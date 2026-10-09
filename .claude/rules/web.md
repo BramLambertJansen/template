@@ -25,3 +25,8 @@ paths:
 - Datums en bedragen alleen via `lib/format.ts`.
 - Schermwerk is pas klaar na `pnpm ui:check <route>` (375 en 1280 px + axe) zodra dat script bestaat.
 - Aanraakdoelen ≥ 44 px en zichtbare focusring zitten in de recepten; nooit uitschakelen.
+
+## Besloten, nog niet gebouwd
+
+De basiskit, tokens, `AsyncView`, `<Form>`, de API- en auth-client, `/design-system`, `check:catalogus` en `ui:check` bestaan nog niet
+(roadmap fase 1, stuk 1 en 3). Bouw geen eigen vervanger; staat een component niet in `node scripts/kit/feiten.mjs componenten`, vraag het.

@@ -24,3 +24,8 @@ paths:
 - `deploy/<host>/` bevat alleen een adapter die de Hono-app exporteert. Geen logica.
 - Tests per route: één per verboden rol (verwacht `FORBIDDEN`), één voor ongeldige input, de acceptatiecriteria.
 - Uniekheidsregel of geld: racetest met twee gelijktijdige requests; precies één slaagt.
+
+## Besloten, nog niet gebouwd
+
+`createApp`, `createRouteKit`/`defineRoute`, `withUser()`, de CSRF-middleware, het foutcoderegister en `src/api/kit.ts` bestaan nog niet
+(roadmap fase 0 en 1). Bouw er niet op vooruit en maak geen eigen variant; staat iets wat je nodig hebt niet in `node scripts/kit/feiten.mjs`, vraag het.

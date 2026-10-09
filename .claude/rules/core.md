@@ -12,3 +12,8 @@ paths:
 - Elke uitbreidingsplek (permissies, foutcodes, limieten, env, componentvarianten) heeft in core een test die bewijst dat een app
   hem gebruikt zonder core te wijzigen.
 - Past iets voor een app niet in core: stop en stel een uitbreidingsplek voor in de template, in plaats van core in de app aan te passen.
+
+## Besloten, nog niet gebouwd
+
+`src/core` bevat nog alleen lege mappen; `check-core` en de dependency-cruiser-regel core → app bestaan nog niet (roadmap fase 1).
+Bouw een core-onderdeel alleen in het stuk van de roadmap waar het hoort.
