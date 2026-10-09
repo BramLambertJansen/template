@@ -6,17 +6,17 @@ Reviews: [2026-10-09 fundering](reviews/2026-10-09-fundering.md), [2026-10-09 fr
 
 ## Beslissingen
 
-Een ADR met status `voorgesteld` is geen besluit. Vóór fase 0 accepteert of verwerpt de eigenaar 0006–0010.
+Een ADR met status `voorgesteld` is geen besluit; afvinken gebeurt pas als de eigenaar hem accepteert.
 
 - [x] Provider-neutraal — ADR 0002
 - [x] Auth in de API met Better Auth, sessiebeleid en MFA — ADR 0003
 - [x] Postgres 17, rollen, dbmate, pgTAP — ADR 0004
 - [x] Node 26, pnpm 11, TypeScript 6.0, GitHub App, toon van de regels — ADR 0005
-- [ ] App uit de template: koppeling, merge-commits voor updates, ADR-nummers, tussentijdse ruleset — ADR 0006 (voorgesteld; stond onterecht op `[x]`)
-- [ ] CSRF-controle en testmatrix — ADR 0007 (voorgesteld)
-- [ ] Grens tussen core en app — ADR 0008 (voorgesteld)
-- [ ] Tests buiten de sandbox — ADR 0009 (voorgesteld)
-- [ ] Schema `better_auth` — ADR 0010 (voorgesteld)
+- [x] App uit de template: koppeling, merge-commits voor updates, ADR-nummers, tussentijdse ruleset — ADR 0006
+- [x] CSRF-controle en testmatrix — ADR 0007
+- [x] Grens tussen core en app — ADR 0008
+- [x] Tests buiten de sandbox: runner-container — ADR 0009
+- [x] Schema `better_auth` — ADR 0010
 
 ## Fase 0 — Bewijs
 

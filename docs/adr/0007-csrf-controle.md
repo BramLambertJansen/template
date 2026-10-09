@@ -1,6 +1,6 @@
 # 0007 — CSRF-controle: header-regels en testmatrix
 
-Status: voorgesteld — door de agent, ter goedkeuring van de eigenaar. Bij acceptatie vervangt dit de paragraaf CSRF uit [ADR 0003](0003-auth-in-de-api.md), waar de oorspronkelijke tekst tot die tijd staat.
+Status: geaccepteerd (2026-10-09) — voorgesteld door de agent, geaccepteerd door de eigenaar. Vervangt de paragraaf CSRF uit [ADR 0003](0003-auth-in-de-api.md).
 
 ## Context
 

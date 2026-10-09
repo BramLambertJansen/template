@@ -1,6 +1,7 @@
 # 0003 — Auth draait in de API, op de eigen Postgres
 
-Status: geaccepteerd (2026-10-09), herzien na review van 2026-10-09. Herzien via een nieuwe ADR. De paragraaf CSRF wordt vervangen door [ADR 0007](0007-csrf-controle.md) zodra die is geaccepteerd.
+Status: geaccepteerd (2026-10-09), herzien na review van 2026-10-09. Herzien via een nieuwe ADR. Deels vervangen: paragraaf CSRF door [ADR 0007](0007-csrf-controle.md), plaats `src/api/auth` door
+[ADR 0008](0008-grens-core-en-app.md) (`src/core/api/auth`), schema `auth` door [ADR 0010](0010-schema-better-auth.md) (`better_auth`).
 
 ## Context
 
@@ -32,7 +33,7 @@ een after-hook op `/two-factor/verify-*`. `trustDevice` uit. Admins kunnen niet 
 header. Geen account-enumeratie bij aanmelden en reset; e-mailverificatie verplicht; gelekte wachtwoorden weigeren
 (HIBP k-anonimity) zodra er netwerk is, lokaal uitgeschakeld. CAPTCHA alleen in staging/productie.
 
-**CSRF.** Wordt vervangen door [ADR 0007](0007-csrf-controle.md) (header-controle en testmatrix) zodra die is geaccepteerd. Oorspronkelijke tekst: eigen middleware vóór alle routes; niet-GET eist `Sec-Fetch-Site: same-origin` of `Origin === APP_ORIGIN`
+**CSRF.** Vervangen door [ADR 0007](0007-csrf-controle.md) (header-controle en testmatrix). Oorspronkelijke tekst, niet meer geldig: eigen middleware vóór alle routes; niet-GET eist `Sec-Fetch-Site: same-origin` of `Origin === APP_ORIGIN`
 en `Content-Type: application/json`. Hono's `csrf()` dekt alleen formulieren. Geen `cors()`.
 
 ## Alternatieven

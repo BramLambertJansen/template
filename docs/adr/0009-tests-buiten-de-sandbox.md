@@ -1,6 +1,6 @@
 # 0009 — Tests buiten de sandbox
 
-Status: voorgesteld — door de agent, herzien na de review van 2026-10-09. De eigenaar kiest; hieronder een aanbeveling.
+Status: geaccepteerd (2026-10-09), optie (a) — voorgesteld door de agent, herzien na de review van 2026-10-09, geaccepteerd door de eigenaar.
 
 ## Context
 
@@ -34,7 +34,7 @@ caches (`.vite`, `.vitest`) in tmpfs, één uitvoermap die de host nooit uitvoer
 **(c) Postgres binnen de sandbox bereiken via een Unix-socket** (`allowAllUnixSockets: true`).
 - Tegen: opent ook `/var/run/docker.sock` (root op de host); lost `ui:check`/e2e niet op (TCP naar Vite).
 
-## Besluit (aanbeveling)
+## Besluit
 
 **(a)**, gebouwd in roadmap fase 1 stuk 1 (test-infra), zodat stuk 2 en 3 hun tests er al mee draaien. Aanvullend, omdat het script zelf
 op de host draait: de bestanden die de host vóór de container uitvoert (`scripts/**`, `package.json`, `pnpm-workspace.yaml`, `.npmrc`,

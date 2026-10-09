@@ -18,4 +18,5 @@ Volgt [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/). Een release-tag 
 - Review framework 2026-10-09 (`docs/reviews/2026-10-09-framework.md`) doorgevoerd: baseline gefixt (rechten `app_definer`) en schema
   `better_auth` (ADR 0010, voorgesteld); ADR 0009 herzien (alles in de runner); sandbox: `excludedCommands` met argumenten en in `ask`,
   `denyRead` op inloggegevens; testregel versoepeld; env-regel op `APP_ENV`; ADR 0007/0008 aangescherpt; roadmap: rails en test-infra in
-  stuk 1, stuk 3 in 3a–3d, Better Auth uit fase 0; ADR 0006 terug op voorgesteld in de roadmap.
+  stuk 1, stuk 3 in 3a–3d, Better Auth uit fase 0.
+- ADR 0006–0010 geaccepteerd door de eigenaar (2026-10-09); ADR 0001, 0003 en 0004 verwijzen naar wat ze deels vervangt.

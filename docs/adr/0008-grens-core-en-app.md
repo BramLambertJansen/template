@@ -1,6 +1,6 @@
 # 0008 — Grens tussen core en app
 
-Status: voorgesteld — door de agent, ter goedkeuring van de eigenaar. Bij acceptatie vervangt dit de plaatsaanduidingen in
+Status: geaccepteerd (2026-10-09) — voorgesteld door de agent, geaccepteerd door de eigenaar. Vervangt de plaatsaanduidingen in
 [ADR 0001](0001-stack-en-architectuur.md) (`src/web`, `src/api`, `src/shared` als enige mappen) en [ADR 0003](0003-auth-in-de-api.md)
 (Better Auth in `src/api/auth`); de inhoud van die besluiten blijft staan.
 
