@@ -29,7 +29,10 @@
     "ratchet": "node scripts/kit/ratchet.mjs",
     "ratchet:update": "node scripts/kit/ratchet.mjs --update",
     "test:unit": "vitest run --project unit",
+    "test:db": "scripts/runner.sh db",
     "test:e2e": "playwright test",
+    "ui:check": "scripts/runner.sh ui",
+    "db:migrate": "scripts/db-migrate.sh .env.local up",
     "gate:fast": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm ratchet && pnpm test:unit"
   },
   "dependencies": {

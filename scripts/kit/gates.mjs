@@ -15,4 +15,10 @@ export const gates = [
   { script: 'typecheck', bewaakt: 'TypeScript streng (framework §4), ook scripts/', snel: true },
   { script: 'ratchet', bewaakt: 'lagen en zones (dependency-cruiser) tegen .kit/baseline.json', snel: true },
   { script: 'test:unit', bewaakt: 'unit-tests en de fixtures van de rails (test/rails)', snel: true },
+  {
+    script: 'test:db',
+    bewaakt: 'integratietests (ook de isolatietest) en pgTAP tegen een verse database, in de runner (ADR 0009)',
+    snel: false,
+  },
+  { script: 'ui:check', bewaakt: 'e2e met CSP aan tegen API en Vite, in de Playwright-runner (ADR 0009)', snel: false },
 ];

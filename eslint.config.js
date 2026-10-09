@@ -124,7 +124,14 @@ const railConfigs = [
 ];
 
 export default defineConfig(
-  globalIgnores(['dist/', 'coverage/', 'playwright-report/', 'test-results/', 'test/rails/fixtures/']),
+  globalIgnores([
+    'dist/',
+    'coverage/',
+    'playwright-report/',
+    'test-results/',
+    '.runner-output/',
+    'test/rails/fixtures/',
+  ]),
   {
     // Geen eslint-disable in de code: een uitzondering gaat via de ratchet (eslint-suppressions.json, framework §4).
     linterOptions: { noInlineConfig: true, reportUnusedDisableDirectives: 'error' },
