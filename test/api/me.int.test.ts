@@ -4,6 +4,7 @@ import { afterAll, describe, expect, test } from 'vitest';
 import { inviteUser } from '../../src/core/api/auth/index.ts';
 import { AppError } from '../../src/core/api/errors.ts';
 import { Browser, createTestApp, latestMailTo, required, tokenFrom, totp, uniqueEmail } from '../auth/harness.ts';
+import { UserId } from '../../src/core/shared/ids.ts';
 
 // GET /api/me door de hele pipeline (spec accountbeheer; framework §6): sessie uit Better Auth, rol uit user_roles,
 // can() met de MFA-eis, output volgens het contract. Tegen de echte database, via `pnpm test:db`.
@@ -18,7 +19,7 @@ afterAll(async () => {
 async function signedIn(
   role: 'user' | 'admin' | null,
   name = 'Iemand',
-): Promise<{ browser: Browser; userId: string; email: string }> {
+): Promise<{ browser: Browser; userId: UserId; email: string }> {
   const email = uniqueEmail(role ?? 'zonder-rol');
   const { userId } = await inviteUser(auth, { name, email });
   if (role !== null) await migrator.query('select app.assign_role($1, $2)', [userId, role]);
@@ -26,7 +27,7 @@ async function signedIn(
   const browser = new Browser(app);
   await browser.post('/api/auth/reset-password', { token, newPassword: PASSWORD });
   await browser.post('/api/auth/sign-in/email', { email, password: PASSWORD });
-  return { browser, userId, email };
+  return { browser, userId: UserId.parse(userId), email };
 }
 
 async function body(response: Response): Promise<unknown> {

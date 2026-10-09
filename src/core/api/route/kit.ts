@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 import type { CanActor, Decision, Permissions, Role, SessionStrength } from '../../shared/can.ts';
 import type { Contract, Method } from '../../shared/contract.ts';
+import type { UserId } from '../../shared/ids.ts';
 import type { Tx } from '../db/types.ts';
 
 // defineRoute (framework §1, §6; ADR 0008): de enige manier om een route te maken. createApp accepteert alleen wat hier
@@ -9,7 +10,7 @@ import type { Tx } from '../db/types.ts';
 export const ROUTE: unique symbol = Symbol('defineRoute');
 
 export interface RouteActor {
-  readonly userId: string;
+  readonly userId: UserId;
   readonly role: Role;
   readonly sessionStrength: SessionStrength;
   readonly name: string;

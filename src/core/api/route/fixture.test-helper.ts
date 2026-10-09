@@ -7,6 +7,7 @@ import type { AuthGateway } from '../auth/auth.ts';
 import type { Tx, WithUser } from '../db/types.ts';
 import { createApp } from '../http/create-app.ts';
 import { createRouteKit, type RouteDef } from './kit.ts';
+import { UserId } from '../../shared/ids.ts';
 
 // Een app in het klein, zonder database: nep-sessie en nep-withUser waarvan tx.execute de rol teruggeeft.
 export const permissions = definePermissions({
@@ -31,7 +32,12 @@ export function fakeDeps(user: FakeUser | null) {
         session:
           user === null
             ? null
-            : { userId: 'u1', sessionStrength: user.sessionStrength, name: 'Test', email: 't@test.local' },
+            : {
+                userId: UserId.parse('u1'),
+                sessionStrength: user.sessionStrength,
+                name: 'Test',
+                email: 't@test.local',
+              },
         setCookie: ['__Host-auth.session_token=vernieuwd; Path=/; Secure; HttpOnly'],
       }),
   };

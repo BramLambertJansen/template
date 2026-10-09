@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth';
 import pg from 'pg';
+import { UserId } from '../../shared/ids.ts';
 import { SESSION_ABSOLUTE_SECONDS } from '../../shared/limits.ts';
 import { AUTH_BASE_PATH, type AuthConfig, createAuthOptions, DISABLED_PREFIXES } from './options.ts';
 
@@ -18,7 +19,7 @@ export function createAuth(config: CreateAuthConfig) {
 export type Auth = ReturnType<typeof createAuth>;
 
 export interface SessionInfo {
-  readonly userId: string;
+  readonly userId: UserId;
   readonly sessionStrength: 'password' | 'mfa';
   readonly name: string;
   readonly email: string;
@@ -56,7 +57,10 @@ export function authGateway(auth: Auth, now: () => number = Date.now): AuthGatew
       }
       const strength = session.sessionStrength;
       if (strength !== 'password' && strength !== 'mfa') return { session: null, setCookie };
-      return { session: { userId: user.id, sessionStrength: strength, name: user.name, email: user.email }, setCookie };
+      return {
+        session: { userId: UserId.parse(user.id), sessionStrength: strength, name: user.name, email: user.email },
+        setCookie,
+      };
     },
   };
 }
