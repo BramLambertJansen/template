@@ -52,6 +52,11 @@ const baseSchema = z.object({
   AUTH_BASE_URL: origin,
   AUTH_SECRET: z.string().min(1),
   SMTP_URL: url,
+  // Header met het client-IP die de host zet en de client niet kan vervalsen (framework §6, Verharding); voor de rate limit.
+  CLIENT_IP_HEADER: z
+    .string()
+    .regex(/^[a-z0-9-]+$/, 'kleine letters, cijfers en streepjes')
+    .optional(),
 });
 
 type RawEnv = z.infer<typeof baseSchema>;
@@ -73,6 +78,7 @@ function checkSecrets(raw: RawEnv, issue: Issue): void {
     if (new URL(raw[key]).protocol !== 'https:') issue(key, 'moet https zijn');
   }
   if (raw.AUTH_BASE_URL !== raw.APP_ORIGIN) issue('AUTH_BASE_URL', 'moet gelijk zijn aan APP_ORIGIN');
+  if (raw.CLIENT_IP_HEADER === undefined) issue('CLIENT_IP_HEADER', 'verplicht: anders werkt de rate limit niet');
 }
 
 // Buiten local en test gelden de secrets-regels (framework §6); lokaal zijn de demo-waarden juist de bedoeling.
@@ -92,6 +98,7 @@ export interface Env {
   readonly authBaseUrl: string;
   readonly authSecret: string;
   readonly smtpUrl: string;
+  readonly clientIpHeader: string | undefined;
 }
 
 function describe(error: z.ZodError): string {
@@ -111,6 +118,7 @@ export function parseEnv(source: Readonly<Record<string, string | undefined>>): 
     authBaseUrl: raw.AUTH_BASE_URL,
     authSecret: raw.AUTH_SECRET,
     smtpUrl: raw.SMTP_URL,
+    clientIpHeader: raw.CLIENT_IP_HEADER,
   };
 }
 

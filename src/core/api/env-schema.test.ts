@@ -12,6 +12,7 @@ const production = {
   DATABASE_URL: 'postgres://api_user:Kp4wQ9zL2xR7@db.example.com:5432/app',
   AUTH_DATABASE_URL: 'postgres://auth_service:Vb8nM3cT6yH1@db.example.com:5432/app',
   SMTP_URL: 'smtp://mail.example.com:587',
+  CLIENT_IP_HEADER: 'x-real-ip',
 };
 
 const local = {
@@ -76,6 +77,8 @@ describe('env-schema', () => {
     ['APP_ORIGIN met pad', { APP_ORIGIN: 'https://app.example.com/' }, 'APP_ORIGIN: alleen schema, host en poort'],
     ['DATABASE_URL geen postgres', { DATABASE_URL: 'mysql://a:b@db/app' }, 'DATABASE_URL: geen postgres-URL'],
     ['ongeldige API_PORT', { API_PORT: '70000' }, 'API_PORT: ongeldige poort'],
+    ['CLIENT_IP_HEADER ontbreekt', { CLIENT_IP_HEADER: undefined }, 'CLIENT_IP_HEADER: verplicht'],
+    ['CLIENT_IP_HEADER ongeldig', { CLIENT_IP_HEADER: 'X-Real-IP' }, 'CLIENT_IP_HEADER: kleine letters'],
   ])('weigert in productie: %s', (_, override, message) => {
     expect(() => parseEnv({ ...production, ...override })).toThrow(message);
   });

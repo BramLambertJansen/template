@@ -40,5 +40,10 @@ mkdir -p .runner-output
 trap 'compose down --volumes --remove-orphans >/dev/null 2>&1 || true' EXIT
 compose down --volumes --remove-orphans >/dev/null 2>&1 || true
 for service in "${services[@]}"; do
-  compose run --rm --build "$service"
+  if ! compose run --rm --build "$service"; then
+    # Eerst laten zien waarom (migraties, pooler, Mailpit), dan pas opruimen via de trap.
+    printf '\n✗ %s faalde. Logs van de testdiensten:\n' "$service" >&2
+    compose logs --no-color --tail=60 test-db test-migrate test-pooler test-mailpit >&2 || true
+    exit 1
+  fi
 done

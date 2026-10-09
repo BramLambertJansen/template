@@ -29,4 +29,5 @@ paths:
 
 Gebouwd: `withUser()` (zonder foutvertaling), `createApp` met CSRF, `bodyLimit`, `secureHeaders()` en `onError`, en het env-schema
 (`env()`, `readEnv()`). Nog niet: `createRouteKit`/`defineRoute`, de foutvertaling, het foutcoderegister met app-uitbreiding, `src/api/kit.ts`,
-Better Auth en logging via `src/core/api/obs` (roadmap fase 1, stuk 2 en 3a). Bouw er niet op vooruit en maak geen eigen variant; staat iets wat je nodig hebt niet in `node scripts/kit/feiten.mjs`, vraag het.
+en logging via `src/core/api/obs` (roadmap fase 1, stuk 3a). Better Auth staat in `src/core/api/auth` (ADR 0013); `user_roles`, seed en
+`admin:create` volgen in stuk 2 (4c). Bouw er niet op vooruit en maak geen eigen variant; staat iets wat je nodig hebt niet in `node scripts/kit/feiten.mjs`, vraag het.

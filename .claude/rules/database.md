@@ -24,7 +24,8 @@ paths:
   eigenaar `app_definer` (`alter function … owner to app_definer`) met alleen de rechten die de functie nodig heeft.
 - Datamigraties die alle rijen moeten zien: via zo'n functie, nooit door RLS uit te zetten. FORCE RLS geldt ook voor
   `app_definer`: geef de tabel in dezelfde migratie een policy `to app_definer` met alleen wat de functie nodig heeft, met een pgTAP-test.
-- Auth-tabellen: SQL uit `auth generate` (gepinde versie) in een migratie die begint met `set local search_path = better_auth;`; nooit `auth migrate`.
+- Auth-tabellen: SQL uit `node scripts/auth-schema.mjs` (gepinde versie) in een migratie die begint met `set local search_path = better_auth;`
+  en eindigt met `reset search_path;` (dbmate schrijft `schema_migrations` in dezelfde transactie); nooit `auth migrate`.
 - Heeft een auth-hook data buiten `better_auth` nodig (bijv. rol uit `user_roles`), of de app gegevens uit `better_auth."user"`:
   via een `security definer`-functie of -view van `app_definer`, nooit met extra grants op het andere schema.
 - `set_config` en `current_setting` alleen in `src/core/api/db` en in de helpers in schema `app`; nooit in app-SQL of handlers.

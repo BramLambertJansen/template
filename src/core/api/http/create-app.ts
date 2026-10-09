@@ -9,6 +9,8 @@ import { csrf } from './csrf.ts';
 export interface AppConfig {
   // Exact de origin van de SPA (ADR 0007); zonder waarde weigert de CSRF-controle elke Origin-header.
   readonly appOrigin?: string;
+  // Better Auth op /api/auth/* (framework §3: de enige routes buiten defineRoute). Zonder: 404.
+  readonly auth?: { readonly handler: (request: Request) => Promise<Response> };
 }
 
 // Vaste volgorde (framework §6): requestId, secureHeaders, CSRF, bodyLimit, routes; één onError en notFound met
@@ -33,5 +35,6 @@ export function createApp(config: AppConfig = {}) {
       return c.json(fail('INTERNAL_ERROR', c.get('requestId')), 500);
     })
     .notFound((c) => c.json(fail('NOT_FOUND', c.get('requestId')), 404))
-    .get('/health', (c) => c.json({ ok: true }));
+    .get('/health', (c) => c.json({ ok: true }))
+    .on(['GET', 'POST'], '/auth/*', (c) => (config.auth === undefined ? c.notFound() : config.auth.handler(c.req.raw)));
 }

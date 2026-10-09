@@ -1,0 +1,135 @@
+import type { BetterAuthOptions } from 'better-auth';
+import { APIError, createAuthMiddleware } from 'better-auth/api';
+import { twoFactor } from 'better-auth/plugins/two-factor';
+import type { Pool } from 'pg';
+import {
+  INVITATION_TTL_SECONDS,
+  MAX_PASSWORD_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  SESSION_FRESH_SECONDS,
+  SESSION_IDLE_SECONDS,
+  SESSION_REFRESH_SECONDS,
+} from '../../shared/limits.ts';
+
+export interface Invitation {
+  readonly email: string;
+  readonly name: string;
+  // Link naar het scherm "Wachtwoord instellen" van de SPA, met het eenmalige token.
+  readonly url: string;
+}
+
+export interface AuthConfig {
+  // Exact APP_ORIGIN (framework §6: AUTH_BASE_URL = APP_ORIGIN); Better Auth hangt onder /api/auth.
+  readonly origin: string;
+  readonly secret: string;
+  readonly sendInvitation: (invitation: Invitation) => Promise<void>;
+  // Zonder: geen enkele header vertrouwd (geen spoofbare x-forwarded-for); lokaal valt Better Auth terug op 127.0.0.1.
+  readonly clientIpHeader?: string | undefined;
+}
+
+const NO_TRUSTED_IP_HEADER = 'x-template-geen-ip-header';
+
+export const AUTH_BASE_PATH = '/api/auth';
+export const INVITATION_PATH = '/uitnodiging';
+
+// Publiek dicht (ADR 0013): 404 in de router; interne aanroepen via auth.api.* blijven werken. disabledPaths vergelijkt
+// letterlijk, dus een pad met een parameter staat apart in DISABLED_PREFIXES (afgevangen in authHandler).
+export const DISABLED_PREFIXES: readonly string[] = ['/reset-password/'];
+export const DISABLED_PATHS: readonly string[] = [
+  '/sign-up/email',
+  '/request-password-reset',
+  '/two-factor/send-otp',
+  '/two-factor/verify-otp',
+  '/two-factor/verify-backup-code',
+  '/two-factor/generate-backup-codes',
+  '/two-factor/view-backup-codes',
+];
+
+// __Host-: alleen Secure, Path=/ en zonder Domain (ADR 0003). Better Auth zou zelf __Secure- ervoor zetten; daarom
+// staat useSecureCookies uit en zet elke cookie zelf `secure: true`.
+const HOST_COOKIES = ['session_token', 'session_data', 'dont_remember', 'two_factor'] as const;
+const cookies = Object.fromEntries(
+  HOST_COOKIES.map((name) => [name, { name: `__Host-auth.${name}`, attributes: { secure: true, path: '/' } }]),
+);
+
+// session_strength: 'password' bij inloggen; alleen deze hooks zetten 'mfa' (framework §6, ADR 0013).
+const before = createAuthMiddleware(async (ctx) => {
+  if (ctx.path === '/two-factor/verify-totp' && isTrustDeviceRequested(ctx.body)) {
+    throw new APIError('BAD_REQUEST', { message: 'trustDevice staat uit (ADR 0013)', code: 'TRUST_DEVICE_DISABLED' });
+  }
+  return Promise.resolve();
+});
+
+const after = createAuthMiddleware(async (ctx) => {
+  const session = ctx.context.newSession?.session;
+  if (session === undefined) return;
+  if (ctx.path === '/two-factor/verify-totp') {
+    await ctx.context.internalAdapter.updateSession(session.token, { sessionStrength: 'mfa' });
+  } else if (ctx.path === '/two-factor/disable') {
+    await ctx.context.internalAdapter.updateSession(session.token, { sessionStrength: 'password' });
+  }
+});
+
+function isTrustDeviceRequested(body: unknown): boolean {
+  return typeof body === 'object' && body !== null && 'trustDevice' in body && body.trustDevice !== false;
+}
+
+// database: een pg-pool als auth_service (search_path better_auth, alleen DML op dat schema, ADR 0010).
+export function createAuthOptions(config: AuthConfig, database: Pool) {
+  return {
+    baseURL: config.origin,
+    basePath: AUTH_BASE_PATH,
+    secret: config.secret,
+    database,
+    trustedOrigins: [config.origin],
+    disabledPaths: [...DISABLED_PATHS],
+    emailAndPassword: {
+      enabled: true,
+      minPasswordLength: MIN_PASSWORD_LENGTH,
+      maxPasswordLength: MAX_PASSWORD_LENGTH,
+      resetPasswordTokenExpiresIn: INVITATION_TTL_SECONDS,
+      revokeSessionsOnPasswordReset: true,
+      // Uitnodigen gebruikt de reset-flow (ADR 0013): de mail gaat naar het scherm in de SPA, niet naar de GET-redirect.
+      sendResetPassword: async ({ user, token }) => {
+        const url = `${config.origin}${INVITATION_PATH}?token=${encodeURIComponent(token)}`;
+        await config.sendInvitation({ email: user.email, name: user.name, url });
+      },
+    },
+    session: {
+      expiresIn: SESSION_IDLE_SECONDS,
+      updateAge: SESSION_REFRESH_SECONDS,
+      freshAge: SESSION_FRESH_SECONDS,
+      cookieCache: { enabled: false },
+      additionalFields: {
+        sessionStrength: {
+          type: 'string',
+          input: false,
+          required: true,
+          defaultValue: 'password',
+          fieldName: 'session_strength',
+        },
+      },
+    },
+    rateLimit: { enabled: true, storage: 'database' },
+    advanced: {
+      useSecureCookies: false,
+      cookies,
+      ipAddress: { ipAddressHeaders: [config.clientIpHeader ?? NO_TRUSTED_IP_HEADER] },
+    },
+    hooks: { before, after },
+    databaseHooks: {
+      // Een uitgenodigde gebruiker heeft geen credential-account; dat ontstaat pas als hij via de link zijn wachtwoord
+      // instelt. Dat bewijst het e-mailadres (ADR 0013).
+      account: {
+        create: {
+          after: async (account, ctx) => {
+            if (account.providerId !== 'credential' || ctx === null) return;
+            await ctx.context.internalAdapter.updateUser(account.userId, { emailVerified: true });
+          },
+        },
+      },
+    },
+    plugins: [twoFactor({ issuer: new URL(config.origin).hostname })],
+    telemetry: { enabled: false },
+  } satisfies BetterAuthOptions;
+}
