@@ -1,6 +1,7 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { uiTexts } from '../copy/ui.ts';
+import { Button } from './button.tsx';
 import { useErrorText } from './error-texts.tsx';
 
 interface AsyncViewProps<Data> {
@@ -14,17 +15,23 @@ interface AsyncViewProps<Data> {
 // Laden, fout, leeg en data op één plek (framework §5): features lezen nooit zelf isLoading of isError.
 export function AsyncView<Data>({ query, isEmpty, emptyText = uiTexts.empty, children }: AsyncViewProps<Data>) {
   const errorText = useErrorText();
-  if (query.isPending) return <p role="status">{uiTexts.loading}</p>;
+  if (query.isPending) {
+    return (
+      <p role="status" className="text-sm text-muted-foreground">
+        {uiTexts.loading}
+      </p>
+    );
+  }
   if (query.isError) {
     return (
-      <div role="alert">
-        <p>{errorText(query.error)}</p>
-        <button type="button" onClick={() => void query.refetch()}>
+      <div role="alert" className="flex flex-col items-start gap-3">
+        <p className="text-sm text-destructive">{errorText(query.error)}</p>
+        <Button variant="outline" onClick={() => void query.refetch()}>
           {uiTexts.retry}
-        </button>
+        </Button>
       </div>
     );
   }
-  if (isEmpty?.(query.data) === true) return <p>{emptyText}</p>;
+  if (isEmpty?.(query.data) === true) return <p className="text-sm text-muted-foreground">{emptyText}</p>;
   return <>{children(query.data)}</>;
 }

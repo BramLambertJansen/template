@@ -1,5 +1,6 @@
 import path from 'node:path';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig, loadEnv, type Plugin } from 'vite';
+import tailwindcss from '@tailwindcss/vite';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
 import react from '@vitejs/plugin-react';
 import pkg from './package.json' with { type: 'json' };
@@ -43,6 +44,26 @@ function buildTarget(queries: readonly string[]): string[] {
   });
 }
 
+// src/web/dev/ (catalogus, rolwisselaar) bestaat alleen in dev (framework §6): bij build wordt elke module daaruit een lege
+// module. Gebruik ze daarom alleen via een dynamische import achter isDev; test/ui/bundle.test.ts bewijst het.
+const DEV_ONLY_DIR = path.join(import.meta.dirname, 'src/web/dev') + path.sep;
+const DEV_ONLY_ID = '\0dev-only';
+
+export function devOnlyModules(): Plugin {
+  return {
+    name: 'dev-only-modules',
+    apply: 'build',
+    enforce: 'pre',
+    async resolveId(source, importer, options) {
+      const resolved = await this.resolve(source, importer, { ...options, skipSelf: true });
+      return resolved?.id.startsWith(DEV_ONLY_DIR) === true ? DEV_ONLY_ID : null;
+    },
+    load(id) {
+      return id === DEV_ONLY_ID ? 'export {};' : null;
+    },
+  };
+}
+
 export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, import.meta.dirname, '');
   const webPort = Number(env['WEB_PORT'] ?? '5173');
@@ -59,6 +80,7 @@ export default defineConfig(({ command, mode }) => {
     envDir: import.meta.dirname,
     // Bestandsroutes (framework §5): de plugin schrijft src/web/routeTree.gen.ts (gegenereerd, wel gecommit voor typecheck).
     plugins: [
+      devOnlyModules(),
       tanstackRouter({
         target: 'react',
         routesDirectory: path.join(import.meta.dirname, 'src/web/routes'),
@@ -66,6 +88,8 @@ export default defineConfig(({ command, mode }) => {
         autoCodeSplitting: true,
       }),
       react(),
+      // Tokens en utilities uit src/web/styles/app.css (framework §7).
+      tailwindcss(),
     ],
     html: isDev ? { cspNonce: DEV_NONCE } : {},
     build: { outDir: '../../dist/web', emptyOutDir: true, target: buildTarget(pkg.browserslist) },

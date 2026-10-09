@@ -5,4 +5,8 @@ export const uiTexts = {
   notFoundTitle: 'Pagina niet gevonden',
   errorTitle: 'Er ging iets mis',
   empty: 'Er is nog niets om te tonen.',
+  mainMenu: 'Hoofdmenu',
+  openMenu: 'Menu openen',
+  profileMenu: 'Profielmenu',
+  close: 'Sluiten',
 } as const;

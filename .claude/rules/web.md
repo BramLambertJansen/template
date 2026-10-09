@@ -31,8 +31,10 @@ paths:
 Gebouwd (stuk 3b): bestandsroutes in `src/web/routes` (TanStack Router; `routeTree.gen.ts` is gegenereerd), de router in
 `src/web/lib/router.ts` met `RouteError`/`NotFound` als ErrorBoundary per route, de guard `guard('<permissie>')` uit
 `src/web/lib/session.ts` voor `beforeLoad`, `createQueryClient` (401 → `/login`), `AsyncView`, `Form`/`FormField`/`useZodForm`,
-`format` en `readWebEnv`/`isDev` in `src/core/web`, foutteksten in `src/web/copy/errors.ts`. Componenttests in het
-Vitest-project `web` (jsdom, `*.test.tsx`).
-Nog niet: tokens, basiskit en layout (stuk 3c), de auth-client, `/design-system`, `check:catalogus` en `ui:check` met axe.
-Tot de basiskit er is, renderen `AsyncView`, `Form` en `RouteError` kale elementen. Bouw geen eigen vervanger; staat een
-component niet in `node scripts/kit/feiten.mjs componenten`, vraag het.
+`format` en `readWebEnv`/`isDev`, foutteksten in `src/web/copy/errors.ts`. Componenttests in het Vitest-project `web` (jsdom).
+Gebouwd (stuk 3c): tokens in drie lagen (`src/core/web/styles`, thema van de app in `src/web/styles/theme.css`), de basiskit
+Button, Input, Field, Card, Dialog (native `<dialog>`, geen Radix: CSP), DropdownMenu, NavLink en de layoutblokken AppShell,
+Sidebar (`visibleNavItems` per rol), Topbar en CenteredCard; alles via `src/web/ui/index.ts`. `/design-system` alleen in dev;
+`src/web/dev/` is leeg in de productiebundel (alleen dynamisch importeren). Contrasttest `test/ui/contrast.test.ts` (nieuwe
+Button-variant = nieuwe rij), `scanAxe` in `e2e/support/axe.ts`.
+Nog niet: de auth-client, `check:catalogus`, screenshot-baselines, `scanAxe`-uitzonderingen in de ratchet en de woordenlijsttest.

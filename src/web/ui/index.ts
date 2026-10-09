@@ -1,0 +1,16 @@
+// De enige importbron voor features/ (framework §7): her-exporteert de basiskit uit core. Eigen componenten en afgeleide
+// varianten van de app komen hier ook (afleiden uit de basis en variantkaart van core, niet forken).
+export { AppShell } from '#core/web/ui/app-shell.tsx';
+export { AsyncView } from '#core/web/ui/async-view.tsx';
+export { Button, buttonBase, buttonVariantMap, buttonVariants, type ButtonProps } from '#core/web/ui/button.tsx';
+export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '#core/web/ui/card.tsx';
+export { CenteredCard } from '#core/web/ui/centered-card.tsx';
+export { cn } from '#core/web/ui/cn.ts';
+export { Dialog } from '#core/web/ui/dialog.tsx';
+export { DropdownMenu, type MenuItem } from '#core/web/ui/dropdown-menu.tsx';
+export { Field } from '#core/web/ui/field.tsx';
+export { Form, FormField, useZodForm } from '#core/web/ui/form.tsx';
+export { Input } from '#core/web/ui/input.tsx';
+export { NavLink } from '#core/web/ui/nav-link.tsx';
+export { Sidebar, visibleNavItems, type NavItem } from '#core/web/ui/sidebar.tsx';
+export { Topbar } from '#core/web/ui/topbar.tsx';
