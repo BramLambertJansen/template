@@ -7,15 +7,15 @@ export default defineConfig({
       {
         test: {
           name: 'unit',
-          include: ['src/**/*.test.{ts,tsx}'],
-          exclude: ['src/**/*.int.test.ts'],
+          include: ['{src,test}/**/*.test.{ts,tsx}'],
+          exclude: ['**/*.int.test.ts', 'test/rails/fixtures/**'],
           environment: 'node',
         },
       },
       {
         test: {
           name: 'int',
-          include: ['src/**/*.int.test.ts'],
+          include: ['{src,test}/**/*.int.test.ts'],
           environment: 'node',
         },
       },
