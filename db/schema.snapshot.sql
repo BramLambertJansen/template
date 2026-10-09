@@ -1,0 +1,600 @@
+--
+-- PostgreSQL database dump
+--
+
+
+-- Dumped from database version 17.11 (Debian 17.11-1.pgdg12+2)
+-- Dumped by pg_dump version 17.11 (Debian 17.11-1.pgdg12+2)
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- Name: app; Type: SCHEMA; Schema: -; Owner: app_migrator
+--
+
+CREATE SCHEMA app;
+
+
+ALTER SCHEMA app OWNER TO app_migrator;
+
+--
+-- Name: better_auth; Type: SCHEMA; Schema: -; Owner: app_migrator
+--
+
+CREATE SCHEMA better_auth;
+
+
+ALTER SCHEMA better_auth OWNER TO app_migrator;
+
+--
+-- Name: assign_role(text, text); Type: FUNCTION; Schema: app; Owner: app_definer
+--
+
+CREATE FUNCTION app.assign_role(p_user_id text, p_role text) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  begin
+    if not app.is_mfa_admin()
+       and not (session_user = 'app_migrator' and app.current_user_id() is null) then
+      raise exception 'FORBIDDEN' using errcode = '42501';
+    end if;
+    insert into public.user_roles (user_id, role) values (p_user_id, p_role)
+      on conflict (user_id) do update set role = excluded.role;
+  end
+  $$;
+
+
+ALTER FUNCTION app.assign_role(p_user_id text, p_role text) OWNER TO app_definer;
+
+--
+-- Name: current_user_id(); Type: FUNCTION; Schema: app; Owner: app_migrator
+--
+
+CREATE FUNCTION app.current_user_id() RETURNS text
+    LANGUAGE sql STABLE
+    RETURN NULLIF(current_setting('app.user_id'::text, true), ''::text);
+
+
+ALTER FUNCTION app.current_user_id() OWNER TO app_migrator;
+
+--
+-- Name: is_mfa_admin(); Type: FUNCTION; Schema: app; Owner: app_definer
+--
+
+CREATE FUNCTION app.is_mfa_admin() RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+    select app.session_strength() = 'mfa'
+       and exists (select 1 from public.user_roles r where r.user_id = app.current_user_id() and r.role = 'admin')
+  $$;
+
+
+ALTER FUNCTION app.is_mfa_admin() OWNER TO app_definer;
+
+--
+-- Name: session_strength(); Type: FUNCTION; Schema: app; Owner: app_migrator
+--
+
+CREATE FUNCTION app.session_strength() RETURNS text
+    LANGUAGE sql STABLE
+    RETURN COALESCE(NULLIF(current_setting('app.session_strength'::text, true), ''::text), 'none'::text);
+
+
+ALTER FUNCTION app.session_strength() OWNER TO app_migrator;
+
+--
+-- Name: user_roles_keep_one_admin(); Type: FUNCTION; Schema: app; Owner: app_definer
+--
+
+CREATE FUNCTION app.user_roles_keep_one_admin() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  begin
+    perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtext('public.user_roles:last_admin'));
+    if old.role = 'admin' and not exists (select 1 from public.user_roles r where r.role = 'admin') then
+      raise exception 'LAST_ADMIN' using errcode = 'P0001', detail = 'De laatste admin kan niet weg.';
+    end if;
+    return null;
+  end
+  $$;
+
+
+ALTER FUNCTION app.user_roles_keep_one_admin() OWNER TO app_definer;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: account; Type: TABLE; Schema: better_auth; Owner: app_migrator
+--
+
+CREATE TABLE better_auth.account (
+    id text NOT NULL,
+    "accountId" text NOT NULL,
+    "providerId" text NOT NULL,
+    "userId" text NOT NULL,
+    "accessToken" text,
+    "refreshToken" text,
+    "idToken" text,
+    "accessTokenExpiresAt" timestamp with time zone,
+    "refreshTokenExpiresAt" timestamp with time zone,
+    scope text,
+    password text,
+    "createdAt" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL
+);
+
+
+ALTER TABLE better_auth.account OWNER TO app_migrator;
+
+--
+-- Name: rateLimit; Type: TABLE; Schema: better_auth; Owner: app_migrator
+--
+
+CREATE TABLE better_auth."rateLimit" (
+    id text NOT NULL,
+    key text NOT NULL,
+    count integer NOT NULL,
+    "lastRequest" bigint NOT NULL
+);
+
+
+ALTER TABLE better_auth."rateLimit" OWNER TO app_migrator;
+
+--
+-- Name: session; Type: TABLE; Schema: better_auth; Owner: app_migrator
+--
+
+CREATE TABLE better_auth.session (
+    id text NOT NULL,
+    "expiresAt" timestamp with time zone NOT NULL,
+    token text NOT NULL,
+    "createdAt" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "ipAddress" text,
+    "userAgent" text,
+    "userId" text NOT NULL,
+    session_strength text DEFAULT 'password'::text NOT NULL,
+    CONSTRAINT session_strength_check CHECK ((session_strength = ANY (ARRAY['password'::text, 'mfa'::text])))
+);
+
+
+ALTER TABLE better_auth.session OWNER TO app_migrator;
+
+--
+-- Name: twoFactor; Type: TABLE; Schema: better_auth; Owner: app_migrator
+--
+
+CREATE TABLE better_auth."twoFactor" (
+    id text NOT NULL,
+    secret text NOT NULL,
+    "backupCodes" text NOT NULL,
+    "userId" text NOT NULL,
+    verified boolean,
+    "failedVerificationCount" integer,
+    "lockedUntil" timestamp with time zone
+);
+
+
+ALTER TABLE better_auth."twoFactor" OWNER TO app_migrator;
+
+--
+-- Name: user; Type: TABLE; Schema: better_auth; Owner: app_migrator
+--
+
+CREATE TABLE better_auth."user" (
+    id text NOT NULL,
+    name text NOT NULL,
+    email text NOT NULL,
+    "emailVerified" boolean NOT NULL,
+    image text,
+    "createdAt" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "twoFactorEnabled" boolean
+);
+
+
+ALTER TABLE better_auth."user" OWNER TO app_migrator;
+
+--
+-- Name: verification; Type: TABLE; Schema: better_auth; Owner: app_migrator
+--
+
+CREATE TABLE better_auth.verification (
+    id text NOT NULL,
+    identifier text NOT NULL,
+    value text NOT NULL,
+    "expiresAt" timestamp with time zone NOT NULL,
+    "createdAt" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+ALTER TABLE better_auth.verification OWNER TO app_migrator;
+
+--
+-- Name: schema_migrations; Type: TABLE; Schema: public; Owner: app_migrator
+--
+
+CREATE TABLE public.schema_migrations (
+    version character varying NOT NULL
+);
+
+
+ALTER TABLE public.schema_migrations OWNER TO app_migrator;
+
+--
+-- Name: user_roles; Type: TABLE; Schema: public; Owner: app_migrator
+--
+
+CREATE TABLE public.user_roles (
+    user_id text NOT NULL,
+    role text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT user_roles_role_check CHECK ((role = ANY (ARRAY['user'::text, 'admin'::text])))
+);
+
+ALTER TABLE ONLY public.user_roles FORCE ROW LEVEL SECURITY;
+
+
+ALTER TABLE public.user_roles OWNER TO app_migrator;
+
+--
+-- Name: account account_pkey; Type: CONSTRAINT; Schema: better_auth; Owner: app_migrator
+--
+
+ALTER TABLE ONLY better_auth.account
+    ADD CONSTRAINT account_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: rateLimit rateLimit_key_key; Type: CONSTRAINT; Schema: better_auth; Owner: app_migrator
+--
+
+ALTER TABLE ONLY better_auth."rateLimit"
+    ADD CONSTRAINT "rateLimit_key_key" UNIQUE (key);
+
+
+--
+-- Name: rateLimit rateLimit_pkey; Type: CONSTRAINT; Schema: better_auth; Owner: app_migrator
+--
+
+ALTER TABLE ONLY better_auth."rateLimit"
+    ADD CONSTRAINT "rateLimit_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: session session_pkey; Type: CONSTRAINT; Schema: better_auth; Owner: app_migrator
+--
+
+ALTER TABLE ONLY better_auth.session
+    ADD CONSTRAINT session_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: session session_token_key; Type: CONSTRAINT; Schema: better_auth; Owner: app_migrator
+--
+
+ALTER TABLE ONLY better_auth.session
+    ADD CONSTRAINT session_token_key UNIQUE (token);
+
+
+--
+-- Name: twoFactor twoFactor_pkey; Type: CONSTRAINT; Schema: better_auth; Owner: app_migrator
+--
+
+ALTER TABLE ONLY better_auth."twoFactor"
+    ADD CONSTRAINT "twoFactor_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: user user_email_key; Type: CONSTRAINT; Schema: better_auth; Owner: app_migrator
+--
+
+ALTER TABLE ONLY better_auth."user"
+    ADD CONSTRAINT user_email_key UNIQUE (email);
+
+
+--
+-- Name: user user_pkey; Type: CONSTRAINT; Schema: better_auth; Owner: app_migrator
+--
+
+ALTER TABLE ONLY better_auth."user"
+    ADD CONSTRAINT user_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: verification verification_pkey; Type: CONSTRAINT; Schema: better_auth; Owner: app_migrator
+--
+
+ALTER TABLE ONLY better_auth.verification
+    ADD CONSTRAINT verification_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: schema_migrations schema_migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: app_migrator
+--
+
+ALTER TABLE ONLY public.schema_migrations
+    ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
+
+
+--
+-- Name: user_roles user_roles_pkey; Type: CONSTRAINT; Schema: public; Owner: app_migrator
+--
+
+ALTER TABLE ONLY public.user_roles
+    ADD CONSTRAINT user_roles_pkey PRIMARY KEY (user_id);
+
+
+--
+-- Name: account_userId_idx; Type: INDEX; Schema: better_auth; Owner: app_migrator
+--
+
+CREATE INDEX "account_userId_idx" ON better_auth.account USING btree ("userId");
+
+
+--
+-- Name: session_userId_idx; Type: INDEX; Schema: better_auth; Owner: app_migrator
+--
+
+CREATE INDEX "session_userId_idx" ON better_auth.session USING btree ("userId");
+
+
+--
+-- Name: twoFactor_secret_idx; Type: INDEX; Schema: better_auth; Owner: app_migrator
+--
+
+CREATE INDEX "twoFactor_secret_idx" ON better_auth."twoFactor" USING btree (secret);
+
+
+--
+-- Name: twoFactor_userId_idx; Type: INDEX; Schema: better_auth; Owner: app_migrator
+--
+
+CREATE INDEX "twoFactor_userId_idx" ON better_auth."twoFactor" USING btree ("userId");
+
+
+--
+-- Name: verification_identifier_idx; Type: INDEX; Schema: better_auth; Owner: app_migrator
+--
+
+CREATE INDEX verification_identifier_idx ON better_auth.verification USING btree (identifier);
+
+
+--
+-- Name: user_roles user_roles_keep_one_admin; Type: TRIGGER; Schema: public; Owner: app_migrator
+--
+
+CREATE TRIGGER user_roles_keep_one_admin AFTER DELETE OR UPDATE ON public.user_roles FOR EACH ROW EXECUTE FUNCTION app.user_roles_keep_one_admin();
+
+
+--
+-- Name: account account_userId_fkey; Type: FK CONSTRAINT; Schema: better_auth; Owner: app_migrator
+--
+
+ALTER TABLE ONLY better_auth.account
+    ADD CONSTRAINT "account_userId_fkey" FOREIGN KEY ("userId") REFERENCES better_auth."user"(id) ON DELETE CASCADE;
+
+
+--
+-- Name: session session_userId_fkey; Type: FK CONSTRAINT; Schema: better_auth; Owner: app_migrator
+--
+
+ALTER TABLE ONLY better_auth.session
+    ADD CONSTRAINT "session_userId_fkey" FOREIGN KEY ("userId") REFERENCES better_auth."user"(id) ON DELETE CASCADE;
+
+
+--
+-- Name: twoFactor twoFactor_userId_fkey; Type: FK CONSTRAINT; Schema: better_auth; Owner: app_migrator
+--
+
+ALTER TABLE ONLY better_auth."twoFactor"
+    ADD CONSTRAINT "twoFactor_userId_fkey" FOREIGN KEY ("userId") REFERENCES better_auth."user"(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_roles user_roles_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: app_migrator
+--
+
+ALTER TABLE ONLY public.user_roles
+    ADD CONSTRAINT user_roles_user_id_fkey FOREIGN KEY (user_id) REFERENCES better_auth."user"(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_roles; Type: ROW SECURITY; Schema: public; Owner: app_migrator
+--
+
+ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: user_roles user_roles_definer_all; Type: POLICY; Schema: public; Owner: app_migrator
+--
+
+CREATE POLICY user_roles_definer_all ON public.user_roles TO app_definer USING (true) WITH CHECK (true);
+
+
+--
+-- Name: user_roles user_roles_select_admin; Type: POLICY; Schema: public; Owner: app_migrator
+--
+
+CREATE POLICY user_roles_select_admin ON public.user_roles FOR SELECT TO app_authenticated USING (( SELECT app.is_mfa_admin() AS is_mfa_admin));
+
+
+--
+-- Name: user_roles user_roles_select_own; Type: POLICY; Schema: public; Owner: app_migrator
+--
+
+CREATE POLICY user_roles_select_own ON public.user_roles FOR SELECT TO app_authenticated USING ((user_id = ( SELECT app.current_user_id() AS current_user_id)));
+
+
+--
+-- Name: SCHEMA app; Type: ACL; Schema: -; Owner: app_migrator
+--
+
+GRANT USAGE ON SCHEMA app TO app_authenticated;
+GRANT ALL ON SCHEMA app TO app_definer;
+
+
+--
+-- Name: SCHEMA better_auth; Type: ACL; Schema: -; Owner: app_migrator
+--
+
+GRANT USAGE ON SCHEMA better_auth TO auth_service;
+
+
+--
+-- Name: SCHEMA public; Type: ACL; Schema: -; Owner: pg_database_owner
+--
+
+REVOKE USAGE ON SCHEMA public FROM PUBLIC;
+GRANT USAGE ON SCHEMA public TO app_authenticated;
+GRANT USAGE ON SCHEMA public TO app_definer;
+
+
+--
+-- Name: FUNCTION assign_role(p_user_id text, p_role text); Type: ACL; Schema: app; Owner: app_definer
+--
+
+REVOKE ALL ON FUNCTION app.assign_role(p_user_id text, p_role text) FROM PUBLIC;
+GRANT ALL ON FUNCTION app.assign_role(p_user_id text, p_role text) TO app_authenticated;
+GRANT ALL ON FUNCTION app.assign_role(p_user_id text, p_role text) TO app_migrator;
+
+
+--
+-- Name: FUNCTION current_user_id(); Type: ACL; Schema: app; Owner: app_migrator
+--
+
+REVOKE ALL ON FUNCTION app.current_user_id() FROM PUBLIC;
+GRANT ALL ON FUNCTION app.current_user_id() TO app_authenticated;
+GRANT ALL ON FUNCTION app.current_user_id() TO app_definer;
+
+
+--
+-- Name: FUNCTION is_mfa_admin(); Type: ACL; Schema: app; Owner: app_definer
+--
+
+REVOKE ALL ON FUNCTION app.is_mfa_admin() FROM PUBLIC;
+GRANT ALL ON FUNCTION app.is_mfa_admin() TO app_authenticated;
+
+
+--
+-- Name: FUNCTION session_strength(); Type: ACL; Schema: app; Owner: app_migrator
+--
+
+REVOKE ALL ON FUNCTION app.session_strength() FROM PUBLIC;
+GRANT ALL ON FUNCTION app.session_strength() TO app_authenticated;
+GRANT ALL ON FUNCTION app.session_strength() TO app_definer;
+
+
+--
+-- Name: FUNCTION user_roles_keep_one_admin(); Type: ACL; Schema: app; Owner: app_definer
+--
+
+REVOKE ALL ON FUNCTION app.user_roles_keep_one_admin() FROM PUBLIC;
+
+
+--
+-- Name: TABLE account; Type: ACL; Schema: better_auth; Owner: app_migrator
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE better_auth.account TO auth_service;
+
+
+--
+-- Name: TABLE "rateLimit"; Type: ACL; Schema: better_auth; Owner: app_migrator
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE better_auth."rateLimit" TO auth_service;
+
+
+--
+-- Name: TABLE session; Type: ACL; Schema: better_auth; Owner: app_migrator
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE better_auth.session TO auth_service;
+
+
+--
+-- Name: TABLE "twoFactor"; Type: ACL; Schema: better_auth; Owner: app_migrator
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE better_auth."twoFactor" TO auth_service;
+
+
+--
+-- Name: TABLE "user"; Type: ACL; Schema: better_auth; Owner: app_migrator
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE better_auth."user" TO auth_service;
+
+
+--
+-- Name: TABLE verification; Type: ACL; Schema: better_auth; Owner: app_migrator
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE better_auth.verification TO auth_service;
+
+
+--
+-- Name: TABLE user_roles; Type: ACL; Schema: public; Owner: app_migrator
+--
+
+GRANT SELECT ON TABLE public.user_roles TO app_authenticated;
+GRANT SELECT,INSERT,UPDATE ON TABLE public.user_roles TO app_definer;
+
+
+--
+-- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: better_auth; Owner: app_migrator
+--
+
+ALTER DEFAULT PRIVILEGES FOR ROLE app_migrator IN SCHEMA better_auth GRANT SELECT,USAGE ON SEQUENCES TO auth_service;
+
+
+--
+-- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: better_auth; Owner: app_migrator
+--
+
+ALTER DEFAULT PRIVILEGES FOR ROLE app_migrator IN SCHEMA better_auth GRANT SELECT,INSERT,DELETE,UPDATE ON TABLES TO auth_service;
+
+
+--
+-- Name: DEFAULT PRIVILEGES FOR TYPES; Type: DEFAULT ACL; Schema: -; Owner: app_migrator
+--
+
+ALTER DEFAULT PRIVILEGES FOR ROLE app_migrator REVOKE ALL ON TYPES FROM PUBLIC;
+
+
+--
+-- Name: DEFAULT PRIVILEGES FOR FUNCTIONS; Type: DEFAULT ACL; Schema: -; Owner: app_definer
+--
+
+ALTER DEFAULT PRIVILEGES FOR ROLE app_definer REVOKE ALL ON FUNCTIONS FROM PUBLIC;
+
+
+--
+-- Name: DEFAULT PRIVILEGES FOR FUNCTIONS; Type: DEFAULT ACL; Schema: -; Owner: app_migrator
+--
+
+ALTER DEFAULT PRIVILEGES FOR ROLE app_migrator REVOKE ALL ON FUNCTIONS FROM PUBLIC;
+
+
+--
+-- PostgreSQL database dump complete
+--
+
+
