@@ -145,7 +145,12 @@ services:
       DATABASE_URL: ${MIGRATOR_DATABASE_URL}
     entrypoint: ["sh", "-c"]
     command:
-      - 'set -- /db/tests/*.sql; if [ ! -e "$$1" ]; then echo "geen pgTAP-tests in db/tests"; exit 0; fi; exec pg_prove --dbname "$$DATABASE_URL" --failures --ext .sql --recurse /db/tests'
+      - >-
+        set -- /db/tests/*.sql;
+        if [ ! -e "$$1" ]; then echo "geen pgTAP-tests in db/tests"; exit 0; fi;
+        who=$$(psql "$$DATABASE_URL" --no-psqlrc -Atc 'select current_user') || exit 1;
+        echo "pgTAP verbindt als: $$who";
+        exec pg_prove --dbname "$$DATABASE_URL" --failures --ext .sql --recurse /db/tests
     volumes:
       - ./db/tests:/db/tests:ro
     tmpfs:
