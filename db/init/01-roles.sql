@@ -12,7 +12,7 @@ create role app_authenticated nologin noinherit;
 -- De API: geen eigen rechten, mag alleen SET LOCAL ROLE app_authenticated.
 create role api_user login noinherit password 'api_user' in role app_authenticated;
 
--- Better Auth: alleen DML op schema auth (grants in de migratie).
+-- Better Auth: alleen DML op schema better_auth (grants in de migratie).
 create role auth_service login password 'auth_service';
 
 -- Eigenaar van security definer-functies; krijgt alleen de rechten die die functies nodig hebben.
@@ -21,7 +21,10 @@ create role app_definer nologin;
 alter role api_user set statement_timeout = '5s';
 alter role api_user set idle_in_transaction_session_timeout = '10s';
 alter role auth_service set statement_timeout = '5s';
-alter role auth_service set search_path = auth;
+alter role auth_service set idle_in_transaction_session_timeout = '10s';
+alter role auth_service set search_path = better_auth;
+-- Een migratie wacht niet eindeloos op een lock van de draaiende app.
+alter role app_migrator set lock_timeout = '5s';
 
 revoke all on database app from public;
 grant connect on database app to app_migrator, api_user, auth_service;

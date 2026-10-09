@@ -7,13 +7,14 @@ Template voor webapps, gebouwd door agents binnen afgedwongen kaders. De regels 
 
 Fundering in opbouw (fase 0/1). Wat niet in `package.json` of de repo staat, bestaat nog niet: verzin geen
 commando's, scripts of bestanden. Noem iets pas klaar met de uitvoer van de check die het bewijst.
+Een ADR met status `voorgesteld` is nog geen besluit: staat werk erop te wachten, vraag de eigenaar.
 
 ## Stack
 
 - `src/core/{api,web,shared}` — van de template; een app wijzigt het niet, maar breidt uit via registratie (ADR 0008).
 - `src/web` — Vite + React SPA, TanStack Router/Query, React Hook Form, shadcn/ui, Tailwind v4.
 - `src/api` — Hono; lokale ingang `src/api/server.ts` (:8787). Host-adapters alleen in `deploy/<host>/`.
-- `src/core/api/auth` — Better Auth, sessie-cookie, schema `auth` (ADR 0003).
+- `src/core/api/auth` — Better Auth, sessie-cookie, schema `better_auth` (ADR 0003, 0010).
 - `src/core/shared` — `can()`-engine, basisfoutcodes en -limieten, branded IDs, `Cents`, cursor-contract, `assert()`, `unsafeCast()`.
 - `src/shared` — zod-schema's, `permissions.ts`, eigen foutcodes, `limits.ts` en IDs van de app.
 - `db/` — SQL-migraties (dbmate), pgTAP-tests, `schema.snapshot.sql` (gegenereerd); rollen in `db/init/` (ADR 0004).
@@ -29,7 +30,7 @@ vangen het later toch, en dan is het werk verloren. Uitzonderingen staan limitat
 - `src/core` importeert nooit uit app-code; app-code mag core importeren. Een app wijzigt `src/core` niet.
 - `src/web` haalt data alleen via `src/web/lib/api.ts`; geen databasedriver, ORM of provider-SDK.
 - `src/web` importeert uit `src/api` alleen het type `AppType`; `shared` (beide zones) importeert niets uit `web` of `api`.
-- Alleen `src/core/api/db` maakt databaseverbindingen (en `src/core/api/auth` voor Better Auth). `src/core/api/db` exporteert alleen `withUser()`.
+- Alleen `src/core/api/db` maakt databaseverbindingen (en `src/core/api/auth` voor Better Auth). `src/core/api/db` exporteert alleen `withUser()` (en `testing.ts` voor tests).
 - `process.env` alleen in `src/core/api/env.ts`, `import.meta.env` alleen in `src/core/web/lib/env.ts`. Alleen publieke waarden krijgen `VITE_`.
 - `MIGRATOR_DATABASE_URL` alleen in `scripts/`, nooit in `src/`.
 
@@ -45,6 +46,7 @@ vangen het later toch, en dan is het werk verloren. Uitzonderingen staan limitat
 - `security definer` alleen met `set search_path = ''`, volledig gekwalificeerde namen en eigenaar `app_definer`.
 - Wijzig nooit een gecommitte migratie; maak een nieuwe (expand/contract). Maak geen rollen in migraties.
 - Gebruik nooit `SET ROLE` of `set_config(…, false)`: op een gedeelde verbinding lekt dat naar de volgende gebruiker.
+  `set_config`/`current_setting` alleen in `src/core/api/db`, anders kan een query een andere gebruiker of MFA voorwenden.
 
 **Types en code** — zodat de compiler fouten vindt in plaats van gebruikers.
 - Geen type-assertions (`x as T`), geen `any`, geen `@ts-ignore` of `eslint-disable`. Uitweg: `unsafeCast(value, reden)`.
@@ -59,11 +61,13 @@ vangen het later toch, en dan is het werk verloren. Uitzonderingen staan limitat
 - Past geen bestaand component, stop dan en stel een variant voor in plaats van iets nieuws ernaast te bouwen.
 
 **Tests** — zodat groen ook echt iets betekent.
-- Voeg tests toe; wijzig, verwijder of skip geen bestaande test. Lijkt een test fout, leg het de eigenaar voor.
+- Voeg tests toe. Wijzig een bestaande test alleen als de spec of opdracht het geteste gedrag verandert, en noem hem met
+  reden in de PR. Verwijderen of skippen alleen met akkoord van de eigenaar. Lijkt een test fout, leg het de eigenaar voor.
+- Unit `*.test.ts(x)` naast de code; integratie `*.int.test.ts` (via `pnpm test:db`); e2e in `e2e/`.
 - E2E en integratietests draaien tegen de echte lokale stack, nooit met gemockte API of database.
 
 **Repo en grenzen** — zodat de kaders zelf niet ongemerkt verschuiven.
-- Bewerk geen gegenereerde bestanden en geen `.env*` (behalve `.env.example`).
+- Bewerk geen gegenereerde bestanden en geen `.env*`; `.env.example` is beschermd (de demo-waarden zijn een securityregel).
 - Beschermde paden (`docs/framework.md` §10) wijzig je alleen na akkoord van de eigenaar.
 - Geen nieuwe dependency zonder akkoord. Zet een spec nooit op `goedgekeurd`; dat doet alleen de eigenaar.
 - Push nooit naar `main`, gebruik nooit `--no-verify`, merge nooit. Eén onderwerp per PR, conventional commits.

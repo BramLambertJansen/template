@@ -15,3 +15,7 @@ Volgt [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/). Een release-tag 
   commit `8422b8663489c1bbf63f39ebd6faa32a62098c85`. ADR 0008 (grens core/app, voorgesteld) met `src/core/`, nieuwe padregel `core.md`
   en aangepaste beschermde paden; ADR 0009 (tests buiten de sandbox, voorgesteld). Roadmap fase 1 als zes verticale stukken met
   "klaar als" per stuk; ADR-nummer voor het datapad niet meer vast. Framework §6: env-schema weigert `.env.example`-waarden buiten localhost.
+- Review framework 2026-10-09 (`docs/reviews/2026-10-09-framework.md`) doorgevoerd: baseline gefixt (rechten `app_definer`) en schema
+  `better_auth` (ADR 0010, voorgesteld); ADR 0009 herzien (alles in de runner); sandbox: `excludedCommands` met argumenten en in `ask`,
+  `denyRead` op inloggegevens; testregel versoepeld; env-regel op `APP_ENV`; ADR 0007/0008 aangescherpt; roadmap: rails en test-infra in
+  stuk 1, stuk 3 in 3a–3d, Better Auth uit fase 0; ADR 0006 terug op voorgesteld in de roadmap.

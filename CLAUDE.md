@@ -4,16 +4,8 @@ Dit bestand bevat aanvullingen voor Claude Code. De platformneutrale werkstraat 
 
 ## Werkstraat (verplicht)
 
-1. **Spec** — bij migratie, nieuwe route of nieuwe permissie. Niet bouwen vóór `status: goedgekeurd`.
-2. **Contract** — zod-schema's en routes die `501` teruggeven, wanneer de wijziging een API-contract toevoegt.
-3. **Tester-subagent** — acceptatietests tegen het contract; ze compileren en falen op hun asserties.
-4. **Bouwen** — tot alle tests groen zijn. Tests toevoegen mag, bestaande wijzigen niet. Lijkt een test van de
-   tester fout: stop, leg het de eigenaar voor; na akkoord past de tester hem aan.
-5. **Reviewer-subagent** — schone context, loopt `docs/dod.md` af, rapporteert alleen correctheid,
-   duplicatie, spec-afwijking en ontbrekende testinhoud.
-6. **Eigenaar** — reviewt en merget. Jij nooit.
-
-Licht pad (geen migratie, route of permissie): plan → bouwen → review.
+Spec → contract → tester-subagent → bouwen → reviewer-subagent → eigenaar merget (jij nooit). De volledige tekst, ook
+wanneer je een bestaande test mag wijzigen en het lichte pad, staat op één plek: `docs/framework.md` §8.
 
 ## Stoppen en vragen
 

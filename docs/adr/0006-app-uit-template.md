@@ -34,5 +34,6 @@ als uitvoerbare stappen.
 
 - `check-github` (fase 1) controleert dat merge-commits toegestaan zijn en rebase niet.
 - Hernoemen in een app raakt alleen `package.json`, README en CHANGELOG (en CODEOWNERS bij een andere eigenaar); de rest van de template
-  blijft gelijk, zodat updates schoon mergen.
+  blijft gelijk. In die vier bestanden zijn conflicten bij een template-update verwacht; de app houdt haar eigen versie.
+  App-code buiten `src/core` raakt de template niet (ADR 0008).
 - Een app met een private repo op een gratis account heeft geen ruleset; de eigenaar kiest Pro, een organisatie met Team, of public.

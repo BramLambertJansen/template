@@ -27,7 +27,7 @@ cp .env.example .env.local
 docker compose --env-file .env.local up -d --build --wait   # Postgres 17 + pgTAP op 127.0.0.1:54322, Mailpit op http://127.0.0.1:54324
 ```
 
-Draait er al een app op die poorten: tel 10 op bij `PG_PORT`, `MAIL_UI_PORT` en `SMTP_PORT` én bij de poort in de drie database-URL's in `.env.local`.
+Draait er al een app op die poorten: tel 10 op bij `PG_PORT`, `MAIL_UI_PORT` en `SMTP_PORT` én bij de poort in de drie database-URL's en `SMTP_URL` in `.env.local`.
 
 `pnpm dev`, `scripts/bootstrap.sh` en `scripts/doctor.sh` volgen in fase 1.
 

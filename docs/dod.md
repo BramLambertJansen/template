@@ -8,7 +8,8 @@ De reviewer bepaalt eerst welke fase uit `docs/roadmap.md` bij het werk hoort: d
 - [ ] Een wijziging die een check, hook, script of testconfiguratie verwijdert, hernoemt of afzwakt (ook in `package.json`, `.github/` of `scripts/`) is een blokkerende bevinding tot de eigenaar akkoord geeft. Een weggehaalde check telt niet als "bestaat niet".
 - [ ] Als `check-docs` bestaat, voer die ook uit bij documentatiewijzigingen. Als die nog niet bestaat, meld dat expliciet en controleer handmatig de gewijzigde interne links en verwijzingen op juistheid; deze controle vervangt de ontbrekende check niet.
 - [ ] Elk acceptatiecriterium voor gewijzigd gedrag heeft een inhoudelijke test (geen lege of triviale assertie). Bij wijzigingen zonder gedragsverandering, zoals alleen documentatie, noteer je voor dit criterium “n.v.t.” met reden; toepasselijke documentatiechecks blijven verplicht.
-- [ ] Geen bestaande migratie of bestaande test gewijzigd. Als zo'n wijziging noodzakelijk lijkt, stop en leg dit voor aan de eigenaar.
+- [ ] Geen bestaande migratie gewijzigd. Een bestaande test is alleen gewijzigd als de spec of opdracht het geteste gedrag verandert, en staat met reden in de PR; geen test verwijderd of geskipt zonder akkoord van de eigenaar.
+- [ ] Nieuwe of gewijzigde tests en configs die buiten de sandbox draaien (`excludedCommands`), zijn door de eigenaar gelezen vóór zo'n run, zolang ADR 0009 niet gebouwd is.
 - [ ] Bij migratie, nieuwe route of nieuwe permissie bestaat een goedgekeurde spec in `docs/specs/`; zonder die spec is de PR niet klaar. Laat de status alleen naar `gebouwd` gaan als de implementatie is afgerond. Verander nooit zelf een status naar `goedgekeurd`.
 
 ### Beveiliging en data (geldt in elke fase)
@@ -27,7 +28,7 @@ De reviewer bepaalt eerst welke fase uit `docs/roadmap.md` bij het werk hoort: d
 
 - [ ] Voor elke gebouwde capability zijn de toepasselijke check, test en documentatie bijgewerkt; roadmap-items blijven open totdat de checkuitslag of het bewijs beschikbaar is.
 
-## Fase 2 — Gouden pad en features
+## Features (fase 1 stuk 3 "gebruikersbeheer" en elke feature in fase 2)
 
 - [ ] Elk acceptatiecriterium uit de goedgekeurde spec is gedekt door een inhoudelijke test; meld ontbrekende criteria afzonderlijk.
 - [ ] Bij schermwerk: als `ui:check` in `package.json` bestaat, voer `pnpm ui:check <route>` uit (375 en 1280 px + axe) en noteer de uitslag. Zo niet, vermeld dat de check nog niet beschikbaar is; claim geen UI-check als geslaagd.

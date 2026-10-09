@@ -17,7 +17,7 @@ paths:
   Een route vangt ze nooit zelf af. Nieuwe foutcode: `src/shared/errors.ts`, tekst in `src/web/copy/errors.ts`.
 - Pure logica in `src/api/domain` (unit-testbaar, geen I/O). Handlers zijn dun.
 - `process.env` alleen in `src/core/api/env.ts`; app-variabelen als schema in `src/api/env.ts`. Logging alleen via `src/core/api/obs` met `requestId`.
-- `src/core/api/auth`: Better Auth op `/api/auth/*`, eigen verbinding als `auth_service`, alleen schema `auth`. Sessie per request uit
+- `src/core/api/auth`: Better Auth op `/api/auth/*`, eigen verbinding als `auth_service`, alleen schema `better_auth`. Sessie per request uit
   de database (`cookieCache` uit); rollen uit `user_roles`, nooit uit de sessie. Alleen plugins two-factor en magic link;
   een andere plugin vraagt een ADR. Sessiebeleid en MFA: ADR 0003.
 - CSRF-middleware vóór alle routes; geen `cors()`. `bodyLimit` op de app; paginagrootte uit `limits.ts`.

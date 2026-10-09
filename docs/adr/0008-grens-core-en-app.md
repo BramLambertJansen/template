@@ -39,14 +39,16 @@ niet via een import. Er is geen globale registratie en geen mutable singleton.
 | `assert`, `unsafeCast`, `Cents`, cursor | `core/shared/` | — |
 | Branded IDs | `core/shared/ids.ts` (`brand()`-helper, `UserId`) | `shared/ids.ts` |
 | Foutcodes | `core/shared/errors.ts` (basiscodes), `core/web/copy/errors.ts` (tekst) | `shared/errors.ts`, `web/copy/errors.ts` |
-| Permissies, `can()` | `core/shared/can.ts` (engine, MFA-eis voor admin-permissies) | `shared/permissions.ts` (tabel) |
+| Permissies, `can()` | `core/shared/can.ts` (engine, MFA-eis voor de rol `admin`, permissie `app.use`) | `shared/permissions.ts` (tabel) |
 | Limieten | `core/shared/limits.ts` (harde grenzen: body, paginagrootte) | `shared/limits.ts` |
 
 **Uitbreiden zonder edit**
 
-- *Permissies*: `shared/permissions.ts` roept `definePermissions({ 'notes.read': { roles: [...] }, 'users.manage': { roles: ['admin'], admin: true } })`
+- *Permissies*: `shared/permissions.ts` roept `definePermissions({ 'notes.read': { roles: [...] }, 'users.manage': { roles: ['admin'] } })`
   aan en exporteert `can`. `createRouteKit({ permissions })` maakt het `permission`-veld van `defineRoute` een union van precies die sleutels.
-  De MFA-eis volgt uit `admin: true`; die logica zit in core en in de RLS-helper, niet in de tabel.
+  De MFA-eis leidt core af uit de rol: elke permissie die `admin` heeft, eist `mfa`; de app kan dat niet uitzetten. De RLS-helper
+  kijkt naar dezelfde rol in `user_roles`, zodat `can()` en RLS niet uit elkaar lopen. Core levert `app.use` (elke ingelogde rol)
+  voor gewone ingelogde schermen.
 - *Foutcodes*: `shared/errors.ts` doet `defineErrorCodes(['NOTE_LOCKED'])`; `ErrorCode = CoreErrorCode | AppErrorCode`.
   `web/copy/errors.ts` is `{ ...coreErrorCopy, NOTE_LOCKED: '…' } satisfies Record<ErrorCode, string>`; een basistekst
   overschrijven mag daar, een code vergeten faalt in TypeScript.
@@ -64,12 +66,20 @@ later in de template komt, dan vervangt de app het eigen component na de merge d
 referentie-feature gebruikersbeheer en de app-tabellen in `permissions.ts`/`errors.ts`) is startinhoud: na het aanmaken van
 de app beheert de app het. De template houdt die bestanden klein en wijzigt ze zelden; een conflict daar is verwacht en lokaal op te lossen.
 
-**Beschermd ≠ core.** Beschermd is alles wat alleen met akkoord van de eigenaar verandert (framework §10). Core is daarvan het
-deel dat een app helemaal niet wijzigt. App-paden die beschermd blijven: `src/shared/permissions.ts` en `src/api/env.ts`.
+**Compositie-roots kunnen de rails niet omzeilen.** `createApp(config)` accepteert alleen `RouteDef[]` uit `defineRoute` en geeft
+alleen `{ fetch }` terug, dus de app kan geen route of middleware buiten core om toevoegen. Lint verbiedt `hono`-imports buiten
+`src/core`; een core-test somt alle routes op en controleert de middleware-volgorde. Config die beveiliging raakt (bijv. `bodyLimit`)
+mag alleen binnen een harde grens van core.
 
-**Afdwingen.** dependency-cruiser (richting core → app verboden), `check-core` (een PR in een app die `src/core/` wijzigt
-faalt, behalve een template-merge: een merge-commit met `template/main` als ouder), CODEOWNERS en `ask` op `src/core/`.
-In de template zelf is `check-core` uit. Een fout in core die een app raakt, wordt in de template opgelost, niet in de app.
+**Beschermd ≠ core.** Beschermd is alles wat alleen met akkoord van de eigenaar verandert (framework §10). Core is daarvan het
+deel dat een app helemaal niet wijzigt. App-paden die beschermd blijven: de compositie-roots (`src/api/app.ts`, `kit.ts`, `server.ts`),
+`src/api/env.ts`, `src/shared/permissions.ts` en `deploy/`.
+
+**Afdwingen.** dependency-cruiser (richting core → app verboden), CODEOWNERS en `ask` op `src/core/`, en `check-core` in `guard.yml`
+(dus de versie van `main`): een PR in een app die `src/core/` wijzigt, faalt, tenzij het een template-merge is. Dat telt alleen als
+(1) de tweede ouder `P2` een voorouder is van `template/main`, opgehaald van de vaste template-URL; (2) `git diff P2 <merge> -- src/core`
+leeg is (geen eigen wijziging in de merge zelf); (3) geen ander commit in de PR `src/core/` raakt. In de template zelf is `check-core` uit.
+Een fout in core die een app raakt, wordt in de template opgelost, niet in de app.
 
 ## Alternatieven
 
@@ -82,7 +92,7 @@ In de template zelf is `check-core` uit. Een fout in core die een app raakt, wor
 ## Gevolgen
 
 - Framework §2, §3, §5, §7, §10 en §11a, `.claude/rules/`, CODEOWNERS en `ask` noemen de nieuwe paden; `.claude/rules/core.md` is nieuw.
-- Pad-aliassen (`@core/*`, `@app/*`) worden in het skelet vastgelegd.
+- Pad-aliassen via `imports` in `package.json` (`#core/*`, `#api/*`, `#web/*`, `#shared/*`; framework §4), vastgelegd in het skelet.
 - Fase 0 (`withUser()`) bouwt direct in `src/core/api/db`.
 - `check-core` en de dependency-cruiser-regel horen bij "rails afdwingen" in de roadmap.
 - Core krijgt een tweede soort gebruiker (de app via config); elke uitbreidingsplek heeft een test in core die bewijst dat een app

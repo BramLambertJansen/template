@@ -4,12 +4,15 @@
 
 ## Bewijs
 
+- Fase(s) uit `docs/roadmap.md` en waarom:
 - Acceptatiecriteria die deze PR afdekt (bijv. `notes/AC-1`) en de tests die ze bewijzen:
-- Checkuitslag (`gate:fast`, `gate:slow`):
+- Checkuitslag per exact commando (`gate:fast`, `gate:slow`, osv-scanner, CodeQL; wat nog niet bestaat: "niet beschikbaar"):
 - Bij schermwerk: `ui:check` gedaan voor:
+- Gewijzigde bestaande tests, met reden:
 
 ## Checklist
 
 - [ ] `docs/dod.md` doorlopen
-- [ ] Geen bestaande migratie of test gewijzigd
+- [ ] Geen bestaande migratie gewijzigd; geen test verwijderd of geskipt zonder akkoord
+- [ ] Nieuwe of gewijzigde tests/configs gelezen door de eigenaar vóór een run buiten de sandbox (tot ADR 0009 gebouwd is)
 - [ ] Nieuwe `unsafeCast` heeft een reden
