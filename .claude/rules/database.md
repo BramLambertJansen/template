@@ -36,5 +36,5 @@ paths:
 
 ## Besloten, nog niet gebouwd
 
-`withUser()`, `db/schema.snapshot.sql`, `check-secdef`, `check-policies`, de functiecatalogus in pgTAP (framework §6), de RLS-invarianten en de
+`withUser()` bestaat (zonder foutvertaling, ADR 0012). Nog niet: `db/schema.snapshot.sql`, `check-secdef`, `check-policies`, de functiecatalogus in pgTAP (framework §6), de RLS-invarianten en de
 scripts voor types en snapshot bestaan nog niet (roadmap fase 0 en 1). Alleen de baseline-migratie staat er. Bouw er niet op vooruit.

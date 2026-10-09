@@ -15,5 +15,6 @@ paths:
 
 ## Besloten, nog niet gebouwd
 
-`src/core` bevat nog alleen lege mappen; `check-core` en de dependency-cruiser-regel core → app bestaan nog niet (roadmap fase 1).
+Gebouwd: `src/core/api/{env.ts,db,http}`, `src/core/shared/{errors,limits}.ts` en de API-client; de dependency-cruiser-regel core → app bestaat.
+Nog niet: `check-core` en de rest van core (roadmap fase 1).
 Bouw een core-onderdeel alleen in het stuk van de roadmap waar het hoort.
