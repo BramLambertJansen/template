@@ -48,8 +48,12 @@ export default defineConfig(({ command, mode }) => {
   const proxy = { '/api': { target: apiTarget } };
   const isDev = command === 'serve' && mode === 'development';
 
+  // In de runner (ADR 0009) is de repo read-only: de cache gaat dan naar RUNNER_CACHE_DIR.
+  const runnerCache = env['RUNNER_CACHE_DIR'];
+
   return {
     root: 'src/web',
+    ...(runnerCache === undefined ? {} : { cacheDir: runnerCache }),
     envDir: import.meta.dirname,
     plugins: [react()],
     html: isDev ? { cspNonce: DEV_NONCE } : {},
