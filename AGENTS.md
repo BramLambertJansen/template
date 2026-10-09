@@ -72,7 +72,9 @@ vangen het later toch, en dan is het werk verloren. Uitzonderingen staan limitat
 - Ontbreekt een beslissing (bedrag, tekst, randgeval, providerkeuze): vraag het, vul geen aanname in.
 - Migratie, nieuwe route of nieuwe permissie: eerst een spec (`docs/specs/_template.md`), bouwen pas bij `status: goedgekeurd`.
 - UI-tekst Nederlands; code, commits en branchnamen Engels. Naamgeving: `docs/framework.md` §5.
-- Klaar is elk punt van `docs/dod.md`, met bewijs.
+- Volg `docs/dod.md` fasebewust: voer bestaande, toepasselijke checks uit en vermeld exact wat nog niet beschikbaar is; verzin geen commando's of uitslagen.
+- Volg de platformneutrale werkstraat in `docs/framework.md` §8. Agentrollen zijn onafhankelijk waar de runtime dat ondersteunt; ontbreekt een onafhankelijke reviewer, vraag de eigenaar om die review en claim niet dat je eigen werk onafhankelijk is gecontroleerd.
+- Runtime-specifieke instructies gelden alleen voor die runtime. `.claude/`-configuratie is geen aanname over andere agentomgevingen.
 
 ## Waar een regel woont
 

@@ -135,7 +135,7 @@ Ankers: OWASP Top 10:2025, OWASP API Security Top 10, ASVS 5.0 niveau 1 (checkli
 - **Sessies** (ADR 0003): Better Auth in `src/api/auth`, sessie in de database (`cookieCache` uit), cookie `__Host-`, `httpOnly`,
   `Secure`, `SameSite=Lax`; geen token in `localStorage`. Absoluut 7 dagen, idle 12 uur, `freshAge` 10 min voor gevoelige acties;
   wachtwoord- of 2FA-wijziging trekt andere sessies in. Gebruikersbewerkbare velden nooit voor autorisatie.
-- **CSRF**: eigen middleware; niet-GET eist `Sec-Fetch-Site: same-origin` of `Origin === APP_ORIGIN` en `Content-Type: application/json`. Geen `cors()`.
+- **CSRF**: eigen middleware; elk niet-GET-request vereist `Content-Type: application/json`. Minstens een van `Sec-Fetch-Site` en `Origin` moet aanwezig zijn; elke aanwezige header moet respectievelijk `same-origin` of exact `APP_ORIGIN` zijn. Als beide headers ontbreken of een aanwezige header niet klopt, wordt het request geweigerd. Geen `cors()`.
 - **Accounts**: e-mailverificatie verplicht, geen account-enumeratie bij aanmelden en reset, gelekte wachtwoorden geweigerd (staging/productie).
 - **Eigen databaserol**: de API verbindt als `api_user` (NOINHERIT, geen eigen rechten, alleen lid van `app_authenticated`),
   nooit als superuser of eigenaar. Systeemjobs krijgen een aparte rol. Werkt de gekozen pooler (transaction mode) niet met
@@ -195,16 +195,18 @@ Ankers: OWASP Top 10:2025, OWASP API Security Top 10, ASVS 5.0 niveau 1 (checkli
 ## 8. Werkstraat
 
 1. **Spec** in `docs/specs/` volgens `_template.md` — alleen bij migratie, nieuwe route of nieuwe permissie. Status `goedgekeurd` zet alleen de eigenaar.
-2. **Contract**: zod-schema's en routes die `501` teruggeven.
-3. **Tester-subagent** (sonnet) schrijft acceptatietests tegen het contract; ze compileren en falen op hun asserties. Schrijft alleen in testpaden (PreToolUse-hook).
+2. **Contract**: zod-schema's en routes die `501` teruggeven wanneer de wijziging een API-contract toevoegt.
+3. **Tester-agent** schrijft acceptatietests tegen het contract; ze compileren en falen op hun asserties. Schrijft alleen in testpaden.
 4. **Hoofdsessie** bouwt tot groen. Mag tests toevoegen, nooit bestaande wijzigen of verwijderen. Lijkt een test van de tester fout,
    dan stopt de hoofdsessie en legt het de eigenaar voor; na akkoord past de tester (niet de hoofdsessie) de test aan.
-5. **Reviewer-subagent** (opus, `tools: Read, Grep, Glob, Bash`, `maxTurns`, readonly-bash-hook) keurt tegen `docs/dod.md`: correctheid, duplicatie, spec-afwijking, testinhoud per criterium. Stijl is werk van de lint.
+5. **Reviewer-agent** met schone context controleert `docs/dod.md`: correctheid, duplicatie, spec-afwijking en testinhoud per criterium. Stijl is werk van de lint.
 6. **Eigenaar** reviewt en merget.
 
 Licht pad: geen migratie, route of permissie → plan, bouwen, review.
 
-CI zet gewijzigde bestaande tests als lijst in de PR. Ontbreekt de subagent nog, dan draait de rol als ad-hoc subagent met dezelfde opdracht; de hoofdsessie reviewt nooit haar eigen werk.
+CI zet gewijzigde bestaande tests als lijst in de PR. Implementeer tester- en reviewerrollen als onafhankelijke agents wanneer de gebruikte agentruntime dat ondersteunt; beperk hun bestandstoegang en commando's met de beveiligingsmechanismen van die runtime. Ontbreekt een rol of ondersteunt de runtime geen onafhankelijke agents, voer dan geen onafhankelijke review voor die rol op. Benoem de ontbrekende stap expliciet en laat de eigenaar die uitvoeren vóór samenvoegen. De hoofdsessie reviewt nooit haar eigen werk.
+
+De rollen en criteria in deze werkstraat zijn platformneutraal. Hooks, permissies, sandboxinstellingen en agentconfiguratie zijn runtime-specifieke implementaties; documenteer en activeer die alleen voor de agentruntime waarvoor ze zijn getest.
 
 Hooks (exit 2 blokkeert; exit 1 en een timeout laten door, dus elke hook heeft een korte expliciete `timeout`
 en `set -euo pipefail` met `trap 'exit 2' ERR`):

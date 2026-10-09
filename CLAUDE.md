@@ -1,5 +1,7 @@
 @AGENTS.md
 
+Dit bestand bevat aanvullingen voor Claude Code. De platformneutrale werkstraat en projectregels staan in `AGENTS.md` en `docs/framework.md`; runtime-specifieke hooks, tools en agentconfiguratie gelden alleen in Claude Code.
+
 ## Werkstraat (verplicht)
 
 1. **Spec** — bij migratie, nieuwe route of nieuwe permissie. Niet bouwen vóór `status: goedgekeurd`.
@@ -25,5 +27,4 @@ Licht pad (geen migratie, route of permissie): plan → bouwen → review.
 - Lees `db/schema.snapshot.sql` in plaats van alle migraties (zodra die bestaat).
 - Externe diensten via hun CLI (`gh`); MCP alleen read-only. Geen `docker`.
 
-Subagents, skills en hooks volgen in fase 1 (`docs/roadmap.md`). Tot ze bestaan, start je tester en reviewer als ad-hoc
-subagent met dezelfde opdracht; je reviewt nooit je eigen werk.
+Subagents, skills en hooks volgen in fase 1 (`docs/roadmap.md`). Tot de gespecialiseerde agents bestaan, gebruik je voor de tester- en reviewerrol ad-hoc subagents met dezelfde afgebakende opdracht. Als een rol niet onafhankelijk kan worden uitgevoerd, leg je die stap voor aan de eigenaar; je reviewt nooit je eigen werk.
