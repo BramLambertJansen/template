@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Draait door de agent geschreven tests en configs in de runner-container (ADR 0009): read-only repo, geen
 # capabilities, alleen op het interne netwerk test-net met een eigen, verse test-database.
-# Gebruik: scripts/runner.sh db|ui [--sta-wijzigingen-toe]   (via pnpm test:db en pnpm ui:check)
+# Gebruik: scripts/runner.sh db|ui|gen [--sta-wijzigingen-toe]   (via pnpm test:db, pnpm ui:check en pnpm db:generate)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -15,7 +15,9 @@ case "$suite" in
   # pgTAP eerst: die tests draaien in een teruggedraaide transactie en verwachten de verse database na de migraties.
   db) services=(test-pgtap runner) ;;
   ui) services=(ui-runner) ;;
-  *) echo "Gebruik: scripts/runner.sh db|ui [--sta-wijzigingen-toe]" >&2; exit 2 ;;
+  # Uitvoer naar .runner-output/gen; scripts/db-generate.sh zet die op zijn plek.
+  gen) services=(gen-snapshot gen-schema) ;;
+  *) echo "Gebruik: scripts/runner.sh db|ui|gen [--sta-wijzigingen-toe]" >&2; exit 2 ;;
 esac
 
 if [[ "${2:-}" != "--sta-wijzigingen-toe" ]]; then

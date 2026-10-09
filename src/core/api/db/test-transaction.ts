@@ -5,6 +5,7 @@ import type { AuthGateway, SessionInfo } from '../auth/auth.ts';
 import { translateDatabaseError } from '../errors.ts';
 import type { Actor, SessionStrength, WithUser } from './types.ts';
 import { checkActor, enterActor } from './with-user.ts';
+import { UserId } from '../../shared/ids.ts';
 
 // Testkit (framework §4, ADR 0012): één transactie per test die aan het eind terugdraait, een savepoint per withUser-aanroep.
 // Alleen via testing.ts, dus alleen vanuit testbestanden (dependency-cruiser: testing-alleen-in-tests).
@@ -72,7 +73,7 @@ export async function beginTestDb(pool: Pool): Promise<TestDb> {
   const client = await pool.connect();
   await client.query('begin');
   const asUser: TestDb['asUser'] = async (role, options = {}) => {
-    const id = `test-${randomUUID()}`;
+    const id = UserId.parse(`test-${randomUUID()}`);
     const name = options.name ?? 'Test Gebruiker';
     const email = `${id}@test.local`;
     await client.query('insert into better_auth."user" (id, name, email, "emailVerified") values ($1, $2, $3, true)', [

@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import pg from 'pg';
 import { afterAll, describe, expect, test } from 'vitest';
 import { createPool, createWithUser } from '../../src/core/api/db/testing.ts';
+import { UserId } from '../../src/core/shared/ids.ts';
 
 // Fase 0, datapad (ADR 0012): withUser() lekt geen gebruiker of rol tussen requests, direct én via PgBouncer
 // (transaction mode). Draait alleen via `pnpm test:db` in de runner (ADR 0009).
@@ -44,13 +45,16 @@ describe.each(targets)('withUser $name', ({ url: connectionString }) => {
   test(`${String(PARALLEL)} gelijktijdige requests zien elk alleen hun eigen actor`, async () => {
     const seen = await Promise.all(
       Array.from({ length: PARALLEL }, (_, i) =>
-        withUser({ userId: `user-${String(i)}`, sessionStrength: i % 2 === 0 ? 'mfa' : 'password' }, async (tx) => {
-          await tx.execute(sql`select pg_sleep(random() * 0.02)`);
-          const { rows } = await tx.execute<Seen>(
-            sql`select app.current_user_id() as id, app.session_strength() as strength, current_user as role, current_setting('transaction_read_only') as "readOnly"`,
-          );
-          return rows[0];
-        }),
+        withUser(
+          { userId: UserId.parse(`user-${String(i)}`), sessionStrength: i % 2 === 0 ? 'mfa' : 'password' },
+          async (tx) => {
+            await tx.execute(sql`select pg_sleep(random() * 0.02)`);
+            const { rows } = await tx.execute<Seen>(
+              sql`select app.current_user_id() as id, app.session_strength() as strength, current_user as role, current_setting('transaction_read_only') as "readOnly"`,
+            );
+            return rows[0];
+          },
+        ),
       ),
     );
 
@@ -69,7 +73,7 @@ describe.each(targets)('withUser $name', ({ url: connectionString }) => {
 
   test('een fout in de handler draait terug en laat geen actor achter', async () => {
     await expect(
-      withUser({ userId: 'user-fout', sessionStrength: 'mfa' }, async (tx) => {
+      withUser({ userId: UserId.parse('user-fout'), sessionStrength: 'mfa' }, async (tx) => {
         await tx.execute(sql`select 1`);
         throw new Error('handler faalt');
       }),
@@ -80,7 +84,7 @@ describe.each(targets)('withUser $name', ({ url: connectionString }) => {
 
   test('readOnly geeft een read-only transactie', async () => {
     const readOnly = await withUser(
-      { userId: 'user-get', sessionStrength: 'password' },
+      { userId: UserId.parse('user-get'), sessionStrength: 'password' },
       async (tx) =>
         (await tx.execute<Seen>(sql`select current_setting('transaction_read_only') as "readOnly"`)).rows[0]?.readOnly,
       { readOnly: true },
@@ -105,7 +109,7 @@ describe('meting (geen grens; de uitkomst gaat naar ADR 0012)', () => {
       for (let i = 0; i < runs; i += 1) {
         const start = performance.now();
         await session.query('select 1');
-        await withUser({ userId: 'meting', sessionStrength: 'password' }, (tx) =>
+        await withUser({ userId: UserId.parse('meting'), sessionStrength: 'password' }, (tx) =>
           tx.execute(sql`select app.current_user_id()`),
         );
         durations.push(performance.now() - start);

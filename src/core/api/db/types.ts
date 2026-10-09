@@ -1,4 +1,5 @@
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { UserId } from '../../shared/ids.ts';
 
 // Alleen types (geen pool, geen verbinding): route-code en createApp typen hiermee zonder index.ts te laden.
 
@@ -8,9 +9,9 @@ export type Tx = NodePgDatabase;
 
 export type SessionStrength = 'password' | 'mfa';
 
-// userId wordt een branded UserId uit src/core/shared/ids.ts zodra het Drizzle-schema er is (stuk 5c, ADR 0012).
+// userId is een branded UserId (framework §4, ADR 0012): dezelfde brand als de kolommen in het Drizzle-schema.
 export interface Actor {
-  readonly userId: string;
+  readonly userId: UserId;
   readonly sessionStrength: SessionStrength;
 }
 

@@ -24,6 +24,8 @@ const cases: [file: string, rules: string[]][] = [
   ['src/api/naar-web.ts', ['api-niet-naar-web']],
   ['src/web/db.ts', ['database-alleen-in-core-db']],
   ['src/api/db.ts', ['database-alleen-in-core-db']],
+  ['src/api/db/schema.ts', ['schema-alleen-drizzle']],
+  ['src/api/drizzle-buiten-schema.ts', ['database-alleen-in-core-db']],
   ['src/api/a.ts', ['geen-cycles']],
   ['src/web/onbekend.ts', ['niet-oplosbaar']],
   ['src/core/api/db/pool.ts', []],

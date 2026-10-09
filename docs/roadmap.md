@@ -97,8 +97,8 @@ admin (MFA verplicht) zoekt gebruikers met cursor-paginering, kent rollen toe en
 Vier deel-PR's, in deze volgorde.
 
 **3a. Backend-kern**
-- [ ] `defineRoute()` met `ctx.actor`, `createRouteKit`/`createApp` (ADR 0008), getypte client (contracten in `src/shared/contracts`), types per resource
-- [ ] `withUser()` met foutvertaling; Drizzle-introspectie + brands-script
+- [x] `defineRoute()` met `ctx.actor`, `createRouteKit`/`createApp` (ADR 0008), getypte client (contracten in `src/shared/contracts`), types per resource
+- [x] `withUser()` met foutvertaling; Drizzle-schema uit de catalogus met branded IDs (`pnpm db:generate`)
 - [x] Foutcoderegister, `limits.ts`, `assert()`, `unsafeCast()`, `Cents`, cursor-contract — met uitbreiding door de app (ADR 0008)
 - [x] `user_roles` (FK naar `better_auth."user"`), `can()` met permissietabel van de app, MFA-eis afgeleid uit de rol in `can()` én RLS-helper, admin-test zonder MFA
 - [x] pgTAP-invarianten (RLS geforceerd, geen TRUNCATE/REFERENCES/TRIGGER, `better_auth` dicht), racetest-patroon

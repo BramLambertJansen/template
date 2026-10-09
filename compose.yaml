@@ -188,6 +188,37 @@ services:
     image: node:26.11.1-bookworm-slim@sha256:86f07bc9c5dce4578cf37e5a418b7bfc7f817cda25cde66e2b66e95ed86c4567
     command: ["node", "node_modules/vitest/vitest.mjs", "run", "--project", "int", "--configLoader", "native"]
 
+  # pnpm db:generate (scripts/db-generate.sh): snapshot met pg_dump uit het gepinde image, schema.ts uit de catalogus.
+  gen-snapshot:
+    <<: *hardened
+    profiles: [test]
+    build: db/docker
+    user: "${RUNNER_UID:-65534}:${RUNNER_GID:-65534}"
+    environment:
+      HOME: /tmp
+      DATABASE_URL: ${MIGRATOR_DATABASE_URL}
+    entrypoint: ["sh", "-c"]
+    command:
+      - >-
+        mkdir -p /output/gen &&
+        exec pg_dump --dbname "$$DATABASE_URL" --schema-only -N tap --exclude-extension=pgtap
+        --file /output/gen/schema.snapshot.sql
+    volumes:
+      - ./.runner-output:/output
+    tmpfs:
+      - /tmp
+    depends_on:
+      test-migrate:
+        condition: service_completed_successfully
+
+  gen-schema:
+    <<: *runner
+    image: node:26.11.1-bookworm-slim@sha256:86f07bc9c5dce4578cf37e5a418b7bfc7f817cda25cde66e2b66e95ed86c4567
+    command: ["node", "scripts/db-introspect.mjs"]
+    depends_on:
+      test-migrate:
+        condition: service_completed_successfully
+
   ui-runner:
     <<: *runner
     # Exact de versie van @playwright/test (framework §11); screenshot-baselines alleen in dit image.

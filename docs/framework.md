@@ -84,7 +84,8 @@ dependency-cruiser); checks op de database lezen de catalogus van de lokale data
 - **Geen casts**: type-assertions (`x as T`, `<T>x`) zijn verboden (`consistent-type-assertions: never`); `as const` en `import { a as b }` mogen; `unsafeCast(value, reden)` in `src/core/shared` is de enige uitweg. CI zet het verschil in aantal op de PR.
 - **`assert(cond, msg)`** in `src/core/shared`, actief in productie en gemeld aan de fouttracking; in de frontend vangt een ErrorBoundary per route hem op.
 - **Types per resource** apart geëxporteerd uit de API, zodat de TypeScript-server niet trager wordt naarmate routes groeien.
-- **Branded IDs** (`UserId`) via zod `.brand()`; een script na schema-introspectie zet `$type<UserId>()` terug.
+- **Branded IDs** (`UserId`) via zod `.brand()`; `pnpm db:generate` zet `$type<…>()` in het gegenereerde Drizzle-schema. Elke kolom
+  `id` of `*_id` krijgt een brand via een foreign key of via `db/ids.json` (of daar bewust `null`); anders faalt de generator.
 - **Modules en aliassen**: aliassen via `imports` in `package.json` (`#core/*` → `./src/core/*`, `#api/*`, `#web/*`, `#shared/*`),
   zodat Node, Vite, Vitest en TypeScript dezelfde bron lezen. Hoe Node `src/api/server.ts` draait (native type stripping of een
   loader) en de bijbehorende tsconfig-flags legt het skelet vast en bewijst `pnpm dev`.

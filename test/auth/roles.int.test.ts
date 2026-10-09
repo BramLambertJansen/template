@@ -4,6 +4,7 @@ import pg from 'pg';
 import { afterAll, describe, expect, test } from 'vitest';
 import { createPool, createWithUser } from '../../src/core/api/db/testing.ts';
 import { latestMailTo, required, uniqueEmail } from './harness.ts';
+import { UserId } from '../../src/core/shared/ids.ts';
 
 // Laatste-admin-regel (spec accounts/AC-9): twee admins met MFA degraderen elkaar tegelijk; precies één slaagt.
 const migrator = new pg.Pool({ connectionString: required('MIGRATOR_DATABASE_URL'), max: 2 });
@@ -24,7 +25,7 @@ async function admin(id: string): Promise<void> {
 
 describe('laatste admin', () => {
   test('twee admins degraderen elkaar tegelijk: precies één slaagt en er blijft precies één admin', async () => {
-    const [a, b] = [`race-a-${String(Date.now())}`, `race-b-${String(Date.now())}`];
+    const [a, b] = [UserId.parse(`race-a-${String(Date.now())}`), UserId.parse(`race-b-${String(Date.now())}`)];
     await admin(a);
     await admin(b);
     // Voorwaarde: a en b zijn de enige admins (verse test-database); een admin met MFA ziet alle rollen.
@@ -36,7 +37,7 @@ describe('laatste admin', () => {
     });
     expect(admins).toBe(2);
 
-    const demote = (actor: string, target: string) =>
+    const demote = (actor: UserId, target: UserId) =>
       withUser({ userId: actor, sessionStrength: 'mfa' }, async (tx) => {
         await tx.execute(sql`select pg_sleep(0.05)`);
         await tx.execute(sql`select app.assign_role(${target}, 'user')`);
@@ -96,7 +97,7 @@ describe('admin:create', () => {
     const mail = await latestMailTo(email);
     expect(mail.text).toContain('Hallo Nood Beheerder,');
     const { rows } = await auth.query<{ id: string }>('select id from "user" where email = $1', [email]);
-    const role = await withUser({ userId: rows[0]?.id ?? '', sessionStrength: 'password' }, async (tx) => {
+    const role = await withUser({ userId: UserId.parse(rows[0]?.id), sessionStrength: 'password' }, async (tx) => {
       const own = await tx.execute<{ role: string }>(sql`select role from public.user_roles`);
       return own.rows[0]?.role;
     });
