@@ -4,23 +4,36 @@ import { requestId } from 'hono/request-id';
 import { secureHeaders } from 'hono/secure-headers';
 import { coreErrorCodes, type ErrorRegistry } from '../../shared/errors.ts';
 import { MAX_BODY_BYTES } from '../../shared/limits.ts';
+import { unsafeCast } from '../../shared/unsafe-cast.ts';
 import type { AuthGateway } from '../auth/auth.ts';
 import type { WithUser } from '../db/types.ts';
 import { AppError, statusFor } from '../errors.ts';
+import { z } from 'zod';
+import type { Contract } from '../../shared/contract.ts';
 import { isRouteDef, type RouteDef } from '../route/kit.ts';
 import { csrf } from './csrf.ts';
 
-export interface AppConfig {
+// Dev-login (spec accountbeheer, framework §3: limitatieve uitzondering, ADR 0014): logt echt in als het seed-account van de
+// rol en geeft de set-cookie-regels terug. Alleen meegeven bij APP_ENV=local; zonder bestaat /api/dev/login-as niet (404).
+export type DevLogin = (role: 'user' | 'admin', headers: Headers) => Promise<readonly string[]>;
+
+interface BaseConfig<Services> {
   // Exact de origin van de SPA (ADR 0007); zonder waarde weigert de CSRF-controle elke Origin-header.
   readonly appOrigin?: string;
   // Better Auth op /api/auth/* (framework §3: de enige routes buiten defineRoute) en de sessie per request.
   readonly auth?: AuthGateway;
   readonly withUser?: WithUser;
   // Alleen routes uit defineRoute (ADR 0008); iets anders weigert createApp bij opstart.
-  readonly routes?: readonly RouteDef[];
+  readonly routes?: readonly RouteDef<Contract, Services>[];
+  readonly devLogin?: DevLogin;
   // Foutcodes die naar buiten mogen; een onbekende code wordt INTERNAL_ERROR.
   readonly errors?: ErrorRegistry<string>;
 }
+
+// Wat handlers via ctx.services krijgen (bijv. uitnodigen via Better Auth): verplicht zodra de app een Services-type kiest
+// (createRouteKit<Permission, Services>), weg te laten zonder.
+export type AppConfig<Services = undefined> = BaseConfig<Services> &
+  (undefined extends Services ? { readonly services?: Services } : { readonly services: Services });
 
 export interface App {
   readonly fetch: (request: Request) => Promise<Response>;
@@ -40,7 +53,10 @@ async function readInput(c: Context, method: string): Promise<unknown> {
   return { ...body, ...params };
 }
 
-function routeHandler(route: RouteDef, config: AppConfig) {
+function routeHandler<Services>(
+  route: RouteDef<Contract, Services>,
+  config: BaseConfig<Services> & { readonly services?: Services },
+) {
   const { contract } = route;
   return async (c: Context) => {
     const { auth, withUser } = config;
@@ -58,7 +74,11 @@ function routeHandler(route: RouteDef, config: AppConfig) {
         if (role === null) throw new AppError('FORBIDDEN');
         const decision = route.check({ role, sessionStrength: session.sessionStrength });
         if (!decision.ok) throw new AppError(decision.code);
-        const result = await route.handler({ input: parsed.data, actor: { ...session, role }, tx });
+        const services = unsafeCast<Services>(
+          config.services,
+          'AppConfig eist services zodra Services geen undefined toelaat; anders is undefined een geldige waarde',
+        );
+        const result = await route.handler({ input: parsed.data, actor: { ...session, role }, tx, services });
         // Een output die niet bij het contract past, is een bug: INTERNAL_ERROR, nooit de data.
         return contract.output.parse(result);
       },
@@ -70,7 +90,11 @@ function routeHandler(route: RouteDef, config: AppConfig) {
 
 // Vaste volgorde (framework §6): requestId, secureHeaders, CSRF, bodyLimit, routes; één onError en notFound met alleen
 // `{ code, requestId }`. De health-route is de publieke uitzondering uit framework §3.
-export function createApp(config: AppConfig = {}): App {
+const devLoginInput = z.object({ rol: z.enum(['user', 'admin']) }).strict();
+
+export function createApp(): App;
+export function createApp<Services = undefined>(config: AppConfig<Services>): App;
+export function createApp<Services>(config: BaseConfig<Services> & { readonly services?: Services } = {}): App {
   const routes = config.routes ?? [];
   for (const route of routes) {
     if (!isRouteDef(route)) throw new Error('createApp: alleen routes uit defineRoute (ADR 0008)');
@@ -94,6 +118,17 @@ export function createApp(config: AppConfig = {}): App {
     .get('/health', (c) => c.json({ ok: true }))
     .on(['GET', 'POST'], '/auth/*', (c) => (config.auth === undefined ? c.notFound() : config.auth.handler(c.req.raw)));
 
+  const { devLogin } = config;
+  if (devLogin !== undefined) {
+    app.post('/dev/login-as', async (c) => {
+      const parsed = devLoginInput.safeParse(await c.req.json().catch(() => null));
+      if (!parsed.success) throw new AppError('VALIDATION');
+      for (const cookie of await devLogin(parsed.data.rol, c.req.raw.headers)) {
+        c.header('set-cookie', cookie, { append: true });
+      }
+      return c.body(null, 204);
+    });
+  }
   for (const route of routes) app.on(route.contract.method, route.contract.path, routeHandler(route, config));
   return { fetch: async (request) => app.fetch(request) };
 }

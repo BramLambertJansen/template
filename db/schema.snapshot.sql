@@ -142,6 +142,63 @@ CREATE TABLE better_auth.account (
 ALTER TABLE better_auth.account OWNER TO app_migrator;
 
 --
+-- Name: user; Type: TABLE; Schema: better_auth; Owner: app_migrator
+--
+
+CREATE TABLE better_auth."user" (
+    id text NOT NULL,
+    name text NOT NULL,
+    email text NOT NULL,
+    "emailVerified" boolean NOT NULL,
+    image text,
+    "createdAt" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "twoFactorEnabled" boolean
+);
+
+
+ALTER TABLE better_auth."user" OWNER TO app_migrator;
+
+--
+-- Name: user_roles; Type: TABLE; Schema: public; Owner: app_migrator
+--
+
+CREATE TABLE public.user_roles (
+    user_id text NOT NULL,
+    role text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT user_roles_role_check CHECK ((role = ANY (ARRAY['user'::text, 'admin'::text])))
+);
+
+ALTER TABLE ONLY public.user_roles FORCE ROW LEVEL SECURITY;
+
+
+ALTER TABLE public.user_roles OWNER TO app_migrator;
+
+--
+-- Name: accounts; Type: VIEW; Schema: app; Owner: app_definer
+--
+
+CREATE VIEW app.accounts WITH (security_barrier='true') AS
+ SELECT u.id,
+    u.name,
+    u.email,
+    r.role,
+        CASE
+            WHEN (EXISTS ( SELECT 1
+               FROM better_auth.account a
+              WHERE ((a."userId" = u.id) AND (a."providerId" = 'credential'::text)))) THEN 'active'::text
+            ELSE 'invited'::text
+        END AS status,
+    u."createdAt" AS created_at
+   FROM (better_auth."user" u
+     JOIN public.user_roles r ON ((r.user_id = u.id)))
+  WHERE ( SELECT app.is_mfa_admin() AS is_mfa_admin);
+
+
+ALTER VIEW app.accounts OWNER TO app_definer;
+
+--
 -- Name: rateLimit; Type: TABLE; Schema: better_auth; Owner: app_migrator
 --
 
@@ -193,24 +250,6 @@ CREATE TABLE better_auth."twoFactor" (
 ALTER TABLE better_auth."twoFactor" OWNER TO app_migrator;
 
 --
--- Name: user; Type: TABLE; Schema: better_auth; Owner: app_migrator
---
-
-CREATE TABLE better_auth."user" (
-    id text NOT NULL,
-    name text NOT NULL,
-    email text NOT NULL,
-    "emailVerified" boolean NOT NULL,
-    image text,
-    "createdAt" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    "updatedAt" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    "twoFactorEnabled" boolean
-);
-
-
-ALTER TABLE better_auth."user" OWNER TO app_migrator;
-
---
 -- Name: verification; Type: TABLE; Schema: better_auth; Owner: app_migrator
 --
 
@@ -236,22 +275,6 @@ CREATE TABLE public.schema_migrations (
 
 
 ALTER TABLE public.schema_migrations OWNER TO app_migrator;
-
---
--- Name: user_roles; Type: TABLE; Schema: public; Owner: app_migrator
---
-
-CREATE TABLE public.user_roles (
-    user_id text NOT NULL,
-    role text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT user_roles_role_check CHECK ((role = ANY (ARRAY['user'::text, 'admin'::text])))
-);
-
-ALTER TABLE ONLY public.user_roles FORCE ROW LEVEL SECURITY;
-
-
-ALTER TABLE public.user_roles OWNER TO app_migrator;
 
 --
 -- Name: account account_pkey; Type: CONSTRAINT; Schema: better_auth; Owner: app_migrator
@@ -455,6 +478,7 @@ GRANT ALL ON SCHEMA app TO app_definer;
 --
 
 GRANT USAGE ON SCHEMA better_auth TO auth_service;
+GRANT USAGE ON SCHEMA better_auth TO app_definer;
 
 
 --
@@ -516,6 +540,70 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE better_auth.account TO auth_service;
 
 
 --
+-- Name: COLUMN account."providerId"; Type: ACL; Schema: better_auth; Owner: app_migrator
+--
+
+GRANT SELECT("providerId") ON TABLE better_auth.account TO app_definer;
+
+
+--
+-- Name: COLUMN account."userId"; Type: ACL; Schema: better_auth; Owner: app_migrator
+--
+
+GRANT SELECT("userId") ON TABLE better_auth.account TO app_definer;
+
+
+--
+-- Name: TABLE "user"; Type: ACL; Schema: better_auth; Owner: app_migrator
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE better_auth."user" TO auth_service;
+
+
+--
+-- Name: COLUMN "user".id; Type: ACL; Schema: better_auth; Owner: app_migrator
+--
+
+GRANT SELECT(id) ON TABLE better_auth."user" TO app_definer;
+
+
+--
+-- Name: COLUMN "user".name; Type: ACL; Schema: better_auth; Owner: app_migrator
+--
+
+GRANT SELECT(name) ON TABLE better_auth."user" TO app_definer;
+
+
+--
+-- Name: COLUMN "user".email; Type: ACL; Schema: better_auth; Owner: app_migrator
+--
+
+GRANT SELECT(email) ON TABLE better_auth."user" TO app_definer;
+
+
+--
+-- Name: COLUMN "user"."createdAt"; Type: ACL; Schema: better_auth; Owner: app_migrator
+--
+
+GRANT SELECT("createdAt") ON TABLE better_auth."user" TO app_definer;
+
+
+--
+-- Name: TABLE user_roles; Type: ACL; Schema: public; Owner: app_migrator
+--
+
+GRANT SELECT ON TABLE public.user_roles TO app_authenticated;
+GRANT SELECT,INSERT,UPDATE ON TABLE public.user_roles TO app_definer;
+
+
+--
+-- Name: TABLE accounts; Type: ACL; Schema: app; Owner: app_definer
+--
+
+GRANT SELECT ON TABLE app.accounts TO app_authenticated;
+
+
+--
 -- Name: TABLE "rateLimit"; Type: ACL; Schema: better_auth; Owner: app_migrator
 --
 
@@ -537,25 +625,10 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE better_auth."twoFactor" TO auth_servi
 
 
 --
--- Name: TABLE "user"; Type: ACL; Schema: better_auth; Owner: app_migrator
---
-
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE better_auth."user" TO auth_service;
-
-
---
 -- Name: TABLE verification; Type: ACL; Schema: better_auth; Owner: app_migrator
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE better_auth.verification TO auth_service;
-
-
---
--- Name: TABLE user_roles; Type: ACL; Schema: public; Owner: app_migrator
---
-
-GRANT SELECT ON TABLE public.user_roles TO app_authenticated;
-GRANT SELECT,INSERT,UPDATE ON TABLE public.user_roles TO app_definer;
 
 
 --

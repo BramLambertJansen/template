@@ -3,6 +3,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, test } from 'vitest'
 import { beginTestDb, createPool, type TestDb } from '../../src/core/api/db/testing.ts';
 import { AppError } from '../../src/core/api/errors.ts';
 import { buildApp } from '../../src/api/app.ts';
+import type { AppServices } from '../../src/api/services.ts';
 import { APP_ORIGIN, required } from '../auth/harness.ts';
 
 // Testkit (framework §4, ADR 0012): één transactie per test, savepoint per withUser-aanroep, alles draait terug.
@@ -81,9 +82,13 @@ describe('beginTestDb', () => {
   });
 });
 
+// GET /api/me gebruikt geen services; buildApp eist ze wel (sinds de accountroutes).
+const notUsed = () => Promise.reject(new Error('niet gebruikt in deze test'));
+const unusedServices: AppServices = { invitations: { invite: notUsed, reinvite: notUsed } };
+
 describe('testkit met createApp: de hele pipeline tegen de echte database, zonder Better Auth-sessie', () => {
   const me = (user: Awaited<ReturnType<TestDb['asUser']>>) =>
-    buildApp({ appOrigin: APP_ORIGIN, auth: user.auth, withUser: db.withUser }).fetch(
+    buildApp({ appOrigin: APP_ORIGIN, auth: user.auth, withUser: db.withUser, services: unusedServices }).fetch(
       new Request(`${APP_ORIGIN}/api/me`),
     );
 

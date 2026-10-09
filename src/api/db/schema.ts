@@ -1,7 +1,20 @@
 // GEGENEREERD door `pnpm db:generate` (scripts/db-introspect.mjs) uit de gemigreerde database. Niet bewerken.
-import { pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { pgSchema, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import type { UserId } from '#core/shared/ids.ts';
+
+const appSchema = pgSchema('app');
+
+export const appAccounts = appSchema
+  .view('accounts', {
+    id: text('id').$type<UserId>(),
+    name: text('name'),
+    email: text('email'),
+    role: text('role'),
+    status: text('status'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }),
+  })
+  .existing();
 
 export const userRoles = pgTable('user_roles', {
   userId: text('user_id').$type<UserId>().primaryKey(),
