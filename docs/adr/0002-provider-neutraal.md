@@ -4,7 +4,7 @@ Status: geaccepteerd (2026-10-09)
 
 ## Context
 
-Plan v1 (`docs/background/plan-v1.md`) koos Supabase (Postgres + Auth) en Vercel. De template moet de basis zijn
+Plan v1 (verwijderd; staat in de git-geschiedenis, zie CHANGELOG) koos Supabase (Postgres + Auth) en Vercel. De template moet de basis zijn
 voor elke app; de hosting- en databaseprovider verschilt per app.
 
 ## Besluit

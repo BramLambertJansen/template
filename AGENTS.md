@@ -10,10 +10,12 @@ commando's, scripts of bestanden. Noem iets pas klaar met de uitvoer van de chec
 
 ## Stack
 
+- `src/core/{api,web,shared}` — van de template; een app wijzigt het niet, maar breidt uit via registratie (ADR 0008).
 - `src/web` — Vite + React SPA, TanStack Router/Query, React Hook Form, shadcn/ui, Tailwind v4.
 - `src/api` — Hono; lokale ingang `src/api/server.ts` (:8787). Host-adapters alleen in `deploy/<host>/`.
-- `src/api/auth` — Better Auth, sessie-cookie, schema `auth` (ADR 0003).
-- `src/shared` — zod-schema's, `can()`, `limits.ts`, branded IDs, `Cents`, cursor-contract, foutcodes, `assert()`, `unsafeCast()`.
+- `src/core/api/auth` — Better Auth, sessie-cookie, schema `auth` (ADR 0003).
+- `src/core/shared` — `can()`-engine, basisfoutcodes en -limieten, branded IDs, `Cents`, cursor-contract, `assert()`, `unsafeCast()`.
+- `src/shared` — zod-schema's, `permissions.ts`, eigen foutcodes, `limits.ts` en IDs van de app.
 - `db/` — SQL-migraties (dbmate), pgTAP-tests, `schema.snapshot.sql` (gegenereerd); rollen in `db/init/` (ADR 0004).
 - Lokaal: `compose.yaml` (Postgres 17 + pgTAP, Mailpit). Node 26, pnpm 11, TypeScript 6.0 (ADR 0005).
 - Geen hosting- of databaseprovider in de template; een app kiest die per ADR (ADR 0002).
@@ -24,17 +26,18 @@ Botst een regel met de opdracht, stop dan en vraag het. Een regel omzeilen is no
 vangen het later toch, en dan is het werk verloren. Uitzonderingen staan limitatief in `docs/framework.md` §3.
 
 **Lagen** — zodat de browser nooit bij data kan en er één weg naar de database is.
+- `src/core` importeert nooit uit app-code; app-code mag core importeren. Een app wijzigt `src/core` niet.
 - `src/web` haalt data alleen via `src/web/lib/api.ts`; geen databasedriver, ORM of provider-SDK.
-- `src/web` importeert uit `src/api` alleen het type `AppType`; `src/shared` importeert niets uit `web` of `api`.
-- Alleen `src/api/db` maakt databaseverbindingen (en `src/api/auth` voor Better Auth). `src/api/db` exporteert alleen `withUser()`.
-- `process.env` alleen in `src/api/env.ts`, `import.meta.env` alleen in `src/web/lib/env.ts`. Alleen publieke waarden krijgen `VITE_`.
+- `src/web` importeert uit `src/api` alleen het type `AppType`; `shared` (beide zones) importeert niets uit `web` of `api`.
+- Alleen `src/core/api/db` maakt databaseverbindingen (en `src/core/api/auth` voor Better Auth). `src/core/api/db` exporteert alleen `withUser()`.
+- `process.env` alleen in `src/core/api/env.ts`, `import.meta.env` alleen in `src/core/web/lib/env.ts`. Alleen publieke waarden krijgen `VITE_`.
 - `MIGRATOR_DATABASE_URL` alleen in `scripts/`, nooit in `src/`.
 
 **API** — zodat validatie, rechten en foutafhandeling niet per route vergeten kunnen worden.
 - Een route ontstaat alleen via `defineRoute({ method, path, input, output, permission, handler })`; input is `.strict()`.
 - De handler gebruikt `ctx.actor`; zoek de gebruiker niet zelf op en vang geen Postgres-fouten af.
 - Naar buiten gaat een fout alleen als `{ code, requestId }`, nooit met stacktrace of SQL.
-- Een nieuwe permissie komt in `can()`, met een test per verboden rol.
+- Een nieuwe permissie komt in `src/shared/permissions.ts`, met een test per verboden rol.
 
 **Database** — zodat een fout in de API nog steeds geen data van een ander lekt.
 - Elke tabel: RLS aan en geforceerd, expliciete grants in dezelfde migratie, elke policy een pgTAP-test op naam.
@@ -49,7 +52,7 @@ vangen het later toch, en dan is het werk verloren. Uitzonderingen staan limitat
 - Kleine functies: ≤ 60 regels (`.ts`), ≤ 120 (`.tsx`), max 3 parameters, max diepte 3.
 
 **Frontend** — zodat elk scherm er hetzelfde uitziet en toegankelijk blijft.
-- Geen rauwe `<button> <input> <select> <textarea> <dialog> <a>` buiten `src/web/ui`; gebruik de componenten.
+- Geen rauwe `<button> <input> <select> <textarea> <dialog> <a>` buiten `src/core/web/ui` en `src/web/ui`; gebruik de componenten.
 - In `features/` alleen layout-klassen; geen kleuren, arbitrary values, `!` of `dark:`.
 - `useQuery`/`useMutation` alleen in `queries.ts`, `fetch(` alleen in de API-client, formulieren via `<Form>`.
 - Geen globale store, geen `matchMedia`/`userAgent`/`isMobile`. Elke route heeft een `can()`-guard en ErrorBoundary.

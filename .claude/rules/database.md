@@ -1,10 +1,11 @@
 ---
 paths:
   - "db/**"
+  - "src/core/api/db/**"
   - "src/api/db/**"
 ---
 
-# Regels voor `db/` en `src/api/db`
+# Regels voor `db/` en de database-toegang (`src/core/api/db`; `src/api/db` is gegenereerd)
 
 - Lees `db/schema.snapshot.sql` voor de huidige stand, niet alle migraties.
 - Nieuwe wijziging = nieuwe migratie in `db/migrations/` (dbmate-formaat `-- migrate:up`, geen down). Draait als `app_migrator`. Rollen maak je nooit in een migratie (`db/init/`). Een migratie die op `main` staat, raak je nooit aan.
@@ -23,6 +24,6 @@ paths:
   eigenaar `app_definer` (`alter function … owner to app_definer`) met alleen de rechten die de functie nodig heeft.
 - Datamigraties die alle rijen moeten zien: via zo'n functie, nooit door RLS uit te zetten.
 - Auth-tabellen: SQL uit `auth generate` (gepinde versie) in een migratie; nooit `auth migrate`.
-- Rijen in schema `auth` zijn van Better Auth; lees of schrijf ze nooit vanuit `src/api/db`. Geen provider-specifieke schema's of functies (`storage.*`, `realtime.*`, `auth.uid()`).
+- Rijen in schema `auth` zijn van Better Auth; lees of schrijf ze nooit vanuit `src/core/api/db` of app-code. Geen provider-specifieke schema's of functies (`storage.*`, `realtime.*`, `auth.uid()`).
 - Na een migratie: types en snapshot opnieuw genereren met het script (zodra het bestaat); nooit met de hand.
-- `src/api/db` exporteert alleen `withUser()`. Die zet per transactie de rol, `app.user_id` en `app.session_strength`, en vertaalt fouten.
+- `src/core/api/db` exporteert alleen `withUser()`. Die zet per transactie de rol, `app.user_id` en `app.session_strength`, en vertaalt fouten.

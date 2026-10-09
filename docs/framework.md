@@ -1,7 +1,6 @@
 # Framework
 
-Normatief. Dit document is de wet voor elke app die uit deze template start. Het is de
-provider-neutrale uitwerking van [background/plan-v1.md](background/plan-v1.md); bij verschil wint dit document.
+Normatief. Dit document is de wet voor elke app die uit deze template start.
 Wijzigen alleen via een PR met ADR, met review door de eigenaar.
 
 ## 1. Principes
@@ -18,15 +17,24 @@ Wijzigen alleen via een PR met ADR, met review door de eigenaar.
 
 ## 2. Architectuur
 
-Eén repository, één pakket, drie lagen, bewaakt door dependency-cruiser (ook: geen cycles):
+Eén repository, één pakket, drie lagen in twee zones, bewaakt door dependency-cruiser (ook: geen cycles).
 
-| Laag | Map | Mag importeren | Mag nooit |
+**Zones** (ADR 0008): `src/core/{api,web,shared}` is van de template — beschermd, in een app alleen gewijzigd door een template-merge.
+App-code staat in `src/{api,web,shared}`. App mag core importeren; core importeert nooit app. Wat core van de app nodig heeft
+(permissies, foutcodes, routes, env-uitbreiding, `AppType`), krijgt het als argument van een compositie-root in de app
+(`src/api/app.ts`, `src/api/kit.ts`, `src/web/lib/api.ts`). Een app breidt uit door te registreren, nooit door core te wijzigen.
+
+| Laag | Map (core / app) | Mag importeren | Mag nooit |
 |---|---|---|---|
-| Frontend (Vite + React SPA) | `src/web` | `src/shared`, het type `AppType` uit `src/api`, `better-auth/react` alleen in `lib/auth.ts` | databasedriver, ORM, `process.env`/`import.meta.env` buiten `lib/env.ts`, andere code uit `src/api` |
-| API (Hono) | `src/api` | `src/shared` | `src/web` |
-| Gedeeld | `src/shared` | alleen libraries (zod) | `src/web`, `src/api` |
-| Database-toegang | `src/api/db` | driver (`pg`) en Drizzle — als enige | iets anders exporteren dan `withUser()` |
-| Auth | `src/api/auth` | Better Auth met eigen verbinding als `auth_service`, alleen schema `auth` | data buiten `auth` lezen of schrijven |
+| Frontend (Vite + React SPA) | `src/core/web` / `src/web` | `src/core/shared`, `src/shared`, het type `AppType` uit `src/api`, `better-auth/react` alleen in `src/core/web/lib/auth.ts` | databasedriver, ORM, `process.env`, `import.meta.env` buiten `src/core/web/lib/env.ts`, andere code uit `src/api` of `src/core/api` |
+| API (Hono) | `src/core/api` / `src/api` | `src/core/shared`, `src/shared` | `src/web`, `src/core/web` |
+| Gedeeld | `src/core/shared` / `src/shared` | alleen libraries (zod) en `src/core/shared` | `web`, `api` (beide zones) |
+| Database-toegang | `src/core/api/db` | driver (`pg`) en Drizzle — als enige | iets anders exporteren dan `withUser()` |
+| Auth | `src/core/api/auth` | Better Auth met eigen verbinding als `auth_service`, alleen schema `auth` | data buiten `auth` lezen of schrijven |
+
+Plaats per onderdeel (`defineRoute`, `withUser`, auth, CSRF, foutafhandeling, logging, env, API- en auth-client, `AsyncView`, `Form`,
+UI-kit en tokens, `format`, `assert`, `unsafeCast`, `Cents`, cursor, branded IDs, foutcodes, `can()`, limieten) en hoe een app elk
+uitbreidingspunt gebruikt: ADR 0008.
 
 - De browser praat alleen met de API, same-origin via `/api`. Lokaal proxyt Vite (:5173) `/api` naar Hono (:8787).
 - De Hono-app is host-onafhankelijk. Ingangen: `src/api/server.ts` (Node, lokaal en containerhosts) en per gekozen
@@ -56,7 +64,7 @@ Regels voor elke keuze:
 
 | Regel | Uitzondering | Waarom |
 |---|---|---|
-| Alleen `src/api/db` raakt `pg` | `src/api/auth` (als `auth_service`, alleen schema `auth`) | Better Auth beheert zijn eigen tabellen |
+| Alleen `src/core/api/db` raakt `pg` | `src/core/api/auth` (als `auth_service`, alleen schema `auth`) | Better Auth beheert zijn eigen tabellen |
 | Elke route via `defineRoute` | `/api/auth/*` (Better Auth-handler) | De library levert deze routes |
 | Elke route vraagt login | `/api/auth/*` (inloggen, aanmelden, reset) en de clientfouten-route | Bestaan juist voor niet-ingelogden; elk met rate limit |
 | Elke schermroute heeft een `can()`-guard | Inlog-, aanmeld- en resetschermen | Publiek; ze tonen geen data |
@@ -69,9 +77,9 @@ dependency-cruiser); checks op de database lezen de catalogus van de lokale data
 
 - **Lintmeldingen zijn instructies**: `no-restricted-imports`/`no-restricted-syntax` noemen de juiste helper.
 - **Kleine eenheden**: max-lines-per-function 60 (`.ts`) / 120 (`.tsx`); sonarjs cognitive-complexity 15; max-params 3; max-depth 3.
-- **Parse op elke grens**: zod via `defineRoute()` voor request en response (`.strict()`); env-schema in `src/api/env.ts`, de enige plek met `process.env`.
-- **Geen casts**: type-assertions (`x as T`, `<T>x`) zijn verboden (`consistent-type-assertions: never`); `as const` en `import { a as b }` mogen; `unsafeCast(value, reden)` in `src/shared` is de enige uitweg. CI zet het verschil in aantal op de PR.
-- **`assert(cond, msg)`** in `src/shared`, actief in productie en gemeld aan de fouttracking; in de frontend vangt een ErrorBoundary per route hem op.
+- **Parse op elke grens**: zod via `defineRoute()` voor request en response (`.strict()`); env-schema in `src/core/api/env.ts`, de enige plek met `process.env` (de app levert alleen haar uitbreiding in `src/api/env.ts`).
+- **Geen casts**: type-assertions (`x as T`, `<T>x`) zijn verboden (`consistent-type-assertions: never`); `as const` en `import { a as b }` mogen; `unsafeCast(value, reden)` in `src/core/shared` is de enige uitweg. CI zet het verschil in aantal op de PR.
+- **`assert(cond, msg)`** in `src/core/shared`, actief in productie en gemeld aan de fouttracking; in de frontend vangt een ErrorBoundary per route hem op.
 - **Types per resource** apart geëxporteerd uit de API, zodat de TypeScript-server niet trager wordt naarmate routes groeien.
 - **Branded IDs** (`UserId`) via zod `.brand()`; een script na schema-introspectie zet `$type<UserId>()` terug.
 - **TypeScript streng**: `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noFallthroughCasesInSwitch`,
@@ -97,7 +105,7 @@ dependency-cruiser); checks op de database lezen de catalogus van de lokale data
 
 ### Tests
 
-- Unit (Vitest) op `src/api/domain` en `src/shared`; property-based (fast-check) voor reken- en parselogica.
+- Unit (Vitest) op `src/api/domain`, `src/shared` en `src/core`; property-based (fast-check) voor reken- en parselogica.
 - Integratie tegen lokale Postgres; `withUser()` accepteert in tests een geïnjecteerde transactie (savepoint per test);
   per feature één test die echt commit.
 - Races: elke mutatie met een uniekheidsregel of geld krijgt een test met twee gelijktijdige requests; precies één slaagt.
@@ -112,10 +120,10 @@ dependency-cruiser); checks op de database lezen de catalogus van de lokale data
 | Routing | TanStack Router, bestandsroutes, getypte zoekparameters; elke route ErrorBoundary + `beforeLoad`-guard met `can()` (uitzonderingen: §3) | Router-types; lint op routes zonder guard |
 | State | Server-state in TanStack Query; UI-state in de URL; formulieren in React Hook Form; geen globale store | Lint verbiedt store-libraries |
 | Data | Per resource één `queries.ts` met key-factory, hooks en mutaties; mutatie invalideert eigen resource + "raakt ook" | Lint: `useQuery`/`useMutation` alleen in `queries.ts` |
-| API-client | Eén client in `src/web/lib/api.ts`: same-origin met cookie, 401 → naar inloggen, foutcodes → `ApiError` | Lint verbiedt `fetch(` elders |
+| API-client | Eén client in `src/core/web/lib/api-client.ts`, door de app gemaakt in `src/web/lib/api.ts`: same-origin met cookie, 401 → naar inloggen, foutcodes → `ApiError` | Lint verbiedt `fetch(` elders |
 | Formulieren | `<Form>`/`<FormField>` met zodResolver op het gedeelde schema; valideren bij verlaten, daarna bij typen; verzendknop uit tijdens de mutatie; serverveldfouten via `setError` | Lint verbiedt `useForm` buiten de wrapper |
 | Laden/leeg/fout | `<AsyncView query empty>` | Lint op `.isLoading`/`.isError` in `features/` |
-| Teksten | `copy/errors.ts` als `Record<ErrorCode, string>`; zod-meldingen Nederlands | TypeScript |
+| Teksten | `src/web/copy/errors.ts` als `Record<ErrorCode, string>` (basisteksten uit `src/core/web/copy`, app-codes erbij); zod-meldingen Nederlands | TypeScript |
 | Rechten | Dezelfde `can()` als de API; de API blijft de echte controle | Eén functie |
 
 ### Data en waarden
@@ -124,7 +132,7 @@ dependency-cruiser); checks op de database lezen de catalogus van de lokale data
 |---|---|
 | Datums | `timestamptz` in de database, ISO-strings in het contract, één formatter (Intl, Europe/Amsterdam) |
 | Bedragen | Gehele centen, branded `Cents`, één formatter |
-| Paginering | Cursor-contract `{ items, nextCursor }` in `src/shared`, cursor in de URL |
+| Paginering | Cursor-contract `{ items, nextCursor }` in `src/core/shared`, cursor in de URL |
 | Naamgeving | Bestanden kebab-case, componenten PascalCase, hooks `useX`, routes meervoud, tabellen/kolommen snake_case; UI Nederlands, code en commits Engels |
 
 ## 6. Data-toegang en security
@@ -132,7 +140,7 @@ dependency-cruiser); checks op de database lezen de catalogus van de lokale data
 Ankers: OWASP Top 10:2025, OWASP API Security Top 10, ASVS 5.0 niveau 1 (checklist in de security-review-skill).
 
 - **Alleen inloggen vanuit de browser**; alle data via de API.
-- **Sessies** (ADR 0003): Better Auth in `src/api/auth`, sessie in de database (`cookieCache` uit), cookie `__Host-`, `httpOnly`,
+- **Sessies** (ADR 0003): Better Auth in `src/core/api/auth`, sessie in de database (`cookieCache` uit), cookie `__Host-`, `httpOnly`,
   `Secure`, `SameSite=Lax`; geen token in `localStorage`. Absoluut 7 dagen, idle 12 uur, `freshAge` 10 min voor gevoelige acties;
   wachtwoord- of 2FA-wijziging trekt andere sessies in. Gebruikersbewerkbare velden nooit voor autorisatie.
 - **CSRF** (ADR 0007): eigen middleware vóór alle routes; elk niet-GET-request vereist mediatype `application/json` (hoofdletterongevoelig; parameters zoals `charset` zijn toegestaan; ook zonder body, dus de client stuurt de header altijd). Minstens een van `Sec-Fetch-Site` en `Origin` moet aanwezig zijn; elke aanwezige header moet respectievelijk `same-origin` of exact `APP_ORIGIN` zijn (`Origin: null`, `same-site`, `cross-site` en `none` worden geweigerd). Ontbreken beide of klopt een aanwezige header niet, dan weigert de middleware het request. Testmatrix: ADR 0007. Geen `cors()`.
@@ -160,7 +168,7 @@ Ankers: OWASP Top 10:2025, OWASP API Security Top 10, ASVS 5.0 niveau 1 (checkli
 - **Schema-snapshot**: `db/schema.snapshot.sql` via `pg_dump --schema-only -N tap` van de lokale database (het enige schemabestand; dbmate draait met `--no-dump-schema`); de agent leest dit, CI faalt bij verschil.
 - **Eén actor**: `defineRoute` geeft `ctx.actor`; een handler zoekt de gebruiker nooit zelf op.
 - **Databasefouten op één plek**: `withUser()` vertaalt 23505 → `ALREADY_EXISTS`, 23503 → `NOT_FOUND`, 42501 → `FORBIDDEN`.
-- **Limieten één keer** in `src/shared/limits.ts`; een CHECK-constraint met dezelfde waarde krijgt een gelijkheidstest.
+- **Limieten één keer**: harde grenzen in `src/core/shared/limits.ts`, app-grenzen in `src/shared/limits.ts` (ADR 0008); een CHECK-constraint met dezelfde waarde krijgt een gelijkheidstest.
 - **Resourceverbruik (API4)**: `bodyLimit` op de Hono-app, maximale paginagrootte in `limits.ts`, database-timeouts (hierboven).
 - **Verharding**: rate limit op dure routes en op inloggen/reset (in de API, opslag in de database, IP alleen uit een door de host gezette header); CAPTCHA op aanmelden/reset in staging en productie (lokaal uit, want offline);
   headers (CSP, HSTS, nosniff, Referrer-Policy) zet de statische host voor de SPA en `secureHeaders()` voor `/api`; lokaal zet Vite dezelfde headers zodat e2e met CSP draait;
@@ -169,6 +177,8 @@ Ankers: OWASP Top 10:2025, OWASP API Security Top 10, ASVS 5.0 niveau 1 (checkli
   `/design-system` en `/design` bestaan alleen in dev-builds; de clientfouten-route is de enige data-route zonder login, met maximale grootte per melding, limiet per IP per minuut en geen onnodige vrije tekst.
 - **Logging**: per request `requestId`, gebruiker-ID, duur, databasetijd. Clientfouten via `reportClientError()` naar een eigen tabel; lint verbiedt kale `console.error` in `queries.ts` en de API-client.
 - **Secrets**: env-schema bij opstart; alleen publieke waarden krijgen `VITE_`. Geen productiegeheimen in de werkmap.
+  Is de host van `APP_ORIGIN` niet `localhost` (of `127.0.0.1`/`[::1]`), dan weigert het env-schema bij opstart elke variabele
+  die gelijk is aan haar waarde in `.env.example`, waaronder de demo-waarde van `AUTH_SECRET`; een test bewijst dat.
   Secret scanning met push protection; gitleaks in pre-commit en CI.
 - **Supply chain**: Renovate gegroepeerd; pnpm-instellingen in `pnpm-workspace.yaml`: `minimumReleaseAge: 10080` (minuten = 7 dagen), `strictDepBuilds` met expliciete `allowBuilds`, `trustPolicy: no-downgrade`;
   versies in het framework zijn ondergrenzen bij schrijven, nooit de bewaking: osv-scanner faalt op bekende advisories;
@@ -183,9 +193,13 @@ Ankers: OWASP Top 10:2025, OWASP API Security Top 10, ASVS 5.0 niveau 1 (checkli
   `--background`, `--foreground`, `--primary`, … `--radius`; de enige laag die een app aanpast) → component (`--control-h-*`, `--focus-ring-*`).
 - In `@theme` worden kleur, radius en schaduw van Tailwind gereset; `bg-red-500` bestaat niet. Dark mode via `[data-theme=dark]` met `@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));`.
   De reset sloopt klassen die shadcn gebruikt (`bg-black/50`, `shadow-xs`): de codemod vangt die op. Vite `build.target` gelijk aan browserslist.
-- **Componenten**: shadcn/ui gekopieerd naar `src/web/ui`; na elke `shadcn add` zet een codemod het component op de eigen tokens; varianten in één CVA-recept; afleiden, niet forken; 44 px en focusring in de basis van elk recept.
+- **Tokens per zone** (ADR 0008): primitief, component en standaard-semantisch in `src/core/web/styles/`; een app past alleen de
+  semantische laag aan in `src/web/styles/theme.css`.
+- **Componenten**: shadcn/ui gekopieerd naar `src/core/web/ui` (basiskit, van de template); app-specifieke componenten en
+  afgeleide varianten in `src/web/ui`, die ook de enige importbron voor `features/` is (her-exporteert core). Een basiscomponent dat
+  elke app kan gebruiken, komt via een PR in de template. Na elke `shadcn add` zet een codemod het component op de eigen tokens; varianten in één CVA-recept; afleiden, niet forken; 44 px en focusring in de basis van elk recept.
 - **Afgedwongen**: alleen bestaande klassen; in `features/` geen arbitrary values, `!` of `dark:` en alleen layout-klassen;
-  geen rauwe `<button> <input> <select> <textarea> <dialog> <a>` buiten `src/web/ui`; geen hex/benoemde kleuren buiten tokens;
+  geen rauwe `<button> <input> <select> <textarea> <dialog> <a>` buiten `src/core/web/ui` en `src/web/ui`; geen hex/benoemde kleuren buiten tokens;
   contrasttest over alle receptvarianten; `outline-none` alleen met `focus-visible:ring-*`; één `scanAxe(page)` (wcag2a/aa, 21aa, 22aa; lint verbiedt losse `AxeBuilder`);
   woordenlijsttest op `src/web/copy`; geen `matchMedia`/`userAgent`/`isMobile` in `src/web`; browserslist in `package.json`.
 - **Hergebruik**: de schermskill haalt via `scripts/facts.mjs` de actuele componenten op; past geen component, dan stopt de agent en stelt een variant voor.
@@ -229,7 +243,7 @@ force, `--no-verify`, mergen en `docker`; `ask` op de beschermde paden (§10) en
 Permissieregels vangen alleen de gangbare vormen (bijv. `git commit -n` midden in de opties niet); de git-guard-hook dekt dat volledig.
 De sandbox (`failIfUnavailable`, `allowUnsandboxedCommands: false`) en GitHub zijn de grens. Op Linux/WSL2 bereikt een
 commando in de sandbox `localhost` niet; commando's die de lokale stack nodig hebben (`pnpm test:db`, `pnpm gate:slow`, …) staan
-in `excludedCommands`. De toolchain (mise: Node, pnpm, dbmate, gitleaks) installeert de eigenaar via `scripts/bootstrap.sh`, niet de agent.
+in `excludedCommands`. Daarmee draaien ook door de agent geschreven tests buiten de sandbox; hoe dat gat dichtgaat, staat in ADR 0009. De toolchain (mise: Node, pnpm, dbmate, gitleaks) installeert de eigenaar via `scripts/bootstrap.sh`, niet de agent.
 
 ## 9. Documentatie en tokenbudget
 
@@ -259,8 +273,9 @@ Wat een type of check afdwingt, staat niet in proza. Wat soms nodig is, hoort in
   blokkeert de guard-files-hook, `goedgekeurd` bewaakt `check-spec-approval`. `check-docs` bewaakt beide spiegelingen):
   `AGENTS.md`, `CLAUDE.md`, `docs/framework.md`, `docs/dod.md`, `docs/roadmap.md`, `docs/adr/`, `docs/specs/`, `.github/`, `.claude/`, `scripts/`,
   `db/init/`, `db/docker/`, `db/tests/`, `compose.yaml`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `mise.toml`,
-  `eslint.config.*`, `tsconfig*.json`, `.dependency-cruiser.*`, `lefthook.yml`, `renovate.json`, `.gitattributes`, `src/api/db/`,
-  `src/api/auth/`, `src/api/env.ts`, `src/shared/can.ts`, alle `*.test.*`/`*.spec.*`, `e2e/`.
+  `eslint.config.*`, `tsconfig*.json`, `.dependency-cruiser.*`, `lefthook.yml`, `renovate.json`, `.gitattributes`, `src/core/`,
+  `src/api/env.ts`, `src/shared/permissions.ts`, alle `*.test.*`/`*.spec.*`, `e2e/`.
+  `src/core/` is daarnaast core (ADR 0008): in een app wijzigt alleen een template-merge het, bewaakt door `check-core`.
 - Instellingen als code in `.github/settings/main-protection.json`; `scripts/check-github.mjs` controleert alleen-lezend dat ze actief zijn en faalt als de agent onder het account van de eigenaar werkt.
 - `check-docs` (smal): paden en `pnpm`-scripts in `AGENTS.md`, `CLAUDE.md` en `.claude/**` moeten bestaan; spec-statussen uit de vaste woordenlijst.
 - **Spec goedkeuren**: een spec komt in een eigen PR met `status: voorstel`; de eigenaar zet `goedgekeurd` in die PR en keurt hem goed.
@@ -310,22 +325,27 @@ een regel blijft alleen als hij aantoonbaar helpt.
   Poorten via `.env.local`, zodat meerdere apps naast elkaar draaien. Compose leest zonder `--env-file` alleen `.env`, en de poort
   staat ook in de drie database-URL's: een andere poort betekent `PG_PORT` én die URL's aanpassen.
 - De agent gebruikt `docker` niet (deny); de stack is van de eigenaar. Draait de stack niet (SessionStart-hook draait `doctor --quick`), dan vraagt de agent de eigenaar `pnpm dev` te starten. Sandbox met `failIfUnavailable: true`; alleen `pnpm test:db`, `pnpm db:reset`,
-  `pnpm db:types` en `pnpm ui:check` draaien buiten de sandbox (`excludedCommands`), en hun scripts vallen onder CODEOWNERS.
+  `pnpm db:types`, `pnpm ui:check` en `pnpm gate:slow` draaien buiten de sandbox (`excludedCommands`), en hun scripts vallen onder CODEOWNERS (risico en oplossing: ADR 0009).
 - Screenshot-baselines alleen in de gepinde Playwright-image.
 - Devcontainer (optioneel): Docker-in-Docker, nooit de host-socket doorgeven.
 
 ## 11a. Repo-structuur
 
 ```
-src/web/      routes/ features/ ui/ lib/ (api.ts, auth.ts, format.ts, report-error.ts) copy/ dev/
-src/api/      routes/ domain/ db/ (pool, withUser, schema, ids.ts) auth/ (Better Auth) obs/ env.ts server.ts
-src/shared/   schema's, can(), limits.ts, branded IDs, Cents, cursor, foutcodes, assert(), unsafeCast()
+src/core/     van de template (ADR 0008); een app wijzigt dit niet
+  api/        route/ (createRouteKit, defineRoute) db/ (pool, withUser, foutvertaling) auth/ (Better Auth)
+              http/ (createApp: CSRF, bodyLimit, secureHeaders, onError) obs/ env.ts (basisschema, enige process.env)
+  web/        ui/ (basiskit, AsyncView, Form) styles/ (tokens) lib/ (api-client.ts, auth.ts, env.ts, format.ts, report-error.ts) copy/ (basisteksten)
+  shared/     can.ts (engine) errors.ts (basiscodes) limits.ts (harde grenzen) ids.ts assert unsafeCast Cents cursor
+src/web/      routes/ features/ ui/ (eigen componenten + barrel) styles/theme.css lib/ (api.ts, env.ts) copy/ dev/
+src/api/      app.ts kit.ts server.ts env.ts routes/ domain/ db/ (gegenereerd: schema, ids.ts)
+src/shared/   schema's, permissions.ts, errors.ts, limits.ts, ids.ts (app-uitbreidingen)
 deploy/<host>/ adapter per gekozen host (per app)
 db/           docker/ (Postgres+pgTAP) init/ (rollen, alleen lokaal) migrations/ (dbmate) tests/ (pgTAP) schema.snapshot.sql
 scripts/seed  testgebruikers per rol via de auth-API (wachtwoordhashes, vast lokaal TOTP-geheim voor admin)
 scripts/      dev bootstrap doctor test-db ui-check db-types facts.mjs check-*
 designs/      optioneel: prototype-exports
-docs/         framework.md roadmap.md dod.md specs/ adr/ operations/ background/
+docs/         framework.md roadmap.md dod.md specs/ adr/ operations/ reviews/
 .claude/      settings.json agents/ skills/ rules/ hooks/
 .github/      workflows/ settings/ CODEOWNERS pull_request_template.md
 compose.yaml  mise.toml  AGENTS.md  CLAUDE.md  CHANGELOG.md
@@ -336,11 +356,11 @@ compose.yaml  mise.toml  AGENTS.md  CLAUDE.md  CHANGELOG.md
 | Fase | Inhoud |
 |---|---|
 | 0. Bewijs | `api_user` + `withUser()` via `pg`, direct én via PgBouncer (transaction mode) in compose, zonder lekken |
-| 1. Fundament | Checks, secure route, database, auth, frontend-basis, design system, agent-opzet, GitHub — zie `roadmap.md` |
-| 2. Eerste features (per app) | Gouden pad, `new:resource`-generator, clientfouten, `check:catalogus` |
+| 1. Fundament | Verticale stukken: skelet, auth, secure route met gebruikersbeheer als referentie-feature (gouden pad), rails afdwingen, agent-opzet (met `new:resource`), GitHub — zie `roadmap.md` |
+| 2. Eerste features (per app) | Clientfouten, `check:catalogus`; wat in een app doorglipt, wordt eerst een check in de template |
 | 3. Eerste release (per app) | Providerkeuze per ADR, adapter, staging/productie, runbooks |
 
-Fase 0 en 1 horen in de template. Fase 2 levert het gouden pad en de generator terug aan de template; fase 3 is per app.
+Fase 0 en 1 horen in de template; het gouden pad en de generator ontstaan in fase 1 uit gebruikersbeheer. Fase 2 levert verbeteringen terug aan de template; fase 3 is per app.
 
 ### Uitbreidingen, op aanleiding
 
