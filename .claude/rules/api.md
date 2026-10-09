@@ -32,4 +32,4 @@ alleen routes uit `defineRoute`), `createRouteKit`/`defineRoute` in `src/core/ap
 `src/shared/contracts/`, `src/api/kit.ts`, Better Auth (`src/core/api/auth`, ADR 0013) en het env-schema. Een nieuwe route = eerst het contract
 in `src/shared/contracts/<resource>.ts`, dan de handler in `src/api/routes/<resource>.ts`, dan beide in de lijsten
 (`src/shared/contracts/index.ts`, `src/api/app.ts`). Routetests tegen de echte database: de testkit uit `src/core/api/db/testing.ts` (`beginTestDb`, `asUser(rol)` met een
-`auth`-gateway voor `buildApp`). Nog niet: het Drizzle-schema uit introspectie (deel 5d) en logging via `src/core/api/obs`. Bouw er niet op vooruit; staat iets niet in `node scripts/kit/feiten.mjs`, vraag het.
+`auth`-gateway voor `buildApp`). Tabellen voor `tx`: `src/api/db/schema.ts` (gegenereerd, `pnpm db:generate`). Nog niet: logging via `src/core/api/obs`. Bouw er niet op vooruit; staat iets niet in `node scripts/kit/feiten.mjs`, vraag het.

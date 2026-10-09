@@ -48,10 +48,19 @@ const config = {
     },
     {
       name: 'database-alleen-in-core-db',
-      comment: 'Alleen src/core/api/db (en src/core/api/auth voor Better Auth) gebruikt een databasedriver of -SDK.',
+      comment:
+        'Alleen src/core/api/db (en src/core/api/auth voor Better Auth) gebruikt een databasedriver of -SDK; het gegenereerde schema alleen Drizzle.',
       severity: 'error',
-      from: { path: '^src/', pathNot: '^src/core/api/(db|auth)/' },
+      from: { path: '^src/', pathNot: ['^src/core/api/(db|auth)/', '^src/api/db/schema\\.ts$'] },
       to: { path: DATABASE },
+    },
+    {
+      name: 'schema-alleen-drizzle',
+      comment:
+        'Het gegenereerde src/api/db/schema.ts (pnpm db:generate) beschrijft alleen tabellen: drizzle-orm, geen driver.',
+      severity: 'error',
+      from: { path: '^src/api/db/schema\\.ts$' },
+      to: { path: DATABASE, pathNot: '(^|node_modules/)drizzle-orm(/|$)' },
     },
     {
       name: 'db-alleen-via-index',

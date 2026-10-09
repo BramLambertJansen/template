@@ -30,7 +30,10 @@ paths:
   via een `security definer`-functie of -view van `app_definer`, nooit met extra grants op het andere schema.
 - `set_config` en `current_setting` alleen in `src/core/api/db` en in de helpers in schema `app`; nooit in app-SQL of handlers.
 - Rijen in schema `better_auth` zijn van Better Auth (ADR 0010); lees of schrijf ze nooit vanuit `src/core/api/db` of app-code (uitzondering: `asUser` in de testkit, binnen een testtransactie die terugdraait). Geen provider-specifieke schema's of functies (`storage.*`, `realtime.*`, `auth.uid()`).
-- Na een migratie: types en snapshot opnieuw genereren met het script (zodra het bestaat); nooit met de hand.
+- Na een migratie: `pnpm db:generate` (verse test-database in de runner) schrijft `db/schema.snapshot.sql` en
+  `src/api/db/schema.ts`; commit beide met de migratie, nooit met de hand bewerken. Een kolom `id` of `*_id` zonder
+  foreign key naar een gebrande kolom: zet hem in `db/ids.json` met een ID uit `src/shared/ids.ts` (`brandedId()`), of `null` met reden.
+  Een kolomtype dat de generator niet kent (of `timestamp` zonder tijdzone) laat hem falen.
 - `src/core/api/db` exporteert alleen `withUser()` (plus `testing.ts`, alleen voor testbestanden). Die controleert aan het begin
   van elke transactie `current_user = session_user`, zet de rol, `app.user_id` en `app.session_strength` (`password` of `mfa`; elke
   andere waarde weigert hij) en vertaalt fouten. Buiten `withUser()` geeft `app.session_strength()` `none`.
@@ -42,5 +45,5 @@ geforceerd, geen TRUNCATE/REFERENCES/TRIGGER, `better_auth` dicht, niets voor PU
 (`db/tests/functies.sql`: een nieuwe functie krijgt daar een regel, in dezelfde PR als de migratie); de testkit in
 `testing.ts` (`beginTestDb(pool)`: `asUser(rol)`, `withUser` met een savepoint per aanroep, `rollback()`; de pool verbindt
 als `app_migrator` en wordt alleen in `test/` gemaakt).
-Nog niet: `db/schema.snapshot.sql`, het Drizzle-schema uit introspectie met branded IDs (deel 5d), `check-secdef` en
-`check-policies` (roadmap fase 1). Bouw er niet op vooruit.
+`pnpm db:generate` met `db/schema.snapshot.sql` en `src/api/db/schema.ts` (eigen generator in `scripts/db/`, geen drizzle-kit).
+Nog niet: de snapshot-vergelijking in CI (`gate:slow`), `check-secdef` en `check-policies` (roadmap fase 1). Bouw er niet op vooruit.
