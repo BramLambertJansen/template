@@ -2,9 +2,11 @@
 
 Dit bestand bevat aanvullingen voor Claude Code. De platformneutrale werkstraat en projectregels staan in `AGENTS.md` en `docs/framework.md`; runtime-specifieke hooks, tools en agentconfiguratie gelden alleen in Claude Code.
 
+Wat een gate kan afdwingen, staat hier niet. Groeit dit bestand of `AGENTS.md` over zijn budget (framework §9), dan ontbreekt er een gate.
+
 ## Werkstraat (verplicht)
 
-Spec → contract → tester-subagent → bouwen → reviewer-subagent → eigenaar merget (jij nooit). De volledige tekst, ook
+Architect (spec) → contract → tester → developer → reviewer → eigenaar merget (jij nooit) → docs. De volledige tekst, ook
 wanneer je een bestaande test mag wijzigen en het lichte pad, staat op één plek: `docs/framework.md` §8.
 
 ## Stoppen en vragen
@@ -19,4 +21,4 @@ wanneer je een bestaande test mag wijzigen en het lichte pad, staat op één ple
 - Lees `db/schema.snapshot.sql` in plaats van alle migraties (zodra die bestaat).
 - Externe diensten via hun CLI (`gh`); MCP alleen read-only. Geen `docker`.
 
-Subagents, skills en hooks volgen in fase 1 (`docs/roadmap.md`). Tot de gespecialiseerde agents bestaan, gebruik je voor de tester- en reviewerrol ad-hoc subagents met dezelfde afgebakende opdracht. Een ad-hoc subagent telt alleen als onafhankelijk als de eisen uit `docs/framework.md` §8 worden afgedwongen (schone context; tester alleen in testpaden; reviewer read-only). Anders leg je die stap voor aan de eigenaar; je reviewt nooit je eigen werk.
+Subagents, skills en hooks volgen in fase 1 (`docs/roadmap.md`, stuk 5; ADR 0011). Tot de gespecialiseerde agents bestaan, gebruik je voor de tester- en reviewerrol ad-hoc subagents met dezelfde afgebakende opdracht. Een ad-hoc subagent telt alleen als onafhankelijk als de eisen uit `docs/framework.md` §8 worden afgedwongen (schone context; tester alleen in testpaden; reviewer read-only). Anders leg je die stap voor aan de eigenaar; je reviewt nooit je eigen werk.

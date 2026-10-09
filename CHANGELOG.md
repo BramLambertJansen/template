@@ -20,3 +20,5 @@ Volgt [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/). Een release-tag 
   `denyRead` op inloggegevens; testregel versoepeld; env-regel op `APP_ENV`; ADR 0007/0008 aangescherpt; roadmap: rails en test-infra in
   stuk 1, stuk 3 in 3a–3d, Better Auth uit fase 0.
 - ADR 0006–0010 geaccepteerd door de eigenaar (2026-10-09); ADR 0001, 0003 en 0004 verwijzen naar wat ze deels vervangt.
+- ADR 0011 (railwerk): rolhek met één padenlijst (`.claude/gates.json`), geteste hooks, groen vóór klaar, ratchet, gate-register,
+  live feiten, vijf rollen, diff-guard met exacte goedkeuring, functiecatalogus, Betterleaks; settings weigeren zelfreview en `LEFTHOOK=0`.

@@ -17,6 +17,7 @@ Een ADR met status `voorgesteld` is geen besluit; afvinken gebeurt pas als de ei
 - [x] Grens tussen core en app — ADR 0008
 - [x] Tests buiten de sandbox: runner-container — ADR 0009
 - [x] Schema `better_auth` — ADR 0010
+- [x] Railwerk: rolhek, geteste hooks, ratchet, gate-register, feiten, vijf rollen, diff-guard — ADR 0011
 
 ## Fase 0 — Bewijs
 
@@ -51,19 +52,22 @@ Rails en test-infra komen vóór de code die ze bewaken, zodat de referentie-fea
 - [ ] Eén publieke route `GET /api/health` (uitzondering in framework §3) en een pagina die hem toont via `hc<AppType>` in `src/core/web/lib/api-client.ts`
 - [ ] ESLint 10 flat config: strictTypeChecked, `consistent-type-assertions: never`, `switch-exhaustiveness-check`; Prettier
 - [ ] Rails vooraf: dependency-cruiser (lagen, core → app verboden, geen cycles) en `no-restricted-imports`/`no-restricted-syntax`
-      (elementen, `fetch`, env, `SET ROLE`, `set_config`, `hono` buiten core) — elk met een fixture die bewijst dat hij faalt
+      (elementen, `fetch`, env, `SET ROLE`, `set_config`, `hono` buiten core, niet-letterlijke `import()`) — elk met een fixture die bewijst dat hij faalt,
+      ook voor bekende omzeilingen (alias, re-export, bracket-notatie)
+- [ ] Ratchet: `.kit/baseline.json` + `pnpm ratchet:update`, ESLint bulk-suppressions + `lint:prune`; faalt in beide richtingen
+- [ ] Gate-register `scripts/kit/gates.mjs` en eerste `scripts/kit/feiten.mjs` (gates, ADR-statussen, volgende vrije migratie- en ADR-nummer)
 - [ ] Vitest-projecten `unit` en `int`; Playwright in `e2e/`; `pnpm test:db` (integratie + `pg_prove`) en `pnpm ui:check` in de runner-container van ADR 0009
 - [ ] `scripts/bootstrap.sh`, `scripts/doctor.sh` (versies, inotify, sandbox, Docker, jq, bubblewrap; `--quick` voor de SessionStart-hook)
-- [ ] dbmate en gitleaks gepind in `mise.toml`; dbmate via script
+- [ ] dbmate en Betterleaks gepind in `mise.toml`; dbmate via script
 - [ ] `pnpm dev`: Docker-check, `.env.local`, `compose --env-file .env.local up --build --wait`, migraties, Hono + Vite (met headers/CSP)
-- [ ] lefthook (pre-commit: format, lint op staged, gitleaks; pre-push: `gate:fast`)
+- [ ] lefthook (pre-commit: format, lint op staged, Betterleaks; pre-push: `gate:fast`)
 - [ ] `gate:fast` (eerste versie: lint, typecheck, unit, dependency-cruiser)
 - [ ] `ci.yml` (`ubuntu-24.04`, mise-action, Actions op SHA, `permissions: read-all`, concurrency) met job `gate:fast` — het commit met
       `.github/workflows/` pusht de eigenaar
 
 **Klaar als:** `pnpm gate:fast` groen (uitvoer); pre-commit houdt een commit met `any` of `as` tegen (uitvoer); elke fixture-test van de
-rails groen; de isolatietest uit ADR 0009 groen; CI-job `gate:fast` groen op de PR; de eigenaar bevestigt dat `pnpm dev` op een verse machine
-de pagina met `/api/health` toont.
+rails groen (ook de omzeilingen); de ratchet-test bewijst beide richtingen; de isolatietest uit ADR 0009 groen; CI-job `gate:fast` groen op de PR;
+de eigenaar bevestigt dat `pnpm dev` op een verse machine de pagina met `/api/health` toont.
 
 ### 2. Auth
 
@@ -93,6 +97,7 @@ Vier deel-PR's, in deze volgorde.
 - [ ] Foutcoderegister, `limits.ts`, `assert()`, `unsafeCast()`, `Cents`, cursor-contract — met uitbreiding door de app (ADR 0008)
 - [ ] `user_roles` (FK naar `better_auth."user"`), `can()` met permissietabel van de app, MFA-eis afgeleid uit de rol in `can()` én RLS-helper, admin-test zonder MFA
 - [ ] pgTAP-invarianten (RLS geforceerd, geen TRUNCATE/REFERENCES/TRIGGER, `better_auth` dicht), racetest-patroon
+- [ ] Functiecatalogus in pgTAP (framework §6): elke functie client of intern, grants passend, actorcontrole, `search_path = ''`
 - [ ] Testkit in `src/core`: `asUser(rol)`, factories, savepoint per test
 
 **3b. Frontend-basis**
@@ -101,7 +106,9 @@ Vier deel-PR's, in deze volgorde.
 
 **3c. Tokens en UI-kit**
 - [ ] Tokens in drie lagen, `@custom-variant dark`, basiskit Button, Input, Field, Card, Dialog (+ codemod)
-- [ ] Contrasttest over recepten, `scanAxe`, woordenlijsttest, `/design-system` alleen in dev
+- [ ] Contrasttest over recepten (bewijst ook dat een bekende foute kleur faalt), `scanAxe` met uitzonderingen in de ratchet, woordenlijsttest,
+      `/design-system` alleen in dev
+- [ ] `check:catalogus`: elk component op `/design-system` of als uitzondering met code (ratchet); screenshot-baselines in de Playwright-image (uit fase 2)
 
 **3d. De feature**
 - [ ] Eerste feature met de hand door alle lagen (uit fase 2: dit is die feature); app-gegevens uit `better_auth."user"` via een `security definer`-view
@@ -115,11 +122,13 @@ toevoegt zonder `src/core` te wijzigen; een core-test bewijst dat `createApp` ge
 
 Elke regel uit `AGENTS.md` die een check kan zijn, wordt een check; een check telt pas met een fixture die bewijst dat hij faalt.
 - [ ] Overige ESLint-regels: sonarjs, better-tailwindcss, functielengte, max-params, max-depth, `useQuery`/`useForm`/`console.error`-restricties
-- [ ] `check-migrations`, `check-docs` (incl. gelijke beschermde-padenlijsten), `check-secdef`, `check-policies`, `check-core`, bundelbudget
+- [ ] `check-migrations`, `check-docs` (framework §10: identifiers tussen backticks, `.claude/gates.json` = CODEOWNERS = `ask`, register = gates,
+      statussen), `check-secdef`, `check-policies`, `check-core`, bundelbudget
+- [ ] Diff-guard met label `gate-wijziging` + goedkeuring op exact de head-SHA, niet van de auteur (framework §10), met tests per geval
 - [ ] `gate:fast` definitief, `gate:slow` (squawk, snapshot `pg_dump -N tap --exclude-extension=pgtap` zonder verschil, `check-policies`, e2e)
 - [ ] Scripts uit `excludedCommands` (`test:db`, `db:reset`, `db:types`, `ui:check`, `gate:slow`) bestaan in `package.json`, alle vijf in de runner van ADR 0009
-- [ ] CI: `gate:slow`-job, gewijzigde tests als lijst, `guard.yml` (PR-code alleen als data), CodeQL, osv-scanner (PR + wekelijks),
-      Renovate (gegroepeerd, blokkeert TS 7)
+- [ ] CI: `gate:slow`-job, gewijzigde tests als lijst, `guard.yml` (PR-code alleen als data, met de diff-guard), CodeQL, osv-scanner (PR + wekelijks;
+      uitzonderingen met reden en `ignoreUntil`), Betterleaks op digest, Renovate (gegroepeerd, blokkeert TS 7)
 
 **Klaar als:** tabel in de PR met per regel uit `AGENTS.md` de check en de fixture-test die bewijst dat hij faalt (alle fixture-tests groen);
 CI weigert `any`, een databaseclient in `src/web`, een route buiten `defineRoute` en een gewijzigde migratie (uitvoer);
@@ -129,12 +138,14 @@ de bewaker houdt een afgezwakt check-script tegen; regels zonder check staan met
 
 - [x] `AGENTS.md`, `CLAUDE.md`, padregels, spec-sjabloon, DoD (tekst; nog niet afgedwongen)
 - [ ] `.claude/settings.json` bewezen: sandbox start op Ubuntu/WSL2 (bubblewrap, socat), deny-regels getest (ook `Read(!.env.example)` en `cat .env`)
-- [ ] Hooks uit framework §8 (incl. git-guard en guard-files), elk met timeout; SubagentStop in `settings.json`
-- [ ] Subagents tester (sonnet) en reviewer (opus) met frontmatter-hooks
-- [ ] Skills (spec, nieuw-route, nieuw-scherm, nieuw-component, migratie, release, security-review) + `scripts/facts.mjs`
+- [ ] Rolhek-hook + `.claude/gates.json` (één lijst voor hook, diff-guard, CODEOWNERS en `ask`), met tabeltest van echte payloads incl. omzeilingen
+- [ ] "Groen vóór klaar" (SubagentStop developer) en de overige hooks uit framework §8, elk met timeout en tabeltest
+- [ ] Vijf subagents (architect, developer, tester sonnet, reviewer opus, docs) met `model`, `maxTurns`, "eerst de feiten"
+- [ ] Skills (spec, nieuw-route, nieuw-scherm, nieuw-component, migratie, release, security-review) met `!`-injectie uit `scripts/kit/feiten.mjs`
+      (routes, permissies, foutcodes, componenten)
 - [ ] `pnpm new:resource <naam>` afgeleid uit het gouden pad (uit fase 2)
 
-**Klaar als:** per hook een script dat hem met voorbeeld-invoer aanroept en de exitcode controleert (blokkeert wat moet, laat door wat mag), groen;
+**Klaar als:** per hook een tabeltest die hem met echte invoer aanroept en de exitcode controleert (blokkeert wat moet, laat door wat mag), groen;
 code uit `pnpm new:resource` haalt `gate:fast`; drie testopdrachten door de hele werkstraat met per opdracht: ingegrepen hook of check, aantal beurten, correcties van de eigenaar.
 
 ### 6. GitHub
@@ -142,7 +153,8 @@ code uit `pnpm new:resource` haalt `gate:fast`; drie testopdrachten door de hele
 - [x] `CODEOWNERS`, PR-template (bestanden; nog niet actief)
 - [ ] Organisatie, GitHub App voor de agent, org-ruleset via custom property, Actions-instellingen
       (daarna in de ruleset: code-owner-review en 1 goedkeuring aan; private repo's vragen Pro/Team)
-- [ ] `.github/settings/` + `scripts/check-github.mjs`, `check-spec-approval`
+- [ ] `.github/settings/` + `scripts/check-github.mjs` (ook `app_id` van verplichte checks, `enforce_admins`, conversation resolution), `check-spec-approval`
+- [ ] `docs/operations/rails-checklist.md`: instellingen buiten de repo, per stuk afgevinkt met bewijs
 - [ ] Pushen met het App-token zonder het token van de eigenaar in de agent-omgeving (`docs/operations/`); daarna `denyRead` op `~/.config/gh`
 
 **Klaar als:** `check-github` groen; een test-PR van de bot is zonder review van de eigenaar niet te mergen; een push naar `main` wordt geweigerd.
@@ -153,14 +165,15 @@ de bewaker houdt een afgezwakt check-script tegen; `check-github` groen; elke ro
 
 ## Fase 2 — Eerste app, terug naar template
 
-Eerste feature en `new:resource` zijn naar fase 1 verplaatst (stuk 3 en 5).
-- [ ] Clientfouten naar eigen tabel, `check:catalogus`
+Eerste feature, `new:resource` en `check:catalogus` zijn naar fase 1 verplaatst (stuk 3 en 5).
+- [ ] Clientfouten naar eigen tabel: allowlist-velden, geen PII, 5 min dedupe, build-SHA (framework §6)
 - [ ] Elke fout die in een app doorglipt, wordt eerst een check of regel in de template (met fixture), daarna gerepareerd in de app
 
 ## Fase 3 — Release (per app)
 
 - [ ] ADR `0100`+: hosting en beheerde Postgres (moet eigen rollen toestaan); adapter in `deploy/<host>/`
 - [ ] Lektest via de pooler van de provider; rollen per omgeving via runbook
-- [ ] Staging en productie, beschermde environments, release-workflows, `check-release-ci`, `check-deployment-schema`
+- [ ] Staging en productie, beschermde environments, release-workflows, `check-release-ci` (vóór én na de build), `check-deployment-schema`
+      (faalt dicht, weigert preview tegen productie)
 - [ ] Smoketest na deploy; headers/CSP op de host; CAPTCHA; PWA-manifest
-- [ ] Runbooks in `docs/operations/`; back-up één keer teruggezet
+- [ ] Runbooks in `docs/operations/` (platform, back-up en herstel met acceptatietabel); back-up één keer teruggezet

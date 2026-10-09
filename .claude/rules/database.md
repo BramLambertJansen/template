@@ -33,3 +33,8 @@ paths:
 - `src/core/api/db` exporteert alleen `withUser()` (plus `testing.ts`, alleen voor testbestanden). Die controleert aan het begin
   van elke transactie `current_user = session_user`, zet de rol, `app.user_id` en `app.session_strength` (`password` of `mfa`; elke
   andere waarde weigert hij) en vertaalt fouten. Buiten `withUser()` geeft `app.session_strength()` `none`.
+
+## Besloten, nog niet gebouwd
+
+`withUser()`, `db/schema.snapshot.sql`, `check-secdef`, `check-policies`, de functiecatalogus in pgTAP (framework §6), de RLS-invarianten en de
+scripts voor types en snapshot bestaan nog niet (roadmap fase 0 en 1). Alleen de baseline-migratie staat er. Bouw er niet op vooruit.

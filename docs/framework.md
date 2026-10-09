@@ -11,7 +11,9 @@ Wijzigen alleen via een PR met ADR, met review door de eigenaar.
    en hooks sturen en geven snelle feedback; de harde grens ligt in CI en op GitHub.
 3. **Eén bron per feit.** Migraties voor het datamodel, zod-schema's voor contracten, één CSS-laag voor tokens, één script per check.
 4. **Lokaal is gelijk aan productie.** Dezelfde Postgres-versie (exact gepind in `db/docker/Dockerfile`, gelijk aan de beheerde database van de app), dezelfde rollen, grants, RLS, migraties en checks.
-5. **Rails groeien met bewijs.** Een check of regel komt erbij als een fout aantoonbaar doorglipte. De eigenaar reviewt elke PR en releaset.
+5. **Rails groeien met bewijs.** Een check of regel komt erbij als een fout aantoonbaar doorglipte. Een rail-fix begint met een test die
+   op de oude code faalt (eerst reproduceren); elke check heeft fixtures die falen, ook voor bekende omzeilingen (aliassen, re-exports,
+   bracket-notatie, `bash -c`, niet-letterlijke `import()`). Hooks zijn gates en hebben dus ook tests (ADR 0011). De eigenaar reviewt elke PR en releaset.
 6. **Provider-neutraal.** De template kent geen hostingprovider en geen database-as-a-service. Een app kiest die per
    ADR (zie §3); de code raakt de keuze alleen via een adapter.
 
@@ -98,7 +100,7 @@ dependency-cruiser); checks op de database lezen de catalogus van de lokale data
 | Moment | Wat | Duur |
 |---|---|---|
 | Na elke bewerking (PostToolUse-hook) | ESLint + Prettier op dat bestand | ~1–2 s |
-| Pre-commit (lefthook) | format, ESLint op staged, gitleaks | < 10 s |
+| Pre-commit (lefthook) | format, ESLint op staged, Betterleaks | < 10 s |
 | Einde beurt (Stop-hook) | `tsc --incremental`, ESLint `--cache`, `vitest --changed` (alleen het unit-project) | ~10–30 s |
 | Database-tests | `pnpm test:db`: integratie + pgTAP tegen lokale Postgres | ~20–60 s |
 | Pre-push | `gate:fast` | < 60 s |
@@ -107,6 +109,11 @@ dependency-cruiser); checks op de database lezen de catalogus van de lokale data
 - `gate:fast` = lint, typecheck, unit, dependency-cruiser, bundelbudget, `check-migrations`, `check-docs`.
 - `gate:slow` = `test:db` met `check-policies` en `check-secdef`, squawk op migraties, schema-snapshot zonder verschil, kleine e2e-set — tegen een verse database.
 - Verplicht naast CI: CodeQL en osv-scanner.
+- **Gate-register**: `scripts/kit/gates.mjs` beschrijft per script wat het bewaakt en of het snel is (zonder database, dus in `gate:fast`);
+  het is de enige gate-tabel. `check-docs` eist dat register en `gate:fast`/`gate:slow` gelijk zijn (ADR 0011).
+- **Ratchet**: bestaande overtredingen staan in `.kit/baseline.json` (stabiele sleutels: bestand, policynaam) of in ESLint bulk-suppressions.
+  Een nieuwe overtreding faalt; een opgeloste die nog in de baseline staat, faalt ook tot `pnpm ratchet:update` hem weghaalt. Zo daalt schuld
+  alleen, en kan een app een nieuwe template-regel invoeren zonder eerst alles te repareren. De baseline laten groeien is een gate-wijziging.
 
 ### Tests
 
@@ -178,6 +185,9 @@ Ankers: OWASP Top 10:2025, OWASP API Security Top 10, ASVS 5.0 niveau 1 (checkli
   Datamigraties die alle rijen moeten zien, lopen via een gereviewde `security definer`-functie van `app_definer`; omdat FORCE RLS
   ook voor `app_definer` geldt, krijgt de tabel daarvoor een eigen policy `to app_definer` met pgTAP-test.
 - **`search_path = ''`** op elke `security definer`-functie, met volledig gekwalificeerde namen; een catalogus-check op `pg_proc` (`prosecdef` en `proconfig`) bewaakt dit.
+- **Functiecatalogus** (pgTAP, ADR 0011): elke functie in `public` en `app` staat in een catalogus als `client` (uitvoerbaar voor `app_authenticated`)
+  of `intern` (geen API-rol); de grants moeten bij die klasse passen, elke client-functie controleert de actor (`app.current_user_id()`)
+  of heeft een vastgelegde reden waarom niet. Een nieuwe functie zonder klasse faalt.
 - **Schema-snapshot**: `db/schema.snapshot.sql` via `pg_dump --schema-only -N tap --exclude-extension=pgtap` van de lokale database (het enige schemabestand; dbmate draait met `--no-dump-schema`); de agent leest dit, CI faalt bij verschil.
 - **Eén actor**: `defineRoute` geeft `ctx.actor`; een handler zoekt de gebruiker nooit zelf op.
 - **Databasefouten op één plek**: `withUser()` vertaalt 23505 → `ALREADY_EXISTS`, 23503 → `NOT_FOUND`, 42501 → `FORBIDDEN`.
@@ -190,14 +200,16 @@ Ankers: OWASP Top 10:2025, OWASP API Security Top 10, ASVS 5.0 niveau 1 (checkli
   service worker cachet nooit `/api/*`; één `onError` die `{ code, requestId }` teruggeeft, nooit stacktraces of SQL;
   `/design-system` en `/design` bestaan alleen in dev-builds; de clientfouten-route is de enige data-route zonder login, met maximale grootte per melding, limiet per IP per minuut en geen onnodige vrije tekst.
 - **Logging**: per request `requestId`, gebruiker-ID, duur, databasetijd. Clientfouten via `reportClientError()` naar een eigen tabel; lint verbiedt kale `console.error` in `queries.ts` en de API-client.
+  Een clientfout bevat alleen velden van een allowlist (bron, soort, foutcode, pad zonder query, telling, build-SHA), geen PII of vrije tekst, en wordt per 5 minuten ontdubbeld.
 - **Secrets**: env-schema bij opstart; alleen publieke waarden krijgen `VITE_`. Geen productiegeheimen in de werkmap.
   `APP_ENV` (`local` | `test` | `staging` | `production`) is verplicht. Buiten `local`/`test` weigert het env-schema bij opstart:
   een `AUTH_SECRET` korter dan 32 bytes of met een demo-waarde erin; database-URL's met een demo-wachtwoord (URL geparsed, niet als
   hele string vergeleken); een `APP_ORIGIN` of `AUTH_BASE_URL` zonder `https`; `AUTH_BASE_URL` ≠ `APP_ORIGIN`. De demo-waarden staan
   als lijst in `src/core/api/env.ts` (niet uit `.env.example` gelezen); een test per regel bewijst het.
-  Secret scanning met push protection; gitleaks in pre-commit en CI.
+  Secret scanning met push protection; Betterleaks (opvolger van gitleaks, dat in onderhoudsmodus staat; image op digest) in pre-commit en CI.
 - **Supply chain**: Renovate gegroepeerd; pnpm-instellingen in `pnpm-workspace.yaml`: `minimumReleaseAge: 10080` (minuten = 7 dagen), `strictDepBuilds` met expliciete `allowBuilds`, `trustPolicy: no-downgrade`;
   versies in het framework zijn ondergrenzen bij schrijven, nooit de bewaking: osv-scanner faalt op bekende advisories;
+  een uitzondering (osv, Betterleaks) heeft een reden en een einddatum (`ignoreUntil`), daarna wordt de check vanzelf weer rood;
   Actions gepind op SHA, `permissions: read-all`, runner gepind op `ubuntu-24.04`; deploy-secrets alleen in beschermde GitHub-environments;
   CodeQL en osv-scanner op elke PR en wekelijks op `main`.
 - **Agentveiligheid**: de agent werkt via een GitHub App zonder `workflows`-recht (ADR 0005); het token van de eigenaar staat niet in de agent-omgeving.
@@ -219,21 +231,33 @@ Ankers: OWASP Top 10:2025, OWASP API Security Top 10, ASVS 5.0 niveau 1 (checkli
   geen rauwe `<button> <input> <select> <textarea> <dialog> <a>` buiten `src/core/web/ui` en `src/web/ui`; geen hex/benoemde kleuren buiten tokens;
   contrasttest over alle receptvarianten; `outline-none` alleen met `focus-visible:ring-*`; één `scanAxe(page)` (wcag2a/aa, 21aa, 22aa; lint verbiedt losse `AxeBuilder`);
   woordenlijsttest op `src/web/copy`; geen `matchMedia`/`userAgent`/`isMobile` in `src/web`; browserslist in `package.json`.
-- **Hergebruik**: de schermskill haalt via `scripts/facts.mjs` de actuele componenten op; past geen component, dan stopt de agent en stelt een variant voor.
+- **Hergebruik**: de schermskill haalt via `scripts/kit/feiten.mjs componenten` de actuele componenten op; lintmeldingen over rauwe elementen
+  verwijzen naar datzelfde commando. Past geen component, dan stopt de agent en stelt een variant voor.
+- **Catalogus en contrast** (vanaf het eerste component): `check:catalogus` eist dat elk component op `/design-system` staat of een
+  uitzondering met code en reden heeft (in de ratchet); screenshot-baselines van de catalogus in de gepinde Playwright-image; de
+  contrasttest bewijst ook dat een bekende foute kleur zou falen.
 - **Startkit**: Button, Input, Field, Card, Dialog. Groeit per app-behoefte. WCAG 2.2 AA (4,5:1 tekst, 3:1 UI), één focusring, `prefers-reduced-motion`, 44 px aanraakdoelen.
 - `/design-system` (catalogus) en optioneel `/design` (prototypes uit `designs/`), alleen in dev.
 
 ## 8. Werkstraat
 
-1. **Spec** in `docs/specs/` volgens `_template.md` — alleen bij migratie, nieuwe route of nieuwe permissie. Status `goedgekeurd` zet alleen de eigenaar.
+Elke rol begint met de feiten: `node scripts/kit/feiten.mjs` (gates, routes, permissies, foutcodes, componenten, ADR-statussen,
+volgende vrije migratie- en ADR-nummer), niet met wat in proza staat.
+
+1. **Spec** (architect) in `docs/specs/` volgens `_template.md` — alleen bij migratie, nieuwe route of nieuwe permissie. De architect schrijft
+   alleen specs en ADR's (status `voorstel`) en stopt dan. Status `goedgekeurd` zet alleen de eigenaar; een goedgekeurde spec heeft een ingevulde
+   sectie "Hergebruik en UX" (`check-docs`).
 2. **Contract**: zod-schema's en routes die `501` teruggeven wanneer de wijziging een API-contract toevoegt.
-3. **Tester-agent** schrijft acceptatietests tegen het contract; ze compileren en falen op hun asserties. Schrijft alleen in testpaden.
-4. **Hoofdsessie** bouwt tot groen. Mag tests toevoegen. Een bestaande test wijzigen mag alleen als de spec of opdracht het geteste
+3. **Tester-agent** schrijft acceptatietests tegen het contract; ze compileren en falen op hun asserties. Schrijft alleen in testpaden;
+   per permissie en per policy ook de negatieve test.
+4. **Developer** (hoofdsessie of developer-agent) bouwt tot groen; schrijft niet in gate-paden. Mag tests toevoegen. Een bestaande test wijzigen mag alleen als de spec of opdracht het geteste
    gedrag verandert; elke gewijzigde test staat met reden in de PR. Verwijderen of skippen alleen met akkoord van de eigenaar.
    Lijkt een test van de tester fout zonder dat het gedrag verandert, dan stopt de hoofdsessie en legt het de eigenaar voor;
    na akkoord past de tester (niet de hoofdsessie) de test aan.
-5. **Reviewer-agent** met schone context controleert `docs/dod.md`: correctheid, duplicatie, spec-afwijking en testinhoud per criterium. Stijl is werk van de lint.
+5. **Reviewer-agent** met schone context controleert `docs/dod.md`: correctheid, duplicatie, spec-afwijking en testinhoud per criterium,
+   elke blokkerende bevinding met bestand:regel en een pad van invoer naar fout. Stijl is werk van de lint.
 6. **Eigenaar** reviewt en merget.
+7. **Docs-agent** na de merge: spec, ADR-status en `docs/` gelijk aan wat gebouwd is; regels die een gate nu afdwingt, gaan uit CLAUDE.md en de padregels.
 
 Licht pad: geen migratie, route of permissie → plan, bouwen, review.
 
@@ -241,7 +265,15 @@ CI zet gewijzigde bestaande tests als lijst in de PR.
 
 **Eisen aan de rollen, ongeacht runtime:** de tester kan alleen in testpaden schrijven; de reviewer is read-only (geen schrijfrechten; alleen leescommando's, `git diff/log/show/status`, `gh pr view/diff/checks` en de checks uit `docs/dod.md`) met een begrensd aantal beurten; beide starten met schone context en alleen de afgebakende opdracht. Een rol telt alleen als onafhankelijk, ook als ad-hoc subagent, wanneer de runtime die eisen afdwingt. Is dat niet zo, of ontbreekt de rol, voer dan geen onafhankelijke review voor die rol op: benoem de ontbrekende stap expliciet en laat de eigenaar die uitvoeren vóór samenvoegen. De hoofdsessie reviewt nooit haar eigen werk.
 
-**Claude Code-implementatie:** reviewer (opus) met `tools: Read, Grep, Glob, Bash`, `maxTurns` en de readonly-bash-hook; tester (sonnet) met de testpaden-hook (zie tabel). Hooks, permissies, sandboxinstellingen en agentconfiguratie zijn runtime-specifiek; documenteer en activeer ze alleen voor de runtime waarvoor ze zijn getest. De eisen hierboven gelden voor elke runtime.
+**Claude Code-implementatie** (ADR 0011): vijf subagents — architect, developer, tester (sonnet), reviewer (opus, `tools: Read, Grep, Glob, Bash`), docs —
+elk met `model` en `maxTurns`; schrijfrecht per rol bepaalt de rolhek-hook, niet de tools-lijst. Hooks, permissies, sandboxinstellingen en
+agentconfiguratie zijn runtime-specifiek; documenteer en activeer ze alleen voor de runtime waarvoor ze zijn getest, en zeg in AGENTS.md dat ze
+voor andere runtimes (Codex, cloudsessies) niet gelden. De eisen hierboven gelden voor elke runtime.
+
+**Rolhek en gate-paden**: `.claude/gates.json` is de enige lijst met `gates` (paden die alleen via een gate-wijziging veranderen), `testpaden`,
+`jsonGates` (`package.json` → `scripts`: alleen die sleutel is een gate), `goedkeurders` en `schrijfrecht` per rol (architect: specs en ADR's;
+tester: testpaden; reviewer: niets; docs: `docs/`; developer en hoofdsessie: alles behalve gates en bestaande tests). De rolhek-hook leest hem lokaal,
+de diff-guard in CI leest dezelfde lijst, en `check-docs` vergelijkt CODEOWNERS en `ask` ermee.
 
 Hooks (exit 2 blokkeert; exit 1 en een timeout laten het toolgebruik door — fail-open. Elke hook is daarom kort en deterministisch,
 met een korte expliciete `timeout` en `set -euo pipefail` met `trap 'exit 2' ERR`; de harde grens blijven sandbox, CI en GitHub).
@@ -251,21 +283,23 @@ SubagentStop staat in `.claude/settings.json` (matcher = agentnaam), niet in de 
 |---|---|
 | PostToolUse (Edit/Write) | ESLint + Prettier op het bewerkte bestand |
 | Stop | typecheck/lint/unit op geraakte bestanden; `{"decision":"block","reason":…}` met ≤ 40 regels; stopt direct bij `stop_hook_active`; overslaan in plan mode of zonder wijzigingen; nooit netwerk of database |
-| SubagentStop | klaar-criterium per `agent_type`: tester → nieuwe tests compileren en falen op asserties; reviewer → rapport geschreven |
+| SubagentStop "groen vóór klaar" (developer) | blokkeert met `{"decision":"block"}` en de laatste 40 regels tot `gate:fast` groen is, ook bij een schone werkmap (een commit bewijst niet dat de pre-commit draaide) |
+| SubagentStop (tester, reviewer) | tester → lint en typecheck groen, en de nieuwe tests falen alleen op asserties (de acceptatietests zijn rood tot de developer klaar is); reviewer → rapport geschreven |
 | SessionStart | spec, branch, laatste checkuitslag, status lokale stack (`doctor --quick`) als `additionalContext` |
-| PreToolUse guard-files (Edit/Write/Bash) | blokkeert gegenereerde bestanden, gecommitte migraties, verwijderen of skippen van bestaande tests (bestand bestaat in `origin/main`) en schrijven via Bash (`sed -i`, `perl -pi`, `cp`, `mv`, redirect) naar beschermde paden; wijzigen van een bestaande test meldt hij als `additionalContext` (reden in de PR) |
-| PreToolUse git-guard (Bash) | blokkeert push als de huidige branch `main` is, `HUSKY=0`, `core.hooksPath` |
-| PreToolUse tester-paden (subagent, Edit/Write/Bash) | tester schrijft alleen in testpaden |
-| PreToolUse readonly-bash (subagent) | reviewer: alleen `pnpm check:*`/`test*`/`gate:*`, `git diff/log/show/status`, `gh pr view/diff/checks` |
+| PreToolUse rolhek (Edit/Write/Bash, alle rollen) | schrijfrecht per rol uit `.claude/gates.json` (ook voor Bash-schrijfdoelen: redirect, `sed -i`, `tee`, `cp`, `mv`, `rm`, `git checkout/restore`); simuleert Edit/Write op `jsonGates` en vergelijkt de sleutel; blokkeert gegenereerde bestanden, gecommitte migraties, verwijderen of skippen van bestaande tests; wijzigen van een bestaande test meldt hij als `additionalContext` |
+| PreToolUse rolhek (Bash, alle rollen) | blokkeert push naar `main`, `LEFTHOOK=0`, `--no-verify`/`-n`, `core.hooksPath` (leesvormen met `--get` mogen, per commandosegment), `gh pr review`, het label `gate-wijziging`, `gh api` naar labels, reviews, statuses of check-runs; voor subagents ook push, merge, rebase en `reset --hard`; reviewer alleen `pnpm check:*`/`test*`/`gate:*`, `git diff/log/show/status`, `gh pr view/diff/checks` |
 
-Permissieregels in `.claude/settings.json` zijn gemak, geen grens (Claude Code-docs): deny op `.env*`, pushes naar `main`,
-force, `--no-verify`, mergen en `docker`; `ask` op de beschermde paden (§10), op `pnpm add/install/update/remove`, op `sed -i`/`perl -pi`
+Elke hook heeft een tabeltest (`test/hooks/*.test.ts`): echte stdin-payloads met de verwachte exitcode, inclusief omzeilingen (tweede commando na
+een leesuitzondering, aanhalingstekens rond redirect-doelen). Wat tekstheuristiek niet vangt (`bash -c`, `node -e`), vangt de diff-guard in CI.
+
+Permissieregels in `.claude/settings.json` zijn gemak, geen grens (Claude Code-docs): deny op `.env*` en `*secret*`, pushes naar `main`,
+force, `--no-verify`, `LEFTHOOK=0`, mergen, zelfreview (`gh pr review`, labels, statuses) en `docker`; `disableBypassPermissionsMode: "disable"`; `ask` op de beschermde paden (§10), op `pnpm add/install/update/remove`, op `sed -i`/`perl -pi`
 (Edit-regels dekken Bash-schrijfacties niet) en op elk commando uit `excludedCommands`, zodat de eigenaar elke run buiten de sandbox goedkeurt.
-Permissieregels vangen alleen de gangbare vormen (bijv. `git commit -n` midden in de opties niet); de git-guard-hook dekt dat volledig.
+Permissieregels vangen alleen de gangbare vormen (bijv. `git commit -n` midden in de opties niet); de rolhek-hook dekt dat.
 De sandbox (`failIfUnavailable`, `allowUnsandboxedCommands: false`, `denyRead` op `~/.ssh` en `~/.aws`; `~/.config/gh` volgt zodra de agent met het App-token werkt) en GitHub zijn de grens.
 De sandbox draait niet op native Windows: met `failIfUnavailable` start Claude Code daar niet; werk in WSL2. Op Linux/WSL2 bereikt een
 commando in de sandbox `localhost` niet; commando's die de lokale stack nodig hebben (`pnpm test:db`, `pnpm gate:slow`, …) staan
-in `excludedCommands` als patroon met ` *`, zodat argumenten meekomen (zonder wildcard matcht het exact). Daarmee draaien ook door de agent geschreven tests buiten de sandbox; hoe dat gat dichtgaat, staat in ADR 0009. De toolchain (mise: Node, pnpm, dbmate, gitleaks) installeert de eigenaar via `scripts/bootstrap.sh`, niet de agent.
+in `excludedCommands` als patroon met ` *`, zodat argumenten meekomen (zonder wildcard matcht het exact). Daarmee draaien ook door de agent geschreven tests buiten de sandbox; hoe dat gat dichtgaat, staat in ADR 0009. De toolchain (mise: Node, pnpm, dbmate, Betterleaks) installeert de eigenaar via `scripts/bootstrap.sh`, niet de agent.
 
 ## 9. Documentatie en tokenbudget
 
@@ -280,6 +314,9 @@ in `excludedCommands` als patroon met ` *`, zodat argumenten meekomen (zonder wi
 | `docs/operations/` | Release, rollback, back-up en herstel | Bij release of incident | 1–2 pagina's |
 
 Wat een type of check afdwingt, staat niet in proza. Wat soms nodig is, hoort in een skill of padregel, niet in een `@`-import.
+Groeit een altijd-geladen bestand over zijn budget, dan ontbreekt er een gate: maak de gate, haal de regel weg (de docs-rol doet dat na elke merge).
+Elke padregel eindigt met "Besloten, nog niet gebouwd": wat besloten is maar nog niet bestaat, zodat de agent er niet op vooruit bouwt.
+Live feiten (gates, routes, componenten, nummers) komen uit `scripts/kit/feiten.mjs` via `!`-injectie in skills, niet uit proza.
 
 ## 10. Versiebeheer, CI en release
 
@@ -290,24 +327,32 @@ Wat een type of check afdwingt, staat niet in proza. Wat soms nodig is, hoort in
   Tot de GitHub App bestaat, pusht de agent onder het account van de eigenaar en kan die zijn eigen PR niet goedkeuren: dan 0 goedkeuringen
   en geen code-owner-review, wel PR-plicht, geen force push en geen delete (ADR 0006). Rulesets op private repo's vragen GitHub Pro of Team.
 - Actions-instellingen: "Allow GitHub Actions to create and approve pull requests" uit; "Require actions to be pinned to a full-length commit SHA" aan.
-- **Beschermde paden** (één lijst; CODEOWNERS spiegelt hem volledig, `ask` in `.claude/settings.json` zonder de paden waarin de agent
+- **Beschermde paden** (bron: `.claude/gates.json`, ADR 0011; CODEOWNERS spiegelt hem volledig, `ask` in `.claude/settings.json` zonder de paden waarin de agent
   hoort te schrijven: tests (`*.test.*`, `*.spec.*`, `db/tests/`, `e2e/`) en `docs/specs/`. Toevoegen mag daar; verwijderen of skippen
-  van bestaande tests blokkeert de guard-files-hook, `goedgekeurd` bewaakt `check-spec-approval`. `check-docs` bewaakt beide spiegelingen):
+  van bestaande tests blokkeert de rolhek-hook, `goedgekeurd` bewaakt `check-spec-approval`. `check-docs` bewaakt beide spiegelingen):
   `AGENTS.md`, `CLAUDE.md`, `docs/framework.md`, `docs/dod.md`, `docs/roadmap.md`, `docs/adr/`, `docs/specs/`, `.github/`, `.claude/`, `scripts/`,
   `db/init/`, `db/docker/`, `db/tests/`, `compose*.yaml`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.npmrc`, `.pnpmfile.cjs`,
-  `mise.toml`, `.env.example`, `eslint.config.*`, `tsconfig*.json`, `.dependency-cruiser.*`, `lefthook.yml`, `renovate.json`, `.gitattributes`,
+  `mise.toml`, `.env.example`, `eslint.config.*`, `eslint-suppressions.json`, `.kit/`, `osv-scanner.toml`, `.betterleaksignore`,
+  `tsconfig*.json`, `.dependency-cruiser.*`, `lefthook.yml`, `renovate.json`, `.gitattributes`,
   `src/core/`, `src/api/app.ts`, `src/api/kit.ts`, `src/api/server.ts`, `src/api/env.ts`, `src/shared/permissions.ts`, `deploy/`,
   alle `*.test.*`/`*.spec.*`, `e2e/`.
   `src/core/` is daarnaast core (ADR 0008): in een app wijzigt alleen een template-merge het, bewaakt door `check-core`.
-- Instellingen als code in `.github/settings/main-protection.json`; `scripts/check-github.mjs` controleert alleen-lezend dat ze actief zijn en faalt als de agent onder het account van de eigenaar werkt.
-- `check-docs` (smal): paden en `pnpm`-scripts in `AGENTS.md`, `CLAUDE.md` en `.claude/**` moeten bestaan; relatieve links in `docs/` kloppen;
-  de beschermde-padenlijst hierboven, CODEOWNERS en `ask` zijn gelijk (op de genoemde uitzonderingen na); spec- en ADR-statussen uit de vaste woordenlijst.
+- Instellingen als code in `.github/settings/main-protection.json`; `scripts/check-github.mjs` controleert alleen-lezend dat ze actief zijn en faalt als de agent
+  onder het account van de eigenaar werkt, als een verplichte check niet van GitHub Actions komt (`app_id`, anders is een status te vervalsen), als
+  beheerders de regels kunnen omzeilen of als reviewgesprekken niet opgelost hoeven te zijn. Wat niet als code kan (host, database-provider),
+  staat als checklist in `docs/operations/rails-checklist.md`; een onleesbare instelling telt als fout, nooit als goed.
+- `check-docs`: elk pad, `pnpm`-script en identifier tussen backticks in `AGENTS.md`, `CLAUDE.md` en `.claude/**` bestaat; relatieve links in `docs/` kloppen;
+  `.claude/gates.json`, CODEOWNERS en `ask` zijn gelijk (op de genoemde uitzonderingen na); het gate-register is gelijk aan `gate:fast`/`gate:slow`;
+  spec- en ADR-statussen uit de vaste woordenlijst; een goedgekeurde spec heeft "Hergebruik en UX"; elk component heeft een rij in de catalogus.
 - **Spec goedkeuren**: een spec komt in een eigen PR met `status: voorstel`; de eigenaar zet `goedgekeurd` in die PR en keurt hem goed.
   `check-spec-approval` controleert via de GitHub API dat de wijziging naar `goedgekeurd` in een PR zit met een goedkeuring van de eigenaar
   (commit-auteurs zijn te vervalsen).
 - `guard.yml` (`pull_request_target`, draait altijd de versie van de default branch) voert de check-scripts van `main` uit. PR-code wordt
   alleen als git-data in een aparte map uitgecheckt en nooit uitgevoerd: geen `pnpm install`, geen configs of scripts uit de PR,
-  `persist-credentials: false`, minimale `permissions`.
+  `persist-credentials: false`, minimale `permissions`; controleert dat base-repo en -branch kloppen en beide SHA's volledig (40 tekens) zijn.
+- **Diff-guard** (in `guard.yml`, ADR 0011): raakt een PR een pad uit `gates` in `.claude/gates.json`, de sleutel `scripts` in `package.json`, of
+  wijzigt hij een bestaande test (toevoegen is vrij), dan faalt de check tenzij de PR het label `gate-wijziging` heeft én de laatste beslissende
+  review van een goedkeurder (niet de auteur) APPROVED is op exact de head-SHA. Een label alleen is geen akkoord. Paden uit `git diff -z` (NUL-gesplitst).
 - Korte branches, één onderwerp, squash-merge, conventional commits. Uitzondering: de template-koppeling en template-updates
   landen als merge-commit; squash gooit de tweede ouder weg en dan conflicteert elke volgende update op alles (ADR 0006).
 - CI: runner `ubuntu-24.04`, toolchain via `jdx/mise-action` (geen Corepack); snelle job op elke push, trage job op PR's en `main`; concurrency annuleert oude runs; pad-filters en caches.
@@ -316,8 +361,8 @@ Wat een type of check afdwingt, staat niet in proza. Wat soms nodig is, hoort in
 
 - Lokaal → PR → staging → productie. Database vóór code, altijd eerst staging. Merge op `main` → staging; release-tag + goedkeuring
   van de eigenaar in een beschermde environment → productie. Automatische Git-deploys van de host staan uit: CI bouwt en zet neer.
-- Geen preview-deploys tegen staging zonder de migraties van die PR.
-- `check-release-ci`: CI was groen voor exact dit commit (en voor productie: staging ook). `check-deployment-schema`: het productieschema
+- Geen preview-deploys tegen staging zonder de migraties van die PR. Een preview-build tegen de productiedatabase faalt (de check weigert de combinatie).
+- `check-release-ci`, vóór én na de build: het commit is nog de kop van `main` en CI was groen voor exact dit commit (en voor productie: staging ook). `check-deployment-schema`: het productieschema
   heeft alleen-lezend de tabellen en kolommen die de code verwacht, afgeleid uit het Drizzle-schema.
 - Per omgeving een eigen build (publieke `VITE_`-waarden zitten in de build): hetzelfde commit, niet dezelfde build.
 - Migraties append-only en expand/contract; `check-migrations` vergelijkt met `origin/main` en eist unieke versienummers
@@ -370,10 +415,12 @@ deploy/<host>/ adapter per gekozen host (per app)
 db/           docker/ (Postgres+pgTAP) init/ (rollen, alleen lokaal) migrations/ (dbmate) tests/ (pgTAP) schema.snapshot.sql
 e2e/          Playwright-tests tegen de echte lokale stack
 scripts/seed  testgebruikers per rol via de auth-API (wachtwoordhashes, vast lokaal TOTP-geheim voor admin)
-scripts/      dev bootstrap doctor test-db ui-check db-types facts.mjs check-*
+scripts/      dev bootstrap doctor test-db ui-check db-types check-*
+scripts/kit/  gates.mjs (gate-register) feiten.mjs ratchet.mjs diff-guard.mjs goedkeuring.mjs (ADR 0011)
+.kit/         baseline.json (ratchet)
 designs/      optioneel: prototype-exports
 docs/         framework.md roadmap.md dod.md nieuwe-app.md gouden-pad.md specs/ adr/ operations/ reviews/
-.claude/      settings.json agents/ skills/ rules/ hooks/
+.claude/      settings.json gates.json agents/ skills/ rules/ hooks/ (rolhek, groen-voor-klaar)
 .github/      workflows/ settings/ CODEOWNERS pull_request_template.md
 compose.yaml  mise.toml  AGENTS.md  CLAUDE.md  CHANGELOG.md
 ```
@@ -384,7 +431,7 @@ compose.yaml  mise.toml  AGENTS.md  CLAUDE.md  CHANGELOG.md
 |---|---|
 | 0. Bewijs | `api_user` + `withUser()` via `pg`, direct én via PgBouncer (transaction mode) in compose, zonder lekken |
 | 1. Fundament | Verticale stukken: skelet met rails en test-infra, auth, secure route met gebruikersbeheer als referentie-feature (gouden pad), rails afdwingen, agent-opzet (met `new:resource`), GitHub — zie `roadmap.md` |
-| 2. Eerste features (per app) | Clientfouten, `check:catalogus`; wat in een app doorglipt, wordt eerst een check in de template |
+| 2. Eerste features (per app) | Clientfouten; wat in een app doorglipt, wordt eerst een check in de template |
 | 3. Eerste release (per app) | Providerkeuze per ADR, adapter, staging/productie, runbooks |
 
 Fase 0 en 1 horen in de template; het gouden pad en de generator ontstaan in fase 1 uit gebruikersbeheer. Fase 2 levert verbeteringen terug aan de template; fase 3 is per app.
@@ -395,7 +442,7 @@ Fase 0 en 1 horen in de template; het gouden pad en de generator ontstaan in fas
 |---|---|
 | Audit log | Wijzigingen moeten herleidbaar zijn naar een gebruiker |
 | Bestanden (signed URL's) of realtime | De app heeft ze nodig, met een eigen ADR |
-| Idempotency-Key | Mutaties met geld of voorraad |
+| Idempotente mutaties (ADR 0011): request-UUID die de client vóór het netwerkverzoek vastlegt en bij herhalen hergebruikt; bonnetabel met payload-hash (zelfde UUID, andere inhoud → `REQUEST_ID_CONFLICT`); `pg_advisory_xact_lock` per UUID; opvragen of annuleren (tombstone) van een onbekende uitkomst | Mutaties met geld of voorraad |
 | Screenshot-regressie en axe in CI | Een visuele of toegankelijkheidsfout glipte door |
 | jscpd, knip, ast-grep | Review vindt herhaaldelijk kopieën, dode code of een fout patroon |
 | Mutation testing | Kritieke reken- of geldlogica |
