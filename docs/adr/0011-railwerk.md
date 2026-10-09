@@ -1,25 +1,22 @@
-# 0011 — Rails overnemen uit ABAS
+# 0011 — Railwerk: rolhek, geteste hooks, ratchet en goedkeuring
 
-Status: geaccepteerd (2026-10-09) — voorgesteld door de agent na de vergelijking in
-[reviews/2026-10-09-abas-vergelijking.md](../reviews/2026-10-09-abas-vergelijking.md), op verzoek van de eigenaar ("verwerk de sterke punten").
+Status: geaccepteerd (2026-10-09) — voorgesteld door de agent, op verzoek van de eigenaar.
 
 ## Context
 
-ABAS (`BramLambertJansen/ABAS`, referentie-commit `8299617`) is een app die door agents is gebouwd, met draaiende en geteste rails:
-een rolhek-hook met 66 geteste payloads, een SubagentStop die pas groen loslaat, een ratchet op schuld, een gate-register, een diff-guard
-met exacte goedkeuringsregels en een catalogustest op databasefuncties. Elke rail is daar na een echte fout of een adversariële review ontstaan,
-vaak met een test die eerst op de oude code faalde. De template had dezelfde doelen, maar losser beschreven en zonder bewezen vorm.
-Het ontwerp van de template (API-laag, `withUser()`, sandbox, core/app-grens) blijft leidend; dit gaat over het railwerk.
+De template beschreef zijn rails als losse hooks, drie gespiegelde padenlijsten en een globale "bewaker" in CI. In de praktijk faalt railwerk
+voor agents op voorspelbare plekken: een hook die zelf niet getest is, laat een omweg door (`echo x > "pad"`, een tweede commando na een
+toegestane leesvorm, `core.hooksPath`); een agent keurt via `gh` zijn eigen werk goed of zet een label; een lijst die op drie plekken staat,
+loopt uit elkaar; een regel die pas na de code komt, vraagt een grote opruimactie of wordt nooit ingevoerd; een agent bouwt op proza die
+niet meer klopt. Elk van die gaten is pas echt dicht als een test bewijst dat de oude situatie faalde.
 
 ## Besluit
-
-De template neemt deze mechanismen over, met ABAS als bron om te porten (inclusief tests):
 
 1. **Eén rolhek** (`.claude/hooks/rolhek.mjs` + `.claude/gates.json`) vervangt guard-files, tester-paden en readonly-bash.
    `.claude/gates.json` is de enige lijst van gate-paden, testpaden, `jsonGates` (`package.json` → `scripts`), goedkeurders en schrijfrecht per rol.
    CODEOWNERS en `ask` worden ermee vergeleken door `check-docs`; de diff-guard in CI leest dezelfde lijst.
 2. **Hooks zijn gates**: elke hook heeft een tabeltest met echte stdin-payloads en de verwachte exitcode, inclusief bekende omzeilingen.
-3. **Groen vóór klaar**: SubagentStop voor developer en tester blokkeert tot `gate:fast` groen is, ook bij een schone werkmap.
+3. **Groen vóór klaar**: SubagentStop voor de developer blokkeert tot `gate:fast` groen is, ook bij een schone werkmap.
 4. **Geen zelfreview**: lokaal geblokkeerd en in CI zonder effect: `gh pr review`, het label `gate-wijziging`, statussen en check-runs via `gh api`.
 5. **Ratchet**: `.kit/baseline.json` plus ESLint bulk-suppressions; een nieuwe overtreding faalt, een opgeloste die nog in de baseline staat ook.
    De baseline laten groeien is een gate-wijziging.
@@ -38,15 +35,14 @@ De template neemt deze mechanismen over, met ABAS als bron om te porten (inclusi
 14. **Patronen**: idempotente mutaties (request-UUID, bonnetabel met payload-hash, advisory lock, tombstone; client legt intentie vast vóór het netwerk)
     en clientfouten (allowlist-velden, geen PII, 5 min dedupe, build-SHA).
 
-Niet overgenomen: wat ABAS zelf als zwak noteert (regex-checks op SQL, `.from()` vanuit de client, geen sandbox, losse env-toegang) en de
-volledige `check:fast` bij elke stop zonder grens (de template draait `gate:fast`, die klein moet blijven).
+Bewust niet: checks op SQL met regex (de template leest de catalogus), en bij elke stop de volledige testset zonder grens (`gate:fast` moet klein blijven).
 
 ## Alternatieven
 
-- Rails zelf opnieuw ontwerpen volgens de bestaande tekst: meer werk en zonder het bewijs dat ABAS al heeft.
-- ABAS-kit als los pakket (`stack-rails`) afwachten: ABAS-roadmap fase 4 is niet gestart; porten nu kost minder dan wachten.
+- Losse hooks per rol met eigen padenlijsten: werkt, maar de lijsten lopen uit elkaar en omzeilingen worden per hook opnieuw gevonden.
+- Alleen CI als bewaker, geen lokale hooks: veilig, maar de agent hoort pas na een push dat hij een grens raakte; dat kost beurten.
 
 ## Gevolgen
 
 - Framework §1, §4, §7, §8, §9, §10, §12, AGENTS.md, CLAUDE.md, padregels, settings en roadmap zijn bijgewerkt.
-- Porten gebeurt in roadmap fase 1 (stuk 1, 4, 5 en 6), elk met de ABAS-tests als startpunt, aangepast aan pnpm, Hono en gewone Postgres.
+- Het railwerk wordt gebouwd in roadmap fase 1 (stuk 1, 4, 5 en 6), elk onderdeel met zijn tabel- of fixturetest.
