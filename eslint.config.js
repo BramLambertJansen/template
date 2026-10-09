@@ -131,6 +131,8 @@ export default defineConfig(
     'test-results/',
     '.runner-output/',
     'test/rails/fixtures/',
+    // Gegenereerd door @tanstack/router-plugin (vite.config.ts); niet bewerken.
+    'src/web/routeTree.gen.ts',
   ]),
   {
     // Geen eslint-disable in de code: een uitzondering gaat via de ratchet (eslint-suppressions.json, framework §4).

@@ -1,4 +1,6 @@
+import path from 'node:path';
 import { defineConfig, loadEnv } from 'vite';
+import { tanstackRouter } from '@tanstack/router-plugin/vite';
 import react from '@vitejs/plugin-react';
 import pkg from './package.json' with { type: 'json' };
 
@@ -55,7 +57,16 @@ export default defineConfig(({ command, mode }) => {
     root: 'src/web',
     ...(runnerCache === undefined ? {} : { cacheDir: runnerCache }),
     envDir: import.meta.dirname,
-    plugins: [react()],
+    // Bestandsroutes (framework §5): de plugin schrijft src/web/routeTree.gen.ts (gegenereerd, wel gecommit voor typecheck).
+    plugins: [
+      tanstackRouter({
+        target: 'react',
+        routesDirectory: path.join(import.meta.dirname, 'src/web/routes'),
+        generatedRouteTree: path.join(import.meta.dirname, 'src/web/routeTree.gen.ts'),
+        autoCodeSplitting: true,
+      }),
+      react(),
+    ],
     html: isDev ? { cspNonce: DEV_NONCE } : {},
     build: { outDir: '../../dist/web', emptyOutDir: true, target: buildTarget(pkg.browserslist) },
     server: { host: '127.0.0.1', port: webPort, strictPort: true, proxy, headers: securityHeaders(DEV_NONCE) },
