@@ -22,14 +22,14 @@ Vereist: Ubuntu 24.04 (native of WSL2), Docker Engine, [mise](https://mise.jdx.d
 (zonder die twee start Claude Code hier niet: de sandbox staat op `failIfUnavailable`).
 
 ```sh
-mise trust && mise install
-cp .env.example .env.local
-docker compose --env-file .env.local up -d --build --wait   # Postgres 17 + pgTAP op 127.0.0.1:54322, Mailpit op http://127.0.0.1:54324
+scripts/bootstrap.sh   # eenmalig: mise install, pnpm install, git-hooks (lefthook), daarna scripts/doctor.sh
+pnpm dev               # Docker-check, .env.local, Postgres 17 + pgTAP en Mailpit, migraties, API :8787 + web http://127.0.0.1:5173
 ```
 
 Draait er al een app op die poorten: tel 10 op bij `PG_PORT`, `MAIL_UI_PORT` en `SMTP_PORT` én bij de poort in de drie database-URL's en `SMTP_URL` in `.env.local`.
 
-`pnpm dev`, `scripts/bootstrap.sh` en `scripts/doctor.sh` volgen in fase 1.
+Checks: `pnpm gate:fast` (lint, typecheck, lagen, unit), `pnpm test:db` en `pnpm ui:check` (in de runner-container van
+[ADR 0009](docs/adr/0009-tests-buiten-de-sandbox.md)). Overzicht: `node scripts/kit/feiten.mjs`. Machine controleren: `scripts/doctor.sh`.
 
 ## Nieuwe app starten
 
