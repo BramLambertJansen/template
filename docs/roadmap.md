@@ -18,6 +18,7 @@ Een ADR met status `voorgesteld` is geen besluit; afvinken gebeurt pas als de ei
 - [x] Tests buiten de sandbox: runner-container — ADR 0009
 - [x] Schema `better_auth` — ADR 0010
 - [x] Railwerk: rolhek, geteste hooks, ratchet, gate-register, feiten, vijf rollen, diff-guard — ADR 0011
+- [x] Uitnodigen en MFA in Better Auth — ADR 0013
 - [x] Datapad: `withUser()` met `pg`, transactie per request, Drizzle als `tx` — ADR 0012
 
 ## Fase 0 — Bewijs
