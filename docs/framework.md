@@ -222,7 +222,10 @@ en `set -euo pipefail` met `trap 'exit 2' ERR`):
 
 Permissieregels in `.claude/settings.json` zijn gemak, geen grens (Claude Code-docs): deny op `.env*`, pushes naar `main`,
 force, `--no-verify`, mergen en `docker`; `ask` op de beschermde paden (§10) en op `pnpm add/install/update/remove`.
-De sandbox (`failIfUnavailable`, `allowUnsandboxedCommands: false`) en GitHub zijn de grens.
+Permissieregels vangen alleen de gangbare vormen (bijv. `git commit -n` midden in de opties niet); de git-guard-hook dekt dat volledig.
+De sandbox (`failIfUnavailable`, `allowUnsandboxedCommands: false`) en GitHub zijn de grens. Op Linux/WSL2 bereikt een
+commando in de sandbox `localhost` niet; commando's die de lokale stack nodig hebben (`pnpm test:db`, `pnpm gate:slow`, …) staan
+in `excludedCommands`. De toolchain (mise: Node, pnpm, dbmate, gitleaks) installeert de eigenaar via `scripts/bootstrap.sh`, niet de agent.
 
 ## 9. Documentatie en tokenbudget
 
@@ -245,7 +248,9 @@ Wat een type of check afdwingt, staat niet in proza. Wat soms nodig is, hoort in
   alleen via PR; geen force push of delete; verplichte checks `gate:fast`, `gate:slow`, osv-scanner; "Require code scanning results"
   (CodeQL); code-owner-review; goedkeuring vervalt bij nieuwe push; geen bypass voor de bot.
 - Actions-instellingen: "Allow GitHub Actions to create and approve pull requests" uit; "Require actions to be pinned to a full-length commit SHA" aan.
-- **Beschermde paden** (één lijst; CODEOWNERS en `ask` in `.claude/settings.json` spiegelen hem, `check-docs` bewaakt gelijkheid; de `ask`-lijst is nog niet gelijk, zie roadmap):
+- **Beschermde paden** (één lijst; CODEOWNERS spiegelt hem volledig, `ask` in `.claude/settings.json` zonder de paden waarin de agent
+  hoort te schrijven: tests (`*.test.*`, `*.spec.*`, `db/tests/`, `e2e/`) en `docs/specs/`. Toevoegen mag daar; bestaande tests wijzigen
+  blokkeert de guard-files-hook, `goedgekeurd` bewaakt `check-spec-approval`. `check-docs` bewaakt beide spiegelingen):
   `AGENTS.md`, `CLAUDE.md`, `docs/framework.md`, `docs/dod.md`, `docs/adr/`, `docs/specs/`, `.github/`, `.claude/`, `scripts/`,
   `db/init/`, `db/docker/`, `db/tests/`, `compose.yaml`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `mise.toml`,
   `eslint.config.*`, `tsconfig*.json`, `.dependency-cruiser.*`, `lefthook.yml`, `renovate.json`, `.gitattributes`, `src/api/db/`,

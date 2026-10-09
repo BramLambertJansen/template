@@ -2,21 +2,29 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "deny": [
-      "Read(.env*)",
+      "Read(.env)",
+      "Read(.env.*)",
       "Read(!.env.example)",
-      "Edit(.env*)",
+      "Edit(.env)",
+      "Edit(.env.*)",
       "Edit(!.env.example)",
-      "Bash(git push origin main*)",
+      "Bash(git push origin main)",
+      "Bash(git push origin main *)",
       "Bash(git push * main)",
-      "Bash(git push *:main*)",
-      "Bash(git push * +main*)",
+      "Bash(git push *:main)",
+      "Bash(git push *:main *)",
+      "Bash(git push * +main)",
+      "Bash(git push * +main *)",
+      "Bash(git push * main *)",
+      "Bash(git push *refs/heads/main)",
+      "Bash(git push *refs/heads/main *)",
       "Bash(git push --force*)",
       "Bash(git push -f*)",
       "Bash(git push * --force*)",
       "Bash(git push * -f*)",
       "Bash(git * --no-verify*)",
       "Bash(git commit -n*)",
-      "Bash(git commit * -n*)",
+      "Bash(git commit * -n)",
       "Bash(git -c core.hooksPath*)",
       "Bash(git config core.hooksPath*)",
       "Bash(gh pr merge*)",
@@ -26,8 +34,14 @@
     "ask": [
       "Bash(pnpm add *)",
       "Bash(pnpm install *)",
+      "Bash(pnpm i *)",
       "Bash(pnpm update *)",
+      "Bash(pnpm up *)",
+      "Bash(pnpm upgrade *)",
       "Bash(pnpm remove *)",
+      "Bash(pnpm rm *)",
+      "Bash(pnpm uninstall *)",
+      "Bash(pnpm un *)",
       "Edit(AGENTS.md)",
       "Edit(CLAUDE.md)",
       "Edit(docs/framework.md)",
@@ -40,6 +54,7 @@
       "Edit(db/docker/**)",
       "Edit(compose.yaml)",
       "Edit(package.json)",
+      "Edit(pnpm-lock.yaml)",
       "Edit(pnpm-workspace.yaml)",
       "Edit(mise.toml)",
       "Edit(eslint.config.*)",
@@ -50,16 +65,27 @@
       "Edit(src/api/db/**)",
       "Edit(src/api/auth/**)",
       "Edit(src/api/env.ts)",
-      "Edit(src/shared/can.ts)"
+      "Edit(src/shared/can.ts)",
+      "Edit(.gitattributes)"
     ]
   },
   "sandbox": {
     "enabled": true,
     "failIfUnavailable": true,
     "allowUnsandboxedCommands": false,
-    "excludedCommands": ["pnpm test:db", "pnpm db:reset", "pnpm db:types", "pnpm ui:check"],
+    "excludedCommands": [
+      "pnpm test:db",
+      "pnpm db:reset",
+      "pnpm db:types",
+      "pnpm ui:check",
+      "pnpm gate:slow"
+    ],
     "network": {
-      "allowedDomains": ["registry.npmjs.org", "github.com", "api.github.com"]
+      "allowedDomains": [
+        "registry.npmjs.org",
+        "github.com",
+        "api.github.com"
+      ]
     }
   }
 }

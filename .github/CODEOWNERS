@@ -1,5 +1,6 @@
-# Beschermde paden — dezelfde lijst als docs/framework.md §10 en "ask" in .claude/settings.json.
-# check-docs (fase 1) controleert dat de drie gelijk zijn. Vervang de handle per app (liever een team).
+# Beschermde paden — dezelfde lijst als docs/framework.md §10. "ask" in .claude/settings.json is dezelfde lijst
+# zonder tests en docs/specs/ (daar schrijft de agent; zie §10).
+# check-docs (fase 1) bewaakt beide spiegelingen. Vervang de handle per app (liever een team).
 /AGENTS.md                @bramlambertjansen
 /CLAUDE.md                @bramlambertjansen
 /docs/framework.md        @bramlambertjansen
@@ -27,8 +28,6 @@
 /src/api/auth/            @bramlambertjansen
 /src/api/env.ts           @bramlambertjansen
 /src/shared/can.ts        @bramlambertjansen
-**/*.test.ts              @bramlambertjansen
-**/*.test.tsx             @bramlambertjansen
-**/*.spec.ts              @bramlambertjansen
-**/*.spec.tsx             @bramlambertjansen
+**/*.test.*               @bramlambertjansen
+**/*.spec.*               @bramlambertjansen
 /e2e/                     @bramlambertjansen

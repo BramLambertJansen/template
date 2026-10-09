@@ -63,7 +63,8 @@ Daarna:
 
 ### Agent-opzet
 - [x] `AGENTS.md`, `CLAUDE.md`, padregels, spec-sjabloon, DoD (tekst; nog niet afgedwongen)
-- [ ] `.claude/settings.json` gecorrigeerd (review: `!`-negatie, `ask` = §10, aliassen, localhost/mise in sandbox) en bewezen: sandbox start op Ubuntu/WSL2 (bubblewrap, socat), deny-regels getest
+- [ ] Scripts uit `excludedCommands` (`test:db`, `db:reset`, `db:types`, `ui:check`, `gate:slow`) bestaan in `package.json`
+- [ ] `.claude/settings.json` bewezen: sandbox start op Ubuntu/WSL2 (bubblewrap, socat), deny-regels getest
 - [ ] Hooks uit framework §8 (incl. git-guard en guard-files voor bestaande tests), elk met timeout
 - [ ] Subagents tester (sonnet) en reviewer (opus) met frontmatter-hooks
 - [ ] Skills (spec, nieuw-route, nieuw-scherm, nieuw-component, migratie, release, security-review) + `scripts/facts.mjs`
