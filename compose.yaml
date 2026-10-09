@@ -143,14 +143,21 @@ services:
     user: postgres
     environment:
       DATABASE_URL: ${MIGRATOR_DATABASE_URL}
+      # pg_prove geeft een URL niet betrouwbaar door aan psql; libpq-variabelen wel (ADR 0012).
+      PGHOST: test-db
+      PGPORT: "5432"
+      PGDATABASE: app
+      PGUSER: app_migrator
+      PGSSLMODE: disable
     entrypoint: ["sh", "-c"]
     command:
       - >-
         set -- /db/tests/*.sql;
         if [ ! -e "$$1" ]; then echo "geen pgTAP-tests in db/tests"; exit 0; fi;
-        who=$$(psql "$$DATABASE_URL" --no-psqlrc -Atc 'select current_user') || exit 1;
+        export PGPASSWORD="$$(printf '%s' "$$DATABASE_URL" | sed -E 's#^[^:]+://[^:]+:([^@]+)@.*#\1#')";
+        who=$$(psql --no-psqlrc -Atc 'select current_user') || exit 1;
         echo "pgTAP verbindt als: $$who";
-        exec pg_prove --dbname "$$DATABASE_URL" --failures --ext .sql --recurse /db/tests
+        exec pg_prove --failures --ext .sql --recurse /db/tests
     volumes:
       - ./db/tests:/db/tests:ro
     tmpfs:
