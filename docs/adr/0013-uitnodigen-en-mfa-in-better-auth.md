@@ -31,8 +31,9 @@ ADR 0003 kiest Better Auth (1.7.7) met alleen de plugin two-factor. Gecontroleer
    gebruiker (verbinding als `auth_service`, alleen schema `better_auth`), zodat alleen de nieuwste link werkt.
 5. Wachtwoord minstens 12 tekens (`minPasswordLength`, uit `limits.ts`; besluit eigenaar).
 
-**Publiek dicht** via `disabledPaths` (404, met een test per pad): `/sign-up/email`, `/request-password-reset`, `/reset-password/:token` (GET-redirect),
+**Publiek dicht** via `disabledPaths` (404, met een test per pad): `/sign-up/email`, `/request-password-reset`,
 `/two-factor/send-otp`, `/two-factor/verify-otp`, `/two-factor/verify-backup-code`, `/two-factor/generate-backup-codes`, `/two-factor/view-backup-codes`.
+`disabledPaths` vergelijkt letterlijk; de GET-redirect `/reset-password/<token>` vangt daarom `authHandler` in `src/core/api/auth` af op prefix (404, test).
 `emailAndPassword.disableSignUp` blijft `false`, omdat het ook de interne route raakt; de 404 komt van `disabledPaths`.
 
 **MFA**
@@ -42,6 +43,10 @@ ADR 0003 kiest Better Auth (1.7.7) met alleen de plugin two-factor. Gecontroleer
 9. `trustDevice` kan niet: een before-hook op `/two-factor/verify-totp` weigert `trustDevice: true` (test). Een trust-cookie zou de
    TOTP-vraag overslaan en een `password`-sessie opleveren. Backupcodes en e-mail-OTP staan dicht (hierboven).
    Wie zijn TOTP kwijt is, gebruikt `pnpm admin:create` (runbook).
+
+**Rate limit en IP** (gevonden bij het bouwen): zonder instelling leest Better Auth het IP uit `x-forwarded-for`, die elke client zelf kan
+zetten. De app vertrouwt alleen de header uit `CLIENT_IP_HEADER` (door de host gezet; framework §6), verplicht buiten `local`/`test`.
+Zonder die variabele vertrouwt hij geen enkele header (lokaal valt Better Auth terug op 127.0.0.1).
 
 **Overig** volgens ADR 0003: `cookieCache` uit, `__Host-`-cookie, absoluut 7 dagen en idle 12 uur, rate limit in de database,
 schema `better_auth` (ADR 0010), eigen verbinding als `auth_service`.
@@ -57,4 +62,6 @@ schema `better_auth` (ADR 0010), eigen verbinding als `auth_service`.
 
 - `internalAdapter` is geen gedocumenteerde publieke API: bij elke update van `better-auth` bewijzen de integratietests (uitnodigen, opnieuw
   uitnodigen, accepteren, dichte paden, `session_strength`) dat het nog werkt. Renovate groepeert `better-auth` daarom niet met andere updates.
+- TOTP-codes zijn in Better Auth 1.7.7 herbruikbaar binnen het venster (±1 periode, geen replay-bescherming). Afgedekt door de
+  rate limit per IP en de lockout na 5 fouten; eigen replay-bescherming is een mogelijke uitbreiding.
 - Een "wachtwoord vergeten"-functie later is één pad uit `disabledPaths` halen plus een scherm; de token-geldigheid moet dan apart (nu 7 dagen voor alles).
