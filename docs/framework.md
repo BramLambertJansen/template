@@ -135,7 +135,7 @@ Ankers: OWASP Top 10:2025, OWASP API Security Top 10, ASVS 5.0 niveau 1 (checkli
 - **Sessies** (ADR 0003): Better Auth in `src/api/auth`, sessie in de database (`cookieCache` uit), cookie `__Host-`, `httpOnly`,
   `Secure`, `SameSite=Lax`; geen token in `localStorage`. Absoluut 7 dagen, idle 12 uur, `freshAge` 10 min voor gevoelige acties;
   wachtwoord- of 2FA-wijziging trekt andere sessies in. Gebruikersbewerkbare velden nooit voor autorisatie.
-- **CSRF**: eigen middleware; elk niet-GET-request vereist `Content-Type: application/json`. Minstens een van `Sec-Fetch-Site` en `Origin` moet aanwezig zijn; elke aanwezige header moet respectievelijk `same-origin` of exact `APP_ORIGIN` zijn. Als beide headers ontbreken of een aanwezige header niet klopt, wordt het request geweigerd. Geen `cors()`.
+- **CSRF** (ADR 0007): eigen middleware vóór alle routes; elk niet-GET-request vereist mediatype `application/json` (hoofdletterongevoelig; parameters zoals `charset` zijn toegestaan; ook zonder body, dus de client stuurt de header altijd). Minstens een van `Sec-Fetch-Site` en `Origin` moet aanwezig zijn; elke aanwezige header moet respectievelijk `same-origin` of exact `APP_ORIGIN` zijn (`Origin: null`, `same-site`, `cross-site` en `none` worden geweigerd). Ontbreken beide of klopt een aanwezige header niet, dan weigert de middleware het request. Testmatrix: ADR 0007. Geen `cors()`.
 - **Accounts**: e-mailverificatie verplicht, geen account-enumeratie bij aanmelden en reset, gelekte wachtwoorden geweigerd (staging/productie).
 - **Eigen databaserol**: de API verbindt als `api_user` (NOINHERIT, geen eigen rechten, alleen lid van `app_authenticated`),
   nooit als superuser of eigenaar. Systeemjobs krijgen een aparte rol. Werkt de gekozen pooler (transaction mode) niet met
@@ -204,9 +204,11 @@ Ankers: OWASP Top 10:2025, OWASP API Security Top 10, ASVS 5.0 niveau 1 (checkli
 
 Licht pad: geen migratie, route of permissie → plan, bouwen, review.
 
-CI zet gewijzigde bestaande tests als lijst in de PR. Implementeer tester- en reviewerrollen als onafhankelijke agents wanneer de gebruikte agentruntime dat ondersteunt; beperk hun bestandstoegang en commando's met de beveiligingsmechanismen van die runtime. Ontbreekt een rol of ondersteunt de runtime geen onafhankelijke agents, voer dan geen onafhankelijke review voor die rol op. Benoem de ontbrekende stap expliciet en laat de eigenaar die uitvoeren vóór samenvoegen. De hoofdsessie reviewt nooit haar eigen werk.
+CI zet gewijzigde bestaande tests als lijst in de PR.
 
-De rollen en criteria in deze werkstraat zijn platformneutraal. Hooks, permissies, sandboxinstellingen en agentconfiguratie zijn runtime-specifieke implementaties; documenteer en activeer die alleen voor de agentruntime waarvoor ze zijn getest.
+**Eisen aan de rollen, ongeacht runtime:** de tester kan alleen in testpaden schrijven; de reviewer is read-only (geen schrijfrechten; alleen leescommando's, `git diff/log/show/status`, `gh pr view/diff/checks` en de checks uit `docs/dod.md`) met een begrensd aantal beurten; beide starten met schone context en alleen de afgebakende opdracht. Een rol telt alleen als onafhankelijk, ook als ad-hoc subagent, wanneer de runtime die eisen afdwingt. Is dat niet zo, of ontbreekt de rol, voer dan geen onafhankelijke review voor die rol op: benoem de ontbrekende stap expliciet en laat de eigenaar die uitvoeren vóór samenvoegen. De hoofdsessie reviewt nooit haar eigen werk.
+
+**Claude Code-implementatie:** reviewer (opus) met `tools: Read, Grep, Glob, Bash`, `maxTurns` en de readonly-bash-hook; tester (sonnet) met de testpaden-hook (zie tabel). Hooks, permissies, sandboxinstellingen en agentconfiguratie zijn runtime-specifiek; documenteer en activeer ze alleen voor de runtime waarvoor ze zijn getest. De eisen hierboven gelden voor elke runtime.
 
 Hooks (exit 2 blokkeert; exit 1 en een timeout laten door, dus elke hook heeft een korte expliciete `timeout`
 en `set -euo pipefail` met `trap 'exit 2' ERR`):
@@ -255,7 +257,7 @@ Wat een type of check afdwingt, staat niet in proza. Wat soms nodig is, hoort in
 - **Beschermde paden** (één lijst; CODEOWNERS spiegelt hem volledig, `ask` in `.claude/settings.json` zonder de paden waarin de agent
   hoort te schrijven: tests (`*.test.*`, `*.spec.*`, `db/tests/`, `e2e/`) en `docs/specs/`. Toevoegen mag daar; bestaande tests wijzigen
   blokkeert de guard-files-hook, `goedgekeurd` bewaakt `check-spec-approval`. `check-docs` bewaakt beide spiegelingen):
-  `AGENTS.md`, `CLAUDE.md`, `docs/framework.md`, `docs/dod.md`, `docs/adr/`, `docs/specs/`, `.github/`, `.claude/`, `scripts/`,
+  `AGENTS.md`, `CLAUDE.md`, `docs/framework.md`, `docs/dod.md`, `docs/roadmap.md`, `docs/adr/`, `docs/specs/`, `.github/`, `.claude/`, `scripts/`,
   `db/init/`, `db/docker/`, `db/tests/`, `compose.yaml`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `mise.toml`,
   `eslint.config.*`, `tsconfig*.json`, `.dependency-cruiser.*`, `lefthook.yml`, `renovate.json`, `.gitattributes`, `src/api/db/`,
   `src/api/auth/`, `src/api/env.ts`, `src/shared/can.ts`, alle `*.test.*`/`*.spec.*`, `e2e/`.

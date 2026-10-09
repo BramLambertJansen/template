@@ -5,7 +5,7 @@ Dit bestand bevat aanvullingen voor Claude Code. De platformneutrale werkstraat 
 ## Werkstraat (verplicht)
 
 1. **Spec** — bij migratie, nieuwe route of nieuwe permissie. Niet bouwen vóór `status: goedgekeurd`.
-2. **Contract** — zod-schema's en routes die `501` teruggeven.
+2. **Contract** — zod-schema's en routes die `501` teruggeven, wanneer de wijziging een API-contract toevoegt.
 3. **Tester-subagent** — acceptatietests tegen het contract; ze compileren en falen op hun asserties.
 4. **Bouwen** — tot alle tests groen zijn. Tests toevoegen mag, bestaande wijzigen niet. Lijkt een test van de
    tester fout: stop, leg het de eigenaar voor; na akkoord past de tester hem aan.
@@ -27,4 +27,4 @@ Licht pad (geen migratie, route of permissie): plan → bouwen → review.
 - Lees `db/schema.snapshot.sql` in plaats van alle migraties (zodra die bestaat).
 - Externe diensten via hun CLI (`gh`); MCP alleen read-only. Geen `docker`.
 
-Subagents, skills en hooks volgen in fase 1 (`docs/roadmap.md`). Tot de gespecialiseerde agents bestaan, gebruik je voor de tester- en reviewerrol ad-hoc subagents met dezelfde afgebakende opdracht. Als een rol niet onafhankelijk kan worden uitgevoerd, leg je die stap voor aan de eigenaar; je reviewt nooit je eigen werk.
+Subagents, skills en hooks volgen in fase 1 (`docs/roadmap.md`). Tot de gespecialiseerde agents bestaan, gebruik je voor de tester- en reviewerrol ad-hoc subagents met dezelfde afgebakende opdracht. Een ad-hoc subagent telt alleen als onafhankelijk als de eisen uit `docs/framework.md` §8 worden afgedwongen (schone context; tester alleen in testpaden; reviewer read-only). Anders leg je die stap voor aan de eigenaar; je reviewt nooit je eigen werk.

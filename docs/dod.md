@@ -1,14 +1,22 @@
 # Definition of Done
 
-De reviewer bepaalt eerst welke fase uit `docs/roadmap.md` bij het werk hoort. Loop daarna de algemene criteria en alleen de toepasselijke fasecriteria af; noteer bewijs of een concrete reden waarom een criterium niet van toepassing is in de PR.
+De reviewer bepaalt eerst welke fase uit `docs/roadmap.md` bij het werk hoort: de fase van de roadmap-items die de PR aanvinkt of raakt. Raakt de PR meer fases, loop dan al die fases af; een lagere fase kiezen dan het werk vereist is niet toegestaan. Noteer de gekozen fase met reden in de PR; bij twijfel beslist de eigenaar. Loop daarna "Altijd" en de criteria van de gekozen fase(s) af; noteer bewijs of een concrete reden waarom een criterium niet van toepassing is in de PR.
 
 ## Altijd
 
-- [ ] Voer alle toepasselijke checks uit die in `package.json` bestaan en noteer elke exacte opdracht met de uitslag in de PR. Als een vereiste check nog niet bestaat of niet kan draaien, benoem die als niet uitgevoerd; claim geen groen resultaat. Voer nooit een onbekend of alleen gedocumenteerd commando uit alsof het bestaat.
+- [ ] Vereiste checks zijn die uit `docs/framework.md` §10 (`gate:fast`, `gate:slow`, osv-scanner, CodeQL) en `.github/`, niet de scripts die toevallig in `package.json` staan. Voer elke vereiste check uit die al bestaat, noteer per exacte opdracht de uitslag in de PR en lever alleen op met een geslaagde uitslag. Een rode of niet-uitgevoerde check blokkeert, tenzij de eigenaar in de PR expliciet akkoord geeft (wie en waarom). Enige uitzondering: een vereiste check die nog niet bestaat omdat zijn roadmap-item open staat (`[ ]`); meld die als niet uitgevoerd, claim geen groen resultaat en voer nooit een onbekend of alleen gedocumenteerd commando uit alsof het bestaat. `docs/roadmap.md` is een beschermd pad: een item heropenen (`[x]` → `[ ]`) om een check te omzeilen telt niet, en aanvinken of heropenen gebeurt met akkoord van de eigenaar.
+- [ ] Een wijziging die een check, hook, script of testconfiguratie verwijdert, hernoemt of afzwakt (ook in `package.json`, `.github/` of `scripts/`) is een blokkerende bevinding tot de eigenaar akkoord geeft. Een weggehaalde check telt niet als "bestaat niet".
 - [ ] Als `check-docs` bestaat, voer die ook uit bij documentatiewijzigingen. Als die nog niet bestaat, meld dat expliciet en controleer handmatig de gewijzigde interne links en verwijzingen op juistheid; deze controle vervangt de ontbrekende check niet.
 - [ ] Elk acceptatiecriterium voor gewijzigd gedrag heeft een inhoudelijke test (geen lege of triviale assertie). Bij wijzigingen zonder gedragsverandering, zoals alleen documentatie, noteer je voor dit criterium “n.v.t.” met reden; toepasselijke documentatiechecks blijven verplicht.
 - [ ] Geen bestaande migratie of bestaande test gewijzigd. Als zo'n wijziging noodzakelijk lijkt, stop en leg dit voor aan de eigenaar.
-- [ ] Laat de status van een spec alleen naar `gebouwd` gaan als er voor dit werk een goedgekeurde spec bestaat en de implementatie is afgerond. Verander nooit zelf een status naar `goedgekeurd`.
+- [ ] Bij migratie, nieuwe route of nieuwe permissie bestaat een goedgekeurde spec in `docs/specs/`; zonder die spec is de PR niet klaar. Laat de status alleen naar `gebouwd` gaan als de implementatie is afgerond. Verander nooit zelf een status naar `goedgekeurd`.
+
+### Beveiliging en data (geldt in elke fase)
+
+- [ ] Nieuwe routes gebruiken `defineRoute` met permissie en hebben een test per verboden rol. Nieuwe foutcodes hebben een tekst in `src/web/copy/errors.ts`.
+- [ ] Nieuwe tabellen hebben RLS aan en geforceerd, expliciete grants en een pgTAP-test per policy.
+- [ ] Nieuwe `unsafeCast`-aanroepen hebben een reden.
+- [ ] Een wijziging aan de CSRF-middleware heeft de testmatrix uit ADR 0007 als tests.
 
 ## Fase 0 — Bewijs
 
@@ -18,9 +26,6 @@ De reviewer bepaalt eerst welke fase uit `docs/roadmap.md` bij het werk hoort. L
 ## Fase 1 — Fundament
 
 - [ ] Voor elke gebouwde capability zijn de toepasselijke check, test en documentatie bijgewerkt; roadmap-items blijven open totdat de checkuitslag of het bewijs beschikbaar is.
-- [ ] Nieuwe routes gebruiken `defineRoute` met permissie en hebben tests voor verboden rollen. Nieuwe foutcodes hebben een tekst in `src/web/copy/errors.ts`.
-- [ ] Nieuwe tabellen hebben RLS aan en geforceerd, expliciete grants en een pgTAP-test per policy.
-- [ ] Nieuwe `unsafeCast`-aanroepen hebben een reden.
 
 ## Fase 2 — Gouden pad en features
 

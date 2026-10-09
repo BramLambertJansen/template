@@ -50,7 +50,7 @@ Daarna:
 - [ ] `withUser()` met foutvertaling; Drizzle-introspectie + brands-script
 - [ ] Foutcoderegister, `limits.ts`, `assert()`, `unsafeCast()`, `Cents`, cursor-contract
 - [ ] pgTAP-invarianten (RLS geforceerd, geen TRUNCATE/REFERENCES/TRIGGER, `auth` dicht), racetest-patroon
-- [ ] CSRF-middleware, `bodyLimit`, `secureHeaders()`, `onError` met `{ code, requestId }`
+- [ ] CSRF-middleware (testmatrix uit ADR 0007), `bodyLimit`, `secureHeaders()`, `onError` met `{ code, requestId }`
 
 ### Auth en rollen
 - [ ] Better Auth (gepind): tabellen via `auth generate` → migratie, `__Host-`-cookie, sessiebeleid, rate limit in database
