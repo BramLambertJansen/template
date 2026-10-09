@@ -110,9 +110,9 @@ Vier deel-PR's, in deze volgorde.
 - [x] `AsyncView`, `<Form>`/`<FormField>`, `lib/format.ts`, `lib/env.ts`
 
 **3c. Tokens en UI-kit**
-- [ ] Tokens in drie lagen, `@custom-variant dark`, basiskit Button, Input, Field, Card, Dialog (+ codemod)
-- [ ] Contrasttest over recepten (bewijst ook dat een bekende foute kleur faalt), `scanAxe` met uitzonderingen in de ratchet, woordenlijsttest,
-      `/design-system` alleen in dev
+- [x] Tokens in drie lagen, `@custom-variant dark`, basiskit Button, Input, Field, Card, Dialog (codemod vervalt: componenten met de hand op de tokens, geen `shadcn add`)
+- [x] Contrasttest over recepten (bewijst ook dat een bekende foute kleur faalt), `scanAxe`, `/design-system` alleen in dev
+- [ ] `scanAxe`-uitzonderingen in de ratchet, woordenlijsttest
 - [ ] `check:catalogus`: elk component op `/design-system` of als uitzondering met code (ratchet); screenshot-baselines in de Playwright-image (uit fase 2)
 
 **3d. De feature**

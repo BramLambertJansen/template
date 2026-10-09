@@ -7,6 +7,7 @@ import { ErrorTextsProvider } from '#core/web/ui/error-texts.tsx';
 import { errorTexts } from '#web/copy/errors.ts';
 import { createAppRouter } from '#web/lib/router.ts';
 import { LOGIN_PATH } from '#web/lib/session.ts';
+import './styles/app.css';
 
 // Compositie-root van de frontend (ADR 0008): query-client, router, foutteksten.
 const queryClient = createQueryClient({

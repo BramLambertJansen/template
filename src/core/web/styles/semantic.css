@@ -1,0 +1,54 @@
+/* Laag 2: semantisch (shadcn-namen, framework §7). De standaard van de template; een app past alleen deze laag aan,
+   in src/web/styles/theme.css. De contrasttest (contrast.test.ts) leest dit bestand. */
+:root {
+  --background: var(--p-white);
+  --foreground: var(--p-zinc-950);
+  --card: var(--p-white);
+  --card-foreground: var(--p-zinc-950);
+  --popover: var(--p-white);
+  --popover-foreground: var(--p-zinc-950);
+  --primary: var(--p-blue-700);
+  --primary-foreground: var(--p-white);
+  --secondary: var(--p-zinc-100);
+  --secondary-foreground: var(--p-zinc-900);
+  --muted: var(--p-zinc-100);
+  --muted-foreground: var(--p-zinc-600);
+  --accent: var(--p-zinc-100);
+  --accent-foreground: var(--p-zinc-900);
+  --destructive: var(--p-red-700);
+  --destructive-foreground: var(--p-white);
+  --border: var(--p-zinc-200);
+  --input: var(--p-zinc-500);
+  --ring: var(--p-blue-600);
+  --sidebar: var(--p-zinc-50);
+  --sidebar-foreground: var(--p-zinc-900);
+  --sidebar-accent: var(--p-zinc-200);
+  --sidebar-accent-foreground: var(--p-zinc-950);
+  --radius: 0.5rem;
+}
+
+[data-theme='dark'] {
+  --background: var(--p-zinc-950);
+  --foreground: var(--p-zinc-50);
+  --card: var(--p-zinc-900);
+  --card-foreground: var(--p-zinc-50);
+  --popover: var(--p-zinc-900);
+  --popover-foreground: var(--p-zinc-50);
+  --primary: var(--p-blue-300);
+  --primary-foreground: var(--p-zinc-950);
+  --secondary: var(--p-zinc-800);
+  --secondary-foreground: var(--p-zinc-50);
+  --muted: var(--p-zinc-800);
+  --muted-foreground: var(--p-zinc-400);
+  --accent: var(--p-zinc-800);
+  --accent-foreground: var(--p-zinc-50);
+  --destructive: var(--p-red-300);
+  --destructive-foreground: var(--p-zinc-950);
+  --border: var(--p-zinc-800);
+  --input: var(--p-zinc-500);
+  --ring: var(--p-blue-400);
+  --sidebar: var(--p-zinc-900);
+  --sidebar-foreground: var(--p-zinc-50);
+  --sidebar-accent: var(--p-zinc-800);
+  --sidebar-accent-foreground: var(--p-zinc-50);
+}

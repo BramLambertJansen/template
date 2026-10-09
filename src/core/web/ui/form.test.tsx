@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { ApiError } from '../lib/api-client.ts';
 import { ErrorTextsProvider } from './error-texts.tsx';
 import { Form, FormField, useZodForm } from './form.tsx';
+import { Input } from './input.tsx';
 
 afterEach(cleanup);
 
@@ -19,14 +20,7 @@ function Invite({ onSubmit }: { onSubmit: (values: z.output<typeof schema>) => P
       fieldForCode={{ ALREADY_EXISTS: 'email' }}
     >
       <FormField form={form} name="email" label="E-mailadres" description="Het adres krijgt een uitnodiging.">
-        {({ onChange, ...field }) => (
-          <input
-            {...field}
-            onChange={(event) => {
-              onChange(event.target.value);
-            }}
-          />
-        )}
+        {(field) => <Input {...field} />}
       </FormField>
     </Form>
   );

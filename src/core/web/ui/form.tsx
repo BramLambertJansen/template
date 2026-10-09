@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import {
   useController,
   useForm,
@@ -9,7 +9,9 @@ import {
   type UseFormReturn,
 } from 'react-hook-form';
 import type { z } from 'zod';
+import { Button } from './button.tsx';
 import { useErrorText } from './error-texts.tsx';
+import { Field } from './field.tsx';
 
 // Formulieren (framework §5): zodResolver op het gedeelde schema, valideren bij verlaten en daarna bij typen
 // (mode onTouched), verzendknop uit tijdens het versturen, serverfouten per veld via setError. useForm alleen hier.
@@ -59,16 +61,21 @@ export function Form<Input extends FieldValues, Output>(props: FormProps<Input, 
   });
 
   return (
-    <form noValidate onSubmit={(event) => void submit(event)}>
+    <form noValidate onSubmit={(event) => void submit(event)} className="flex flex-col gap-4">
       {formError === null ? null : (
-        <p role="alert" tabIndex={-1} ref={alert}>
+        <p
+          role="alert"
+          tabIndex={-1}
+          ref={alert}
+          className="rounded-md border border-destructive px-3 py-2 text-sm font-medium text-destructive"
+        >
           {formError}
         </p>
       )}
       {children}
-      <button type="submit" disabled={form.formState.isSubmitting}>
+      <Button type="submit" disabled={form.formState.isSubmitting}>
         {submitLabel}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -77,7 +84,7 @@ export interface FieldProps {
   readonly id: string;
   readonly name: string;
   readonly value: string;
-  readonly onChange: (value: string) => void;
+  readonly onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   readonly onBlur: () => void;
   readonly ref: (element: HTMLElement | null) => void;
   readonly 'aria-invalid': boolean;
@@ -92,7 +99,7 @@ interface FormFieldProps<Input extends FieldValues, Output> {
   readonly children: (field: FieldProps) => ReactNode;
 }
 
-// Label boven het veld, hulptekst en fout eronder, gekoppeld via aria-describedby.
+// Label boven het veld, hulptekst en fout eronder (Field), gekoppeld via aria-describedby. Het kind is meestal <Input {...field} />.
 export function FormField<Input extends FieldValues, Output>(props: FormFieldProps<Input, Output>) {
   const { form, name, label, description, children } = props;
   const { field, fieldState } = useController({ control: form.control, name });
@@ -104,8 +111,7 @@ export function FormField<Input extends FieldValues, Output>(props: FormFieldPro
   const value: unknown = field.value;
 
   return (
-    <div>
-      <label htmlFor={id}>{label}</label>
+    <Field id={id} label={label} description={description} error={fieldState.error?.message}>
       {children({
         id,
         name: field.name,
@@ -116,8 +122,6 @@ export function FormField<Input extends FieldValues, Output>(props: FormFieldPro
         'aria-invalid': fieldState.error !== undefined,
         'aria-describedby': describedBy.length === 0 ? undefined : describedBy.join(' '),
       })}
-      {description === undefined ? null : <p id={`${id}-hulp`}>{description}</p>}
-      {fieldState.error?.message === undefined ? null : <p id={`${id}-fout`}>{fieldState.error.message}</p>}
-    </div>
+    </Field>
   );
 }
