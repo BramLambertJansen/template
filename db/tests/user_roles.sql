@@ -28,7 +28,7 @@ select results_eq($$select user_id from public.user_roles$$, $$values ('u-admin'
 select throws_ok($$select app.assign_role('u-user', 'admin')$$, '42501', null, 'een admin zonder MFA kent geen rollen toe');
 
 do $$ begin perform set_config('app.user_id', 'u-admin', true); perform set_config('app.session_strength', 'mfa', true); end $$;
-select results_eq($$select user_id from public.user_roles order by 1$$, $$values ('u-admin'), ('u-user')$$, 'user_roles_select_admin: een admin met MFA ziet alle rollen');
+select results_eq($$select user_id from public.user_roles where user_id like 'u-%' order by 1$$, $$values ('u-admin'), ('u-user')$$, 'user_roles_select_admin: een admin met MFA ziet ook de rollen van anderen');
 select lives_ok($$select app.assign_role('u-admin2', 'admin')$$, 'user_roles_definer_all: een admin met MFA kent via app.assign_role rollen toe');
 
 do $$ begin perform set_config('app.user_id', '', true); perform set_config('app.session_strength', 'none', true); end $$;

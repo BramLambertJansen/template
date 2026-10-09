@@ -12,7 +12,8 @@ HOST_FILES=(scripts package.json pnpm-workspace.yaml .npmrc .pnpmfile.cjs mise.t
 
 suite="${1:-}"
 case "$suite" in
-  db) services=(runner test-pgtap) ;;
+  # pgTAP eerst: die tests draaien in een teruggedraaide transactie en verwachten de verse database na de migraties.
+  db) services=(test-pgtap runner) ;;
   ui) services=(ui-runner) ;;
   *) echo "Gebruik: scripts/runner.sh db|ui [--sta-wijzigingen-toe]" >&2; exit 2 ;;
 esac
