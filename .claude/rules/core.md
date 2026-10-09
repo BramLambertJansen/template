@@ -15,6 +15,8 @@ paths:
 
 ## Besloten, nog niet gebouwd
 
-Gebouwd: `src/core/api/{env.ts,db,http}`, `src/core/shared/{errors,limits}.ts` en de API-client; de dependency-cruiser-regel core → app bestaat.
+Gebouwd: `src/core/api/{env.ts,db,http,auth,mail}`, en in `src/core/shared`: `errors.ts` (`defineErrorCodes`), `can.ts` (`definePermissions`,
+MFA-eis voor admin), `limits.ts`, `assert.ts`, `unsafe-cast.ts`, `ids.ts` (`brandedId`), `money.ts` (`Cents`), `cursor.ts`; de API-client;
+de dependency-cruiser-regel core → app.
 Nog niet: `check-core` en de rest van core (roadmap fase 1).
 Bouw een core-onderdeel alleen in het stuk van de roadmap waar het hoort.

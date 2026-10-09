@@ -1,0 +1,7 @@
+{
+  "src/core/shared/unsafe-cast.ts": {
+    "@typescript-eslint/no-unnecessary-type-parameters": {
+      "count": 1
+    }
+  }
+}
