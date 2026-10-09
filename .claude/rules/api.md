@@ -31,5 +31,5 @@ Gebouwd: `withUser()` (Drizzle-`tx`, rol uit `user_roles`, foutvertaling), `crea
 alleen routes uit `defineRoute`), `createRouteKit`/`defineRoute` in `src/core/api/route`, contracten met `defineContract` in
 `src/shared/contracts/`, `src/api/kit.ts`, Better Auth (`src/core/api/auth`, ADR 0013) en het env-schema. Een nieuwe route = eerst het contract
 in `src/shared/contracts/<resource>.ts`, dan de handler in `src/api/routes/<resource>.ts`, dan beide in de lijsten
-(`src/shared/contracts/index.ts`, `src/api/app.ts`). Nog niet: het Drizzle-schema uit introspectie, de testkit (`asUser`) en logging via
-`src/core/api/obs` (roadmap 3a, deel 5c). Bouw er niet op vooruit; staat iets niet in `node scripts/kit/feiten.mjs`, vraag het.
+(`src/shared/contracts/index.ts`, `src/api/app.ts`). Routetests tegen de echte database: de testkit uit `src/core/api/db/testing.ts` (`beginTestDb`, `asUser(rol)` met een
+`auth`-gateway voor `buildApp`). Nog niet: het Drizzle-schema uit introspectie (deel 5d) en logging via `src/core/api/obs`. Bouw er niet op vooruit; staat iets niet in `node scripts/kit/feiten.mjs`, vraag het.

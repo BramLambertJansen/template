@@ -22,8 +22,8 @@ class LeakedConnectionError extends Error {
   }
 }
 
-async function begin(client: PoolClient, actor: Actor, readOnly: boolean): Promise<ActorRole> {
-  await client.query(readOnly ? 'begin read only' : 'begin');
+// De actor-stap binnen een open transactie; ook gebruikt door de testkit (testing.ts), daar binnen een savepoint.
+export async function enterActor(client: PoolClient, actor: Actor): Promise<ActorRole> {
   // Een verbinding met een andere rol dan waarmee hij inlogde, lekt van een vorige gebruiker: weigeren en weggooien.
   const { rows } = await client.query<{ clean: boolean }>('select current_user = session_user as clean');
   if (rows[0]?.clean !== true) throw new LeakedConnectionError();
@@ -50,7 +50,8 @@ export function createWithUser(pool: Pool): WithUser {
     const client = await pool.connect();
     let destroy = false;
     try {
-      const actorRole = await begin(client, actor, options.readOnly ?? false);
+      await client.query(options.readOnly === true ? 'begin read only' : 'begin');
+      const actorRole = await enterActor(client, actor);
       const result = await work(drizzle({ client }), actorRole);
       await client.query('commit');
       return result;
