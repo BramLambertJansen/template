@@ -1,0 +1,11 @@
+# Eén pakket; dit bestand bestaat voor de pnpm-instellingen (supply chain, docs/framework.md §6).
+packages:
+  - "."
+
+# Nieuwe versies pas na 7 dagen (in minuten).
+minimumReleaseAge: 10080
+# Weiger een versie die met minder vertrouwen gepubliceerd is dan de vorige.
+trustPolicy: no-downgrade
+# Install-scripts alleen voor expliciet toegestane pakketten.
+strictDepBuilds: true
+allowBuilds: {}

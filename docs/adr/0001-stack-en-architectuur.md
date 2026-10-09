@@ -4,13 +4,13 @@ Status: geaccepteerd (2026-10-09)
 
 ## Context
 
-Eén webapp, gebouwd door agents. Alle schermen achter login. Ontwikkelen volledig lokaal; release naar Vercel + Supabase.
+Eén webapp, gebouwd door agents. Alle schermen achter login. Ontwikkelen volledig lokaal; hosting per app (ADR 0002).
 
 ## Besluit
 
-Vite + React SPA en Hono-API in één pakket (`src/web`, `src/api`, `src/shared`), Supabase voor Postgres en Auth.
+Vite + React SPA en Hono-API in één pakket (`src/web`, `src/api`, `src/shared`), gewone Postgres.
 De browser praat alleen met de API; de API raakt Postgres alleen via `withUser()` onder de identiteit van de gebruiker.
-Details: `docs/plan.md`, hoofdstukken Architectuur en Data-toegang.
+Details: `docs/framework.md` §2 en §6.
 
 ## Alternatieven
 
@@ -22,4 +22,4 @@ Details: `docs/plan.md`, hoofdstukken Architectuur en Data-toegang.
 ## Gevolgen
 
 - Grenzen tussen mappen moeten met dependency-cruiser bewaakt worden.
-- Open risico: Supavisor in transaction mode met eigen rol `api_user` is nog niet bewezen (fase 0).
+- Open risico: `api_user` + `withUser()` achter een pooler in transaction mode is nog niet bewezen (fase 0).

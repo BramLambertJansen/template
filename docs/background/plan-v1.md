@@ -1,4 +1,4 @@
-<!-- Bron: Claude Doc "Agent-framework: plan" (rev 77, 2026-10-09). Dit bestand is de vastgelegde versie in git; wijzigingen aan het plan gaan via een PR. -->
+<!-- Achtergrond, NIET normatief. Oorspronkelijk plan (Claude Doc "Agent-framework: plan", rev 77, 2026-10-09), Supabase- en Vercel-specifiek. De wet is docs/framework.md (zie ADR 0002). -->
 
 # Agent-framework: plan
 
