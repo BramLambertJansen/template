@@ -1,0 +1,29 @@
+# Lokale stack. De app (Vite, Hono) draait native; alleen diensten draaien hier.
+# Poorten alleen op 127.0.0.1. Wachtwoorden zijn lokale demo-waarden, nooit echt.
+name: app-template
+
+services:
+  postgres:
+    image: postgres:17.6-bookworm
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+    ports:
+      - "127.0.0.1:54322:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d app"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "127.0.0.1:54324:8025"
+      - "127.0.0.1:54325:1025"
+
+volumes:
+  pgdata:

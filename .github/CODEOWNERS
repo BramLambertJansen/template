@@ -2,6 +2,6 @@
 /.github/            @bramlambertjansen
 /.claude/            @bramlambertjansen
 /scripts/            @bramlambertjansen
-/supabase/tests/     @bramlambertjansen
+/db/tests/           @bramlambertjansen
 **/*.test.ts         @bramlambertjansen
 **/*.test.tsx        @bramlambertjansen

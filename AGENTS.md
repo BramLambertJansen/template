@@ -1,41 +1,74 @@
 # AGENTS.md
 
-Webapp-template, gebouwd door agents binnen afgedwongen kaders. Ontwerp: `docs/plan.md`. Voortgang: `docs/roadmap.md`.
+Template voor webapps, gebouwd door agents binnen afgedwongen kaders. De wet is `docs/framework.md`;
+voortgang in `docs/roadmap.md`. Bij twijfel wint `docs/framework.md`, daarna vraag je het de eigenaar.
 
 ## Status
 
-Skelet. Er is nog geen code, geen `pnpm`-script en geen CI. Verzin geen commando's: wat niet in
-`package.json` staat, bestaat nog niet. Bouw volgens de roadmap, fase voor fase.
+Fundering in opbouw (fase 0/1). Verzin geen commando's, scripts of bestanden: wat niet in `package.json`
+of de repo staat, bestaat niet. Noem iets pas "klaar" met de uitvoer van de check die het bewijst.
 
 ## Stack
 
 - `src/web` — Vite + React SPA, TanStack Router/Query, React Hook Form, shadcn/ui, Tailwind v4.
-- `src/api` — Hono-app; lokaal via `src/api/server.ts` (:8787), op Vercel via `api/index.ts`.
-- `src/shared` — zod-schema's, `can()`, `limits.ts`, branded IDs, foutcodes, `assert()`, `unsafeCast()`.
-- `supabase/` — migraties (append-only), pgTAP-tests, seed, `schema.snapshot.sql` (gegenereerd).
-- Node 24 LTS, pnpm, TypeScript 6.0.x — versies in `mise.toml` en `package.json`.
+- `src/api` — Hono; lokale ingang `src/api/server.ts` (:8787). Host-adapters alleen in `deploy/<host>/`.
+- `src/shared` — zod-schema's, `can()`, `limits.ts`, branded IDs, `Cents`, cursor-contract, foutcodes, `assert()`, `unsafeCast()`.
+- `db/` — SQL-migraties (append-only), pgTAP-tests, seed, `schema.snapshot.sql` (gegenereerd).
+- Lokaal: `compose.yaml` (Postgres, Mailpit). Node 24, pnpm, TypeScript 6.0.x (`mise.toml`, `package.json`).
+- Geen hosting- of databaseprovider in de template. Providerkeuze is per app, via ADR (`docs/framework.md` §3).
 
-## Harde regels (worden checks; tot dan: handmatig naleven)
+## Harde regels — MOET / MAG NOOIT
 
-- De browser raakt geen database: alleen `@supabase/auth-js` voor inloggen, data via `src/web/lib/api.ts`.
-- `src/api/db` exporteert alleen `withUser()`. Nooit verbinden als `postgres`.
-- Een route bestaat alleen via `defineRoute({ method, path, input, output, permission, handler })`.
-- `process.env` alleen in `src/api/env.ts`. Geen `as`; uitweg is `unsafeCast(value, reden)`.
-- Elke tabel: RLS aan, expliciete grants in de migratie, elke policy een pgTAP-test op naam.
-- Een gecommitte migratie wijzig je nooit; maak een nieuwe. Migraties zijn expand/contract.
-- Tests: toevoegen mag, bestaande wijzigen of verwijderen niet zonder akkoord.
-- Geen kleuren, radius of schaduw buiten tokens; geen rauwe HTML-controls buiten `src/web/ui`.
+Een regel overtreden is nooit de oplossing. Botst een regel met de opdracht: stop en vraag.
+
+**Lagen**
+- `src/web` MAG NOOIT een databasedriver, ORM, provider-data-SDK of `process.env` importeren. Data alleen via `src/web/lib/api.ts`.
+- `src/web` importeert uit `src/api` alleen het type `AppType`. `src/shared` importeert niets uit `web` of `api`.
+- Alleen `src/api/db` importeert `pg`/Drizzle en exporteert alleen `withUser()`. Geen andere databaseverbinding.
+- `process.env` alleen in `src/api/env.ts` (zod-schema). Alleen publieke waarden krijgen `VITE_`.
+
+**API**
+- Een route bestaat alleen via `defineRoute({ method, path, input, output, permission, handler })`. Input `.strict()`.
+- De handler gebruikt `ctx.actor`; nooit zelf de gebruiker opzoeken. Nooit Postgres-fouten zelf afvangen.
+- Fouten naar buiten alleen als `{ code, requestId }`. Nooit stacktraces, SQL of interne meldingen.
+- Elke nieuwe permissie in `can()`, met een test per verboden rol.
+
+**Database**
+- Elke tabel: RLS aan én geforceerd, expliciete grants in dezelfde migratie, elke policy een pgTAP-test op naam.
+- Policies gebruiken `(select app.current_user_id())`; geen provider-functies (`auth.uid()` e.d.).
+- `security definer` alleen met `set search_path = ''` en volledig gekwalificeerde namen.
+- Een migratie die op `main` staat MAG NOOIT gewijzigd of verwijderd worden; maak een nieuwe. Altijd expand/contract.
+- De API verbindt als `api_user`, NOOIT als superuser of eigenaar.
+
+**Types en code**
+- Geen `as`, geen `any`, geen `@ts-ignore`/`eslint-disable`. Uitweg: `unsafeCast(value, reden)`.
+- Bedragen in gehele centen (`Cents`); datums `timestamptz` / ISO-string; limieten alleen uit `limits.ts`.
+- Functies klein: ≤ 60 regels (`.ts`), ≤ 120 (`.tsx`), max 3 parameters, max diepte 3.
+
+**Frontend en design system**
+- Geen rauwe `<button> <input> <select> <textarea> <dialog> <a>` buiten `src/web/ui`.
+- Geen hex/benoemde kleuren, arbitrary values, `!` of `dark:` in `features/`; alleen layout-klassen.
+- `useQuery`/`useMutation` alleen in `queries.ts`; `fetch(` alleen in de API-client; `useForm` alleen via `<Form>`.
+- Geen globale store, geen `matchMedia`/`userAgent`/`isMobile`. Elke route: guard met `can()` en ErrorBoundary.
+- Past geen bestaand component: stop en stel een variant voor. Bouw geen eigen component ernaast.
+
+**Tests**
+- Tests toevoegen mag. Bestaande tests wijzigen, verwijderen of skippen MAG NOOIT zonder akkoord van de eigenaar.
+- E2E altijd tegen de echte lokale stack; nooit API of database mocken in e2e of integratietests.
+
+**Repo en git**
+- Nooit bewerken: gegenereerde bestanden, `.env*`, checks/hooks/workflows/`.claude/` zonder te vragen.
+- Nooit pushen naar `main`, nooit `--no-verify`, nooit mergen. Eén onderwerp per PR, conventional commits (Engels).
+- Nooit productiegeheimen of -data lokaal. De agent start of stopt Docker niet.
 
 ## Werkafspraken
 
-- Ontbreekt een beslissing (bedrag, tekst, randgeval): stop en vraag. Vul geen aanname in.
-- Feature met migratie, nieuwe route of nieuwe permissie: eerst spec (`docs/specs/_template.md`),
-  status `goedgekeurd` zet alleen de eigenaar. Zonder die drie: licht pad (plan, bouwen, review).
-- UI-tekst Nederlands; code, commits en branchnamen Engels. Conventional commits, één onderwerp per PR.
-- Bestanden kebab-case, componenten PascalCase, hooks `useX`, tabellen/kolommen snake_case.
-- Klaar = `docs/dod.md`.
+- Ontbreekt een beslissing (bedrag, tekst, randgeval, providerkeuze): stop en vraag. Nooit een aanname invullen.
+- Migratie, nieuwe route of nieuwe permissie → eerst spec (`docs/specs/_template.md`), bouwen pas bij `status: goedgekeurd`.
+- UI-tekst Nederlands; code, commits en branchnamen Engels. Naamgeving: `docs/framework.md` §5.
+- Klaar = elk punt van `docs/dod.md` met bewijs.
 
 ## Waar een regel woont
 
 Type of `defineRoute` → lintregel of check → gouden pad/template → `.claude/rules/` → dit bestand.
-Een nieuwe regel hier is het laatste redmiddel.
+Een regel in proza die een check kan zijn, is een open taak in `docs/roadmap.md`.

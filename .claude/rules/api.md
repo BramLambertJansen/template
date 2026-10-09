@@ -1,0 +1,20 @@
+---
+paths:
+  - "src/api/**"
+  - "deploy/**"
+---
+
+# Regels voor `src/api`
+
+- Nieuwe route: in `src/api/routes/<resource>.ts`, één bestand per resource, alleen via `defineRoute()`.
+  `input` en `output` zijn zod-schema's uit `src/shared`; `input` is `.strict()`; `permission` is een sleutel uit `can()`.
+- De handler krijgt `ctx.actor` en een `tx` via `withUser()`. Geen eigen query buiten `tx`, geen tweede verbinding.
+- GET-routes draaien read only. Geen opeenvolgende queries per request als één query volstaat.
+- Postgres-fouten worden in `withUser()` vertaald (23505 → `ALREADY_EXISTS`, 23503 → `NOT_FOUND`, 42501 → `FORBIDDEN`).
+  Een route vangt ze nooit zelf af. Nieuwe foutcode: register in `src/shared`, tekst in `src/web/copy/errors.ts`.
+- Pure logica in `src/api/domain` (unit-testbaar, geen I/O). Handlers zijn dun.
+- `process.env` alleen in `env.ts`. Logging alleen via `src/api/obs` met `requestId`.
+- `src/api/auth`: JWT via JWKS, algoritme-allowlist, check `iss`/`aud`/`exp`; rollen uit `user_roles`, nooit uit de token.
+- `deploy/<host>/` bevat alleen een adapter die de Hono-app exporteert. Geen logica.
+- Tests per route: één per verboden rol (verwacht `FORBIDDEN`), één voor ongeldige input, de acceptatiecriteria.
+- Uniekheidsregel of geld: racetest met twee gelijktijdige requests; precies één slaagt.

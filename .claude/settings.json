@@ -17,7 +17,7 @@
       "Edit(./.github/**)",
       "Edit(./.claude/**)",
       "Edit(./scripts/check-*)",
-      "Edit(./supabase/tests/**)"
+      "Edit(./db/tests/**)"
     ]
   }
 }

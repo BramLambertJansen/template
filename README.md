@@ -1,26 +1,36 @@
 # App-template
 
-Basisrepository voor nieuwe webapps die door AI-agents gebouwd worden binnen afgedwongen kaders.
-Het volledige ontwerp staat in [docs/plan.md](docs/plan.md); de voortgang in [docs/roadmap.md](docs/roadmap.md).
+Fundering voor elke nieuwe webapp, gebouwd door AI-agents binnen afgedwongen kaders.
 
-**Status:** skelet. De mappenstructuur, documentatie en basisconfiguratie staan erin; code, checks,
-hooks en CI worden per fase gebouwd (zie roadmap). Fase 0 (bewijs Supavisor + `withUser()`) is nog niet gedaan.
+- **De wet:** [docs/framework.md](docs/framework.md) — regels, architectuur, werkstraat.
+- **Voortgang:** [docs/roadmap.md](docs/roadmap.md).
+- **Agents:** [CLAUDE.md](CLAUDE.md) → [AGENTS.md](AGENTS.md) + padregels in `.claude/rules/`.
+- **Achtergrond:** [docs/background/plan-v1.md](docs/background/plan-v1.md) (oorspronkelijk plan, niet normatief).
+
+**Status:** fundering in opbouw (fase 0/1). Nog geen app-code, checks of CI.
 
 ## Stack
 
-Vite + React SPA (`src/web`), Hono-API (`src/api`), gedeelde contracten (`src/shared`), Supabase
-(Postgres + Auth) lokaal in Docker. Release naar Vercel + Supabase (fase 3).
+Vite + React SPA (`src/web`), Hono-API (`src/api`), gedeelde contracten (`src/shared`), gewone Postgres (`db/`).
+Geen hosting- of databaseprovider in de template: een app kiest die zelf per ADR ([ADR 0002](docs/adr/0002-provider-neutraal.md)).
 
-## Nieuwe app starten vanaf deze template
+## Lokaal draaien
 
-GitHub staat niet toe dat je een repo forkt naar hetzelfde account of dezelfde organisatie. Daarom:
+Vereist: Ubuntu 24.04 (native of WSL2), Docker Engine, [mise](https://mise.jdx.dev).
 
-1. Zet deze repo op GitHub op **Settings → Template repository**.
+```sh
+mise install
+cp .env.example .env.local
+docker compose up -d --wait   # Postgres op 127.0.0.1:54322, Mailpit op http://127.0.0.1:54324
+```
+
+`pnpm dev`, `scripts/bootstrap.sh` en `scripts/doctor.sh` volgen in fase 1.
+
+## Nieuwe app starten
+
+GitHub laat je een repo niet forken naar hetzelfde account. Daarom:
+
+1. Zet deze repo op **Settings → Template repository**.
 2. Nieuwe app: **Use this template → Create a new repository**.
-3. Updates uit de template later overnemen: `git remote add template <url-van-deze-repo>`,
-   `git fetch template` en `git merge template/main` op een branch, via een PR.
-
-## Lokaal starten
-
-Nog niet beschikbaar: `scripts/bootstrap.sh`, `scripts/doctor.sh` en `pnpm dev` komen in fase 1
-(zie [docs/plan.md](docs/plan.md), "Nieuwe machine in tien stappen").
+3. Template-updates overnemen: `git remote add template <url>`, `git fetch template`, `git merge template/main` op een branch, via PR.
+4. Eerste ADR in de app: hosting, beheerde Postgres en identity provider (`docs/framework.md` §3).

@@ -1,19 +1,27 @@
 @AGENTS.md
 
-## Werkstraat
+## Werkstraat (verplicht)
 
-1. Spec (bij migratie, nieuwe route of permissie) — wacht op status `goedgekeurd`.
-2. Contract: zod-schema's en routes die `501` teruggeven.
-3. Tester-subagent schrijft acceptatietests tegen het contract (compileren, falen terecht).
-4. Hoofdsessie bouwt tot de tests groen zijn.
-5. Reviewer-subagent keurt in schone context tegen `docs/dod.md`.
-6. Eigenaar reviewt en merget.
+1. **Spec** — bij migratie, nieuwe route of nieuwe permissie. Niet bouwen vóór `status: goedgekeurd`.
+2. **Contract** — zod-schema's en routes die `501` teruggeven.
+3. **Tester-subagent** — acceptatietests tegen het contract; ze compileren en falen op hun asserties.
+4. **Bouwen** — tot alle tests groen zijn. Tests toevoegen mag, bestaande wijzigen niet.
+5. **Reviewer-subagent** — schone context, loopt `docs/dod.md` af, rapporteert alleen correctheid,
+   duplicatie, spec-afwijking en ontbrekende testinhoud.
+6. **Eigenaar** — reviewt en merget. Jij nooit.
 
-Subagents, skills en hooks bestaan nog niet (fase 1, zie `docs/roadmap.md`).
+Licht pad (geen migratie, route of permissie): plan → bouwen → review.
+
+## Stoppen en vragen
+
+- Een beslissing ontbreekt, de spec spreekt zichzelf tegen, of een regel staat de opdracht in de weg.
+- Een check faalt en de fix zou een regel, check, hook of test afzwakken.
+- Na twee mislukte correctiepogingen: stop, vat samen wat je probeerde, vraag om richting.
 
 ## Zuinig met context
 
 - Onderzoek via een subagent die alleen een conclusie teruggeeft.
-- Lees `supabase/schema.snapshot.sql` in plaats van alle migraties (zodra die bestaat).
-- Na twee mislukte correcties: stop en vraag om een betere opdracht.
-- Externe diensten via hun CLI (`gh`, `supabase`), niet via MCP.
+- Lees `db/schema.snapshot.sql` in plaats van alle migraties (zodra die bestaat).
+- Externe diensten via hun CLI (`gh`, `docker`), niet via MCP.
+
+Subagents, skills en hooks volgen in fase 1 (`docs/roadmap.md`). Tot ze bestaan, voer je hun rol zelf uit en zeg je dat.
