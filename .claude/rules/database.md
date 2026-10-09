@@ -29,7 +29,7 @@ paths:
 - Heeft een auth-hook data buiten `better_auth` nodig (bijv. rol uit `user_roles`), of de app gegevens uit `better_auth."user"`:
   via een `security definer`-functie of -view van `app_definer`, nooit met extra grants op het andere schema.
 - `set_config` en `current_setting` alleen in `src/core/api/db` en in de helpers in schema `app`; nooit in app-SQL of handlers.
-- Rijen in schema `better_auth` zijn van Better Auth (ADR 0010); lees of schrijf ze nooit vanuit `src/core/api/db` of app-code. Geen provider-specifieke schema's of functies (`storage.*`, `realtime.*`, `auth.uid()`).
+- Rijen in schema `better_auth` zijn van Better Auth (ADR 0010); lees of schrijf ze nooit vanuit `src/core/api/db` of app-code (uitzondering: `asUser` in de testkit, binnen een testtransactie die terugdraait). Geen provider-specifieke schema's of functies (`storage.*`, `realtime.*`, `auth.uid()`).
 - Na een migratie: types en snapshot opnieuw genereren met het script (zodra het bestaat); nooit met de hand.
 - `src/core/api/db` exporteert alleen `withUser()` (plus `testing.ts`, alleen voor testbestanden). Die controleert aan het begin
   van elke transactie `current_user = session_user`, zet de rol, `app.user_id` en `app.session_strength` (`password` of `mfa`; elke
@@ -37,5 +37,10 @@ paths:
 
 ## Besloten, nog niet gebouwd
 
-`withUser()` bestaat (zonder foutvertaling, ADR 0012). Nog niet: `db/schema.snapshot.sql`, `check-secdef`, `check-policies`, de functiecatalogus in pgTAP (framework §6), de RLS-invarianten en de
-scripts voor types en snapshot bestaan nog niet (roadmap fase 0 en 1). Alleen de baseline-migratie staat er. Bouw er niet op vooruit.
+Gebouwd: `withUser()` met Drizzle-`tx` en foutvertaling (ADR 0012); pgTAP-invarianten (`db/tests/invarianten.sql`: RLS
+geforceerd, geen TRUNCATE/REFERENCES/TRIGGER, `better_auth` dicht, niets voor PUBLIC) en de functiecatalogus
+(`db/tests/functies.sql`: een nieuwe functie krijgt daar een regel, in dezelfde PR als de migratie); de testkit in
+`testing.ts` (`beginTestDb(pool)`: `asUser(rol)`, `withUser` met een savepoint per aanroep, `rollback()`; de pool verbindt
+als `app_migrator` en wordt alleen in `test/` gemaakt).
+Nog niet: `db/schema.snapshot.sql`, het Drizzle-schema uit introspectie met branded IDs (deel 5d), `check-secdef` en
+`check-policies` (roadmap fase 1). Bouw er niet op vooruit.
