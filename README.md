@@ -28,6 +28,15 @@ pnpm dev               # Docker-check, .env.local, Postgres 17 + pgTAP en Mailpi
 
 Draait er al een app op die poorten: tel 10 op bij `PG_PORT`, `MAIL_UI_PORT` en `SMTP_PORT` én bij de poort in de drie database-URL's en `SMTP_URL` in `.env.local`.
 
+Lokale accounts (gemaakt door `pnpm dev`, alleen lokaal; wachtwoord `lokaal-demo-wachtwoord`):
+
+| Account | Rol | TOTP |
+|---|---|---|
+| `admin@template.test` | admin | vast geheim; voeg toe aan je authenticator-app met `otpauth://totp/localhost:admin%40template.test?secret=NRXWWYLBNQWWIZLNN4WXI33UOAWXG3DFOV2GK3BNGAYDAMBQGAYA&issuer=localhost&digits=6&period=30` |
+| `gebruiker@template.test` | user | — |
+
+Eerste admin in een echte omgeving, of buitengesloten: `pnpm admin:create --email …` ([runbook](docs/operations/eerste-admin.md)).
+
 Checks: `pnpm gate:fast` (lint, typecheck, lagen, unit), `pnpm test:db` en `pnpm ui:check` (in de runner-container van
 [ADR 0009](docs/adr/0009-tests-buiten-de-sandbox.md)). Overzicht: `node scripts/kit/feiten.mjs`. Machine controleren: `scripts/doctor.sh`.
 
