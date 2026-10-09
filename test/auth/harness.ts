@@ -2,7 +2,8 @@ import { createHmac } from 'node:crypto';
 import { z } from 'zod';
 import { buildApp } from '../../src/api/app.ts';
 import { invitationMail } from '../../src/api/mail/invitation.ts';
-import { authHandler, createAuth } from '../../src/core/api/auth/index.ts';
+import { authGateway, createAuth } from '../../src/core/api/auth/index.ts';
+import { createPool, createWithUser } from '../../src/core/api/db/testing.ts';
 import { createSmtpMailer } from '../../src/core/api/mail/smtp.ts';
 
 // Testopzet voor de auth-integratietests (runner, ADR 0009): echte database als auth_service, echte SMTP naar Mailpit.
@@ -23,7 +24,9 @@ export function createTestApp() {
     clientIpHeader: required('CLIENT_IP_HEADER'),
     sendInvitation: (invitation) => sendMail(invitationMail(invitation)),
   });
-  return { auth, app: buildApp({ appOrigin: APP_ORIGIN, auth: authHandler(auth) }) };
+  const pool = createPool(required('DATABASE_URL'));
+  const withUser = createWithUser(pool);
+  return { auth, pool, withUser, app: buildApp({ appOrigin: APP_ORIGIN, auth: authGateway(auth), withUser }) };
 }
 
 type App = ReturnType<typeof createTestApp>['app'];
@@ -63,7 +66,7 @@ export class Browser {
     if (this.cookies.size > 0) {
       headers.set('cookie', [...this.cookies].map(([name, value]) => `${name}=${value}`).join('; '));
     }
-    const response = await this.app.request(`${APP_ORIGIN}${path}`, { ...init, headers });
+    const response = await this.app.fetch(new Request(`${APP_ORIGIN}${path}`, { ...init, headers }));
     for (const line of response.headers.getSetCookie()) {
       const [pair = ''] = line.split(';');
       const index = pair.indexOf('=');

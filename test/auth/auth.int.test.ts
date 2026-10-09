@@ -17,10 +17,10 @@ import { APP_ORIGIN, Browser, createTestApp, latestMailTo, required, tokenFrom, 
 const PASSWORD = 'ab-'.repeat(6);
 const WRONG = 'xy-'.repeat(6);
 const ELEVEN = 'ab-'.repeat(3) + 'ab';
-const { auth, app } = createTestApp();
+const { auth, app, pool } = createTestApp();
 const db = new pg.Pool({ connectionString: required('AUTH_DATABASE_URL'), max: 2 });
 afterAll(async () => {
-  await db.end();
+  await Promise.all([db.end(), pool.end()]);
 });
 
 async function invitedAndActivated(name: string): Promise<{ email: string; userId: string }> {
