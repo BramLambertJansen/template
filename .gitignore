@@ -9,3 +9,7 @@ test-results/
 .env.*
 !.env.example
 .DS_Store
+.claude/settings.local.json
+mise.local.toml
+blob-report/
+*.log

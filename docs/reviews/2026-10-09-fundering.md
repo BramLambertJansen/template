@@ -2,7 +2,10 @@
 
 Vier onafhankelijke reviews (alleen lezend): trouw aan plan-v1, Claude Code-docs, auth/database/security, tooling/CI.
 Versies uit npm-registry, Docker Hub, nodejs.org en GitHub-advisories op 2026-10-09. **(onzeker)** = niet zelf geverifieerd.
-Nog niets van deze review is doorgevoerd.
+**Status:** doorgevoerd op 2026-10-09 (zie CHANGELOG en ADR 0003–0005). Open: alles wat bewijs op een machine met Docker vraagt
+(A9, healthcheck; pgTAP-image; rollen en baseline-migratie) staat in roadmap fase 0.
+Nog open na de controle-review: `.claude/settings.json` (env-deny zonder `!`, `ask`-lijst gelijk aan §10, te brede
+push/commit-denies, pnpm-aliassen, sandbox-netwerk voor localhost en mise) wacht op akkoord van de eigenaar.
 
 ## A. Blokkerend vóór fase 0
 

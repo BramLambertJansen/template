@@ -1,32 +1,34 @@
 # Lokale stack. De app (Vite, Hono) draait native; alleen diensten draaien hier.
-# Poorten alleen op 127.0.0.1. Wachtwoorden zijn lokale demo-waarden, nooit echt.
-name: app-template
+# Geen vaste projectnaam: elke app krijgt zijn eigen volume (naam van de map).
+# Poorten alleen op 127.0.0.1 en instelbaar, zodat meerdere apps naast elkaar draaien.
+# Wachtwoorden zijn lokale demo-waarden, nooit echt.
 
 services:
   postgres:
     build: db/docker
-    image: app-template-postgres:17.6
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: app
     ports:
-      - "127.0.0.1:54322:5432"
+      - "127.0.0.1:${PG_PORT:-54322}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d:ro
       - ./db:/db:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d app"]
+      # Via TCP: de tijdelijke init-server luistert alleen op de socket, dus pas na db/init gezond.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d app"]
+      start_period: 30s
       interval: 2s
       timeout: 3s
       retries: 30
 
   mailpit:
-    image: axllent/mailpit:v1.27
+    image: axllent/mailpit:v1.31.4
     ports:
-      - "127.0.0.1:54324:8025"
-      - "127.0.0.1:54325:1025"
+      - "127.0.0.1:${MAIL_UI_PORT:-54324}:8025"
+      - "127.0.0.1:${SMTP_PORT:-54325}:1025"
 
 volumes:
   pgdata:

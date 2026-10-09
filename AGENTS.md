@@ -1,79 +1,78 @@
 # AGENTS.md
 
-Template voor webapps, gebouwd door agents binnen afgedwongen kaders. De wet is `docs/framework.md`;
-voortgang in `docs/roadmap.md`. Bij twijfel wint `docs/framework.md`, daarna vraag je het de eigenaar.
+Template voor webapps, gebouwd door agents binnen afgedwongen kaders. De regels staan in `docs/framework.md`
+(bij twijfel wint dat document, daarna de eigenaar); voortgang in `docs/roadmap.md`; besluiten in `docs/adr/`.
 
 ## Status
 
-Fundering in opbouw (fase 0/1). Verzin geen commando's, scripts of bestanden: wat niet in `package.json`
-of de repo staat, bestaat niet. Noem iets pas "klaar" met de uitvoer van de check die het bewijst.
+Fundering in opbouw (fase 0/1). Wat niet in `package.json` of de repo staat, bestaat nog niet: verzin geen
+commando's, scripts of bestanden. Noem iets pas klaar met de uitvoer van de check die het bewijst.
 
 ## Stack
 
 - `src/web` — Vite + React SPA, TanStack Router/Query, React Hook Form, shadcn/ui, Tailwind v4.
 - `src/api` — Hono; lokale ingang `src/api/server.ts` (:8787). Host-adapters alleen in `deploy/<host>/`.
+- `src/api/auth` — Better Auth, sessie-cookie, schema `auth` (ADR 0003).
 - `src/shared` — zod-schema's, `can()`, `limits.ts`, branded IDs, `Cents`, cursor-contract, foutcodes, `assert()`, `unsafeCast()`.
-- `src/api/auth` — Better Auth, sessie-cookie, eigen Postgres-schema `auth` (ADR 0003).
-- `db/` — SQL-migraties met dbmate (append-only), pgTAP-tests, seed, `schema.snapshot.sql` (gegenereerd) (ADR 0004).
-- Lokaal: `compose.yaml` (Postgres 17 + pgTAP, Mailpit). Node 24, pnpm, TypeScript 6.0.x (`mise.toml`, `package.json`).
-- Geen hosting- of databaseprovider in de template. Providerkeuze is per app, via ADR (`docs/framework.md` §3).
+- `db/` — SQL-migraties (dbmate), pgTAP-tests, `schema.snapshot.sql` (gegenereerd); rollen in `db/init/` (ADR 0004).
+- Lokaal: `compose.yaml` (Postgres 17 + pgTAP, Mailpit). Node 26, pnpm 11, TypeScript 6.0 (ADR 0005).
+- Geen hosting- of databaseprovider in de template; een app kiest die per ADR (ADR 0002).
 
-## Harde regels — MOET / MAG NOOIT
+## Regels
 
-Een regel overtreden is nooit de oplossing. Botst een regel met de opdracht: stop en vraag.
+Botst een regel met de opdracht, stop dan en vraag het. Een regel omzeilen is nooit de oplossing: de checks
+vangen het later toch, en dan is het werk verloren. Uitzonderingen staan limitatief in `docs/framework.md` §3.
 
-**Lagen**
-- `src/web` MAG NOOIT een databasedriver, ORM, provider-SDK of `process.env` importeren. Data alleen via `src/web/lib/api.ts`.
-- `src/web` importeert uit `src/api` alleen het type `AppType`. `src/shared` importeert niets uit `web` of `api`.
-- Alleen `src/api/db` importeert `pg`/Drizzle en exporteert alleen `withUser()`. Enige andere verbinding: `src/api/auth` als `auth_service`.
-- `DATABASE_ADMIN_URL` (superuser) alleen in `scripts/`, NOOIT in `src/`.
-- Provider-SDK's alleen in `deploy/<host>/` of een adapter die een ADR toestaat.
-- `process.env` alleen in `src/api/env.ts` (zod-schema). Alleen publieke waarden krijgen `VITE_`.
+**Lagen** — zodat de browser nooit bij data kan en er één weg naar de database is.
+- `src/web` haalt data alleen via `src/web/lib/api.ts`; geen databasedriver, ORM of provider-SDK.
+- `src/web` importeert uit `src/api` alleen het type `AppType`; `src/shared` importeert niets uit `web` of `api`.
+- Alleen `src/api/db` maakt databaseverbindingen (en `src/api/auth` voor Better Auth). `src/api/db` exporteert alleen `withUser()`.
+- `process.env` alleen in `src/api/env.ts`, `import.meta.env` alleen in `src/web/lib/env.ts`. Alleen publieke waarden krijgen `VITE_`.
+- `MIGRATOR_DATABASE_URL` alleen in `scripts/`, nooit in `src/`.
 
-**API**
-- Een route bestaat alleen via `defineRoute({ method, path, input, output, permission, handler })`. Input `.strict()`.
-- De handler gebruikt `ctx.actor`; nooit zelf de gebruiker opzoeken. Nooit Postgres-fouten zelf afvangen.
-- Fouten naar buiten alleen als `{ code, requestId }`. Nooit stacktraces, SQL of interne meldingen.
-- Elke nieuwe permissie in `can()`, met een test per verboden rol.
+**API** — zodat validatie, rechten en foutafhandeling niet per route vergeten kunnen worden.
+- Een route ontstaat alleen via `defineRoute({ method, path, input, output, permission, handler })`; input is `.strict()`.
+- De handler gebruikt `ctx.actor`; zoek de gebruiker niet zelf op en vang geen Postgres-fouten af.
+- Naar buiten gaat een fout alleen als `{ code, requestId }`, nooit met stacktrace of SQL.
+- Een nieuwe permissie komt in `can()`, met een test per verboden rol.
 
-**Database**
-- Elke tabel: RLS aan én geforceerd, expliciete grants in dezelfde migratie, elke policy een pgTAP-test op naam.
-- Policies gebruiken `(select app.current_user_id())`; geen provider-functies (`auth.uid()` e.d.).
-- `security definer` alleen met `set search_path = ''` en volledig gekwalificeerde namen.
-- Een migratie die op `main` staat MAG NOOIT gewijzigd of verwijderd worden; maak een nieuwe. Altijd expand/contract.
-- De API verbindt als `api_user`, NOOIT als superuser of eigenaar.
+**Database** — zodat een fout in de API nog steeds geen data van een ander lekt.
+- Elke tabel: RLS aan en geforceerd, expliciete grants in dezelfde migratie, elke policy een pgTAP-test op naam.
+- Policies gebruiken `(select app.current_user_id())`; geen provider-functies zoals `auth.uid()`.
+- `security definer` alleen met `set search_path = ''`, volledig gekwalificeerde namen en eigenaar `app_definer`.
+- Wijzig nooit een gecommitte migratie; maak een nieuwe (expand/contract). Maak geen rollen in migraties.
+- Gebruik nooit `SET ROLE` of `set_config(…, false)`: op een gedeelde verbinding lekt dat naar de volgende gebruiker.
 
-**Types en code**
-- Geen `as`, geen `any`, geen `@ts-ignore`/`eslint-disable`. Uitweg: `unsafeCast(value, reden)`.
-- Bedragen in gehele centen (`Cents`); datums `timestamptz` / ISO-string; limieten alleen uit `limits.ts`.
-- Functies klein: ≤ 60 regels (`.ts`), ≤ 120 (`.tsx`), max 3 parameters, max diepte 3.
+**Types en code** — zodat de compiler fouten vindt in plaats van gebruikers.
+- Geen type-assertions (`x as T`), geen `any`, geen `@ts-ignore` of `eslint-disable`. Uitweg: `unsafeCast(value, reden)`.
+- Bedragen in gehele centen (`Cents`), tijd als `timestamptz`/ISO-string, grenzen alleen uit `limits.ts`.
+- Kleine functies: ≤ 60 regels (`.ts`), ≤ 120 (`.tsx`), max 3 parameters, max diepte 3.
 
-**Frontend en design system**
-- Geen rauwe `<button> <input> <select> <textarea> <dialog> <a>` buiten `src/web/ui`.
-- Geen hex/benoemde kleuren, arbitrary values, `!` of `dark:` in `features/`; alleen layout-klassen.
-- `useQuery`/`useMutation` alleen in `queries.ts`; `fetch(` alleen in de API-client; `useForm` alleen via `<Form>`.
-- Geen globale store, geen `matchMedia`/`userAgent`/`isMobile`. Elke route: guard met `can()` en ErrorBoundary.
-- Past geen bestaand component: stop en stel een variant voor. Bouw geen eigen component ernaast.
+**Frontend** — zodat elk scherm er hetzelfde uitziet en toegankelijk blijft.
+- Geen rauwe `<button> <input> <select> <textarea> <dialog> <a>` buiten `src/web/ui`; gebruik de componenten.
+- In `features/` alleen layout-klassen; geen kleuren, arbitrary values, `!` of `dark:`.
+- `useQuery`/`useMutation` alleen in `queries.ts`, `fetch(` alleen in de API-client, formulieren via `<Form>`.
+- Geen globale store, geen `matchMedia`/`userAgent`/`isMobile`. Elke route heeft een `can()`-guard en ErrorBoundary.
+- Past geen bestaand component, stop dan en stel een variant voor in plaats van iets nieuws ernaast te bouwen.
 
-**Tests**
-- Tests toevoegen mag. Bestaande tests wijzigen, verwijderen of skippen MAG NOOIT zonder akkoord van de eigenaar.
-- E2E altijd tegen de echte lokale stack; nooit API of database mocken in e2e of integratietests.
+**Tests** — zodat groen ook echt iets betekent.
+- Voeg tests toe; wijzig, verwijder of skip geen bestaande test. Lijkt een test fout, leg het de eigenaar voor.
+- E2E en integratietests draaien tegen de echte lokale stack, nooit met gemockte API of database.
 
-**Repo en git**
-- Nooit bewerken: gegenereerde bestanden en `.env*` (behalve `.env.example`).
-- Alleen na akkoord van de eigenaar wijzigen: `AGENTS.md`, `CLAUDE.md`, `docs/framework.md`, `docs/dod.md`, `docs/adr/`,
-  `.claude/`, `.github/`, `scripts/`, `db/init/`, `db/docker/`, `compose.yaml`, `package.json`, `mise.toml`.
-- Geen nieuwe dependency zonder akkoord. MCP-servers alleen read-only en versie gepind.
-- Een spec op `status: goedgekeurd` zetten MAG NOOIT; dat doet alleen de eigenaar.
-- Nooit pushen naar `main`, nooit `--no-verify`, nooit mergen. Eén onderwerp per PR, conventional commits (Engels).
-- Nooit productiegeheimen of -data lokaal. De agent start of stopt Docker niet; draait de stack niet, vraag de eigenaar `pnpm dev` te starten.
+**Repo en grenzen** — zodat de kaders zelf niet ongemerkt verschuiven.
+- Bewerk geen gegenereerde bestanden en geen `.env*` (behalve `.env.example`).
+- Beschermde paden (`docs/framework.md` §10) wijzig je alleen na akkoord van de eigenaar.
+- Geen nieuwe dependency zonder akkoord. Zet een spec nooit op `goedgekeurd`; dat doet alleen de eigenaar.
+- Push nooit naar `main`, gebruik nooit `--no-verify`, merge nooit. Eén onderwerp per PR, conventional commits.
+- Gebruik `docker` niet; draait de stack niet, vraag de eigenaar `pnpm dev` te starten. Geen productiegeheimen of -data lokaal.
+- Externe diensten via hun CLI (`gh`). MCP-servers alleen read-only en versie gepind.
 
 ## Werkafspraken
 
-- Ontbreekt een beslissing (bedrag, tekst, randgeval, providerkeuze): stop en vraag. Nooit een aanname invullen.
-- Migratie, nieuwe route of nieuwe permissie → eerst spec (`docs/specs/_template.md`), bouwen pas bij `status: goedgekeurd`.
+- Ontbreekt een beslissing (bedrag, tekst, randgeval, providerkeuze): vraag het, vul geen aanname in.
+- Migratie, nieuwe route of nieuwe permissie: eerst een spec (`docs/specs/_template.md`), bouwen pas bij `status: goedgekeurd`.
 - UI-tekst Nederlands; code, commits en branchnamen Engels. Naamgeving: `docs/framework.md` §5.
-- Klaar = elk punt van `docs/dod.md` met bewijs.
+- Klaar is elk punt van `docs/dod.md`, met bewijs.
 
 ## Waar een regel woont
 

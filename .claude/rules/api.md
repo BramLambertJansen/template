@@ -15,7 +15,9 @@ paths:
 - Pure logica in `src/api/domain` (unit-testbaar, geen I/O). Handlers zijn dun.
 - `process.env` alleen in `env.ts`. Logging alleen via `src/api/obs` met `requestId`.
 - `src/api/auth`: Better Auth op `/api/auth/*`, eigen verbinding als `auth_service`, alleen schema `auth`. Sessie per request uit
-  de database; rollen uit `user_roles`, nooit uit de sessie. Muterende requests: `Origin`-check.
+  de database (`cookieCache` uit); rollen uit `user_roles`, nooit uit de sessie. Alleen plugins two-factor en magic link;
+  een andere plugin vraagt een ADR. Sessiebeleid en MFA: ADR 0003.
+- CSRF-middleware vóór alle routes; geen `cors()`. `bodyLimit` op de app; paginagrootte uit `limits.ts`.
 - `deploy/<host>/` bevat alleen een adapter die de Hono-app exporteert. Geen logica.
 - Tests per route: één per verboden rol (verwacht `FORBIDDEN`), één voor ongeldige input, de acceptatiecriteria.
 - Uniekheidsregel of geld: racetest met twee gelijktijdige requests; precies één slaagt.

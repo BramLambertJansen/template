@@ -13,7 +13,8 @@ Fundering voor elke nieuwe webapp, gebouwd door AI-agents binnen afgedwongen kad
 
 Vite + React SPA (`src/web`), Hono-API (`src/api`), gedeelde contracten (`src/shared`), gewone Postgres (`db/`).
 Geen hosting- of databaseprovider in de template: een app kiest die zelf per ADR ([ADR 0002](docs/adr/0002-provider-neutraal.md)).
-Auth draait in de API op de eigen Postgres ([ADR 0003](docs/adr/0003-auth-in-de-api.md)); database-tooling in [ADR 0004](docs/adr/0004-database-tooling.md).
+Auth draait in de API op de eigen Postgres ([ADR 0003](docs/adr/0003-auth-in-de-api.md)); database in [ADR 0004](docs/adr/0004-database-tooling.md);
+toolchain en bot-identiteit in [ADR 0005](docs/adr/0005-toolchain-en-identiteit.md).
 
 ## Lokaal draaien
 
@@ -33,5 +34,7 @@ GitHub laat je een repo niet forken naar hetzelfde account. Daarom:
 
 1. Zet deze repo op **Settings → Template repository**.
 2. Nieuwe app: **Use this template → Create a new repository**.
-3. Template-updates overnemen: `git remote add template <url>`, `git fetch template`, `git merge template/main` op een branch, via PR.
+3. Direct daarna eenmalig (de nieuwe repo heeft een eigen geschiedenis):
+   `git remote add template <url>`, `git fetch template`, `git merge --allow-unrelated-histories -s ours template/main`.
+   Daarna haal je updates binnen met `git merge template/main` op een branch, via een PR.
 4. Eerste ADR in de app: hosting en beheerde Postgres (`docs/framework.md` §3).
