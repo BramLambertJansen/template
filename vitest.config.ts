@@ -20,6 +20,7 @@ export default defineConfig({
         test: {
           name: 'int',
           include: ['{src,test}/**/*.int.test.ts'],
+          exclude: ['test/rails/fixtures/**'],
           environment: 'node',
         },
       },
