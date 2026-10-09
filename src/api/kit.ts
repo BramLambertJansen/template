@@ -1,5 +1,6 @@
 import { createRouteKit } from '#core/api/route/kit.ts';
-import { permissions } from '#shared/permissions.ts';
+import { permissions, type Permission } from '#shared/permissions.ts';
+import type { AppServices } from './services.ts';
 
-// Compositie-root (ADR 0008): defineRoute met de permissietabel van de app.
-export const { defineRoute } = createRouteKit({ permissions });
+// Compositie-root (ADR 0008): defineRoute met de permissietabel en de services van de app.
+export const { defineRoute } = createRouteKit<Permission, AppServices>({ permissions });

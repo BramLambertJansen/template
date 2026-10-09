@@ -16,6 +16,7 @@
  * @property {number | null} length
  * @property {number | null} precision
  * @property {number | null} scale
+ * @property {boolean} [isView]  kolom van een view: alleen-lezen, zonder primary key of default
  */
 
 /**
@@ -173,7 +174,7 @@ export function renderSchema(catalog, declared) {
     tables.set(key, [...(tables.get(key) ?? []), column]);
   }
   /** @type {Set<string>} */
-  const imports = new Set(['pgTable']);
+  const imports = new Set();
   const schemas = new Set();
   const names = new Set();
   const blocks = [...tables.entries()]
@@ -190,12 +191,15 @@ export function renderSchema(catalog, declared) {
           ? `, (table) => [primaryKey({ columns: [${primaryKey.map((c) => `table.${camel(c)}`).join(', ')}] })]`
           : '';
       if (composite !== '') imports.add('primaryKey');
-      const factory = schema === 'public' ? 'pgTable' : `${camel(schema)}Schema.table`;
-      if (schema !== 'public') schemas.add(schema);
-      return `export const ${name} = ${factory}(${quote(table)}, {\n${body}\n}${composite});`;
+      // Een view (bijv. app.accounts) wordt een bestaande Drizzle-view: alleen-lezen, de database levert de definitie.
+      const isView = columns[0]?.isView === true;
+      const kind = isView ? 'view' : 'table';
+      const factory = schema === 'public' ? (isView ? 'pgView' : 'pgTable') : `${camel(schema)}Schema.${kind}`;
+      if (schema === 'public') imports.add(isView ? 'pgView' : 'pgTable');
+      else schemas.add(schema);
+      return `export const ${name} = ${factory}(${quote(table)}, {\n${body}\n}${composite})${isView ? '.existing()' : ''};`;
     });
   if (schemas.size > 0) imports.add('pgSchema');
-  if (schemas.size === tables.size && tables.size > 0) imports.delete('pgTable');
 
   const used = new Set(
     [...brands.values()].flatMap((brand) =>

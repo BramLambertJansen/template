@@ -1,3 +1,5 @@
 {
-  "brands": {}
+  "brands": {
+    "app.accounts.id": "UserId"
+  }
 }

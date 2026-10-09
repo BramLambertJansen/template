@@ -71,6 +71,7 @@ Regels voor elke keuze:
 | Elke route vraagt login | `/api/auth/*` (inloggen, aanmelden, reset), de clientfouten-route en `GET /api/health` | Bestaan juist voor niet-ingelogden; elk met rate limit; health geeft alleen `{ ok }`, geen data |
 | Elke schermroute heeft een `can()`-guard | Inlog-, aanmeld- en resetschermen | Publiek; ze tonen geen data |
 | Spec vóór een nieuwe route | `GET /api/health` en de pagina die hem toont (skelet) | Bestaat vóór `defineRoute`; vervalt zodra het skelet een ingelogde startpagina heeft |
+| Elke route via `defineRoute` en met login | `POST /api/dev/login-as` (ADR 0014) | Alleen bij `APP_ENV=local` geregistreerd (elders 404); logt in als een seed-account, met CSRF-controle |
 
 ## 4. Codeerkaders
 
@@ -181,7 +182,7 @@ Ankers: OWASP Top 10:2025, OWASP API Security Top 10, ASVS 5.0 niveau 1 (checkli
 - **Grants**: PUBLIC krijgt niets (`alter default privileges for role app_migrator revoke execute on functions / usage on types from public`,
   `revoke all on database/schema public from public`); elke tabel expliciete grants in de migratie; een pgTAP-invariant eist dat geen
   API-rol TRUNCATE, REFERENCES of TRIGGER heeft en dat elke tabel in `public` en `app` RLS aan én geforceerd heeft
-  (uitzondering: `public.schema_migrations`); schema `better_auth` heeft geen grants behalve aan `auth_service`.
+  (uitzondering: `public.schema_migrations`); schema `better_auth` heeft geen grants behalve aan `auth_service`, plus de kolom-allowlist van `app_definer` voor de view `app.accounts` (ADR 0014).
 - **FORCE RLS werkt alleen voor niet-superusers**: daarom is `app_migrator` eigenaar en geen superuser, lokaal én in productie.
   Datamigraties die alle rijen moeten zien, lopen via een gereviewde `security definer`-functie van `app_definer`; omdat FORCE RLS
   ook voor `app_definer` geldt, krijgt de tabel daarvoor een eigen policy `to app_definer` met pgTAP-test.

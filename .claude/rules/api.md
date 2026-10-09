@@ -32,4 +32,6 @@ alleen routes uit `defineRoute`), `createRouteKit`/`defineRoute` in `src/core/ap
 `src/shared/contracts/`, `src/api/kit.ts`, Better Auth (`src/core/api/auth`, ADR 0013) en het env-schema. Een nieuwe route = eerst het contract
 in `src/shared/contracts/<resource>.ts`, dan de handler in `src/api/routes/<resource>.ts`, dan beide in de lijsten
 (`src/shared/contracts/index.ts`, `src/api/app.ts`). Routetests tegen de echte database: de testkit uit `src/core/api/db/testing.ts` (`beginTestDb`, `asUser(rol)` met een
-`auth`-gateway voor `buildApp`). Tabellen voor `tx`: `src/api/db/schema.ts` (gegenereerd, `pnpm db:generate`). Nog niet: logging via `src/core/api/obs`. Bouw er niet op vooruit; staat iets niet in `node scripts/kit/feiten.mjs`, vraag het.
+`auth`-gateway voor `buildApp`). Tabellen en views voor `tx`: `src/api/db/schema.ts` (gegenereerd, `pnpm db:generate`); queries met `drizzle-orm`
+(`eq`, `desc`, `sql`), nooit een driver (ADR 0014). Iets buiten de database (bijv. uitnodigen via Better Auth): via `ctx.services`
+(`src/api/services.ts`), dat core-fouten vertaalt naar foutcodes. Voorbeeld van alles samen: `src/api/routes/accounts.ts`. Nog niet: logging via `src/core/api/obs`. Bouw er niet op vooruit; staat iets niet in `node scripts/kit/feiten.mjs`, vraag het.

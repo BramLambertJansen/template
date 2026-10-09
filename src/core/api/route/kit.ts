@@ -17,29 +17,35 @@ export interface RouteActor {
   readonly email: string;
 }
 
-export interface RouteContext<Input> {
+// services: wat de app in createApp meegeeft (bijv. uitnodigen via Better Auth); getypt via createRouteKit<…, Services>.
+export interface RouteContext<Input, Services = unknown> {
   readonly input: Input;
   readonly actor: RouteActor;
   readonly tx: Tx;
+  readonly services: Services;
 }
 
-export interface RouteDef<C extends Contract = Contract> {
+export interface RouteDef<C extends Contract = Contract, Services = unknown> {
   readonly [ROUTE]: true;
   readonly contract: C;
   readonly check: (actor: CanActor) => Decision;
-  readonly handler: (ctx: RouteContext<z.output<C['input']>>) => z.input<C['output']> | Promise<z.input<C['output']>>;
+  readonly handler: (
+    ctx: RouteContext<z.output<C['input']>, Services>,
+  ) => z.input<C['output']> | Promise<z.input<C['output']>>;
 }
 
 export function isRouteDef(value: unknown): value is RouteDef {
   return typeof value === 'object' && value !== null && ROUTE in value;
 }
 
-export function createRouteKit<Permission extends string>(config: { permissions: Permissions<Permission> }) {
+export function createRouteKit<Permission extends string, Services = unknown>(config: {
+  permissions: Permissions<Permission>;
+}) {
   return {
     defineRoute: <const M extends Method, const P extends string, I extends z.ZodObject, O extends z.ZodType>(
       contract: Contract<M, P, I, O, Permission>,
-      handler: (ctx: RouteContext<z.output<I>>) => z.input<O> | Promise<z.input<O>>,
-    ): RouteDef<Contract<M, P, I, O, Permission>> => ({
+      handler: (ctx: RouteContext<z.output<I>, Services>) => z.input<O> | Promise<z.input<O>>,
+    ): RouteDef<Contract<M, P, I, O, Permission>, Services> => ({
       [ROUTE]: true,
       contract,
       check: (actor) => config.permissions.check(actor, contract.permission),

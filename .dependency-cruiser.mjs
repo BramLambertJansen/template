@@ -4,6 +4,8 @@
 const WEB = '^src/(core/)?web/';
 const API = '^src/(core/)?api/';
 const SHARED = '^src/(core/)?shared/';
+// De querybouwer van Drizzle zonder driver: de hoofdingang en pg-core (ook als fixture-stub met pg-core.js).
+const QUERY_BUILDER = 'node_modules/drizzle-orm/(index|pg-core/index|pg-core)\\.(d\\.)?[cm]?[jt]s$';
 const DATABASE =
   '(^|node_modules/)(pg|pg-[^/]+|postgres|drizzle-orm|kysely|@prisma/[^/]+|@supabase/[^/]+|@neondatabase/[^/]+)(/|$)';
 
@@ -49,18 +51,18 @@ const config = {
     {
       name: 'database-alleen-in-core-db',
       comment:
-        'Alleen src/core/api/db (en src/core/api/auth voor Better Auth) gebruikt een databasedriver of -SDK; het gegenereerde schema alleen Drizzle.',
+        'Alleen src/core/api/db (en src/core/api/auth voor Better Auth) gebruikt een databasedriver of -SDK; src/api alleen de querybouwer.',
       severity: 'error',
-      from: { path: '^src/', pathNot: ['^src/core/api/(db|auth)/', '^src/api/db/schema\\.ts$'] },
+      from: { path: '^src/', pathNot: ['^src/core/api/(db|auth)/', '^src/api/'] },
       to: { path: DATABASE },
     },
     {
-      name: 'schema-alleen-drizzle',
+      name: 'api-alleen-querybouwer',
       comment:
-        'Het gegenereerde src/api/db/schema.ts (pnpm db:generate) beschrijft alleen tabellen: drizzle-orm, geen driver.',
+        "src/api gebruikt van Drizzle alleen de querybouwer ('drizzle-orm', 'drizzle-orm/pg-core') met de tx uit withUser; geen driver of verbinding.",
       severity: 'error',
-      from: { path: '^src/api/db/schema\\.ts$' },
-      to: { path: DATABASE, pathNot: '(^|node_modules/)drizzle-orm(/|$)' },
+      from: { path: '^src/api/' },
+      to: { path: DATABASE, pathNot: QUERY_BUILDER },
     },
     {
       name: 'db-alleen-via-index',

@@ -24,10 +24,11 @@ try {
            c.column_default as "defaultExpr",
            case when c.is_identity = 'YES' then c.identity_generation end as identity,
            case when c.is_generated = 'ALWAYS' then c.generation_expression end as "generatedExpr",
-           c.character_maximum_length as length, c.numeric_precision as precision, c.numeric_scale as scale
+           c.character_maximum_length as length, c.numeric_precision as precision, c.numeric_scale as scale,
+           t.table_type = 'VIEW' as "isView"
     from information_schema.columns c
     join information_schema.tables t on t.table_schema = c.table_schema and t.table_name = c.table_name
-    where c.table_schema in ('public', 'app') and t.table_type = 'BASE TABLE'
+    where c.table_schema in ('public', 'app') and t.table_type in ('BASE TABLE', 'VIEW')
       and not (c.table_schema = 'public' and c.table_name = 'schema_migrations')
     order by c.table_schema, c.table_name, c.ordinal_position`);
   const { rows: keys } = await client.query(`

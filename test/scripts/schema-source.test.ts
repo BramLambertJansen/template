@@ -108,6 +108,23 @@ describe('renderSchema', () => {
     expect(source).not.toContain('pgTable');
   });
 
+  test('een view wordt een bestaande Drizzle-view (alleen-lezen), met de brand uit db/ids.json', () => {
+    const catalog = {
+      columns: [
+        column('accounts', 'id', 'text', { schema: 'app', isView: true, nullable: true }),
+        column('accounts', 'name', 'text', { schema: 'app', isView: true, nullable: true }),
+      ],
+      primaryKeys: {},
+      foreignKeys: [],
+    };
+
+    expect(() => renderSchema(catalog, {})).toThrow('app.accounts.id');
+    const source = renderSchema(catalog, { 'app.accounts.id': 'UserId' });
+    expect(source).toContain("export const appAccounts = appSchema.view('accounts', {");
+    expect(source).toContain("id: text('id').$type<UserId>(),");
+    expect(source).toContain('}).existing();');
+  });
+
   test('timestamp zonder tijdzone en onbekende types falen hard', () => {
     const at = (udt: string) => ({
       columns: [column('t', 'at', udt)],

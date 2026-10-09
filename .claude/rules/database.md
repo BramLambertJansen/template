@@ -27,7 +27,8 @@ paths:
 - Auth-tabellen: SQL uit `node scripts/auth-schema.mjs` (gepinde versie) in een migratie die begint met `set local search_path = better_auth;`
   en eindigt met `reset search_path;` (dbmate schrijft `schema_migrations` in dezelfde transactie); nooit `auth migrate`.
 - Heeft een auth-hook data buiten `better_auth` nodig (bijv. rol uit `user_roles`), of de app gegevens uit `better_auth."user"`:
-  via een `security definer`-functie of -view van `app_definer`, nooit met extra grants op het andere schema.
+  via een `security definer`-functie of -view van `app_definer` (zoals `app.accounts`). `app_definer` leest uit `better_auth` alleen de
+  kolommen in de allowlist van `db/tests/invarianten.sql` (ADR 0014); een extra kolom vraagt een ADR.
 - `set_config` en `current_setting` alleen in `src/core/api/db` en in de helpers in schema `app`; nooit in app-SQL of handlers.
 - Rijen in schema `better_auth` zijn van Better Auth (ADR 0010); lees of schrijf ze nooit vanuit `src/core/api/db` of app-code (uitzondering: `asUser` in de testkit, binnen een testtransactie die terugdraait). Geen provider-specifieke schema's of functies (`storage.*`, `realtime.*`, `auth.uid()`).
 - Na een migratie: `pnpm db:generate` (verse test-database in de runner) schrijft `db/schema.snapshot.sql` en

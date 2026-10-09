@@ -1,6 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { z } from 'zod';
 import { buildApp } from '../../src/api/app.ts';
+import { createServices } from '../../src/api/services.ts';
 import { invitationMail } from '../../src/api/mail/invitation.ts';
 import { authGateway, createAuth } from '../../src/core/api/auth/index.ts';
 import { createPool, createWithUser } from '../../src/core/api/db/testing.ts';
@@ -26,7 +27,13 @@ export function createTestApp() {
   });
   const pool = createPool(required('DATABASE_URL'));
   const withUser = createWithUser(pool);
-  return { auth, pool, withUser, app: buildApp({ appOrigin: APP_ORIGIN, auth: authGateway(auth), withUser }) };
+  const services = createServices(auth);
+  return {
+    auth,
+    pool,
+    withUser,
+    app: buildApp({ appOrigin: APP_ORIGIN, auth: authGateway(auth), withUser, services }),
+  };
 }
 
 type App = ReturnType<typeof createTestApp>['app'];

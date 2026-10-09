@@ -7,5 +7,11 @@ export {
   type CreateAuthConfig,
   type SessionInfo,
 } from './auth.ts';
-export { AccountAlreadyActiveError, AccountNotFoundError, inviteUser, reinviteUser } from './invitations.ts';
+export {
+  AccountAlreadyActiveError,
+  AccountExistsError,
+  AccountNotFoundError,
+  inviteUser,
+  reinviteUser,
+} from './invitations.ts';
 export type { Invitation } from './options.ts';
