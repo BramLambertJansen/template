@@ -9,6 +9,7 @@ import {
   type UseFormReturn,
 } from 'react-hook-form';
 import type { z } from 'zod';
+import { uiTexts } from '../copy/ui.ts';
 import { Button } from './button.tsx';
 import { useErrorText } from './error-texts.tsx';
 import { Field } from './field.tsx';
@@ -35,11 +36,13 @@ interface FormProps<Input extends FieldValues, Output> {
   readonly submitLabel: string;
   // Foutcode van de server → veld (bijv. ALREADY_EXISTS → 'email'); een andere code komt boven het formulier.
   readonly fieldForCode?: Readonly<Partial<Record<string, FieldPath<Input>>>>;
+  // Naast de verzendknop, bijv. "Annuleren" in een dialoog.
+  readonly secondaryAction?: ReactNode;
   readonly children: ReactNode;
 }
 
 export function Form<Input extends FieldValues, Output>(props: FormProps<Input, Output>) {
-  const { form, onSubmit, submitLabel, fieldForCode, children } = props;
+  const { form, onSubmit, submitLabel, fieldForCode, secondaryAction, children } = props;
   const errorText = useErrorText();
   const [formError, setFormError] = useState<string | null>(null);
   const alert = useRef<HTMLParagraphElement>(null);
@@ -73,9 +76,12 @@ export function Form<Input extends FieldValues, Output>(props: FormProps<Input, 
         </p>
       )}
       {children}
-      <Button type="submit" disabled={form.formState.isSubmitting}>
-        {submitLabel}
-      </Button>
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        {secondaryAction}
+        <Button type="submit" disabled={form.formState.isSubmitting}>
+          {form.formState.isSubmitting ? uiTexts.busy : submitLabel}
+        </Button>
+      </div>
     </form>
   );
 }
@@ -84,7 +90,7 @@ export interface FieldProps {
   readonly id: string;
   readonly name: string;
   readonly value: string;
-  readonly onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  readonly onChange: (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   readonly onBlur: () => void;
   readonly ref: (element: HTMLElement | null) => void;
   readonly 'aria-invalid': boolean;

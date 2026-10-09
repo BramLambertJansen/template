@@ -9,4 +9,5 @@ export const uiTexts = {
   openMenu: 'Menu openen',
   profileMenu: 'Profielmenu',
   close: 'Sluiten',
+  busy: 'Bezig…',
 } as const;

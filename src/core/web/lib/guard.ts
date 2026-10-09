@@ -18,6 +18,8 @@ export interface GuardConfig<Permission extends string, Context> {
   // De actor van de huidige sessie; null of een ApiError UNAUTHENTICATED/MFA_REQUIRED = niet (volledig) ingelogd.
   readonly loadActor: (context: Context) => Promise<CanActor | null>;
   readonly loginPath: string;
+  // Extra zoekparameters voor de inlogpagina, bijv. een melding dat de sessie verlopen is.
+  readonly loginSearch?: (context: Context) => Readonly<Record<string, string>>;
 }
 
 async function actorOrNull<Context>(
@@ -43,7 +45,7 @@ export function createGuard<Permission extends string, Context>(config: GuardCon
       const decision = config.permissions.check(await actorOrNull(config.loadActor, context), permission);
       if (decision.ok) return;
       if (decision.code === 'FORBIDDEN') throw new ForbiddenError();
-      const search = new URLSearchParams({ redirect: location.href });
+      const search = new URLSearchParams({ redirect: location.href, ...config.loginSearch?.(context) });
       // href in plaats van to: core kent de getypte routes van de app niet. throw: true laat de router de redirect gooien.
       redirect({ href: `${config.loginPath}?${search.toString()}`, throw: true });
     };

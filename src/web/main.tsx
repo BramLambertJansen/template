@@ -6,15 +6,16 @@ import { createQueryClient } from '#core/web/lib/query.ts';
 import { ErrorTextsProvider } from '#core/web/ui/error-texts.tsx';
 import { errorTexts } from '#web/copy/errors.ts';
 import { createAppRouter } from '#web/lib/router.ts';
-import { LOGIN_PATH } from '#web/lib/session.ts';
+import { hadSession } from '#web/lib/session.ts';
 import './styles/app.css';
 
 // Compositie-root van de frontend (ADR 0008): query-client, router, foutteksten.
 const queryClient = createQueryClient({
-  // 401 uit een query of mutatie → inloggen, daarna terug naar waar de gebruiker was (framework §5).
+  // 401 uit een query of mutatie → inloggen met de terugweg (framework §5). Alleen als er in dit tabblad een sessie was:
+  // dan is hij verlopen (spec: "Je sessie is verlopen."); bij een eerste bezoek stuurt de guard al door.
   onUnauthenticated: () => {
-    const search = new URLSearchParams({ redirect: router.state.location.href });
-    void router.navigate({ href: `${LOGIN_PATH}?${search.toString()}` });
+    if (!hadSession(queryClient)) return;
+    void router.navigate({ to: '/login', search: { redirect: router.state.location.href, sessie: 'verlopen' } });
   },
 });
 const router = createAppRouter(queryClient);

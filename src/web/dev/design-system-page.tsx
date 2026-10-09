@@ -17,6 +17,16 @@ import {
   Form,
   FormField,
   Input,
+  Notice,
+  PageHeader,
+  QrCode,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
   useZodForm,
 } from '#web/ui/index.ts';
 
@@ -41,10 +51,11 @@ function isVariant(value: string): value is keyof typeof buttonVariantMap.varian
 const voorbeeld = z.object({
   naam: z.string().min(1, 'Vul een naam in.'),
   email: z.email('Vul een geldig e-mailadres in.'),
+  rol: z.enum(['user', 'admin']),
 });
 
 function FormExample() {
-  const form = useZodForm(voorbeeld, { naam: '', email: '' });
+  const form = useZodForm(voorbeeld, { naam: '', email: '', rol: 'user' });
   return (
     <Form form={form} onSubmit={() => Promise.resolve()} submitLabel="Versturen">
       <FormField form={form} name="naam" label="Naam">
@@ -52,6 +63,17 @@ function FormExample() {
       </FormField>
       <FormField form={form} name="email" label="E-mailadres" description="We sturen hier een uitnodiging heen.">
         {(field) => <Input {...field} type="email" autoComplete="email" />}
+      </FormField>
+      <FormField form={form} name="rol" label="Rol">
+        {(field) => (
+          <Select
+            {...field}
+            options={[
+              { value: 'user', label: 'Gebruiker' },
+              { value: 'admin', label: 'Beheerder' },
+            ]}
+          />
+        )}
       </FormField>
     </Form>
   );
@@ -141,6 +163,43 @@ export function DesignSystemPage() {
         <div className="max-w-sm">
           <FormExample />
         </div>
+      </Section>
+
+      <Section title="PageHeader en Notice">
+        <PageHeader title="Accounts" actions={<Button>Account uitnodigen</Button>} />
+        <Notice>Uitnodiging verstuurd naar anna@example.test.</Notice>
+        <Notice tone="error">Er ging iets mis. Probeer het later opnieuw.</Notice>
+      </Section>
+
+      <Section title="Table">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Naam</TableHead>
+              <TableHead>E-mailadres</TableHead>
+              <TableHead>Rol</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell>Anna de Vries</TableCell>
+              <TableCell>anna@example.test</TableCell>
+              <TableCell>Beheerder</TableCell>
+              <TableCell>Actief</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>Bert Jansen</TableCell>
+              <TableCell>bert@example.test</TableCell>
+              <TableCell>Gebruiker</TableCell>
+              <TableCell>Uitgenodigd</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </Section>
+
+      <Section title="QrCode">
+        <QrCode value="otpauth://totp/voorbeeld?secret=JBSWY3DPEHPK3PXP" label="Voorbeeld-QR-code" />
       </Section>
 
       <Section title="Card">

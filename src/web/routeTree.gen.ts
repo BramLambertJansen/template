@@ -9,12 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/_app'
 import { Route as DesignSystemRouteImport } from './routes/design-system'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as UitnodigingRouteImport } from './routes/uitnodiging'
+import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppAdminIndexRouteImport } from './routes/_app/admin/index'
+import { Route as AppAdminAccountsRouteImport } from './routes/_app/admin/accounts'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DesignSystemRoute = DesignSystemRouteImport.update({
@@ -22,40 +26,100 @@ const DesignSystemRoute = DesignSystemRouteImport.update({
   path: '/design-system',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UitnodigingRoute = UitnodigingRouteImport.update({
+  id: '/uitnodiging',
+  path: '/uitnodiging',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminIndexRoute = AppAdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminAccountsRoute = AppAdminAccountsRouteImport.update({
+  id: '/admin/accounts',
+  path: '/admin/accounts',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof AppIndexRoute
   '/design-system': typeof DesignSystemRoute
+  '/login': typeof LoginRoute
+  '/uitnodiging': typeof UitnodigingRoute
+  '/admin/accounts': typeof AppAdminAccountsRoute
+  '/admin/': typeof AppAdminIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/design-system': typeof DesignSystemRoute
+  '/login': typeof LoginRoute
+  '/uitnodiging': typeof UitnodigingRoute
+  '/': typeof AppIndexRoute
+  '/admin/accounts': typeof AppAdminAccountsRoute
+  '/admin': typeof AppAdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
   '/design-system': typeof DesignSystemRoute
+  '/login': typeof LoginRoute
+  '/uitnodiging': typeof UitnodigingRoute
+  '/_app/': typeof AppIndexRoute
+  '/_app/admin/accounts': typeof AppAdminAccountsRoute
+  '/_app/admin/': typeof AppAdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/design-system'
+  fullPaths:
+    | '/'
+    | '/design-system'
+    | '/login'
+    | '/uitnodiging'
+    | '/admin/accounts'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/design-system'
-  id: '__root__' | '/' | '/design-system'
+  to:
+    | '/design-system'
+    | '/login'
+    | '/uitnodiging'
+    | '/'
+    | '/admin/accounts'
+    | '/admin'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/design-system'
+    | '/login'
+    | '/uitnodiging'
+    | '/_app/'
+    | '/_app/admin/accounts'
+    | '/_app/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
   DesignSystemRoute: typeof DesignSystemRoute
+  LoginRoute: typeof LoginRoute
+  UitnodigingRoute: typeof UitnodigingRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
+    '/_app': {
+      id: '/_app'
+      path: ''
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/design-system': {
@@ -65,12 +129,63 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DesignSystemRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/uitnodiging': {
+      id: '/uitnodiging'
+      path: '/uitnodiging'
+      fullPath: '/uitnodiging'
+      preLoaderRoute: typeof UitnodigingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/': {
+      id: '/_app/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/': {
+      id: '/_app/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AppAdminIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/accounts': {
+      id: '/_app/admin/accounts'
+      path: '/admin/accounts'
+      fullPath: '/admin/accounts'
+      preLoaderRoute: typeof AppAdminAccountsRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
+interface AppRouteChildren {
+  AppIndexRoute: typeof AppIndexRoute
+  AppAdminAccountsRoute: typeof AppAdminAccountsRoute
+  AppAdminIndexRoute: typeof AppAdminIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppIndexRoute: AppIndexRoute,
+  AppAdminAccountsRoute: AppAdminAccountsRoute,
+  AppAdminIndexRoute: AppAdminIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
   DesignSystemRoute: DesignSystemRoute,
+  LoginRoute: LoginRoute,
+  UitnodigingRoute: UitnodigingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

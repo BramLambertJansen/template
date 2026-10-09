@@ -74,5 +74,16 @@ export function createApiClient<Contracts extends readonly AnyContract[]>() {
     return response.ok;
   }
 
-  return { call, health };
+  // Alleen lokaal (ADR 0014): logt in als het seed-account van de rol; elders geeft de server 404.
+  async function devLoginAs(rol: 'user' | 'admin'): Promise<void> {
+    const response = await fetch('/api/dev/login-as', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ rol }),
+    });
+    if (!response.ok) throw new ApiError(await errorCode(response), response.status);
+  }
+
+  return { call, health, devLoginAs };
 }

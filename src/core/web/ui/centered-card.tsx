@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card.tsx';
+import { Card, CardContent, CardDescription, CardHeader } from './card.tsx';
 
 interface CenteredCardProps {
   readonly title: string;
@@ -13,7 +13,8 @@ export function CenteredCard({ title, description, children }: CenteredCardProps
     <main className="flex min-h-dvh items-center justify-center bg-muted p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-2xl">{title}</CardTitle>
+          {/* De enige h1 van het scherm. */}
+          <h1 className="text-2xl leading-none font-semibold">{title}</h1>
           {description === undefined ? null : <CardDescription>{description}</CardDescription>}
         </CardHeader>
         <CardContent>{children}</CardContent>

@@ -1,11 +1,11 @@
-import type { UseQueryResult } from '@tanstack/react-query';
+import type { UseInfiniteQueryResult, UseQueryResult } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { uiTexts } from '../copy/ui.ts';
 import { Button } from './button.tsx';
 import { useErrorText } from './error-texts.tsx';
 
 interface AsyncViewProps<Data> {
-  readonly query: UseQueryResult<Data>;
+  readonly query: UseQueryResult<Data> | UseInfiniteQueryResult<Data>;
   // Wanneer de data als leeg telt (bijv. een lege lijst); dan staat emptyText er in plaats van children.
   readonly isEmpty?: (data: Data) => boolean;
   readonly emptyText?: string;
