@@ -2,6 +2,7 @@
 # Geen vaste projectnaam: elke app krijgt zijn eigen volume (naam van de map).
 # Poorten alleen op 127.0.0.1 en instelbaar, zodat meerdere apps naast elkaar draaien.
 # Wachtwoorden zijn lokale demo-waarden, nooit echt.
+# Starten: docker compose --env-file .env.local up -d --build --wait (zonder --env-file leest compose alleen .env).
 
 services:
   postgres:

@@ -18,23 +18,31 @@ toolchain en bot-identiteit in [ADR 0005](docs/adr/0005-toolchain-en-identiteit.
 
 ## Lokaal draaien
 
-Vereist: Ubuntu 24.04 (native of WSL2), Docker Engine, [mise](https://mise.jdx.dev).
+Vereist: Ubuntu 24.04 (native of WSL2), Docker Engine, [mise](https://mise.jdx.dev), gh, `bubblewrap` en `socat`
+(zonder die twee start Claude Code hier niet: de sandbox staat op `failIfUnavailable`).
 
 ```sh
-mise install
+mise trust && mise install
 cp .env.example .env.local
-docker compose up -d --build --wait   # Postgres 17 + pgTAP op 127.0.0.1:54322, Mailpit op http://127.0.0.1:54324
+docker compose --env-file .env.local up -d --build --wait   # Postgres 17 + pgTAP op 127.0.0.1:54322, Mailpit op http://127.0.0.1:54324
 ```
+
+Draait er al een app op die poorten: tel 10 op bij `PG_PORT`, `MAIL_UI_PORT` en `SMTP_PORT` én bij de poort in de drie database-URL's in `.env.local`.
 
 `pnpm dev`, `scripts/bootstrap.sh` en `scripts/doctor.sh` volgen in fase 1.
 
 ## Nieuwe app starten
 
-GitHub laat je een repo niet forken naar hetzelfde account. Daarom:
+Laat Claude Code het doen met [docs/nieuwe-app.md](docs/nieuwe-app.md): machine, repo, koppeling, instellingen, lokale stack en databasebewijs.
 
-1. Zet deze repo op **Settings → Template repository**.
-2. Nieuwe app: **Use this template → Create a new repository**.
-3. Direct daarna eenmalig (de nieuwe repo heeft een eigen geschiedenis):
-   `git remote add template <url>`, `git fetch template`, `git merge --allow-unrelated-histories -s ours template/main`.
-   Daarna haal je updates binnen met `git merge template/main` op een branch, via een PR.
-4. Eerste ADR in de app: hosting en beheerde Postgres (`docs/framework.md` §3).
+```sh
+mkdir -p ~/setup && curl -fsSL https://raw.githubusercontent.com/BramLambertJansen/template/main/docs/nieuwe-app.md -o ~/setup/nieuwe-app.md
+cd ~/setup && claude        # zeg: Volg nieuwe-app.md
+```
+
+De afspraken erachter ([ADR 0006](docs/adr/0006-app-uit-template.md)):
+
+1. Deze repo staat op **Settings → Template repository**; een app ontstaat met **Use this template**.
+2. Direct daarna eenmalig een merge-commit die de geschiedenis koppelt (`-s ours`); updates later met `git merge template/main`
+   op een branch, via een PR, gemerged met **Create a merge commit** — nooit squash.
+3. App-eigen ADR's nummeren vanaf `0100`. De hosting-ADR volgt bij de eerste release (roadmap fase 3), niet bij de start.
