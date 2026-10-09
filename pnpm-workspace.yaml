@@ -8,4 +8,6 @@ minimumReleaseAge: 10080
 trustPolicy: no-downgrade
 # Install-scripts alleen voor expliciet toegestane pakketten.
 strictDepBuilds: true
-allowBuilds: {}
+# lefthook: geen postinstall; scripts/bootstrap.sh draait `lefthook install` zelf.
+allowBuilds:
+  lefthook: false

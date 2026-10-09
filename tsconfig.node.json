@@ -2,8 +2,10 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "types": ["node"],
+    "allowJs": true,
+    "checkJs": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo"
   },
-  "include": ["src/api", "src/core/api", "src/shared", "src/core/shared", "e2e", "test", "*.config.ts"],
+  "include": ["src/api", "src/core/api", "src/shared", "src/core/shared", "e2e", "test", "scripts", "*.config.ts"],
   "exclude": ["test/rails/fixtures"]
 }

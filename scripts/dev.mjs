@@ -8,6 +8,7 @@ const children = [
 ];
 
 let stopping = false;
+/** @param {number} code */
 function stop(code) {
   if (stopping) return;
   stopping = true;
