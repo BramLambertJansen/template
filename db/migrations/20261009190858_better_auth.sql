@@ -29,5 +29,8 @@ create index "twoFactor_userId_idx" on "twoFactor" ("userId");
 alter table "session" alter column "session_strength" set default 'password';
 alter table "session" add constraint "session_strength_check" check ("session_strength" in ('password', 'mfa'));
 
+-- dbmate schrijft schema_migrations in dezelfde transactie, zonder schemanaam: zonder reset belandt die in better_auth.
+reset search_path;
+
 -- migrate:down
 -- Append-only: geen down-migraties (docs/framework.md §10).
