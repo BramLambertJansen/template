@@ -24,6 +24,10 @@ describe('authErrorCode', () => {
     expect(authErrorCode('setPassword', { status: 400, code: 'PASSWORD_TOO_SHORT' })).toBe('VALIDATION');
   });
 
+  test('een CSRF-weigering (andere origin) blijft CSRF_REJECTED, ook bij inloggen', () => {
+    expect(authErrorCode('signIn', { status: 403, code: 'CSRF_REJECTED' })).toBe('CSRF_REJECTED');
+  });
+
   test('een serverfout blijft INTERNAL_ERROR', () => {
     expect(authErrorCode('signIn', { status: 500 })).toBe('INTERNAL_ERROR');
   });

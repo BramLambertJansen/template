@@ -3,7 +3,8 @@ import { defineConfig, devices } from '@playwright/test';
 // E2E draait altijd tegen de echte lokale stack, nooit met een gemockte API. Lokaal start de eigenaar die met
 // `pnpm dev`; in de runner van `pnpm ui:check` (ADR 0009) start Playwright de API en Vite zelf.
 const webPort = process.env['WEB_PORT'] ?? '5173';
-const baseURL = `http://127.0.0.1:${webPort}`;
+// Dezelfde origin als APP_ORIGIN: anders weigeren de CSRF-controle en Better Auth elke POST (localhost ≠ 127.0.0.1).
+const baseURL = process.env['APP_ORIGIN'] ?? `http://localhost:${webPort}`;
 const inRunner = process.env['RUNNER'] === '1';
 const outputDir = process.env['RUNNER_OUTPUT_DIR'];
 

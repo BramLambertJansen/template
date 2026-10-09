@@ -172,7 +172,7 @@ export function DesignSystemPage() {
       </Section>
 
       <Section title="Table">
-        <Table>
+        <Table label="Voorbeeldtabel">
           <TableHeader>
             <TableRow>
               <TableHead>Naam</TableHead>

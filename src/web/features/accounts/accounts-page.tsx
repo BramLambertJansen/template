@@ -35,7 +35,7 @@ function AccountsTable({ items, onMessage }: { items: readonly Account[]; onMess
     );
   };
   return (
-    <Table>
+    <Table label={copy.accounts.title}>
       <TableHeader>
         <TableRow>
           <TableHead>{copy.accounts.name}</TableHead>

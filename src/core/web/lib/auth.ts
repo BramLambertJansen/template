@@ -18,6 +18,8 @@ type Step = 'signIn' | 'verifyTotp' | 'enableTotp' | 'setPassword' | 'signOut';
 export function authErrorCode(step: Step, failure: AuthFailure): string {
   if (failure.status === 429) return 'RATE_LIMITED';
   if (failure.status >= 500) return 'INTERNAL_ERROR';
+  // Geweigerd vóór Better Auth (andere origin, ADR 0007): nooit vermommen als "wachtwoord klopt niet".
+  if (failure.code === 'CSRF_REJECTED') return 'CSRF_REJECTED';
   if (step === 'verifyTotp') return failure.code === 'INVALID_TWO_FACTOR_COOKIE' ? 'UNAUTHENTICATED' : 'INVALID_TOTP';
   if (step === 'setPassword') return failure.code === 'PASSWORD_TOO_SHORT' ? 'VALIDATION' : 'INVITATION_INVALID';
   if (step === 'signIn' || step === 'enableTotp') return 'INVALID_CREDENTIALS';
