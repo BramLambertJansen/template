@@ -246,7 +246,9 @@ Wat een type of check afdwingt, staat niet in proza. Wat soms nodig is, hoort in
 - Repo in een organisatie; de agent pusht via een GitHub App zonder `workflows`-recht en zonder admin (ADR 0005). De eigenaar merget.
 - Ruleset op `main` (op organisatieniveau via een custom property, want "Use this template" kopieert geen rulesets of settings):
   alleen via PR; geen force push of delete; verplichte checks `gate:fast`, `gate:slow`, osv-scanner; "Require code scanning results"
-  (CodeQL); code-owner-review; goedkeuring vervalt bij nieuwe push; geen bypass voor de bot.
+  (CodeQL); code-owner-review; goedkeuring vervalt bij nieuwe push; geen bypass voor de bot; merge-methoden alleen merge en squash.
+  Tot de GitHub App bestaat, pusht de agent onder het account van de eigenaar en kan die zijn eigen PR niet goedkeuren: dan 0 goedkeuringen
+  en geen code-owner-review, wel PR-plicht, geen force push en geen delete (ADR 0006). Rulesets op private repo's vragen GitHub Pro of Team.
 - Actions-instellingen: "Allow GitHub Actions to create and approve pull requests" uit; "Require actions to be pinned to a full-length commit SHA" aan.
 - **Beschermde paden** (één lijst; CODEOWNERS spiegelt hem volledig, `ask` in `.claude/settings.json` zonder de paden waarin de agent
   hoort te schrijven: tests (`*.test.*`, `*.spec.*`, `db/tests/`, `e2e/`) en `docs/specs/`. Toevoegen mag daar; bestaande tests wijzigen
@@ -263,7 +265,8 @@ Wat een type of check afdwingt, staat niet in proza. Wat soms nodig is, hoort in
 - `guard.yml` (`pull_request_target`, draait altijd de versie van de default branch) voert de check-scripts van `main` uit. PR-code wordt
   alleen als git-data in een aparte map uitgecheckt en nooit uitgevoerd: geen `pnpm install`, geen configs of scripts uit de PR,
   `persist-credentials: false`, minimale `permissions`.
-- Korte branches, één onderwerp, squash-merge, conventional commits.
+- Korte branches, één onderwerp, squash-merge, conventional commits. Uitzondering: de template-koppeling en template-updates
+  landen als merge-commit; squash gooit de tweede ouder weg en dan conflicteert elke volgende update op alles (ADR 0006).
 - CI: runner `ubuntu-24.04`, toolchain via `jdx/mise-action` (geen Corepack); snelle job op elke push, trage job op PR's en `main`; concurrency annuleert oude runs; pad-filters en caches.
 
 ### Release (geldt voor elke host)
@@ -285,7 +288,9 @@ Wat een type of check afdwingt, staat niet in proza. Wat soms nodig is, hoort in
 
 "Use this template" maakt een nieuwe geschiedenis. Direct na het aanmaken eenmalig:
 `git remote add template <url>`, `git fetch template`, `git merge --allow-unrelated-histories -s ours template/main`.
-Daarna haalt een gewone `git merge template/main` op een branch, via een PR, de updates binnen. Workflow-wijzigingen pusht de eigenaar.
+Daarna haalt een gewone `git merge template/main` op een branch, via een PR, de updates binnen; de eigenaar merget met
+**Create a merge commit**, nooit squash. Workflow-wijzigingen pusht de eigenaar. App-eigen ADR's nummeren vanaf `0100`;
+`0001`–`0099` zijn van de template. Het hele traject voor een nieuwe app staat in [nieuwe-app.md](nieuwe-app.md) (ADR 0006).
 
 ### Meten
 
@@ -294,11 +299,12 @@ een regel blijft alleen als hij aantoonbaar helpt.
 
 ## 11. Lokaal ontwikkelen
 
-- Ubuntu 24.04 (native of WSL2), code op ext4 (`~/code`), Docker Engine, mise (`mise.toml`). WSL2: `systemd=true` in `/etc/wsl.conf`
+- Ubuntu 24.04 (native of WSL2), code op ext4 (`~/code`), Docker Engine, mise (`mise.toml`), gh, `bubblewrap` en `socat` (sandbox van Claude Code). WSL2: `systemd=true` in `/etc/wsl.conf`
   (nodig voor Docker Engine), `fs.inotify.max_user_watches=524288`, `networkingMode=mirrored`.
 - `compose.yaml` levert Postgres (eigen image met pgTAP) en Mailpit, gebonden aan `127.0.0.1`. De app (Vite, Hono) draait native, niet in Docker.
-- `pnpm dev` (fase 1): Docker-check, `.env.local` uit `.env.example`, `docker compose up -d --build --wait`, migraties, Hono :8787 + Vite :5173.
-  Poorten via `.env.local`, zodat meerdere apps naast elkaar draaien.
+- `pnpm dev` (fase 1): Docker-check, `.env.local` uit `.env.example`, `docker compose --env-file .env.local up -d --build --wait`, migraties, Hono :8787 + Vite :5173.
+  Poorten via `.env.local`, zodat meerdere apps naast elkaar draaien. Compose leest zonder `--env-file` alleen `.env`, en de poort
+  staat ook in de drie database-URL's: een andere poort betekent `PG_PORT` én die URL's aanpassen.
 - De agent gebruikt `docker` niet (deny); de stack is van de eigenaar. Draait de stack niet (SessionStart-hook draait `doctor --quick`), dan vraagt de agent de eigenaar `pnpm dev` te starten. Sandbox met `failIfUnavailable: true`; alleen `pnpm test:db`, `pnpm db:reset`,
   `pnpm db:types` en `pnpm ui:check` draaien buiten de sandbox (`excludedCommands`), en hun scripts vallen onder CODEOWNERS.
 - Screenshot-baselines alleen in de gepinde Playwright-image.

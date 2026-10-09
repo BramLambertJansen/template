@@ -10,6 +10,7 @@ Review van 2026-10-09: [reviews/2026-10-09-fundering.md](reviews/2026-10-09-fund
 - [x] Auth in de API met Better Auth, sessiebeleid en MFA — ADR 0003
 - [x] Postgres 17, rollen, dbmate, pgTAP — ADR 0004
 - [x] Node 26, pnpm 11, TypeScript 6.0, GitHub App, toon van de regels — ADR 0005
+- [x] App uit de template: koppeling, merge-commits voor updates, ADR-nummers, tussentijdse ruleset — ADR 0006
 
 ## Fase 0 — Bewijs
 
@@ -24,14 +25,15 @@ Daarna:
 - [ ] FORCE RLS: bewijzen dat `app_migrator` (geen superuser) onder RLS valt
 - [ ] Better Auth: `session_strength` via after-hook op 2FA-verificatie, `cookieCache` uit, intrekken werkt direct
 - [ ] Meten: twee verbindingen per request (sessie + `withUser`), latency lokaal
-- [ ] Uitkomst in `docs/adr/0006-datapad.md`
+- [ ] Uitkomst in `docs/adr/0007-datapad.md`
 
 ## Fase 1 — Fundament
 
 ### Machine en repo
 - [x] `mise.toml`, `.gitattributes`, `.editorconfig`, browserslist, `pnpm-workspace.yaml`, `.env.example` (bestanden staan er; nog niet in gebruik)
 - [ ] `scripts/bootstrap.sh`, `scripts/doctor.sh` (versies, inotify, sandbox, Docker, jq, bubblewrap)
-- [ ] `pnpm dev`: Docker-check, `.env.local`, `compose up --build --wait`, migraties, Hono :8787 + Vite :5173 (met headers/CSP)
+- [x] `docs/nieuwe-app.md`: setup-playbook voor Claude Code (machine → repo → koppeling → stack → databasebewijs)
+- [ ] `pnpm dev`: Docker-check, `.env.local`, `compose --env-file .env.local up --build --wait`, migraties, Hono :8787 + Vite :5173 (met headers/CSP)
 - [ ] `scripts/seed` via de auth-API: gebruiker per rol, admin met vast lokaal TOTP-geheim
 
 ### Checks
@@ -72,6 +74,7 @@ Daarna:
 ### GitHub
 - [x] `CODEOWNERS`, PR-template (bestanden; nog niet actief)
 - [ ] Organisatie, GitHub App voor de agent, org-ruleset via custom property, Actions-instellingen
+      (daarna in de ruleset: code-owner-review en 1 goedkeuring aan; private repo's vragen Pro/Team)
 - [ ] `.github/settings/` + `scripts/check-github.mjs`, `check-spec-approval`
 - [ ] `ci.yml` (`ubuntu-24.04`, mise-action, Actions op SHA, gewijzigde tests als lijst), `guard.yml` (PR-code alleen als data),
       CodeQL, osv-scanner (PR + wekelijks), Renovate
@@ -88,7 +91,7 @@ de bewaker houdt een afgezwakt check-script tegen; `check-github` groen; elke ro
 
 ## Fase 3 — Release (per app)
 
-- [ ] ADR: hosting en beheerde Postgres (moet eigen rollen toestaan); adapter in `deploy/<host>/`
+- [ ] ADR `0100`+: hosting en beheerde Postgres (moet eigen rollen toestaan); adapter in `deploy/<host>/`
 - [ ] Lektest via de pooler van de provider; rollen per omgeving via runbook
 - [ ] Staging en productie, beschermde environments, release-workflows, `check-release-ci`, `check-deployment-schema`
 - [ ] Smoketest na deploy; headers/CSP op de host; CAPTCHA; PWA-manifest
