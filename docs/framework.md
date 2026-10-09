@@ -23,12 +23,12 @@ Eén repository, één pakket, drie lagen in twee zones, bewaakt door dependency
 
 **Zones** (ADR 0008): `src/core/{api,web,shared}` is van de template — beschermd, in een app alleen gewijzigd door een template-merge.
 App-code staat in `src/{api,web,shared}`. App mag core importeren; core importeert nooit app. Wat core van de app nodig heeft
-(permissies, foutcodes, routes, env-uitbreiding, `AppType`), krijgt het als argument van een compositie-root in de app
+(permissies, foutcodes, routes, contracten, env-uitbreiding), krijgt het als argument van een compositie-root in de app
 (`src/api/app.ts`, `src/api/kit.ts`, `src/web/lib/api.ts`). Een app breidt uit door te registreren, nooit door core te wijzigen.
 
 | Laag | Map (core / app) | Mag importeren | Mag nooit |
 |---|---|---|---|
-| Frontend (Vite + React SPA) | `src/core/web` / `src/web` | `src/core/shared`, `src/shared`, het type `AppType` uit `src/api`, `better-auth/react` alleen in `src/core/web/lib/auth.ts` | databasedriver, ORM, `process.env`, `import.meta.env` buiten `src/core/web/lib/env.ts`, andere code uit `src/api` of `src/core/api` |
+| Frontend (Vite + React SPA) | `src/core/web` / `src/web` | `src/core/shared`, `src/shared` (met de contracten in `src/shared/contracts`), `better-auth/react` alleen in `src/core/web/lib/auth.ts` | databasedriver, ORM, `process.env`, `import.meta.env` buiten `src/core/web/lib/env.ts`, iets uit `src/api` of `src/core/api` (ook geen types) |
 | API (Hono) | `src/core/api` / `src/api` | `src/core/shared`, `src/shared` | `src/web`, `src/core/web` |
 | Gedeeld | `src/core/shared` / `src/shared` | alleen libraries (zod) en `src/core/shared` | `web`, `api` (beide zones) |
 | Database-toegang | `src/core/api/db` | driver (`pg`) en Drizzle — als enige | iets anders exporteren dan `withUser()` |
