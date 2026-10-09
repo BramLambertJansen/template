@@ -50,7 +50,16 @@ function Credentials({ onStep, finish }: { onStep: (step: Step) => void; finish:
   );
 }
 
-function CodeForm({ submitLabel, finish }: { submitLabel: string; finish: () => Promise<void> }) {
+// autoFocus alleen als het veld het eerste op het scherm is (bij instellen staat de QR-code eerst).
+function CodeForm({
+  submitLabel,
+  finish,
+  autoFocus = true,
+}: {
+  submitLabel: string;
+  finish: () => Promise<void>;
+  autoFocus?: boolean;
+}) {
   const form = useZodForm(totpInput, { code: '' });
   const submit = async ({ code }: { code: string }) => {
     await auth.verifyTotp(code);
@@ -59,7 +68,9 @@ function CodeForm({ submitLabel, finish }: { submitLabel: string; finish: () => 
   return (
     <Form form={form} onSubmit={submit} submitLabel={submitLabel}>
       <FormField form={form} name="code" label={copy.totp.code}>
-        {(field) => <Input {...field} inputMode="numeric" autoComplete="one-time-code" maxLength={6} autoFocus />}
+        {(field) => (
+          <Input {...field} inputMode="numeric" autoComplete="one-time-code" maxLength={6} autoFocus={autoFocus} />
+        )}
       </FormField>
     </Form>
   );
@@ -87,7 +98,7 @@ function TotpSetup({ totpURI, finish }: { totpURI: string; finish: () => Promise
           {copy.totpSetup.showKey}
         </Button>
       )}
-      <CodeForm submitLabel={copy.totpSetup.submit} finish={finish} />
+      <CodeForm submitLabel={copy.totpSetup.submit} finish={finish} autoFocus={false} />
     </div>
   );
 }

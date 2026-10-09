@@ -102,16 +102,18 @@ export function AccountsPage() {
         emptyText={copy.accounts.empty}
       >
         {(data) => (
-          <div className="flex flex-col items-start gap-4">
+          <div className="flex min-w-0 flex-col gap-4">
             <AccountsTable items={data.pages.flatMap((page) => page.items)} onMessage={setMessage} />
             {accounts.hasNextPage ? (
-              <Button
-                variant="outline"
-                disabled={accounts.isFetchingNextPage}
-                onClick={() => void accounts.fetchNextPage()}
-              >
-                {copy.accounts.more}
-              </Button>
+              <div>
+                <Button
+                  variant="outline"
+                  disabled={accounts.isFetchingNextPage}
+                  onClick={() => void accounts.fetchNextPage()}
+                >
+                  {copy.accounts.more}
+                </Button>
+              </div>
             ) : null}
           </div>
         )}

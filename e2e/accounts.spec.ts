@@ -30,7 +30,7 @@ async function signIn(page: Page, account: { email: string }, password = PASSWOR
 async function signInAsAdmin(page: Page, admin: TestAccount): Promise<void> {
   await page.goto('/login');
   await signIn(page, admin);
-  await page.getByLabel('Code').fill(totpFor(admin.totpSecret ?? ''));
+  await page.getByLabel('Code', { exact: true }).fill(totpFor(admin.totpSecret ?? ''));
   await page.getByRole('button', { name: 'Bevestigen' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
 }
@@ -81,7 +81,7 @@ test('AC-3: een admin met TOTP komt na wachtwoord en code op het dashboard met d
 
   await expect(heading(page)).toHaveText('Verificatiecode');
   await axeAtBothWidths(page);
-  await page.getByLabel('Code').fill(totpFor(admin.totpSecret ?? ''));
+  await page.getByLabel('Code', { exact: true }).fill(totpFor(admin.totpSecret ?? ''));
   await page.getByRole('button', { name: 'Bevestigen' }).click();
 
   await expect(heading(page)).toHaveText('Dashboard');
@@ -95,7 +95,7 @@ test('AC-3: een foute code geeft de spectekst en geen sessie', async ({ page }) 
   const admin = await createAccount('admin', { totp: true });
   await page.goto('/login');
   await signIn(page, admin);
-  await page.getByLabel('Code').fill('000000');
+  await page.getByLabel('Code', { exact: true }).fill('000000');
   await page.getByRole('button', { name: 'Bevestigen' }).click();
 
   await expect(page.getByRole('alert')).toHaveText('Deze code klopt niet. Probeer het opnieuw.');
@@ -116,7 +116,7 @@ test('AC-4: een admin zonder TOTP moet eerst instellen; tot dan MFA_REQUIRED', a
 
   await page.getByRole('button', { name: 'Kan je niet scannen? Toon de sleutel' }).click();
   const secret = (await page.locator('code').textContent()) ?? '';
-  await page.getByLabel('Code').fill(totpFor(base32Decode(secret)));
+  await page.getByLabel('Code', { exact: true }).fill(totpFor(base32Decode(secret)));
   await page.getByRole('button', { name: 'Activeren' }).click();
 
   await expect(heading(page)).toHaveText('Dashboard');
