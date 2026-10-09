@@ -27,5 +27,6 @@ paths:
 
 ## Besloten, nog niet gebouwd
 
-`createApp`, `createRouteKit`/`defineRoute`, `withUser()`, de CSRF-middleware, het foutcoderegister en `src/api/kit.ts` bestaan nog niet
-(roadmap fase 0 en 1). Bouw er niet op vooruit en maak geen eigen variant; staat iets wat je nodig hebt niet in `node scripts/kit/feiten.mjs`, vraag het.
+Gebouwd: `withUser()` (zonder foutvertaling), `createApp` met CSRF, `bodyLimit`, `secureHeaders()` en `onError`, en het env-schema
+(`env()`, `readEnv()`). Nog niet: `createRouteKit`/`defineRoute`, de foutvertaling, het foutcoderegister met app-uitbreiding, `src/api/kit.ts`,
+Better Auth en logging via `src/core/api/obs` (roadmap fase 1, stuk 2 en 3a). Bouw er niet op vooruit en maak geen eigen variant; staat iets wat je nodig hebt niet in `node scripts/kit/feiten.mjs`, vraag het.
