@@ -28,6 +28,9 @@ const cases: [file: string, rules: string[]][] = [
   ['src/web/type-uit-api.ts', []],
   ['src/core/api/db/pool.ts', []],
   ['src/web/x.ts', []],
+  ['src/api/db-intern.ts', ['db-alleen-via-index']],
+  ['src/api/testing-in-code.ts', ['testing-alleen-in-tests']],
+  ['src/api/testing.int.test.ts', []],
 ];
 
 describe('lagenregels in .dependency-cruiser.mjs', () => {

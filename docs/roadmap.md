@@ -18,21 +18,25 @@ Een ADR met status `voorgesteld` is geen besluit; afvinken gebeurt pas als de ei
 - [x] Tests buiten de sandbox: runner-container — ADR 0009
 - [x] Schema `better_auth` — ADR 0010
 - [x] Railwerk: rolhek, geteste hooks, ratchet, gate-register, feiten, vijf rollen, diff-guard — ADR 0011
+- [ ] Datapad: `withUser()` met `pg`, transactie per request, Drizzle als `tx` — ADR 0012 (voorgesteld)
 
 ## Fase 0 — Bewijs
 
+Bewijs: PR #11 (`pnpm test:db` door de eigenaar, 2026-10-09: Vitest 17/17, pgTAP 10/10; `pnpm dev` bij #9).
+
 Eerst door de eigenaar op de eigen machine (de agent gebruikt geen Docker):
-- [ ] `docker compose --env-file .env.local up -d --build --wait`: image met pgTAP bouwt, `db/init` draait vóór "healthy"
-- [ ] Baseline-migratie draait als `app_migrator` met dbmate
+- [x] `docker compose --env-file .env.local up -d --build --wait`: image met pgTAP bouwt, `db/init` draait vóór "healthy"
+- [x] Baseline-migratie draait als `app_migrator` met dbmate
 
 Daarna (de PR mag het minimum uit stuk 1 meenemen dat hiervoor nodig is: `pg`, Vitest, tsconfig):
-- [ ] `withUser()` met `pg` in `src/core/api/db`: `SET LOCAL ROLE` + `set_config(…, true)`; lektest over parallelle requests, nul lekken;
+- [x] `withUser()` met `pg` in `src/core/api/db`: `SET LOCAL ROLE` + `set_config(…, true)`; lektest over parallelle requests, nul lekken;
       na elke request `current_user = session_user`; `api_user` ziet zonder `withUser()` niets
-- [ ] Dezelfde test via PgBouncer (transaction mode) als compose-profiel `pooler`
-- [ ] FORCE RLS: bewijzen dat `app_migrator` (geen superuser) onder RLS valt; `app_definer` ziet alleen rijen via een eigen policy
-- [ ] Meten: twee verbindingen per request (sessie + `withUser`), latency lokaal
-- [ ] Contract vastleggen: `Actor`, type van `tx` (pg of Drizzle), `testing.ts` voor geïnjecteerde transacties
-- [ ] Uitkomst in een ADR "Datapad" (volgende vrije nummer in `docs/adr/`)
+- [x] Dezelfde test via PgBouncer (transaction mode) als compose-profiel `pooler`
+- [x] FORCE RLS: bewijzen dat `app_migrator` (geen superuser) onder RLS valt; `app_definer` ziet alleen rijen via een eigen policy
+- [x] Meten: twee verbindingen per request (sessie + `withUser`), latency lokaal
+- [x] Contract vastleggen: `Actor`, type van `tx` (pg of Drizzle), `testing.ts` voor geïnjecteerde transacties
+      (vastgelegd in ADR 0012: `tx` wordt een Drizzle-transactie; de savepoint-variant van `testing.ts` bouwt stuk 3a)
+- [x] Uitkomst in een ADR "Datapad" (volgende vrije nummer in `docs/adr/`)
 
 Verplaatst naar fase 1, stuk 2 (heeft Better Auth nodig): `session_strength` via after-hook op 2FA-verificatie, `cookieCache` uit, intrekken werkt direct.
 

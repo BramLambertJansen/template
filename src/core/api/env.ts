@@ -13,4 +13,6 @@ export function parsePort(value: string | undefined, fallback: number): number {
 
 export const env = {
   apiPort: parsePort(process.env['API_PORT'], DEFAULT_API_PORT),
+  // Verplicht zodra src/core/api/db geladen wordt (die faalt dan bij opstart); het env-schema volgt in stuk 2.
+  databaseUrl: process.env['DATABASE_URL'],
 };

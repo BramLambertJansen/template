@@ -60,6 +60,20 @@ const config = {
       to: { path: DATABASE },
     },
     {
+      name: 'db-alleen-via-index',
+      comment: 'Buiten src/core/api/db alleen withUser() uit index.ts (en testing.ts in tests): geen pool of driver.',
+      severity: 'error',
+      from: { pathNot: '^src/core/api/db/' },
+      to: { path: '^src/core/api/db/', pathNot: '^src/core/api/db/(index|testing)\\.ts$' },
+    },
+    {
+      name: 'testing-alleen-in-tests',
+      comment: 'src/core/api/db/testing.ts (eigen pools, geïnjecteerde transacties) alleen vanuit testbestanden.',
+      severity: 'error',
+      from: { path: '^src/', pathNot: '\\.test\\.tsx?$' },
+      to: { path: '^src/core/api/db/testing\\.ts$' },
+    },
+    {
       name: 'niet-oplosbaar',
       comment: 'Elke import moet op te lossen zijn; anders ziet geen enkele lagenregel hem.',
       severity: 'error',
