@@ -28,5 +28,11 @@ paths:
 
 ## Besloten, nog niet gebouwd
 
-De basiskit, tokens, `AsyncView`, `<Form>`, de API- en auth-client, `/design-system`, `check:catalogus` en `ui:check` bestaan nog niet
-(roadmap fase 1, stuk 1 en 3). Bouw geen eigen vervanger; staat een component niet in `node scripts/kit/feiten.mjs componenten`, vraag het.
+Gebouwd (stuk 3b): bestandsroutes in `src/web/routes` (TanStack Router; `routeTree.gen.ts` is gegenereerd), de router in
+`src/web/lib/router.ts` met `RouteError`/`NotFound` als ErrorBoundary per route, de guard `guard('<permissie>')` uit
+`src/web/lib/session.ts` voor `beforeLoad`, `createQueryClient` (401 → `/login`), `AsyncView`, `Form`/`FormField`/`useZodForm`,
+`format` en `readWebEnv`/`isDev` in `src/core/web`, foutteksten in `src/web/copy/errors.ts`. Componenttests in het
+Vitest-project `web` (jsdom, `*.test.tsx`).
+Nog niet: tokens, basiskit en layout (stuk 3c), de auth-client, `/design-system`, `check:catalogus` en `ui:check` met axe.
+Tot de basiskit er is, renderen `AsyncView`, `Form` en `RouteError` kale elementen. Bouw geen eigen vervanger; staat een
+component niet in `node scripts/kit/feiten.mjs componenten`, vraag het.

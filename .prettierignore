@@ -6,3 +6,5 @@ test-results/
 docs/
 *.md
 .claude/
+# Gegenereerd door @tanstack/router-plugin.
+src/web/routeTree.gen.ts

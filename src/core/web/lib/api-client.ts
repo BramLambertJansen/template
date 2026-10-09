@@ -3,7 +3,7 @@ import { unsafeCast } from '../../shared/unsafe-cast.ts';
 
 // Enige plek met fetch (framework §5). Getypt op de route-contracten uit src/shared: de web-code importeert niets uit src/api.
 // Same-origin met cookie; de CSRF-headers stuurt de browser zelf (Sec-Fetch-Site), Content-Type zet de client altijd (ADR 0007).
-// 401 → inloggen volgt in stuk 3b.
+// 401 → inloggen: createQueryClient (query.ts) en de guard (guard.ts) handelen dat af; de client gooit alleen ApiError.
 
 interface AnyContract {
   readonly method: string;

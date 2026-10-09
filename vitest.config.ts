@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitest/config';
 
-// unit draait in de sandbox; int alleen via `pnpm test:db` in de runner (framework §4, Tests; ADR 0009).
+// unit en web draaien in de sandbox; int alleen via `pnpm test:db` in de runner (framework §4, Tests; ADR 0009).
 // In de runner is de repo read-only: de cache gaat dan naar RUNNER_CACHE_DIR.
 const runnerCache = process.env['RUNNER_CACHE_DIR'];
 
@@ -11,9 +11,17 @@ export default defineConfig({
       {
         test: {
           name: 'unit',
-          include: ['{src,test}/**/*.test.{ts,tsx}'],
+          include: ['{src,test}/**/*.test.ts'],
           exclude: ['**/*.int.test.ts', 'test/rails/fixtures/**'],
           environment: 'node',
+        },
+      },
+      {
+        // Componenten en routes in een DOM (jsdom); draait net als unit in de sandbox.
+        test: {
+          name: 'web',
+          include: ['src/**/*.test.tsx'],
+          environment: 'jsdom',
         },
       },
       {

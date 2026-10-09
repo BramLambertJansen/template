@@ -106,8 +106,8 @@ Vier deel-PR's, in deze volgorde.
 - [x] Testkit in `src/core`: `asUser(rol)`, factories, savepoint per test
 
 **3b. Frontend-basis**
-- [ ] TanStack Router met guards + ErrorBoundary; API-client (401 → inloggen, `ApiError`)
-- [ ] `AsyncView`, `<Form>`/`<FormField>`, `lib/format.ts`, `lib/env.ts`
+- [x] TanStack Router met guards + ErrorBoundary; API-client (401 → inloggen, `ApiError`)
+- [x] `AsyncView`, `<Form>`/`<FormField>`, `lib/format.ts`, `lib/env.ts`
 
 **3c. Tokens en UI-kit**
 - [ ] Tokens in drie lagen, `@custom-variant dark`, basiskit Button, Input, Field, Card, Dialog (+ codemod)
