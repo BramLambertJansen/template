@@ -64,7 +64,7 @@ const rows: Row[] = [
 
 describe('CSRF-middleware (ADR 0007)', () => {
   test.each(rows)('rij $nr: $method site=$site origin=$origin type=$type → toegestaan: $allowed', async (row) => {
-    const response = await app.request(request(row));
+    const response = await app.fetch(request(row));
 
     if (row.allowed) {
       expect(response.status).not.toBe(403);
@@ -75,7 +75,7 @@ describe('CSRF-middleware (ADR 0007)', () => {
   });
 
   test('zonder appOrigin weigert de app elke Origin-header (veilige standaard)', async () => {
-    const response = await createApp().request(
+    const response = await createApp().fetch(
       request({ nr: 2, site: undefined, origin: APP_ORIGIN, type: json, allowed: false }),
     );
 

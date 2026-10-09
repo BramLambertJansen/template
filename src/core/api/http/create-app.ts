@@ -1,40 +1,99 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { requestId } from 'hono/request-id';
 import { secureHeaders } from 'hono/secure-headers';
-import type { CoreErrorCode, ErrorBody } from '../../shared/errors.ts';
+import { coreErrorCodes, type ErrorRegistry } from '../../shared/errors.ts';
 import { MAX_BODY_BYTES } from '../../shared/limits.ts';
+import type { AuthGateway } from '../auth/auth.ts';
+import type { WithUser } from '../db/types.ts';
+import { AppError, statusFor } from '../errors.ts';
+import { isRouteDef, type RouteDef } from '../route/kit.ts';
 import { csrf } from './csrf.ts';
 
 export interface AppConfig {
   // Exact de origin van de SPA (ADR 0007); zonder waarde weigert de CSRF-controle elke Origin-header.
   readonly appOrigin?: string;
-  // Better Auth op /api/auth/* (framework §3: de enige routes buiten defineRoute). Zonder: 404.
-  readonly auth?: { readonly handler: (request: Request) => Promise<Response> };
+  // Better Auth op /api/auth/* (framework §3: de enige routes buiten defineRoute) en de sessie per request.
+  readonly auth?: AuthGateway;
+  readonly withUser?: WithUser;
+  // Alleen routes uit defineRoute (ADR 0008); iets anders weigert createApp bij opstart.
+  readonly routes?: readonly RouteDef[];
+  // Foutcodes die naar buiten mogen; een onbekende code wordt INTERNAL_ERROR.
+  readonly errors?: ErrorRegistry<string>;
 }
 
-// Vaste volgorde (framework §6): requestId, secureHeaders, CSRF, bodyLimit, routes; één onError en notFound met
-// alleen `{ code, requestId }`. De health-route is de publieke uitzondering uit framework §3. In stuk 3a krijgt createApp
-// de RouteDef[] uit defineRoute.
-export function createApp(config: AppConfig = {}) {
-  const fail = (code: CoreErrorCode, id: string): ErrorBody => ({ code, requestId: id });
+export interface App {
+  readonly fetch: (request: Request) => Promise<Response>;
+}
 
-  return new Hono()
+async function readInput(c: Context, method: string): Promise<unknown> {
+  const params = c.req.param();
+  if (method === 'GET' || method === 'DELETE') return { ...c.req.query(), ...params };
+  const text = await c.req.text();
+  let body: unknown;
+  try {
+    body = text === '' ? {} : JSON.parse(text);
+  } catch {
+    throw new AppError('VALIDATION');
+  }
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) throw new AppError('VALIDATION');
+  return { ...body, ...params };
+}
+
+function routeHandler(route: RouteDef, config: AppConfig) {
+  const { contract } = route;
+  return async (c: Context) => {
+    const { auth, withUser } = config;
+    if (auth === undefined || withUser === undefined) throw new Error('createApp: routes vragen auth en withUser');
+    const { session, setCookie } = await auth.getSession(c.req.raw.headers);
+    for (const cookie of setCookie) c.header('set-cookie', cookie, { append: true });
+    if (session === null) throw new AppError('UNAUTHENTICATED');
+    const parsed = contract.input.safeParse(await readInput(c, contract.method));
+    if (!parsed.success) throw new AppError('VALIDATION');
+    const actor = { userId: session.userId, sessionStrength: session.sessionStrength };
+    const output = await withUser(
+      actor,
+      async (tx, { role }) => {
+        // Geen rol in user_roles = geen toegang (framework §6: de rol komt per request uit de database).
+        if (role === null) throw new AppError('FORBIDDEN');
+        const decision = route.check({ role, sessionStrength: session.sessionStrength });
+        if (!decision.ok) throw new AppError(decision.code);
+        const result = await route.handler({ input: parsed.data, actor: { ...session, role }, tx });
+        // Een output die niet bij het contract past, is een bug: INTERNAL_ERROR, nooit de data.
+        return contract.output.parse(result);
+      },
+      { readOnly: contract.method === 'GET' },
+    );
+    return c.json(output);
+  };
+}
+
+// Vaste volgorde (framework §6): requestId, secureHeaders, CSRF, bodyLimit, routes; één onError en notFound met alleen
+// `{ code, requestId }`. De health-route is de publieke uitzondering uit framework §3.
+export function createApp(config: AppConfig = {}): App {
+  const routes = config.routes ?? [];
+  for (const route of routes) {
+    if (!isRouteDef(route)) throw new Error('createApp: alleen routes uit defineRoute (ADR 0008)');
+  }
+  const fail = (c: Context, code: string) => c.json({ code, requestId: c.get('requestId') }, statusFor(code));
+  const core: readonly string[] = coreErrorCodes;
+  const isPublic = (code: string) => config.errors?.is(code) ?? core.includes(code);
+
+  const app = new Hono()
     .basePath('/api')
     .use(requestId())
     .use(secureHeaders())
     .use(csrf(config.appOrigin))
-    .use(
-      bodyLimit({
-        maxSize: MAX_BODY_BYTES,
-        onError: (c) => c.json(fail('PAYLOAD_TOO_LARGE', c.get('requestId')), 413),
-      }),
-    )
+    .use(bodyLimit({ maxSize: MAX_BODY_BYTES, onError: (c) => fail(c, 'PAYLOAD_TOO_LARGE') }))
     .onError((error, c) => {
+      if (error instanceof AppError && isPublic(error.code)) return fail(c, error.code);
       console.error(`[${c.get('requestId')}]`, error);
-      return c.json(fail('INTERNAL_ERROR', c.get('requestId')), 500);
+      return fail(c, 'INTERNAL_ERROR');
     })
-    .notFound((c) => c.json(fail('NOT_FOUND', c.get('requestId')), 404))
+    .notFound((c) => fail(c, 'NOT_FOUND'))
     .get('/health', (c) => c.json({ ok: true }))
     .on(['GET', 'POST'], '/auth/*', (c) => (config.auth === undefined ? c.notFound() : config.auth.handler(c.req.raw)));
+
+  for (const route of routes) app.on(route.contract.method, route.contract.path, routeHandler(route, config));
+  return { fetch: async (request) => app.fetch(request) };
 }

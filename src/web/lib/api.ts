@@ -1,4 +1,4 @@
-import type { AppType } from '#api/app.ts';
 import { createApiClient } from '#core/web/lib/api-client.ts';
+import type { Contracts } from '#shared/contracts/index.ts';
 
-export const api = createApiClient<AppType>();
+export const api = createApiClient<Contracts>();

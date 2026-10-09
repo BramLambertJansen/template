@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { sql } from 'drizzle-orm';
 import pg from 'pg';
 import { afterAll, describe, expect, test } from 'vitest';
 import { createPool, createWithUser } from '../../src/core/api/db/testing.ts';
@@ -28,8 +29,8 @@ describe('laatste admin', () => {
     await admin(b);
     // Voorwaarde: a en b zijn de enige admins (verse test-database); een admin met MFA ziet alle rollen.
     const admins = await withUser({ userId: a, sessionStrength: 'mfa' }, async (tx) => {
-      const { rows } = await tx.query<{ count: number }>(
-        "select count(*)::integer as count from public.user_roles where role = 'admin'",
+      const { rows } = await tx.execute<{ count: number }>(
+        sql`select count(*)::integer as count from public.user_roles where role = 'admin'`,
       );
       return rows[0]?.count;
     });
@@ -37,15 +38,15 @@ describe('laatste admin', () => {
 
     const demote = (actor: string, target: string) =>
       withUser({ userId: actor, sessionStrength: 'mfa' }, async (tx) => {
-        await tx.query('select pg_sleep(0.05)');
-        await tx.query("select app.assign_role($1, 'user')", [target]);
+        await tx.execute(sql`select pg_sleep(0.05)`);
+        await tx.execute(sql`select app.assign_role(${target}, 'user')`);
       });
     const results = await Promise.allSettled([demote(a, b), demote(b, a)]);
 
     const winner = results[0].status === 'fulfilled' ? a : b;
     const remaining = await withUser({ userId: winner, sessionStrength: 'mfa' }, async (tx) => {
-      const { rows } = await tx.query<{ user_id: string }>(
-        "select user_id from public.user_roles where role = 'admin'",
+      const { rows } = await tx.execute<{ user_id: string }>(
+        sql`select user_id from public.user_roles where role = 'admin'`,
       );
       return rows.map((row) => row.user_id);
     });
@@ -96,7 +97,7 @@ describe('admin:create', () => {
     expect(mail.text).toContain('Hallo Nood Beheerder,');
     const { rows } = await auth.query<{ id: string }>('select id from "user" where email = $1', [email]);
     const role = await withUser({ userId: rows[0]?.id ?? '', sessionStrength: 'password' }, async (tx) => {
-      const own = await tx.query<{ role: string }>('select role from public.user_roles');
+      const own = await tx.execute<{ role: string }>(sql`select role from public.user_roles`);
       return own.rows[0]?.role;
     });
     expect(role).toBe('admin');
