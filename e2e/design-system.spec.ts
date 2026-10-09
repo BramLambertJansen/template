@@ -54,8 +54,9 @@ test('menu: met het toetsenbord open, Esc sluit, focus terug op de knop', async 
   expect(csp).toStrictEqual([]);
 });
 
-test('profielmenu in de AppShell heeft de toegankelijke naam "Profielmenu"', async ({ page }) => {
+test('profielmenu in de AppShell heeft de toegankelijke naam "Profielmenu" en toont de initialen', async ({ page }) => {
   await page.goto('/design-system');
 
-  await expect(page.getByRole('button', { name: 'Profielmenu' })).toHaveText('AD');
+  // "Anna de Vries": eerste letter van het eerste en het laatste woord.
+  await expect(page.getByRole('button', { name: 'Profielmenu' })).toHaveText('AV');
 });
