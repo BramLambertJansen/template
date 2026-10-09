@@ -64,7 +64,7 @@ const config = {
       comment: 'Buiten src/core/api/db alleen withUser() uit index.ts (en testing.ts in tests): geen pool of driver.',
       severity: 'error',
       from: { pathNot: '^src/core/api/db/' },
-      to: { path: '^src/core/api/db/', pathNot: '^src/core/api/db/(index|testing)\\.ts$' },
+      to: { path: '^src/core/api/db/', pathNot: '^src/core/api/db/(index|testing|types)\\.ts$' },
     },
     {
       name: 'testing-alleen-in-tests',

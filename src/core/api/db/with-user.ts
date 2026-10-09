@@ -1,22 +1,10 @@
+import { drizzle } from 'drizzle-orm/node-postgres';
 import type { Pool, PoolClient } from 'pg';
+import { translateDatabaseError } from '../errors.ts';
 
-export type SessionStrength = 'password' | 'mfa';
+import type { Actor, ActorRole, WithUser } from './types.ts';
 
-// userId wordt in stuk 3a een branded UserId uit src/core/shared/ids.ts (ADR 0012).
-export interface Actor {
-  readonly userId: string;
-  readonly sessionStrength: SessionStrength;
-}
-
-// Vanaf stuk 3a een Drizzle-transactie over dezelfde verbinding (ADR 0012); de handler ziet nooit de pool.
-export type Tx = PoolClient;
-
-export interface WithUserOptions {
-  // GET-routes: de transactie is read only (framework §6).
-  readonly readOnly?: boolean;
-}
-
-export type WithUser = <T>(actor: Actor, work: (tx: Tx) => Promise<T>, options?: WithUserOptions) => Promise<T>;
+export type { Actor, ActorRole, SessionStrength, Tx, WithUser, WithUserOptions } from './types.ts';
 
 const STRENGTHS: ReadonlySet<string> = new Set(['password', 'mfa']);
 
@@ -34,7 +22,7 @@ class LeakedConnectionError extends Error {
   }
 }
 
-async function begin(client: PoolClient, actor: Actor, readOnly: boolean): Promise<void> {
+async function begin(client: PoolClient, actor: Actor, readOnly: boolean): Promise<ActorRole> {
   await client.query(readOnly ? 'begin read only' : 'begin');
   // Een verbinding met een andere rol dan waarmee hij inlogde, lekt van een vorige gebruiker: weigeren en weggooien.
   const { rows } = await client.query<{ clean: boolean }>('select current_user = session_user as clean');
@@ -45,18 +33,25 @@ async function begin(client: PoolClient, actor: Actor, readOnly: boolean): Promi
     actor.userId,
     actor.sessionStrength,
   ]);
+  // De rol hoort bij elke request (framework §6); de policy user_roles_select_own laat alleen de eigen rij zien.
+  const { rows: roles } = await client.query<{ role: string }>(
+    'select role from public.user_roles where user_id = $1',
+    [actor.userId],
+  );
+  const role = roles[0]?.role;
+  return { role: role === 'user' || role === 'admin' ? role : null };
 }
 
 // Eén transactie per request met rol app_authenticated, app.user_id en app.session_strength (framework §6).
-// Foutvertaling (23505, 23503, 42501) volgt in stuk 3a.
+// Databasefouten worden vertaald naar AppError (src/core/api/errors.ts).
 export function createWithUser(pool: Pool): WithUser {
   return async (actor, work, options = {}) => {
     checkActor(actor);
     const client = await pool.connect();
     let destroy = false;
     try {
-      await begin(client, actor, options.readOnly ?? false);
-      const result = await work(client);
+      const actorRole = await begin(client, actor, options.readOnly ?? false);
+      const result = await work(drizzle({ client }), actorRole);
       await client.query('commit');
       return result;
     } catch (error) {
@@ -64,7 +59,7 @@ export function createWithUser(pool: Pool): WithUser {
       await client.query('rollback').catch(() => {
         destroy = true;
       });
-      throw error;
+      throw translateDatabaseError(error);
     } finally {
       client.release(destroy);
     }
