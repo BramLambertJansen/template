@@ -14,10 +14,10 @@ export function HealthPage() {
   const [status, setStatus] = useState<Status>('laden');
 
   useEffect(() => {
-    api.api.health
-      .$get()
-      .then((response) => {
-        setStatus(response.ok ? 'ok' : 'fout');
+    api
+      .health()
+      .then((ok) => {
+        setStatus(ok ? 'ok' : 'fout');
       })
       .catch(() => {
         setStatus('fout');

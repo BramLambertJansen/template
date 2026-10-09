@@ -27,7 +27,9 @@ paths:
 
 ## Besloten, nog niet gebouwd
 
-Gebouwd: `withUser()` (zonder foutvertaling), `createApp` met CSRF, `bodyLimit`, `secureHeaders()` en `onError`, en het env-schema
-(`env()`, `readEnv()`). Nog niet: `createRouteKit`/`defineRoute`, de foutvertaling, het foutcoderegister met app-uitbreiding, `src/api/kit.ts`,
-en logging via `src/core/api/obs` (roadmap fase 1, stuk 3a). Better Auth staat in `src/core/api/auth` (ADR 0013); `user_roles`, seed en
-`admin:create` volgen in stuk 2 (4c). Bouw er niet op vooruit en maak geen eigen variant; staat iets wat je nodig hebt niet in `node scripts/kit/feiten.mjs`, vraag het.
+Gebouwd: `withUser()` (Drizzle-`tx`, rol uit `user_roles`, foutvertaling), `createApp` (CSRF, `bodyLimit`, `secureHeaders()`, `onError`,
+alleen routes uit `defineRoute`), `createRouteKit`/`defineRoute` in `src/core/api/route`, contracten met `defineContract` in
+`src/shared/contracts/`, `src/api/kit.ts`, Better Auth (`src/core/api/auth`, ADR 0013) en het env-schema. Een nieuwe route = eerst het contract
+in `src/shared/contracts/<resource>.ts`, dan de handler in `src/api/routes/<resource>.ts`, dan beide in de lijsten
+(`src/shared/contracts/index.ts`, `src/api/app.ts`). Nog niet: het Drizzle-schema uit introspectie, de testkit (`asUser`) en logging via
+`src/core/api/obs` (roadmap 3a, deel 5c). Bouw er niet op vooruit; staat iets niet in `node scripts/kit/feiten.mjs`, vraag het.

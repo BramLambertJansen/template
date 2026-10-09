@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth';
 import pg from 'pg';
+import { SESSION_ABSOLUTE_SECONDS } from '../../shared/limits.ts';
 import { AUTH_BASE_PATH, type AuthConfig, createAuthOptions, DISABLED_PREFIXES } from './options.ts';
 
 export interface CreateAuthConfig extends AuthConfig {
@@ -16,14 +17,46 @@ export function createAuth(config: CreateAuthConfig) {
 
 export type Auth = ReturnType<typeof createAuth>;
 
-// Wat createApp op /api/auth/* aanroept: eerst de paden met een parameter die publiek dicht zijn (ADR 0013).
-export function authHandler(auth: { handler: (request: Request) => Promise<Response> }) {
+export interface SessionInfo {
+  readonly userId: string;
+  readonly sessionStrength: 'password' | 'mfa';
+  readonly name: string;
+  readonly email: string;
+}
+
+export interface SessionLookup {
+  readonly session: SessionInfo | null;
+  // Better Auth verlengt de sessie (idle 12 uur); zonder deze Set-Cookie verloopt hij in de browser alsnog.
+  readonly setCookie: readonly string[];
+}
+
+// Wat createApp van auth nodig heeft (ADR 0003, 0013): de handler voor /api/auth/* en de sessie per request.
+export interface AuthGateway {
+  readonly handler: (request: Request) => Promise<Response>;
+  readonly getSession: (headers: Headers) => Promise<SessionLookup>;
+}
+
+export function authGateway(auth: Auth, now: () => number = Date.now): AuthGateway {
   return {
-    handler: async (request: Request): Promise<Response> => {
+    handler: async (request) => {
       const path = new URL(request.url).pathname.slice(AUTH_BASE_PATH.length);
       if (DISABLED_PREFIXES.some((prefix) => path.startsWith(prefix)))
         return new Response('Not Found', { status: 404 });
       return auth.handler(request);
+    },
+    getSession: async (headers) => {
+      const { headers: responseHeaders, response } = await auth.api.getSession({ headers, returnHeaders: true });
+      const setCookie = responseHeaders.getSetCookie();
+      if (response === null) return { session: null, setCookie };
+      const { session, user } = response;
+      // Absoluut 7 dagen na inloggen (ADR 0003), ook als de sessie actief bleef: intrekken en als uitgelogd behandelen.
+      if (now() - session.createdAt.getTime() > SESSION_ABSOLUTE_SECONDS * 1000) {
+        await (await auth.$context).internalAdapter.deleteSession(session.token);
+        return { session: null, setCookie };
+      }
+      const strength = session.sessionStrength;
+      if (strength !== 'password' && strength !== 'mfa') return { session: null, setCookie };
+      return { session: { userId: user.id, sessionStrength: strength, name: user.name, email: user.email }, setCookie };
     },
   };
 }

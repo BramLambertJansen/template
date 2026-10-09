@@ -1,4 +1,5 @@
-import { authHandler, createAuth } from '#core/api/auth/index.ts';
+import { authGateway, createAuth } from '#core/api/auth/index.ts';
+import { withUser } from '#core/api/db/index.ts';
 import { env } from '#core/api/env.ts';
 import { startServer } from '#core/api/http/serve.ts';
 import { createSmtpMailer } from '#core/api/mail/smtp.ts';
@@ -16,4 +17,4 @@ const auth = createAuth({
   sendInvitation: (invitation) => sendMail(invitationMail(invitation)),
 });
 
-startServer(buildApp({ appOrigin: config.appOrigin, auth: authHandler(auth) }), config.apiPort);
+startServer(buildApp({ appOrigin: config.appOrigin, auth: authGateway(auth), withUser }), config.apiPort);
