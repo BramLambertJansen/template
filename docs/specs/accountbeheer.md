@@ -52,13 +52,14 @@ en er is altijd een weg naar binnen (lokaal seed-accounts en een dev-rol-switche
 | POST | `/api/auth/sign-out` (Better Auth) | ingelogd | — |
 | GET | `/api/me` → `{ id, naam, email, rol }` | `me:read` (`user`, `admin`) | `UNAUTHENTICATED`, `MFA_REQUIRED` |
 | GET | `/api/accounts?cursor=` → `{ items, nextCursor }` | `accounts:read` | `FORBIDDEN`, `MFA_REQUIRED` |
-| POST | `/api/accounts/invite` `{ email, rol }` | `accounts:invite` | `ALREADY_EXISTS`, `VALIDATION`, `FORBIDDEN`, `MFA_REQUIRED` |
+| POST | `/api/accounts/invite` `{ naam, email, rol }` | `accounts:invite` | `ALREADY_EXISTS`, `VALIDATION`, `FORBIDDEN`, `MFA_REQUIRED` |
 | POST | `/api/accounts/:id/reinvite` | `accounts:invite` | `NOT_FOUND`, `ALREADY_ACTIVE`, `FORBIDDEN`, `MFA_REQUIRED` |
 | POST | `/api/dev/login-as` `{ rol }` | alleen `APP_ENV=local`, anders 404 | `NOT_FOUND` |
 
 - **Uitnodiging (besluit eigenaar):** `invite` maakt het account direct aan (status `uitgenodigd`, `emailVerified` pas na instellen) en verstuurt
   via Better Auth een link om het wachtwoord in te stellen (geldig 7 dagen). Het publieke `/api/auth/request-password-reset` staat dicht
-  (geen "wachtwoord vergeten" in deze reeks). Exacte Better Auth-configuratie: ADR bij PR 4.
+  (geen "wachtwoord vergeten" in deze reeks). Exacte Better Auth-configuratie: [ADR 0013](../adr/0013-uitnodigen-en-mfa-in-better-auth.md).
+  De admin vult de naam in bij het uitnodigen; het uitnodigingsscherm vraagt alleen het wachtwoord (besluit eigenaar, 2026-10-09).
 - **Dev-route (besluit eigenaar):** limitatieve uitzondering in framework §3 (ADR in PR 7). Logt echt in als het seed-account van de rol;
   voor de admin vult de server de TOTP-code in met het vaste lokale geheim. Wordt buiten `local` niet geregistreerd.
 - `/api/auth/sign-up/email`, magic link en `trustDevice` staan uit.
@@ -76,14 +77,14 @@ en er is altijd een weg naar binnen (lokaal seed-accounts en een dev-rol-switche
 | Login | titel "Inloggen"; velden "E-mailadres", "Wachtwoord"; knop "Inloggen"; fout "E-mailadres of wachtwoord klopt niet." |
 | TOTP | titel "Verificatiecode"; uitleg "Voer de 6-cijferige code uit je authenticator-app in."; veld "Code"; knop "Bevestigen"; fout "Deze code klopt niet. Probeer het opnieuw." |
 | TOTP instellen | titel "Tweestapsverificatie instellen"; uitleg "Scan de QR-code met je authenticator-app en voer daarna de code in."; link "Kan je niet scannen? Toon de sleutel"; veld "Code"; knop "Activeren" |
-| Uitnodiging | titel "Wachtwoord instellen"; velden "Naam", "Wachtwoord", "Wachtwoord herhalen"; hulptekst "Minstens 12 tekens."; knop "Wachtwoord instellen"; fout "Deze uitnodiging is verlopen of al gebruikt. Vraag een nieuwe aan."; mismatch "De wachtwoorden zijn niet gelijk." |
+| Uitnodiging | titel "Wachtwoord instellen"; velden "Wachtwoord", "Wachtwoord herhalen"; hulptekst "Minstens 12 tekens."; knop "Wachtwoord instellen"; fout "Deze uitnodiging is verlopen of al gebruikt. Vraag een nieuwe aan."; mismatch "De wachtwoorden zijn niet gelijk." |
 | Na instellen | op `/login`: "Je wachtwoord is ingesteld. Log in om verder te gaan." |
 | Sidebar | "Home", "Dashboard" |
 | Topbar | profielknop met initialen (toegankelijke naam "Profielmenu"); menu-item "Uitloggen" |
 | Home | titel "Home" (verder leeg) |
 | Dashboard | titel "Dashboard"; link "Accounts" |
 | Accounts | titel "Accounts"; kolommen "Naam", "E-mailadres", "Rol", "Status"; rollen "Gebruiker", "Beheerder"; status "Actief", "Uitgenodigd"; actie "Opnieuw uitnodigen"; knop "Account uitnodigen"; leeg "Nog geen accounts."; meer "Meer laden" |
-| Uitnodigen (dialoog) | titel "Account uitnodigen"; velden "E-mailadres", "Rol"; knoppen "Uitnodiging versturen", "Annuleren"; gelukt "Uitnodiging verstuurd naar {email}."; bestaat "Er bestaat al een account met dit e-mailadres." |
+| Uitnodigen (dialoog) | titel "Account uitnodigen"; velden "Naam", "E-mailadres", "Rol"; knoppen "Uitnodiging versturen", "Annuleren"; gelukt "Uitnodiging verstuurd naar {email}."; bestaat "Er bestaat al een account met dit e-mailadres." |
 | Dev-switcher (alleen lokaal) | op `/login` onder het formulier: kop "Lokaal inloggen als"; knoppen "Gebruiker", "Beheerder"; in het profielmenu: "Wissel naar gebruiker" / "Wissel naar beheerder" |
 | Algemeen | sessie verlopen: naar `/login` met "Je sessie is verlopen. Log opnieuw in."; geen rechten: "Je hebt geen toegang tot deze pagina."; mail-onderwerp "Uitnodiging voor {appnaam}" |
 
@@ -97,9 +98,9 @@ en er is altijd een weg naar binnen (lokaal seed-accounts en een dev-rol-switche
 - **accounts/AC-3** — Gegeven een admin met TOTP, wanneer hij wachtwoord en code invoert, dan ziet hij `/admin` met de link "Accounts".
 - **accounts/AC-4** — Gegeven een admin zonder TOTP, wanneer hij met zijn wachtwoord inlogt, dan krijgt hij eerst "Tweestapsverificatie instellen"
   en zijn admin-routes geven `MFA_REQUIRED` tot de code klopt.
-- **accounts/AC-5** — Gegeven een admin met MFA, wanneer hij `nieuw@template.test` als "Gebruiker" uitnodigt, dan staat er een mail in Mailpit en
+- **accounts/AC-5** — Gegeven een admin met MFA, wanneer hij "Nieuwe Gebruiker" met `nieuw@template.test` als "Gebruiker" uitnodigt, dan staat er een mail in Mailpit en
   het account met status "Uitgenodigd" in de lijst.
-- **accounts/AC-6** — Gegeven die uitnodiging, wanneer de genodigde naam en wachtwoord instelt, dan komt hij op `/login` met de bevestiging, kan hij
+- **accounts/AC-6** — Gegeven die uitnodiging, wanneer de genodigde zijn wachtwoord instelt, dan komt hij op `/login` met de bevestiging, kan hij
   inloggen en is de status "Actief".
 - **accounts/AC-7** — Gegeven een `user`, wanneer hij `/admin` of `/api/accounts` opent, dan ziet hij "Je hebt geen toegang tot deze pagina." / krijgt hij `FORBIDDEN`.
 - **accounts/AC-8** — Gegeven `APP_ENV=local`, wanneer iemand op "Beheerder" in de dev-switcher klikt, dan is hij ingelogd als `admin@template.test`
