@@ -1,7 +1,7 @@
 # 0013 — Uitnodigen en MFA in Better Auth
 
-Status: voorgesteld — voorgesteld door de agent bij roadmap stuk 2 (PR 4b); keuzes voor de reset-flow, de naam bij uitnodigen en
-de wachtwoordlengte door de eigenaar (spec `docs/specs/accountbeheer.md`).
+Status: geaccepteerd (2026-10-09) — voorgesteld door de agent bij roadmap stuk 2 (PR 4b); keuzes voor de reset-flow, de naam bij
+uitnodigen en de wachtwoordlengte door de eigenaar (spec `docs/specs/accountbeheer.md`); geaccepteerd door de eigenaar ("alles akkoord").
 
 ## Context
 
