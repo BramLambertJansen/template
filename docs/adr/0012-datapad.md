@@ -1,7 +1,7 @@
 # 0012 — Datapad: `withUser()` met `pg`, transactie per request, Drizzle als `tx`
 
-Status: voorgesteld — voorgesteld door de agent na fase 0; keuzes voor `tx` (Drizzle) en PgBouncer-image door de eigenaar gemaakt.
-Wordt geaccepteerd zodra de eigenaar `pnpm test:db` volledig groen heeft gedraaid (ook pgTAP).
+Status: geaccepteerd (2026-10-09) — voorgesteld door de agent na fase 0; keuzes voor `tx` (Drizzle) en PgBouncer-image door de eigenaar,
+geaccepteerd door de eigenaar na `pnpm test:db` (Vitest 17/17, pgTAP 10/10; PR #11).
 
 ## Context
 
