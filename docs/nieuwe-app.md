@@ -231,7 +231,9 @@ pwd                                        # nooit /mnt/c/...
 > 2. Kopieer de code, druk Enter, plak de code in de browser, klik **Authorize**.
 > 3. Typ *klaar*.
 
-Daarna zelf: `gh auth setup-git`. `workflow` is nodig omdat jij (de eigenaar) later template-updates met `.github/workflows/` pusht; de agent krijgt dat recht nooit (ADR 0005).
+Daarna zelf: `gh auth setup-git`. `workflow` is nodig omdat jij (de eigenaar) later template-updates met `.github/workflows/` pusht.
+Let op: tot de GitHub App voor de agent bestaat (ADR 0005), draait Claude Code als dezelfde WSL-gebruiker en gebruikt dus deze login,
+inclusief `workflow`. De grens is dan de ruleset en jouw review (framework §6, Agentveiligheid). Zeg dat in de overdracht van Fase 10.
 Zet de git-identiteit volgens *Standaardwaarden* als die ontbreekt.
 
 ### 4.2 Template controleren
@@ -270,7 +272,7 @@ git remote add template https://github.com/BramLambertJansen/template.git
 git remote set-url --push template DISABLED   # nooit per ongeluk naar de template pushen
 git fetch template
 git merge --allow-unrelated-histories -s ours template/main \
-  -m "chore: koppel aan template ($(git rev-parse --short template/main))"
+  -m "chore: link to template ($(git rev-parse --short template/main))"
 ```
 
 `-s ours` houdt de inhoud van de app en registreert de template als voorouder. Daarna haalt `git merge template/main` alleen nieuwe template-commits binnen.
@@ -292,7 +294,7 @@ Raak `docs/`, `AGENTS.md`, `CLAUDE.md`, `.claude/`, `db/`, `compose.yaml` niet a
 
 ```bash
 git add -A
-git commit -m "chore: hernoem naar <slug>"
+git commit -m "chore: rename to <slug>"
 ```
 
 Controle: `git status` schoon; `git log --oneline -3` toont: hernoem, koppel (merge), initial commit.
@@ -379,7 +381,7 @@ Bezet (meestal een andere app van deze template): tel 10 op bij alle drie tot ze
 
 ```bash
 cp -n .env.example .env.local
-# Alleen bij afwijkende poorten — PG_PORT én de poort in de drie database-URL's:
+# Alleen bij afwijkende poorten — de poortvariabelen én de poort in de drie database-URL's en SMTP_URL:
 sed -i -e 's/54322/<pg>/g' -e 's/54324/<mailui>/g' -e 's/54325/<smtp>/g' .env.local
 ```
 
@@ -411,19 +413,20 @@ Dit zijn de eerste twee punten van fase 0 in `docs/roadmap.md`, nu op deze machi
 
 ```bash
 cd ~/code/<slug>
-~/.local/bin/mise exec -- pnpm dlx dbmate@2 --env-file .env.local --env MIGRATOR_DATABASE_URL --no-dump-schema up
+~/.local/bin/mise exec -- pnpm dlx dbmate@2.36.0 --env-file .env.local --env MIGRATOR_DATABASE_URL --no-dump-schema up
 ```
 
 Faalt `pnpm dlx` (registry, build-scripts): download de binary naast de repo, niet erin —
-`curl -fsSL -o ~/.local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64 && chmod +x ~/.local/bin/dbmate`
-en draai hetzelfde commando met `dbmate` in plaats van `pnpm dlx dbmate@2`. Voeg dbmate niet toe aan `package.json`; dat doet fase 1 gepind.
+`curl -fsSL -o ~/.local/bin/dbmate https://github.com/amacneil/dbmate/releases/download/v2.36.0/dbmate-linux-amd64 && chmod +x ~/.local/bin/dbmate`
+en draai hetzelfde commando met `dbmate` in plaats van `pnpm dlx dbmate@2.36.0` (versie uit ADR 0004). Voeg dbmate niet toe aan
+`package.json` of `mise.toml`; dat doet roadmap fase 1, stuk 1 (gepind in `mise.toml`).
 
 Bewijs met `psql` (`M=postgres://app_migrator:app_migrator@127.0.0.1:<pg>/app`, `A=postgres://api_user:api_user@127.0.0.1:<pg>/app`):
 
 | Bewering | Commando | Verwacht |
 |---|---|---|
 | Migratie toegepast | `psql "$M" -Atc "select version from schema_migrations"` | `20261009000000` |
-| Schema's bestaan | `psql "$M" -Atc "select string_agg(nspname, ',' order by nspname) from pg_namespace where nspname in ('app','auth','tap')"` | `app,auth,tap` |
+| Schema's bestaan | `psql "$M" -Atc "select string_agg(nspname, ',' order by nspname) from pg_namespace where nspname in ('app','better_auth','tap')"` | `app,better_auth,tap` |
 | Migrator is geen superuser (RLS geldt ook voor hem) | `psql "$M" -Atc "select rolsuper from pg_roles where rolname = current_user"` | `f` |
 | `api_user` ziet zonder rolwissel niets | `psql "$A" -Atc "select app.current_user_id()"` | `ERROR: permission denied for schema app` |
 | Met `SET LOCAL ROLE` wel, zonder gebruiker | `psql "$A" -At -c begin -c "set local role app_authenticated" -c "select coalesce(app.current_user_id(), '<null>')" -c rollback` | `<null>` |
