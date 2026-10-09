@@ -26,17 +26,11 @@ const config = {
     },
     {
       name: 'web-niet-naar-api',
-      comment: "Web importeert uit de API alleen het type AppType, uit src/api/app.ts ('import type').",
+      comment:
+        'Web importeert niets uit de API, ook geen types: de contracten staan in src/shared/contracts (ADR 0008).',
       severity: 'error',
       from: { path: WEB },
-      to: { path: API, pathNot: '^src/api/app\\.ts$' },
-    },
-    {
-      name: 'web-alleen-type-uit-api',
-      comment: "Web importeert src/api/app.ts alleen met 'import type': anders komt de server in de bundel.",
-      severity: 'error',
-      from: { path: WEB },
-      to: { path: '^src/api/app\\.ts$', dependencyTypesNot: ['type-only'] },
+      to: { path: API },
     },
     {
       name: 'api-niet-naar-web',

@@ -29,7 +29,8 @@ vangen het later toch, en dan is het werk verloren. Uitzonderingen staan limitat
 **Lagen** — zodat de browser nooit bij data kan en er één weg naar de database is.
 - `src/core` importeert nooit uit app-code; app-code mag core importeren. Een app wijzigt `src/core` niet.
 - `src/web` haalt data alleen via `src/web/lib/api.ts`; geen databasedriver, ORM of provider-SDK.
-- `src/web` importeert uit `src/api` alleen het type `AppType`; `shared` (beide zones) importeert niets uit `web` of `api`.
+- `src/web` importeert niets uit `src/api`, ook geen types: request en response staan als contract in `src/shared/contracts`.
+  `shared` (beide zones) importeert niets uit `web` of `api`.
 - Alleen `src/core/api/db` maakt databaseverbindingen (en `src/core/api/auth` voor Better Auth). `src/core/api/db` exporteert alleen `withUser()` (en `testing.ts` voor tests).
 - `process.env` alleen in `src/core/api/env.ts`, `import.meta.env` alleen in `src/core/web/lib/env.ts`. Alleen publieke waarden krijgen `VITE_`.
 - `MIGRATOR_DATABASE_URL` alleen in `scripts/`, nooit in `src/`.

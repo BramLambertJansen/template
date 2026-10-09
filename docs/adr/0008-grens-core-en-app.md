@@ -18,7 +18,7 @@ alleen gewijzigd door een template-merge. App-code staat in `src/{api,web,shared
 (framework §2): `core/web` en `web` praten alleen via de API; `core/shared` en `shared` importeren niets uit `web` of `api`.
 
 **Richting.** App mag core importeren; core importeert nooit app (dependency-cruiser). Wat core van de app nodig heeft
-(permissies, foutcodes, routes, env-uitbreiding, `AppType`), krijgt het als argument van een **compositie-root** in de app,
+(permissies, foutcodes, routes, contracten, env-uitbreiding), krijgt het als argument van een **compositie-root** in de app,
 niet via een import. Er is geen globale registratie en geen mutable singleton.
 
 **Plaats per onderdeel**
@@ -31,7 +31,7 @@ niet via een import. Er is geen globale registratie en geen mutable singleton.
 | CSRF, `bodyLimit`, `secureHeaders`, `onError` | `core/api/http/` — `createApp(config)` zet ze in vaste volgorde | `api/app.ts` geeft config (bijv. `bodyLimit` binnen de harde grens uit core) |
 | Logging | `core/api/obs/` | Velden toevoegen via `createApp`-config |
 | Env | `core/api/env.ts` (enige `process.env`) — basisschema + `loadEnv(appSchema)`; `core/web/lib/env.ts` (enige `import.meta.env`) | `api/env.ts` en `web/lib/env.ts`: alleen het eigen schema |
-| API-client | `core/web/lib/api-client.ts` (enige `fetch(`) — `createApiClient<AppType>()` | `web/lib/api.ts`: één regel die de client maakt |
+| API-client | `core/web/lib/api-client.ts` (enige `fetch(`) — `createApiClient<Contracts>()`, getypt op de contracten uit `shared/contracts` | `web/lib/api.ts`: één regel die de client maakt |
 | Auth-client | `core/web/lib/auth.ts` (enige `better-auth/react`) | — |
 | `AsyncView`, `Form`/`FormField` | `core/web/ui/` | — |
 | UI-kit, tokens | `core/web/ui/` (recepten exporteren basis en variantkaarten), `core/web/styles/` (primitief, component, standaard semantisch) | `web/ui/` (eigen componenten en barrel), `web/styles/theme.css` (semantische laag) |
@@ -97,3 +97,10 @@ Een fout in core die een app raakt, wordt in de template opgelost, niet in de ap
 - `check-core` en de dependency-cruiser-regel horen bij "rails afdwingen" in de roadmap.
 - Core krijgt een tweede soort gebruiker (de app via config); elke uitbreidingsplek heeft een test in core die bewijst dat een app
   hem kan gebruiken zonder core te wijzigen.
+
+## Aanvulling (2026-10-09, PR 5b)
+
+De API-client is getypt op contracten in `src/shared/contracts` (`createContracts(permissions).defineContract`) in plaats van
+op `AppType` uit `src/api/app.ts`. Web importeert daardoor niets meer uit `src/api`, ook geen types; de dependency-cruiser-regel
+`web-niet-naar-api` kent geen uitzondering meer. Server en client lezen hetzelfde zod-schema: `createApp` valideert input en
+output ertegen, de client vertrouwt de output op die grond.

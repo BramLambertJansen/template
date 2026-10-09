@@ -54,7 +54,7 @@ Rails en test-infra komen vóór de code die ze bewaken, zodat de referentie-fea
 - [x] `docs/nieuwe-app.md`: setup-playbook voor Claude Code (machine → repo → koppeling → stack → databasebewijs)
 - [ ] `tsconfig` (flags uit framework §4), TypeScript `~6.0.3`; aliassen via `package.json` `imports`; hoe Node `server.ts` draait, bewezen met `pnpm dev`
 - [ ] Vite + React in `src/web`, Hono in `src/api` met `src/api/server.ts`, Vite-proxy `/api`, headers/CSP in Vite; poorten via `WEB_PORT`/`API_PORT`
-- [ ] Eén publieke route `GET /api/health` (uitzondering in framework §3) en een pagina die hem toont via `hc<AppType>` in `src/core/web/lib/api-client.ts`
+- [ ] Eén publieke route `GET /api/health` (uitzondering in framework §3) en een pagina die hem toont via de client in `src/core/web/lib/api-client.ts`
 - [ ] ESLint 10 flat config: strictTypeChecked, `consistent-type-assertions: never`, `switch-exhaustiveness-check`; Prettier
 - [ ] Rails vooraf: dependency-cruiser (lagen, core → app verboden, geen cycles) en `no-restricted-imports`/`no-restricted-syntax`
       (elementen, `fetch`, env, `SET ROLE`, `set_config`, `hono` buiten core, niet-letterlijke `import()`) — elk met een fixture die bewijst dat hij faalt,
@@ -97,7 +97,7 @@ admin (MFA verplicht) zoekt gebruikers met cursor-paginering, kent rollen toe en
 Vier deel-PR's, in deze volgorde.
 
 **3a. Backend-kern**
-- [ ] `defineRoute()` met `ctx.actor`, `createRouteKit`/`createApp` (ADR 0008), getypte client (`AppType`), types per resource
+- [ ] `defineRoute()` met `ctx.actor`, `createRouteKit`/`createApp` (ADR 0008), getypte client (contracten in `src/shared/contracts`), types per resource
 - [ ] `withUser()` met foutvertaling; Drizzle-introspectie + brands-script
 - [ ] Foutcoderegister, `limits.ts`, `assert()`, `unsafeCast()`, `Cents`, cursor-contract — met uitbreiding door de app (ADR 0008)
 - [ ] `user_roles` (FK naar `better_auth."user"`), `can()` met permissietabel van de app, MFA-eis afgeleid uit de rol in `can()` én RLS-helper, admin-test zonder MFA
