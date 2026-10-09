@@ -70,6 +70,12 @@ const after = createAuthMiddleware(async (ctx) => {
   }
 });
 
+interface AccountHookContext {
+  readonly context: {
+    readonly internalAdapter: { updateUser: (userId: string, data: { emailVerified: boolean }) => Promise<unknown> };
+  };
+}
+
 function isTrustDeviceRequested(body: unknown): boolean {
   return typeof body === 'object' && body !== null && 'trustDevice' in body && body.trustDevice !== false;
 }
@@ -122,8 +128,9 @@ export function createAuthOptions(config: AuthConfig, database: Pool) {
       // instelt. Dat bewijst het e-mailadres (ADR 0013).
       account: {
         create: {
-          after: async (account, ctx) => {
-            if (account.providerId !== 'credential' || ctx === null) return;
+          // Buiten een request (seed, admin:create) geeft Better Auth 1.7.7 hier `undefined` mee, ondanks het type `| null`.
+          after: async (account, ctx: AccountHookContext | null | undefined) => {
+            if (account.providerId !== 'credential' || ctx === null || ctx === undefined) return;
             await ctx.context.internalAdapter.updateUser(account.userId, { emailVerified: true });
           },
         },

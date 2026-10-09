@@ -22,7 +22,7 @@ async function admin(id: string): Promise<void> {
 }
 
 describe('laatste admin', () => {
-  test('twee admins degraderen elkaar tegelijk: precies één slaagt, de ander krijgt LAST_ADMIN', async () => {
+  test('twee admins degraderen elkaar tegelijk: precies één slaagt en er blijft precies één admin', async () => {
     const [a, b] = [`race-a-${String(Date.now())}`, `race-b-${String(Date.now())}`];
     await admin(a);
     await admin(b);
@@ -42,8 +42,20 @@ describe('laatste admin', () => {
       });
     const results = await Promise.allSettled([demote(a, b), demote(b, a)]);
 
+    const winner = results[0].status === 'fulfilled' ? a : b;
+    const remaining = await withUser({ userId: winner, sessionStrength: 'mfa' }, async (tx) => {
+      const { rows } = await tx.query<{ user_id: string }>(
+        "select user_id from public.user_roles where role = 'admin'",
+      );
+      return rows.map((row) => row.user_id);
+    });
+
     expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
-    expect(results.find((result) => result.status === 'rejected')).toMatchObject({ reason: { message: 'LAST_ADMIN' } });
+    // Wie als tweede komt, is al gedegradeerd (FORBIDDEN) of botst binnen de lock op de regel (LAST_ADMIN).
+    const rejected = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+    const message: unknown = rejected?.reason instanceof Error ? rejected.reason.message : rejected?.reason;
+    expect(['LAST_ADMIN', 'FORBIDDEN']).toContain(message);
+    expect(remaining).toStrictEqual([winner]);
   });
 });
 
