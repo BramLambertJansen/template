@@ -1,7 +1,7 @@
 # 0012 — Datapad: `withUser()` met `pg`, transactie per request, Drizzle als `tx`
 
 Status: voorgesteld — voorgesteld door de agent na fase 0; keuzes voor `tx` (Drizzle) en PgBouncer-image door de eigenaar gemaakt.
-Wordt geaccepteerd zodra de eigenaar `pnpm test:db` groen heeft gedraaid en de meting hieronder is ingevuld.
+Wordt geaccepteerd zodra de eigenaar `pnpm test:db` volledig groen heeft gedraaid (ook pgTAP).
 
 ## Context
 
@@ -56,8 +56,11 @@ Twee verbindingen per request (sessie als `auth_service`, daarna `withUser()`), 
 
 | Pad | p50 | p95 | max |
 |---|---|---|---|
-| direct | _in te vullen_ | | |
-| via PgBouncer | _in te vullen_ | | |
+| direct | 0,91 ms | 1,16 ms | 14,82 ms |
+| via PgBouncer (transaction mode) | 1,36 ms | 1,71 ms | 14,72 ms |
+
+Gemeten op 2026-10-09 door de eigenaar (WSL2, lokale Docker). PgBouncer kost ongeveer 0,5 ms per request; de uitschieter
+(max) is bij beide de eerste verbinding.
 
 ## Alternatieven
 
