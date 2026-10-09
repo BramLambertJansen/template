@@ -35,8 +35,12 @@ select is((select count(*)::integer from app.accounts), 0, 'een admin zonder MFA
 do $$ begin perform set_config('app.user_id', 'a-actief', true); perform set_config('app.session_strength', 'mfa', true); end $$;
 select is((select count(*)::integer from app.accounts), 0, 'een user ziet geen accounts, ook met MFA');
 select throws_ok($$select id from better_auth."user"$$, '42501', null, 'app_authenticated leest better_auth niet direct');
-select throws_ok($$insert into app.accounts (id) values ('x')$$, '42501', null, 'app.accounts is alleen-lezen voor de API');
 reset role;
+select is(
+  has_table_privilege('app_authenticated', 'app.accounts', 'insert, update, delete'),
+  false,
+  'app.accounts is alleen-lezen voor de API (alleen select)'
+);
 
 select is(has_column_privilege('app_definer', 'better_auth.account', 'password', 'select'), false, 'app_definer leest geen wachtwoord-hash');
 select is(has_table_privilege('app_definer', 'better_auth.session', 'select'), false, 'app_definer leest geen sessies');

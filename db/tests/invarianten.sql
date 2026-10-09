@@ -22,6 +22,8 @@ create function pg_temp.verboden_rechten() returns setof text language sql stabl
   cross join (values ('app_authenticated'), ('api_user'), ('auth_service'), ('app_definer')) r (rolname)
   cross join (values ('TRUNCATE'), ('REFERENCES'), ('TRIGGER')) p (recht)
   where c.relkind in ('r', 'p', 'v', 'm', 'f') and n.nspname in ('public', 'app', 'better_auth')
+    -- De eigenaar (bijv. app_definer van de view app.accounts) heeft ze altijd; het gaat om rechten die zijn toegekend.
+    and c.relowner <> r.rolname::regrole
     and pg_catalog.has_table_privilege(r.rolname, c.oid, p.recht)
   order by 1
 $$;
