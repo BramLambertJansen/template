@@ -33,6 +33,9 @@
     "test:e2e": "playwright test",
     "ui:check": "scripts/runner.sh ui",
     "db:migrate": "scripts/db-migrate.sh .env.local up",
+    "db:seed": "node --env-file=.env.local scripts/seed.mjs",
+    "admin:create": "node --env-file-if-exists=.env.local scripts/admin-create.mjs",
+    "auth:schema": "node scripts/auth-schema.mjs",
     "gate:fast": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm ratchet && pnpm test:unit"
   },
   "dependencies": {

@@ -36,6 +36,11 @@ step(
   'docker compose --env-file .env.local logs postgres; zie docs/nieuwe-app.md, probleemtabel',
 );
 step('scripts/db-migrate.sh', [ENV_FILE, 'up'], 'lees de dbmate-fout hierboven; wijzig nooit een gecommitte migratie');
+step(
+  process.execPath,
+  [`--env-file=${ENV_FILE}`, 'scripts/seed.mjs'],
+  'lees de seed-fout hierboven (scripts/seed.mjs)',
+);
 
 const children = [
   spawn(process.execPath, [`--env-file-if-exists=${ENV_FILE}`, '--watch', 'src/api/server.ts'], { stdio: 'inherit' }),
