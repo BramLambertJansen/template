@@ -24,12 +24,12 @@ const cursorKey = z.tuple([z.string(), z.string()]);
 
 function after(cursor: string | undefined): z.infer<typeof cursorKey> | null {
   if (cursor === undefined) return null;
-  const parsed = z
-    .string()
-    .transform((value) => decodeCursor(value, cursorKey))
-    .safeParse(cursor);
-  if (!parsed.success) throw new AppError('VALIDATION');
-  return parsed.data;
+  // decodeCursor gooit een ZodError bij een gemanipuleerde cursor: dat is invoer van de client, dus VALIDATION.
+  try {
+    return decodeCursor(cursor, cursorKey);
+  } catch {
+    throw new AppError('VALIDATION');
+  }
 }
 
 export const accountsListRoute = defineRoute(accountsListContract, async ({ input, tx }) => {
