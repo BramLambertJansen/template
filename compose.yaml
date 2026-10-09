@@ -35,6 +35,8 @@ x-runner: &runner
     POOLER_DATABASE_URL: ${POOLER_DATABASE_URL}
     MAILPIT_URL: ${MAILPIT_URL}
     CLIENT_IP_HEADER: ${CLIENT_IP_HEADER}
+    # Alleen voor tests die rollen klaarzetten zoals de seed (nooit in src/, framework §6).
+    MIGRATOR_DATABASE_URL: ${MIGRATOR_DATABASE_URL}
   depends_on:
     test-migrate:
       condition: service_completed_successfully
