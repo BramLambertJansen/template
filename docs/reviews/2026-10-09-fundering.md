@@ -1,6 +1,6 @@
 # Review fundering — 2026-10-09
 
-Vier onafhankelijke reviews (alleen lezend): trouw aan plan-v1, Claude Code-docs, auth/database/security, tooling/CI.
+Vier onafhankelijke reviews (alleen lezend): trouw aan het oorspronkelijke plan (sindsdien verwijderd, zie CHANGELOG), Claude Code-docs, auth/database/security, tooling/CI.
 Versies uit npm-registry, Docker Hub, nodejs.org en GitHub-advisories op 2026-10-09. **(onzeker)** = niet zelf geverifieerd.
 **Status:** doorgevoerd op 2026-10-09 (zie CHANGELOG en ADR 0003–0005). Open: alles wat bewijs op een machine met Docker vraagt
 (A9, healthcheck; pgTAP-image; rollen en baseline-migratie) staat in roadmap fase 0.

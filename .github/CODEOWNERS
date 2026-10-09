@@ -25,10 +25,9 @@
 /lefthook.yml             @bramlambertjansen
 /renovate.json            @bramlambertjansen
 /.gitattributes           @bramlambertjansen
-/src/api/db/              @bramlambertjansen
-/src/api/auth/            @bramlambertjansen
+/src/core/                @bramlambertjansen
 /src/api/env.ts           @bramlambertjansen
-/src/shared/can.ts        @bramlambertjansen
+/src/shared/permissions.ts @bramlambertjansen
 **/*.test.*               @bramlambertjansen
 **/*.spec.*               @bramlambertjansen
 /e2e/                     @bramlambertjansen

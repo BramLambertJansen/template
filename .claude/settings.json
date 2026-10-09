@@ -63,10 +63,9 @@
       "Edit(.dependency-cruiser.*)",
       "Edit(lefthook.yml)",
       "Edit(renovate.json)",
-      "Edit(src/api/db/**)",
-      "Edit(src/api/auth/**)",
+      "Edit(src/core/**)",
       "Edit(src/api/env.ts)",
-      "Edit(src/shared/can.ts)",
+      "Edit(src/shared/permissions.ts)",
       "Edit(.gitattributes)"
     ]
   },

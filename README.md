@@ -5,13 +5,13 @@ Fundering voor elke nieuwe webapp, gebouwd door AI-agents binnen afgedwongen kad
 - **De wet:** [docs/framework.md](docs/framework.md) — regels, architectuur, werkstraat.
 - **Voortgang:** [docs/roadmap.md](docs/roadmap.md).
 - **Agents:** [CLAUDE.md](CLAUDE.md) → [AGENTS.md](AGENTS.md) + padregels in `.claude/rules/`.
-- **Achtergrond:** [docs/background/plan-v1.md](docs/background/plan-v1.md) (oorspronkelijk plan, niet normatief).
 
 **Status:** fundering in opbouw (fase 0/1). Nog geen app-code, checks of CI.
 
 ## Stack
 
 Vite + React SPA (`src/web`), Hono-API (`src/api`), gedeelde contracten (`src/shared`), gewone Postgres (`db/`).
+Frameworkcode staat apart in `src/core/`, zodat template-updates niet botsen met app-code ([ADR 0008](docs/adr/0008-grens-core-en-app.md)).
 Geen hosting- of databaseprovider in de template: een app kiest die zelf per ADR ([ADR 0002](docs/adr/0002-provider-neutraal.md)).
 Auth draait in de API op de eigen Postgres ([ADR 0003](docs/adr/0003-auth-in-de-api.md)); database in [ADR 0004](docs/adr/0004-database-tooling.md);
 toolchain en bot-identiteit in [ADR 0005](docs/adr/0005-toolchain-en-identiteit.md).
