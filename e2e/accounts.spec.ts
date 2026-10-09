@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
   base32Decode,
+  clientIpHeaders,
   createAccount,
   invitationLink,
   PASSWORD,
@@ -35,6 +36,10 @@ async function signInAsAdmin(page: Page, admin: TestAccount): Promise<void> {
 }
 
 const heading = (page: Page) => page.getByRole('heading', { level: 1 });
+
+test.beforeEach(async ({ context }) => {
+  await context.setExtraHTTPHeaders(clientIpHeaders());
+});
 
 test('AC-1: anoniem naar /login, zonder sidebar of topbar', async ({ page }) => {
   const csp = collectCspViolations(page);
@@ -146,7 +151,7 @@ test('AC-5 en AC-6: uitnodigen, mail, wachtwoord instellen, inloggen; status wor
   await expect(row).toContainText('Uitgenodigd');
 
   // De genodigde, in een eigen browsercontext (geen sessie van de admin).
-  const invitee = await (await browser.newContext()).newPage();
+  const invitee = await (await browser.newContext({ extraHTTPHeaders: clientIpHeaders() })).newPage();
   const inviteeCsp = collectCspViolations(invitee);
   await invitee.goto(await invitationLink('nieuw@template.test'));
   await expect(invitee.getByRole('heading', { level: 1 })).toHaveText('Wachtwoord instellen');

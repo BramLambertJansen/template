@@ -18,6 +18,14 @@ const auth = createAuth({
 });
 const migrator = new pg.Pool({ connectionString: required('MIGRATOR_DATABASE_URL'), max: 1 });
 
+// Elke test is een eigen client voor de rate limit van Better Auth (framework §6): een eigen IP in CLIENT_IP_HEADER,
+// zoals de host die in productie zet. Anders delen alle tests één teller en krijgt de vierde login RATE_LIMITED.
+let clients = 0;
+export function clientIpHeaders(): Record<string, string> {
+  clients += 1;
+  return { [required('CLIENT_IP_HEADER')]: `10.20.${String(process.pid % 250)}.${String(clients % 250)}` };
+}
+
 // Demo-wachtwoord, opgebouwd zodat het geen geheim lijkt (Betterleaks).
 export const PASSWORD = 'e2e-'.repeat(4);
 
