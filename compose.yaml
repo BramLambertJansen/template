@@ -4,7 +4,8 @@ name: app-template
 
 services:
   postgres:
-    image: postgres:17.6-bookworm
+    build: db/docker
+    image: app-template-postgres:17.6
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -13,6 +14,8 @@ services:
       - "127.0.0.1:54322:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+      - ./db:/db:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d app"]
       interval: 2s

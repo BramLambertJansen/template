@@ -5,7 +5,7 @@
 1. **Spec** — bij migratie, nieuwe route of nieuwe permissie. Niet bouwen vóór `status: goedgekeurd`.
 2. **Contract** — zod-schema's en routes die `501` teruggeven.
 3. **Tester-subagent** — acceptatietests tegen het contract; ze compileren en falen op hun asserties.
-4. **Bouwen** — tot alle tests groen zijn. Tests toevoegen mag, bestaande wijzigen niet.
+4. **Bouwen** — tot alle tests groen zijn. Tests toevoegen mag, bestaande wijzigen niet zonder akkoord.
 5. **Reviewer-subagent** — schone context, loopt `docs/dod.md` af, rapporteert alleen correctheid,
    duplicatie, spec-afwijking en ontbrekende testinhoud.
 6. **Eigenaar** — reviewt en merget. Jij nooit.
@@ -22,6 +22,7 @@ Licht pad (geen migratie, route of permissie): plan → bouwen → review.
 
 - Onderzoek via een subagent die alleen een conclusie teruggeeft.
 - Lees `db/schema.snapshot.sql` in plaats van alle migraties (zodra die bestaat).
-- Externe diensten via hun CLI (`gh`, `docker`), niet via MCP.
+- Externe diensten via hun CLI (`gh`), niet via MCP. `docker` alleen lezend (`ps`, `logs`).
 
-Subagents, skills en hooks volgen in fase 1 (`docs/roadmap.md`). Tot ze bestaan, voer je hun rol zelf uit en zeg je dat.
+Subagents, skills en hooks volgen in fase 1 (`docs/roadmap.md`). Tot ze bestaan, start je tester en reviewer als ad-hoc
+subagent met dezelfde opdracht; je reviewt nooit je eigen werk.

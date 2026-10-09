@@ -1,7 +1,20 @@
-# Code-owner-review verplicht op de kaders (zie docs/plan.md, Agentveiligheid).
-/.github/            @bramlambertjansen
-/.claude/            @bramlambertjansen
-/scripts/            @bramlambertjansen
-/db/tests/           @bramlambertjansen
-**/*.test.ts         @bramlambertjansen
-**/*.test.tsx        @bramlambertjansen
+# Code-owner-review verplicht op de kaders (docs/framework.md §10). Vervang de handle per app.
+/AGENTS.md               @bramlambertjansen
+/CLAUDE.md               @bramlambertjansen
+/docs/framework.md       @bramlambertjansen
+/docs/dod.md             @bramlambertjansen
+/docs/adr/               @bramlambertjansen
+/docs/specs/             @bramlambertjansen
+/.github/                @bramlambertjansen
+/.claude/                @bramlambertjansen
+/scripts/                @bramlambertjansen
+/db/init/                @bramlambertjansen
+/db/docker/              @bramlambertjansen
+/db/tests/               @bramlambertjansen
+/compose.yaml            @bramlambertjansen
+/package.json            @bramlambertjansen
+/pnpm-lock.yaml          @bramlambertjansen
+/mise.toml               @bramlambertjansen
+**/*.test.ts             @bramlambertjansen
+**/*.test.tsx            @bramlambertjansen
+**/*.spec.ts             @bramlambertjansen

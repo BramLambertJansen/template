@@ -1,23 +1,52 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
+    "allow": [
+      "Read(./.env.example)"
+    ],
     "deny": [
       "Read(./.env)",
-      "Read(./.env.*)",
+      "Read(./.env.local)",
+      "Read(./.env.*.local)",
+      "Read(./.env.production)",
       "Edit(./.env)",
-      "Edit(./.env.*)",
+      "Edit(./.env.local)",
+      "Edit(./.env.*.local)",
+      "Edit(./.env.production)",
       "Bash(git push origin main)",
       "Bash(git push origin main:*)",
+      "Bash(git push origin HEAD:main:*)",
       "Bash(git push --force:*)",
-      "Bash(gh pr merge:*)",
+      "Bash(git push -f:*)",
+      "Bash(git push --force-with-lease:*)",
+      "Bash(git push --no-verify:*)",
       "Bash(git commit --no-verify:*)",
-      "Bash(git push --no-verify:*)"
+      "Bash(git commit -n:*)",
+      "Bash(git commit:* --no-verify)",
+      "Bash(gh pr merge:*)",
+      "Bash(docker compose down:*)",
+      "Bash(docker compose up:*)",
+      "Bash(docker stop:*)",
+      "Bash(docker rm:*)"
     ],
     "ask": [
+      "Edit(./AGENTS.md)",
+      "Edit(./CLAUDE.md)",
+      "Edit(./docs/framework.md)",
+      "Edit(./docs/dod.md)",
+      "Edit(./docs/adr/**)",
       "Edit(./.github/**)",
       "Edit(./.claude/**)",
-      "Edit(./scripts/check-*)",
-      "Edit(./db/tests/**)"
+      "Edit(./scripts/**)",
+      "Edit(./db/init/**)",
+      "Edit(./db/docker/**)",
+      "Edit(./db/tests/**)",
+      "Edit(./compose.yaml)",
+      "Edit(./package.json)",
+      "Edit(./mise.toml)",
+      "Edit(**/*.test.ts)",
+      "Edit(**/*.test.tsx)",
+      "Edit(**/*.spec.ts)"
     ]
   }
 }

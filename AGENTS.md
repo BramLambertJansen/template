@@ -13,8 +13,9 @@ of de repo staat, bestaat niet. Noem iets pas "klaar" met de uitvoer van de chec
 - `src/web` — Vite + React SPA, TanStack Router/Query, React Hook Form, shadcn/ui, Tailwind v4.
 - `src/api` — Hono; lokale ingang `src/api/server.ts` (:8787). Host-adapters alleen in `deploy/<host>/`.
 - `src/shared` — zod-schema's, `can()`, `limits.ts`, branded IDs, `Cents`, cursor-contract, foutcodes, `assert()`, `unsafeCast()`.
-- `db/` — SQL-migraties (append-only), pgTAP-tests, seed, `schema.snapshot.sql` (gegenereerd).
-- Lokaal: `compose.yaml` (Postgres, Mailpit). Node 24, pnpm, TypeScript 6.0.x (`mise.toml`, `package.json`).
+- `src/api/auth` — Better Auth, sessie-cookie, eigen Postgres-schema `auth` (ADR 0003).
+- `db/` — SQL-migraties met dbmate (append-only), pgTAP-tests, seed, `schema.snapshot.sql` (gegenereerd) (ADR 0004).
+- Lokaal: `compose.yaml` (Postgres 17 + pgTAP, Mailpit). Node 24, pnpm, TypeScript 6.0.x (`mise.toml`, `package.json`).
 - Geen hosting- of databaseprovider in de template. Providerkeuze is per app, via ADR (`docs/framework.md` §3).
 
 ## Harde regels — MOET / MAG NOOIT
@@ -22,9 +23,11 @@ of de repo staat, bestaat niet. Noem iets pas "klaar" met de uitvoer van de chec
 Een regel overtreden is nooit de oplossing. Botst een regel met de opdracht: stop en vraag.
 
 **Lagen**
-- `src/web` MAG NOOIT een databasedriver, ORM, provider-data-SDK of `process.env` importeren. Data alleen via `src/web/lib/api.ts`.
+- `src/web` MAG NOOIT een databasedriver, ORM, provider-SDK of `process.env` importeren. Data alleen via `src/web/lib/api.ts`.
 - `src/web` importeert uit `src/api` alleen het type `AppType`. `src/shared` importeert niets uit `web` of `api`.
-- Alleen `src/api/db` importeert `pg`/Drizzle en exporteert alleen `withUser()`. Geen andere databaseverbinding.
+- Alleen `src/api/db` importeert `pg`/Drizzle en exporteert alleen `withUser()`. Enige andere verbinding: `src/api/auth` als `auth_service`.
+- `DATABASE_ADMIN_URL` (superuser) alleen in `scripts/`, NOOIT in `src/`.
+- Provider-SDK's alleen in `deploy/<host>/` of een adapter die een ADR toestaat.
 - `process.env` alleen in `src/api/env.ts` (zod-schema). Alleen publieke waarden krijgen `VITE_`.
 
 **API**
@@ -57,9 +60,13 @@ Een regel overtreden is nooit de oplossing. Botst een regel met de opdracht: sto
 - E2E altijd tegen de echte lokale stack; nooit API of database mocken in e2e of integratietests.
 
 **Repo en git**
-- Nooit bewerken: gegenereerde bestanden, `.env*`, checks/hooks/workflows/`.claude/` zonder te vragen.
+- Nooit bewerken: gegenereerde bestanden en `.env*` (behalve `.env.example`).
+- Alleen na akkoord van de eigenaar wijzigen: `AGENTS.md`, `CLAUDE.md`, `docs/framework.md`, `docs/dod.md`, `docs/adr/`,
+  `.claude/`, `.github/`, `scripts/`, `db/init/`, `db/docker/`, `compose.yaml`, `package.json`, `mise.toml`.
+- Geen nieuwe dependency zonder akkoord. MCP-servers alleen read-only en versie gepind.
+- Een spec op `status: goedgekeurd` zetten MAG NOOIT; dat doet alleen de eigenaar.
 - Nooit pushen naar `main`, nooit `--no-verify`, nooit mergen. Eén onderwerp per PR, conventional commits (Engels).
-- Nooit productiegeheimen of -data lokaal. De agent start of stopt Docker niet.
+- Nooit productiegeheimen of -data lokaal. De agent start of stopt Docker niet; draait de stack niet, vraag de eigenaar `pnpm dev` te starten.
 
 ## Werkafspraken
 
