@@ -1,0 +1,7 @@
+# Code-owner-review verplicht op de kaders (zie docs/plan.md, Agentveiligheid).
+/.github/            @bramlambertjansen
+/.claude/            @bramlambertjansen
+/scripts/            @bramlambertjansen
+/supabase/tests/     @bramlambertjansen
+**/*.test.ts         @bramlambertjansen
+**/*.test.tsx        @bramlambertjansen

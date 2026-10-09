@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.vercel/
+coverage/
+playwright-report/
+test-results/
+.eslintcache
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+supabase/.branches/
+supabase/.temp/
+.DS_Store
