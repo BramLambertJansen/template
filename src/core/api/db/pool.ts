@@ -4,9 +4,31 @@ import pg from 'pg';
 // maar één transactie vast.
 const POOL_SIZE = 5;
 const IDLE_TIMEOUT_MS = 10_000;
+// Wachten op een verbinding (nieuw of uit de volle pool) duurt hooguit 10 s; daarna faalt de request (INTERNAL_ERROR)
+// in plaats van te blijven hangen tot de TCP-timeout van het OS (minuten) als de database onbereikbaar is.
+const CONNECT_TIMEOUT_MS = 10_000;
+
+// Een idle verbinding die wegvalt (herstart of failover van de database of de pooler) meldt pg-pool als 'error' op de
+// pool; zonder listener stopt dat het hele proces. De pool gooit de verbinding zelf weg; de volgende request verbindt opnieuw.
+export function ignoreIdleErrors(pool: pg.Pool): pg.Pool {
+  pool.on('error', (error) => {
+    console.warn(`database: idle verbinding verbroken (${error.message})`);
+  });
+  return pool;
+}
 
 export function createPool(connectionString: string): pg.Pool {
-  return new pg.Pool({ connectionString, max: POOL_SIZE, idleTimeoutMillis: IDLE_TIMEOUT_MS });
+  return ignoreIdleErrors(
+    new pg.Pool({
+      connectionString,
+      max: POOL_SIZE,
+      idleTimeoutMillis: IDLE_TIMEOUT_MS,
+      connectionTimeoutMillis: CONNECT_TIMEOUT_MS,
+      // Een dode verbinding (half-open TCP) wordt gezien in plaats van een request te laten hangen.
+      keepAlive: true,
+      application_name: 'api',
+    }),
+  );
 }
 
 // Readiness (framework §3, ADR 0018): kan de API de database bereiken? Een eigen verbinding (max 1), los van de pool van
@@ -29,9 +51,7 @@ export function createPing(connectionString: string, timeoutMs: number): Ping {
     // Herkenbaar in pg_stat_activity (en in de integratietest).
     application_name: 'readiness',
   });
-  // Een idle verbinding die wegvalt (herstart of failover van de database) meldt pg-pool als 'error' op de pool; zonder
-  // listener stopt dat het proces. De pool gooit de verbinding weg; de volgende ping verbindt opnieuw of meldt de fout.
-  pool.on('error', () => undefined);
+  ignoreIdleErrors(pool);
   return {
     ping: async () => {
       const client = await pool.connect();

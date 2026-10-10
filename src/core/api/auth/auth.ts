@@ -10,9 +10,21 @@ export interface CreateAuthConfig extends AuthConfig {
 }
 
 const AUTH_POOL_SIZE = 3;
+// Gelijk aan de pool van withUser() (src/core/api/db/pool.ts).
+const AUTH_CONNECT_TIMEOUT_MS = 10_000;
 
 export function createAuth(config: CreateAuthConfig) {
-  const pool = new pg.Pool({ connectionString: config.databaseUrl, max: AUTH_POOL_SIZE });
+  const pool = new pg.Pool({
+    connectionString: config.databaseUrl,
+    max: AUTH_POOL_SIZE,
+    connectionTimeoutMillis: AUTH_CONNECT_TIMEOUT_MS,
+    keepAlive: true,
+    application_name: 'auth',
+  });
+  // Zoals in src/core/api/db/pool.ts: een weggevallen idle verbinding mag het proces niet stoppen.
+  pool.on('error', (error) => {
+    console.warn(`auth-database: idle verbinding verbroken (${error.message})`);
+  });
   // closePool: alleen bij het stoppen van het proces (src/api/server.ts), na de laatste request.
   return Object.assign(betterAuth(createAuthOptions(config, pool)), { closePool: () => pool.end() });
 }
