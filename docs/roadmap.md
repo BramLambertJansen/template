@@ -22,6 +22,7 @@ Een ADR met status `voorgesteld` is geen besluit; afvinken gebeurt pas als de ei
 - [x] Datapad: `withUser()` met `pg`, transactie per request, Drizzle als `tx` — ADR 0012
 - [ ] Achtergrondtaken: opruimen (verlopen sessies, uitnodigingen, rate-limit-rijen), mail via een outbox, eigen databaserol voor
       systeemjobs (framework §6); keuze tussen worker in het proces, queue in Postgres of cron van de host — ADR (bouwen: stuk 7)
+- [x] Taal: alleen Nederlands, teksten in `src/web/copy` en `src/core/web/copy`; geen meertaligheid in de template (besluit eigenaar 2026-10-10)
 - [ ] Audit log van admin-acties (rol toekennen, uitnodigen, blokkeren) standaard in core, in plaats van "op aanleiding" (framework §12) — ADR
 - [ ] AVG: wat de template levert voor inzage, verwijderen en bewaartermijnen van persoonsgegevens (mechanisme in core, inhoud per app) — ADR
 - [ ] Ontwikkelplatform: alleen Ubuntu/WSL2, of ook macOS (sandbox, `scripts/bootstrap.sh`, `scripts/doctor.sh`)
@@ -59,6 +60,9 @@ Rails en test-infra komen vóór de code die ze bewaken, zodat de referentie-fea
 3. De drie testopdrachten door de werkstraat (stuk 5, **Klaar als**).
 4. Proef-app met een template-update (stuk 6).
 5. ADR's uit **Beslissingen** (achtergrondtaken, audit log, AVG) en de open punten van stuk 3.
+6. De starter-basis: stuk 3f, de nieuwe punten in 3e en de repo-punten in stuk 6.
+
+Op aanleiding, niet in de basis (eigenaar 2026-10-10): feature flags, onderhoudsmodus, waarschuwing bij niet-opgeslagen formulieren.
 
 Overige rails uit stuk 4 (sonarjs, better-tailwindcss, squawk) volgen pas als de testopdrachten of de proef-app laten zien dat ze nodig zijn (framework §1.5).
 
@@ -144,6 +148,19 @@ Elke app heeft dit nodig, dus het hoort in de template. Elk punt eerst een spec.
 - [ ] Admin blokkeert en deblokkeert een gebruiker; blokkeren trekt alle sessies direct in (de laatste-admin-regel geldt ook hier)
 - [ ] Gebruiker bekijkt en beëindigt de eigen sessies
 - [ ] Backupcodes voor TOTP, zodat een admin die zijn telefoon kwijt is niet alleen via `admin:create` terugkomt
+- [ ] Gebruiker wijzigt het eigen wachtwoord en de eigen naam
+- [ ] Admin trekt een openstaande uitnodiging in (opnieuw versturen bestaat al: `reinviteRoute`)
+- [ ] Admin stuurt een gebruiker een resetlink ("wachtwoord vergeten" blijft dicht, ADR 0013; nu is `admin:create` de enige uitweg)
+- [ ] Gebruiker wijzigt het e-mailadres, met bevestiging naar het oude en het nieuwe adres
+
+**3f. Basis die elke app nodig heeft** (lijst eigenaar 2026-10-10). Nieuwe route, permissie of migratie: eerst een spec.
+- [ ] Lijstpagina-patroon: zoeken, filteren en sorteren in de search params, op het cursor-contract en `Table`; `new:resource` gebruikt het
+- [ ] `ConfirmDialog` in de kit voor destructieve acties, op `/design-system` en in `check:catalogus`
+- [ ] Schil toegankelijk: paginatitel per route, skip-link naar de inhoud, focus naar de kop na een routewissel (elk met test)
+- [ ] Rate limit voor app-routes in `defineRoute` (nu alleen in Better Auth), met grenzen uit `limits.ts` en foutcode `RATE_LIMITED`
+- [ ] Mail-layout in core: één basissjabloon (HTML en platte tekst, afzender, voettekst) met snapshot-test; uitnodiging gebruikt hem
+- [ ] Versie en build-SHA in `GET /api/health` en onderaan in de app
+- [ ] `favicon` en app-icoon, `robots.txt` (standaard `noindex`), `/.well-known/security.txt`
 
 **Klaar als:** unit, pgTAP (elke policy op naam plus de invarianten), integratie, racetest "rol toekennen", e2e per rol en axe op 375 en
 1280 px groen (uitvoer); een test per verboden rol per route; een test bewijst dat een app een permissie, foutcode en componentvariant
@@ -204,6 +221,10 @@ code uit `pnpm new:resource` haalt `gate:fast`; drie testopdrachten door de hele
 - [ ] `.github/settings/` + `scripts/check-github.mjs` (ook `app_id` van verplichte checks, `enforce_admins`, conversation resolution), `check-spec-approval`
 - [ ] `docs/operations/rails-checklist.md`: instellingen buiten de repo, per stuk afgevinkt met bewijs
 - [ ] Pushen met het App-token zonder het token van de eigenaar in de agent-omgeving (`docs/operations/`); daarna `denyRead` op `~/.config/gh`
+- [ ] `pnpm app:init <slug> "<App-naam>"`: de handstappen uit `docs/nieuwe-app.md` (naam, README, titel) als script met test; de template-sectie verdwijnt
+- [ ] Template-versie: tag per template-release, de app legt de versie vast, upgrade-notities bij breaking changes in `CHANGELOG.md` (ADR 0006)
+- [ ] `.vscode/extensions.json` en `.vscode/settings.json` (ESLint, Prettier, Tailwind), gelijk aan de gates
+- [ ] `LICENSE`: eigendom en geen open-source-licentie
 - [ ] Proef-app: een app via `docs/nieuwe-app.md`, daarna één echte template-update (`git merge template/main`) via een PR.
       Conflicten en handwerk vastleggen; wat terugkomt, wordt een regel of script in de template (ADR 0006)
 
