@@ -1,5 +1,5 @@
 import { authGateway, createAuth } from '#core/api/auth/index.ts';
-import { withUser } from '#core/api/db/index.ts';
+import { closeDatabase, withUser } from '#core/api/db/index.ts';
 import { env } from '#core/api/env.ts';
 import { startServer } from '#core/api/http/serve.ts';
 import { createSmtpMailer } from '#core/api/mail/smtp.ts';
@@ -21,7 +21,7 @@ const auth = createAuth({
 
 const gateway = authGateway(auth);
 
-startServer(
+await startServer(
   buildApp({
     appOrigin: config.appOrigin,
     auth: gateway,
@@ -30,5 +30,12 @@ startServer(
     // Dev-login alleen lokaal (ADR 0014); in elke andere omgeving bestaat de route niet.
     ...(config.appEnv === 'local' ? { devLogin: createDevLogin(devAuthSteps(auth)) } : {}),
   }),
-  config.apiPort,
+  {
+    host: config.apiHost,
+    port: config.apiPort,
+    shutdownTimeoutMs: config.shutdownTimeoutMs,
+    onStopped: async () => {
+      await Promise.all([closeDatabase(), auth.closePool()]);
+    },
+  },
 );

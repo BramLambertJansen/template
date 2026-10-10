@@ -213,8 +213,9 @@ de proef-app neemt een template-update over met conflicten alleen in bestanden d
 ### 7. Draaien buiten `pnpm dev`
 
 Provider-neutraal: wat elke host nodig heeft, hoort in de template; de adapter per host blijft fase 3.
-- [ ] `startServer` neemt host en poort uit het env-schema (nu vast `127.0.0.1`, dus onbereikbaar in een container)
-- [ ] Netjes stoppen: bij SIGTERM geen nieuwe requests, lopende afmaken binnen een timeout, daarna de pools sluiten
+- [x] `startServer` neemt host en poort uit het env-schema: `API_HOST` (standaard `127.0.0.1`; de containerimage zet `0.0.0.0`) en `API_PORT`
+- [x] Netjes stoppen: bij SIGTERM/SIGINT geen nieuwe verbindingen, lopende requests afmaken binnen `SHUTDOWN_TIMEOUT_MS` (standaard 10 s),
+      daarna de pools sluiten via `onStopped` uit `src/api/server.ts` (`src/core/api/http/serve.test.ts`)
 - [ ] Request-logging in `src/core/api/obs/` (framework §6): één gestructureerde regel per request met `requestId`, gebruiker-ID, duur en
       databasetijd; geen body, geen PII. Een logger als dependency vraagt akkoord van de eigenaar
 - [ ] Readiness met databasecontrole naast `GET /api/health` (liveness); een nieuwe publieke route vraagt een regel in framework §3

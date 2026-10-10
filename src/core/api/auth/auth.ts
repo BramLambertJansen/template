@@ -13,7 +13,8 @@ const AUTH_POOL_SIZE = 3;
 
 export function createAuth(config: CreateAuthConfig) {
   const pool = new pg.Pool({ connectionString: config.databaseUrl, max: AUTH_POOL_SIZE });
-  return betterAuth(createAuthOptions(config, pool));
+  // closePool: alleen bij het stoppen van het proces (src/api/server.ts), na de laatste request.
+  return Object.assign(betterAuth(createAuthOptions(config, pool)), { closePool: () => pool.end() });
 }
 
 export type Auth = ReturnType<typeof createAuth>;

@@ -4,6 +4,11 @@ import { z } from 'zod';
 // Een app breidt uit met `readEnv(eigenSchema)` vanuit src/api/env.ts (ADR 0008).
 
 const DEFAULT_API_PORT = 8787;
+// Lokaal alleen bereikbaar vanaf de eigen machine; een containerimage zet API_HOST=0.0.0.0 expliciet.
+const DEFAULT_API_HOST = '127.0.0.1';
+// Ruim binnen de gebruikelijke 30 s die een containerhost na SIGTERM geeft.
+const DEFAULT_SHUTDOWN_TIMEOUT_MS = 10_000;
+const MAX_SHUTDOWN_TIMEOUT_MS = 120_000;
 const MIN_SECRET_BYTES = 32;
 
 // Demo-waarden uit .env.example, db/init en compose: buiten local/test geweigerd (framework §6, Secrets).
@@ -31,11 +36,14 @@ const origin = url.refine(
   (value) => new URL(value).origin === value,
   'alleen schema, host en poort, zonder slash achteraan',
 );
+// Een lege waarde in een .env-bestand telt als niet gezet, net als bij API_PORT.
+const unsetIfEmpty = (value: unknown): unknown => (value === '' ? undefined : value);
 const databaseUrl = url.refine((value) => /^postgres(ql)?:$/.test(new URL(value).protocol), 'geen postgres-URL');
 
 const baseSchema = z.object({
   APP_ENV: z.enum(['local', 'test', 'staging', 'production']),
   APP_ORIGIN: origin,
+  API_HOST: z.preprocess(unsetIfEmpty, z.union([z.ipv4(), z.ipv6(), z.hostname()]).default(DEFAULT_API_HOST)),
   API_PORT: z
     .string()
     .optional()
@@ -47,6 +55,10 @@ const baseSchema = z.object({
         return z.NEVER;
       }
     }),
+  SHUTDOWN_TIMEOUT_MS: z.preprocess(
+    unsetIfEmpty,
+    z.coerce.number().int().min(1).max(MAX_SHUTDOWN_TIMEOUT_MS).default(DEFAULT_SHUTDOWN_TIMEOUT_MS),
+  ),
   DATABASE_URL: databaseUrl,
   AUTH_DATABASE_URL: databaseUrl,
   AUTH_BASE_URL: origin,
@@ -92,7 +104,9 @@ export const envSchema = baseSchema.superRefine((raw, ctx) => {
 export interface Env {
   readonly appEnv: RawEnv['APP_ENV'];
   readonly appOrigin: string;
+  readonly apiHost: string;
   readonly apiPort: number;
+  readonly shutdownTimeoutMs: number;
   readonly databaseUrl: string;
   readonly authDatabaseUrl: string;
   readonly authBaseUrl: string;
@@ -112,7 +126,9 @@ export function parseEnv(source: Readonly<Record<string, string | undefined>>): 
   return {
     appEnv: raw.APP_ENV,
     appOrigin: raw.APP_ORIGIN,
+    apiHost: raw.API_HOST,
     apiPort: raw.API_PORT,
+    shutdownTimeoutMs: raw.SHUTDOWN_TIMEOUT_MS,
     databaseUrl: raw.DATABASE_URL,
     authDatabaseUrl: raw.AUTH_DATABASE_URL,
     authBaseUrl: raw.AUTH_BASE_URL,
@@ -125,6 +141,37 @@ export function parseEnv(source: Readonly<Record<string, string | undefined>>): 
 // Leest en controleert process.env; alleen bij opstart aanroepen (server.ts, db/index.ts), niet per request.
 export function env(): Env {
   return parseEnv(process.env);
+}
+
+export interface SignalHost {
+  readonly once: (signal: NodeJS.Signals, listener: () => void) => unknown;
+  readonly exit: (code: number) => void;
+}
+
+const processHost: SignalHost = {
+  once: (signal, listener) => process.once(signal, listener),
+  exit: (code) => process.exit(code),
+};
+
+// Signalen van de host (SIGTERM) en Ctrl+C (SIGINT) voor startServer: process alleen hier (framework §4). Na de afhandeling
+// eindigt het proces expliciet (0, of 1 bij een fout), ook als er nog een verbinding openstaat. Een tweede keer hetzelfde signaal
+// stopt direct (standaardgedrag van Node). host is alleen voor tests.
+export function onProcessSignal(
+  signal: NodeJS.Signals,
+  handle: () => Promise<void>,
+  host: SignalHost = processHost,
+): void {
+  host.once(signal, () => {
+    handle().then(
+      () => {
+        host.exit(0);
+      },
+      (error: unknown) => {
+        console.error(`${signal}: afhandeling mislukt`, error);
+        host.exit(1);
+      },
+    );
+  });
 }
 
 // Uitbreidingsplek voor de app (ADR 0008): src/api/env.ts geeft een eigen schema mee.

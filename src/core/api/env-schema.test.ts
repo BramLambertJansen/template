@@ -90,6 +90,37 @@ describe('env-schema', () => {
   });
 });
 
+describe('API_HOST en SHUTDOWN_TIMEOUT_MS (draaien buiten pnpm dev)', () => {
+  test('standaard alleen lokaal bereikbaar en 10 s om te stoppen', () => {
+    expect(parseEnv(production)).toMatchObject({ apiHost: '127.0.0.1', shutdownTimeoutMs: 10_000 });
+  });
+
+  test('een lege waarde telt als niet gezet', () => {
+    expect(parseEnv({ ...production, API_HOST: '', SHUTDOWN_TIMEOUT_MS: '' })).toMatchObject({
+      apiHost: '127.0.0.1',
+      shutdownTimeoutMs: 10_000,
+    });
+  });
+
+  test.each(['0.0.0.0', '::', 'api.internal'])('accepteert API_HOST %s', (host) => {
+    expect(parseEnv({ ...production, API_HOST: host }).apiHost).toBe(host);
+  });
+
+  test('leest SHUTDOWN_TIMEOUT_MS', () => {
+    expect(parseEnv({ ...production, SHUTDOWN_TIMEOUT_MS: '25000' }).shutdownTimeoutMs).toBe(25_000);
+  });
+
+  test.each([
+    ['API_HOST met spatie', { API_HOST: 'a b' }, 'API_HOST'],
+    ['API_HOST als URL', { API_HOST: 'http://0.0.0.0' }, 'API_HOST'],
+    ['SHUTDOWN_TIMEOUT_MS nul', { SHUTDOWN_TIMEOUT_MS: '0' }, 'SHUTDOWN_TIMEOUT_MS'],
+    ['SHUTDOWN_TIMEOUT_MS geen getal', { SHUTDOWN_TIMEOUT_MS: 'tien' }, 'SHUTDOWN_TIMEOUT_MS'],
+    ['SHUTDOWN_TIMEOUT_MS boven 120 s', { SHUTDOWN_TIMEOUT_MS: '120001' }, 'SHUTDOWN_TIMEOUT_MS'],
+  ])('weigert %s', (_, override, message) => {
+    expect(() => parseEnv({ ...local, ...override })).toThrow(message);
+  });
+});
+
 describe('readEnv (uitbreidingsplek voor de app, ADR 0008)', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
