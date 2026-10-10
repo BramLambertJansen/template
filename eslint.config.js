@@ -20,6 +20,8 @@ const ruleNames = [
 const rails = { rules: Object.fromEntries(ruleNames.map((name) => [name, restrictedSyntax])) };
 
 const SRC = ['src/**/*.{ts,tsx}'];
+const CODE = ['src/**/*.{ts,tsx,mjs}', 'scripts/**/*.{mjs,js,ts}', 'test/**/*.ts', 'e2e/**/*.ts'];
+const TESTS = ['**/*.test.{ts,tsx}', '**/*.spec.ts', 'test/**/*.ts', 'e2e/**/*.ts'];
 const WEB = ['src/web/**/*.{ts,tsx}', 'src/core/web/**/*.{ts,tsx}'];
 const ELEMENTS = '/^(button|input|select|textarea|dialog|a)$/';
 const IMPORTS = ['ImportDeclaration', 'ExportNamedDeclaration', 'ExportAllDeclaration', 'ImportExpression'].join(', ');
@@ -155,4 +157,20 @@ export default defineConfig(
     languageOptions: { globals: { process: 'readonly', console: 'readonly', URL: 'readonly' } },
   },
   railConfigs,
+  // Kleine functies (AGENTS.md, framework §4): ≤ 60 regels in .ts/.mjs, ≤ 120 in .tsx, max 3 parameters, max diepte 3.
+  // In tests geldt de lengte niet (een describe-blok is een lijst gevallen); parameters en diepte wel.
+  // Bestaande overtredingen staan in eslint-suppressions.json (ratchet).
+  {
+    files: CODE,
+    rules: {
+      'max-lines-per-function': ['error', { max: 60, skipBlankLines: true, skipComments: true }],
+      'max-params': ['error', 3],
+      'max-depth': ['error', 3],
+    },
+  },
+  {
+    files: ['**/*.tsx'],
+    rules: { 'max-lines-per-function': ['error', { max: 120, skipBlankLines: true, skipComments: true }] },
+  },
+  { files: TESTS, rules: { 'max-lines-per-function': 'off' } },
 );
