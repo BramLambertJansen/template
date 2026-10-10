@@ -44,20 +44,29 @@ function focusVisibleHeading(main: HTMLElement): boolean {
   return heading !== undefined && document.activeElement === heading;
 }
 
+// Is de focus verloren (op body, of op een element dat net uit de DOM ging)? Dan mag de focus terug naar de h1; staat hij
+// ergens anders, dan heeft de gebruiker hem verplaatst en blijven we eraf.
+function focusLost(): boolean {
+  const active = document.activeElement;
+  return active === null || active === document.body || !active.isConnected;
+}
+
 function focusHeadingWhenPresent(main: HTMLElement): () => void {
-  const observer = new MutationObserver(() => {
-    if (focusVisibleHeading(main)) stop();
-  });
+  let focused = false;
+  // Tot HEADING_WAIT_MS: een lazy scherm kan zijn h1 nog vervangen (opnieuw renderen), dan verdwijnt de gefocuste node.
+  const attempt = () => {
+    if (focused && !focusLost()) return;
+    if (focusVisibleHeading(main)) focused = true;
+  };
+  const observer = new MutationObserver(attempt);
   const frame = requestAnimationFrame(() => {
-    if (focusVisibleHeading(main)) {
-      stop();
-      return;
-    }
+    attempt();
     observer.observe(main, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'hidden'] });
   });
   const timer = setTimeout(() => {
     stop();
-    if (!focusVisibleHeading(main)) main.focus();
+    attempt();
+    if (!focused) main.focus();
   }, HEADING_WAIT_MS);
   function stop() {
     cancelAnimationFrame(frame);

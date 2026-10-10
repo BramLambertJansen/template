@@ -44,6 +44,9 @@ test('titel per scherm, skip-link en focus na navigeren', async ({ page }) => {
 
   // Een lazy route: de focus komt pas op de h1 als het nieuwe scherm er staat, niet op die van het oude.
   await main.getByRole('link', { name: 'Design system' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Design system' })).toBeFocused();
+  // Als tekst (de e2e-tsconfig kent geen DOM-types); bij een fout staat in de uitvoer waar de focus wél staat.
+  await expect
+    .poll(async () => page.evaluate<string>('document.activeElement?.outerHTML.slice(0, 120) ?? "geen"'))
+    .toContain('>Design system</h1>');
   await expect(page).toHaveTitle(/^Design system · /);
 });

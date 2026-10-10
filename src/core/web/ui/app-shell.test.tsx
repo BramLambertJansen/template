@@ -80,6 +80,24 @@ test('een verborgen h1 van het oude scherm (Suspense, display: none) krijgt de f
   expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1, name: 'Later' }));
 });
 
+test('wordt de gefocuste h1 vervangen (opnieuw renderen), dan krijgt de nieuwe h1 de focus', async () => {
+  const { rerender } = render(shell('/', 'Home'));
+  rerender(shell('/b', 'Later'));
+  await nextFrame();
+  expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1, name: 'Later' }));
+  rerender(
+    <AppShell nav={[]} userName="Ada Admin" menuItems={[]} routeKey="/b">
+      <section>
+        <PageHeader title="Later" />
+      </section>
+    </AppShell>,
+  );
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1, name: 'Later' }));
+});
+
 test('zonder h1 gaat de focus na het wachten naar main', async () => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
   try {
