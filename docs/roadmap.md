@@ -200,7 +200,7 @@ Elke regel uit `AGENTS.md` die een check kan zijn, wordt een check; een check te
       verschil) (#38); squawk vraagt een nieuwe tool
 - [ ] Scripts uit `excludedCommands` (`test:db`, `db:reset`, `db:types`, `ui:check`, `gate:slow`) bestaan in `package.json`, alle vijf in de runner van ADR 0009
 - [ ] CI: `gate:slow`-job, gewijzigde tests als lijst, `guard.yml` (PR-code alleen als data, met de diff-guard), CodeQL, osv-scanner (PR + wekelijks;
-      uitzonderingen met reden en `ignoreUntil`), Betterleaks op digest, Renovate (gegroepeerd, blokkeert TS 7)
+      uitzonderingen met reden en `ignoreUntil`), Betterleaks (versie gepind in `mise.toml`), Renovate (gegroepeerd, blokkeert TS 7)
       Eerst, als eigen PR (volgorde punt 1): `gate:slow`-job met de Postgres-image uit `db/docker/`, osv-scanner en Renovate
       Gebouwd: `gate:slow`-job (#59), osv-scanner en Renovate (#61), `guard.yml` met de diff-guard (#62), CodeQL (`codeql.yml`,
       `security-extended`, TypeScript en workflows) en Betterleaks over de hele geschiedenis (job `secrets`, versie gepind in

@@ -14,7 +14,8 @@ on:
 permissions: read-all
 
 concurrency:
-  group: codeql-${{ github.event.pull_request.number || github.ref }}
+  # Met het event erin breekt een push naar main de wekelijkse run niet af (en andersom).
+  group: codeql-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -22,7 +23,9 @@ jobs:
     name: codeql (${{ matrix.language }})
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    # Permissies op jobniveau vervangen read-all helemaal; actions: read is nodig in private repo's.
     permissions:
+      actions: read
       contents: read
       security-events: write
     strategy:

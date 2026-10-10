@@ -1,6 +1,6 @@
 # gate:fast en gate:slow op elke push naar main en elke PR (framework §10); check:new-resource als eigen job (ADR 0016, OV-7);
 # image bouwt en controleert de productie-image (ADR 0019); secrets draait Betterleaks over de geschiedenis. CodeQL in codeql.yml.
-# osv-scanner in osv.yml, de diff-guard in guard.yml; CodeQL en Betterleaks in CI volgen in roadmap stuk 4. Actions op volledige SHA; Renovate werkt ze bij.
+# osv-scanner in osv.yml, de diff-guard in guard.yml. Actions op volledige SHA; Renovate werkt ze bij.
 name: ci
 
 on:
