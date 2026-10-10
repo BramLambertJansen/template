@@ -332,16 +332,19 @@ function onbewaakt(tekst) {
 /**
  * Of een view-optie aan staat: zonder waarde, of met een waarde die Postgres als waar leest (ook tussen quotes).
  * @param {string} tekst het create-statement
+ * @param {RegExpExecArray} m de match van CREATE_VIEW
  * @param {string} sleutel bijv. security_invoker
  */
-function optieAan(tekst, sleutel) {
-  const opties = /\bwith\s*\(([^)]*)\)\s*as\b/i.exec(zonderBodies(tekst))?.[1] ?? '';
+function optieAan(tekst, m, sleutel) {
+  // Alleen direct na de naam (en een eventuele kolomlijst), zodat een string in de select nooit voor opties doorgaat.
+  const rest = zonderBodies(tekst.slice(m.index + m[0].length));
+  const opties = /^\s*(?:\([^)]*\)\s*)?with\s*\(([^)]*)\)\s*as\b/i.exec(rest)?.[1] ?? '';
   return opties.split(',').some((optie) => {
-    const [naam = '', ...rest] = optie.split('=');
+    const [naam = '', ...waarde] = optie.split('=');
     if (naam.trim().toLowerCase() !== sleutel) return false;
-    if (rest.length === 0) return true;
+    if (waarde.length === 0) return true;
     return WAAR.has(
-      rest
+      waarde
         .join('=')
         .trim()
         .replace(/^(['"])(.*)\1$/, '$2')
@@ -363,7 +366,7 @@ function definerViewFouten(tekst, m) {
   const select = body.slice(/\bas\b/i.exec(body)?.index ?? 0);
   const fouten = [];
   if (!naam.includes('.')) fouten.push(`heeft geen schema; schrijf <schema>.${naam}`);
-  if (!optieAan(tekst, 'security_barrier')) {
+  if (!optieAan(tekst, m, 'security_barrier')) {
     fouten.push('leest met de rechten van zijn eigenaar zonder `security_barrier`; schrijf `with (security_barrier)`');
   }
   if (/\b(?:union|except|intersect)\b/i.test(select)) {
@@ -403,7 +406,7 @@ function createView(tekst, create, views) {
       fouten: [`${naam} is een materialized view: geen RLS en geen actor; gebruik een gewone view of tabel`],
     };
   }
-  const invoker = optieAan(tekst, 'security_invoker');
+  const invoker = optieAan(tekst, create, 'security_invoker');
   const vorige = views.get(naam);
   views.set(naam, { definer: !invoker, eigenaar: create[1] === undefined ? null : (vorige?.eigenaar ?? null) });
   return { naam, fouten: invoker ? [] : definerViewFouten(tekst, create).map((fout) => `${naam} ${fout}`) };
@@ -454,7 +457,7 @@ function alterView(tekst, views) {
       ],
     };
   }
-  if (/\brename\b|\bset\s+schema\b/i.test(tekst)) {
+  if (/\brename\s+to\b|\bset\s+schema\b/i.test(tekst)) {
     return {
       naam,
       fouten: [`${naam} wordt hernoemd of verplaatst; drop de view en maak hem opnieuw onder de nieuwe naam`],

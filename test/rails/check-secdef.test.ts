@@ -271,6 +271,14 @@ test.each([
     ],
   ],
   [
+    'view-optie-in-string.sql',
+    [
+      'db/migrations/view-optie-in-string.sql:2: app.v leest met de rechten van zijn eigenaar zonder `security_barrier`; schrijf `with (security_barrier)`',
+      'db/migrations/view-optie-in-string.sql:2: app.v filtert niet op de actor: de where roept geen functie uit schema app aan (bijv. `(select app.is_mfa_admin())`)',
+      'db/migrations/view-optie-in-string.sql:2: app.v leest met de rechten van zijn eigenaar, maar die is niet app_definer; zet `alter view app.v owner to app_definer` in dezelfde migratie',
+    ],
+  ],
+  [
     'view-union.sql',
     [
       'db/migrations/view-union.sql:1: app.v combineert selects (union, except of intersect): de check ziet niet of elke tak een actorfilter heeft; splits de view of gebruik security_invoker',
