@@ -12,6 +12,9 @@ Feiten nu:
 
 !`node scripts/kit/feiten.mjs migraties`
 
+Een nieuwe resource met een eigenaar per rij begint met `pnpm new:resource <naam> --rollen …` (hoofdsessie): die schrijft de
+migratie met het tabelpatroon. Velden komen daarna in een nieuwe migratie, met kolomgrants (`docs/gouden-pad.md`).
+
 Regels (AGENTS.md, `.claude/rules/database.md`):
 1. `db/migrations/<tijdstempel>_<naam>.sql` met een tijdstempel na de laatste; nooit rollen maken.
 2. Elke tabel: RLS aan en geforceerd, expliciete grants in dezelfde migratie. Policies met `(select app.current_user_id())`.

@@ -13,7 +13,9 @@ Feiten nu:
 !`node scripts/kit/feiten.mjs specs routes permissies foutcodes`
 
 Stappen:
-1. Kopieer `docs/specs/_template.md` naar `docs/specs/<naam>.md`, met `status: voorstel`.
+1. Een resource met een eigenaar per rij: `pnpm new:resource <naam>` maakt het skelet `docs/specs/<naam>.md` (alleen de
+   hoofdsessie; als architect kopieer je het zelf, zie `docs/gouden-pad.md`). Anders: kopieer `docs/specs/_template.md` naar
+   `docs/specs/<naam>.md`, met `status: voorstel`.
 2. Vul elke kop in; "n.v.t. — reden" mag. Teksten letterlijk; acceptatiecriteria toetsbaar (een test per criterium).
 3. "Hergebruik en UX": noem de bestaande componenten (`node scripts/kit/feiten.mjs componenten`); een nieuw component alleen met reden.
 4. Routes en foutcodes: hergebruik bestaande codes uit de feiten; een nieuwe code krijgt een tekst.

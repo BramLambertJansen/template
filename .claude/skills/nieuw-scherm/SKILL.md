@@ -14,7 +14,8 @@ Routes en permissies:
 
 !`node scripts/kit/feiten.mjs routes permissies`
 
-Volg `docs/gouden-pad.md`, stap 8 t/m 11:
+Een nieuwe resource begint met `pnpm new:resource <naam> --rollen …` (hoofdsessie): queries, een lijstscherm, de route en
+het menu-item. Daarna, of voor een los scherm, `docs/gouden-pad.md`, stap 8 t/m 11:
 1. Queries in `src/web/features/<resource>/queries.ts` (key-factory, hooks, mutaties die invalideren). `useQuery`/`useMutation` alleen daar (lint).
 2. Scherm in `src/web/features/<resource>/` met componenten uit `#web/ui/index.ts`; in `features/` alleen layout-klassen. Laden, leeg en fout via `<AsyncView>`, formulieren via `<Form>`.
 3. Alle zichtbare tekst in `src/web/copy/ui.ts`, Nederlands volgens de woordenlijst (`src/web/copy/woordenlijst.test.ts`).

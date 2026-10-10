@@ -1,0 +1,48 @@
+import { format } from '#core/web/lib/format.ts';
+import { copy } from '#web/copy/ui.ts';
+import {
+  AsyncView,
+  PageHeader,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '#web/ui/index.ts';
+import { use__Naam__ } from './queries.ts';
+
+// Resource __naam__ (spec docs/specs/__naam__.md), gemaakt door pnpm new:resource.
+// De lijst via AsyncView (laden, leeg, fout); kolommen, acties en "Meer laden" volgen uit de spec.
+export function __Naam__Page() {
+  const list = use__Naam__();
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader title={copy.__naamCamel__.title} />
+      <AsyncView
+        query={list}
+        isEmpty={(data) => data.pages.every((page) => page.items.length === 0)}
+        emptyText={copy.__naamCamel__.empty}
+      >
+        {(data) => (
+          <Table label={copy.__naamCamel__.title}>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{copy.__naamCamel__.created}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.pages
+                .flatMap((page) => page.items)
+                .map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>{format.dateTime(item.aangemaakt)}</TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+        )}
+      </AsyncView>
+    </div>
+  );
+}

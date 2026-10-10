@@ -197,6 +197,10 @@ describe('Bash: alleen de hoofdsessie', () => {
     { name: 'rebase', command: 'git rebase main' },
     { name: 'reset --hard', command: 'git reset --hard HEAD~1' },
     { name: 'gh pr merge', command: 'gh pr merge 12 --squash' },
+    // ADR 0016 (OV-4): de generator schrijft gate-bestanden niet, maar wel paden die het rolhek in een script niet ziet.
+    { name: 'new:resource', command: 'pnpm new:resource invoices --rollen user' },
+    { name: 'new:resource via run', command: 'pnpm run new:resource invoices' },
+    { name: 'new:resource via node', command: 'node scripts/kit/new-resource.mjs invoices' },
   ])('subagent: $name verboden', ({ command }) => {
     expect([verdict(bash(command)), verdict(bash(command, 'developer'))]).toStrictEqual(['allow', 'deny']);
   });

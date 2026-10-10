@@ -1,0 +1,8 @@
+import { createFileRoute } from '@tanstack/react-router';
+import { __Naam__Page } from '#web/features/__naam__/__naam__-page.tsx';
+import { guard } from '#web/lib/session.ts';
+
+export const Route = createFileRoute('/_app/__naam__')({
+  beforeLoad: guard('__naam__:read'),
+  component: __Naam__Page,
+});
