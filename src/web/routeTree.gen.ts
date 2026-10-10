@@ -10,20 +10,15 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
-import { Route as DesignSystemRouteImport } from './routes/design-system'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as UitnodigingRouteImport } from './routes/uitnodiging'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppDesignSystemRouteImport } from './routes/_app/design-system'
 import { Route as AppAdminIndexRouteImport } from './routes/_app/admin/index'
 import { Route as AppAdminAccountsRouteImport } from './routes/_app/admin/accounts'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DesignSystemRoute = DesignSystemRouteImport.update({
-  id: '/design-system',
-  path: '/design-system',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -41,6 +36,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDesignSystemRoute = AppDesignSystemRouteImport.update({
+  id: '/design-system',
+  path: '/design-system',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAdminIndexRoute = AppAdminIndexRouteImport.update({
   id: '/admin/',
   path: '/admin/',
@@ -54,16 +54,16 @@ const AppAdminAccountsRoute = AppAdminAccountsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
-  '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/uitnodiging': typeof UitnodigingRoute
+  '/design-system': typeof AppDesignSystemRoute
   '/admin/accounts': typeof AppAdminAccountsRoute
   '/admin/': typeof AppAdminIndexRoute
 }
 export interface FileRoutesByTo {
-  '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/uitnodiging': typeof UitnodigingRoute
+  '/design-system': typeof AppDesignSystemRoute
   '/': typeof AppIndexRoute
   '/admin/accounts': typeof AppAdminAccountsRoute
   '/admin': typeof AppAdminIndexRoute
@@ -71,9 +71,9 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
-  '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/uitnodiging': typeof UitnodigingRoute
+  '/_app/design-system': typeof AppDesignSystemRoute
   '/_app/': typeof AppIndexRoute
   '/_app/admin/accounts': typeof AppAdminAccountsRoute
   '/_app/admin/': typeof AppAdminIndexRoute
@@ -82,25 +82,25 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/design-system'
     | '/login'
     | '/uitnodiging'
+    | '/design-system'
     | '/admin/accounts'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/design-system'
     | '/login'
     | '/uitnodiging'
+    | '/design-system'
     | '/'
     | '/admin/accounts'
     | '/admin'
   id:
     | '__root__'
     | '/_app'
-    | '/design-system'
     | '/login'
     | '/uitnodiging'
+    | '/_app/design-system'
     | '/_app/'
     | '/_app/admin/accounts'
     | '/_app/admin/'
@@ -108,7 +108,6 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
-  DesignSystemRoute: typeof DesignSystemRoute
   LoginRoute: typeof LoginRoute
   UitnodigingRoute: typeof UitnodigingRoute
 }
@@ -120,13 +119,6 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AppRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/design-system': {
-      id: '/design-system'
-      path: '/design-system'
-      fullPath: '/design-system'
-      preLoaderRoute: typeof DesignSystemRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -150,6 +142,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/design-system': {
+      id: '/_app/design-system'
+      path: '/design-system'
+      fullPath: '/design-system'
+      preLoaderRoute: typeof AppDesignSystemRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/admin/': {
       id: '/_app/admin/'
       path: '/admin'
@@ -168,12 +167,14 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppDesignSystemRoute: typeof AppDesignSystemRoute
   AppIndexRoute: typeof AppIndexRoute
   AppAdminAccountsRoute: typeof AppAdminAccountsRoute
   AppAdminIndexRoute: typeof AppAdminIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppDesignSystemRoute: AppDesignSystemRoute,
   AppIndexRoute: AppIndexRoute,
   AppAdminAccountsRoute: AppAdminAccountsRoute,
   AppAdminIndexRoute: AppAdminIndexRoute,
@@ -183,7 +184,6 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
-  DesignSystemRoute: DesignSystemRoute,
   LoginRoute: LoginRoute,
   UitnodigingRoute: UitnodigingRoute,
 }

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { expect, test } from 'vitest';
-import { Section } from './design-system-page.tsx';
+import { Section } from './section.tsx';
 
 // Elke sectie van de catalogus heet naar haar titel, ook met spaties en komma's in de titel.
 test('een sectie krijgt haar titel als toegankelijke naam', () => {

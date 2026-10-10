@@ -34,7 +34,7 @@ Gebouwd (stuk 3b): bestandsroutes in `src/web/routes` (TanStack Router; `routeTr
 `format` en `readWebEnv`/`isDev`, foutteksten in `src/web/copy/errors.ts`. Componenttests in het Vitest-project `web` (jsdom).
 Gebouwd (stuk 3c): tokens in drie lagen (`src/core/web/styles`, thema van de app in `src/web/styles/theme.css`), de basiskit
 Button, Input, Field, Card, Dialog (native `<dialog>`, geen Radix: CSP), DropdownMenu, NavLink en de layoutblokken AppShell,
-Sidebar (`visibleNavItems` per rol), Topbar en CenteredCard; alles via `src/web/ui/index.ts`. `/design-system` alleen in dev;
+Sidebar (`visibleNavItems` per rol), Topbar en CenteredCard; alles via `src/web/ui/index.ts`. `/design-system` in de app achter `guard('design-system:read')`, alleen voorbeelddata (ADR 0015);
 `src/web/dev/` is leeg in de productiebundel (alleen dynamisch importeren). Contrasttest `test/ui/contrast.test.ts` (nieuwe
 Button-variant = nieuwe rij), `scanAxe` in `e2e/support/axe.ts`.
 Gebouwd (stuk 3d, accountbeheer): de auth-client `src/core/web/lib/auth.ts` (via `src/web/lib/auth.ts`), schermen in

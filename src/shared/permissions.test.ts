@@ -9,6 +9,7 @@ const expected: Record<string, readonly Role[]> = {
   'me:read': ['user', 'admin'],
   'accounts:read': ['admin'],
   'accounts:invite': ['admin'],
+  'design-system:read': ['admin'],
 };
 
 const entries = Object.entries(expected).flatMap(([permission, allowed]) =>

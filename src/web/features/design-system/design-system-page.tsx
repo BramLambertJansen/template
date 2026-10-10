@@ -1,8 +1,8 @@
-import { Bell, Home, LayoutDashboard } from 'lucide-react';
-import { useId, useState, type ReactNode } from 'react';
+import { Bell } from 'lucide-react';
+import { useState } from 'react';
 import { z } from 'zod';
+import { copy } from '#web/copy/ui.ts';
 import {
-  AppShell,
   Button,
   buttonVariantMap,
   Card,
@@ -11,7 +11,6 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-  CenteredCard,
   Dialog,
   DropdownMenu,
   Form,
@@ -20,6 +19,7 @@ import {
   Notice,
   PageHeader,
   QrCode,
+  Section,
   Select,
   Table,
   TableBody,
@@ -27,25 +27,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  ThemeToggle,
   useZodForm,
 } from '#web/ui/index.ts';
 
-// Catalogus van de basiskit (framework §7), alleen in dev. Elke component met elke variant; de e2e-test draait axe op
-// 375 en 1280 px, in licht en donker. De teksten zijn voorbeelden, geen app-teksten.
-
-// Id via useId: een titel met spaties ("Form, Field en Input") als id leest aria-labelledby als meerdere id's.
-export function Section({ title, children }: { title: string; children: ReactNode }) {
-  const id = useId();
-  return (
-    <section aria-labelledby={id} className="flex flex-col gap-4">
-      <h2 id={id} className="text-xl font-semibold">
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
-}
+// Catalogus van de basiskit (framework §7, spec design-system), ook in productie achter guard('design-system:read'). Elke
+// component met elke variant; de e2e-test draait axe op 375 en 1280 px, in licht en donker. De teksten zijn voorbeelden, geen
+// app-teksten. Alleen voorbeelddata en geen API-aanroepen: de chunk is statisch en voor iedereen te downloaden (AC-10).
+// AppShell, CenteredCard en ThemeToggle staan er niet los in: de eerste twee zijn een heel scherm met een eigen main, de
+// themaschakelaar staat al in de topbalk (uitzonderingen in scripts/kit/catalogus.mjs).
 
 function isVariant(value: string): value is keyof typeof buttonVariantMap.variant {
   return value in buttonVariantMap.variant;
@@ -119,24 +108,16 @@ function DialogExample() {
           </>
         }
       >
-        <p className="text-sm">De inhoud van de dialoog.</p>
+        <p>De inhoud van de dialoog.</p>
       </Dialog>
     </>
   );
 }
 
-const nav = [
-  { label: 'Home', href: '/design-system', permission: 'app.use', icon: Home },
-  { label: 'Dashboard', href: '/design-system/dashboard', permission: 'app.use', icon: LayoutDashboard },
-] as const;
-
 export function DesignSystemPage() {
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-10 p-4 md:p-8">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-3xl font-semibold">Design system</h1>
-        <ThemeToggle />
-      </header>
+    <div className="flex flex-col gap-10">
+      <PageHeader title={copy.designSystem.title} />
 
       <Section title="Button">
         <div className="flex flex-wrap gap-3">
@@ -204,7 +185,7 @@ export function DesignSystemPage() {
             <CardDescription>Een korte beschrijving.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm">Inhoud van de kaart.</p>
+            <p>Inhoud van de kaart.</p>
           </CardContent>
           <CardFooter>
             <Button variant="secondary">Actie</Button>
@@ -225,22 +206,6 @@ export function DesignSystemPage() {
             { label: 'Uitloggen', onSelect: () => undefined },
           ]}
         />
-      </Section>
-
-      <Section title="CenteredCard">
-        <div className="overflow-hidden rounded-lg border">
-          <CenteredCard title="Inloggen" description="Voorbeeld van een scherm zonder app-layout.">
-            <p className="text-sm">Hier staat het formulier.</p>
-          </CenteredCard>
-        </div>
-      </Section>
-
-      <Section title="AppShell">
-        <div className="overflow-hidden rounded-lg border">
-          <AppShell nav={nav} userName="Anna de Vries" menuItems={[{ label: 'Uitloggen', onSelect: () => undefined }]}>
-            <h3 className="text-2xl font-semibold">Home</h3>
-          </AppShell>
-        </div>
       </Section>
     </div>
   );

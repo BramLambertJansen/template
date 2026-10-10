@@ -6,6 +6,8 @@ export const permissions = definePermissions({
   'me:read': { roles: ['user', 'admin'] },
   'accounts:read': { roles: ['admin'] },
   'accounts:invite': { roles: ['admin'] },
+  // Spec design-system (OV-1): de catalogus, ook in productie; de guard verbergt hem, hij beschermt geen geheim.
+  'design-system:read': { roles: ['admin'] },
 });
 
 export type Permission = (typeof permissions.names)[number];

@@ -69,7 +69,7 @@ Regels voor elke keuze:
 | Alleen `src/core/api/db` raakt `pg` | `src/core/api/auth` (als `auth_service`, alleen schema `better_auth`) | Better Auth beheert zijn eigen tabellen |
 | Elke route via `defineRoute` | `/api/auth/*` (Better Auth-handler) en de clientfouten-route (ADR 0003) | De library levert de auth-routes; de clientfouten-route werkt zonder actor |
 | Elke route vraagt login | `/api/auth/*` (inloggen, aanmelden, reset), de clientfouten-route en `GET /api/health` | Bestaan juist voor niet-ingelogden; elk met rate limit; health geeft alleen `{ ok }`, geen data |
-| Elke schermroute heeft een `can()`-guard | Inlog-, aanmeld- en resetschermen (`/login`, `/uitnodiging`); `/design-system` alleen in dev | Publiek; ze tonen geen data |
+| Elke schermroute heeft een `can()`-guard | Inlog-, aanmeld- en resetschermen (`/login`, `/uitnodiging`) | Publiek; ze tonen geen data |
 | Spec vóór een nieuwe route | `GET /api/health` (skelet) | Bestaat vóór `defineRoute`; de skeletpagina die hem toonde, is vervallen met de ingelogde startpagina (PR 7b) |
 | Elke route via `defineRoute` en met login | `POST /api/dev/login-as` (ADR 0014) | Alleen bij `APP_ENV=local` geregistreerd (elders 404); logt in als een seed-account, met CSRF-controle |
 
@@ -200,7 +200,7 @@ Ankers: OWASP Top 10:2025, OWASP API Security Top 10, ASVS 5.0 niveau 1 (checkli
   CSP volledig uitgeschreven: `default-src 'self'`; `script-src 'self'` plus CAPTCHA-domein; `frame-src` CAPTCHA-domein; `connect-src 'self'`; `style-src 'self'` (geen nonce mogelijk bij een statische SPA; wat componenten inline zetten, wordt in e2e met CSP aan ontdekt en per ADR toegestaan); `img-src 'self' data:`; `frame-ancestors 'none'`; `base-uri 'self'`; `form-action 'self'`; `object-src 'none'`; e2e draait met CSP aan
   (verwacht: Radix Dialog zet een inline `<style>`, dat vraagt een ADR of een andere scroll-lock); HSTS, nosniff, Referrer-Policy;
   service worker cachet nooit `/api/*`; één `onError` die `{ code, requestId }` teruggeeft, nooit stacktraces of SQL;
-  `/design-system` en `/design` bestaan alleen in dev-builds; de clientfouten-route is de enige data-route zonder login, met maximale grootte per melding, limiet per IP per minuut en geen onnodige vrije tekst.
+  `/design` bestaat alleen in dev-builds, `/design-system` staat achter `guard('design-system:read')` en toont alleen voorbeelddata (ADR 0015); de clientfouten-route is de enige data-route zonder login, met maximale grootte per melding, limiet per IP per minuut en geen onnodige vrije tekst.
 - **Logging**: per request `requestId`, gebruiker-ID, duur, databasetijd. Clientfouten via `reportClientError()` naar een eigen tabel; lint verbiedt kale `console.error` in `queries.ts` en de API-client.
   Een clientfout bevat alleen velden van een allowlist (bron, soort, foutcode, pad zonder query, telling, build-SHA), geen PII of vrije tekst, en wordt per 5 minuten ontdubbeld.
 - **Secrets**: env-schema bij opstart; alleen publieke waarden krijgen `VITE_`. Geen productiegeheimen in de werkmap.
@@ -239,7 +239,7 @@ Ankers: OWASP Top 10:2025, OWASP API Security Top 10, ASVS 5.0 niveau 1 (checkli
   uitzondering met code en reden heeft (in de ratchet); screenshot-baselines van de catalogus in de gepinde Playwright-image; de
   contrasttest bewijst ook dat een bekende foute kleur zou falen.
 - **Startkit**: Button, Input, Field, Card, Dialog. Groeit per app-behoefte. WCAG 2.2 AA (4,5:1 tekst, 3:1 UI), één focusring, `prefers-reduced-motion`, 44 px aanraakdoelen.
-- `/design-system` (catalogus) en optioneel `/design` (prototypes uit `designs/`), alleen in dev.
+- `/design-system` (catalogus, in de app voor admins, ADR 0015) en optioneel `/design` (prototypes uit `designs/`, alleen in dev).
 
 ## 8. Werkstraat
 
