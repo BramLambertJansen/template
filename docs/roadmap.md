@@ -112,9 +112,9 @@ Vier deel-PR's, in deze volgorde.
 **3c. Tokens en UI-kit**
 - [x] Tokens in drie lagen, `@custom-variant dark`, basiskit Button, Input, Field, Card, Dialog (codemod vervalt: componenten met de hand op de tokens, geen `shadcn add`)
 - [x] Contrasttest over recepten (bewijst ook dat een bekende foute kleur faalt), `scanAxe`, `/design-system` alleen in dev
-- [x] Woordenlijsttest op `src/web/copy` en `src/core/web/copy` (`src/web/copy/woordenlijst.test.ts`, met zelftest) (PR_NR)
+- [x] Woordenlijsttest op `src/web/copy` en `src/core/web/copy` (`src/web/copy/woordenlijst.test.ts`, met zelftest) (#33)
 - [ ] `scanAxe`-uitzonderingen in de ratchet
-- [x] `check:catalogus`: elk component op `/design-system` of als uitzondering met reden in `scripts/kit/catalogus.mjs` (groeien = gate-wijziging; een overbodige uitzondering faalt ook), in `gate:fast` (PR_NR)
+- [x] `check:catalogus`: elk component op `/design-system` of als uitzondering met reden in `scripts/kit/catalogus.mjs` (groeien = gate-wijziging; een overbodige uitzondering faalt ook), in `gate:fast` (#33)
 - [ ] Screenshot-baselines van de catalogus in de Playwright-image (uit fase 2)
 
 **3d. De feature**
