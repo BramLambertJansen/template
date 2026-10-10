@@ -149,7 +149,7 @@ Elke app heeft dit nodig, dus het hoort in de template. Elk punt eerst een spec.
 - [ ] Gebruiker bekijkt en beëindigt de eigen sessies
 - [ ] Backupcodes voor TOTP, zodat een admin die zijn telefoon kwijt is niet alleen via `admin:create` terugkomt
 - [ ] Gebruiker wijzigt het eigen wachtwoord en de eigen naam
-- [ ] Admin verstuurt een uitnodiging opnieuw of trekt hem in
+- [ ] Admin trekt een openstaande uitnodiging in (opnieuw versturen bestaat al: `reinviteRoute`)
 - [ ] Admin stuurt een gebruiker een resetlink ("wachtwoord vergeten" blijft dicht, ADR 0013; nu is `admin:create` de enige uitweg)
 - [ ] Gebruiker wijzigt het e-mailadres, met bevestiging naar het oude en het nieuwe adres
 
