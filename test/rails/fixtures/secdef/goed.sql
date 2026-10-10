@@ -27,3 +27,6 @@ create function app.plain() returns timestamptz language sql stable return now()
 
 alter function app.is_owner(text) owner to app_definer;
 alter function app.thing_count() owner to app_definer;
+
+-- Een overload van een functie zonder security definer mag wel.
+create function app.plain(p_dag integer) returns timestamptz language sql stable return now();

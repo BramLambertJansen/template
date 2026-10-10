@@ -61,6 +61,19 @@ test.each([
       'db/migrations/verkeerde-eigenaar.sql:2: app.is_owner is security definer met eigenaar app_migrator; de eigenaar is app_definer',
     ],
   ],
+  [
+    'overload.sql',
+    [
+      'db/migrations/overload.sql:6: app.is_owner heeft een overload: (integer, boolean) naast (text); een security definer-functie mag geen overload hebben',
+    ],
+  ],
+  [
+    'do-blok.sql',
+    [
+      'db/migrations/do-blok.sql:3: security definer buiten een create function of procedure die de check leest (bijv. in een do-blok of dynamische SQL); schrijf een eigen create function',
+      'db/migrations/do-blok.sql:10: security definer buiten een create function of procedure die de check leest (bijv. in een do-blok of dynamische SQL); schrijf een eigen create function',
+    ],
+  ],
 ])('%s faalt', (naam, fouten) => {
   expect(fixture(naam)).toStrictEqual(fouten);
 });
@@ -106,6 +119,40 @@ test('security definer zetten via alter function faalt', () => {
   ).toStrictEqual([
     'db/migrations/2.sql:1: app.f wordt security definer via alter; zet het in create function, met de search_path',
   ]);
+});
+
+test('een overload van een security definer-functie faalt, in beide volgordes en over migraties heen; na een drop niet', () => {
+  const plain = 'create function app.f(p text) returns boolean language sql return true;\n';
+  const plainInt = 'create function app.f(p integer) returns boolean language sql return true;\n';
+  const secdef = `create or replace function app.f(p text) returns boolean
+  language sql security definer set search_path = ''
+  as $$ select true $$;
+alter function app.f(text) owner to app_definer;
+`;
+  const fout =
+    'db/migrations/2.sql:1: app.f heeft een overload: (integer) naast (text); een security definer-functie mag geen overload hebben';
+
+  expect(
+    secdefRegels([
+      { naam: '1.sql', sql: CREATE.replace('app.f()', 'app.f(p text)') },
+      { naam: '2.sql', sql: plainInt },
+    ]),
+  ).toStrictEqual([fout]);
+  expect(
+    secdefRegels([
+      { naam: '1.sql', sql: plain + plainInt },
+      { naam: '2.sql', sql: secdef },
+    ]),
+  ).toStrictEqual([
+    'db/migrations/2.sql:1: app.f heeft een overload: (text) naast (integer); een security definer-functie mag geen overload hebben',
+  ]);
+  const drop = 'drop function app.f(integer);\n';
+  expect(
+    secdefRegels([
+      { naam: '1.sql', sql: plain + plainInt + drop },
+      { naam: '2.sql', sql: secdef },
+    ]),
+  ).toStrictEqual([]);
 });
 
 test('de migraties in db/migrations zijn groen, en zonder `owner to app_definer` niet', () => {

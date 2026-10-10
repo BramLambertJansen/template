@@ -6,7 +6,10 @@
 //     en functies (`naam(`) alleen met schema (`public.x`, `pg_catalog.y`). SQL-syntax als `exists (`, `coalesce(` en
 //     typemodifiers als `numeric(` tellen niet; namen uit een eigen `with` ook niet;
 //  3. is aan het eind van de migratie waarin hij ontstaat of wijzigt van `app_definer` (`alter function … owner to app_definer`).
-//     `create or replace` houdt de eigenaar van de vorige versie, zoals Postgres.
+//     `create or replace` houdt de eigenaar van de vorige versie, zoals Postgres;
+//  4. heeft geen overload (over alle migraties heen), zodat koppelen op naam klopt.
+// Fail-closed: `alter function … security definer` faalt, en `security definer` op een plek die de check niet als create leest
+// (een do-blok, dynamische SQL) ook. Security definer-views vallen buiten deze check (roadmap).
 // De pgTAP-functiecatalogus (db/tests/functies.sql, in test:db) controleert eigenaar en search_path daarnaast in de database;
 // deze check vangt het eerder (gate:fast) en controleert ook de namen. Twijfel telt als fout: herschrijf de SQL of vraag de eigenaar.
 import { readdirSync, readFileSync } from 'node:fs';
@@ -34,9 +37,12 @@ const SYNTAX = new Set(
   ).split(' '),
 );
 
+// Typen van meer woorden: het eerste woord is dan geen argumentnaam.
+const TYPE_BEGIN = new Set(['bit', 'char', 'character', 'double', 'interval', 'national', 'time', 'timestamp']);
+
 /** @typedef {{ naam: string, sql: string }} Migratie */
 /** @typedef {{ tekst: string, regel: number }} Statement */
-/** @typedef {{ secdef: boolean, eigenaar: string | null, waar: string }} Functie */
+/** @typedef {{ secdef: boolean, eigenaar: string | null, signaturen: Set<string> }} Functie */
 
 /**
  * Haalt commentaar weg (regels blijven staan) en zet dollar-gequote bodies als code tussen \uE001 en \uE002.
@@ -188,35 +194,107 @@ function definitieFouten({ tekst }, m) {
 }
 
 /**
+ * De argumenttypen tussen de haakjes vanaf `open`, zoals Postgres een functie herkent (zonder namen, defaults en OUT).
+ * @param {string} tekst
+ * @param {number} open de index van `(`
+ * @returns {string}
+ */
+function signatuur(tekst, open) {
+  const delen = [''];
+  let diepte = 0;
+  for (const teken of tekst.slice(open).replace(TEKST, "''")) {
+    if (teken === '(') diepte += 1;
+    if (teken === ')') diepte -= 1;
+    if (diepte === 0) break;
+    if (teken === ',' && diepte === 1) delen.push('');
+    else delen[delen.length - 1] += teken;
+  }
+  return delen
+    .map((deel, i) => (i === 0 ? deel.slice(1) : deel))
+    .map((deel) =>
+      deel
+        .replace(/(?:\s+default\b|\s*=)[\s\S]*$/i, '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, ' '),
+    )
+    .filter((deel) => deel !== '' && !/^out\s/.test(deel))
+    .map((deel) => deel.replace(/^(?:in|inout|variadic)\s+/, '').split(' '))
+    .map((woorden) => (woorden.length > 1 && !TYPE_BEGIN.has(woorden[0] ?? '') ? woorden.slice(1) : woorden).join(' '))
+    .join(', ');
+}
+
+/**
+ * @param {Statement} statement
+ * @param {RegExpExecArray} create de match van CREATE
+ * @param {Map<string, Functie>} functies
+ * @returns {{ naam: string, fouten: string[] }}
+ */
+function verwerkCreate(statement, create, functies) {
+  const naam = normaal(create[2] ?? '');
+  const secdef = /\bsecurity\s+definer\b/i.test(kop(statement.tekst).replace(TEKST, "''"));
+  const sig = signatuur(statement.tekst, create.index + create[0].length - 1);
+  const vorige = functies.get(naam);
+  const signaturen = new Set([...(vorige?.signaturen ?? []), sig]);
+  const andere = [...signaturen].filter((andere) => andere !== sig);
+  functies.set(naam, { secdef: secdef || (vorige?.secdef ?? false), eigenaar: vorige?.eigenaar ?? null, signaturen });
+  const fouten = secdef ? definitieFouten(statement, create) : [];
+  if (andere.length > 0 && (secdef || vorige?.secdef === true))
+    fouten.push(
+      `heeft een overload: (${sig}) naast ${andere.map((oud) => `(${oud})`).join(', ')}; een security definer-functie mag geen overload hebben`,
+    );
+  return { naam, fouten };
+}
+
+/**
+ * @param {string} tekst
+ * @param {Map<string, Functie>} functies
+ */
+function verwerkDrop(tekst, functies) {
+  const drop = DROP.exec(tekst);
+  if (drop === null) return;
+  const naam = normaal(drop[1] ?? '');
+  const functie = functies.get(naam);
+  const open = drop.index + drop[0].length;
+  if (functie !== undefined && /^\s*\(/.test(tekst.slice(open))) {
+    functie.signaturen.delete(signatuur(tekst, tekst.indexOf('(', open)));
+    if (functie.signaturen.size > 0) return;
+  }
+  functies.delete(naam);
+}
+
+/**
  * Verwerkt één statement: definities, eigenaren en drops in `functies`; fouten in de definitie terug.
  * @param {Statement} statement
  * @param {Map<string, Functie>} functies
- * @param {string} waar `pad:regel`
  * @returns {{ naam: string | null, fouten: string[] }}
  */
-function verwerk(statement, functies, waar) {
+function verwerk(statement, functies) {
   const { tekst } = statement;
   const create = CREATE.exec(tekst);
-  if (create !== null) {
-    const naam = normaal(create[2] ?? '');
-    const secdef = /\bsecurity\s+definer\b/i.test(kop(tekst).replace(TEKST, "''"));
-    const vorige = create[1] === undefined ? undefined : functies.get(naam);
-    functies.set(naam, { secdef, eigenaar: vorige?.eigenaar ?? null, waar });
-    return { naam, fouten: secdef ? definitieFouten(statement, create) : [] };
-  }
+  if (create !== null) return verwerkCreate(statement, create, functies);
   const alter = ALTER.exec(tekst);
   const naam = normaal(alter?.[1] ?? '');
   const functie = functies.get(naam);
   if (alter === null || functie === undefined) {
-    const drop = DROP.exec(tekst);
-    if (drop !== null) functies.delete(normaal(drop[1] ?? ''));
+    verwerkDrop(tekst, functies);
     return { naam: null, fouten: [] };
   }
   const eigenaar = /\bowner\s+to\s+("?[\w$]+"?)/i.exec(tekst)?.[1];
   if (eigenaar !== undefined) functie.eigenaar = normaal(eigenaar);
-  if (/\bsecurity\s+definer\b/i.test(tekst.replace(TEKST, "''")))
+  if (/\bsecurity\s+definer\b/i.test(tekst))
     return { naam, fouten: ['wordt security definer via alter; zet het in create function, met de search_path'] };
   return { naam, fouten: [] };
+}
+
+/**
+ * Fail-closed: `security definer` op een plek die de check niet als create leest (do-blok, dynamische SQL, tekst).
+ * @param {string} tekst
+ */
+function onbewaakt(tekst) {
+  const aantal = tekst.match(/\bsecurity\s+definer\b/gi)?.length ?? 0;
+  const create = CREATE.test(tekst) && /\bsecurity\s+definer\b/i.test(kop(tekst).replace(TEKST, "''"));
+  return aantal > (create ? 1 : 0);
 }
 
 /**
@@ -232,8 +310,12 @@ export function secdefRegels(migraties) {
     const geraakt = new Map();
     const fouten = statements(sql).flatMap((statement) => {
       const waar = `${pad}:${statement.regel}`;
-      const { naam, fouten: eigen } = verwerk(statement, functies, waar);
+      const { naam, fouten: eigen } = verwerk(statement, functies);
       if (naam !== null && !geraakt.has(naam)) geraakt.set(naam, waar);
+      if (eigen.length === 0 && onbewaakt(statement.tekst))
+        return [
+          `${waar}: security definer buiten een create function of procedure die de check leest (bijv. in een do-blok of dynamische SQL); schrijf een eigen create function`,
+        ];
       return eigen.map((fout) => `${waar}: ${naam ?? '?'} ${fout}`);
     });
     const eigenaarFouten = [...geraakt]
