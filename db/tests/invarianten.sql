@@ -3,7 +3,7 @@
 -- de query hem vangt. Alles in één transactie die terugdraait.
 begin;
 set search_path = tap, public;
-select plan(12);
+select plan(16);
 
 -- Elke tabel in public en app: RLS aan én geforceerd (uitzondering: public.schema_migrations van dbmate).
 create function pg_temp.zonder_rls() returns setof text language sql stable as $$
@@ -83,10 +83,54 @@ create function pg_temp.rechten_voor_public() returns setof text language sql st
   order by 1
 $$;
 
+-- Tabelpatroon met owner_id (docs/reviews/2026-10-10-tabelpatroon.md, B1; ADR 0016), voor elke tabel in public met die kolom:
+-- geen insert- of updaterecht voor app_authenticated op id, owner_id of created_at (A1/A2: anders kiest de client zelf de
+-- id of de eigenaar), een policy voor select, insert, update en delete to app_authenticated (A3: een recht zonder policy
+-- geeft stil 0 rijen), en een index met owner_id als eerste kolom (elke policy filtert erop).
+create function pg_temp.eigenaartabellen() returns setof text language sql stable as $$
+  with t as (
+    select c.oid, format('%I.%I', n.nspname, c.relname) as naam
+    from pg_catalog.pg_class c
+    join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+    join pg_catalog.pg_attribute a on a.attrelid = c.oid and a.attname = 'owner_id' and not a.attisdropped
+    where c.relkind in ('r', 'p') and n.nspname = 'public'
+  )
+  select * from (
+    select format('%s: app_authenticated heeft %s op %s', t.naam, r.recht, k.kolom)
+    from t
+    cross join (values ('id'), ('owner_id'), ('created_at')) k (kolom)
+    cross join (values ('INSERT'), ('UPDATE')) r (recht)
+    where exists (
+        select 1 from pg_catalog.pg_attribute a where a.attrelid = t.oid and a.attname = k.kolom and not a.attisdropped
+      )
+      and pg_catalog.has_column_privilege('app_authenticated', t.oid, k.kolom, r.recht)
+    union all
+    select format('%s: geen policy voor %s to app_authenticated', t.naam, m.actie)
+    from t
+    cross join (values ('select', 'r'), ('insert', 'a'), ('update', 'w'), ('delete', 'd')) m (actie, cmd)
+    where not exists (
+      select 1 from pg_catalog.pg_policy p
+      where p.polrelid = t.oid
+        and p.polcmd in (m.cmd::"char", '*'::"char")
+        and 'app_authenticated'::regrole::oid = any (p.polroles)
+    )
+    union all
+    select format('%s: geen index met owner_id als eerste kolom', t.naam)
+    from t
+    where not exists (
+      select 1 from pg_catalog.pg_index i
+      join pg_catalog.pg_attribute a on a.attrelid = i.indrelid and a.attnum = i.indkey[0]
+      where i.indrelid = t.oid and a.attname = 'owner_id'
+    )
+  ) overtredingen (regel)
+  order by regel collate "C"
+$$;
+
 select is(array(select pg_temp.zonder_rls()), '{}'::text[], 'elke tabel in public en app heeft RLS aan en geforceerd');
 select is(array(select pg_temp.verboden_rechten()), '{}'::text[], 'geen API-rol heeft TRUNCATE, REFERENCES of TRIGGER');
 select is(array(select pg_temp.better_auth_open()), '{}'::text[], 'better_auth: alleen auth_service heeft rechten, plus de kolom-allowlist van app_definer');
 select is(array(select pg_temp.rechten_voor_public()), '{}'::text[], 'PUBLIC heeft geen tabelrechten en geen EXECUTE');
+select is(array(select pg_temp.eigenaartabellen()), '{}'::text[], 'elke tabel met owner_id volgt het tabelpatroon (kolomrechten, vier policies, index)');
 select is(has_schema_privilege('app_authenticated', 'better_auth', 'usage'), false, 'app_authenticated kan schema better_auth niet gebruiken');
 select is(has_schema_privilege('api_user', 'better_auth', 'usage'), false, 'api_user kan schema better_auth niet gebruiken');
 
@@ -130,6 +174,63 @@ select is(
   array['PUBLIC: EXECUTE op app.invariant_probe_fn()'],
   'controle: EXECUTE voor PUBLIC wordt gevangen'
 );
+
+-- Controle tabelpatroon: een tabel met tabelbrede insert en update, zonder policies en zonder index wordt gevangen; met
+-- kolomrechten alleen op een veld, de vier policies en de index (het patroon van pnpm new:resource) is hij in orde.
+create table public.invariant_owner_probe (
+  id uuid primary key default gen_random_uuid(),
+  owner_id text not null,
+  created_at timestamptz not null default now(),
+  notitie text
+);
+alter table public.invariant_owner_probe enable row level security;
+alter table public.invariant_owner_probe force row level security;
+grant select, insert, update, delete on public.invariant_owner_probe to app_authenticated;
+select is(
+  array(select pg_temp.eigenaartabellen()),
+  array[
+    'public.invariant_owner_probe: app_authenticated heeft INSERT op created_at',
+    'public.invariant_owner_probe: app_authenticated heeft INSERT op id',
+    'public.invariant_owner_probe: app_authenticated heeft INSERT op owner_id',
+    'public.invariant_owner_probe: app_authenticated heeft UPDATE op created_at',
+    'public.invariant_owner_probe: app_authenticated heeft UPDATE op id',
+    'public.invariant_owner_probe: app_authenticated heeft UPDATE op owner_id',
+    'public.invariant_owner_probe: geen index met owner_id als eerste kolom',
+    'public.invariant_owner_probe: geen policy voor delete to app_authenticated',
+    'public.invariant_owner_probe: geen policy voor insert to app_authenticated',
+    'public.invariant_owner_probe: geen policy voor select to app_authenticated',
+    'public.invariant_owner_probe: geen policy voor update to app_authenticated'
+  ],
+  'controle: tabelbrede insert en update, ontbrekende policies en index worden gevangen'
+);
+
+revoke insert, update on public.invariant_owner_probe from app_authenticated;
+grant insert (notitie), update (notitie) on public.invariant_owner_probe to app_authenticated;
+create policy invariant_owner_probe_select_own on public.invariant_owner_probe
+  for select to app_authenticated using (owner_id = (select app.current_user_id()));
+create policy invariant_owner_probe_insert_own on public.invariant_owner_probe
+  for insert to public with check (owner_id = (select app.current_user_id()));
+select is(
+  array(select pg_temp.eigenaartabellen()),
+  array[
+    'public.invariant_owner_probe: geen index met owner_id als eerste kolom',
+    'public.invariant_owner_probe: geen policy voor delete to app_authenticated',
+    'public.invariant_owner_probe: geen policy voor insert to app_authenticated',
+    'public.invariant_owner_probe: geen policy voor update to app_authenticated'
+  ],
+  'controle: kolomrechten op een veld zijn goed; een policy to public telt niet als policy to app_authenticated'
+);
+
+drop policy invariant_owner_probe_insert_own on public.invariant_owner_probe;
+create policy invariant_owner_probe_insert_own on public.invariant_owner_probe
+  for insert to app_authenticated with check (owner_id = (select app.current_user_id()));
+create policy invariant_owner_probe_update_own on public.invariant_owner_probe
+  for update to app_authenticated
+  using (owner_id = (select app.current_user_id())) with check (owner_id = (select app.current_user_id()));
+create policy invariant_owner_probe_delete_own on public.invariant_owner_probe
+  for delete to app_authenticated using (owner_id = (select app.current_user_id()));
+create index invariant_owner_probe_owner_id_idx on public.invariant_owner_probe (owner_id);
+select is(array(select pg_temp.eigenaartabellen()), '{}'::text[], 'controle: het tabelpatroon van pnpm new:resource wordt doorgelaten');
 
 select * from finish();
 rollback;
