@@ -9,13 +9,14 @@ import type { AuthGateway } from '../auth/auth.ts';
 import type { WithUser } from '../db/types.ts';
 import { AppError, statusFor } from '../errors.ts';
 import { z } from 'zod';
+import { ROLES, type Role } from '../../shared/can.ts';
 import type { Contract } from '../../shared/contract.ts';
 import { isRouteDef, type RouteDef } from '../route/kit.ts';
 import { csrf } from './csrf.ts';
 
 // Dev-login (spec accountbeheer, framework §3: limitatieve uitzondering, ADR 0014): logt echt in als het seed-account van de
 // rol en geeft de set-cookie-regels terug. Alleen meegeven bij APP_ENV=local; zonder bestaat /api/dev/login-as niet (404).
-export type DevLogin = (role: 'user' | 'admin', headers: Headers) => Promise<readonly string[]>;
+export type DevLogin = (role: Role, headers: Headers) => Promise<readonly string[]>;
 
 interface BaseConfig<Services> {
   // Exact de origin van de SPA (ADR 0007); zonder waarde weigert de CSRF-controle elke Origin-header.
@@ -90,7 +91,7 @@ function routeHandler<Services>(
 
 // Vaste volgorde (framework §6): requestId, secureHeaders, CSRF, bodyLimit, routes; één onError en notFound met alleen
 // `{ code, requestId }`. De health-route is de publieke uitzondering uit framework §3.
-const devLoginInput = z.object({ rol: z.enum(['user', 'admin']) }).strict();
+const devLoginInput = z.object({ rol: z.enum(ROLES) }).strict();
 
 export function createApp(): App;
 export function createApp<Services = undefined>(config: AppConfig<Services>): App;

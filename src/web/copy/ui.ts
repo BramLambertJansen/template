@@ -1,5 +1,10 @@
+import type { Role } from '#core/shared/can.ts';
+
 // Zichtbare teksten van de schermen, letterlijk uit de spec accountbeheer waar die een tekst geeft. Teksten die de spec
 // niet noemt (toegankelijke namen, validatie), staan met "(niet in spec)" erbij.
+// Naam per rol: Record<Role, …>, dus een nieuwe rol in ROLES zonder naam is een typefout (accounts, rolwisselaar).
+export const roleLabels = { user: 'Gebruiker', admin: 'Beheerder' } as const satisfies Record<Role, string>;
+
 export const copy = {
   login: {
     title: 'Inloggen',
@@ -44,7 +49,7 @@ export const copy = {
     status: 'Status',
     // (niet in spec) kop van de kolom met "Opnieuw uitnodigen"; alleen voor schermlezers.
     actions: 'Acties',
-    roles: { user: 'Gebruiker', admin: 'Beheerder' },
+    roles: roleLabels,
     statuses: { actief: 'Actief', uitgenodigd: 'Uitgenodigd' },
     reinvite: 'Opnieuw uitnodigen',
     invite: 'Account uitnodigen',

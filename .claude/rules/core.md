@@ -13,6 +13,10 @@ paths:
   hem gebruikt zonder core te wijzigen.
 - Past iets voor een app niet in core: stop en stel een uitbreidingsplek voor in de template, in plaats van core in de app aan te passen.
 
+- Nieuwe rol: `ROLES` in `src/core/shared/can.ts`, een migratie voor de CHECK op `public.user_roles.role`, een seed-account in
+  `src/core/api/dev/seed-accounts.ts` en een naam in `roleLabels` (`src/web/copy/ui.ts`). TypeScript dwingt de laatste twee af;
+  de dev-rolwisselaar toont de rol dan vanzelf.
+
 ## Besloten, nog niet gebouwd
 
 Gebouwd: `src/core/api/{env.ts,db,http,auth,mail}`, en in `src/core/shared`: `errors.ts` (`defineErrorCodes`), `can.ts` (`definePermissions`,

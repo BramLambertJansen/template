@@ -32,15 +32,15 @@ const auth = createAuth({
 const migrator = new pg.Pool({ connectionString: migratorUrl, max: 1 });
 
 try {
-  for (const account of SEED_ACCOUNTS) {
+  for (const [role, account] of Object.entries(SEED_ACCOUNTS)) {
     const { userId } = await ensureAccount(auth, {
       email: account.email,
       name: account.name,
       password: SEED_DEMO_WACHTWOORD,
-      ...(account.role === 'admin' ? { totpSecret: SEED_ADMIN_TOTP_SLEUTEL } : {}),
+      ...(role === 'admin' ? { totpSecret: SEED_ADMIN_TOTP_SLEUTEL } : {}),
     });
-    await migrator.query('select app.assign_role($1, $2)', [userId, account.role]);
-    console.info(`✓ ${account.email} (${account.role})`);
+    await migrator.query('select app.assign_role($1, $2)', [userId, role]);
+    console.info(`✓ ${account.email} (${role})`);
   }
 } finally {
   await migrator.end();

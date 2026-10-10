@@ -1,6 +1,5 @@
-import { lazy, Suspense, useState } from 'react';
+import { useState } from 'react';
 import { ApiError } from '#core/web/lib/api-client.ts';
-import { isDev } from '#core/web/lib/env.ts';
 import { loginInput, totpInput } from '#shared/schemas/auth.ts';
 import { copy } from '#web/copy/ui.ts';
 import { auth } from '#web/lib/auth.ts';
@@ -9,11 +8,6 @@ import { useFinishLogin } from './queries.ts';
 
 // Inloggen (spec accountbeheer) in stappen binnen één route: wachtwoord → code (admin met TOTP) of instellen (admin zonder
 // TOTP). Wachtwoord en TOTP-sleutel blijven in het geheugen van deze pagina, nooit in de URL of opslag.
-
-// Alleen in dev (src/web/dev is leeg in de productiebundel).
-const RoleSwitcher = isDev
-  ? lazy(() => import('#web/dev/role-switcher.tsx').then((module) => ({ default: module.RoleSwitcher })))
-  : null;
 
 type Step =
   { readonly kind: 'credentials' } | { readonly kind: 'totp' } | { readonly kind: 'setup'; readonly totpURI: string };
@@ -127,11 +121,6 @@ export function LoginPage({ notice, redirect }: LoginPageProps) {
         {notice === 'ingesteld' ? <Notice>{copy.login.passwordSet}</Notice> : null}
         {notice === 'verlopen' ? <Notice>{copy.login.sessionExpired}</Notice> : null}
         <Credentials onStep={setStep} finish={finish} />
-        {RoleSwitcher === null ? null : (
-          <Suspense fallback={null}>
-            <RoleSwitcher />
-          </Suspense>
-        )}
       </div>
     </CenteredCard>
   );

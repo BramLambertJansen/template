@@ -103,6 +103,6 @@ describe('routes van de app', () => {
   test('een onbekend pad toont "Pagina niet gevonden"', async () => {
     show('/bestaat-niet', null);
 
-    expect((await screen.findByRole('heading')).textContent).toBe('Pagina niet gevonden');
+    expect((await screen.findByRole('heading', { level: 1 })).textContent).toBe('Pagina niet gevonden');
   });
 });

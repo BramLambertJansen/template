@@ -27,6 +27,6 @@ describe('productiebundel', () => {
     expect(bundle).not.toContain('Design system');
     expect(bundle).not.toContain('Dialoog openen');
     expect(bundle).not.toContain('Lokaal inloggen als');
-    expect(bundle).not.toContain('Wissel naar beheerder');
+    expect(bundle).not.toContain('Rol wisselen (alleen lokaal)');
   }, 30_000);
 });

@@ -26,8 +26,7 @@ export function createDevLogin(auth: AuthGateway, authOrigin: string): DevLogin 
   }
 
   return async (role, incoming) => {
-    const account = SEED_ACCOUNTS.find((candidate) => candidate.role === role);
-    if (account === undefined) throw new Error(`dev-login: geen seed-account voor ${role}`);
+    const account = SEED_ACCOUNTS[role];
     const signedIn = await post(
       '/sign-in/email',
       { email: account.email, password: SEED_DEMO_WACHTWOORD },

@@ -1,3 +1,4 @@
+import type { Role } from '#core/shared/can.ts';
 import { inviteInput, ROLLEN } from '#shared/contracts/accounts.ts';
 import { errorTexts } from '#web/copy/errors.ts';
 import { copy } from '#web/copy/ui.ts';
@@ -18,7 +19,7 @@ interface InviteDialogProps {
 function InviteForm({ onDone, onInvited }: { onDone: () => void; onInvited: (email: string) => void }) {
   const invite = useInvite();
   const form = useZodForm(inviteInput, { naam: '', email: '', rol: 'user' });
-  const submit = async (values: { naam: string; email: string; rol: 'user' | 'admin' }) => {
+  const submit = async (values: { naam: string; email: string; rol: Role }) => {
     await invite.mutateAsync(values);
     onInvited(values.email);
     onDone();

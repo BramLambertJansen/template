@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import type { Role } from '../../shared/can.ts';
 import { unsafeCast } from '../../shared/unsafe-cast.ts';
 
 // Enige plek met fetch (framework §5). Getypt op de route-contracten uit src/shared: de web-code importeert niets uit src/api.
@@ -75,7 +76,7 @@ export function createApiClient<Contracts extends readonly AnyContract[]>() {
   }
 
   // Alleen lokaal (ADR 0014): logt in als het seed-account van de rol; elders geeft de server 404.
-  async function devLoginAs(rol: 'user' | 'admin'): Promise<void> {
+  async function devLoginAs(rol: Role): Promise<void> {
     const response = await fetch('/api/dev/login-as', {
       method: 'POST',
       credentials: 'same-origin',

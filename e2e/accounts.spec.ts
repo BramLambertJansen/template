@@ -205,3 +205,22 @@ test('AC-8: buiten APP_ENV=local bestaat /api/dev/login-as niet', async ({ page,
 
   expect(response.status()).toBe(404);
 });
+
+test('dev-rolwisselaar: op elk scherm een tabje rechts dat een paneel met de rollen opent', async ({ page }) => {
+  const user = await createAccount('user');
+  await page.goto('/login');
+  const tab = page.getByRole('button', { name: 'Rol wisselen (alleen lokaal)' });
+  await expect(tab).toBeVisible();
+
+  await signIn(page, user);
+  await expect(heading(page)).toHaveText('Home');
+  await expect(tab).toBeVisible();
+  await tab.click();
+  const panel = page.getByRole('complementary', { name: 'Rol wisselen' });
+  await expect(panel.getByRole('button', { name: 'Gebruiker' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(panel.getByRole('button', { name: 'Beheerder' })).toHaveAttribute('aria-pressed', 'false');
+  await scanAxe(page);
+  await page.keyboard.press('Escape');
+  await expect(tab).toBeFocused();
+  await expect(tab).toHaveAttribute('aria-expanded', 'false');
+});
