@@ -195,7 +195,9 @@ Ankers: OWASP Top 10:2025, OWASP API Security Top 10, ASVS 5.0 niveau 1 (checkli
   - Geen overload van een security definer-functie (over alle migraties heen); zo klopt het koppelen van de eigenaar op naam.
   - Nooit `alter function … security definer`: definer-rechten ontstaan alleen bij `create`, waar search_path en namen gecontroleerd
     worden. `security definer` op een plek die `check-secdef` niet als `create` leest (een `do`-blok, dynamische SQL) faalt.
-  - Security definer-views (zoals `app.accounts`) controleert `check-secdef` nog niet (roadmap stuk 4).
+  - Een view zonder `security_invoker = true` leest met de rechten van zijn eigenaar (zoals `app.accounts`). `check-secdef` eist dan:
+    schema, `security_barrier`, namen met schema, een `where` die een functie uit schema `app` aanroept (het actorfilter) en eigenaar
+    `app_definer`. Een materialized view en `security_invoker` later uitzetten falen.
 - **Functiecatalogus** (pgTAP, ADR 0011): elke functie in `public` en `app` staat in een catalogus als `client` (uitvoerbaar voor `app_authenticated`)
   of `intern` (geen API-rol); de grants moeten bij die klasse passen, elke client-functie controleert de actor (`app.current_user_id()`)
   of heeft een vastgelegde reden waarom niet. Een nieuwe functie zonder klasse faalt.
