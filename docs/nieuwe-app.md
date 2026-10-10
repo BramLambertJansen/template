@@ -280,7 +280,13 @@ Controle: `git log --oneline --graph -5` toont een merge met twee ouders; `git d
 
 ### 5.2 Hernoemen
 
-Alleen deze bestanden:
+```bash
+pnpm app:init <slug> "<App-naam>" --dry-run   # toont welke bestanden het raakt
+pnpm app:init <slug> "<App-naam>"             # met --owner <login> als de owner niet bramlambertjansen is
+```
+
+Het script (`scripts/kit/app-init.mjs`) doet precies de tabel hieronder, plus de app-naam in `src/shared/app.ts` (mails) en
+`<title>` in `src/web/index.html` (paginatitel). Het draait één keer: een al hernoemde app weigert het. Wat het doet:
 
 | Bestand | Wijziging |
 |---|---|
