@@ -50,7 +50,7 @@ uitbreidingspunt gebruikt: ADR 0008.
 | Poort | Template levert | Per app te kiezen (ADR) | Voorbeeld |
 |---|---|---|---|
 | Postgres | Postgres 17 + pgTAP in Docker (`compose.yaml`), rollen via `db/init/`, migraties met dbmate | Beheerde Postgres | Supabase, Neon, RDS |
-| Frontend + API hosting | `vite build` (statisch) + `src/api/server.ts` | Host + adapter in `deploy/<host>/` | Vercel, Cloudflare, Fly |
+| Frontend + API hosting | `vite build` (statisch) + `src/api/server.ts`; containerimage die beide op één origin serveert (`Dockerfile`, ADR 0019) | Host + adapter in `deploy/<host>/` | Vercel, Cloudflare, Fly |
 | Auth | Better Auth in de API op de eigen Postgres (ADR 0003) | Alleen bij ADR: externe provider | — |
 | E-mail | Mailpit in Docker | SMTP-dienst | — |
 | Fouttracking | Eigen tabel via `reportClientError()` | Optionele dienst | Sentry |
@@ -205,7 +205,7 @@ Ankers: OWASP Top 10:2025, OWASP API Security Top 10, ASVS 5.0 niveau 1 (checkli
 - **Limieten één keer**: harde grenzen in `src/core/shared/limits.ts`, app-grenzen in `src/shared/limits.ts` (ADR 0008); een CHECK-constraint met dezelfde waarde krijgt een gelijkheidstest.
 - **Resourceverbruik (API4)**: `bodyLimit` op de Hono-app, maximale paginagrootte in `limits.ts`, database-timeouts (hierboven).
 - **Verharding**: rate limit op dure routes en op inloggen/reset (in de API, opslag in de database, IP alleen uit een door de host gezette header); CAPTCHA op aanmelden/reset in staging en productie (lokaal uit, want offline);
-  headers (CSP, HSTS, nosniff, Referrer-Policy) zet de statische host voor de SPA en `secureHeaders()` voor `/api`; lokaal zet Vite dezelfde headers zodat e2e met CSP draait;
+  headers (CSP, HSTS, nosniff, Referrer-Policy) komen uit `src/core/api/http/security-headers.ts`: de server met `WEB_DIR` (ADR 0019) of de statische host zet ze voor de SPA, `secureHeaders()` voor `/api`; lokaal zet Vite dezelfde headers zodat e2e met CSP draait;
   CSP volledig uitgeschreven: `default-src 'self'`; `script-src 'self'` plus CAPTCHA-domein; `frame-src` CAPTCHA-domein; `connect-src 'self'`; `style-src 'self'` (geen nonce mogelijk bij een statische SPA; wat componenten inline zetten, wordt in e2e met CSP aan ontdekt en per ADR toegestaan); `img-src 'self' data:`; `frame-ancestors 'none'`; `base-uri 'self'`; `form-action 'self'`; `object-src 'none'`; e2e draait met CSP aan
   (verwacht: Radix Dialog zet een inline `<style>`, dat vraagt een ADR of een andere scroll-lock); HSTS, nosniff, Referrer-Policy;
   service worker cachet nooit `/api/*`; één `onError` die `{ code, requestId }` teruggeeft, nooit stacktraces of SQL;
