@@ -24,7 +24,9 @@ Een ADR met status `voorgesteld` is geen besluit; afvinken gebeurt pas als de ei
       systeemjobs (framework §6); keuze tussen worker in het proces, queue in Postgres of cron van de host — ADR (bouwen: stuk 7)
 - [x] Taal: alleen Nederlands, teksten in `src/web/copy` en `src/core/web/copy`; geen meertaligheid in de template (besluit eigenaar 2026-10-10)
 - [ ] Audit log van admin-acties (rol toekennen, uitnodigen, blokkeren) standaard in core, in plaats van "op aanleiding" (framework §12) — ADR
+      Voorstel: ADR 0021 (`voorgesteld`, OV-1..7)
 - [ ] AVG: wat de template levert voor inzage, verwijderen en bewaartermijnen van persoonsgegevens (mechanisme in core, inhoud per app) — ADR
+      Voorstel: ADR 0022 (`voorgesteld`)
 - [ ] Ontwikkelplatform: alleen Ubuntu/WSL2, of ook macOS (sandbox, `scripts/bootstrap.sh`, `scripts/doctor.sh`)
 
 ## Fase 0 — Bewijs
