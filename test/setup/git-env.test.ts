@@ -10,3 +10,10 @@ test('tijdens de tests staat geen repo-variabele van git in process.env', () => 
   expect(names).toContain('GIT_DIR');
   expect(names.filter((name) => process.env[name] !== undefined)).toStrictEqual([]);
 });
+
+// In de runner (ADR 0009) bestaat git niet; de setup mag de integratietests dan niet laten falen.
+test('zonder git op het PATH slaagt de setup', () => {
+  expect(() =>
+    execFileSync(process.execPath, ['test/setup/git-env.ts'], { env: { PATH: '' }, stdio: 'pipe' }),
+  ).not.toThrow();
+});
