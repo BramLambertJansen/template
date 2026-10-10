@@ -10,6 +10,8 @@ test-results/
 !.env.example
 .DS_Store
 .claude/settings.local.json
+# Worktrees van subagents (Claude Code); elk een eigen kopie van de repo.
+.claude/worktrees/
 mise.local.toml
 blob-report/
 .runner-output/

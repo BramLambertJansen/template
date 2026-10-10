@@ -1,5 +1,7 @@
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { expect, test } from 'vitest';
 
 // Het echte hook-script (.claude/hooks/rolhek.mjs) met echte stdin-payloads: exitcode en uitvoer zoals Claude Code ze leest.
@@ -46,6 +48,23 @@ test('bestaande test wijzigen: door, met context voor de PR', () => {
 
 test('gewoon commando: door, zonder uitvoer', () => {
   expect(run(bash('ls'))).toStrictEqual({ status: 0, stdout: '', stderr: '' });
+});
+
+// ADR 0016 (gevolgen): paden tellen vanaf de git-root van de sessie (een worktree), niet vanaf CLAUDE_PROJECT_DIR. Vanaf
+// CLAUDE_PROJECT_DIR lag src/core/ van de worktree buiten de repo (of onder .claude/**) en klopte het oordeel niet.
+test('in een andere worktree: src/core/ van die worktree is een gate (ask)', () => {
+  const worktree = mkdtempSync(path.join(tmpdir(), 'rolhek-worktree-'));
+  spawnSync('git', ['init', '-q'], { cwd: worktree });
+  cpSync('.claude/gates.json', path.join(worktree, '.claude/gates.json'));
+  const payload = JSON.stringify({
+    tool_name: 'Write',
+    tool_input: { file_path: path.join(worktree, 'src/core/x.ts'), content: 'export {};\n' },
+    cwd: worktree,
+  });
+  const result = run(payload);
+
+  expect(result.status).toBe(0);
+  expect(JSON.parse(result.stdout)).toMatchObject({ hookSpecificOutput: { permissionDecision: 'ask' } });
 });
 
 test('kapotte invoer: faalt dicht (exit 2)', () => {
