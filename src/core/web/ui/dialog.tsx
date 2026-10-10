@@ -19,6 +19,8 @@ interface DialogProps {
   readonly variant?: 'modal' | 'sheet';
   readonly children: ReactNode;
   readonly footer?: ReactNode;
+  // false: Esc en de sluitknop doen niets (bijv. terwijl een bevestigde actie loopt).
+  readonly dismissible?: boolean;
 }
 
 // Openen en sluiten via CSS-overgangen; bij prefers-reduced-motion zijn ze ingekort (styles/index.css).
@@ -39,9 +41,12 @@ function useModal(open: boolean) {
     if (dialog === null) return;
     if (open && !dialog.open) {
       dialog.showModal();
-      // Focus op het eerste veld (spec accountbeheer). React's autoFocus vuurt vóór showModal, als de dialoog nog dicht is,
-      // en zonder veld kiest showModal zelf (de sluitknop).
-      dialog.querySelector<HTMLElement>('input, select, textarea')?.focus();
+      // Focus op een element met data-autofocus (ConfirmDialog: "Annuleren"), anders op het eerste veld (spec accountbeheer).
+      // React's autoFocus vuurt vóór showModal, als de dialoog nog dicht is, en zonder veld kiest showModal zelf (de sluitknop).
+      (
+        dialog.querySelector<HTMLElement>('[data-autofocus]') ??
+        dialog.querySelector<HTMLElement>('input, select, textarea')
+      )?.focus();
     }
     if (!open && dialog.open) dialog.close();
   }, [open]);
@@ -57,6 +62,7 @@ export function Dialog({
   variant = 'modal',
   children,
   footer,
+  dismissible = true,
 }: DialogProps) {
   const ref = useModal(open);
   const id = useId();
@@ -70,9 +76,12 @@ export function Dialog({
       onClose={() => {
         onOpenChange(false);
       }}
+      onCancel={(event) => {
+        if (!dismissible) event.preventDefault();
+      }}
       // Een klik op de backdrop heeft de <dialog> zelf als doel; binnen de sheet is het doel altijd een kind.
       onClick={(event) => {
-        if (sheet && event.target === event.currentTarget) onOpenChange(false);
+        if (dismissible && sheet && event.target === event.currentTarget) onOpenChange(false);
       }}
       className={cn('p-0 shadow-lg', variantClasses[variant])}
     >
@@ -97,6 +106,7 @@ export function Dialog({
               variant="ghost"
               size="icon"
               aria-label={closeLabel}
+              disabled={!dismissible}
               onClick={() => {
                 onOpenChange(false);
               }}

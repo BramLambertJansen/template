@@ -11,6 +11,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
+  ConfirmDialog,
   Dialog,
   DropdownMenu,
   Form,
@@ -68,6 +69,32 @@ function FormExample() {
         )}
       </FormField>
     </Form>
+  );
+}
+
+function ConfirmDialogExample() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button
+        variant="destructive"
+        onClick={() => {
+          setOpen(true);
+        }}
+      >
+        Account blokkeren
+      </Button>
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Account blokkeren?"
+        description="Een voorbeeld: de focus staat op Annuleren, de actie is rood."
+        confirmLabel="Blokkeren"
+        onConfirm={() => {
+          setOpen(false);
+        }}
+      />
+    </>
   );
 }
 
@@ -195,6 +222,10 @@ export function DesignSystemPage() {
 
       <Section title="Dialog">
         <DialogExample />
+      </Section>
+
+      <Section title="ConfirmDialog">
+        <ConfirmDialogExample />
       </Section>
 
       <Section title="DropdownMenu">

@@ -63,6 +63,23 @@ test('dialoog: focus erin, Esc sluit, focus terug op de knop', async ({ page }) 
   expect(csp).toStrictEqual([]);
 });
 
+test('bevestigen: focus op Annuleren, Enter annuleert, focus terug op de knop', async ({ page }) => {
+  const csp = collectCspViolations(page);
+  await signInAsAdmin(page);
+  await page.goto('/design-system');
+  const opener = page.getByRole('button', { name: 'Account blokkeren' });
+
+  await opener.click();
+  const dialog = page.getByRole('dialog', { name: 'Account blokkeren?' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Annuleren' })).toBeFocused();
+  await scanAxe(page);
+  await page.keyboard.press('Enter');
+  await expect(dialog).toBeHidden();
+  await expect(opener).toBeFocused();
+  expect(csp).toStrictEqual([]);
+});
+
 test('menu: met het toetsenbord open, Esc sluit, focus terug op de knop', async ({ page }) => {
   const csp = collectCspViolations(page);
   await signInAsAdmin(page);
