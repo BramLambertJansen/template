@@ -19,4 +19,5 @@ export { QrCode } from '#core/web/ui/qr-code.tsx';
 export { Select, type SelectOption } from '#core/web/ui/select.tsx';
 export { Sidebar, visibleNavItems, type NavItem } from '#core/web/ui/sidebar.tsx';
 export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '#core/web/ui/table.tsx';
+export { ThemeToggle } from '#core/web/ui/theme-toggle.tsx';
 export { Topbar } from '#core/web/ui/topbar.tsx';

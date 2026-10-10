@@ -3,10 +3,10 @@ import { can } from '#shared/permissions.ts';
 import { copy } from '#web/copy/ui.ts';
 import { navItems } from '#web/lib/nav.ts';
 import { actorFromMe } from '#web/lib/session.ts';
-import { AppShell, visibleNavItems, type MenuItem } from '#web/ui/index.ts';
+import { AppShell, ThemeToggle, visibleNavItems, type MenuItem } from '#web/ui/index.ts';
 import { useLogout, useMe } from '../session/queries.ts';
 
-// Layout voor ingelogde schermen (spec accountbeheer): sidebar per rol, profielmenu met "Uitloggen".
+// Layout voor ingelogde schermen (spec accountbeheer): sidebar per rol, themaschakelaar en profielmenu met "Uitloggen".
 export function AppLayout() {
   const me = useMe();
   const logout = useLogout();
@@ -21,7 +21,12 @@ export function AppLayout() {
     },
   ];
   return (
-    <AppShell nav={visibleNavItems(navItems, actorFromMe(me.data), can)} userName={me.data.naam} menuItems={menuItems}>
+    <AppShell
+      nav={visibleNavItems(navItems, actorFromMe(me.data), can)}
+      userName={me.data.naam}
+      menuItems={menuItems}
+      topbarActions={<ThemeToggle />}
+    >
       <Outlet />
     </AppShell>
   );

@@ -270,3 +270,25 @@ test('smal scherm: het hoofdmenu schuift vanaf links over het scherm; Esc, de st
   await expect(sheet).toBeHidden();
   expect(csp).toStrictEqual([]);
 });
+
+test('themaschakelaar in de topbalk: donker blijft na herladen, axe in donker; lokaal een link naar het design system', async ({
+  page,
+}) => {
+  const csp = collectCspViolations(page);
+  const admin = await createAccount('admin', { totp: true });
+  await signInAsAdmin(page, admin);
+  const toggle = page.getByRole('banner').getByRole('button', { name: 'Donker thema' });
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+
+  await toggle.click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await axeAtBothWidths(page);
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.getByRole('link', { name: 'Design system' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Design system' })).toBeVisible();
+  expect(csp).toStrictEqual([]);
+});

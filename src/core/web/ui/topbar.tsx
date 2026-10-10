@@ -19,14 +19,17 @@ interface TopbarProps {
   readonly menuItems: readonly MenuItem[];
   // Links in de balk, bijv. de menuknop op smalle schermen (AppShell).
   readonly start?: ReactNode;
+  // Rechts, vóór het profielmenu: bijv. de themaschakelaar (AppShell).
+  readonly actions?: ReactNode;
 }
 
 // Profielmenu rechts (spec accountbeheer: knop met initialen, toegankelijke naam "Profielmenu").
-export function Topbar({ userName, menuItems, start }: TopbarProps) {
+export function Topbar({ userName, menuItems, start, actions }: TopbarProps) {
   return (
     <header className="flex min-h-14 items-center gap-2 border-b bg-background px-3">
       {start}
-      <div className="ms-auto">
+      <div className="ms-auto flex items-center gap-1">
+        {actions}
         <DropdownMenu
           items={menuItems}
           trigger={

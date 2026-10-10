@@ -27,6 +27,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  ThemeToggle,
   useZodForm,
 } from '#web/ui/index.ts';
 
@@ -130,19 +131,11 @@ const nav = [
 ] as const;
 
 export function DesignSystemPage() {
-  const [dark, setDark] = useState(false);
-  const toggleTheme = () => {
-    document.documentElement.dataset['theme'] = dark ? 'light' : 'dark';
-    setDark(!dark);
-  };
-
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-10 p-4 md:p-8">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-3xl font-semibold">Design system</h1>
-        <Button variant="outline" onClick={toggleTheme} aria-pressed={dark}>
-          Donker thema
-        </Button>
+        <ThemeToggle />
       </header>
 
       <Section title="Button">

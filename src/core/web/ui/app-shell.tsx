@@ -11,12 +11,14 @@ interface AppShellProps {
   readonly nav: readonly NavItem<string>[];
   readonly userName: string;
   readonly menuItems: readonly MenuItem[];
+  // In de topbalk, vóór het profielmenu (bijv. <ThemeToggle />).
+  readonly topbarActions?: ReactNode;
   readonly children: ReactNode;
 }
 
 // Layout voor ingelogde schermen: sidebar links (vanaf md), topbar met profielmenu, inhoud. Op smalle schermen opent de
 // menuknop dezelfde navigatie in een sheet die vanaf links over het scherm schuift. Breakpoints in CSS, geen matchMedia (framework §7).
-export function AppShell({ nav, userName, menuItems, children }: AppShellProps) {
+export function AppShell({ nav, userName, menuItems, topbarActions, children }: AppShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButton = (
     <Button
@@ -38,7 +40,7 @@ export function AppShell({ nav, userName, menuItems, children }: AppShellProps) 
         <Sidebar items={nav} />
       </aside>
       <div className="flex min-w-0 flex-col">
-        <Topbar userName={userName} menuItems={menuItems} start={menuButton} />
+        <Topbar userName={userName} menuItems={menuItems} start={menuButton} actions={topbarActions} />
         <main className="min-w-0 flex-1 p-4 md:p-6">{children}</main>
       </div>
       <Dialog
