@@ -11,6 +11,7 @@ import { AppError, statusFor } from '../errors.ts';
 import { z } from 'zod';
 import { ROLES, type Role } from '../../shared/can.ts';
 import type { Contract } from '../../shared/contract.ts';
+import { requestLog, timeDatabase, type RequestLog } from '../obs/request-log.ts';
 import { isRouteDef, type RouteDef } from '../route/kit.ts';
 import { csrf } from './csrf.ts';
 
@@ -29,6 +30,8 @@ interface BaseConfig<Services> {
   readonly devLogin?: DevLogin;
   // Foutcodes die naar buiten mogen; een onbekende code wordt INTERNAL_ERROR.
   readonly errors?: ErrorRegistry<string>;
+  // Eén regel per request (src/core/api/obs); server.ts geeft writeJsonLine mee, zonder waarde logt de app niets.
+  readonly log?: RequestLog;
 }
 
 // Wat handlers via ctx.services krijgen (bijv. uitnodigen via Better Auth): verplicht zodra de app een Services-type kiest
@@ -65,31 +68,35 @@ function routeHandler<Services>(
     const { session, setCookie } = await auth.getSession(c.req.raw.headers);
     for (const cookie of setCookie) c.header('set-cookie', cookie, { append: true });
     if (session === null) throw new AppError('UNAUTHENTICATED');
+    const facts = c.get('requestFacts');
+    if (facts !== undefined) facts.userId = session.userId;
     const parsed = contract.input.safeParse(await readInput(c, contract.method));
     if (!parsed.success) throw new AppError('VALIDATION');
     const actor = { userId: session.userId, sessionStrength: session.sessionStrength };
-    const output = await withUser(
-      actor,
-      async (tx, { role }) => {
-        // Geen rol in user_roles = geen toegang (framework §6: de rol komt per request uit de database).
-        if (role === null) throw new AppError('FORBIDDEN');
-        const decision = route.check({ role, sessionStrength: session.sessionStrength });
-        if (!decision.ok) throw new AppError(decision.code);
-        const services = unsafeCast<Services>(
-          config.services,
-          'AppConfig eist services zodra Services geen undefined toelaat; anders is undefined een geldige waarde',
-        );
-        const result = await route.handler({ input: parsed.data, actor: { ...session, role }, tx, services });
-        // Een output die niet bij het contract past, is een bug: INTERNAL_ERROR, nooit de data.
-        return contract.output.parse(result);
-      },
-      { readOnly: contract.method === 'GET' },
+    const output = await timeDatabase(facts, () =>
+      withUser(
+        actor,
+        async (tx, { role }) => {
+          // Geen rol in user_roles = geen toegang (framework §6: de rol komt per request uit de database).
+          if (role === null) throw new AppError('FORBIDDEN');
+          const decision = route.check({ role, sessionStrength: session.sessionStrength });
+          if (!decision.ok) throw new AppError(decision.code);
+          const services = unsafeCast<Services>(
+            config.services,
+            'AppConfig eist services zodra Services geen undefined toelaat; anders is undefined een geldige waarde',
+          );
+          const result = await route.handler({ input: parsed.data, actor: { ...session, role }, tx, services });
+          // Een output die niet bij het contract past, is een bug: INTERNAL_ERROR, nooit de data.
+          return contract.output.parse(result);
+        },
+        { readOnly: contract.method === 'GET' },
+      ),
     );
     return c.json(output);
   };
 }
 
-// Vaste volgorde (framework §6): requestId, secureHeaders, CSRF, bodyLimit, routes; één onError en notFound met alleen
+// Vaste volgorde (framework §6): requestId, request-log (als log is meegegeven), secureHeaders, CSRF, bodyLimit, routes; één onError en notFound met alleen
 // `{ code, requestId }`. De health-route is de publieke uitzondering uit framework §3.
 const devLoginInput = z.object({ rol: z.enum(ROLES) }).strict();
 
@@ -104,9 +111,9 @@ export function createApp<Services>(config: BaseConfig<Services> & { readonly se
   const core: readonly string[] = coreErrorCodes;
   const isPublic = (code: string) => config.errors?.is(code) ?? core.includes(code);
 
-  const app = new Hono()
-    .basePath('/api')
-    .use(requestId())
+  const app = new Hono().basePath('/api').use(requestId());
+  if (config.log !== undefined) app.use(requestLog(config.log));
+  app
     .use(secureHeaders())
     .use(csrf(config.appOrigin))
     .use(bodyLimit({ maxSize: MAX_BODY_BYTES, onError: (c) => fail(c, 'PAYLOAD_TOO_LARGE') }))
