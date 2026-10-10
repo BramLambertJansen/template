@@ -165,7 +165,8 @@ Elke app heeft dit nodig, dus het hoort in de template. Elk punt eerst een spec.
       `HEADING_WAIT_MS` (2 s), of het pad naar `resolvedLocation` loopt anders. Eerst reproduceren met een trace
       (`pnpm ui:check`), dan pas repareren
 - [ ] Rate limit voor app-routes in `defineRoute` (nu alleen in Better Auth), met grenzen uit `limits.ts` en foutcode `RATE_LIMITED`
-- [ ] Mail-layout in core: één basissjabloon (HTML en platte tekst, afzender, voettekst) met snapshot-test; uitnodiging gebruikt hem
+- [x] Mail-layout in core: één basissjabloon (HTML en platte tekst, afzender, voettekst) met snapshot-test; uitnodiging gebruikt hem
+      (`src/core/api/mail/layout.ts`, escaping en alleen http(s)-links getest)
 - [ ] Versie en build-SHA in `GET /api/health` en onderaan in de app
 - [ ] `favicon` en app-icoon, `robots.txt` (standaard `noindex`), `/.well-known/security.txt`
 
