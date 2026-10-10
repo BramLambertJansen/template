@@ -161,7 +161,8 @@ Elke app heeft dit nodig, dus het hoort in de template. Elk punt eerst een spec.
 - [ ] Rate limit voor app-routes in `defineRoute` (nu alleen in Better Auth), met grenzen uit `limits.ts` en foutcode `RATE_LIMITED`
 - [ ] Mail-layout in core: één basissjabloon (HTML en platte tekst, afzender, voettekst) met snapshot-test; uitnodiging gebruikt hem
 - [ ] Versie en build-SHA in `GET /api/health` en onderaan in de app
-- [ ] `favicon` en app-icoon, `robots.txt` (standaard `noindex`), `/.well-known/security.txt`
+- [x] `favicon` (`src/web/public/favicon.svg`), `robots.txt` en `<meta name="robots">` (standaard `noindex`) (`test/ui/public.test.ts`)
+- [ ] `/.well-known/security.txt`: vraagt een contactadres per app (eigenaar)
 
 **Klaar als:** unit, pgTAP (elke policy op naam plus de invarianten), integratie, racetest "rol toekennen", e2e per rol en axe op 375 en
 1280 px groen (uitvoer); een test per verboden rol per route; een test bewijst dat een app een permissie, foutcode en componentvariant
@@ -224,7 +225,7 @@ code uit `pnpm new:resource` haalt `gate:fast`; drie testopdrachten door de hele
 - [ ] Pushen met het App-token zonder het token van de eigenaar in de agent-omgeving (`docs/operations/`); daarna `denyRead` op `~/.config/gh`
 - [ ] `pnpm app:init <slug> "<App-naam>"`: de handstappen uit `docs/nieuwe-app.md` (naam, README, titel) als script met test; de template-sectie verdwijnt
 - [ ] Template-versie: tag per template-release, de app legt de versie vast, upgrade-notities bij breaking changes in `CHANGELOG.md` (ADR 0006)
-- [ ] `.vscode/extensions.json` en `.vscode/settings.json` (ESLint, Prettier, Tailwind), gelijk aan de gates
+- [x] `.vscode/extensions.json` en `.vscode/settings.json` (ESLint, Prettier, Tailwind), gelijk aan de gates
 - [ ] `LICENSE`: eigendom en geen open-source-licentie
 - [ ] Proef-app: een app via `docs/nieuwe-app.md`, daarna één echte template-update (`git merge template/main`) via een PR.
       Conflicten en handwerk vastleggen; wat terugkomt, wordt een regel of script in de template (ADR 0006)
