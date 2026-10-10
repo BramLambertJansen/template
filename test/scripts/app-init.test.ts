@@ -68,6 +68,17 @@ describe('planAppInit', () => {
     expect(readFileSync(path.join(dir, 'package.json'), 'utf8')).toContain('"name": "app-template"');
   });
 
+  test('--owner mag ook een team zijn', () => {
+    const codeowners = changed(planAppInit(copy(), { ...options, owner: 'acme/beheer' }), '.github/CODEOWNERS');
+    expect(codeowners).toContain('/AGENTS.md                @acme/beheer');
+  });
+
+  test('een README die anders begint, weigert hij in plaats van blind te overschrijven', () => {
+    const dir = copy();
+    writeFileSync(path.join(dir, 'README.md'), '# App-template\n[![badge](x)](y)\nFundering\n');
+    expect(() => planAppInit(dir, options)).toThrow(/README\.md: begint niet met/);
+  });
+
   test('--owner vervangt de handle in CODEOWNERS', () => {
     const codeowners = changed(planAppInit(copy(), { ...options, owner: 'acme-team' }), '.github/CODEOWNERS');
     expect(codeowners).toContain('/AGENTS.md                @acme-team');
@@ -86,6 +97,7 @@ describe('planAppInit', () => {
     ['naam met <', { name: '<b>Uren</b>' }],
     ['geen git-hash', { sha: 'main' }],
     ['ongeldige owner', { owner: 'a b' }],
+    ['naam met backslash', { name: 'Uren\\' }],
   ])('weigert: %s', (_case, override) => {
     expect(() => planAppInit(copy(), { ...options, ...override })).toThrow(AppInitError);
   });
