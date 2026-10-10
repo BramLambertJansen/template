@@ -165,7 +165,7 @@ de bewaker houdt een afgezwakt check-script tegen; regels zonder check staan met
 - [x] Vijf subagents (architect, developer, tester sonnet, reviewer opus, docs) met `model`, `maxTurns`, "eerst de feiten" (#42)
 - [x] Skills (spec, nieuw-route, nieuw-scherm, nieuw-component, migratie, release, security-review) met `!`-injectie uit `scripts/kit/feiten.mjs`
       (routes, permissies, foutcodes, componenten) (#42; `release` volgt in fase 3)
-- [ ] `pnpm new:resource <naam>` afgeleid uit het gouden pad (uit fase 2)
+- [x] `pnpm new:resource <naam>` afgeleid uit het gouden pad (ADR 0016): spec-skelet, daarna werkstraat-stap 2 met 501-handlers; `check:new-resource` als eigen CI-job
 
 **Klaar als:** per hook een tabeltest die hem met echte invoer aanroept en de exitcode controleert (blokkeert wat moet, laat door wat mag), groen;
 code uit `pnpm new:resource` haalt `gate:fast`; drie testopdrachten door de hele werkstraat met per opdracht: ingegrepen hook of check, aantal beurten, correcties van de eigenaar.

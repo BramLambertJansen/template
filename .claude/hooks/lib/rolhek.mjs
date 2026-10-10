@@ -327,6 +327,16 @@ function reviewerMay(argv, redirects) {
 }
 
 /**
+ * De generator via het script of rechtstreeks met node.
+ * @param {string} program
+ * @param {readonly string[]} args
+ */
+function isNewResource(program, args) {
+  if (program === 'pnpm') return args[0] === 'new:resource' || (args[0] === 'run' && args[1] === 'new:resource');
+  return program === 'node' && args.some((arg) => /(?:^|\/)scripts\/kit\/new-resource\.mjs$/.test(arg));
+}
+
+/**
  * Wat voor elke rol verboden is (zelfreview, hooks overslaan, push naar main), plus wat alleen een subagent niet mag.
  * @param {{ assignments: string[], argv: string[] }} command
  * @param {{ role: string, ctx: Ctx }} who
@@ -338,6 +348,8 @@ function forbidden({ assignments, argv }, { role, ctx }, decision) {
   if (lefthook !== undefined) decision.deny.push(`${lefthook}: git-hooks overslaan is verboden (AGENTS.md)`);
   if (program === 'git') decision.deny.push(...gitForbidden(args, { role, branch: ctx.branch }));
   if (program === 'gh') decision.deny.push(...ghForbidden(args, role));
+  if (role !== 'hoofdsessie' && isNewResource(program, args))
+    decision.deny.push('pnpm new:resource: alleen de hoofdsessie (ADR 0016, OV-4); wat hij schrijft, ziet het rolhek niet');
 }
 
 /**

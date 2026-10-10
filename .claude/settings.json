@@ -58,6 +58,8 @@
       "Bash(pnpm db:types *)",
       "Bash(pnpm ui:check *)",
       "Bash(pnpm gate:slow *)",
+      "Bash(pnpm new:resource *)",
+      "Bash(pnpm run new:resource *)",
       "Bash(sed -i *)",
       "Bash(perl -pi *)",
       "Edit(AGENTS.md)",
