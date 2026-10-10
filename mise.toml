@@ -6,3 +6,5 @@ pnpm = "11"
 dbmate = "2.36.0"
 # Secret scanning (framework §6) in pre-commit en CI, altijd met -c scripts/kit/betterleaks.toml.
 betterleaks = "1.9.0"
+# Bekende kwetsbaarheden in pnpm-lock.yaml (framework §6), lokaal en in .github/workflows/osv.yml, altijd met osv-scanner.toml.
+osv-scanner = "2.6.0"
