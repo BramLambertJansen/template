@@ -64,6 +64,45 @@ export function devOnlyModules(): Plugin {
   };
 }
 
+// Lokaal moet de pagina op APP_ORIGIN openen: vanaf een ander adres (de 127.0.0.1-link die Vite zelf toont, een netwerk-IP)
+// weigeren de CSRF-controle en Better Auth elke POST ("je verzoek is geweigerd"). Een GET op een ander adres gaat daarom
+// met een redirect naar APP_ORIGIN; de terminal toont die link erbij.
+export function redirectToAppOrigin(
+  request: {
+    readonly method?: string | undefined;
+    readonly host?: string | undefined;
+    readonly url?: string | undefined;
+  },
+  appOrigin: string,
+): string | null {
+  const target = new URL(appOrigin);
+  if (request.method !== 'GET' || request.host === undefined || request.host === target.host) return null;
+  return new URL(request.url ?? '/', target).href;
+}
+
+function sameOriginAsApp(appOrigin: string): Plugin {
+  return {
+    name: 'same-origin-as-app',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const location = redirectToAppOrigin({ method: req.method, host: req.headers.host, url: req.url }, appOrigin);
+        if (location === null) {
+          next();
+          return;
+        }
+        res.writeHead(307, { location });
+        res.end();
+      });
+      server.httpServer?.once('listening', () => {
+        server.config.logger.info(
+          `\n  → Open ${appOrigin} (APP_ORIGIN); een ander adres wordt daarheen doorgestuurd.\n`,
+        );
+      });
+    },
+  };
+}
+
 export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, import.meta.dirname, '');
   const webPort = Number(env['WEB_PORT'] ?? '5173');
@@ -81,6 +120,7 @@ export default defineConfig(({ command, mode }) => {
     // Bestandsroutes (framework §5): de plugin schrijft src/web/routeTree.gen.ts (gegenereerd, wel gecommit voor typecheck).
     plugins: [
       devOnlyModules(),
+      ...(env['APP_ORIGIN'] === undefined ? [] : [sameOriginAsApp(env['APP_ORIGIN'])]),
       tanstackRouter({
         target: 'react',
         routesDirectory: path.join(import.meta.dirname, 'src/web/routes'),
