@@ -79,6 +79,14 @@ describe('planAppInit', () => {
     expect(() => planAppInit(dir, options)).toThrow(/README\.md: begint niet met/);
   });
 
+  test('--owner zonder template-handle in CODEOWNERS: fout in plaats van stil niets', () => {
+    const dir = copy();
+    writeFileSync(path.join(dir, '.github/CODEOWNERS'), '/AGENTS.md @iemand-anders\n');
+    expect(() => planAppInit(dir, { ...options, owner: 'acme' })).toThrow(
+      /CODEOWNERS: @bramlambertjansen niet gevonden/,
+    );
+  });
+
   test('--owner vervangt de handle in CODEOWNERS', () => {
     const codeowners = changed(planAppInit(copy(), { ...options, owner: 'acme-team' }), '.github/CODEOWNERS');
     expect(codeowners).toContain('/AGENTS.md                @acme-team');

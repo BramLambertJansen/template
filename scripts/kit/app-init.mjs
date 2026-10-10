@@ -109,10 +109,10 @@ export function planAppInit(root, options) {
     },
   ];
   if (options.owner !== undefined) {
-    plan.push({
-      pad: '.github/CODEOWNERS',
-      inhoud: read('.github/CODEOWNERS').replaceAll(TEMPLATE_OWNER, `@${options.owner}`),
-    });
+    const codeowners = read('.github/CODEOWNERS');
+    if (!codeowners.includes(TEMPLATE_OWNER))
+      throw new AppInitError(`.github/CODEOWNERS: ${TEMPLATE_OWNER} niet gevonden`);
+    plan.push({ pad: '.github/CODEOWNERS', inhoud: codeowners.replaceAll(TEMPLATE_OWNER, `@${options.owner}`) });
   }
   return plan;
 }
