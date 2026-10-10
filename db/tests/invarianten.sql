@@ -123,7 +123,7 @@ create function pg_temp.eigenaartabellen() returns setof text language sql stabl
       where i.indrelid = t.oid and a.attname = 'owner_id'
     )
   ) overtredingen (regel)
-  order by 1 collate "C"
+  order by regel collate "C"
 $$;
 
 select is(array(select pg_temp.zonder_rls()), '{}'::text[], 'elke tabel in public en app heeft RLS aan en geforceerd');
@@ -179,7 +179,7 @@ select is(
 -- kolomrechten alleen op een veld, de vier policies en de index (het patroon van pnpm new:resource) is hij in orde.
 create table public.invariant_owner_probe (
   id uuid primary key default gen_random_uuid(),
-  owner_id text not null default app.current_user_id(),
+  owner_id text not null,
   created_at timestamptz not null default now(),
   notitie text
 );
