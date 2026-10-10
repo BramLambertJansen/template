@@ -33,3 +33,15 @@ describe('GET /api/ready (readiness, framework §3)', () => {
     expect(response.status).toBe(404);
   });
 });
+
+describe('requestId (ADR 0021)', () => {
+  test('de server maakt hem zelf: een X-Request-Id van de client wordt genegeerd', async () => {
+    const response = await request(createApp(), '/api/bestaat-niet', {
+      headers: { 'X-Request-Id': 'door-de-client-gekozen' },
+    });
+    const body: unknown = await response.json();
+    const id = response.headers.get('x-request-id');
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(body).toEqual({ code: 'NOT_FOUND', requestId: id });
+  });
+});
