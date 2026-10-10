@@ -40,7 +40,9 @@ export const copy = {
   nav: { home: 'Home', dashboard: 'Dashboard' },
   menu: { logout: 'Uitloggen' },
   home: { title: 'Home' },
-  dashboard: { title: 'Dashboard', accounts: 'Accounts' },
+  dashboard: { title: 'Dashboard', accounts: 'Accounts', designSystem: 'Design system' },
+  // Spec design-system: de paginatitel; de voorbeeldteksten staan bij de catalogus.
+  designSystem: { title: 'Design system' },
   accounts: {
     title: 'Accounts',
     name: 'Naam',

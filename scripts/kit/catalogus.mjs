@@ -6,15 +6,21 @@ import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 const BARREL = 'src/web/ui/index.ts';
-const CATALOGUS = 'src/web/dev/design-system-page.tsx';
+const CATALOGUS = 'src/web/features/design-system/design-system-page.tsx';
 
 /** @type {Readonly<Record<string, string>>} */
 export const UITZONDERINGEN = {
+  AppShell:
+    'de catalogus staat zelf in de AppShell; een tweede zou een tweede main en navigatie "Hoofdmenu" geven (spec design-system, OV-5)',
+  CenteredCard:
+    'layoutblok voor een heel scherm met een eigen main en h1; binnen de AppShell zouden er twee zijn. Te zien op /login (besluit eigenaar 2026-10-10)',
   AsyncView: 'vraagt een echte query (useQuery alleen in queries.ts); in gebruik op /admin/accounts',
   ErrorTextsProvider: 'context zonder eigen weergave',
-  NavLink: 'staat in de sectie AppShell (Sidebar)',
-  Sidebar: 'staat in de sectie AppShell; los zou er een tweede navigatie "Hoofdmenu" zijn',
-  Topbar: 'staat in de sectie AppShell; los zou er een tweede knop "Profielmenu" zijn',
+  NavLink: 'staat in de Sidebar van de AppShell om de catalogus heen',
+  Sidebar: 'staat in de AppShell om de catalogus heen; los zou er een tweede navigatie "Hoofdmenu" zijn',
+  ThemeToggle:
+    'staat in de topbalk van de AppShell om de catalogus heen; een tweede zou een tweede knop "Donker thema" met eigen staat geven (besluit eigenaar 2026-10-10)',
+  Topbar: 'staat in de AppShell om de catalogus heen; los zou er een tweede knop "Profielmenu" zijn',
 };
 
 /**

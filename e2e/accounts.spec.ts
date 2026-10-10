@@ -271,7 +271,7 @@ test('smal scherm: het hoofdmenu schuift vanaf links over het scherm; Esc, de st
   expect(csp).toStrictEqual([]);
 });
 
-test('themaschakelaar in de topbalk: donker blijft na herladen, axe in donker; lokaal een link naar het design system', async ({
+test('themaschakelaar in de topbalk: donker blijft na herladen, axe in donker; een link naar het design system, geen sidebar-item', async ({
   page,
 }) => {
   const csp = collectCspViolations(page);
@@ -288,7 +288,11 @@ test('themaschakelaar in de topbalk: donker blijft na herladen, axe in donker; l
   await axeAtBothWidths(page);
 
   await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(
+    page.getByRole('navigation', { name: 'Hoofdmenu' }).getByRole('link', { name: 'Design system' }),
+  ).toHaveCount(0);
   await page.getByRole('link', { name: 'Design system' }).click();
+  await expect(page).toHaveURL(/\/design-system$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Design system' })).toBeVisible();
   expect(csp).toStrictEqual([]);
 });

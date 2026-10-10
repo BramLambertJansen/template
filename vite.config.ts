@@ -44,7 +44,7 @@ function buildTarget(queries: readonly string[]): string[] {
   });
 }
 
-// src/web/dev/ (catalogus, rolwisselaar) bestaat alleen in dev (framework §6): bij build wordt elke module daaruit een lege
+// src/web/dev/ (rolwisselaar) bestaat alleen in dev (framework §6): bij build wordt elke module daaruit een lege
 // module. Gebruik ze daarom alleen via een dynamische import achter isDev; test/ui/bundle.test.ts bewijst het.
 const DEV_ONLY_DIR = path.join(import.meta.dirname, 'src/web/dev') + path.sep;
 const DEV_ONLY_ID = '\0dev-only';

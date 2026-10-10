@@ -16,6 +16,7 @@ export { NavLink } from '#core/web/ui/nav-link.tsx';
 export { Notice } from '#core/web/ui/notice.tsx';
 export { PageHeader } from '#core/web/ui/page-header.tsx';
 export { QrCode } from '#core/web/ui/qr-code.tsx';
+export { Section } from './section.tsx';
 export { Select, type SelectOption } from '#core/web/ui/select.tsx';
 export { Sidebar, visibleNavItems, type NavItem } from '#core/web/ui/sidebar.tsx';
 export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '#core/web/ui/table.tsx';

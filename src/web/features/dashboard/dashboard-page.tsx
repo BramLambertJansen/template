@@ -1,16 +1,15 @@
 import { Link } from '@tanstack/react-router';
-import { lazy, Suspense } from 'react';
-import { isDev } from '#core/web/lib/env.ts';
+import { can } from '#shared/permissions.ts';
 import { copy } from '#web/copy/ui.ts';
+import { actorFromMe } from '#web/lib/session.ts';
 import { Button, PageHeader } from '#web/ui/index.ts';
+import { useMe } from '../session/queries.ts';
 
-// Lokaal ook een link naar /design-system (besluit eigenaar 2026-10-10); in de productiebundel bestaat src/web/dev niet.
-const DevDashboardLinks = isDev
-  ? lazy(() => import('#web/dev/dashboard-links.tsx').then((module) => ({ default: module.DevDashboardLinks })))
-  : null;
-
-// Dashboard van een admin (spec accounts/AC-3): titel en de link naar de accounts.
+// Dashboard van een admin (spec accounts/AC-3): titel en de link naar de accounts; de link naar de catalogus alleen voor wie
+// design-system:read heeft (spec design-system/AC-8).
 export function DashboardPage() {
+  const me = useMe();
+  const showDesignSystem = me.data !== undefined && can(actorFromMe(me.data), 'design-system:read');
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={copy.dashboard.title} />
@@ -18,11 +17,11 @@ export function DashboardPage() {
         <Button asChild variant="outline">
           <Link to="/admin/accounts">{copy.dashboard.accounts}</Link>
         </Button>
-        {DevDashboardLinks === null ? null : (
-          <Suspense fallback={null}>
-            <DevDashboardLinks />
-          </Suspense>
-        )}
+        {showDesignSystem ? (
+          <Button asChild variant="outline">
+            <Link to="/design-system">{copy.dashboard.designSystem}</Link>
+          </Button>
+        ) : null}
       </div>
     </div>
   );
