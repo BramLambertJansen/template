@@ -161,7 +161,7 @@ Elke app heeft dit nodig, dus het hoort in de template. Elk punt eerst een spec.
 - [ ] Rate limit voor app-routes in `defineRoute` (nu alleen in Better Auth), met grenzen uit `limits.ts` en foutcode `RATE_LIMITED`
 - [ ] Mail-layout in core: één basissjabloon (HTML en platte tekst, afzender, voettekst) met snapshot-test; uitnodiging gebruikt hem
 - [ ] Versie en build-SHA in `GET /api/health` en onderaan in de app
-- [x] `favicon` (`src/web/public/favicon.svg`), `<meta name="robots" content="noindex">` met een `robots.txt` die crawlen toestaat (anders ziet een crawler de noindex niet) (`test/ui/public.test.ts`)
+- [x] `favicon` (`src/web/public/favicon.svg`), `<meta name="robots" content="noindex, nofollow">` met een `robots.txt` die crawlen toestaat (anders ziet een crawler de noindex niet) (`test/ui/public.test.ts`)
 - [ ] `/.well-known/security.txt`: vraagt een contactadres per app (eigenaar)
 
 **Klaar als:** unit, pgTAP (elke policy op naam plus de invarianten), integratie, racetest "rol toekennen", e2e per rol en axe op 375 en
