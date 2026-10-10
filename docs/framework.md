@@ -6,7 +6,7 @@ Wijzigen alleen via een PR met ADR, met review door de eigenaar.
 ## 1. Principes
 
 1. **De fout onmogelijk maken, niet verbieden.** De browser heeft geen databaseclient; de databasemodule
-   exporteert alleen `withUser()` (en `closeDatabase()` bij het stoppen); een route bestaat alleen via `defineRoute()`. Wat het typesysteem afdwingt, hoeft geen regel te zijn.
+   exporteert alleen `withUser()` (en `pingDatabase()` voor readiness en `closeDatabase()` bij het stoppen); een route bestaat alleen via `defineRoute()`. Wat het typesysteem afdwingt, hoeft geen regel te zijn.
 2. **Afdwingen boven afspreken.** Wat niet onmogelijk te maken is, blokkeert een check in CI. CLAUDE.md, skills
    en hooks sturen en geven snelle feedback; de harde grens ligt in CI en op GitHub.
 3. **Eén bron per feit.** Migraties voor het datamodel, zod-schema's voor contracten, één CSS-laag voor tokens, één script per check.
@@ -68,9 +68,9 @@ Regels voor elke keuze:
 |---|---|---|
 | Alleen `src/core/api/db` raakt `pg` | `src/core/api/auth` (als `auth_service`, alleen schema `better_auth`) | Better Auth beheert zijn eigen tabellen |
 | Elke route via `defineRoute` | `/api/auth/*` (Better Auth-handler) en de clientfouten-route (ADR 0003) | De library levert de auth-routes; de clientfouten-route werkt zonder actor |
-| Elke route vraagt login | `/api/auth/*` (inloggen, aanmelden, reset), de clientfouten-route en `GET /api/health` | Bestaan juist voor niet-ingelogden; elk met rate limit; health geeft alleen `{ ok }`, geen data |
+| Elke route vraagt login | `/api/auth/*` (inloggen, aanmelden, reset), de clientfouten-route, `GET /api/health` en `GET /api/ready` | Bestaan juist voor niet-ingelogden; auth en clientfouten met rate limit; health en ready geven alleen `{ ok }`, geen data en geen rate limit (ready: 503 als de database onbereikbaar is; uitkomst 1 s bewaard, hooguit één controle tegelijk, ADR 0018) |
 | Elke schermroute heeft een `can()`-guard | Inlog-, aanmeld- en resetschermen (`/login`, `/uitnodiging`) | Publiek; ze tonen geen data |
-| Spec vóór een nieuwe route | `GET /api/health` (skelet) | Bestaat vóór `defineRoute`; de skeletpagina die hem toonde, is vervallen met de ingelogde startpagina (PR 7b) |
+| Spec vóór een nieuwe route | `GET /api/health` (skelet) en `GET /api/ready` (readiness, ADR 0018) | Infrastructuur zonder data of actor; health bestaat vóór `defineRoute`, de skeletpagina die hem toonde, is vervallen met de ingelogde startpagina (PR 7b) |
 | Elke route via `defineRoute` en met login | `POST /api/dev/login-as` (ADR 0014) | Alleen bij `APP_ENV=local` geregistreerd (elders 404); logt in als een seed-account, met CSRF-controle |
 
 ## 4. Codeerkaders

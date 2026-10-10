@@ -66,7 +66,8 @@ const config = {
     },
     {
       name: 'db-alleen-via-index',
-      comment: 'Buiten src/core/api/db alleen withUser() uit index.ts (en testing.ts in tests): geen pool of driver.',
+      comment:
+        'Buiten src/core/api/db alleen withUser(), pingDatabase() en closeDatabase() uit index.ts (en testing.ts in tests): geen pool of driver.',
       severity: 'error',
       from: { pathNot: '^src/core/api/db/' },
       to: { path: '^src/core/api/db/', pathNot: '^src/core/api/db/(index|testing|types)\\.ts$' },
