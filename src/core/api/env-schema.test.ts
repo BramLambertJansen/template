@@ -138,3 +138,14 @@ describe('readEnv (uitbreidingsplek voor de app, ADR 0008)', () => {
     expect(() => readEnv(z.object({ APP_FEATURE_LIMIT: z.coerce.number().int() }))).toThrow('APP_FEATURE_LIMIT');
   });
 });
+
+describe('WEB_DIR (productie-image, ADR 0019)', () => {
+  test('niet gezet of leeg: geen SPA uit de API-server', () => {
+    expect(parseEnv(production).webDir).toBeUndefined();
+    expect(parseEnv({ ...production, WEB_DIR: '' }).webDir).toBeUndefined();
+  });
+
+  test('gezet: de map met de build', () => {
+    expect(parseEnv({ ...production, WEB_DIR: '/app/dist/web' }).webDir).toBe('/app/dist/web');
+  });
+});

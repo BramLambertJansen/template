@@ -38,3 +38,7 @@ host", maar een containerhost heeft er geen: dan zou elke app zelf een reverse p
 - Framework §3 (hosting) en §6 (Verharding: headers) noemen deze server naast de statische host.
 - De image bevat de broncode van de serverkant (geen geheimen); `AUTH_SECRET` en de database-URL's komen altijd van de host.
 - Een app die de SPA via een CDN wil, laat `WEB_DIR` leeg en zet in `deploy/<host>/` dezelfde headers uit `security-headers.ts`.
+- pnpm komt in de buildstages via `npm install --global pnpm@<versie>`: de versie staat vast (`test/scripts/dockerfile.test.ts`), maar
+  `minimumReleaseAge` en `trustPolicy` gelden alleen voor de lockfile, niet voor pnpm zelf. pnpm zit niet in de runtime-image.
+- De CI-job `image` telt pas als harde grens als de eigenaar hem verplicht maakt in de ruleset (stuk 6).
+- `createWebApp` serveert geen verborgen bestanden (behalve `/.well-known/`) en volgt geen symlink naar buiten `WEB_DIR`.
