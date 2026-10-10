@@ -4,7 +4,7 @@
 
 export interface ReadinessOptions {
   // Na deze tijd telt een controle als mislukt; de controle zelf mag doorlopen, maar er start geen tweede. De controle moet
-  // daarom zelf begrensd zijn (pingDatabase is dat: verbinden en query elk 1,5 s), anders blijft readiness op false.
+  // daarom zelf begrensd zijn (pingDatabase is dat: verbinden en query elk 900 ms), anders blijft readiness op false.
   readonly timeoutMs: number;
   // Zolang geldt de vorige uitkomst.
   readonly cacheMs: number;

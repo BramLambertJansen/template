@@ -14,8 +14,9 @@ geen data lekken, de database niet laten belasten en na een storing niet zelf bl
 1. `GET /api/ready` geeft 200 `{ ok: true }` of 503 `{ ok: false }`, zonder verdere data. `createApp({ ready })` registreert hem;
    zonder `ready` bestaat de route niet. Een uitzondering in framework §3 (publiek, geen spec vooraf), naast `GET /api/health`.
 2. De controle is `pingDatabase()` uit `src/core/api/db`: `select 1` als `api_user`, zonder `withUser()`, over een **eigen
-   verbinding** (pool met max 1), niet de pool van `withUser()`. Verbinden en de query zijn elk begrensd op 1,5 s
-   (`connectionTimeoutMillis`, `query_timeout`, `keepAlive`). Na een fout wordt de verbinding weggegooid.
+   verbinding** (pool met max 1), niet de pool van `withUser()`. Verbinden en de query zijn elk begrensd op 900 ms (samen korter dan de 2 s van punt 3)
+   (`connectionTimeoutMillis`, `query_timeout`, `keepAlive`). Na een fout wordt de verbinding weggegooid; een idle verbinding
+   die wegvalt, stopt het proces niet (`error`-listener op de pool).
 3. `createReadiness` (`src/core/api/http/readiness.ts`) bewaart de uitkomst 1 s, laat hooguit één controle tegelijk lopen en
    telt na 2 s een controle als mislukt. Zolang een eerdere controle nog loopt, start er geen tweede. De bewaartijd gebruikt
    een monotone klok.

@@ -26,7 +26,12 @@ export function createPing(connectionString: string, timeoutMs: number): Ping {
     query_timeout: timeoutMs,
     idleTimeoutMillis: IDLE_TIMEOUT_MS,
     keepAlive: true,
+    // Herkenbaar in pg_stat_activity (en in de integratietest).
+    application_name: 'readiness',
   });
+  // Een idle verbinding die wegvalt (herstart of failover van de database) meldt pg-pool als 'error' op de pool; zonder
+  // listener stopt dat het proces. De pool gooit de verbinding weg; de volgende ping verbindt opnieuw of meldt de fout.
+  pool.on('error', () => undefined);
   return {
     ping: async () => {
       const client = await pool.connect();

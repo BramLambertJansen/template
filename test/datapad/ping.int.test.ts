@@ -1,9 +1,10 @@
+import pg from 'pg';
 import { afterAll, describe, expect, test } from 'vitest';
 import { createPing, type Ping } from '../../src/core/api/db/testing.ts';
 
 // Readiness (ADR 0018): de ping van GET /api/ready slaagt als api_user, direct én via PgBouncer (transaction mode), en
 // faalt bij een geweigerde login. Draait alleen via `pnpm test:db` in de runner (ADR 0009).
-const TIMEOUT_MS = 1500;
+const TIMEOUT_MS = 900;
 
 function url(name: string): string {
   const value = process.env[name];
@@ -38,4 +39,22 @@ describe.each([
     bad.password += 'x';
     await expect(ping(bad.toString()).ping()).rejects.toThrow();
   });
+});
+
+test('een idle verbinding die wegvalt, stopt het proces niet; de volgende ping verbindt opnieuw', async () => {
+  const { ping: run } = ping(url('DATABASE_URL'));
+  await run();
+  const admin = new pg.Client({ connectionString: url('DATABASE_URL') });
+  await admin.connect();
+  try {
+    // api_user mag backends van de eigen rol beëindigen; alleen die van de ping (application_name).
+    const { rows } = await admin.query<{ killed: boolean }>(
+      "select pg_terminate_backend(pid) as killed from pg_stat_activity where application_name = 'readiness' and usename = current_user",
+    );
+    expect(rows.some((row) => row.killed)).toBe(true);
+  } finally {
+    await admin.end();
+  }
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  await expect(run()).resolves.toBeUndefined();
 });

@@ -4,8 +4,9 @@ import { createWithUser } from './with-user.ts';
 
 const { databaseUrl } = env();
 const pool = createPool(databaseUrl);
-// Korter dan de timeout van readiness (2 s, src/api/server.ts), zodat de ping altijd zelf eindigt.
-const PING_TIMEOUT_MS = 1500;
+// Verbinden en query elk hooguit 900 ms: samen korter dan de timeout van readiness (2 s, src/api/server.ts), zodat de
+// ping altijd vóór de volgende controle zelf eindigt.
+const PING_TIMEOUT_MS = 900;
 const ping = createPing(databaseUrl, PING_TIMEOUT_MS);
 
 // De enige ingang naar de database (framework §1, §6): de rest van de module is intern.
