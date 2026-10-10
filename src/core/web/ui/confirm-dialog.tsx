@@ -23,18 +23,29 @@ interface ConfirmDialogProps {
   readonly children?: ReactNode;
 }
 
-// Een snelle dubbelklik komt binnen vóór de ouder `busy` zet (TanStack Query zet isPending pas na een tick).
+// Een snelle dubbelklik komt binnen vóór de ouder `busy` zet (TanStack Query zet isPending pas na een tick). Daarom vuurt
+// onConfirm één keer, en mag het opnieuw na busy → niet busy (een fout), of na RETRY_AFTER_MS als busy nooit true werd
+// (een ouder zonder busy, of een mutatie die faalde vóór isPending gerenderd werd): de knop blijft nooit stil dood.
+const RETRY_AFTER_MS = 500;
+
 function useConfirmOnce(open: boolean, busy: boolean) {
   const confirmed = useRef(false);
-  const wasBusy = useRef(busy);
+  const busyNow = useRef(busy);
   useEffect(() => {
     if (open) confirmed.current = false;
   }, [open]);
   useEffect(() => {
-    if (wasBusy.current && !busy) confirmed.current = false;
-    wasBusy.current = busy;
+    if (busyNow.current && !busy) confirmed.current = false;
+    busyNow.current = busy;
   }, [busy]);
-  return confirmed;
+  return (onConfirm: () => void) => {
+    if (busyNow.current || confirmed.current) return;
+    confirmed.current = true;
+    setTimeout(() => {
+      if (!busyNow.current) confirmed.current = false;
+    }, RETRY_AFTER_MS);
+    onConfirm();
+  };
 }
 
 export function ConfirmDialog({
@@ -48,7 +59,7 @@ export function ConfirmDialog({
   busy = false,
   children,
 }: ConfirmDialogProps) {
-  const confirmed = useConfirmOnce(open, busy);
+  const confirmOnce = useConfirmOnce(open, busy);
   return (
     <Dialog
       open={open}
@@ -75,9 +86,7 @@ export function ConfirmDialog({
             aria-disabled={busy}
             className="aria-disabled:opacity-50"
             onClick={() => {
-              if (busy || confirmed.current) return;
-              confirmed.current = true;
-              onConfirm();
+              confirmOnce(onConfirm);
             }}
           >
             {busy ? uiTexts.busy : confirmLabel}

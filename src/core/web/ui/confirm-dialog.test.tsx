@@ -103,3 +103,18 @@ test('sluit de browser hem tijdens busy toch, dan gaat hij meteen weer open', ()
   expect(dialog.hasAttribute('open')).toBe(true);
   expect(onOpenChange).not.toHaveBeenCalled();
 });
+
+test('zonder busy (of een fout vóór busy): na een halve seconde kan bevestigen weer', () => {
+  vi.useFakeTimers({ toFake: ['setTimeout'] });
+  try {
+    const { onConfirm } = renderConfirm();
+    fireEvent.click(screen.getByRole('button', { name: 'Blokkeren' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Blokkeren' }));
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(500);
+    fireEvent.click(screen.getByRole('button', { name: 'Blokkeren' }));
+    expect(onConfirm).toHaveBeenCalledTimes(2);
+  } finally {
+    vi.useRealTimers();
+  }
+});
