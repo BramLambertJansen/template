@@ -35,7 +35,7 @@ Stop als dit allemaal waar is, niet eerder:
 - **`.env.local` alleen maken met `cp` uit `.env.example`** en daarna alleen poortnummers vervangen (Fase 7). Geen andere waarden, geen echte geheimen, nooit `.env.example` aanpassen.
 - **Geen destructieve commando's.** Nooit `docker compose down -v`, `docker system prune`, `rm -rf` buiten mappen die je in deze run zelf hebt gemaakt, `wsl --unregister`.
 - **`wsl --shutdown` alleen in Fase 3.3**, vóór er een stack draait. Draai je zelf in WSL, dan beëindigt het jouw sessie — dan is het een overdracht.
-- **Geen `pnpm install`, geen checks, geen tests.** De template heeft nog geen scripts en geen `src`-code (fase 1). Dit is setup, geen ontwikkeling.
+- **Geen `pnpm install`, geen checks, geen tests.** Dit is setup, geen ontwikkeling. Uitzondering: het hernoemscript in fase 5.2 (alleen Node, via `mise exec`).
 - **Eén vraag: de app-naam.** Al het andere ligt vast onder *Standaardwaarden*. Wijkt de gebruiker er in zijn eerste bericht van af, volg hem.
 - **Eén overdracht tegelijk.** Moet de gebruiker iets doen: stop, geef genummerde stappen, wacht.
 - **Faalt iets:** lees de fout, kijk in de tabel onderaan, zeg in één zin wat je nu probeert. Na twee mislukte pogingen voor hetzelfde: stoppen en melden.
@@ -280,15 +280,24 @@ Controle: `git log --oneline --graph -5` toont een merge met twee ouders; `git d
 
 ### 5.2 Hernoemen
 
-Alleen deze bestanden:
+pnpm bestaat hier nog niet (fase 7); het script gebruikt alleen Node, dat mise op verzoek installeert:
+
+```bash
+~/.local/bin/mise trust
+~/.local/bin/mise exec node -- node scripts/kit/app-init.mjs <slug> "<App-naam>" --dry-run   # toont welke bestanden het raakt
+~/.local/bin/mise exec node -- node scripts/kit/app-init.mjs <slug> "<App-naam>"             # --owner <login> als de owner niet bramlambertjansen is
+```
+
+Later in de app heet hetzelfde `pnpm app:init`. Het script (`scripts/kit/app-init.mjs`) doet precies de tabel hieronder, plus de app-naam in `src/shared/app.ts` (mails) en
+`<title>` in `src/web/index.html` (paginatitel). Het draait één keer: een al hernoemde app weigert het. Wat het doet:
 
 | Bestand | Wijziging |
 |---|---|
-| `package.json` | `"name": "app-template"` → `"name": "<slug>"` (met `jq` of `sed`, rest ongemoeid) |
+| `package.json` | `"name": "app-template"` → `"name": "<slug>"` (rest ongemoeid) |
 | `README.md` | Kop `# App-template` → `# <App-naam>`; eerste alinea → één zin over de app ("Gebouwd op [BramLambertJansen/template](https://github.com/BramLambertJansen/template)."); sectie **Nieuwe app starten** verwijderen (geldt alleen voor de template); de rest blijft |
 | `docs/nieuwe-app.md` | Niets — laten staan. Verwijderen geeft bij elke template-update een conflict |
 | `CHANGELOG.md` | Onder `## [Unreleased]` de template-regels vervangen door: `- Gestart vanaf template <sha>.` |
-| `.github/CODEOWNERS` | Alleen als de owner niet `bramlambertjansen` is: handle vervangen door `@<login>` (of een team) |
+| `.github/CODEOWNERS` | Alleen als de owner niet `bramlambertjansen` is (`--owner`): handle vervangen door `@<login>` of `@<org>/<team>` |
 
 Raak `docs/`, `AGENTS.md`, `CLAUDE.md`, `.claude/`, `db/`, `compose.yaml` niet aan. Die komen uit de template en worden via template-updates bijgehouden.
 
