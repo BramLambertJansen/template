@@ -241,7 +241,8 @@ Provider-neutraal: wat elke host nodig heeft, hoort in de template; de adapter p
       gebruiker-ID, duur en databasetijd (tijd binnen `withUser`); geen body, query of PII. Eigen logger, geen dependency (besluit eigenaar
       2026-10-10); `createApp({ log })`, `server.ts` geeft `writeJsonLine` mee (`src/core/api/obs/request-log.test.ts`)
 - [ ] Readiness met databasecontrole naast `GET /api/health` (liveness); een nieuwe publieke route vraagt een regel in framework §3
-- [ ] `pnpm start` en een productiebuild van de API; een containerimage (non-root) dat elke containerhost kan draaien
+- [x] `pnpm start` (`node src/api/server.ts`, geen buildstap voor de API) en een containerimage (non-root) die SPA en API op één origin serveert
+      (ADR 0019, `Dockerfile`, CI-job `image` met `scripts/check-image.sh`; `src/core/api/http/web.test.ts`)
 - [ ] Achtergrondtaken volgens de ADR uit **Beslissingen**: opruimen en mail-outbox, elk met een integratietest
 
 **Klaar als:** de image start met een niet-lokale `APP_ENV` tegen de lokale stack (uitvoer van de eigenaar); per request één logregel

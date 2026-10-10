@@ -21,6 +21,7 @@
     "dev": "node scripts/dev.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
+    "start": "node src/api/server.ts",
     "lint": "eslint . --max-warnings 0",
     "lint:prune": "eslint . --prune-suppressions",
     "format": "git ls-files -z --cached --others --exclude-standard | xargs -0 prettier --ignore-unknown --write",
