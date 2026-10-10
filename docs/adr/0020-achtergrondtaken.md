@@ -1,6 +1,6 @@
 # 0020 — Achtergrondtaken: opruimen en mail-outbox
 
-Status: voorgesteld
+Status: geaccepteerd (agent, onder mandaat van de eigenaar van 2026-10-11; ter herziening door de eigenaar)
 
 ## Context
 
@@ -34,7 +34,13 @@ Wat er nu groeit of misgaat:
 5. Elke taak heeft een integratietest: opruimen verwijdert alleen verlopen rijen (roadmap stuk 7, **Klaar als**); de outbox
    verstuurt precies één keer bij twee gelijktijdige workers (racetest) en probeert opnieuw na een SMTP-fout.
 
-## Open punten voor de eigenaar
+## Besluiten op de open punten (agent, 2026-10-11)
+
+- OV-1: eigen rol `app_jobs`, zoals framework §6 vraagt.
+- OV-2: `JOBS_DATABASE_URL` met demo-waarde in `.env.example` en de rol in `db/init/01-roles.sql` (beschermde paden, onder het mandaat).
+- OV-3: outbox; de accountlijst toont een mislukte verzending.
+
+## Open punten voor de eigenaar (oorspronkelijk)
 
 - **OV-1: eigen rol `app_jobs` (aanbeveling) of geen nieuwe rol.** Alternatief zonder nieuwe rol: grant `execute` op de interne
   functies rechtstreeks aan `api_user`. Binnen `withUser()` is de rol `app_authenticated` (en `api_user` is `noinherit`), dus een
