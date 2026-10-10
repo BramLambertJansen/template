@@ -129,6 +129,10 @@
         "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
         "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/rolhek.mjs\"", "timeout": 10 }]
       }
-    ]
+    ],
+    "PostToolUse": [{ "matcher": "Edit|Write|MultiEdit", "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/werkstraat.mjs\" post-edit", "timeout": 60 }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/werkstraat.mjs\" stop", "timeout": 300 }] }],
+    "SubagentStop": [{ "matcher": "developer|tester|reviewer", "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/werkstraat.mjs\" subagent-stop", "timeout": 600 }] }],
+    "SessionStart": [{ "matcher": "startup|resume|clear|compact", "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/werkstraat.mjs\" session-start", "timeout": 30 }] }]
   }
 }
