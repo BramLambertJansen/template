@@ -11,6 +11,7 @@ export const coreErrorCodes = [
   'MFA_REQUIRED',
   'ALREADY_EXISTS',
   'RATE_LIMITED',
+  'NOT_IMPLEMENTED',
 ] as const;
 
 export type CoreErrorCode = (typeof coreErrorCodes)[number];

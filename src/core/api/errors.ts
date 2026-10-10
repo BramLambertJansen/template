@@ -12,7 +12,7 @@ export class AppError extends Error {
   }
 }
 
-export type ErrorStatus = 400 | 401 | 403 | 404 | 409 | 413 | 429 | 500;
+export type ErrorStatus = 400 | 401 | 403 | 404 | 409 | 413 | 429 | 500 | 501;
 
 const STATUS = new Map<string, ErrorStatus>(
   Object.entries({
@@ -26,6 +26,7 @@ const STATUS = new Map<string, ErrorStatus>(
     MFA_REQUIRED: 403,
     ALREADY_EXISTS: 409,
     RATE_LIMITED: 429,
+    NOT_IMPLEMENTED: 501,
   } satisfies Record<CoreErrorCode, ErrorStatus>),
 );
 
