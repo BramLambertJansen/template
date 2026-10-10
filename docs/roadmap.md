@@ -116,6 +116,10 @@ Vier deel-PR's, in deze volgorde.
 - [ ] `scanAxe`-uitzonderingen in de ratchet
 - [x] `check:catalogus`: elk component op `/design-system` of als uitzondering met reden in `scripts/kit/catalogus.mjs` (groeien = gate-wijziging; een overbodige uitzondering faalt ook), in `gate:fast` (#33)
 - [ ] Screenshot-baselines van de catalogus in de Playwright-image (uit fase 2)
+- [ ] Toasts standaard in de basiskit (besluit eigenaar 2026-10-10): `Toaster` in de AppShell en een `toast()`-aanroep voor "gelukt" en "fout" na
+      een mutatie, met `aria-live`, op `/design-system` en in `check:catalogus`; zelf bouwen of een dependency vraagt een besluit van de eigenaar
+- [ ] `/design-system` als echte pagina (besluit eigenaar 2026-10-10): onder `/_app` in de AppShell, met menu-item en `can()`-guard, ook in
+      productie; vervangt "alleen in dev" hierboven en in framework §6 en §7. Eerst een spec
 
 **3d. De feature**
 - [x] Eerste feature met de hand door alle lagen (uit fase 2: dit is die feature); app-gegevens uit `better_auth."user"` via een `security definer`-view
