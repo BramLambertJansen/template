@@ -19,6 +19,11 @@ interface DialogProps {
   readonly variant?: 'modal' | 'sheet';
   readonly children: ReactNode;
   readonly footer?: ReactNode;
+  // false: Esc, de sluitknop en de backdrop doen niets (bijv. terwijl een bevestigde actie loopt). Sluit de browser hem toch
+  // (Chrome: een tweede Esc zonder klik ertussen), dan gaat hij meteen weer open, zodat state en scherm gelijk blijven.
+  readonly dismissible?: boolean;
+  // 'alertdialog' voor een bevestiging vóór een onomkeerbare actie (ConfirmDialog, WAI-ARIA).
+  readonly role?: 'dialog' | 'alertdialog';
 }
 
 // Openen en sluiten via CSS-overgangen; bij prefers-reduced-motion zijn ze ingekort (styles/index.css).
@@ -32,20 +37,31 @@ const variantClasses = {
     'backdrop:opacity-0 open:backdrop:opacity-100 starting:open:backdrop:opacity-0',
 } as const;
 
+// Openen met de focus op een element met data-autofocus (ConfirmDialog: "Annuleren"), anders op het eerste veld (spec
+// accountbeheer). React's autoFocus vuurt vóór showModal, als de dialoog nog dicht is, en zonder veld kiest showModal zelf
+// (de sluitknop).
+function openModal(dialog: HTMLDialogElement) {
+  dialog.showModal();
+  (
+    dialog.querySelector<HTMLElement>('[data-autofocus]') ??
+    dialog.querySelector<HTMLElement>('input, select, textarea')
+  )?.focus();
+}
+
 function useModal(open: boolean) {
   const ref = useRef<HTMLDialogElement>(null);
+  // true zolang wij zelf sluiten (open werd false); anders kwam het close-event van de browser (Esc).
+  const closing = useRef(false);
   useEffect(() => {
     const dialog = ref.current;
     if (dialog === null) return;
-    if (open && !dialog.open) {
-      dialog.showModal();
-      // Focus op het eerste veld (spec accountbeheer). React's autoFocus vuurt vóór showModal, als de dialoog nog dicht is,
-      // en zonder veld kiest showModal zelf (de sluitknop).
-      dialog.querySelector<HTMLElement>('input, select, textarea')?.focus();
+    if (open && !dialog.open) openModal(dialog);
+    if (!open && dialog.open) {
+      closing.current = true;
+      dialog.close();
     }
-    if (!open && dialog.open) dialog.close();
   }, [open]);
-  return ref;
+  return { ref, closing };
 }
 
 export function Dialog({
@@ -57,22 +73,38 @@ export function Dialog({
   variant = 'modal',
   children,
   footer,
+  dismissible = true,
+  role = 'dialog',
 }: DialogProps) {
-  const ref = useModal(open);
+  const { ref, closing } = useModal(open);
   const id = useId();
   const sheet = variant === 'sheet';
 
   return (
     <dialog
       ref={ref}
+      role={role === 'alertdialog' ? role : undefined}
       aria-labelledby={`${id}-titel`}
       aria-describedby={description === undefined ? undefined : `${id}-uitleg`}
-      onClose={() => {
+      onClose={(event) => {
+        const requested = closing.current;
+        closing.current = false;
+        if (!requested && !dismissible) {
+          openModal(event.currentTarget);
+          return;
+        }
         onOpenChange(false);
+      }}
+      onCancel={(event) => {
+        if (!dismissible) event.preventDefault();
+      }}
+      // Een geannuleerde keydown is geen sluitverzoek (HTML-spec); zo houdt ook een herhaalde Esc in Chrome hem open.
+      onKeyDown={(event) => {
+        if (!dismissible && event.key === 'Escape') event.preventDefault();
       }}
       // Een klik op de backdrop heeft de <dialog> zelf als doel; binnen de sheet is het doel altijd een kind.
       onClick={(event) => {
-        if (sheet && event.target === event.currentTarget) onOpenChange(false);
+        if (dismissible && sheet && event.target === event.currentTarget) onOpenChange(false);
       }}
       className={cn('p-0 shadow-lg', variantClasses[variant])}
     >
@@ -97,6 +129,7 @@ export function Dialog({
               variant="ghost"
               size="icon"
               aria-label={closeLabel}
+              disabled={!dismissible}
               onClick={() => {
                 onOpenChange(false);
               }}

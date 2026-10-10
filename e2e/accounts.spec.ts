@@ -253,8 +253,9 @@ test('smal scherm: het hoofdmenu schuift vanaf links over het scherm; Esc, de st
 
   await opener.click();
   await expect(sheet.getByRole('link', { name: 'Home' })).toBeVisible();
-  // Tegen de linkerrand, volle hoogte, met rechts een strook van de pagina.
-  expect(await sheet.boundingBox()).toMatchObject({ x: 0, y: 0, height: 900 });
+  // Tegen de linkerrand, volle hoogte, met rechts een strook van de pagina. Poll: het inschuiven duurt 200 ms (een meting
+  // tijdens de overgang gaf x = -288 in CI).
+  await expect.poll(async () => sheet.boundingBox()).toMatchObject({ x: 0, y: 0, height: 900 });
   expect((await sheet.boundingBox())?.width).toBeLessThan(375);
   await scanAxe(page);
   await page.keyboard.press('Escape');

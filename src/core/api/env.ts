@@ -64,6 +64,9 @@ const baseSchema = z.object({
   AUTH_BASE_URL: origin,
   AUTH_SECRET: z.string().min(1),
   SMTP_URL: url,
+  // Map met de build van de SPA (dist/web); gezet = de server serveert de SPA naast /api op één origin (ADR 0019).
+  // Lokaal leeg: dan serveert Vite de SPA.
+  WEB_DIR: z.preprocess(unsetIfEmpty, z.string().min(1).optional()),
   // Header met het client-IP die de host zet en de client niet kan vervalsen (framework §6, Verharding); voor de rate limit.
   CLIENT_IP_HEADER: z
     .string()
@@ -113,6 +116,7 @@ export interface Env {
   readonly authSecret: string;
   readonly smtpUrl: string;
   readonly clientIpHeader: string | undefined;
+  readonly webDir: string | undefined;
 }
 
 function describe(error: z.ZodError): string {
@@ -135,6 +139,7 @@ export function parseEnv(source: Readonly<Record<string, string | undefined>>): 
     authSecret: raw.AUTH_SECRET,
     smtpUrl: raw.SMTP_URL,
     clientIpHeader: raw.CLIENT_IP_HEADER,
+    webDir: raw.WEB_DIR,
   };
 }
 

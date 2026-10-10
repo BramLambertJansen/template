@@ -3,6 +3,7 @@ import { closeDatabase, pingDatabase, withUser } from '#core/api/db/index.ts';
 import { env } from '#core/api/env.ts';
 import { createReadiness } from '#core/api/http/readiness.ts';
 import { startServer } from '#core/api/http/serve.ts';
+import { createWebApp } from '#core/api/http/web.ts';
 import { writeJsonLine } from '#core/api/obs/request-log.ts';
 import { createSmtpMailer } from '#core/api/mail/smtp.ts';
 import { createDevLogin, devAuthSteps } from '#core/api/dev/login-as.ts';
@@ -27,23 +28,23 @@ const auth = createAuth({
 
 const gateway = authGateway(auth);
 
-await startServer(
-  buildApp({
-    appOrigin: config.appOrigin,
-    auth: gateway,
-    withUser,
-    services: createServices(auth),
-    log: writeJsonLine,
-    ready: createReadiness(pingDatabase, { timeoutMs: READY_TIMEOUT_MS, cacheMs: READY_CACHE_MS }),
-    // Dev-login alleen lokaal (ADR 0014); in elke andere omgeving bestaat de route niet.
-    ...(config.appEnv === 'local' ? { devLogin: createDevLogin(devAuthSteps(auth)) } : {}),
-  }),
-  {
-    host: config.apiHost,
-    port: config.apiPort,
-    shutdownTimeoutMs: config.shutdownTimeoutMs,
-    onStopped: async () => {
-      await Promise.all([closeDatabase(), auth.closePool()]);
-    },
+const api = buildApp({
+  appOrigin: config.appOrigin,
+  auth: gateway,
+  withUser,
+  services: createServices(auth),
+  log: writeJsonLine,
+  ready: createReadiness(pingDatabase, { timeoutMs: READY_TIMEOUT_MS, cacheMs: READY_CACHE_MS }),
+  // Dev-login alleen lokaal (ADR 0014); in elke andere omgeving bestaat de route niet.
+  ...(config.appEnv === 'local' ? { devLogin: createDevLogin(devAuthSteps(auth)) } : {}),
+});
+
+// Met WEB_DIR (de containerimage) serveert dezelfde server de SPA op dezelfde origin (ADR 0019); lokaal doet Vite dat.
+await startServer(config.webDir === undefined ? api : createWebApp(api, config.webDir), {
+  host: config.apiHost,
+  port: config.apiPort,
+  shutdownTimeoutMs: config.shutdownTimeoutMs,
+  onStopped: async () => {
+    await Promise.all([closeDatabase(), auth.closePool()]);
   },
-);
+});

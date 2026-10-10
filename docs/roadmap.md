@@ -155,7 +155,8 @@ Elke app heeft dit nodig, dus het hoort in de template. Elk punt eerst een spec.
 
 **3f. Basis die elke app nodig heeft** (lijst eigenaar 2026-10-10). Nieuwe route, permissie of migratie: eerst een spec.
 - [ ] Lijstpagina-patroon: zoeken, filteren en sorteren in de search params, op het cursor-contract en `Table`; `new:resource` gebruikt het
-- [ ] `ConfirmDialog` in de kit voor destructieve acties, op `/design-system` en in `check:catalogus`
+- [x] `ConfirmDialog` in de kit voor destructieve acties (focus op Annuleren, `busy` blokkeert sluiten), op `/design-system` en in
+      `check:catalogus` (`src/core/web/ui/confirm-dialog.test.tsx`, `e2e/design-system.spec.ts`)
 - [x] Schil toegankelijk: paginatitel per scherm (`useDocumentTitle` via de h1, app-naam uit `src/web/index.html`), skip-link naar de inhoud,
       focus naar de h1 na een routewissel (`src/core/web/ui/app-shell.test.tsx`, `e2e/shell.spec.ts`)
 - [ ] Focus naar de h1 na een routewissel naar een **lazy** route (`/design-system`): in e2e (Vite dev) staat de focus daarna op
@@ -248,7 +249,8 @@ Provider-neutraal: wat elke host nodig heeft, hoort in de template; de adapter p
       2026-10-10); `createApp({ log })`, `server.ts` geeft `writeJsonLine` mee (`src/core/api/obs/request-log.test.ts`)
 - [x] Readiness: `GET /api/ready` (200 `{ ok: true }` of 503 `{ ok: false }`) via `pingDatabase()` naast `GET /api/health` (liveness); uitkomst 1 s
       bewaard, hooguit één controle tegelijk, timeout 2 s; eigen verbinding met timeouts; regel in framework §3, ADR 0018 (`src/core/api/http/readiness.test.ts`, `test/datapad/ping.int.test.ts`)
-- [ ] `pnpm start` en een productiebuild van de API; een containerimage (non-root) dat elke containerhost kan draaien
+- [x] `pnpm start` (`node src/api/server.ts`, geen buildstap voor de API) en een containerimage (non-root) die SPA en API op één origin serveert
+      (ADR 0019, `Dockerfile`, CI-job `image` met `scripts/check-image.sh`; `src/core/api/http/web.test.ts`)
 - [ ] Achtergrondtaken volgens de ADR uit **Beslissingen**: opruimen en mail-outbox, elk met een integratietest
 
 **Klaar als:** de image start met een niet-lokale `APP_ENV` tegen de lokale stack (uitvoer van de eigenaar); per request één logregel
