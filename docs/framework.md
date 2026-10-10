@@ -197,7 +197,8 @@ Ankers: OWASP Top 10:2025, OWASP API Security Top 10, ASVS 5.0 niveau 1 (checkli
     worden. `security definer` op een plek die `check-secdef` niet als `create` leest (een `do`-blok, dynamische SQL) faalt.
   - Een view zonder `security_invoker = true` leest met de rechten van zijn eigenaar (zoals `app.accounts`). `check-secdef` eist dan:
     schema, `security_barrier`, namen met schema, een `where` die een functie uit schema `app` aanroept (het actorfilter) en eigenaar
-    `app_definer`. Een materialized view en `security_invoker` later uitzetten falen.
+    `app_definer`. Fail-closed: een materialized view, view-opties wijzigen of de view hernoemen via `alter`, een view in een `do`-blok
+    of dynamische SQL, en `union`/`except`/`intersect` in zo'n view. Het actorfilter is een heuristiek; pgTAP en review blijven nodig.
 - **Functiecatalogus** (pgTAP, ADR 0011): elke functie in `public` en `app` staat in een catalogus als `client` (uitvoerbaar voor `app_authenticated`)
   of `intern` (geen API-rol); de grants moeten bij die klasse passen, elke client-functie controleert de actor (`app.current_user_id()`)
   of heeft een vastgelegde reden waarom niet. Een nieuwe functie zonder klasse faalt.

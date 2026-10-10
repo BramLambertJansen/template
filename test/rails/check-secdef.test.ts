@@ -226,8 +226,54 @@ test.each([
   [
     'view-invoker-uit.sql',
     [
-      'db/migrations/view-invoker-uit.sql:3: app.v zet security_invoker uit via alter; schrijf de view opnieuw met create or replace',
-      'db/migrations/view-invoker-uit.sql:4: app.v zet security_invoker uit via alter; schrijf de view opnieuw met create or replace',
+      'db/migrations/view-invoker-uit.sql:3: app.v wijzigt view-opties via alter; doe het met create or replace view (security_invoker aan, of een definer-view met barrier, actorfilter en eigenaar app_definer)',
+      'db/migrations/view-invoker-uit.sql:4: app.v wijzigt view-opties via alter; doe het met create or replace view (security_invoker aan, of een definer-view met barrier, actorfilter en eigenaar app_definer)',
+    ],
+  ],
+  [
+    'view-alter-opties.sql',
+    [
+      'db/migrations/view-alter-opties.sql:4: app.v wijzigt view-opties via alter; doe het met create or replace view (security_invoker aan, of een definer-view met barrier, actorfilter en eigenaar app_definer)',
+      'db/migrations/view-alter-opties.sql:5: app.v wijzigt view-opties via alter; doe het met create or replace view (security_invoker aan, of een definer-view met barrier, actorfilter en eigenaar app_definer)',
+    ],
+  ],
+  [
+    'view-opties-quotes.sql',
+    [
+      'db/migrations/view-opties-quotes.sql:2: app.a leest met de rechten van zijn eigenaar zonder `security_barrier`; schrijf `with (security_barrier)`',
+      'db/migrations/view-opties-quotes.sql:5: app.b leest met de rechten van zijn eigenaar zonder `security_barrier`; schrijf `with (security_barrier)`',
+    ],
+  ],
+  [
+    'view-hernoemen.sql',
+    [
+      'db/migrations/view-hernoemen.sql:4: app.v wordt hernoemd of verplaatst; drop de view en maak hem opnieuw onder de nieuwe naam',
+      'db/migrations/view-hernoemen.sql:5: app.v wordt hernoemd of verplaatst; drop de view en maak hem opnieuw onder de nieuwe naam',
+    ],
+  ],
+  [
+    'view-onbewaakt.sql',
+    [1, 4, 5].map(
+      (regel) =>
+        `db/migrations/view-onbewaakt.sql:${String(regel)}: maakt of wijzigt een view (of eigenaar en opties) op een plek die de check niet leest (bijv. in een do-blok of dynamische SQL); schrijf het als eigen statement`,
+    ),
+  ],
+  [
+    'view-unlogged-materialized.sql',
+    [
+      'db/migrations/view-unlogged-materialized.sql:1: app.m is een materialized view: geen RLS en geen actor; gebruik een gewone view of tabel',
+    ],
+  ],
+  [
+    'view-drop-meerdere.sql',
+    [
+      'db/migrations/view-drop-meerdere.sql:4: app.w leest met de rechten van zijn eigenaar, maar die is niet app_definer; zet `alter view app.w owner to app_definer` in dezelfde migratie',
+    ],
+  ],
+  [
+    'view-union.sql',
+    [
+      'db/migrations/view-union.sql:1: app.v combineert selects (union, except of intersect): de check ziet niet of elke tak een actorfilter heeft; splits de view of gebruik security_invoker',
     ],
   ],
 ])('view fout: %s', (naam, verwacht) => {

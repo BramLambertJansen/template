@@ -17,8 +17,11 @@
 //  6. noemt tabellen en functies alleen met schema (regel 2);
 //  7. filtert op de actor: de `where` roept een functie uit schema app aan (bijv. `(select app.is_mfa_admin())`);
 //  8. is aan het eind van zijn migratie van `app_definer` (`alter view … owner to app_definer`).
-// Een view met `security_invoker = true` valt onder de RLS van de aanroeper en hoeft niets. Fail-closed: een materialized
-// view (geen RLS, geen actor) en `alter view … set (security_invoker = false)` of `reset (security_invoker)` falen.
+// Een view met `security_invoker` aan (een waarde die Postgres als waar leest) valt onder de RLS van de aanroeper en hoeft
+// niets. Fail-closed: een materialized view (ook unlogged), view-opties wijzigen, hernoemen of verplaatsen via alter, een
+// view of eigenaar wisselen in een do-blok of dynamische SQL, en een definer-view met union, except of intersect falen (dus
+// ook een recursieve definer-view: maak die security_invoker).
+// Het actorfilter (7) is een heuristiek: hij ziet een `app.`-functie na `where`, niet of die het echte filter is.
 // De pgTAP-functiecatalogus (db/tests/functies.sql, in test:db) controleert eigenaar en search_path daarnaast in de database;
 // deze check vangt het eerder (gate:fast) en controleert ook de namen. Twijfel telt als fout: herschrijf de SQL of vraag de eigenaar.
 import { readdirSync, readFileSync } from 'node:fs';
@@ -33,14 +36,23 @@ const CREATE = new RegExp(String.raw`^\s*create\s+(or\s+replace\s+)?(?:function|
 const ALTER = new RegExp(String.raw`^\s*alter\s+(?:function|procedure|routine)\s+(${NAAM})`, 'i');
 const DROP = new RegExp(String.raw`^\s*drop\s+(?:function|procedure|routine)\s+(?:if\s+exists\s+)?(${NAAM})`, 'i');
 const CREATE_VIEW = new RegExp(
-  String.raw`^\s*create\s+(or\s+replace\s+)?(?:temp(?:orary)?\s+)?(?:recursive\s+)?(materialized\s+)?view\s+(?:if\s+not\s+exists\s+)?(${NAAM})`,
+  String.raw`^\s*create\s+(or\s+replace\s+)?(?:(?:temp|temporary|unlogged)\s+)?(recursive\s+)?(materialized\s+)?view\s+(?:if\s+not\s+exists\s+)?(${NAAM})`,
   'i',
 );
 const ALTER_VIEW = new RegExp(
-  String.raw`^\s*alter\s+(?:materialized\s+)?(?:view|table)\s+(?:if\s+exists\s+)?(${NAAM})`,
+  String.raw`^\s*alter\s+(?:materialized\s+)?(?:view|table)\s+(?:if\s+exists\s+)?(?:only\s+)?(${NAAM})`,
   'i',
 );
-const DROP_VIEW = new RegExp(String.raw`^\s*drop\s+(?:materialized\s+)?view\s+(?:if\s+exists\s+)?(${NAAM})`, 'i');
+const DROP_VIEW = new RegExp(
+  String.raw`^\s*drop\s+(?:materialized\s+)?view\s+(?:if\s+exists\s+)?(${NAAM}(?:\s*,\s*${NAAM})*)`,
+  'i',
+);
+// Ergens in een statement, ook in een body of string: een view maken, of een view of tabel van eigenaar of opties wisselen.
+const VIEW_OVERAL =
+  /\bcreate\s+(?:or\s+replace\s+)?(?:(?:temp|temporary|unlogged)\s+)?(?:recursive\s+)?(?:materialized\s+)?view\b/gi;
+const ALTER_VIEW_OVERAL = /\balter\s+(?:materialized\s+)?(?:view|table)\b[^;]*?\b(?:owner\s+to|set\s*\(|reset\s*\()/gi;
+// Waarden die Postgres (parse_bool) als waar leest; alles anders telt niet als aan.
+const WAAR = new Set(['t', 'tr', 'tru', 'true', 'y', 'ye', 'yes', 'on', '1']);
 const TOKEN = /--[^\n]*|\/\*[\s\S]*?\*\/|'(?:[^']|'')*'|"(?:[^"]|"")*"|\$(?:[A-Za-z_]\w*)?\$|[^-/'"$;]+|[\s\S]/y;
 const TEKST = /'(?:[^']|'')*'/g;
 const BODY = /\uE001[^\uE001\uE002]*\uE002/g;
@@ -318,36 +330,83 @@ function onbewaakt(tekst) {
 /** @typedef {{ definer: boolean, eigenaar: string | null }} View */
 
 /**
- * De opties tussen `with (` en `) as` van een create view.
- * @param {string} tekst
+ * Of een view-optie aan staat: zonder waarde, of met een waarde die Postgres als waar leest (ook tussen quotes).
+ * @param {string} tekst het create-statement
+ * @param {string} sleutel bijv. security_invoker
  */
-function viewOpties(tekst) {
-  return /\bwith\s*\(([^)]*)\)\s*as\b/i.exec(zonderBodies(tekst).replace(TEKST, "''"))?.[1]?.toLowerCase() ?? '';
+function optieAan(tekst, sleutel) {
+  const opties = /\bwith\s*\(([^)]*)\)\s*as\b/i.exec(zonderBodies(tekst))?.[1] ?? '';
+  return opties.split(',').some((optie) => {
+    const [naam = '', ...rest] = optie.split('=');
+    if (naam.trim().toLowerCase() !== sleutel) return false;
+    if (rest.length === 0) return true;
+    return WAAR.has(
+      rest
+        .join('=')
+        .trim()
+        .replace(/^(['"])(.*)\1$/, '$2')
+        .toLowerCase(),
+    );
+  });
 }
 
 /**
- * Fouten in de definitie van een view die met de rechten van zijn eigenaar leest (regels 5–7).
+ * Fouten in de definitie van een view die met de rechten van zijn eigenaar leest (regels 5–7). Het actorfilter is een
+ * heuristiek (een `app.`-functie na `where`); de review en pgTAP blijven de echte grens.
  * @param {string} tekst
  * @param {RegExpExecArray} m de match van CREATE_VIEW
- * @param {string} opties
  * @returns {string[]}
  */
-function definerViewFouten(tekst, m, opties) {
-  const naam = m[3] ?? '';
+function definerViewFouten(tekst, m) {
+  const naam = m[4] ?? '';
   const body = zonderBodies(tekst.slice(m.index + m[0].length)).replace(TEKST, "''");
   const select = body.slice(/\bas\b/i.exec(body)?.index ?? 0);
   const fouten = [];
   if (!naam.includes('.')) fouten.push(`heeft geen schema; schrijf <schema>.${naam}`);
-  if (!/\bsecurity_barrier\b(?!\s*=\s*(?:false|off|0|no)\b)/.test(opties)) {
+  if (!optieAan(tekst, 'security_barrier')) {
     fouten.push('leest met de rechten van zijn eigenaar zonder `security_barrier`; schrijf `with (security_barrier)`');
   }
-  const where = /\bwhere\b([\s\S]*)$/i.exec(select)?.[1] ?? '';
-  if (!/\bapp\s*\.\s*[a-z_]\w*\s*\(/i.test(where)) {
+  if (/\b(?:union|except|intersect)\b/i.test(select)) {
+    fouten.push(
+      'combineert selects (union, except of intersect): de check ziet niet of elke tak een actorfilter heeft; splits de view of gebruik security_invoker',
+    );
+  }
+  if (!/\bapp\s*\.\s*[a-z_]\w*\s*\(/i.test(/\bwhere\b([\s\S]*)$/i.exec(select)?.[1] ?? '')) {
     fouten.push(
       'filtert niet op de actor: de where roept geen functie uit schema app aan (bijv. `(select app.is_mfa_admin())`)',
     );
   }
   return [...fouten, ...ongekwalificeerd(select)];
+}
+
+/**
+ * Fail-closed: een view maken, of eigenaar en opties van een view of tabel wisselen, op een plek die de check niet leest.
+ * @param {string} tekst
+ * @param {boolean} create het statement zelf is een create view die de check leest
+ */
+function viewOnbewaakt(tekst, create) {
+  const views = tekst.match(VIEW_OVERAL)?.length ?? 0;
+  const alters = tekst.match(ALTER_VIEW_OVERAL)?.length ?? 0;
+  return views > (create ? 1 : 0) || alters > (ALTER_VIEW.test(tekst) ? 1 : 0);
+}
+
+/**
+ * @param {string} tekst
+ * @param {RegExpExecArray} create
+ * @param {Map<string, View>} views
+ */
+function createView(tekst, create, views) {
+  const naam = normaal(create[4] ?? '');
+  if (create[3] !== undefined) {
+    return {
+      naam: null,
+      fouten: [`${naam} is een materialized view: geen RLS en geen actor; gebruik een gewone view of tabel`],
+    };
+  }
+  const invoker = optieAan(tekst, 'security_invoker');
+  const vorige = views.get(naam);
+  views.set(naam, { definer: !invoker, eigenaar: create[1] === undefined ? null : (vorige?.eigenaar ?? null) });
+  return { naam, fouten: invoker ? [] : definerViewFouten(tekst, create).map((fout) => `${naam} ${fout}`) };
 }
 
 /**
@@ -357,29 +416,25 @@ function definerViewFouten(tekst, m, opties) {
  */
 function verwerkView(tekst, views) {
   const create = CREATE_VIEW.exec(tekst);
-  if (create !== null) {
-    const naam = normaal(create[3] ?? '');
-    if (create[2] !== undefined) {
-      return {
-        naam: null,
-        fouten: [`${naam} is een materialized view: geen RLS en geen actor; gebruik een gewone view of tabel`],
-      };
-    }
-    const opties = viewOpties(tekst);
-    const invoker = /\bsecurity_invoker\b(?!\s*=\s*(?:false|off|0|no)\b)/.test(opties);
-    const vorige = views.get(naam);
-    views.set(naam, { definer: !invoker, eigenaar: create[1] === undefined ? null : (vorige?.eigenaar ?? null) });
-    return { naam, fouten: invoker ? [] : definerViewFouten(tekst, create, opties).map((fout) => `${naam} ${fout}`) };
+  if (viewOnbewaakt(tekst, create !== null)) {
+    return {
+      naam: null,
+      fouten: [
+        'maakt of wijzigt een view (of eigenaar en opties) op een plek die de check niet leest (bijv. in een do-blok of dynamische SQL); schrijf het als eigen statement',
+      ],
+    };
   }
+  if (create !== null) return createView(tekst, create, views);
   const drop = DROP_VIEW.exec(tekst);
   if (drop !== null) {
-    views.delete(normaal(drop[1] ?? ''));
+    for (const [naam] of (drop[1] ?? '').matchAll(new RegExp(NAAM, 'gi'))) views.delete(normaal(naam));
     return { naam: null, fouten: [] };
   }
   return alterView(tekst, views);
 }
 
 /**
+ * Eigenaar wisselen mag; opties, naam en schema van een gevolgde view alleen via drop en create (or replace).
  * @param {string} tekst
  * @param {Map<string, View>} views
  * @returns {{ naam: string | null, fouten: string[] }}
@@ -391,10 +446,18 @@ function alterView(tekst, views) {
   if (alter === null || view === undefined) return { naam: null, fouten: [] };
   const eigenaar = /\bowner\s+to\s+("?[\w$]+"?)/i.exec(tekst)?.[1];
   if (eigenaar !== undefined) view.eigenaar = normaal(eigenaar);
-  if (/\breset\s*\([^)]*\bsecurity_invoker\b|\bsecurity_invoker\s*=\s*(?:false|off|0|no)\b/i.test(tekst)) {
+  if (/\b(?:set|reset)\s*\(/i.test(tekst)) {
     return {
       naam,
-      fouten: [`${naam} zet security_invoker uit via alter; schrijf de view opnieuw met create or replace`],
+      fouten: [
+        `${naam} wijzigt view-opties via alter; doe het met create or replace view (security_invoker aan, of een definer-view met barrier, actorfilter en eigenaar ${EIGENAAR})`,
+      ],
+    };
+  }
+  if (/\brename\b|\bset\s+schema\b/i.test(tekst)) {
+    return {
+      naam,
+      fouten: [`${naam} wordt hernoemd of verplaatst; drop de view en maak hem opnieuw onder de nieuwe naam`],
     };
   }
   return { naam, fouten: [] };
@@ -481,6 +544,6 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
     process.exit(1);
   }
   console.info(
-    `✓ check:secdef: elke security definer-functie en definer-view in ${DIR} heeft namen met schema en eigenaar ${EIGENAAR}`,
+    `✓ check:secdef: elke security definer-functie in ${DIR} heeft search_path '', en elke security definer-functie en definer-view heeft namen met schema en eigenaar ${EIGENAAR}`,
   );
 }
