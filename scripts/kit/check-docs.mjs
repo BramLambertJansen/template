@@ -4,8 +4,8 @@
 //     (een kale naam of relatief pad telt als een bestand in git erop eindigt; `/route` is een URL, geen pad).
 //  2. Relatieve links in docs/**/*.md en README.md wijzen naar een bestaand bestand.
 //  3. ADR- en spec-statussen komen uit de vaste woordenlijst; een goedgekeurde of gebouwde spec heeft "Hergebruik en UX".
-//  4. CODEOWNERS en `ask` in .claude/settings.json noemen dezelfde paden (CODEOWNERS daarnaast tests en docs/specs/).
-// Nog niet: de vergelijking met .claude/gates.json (komt met de rolhek-hook, roadmap stuk 5).
+//  4. CODEOWNERS en `ask` in .claude/settings.json noemen dezelfde paden (CODEOWNERS daarnaast tests en docs/specs/), en
+//     CODEOWNERS noemt precies de gates en jsonGates uit .claude/gates.json (de bron, ADR 0011).
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -179,6 +179,7 @@ function mirrorViolations(files, read) {
   );
   const ask = new Set(askEditPaths(read('.claude/settings.json')));
   return [
+    ...(files.includes('.claude/gates.json') ? gatesViolations(owners, read('.claude/gates.json')) : []),
     ...[...owners]
       .filter((entry) => !OWNERS_ONLY.has(entry) && !ask.has(entry))
       .map((entry) => ({
@@ -190,6 +191,41 @@ function mirrorViolations(files, read) {
       .map((entry) => ({
         key: `docs:spiegel:codeowners:${entry}`,
         message: `\`ask\` noemt ${entry}, CODEOWNERS niet`,
+      })),
+  ];
+}
+
+/**
+ * CODEOWNERS = gates + jsonGates uit .claude/gates.json.
+ * @param {ReadonlySet<string>} owners
+ * @param {string} text
+ * @returns {Violation[]}
+ */
+function gatesViolations(owners, text) {
+  /** @type {unknown} */
+  const config = JSON.parse(text);
+  const entry = (/** @type {string} */ key) =>
+    typeof config === 'object' && config !== null
+      ? Object.entries(config).find(([name]) => name === key)?.[1]
+      : undefined;
+  const gates = entry('gates');
+  const jsonGates = entry('jsonGates');
+  const expected = new Set([
+    ...(Array.isArray(gates) ? gates.map(String) : []),
+    ...(typeof jsonGates === 'object' && jsonGates !== null ? Object.keys(jsonGates) : []),
+  ]);
+  return [
+    ...[...expected]
+      .filter((path) => !owners.has(path))
+      .map((path) => ({
+        key: `docs:spiegel:codeowners-gates:${path}`,
+        message: `.claude/gates.json noemt ${path}, CODEOWNERS niet`,
+      })),
+    ...[...owners]
+      .filter((path) => !expected.has(path))
+      .map((path) => ({
+        key: `docs:spiegel:gates:${path}`,
+        message: `CODEOWNERS noemt ${path}, .claude/gates.json niet`,
       })),
   ];
 }

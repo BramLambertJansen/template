@@ -23,7 +23,13 @@ const ruleNames = [
 const rails = { rules: Object.fromEntries(ruleNames.map((name) => [name, restrictedSyntax])) };
 
 const SRC = ['src/**/*.{ts,tsx}'];
-const CODE = ['src/**/*.{ts,tsx,mjs}', 'scripts/**/*.{mjs,js,ts}', 'test/**/*.ts', 'e2e/**/*.ts'];
+const CODE = [
+  'src/**/*.{ts,tsx,mjs}',
+  'scripts/**/*.{mjs,js,ts}',
+  '.claude/hooks/**/*.mjs',
+  'test/**/*.ts',
+  'e2e/**/*.ts',
+];
 const TESTS = ['**/*.test.{ts,tsx}', '**/*.spec.ts', 'test/**/*.ts', 'e2e/**/*.ts'];
 const WEB = ['src/web/**/*.{ts,tsx}', 'src/core/web/**/*.{ts,tsx}'];
 const ELEMENTS = '/^(button|input|select|textarea|dialog|a)$/';

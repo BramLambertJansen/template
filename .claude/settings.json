@@ -122,5 +122,13 @@
         "api.github.com"
       ]
     }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/rolhek.mjs\"", "timeout": 10 }]
+      }
+    ]
   }
 }
