@@ -2,6 +2,7 @@ import { useRouter, type ErrorComponentProps } from '@tanstack/react-router';
 import { uiTexts } from '../copy/ui.ts';
 import { ForbiddenError } from '../lib/guard.ts';
 import { Button } from './button.tsx';
+import { PageTitle } from './page-title.tsx';
 import { useErrorText } from './error-texts.tsx';
 
 // ErrorBoundary van elke route (framework §5, via defaultErrorComponent van de router). Toont alleen een tekst bij de
@@ -20,7 +21,7 @@ export function RouteError({ error }: ErrorComponentProps) {
   }
   return (
     <main className="flex flex-col items-start gap-3 p-6">
-      <h1 className="text-2xl font-semibold">{uiTexts.errorTitle}</h1>
+      <PageTitle title={uiTexts.errorTitle} className="text-2xl font-semibold" />
       <p role="alert" className="text-destructive">
         {errorText(error)}
       </p>
@@ -35,7 +36,7 @@ export function RouteError({ error }: ErrorComponentProps) {
 export function NotFound() {
   return (
     <main className="p-6">
-      <h1 className="text-2xl font-semibold">{uiTexts.notFoundTitle}</h1>
+      <PageTitle title={uiTexts.notFoundTitle} className="text-2xl font-semibold" />
     </main>
   );
 }

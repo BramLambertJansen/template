@@ -1,4 +1,4 @@
-import { Outlet } from '@tanstack/react-router';
+import { Outlet, useRouterState } from '@tanstack/react-router';
 import { can } from '#shared/permissions.ts';
 import { copy } from '#web/copy/ui.ts';
 import { navItems } from '#web/lib/nav.ts';
@@ -10,6 +10,7 @@ import { useLogout, useMe } from '../session/queries.ts';
 export function AppLayout() {
   const me = useMe();
   const logout = useLogout();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   if (me.data === undefined) return null;
 
   const menuItems: MenuItem[] = [
@@ -26,6 +27,7 @@ export function AppLayout() {
       userName={me.data.naam}
       menuItems={menuItems}
       topbarActions={<ThemeToggle />}
+      routeKey={pathname}
     >
       <Outlet />
     </AppShell>

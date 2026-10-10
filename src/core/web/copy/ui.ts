@@ -11,4 +11,5 @@ export const uiTexts = {
   close: 'Sluiten',
   busy: 'Bezig…',
   darkTheme: 'Donker thema',
+  skipToContent: 'Naar de inhoud',
 } as const;
