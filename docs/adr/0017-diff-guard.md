@@ -1,6 +1,6 @@
 # 0017 — Diff-guard en de identiteit van de agent
 
-Status: voorgesteld (2026-10-10) — roadmap fase 1, stuk 4; de keuzes (OV-1 t/m OV-5) zijn van de eigenaar.
+Status: geaccepteerd (2026-10-10) — roadmap fase 1, stuk 4; de eigenaar koos bij elke vraag de aanbeveling (OV-1 t/m OV-5).
 
 ## Context
 
@@ -68,7 +68,17 @@ de laatste beslissende review van een goedkeurder (niet de auteur) APPROVED is o
 
 ## Besluit
 
-Nog geen; de eigenaar kiest per vraag. Bij de aanbevelingen bouwt de agent in de volgende PR:
+Besluiten van de eigenaar (2026-10-10): bij elke vraag de aanbeveling.
+
+| Vraag | Besluit | Verworpen |
+|---|---|---|
+| OV-1 Volgorde | (a) guard nu bouwen, nog niet verplicht; verplicht bij de overstap op de App | (b) eerst de App; (c) nu verplicht |
+| OV-2 Overgang | (b) is de auteur een goedkeurder: slagen met waarschuwing en samenvatting; anders de volle regel, zonder schakelaar | (a) strikt; (c) label genoeg |
+| OV-3 Opnieuw draaien | (a) `pull_request_target` met `labeled` e.a.; eerst goedkeuren, dan label; (c) Re-run als uitweg | (b) `pull_request_review` (tot de App) |
+| OV-4 Gewijzigde test | (a) status `M`, `D`, `R`, `T` op een testpad; toevoegen vrij | (b) inhoudelijk |
+| OV-5 GitHub App | Rechten, sleutel en tokenscript zoals hierboven, in een eigen PR in stuk 6 | — |
+
+De volgende PR bouwt:
 
 - `scripts/kit/diff-guard.mjs`: een pure functie (diff met status per pad, `package.json` voor en na, labels, reviews, auteur, head-SHA,
   `.claude/gates.json`) → `{ uitslag: 'groen' | 'overgang' | 'rood', redenen, geraakt }`, met een tabeltest per geval: gate-pad,
