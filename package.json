@@ -28,6 +28,7 @@
     "typecheck": "tsc -b",
     "ratchet": "node scripts/kit/ratchet.mjs",
     "ratchet:update": "node scripts/kit/ratchet.mjs --update",
+    "check:catalogus": "node scripts/kit/catalogus.mjs",
     "test:unit": "vitest run --project unit --project web",
     "test:db": "scripts/runner.sh db",
     "test:e2e": "playwright test",
@@ -37,7 +38,7 @@
     "db:seed": "node --env-file=.env.local scripts/seed.mjs",
     "admin:create": "node --env-file-if-exists=.env.local scripts/admin-create.mjs",
     "auth:schema": "node scripts/auth-schema.mjs",
-    "gate:fast": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm ratchet && pnpm test:unit"
+    "gate:fast": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm ratchet && pnpm check:catalogus && pnpm test:unit"
   },
   "dependencies": {
     "@hono/node-server": "2.1.3",

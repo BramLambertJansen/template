@@ -1,9 +1,9 @@
 // Live feiten (framework §8, ADR 0011): elke rol begint hiermee, niet met wat in proza staat.
 // Gebruik: node scripts/kit/feiten.mjs [gates|adr|specs|migraties|routes|permissies|foutcodes|componenten] [--json]
 import { readdirSync, readFileSync } from 'node:fs';
+import { componenten, UITZONDERINGEN } from './catalogus.mjs';
 import { gates } from './gates.mjs';
 
-const NOG_NIET = 'nog niet gebouwd (roadmap fase 1, stuk 3)';
 const TEMPLATE_ADR_MAX = 99;
 
 /** @param {string} dir */
@@ -48,6 +48,31 @@ function migrations() {
   return { laatste: last, volgende: `tijdstempel > ${last ?? '0'} (dbmate new <naam>)` };
 }
 
+// Routes, permissies en foutcodes rechtstreeks uit de bron (Node draait TypeScript zonder build); geen kopie in proza.
+async function routes() {
+  const { contracts } = await import('../../src/shared/contracts/index.ts');
+  return contracts.map((contract) => ({
+    route: `${contract.method} /api${contract.path}`,
+    permissie: contract.permission,
+    bron: 'src/shared/contracts/ (handler: src/api/routes/)',
+  }));
+}
+
+async function permissies() {
+  const { permissions } = await import('../../src/shared/permissions.ts');
+  const { ROLES } = await import('../../src/core/shared/can.ts');
+  return permissions.names.map((permission) => ({
+    permissie: permission,
+    rollen:
+      ROLES.filter((role) => permissions.can({ role, sessionStrength: 'mfa' }, permission)).join(', ') || '(geen)',
+  }));
+}
+
+async function foutcodes() {
+  const { errors } = await import('../../src/shared/errors.ts');
+  return { codes: errors.codes.join(', '), teksten: 'src/web/copy/errors.ts', nieuw: 'src/shared/errors.ts' };
+}
+
 /** @type {Record<string, () => unknown>} */
 const sections = {
   gates: () =>
@@ -58,10 +83,15 @@ const sections = {
   },
   specs,
   migraties: migrations,
-  routes: () => NOG_NIET,
-  permissies: () => NOG_NIET,
-  foutcodes: () => NOG_NIET,
-  componenten: () => NOG_NIET,
+  routes,
+  permissies,
+  foutcodes,
+  componenten: () =>
+    componenten().map(({ naam, bron }) => ({
+      naam,
+      bron,
+      catalogus: naam in UITZONDERINGEN ? `uitzondering: ${UITZONDERINGEN[naam] ?? ''}` : '/design-system',
+    })),
 };
 
 const args = process.argv.slice(2);
@@ -72,7 +102,9 @@ if (unknown.length > 0) {
   process.exit(2);
 }
 const result = Object.fromEntries(
-  (wanted.length > 0 ? wanted : Object.keys(sections)).map((name) => [name, sections[name]?.()]),
+  await Promise.all(
+    (wanted.length > 0 ? wanted : Object.keys(sections)).map(async (name) => [name, await sections[name]?.()]),
+  ),
 );
 console.info(args.includes('--json') ? JSON.stringify(result, null, 2) : toText(result));
 
