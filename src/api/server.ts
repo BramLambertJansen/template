@@ -2,6 +2,7 @@ import { authGateway, createAuth } from '#core/api/auth/index.ts';
 import { closeDatabase, withUser } from '#core/api/db/index.ts';
 import { env } from '#core/api/env.ts';
 import { startServer } from '#core/api/http/serve.ts';
+import { writeJsonLine } from '#core/api/obs/request-log.ts';
 import { createSmtpMailer } from '#core/api/mail/smtp.ts';
 import { createDevLogin, devAuthSteps } from '#core/api/dev/login-as.ts';
 import { buildApp } from './app.ts';
@@ -27,6 +28,7 @@ await startServer(
     auth: gateway,
     withUser,
     services: createServices(auth),
+    log: writeJsonLine,
     // Dev-login alleen lokaal (ADR 0014); in elke andere omgeving bestaat de route niet.
     ...(config.appEnv === 'local' ? { devLogin: createDevLogin(devAuthSteps(auth)) } : {}),
   }),

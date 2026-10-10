@@ -216,8 +216,9 @@ Provider-neutraal: wat elke host nodig heeft, hoort in de template; de adapter p
 - [x] `startServer` neemt host en poort uit het env-schema: `API_HOST` (standaard `127.0.0.1`; de containerimage zet `0.0.0.0`) en `API_PORT`
 - [x] Netjes stoppen: bij SIGTERM/SIGINT geen nieuwe verbindingen, lopende requests afmaken binnen `SHUTDOWN_TIMEOUT_MS` (standaard 10 s),
       daarna de pools sluiten via `onStopped` uit `src/api/server.ts` (`src/core/api/http/serve.test.ts`)
-- [ ] Request-logging in `src/core/api/obs/` (framework §6): één gestructureerde regel per request met `requestId`, gebruiker-ID, duur en
-      databasetijd; geen body, geen PII. Een logger als dependency vraagt akkoord van de eigenaar
+- [x] Request-logging in `src/core/api/obs/` (framework §6): één JSON-regel per request op stdout met `requestId`, routepatroon, status,
+      gebruiker-ID, duur en databasetijd (tijd binnen `withUser`); geen body, query of PII. Eigen logger, geen dependency (besluit eigenaar
+      2026-10-10); `createApp({ log })`, `server.ts` geeft `writeJsonLine` mee (`src/core/api/obs/request-log.test.ts`)
 - [ ] Readiness met databasecontrole naast `GET /api/health` (liveness); een nieuwe publieke route vraagt een regel in framework §3
 - [ ] `pnpm start` en een productiebuild van de API; een containerimage (non-root) dat elke containerhost kan draaien
 - [ ] Achtergrondtaken volgens de ADR uit **Beslissingen**: opruimen en mail-outbox, elk met een integratietest
