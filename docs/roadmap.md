@@ -143,7 +143,7 @@ Elke regel uit `AGENTS.md` die een check kan zijn, wordt een check; een check te
       `check-policies` (elke policy een pgTAP-assert op naam, in `test:db`) en het bundelbudget (JS 260 kB, grootste chunk 115 kB, CSS 15 kB
       gzip, in `gate:fast`) (#38); `check-secdef`: eigenaar en `search_path` in de database via de functiecatalogus in pgTAP
       (`db/tests/functies.sql`, #23), en `check:secdef` in `gate:fast` op de migraties (`search_path = ''`, namen met schema, eigenaar
-      `app_definer`; fixtures in `test/rails/fixtures/secdef/`);
+      `app_definer`; fixtures in `test/rails/fixtures/secdef/`) (#60);
       `check:migrations` (geen gecommitte migratie gewijzigd, verwijderd of hernoemd t.o.v. het afsplitspunt met `origin/main`, namen en
       versies uniek, in `gate:fast`; CI haalt daarvoor de volledige geschiedenis op)
 - [ ] Diff-guard met label `gate-wijziging` + goedkeuring op exact de head-SHA, niet van de auteur (framework §10), met tests per geval
