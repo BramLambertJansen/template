@@ -55,6 +55,7 @@ expect_version node "v$(mise_version node)" mise exec -- node --version
 expect_version pnpm "$(sed -nE 's/.*"packageManager": "pnpm@([^"]+)".*/\1/p' package.json)" mise exec -- pnpm --version
 expect_version dbmate "$(mise_version dbmate)" mise exec -- dbmate --version
 expect_version betterleaks "$(mise_version betterleaks)" mise exec -- betterleaks version
+expect_version osv-scanner "$(mise_version osv-scanner)" mise exec -- osv-scanner --version
 
 for tool in git gh jq bwrap socat; do
   if command -v "$tool" >/dev/null; then ok "$tool aanwezig"; else fail "$tool ontbreekt" "sudo apt-get install -y $tool (docs/nieuwe-app.md)"; fi
