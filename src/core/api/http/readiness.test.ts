@@ -58,4 +58,30 @@ describe('createReadiness', () => {
     expect(await ready()).toBe(true);
     expect(check).toHaveBeenCalledTimes(2);
   });
+
+  test('hangende controle die later faalt: daarna start een nieuwe controle', async () => {
+    const hanging = Promise.withResolvers<undefined>();
+    const check = vi.fn<() => Promise<void>>().mockReturnValueOnce(hanging.promise).mockResolvedValue(undefined);
+    const ready = createReadiness(check, { timeoutMs: 20, cacheMs: 0 });
+    expect(await ready()).toBe(false);
+    hanging.reject(new Error('ETIMEDOUT'));
+    await hanging.promise.catch(() => undefined);
+    await Promise.resolve();
+    expect(await ready()).toBe(true);
+    expect(check).toHaveBeenCalledTimes(2);
+  });
+
+  test('een timeout wordt net als een gewone uitkomst bewaard binnen cacheMs', async () => {
+    const time = clock();
+    const hanging = Promise.withResolvers<undefined>();
+    const check = vi.fn(() => hanging.promise);
+    const ready = createReadiness(check, { timeoutMs: 20, cacheMs: 1000, now: time.now });
+    expect(await ready()).toBe(false);
+    hanging.resolve(undefined);
+    await hanging.promise;
+    await Promise.resolve();
+    time.advance(500);
+    expect(await ready()).toBe(false);
+    expect(check).toHaveBeenCalledTimes(1);
+  });
 });

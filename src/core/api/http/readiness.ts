@@ -3,10 +3,12 @@
 // loopt hooguit één controle tegelijk, zodat een publieke route de database niet kan belasten.
 
 export interface ReadinessOptions {
-  // Na deze tijd telt een controle als mislukt; de controle zelf mag doorlopen, maar er start geen tweede.
+  // Na deze tijd telt een controle als mislukt; de controle zelf mag doorlopen, maar er start geen tweede. De controle moet
+  // daarom zelf begrensd zijn (pingDatabase is dat: verbinden en query elk 1,5 s), anders blijft readiness op false.
   readonly timeoutMs: number;
   // Zolang geldt de vorige uitkomst.
   readonly cacheMs: number;
+  // Monotone klok, zodat een klokcorrectie (NTP) de bewaartijd niet verlengt.
   readonly now?: () => number;
 }
 
@@ -25,7 +27,7 @@ function within(check: Promise<boolean>, timeoutMs: number): Promise<boolean> {
 }
 
 export function createReadiness(check: () => Promise<void>, options: ReadinessOptions): Readiness {
-  const now = options.now ?? Date.now;
+  const now = options.now ?? (() => performance.now());
   let last: { readonly ok: boolean; readonly at: number } | undefined;
   let running: Promise<boolean> | undefined;
   let checking = false;

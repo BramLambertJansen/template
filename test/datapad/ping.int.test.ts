@@ -1,28 +1,41 @@
-import { afterAll, expect, test } from 'vitest';
-import { createPing, createPool } from '../../src/core/api/db/testing.ts';
+import { afterAll, describe, expect, test } from 'vitest';
+import { createPing, type Ping } from '../../src/core/api/db/testing.ts';
 
-// Readiness (roadmap stuk 7): de ping van GET /api/ready slaagt tegen de echte database en faalt bij een geweigerde login.
-// Draait alleen via `pnpm test:db` in de runner (ADR 0009).
-function databaseUrl(): string {
-  const value = process.env['DATABASE_URL'];
-  if (value === undefined || value === '') throw new Error('DATABASE_URL ontbreekt: draai via pnpm test:db');
+// Readiness (ADR 0018): de ping van GET /api/ready slaagt als api_user, direct én via PgBouncer (transaction mode), en
+// faalt bij een geweigerde login. Draait alleen via `pnpm test:db` in de runner (ADR 0009).
+const TIMEOUT_MS = 1500;
+
+function url(name: string): string {
+  const value = process.env[name];
+  if (value === undefined || value === '') throw new Error(`${name} ontbreekt: draai via pnpm test:db`);
   return value;
 }
 
-const pool = createPool(databaseUrl());
-const badUrl = new URL(databaseUrl());
-// Het juiste wachtwoord met één teken erbij: dezelfde rol, maar Postgres weigert de login (scram).
-badUrl.password += 'x';
-const badPool = createPool(badUrl.toString());
+const pings: Ping[] = [];
+function ping(connectionString: string): Ping {
+  const created = createPing(connectionString, TIMEOUT_MS);
+  pings.push(created);
+  return created;
+}
 
 afterAll(async () => {
-  await Promise.all([pool.end(), badPool.end()]);
+  await Promise.all(pings.map(async (created) => created.end()));
 });
 
-test('ping als api_user slaagt zonder withUser()', async () => {
-  await expect(createPing(pool)()).resolves.toBeUndefined();
-});
+describe.each([
+  { name: 'direct', variable: 'DATABASE_URL' },
+  { name: 'via PgBouncer (transaction mode)', variable: 'POOLER_DATABASE_URL' },
+])('ping $name', ({ variable }) => {
+  test('slaagt als api_user zonder withUser(), ook herhaald op dezelfde verbinding', async () => {
+    const { ping: run } = ping(url(variable));
+    await expect(run()).resolves.toBeUndefined();
+    await expect(run()).resolves.toBeUndefined();
+  });
 
-test('ping met een geweigerde login faalt', async () => {
-  await expect(createPing(badPool)()).rejects.toThrow();
+  test('faalt bij een geweigerde login', async () => {
+    const bad = new URL(url(variable));
+    // Het juiste wachtwoord met één teken erbij: dezelfde rol, maar Postgres weigert de login (scram).
+    bad.password += 'x';
+    await expect(ping(bad.toString()).ping()).rejects.toThrow();
+  });
 });
