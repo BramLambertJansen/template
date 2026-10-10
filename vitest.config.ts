@@ -18,6 +18,8 @@ export default defineConfig({
           include: ['{src,test}/**/*.test.ts'],
           exclude: ['**/*.int.test.ts', 'test/rails/fixtures/**'],
           environment: 'node',
+          // Eén database voor alle bestanden: parallel zien racetests de commits van andere bestanden (roles.int.test.ts).
+          fileParallelism: false,
           setupFiles: [gitEnv],
         },
       },
@@ -35,6 +37,8 @@ export default defineConfig({
           include: ['{src,test}/**/*.int.test.ts'],
           exclude: ['test/rails/fixtures/**'],
           environment: 'node',
+          // Eén database voor alle bestanden: parallel zien racetests de commits van andere bestanden (roles.int.test.ts).
+          fileParallelism: false,
           setupFiles: [gitEnv],
         },
       },
