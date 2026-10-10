@@ -37,7 +37,7 @@ paths:
   `src/api/db/schema.ts`; commit beide met de migratie, nooit met de hand bewerken. Een kolom `id` of `*_id` zonder
   foreign key naar een gebrande kolom: zet hem in `db/ids.json` met een ID gemaakt met `brandedId()` uit `src/core/shared/ids.ts`, of `null` met reden.
   Een kolomtype dat de generator niet kent (of `timestamp` zonder tijdzone) laat hem falen.
-- `src/core/api/db` exporteert alleen `withUser()` (plus `testing.ts`, alleen voor testbestanden). Die controleert aan het begin
+- `src/core/api/db` exporteert alleen `withUser()`, `closeDatabase()` (alleen bij het stoppen, vanuit `src/api/server.ts`) en `testing.ts` (alleen voor testbestanden). Die controleert aan het begin
   van elke transactie `current_user = session_user`, zet de rol, `app.user_id` en `app.session_strength` (`password` of `mfa`; elke
   andere waarde weigert hij) en vertaalt fouten. Buiten `withUser()` geeft `app.session_strength()` `none`.
 

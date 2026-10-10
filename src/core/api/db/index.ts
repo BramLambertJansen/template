@@ -2,6 +2,14 @@ import { env } from '../env.ts';
 import { createPool } from './pool.ts';
 import { createWithUser } from './with-user.ts';
 
+const pool = createPool(env().databaseUrl);
+
 // De enige ingang naar de database (framework §1, §6): de rest van de module is intern.
-export const withUser = createWithUser(createPool(env().databaseUrl));
+export const withUser = createWithUser(pool);
+
+// Alleen bij het stoppen van het proces (startServer, onStopped): daarna faalt elke withUser().
+export async function closeDatabase(): Promise<void> {
+  await pool.end();
+}
+
 export type { Actor, SessionStrength, Tx, WithUserOptions } from './with-user.ts';

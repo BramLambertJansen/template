@@ -6,7 +6,7 @@ Wijzigen alleen via een PR met ADR, met review door de eigenaar.
 ## 1. Principes
 
 1. **De fout onmogelijk maken, niet verbieden.** De browser heeft geen databaseclient; de databasemodule
-   exporteert alleen `withUser()`; een route bestaat alleen via `defineRoute()`. Wat het typesysteem afdwingt, hoeft geen regel te zijn.
+   exporteert alleen `withUser()` (en `closeDatabase()` bij het stoppen); een route bestaat alleen via `defineRoute()`. Wat het typesysteem afdwingt, hoeft geen regel te zijn.
 2. **Afdwingen boven afspreken.** Wat niet onmogelijk te maken is, blokkeert een check in CI. CLAUDE.md, skills
    en hooks sturen en geven snelle feedback; de harde grens ligt in CI en op GitHub.
 3. **Eén bron per feit.** Migraties voor het datamodel, zod-schema's voor contracten, één CSS-laag voor tokens, één script per check.
