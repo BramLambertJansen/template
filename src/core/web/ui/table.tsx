@@ -2,6 +2,7 @@ import type { ComponentProps } from 'react';
 import { cn } from './cn.ts';
 
 // Tabel (spec accountbeheer). De omhulling scrolt zelf horizontaal, zodat de pagina op 375 px niet breder wordt.
+// relative: anders hangt een absoluut element (sr-only kolomkop) aan de pagina en steekt het buiten beeld.
 // Met het toetsenbord te scrollen (WCAG 2.1.1, axe scrollable-region-focusable): de omhulling is focusbaar en heeft een naam.
 export function Table({ className, label, ...props }: ComponentProps<'table'> & { readonly label: string }) {
   return (
@@ -9,7 +10,7 @@ export function Table({ className, label, ...props }: ComponentProps<'table'> & 
       role="region"
       aria-label={label}
       tabIndex={0}
-      className="w-full overflow-x-auto rounded-lg border focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      className="relative w-full overflow-x-auto rounded-lg border focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
       <table className={cn('w-full caption-bottom text-sm', className)} {...props} />
     </div>
