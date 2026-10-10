@@ -12,12 +12,26 @@ import { collectCspViolations, scanAxe } from './support/axe.ts';
 
 // Accountbeheer tegen de echte stack (spec accountbeheer, AC-1 t/m AC-8 en AC-10): CSP aan, axe op 375 en 1280 px.
 
+// Bij horizontaal scrollen: de buitenste elementen die rechts buiten beeld steken, met hun breedte en die van de ouder.
+const overflowReport = `(() => {
+  const describe = (el) => el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + '.' + [...el.classList].join('.');
+  const wide = [...document.body.querySelectorAll('*')].filter((el) => el.getBoundingClientRect().right > window.innerWidth + 0.5);
+  return {
+    overflow: document.documentElement.scrollWidth - window.innerWidth,
+    elements: wide
+      .filter((el) => !wide.includes(el.parentElement))
+      .map((el) => describe(el) + ' ' + Math.round(el.getBoundingClientRect().width) + 'px in ' +
+        describe(el.parentElement) + ' ' + Math.round(el.parentElement.getBoundingClientRect().width) + 'px, ' +
+        getComputedStyle(el).overflowX),
+  };
+})()`;
+
 async function axeAtBothWidths(page: Page): Promise<void> {
   for (const width of [375, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     await scanAxe(page);
-    const overflow = await page.evaluate<number>('document.documentElement.scrollWidth - window.innerWidth');
-    expect(overflow, `horizontaal scrollen op ${String(width)} px`).toBeLessThanOrEqual(0);
+    const { overflow, elements } = await page.evaluate<{ overflow: number; elements: string[] }>(overflowReport);
+    expect(overflow, `horizontaal scrollen op ${String(width)} px: ${elements.join(' | ')}`).toBeLessThanOrEqual(0);
   }
 }
 
