@@ -131,6 +131,8 @@ Elke regel uit `AGENTS.md` die een check kan zijn, wordt een check; een check te
 - [ ] Overige ESLint-regels: sonarjs, better-tailwindcss, functielengte, max-params, max-depth, `useQuery`/`useForm`/`console.error`-restricties
 - [ ] `check-migrations`, `check-docs` (framework §10: identifiers tussen backticks, `.claude/gates.json` = CODEOWNERS = `ask`, register = gates,
       statussen), `check-secdef`, `check-policies`, `check-core`, bundelbudget
+      Deels gebouwd: `check-docs` in de ratchet (paden en scripts tussen backticks, links in `docs/`, statussen, "Hergebruik en UX",
+      CODEOWNERS = `ask`) (#34); nog zonder vergelijking met `.claude/gates.json` (stuk 5)
 - [ ] Diff-guard met label `gate-wijziging` + goedkeuring op exact de head-SHA, niet van de auteur (framework §10), met tests per geval
 - [ ] `gate:fast` definitief, `gate:slow` (squawk, snapshot `pg_dump -N tap --exclude-extension=pgtap` zonder verschil, `check-policies`, e2e)
 - [ ] Scripts uit `excludedCommands` (`test:db`, `db:reset`, `db:types`, `ui:check`, `gate:slow`) bestaan in `package.json`, alle vijf in de runner van ADR 0009
