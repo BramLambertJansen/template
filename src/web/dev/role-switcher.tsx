@@ -1,11 +1,11 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { UserCog, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { ROLES, type Role } from '#core/shared/can.ts';
 import { roleLabels } from '#web/copy/ui.ts';
-import { meQuery } from '#web/lib/session.ts';
 import { Button, cn, Notice, useErrorText } from '#web/ui/index.ts';
+import { useCurrentRole } from './queries.ts';
 import { switchRole } from './switch-role.ts';
 
 // Dev-rolwisselaar (spec accounts/AC-8, besluit eigenaar 2026-10-10): op elk scherm, ook ingelogd, een tabje rechts; een
@@ -19,7 +19,7 @@ export function DevRoleSwitcher() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const errorText = useErrorText();
-  const current = useQuery({ ...meQuery, retry: false }).data?.rol;
+  const current = useCurrentRole();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const trigger = useRef<HTMLButtonElement>(null);

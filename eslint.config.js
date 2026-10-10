@@ -16,6 +16,9 @@ const ruleNames = [
   'sql-instellingen',
   'hono',
   'import',
+  'query-hooks',
+  'use-form',
+  'console-error',
 ];
 const rails = { rules: Object.fromEntries(ruleNames.map((name) => [name, restrictedSyntax])) };
 
@@ -40,6 +43,37 @@ function restrict(rule, files, ignores, message, selectors) {
 }
 
 const railConfigs = [
+  restrict(
+    'query-hooks',
+    WEB,
+    ['**/queries.ts', '**/*.test.{ts,tsx}'],
+    'useQuery/useMutation alleen in features/<resource>/queries.ts (framework §5): roep daar een hook aan.',
+    [
+      "ImportDeclaration[source.value='@tanstack/react-query'] > ImportSpecifier[imported.name=/^use(Suspense)?(Query|Queries|InfiniteQuery|Mutation)$/]",
+      "ImportDeclaration[source.value='@tanstack/react-query'] > ImportNamespaceSpecifier",
+      "ExportNamedDeclaration[source.value='@tanstack/react-query'] > ExportSpecifier[local.name=/^use(Suspense)?(Query|Queries|InfiniteQuery|Mutation)$/]",
+    ],
+  ),
+  restrict(
+    'use-form',
+    WEB,
+    ['src/core/web/ui/form.tsx', '**/*.test.{ts,tsx}'],
+    "Formulieren via <Form> en useZodForm uit '#web/ui/index.ts' (framework §5), niet useForm zelf.",
+    [
+      "ImportDeclaration[source.value='react-hook-form'] > ImportSpecifier[imported.name='useForm']",
+      "ImportDeclaration[source.value='react-hook-form'] > ImportNamespaceSpecifier",
+    ],
+  ),
+  restrict(
+    'console-error',
+    ['src/**/queries.ts', 'src/core/web/lib/api-client.ts', 'src/web/lib/api.ts'],
+    [],
+    'Geen kale console.error in queries.ts of de API-client (framework §6): een fout gaat als ApiError naar AsyncView/Form.',
+    [
+      "CallExpression > MemberExpression.callee[object.name='console'][property.name='error']",
+      "CallExpression > MemberExpression.callee[object.name='console'][computed=true]",
+    ],
+  ),
   restrict(
     'process-env',
     SRC,
