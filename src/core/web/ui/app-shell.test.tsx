@@ -62,6 +62,24 @@ test('een h1 die later verschijnt (lazy onderdeel) krijgt alsnog de focus', asyn
   expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1, name: 'Later' }));
 });
 
+test('een verborgen h1 van het oude scherm (Suspense, display: none) krijgt de focus niet', async () => {
+  const { rerender } = render(shell('/', 'Home'));
+  rerender(
+    <AppShell nav={[]} userName="Ada Admin" menuItems={[]} routeKey="/b">
+      <div style={{ display: 'none' }}>
+        <PageHeader title="Home" />
+      </div>
+    </AppShell>,
+  );
+  await nextFrame();
+  expect(document.activeElement).toBe(document.body);
+  rerender(shell('/b', 'Later'));
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1, name: 'Later' }));
+});
+
 test('zonder h1 gaat de focus na het wachten naar main', async () => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
   try {

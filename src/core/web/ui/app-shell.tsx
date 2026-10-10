@@ -29,25 +29,35 @@ const MAIN_ID = 'inhoud';
 // eerst teruggeeft.
 const HEADING_WAIT_MS = 2000;
 
+// Een zichtbare h1: tijdens het laden van een lazy route verbergt React Suspense het oude scherm met een inline
+// display: none en blijft zijn h1 in de DOM; focus() op een verborgen element doet niets.
+function isHiddenWithin(element: HTMLElement, main: HTMLElement): boolean {
+  for (let node: HTMLElement | null = element; node !== null && node !== main; node = node.parentElement) {
+    if (node.hidden || node.style.display === 'none') return true;
+  }
+  return false;
+}
+
+function focusVisibleHeading(main: HTMLElement): boolean {
+  const heading = [...main.querySelectorAll<HTMLElement>('h1')].find((element) => !isHiddenWithin(element, main));
+  heading?.focus();
+  return heading !== undefined && document.activeElement === heading;
+}
+
 function focusHeadingWhenPresent(main: HTMLElement): () => void {
-  const heading = () => main.querySelector<HTMLElement>('h1');
+  const observer = new MutationObserver(() => {
+    if (focusVisibleHeading(main)) stop();
+  });
   const frame = requestAnimationFrame(() => {
-    const found = heading();
-    if (found !== null) {
-      found.focus();
+    if (focusVisibleHeading(main)) {
+      stop();
       return;
     }
-    observer.observe(main, { childList: true, subtree: true });
-  });
-  const observer = new MutationObserver(() => {
-    const found = heading();
-    if (found === null) return;
-    stop();
-    found.focus();
+    observer.observe(main, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'hidden'] });
   });
   const timer = setTimeout(() => {
     stop();
-    if (heading() === null) main.focus();
+    if (!focusVisibleHeading(main)) main.focus();
   }, HEADING_WAIT_MS);
   function stop() {
     cancelAnimationFrame(frame);
