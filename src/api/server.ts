@@ -1,6 +1,7 @@
 import { authGateway, createAuth } from '#core/api/auth/index.ts';
-import { closeDatabase, withUser } from '#core/api/db/index.ts';
+import { closeDatabase, pingDatabase, withUser } from '#core/api/db/index.ts';
 import { env } from '#core/api/env.ts';
+import { createReadiness } from '#core/api/http/readiness.ts';
 import { startServer } from '#core/api/http/serve.ts';
 import { createWebApp } from '#core/api/http/web.ts';
 import { writeJsonLine } from '#core/api/obs/request-log.ts';
@@ -9,6 +10,10 @@ import { createDevLogin, devAuthSteps } from '#core/api/dev/login-as.ts';
 import { buildApp } from './app.ts';
 import { invitationMail } from './mail/invitation.ts';
 import { createServices } from './services.ts';
+
+// Readiness (GET /api/ready): een probe wacht hooguit 2 s; binnen 1 s krijgt de volgende probe dezelfde uitkomst.
+const READY_TIMEOUT_MS = 2000;
+const READY_CACHE_MS = 1000;
 
 // env() controleert de hele omgeving bij opstart (framework §6) en faalt met alle fouten tegelijk.
 const config = env();
@@ -29,6 +34,7 @@ const api = buildApp({
   withUser,
   services: createServices(auth),
   log: writeJsonLine,
+  ready: createReadiness(pingDatabase, { timeoutMs: READY_TIMEOUT_MS, cacheMs: READY_CACHE_MS }),
   // Dev-login alleen lokaal (ADR 0014); in elke andere omgeving bestaat de route niet.
   ...(config.appEnv === 'local' ? { devLogin: createDevLogin(devAuthSteps(auth)) } : {}),
 });
