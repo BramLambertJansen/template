@@ -161,9 +161,12 @@ Elke regel uit `AGENTS.md` die een check kan zijn, wordt een check; een check te
       Deels gebouwd: `check-docs` in de ratchet (paden en scripts tussen backticks, links in `docs/`, statussen, "Hergebruik en UX",
       CODEOWNERS = `ask`) (#34); nog zonder vergelijking met `.claude/gates.json` (stuk 5);
       `check-policies` (elke policy een pgTAP-assert op naam, in `test:db`) en het bundelbudget (JS 260 kB, grootste chunk 115 kB, CSS 15 kB
-      gzip, in `gate:fast`) (#38); `check-secdef` is gedekt door de functiecatalogus in pgTAP (`db/tests/functies.sql`, #23);
+      gzip, in `gate:fast`) (#38); `check-secdef`: eigenaar en `search_path` in de database via de functiecatalogus in pgTAP
+      (`db/tests/functies.sql`, #23), en `check:secdef` in `gate:fast` op de migraties (`search_path = ''`, namen met schema, eigenaar
+      `app_definer`; fixtures in `test/rails/fixtures/secdef/`) (#60);
       `check:migrations` (geen gecommitte migratie gewijzigd, verwijderd of hernoemd t.o.v. het afsplitspunt met `origin/main`, namen en
       versies uniek, in `gate:fast`; CI haalt daarvoor de volledige geschiedenis op)
+- [ ] `check-secdef` voor security definer-views (zoals `app.accounts`): nu alleen functies en procedures (#60)
 - [ ] Diff-guard met label `gate-wijziging` + goedkeuring op exact de head-SHA, niet van de auteur (framework §10), met tests per geval
 - [ ] `gate:fast` definitief, `gate:slow` (squawk, snapshot `pg_dump -N tap --exclude-extension=pgtap` zonder verschil, `check-policies`, e2e)
       Deels gebouwd: `gate:slow` = `test:db` (met `check-policies`) + `ui:check` + `check:snapshot` (snapshot en Drizzle-schema zonder

@@ -22,6 +22,8 @@ paths:
 - CHECK-constraint met een grens uit `src/shared/limits.ts`: test dat beide waarden gelijk zijn.
 - `security definer`-functies: `set search_path = ''`, alles volledig gekwalificeerd (`public.x`, `pg_catalog.y`),
   eigenaar `app_definer` (`alter function … owner to app_definer`) met alleen de rechten die de functie nodig heeft.
+  Geen overload, nooit `alter function … security definer` en geen `security definer` in een `do`-blok of dynamische SQL
+  (`pnpm check:secdef`, framework §6).
 - Datamigraties die alle rijen moeten zien: via zo'n functie, nooit door RLS uit te zetten. FORCE RLS geldt ook voor
   `app_definer`: geef de tabel in dezelfde migratie een policy `to app_definer` met alleen wat de functie nodig heeft, met een pgTAP-test.
 - Auth-tabellen: SQL uit `node scripts/auth-schema.mjs` (gepinde versie) in een migratie die begint met `set local search_path = better_auth;`
@@ -47,4 +49,5 @@ geforceerd, geen TRUNCATE/REFERENCES/TRIGGER, `better_auth` dicht, niets voor PU
 `testing.ts` (`beginTestDb(pool)`: `asUser(rol)`, `withUser` met een savepoint per aanroep, `rollback()`; de pool verbindt
 als `app_migrator` en wordt alleen in `test/` gemaakt).
 `pnpm db:generate` met `db/schema.snapshot.sql` en `src/api/db/schema.ts` (eigen generator in `scripts/db/`, geen drizzle-kit).
-Nog niet: de snapshot-vergelijking in CI (`gate:slow`), `check-secdef` en `check-policies` (roadmap fase 1). Bouw er niet op vooruit.
+`pnpm check:secdef` (statisch op de migraties, in `gate:fast`; de functiecatalogus is de runtime-kant in `gate:slow`).
+Nog niet: de snapshot-vergelijking in CI (`gate:slow`) en `check-policies` (roadmap fase 1). Bouw er niet op vooruit.

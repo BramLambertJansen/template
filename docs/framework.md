@@ -108,8 +108,8 @@ dependency-cruiser); checks op de database lezen de catalogus van de lokale data
 | Pre-push | `gate:fast` | < 60 s |
 | CI | `gate:fast` + build, daarna `gate:slow` | 3–5 / 8–15 min |
 
-- `gate:fast` = lint, typecheck, unit, dependency-cruiser, bundelbudget, `check-migrations`, `check-docs`.
-- `gate:slow` = `test:db` met `check-policies` en `check-secdef`, squawk op migraties, schema-snapshot zonder verschil, kleine e2e-set — tegen een verse database.
+- `gate:fast` = lint, typecheck, unit, dependency-cruiser, bundelbudget, `check-migrations`, `check-secdef` (statisch, op de migraties), `check-docs`.
+- `gate:slow` = `test:db` met `check-policies` en de functiecatalogus (de runtime-kant van `check-secdef`, op `pg_proc`), squawk op migraties, schema-snapshot zonder verschil, kleine e2e-set — tegen een verse database.
 - Verplicht naast CI: CodeQL en osv-scanner.
 - **Gate-register**: `scripts/kit/gates.mjs` beschrijft per script wat het bewaakt en of het snel is (zonder database, dus in `gate:fast`);
   het is de enige gate-tabel. `check-docs` eist dat register en `gate:fast`/`gate:slow` gelijk zijn (ADR 0011).
@@ -186,7 +186,16 @@ Ankers: OWASP Top 10:2025, OWASP API Security Top 10, ASVS 5.0 niveau 1 (checkli
 - **FORCE RLS werkt alleen voor niet-superusers**: daarom is `app_migrator` eigenaar en geen superuser, lokaal én in productie.
   Datamigraties die alle rijen moeten zien, lopen via een gereviewde `security definer`-functie van `app_definer`; omdat FORCE RLS
   ook voor `app_definer` geldt, krijgt de tabel daarvoor een eigen policy `to app_definer` met pgTAP-test.
-- **`search_path = ''`** op elke `security definer`-functie, met volledig gekwalificeerde namen; een catalogus-check op `pg_proc` (`prosecdef` en `proconfig`) bewaakt dit.
+- **`security definer`** alleen met `search_path = ''`, volledig gekwalificeerde namen en eigenaar `app_definer`. Twee lagen: `check-secdef`
+  (`gate:fast`) leest de migraties statisch; de functiecatalogus in pgTAP (`gate:slow`) controleert in de draaiende database op `pg_proc`
+  (`prosecdef`, `proconfig`, eigenaar).
+  - Volledig gekwalificeerd: de functienaam, elke tabel en elke functieaanroep in de body heeft een schema, ook ingebouwde functies
+    (`pg_catalog.now()`). Typen en operators niet: `pg_temp` wordt nooit doorzocht voor functies en operators; de echte aanval is een
+    tijdelijke tabel die een ongekwalificeerde tabel overschaduwt.
+  - Geen overload van een security definer-functie (over alle migraties heen); zo klopt het koppelen van de eigenaar op naam.
+  - Nooit `alter function … security definer`: definer-rechten ontstaan alleen bij `create`, waar search_path en namen gecontroleerd
+    worden. `security definer` op een plek die `check-secdef` niet als `create` leest (een `do`-blok, dynamische SQL) faalt.
+  - Security definer-views (zoals `app.accounts`) controleert `check-secdef` nog niet (roadmap stuk 4).
 - **Functiecatalogus** (pgTAP, ADR 0011): elke functie in `public` en `app` staat in een catalogus als `client` (uitvoerbaar voor `app_authenticated`)
   of `intern` (geen API-rol); de grants moeten bij die klasse passen, elke client-functie controleert de actor (`app.current_user_id()`)
   of heeft een vastgelegde reden waarom niet. Een nieuwe functie zonder klasse faalt.

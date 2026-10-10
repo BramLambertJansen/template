@@ -28,7 +28,15 @@ describe('laatste admin', () => {
     const [a, b] = [UserId.parse(`race-a-${String(Date.now())}`), UserId.parse(`race-b-${String(Date.now())}`)];
     await admin(a);
     await admin(b);
-    // Voorwaarde: a en b zijn de enige admins (verse test-database); een admin met MFA ziet alle rollen.
+    // Voorwaarde: a en b zijn de enige admins. Andere int-tests committen ook admins (dev-login: de seed-admin), dus
+    // die zet de test eerst terug naar user in plaats van op een verse database te rekenen; een admin met MFA ziet alle rollen.
+    const others = await withUser({ userId: a, sessionStrength: 'mfa' }, async (tx) => {
+      const { rows } = await tx.execute<{ user_id: string }>(
+        sql`select user_id from public.user_roles where role = 'admin' and user_id not in (${a}, ${b})`,
+      );
+      return rows.map((row) => row.user_id);
+    });
+    await Promise.all(others.map((id) => migrator.query("select app.assign_role($1, 'user')", [id])));
     const admins = await withUser({ userId: a, sessionStrength: 'mfa' }, async (tx) => {
       const { rows } = await tx.execute<{ count: number }>(
         sql`select count(*)::integer as count from public.user_roles where role = 'admin'`,
