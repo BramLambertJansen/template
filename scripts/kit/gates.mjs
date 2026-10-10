@@ -14,6 +14,11 @@ export const gates = [
   },
   { script: 'typecheck', bewaakt: 'TypeScript streng (framework §4), ook scripts/', snel: true },
   { script: 'ratchet', bewaakt: 'lagen en zones (dependency-cruiser) tegen .kit/baseline.json', snel: true },
+  {
+    script: 'check:catalogus',
+    bewaakt: 'elk component uit src/web/ui op /design-system of met een uitzondering met reden (framework §7)',
+    snel: true,
+  },
   { script: 'test:unit', bewaakt: 'unit-tests en de fixtures van de rails (test/rails)', snel: true },
   {
     script: 'test:db',
