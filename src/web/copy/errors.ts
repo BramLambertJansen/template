@@ -8,6 +8,6 @@ export const errorTexts = {
   INVALID_CREDENTIALS: 'E-mailadres of wachtwoord klopt niet.',
   INVALID_TOTP: 'Deze code klopt niet. Probeer het opnieuw.',
   INVITATION_INVALID: 'Deze uitnodiging is verlopen of al gebruikt. Vraag een nieuwe aan.',
-  ALREADY_ACTIVE: 'Dit account is al actief; opnieuw uitnodigen kan niet.',
+  ALREADY_ACTIVE: 'Dit account is al actief. Een nieuwe uitnodiging is niet nodig.',
   LAST_ADMIN: 'Er moet minstens één beheerder overblijven.',
 } as const satisfies Record<ErrorCode, string>;

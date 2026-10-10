@@ -1,7 +1,7 @@
 import type { Role } from '#core/shared/can.ts';
 
-// Zichtbare teksten van de schermen, letterlijk uit de spec accountbeheer waar die een tekst geeft. Teksten die de spec
-// niet noemt (toegankelijke namen, validatie), staan met "(niet in spec)" erbij.
+// Zichtbare teksten van de schermen, letterlijk uit de spec accountbeheer (ook de rij "Aanvullend": toegankelijke namen
+// en validatie).
 // Naam per rol: Record<Role, …>, dus een nieuwe rol in ROLES zonder naam is een typefout (accounts, rolwisselaar).
 export const roleLabels = { user: 'Gebruiker', admin: 'Beheerder' } as const satisfies Record<Role, string>;
 
@@ -26,7 +26,7 @@ export const copy = {
     showKey: 'Kan je niet scannen? Toon de sleutel',
     code: 'Code',
     submit: 'Activeren',
-    // (niet in spec) toegankelijke naam van de QR-code en het label van de sleutel.
+    // Toegankelijke naam van de QR-code en het label van de sleutel.
     qrLabel: 'QR-code voor je authenticator-app',
     keyLabel: 'Sleutel',
   },
@@ -47,7 +47,7 @@ export const copy = {
     email: 'E-mailadres',
     role: 'Rol',
     status: 'Status',
-    // (niet in spec) kop van de kolom met "Opnieuw uitnodigen"; alleen voor schermlezers.
+    // Kop van de kolom met "Opnieuw uitnodigen"; alleen voor schermlezers.
     actions: 'Acties',
     roles: roleLabels,
     statuses: { actief: 'Actief', uitgenodigd: 'Uitgenodigd' },
