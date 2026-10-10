@@ -13,7 +13,12 @@ export const gates = [
     snel: true,
   },
   { script: 'typecheck', bewaakt: 'TypeScript streng (framework §4), ook scripts/', snel: true },
-  { script: 'ratchet', bewaakt: 'lagen en zones (dependency-cruiser) tegen .kit/baseline.json', snel: true },
+  {
+    script: 'ratchet',
+    bewaakt:
+      'lagen en zones (dependency-cruiser) en docs (check-docs: paden, links, statussen, spiegeling) tegen .kit/baseline.json',
+    snel: true,
+  },
   {
     script: 'check:catalogus',
     bewaakt: 'elk component uit src/web/ui op /design-system of met een uitzondering met reden (framework §7)',

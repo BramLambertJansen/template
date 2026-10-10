@@ -3,6 +3,8 @@
 // De baseline laten groeien is een gate-wijziging (.kit/ is beschermd). ESLint heeft een eigen ratchet:
 // eslint-suppressions.json met `pnpm lint:prune`.
 import { readFileSync, writeFileSync } from 'node:fs';
+import { format, resolveConfig } from 'prettier';
+import { docsViolations } from './check-docs.mjs';
 import { dependencyViolations } from './depcruise.mjs';
 
 const BASELINE = '.kit/baseline.json';
@@ -12,6 +14,7 @@ const BASELINE = '.kit/baseline.json';
 /** @type {Record<string, () => Promise<Violation[]>>} */
 const checks = {
   'dependency-cruiser': () => dependencyViolations(process.cwd()),
+  'check-docs': () => docsViolations(process.cwd()),
 };
 
 /**
@@ -47,7 +50,9 @@ async function update() {
   const baseline = {};
   for (const [name, run] of Object.entries(checks))
     baseline[name] = (await run()).map((violation) => violation.key).sort();
-  writeFileSync(BASELINE, `${JSON.stringify(baseline, null, 2)}\n`);
+  // Via Prettier: anders keurt format:check de baseline af zodra hij een lange lijst bevat.
+  const options = (await resolveConfig(BASELINE)) ?? {};
+  writeFileSync(BASELINE, await format(JSON.stringify(baseline), { ...options, filepath: BASELINE }));
   console.info(
     `${BASELINE} bijgewerkt. Groeit hij, dan is dit een gate-wijziging (label gate-wijziging + akkoord eigenaar).`,
   );
