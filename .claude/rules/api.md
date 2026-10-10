@@ -16,7 +16,7 @@ paths:
 - Postgres-fouten worden in `withUser()` vertaald (23505 → `ALREADY_EXISTS`, 23503 → `NOT_FOUND`, 42501 → `FORBIDDEN`).
   Een route vangt ze nooit zelf af. Nieuwe foutcode: `src/shared/errors.ts`, tekst in `src/web/copy/errors.ts`.
 - Pure logica in `src/api/domain` (unit-testbaar, geen I/O). Handlers zijn dun.
-- `process.env` alleen in `src/core/api/env.ts`; app-variabelen als schema in `src/api/env.ts`. Logging alleen via `src/core/api/obs` met `requestId`.
+- `process.env` alleen in `src/core/api/env.ts`; app-variabelen als schema in src/api/env.ts (komt zodra de app eigen variabelen heeft). Logging alleen via `src/core/api/obs` met `requestId`.
 - `src/core/api/auth`: Better Auth op `/api/auth/*`, eigen verbinding als `auth_service`, alleen schema `better_auth`. Sessie per request uit
   de database (`cookieCache` uit); rollen uit `user_roles`, nooit uit de sessie. Alleen plugins two-factor en magic link;
   een andere plugin vraagt een ADR. Sessiebeleid en MFA: ADR 0003.

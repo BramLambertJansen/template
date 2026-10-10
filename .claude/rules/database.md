@@ -33,7 +33,7 @@ paths:
 - Rijen in schema `better_auth` zijn van Better Auth (ADR 0010); lees of schrijf ze nooit vanuit `src/core/api/db` of app-code (uitzondering: `asUser` in de testkit, binnen een testtransactie die terugdraait). Geen provider-specifieke schema's of functies (`storage.*`, `realtime.*`, `auth.uid()`).
 - Na een migratie: `pnpm db:generate` (verse test-database in de runner) schrijft `db/schema.snapshot.sql` en
   `src/api/db/schema.ts`; commit beide met de migratie, nooit met de hand bewerken. Een kolom `id` of `*_id` zonder
-  foreign key naar een gebrande kolom: zet hem in `db/ids.json` met een ID uit `src/shared/ids.ts` (`brandedId()`), of `null` met reden.
+  foreign key naar een gebrande kolom: zet hem in `db/ids.json` met een ID gemaakt met `brandedId()` uit `src/core/shared/ids.ts`, of `null` met reden.
   Een kolomtype dat de generator niet kent (of `timestamp` zonder tijdzone) laat hem falen.
 - `src/core/api/db` exporteert alleen `withUser()` (plus `testing.ts`, alleen voor testbestanden). Die controleert aan het begin
   van elke transactie `current_user = session_user`, zet de rol, `app.user_id` en `app.session_strength` (`password` of `mfa`; elke
