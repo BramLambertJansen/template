@@ -20,6 +20,11 @@ Een ADR met status `voorgesteld` is geen besluit; afvinken gebeurt pas als de ei
 - [x] Railwerk: rolhek, geteste hooks, ratchet, gate-register, feiten, vijf rollen, diff-guard — ADR 0011
 - [x] Uitnodigen en MFA in Better Auth — ADR 0013
 - [x] Datapad: `withUser()` met `pg`, transactie per request, Drizzle als `tx` — ADR 0012
+- [ ] Achtergrondtaken: opruimen (verlopen sessies, uitnodigingen, rate-limit-rijen), mail via een outbox, eigen databaserol voor
+      systeemjobs (framework §6); keuze tussen worker in het proces, queue in Postgres of cron van de host — ADR (bouwen: stuk 7)
+- [ ] Audit log van admin-acties (rol toekennen, uitnodigen, blokkeren) standaard in core, in plaats van "op aanleiding" (framework §12) — ADR
+- [ ] AVG: wat de template levert voor inzage, verwijderen en bewaartermijnen van persoonsgegevens (mechanisme in core, inhoud per app) — ADR
+- [ ] Ontwikkelplatform: alleen Ubuntu/WSL2, of ook macOS (sandbox, `scripts/bootstrap.sh`, `scripts/doctor.sh`)
 
 ## Fase 0 — Bewijs
 
@@ -43,10 +48,19 @@ Verplaatst naar fase 1, stuk 2 (heeft Better Auth nodig): `session_strength` via
 
 ## Fase 1 — Fundament
 
-Zes verticale stukken, in deze volgorde. Elk stuk is één branch; een groot stuk mag in deel-PR's (zoals 3a–3d), een spec in een eigen PR ervoor.
+Zeven verticale stukken. Elk stuk is één branch; een groot stuk mag in deel-PR's (zoals 3a–3d), een spec in een eigen PR ervoor.
 Een stuk is klaar als elk punt onder **Klaar als** met een checkuitslag of testuitvoer in de PR staat.
 Core-onderdelen komen in `src/core/`, app-code en de referentie-feature in `src/{api,web,shared}` (ADR 0008).
 Rails en test-infra komen vóór de code die ze bewaken, zodat de referentie-feature er vanaf het begin aan voldoet.
+
+**Volgorde vanaf 2026-10-10** (afgesproken met de eigenaar): eerst bewijzen dat de template als basis voor een app werkt, daarna meer rails.
+1. CI-job `gate:slow`, osv-scanner en Renovate (stuk 4) — de RLS- en pgTAP-invarianten draaien nu alleen lokaal.
+2. Stuk 7: de API draait buiten `pnpm dev`, logt per request en stopt netjes.
+3. De drie testopdrachten door de werkstraat (stuk 5, **Klaar als**).
+4. Proef-app met een template-update (stuk 6).
+5. ADR's uit **Beslissingen** (achtergrondtaken, audit log, AVG) en de open punten van stuk 3.
+
+Overige rails uit stuk 4 (sonarjs, better-tailwindcss, squawk) volgen pas als de testopdrachten of de proef-app laten zien dat ze nodig zijn (framework §1.5).
 
 ### 1. Skelet, rails en test-infra
 
@@ -118,12 +132,18 @@ Vier deel-PR's, in deze volgorde.
 - [ ] Screenshot-baselines van de catalogus in de Playwright-image (uit fase 2)
 - [ ] Toasts standaard in de basiskit (besluit eigenaar 2026-10-10): `Toaster` in de AppShell en een `toast()`-aanroep voor "gelukt" en "fout" na
       een mutatie, met `aria-live`, op `/design-system` en in `check:catalogus`; zelf bouwen of een dependency vraagt een besluit van de eigenaar
-- [ ] `/design-system` als echte pagina (besluit eigenaar 2026-10-10): onder `/_app` in de AppShell, met menu-item en `can()`-guard, ook in
-      productie; vervangt "alleen in dev" hierboven en in framework §6 en §7. Eerst een spec
+- [x] `/design-system` als echte pagina (besluit eigenaar 2026-10-10): onder `/_app` in de AppShell, met menu-item en `can()`-guard, ook in
+      productie; vervangt "alleen in dev" hierboven en in framework §6 en §7. Eerst een spec (#44, ADR 0015, #51)
 
 **3d. De feature**
 - [x] Eerste feature met de hand door alle lagen (uit fase 2: dit is die feature); app-gegevens uit `better_auth."user"` via een `security definer`-view
 - [x] `docs/gouden-pad.md` (≤ 1 pagina) met verwijzingen naar de bestanden van deze feature
+
+**3e. Rest van gebruikersbeheer** — de beschrijving hierboven belooft meer dan de spec `accountbeheer` bouwde (daar buiten scope).
+Elke app heeft dit nodig, dus het hoort in de template. Elk punt eerst een spec.
+- [ ] Admin blokkeert en deblokkeert een gebruiker; blokkeren trekt alle sessies direct in (de laatste-admin-regel geldt ook hier)
+- [ ] Gebruiker bekijkt en beëindigt de eigen sessies
+- [ ] Backupcodes voor TOTP, zodat een admin die zijn telefoon kwijt is niet alleen via `admin:create` terugkomt
 
 **Klaar als:** unit, pgTAP (elke policy op naam plus de invarianten), integratie, racetest "rol toekennen", e2e per rol en axe op 375 en
 1280 px groen (uitvoer); een test per verboden rol per route; een test bewijst dat een app een permissie, foutcode en componentvariant
@@ -151,6 +171,7 @@ Elke regel uit `AGENTS.md` die een check kan zijn, wordt een check; een check te
 - [ ] Scripts uit `excludedCommands` (`test:db`, `db:reset`, `db:types`, `ui:check`, `gate:slow`) bestaan in `package.json`, alle vijf in de runner van ADR 0009
 - [ ] CI: `gate:slow`-job, gewijzigde tests als lijst, `guard.yml` (PR-code alleen als data, met de diff-guard), CodeQL, osv-scanner (PR + wekelijks;
       uitzonderingen met reden en `ignoreUntil`), Betterleaks op digest, Renovate (gegroepeerd, blokkeert TS 7)
+      Eerst, als eigen PR (volgorde punt 1): `gate:slow`-job met de Postgres-image uit `db/docker/`, osv-scanner en Renovate
 
 **Klaar als:** tabel in de PR met per regel uit `AGENTS.md` de check en de fixture-test die bewijst dat hij faalt (alle fixture-tests groen);
 CI weigert `any`, een databaseclient in `src/web`, een route buiten `defineRoute` en een gewijzigde migratie (uitvoer);
@@ -178,12 +199,30 @@ code uit `pnpm new:resource` haalt `gate:fast`; drie testopdrachten door de hele
 - [ ] `.github/settings/` + `scripts/check-github.mjs` (ook `app_id` van verplichte checks, `enforce_admins`, conversation resolution), `check-spec-approval`
 - [ ] `docs/operations/rails-checklist.md`: instellingen buiten de repo, per stuk afgevinkt met bewijs
 - [ ] Pushen met het App-token zonder het token van de eigenaar in de agent-omgeving (`docs/operations/`); daarna `denyRead` op `~/.config/gh`
+- [ ] Proef-app: een app via `docs/nieuwe-app.md`, daarna één echte template-update (`git merge template/main`) via een PR.
+      Conflicten en handwerk vastleggen; wat terugkomt, wordt een regel of script in de template (ADR 0006)
 
-**Klaar als:** `check-github` groen; een test-PR van de bot is zonder review van de eigenaar niet te mergen; een push naar `main` wordt geweigerd.
+**Klaar als:** `check-github` groen; een test-PR van de bot is zonder review van de eigenaar niet te mergen; een push naar `main` wordt geweigerd;
+de proef-app neemt een template-update over met conflicten alleen in bestanden die vooraf als verwacht zijn vastgelegd.
+
+### 7. Draaien buiten `pnpm dev`
+
+Provider-neutraal: wat elke host nodig heeft, hoort in de template; de adapter per host blijft fase 3.
+- [ ] `startServer` neemt host en poort uit het env-schema (nu vast `127.0.0.1`, dus onbereikbaar in een container)
+- [ ] Netjes stoppen: bij SIGTERM geen nieuwe requests, lopende afmaken binnen een timeout, daarna de pools sluiten
+- [ ] Request-logging in `src/core/api/obs/` (framework §6): één gestructureerde regel per request met `requestId`, gebruiker-ID, duur en
+      databasetijd; geen body, geen PII. Een logger als dependency vraagt akkoord van de eigenaar
+- [ ] Readiness met databasecontrole naast `GET /api/health` (liveness); een nieuwe publieke route vraagt een regel in framework §3
+- [ ] `pnpm start` en een productiebuild van de API; een containerimage (non-root) dat elke containerhost kan draaien
+- [ ] Achtergrondtaken volgens de ADR uit **Beslissingen**: opruimen en mail-outbox, elk met een integratietest
+
+**Klaar als:** de image start met een niet-lokale `APP_ENV` tegen de lokale stack (uitvoer van de eigenaar); per request één logregel
+(test); na SIGTERM eindigt een lopend request zonder afgebroken transactie (test); een opruimtaak verwijdert alleen verlopen rijen (test).
 
 **Fase 1 klaar als:** verse machine komt met `bootstrap.sh` + `pnpm dev` tot een ingelogde app zonder extern account;
 CI weigert `any`, een databaseclient in `src/web`, een route buiten `defineRoute` en een gewijzigde migratie;
-de bewaker houdt een afgezwakt check-script tegen; `check-github` groen; elke rol logt in via e2e.
+de bewaker houdt een afgezwakt check-script tegen; `check-github` groen; elke rol logt in via e2e;
+`gate:slow` draait in CI; de proef-app neemt een template-update over (stuk 6).
 
 ## Fase 2 — Eerste app, terug naar template
 
