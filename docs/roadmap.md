@@ -155,7 +155,8 @@ Elke app heeft dit nodig, dus het hoort in de template. Elk punt eerst een spec.
 
 **3f. Basis die elke app nodig heeft** (lijst eigenaar 2026-10-10). Nieuwe route, permissie of migratie: eerst een spec.
 - [ ] Lijstpagina-patroon: zoeken, filteren en sorteren in de search params, op het cursor-contract en `Table`; `new:resource` gebruikt het
-- [ ] `ConfirmDialog` in de kit voor destructieve acties, op `/design-system` en in `check:catalogus`
+- [x] `ConfirmDialog` in de kit voor destructieve acties (focus op Annuleren, `busy` blokkeert sluiten), op `/design-system` en in
+      `check:catalogus` (`src/core/web/ui/confirm-dialog.test.tsx`, `e2e/design-system.spec.ts`)
 - [ ] Schil toegankelijk: paginatitel per route, skip-link naar de inhoud, focus naar de kop na een routewissel (elk met test)
 - [ ] Rate limit voor app-routes in `defineRoute` (nu alleen in Better Auth), met grenzen uit `limits.ts` en foutcode `RATE_LIMITED`
 - [ ] Mail-layout in core: één basissjabloon (HTML en platte tekst, afzender, voettekst) met snapshot-test; uitnodiging gebruikt hem
