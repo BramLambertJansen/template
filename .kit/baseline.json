@@ -1,4 +1,1 @@
-{
-  "dependency-cruiser": [],
-  "check-docs": ["docs:.claude/rules/api.md:pad:src/api/env.ts", "docs:.claude/rules/database.md:pad:src/shared/ids.ts"]
-}
+{ "dependency-cruiser": [], "check-docs": [] }

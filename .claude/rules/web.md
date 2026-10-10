@@ -40,4 +40,6 @@ Button-variant = nieuwe rij), `scanAxe` in `e2e/support/axe.ts`.
 Gebouwd (stuk 3d, accountbeheer): de auth-client `src/core/web/lib/auth.ts` (via `src/web/lib/auth.ts`), schermen in
 `src/web/features/*` met routes in `src/web/routes` (`_app` = ingelogde layout met guard), Table, Select, PageHeader, Notice en
 QrCode in de kit. Voorbeeld van een scherm door alle lagen: `docs/gouden-pad.md`.
-Nog niet: `check:catalogus`, screenshot-baselines, `scanAxe`-uitzonderingen in de ratchet en de woordenlijsttest.
+Gebouwd (stuk 4): `pnpm check:catalogus` (uitzonderingen met reden in `scripts/kit/catalogus.mjs`) en de woordenlijsttest
+`src/web/copy/woordenlijst.test.ts`.
+Nog niet: screenshot-baselines en `scanAxe`-uitzonderingen in de ratchet.
