@@ -238,3 +238,35 @@ test('dev-rolwisselaar: op elk scherm een tabje rechts dat een paneel met de rol
   await expect(tab).toBeFocused();
   await expect(tab).toHaveAttribute('aria-expanded', 'false');
 });
+
+test('smal scherm: het hoofdmenu schuift vanaf links over het scherm; Esc, de strook ernaast en een link sluiten het', async ({
+  page,
+}) => {
+  const csp = collectCspViolations(page);
+  const user = await createAccount('user');
+  await page.setViewportSize({ width: 375, height: 900 });
+  await page.goto('/login');
+  await signIn(page, user);
+  await expect(heading(page)).toHaveText('Home');
+  const opener = page.getByRole('button', { name: 'Menu openen' });
+  const sheet = page.getByRole('dialog', { name: 'Hoofdmenu' });
+
+  await opener.click();
+  await expect(sheet.getByRole('link', { name: 'Home' })).toBeVisible();
+  // Tegen de linkerrand, volle hoogte, met rechts een strook van de pagina.
+  expect(await sheet.boundingBox()).toMatchObject({ x: 0, y: 0, height: 900 });
+  expect((await sheet.boundingBox())?.width).toBeLessThan(375);
+  await scanAxe(page);
+  await page.keyboard.press('Escape');
+  await expect(sheet).toBeHidden();
+  await expect(opener).toBeFocused();
+
+  await opener.click();
+  await page.mouse.click(365, 450);
+  await expect(sheet).toBeHidden();
+
+  await opener.click();
+  await sheet.getByRole('link', { name: 'Home' }).click();
+  await expect(sheet).toBeHidden();
+  expect(csp).toStrictEqual([]);
+});

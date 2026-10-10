@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { afterAll, beforeAll, expect, test } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { afterAll, beforeAll, expect, test, vi } from 'vitest';
 import { Dialog } from './dialog.tsx';
 import { Input } from './input.tsx';
 
@@ -25,4 +25,19 @@ test('bij openen staat de focus op het eerste veld', () => {
   );
 
   expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Naam' }));
+});
+
+// Sheet (navigatie op smalle schermen): een klik op de verduisterde strook (doel: de <dialog> zelf) sluit hem, een klik erin niet.
+test('sheet: een klik naast het paneel sluit, een klik erin niet', () => {
+  const onOpenChange = vi.fn();
+  render(
+    <Dialog open onOpenChange={onOpenChange} title="Hoofdmenu" variant="sheet">
+      <p>Inhoud</p>
+    </Dialog>,
+  );
+
+  fireEvent.click(screen.getByText('Inhoud'));
+  expect(onOpenChange).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('dialog', { name: 'Hoofdmenu' }));
+  expect(onOpenChange).toHaveBeenCalledWith(false);
 });
