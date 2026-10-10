@@ -1,5 +1,5 @@
 import { Bell, Home, LayoutDashboard } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { z } from 'zod';
 import {
   AppShell,
@@ -33,10 +33,12 @@ import {
 // Catalogus van de basiskit (framework §7), alleen in dev. Elke component met elke variant; de e2e-test draait axe op
 // 375 en 1280 px, in licht en donker. De teksten zijn voorbeelden, geen app-teksten.
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+// Id via useId: een titel met spaties ("Form, Field en Input") als id leest aria-labelledby als meerdere id's.
+export function Section({ title, children }: { title: string; children: ReactNode }) {
+  const id = useId();
   return (
-    <section aria-labelledby={`sectie-${title}`} className="flex flex-col gap-4">
-      <h2 id={`sectie-${title}`} className="text-xl font-semibold">
+    <section aria-labelledby={id} className="flex flex-col gap-4">
+      <h2 id={id} className="text-xl font-semibold">
         {title}
       </h2>
       {children}
