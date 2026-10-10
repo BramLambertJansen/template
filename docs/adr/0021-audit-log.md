@@ -1,6 +1,6 @@
 # 0021 — Audit log van admin-acties in core
 
-Status: voorgesteld
+Status: geaccepteerd (agent, onder mandaat van de eigenaar van 2026-10-11; ter herziening door de eigenaar)
 
 ## Context
 
@@ -77,7 +77,7 @@ Wat de repo nu laat zien en het ontwerp bepaalt:
 - Framework §6 (audit log, invariant) en §12 (rij "Audit log" weg) wijzigen: beschermd, akkoord van de eigenaar.
 - De routes uit spec `accountbeheer-uitbreiding` krijgen elk een auditregel; dat staat in de spec vóór `goedgekeurd`.
 
-## Open punten voor de eigenaar
+## Open punten (agent, 2026-10-11: elk punt besloten volgens de aanbeveling)
 
 - **OV-1 — Standaard in core of op aanleiding.** Aanbeveling: in core, nu; PR #77 heeft het nodig en achteraf toevoegen mist de oude acties.
 - **OV-2 — Schrijfwijze.** (a) expliciet in definer-functies en via `app.audit`/`ctx.audit`; (b) generieke triggers. Aanbeveling: (a).
