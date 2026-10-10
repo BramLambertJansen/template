@@ -10,7 +10,8 @@ Dat de agent zelf `docker` gebruikte, is in strijd met framework §11 (de sessie
 eigenaar heeft de uitkomsten zo geaccepteerd. Het blijvende bewijs zijn de pgTAP-tests van de generator-PR (via `pnpm test:db`).
 De code-paden (`src/core/api/http/create-app.ts`, `src/core/api/errors.ts`) zijn gelezen.
 
-**Status:** voorstel. De bevindingen A1 en A2 wijzigen het patroon in ADR 0016; die gaan in de templates van de generator-PR.
+**Status:** verwerkt. A1–A3 en B2–B6 zitten in de templates van `pnpm new:resource` (#52); B1 is de invariant
+`pg_temp.eigenaartabellen()` in `db/tests/invarianten.sql`, met controles die bewijzen dat hij elke afwijking vangt.
 
 ## Wat standhoudt
 
