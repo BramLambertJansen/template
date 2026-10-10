@@ -31,7 +31,12 @@ export function Dialog({
   useEffect(() => {
     const dialog = ref.current;
     if (dialog === null) return;
-    if (open && !dialog.open) dialog.showModal();
+    if (open && !dialog.open) {
+      dialog.showModal();
+      // Focus op het eerste veld (spec accountbeheer). React's autoFocus vuurt vóór showModal, als de dialoog nog dicht is,
+      // en zonder veld kiest showModal zelf (de sluitknop).
+      dialog.querySelector<HTMLElement>('input, select, textarea')?.focus();
+    }
     if (!open && dialog.open) dialog.close();
   }, [open]);
 

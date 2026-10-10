@@ -38,7 +38,7 @@ function InviteForm({ onDone, onInvited }: { onDone: () => void; onInvited: (ema
         }
       >
         <FormField form={form} name="naam" label={copy.inviteDialog.name}>
-          {(field) => <Input {...field} autoComplete="off" autoFocus />}
+          {(field) => <Input {...field} autoComplete="off" />}
         </FormField>
         <FormField form={form} name="email" label={copy.inviteDialog.email}>
           {(field) => <Input {...field} type="email" autoComplete="off" />}
