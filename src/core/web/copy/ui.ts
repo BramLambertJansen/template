@@ -10,4 +10,5 @@ export const uiTexts = {
   profileMenu: 'Profielmenu',
   close: 'Sluiten',
   busy: 'Bezig…',
+  darkTheme: 'Donker thema',
 } as const;

@@ -83,9 +83,9 @@ en er is altijd een weg naar binnen (lokaal seed-accounts en een dev-rol-switche
 | Uitnodiging | titel "Wachtwoord instellen"; velden "Wachtwoord", "Wachtwoord herhalen"; hulptekst "Minstens 12 tekens."; knop "Wachtwoord instellen"; fout "Deze uitnodiging is verlopen of al gebruikt. Vraag een nieuwe aan."; mismatch "De wachtwoorden zijn niet gelijk." |
 | Na instellen | op `/login`: "Je wachtwoord is ingesteld. Log in om verder te gaan." |
 | Sidebar | "Home", "Dashboard" |
-| Topbar | profielknop met initialen (toegankelijke naam "Profielmenu"); menu-item "Uitloggen" |
+| Topbar | themaschakelaar (toggle, toegankelijke naam "Donker thema"; keuze blijft bewaard in de browser; besluit eigenaar 2026-10-10); profielknop met initialen (toegankelijke naam "Profielmenu"); menu-item "Uitloggen" |
 | Home | titel "Home" (verder leeg) |
-| Dashboard | titel "Dashboard"; link "Accounts" |
+| Dashboard | titel "Dashboard"; link "Accounts"; alleen lokaal ook link "Design system" naar `/design-system` (besluit eigenaar 2026-10-10) |
 | Accounts | titel "Accounts"; kolommen "Naam", "E-mailadres", "Rol", "Status"; rollen "Gebruiker", "Beheerder"; status "Actief", "Uitgenodigd"; actie "Opnieuw uitnodigen"; knop "Account uitnodigen"; leeg "Nog geen accounts."; meer "Meer laden" |
 | Uitnodigen (dialoog) | titel "Account uitnodigen"; velden "Naam", "E-mailadres", "Rol"; knoppen "Uitnodiging versturen", "Annuleren"; gelukt "Uitnodiging verstuurd naar {email}."; bestaat "Er bestaat al een account met dit e-mailadres." |
 | Dev-switcher (alleen lokaal) | op elk scherm (ook `/login` en ingelogd) een tabje rechts (toegankelijke naam "Rol wisselen (alleen lokaal)"); een klik schuift een paneel in met kop "Lokaal inloggen als", een knop per rol ("Gebruiker", "Beheerder"; de huidige gemarkeerd) en "Sluiten"; Esc sluit. Niet meer op het inlogscherm of in het profielmenu (besluit eigenaar, 2026-10-10) |

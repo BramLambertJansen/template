@@ -3,6 +3,7 @@ import { RouterProvider } from '@tanstack/react-router';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createQueryClient } from '#core/web/lib/query.ts';
+import { applyStoredTheme } from '#core/web/lib/theme.ts';
 import { ErrorTextsProvider } from '#core/web/ui/error-texts.tsx';
 import { errorTexts } from '#web/copy/errors.ts';
 import { createAppRouter } from '#web/lib/router.ts';
@@ -19,6 +20,9 @@ const queryClient = createQueryClient({
   },
 });
 const router = createAppRouter(queryClient);
+
+// Het bewaarde thema vóór de eerste render, zodat er geen licht scherm flitst.
+applyStoredTheme();
 
 const root = document.getElementById('root');
 if (root === null) throw new Error('Element #root ontbreekt in index.html');
