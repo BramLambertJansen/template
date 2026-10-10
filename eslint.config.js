@@ -172,6 +172,8 @@ export default defineConfig(
     'playwright-report/',
     'test-results/',
     '.runner-output/',
+    // Worktrees van subagents: eigen kopieën van de repo, met hun eigen lint (ADR 0016, gevolgen).
+    '.claude/worktrees/',
     'test/rails/fixtures/',
     // Gegenereerd door @tanstack/router-plugin (vite.config.ts); niet bewerken.
     'src/web/routeTree.gen.ts',

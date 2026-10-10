@@ -59,6 +59,22 @@ function gitBranch(root) {
   }
 }
 
+/**
+ * De root van de worktree waarin de sessie werkt, niet CLAUDE_PROJECT_DIR: in een worktree onder .claude/worktrees/ zou elk
+ * pad anders onder de gate `.claude/**` vallen, en de gates.json van de branch zelf gelden niet (ADR 0016, gevolgen).
+ * Alleen buiten git valt hij terug op CLAUDE_PROJECT_DIR.
+ * @param {string} cwd
+ */
+function projectRoot(cwd) {
+  try {
+    return git(cwd, ['rev-parse', '--show-toplevel']);
+  } catch (error) {
+    const projectDir = process.env['CLAUDE_PROJECT_DIR'];
+    if (projectDir === undefined) throw error;
+    return projectDir;
+  }
+}
+
 function main() {
   /** @type {unknown} */
   const payload = JSON.parse(readFileSync(0, 'utf8'));
@@ -66,7 +82,7 @@ function main() {
     typeof payload === 'object' && payload !== null && 'cwd' in payload && typeof payload.cwd === 'string'
       ? payload.cwd
       : process.cwd();
-  const root = process.env['CLAUDE_PROJECT_DIR'] ?? git(cwd, ['rev-parse', '--show-toplevel']);
+  const root = projectRoot(cwd);
   const decision = decide(payload, context(root, cwd));
   if (decision.deny.length > 0) {
     process.stderr.write(`rolhek: ${decision.deny.join('\nrolhek: ')}\n`);
