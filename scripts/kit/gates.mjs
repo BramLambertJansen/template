@@ -30,6 +30,12 @@ export const gates = [
       'geen gecommitte migratie gewijzigd of verwijderd t.o.v. origin/main, namen en versies uniek (framework §10)',
     snel: true,
   },
+  {
+    script: 'check:secdef',
+    bewaakt:
+      "security definer in db/migrations: search_path '', namen met schema, eigenaar app_definer (AGENTS.md, framework §6)",
+    snel: true,
+  },
   { script: 'test:unit', bewaakt: 'unit-tests en de fixtures van de rails (test/rails)', snel: true },
   {
     script: 'test:db',
