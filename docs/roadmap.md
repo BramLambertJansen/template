@@ -145,6 +145,8 @@ Elke regel uit `AGENTS.md` die een check kan zijn, wordt een check; een check te
       `check:migrations` (geen gecommitte migratie gewijzigd, verwijderd of hernoemd t.o.v. het afsplitspunt met `origin/main`, namen en
       versies uniek, in `gate:fast`; CI haalt daarvoor de volledige geschiedenis op)
 - [ ] Diff-guard met label `gate-wijziging` + goedkeuring op exact de head-SHA, niet van de auteur (framework §10), met tests per geval
+      Gebouwd, nog niet verplicht (ADR 0017): `scripts/kit/diff-guard.mjs` met tabeltests en `.github/workflows/guard.yml`; zolang de
+      auteur zelf goedkeurder is, uitslag `overgang`. Verplicht bij de overstap op de GitHub App (stuk 6)
 - [ ] `gate:fast` definitief, `gate:slow` (squawk, snapshot `pg_dump -N tap --exclude-extension=pgtap` zonder verschil, `check-policies`, e2e)
       Deels gebouwd: `gate:slow` = `test:db` (met `check-policies`) + `ui:check` + `check:snapshot` (snapshot en Drizzle-schema zonder
       verschil) (#38); squawk vraagt een nieuwe tool
