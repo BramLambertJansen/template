@@ -183,6 +183,79 @@ const fixtures: Fixture[] = [
     rule: 'rails/import',
   },
   { name: 'letterlijk mag', file: 'src/web/x.ts', code: "export const m = import('./a.ts');", rule: null },
+  // axe (framework §7): alleen scanAxe, zonder uitzonderingen.
+  {
+    name: 'eigen AxeBuilder in een spec',
+    file: 'e2e/x.spec.ts',
+    code: "import AxeBuilder from '@axe-core/playwright'; export const a = AxeBuilder;",
+    rule: 'rails/axe-import',
+  },
+  {
+    name: 'axe via dynamische import',
+    file: 'e2e/x.spec.ts',
+    code: "export const a = import('@axe-core/playwright');",
+    rule: 'rails/axe-import',
+  },
+  {
+    name: 'axe-core direct',
+    file: 'test/ui/x.test.ts',
+    code: "export { default } from '@axe-core/playwright';",
+    rule: 'rails/axe-import',
+  },
+  {
+    name: 'scanAxe zelf mag AxeBuilder',
+    file: 'e2e/support/axe.ts',
+    code: "import AxeBuilder from '@axe-core/playwright'; export const a = AxeBuilder;",
+    rule: null,
+  },
+  {
+    name: 'disableRules in scanAxe',
+    file: 'e2e/support/axe.ts',
+    code: "declare const b: { disableRules(r: string[]): void }; b.disableRules(['color-contrast']);",
+    rule: 'rails/axe-uitzondering',
+  },
+  {
+    name: 'exclude in scanAxe',
+    file: 'e2e/support/axe.ts',
+    code: "declare const b: { exclude(s: string): void }; b.exclude('#x');",
+    rule: 'rails/axe-uitzondering',
+  },
+  {
+    name: 'omzeiling met bracket-notatie',
+    file: 'e2e/support/axe.ts',
+    code: "declare const b: Record<string, (x: string) => void>; const k = 'exclude'; b[k]?.('#x');",
+    rule: 'rails/axe-scan',
+  },
+  {
+    name: 'bracket met letterlijke string',
+    file: 'e2e/support/axe.ts',
+    code: "declare const b: Record<string, (x: string[]) => void>; b['disableRules']?.(['color-contrast']);",
+    rule: 'rails/axe-uitzondering',
+  },
+  {
+    name: 'destructuring van disableRules',
+    file: 'e2e/support/axe.ts',
+    code: "declare const b: { disableRules(r: string[]): void }; const { disableRules } = b; disableRules(['x']);",
+    rule: 'rails/axe-uitzondering',
+  },
+  {
+    name: 'disableRules via call in een spec',
+    file: 'e2e/x.spec.ts',
+    code: "declare const b: { disableRules(r: string[]): void }; b.disableRules.call(b, ['x']);",
+    rule: 'rails/axe-uitzondering',
+  },
+  {
+    name: 'eigen axeSource',
+    file: 'e2e/support/axe.ts',
+    code: "export const o = { axeSource: 'nep' };",
+    rule: 'rails/axe-uitzondering',
+  },
+  {
+    name: 're-export van AxeBuilder uit scanAxe',
+    file: 'e2e/support/axe.ts',
+    code: "export { default as AxeBuilder } from '@axe-core/playwright';",
+    rule: 'rails/axe-scan',
+  },
 ];
 
 describe('rails in eslint.config.js', () => {
