@@ -22,12 +22,13 @@ Een ADR met status `voorgesteld` is geen besluit; afvinken gebeurt pas als de ei
 - [x] Datapad: `withUser()` met `pg`, transactie per request, Drizzle als `tx` — ADR 0012
 - [ ] Achtergrondtaken: opruimen (verlopen sessies, uitnodigingen, rate-limit-rijen), mail via een outbox, eigen databaserol voor
       systeemjobs (framework §6); keuze tussen worker in het proces, queue in Postgres of cron van de host — ADR (bouwen: stuk 7)
-      ADR 0020 geaccepteerd (agent, onder mandaat): runner in het API-proces, eigen rol `app_jobs`, outbox
+      ADR 0020 geaccepteerd (agent, onder mandaat): runner in het API-proces, eigen rol `app_jobs`, outbox zonder token;
+      gecorrigeerd na review (2026-10-11), met de bouwvolgorde van 0020–0022
 - [x] Taal: alleen Nederlands, teksten in `src/web/copy` en `src/core/web/copy`; geen meertaligheid in de template (besluit eigenaar 2026-10-10)
 - [ ] Audit log van admin-acties (rol toekennen, uitnodigen, blokkeren) standaard in core, in plaats van "op aanleiding" (framework §12) — ADR
-      ADR 0021 geaccepteerd (agent, onder mandaat; aanbevelingen OV-1..7)
+      ADR 0021 geaccepteerd (agent, onder mandaat; aanbevelingen OV-1..7); gecorrigeerd na review (2026-10-11)
 - [ ] AVG: wat de template levert voor inzage, verwijderen en bewaartermijnen van persoonsgegevens (mechanisme in core, inhoud per app) — ADR
-      ADR 0022 geaccepteerd (agent, onder mandaat; aanbevelingen OV-1..7)
+      ADR 0022 geaccepteerd (agent, onder mandaat; aanbevelingen OV-1..7); gecorrigeerd na review (2026-10-11)
 - [ ] Ontwikkelplatform: alleen Ubuntu/WSL2, of ook macOS (sandbox, `scripts/bootstrap.sh`, `scripts/doctor.sh`)
 
 ## Fase 0 — Bewijs
@@ -262,7 +263,8 @@ Provider-neutraal: wat elke host nodig heeft, hoort in de template; de adapter p
       bewaard, hooguit één controle tegelijk, timeout 2 s; eigen verbinding met timeouts; regel in framework §3, ADR 0018 (`src/core/api/http/readiness.test.ts`, `test/datapad/ping.int.test.ts`)
 - [x] `pnpm start` (`node src/api/server.ts`, geen buildstap voor de API) en een containerimage (non-root) die SPA en API op één origin serveert
       (ADR 0019, `Dockerfile`, CI-job `image` met `scripts/check-image.sh`; `src/core/api/http/web.test.ts`)
-- [ ] Achtergrondtaken volgens de ADR uit **Beslissingen**: opruimen en mail-outbox, elk met een integratietest
+- [ ] Achtergrondtaken volgens de ADR uit **Beslissingen**: opruimen en mail-outbox, elk met een integratietest (volgorde: ADR 0020,
+      sectie Bouwvolgorde)
 
 **Klaar als:** de image start met een niet-lokale `APP_ENV` tegen de lokale stack (uitvoer van de eigenaar); per request één logregel
 (test); na SIGTERM eindigt een lopend request zonder afgebroken transactie (test); een opruimtaak verwijdert alleen verlopen rijen (test).
