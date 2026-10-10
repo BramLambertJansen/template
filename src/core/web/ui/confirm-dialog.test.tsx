@@ -37,7 +37,7 @@ function renderConfirm(props: { busy?: boolean; destructive?: boolean } = {}) {
 test('opent met de focus op Annuleren, niet op de actie', () => {
   renderConfirm();
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Annuleren' }));
-  expect(screen.getByRole('dialog', { name: 'Account blokkeren?' })).toBeTruthy();
+  expect(screen.getByRole('alertdialog', { name: 'Account blokkeren?' })).toBeTruthy();
 });
 
 test('Annuleren sluit zonder de actie; de actieknop roept onConfirm aan', () => {
@@ -60,13 +60,46 @@ test('destructief is standaard rood; destructive={false} is primair', () => {
 test('tijdens busy: knoppen uit, "Bezig…", en Esc sluit niet', () => {
   const { onConfirm, onOpenChange } = renderConfirm({ busy: true });
   const confirm = screen.getByRole('button', { name: 'Bezig…' });
-  expect(confirm.hasAttribute('disabled')).toBe(true);
+  // aria-disabled in plaats van disabled: de focus blijft op de knop staan.
+  expect(confirm.getAttribute('aria-disabled')).toBe('true');
   expect(screen.getByRole('button', { name: 'Annuleren' }).hasAttribute('disabled')).toBe(true);
   expect(screen.getByRole('button', { name: 'Sluiten' }).hasAttribute('disabled')).toBe(true);
   const cancel = new Event('cancel', { cancelable: true });
-  screen.getByRole('dialog').dispatchEvent(cancel);
+  screen.getByRole('alertdialog').dispatchEvent(cancel);
+  const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+  screen.getByRole('alertdialog').dispatchEvent(escape);
+  expect(escape.defaultPrevented).toBe(true);
   expect(cancel.defaultPrevented).toBe(true);
   fireEvent.click(confirm);
   expect(onConfirm).not.toHaveBeenCalled();
+  expect(onOpenChange).not.toHaveBeenCalled();
+});
+
+test('een dubbele klik bevestigt één keer; na busy → klaar met fout kan het opnieuw', () => {
+  const onConfirm = vi.fn();
+  const props = {
+    open: true,
+    onOpenChange: () => undefined,
+    title: 'Account blokkeren?',
+    description: 'Uitleg.',
+    confirmLabel: 'Blokkeren',
+    onConfirm,
+  };
+  const { rerender } = render(<ConfirmDialog {...props} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Blokkeren' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Blokkeren' }));
+  expect(onConfirm).toHaveBeenCalledTimes(1);
+  rerender(<ConfirmDialog {...props} busy />);
+  rerender(<ConfirmDialog {...props} busy={false} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Blokkeren' }));
+  expect(onConfirm).toHaveBeenCalledTimes(2);
+});
+
+test('sluit de browser hem tijdens busy toch, dan gaat hij meteen weer open', () => {
+  const { onOpenChange } = renderConfirm({ busy: true });
+  const dialog = screen.getByRole('alertdialog');
+  dialog.removeAttribute('open');
+  dialog.dispatchEvent(new Event('close'));
+  expect(dialog.hasAttribute('open')).toBe(true);
   expect(onOpenChange).not.toHaveBeenCalled();
 });

@@ -63,20 +63,33 @@ test('dialoog: focus erin, Esc sluit, focus terug op de knop', async ({ page }) 
   expect(csp).toStrictEqual([]);
 });
 
-test('bevestigen: focus op Annuleren, Enter annuleert, focus terug op de knop', async ({ page }) => {
+test('bevestigen: focus op Annuleren, Enter annuleert; tijdens Bezig… houdt ook een dubbele Esc hem open', async ({
+  page,
+}) => {
   const csp = collectCspViolations(page);
   await signInAsAdmin(page);
   await page.goto('/design-system');
   const opener = page.getByRole('button', { name: 'Account blokkeren' });
+  const dialog = page.getByRole('alertdialog', { name: 'Account blokkeren?' });
+  const status = page.getByRole('status').filter({ hasText: 'Geblokkeerd' });
 
   await opener.click();
-  const dialog = page.getByRole('dialog', { name: 'Account blokkeren?' });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Annuleren' })).toBeFocused();
   await scanAxe(page);
   await page.keyboard.press('Enter');
   await expect(dialog).toBeHidden();
   await expect(opener).toBeFocused();
+  await expect(status).toHaveCount(0);
+
+  await opener.click();
+  await dialog.getByRole('button', { name: 'Blokkeren' }).click();
+  await expect(dialog.getByRole('button', { name: 'Bezig…' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeVisible();
+  await expect(status).toBeVisible();
+  await expect(dialog).toBeHidden();
   expect(csp).toStrictEqual([]);
 });
 

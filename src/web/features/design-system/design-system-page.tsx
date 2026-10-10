@@ -72,29 +72,42 @@ function FormExample() {
   );
 }
 
+// Voorbeeld met een actie die even duurt (zoals een mutatie): tijdens "Bezig…" sluit de dialoog niet, daarna een status.
+const EXAMPLE_ACTION_MS = 1500;
+
 function ConfirmDialogExample() {
   const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
   return (
-    <>
+    <div className="flex flex-wrap items-center gap-4">
       <Button
         variant="destructive"
         onClick={() => {
+          setDone(false);
           setOpen(true);
         }}
       >
         Account blokkeren
       </Button>
+      {done ? <p role="status">Geblokkeerd (voorbeeld)</p> : null}
       <ConfirmDialog
         open={open}
         onOpenChange={setOpen}
         title="Account blokkeren?"
         description="Een voorbeeld: de focus staat op Annuleren, de actie is rood."
         confirmLabel="Blokkeren"
+        busy={busy}
         onConfirm={() => {
-          setOpen(false);
+          setBusy(true);
+          setTimeout(() => {
+            setBusy(false);
+            setOpen(false);
+            setDone(true);
+          }, EXAMPLE_ACTION_MS);
         }}
       />
-    </>
+    </div>
   );
 }
 

@@ -1,12 +1,13 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { uiTexts } from '../copy/ui.ts';
 import { Button } from './button.tsx';
 import { Dialog } from './dialog.tsx';
 
 // Bevestiging vóór een actie die je niet zomaar terugdraait (roadmap 3f): blokkeren, verwijderen, sessies beëindigen.
-// De focus staat bij openen op "Annuleren", zodat Enter of een dubbele klik niets kapotmaakt. Tijdens `busy` zijn beide
-// knoppen uit en toont de bevestigknop "Bezig…"; sluiten doet de ouder na succes (bijv. in onSuccess van de mutatie).
-// Een fout toont de ouder als children (bijv. <Notice>), zodat de dialoog open blijft.
+// De focus staat bij openen op "Annuleren", zodat Enter of een dubbele klik niets kapotmaakt. onConfirm vuurt hooguit één
+// keer per openen, tot `busy` weer false wordt (na een fout: opnieuw proberen). Tijdens `busy` sluiten Esc, de sluitknop
+// en Annuleren niets en toont de bevestigknop "Bezig…" (aria-disabled, zodat de focus erop blijft staan). Sluiten doet de
+// ouder na succes (bijv. in onSuccess van de mutatie); een fout toont de ouder als children (bijv. <Notice>).
 
 interface ConfirmDialogProps {
   readonly open: boolean;
@@ -22,6 +23,20 @@ interface ConfirmDialogProps {
   readonly children?: ReactNode;
 }
 
+// Een snelle dubbelklik komt binnen vóór de ouder `busy` zet (TanStack Query zet isPending pas na een tick).
+function useConfirmOnce(open: boolean, busy: boolean) {
+  const confirmed = useRef(false);
+  const wasBusy = useRef(busy);
+  useEffect(() => {
+    if (open) confirmed.current = false;
+  }, [open]);
+  useEffect(() => {
+    if (wasBusy.current && !busy) confirmed.current = false;
+    wasBusy.current = busy;
+  }, [busy]);
+  return confirmed;
+}
+
 export function ConfirmDialog({
   open,
   onOpenChange,
@@ -33,11 +48,13 @@ export function ConfirmDialog({
   busy = false,
   children,
 }: ConfirmDialogProps) {
+  const confirmed = useConfirmOnce(open, busy);
   return (
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
       dismissible={!busy}
+      role="alertdialog"
       title={title}
       description={description}
       closeLabel={uiTexts.close}
@@ -53,7 +70,16 @@ export function ConfirmDialog({
           >
             {uiTexts.cancel}
           </Button>
-          <Button variant={destructive ? 'destructive' : 'primary'} disabled={busy} onClick={onConfirm}>
+          <Button
+            variant={destructive ? 'destructive' : 'primary'}
+            aria-disabled={busy}
+            className="aria-disabled:opacity-50"
+            onClick={() => {
+              if (busy || confirmed.current) return;
+              confirmed.current = true;
+              onConfirm();
+            }}
+          >
             {busy ? uiTexts.busy : confirmLabel}
           </Button>
         </>
