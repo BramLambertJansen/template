@@ -158,7 +158,8 @@ Elke app heeft dit nodig, dus het hoort in de template. Elk punt eerst een spec.
 - [ ] `ConfirmDialog` in de kit voor destructieve acties, op `/design-system` en in `check:catalogus`
 - [ ] Schil toegankelijk: paginatitel per route, skip-link naar de inhoud, focus naar de kop na een routewissel (elk met test)
 - [ ] Rate limit voor app-routes in `defineRoute` (nu alleen in Better Auth), met grenzen uit `limits.ts` en foutcode `RATE_LIMITED`
-- [ ] Mail-layout in core: één basissjabloon (HTML en platte tekst, afzender, voettekst) met snapshot-test; uitnodiging gebruikt hem
+- [x] Mail-layout in core: één basissjabloon (HTML en platte tekst, afzender, voettekst) met snapshot-test; uitnodiging gebruikt hem
+      (`src/core/api/mail/layout.ts`, escaping en alleen http(s)-links getest)
 - [ ] Versie en build-SHA in `GET /api/health` en onderaan in de app
 - [ ] `favicon` en app-icoon, `robots.txt` (standaard `noindex`), `/.well-known/security.txt`
 
