@@ -192,7 +192,8 @@ Elke regel uit `AGENTS.md` die een check kan zijn, wordt een check; een check te
       `app_definer`; fixtures in `test/rails/fixtures/secdef/`) (#60);
       `check:migrations` (geen gecommitte migratie gewijzigd, verwijderd of hernoemd t.o.v. het afsplitspunt met `origin/main`, namen en
       versies uniek, in `gate:fast`; CI haalt daarvoor de volledige geschiedenis op)
-- [ ] `check-secdef` voor security definer-views (zoals `app.accounts`): nu alleen functies en procedures (#60)
+- [x] `check-secdef` voor security definer-views (zoals `app.accounts`): barrier, actorfilter, namen met schema, eigenaar; fail-closed bij
+      materialized views, opties of naam wijzigen via `alter`, views in dynamische SQL en set-operaties (`test/rails/fixtures/secdef-views/`)
 - [ ] Diff-guard met label `gate-wijziging` + goedkeuring op exact de head-SHA, niet van de auteur (framework §10), met tests per geval
       Gebouwd, nog niet verplicht (ADR 0017): `scripts/kit/diff-guard.mjs` met tabeltests en `.github/workflows/guard.yml`; zolang de
       auteur zelf goedkeurder is, uitslag `overgang`. Verplicht bij de overstap op de GitHub App (stuk 6)
