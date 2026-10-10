@@ -157,7 +157,13 @@ Elke app heeft dit nodig, dus het hoort in de template. Elk punt eerst een spec.
 - [ ] Lijstpagina-patroon: zoeken, filteren en sorteren in de search params, op het cursor-contract en `Table`; `new:resource` gebruikt het
 - [x] `ConfirmDialog` in de kit voor destructieve acties (focus op Annuleren, `busy` blokkeert sluiten), op `/design-system` en in
       `check:catalogus` (`src/core/web/ui/confirm-dialog.test.tsx`, `e2e/design-system.spec.ts`)
-- [ ] Schil toegankelijk: paginatitel per route, skip-link naar de inhoud, focus naar de kop na een routewissel (elk met test)
+- [x] Schil toegankelijk: paginatitel per scherm (`useDocumentTitle` via de h1, app-naam uit `src/web/index.html`), skip-link naar de inhoud,
+      focus naar de h1 na een routewissel (`src/core/web/ui/app-shell.test.tsx`, `e2e/shell.spec.ts`)
+- [ ] Focus naar de h1 na een routewissel naar een **lazy** route (`/design-system`): in e2e (Vite dev) staat de focus daarna op
+      `body`. Geprobeerd: `routeKey` uit `resolvedLocation`, wachten op een (zichtbare) h1 met een MutationObserver, en
+      terugzetten als de focus verloren gaat. Vermoeden: pending-weergave of het laden van de chunk duurt langer dan
+      `HEADING_WAIT_MS` (2 s), of het pad naar `resolvedLocation` loopt anders. Eerst reproduceren met een trace
+      (`pnpm ui:check`), dan pas repareren
 - [ ] Rate limit voor app-routes in `defineRoute` (nu alleen in Better Auth), met grenzen uit `limits.ts` en foutcode `RATE_LIMITED`
 - [ ] Mail-layout in core: één basissjabloon (HTML en platte tekst, afzender, voettekst) met snapshot-test; uitnodiging gebruikt hem
 - [ ] Versie en build-SHA in `GET /api/health` en onderaan in de app
