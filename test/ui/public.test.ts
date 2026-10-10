@@ -5,8 +5,9 @@ import { expect, test } from 'vitest';
 // serveren src/web/public op de wortel.
 const read = (file: string) => readFileSync(new URL(`../../src/web/${file}`, import.meta.url), 'utf8');
 
-test('robots.txt sluit alles uit, en index.html zegt noindex', () => {
-  expect(read('public/robots.txt')).toMatch(/^User-agent: \*\nDisallow: \/$/m);
+test('index.html zegt noindex, en robots.txt laat crawlers dat zien (geen Disallow)', () => {
+  expect(read('public/robots.txt')).toMatch(/^User-agent: \*\nAllow: \/$/m);
+  expect(read('public/robots.txt')).not.toMatch(/^Disallow:/m);
   expect(read('index.html')).toContain('<meta name="robots" content="noindex, nofollow" />');
 });
 
