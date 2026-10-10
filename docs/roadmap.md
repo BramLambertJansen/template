@@ -131,7 +131,8 @@ Vier deel-PR's, in deze volgorde.
 - [x] Tokens in drie lagen, `@custom-variant dark`, basiskit Button, Input, Field, Card, Dialog (codemod vervalt: componenten met de hand op de tokens, geen `shadcn add`)
 - [x] Contrasttest over recepten (bewijst ook dat een bekende foute kleur faalt), `scanAxe`, `/design-system` alleen in dev
 - [x] Woordenlijsttest op `src/web/copy` en `src/core/web/copy` (`src/web/copy/woordenlijst.test.ts`, met zelftest) (#33)
-- [ ] `scanAxe`-uitzonderingen in de ratchet
+- [x] `scanAxe`-uitzonderingen: geen, en een lintregel houdt ze tegen (`rails/axe-import`: alleen `e2e/support/axe.ts` gebruikt axe;
+      `rails/axe-uitzondering`: geen `disableRules`/`exclude`/`include`/`options` daarin), fixtures in `test/rails/eslint.test.ts`
 - [x] `check:catalogus`: elk component op `/design-system` of als uitzondering met reden in `scripts/kit/catalogus.mjs` (groeien = gate-wijziging; een overbodige uitzondering faalt ook), in `gate:fast` (#33)
 - [ ] Screenshot-baselines van de catalogus in de Playwright-image (uit fase 2)
 - [ ] Toasts standaard in de basiskit (besluit eigenaar 2026-10-10): `Toaster` in de AppShell en een `toast()`-aanroep voor "gelukt" en "fout" na

@@ -19,6 +19,8 @@ const ruleNames = [
   'query-hooks',
   'use-form',
   'console-error',
+  'axe-import',
+  'axe-uitzondering',
 ];
 const rails = { rules: Object.fromEntries(ruleNames.map((name) => [name, restrictedSyntax])) };
 
@@ -162,6 +164,25 @@ const railConfigs = [
     [],
     "Alleen import('letterlijk pad'): een berekend pad ziet dependency-cruiser niet, dus ook de lagenregels niet.",
     ["ImportExpression[source.type!='Literal']"],
+  ),
+  // Toegankelijkheid (framework §7, roadmap 3c): één axe-scan zonder uitzonderingen. Een regel of element uitzetten moet
+  // zichtbaar een gate-wijziging zijn, geen regel in een test.
+  restrict(
+    'axe-import',
+    CODE,
+    ['e2e/support/axe.ts'],
+    'Scan met scanAxe uit e2e/support/axe.ts (framework §7); een eigen AxeBuilder kan regels of elementen overslaan.',
+    [fromModule('/^@axe-core\\//')],
+  ),
+  restrict(
+    'axe-uitzondering',
+    ['e2e/support/axe.ts'],
+    [],
+    'Geen uitzonderingen in scanAxe (framework §7): los de toegankelijkheidsfout op; een uitzondering vraagt een ADR van de eigenaar.',
+    [
+      'CallExpression[callee.property.name=/^(disableRules|exclude|include|options|withRules|setLegacyMode|disableFrameSandbox)$/]',
+      "MemberExpression[computed=true][property.type!='Literal']",
+    ],
   ),
 ];
 
