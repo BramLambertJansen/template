@@ -11,7 +11,8 @@ const outputDir = process.env['RUNNER_OUTPUT_DIR'];
 export default defineConfig({
   testDir: 'e2e',
   forbidOnly: true,
-  use: { baseURL },
+  // Overgangen ingekort (styles/index.css): axe meet anders kleuren halverwege transition-colors (flaky contrast).
+  use: { baseURL, reducedMotion: 'reduce' },
   projects: [{ name: 'chromium', use: devices['Desktop Chrome'] }],
   ...(outputDir === undefined ? {} : { outputDir: `${outputDir}/test-results` }),
   ...(inRunner
