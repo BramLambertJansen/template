@@ -224,7 +224,37 @@ const fixtures: Fixture[] = [
     name: 'omzeiling met bracket-notatie',
     file: 'e2e/support/axe.ts',
     code: "declare const b: Record<string, (x: string) => void>; const k = 'exclude'; b[k]?.('#x');",
+    rule: 'rails/axe-scan',
+  },
+  {
+    name: 'bracket met letterlijke string',
+    file: 'e2e/support/axe.ts',
+    code: "declare const b: Record<string, (x: string[]) => void>; b['disableRules']?.(['color-contrast']);",
     rule: 'rails/axe-uitzondering',
+  },
+  {
+    name: 'destructuring van disableRules',
+    file: 'e2e/support/axe.ts',
+    code: "declare const b: { disableRules(r: string[]): void }; const { disableRules } = b; disableRules(['x']);",
+    rule: 'rails/axe-uitzondering',
+  },
+  {
+    name: 'disableRules via call in een spec',
+    file: 'e2e/x.spec.ts',
+    code: "declare const b: { disableRules(r: string[]): void }; b.disableRules.call(b, ['x']);",
+    rule: 'rails/axe-uitzondering',
+  },
+  {
+    name: 'eigen axeSource',
+    file: 'e2e/support/axe.ts',
+    code: "export const o = { axeSource: 'nep' };",
+    rule: 'rails/axe-uitzondering',
+  },
+  {
+    name: 're-export van AxeBuilder uit scanAxe',
+    file: 'e2e/support/axe.ts',
+    code: "export { default as AxeBuilder } from '@axe-core/playwright';",
+    rule: 'rails/axe-scan',
   },
 ];
 

@@ -21,6 +21,7 @@ const ruleNames = [
   'console-error',
   'axe-import',
   'axe-uitzondering',
+  'axe-scan',
 ];
 const rails = { rules: Object.fromEntries(ruleNames.map((name) => [name, restrictedSyntax])) };
 
@@ -34,6 +35,7 @@ const CODE = [
 ];
 const TESTS = ['**/*.test.{ts,tsx}', '**/*.spec.ts', 'test/**/*.ts', 'e2e/**/*.ts'];
 const WEB = ['src/web/**/*.{ts,tsx}', 'src/core/web/**/*.{ts,tsx}'];
+const AXE_UITZONDERING = '/^(disableRules|exclude|include|options|withRules|setLegacyMode|disableFrameSandbox)$/';
 const ELEMENTS = '/^(button|input|select|textarea|dialog|a)$/';
 const IMPORTS = ['ImportDeclaration', 'ExportNamedDeclaration', 'ExportAllDeclaration', 'ImportExpression'].join(', ');
 
@@ -176,12 +178,25 @@ const railConfigs = [
   ),
   restrict(
     'axe-uitzondering',
-    ['e2e/support/axe.ts'],
+    ['e2e/**/*.ts'],
     [],
     'Geen uitzonderingen in scanAxe (framework §7): los de toegankelijkheidsfout op; een uitzondering vraagt een ADR van de eigenaar.',
     [
-      'CallExpression[callee.property.name=/^(disableRules|exclude|include|options|withRules|setLegacyMode|disableFrameSandbox)$/]',
+      `MemberExpression[property.name=${AXE_UITZONDERING}]`,
+      `MemberExpression[property.value=${AXE_UITZONDERING}]`,
+      `Property[key.name=${AXE_UITZONDERING}]`,
+      "Property[key.name='axeSource']",
+    ],
+  ),
+  // In scanAxe zelf ook geen berekende property-toegang (omzeiling van de namen hierboven) en geen re-export van axe.
+  restrict(
+    'axe-scan',
+    ['e2e/support/axe.ts'],
+    [],
+    'scanAxe blijft één vaste scan (framework §7): geen berekende property-toegang en geen re-export van axe.',
+    [
       "MemberExpression[computed=true][property.type!='Literal']",
+      ':matches(ExportNamedDeclaration, ExportAllDeclaration)[source.value=/^@axe-core\\//]',
     ],
   ),
 ];
