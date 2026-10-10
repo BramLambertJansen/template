@@ -121,6 +121,18 @@ describe('defineRoute en createApp', () => {
     error.mockRestore();
   });
 
+  // ADR 0016 (OV-1): een gegenereerde handler gooit NOT_IMPLEMENTED; pas na sessie, input, rol en permissie.
+  test('een handler met NOT_IMPLEMENTED geeft 501 aan wie het recht heeft, 403 aan wie het niet heeft', async () => {
+    const todo = defineRoute(notesContract, () => {
+      throw new AppError('NOT_IMPLEMENTED');
+    });
+
+    const allowed = await request(appWith(user, [todo]).app, '/api/notes/n1');
+    const denied = await request(appWith({ ...user, role: null }, [todo]).app, '/api/notes/n1');
+    expect([allowed.status, await codeOf(allowed)]).toStrictEqual([501, 'NOT_IMPLEMENTED']);
+    expect([denied.status, await codeOf(denied)]).toStrictEqual([403, 'FORBIDDEN']);
+  });
+
   test('createApp weigert een route die niet uit defineRoute komt', () => {
     const fake = unsafeCast<RouteDef>(
       { contract: notesContract, check: () => ({ ok: true }), handler: () => ({}) },

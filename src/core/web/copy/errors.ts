@@ -13,4 +13,5 @@ export const coreErrorTexts = {
   MFA_REQUIRED: 'Bevestig eerst je verificatiecode.',
   ALREADY_EXISTS: 'Dit bestaat al.',
   RATE_LIMITED: 'Te veel pogingen. Probeer het over een paar minuten opnieuw.',
+  NOT_IMPLEMENTED: 'Dit onderdeel is nog niet beschikbaar.',
 } as const satisfies Record<CoreErrorCode, string>;

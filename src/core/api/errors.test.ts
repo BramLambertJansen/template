@@ -38,4 +38,9 @@ describe('translateDatabaseError', () => {
       statusFor('LAST_ADMIN'),
     ]).toStrictEqual([401, 403, 400, 409]);
   });
+
+  // ADR 0016 (OV-1): de generator maakt handlers die NOT_IMPLEMENTED gooien tot de developer ze bouwt.
+  test('NOT_IMPLEMENTED is een basiscode met status 501', () => {
+    expect(statusFor('NOT_IMPLEMENTED')).toBe(501);
+  });
 });
