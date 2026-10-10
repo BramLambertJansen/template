@@ -24,6 +24,12 @@ export const gates = [
     bewaakt: 'elk component uit src/web/ui op /design-system of met een uitzondering met reden (framework §7)',
     snel: true,
   },
+  {
+    script: 'check:migrations',
+    bewaakt:
+      'geen gecommitte migratie gewijzigd of verwijderd t.o.v. origin/main, namen en versies uniek (framework §10)',
+    snel: true,
+  },
   { script: 'test:unit', bewaakt: 'unit-tests en de fixtures van de rails (test/rails)', snel: true },
   {
     script: 'test:db',
