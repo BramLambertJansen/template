@@ -130,7 +130,7 @@ toevoegt zonder `src/core` te wijzigen; een core-test bewijst dat `createApp` ge
 Elke regel uit `AGENTS.md` die een check kan zijn, wordt een check; een check telt pas met een fixture die bewijst dat hij faalt.
 - [ ] Overige ESLint-regels: sonarjs, better-tailwindcss, functielengte, max-params, max-depth, `useQuery`/`useForm`/`console.error`-restricties
       Deels gebouwd: functielengte (60 / 120 in `.tsx`, niet in tests), max-params 3, max-depth 3 met fixtures (#35); `useQuery`/`useMutation` alleen in
-      `queries.ts`, `useForm` alleen in de wrapper, geen `console.error` in `queries.ts` en de API-client (PR_NR); sonarjs en
+      `queries.ts`, `useForm` alleen in de wrapper, geen `console.error` in `queries.ts` en de API-client (#36); sonarjs en
       better-tailwindcss vragen een nieuwe dependency
 - [ ] `check-migrations`, `check-docs` (framework §10: identifiers tussen backticks, `.claude/gates.json` = CODEOWNERS = `ask`, register = gates,
       statussen), `check-secdef`, `check-policies`, `check-core`, bundelbudget
