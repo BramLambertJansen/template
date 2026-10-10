@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { AppShell } from './app-shell.tsx';
 import { PageHeader } from './page-header.tsx';
@@ -59,4 +59,22 @@ test('zonder h1 gaat de focus naar main', async () => {
   );
   await nextFrame();
   expect(document.activeElement).toBe(screen.getByRole('main'));
+});
+
+test('de skip-link zet de focus op main, zonder fragment in de URL', () => {
+  render(shell('/', 'Home'));
+  const before = window.location.href;
+  fireEvent.click(screen.getByRole('link', { name: 'Naar de inhoud' }));
+  expect(document.activeElement).toBe(screen.getByRole('main'));
+  expect(window.location.href).toBe(before);
+});
+
+test('een voorbeeld-PageHeader met documentTitle={false} laat de paginatitel staan', () => {
+  render(
+    <AppShell nav={[]} userName="Ada Admin" menuItems={[]} routeKey="/">
+      <PageHeader title="Design system" />
+      <PageHeader title="Accounts" documentTitle={false} />
+    </AppShell>,
+  );
+  expect(document.title).toBe('Design system');
 });

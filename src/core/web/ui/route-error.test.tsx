@@ -75,4 +75,16 @@ describe('RouteError en NotFound', () => {
 
     expect((await screen.findByRole('heading')).textContent).toBe('Pagina niet gevonden');
   });
+
+  test('elke uitkomst zet een eigen paginatitel (WCAG 2.4.2), ook geen rechten zonder h1', async () => {
+    document.title = 'Home';
+    show('/beheer');
+    await screen.findByRole('alert');
+    expect(document.title).toBe('Geen toegang');
+    cleanup();
+
+    show('/bestaat-niet');
+    await screen.findByRole('heading');
+    expect(document.title).toBe('Pagina niet gevonden');
+  });
 });

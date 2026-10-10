@@ -4,6 +4,7 @@ export const uiTexts = {
   retry: 'Opnieuw proberen',
   notFoundTitle: 'Pagina niet gevonden',
   errorTitle: 'Er ging iets mis',
+  forbiddenTitle: 'Geen toegang',
   empty: 'Er is nog niets om te tonen.',
   mainMenu: 'Hoofdmenu',
   openMenu: 'Menu openen',

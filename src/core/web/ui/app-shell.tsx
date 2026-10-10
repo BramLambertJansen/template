@@ -20,6 +20,8 @@ interface AppShellProps {
 
 const MAIN_ID = 'inhoud';
 
+// main en de h1 krijgen focus zonder focusring: niet interactief en niet met Tab bereikbaar (bewuste uitzondering op de
+// regel "focusring nooit uit"); de schermlezer leest de plek voor.
 // Na een routewissel (niet bij het eerste scherm) de focus naar de h1 van het nieuwe scherm, of naar main als die er
 // (nog) niet is. Zo leest een schermlezer de nieuwe titel voor, en begint Tab bovenaan de inhoud. Na de render, zodat
 // een sluitend menu zijn focus eerst teruggeeft.
@@ -62,9 +64,14 @@ export function AppShell({ nav, userName, menuItems, topbarActions, routeKey, ch
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[16rem_1fr]">
       {/* Eerste Tab-stop (WCAG 2.4.1): langs sidebar en topbalk direct naar de inhoud. Alleen zichtbaar met focus. */}
+      {/* Zonder fragment in de URL of extra history-stap: de klik zet zelf de focus op main. */}
       <a
         href={`#${MAIN_ID}`}
-        className="sr-only rounded-md bg-background px-3 py-2 text-sm text-foreground focus:not-sr-only focus:fixed focus:start-2 focus:top-2 focus:z-50 focus:ring-2 focus:ring-ring"
+        onClick={(event) => {
+          event.preventDefault();
+          mainRef.current?.focus();
+        }}
+        className="sr-only rounded-md bg-background text-sm text-foreground focus:not-sr-only focus:fixed focus:start-2 focus:top-2 focus:z-50 focus:inline-flex focus:min-h-control focus:items-center focus:px-3 focus:ring-2 focus:ring-ring"
       >
         {uiTexts.skipToContent}
       </a>

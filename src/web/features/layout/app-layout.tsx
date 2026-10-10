@@ -10,7 +10,8 @@ import { useLogout, useMe } from '../session/queries.ts';
 export function AppLayout() {
   const me = useMe();
   const logout = useLogout();
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  // resolvedLocation: pas als het nieuwe scherm gerenderd is (ook na een lazy route of loader), niet bij de start van het laden.
+  const pathname = useRouterState({ select: (state) => state.resolvedLocation?.pathname ?? state.location.pathname });
   if (me.data === undefined) return null;
 
   const menuItems: MenuItem[] = [

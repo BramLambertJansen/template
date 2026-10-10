@@ -8,8 +8,9 @@ export function formatDocumentTitle(title: string, app: string): string {
   return app === '' || app === title ? title : `${title} · ${app}`;
 }
 
-export function useDocumentTitle(title: string): void {
+// null: dit element zet geen titel (bijv. een voorbeeld-PageHeader in de catalogus).
+export function useDocumentTitle(title: string | null): void {
   useEffect(() => {
-    document.title = formatDocumentTitle(title, appName);
+    if (title !== null) document.title = formatDocumentTitle(title, appName);
   }, [title]);
 }

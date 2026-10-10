@@ -1,5 +1,6 @@
 import { useRouter, type ErrorComponentProps } from '@tanstack/react-router';
 import { uiTexts } from '../copy/ui.ts';
+import { useDocumentTitle } from '../lib/document-title.ts';
 import { ForbiddenError } from '../lib/guard.ts';
 import { Button } from './button.tsx';
 import { PageTitle } from './page-title.tsx';
@@ -10,7 +11,10 @@ import { useErrorText } from './error-texts.tsx';
 export function RouteError({ error }: ErrorComponentProps) {
   const errorText = useErrorText();
   const router = useRouter();
-  if (error instanceof ForbiddenError) {
+  const forbidden = error instanceof ForbiddenError;
+  // Zonder h1 (vaste spectekst), maar wel een eigen paginatitel: anders blijft die van het vorige scherm staan.
+  useDocumentTitle(forbidden ? uiTexts.forbiddenTitle : null);
+  if (forbidden) {
     return (
       <main className="p-6">
         <p role="alert" className="text-foreground">

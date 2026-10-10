@@ -31,8 +31,19 @@ test('titel per scherm, skip-link en focus na navigeren', async ({ page }) => {
   await page.keyboard.press('Enter');
   await expect(page.getByRole('main')).toBeFocused();
 
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await page.getByRole('navigation', { name: 'Hoofdmenu' }).getByRole('link', { name: 'Accounts' }).click();
+  await expect(page).not.toHaveURL(/#/);
+
+  // De links naar Accounts en Design system staan op het dashboard; terug via het hoofdmenu.
+  const main = page.getByRole('main');
+  await main.getByRole('link', { name: 'Accounts' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Accounts' })).toBeFocused();
   await expect(page).toHaveTitle(/^Accounts · /);
+
+  await page.getByRole('navigation', { name: 'Hoofdmenu' }).getByRole('link', { name: 'Dashboard' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeFocused();
+
+  // Een lazy route: de focus komt pas op de h1 als het nieuwe scherm er staat, niet op die van het oude.
+  await main.getByRole('link', { name: 'Design system' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Design system' })).toBeFocused();
+  await expect(page).toHaveTitle(/^Design system · /);
 });
