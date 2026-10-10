@@ -7,10 +7,12 @@ const IDLE_TIMEOUT_MS = 10_000;
 // Wachten op een verbinding (nieuw of uit de volle pool) duurt hooguit 10 s; daarna faalt de request (INTERNAL_ERROR)
 // in plaats van te blijven hangen tot de TCP-timeout van het OS (minuten) als de database onbereikbaar is.
 const CONNECT_TIMEOUT_MS = 10_000;
+// TCP-keepalive na 10 s stilte: zonder deze waarde gebruikt pg de OS-standaard (Linux: pas na 2 uur).
+const KEEPALIVE_DELAY_MS = 10_000;
 
 // Een idle verbinding die wegvalt (herstart of failover van de database of de pooler) meldt pg-pool als 'error' op de
 // pool; zonder listener stopt dat het hele proces. De pool gooit de verbinding zelf weg; de volgende request verbindt opnieuw.
-export function ignoreIdleErrors(pool: pg.Pool): pg.Pool {
+function ignoreIdleErrors(pool: pg.Pool): pg.Pool {
   pool.on('error', (error) => {
     console.warn(`database: idle verbinding verbroken (${error.message})`);
   });
@@ -26,6 +28,7 @@ export function createPool(connectionString: string): pg.Pool {
       connectionTimeoutMillis: CONNECT_TIMEOUT_MS,
       // Een dode verbinding (half-open TCP) wordt gezien in plaats van een request te laten hangen.
       keepAlive: true,
+      keepAliveInitialDelayMillis: KEEPALIVE_DELAY_MS,
       application_name: 'api',
     }),
   );
@@ -48,6 +51,7 @@ export function createPing(connectionString: string, timeoutMs: number): Ping {
     query_timeout: timeoutMs,
     idleTimeoutMillis: IDLE_TIMEOUT_MS,
     keepAlive: true,
+    keepAliveInitialDelayMillis: KEEPALIVE_DELAY_MS,
     // Herkenbaar in pg_stat_activity (en in de integratietest).
     application_name: 'readiness',
   });

@@ -1,3 +1,4 @@
+import { once } from 'node:events';
 import { sql } from 'drizzle-orm';
 import pg from 'pg';
 import { afterAll, expect, test } from 'vitest';
@@ -23,6 +24,8 @@ afterAll(async () => {
 test('na het beëindigen van een idle verbinding werkt de volgende withUser()', async () => {
   await withUser(actor, async (tx) => tx.execute(sql`select 1`));
   expect(pool.idleCount).toBeGreaterThan(0);
+  // Wacht deterministisch tot de pool de weggevallen verbinding gemeld heeft (en bewijst dat de melding de pool bereikt).
+  const lost = once(pool, 'error');
   const admin = new pg.Client({ connectionString: url() });
   await admin.connect();
   try {
@@ -34,6 +37,6 @@ test('na het beëindigen van een idle verbinding werkt de volgende withUser()', 
   } finally {
     await admin.end();
   }
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  await lost;
   await expect(withUser(actor, async (tx) => tx.execute(sql`select 1`))).resolves.toBeDefined();
 });

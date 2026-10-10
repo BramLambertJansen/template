@@ -19,6 +19,8 @@ export function createAuth(config: CreateAuthConfig) {
     max: AUTH_POOL_SIZE,
     connectionTimeoutMillis: AUTH_CONNECT_TIMEOUT_MS,
     keepAlive: true,
+    // Zonder deze waarde gebruikt pg de OS-standaard (Linux: pas na 2 uur).
+    keepAliveInitialDelayMillis: 10_000,
     application_name: 'auth',
   });
   // Zoals in src/core/api/db/pool.ts: een weggevallen idle verbinding mag het proces niet stoppen.
