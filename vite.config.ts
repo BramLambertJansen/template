@@ -4,34 +4,11 @@ import tailwindcss from '@tailwindcss/vite';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
 import react from '@vitejs/plugin-react';
 import pkg from './package.json' with { type: 'json' };
+import { securityHeaders } from './src/core/api/http/security-headers.ts';
 
 // Vaste nonce alleen voor de dev-server: Vite en de React-preamble zetten inline tags. De build en `vite preview`
-// gebruiken exact de CSP uit framework §6, zonder nonce.
+// gebruiken exact de CSP uit framework §6, zonder nonce (src/core/api/http/security-headers.ts, ook voor de productieserver).
 const DEV_NONCE = 'dev-only-nonce';
-
-function contentSecurityPolicy(nonce?: string): string {
-  const extra = nonce === undefined ? '' : ` 'nonce-${nonce}'`;
-  return [
-    "default-src 'self'",
-    `script-src 'self'${extra}`,
-    `style-src 'self'${extra}`,
-    "connect-src 'self'",
-    "img-src 'self' data:",
-    "frame-ancestors 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "object-src 'none'",
-  ].join('; ');
-}
-
-function securityHeaders(nonce?: string): Record<string, string> {
-  return {
-    'Content-Security-Policy': contentSecurityPolicy(nonce),
-    'Strict-Transport-Security': 'max-age=63072000; includeSubDomains',
-    'X-Content-Type-Options': 'nosniff',
-    'Referrer-Policy': 'strict-origin-when-cross-origin',
-  };
-}
 
 // Eén bron: browserslist in package.json ("safari >= 16.4") → build.target ("safari16.4").
 function buildTarget(queries: readonly string[]): string[] {

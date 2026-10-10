@@ -21,6 +21,7 @@
     "dev": "node scripts/dev.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
+    "start": "node src/api/server.ts",
     "lint": "eslint . --max-warnings 0",
     "lint:prune": "eslint . --prune-suppressions",
     "format": "git ls-files -z --cached --others --exclude-standard | xargs -0 prettier --ignore-unknown --write",
@@ -42,6 +43,7 @@
     "admin:create": "node --env-file-if-exists=.env.local scripts/admin-create.mjs",
     "auth:schema": "node scripts/auth-schema.mjs",
     "new:resource": "node scripts/kit/new-resource.mjs",
+    "app:init": "node scripts/kit/app-init.mjs",
     "gate:fast": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm ratchet && pnpm check:catalogus && pnpm check:migrations && pnpm check:secdef && pnpm test:unit",
     "check:snapshot": "scripts/check-snapshot.sh",
     "gate:slow": "pnpm test:db && pnpm ui:check && pnpm check:snapshot"

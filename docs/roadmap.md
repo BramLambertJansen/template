@@ -156,12 +156,21 @@ Elke app heeft dit nodig, dus het hoort in de template. Elk punt eerst een spec.
 
 **3f. Basis die elke app nodig heeft** (lijst eigenaar 2026-10-10). Nieuwe route, permissie of migratie: eerst een spec.
 - [ ] Lijstpagina-patroon: zoeken, filteren en sorteren in de search params, op het cursor-contract en `Table`; `new:resource` gebruikt het
-- [ ] `ConfirmDialog` in de kit voor destructieve acties, op `/design-system` en in `check:catalogus`
-- [ ] Schil toegankelijk: paginatitel per route, skip-link naar de inhoud, focus naar de kop na een routewissel (elk met test)
+- [x] `ConfirmDialog` in de kit voor destructieve acties (focus op Annuleren, `busy` blokkeert sluiten), op `/design-system` en in
+      `check:catalogus` (`src/core/web/ui/confirm-dialog.test.tsx`, `e2e/design-system.spec.ts`)
+- [x] Schil toegankelijk: paginatitel per scherm (`useDocumentTitle` via de h1, app-naam uit `src/web/index.html`), skip-link naar de inhoud,
+      focus naar de h1 na een routewissel (`src/core/web/ui/app-shell.test.tsx`, `e2e/shell.spec.ts`)
+- [ ] Focus naar de h1 na een routewissel naar een **lazy** route (`/design-system`): in e2e (Vite dev) staat de focus daarna op
+      `body`. Geprobeerd: `routeKey` uit `resolvedLocation`, wachten op een (zichtbare) h1 met een MutationObserver, en
+      terugzetten als de focus verloren gaat. Vermoeden: pending-weergave of het laden van de chunk duurt langer dan
+      `HEADING_WAIT_MS` (2 s), of het pad naar `resolvedLocation` loopt anders. Eerst reproduceren met een trace
+      (`pnpm ui:check`), dan pas repareren
 - [ ] Rate limit voor app-routes in `defineRoute` (nu alleen in Better Auth), met grenzen uit `limits.ts` en foutcode `RATE_LIMITED`
-- [ ] Mail-layout in core: één basissjabloon (HTML en platte tekst, afzender, voettekst) met snapshot-test; uitnodiging gebruikt hem
+- [x] Mail-layout in core: één basissjabloon (HTML en platte tekst, afzender, voettekst) met snapshot-test; uitnodiging gebruikt hem
+      (`src/core/api/mail/layout.ts`, escaping en alleen http(s)-links getest)
 - [ ] Versie en build-SHA in `GET /api/health` en onderaan in de app
-- [ ] `favicon` en app-icoon, `robots.txt` (standaard `noindex`), `/.well-known/security.txt`
+- [x] `favicon` (`src/web/public/favicon.svg`), `<meta name="robots" content="noindex, nofollow">` met een `robots.txt` die crawlen toestaat (anders ziet een crawler de noindex niet) (`test/ui/public.test.ts`)
+- [ ] `/.well-known/security.txt`: vraagt een contactadres per app (eigenaar)
 
 **Klaar als:** unit, pgTAP (elke policy op naam plus de invarianten), integratie, racetest "rol toekennen", e2e per rol en axe op 375 en
 1280 px groen (uitvoer); een test per verboden rol per route; een test bewijst dat een app een permissie, foutcode en componentvariant
@@ -184,7 +193,8 @@ Elke regel uit `AGENTS.md` die een check kan zijn, wordt een check; een check te
       `app_definer`; fixtures in `test/rails/fixtures/secdef/`) (#60);
       `check:migrations` (geen gecommitte migratie gewijzigd, verwijderd of hernoemd t.o.v. het afsplitspunt met `origin/main`, namen en
       versies uniek, in `gate:fast`; CI haalt daarvoor de volledige geschiedenis op)
-- [ ] `check-secdef` voor security definer-views (zoals `app.accounts`): nu alleen functies en procedures (#60)
+- [x] `check-secdef` voor security definer-views (zoals `app.accounts`): barrier, actorfilter, namen met schema, eigenaar; fail-closed bij
+      materialized views, opties of naam wijzigen via `alter`, views in dynamische SQL en set-operaties (`test/rails/fixtures/secdef-views/`)
 - [ ] Diff-guard met label `gate-wijziging` + goedkeuring op exact de head-SHA, niet van de auteur (framework §10), met tests per geval
       Gebouwd, nog niet verplicht (ADR 0017): `scripts/kit/diff-guard.mjs` met tabeltests en `.github/workflows/guard.yml`; zolang de
       auteur zelf goedkeurder is, uitslag `overgang`. Verplicht bij de overstap op de GitHub App (stuk 6)
@@ -192,9 +202,13 @@ Elke regel uit `AGENTS.md` die een check kan zijn, wordt een check; een check te
       Deels gebouwd: `gate:slow` = `test:db` (met `check-policies`) + `ui:check` + `check:snapshot` (snapshot en Drizzle-schema zonder
       verschil) (#38); squawk vraagt een nieuwe tool
 - [ ] Scripts uit `excludedCommands` (`test:db`, `db:reset`, `db:types`, `ui:check`, `gate:slow`) bestaan in `package.json`, alle vijf in de runner van ADR 0009
-- [ ] CI: `gate:slow`-job, gewijzigde tests als lijst, `guard.yml` (PR-code alleen als data, met de diff-guard), CodeQL, osv-scanner (PR + wekelijks;
-      uitzonderingen met reden en `ignoreUntil`), Betterleaks op digest, Renovate (gegroepeerd, blokkeert TS 7)
+- [x] CI: `gate:slow`-job, gewijzigde tests als lijst, `guard.yml` (PR-code alleen als data, met de diff-guard), CodeQL, osv-scanner (PR + wekelijks;
+      uitzonderingen met reden en `ignoreUntil`), Betterleaks (versie gepind in `mise.toml`), Renovate (gegroepeerd, blokkeert TS 7)
       Eerst, als eigen PR (volgorde punt 1): `gate:slow`-job met de Postgres-image uit `db/docker/`, osv-scanner en Renovate
+      Gebouwd: `gate:slow`-job (#59), osv-scanner en Renovate (#61), `guard.yml` met de diff-guard (#62), CodeQL (`codeql.yml`,
+      `security-extended`, TypeScript en workflows) en Betterleaks over de hele geschiedenis (job `secrets`, versie gepind in
+      `mise.toml` in plaats van een image op digest). Gewijzigde of verwijderde tests als lijst staan in de samenvatting van de
+      diff-guard (`scripts/kit/diff-guard.mjs`, "Gewijzigde of verwijderde tests"; op elke PR via `guard.yml`)
 
 **Klaar als:** tabel in de PR met per regel uit `AGENTS.md` de check en de fixture-test die bewijst dat hij faalt (alle fixture-tests groen);
 CI weigert `any`, een databaseclient in `src/web`, een route buiten `defineRoute` en een gewijzigde migratie (uitvoer);
@@ -222,9 +236,10 @@ code uit `pnpm new:resource` haalt `gate:fast`; drie testopdrachten door de hele
 - [ ] `.github/settings/` + `scripts/check-github.mjs` (ook `app_id` van verplichte checks, `enforce_admins`, conversation resolution), `check-spec-approval`
 - [ ] `docs/operations/rails-checklist.md`: instellingen buiten de repo, per stuk afgevinkt met bewijs
 - [ ] Pushen met het App-token zonder het token van de eigenaar in de agent-omgeving (`docs/operations/`); daarna `denyRead` op `~/.config/gh`
-- [ ] `pnpm app:init <slug> "<App-naam>"`: de handstappen uit `docs/nieuwe-app.md` (naam, README, titel) als script met test; de template-sectie verdwijnt
+- [x] `pnpm app:init <slug> "<App-naam>"`: de handstappen uit `docs/nieuwe-app.md` (naam, README, titel) als script met test; de template-sectie verdwijnt
+      (`scripts/kit/app-init.mjs`, `test/scripts/app-init.test.ts`)
 - [ ] Template-versie: tag per template-release, de app legt de versie vast, upgrade-notities bij breaking changes in `CHANGELOG.md` (ADR 0006)
-- [ ] `.vscode/extensions.json` en `.vscode/settings.json` (ESLint, Prettier, Tailwind), gelijk aan de gates
+- [x] `.vscode/extensions.json` en `.vscode/settings.json` (ESLint, Prettier, Tailwind), gelijk aan de gates
 - [ ] `LICENSE`: eigendom en geen open-source-licentie
 - [ ] Proef-app: een app via `docs/nieuwe-app.md`, daarna één echte template-update (`git merge template/main`) via een PR.
       Conflicten en handwerk vastleggen; wat terugkomt, wordt een regel of script in de template (ADR 0006)
@@ -243,7 +258,8 @@ Provider-neutraal: wat elke host nodig heeft, hoort in de template; de adapter p
       2026-10-10); `createApp({ log })`, `server.ts` geeft `writeJsonLine` mee (`src/core/api/obs/request-log.test.ts`)
 - [x] Readiness: `GET /api/ready` (200 `{ ok: true }` of 503 `{ ok: false }`) via `pingDatabase()` naast `GET /api/health` (liveness); uitkomst 1 s
       bewaard, hooguit één controle tegelijk, timeout 2 s; eigen verbinding met timeouts; regel in framework §3, ADR 0018 (`src/core/api/http/readiness.test.ts`, `test/datapad/ping.int.test.ts`)
-- [ ] `pnpm start` en een productiebuild van de API; een containerimage (non-root) dat elke containerhost kan draaien
+- [x] `pnpm start` (`node src/api/server.ts`, geen buildstap voor de API) en een containerimage (non-root) die SPA en API op één origin serveert
+      (ADR 0019, `Dockerfile`, CI-job `image` met `scripts/check-image.sh`; `src/core/api/http/web.test.ts`)
 - [ ] Achtergrondtaken volgens de ADR uit **Beslissingen**: opruimen en mail-outbox, elk met een integratietest
 
 **Klaar als:** de image start met een niet-lokale `APP_ENV` tegen de lokale stack (uitvoer van de eigenaar); per request één logregel

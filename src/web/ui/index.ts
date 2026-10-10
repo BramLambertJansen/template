@@ -6,6 +6,7 @@ export { Button, buttonBase, buttonVariantMap, buttonVariants, type ButtonProps 
 export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '#core/web/ui/card.tsx';
 export { CenteredCard } from '#core/web/ui/centered-card.tsx';
 export { cn } from '#core/web/ui/cn.ts';
+export { ConfirmDialog } from '#core/web/ui/confirm-dialog.tsx';
 export { Dialog } from '#core/web/ui/dialog.tsx';
 export { ErrorTextsProvider, useErrorText } from '#core/web/ui/error-texts.tsx';
 export { DropdownMenu, type MenuItem } from '#core/web/ui/dropdown-menu.tsx';

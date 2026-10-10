@@ -24,6 +24,9 @@ paths:
   eigenaar `app_definer` (`alter function … owner to app_definer`) met alleen de rechten die de functie nodig heeft.
   Geen overload, nooit `alter function … security definer` en geen `security definer` in een `do`-blok of dynamische SQL
   (`pnpm check:secdef`, framework §6).
+- Views: standaard `with (security_invoker = true)` (RLS van de aanroeper). Zonder dat leest de view met de rechten van zijn
+  eigenaar en eist `check:secdef` `security_barrier`, namen met schema, een `where` met een `app.`-functie als actorfilter en
+  eigenaar `app_definer`. Geen materialized views.
 - Datamigraties die alle rijen moeten zien: via zo'n functie, nooit door RLS uit te zetten. FORCE RLS geldt ook voor
   `app_definer`: geef de tabel in dezelfde migratie een policy `to app_definer` met alleen wat de functie nodig heeft, met een pgTAP-test.
 - Auth-tabellen: SQL uit `node scripts/auth-schema.mjs` (gepinde versie) in een migratie die begint met `set local search_path = better_auth;`

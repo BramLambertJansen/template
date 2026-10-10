@@ -1,5 +1,6 @@
-# gate:fast en gate:slow op elke push naar main en elke PR (framework §10); check:new-resource als eigen job (ADR 0016, OV-7).
-# osv-scanner in osv.yml, de diff-guard in guard.yml; CodeQL en Betterleaks in CI volgen in roadmap stuk 4. Actions op volledige SHA; Renovate werkt ze bij.
+# gate:fast en gate:slow op elke push naar main en elke PR (framework §10); check:new-resource als eigen job (ADR 0016, OV-7);
+# image bouwt en controleert de productie-image (ADR 0019); secrets draait Betterleaks over de geschiedenis. CodeQL in codeql.yml.
+# osv-scanner in osv.yml, de diff-guard in guard.yml. Actions op volledige SHA; Renovate werkt ze bij.
 name: ci
 
 on:
@@ -57,6 +58,35 @@ jobs:
           include-hidden-files: true
           retention-days: 7
           if-no-files-found: ignore
+
+  # Betterleaks over de hele geschiedenis (framework §6): wat lefthook lokaal tegenhoudt, kan via --no-verify of een andere
+  # machine toch binnenkomen. Altijd met scripts/kit/betterleaks.toml; inline allows tellen niet.
+  secrets:
+    name: secrets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: jdx/mise-action@7a4e45a543138629540c9a1616d08632b893e492 # v5.0.1
+        with:
+          version: 2026.9.18
+          install_args: betterleaks
+      - run: betterleaks git -c scripts/kit/betterleaks.toml --redact --no-banner --ignore-gitleaks-allow
+
+  # De productie-image (ADR 0019) bouwt en start: niet als root, liveness, readiness, SPA met CSP en netjes stoppen.
+  image:
+    name: image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: docker build -t app:ci .
+      - run: scripts/check-image.sh app:ci
 
   # Code uit pnpm new:resource haalt gate:fast (ADR 0016, OV-7). Duurt minuten, daarom niet in gate:fast zelf; wel altijd,
   # want de templates doen bijna alles in src/ na.

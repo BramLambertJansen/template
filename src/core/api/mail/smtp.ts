@@ -4,6 +4,8 @@ export interface Mail {
   readonly to: string;
   readonly subject: string;
   readonly text: string;
+  // HTML-versie naast de tekst (renderMail in layout.ts); zonder alleen tekst.
+  readonly html?: string;
 }
 
 export type SendMail = (mail: Mail) => Promise<void>;

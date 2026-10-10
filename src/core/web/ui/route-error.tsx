@@ -1,7 +1,9 @@
 import { useRouter, type ErrorComponentProps } from '@tanstack/react-router';
 import { uiTexts } from '../copy/ui.ts';
+import { useDocumentTitle } from '../lib/document-title.ts';
 import { ForbiddenError } from '../lib/guard.ts';
 import { Button } from './button.tsx';
+import { PageTitle } from './page-title.tsx';
 import { useErrorText } from './error-texts.tsx';
 
 // ErrorBoundary van elke route (framework §5, via defaultErrorComponent van de router). Toont alleen een tekst bij de
@@ -9,7 +11,10 @@ import { useErrorText } from './error-texts.tsx';
 export function RouteError({ error }: ErrorComponentProps) {
   const errorText = useErrorText();
   const router = useRouter();
-  if (error instanceof ForbiddenError) {
+  const forbidden = error instanceof ForbiddenError;
+  // Zonder h1 (vaste spectekst), maar wel een eigen paginatitel: anders blijft die van het vorige scherm staan.
+  useDocumentTitle(forbidden ? uiTexts.forbiddenTitle : null);
+  if (forbidden) {
     return (
       <main className="p-6">
         <p role="alert" className="text-foreground">
@@ -20,7 +25,7 @@ export function RouteError({ error }: ErrorComponentProps) {
   }
   return (
     <main className="flex flex-col items-start gap-3 p-6">
-      <h1 className="text-2xl font-semibold">{uiTexts.errorTitle}</h1>
+      <PageTitle title={uiTexts.errorTitle} className="text-2xl font-semibold" />
       <p role="alert" className="text-destructive">
         {errorText(error)}
       </p>
@@ -35,7 +40,7 @@ export function RouteError({ error }: ErrorComponentProps) {
 export function NotFound() {
   return (
     <main className="p-6">
-      <h1 className="text-2xl font-semibold">{uiTexts.notFoundTitle}</h1>
+      <PageTitle title={uiTexts.notFoundTitle} className="text-2xl font-semibold" />
     </main>
   );
 }
