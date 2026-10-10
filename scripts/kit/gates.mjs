@@ -27,8 +27,14 @@ export const gates = [
   { script: 'test:unit', bewaakt: 'unit-tests en de fixtures van de rails (test/rails)', snel: true },
   {
     script: 'test:db',
-    bewaakt: 'integratietests (ook de isolatietest) en pgTAP tegen een verse database, in de runner (ADR 0009)',
+    bewaakt:
+      'integratietests (ook de isolatietest en check-policies) en pgTAP tegen een verse database, in de runner (ADR 0009)',
     snel: false,
   },
   { script: 'ui:check', bewaakt: 'e2e met CSP aan tegen API en Vite, in de Playwright-runner (ADR 0009)', snel: false },
+  {
+    script: 'check:snapshot',
+    bewaakt: 'db/schema.snapshot.sql en src/api/db/schema.ts gelijk aan wat de migraties opleveren (framework §6)',
+    snel: false,
+  },
 ];
