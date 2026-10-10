@@ -114,7 +114,15 @@ export function createApp<Services>(config: BaseConfig<Services> & { readonly se
   const core: readonly string[] = coreErrorCodes;
   const isPublic = (code: string) => config.errors?.is(code) ?? core.includes(code);
 
-  const app = new Hono().basePath('/api').use(requestId());
+  // De ID maakt de server altijd zelf (nooit uit X-Request-Id van de client): hij koppelt de request-log aan foutmeldingen
+  // en straks aan auditregels (ADR 0021), dus een client mag hem niet kiezen of een bestaande nadoen.
+  const app = new Hono()
+    .basePath('/api')
+    .use(requestId({ headerName: '' }))
+    .use(async (c, next) => {
+      c.header('X-Request-Id', c.get('requestId'));
+      await next();
+    });
   if (config.log !== undefined) app.use(requestLog(config.log));
   app
     .use(secureHeaders())
