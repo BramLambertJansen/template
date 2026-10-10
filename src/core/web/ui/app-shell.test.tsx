@@ -46,19 +46,43 @@ test('na een routewissel staat de focus op de nieuwe h1; bij het eerste scherm n
   expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1, name: 'Accounts' }));
 });
 
-test('zonder h1 gaat de focus naar main', async () => {
-  const { rerender } = render(
-    <AppShell nav={[]} userName="Ada Admin" menuItems={[]} routeKey="/">
-      <p>laden</p>
-    </AppShell>,
-  );
+test('een h1 die later verschijnt (lazy onderdeel) krijgt alsnog de focus', async () => {
+  const { rerender } = render(shell('/', 'Home'));
   rerender(
     <AppShell nav={[]} userName="Ada Admin" menuItems={[]} routeKey="/b">
       <p>laden</p>
     </AppShell>,
   );
   await nextFrame();
-  expect(document.activeElement).toBe(screen.getByRole('main'));
+  expect(document.activeElement).toBe(document.body);
+  rerender(shell('/b', 'Later'));
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1, name: 'Later' }));
+});
+
+test('zonder h1 gaat de focus na het wachten naar main', async () => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  try {
+    const { rerender } = render(
+      <AppShell nav={[]} userName="Ada Admin" menuItems={[]} routeKey="/">
+        <p>laden</p>
+      </AppShell>,
+    );
+    rerender(
+      <AppShell nav={[]} userName="Ada Admin" menuItems={[]} routeKey="/b">
+        <p>laden</p>
+      </AppShell>,
+    );
+    await nextFrame();
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(document.activeElement).toBe(screen.getByRole('main'));
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 test('de skip-link zet de focus op main, zonder fragment in de URL', () => {

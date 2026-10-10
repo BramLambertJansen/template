@@ -22,22 +22,49 @@ const MAIN_ID = 'inhoud';
 
 // main en de h1 krijgen focus zonder focusring: niet interactief en niet met Tab bereikbaar (bewuste uitzondering op de
 // regel "focusring nooit uit"); de schermlezer leest de plek voor.
-// Na een routewissel (niet bij het eerste scherm) de focus naar de h1 van het nieuwe scherm, of naar main als die er
-// (nog) niet is. Zo leest een schermlezer de nieuwe titel voor, en begint Tab bovenaan de inhoud. Na de render, zodat
-// een sluitend menu zijn focus eerst teruggeeft.
+// Na een routewissel (niet bij het eerste scherm) de focus naar de h1 van het nieuwe scherm. routeKey verandert pas als het
+// nieuwe scherm gerenderd is (resolvedLocation), maar een scherm kan zijn h1 later tonen (lazy onderdeel, Suspense): dan
+// wachten we tot er een h1 in main staat, en na HEADING_WAIT_MS zonder h1 gaat de focus naar main. Zo leest een
+// schermlezer de nieuwe titel voor, en begint Tab bovenaan de inhoud. Na de render, zodat een sluitend menu zijn focus
+// eerst teruggeeft.
+const HEADING_WAIT_MS = 2000;
+
+function focusHeadingWhenPresent(main: HTMLElement): () => void {
+  const heading = () => main.querySelector<HTMLElement>('h1');
+  const frame = requestAnimationFrame(() => {
+    const found = heading();
+    if (found !== null) {
+      found.focus();
+      return;
+    }
+    observer.observe(main, { childList: true, subtree: true });
+  });
+  const observer = new MutationObserver(() => {
+    const found = heading();
+    if (found === null) return;
+    stop();
+    found.focus();
+  });
+  const timer = setTimeout(() => {
+    stop();
+    if (heading() === null) main.focus();
+  }, HEADING_WAIT_MS);
+  function stop() {
+    cancelAnimationFrame(frame);
+    observer.disconnect();
+    clearTimeout(timer);
+  }
+  return stop;
+}
+
 function useFocusOnRouteChange(routeKey: string | undefined) {
   const mainRef = useRef<HTMLElement>(null);
   const previous = useRef(routeKey);
   useEffect(() => {
     if (previous.current === routeKey) return;
     previous.current = routeKey;
-    const frame = requestAnimationFrame(() => {
-      const main = mainRef.current;
-      (main?.querySelector<HTMLElement>('h1') ?? main)?.focus();
-    });
-    return () => {
-      cancelAnimationFrame(frame);
-    };
+    const main = mainRef.current;
+    return main === null ? undefined : focusHeadingWhenPresent(main);
   }, [routeKey]);
   return mainRef;
 }
