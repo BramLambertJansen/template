@@ -24,6 +24,7 @@ Vereist: Ubuntu 24.04 (native of WSL2), Docker Engine, [mise](https://mise.jdx.d
 ```sh
 scripts/bootstrap.sh   # eenmalig: mise install, pnpm install, git-hooks (lefthook), daarna scripts/doctor.sh
 pnpm dev               # Docker-check, .env.local, Postgres 17 + pgTAP en Mailpit, migraties, API :8787 + web http://localhost:5173 (de origin uit APP_ORIGIN)
+                       # mail lokaal bekijken: Mailpit op http://localhost:54324 (MAIL_UI_PORT)
 ```
 
 Draait er al een app op die poorten: tel 10 op bij `PG_PORT`, `MAIL_UI_PORT` en `SMTP_PORT` én bij de poort in de drie database-URL's en `SMTP_URL` in `.env.local`.

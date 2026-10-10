@@ -52,23 +52,23 @@ Rails en test-infra komen vóór de code die ze bewaken, zodat de referentie-fea
 
 - [x] `mise.toml`, `.gitattributes`, `.editorconfig`, browserslist, `pnpm-workspace.yaml`, `.env.example` (bestanden staan er; nog niet in gebruik)
 - [x] `docs/nieuwe-app.md`: setup-playbook voor Claude Code (machine → repo → koppeling → stack → databasebewijs)
-- [ ] `tsconfig` (flags uit framework §4), TypeScript `~6.0.3`; aliassen via `package.json` `imports`; hoe Node `server.ts` draait, bewezen met `pnpm dev`
-- [ ] Vite + React in `src/web`, Hono in `src/api` met `src/api/server.ts`, Vite-proxy `/api`, headers/CSP in Vite; poorten via `WEB_PORT`/`API_PORT`
-- [ ] Eén publieke route `GET /api/health` (uitzondering in framework §3) en een pagina die hem toont via de client in `src/core/web/lib/api-client.ts`
-- [ ] ESLint 10 flat config: strictTypeChecked, `consistent-type-assertions: never`, `switch-exhaustiveness-check`; Prettier
-- [ ] Rails vooraf: dependency-cruiser (lagen, core → app verboden, geen cycles) en `no-restricted-imports`/`no-restricted-syntax`
+- [x] `tsconfig` (flags uit framework §4), TypeScript `~6.0.3`; aliassen via `package.json` `imports`; hoe Node `server.ts` draait, bewezen met `pnpm dev` (#8, #9)
+- [x] Vite + React in `src/web`, Hono in `src/api` met `src/api/server.ts`, Vite-proxy `/api`, headers/CSP in Vite; poorten via `WEB_PORT`/`API_PORT` (#8)
+- [x] Eén publieke route `GET /api/health` (uitzondering in framework §3) en een pagina die hem toont via de client in `src/core/web/lib/api-client.ts` (#8; de pagina is vervallen in #29 zodra er een ingelogde startpagina was, framework §3)
+- [x] ESLint 10 flat config: strictTypeChecked, `consistent-type-assertions: never`, `switch-exhaustiveness-check`; Prettier (#9)
+- [x] Rails vooraf: dependency-cruiser (lagen, core → app verboden, geen cycles) en `no-restricted-imports`/`no-restricted-syntax`
       (elementen, `fetch`, env, `SET ROLE`, `set_config`, `hono` buiten core, niet-letterlijke `import()`) — elk met een fixture die bewijst dat hij faalt,
-      ook voor bekende omzeilingen (alias, re-export, bracket-notatie)
-- [ ] Ratchet: `.kit/baseline.json` + `pnpm ratchet:update`, ESLint bulk-suppressions + `lint:prune`; faalt in beide richtingen
-- [ ] Gate-register `scripts/kit/gates.mjs` en eerste `scripts/kit/feiten.mjs` (gates, ADR-statussen, volgende vrije migratie- en ADR-nummer)
-- [ ] Vitest-projecten `unit` en `int`; Playwright in `e2e/`; `pnpm test:db` (integratie + `pg_prove`) en `pnpm ui:check` in de runner-container van ADR 0009
-- [ ] `scripts/bootstrap.sh`, `scripts/doctor.sh` (versies, inotify, sandbox, Docker, jq, bubblewrap; `--quick` voor de SessionStart-hook)
-- [ ] dbmate en Betterleaks gepind in `mise.toml`; dbmate via script
-- [ ] `pnpm dev`: Docker-check, `.env.local`, `compose --env-file .env.local up --build --wait`, migraties, Hono + Vite (met headers/CSP)
-- [ ] lefthook (pre-commit: format, lint op staged, Betterleaks; pre-push: `gate:fast`)
-- [ ] `gate:fast` (eerste versie: lint, typecheck, unit, dependency-cruiser)
-- [ ] `ci.yml` (`ubuntu-24.04`, mise-action, Actions op SHA, `permissions: read-all`, concurrency) met job `gate:fast` — het commit met
-      `.github/workflows/` pusht de eigenaar
+      ook voor bekende omzeilingen (alias, re-export, bracket-notatie) (#9: `test/rails/`)
+- [x] Ratchet: `.kit/baseline.json` + `pnpm ratchet:update`, ESLint bulk-suppressions + `lint:prune`; faalt in beide richtingen (#9: `test/rails/ratchet.test.ts`)
+- [x] Gate-register `scripts/kit/gates.mjs` en eerste `scripts/kit/feiten.mjs` (gates, ADR-statussen, volgende vrije migratie- en ADR-nummer) (#9)
+- [x] Vitest-projecten `unit` en `int`; Playwright in `e2e/`; `pnpm test:db` (integratie + `pg_prove`) en `pnpm ui:check` in de runner-container van ADR 0009 (#9, #11)
+- [x] `scripts/bootstrap.sh`, `scripts/doctor.sh` (versies, inotify, sandbox, Docker, jq, bubblewrap; `--quick` voor de SessionStart-hook) (#9)
+- [x] dbmate en Betterleaks gepind in `mise.toml`; dbmate via script (#9)
+- [x] `pnpm dev`: Docker-check, `.env.local`, `compose --env-file .env.local up --build --wait`, migraties, Hono + Vite (met headers/CSP) (#8, #9)
+- [x] lefthook (pre-commit: format, lint op staged, Betterleaks; pre-push: `gate:fast`) (#9)
+- [x] `gate:fast` (eerste versie: lint, typecheck, unit, dependency-cruiser) (#9; dependency-cruiser via `pnpm ratchet`)
+- [x] `ci.yml` (`ubuntu-24.04`, mise-action, Actions op SHA, `permissions: read-all`, concurrency) met job `gate:fast` — het commit met
+      `.github/workflows/` pusht de eigenaar (#12)
 
 **Klaar als:** `pnpm gate:fast` groen (uitvoer); pre-commit houdt een commit met `any` of `as` tegen (uitvoer); elke fixture-test van de
 rails groen (ook de omzeilingen); de ratchet-test bewijst beide richtingen; de isolatietest uit ADR 0009 groen; CI-job `gate:fast` groen op de PR;
@@ -77,14 +77,14 @@ de eigenaar bevestigt dat `pnpm dev` op een verse machine de pagina met `/api/he
 ### 2. Auth
 
 Spec eerst (migraties en routes).
-- [ ] Better Auth (gepind) in `src/core/api/auth`, schema `better_auth`: tabellen via `auth generate` → migratie, `__Host-`-cookie, sessiebeleid, rate limit in database
-- [ ] `session_strength` als sessieveld (`input: false`, standaard `password`), gezet in een after-hook op 2FA-verificatie, doorgegeven aan `withUser()`; `cookieCache` uit
-- [ ] Rolcontrole in auth-hooks (admin: geen magic link) via een `security definer`-functie van `app_definer`, niet via grants
-- [ ] Inloggen, aanmelden, reset, e-mailverificatie via Mailpit; geen account-enumeratie; GET-links die een sessie maken, bevestigen met een POST
-- [ ] MFA met inschrijfscherm; admins zonder magic link en zonder `trustDevice`
-- [ ] CSRF-middleware (testmatrix uit ADR 0007), `bodyLimit`, `secureHeaders()`, `onError` met `{ code, requestId }`
-- [ ] Env-schema met `APP_ENV` en de regels uit framework §6 (Secrets)
-- [ ] `scripts/seed` via de auth-API: gebruiker per rol, admin met vast lokaal TOTP-geheim
+- [x] Better Auth (gepind) in `src/core/api/auth`, schema `better_auth`: tabellen via `auth generate` → migratie, `__Host-`-cookie, sessiebeleid, rate limit in database (#18)
+- [x] `session_strength` als sessieveld (`input: false`, standaard `password`), gezet in een after-hook op 2FA-verificatie, doorgegeven aan `withUser()`; `cookieCache` uit (#18)
+- [x] ~~Rolcontrole in auth-hooks (admin: geen magic link) via een `security definer`-functie van `app_definer`, niet via grants~~ — vervallen: geen magic link (ADR 0013, alleen two-factor)
+- [x] Inloggen, aanmelden, reset, e-mailverificatie via Mailpit; geen account-enumeratie; GET-links die een sessie maken, bevestigen met een POST — volgens ADR 0013: aanmelden en "wachtwoord vergeten" dicht; uitnodigen via de reset-flow, e-mail geverifieerd bij accepteren (#18, #28, #29)
+- [x] MFA met inschrijfscherm; admins zonder magic link en zonder `trustDevice` (#18, #29; geen magic link, ADR 0013)
+- [x] CSRF-middleware (testmatrix uit ADR 0007), `bodyLimit`, `secureHeaders()`, `onError` met `{ code, requestId }` (#16)
+- [x] Env-schema met `APP_ENV` en de regels uit framework §6 (Secrets) (#16)
+- [x] `scripts/seed` via de auth-API: gebruiker per rol, admin met vast lokaal TOTP-geheim (#19; per rol uit `ROLES` sinds #29)
 
 **Klaar als:** één test per rij van de CSRF-matrix groen; een ingetrokken sessie geeft bij de volgende request 401; een admin-sessie zonder MFA
 heeft sterkte `password`; de Better Auth-client stuurt bij sign-out `Content-Type: application/json`; per Secrets-regel een env-test die faalt
