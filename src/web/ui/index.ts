@@ -7,10 +7,16 @@ export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 export { CenteredCard } from '#core/web/ui/centered-card.tsx';
 export { cn } from '#core/web/ui/cn.ts';
 export { Dialog } from '#core/web/ui/dialog.tsx';
+export { ErrorTextsProvider, useErrorText } from '#core/web/ui/error-texts.tsx';
 export { DropdownMenu, type MenuItem } from '#core/web/ui/dropdown-menu.tsx';
 export { Field } from '#core/web/ui/field.tsx';
 export { Form, FormField, useZodForm } from '#core/web/ui/form.tsx';
 export { Input } from '#core/web/ui/input.tsx';
 export { NavLink } from '#core/web/ui/nav-link.tsx';
+export { Notice } from '#core/web/ui/notice.tsx';
+export { PageHeader } from '#core/web/ui/page-header.tsx';
+export { QrCode } from '#core/web/ui/qr-code.tsx';
+export { Select, type SelectOption } from '#core/web/ui/select.tsx';
 export { Sidebar, visibleNavItems, type NavItem } from '#core/web/ui/sidebar.tsx';
+export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '#core/web/ui/table.tsx';
 export { Topbar } from '#core/web/ui/topbar.tsx';

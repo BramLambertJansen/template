@@ -39,7 +39,7 @@ export function AppShell({ nav, userName, menuItems, children }: AppShellProps) 
       </aside>
       <div className="flex min-w-0 flex-col">
         <Topbar userName={userName} menuItems={menuItems} start={menuButton} />
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+        <main className="min-w-0 flex-1 p-4 md:p-6">{children}</main>
       </div>
       <Dialog open={menuOpen} onOpenChange={setMenuOpen} title={uiTexts.mainMenu} closeLabel={uiTexts.close}>
         {/* Een klik op een link sluit het menu; de router navigeert. */}

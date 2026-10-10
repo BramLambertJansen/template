@@ -69,8 +69,8 @@ Regels voor elke keuze:
 | Alleen `src/core/api/db` raakt `pg` | `src/core/api/auth` (als `auth_service`, alleen schema `better_auth`) | Better Auth beheert zijn eigen tabellen |
 | Elke route via `defineRoute` | `/api/auth/*` (Better Auth-handler) en de clientfouten-route (ADR 0003) | De library levert de auth-routes; de clientfouten-route werkt zonder actor |
 | Elke route vraagt login | `/api/auth/*` (inloggen, aanmelden, reset), de clientfouten-route en `GET /api/health` | Bestaan juist voor niet-ingelogden; elk met rate limit; health geeft alleen `{ ok }`, geen data |
-| Elke schermroute heeft een `can()`-guard | Inlog-, aanmeld- en resetschermen | Publiek; ze tonen geen data |
-| Spec vóór een nieuwe route | `GET /api/health` en de pagina die hem toont (skelet) | Bestaat vóór `defineRoute`; vervalt zodra het skelet een ingelogde startpagina heeft |
+| Elke schermroute heeft een `can()`-guard | Inlog-, aanmeld- en resetschermen (`/login`, `/uitnodiging`); `/design-system` alleen in dev | Publiek; ze tonen geen data |
+| Spec vóór een nieuwe route | `GET /api/health` (skelet) | Bestaat vóór `defineRoute`; de skeletpagina die hem toonde, is vervallen met de ingelogde startpagina (PR 7b) |
 | Elke route via `defineRoute` en met login | `POST /api/dev/login-as` (ADR 0014) | Alleen bij `APP_ENV=local` geregistreerd (elders 404); logt in als een seed-account, met CSRF-controle |
 
 ## 4. Codeerkaders

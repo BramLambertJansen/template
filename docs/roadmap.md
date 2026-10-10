@@ -116,8 +116,8 @@ Vier deel-PR's, in deze volgorde.
 - [ ] `check:catalogus`: elk component op `/design-system` of als uitzondering met code (ratchet); screenshot-baselines in de Playwright-image (uit fase 2)
 
 **3d. De feature**
-- [ ] Eerste feature met de hand door alle lagen (uit fase 2: dit is die feature); app-gegevens uit `better_auth."user"` via een `security definer`-view
-- [ ] `docs/gouden-pad.md` (≤ 1 pagina) met verwijzingen naar de bestanden van deze feature
+- [x] Eerste feature met de hand door alle lagen (uit fase 2: dit is die feature); app-gegevens uit `better_auth."user"` via een `security definer`-view
+- [x] `docs/gouden-pad.md` (≤ 1 pagina) met verwijzingen naar de bestanden van deze feature
 
 **Klaar als:** unit, pgTAP (elke policy op naam plus de invarianten), integratie, racetest "rol toekennen", e2e per rol en axe op 375 en
 1280 px groen (uitvoer); een test per verboden rol per route; een test bewijst dat een app een permissie, foutcode en componentvariant

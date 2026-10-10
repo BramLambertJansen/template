@@ -60,6 +60,9 @@ en er is altijd een weg naar binnen (lokaal seed-accounts en een dev-rol-switche
   via Better Auth een link om het wachtwoord in te stellen (geldig 7 dagen). Het publieke `/api/auth/request-password-reset` staat dicht
   (geen "wachtwoord vergeten" in deze reeks). Exacte Better Auth-configuratie: [ADR 0013](../adr/0013-uitnodigen-en-mfa-in-better-auth.md).
   De admin vult de naam in bij het uitnodigen; het uitnodigingsscherm vraagt alleen het wachtwoord (besluit eigenaar, 2026-10-09).
+- **Rollen (besluit eigenaar, 2026-10-10):** één account heeft één rol. De rolwisselaar toont elke rol uit `ROLES`
+  (`src/core/shared/can.ts`); elke rol heeft een seed-account en een naam (`Record<Role, …>`, dus een nieuwe rol zonder die twee is
+  een typefout). Een nieuwe rol vraagt ook een migratie (CHECK op `user_roles.role`).
 - **Dev-route (besluit eigenaar):** limitatieve uitzondering in framework §3 (ADR in PR 7). Logt echt in als het seed-account van de rol;
   voor de admin vult de server de TOTP-code in met het vaste lokale geheim. Wordt buiten `local` niet geregistreerd.
 - `/api/auth/sign-up/email`, magic link en `trustDevice` staan uit.
@@ -85,7 +88,7 @@ en er is altijd een weg naar binnen (lokaal seed-accounts en een dev-rol-switche
 | Dashboard | titel "Dashboard"; link "Accounts" |
 | Accounts | titel "Accounts"; kolommen "Naam", "E-mailadres", "Rol", "Status"; rollen "Gebruiker", "Beheerder"; status "Actief", "Uitgenodigd"; actie "Opnieuw uitnodigen"; knop "Account uitnodigen"; leeg "Nog geen accounts."; meer "Meer laden" |
 | Uitnodigen (dialoog) | titel "Account uitnodigen"; velden "Naam", "E-mailadres", "Rol"; knoppen "Uitnodiging versturen", "Annuleren"; gelukt "Uitnodiging verstuurd naar {email}."; bestaat "Er bestaat al een account met dit e-mailadres." |
-| Dev-switcher (alleen lokaal) | op `/login` onder het formulier: kop "Lokaal inloggen als"; knoppen "Gebruiker", "Beheerder"; in het profielmenu: "Wissel naar gebruiker" / "Wissel naar beheerder" |
+| Dev-switcher (alleen lokaal) | op elk scherm (ook `/login` en ingelogd) een tabje rechts (toegankelijke naam "Rol wisselen (alleen lokaal)"); een klik schuift een paneel in met kop "Lokaal inloggen als", een knop per rol ("Gebruiker", "Beheerder"; de huidige gemarkeerd) en "Sluiten"; Esc sluit. Niet meer op het inlogscherm of in het profielmenu (besluit eigenaar, 2026-10-10) |
 | Algemeen | sessie verlopen: naar `/login` met "Je sessie is verlopen. Log opnieuw in."; geen rechten: "Je hebt geen toegang tot deze pagina."; mail-onderwerp "Uitnodiging voor {appnaam}" |
 
 - **Focusvolgorde en toetsenbord:** focus start op het eerste veld; Enter verzendt; na een fout gaat de focus naar de melding (`role="alert"`).

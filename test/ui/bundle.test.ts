@@ -20,11 +20,13 @@ async function productionChunks(): Promise<string[]> {
 }
 
 describe('productiebundel', () => {
-  test('bevat de catalogus uit src/web/dev niet', async () => {
+  test('bevat de catalogus en de rolwisselaar uit src/web/dev niet (spec accounts/AC-8)', async () => {
     const bundle = (await productionChunks()).join('\n');
 
-    expect(bundle).toContain('API-status');
+    expect(bundle).toContain('Inloggen');
     expect(bundle).not.toContain('Design system');
     expect(bundle).not.toContain('Dialoog openen');
+    expect(bundle).not.toContain('Lokaal inloggen als');
+    expect(bundle).not.toContain('Rol wisselen (alleen lokaal)');
   }, 30_000);
 });

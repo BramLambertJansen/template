@@ -3,4 +3,7 @@
   --control-h: 2.75rem;
   --focus-ring-width: 2px;
   --focus-ring-offset: 2px;
+  /* QR-code: altijd donker op licht, ook in het donkere thema (scanners lezen omgekeerd slecht). */
+  --qr-dark: var(--p-black);
+  --qr-light: var(--p-white);
 }

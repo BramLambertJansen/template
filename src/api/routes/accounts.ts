@@ -1,6 +1,7 @@
 import { desc, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { AppError } from '#core/api/errors.ts';
+import { ROLES } from '#core/shared/can.ts';
 import { decodeCursor, encodeCursor } from '#core/shared/cursor.ts';
 import { accountsListContract, inviteContract, reinviteContract } from '#shared/contracts/accounts.ts';
 import { ACCOUNTS_PAGE_SIZE } from '#shared/limits.ts';
@@ -15,7 +16,7 @@ const accountRow = z.object({
   id: z.string(),
   naam: z.string(),
   email: z.string(),
-  rol: z.enum(['user', 'admin']),
+  rol: z.enum(ROLES),
   status: z.enum(['active', 'invited']),
   aangemaakt: z.string(),
 });

@@ -11,6 +11,8 @@ export default defineConfig({
       {
         test: {
           name: 'unit',
+          // De rails-tests starten ESLint en de bundeltest bouwt met Vite; samen halen ze 5 s niet altijd.
+          testTimeout: 15_000,
           include: ['{src,test}/**/*.test.ts'],
           exclude: ['**/*.int.test.ts', 'test/rails/fixtures/**'],
           environment: 'node',

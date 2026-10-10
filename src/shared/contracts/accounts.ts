@@ -1,10 +1,12 @@
 import { z } from 'zod';
+import { ROLES } from '#core/shared/can.ts';
 import { pageSchema } from '#core/shared/cursor.ts';
 import { MAX_EMAIL_LENGTH, MAX_NAME_LENGTH } from '../limits.ts';
 import { defineContract } from './kit.ts';
 
 // Accountbeheer (spec accountbeheer): lijst met cursor, uitnodigen en opnieuw uitnodigen; alleen een admin met MFA.
-export const ROLLEN = ['user', 'admin'] as const;
+// De rollen komen uit core (ROLES); een nieuwe rol verschijnt hier vanzelf.
+export const ROLLEN = ROLES;
 
 export const accountItem = z
   .object({
