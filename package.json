@@ -38,7 +38,9 @@
     "db:seed": "node --env-file=.env.local scripts/seed.mjs",
     "admin:create": "node --env-file-if-exists=.env.local scripts/admin-create.mjs",
     "auth:schema": "node scripts/auth-schema.mjs",
-    "gate:fast": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm ratchet && pnpm check:catalogus && pnpm test:unit"
+    "gate:fast": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm ratchet && pnpm check:catalogus && pnpm test:unit",
+    "check:snapshot": "scripts/check-snapshot.sh",
+    "gate:slow": "pnpm test:db && pnpm ui:check && pnpm check:snapshot"
   },
   "dependencies": {
     "@hono/node-server": "2.1.3",
