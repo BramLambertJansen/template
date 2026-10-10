@@ -14,6 +14,7 @@ import type { Contract } from '../../shared/contract.ts';
 import { requestLog, timeDatabase, type RequestLog } from '../obs/request-log.ts';
 import { isRouteDef, type RouteDef } from '../route/kit.ts';
 import { csrf } from './csrf.ts';
+import type { Readiness } from './readiness.ts';
 
 // Dev-login (spec accountbeheer, framework §3: limitatieve uitzondering, ADR 0014): logt echt in als het seed-account van de
 // rol en geeft de set-cookie-regels terug. Alleen meegeven bij APP_ENV=local; zonder bestaat /api/dev/login-as niet (404).
@@ -32,6 +33,8 @@ interface BaseConfig<Services> {
   readonly errors?: ErrorRegistry<string>;
   // Eén regel per request (src/core/api/obs); server.ts geeft writeJsonLine mee, zonder waarde logt de app niets.
   readonly log?: RequestLog;
+  // GET /api/ready (framework §3): zonder waarde bestaat de route niet; server.ts geeft createReadiness(pingDatabase) mee.
+  readonly ready?: Readiness;
 }
 
 // Wat handlers via ctx.services krijgen (bijv. uitnodigen via Better Auth): verplicht zodra de app een Services-type kiest
@@ -97,7 +100,7 @@ function routeHandler<Services>(
 }
 
 // Vaste volgorde (framework §6): requestId, request-log (als log is meegegeven), secureHeaders, CSRF, bodyLimit, routes; één onError en notFound met alleen
-// `{ code, requestId }`. De health-route is de publieke uitzondering uit framework §3.
+// `{ code, requestId }`. Health (liveness) en ready (readiness) zijn de publieke uitzonderingen uit framework §3.
 const devLoginInput = z.object({ rol: z.enum(ROLES) }).strict();
 
 export function createApp(): App;
@@ -125,6 +128,11 @@ export function createApp<Services>(config: BaseConfig<Services> & { readonly se
     .notFound((c) => fail(c, 'NOT_FOUND'))
     .get('/health', (c) => c.json({ ok: true }))
     .on(['GET', 'POST'], '/auth/*', (c) => (config.auth === undefined ? c.notFound() : config.auth.handler(c.req.raw)));
+
+  const { ready } = config;
+  if (ready !== undefined) {
+    app.get('/ready', async (c) => ((await ready()) ? c.json({ ok: true }) : c.json({ ok: false }, 503)));
+  }
 
   const { devLogin } = config;
   if (devLogin !== undefined) {
