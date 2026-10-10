@@ -1,9 +1,12 @@
 ---
-status: voorstel # voorstel | goedgekeurd | gebouwd | vervallen — alleen de eigenaar zet goedgekeurd
+status: goedgekeurd # door de agent onder mandaat van de eigenaar (2026-10-11), open vragen volgens de aanbeveling; ter herziening
 namespace: lijstpagina
 ---
 
 # Lijstpagina: zoeken, filteren en sorteren in de URL
+
+> Goedgekeurd door de agent onder mandaat van de eigenaar (2026-10-11). Elke open vraag is besloten volgens de aanbeveling
+> erbij; zie `docs/reviews/2026-10-11-keuzes-agent.md`. De eigenaar kan dit herzien.
 
 Geen kop weglaten; "n.v.t. — reden" mag. Ontbreekt een antwoord, dan vraagt de agent het.
 
@@ -46,6 +49,9 @@ cursor-contract (`src/core/shared/cursor.ts`) en `Table`; eerst op `/admin/accou
 - **Cursor aan de sortering gebonden:** de cursor is `encodeCursor([sort, …sleutel])`; `decodeCursor` met een tuple per sortering. Een cursor van een
   andere sortering of met een ander sleuteltype geeft `VALIDATION`. Zoek- en filterwaarden zitten in de query key van TanStack Query: elke wijziging
   begint bij de eerste pagina. De paginagrootte blijft `ACCOUNTS_PAGE_SIZE`.
+- **Ontdubbelen:** keyset-paginering garandeert niets als een rij tussen twee pagina's van sorteersleutel verandert (bijv. hernoemd): hij kan
+  dan op een volgende pagina terugkomen of worden overgeslagen. `useInfiniteQuery` voegt de pagina's daarom samen met ontdubbelen op `id`
+  (eerste voorkomen wint); een overgeslagen rij verschijnt pas na herladen. Geldt ook voor de generator.
 - **Cursor niet in de URL** (OV-1): "Meer laden" blijft (`useInfiniteQuery`); de URL bewaart zoeken, filters en sortering. Framework §5 ("cursor in de
   URL") wordt daarop aangepast.
 
@@ -66,7 +72,7 @@ cursor-contract (`src/core/shared/cursor.ts`) en `Table`; eerst op `/admin/accou
 | Filter Rol | label "Rol"; opties "Alle rollen", "Gebruiker", "Beheerder" |
 | Filter Status | label "Status"; opties "Alle statussen", "Actief", "Uitgenodigd" (en "Geblokkeerd" na spec accountbeheer-uitbreiding) |
 | Sorteren | label "Sorteren"; opties "Nieuwste eerst", "Oudste eerst", "Naam A–Z", "Naam Z–A" |
-| Wissen | knop "Filters wissen" (alleen zichtbaar als `q` of een filter actief is) |
+| Wissen | knop "Filters wissen" (alleen zichtbaar als `q` of een filter actief is; wist `q` en filters, de sortering blijft staan) |
 | Leeg met filters | "Geen accounts gevonden. Pas je zoekopdracht of filters aan." |
 | Statusregel (`aria-live="polite"`) | "{n} accounts getoond." / bij meer pagina's "{n} accounts getoond. Er zijn er meer." / tijdens laden "Bezig met laden…" |
 | Generator (sjabloon) | label "Zoeken"; sorteren "Nieuwste eerst", "Oudste eerst"; leeg met filters "Niets gevonden. Pas je zoekopdracht aan." |
@@ -83,8 +89,8 @@ cursor-contract (`src/core/shared/cursor.ts`) en `Table`; eerst op `/admin/accou
 - **lijstpagina/AC-3** — Gegeven sortering "Naam A–Z" en meer dan 25 accounts, wanneer hij "Meer laden" kiest, dan volgen de rijen de sortering zonder
   dubbele of ontbrekende rijen.
 - **lijstpagina/AC-4** — Gegeven een gefilterde lijst, wanneer hij de Terug-knop van de browser gebruikt, dan staat het vorige filter of de vorige sortering terug.
-- **lijstpagina/AC-5** — Gegeven een zoekopdracht zonder treffers, dan ziet hij "Geen accounts gevonden. …" en "Filters wissen"; na een klik is de URL
-  zonder search params en staat de volledige lijst er.
+- **lijstpagina/AC-5** — Gegeven een zoekopdracht zonder treffers en sortering "Naam A–Z", dan ziet hij "Geen accounts gevonden. …" en "Filters
+  wissen"; na een klik bevat de URL alleen nog `sort=naam-az` en staat de volledige lijst er in die sortering.
 - **lijstpagina/AC-6** — Gegeven een URL met `?sort=onzin&rol=koning`, wanneer hij hem opent, dan ziet hij de lijst met de standaardwaarden en zonder foutmelding;
   dezelfde waarden rechtstreeks naar `/api/accounts` geven `VALIDATION`.
 - **lijstpagina/AC-7** — Gegeven een cursor die bij "nieuwste" hoort, wanneer iemand hem met `sort=naam-az` naar de API stuurt, dan `VALIDATION`.
@@ -99,7 +105,7 @@ cursor-contract (`src/core/shared/cursor.ts`) en `Table`; eerst op `/admin/accou
 | `q` langer dan `MAX_SEARCH_LENGTH` (100) | web: afgekapt in het veld (`maxLength`); API: geweigerd | `VALIDATION` |
 | Onbekende sleutel in de search params | web: genegeerd; API: geweigerd (`.strict()`) | `VALIDATION` |
 | Gemanipuleerde of vreemde cursor | geweigerd, geen SQL-fout | `VALIDATION` |
-| Account wijzigt tussen twee pagina's (bijv. hernoemd) | kan verschuiven; geen dubbele rij binnen één sortering dankzij `id` als tiebreak | — |
+| Account wijzigt tussen twee pagina's (bijv. hernoemd) | kan op een volgende pagina terugkomen (ontdubbeld op `id`, dus één keer zichtbaar) of overgeslagen worden (zichtbaar na herladen) | — |
 | Snel typen | één request per 300 ms stilte; een oud antwoord overschrijft geen nieuw (query key) | — |
 | `user` opent `/admin/accounts?q=x` | geen toegang, zoals nu | `FORBIDDEN` |
 | Naam met hoofdletters en accenten | sortering op `lower(naam)` in de collatie van de database (OV-3) | — |
@@ -111,6 +117,7 @@ cursor-contract (`src/core/shared/cursor.ts`) en `Table`; eerst op `/admin/accou
 - Generator: `scripts/kit/templates/` (`contract.ts.tmpl`, `route.ts.tmpl`, `queries.ts.tmpl`, `page.tsx.tmpl`, `web-route.tsx.tmpl`, `spec.md.tmpl`) en
   `scripts/kit/check-new-resource.mjs`: gate-paden (ADR 0016), dus een gate-wijziging door de eigenaar.
 - Framework §5 (Paginering, Routing) en `docs/gouden-pad.md` wijzen naar dit patroon; `/design-system` krijgt een voorbeeld van `ListToolbar`.
+- `src/core/shared/cursor.ts`: het commentaar zegt "cursor in de URL"; dat wordt "cursor alleen in de query van TanStack Query" (OV-1).
 
 ## Buiten scope
 
@@ -121,10 +128,13 @@ meerdere waarden per filter, zoeken op `/design-system`-voorbeelddata.
 
 - **Unit:** `defineListSearch`: strict voor de API, `.catch()` voor de web, `q` trim en leeg, grenzen gelijk aan `limits.ts`; cursor per sortering
   (goed, andere sortering, verkeerd type); escapen van `%`, `_`, `\`; `useListSearch` (debounce, `replace` bij zoeken, push bij filter);
-  `ListToolbar` (labels, "Filters wissen" alleen bij actieve filters, focus na wissen); copy-woordenlijst.
+  `ListToolbar` (labels, "Filters wissen" alleen bij actieve filters, sortering blijft, focus na wissen); samenvoegen van pagina's met een dubbele
+  `id` (één rij); copy-woordenlijst.
 - **pgTAP:** n.v.t. (geen migratie); de bestaande test "`app.accounts` alleen voor admin met MFA" blijft groen, nu ook met een zoekfilter.
 - **Integratie (`pnpm test:db`):** `GET /api/accounts` per filter, per sortering en met zoeken; paginering over 3 pagina's zonder dubbele of ontbrekende
   rijen per sortering; ongeldige `sort`, `rol`, `status`, `q` en cursor → `VALIDATION`; `user` → `FORBIDDEN`, admin zonder MFA → `MFA_REQUIRED`.
+  Volgorde op naam: exacte asserts alleen op ASCII-namen; namen met accenten of hoofdletters alleen op aanwezigheid en zonder dubbele rij, want de
+  collatie verschilt per database (OV-3) en lokaal is niet gelijk aan de provider.
 - **Generator:** `check:new-resource` maakt een resource uit de nieuwe sjablonen en draait typecheck, lint en unit (AC-8).
 - **E2E (`pnpm ui:check`, echte stack, CSP aan):** AC-1 t/m AC-6 op `/admin/accounts` met seed-accounts; axe op 375 en 1280 px met lege lijst,
   gefilterde lijst en "verouderd"; op 375 px geen horizontale scroll buiten de tabel.
