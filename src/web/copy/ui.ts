@@ -38,7 +38,7 @@ export const copy = {
     submit: 'Wachtwoord instellen',
   },
   nav: { home: 'Home', dashboard: 'Dashboard' },
-  menu: { logout: 'Uitloggen' },
+  menu: { account: 'Mijn account', logout: 'Uitloggen' },
   home: { title: 'Home' },
   dashboard: { title: 'Dashboard', accounts: 'Accounts', designSystem: 'Design system' },
   // Spec design-system: de paginatitel; de voorbeeldteksten staan bij de catalogus.
@@ -67,5 +67,24 @@ export const copy = {
     cancel: 'Annuleren',
     sent: (email: string) => `Uitnodiging verstuurd naar ${email}.`,
     exists: 'Er bestaat al een account met dit e-mailadres.',
+  },
+  // Spec eigen-account: /account, letterlijk uit de tabel "Alle zichtbare tekst".
+  account: {
+    title: 'Mijn account',
+    name: {
+      title: 'Naam',
+      label: 'Naam',
+      submit: 'Naam opslaan',
+      saved: 'Je naam is opgeslagen.',
+    },
+    password: {
+      title: 'Wachtwoord',
+      current: 'Huidig wachtwoord',
+      new: 'Nieuw wachtwoord',
+      repeat: 'Nieuw wachtwoord herhalen',
+      help: 'Minstens 12 tekens. Je wordt op je andere apparaten uitgelogd.',
+      submit: 'Wachtwoord wijzigen',
+      changed: 'Je wachtwoord is gewijzigd. Je andere sessies zijn beëindigd.',
+    },
   },
 } as const;

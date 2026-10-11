@@ -15,3 +15,4 @@ export {
   reinviteUser,
 } from './invitations.ts';
 export type { Invitation } from './options.ts';
+export { renameUser } from './profile.ts';

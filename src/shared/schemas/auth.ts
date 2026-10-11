@@ -25,3 +25,19 @@ export const newPasswordInput = z
     path: ['herhaal'],
     message: 'De wachtwoorden zijn niet gelijk.',
   });
+
+// Spec eigen-account: wachtwoord wijzigen. Het nieuwe wachtwoord volgt dezelfde grenzen als bij het instellen.
+export const changePasswordInput = z
+  .object({
+    huidig: z.string().min(1, 'Vul je huidige wachtwoord in.').max(MAX_PASSWORD_LENGTH),
+    nieuw: z
+      .string()
+      .min(MIN_PASSWORD_LENGTH, `Minstens ${String(MIN_PASSWORD_LENGTH)} tekens.`)
+      .max(MAX_PASSWORD_LENGTH, `Hooguit ${String(MAX_PASSWORD_LENGTH)} tekens.`),
+    herhaal: z.string(),
+  })
+  .strict()
+  .refine((value) => value.nieuw === value.herhaal, {
+    path: ['herhaal'],
+    message: 'De wachtwoorden zijn niet gelijk.',
+  });

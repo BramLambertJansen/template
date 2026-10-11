@@ -5,11 +5,11 @@ import type { Readiness } from '#core/api/http/readiness.ts';
 import type { RequestLog } from '#core/api/obs/request-log.ts';
 import { errors } from '#shared/errors.ts';
 import { accountsListRoute, inviteRoute, reinviteRoute } from './routes/accounts.ts';
-import { meRoute } from './routes/me.ts';
+import { meRoute, renameRoute } from './routes/me.ts';
 import type { AppServices } from './services.ts';
 
 // Compositie-root van de app (ADR 0008): routes, foutcodes en wat server.ts aanlevert (auth, withUser, services, devLogin).
-export const routes = [meRoute, accountsListRoute, inviteRoute, reinviteRoute] as const;
+export const routes = [meRoute, renameRoute, accountsListRoute, inviteRoute, reinviteRoute] as const;
 
 export interface BuildAppConfig {
   readonly appOrigin: string;

@@ -4,6 +4,7 @@ import {
   AccountNotFoundError,
   inviteUser,
   reinviteUser,
+  renameUser,
   type Auth,
 } from '#core/api/auth/index.ts';
 import { AppError } from '#core/api/errors.ts';
@@ -17,6 +18,10 @@ export interface AppServices {
       beforeMail: (userId: string) => Promise<void>,
     ) => Promise<{ userId: string }>;
     readonly reinvite: (userId: string) => Promise<void>;
+  };
+  // Het eigen account (spec eigen-account); userId komt altijd uit ctx.actor.
+  readonly profile: {
+    readonly rename: (userId: string, name: string) => Promise<void>;
   };
 }
 
@@ -38,6 +43,9 @@ export function createServices(auth: Auth): AppServices {
         reinviteUser(auth, userId).catch((error: unknown) => {
           throw translate(error);
         }),
+    },
+    profile: {
+      rename: (userId, name) => renameUser(auth, userId, name),
     },
   };
 }

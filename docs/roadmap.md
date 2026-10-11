@@ -149,7 +149,8 @@ Elke app heeft dit nodig, dus het hoort in de template. Elk punt eerst een spec.
 - [ ] Admin blokkeert en deblokkeert een gebruiker; blokkeren trekt alle sessies direct in (de laatste-admin-regel geldt ook hier)
 - [ ] Gebruiker bekijkt en beëindigt de eigen sessies
 - [ ] Backupcodes voor TOTP, zodat een admin die zijn telefoon kwijt is niet alleen via `admin:create` terugkomt
-- [ ] Gebruiker wijzigt het eigen wachtwoord en de eigen naam
+- [x] Gebruiker wijzigt het eigen wachtwoord en de eigen naam (spec `eigen-account`, ADR 0024; `test/api/eigen-account.int.test.ts`,
+      `e2e/eigen-account.spec.ts`, `src/web/account.test.tsx`)
 - [ ] Admin trekt een openstaande uitnodiging in (opnieuw versturen bestaat al: `reinviteRoute`)
 - [ ] Admin stuurt een gebruiker een resetlink ("wachtwoord vergeten" blijft dicht, ADR 0013; nu is `admin:create` de enige uitweg)
 - [ ] Gebruiker wijzigt het e-mailadres, met bevestiging naar het oude en het nieuwe adres
