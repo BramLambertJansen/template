@@ -30,10 +30,10 @@ test('AC-1 en AC-2: zoeken en filteren staan in de URL en overleven herladen', a
   await expect(table.getByText(gezocht.email)).toBeVisible();
   await expect(table.getByText('Andere Persoon')).toHaveCount(0);
 
-  await page.getByLabel('Rol').selectOption('user');
+  await page.getByLabel('Rol', { exact: true }).selectOption('user');
   await page.reload();
   await expect(page.getByLabel('Zoeken')).toHaveValue('Zoekbaar');
-  await expect(page.getByLabel('Rol')).toHaveValue('user');
+  await expect(page.getByLabel('Rol', { exact: true })).toHaveValue('user');
   await expect(table.getByText(gezocht.email)).toBeVisible();
 });
 
@@ -45,9 +45,9 @@ test('AC-4 en AC-5: Terug herstelt het filter; zonder treffers wist "Filters wis
   await page.goto('/admin/accounts');
 
   await page.getByLabel('Sorteren').selectOption('naam-az');
-  await page.getByLabel('Rol').selectOption('admin');
+  await page.getByLabel('Rol', { exact: true }).selectOption('admin');
   await page.goBack();
-  await expect(page.getByLabel('Rol')).toHaveValue('');
+  await expect(page.getByLabel('Rol', { exact: true })).toHaveValue('');
   await expect(page.getByLabel('Sorteren')).toHaveValue('naam-az');
 
   await page.getByLabel('Zoeken').fill('bestaat-echt-niet-xyz');
@@ -64,6 +64,6 @@ test('AC-6: een ongeldige URL toont de lijst met standaardwaarden, zonder foutme
 
   await expect(page.getByRole('heading', { level: 1, name: 'Accounts' })).toBeVisible();
   await expect(page.getByLabel('Sorteren')).toHaveValue('nieuwste');
-  await expect(page.getByLabel('Rol')).toHaveValue('');
+  await expect(page.getByLabel('Rol', { exact: true })).toHaveValue('');
   await expect(page.getByRole('alert')).toHaveCount(0);
 });

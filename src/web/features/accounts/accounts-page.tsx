@@ -108,7 +108,8 @@ function AccountsTable({
 // Accountlijst (spec accountbeheer): laden, leeg en fout via AsyncView; "Meer laden" met de cursor; uitnodigen in een dialoog.
 export function AccountsPage() {
   const list = useListSearch();
-  const route = useSearch({ from: '/_app/admin/accounts' });
+  // De router laat ongeldige sleutels uit de URL staan (hij voegt de search van de ouder samen): opnieuw schonen vóór gebruik.
+  const route = accountsSearch.web.parse(useSearch({ from: '/_app/admin/accounts' }));
   const accounts = useAccounts(route);
   const filtered = route.q !== undefined || route.rol !== undefined || route.status !== undefined;
   const [inviting, setInviting] = useState(false);
@@ -170,7 +171,7 @@ export function AccountsPage() {
           const rows = uniqueById(data.pages.flatMap((page) => page.items));
           return (
             <div className="flex min-w-0 flex-col gap-4">
-              <p role="status" aria-live="polite" className="text-sm text-muted-foreground">
+              <p aria-live="polite" className="text-sm text-muted-foreground">
                 {accounts.isPlaceholderData
                   ? copy.accounts.loading
                   : copy.accounts.shown(rows.length, accounts.hasNextPage)}
