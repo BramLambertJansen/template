@@ -58,6 +58,15 @@ begint juist bij Opus en er zijn geen benchmarks, dus de eigen meting beslist). 
 `tester` blijft sonnet, `reviewer` opus, `onderzoek` sonnet. Terugvalcriterium na 10 PR's: stijgt het aantal blokkerende reviewbevindingen per PR of het aantal
 correctiepogingen per PR, dan gaat `developer` terug naar `inherit`. (Aanpassing aan een rol is een gate-wijziging.)
 
+**8. Bouwen via de developer-agent in het volledige pad.** Meting: één Agent-aanroep in de grote sessie; de Opus-hoofdsessie bouwde zelf, dus
+de modelkeuze in punt 7 en de schone context van de developer bleven ongebruikt (framework §8 laat "hoofdsessie of developer-agent" toe).
+- Volledig pad (goedgekeurde spec met migratie, route of permissie): het rolhek weigert de hoofdsessie (geen `agent_type`) schrijven in
+  `src/**` en `db/migrations/**` zolang de branch een goedgekeurde spec heeft; de developer-agent krijgt de spec als enige opdracht.
+- Lichte pad (geen migratie, route of permissie): de hoofdsessie mag zelf bouwen.
+- De skills `migratie`, `nieuw-route` en `nieuw-scherm` noemen de aanroep, inclusief de `model`-override voor migraties, RLS en auth.
+- Valkuil: een geblokkeerde hoofdsessie kan om het hek heen werken via Bash; de bestaande schrijfdoel-detectie van het rolhek dekt dat, en de
+  diff-guard blijft de grens in CI.
+
 Elke hook en elk script krijgt een tabeltest (`test/hooks/`, `test/rails/`) volgens de bestaande conventie, inclusief de omzeiling
 (Read met `offset` tot 1 regel; `node_modules` via `cat` in Bash).
 
@@ -82,10 +91,11 @@ Elke hook en elk script krijgt een tabeltest (`test/hooks/`, `test/rails/`) volg
 ## Gevolgen
 
 - Vier PR's: (1) `pnpm tokens` + nulmeting + documentbudget in `check-docs`; (2) `pnpm stand`, `feiten.mjs` ADR-index en `sectie`, SessionStart;
-  (3) `autoCompactWindow`, hook `context-budget`, leesmelding, agent `onderzoek` met tests; (4) rolmodellen, framework §8/§9, `CLAUDE.md`, roadmap-stuk.
+  (3) `autoCompactWindow`, hook `context-budget`, leesmelding, agent `onderzoek` met tests; (4) rolmodellen, hoofdsessiehek voor het volledige pad (punt 8), framework §8/§9, `CLAUDE.md`, roadmap-stuk.
 - Dit is een gate-wijziging: label `gate-wijziging`, ADR eerst geaccepteerd door de eigenaar.
 - Prompt caching maakt een cache-hit 0,05× (Sonnet 5.5, Opus 5.5) van de invoerprijs: de besparing in geld is kleiner dan in tokens; op een
   abonnement telt vooral de limiet en de kwaliteit bij lange context. `pnpm tokens` rapporteert beide.
 - `pnpm tokens` leest alleen de transcriptmap van dit project (de sandbox laat `~/.claude/projects` standaard lezen) en drukt nooit inhoud af.
 - Keuzes (aanbeveling, de eigenaar beslist): **OV-1** `autoCompactWindow` 200k en melding vanaf 150k; **OV-2** developer op sonnet met opus-override
-  en het terugvalcriterium; **OV-3** alleen melden bij volledige reads; **OV-4** transcripten lezen toegestaan, alleen dit project.
+  en het terugvalcriterium; **OV-3** alleen melden bij volledige reads; **OV-4** transcripten lezen toegestaan, alleen dit project;
+  **OV-5** verplichte developer-agent in het volledige pad (punt 8), lichte pad vrij.
