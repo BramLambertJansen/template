@@ -67,6 +67,17 @@ de modelkeuze in punt 7 en de schone context van de developer bleven ongebruikt 
 - Valkuil: een geblokkeerde hoofdsessie kan om het hek heen werken via Bash; de bestaande schrijfdoel-detectie van het rolhek dekt dat, en de
   diff-guard blijft de grens in CI.
 
+**9. Eén sessie per branch.** De grote sessie bouwde tientallen PR's in één context. De hook `context-budget` onthoudt de branch bij de
+eerste prompt van de sessie (in de scratchpad, per `session_id`) en meldt als `additionalContext` wanneer de branch daarna verandert:
+"nieuwe branch, nieuwe sessie: schrijf de overdracht (`pnpm stand`) en stel `/clear` voor". Alleen melden; kost geen kwaliteit.
+
+**10. Wanneer aanscherpen of terugdraaien.** Na 10 gemergde PR's onder dit ADR beoordeelt de eigenaar met `pnpm tokens`:
+- mediane context > 150k → `autoCompactWindow` omlaag;
+- de hoofdsessie schrijft > 30% van de gewijzigde regels in `src/` via het lichte pad → verplichte developer-agent uitbreiden (punt 8);
+- meer blokkerende reviewbevindingen of correctierondes per PR dan in de nulmeting → de laatste besparing terugdraaien, ook als dat tokens kost.
+Strenger maken zonder deze signalen gebeurt niet: een lagere grens (100k) wint ≈ 7 procentpunt tegen twee keer zoveel overdrachten, en de
+reviewer en architect blijven op opus omdat zij het vangnet zijn voor de andere besparingen.
+
 Elke hook en elk script krijgt een tabeltest (`test/hooks/`, `test/rails/`) volgens de bestaande conventie, inclusief de omzeiling
 (Read met `offset` tot 1 regel; `node_modules` via `cat` in Bash).
 
