@@ -32,3 +32,51 @@ export const renameContract = defineContract({
   output: z.null(),
   permission: 'me:update',
 });
+
+// Spec eigen-account: eigen sessies. Nooit tokens of IP naar de browser; `id` is het sessie-ID, geen token.
+export const sessionItem = z
+  .object({
+    id: z.string(),
+    apparaat: z.string(),
+    // ISO 8601 met tijdzone; tonen via format.dateTime.
+    aangemaakt: z.string(),
+    laatstActief: z.string(),
+    huidig: z.boolean(),
+  })
+  .strict();
+
+export const sessionsListContract = defineContract({
+  method: 'GET',
+  path: '/me/sessions',
+  input: z.object({}).strict(),
+  output: z.object({ items: z.array(sessionItem) }).strict(),
+  permission: 'me:read',
+});
+
+// De eigen huidige sessie beëindigen kan hier niet (VALIDATION): daarvoor is "Uitloggen".
+export const revokeSessionContract = defineContract({
+  method: 'DELETE',
+  path: '/me/sessions/:id',
+  input: z.object({ id: z.string().min(1).max(200) }).strict(),
+  output: z.null(),
+  permission: 'me:update',
+});
+
+export const revokeOtherSessionsContract = defineContract({
+  method: 'POST',
+  path: '/me/sessions/revoke-others',
+  input: z.object({}).strict(),
+  output: z.null(),
+  permission: 'me:update',
+});
+
+// Spec eigen-account: stap 1 (oud adres) of 2 (nieuw adres) van een e-mailwijziging bevestigen met het token uit de mail.
+export const confirmEmailContract = defineContract({
+  method: 'POST',
+  path: '/me/email/bevestigen',
+  input: z.object({ token: z.string().min(1).max(2000) }).strict(),
+  output: z.object({ stap: z.enum(['oud', 'nieuw']) }).strict(),
+  permission: 'me:update',
+  // Kan mail versturen (stap 1 stuurt mail 2).
+  rateLimit: 'duur',
+});

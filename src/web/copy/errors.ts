@@ -14,4 +14,6 @@ export const errorTexts = {
   ALREADY_ACTIVE: 'Dit account is al actief. Een nieuwe uitnodiging is niet nodig.',
   LAST_ADMIN: 'Er moet minstens één beheerder overblijven.',
   WRONG_PASSWORD: wrongCurrentPasswordText,
+  SESSION_NOT_FRESH: 'Log opnieuw in om dit te wijzigen.',
+  EMAIL_LINK_INVALID: 'Deze link is verlopen of al gebruikt. Vraag de wijziging opnieuw aan.',
 } as const satisfies Record<ErrorCode, string>;

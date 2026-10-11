@@ -9,6 +9,8 @@ export const errors = defineErrorCodes([
   'LAST_ADMIN',
   // Spec eigen-account.
   'WRONG_PASSWORD',
+  'SESSION_NOT_FRESH',
+  'EMAIL_LINK_INVALID',
 ]);
 
 export type ErrorCode = ErrorCodeOf<typeof errors>;
