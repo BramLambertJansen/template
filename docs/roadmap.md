@@ -4,6 +4,10 @@ Uitwerking van [framework.md](framework.md) §12. Vink alleen af met bewijs (che
 Fase 0 en 1 horen in de template; fase 2 levert verbeteringen terug aan de template; fase 3 is per app.
 Reviews: [2026-10-09 fundering](reviews/2026-10-09-fundering.md), [2026-10-09 framework](reviews/2026-10-09-framework.md).
 
+De aanbevelingen uit de starter-beoordeling van 2026-10-11 staan hieronder als
+[agenttaken](#agenttaken-uit-de-starter-beoordeling-2026-10-11), met scope, afhankelijkheden en bewijscriteria.
+Ze werken bestaande items uit; de bestaande vinkjes, besluiten en bouwvolgorde blijven leidend.
+
 ## Beslissingen
 
 Een ADR met status `voorgesteld` is geen besluit; afvinken gebeurt pas als de eigenaar hem accepteert.
@@ -22,10 +26,13 @@ Een ADR met status `voorgesteld` is geen besluit; afvinken gebeurt pas als de ei
 - [x] Datapad: `withUser()` met `pg`, transactie per request, Drizzle als `tx` — ADR 0012
 - [ ] Achtergrondtaken: opruimen (verlopen sessies, uitnodigingen, rate-limit-rijen), mail via een outbox, eigen databaserol voor
       systeemjobs (framework §6); keuze tussen worker in het proces, queue in Postgres of cron van de host — ADR (bouwen: stuk 7)
-      ADR 0020 geaccepteerd (agent, onder mandaat): runner in het API-proces, eigen rol `app_jobs`, outbox
+      ADR 0020 geaccepteerd (agent, onder mandaat): runner in het API-proces, eigen rol `app_jobs`, outbox zonder token;
+      gecorrigeerd na review (2026-10-11), met de bouwvolgorde van 0020–0022
 - [x] Taal: alleen Nederlands, teksten in `src/web/copy` en `src/core/web/copy`; geen meertaligheid in de template (besluit eigenaar 2026-10-10)
 - [ ] Audit log van admin-acties (rol toekennen, uitnodigen, blokkeren) standaard in core, in plaats van "op aanleiding" (framework §12) — ADR
+      ADR 0021 geaccepteerd (agent, onder mandaat; aanbevelingen OV-1..7); gecorrigeerd na review (2026-10-11)
 - [ ] AVG: wat de template levert voor inzage, verwijderen en bewaartermijnen van persoonsgegevens (mechanisme in core, inhoud per app) — ADR
+      ADR 0022 geaccepteerd (agent, onder mandaat; aanbevelingen OV-1..7); gecorrigeerd na review (2026-10-11)
 - [ ] Ontwikkelplatform: alleen Ubuntu/WSL2, of ook macOS (sandbox, `scripts/bootstrap.sh`, `scripts/doctor.sh`)
 
 ## Fase 0 — Bewijs
@@ -132,7 +139,8 @@ Vier deel-PR's, in deze volgorde.
 - [x] Tokens in drie lagen, `@custom-variant dark`, basiskit Button, Input, Field, Card, Dialog (codemod vervalt: componenten met de hand op de tokens, geen `shadcn add`)
 - [x] Contrasttest over recepten (bewijst ook dat een bekende foute kleur faalt), `scanAxe`, `/design-system` alleen in dev
 - [x] Woordenlijsttest op `src/web/copy` en `src/core/web/copy` (`src/web/copy/woordenlijst.test.ts`, met zelftest) (#33)
-- [ ] `scanAxe`-uitzonderingen in de ratchet
+- [x] `scanAxe`-uitzonderingen: geen, en een lintregel houdt ze tegen (`rails/axe-import`: alleen `e2e/support/axe.ts` gebruikt axe;
+      `rails/axe-uitzondering`: geen `disableRules`/`exclude`/`include`/`options` daarin), fixtures in `test/rails/eslint.test.ts`
 - [x] `check:catalogus`: elk component op `/design-system` of als uitzondering met reden in `scripts/kit/catalogus.mjs` (groeien = gate-wijziging; een overbodige uitzondering faalt ook), in `gate:fast` (#33)
 - [ ] Screenshot-baselines van de catalogus in de Playwright-image (uit fase 2)
 - [ ] Toasts standaard in de basiskit (besluit eigenaar 2026-10-10): `Toaster` in de AppShell en een `toast()`-aanroep voor "gelukt" en "fout" na
@@ -166,7 +174,8 @@ Elke app heeft dit nodig, dus het hoort in de template. Elk punt eerst een spec.
       terugzetten als de focus verloren gaat. Vermoeden: pending-weergave of het laden van de chunk duurt langer dan
       `HEADING_WAIT_MS` (2 s), of het pad naar `resolvedLocation` loopt anders. Eerst reproduceren met een trace
       (`pnpm ui:check`), dan pas repareren
-- [ ] Rate limit voor app-routes in `defineRoute` (nu alleen in Better Auth), met grenzen uit `limits.ts` en foutcode `RATE_LIMITED`
+- [x] Rate limit voor app-routes in `defineRoute` (nu alleen in Better Auth), met grenzen uit `limits.ts` en foutcode `RATE_LIMITED`
+      (spec `rate-limit`; `app.consume_rate_limit`, `src/core/api/http/rate-limit.test.ts`, `test/api/rate-limit.int.test.ts`, `e2e/rate-limit.spec.ts`)
 - [x] Mail-layout in core: één basissjabloon (HTML en platte tekst, afzender, voettekst) met snapshot-test; uitnodiging gebruikt hem
       (`src/core/api/mail/layout.ts`, escaping en alleen http(s)-links getest)
 - [ ] Versie en build-SHA in `GET /api/health` en onderaan in de app
@@ -261,7 +270,8 @@ Provider-neutraal: wat elke host nodig heeft, hoort in de template; de adapter p
       bewaard, hooguit één controle tegelijk, timeout 2 s; eigen verbinding met timeouts; regel in framework §3, ADR 0018 (`src/core/api/http/readiness.test.ts`, `test/datapad/ping.int.test.ts`)
 - [x] `pnpm start` (`node src/api/server.ts`, geen buildstap voor de API) en een containerimage (non-root) die SPA en API op één origin serveert
       (ADR 0019, `Dockerfile`, CI-job `image` met `scripts/check-image.sh`; `src/core/api/http/web.test.ts`)
-- [ ] Achtergrondtaken volgens de ADR uit **Beslissingen**: opruimen en mail-outbox, elk met een integratietest
+- [ ] Achtergrondtaken volgens de ADR uit **Beslissingen**: opruimen en mail-outbox, elk met een integratietest (volgorde: ADR 0020,
+      sectie Bouwvolgorde)
 
 **Klaar als:** de image start met een niet-lokale `APP_ENV` tegen de lokale stack (uitvoer van de eigenaar); per request één logregel
 (test); na SIGTERM eindigt een lopend request zonder afgebroken transactie (test); een opruimtaak verwijdert alleen verlopen rijen (test).
@@ -285,3 +295,225 @@ Eerste feature, `new:resource` en `check:catalogus` zijn naar fase 1 verplaatst 
       (faalt dicht, weigert preview tegen productie)
 - [ ] Smoketest na deploy; headers/CSP op de host; CAPTCHA; PWA-manifest
 - [ ] Runbooks in `docs/operations/` (platform, back-up en herstel met acceptatietabel); back-up één keer teruggezet
+
+## Agenttaken uit de starter-beoordeling (2026-10-11)
+
+Doel: van een stevig framework naar een bewezen start-app die een agent zonder eigen architectuurkeuzes kan uitbreiden.
+P0 betekent noodzakelijk voor een veilige basis, P1 voor een herbruikbare en bewezen starter, P2 optioneel op aanleiding.
+Dit vervangt **Volgorde vanaf 2026-10-10** niet: de proef-app blijft vóór verdere uitbreiding komen.
+Een taak blijft open totdat de toepasselijke checks en het hieronder genoemde bewijs in een PR staan.
+Een bestaand script of ADR bewijst niet dat de bijbehorende capability compleet of actief is.
+
+### Werkwijze voor de uitvoerende agent
+
+- Lees AGENTS.md, de relevante ADR's, specs en bestaande code; begin met de feiten uit het feiten-script.
+- Zoek eerst bestaande implementaties en open PR's. Breid de bestaande taak/spec uit; bouw geen tweede mechanisme naast de eerste.
+- Nieuwe route, permissie of migratie: eerst een spec volgens [het sjabloon](specs/_template.md), daarna eigenaargoedkeuring.
+  Deze roadmap is geen goedgekeurde featurespec en verleent geen toestemming voor nieuwe dependencies of providerkeuzes.
+- Beschrijf in de spec contracten, verboden rollen, foutgevallen, hergebruik, grenzen en bewijsmatrix.
+  Splits omvangrijk werk in kleine PR's; volg [de DoD](dod.md) en de werkstraat uit [het framework](framework.md).
+- Verander geen bestaande vinkjes of ADR-statussen op basis van deze lijst. Meld onbesliste waarden aan de eigenaar.
+- Houd de core klein. SaaS, PWA, storage en app-specifieke notificaties zijn optionele uitbreidingen, geen standaard afhankelijkheden.
+
+### ST-01 — P0: GitHub-bescherming daadwerkelijk activeren
+
+- [ ] **Aansluiting:** fase 1, stuk 6 en diff-guard in stuk 4.
+  **Doel:** een agent kan beschermd werk niet zonder de juiste eigenaarreview samenvoegen.
+  **Werk:** werk de gewenste instellingen als code en de rails-checklist uit: PR-plicht, verbod op force/delete,
+  verplichte checks met hun verwachte GitHub Actions-identiteit, CodeQL, opgeloste gesprekken, review op de huidige head-SHA
+  en geen bot-bypass. Onderscheid expliciet de overgang onder het eigenaaraccount van de definitieve GitHub App-opzet.
+  Implementeer de alleen-lezende controle; een onleesbare instelling is een fout. Laat de eigenaar organisatie, App en instellingen activeren.
+  Privésleutels en het eigenaar-token blijven buiten de agentomgeving; beschrijf de verstrekking van kortlevende App-tokens.
+  **Afhankelijkheden:** ADR 0005, 0006, 0011 en 0017; beschikbaarheid van de vereiste CI-checks.
+  **Klaar als:** negatieve fixtures voor ontbrekende/bypassbare instellingen; bewijs dat directe push naar main wordt geweigerd
+  en een bot-PR zonder vereiste review niet mergebaar is. Geen actieve bescherming claimen op basis van alleen JSON-bestanden.
+
+### ST-02 — P0: accountbeheer en herstel volledig maken
+
+- [ ] **Aansluiting:** fase 1, stuk 3e; bestaande accountbeheer-specs.
+  **Werk:** inventariseer per open 3e-item de huidige spec/PR en implementeer de ontbrekende flow:
+  blokkeren/deblokkeren, eigen sessies intrekken, TOTP-backupcodes, naam/wachtwoord wijzigen, uitnodiging intrekken,
+  admin-resetlink en e-mail wijzigen. Houd publieke wachtwoordvergeten-flow dicht volgens ADR 0013.
+  Specificeer herauthenticatie, sessie-intrekking, tokenverval, oude/nieuwe adresbevestiging en herstel zonder rolpromotie.
+  Koppel audit en mail aan ST-04/ST-03; kopieer geen synchroon mailpad als de outbox de geldende route wordt.
+  **Afhankelijkheden:** ADR 0013; audit voor admin-acties; de relevante stappen uit ADR 0020.
+  **Klaar als:** echte-stack e2e van elke flow; verboden rol en admin zonder MFA geweigerd; blokkeren werkt bij de volgende request;
+  laatste-admin-racetest; herstelcode eenmalig, ook bij parallel gebruik; ingetrokken/verlopen links werken niet;
+  gewijzigd e-mailadres is pas actief na de vereiste bevestigingen. Elk deel krijgt afzonderlijk bewijs.
+
+### ST-03 — P0: runner, opruimen en betrouwbare mail-outbox
+
+- [ ] **Aansluiting:** fase 1, stuk 7; [ADR 0020](adr/0020-achtergrondtaken.md).
+  **Werk:** volg de sectie Bouwvolgorde van ADR 0020 letterlijk voor audit, bewaarcatalogus, jobrol, runner en outbox.
+  Verbindingen blijven in de bestaande db/auth-laag; de runner krijgt ze geïnjecteerd. Voeg batches, locks, leases,
+  begrensde retries, definitieve foutstatus en herstel na een procescrash toe volgens de ADR.
+  Bewaar geen uitnodigingstoken in de outbox. Maak verzendstatus zichtbaar voor de admin en schrijf een herstelrunbook.
+  Een naar nul schalende host krijgt later een eigen adapter; kies nu geen queue-provider.
+  **Afhankelijkheden:** ST-04 en ST-05 volgens de ADR-bouwvolgorde; akkoord voor beschermde rol/env-wijzigingen.
+  **Klaar als:** twee runners claimen dezelfde rij niet tegelijk; crash/lease-verval en SMTP-uitval zijn getest;
+  definitief mislukte mail blijft herstelbaar; alleen verlopen rijen worden verwijderd; stoppen wacht op de lopende batch
+  vóór het sluiten van pools. Documenteer at-least-once-verzending: dit bewijst geen exactly-once-mailbezorging.
+
+### ST-04 — P0: audit en rate limiting op app-routes
+
+- [ ] **Aansluiting:** auditbesluit, stuk 3f en [ADR 0021](adr/0021-audit-log.md).
+  **Werk audit:** servergegenereerde request-ID, audit-context in de transactie, append-only-tabel en vaste grants/policies;
+  registreer app-acties met getypte, strict gevalideerde details. Gebruik de aparte core-auditwriter voor Better Auth-acties.
+  Beschrijf de transactionele grens bij het aanmaken van een uitnodiging en de beheerdersrechten van de migrator eerlijk.
+  Geen willekeurige payloads, e-mailadressen of vrije tekst in auditdetails.
+  **Werk rate limiting:** eigen spec voor limieten in defineRoute, los van bestaande Better Auth-limieten.
+  Leg sleutel, venster, atomair tellen over meerdere API-instanties, responsecontract en gedrag bij store-uitval vast;
+  waarden komen uit limits.ts en worden door de eigenaar vastgesteld. Houd dit een afzonderlijke implementatie-PR.
+  **Afhankelijkheden:** auditstappen 1–4 uit ADR 0020; goedgekeurde rate-limit-spec.
+  **Klaar als:** audit wordt met de actie teruggedraaid; verboden schrijver/lezer geweigerd; auditdetails falen buiten de allowlist;
+  vervalste client-request-ID wordt niet gebruikt. Parallelle requests overschrijden de vastgestelde limiet niet;
+  RATE_LIMITED heeft de afgesproken clientweergave; lagere app-limieten worden werkelijk toegepast.
+
+### ST-05 — P0: privacymechanisme, export en verwijderen
+
+- [ ] **Aansluiting:** AVG-besluit; [ADR 0022](adr/0022-avg.md).
+  **Werk:** bouw bewaarcatalogus, FK-invarianten, eigen export, admin-verwijdering en app-registratie van exporters/erasers
+  in de volgorde uit ADR 0020. Accountverwijdering en audit blijven in één transactie; vermijd een tweede verbinding
+  die op dezelfde laatste-admin-lock wacht. Exporters filteren expliciet op eigenaar, ook als RLS gedeelde data toelaat.
+  Valideer bewaartermijnen en retention-kolommen; negatieve termijnen of ongeschikte kolommen worden geweigerd.
+  Neem catalogusregistratie mee in de generator. Lever het privacyregister-sjabloon; juridische inhoud en back-uptermijnen blijven per app.
+  **Afhankelijkheden:** audit, bewaarcatalogus en outbox volgens ADR 0020; goedgekeurde export/verwijder-specs.
+  **Klaar als:** gedeelde data van anderen ontbreekt in export; accountverwijdering ruimt ook tokens/outbox op;
+  laatste-admin en eigen-admin-verwijdering worden geweigerd; terugrollen herstelt actie en audit samen;
+  cascades/nullable SET NULL en catalogusregistratie hebben negatieve pgTAP-fixtures;
+  app-exporter/eraser werkt zonder core-aanpassing. Retention is techniek, geen claim van volledige AVG-conformiteit.
+
+### ST-06 — P1: generator tot complete CRUD-flow uitbreiden
+
+- [ ] **Aansluiting:** fase 1, stuk 5, 3f en ADR 0016; de huidige generator levert bewust 501-handlers.
+  **Werk:** ontwerp na de proef-app een uitbreiding voor eenvoudige owner-scoped resources: migratie/RLS-tests,
+  strict contracten, permissies, lijst/detail/aanmaken/wijzigen/verwijderen, query-hooks, formulieren en ConfirmDialog.
+  Gebruik het gedeelde lijstpatroon; search params bevatten zoeken/filter/sorteren en volgen het cursor-contract.
+  Geen generieke oplossing voor elke resource: documenteer welke relaties en bijzondere mutaties handwerk vragen.
+  Behoud spec-eerst, dry-run, weigering om te overschrijven en rollback bij mislukte generatie.
+  **Afhankelijkheden:** bewijs uit ST-09, lijstpatroon ST-07, ADR/spec voor wijziging van generatorgedrag, retention uit ST-05.
+  **Klaar als:** een gegenereerde fixture-resource werkt door alle lagen tegen de echte stack;
+  tenant-isolatie, verboden rollen, validatiefouten, paginering en destructieve acties getest;
+  generatie haalt de toepasselijke gates en build; dry-run toont alle schrijfdoelen, waaronder de route-tree;
+  een mislukking laat geen half gegenereerde resource achter.
+
+### ST-07 — P1: herbruikbare schermpatronen en design-system
+
+- [ ] **Aansluiting:** fase 1, stuk 3c/3f, ADR 0015 en componentcatalogus.
+  **Werk:** rond lijstpatroon, mutatiefeedback/toasts en lazy-route-focus af. Leg herbruikbare recepten vast voor
+  lijst/detail/formulier, empty/loading/error/forbidden, bevestigen en succes/foutfeedback.
+  Inventariseer ontbrekende componentvarianten op basis van de proef-app; volg de bestaande tokens en registratielaag.
+  Reproduceer de lazy-route-focusfout eerst met een trace. Behoud documenttitel- en focusgedrag bij nieuwe AppShell-mounts.
+  **Afhankelijkheden:** bestaande shell/ConfirmDialog; eigenaarbesluit over toastdependency; concrete behoeften uit ST-09.
+  **Klaar als:** patronen in de catalogus en voorbeelden; keyboard/focus en aria-live inhoudelijk getest;
+  axe op 375/1280 px groen zonder uitzonderingen; geen dubbele mutatie bij busy-state;
+  ConfirmDialog documenteert retries na fouten. App-varianten vereisen geen core-wijziging.
+
+### ST-08 — P1: operationele monitoring en foutdiagnose
+
+- [ ] **Aansluiting:** request-logging/readiness uit stuk 7 en clientfouten in fase 2.
+  **Werk:** verbind serverfouten, clientfouten, build-SHA en request-ID; bouw de geplande clientfoutentabel met allowlist,
+  dedupe en retention. Definieer signalen voor readiness-uitval, foutpercentage, jobachterstand en mislukte verzending.
+  Core levert contracts/uitbreidingspunten; de app kiest pas bij release de monitor en alarmering.
+  Leg per signaal drempel, verantwoordelijke en herstelactie vast in het app-runbook, na eigenaarbesluit.
+  **Afhankelijkheden:** ST-03/ST-05 voor jobstatus/retention, ST-12 voor versie/buildidentiteit; spec voor clientfouten.
+  **Klaar als:** geforceerde fout is traceerbaar zonder PII/tokens/body/query; dedupe en opruimen getest;
+  een daadwerkelijk alert en herstel zijn in staging bewezen. Geen telemetry-provider verplicht in core.
+
+### ST-09 — P1: bewijs met proef-app én template-update
+
+- [ ] **Aansluiting:** fase 1, stuk 6; prioriteit blijft zoals afgesproken op 2026-10-10.
+  **Werk:** kies met de eigenaar één kleine echte app met een owner-scoped resource en een adminactie.
+  Start via het nieuwe-app-playbook, bouw een complete verticale flow en registreer elke handmatige stap,
+  onduidelijke instructie, ontbrekende component en core-aanpassing. Houd app-domein buiten deze template.
+  Neem daarna één echte template-update over via de bestaande merge-history-aanpak van ADR 0006.
+  **Afhankelijkheden:** bestaande runtime/auth/generator; de eigenaar levert de lokale stack en de appkeuze.
+  **Klaar als:** nieuwe gebruiker/admin doorloopt de flow tegen de echte stack; verboden toegang getest;
+  update behoudt app-code en instellingen; verwacht versus werkelijk conflict vastgelegd;
+  rapport met exacte checks, handwerk en verbeter-PR's terug naar template. Een demo in deze repo alleen telt niet.
+
+### ST-10 — P1: staging, release en aantoonbaar herstel
+
+- [ ] **Aansluiting:** fase 3, per app; herbruikbare contracts/runbook-sjablonen terug naar template.
+  **Werk:** na provider-ADR een adapter, gescheiden omgevingen, schema-compatibiliteitscontrole,
+  release-CI-controle op exact commit, protected production approval en smoketest implementeren.
+  Beschrijf code-rollback, vooruitmigratie, back-up/herstel en omgang met verwijderde gegevens in back-ups.
+  Eigenaar kiest beschikbaarheidsdoelen/RPO/RTO, regio en bewaartermijnen; de agent verzint die niet.
+  **Afhankelijkheden:** providerbesluit, ST-01, ST-08, privacyregister en productie-runbooks.
+  **Klaar als:** preview tegen productie faalt; vereiste CI en staging horen bij exact het releasecommit;
+  smoketest bewijst login/lezen en gesloten browser-datatoegang; een back-up is werkelijk in een aparte omgeving
+  teruggezet, met gemeten dataverlies/hersteltijd. Productiegoedkeuring blijft bij de eigenaar.
+
+### ST-11 — P2: optionele notificatie- en storage-uitbreidingen
+
+- [ ] **Doel:** app-behoeften ondersteunen zonder de starter-core standaard te belasten.
+  **Notificaties:** bouw alleen bij een concrete app een registratiecontract voor berichtsoorten,
+  ontvangers/autorisatie, voorkeuren en kanalen. Hergebruik mail-layout/outbox; in-app inbox en push vragen eigen specs.
+  **Storage:** ontwerp een provider-neutrale grens voor uploads/downloads met owner-controle,
+  toegestane typen/grootte, korte signed-URL-geldigheid, metadata en opruimen van verweesde bestanden.
+  Geen provider-SDK in de browser; adapter en credentials blijven server-side.
+  **Afhankelijkheden:** concrete appbeslissing; ST-03/ST-05; provider-ADR voor storage/push; dependencygoedkeuring.
+  **Klaar als:** ontvangstrechten en voorkeuren getest; herhaalde jobs veroorzaken geen dubbele inboxregels;
+  twee gebruikers kunnen elkaars bestanden niet benaderen; verlopen links en ongeldige uploads geweigerd;
+  accountverwijdering en retention behandelen bestanden. Zonder activering voegt dit geen service of runtimeverplichting toe.
+
+### ST-12 — P2: templateversies en upgradecontrole
+
+- [ ] **Aansluiting:** fase 1, stuk 6 (template-versie) en 3f (versie/build-SHA).
+  **Werk:** beschrijf releaseversie, opgenomen templatecommit en app-build-SHA als verschillende waarden.
+  Leg templateversie/commit vast bij app-init en update; lever upgrade-notities voor breaking changes,
+  migraties, nieuwe instellingen en noodzakelijke handstappen. Controleer vóór een update core/app-grens en ontbrekende stappen.
+  Een versiecontrole adviseert; hij wijzigt geen app automatisch en vervangt de mergeprocedure van ADR 0006 niet.
+  Health/UI tonen alleen afgesproken publieke buildmetadata, geen secrets of interne infrastructuur.
+  **Afhankelijkheden:** proef-update ST-09; eigenaarbesluit over versieschema/metadataformat; spec voor healthcontractwijziging.
+  **Klaar als:** app-init legt de juiste herkomst vast; update wijzigt die controleerbaar;
+  fixture detecteert ontbrekende upgradevoorwaarde; buildmetadata komt overeen met het gebouwde commit;
+  een app kan een template-update reviewen en terugvinden zonder core-code te kopiëren.
+
+### ST-13 — P2: optionele SaaS- en PWA-pakketten
+
+- [ ] **Werk:** documenteer activeringsgrenzen en aparte ADR/spec per gekozen pakket.
+  SaaS: workspace/tenant, lidmaatschap en rollen; abonnement/betaling alleen bij concrete behoefte.
+  PWA: manifest/installatie, veilige updateflow en alleen afgesproken offlinegedrag; push apart van installatie behandelen.
+  Storage blijft ST-11. Kies geen billing-, push- of hostingprovider als onderdeel van deze roadmap.
+  **Afhankelijkheden:** bewezen starter; eigenaar kiest een concrete app en pakket; provider/dependencybesluiten vóór bouw.
+  **Klaar als:** pakket is weglaatbaar en voegt zonder activatie geen tabellen, dependencies of externe dienst toe;
+  SaaS-tests bewijzen tenant-isolatie over API én database; PWA-tests bewijzen updates en uitloggen zonder achterblijvende
+  privé-cache. Feature flags, onderhoudsmodus en unsaved-form-waarschuwingen blijven op aanleiding zoals eerder besloten.
+
+### ST-14 — P1: documentatie en bouwresten opruimen
+
+- [ ] **Doel:** een repo waarmee mensen en agents apps kunnen bouwen zonder eerst het bouwproces van het framework te reconstrueren.
+  De teksten moeten helder, natuurlijk Nederlands zijn. Bouwen met agents blijft het uitgangspunt van de template.
+  **Behoud van agentinformatie:** verwijder niets dat agents helpt de template of het framework correct te gebruiken.
+  Behoud instructies, skills, hooks, voorbeelden, specs, ontwerpcontext, bekende valkuilen, herstelstappen, overdracht en bewijs.
+  Dat informatie over agents of het bouwproces gaat, maakt haar niet overbodig. Bij twijfel blijft ze staan.
+  **Eerste stap:** README, changelog en leeswijzer zijn herschreven; de volledige opschoonronde staat nog open.
+  **Inventarisatie:** loop alle bijgehouden bestanden na: documentatie, codecommentaar, gebruikers- en mailteksten,
+  scripts, agentinstructies en GitHub-templates. Noteer per kandidaat wie hem leest, waar hij wordt gebruikt en of hij
+  blijft, wordt herschreven, wordt samengevoegd of verdwijnt. Controleer imports, links, generators en checks die erop rekenen.
+  Beoordeel ook gebruik als agentcontext: afzonderlijk geladen padregels, sessieherstel, voorbeelden en preventie van eerdere fouten.
+  Begin bij oude plannen, reviewverslagen, voortgangsbestanden, herstelnotities en toelichting op mislukte bouwpogingen.
+  **Redactie:** schrijf over de huidige werking. Verwijder gesprekstaal, zelfbeoordelingen, opgeblazen formuleringen,
+  lege herhaling en verouderde statusclaims. Behoud herhaling waar afzonderlijk geladen agentcontext die nodig heeft.
+  Zet besliste open vragen om in besluiten, met behoud van datum, herkomst, alternatieven en relevante afwegingen.
+  Gebruik roadmaptaken voor open werk, ADR's voor keuzes en de changelog voor wijzigingen die een app raken.
+  Houd de menselijke leesroute kort: README → leeswijzer → gebruik of ontwikkeling.
+  **Opruimen:** een bouwverslag mag alleen verdwijnen als het geen nut meer heeft voor mensen of agents.
+  Verplaats unieke, bruikbare informatie eerst naar een passende, vindbare plek en controleer de verwijzingen ernaartoe.
+  Leg per verwijdervoorstel vast waarom geen instructie, ontwerpcontext of leerpunt verloren gaat.
+  Git of een oude PR alleen is geen vervanging voor informatie die een agent tijdens het werken nodig heeft.
+  Bewijs voor een open taak blijft bereikbaar totdat die taak is afgerond.
+  Verwijder geen tests, fixtures, migraties, gates, veiligheidsregels of goedkeuringshistorie als vermeend bouwafval.
+  Raakt opruimen zo'n onderdeel, leg de wijziging apart aan de eigenaar voor. Herschrijf geen Git-geschiedenis.
+  **GitHub:** vul een korte beschrijving en passende topics in; controleer de template-instelling en de uitleg voor nieuwe apps.
+  Voorgestelde beschrijving: "Template om webapps met code-agents te bouwen. React, Hono en Postgres, met agentinstructies, UI-componenten en ontwikkelcontroles."
+  De controle op 2026-10-11 vond geen beschrijving of topics en een uitgeschakelde template-instelling.
+  **Afhankelijkheden:** eigenaarreview van de opruiminventaris; geldende besluiten en bewijscriteria; app-init die README/changelog gebruikt.
+  **Klaar als:** elk bestand in de inventaris heeft een onderbouwde bestemming; overbodige bouwresten zijn verwijderd
+  en verwijzingen aangepast; documentatie klopt met code en beschikbare commando's; een menselijke lezer kan de app starten
+  en de bouwafspraken vinden zonder reviewlogs te lezen. Documentatiecontrole en toepasselijke gates zijn groen;
+  app-init blijft werken; een zoekronde vindt geen achtergebleven verwijzingen naar verwijderde bestanden.
+  De inventaris toont waar alle bruikbare agentinformatie behouden is. Loop de agentprocedure voor een nieuwe app en
+  een feature na: instructies, voorbeelden, beslissingen en herstelcontext zijn nog bereikbaar vanuit hun normale startpunten.
+  De eigenaar leest de instappagina's en een steekproef van de overige teksten. Een woordfilter alleen bewijst geen goede redactie.
