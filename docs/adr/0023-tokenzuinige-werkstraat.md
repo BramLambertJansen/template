@@ -23,8 +23,9 @@ Elke hook en elk script krijgt een tabeltest (`test/hooks/`, `test/rails/`), en 
    `claude`). `docs/nieuwe-app.md` en de README zeggen dat; `autoCompactWindow` staat ook in de gebruikersinstellingen van de eigenaar
    (`~/.claude/settings.json`, eigenaar plaatst), zodat de grens buiten de repo ook geldt.
 2. **Meten — `pnpm tokens`** (`scripts/kit/tokens.mjs`): per sessie beurten, mediane en p95-context, cache-read, aandeel beurten in de
-   hoofdsessie, herhaalde volledige reads, uitvoer per commandoprefix. Leest de transcriptmappen van de repo, de worktrees en `~`; drukt
-   alleen getallen en bestandsnamen af, nooit inhoud. Dit is de nulmeting.
+   hoofdsessie, herhaalde volledige reads, uitvoer per commandoprefix. Leest alleen de transcriptmappen van de repo en de worktrees,
+   niet die van `~`; drukt alleen getallen en bestandsnamen af, nooit inhoud. Dit is de nulmeting; sessies die buiten de repo
+   startten (zoals de gemeten sessie hierboven) vallen erbuiten, dus de nulmeting zijn de eerste sessies in de repo.
 3. **Sessiebudget.** `autoCompactWindow: 200000` in `.claude/settings.json` is de harde grens. Een fail-open hook `context-budget`
    (UserPromptSubmit, en PostToolUse gedrosseld: elke 25 calls of bij +25k) leest de staart van `transcript_path` en meldt vanaf 150k:
    "rond af, `pnpm stand`, stel een verse sessie voor". Wisselt de branch binnen een sessie (bijgehouden in de git-dir per `session_id`),
@@ -64,5 +65,6 @@ hoofdsessie omlaag; blokkerende reviewbevindingen per PR niet hoger. Simulatie o
 - Vier PR's, elk met tests en de bijbehorende tekst in framework §8/§9: (1) `pnpm tokens`, nulmeting, documentbudget; (2) `pnpm stand`,
   `feiten.mjs`, SessionStart; (3) `autoCompactWindow`, `context-budget`, agent `onderzoek`; (4) bouwagents, rolhekregel punt 8, A/B-meting.
 - Gate-wijziging: label `gate-wijziging`; de gebruikersinstelling uit punt 1 plaatst de eigenaar zelf.
-- Keuzes (aanbeveling, de eigenaar beslist): **OV-1** 200k grens, melding vanaf 150k; **OV-2** twee bouwagents, sonnet pas na A/B;
-  **OV-3** volledige reads alleen melden; **OV-4** `pnpm tokens` leest transcripten, alleen getallen; **OV-5** punt 8 als sturing op pad.
+- Besloten door de eigenaar: **OV-1** 200k grens, melding vanaf 150k; **OV-2** twee bouwagents, sonnet pas na A/B; **OV-3** volledige
+  reads alleen melden; **OV-4** `pnpm tokens` leest alleen transcripten van de repo en de worktrees, alleen getallen; **OV-5** punt 8
+  als sturing op pad.
