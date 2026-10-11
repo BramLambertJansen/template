@@ -23,12 +23,13 @@ maximale context, cache-read totaal, herhaalde volledige reads per bestand, tool
 Alleen getallen en bestandsnamen in de uitvoer, nooit inhoud. Dit is de nulmeting en de bewijslast voor elke volgende maatregel
 (framework §10 "Meten"): een regel blijft alleen als de cijfers verbeteren zonder meer blokkerende reviewbevindingen per PR.
 
-**2. Sessiebudget — hook `context-budget`** (UserPromptSubmit en Stop, in `werkstraat.mjs`). Schat de context uit het laatste
-`usage`-blok in `transcript_path`.
-- ≥ 150k: `additionalContext` "rond het lopende onderdeel af; schrijf de overdracht (`pnpm stand`) en stel een verse sessie voor".
-- ≥ 250k: de Stop-hook blokkeert één keer met dezelfde boodschap, tenzij `stop_hook_active`. De hook kan `/clear` niet forceren; de
-  afdwinging is dat elke beurt boven de drempel de melding krijgt en `pnpm tokens` het zichtbaar maakt. Fail-open bij een leesfout.
-- Drempels staan in `.claude/gates.json` (`tokenBudget`), niet in de hook.
+**2. Sessiebudget — ingebouwde grens plus melding.** De Claude Code-documentatie noemt geen tokendrempel waarboven kwaliteit daalt
+(wel "context rot", zonder getal) en compact standaard pas rond 967k. De grens is daarom een keuze, gemeten met `pnpm tokens`:
+- `autoCompactWindow: 200000` in `.claude/settings.json` (instelbaar van 100k tot 1M): de harde grens, zonder eigen hook.
+- Hook `context-budget` (UserPromptSubmit, in `werkstraat.mjs`) schat de context uit het laatste `usage`-blok in `transcript_path` (de docs
+  bieden geen veld voor context-gebruik in een hook). Vanaf 150k meldt hij als `additionalContext`: "rond het lopende onderdeel af,
+  schrijf de overdracht (`pnpm stand`) en stel een verse sessie voor". Een nette overdracht verliest minder dan auto-compact. Fail-open.
+- De drempel staat in `.claude/gates.json` (`tokenBudget`), niet in de hook. De 150k/200k zijn een eerste keuze; `pnpm tokens` stuurt bij.
 
 **3. Overdracht in de repo, niet in het geheugen — `pnpm stand`** (`scripts/kit/stand.mjs`). Eén compacte uitvoer (≤ 40 regels): branch, PR
 en checkstatus (`gh pr view`/`checks` in één keer), `git diff --stat main...HEAD`, open reviewbevindingen, spec en acceptatiecriteria,
@@ -39,19 +40,22 @@ staat in de PR en in de roadmap. Vervangt de ~120 losse `gh`-aanroepen.
 - `feiten.mjs` krijgt `adr` met één regel samenvatting per ADR en `sectie <doc> <nummer>` voor `framework.md`, `roadmap.md`, `nieuwe-app.md`.
 - `check-docs` krijgt een documentbudget (regels per `##`-sectie en per bestand, §9-tabel uitgebreid); bestaande overschrijdingen komen in
   `.kit/baseline.json` (ratchet): geen nieuwe of groeiende overschrijding. Overschrijding betekent: splitsen of een gate maken.
-- PreToolUse-regel in `rolhek` voor `Read` zonder `offset`/`limit` op `docs/framework.md`, `docs/roadmap.md`, `docs/nieuwe-app.md` en
-  `docs/adr/*` (behalve het ADR waaraan de rol werkt): weigeren met "gebruik `feiten.mjs sectie …` of `offset`/`limit`".
+- Een `Read` zonder `offset`/`limit` op `docs/framework.md`, `docs/roadmap.md` of `docs/nieuwe-app.md` krijgt een melding
+  (`additionalContext`) met het alternatief; geen weigering. De documentatie bevestigt niet dat een hook `offset`/`limit` van Read ziet, en
+  de volledige reads wegen weinig (≈ 350k tekens op 1,17 miljard cache-read tokens). De echte afdwinging is het documentbudget.
 
 **5. Onderzoek via subagent — agent `onderzoek`** (read-only: Read, Grep, Glob, `git log/show`; sonnet, `maxTurns: 30`). Levert een conclusie
-van ≤ 40 regels met `bestand:regel`. Het rolhek weigert in de hoofdsessie (niet in subagents) `Read`/`Grep`/Bash-leesacties in
-`node_modules/` en `.pnpm/` met verwijzing naar deze agent. Spiegelt het bestaande onderscheid hoofdsessie/subagent.
+van ≤ 40 regels met `bestand:regel`. Het rolhek weigert in de hoofdsessie (niet in subagents, herkenbaar aan `agent_type`) `Read`/`Grep`/Bash-leesacties in
+`node_modules/` en `.pnpm/` met verwijzing naar deze agent.
 
 **6. Minder beurten.** `SessionStart` meldt als de werkmap niet de repo-root is (geen `cd … &&` meer nodig). `AGENTS.md`/`CLAUDE.md`
 verwijzen naar `pnpm stand` en `pnpm tokens`; "Zuinig met context" in `CLAUDE.md` wordt een verwijzing naar framework §9 (de regel
 is nu een gate: haal de proza weg, framework §9).
 
-**7. Model per rol, met kwaliteitsrem.** `developer` op `sonnet` voor goedgekeurde specs; `tester` blijft sonnet, `reviewer` blijft opus,
-`onderzoek` sonnet. Terugvalcriterium na 10 PR's: stijgt het aantal blokkerende reviewbevindingen per PR of het aantal
+**7. Model per rol, met kwaliteitsrem.** `developer` op `sonnet` voor goedgekeurde specs (de Claude Code-docs: Sonnet "handles most coding tasks well"; de modelgids
+begint juist bij Opus en er zijn geen benchmarks, dus de eigen meting beslist). Voor migraties, RLS en auth geeft de hoofdsessie
+`model: opus` mee aan de aanroep (vastgelegd in de skills `migratie` en `nieuw-route`); pgTAP en de reviewer blijven het vangnet.
+`tester` blijft sonnet, `reviewer` opus, `onderzoek` sonnet. Terugvalcriterium na 10 PR's: stijgt het aantal blokkerende reviewbevindingen per PR of het aantal
 correctiepogingen per PR, dan gaat `developer` terug naar `inherit`. (Aanpassing aan een rol is een gate-wijziging.)
 
 Elke hook en elk script krijgt een tabeltest (`test/hooks/`, `test/rails/`) volgens de bestaande conventie, inclusief de omzeiling
@@ -71,16 +75,17 @@ Elke hook en elk script krijgt een tabeltest (`test/hooks/`, `test/rails/`) volg
 ## Alternatieven
 
 - **Alleen proza in `CLAUDE.md`**: wordt in een lange sessie niet gevolgd en voldoet niet aan §9 ("regel in proza die een check kan zijn").
-- **Hard `/clear` forceren**: niet mogelijk vanuit een hook; de melding per beurt plus meting is het maximaal haalbare.
+- **Hard `/clear` forceren**: niet mogelijk vanuit een hook; `autoCompactWindow` is de harde grens, de melding en meting doen de rest.
 - **Documenten inkorten of regels schrappen**: bespaart weinig (basis is 2,5k) en riskeert kwaliteit; het probleem is sessielengte.
 - **Alles op een goedkoper model**: tast de reviewkwaliteit aan; daarom alleen de rollen waar de reviewer het vangnet is.
 
 ## Gevolgen
 
 - Vier PR's: (1) `pnpm tokens` + nulmeting + documentbudget in `check-docs`; (2) `pnpm stand`, `feiten.mjs` ADR-index en `sectie`, SessionStart;
-  (3) hooks `context-budget`, leesgrens, agent `onderzoek` met tests; (4) rolmodellen, framework §8/§9, `CLAUDE.md`, roadmap-stuk.
+  (3) `autoCompactWindow`, hook `context-budget`, leesmelding, agent `onderzoek` met tests; (4) rolmodellen, framework §8/§9, `CLAUDE.md`, roadmap-stuk.
 - Dit is een gate-wijziging: label `gate-wijziging`, ADR eerst geaccepteerd door de eigenaar.
-- De leesgrens kan een legitieme volledige read hinderen; de weigering noemt het alternatief en `offset`/`limit` blijft mogelijk.
-- `pnpm tokens` leest transcripten buiten de repo; het rapport bevat nooit inhoud, alleen aantallen en bestandsnamen.
-- Open voor de eigenaar: **OV-1** drempels 150k/250k; **OV-2** `developer` op sonnet met het terugvalcriterium; **OV-3** harde weigering van volledige
-  reads (alternatief: alleen melden); **OV-4** mag `pnpm tokens` de transcripten lezen (sandbox)?
+- Prompt caching maakt een cache-hit 0,05× (Sonnet 5.5, Opus 5.5) van de invoerprijs: de besparing in geld is kleiner dan in tokens; op een
+  abonnement telt vooral de limiet en de kwaliteit bij lange context. `pnpm tokens` rapporteert beide.
+- `pnpm tokens` leest alleen de transcriptmap van dit project (de sandbox laat `~/.claude/projects` standaard lezen) en drukt nooit inhoud af.
+- Keuzes (aanbeveling, de eigenaar beslist): **OV-1** `autoCompactWindow` 200k en melding vanaf 150k; **OV-2** developer op sonnet met opus-override
+  en het terugvalcriterium; **OV-3** alleen melden bij volledige reads; **OV-4** transcripten lezen toegestaan, alleen dit project.
