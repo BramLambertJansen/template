@@ -1,8 +1,11 @@
 import type { BetterAuthOptions } from 'better-auth';
 import { twoFactor } from 'better-auth/plugins/two-factor';
 import type { Pool } from 'pg';
-import { afterHook, beforeHook } from './hooks.ts';
+import type { SendMail } from '../mail/smtp.ts';
+import { createHooks } from './hooks.ts';
+import { createMailing, type Mailing } from './mailing.ts';
 import {
+  EMAIL_CHANGE_TTL_SECONDS,
   INVITATION_TTL_SECONDS,
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
@@ -25,6 +28,10 @@ export interface AuthConfig {
   readonly sendInvitation: (invitation: Invitation) => Promise<void>;
   // Zonder: geen enkele header vertrouwd (geen spoofbare x-forwarded-for); lokaal valt Better Auth terug op 127.0.0.1.
   readonly clientIpHeader?: string | undefined;
+  // De mails van een e-mailwijziging (spec eigen-account). Zonder staat changeEmail uit.
+  readonly sendMail?: SendMail | undefined;
+  // Naam in die mails; zonder de hostnaam van de origin (core kent de naam van de app niet).
+  readonly appName?: string | undefined;
 }
 
 const NO_TRUSTED_IP_HEADER = 'x-template-geen-ip-header';
@@ -69,9 +76,40 @@ interface AccountHookContext {
   };
 }
 
+// Stap 1 gaat naar het oude adres, stap 2 naar het nieuwe (user.email is dan het nieuwe adres); de links wijzen naar de SPA.
+function emailChangeOptions(mailing: Mailing | null) {
+  if (mailing === null) return {};
+  return {
+    user: {
+      changeEmail: {
+        enabled: true,
+        sendChangeEmailConfirmation: ({ user, newEmail, token }: ChangeConfirmation) =>
+          mailing.confirmOld(user, newEmail, token),
+      },
+    },
+    emailVerification: {
+      expiresIn: EMAIL_CHANGE_TTL_SECONDS,
+      sendVerificationEmail: ({ user, token }: { user: MailUser; token: string }) => mailing.verifyNew(user, token),
+    },
+  };
+}
+
+interface MailUser {
+  readonly name: string;
+  readonly email: string;
+}
+
+interface ChangeConfirmation {
+  readonly user: MailUser;
+  readonly newEmail: string;
+  readonly token: string;
+}
+
 // database: een pg-pool als auth_service (search_path better_auth, alleen DML op dat schema, ADR 0010).
 export function createAuthOptions(config: AuthConfig, database: Pool) {
+  const mailing = createMailing(config);
   return {
+    ...emailChangeOptions(mailing),
     baseURL: config.origin,
     basePath: AUTH_BASE_PATH,
     secret: config.secret,
@@ -111,7 +149,7 @@ export function createAuthOptions(config: AuthConfig, database: Pool) {
       cookies,
       ipAddress: { ipAddressHeaders: [config.clientIpHeader ?? NO_TRUSTED_IP_HEADER] },
     },
-    hooks: { before: beforeHook, after: afterHook },
+    hooks: createHooks(mailing),
     databaseHooks: {
       // Een uitgenodigde gebruiker heeft geen credential-account; dat ontstaat pas als hij via de link zijn wachtwoord
       // instelt. Dat bewijst het e-mailadres (ADR 0013).

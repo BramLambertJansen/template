@@ -86,5 +86,45 @@ export const copy = {
       submit: 'Wachtwoord wijzigen',
       changed: 'Je wachtwoord is gewijzigd. Je andere sessies zijn beëindigd.',
     },
+    sessions: {
+      title: 'Sessies',
+      device: 'Apparaat',
+      createdAt: 'Ingelogd op',
+      lastActive: 'Laatst actief',
+      current: 'Dit apparaat',
+      revoke: 'Beëindigen',
+      revokeOthers: 'Alle andere sessies beëindigen',
+      unknownDevice: 'Onbekend apparaat',
+      // Kop van de kolom met "Beëindigen"; alleen voor schermlezers.
+      actions: 'Acties',
+      revokeDialog: {
+        title: 'Sessie beëindigen?',
+        description: (device: string) => `Het apparaat ${device} wordt uitgelogd.`,
+        confirm: 'Beëindigen',
+        done: 'De sessie is beëindigd.',
+      },
+      revokeOthersDialog: {
+        title: 'Alle andere sessies beëindigen?',
+        description: 'Je blijft alleen op dit apparaat ingelogd.',
+        confirm: 'Beëindigen',
+        done: 'Je andere sessies zijn beëindigd.',
+      },
+    },
+    email: {
+      title: 'E-mailadres',
+      current: (email: string) => `Huidig e-mailadres: ${email}`,
+      label: 'Nieuw e-mailadres',
+      submit: 'E-mailadres wijzigen',
+      requested: (email: string) =>
+        `We hebben een bevestigingslink gestuurd naar ${email}. Daarna volgt een link naar het nieuwe adres.`,
+      same: 'Dit is al je e-mailadres.',
+    },
+    confirmEmail: {
+      title: 'E-mailadres bevestigen',
+      submit: 'Bevestigen',
+      oldDone: 'Gelukt. Open nu de link die we naar je nieuwe e-mailadres hebben gestuurd.',
+      newDone: 'Je e-mailadres is gewijzigd.',
+      toAccount: 'Naar Mijn account',
+    },
   },
 } as const;

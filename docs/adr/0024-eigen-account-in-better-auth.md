@@ -43,6 +43,19 @@ Better Auth 1.7.7 heeft daar eigen endpoints voor, met eigenschappen die niet bi
 5. **Framework §6**: `session_strength` wordt gezet in de after-hook op 2FA-verificatie, én overgenomen van de oude sessie bij
    `/change-password`.
 
+## Uitwerking van deel 2 (afwijkingen en keuzes tijdens het bouwen)
+
+- `AuthConfig` krijgt `sendMail` (optioneel: zonder staat `changeEmail` uit) en `appName` (optioneel, standaard de hostnaam van de origin):
+  core kent `APP_NAME` niet, `server.ts` geeft hem mee. De vier mails staan in `src/core/api/mail/email-change.ts`; `layout.ts` kreeg
+  `action.labelInText` (het label van de knop ook in de tekstversie, vóór de link).
+- `RouteContext` krijgt `headers: Headers` en `RouteActor` een `sessionId`. `confirmEmail` roept `auth.api.verifyEmail` aan met de
+  headers van het verzoek, zodat Better Auth controleert dat de link bij de ingelogde gebruiker hoort (`INVALID_USER`).
+- De route bevestigt alleen tokens met `requestType` `change-email-confirmation` en `change-email-verification`; een gewone
+  verificatielink wordt `EMAIL_LINK_INVALID`.
+- Sessies tonen en beëindigen via `internalAdapter.listSessions` en `deleteSession(s)`; de lijst bevat nooit tokens, IP of de ruwe user-agent.
+- Web: de auth-client wordt per aanroep gemaakt (hij legt `fetch` vast bij het aanmaken; zo stubt een test `fetch` per test).
+  `Section` kreeg `landmark={false}` voor een sectie waarvan de inhoud (een `Table` met label) al een region met dezelfde naam is.
+
 ## Alternatieven
 
 - **De endpoints van Better Auth openlaten** (`/update-user`, `/list-sessions`): minder code, maar tokens in de browser, geen grenzen uit

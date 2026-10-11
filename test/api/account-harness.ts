@@ -24,7 +24,11 @@ export function createAccountTestApp() {
   type App = typeof setup.app;
 
   // Zoals Browser.send, maar met elke methode (PATCH, DELETE) en dezelfde cookies en IP als de browser: `call(b, 'PATCH /api/me')`.
-  async function call(browser: Browser, route: string, body?: unknown): Promise<Response> {
+  async function callWith(
+    browser: Browser,
+    route: string,
+    { body, headers: extraHeaders = {} }: { body?: unknown; headers?: Record<string, string> } = {},
+  ): Promise<Response> {
     const [method = 'GET', path = '/'] = route.split(' ');
     const headers = new Headers({
       'content-type': 'application/json',
@@ -32,6 +36,7 @@ export function createAccountTestApp() {
       origin: APP_ORIGIN,
     });
     headers.set(required('CLIENT_IP_HEADER'), browser.ip);
+    for (const [name, value] of Object.entries(extraHeaders)) headers.set(name, value);
     if (browser.cookies.size > 0) {
       headers.set('cookie', [...browser.cookies].map(([name, value]) => `${name}=${value}`).join('; '));
     }
@@ -46,6 +51,8 @@ export function createAccountTestApp() {
     }
     return response;
   }
+
+  const call = (browser: Browser, route: string, body?: unknown) => callWith(browser, route, { body });
 
   async function signIn(app: App, email: string, password = PASSWORD): Promise<Browser> {
     const browser = new Browser(app);
@@ -81,17 +88,71 @@ export function createAccountTestApp() {
     return rows;
   }
 
+  // Een sessie ouder maken (verse-sessie-eis van 10 minuten, absolute duur van 7 dagen): createdAt én updatedAt terug in de tijd.
+  async function ageSession(token: string, seconds: number): Promise<void> {
+    await authDb.query(
+      `update session set "createdAt" = now() - make_interval(secs => $2), "updatedAt" = now() - make_interval(secs => $2) where token = $1`,
+      [token, seconds],
+    );
+  }
+
   return {
     ...setup,
+    ageSession,
     authDb,
     migrator,
     call,
+    callWith,
     signIn: (email: string, password?: string) => signIn(setup.app, email, password),
     account,
     enableTotp,
     sessionsOf,
     close: () => Promise.all([setup.pool.end(), migrator.end(), authDb.end(), setup.auth.closePool()]),
   };
+}
+
+export interface MailSummary {
+  readonly subject: string;
+  readonly text: string;
+}
+
+// Alle mails aan een adres uit Mailpit (nieuwste eerst), met tekst.
+export async function mailsTo(email: string): Promise<MailSummary[]> {
+  const base = required('MAILPIT_URL');
+  const search = await fetch(`${base}/api/v1/search?query=${encodeURIComponent(`to:"${email}"`)}`);
+  const { messages } = z
+    .object({ messages: z.array(z.object({ ID: z.string(), Subject: z.string() })) })
+    .parse(await search.json());
+  return Promise.all(
+    messages.map(async ({ ID, Subject }) => {
+      const message = z.object({ Text: z.string() }).parse(await (await fetch(`${base}/api/v1/message/${ID}`)).json());
+      return { subject: Subject, text: message.Text };
+    }),
+  );
+}
+
+// Wacht tot er een mail met dit onderwerp aan het adres is (SMTP is asynchroon).
+export async function waitForMail(email: string, subject: string): Promise<MailSummary> {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const found = (await mailsTo(email)).find((mail) => mail.subject === subject);
+    if (found !== undefined) return found;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error(`geen mail "${subject}" aan ${email}`);
+}
+
+// Geeft na een pauze het aantal mails met dit onderwerp (voor "er gaat niets heen").
+export async function countMails(email: string, subject?: string): Promise<number> {
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const mails = await mailsTo(email);
+  return subject === undefined ? mails.length : mails.filter((mail) => mail.subject === subject).length;
+}
+
+// De link uit een bevestigingsmail: `${APP_ORIGIN}/email-bevestigen?token=…` (spec eigen-account).
+export function confirmTokenFrom(text: string): string {
+  const match = /\/email-bevestigen\?token=([^\s]+)/.exec(text);
+  if (match?.[1] === undefined) throw new Error('geen bevestigingslink in de mail');
+  return decodeURIComponent(match[1]);
 }
 
 export async function json(response: Response): Promise<unknown> {

@@ -1,4 +1,3 @@
-import { AppError } from '#core/api/errors.ts';
 import {
   confirmEmailContract,
   meContract,
@@ -23,11 +22,30 @@ export const renameRoute = defineRoute(renameContract, async ({ actor, input, se
   return null;
 });
 
-// Contractstap (framework §8, stap 2): de developer vervangt deze handlers.
-function notImplemented(): never {
-  throw new AppError('NOT_IMPLEMENTED');
-}
-export const sessionsListRoute = defineRoute(sessionsListContract, notImplemented);
-export const revokeSessionRoute = defineRoute(revokeSessionContract, notImplemented);
-export const revokeOtherSessionsRoute = defineRoute(revokeOtherSessionsContract, notImplemented);
-export const confirmEmailRoute = defineRoute(confirmEmailContract, notImplemented);
+// Eigen sessies en e-mailwijziging (spec eigen-account): altijd via ctx.actor, nooit een ID uit de invoer voor wie het is.
+export const sessionsListRoute = defineRoute(sessionsListContract, async ({ actor, services }) => {
+  const sessions = await services.sessions.list(actor);
+  return {
+    items: sessions.map((session) => ({
+      id: session.id,
+      apparaat: session.device,
+      aangemaakt: session.createdAt,
+      laatstActief: session.lastActiveAt,
+      huidig: session.current,
+    })),
+  };
+});
+
+export const revokeSessionRoute = defineRoute(revokeSessionContract, async ({ actor, input, services }) => {
+  await services.sessions.revoke(actor, input.id);
+  return null;
+});
+
+export const revokeOtherSessionsRoute = defineRoute(revokeOtherSessionsContract, async ({ actor, services }) => {
+  await services.sessions.revokeOthers(actor);
+  return null;
+});
+
+export const confirmEmailRoute = defineRoute(confirmEmailContract, async ({ actor, input, services, headers }) => {
+  return { stap: await services.profile.confirmEmail(actor, input.token, headers) };
+});

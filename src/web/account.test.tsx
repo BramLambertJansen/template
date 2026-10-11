@@ -28,6 +28,8 @@ function show(path: string, me: { naam: string } | null) {
     const body: unknown = typeof init.body === 'string' ? JSON.parse(init.body) : undefined;
     calls.push({ method, url, body });
     if (me === null) return Promise.resolve(new Response(JSON.stringify({ code: 'UNAUTHENTICATED' }), { status: 401 }));
+    // De sectie Sessies (deel 2) leest de eigen sessies; deze tests gaan over naam en wachtwoord.
+    if (url.startsWith('/api/me/sessions')) return Promise.resolve(new Response(JSON.stringify({ items: [] })));
     if (method === 'PATCH' && typeof body === 'object' && body !== null && 'naam' in body) {
       naam = String(body.naam);
       return Promise.resolve(new Response('null'));
@@ -73,6 +75,8 @@ describe('/account (spec eigen-account)', () => {
     show('/account', { naam: 'Anna de Vries' });
 
     await screen.findByRole('heading', { level: 1, name: 'Mijn account' });
+    // De secties verschijnen zodra `me` en de sessies binnen zijn (alleen timing: de lijst met sessies is erbij gekomen).
+    await screen.findByRole('textbox', { name: 'Naam' });
     const sections = within(screen.getByRole('main')).getAllByRole('heading', { level: 2 });
     expect(sections.map((heading) => heading.textContent).slice(0, 2)).toStrictEqual(['Naam', 'Wachtwoord']);
     expect(screen.getByRole<HTMLInputElement>('textbox', { name: 'Naam' }).value).toBe('Anna de Vries');
