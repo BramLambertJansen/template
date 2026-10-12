@@ -326,6 +326,37 @@ describe('WS-04: merge en force-push voor elke rol verboden', () => {
     expect(verdict(bash(command, 'developer'))).toBe('deny');
   });
 
+  // Git accepteert afgekorte long options (--forc, --force-w, ...) als force-push.
+  const abbreviated = [
+    { name: 'afgekort --forc', command: 'git push --forc origin feat' },
+    { name: 'afgekort --force-w', command: 'git push --force-w origin feat' },
+    { name: 'afgekort --force-wi=ref:sha', command: 'git push --force-wi=main:abc origin feat' },
+    { name: 'afgekort --force-i', command: 'git push --force-i origin feat' },
+  ];
+
+  test.each(abbreviated)('hoofdsessie: $name → deny', ({ command }) => {
+    expect(verdict(bash(command))).toBe('deny');
+  });
+
+  test.each(abbreviated)('developer: $name → deny', ({ command }) => {
+    expect(verdict(bash(command, 'developer'))).toBe('deny');
+  });
+
+  test('regressie hoofdsessie mag: --follow-tags is geen force', () => {
+    expect(verdict(bash('git push --follow-tags origin feat'))).toBe('allow');
+  });
+
+  // Regressie: samengestelde vormen die de parser al ziet; moeten deny blijven.
+  test.each([
+    { name: 'add && push -f', command: 'git add . && git push -f origin feat' },
+    { name: 'subshell push --force', command: '(git push --force origin feat)' },
+    { name: 'env X=1 git push --force', command: 'env X=1 git push --force origin feat' },
+    { name: 'git -C sub push --force', command: 'git -C sub push --force origin feat' },
+    { name: 'command gh pr merge', command: 'command gh pr merge 1' },
+  ])('regressie hoofdsessie: $name → deny', ({ command }) => {
+    expect(verdict(bash(command))).toBe('deny');
+  });
+
   // Regressie: slaagt ook op de oude code; deze vormen moeten voor de hoofdsessie door blijven.
   test.each([
     { name: 'git push origin HEAD:feat', command: 'git push origin HEAD:feat' },
