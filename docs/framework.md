@@ -273,14 +273,18 @@ volgende vrije migratie- en ADR-nummer), niet met wat in proza staat.
 5. **Reviewer-agent** met schone context controleert `docs/dod.md`: correctheid, duplicatie, spec-afwijking en testinhoud per criterium,
    en of de doc-wijziging in de PR zit (raakt de diff gedrag, API of conventies; zo ja, ontbreekt de doc, dan is dat een bevinding),
    elke blokkerende bevinding met bestand:regel en een pad van invoer naar fout. Stijl is werk van de lint.
-6. **Eigenaar** reviewt en merget.
+   De review draait op de lokale branch (`git diff origin/main...HEAD`), direct nadat de developer groen is en vóór push en PR;
+   de bevindingen zijn verwerkt voordat er opgeleverd wordt (ADR 0025).
+6. **Opleveren** (alleen de hoofdsessie, pas na stap 5): featurebranch pushen, PR openen, CI-lus, conflicten via `git merge origin/main`,
+   eindmelding. Mergen, goedkeuren, labels en check-statussen blijven van de eigenaar (ADR 0025 punt 1; de rolhek-uitwerking volgt in WS-04).
+7. **Eigenaar** reviewt en merget.
 
 **Docs horen bij de wijziging**: de developer werkt bij elke wijziging die gedrag, API, configuratie of conventies raakt de relevante doc
 mee, in dezelfde commit en PR (kort, met `bestand:regel`-verwijzingen, zonder code te kopiëren). Spec naar `gebouwd`, roadmap-vinkje en ADR-status
 horen daar ook bij, met de goedkeuring van de eigenaar waar het beschermde paden zijn. `check:docs-drift` waarschuwt in CI (geen blokkade) als `src/`
 wijzigt zonder `docs/` of `CHANGELOG.md`; er is geen docs-stap na de merge.
 
-Licht pad: geen migratie, route of permissie → plan, bouwen, review.
+Licht pad: geen migratie, route of permissie → plan, bouwen, review, opleveren.
 
 CI zet gewijzigde bestaande tests als lijst in de PR.
 
