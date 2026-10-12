@@ -1,6 +1,6 @@
 # 0025 — Werkstraat tot aan de merge en modelkeuze per spec
 
-Status: voorgesteld
+Status: goedgekeurd 
 Vervangt 0023 punt 7.
 Wijzigt 0009 (punt 4 hieronder).
 
