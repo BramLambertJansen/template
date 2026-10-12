@@ -25,3 +25,5 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 ### Bij een update
 
 De template heeft nog geen releaseversies. Controleer bij een update de gewijzigde migraties, architectuurbesluiten en instellingen. Een volledige upgradecontrole staat op de roadmap.
+
+- **ADR 0025 (voorgesteld): werkstraat tot de merge en modelkeuze per spec.** Wat verandert voor een app: nog niets. Alleen besluittekst; rails, hooks, settings en skills volgen in aparte PR's, elk met een eigen notitie. Wat de eigenaar moet doen: niets bij deze update. Conflicten: geen bij app-ADR's vanaf `0100` (ADR 0006); `docs/adr/0009-…` kreeg één regel, en die geeft alleen een conflict als de app die ADR zelf wijzigde.
