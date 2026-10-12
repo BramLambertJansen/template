@@ -168,7 +168,7 @@ CREATE FUNCTION app.set_account_blocked(p_user_id text, p_blocked boolean) RETUR
       return;
     end if;
     perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtext('public.user_roles:last_admin'));
-    update better_auth."user" set blocked_at = pg_catalog.now() where id = p_user_id;
+    update better_auth."user" set blocked_at = pg_catalog.now() where id = p_user_id and blocked_at is null;
     if not exists (
       select 1
       from public.user_roles r
@@ -197,7 +197,7 @@ CREATE FUNCTION app.user_roles_keep_one_admin() RETURNS trigger
     AS $$
   begin
     perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtext('public.user_roles:last_admin'));
-    if old.role = 'admin' and not exists (
+    if old.role = 'admin' and (tg_op = 'DELETE' or new.role <> 'admin') and not exists (
       select 1
       from public.user_roles r
       join better_auth."user" u on u.id = r.user_id
