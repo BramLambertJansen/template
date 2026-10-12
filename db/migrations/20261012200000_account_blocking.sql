@@ -14,13 +14,13 @@ reset search_path;
 grant select (blocked_at), update (blocked_at) on better_auth."user" to app_definer;
 
 -- Besluit 4: een telbare admin heeft een credential-account en is niet geblokkeerd. Triggerfunctie en trigger blijven
--- (eigenaar, search_path); na elke wijziging van een adminrij moet er nog een telbare admin zijn.
+-- (eigenaar, search_path); bij degradatie of verwijdering van een adminrij (niet bij admin naar admin, zoals de upsert van admin:create) moet er nog een telbare admin zijn.
 create or replace function app.user_roles_keep_one_admin() returns trigger
   language plpgsql volatile security definer set search_path = ''
   as $$
   begin
     perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtext('public.user_roles:last_admin'));
-    if old.role = 'admin' and not exists (
+    if old.role = 'admin' and (tg_op = 'DELETE' or new.role <> 'admin') and not exists (
       select 1
       from public.user_roles r
       join better_auth."user" u on u.id = r.user_id
@@ -66,7 +66,7 @@ create function app.set_account_blocked(p_user_id text, p_blocked boolean) retur
       return;
     end if;
     perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtext('public.user_roles:last_admin'));
-    update better_auth."user" set blocked_at = pg_catalog.now() where id = p_user_id;
+    update better_auth."user" set blocked_at = pg_catalog.now() where id = p_user_id and blocked_at is null;
     if not exists (
       select 1
       from public.user_roles r
