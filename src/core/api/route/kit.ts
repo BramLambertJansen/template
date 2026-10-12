@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 import type { CanActor, Decision, Permissions, Role, SessionStrength } from '../../shared/can.ts';
-import type { AuditAction, AuditActions, AuditDetails } from '../../shared/audit.ts';
+import type { AuditActions, AuditFn } from '../../shared/audit.ts';
 import type { Contract, Method } from '../../shared/contract.ts';
 import type { UserId } from '../../shared/ids.ts';
 import type { Tx } from '../db/types.ts';
@@ -20,12 +20,7 @@ export interface RouteActor {
   readonly email: string;
 }
 
-// Een auditregel in de transactie van de route (ADR 0021): alleen acties die de app met defineAuditActions registreerde.
-export type AuditFn<Audit extends AuditActions = AuditActions> = <A extends AuditAction<Audit>>(
-  action: A,
-  targetId: string,
-  details: AuditDetails<Audit, A>,
-) => Promise<void>;
+export type { AuditFn };
 
 // services: wat de app in createApp meegeeft (bijv. uitnodigen via Better Auth); getypt via createRouteKit<…, Services>.
 export interface RouteContext<Input, Services = unknown, Audit extends AuditActions = AuditActions> {
@@ -42,6 +37,8 @@ export interface RouteDef<C extends Contract = Contract, Services = unknown> {
   readonly [ROUTE]: true;
   readonly contract: C;
   readonly check: (actor: CanActor) => Decision;
+  // De auditacties van de app waarmee de route gemaakt is; createApp bouwt er ctx.audit mee.
+  readonly audit: AuditActions;
   readonly handler: (
     ctx: RouteContext<z.output<C['input']>, Services>,
   ) => z.input<C['output']> | Promise<z.input<C['output']>>;
@@ -64,6 +61,7 @@ export function createRouteKit<
       [ROUTE]: true,
       contract,
       check: (actor) => config.permissions.check(actor, contract.permission),
+      audit: config.audit,
       handler,
     }),
   };

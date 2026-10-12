@@ -18,6 +18,7 @@ import { z } from 'zod';
 import { ROLES, type Role } from '../../shared/can.ts';
 import { rateLimitCategory, type Contract } from '../../shared/contract.ts';
 import { requestLog, timeDatabase, type RequestLog } from '../obs/request-log.ts';
+import { createAuditFn } from '../db/audit.ts';
 import { isRouteDef, type RouteDef } from '../route/kit.ts';
 import { csrf } from './csrf.ts';
 import type { Readiness } from './readiness.ts';
@@ -114,8 +115,7 @@ function routeHandler<Services>(
             actor: { ...session, role },
             tx,
             services,
-            // Contractstub (ADR 0021): de echte auditregel volgt met deel C.
-            audit: () => Promise.reject(new Error('niet geïmplementeerd')),
+            audit: createAuditFn(tx, route.audit),
             headers: c.req.raw.headers,
           });
           // Een output die niet bij het contract past, is een bug: INTERNAL_ERROR, nooit de data.

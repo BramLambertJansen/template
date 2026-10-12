@@ -4,7 +4,7 @@ import type { Pool, PoolClient } from 'pg';
 import type { AuthGateway, SessionInfo } from '../auth/auth.ts';
 import { translateDatabaseError } from '../errors.ts';
 import type { Actor, ActorRole, SessionStrength, Tx, WithUserOptions } from './types.ts';
-import { checkActor, consumeRateLimit, createWithUser, enterActor, rateLimited } from './with-user.ts';
+import { checkActor, checkRequestId, consumeRateLimit, createWithUser, enterActor, rateLimited } from './with-user.ts';
 import { UserId } from '../../shared/ids.ts';
 
 // Testkit (framework §4, ADR 0012): één transactie per test die aan het eind terugdraait, een savepoint per withUser-aanroep.
@@ -42,7 +42,9 @@ export interface TestDb {
 // Na een release blijven SET LOCAL en set_config(…, true) tot het eind van de buitenste transactie: terugzetten.
 async function leaveActor(client: PoolClient): Promise<void> {
   await client.query('reset role');
-  await client.query("select set_config('app.user_id', '', true), set_config('app.session_strength', '', true)");
+  await client.query(
+    "select set_config('app.user_id', '', true), set_config('app.session_strength', '', true), set_config('app.request_id', '', true)",
+  );
 }
 
 function testWithUser(client: PoolClient): TestWithUser {
@@ -65,16 +67,17 @@ function testWithUser(client: PoolClient): TestWithUser {
     }
   };
   return async (actor, work, options = {}) => {
+    const { rateLimit, requestId = randomUUID() } = options;
     checkActor(actor);
-    const { rateLimit } = options;
+    checkRequestId(requestId);
     if (rateLimit !== undefined) {
       const retryAfter = await inSavepoint(async () => {
-        await enterActor(client, actor);
+        await enterActor(client, actor, requestId);
         return consumeRateLimit(client, rateLimit);
       });
       if (retryAfter > 0) throw rateLimited(retryAfter);
     }
-    return inSavepoint(async () => work(drizzle({ client }), await enterActor(client, actor)));
+    return inSavepoint(async () => work(drizzle({ client }), await enterActor(client, actor, requestId)));
   };
 }
 
