@@ -122,11 +122,16 @@ export const reinviteRoute = defineRoute(reinviteContract, async ({ input, servi
   return null;
 });
 
-// Contractstap (framework §8, stap 2): 501 tot de developer bouwt (ADR 0026).
-export const blockRoute = defineRoute(blockContract, () => {
-  throw new AppError('NOT_IMPLEMENTED');
+// Blokkeren (ADR 0026, besluit 7): de functie in de transactie van de admin (NOT_FOUND, OWN_ACCOUNT, ACCOUNT_INVITED en
+// LAST_ADMIN komen als P0001 uit de database), daarna de sessies opruimen. Core geeft een handler geen hook na de commit,
+// dus dat opruimen draait vóór de commit (afwijking van besluit 7); faalt het, dan weigert getSession de sessies toch.
+export const blockRoute = defineRoute(blockContract, async ({ input, tx, services }) => {
+  await tx.execute(sql`select app.set_account_blocked(${input.id}, true)`);
+  await services.sessions.revokeAll(input.id);
+  return null;
 });
 
-export const unblockRoute = defineRoute(unblockContract, () => {
-  throw new AppError('NOT_IMPLEMENTED');
+export const unblockRoute = defineRoute(unblockContract, async ({ input, tx }) => {
+  await tx.execute(sql`select app.set_account_blocked(${input.id}, false)`);
+  return null;
 });

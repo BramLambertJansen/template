@@ -54,6 +54,17 @@ export const copy = {
     roles: roleLabels,
     statuses: { actief: 'Actief', uitgenodigd: 'Uitgenodigd', geblokkeerd: 'Geblokkeerd' },
     reinvite: 'Opnieuw uitnodigen',
+    // Spec accountbeheer-uitbreiding: menu per rij en de blokkeerdialoog.
+    rowActions: (naam: string) => `Acties voor ${naam}`,
+    block: 'Blokkeren',
+    unblock: 'Deblokkeren',
+    blockDialog: {
+      title: (naam: string) => `${naam} blokkeren?`,
+      description: (naam: string) =>
+        `${naam} wordt direct overal uitgelogd en kan niet meer inloggen tot je het account deblokkeert.`,
+    },
+    blocked: (naam: string) => `${naam} is geblokkeerd.`,
+    unblocked: (naam: string) => `${naam} is gedeblokkeerd.`,
     invite: 'Account uitnodigen',
     empty: 'Nog geen accounts.',
     more: 'Meer laden',
