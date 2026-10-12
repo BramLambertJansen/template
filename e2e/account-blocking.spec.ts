@@ -50,7 +50,7 @@ test('AC-11 en AC-12: blokkeren met bevestiging, de user is uitgelogd en ziet de
   await expect(page.getByRole('menuitem', { name: 'Deblokkeren' })).toHaveCount(0);
   await page.getByRole('menuitem', { name: 'Blokkeren' }).click();
 
-  const dialog = page.getByRole('dialog', { name: 'Bea Blokkade blokkeren?' });
+  const dialog = page.getByRole('alertdialog', { name: 'Bea Blokkade blokkeren?' });
   await expect(dialog).toContainText(
     'Bea Blokkade wordt direct overal uitgelogd en kan niet meer inloggen tot je het account deblokkeert.',
   );
@@ -72,7 +72,7 @@ test('AC-11 en AC-12: blokkeren met bevestiging, de user is uitgelogd en ziet de
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.getByRole('menuitem', { name: 'Deblokkeren' }).click();
   await expect(page.getByRole('status')).toHaveText('Bea Blokkade is gedeblokkeerd.');
-  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
   await expect(row).toContainText('Actief');
 
   await signIn(userPage, user);
@@ -89,11 +89,11 @@ test('AC-11: annuleren in de dialoog blokkeert niet', async ({ page }) => {
   await row.getByRole('button', { name: 'Acties voor Cor Annuleer' }).click();
   await page.getByRole('menuitem', { name: 'Blokkeren' }).click();
   await page
-    .getByRole('dialog', { name: 'Cor Annuleer blokkeren?' })
+    .getByRole('alertdialog', { name: 'Cor Annuleer blokkeren?' })
     .getByRole('button', { name: 'Annuleren' })
     .click();
 
-  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
   await expect(row).toContainText('Actief');
 });
 
