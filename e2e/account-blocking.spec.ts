@@ -47,8 +47,8 @@ test('AC-11 en AC-12: blokkeren met bevestiging, de user is uitgelogd en ziet de
   const row = page.getByRole('row').filter({ hasText: user.email });
   await expect(row).toContainText('Actief');
   await row.getByRole('button', { name: 'Acties voor Bea Blokkade' }).click();
-  await expect(page.getByRole('menuitem', { name: 'Deblokkeren' })).toHaveCount(0);
-  await page.getByRole('menuitem', { name: 'Blokkeren' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Deblokkeren', exact: true })).toHaveCount(0);
+  await page.getByRole('menuitem', { name: 'Blokkeren', exact: true }).click();
 
   const dialog = page.getByRole('alertdialog', { name: 'Bea Blokkade blokkeren?' });
   await expect(dialog).toContainText(
@@ -67,10 +67,10 @@ test('AC-11 en AC-12: blokkeren met bevestiging, de user is uitgelogd en ziet de
   await expect(userPage.getByRole('alert')).toHaveText('E-mailadres of wachtwoord klopt niet.');
 
   await row.getByRole('button', { name: 'Acties voor Bea Blokkade' }).click();
-  await expect(page.getByRole('menuitem', { name: 'Blokkeren' })).toHaveCount(0);
+  await expect(page.getByRole('menuitem', { name: 'Blokkeren', exact: true })).toHaveCount(0);
   await axeAtBothWidths(page);
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.getByRole('menuitem', { name: 'Deblokkeren' }).click();
+  await page.getByRole('menuitem', { name: 'Deblokkeren', exact: true }).click();
   await expect(page.getByRole('status')).toHaveText('Bea Blokkade is gedeblokkeerd.');
   await expect(page.getByRole('alertdialog')).toHaveCount(0);
   await expect(row).toContainText('Actief');
@@ -87,7 +87,7 @@ test('AC-11: annuleren in de dialoog blokkeert niet', async ({ page }) => {
   await page.goto('/admin/accounts');
   const row = page.getByRole('row').filter({ hasText: user.email });
   await row.getByRole('button', { name: 'Acties voor Cor Annuleer' }).click();
-  await page.getByRole('menuitem', { name: 'Blokkeren' }).click();
+  await page.getByRole('menuitem', { name: 'Blokkeren', exact: true }).click();
   await page
     .getByRole('alertdialog', { name: 'Cor Annuleer blokkeren?' })
     .getByRole('button', { name: 'Annuleren' })

@@ -105,9 +105,10 @@ describe('blokkeren (AC-11)', () => {
     const response = await t.call(admin.browser, BLOCK(user.userId), {});
 
     expect([response.status, await json(response)]).toStrictEqual([200, null]);
+    // Direct na het blokkeren, vóór er een request van de user is: alleen services.sessions.revokeAll kan dit hebben gedaan.
+    expect(await t.sessionsOf(user.userId)).toHaveLength(0);
     expect((await user.browser.get('/api/me')).status).toBe(401);
     expect((await second.get('/api/me')).status).toBe(401);
-    expect(await t.sessionsOf(user.userId)).toHaveLength(0);
     expect(await statusOf(admin.browser, user.email)).toBe('geblokkeerd');
   });
 

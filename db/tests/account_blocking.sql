@@ -5,7 +5,7 @@
 -- fout), zodat een ontbrekende migratie als falende assert verschijnt en niet als afgebroken script.
 begin;
 set search_path = tap, public;
-select plan(44);
+select plan(47);
 
 insert into better_auth."user" (id, name, email, "emailVerified") values
   ('b-admin', 'Admin Een', 'b-admin@test.local', true),
@@ -190,8 +190,9 @@ reset role;
 select lives_ok($$select app.assign_role('b-admin', 'user')$$, 'user_roles_keep_one_admin: een gedeblokkeerde admin telt weer mee, dus de ander degraderen mag');
 
 -- Nu is b-admin2 de enige actieve admin naast de uitgenodigde admin b-invadmin (AC-24).
--- b-admin is hierboven gedegradeerd en is dus geen MFA-admin meer: de actor wordt b-admin2, anders weigert
--- app.assign_role met 42501 vóór de trigger.
+-- De set_config hieronder geldt alleen voor de set_account_blocked-aanroepen na 'set local role app_authenticated'.
+-- De assign_role- en delete-asserts draaien na 'reset role' als app_migrator, zonder actorcontrole: die toetsen
+-- uitsluitend de trigger. b-admin is hierboven gedegradeerd; b-admin2 is de actor voor de aanroepen daarna.
 do $$ begin perform set_config('app.user_id', 'b-admin2', true); perform set_config('app.session_strength', 'mfa', true); end $$;
 select throws_ok($$select app.assign_role('b-admin2', 'user')$$, 'P0001', 'LAST_ADMIN', 'user_roles_keep_one_admin: degraderen van de enige actieve admin naast een uitgenodigde admin: LAST_ADMIN (AC-24)');
 select throws_ok($$delete from better_auth."user" where id = 'b-admin2'$$, 'P0001', 'LAST_ADMIN', 'user_roles_keep_one_admin: verwijderen van de enige actieve admin naast een uitgenodigde admin: LAST_ADMIN (AC-24)');
@@ -204,6 +205,19 @@ select results_eq(
   $$values (2)$$,
   'user_roles_keep_one_admin: na de geweigerde wijzigingen zijn er nog steeds twee adminrijen (b-admin2 en b-invadmin)'
 );
+
+-- Regressie (B2): een upsert admin -> admin verandert niets en mag dus nooit LAST_ADMIN geven, ook niet als er geen
+-- telbare admin is (zoals scripts/admin-create.mjs bij een tweede 'pnpm admin:create' voor een uitgenodigde admin).
+select lives_ok($$select app.assign_role('b-admin2', 'admin')$$, 'user_roles_keep_one_admin: admin -> admin voor de enige telbare admin mag (geen wijziging)');
+update better_auth."user" set blocked_at = now() where id = 'b-admin2';
+select lives_ok($$select app.assign_role('b-invadmin', 'admin')$$, 'user_roles_keep_one_admin: admin -> admin voor een uitgenodigde admin mag ook als er geen telbare admin is (B2)');
+select results_eq(
+  $$select role::text from public.user_roles where user_id = 'b-invadmin'$$,
+  $$values ('admin')$$,
+  'user_roles_keep_one_admin: na admin -> admin is de rol nog admin'
+);
+update better_auth."user" set blocked_at = null where id = 'b-admin2';
+-- Echte degradatie en verwijderen van de enige telbare admin blijven LAST_ADMIN geven: zie de AC-24-asserts hierboven.
 
 select * from finish();
 rollback;
