@@ -10,7 +10,8 @@ Geen kop weglaten; "n.v.t. — reden" mag. Ontbreekt een antwoord, dan vraagt de
 ## Doel
 
 Een blokkerende check in `gate:fast` meldt elk nieuw of gewijzigd `[x]` in `docs/roadmap.md` zonder verwijzing naar bewijs, en elke spec die
-naar `gebouwd` gaat zonder bewijs of zonder dat de roadmap meewijzigt. Zo wordt de regel uit `docs/framework.md` §8 ("Docs horen bij de
+naar `gebouwd` gaat zonder bewijs; noemt de spec een roadmap-item, dan ook als de roadmap niet meewijzigt. Of een spec zonder roadmap-item
+bewijs nodig heeft, is open (OV-10). Zo wordt de regel uit `docs/framework.md` §8 ("Docs horen bij de
 wijziging") en `docs/dod.md` (Altijd, vierde punt) een check (roadmap stuk 4, item "Roadmap-vinkjes afdwingen").
 
 ## Rollen en wie wat ziet
@@ -50,7 +51,9 @@ Afgewogen:
   - afsplitspunt: hetzelfde patroon als `driftVanRepo` in `scripts/kit/check-docs-drift.mjs` en `check-migrations.mjs`
     (`git merge-base origin/main HEAD`, daarna `git show <afsplitsing>:<pad>`);
   - padherkenning: `looksLikePath` en `pathExists` uit `scripts/kit/check-docs.mjs` (nu niet geëxporteerd; de PR exporteert ze zonder
-    gedragswijziging), plus de aliasstap uit `pathExists` (`#core/…` → `src/core/…`) als eigen export `doelPad`, ook zonder gedragswijziging;
+    gedragswijziging), plus de normalisatie van `target` uit `pathExists` (`scripts/kit/check-docs.mjs:101`–`104`: aliasstap
+    `#core/…` → `src/core/…` én de afsluitende `/` weghalen) als eigen export `doelPad`, die `pathExists` zelf ook gebruikt (geen
+    gedragswijziging);
   - scripts uit `package.json`: `packageScripts` uit `check-docs.mjs` (zelfde export);
   - specstatus: de regex `SPEC_STATUS` uit `check-docs.mjs` (zelfde export);
   - testpaden: `testpaden` uit `.claude/gates.json` (gelezen naast het script, `import.meta.dirname`, zoals `scripts/kit/diff-guard.mjs`) met
@@ -62,7 +65,8 @@ De kern is een pure functie (geen git, geen fs) zodat de fixtures haar direct vo
 `basis` en `head` elk `{ lees(pad): string | null, bestanden: string[] }` zijn en `head` daarnaast `hernoemd: Record<nieuwPad, oudPad>` heeft
 (voor specs, zie "Spec naar `gebouwd`"). Een dunne laag `roadmapVanRepo(root, base)` vult die uit git:
 `head.bestanden` = `git ls-files` met inhoud van schijf (zoals `check-docs`), `basis` via `git show <afsplitsing>:<pad>` en `git ls-tree`,
-`hernoemd` uit `git diff -M --name-status <afsplitsing>` (regels `R…`). `scripts` = `packageScripts(lees('package.json'))` in een
+`hernoemd` uit `git diff -M --name-status -z <afsplitsing>` (NUL-gesplitst, zoals `check-migrations`, `check-docs-drift` en de diff-guard;
+records `R<score>`, oud pad, nieuw pad). `scripts` = `packageScripts(lees('package.json'))` in een
 `try/catch` bij de aanroeper: ontbreekt `package.json` of is het geen geldige JSON (`JSON.parse` gooit), dan is `scripts` leeg.
 
 ### Een item
@@ -97,8 +101,9 @@ Een **vervallen** item (tekst na het vakje begint met `~~`) heeft bewijs als het
 
 ### Bestaan
 
-- Een token **met** `/` (na `doelPad`, dus na de aliasstap) bestaat als een bestand in `head.bestanden` precies dat pad is, of ermee begint
-  gevolgd door `/` (een map). Geen achtervoegsel-match: anders maakt `test/rails/fixtures/roadmap/<geval>/head/db/tests/weg.sql` in de echte
+- Een token **met** `/` wordt eerst genormaliseerd met `doelPad` (aliasstap en afsluitende `/` weg, dus `scripts/kit/templates/` →
+  `scripts/kit/templates`). Het bestaat als een bestand in `head.bestanden` precies dat pad is, of ermee begint gevolgd door `/` (een map,
+  zoals `scripts/kit/templates/` in `docs/roadmap.md:173`–`174`). Geen achtervoegsel-match: anders maakt `test/rails/fixtures/roadmap/<geval>/head/db/tests/weg.sql` in de echte
   repo het niet-bestaande `db/tests/weg.sql` "bestaand".
 - Een token **zonder** `/` (een kale naam als `mise.toml` of `excluded-commands.test.ts`) gebruikt `pathExists` zoals in `check-docs`
   (een bestand in git eindigt erop). Kale namen blijven dus vatbaar voor een match in de fixtures; dat is de bewuste prijs van gelijk gedrag
@@ -120,7 +125,7 @@ volgt geen melding (hernoemen of bewerken van een gebouwde spec is geen overgang
 
 - **R4 — roadmap mee**: noemt de spec een roadmap-item (tekst `roadmap stuk <n>` of `ST-<nn>`, hoofdletterongevoelig), dan moet
   `docs/roadmap.md` in deze PR wijzigen (de tekst in `basis` en `head` verschilt). Een spec zonder zo'n verwijzing is de bewuste uitzondering.
-- **R3 — bewijs** (onder voorbehoud van OV-10): goed als (a) deze PR minstens één nieuw afgevinkt roadmap-item met bewijs bevat, of
+- **R3 — bewijs** (spec mét roadmap-verwijzing: besloten, OV-4; spec zonder roadmap-verwijzing: onder voorbehoud van OV-10): goed als (a) deze PR minstens één nieuw afgevinkt roadmap-item met bewijs bevat, of
   (b) het commentaar achter de status (`status: gebouwd # …`, precedent `docs/specs/design-system.md:2` "gebouwd in PR #51") bewijs bevat
   volgens de tabel hierboven (OV-3). Bij een spec met roadmap-verwijzing gelden R3 en R4 allebei (OV-4).
 - **Bewuste grens van R3(a)**: de check koppelt het nieuwe vinkje niet aan de spec. Elk nieuw afgevinkt item met bewijs in dezelfde PR telt,
@@ -169,7 +174,8 @@ volgt geen melding (hernoemen of bewerken van een gebouwde spec is geen overgang
   geen check is (`` `pnpm dev` ``), dan telt die niet als bewijs: zonder ander bewijs `roadmap:bewijs:<regel>`.
 - **roadmap/AC-5** (onder voorbehoud van OV-9) — Gegeven een nieuw afgevinkt item met bewijs dat een bestand noemt dat in `head` niet bestaat
   (`` `src/api/weg.ts` ``), dan meldt de check `roadmap:pad:<regel>:src/api/weg.ts`; een glob (`` `eslint.config.*` ``), een URL-pad
-  (`` `/design-system` ``) en een bestaande kale naam (`` `mise.toml` ``) geven geen melding.
+  (`` `/design-system` ``), een bestaande kale naam (`` `mise.toml` ``) en een bestaande map met afsluitende `/`
+  (`` `scripts/kit/templates/` ``) geven geen melding.
 - **roadmap/AC-6** — Gegeven een `[x]`-item dat in de basis al zo stond (zelfde vergeleken tekst), ook zonder bewijs, dan meldt de check niets;
   ook niet als alleen de regelafbreking of inspringing verandert, of `[x]` in `[X]`.
 - **roadmap/AC-7** — Gegeven een `[x]`-item waarvan de PR de tekst wijzigt en daarbij geen bewijs heeft, dan meldt de check
@@ -178,15 +184,15 @@ volgt geen melding (hernoemen of bewerken van een gebouwde spec is geen overgang
   staat het bewijs alleen in het volgende item, na een lege regel of na een `**…**`-regel in kolom 0, dan wel.
 - **roadmap/AC-9** — Gegeven een nieuw vervallen item `- [x] ~~…~~ — vervallen: …`, dan is `ADR NNNN` met een bestaand ADR-bestand of een
   PR-nummer bewijs; een niet-bestaand ADR-nummer niet; paden tussen `~~` worden niet op bestaan gecontroleerd.
-- **roadmap/AC-10** (onder voorbehoud van OV-10) — Gegeven een spec die van `goedgekeurd` naar `gebouwd` gaat, zonder roadmap-verwijzing,
+- **roadmap/AC-10** (onder voorbehoud van OV-10: spec zonder roadmap-verwijzing) — Gegeven een spec die van `goedgekeurd` naar `gebouwd` gaat, zonder roadmap-verwijzing,
   zonder nieuw afgevinkt item en zonder bewijs achter de status, dan meldt de check `spec:bewijs:<bestand>`; met
   `status: gebouwd # gebouwd in PR #51` niets.
 - **roadmap/AC-11** — Gegeven een spec die naar `gebouwd` gaat en "roadmap stuk 3f" noemt, terwijl `docs/roadmap.md` niet wijzigt, dan meldt de
   check `spec:roadmap:<bestand>` (ook als het statuscommentaar bewijs heeft); wijzigt de roadmap en vinkt hij een item af met bewijs, dan niets.
-- **roadmap/AC-12** (onder voorbehoud van OV-10) — Gegeven een spec die al `gebouwd` was in de basis (ook na `git mv` naar een nieuwe naam),
+- **roadmap/AC-12** — Gegeven een spec die al `gebouwd` was in de basis (ook na `git mv` naar een nieuwe naam),
   of een nieuwe spec met status `voorstel`, of `_template.md`, dan meldt de check niets over specs.
-- **roadmap/AC-13** (onder voorbehoud van OV-10) — Gegeven een nieuwe spec (niet in de basis, niet hernoemd) die meteen `gebouwd` is, dan geldt
-  hij als overgang naar `gebouwd` (AC-10, AC-11).
+- **roadmap/AC-13** (voor een spec zonder roadmap-verwijzing onder voorbehoud van OV-10) — Gegeven een nieuwe spec (niet in de basis, niet
+  hernoemd) die meteen `gebouwd` is, dan geldt hij als overgang naar `gebouwd` (AC-10, AC-11).
 - **roadmap/AC-14** — Gegeven een branch die achterloopt op `main` (op `main` is na het afsplitsen een item afgevinkt), dan meldt de check dat
   item niet: hij vergelijkt met het afsplitspunt, niet met de kop van `main`.
 - **roadmap/AC-15** — Gegeven het script als commando: zonder meldingen exit 0 en de ✓-tekst op stdout; met een melding exit 1 en
@@ -286,6 +292,7 @@ matcht op `testpaden` (`**/*.test.*`), dus de diff-guard en het rolhek zouden he
 | `vinkje-geen-check` (`pnpm dev`) | AC-4 | `['roadmap:bewijs:<r>']` |
 | `vinkje-pad-bestaat-niet` (`#12` en `src/api/weg.ts`) | AC-5 | `['roadmap:pad:<r>:src/api/weg.ts']` |
 | `vinkje-glob-url-kale-naam` | AC-5 | `[]` |
+| `vinkje-map-met-slash` (`#12` en `scripts/kit/templates/`, head heeft `scripts/kit/templates/a.ts.tpl`) | AC-5 | `[]` |
 | `nieuw-item-afgevinkt` (nieuwe regel, meteen `[x]`, zonder bewijs) | AC-1 | `['roadmap:bewijs:<r>']` |
 | `vinkje-tekst-gewijzigd` (bestaand `[x]`, tekst anders, geen bewijs) | AC-7 | `['roadmap:bewijs:<r>']` |
 | `bewijs-op-vervolgregel` | AC-8 | `[]` |
@@ -330,6 +337,8 @@ Na de bouw: `pnpm gate:fast` groen; uitslag in de PR.
 
 ## Besluiten eigenaar (2026-10-12)
 
+Gegeven in het gesprek met de eigenaar ("volg alle aanbevelingen"); bevestiging door merge van deze PR.
+
 - **OV-1 Blokkeren of waarschuwen — besluit: blokkeren**, exit 1, als snelle gate in `gate:fast` en `scripts/kit/gates.mjs`; een
   onleesbare base is een fout (zoals `check:migrations`). Afweging, voor later:
   - *Voor blokkeren*: de vraag is objectief (staat er een verwijzing, bestaat het pad), anders dan bij `check:docs-drift` ("raakt dit
@@ -363,7 +372,8 @@ Na de bouw: `pnpm gate:fast` groen; uitslag in de PR.
   gaat of tussen `~~` komt. Aanbeveling: **erin**. Een vinkje dat naar een niet-bestaand bestand wijst, is meestal een tikfout of een
   vergeten hernoeming, de controle is goedkoop (zelfde padregels als "Bestaan"), en de uitweg (`~~…~~` of het pad zonder backticks) is
   eenvoudig.
-- **OV-10 R3: bewijs eisen bij een spec naar `gebouwd`, ook zonder roadmap-verwijzing (AC-10, AC-12, AC-13)?** Het roadmap-item vraagt alleen
+- **OV-10 R3 voor een spec zónder roadmap-verwijzing: bewijs eisen bij de overgang naar `gebouwd` (AC-10, AC-13)?** Alleen deze groep is
+  open; voor een spec mét roadmap-verwijzing gelden R3 en R4 al (besluit OV-4). Het roadmap-item vraagt alleen
   dat de roadmap meewijzigt (R4) en zondert specs zonder roadmap-item uit; R3 legt daar een eigen eis op (bewijs in het statuscommentaar of
   een nieuw vinkje met bewijs). Aanbeveling: **erin**. Zonder R3 kan een spec zonder roadmap-item naar `gebouwd` zonder enige verwijzing,
   terwijl `docs/dod.md` (Altijd) `gebouwd` alleen toelaat als de implementatie af is; een PR-nummer of testpad achter de status kost één
