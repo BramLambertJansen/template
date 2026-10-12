@@ -67,7 +67,7 @@ async function transaction<T>(client: PoolClient, begin: string, run: () => Prom
 // rateLimit eerst een eigen korte transactie voor de telling, op dezelfde verbinding (spec rate-limit, OV-2).
 // Databasefouten worden vertaald naar AppError (src/core/api/errors.ts); faalt de telling, dan faalt de request (fail closed).
 export function createWithUser(pool: Pool): WithUser {
-  return async (actor, work, options = {}) => {
+  return async (actor, work, options) => {
     checkActor(actor);
     const client = await pool.connect();
     let destroy = false;

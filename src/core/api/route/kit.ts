@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import type { CanActor, Decision, Permissions, Role, SessionStrength } from '../../shared/can.ts';
+import type { AuditAction, AuditActions, AuditDetails } from '../../shared/audit.ts';
 import type { Contract, Method } from '../../shared/contract.ts';
 import type { UserId } from '../../shared/ids.ts';
 import type { Tx } from '../db/types.ts';
@@ -19,12 +20,20 @@ export interface RouteActor {
   readonly email: string;
 }
 
+// Een auditregel in de transactie van de route (ADR 0021): alleen acties die de app met defineAuditActions registreerde.
+export type AuditFn<Audit extends AuditActions = AuditActions> = <A extends AuditAction<Audit>>(
+  action: A,
+  targetId: string,
+  details: AuditDetails<Audit, A>,
+) => Promise<void>;
+
 // services: wat de app in createApp meegeeft (bijv. uitnodigen via Better Auth); getypt via createRouteKit<…, Services>.
-export interface RouteContext<Input, Services = unknown> {
+export interface RouteContext<Input, Services = unknown, Audit extends AuditActions = AuditActions> {
   readonly input: Input;
   readonly actor: RouteActor;
   readonly tx: Tx;
   readonly services: Services;
+  readonly audit: AuditFn<Audit>;
   // De headers van het verzoek, voor een aanroep van Better Auth namens deze gebruiker (auth.api.* leest de sessie eruit).
   readonly headers: Headers;
 }
@@ -42,13 +51,15 @@ export function isRouteDef(value: unknown): value is RouteDef {
   return typeof value === 'object' && value !== null && ROUTE in value;
 }
 
-export function createRouteKit<Permission extends string, Services = unknown>(config: {
-  permissions: Permissions<Permission>;
-}) {
+export function createRouteKit<
+  Permission extends string,
+  Services = unknown,
+  Audit extends AuditActions = AuditActions,
+>(config: { permissions: Permissions<Permission>; audit: Audit }) {
   return {
     defineRoute: <const M extends Method, const P extends string, I extends z.ZodObject, O extends z.ZodType>(
       contract: Contract<M, P, I, O, Permission>,
-      handler: (ctx: RouteContext<z.output<I>, Services>) => z.input<O> | Promise<z.input<O>>,
+      handler: (ctx: RouteContext<z.output<I>, Services, Audit>) => z.input<O> | Promise<z.input<O>>,
     ): RouteDef<Contract<M, P, I, O, Permission>, Services> => ({
       [ROUTE]: true,
       contract,

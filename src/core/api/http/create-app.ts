@@ -114,12 +114,14 @@ function routeHandler<Services>(
             actor: { ...session, role },
             tx,
             services,
+            // Contractstub (ADR 0021): de echte auditregel volgt met deel C.
+            audit: () => Promise.reject(new Error('niet geïmplementeerd')),
             headers: c.req.raw.headers,
           });
           // Een output die niet bij het contract past, is een bug: INTERNAL_ERROR, nooit de data.
           return contract.output.parse(result);
         },
-        { readOnly: contract.method === 'GET', rateLimit },
+        { readOnly: contract.method === 'GET', rateLimit, requestId: c.get('requestId') },
       ),
     );
     return c.json(output);
