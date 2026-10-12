@@ -53,4 +53,4 @@ geforceerd, geen TRUNCATE/REFERENCES/TRIGGER, `better_auth` dicht, niets voor PU
 als `app_migrator` en wordt alleen in `test/` gemaakt).
 `pnpm db:generate` met `db/schema.snapshot.sql` en `src/api/db/schema.ts` (eigen generator in `scripts/db/`, geen drizzle-kit).
 `pnpm check:secdef` (statisch op de migraties, in `gate:fast`; de functiecatalogus is de runtime-kant in `gate:slow`).
-Nog niet: de snapshot-vergelijking in CI (`gate:slow`) en `check-policies` (roadmap fase 1). Bouw er niet op vooruit.
+`pnpm check:snapshot` (snapshot-vergelijking, in `gate:slow`) en `check-policies` (elke policy een pgTAP-assert op naam, in `pnpm test:db`).
