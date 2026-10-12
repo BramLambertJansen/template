@@ -85,7 +85,8 @@ select results_eq(
   'app.audit_log: RLS aan en geforceerd, eigenaar app_migrator (AC-5)'
 );
 select results_eq(
-  $$select a.attname::text, pg_catalog.format_type(a.atttypid, a.atttypmod), a.attnotnull, a.attidentity::text
+  $$select a.attname::text collate "default", pg_catalog.format_type(a.atttypid, a.atttypmod), a.attnotnull,
+           a.attidentity::text collate "default"
     from pg_catalog.pg_attribute a
     where a.attrelid = to_regclass('app.audit_log') and a.attnum > 0 and not a.attisdropped order by a.attnum$$,
   $$values ('id', 'bigint', true, 'a'), ('at', 'timestamp with time zone', true, ''), ('actor_id', 'text', false, ''),
@@ -94,7 +95,7 @@ select results_eq(
   'app.audit_log: kolommen en types uit de spec (id generated always as identity, actor_id zonder foreign key)'
 );
 select results_eq(
-  $$select a.attname::text,
+  $$select a.attname::text collate "default",
            case a.attname::text
              when 'at' then e ~* '^(pg_catalog\.)?now\(\)$'
              when 'db_role' then e ~* '^session_user$'
@@ -132,7 +133,7 @@ select results_eq(
       ('target_id van 129 tekens', $s$insert into app.audit_log (action, target_id) values ('a.b', repeat('a', 129))$s$),
       ('details een array', $s$insert into app.audit_log (action, details) values ('a.b', '[]'::jsonb)$s$),
       ('details van 2049 bytes', format($s$insert into app.audit_log (action, details) values ('a.b', %L::jsonb)$s$, pg_temp.details_of_size(2049)))
-    ) r (rowtype, stmt) order by r.rowtype$$,
+    ) r (rowtype, stmt) order by r.rowtype collate "C"$$,
   $$values ('action hoofdletter', '23514'), ('action met cijfer', '23514'), ('action zonder punt', '23514'),
            ('details een array', '23514'), ('details van 2049 bytes', '23514'), ('target_id met @', '23514'),
            ('target_id met spatie', '23514'), ('target_id van 129 tekens', '23514'), ('target_type hoofdletter', '23514')$$,
@@ -146,7 +147,7 @@ select results_eq(
   'app.audit_log: details van precies 2048 bytes en target_id van precies 128 tekens slagen (AC-5, AC-16)'
 );
 select results_eq(
-  $$select coalesce(g.rolname, 'PUBLIC')::text, a.privilege_type::text
+  $$select coalesce(g.rolname, 'PUBLIC')::text collate "default", a.privilege_type::text
     from pg_catalog.pg_class c
     cross join lateral pg_catalog.aclexplode(coalesce(c.relacl, pg_catalog.acldefault('r', c.relowner))) a
     left join pg_catalog.pg_roles g on g.oid = a.grantee
@@ -155,7 +156,7 @@ select results_eq(
   'app.audit_log: tabelgrants zijn alleen select voor app_authenticated en app_definer (AC-5)'
 );
 select results_eq(
-  $$select g.rolname::text, a.privilege_type::text, att.attname::text
+  $$select g.rolname::text collate "default", a.privilege_type::text, att.attname::text collate "default"
     from pg_catalog.pg_attribute att
     cross join lateral pg_catalog.aclexplode(att.attacl) a
     left join pg_catalog.pg_roles g on g.oid = a.grantee
@@ -166,14 +167,15 @@ select results_eq(
   'app.audit_log: app_definer mag alleen de kolommen actor_id, action, target_type, target_id, request_id en details invoegen (OV-B2)'
 );
 select results_eq(
-  $$select p.policyname::text, p.cmd::text, p.roles::text
+  $$select p.policyname::text collate "default", p.cmd::text collate "default", p.roles::text collate "default"
     from pg_catalog.pg_policies p where p.schemaname = 'app' and p.tablename = 'audit_log' order by 1$$,
   $$values ('audit_log_definer_insert', 'INSERT', '{app_definer}'), ('audit_log_definer_select', 'SELECT', '{app_definer}'),
            ('audit_log_select_admin', 'SELECT', '{app_authenticated}')$$,
   'app.audit_log: precies drie policies (audit_log_definer_insert, audit_log_definer_select, audit_log_select_admin)'
 );
 select results_eq(
-  $$select t.tgname::text, t.tgtype::integer, t.tgenabled::text, t.tgfoid::regproc::text
+  $$select t.tgname::text collate "default", t.tgtype::integer, t.tgenabled::text collate "default",
+           t.tgfoid::regproc::text collate "default"
     from pg_catalog.pg_trigger t where t.tgrelid = to_regclass('app.audit_log') and not t.tgisinternal order by 1$$,
   $$values ('audit_log_no_delete', 10, 'O', 'app.audit_log_guard'), ('audit_log_no_truncate', 34, 'O', 'app.audit_log_guard'),
            ('audit_log_no_update', 18, 'O', 'app.audit_log_guard')$$,
@@ -208,7 +210,7 @@ select results_eq(
            pg_catalog.has_function_privilege(r.rolname, to_regprocedure(f.functie), 'execute')
     from (values ('app.audit(text, text, text, jsonb)'), ('app.audit_account_action(text, text)'), ('app.request_id()')) f (functie)
     cross join (values ('app_authenticated'), ('app_definer'), ('api_user'), ('auth_service'), ('public')) r (rolname)
-    order by 1 collate "C", 2 collate "C"$$,
+    order by f.functie collate "C", r.rolname collate "C"$$,
   $$values ('app.audit(text, text, text, jsonb)', 'api_user', false),
            ('app.audit(text, text, text, jsonb)', 'app_authenticated', true),
            ('app.audit(text, text, text, jsonb)', 'app_definer', true),
@@ -227,7 +229,7 @@ select results_eq(
   'app.audit, app.audit_account_action en app.request_id: execute alleen voor de bedoelde rollen, nooit PUBLIC'
 );
 select results_eq(
-  $$select l.lanname::text, p.provolatile::text, p.prosecdef, p.proowner::regrole::text, p.prorettype::regtype::text
+  $$select l.lanname::text collate "default", p.provolatile::text collate "default", p.prosecdef, p.proowner::regrole::text, p.prorettype::regtype::text
     from pg_catalog.pg_proc p join pg_catalog.pg_language l on l.oid = p.prolang
     where p.oid = to_regprocedure('app.request_id()')$$,
   $$values ('sql', 's', false, 'app_migrator', 'text')$$,
@@ -463,7 +465,7 @@ select results_eq(
       ('target_id van 129 tekens', $s$select app.audit('note.archive', 'note', repeat('a', 129), '{}'::jsonb)$s$),
       ('details geen object', $s$select app.audit('note.archive', 'note', 'n16', '[]'::jsonb)$s$),
       ('details van 2049 bytes', format($s$select app.audit('note.archive', 'note', 'n16', %L::jsonb)$s$, pg_temp.details_of_size(2049)))
-    ) r (omschrijving, stmt) order by 1$$,
+    ) r (omschrijving, stmt) order by r.omschrijving collate "C"$$,
   $$values ('action met core.-voorvoegsel', '22023'), ('details geen object', '23514'), ('details van 2049 bytes', '23514'),
            ('target_id met @', '23514'), ('target_id met spatie', '23514'), ('target_id van 129 tekens', '23514'),
            ('target_type account', '22023')$$,

@@ -156,8 +156,8 @@ create function pg_temp.audit_log_afwijkingen() returns setof text language sql 
   cross join lateral pg_catalog.aclexplode(att.attacl) a
   left join pg_catalog.pg_roles g on g.oid = a.grantee
   where att.attacl is not null
-    and not (g.rolname = 'app_definer' and a.privilege_type = 'INSERT'
-             and att.attname in ('actor_id', 'action', 'target_type', 'target_id', 'request_id', 'details'))
+    and not coalesce(g.rolname = 'app_definer' and a.privilege_type = 'INSERT'
+                     and att.attname in ('actor_id', 'action', 'target_type', 'target_id', 'request_id', 'details'), false)
   union all
   select format('guard-trigger %s staat niet aan', v.naam) from t
   cross join (values ('audit_log_no_update'), ('audit_log_no_delete'), ('audit_log_no_truncate')) v (naam)
