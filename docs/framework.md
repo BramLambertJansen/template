@@ -274,9 +274,11 @@ volgende vrije migratie- en ADR-nummer), niet met wat in proza staat.
    en of de doc-wijziging in de PR zit (raakt de diff gedrag, API of conventies; zo ja, ontbreekt de doc, dan is dat een bevinding),
    elke blokkerende bevinding met bestand:regel en een pad van invoer naar fout. Stijl is werk van de lint.
    De review draait op de lokale branch (`git diff origin/main...HEAD`), direct nadat de developer groen is en vóór push en PR;
-   de bevindingen zijn verwerkt voordat er opgeleverd wordt (ADR 0025).
+   de bevindingen zijn verwerkt voordat er opgeleverd wordt (ADR 0025). Wijzigt de code daarna nog (CI-fixes, conflicten),
+   dan reviewt de reviewer die wijziging opnieuw (`git diff <reviewer-sha>..HEAD`).
 6. **Opleveren** (alleen de hoofdsessie, pas na stap 5): featurebranch pushen, PR openen, CI-lus, conflicten via `git merge origin/main`,
-   eindmelding. Mergen, goedkeuren, labels en check-statussen blijven van de eigenaar (ADR 0025 punt 1; de rolhek-uitwerking volgt in WS-04).
+   eindmelding. Mergen, goedkeuren, labels, check-statussen en statusovergangen blijven van de eigenaar; push naar `main` en force-push
+   blijven verboden (ADR 0025 punt 1). Het rolhek dwingt die grenzen al af (tabel hieronder, WS-04a); de skill `opleveren` volgt in WS-04b.
 7. **Eigenaar** reviewt en merget.
 
 **Docs horen bij de wijziging**: de developer werkt bij elke wijziging die gedrag, API, configuratie of conventies raakt de relevante doc
