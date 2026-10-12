@@ -51,7 +51,8 @@ function AccountsTable({
 }) {
   const reinvite = useReinvite();
   const unblock = useUnblock();
-  const me = useMe();
+  // Zolang de eigen id onbekend is, bieden we geen menu aan: de eigen rij mag nooit even "Blokkeren" tonen.
+  const myId = useMe().data?.id;
   const [blocking, setBlocking] = useState<Account | null>(null);
   const errorText = useErrorText();
   const fail = (error: unknown) => {
@@ -107,9 +108,10 @@ function AccountsTable({
                   >
                     {copy.accounts.reinvite}
                   </Button>
-                ) : (
-                  <RowMenu account={account} items={itemsFor(account, account.id === me.data?.id, handlers)} />
-                )}
+                ) : null}
+                {account.status !== 'uitgenodigd' && myId !== undefined ? (
+                  <RowMenu account={account} items={itemsFor(account, account.id === myId, handlers)} />
+                ) : null}
               </TableCell>
             </TableRow>
           ))}
