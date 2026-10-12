@@ -39,6 +39,8 @@ export function __Naam__Page() {
   // De router laat ongeldige sleutels uit de URL staan: opnieuw schonen vóór gebruik.
   const route = __naamCamel__Search.web.parse(useSearch({ from: '/_app/__naam__' }));
   const query = use__Naam__(route);
+  // Voegt de app filters toe, breid dan deze voorwaarde uit, zoals `filtered` in src/web/features/accounts/accounts-page.tsx.
+  const filtered = route.q !== undefined;
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={copy.__naamCamel__.title} />
@@ -55,43 +57,43 @@ export function __Naam__Page() {
       <AsyncView
         query={query}
         isEmpty={(data) => data.pages.every((page) => page.items.length === 0)}
-        emptyText={route.q === undefined ? copy.__naamCamel__.empty : copy.__naamCamel__.emptyFiltered}
+        emptyText={filtered ? copy.__naamCamel__.emptyFiltered : copy.__naamCamel__.empty}
       >
         {(data) => {
           const rows = uniqueById(data.pages.flatMap((page) => page.items));
           return (
-          <div className="flex min-w-0 flex-col gap-4">
-            <p aria-live="polite" className="text-sm text-muted-foreground">
-              {query.isPlaceholderData
-                ? copy.__naamCamel__.loading
-                : copy.__naamCamel__.shown(rows.length, query.hasNextPage)}
-            </p>
-            <Table label={copy.__naamCamel__.title} aria-busy={query.isPlaceholderData}>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{copy.__naamCamel__.created}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{format.dateTime(item.aangemaakt)}</TableCell>
+            <div className="flex min-w-0 flex-col gap-4">
+              <p aria-live="polite" className="text-sm text-muted-foreground">
+                {query.isPlaceholderData
+                  ? copy.__naamCamel__.loading
+                  : copy.__naamCamel__.shown(rows.length, query.hasNextPage)}
+              </p>
+              <Table label={copy.__naamCamel__.title} aria-busy={query.isPlaceholderData}>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{copy.__naamCamel__.created}</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            {query.hasNextPage ? (
-              <div>
-                <Button
-                  variant="outline"
-                  disabled={query.isFetchingNextPage}
-                  onClick={() => void query.fetchNextPage()}
-                >
-                  {copy.__naamCamel__.more}
-                </Button>
-              </div>
-            ) : null}
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{format.dateTime(item.aangemaakt)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {query.hasNextPage ? (
+                <div>
+                  <Button
+                    variant="outline"
+                    disabled={query.isFetchingNextPage}
+                    onClick={() => void query.fetchNextPage()}
+                  >
+                    {copy.__naamCamel__.more}
+                  </Button>
+                </div>
+              ) : null}
+            </div>
           );
         }}
       </AsyncView>
