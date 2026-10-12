@@ -125,6 +125,7 @@ export const reinviteRoute = defineRoute(reinviteContract, async ({ input, servi
 // Blokkeren (ADR 0026, besluit 7): de functie in de transactie van de admin (NOT_FOUND, OWN_ACCOUNT, ACCOUNT_INVITED en
 // LAST_ADMIN komen als P0001 uit de database), daarna de sessies opruimen. Core geeft een handler geen hook na de commit,
 // dus dat opruimen draait vóór de commit (afwijking van besluit 7); faalt het, dan weigert getSession de sessies toch.
+// `/api/auth/*` loopt niet via getSession: daar blijft een geblokkeerde sessie bruikbaar tot het opruimen gelukt is.
 export const blockRoute = defineRoute(blockContract, async ({ input, tx, services }) => {
   await tx.execute(sql`select app.set_account_blocked(${input.id}, true)`);
   await services.sessions.revokeAll(input.id);
