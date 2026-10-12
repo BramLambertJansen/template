@@ -65,6 +65,19 @@ PR's en los ze op zoals WS-04 punt 1.7 beschrijft.
 Tot WS-04 gemergd is, doet de agent bij deze PR's zelf wat WS-04 beschrijft, voor zover het al mag: pushen naar een featurebranch
 en `gh pr create` laat het rolhek nu al toe (alleen `main`, force, merge, review, labels en statussen zijn dicht).
 
+**Aanbevolen uitvoeringsvolgorde (2026-10-12, na de controle in §8).** Binnen de afhankelijkheden hierboven: eerst wat concrete
+fouten of gaten dicht, daarna wat alleen bespaart.
+0. **Omgeving (eigenaar, vóór fase B).** Toolchain en hooks (`scripts/bootstrap.sh`, `pnpm install`), anders draaien `gate:fast`,
+   pre-commit en pre-push niet (§8 punt 8); een `gh`-login met pushrecht op deze repo (§8 punt 7); in de ruleset
+   `codeql (javascript-typescript)` erbij (WS-00). Zonder deze stap is doel 1 onhaalbaar, welk pakket ook af is.
+1. **WS-03 en WS-06.** Klein en concreet: `excludedCommands` noemt scripts die niet bestaan en mist er twee die de migratieskill
+   vraagt; MCP-tools met schrijfrechten (Supabase, Vercel) zijn in een sessie beschikbaar en het rolhek ziet ze niet.
+2. **WS-02.** Dicht een echt gat, maar meer paden vragen akkoord van de eigenaar: meer prompts en gate-PR's.
+3. **WS-04**, in twee PR's: (a) rolhek, runner en migratiereferentie; (b) skill en docs, beproefd op één echte PR.
+4. **WS-05** alleen met meting (`pnpm tokens` uit ADR 0023 bestaat nog niet, dus er is geen nulmeting), of bewust aanvaard als
+   ongemeten besparing. W-4 (hoofdsessie op Sonnet) is niet afdwingbaar.
+5. **Daarna ST-09** (proef-app), niet verder uitbreiden in de template: de roadmap zet de proef-app vóór verdere uitbreiding.
+
 ---
 
 ## WS-00 — Eigenaar: GitHub dicht en diagnose (geen code)
