@@ -447,7 +447,7 @@ src/core/     van de template (ADR 0008); een app wijzigt dit niet
   web/        ui/ (basiskit, AsyncView, Form) styles/ (tokens) lib/ (api-client.ts, auth.ts, env.ts, format.ts; report-error.ts volgt in fase 2) copy/ (basisteksten)
   shared/     can.ts (engine) errors.ts (basiscodes) limits.ts (harde grenzen) ids.ts assert unsafeCast Cents cursor
 src/web/      routes/ features/ ui/ (eigen componenten + barrel) styles/theme.css lib/ (api.ts, env.ts) copy/ dev/
-src/api/      app.ts kit.ts server.ts routes/ domain/ db/ (gegenereerd: schema, ids.ts)
+src/api/      app.ts kit.ts server.ts env.ts (zodra de app eigen variabelen heeft) routes/ domain/ db/ (gegenereerd: schema, ids.ts)
 src/shared/   schema's, permissions.ts, errors.ts, limits.ts, ids.ts (app-uitbreidingen)
 deploy/<host>/ adapter per gekozen host (per app)
 db/           docker/ (Postgres+pgTAP) init/ (rollen, alleen lokaal) migrations/ (dbmate) tests/ (pgTAP) schema.snapshot.sql
