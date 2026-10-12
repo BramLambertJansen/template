@@ -57,6 +57,8 @@ export const DISABLED_PATHS: readonly string[] = [
   '/revoke-session',
   '/revoke-sessions',
   '/revoke-other-sessions',
+  // Account zelf verwijderen blijft buiten scope (spec eigen-account); verwijderen is een admin-actie (ADR 0022).
+  '/delete-user',
   // Anoniem; zou elk account met emailVerified = false (elke uitnodiging) mailen zodra sendVerificationEmail bestaat.
   '/send-verification-email',
   // GET; bevestigen gaat via de eigen POST-route (framework §6: een GET-link bevestigt met een POST).
