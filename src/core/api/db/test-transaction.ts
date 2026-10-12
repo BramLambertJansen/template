@@ -84,7 +84,7 @@ function testWithUser(client: PoolClient): TestWithUser {
 // De echte withUser op een eigen pool (voor lek- en racetests), met een gegenereerde requestId zodat een test hem niet hoeft te geven.
 export function createTestWithUser(pool: Pool): TestWithUser {
   const withUser = createWithUser(pool);
-  return (actor, work, options) => withUser(actor, work, { requestId: randomUUID(), ...options });
+  return (actor, work, options) => withUser(actor, work, { ...options, requestId: options?.requestId ?? randomUUID() });
 }
 
 function gatewayFor(session: SessionInfo): AuthGateway {

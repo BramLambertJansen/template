@@ -131,7 +131,7 @@ select results_eq(
       ('target_id met spatie', $s$insert into app.audit_log (action, target_id) values ('a.b', 'a b')$s$),
       ('target_id van 129 tekens', $s$insert into app.audit_log (action, target_id) values ('a.b', repeat('a', 129))$s$),
       ('details een array', $s$insert into app.audit_log (action, details) values ('a.b', '[]'::jsonb)$s$),
-      ('details van 2049 bytes', $s$insert into app.audit_log (action, details) values ('a.b', pg_temp.details_of_size(2049))$s$)
+      ('details van 2049 bytes', format($s$insert into app.audit_log (action, details) values ('a.b', %L::jsonb)$s$, pg_temp.details_of_size(2049)))
     ) r (rowtype, stmt) order by r.rowtype$$,
   $$values ('action hoofdletter', '23514'), ('action met cijfer', '23514'), ('action zonder punt', '23514'),
            ('details een array', '23514'), ('details van 2049 bytes', '23514'), ('target_id met @', '23514'),
@@ -140,7 +140,7 @@ select results_eq(
 );
 select is(octet_length(pg_temp.details_of_size(2048)::text), 2048, 'voorbereiding: details_of_size(2048) is 2048 bytes in tekstvorm');
 select results_eq(
-  $$select left(pg_temp.try_as('app_definer', $s$insert into app.audit_log (action, details) values ('a.b', pg_temp.details_of_size(2048))$s$), 5),
+  $$select left(pg_temp.try_as('app_definer', format($s$insert into app.audit_log (action, details) values ('a.b', %L::jsonb)$s$, pg_temp.details_of_size(2048))), 5),
           left(pg_temp.try_as('app_definer', $s$insert into app.audit_log (action, target_id) values ('a.b', repeat('a', 128))$s$), 5)$$,
   $$values ('00000', '00000')$$,
   'app.audit_log: details van precies 2048 bytes en target_id van precies 128 tekens slagen (AC-5, AC-16)'
@@ -278,7 +278,7 @@ select is(
   'audit_log_definer_insert: app_authenticated (ook een admin met MFA) kan niet invoegen (42501)'
 );
 select is(
-  left(pg_temp.try_as('app_definer', $$insert into app.audit_log (id, action) values (999999, 'a.b')$$), 5),
+  left(pg_temp.try_as('app_definer', $$insert into app.audit_log (id, action) overriding system value values (999999, 'a.b')$$), 5),
   '42501',
   'audit_log_definer_insert: app_definer kiest id niet zelf (kolomgrant, OV-B2)'
 );
@@ -356,7 +356,9 @@ select is(
    from (values ('api_user'), ('auth_service')) r (rolname)
    cross join (values ('select'), ('insert'), ('update'), ('delete'), ('truncate'), ('references'), ('trigger')) p (recht)
    where coalesce(pg_catalog.has_table_privilege(r.rolname, to_regclass('app.audit_log'), p.recht), true)
-      or coalesce(pg_catalog.has_any_column_privilege(r.rolname, to_regclass('app.audit_log'), p.recht), true)),
+      or case when p.recht in ('select', 'insert', 'update', 'references')
+              then coalesce(pg_catalog.has_any_column_privilege(r.rolname, to_regclass('app.audit_log'), p.recht), true)
+              else false end),
   0,
   'api_user en auth_service: geen enkel recht op app.audit_log (AC-9)'
 );
@@ -460,7 +462,7 @@ select results_eq(
       ('target_id met spatie', $s$select app.audit('note.archive', 'note', 'a b', '{}'::jsonb)$s$),
       ('target_id van 129 tekens', $s$select app.audit('note.archive', 'note', repeat('a', 129), '{}'::jsonb)$s$),
       ('details geen object', $s$select app.audit('note.archive', 'note', 'n16', '[]'::jsonb)$s$),
-      ('details van 2049 bytes', $s$select app.audit('note.archive', 'note', 'n16', pg_temp.details_of_size(2049))$s$)
+      ('details van 2049 bytes', format($s$select app.audit('note.archive', 'note', 'n16', %L::jsonb)$s$, pg_temp.details_of_size(2049)))
     ) r (omschrijving, stmt) order by 1$$,
   $$values ('action met core.-voorvoegsel', '22023'), ('details geen object', '23514'), ('details van 2049 bytes', '23514'),
            ('target_id met @', '23514'), ('target_id met spatie', '23514'), ('target_id van 129 tekens', '23514'),
@@ -468,7 +470,7 @@ select results_eq(
   'app.audit: core.-actie en target_type account geven 22023; een ongeldig target_id of details geven 23514 (AC-16)'
 );
 select results_eq(
-  $$select left(pg_temp.try_as('app_authenticated', $s$select app.audit('note.archive', 'note', 'n16', pg_temp.details_of_size(2048))$s$), 5),
+  $$select left(pg_temp.try_as('app_authenticated', format($s$select app.audit('note.archive', 'note', 'n16', %L::jsonb)$s$, pg_temp.details_of_size(2048))), 5),
           left(pg_temp.try_as('app_authenticated', $s$select app.audit('note.archive', 'note', repeat('a', 128), '{}'::jsonb)$s$), 5)$$,
   $$values ('00000', '00000')$$,
   'app.audit: details van precies 2048 bytes en target_id van 128 tekens slagen (AC-16)'
