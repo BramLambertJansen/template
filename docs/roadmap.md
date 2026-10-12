@@ -254,7 +254,7 @@ code uit `pnpm new:resource` haalt `gate:fast`; drie testopdrachten door de hele
 
 - [x] `CODEOWNERS`, PR-template (bestanden; nog niet actief)
 - [ ] Organisatie, GitHub App voor de agent, org-ruleset via custom property, Actions-instellingen
-      Deels gebouwd: `scripts/github-ruleset.sh` met `test/scripts/github-ruleset.test.ts` (#104); of de eigenaar hem draaide, is niet af te leiden uit de repo
+      Deels gebouwd: `scripts/github-ruleset.sh` met `test/scripts/github-ruleset.test.ts` (#104) zet de ruleset van één repo; de org-ruleset via custom property en de GitHub App ontbreken
       (daarna in de ruleset: code-owner-review en 1 goedkeuring aan; private repo's vragen Pro/Team)
 - [ ] `.github/settings/` + `scripts/check-github.mjs` (ook `app_id` van verplichte checks, `enforce_admins`, conversation resolution), `check-spec-approval`
 - [ ] `docs/operations/rails-checklist.md`: instellingen buiten de repo, per stuk afgevinkt met bewijs
@@ -345,7 +345,7 @@ Een bestaand script of ADR bewijst niet dat de bijbehorende capability compleet 
 ### ST-02 — P0: accountbeheer en herstel volledig maken
 
 - [ ] **Aansluiting:** fase 1, stuk 3e; bestaande accountbeheer-specs.
-  **Stand 2026-10-12:** gebouwd: eigen sessies en e-mail wijzigen (#93), naam en wachtwoord (spec `eigen-account`), blokkeren en
+  **Stand 2026-10-12:** gebouwd: eigen sessies en e-mail wijzigen (#93), naam en wachtwoord (spec `eigen-account`, #93), blokkeren en
   deblokkeren (#117). Open: backupcodes, uitnodiging intrekken, admin-resetlink.
   **Werk:** inventariseer per open 3e-item de huidige spec/PR en implementeer de ontbrekende flow:
   blokkeren/deblokkeren, eigen sessies intrekken, TOTP-backupcodes, naam/wachtwoord wijzigen, uitnodiging intrekken,
@@ -419,7 +419,7 @@ Een bestaand script of ADR bewijst niet dat de bijbehorende capability compleet 
 ### ST-07 — P1: herbruikbare schermpatronen en design-system
 
 - [ ] **Aansluiting:** fase 1, stuk 3c/3f, ADR 0015 en componentcatalogus.
-  **Stand 2026-10-12:** gebouwd: lijstpagina-patroon (#111, #113). Open: toasts en focus na een routewissel naar een lazy route.
+  **Stand 2026-10-12:** gebouwd: lijstpagina-patroon (#92, #114; generator #111, #113). Open: toasts en focus na een routewissel naar een lazy route.
   **Werk:** rond lijstpatroon, mutatiefeedback/toasts en lazy-route-focus af. Leg herbruikbare recepten vast voor
   lijst/detail/formulier, empty/loading/error/forbidden, bevestigen en succes/foutfeedback.
   Inventariseer ontbrekende componentvarianten op basis van de proef-app; volg de bestaande tokens en registratielaag.
