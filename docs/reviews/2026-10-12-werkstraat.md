@@ -73,7 +73,8 @@ en `gh pr create` laat het rolhek nu al toe (alleen `main`, force, merge, review
 (roadmap stuk 6, ST-01): geen ruleset, `guard.yml` niet verplicht. Als de agent zelf pusht, moet `main` eerst dicht.
 
 **Werk:**
-1. **Ruleset op `main`** (eigenaar, handwerk; de tussenversie uit `docs/nieuwe-app.md` 6.2 en ADR 0006): alleen via PR, geen force
+1. **Ruleset op `main`** (eigenaar, handwerk, vóór de eerste push van de agent; niet de tussenversie uit `docs/nieuwe-app.md` 6.2,
+   die heeft geen verplichte checks): alleen via PR, geen force
    push, geen delete; verplichte checks met de namen zoals ze op een PR verschijnen: `gate:fast`, `gate:slow`, `secrets`, `image`,
    `check:new-resource`, de CodeQL-jobs (`codeql (…)`) en osv-scanner (framework §10); merge-methoden merge en squash (ADR 0006).
    Nog geen verplichte review: de auteur kan zichzelf niet goedkeuren (ADR 0006, ADR 0017 OV-2). De agent zet dit niet zelf.
@@ -87,7 +88,7 @@ en `gh pr create` laat het rolhek nu al toe (alleen `main`, force, merge, review
 squash) en `required_status_checks` met `gate:fast`, `gate:slow`, `secrets`, `image`, `check:new-resource`, `codeql (actions)` en
 `osv-scanner`, alle zeven met `integration_id` 15368 (GitHub Actions). Afwijkingen van stap 1: `codeql (javascript-typescript)`
 (tweede job uit de matrix in `.github/workflows/codeql.yml:34`) ontbreekt; `required_review_thread_resolution` staat uit, terwijl
-`docs/nieuwe-app.md` 6.2 hem aanzet. Of de ruleset hiermee "staat", bevestigt de eigenaar.
+`docs/nieuwe-app.md` 6.2 hem aanzet. Of de ruleset hiermee "staat", bevestigt de eigenaar; tot dan pusht de agent niet.
 
 **Klaar als:** `git push origin main` vanaf de agent wordt door GitHub geweigerd (uitvoer bewaard); een test-PR kan niet gemergd
 worden zolang een verplichte check rood is; de diagnose staat in de PR's van fase A.
@@ -434,6 +435,7 @@ mist de uitvoerder geen context. Aangepast:
 9. **Herreview had geen grens.** Nu: alleen bij wijzigingen in `src/`, `db/` of tests na de reviewer-SHA, en alleen op die delta (WS-04.1.8).
 10. **Valse belofte bij de identiteit.** Een token van de eigenaar maakt de agent geen andere auteur: de diff-guard blijft `overgang`
     en de eigenaar kan de PR nog steeds niet zelf goedkeuren. Dat staat nu expliciet in W-3; alleen de App (ST-01) lost het op.
+    **2026-10-12: W-3 uitgesteld**; de agent pusht met de bestaande `gh`-login, met hetzelfde gevolg voor de diff-guard (§9).
 11. **Rood bewijzen via een draft-PR kon niet.** Het eerste concept liet de tester rode tests pushen. De pre-push-hook draait
     `gate:fast` en weigert rode unit-tests, en `--no-verify` is verboden. W-5 is nu één `ask`-run van `pnpm test:db`.
 12. **Volgorde klopte niet met het framework.** WS-02, WS-03 en WS-06 mochten eerst vóór de ADR, maar `framework.md` wijzigt alleen
@@ -446,7 +448,8 @@ mist de uitvoerder geen context. Aangepast:
 
 Bekend restrisico na alle pakketten: de agent draait nog steeds als de Linux-gebruiker van de eigenaar (lid van de groep `docker`,
 dus root-equivalent buiten de sandbox). `deny` op `docker` en de sandbox houden de agent eruit, maar elke `ask`-run buiten de
-sandbox heeft die rechten. Lees nieuwe tests en configs voordat je zo'n run goedkeurt (DoD "Altijd").
+sandbox heeft die rechten. Lees nieuwe tests en configs voordat je zo'n run goedkeurt (DoD "Altijd"). Zolang W-3 is uitgesteld, komt
+daar het `gh`-token met `workflow`-scope bij dat in de sandbox leesbaar is (§9a).
 
 ## 8. Controle tegen de huidige code (2026-10-12, `b52b001`)
 
@@ -461,8 +464,8 @@ Tussen `1312b61` en `b52b001` wijzigde alleen dit document; de regelnummers uit 
 Afwijkingen:
 1. **W-6, specs onder mandaat.** `accountbeheer` is gewoon `goedgekeurd`, niet onder mandaat. Wel onder mandaat: `rate-limit`
    (status `gebouwd`). Verbeterd in §3.
-2. **WS-07 bestaat niet in dit plan.** De opdracht noemt WS-07 (tokenscript, timer, bot-identiteit); dat werk staat nergens als
-   pakket. Vastgelegd als geparkeerd in §9f.
+2. **"Tot die App bestaat"** staat in framework §6 "Agentveiligheid" (`docs/framework.md:230`), niet in §8. §8 noemt alleen dat
+   `~/.config/gh` in `denyRead` "volgt zodra de agent met het App-token werkt".
 3. **`projectRoot`** staat in `.claude/hooks/rolhek.mjs:68` (de hook), niet in `lib/`; WS-03 punt 1 zegt terecht "haal naar `lib/`".
 4. **ADR 0009 versus de runner.** ADR 0009 zegt `git diff --quiet HEAD -- <lijst>`; `scripts/runner.sh:24` gebruikt
    `git status --porcelain --untracked-files=all` (vangt ook nieuwe bestanden). Strenger dan de ADR; relevant voor WS-04 punt 4.
@@ -482,13 +485,13 @@ Afwijkingen:
 ## 9. Geparkeerd, nog uit te werken
 
 Besloten op 2026-10-12: niet bouwen, alleen vastleggen. Buiten scope: WS-00 stap 2 (gescopet token), de GitHub App (ADR 0005,
-ST-01), het tokenscript, de timer en de bot-identiteit, WS-04 punt 6 (`denyRead` op `~/.config/gh`), `scripts/check-github.mjs` en
+ST-01), WS-04 punt 6 (`denyRead` op `~/.config/gh`), `scripts/check-github.mjs` en
 onbeheerd werken. Geverifieerde bevindingen:
 
 a. **Het `gh`-token is leesbaar voor elke agent op de machine.** `~/.config/gh` staat niet in `sandbox.filesystem.denyRead`
    (`.claude/settings.json:115-118`). `docs/nieuwe-app.md` 4.1 logt in met `--scopes workflow`. Alle apps staan in `~/code/<slug>`
    op één machine, dus een agent in één app bereikt het token voor alle repo's van dat account. Gezien op 2026-10-12: zie §8 punt 7.
-b. **De ruleset is de tussenversie.** `docs/nieuwe-app.md` 6.2: 0 goedkeuringen, geen code-owner-review en (in het playbook) geen
+b. **Het playbook zet voor apps de tussenversie.** `docs/nieuwe-app.md` 6.2: 0 goedkeuringen, geen code-owner-review en (in het playbook) geen
    verplichte checks. `check-github` (ST-01) bestaat nog niet, dus niets controleert of een app de ruleset heeft. Een app op een
    privé-repo met een gratis account kan geen ruleset hebben (ADR 0006, Gevolgen).
 c. **Template-updates bereiken apps alleen via handmatige merge-PR's** (`docs/nieuwe-app.md`, Naslag); er is geen versiebewaking
@@ -500,8 +503,7 @@ e. **GitHub-gedrag.** Bevestigd in de GitHub-docs: een installation-token verloo
    voordat een beslissing hierop rust.
 f. **Opties voor later** (niet besloten):
    - GitHub App met het token buiten de sandbox: een systemd user-timer ververst het, token in `~/.cache/template-agent/token`,
-     sleutel in `~/.config/template-agent/app.pem` in `denyRead`. Hieronder vallen ook het tokenscript, de timer en de
-     bot-identiteit (de "WS-07" uit de opdracht, §8 punt 2).
+     sleutel in `~/.config/template-agent/app.pem` in `denyRead`.
    - Onbeheerd werken in fases per app: beheerd; deels onbeheerd op een container of aparte host; vrij onbeheerd. Per app criteria,
      een noodrem (token intrekken), een limiet op kosten of beurten en een melding bij stop.
    - `ask`-runs buiten de sandbox en het restrisico van de groep `docker` (framework §12, "Devcontainer of agent-sandbox"; §7 slot).
