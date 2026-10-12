@@ -49,7 +49,7 @@ function run(args: string[], mode = ''): Uitvoer {
     encoding: 'utf8',
     env: { HOME: dir, PATH: `${dir}:/usr/bin:/bin`, STUB_DIR: dir, GH_MODE: mode },
   });
-  let payload: unknown = null;
+  let payload: unknown;
   try {
     payload = JSON.parse(readFileSync(path.join(dir, 'payload.json'), 'utf8'));
   } catch {
