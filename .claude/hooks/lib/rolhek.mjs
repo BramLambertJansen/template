@@ -454,7 +454,9 @@ function pushesMain(rest, branch) {
   return refspecs.some((spec) => /(?:^|:)\+?(?:refs\/heads\/)?main$/.test(spec) || (spec === 'HEAD' && branch === 'main'));
 }
 
-const FORCE_OPTIONS = /^--force(?:-with-lease(?:=.*)?|-if-includes)?$/;
+// Git accepteert elke unieke prefix van een long option: alles vanaf `--forc` is --force, --force-with-lease[=…] of
+// --force-if-includes. `--fo`/`--for` zijn ambigu met --follow-tags en weigert git zelf; --follow-tags moet door.
+const FORCE_OPTIONS = /^--forc/;
 const PUSH_OPTIONS_WITH_VALUE = new Set(['--push-option', '--repo', '--receive-pack', '--exec']);
 
 /**
