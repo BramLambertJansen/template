@@ -206,6 +206,9 @@ Elke regel uit `AGENTS.md` die een check kan zijn, wordt een check; een check te
       versies uniek, in `gate:fast`; CI haalt daarvoor de volledige geschiedenis op)
 - [x] `check-secdef` voor security definer-views (zoals `app.accounts`): barrier, actorfilter, namen met schema, eigenaar; fail-closed bij
       materialized views, opties of naam wijzigen via `alter`, views in dynamische SQL en set-operaties (`test/rails/fixtures/secdef-views/`)
+- [ ] Roadmap-vinkjes afdwingen: `check:docs-drift` (of een eigen check) meldt een PR die een spec op `gebouwd` zet of een item afrondt
+      zonder dat `docs/roadmap.md` mee wijzigt, en een nieuw vinkje zonder bewijs (testpad, check of PR-nummer) erachter; met fixtures
+      (regel nu in prose: `docs/framework.md` §8, `docs/dod.md`)
 - [ ] Diff-guard met label `gate-wijziging` + goedkeuring op exact de head-SHA, niet van de auteur (framework §10), met tests per geval
       Gebouwd, nog niet verplicht (ADR 0017): `scripts/kit/diff-guard.mjs` met tabeltests en `.github/workflows/guard.yml`; zolang de
       auteur zelf goedkeurder is, uitslag `overgang`. Verplicht bij de overstap op de GitHub App (stuk 6)

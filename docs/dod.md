@@ -27,6 +27,7 @@ De reviewer bepaalt eerst welke fase uit `docs/roadmap.md` bij het werk hoort: d
 ## Fase 1 — Fundament
 
 - [ ] Voor elke gebouwde capability zijn de toepasselijke check, test en documentatie bijgewerkt; roadmap-items blijven open totdat de checkuitslag of het bewijs beschikbaar is.
+- [ ] Rondt de PR een roadmap-item af, dan vinkt dezelfde PR dat item af, met het bewijs (test, check of PR-nummer) achter het vinkje. Een afgerond item dat open blijft staan is een bevinding van de reviewer, net als een vinkje zonder bewijs.
 
 ## Features (fase 1 stuk 3 "gebruikersbeheer" en elke feature in fase 2)
 

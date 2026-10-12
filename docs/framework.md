@@ -277,7 +277,8 @@ volgende vrije migratie- en ADR-nummer), niet met wat in proza staat.
 
 **Docs horen bij de wijziging**: de developer werkt bij elke wijziging die gedrag, API, configuratie of conventies raakt de relevante doc
 mee, in dezelfde commit en PR (kort, met `bestand:regel`-verwijzingen, zonder code te kopiëren). Spec naar `gebouwd`, roadmap-vinkje en ADR-status
-horen daar ook bij, met de goedkeuring van de eigenaar waar het beschermde paden zijn. `check:docs-drift` waarschuwt in CI (geen blokkade) als `src/`
+horen daar ook bij, met de goedkeuring van de eigenaar waar het beschermde paden zijn. Een PR die een roadmap-item afrondt, vinkt het
+af in diezelfde PR, met bewijs; geen vinkje zonder bewijs en geen afgerond item dat open blijft (`docs/dod.md`). `check:docs-drift` waarschuwt in CI (geen blokkade) als `src/`
 wijzigt zonder `docs/` of `CHANGELOG.md`; er is geen docs-stap na de merge.
 
 Licht pad: geen migratie, route of permissie → plan, bouwen, review.
