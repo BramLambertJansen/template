@@ -52,6 +52,9 @@ alleen een permissieregel (`.claude/hooks/lib/rolhek.mjs:441`). Besluiten van de
 
 ## Gevolgen
 
+- Volgorde (aanbeveling, plan §4): eerst de omgeving door de eigenaar (toolchain en hooks, `gh`-login met pushrecht, CodeQL-check in de
+  ruleset); dan WS-03 en WS-06, WS-02, WS-04 (rails, daarna skill); WS-05 pas met meting of als bewust ongemeten besparing; daarna de
+  proef-app (ST-09).
 - Framework §8 (stap Opleveren, licht pad, rolhektabel, Claude Code-implementatie), §10 en §11 wijzigen in de PR's van de pakketten
   WS-02..WS-06: één pakket per PR, elk test-eerst (framework §1.5), elk een gate-wijziging die de eigenaar leest en merget.
 - Tot de GitHub App bestaat, pusht de agent met de bestaande `gh`-login ("Tot die App bestaat", `docs/framework.md:230`); de diff-guard blijft
