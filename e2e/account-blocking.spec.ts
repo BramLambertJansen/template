@@ -97,17 +97,17 @@ test('AC-11: annuleren in de dialoog blokkeert niet', async ({ page }) => {
   await expect(row).toContainText('Actief');
 });
 
-test('AC-14: in het menu van de eigen rij staat geen "Blokkeren"', async ({ page }) => {
+test('AC-14: de eigen actieve rij heeft geen menuknop, andere actieve rijen wel', async ({ page }) => {
   const admin = await createAccount('admin', { totp: true, name: 'Dirk Eigen' });
+  const other = await createAccount('user', { name: 'Eva Ander' });
   await signInAsAdmin(page, admin);
   await page.goto('/admin/accounts');
-  await page
-    .getByRole('row')
-    .filter({ hasText: admin.email })
-    .getByRole('button', { name: 'Acties voor Dirk Eigen' })
-    .click();
+  const ownRow = page.getByRole('row').filter({ hasText: admin.email });
+  const otherRow = page.getByRole('row').filter({ hasText: other.email });
 
-  await expect(page.getByRole('menu')).toBeVisible();
-  await expect(page.getByRole('menuitem', { name: 'Blokkeren' })).toHaveCount(0);
+  await expect(ownRow).toContainText('Actief');
+  await expect(otherRow.getByRole('button', { name: 'Acties voor Eva Ander' })).toBeVisible();
+  await expect(ownRow.getByRole('button', { name: /^Acties voor/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Acties voor Dirk Eigen' })).toHaveCount(0);
   await axeAtBothWidths(page);
 });
