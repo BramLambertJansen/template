@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
 
-// scripts/github-ruleset.sh (docs/nieuwe-app.md, fase 6.2): de ruleset `main` voor een app-repo, met `gh` als stub op PATH.
+// scripts/github-ruleset.sh (docs/nieuwe-app.md, fase 6.2): de ruleset `main` voor een app-repo, met `gh` als stub.
 // De stub logt elke aanroep en bewaart de payload; er gaat niets naar GitHub.
 const ROOT = path.join(import.meta.dirname, '../..');
 const SCRIPT = path.join(ROOT, 'scripts/github-ruleset.sh');
@@ -12,6 +12,18 @@ const WORKFLOWS = path.join(ROOT, '.github/workflows');
 // Geen verplichte check tot de GitHub App er is (ADR 0017, guard.yml).
 const NIET_VERPLICHT = ['diff-guard'];
 const GITHUB_ACTIONS = 15368;
+const OPDRACHT = [
+  'gate:fast',
+  'gate:slow',
+  'secrets',
+  'image',
+  'check:new-resource',
+  'codeql (actions)',
+  'codeql (javascript-typescript)',
+  'osv-scanner',
+];
+const CODEQL = ['codeql (actions)', 'codeql (javascript-typescript)'];
+const REGELS = ['deletion', 'non_fast_forward', 'pull_request', 'required_status_checks'];
 const dirs: string[] = [];
 
 type Uitvoer = { status: number | null; stdout: string; stderr: string; aanroepen: string[]; payload: unknown };
@@ -37,14 +49,13 @@ function run(args: string[], mode = ''): Uitvoer {
     encoding: 'utf8',
     env: { HOME: dir, PATH: `${dir}:/usr/bin:/bin`, STUB_DIR: dir, GH_MODE: mode },
   });
-  const payloadFile = path.join(dir, 'payload.json');
   let payload: unknown = null;
   try {
-    payload = JSON.parse(readFileSync(payloadFile, 'utf8'));
+    payload = JSON.parse(readFileSync(path.join(dir, 'payload.json'), 'utf8'));
   } catch {
     payload = null;
   }
-  const aanroepen = readFileSync(path.join(dir, 'log'), 'utf8').trim().split('\n').filter(Boolean);
+  const aanroepen = readFileSync(path.join(dir, 'log'), 'utf8').split('\n').filter(Boolean);
   return { status: result.status, stdout: result.stdout, stderr: result.stderr, aanroepen, payload };
 }
 
@@ -55,13 +66,17 @@ afterEach(() => {
 // Job-namen zoals ze op een PR verschijnen: `name:` op jobniveau, met de matrix van codeql uitgeschreven.
 function checksUitWorkflows(): string[] {
   const names: string[] = [];
-  for (const file of readdirSync(WORKFLOWS).filter((name) => name.endsWith('.yml'))) {
+  for (const file of readdirSync(WORKFLOWS)) {
+    if (!file.endsWith('.yml')) continue;
     const source = readFileSync(path.join(WORKFLOWS, file), 'utf8');
-    const languages = /language: \[([^\]]+)\]/.exec(source)?.[1]?.split(',').map((value) => value.trim()) ?? [];
+    const matrix = /language: \[([^\]]+)\]/.exec(source)?.[1] ?? '';
+    const languages = matrix === '' ? [] : matrix.split(', ');
     for (const [, name = ''] of source.matchAll(/^ {4}name: (.+)$/gm)) {
-      if (name.includes('${{ matrix.language }}'))
-        names.push(...languages.map((language) => name.replace('${{ matrix.language }}', language)));
-      else names.push(name);
+      if (!name.includes('${{ matrix.language }}')) {
+        names.push(name);
+        continue;
+      }
+      for (const language of languages) names.push(name.replace('${{ matrix.language }}', language));
     }
   }
   return names.filter((name) => !NIET_VERPLICHT.includes(name)).toSorted();
@@ -70,61 +85,53 @@ function checksUitWorkflows(): string[] {
 type Check = { context: string; integration_id: number };
 type Regel = { type: string; parameters?: Record<string, unknown> };
 
+function isRegel(value: unknown): value is Regel {
+  return typeof value === 'object' && value !== null && 'type' in value;
+}
+
+function isCheck(value: unknown): value is Check {
+  return typeof value === 'object' && value !== null && 'context' in value;
+}
+
 function regels(payload: unknown): Regel[] {
-  if (typeof payload !== 'object' || payload === null || !('rules' in payload) || !Array.isArray(payload.rules))
+  if (typeof payload !== 'object' || payload === null || !('rules' in payload) || !Array.isArray(payload.rules)) {
     throw new Error('payload zonder rules');
-  return payload.rules.filter((regel): regel is Regel => typeof regel === 'object' && regel !== null && 'type' in regel);
+  }
+  return payload.rules.filter(isRegel);
 }
 
 function checks(payload: unknown): Check[] {
   const regel = regels(payload).find((kandidaat) => kandidaat.type === 'required_status_checks');
   const lijst = regel?.parameters?.['required_status_checks'];
-  return Array.isArray(lijst) ? lijst.filter((check): check is Check => typeof check === 'object' && check !== null) : [];
+  if (!Array.isArray(lijst)) return [];
+  return lijst.filter(isCheck);
 }
 
 // Wat de payload mist ten opzichte van de verwachte checks (leeg = compleet, alle van GitHub Actions).
 function ontbrekend(payload: unknown, verwacht: string[]): string[] {
-  const aanwezig = new Set(
-    checks(payload)
-      .filter((check) => check.integration_id === GITHUB_ACTIONS)
-      .map((check) => check.context),
-  );
+  const vanActions = checks(payload).filter((check) => check.integration_id === GITHUB_ACTIONS);
+  const aanwezig = new Set(vanActions.map((check) => check.context));
   return verwacht.filter((name) => !aanwezig.has(name));
 }
 
 describe('checknamen', () => {
   test('de workflows leveren precies de checks uit de opdracht', () => {
-    expect(checksUitWorkflows()).toStrictEqual(
-      [
-        'gate:fast',
-        'gate:slow',
-        'secrets',
-        'image',
-        'check:new-resource',
-        'codeql (actions)',
-        'codeql (javascript-typescript)',
-        'osv-scanner',
-      ].toSorted(),
-    );
+    expect(checksUitWorkflows()).toStrictEqual(OPDRACHT.toSorted());
   });
 
   test('de controle vangt een payload met een ontbrekende check', () => {
     const { payload } = run(['eigenaar/app']);
-    const zonderOsv = {
-      rules: regels(payload).map((regel) =>
-        regel.type === 'required_status_checks'
-          ? { ...regel, parameters: { required_status_checks: checks(payload).filter((c) => c.context !== 'osv-scanner') } }
-          : regel,
-      ),
-    };
+    const zonderOsv = checks(payload).filter((check) => check.context !== 'osv-scanner');
+    const kapot = { rules: [{ type: 'required_status_checks', parameters: { required_status_checks: zonderOsv } }] };
 
-    expect(ontbrekend(zonderOsv, checksUitWorkflows())).toStrictEqual(['osv-scanner']);
+    expect(ontbrekend(kapot, checksUitWorkflows())).toStrictEqual(['osv-scanner']);
   });
 });
 
 describe('scripts/github-ruleset.sh', () => {
   test('nieuwe ruleset: POST met de regels uit framework §10 en alle checks van GitHub Actions', () => {
     const { status, aanroepen, payload } = run(['eigenaar/app']);
+    const pullRequest = regels(payload).find((regel) => regel.type === 'pull_request');
 
     expect(status).toBe(0);
     expect(aanroepen.at(-1)).toBe('gh api -X POST repos/eigenaar/app/rulesets --input -');
@@ -137,13 +144,8 @@ describe('scripts/github-ruleset.sh', () => {
       bypass_actors: [],
       conditions: { ref_name: { include: ['~DEFAULT_BRANCH'], exclude: [] } },
     });
-    expect(regels(payload).map((regel) => regel.type)).toStrictEqual([
-      'deletion',
-      'non_fast_forward',
-      'pull_request',
-      'required_status_checks',
-    ]);
-    expect(regels(payload).find((regel) => regel.type === 'pull_request')?.parameters).toMatchObject({
+    expect(regels(payload).map((regel) => regel.type)).toStrictEqual(REGELS);
+    expect(pullRequest?.parameters).toMatchObject({
       required_approving_review_count: 0,
       required_review_thread_resolution: true,
       allowed_merge_methods: ['merge', 'squash'],
@@ -161,8 +163,8 @@ describe('scripts/github-ruleset.sh', () => {
     const { status, payload } = run(['eigenaar/app', '--zonder-codeql']);
 
     expect(status).toBe(0);
-    expect(ontbrekend(payload, checksUitWorkflows())).toStrictEqual(['codeql (actions)', 'codeql (javascript-typescript)']);
-    expect(checks(payload)).toHaveLength(checksUitWorkflows().length - 2);
+    expect(ontbrekend(payload, checksUitWorkflows())).toStrictEqual(CODEQL);
+    expect(checks(payload)).toHaveLength(checksUitWorkflows().length - CODEQL.length);
   });
 
   test('private repo zonder Pro/Team: duidelijke melding, geen zichtbaarheid gewijzigd', () => {
