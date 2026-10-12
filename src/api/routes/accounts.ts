@@ -3,7 +3,14 @@ import { z } from 'zod';
 import { AppError } from '#core/api/errors.ts';
 import { ROLES } from '#core/shared/can.ts';
 import { decodeCursor, encodeCursor } from '#core/shared/cursor.ts';
-import { ACCOUNT_SORTS, accountsListContract, inviteContract, reinviteContract } from '#shared/contracts/accounts.ts';
+import {
+  ACCOUNT_SORTS,
+  accountsListContract,
+  blockContract,
+  inviteContract,
+  reinviteContract,
+  unblockContract,
+} from '#shared/contracts/accounts.ts';
 import { ACCOUNTS_PAGE_SIZE } from '#shared/limits.ts';
 import { appAccounts } from '../db/schema.ts';
 import { defineRoute } from '../kit.ts';
@@ -17,7 +24,7 @@ const accountRow = z.object({
   naam: z.string(),
   email: z.string(),
   rol: z.enum(ROLES),
-  status: z.enum(['active', 'invited']),
+  status: z.enum(['active', 'invited', 'blocked']),
   aangemaakt: z.string(),
   naamKey: z.string(),
 });
@@ -42,7 +49,9 @@ function containsPattern(q: string): string {
   return `%${q.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
 }
 
-const STATUS_COLUMN = { actief: 'active', uitgenodigd: 'invited' } as const;
+const STATUS_COLUMN = { actief: 'active', uitgenodigd: 'invited', geblokkeerd: 'blocked' } as const;
+
+const STATUS_LABEL = { active: 'actief', invited: 'uitgenodigd', blocked: 'geblokkeerd' } as const;
 
 const naamKey = sql<string>`lower(${appAccounts.name})`;
 const aangemaaktKey = sql<string>`to_json(${appAccounts.createdAt}) #>> '{}'`;
@@ -91,7 +100,7 @@ export const accountsListRoute = defineRoute(accountsListContract, async ({ inpu
       email: row.email,
       rol: row.rol,
       aangemaakt: row.aangemaakt,
-      status: row.status === 'active' ? ('actief' as const) : ('uitgenodigd' as const),
+      status: STATUS_LABEL[row.status],
     })),
     nextCursor:
       rows.length > ACCOUNTS_PAGE_SIZE && last !== undefined
@@ -111,4 +120,13 @@ export const inviteRoute = defineRoute(inviteContract, async ({ input, tx, servi
 export const reinviteRoute = defineRoute(reinviteContract, async ({ input, services }) => {
   await services.invitations.reinvite(input.id);
   return null;
+});
+
+// Contractstap (framework §8, stap 2): 501 tot de developer bouwt (ADR 0026).
+export const blockRoute = defineRoute(blockContract, () => {
+  throw new AppError('NOT_IMPLEMENTED');
+});
+
+export const unblockRoute = defineRoute(unblockContract, () => {
+  throw new AppError('NOT_IMPLEMENTED');
 });

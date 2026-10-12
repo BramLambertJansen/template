@@ -52,7 +52,7 @@ export const copy = {
     // Kop van de kolom met "Opnieuw uitnodigen"; alleen voor schermlezers.
     actions: 'Acties',
     roles: roleLabels,
-    statuses: { actief: 'Actief', uitgenodigd: 'Uitgenodigd' },
+    statuses: { actief: 'Actief', uitgenodigd: 'Uitgenodigd', geblokkeerd: 'Geblokkeerd' },
     reinvite: 'Opnieuw uitnodigen',
     invite: 'Account uitnodigen',
     empty: 'Nog geen accounts.',
