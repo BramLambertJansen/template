@@ -190,6 +190,9 @@ reset role;
 select lives_ok($$select app.assign_role('b-admin', 'user')$$, 'user_roles_keep_one_admin: een gedeblokkeerde admin telt weer mee, dus de ander degraderen mag');
 
 -- Nu is b-admin2 de enige actieve admin naast de uitgenodigde admin b-invadmin (AC-24).
+-- b-admin is hierboven gedegradeerd en is dus geen MFA-admin meer: de actor wordt b-admin2, anders weigert
+-- app.assign_role met 42501 vóór de trigger.
+do $$ begin perform set_config('app.user_id', 'b-admin2', true); perform set_config('app.session_strength', 'mfa', true); end $$;
 select throws_ok($$select app.assign_role('b-admin2', 'user')$$, 'P0001', 'LAST_ADMIN', 'user_roles_keep_one_admin: degraderen van de enige actieve admin naast een uitgenodigde admin: LAST_ADMIN (AC-24)');
 select throws_ok($$delete from better_auth."user" where id = 'b-admin2'$$, 'P0001', 'LAST_ADMIN', 'user_roles_keep_one_admin: verwijderen van de enige actieve admin naast een uitgenodigde admin: LAST_ADMIN (AC-24)');
 set local role app_authenticated;
