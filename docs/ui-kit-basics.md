@@ -41,3 +41,14 @@ bijvoorbeeld bij succes of fout; de kit doet geen automatische retry, timer of t
 
 Voorbeelden: `src/web/features/design-system/ui-basics-examples.tsx`. De voorbeeldquery in `queries.ts`
 levert uitsluitend lokale fictieve data; er zijn geen nieuwe API-aanroepen of rechten.
+
+## Acceptatiebewijs
+
+| Criteria | Testpad |
+|---|---|
+| AC-1 t/m AC-5: bestaande binding, textarea, boolean, radio, schema-/serverfout, default en reset | `src/core/web/ui/form-controls.test.tsx`, bestaande `form.test.tsx` |
+| AC-6/7: aangeleverde badgetekst, EmptyState met/zonder actie en AsyncView-fallback | `src/core/web/ui/empty-state.test.tsx`, bestaande `async-view.test.tsx` |
+| AC-8: focus, dubbele activering, asChild-capture/naam, submit, menu en herstel | `src/core/web/ui/button-busy.test.tsx`, `src/core/web/ui/dropdown-menu-busy.test.tsx` |
+| AC-6/9/10: alle tonen en voorbeelden, native Space/pijltjestoetsen, mobiel/desktop, licht/donker, CSP en axe | `e2e/ui-kit-basics.spec.ts`, `check:catalogus`, bestaande `test/ui/contrast.test.ts` |
+
+De tabel beschrijft de testdekking; de werkelijke uitslagen en gevalideerde commit staan in de bouw-PR.

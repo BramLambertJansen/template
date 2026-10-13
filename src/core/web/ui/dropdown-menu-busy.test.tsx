@@ -36,6 +36,8 @@ test('AC-8: busy/disabled selecteren en sluiten niet; herstel maakt de actie bru
   expect(screen.getByRole('menuitem', { name: 'Versturen' })).toBe(item);
   expect(document.activeElement).toBe(item);
   fireEvent.click(item);
-  await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+  await waitFor(() => {
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
   expect(action).toHaveBeenCalledTimes(1);
 });

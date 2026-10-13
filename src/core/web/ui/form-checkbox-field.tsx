@@ -29,7 +29,9 @@ export function FormCheckboxField<Input extends FieldValues, Output>(props: Form
         name={field.name}
         checked={value}
         disabled={disabled}
-        onChange={(event) => field.onChange(event.currentTarget.checked)}
+        onChange={(event) => {
+          field.onChange(event.currentTarget.checked);
+        }}
         onBlur={field.onBlur}
         ref={field.ref}
         aria-invalid={fieldState.error !== undefined}

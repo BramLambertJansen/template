@@ -40,7 +40,7 @@ for (const width of [375, 1280]) {
       await expect(admin).toBeFocused();
       await controls.getByRole('button', { name: 'Versturen' }).click();
       await expect(controls.locator('output')).toHaveText(
-        JSON.stringify({ naam: 'Ada\nLovelace', meldingen: true, rol: 'admin' }),
+        JSON.stringify({ name: 'Ada\nLovelace', notifications: true, role: 'admin' }),
       );
       await controls.getByRole('button', { name: 'Annuleren' }).click();
       await expect(name).toHaveValue('');

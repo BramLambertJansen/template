@@ -42,7 +42,9 @@ export function RadioGroup(props: RadioGroupProps) {
             checked={value === option.value}
             disabled={option.disabled}
             ref={option.value === anchor ? ref : undefined}
-            onChange={(event) => onValueChange(event.currentTarget.value)}
+            onChange={(event) => {
+              onValueChange(event.currentTarget.value);
+            }}
             onBlur={onBlur}
             aria-invalid={error !== undefined}
             aria-describedby={describedBy}

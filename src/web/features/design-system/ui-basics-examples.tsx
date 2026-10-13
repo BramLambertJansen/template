@@ -20,7 +20,7 @@ import {
 import { useEmptyExampleQuery } from './queries.ts';
 
 const schema = z
-  .object({ naam: z.string().min(1, 'Vul een naam in.'), meldingen: z.boolean(), rol: z.enum(['user', 'admin']) })
+  .object({ name: z.string().min(1, 'Vul een naam in.'), notifications: z.boolean(), role: z.enum(['user', 'admin']) })
   .strict();
 const roles = [
   { value: 'user', label: 'Gebruiker' },
@@ -28,7 +28,7 @@ const roles = [
 ];
 
 function FormControlsExample() {
-  const form = useZodForm(schema, { naam: '', meldingen: false, rol: 'user' });
+  const form = useZodForm(schema, { name: '', notifications: false, role: 'user' });
   const [sent, setSent] = useState<z.output<typeof schema> | null>(null);
   return (
     <div className="flex max-w-sm flex-col gap-4">
@@ -51,11 +51,11 @@ function FormControlsExample() {
           </Button>
         }
       >
-        <FormField form={form} name="naam" label="Naam" description="Naam">
+        <FormField form={form} name="name" label="Naam" description="Naam">
           {(field) => <Textarea {...field} />}
         </FormField>
-        <FormCheckboxField form={form} name="meldingen" label="Meldingen" description="Meldingen" />
-        <FormRadioGroupField form={form} name="rol" label="Rol" options={roles} description="Rol" />
+        <FormCheckboxField form={form} name="notifications" label="Meldingen" description="Meldingen" />
+        <FormRadioGroupField form={form} name="role" label="Rol" options={roles} description="Rol" />
       </Form>
       {sent === null ? null : <output>{JSON.stringify(sent)}</output>}
     </div>
@@ -120,10 +120,21 @@ function BusyButtonExample() {
   const [busy, setBusy] = useState(false);
   return (
     <div className="flex flex-wrap gap-3">
-      <Button busy={busy} busyLabel={uiTexts.busy} onClick={() => setBusy(true)}>
+      <Button
+        busy={busy}
+        busyLabel={uiTexts.busy}
+        onClick={() => {
+          setBusy(true);
+        }}
+      >
         Versturen
       </Button>
-      <Button variant="outline" onClick={() => setBusy(false)}>
+      <Button
+        variant="outline"
+        onClick={() => {
+          setBusy(false);
+        }}
+      >
         Annuleren
       </Button>
       <Button busy busyLabel={uiTexts.busy}>
@@ -141,8 +152,20 @@ function BusyMenuExample() {
         align="start"
         trigger={<Button variant="outline">Meldingen</Button>}
         items={[
-          { label: 'Versturen', busy, busyLabel: uiTexts.busy, onSelect: () => setBusy(true) },
-          { label: 'Annuleren', onSelect: () => setBusy(false) },
+          {
+            label: 'Versturen',
+            busy,
+            busyLabel: uiTexts.busy,
+            onSelect: () => {
+              setBusy(true);
+            },
+          },
+          {
+            label: 'Annuleren',
+            onSelect: () => {
+              setBusy(false);
+            },
+          },
           { label: 'Geblokkeerd', disabled: true, onSelect: () => undefined },
           { label: 'Bezig…', busy: true, onSelect: () => undefined },
         ]}
@@ -166,7 +189,12 @@ function EmptyExample() {
             title={uiTexts.empty}
             description={uiTexts.empty}
             action={
-              <Button variant="outline" onClick={() => setDone(true)}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDone(true);
+                }}
+              >
                 Versturen
               </Button>
             }

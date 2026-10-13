@@ -1,6 +1,6 @@
 import { Slot } from '@radix-ui/react-slot';
 import type { VariantProps } from 'class-variance-authority';
-import { cloneElement, isValidElement, type ComponentProps } from 'react';
+import { cloneElement, isValidElement, type AriaAttributes, type ComponentProps, type DOMAttributes } from 'react';
 import { buttonVariants } from './button-recipe.ts';
 import { cn } from './cn.ts';
 
@@ -29,11 +29,21 @@ export function Button({
 }: ButtonProps) {
   const Component = asChild ? Slot : 'button';
   const content =
-    busy && busyLabel !== undefined
-      ? asChild && isValidElement(children)
-        ? cloneElement(children, undefined, busyLabel)
-        : busyLabel
-      : children;
+    busy && asChild && isValidElement<DOMAttributes<HTMLElement> & AriaAttributes>(children)
+      ? cloneElement(
+          children,
+          {
+            onClickCapture: undefined,
+            onKeyDownCapture: undefined,
+            'aria-disabled': true,
+            'aria-busy': true,
+            'aria-label': busyLabel ?? children.props['aria-label'],
+          },
+          busyLabel ?? children.props.children,
+        )
+      : busy && busyLabel !== undefined
+        ? busyLabel
+        : children;
   return (
     <Component
       className={cn(buttonVariants({ variant, size }), 'aria-busy:cursor-wait', className)}

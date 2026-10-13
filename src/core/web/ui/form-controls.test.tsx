@@ -15,7 +15,7 @@ import { Textarea } from './textarea.tsx';
 
 afterEach(cleanup);
 const schema = z
-  .object({ naam: z.string().min(1, 'Vul een naam in.'), meldingen: z.boolean(), rol: z.enum(['user', 'admin']) })
+  .object({ name: z.string().min(1, 'Vul een naam in.'), notifications: z.boolean(), role: z.enum(['user', 'admin']) })
   .strict();
 type Values = z.output<typeof schema>;
 const options = [
@@ -23,21 +23,29 @@ const options = [
   { value: 'admin', label: 'Beheerder' },
 ];
 
-function Example({ submit, target = 'naam' }: { submit: (values: Values) => Promise<unknown>; target?: keyof Values }) {
-  const form = useZodForm(schema, { naam: '', meldingen: false, rol: 'user' });
+function Example({ submit, target = 'name' }: { submit: (values: Values) => Promise<unknown>; target?: keyof Values }) {
+  const form = useZodForm(schema, { name: '', notifications: false, role: 'user' });
   return (
     <Form
       form={form}
       onSubmit={submit}
       submitLabel="Versturen"
       fieldForCode={{ VALIDATION: target }}
-      secondaryAction={<Button onClick={() => form.reset()}>Reset</Button>}
+      secondaryAction={
+        <Button
+          onClick={() => {
+            form.reset();
+          }}
+        >
+          Reset
+        </Button>
+      }
     >
-      <FormField form={form} name="naam" label="Naam" description="Uitleg">
+      <FormField form={form} name="name" label="Naam" description="Uitleg">
         {(field) => <Textarea {...field} />}
       </FormField>
-      <FormCheckboxField form={form} name="meldingen" label="Meldingen" description="Boolean" />
-      <FormRadioGroupField form={form} name="rol" label="Rol" options={options} description="Keuze" />
+      <FormCheckboxField form={form} name="notifications" label="Meldingen" description="Boolean" />
+      <FormRadioGroupField form={form} name="role" label="Rol" options={options} description="Keuze" />
     </Form>
   );
 }
@@ -62,7 +70,9 @@ test('AC-2/3/4: tekst, boolean en radio behouden hun waarde in payload en reset'
   fireEvent.click(screen.getByText('Meldingen'));
   fireEvent.click(screen.getByLabelText('Beheerder'));
   fireEvent.click(screen.getByRole('button', { name: 'Versturen' }));
-  await waitFor(() => expect(sent).toStrictEqual([{ naam: 'Ada\nLovelace', meldingen: true, rol: 'admin' }]));
+  await waitFor(() => {
+    expect(sent).toStrictEqual([{ name: 'Ada\nLovelace', notifications: true, role: 'admin' }]);
+  });
   fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
   expect(screen.getByLabelText('Naam').getAttribute('aria-invalid')).toBe('false');
   expect(screen.getByLabelText('Naam').textContent).toBe('');
@@ -80,7 +90,7 @@ test('AC-2: touched-validatie koppelt hulp en fout aan de textarea', async () =>
   expect(input.getAttribute('aria-describedby')?.split(' ')).toStrictEqual([screen.getByText('Uitleg').id, error.id]);
 });
 
-test.each<keyof Values>(['naam', 'meldingen', 'rol'])(
+test.each<keyof Values>(['name', 'notifications', 'role'])(
   'serverfout focust %s en blijft gekoppeld na herstel',
   async (target) => {
     show({ target, submit: () => Promise.reject(new ApiError('VALIDATION', 400)) });
@@ -88,9 +98,11 @@ test.each<keyof Values>(['naam', 'meldingen', 'rol'])(
     fireEvent.click(screen.getByRole('button', { name: 'Versturen' }));
     const error = await screen.findByText('Ongeldig.');
     const anchor = screen.getByLabelText(
-      target === 'naam' ? 'Naam' : target === 'meldingen' ? 'Meldingen' : 'Gebruiker',
+      target === 'name' ? 'Naam' : target === 'notifications' ? 'Meldingen' : 'Gebruiker',
     );
-    await waitFor(() => expect(document.activeElement).toBe(anchor));
+    await waitFor(() => {
+      expect(document.activeElement).toBe(anchor);
+    });
     expect(anchor.getAttribute('aria-describedby')?.split(' ')).toContain(error.id);
     expect(anchor.getAttribute('aria-invalid')).toBe('true');
     expect(screen.getByRole('button', { name: 'Versturen' }).hasAttribute('disabled')).toBe(false);
@@ -109,22 +121,22 @@ test('AC-5: namen volgen het echte veldtype, inclusief enum-string', () => {
   type StringNames = ComponentProps<typeof FormField<Values, Values>>['name'];
   type BooleanNames = ComponentProps<typeof FormCheckboxField<Values, Values>>['name'];
   type RadioNames = ComponentProps<typeof FormRadioGroupField<Values, Values>>['name'];
-  expectTypeOf<StringNames>().toEqualTypeOf<'naam' | 'rol'>();
-  expectTypeOf<BooleanNames>().toEqualTypeOf<'meldingen'>();
-  expectTypeOf<RadioNames>().toEqualTypeOf<'naam' | 'rol'>();
+  expectTypeOf<StringNames>().toEqualTypeOf<'name' | 'role'>();
+  expectTypeOf<BooleanNames>().toEqualTypeOf<'notifications'>();
+  expectTypeOf<RadioNames>().toEqualTypeOf<'name' | 'role'>();
 });
 
 const requiredSchema = z.object({
-  meldingen: z.boolean().refine(Boolean, 'Kies meldingen.'),
-  rol: z.string().refine((role) => role === 'user' || role === 'admin', 'Kies een rol.'),
+  notifications: z.boolean().refine(Boolean, 'Kies meldingen.'),
+  role: z.string().refine((role) => role === 'user' || role === 'admin', 'Kies een rol.'),
 });
 
 function RequiredExample({ submit }: { submit: () => Promise<unknown> }) {
-  const form = useZodForm(requiredSchema, { meldingen: false, rol: '' });
+  const form = useZodForm(requiredSchema, { notifications: false, role: '' });
   return (
     <Form form={form} onSubmit={submit} submitLabel="Versturen">
-      <FormCheckboxField form={form} name="meldingen" label="Meldingen" />
-      <FormRadioGroupField form={form} name="rol" label="Rol" options={options} />
+      <FormCheckboxField form={form} name="notifications" label="Meldingen" />
+      <FormRadioGroupField form={form} name="role" label="Rol" options={options} />
     </Form>
   );
 }
@@ -150,13 +162,15 @@ test('AC-3/4: schemafouten blokkeren submit; radio kiest niet impliciet een eers
   fireEvent.click(screen.getByRole('checkbox'));
   fireEvent.click(screen.getByRole('radio', { name: 'Gebruiker' }));
   fireEvent.click(screen.getByRole('button', { name: 'Versturen' }));
-  await waitFor(() => expect(calls).toBe(1));
+  await waitFor(() => {
+    expect(calls).toBe(1);
+  });
 });
 
 function MissingDefault() {
-  const form = useZodForm(schema, { meldingen: false, rol: 'user' });
+  const form = useZodForm(schema, { notifications: false, role: 'user' });
   return (
-    <FormField form={form} name="naam" label="Naam">
+    <FormField form={form} name="name" label="Naam">
       {(field) => <Textarea {...field} />}
     </FormField>
   );
@@ -167,18 +181,26 @@ test('AC-5: ontbrekende stringdefault veroorzaakt een assertion in plaats van ee
 });
 
 function Legacy({ submit }: { submit: (values: Values) => Promise<unknown> }) {
-  const form = useZodForm(schema, { naam: 'Ada', rol: 'user', meldingen: false });
+  const form = useZodForm(schema, { name: 'Ada', role: 'user', notifications: false });
   return (
     <Form
       form={form}
       onSubmit={submit}
       submitLabel="Versturen"
-      secondaryAction={<Button onClick={() => form.reset()}>Reset</Button>}
+      secondaryAction={
+        <Button
+          onClick={() => {
+            form.reset();
+          }}
+        >
+          Reset
+        </Button>
+      }
     >
-      <FormField form={form} name="naam" label="Naam">
+      <FormField form={form} name="name" label="Naam">
         {(field) => <Input {...field} />}
       </FormField>
-      <FormField form={form} name="rol" label="Rol">
+      <FormField form={form} name="role" label="Rol">
         {(field) => <Select {...field} options={options} />}
       </FormField>
     </Form>
@@ -200,7 +222,9 @@ test('AC-1: bestaande Input/Select-binding blijft submit en reset ondersteunen',
   fireEvent.change(screen.getByLabelText('Naam'), { target: { value: 'Grace' } });
   fireEvent.change(screen.getByLabelText('Rol'), { target: { value: 'admin' } });
   fireEvent.click(screen.getByRole('button', { name: 'Versturen' }));
-  await waitFor(() => expect(sent).toStrictEqual([{ naam: 'Grace', rol: 'admin', meldingen: false }]));
+  await waitFor(() => {
+    expect(sent).toStrictEqual([{ name: 'Grace', role: 'admin', notifications: false }]);
+  });
   fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
   expect(screen.getByDisplayValue('Ada')).toBeDefined();
   expect(screen.getByDisplayValue('Gebruiker')).toBeDefined();

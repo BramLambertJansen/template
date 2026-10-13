@@ -76,7 +76,9 @@ test('busy pictogramknop krijgt de aangeleverde naam, native disabled blijft bes
 });
 
 test('busy submit voorkomt native submit, na herstel werkt het weer', () => {
-  const submit = vi.fn((event: React.SubmitEvent<HTMLFormElement>) => event.preventDefault());
+  const submit = vi.fn((event: React.SubmitEvent<HTMLFormElement>) => {
+    event.preventDefault();
+  });
   const view = render(
     <form onSubmit={submit}>
       <Button type="submit" busy busyLabel="Bezig…">
@@ -93,4 +95,28 @@ test('busy submit voorkomt native submit, na herstel werkt het weer', () => {
   );
   fireEvent.click(screen.getByRole('button'));
   expect(submit).toHaveBeenCalledTimes(1);
+});
+
+test('busy asChild blokkeert ook capturehandlers en bewaakt de busy-naam boven kindprops', () => {
+  const capture = vi.fn();
+  render(
+    <Button asChild busy busyLabel="Bezig…">
+      <a
+        href="/accounts"
+        onClickCapture={capture}
+        onKeyDownCapture={capture}
+        aria-label="Accounts"
+        aria-disabled={false}
+        aria-busy={false}
+      >
+        Accounts
+      </a>
+    </Button>,
+  );
+  const link = screen.getByRole('link', { name: 'Bezig…' });
+  expect(fireEvent.click(link)).toBe(false);
+  expect(fireEvent.keyDown(link, { key: 'Enter' })).toBe(false);
+  expect(capture).not.toHaveBeenCalled();
+  expect(link.getAttribute('aria-disabled')).toBe('true');
+  expect(link.getAttribute('aria-busy')).toBe('true');
 });
