@@ -30,11 +30,12 @@ for (const width of [375, 1280]) {
       await expect(name).toBeFocused();
       await expect(name).toHaveAttribute('aria-invalid', 'true');
       await expect(controls.getByText('Vul een naam in.')).toBeVisible();
-      await scanAxe(page);
-      await name.fill('Ada\nLovelace');
       await checkbox.focus();
       await page.keyboard.press('Space');
       await expect(checkbox).toBeChecked();
+      // Eén licht-scan met zowel de veldfout als een actieve checkbox; disabled/invalid voorbeelden staan op dezelfde pagina.
+      await scanAxe(page);
+      await name.fill('Ada\nLovelace');
       await user.focus();
       await page.keyboard.press('ArrowRight');
       await expect(admin).toBeChecked();
@@ -61,7 +62,6 @@ for (const width of [375, 1280]) {
       await expect(disabled.getByRole('checkbox')).toBeChecked();
       await expect(disabled.getByRole('textbox')).toBeDisabled();
       await expect(disabled.getByRole('radio', { name: 'Beheerder' })).toBeDisabled();
-      await scanAxe(page);
       await page.getByRole('button', { name: 'Donker thema' }).click();
       await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
       await scanAxe(page);
