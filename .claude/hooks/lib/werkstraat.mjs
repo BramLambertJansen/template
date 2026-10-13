@@ -1,11 +1,13 @@
 // De werkstraat-hooks uit framework §8 (ADR 0011), behalve het rolhek: na elke bewerking, bij stoppen, "groen vóór klaar"
 // voor de developer, de stopcontrole van tester en reviewer, en de feiten bij de start van een sessie. Puur: elk commando
 // gaat via `deps.run`, zodat test/hooks/werkstraat.test.ts elke beslissing zonder echte pnpm of git bewijst.
-// Nooit netwerk of database: alleen lint, typecheck, unit (gate:fast) en git.
+// Nooit database. Netwerk alleen voor de fetch van session-start (harde timeout, nooit om credentials vragen); de rest is
+// lint, typecheck, unit (gate:fast) en git.
 
 /**
  * @typedef {{ code: number, output: string }} RunResult
- * @typedef {{ run: (command: string, args: readonly string[]) => RunResult, changed: () => string[],
+ * @typedef {{ timeout?: number, env?: Record<string, string> }} RunOptions
+ * @typedef {{ run: (command: string, args: readonly string[], options?: RunOptions) => RunResult, changed: () => string[],
  *   read: (rel: string) => string | null }} Deps
  * @typedef {{ exit?: number, stdout?: string, stderr?: string }} HookResult
  */
@@ -170,16 +172,21 @@ function reviewerStop(payload) {
 }
 
 /**
- * Haalt origin/main op (korte timeout via lowSpeedTime; fail-open) en meldt een achterstand van de branch.
+ * Haalt origin/main op en meldt een achterstand van de branch. Fail-open: een harde procestimeout, nooit om credentials
+ * vragen (HTTPS-prompt of SSH-passphrase), en zonder bekende origin/main (een app zonder remote) geen melding.
  * @param {Deps} deps
  * @returns {string}
  */
 function mainLag(deps) {
-  const fetched = deps.run('git', ['-c', 'http.lowSpeedLimit=1000', '-c', 'http.lowSpeedTime=5', 'fetch', '--quiet', '--no-tags', 'origin', 'main']);
+  const fetched = deps.run('git', ['fetch', '--quiet', '--no-tags', 'origin', '+refs/heads/main:refs/remotes/origin/main'], {
+    timeout: 5000,
+    env: { GIT_TERMINAL_PROMPT: '0', GIT_SSH_COMMAND: 'ssh -o BatchMode=yes -o ConnectTimeout=5' },
+  });
   const counts = deps.run('git', ['rev-list', '--left-right', '--count', 'origin/main...HEAD']);
+  if (counts.code !== 0) return '';
   const behind = Number(counts.output.trim().split(/\s+/)[0]);
   const stale = fetched.code === 0 ? '' : 'origin/main ophalen mislukt (stand van de laatste fetch). ';
-  if (counts.code !== 0 || !Number.isFinite(behind) || behind === 0) return stale.trim();
+  if (!Number.isFinite(behind) || behind === 0) return stale.trim();
   return `${stale}Let op: ${behind} commits achter op origin/main; haal ze binnen voor je bouwt (git merge origin/main, nooit rebase).`;
 }
 
