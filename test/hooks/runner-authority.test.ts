@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -141,6 +141,21 @@ describe('trustedRunner: toestemming en hostcode uit de echte vertrouwde Git-bas
     const { root } = fixture();
 
     expect(trustedRunner(root)).toBe(true);
+  });
+
+  test('een tracked hostsymlink op origin/main blijft geweigerd bij een schone tree zonder hostdiff', () => {
+    const { root } = fixture();
+    git(root, ['switch', '-q', 'main']);
+    rmSync(path.join(root, '.npmrc'));
+    symlinkSync('test/example.test.ts', path.join(root, '.npmrc'));
+    const symlinkBase = commit(root);
+    git(root, ['update-ref', 'refs/remotes/origin/main', symlinkBase]);
+    git(root, ['switch', '-q', '-c', 'feat/host-symlink']);
+
+    expect(git(root, ['ls-files', '--stage', '--', '.npmrc'])).toMatch(/^120000 /);
+    expect(git(root, ['status', '--porcelain', '--untracked-files=all'])).toBe('');
+    expect(git(root, ['diff', '--name-only', 'origin/main', 'HEAD'])).toBe('');
+    expect(trustedRunner(root)).toBe(false);
   });
 
   test.each(CHANGES)('een lokale autoRunner-vervalsing (%s) geeft geen recht als main false is', (state) => {

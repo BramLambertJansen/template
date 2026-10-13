@@ -1,7 +1,7 @@
 // De agent bereidt een besluit voor. Alleen de versie die de eigenaar naar main brengt is bevoegdheid.
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { documentInfo } from '../../.claude/hooks/lib/document-state.mjs';
+import { documentInfo, documentKind } from '../../.claude/hooks/lib/document-state.mjs';
 import { readRegistry } from '../../.claude/hooks/lib/task-authority.mjs';
 import { gitText, repositoryName, safeRepositoryPath } from '../../.claude/hooks/lib/authority-context.mjs';
 
@@ -25,6 +25,7 @@ function argumentsFor(args) {
 async function main() {
   const root = process.cwd();
   const target = argumentsFor(process.argv.slice(2));
+  if (documentKind(target.file) === null) throw new Error('Alleen een spec- of ADR-document is toegestaan');
   if (!safeRepositoryPath(root, target.file) || !safeRepositoryPath(root, '.claude/decisions.json'))
     throw new Error('Onveilig document- of besluitenpad');
   const info = documentInfo(target.file, readFileSync(path.join(root, target.file), 'utf8'));

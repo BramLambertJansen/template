@@ -1,5 +1,5 @@
 // Alleen vaste runner-opdrachten met ongewijzigde hostcode mogen zonder handmatige prompt (ADR 0027).
-import { gitText } from './authority-context.mjs';
+import { gitText, safeRepositoryPath } from './authority-context.mjs';
 
 const HOST_FILES = ['scripts', 'package.json', 'pnpm-workspace.yaml', '.npmrc', '.pnpmfile.cjs', 'mise.toml',
   'compose.yaml', 'compose.*.yaml', 'compose.override.yaml', 'db/test.env', 'db/docker'];
@@ -30,5 +30,7 @@ export function trustedRunner(root) {
   const local = gitText(root, ['status', '--porcelain', '--untracked-files=all', '--', ...HOST_FILES]);
   const changed = gitText(root, ['diff', '--name-only', base, 'HEAD', '--', ...HOST_FILES]);
   const ignored = gitText(root, ['ls-files', '--others', '--ignored', '--exclude-standard', '--', ...HOST_FILES]);
-  return local === '' && changed === '' && ignored === '';
+  const tracked = gitText(root, ['ls-files', '-z', '--', ...HOST_FILES]);
+  return local === '' && changed === '' && ignored === '' && tracked !== null &&
+    tracked.split('\0').filter(Boolean).every((file) => safeRepositoryPath(root, file));
 }

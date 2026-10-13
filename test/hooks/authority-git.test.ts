@@ -13,6 +13,8 @@ const SOURCE = 'src/core/web/ui/example.tsx';
 const BODY = '---\nstatus: voorstel\nnamespace: example\n---\n\n# Voorbeeld\n\n## Hergebruik en UX\n\nBestaande kit.\n';
 const SCRIPT = path.resolve('scripts/kit/document-status.mjs');
 const CHECKER = path.resolve('scripts/kit/check-document-status.mjs');
+const DECISION = path.resolve('scripts/kit/document-decision.mjs');
+const HOOK = path.resolve('.claude/hooks/rolhek.mjs');
 const CONFIG = readFileSync('.claude/gates.json', 'utf8');
 const directories: string[] = [];
 
@@ -89,6 +91,44 @@ afterEach(() => {
 });
 
 describe('taakmandaat tegen echte git-objecten', () => {
+  test('de besluithelper bereidt een record in .claude voor zonder zichzelf rechten te geven', () => {
+    const { root } = fixture();
+    const source = 'src/core/web/ui/new.tsx';
+    const result = execFileSync(
+      process.execPath,
+      [DECISION, SPEC, 'goedgekeurd', '--branch', 'feat/example', '--path', source],
+      {
+        cwd: root,
+        encoding: 'utf8',
+      },
+    );
+    expect(result).toContain('geen rechten actief');
+    const record = readFileSync(path.join(root, '.claude/decisions.json'), 'utf8');
+    expect(record).toContain(source);
+    const authority = readAuthority({ root });
+    if (authority === null) throw new Error('Fixture heeft geen authority');
+    expect(canWriteProtected({ file: source, role: 'developer' }, authority)).toBe(false);
+    expect(authority.trusted('.claude/gates.json')).toBe(CONFIG);
+  });
+
+  test('het echte rolhek gebruikt de gates uit main bij een lokaal weggehaalde core-bescherming', () => {
+    const { root } = fixture();
+    write(root, '.claude/gates.json', CONFIG.replace('"src/core/**",', ''));
+    const payload = {
+      cwd: root,
+      tool_name: 'Write',
+      agent_type: 'developer',
+      tool_input: { file_path: path.join(root, 'src/core/web/ui/unapproved.tsx'), content: 'export {};' },
+    };
+    expect(() =>
+      execFileSync(process.execPath, [HOOK], {
+        cwd: root,
+        input: JSON.stringify(payload),
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }),
+    ).toThrow(/beschermd pad/);
+  });
+
   test('de statushelper registreert het besluit uit main en opent uitsluitend de genoemde broncode', () => {
     const { root } = fixture();
     const authority = readAuthority({ root });

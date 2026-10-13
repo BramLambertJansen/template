@@ -36,10 +36,11 @@ function safe(probe) {
  * @param {string} cwd
  */
 function context(root, cwd) {
+  const authority = readAuthority({ root });
   return {
     root,
     cwd,
-    config: loadConfig(readFileSync(path.join(root, '.claude/gates.json'), 'utf8')),
+    config: loadConfig(authority?.trusted('.claude/gates.json') ?? readFileSync(path.join(root, '.claude/gates.json'), 'utf8')),
     read: (/** @type {string} */ rel) => {
       try {
         return readFileSync(path.join(root, rel), 'utf8');
@@ -50,7 +51,7 @@ function context(root, cwd) {
     committed: committedIn(root),
     isDir: (/** @type {string} */ rel) => safe(() => statSync(path.join(root, rel)).isDirectory()),
     branch: gitBranch(root),
-    authority: readAuthority({ root }),
+    authority,
     runnerTrusted: trustedRunner(root),
   };
 }

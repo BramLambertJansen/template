@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { readAuthority, gitText } from '../../.claude/hooks/lib/authority-context.mjs';
-import { changeStatus, documentInfo } from '../../.claude/hooks/lib/document-state.mjs';
+import { changeStatus, documentInfo, documentKind } from '../../.claude/hooks/lib/document-state.mjs';
 import { canRecordStatus } from '../../.claude/hooks/lib/task-authority.mjs';
 import { canRecordBuilt } from '../../.claude/hooks/lib/built-evidence.mjs';
 import { pullRequest, checkRuns } from './github-evidence.mjs';
@@ -53,6 +53,7 @@ function unchanged(expected) {
 async function main() {
   const root = process.cwd();
   const target = argumentsFor(process.argv.slice(2));
+  if (documentKind(target.file) === null) throw new Error('Alleen een spec- of ADR-document is toegestaan');
   const authority = readAuthority({ root });
   if (authority === null || !authority.safe(target.file))
     throw new Error('Geen leesbare vertrouwde basis of veilig documentpad; haal origin/main opnieuw op');

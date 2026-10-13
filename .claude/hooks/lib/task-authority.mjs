@@ -36,7 +36,7 @@ function stringList(value) {
 
 /** @param {string} file */
 export function canonicalPath(file) {
-  return /^[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_.-]+)+$/.test(file) &&
+  return /^[a-zA-Z0-9_.-]+(?:\/[a-zA-Z0-9_.-]+)*$/.test(file) &&
     !file.split('/').some((part) => part === '.' || part === '..') && !file.endsWith('/');
 }
 
