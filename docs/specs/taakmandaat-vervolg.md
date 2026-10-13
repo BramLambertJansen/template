@@ -242,7 +242,7 @@ Besloten in OV-10; de implementatie-PR wijzigt deze documenten (ze hebben een go
 - **mandate-follow-up/AC-2** — Gegeven hetzelfde mandaat, dan faalt `check-document-status` met de melding "buiten het
   taakmandaat" als de PR daarnaast één andere regel van `docs/roadmap.md` wijzigt, een item van een spec zonder actief
   mandaat afvinkt, een regel toevoegt of verwijdert buiten het item, tekst van het item wijzigt in plaats van aanvult,
-  in de aanvulling een regel `- [ ] …` of `- [x] …` (ook ingesprongen) toevoegt, het item heropent, een ander item
+  in de aanvulling een regel `- [ ] …` of `- [x] …` (ook ingesprongen) toevoegt, een ander item
   heropent, of het bestand hernoemt of verwijdert.
 - **mandate-follow-up/AC-3** — Gegeven een actief mandaat voor S en in de merge-base meer dan één open item dat `` `S` ``
   noemt, of daarnaast een afgevinkt item dat het noemt, dan faalt een wijziging van een van die items met "geen eenduidig
@@ -390,9 +390,10 @@ Bestaande tests die wijzigen, met reden (B2 verandert het geteste gedrag; noemen
 - Nieuwe AC's: AC-19 en AC-21 in de Git-repo-tests van `check-document-status`, AC-20 bij `statusOnlyDiff`, AC-22 bij
   `taakVinkje` en beide checks, AC-23 bij `docs:status`, AC-24 bij `runner.sh` met de docker-stub, AC-25 in de
   Git-repo-tests van `check-document-status` (vinkje zonder overgang, vinkje in een eerdere commit dan de status, twee
-  mandaten waarvan één overgaat). AC-26 is een documentcontrole van de reviewer plus `pnpm ratchet`.
+  mandaten waarvan één overgaat). AC-14 en AC-26 zijn een documentcontrole van de reviewer plus `pnpm ratchet`.
 - Unit (`test/rails/`, in `pnpm test:unit`): `taakVinkje` als pure functie per geval van AC-1 t/m AC-6; fixtures voor
-  `check:roadmap` per regel van AC-10 t/m AC-12; de gewijzigde tests uit "Raakt ook"; de gelijkheidstest van AC-15 met een
+  `check:roadmap` per regel van AC-10 t/m AC-12, en voor AC-13 (basis al `gebouwd` in een oude vorm, zoals
+  `status: gebouwd # gebouwd in PR #51`, head ongewijzigd of hernoemd: geen melding); de gewijzigde tests uit "Raakt ook"; de gelijkheidstest van AC-15 met een
   negatieve fixture.
 - Echte tijdelijke Git-repositories (zoals `test/hooks/authority-git.test.ts`): `check-document-status` met een register
   op main voor AC-1 t/m AC-5 en AC-7; `statusOnlyDiff` met en zonder register voor AC-6 en AC-7; `docs:status --roadmap`
