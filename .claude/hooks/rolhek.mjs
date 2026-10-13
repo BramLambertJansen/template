@@ -7,6 +7,8 @@ import { readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { decide, loadConfig } from './lib/rolhek.mjs';
 import { payloadCwd, projectRoot } from './lib/root.mjs';
+import { readAuthority } from './lib/authority-context.mjs';
+import { trustedRunner } from './lib/runner-authority.mjs';
 
 /**
  * @param {string} root
@@ -48,6 +50,8 @@ function context(root, cwd) {
     committed: committedIn(root),
     isDir: (/** @type {string} */ rel) => safe(() => statSync(path.join(root, rel)).isDirectory()),
     branch: gitBranch(root),
+    authority: readAuthority({ root }),
+    runnerTrusted: trustedRunner(root),
   };
 }
 
@@ -105,7 +109,7 @@ function main() {
           permissionDecision: 'ask',
           permissionDecisionReason: decision.ask.join('; '),
         }
-      : {}),
+      : decision.allow === true ? { permissionDecision: 'allow' } : {}),
     ...(decision.context.length > 0 ? { additionalContext: decision.context.join('\n') } : {}),
   };
   if (Object.keys(output).length > 1) process.stdout.write(JSON.stringify({ hookSpecificOutput: output }));

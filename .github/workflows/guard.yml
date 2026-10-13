@@ -28,6 +28,7 @@ jobs:
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
       AUTHOR: ${{ github.event.pull_request.user.login }}
+      HEAD_REF: ${{ github.event.pull_request.head.ref }}
     steps:
       - name: Base-repo en SHA's controleren
         run: |
@@ -58,3 +59,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
         run: node scripts/kit/diff-guard.mjs
+      - name: Documentstatus en taakmandaat
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: node scripts/kit/check-document-status.mjs
