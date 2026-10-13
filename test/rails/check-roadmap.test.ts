@@ -172,9 +172,10 @@ const matrix: [geval: string, ac: string, verwacht: string[]][] = [
   ['pr-bestaat-niet', 'randgeval (OV-7: alleen de vorm)', GEEN],
   ['package-json-ongeldig', 'randgeval', ['roadmap:bewijs:5']],
   ['spec-gebouwd-zonder-bewijs', 'AC-10', ['spec:bewijs:docs/specs/a.md']],
-  ['spec-gebouwd-bewijs-in-status', 'AC-10', GEEN],
-  ['spec-gebouwd-met-vinkje-zonder-verwijzing', 'AC-10 (R3a)', GEEN],
-  ['spec-gebouwd-met-roadmapvinkje', 'AC-11', GEEN],
+  // B2 (mandate-follow-up/AC-10, AC-11): vrij commentaar en een roadmap-vinkje vervangen het statusbewijs niet meer.
+  ['spec-gebouwd-bewijs-in-status', 'mandate-follow-up/AC-10', ['spec:bewijs:docs/specs/a.md']],
+  ['spec-gebouwd-met-vinkje-zonder-verwijzing', 'mandate-follow-up/AC-11', ['spec:bewijs:docs/specs/a.md']],
+  ['spec-gebouwd-met-roadmapvinkje', 'mandate-follow-up/AC-11', ['spec:bewijs:docs/specs/a.md']],
   ['spec-roadmapverwijzing-roadmap-ongewijzigd', 'AC-11', ['spec:roadmap:docs/specs/a.md']],
   [
     'spec-st-verwijzing-roadmap-ongewijzigd',
@@ -221,7 +222,7 @@ describe('roadmapMeldingen: meldteksten (letterlijk uit de spec)', () => {
       {
         key: 'spec:bewijs:docs/specs/a.md',
         message:
-          'docs/specs/a.md: naar gebouwd zonder bewijs; vink het roadmap-item af met bewijs, of zet bewijs achter de status (status: gebouwd # #<PR> of een testpad)',
+          'docs/specs/a.md: naar gebouwd zonder bouwbewijs; zet de status met pnpm docs:status (status: gebouwd # #<PR>; gevalideerd: <sha>)',
       },
     ]);
   });
