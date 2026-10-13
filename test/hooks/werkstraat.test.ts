@@ -222,14 +222,14 @@ test('session-start: haalt origin/main op en meldt hoeveel commits de branch ach
   expect(text).toContain('34 commits achter op origin/main');
 });
 
-test('session-start: de fetch krijgt een harde timeout en kan niet om credentials vragen', () => {
+test('session-start: de fetch krijgt een harde timeout en vraagt niet om een wachtwoord en laat het SSH-commando van de gebruiker met rust', () => {
   const { deps, fetchOptions } = lagDeps({});
   sessionStart(deps);
 
   expect(fetchOptions).toHaveLength(1);
   expect(fetchOptions[0]?.timeout).toBe(5000);
   expect(fetchOptions[0]?.env?.['GIT_TERMINAL_PROMPT']).toBe('0');
-  expect(fetchOptions[0]?.env?.['GIT_SSH_COMMAND']).toContain('BatchMode=yes');
+  expect(fetchOptions[0]?.env?.['GIT_SSH_COMMAND']).toBeUndefined();
 });
 
 test('session-start: geen achterstand, geen melding', () => {

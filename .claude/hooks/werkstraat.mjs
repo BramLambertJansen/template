@@ -26,7 +26,7 @@ function makeDeps(root) {
       timeout: options.timeout,
       maxBuffer: 32 * 1024 * 1024,
     });
-    return { code: result.status ?? 1, output: `${result.stdout}${result.stderr}` };
+    return { code: result.status ?? 1, output: `${result.stdout ?? ''}${result.stderr ?? ''}` };
   };
   return {
     run,

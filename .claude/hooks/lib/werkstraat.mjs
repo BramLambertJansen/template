@@ -173,14 +173,14 @@ function reviewerStop(payload) {
 
 /**
  * Haalt origin/main op en meldt een achterstand van de branch. Fail-open: een harde procestimeout, nooit om credentials
- * vragen (HTTPS-prompt of SSH-passphrase), en zonder bekende origin/main (een app zonder remote) geen melding.
+ * vragen (HTTPS-prompt; de timeout begrenst een SSH-passphrase, zonder het SSH-commando van de gebruiker te overschrijven), en zonder bekende origin/main (een app zonder remote) geen melding.
  * @param {Deps} deps
  * @returns {string}
  */
 function mainLag(deps) {
   const fetched = deps.run('git', ['fetch', '--quiet', '--no-tags', 'origin', '+refs/heads/main:refs/remotes/origin/main'], {
     timeout: 5000,
-    env: { GIT_TERMINAL_PROMPT: '0', GIT_SSH_COMMAND: 'ssh -o BatchMode=yes -o ConnectTimeout=5' },
+    env: { GIT_TERMINAL_PROMPT: '0' },
   });
   const counts = deps.run('git', ['rev-list', '--left-right', '--count', 'origin/main...HEAD']);
   if (counts.code !== 0) return '';
