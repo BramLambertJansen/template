@@ -39,7 +39,8 @@ verwerkt de grens of vraagt een concrete scope-uitbreiding. Een blokkadetekst sc
 
 De bestaande runner start zijn eigen verse teststack; hiervoor hoeft de eigenaar geen dev-stack te starten.
 `pnpm test:db`, `pnpm ui:check` en `pnpm gate:slow` mogen automatisch bij `autoRunner` op main en onveranderde
-hostbestanden. Alleen de exacte opdrachten krijgen expliciete toestemming, zonder extra argumenten, environment-
+hostbestanden. Start ze vanuit de repositoryroot; een package in een submap krijgt geen automatische hosttoestemming.
+Alleen de exacte opdrachten krijgen expliciete toestemming, zonder extra argumenten, environment-
 overrides of samengestelde shellopdracht.
 
 Bij gewijzigde scripts, compose-, package- of andere hostconfiguratie gebruikt de hoofdsessie de bestaande GitHub CI

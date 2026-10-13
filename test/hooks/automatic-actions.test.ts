@@ -52,3 +52,22 @@ test('hoofdsessie gebruikt labelhelper; directe zelfgoedkeuring blijft verboden'
   expect(action('gh pr edit 123 --add-label gate-wijziging').deny).not.toHaveLength(0);
   expect(action('gh pr review 123 --approve').deny).not.toHaveLength(0);
 });
+
+test('een andere package in een submap krijgt geen automatische hosttoestemming', () => {
+  const root = process.cwd();
+  const result = decide(
+    { tool_name: 'Bash', tool_input: { command: 'pnpm test:db' }, agent_type: 'developer' },
+    {
+      root,
+      cwd: `${root}/src/web`,
+      branch: 'feat/example',
+      config: loadConfig(readFileSync('.claude/gates.json', 'utf8')),
+      authority: null,
+      runnerTrusted: true,
+      read: () => null,
+      committed: () => false,
+      isDir: () => false,
+    },
+  );
+  expect(result.allow).toBeUndefined();
+});

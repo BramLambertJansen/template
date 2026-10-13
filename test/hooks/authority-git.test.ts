@@ -204,6 +204,17 @@ describe('taakmandaat tegen echte git-objecten', () => {
     };
     expect(decide(compound, ctx).context).toContainEqual(expect.stringContaining('Taakmandaat:'));
     expect(decide(compound, ctx).allow).toBeUndefined();
+    write(root, 'private/example.tsx', 'Ongewijzigde fixture.');
+    mkdirSync(path.join(root, 'private/directory'));
+    const link = path.join(root, 'src/core/web/ui/link');
+    symlinkSync(path.join(root, 'private/directory'), link);
+    const alias = {
+      ...call,
+      agent_type: 'developer',
+      tool_input: { ...call.tool_input, file_path: `${link}/../example.tsx` },
+    };
+    expect(decide(alias, ctx).deny).not.toHaveLength(0);
+    expect(decide(alias, ctx).allow).toBeUndefined();
   });
 
   test('een gewijzigde taakspec of branch trekt de bevoegdheid in', () => {

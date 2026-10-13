@@ -72,7 +72,7 @@ export function decide(payload, ctx) {
     const command = field(input, 'command');
     decideBash({ command, role }, context, decision);
     if (command.includes('--sta-wijzigingen-toe')) decision.deny.push('De agent omzeilt de hostcontrole van de runner nooit; gebruik voor gewijzigd railwerk de CI-runner');
-    if (ctx.runnerTrusted === true && automaticRunner(command) && decision.ask.length + decision.deny.length === 0)
+    if (ctx.cwd === ctx.root && ctx.runnerTrusted === true && automaticRunner(command) && decision.ask.length + decision.deny.length === 0)
       decision.allow = true;
   }
   else if (['Edit', 'Write', 'MultiEdit', 'NotebookEdit'].includes(tool)) {
@@ -144,11 +144,19 @@ function decideMcp({ tool, role }, ctx, decision) {
  */
 function decideEdit({ tool, input, role }, ctx, decision) {
   const file = field(input, 'file_path') || field(input, 'notebook_path');
+  ctx = scopedContext(ctx, file);
   const rel = relative(ctx, file);
   if (rel === null) return;
   const before = ctx.read(rel);
   const after = tool === 'NotebookEdit' ? null : simulate(tool, input, before);
   decideFile({ rel, change: { kind: 'write', after }, role }, ctx, decision);
+}
+
+/** Een weggewerkte parentcomponent kan via een symlink naar een ander fysiek bestand wijzen.
+ * @param {Ctx} ctx @param {string} file */
+function scopedContext(ctx, file) {
+  const parent = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
+  return parent.test(file) || parent.test(ctx.cwd) ? { ...ctx, authority: null } : ctx;
 }
 
 /**
@@ -379,6 +387,7 @@ function decideBash({ command, role }, ctx, decision) {
  * @param {Decision} decision
  */
 function bashTarget({ file, kind, role }, ctx, decision) {
+  ctx = scopedContext(ctx, file);
   const rel = relative(ctx, file);
   if (rel === null) return;
   // Naar een bestaande map (cp x src/core/): beslis voor een nieuw bestand daarin.
