@@ -17,7 +17,7 @@ Achtergrond: [spec taakmandaat](taakmandaat-frameworkwerk.md), [ADR 0027](../adr
 - **B2** — Eén bewijsvorm voor gebouwd: `check-document-status` en `check:roadmap`/`docs/dod.md:10` accepteren hetzelfde; `docs/dod.md` gaat mee.
 - **B3** — `HOST_FILES` staat dubbel (`.claude/hooks/lib/runner-authority.mjs:4-6`, `scripts/runner.sh:12-13`): één bron of een check die ze gelijk houdt.
 
-De uitwerking is met de eigenaarbesluiten OV-1 t/m OV-6 vastgelegd (onderaan); OV-8 en OV-9 staan open. De spec blijft
+De uitwerking is met de eigenaarbesluiten OV-1 t/m OV-6 vastgelegd (onderaan); OV-7, OV-8, OV-9 en OV-10 staan open. De spec blijft
 `voorstel` tot de eigenaar hem zelf op `goedgekeurd` zet.
 
 ### Huidige stand (origin/main `f290a76`)
@@ -83,13 +83,21 @@ n.v.t. — geen HTTP-route, permissie of applicatiefoutcode. Wel nieuwe en gewij
 pad van S tussen backticks noemt, bijvoorbeeld `` `docs/specs/taakmandaat-vervolg.md` ``. Het pad moet al in de basis in
 het item staan; het pad in dezelfde PR toevoegen is een tekstwijziging en valt niet onder de uitzondering.
 
+**Wanneer**: `taakVinkje` wordt alleen aangeroepen als `docs/roadmap.md` tussen `basis` en `head` in de diff staat
+(gewijzigd, hernoemd of verwijderd). Staat het bestand niet in de diff, dan is er niets te controleren. Een spec zonder
+roadmap-item die naar `gebouwd` gaat, heeft alleen statusbewijs nodig.
+
+**Geraakte spec**: een spec S uit `specs` waarvan een item wijzigt, dus een item dat tussen `basis` en `head` verschilt en
+in `basis` het pad van S tussen backticks noemt.
+
 **`taakVinkje({ basis, head, specs, kader })`** slaagt alleen als alles hieronder geldt (regels vergeleken na
 normalisatie van `\r\n`):
 
-1. Voor elke spec in `specs` staat in `basis` precies één open item (`[ ]`) dat het pad van S noemt, en geen afgevinkt
-   item dat het noemt. Anders: "geen eenduidig open item". Deze eis geldt overal in deze spec: in CI, in `statusOnlyDiff`
-   en in `docs:status`.
-2. Elk item dat tussen `basis` en `head` wijzigt, is zo'n item van een spec in `specs`. In `head` is het `[x]`; de tekst in
+1. Voor elke geraakte spec staat in `basis` precies één open item (`[ ]`) dat het pad van S noemt, en geen afgevinkt
+   item dat het noemt. Anders: "geen eenduidig open item". Specs uit `specs` zonder gewijzigd item hoeven geen item te
+   hebben. Deze eis geldt overal in deze spec: in CI, in `statusOnlyDiff` en in `docs:status` (daar is de ene spec uit de
+   opdracht per definitie geraakt).
+2. Elk item dat tussen `basis` en `head` wijzigt, is het item van een geraakte spec. In `head` is het `[x]`; de tekst in
    `basis` is een prefix van de tekst in `head` (alleen aanvullen aan het einde, op dezelfde regel of op nieuwe
    vervolgregels). Een aanvulling bevat geen regel die zelf een item is (`- [ ]`, `- [x]` of `- [X]`, op elke inspringing).
 3. Elke andere regel van het bestand is gelijk aan `basis`; er komen geen regels bij of af buiten die items.
@@ -103,6 +111,17 @@ normalisatie van `\r\n`):
 | `check-document-status` → `verifyScopedFile` (alleen bij een actief mandaat) | merge-base (`split`) | `HEAD_SHA` | elke spec met een actief mandaat op deze repository en branch | `package.json` uit `HEAD_SHA` (`git show`) / `git ls-tree -r --name-only HEAD_SHA` / `testpaden` uit `.claude/gates.json` van `BASE_SHA` |
 | `statusOnlyDiff(from, to)` (via `verifyBuilt`, ook zonder mandaat) | `from` (gevalideerde SHA) | `to` | elke spec die in `from` niet `gebouwd` is en in `to` wel, ongeacht mandaat | `package.json` uit `to` / `git ls-tree -r --name-only to` / `testpaden` uit `.claude/gates.json` van de vertrouwde basis die de aanroeper meegeeft (CI: `BASE_SHA`; `docs:status`: `origin/main`) |
 | `docs:status … --roadmap` | `HEAD` (werkmap gelijk aan HEAD) | de nieuwe tekst | de ene spec uit de opdracht | uit `HEAD` / `git ls-tree -r --name-only HEAD` / `.claude/gates.json` van `origin/main` |
+
+`register` (de checknamen voor `heeftBewijs`, nu `gates.map((gate) => gate.script)` in `roadmapMeldingen`) komt in elke
+aanroep uit `scripts/kit/gates.mjs` van de draaiende code; in CI is dat de versie uit main.
+
+`statusOnlyDiff` krijgt daarvoor een derde parameter: `statusOnlyDiff(root, commits, { testpaden })`. Beide SHA's in
+`commits` blijven 40 tekens (zoals nu). Aanroepen die mee wijzigen: `check-document-status.mjs:28` en
+`document-status.mjs:35` (daar is `from === to`, dus `docs/roadmap.md` staat niet in de diff en `taakVinkje` wordt niet
+aangeroepen).
+
+`statusOnlyDiff` accepteert het vinkje van een spec die in `from..to` naar `gebouwd` gaat ook zonder mandaat (AC-7): het
+leest het register niet. Dat versoepelt ADR 0027 punt 4 en task-mandate/AC-9 ("uitsluitend statusregels"); zie OV-10.
 
 Twee mandaten op één branch mogen elk hun eigen item afvinken, in dezelfde PR. Bij een actief mandaat mag het vinkje
 ook zonder statusovergang van de spec meewijzigen (bijvoorbeeld in een eerdere commit dan de status); of dat zo bedoeld is,
@@ -130,9 +149,12 @@ doet, plus het vinkje:
 ### B2 — Eén bewijsvorm (OV-1)
 
 - **Spec naar `gebouwd`**: alleen de vorm die `pnpm docs:status` schrijft: `status: gebouwd # #<PR>; gevalideerd: <40 hex>`.
-  `check:roadmap` leest de status voortaan met `documentInfo` (precies één statusregel, geldige frontmatter) en het bewijs
-  met `builtReference` op die ene regel; zijn eigen `statusBewijs` en de `roadmapBewijs`-route in `specMeldingen` vervallen.
-  Een spec met twee statusregels of zonder geldige frontmatter die naar `gebouwd` gaat, krijgt `spec:bewijs`.
+  Of een spec "naar `gebouwd` gaat", bepaalt `check:roadmap` zoals nu: met `SPEC_STATUS` (eerste `status:`-regel) in
+  `basis` (oud pad bij rename) en `head`; was de basis al `gebouwd`, dan volgt nooit een melding, ook als `documentInfo`
+  die spec afwijst (AC-13). Alleen bij een overgang leest hij het bewijs met `documentInfo` (precies één statusregel,
+  geldige frontmatter) en `builtReference` op die ene regel. Geeft `documentInfo` `null` (twee statusregels, ongeldige
+  frontmatter), dan telt dat als geen bewijs: `spec:bewijs`. Zijn eigen `statusBewijs` en de `roadmapBewijs`-route in
+  `specMeldingen` vervallen.
   `check:roadmap` controleert alleen de vorm (offline); `check-document-status` controleert daarnaast PR, SHA en checks
   live (ongewijzigd, task-mandate/AC-9).
 - **Roadmap-vinkje**: ongewijzigd: een testpad, een checknaam (`` `pnpm …` ``) of een PR-nummer (`#…`), gelezen door
@@ -154,6 +176,10 @@ doet, plus het vinkje:
   - Verschil met `safeRepositoryPath` dat blijft: bash onderscheidt een niet-leesbaar voorvoegsel (bijvoorbeeld `EACCES`)
     niet van een ontbrekend; de hook weigert dat, `runner.sh` laat het door. Bash leest de werkmap, de hook ook.
 - `--sta-wijzigingen-toe` slaat ook deze controles over, zoals nu.
+- **Risico**: controle (a) draait ook met `CI=true`. Maakt een CI-stap vóór `runner.sh` een genegeerd bestand onder een
+  hostpad (bijvoorbeeld een `*.log` in `scripts/`, of een cache onder `db/docker`), dan wordt `gate:slow` rood zonder dat de
+  PR iets fout doet. Niet nagegaan of dat nu gebeurt; de eerste CI-run van de implementatie-PR toont het. Een
+  CI-uitzondering hoort er niet in zonder besluit van de eigenaar.
 
 ### Letterlijke meldingen
 
@@ -190,6 +216,17 @@ doet, plus het vinkje:
 en de zin "Schrijft alleen de statusregel met PR en gevalideerde bron-SHA." wordt "Schrijft alleen de statusregel met PR en
 gevalideerde bron-SHA, en met `--roadmap` het vinkje van het item dat de spec noemt."
 
+Alleen na akkoord in OV-10 (deze documenten hebben een goedkeuringsstatus; de agent wijzigt ze niet zelf):
+
+- `docs/adr/0027-taakmandaat-voor-frameworkwerk.md:31`: "Daarna mogen uitsluitend statusregels veranderen;" wordt
+  "Daarna mogen uitsluitend statusregels en het vinkje van het roadmap-item van de eigen spec veranderen (spec taakmandaat-vervolg);".
+- `docs/specs/taakmandaat-frameworkwerk.md:37`: "`pnpm docs:status` wijzigt alleen de statusregel;" wordt
+  "`pnpm docs:status` wijzigt alleen de statusregel, met `--roadmap` ook het vinkje van de eigen taak;".
+- `docs/specs/taakmandaat-frameworkwerk.md:59-61` (task-mandate/AC-9): "uitsluitend latere statuswijzigingen" wordt
+  "uitsluitend latere statuswijzigingen en het vinkje van het roadmap-item van de eigen spec".
+- `docs/operations/agent-doorloop.md:81`: "als de latere diff uitsluitend statusregels wijzigt" wordt "als de latere diff
+  uitsluitend statusregels en het vinkje van de eigen taak wijzigt".
+
 ## Acceptatiecriteria
 
 - **mandate-follow-up/AC-1** — Gegeven een actief mandaat voor spec S en een PR die in `docs/roadmap.md` (t.o.v. de
@@ -198,11 +235,12 @@ gevalideerde bron-SHA, en met `--roadmap` het vinkje van het item dat de spec no
 - **mandate-follow-up/AC-2** — Gegeven hetzelfde mandaat, dan faalt `check-document-status` met de melding "buiten het
   taakmandaat" als de PR daarnaast één andere regel van `docs/roadmap.md` wijzigt, een item van een spec zonder actief
   mandaat afvinkt, een regel toevoegt of verwijdert buiten het item, tekst van het item wijzigt in plaats van aanvult,
-  in de aanvulling een regel `- [ ] …` of `- [x] …` (ook ingesprongen) toevoegt, het item heropent, of het bestand
-  hernoemt of verwijdert.
-- **mandate-follow-up/AC-3** — Gegeven een actief mandaat voor S en in de merge-base geen, of meer dan één, open item dat
-  `` `S` `` noemt (of daarnaast een afgevinkt item dat het noemt), dan faalt een wijziging van een item dat `` `S` `` noemt met
-  "geen eenduidig open item"; ook als de PR zelf het pad aan een item toevoegt.
+  in de aanvulling een regel `- [ ] …` of `- [x] …` (ook ingesprongen) toevoegt, het item heropent, een ander item
+  heropent, of het bestand hernoemt of verwijdert.
+- **mandate-follow-up/AC-3** — Gegeven een actief mandaat voor S en in de merge-base meer dan één open item dat `` `S` ``
+  noemt, of daarnaast een afgevinkt item dat het noemt, dan faalt een wijziging van een van die items met "geen eenduidig
+  open item". Noemt in de merge-base geen item `` `S` `` (ook als de PR het pad zelf aan een item toevoegt), dan is een
+  gewijzigd item van niemand en faalt de wijziging met "buiten het taakmandaat".
 - **mandate-follow-up/AC-4** — Gegeven het afgevinkte item van de taak zonder bewijs volgens `heeftBewijs`, dan faalt
   `check-document-status` met "vinkje zonder bewijs", en `check:roadmap` meldt `roadmap:bewijs:<regel>`. Bij meerdere
   overtredingen meldt `check-document-status` alleen de eerste volgens de vastgelegde volgorde.
@@ -217,9 +255,10 @@ gevalideerde bron-SHA, en met `--roadmap` het vinkje van het item dat de spec no
   geeft AC-6 dezelfde uitkomsten. Zonder actief mandaat doet `verifyScope` niets met `docs/roadmap.md` (zoals nu).
 - **mandate-follow-up/AC-8** — Gegeven een schone werkmap, een open item dat `` `S` `` noemt en geldig bouwbewijs, dan
   zet `pnpm docs:status S gebouwd --pr <n> --roadmap` de statusregel op `status: gebouwd # #<n>; gevalideerd: <HEAD>` en
-  het item op `[x]` met ` (#<n>)` erachter; `git diff` toont alleen die twee wijzigingen. Na commit accepteren
-  `statusOnlyDiff(HEAD~1, HEAD)`, `check-document-status` en `check:roadmap` het resultaat, met en zonder actief mandaat
-  voor S.
+  het item op `[x]` met ` (#<n>)` erachter; `git diff` toont alleen die twee wijzigingen, en stdout is letterlijk
+  `S: gebouwd; bewijs gecontroleerd, alleen de statusregel en het vinkje van het item gewijzigd`. Na commit accepteren
+  `statusOnlyDiff(root, { from: <volledige SHA van HEAD~1>, to: <volledige SHA van HEAD> }, { testpaden })`,
+  `check-document-status` en `check:roadmap` het resultaat, met en zonder actief mandaat voor S.
 - **mandate-follow-up/AC-9** — `pnpm docs:status … --roadmap` faalt met exit 1 en wijzigt geen enkel bestand als: geen of
   meerdere open items S noemen; het item al `[x]` is; `--roadmap` gebruikt wordt met een ADR, een andere status of zonder
   `--pr`; `docs/roadmap.md` afwijkt van HEAD of een symlink is; of het bouwbewijs ontbreekt (bestaande controles).
@@ -253,14 +292,32 @@ gevalideerde bron-SHA, en met `--roadmap` het vinkje van het item dat de spec no
   gaat hij door.
 - **mandate-follow-up/AC-18** — De bestaande tests in `test/scripts/runner-guard.test.ts` en
   `test/hooks/runner-authority.test.ts` blijven groen.
+- **mandate-follow-up/AC-19** — Gegeven actieve mandaten voor S1 (met een open item) en S2 (zonder item) en een PR die
+  alleen het item van S1 afvinkt, dan slaagt `check-document-status` (`verifyScopedFile`); er volgt geen melding over S2.
+- **mandate-follow-up/AC-20** — Gegeven `from` waarin S1 (met een open item) en S2 (zonder item) `goedgekeurd` zijn, en `to`
+  waarin beide `gebouwd` zijn en alleen het item van S1 is afgevinkt, dan geeft `statusOnlyDiff` `true`. Zet `to` alleen de
+  statusregel van S2 op `gebouwd` en staat `docs/roadmap.md` niet in de diff, dan ook `true` en wordt `taakVinkje` niet aangeroepen.
+- **mandate-follow-up/AC-21** — Gegeven een item dat het pad van S1 en van S2 noemt, beide met actief mandaat en elk
+  zonder ander item, dan slaagt het afvinken van dat item; noemt een tweede open item ook `` `S2` ``, dan faalt het met
+  "geen eenduidig open item" voor S2.
+- **mandate-follow-up/AC-22** — Gegeven het item van S met het bewijs `(#130)` op een nieuwe, ingesprongen vervolgregel
+  (geen itemregel), dan slagen `taakVinkje`, `check-document-status` en `check:roadmap`.
+- **mandate-follow-up/AC-23** — `pnpm docs:status a b c` (onjuist aantal argumenten) en
+  `pnpm docs:status docs/specs/x.md gebouwd --roadmap --pr 1` (verkeerde volgorde) eindigen met exit 1 en stderr letterlijk
+  `Gebruik: pnpm docs:status <document> <status> [--pr <nummer> [--roadmap]]`; `--roadmap` met een ADR of status
+  `goedgekeurd` geeft letterlijk `--roadmap kan alleen met een spec, status gebouwd en --pr`.
+- **mandate-follow-up/AC-24** — `scripts/runner.sh db` stopt vóór de eerste `docker`-aanroep met de melding "Hostpad is een
+  symlink of geen veilig pad" als een in de basis gecommit hostbestand een naam buiten `[A-Za-z0-9_.-]` heeft (bijv.
+  `scripts/a b.sh`), en als de repository via een symlink wordt aangeroepen (`pwd -P` ≠ `$PWD`); lokaal en met `CI=true`.
 
 ## Randgevallen
 
 | Situatie | Gedrag | Foutcode |
 |---|---|---|
 | Item noemt de spec alleen zonder backticks of via een markdownlink | Geen match; uitzondering geldt niet (AC-3) | n.v.t. |
-| Pad van de spec staat pas in deze PR in het item | Tekstwijziging; faalt (AC-3) | n.v.t. |
-| Item was in de basis al `[x]` | Geen eenduidig open item; wijziging faalt (AC-3, AC-9) | n.v.t. |
+| Pad van de spec staat pas in deze PR in het item | Item hoort in de basis bij geen spec; "buiten het taakmandaat" (AC-3) | n.v.t. |
+| Item was in de basis al `[x]` en wijzigt | Geen eenduidig open item; wijziging faalt (AC-3, AC-9) | n.v.t. |
+| Spec met mandaat zonder roadmap-item gaat naar `gebouwd` | Alleen statusbewijs; geen itemeis (AC-19, AC-20) | n.v.t. |
 | Eén item noemt de paden van twee specs met mandaat | Het is het item van beide; voor elk geldt precies één open item | n.v.t. |
 | Bewijs op een nieuwe vervolgregel van het item | Toegestaan als aanvulling, mits geen itemregel (B1 regel 2) | n.v.t. |
 | CRLF in `docs/roadmap.md` | Vergelijking per regel na normalisatie van `\r\n`, zoals `documentInfo` | n.v.t. |
@@ -275,9 +332,9 @@ gevalideerde bron-SHA, en met `--roadmap` het vinkje van het item dat de spec no
 | Bestand | Gate-pad | Wijziging |
 |---|---|---|
 | `scripts/kit/check-document-status.mjs` | ja | B1 in `verifyScopedFile` via `taakVinkje`, kader uit `HEAD_SHA`/`BASE_SHA` |
-| `scripts/kit/status-git.mjs` | ja | `statusOnlyDiff` roept `taakVinkje` aan voor de specs die in `from..to` naar `gebouwd` gaan |
+| `scripts/kit/status-git.mjs` | ja | `statusOnlyDiff(root, commits, { testpaden })` roept `taakVinkje` aan voor de specs die in `from..to` naar `gebouwd` gaan, alleen als `docs/roadmap.md` in de diff staat; aanroepen in `check-document-status.mjs:28` en `document-status.mjs:35` mee |
 | `scripts/kit/document-status.mjs` | ja | optie `--roadmap`, nieuwe gebruikstekst en succesregel |
-| `scripts/kit/check-roadmap.mjs` | ja | `documentInfo` + `builtReference`, `statusBewijs` en `roadmapBewijs`-route weg, nieuwe meldingstekst, `heeftBewijs` exporteren, kopcommentaar `:1-4` bijwerken |
+| `scripts/kit/check-roadmap.mjs` | ja | `documentInfo` + `builtReference`, `statusBewijs` en `roadmapBewijs`-route weg, nieuwe meldingstekst, `heeftBewijs` en `leesItems` exporteren, kopcommentaar `:1-4` bijwerken |
 | nieuw: module met `taakVinkje` (bijv. `scripts/kit/roadmap-item.mjs`) | ja | gedeelde B1-controle |
 | `.claude/hooks/lib/runner-authority.mjs` | ja | `HOST_FILES` exporteren — handeling van de eigenaar nodig (rolhek en sandbox) |
 | `scripts/runner.sh` | ja | `'compose.*.yaml'` quoten; controles (a) en (b) vóór regel 27 |
@@ -285,7 +342,9 @@ gevalideerde bron-SHA, en met `--roadmap` het vinkje van het item dat de spec no
 | `docs/dod.md` | ja | regel 10 |
 | `docs/framework.md` | ja | één zin in §8 (regel 297) |
 | `docs/specs/_template.md` | ja | regel 2, commentaar |
-| `docs/operations/agent-doorloop.md` | nee | `:77-80` |
+| `docs/operations/agent-doorloop.md` | nee | `:77-80`; `:81` alleen na OV-10 |
+| `docs/adr/0027-taakmandaat-voor-frameworkwerk.md` | ja | `:31` (punt 4), alleen na OV-10; ADR is `geaccepteerd` |
+| `docs/specs/taakmandaat-frameworkwerk.md` | ja | `:37` en `:59-61` (task-mandate/AC-9), alleen na OV-10; spec is `goedgekeurd` |
 | `test/rails/check-roadmap.test.ts` + fixtures | ja | zie hieronder |
 
 Bestaande tests die wijzigen, met reden (B2 verandert het geteste gedrag; noemen in de PR):
@@ -310,6 +369,8 @@ Bestaande tests die wijzigen, met reden (B2 verandert het geteste gedrag; noemen
 
 ## Testplan
 
+- Nieuwe AC's: AC-19 en AC-21 in de Git-repo-tests van `check-document-status`, AC-20 bij `statusOnlyDiff`, AC-22 bij
+  `taakVinkje` en beide checks, AC-23 bij `docs:status`, AC-24 bij `runner.sh` met de docker-stub.
 - Unit (`test/rails/`, in `pnpm test:unit`): `taakVinkje` als pure functie per geval van AC-1 t/m AC-6; fixtures voor
   `check:roadmap` per regel van AC-10 t/m AC-12; de gewijzigde tests uit "Raakt ook"; de gelijkheidstest van AC-15 met een
   negatieve fixture.
@@ -347,3 +408,9 @@ Doorgegeven via de hoofdsessie op 2026-10-13; de eigenaar bevestigt ze door deze
 - **OV-9** — Mag het vinkje van de taak onder een mandaat ook meewijzigen zonder dat de spec in dezelfde PR naar `gebouwd`
   gaat (bijvoorbeeld een item dat eerder klaar is dan de spec)? Deze spec staat het toe; zeg het als het alleen samen met
   `gebouwd` mag.
+- **OV-10** — B1 versoepelt "na de gevalideerde SHA uitsluitend statusregels" tot "statusregels én het vinkje van de
+  eigen taak", en `statusOnlyDiff` accepteert dat vinkje ook zonder mandaat (AC-7). Ga je akkoord dat dit ook in
+  `docs/adr/0027-taakmandaat-voor-frameworkwerk.md:31` (punt 4), `docs/specs/taakmandaat-frameworkwerk.md:37` en `:59-61`
+  (task-mandate/AC-9) en `docs/operations/agent-doorloop.md:81` zo komt te staan, met de teksten onder "Nieuwe
+  documentatieteksten"? ADR 0027 en die spec hebben een goedkeuringsstatus; deze spec wijzigt ze niet zelf. Zonder
+  akkoord spreekt de implementatie die documenten tegen.
