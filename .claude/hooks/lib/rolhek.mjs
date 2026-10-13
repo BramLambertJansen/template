@@ -72,8 +72,7 @@ export function decide(payload, ctx) {
     const command = field(input, 'command');
     decideBash({ command, role }, context, decision);
     if (command.includes('--sta-wijzigingen-toe')) decision.deny.push('De agent omzeilt de hostcontrole van de runner nooit; gebruik voor gewijzigd railwerk de CI-runner');
-    if ((ctx.runnerTrusted === true && automaticRunner(command) ||
-      decision.context.some((reason) => reason.startsWith('Taakmandaat:'))) && decision.ask.length + decision.deny.length === 0)
+    if (ctx.runnerTrusted === true && automaticRunner(command) && decision.ask.length + decision.deny.length === 0)
       decision.allow = true;
   }
   else if (['Edit', 'Write', 'MultiEdit', 'NotebookEdit'].includes(tool)) {

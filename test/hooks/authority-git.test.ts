@@ -197,6 +197,13 @@ describe('taakmandaat tegen echte git-objecten', () => {
     };
     expect(decide({ ...call, agent_type: 'developer' }, ctx).allow).toBe(true);
     expect(decide({ ...call, agent_type: 'Explore' }, ctx).deny).not.toHaveLength(0);
+    const compound = {
+      tool_name: 'Bash',
+      agent_type: 'developer',
+      tool_input: { command: `echo x > ${SOURCE}; docker run untrusted` },
+    };
+    expect(decide(compound, ctx).context).toContainEqual(expect.stringContaining('Taakmandaat:'));
+    expect(decide(compound, ctx).allow).toBeUndefined();
   });
 
   test('een gewijzigde taakspec of branch trekt de bevoegdheid in', () => {
