@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expect, test } from 'vitest';
@@ -15,6 +15,7 @@ function runBlock(): string {
   const lines = job.split('\n');
   const start = lines.findIndex((line) => line.trim() === '- run: |');
   const end = lines.findIndex((line, index) => index > start && line.trim() === 'env:');
+  if (start < 0 || end < 0) throw new Error('de job secrets heeft geen `run: |`-blok met een `env:` erna');
   const body = lines.slice(start + 1, end);
   const indent = (body[0] ?? '').length - (body[0] ?? '').trimStart().length;
   return body.map((line) => line.slice(indent)).join('\n');
@@ -24,10 +25,14 @@ function scan(event: string): string {
   const bin = mkdtempSync(path.join(tmpdir(), 'ci-scan-'));
   writeFileSync(path.join(bin, 'betterleaks'), '#!/bin/sh\necho "ARGS: $*"\n');
   chmodSync(path.join(bin, 'betterleaks'), 0o755);
-  return execFileSync('bash', ['-eu', '-c', runBlock()], {
-    encoding: 'utf8',
-    env: { PATH: `${bin}:${process.env['PATH'] ?? ''}`, EVENT: event },
-  });
+  try {
+    return execFileSync('bash', ['-eu', '-c', runBlock()], {
+      encoding: 'utf8',
+      env: { PATH: `${bin}:${process.env['PATH'] ?? ''}`, EVENT: event },
+    });
+  } finally {
+    rmSync(bin, { recursive: true, force: true });
+  }
 }
 
 test('op een PR alleen de commits van die PR, met eigen config en zonder inline allows', () => {
@@ -44,6 +49,10 @@ test.each(['push', 'merge_group', 'workflow_dispatch'])('bij %s alle gefetchte r
   expect(args).not.toContain('--log-opts');
   expect(args).toContain('-c scripts/kit/betterleaks.toml');
   expect(args).toContain('--ignore-gitleaks-allow');
+});
+
+test('EVENT komt uit het event van de workflow, niet uit iets anders', () => {
+  expect(job).toMatch(/env:\n\s+EVENT: \$\{\{ github\.event_name \}\}/);
 });
 
 test('de checkout haalt de hele geschiedenis op, zodat origin/main bestaat', () => {
