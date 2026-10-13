@@ -114,6 +114,58 @@ test('AC-5: namen volgen het echte veldtype, inclusief enum-string', () => {
   expectTypeOf<RadioNames>().toEqualTypeOf<'naam' | 'rol'>();
 });
 
+const requiredSchema = z.object({
+  meldingen: z.boolean().refine(Boolean, 'Kies meldingen.'),
+  rol: z.string().refine((role) => role === 'user' || role === 'admin', 'Kies een rol.'),
+});
+
+function RequiredExample({ submit }: { submit: () => Promise<unknown> }) {
+  const form = useZodForm(requiredSchema, { meldingen: false, rol: '' });
+  return (
+    <Form form={form} onSubmit={submit} submitLabel="Versturen">
+      <FormCheckboxField form={form} name="meldingen" label="Meldingen" />
+      <FormRadioGroupField form={form} name="rol" label="Rol" options={options} />
+    </Form>
+  );
+}
+
+test('AC-3/4: schemafouten blokkeren submit; radio kiest niet impliciet een eerste optie', async () => {
+  let calls = 0;
+  render(
+    <ErrorTextsProvider texts={{}}>
+      <RequiredExample
+        submit={() => {
+          calls += 1;
+          return Promise.resolve();
+        }}
+      />
+    </ErrorTextsProvider>,
+  );
+  expect(screen.queryByRole('radio', { checked: true })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Versturen' }));
+  const error = await screen.findByText('Kies een rol.');
+  expect(await screen.findByText('Kies meldingen.')).toBeDefined();
+  expect(calls).toBe(0);
+  expect(screen.getByRole('radio', { name: 'Gebruiker' }).getAttribute('aria-describedby')).toBe(error.id);
+  fireEvent.click(screen.getByRole('checkbox'));
+  fireEvent.click(screen.getByRole('radio', { name: 'Gebruiker' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Versturen' }));
+  await waitFor(() => expect(calls).toBe(1));
+});
+
+function MissingDefault() {
+  const form = useZodForm(schema, { meldingen: false, rol: 'user' });
+  return (
+    <FormField form={form} name="naam" label="Naam">
+      {(field) => <Textarea {...field} />}
+    </FormField>
+  );
+}
+
+test('AC-5: ontbrekende stringdefault veroorzaakt een assertion in plaats van een stille lege waarde', () => {
+  expect(() => render(<MissingDefault />)).toThrow('FormField requires a string default value');
+});
+
 function Legacy({ submit }: { submit: (values: Values) => Promise<unknown> }) {
   const form = useZodForm(schema, { naam: 'Ada', rol: 'user', meldingen: false });
   return (
