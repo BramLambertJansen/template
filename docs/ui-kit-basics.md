@@ -17,3 +17,27 @@ De uitbreiding volgt [de goedgekeurde spec](specs/ui-kit-basics.md). Importeer c
 Bronnen: `src/core/web/ui/form.tsx:94`, `src/core/web/ui/form-checkbox-field.tsx:15`,
 `src/core/web/ui/form-radio-group-field.tsx:15`, `src/web/features/design-system/ui-basics-examples.tsx`.
 Additieve acceptatietests: `src/core/web/ui/form-controls.test.tsx`. Bestaande tests blijven ongewijzigd.
+
+## Status en leegte
+
+`StatusBadge` presenteert aangeleverde tekst met `tone="neutral"`, `accent` of `destructive`.
+De tekst-/vlakparen zijn dezelfde als de bestaande contrasttest voor muted, accent en destructive Button,
+in licht en donker (`test/ui/contrast.test.ts`). Core kent geen accountstatussen.
+
+`EmptyState` heeft `title`, optionele `description` en `action`. De app beslist over toegang tot de actie.
+Gebruik `AsyncView.emptyContent` voor deze samengestelde weergave, naast `isEmpty`; zonder custom inhoud
+blijft `emptyText` gelden. Loading/error/retry blijven in AsyncView.
+
+## Busy acties
+
+`Button.busy` en `busyLabel` tonen de actie in uitvoering. `aria-disabled` bewaart focus;
+capturehandlers weigeren click en Enter/Space voordat de actie of native submit/navigatie kan plaatsvinden.
+Ook `asChild` behoudt zijn element tijdens de labelwissel. Geef een geschikt aangeleverd busy-label door,
+ook wanneer de gewone knop uitsluitend een pictogram heeft. Native `disabled` blijft beschikbaar.
+
+Menu-items ondersteunen `busy`, `busyLabel` en `disabled`. Busy blijft focusbaar; disabled wordt door
+Radix overgeslagen. Beide weigeren selectie en sluiten het menu niet. De caller beëindigt busy,
+bijvoorbeeld bij succes of fout; de kit doet geen automatische retry, timer of toast.
+
+Voorbeelden: `src/web/features/design-system/ui-basics-examples.tsx`. De voorbeeldquery in `queries.ts`
+levert uitsluitend lokale fictieve data; er zijn geen nieuwe API-aanroepen of rechten.
