@@ -443,7 +443,9 @@ describe('de echte docs/roadmap.md (AC-16)', () => {
   // beginregel van een afgevinkt item (dus geen vervolgregel, `**Klaar als:**`-regel of kop als item).
   test('met een lege basis horen alle meldingen bij de beginregel van een [x]-item', async () => {
     const regels = echteRoadmap().split('\n');
-    const meldingen = await echteMeldingen(lege());
+    // Alleen de roadmap-meldingen: met een lege basis gaat elke bestaande gebouwde spec "naar gebouwd", en die oude statusvorm is
+    // sinds taakmandaat-vervolg (B2) geen geldig bewijs meer (spec:bewijs, zie AC-13 daar: alleen een overgang wordt gecontroleerd).
+    const meldingen = (await echteMeldingen(lege())).filter(({ key }) => key.startsWith('roadmap:'));
     for (const { key } of meldingen) {
       const regel = Number(/^roadmap:(?:bewijs|pad):(\d+)/.exec(key)?.[1]);
       expect(regels[regel - 1], key).toMatch(/^\s*- \[[xX]\] /);
