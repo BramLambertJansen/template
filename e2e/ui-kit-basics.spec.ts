@@ -6,6 +6,8 @@ import { signIn } from './support/eigen-account.ts';
 async function openCatalog(page: Page) {
   await signIn(page, await createAccount('admin', { totp: true }));
   await page.goto('/design-system');
+  // De route laadt zijn cataloguschunk lazy; wacht op de echte scherminhoud binnen de bestaande test-timeout.
+  await page.getByRole('region', { name: 'Textarea, Checkbox en RadioGroup' }).waitFor();
   await expect(page.getByRole('heading', { level: 1, name: 'Design system' })).toBeVisible();
 }
 
