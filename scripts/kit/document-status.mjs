@@ -6,7 +6,7 @@ import { changeStatus, documentInfo, documentKind } from '../../.claude/hooks/li
 import { canRecordStatus } from '../../.claude/hooks/lib/task-authority.mjs';
 import { canRecordBuilt } from '../../.claude/hooks/lib/built-evidence.mjs';
 import { pullRequest, checkRuns } from './github-evidence.mjs';
-import { statusOnlyDiff, isAncestor } from './status-git.mjs';
+import { statusOnlyDiff, isAncestor, unchangedHead } from './status-git.mjs';
 
 /** @param {string[]} args */
 function argumentsFor(args) {
@@ -41,10 +41,10 @@ function nextStatus(target, context) {
   return after;
 }
 
-/** @param {{ root: string, file: string, before: string, head: string }} expected */
+/** @param {{ root: string, file: string, before: string, head: string, branch: string, base: string }} expected */
 function unchanged(expected) {
   return (
-    gitText(expected.root, ['rev-parse', 'HEAD'])?.trim() === expected.head &&
+    unchangedHead(expected.root, expected) &&
     gitText(expected.root, ['status', '--porcelain', '--untracked-files=all', '--', '.', ':!node_modules']) === '' &&
     readFileSync(path.join(expected.root, expected.file), 'utf8') === expected.before
   );
@@ -54,14 +54,15 @@ async function main() {
   const root = process.cwd();
   const target = argumentsFor(process.argv.slice(2));
   if (documentKind(target.file) === null) throw new Error('Alleen een spec- of ADR-document is toegestaan');
-  const authority = readAuthority({ root });
-  if (authority === null || !authority.safe(target.file))
+  const base = gitText(root, ['rev-parse', 'origin/main'])?.trim();
+  const authority = base === undefined ? null : readAuthority({ root, base });
+  if (authority === null || base === undefined || !authority.safe(target.file))
     throw new Error('Geen leesbare vertrouwde basis of veilig documentpad; haal origin/main opnieuw op');
   const head = gitText(root, ['rev-parse', 'HEAD'])?.trim();
   if (head === undefined) throw new Error('HEAD is niet leesbaar');
   const before = readFileSync(path.join(root, target.file), 'utf8');
   if (documentInfo(target.file, before) === null) throw new Error('Ongeldig ADR- of spec-document');
-  const expected = { root, file: target.file, before, head };
+  const expected = { root, file: target.file, before, head, branch: authority.branch, base };
   if (!unchanged(expected))
     throw new Error('Leg de implementatie eerst vast; de gecontroleerde commit en werkmap moeten overeenkomen');
   const after = nextStatus(target, { root, authority, before });

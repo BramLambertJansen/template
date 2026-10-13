@@ -1,5 +1,14 @@
 import { documentInfo } from '../../.claude/hooks/lib/document-state.mjs';
 import { gitText } from '../../.claude/hooks/lib/authority-context.mjs';
+
+/** @param {string} root @param {{ head: string, branch: string, base: string }} expected */
+export function unchangedHead(root, expected) {
+  return (
+    gitText(root, ['rev-parse', 'HEAD'])?.trim() === expected.head &&
+    gitText(root, ['branch', '--show-current'])?.trim() === expected.branch &&
+    gitText(root, ['rev-parse', 'origin/main'])?.trim() === expected.base
+  );
+}
 import { parseNameStatus } from './diff-guard.mjs';
 
 /** @param {string} root @param {{ from: string, to: string }} commits */

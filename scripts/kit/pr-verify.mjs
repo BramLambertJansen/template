@@ -3,6 +3,7 @@ import { readAuthority, gitText } from '../../.claude/hooks/lib/authority-contex
 import { checkedCommit, GITHUB_ACTIONS_APP_ID } from '../../.claude/hooks/lib/built-evidence.mjs';
 import { pullRequest, checkRuns } from './github-evidence.mjs';
 import { setTimeout } from 'node:timers/promises';
+import { unchangedHead } from './status-git.mjs';
 
 /** @param {import('../../.claude/hooks/lib/built-evidence.mjs').CheckRun[]} checks @param {{ names: string[], sha: string }} required */
 export function checkProgress(checks, required) {
@@ -34,14 +35,14 @@ function argumentsFor(args) {
   return { number: Number(number), watch: flag === '--watch' };
 }
 
-/** @param {{ root: string, head: string, authority: import('../../.claude/hooks/lib/task-authority.mjs').Authority, number: number }} context */
+/** @param {{ root: string, head: string, base: string, authority: import('../../.claude/hooks/lib/task-authority.mjs').Authority, number: number }} context */
 function verifyHead(context) {
   const pr = pullRequest(context.authority.repository, context.number);
   if (
     pr.headSha !== context.head ||
     pr.branch !== context.authority.branch ||
     pr.state !== 'open' ||
-    gitText(context.root, ['rev-parse', 'HEAD'])?.trim() !== context.head ||
+    !unchangedHead(context.root, { head: context.head, branch: context.authority.branch, base: context.base }) ||
     gitText(context.root, ['status', '--porcelain', '--untracked-files=all', '--', '.', ':!node_modules']) !== ''
   )
     throw new Error('PR, branch of werkmap wijkt af van de gecontroleerde commit; bewijs opnieuw ophalen');
@@ -50,10 +51,12 @@ function verifyHead(context) {
 async function main() {
   const root = process.cwd();
   const target = argumentsFor(process.argv.slice(2));
-  const authority = readAuthority({ root });
+  const base = gitText(root, ['rev-parse', 'origin/main'])?.trim();
+  const authority = base === undefined ? null : readAuthority({ root, base });
   const head = gitText(root, ['rev-parse', 'HEAD'])?.trim();
-  if (authority === null || head === undefined) throw new Error('Geen leesbare vertrouwde basis of HEAD');
-  const context = { root, head, authority, number: target.number };
+  if (authority === null || head === undefined || base === undefined)
+    throw new Error('Geen leesbare vertrouwde basis of HEAD');
+  const context = { root, head, base, authority, number: target.number };
   const required = { names: authority.registry.requiredChecks, sha: head };
   const deadline = Date.now() + 30 * 60 * 1000;
   while (true) {

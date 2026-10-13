@@ -7,6 +7,7 @@ import { documentInfo } from '../../.claude/hooks/lib/document-state.mjs';
 import { readAuthority, repositoryName } from '../../.claude/hooks/lib/authority-context.mjs';
 import { canWriteProtected } from '../../.claude/hooks/lib/task-authority.mjs';
 import { decide, loadConfig } from '../../.claude/hooks/lib/rolhek.mjs';
+import { unchangedHead } from '../../scripts/kit/status-git.mjs';
 
 const SPEC = 'docs/specs/example.md';
 const SOURCE = 'src/core/web/ui/example.tsx';
@@ -91,6 +92,25 @@ afterEach(() => {
 });
 
 describe('taakmandaat tegen echte git-objecten', () => {
+  test('branchwissel op dezelfde commit maakt lopende bewijscontrole ongeldig', () => {
+    const { root, base } = fixture();
+    const expected = { head: base, base, branch: 'feat/example' };
+    expect(unchangedHead(root, expected)).toBe(true);
+    git(root, ['switch', '-c', 'feat/other']);
+    expect(git(root, ['rev-parse', 'HEAD'])).toBe(base);
+    expect(unchangedHead(root, expected)).toBe(false);
+  });
+
+  test('een nieuwe vertrouwde basis vraagt hercontrole zonder gewijzigde HEAD', () => {
+    const { root, base } = fixture();
+    write(root, 'README.md', 'Nieuwe basis.');
+    const head = commit(root);
+    const expected = { head, base, branch: 'feat/example' };
+    expect(unchangedHead(root, expected)).toBe(true);
+    git(root, ['update-ref', 'refs/remotes/origin/main', head]);
+    expect(unchangedHead(root, expected)).toBe(false);
+  });
+
   test('de besluithelper bereidt een record in .claude voor zonder zichzelf rechten te geven', () => {
     const { root } = fixture();
     const source = 'src/core/web/ui/new.tsx';
