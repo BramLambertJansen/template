@@ -50,7 +50,12 @@ for (const width of [375, 1280]) {
       await expect(checkbox).toBeChecked();
       const disabled = page.getByRole('region', { name: 'Invoervelden: disabled' });
       await expect(disabled.getByRole('checkbox')).toBeDisabled();
-      await disabled.getByRole('checkbox').locator('..').click();
+      const label = disabled.getByRole('checkbox').locator('..');
+      await label.scrollIntoViewIfNeeded();
+      const bounds = await label.boundingBox();
+      if (bounds === null) throw new Error('Het checkboxlabel is niet zichtbaar.');
+      // Een echte muisklik: locator.click weigert al vóór de browser een label van een disabled input te activeren.
+      await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
       await expect(disabled.getByRole('checkbox')).toBeChecked();
       await expect(disabled.getByRole('textbox')).toBeDisabled();
       await expect(disabled.getByRole('radio', { name: 'Beheerder' })).toBeDisabled();
