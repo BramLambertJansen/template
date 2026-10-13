@@ -170,6 +170,20 @@ function reviewerStop(payload) {
 }
 
 /**
+ * Haalt origin/main op (korte timeout via lowSpeedTime; fail-open) en meldt een achterstand van de branch.
+ * @param {Deps} deps
+ * @returns {string}
+ */
+function mainLag(deps) {
+  const fetched = deps.run('git', ['-c', 'http.lowSpeedLimit=1000', '-c', 'http.lowSpeedTime=5', 'fetch', '--quiet', '--no-tags', 'origin', 'main']);
+  const counts = deps.run('git', ['rev-list', '--left-right', '--count', 'origin/main...HEAD']);
+  const behind = Number(counts.output.trim().split(/\s+/)[0]);
+  const stale = fetched.code === 0 ? '' : 'origin/main ophalen mislukt (stand van de laatste fetch). ';
+  if (counts.code !== 0 || !Number.isFinite(behind) || behind === 0) return stale.trim();
+  return `${stale}Let op: ${behind} commits achter op origin/main; haal ze binnen voor je bouwt (git merge origin/main, nooit rebase).`;
+}
+
+/**
  * SessionStart: de feiten als context (framework §8): branch, open wijzigingen, specs, laatste checkuitslag en de lokale stack.
  * @param {Deps} deps
  * @returns {HookResult}
@@ -184,6 +198,7 @@ export function sessionStart(deps) {
   return {
     stdout: [
       `Branch: ${branch}${branch === 'main' ? ' (maak een branch voor je wijzigt)' : ''}`,
+      mainLag(deps),
       `Gewijzigde bestanden: ${changed.length === 0 ? 'geen' : changed.slice(0, 20).join(', ')}`,
       specs,
       status,

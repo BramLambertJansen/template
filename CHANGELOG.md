@@ -6,6 +6,8 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Toegevoegd
 
+- De SessionStart-hook haalt `origin/main` op en meldt hoeveel commits de branch achterloopt, zodat een agent niet op een verouderde basis werkt. Een mislukte fetch blokkeert niets.
+
 - Taakgebonden frameworkontwikkeling en bewijsgebonden ADR/spec-statusadministratie (ADR 0027), met controle vanuit main. De agent verzorgt veilige runnerchecks, verzamelt CI-bewijs en kan documentatie-PR's administratief markeren; inhoudelijke besluiten en merge blijven van de eigenaar.
 
 - `check-docs` weigert twee ADR's met hetzelfde nummer. De ADR over de volledige UI-catalogus is hernummerd naar 0028 (ADR 0027 is het taakmandaat). `PageHeader` heeft een eigen `preview`-prop naast `documentTitle`.

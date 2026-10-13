@@ -180,3 +180,44 @@ test('hulpjes: git status en de laatste regels', () => {
     ),
   ).toStrictEqual(['a.test.ts: Failed to load x']);
 });
+
+// SessionStart haalt origin/main op en meldt een achterstand: een verouderde lokale basis gaf een verkeerde conclusie over
+// wat er al op main stond (framework §8). Een mislukte fetch blokkeert niets (fail-open).
+const FETCH = 'git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=5 fetch --quiet --no-tags origin main';
+
+function lagDeps(options: { fetchCode?: number; counts?: string }) {
+  const calls: string[] = [];
+  return {
+    calls,
+    deps: {
+      run: (command: string, args: readonly string[]) => {
+        const line = [command, ...args].join(' ');
+        calls.push(line);
+        if (line === FETCH) return { code: options.fetchCode ?? 0, output: '' };
+        if (line.startsWith('git rev-list')) return { code: 0, output: options.counts ?? '0\t0' };
+        return { code: 0, output: 'feat/x' };
+      },
+      changed: () => [],
+      read: () => null,
+    },
+  };
+}
+
+test('session-start: haalt origin/main op en meldt hoeveel commits de branch achterloopt', () => {
+  const { deps, calls } = lagDeps({ counts: '34\t1' });
+  const text = sessionStart(deps).stdout ?? '';
+
+  expect(calls).toContain(FETCH);
+  expect(text).toContain('34 commits achter op origin/main');
+});
+
+test('session-start: geen achterstand, geen melding', () => {
+  expect(sessionStart(lagDeps({ counts: '0\t3' }).deps).stdout ?? '').not.toContain('achter op origin/main');
+});
+
+test('session-start: een mislukte fetch meldt dat, en de hook gaat door', () => {
+  const text = sessionStart(lagDeps({ fetchCode: 1 }).deps).stdout ?? '';
+
+  expect(text).toContain('origin/main ophalen mislukt');
+  expect(text).toContain('Branch: feat/x');
+});
