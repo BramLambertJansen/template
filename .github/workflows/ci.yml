@@ -61,8 +61,8 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  # Betterleaks over de hele geschiedenis (framework §6): wat lefthook lokaal tegenhoudt, kan via --no-verify of een andere
-  # machine toch binnenkomen. Altijd met scripts/kit/betterleaks.toml; inline allows tellen niet.
+  # Betterleaks (framework §6): wat lefthook lokaal tegenhoudt, kan via --no-verify of een andere machine toch binnenkomen.
+  # Op een PR de commits van die PR, anders alle gefetchte refs. Altijd met scripts/kit/betterleaks.toml; inline allows tellen niet.
   secrets:
     name: secrets
     runs-on: ubuntu-24.04
