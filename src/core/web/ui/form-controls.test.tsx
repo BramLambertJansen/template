@@ -1,0 +1,155 @@
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { ComponentProps } from 'react';
+import { afterEach, expect, expectTypeOf, test } from 'vitest';
+import { z } from 'zod';
+import { ApiError } from '../lib/api-client.ts';
+import { Button } from './button.tsx';
+import { Checkbox } from './checkbox.tsx';
+import { ErrorTextsProvider } from './error-texts.tsx';
+import { FormCheckboxField } from './form-checkbox-field.tsx';
+import { FormRadioGroupField } from './form-radio-group-field.tsx';
+import { Form, FormField, useZodForm } from './form.tsx';
+import { Input } from './input.tsx';
+import { Select } from './select.tsx';
+import { Textarea } from './textarea.tsx';
+
+afterEach(cleanup);
+const schema = z
+  .object({ naam: z.string().min(1, 'Vul een naam in.'), meldingen: z.boolean(), rol: z.enum(['user', 'admin']) })
+  .strict();
+type Values = z.output<typeof schema>;
+const options = [
+  { value: 'user', label: 'Gebruiker' },
+  { value: 'admin', label: 'Beheerder' },
+];
+
+function Example({ submit, target = 'naam' }: { submit: (values: Values) => Promise<unknown>; target?: keyof Values }) {
+  const form = useZodForm(schema, { naam: '', meldingen: false, rol: 'user' });
+  return (
+    <Form
+      form={form}
+      onSubmit={submit}
+      submitLabel="Versturen"
+      fieldForCode={{ VALIDATION: target }}
+      secondaryAction={<Button onClick={() => form.reset()}>Reset</Button>}
+    >
+      <FormField form={form} name="naam" label="Naam" description="Uitleg">
+        {(field) => <Textarea {...field} />}
+      </FormField>
+      <FormCheckboxField form={form} name="meldingen" label="Meldingen" description="Boolean" />
+      <FormRadioGroupField form={form} name="rol" label="Rol" options={options} description="Keuze" />
+    </Form>
+  );
+}
+
+function show(props: ComponentProps<typeof Example>) {
+  render(
+    <ErrorTextsProvider texts={{ VALIDATION: 'Ongeldig.' }}>
+      <Example {...props} />
+    </ErrorTextsProvider>,
+  );
+}
+
+test('AC-2/3/4: tekst, boolean en radio behouden hun waarde in payload en reset', async () => {
+  const sent: Values[] = [];
+  show({
+    submit: (values) => {
+      sent.push(values);
+      return Promise.resolve();
+    },
+  });
+  fireEvent.change(screen.getByLabelText('Naam'), { target: { value: 'Ada\nLovelace' } });
+  fireEvent.click(screen.getByText('Meldingen'));
+  fireEvent.click(screen.getByLabelText('Beheerder'));
+  fireEvent.click(screen.getByRole('button', { name: 'Versturen' }));
+  await waitFor(() => expect(sent).toStrictEqual([{ naam: 'Ada\nLovelace', meldingen: true, rol: 'admin' }]));
+  fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+  expect(screen.getByLabelText('Naam').getAttribute('aria-invalid')).toBe('false');
+  expect(screen.getByLabelText('Naam').textContent).toBe('');
+  expect(screen.getByRole('checkbox', { checked: false })).toBeDefined();
+  expect(screen.getByRole('radio', { name: 'Gebruiker', checked: true })).toBeDefined();
+  expect(screen.getAllByRole('radio', { checked: true })).toHaveLength(1);
+});
+
+test('AC-2: touched-validatie koppelt hulp en fout aan de textarea', async () => {
+  show({ submit: () => Promise.resolve() });
+  const input = screen.getByLabelText('Naam');
+  fireEvent.blur(input);
+  const error = await screen.findByText('Vul een naam in.');
+  expect(input.getAttribute('aria-invalid')).toBe('true');
+  expect(input.getAttribute('aria-describedby')?.split(' ')).toStrictEqual([screen.getByText('Uitleg').id, error.id]);
+});
+
+test.each<keyof Values>(['naam', 'meldingen', 'rol'])(
+  'serverfout focust %s en blijft gekoppeld na herstel',
+  async (target) => {
+    show({ target, submit: () => Promise.reject(new ApiError('VALIDATION', 400)) });
+    fireEvent.change(screen.getByLabelText('Naam'), { target: { value: 'Ada' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Versturen' }));
+    const error = await screen.findByText('Ongeldig.');
+    const anchor = screen.getByLabelText(
+      target === 'naam' ? 'Naam' : target === 'meldingen' ? 'Meldingen' : 'Gebruiker',
+    );
+    await waitFor(() => expect(document.activeElement).toBe(anchor));
+    expect(anchor.getAttribute('aria-describedby')?.split(' ')).toContain(error.id);
+    expect(anchor.getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Versturen' }).hasAttribute('disabled')).toBe(false);
+  },
+);
+
+test('AC-3: native disabled checkbox bewaart zijn waarde', () => {
+  render(<Checkbox label="Meldingen" disabled defaultChecked />);
+  const checkbox = screen.getByRole('checkbox', { checked: true });
+  expect(checkbox.hasAttribute('disabled')).toBe(true);
+  fireEvent.click(screen.getByText('Meldingen'));
+  expect(screen.getByRole('checkbox', { checked: true })).toBe(checkbox);
+});
+
+test('AC-5: namen volgen het echte veldtype, inclusief enum-string', () => {
+  type StringNames = ComponentProps<typeof FormField<Values, Values>>['name'];
+  type BooleanNames = ComponentProps<typeof FormCheckboxField<Values, Values>>['name'];
+  type RadioNames = ComponentProps<typeof FormRadioGroupField<Values, Values>>['name'];
+  expectTypeOf<StringNames>().toEqualTypeOf<'naam' | 'rol'>();
+  expectTypeOf<BooleanNames>().toEqualTypeOf<'meldingen'>();
+  expectTypeOf<RadioNames>().toEqualTypeOf<'naam' | 'rol'>();
+});
+
+function Legacy({ submit }: { submit: (values: Values) => Promise<unknown> }) {
+  const form = useZodForm(schema, { naam: 'Ada', rol: 'user', meldingen: false });
+  return (
+    <Form
+      form={form}
+      onSubmit={submit}
+      submitLabel="Versturen"
+      secondaryAction={<Button onClick={() => form.reset()}>Reset</Button>}
+    >
+      <FormField form={form} name="naam" label="Naam">
+        {(field) => <Input {...field} />}
+      </FormField>
+      <FormField form={form} name="rol" label="Rol">
+        {(field) => <Select {...field} options={options} />}
+      </FormField>
+    </Form>
+  );
+}
+
+test('AC-1: bestaande Input/Select-binding blijft submit en reset ondersteunen', async () => {
+  const sent: Values[] = [];
+  render(
+    <ErrorTextsProvider texts={{}}>
+      <Legacy
+        submit={(values) => {
+          sent.push(values);
+          return Promise.resolve();
+        }}
+      />
+    </ErrorTextsProvider>,
+  );
+  fireEvent.change(screen.getByLabelText('Naam'), { target: { value: 'Grace' } });
+  fireEvent.change(screen.getByLabelText('Rol'), { target: { value: 'admin' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Versturen' }));
+  await waitFor(() => expect(sent).toStrictEqual([{ naam: 'Grace', rol: 'admin', meldingen: false }]));
+  fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+  expect(screen.getByDisplayValue('Ada')).toBeDefined();
+  expect(screen.getByDisplayValue('Gebruiker')).toBeDefined();
+});
