@@ -29,9 +29,10 @@ eigenaar wil per PR kunnen kiezen om de agent te laten mergen, zonder dat de age
    dan geldt `"eigenaar"`. `.claude/**` is een gate-pad, dus alleen de eigenaar zet hem. `check-docs` faalt op een andere waarde.
    Het rolhek leest de sleutel uit `origin/main`, zoals `autoRunner` (ADR 0027 punt 6), nooit uit de werkmap; onleesbaar → `"eigenaar"`.
 3. **Voorwaarde: bewezen ruleset.** `"agent-na-akkoord"` kan pas aan als aantoonbaar is dat de ruleset op `main` groene verplichte
-   checks eist, via `scripts/check-github.mjs` tegen `.github/settings/main-protection.json` (framework §10). Beide bestaan nog niet;
-   tot ze er zijn en groen zijn, kan de modus niet aan: `check-docs` faalt op `"agent-na-akkoord"` zolang `scripts/check-github.mjs`
-   ontbreekt. Hoe dat bewijs wordt opgeleverd, is een open punt (zie Niet beslist).
+   checks eist, via `scripts/check-github.mjs` tegen `.github/settings/main-protection.json` (framework §10). Beide bestaan nog niet
+   en komen in PR 2 zelf (punt 7). Tot ze er zijn, kan de modus niet aan: `check-docs` faalt op `"agent-na-akkoord"` zolang
+   `scripts/check-github.mjs` ontbreekt. De check draait één keer: bij de gate-wijziging die de waarde op `"agent-na-akkoord"` zet,
+   niet bij elke merge.
 4. **Akkoord per PR, in de sessie (O-1a).** Bij `"agent-na-akkoord"` gaat het rolhek alleen voor de hoofdsessie van `deny` naar `ask`
    voor exact `gh pr merge <nr> --squash`: de permissieprompt is het akkoord, de agent kan hem niet zelf beantwoorden. Elke andere vorm
    blijft deny voor elke rol: andere of extra vlaggen, en expliciet `--admin` (omzeilt de ruleset voor een beheerder; het account van de
@@ -49,7 +50,7 @@ eigenaar wil per PR kunnen kiezen om de agent te laten mergen, zonder dat de age
    geen akkoord. Spec `goedgekeurd` en ADR `geaccepteerd` blijven inhoudelijke eigenaarbesluiten (0027 punt 1).
 7. **Uitvoering in twee PR's**, beide gate-wijzigingen die de eigenaar leest en merget; geen spec (geen migratie, route of permissie).
    PR 1, CI-lus: skill `opleveren`, framework §8 stap 6, CLAUDE.md-uitzondering. PR 2, merge-modus: eerst tabeltests in `test/hooks/`,
-   dan het rolhek, de sleutel in `.claude/gates.json` met `check-docs` (punten 2 en 3), `.claude/settings.json` (`Bash(gh pr merge*)` van
+   dan het rolhek, `.github/settings/main-protection.json` en `scripts/check-github.mjs` (punt 3), de sleutel in `.claude/gates.json` met `check-docs` (punten 2 en 3), `.claude/settings.json` (`Bash(gh pr merge*)` van
    `deny` naar `ask`; `--auto`, `--admin` en `gh api *merge*` blijven `deny`), framework §8 stap 6/7 en §10 "De eigenaar merget",
    AGENTS.md "merge nooit", CLAUDE.md werkstraat. De modus aanzetten is een aparte eigenaarwijziging na punt 3.
 
@@ -72,9 +73,7 @@ eigenaar wil per PR kunnen kiezen om de agent te laten mergen, zonder dat de age
 - ADR 0027 "Vertrouwensgrens" ("main berust op de afspraak dat alleen de eigenaar merget") geldt bij `"agent-na-akkoord"` als: alleen
   de eigenaar geeft per PR akkoord. 0025 en 0027 krijgen bij acceptatie van 0030 een verwijsregel naar dit ADR, niet eerder;
   hun besluiten blijven verder staan.
-
-## Niet beslist
-
-- **Hoe het ruleset-bewijs (punt 3) wordt opgeleverd**: eigen PR met `.github/settings/main-protection.json` en
-  `scripts/check-github.mjs` (framework §10, ST-01 in `docs/reviews/2026-10-12-werkstraat.md`) vóór PR 2, binnen PR 2, of later; en of
-  de check bij elke merge opnieuw draait of eenmalig bij het aanzetten. Kiest de eigenaar.
+- **Restrisico ruleset.** Het ruleset-bewijs (punt 3) is een momentopname bij het aanzetten. Wordt de ruleset daarna versoepeld
+  (bijv. een verplichte check eruit), dan merkt de template dat niet automatisch op. Bij elke merge blijft GitHub de harde grens: wat
+  de ruleset dan eist, geldt. `pnpm pr:verify` toetst per merge wel dat elke verplichte check uit main van GitHub Actions komt en
+  groen is op de head, maar niet dat de ruleset die checks nog eist.
