@@ -468,7 +468,8 @@ export function gitForbidden(args, { role, branch }) {
   return found;
 }
 
-const BRANCH_DELETE_FLAGS = /^(?:--delete|-[a-zA-Z]*[dD][a-zA-Z]*)$/;
+// git accepteert elke unieke prefix van een long option: `--d` t/m `--delete`.
+const BRANCH_DELETE_FLAGS = /^(?:--d(?:e(?:l(?:e(?:t(?:e)?)?)?)?)?|-[a-zA-Z]*[dD][a-zA-Z]*)$/;
 
 /**
  * `git branch -d/-D/--delete` met `main` of `refs/heads/main` als operand.
@@ -479,7 +480,7 @@ function deletesMain(rest) {
   return deletes && rest.some((arg) => arg === 'main' || arg === 'refs/heads/main');
 }
 
-const COMMIT_VALUE_FLAGS =new Set(['m', 'F', 'C', 'c', 't', 'S']);
+const COMMIT_VALUE_FLAGS = new Set(['m', 'F', 'C', 'c', 't', 'S']);
 
 /**
  * `-n` in een cluster (`-an`, `-nm x`), niet in de waarde van `-m`.

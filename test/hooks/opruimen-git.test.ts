@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 import { decide, loadConfig } from '../../.claude/hooks/lib/rolhek.mjs';
 
-// ADR 0030 punt 8: het opruimen na de merge gebruikt alleen deze gitvormen. Karakteriseringstests van bestaand rolhekgedrag.
+// ADR 0030 punt 8: het opruimen na de merge gebruikt alleen deze gitvormen. Karakteriseringstests van bestaand rolhekgedrag; het weigeren van `git branch -D main` is nieuw gedrag (ADR 0030).
 const ROOT = '/repo';
 const config = loadConfig(readFileSync('.claude/gates.json', 'utf8'));
 
@@ -26,12 +26,36 @@ describe('opruimen na de merge: hoofdsessie', () => {
     expect(exitCode(command)).toBe(0);
   });
 
-  test.each(['git push origin --delete main', 'git branch -D main', 'git push --force origin feat/x'])(
-    'geweigerd: %s',
-    (command) => {
-      expect(exitCode(command)).toBe(2);
-    },
-  );
+  test.each(['git push origin --delete main', 'git push --force origin feat/x'])('geweigerd: %s', (command) => {
+    expect(exitCode(command)).toBe(2);
+  });
+
+  test.each([
+    'git branch -D main',
+    'git branch -d main',
+    'git branch --delete main',
+    'git branch -fD main',
+    'git branch -D refs/heads/main',
+    'git branch --delete --force main',
+    'git branch -D feat/x main',
+    'git -C . branch -D main',
+    'git branch --del main',
+    'git branch --d main',
+    'git branch --dele main',
+  ])('geweigerd, main verwijderen: %s', (command) => {
+    expect(exitCode(command)).toBe(2);
+  });
+
+  test.each([
+    'git branch -D main-old',
+    'git branch -D feat/main',
+    'git branch --list main',
+    'git branch -m main x',
+    'git branch -u origin/main',
+    'git branch -D feat/x',
+  ])('toegestaan, geen valse positief: %s', (command) => {
+    expect(exitCode(command)).toBe(0);
+  });
 });
 
 describe('opruimen na de merge: subagents', () => {

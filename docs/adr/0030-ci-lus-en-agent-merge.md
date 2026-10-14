@@ -61,11 +61,11 @@ eigenaar wil per PR kunnen kiezen om de agent te laten mergen, zonder dat de age
    - Main bijwerken: `git switch main`, of `git switch --detach origin/main` in een worktree waar `main` al elders is uitgecheckt;
      dan `git fetch origin` en `git merge --ff-only origin/main`. Geen rebase: `main` wordt squash-gemerged en lokaal heeft `main` geen
      eigen commits, dus fast-forward is de juiste vorm. Faalt `--ff-only`, dan stoppen en melden; nooit `reset --hard`.
+   - Worktree: hoort de branch bij een andere worktree dan de huidige, dan eerst `git worktree remove <pad>` (zonder `--force`);
+     git weigert anders de branch te verwijderen. De worktree waarin de sessie zelf draait, ruimt de runtime of de eigenaar op.
    - Lokale branch: `git branch -D <headRefName>` (na de merged-controle; `-d` faalt na een squash-merge). Alleen die branch.
    - Remote branch: bij voorkeur de GitHub-instelling "Automatically delete head branches" (zet de eigenaar). Staat de branch er na
      de merge nog, dan `git push origin --delete <headRefName>`, alleen voor die branch en nooit `main`.
-   - Worktree: hoort de branch bij een andere worktree dan de huidige, dan `git worktree remove <pad>` (zonder `--force`); de
-     worktree waarin de sessie zelf draait, ruimt de runtime of de eigenaar op.
    - De eindmelding noemt wat is opgeruimd (lokale branch, remote branch, worktree) en de nieuwe SHA van `main`.
 
 ## Alternatieven
