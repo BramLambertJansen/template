@@ -1,4 +1,5 @@
-// Administratie van besluiten en bouwbewijs. Schrijft uitsluitend de afgeleide statusregel (ADR 0027).
+// Administratie van besluiten en bouwbewijs. Schrijft uitsluitend de afgeleide statusregel en, met --roadmap, het vinkje van
+// het item van de eigen spec (ADR 0027, spec taakmandaat-vervolg).
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { readAuthority, gitText } from '../../.claude/hooks/lib/authority-context.mjs';
@@ -109,7 +110,12 @@ async function main() {
     console.log(`${target.file}: ${target.status}; bewijs gecontroleerd, alleen de statusregel gewijzigd`);
     return;
   }
-  writeFileSync(path.join(root, ROADMAP), roadmap);
+  try {
+    writeFileSync(path.join(root, ROADMAP), roadmap);
+  } catch (error) {
+    writeFileSync(path.join(root, target.file), before); // geen van beide bestanden wijzigt
+    throw error;
+  }
   console.log(
     `${target.file}: gebouwd; bewijs gecontroleerd, alleen de statusregel en het vinkje van het item gewijzigd`,
   );

@@ -37,6 +37,7 @@ unsafe_host_path() {
 check_host_paths() {
   local ignored hostpath prefix part
   local -a parts
+  local LC_ALL=C # de tekenreeksen [A-Za-z] hangen anders van de locale af
   ignored="$(git ls-files --others --ignored --exclude-standard -- "${HOST_FILES[@]}")"
   if [[ -n "$ignored" ]]; then
     printf '✗ Genegeerde bestanden in hostpaden; de host zou ze ongezien gebruiken:\n%s\n' "$ignored" >&2
