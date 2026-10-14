@@ -460,6 +460,7 @@ export function gitForbidden(args, { role, branch }) {
     found.push('de vertrouwde basis (origin/main en remote origin) verander je alleen met git fetch (ADR 0027)');
   if (subcommand === 'push' && pushesMain(rest, branch)) found.push('push naar main is verboden; open een PR');
   if (subcommand === 'push' && forcePushes(rest)) found.push('force-push is verboden, ook voor de hoofdsessie (WS-04)');
+  if (subcommand === 'branch' && deletesMain(rest)) found.push('git branch -d/-D/--delete van main is verboden (ADR 0030)');
   if (role === 'hoofdsessie') return found;
   if (subcommand === 'push' || subcommand === 'merge' || subcommand === 'rebase')
     found.push(`subagent: git ${subcommand} doet de hoofdsessie`);
@@ -467,7 +468,18 @@ export function gitForbidden(args, { role, branch }) {
   return found;
 }
 
-const COMMIT_VALUE_FLAGS = new Set(['m', 'F', 'C', 'c', 't', 'S']);
+const BRANCH_DELETE_FLAGS = /^(?:--delete|-[a-zA-Z]*[dD][a-zA-Z]*)$/;
+
+/**
+ * `git branch -d/-D/--delete` met `main` of `refs/heads/main` als operand.
+ * @param {readonly string[]} rest
+ */
+function deletesMain(rest) {
+  const deletes = rest.some((arg) => BRANCH_DELETE_FLAGS.test(arg));
+  return deletes && rest.some((arg) => arg === 'main' || arg === 'refs/heads/main');
+}
+
+const COMMIT_VALUE_FLAGS =new Set(['m', 'F', 'C', 'c', 't', 'S']);
 
 /**
  * `-n` in een cluster (`-an`, `-nm x`), niet in de waarde van `-m`.

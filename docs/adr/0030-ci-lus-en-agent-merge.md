@@ -55,7 +55,7 @@ eigenaar wil per PR kunnen kiezen om de agent te laten mergen, zonder dat de age
    (`Bash(gh pr merge*)` van `deny` naar `ask`; `--auto`, `--admin` en `gh api *merge*` blijven `deny`), framework §8 stap 6/7 en §10
    "De eigenaar merget", AGENTS.md "merge nooit", CLAUDE.md werkstraat. De modus aanzetten is een aparte eigenaarwijziging na punt 3.
 8. **Opruimen na de merge** (hoofdsessie, skill `opleveren`, in beide modi, ook als de eigenaar zelf merget).
-   - Trigger: `gh pr view <nr> --json merged,mergeCommit,headRefName,headRefOid` geeft `merged: true`. Zonder dat: niets opruimen.
+   - Trigger: `gh pr view <nr> --json state,mergedAt,mergeCommit,headRefName,headRefOid` geeft `state: MERGED` (het veld `merged` bestaat niet in `gh`). Zonder dat: niets opruimen.
    - Vooraf stoppen en melden (niet forceren) als: de werkmap niet-gecommitte wijzigingen heeft (`git status --porcelain` niet leeg);
      de lokale branch niet `headRefName` is; of de lokale branch commits heeft die niet in `headRefOid` zitten (ongepusht werk).
    - Main bijwerken: `git switch main`, of `git switch --detach origin/main` in een worktree waar `main` al elders is uitgecheckt;
