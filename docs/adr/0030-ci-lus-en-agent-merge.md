@@ -49,10 +49,24 @@ eigenaar wil per PR kunnen kiezen om de agent te laten mergen, zonder dat de age
    `pnpm pr:label-gate` op documentatie-PR's (`gateMarker: docs`, ADR 0027 punt 5) blijft toegestaan, en dat label is administratie,
    geen akkoord. Spec `goedgekeurd` en ADR `geaccepteerd` blijven inhoudelijke eigenaarbesluiten (0027 punt 1).
 7. **Uitvoering in twee PR's**, beide gate-wijzigingen die de eigenaar leest en merget; geen spec (geen migratie, route of permissie).
-   PR 1, CI-lus: skill `opleveren`, framework §8 stap 6, CLAUDE.md-uitzondering. PR 2, merge-modus: eerst tabeltests in `test/hooks/`,
-   dan het rolhek, `.github/settings/main-protection.json` en `scripts/check-github.mjs` (punt 3), de sleutel in `.claude/gates.json` met `check-docs` (punten 2 en 3), `.claude/settings.json` (`Bash(gh pr merge*)` van
-   `deny` naar `ask`; `--auto`, `--admin` en `gh api *merge*` blijven `deny`), framework §8 stap 6/7 en §10 "De eigenaar merget",
-   AGENTS.md "merge nooit", CLAUDE.md werkstraat. De modus aanzetten is een aparte eigenaarwijziging na punt 3.
+   PR 1, CI-lus en opruimen: skill `opleveren` (met de stap "Opruimen", punt 8), framework §8 stap 6, CLAUDE.md-uitzondering.
+   PR 2, merge-modus: eerst tabeltests in `test/hooks/`, dan het rolhek, `.github/settings/main-protection.json` en
+   `scripts/check-github.mjs` (punt 3), de sleutel in `.claude/gates.json` met `check-docs` (punten 2 en 3), `.claude/settings.json`
+   (`Bash(gh pr merge*)` van `deny` naar `ask`; `--auto`, `--admin` en `gh api *merge*` blijven `deny`), framework §8 stap 6/7 en §10
+   "De eigenaar merget", AGENTS.md "merge nooit", CLAUDE.md werkstraat. De modus aanzetten is een aparte eigenaarwijziging na punt 3.
+8. **Opruimen na de merge** (hoofdsessie, skill `opleveren`, in beide modi, ook als de eigenaar zelf merget).
+   - Trigger: `gh pr view <nr> --json merged,mergeCommit,headRefName,headRefOid` geeft `merged: true`. Zonder dat: niets opruimen.
+   - Vooraf stoppen en melden (niet forceren) als: de werkmap niet-gecommitte wijzigingen heeft (`git status --porcelain` niet leeg);
+     de lokale branch niet `headRefName` is; of de lokale branch commits heeft die niet in `headRefOid` zitten (ongepusht werk).
+   - Main bijwerken: `git switch main`, of `git switch --detach origin/main` in een worktree waar `main` al elders is uitgecheckt;
+     dan `git fetch origin` en `git merge --ff-only origin/main`. Geen rebase: `main` wordt squash-gemerged en lokaal heeft `main` geen
+     eigen commits, dus fast-forward is de juiste vorm. Faalt `--ff-only`, dan stoppen en melden; nooit `reset --hard`.
+   - Lokale branch: `git branch -D <headRefName>` (na de merged-controle; `-d` faalt na een squash-merge). Alleen die branch.
+   - Remote branch: bij voorkeur de GitHub-instelling "Automatically delete head branches" (zet de eigenaar). Staat de branch er na
+     de merge nog, dan `git push origin --delete <headRefName>`, alleen voor die branch en nooit `main`.
+   - Worktree: hoort de branch bij een andere worktree dan de huidige, dan `git worktree remove <pad>` (zonder `--force`); de
+     worktree waarin de sessie zelf draait, ruimt de runtime of de eigenaar op.
+   - De eindmelding noemt wat is opgeruimd (lokale branch, remote branch, worktree) en de nieuwe SHA van `main`.
 
 ## Alternatieven
 
@@ -60,6 +74,8 @@ eigenaar wil per PR kunnen kiezen om de agent te laten mergen, zonder dat de age
 - **Akkoord via label of PR-comment**: verworpen; de agent pusht onder het account van de eigenaar en kan die zelf zetten.
 - **Vast maximum aan CI-rondes**: verworpen; de stopgronden in punt 1 zijn inhoudelijk, niet tellend.
 - **Merge-modus uit de werkmap of per sessie**: verworpen; alleen wat de eigenaar op `main` zette, geeft het recht.
+- **`gh pr merge --delete-branch`**: verworpen; het breekt de exacte vorm uit punt 4 en schakelt lokaal van branch zonder de
+  controles uit punt 8. **Rebase van `main`**: verworpen, zie punt 8.
 - **`gh pr checks --watch` als wachtlus**: verworpen; toetst niet of een check van GitHub Actions komt en op de juiste SHA staat.
 
 ## Gevolgen
@@ -77,3 +93,7 @@ eigenaar wil per PR kunnen kiezen om de agent te laten mergen, zonder dat de age
   (bijv. een verplichte check eruit), dan merkt de template dat niet automatisch op. Bij elke merge blijft GitHub de harde grens: wat
   de ruleset dan eist, geldt. `pnpm pr:verify` toetst per merge wel dat elke verplichte check uit main van GitHub Actions komt en
   groen is op de head, maar niet dat de ruleset die checks nog eist.
+- **Opruimen en het rolhek** (punt 8): `git push origin --delete <branch>` is geen push naar `main` en geen force-push (`pushesMain`,
+  `forcePushes` in `.claude/hooks/lib/rolhek.mjs`); `--delete main` blijft geweigerd. `git merge --ff-only origin/main` en
+  `git branch -D` raken de vertrouwde basis niet (`movesTrustedBase`). PR 1 bewijst dit met tabeltests in `test/hooks/` voor de
+  hoofdsessie, ook dat `git push origin --delete main` deny is. ADR 0025 punt 1 verbiedt alleen push naar `main` en force-push.
