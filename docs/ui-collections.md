@@ -20,7 +20,7 @@ Optionvalues zijn uniek en niet leeg; programmeerfouten worden expliciet geweige
 Voor echte formulieren gebruik je FormComboboxField met form, name, label en options. Het veld accepteert alleen stringpaden
 en vereist een stringdefault. De adapter gebruikt dezelfde Field/RHF-structuur voor hulptekst, touched, foutfocus en
 serverveldfouten. Hij geeft een resetKey door aan Combobox, zodat form.reset ook een zoekactie wist wanneer de waarde gelijk
-blijft. De native input blijft daarbij gemount. Een losse ouder kan dezelfde optionele resetKey gebruiken voor zo'n reset.
+blijft. De native input blijft daarbij gemount. In het catalogusvoorbeeld staat Annuleren boven de velden, zodat een geopende keuzelijst de resetbediening niet bedekt. Een losse ouder kan dezelfde optionele resetKey gebruiken voor zo'n reset.
 Geen netwerkzoekactie, vrije invoer of multiselect in deze versie.
 
 ## Accordion

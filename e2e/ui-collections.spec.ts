@@ -36,7 +36,7 @@ for (const width of [375, 1280]) {
       await expect(input).toHaveValue('');
       await expect(input).toBeFocused();
       await input.fill('zzzz');
-      await expect(section.getByRole('status')).toHaveText('Geen resultaten.');
+      await expect(section.getByRole('status').filter({ hasText: 'Geen resultaten.' })).toHaveText('Geen resultaten.');
       await input.press('Tab');
       await expect(input).toHaveValue('');
       await input.click();

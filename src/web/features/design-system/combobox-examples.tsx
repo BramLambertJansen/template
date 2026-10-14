@@ -158,6 +158,15 @@ function ComboboxFormExample() {
       >
         {disabled ? 'Velden inschakelen' : 'Velden uitschakelen'}
       </Button>
+      <Button
+        variant="outline"
+        onClick={() => {
+          form.reset();
+          setSent(null);
+        }}
+      >
+        Annuleren
+      </Button>
       <Form
         form={form}
         submitLabel="Versturen"
@@ -168,17 +177,6 @@ function ComboboxFormExample() {
           setSent(values);
           return Promise.resolve();
         }}
-        secondaryAction={
-          <Button
-            variant="outline"
-            onClick={() => {
-              form.reset();
-              setSent(null);
-            }}
-          >
-            Annuleren
-          </Button>
-        }
       >
         <FormComboboxField
           form={form}
