@@ -37,7 +37,7 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
 3. `git switch main` (of `git switch --detach origin/main` als `main` elders is uitgecheckt), `git fetch origin`,
    `git merge --ff-only origin/main`. Geen rebase: `main` wordt squash-gemerged. Faalt `--ff-only`, stop dan; nooit `reset --hard`.
 4. Een andere worktree van die branch eerst weghalen: `git worktree remove <pad>` zonder `--force` (git weigert anders de branch te verwijderen).
-   De worktree waarin je zelf draait ruimt de runtime of de eigenaar op; stop dan en meld dat de branch nog in gebruik is.
+   De worktree waarin je zelf draait ruimt de runtime of de eigenaar op; heeft stap 3 de branch daar losgemaakt, dan lukt stap 5 gewoon.
 5. `git branch -D <headRefName>` (`-d` faalt na een squash-merge). Alleen die branch, nooit `main`.
 6. Staat de remote branch er nog: `git push origin --delete <headRefName>`. Nooit `main`.
 7. Eindmelding: wat is opgeruimd (lokale branch, remote branch, worktree) en de nieuwe SHA van `main`.
