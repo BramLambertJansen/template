@@ -71,7 +71,7 @@ guard-check. Een rode `check-document-status` stopt de CI-lus dus niet; de agent
    - De ADR 0027-garantie blijft: geen inhoud in de digest verandert zonder record op main en eigenaarmerge.
 4. **Strikte statusregel voor ADR's.** Is de statusregel van een ADR nieuw of gewijzigd ten opzichte van main, dan faalt
    `document-status` tenzij achter de statuswaarde alleen staat: een datum `(JJJJ-MM-DD)`, PR-nummers `#<nr>` en links
-   naar bestaande ADR's `[NNNN](NNNN-naam.md)`, gescheiden door `, ` of ` — `. Ongewijzigde statusregels op main blijven
+   naar bestaande ADR's (een gewone Markdown-link met alleen het ADR-nummer als tekst), gescheiden door `, ` of ` — `. Ongewijzigde statusregels op main blijven
    geldig; herschrijven zou hun herkomsttekst wissen. Dit sluit het kanaal uit context 3(b) voor elke nieuwe wijziging.
    Specs vallen erbuiten: hun `#`-commentaar draagt het bouwbewijs (`builtReference`).
 5. **`pr:verify`: begrensde uitzondering, uit main.** Nieuwe sleutel `werkmapNegeer` in `.claude/gates.json` (gate-pad), gelezen
