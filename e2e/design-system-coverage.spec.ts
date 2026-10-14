@@ -12,7 +12,9 @@ async function openCatalogue(page: Page) {
   await page.getByRole('button', { name: 'Bevestigen' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
   await page.goto('/design-system');
-  await expect(page.getByRole('region', { name: 'Componentenindex' })).toBeVisible();
+  // De catalogus laadt lazy; hetzelfde gereedheidspatroon als de bestaande UI-basics-tests.
+  await page.getByRole('region', { name: 'Componentenindex' }).waitFor();
+  await expect(page.getByRole('heading', { level: 1, name: 'Design system' })).toBeVisible();
 }
 
 for (const width of [375, 1280]) {
