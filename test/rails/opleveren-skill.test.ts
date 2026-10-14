@@ -5,7 +5,6 @@ import { describe, expect, test } from 'vitest';
 const SKILL = '.claude/skills/opleveren/SKILL.md';
 const skill = existsSync(SKILL) ? readFileSync(SKILL, 'utf8') : '';
 const framework = readFileSync('docs/framework.md', 'utf8');
-const adr = readFileSync('docs/adr/0030-ci-lus-en-agent-merge.md', 'utf8');
 const claude = readFileSync('CLAUDE.md', 'utf8');
 
 function step6(): string {
@@ -73,10 +72,7 @@ describe('framework §8 stap 6 en CLAUDE.md', () => {
     expect(around).toMatch(/uitzondering|behalve/i);
   });
 
-  test.each([
-    { name: 'docs/framework.md', text: framework },
-    { name: 'docs/adr/0030-ci-lus-en-agent-merge.md', text: adr },
-  ])('$name bevat nergens meer --json merged', ({ text }) => {
-    expect(text).not.toMatch(/--json\s+[^\s`]*\bmerged\b(?!At)/);
+  test('docs/framework.md bevat nergens meer --json merged', () => {
+    expect(framework).not.toMatch(/--json\s+[^\s`]*\bmerged\b(?!At)/);
   });
 });

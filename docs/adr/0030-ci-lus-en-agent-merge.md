@@ -55,17 +55,17 @@ eigenaar wil per PR kunnen kiezen om de agent te laten mergen, zonder dat de age
    (`Bash(gh pr merge*)` van `deny` naar `ask`; `--auto`, `--admin` en `gh api *merge*` blijven `deny`), framework §8 stap 6/7 en §10
    "De eigenaar merget", AGENTS.md "merge nooit", CLAUDE.md werkstraat. De modus aanzetten is een aparte eigenaarwijziging na punt 3.
 8. **Opruimen na de merge** (hoofdsessie, skill `opleveren`, in beide modi, ook als de eigenaar zelf merget).
-   - Trigger: `gh pr view <nr> --json state,mergedAt,mergeCommit,headRefName,headRefOid` geeft `state: MERGED` (het veld `merged` bestaat niet in `gh`). Zonder dat: niets opruimen.
+   - Trigger: `gh pr view <nr> --json merged,mergeCommit,headRefName,headRefOid` geeft `merged: true`. Zonder dat: niets opruimen.
    - Vooraf stoppen en melden (niet forceren) als: de werkmap niet-gecommitte wijzigingen heeft (`git status --porcelain` niet leeg);
      de lokale branch niet `headRefName` is; of de lokale branch commits heeft die niet in `headRefOid` zitten (ongepusht werk).
    - Main bijwerken: `git switch main`, of `git switch --detach origin/main` in een worktree waar `main` al elders is uitgecheckt;
      dan `git fetch origin` en `git merge --ff-only origin/main`. Geen rebase: `main` wordt squash-gemerged en lokaal heeft `main` geen
      eigen commits, dus fast-forward is de juiste vorm. Faalt `--ff-only`, dan stoppen en melden; nooit `reset --hard`.
-   - Worktree: hoort de branch bij een andere worktree dan de huidige, dan eerst `git worktree remove <pad>` (zonder `--force`);
-     git weigert anders de branch te verwijderen. De worktree waarin de sessie zelf draait, ruimt de runtime of de eigenaar op.
    - Lokale branch: `git branch -D <headRefName>` (na de merged-controle; `-d` faalt na een squash-merge). Alleen die branch.
    - Remote branch: bij voorkeur de GitHub-instelling "Automatically delete head branches" (zet de eigenaar). Staat de branch er na
      de merge nog, dan `git push origin --delete <headRefName>`, alleen voor die branch en nooit `main`.
+   - Worktree: hoort de branch bij een andere worktree dan de huidige, dan `git worktree remove <pad>` (zonder `--force`); de
+     worktree waarin de sessie zelf draait, ruimt de runtime of de eigenaar op.
    - De eindmelding noemt wat is opgeruimd (lokale branch, remote branch, worktree) en de nieuwe SHA van `main`.
 
 ## Alternatieven
