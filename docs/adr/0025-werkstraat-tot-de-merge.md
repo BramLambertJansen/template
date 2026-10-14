@@ -6,8 +6,6 @@ Wijzigt 0009 (punt 4 hieronder).
 
 Gewijzigd door [0027](0027-taakmandaat-voor-frameworkwerk.md): taakgebonden broncode, bewijsgebonden statusadministratie, documentatielabel en automatische veilige runner/CI-opvolging. De oorspronkelijke beperkingen hieronder gelden met die afgebakende uitzonderingen.
 
-Voorgestelde wijziging: [0030](0030-ci-lus-en-agent-merge.md) (status voorgesteld) vervangt het alternatief "Auto-merge na groen" door een optionele agent-merge na akkoord per PR en wijzigt punt 6 voor één exacte vorm. Tot 0030 geaccepteerd is, geldt dit ADR ongewijzigd.
-
 ## Context
 
 De werkstraat (framework §8) stopt na de reviewer; pushen, de PR, de CI-lus en conflicten liggen bij de eigenaar, die alleen wil mergen.

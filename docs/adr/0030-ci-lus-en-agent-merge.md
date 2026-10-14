@@ -4,7 +4,7 @@ Status: voorgesteld
 
 Vervangt het alternatief "Auto-merge na groen: verworpen (E-2)" uit [0025](0025-werkstraat-tot-de-merge.md) en wijzigt 0025 punt 6
 (mergen dicht voor de hoofdsessie) voor één exacte vorm. Wijzigt de "Vertrouwensgrens" van [0027](0027-taakmandaat-voor-frameworkwerk.md).
-Besluiten van de eigenaar: 2026-10-12 (E-2 herzien) en 2026-10-14 (punten 1–7 hieronder, behalve waar "voorstel" staat).
+Besluiten van de eigenaar: 2026-10-12 (E-2 herzien) en 2026-10-14 (punten 1–7 hieronder).
 
 ## Context
 
@@ -39,7 +39,7 @@ eigenaar wil per PR kunnen kiezen om de agent te laten mergen, zonder dat de age
    Subagents blijven deny. Bij `"eigenaar"` verandert er niets.
 5. **Voorwaarden vóór de merge**: de instelling staat aan (op `origin/main`); de eigenaar gaf in de sessie akkoord voor dit PR-nummer;
    de reviewer zag de huidige head; `pnpm pr:verify <nr>` is groen op de huidige head; de PR raakt geen gate-pad.
-   **Voorstel architect** voor de verdeling (ter beslissing door de eigenaar):
+   Verdeling van de toetsing:
    - rolhek (technisch): modus uit `origin/main`; exacte commandovorm; geen `--admin` of `--auto`; de PR raakt geen gate-pad, getoetst
      met de diff van de branch tegen `origin/main` en de lijst `gates` (zoals de diff-guard);
    - skill `opleveren` (procedureel): akkoord voor dit PR-nummer; reviewer-SHA gelijk aan de head; `pr:verify` groen.
@@ -70,11 +70,11 @@ eigenaar wil per PR kunnen kiezen om de agent te laten mergen, zonder dat de age
 - **Restrisico hook.** Het rolhek is fail-open (framework §8: exit 1 of timeout laat door). Doordat `Bash(gh pr merge*)` in
   `.claude/settings.json` `ask` wordt, eindigt een falende hook nog steeds op een prompt; subagents leunen voor hun deny dan op de hook.
 - ADR 0027 "Vertrouwensgrens" ("main berust op de afspraak dat alleen de eigenaar merget") geldt bij `"agent-na-akkoord"` als: alleen
-  de eigenaar geeft per PR akkoord. 0025 en 0027 krijgen een verwijsregel naar dit voorstel; hun besluiten blijven verder staan.
+  de eigenaar geeft per PR akkoord. 0025 en 0027 krijgen bij acceptatie van 0030 een verwijsregel naar dit ADR, niet eerder;
+  hun besluiten blijven verder staan.
 
 ## Niet beslist
 
 - **Hoe het ruleset-bewijs (punt 3) wordt opgeleverd**: eigen PR met `.github/settings/main-protection.json` en
   `scripts/check-github.mjs` (framework §10, ST-01 in `docs/reviews/2026-10-12-werkstraat.md`) vóór PR 2, binnen PR 2, of later; en of
   de check bij elke merge opnieuw draait of eenmalig bij het aanzetten. Kiest de eigenaar.
-- **Verdeling hook en skill** (punt 5): voorstel architect, nog niet beslist.

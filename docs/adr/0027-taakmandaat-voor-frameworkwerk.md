@@ -2,8 +2,6 @@
 
 Status: geaccepteerd (2026-10-13) — eigenaarakkoord in de opdracht; statusadministratie op basis van bewijs, geen autonome inhoudelijke goedkeuring.
 
-Voorgestelde wijziging: [0030](0030-ci-lus-en-agent-merge.md) (status voorgesteld) wijzigt de "Vertrouwensgrens" voor de optionele agent-merge na akkoord per PR. Tot 0030 geaccepteerd is, geldt dit ADR ongewijzigd.
-
 ## Context
 
 De eigenaar wil de template ontwikkelen met behoud van de rails. Het bestaande rolhek weigert een developer altijd
