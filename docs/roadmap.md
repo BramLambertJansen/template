@@ -48,7 +48,12 @@ Hooguit drie open items (`check:roadmap`); nummer 1 is bewijs vóór uitbreiding
   **Klaar als:** elk bestand in de inventaris heeft een onderbouwde bestemming; verwijzingen zijn aangepast en een zoekronde vindt geen
   verwijzing naar verwijderde bestanden; docs kloppen met code en commando's; `pnpm ratchet` en toepasselijke gates groen; `app:init` werkt;
   de agentprocedure voor een nieuwe app en een feature is nog bereikbaar vanuit de startpunten. De eigenaar leest de instappagina's en een
-  steekproef; een woordfilter bewijst geen goede redactie.
+  steekproef; een woordfilter bewijst geen goede redactie. Ook: overbodige bouwresten zijn verwijderd; de inventaris toont waar alle bruikbare
+  agentinformatie behouden is; een menselijke lezer kan de app starten en de bouwafspraken vinden zonder reviewlogs te lezen.
+  **Vangrails:** leg per verwijdervoorstel vast waarom geen instructie, ontwerpcontext of leerpunt verloren gaat; bewijs voor een open taak blijft
+  bereikbaar totdat die taak is afgerond; raakt opruimen tests, fixtures, migraties, gates, veiligheidsregels of goedkeuringshistorie, leg de
+  wijziging dan apart aan de eigenaar voor. **Afhankelijkheden:** eigenaarreview van de opruiminventaris; geldende besluiten en bewijscriteria;
+  `app:init` dat README en changelog gebruikt.
   aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (categorie C, besluit 1)
 - [ ] **AC→test-check en risico-overzicht in de diff-guard** (opdracht stap 6; ADR 0029 P5). Elk acceptatiecriterium van een spec heeft een
   test, en elke PR toont een risico-overzicht (nieuwe of gewijzigde permissiesleutels en routes, lane-uitslag). Voorwaarde voor het
@@ -127,7 +132,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   aan; private repo's vragen Pro/Team); `.github/settings/` met `scripts/check-github.mjs` (alleen-lezend, een onleesbare instelling is een fout;
   ook `app_id` van verplichte checks, `enforce_admins`, conversation resolution) en `check-spec-approval`; `docs/operations/rails-checklist.md` met
   per stuk bewijs; pushen met een kortlevend App-token zonder het eigenaar-token in de agentomgeving, daarna `denyRead` op `~/.config/gh`;
-  de diff-guard verplicht bij de overstap op de App. Onderscheid de overgang onder het eigenaaraccount van de definitieve App-opzet; de eigenaar
+  de diff-guard verplicht bij de overstap op de App, met goedkeuring op exact de head-SHA die niet van de auteur is (framework §10). Onderscheid de overgang onder het eigenaaraccount van de definitieve App-opzet; de eigenaar
   activeert organisatie, App en instellingen.
   **Afhankelijkheden:** ADR 0005, 0006, 0011 en 0017; beschikbaarheid van de vereiste CI-checks.
   **Klaar als:** negatieve fixtures voor ontbrekende of bypassbare instellingen; bewijs dat een directe push naar main wordt geweigerd en een
@@ -142,10 +147,21 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
 - [ ] **`.claude/settings.json` bewezen** (stuk 5): de sandbox start op Ubuntu/WSL2 (bubblewrap, socat) en de deny-regels zijn getest, ook
   `Read(!.env.example)` en `cat .env`.
   aanleiding: `.claude/settings.json` (onbewezen sinds stuk 5; `test/rails/sandbox-settings.test.ts` dekt de spiegel, niet de sandbox)
+- [ ] **`gate:fast` definitief** (stuk 4): vastleggen welke checks de definitieve `gate:fast` bevat (nu een groeiende lijst in `scripts/kit/gates.mjs`); `gate:slow` is gebouwd (#38), squawk staat onder Geparkeerd.
+  aanleiding: `scripts/kit/gates.mjs`
 - [ ] **`check-core`** (stuk 4; `.claude/rules/core.md` noemt hem nog niet gebouwd): een app wijzigt `src/core` niet. Met fixture die bewijst dat hij faalt.
   aanleiding: `.claude/rules/core.md`
 - [ ] **Fout die in een app doorglipt wordt eerst een check of regel in de template** (met fixture), daarna gerepareerd in de app (fase 2; doorlopend, P5).
   aanleiding: `docs/adr/0029-snellere-beslisroute.md` (P5)
+- [ ] **ST-10 (P1) — staging, release en aantoonbaar herstel** (fase 3, per app). Na een provider-ADR (`0100`+: hosting en beheerde Postgres met eigen
+  rollen) een adapter in `deploy/<host>/`, gescheiden omgevingen, lektest via de pooler, rollen per omgeving via runbook, `check-deployment-schema` (faalt dicht, weigert preview
+  tegen productie), `check-release-ci` vóór én na de build, beschermde production-approval, release-workflows en smoketest na deploy; headers/CSP op
+  de host, CAPTCHA, PWA-manifest. Runbooks in `docs/operations/` (platform, back-up en herstel met acceptatietabel); beschrijf code-rollback,
+  vooruitmigratie en verwijderde gegevens in back-ups. De eigenaar kiest beschikbaarheidsdoelen, RPO/RTO, regio en bewaartermijnen. **Afhankelijkheden:**
+  providerbesluit, ST-01, ST-08, privacyregister. **Klaar als:** preview tegen productie faalt; vereiste CI en staging horen bij exact het
+  releasecommit; de smoketest bewijst login, lezen en gesloten browser-datatoegang; een back-up is in een aparte omgeving teruggezet met gemeten
+  dataverlies en hersteltijd. Productiegoedkeuring blijft bij de eigenaar.
+  aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (B-6: niet geparkeerd besloten)
 
 ## Geparkeerd
 
@@ -184,15 +200,6 @@ Bewust nog niet, tot de genoemde aanleiding er is (P1). Niets verdwijnt: elk ite
   ST-05 voor jobstatus en retention, ST-12 voor buildidentiteit; spec voor clientfouten. **Klaar als:** een geforceerde fout is traceerbaar zonder
   PII, tokens, body of query; dedupe en opruimen getest; een alert en herstel zijn in staging bewezen. Geen telemetry-provider verplicht in core.
   terug als: de eerste app naar staging gaat
-- [ ] **ST-10 (P1) — staging, release en aantoonbaar herstel** (fase 3, per app). Na een provider-ADR (`0100`+: hosting en beheerde Postgres met eigen
-  rollen) een adapter in `deploy/<host>/`, gescheiden omgevingen, lektest via de pooler, rollen per omgeving via runbook, `check-deployment-schema` (faalt dicht, weigert preview
-  tegen productie), `check-release-ci` vóór én na de build, beschermde production-approval, release-workflows en smoketest na deploy; headers/CSP op
-  de host, CAPTCHA, PWA-manifest. Runbooks in `docs/operations/` (platform, back-up en herstel met acceptatietabel); beschrijf code-rollback,
-  vooruitmigratie en verwijderde gegevens in back-ups. De eigenaar kiest beschikbaarheidsdoelen, RPO/RTO, regio en bewaartermijnen. **Afhankelijkheden:**
-  providerbesluit, ST-01, ST-08, privacyregister. **Klaar als:** preview tegen productie faalt; vereiste CI en staging horen bij exact het
-  releasecommit; de smoketest bewijst login, lezen en gesloten browser-datatoegang; een back-up is in een aparte omgeving teruggezet met gemeten
-  dataverlies en hersteltijd. Productiegoedkeuring blijft bij de eigenaar.
-  terug als: de proef-app (ST-09) klaar is en de eigenaar een provider kiest
 - [ ] **ST-11 (P2) — notificaties en storage (optioneel).** Notificaties: registratiecontract voor berichtsoorten, ontvangers en autorisatie,
   voorkeuren en kanalen, met hergebruik van mail-layout en outbox; in-app inbox en push vragen eigen specs. Storage: provider-neutrale grens
   voor uploads en downloads met owner-controle, toegestane typen en grootte, korte signed-URL-geldigheid, metadata en opruimen van verweesde
