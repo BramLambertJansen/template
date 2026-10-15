@@ -6,7 +6,7 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Toegevoegd
 
-- Snellere beslisroute (ADR 0029, geaccepteerd; vervangt ADR 0023): principes P1–P7 in `docs/framework.md` §1, ADR-drempel A1–A4, mini-spec en feature-lane als besluit; de roadmap heeft de structuur Nu/Volgende/Geparkeerd, afgedwongen door `check:roadmap` (#162, #164). Inventaris tegen de principes: `docs/reviews/2026-10-15-principes-inventaris.md` (#158–#161).
+- Snellere beslisroute (ADR 0029, geaccepteerd; vervangt ADR 0023): principes P1–P7 (ADR 0029; P1, P3, P4 en P6 kort in `docs/framework.md` §1), ADR-drempel A1–A4, mini-spec en feature-lane als besluit; de roadmap heeft de structuur Nu/Volgende/Geparkeerd, afgedwongen door `check:roadmap` (#162, #164). Inventaris tegen de principes: `docs/reviews/2026-10-15-principes-inventaris.md` (#158–#161).
 - `check:roadmap` blokkeert vinkjes en gebouwde specs zonder bewijs (#127).
 - Auditlog van beheeracties (ADR 0021, spec `audit-log`): tabel `app.audit_log` met guard-trigger, schrijvers `app.audit` en `app.audit_account_action`, `ctx.audit` en de `requestId` van de server in `withUser()`; uitnodigen, opnieuw uitnodigen, rolwijziging en blokkeren schrijven een regel (#128).
 - UI-kit: Checkbox, RadioGroup, Textarea, StatusBadge, EmptyState, `busy` op Button en DropdownMenu en bijbehorende formuliervelden (#145); catalogusvoorbeelden die vindbaar en inspecteerbaar zijn, met staatvoorbeelden (#146); doorzoekbare Combobox, Accordion, List en DescriptionList (#150).
