@@ -89,7 +89,7 @@ Geen verouderde claims gevonden in `CLAUDE.md`, `.claude/agents/*`, `.claude/rul
 
 1. Herziening van ADR 0018–0022, 0024 en de specs onder mandaat (D-1).
 2. `ui-data-display`: bouwen of parkeren, en wat met het record (B-1, D-17).
-3. ST-01 (GitHub App en bescherming): voorwaarde voor B-8 en B-9.
+3. ST-01 (GitHub App en bescherming): voorwaarde voor B-8 (B-9 staat in `## Volgende`, zie besluit 2).
 4. ADR 0023: vervallen of opgaan in 0029 (D-2).
 
 ## Besluiten van de eigenaar (2026-10-15, in de sessie)
