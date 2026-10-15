@@ -53,7 +53,9 @@ Bron voor deze herziening: dezelfde inventaris met de eigenaarbesluiten van 2026
    `vervangen door NNNN`. De agent zet die regel nooit (AGENTS.md, ADR 0025 punt 10 blijven gelden). `gebouwd` blijft bij
    `pnpm docs:status --pr` met bouwbewijs (ADR 0027 punt 4). In de framework-lane bevat die PR alleen het besluit (en een
    eventueel record, punt 2); bouwen gebeurt in een volgende PR.
-2. **Register alleen voor broncodemandaat.** Een spec die beschermde bronbestanden nodig heeft, krijgt zijn
+2. **Register alleen voor broncodemandaat en verplichte checks.** `.claude/decisions.json` houdt naast de records ook
+   `requiredChecks`, de lijst die `pnpm pr:verify` leest (`scripts/kit/pr-verify.mjs:102`); punt 16 voegt daar een check aan
+   toe. Verder krijgt een statusbesluit geen record. Een spec die beschermde bronbestanden nodig heeft, krijgt zijn
    `pnpm docs:decision`-record in díe PR; na de merge staan document en record samen op main en is het mandaat actief. Een ADR
    of spec zonder `--path` krijgt geen record: de status op main is zelf het bewijs (eerste tak van `canRecordStatus`).
 3. **Wat de guard controleert** (minimale wijziging in `verifyDocument`, als `canRecordStatus` faalt en de overgang van
@@ -102,7 +104,9 @@ Bron voor deze herziening: dezelfde inventaris met de eigenaarbesluiten van 2026
 
 **Promptbeleid (P3).**
 
-8. **Lijst `voorReview`** in `.claude/gates.json`, een deelverzameling van `gates` + `jsonGates`. Een pad hoort erin als het
+8. **Lijst `voorReview`** in `.claude/gates.json`, een deelverzameling van `gates` + `jsonGates`. De lijst ontstaat in de
+   bouw-PR van punt 1–3 en 7: daar gebruikt alleen de lane-herkenning hem, en `check-docs` controleert dat hij binnen
+   `gates` + `jsonGates` valt. Prompts en rolhek veranderen pas in punt 9. Een pad hoort erin als het
    effect heeft vóór review: (a) het bestand is gereedschap dat op de machine van de eigenaar of in CI draait (scripts, CI,
    hooks, dependencies, omgeving, configs); app- en testcode vallen er niet onder, want die draaien geïsoleerd in de runner
    (ADR 0009) (besluit 2026-10-15); (b) het wijzigt instructies, rechten of hooks van de agent; (c) het verandert de vertrouwde
@@ -129,13 +133,13 @@ Bron voor deze herziening: dezelfde inventaris met de eigenaarbesluiten van 2026
    | `.env.example` | ja | (a): `scripts/dev.mjs:29` kopieert hem naar `.env.local`; demo-waarden zijn een securityregel |
    | `src/core/**` | nee | appcode; blijft dicht via `check-core` en CODEOWNERS |
 
-9. **Gevolg.** `ask` (Edit-regels) = `voorReview`; de `ask`-regels voor commando's (`pnpm add`, runnerchecks, `sed -i`, …)
+9. **Gevolg voor prompts** (stap 7, na punt 10). `ask` (Edit-regels) = `voorReview`; de `ask`-regels voor commando's (`pnpm add`, runnerchecks, `sed -i`, …)
    blijven. Het rolhek vraagt de hoofdsessie alleen nog op `voorReview` (`gate()`); op andere gate-paden geeft het een melding
    ("gate-pad: eigenaarreview in de PR"). Subagentrollen, migraties, gegenereerde bestanden en bestaande tests blijven in het
    rolhek ongewijzigd. CODEOWNERS blijft = `gates` + `jsonGates`; de diff-guard blijft gelijk. De spiegelregel in `check-docs`
-   wordt "`ask` = `voorReview`" en faalt als `voorReview` een pad buiten `gates`/`jsonGates` noemt. `src/core` blijft in een app
+   wordt "`ask` = `voorReview`". `src/core` blijft in een app
    dicht (`check-core`).
-10. **Volgorde: compensatie vóór versoepeling.** Punt 8–9 wordt pas gebouwd als (1) de AC→test-check en het risico-overzicht
+10. **Volgorde: compensatie vóór versoepeling.** Punt 9 (en punt 14 en 18) wordt pas gebouwd als (1) de AC→test-check en het risico-overzicht
     in de diff-guard (P5) op main staan en (2) deze ADR `geaccepteerd` is.
 
 **Meten (P6).** Vervangt ADR 0023; neemt het meetpunt (0023 punt 2) verbreed over.
@@ -150,10 +154,10 @@ Bron voor deze herziening: dezelfde inventaris met de eigenaarbesluiten van 2026
     buiten het commandoprefix, of geheimen. Overzichtscommando (voorstel: `pnpm meting`) toont per sessie/branch: prompts per pad
     of commandoprefix, weigeringen, beurten, CI-rondes (via `gh`, met timeout; zonder netwerk "onbekend") en correcties van de
     eigenaar: elk eigenaarbericht na de opdracht in dezelfde sessie, als telling (een bovengrens; besluit 2026-10-15).
-13. **Nulmeting** vóór punt 8–9: `pnpm new:resource demo --dry-run` (`scripts/kit/new-resource.mjs:523`) plus een
+13. **Nulmeting** vóór punt 9: `pnpm new:resource demo --dry-run` (`scripts/kit/new-resource.mjs:523`) plus een
     walk-through van het gouden pad (`docs/gouden-pad.md`), droog, zonder merge. Dezelfde opdracht na elke wijziging aan de
     werkstraat. **Herzien** na de eerste 5 besluiten als de mediaan > 1 PR is of de doorlooptijd niet onder de basislijn
-    ligt; direct bij één status op main zonder statuscommit van de eigenaar in de PR; en na punt 8–9 als prompts niet dalen of
+    ligt; direct bij één status op main zonder statuscommit van de eigenaar in de PR; en na punt 9 als prompts niet dalen of
     weigeringen, blokkerende reviewbevindingen of correcties stijgen ten opzichte van de nulmeting.
 
 **Agent-merge in de feature-lane** (besluit 2026-10-15).
@@ -163,16 +167,21 @@ Bron voor deze herziening: dezelfde inventaris met de eigenaarbesluiten van 2026
     reviewer (eisen framework §8) gaf akkoord op die SHA en er staat geen blokkerende bevinding open; (3) de diff-guard
     bevestigt de lane: geen pad uit `voorReview`, geen `src/core`, geen gewijzigde of verwijderde bestaande test, geen
     gewijzigde migratie, geen ADR (dezelfde herkenning als punt 7); (4) de voorwaarden uit 0030 punt 2–3 gelden: de
-    merge-sleutel in `.claude/gates.json` staat aan op `origin/main` en de ruleset is bewezen via `scripts/check-github.mjs`
-    (de harde grens blijft GitHub, 0030 punt 6). De eigenaar krijgt achteraf een melding: de eindmelding van `opleveren` én
+    merge-sleutel `merge` in `.claude/gates.json` staat op `"feature-lane"` op `origin/main`, en de ruleset is bewezen via
+    `scripts/check-github.mjs` tegen `.github/settings/main-protection.json` (de harde grens blijft GitHub, 0030 punt 6).
+    **Die drie bestaan nog niet**; ze hoorden bij 0030 PR 2, die geparkeerd is. De stap agent-merge bouwt ze daarom zelf:
+    `scripts/check-github.mjs` (alleen-lezend), de settings als code, en de sleutel `merge: "eigenaar" | "feature-lane" |
+    "agent-na-akkoord"` (ontbreekt of onleesbaar → `"eigenaar"`, gelezen uit `origin/main` zoals 0030 punt 2). De waarde
+    `"agent-na-akkoord"` blijft ongebruikt zolang 0030 PR 2 voor de framework-lane geparkeerd is; `check-docs` faalt erop. De eigenaar krijgt achteraf een melding: de eindmelding van `opleveren` én
     een commentaar op de PR. In de framework-lane merget de eigenaar, ongewijzigd.
 15. **Verhouding tot 0030.** Voor de feature-lane vervangen (2) en (3) het akkoord per PR in de sessie (0030 punt 4) en de eis
     "raakt geen gate-pad" (0030 punt 5); `--admin`, `--auto`, `gh api …/merge` en subagent-merge blijven deny. De algemene
     agent-merge (0030 PR 2) blijft voor de framework-lane geparkeerd (inventaris B-8). 0030 krijgt een verwijsregel
     "Gewijzigd door 0029".
 16. **Volgorde.** Actief pas als de AC→test-check en het risico-overzicht in de diff-guard (P5) op main staan en deze ADR
-    `geaccepteerd` is (punt 10). De diff-guard-uitslag moet dan meetellen in `pr:verify`: nu draait `check-document-status` in
-    de niet-verplichte job `diff-guard` (inventaris, besluit 2; ADR 0031 PR 2).
+    `geaccepteerd` is (punt 10). Daarnaast moet de lane-uitslag meetellen in `pr:verify`: nu draait `check-document-status` in
+    de niet-verplichte job `diff-guard` (inventaris, besluit 2; ADR 0031 PR 2), en `pr:verify` kent alleen de namen uit
+    `requiredChecks` in `.claude/decisions.json`. `diff-guard` (of een aparte lane-check) komt in `requiredChecks` (punt 2).
 17. **Zwakte.** De agent pusht en merget onder het account van de eigenaar: de merge is geen identiteitsbewijs, en het
     reviewerakkoord is een sessie-artefact (geen GitHub-review; `gh pr review` blijft deny), dus niet verifieerbaar in CI. De
     grens ligt in de diff-guard en de verplichte checks. Na punt 18 kan de agent ook een feature met een nieuwe route of
@@ -211,22 +220,26 @@ gelijk (merge-afspraak, `overgang`), en geldt na punt 14 ook voor de merge door 
 - **Stap 3 (meten):** hooks uit punt 12 in `.claude/hooks/` + `.claude/settings.json`, het overzichtscommando in `scripts/kit/`
   en `package.json`, tests in `test/hooks/`; framework §8 (fail-open meldhooks naast de blokkerende hooks); nulmeting (punt 13).
 - **Bouw-PR punt 1–3 en 7:** `scripts/kit/check-document-status.mjs` (tak en lane-herkenning) met fixtures in `test/rails/`;
+  de lijst `voorReview` in `.claude/gates.json` (punt 8) met een `check-docs`-regel dat hij binnen `gates` + `jsonGates` valt;
   `docs/specs/_mini.md` nieuw; `check-docs` kent het frontmatterveld van de mini-spec; `docs/operations/agent-doorloop.md`
   ("Besluit en taakscope voorbereiden"); `docs/roadmap.md` (controle als deel van `check-spec-approval`).
 - **Stap 5 (teksten):** `docs/framework.md` regel 4 (drempel uit punt 4), §1 (korte versie P1–P7), §8 stap 1 en licht pad
   (lanes, mini-spec), §10 "Meten" (`docs/framework.md:441-444`, naar punt 11–13) en "Beschermde paden" (`voorReview`);
   `AGENTS.md` Werkafspraken (mini-spec, lanes); ADR 0027 en 0025 alleen een verwijsregel "Gewijzigd door 0029".
 - **Vóór stap 7:** de PR('s) van P5: AC→test-check en risico-overzicht in de diff-guard.
-- **Stap 7 (prompts, pas na punt 10):** `voorReview` in `.claude/gates.json`; Edit-regels in `ask` in `.claude/settings.json`;
+- **Stap 7 (prompts, pas na punt 10):** Edit-regels in `ask` in `.claude/settings.json`;
   `gate()` in `.claude/hooks/lib/rolhek.mjs`; spiegelregel in `scripts/kit/check-docs.mjs` (`mirrorViolations`, `OWNERS_ONLY`);
   tests `test/rails/check-docs-gates.test.ts`, `test/rails/sandbox-settings.test.ts` en de rolhektests (nieuwe gevallen; een
   bestaande test aanpassen alleen met reden in de PR); framework §8/§10. Label `gate-wijziging`.
-- **Stap 7 of later (agent-merge, pas na punt 16):** `ghForbidden` in `.claude/hooks/lib/rolhek.mjs` (exacte mergevorm alleen
-  voor de hoofdsessie bij een bevestigde feature-lane, met tabeltests in `test/hooks/`); `.claude/settings.json`
-  (`Bash(gh pr merge*)` uit `deny`; `--auto`, `--admin` en `gh api *merge*` blijven deny); skill `opleveren` (voorwaarden
-  punt 14, reviewer-SHA, melding); `scripts/kit/diff-guard.mjs` en `.github/workflows/guard.yml` (lane-uitslag, verplicht
-  via `pr:verify`); `.github/settings/main-protection.json` (verplichte checks); framework §8 stap 6/7 en §10, AGENTS.md
-  ("merge nooit"), CLAUDE.md; ADR 0030 verwijsregel.
+- **Stap 7 of later (agent-merge, pas na punt 16; nog te bouwen):** de onderdelen van 0030 PR 2 die punt 14 nodig heeft:
+  `scripts/check-github.mjs` (alleen-lezend), `.github/settings/main-protection.json` (settings als code) en de sleutel
+  `merge` in `.claude/gates.json` met de `check-docs`-regel uit punt 14; `ghForbidden` in `.claude/hooks/lib/rolhek.mjs`
+  (exacte mergevorm alleen voor de hoofdsessie bij `"feature-lane"` en een bevestigde lane, met tabeltests in `test/hooks/`);
+  `.claude/settings.json` (`Bash(gh pr merge*)` uit `deny`; `--auto`, `--admin` en `gh api *merge*` blijven deny); skill
+  `opleveren` (voorwaarden punt 14, reviewer-SHA, melding); `scripts/kit/diff-guard.mjs` en `.github/workflows/guard.yml`
+  (lane-uitslag); `requiredChecks` in `.claude/decisions.json` (punt 16); framework §8 stap 6/7 en §10, AGENTS.md ("merge
+  nooit"), CLAUDE.md; ADR 0030 verwijsregel. De agent heeft geen `workflows`-recht: wijzigingen in `.github/**` pusht de
+  eigenaar (framework §10).
 - **Stap 7 (versoepeling, na P5): punt 18.** `src/api/app.ts` en `src/shared/permissions.ts` uit `gates` in
   `.claude/gates.json` en uit `.github/CODEOWNERS` (en uit `ask`); `check-docs`-fixtures voor de spiegeling
   (`test/rails/check-docs-gates.test.ts`, nieuwe gevallen); `scripts/kit/new-resource.mjs` (behandelt beide nu als gate,
