@@ -302,24 +302,50 @@ function routeAanroepen(bron) {
   return [...code.matchAll(/\bdefineRoute\s*\(/g)].map((t) => compact(blokVanaf(code, t.index + t[0].length - 1)));
 }
 
-/** @param {string} pad @param {string} aanroep */
-function routeLabel(pad, aanroep) {
-  const method = /[({,]method:(['"])([A-Za-z]+)\1/.exec(aanroep)?.[2];
-  const routePad = /[({,]path:(['"])([^'"]*)\1/.exec(aanroep)?.[2];
-  if (method === undefined || routePad === undefined) return `${pad}: method en path niet letterlijk (via contract)`;
-  return `${pad}: ${method.toUpperCase()} ${routePad}`;
+/** Het eerste argument van een compacte aanroep `(…)`, tot de eerste komma op het bovenste niveau. @param {string} aanroep */
+function eersteArgument(aanroep) {
+  let diepte = 0;
+  for (let i = 0; i < aanroep.length; i = stringEinde(aanroep, i)) {
+    const teken = aanroep.charAt(i);
+    if ('([{'.includes(teken)) diepte += 1;
+    if (')]}'.includes(teken)) diepte -= 1;
+    if ((teken === ',' && diepte === 1) || diepte === 0) return aanroep.slice(1, i);
+  }
+  return aanroep.slice(1);
 }
 
-/** Aanroepen in `na` die (als multiset) niet in `voor` staan. @param {string} pad @param {{ voor: string | null, na: string | null }} versies */
+/**
+ * Identiteit van een route: `METHOD path` als beide letterlijk staan, anders het eerste argument (het contract). Handler,
+ * permission en schema's horen er niet bij: een bestaande route met een andere handler is niet nieuw.
+ * @param {string} aanroep
+ * @returns {{ letterlijk: boolean, id: string }}
+ */
+function routeIdentiteit(aanroep) {
+  const method = /[({,]method:(['"])([A-Za-z]+)\1/.exec(aanroep)?.[2];
+  const routePad = /[({,]path:(['"])([^'"]*)\1/.exec(aanroep)?.[2];
+  if (method === undefined || routePad === undefined) return { letterlijk: false, id: eersteArgument(aanroep) };
+  return { letterlijk: true, id: `${method.toUpperCase()} ${routePad}` };
+}
+
+/** Routes in `na` waarvan de identiteit (als multiset) niet in `voor` staat. @param {string} pad @param {{ voor: string | null, na: string | null }} versies */
 function nieuweRoutes(pad, versies) {
-  const oud = routeAanroepen(versies.voor);
+  const oud = routeAanroepen(versies.voor).map((aanroep) => routeIdentiteit(aanroep).id);
   return routeAanroepen(versies.na)
-    .filter((aanroep) => {
-      const index = oud.indexOf(aanroep);
+    .map(routeIdentiteit)
+    .filter(({ id }) => {
+      const index = oud.indexOf(id);
       if (index !== -1) oud.splice(index, 1);
       return index === -1;
     })
-    .map((aanroep) => routeLabel(pad, aanroep));
+    .map(({ letterlijk, id }) =>
+      letterlijk ? `${pad}: ${id}` : `${pad}: method en path niet letterlijk (via contract)`,
+    );
+}
+
+/** Nieuwe of gewijzigde migratie, of een hernoeming van of naar `db/migrations` (beide paden). @param {Wijziging} wijziging */
+function migratieRegel({ status, pad, van }) {
+  if (status === 'R' && van !== undefined && (MIGRATIE.test(pad) || MIGRATIE.test(van))) return [`${van} → ${pad}`];
+  return (status === 'A' || status === 'M') && MIGRATIE.test(pad) ? [pad] : [];
 }
 
 /**
@@ -330,10 +356,7 @@ function nieuweRoutes(pad, versies) {
 export function risico(pr) {
   const versies = new Map(Object.entries(pr.json));
   return {
-    migraties: pr.wijzigingen
-      .filter(({ status, pad }) => (status === 'A' || status === 'M') && MIGRATIE.test(pad))
-      .map(({ pad }) => pad)
-      .sort(),
+    migraties: pr.wijzigingen.flatMap(migratieRegel).sort(),
     permissies: gewijzigdePermissies(versies.get(PERMISSIES)),
     dependencies: nieuweDependencies(versies.get(PAKKET)),
     routes: [...versies]
@@ -347,7 +370,7 @@ export function risico(pr) {
 function risicoTekst(risico) {
   /** @type {[string, string[]][]} */
   const categorieen = [
-    ['Migraties (nieuw of gewijzigd)', risico.migraties],
+    ['Migraties (nieuw, gewijzigd of hernoemd)', risico.migraties],
     ['Permissiesleutels (nieuw of gewijzigd)', risico.permissies],
     ['Dependencies (nieuw)', risico.dependencies],
     ['Routes (nieuwe defineRoute)', risico.routes],

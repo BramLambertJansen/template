@@ -200,7 +200,8 @@ function statusViolations(files, read) {
 
 // Testpaden uit .claude/gates.json (`testpaden`): `*.test.*`, `*.spec.*`, `db/tests/**`, `e2e/**`, `test/**`.
 const TESTBESTAND = /(?:^|\/)[^/]+\.(?:test|spec)\.[^/]+$|^(?:db\/tests|e2e|test)\//;
-const AC_ID = /(?<![\w-])AC-\d+(?![\w-])/g;
+// Een AC-id als heel woord, met een optioneel voorvoegsel `<naam>/` (groep 1); groep 2 is het id.
+const AC_ID = /(?<![\w/-])(?:([\w.-]+)\/)?(AC-\d+)(?![\w-])/g;
 
 /** Regex die `naam` als heel woord vindt (geen woordteken of `-` ervoor of erna). @param {string} naam */
 function heelWoord(naam) {
@@ -234,7 +235,12 @@ function acViolations(files, read) {
   const tests = files.filter((file) => TESTBESTAND.test(file)).map(read);
   return gebouwd.flatMap(({ file, text }) => {
     const spec = { naam: path.basename(file, '.md'), namespace: /^namespace:\s*(\S+)\s*$/m.exec(text)?.[1] };
-    const acs = [...new Set(text.match(AC_ID) ?? [])].sort((a, b) => Number(a.slice(3)) - Number(b.slice(3)));
+    const eigen = new Set([spec.naam, spec.namespace]);
+    // Een AC met het voorvoegsel van een andere spec (`accounts/AC-42`) is een kruisverwijzing, geen eigen AC.
+    const ids = [...text.matchAll(AC_ID)]
+      .filter(([, voor]) => voor === undefined || eigen.has(voor))
+      .map(([, , id = '']) => id);
+    const acs = [...new Set(ids)].sort((a, b) => Number(a.slice(3)) - Number(b.slice(3)));
     return acs
       .filter((ac) => !tests.some((tekst) => dekt(tekst, spec, ac)))
       .map((ac) => ({

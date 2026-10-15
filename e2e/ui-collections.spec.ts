@@ -161,7 +161,9 @@ test.describe('UI-collecties: alleen lokale data', () => {
     const list = page.getByRole('region', { name: 'List', exact: true });
     await list.getByRole('button', { name: 'Bekijken Anna de Vries' }).click();
     await expect(list.getByRole('status')).toHaveText('Anna de Vries');
-    await page.waitForLoadState('networkidle');
+    // networkidle lost direct op als er op dat moment niets loopt. Een vaste stilteperiode laat de luisteraar echt lopen,
+    // zodat ook een vertraagde query of refetch na de laatste interactie wordt opgemerkt.
+    await page.waitForTimeout(1500);
 
     expect(requests).toStrictEqual([]);
   });

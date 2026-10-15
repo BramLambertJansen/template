@@ -49,6 +49,24 @@ describe('Risico-overzicht: migraties', () => {
   });
 });
 
+describe('Risico-overzicht: hernoemde migraties', () => {
+  test('een hernoemde migratie (status R) staat erin, met het oude en het nieuwe pad', () => {
+    const tekst = sectie(
+      pr([
+        {
+          status: 'R',
+          pad: 'db/migrations/20261015120000_nieuwe_naam.sql',
+          van: 'db/migrations/20261001090000_oude_naam.sql',
+        },
+      ]),
+    );
+
+    expect(tekst).toContain('db/migrations/20261015120000_nieuwe_naam.sql');
+    expect(tekst).toContain('db/migrations/20261001090000_oude_naam.sql');
+    expect(tekst).not.toMatch(/Migraties[^\n]*\n\s*-?\s*geen/);
+  });
+});
+
 describe('Risico-overzicht: permissiesleutels', () => {
   const pad = 'src/shared/permissions.ts';
   const wijziging = [{ status: 'M', pad }];
@@ -171,6 +189,32 @@ describe('Risico-overzicht: routes', () => {
     );
 
     expect(tekst).not.toContain(pad);
+  });
+});
+
+describe('Risico-overzicht: routes, alleen echt nieuwe', () => {
+  const pad = 'src/api/routes/reports.ts';
+  const letterlijk = (method: string, rest: string) =>
+    `import { defineRoute } from '#core/api/route.ts';\nexport const a = defineRoute({ method: '${method}', path: '/reports', ${rest} });\n`;
+
+  test('bestaande route met alleen een andere handler, permission of input: niet onder nieuwe routes', () => {
+    const voor = letterlijk('GET', "input: i, output: o, permission: 'reports:read', handler: oud");
+    const na = letterlijk('GET', "input: i2, output: o2, permission: 'reports:admin', handler: nieuw");
+
+    const tekst = sectie(pr([{ status: 'M', pad }], { [pad]: { voor, na } }));
+
+    expect(tekst).not.toContain(pad);
+    expect(tekst).not.toContain('/reports');
+  });
+
+  test('dezelfde route met een nieuwe method of een nieuw path: wel genoemd', () => {
+    const voor = letterlijk('GET', "input: i, output: o, permission: 'reports:read', handler: h");
+
+    const anderMethod = letterlijk('POST', "input: i, output: o, permission: 'reports:read', handler: h");
+    const anderPath = voor.replace("'/reports'", "'/reports/export'");
+
+    expect(sectie(pr([{ status: 'M', pad }], { [pad]: { voor, na: anderMethod } }))).toMatch(/POST\s+\/reports/);
+    expect(sectie(pr([{ status: 'M', pad }], { [pad]: { voor, na: anderPath } }))).toMatch(/GET\s+\/reports\/export/);
   });
 });
 

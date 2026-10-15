@@ -29,7 +29,7 @@ async function list(user: TestUser, query: string) {
   return accountsListContract.output.parse(await response.json());
 }
 
-describe('lijstpagina/AC-3: Naam A-Z met meer dan 25 accounts, pagina voor pagina', () => {
+describe('lijstpagina/AC-3 (API-deel): Naam A-Z met meer dan 25 accounts, cursorpagina voor cursorpagina', () => {
   test("de pagina's volgen de sortering zonder dubbele of ontbrekende rijen", async () => {
     const admin = await db.asUser('admin', { name: 'Test Admin' });
     // Invoegvolgorde bewust niet alfabetisch: de volgorde komt van de sortering, niet van de aanmaaktijd.

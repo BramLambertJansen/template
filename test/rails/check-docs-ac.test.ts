@@ -111,3 +111,11 @@ test('een bestand buiten de testpaden dekt niet', async () => {
 
   expect(keys).toStrictEqual(['docs:ac:mijn-spec:AC-1']);
 });
+
+test('een kruisverwijzing naar een AC van een andere spec in de spec zelf is geen eigen AC', async () => {
+  const text = spec('gebouwd').replace('Gegeven iets, dan dit.', 'Gegeven iets, dan dit; zie ook accounts/AC-42.');
+
+  const keys = await acKeys({ [SPEC]: text, 'src/a/a.test.ts': "test('mijn/AC-1: doet iets', () => {});\n" });
+
+  expect(keys).toStrictEqual([]);
+});
