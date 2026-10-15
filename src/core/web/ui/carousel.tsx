@@ -86,8 +86,13 @@ export function Carousel(props: CarouselProps) {
         state.tracked.current = event.target;
       }}
       onBlurCapture={(event) => {
-        if (event.relatedTarget instanceof Node && !event.currentTarget.contains(event.relatedTarget))
-          state.tracked.current = null;
+        const left = event.relatedTarget instanceof Node && !event.currentTarget.contains(event.relatedTarget);
+        const released =
+          event.relatedTarget === null &&
+          event.target.isConnected &&
+          event.target.closest('[hidden]') === null &&
+          !event.target.matches(':disabled');
+        if (left || released) state.tracked.current = null;
       }}
     >
       <div

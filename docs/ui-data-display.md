@@ -3,6 +3,8 @@
 Deze componenten horen bij [de spec](specs/ui-data-display.md) en staan met werkende voorbeelden op de bestaande
 adminpagina `/design-system`. Importeer componenten en types uit de app-barrel `src/web/ui/index.ts`.
 Geen nieuwe dependency, netwerklaag, token of autorisatie is nodig.
+De lokale voorbeeldbeelden staan in `public/`; de leesweigering voor bestandsnamen met `secret` dekt deze nieuwe map
+via `.claude/settings.json:19`, met afzonderlijk akkoord van de eigenaar.
 
 ## DataTable
 
@@ -26,6 +28,8 @@ optioneel defaultValue. Left/Right/Home/End verplaatsen focus; Enter/Space activ
 maar hidden, zodat invoer bewaard blijft. Een paneel met eigen focusbare inhoud krijgt geen extra Tab-stop.
 Onbekende expliciete waarden worden niet vervangen; de eerste enabled tab blijft bereikbaar. Verdwijnt een actieve
 uncontrolled tab, dan herstelt de eerste enabled tab zonder wijzigingscallback. Focusherstel steelt geen externe focus.
+Na bewust verlaten van een zichtbaar, bereikbaar veld wordt ook een blur zonder volgend focusdoel gerespecteerd
+(`src/core/web/ui/tabs.tsx:87`); een latere ouderwissel trekt focus dan niet terug.
 
 ## Gallery
 
@@ -54,6 +58,8 @@ interactieve controls blijven normaal werken. Native pointer capture geldt voor 
 Geen autoplay, animatie, timer of algemene pijltjes-handler: reduced motion is standaard gerespecteerd.
 Een gebruikerswissel wordt pas aangekondigd wanneer de actieve waarde daadwerkelijk verandert. Bij onbekende expliciete
 waarde blijft een eerste-keuzeknop bereikbaar, ook met één item. Verwijderde gefocuste inhoud krijgt een focusvangnet.
+Een bewust verlaten dia trekt bij een latere ouderwissel geen focus terug, ook als de blur geen volgend focusdoel had
+(`src/core/web/ui/carousel.tsx:88`).
 
 ## Acceptatiebewijs
 
@@ -62,10 +68,10 @@ waarde blijft een eerste-keuzeknop bereikbaar, ook met één item. Verwijderde g
 | AC-1 exports/types/defaultcompatibiliteit | typecheck, check:catalogus, list-toolbar-filters.test.tsx |
 | AC-2 tabel/sortering/ids | data-table.test.tsx, e2e/ui-data-display.spec.ts |
 | AC-3 selectie/busy/leeg/meer laden | data-table.test.tsx, e2e/ui-data-display.spec.ts |
-| AC-4 tabs/keyboard/staat/focus | tabs.test.tsx, e2e/ui-data-display.spec.ts |
+| AC-4 tabs/keyboard/staat/focus | tabs.test.tsx, tabs-blur.test.tsx, e2e/ui-data-display.spec.ts |
 | AC-5 gallery/fout/preview | gallery.test.tsx, e2e/ui-data-display.spec.ts |
 | AC-6 toolbar/adaptatie/chips/debounce | list-toolbar-filters.test.tsx, bestaande list-toolbar.test.tsx, e2e/ui-data-display.spec.ts |
-| AC-7 carousel/controlled/swipe | carousel.test.tsx, e2e/ui-data-display.spec.ts |
+| AC-7 carousel/controlled/swipe | carousel.test.tsx, carousel-blur.test.tsx, e2e/ui-data-display.spec.ts |
 | AC-8 structurele wijzigingen/id-fouten | nieuwe componenttests per onderdeel |
 | AC-9 bronindex en voorbeelden | check:catalogus, bestaande e2e/design-system.spec.ts |
 | AC-10 responsive/axe/CSP/thema | e2e/ui-data-display.spec.ts, bestaande design-systemtests |
