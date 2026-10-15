@@ -3,13 +3,18 @@
 // met echte payloads kan bewijzen. De stdin/stdout-kant staat in .claude/hooks/rolhek.mjs.
 import path from 'node:path';
 import { gitSubcommand, parseCommands, splitCommand, writeTargets } from './shell.mjs';
+import { documentInfo } from './document-state.mjs';
+import { canRecordStatus, canWriteProtected } from './task-authority.mjs';
+import { automaticRunner } from './runner-authority.mjs';
 
 /**
  * @typedef {{ gates: string[], testpaden: string[], jsonGates: Record<string, string[]>, gegenereerd: string[],
- *   migraties: string[], schrijfrecht: Record<string, string[]> }} Config
+ *   migraties: string[], schrijfrecht: Record<string, string[]>, mcpLezen: string[] }} Config
  * @typedef {{ root: string, cwd: string, config: Config, read: (rel: string) => string | null,
- *   committed: (rel: string) => boolean, isDir: (rel: string) => boolean, branch: string }} Ctx
- * @typedef {{ deny: string[], ask: string[], context: string[] }} Decision
+ *   committed: (rel: string) => boolean | 'zonder-origin', isDir: (rel: string) => boolean, branch: string,
+ *   authority?: import('./task-authority.mjs').Authority | null, runnerTrusted?: boolean }} Ctx
+ * `committed`: staat in de merge-base met origin/main; 'zonder-origin' = origin/main onleesbaar en wel in HEAD (terugval).
+ * @typedef {{ deny: string[], ask: string[], context: string[], allow?: boolean }} Decision
  * @typedef {{ kind: 'write' | 'delete', after: string | null }} Change
  */
 
@@ -42,6 +47,7 @@ export function loadConfig(text) {
     testpaden: list('testpaden'),
     gegenereerd: list('gegenereerd'),
     migraties: list('migraties'),
+    mcpLezen: list('mcpLezen'),
     jsonGates: record('jsonGates'),
     schrijfrecht: record('schrijfrecht'),
   };
@@ -58,8 +64,22 @@ export function decide(payload, ctx) {
   const tool = field(payload, 'tool_name');
   const input = objectField(payload, 'tool_input');
   const role = roleOf(field(payload, 'agent_type'));
-  if (tool === 'Bash') decideBash({ command: field(input, 'command'), role }, ctx, decision);
-  else if (['Edit', 'Write', 'MultiEdit', 'NotebookEdit'].includes(tool)) decideEdit({ tool, input, role }, ctx, decision);
+  // Een onbekende subagent houdt de bestaande developerbeperkingen, maar krijgt nooit een taakmandaat.
+  const namedRole = field(payload, 'agent_type');
+  const context = ['', 'developer', 'architect'].includes(namedRole) ? ctx : { ...ctx, authority: null };
+  if (tool.startsWith('mcp__')) decideMcp({ tool, role }, context, decision);
+  else if (tool === 'Bash') {
+    const command = field(input, 'command');
+    decideBash({ command, role }, context, decision);
+    if (command.includes('--sta-wijzigingen-toe')) decision.deny.push('De agent omzeilt de hostcontrole van de runner nooit; gebruik voor gewijzigd railwerk de CI-runner');
+    if (ctx.cwd === ctx.root && ctx.runnerTrusted === true && automaticRunner(command) && decision.ask.length + decision.deny.length === 0)
+      decision.allow = true;
+  }
+  else if (['Edit', 'Write', 'MultiEdit', 'NotebookEdit'].includes(tool)) {
+    decideEdit({ tool, input, role }, context, decision);
+    if (decision.context.some((reason) => reason.startsWith('Taakmandaat:')) && decision.ask.length + decision.deny.length === 0)
+      decision.allow = true;
+  }
   return decision;
 }
 
@@ -103,6 +123,18 @@ function gate(decision, role, reason) {
   else decision.deny.push(reason);
 }
 
+/**
+ * MCP-tools (WS-06): alleen exacte namen uit mcpLezen mogen door; anders vraagt de hoofdsessie de eigenaar en weigert een
+ * subagent (ook een onbekende), want een connector kan buiten de repo schrijven (framework §10).
+ * @param {{ tool: string, role: string }} call
+ * @param {Ctx} ctx
+ * @param {Decision} decision
+ */
+function decideMcp({ tool, role }, ctx, decision) {
+  if (ctx.config.mcpLezen.includes(tool)) return;
+  gate(decision, role, `${tool} staat niet in mcpLezen (.claude/gates.json): MCP alleen read-only (AGENTS.md)`);
+}
+
 // ---------- bestanden ----------
 
 /**
@@ -112,11 +144,19 @@ function gate(decision, role, reason) {
  */
 function decideEdit({ tool, input, role }, ctx, decision) {
   const file = field(input, 'file_path') || field(input, 'notebook_path');
+  ctx = scopedContext(ctx, file);
   const rel = relative(ctx, file);
   if (rel === null) return;
   const before = ctx.read(rel);
   const after = tool === 'NotebookEdit' ? null : simulate(tool, input, before);
   decideFile({ rel, change: { kind: 'write', after }, role }, ctx, decision);
+}
+
+/** Een weggewerkte parentcomponent kan via een symlink naar een ander fysiek bestand wijzen.
+ * @param {Ctx} ctx @param {string} file */
+function scopedContext(ctx, file) {
+  const parent = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
+  return parent.test(file) || parent.test(ctx.cwd) ? { ...ctx, authority: null } : ctx;
 }
 
 /**
@@ -162,8 +202,17 @@ function decideFile({ rel, change, role }, ctx, decision) {
     decision.deny.push(`${rel} is gegenereerd: draai het script dat hem maakt (pnpm db:generate, de router-plugin)`);
     return;
   }
-  if (matches(config.migraties) && ctx.committed(rel)) {
-    decision.deny.push(`${rel} is een gecommitte migratie: wijzig hem nooit, maak een nieuwe (AGENTS.md)`);
+  const committed = matches(config.migraties) ? ctx.committed(rel) : false;
+  if (committed !== false) {
+    const hint = committed === 'zonder-origin' ? ' (origin/main onleesbaar, daarom vergeleken met HEAD: draai git fetch origin)' : '';
+    decision.deny.push(`${rel} is een gecommitte migratie: wijzig hem nooit, maak een nieuwe (AGENTS.md)${hint}`);
+    return;
+  }
+  if (recordedStatus({ rel, change, role }, ctx, decision)) return;
+  const nextDocument = documentInfo(rel, change.after ?? '');
+  if (ctx.authority != null && nextDocument !== null && !['voorstel', 'voorgesteld'].includes(nextDocument.status) &&
+    !canRecordStatus({ file: rel, text: change.after ?? '' }, ctx.authority)) {
+    decision.deny.push(`${rel}: inhoud of besluit heeft geen geldig bewijs uit main; heropen het voorstel voor een nieuwe beoordeling`);
     return;
   }
   if (approvesSpec(rel, change, ctx)) {
@@ -172,6 +221,24 @@ function decideFile({ rel, change, role }, ctx, decision) {
   }
   if (matches(config.testpaden) && ctx.read(rel) !== null) existingTest({ rel, change, role }, ctx, decision);
   decideByRole({ rel, change, role }, ctx, decision);
+}
+
+/**
+ * Een statuswijziging mag alleen de statusregel aanpassen en een bestaand besluit administreren.
+ * @param {{ rel: string, change: Change, role: string }} target
+ * @param {Ctx} ctx
+ * @param {Decision} decision
+ */
+function recordedStatus({ rel, change, role }, ctx, decision) {
+  if (ctx.authority == null || change.kind !== 'write' || change.after === null) return false;
+  const before = ctx.read(rel);
+  const old = documentInfo(rel, before ?? '');
+  const next = documentInfo(rel, change.after);
+  if (old === null || next === null || before === change.after || old.digest !== next.digest) return false;
+  if (!['hoofdsessie', 'developer', 'architect'].includes(role) || !canRecordStatus({ file: rel, text: change.after }, ctx.authority)) {
+    decision.deny.push(`${rel}: deze statusovergang heeft geen geldig besluit uit de vertrouwde basis; gebouwd via pnpm docs:status`);
+  } else decision.context.push(`Taakmandaat: ${rel}: status administratief vastgelegd op basis van het besluit uit main`);
+  return true;
 }
 
 /**
@@ -188,8 +255,15 @@ function approvesSpec(rel, change, ctx) {
 const SKIP = /\.(?:skip|todo|fixme)\s*\(|\b(?:xit|xtest|xdescribe)\s*\(|\bskip\s*\(/g;
 const CASES = /\b(?:test|it)(?:\.each\b[^(]*\([^)]*\))?\s*\(/g;
 
+// Testbestanden in testpaden; de rest daar is een hulpbestand (harness, fixture, setup, e2e/support).
+const TEST_FILES = ['**/*.test.*', '**/*.spec.*', 'db/tests/**'];
+// Fixtures bewijzen dat een check faalt en de setup draait vóór elke test: wijzigen is een gate (WS-02), ook voor een
+// bestand daaronder dat als testbestand heet.
+const LOCKED_HELPERS = ['test/rails/fixtures/**', 'test/setup/**'];
+
 /**
- * Bestaande test: verwijderen, skippen of gevallen weghalen vraagt akkoord van de eigenaar; wijzigen meldt het rolhek.
+ * Bestaande test of hulpbestand: verwijderen, skippen of gevallen weghalen vraagt akkoord van de eigenaar, net als een
+ * fixture of setup wijzigen; een andere wijziging meldt het rolhek.
  * @param {{ rel: string, change: Change, role: string }} target
  * @param {Ctx} ctx
  * @param {Decision} decision
@@ -197,12 +271,18 @@ const CASES = /\b(?:test|it)(?:\.each\b[^(]*\([^)]*\))?\s*\(/g;
 function existingTest({ rel, change, role }, ctx, decision) {
   const before = ctx.read(rel) ?? '';
   const count = (/** @type {string} */ text, /** @type {RegExp} */ pattern) => (text.match(pattern) ?? []).length;
-  if (change.kind === 'delete') {
+  const helper = !TEST_FILES.some((glob) => globMatch(glob, rel));
+  // Vóór de indeling als testbestand: ook een fixture die `*.test.*` heet, blijft vergrendeld (WS-02 follow-up).
+  if (LOCKED_HELPERS.some((glob) => globMatch(glob, rel))) {
+    gate(decision, role, `${rel} is een fixture of setup: wijzigen of verwijderen alleen met akkoord van de eigenaar (WS-02)`);
+  } else if (change.kind === 'delete') {
     gate(decision, role, `${rel} is een bestaande test: verwijderen alleen met akkoord van de eigenaar (AGENTS.md)`);
   } else if (change.after !== null && count(change.after, SKIP) > count(before, SKIP)) {
     gate(decision, role, `${rel}: een test skippen alleen met akkoord van de eigenaar (AGENTS.md)`);
   } else if (change.after !== null && count(change.after, CASES) < count(before, CASES)) {
     gate(decision, role, `${rel}: testgevallen weghalen alleen met akkoord van de eigenaar (AGENTS.md)`);
+  } else if (helper) {
+    decision.context.push(`${rel}: hulpbestand gewijzigd: noem het met reden in de PR (AGENTS.md, framework §8).`);
   } else {
     decision.context.push(`${rel} is een bestaande test: noem de wijziging met reden in de PR (AGENTS.md, framework §8).`);
   }
@@ -229,6 +309,10 @@ function decideByRole({ rel, change, role }, ctx, decision) {
   }
   // Tests (toevoegen is vrij) en specs (de agent schrijft ze; goedgekeurd bewaakt de check) zijn geen gate voor schrijven.
   const free = config.testpaden.some((glob) => globMatch(glob, rel)) || rel.startsWith('docs/specs/');
+  if (!free && ctx.authority != null && canWriteProtected({ file: rel, role }, ctx.authority)) {
+    decision.context.push(`Taakmandaat: ${rel}: exact bestand toegestaan door de goedgekeurde taak uit main`);
+    return;
+  }
   if (!free && config.gates.some((glob) => globMatch(glob, rel)))
     gate(decision, role, `${rel} is een beschermd pad (framework §10): wijzigen vraagt akkoord van de eigenaar`);
 }
@@ -303,6 +387,7 @@ function decideBash({ command, role }, ctx, decision) {
  * @param {Decision} decision
  */
 function bashTarget({ file, kind, role }, ctx, decision) {
+  ctx = scopedContext(ctx, file);
   const rel = relative(ctx, file);
   if (rel === null) return;
   // Naar een bestaande map (cp x src/core/): beslis voor een nieuw bestand daarin.
@@ -346,10 +431,16 @@ function forbidden({ assignments, argv }, { role, ctx }, decision) {
   const [program = '', ...args] = argv;
   const lefthook = [...assignments, ...(program === 'export' ? args : [])].find((word) => /^LEFTHOOK(?:_\w+)?=/.test(word));
   if (lefthook !== undefined) decision.deny.push(`${lefthook}: git-hooks overslaan is verboden (AGENTS.md)`);
+  if ([...assignments, ...(program === 'export' ? args : [])].some((word) => /^CI=/.test(word)))
+    decision.deny.push('De agent zet CI niet lokaal; dit kan de hostcontrole van de runner omzeilen');
   if (program === 'git') decision.deny.push(...gitForbidden(args, { role, branch: ctx.branch }));
-  if (program === 'gh') decision.deny.push(...ghForbidden(args, role));
+  if (program === 'gh') decision.deny.push(...ghForbidden(args));
   if (role !== 'hoofdsessie' && isNewResource(program, args))
     decision.deny.push('pnpm new:resource: alleen de hoofdsessie (ADR 0016, OV-4); wat hij schrijft, ziet het rolhek niet');
+  if (role !== 'hoofdsessie' &&
+    ((program === 'pnpm' && args.includes('pr:label-gate')) ||
+      (program === 'node' && args.some((arg) => /(?:^|\/)scripts\/kit\/pr-gate-label\.mjs$/.test(arg)))))
+    decision.deny.push('Het administratieve gate-label zet alleen de hoofdsessie via pr:label-gate');
 }
 
 /**
@@ -365,12 +456,28 @@ export function gitForbidden(args, { role, branch }) {
   if (args.includes('--no-verify')) found.push('--no-verify is verboden (AGENTS.md)');
   if (subcommand === 'commit' && commitSkipsHooks(rest)) found.push('git commit -n slaat de hooks over: verboden');
   if (subcommand === 'config' && setsHooksPath(rest)) found.push('core.hooksPath zetten is verboden');
+  if (config.some((setting) => TRUSTED_CONFIG.test(setting)) || movesTrustedBase(subcommand, rest))
+    found.push('de vertrouwde basis (origin/main en remote origin) verander je alleen met git fetch (ADR 0027)');
   if (subcommand === 'push' && pushesMain(rest, branch)) found.push('push naar main is verboden; open een PR');
+  if (subcommand === 'push' && forcePushes(rest)) found.push('force-push is verboden, ook voor de hoofdsessie (WS-04)');
+  if (subcommand === 'branch' && deletesMain(rest)) found.push('git branch -d/-D/--delete van main is verboden (ADR 0030)');
   if (role === 'hoofdsessie') return found;
   if (subcommand === 'push' || subcommand === 'merge' || subcommand === 'rebase')
     found.push(`subagent: git ${subcommand} doet de hoofdsessie`);
   if (subcommand === 'reset' && rest.includes('--hard')) found.push('subagent: git reset --hard is verboden');
   return found;
+}
+
+// git accepteert elke unieke prefix van een long option: `--d` t/m `--delete`.
+const BRANCH_DELETE_FLAGS = /^(?:--d(?:e(?:l(?:e(?:t(?:e)?)?)?)?)?|-[a-zA-Z]*[dD][a-zA-Z]*)$/;
+
+/**
+ * `git branch -d/-D/--delete` met `main` of `refs/heads/main` als operand.
+ * @param {readonly string[]} rest
+ */
+function deletesMain(rest) {
+  const deletes = rest.some((arg) => BRANCH_DELETE_FLAGS.test(arg));
+  return deletes && rest.some((arg) => arg === 'main' || arg === 'refs/heads/main');
 }
 
 const COMMIT_VALUE_FLAGS = new Set(['m', 'F', 'C', 'c', 't', 'S']);
@@ -405,6 +512,41 @@ function clusterFlags(cluster) {
   return { hooks: false, takesNext: false };
 }
 
+// De hooks lezen besluiten, autoRunner en gateMarker uit de lokale ref origin/main (ADR 0027). Een eigen commit of een andere
+// remote onder die naam zou bevoegdheid geven die nooit is toegekend; de CI-guard leest main bij GitHub en blijft de grens.
+const TRUSTED_CONFIG = /^(?:remote\.origin\.|url\.)/i;
+const TRUSTED_NAME = /^(?:refs\/(?:heads|tags)\/)?origin\/(?:main|HEAD)$/;
+const TRUSTED_DESTINATION = /:\+?(?:refs\/remotes\/)?origin\/(?:main|HEAD|\*)$/;
+const READ_ONLY_CONFIG = ['--get', '--get-all', '--get-regexp', '--list', '-l', '--show-origin'];
+const BRANCH_READ_FLAGS = /^(?:--set-upstream-to|-u|--contains|--no-contains|--merged|--no-merged|--points-at|--list|-l)(?:=|$)/;
+
+/**
+ * @param {string} subcommand
+ * @param {readonly string[]} rest
+ */
+function movesTrustedBase(subcommand, rest) {
+  const operands = rest.filter((arg) => !arg.startsWith('-'));
+  switch (subcommand) {
+    case 'update-ref':
+    case 'symbolic-ref':
+      return rest.some((arg) => /^refs\/remotes\/origin\//.test(arg));
+    case 'branch':
+    case 'tag':
+      return !rest.some((arg) => BRANCH_READ_FLAGS.test(arg)) && TRUSTED_NAME.test(operands[0] ?? '');
+    case 'checkout':
+    case 'switch':
+      return rest.some((arg, index) => ['-b', '-B', '-c', '-C'].includes(arg) && TRUSTED_NAME.test(rest[index + 1] ?? ''));
+    case 'fetch':
+      return operands[0] !== 'origin' && operands.slice(1).some((spec) => TRUSTED_DESTINATION.test(spec));
+    case 'remote':
+      return ['add', 'set-url', 'rename', 'remove', 'rm', 'set-head', 'set-branches'].includes(operands[0] ?? '');
+    case 'config':
+      return !rest.some((arg) => READ_ONLY_CONFIG.includes(arg)) && rest.some((arg) => TRUSTED_CONFIG.test(arg));
+    default:
+      return false;
+  }
+}
+
 /** @param {readonly string[]} rest */
 function setsHooksPath(rest) {
   const reading = rest.some((arg) => ['--get', '--get-all', '--list', '-l', '--get-regexp'].includes(arg));
@@ -423,14 +565,38 @@ function pushesMain(rest, branch) {
   return refspecs.some((spec) => /(?:^|:)\+?(?:refs\/heads\/)?main$/.test(spec) || (spec === 'HEAD' && branch === 'main'));
 }
 
+// Git accepteert elke unieke prefix van een long option: alles vanaf `--forc` is --force, --force-with-lease[=…] of
+// --force-if-includes. `--fo`/`--for` zijn ambigu met --follow-tags en weigert git zelf; --follow-tags moet door.
+const FORCE_OPTIONS = /^--forc/;
+const PUSH_OPTIONS_WITH_VALUE = new Set(['--push-option', '--repo', '--receive-pack', '--exec']);
+
+/**
+ * `--force`, `--force-with-lease[=…]`, `--force-if-includes`, `-f` (ook in een cluster als `-uf`) of een refspec met `+`.
+ * @param {readonly string[]} rest
+ */
+function forcePushes(rest) {
+  for (let index = 0; index < rest.length; index += 1) {
+    const arg = rest[index] ?? '';
+    if (FORCE_OPTIONS.test(arg) || arg.startsWith('+')) return true;
+    if (PUSH_OPTIONS_WITH_VALUE.has(arg)) index += 1;
+    else if (/^-[^-]/.test(arg)) {
+      // `-o <optie>`: wat na `o` in het cluster staat, is de waarde, geen vlag; `-uo` neemt het volgende argument.
+      const [flags = ''] = arg.slice(1).split('o');
+      if (flags.includes('f')) return true;
+      if (arg.endsWith('o')) index += 1;
+    }
+  }
+  return false;
+}
+
 const SELF_REVIEW_API = /\/(?:labels|reviews|statuses|check-runs|check-suites)\b|\/requested_reviewers\b/;
 
 /**
+ * Voor elke rol, ook de hoofdsessie: zelfreview, het gate-label en mergen (WS-04).
  * @param {readonly string[]} args
- * @param {string} role
  * @returns {string[]}
  */
-export function ghForbidden(args, role) {
+export function ghForbidden(args) {
   const [group = '', action = ''] = args;
   /** @type {string[]} */
   const found = [];
@@ -438,8 +604,22 @@ export function ghForbidden(args, role) {
   if (args.some((arg, index) => arg.includes('gate-wijziging') && /label/.test(`${args[index - 1] ?? ''}${arg}`)))
     found.push('het label gate-wijziging zet alleen de eigenaar (AGENTS.md)');
   if (group === 'api' && apiWritesSelfReview(args.slice(1))) found.push('gh api: labels, reviews en statussen zet alleen de eigenaar');
-  if (role !== 'hoofdsessie' && group === 'pr' && action === 'merge') found.push('subagent: mergen is verboden');
+  if ((group === 'pr' && action === 'merge') || (group === 'api' && apiMerges(args.slice(1))))
+    found.push('mergen (ook auto-merge) doet alleen de eigenaar, voor elke rol (WS-04)');
   return found;
+}
+
+const MERGE_API = /\/(?:auto-)?merges?\/?(?:[?#]|$)/;
+const MERGE_MUTATION = /\b(?:mergePullRequest|enablePullRequestAutoMerge|mergeBranch)\b/;
+
+/**
+ * `gh api` naar …/merge of …/auto-merge (elke methode) of een GraphQL-mutatie die mergt.
+ * @param {readonly string[]} args
+ */
+function apiMerges(args) {
+  const endpoint = apiEndpoint(args);
+  if (endpoint === 'graphql') return args.some((arg) => MERGE_MUTATION.test(arg));
+  return MERGE_API.test(endpoint);
 }
 
 /** @param {readonly string[]} args */

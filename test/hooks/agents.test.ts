@@ -43,6 +43,17 @@ describe('subagents', () => {
   });
 });
 
+// WS-06: MCP-tools zijn voor deze rollen uit het gereedschap gehaald (naast het rolhek, dat subagent-MCP weigert).
+describe('subagents: geen MCP (WS-06)', () => {
+  test.each(['tester', 'docs', 'architect'])('%s: disallowedTools bevat mcp__*', (role) => {
+    const list = (frontmatter(`.claude/agents/${role}.md`)['disallowedTools'] ?? '')
+      .split(',')
+      .map((tool) => tool.trim());
+
+    expect(list).toContain('mcp__*');
+  });
+});
+
 describe('skills', () => {
   const skills = readdirSync('.claude/skills', { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
@@ -50,7 +61,7 @@ describe('skills', () => {
 
   test('de skills uit de roadmap (zonder release: fase 3)', () => {
     expect(skills.sort()).toStrictEqual(
-      ['migratie', 'nieuw-component', 'nieuw-route', 'nieuw-scherm', 'security-review', 'spec'].sort(),
+      ['migratie', 'nieuw-component', 'nieuw-route', 'nieuw-scherm', 'opleveren', 'security-review', 'spec'].sort(),
     );
   });
 

@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "requiredChecks": [
+    "gate:fast",
+    "gate:slow",
+    "secrets",
+    "image",
+    "check:new-resource",
+    "codeql (javascript-typescript)",
+    "codeql (actions)",
+    "osv-scanner"
+  ],
+  "decisions": [
+    {
+      "file": "docs/adr/0028-volledige-ui-catalogus.md",
+      "digest": "1d4c48ea75672c5f81d710f2d43f711388d2b6127a72b8c269f40c48417b29ab",
+      "repository": "BramLambertJansen/template",
+      "branch": "fix/post-merge-review",
+      "status": "geaccepteerd",
+      "paths": []
+    },
+    {
+      "file": "docs/specs/taakmandaat-vervolg.md",
+      "digest": "3bcaf05f3a71a85577046396918c257829353c1fc8a38c342e65f7ca068fac2c",
+      "repository": "BramLambertJansen/template",
+      "branch": "feat/task-mandate-follow-up",
+      "status": "goedgekeurd",
+      "paths": [
+        "scripts/kit/check-document-status.mjs",
+        "scripts/kit/status-git.mjs",
+        "scripts/kit/document-status.mjs",
+        "scripts/kit/check-roadmap.mjs",
+        "scripts/kit/roadmap-item.mjs",
+        "scripts/kit/gates.mjs",
+        "scripts/runner.sh",
+        "docs/dod.md",
+        "docs/framework.md",
+        "docs/specs/_template.md",
+        "docs/adr/0027-taakmandaat-voor-frameworkwerk.md",
+        "docs/specs/taakmandaat-frameworkwerk.md",
+        "docs/specs/roadmap-vinkjes.md"
+      ]
+    },
+    {
+      "file": "docs/specs/ui-kit-basics.md",
+      "digest": "851ad33438c2e02bc118577681286ac9f65c217138394e799f75f2652bea9d55",
+      "repository": "BramLambertJansen/template",
+      "branch": "codex/ui-kit-basics",
+      "status": "goedgekeurd",
+      "paths": [
+        "src/core/web/ui/textarea.tsx",
+        "src/core/web/ui/checkbox.tsx",
+        "src/core/web/ui/radio-group.tsx",
+        "src/core/web/ui/status-badge.tsx",
+        "src/core/web/ui/empty-state.tsx",
+        "src/core/web/ui/form-checkbox-field.tsx",
+        "src/core/web/ui/form-radio-group-field.tsx",
+        "src/core/web/ui/form.tsx",
+        "src/core/web/ui/async-view.tsx",
+        "src/core/web/ui/button.tsx",
+        "src/core/web/ui/dropdown-menu.tsx"
+      ]
+    },
+    {
+      "file": "docs/specs/ui-collections.md",
+      "digest": "42f58b6d2a41d75cab031782b1d9a0e1c97cebf81349be4e89515284ee70b138",
+      "repository": "BramLambertJansen/template",
+      "branch": "codex/ui-collections",
+      "status": "goedgekeurd",
+      "paths": [
+        "src/core/web/ui/combobox.tsx",
+        "src/core/web/ui/form-combobox-field.tsx",
+        "src/core/web/ui/accordion.tsx",
+        "src/core/web/ui/list.tsx",
+        "src/core/web/ui/description-list.tsx"
+      ]
+    },
+    {
+      "file": "docs/specs/ui-data-display.md",
+      "digest": "8f53b0eeac6c6322749333071e123d087ca3df57a323af23d29f6c1d4ffced28",
+      "repository": "BramLambertJansen/template",
+      "branch": "codex/ui-data-display",
+      "status": "goedgekeurd",
+      "paths": [
+        "src/core/web/ui/data-table.tsx",
+        "src/core/web/ui/tabs.tsx",
+        "src/core/web/ui/gallery.tsx",
+        "src/core/web/ui/list-toolbar.tsx",
+        "src/core/web/ui/carousel.tsx"
+      ]
+    },
+    {
+      "file": "docs/adr/0029-snellere-beslisroute.md",
+      "digest": "bd72f91c47ed3c1a78928c67b11d7516f7462258c68f90894e62f2ab93d44a3b",
+      "repository": "BramLambertJansen/template",
+      "branch": "claude/youthful-carson-r5jhlr",
+      "status": "geaccepteerd",
+      "paths": []
+    },
+    {
+      "file": "docs/adr/0023-tokenzuinige-werkstraat.md",
+      "digest": "fc61fdd279c19b93c05e4c790ccbb9df1b6fb71321dca5b517653f4d6684fb52",
+      "repository": "BramLambertJansen/template",
+      "branch": "claude/youthful-carson-r5jhlr",
+      "status": "vervangen door 0029",
+      "paths": []
+    }
+  ]
+}

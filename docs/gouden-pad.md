@@ -16,7 +16,7 @@ draait hem; `--dry-run` toont het plan zonder te schrijven, en bestaat een doel 
      [de security-review](reviews/2026-10-10-tabelpatroon.md); een naam met `-` wordt `_` in SQL), `src/api/routes/<naam>.ts`,
      `src/web/features/<naam>/queries.ts`, `src/web/features/<naam>/<naam>-page.tsx`, `src/web/routes/_app/<naam>.tsx`
      (en `src/web/routeTree.gen.ts` opnieuw);
-   - gewijzigd: `src/shared/contracts/index.ts`, `src/shared/ids.ts` en `db/ids.json` (brand `<Naam>Id`), `src/shared/limits.ts`
+   - gewijzigd: `src/shared/contracts/index.ts`, `src/shared/ids.ts` (aangemaakt als hij ontbreekt) en `db/ids.json` (brand `<Naam>Id`), `src/shared/limits.ts`
      (paginagrootte), `src/web/copy/ui.ts` (teksten, te vervangen door die uit de spec), `src/web/lib/nav.ts` (menu-item);
    - gate-bestanden, als afgedrukte wijziging die de hoofdsessie met Edit zet: `src/shared/permissions.ts`,
      `src/shared/permissions.test.ts`, `src/api/app.ts` en `src/web/routes.test.tsx` (menu per rol). Noem de twee
@@ -29,7 +29,7 @@ draait hem; `--dry-run` toont het plan zonder te schrijven, en bestaat een doel 
 ## Stappen
 
 1. **Spec** met status `goedgekeurd`: `docs/specs/accountbeheer.md` (routes, foutcodes, teksten, ACs, testplan).
-2. **Migratie** met RLS, grants en policies, of een view van `app_definer`: `db/migrations/*_user_roles.sql`, `*_accounts_view.sql`.
+2. **Migratie** met RLS, grants en policies, of een view van `app_definer`: `db/migrations/*_user_roles.sql`, `*_accounts_view.sql`; een functie van `app_definer` die in `better_auth` schrijft: `*_account_blocking.sql` (ADR 0026).
    pgTAP per policy: `db/tests/user_roles.sql`, `db/tests/accounts.sql`; nieuwe functie → regel in `db/tests/functies.sql`.
 3. **Schema genereren**: `pnpm db:generate` (snapshot en `src/api/db/schema.ts`); nieuwe id-kolom → `db/ids.json`.
 4. **Permissie** en **foutcode**: `src/shared/permissions.ts`, `src/shared/errors.ts`, tekst in `src/web/copy/errors.ts`.
@@ -38,10 +38,11 @@ draait hem; `--dry-run` toont het plan zonder te schrijven, en bestaat een doel 
    via `ctx.services`: `src/api/services.ts`.
 7. **Integratietests** (verboden rol, admin zonder MFA, ongeldige input, ACs): `test/api/accounts.int.test.ts` met de testkit
    (`beginTestDb`, `asUser`).
-8. **Queries** (key-factory, hooks, mutaties die invalideren): `src/web/features/accounts/queries.ts`.
+8. **Queries** (key-factory met de search in de key, hooks, `placeholderData`, mutaties die invalideren): `src/web/features/accounts/queries.ts`.
 9. **Scherm** met kitcomponenten uit `src/web/ui` en teksten uit `src/web/copy/ui.ts`: `src/web/features/accounts/accounts-page.tsx`,
-   `invite-dialog.tsx`.
+   `invite-dialog.tsx`. Een lijst met zoeken en sorteren in de search params (`defineListSearch`, `useListSearch`, `uniqueById`, `ListToolbar`;
+   spec [lijstpagina](specs/lijstpagina.md)); `new:resource` maakt die uit de sjablonen, met de sorteringen nieuwste en oudste.
 10. **Route** met guard: `src/web/routes/_app/admin/accounts.tsx`; menu-item per rol in `src/web/lib/nav.ts`.
 11. **E2E** per AC met axe op 375 en 1280 px: `e2e/accounts.spec.ts`.
 
-Bewijs per PR: `pnpm gate:fast`, `pnpm test:db` en `pnpm ui:check` (de laatste twee in de runner, door de eigenaar).
+Bewijs per PR: `pnpm gate:fast`, `pnpm test:db` en `pnpm ui:check`. De agent voert de veilige runner uit of verzamelt de werkelijke CI-uitslag op de juiste SHA; zie [agentdoorloop](operations/agent-doorloop.md).

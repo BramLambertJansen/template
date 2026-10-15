@@ -1,8 +1,10 @@
 # 0025 — Werkstraat tot aan de merge en modelkeuze per spec
 
-Status: voorgesteld
+Status: geaccepteerd (2026-10-12) — voorgesteld door de architect, geaccepteerd door de eigenaar.
 Vervangt 0023 punt 7.
 Wijzigt 0009 (punt 4 hieronder).
+
+Gewijzigd door [0027](0027-taakmandaat-voor-frameworkwerk.md): taakgebonden broncode, bewijsgebonden statusadministratie, documentatielabel en automatische veilige runner/CI-opvolging. De oorspronkelijke beperkingen hieronder gelden met die afgebakende uitzonderingen.
 
 ## Context
 

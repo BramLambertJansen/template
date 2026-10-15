@@ -4,6 +4,7 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { createQueryClient } from '#core/web/lib/query.ts';
 import { ErrorTextsProvider } from '#core/web/ui/error-texts.tsx';
+import { ToastProvider } from '#core/web/ui/toast.tsx';
 import { errorTexts } from '#web/copy/errors.ts';
 import { createAppRouter } from '#web/lib/router.ts';
 
@@ -37,7 +38,9 @@ function show(path: string, me: MeResult) {
   render(
     <ErrorTextsProvider texts={errorTexts}>
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
       </QueryClientProvider>
     </ErrorTextsProvider>,
   );
@@ -141,7 +144,7 @@ describe('/design-system (spec design-system)', () => {
   test('AC-3: admin met MFA op /design-system: kop "Design system" binnen de AppShell, precies één main', async () => {
     show('/design-system', admin);
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Design system' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Design system' }, { timeout: 5000 })).toBeTruthy();
     expect(screen.getAllByRole('main')).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: 'Profielmenu' })).toHaveLength(1);
   });

@@ -94,7 +94,7 @@ Besluiten van de eigenaar (2026-10-10, doorgegeven via de coördinator): bij elk
 | OV-6 Bundelbudget | Lazy chunk; budget blijft 260 / 115 / 15 kB; nieuwe test: de catalogus zit niet in de entry-chunk. Overschrijdt de meting het budget, dan stopt de developer en vraagt de eigenaar | budget verhogen; lazy chunks buiten het totaal |
 | OV-7 Bundeltest | `test/ui/bundle.test.ts`: de asserties op 'Design system' en 'Dialoog openen' eruit, testnaam "bevat de rolwisselaar uit src/web/dev niet (spec accounts/AC-8)" | de test geheel vervangen |
 | OV-8 Plek | `src/web/features/design-system/`, eigen klassen vervangen door `PageHeader` en bestaande componenten; lukt dat niet, dan stopt de developer en stelt een variant voor | `src/web/ui/design-system/` |
-| OV-9 ADR | [ADR 0015](../adr/0015-design-system-in-de-app.md), status `voorgesteld` | alleen de spec |
+| OV-9 ADR | [ADR 0015](../adr/0015-design-system-in-de-app.md), status bij het besluit `voorgesteld`, inmiddels `geaccepteerd` | alleen de spec |
 
 **Gewijzigde bestaande tests** (elk met reden in de PR, label `gate-wijziging`, akkoord van de eigenaar):
 - `test/ui/bundle.test.ts` — reden: "spec design-system: de catalogus hoort nu in de productiebundel; het dev-only-bewijs blijft voor de rolwisselaar".
@@ -105,6 +105,11 @@ Besluiten van de eigenaar (2026-10-10, doorgegeven via de coördinator): bij elk
 - `test/rails/catalogus.test.ts` — alleen als die het pad van de catalogus of de uitzonderingenlijst vastlegt.
 
 ## Acceptatiecriteria
+
+Aanvulling eigenaar 2026-10-13 ([ADR 0028](../adr/0028-volledige-ui-catalogus.md)): de uitzonderingen uit OV-5 en de oorspronkelijke
+AC-9 vervallen. Broninventarisatie, hergebruik via de barrel en bereikbare voorbeelden gelden voor de hele UI-kit. Dezelfde bronindex
+staat zoekbaar op de pagina (zoekparameter `q`) en in de agentfeiten; `AsyncView` gebruikt uitsluitend lokale voorbeelddata. De
+schermvoorbeelden gebruiken `preview` om geen extra landmarks of documenttitels te maken. Guard, permissie, lazy chunk en bundelbudget blijven gelijk.
 
 - **design-system/AC-1** — Gegeven een anonieme bezoeker, wanneer hij `/design-system` opent, dan komt hij op `/login` (met `redirect` naar `/design-system`).
 - **design-system/AC-2** — Gegeven een `user`, wanneer hij `/design-system` opent, dan ziet hij "Je hebt geen toegang tot deze pagina.".
@@ -120,8 +125,9 @@ Besluiten van de eigenaar (2026-10-10, doorgegeven via de coördinator): bij elk
 - **design-system/AC-7** — Gegeven de productiebundel, dan blijft `test/ui/bundle-budget.test.ts` ongewijzigd groen (260 / 115 / 15 kB gzip).
 - **design-system/AC-8** — Gegeven een admin met MFA op het dashboard, wanneer hij op "Design system" klikt, dan opent `/design-system`;
   gegeven een actor zonder `design-system:read`, dan rendert het dashboard de link niet (`can()`), en er is geen sidebar-item "Design system".
-- **design-system/AC-9** — Gegeven `pnpm check:catalogus`, dan slaagt hij met de catalogus op `src/web/features/design-system/` en de
-  uitzondering voor `AppShell`.
+- **design-system/AC-9** — Gegeven `pnpm check:catalogus`, dan ontdekt hij alle componenten in beide UI-mappen, eist publieke barrel-exports
+  en bereikbare voorbeelden met eindige stringvarianten op `src/web/features/design-system/`, zonder uitzonderingen. De bestaande AppShell
+  en providers tellen via hun renderpad; een titel, import of ongebruikt voorbeeld telt niet.
 - **design-system/AC-10** — Gegeven `/design-system` geopend door een admin met MFA, dan doet de pagina geen enkele aanroep naar `/api/`
   buiten wat de AppShell zelf al doet (`/api/me`).
 
@@ -151,7 +157,7 @@ Besluiten van de eigenaar (2026-10-10, doorgegeven via de coördinator): bij elk
 ## Buiten scope
 
 `/design` (prototypes uit `designs/`) blijft alleen in dev. Screenshot-baselines van de catalogus (roadmap stuk 3c, open). Nieuwe
-componenten of varianten. De dev-rolwisselaar. Een sidebar-item. Live-voorbeelden met echte data (`AsyncView` blijft een uitzondering).
+componenten of varianten buiten de aanvulling van ADR 0028. De dev-rolwisselaar. Een sidebar-item. Live-voorbeelden met echte data.
 
 ## Testplan
 

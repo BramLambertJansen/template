@@ -1,5 +1,5 @@
 {
-  "$comment": "Enige lijst met gate-paden (framework §8 en §10, ADR 0011). De rolhek-hook leest hem lokaal; CODEOWNERS en `ask` in .claude/settings.json spiegelen hem (test/hooks/gates-json.test.ts); de diff-guard in CI leest hem (roadmap stuk 4). Globs: `*` binnen één map, `**` over mappen heen.",
+  "$comment": "Enige lijst met gate-paden (framework §8 en §10, ADR 0011). De rolhek-hook leest hem lokaal; CODEOWNERS en `ask` in .claude/settings.json spiegelen hem (`scripts/kit/check-docs.mjs`); de diff-guard in CI leest hem (roadmap stuk 4). Globs: `*` binnen één map, `**` over mappen heen. `mcpLezen`: exacte namen van read-only MCP-tools die het rolhek doorlaat; elke andere `mcp__`-tool is ask (hoofdsessie) of deny (subagent). `werkmapNegeer`: ongetrackte paden onder `.claude/` die `pnpm pr:verify` niet als vuile werkmap telt (gelezen uit origin/main, ADR 0031).",
   "gates": [
     "AGENTS.md",
     "CLAUDE.md",
@@ -40,18 +40,46 @@
     "deploy/**",
     "**/*.test.*",
     "**/*.spec.*",
-    "e2e/**"
+    "e2e/**",
+    "test/**",
+    "vitest.config.ts",
+    "playwright.config.ts",
+    "vite.config.ts",
+    ".prettierrc.json",
+    ".prettierignore",
+    "Dockerfile",
+    ".dockerignore",
+    "db/test.env",
+    "docs/nieuwe-app.md"
   ],
   "testpaden": ["**/*.test.*", "**/*.spec.*", "e2e/**", "db/tests/**", "test/**"],
   "jsonGates": { "package.json": ["scripts"] },
   "gegenereerd": ["src/web/routeTree.gen.ts", "src/api/db/schema.ts", "db/schema.snapshot.sql"],
   "migraties": ["db/migrations/**"],
+  "mcpLezen": [],
+  "autoRunner": true,
+  "werkmapNegeer": [
+    ".claude/launch.json",
+    ".claude/loop.md",
+    ".claude/output-styles/",
+    ".claude/routines/",
+    ".claude/scheduled_tasks.json",
+    ".claude/workflows/"
+  ],
+  "gateMarker": "docs",
   "goedkeurders": ["bramlambertjansen"],
   "schrijfrecht": {
     "architect": ["docs/specs/**", "docs/adr/**"],
     "tester": ["**/*.test.*", "**/*.spec.*", "e2e/**", "db/tests/**", "test/**"],
     "reviewer": [],
-    "docs": ["docs/**", "README.md", "CHANGELOG.md"],
+    "docs": [
+      "docs/reviews/**",
+      "docs/operations/**",
+      "docs/README.md",
+      "docs/gouden-pad.md",
+      "README.md",
+      "CHANGELOG.md"
+    ],
     "developer": ["**"]
   }
 }

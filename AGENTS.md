@@ -5,9 +5,9 @@ Template voor webapps, gebouwd door agents binnen afgedwongen kaders. De regels 
 
 ## Status
 
-Fundering in opbouw (fase 0/1). Wat niet in `package.json` of de repo staat, bestaat nog niet: verzin geen
+Fundament gebouwd (fase 0/1); volgende stap is de proef-app (ST-09, `docs/roadmap.md`). Wat niet in `package.json` of de repo staat, bestaat nog niet: verzin geen
 commando's, scripts of bestanden. Noem iets pas klaar met de uitvoer van de check die het bewijst.
-Een ADR met status `voorgesteld` is nog geen besluit: staat werk erop te wachten, vraag de eigenaar.
+Een voorstel is nog geen besluit. Statusadministratie volgt bewijs uit main (ADR 0027); ontbreekt akkoord, vraag de eigenaar.
 
 ## Stack
 
@@ -31,7 +31,7 @@ vangen het later toch, en dan is het werk verloren. Uitzonderingen staan limitat
 - `src/web` haalt data alleen via `src/web/lib/api.ts`; geen databasedriver, ORM of provider-SDK.
 - `src/web` importeert niets uit `src/api`, ook geen types: request en response staan als contract in `src/shared/contracts`.
   `shared` (beide zones) importeert niets uit `web` of `api`.
-- Alleen `src/core/api/db` maakt databaseverbindingen (en `src/core/api/auth` voor Better Auth). `src/core/api/db` exporteert alleen `withUser()`, `pingDatabase()` (readiness), `closeDatabase()` (bij het stoppen) en `testing.ts` voor tests.
+- Alleen `src/core/api/db` maakt databaseverbindingen (en `src/core/api/auth` voor Better Auth). `src/core/api/db` exporteert alleen `withUser()`, `pingDatabase()` (readiness), `closeDatabase()` (bij het stoppen), `createAuditFn()` uit `audit.ts` (alleen `app.audit` in de `tx`, geen pool; de database dwingt de regels af) en `testing.ts` voor tests.
 - `process.env` alleen in `src/core/api/env.ts`, `import.meta.env` alleen in `src/core/web/lib/env.ts`. Alleen publieke waarden krijgen `VITE_`.
 - `MIGRATOR_DATABASE_URL` alleen in `scripts/`, nooit in `src/`.
 
@@ -69,12 +69,12 @@ vangen het later toch, en dan is het werk verloren. Uitzonderingen staan limitat
 
 **Repo en grenzen** — zodat de kaders zelf niet ongemerkt verschuiven.
 - Bewerk geen gegenereerde bestanden en geen `.env*`; `.env.example` is beschermd (de demo-waarden zijn een securityregel).
-- Beschermde paden (`docs/framework.md` §10) wijzig je alleen na akkoord van de eigenaar.
-- Geen nieuwe dependency zonder akkoord. Zet een spec nooit op `goedgekeurd`; dat doet alleen de eigenaar.
+- Beschermde paden (`docs/framework.md` §10) vragen eigenaarakkoord; developer-broncode kan met exact taakmandaat (ADR 0027).
+- Geen nieuwe dependency zonder akkoord. Statussen via `pnpm docs:status`, uitsluitend met bewezen eigenaarbesluit of bouwbewijs.
 - Push nooit naar `main`, gebruik nooit `--no-verify`, merge nooit. Eén onderwerp per PR, conventional commits.
-- Zet nooit zelf een review, het label `gate-wijziging` of een check-status: dat is de goedkeuring van de eigenaar.
-- Gebruik `docker` niet; draait de stack niet, vraag de eigenaar `pnpm dev` te starten. Geen productiegeheimen of -data lokaal.
-- Externe diensten via hun CLI (`gh`). MCP-servers alleen read-only en versie gepind.
+- Geen zelfreview of check-status. Gate-label alleen door hoofdsessie via `pnpm pr:label-gate` binnen het mandaat uit main.
+- Geen `docker` of runneroverride. Runnerchecks zelf draaien of CI-bewijs ophalen (`pnpm pr:verify`); zie `docs/operations/agent-doorloop.md`.
+- Externe diensten via hun CLI (`gh`). MCP-servers alleen read-only (afgedwongen door het rolhek) en versie gepind.
 
 ## Werkafspraken
 
@@ -84,7 +84,8 @@ vangen het later toch, en dan is het werk verloren. Uitzonderingen staan limitat
 - UI-tekst Nederlands; code, commits en branchnamen Engels. Naamgeving: `docs/framework.md` §5.
 - Volg `docs/dod.md` fasebewust: voer bestaande, toepasselijke checks uit, lever alleen op met een geslaagde uitslag (of expliciet akkoord van de eigenaar) en vermeld exact wat nog niet beschikbaar is; verzin geen commando's of uitslagen.
 - Volg de platformneutrale werkstraat in `docs/framework.md` §8. Agentrollen zijn onafhankelijk waar de runtime dat ondersteunt; ontbreekt een onafhankelijke reviewer, vraag de eigenaar om die review en claim niet dat je eigen werk onafhankelijk is gecontroleerd.
-- Begin met de feiten: `node scripts/kit/feiten.mjs` (zodra het bestaat) in plaats van wat in proza staat.
+- Voordat je een roadmap-item, rail of ADR toevoegt: toets aan framework §1; ontbreekt een aanleiding, vraag de eigenaar.
+- Begin met de feiten: `node scripts/kit/feiten.mjs` in plaats van wat in proza staat.
 - Runtime-specifieke instructies gelden alleen voor die runtime. De hooks in `.claude/` werken niet in andere runtimes (Codex, sommige
   cloudsessies); daar zijn CI, de diff-guard en GitHub de enige grens. Claim nooit dat een instelling klopt die je niet kunt lezen.
 

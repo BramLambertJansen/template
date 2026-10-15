@@ -1,7 +1,7 @@
 # 0009 — Tests buiten de sandbox
 
 Status: geaccepteerd (2026-10-09), optie (a) — voorgesteld door de agent, herzien na de review van 2026-10-09, geaccepteerd door de eigenaar.
-Gewijzigd door 0025 (punt 4: runner vergelijkt lokaal met origin/main).
+Gewijzigd door 0025 (punt 4: runner vergelijkt lokaal met origin/main) en [0027](0027-taakmandaat-voor-frameworkwerk.md) (vaste vertrouwde runnerchecks automatisch; CI voor gewijzigde hostcode).
 
 ## Context
 
@@ -41,9 +41,10 @@ caches (`.vite`, `.vitest`) in tmpfs, één uitvoermap die de host nooit uitvoer
 op de host draait: de bestanden die de host vóór de container uitvoert (`scripts/**`, `package.json`, `pnpm-workspace.yaml`, `.npmrc`,
 `.pnpmfile.cjs`, `mise.toml`, `compose*.yaml`, `db/test.env`) zijn beschermd, en het script weigert te starten als een van die bestanden
 afwijkt van `HEAD` (`git diff --quiet HEAD -- <lijst>`), tenzij de eigenaar dat met een vlag expliciet toestaat.
+Gewijzigd door 0025 (punt 4): lokaal vergelijkt het script met de merge-base met `origin/main` (onleesbaar → weigeren), in CI met `HEAD` (`check_host_files` in `scripts/runner.sh`).
 Een test bewijst de isolatie: vanuit de runner falen een verbinding naar internet en naar de host, inloggen als `postgres` en schrijven in de repo.
 
 ## Gevolgen
 
-- `excludedCommands` krijgt patronen met ` *` (argumenten); dezelfde commando's staan in `ask`, dus elke run vraagt de eigenaar.
+- `excludedCommands` krijgt patronen met ` *` (argumenten); dezelfde commando's staan in `ask`. ADR 0027 laat het rolhek de drie vaste runnerchecks expliciet toestaan bij onveranderde vertrouwde hostcode; overige opdrachten houden hun prompt.
 - Tot (a) staat, geldt (b); de PR-template vraagt bij nieuwe tests of configs: "gelezen vóór een run buiten de sandbox".

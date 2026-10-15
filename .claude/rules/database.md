@@ -33,14 +33,15 @@ paths:
   en eindigt met `reset search_path;` (dbmate schrijft `schema_migrations` in dezelfde transactie); nooit `auth migrate`.
 - Heeft een auth-hook data buiten `better_auth` nodig (bijv. rol uit `user_roles`), of de app gegevens uit `better_auth."user"`:
   via een `security definer`-functie of -view van `app_definer` (zoals `app.accounts`). `app_definer` leest uit `better_auth` alleen de
-  kolommen in de allowlist van `db/tests/invarianten.sql` (ADR 0014); een extra kolom vraagt een ADR.
+  kolommen in de allowlist van `db/tests/invarianten.sql` (ADR 0014) en schrijft alleen `blocked_at` (ADR 0026); een extra kolom vraagt een ADR.
 - `set_config` en `current_setting` alleen in `src/core/api/db` en in de helpers in schema `app`; nooit in app-SQL of handlers.
-- Rijen in schema `better_auth` zijn van Better Auth (ADR 0010); lees of schrijf ze nooit vanuit `src/core/api/db` of app-code (uitzondering: `asUser` in de testkit, binnen een testtransactie die terugdraait). Geen provider-specifieke schema's of functies (`storage.*`, `realtime.*`, `auth.uid()`).
+- Rijen in schema `better_auth` zijn van Better Auth (ADR 0010); lees of schrijf ze nooit vanuit `src/core/api/db` of app-code (uitzonderingen: `app.set_account_blocked` voor `blocked_at`, ADR 0026; `asUser` in de testkit, binnen een testtransactie die terugdraait). Geen provider-specifieke schema's of functies (`storage.*`, `realtime.*`, `auth.uid()`).
 - Na een migratie: `pnpm db:generate` (verse test-database in de runner) schrijft `db/schema.snapshot.sql` en
   `src/api/db/schema.ts`; commit beide met de migratie, nooit met de hand bewerken. Een kolom `id` of `*_id` zonder
   foreign key naar een gebrande kolom: zet hem in `db/ids.json` met een ID gemaakt met `brandedId()` uit `src/core/shared/ids.ts`, of `null` met reden.
   Een kolomtype dat de generator niet kent (of `timestamp` zonder tijdzone) laat hem falen.
-- `src/core/api/db` exporteert alleen `withUser()`, `pingDatabase()` (alleen voor readiness, vanuit `src/api/server.ts`), `closeDatabase()` (alleen bij het stoppen, vanuit `src/api/server.ts`) en `testing.ts` (alleen voor testbestanden). Die controleert aan het begin
+- `app.request_id()` leest `app.request_id`, gezet door `withUser()` uit de `requestId` van de server (nooit van de client); `app.audit_log` is append-only, schrijven via `app.audit`/`app.audit_account_action` en door `app.assign_role` en `app.set_account_blocked`.
+- `src/core/api/db` exporteert alleen `withUser()`, `pingDatabase()` (alleen voor readiness, vanuit `src/api/server.ts`), `closeDatabase()` (alleen bij het stoppen, vanuit `src/api/server.ts`) en `testing.ts` (alleen voor testbestanden); `audit.ts` (`createAuditFn`, alleen voor `ctx.audit` in de route kit) is het enige andere toegestane bestand buiten index, testing en types. Die controleert aan het begin
   van elke transactie `current_user = session_user`, zet de rol, `app.user_id` en `app.session_strength` (`password` of `mfa`; elke
   andere waarde weigert hij) en vertaalt fouten. Buiten `withUser()` geeft `app.session_strength()` `none`.
 
@@ -53,4 +54,4 @@ geforceerd, geen TRUNCATE/REFERENCES/TRIGGER, `better_auth` dicht, niets voor PU
 als `app_migrator` en wordt alleen in `test/` gemaakt).
 `pnpm db:generate` met `db/schema.snapshot.sql` en `src/api/db/schema.ts` (eigen generator in `scripts/db/`, geen drizzle-kit).
 `pnpm check:secdef` (statisch op de migraties, in `gate:fast`; de functiecatalogus is de runtime-kant in `gate:slow`).
-Nog niet: de snapshot-vergelijking in CI (`gate:slow`) en `check-policies` (roadmap fase 1). Bouw er niet op vooruit.
+`pnpm check:snapshot` (snapshot-vergelijking, in `gate:slow`) en `check-policies` (elke policy een pgTAP-assert op naam, in `pnpm test:db`).

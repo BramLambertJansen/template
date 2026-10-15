@@ -51,7 +51,11 @@ describe('wat de guard raakt', () => {
       w: { status: 'M', pad: 'src/api/x.test.ts' },
       verwacht: [['src/api/x.test.ts'], ['src/api/x.test.ts']],
     },
-    { naam: 'verwijderde test onder test/', w: { status: 'D', pad: 'test/x.ts' }, verwacht: [[], ['test/x.ts']] },
+    {
+      naam: 'verwijderde test onder test/ (test/** is ook een gate)',
+      w: { status: 'D', pad: 'test/x.ts' },
+      verwacht: [['test/x.ts'], ['test/x.ts']],
+    },
     {
       naam: 'hernoemde test (beide paden)',
       w: { status: 'R', van: 'e2e/a.spec.ts', pad: 'e2e/b.spec.ts' },
@@ -168,6 +172,19 @@ describe('oordeel', () => {
     expect(tekst).toContain('## diff-guard: overgang');
     expect(tekst).toContain('- `src/core/shared/can.ts`');
     expect(tekst).toContain('**Gewijzigde of verwijderde tests**');
+  });
+
+  test('de samenvatting bij overgang bevat de uitleg uit ADR 0031 besluit 2; bij groen en rood niet', () => {
+    const zin =
+      'Overgang (ADR 0017, OV-2): de auteur is zelf goedkeurder. Label `gate-wijziging` en review worden in deze fase niet gevraagd en niet gecontroleerd. Lees de geraakte paden hieronder; de eigenaar merget zelf.';
+    const overgang = beoordeel(pr([core], { auteur: EIGENAAR }), config);
+    const groen = beoordeel(pr([{ status: 'M', pad: 'README.md' }]), config);
+    const rood = beoordeel(pr([core]), config);
+
+    expect([overgang.uitslag, groen.uitslag, rood.uitslag]).toStrictEqual(['overgang', 'groen', 'rood']);
+    expect(samenvatting(overgang)).toContain(zin);
+    expect(samenvatting(groen)).not.toContain(zin);
+    expect(samenvatting(rood)).not.toContain(zin);
   });
 });
 

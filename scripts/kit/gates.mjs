@@ -21,7 +21,8 @@ export const gates = [
   },
   {
     script: 'check:catalogus',
-    bewaakt: 'elk component uit src/web/ui op /design-system of met een uitzondering met reden (framework §7)',
+    bewaakt:
+      'AST-index van alle UI-componenten, barrel-export en bereikbare catalogusvoorbeelden met alle eindige varianten; geen uitzonderingen (framework §7)',
     snel: true,
   },
   {
@@ -34,6 +35,12 @@ export const gates = [
     script: 'check:secdef',
     bewaakt:
       "security definer in db/migrations: search_path '', namen met schema, eigenaar app_definer (AGENTS.md, framework §6)",
+    snel: true,
+  },
+  {
+    script: 'check:roadmap',
+    bewaakt:
+      'een nieuw of gewijzigd [x] in docs/roadmap.md verwijst naar bewijs (testpad, checknaam of PR-nummer) en een spec die naar gebouwd gaat heeft status: gebouwd # #<PR>; gevalideerd: <sha>, t.o.v. origin/main (framework §8); heeft docs/roadmap.md een kop ## Nu, dan gelden ook de structuurregels: vereiste koppen, hooguit 3 open items onder Nu, terug als: bij geparkeerd, geen gedateerd statusproza en aanleiding: bij een nieuw open item (ADR 0029)',
     snel: true,
   },
   { script: 'test:unit', bewaakt: 'unit-tests en de fixtures van de rails (test/rails)', snel: true },
