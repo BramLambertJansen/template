@@ -52,17 +52,8 @@ Filter-id's krijgen een eigen prefix, ook wanneer hun waarde zoeken of sorteren 
 
 ## Carousel
 
-Carousel gebruikt items met id/label/content en optioneel controlled value/onValueChange of defaultValue. Eén slide is
-zichtbaar, andere blijven hidden gemount. Bedien met de vorige/volgende/directe knoppen; op grenzen stopt de carousel.
-Een horizontale pointer/touch-swipe vanaf 50 px op niet-interactieve inhoud wisselt één slide. Verticale scroll en
-interactieve controls blijven normaal werken. Native pointer capture geldt voor echte pointerevents.
-Capture wordt bij pointerup en pointercancel expliciet vrijgegeven vóór een eventuele diawissel
-(`src/core/web/ui/carousel.tsx:63`); de echte touchregressie controleert de actieknop na een swipe.
-Geen autoplay, animatie, timer of algemene pijltjes-handler: reduced motion is standaard gerespecteerd.
-Een gebruikerswissel wordt pas aangekondigd wanneer de actieve waarde daadwerkelijk verandert. Bij onbekende expliciete
-waarde blijft een eerste-keuzeknop bereikbaar, ook met één item. Verwijderde gefocuste inhoud krijgt een focusvangnet.
-Een bewust verlaten dia trekt bij een latere ouderwissel geen focus terug, ook als de blur geen volgend focusdoel had
-(`src/core/web/ui/carousel.tsx:97`).
+Vervallen uit deze tranche op verzoek van de eigenaar (2026-10-15): de touchregressie (tik op een dia-actie na een swipe)
+bleef in `gate:slow` falen. Component, voorbeeld en tests zijn verwijderd; een latere tranche kan het opnieuw voorstellen.
 
 ## Acceptatiebewijs
 
@@ -74,7 +65,7 @@ Een bewust verlaten dia trekt bij een latere ouderwissel geen focus terug, ook a
 | AC-4 tabs/keyboard/staat/focus | tabs.test.tsx, tabs-blur.test.tsx, e2e/ui-data-display.spec.ts |
 | AC-5 gallery/fout/preview | gallery.test.tsx, e2e/ui-data-display.spec.ts |
 | AC-6 toolbar/adaptatie/chips/debounce | list-toolbar-filters.test.tsx, bestaande list-toolbar.test.tsx, e2e/ui-data-display.spec.ts |
-| AC-7 carousel/controlled/swipe | carousel.test.tsx, carousel-blur.test.tsx, e2e/ui-data-display.spec.ts, e2e/carousel-touch.spec.ts |
+| AC-7 carousel/controlled/swipe | vervallen (Carousel uit deze tranche gehaald) |
 | AC-8 structurele wijzigingen/id-fouten | nieuwe componenttests per onderdeel |
 | AC-9 bronindex en voorbeelden | check:catalogus, bestaande e2e/design-system.spec.ts |
 | AC-10 responsive/axe/CSP/thema | e2e/ui-data-display.spec.ts, bestaande design-systemtests |

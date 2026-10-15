@@ -1,5 +1,4 @@
 import { DataDisplayExamples } from './data-display-examples.tsx';
-import { CarouselExamples } from './carousel-examples.tsx';
 import { ComboboxExamples } from './combobox-examples.tsx';
 import { CollectionExamples } from './collection-examples.tsx';
 import { Bell } from 'lucide-react';
@@ -347,7 +346,6 @@ export function DesignSystemPage() {
       <ComboboxExamples />
       <CollectionExamples />
       <DataDisplayExamples />
-      <CarouselExamples />
     </div>
   );
 }

@@ -49,5 +49,4 @@ export {
 } from '#core/web/ui/data-table.tsx';
 export { Tabs, type TabsProps, type TabItem } from '#core/web/ui/tabs.tsx';
 export { Gallery, type GalleryProps, type GalleryItem } from '#core/web/ui/gallery.tsx';
-export { Carousel, type CarouselProps, type CarouselItem } from '#core/web/ui/carousel.tsx';
 export type { ListToolbarProps, ListToolbarFilter } from '#core/web/ui/list-toolbar.tsx';

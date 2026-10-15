@@ -1,4 +1,4 @@
-import { expect, test, type Page, type Locator } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { clientIpHeaders, createAccount } from './support/accounts.ts';
 import { signIn } from './support/eigen-account.ts';
 import { collectCspViolations, scanAxe } from './support/axe.ts';
@@ -7,22 +7,6 @@ async function openCatalogue(page: Page) {
   await signIn(page, await createAccount('admin', { totp: true }));
   await page.goto('/design-system');
   await page.getByRole('region', { name: 'DataTable', exact: true }).waitFor();
-}
-
-async function swipeLeft(page: Page, slide: Locator) {
-  await slide.scrollIntoViewIfNeeded();
-  const box = await slide.boundingBox();
-  if (box === null) throw new Error('Carousel slide must be visible');
-  const x = box.x + Math.min(box.width - 10, 220);
-  const y = box.y + box.height / 2;
-  const session = await page.context().newCDPSession(page);
-  await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
-  for (const step of [20, 40, 60, 80, 100]) {
-    await session.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x - step, y }] });
-    await page.waitForTimeout(16);
-  }
-  await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  await session.detach();
 }
 
 for (const width of [375, 1280]) {
@@ -67,7 +51,7 @@ for (const width of [375, 1280]) {
       await expect(section.getByRole('status', { name: 'Rijactie' })).toHaveText('Anna de Vries');
     });
 
-    test('AC-4/5/7/9/10: tabs, preview, swipe, focus, axe en CSP', async ({ page }) => {
+    test('AC-4/5/7/9/10: tabs, preview, focus, axe en CSP', async ({ page }) => {
       const csp = collectCspViolations(page);
       await openCatalogue(page);
       const tabs = page.getByRole('tablist', { name: 'Voorbeeldtabs', exact: true });
@@ -96,17 +80,6 @@ for (const width of [375, 1280]) {
       await expect(dialog).toBeHidden();
       await expect(opener).toBeFocused();
       await expect(gallery.getByRole('status')).toHaveText('Afbeelding niet beschikbaar.');
-      const carousel = page.getByRole('region', { name: 'Voorbeeldcarrousel', exact: true });
-      const slide = carousel.getByRole('group', { name: '1 van 3: Landschap', exact: true });
-      await swipeLeft(page, slide);
-      await expect(carousel.getByRole('textbox', { name: 'Dia-invoer' })).toBeVisible();
-      await carousel.getByRole('textbox', { name: 'Dia-invoer' }).fill('Blijft');
-      await carousel.getByRole('button', { name: 'Bekijken', exact: true }).tap();
-      await expect(page.getByRole('status', { name: 'Dia-actie' })).toHaveText('Bekijken');
-      await carousel.getByRole('button', { name: 'Volgende dia', exact: true }).click();
-      await expect(carousel.getByRole('button', { name: 'Volgende dia', exact: true })).toBeDisabled();
-      await carousel.getByRole('button', { name: 'Toon dia 2: Architectuur', exact: true }).click();
-      await expect(carousel.getByRole('textbox', { name: 'Dia-invoer' })).toHaveValue('Blijft');
       await scanAxe(page);
       await page.getByRole('button', { name: /Donker thema|Licht thema/ }).click();
       await scanAxe(page);

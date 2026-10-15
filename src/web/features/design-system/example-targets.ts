@@ -12,11 +12,6 @@ const groups = [
     text: 'Open de preview en bekijk lege en ontbrekende afbeeldingen.',
   },
   {
-    names: ['Carousel'],
-    id: 'example-carousel',
-    text: 'Gebruik knoppen of veeg horizontaal; geen automatisch afspelen.',
-  },
-  {
     names: ['Combobox', 'ComboboxPopup'],
     id: 'example-combobox',
     text: 'Zoek en kies een optie; bekijk ook disabled, invalid en de dialoog.',
