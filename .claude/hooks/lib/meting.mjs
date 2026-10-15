@@ -64,16 +64,18 @@ export function branch(root) {
 
 /** Bash: hoogstens twee veilige woorden (het tweede alleen na een programma uit SUBCOMMANDO); `X=..` kan een geheim zijn. @param {string} command */
 export function bashSleutel(command) {
-  const [eerste = '', tweede = ''] = command.trim().split(/\s+/);
+  const [eerste = '', tweede = '', ...rest] = command.trim().split(/\s+/);
   if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(eerste)) return 'env-toewijzing';
   if (!/^[A-Za-z0-9_][A-Za-z0-9_.-]*$/.test(eerste)) return '';
+  // Een proefpush is geen CI-ronde: vast label; de argumenten worden alleen gelezen, nooit opgeslagen.
+  if (eerste === 'git' && tweede === 'push' && rest.some((w) => w === '--dry-run' || w === '-n')) return 'git push --dry-run';
   return SUBCOMMANDO.has(eerste) && /^[a-z][a-z0-9:_-]*$/.test(tweede) ? `${eerste} ${tweede}` : eerste;
 }
 
-/** @param {unknown} pad @param {string} cwd */
+/** Pad relatief aan de repo-root (zonder repo: aan cwd); daarbuiten `buiten-repo`. @param {unknown} pad @param {string} cwd */
 function padSleutel(pad, cwd) {
   if (typeof pad !== 'string' || pad === '') return '';
-  const rel = path.relative(cwd, path.resolve(cwd, pad));
+  const rel = path.relative(repoRoot(cwd) ?? path.resolve(cwd), path.resolve(cwd, pad));
   if (rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel)) return 'buiten-repo';
   return rel === '' ? '.' : rel.split(path.sep).join('/');
 }

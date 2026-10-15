@@ -311,3 +311,46 @@ test('fail-open: onschrijfbare map geeft exit 0 zonder stdout', () => {
   expect(result).toStrictEqual({ status: 0, stdout: '' });
   expect(existsSync(path.join(root, '.claude/hooks/meting.mjs'))).toBe(true);
 });
+
+function subRepo(): { root: string; sub: string } {
+  const root = repo('ref: refs/heads/stap-3\n');
+  const sub = path.join(root, 'sub');
+  mkdirSync(sub);
+  return { root, sub };
+}
+
+test.each([
+  ['README.md in de repo-root', (r: string) => `${r}/README.md`, 'README.md'],
+  ['bestand in de submap', (r: string) => `${r}/sub/x.ts`, 'sub/x.ts'],
+  ['pad buiten de repo', () => '/etc/passwd', 'buiten-repo'],
+])('cwd in submap: %s relatief aan de repo-root', (_naam, pad, sleutel) => {
+  const dir = tmp('meting-dir-');
+  const { root: repoRoot, sub } = subRepo();
+
+  run(JSON.stringify(event(sub, { tool_name: 'Edit', tool_input: { file_path: pad(repoRoot) } })), { METING_DIR: dir });
+
+  expect(regels(dir)).toMatchObject([{ k: sleutel, b: 'stap-3' }]);
+});
+
+test.each(['git push --dry-run', 'git push -n', 'git push origin main --dry-run'])(
+  'Bash %j: vast label git push --dry-run, geen andere argumenten',
+  (command) => {
+    const dir = tmp('meting-dir-');
+
+    run(JSON.stringify(event(repo(null), { tool_name: 'Bash', tool_input: { command } })), { METING_DIR: dir });
+
+    expect(regels(dir)).toMatchObject([{ k: 'git push --dry-run' }]);
+    expect(readFileSync(path.join(dir, `${SESSIE}.jsonl`), 'utf8')).not.toContain('origin');
+  },
+);
+
+test.each(['__proto__', 'constructor'])('branchnaam %s in .git/HEAD: gewoon gelogd, exit 0', (naam) => {
+  const dir = tmp('meting-dir-');
+
+  const result = run(JSON.stringify(event(repo(`ref: refs/heads/${naam}\n`), { tool_name: 'Grep' })), {
+    METING_DIR: dir,
+  });
+
+  expect(result.status).toBe(0);
+  expect(regels(dir)).toMatchObject([{ b: naam }]);
+});

@@ -7,7 +7,7 @@ import { expect, test } from 'vitest';
 // Het overzicht scripts/kit/meting.mjs (`pnpm meting`) als proces, met METING_DIR op een tijdelijke map (ADR 0029 punt 12).
 const root = process.cwd();
 
-type Regel = { e: string; s?: string; b?: string; k?: string; id?: string; tool?: string };
+type Regel = { t?: string; e: string; s?: string; b?: string; k?: string; id?: string; tool?: string };
 
 function map(bestanden: Record<string, (Regel | string)[]>): string {
   const dir = mkdtempSync(path.join(tmpdir(), 'meting-overzicht-'));
@@ -37,7 +37,9 @@ function gh(gedrag: { uit?: string; exit?: number; slaap?: boolean }): string {
   return file;
 }
 
-const ghDrie = gh({ uit: '[{"databaseId":1},{"databaseId":2},{"databaseId":3}]' });
+const ghDrie = gh({
+  uit: JSON.stringify([1, 2, 3].map((databaseId) => ({ databaseId, createdAt: '2026-10-15T10:05:00Z' }))),
+});
 
 function overzicht(dir: string, ...args: string[]) {
   return overzichtMet({ METING_DIR: dir, METING_GH: ghDrie }, root, ...args);
@@ -244,7 +246,7 @@ test('ciRondes: één onbekende branch maakt de sessie onbekend, de andere branc
   const dir = map({ a: ciRegels });
   const file = path.join(mkdtempSync(path.join(tmpdir(), 'meting-gh-')), 'gh');
   const body =
-    "if (process.argv.includes('--branch=y')) process.exit(1); process.stdout.write('[{\"databaseId\":1}]');";
+    'if (process.argv.includes(\'--branch=y\')) process.exit(1); process.stdout.write(\'[{"databaseId":1,"createdAt":"2026-10-15T10:05:00Z"}]\');';
   writeFileSync(file, `#!/usr/bin/env node\n${body}\n`);
   chmodSync(file, 0o755);
 
@@ -253,7 +255,7 @@ test('ciRondes: één onbekende branch maakt de sessie onbekend, de andere branc
   });
 });
 
-test('gh krijgt run list --branch=<branch> --json databaseId --limit 200', () => {
+test('gh krijgt run list --branch=<branch> --json databaseId,createdAt --limit 200', () => {
   const dir = map({ a: [s('feat/z', 'Stop')] });
   const log = path.join(mkdtempSync(path.join(tmpdir(), 'meting-gh-')), 'args.txt');
   const file = path.join(path.dirname(log), 'gh');
@@ -265,7 +267,7 @@ test('gh krijgt run list --branch=<branch> --json databaseId --limit 200', () =>
 
   ciUit({ METING_GH: file }, dir);
 
-  expect(readFileSync(log, 'utf8')).toBe('run list --branch=feat/z --json databaseId --limit 200');
+  expect(readFileSync(log, 'utf8')).toBe('run list --branch=feat/z --json databaseId,createdAt --limit 200');
 });
 
 test('zonder METING_DIR leest het overzicht <cwd>/.git/agent-meting', () => {
@@ -296,4 +298,89 @@ test('branch die met - begint: onbekend zonder gh-aanroep', () => {
     sessies: { a: { ciRondes: 'onbekend', branches: { '-evil': { ciRondes: 'onbekend' } } } },
   });
   expect(existsSync(log)).toBe(false);
+});
+
+function ghRuns(createdAt: string[]): string {
+  return gh({ uit: JSON.stringify(createdAt.map((c, i) => ({ databaseId: i + 1, createdAt: c }))) });
+}
+
+test('ciRondes: alleen runs binnen het sessievenster (eerste t tot laatste t + 60 minuten)', () => {
+  const dir = map({
+    a: [
+      s('x', 'UserPromptSubmit', { t: '2026-10-15T10:00:00.000Z' }),
+      s('x', 'Stop', { t: '2026-10-15T10:30:00.000Z' }),
+    ],
+  });
+  const runs = ghRuns([
+    '2026-10-14T09:00:00Z',
+    '2026-10-15T09:59:00Z',
+    '2026-10-15T10:10:00Z',
+    '2026-10-15T11:25:00Z',
+    '2026-10-15T11:31:00Z',
+    '2026-10-16T10:00:00Z',
+  ]);
+
+  expect(ciUit({ METING_GH: runs }, dir)).toMatchObject({
+    sessies: { a: { ciRondes: 2, branches: { x: { ciRondes: 2 } } } },
+  });
+});
+
+test('ciRondes: runs buiten het venster tellen niet, ook als de lijst verder leeg is', () => {
+  const dir = map({ a: [s('x', 'Stop', { t: '2026-10-15T10:00:00.000Z' })] });
+
+  expect(ciUit({ METING_GH: ghRuns(['2026-10-01T10:00:00Z', '2026-10-20T10:00:00Z']) }, dir)).toMatchObject({
+    sessies: { a: { ciRondes: 0 } },
+  });
+});
+
+function eigenSleutels(waarde: unknown): string[] {
+  return typeof waarde === 'object' && waarde !== null ? Object.keys(waarde) : [];
+}
+
+test.each(['__proto__', 'constructor'])(
+  'branchnaam %s telt gewoon mee, zonder crash of prototypevervuiling',
+  (naam) => {
+    const dir = map({
+      a: [s(naam, 'PermissionRequest', { k: naam }), s(naam, 'PermissionRequest', { k: naam }), s('x', 'Stop')],
+    });
+
+    const uit = json(dir);
+    const alleSessies = sessies(dir);
+    const sessie = alleSessies[0]?.[1];
+    const branches = veld(sessie, 'branches');
+    const eigen: unknown = Object.getOwnPropertyDescriptor(Object(branches), naam)?.value;
+
+    expect(uit).toHaveProperty('sessies');
+    expect(eigenSleutels(branches).sort()).toStrictEqual([naam, 'x'].sort());
+    expect(veld(eigen, 'prompts')).toBe(2);
+    expect(veld(veld(sessie, 'promptsPerSleutel'), naam)).toBe(2);
+    expect(Object.getOwnPropertyDescriptor(Object(veld(sessie, 'promptsPerSleutel')), naam)?.value).toBe(2);
+    expect(overzicht(dir).status).toBe(0);
+    expect(Object.prototype).not.toHaveProperty('prompts');
+  },
+);
+
+test('pushes telt alleen k === "git push": git push --dry-run telt niet', () => {
+  const dir = map({
+    a: [
+      s('x', 'PostToolUse', { k: 'git push' }),
+      s('x', 'PostToolUse', { k: 'git push --dry-run' }),
+      s('x', 'PostToolUse', { k: 'git push --dry-run' }),
+    ],
+  });
+
+  expect(ciUit({ METING_GH: ghDrie }, dir)).toMatchObject({
+    sessies: { a: { pushes: 1, branches: { x: { pushes: 1 } } } },
+  });
+});
+
+test('tekstvorm toont per branch ook de promptsPerSleutel-sleutels', () => {
+  const dir = map({
+    a: [s('feat/een', 'PermissionRequest', { k: 'pnpm lint' }), s('feat/een', 'PermissionRequest', { k: 'pnpm lint' })],
+  });
+
+  const tekst = overzicht(dir).stdout;
+
+  expect(tekst).toContain('feat/een');
+  expect(tekst.split('pnpm lint').length - 1).toBeGreaterThanOrEqual(2);
 });
