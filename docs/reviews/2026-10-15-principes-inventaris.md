@@ -105,5 +105,9 @@ Geen verouderde claims gevonden in `CLAUDE.md`, `.claude/agents/*`, `.claude/rul
 4. **ADR 0023 (D-2): vervangen door 0029.** Het meetpunt (verbreed tot prompts, weigeringen, beurten, CI-rondes en
    correcties) gaat in de herziening van ADR 0029 (stap 2). **Herziening (D-1): later**, als open eigenaarbesluit op de roadmap.
 
+5. **Verwijderen van ADR's en specs.** ADR's worden nooit verwijderd, alleen `vervallen` of `vervangen door NNNN` (nummering,
+   verwijzingen en afgewezen alternatieven blijven vindbaar). Een spec mag weg als hij `vervallen` is of in een gebouwde
+   spec of ADR is opgegaan en niets er meer naar verwijst; elk geval wordt apart aan de eigenaar voorgelegd.
+
 Categorie C (D-3 t/m D-16) is niet apart voorgelegd. Die volgt in stap 5 zoals hierboven voorgesteld, tenzij de eigenaar
 in de review van deze PR anders beslist.
