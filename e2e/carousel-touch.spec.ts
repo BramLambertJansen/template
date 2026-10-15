@@ -34,7 +34,10 @@ test('AC-7: een swipe laat invoer en een daaropvolgende tik op een dia-actie wer
     const y = box.y + box.height / 2;
     const session = await context.newCDPSession(page);
     await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
-    await session.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x - 100, y }] });
+    for (const step of [20, 40, 60, 80, 100]) {
+      await session.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x - step, y }] });
+      await page.waitForTimeout(16);
+    }
     await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await session.detach();
     await carousel.getByRole('textbox', { name: 'Dia-invoer' }).fill('Blijft');
@@ -49,4 +52,15 @@ test('AC-7: een swipe laat invoer en een daaropvolgende tik op een dia-actie wer
       contentType: 'application/json',
     });
   }
+});
+
+test('AC-7 controle: een tik op een dia-actie werkt zonder voorafgaande swipe', async ({ page, context }) => {
+  await context.setExtraHTTPHeaders(clientIpHeaders());
+  await signIn(page, await createAccount('admin', { totp: true }));
+  await page.goto('/design-system');
+  const carousel = page.getByRole('region', { name: 'Voorbeeldcarrousel', exact: true });
+  await carousel.waitFor();
+  await carousel.getByRole('button', { name: 'Toon dia 2: Architectuur', exact: true }).click();
+  await carousel.getByRole('button', { name: 'Bekijken', exact: true }).tap();
+  await expect(page.getByRole('status', { name: 'Dia-actie' })).toHaveText('Bekijken');
 });

@@ -17,7 +17,10 @@ async function swipeLeft(page: Page, slide: Locator) {
   const y = box.y + box.height / 2;
   const session = await page.context().newCDPSession(page);
   await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
-  await session.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x - 100, y }] });
+  for (const step of [20, 40, 60, 80, 100]) {
+    await session.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x - step, y }] });
+    await page.waitForTimeout(16);
+  }
   await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await session.detach();
 }
