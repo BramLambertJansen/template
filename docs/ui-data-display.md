@@ -56,11 +56,13 @@ Carousel gebruikt items met id/label/content en optioneel controlled value/onVal
 zichtbaar, andere blijven hidden gemount. Bedien met de vorige/volgende/directe knoppen; op grenzen stopt de carousel.
 Een horizontale pointer/touch-swipe vanaf 50 px op niet-interactieve inhoud wisselt één slide. Verticale scroll en
 interactieve controls blijven normaal werken. Native pointer capture geldt voor echte pointerevents.
+Capture wordt bij pointerup en pointercancel expliciet vrijgegeven vóór een eventuele diawissel
+(`src/core/web/ui/carousel.tsx:63`); de echte touchregressie controleert de actieknop na een swipe.
 Geen autoplay, animatie, timer of algemene pijltjes-handler: reduced motion is standaard gerespecteerd.
 Een gebruikerswissel wordt pas aangekondigd wanneer de actieve waarde daadwerkelijk verandert. Bij onbekende expliciete
 waarde blijft een eerste-keuzeknop bereikbaar, ook met één item. Verwijderde gefocuste inhoud krijgt een focusvangnet.
 Een bewust verlaten dia trekt bij een latere ouderwissel geen focus terug, ook als de blur geen volgend focusdoel had
-(`src/core/web/ui/carousel.tsx:88`).
+(`src/core/web/ui/carousel.tsx:97`).
 
 ## Acceptatiebewijs
 

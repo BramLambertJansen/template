@@ -58,15 +58,24 @@ function useCarousel(props: CarouselProps) {
     start.current = { x: event.clientX, y: event.clientY, id: event.pointerId };
     if (event.isTrusted) event.currentTarget.setPointerCapture(event.pointerId);
   };
+  const release = (event: PointerEvent) => {
+    if (event.isTrusted && event.currentTarget.hasPointerCapture(event.pointerId))
+      event.currentTarget.releasePointerCapture(event.pointerId);
+  };
   const up = (event: PointerEvent) => {
     const origin = start.current;
     start.current = null;
+    release(event);
     if (origin === null || origin.id !== event.pointerId) return;
     const dx = event.clientX - origin.x;
     const dy = event.clientY - origin.y;
     if (Math.abs(dx) >= SWIPE_DISTANCE && Math.abs(dx) > Math.abs(dy)) choose(active + (dx < 0 ? 1 : -1));
   };
-  return { root, tracked, active, choose, announcement, choiceId, down, up, start, base };
+  const cancel = (event: PointerEvent) => {
+    start.current = null;
+    release(event);
+  };
+  return { root, tracked, active, choose, announcement, choiceId, down, up, cancel, base };
 }
 
 export function Carousel(props: CarouselProps) {
@@ -95,14 +104,7 @@ export function Carousel(props: CarouselProps) {
         if (left || released) state.tracked.current = null;
       }}
     >
-      <div
-        className="touch-pan-y"
-        onPointerDown={state.down}
-        onPointerUp={state.up}
-        onPointerCancel={() => {
-          state.start.current = null;
-        }}
-      >
+      <div className="touch-pan-y" onPointerDown={state.down} onPointerUp={state.up} onPointerCancel={state.cancel}>
         {props.items.length === 0
           ? (props.emptyContent ?? <p>Geen resultaten.</p>)
           : props.items.map((item, index) => (

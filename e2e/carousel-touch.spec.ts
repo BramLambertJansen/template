@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { writeFile } from 'node:fs/promises';
 import { clientIpHeaders, createAccount } from './support/accounts.ts';
 import { signIn } from './support/eigen-account.ts';
 
@@ -41,8 +42,10 @@ test('AC-7: een swipe laat invoer en een daaropvolgende tik op een dia-actie wer
     await expect(page.getByRole('status', { name: 'Dia-actie' })).toHaveText('Bekijken');
     await expect(carousel.getByRole('textbox', { name: 'Dia-invoer' })).toHaveValue('Blijft');
   } finally {
+    const path = test.info().outputPath('carousel-touch-events.json');
+    await writeFile(path, JSON.stringify(await page.evaluate<unknown>('window.carouselTouchEvents')));
     await test.info().attach('carousel-touch-events', {
-      body: JSON.stringify(await page.evaluate<unknown>('window.carouselTouchEvents')),
+      path,
       contentType: 'application/json',
     });
   }
