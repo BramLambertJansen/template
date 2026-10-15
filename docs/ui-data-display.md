@@ -72,7 +72,7 @@ Een bewust verlaten dia trekt bij een latere ouderwissel geen focus terug, ook a
 | AC-4 tabs/keyboard/staat/focus | tabs.test.tsx, tabs-blur.test.tsx, e2e/ui-data-display.spec.ts |
 | AC-5 gallery/fout/preview | gallery.test.tsx, e2e/ui-data-display.spec.ts |
 | AC-6 toolbar/adaptatie/chips/debounce | list-toolbar-filters.test.tsx, bestaande list-toolbar.test.tsx, e2e/ui-data-display.spec.ts |
-| AC-7 carousel/controlled/swipe | carousel.test.tsx, carousel-blur.test.tsx, e2e/ui-data-display.spec.ts |
+| AC-7 carousel/controlled/swipe | carousel.test.tsx, carousel-blur.test.tsx, e2e/ui-data-display.spec.ts, e2e/carousel-touch.spec.ts |
 | AC-8 structurele wijzigingen/id-fouten | nieuwe componenttests per onderdeel |
 | AC-9 bronindex en voorbeelden | check:catalogus, bestaande e2e/design-system.spec.ts |
 | AC-10 responsive/axe/CSP/thema | e2e/ui-data-display.spec.ts, bestaande design-systemtests |
