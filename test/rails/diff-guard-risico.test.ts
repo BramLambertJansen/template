@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { beoordeel, leesConfig, samenvatting } from '../../scripts/kit/diff-guard.mjs';
 
 // Diff-guard, Risico-overzicht in de samenvatting: nieuwe of gewijzigde migraties, permissiesleutels, dependencies en
@@ -88,16 +88,21 @@ describe('Risico-overzicht: permissiesleutels', () => {
     const marker = path.join(mkdtempSync(path.join(tmpdir(), 'guard-marker-')), 'uitgevoerd');
     const kwaad = [
       "import { writeFileSync } from 'node:fs';",
-      `writeFileSync(${JSON.stringify(marker)}, 'uitgevoerd');`,
-      `process.on('exit', () => writeFileSync(${JSON.stringify(marker)}, 'exit'));`,
+      "writeFileSync(process.env.GUARD_MARKER ?? '', 'uitgevoerd');",
+      "process.on('exit', () => writeFileSync(process.env.GUARD_MARKER ?? '', 'exit'));",
       "import { definePermissions } from '#core/shared/can.ts';",
       "export const permissions = definePermissions({ 'evil:run': { roles: ['user'] } });",
     ].join('\n');
 
-    const tekst = sectie(pr(wijziging, { [pad]: { voor: BASIS_PERMISSIES, na: kwaad } }));
+    vi.stubEnv('GUARD_MARKER', marker);
+    try {
+      const tekst = sectie(pr(wijziging, { [pad]: { voor: BASIS_PERMISSIES, na: kwaad } }));
 
-    expect(existsSync(marker)).toBe(false);
-    expect(tekst).toContain('evil:run');
+      expect(existsSync(marker)).toBe(false);
+      expect(tekst).toContain('evil:run');
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   test('onleesbaar of leeg bestand geeft geen crash', () => {
