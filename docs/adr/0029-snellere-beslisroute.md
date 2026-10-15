@@ -4,7 +4,7 @@ Status: voorgesteld
 
 Wijzigt [0027](0027-taakmandaat-voor-frameworkwerk.md) punt 2 en vult [0025](0025-werkstraat-tot-de-merge.md) punt 1 en 10 aan.
 Vervangt [0023](0023-tokenzuinige-werkstraat.md) (eigenaarbesluit 2026-10-15; de status daar zet de eigenaar, zie Gevolgen).
-Wijzigt [0030](0030-ci-lus-en-agent-merge.md) punt 4–5 voor de feature-lane (punt 14).
+Wijzigt [0030](0030-ci-lus-en-agent-merge.md) punt 2 (waarde `"feature-lane"` van de sleutel `merge`) en punt 4–5 voor de feature-lane (punt 14).
 ADR-drempel (punt 4): A3 (punt 9, 14 en 18 verruimen wat de agent zonder prompt, eigenaarreview of eigenaarmerge doet) en A4 (0027 punt 2, 0030).
 Eigenaarbesluiten 2026-10-15 (in de sessie): P1–P7, `_mini.md`, 0023 vervangen, en de punten gemarkeerd met "(besluit 2026-10-15)".
 
@@ -238,8 +238,8 @@ gelijk (merge-afspraak, `overgang`), en geldt na punt 14 ook voor de merge door 
   `.claude/settings.json` (`Bash(gh pr merge*)` uit `deny`; `--auto`, `--admin` en `gh api *merge*` blijven deny); skill
   `opleveren` (voorwaarden punt 14, reviewer-SHA, melding); `scripts/kit/diff-guard.mjs` en `.github/workflows/guard.yml`
   (lane-uitslag); `requiredChecks` in `.claude/decisions.json` (punt 16); framework §8 stap 6/7 en §10, AGENTS.md ("merge
-  nooit"), CLAUDE.md; ADR 0030 verwijsregel. De agent heeft geen `workflows`-recht: wijzigingen in `.github/**` pusht de
-  eigenaar (framework §10).
+  nooit"), CLAUDE.md; ADR 0030 verwijsregel. Wijzigingen in `.github/workflows/**` pusht de eigenaar
+  (`docs/framework.md:438`); dat is een afspraak, geen technische grens zolang de agent onder het account van de eigenaar pusht.
 - **Stap 7 (versoepeling, na P5): punt 18.** `src/api/app.ts` en `src/shared/permissions.ts` uit `gates` in
   `.claude/gates.json` en uit `.github/CODEOWNERS` (en uit `ask`); `check-docs`-fixtures voor de spiegeling
   (`test/rails/check-docs-gates.test.ts`, nieuwe gevallen); `scripts/kit/new-resource.mjs` (behandelt beide nu als gate,
