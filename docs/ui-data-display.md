@@ -3,8 +3,8 @@
 Deze componenten horen bij [de spec](specs/ui-data-display.md) en staan met werkende voorbeelden op de bestaande
 adminpagina `/design-system`. Importeer componenten en types uit de app-barrel `src/web/ui/index.ts`.
 Geen nieuwe dependency, netwerklaag, token of autorisatie is nodig.
-De lokale voorbeeldbeelden staan in `public/`; de leesweigering voor bestandsnamen met `secret` dekt deze nieuwe map
-via `.claude/settings.json:19`, met afzonderlijk akkoord van de eigenaar.
+De lokale voorbeeldbeelden staan in `src/web/public/`, onder de Vite-root (`vite.config.ts:95`). Ze laden daardoor
+via dezelfde origin in development en de productiebuild, zonder aanvullende configuratie.
 
 ## DataTable
 
@@ -38,6 +38,7 @@ Afbeeldingen laden lazy. Een fout toont een placeholder; een andere src wordt op
 mag alt leeg zijn. Benoem previewcontrols altijd via preview.previewLabel en geef closeLabel. Een caption wordt de
 Dialogtitel, anders de previewlabel. De bestaande Dialog bewaakt focus/Escape; verwijderen van de geopende kaart sluit
 preview en focust de gallerycontainer. De previewinhoud heeft interne verticale scrolling. Geen remote voorbeeldmedia.
+Previewknoppen breken lange labels binnen de kaart af (`src/core/web/ui/gallery.tsx:87`), zodat ze de pagina niet verbreden.
 
 ## ListToolbar
 

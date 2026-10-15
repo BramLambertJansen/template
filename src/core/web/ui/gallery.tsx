@@ -84,6 +84,7 @@ export function Gallery({ label, items, preview, unavailableText, emptyContent }
                 {preview === undefined ? null : (
                   <Button
                     variant="outline"
+                    className="max-w-full whitespace-normal"
                     aria-haspopup="dialog"
                     aria-controls={`${base}-preview`}
                     onClick={(event) => {
@@ -91,7 +92,7 @@ export function Gallery({ label, items, preview, unavailableText, emptyContent }
                       setSelected(item.id);
                     }}
                   >
-                    {preview.previewLabel(item)}
+                    <span className="min-w-0 break-words">{preview.previewLabel(item)}</span>
                   </Button>
                 )}
               </figure>

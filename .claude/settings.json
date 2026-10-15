@@ -16,7 +16,6 @@
       "Read(./designs/**/*secret*)",
       "Read(./docs/**/*secret*)",
       "Read(./e2e/**/*secret*)",
-      "Read(./public/**/*secret*)",
       "Read(./scripts/**/*secret*)",
       "Read(./src/**/*secret*)",
       "Read(./test/**/*secret*)",
