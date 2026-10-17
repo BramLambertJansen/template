@@ -105,6 +105,15 @@
       "Edit(.dockerignore)",
       "Edit(db/test.env)",
       "Edit(docs/nieuwe-app.md)"
+    ],
+     "allow": [
+      "Bash(git read-tree:*)",
+      "Bash(git update-index:*)",
+      "Bash(git write-tree:*)",
+      "Bash(git commit-tree:*)",
+      "Bash(git hash-object:*)",
+      "Bash(git branch:*)",
+      "Bash(git worktree add:*)"
     ]
   },
   "sandbox": {
@@ -122,7 +131,8 @@
       "denyRead": [
         "~/.ssh",
         "~/.aws"
-      ]
+      ],
+      "allowWrite": ["/home/bmj/.local/share/pnpm/store"]
     },
     "network": {
       "allowedDomains": [
