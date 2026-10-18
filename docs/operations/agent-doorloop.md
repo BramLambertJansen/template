@@ -28,6 +28,18 @@ YAML-regel te typen. Inhoud wijzigen vraagt een nieuw voorstel en passend eigena
 verwijdert of vervangt het record op main; lokaal verversen, CI gebruikt de actuele basis. Een verouderde lokale
 basis kan nog oud akkoord zien.
 
+### Feature-lane en mini-spec (ADR 0029)
+
+Een besluit kost één PR: de merge is het besluit. De agent zet de statusregel nooit; de eigenaar zet hem in dezelfde PR in de
+GitHub-webeditor en merget. `check-document-status` herkent dan twee gevallen en eist daarbij dat de commit die de statusregel
+zette alleen statusregels wijzigt, dat er geen inhoud na de status komt en dat de committer GitHub web-flow is (`scripts/kit/lane.mjs`).
+
+- **Feature-lane:** app-werk met een mini-spec (`docs/specs/_mini.md`, veld `sjabloon: mini`). Toegestaan naast de spec: `src/{api,web,shared}`,
+  nieuwe tests, een nieuwe migratie voor een nieuwe tabel (`pnpm new:resource`) en `docs/specs/`. Niet: `src/core`, een pad uit `voorReview`
+  (`.claude/gates.json`), een ADR, een gewijzigde of verwijderde bestaande test of migratie, of een tweede spec met een eigenaarstatus.
+- **Framework-lane:** een ADR of volledige spec met hooguit zijn record in `.claude/decisions.json`. Bouwen volgt in een volgende PR.
+- Past de PR in geen van beide, dan geldt de strenge route: de status heeft een record op main nodig (ADR 0027, hierboven).
+
 ## Ontwikkelen en runnerchecks
 
 Een geldig broncodemandaat geeft alleen de bekende developer toegang tot genoemde beschermde bronbestanden.
