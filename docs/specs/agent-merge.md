@@ -50,29 +50,33 @@ Twee correcties op de opdracht, uit de feiten:
 
 V-1 wijzigt de exacte vorm uit ADR 0029 punt 14, en V-3 (een prompt per merge) gaat in tegen het verworpen alternatief "Agent-merge met
 akkoordprompt per PR (0030 punt 4) ook in de feature-lane" (`docs/adr/0029-snellere-beslisroute.md:209`). Dat is een normatieve
-wijziging van een geaccepteerd ADR. Volgens de correctieprocedure (`docs/framework.md:431`,
-[procedure](../operations/agent-doorloop.md#correctie-aan-een-geaccepteerd-adr), spoor 1 en 2) vraagt dat een nieuw ADR (volgende
-vrije nummer: 0035) dat punt 14 en dat alternatief wijzigt, en daarna een verwijsregel achter de statuswaarde van ADR 0029:
-`Status: geaccepteerd — [0035](0035-<naam>.md)`. Een statusregel mag alleen naar een bestaand ADR linken
-(`statusregelOvertreding`), dus ADR 0035 staat eerst op `main`, in een eigen besluit-PR (één PR per besluit, ADR 0029 punt 1). V-4 is
-strenger dan punt 14 en vraagt zelf geen ADR (ADR 0029 punt 4: "Een strengere check is geen ADR"); ADR 0035 noemt het wel.
+wijziging van een geaccepteerd ADR (`docs/framework.md:431`,
+[procedure](../operations/agent-doorloop.md#correctie-aan-een-geaccepteerd-adr)). Eigenaarbesluit V-11: geen nieuw ADR; ADR 0029 zelf
+wijzigt, in een eigen PR die vóór de PR van deze spec op `main` komt. In die PR gaat ADR 0029 terug naar `voorgesteld` met een record
+(ADR 0027), worden punt 14 (vorm met `--match-head-commit`, prompt per merge, merge-toets V-4) en het verworpen alternatief op :209
+aangepast, en accepteert de eigenaar opnieuw. Deze spec verwijst daarom alleen naar ADR 0029 punt 14 in die gewijzigde vorm; een
+verwijsregel in ADR 0029 hoort niet bij PR A. V-4 is strenger dan punt 14 (ADR 0029 punt 4: "Een strengere check is geen ADR"), maar
+staat voor de duidelijkheid wel in de nieuwe tekst van punt 14.
 
 ### Levering
 
+Volgorde: ADR 0029-PR → spec-PR (dit document, `goedgekeurd` door de eigenaar) → A → B → C.
+
 | PR | Inhoud | Wie past toe | Label |
 |---|---|---|---|
-| **0** — besluit | ADR 0035 `voorgesteld` (V-1, V-3, V-4 ten opzichte van ADR 0029 punt 14 en :209); de eigenaar zet `geaccepteerd` en merget | architect schrijft, eigenaar beslist | `gate-wijziging` |
-| **A** — bouwstenen, nog geen merge-recht | A0 verwijsregel op de statusregel van ADR 0029 naar 0035; A1 `scripts/check-github.mjs`; A2 `.github/settings/main-protection.json`; A3 sleutel `merge: "eigenaar"` in `.claude/gates.json` met `check-docs`-regel; A4 lane- en merge-uitslag in `scripts/kit/diff-guard.mjs`; A5 `diff-guard` in `requiredChecks`; A6 `pnpm pr:verify <nr> --lane`; tests; docs | developer (A1, A4, A6, docs), tester (tests), hoofdsessie met prompt (A2, A3, A5); A0 hoofdsessie | `gate-wijziging` |
-| **B** — het merge-recht | B1 rolhek; B2 `.claude/settings.json`; B3 skill `opleveren`; B4 `.github/workflows/guard.yml`; B5 framework §8/§10; B6 `AGENTS.md`; B7 `CLAUDE.md`; B8 verwijsregel ADR 0030 | de eigenaar (V-2), volgens de exacte teksten en tabeltests hieronder | `gate-wijziging` |
-| **C** — aanzetten | `merge: "feature-lane"` in `.claude/gates.json`; de uitvoer van `node scripts/check-github.mjs <owner>/<repo>` in de PR-beschrijving | de eigenaar, na de merge van A en B | `gate-wijziging` |
+| **ADR 0029** — besluit, vóór de spec | ADR 0029 terug op `voorgesteld` met record; punt 14 en het alternatief op :209 aangepast (V-1, V-3, V-4); de eigenaar accepteert opnieuw en merget | architect schrijft, eigenaar beslist | `gate-wijziging` |
+| **Spec** | dit document; de eigenaar zet `goedgekeurd` en merget | architect schrijft, eigenaar beslist | `gate-wijziging` |
+| **A** — bouwstenen, nog geen merge-recht | A1 `scripts/check-github.mjs`; A2 `.github/settings/main-protection.json`; A3 sleutel `merge: "eigenaar"` in `.claude/gates.json` met `check-docs`-regel; A4 lane- en merge-uitslag in `scripts/kit/diff-guard.mjs`; A5 `diff-guard` in `requiredChecks`; A6 `pnpm pr:verify <nr> --lane`; tests; docs | developer (A1, A4, A6, docs), tester (tests), hoofdsessie met prompt (A2, A3, A5) | `gate-wijziging` |
+| **B** — het merge-recht | B1 rolhek; B2 `.claude/settings.json`; B3 skill `opleveren`; B4 `.github/workflows/guard.yml`; B5 framework §8/§10; B6 `AGENTS.md`; B7 `CLAUDE.md`; B8 statusregel ADR 0030; B9 overige teksten | de eigenaar (V-2), volgens de exacte teksten en tabeltests hieronder | `gate-wijziging` |
+| **C** — aanzetten | `merge: "feature-lane"` in `.claude/gates.json`; in de PR-beschrijving de volledige uitvoer van `node scripts/check-github.mjs BramLambertJansen/template` met exit 0; `check-docs` groen | de eigenaar, na de merge van A en B; handmatige controle, geen AC | `gate-wijziging` |
 
 PR A verandert niets aan wat de agent mag: de sleutel staat op `"eigenaar"` en het rolhek leest hem nog niet. PR B werkt pas na de merge
 (de stub laadt het rolhek van `main`), en zolang C niet gemerged is blijft mergen deny. Het roadmap-item "ADR 0029 stap 7: agent-merge"
-bestaat nog niet; de eigenaar voegt het toe (onder `## Nu` zijn twee van de drie plekken bezet, `docs/roadmap.md:18`).
+voegt de eigenaar toe via een eigen branch (V-12, afgesproken).
 
 ## Rollen en wie wat ziet
 
-| Rol | Na 0 + A + B + C |
+| Rol | Na A + B + C |
 |---|---|
 | Eigenaar | Zet de modus (C), beantwoordt de prompt bij elke agent-merge (V-3), krijgt achteraf een PR-commentaar en de eindmelding, merget elke framework-lane-PR zelf. |
 | Hoofdsessie | Mag alleen de exacte vorm uit "Doel" op een feature-lane-PR, met de voorwaarden uit B1; het rolhek geeft daarbij `ask`, nooit `allow`. |
@@ -97,8 +101,10 @@ n.v.t. — geen API-route of permissie. Uitvoer gaat via exitcodes en meldingen 
   en `WRAPPERS` (`rails/hooks/lib/shell.mjs:168`); `checkRuns`, `pullRequest` (`scripts/kit/github-evidence.mjs`);
   `GITHUB_ACTIONS_APP_ID` (`rails/hooks/lib/built-evidence.mjs`); `onderhoudVan`-patroon voor de vormcheck in `check-docs`; de `gh`-stub
   uit `test/scripts/github-ruleset.test.ts`. Geen tweede lane-herkenning: de besluitbepaling (`eigenaarStatussen`,
-  `scripts/kit/check-document-status.mjs:200`) en de inhoudstoets (`verifyFeatureInhoud`, :221) verhuizen als pure functies naar
-  `scripts/kit/lane.mjs`; `check-document-status`, de diff-guard en het rolhek gebruiken die.
+  `scripts/kit/check-document-status.mjs:200`), de rename-toets (`verifyGeenRename`, :210) en de inhoudstoets
+  (`verifyFeatureInhoud`, :221) verhuizen als pure functies (met lezers voor basis- en headtekst als argument) naar
+  `scripts/kit/lane.mjs`; `check-document-status`, de diff-guard en het rolhek gebruiken die drie, zodat ze dezelfde lane-definitie
+  hebben. Samen heten ze hieronder "de lanetoets".
 - Staten per scherm: n.v.t. — geen scherm.
 - Alle zichtbare tekst letterlijk: zie "Letterlijke meldingen" en de teksten bij B3–B7.
 - Focusvolgorde en toetsenbord: n.v.t. — geen scherm.
@@ -111,11 +117,6 @@ paden) dat matcht met `gates`, behalve een nieuwe test (status `A` of `C` in `te
 `**/*.test.*` in `gates` (`.claude/gates.json:40`). **Merge-toets (V-4):** `geraakt.gates` bevat alleen de mini-spec die in de PR zijn
 eigenaarstatus krijgt, en `geraakt.json` en `geraakt.tests` zijn leeg. Daardoor blokkeren onder meer `docs/roadmap.md`, `deploy/**`,
 `renovate.json`, `src/api/{kit,server,env}.ts`, `.gitattributes` en `docs/nieuwe-app.md` een agent-merge.
-
-### A0 — verwijsregel ADR 0029
-
-De statusregel van `docs/adr/0029-snellere-beslisroute.md` wordt `Status: geaccepteerd — [0035](0035-<naam>.md)`, met de bestandsnaam
-van ADR 0035 op `main`. Geen andere wijziging aan ADR 0029.
 
 ### A1 — `scripts/check-github.mjs`
 
@@ -166,15 +167,18 @@ ongewijzigd. De nieuwe test vergelijkt alleen de stub-payload met het bestand; w
   de head) en voor `isMiniSpec` en de kop "Datawijzigingen (met grants)"; en elke nieuwe migratie (status `A` in `migraties`), alleen
   de headversie, voor `migratieOvertreding`. Alles als git-object, nooit uitgevoerd.
 - `beoordeel` levert naast `uitslag` en `risico`:
-  - `lane: { lane: 'feature' | 'framework' | null, reden: string }`, met `laneVan`, de verhuisde besluitbepaling en de verhuisde
-    inhoudstoets. `feature` geldt dus alleen als ook elke nieuwe migratie alleen een nieuwe tabel maakt én de mini-spec dan de kop
-    "Datawijzigingen (met grants)" met inhoud heeft, precies zoals `verifyFeatureInhoud`. Ook de rename-toets van `verifyGeenRename`
-    (:210) hoort erbij. Zo geven diff-guard en `document-status` op dezelfde PR dezelfde lane (AC-13).
+  - `lane: { lane: 'feature' | 'framework' | null, reden: string }`, met `laneVan` en de lanetoets. `feature` geldt dus alleen als
+    ook elke nieuwe migratie alleen een nieuwe tabel maakt én de mini-spec dan de kop "Datawijzigingen (met grants)" met inhoud heeft
+    (zoals `verifyFeatureInhoud`), en als het besluitdocument geen rename of kopie is van een document met een eigenaarstatus op de
+    basis (zoals `verifyGeenRename`; `docs/specs/a.md` `goedgekeurd` → `docs/specs/b.md` geeft `null`). Zo geven diff-guard,
+    `document-status` en het rolhek op dezelfde PR dezelfde lane (AC-13).
   - `agentMerge: { ja: boolean, reden: string }`: `ja` alleen als `lane.lane === 'feature'` en de merge-toets (V-4, "Begrip: gate-pad")
     slaagt; anders de eerste reden (`lane: …` of `gate-pad <pad>`).
 - Lane en merge-uitslag veranderen `uitslag` niet: een framework-PR blijft groen of `overgang` zoals nu.
-- Uitvoer: regels in de samenvatting en twee annotaties (zie "Letterlijke meldingen"). Geen wijziging in `guard.yml` nodig: de stap
-  draait al `node scripts/kit/diff-guard.mjs` met alle benodigde omgevingsvariabelen.
+- Uitvoer: regels in de samenvatting en twee annotaties (zie "Letterlijke meldingen"). De `<reden>` in een annotatie (die paden uit de
+  PR kan bevatten) wordt geëscaped zoals `annotatie()` in `scripts/kit/check-document-status.mjs:266` (`%` → `%25`, CR → `%0D`,
+  LF → `%0A`), zodat een bestandsnaam geen workflowcommando kan invoegen. Geen wijziging in `guard.yml` nodig: de stap draait al
+  `node scripts/kit/diff-guard.mjs` met alle benodigde omgevingsvariabelen.
 
 ### A5 — `requiredChecks`
 
@@ -194,7 +198,9 @@ is; oudere runs tellen niet. Van die ene run leest hij de annotaties (alleen GET
 **Config en context.**
 
 - `loadConfig` leest `merge`; ontbreekt, onleesbaar of een andere waarde dan `"feature-lane"` → `"eigenaar"`. De hook laadt de config
-  uit het anker (zoals `onderhoud`), nooit uit de werkmap.
+  uit het anker (zoals `onderhoud`), nooit uit de werkmap. Is het anker of de config onleesbaar, dan faalt de hook al vóór `decide`
+  dicht (`loadConfig`, :31-33); dat is bestaand gedrag en geen geval van deze tabel, want een onleesbaar anker is via `Ctx` niet uit
+  te drukken.
 - `Ctx` (:16-19) krijgt één nieuw optioneel veld `mergeFeiten?: () => MergeFeiten`, dat de hook-entry (`rails/hooks/rolhek.mjs`) vult
   en tests als fake meegeven. `MergeFeiten` = `{ changes: Wijziging[], basis: (pad) => string | null, head: (pad) => string | null,
   headSha: string, upstreamSha: string | null, werkmapSchoon: boolean }`: de diff van `<anker-main>...HEAD` (`git diff --name-status
@@ -209,20 +215,29 @@ is; oudere runs tellen niet. Van die ene run leest hij de annotaties (alleen GET
 deny als alles geldt; anders deny met de eerste reden:
 
 1. `role` is de hoofdsessie (anders `alleen de hoofdsessie`);
-2. `merge === "feature-lane"` (anders `modus is "eigenaar"`; anker onleesbaar → `anker onleesbaar`);
+2. `merge === "feature-lane"` (anders `modus is "eigenaar"`);
 3. de ruwe woorden van het commandosegment, vóór `splitCommand`, zijn exact
    `['gh', 'pr', 'merge', <nr>, '--squash', '--match-head-commit', <sha>]`: geen omhulsel uit `WRAPPERS`
    (`rails/hooks/lib/shell.mjs:168`: `env`, `command`, `sudo`, `exec`, `time`, `nohup`, `nice`) en geen voorafgaande toewijzing
    (`X=1`, `GH_REPO=x`, `GH_TOKEN=x`); `<nr>` volgens `/^[1-9]\d*$/`; `<sha>` volgens `/^[0-9a-f]{40}$/` (anders `geen exacte vorm`);
 4. `<sha>` is gelijk aan `mergeFeiten().headSha` (anders `sha is niet de lokale HEAD`);
 5. `werkmapSchoon` (anders `werkmap niet schoon`) en `upstreamSha === headSha` (anders `HEAD is niet gepusht`);
-6. `laneVan` met de verhuisde besluitbepaling en inhoudstoets geeft `feature` (anders `lane: <reden>`);
+6. `laneVan` met de lanetoets (besluitbepaling, `verifyGeenRename` en inhoudstoets uit `scripts/kit/lane.mjs`) geeft `feature`
+   (anders `lane: <reden>`);
 7. de merge-toets (V-4): `geraakt.gates` bevat alleen de mini-spec, `geraakt.json` en `geraakt.tests` zijn leeg (anders
    `gate-pad <pad>`).
 
 **Uitkomst.** Slagen alle toetsen, dan zet het rolhek de merge in `ask` met de melding uit "Letterlijke meldingen" en nooit
 `decision.allow = true` (`Decision`, :23); de prompt is het vangnet van V-3. Een uitzondering bij 4–7 geeft deny (in code dicht, ook al
 is de hook als geheel fail-open). `gh api …/merge`, GraphQL-merge, `--admin`, `--auto` en elke andere vorm blijven deny voor elke rol.
+
+**Bekende gaten** (niet gedicht door B1; zie V-13):
+
+- Het rolhek past `ghForbidden` alleen toe als het programma exact `gh` heet (`forbidden`, :497). `/usr/bin/gh pr merge …` of
+  `./gh pr merge …` ontloopt zowel het rolhek als de `deny`/`ask`-patronen in `.claude/settings.json`; dat gat bestaat nu al voor elke
+  merge.
+- Het rolhek controleert de statuscommit van de mini-spec (alleen statusregels, digest gelijk, committer web-flow; ADR 0029 punt 3)
+  niet; dat doet alleen `document-status` in CI, en die staat in `requiredChecks`. De ask-melding zegt dat.
 
 Tabeltests in een nieuw bestand `test/hooks/rolhek-merge.test.ts`, met een eigen config (de echte `.claude/gates.json` plus `merge`) en
 een fake `mergeFeiten`. `S` is een geldige 40-teken-SHA die gelijk is aan `headSha` en `upstreamSha`; "basis" is: mini-spec
@@ -251,7 +266,7 @@ een fake `mergeFeiten`. `S` is een geldige 40-teken-SHA die gelijk is aan `headS
 | 19 | hoofdsessie | `feature-lane` | mini-spec + nieuwe migratie met `create function`; nieuwe tabel zonder kop "Datawijzigingen (met grants)" | als 1 | deny `lane: …` (twee rijen) |
 | 20 | hoofdsessie | `feature-lane` | basis, werkmap met getrackte wijziging | als 1 | deny `werkmap niet schoon` |
 | 21 | hoofdsessie | `feature-lane` | basis, `upstreamSha` ≠ `headSha` of `null` | als 1 | deny `HEAD is niet gepusht` |
-| 22 | hoofdsessie | anker onleesbaar | basis | als 1 | deny `anker onleesbaar` |
+| 22 | hoofdsessie | `feature-lane` | rename `docs/specs/a.md` (op de basis `goedgekeurd`) → `docs/specs/b.md` met `sjabloon: mini` en status `goedgekeurd`, plus `src/web/x.tsx` | als 1 | deny `lane: …` (`verifyGeenRename`) |
 | 23 | hoofdsessie | `feature-lane` | basis + elk van: `deploy/x`, `src/api/kit.ts`, `docs/roadmap.md`, `renovate.json` | als 1 | deny `gate-pad <pad>` (elk een eigen rij) |
 | 24 | hoofdsessie | `feature-lane` | geen `mergeFeiten` in de ctx; `mergeFeiten` gooit | als 1 | deny `geen mergefeiten` |
 | 25 | hoofdsessie | `feature-lane` | basis | `gh api -X PUT repos/o/r/pulls/12/merge` / GraphQL `mergePullRequest` | deny (bestaand) |
@@ -280,7 +295,7 @@ De sectie "Mergen" wordt letterlijk:
 Het rolhek beslist met `merge` uit zijn anker; deze stap leest de modus alleen ter informatie uit
 `git show origin/main:.claude/gates.json`. Wijken die af (bijvoorbeeld een oude lokale `origin/main`), dan geldt de weigering van het
 rolhek. Bij `"eigenaar"` (of zonder sleutel) reviewt en merget de eigenaar; de hoofdsessie merget nooit. Bij `"feature-lane"` merget de
-hoofdsessie zelf (ADR 0029 punt 14, ADR 0035), alleen als alles geldt:
+hoofdsessie zelf (ADR 0029 punt 14), alleen als alles geldt:
 
 1. De reviewer gaf akkoord op de huidige head: na de laatste review is `git diff <reviewer-sha>..HEAD` leeg of door de reviewer opnieuw
    bekeken, en er staat geen blokkerende bevinding open.
@@ -288,19 +303,20 @@ hoofdsessie zelf (ADR 0029 punt 14, ADR 0035), alleen als alles geldt:
 3. De werkmap is schoon en `HEAD` is gepusht; de statuscommit van de eigenaar (webeditor) is lokaal binnengehaald met `git pull --ff-only`.
 4. De PR raakt geen gate-pad buiten de mini-spec.
 
-Dan exact `gh pr merge <nr> --squash --match-head-commit <sha>`, met `<sha>` uit `git rev-parse HEAD`, niets anders. De eigenaar krijgt
-een permissieprompt. Weigert het rolhek of de eigenaar, stop dan en meld de reden; probeer geen andere vorm.
+Dan exact `gh pr merge <nr> --squash --match-head-commit <sha>`, niets anders. Lees `<sha>` eerst met `git rev-parse HEAD` en zet de
+volledige 40 tekens letterlijk in het commando; geen `$(...)`, geen variabele, geen omhulsel (`env`, `command`) en geen toewijzing
+ervoor. De eigenaar krijgt een permissieprompt. Weigert het rolhek of de eigenaar, stop dan en meld de reden; probeer geen andere vorm.
 Na de merge: `gh pr comment <nr> --body "<melding>"` met de melding hieronder, en dezelfde tekst in de eindmelding. Een framework-lane-PR
 merget altijd de eigenaar.
 
 Melding: `Gemerged door de agent (feature-lane, ADR 0029 punt 14) op <head-sha>. Reviewer-akkoord op <reviewer-sha>; pr:verify --lane groen. Nieuwe permissies en routes: zie het risico-overzicht van de diff-guard.`
 ```
 
-`allowed-tools` in de frontmatter van `SKILL.md` (:3) krijgt géén `gh pr merge`-patroon: een toegestaan gereedschap in de skill zou de
+`allowed-tools` in de frontmatter van `SKILL.md` (:4) krijgt géén `gh pr merge`-patroon: een toegestaan gereedschap in de skill zou de
 prompt uit B2 overslaan. `test/rails/opleveren-skill.test.ts` blijft geldig (de tekst noemt "de eigenaar merget"); nieuwe gevallen in
 `test/rails/opleveren-merge.test.ts`: de skill noemt `pr:verify <nr> --lane`, `gh pr merge <nr> --squash --match-head-commit <sha>`,
-`git rev-parse HEAD` en `gh pr comment`; noemt `--admin`, `--auto` en `--delete-branch` niet als toegestane vorm; en `allowed-tools`
-bevat geen `gh pr merge`.
+`git rev-parse HEAD` en `gh pr comment`; noemt `--admin`, `--auto` en `--delete-branch` niet als toegestane vorm; bevat geen
+`$(git rev-parse` in een merge-commando; en `allowed-tools` bevat geen `gh pr merge`.
 
 ### B4 — `.github/workflows/guard.yml` (eigenaar pusht)
 
@@ -311,15 +327,20 @@ functionele wijziging: lane en merge-uitslag komen uit het script (A4).
 ### B5 — `docs/framework.md` (eigenaar)
 
 - §8 stap 6, de zin "Inhoudelijke goedkeuring en merge blijven van de eigenaar;" wordt "Inhoudelijke goedkeuring blijft van de eigenaar;
-  de merge ook, behalve een feature-lane-PR bij `merge: \"feature-lane\"` op `main`, na een prompt (ADR 0029 punt 14, ADR 0035, skill
+  de merge ook, behalve een feature-lane-PR bij `merge: \"feature-lane\"` op `main`, na een prompt (ADR 0029 punt 14, skill
   `opleveren`);".
 - §8 stap 7 wordt: "**Eigenaar** reviewt en merget; een feature-lane-PR merget de hoofdsessie volgens stap 6, na een prompt en met
   achteraf een melding aan de eigenaar."
 - §8, tabel PreToolUse rolhek (Bash): bij "mergen (…)" toevoegen: "behalve exact `gh pr merge <nr> --squash --match-head-commit <sha>`
   zonder omhulsel of toewijzing, door de hoofdsessie, met `<sha>` = lokale `HEAD`, bij `merge: \"feature-lane\"` op het anker, een
-  feature-lane van `HEAD` en geen gate-pad buiten de mini-spec; dan `ask`, nooit `allow` (ADR 0035)".
-- §10 eerste bullet: "De eigenaar merget." wordt "De eigenaar merget; een feature-lane-PR mag de agent mergen na een prompt (ADR 0029
-  punt 14, ADR 0035)."
+  feature-lane van `HEAD` en geen gate-pad buiten de mini-spec; dan `ask`, nooit `allow` (ADR 0029 punt 14)".
+- §8, alinea permissieregels (`docs/framework.md:364-365`): in de opsomming van de deny-regels wordt "mergen" vervangen door "mergen
+  (behalve `ask` op exact `gh pr merge * --squash --match-head-commit *`; `--admin`, `--auto` en `gh api *merge*` blijven deny, ADR 0029
+  punt 14)".
+- §10 eerste bullet (`docs/framework.md:396`): "De eigenaar merget." wordt "De eigenaar merget; een feature-lane-PR mag de agent mergen
+  na een prompt (ADR 0029 punt 14)."
+- Ongewijzigd, met reden: `docs/framework.md:424` ("De eigenaar reviewt en merget het inhoudelijke besluit") gaat over besluit-PR's in
+  de framework-lane, die de eigenaar blijft mergen.
 - §10 bullet "Instellingen als code": "faalt als de agent onder het account van de eigenaar werkt" wordt "meldt `overgang` als de
   agent onder het account van de eigenaar werkt (ADR 0029 punt 17, geaccepteerd)" (V-6).
 
@@ -334,12 +355,24 @@ Regel 9: "→ eigenaar merget (jij nooit)." wordt "→ eigenaar merget (jij alle
 
 ### B8 — ADR 0030 (eigenaar, correctieprocedure spoor 2)
 
-De statusregel van ADR 0030 wordt `Status: geaccepteerd — [0035](0035-<naam>.md)`.
+De statusregel van ADR 0030 wordt `Status: geaccepteerd — [0029](0029-snellere-beslisroute.md)`: ADR 0029 punt 15 wijzigt 0030 voor de
+feature-lane. Toegestaan door `statusregelOvertreding` (link naar een bestaand ADR met alleen het nummer als linktekst). Overweging
+voor de eigenaar: ADR 0029 vraagt deze verwijsregel al sinds zijn acceptatie (punt 15, "0030 krijgt een verwijsregel"), dus hij kan ook
+in de ADR 0029-PR mee.
 
-### C — aanzetten (eigenaar)
+### B9 — overige teksten (eigenaar of docs-rol, in PR B)
 
-`.claude/gates.json`: `"merge": "feature-lane"`. In de PR-beschrijving de volledige uitvoer van
-`node scripts/check-github.mjs BramLambertJansen/template` met exit 0. `check-docs` faalt als A1/A2 ontbreken (AC-9).
+- `.claude/agents/reviewer.md:3`: "vóór de eigenaar merget" wordt "vóór de merge (door de eigenaar, of in de feature-lane door de
+  hoofdsessie na een prompt)".
+- `docs/operations/agent-doorloop.md:3`: "De eigenaar beslist inhoudelijk en merget." wordt "De eigenaar beslist inhoudelijk en merget;
+  een feature-lane-PR merget de hoofdsessie na een prompt (ADR 0029 punt 14, skill `opleveren`)."
+- `docs/operations/agent-doorloop.md:117`: "De agent merget nooit." wordt "De agent merget nooit, behalve een feature-lane-PR via de skill
+  `opleveren` (ADR 0029 punt 14)."
+- `docs/operations/agent-doorloop.md:138`: "De eigenaar merget zelf." wordt "De eigenaar merget zelf; een feature-lane-PR mag de
+  hoofdsessie mergen (skill `opleveren`)."
+- Gecontroleerd met `grep` op "merge nooit", "merget nooit", "eigenaar merget" in `AGENTS.md`, `CLAUDE.md`, `.claude/agents/*.md`,
+  `docs/operations/agent-doorloop.md` en `docs/framework.md`; andere treffers (`docs/operations/agent-doorloop.md:19`, :33, :113, :143)
+  gaan over besluiten of guardwijzigingen en blijven.
 
 ### Letterlijke meldingen
 
@@ -357,8 +390,8 @@ De statusregel van ADR 0030 wordt `Status: geaccepteerd — [0035](0035-<naam>.m
 | diff-guard, samenvatting | `**Lane:** feature — <reden>` / `**Lane:** framework — <reden>` / `**Lane:** geen — <reden>`, daaronder `**Agent-merge:** ja` of `**Agent-merge:** nee — <reden>` |
 | diff-guard, annotaties | `::notice title=lane::feature` / `::notice title=lane::framework` / `::notice title=lane::geen: <reden>`, en `::notice title=agent-merge::ja` / `::notice title=agent-merge::nee: <reden>` |
 | pr:verify `--lane`, fout | `lane: geen agent-merge volgens diff-guard op <sha7> (<gevonden>)` / `lane: geen geslaagde diff-guard van GitHub Actions op <sha7>` |
-| rolhek, ask | `mergen: feature-lane op <sha7>, geen gate-pad buiten <mini-spec>; de eigenaar beslist met deze prompt (ADR 0029 punt 14, ADR 0035)` |
-| rolhek, deny | `mergen: <reden>; alleen exact gh pr merge <nr> --squash --match-head-commit <sha> door de hoofdsessie, bij merge "feature-lane" op main en een feature-lane (ADR 0029 punt 14, ADR 0035)` met `<reden>` uit: `modus is "eigenaar"`, `anker onleesbaar`, `geen exacte vorm`, `alleen de hoofdsessie`, `sha is niet de lokale HEAD`, `werkmap niet schoon`, `HEAD is niet gepusht`, `lane: <reden van laneVan>`, `gate-pad <pad>`, `geen mergefeiten` |
+| rolhek, ask | `mergen: feature-lane op <sha7>, geen gate-pad buiten <mini-spec>; de statuscommit van de eigenaar (web-flow) controleert alleen document-status in CI, niet het rolhek; de eigenaar beslist met deze prompt (ADR 0029 punt 14)` |
+| rolhek, deny | `mergen: <reden>; alleen exact gh pr merge <nr> --squash --match-head-commit <sha> door de hoofdsessie, bij merge "feature-lane" op main en een feature-lane (ADR 0029 punt 14)` met `<reden>` uit: `modus is "eigenaar"`, `geen exacte vorm`, `alleen de hoofdsessie`, `sha is niet de lokale HEAD`, `werkmap niet schoon`, `HEAD is niet gepusht`, `lane: <reden van laneVan>`, `gate-pad <pad>`, `geen mergefeiten` |
 
 ## Acceptatiecriteria
 
@@ -389,8 +422,10 @@ PR A:
 - **agent-merge/AC-12** — Voor elk negatief geval uit ADR 0029 punt 7 (1)–(8) en (10), een nieuwe migratie met meer dan een nieuwe
   tabel, en een nieuwe tabel zonder kop "Datawijzigingen (met grants)" in de mini-spec, meldt `diff-guard` `lane: geen: <reden>` of
   `lane: framework`, nooit `feature`, en `agent-merge: nee`.
-- **agent-merge/AC-13** — `diff-guard` en `check-document-status` geven op dezelfde fixtures (AC-11, AC-12) dezelfde lane; beide roepen
-  de besluitbepaling en de inhoudstoets aan uit `scripts/kit/lane.mjs`, en `check-document-status` bevat ze zelf niet meer.
+- **agent-merge/AC-13** — `diff-guard` en `check-document-status` geven op dezelfde fixtures (AC-11, AC-12, en een rename
+  `docs/specs/a.md` met status `goedgekeurd` op de basis → `docs/specs/b.md` met `sjabloon: mini` en status `goedgekeurd`, plus code)
+  dezelfde lane (bij de rename: niet `feature`); beide roepen de besluitbepaling, `verifyGeenRename` en de inhoudstoets aan uit
+  `scripts/kit/lane.mjs`, en `check-document-status` bevat ze zelf niet meer.
 - **agent-merge/AC-14** — Gegeven lane `feature` plus één van `docs/roadmap.md`, `deploy/x`, `src/api/kit.ts`, `renovate.json`, of een
   gewijzigde sleutel `scripts` in `package.json`, dan meldt `diff-guard` `agent-merge: nee: gate-pad <pad>` (bij `package.json`:
   `gate-pad package.json → scripts`). Een nieuwe test naast de mini-spec geeft `agent-merge: ja`.
@@ -402,19 +437,19 @@ PR A:
   annotaties `lane`=`feature` en `agent-merge`=`ja`: exit 0. Exit 1 met de letterlijke melding bij: `framework` of `geen: …`;
   `agent-merge`=`nee: …`; een ontbrekende of dubbele annotatie; een andere `app_id`; een andere SHA; en wanneer een oudere run de goede
   annotaties heeft maar de laatste niet. Zonder `--lane` is de uitvoer gelijk aan nu.
-- **agent-merge/AC-18** — De statusregel van ADR 0029 is `Status: geaccepteerd — [0035](0035-<naam>.md)` met een bestaand doel, en
-  `document-status` is groen (`statusregelOvertreding` geeft niets); de rest van ADR 0029 is ongewijzigd.
-- **agent-merge/AC-19** — `docs/nieuwe-app.md` (:366, :468) en `docs/operations/agent-doorloop.md` noemen `check-github` als bestaand en
-  de PR-volgorde 0 → A → B → C; `check-docs` is groen.
+- **agent-merge/AC-18** — Voorwaarde uit de ADR 0029-PR: `docs/adr/0029-snellere-beslisroute.md` heeft status `geaccepteerd` en bevat
+  in punt 14 de tekst `gh pr merge <nr> --squash --match-head-commit <sha>`; de test leest het bestand en faalt anders.
+- **agent-merge/AC-19** — `docs/nieuwe-app.md` en `docs/operations/agent-doorloop.md` bevatten `node scripts/check-github.mjs`, en
+  `docs/nieuwe-app.md` bevat niet meer "`check-github` bestaat nog niet"; de test leest beide bestanden.
 
 PR B (de eigenaar past toe; tests eerst):
 
 - **agent-merge/AC-20** — Tabelgeval 1 uit B1 geeft `ask` met de letterlijke ask-melding, geen deny en `allow` niet `true`.
-- **agent-merge/AC-21** — Tabelgevallen 2–5 en 22 geven deny met reden `modus is "eigenaar"` of `anker onleesbaar`.
+- **agent-merge/AC-21** — Tabelgevallen 2–5 geven deny met reden `modus is "eigenaar"`.
 - **agent-merge/AC-22** — Tabelgevallen 6–12 en 27 geven deny met reden `geen exacte vorm`.
 - **agent-merge/AC-23** — Tabelgeval 13 geeft deny met reden `sha is niet de lokale HEAD`.
 - **agent-merge/AC-24** — Tabelgeval 14 geeft deny voor elke subagentrol en voor een onbekende rol.
-- **agent-merge/AC-25** — Tabelgevallen 15–19 geven deny met reden `lane: …`.
+- **agent-merge/AC-25** — Tabelgevallen 15–19 en 22 geven deny met reden `lane: …`.
 - **agent-merge/AC-26** — Tabelgevallen 20 en 21 geven deny met `werkmap niet schoon` of `HEAD is niet gepusht`.
 - **agent-merge/AC-27** — Tabelgeval 23 geeft per pad deny met reden `gate-pad <pad>`.
 - **agent-merge/AC-28** — Tabelgeval 24 geeft deny met reden `geen mergefeiten`; ook met de echte `.claude/gates.json` en
@@ -426,13 +461,12 @@ PR B (de eigenaar past toe; tests eerst):
   `Bash(gh api *merge*)` (deny).
 - **agent-merge/AC-32** — De skill `opleveren` bevat de sectie uit B3 letterlijk, `allowed-tools` bevat geen `gh pr merge`, en
   `test/rails/opleveren-skill.test.ts` blijft groen.
-- **agent-merge/AC-33** — `docs/framework.md`, `AGENTS.md`, `CLAUDE.md` en ADR 0030 bevatten de teksten uit B5–B8; `check-docs`,
-  `document-status` en `test/rails/opleveren-skill.test.ts` blijven groen.
+- **agent-merge/AC-33** — `docs/framework.md`, `AGENTS.md`, `CLAUDE.md`, ADR 0030, `.claude/agents/reviewer.md` en
+  `docs/operations/agent-doorloop.md` bevatten de teksten uit B5–B9, en `docs/framework.md` noemt in de deny-opsomming van de
+  permissieregels "mergen" niet meer zonder de uitzondering; `check-docs`, `document-status` en `test/rails/opleveren-skill.test.ts`
+  blijven groen.
 
-PR C:
-
-- **agent-merge/AC-34** — `check-docs` is groen met `"merge": "feature-lane"`, en de PR-beschrijving bevat uitvoer van `check-github`
-  met exit 0 (handmatig, door de eigenaar; geen geautomatiseerde test).
+PR C heeft geen AC: de controle is handmatig door de eigenaar (zie Levering).
 
 ## Randgevallen
 
@@ -446,14 +480,19 @@ PR C:
 | PR-head op GitHub ≠ lokale `HEAD` (iemand pushte erbij) | het rolhek ziet het niet (offline); GitHub weigert de merge door `--match-head-commit` | n.v.t. |
 | `main` schuift door tussen `pr:verify` en de merge | GitHub eist de checks op de head; de lane is t.o.v. de merge-base berekend, niet opnieuw | n.v.t. |
 | Rolhek-timeout of -crash (hook fail-open, framework §8) | de `ask`-regel uit B2 blijft staan: de eigenaar krijgt een prompt zonder de controle van het rolhek en beslist zelf (V-3); `--admin`, `--auto` en `gh api *merge*` blijven deny in de instellingen | n.v.t. |
+| `/usr/bin/gh pr merge …` of `./gh pr merge …` | ontloopt rolhek en instellingspatronen (bekend gat, B1; V-13); GitHub blijft de grens met de verplichte checks | n.v.t. |
+| Statuscommit van de mini-spec niet via web-flow of met inhoud | het rolhek ziet het niet; `document-status` (verplicht in `pr:verify`) wordt rood, dus `pr:verify --lane` faalt | n.v.t. |
 | Feature-PR die ook `docs/roadmap.md` aanvinkt | `gate-pad docs/roadmap.md` → geen agent-merge; de eigenaar merget (V-4) | n.v.t. |
 | `merge` staat op `"feature-lane"` in een app uit de template | geldt daar ook, maar alleen als die app zelf C heeft gedaan (eigen `main`) | n.v.t. |
 | PR met mini-spec waarvan de status al op `main` stond (bouw-PR na een besluit-PR) | geen in-PR-status → lane `null` → geen agent-merge; zie V-5 | n.v.t. |
 
 ## Raakt ook
 
-- ADR 0035 (PR 0) en de verwijsregels in ADR 0029 (A0) en ADR 0030 (B8).
-- `scripts/kit/check-document-status.mjs` (besluitbepaling en inhoudstoets verhuizen naar `scripts/kit/lane.mjs`, gedrag gelijk; AC-13).
+- ADR 0029 (eigen PR vóór de spec, V-11) en de statusregel van ADR 0030 (B8).
+- `scripts/kit/check-document-status.mjs` (besluitbepaling, `verifyGeenRename` en inhoudstoets verhuizen naar `scripts/kit/lane.mjs`,
+  gedrag gelijk; AC-13).
+- A5 raakt ook `gebouwd`: `canRecordBuilt` (`rails/hooks/lib/built-evidence.mjs:37`) eist alle `requiredChecks` op de gevalideerde SHA,
+  dus na A5 ook een geslaagde `diff-guard`. In de overgang is die groen voor een PR van de eigenaar.
 - `scripts/kit/pr-verify.mjs`, `scripts/kit/github-evidence.mjs` (annotaties lezen, A6).
 - `rails/hooks/rolhek.mjs` (hook-entry vult `mergeFeiten`, B1).
 - `docs/nieuwe-app.md`, `docs/operations/agent-doorloop.md`, `CHANGELOG.md`; `docs/roadmap.md` (nieuw item, door de eigenaar; vinkje na C
@@ -479,28 +518,31 @@ PR C:
 | AC-7 t/m AC-10 | `test/rails/check-docs-merge.test.ts` |
 | AC-11 t/m AC-15 | `test/rails/diff-guard-lane.test.ts` (fixtures in `test/rails/fixtures/`) |
 | AC-16, AC-17 | `test/scripts/pr-verify-lane.test.ts` |
-| AC-18 | `document-status` in CI op PR A, plus `test/rails/diff-guard-lane.test.ts` leest de statusregel niet; handmatig in de review |
-| AC-19 | `check-docs` (paden) plus review |
+| AC-18, AC-19 | `test/rails/agent-merge-docs.test.ts` (leest de tekst van ADR 0029, `docs/nieuwe-app.md` en `docs/operations/agent-doorloop.md`) |
 | AC-20 t/m AC-30 | `test/hooks/rolhek-merge.test.ts` |
 | AC-31 | `test/rails/sandbox-settings-merge.test.ts` |
-| AC-32, AC-33 | `test/rails/opleveren-merge.test.ts` (skill, framework-, AGENTS- en CLAUDE-teksten) |
-| AC-34 | handmatig door de eigenaar in PR C |
+| AC-32, AC-33 | `test/rails/opleveren-merge.test.ts` (skill, framework-, AGENTS-, CLAUDE-, reviewer- en agent-doorloopteksten) |
 
-Bestaande tests worden niet gewijzigd. De tests voor PR B staan in PR B (ze falen tegen het rolhek van PR A).
+Elk testbestand noemt de AC-id's als `agent-merge/AC-n`, zodat `check-docs` ze vindt zodra de spec `gebouwd` is (`docs/framework.md:422`).
+Bestaande tests worden niet gewijzigd. De tests voor PR B staan in PR B (ze falen tegen het rolhek van PR A). PR C heeft geen
+geautomatiseerde test: de eigenaar controleert de uitvoer van `check-github` (zie Levering).
 
 ## Besloten door de eigenaar (2026-10-18)
 
 Akkoord met het advies van de hoofdsessie; de status `goedgekeurd` volgt bij de merge van deze spec.
 
-- **V-1:** de uitgebreide vorm `gh pr merge <nr> --squash --match-head-commit <sha>`; ADR 0029 punt 14 krijgt in PR A een verwijsregel.
+- **V-1:** de uitgebreide vorm `gh pr merge <nr> --squash --match-head-commit <sha>`; ADR 0029 punt 14 wijzigt mee (zie V-11).
 - **V-2:** B1 (rolhek) blijft bij de eigenaar in PR B.
 - **V-3:** `ask` als vangnet, geen `allow`; de prompt per merge is het aanvaarde gevolg zolang de hook geen fail-closed garantie heeft.
 - **V-4:** agent-merge alleen als geen gate-pad buiten de mini-spec zelf geraakt is (tabelgeval 23).
 - **V-6:** `check-github` meldt `overgang` onder het account van de eigenaar in plaats van een fout.
+- **V-11:** geen ADR 0035. ADR 0029 zelf wijzigt in een aparte PR vóór deze spec: terug op `voorgesteld` met record, punt 14 en het
+  verworpen alternatief op :209 aangepast, daarna accepteert de eigenaar opnieuw. Geen verwijsregel in ADR 0029 in PR A.
+- **V-12:** de eigenaar voegt het roadmap-item "ADR 0029 stap 7: agent-merge" toe via een eigen branch (afgesproken).
 
 ## Nog niet beslist
 
-V-1 tot en met V-4 en V-6 hieronder zijn hierboven besloten; de tekst blijft als onderbouwing staan.
+V-1 tot en met V-4, V-6, V-11 en V-12 hieronder zijn hierboven besloten; de tekst blijft als onderbouwing staan.
 
 - **V-1 Exacte vorm.** ADR 0029 punt 14 zegt exact `gh pr merge <nr> --squash`. Het rolhek werkt offline en kan `<nr>` niet aan de
   branch koppelen: het toetst de lane van de lokale `HEAD`, niet van PR `<nr>`. Voorstel: de vorm
@@ -532,8 +574,9 @@ V-1 tot en met V-4 en V-6 hieronder zijn hierboven besloten; de tekst blijft als
   ADR 0029 punt 14(3) noemen de diff-guard; deze spec volgt dat. Wijzigen?
 - **V-10 Melding achteraf.** Is `gh pr comment` (nu niet geweigerd door rolhek of `.claude/settings.json`) de gewenste vorm, en is de
   tekst uit B3 goed?
-- **V-11 ADR 0035.** V-1 en V-3 wijzigen ADR 0029 punt 14 en gaan in tegen het verworpen alternatief op :209; volgens de
-  correctieprocedure (spoor 1) vraagt dat een nieuw ADR vóór de verwijsregel (A0, B8). Akkoord met PR 0 (ADR 0035 `voorgesteld`, door
-  de architect), of een andere route? Zonder ADR 0035 kan A0 niet: een statusregel linkt alleen naar een bestaand ADR.
-- **V-12 Roadmap-item.** "ADR 0029 stap 7: agent-merge" bestaat niet in `docs/roadmap.md`; de eigenaar voegt het toe (met
-  `aanleiding:`), onder `## Nu` of `## Volgende`.
+- **V-11 Route voor de ADR-wijziging.** V-1 en V-3 wijzigen ADR 0029 punt 14 en gaan in tegen het verworpen alternatief op :209. Nieuw
+  ADR of ADR 0029 zelf wijzigen?
+- **V-12 Roadmap-item.** "ADR 0029 stap 7: agent-merge" bestaat niet in `docs/roadmap.md`; wie voegt het toe?
+- **V-13 Gat bij een volledig pad naar `gh`.** `/usr/bin/gh pr merge …` ontloopt nu al rolhek en instellingspatronen (B1, "Bekende
+  gaten"). Voorstel: het rolhek behandelt elk programma met basisnaam `gh` als `gh` en weigert mergen als het programma niet exact `gh`
+  is. Dat is strenger (geen ADR nodig), maar valt buiten deze opdracht. Meenemen in B1, of een apart roadmap-item?
