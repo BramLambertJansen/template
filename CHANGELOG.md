@@ -6,6 +6,8 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Opgelost
 
+- Het inlogformulier hanteert nu ook de bestaande `MAX_EMAIL_LENGTH` uit `src/shared/limits.ts`, met een Nederlandse melding bij een te lang adres; dezelfde grens geldt al bij uitnodigen en e-mail wijzigen (`src/shared/schemas/login-email-length.test.ts`).
+
 - De terugweg na inloggen wordt na URL-normalisatie gecontroleerd. Externe doelen met backslashes of tabs/regeleinden en genormaliseerde paden naar de inlogpagina worden geweigerd; gewone interne paden behouden hun zoekparameters en fragment (`src/web/lib/session.ts`, `src/web/lib/session-redirect.test.ts`).
 
 ### Toegevoegd
