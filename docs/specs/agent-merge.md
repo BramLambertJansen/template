@@ -385,7 +385,19 @@ PR C:
 
 Bestaande tests worden niet gewijzigd. De tests voor PR B staan in PR B (ze falen tegen het rolhek van PR A); zie V-2.
 
-## Niet beslist
+## Besloten door de eigenaar (2026-10-18)
+
+Akkoord met het advies van de hoofdsessie; de status `goedgekeurd` volgt bij de merge van deze spec.
+
+- **V-1:** de uitgebreide vorm `gh pr merge <nr> --squash --match-head-commit <sha>`; ADR 0029 punt 14 krijgt in PR A een verwijsregel.
+- **V-2:** B1 (rolhek) blijft bij de eigenaar in PR B.
+- **V-3:** `ask` als vangnet, geen `allow`; de prompt per merge is het aanvaarde gevolg zolang de hook geen fail-closed garantie heeft.
+- **V-4:** agent-merge alleen als geen gate-pad buiten de mini-spec zelf geraakt is (tabelgeval 23).
+- **V-6:** `check-github` meldt `overgang` onder het account van de eigenaar in plaats van een fout.
+
+## Nog niet beslist
+
+V-1 tot en met V-4 en V-6 hieronder zijn hierboven besloten; de tekst blijft als onderbouwing staan.
 
 - **V-1 Exacte vorm.** ADR 0029 punt 14 zegt exact `gh pr merge <nr> --squash`. Het rolhek werkt offline en kan `<nr>` niet aan de
   branch koppelen: het toetst de lane van de lokale `HEAD`, niet van PR `<nr>`. Voorstel: de vorm
