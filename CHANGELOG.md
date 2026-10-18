@@ -6,6 +6,7 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Opgelost
 
+- Gedeelde zoeklinks met `?q=true` of `?q=false` behouden hun letterlijke zoekterm. De router las die als booleans, waarna het zoekschema de term wegliet (`src/core/shared/list-search.ts`).
 - De accountformulieren geven bij een te lang inlogwachtwoord, huidig wachtwoord of nieuw e-mailadres een Nederlandse lengtemelding met het maximum. De bestaande grenzen blijven gelijk (`src/shared/schemas/auth.ts`).
 - De API-client laat optionele queryvelden met waarde `undefined` weg bij GET en DELETE. Ze kwamen als de tekst `"undefined"` bij de server terecht, waardoor een weggelaten filter onbedoeld een validatiefout kon geven. Lege tekst, `0`, `false` en de letterlijke zoekterm `"undefined"` blijven behouden (`src/core/web/lib/api-client.ts`).
 - Het inlogformulier hanteert nu ook de bestaande `MAX_EMAIL_LENGTH` uit `src/shared/limits.ts`, met een Nederlandse melding bij een te lang adres; dezelfde grens geldt al bij uitnodigen en e-mail wijzigen (`src/shared/schemas/login-email-length.test.ts`).
