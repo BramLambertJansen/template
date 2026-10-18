@@ -6,6 +6,10 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Opgelost
 
+- Navigatielinks respecteren `target` en `download`: openen in een ander venster of downloaden wordt niet meer vervangen door navigatie in het huidige tabblad (`src/core/web/ui/nav-link.tsx`).
+- Oude retrytimers van bevestigingsdialogen kunnen de dubbelklikbeveiliging na heropenen of snel opnieuw proberen niet meer voortijdig opheffen. De timer wordt bij verwijderen van de dialoog opgeruimd (`src/core/web/ui/confirm-dialog.tsx`).
+- Onbekende permissienamen zoals `constructor` en `__proto__` worden geweigerd zonder een fout te veroorzaken (`src/core/shared/can.ts`).
+- Profielinitialen knippen Unicode-letters niet meer doormidden (`src/core/web/ui/topbar.tsx`).
 - Gedeelde lijstlinks behouden ook filters en sorteringen waarvan de toegestane tekstwaarden op getallen of booleans lijken, zoals `jaar=2026` of `actief=false`. De API blijft echte getallen en booleans weigeren (`src/core/shared/list-search.ts`).
 - Dialogen slaan verborgen, uitgeschakelde en inerte velden over bij het kiezen van de eerste focus. Een bruikbaar `data-autofocus`-doel houdt voorrang (`src/core/web/ui/dialog.tsx`).
 - Een synchrone fout bij het starten van een readiness-controle geeft nu “niet klaar” en blokkeert latere controles niet blijvend (`src/core/api/http/readiness.ts`).
