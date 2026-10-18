@@ -10,7 +10,7 @@ import { globMatch } from '../../rails/hooks/lib/rolhek.mjs';
 /** @typedef {{ lane: 'feature' | 'framework' | null, reden: string }} Uitslag */
 
 const BEKEND = [/^src\//, /^docs\//, /^db\//, /^CHANGELOG\.md$/];
-const INSTRUCTIES = /(?:^|\/)(?:CLAUDE|AGENTS)\.md$/;
+const INSTRUCTIES = /(?:^|\/)(?:(?:CLAUDE|AGENTS)[^/]*\.md|\.claude\/.*)$/;
 const RECORD = '.claude/decisions.json';
 
 /** @param {readonly string[]} globs @param {string} pad */
@@ -27,6 +27,7 @@ function buitenBereik({ status, pad }, config) {
   if (inLijst(config.testpaden, pad))
     return status === 'A' ? null : `${pad}: een bestaande test wijzigen of verwijderen`;
   if (inLijst(config.migraties, pad)) return status === 'A' ? null : `${pad}: een migratie wijzigen of verwijderen`;
+  if (status === 'D' && pad.startsWith('docs/specs/')) return `${pad}: een bestaande spec verwijderen`;
   if (INSTRUCTIES.test(pad)) return `${pad} wijzigt instructies van de agent`;
   return inLijst(config.gates, pad) || BEKEND.some((patroon) => patroon.test(pad))
     ? null
@@ -71,26 +72,68 @@ export function isMiniSpec(text) {
   return lines[0] === '---' && end > 0 && lines.slice(1, end).includes('sjabloon: mini');
 }
 
-const NIEUWE_TABEL = [
-  /^create table /,
-  /^create (?:unique )?index /,
-  /^grant /,
-  /^create policy /,
-  /^alter table \S+ (?:enable|force) row level security$/,
+/**
+ * Splitst SQL in statements, zonder commentaar en met tekstwaarden vervangen door `?`. Quotes worden gevolgd, zodat `--` of `;`
+ * in een tekst geen statement verbergt. Dollar-quotes, blokcommentaar en E-strings (backslash-escapes) zijn niet te volgen en
+ * geven null (faalt dicht).
+ * @param {string} sql @returns {string[] | null}
+ */
+function statementsVan(sql) {
+  let uit = '';
+  for (let i = 0; i < sql.length; i += 1) {
+    const teken = sql[i] ?? '';
+    if (teken === '$' || sql.startsWith('/*', i)) return null;
+    if (sql.startsWith('--', i)) {
+      while (i < sql.length && sql[i] !== '\n') i += 1;
+      uit += '\n';
+    } else if (teken === "'" || teken === '"') {
+      if (teken === "'" && /[eE]$/.test(uit) && !/[\w]/.test(uit.at(-2) ?? ' ')) return null;
+      let einde = i + 1;
+      while (einde < sql.length && !(sql[einde] === teken && sql[einde + 1] !== teken))
+        einde += sql[einde] === teken ? 2 : 1;
+      if (einde >= sql.length) return null;
+      uit += teken === "'" ? '?' : sql.slice(i, einde + 1);
+      i = einde;
+    } else uit += teken;
+  }
+  return uit.split(';').map((deel) => deel.replace(/\s+/g, ' ').trim().toLowerCase());
+}
+
+const NAAM = '((?:[a-z_][a-z0-9_]*|"[^"]+")(?:\\.(?:[a-z_][a-z0-9_]*|"[^"]+"))?)';
+const ROLLEN = '(?:app_[a-z_]+)(?:, app_[a-z_]+)*';
+const REGELS = [
+  { patroon: new RegExp(`^create table ${NAAM} \\(.*\\)$`), doel: 'maak' },
+  { patroon: new RegExp(`^create (?:unique )?index [a-z0-9_]+ on ${NAAM} `), doel: 'op' },
+  { patroon: new RegExp(`^alter table ${NAAM} (?:enable|force) row level security$`), doel: 'op' },
+  { patroon: new RegExp(`^grant [a-z_, ()]+ on (?:table )?${NAAM} to ${ROLLEN}$`), doel: 'op' },
+  { patroon: new RegExp(`^create policy [a-z0-9_]+ on ${NAAM} `), doel: 'op' },
 ];
+const NIET_IN_TABEL = /\b(?:inherits|partition|like)\b/;
+
+/** Het eerste deel van een migratie: dbmate leest `-- migrate:down` als regel met eventueel tekst erachter. @param {string} tekst */
+function upDeel(tekst) {
+  return tekst.replaceAll('\r\n', '\n').split(/^--[ \t]*migrate:down(?:[ \t]*$|[ \t]+\S)/m)[0] ?? '';
+}
 
 /**
- * Een migratie in de feature-lane maakt alleen een nieuwe tabel (ADR 0029 punt 5): tabel, index, grants, policies en RLS.
- * Functies, triggers, `security definer`, rollen en wijzigingen aan bestaande tabellen blijven framework-lane. Het deel na
- * `-- migrate:down` telt niet.
+ * Een migratie in de feature-lane maakt alleen een nieuwe tabel (ADR 0029 punt 5): `create table (…)` en daarna index, RLS,
+ * grants aan app-rollen en policies, uitsluitend op die tabel. Functies, triggers, `security definer`, rolgrants, kopieën
+ * (`as select`, `like`, `inherits`, `partition`) en alles op bestaande objecten blijven framework-lane. Faalt dicht.
  * @param {string} tekst @returns {string | null} de reden, of null
  */
 export function migratieOvertreding(tekst) {
-  const up = tekst.replaceAll('\r\n', '\n').split(/^-- migrate:down/m)[0] ?? '';
-  const zonderCommentaar = up.replace(/--[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
-  const statements = zonderCommentaar.split(';').map((deel) => deel.replace(/\s+/g, ' ').trim().toLowerCase());
-  const vreemd = statements.find((deel) => deel !== '' && !NIEUWE_TABEL.some((patroon) => patroon.test(deel)));
-  return vreemd === undefined ? null : `migratie bevat meer dan een nieuwe tabel: "${vreemd.slice(0, 60)}"`;
+  const statements = statementsVan(upDeel(tekst));
+  if (statements === null) return 'migratie met dollar-quotes, blokcommentaar of E-strings is niet te beoordelen';
+  const gevuld = statements.filter((deel) => deel !== '');
+  const gemaakt = new Set(gevuld.flatMap((deel) => REGELS[0]?.patroon.exec(deel)?.[1] ?? []));
+  const fout = gevuld.find((deel) => {
+    if (NIET_IN_TABEL.test(deel) && deel.startsWith('create table')) return true;
+    const regel = REGELS.find(({ patroon }) => patroon.test(deel));
+    const naam = regel?.patroon.exec(deel)?.[1];
+    return regel === undefined || naam === undefined || !gemaakt.has(naam);
+  });
+  if (gemaakt.size === 0) return 'migratie maakt geen nieuwe tabel';
+  return fout === undefined ? null : `migratie bevat meer dan een nieuwe tabel: "${fout.slice(0, 60)}"`;
 }
 
 /**

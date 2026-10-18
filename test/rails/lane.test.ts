@@ -64,6 +64,9 @@ describe('feature-lane: negatief (moet de strenge route geven)', () => {
     ['2a een pad uit voorReview: scripts', [A(SPEC), M('scripts/kit/check-docs.mjs')]],
     ['2b een pad uit voorReview: .claude', [A(SPEC), M('.claude/gates.json')]],
     ['2c een pad uit voorReview: workflow', [A(SPEC), M('.github/workflows/guard.yml')]],
+    ['CLAUDE.local.md in src', [A(SPEC), A('src/web/CLAUDE.local.md')]],
+    ['een geneste .claude-map', [A(SPEC), A('src/web/.claude/skills/x/SKILL.md')]],
+    ['een bestaande spec verwijderen', [A(SPEC), { status: 'D', pad: 'docs/specs/oud.md' }]],
     ['een geneste CLAUDE.md', [A(SPEC), A('src/web/CLAUDE.md')]],
     ['een geneste AGENTS.md', [A(SPEC), A('src/api/AGENTS.md')]],
     ['onbekend: .vscode/tasks.json', [A(SPEC), A('.vscode/tasks.json')]],
@@ -153,8 +156,57 @@ describe('migratieOvertreding: alleen een nieuwe tabel', () => {
     ['rijen wijzigen', 'update public.notes set body = 1;'],
     ['een rol', 'create role evil;'],
     ['een drop', 'drop table public.accounts;'],
+    ['B1 -- in een tekst verbergt een drop', "create table public.n (a text default '--'); drop table app.accounts;"],
+    [
+      'B1 /* in een tekst',
+      "create table public.n (a text default '/*'); drop table app.accounts; create table public.m (b text default '*/');",
+    ],
+    ['B1 dollar-quote', 'create table public.n (a text default $$--$$); drop table app.accounts;'],
+    [
+      'B1 dollar-quote verbergt een drop achter een enkele quote',
+      "create table public.n (a text default $$ ' $$); drop table app.accounts; create table public.m (b text default ' $$)",
+    ],
+    ['B1 E-string met backslash', "create table public.n (a text default e'\\'); drop table app.accounts; --'); "],
+    ['B2 rolgrant', 'create table public.n (a int); grant app_definer to app_authenticated;'],
+    [
+      'B2 grant op een bestaand object',
+      'create table public.n (a int); grant select on better_auth.account to app_authenticated;',
+    ],
+    [
+      'B2 grant op alle tabellen',
+      'create table public.n (a int); grant all on all tables in schema app to app_authenticated;',
+    ],
+    [
+      'B3 policy op een bestaande tabel',
+      'create table public.n (a int); create policy leak on app.accounts for select to app_authenticated using (true);',
+    ],
+    ['B4 create table as select', 'create table public.x as select * from better_auth.account;'],
+    ['B4 partition of', 'create table public.x partition of app.audit_log for values from (1) to (2);'],
+    ['B4 inherits', 'create table public.x (a int) inherits (app.audit_log);'],
+    ['B4 like', 'create table public.x (like app.audit_log);'],
+    ['index op een bestaande tabel', 'create table public.n (a int); create index i on app.accounts (id);'],
+    ['geen nieuwe tabel', 'create index i on public.notes (id);'],
   ])('%s: overtreding', (_naam, sql) => {
     expect(typeof migratieOvertreding(`-- migrate:up\n${sql}\n`)).toBe('string');
+  });
+});
+
+describe('migratieOvertreding: dbmate-marker en template', () => {
+  test('B5 -- migrate:downx is geen down-marker voor dbmate: het deel erna telt als up', () => {
+    const tekst =
+      '-- migrate:up\ncreate table public.n (a int);\n-- migrate:downx\ndrop table app.accounts;\n-- migrate:down\n';
+    expect(typeof migratieOvertreding(tekst)).toBe('string');
+  });
+
+  test('het resultaat van pnpm new:resource (templatevorm met "user" en defaults) is geen overtreding', () => {
+    const tekst = readFileSync('scripts/kit/templates/migratie.sql.tmpl', 'utf8')
+      .replaceAll('__tabel__', 'notes')
+      .replaceAll('__naam__', 'notes');
+    expect(migratieOvertreding(tekst)).toBeNull();
+  });
+
+  test('een tekst met puntkomma en -- in een kolomdefault blijft één statement', () => {
+    expect(migratieOvertreding("create table public.n (a text default 'x; -- y');")).toBeNull();
   });
 });
 

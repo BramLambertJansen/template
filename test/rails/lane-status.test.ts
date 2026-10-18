@@ -267,6 +267,11 @@ describe('feature-lane: migratie en kop', () => {
     expect(draaiChecker(fixture, head).stderr).toContain('Datawijzigingen');
   });
 
+  test('een lege sectie "Datawijzigingen (met grants)": faalt', () => {
+    const { fixture, head } = featureMetMigratie(TABEL, false, '## Datawijzigingen (met grants)\n\n');
+    expect(draaiChecker(fixture, head).stderr).toContain('Datawijzigingen');
+  });
+
   test('een migratie met een functie: faalt', () => {
     const { fixture, head } = featureMetMigratie(
       TABEL.replace('-- migrate:down', 'create function app.f() returns int language sql return 1;\n-- migrate:down'),
@@ -276,10 +281,14 @@ describe('feature-lane: migratie en kop', () => {
   });
 });
 
-function featureMetMigratie(sql: string, kop: boolean) {
+function featureMetMigratie(sql: string, kop: boolean, eigen?: string) {
   const fixture = nieuw();
   const tekst = spec('demo', 'voorstel', true);
-  write(fixture.root, MINI, kop ? `${tekst}\n## Datawijzigingen (met grants)\n\nnotes.\n` : tekst);
+  write(
+    fixture.root,
+    MINI,
+    eigen !== undefined ? `${tekst}\n${eigen}` : kop ? `${tekst}\n## Datawijzigingen (met grants)\n\nnotes.\n` : tekst,
+  );
   write(fixture.root, MIGRATIE, sql);
   commitAls(fixture.root, 'feat: tabel', 'agent');
   zetStatus(fixture.root, MINI, 'goedgekeurd');

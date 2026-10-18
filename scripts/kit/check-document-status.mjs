@@ -222,10 +222,13 @@ function verifyFeatureInhoud(file, changes, context) {
     ({ status, pad }) => status === 'A' && context.config.migraties.some((glob) => globMatch(glob, pad)),
   );
   for (const { pad } of migraties) {
-    const fout = migratieOvertreding(gitText(context.root, ['show', `${context.sha}:${pad}`]) ?? '');
+    const fout = migratieOvertreding(gitText(context.root, ['show', `${context.sha}:${pad}`]) ?? '\0');
     if (fout !== null) throw new Error(`${pad}: ${fout}; dat is framework-lane met het volledige sjabloon`);
   }
-  if (migraties.length > 0 && !/^## Datawijzigingen \(met grants\)\s*$/m.test(context.authority.working(file) ?? ''))
+  if (
+    migraties.length > 0 &&
+    !/^## Datawijzigingen \(met grants\)\n+(?!##)\S/m.test(context.authority.working(file) ?? '')
+  )
     throw new Error(`${file}: een nieuwe migratie vraagt de kop "Datawijzigingen (met grants)" in de mini-spec`);
 }
 
