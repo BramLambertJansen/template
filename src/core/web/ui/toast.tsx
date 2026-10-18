@@ -6,8 +6,9 @@ import { Button } from './button.tsx';
 // Toast: korte terugkoppeling na een actie ("gelukt" of "fout"). Context zonder globale store: ToastProvider staat in de
 // app-root, de AppShell rendert de Toaster. Succes is een beleefde statusmelding (role=status, polite), een fout wordt
 // direct voorgelezen (role=alert, assertive). De rol zit op de kaart en er is geen aria-live-container omheen: een role binnen
-// een aria-live-regio laat NVDA de melding dubbel aankondigen. Timing (WCAG 2.2.1): een succes verdwijnt na 5 s en pauzeert zolang de muis erboven staat of de focus
-// erin; een fout verdwijnt niet vanzelf maar blijft tot de gebruiker hem sluit (of tot het maximum van drie hem verdringt).
+// een aria-live-regio laat NVDA de melding dubbel aankondigen. Timing (WCAG 2.2.1): een succes verdwijnt na 5 s en pauzeert
+// zolang de muis erboven staat of de focus erin; een fout verdwijnt niet vanzelf maar blijft tot de gebruiker hem sluit (of tot
+// het maximum van drie hem verdringt).
 type ToastTone = 'success' | 'error';
 
 interface ToastItem {
