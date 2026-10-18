@@ -166,6 +166,12 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   releasecommit; de smoketest bewijst login, lezen en gesloten browser-datatoegang; een back-up is in een aparte omgeving teruggezet met gemeten
   dataverlies en hersteltijd. Productiegoedkeuring blijft bij de eigenaar.
   aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (B-6: niet geparkeerd besloten)
+- [ ] **ADR 0029 stap 7: agent-merge in de feature-lane** (route 2, onder het account van de eigenaar; zwakte in ADR 0029 punt 17 aanvaard).
+  Spec: `docs/specs/agent-merge.md`. PR A: `scripts/check-github.mjs`, `.github/settings/main-protection.json`, sleutel `merge`, lane-uitslag in de diff-guard;
+  PR B: rolhek, `.claude/settings.json`, skill `opleveren` en docs (eigenaar); PR C: `merge` op `"feature-lane"` zetten (eigenaar).
+  aanleiding: `docs/adr/0029-snellere-beslisroute.md` (punt 14–17)
+- [ ] **Volledig pad naar `gh` in het rolhek** (V-13): `/usr/bin/gh pr merge …` valt buiten het rolhek (`program === "gh"`) en de settings-patronen; dicht het gat of leg vast waarom het kan blijven.
+  aanleiding: `rails/hooks/lib/rolhek.mjs` (spec `agent-merge`, Bekende gaten)
 
 ## Geparkeerd
 
@@ -227,12 +233,6 @@ Bewust nog niet, tot de genoemde aanleiding er is (P1). Niets verdwijnt: elk ite
   terug als: een app het nodig heeft
 - [ ] **sonarjs, better-tailwindcss en squawk** (stuk 4): de eerste twee vragen een nieuwe dependency, squawk een nieuwe tool (voor `gate:slow`).
   terug als: een fout die deze tool had gevangen doorglipt, of de proef-app toont dat ze nodig zijn
-- [ ] **ADR 0029 stap 7: agent-merge in de feature-lane** (route 2, onder het account van de eigenaar; zwakte in ADR 0029 punt 17 aanvaard).
-  Spec: `docs/specs/agent-merge.md`. PR A: `scripts/check-github.mjs`, `.github/settings/main-protection.json`, sleutel `merge`, lane-uitslag in de diff-guard;
-  PR B: rolhek, `.claude/settings.json`, skill `opleveren` en docs (eigenaar); PR C: `merge` op `"feature-lane"` zetten (eigenaar).
-  aanleiding: `docs/adr/0029-snellere-beslisroute.md` (punt 14–17)
-- [ ] **Volledig pad naar `gh` in het rolhek** (V-13): `/usr/bin/gh pr merge …` valt buiten het rolhek (`program === "gh"`) en de settings-patronen; dicht het gat of leg vast waarom het kan blijven.
-  aanleiding: `docs/specs/agent-merge.md` (Bekende gaten)
 - [ ] **ADR 0030 PR 2: algemene agent-merge** (voor de framework-lane; de feature-lane volgt ADR 0029 punt 14). Zie `.claude/skills/opleveren/SKILL.md`
   en `docs/operations/agent-doorloop.md`.
   terug als: er ≥ 10 feature-PR's zijn zonder gevolgfout, de AC→test-check en het risico-overzicht actief zijn en ST-01 is besloten
