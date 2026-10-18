@@ -129,6 +129,14 @@
       "branch": "docs/adr-0034-geaccepteerd",
       "status": "geaccepteerd",
       "paths": []
+    },
+    {
+      "file": "docs/adr/0029-snellere-beslisroute.md",
+      "digest": "c4c9a2375684c195b02bd96eea485951ba3967423f1bdd52fad5015b89f738ca",
+      "repository": "BramLambertJansen/template",
+      "branch": "docs/adr-0029-agent-merge",
+      "status": "geaccepteerd",
+      "paths": []
     }
   ]
 }
