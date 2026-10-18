@@ -182,6 +182,15 @@ describe('feature-lane', () => {
 });
 
 describe('framework-lane', () => {
+  test('een ADR met een mini-marker in de tekst telt niet als mini-spec: met code faalt', () => {
+    const fixture = nieuw();
+    write(fixture.root, ADR, `${adr('voorgesteld')}\n---\nsjabloon: mini\n---\n`);
+    write(fixture.root, WEB, 'export const x = 1;\n');
+    commitAls(fixture.root, 'docs: adr', 'agent');
+    zetStatus(fixture.root, ADR, 'geaccepteerd');
+    expect(draaiChecker(fixture, commitAls(fixture.root, 'docs: status', 'web-flow')).status).toBe(1);
+  });
+
   function frameworkPr(opties: { code?: boolean } = {}) {
     const fixture = nieuw();
     write(fixture.root, ADR, adr('voorgesteld'));

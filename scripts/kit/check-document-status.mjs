@@ -202,7 +202,8 @@ function verifyStatusCommit(file, context) {
 function verifyInPrStatus({ pending, changes }, context) {
   const [eerste] = pending;
   if (eerste === undefined) return null;
-  const mini = pending.length === 1 && isMiniSpec(context.authority.working(eerste) ?? '');
+  const mini =
+    pending.length === 1 && documentKind(eerste) === 'spec' && isMiniSpec(context.authority.working(eerste) ?? '');
   const { lane, reden } = laneVan({ changes, besluiten: pending, mini, config: context.config });
   if (lane === null) throw new Error(`${eerste}: ${GEEN_BESLUIT}; geen herkende lane: ${reden}`);
   verifyStatusCommit(eerste, context);

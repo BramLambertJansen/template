@@ -55,7 +55,9 @@ export function laneVan({ changes, besluiten, mini, config }) {
     : { lane: null, reden };
 }
 
-/** Het frontmatterveld `sjabloon: mini` (ADR 0029 punt 5). @param {string} text */
+/** Het frontmatterveld `sjabloon: mini` van een spec (ADR 0029 punt 5); alleen echte frontmatter op regel 1 telt. @param {string} text */
 export function isMiniSpec(text) {
-  return /^sjabloon:[ \t]*mini[ \t]*$/m.test(text.replaceAll('\r\n', '\n').split(/^---$/m)[1] ?? '');
+  const lines = text.replaceAll('\r\n', '\n').split('\n');
+  const end = lines.indexOf('---', 1);
+  return lines[0] === '---' && end > 0 && lines.slice(1, end).includes('sjabloon: mini');
 }
