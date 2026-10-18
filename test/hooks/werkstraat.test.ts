@@ -171,7 +171,7 @@ describe('subagent-stop', () => {
         files: { [REPORT]: report('TypeError: x is not a function') },
       });
 
-      expect(blocked(result)).toContain('niet op een assertie');
+      expect(blocked(result)).toContain('TypeError: x is not a function');
     });
 
     test('een rode assertie, in het bestand, blokkeert niet', () => {
@@ -194,10 +194,16 @@ describe('subagent-stop', () => {
       expect(blocked(result)).toContain('geen uitvoer van vitest');
     });
 
+    test('vitest noemt het bestand maar het ontbreekt: geen uitvoer blokkeert', () => {
+      const { result } = tester({ output: written, failing: ['vitest'] });
+
+      expect(blocked(result)).toContain('geen uitvoer van vitest');
+    });
+
     test('nog steeds bruikbaar als vitest het rapport op stdout zet', () => {
       const { result } = tester({ output: report('TypeError: x is not a function'), failing: ['vitest'] });
 
-      expect(blocked(result)).toContain('niet op een assertie');
+      expect(blocked(result)).toContain('TypeError: x is not a function');
     });
   });
 
