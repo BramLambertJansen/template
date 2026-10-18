@@ -48,3 +48,41 @@ describe.each([
 test('het script van document-status draait in een eigen job, niet als stap van diff-guard', () => {
   expect(job('diff-guard')).not.toContain('check-document-status.mjs');
 });
+
+// De twee jobs zijn gelijk tot en met de laatste stap (de eigen controle): wie een stap toevoegt, moet dat in beide doen en
+// valt dan op in de review. Precies één checkout (van de base-SHA) en precies één `node scripts/kit/`-aanroep per job.
+function zonderLaatsteStap(tekst: string, naam: string): string {
+  const laatste = tekst.lastIndexOf('\n      - name:');
+  return tekst.slice(0, laatste).replaceAll(naam, '<job>');
+}
+
+function stappen(tekst: string): string[] {
+  return tekst.split(/\n(?= {6}- )/).slice(1);
+}
+
+describe('beide jobs behandelen de PR als git-data', () => {
+  test('gelijk tot en met de laatste stap', () => {
+    expect(zonderLaatsteStap(job('document-status'), 'document-status')).toBe(
+      zonderLaatsteStap(job('diff-guard'), 'diff-guard'),
+    );
+  });
+
+  test.each([
+    ['diff-guard', 'diff-guard.mjs'],
+    ['document-status', 'check-document-status.mjs'],
+  ])('%s: precies één checkout, één node-aanroep en alleen zijn eigen script', (name, script) => {
+    const tekst = job(name);
+    expect(tekst.match(/uses: actions\/checkout@/g)).toHaveLength(1);
+    expect(tekst.match(/node scripts\/kit\//g)).toHaveLength(1);
+    expect(tekst).toContain(`node scripts/kit/${script}`);
+    expect(tekst).not.toMatch(/\bgit (?:checkout|switch|merge(?!-base)|cherry-pick|worktree|reset)\b/);
+  });
+
+  test.each(['diff-guard', 'document-status'])(
+    '%s: de laatste stap is de controle zelf, daarvoor geen run met PR-code',
+    (name) => {
+      const laatste = stappen(job(name)).at(-1) ?? '';
+      expect(laatste).toMatch(/run: node scripts\/kit\/[a-z-]+\.mjs\s*$/);
+    },
+  );
+});
