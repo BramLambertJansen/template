@@ -72,13 +72,19 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   bewijs `test/hooks/vertrouwde-basis-anker.test.ts`. Een omgebogen lokale ref (`movesTrustedBase` laat een fetch met een andere bron door)
   telt daardoor niet meer voor de hooks (met de nieuwe stub-lader; een sessie met een oude stub leest nog de lokale ref); scripts buiten een hook lezen nog de lokale ref, CI blijft de grens.
   aanleiding: `rails/hooks/lib/rolhek.mjs` (review van de PR voor ADR 0033 punt 1)
-- [ ] **Subagent-stop leest de JSON van vitest niet.** `rails/hooks/lib/werkstraat.mjs` zoekt het rapport van `vitest --reporter=json` op stdout;
-  vitest 5 schrijft het naar `.vitest/json/output.json`, dus de tester-stop meldt "geen uitvoer van vitest".
+- [x] **Subagent-stop leest de JSON van vitest niet.** `rails/hooks/lib/werkstraat.mjs` zocht het rapport van `vitest --reporter=json` op stdout;
+  vitest 5 schrijft het naar een bestand, dus de tester-stop meldde "geen uitvoer van vitest". Nu krijgt vitest `--outputFile.json=.vitest/json/tester-run.json`
+  en leest de hook dat bestand, alleen als vitest meldt dat hij het schreef; bewijs `test/hooks/werkstraat.test.ts`.
   aanleiding: `rails/hooks/lib/werkstraat.mjs` (tester-run in de PR voor ADR 0033 punt 1)
-- [ ] **Toast: pauze bij hover en focus, fout blijft staan** (WCAG 2.2.1), plus een eigenaarbesluit over de duur (nu 5 s en 8 s, een aanname).
-  Toegankelijkheidsfout in de bestaande `Toaster` (`src/core/web/ui/toast.test.tsx`).
+- [x] **Toast: pauze bij hover en focus, fout blijft staan** (WCAG 2.2.1). Besluit eigenaar 2026-10-18 (in de sessie): succes 5 s, een fout
+  verdwijnt niet vanzelf maar blijft tot de gebruiker hem sluit (of tot het bestaande maximum van drie toasts hem verdringt); de timer pauzeert zolang de muis op een toast staat of de focus erin.
+  Alternatief verworpen: alleen pauze met 8 s voor een fout (een fout kan dan nog wegvallen terwijl iemand hem leest). Bewijs `src/core/web/ui/toast.test.tsx`.
   aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (besluit 2)
-- [ ] **Toast: dubbele aankondiging in NVDA** (`role` binnen een `aria-live`-container); herstel met een test.
+- [x] **Toast: dubbele aankondiging in NVDA** (`role` binnen een `aria-live`-container). De `aria-live` van de twee containers is weg; de rol
+  (`status`, `alert`) zit alleen op de kaart. Keuze eigenaar 2026-10-18 (in de sessie), verworpen: een vaste live-regio met kaarten zonder rol
+  (betrouwbaarder voorlezen, maar toasts zijn dan niet meer op rol te vinden: ca. 15 e2e-selectors en 5 unit-testbestanden) en een vaste regio met
+  rol (permanent twee lege status/alert-elementen). Bekend gevolg: een `role=status` die met zijn inhoud wordt toegevoegd, lezen sommige
+  schermlezers minder betrouwbaar voor; `role=alert` wel. Bewijs `src/core/web/ui/toast.test.tsx`.
   aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (besluit 2)
 - [ ] **Focus naar de h1 na een routewissel naar een lazy route** (`/design-system`): in e2e (Vite dev) staat de focus daarna op `body`.
   Geprobeerd: `routeKey` uit `resolvedLocation`, wachten op een (zichtbare) h1 met een MutationObserver, en terugzetten als de focus
