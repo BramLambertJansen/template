@@ -10,6 +10,7 @@ import { globMatch } from '../../rails/hooks/lib/rolhek.mjs';
 /** @typedef {{ lane: 'feature' | 'framework' | null, reden: string }} Uitslag */
 
 const BEKEND = [/^src\//, /^docs\//, /^db\//, /^CHANGELOG\.md$/];
+const INSTRUCTIES = /(?:^|\/)(?:CLAUDE|AGENTS)\.md$/;
 const RECORD = '.claude/decisions.json';
 
 /** @param {readonly string[]} globs @param {string} pad */
@@ -26,6 +27,7 @@ function buitenBereik({ status, pad }, config) {
   if (inLijst(config.testpaden, pad))
     return status === 'A' ? null : `${pad}: een bestaande test wijzigen of verwijderen`;
   if (inLijst(config.migraties, pad)) return status === 'A' ? null : `${pad}: een migratie wijzigen of verwijderen`;
+  if (INSTRUCTIES.test(pad)) return `${pad} wijzigt instructies van de agent`;
   return inLijst(config.gates, pad) || BEKEND.some((patroon) => patroon.test(pad))
     ? null
     : `${pad} is een onbekend pad buiten gates; het kan vóór review effect hebben`;
@@ -67,4 +69,42 @@ export function isMiniSpec(text) {
   const lines = text.replaceAll('\r\n', '\n').split('\n');
   const end = lines.indexOf('---', 1);
   return lines[0] === '---' && end > 0 && lines.slice(1, end).includes('sjabloon: mini');
+}
+
+const NIEUWE_TABEL = [
+  /^create table /,
+  /^create (?:unique )?index /,
+  /^grant /,
+  /^create policy /,
+  /^alter table \S+ (?:enable|force) row level security$/,
+];
+
+/**
+ * Een migratie in de feature-lane maakt alleen een nieuwe tabel (ADR 0029 punt 5): tabel, index, grants, policies en RLS.
+ * Functies, triggers, `security definer`, rollen en wijzigingen aan bestaande tabellen blijven framework-lane. Het deel na
+ * `-- migrate:down` telt niet.
+ * @param {string} tekst @returns {string | null} de reden, of null
+ */
+export function migratieOvertreding(tekst) {
+  const up = tekst.replaceAll('\r\n', '\n').split(/^-- migrate:down/m)[0] ?? '';
+  const zonderCommentaar = up.replace(/--[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  const statements = zonderCommentaar.split(';').map((deel) => deel.replace(/\s+/g, ' ').trim().toLowerCase());
+  const vreemd = statements.find((deel) => deel !== '' && !NIEUWE_TABEL.some((patroon) => patroon.test(deel)));
+  return vreemd === undefined ? null : `migratie bevat meer dan een nieuwe tabel: "${vreemd.slice(0, 60)}"`;
+}
+
+/**
+ * Wijzigt het register alleen de records van `file`? (ADR 0029 punt 7(i): "hooguit zijn record").
+ * @param {{ basis: string | null, head: string | null, file: string }} invoer
+ */
+export function recordAlleenBesluit({ basis, head, file }) {
+  try {
+    const oud = JSON.parse(basis ?? '');
+    const nieuw = JSON.parse(head ?? '');
+    const rest = (/** @type {{ decisions: { file: string }[] }} */ register) =>
+      JSON.stringify({ ...register, decisions: register.decisions.filter((entry) => entry.file !== file) });
+    return rest(oud) === rest(nieuw);
+  } catch {
+    return false;
+  }
 }

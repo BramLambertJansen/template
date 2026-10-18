@@ -13,7 +13,7 @@ import { parseNameStatus } from './diff-guard.mjs';
 import { pullRequest, checkRuns } from './github-evidence.mjs';
 import { kaderVan, ROADMAP, taakVinkje } from './roadmap-item.mjs';
 import { regularGitFile, statusOnlyDiff, isAncestor } from './status-git.mjs';
-import { laneVan, isMiniSpec } from './lane.mjs';
+import { laneVan, isMiniSpec, migratieOvertreding, recordAlleenBesluit } from './lane.mjs';
 
 /** @typedef {{ root: string, sha: string, split: string, adrBestanden: string[], authority: import('../../rails/hooks/lib/task-authority.mjs').Authority, config: import('../../rails/hooks/lib/rolhek.mjs').Config }} Context */
 
@@ -65,6 +65,7 @@ function verifyDocument(document, context) {
   throw new Error(`${document.file}: ${GEEN_BESLUIT}`);
 }
 
+const RECORD = '.claude/decisions.json';
 const GEEN_BESLUIT = 'status of inhoud heeft geen geldig besluit of bouwbewijs uit de vertrouwde basis';
 
 /** De overgang komt van `voorstel`/`voorgesteld` of het bestand is nieuw (ADR 0029 punt 3). @param {{ file: string, before: string | null }} document */
@@ -194,6 +195,40 @@ function verifyStatusCommit(file, context) {
     throw new Error(`${file}: de statusregel is niet gezet via de GitHub-webeditor (committer web-flow)`);
 }
 
+/** Documenten die in deze PR een eigenaarstatus krijgen, met of zonder record. @param {{ pad: string }[]} changes @param {Context} context */
+function eigenaarStatussen(changes, context) {
+  return changes.flatMap(({ pad }) => {
+    const na = documentInfo(pad, context.authority.working(pad) ?? '');
+    const voor = documentInfo(pad, context.authority.trusted(pad) ?? '');
+    const gestart = voor === null || ['voorstel', 'voorgesteld'].includes(voor.status);
+    return na !== null && gestart && !['voorstel', 'voorgesteld', 'gebouwd'].includes(na.status) ? [pad] : [];
+  });
+}
+
+/** Een hernoemd of gekopieerd document met een eigenaarstatus op main telt niet als nieuw voorstel. @param {string} file @param {{ pad: string, van?: string }[]} changes @param {Context} context */
+function verifyGeenRename(file, changes, context) {
+  const van = changes.find((change) => change.pad === file)?.van;
+  if (van === undefined) return;
+  const status = documentInfo(van, context.authority.trusted(van) ?? '')?.status;
+  if (status !== undefined && !['voorstel', 'voorgesteld'].includes(status))
+    throw new Error(
+      `${file}: hernoemd of gekopieerd van ${van} (${status}); een nieuwe status vraagt een record op main`,
+    );
+}
+
+/** Inhoud van de lane: alleen een nieuwe tabel in migraties, en dan een kop "Datawijzigingen" in de mini-spec. @param {string} file @param {{ status: string, pad: string }[]} changes @param {Context} context */
+function verifyFeatureInhoud(file, changes, context) {
+  const migraties = changes.filter(
+    ({ status, pad }) => status === 'A' && context.config.migraties.some((glob) => globMatch(glob, pad)),
+  );
+  for (const { pad } of migraties) {
+    const fout = migratieOvertreding(gitText(context.root, ['show', `${context.sha}:${pad}`]) ?? '');
+    if (fout !== null) throw new Error(`${pad}: ${fout}; dat is framework-lane met het volledige sjabloon`);
+  }
+  if (migraties.length > 0 && !/^## Datawijzigingen \(met grants\)\s*$/m.test(context.authority.working(file) ?? ''))
+    throw new Error(`${file}: een nieuwe migratie vraagt de kop "Datawijzigingen (met grants)" in de mini-spec`);
+}
+
 /**
  * Een statusovergang in de PR zelf (ADR 0029 punt 3 en 7): alleen in een herkende lane en met een goede statuscommit.
  * @param {{ pending: string[], changes: { status: string, pad: string, van?: string }[] }} pr @param {Context} context
@@ -202,10 +237,23 @@ function verifyStatusCommit(file, context) {
 function verifyInPrStatus({ pending, changes }, context) {
   const [eerste] = pending;
   if (eerste === undefined) return null;
+  const besluiten = eigenaarStatussen(changes, context);
   const mini =
-    pending.length === 1 && documentKind(eerste) === 'spec' && isMiniSpec(context.authority.working(eerste) ?? '');
-  const { lane, reden } = laneVan({ changes, besluiten: pending, mini, config: context.config });
+    besluiten.length === 1 && documentKind(eerste) === 'spec' && isMiniSpec(context.authority.working(eerste) ?? '');
+  const { lane, reden } = laneVan({ changes, besluiten, mini, config: context.config });
   if (lane === null) throw new Error(`${eerste}: ${GEEN_BESLUIT}; geen herkende lane: ${reden}`);
+  verifyGeenRename(eerste, changes, context);
+  if (lane === 'feature') verifyFeatureInhoud(eerste, changes, context);
+  if (
+    lane === 'framework' &&
+    changes.some(({ pad }) => pad === RECORD) &&
+    !recordAlleenBesluit({
+      basis: context.authority.trusted(RECORD),
+      head: context.authority.working(RECORD),
+      file: eerste,
+    })
+  )
+    throw new Error(`${RECORD}: wijzigt meer dan het record van ${eerste}`);
   verifyStatusCommit(eerste, context);
   return `${eerste}: statusovergang in de PR (${lane}-lane); bevoegdheid is de merge door de eigenaar (overgang, ADR 0017)`;
 }

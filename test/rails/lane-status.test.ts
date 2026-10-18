@@ -2,7 +2,18 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
-import { draaiChecker, git, maakRepo, opruimen, read, write, type Fixture } from '../hooks/follow-up-kit';
+import { documentInfo } from '../../rails/hooks/lib/document-state.mjs';
+import {
+  BRANCH,
+  REPOSITORY,
+  draaiChecker,
+  git,
+  maakRepo,
+  opruimen,
+  read,
+  write,
+  type Fixture,
+} from '../hooks/follow-up-kit';
 
 // ADR 0029 punt 3 en 7: een statusovergang in de PR zelf is geldig in de feature-lane en in de framework-lane, mits de
 // commit die de statusregel zette alleen statusregels wijzigt (a), er geen inhoud na de status komt (b) en de committer
@@ -228,5 +239,166 @@ describe('ongewijzigd: de strenge route', () => {
       },
     });
     expect(draaiChecker(fixture, head).status).toBe(1);
+  });
+});
+
+const TABEL = [
+  '-- migrate:up',
+  'create table public.notes (id uuid primary key);',
+  'alter table public.notes enable row level security;',
+  'alter table public.notes force row level security;',
+  'grant select on public.notes to app_authenticated;',
+  '-- migrate:down',
+  'drop table public.notes;',
+  '',
+].join('\n');
+const MIGRATIE = 'db/migrations/20261018120000_notes.sql';
+
+describe('feature-lane: migratie en kop', () => {
+  test('een nieuwe tabel met de kop "Datawijzigingen (met grants)": slaagt', () => {
+    const { fixture, head } = featureMetMigratie(TABEL, true);
+    const uitvoer = draaiChecker(fixture, head);
+    expect(uitvoer.stderr).toBe('');
+    expect(uitvoer.status).toBe(0);
+  });
+
+  test('een nieuwe tabel zonder die kop: faalt', () => {
+    const { fixture, head } = featureMetMigratie(TABEL, false);
+    expect(draaiChecker(fixture, head).stderr).toContain('Datawijzigingen');
+  });
+
+  test('een migratie met een functie: faalt', () => {
+    const { fixture, head } = featureMetMigratie(
+      TABEL.replace('-- migrate:down', 'create function app.f() returns int language sql return 1;\n-- migrate:down'),
+      true,
+    );
+    expect(draaiChecker(fixture, head).status).toBe(1);
+  });
+});
+
+function featureMetMigratie(sql: string, kop: boolean) {
+  const fixture = nieuw();
+  const tekst = spec('demo', 'voorstel', true);
+  write(fixture.root, MINI, kop ? `${tekst}\n## Datawijzigingen (met grants)\n\nnotes.\n` : tekst);
+  write(fixture.root, MIGRATIE, sql);
+  commitAls(fixture.root, 'feat: tabel', 'agent');
+  zetStatus(fixture.root, MINI, 'goedgekeurd');
+  return { fixture, head: commitAls(fixture.root, 'docs: status', 'web-flow') };
+}
+
+describe('statuscommit: aanvullende gevallen', () => {
+  test('de agent zet de status en web-flow commit daarna iets anders: faalt', () => {
+    const fixture = nieuw();
+    write(fixture.root, MINI, spec('demo', 'voorstel', true));
+    commitAls(fixture.root, 'feat: demo', 'agent');
+    zetStatus(fixture.root, MINI, 'goedgekeurd');
+    commitAls(fixture.root, 'docs: status door de agent', 'agent');
+    write(fixture.root, WEB, 'export const x = 1;\n');
+    expect(draaiChecker(fixture, commitAls(fixture.root, 'feat: web', 'web-flow')).status).toBe(1);
+  });
+
+  test('web-flow zet de status, de agent zet hem terug en weer door: faalt', () => {
+    const { fixture } = feature();
+    zetStatus(fixture.root, MINI, 'voorstel');
+    commitAls(fixture.root, 'docs: terug', 'web-flow');
+    zetStatus(fixture.root, MINI, 'goedgekeurd');
+    expect(draaiChecker(fixture, commitAls(fixture.root, 'docs: weer door de agent', 'agent')).status).toBe(1);
+  });
+
+  test('main erbij mergen na de statuscommit: slaagt', () => {
+    const { fixture } = feature();
+    git(fixture.root, ['switch', '-q', 'main']);
+    write(fixture.root, 'README.md', 'Nieuw op main.\n');
+    const main = commitAls(fixture.root, 'docs: readme', 'agent');
+    git(fixture.root, ['switch', '-q', BRANCH]);
+    git(fixture.root, ['merge', '-q', '--no-edit', 'main']);
+    git(fixture.root, ['update-ref', 'refs/remotes/origin/main', main]);
+    const uitvoer = draaiChecker({ root: fixture.root, base: main }, git(fixture.root, ['rev-parse', 'HEAD']));
+    expect(uitvoer.stderr).toBe('');
+    expect(uitvoer.status).toBe(0);
+  });
+
+  test('een rename in de statuscommit: faalt', () => {
+    const { fixture } = feature();
+    git(fixture.root, ['mv', MINI, 'docs/specs/hernoemd.md']);
+    expect(draaiChecker(fixture, commitAls(fixture.root, 'docs: hernoem', 'web-flow')).status).toBe(1);
+  });
+});
+
+describe('twee besluiten en renames', () => {
+  test('een tweede spec met een record op main telt ook als eigenaarstatus: faalt', () => {
+    const fixture = nieuw();
+    const tweede = 'docs/specs/tweede.md';
+    write(fixture.root, tweede, spec('tweede', 'voorstel', true));
+    const digest = documentInfo(tweede, read(fixture.root, tweede))?.digest;
+    write(
+      fixture.root,
+      '.claude/decisions.json',
+      JSON.stringify({
+        version: 1,
+        requiredChecks: ['gate:fast'],
+        decisions: [{ file: tweede, digest, repository: REPOSITORY, branch: BRANCH, status: 'goedgekeurd', paths: [] }],
+      }),
+    );
+    git(fixture.root, ['add', '-A']);
+    git(fixture.root, ['commit', '-q', '-m', 'chore: tweede spec met record']);
+    const base = git(fixture.root, ['rev-parse', 'HEAD']);
+    git(fixture.root, ['update-ref', 'refs/remotes/origin/main', base]);
+    write(fixture.root, MINI, spec('demo', 'voorstel', true));
+    commitAls(fixture.root, 'feat: demo', 'agent');
+    zetStatus(fixture.root, MINI, 'goedgekeurd');
+    zetStatus(fixture.root, tweede, 'goedgekeurd');
+    const uitvoer = draaiChecker({ root: fixture.root, base }, commitAls(fixture.root, 'docs: status', 'web-flow'));
+    expect(uitvoer.status).toBe(1);
+    expect(uitvoer.stderr).toContain('meer dan één document');
+  });
+
+  test('een vervallen spec hernoemen en weer goedkeuren: faalt', () => {
+    const fixture = nieuw();
+    write(fixture.root, 'docs/specs/oud.md', spec('demo', 'vervallen', true));
+    git(fixture.root, ['add', '-A']);
+    git(fixture.root, ['commit', '-q', '-m', 'chore: oude spec']);
+    const base = git(fixture.root, ['rev-parse', 'HEAD']);
+    git(fixture.root, ['update-ref', 'refs/remotes/origin/main', base]);
+    git(fixture.root, ['mv', 'docs/specs/oud.md', MINI]);
+    zetStatus(fixture.root, MINI, 'voorstel');
+    commitAls(fixture.root, 'feat: hernoem', 'agent');
+    zetStatus(fixture.root, MINI, 'goedgekeurd');
+    expect(draaiChecker({ root: fixture.root, base }, commitAls(fixture.root, 'docs: status', 'web-flow')).status).toBe(
+      1,
+    );
+  });
+});
+
+describe('framework-lane: het record', () => {
+  function metRecord(eigen: boolean) {
+    const fixture = nieuw();
+    write(fixture.root, ADR, adr('voorgesteld'));
+    const entry = {
+      file: eigen ? ADR : 'docs/specs/vreemd.md',
+      digest: 'a'.repeat(64),
+      repository: REPOSITORY,
+      branch: BRANCH,
+      status: 'geaccepteerd',
+      paths: [],
+    };
+    write(
+      fixture.root,
+      '.claude/decisions.json',
+      JSON.stringify({ version: 1, requiredChecks: ['gate:fast'], decisions: [entry] }),
+    );
+    commitAls(fixture.root, 'docs: adr en record', 'agent');
+    zetStatus(fixture.root, ADR, 'geaccepteerd');
+    return { fixture, head: commitAls(fixture.root, 'docs: status', 'web-flow') };
+  }
+
+  test('het eigen record erbij: slaagt', () => {
+    const { fixture, head } = metRecord(true);
+    expect(draaiChecker(fixture, head).stderr).toBe('');
+  });
+
+  test('het record van een ander document erbij: faalt', () => {
+    const { fixture, head } = metRecord(false);
+    expect(draaiChecker(fixture, head).stderr).toContain('wijzigt meer dan het record');
   });
 });

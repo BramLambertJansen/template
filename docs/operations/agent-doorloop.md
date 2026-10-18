@@ -37,9 +37,10 @@ zette alleen statusregels wijzigt, dat er geen inhoud na de status komt en dat d
 - **Feature-lane:** app-werk met een mini-spec (`docs/specs/_mini.md`, veld `sjabloon: mini`). Alles mag meewijzigen (ook docs,
   `CHANGELOG.md`, de roadmap en gegenereerde bestanden zoals het schema-snapshot) behalve `src/core`, een pad uit `voorReview`
   (`.claude/gates.json`), een ADR, een gewijzigde of verwijderde bestaande test of migratie, en een tweede spec met een eigenaarstatus.
-  Een onbekend pad buiten `gates` en buiten `src/`, `docs/` en `db/` (zoals `.vscode/` of `.mcp.json`) valt eruit. Diff-guard en
+  Een migratie mag alleen een nieuwe tabel maken (tabel, index, grants, policies, RLS) en de mini-spec heeft dan de kop
+  "Datawijzigingen (met grants)". Een geneste `CLAUDE.md` of `AGENTS.md` valt eruit. Een onbekend pad buiten `gates` en buiten `src/`, `docs/` en `db/` (zoals `.vscode/` of `.mcp.json`) valt eruit. Diff-guard en
   CODEOWNERS blijven gelden voor elk gate-pad in de PR. Het bereik is ruimer dan de letter van ADR 0029 punt 6 (eigenaarbesluit).
-- **Framework-lane:** een ADR of volledige spec met hooguit zijn record in `.claude/decisions.json`. Bouwen volgt in een volgende PR.
+- **Framework-lane:** een ADR of volledige spec met hooguit zijn eigen record in `.claude/decisions.json` (andere records of `requiredChecks` wijzigen telt niet). Bouwen volgt in een volgende PR.
 - Past de PR in geen van beide, dan geldt de strenge route: de status heeft een record op main nodig (ADR 0027, hierboven).
 
 ## Ontwikkelen en runnerchecks

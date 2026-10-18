@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 import { loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
-import { laneVan } from '../../scripts/kit/lane.mjs';
+import { laneVan, migratieOvertreding, recordAlleenBesluit } from '../../scripts/kit/lane.mjs';
 
 // ADR 0029 punt 7: lane-herkenning. `laneVan({ changes, besluiten, mini, config })` is puur.
 //   changes   — de name-status-wijzigingen van de PR ({ status: 'A' | 'M' | 'D' | 'R' | 'C', pad, van? })
@@ -64,6 +64,8 @@ describe('feature-lane: negatief (moet de strenge route geven)', () => {
     ['2a een pad uit voorReview: scripts', [A(SPEC), M('scripts/kit/check-docs.mjs')]],
     ['2b een pad uit voorReview: .claude', [A(SPEC), M('.claude/gates.json')]],
     ['2c een pad uit voorReview: workflow', [A(SPEC), M('.github/workflows/guard.yml')]],
+    ['een geneste CLAUDE.md', [A(SPEC), A('src/web/CLAUDE.md')]],
+    ['een geneste AGENTS.md', [A(SPEC), A('src/api/AGENTS.md')]],
     ['onbekend: .vscode/tasks.json', [A(SPEC), A('.vscode/tasks.json')]],
     ['onbekend: .envrc', [A(SPEC), A('.envrc')]],
     ['onbekend: .mcp.json', [A(SPEC), A('.mcp.json')]],
@@ -123,5 +125,75 @@ describe('framework-lane', () => {
 
   test('zonder besluit in de PR is er geen lane', () => {
     expect(lane([M('scripts/kit/check-docs.mjs')], { besluiten: [] }).lane).toBeNull();
+  });
+});
+
+describe('migratieOvertreding: alleen een nieuwe tabel', () => {
+  const tabel = [
+    '-- migrate:up',
+    'create table public.notes (id uuid primary key, body text not null);',
+    'alter table public.notes enable row level security;',
+    'alter table public.notes force row level security;',
+    'create index notes_body_idx on public.notes (body);',
+    'grant select on public.notes to app_authenticated;',
+    'create policy notes_select_own on public.notes for select to app_authenticated using (true);',
+    '-- migrate:down',
+    'drop table public.notes;',
+  ].join('\n');
+
+  test('tabel, RLS, index, grant en policy: geen overtreding (het down-deel telt niet)', () => {
+    expect(migratieOvertreding(tabel)).toBeNull();
+  });
+
+  test.each([
+    ['een bestaande tabel wijzigen', 'alter table public.accounts add column x int;'],
+    ['een functie', 'create function app.f() returns int language sql return 1;'],
+    ['security definer', 'create function app.f() returns int language sql security definer return 1;'],
+    ['een trigger', 'create trigger t before update on public.notes for each statement execute function app.f();'],
+    ['rijen wijzigen', 'update public.notes set body = 1;'],
+    ['een rol', 'create role evil;'],
+    ['een drop', 'drop table public.accounts;'],
+  ])('%s: overtreding', (_naam, sql) => {
+    expect(typeof migratieOvertreding(`-- migrate:up\n${sql}\n`)).toBe('string');
+  });
+});
+
+describe('recordAlleenBesluit', () => {
+  const record = (file: string, digest = 'a') => ({
+    file,
+    digest,
+    repository: 'r/r',
+    branch: 'b/c',
+    status: 'x',
+    paths: [],
+  });
+  const register = (decisions: unknown[], requiredChecks = ['gate:fast']) =>
+    JSON.stringify({ version: 1, requiredChecks, decisions });
+
+  test('alleen het eigen record wijzigt of komt erbij: ok', () => {
+    const basis = register([record('docs/specs/a.md')]);
+    expect(
+      recordAlleenBesluit({
+        basis,
+        head: register([record('docs/specs/a.md'), record('docs/specs/b.md')]),
+        file: 'docs/specs/b.md',
+      }),
+    ).toBe(true);
+  });
+
+  test('een record van een ander document wijzigt: niet ok', () => {
+    const basis = register([record('docs/specs/a.md')]);
+    expect(
+      recordAlleenBesluit({ basis, head: register([record('docs/specs/a.md', 'b')]), file: 'docs/specs/b.md' }),
+    ).toBe(false);
+  });
+
+  test('requiredChecks wijzigt: niet ok', () => {
+    const basis = register([]);
+    expect(recordAlleenBesluit({ basis, head: register([], ['gate:fast', 'x']), file: 'docs/specs/b.md' })).toBe(false);
+  });
+
+  test('onleesbaar register: niet ok', () => {
+    expect(recordAlleenBesluit({ basis: null, head: '{', file: 'docs/specs/b.md' })).toBe(false);
   });
 });
