@@ -41,6 +41,15 @@ describe('feature-lane: positief', () => {
     expect(lane([M(SPEC), M('src/api/app.ts'), M('src/shared/permissions.ts')]).lane).toBe('feature');
   });
 
+  test.each([
+    ['CHANGELOG', 'CHANGELOG.md'],
+    ['de roadmap', 'docs/roadmap.md'],
+    ['andere docs', 'docs/gouden-pad.md'],
+    ['het schema-snapshot', 'db/schema.snapshot.sql'],
+  ])('%s mag meewijzigen', (_naam, pad) => {
+    expect(lane([A(SPEC), A('src/web/features/demo/page.tsx'), M(pad)]).lane).toBe('feature');
+  });
+
   test('een nieuwe migratie en een nieuwe pgTAP-test', () => {
     expect(lane([A(SPEC), A('db/migrations/20261018120000_demo.sql'), A('db/tests/demo.sql')]).lane).toBe('feature');
   });
@@ -60,8 +69,6 @@ describe('feature-lane: negatief (moet de strenge route geven)', () => {
     ['6b een verwijderde migratie', [A(SPEC), { status: 'D', pad: 'db/migrations/20260101000000_oud.sql' }]],
     ['7 een rename van src/core naar src/web', [A(SPEC), { status: 'R', van: 'src/core/x.ts', pad: 'src/web/x.ts' }]],
     ['7b een rename van een bestaande test', [A(SPEC), { status: 'R', van: 'test/a.test.ts', pad: 'test/b.test.ts' }]],
-    ['een onbekend pad buiten het bereik', [A(SPEC), M('README.md')]],
-    ['de roadmap valt buiten het bereik van punt 6', [A(SPEC), M('docs/roadmap.md')]],
   ])('%s', (_naam, changes) => {
     const resultaat = lane(changes);
     expect(resultaat.lane).toBeNull();
@@ -82,7 +89,7 @@ describe('feature-lane: negatief (moet de strenge route geven)', () => {
       JSON.stringify({ ...JSON.parse(readFileSync('.claude/gates.json', 'utf8')), voorReview: undefined }),
     );
     expect(
-      laneVan({ changes: [A(SPEC), M('docs/roadmap.md')], besluiten: [SPEC], mini: true, config: zonder }).lane,
+      laneVan({ changes: [A(SPEC), M('docs/dod.md')], besluiten: [SPEC], mini: true, config: zonder }).lane,
     ).toBeNull();
   });
 });

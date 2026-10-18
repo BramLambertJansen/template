@@ -1,11 +1,12 @@
 // Lane-herkenning (ADR 0029 punt 6 en 7). Puur: de aanroeper levert de wijzigingen en de besluitdocumenten.
+// Bereik (eigenaarbesluit): alles wat niet in src/core, voorReview of docs/adr/ staat; bestaande tests en migraties blijven dicht.
+// Wat code uitvoert op de machine van de eigenaar of in CI staat al in voorReview; diff-guard en CODEOWNERS blijven gelden.
 import { globMatch } from '../../rails/hooks/lib/rolhek.mjs';
 
 /** @typedef {{ status: string, pad: string, van?: string }} Wijziging */
 /** @typedef {{ lane: 'feature' | 'framework' | null, reden: string }} Uitslag */
 
 const RECORD = '.claude/decisions.json';
-const BEREIK = [/^src\/(?:api|web|shared)\//, /^docs\/specs\//];
 
 /** @param {readonly string[]} globs @param {string} pad */
 const inLijst = (globs, pad) => globs.some((glob) => globMatch(glob, pad));
@@ -21,7 +22,7 @@ function buitenBereik({ status, pad }, config) {
   if (inLijst(config.testpaden, pad))
     return status === 'A' ? null : `${pad}: een bestaande test wijzigen of verwijderen`;
   if (inLijst(config.migraties, pad)) return status === 'A' ? null : `${pad}: een migratie wijzigen of verwijderen`;
-  return BEREIK.some((patroon) => patroon.test(pad)) ? null : `${pad} valt buiten het bereik van de feature-lane`;
+  return null;
 }
 
 /** Bij een rename of kopie tellen beide paden (zoals `verifyScope`). @param {Wijziging[]} changes */

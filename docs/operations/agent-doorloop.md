@@ -34,9 +34,10 @@ Een besluit kost één PR: de merge is het besluit. De agent zet de statusregel 
 GitHub-webeditor en merget. `check-document-status` herkent dan twee gevallen en eist daarbij dat de commit die de statusregel
 zette alleen statusregels wijzigt, dat er geen inhoud na de status komt en dat de committer GitHub web-flow is (`scripts/kit/lane.mjs`).
 
-- **Feature-lane:** app-werk met een mini-spec (`docs/specs/_mini.md`, veld `sjabloon: mini`). Toegestaan naast de spec: `src/{api,web,shared}`,
-  nieuwe tests, een nieuwe migratie voor een nieuwe tabel (`pnpm new:resource`) en `docs/specs/`. Niet: `src/core`, een pad uit `voorReview`
-  (`.claude/gates.json`), een ADR, een gewijzigde of verwijderde bestaande test of migratie, of een tweede spec met een eigenaarstatus.
+- **Feature-lane:** app-werk met een mini-spec (`docs/specs/_mini.md`, veld `sjabloon: mini`). Alles mag meewijzigen (ook docs,
+  `CHANGELOG.md`, de roadmap en gegenereerde bestanden zoals het schema-snapshot) behalve `src/core`, een pad uit `voorReview`
+  (`.claude/gates.json`), een ADR, een gewijzigde of verwijderde bestaande test of migratie, en een tweede spec met een eigenaarstatus.
+  Diff-guard en CODEOWNERS blijven gelden voor elk gate-pad in de PR.
 - **Framework-lane:** een ADR of volledige spec met hooguit zijn record in `.claude/decisions.json`. Bouwen volgt in een volgende PR.
 - Past de PR in geen van beide, dan geldt de strenge route: de status heeft een record op main nodig (ADR 0027, hierboven).
 

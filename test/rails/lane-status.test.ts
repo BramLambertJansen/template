@@ -74,6 +74,13 @@ function feature(
 }
 
 describe('feature-lane', () => {
+  test('CHANGELOG, roadmap en schema-snapshot in dezelfde PR: slaagt', () => {
+    const { fixture, head } = feature({ code: [WEB, 'CHANGELOG.md', 'db/schema.snapshot.sql', 'docs/roadmap.md'] });
+    const uitvoer = draaiChecker(fixture, head);
+    expect(uitvoer.stderr).toBe('');
+    expect(uitvoer.status).toBe(0);
+  });
+
   test('mini-spec met code, status gezet door web-flow: slaagt', () => {
     const { fixture, head } = feature();
     const uitvoer = draaiChecker(fixture, head);
