@@ -46,6 +46,9 @@ describe('feature-lane: positief', () => {
     ['de roadmap', 'docs/roadmap.md'],
     ['andere docs', 'docs/gouden-pad.md'],
     ['het schema-snapshot', 'db/schema.snapshot.sql'],
+    ['deploy (gate, geen voorReview)', 'deploy/vercel/vercel.json'],
+    ['renovate.json', 'renovate.json'],
+    ['src/api/server.ts', 'src/api/server.ts'],
   ])('%s mag meewijzigen', (_naam, pad) => {
     expect(lane([A(SPEC), A('src/web/features/demo/page.tsx'), M(pad)]).lane).toBe('feature');
   });
@@ -61,6 +64,11 @@ describe('feature-lane: negatief (moet de strenge route geven)', () => {
     ['2a een pad uit voorReview: scripts', [A(SPEC), M('scripts/kit/check-docs.mjs')]],
     ['2b een pad uit voorReview: .claude', [A(SPEC), M('.claude/gates.json')]],
     ['2c een pad uit voorReview: workflow', [A(SPEC), M('.github/workflows/guard.yml')]],
+    ['onbekend: .vscode/tasks.json', [A(SPEC), A('.vscode/tasks.json')]],
+    ['onbekend: .envrc', [A(SPEC), A('.envrc')]],
+    ['onbekend: .mcp.json', [A(SPEC), A('.mcp.json')]],
+    ['onbekend: postcss.config.js', [A(SPEC), A('postcss.config.js')]],
+    ['een kopie van src/core naar src/web', [A(SPEC), { status: 'C', van: 'src/core/x.ts', pad: 'src/web/x.ts' }]],
     ['2d een pad uit voorReview: package.json', [A(SPEC), M('package.json')]],
     ['3a een gewijzigde bestaande test', [A(SPEC), M('src/web/features/demo/page.test.tsx')]],
     ['3b een verwijderde bestaande test', [A(SPEC), { status: 'D', pad: 'test/rails/lane.test.ts' }]],

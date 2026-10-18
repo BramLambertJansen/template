@@ -1,11 +1,15 @@
 // Lane-herkenning (ADR 0029 punt 6 en 7). Puur: de aanroeper levert de wijzigingen en de besluitdocumenten.
-// Bereik (eigenaarbesluit): alles wat niet in src/core, voorReview of docs/adr/ staat; bestaande tests en migraties blijven dicht.
-// Wat code uitvoert op de machine van de eigenaar of in CI staat al in voorReview; diff-guard en CODEOWNERS blijven gelden.
+// Bereik (eigenaarbesluit, ruimer dan de letter van punt 6): alles wat niet in src/core, voorReview of docs/adr/ staat; bestaande
+// tests en migraties blijven dicht. Een pad buiten `gates` telt alleen binnen src/, docs/, db/ of CHANGELOG.md: onbekende
+// dotfiles en configs (.vscode, .envrc, .mcp.json, postcss.config.*) kunnen vóór review effect hebben en vallen dicht.
+// De overige gate-paden zonder voorReview (deploy, renovate, src/api/server.ts) vallen onder CODEOWNERS en de diff-guard.
+
 import { globMatch } from '../../rails/hooks/lib/rolhek.mjs';
 
 /** @typedef {{ status: string, pad: string, van?: string }} Wijziging */
 /** @typedef {{ lane: 'feature' | 'framework' | null, reden: string }} Uitslag */
 
+const BEKEND = [/^src\//, /^docs\//, /^db\//, /^CHANGELOG\.md$/];
 const RECORD = '.claude/decisions.json';
 
 /** @param {readonly string[]} globs @param {string} pad */
@@ -22,7 +26,9 @@ function buitenBereik({ status, pad }, config) {
   if (inLijst(config.testpaden, pad))
     return status === 'A' ? null : `${pad}: een bestaande test wijzigen of verwijderen`;
   if (inLijst(config.migraties, pad)) return status === 'A' ? null : `${pad}: een migratie wijzigen of verwijderen`;
-  return null;
+  return inLijst(config.gates, pad) || BEKEND.some((patroon) => patroon.test(pad))
+    ? null
+    : `${pad} is een onbekend pad buiten gates; het kan vóór review effect hebben`;
 }
 
 /** Bij een rename of kopie tellen beide paden (zoals `verifyScope`). @param {Wijziging[]} changes */
