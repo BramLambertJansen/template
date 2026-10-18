@@ -6,6 +6,8 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Opgelost
 
+- Onbekende foutcodes zoals `constructor`, `toString` en `__proto__` tonen de algemene fouttekst. Ze werden ten onrechte als geregistreerde teksten gelezen, wat een lege melding of renderfout kon veroorzaken (`src/core/web/ui/error-texts.tsx`).
+- De sessielijst herkent Firefox op iOS als Firefox in plaats van Safari (`src/core/api/auth/user-agent.ts`).
 - Gedeelde zoeklinks met `?q=true` of `?q=false` behouden hun letterlijke zoekterm. De router las die als booleans, waarna het zoekschema de term wegliet (`src/core/shared/list-search.ts`).
 - De accountformulieren geven bij een te lang inlogwachtwoord, huidig wachtwoord of nieuw e-mailadres een Nederlandse lengtemelding met het maximum. De bestaande grenzen blijven gelijk (`src/shared/schemas/auth.ts`).
 - De API-client laat optionele queryvelden met waarde `undefined` weg bij GET en DELETE. Ze kwamen als de tekst `"undefined"` bij de server terecht, waardoor een weggelaten filter onbedoeld een validatiefout kon geven. Lege tekst, `0`, `false` en de letterlijke zoekterm `"undefined"` blijven behouden (`src/core/web/lib/api-client.ts`).
