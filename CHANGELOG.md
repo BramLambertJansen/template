@@ -4,6 +4,10 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ## [Unreleased]
 
+### Opgelost
+
+- De terugweg na inloggen wordt na URL-normalisatie gecontroleerd. Externe doelen met backslashes of tabs/regeleinden en genormaliseerde paden naar de inlogpagina worden geweigerd; gewone interne paden behouden hun zoekparameters en fragment (`src/web/lib/session.ts`, `src/web/lib/session-redirect.test.ts`).
+
 ### Toegevoegd
 
 - Gedeelde Claude Code-instellingen: `acceptEdits` als standaardmodus en vooraf toegestane snelle checks, featurebranch-pushes en GitHub-commando's (`.claude/settings.json:4`, ADR 0034). Overgenomen uit eigenaarcommit `4d6c0ab` op de actuele `main`.
