@@ -411,3 +411,13 @@ describe('framework-lane: het record', () => {
     expect(draaiChecker(fixture, head).stderr).toContain('wijzigt meer dan het record');
   });
 });
+
+describe('annotatie voor de job document-status', () => {
+  test('een fout komt als ::error title=document-status:: op stdout (ADR 0031 besluit 1)', () => {
+    const { fixture, head } = feature({ statusCommit: 'agent' });
+    const uitvoer = draaiChecker(fixture, head);
+    expect(uitvoer.status).toBe(1);
+    expect(uitvoer.stdout).toContain('::error title=document-status::');
+    expect(uitvoer.stdout).toContain('web-flow');
+  });
+});

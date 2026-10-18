@@ -306,6 +306,8 @@ async function main() {
 
 if (import.meta.main)
   await main().catch((error) => {
-    console.error(error instanceof Error ? error.message : String(error));
+    const message = error instanceof Error ? error.message : String(error);
+    console.log(`::error title=document-status::${message.replaceAll('\n', ' ')}`);
+    console.error(message);
     process.exitCode = 1;
   });
