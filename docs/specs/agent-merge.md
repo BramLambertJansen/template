@@ -363,7 +363,7 @@ Regel 9: "→ eigenaar merget (jij nooit)." wordt "→ eigenaar merget (jij alle
 
 ### B8 — ADR 0030 (eigenaar, correctieprocedure spoor 2)
 
-De statusregel van ADR 0030 wordt `Status: geaccepteerd — [0029](0029-snellere-beslisroute.md)`: ADR 0029 punt 15 wijzigt 0030 voor de
+De statusregel van ADR 0030 wordt `Status: geaccepteerd` gevolgd door ` — ` en een ADR-link met `0029` als linktekst en het bestand van ADR 0029 ernaast: ADR 0029 punt 15 wijzigt 0030 voor de
 feature-lane. Toegestaan door `statusregelOvertreding` (link naar een bestaand ADR met alleen het nummer als linktekst). ADR 0029 vraagt
 deze verwijsregel al sinds zijn acceptatie (punt 15, "0030 krijgt een verwijsregel").
 
