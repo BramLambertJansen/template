@@ -132,7 +132,7 @@
     },
     {
       "file": "docs/adr/0029-snellere-beslisroute.md",
-      "digest": "c4c9a2375684c195b02bd96eea485951ba3967423f1bdd52fad5015b89f738ca",
+      "digest": "7763a2d137f7df0988a56726ab72e9ded290d3a2fa1f3e062b00c61d541af478",
       "repository": "BramLambertJansen/template",
       "branch": "docs/adr-0029-agent-merge",
       "status": "geaccepteerd",

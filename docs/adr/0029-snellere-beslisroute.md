@@ -5,10 +5,11 @@ Status: voorgesteld
 Wijzigt [0027](0027-taakmandaat-voor-frameworkwerk.md) punt 2 en vult [0025](0025-werkstraat-tot-de-merge.md) punt 1 en 10 aan.
 Vervangt [0023](0023-tokenzuinige-werkstraat.md) (eigenaarbesluit 2026-10-15; de status daar zet de eigenaar, zie Gevolgen).
 Wijzigt [0030](0030-ci-lus-en-agent-merge.md) punt 2 (waarde `"feature-lane"` van de sleutel `merge`) en punt 4–5 voor de feature-lane (punt 14).
-ADR-drempel (punt 4): A3 (punt 9, 14 en 18 verruimen wat de agent zonder prompt, eigenaarreview of eigenaarmerge doet) en A4 (0027 punt 2, 0030).
+ADR-drempel (punt 4): A3 (punt 9, 14 en 18 verruimen wat de agent zonder eigenaarreview of eigenaarmerge doet) en A4 (0027 punt 2, 0030).
 Eigenaarbesluiten 2026-10-15 (in de sessie): P1–P7, `_mini.md`, 0023 vervangen, en de punten gemarkeerd met "(besluit 2026-10-15)".
 Eigenaarbesluiten 2026-10-18 (in de sessie): mergevorm, prompt als vangnet en merge-toets (punt 14, 15 en 17) en het alternatief
-over de prompt per merge, gemarkeerd met "(besluit 2026-10-18)"; deze ADR wijzigt zelf, er komt geen nieuw ADR.
+over de prompt per merge, gemarkeerd met "(besluit 2026-10-18)"; deze ADR wijzigt zichzelf, er komt geen nieuw ADR (bewust afwijkend
+van [0031](0031-guard-en-pr-verify-bruikbaarder.md) besluit 3 spoor 1).
 
 ## Context
 
@@ -29,7 +30,7 @@ alleen een ronde. Het register heeft wél eigen waarde voor het broncodemandaat 
 
 Prompts: `ask` in `.claude/settings.json:55-119` spiegelt CODEOWNERS min `OWNERS_ONLY` (`scripts/kit/check-docs.mjs:21`,
 `mirrorViolations` :203), en het rolhek vraagt de hoofdsessie op elk gate-pad opnieuw (`gate()`,
-`.claude/hooks/lib/rolhek.mjs:121`). Een prompt op bijvoorbeeld `docs/roadmap.md` voegt niets toe wat diff-guard en
+`rails/hooks/lib/rolhek.mjs:121`). Een prompt op bijvoorbeeld `docs/roadmap.md` voegt niets toe wat diff-guard en
 CODEOWNERS in de PR niet al afdwingen. Meten: ADR 0023 (`voorgesteld`) is grotendeels niet gebouwd; alleen het meetpunt is
 nog nodig, en dat telt tokens, geen prompts of weigeringen (`docs/reviews/2026-10-15-principes-inventaris.md`, correctie 2, D-2).
 Bron voor deze herziening: dezelfde inventaris met de eigenaarbesluiten van 2026-10-15.
@@ -173,7 +174,7 @@ Bron voor deze herziening: dezelfde inventaris met de eigenaarbesluiten van 2026
     reviewer (eisen framework §8) gaf akkoord op die SHA en er staat geen blokkerende bevinding open; (3) de diff-guard
     bevestigt de lane: geen pad uit `voorReview`, geen `src/core`, geen gewijzigde of verwijderde bestaande test, geen
     gewijzigde migratie, geen ADR (dezelfde herkenning als punt 7), en de PR raakt geen gate-pad buiten de mini-spec zelf
-    (merge-toets, strenger dan de lane; besluit 2026-10-18); (4) de voorwaarden uit 0030 punt 2–3 gelden: de
+    (gate-pad zoals de diff-guard het telt, `geraakt`: een nieuwe test telt niet; merge-toets, strenger dan de lane; besluit 2026-10-18); (4) de voorwaarden uit 0030 punt 2–3 gelden: de
     merge-sleutel `merge` in `.claude/gates.json` staat op `"feature-lane"` op `origin/main`, en de ruleset is bewezen via
     `scripts/check-github.mjs` tegen `.github/settings/main-protection.json` (de harde grens blijft GitHub, 0030 punt 6).
     **Die drie bestaan nog niet**; ze hoorden bij 0030 PR 2, die geparkeerd is. De stap agent-merge bouwt ze daarom zelf:
@@ -189,8 +190,8 @@ Bron voor deze herziening: dezelfde inventaris met de eigenaarbesluiten van 2026
     "raakt geen gate-pad" (0030 punt 5) wordt "geen gate-pad buiten de mini-spec zelf" (merge-toets in (3)). De prompt uit
     punt 14 is een vangnet voor de hook, geen akkoord per PR: de voorwaarden (1)–(4) blijven de grond voor de merge.
     `--admin`, `--auto`, `gh api …/merge` en subagent-merge blijven deny. De algemene
-    agent-merge (0030 PR 2) blijft voor de framework-lane geparkeerd (inventaris B-8). 0030 krijgt een verwijsregel
-    "Gewijzigd door 0029".
+    agent-merge (0030 PR 2) blijft voor de framework-lane geparkeerd (inventaris B-8). 0030 krijgt een verwijzing naar 0029 achter de statuswaarde
+    (ADR-link met alleen het nummer als linktekst, ADR 0031 besluit 4).
 16. **Volgorde.** Actief pas als de AC→test-check en het risico-overzicht in de diff-guard (P5) op main staan en deze ADR
     `geaccepteerd` is (punt 10). Daarnaast moet de lane-uitslag meetellen in `pr:verify`: nu draait `check-document-status` in
     de niet-verplichte job `diff-guard` (inventaris, besluit 2; ADR 0031 PR 2), en `pr:verify` kent alleen de namen uit
@@ -243,15 +244,15 @@ gelijk (merge-afspraak, `overgang`), en geldt na punt 14 ook voor de merge door 
   ("Besluit en taakscope voorbereiden"); `docs/roadmap.md` (controle als deel van `check-spec-approval`).
 - **Stap 5 (teksten):** `docs/framework.md` regel 4 (drempel uit punt 4), §1 (korte versie P1–P7), §8 stap 1 en licht pad
   (lanes, mini-spec), §10 "Meten" (`docs/framework.md:441-444`, naar punt 11–13) en "Beschermde paden" (`voorReview`);
-  `AGENTS.md` Werkafspraken (mini-spec, lanes); ADR 0027 en 0025 alleen een verwijsregel "Gewijzigd door 0029".
+  `AGENTS.md` Werkafspraken (mini-spec, lanes); ADR 0027 en 0025 alleen een verwijzing naar 0029 achter de statuswaarde (ADR 0031 besluit 4).
 - **Vóór stap 7:** de PR('s) van P5: AC→test-check en risico-overzicht in de diff-guard.
 - **Stap 7 (prompts, pas na punt 10):** Edit-regels in `ask` in `.claude/settings.json`;
-  `gate()` in `.claude/hooks/lib/rolhek.mjs`; spiegelregel in `scripts/kit/check-docs.mjs` (`mirrorViolations`, `OWNERS_ONLY`);
+  `gate()` in `rails/hooks/lib/rolhek.mjs`; spiegelregel in `scripts/kit/check-docs.mjs` (`mirrorViolations`, `OWNERS_ONLY`);
   tests `test/rails/check-docs-gates.test.ts`, `test/rails/sandbox-settings.test.ts` en de rolhektests (nieuwe gevallen; een
   bestaande test aanpassen alleen met reden in de PR); framework §8/§10. Label `gate-wijziging`.
 - **Stap 7 of later (agent-merge, pas na punt 16; nog te bouwen):** de onderdelen van 0030 PR 2 die punt 14 nodig heeft:
   `scripts/check-github.mjs` (alleen-lezend), `.github/settings/main-protection.json` (settings als code) en de sleutel
-  `merge` in `.claude/gates.json` met de `check-docs`-regel uit punt 14; `ghForbidden` in `.claude/hooks/lib/rolhek.mjs`
+  `merge` in `.claude/gates.json` met de `check-docs`-regel uit punt 14; `ghForbidden` in `rails/hooks/lib/rolhek.mjs`
   (exacte mergevorm alleen voor de hoofdsessie bij `"feature-lane"` en een bevestigde lane, met tabeltests in `test/hooks/`);
   `.claude/settings.json` (`Bash(gh pr merge*)` uit `deny`, `ask` op exact de vorm uit punt 14, geen `allow`; `--auto`,
   `--admin` en `gh api *merge*` blijven deny); skill
