@@ -7,7 +7,7 @@ import { Button } from './button.tsx';
 // app-root, de AppShell rendert de Toaster. Succes is een beleefde statusmelding (role=status, polite), een fout wordt
 // direct voorgelezen (role=alert, assertive). Beide regio's staan altijd in de DOM, anders pakt een schermlezer de
 // eerste melding niet op. Timing (WCAG 2.2.1): een succes verdwijnt na 5 s en pauzeert zolang de muis erboven staat of de focus
-// erin; een fout verdwijnt niet vanzelf maar blijft tot de gebruiker hem sluit.
+// erin; een fout verdwijnt niet vanzelf maar blijft tot de gebruiker hem sluit (of tot het maximum van drie hem verdringt).
 type ToastTone = 'success' | 'error';
 
 interface ToastItem {
@@ -51,20 +51,27 @@ interface Countdown {
 }
 
 // De aftellers van de succes-toasts. Zolang iets vasthoudt (muis of focus op een toast) staan alle aftellers stil; bij het
-// loslaten lopen ze verder met de resterende tijd. `holds` bevat per toast en soort één sleutel, zodat een toast die tijdens
-// de pauze sluit niemand vasthoudt.
-function useCountdowns(onExpire: (id: number) => void) {
+// loslaten lopen ze verder met de resterende tijd. `holds` onthoudt per sleutel van welke toast hij is, zodat een toast die
+// sluit of door het maximum wegvalt (React stuurt dan geen mouseleave of blur) niemand vasthoudt.
+function useCountdowns(remove: (id: number) => void) {
   const countdowns = useRef(new Map<number, Countdown>());
-  const holds = useRef(new Set<string>());
+  const holds = useRef(new Map<string, number>());
+
+  const forget = useCallback((id: number) => {
+    clearTimeout(countdowns.current.get(id)?.handle ?? undefined);
+    countdowns.current.delete(id);
+    for (const [key, owner] of holds.current) if (owner === id) holds.current.delete(key);
+  }, []);
 
   const run = useCallback(
     (id: number, countdown: Countdown) => {
       countdown.startedAt = Date.now();
       countdown.handle = setTimeout(() => {
-        onExpire(id);
+        forget(id);
+        remove(id);
       }, countdown.remaining);
     },
-    [onExpire],
+    [forget, remove],
   );
 
   const suspend = useCallback(() => {
@@ -89,22 +96,30 @@ function useCountdowns(onExpire: (id: number) => void) {
     [run],
   );
 
-  const stop = useCallback(
+  const dismiss = useCallback(
     (id: number) => {
-      clearTimeout(countdowns.current.get(id)?.handle ?? undefined);
-      countdowns.current.delete(id);
-      const before = holds.current.size;
-      holds.current.delete(holdKey(id, 'hover'));
-      holds.current.delete(holdKey(id, 'focus'));
-      if (before > 0 && holds.current.size === 0) resume();
+      const held = holds.current.size > 0;
+      forget(id);
+      if (held && holds.current.size === 0) resume();
+      remove(id);
     },
-    [resume],
+    [forget, resume, remove],
+  );
+
+  // Ruimt de aftellers en holds op van toasts die niet meer in de lijst staan (het maximum liet ze wegvallen).
+  const prune = useCallback(
+    (alive: ReadonlySet<number>) => {
+      const held = holds.current.size > 0;
+      for (const id of [...countdowns.current.keys(), ...holds.current.values()]) if (!alive.has(id)) forget(id);
+      if (held && holds.current.size === 0) resume();
+    },
+    [forget, resume],
   );
 
   const hold = useCallback(
     (id: number, kind: HoldKind) => {
       if (holds.current.size === 0) suspend();
-      holds.current.add(holdKey(id, kind));
+      holds.current.set(holdKey(id, kind), id);
     },
     [suspend],
   );
@@ -124,21 +139,21 @@ function useCountdowns(onExpire: (id: number) => void) {
     };
   }, []);
 
-  return { start, stop, hold, release };
+  return { start, dismiss, prune, hold, release };
 }
 
 export function ToastProvider({ children }: { readonly children: ReactNode }) {
   const [toasts, setToasts] = useState<readonly ToastItem[]>([]);
   const nextId = useRef(0);
-  // `dismiss` en de aftellers verwijzen naar elkaar: een afgelopen teller sluit de toast, een gesloten toast stopt zijn teller.
-  const stopRef = useRef<(id: number) => void>(() => undefined);
 
-  const dismiss = useCallback((id: number) => {
-    stopRef.current(id);
+  const remove = useCallback((id: number) => {
     setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
-  const { start, stop, hold, release } = useCountdowns(dismiss);
-  stopRef.current = stop;
+  const { start, dismiss, prune, hold, release } = useCountdowns(remove);
+
+  useEffect(() => {
+    prune(new Set(toasts.map((toast) => toast.id)));
+  }, [toasts, prune]);
 
   const add = useCallback(
     (tone: ToastTone, message: string) => {

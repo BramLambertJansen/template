@@ -204,6 +204,41 @@ test('een toast die tijdens de pauze sluit, houdt de andere toasts niet vast', (
   expect(screen.queryByText('Opgeslagen')).toBeNull();
 });
 
+test('een toast die door het maximum wegvalt terwijl de muis erop staat, houdt de timers niet vast', () => {
+  setup();
+  fire('succes');
+  fireEvent.mouseEnter(screen.getByRole('status'));
+  fire('fout');
+  fire('fout');
+  fire('fout');
+  expect(screen.queryByRole('status')).toBeNull();
+
+  fire('succes');
+  act(() => {
+    vi.advanceTimersByTime(5000);
+  });
+  expect(screen.queryByRole('status')).toBeNull();
+});
+
+test('focus die binnen dezelfde toast blijft, geeft de pauze niet vrij', () => {
+  setup();
+  fire('succes');
+  const toast = screen.getByRole('status');
+  const close = screen.getByRole('button', { name: 'Sluiten' });
+  fireEvent.focus(close);
+  fireEvent.blur(close, { relatedTarget: toast });
+  act(() => {
+    vi.advanceTimersByTime(60_000);
+  });
+  expect(screen.getByText('Opgeslagen')).toBeTruthy();
+
+  fireEvent.blur(close, { relatedTarget: null });
+  act(() => {
+    vi.advanceTimersByTime(5000);
+  });
+  expect(screen.queryByText('Opgeslagen')).toBeNull();
+});
+
 test('een nieuwe succes-toast tijdens een pauze start pas als de pauze eindigt', () => {
   setup();
   fire('succes');
