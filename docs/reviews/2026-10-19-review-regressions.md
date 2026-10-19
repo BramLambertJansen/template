@@ -29,6 +29,9 @@ een beheerder na een uitnodigingsfout het reeds zichtbare account opnieuw uitnod
 `authGateway.getSession` een geblokkeerd account weigeren. De ruwe Better Auth-endpoints gebruiken die gatewaycontrole
 niet; sessie-opruiming blijft daar relevant.
 
+De accountlijst wordt na uitnodigen en blokkeren ook bij een fout geïnvalideerd: de server kan al gecommit hebben.
+`src/web/features/accounts/mutation-invalidation.test.tsx` bewaakt dat de UI de werkelijke serverstatus opnieuw ophaalt.
+
 De synchrone mailpaden worden niet vervangen door een outbox: dat blijft ST-03. Better Auth 1.7.7 slikt SMTP-fouten in
 `runInBackgroundOrAwait` in; deze wijziging claimt daarom geen bezorggarantie. De bestaande directe `inviteUser`-aanroep
 zonder app-transactie blijft synchroon en ruimt het auth-account bij een tokenfout zelf op.
