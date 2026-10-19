@@ -151,6 +151,25 @@ describe('plan', () => {
     expect(readdirSync(path.join(root, 'db/migrations'))).toStrictEqual(readdirSync('db/migrations'));
   });
 
+  // Spec achtergrondtaken, jobs/AC-10 (OV-A5): elke nieuwe tabel krijgt een rij in de bewaarcatalogus, anders faalt de
+  // invariant "bewaarcatalogus" (db/tests/invarianten.sql). Deze test bewijst de vorm van de rij; dat hij de invariant haalt,
+  // bewijst alleen een migratie van een echte resource in pnpm test:db, en de lane-test (lane.test.ts) dat de lane hem doorlaat.
+  test('de gegenereerde migratie registreert de tabel in app.retention (jobs/AC-10)', async () => {
+    const root = kopie(goedgekeurd);
+    const p = await plan(root, 'invoices', { rollen: ['user'], nu: new Date('2000-01-01T00:00:00Z') });
+    const migratie = p.bestanden.find(({ pad }) => /^db\/migrations\/\d{14}_invoices\.sql$/.test(pad));
+    const sql = migratie?.inhoud ?? '';
+    const rij =
+      /insert into app\.retention values \(\s*'public\.invoices',\s*null,\s*null,\s*'app',\s*'verdwijnt met het account \(owner_id, on delete cascade\)'\s*\);/;
+
+    expect(migratie).toBeDefined();
+    expect(sql).toMatch(rij);
+    expect(sql).not.toContain('__');
+    // Na het aanmaken van de tabel en vóór de down-sectie.
+    expect(sql.search(rij)).toBeGreaterThan(sql.indexOf('create table public.invoices'));
+    expect(sql.search(rij)).toBeLessThan(sql.indexOf('-- migrate:down'));
+  });
+
   // ADR 0029 punt 18: permissions.ts en app.ts zijn geen gate meer; het script schrijft ze zelf (bestanden), de tests blijven gate.
   test('permissions.ts en app.ts worden geschreven; alleen de tabeltest en de menutest blijven gate-wijziging', async () => {
     const root = kopie(goedgekeurd);

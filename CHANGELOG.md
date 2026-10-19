@@ -4,6 +4,10 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ## [Unreleased]
 
+### Toegevoegd
+
+- Bewaarcatalogus `app.retention` met `app.retention_cutoff()` (migratie `20261019120000_retention.sql`): elke tabel in `public` en `app` krijgt een termijn, een invariant bewaakt dat. `pnpm new:resource` voegt de rij voor een nieuwe tabel toe. Verlopen regels in `app.audit_log` (ouder dan 1 jaar) en `app.rate_limits` mogen door `app_definer` worden verwijderd; update en truncate op de audit log blijven geweigerd. Bij een update: bestaande eigen migraties met een nieuwe tabel hebben een rij in `app.retention` nodig (zie `scripts/kit/templates/migratie.sql.tmpl`).
+
 ### Opgelost
 
 - Verbindingsverlies tijdens een API-handler stopt de request gecontroleerd in plaats van het hele proces. Geblokkeerde accounts blijven geblokkeerd als sessie-opruiming faalt; uitnodigingsmail volgt pas na commit en een half auth-account wordt na rollback opgeruimd (`src/core/api/db/with-user.ts`, `src/core/api/http/route-effects.ts`, `src/core/api/auth/invitations.ts`).

@@ -191,6 +191,113 @@ describe('migratieOvertreding: alleen een nieuwe tabel', () => {
   });
 });
 
+describe('migratieOvertreding: bewaarcatalogus (AC-10)', () => {
+  const MAAK = 'create table public.notes (id uuid primary key);';
+  const NO_FORCE = 'alter table app.retention no force row level security;';
+  const FORCE = 'alter table app.retention force row level security;';
+  const RIJ = "insert into app.retention values ('public.notes', null, null, 'app', 'verdwijnt met het account');";
+  const migratie = (...delen: string[]) => `-- migrate:up\n${delen.join('\n')}\n-- migrate:down\n`;
+
+  test.each([
+    ['de drie statements om de eigen tabel', [MAAK, NO_FORCE, RIJ, FORCE]],
+    [
+      'hoofdletters, witruimte en regelafbreking',
+      [
+        MAAK,
+        'ALTER TABLE app.retention\n  NO FORCE ROW LEVEL SECURITY;',
+        "INSERT INTO app.retention VALUES (\n  'public.notes', null, null, 'app', 'reden'\n);",
+        'ALTER TABLE APP.RETENTION FORCE ROW LEVEL SECURITY;',
+      ],
+    ],
+    [
+      'een reden met puntkomma en -- erin',
+      [MAAK, NO_FORCE, "insert into app.retention values ('public.notes', null, null, 'app', 'a; b -- c');", FORCE],
+    ],
+    [
+      'een eigen tabel in een ander schema',
+      [
+        'create table app.things (id uuid primary key);',
+        NO_FORCE,
+        "insert into app.retention values ('app.things', null, null, 'app', 'reden');",
+        FORCE,
+      ],
+    ],
+    [
+      'twee eigen tabellen, elk met eigen rij',
+      [
+        MAAK,
+        'create table public.more (id uuid primary key);',
+        NO_FORCE,
+        RIJ,
+        "insert into app.retention values ('public.more', null, null, 'app', 'reden');",
+        FORCE,
+      ],
+    ],
+  ])('%s: geen overtreding', (_naam, delen) => {
+    expect(migratieOvertreding(migratie(...delen))).toBeNull();
+  });
+
+  test.each([
+    [
+      'rij voor een andere tabel dan de eigen nieuwe',
+      [MAAK, NO_FORCE, "insert into app.retention values ('public.other', null, null, 'app', 'reden');", FORCE],
+    ],
+    [
+      'rij voor dezelfde naam in een ander schema',
+      [MAAK, NO_FORCE, "insert into app.retention values ('app.notes', null, null, 'app', 'reden');", FORCE],
+    ],
+    [
+      'rij voor een bestaande app-tabel',
+      [MAAK, NO_FORCE, "insert into app.retention values ('app.audit_log', null, null, 'app', 'reden');", FORCE],
+    ],
+    [
+      'twee rijen waarvan een vreemde',
+      [
+        MAAK,
+        NO_FORCE,
+        "insert into app.retention values ('public.notes', null, null, 'app', 'a'), ('public.other', null, null, 'app', 'b');",
+        FORCE,
+      ],
+    ],
+    [
+      'rij uit een select',
+      [MAAK, NO_FORCE, "insert into app.retention select 'public.notes', null, null, 'app', 'reden';", FORCE],
+    ],
+    [
+      'rij met een andere purger dan app',
+      [MAAK, NO_FORCE, "insert into app.retention values ('public.notes', null, null, 'job', 'reden');", FORCE],
+    ],
+    [
+      'rij met een bewaartermijn in plaats van null',
+      [
+        MAAK,
+        NO_FORCE,
+        "insert into app.retention values ('public.notes', 'created_at', interval '1 day', 'app', 'reden');",
+        FORCE,
+      ],
+    ],
+    ['insert in app.audit_log', [MAAK, 'insert into app.audit_log values (1);']],
+    ['insert in app.rate_limits', [MAAK, 'insert into app.rate_limits values (1);']],
+    ['insert in de eigen nieuwe tabel', [MAAK, 'insert into public.notes values (gen_random_uuid());']],
+    ['insert in een bestaande tabel', [MAAK, 'insert into public.accounts values (1);']],
+    ['app.retention: disable row level security', [MAAK, 'alter table app.retention disable row level security;']],
+    ['app.retention: enable row level security', [MAAK, 'alter table app.retention enable row level security;']],
+    ['app.retention: drop', [MAAK, 'drop table app.retention;']],
+    ['app.retention: add column', [MAAK, 'alter table app.retention add column x int;']],
+    ['app.retention: rename', [MAAK, 'alter table app.retention rename to r;']],
+    ['app.retention: update', [MAAK, 'update app.retention set keep = null where true;']],
+    ['app.retention: delete', [MAAK, 'delete from app.retention;']],
+    ['app.retention: truncate', [MAAK, 'truncate app.retention;']],
+    ['truncate van de eigen tabel', [MAAK, 'truncate public.notes;']],
+    ['no force op app.audit_log', [MAAK, 'alter table app.audit_log no force row level security;']],
+    ['no force op een bestaande tabel', [MAAK, 'alter table public.accounts no force row level security;']],
+    ['no force op de eigen nieuwe tabel', [MAAK, 'alter table public.notes no force row level security;']],
+    ['force op een bestaande tabel', [MAAK, 'alter table public.accounts force row level security;']],
+  ])('%s: overtreding', (_naam, delen) => {
+    expect(typeof migratieOvertreding(migratie(...delen))).toBe('string');
+  });
+});
+
 describe('migratieOvertreding: dbmate-marker en template', () => {
   test('B5 -- migrate:downx is geen down-marker voor dbmate: het deel erna telt als up', () => {
     const tekst =
