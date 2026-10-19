@@ -2,6 +2,7 @@
 
 Op `/login` kan de gebruiker het ingevulde wachtwoord tijdelijk zichtbaar maken met **Wachtwoord tonen**. Nogmaals
 activeren schermt het weer af. Het veld begint afgeschermd en behoudt bij wisselen zijn waarde en autocomplete-instelling.
+Automatische hoofdletters, autocorrectie en spellingcontrole staan voor dit veld uit, ook bij zichtbare invoer.
 
 De bestaande Button is een toggle met een vaste naam, `aria-pressed` voor de toestand en `aria-controls` naar het veld.
 De actieve variant maakt de toestand ook visueel herkenbaar. De knop werkt met muis, Enter en Spatie en verstuurt het

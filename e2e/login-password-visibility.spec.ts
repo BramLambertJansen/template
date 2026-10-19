@@ -51,6 +51,9 @@ for (const width of [375, 1280]) {
     await toggle.click();
     await expect(password).toHaveAttribute('type', 'text');
     await expect(password).toHaveAttribute('autocomplete', 'current-password');
+    await expect(password).toHaveAttribute('autocapitalize', 'none');
+    await expect(password).toHaveAttribute('autocorrect', 'off');
+    await expect(password).toHaveAttribute('spellcheck', 'false');
     await password.press('Enter');
     await expect(page.getByRole('button', { name: 'Profielmenu' })).toBeVisible();
     expect(submissions).toBe(1);

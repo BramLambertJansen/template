@@ -41,7 +41,14 @@ function Credentials({ onStep, finish }: { onStep: (step: Step) => void; finish:
       <FormField form={form} name="password" label={copy.login.passwordLabel}>
         {(field) => (
           <>
-            <Input {...field} type={showPassword ? 'text' : 'password'} autoComplete="current-password" />
+            <Input
+              {...field}
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+            />
             <Button
               type="button"
               variant={showPassword ? 'secondary' : 'outline'}
