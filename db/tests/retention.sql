@@ -94,9 +94,10 @@ select results_eq(
 
 -- AC-2: wie ziet wat.
 select is(
-  pg_temp.query_as('app_definer', 'select count(*)::text from app.retention'),
+  pg_temp.query_as('app_definer', $q$select count(*)::text from app.retention
+    where table_name = any (array['app.retention', 'public.user_roles', 'app.audit_log', 'app.rate_limits', 'better_auth.session', 'better_auth.verification', 'better_auth."rateLimit"', 'better_auth."user"', 'better_auth.account', 'better_auth."twoFactor"']::regclass[])$q$),
   '10',
-  'retention_definer_select: als app_definer zijn alle tien rijen zichtbaar (AC-2)'
+  'retention_definer_select: als app_definer zijn de tien core-rijen zichtbaar (AC-2; een app voegt eigen rijen toe)'
 );
 select is(
   left(pg_temp.try_as('app_authenticated', 'select * from app.retention'), 5),
@@ -115,7 +116,8 @@ select is(
                          when r.keep = interval '0' then '0' else r.keep::text end, r.purger) as l
              from app.retention r
              join pg_catalog.pg_class c on c.oid = r.table_name
-             join pg_catalog.pg_namespace n on n.oid = c.relnamespace) s$q$
+             join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+             where r.table_name = any (array['app.retention', 'public.user_roles', 'app.audit_log', 'app.rate_limits', 'better_auth.session', 'better_auth.verification', 'better_auth."rateLimit"', 'better_auth."user"', 'better_auth.account', 'better_auth."twoFactor"']::regclass[])) s$q$
   ),
   (select string_agg(l, E'\n' order by l collate "C") from unnest(array[
     'app.retention|-|null|app',
@@ -129,7 +131,7 @@ select is(
     'better_auth.account|-|null|auth',
     'better_auth."twoFactor"|-|null|auth'
   ]) l),
-  'app.retention: precies de tien rijen uit de spec met die time_column, keep en purger (AC-3)'
+  'app.retention: de tien core-rijen uit de spec bestaan met die time_column, keep en purger (AC-3; rijen van een app tellen niet mee)'
 );
 
 -- AC-5: app.retention_cutoff.
