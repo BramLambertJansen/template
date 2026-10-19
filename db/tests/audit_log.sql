@@ -602,7 +602,7 @@ select is(
 select lives_ok(
   $$insert into app.audit_log (at, action, request_id) values
       (pg_catalog.now() - interval '2 years', 'ret.old', 'ret-old'),
-      (pg_catalog.now() - interval '364 days', 'ret.d364', 'ret-364'),
+      (pg_catalog.now() - interval '364 days', 'ret.nearly', 'ret-364'),
       (pg_catalog.now(), 'ret.new', 'ret-new')$$,
   'voorbereiding: een regel van 2 jaar, een van 364 dagen en een van vandaag'
 );
@@ -646,7 +646,7 @@ select is(
   'audit_log_delete_expired_only: ook een regel van 364 dagen (binnen de termijn) wordt geweigerd'
 );
 select lives_ok(
-  $$insert into app.audit_log (at, action, request_id) values (pg_catalog.now() - interval '366 days', 'ret.d366', 'ret-366')$$,
+  $$insert into app.audit_log (at, action, request_id) values (pg_catalog.now() - interval '366 days', 'ret.expired', 'ret-366')$$,
   'voorbereiding: een regel van 366 dagen'
 );
 select is(

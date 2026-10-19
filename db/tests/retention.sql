@@ -86,7 +86,7 @@ select is(
   'app.retention: app_authenticated, api_user en auth_service hebben geen enkel recht (AC-1)'
 );
 select results_eq(
-  $$select p.policyname::text collate "default", p.cmd::text collate "default", p.roles::text collate "default", p.permissive::text collate "default", p.qual
+  $$select p.policyname::text collate "default", p.cmd::text collate "default", p.roles::text collate "default", p.permissive::text collate "default", p.qual::text collate "default"
     from pg_catalog.pg_policies p where p.schemaname = 'app' and p.tablename = 'retention'$$,
   $$values ('retention_definer_select', 'SELECT', '{app_definer}', 'PERMISSIVE', 'true')$$,
   'retention_definer_select: exact één policy, for select to app_definer using (true) (AC-1)'
@@ -149,8 +149,8 @@ select is(
   'app.retention_cutoff: een tabel zonder rij geeft 22023 (AC-5)'
 );
 select results_eq(
-  $$select p.proowner::regrole::text, p.prosecdef, p.proconfig @> array['search_path=""'], p.provolatile::text,
-           p.prorettype::regtype::text, l.lanname::text collate "default",
+  $$select p.proowner::regrole::text collate "default", p.prosecdef, p.proconfig @> array['search_path=""'], p.provolatile::text collate "default",
+           p.prorettype::regtype::text collate "default", l.lanname::text collate "default",
            (select count(*)::integer from pg_catalog.pg_proc o join pg_catalog.pg_namespace n on n.oid = o.pronamespace
             where n.nspname = 'app' and o.proname = 'retention_cutoff')
     from pg_catalog.pg_proc p join pg_catalog.pg_language l on l.oid = p.prolang
