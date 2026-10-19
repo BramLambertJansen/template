@@ -63,9 +63,9 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
 - [x] **ADR 0029 bouw: feature-lane en mini-spec** (punt 1–3, 7). Lane-herkenning in `check-document-status`, `docs/specs/_mini.md`, het
   frontmatterveld `sjabloon: mini` in `check-docs`, "Besluit en taakscope voorbereiden" in `docs/operations/agent-doorloop.md`; fixtures in `test/rails/`.
   aanleiding: `docs/adr/0029-snellere-beslisroute.md` (punt 1–7). Gebouwd in #199: `scripts/kit/lane.mjs`, `_mini.md`, `sjabloon: mini` in `check-docs`, statuscommit-controle (a)–(c).
-- [ ] **ADR 0031 PR 2: documentstatus als verplichte check.** `check-document-status` draait als stap in de niet-verplichte job `diff-guard`
-  (`.github/workflows/guard.yml`) en staat niet in `requiredChecks` van `.claude/decisions.json`; `pnpm pr:verify` kan dus groen melden bij een
-  rode documentstatus. Dat is een fout in een rail (P2), geen meta-werk. Na PR 2 eist `gebouwd` een extra check (ADR 0031, "Gevolg voor gebouwd").
+- [x] **ADR 0031 PR 2: documentstatus als verplichte check.** `check-document-status` draait als eigen job `document-status`
+  (`.github/workflows/guard.yml`) en staat in `requiredChecks` van `.claude/decisions.json`, zodat `pnpm pr:verify` een rode documentstatus ziet
+  Gebouwd in #203; `gh api`-verificatie door de eigenaar op #202 (`diff-guard` op de head-SHA, app-id 15368). Dat is een fout in een rail (P2), geen meta-werk. Na PR 2 eist `gebouwd` een extra check (ADR 0031, "Gevolg voor gebouwd").
   aanleiding: `docs/operations/agent-doorloop.md` (besluit 2 van de inventaris)
 - [x] **Vertrouwde basis uit het anker, niet uit de lokale origin/main.** Binnen een hook lezen rolhek, register en runnercheck hun
   configuratie uit het anker van de stub-lader (`RAILS_ANKER`, `rails/hooks/lib/objecten.mjs`), met hashcontrole van commit, trees en blob;
@@ -166,6 +166,12 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   releasecommit; de smoketest bewijst login, lezen en gesloten browser-datatoegang; een back-up is in een aparte omgeving teruggezet met gemeten
   dataverlies en hersteltijd. Productiegoedkeuring blijft bij de eigenaar.
   aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (B-6: niet geparkeerd besloten)
+- [ ] **ADR 0029 stap 7: agent-merge in de feature-lane** (route 2, onder het account van de eigenaar; zwakte in ADR 0029 punt 17 aanvaard).
+  Spec: `docs/specs/agent-merge.md`. PR A: `scripts/check-github.mjs`, `.github/settings/main-protection.json`, sleutel `merge`, lane-uitslag in de diff-guard;
+  PR B: rolhek, `.claude/settings.json`, skill `opleveren` en docs (eigenaar); PR C: `merge` op `"feature-lane"` zetten (eigenaar).
+  aanleiding: `docs/adr/0029-snellere-beslisroute.md` (punt 14–17)
+- [ ] **Volledig pad naar `gh` in het rolhek** (V-13): `/usr/bin/gh pr merge …` valt buiten het rolhek (`program === "gh"`) en de settings-patronen; dicht het gat of leg vast waarom het kan blijven.
+  aanleiding: `rails/hooks/lib/rolhek.mjs` (spec `agent-merge`, Bekende gaten)
 
 ## Geparkeerd
 
