@@ -38,7 +38,9 @@ test.each(['constructor', 'toString', '__proto__', 'onbekend'])(
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toBe(coreErrorTexts.INTERNAL_ERROR);
     expect(fieldError).not.toHaveBeenCalled();
-    expect(document.activeElement).toBe(alert);
+    await waitFor(() => {
+      expect(document.activeElement).toBe(alert);
+    });
   },
 );
 
