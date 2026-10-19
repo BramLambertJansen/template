@@ -6,6 +6,9 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Opgelost
 
+- Formulieren sturen onbekende foutcodes zoals `constructor` niet meer ten onrechte naar een veld; ze tonen de algemene formuliermelding (`src/core/web/ui/form.tsx`).
+- De bestandsserver weigert ook directory-indexen die via een symlink buiten de buildmap wijzen. Een onveilige hoofdindex wordt bij opstart geweigerd; symlinks binnen de buildmap blijven werken (`src/core/api/http/web.ts`).
+- De server ruimt de shutdowntimer ook op als het sluiten van bronnen synchroon of asynchroon faalt (`src/core/api/http/serve.ts`).
 - Navigatielinks respecteren `target` en `download`: openen in een ander venster of downloaden wordt niet meer vervangen door navigatie in het huidige tabblad (`src/core/web/ui/nav-link.tsx`).
 - Oude retrytimers van bevestigingsdialogen kunnen de dubbelklikbeveiliging na heropenen of snel opnieuw proberen niet meer voortijdig opheffen. De timer wordt bij verwijderen van de dialoog opgeruimd (`src/core/web/ui/confirm-dialog.tsx`).
 - Onbekende permissienamen zoals `constructor` en `__proto__` worden geweigerd zonder een fout te veroorzaken (`src/core/shared/can.ts`).
