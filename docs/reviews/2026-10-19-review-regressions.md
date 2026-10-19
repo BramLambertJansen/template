@@ -38,4 +38,6 @@ zonder app-transactie blijft synchroon en ruimt het auth-account bij een tokenfo
 Fase 0/1: bestaande infrastructuur, accountbeheer en UI-componenten. De PR vermeldt de werkelijke uitslagen van
 `pnpm gate:fast`, `pnpm gate:slow`, build en de overige vereiste CI-checks op de opgeleverde commit.
 Database-regressies gebruiken de echte runnerstack en wekken fouten op met echte locks en backendbeëindiging.
-Er zijn geen bestaande tests verwijderd of afgezwakt en er is geen gecommitteerde migratie gewijzigd.
+De bestaande `test/rails/check-secdef.test.ts` krijgt één extra verwachting voor de nieuwe functiedefinitie:
+ook daar moet het ontbreken van `owner to app_definer` worden afgekeurd. Er zijn geen tests verwijderd of afgezwakt
+en er is geen gecommitteerde migratie gewijzigd.
