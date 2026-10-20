@@ -15,7 +15,7 @@ alter table public.__tabel__ force row level security;
 -- Insert en update alleen op de velden uit de spec, nooit op id, owner_id of created_at (review A1/A2). De velden en hun
 -- grants komen in een nieuwe migratie:
 -- grant insert (<velden>), update (<velden>) on public.__tabel__ to app_authenticated;
-grant select, delete on public.__tabel__ to app_authenticated;
+grant all on public.__tabel__ to app_authenticated;
 
 create policy __tabel___select_own on public.__tabel__
   for select to app_authenticated using (owner_id = (select app.current_user_id()));
