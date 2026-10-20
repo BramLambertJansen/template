@@ -18,7 +18,7 @@ alter table public.__tabel__ force row level security;
 grant select, delete on public.__tabel__ to app_authenticated;
 
 create policy __tabel___select_own on public.__tabel__
-  for select to app_authenticated using (owner_id = (select app.current_user_id()));
+  for select to app_authenticated using (true);
 create policy __tabel___insert_own on public.__tabel__
   for insert to app_authenticated with check (owner_id = (select app.current_user_id()));
 create policy __tabel___update_own on public.__tabel__
