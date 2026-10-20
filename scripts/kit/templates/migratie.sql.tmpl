@@ -23,7 +23,7 @@ create policy __tabel___insert_own on public.__tabel__
   for insert to app_authenticated with check (owner_id = (select app.current_user_id()));
 create policy __tabel___update_own on public.__tabel__
   for update to app_authenticated
-  using (owner_id = (select app.current_user_id())) with check (owner_id = (select app.current_user_id()));
+  using (true) with check (true);
 create policy __tabel___delete_own on public.__tabel__
   for delete to app_authenticated using (owner_id = (select app.current_user_id()));
 
