@@ -1,5 +1,16 @@
 import { createHash } from 'node:crypto';
-import { lstatSync, readdirSync, readFileSync, readlinkSync, realpathSync, existsSync } from 'node:fs';
+import {
+  lstatSync,
+  readdirSync,
+  readFileSync,
+  readlinkSync,
+  realpathSync,
+  existsSync,
+  openSync,
+  closeSync,
+  fstatSync,
+  constants,
+} from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
 
@@ -95,9 +106,9 @@ function inside(root, target) {
 /** @param {string} root */
 function supported(root) {
   for (const [file, hash] of Object.entries(CONFIGS))
-    if (digest(readFileSync(path.join(root, file))) !== hash) return false;
+    if (digest(checkedFile(path.join(root, file))) !== hash) return false;
   /** @type {unknown} */
-  const pkg = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
+  const pkg = JSON.parse(checkedFile(path.join(root, 'package.json')).toString('utf8'));
   if (typeof pkg !== 'object' || pkg === null || !('scripts' in pkg)) return false;
   const scripts = pkg.scripts;
   if (typeof scripts !== 'object' || scripts === null || !('lint' in scripts)) return false;
@@ -156,6 +167,26 @@ function checkReferences({ root, name, text }) {
   }
 }
 
+/** @param {string} file @param {import('node:fs').Stats} before */
+export function readLintFile(file, before) {
+  const flags =
+    typeof constants.O_NOFOLLOW === 'number' ? constants.O_RDONLY | constants.O_NOFOLLOW : constants.O_RDONLY;
+  const descriptor = openSync(file, flags);
+  try {
+    const actual = fstatSync(descriptor);
+    if (!actual.isFile() || actual.dev !== before.dev || actual.ino !== before.ino || actual.mode !== before.mode)
+      throw new Error('lintbron vervangen tijdens invoercontrole');
+    return readFileSync(descriptor);
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
+/** @param {string} file */
+function checkedFile(file) {
+  return readLintFile(file, lstatSync(file));
+}
+
 /** @param {{ root: string, hash: import('node:crypto').Hash }} context @param {string} name */
 function scan(context, name) {
   const base = path.posix.basename(name);
@@ -178,7 +209,7 @@ function scan(context, name) {
   } else if (stat.isDirectory()) {
     for (const child of readdirSync(absolute).sort()) scan(context, path.posix.join(name, child));
   } else if (stat.isFile()) {
-    const content = readFileSync(absolute);
+    const content = readLintFile(absolute, stat);
     context.hash.update(digest(content));
     if ((!name.startsWith('node_modules/') && /\.(?:[cm]?[jt]sx?)$/.test(name)) || /\.[cm]?tsx?$/.test(name))
       checkReferences({ root: context.root, name, text: content.toString('utf8') });
@@ -208,7 +239,7 @@ export function lintInputKey({ root, env, node = process.execPath }) {
         lintEnvironment(env, root),
       ]),
     );
-    hash.update(digest(readFileSync(node)));
+    hash.update(digest(checkedFile(node)));
     scan({ root, hash }, '');
     return hash.digest('hex');
   } catch {

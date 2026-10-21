@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { lintEnvironment, lintInputKey } from './lint-inputs.mjs';
@@ -53,7 +53,6 @@ function prepare({ root, env, key }) {
 
 /** @param {ReturnType<typeof prepare>} files @param {string} key */
 function publish(files, key) {
-  if (!existsSync(files.cache)) return;
   const pending = path.join(files.temporary, 'record.json');
   const record = { key, cache: readFileSync(files.cache, 'utf8') };
   writeFileSync(pending, JSON.stringify(record));

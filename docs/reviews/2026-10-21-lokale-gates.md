@@ -180,7 +180,7 @@ Volledige uitvoer en meetopzet staan lokaal in `/tmp/template-round-v2.py`, `/tm
 
 Een aanvullende codecontrole vond twee ontbrekende grenzen: relatieve `reference types`-directieven en gewone
 TypeScript-bronnen in dependencies. Vijf nieuwe regressiegevallen faalden eerst op asserties en zijn na correctie groen.
-De gerichte controle met de ongewijzigde hooktests telt nu 58 geslaagde tests. Deze aanvullende controle is geen
+Na die correctie telde de gerichte controle met de ongewijzigde hooktests 58 geslaagde tests. Deze aanvullende controle is geen
 afgedwongen onafhankelijke review: deze runtime begrenst de schrijfrechten van de reviewer niet.
 
 De eerste volledige vergelijkingspoging op `90243ac` stopte tijdens de gewone, ongecachete nulmeting. Tien bestaande
@@ -208,6 +208,16 @@ Deze eindcontrole is geen groenbewijs; actuele CI op een schone runner moet het 
 Het afzonderlijke besluitvoorstel staat in [PR #247](https://github.com/BramLambertJansen/template/pull/247).
 De eigenaar beslist met merge. De implementatie blijft concept tot besluit, vereiste CI en eigenaarreview rond zijn;
 de aanvullende statische controles tellen niet als afgedwongen onafhankelijke review.
+
+De eerste CI op `938ce12` leverde groene workflowjobs (3.297 unit-/componenttests, 384 integratietests, 73 e2e-tests en
+de snapshotcontrole), maar de aparte CodeQL-samenvattingscheck meldde twee nieuwe bestandsraces: inspectie gevolgd door
+lezen in `lint-inputs.mjs`, en bestaan controleren gevolgd door schrijven in de nieuwe testfixture. Die samenvatting is
+geen onderdeel van het huidige `pr:verify`-register; de PR is daarom aanvullend rechtstreeks gecontroleerd en niet als
+volledig groen opgeleverd. Er is geen bewaking afgezwakt. Bronlezing controleert nu identiteit/soort vóór het lezen
+op dezelfde descriptor en weigert waar beschikbaar ook symlinkvolging; de fixture inspecteert en schrijft via één descriptor.
+Drie gerichte gevallen controleren een gewone bron, een na inspectie geplaatste symlink en een ander gewoon bestand
+op dezelfde naam. De eerdere volledige tijdvergelijking blijft bewijs voor `7d211b5`; de descriptorcorrectie vraagt
+nieuwe controle en een herhaalde tijdvergelijking. De actuele uitkomsten komen bij de concept-PR.
 
 CI-selectie, consolidatie van ADR's, Docker-orchestratie, rolverdeling en testparallelisatie vallen buiten deze bouwstap.
 Die kunnen later afzonderlijk op hetzelfde soort meting worden beoordeeld.

@@ -1,5 +1,16 @@
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  writeFileSync,
+  openSync,
+  closeSync,
+  fstatSync,
+  ftruncateSync,
+  constants,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -46,4 +57,17 @@ export function cacheRecord(root: string): string {
   const first = readdirSync(directory)[0];
   if (first === undefined) throw new Error('geen cachemap');
   return path.join(directory, first, 'lint.json');
+}
+
+export function writeNativeCache(file: string): boolean {
+  const nofollow = typeof constants.O_NOFOLLOW === 'number' ? constants.O_NOFOLLOW : 0;
+  const descriptor = openSync(file, constants.O_RDWR | constants.O_CREAT | nofollow, 0o600);
+  try {
+    const reused = fstatSync(descriptor).size > 0;
+    ftruncateSync(descriptor, 0);
+    writeFileSync(descriptor, '["ESLint-cache"]');
+    return reused;
+  } finally {
+    closeSync(descriptor);
+  }
 }

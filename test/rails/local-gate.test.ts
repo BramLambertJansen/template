@@ -1,10 +1,10 @@
-import { existsSync, readFileSync, utimesSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
+import { readFileSync, utimesSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { lintEnvironment, lintInputKey } from '../../scripts/kit/lint-inputs.mjs';
 import { runLocalGate } from '../../scripts/kit/local-gate.mjs';
 import { gates } from '../../scripts/kit/gates.mjs';
-import { cacheRecord, fixture, git, write } from './local-gate-fixture.ts';
+import { cacheRecord, fixture, git, write, writeNativeCache } from './local-gate-fixture.ts';
 
 describe('lintinvoer zonder commitafhankelijkheid', () => {
   test('dezelfde inhoud blijft herbruikbaar na stagen en committen', () => {
@@ -135,8 +135,7 @@ describe('alle gates blijven bestaan; alleen lint gebruikt de eigen ESLint-cache
       calls.push(command === 'pnpm' ? (args[0] ?? '') : 'lint');
       const cache = args[args.indexOf('--cache-location') + 1];
       if (command !== 'pnpm' && cache !== undefined) {
-        reused.push(existsSync(cache));
-        write(path.dirname(cache), path.basename(cache), '["ESLint-cache"]');
+        reused.push(writeNativeCache(cache));
       }
       return 0;
     };
@@ -173,8 +172,7 @@ describe('alle gates blijven bestaan; alleen lint gebruikt de eigen ESLint-cache
       if (command === 'pnpm') return 0;
       const cache = args[args.indexOf('--cache-location') + 1];
       if (cache !== undefined) {
-        prior.push(existsSync(cache));
-        write(path.dirname(cache), path.basename(cache), '["failed"]');
+        prior.push(writeNativeCache(cache));
       }
       return 1;
     };
@@ -207,8 +205,7 @@ describe('alle gates blijven bestaan; alleen lint gebruikt de eigen ESLint-cache
       if (command === 'pnpm') return 0;
       const cache = args[args.indexOf('--cache-location') + 1];
       if (cache !== undefined) {
-        reused.push(existsSync(cache));
-        writeFileSync(cache, '["ESLint-cache"]');
+        reused.push(writeNativeCache(cache));
       }
       return 0;
     };
