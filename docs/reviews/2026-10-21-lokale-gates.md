@@ -186,7 +186,8 @@ afgedwongen onafhankelijke review: deze runtime begrenst de schrijfrechten van d
 De eerste volledige vergelijkingspoging op `90243ac` stopte tijdens de gewone, ongecachete nulmeting. Tien bestaande
 DOM-tests overschreden hun ongewijzigde timeout van vijf seconden; 3.090 tests slaagden. De gate was rood (329,777 s),
 dus deze poging bewijst geen tijdwinst. Uitvoer: `/tmp/template-round-baseline-developer.log`.
-De vergelijking wordt opnieuw uitgevoerd na bovenstaande invoercorrecties, zonder aangepaste testgrenzen.
+De vergelijking is na bovenstaande invoercorrecties opnieuw uitgevoerd, zonder aangepaste testgrenzen; de groene
+uitkomsten staan hierboven.
 
 De implementatie volgt het voorwaardelijke akkoord en het vervolgmandaat uit de sessie. De ADR-status is niet door de
 agent goedgekeurd of geaccepteerd. De formele besluitprocedure, eigenaarreview en merge blijven gelden. De lokale
@@ -196,6 +197,17 @@ de eigenaar is die versie zonder conflicten in de werkbranch opgenomen (`c6215c4
 vaste bronversie `7d211b5`; de uiteindelijke samengevoegde bron vraagt daarnaast een eigen checkuitslag.
 De beslisroute uit 0038 vereist een afzonderlijke besluit-PR voor een ADR met eigenaarstatus; bouwen volgt in een
 volgende PR (`docs/operations/agent-doorloop.md`). De lokale bouw en meetgegevens zijn voorbereid voor die review.
+
+De gewone eindcontrole `pnpm gate:fast` op de samengevoegde bron `bcad05e9eb6ef5114802c7cb3639b8af585226cb` bleef rood:
+676,946 seconden, acht bestaande DOM-tests met een timeout en drie niet gestarte Vitest-workers; 3.277 tests slaagden.
+Opmaak, lint, typecheck en alle statische gates waren daarvoor groen. Tijdens het onderzoek was de swap volledig
+bezet (2.047 van 2.048 MiB); de worker- en testtimeouts passen bij een belaste omgeving, maar die oorzaak is niet bewezen.
+De testgrenzen zijn niet aangepast. Uitvoer: `/tmp/template-final-gate.log` en `/tmp/template-final-gate.json`.
+Deze eindcontrole is geen groenbewijs; actuele CI op een schone runner moet het ontbrekende checkbewijs leveren.
+
+Het afzonderlijke besluitvoorstel staat in [PR #247](https://github.com/BramLambertJansen/template/pull/247).
+De eigenaar beslist met merge. De implementatie blijft concept tot besluit, vereiste CI en eigenaarreview rond zijn;
+de aanvullende statische controles tellen niet als afgedwongen onafhankelijke review.
 
 CI-selectie, consolidatie van ADR's, Docker-orchestratie, rolverdeling en testparallelisatie vallen buiten deze bouwstap.
 Die kunnen later afzonderlijk op hetzelfde soort meting worden beoordeeld.
