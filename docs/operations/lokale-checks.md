@@ -13,6 +13,7 @@ De helper ondersteunt de huidige onderzochte ESLint-config en TypeScript-project
 de ondersteunde configuratie. Een gewijzigde configuratie of lintopdracht, extra project, externe bron of declaratie,
 externe symlink, packages in bovenliggende mappen, `NODE_OPTIONS` of een externe `NODE_PATH` geeft gewone lint. Onderzoek een nieuwe
 indeling en breid de negatieve tests uit voordat je haar digests aanpast. Een nieuwe digest alleen bewijst geen veilige invoer.
+Ook relatieve `reference types`-directieven en TypeScript-bronbestanden in dependencies worden op externe invoer gecontroleerd.
 Lint draait direct met de gecontroleerde Node-binary en de lokale ESLint-entry; hiervoor wordt geen shell gebruikt.
 Git-/Claude-/Lefthook-variabelen, shelltellers, `OLDPWD`, `PATH` en kleurkeuzes verdwijnen zowel uit de sleutel als uit de
 lintomgeving; `PWD` wordt de werkmap en `NO_COLOR` wordt `1`. Een door pnpm toegevoegde `NODE_PATH` is alleen toegestaan

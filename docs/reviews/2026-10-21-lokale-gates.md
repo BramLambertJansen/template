@@ -149,6 +149,16 @@ dat beide invoeren dezelfde sleutel krijgen. De volledige vergelijking gebruikt 
 
 ## Besluit en vervolg
 
+Een aanvullende codecontrole vond twee ontbrekende grenzen: relatieve `reference types`-directieven en gewone
+TypeScript-bronnen in dependencies. Vijf nieuwe regressiegevallen faalden eerst op asserties en zijn na correctie groen.
+De gerichte controle met de ongewijzigde hooktests telt nu 58 geslaagde tests. Deze aanvullende controle is geen
+afgedwongen onafhankelijke review: deze runtime begrenst de schrijfrechten van de reviewer niet.
+
+De eerste volledige vergelijkingspoging op `90243ac` stopte tijdens de gewone, ongecachete nulmeting. Tien bestaande
+DOM-tests overschreden hun ongewijzigde timeout van vijf seconden; 3.090 tests slaagden. De gate was rood (329,777 s),
+dus deze poging bewijst geen tijdwinst. Uitvoer: `/tmp/template-round-baseline-developer.log`.
+De vergelijking wordt opnieuw uitgevoerd na bovenstaande invoercorrecties, zonder aangepaste testgrenzen.
+
 De implementatie volgt het voorwaardelijke akkoord en het vervolgmandaat uit de sessie. De ADR-status is niet door de
 agent goedgekeurd of geaccepteerd. De formele besluitprocedure, eigenaarreview en merge blijven gelden. De lokale
 aansluitingen staan alleen op de werkbranch; de draaiende Claude-hooks laden nog hun vertrouwde versie van main.

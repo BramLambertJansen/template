@@ -142,7 +142,9 @@ function checkPackagePaths({ root, name, text }) {
 /** @param {{ root: string, name: string, text: string }} source */
 function checkReferences({ root, name, text }) {
   const info = ts.preProcessFile(text, true, true);
-  const relative = info.importedFiles.filter(({ fileName }) => /^[./\\]|^file:|^[a-z]:[\\/]/i.test(fileName));
+  const relative = [...info.importedFiles, ...info.typeReferenceDirectives].filter(({ fileName }) =>
+    /^[./\\]|^file:|^[a-z]:[\\/]/i.test(fileName),
+  );
   for (const { fileName } of [...relative, ...info.referencedFiles]) {
     const target = path.resolve(root, path.dirname(name), fileName);
     if (
@@ -178,7 +180,7 @@ function scan(context, name) {
   } else if (stat.isFile()) {
     const content = readFileSync(absolute);
     context.hash.update(digest(content));
-    if ((!name.startsWith('node_modules/') && /\.(?:[cm]?[jt]sx?)$/.test(name)) || /\.d\.[cm]?ts$/.test(name))
+    if ((!name.startsWith('node_modules/') && /\.(?:[cm]?[jt]sx?)$/.test(name)) || /\.[cm]?tsx?$/.test(name))
       checkReferences({ root: context.root, name, text: content.toString('utf8') });
     if (base === 'package.json') checkPackagePaths({ root: context.root, name, text: content.toString('utf8') });
     if (!name.startsWith('node_modules/') && /^tsconfig.*\.json$/.test(base) && !Object.hasOwn(CONFIGS, name))

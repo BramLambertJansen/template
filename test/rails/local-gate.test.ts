@@ -60,6 +60,19 @@ describe('lintinvoer zonder commitafhankelijkheid', () => {
     expect(lintInputKey(input)).toBeNull();
   });
 
+  test('een relatieve type-reference buiten de boom geeft terugval', () => {
+    const input = fixture();
+    write(input.root, 'src/input.ts', '/// <reference types="../../external" />\nexport {};\n');
+    expect(lintInputKey(input)).toBeNull();
+  });
+
+  test.each(['ts', 'tsx', 'mts', 'cts'])('ook dependency-broncode .%s blijft binnen de boom', (extension) => {
+    const input = fixture();
+    write(input.root, 'node_modules/pkg/package.json', JSON.stringify({ types: `index.${extension}` }));
+    write(input.root, `node_modules/pkg/index.${extension}`, "export { value } from '../../../external';\n");
+    expect(lintInputKey(input)).toBeNull();
+  });
+
   test.each(['../.git/hidden.ts', '../.env.local'])(
     'een verwijzing naar uitgesloten invoer %s geeft terugval',
     (file) => {
