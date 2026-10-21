@@ -48,6 +48,45 @@ De volledige uitvoer is in de meetsessie bewaard als `/tmp/template-gate-baselin
 de bestandssandbox kon pnpm's lokale database niet openen; die fout telt niet mee als gate-meting. De twee geslaagde
 uitvoeringen gebruikten de ongewijzigde opdracht met de toegestane ruimere uitvoerrechten, zonder runneroverride.
 
+## Toets na voorwaardelijk eigenaarakkoord
+
+De eigenaar reageerde in de sessie: "Prima, als we hier winnen wat we beoogd hadden". Dit is voorwaardelijk akkoord:
+de aansluiting mag pas actief worden als de beoogde winst blijkt. De ADR-status is niet aangepast; het besluit staat
+niet op main. Main is opnieuw opgehaald en stond nog op dezelfde broncommit; 0038 is daar nog voorgesteld.
+
+Een experiment met een echte, afzonderlijke Git-repository heeft twee toegestane volgordes vastgelegd. Het voert
+geen gate uit en implementeert geen cache; het toetst de noodzakelijke voorwaarden uit voorstel 0039 punt 2.
+De broninhoud is na de wijziging telkens gelijk, zowel vóór als na `git add` en `git commit`.
+
+| Volgorde                                      | Werkmap bij developer-stop      | HEAD bij pre-push                  | Gevolg van het voorstel                                                        |
+| --------------------------------------------- | ------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------ |
+| Bewerken → developer-stop → commit → pre-push | Gewijzigd, ook na alleen stagen | Anders dan bij developer-stop      | Geen herbruikbaar developer-resultaat; beide volledige controles blijven nodig |
+| Bewerken → commit → developer-stop → pre-push | Schoon                          | Gelijk, als verder niets verandert | Hergebruik is mogelijk; tijdwinst is nog niet gemeten                          |
+
+Concreet veranderde HEAD in de fixture van `4d9bf4ca63a92e72f33eceea5052bc08542d706b` naar
+`1a4f02182f5cb533fec010dbc64029e87364ec50`. De SHA-256 van het gewijzigde bronbestand bleef vóór en na het committen
+`7b9a72466d3960eb2aacccfc848939453490db0678bd4725def3f789b891c919`. De werkmap ging van gewijzigd naar schoon.
+Dit bewijst dat gelijke broninhoud niet genoeg is voor de voorgestelde sleutel, die ook HEAD en een schone werkmap eist.
+In het eerste scenario daalt het aantal noodzakelijke gate-uitvoeringen dus van twee naar twee: geen uitgespaarde run.
+Dit is een gevolg van de getoetste voorwaarden, geen gemeten tijdsvergelijking van een cache-implementatie.
+
+Het experiment en de volledige uitvoer staan lokaal in `/tmp/template-gate-flow-probe.py` en
+`/tmp/template-gate-flow-probe.json`. Reproductie: initialiseer een tijdelijke Git-repository met één bestand, commit de
+begininhoud, wijzig het bestand, leg HEAD/porcelain/inhoudshash vast, stage, leg ze opnieuw vast, commit en herhaal die
+waarneming tweemaal zonder verdere bewerking. Er wordt niets gepusht en geen framework-werkmap gewijzigd.
+
+**Uitkomst:** de beoogde winst voor de ontwikkelronde is nog niet aangetoond. Het voorstel garandeert geen besparing
+voor de eerste geldige volgorde. De huidige developer-instructie verplicht niet om vóór SubagentStop te committen
+(`.claude/agents/developer.md:8`). Er is ook geen meting van hoe vaak elke volgorde voorkomt. Daarom is geen helper
+gebouwd of aangesloten: dat zou nu extra cachebeheer toevoegen zonder onderbouwde winst in het beoogde gebruik.
+Dit volgt de stopvoorwaarde van 0039 punt 5; het is geen bewijs dat caching in alle workflows nutteloos is.
+
+Een vervolgontwerp moet eerst bepalen welke dure, afzonderlijke controles veilig op hun werkelijke invoer kunnen
+worden gekoppeld, zonder elke commit als verandering te behandelen. Git-afhankelijke controles blijven zelfstandig
+draaien. Ook dan moeten typegestuurde lintafhankelijkheden, de geïnstalleerde dependencies en de omgevingen van beide
+hooks worden meegenomen. Alleen opnieuw pushen op dezelfde HEAD sneller maken is onvoldoende bewijs voor de bredere
+doelstelling. Dat vervolg verandert het huidige voorstel en wordt daarom niet stilzwijgend geactiveerd.
+
 ## Afbakening van de bouw
 
 Het [besluitvoorstel](../adr/0039-lokale-gate-hergebruik.md) beperkt de eerste aansluiting tot developer-stop en pre-push.
