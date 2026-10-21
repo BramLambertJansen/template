@@ -7,12 +7,12 @@ Drempel: A3 (een lokale controle mag een eerdere uitslag gebruiken) en A4. Staat
 
 ## Context
 
-De eigenaar vraagt op 2026-10-21 om de verbeterpunten uit de gedeelde procesanalyse op te pakken; Claude werkt aan 0038.
-Developer-stop en pre-push starten ieder volledig dezelfde snelle gate. De
-[nulmeting](../reviews/2026-10-21-lokale-gates.md) meet circa 218 seconden per uitvoering, waarvan circa 46 seconden lint.
-Het eerste voorstel voor volledige hergebruikcache viel af: een vuile werkmap en een volgende commit verhinderen
-hergebruik. De eigenaar gaf voorwaardelijk akkoord ("als we hier winnen wat we beoogd hadden") en daarna "Oke ga door"
-op het vervolg per controle. Dit voorstel beperkt de bouw tot ESLint; de ADR-status blijft ongewijzigd tot het formele besluit.
+Developer-stop en pre-push starten ieder dezelfde volledige snelle gate. De lokale vergelijking op gelijke inhoud
+meet 419,660 seconden per gewone ronde tegenover 402,956 seconden met gecontroleerde ESLint-cache: 16,704 seconden
+(4,0%) winst. Alle vier uitvoeringen slagen met 3.105 tests. Dit is één lokale vergelijking, geen gegarandeerde versnelling;
+de duur van de tests varieerde tussen 127 en 142 seconden. De winst over de hele ronde is aanzienlijk kleiner dan
+de losse lintwinst (51,398 naar 6,893 seconden). Het besluit beperkt de bouw tot ESLint; de eigenaar beslist met de
+merge van de afzonderlijke besluit-PR volgens 0038. Het lokale meetrapport blijft bij de implementatie.
 
 ## Voorgesteld besluit
 

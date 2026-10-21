@@ -116,7 +116,7 @@ niet stilzwijgend laten vervallen. Het gate-register en de CI-opdrachten blijven
 | CI gebruikt geen lokale cache                                                | CI-terugval getest; CI-workflows en handmatige gate blijven ongewijzigd                                                      |
 | Oudere checkout zonder helper houdt de controle                              | Nieuwe hooktest in `test/hooks/local-gate.test.ts`; bestaande hooktests ongewijzigd groen                                    |
 | Een typewijziging veroorzaakt nog steeds een fout in de onveranderde afnemer | Hieronder met echte ESLint aangetoond                                                                                        |
-| De hele ronde wordt sneller                                                  | Volledige vergelijkingsmeting volgt hieronder                                                                                |
+| De hele ronde wordt sneller                                                  | Hieronder: alle vier gates groen; 16,704 seconden (4,0%) lokale winst over de hele ronde                                     |
 
 De acceptatietests zijn eerst tegen een passthrough/skelet uitgevoerd: 9 van 12 gevallen faalden op de ontbrekende
 hergebruiklogica. Na de bouw zijn de oorspronkelijke gevallen groen; er zijn extra negatieve gevallen toegevoegd.
@@ -147,6 +147,35 @@ hergebruik tussen developer-stop en pre-push verhinderen. Deze metadata wordt nu
 verwijderd of genormaliseerd; een externe `NODE_PATH` geeft nog steeds terugval. De nieuwe commandotest controleert
 dat beide invoeren dezelfde sleutel krijgen. De volledige vergelijking gebruikt ook de echte pre-push-launcher.
 
+## Volledige vergelijking op vaste inhoud
+
+De vergelijking gebruikt een aparte Git-clone met bronversie `7d211b55b4c6480193545b8f822ddc724b4b9a62`, eigen Git-hooks
+en dezelfde vastgelegde dependencies. Een tijdelijk document is bij developer-stop ongetrackt en bij pre-push gecommit.
+Na de gewone ronde wordt alleen de tracking teruggedraaid met een nieuwe commit; dezelfde bestandsinhoud blijft bestaan.
+Daarna volgen de geoptimaliseerde developer-stop met koude cache en de echte Lefthook-pre-push met warme cache.
+Logging staat buiten de werkmap; tijdens de vier runs is de bronboom niet bewerkt. Alle andere gates blijven draaien.
+
+| Uitvoering                      | Opdracht                                  | Duur      | Exitcode | Tests                         |
+| ------------------------------- | ----------------------------------------- | --------- | -------- | ----------------------------- |
+| Gewone developer-stop           | `pnpm gate:fast`                          | 215,129 s | 0        | 210 bestanden, 3.105 geslaagd |
+| Gewone pre-push                 | `pnpm gate:fast`                          | 204,531 s | 0        | 210 bestanden, 3.105 geslaagd |
+| Geoptimaliseerde developer-stop | `node scripts/kit/local-gate.mjs`         | 216,635 s | 0        | 210 bestanden, 3.105 geslaagd |
+| Geoptimaliseerde pre-push       | `node_modules/.bin/lefthook run pre-push` | 186,321 s | 0        | 210 bestanden, 3.105 geslaagd |
+
+De gewone ronde duurt samen 419,660 seconden; de geoptimaliseerde 402,956 seconden. Dat is 16,704 seconden (4,0%) winst
+in deze lokale vergelijking. De pre-push zelf wint 18,210 seconden (8,9%); de eerste koude run kost 1,506 seconden meer.
+Dit is een bescheiden totale winst. De testduur varieerde van 127,19 tot 142,17 seconden. Eén vergelijking bewijst geen
+statistisch stabiele versnelling en rechtvaardigt geen algemene belofte van tientallen seconden per ronde.
+
+De tijdelijke documentinhoud heeft in alle vier fasen dezelfde SHA-256:
+`6938c9a5ad062e0a28f71e2fb22c31ae20d4f9253e5ec0d79ab68f0f1f15738f`.
+De Git-HEAD's zijn achtereenvolgens `7d211b5`, `1168e91`, `d352c35` en `b339a8c`. Die verschillen zijn doelbewust:
+het experiment bewijst hergebruik over stagen en committen, niet alleen bij herhaald pushen op dezelfde HEAD.
+De bronwijziging van de implementatie is in alle vier gevallen gelijk. De hookinstallatie raakt alleen de eigen clone.
+
+Volledige uitvoer en meetopzet staan lokaal in `/tmp/template-round-v2.py`, `/tmp/template-round-v2-results.json` en
+`/tmp/template-round-v2-<scenario>.log`. Dit is lokaal meetbewijs, geen vervanging voor onafhankelijke review of CI.
+
 ## Besluit en vervolg
 
 Een aanvullende codecontrole vond twee ontbrekende grenzen: relatieve `reference types`-directieven en gewone
@@ -162,7 +191,11 @@ De vergelijking wordt opnieuw uitgevoerd na bovenstaande invoercorrecties, zonde
 De implementatie volgt het voorwaardelijke akkoord en het vervolgmandaat uit de sessie. De ADR-status is niet door de
 agent goedgekeurd of geaccepteerd. De formele besluitprocedure, eigenaarreview en merge blijven gelden. De lokale
 aansluitingen staan alleen op de werkbranch; de draaiende Claude-hooks laden nog hun vertrouwde versie van main.
-De status van 0038 en de besluitprocedure moeten vóór opleveren opnieuw tegen main worden gelezen; dit werk herschrijft ze niet.
+Main is opnieuw opgehaald: `542e300` bevat de gebouwde beslisroute en de geaccepteerde 0038. Na expliciet akkoord van
+de eigenaar is die versie zonder conflicten in de werkbranch opgenomen (`c6215c4`). De vergelijking blijft op haar
+vaste bronversie `7d211b5`; de uiteindelijke samengevoegde bron vraagt daarnaast een eigen checkuitslag.
+De beslisroute uit 0038 vereist een afzonderlijke besluit-PR voor een ADR met eigenaarstatus; bouwen volgt in een
+volgende PR (`docs/operations/agent-doorloop.md`). De lokale bouw en meetgegevens zijn voorbereid voor die review.
 
 CI-selectie, consolidatie van ADR's, Docker-orchestratie, rolverdeling en testparallelisatie vallen buiten deze bouwstap.
 Die kunnen later afzonderlijk op hetzelfde soort meting worden beoordeeld.
