@@ -107,7 +107,10 @@ export function subagentStop(payload, deps) {
 
 /** @param {Deps} deps */
 function developerStop(deps) {
-  const gate = deps.run('pnpm', ['gate:fast']);
+  const local = deps.read('scripts/kit/local-gate.mjs');
+  const gate = local === null
+    ? deps.run('pnpm', ['gate:fast'])
+    : deps.run('node', ['scripts/kit/local-gate.mjs']);
   return gate.code === 0 ? {} : block(`Groen vóór klaar: pnpm gate:fast faalt.\n${lastLines(gate.output)}`);
 }
 

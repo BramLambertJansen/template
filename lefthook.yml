@@ -15,4 +15,4 @@ pre-commit:
 pre-push:
   jobs:
     - name: gate-fast
-      run: pnpm gate:fast
+      run: node scripts/kit/local-gate.mjs

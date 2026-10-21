@@ -48,14 +48,14 @@ De volledige uitvoer is in de meetsessie bewaard als `/tmp/template-gate-baselin
 de bestandssandbox kon pnpm's lokale database niet openen; die fout telt niet mee als gate-meting. De twee geslaagde
 uitvoeringen gebruikten de ongewijzigde opdracht met de toegestane ruimere uitvoerrechten, zonder runneroverride.
 
-## Toets na voorwaardelijk eigenaarakkoord
+## Eerste variant: volledige gate hergebruiken
 
 De eigenaar reageerde in de sessie: "Prima, als we hier winnen wat we beoogd hadden". Dit is voorwaardelijk akkoord:
 de aansluiting mag pas actief worden als de beoogde winst blijkt. De ADR-status is niet aangepast; het besluit staat
 niet op main. Main is opnieuw opgehaald en stond nog op dezelfde broncommit; 0038 is daar nog voorgesteld.
 
 Een experiment met een echte, afzonderlijke Git-repository heeft twee toegestane volgordes vastgelegd. Het voert
-geen gate uit en implementeert geen cache; het toetst de noodzakelijke voorwaarden uit voorstel 0039 punt 2.
+geen gate uit en implementeert geen cache; het toetst de voorwaarden van de eerste variant in commit `fa02eed`.
 De broninhoud is na de wijziging telkens gelijk, zowel vóór als na `git add` en `git commit`.
 
 | Volgorde                                      | Werkmap bij developer-stop      | HEAD bij pre-push                  | Gevolg van het voorstel                                                        |
@@ -75,11 +75,10 @@ Het experiment en de volledige uitvoer staan lokaal in `/tmp/template-gate-flow-
 begininhoud, wijzig het bestand, leg HEAD/porcelain/inhoudshash vast, stage, leg ze opnieuw vast, commit en herhaal die
 waarneming tweemaal zonder verdere bewerking. Er wordt niets gepusht en geen framework-werkmap gewijzigd.
 
-**Uitkomst:** de beoogde winst voor de ontwikkelronde is nog niet aangetoond. Het voorstel garandeert geen besparing
+**Uitkomst van de eerste variant:** de beoogde winst voor de ontwikkelronde was niet aangetoond. Die variant garandeert geen besparing
 voor de eerste geldige volgorde. De huidige developer-instructie verplicht niet om vóór SubagentStop te committen
-(`.claude/agents/developer.md:8`). Er is ook geen meting van hoe vaak elke volgorde voorkomt. Daarom is geen helper
-gebouwd of aangesloten: dat zou nu extra cachebeheer toevoegen zonder onderbouwde winst in het beoogde gebruik.
-Dit volgt de stopvoorwaarde van 0039 punt 5; het is geen bewijs dat caching in alle workflows nutteloos is.
+(`.claude/agents/developer.md:8`). Er was ook geen meting van hoe vaak elke volgorde voorkomt. Daarom is die volledige
+hergebruikcache niet gebouwd. Dit volgde haar stopvoorwaarde; het is geen bewijs dat caching in alle workflows nutteloos is.
 
 Een vervolgontwerp moet eerst bepalen welke dure, afzonderlijke controles veilig op hun werkelijke invoer kunnen
 worden gekoppeld, zonder elke commit als verandering te behandelen. Git-afhankelijke controles blijven zelfstandig
@@ -87,49 +86,73 @@ draaien. Ook dan moeten typegestuurde lintafhankelijkheden, de geïnstalleerde d
 hooks worden meegenomen. Alleen opnieuw pushen op dezelfde HEAD sneller maken is onvoldoende bewijs voor de bredere
 doelstelling. Dat vervolg verandert het huidige voorstel en wordt daarom niet stilzwijgend geactiveerd.
 
-## Afbakening van de bouw
+## Vervolg per controle: alleen lint
 
-Het [besluitvoorstel](../adr/0039-lokale-gate-hergebruik.md) beperkt de eerste aansluiting tot developer-stop en pre-push.
-Beoogde nieuwe module en CLI: `scripts/kit/local-gate-state.mjs` en `scripts/kit/local-gate.mjs`.
-Beoogde aansluitingen: `rails/hooks/lib/werkstraat.mjs` en `lefthook.yml`. Testuitbreiding:
-`test/hooks/werkstraat.test.ts` en een nieuw `test/rails/local-gate.test.ts`.
-Dit zijn bouwdoelen, nog geen bestaande bestanden of opdrachten.
+De eigenaar gaf daarna "Oke ga door" op het vervolg per afzonderlijke controle. De bestaande lint duurde afzonderlijk
+46,178 seconden, typecheck 16,186 seconden (beide exitcode 0). De eerste aansluiting richt zich op ESLint's bestaande
+contentcache, niet op een eigen groenbewijs. Het [herziene voorstel](../adr/0039-lokale-gate-hergebruik.md) beschrijft deze scope.
 
-De schone-checkoutbeperking is bewust klein, maar beperkt ook de mogelijke winst: een developer stopt vaak met een
-vuile werkmap en de hoofdsessie commit daarna. Een andere HEAD maakt het resultaat ongeldig, omdat onder meer
-migratie- en roadmapcontroles Git gebruiken. Voor dat patroon is volledige hergebruikcache dus niet vanzelf een
-oplossing. De bouwmeting moet dit scenario meenemen. Zonder winst volgt geen activatie; een volgende, afzonderlijke
-afweging kan onderzoeken welke individuele controles veilig op alleen broninhoud kunnen worden gekoppeld.
+De modules zijn `scripts/kit/lint-inputs.mjs` (inhoudscontrole), `scripts/kit/cached-lint.mjs` (tijdelijke bestanden en
+ESLint-aanroep) en `scripts/kit/local-gate.mjs` (dezelfde gates uit het register). Developer-stop en pre-push gebruiken
+dit toegangspunt. Alle andere gates, waaronder tests en Git-afhankelijke checks, blijven opnieuw draaien. De gewone
+opdracht `pnpm gate:fast`, CI en onafhankelijke review gebruiken de lokale cache niet. De
+[procedure](../operations/lokale-checks.md) beschrijft opslag, terugval en de grens van ondersteunde configuratie.
 
 De hook laadt zijn code vanaf het vertrouwde anker. Een nieuwe scriptnaam uit die hook moet daarom bij ontbreken op
 een oudere checkout terugvallen op de bestaande volledige gate. Een gemengde templateversie mag de lokale controle
 niet stilzwijgend laten vervallen. Het gate-register en de CI-opdrachten blijven gelijk.
 
-## Acceptatiecriteria voor de bouw
+## Acceptatiebewijs
 
-| Criterium                                                                              | Vereist bewijs                                                                                       |
-| -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Identieke, schone invoer hergebruikt alleen een volledig geslaagde gate                | Twee echte CLI-aanroepen in een tijdelijke fixture-repo; de gate wordt één keer gestart              |
-| HEAD, branch en relevante refs horen bij de sleutel                                    | Iedere wijziging afzonderlijk bewijst een nieuwe volledige uitvoering                                |
-| Werkmap, staged wijzigingen, untracked bestanden en bestandssoorten zijn gecontroleerd | Ook wijzigen zonder mtime-wijziging en een symlink mogen geen oud groen opleveren                    |
-| Configuratie, lockfile, toolchain, daadwerkelijke dependencies en omgeving tellen mee  | Afzonderlijke negatieve gevallen; een gelijk versienummer zonder gelijke inhoud volstaat niet        |
-| Een onbekende invoer valt terug op controleren                                         | Onleesbaar bestand en onbekende installatievorm leveren geen cachehit op                             |
-| Alleen stabiel groen telt                                                              | Rode gate, procesfout, onderbreking en wijziging tijdens een run produceren geen herbruikbaar succes |
-| Schade of races geven geen onterecht groen                                             | Ontbrekende, kapotte en gedeeltelijke uitslag; twee gelijktijdige aanroepen; atomair publiceren      |
-| Oude checkouts en andere werkmappen behouden hun controle                              | Ontbrekende helper valt terug; werkmappen delen geen geldig lokaal resultaat                         |
-| CI, runner en PR-bewijs accepteren de lokale uitslag niet                              | Test van de twee aansluitingen en de bestaande CI-/PR-verificatie; geen gewijzigde CI-selectie       |
-| De optimalisatie bespaart werkelijk tijd                                               | Dezelfde scenario's vóór en na; ook hashing, toolstart en cachebeheer meegerekend                    |
+| Criterium                                                                    | Bewijs                                                                                                                       |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Stagen en committen zonder inhoudswijziging behouden hergebruik              | Fixture met echte Git-commits in `test/rails/local-gate.test.ts`                                                             |
+| Andere typen, nieuwe bestanden en dependencies horen bij de sleutel          | Negatieve gevallen, ook met teruggezette mtime en gewijzigde dependency zonder versieverhoging                               |
+| Werkelijke Node-binary en omgeving horen bij de sleutel                      | Afzonderlijke negatieve gevallen; hookvariabelen verdwijnen ook uit de echte lintomgeving                                    |
+| Onbekende of externe invoer geeft gewone lint                                | Configuratie, lintopdracht, externe symlink/bron/declaratie en uitgesloten `.git`/`.env`-verwijzing getest                   |
+| Alleen stabiel groen wordt gepubliceerd                                      | Rode lint, wijziging tijdens lint en onbruikbare cachemap getest                                                             |
+| Een kapotte cache of overlappende run geeft geen onterecht hergebruik        | Beschadigde publicatie en een gecontroleerde interleaving van twee runs getest; dit is geen timingtest met twee OS-processen |
+| Alle gates blijven in dezelfde volgorde draaien                              | Twee volledige aanroepen in de commandotest, alleen lint krijgt cacheopties                                                  |
+| CI gebruikt geen lokale cache                                                | CI-terugval getest; CI-workflows en handmatige gate blijven ongewijzigd                                                      |
+| Oudere checkout zonder helper houdt de controle                              | Nieuwe hooktest in `test/hooks/local-gate.test.ts`; bestaande hooktests ongewijzigd groen                                    |
+| Een typewijziging veroorzaakt nog steeds een fout in de onveranderde afnemer | Hieronder met echte ESLint aangetoond                                                                                        |
+| De hele ronde wordt sneller                                                  | Volledige vergelijkingsmeting volgt hieronder                                                                                |
 
-Geen bestaande test wordt verwijderd of geskipt. De commandotest voor developer-stop verandert in de bouw omdat de
-opdracht naar het gedeelde toegangspunt gaat; de eis dat rood blokkeert blijft bestaan en krijgt aanvullende gevallen.
-Deze voorbereidingswijziging verandert geen test, hook of gate.
+De acceptatietests zijn eerst tegen een passthrough/skelet uitgevoerd: 9 van 12 gevallen faalden op de ontbrekende
+hergebruiklogica. Na de bouw zijn de oorspronkelijke gevallen groen; er zijn extra negatieve gevallen toegevoegd.
+Er is geen bestaande test gewijzigd, verwijderd of geskipt. De nieuwe protocoltests gebruiken een kleine checkerfixture,
+geen gemockte API of database. De meting en typeproef gebruiken de echte geïnstalleerde ESLint.
+
+## Echte lint- en typeproef
+
+Twee tijdelijke bestanden in `src/shared/` vormden leverancier en afnemer. Aanvankelijk retourneerde `value()` een getal;
+de afnemer riep `value();` aan. Na koud en warm controleren veranderde alleen de leverancier naar `Promise<number>`.
+De onveranderde afnemer moet dan `no-floating-promises` opleveren. Dat gebeurde:
+
+| Scenario                                | Duur inclusief invoercontrole | Exitcode | Uitkomst                                                   |
+| --------------------------------------- | ----------------------------- | -------- | ---------------------------------------------------------- |
+| Koude lintcache                         | 51,398 s                      | 0        | Groen                                                      |
+| Dezelfde inhoud, warme lintcache        | 6,893 s                       | 0        | Groen                                                      |
+| Alleen retourtype leverancier gewijzigd | 47,166 s                      | 1        | Afnemer regel 3: `@typescript-eslint/no-floating-promises` |
+
+De SHA-256 van de afnemer bleef in alle drie gevallen
+`a151fca9830efae7f17a09e2cf63dc86dc7f566c55b993217ed3c901671e90f7`. De tijdelijke bestanden zijn daarna opgeruimd.
+Volledige uitvoer: `/tmp/template-lint-type-results.json` en `/tmp/template-lint-type-<scenario>.log`.
+Dit toont 44,505 seconden winst bij één herhaalde lintcontrole, niet bij de hele gate. Het rechtvaardigt de volgende
+volledige vergelijking, maar is nog geen eindbewijs van de totale ontwikkelronde.
+
+De pre-push-omgeving is ook met de echte geïnstalleerde Lefthook onderzocht, in een aparte Git-fixture. De native
+launcher veranderde `NO_COLOR`, `PROGRAMFILES(X86)` en `PWD`; de pnpm-shim voegde ook `NODE_PATH` toe. Dat zou anders
+hergebruik tussen developer-stop en pre-push verhinderen. Deze metadata wordt nu consequent uit de lintomgeving
+verwijderd of genormaliseerd; een externe `NODE_PATH` geeft nog steeds terugval. De nieuwe commandotest controleert
+dat beide invoeren dezelfde sleutel krijgen. De volledige vergelijking gebruikt ook de echte pre-push-launcher.
 
 ## Besluit en vervolg
 
-De huidige framework-lane verlangt een eigenaarbesluit vóór de bouw van een gewijzigde geaccepteerde ADR
-(`docs/adr/0029-snellere-beslisroute.md`, punten 1 en 4). Daarom staat het ontwerp als voorstel klaar; geen cache is
-geactiveerd. ADR 0038 is nog voorgesteld in deze broncheckout en wordt door Claude behandeld.
-Na zijn wijziging moet de besluitprocedure opnieuw tegen main worden gelezen; deze wijziging herschrijft haar niet.
+De implementatie volgt het voorwaardelijke akkoord en het vervolgmandaat uit de sessie. De ADR-status is niet door de
+agent goedgekeurd of geaccepteerd. De formele besluitprocedure, eigenaarreview en merge blijven gelden. De lokale
+aansluitingen staan alleen op de werkbranch; de draaiende Claude-hooks laden nog hun vertrouwde versie van main.
+De status van 0038 en de besluitprocedure moeten vóór opleveren opnieuw tegen main worden gelezen; dit werk herschrijft ze niet.
 
 CI-selectie, consolidatie van ADR's, Docker-orchestratie, rolverdeling en testparallelisatie vallen buiten deze bouwstap.
 Die kunnen later afzonderlijk op hetzelfde soort meting worden beoordeeld.

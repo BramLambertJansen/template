@@ -113,7 +113,7 @@ dependency-cruiser); checks op de database lezen de catalogus van de lokale data
 | Pre-commit (lefthook) | format, ESLint op staged, Betterleaks | < 10 s |
 | Einde beurt (Stop-hook) | `tsc --incremental`, ESLint `--cache`, `vitest --changed` (alleen het unit-project) | ~10–30 s |
 | Database-tests | `pnpm test:db`: integratie + pgTAP tegen lokale Postgres | ~20–60 s |
-| Pre-push | `gate:fast` | < 60 s |
+| Pre-push | Dezelfde snelle gates via `node scripts/kit/local-gate.mjs`; alleen lint met gecontroleerde ESLint-cache | < 60 s |
 | CI | `gate:fast` + build, daarna `gate:slow` | 3–5 / 8–15 min |
 
 - `gate:fast` = lint, typecheck, unit, dependency-cruiser, bundelbudget, `check-migrations`, `check-secdef` (statisch, op de migraties), `check-roadmap` (een nieuw `[x]` in `docs/roadmap.md` of een spec naar `gebouwd` zonder bewijs), `check-docs`.
@@ -353,7 +353,7 @@ SubagentStop staat in `.claude/settings.json` (matcher = agentnaam), niet in de 
 |---|---|
 | PostToolUse (Edit/Write) | ESLint + Prettier op het bewerkte bestand |
 | Stop | typecheck/lint/unit op geraakte bestanden; `{"decision":"block","reason":…}` met ≤ 40 regels; stopt direct bij `stop_hook_active`; overslaan in plan mode of zonder wijzigingen; nooit netwerk of database |
-| SubagentStop "groen vóór klaar" (developer) | blokkeert met `{"decision":"block"}` en de laatste 40 regels tot `gate:fast` groen is, ook bij een schone werkmap (een commit bewijst niet dat de pre-commit draaide) |
+| SubagentStop "groen vóór klaar" (developer) | blokkeert met `{"decision":"block"}` en de laatste 40 regels tot alle snelle gates groen zijn; lokaal via `scripts/kit/local-gate.mjs`, zonder die helper via `pnpm gate:fast`; ook bij een schone werkmap |
 | SubagentStop (tester, reviewer) | tester → lint en typecheck groen, en de nieuwe tests falen alleen op asserties (de acceptatietests zijn rood tot de developer klaar is); reviewer → rapport geschreven |
 | SessionStart | spec, branch, achterstand op `origin/main` (haalt die op met een harde timeout van 5 s en zonder ooit om credentials te vragen; een mislukte fetch blokkeert niets), laatste checkuitslag, status lokale stack (`doctor --quick`) als `additionalContext` |
 | PreToolUse rolhek (Edit/Write/Bash, alle rollen) | schrijfrecht per rol uit `.claude/gates.json` (ook voor Bash-schrijfdoelen: redirect, `sed -i`, `tee`, `cp`, `mv`, `rm`, `git checkout/restore`); simuleert Edit/Write op `jsonGates` en vergelijkt de sleutel; blokkeert gegenereerde bestanden, gecommitte migraties (= in de merge-base met `origin/main`, zoals `check:migrations`; onleesbaar → `HEAD` met de hint `git fetch origin`), verwijderen of skippen van bestaande tests en hulpbestanden, wijzigen van fixtures en setup; wijzigen van een bestaande test of hulpbestand meldt hij als `additionalContext` |
