@@ -34,8 +34,8 @@ Hooguit drie open items (`check:roadmap`); nummer 1 is bewijs vóór uitbreiding
   bouwproces van het framework te reconstrueren; helder Nederlands over de huidige werking; bouwen met agents blijft het uitgangspunt.
   **Gedaan:** README, changelog, leeswijzer en de eerste inventaris (docs en roadmap, `docs/reviews/2026-10-15-principes-inventaris.md`).
   Categorie C van die inventaris (D-3 t/m D-16) is afgehandeld; GitHub-beschrijving en topics staan sinds 2026-10-23.
-  **Open:** codecommentaar, gebruikers- en mailteksten, scripts, agentinstructies en GitHub-templates. De verhuizing van vervangen ADR's
-  naar het archief (ADR 0053) loopt apart. Elke wijziging op een beschermd pad vraagt een eigen eigenaarakkoord.
+  **Open:** codecommentaar, gebruikers- en mailteksten, scripts, agentinstructies en GitHub-templates.
+  Elke wijziging op een beschermd pad vraagt een eigen eigenaarakkoord.
   **Behoud:** verwijder niets dat agents helpt (instructies, skills, hooks, voorbeelden, specs, ontwerpcontext, valkuilen, herstelstappen,
   overdracht, bewijs); bij twijfel blijft het staan. Een bouwverslag verdwijnt pas als geen mens of agent hem nodig heeft; verplaats unieke
   informatie eerst naar een vindbare plek en controleer de verwijzingen. Git of een oude PR vervangt geen agentinformatie. Verwijder geen
@@ -109,19 +109,20 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
 - [ ] **ST-03 (P0) — achtergrondtaken: runner, opruimen en mail-outbox** (stuk 7; [ADR 0050](adr/0050-achtergrondtaken-en-mail-outbox.md): runner in het API-proces,
   eigen rol `app_jobs`, outbox zonder token; audit en bewaarcatalogus in [ADR 0051](adr/0051-audit-log-en-avg.md)). Opruimen van verlopen sessies, uitnodigingen en
   rate-limit-rijen, en mail via een outbox, elk met een integratietest.
-  **Werk:** in deze volgorde, elk een kleine PR met spec waar AGENTS.md dat eist: audit (ST-02), bewaarcatalogus (ADR 0051), rol
-  `app_jobs`, runner met `withJob()`, opruimen, outbox (ADR 0050 punt 1–5). Verbindingen blijven in de
+  **Werk:** inhoud volgens ADR 0050 punt 1–5 en, voor de bewaarcatalogus, ADR 0051. Volgorde (werkafspraak, uit stap 3–9 van het
+  vervangen ADR 0020), elk een kleine PR met spec waar AGENTS.md dat eist: audit (ST-04, basis gebouwd in #128), bewaarcatalogus, rol
+  `app_jobs`, runner met `withJob()`, opruimen, outbox. Verbindingen blijven in de
   bestaande db/auth-laag en worden aan de runner geïnjecteerd. Batches, locks, leases, begrensde retries, definitieve foutstatus en herstel na een
   procescrash. Geen uitnodigingstoken in de outbox; verzendstatus zichtbaar voor de admin; herstelrunbook. Een naar nul schalende host krijgt later
   een eigen adapter; kies nu geen queue-provider.
-  **Afhankelijkheden:** ST-04 en ST-05 volgens de ADR-bouwvolgorde; akkoord voor beschermde rol- of env-wijzigingen.
+  **Afhankelijkheden:** ST-04 en ST-05 volgens de volgorde onder **Werk** hierboven; akkoord voor beschermde rol- of env-wijzigingen.
   **Klaar als:** twee runners claimen dezelfde rij niet tegelijk; crash, lease-verval en SMTP-uitval getest; definitief mislukte mail blijft
   herstelbaar; alleen verlopen rijen verdwijnen; stoppen wacht op de lopende batch vóór het sluiten van pools. Documenteer at-least-once-verzending
   (geen exactly-once-claim).
   aanleiding: `docs/adr/0050-achtergrondtaken-en-mail-outbox.md`
 - [ ] **ST-05 (P0) — AVG: privacymechanisme, export en verwijderen** ([ADR 0051](adr/0051-audit-log-en-avg.md)). Mechanisme in core, inhoud per app.
-  **Werk:** bewaarcatalogus, FK-invarianten, eigen export, admin-verwijdering en app-registratie van exporters en erasers, in de volgorde
-  FK-invariant, export, verwijderen. Accountverwijdering en audit blijven in één transactie (geen tweede verbinding op dezelfde laatste-admin-lock). Exporters filteren
+  **Werk:** bewaarcatalogus, FK-invarianten, eigen export, admin-verwijdering en app-registratie van exporters en erasers. Volgorde
+  (werkafspraak): FK-invariant, export, verwijderen, na de bewaarcatalogus en outbox uit ST-03. Accountverwijdering en audit blijven in één transactie (geen tweede verbinding op dezelfde laatste-admin-lock). Exporters filteren
   expliciet op eigenaar, ook als RLS gedeelde data toelaat. Valideer bewaartermijnen en retention-kolommen; catalogusregistratie ook in de
   generator; lever het privacyregister-sjabloon (juridische inhoud en back-uptermijnen blijven per app).
   **Afhankelijkheden:** audit, bewaarcatalogus en outbox (ADR 0050); goedgekeurde export- en verwijderspecs.

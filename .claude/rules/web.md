@@ -34,7 +34,8 @@ paths:
   `src/web/lib/router.ts` met `RouteError`/`NotFound` als ErrorBoundary, `guard('<permissie>')` uit `src/web/lib/session.ts` voor
   `beforeLoad`, `createQueryClient` (401 → `/login`). Foutteksten in `src/web/copy/errors.ts`. Voorbeeld door alle lagen: `docs/gouden-pad.md`.
 - Tokens in drie lagen: `src/core/web/styles`, thema van de app in `src/web/styles/theme.css`. `Dialog` is native `<dialog>`, geen Radix (CSP).
-- Meldingen na een mutatie: `useToast().success/error`; `Toaster` staat in de AppShell, `ToastProvider` in `main.tsx`.
+- Toast: `useToast().success/error`; `Toaster` staat in de AppShell, `ToastProvider` in `main.tsx`.
+- Env in web alleen via `readWebEnv`/`isDev` (`src/core/web/lib/env.ts`); de Sidebar toont menu-items per rol via `visibleNavItems`.
 - `/design-system` staat achter `guard('design-system:read')`, alleen voorbeelddata; `src/web/dev/` alleen dynamisch importeren
   (leeg in de productiebundel).
 - Een nieuwe Button-variant is een nieuwe rij in `test/ui/contrast.test.ts`. `scanAxe` (`e2e/support/axe.ts`) zonder uitzonderingen;
