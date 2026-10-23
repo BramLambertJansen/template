@@ -33,11 +33,9 @@ Hooguit drie open items (`check:roadmap`); nummer 1 is bewijs vóór uitbreiding
 - [ ] **ST-14 (P1) — documentatie en bouwresten opruimen** (opdracht stap 5). Doel: een repo waarmee mensen en agents apps bouwen zonder het
   bouwproces van het framework te reconstrueren; helder Nederlands over de huidige werking; bouwen met agents blijft het uitgangspunt.
   **Gedaan:** README, changelog, leeswijzer en de eerste inventaris (docs en roadmap, `docs/reviews/2026-10-15-principes-inventaris.md`).
-  **Open:** categorie C van die inventaris (D-3 t/m D-16: framework regel 4, §10 Meten, AGENTS.md-status, DoD, `.claude/rules/web.md`,
-  agent-doorloop, CHANGELOG, README), plus codecommentaar, gebruikers- en mailteksten, scripts, agentinstructies en GitHub-templates.
-  Elke wijziging op een beschermd pad vraagt een eigen eigenaarakkoord. GitHub: vul een korte beschrijving en topics in en controleer de
-  template-instelling; voorstel: "Template om webapps met code-agents te bouwen. React, Hono en Postgres, met agentinstructies,
-  UI-componenten en ontwikkelcontroles." (de controle vond geen beschrijving of topics en een uitgeschakelde template-instelling).
+  Categorie C van die inventaris (D-3 t/m D-16) is afgehandeld; GitHub-beschrijving en topics staan sinds 2026-10-23.
+  **Open:** codecommentaar, gebruikers- en mailteksten, scripts, agentinstructies en GitHub-templates. De verhuizing van vervangen ADR's
+  naar het archief (ADR 0053) loopt apart. Elke wijziging op een beschermd pad vraagt een eigen eigenaarakkoord.
   **Behoud:** verwijder niets dat agents helpt (instructies, skills, hooks, voorbeelden, specs, ontwerpcontext, valkuilen, herstelstappen,
   overdracht, bewijs); bij twijfel blijft het staan. Een bouwverslag verdwijnt pas als geen mens of agent hem nodig heeft; verplaats unieke
   informatie eerst naar een vindbare plek en controleer de verwijzingen. Git of een oude PR vervangt geen agentinformatie. Verwijder geen
@@ -109,9 +107,10 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   een vervalste client-request-ID wordt niet gebruikt.
   aanleiding: #128
 - [ ] **ST-03 (P0) — achtergrondtaken: runner, opruimen en mail-outbox** (stuk 7; [ADR 0050](adr/0050-achtergrondtaken-en-mail-outbox.md): runner in het API-proces,
-  eigen rol `app_jobs`, outbox zonder token; ADR 0020 staat onder Besluiten ter herziening). Opruimen van verlopen sessies, uitnodigingen en
+  eigen rol `app_jobs`, outbox zonder token; audit en bewaarcatalogus in [ADR 0051](adr/0051-audit-log-en-avg.md)). Opruimen van verlopen sessies, uitnodigingen en
   rate-limit-rijen, en mail via een outbox, elk met een integratietest.
-  **Werk:** volg de sectie Bouwvolgorde van ADR 0020 letterlijk (audit, bewaarcatalogus, jobrol, runner, outbox). Verbindingen blijven in de
+  **Werk:** in deze volgorde, elk een kleine PR met spec waar AGENTS.md dat eist: audit (ST-02), bewaarcatalogus (ADR 0051), rol
+  `app_jobs`, runner met `withJob()`, opruimen, outbox (ADR 0050 punt 1–5). Verbindingen blijven in de
   bestaande db/auth-laag en worden aan de runner geïnjecteerd. Batches, locks, leases, begrensde retries, definitieve foutstatus en herstel na een
   procescrash. Geen uitnodigingstoken in de outbox; verzendstatus zichtbaar voor de admin; herstelrunbook. Een naar nul schalende host krijgt later
   een eigen adapter; kies nu geen queue-provider.
@@ -120,9 +119,9 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   herstelbaar; alleen verlopen rijen verdwijnen; stoppen wacht op de lopende batch vóór het sluiten van pools. Documenteer at-least-once-verzending
   (geen exactly-once-claim).
   aanleiding: `docs/adr/0050-achtergrondtaken-en-mail-outbox.md`
-- [ ] **ST-05 (P0) — AVG: privacymechanisme, export en verwijderen** ([ADR 0051](adr/0051-audit-log-en-avg.md), ter herziening). Mechanisme in core, inhoud per app.
-  **Werk:** bewaarcatalogus, FK-invarianten, eigen export, admin-verwijdering en app-registratie van exporters en erasers, in de volgorde van
-  ADR 0020. Accountverwijdering en audit blijven in één transactie (geen tweede verbinding op dezelfde laatste-admin-lock). Exporters filteren
+- [ ] **ST-05 (P0) — AVG: privacymechanisme, export en verwijderen** ([ADR 0051](adr/0051-audit-log-en-avg.md)). Mechanisme in core, inhoud per app.
+  **Werk:** bewaarcatalogus, FK-invarianten, eigen export, admin-verwijdering en app-registratie van exporters en erasers, in de volgorde
+  FK-invariant, export, verwijderen. Accountverwijdering en audit blijven in één transactie (geen tweede verbinding op dezelfde laatste-admin-lock). Exporters filteren
   expliciet op eigenaar, ook als RLS gedeelde data toelaat. Valideer bewaartermijnen en retention-kolommen; catalogusregistratie ook in de
   generator; lever het privacyregister-sjabloon (juridische inhoud en back-uptermijnen blijven per app).
   **Afhankelijkheden:** audit, bewaarcatalogus en outbox (ADR 0050); goedgekeurde export- en verwijderspecs.
@@ -141,7 +140,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   activeert organisatie, App en instellingen.
   **Afhankelijkheden:** ADR 0039, 0040 en 0045; beschikbaarheid van de vereiste CI-checks.
   **Klaar als:** negatieve fixtures voor ontbrekende of bypassbare instellingen; bewijs dat een directe push naar main wordt geweigerd en een
-  bot-PR zonder vereiste review niet mergebaar is. Geen actieve bescherming claimen op basis van alleen JSON-bestanden. Voorwaarde voor ADR 0030 PR 2.
+  bot-PR zonder vereiste review niet mergebaar is. Geen actieve bescherming claimen op basis van alleen JSON-bestanden. Voorwaarde voor agent-merge in de framework-lane (ADR 0046 punt 33).
   aanleiding: `scripts/github-ruleset.sh`
 - [ ] **Versie en build-SHA** (stuk 3f) in `GET /api/health` en onderaan in de app (publieke buildmetadata, geen secrets); vraagt een spec
   voor de healthcontractwijziging. De versiestrategie zelf hoort bij ST-12 (Geparkeerd).
@@ -251,7 +250,7 @@ Bewust nog niet, tot de genoemde aanleiding er is (P1). Niets verdwijnt: elk ite
   terug als: een app het nodig heeft
 - [ ] **sonarjs, better-tailwindcss en squawk** (stuk 4): de eerste twee vragen een nieuwe dependency, squawk een nieuwe tool (voor `gate:slow`).
   terug als: een fout die deze tool had gevangen doorglipt, of de proef-app toont dat ze nodig zijn
-- [ ] **ADR 0030 PR 2: algemene agent-merge** (voor de framework-lane; de feature-lane volgt ADR 0046 punt 30). Zie `.claude/skills/opleveren/SKILL.md`
+- [ ] **Agent-merge in de framework-lane** (ADR 0046 punt 33, geparkeerd; de feature-lane volgt ADR 0046 punt 30). Zie `.claude/skills/opleveren/SKILL.md`
   en `docs/operations/agent-doorloop.md`.
   terug als: er ≥ 10 feature-PR's zijn zonder gevolgfout, de AC→test-check en het risico-overzicht actief zijn en ST-01 is besloten
 
@@ -260,12 +259,8 @@ Bewust nog niet, tot de genoemde aanleiding er is (P1). Niets verdwijnt: elk ite
 Een ADR met status `voorgesteld` is geen besluit; afvinken gebeurt pas als de eigenaar hem accepteert.
 Geldende ADR-besluiten staan in `node scripts/kit/feiten.mjs adr`; afgevinkte besluititems, ook eigenaarbesluiten zonder ADR, staan in [het archief](roadmap-archief.md).
 
-- [ ] **Herziening van ADR 0018–0022 en 0024 en de specs onder mandaat** (`accountbeheer-uitbreiding`, `eigen-account`, `rate-limit`, `lijstpagina`):
-  geaccepteerd door de agent onder mandaat, "ter herziening" door de eigenaar. Open eigenaarbesluit; de agent beslist niet. Dit omvat ook ADR 0020
-  (achtergrondtaken: runner in het API-proces, eigen rol `app_jobs`, outbox zonder token), ADR 0021 (audit log, aanbevelingen OV-1..7) en ADR 0022
-  (AVG, aanbevelingen OV-1..7); gebouwd is audit (#128), rate limiting en readiness. Bron: `docs/reviews/2026-10-12-werkstraat.md`.
 - [ ] Ontwikkelplatform: alleen Ubuntu/WSL2, of ook macOS (sandbox, `scripts/bootstrap.sh`, `scripts/doctor.sh`). Eigenaarbesluit.
-- [ ] ST-01 (GitHub App en bescherming) besluiten: voorwaarde voor ADR 0030 PR 2; zie Volgende.
+- [ ] ST-01 (GitHub App en bescherming) besluiten: voorwaarde voor agent-merge in de framework-lane (ADR 0046 punt 33); zie Volgende.
 
 ## Gebouwd
 

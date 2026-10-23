@@ -26,26 +26,18 @@ paths:
 - Schermwerk is pas klaar na `pnpm ui:check` (375 en 1280 px + axe).
 - Aanraakdoelen ≥ 44 px en zichtbare focusring zitten in de recepten; nooit uitschakelen.
 
-## Gebouwd en nog open
+## Waar het staat
 
-Gebouwd (stuk 3b): bestandsroutes in `src/web/routes` (TanStack Router; `routeTree.gen.ts` is gegenereerd), de router in
-`src/web/lib/router.ts` met `RouteError`/`NotFound` als ErrorBoundary per route, de guard `guard('<permissie>')` uit
-`src/web/lib/session.ts` voor `beforeLoad`, `createQueryClient` (401 → `/login`), `AsyncView`, `Form`/`FormField`/`useZodForm`,
-`format` en `readWebEnv`/`isDev`, foutteksten in `src/web/copy/errors.ts`. Componenttests in het Vitest-project `web` (jsdom).
-Gebouwd (stuk 3c): tokens in drie lagen (`src/core/web/styles`, thema van de app in `src/web/styles/theme.css`), de basiskit
-Button, Input, Field, Card, Dialog (native `<dialog>`, geen Radix: CSP), DropdownMenu, NavLink en de layoutblokken AppShell,
-Sidebar (`visibleNavItems` per rol), Topbar en CenteredCard; alles via `src/web/ui/index.ts`. `/design-system` in de app achter `guard('design-system:read')`, alleen voorbeelddata (ADR 0048);
-`src/web/dev/` is leeg in de productiebundel (alleen dynamisch importeren). Contrasttest `test/ui/contrast.test.ts` (nieuwe
-Button-variant = nieuwe rij), `scanAxe` in `e2e/support/axe.ts`.
-Gebouwd (stuk 3d, accountbeheer): de auth-client `src/core/web/lib/auth.ts` (via `src/web/lib/auth.ts`), schermen in
-`src/web/features/*` met routes in `src/web/routes` (`_app` = ingelogde layout met guard), Table, Select, PageHeader, Notice en
-QrCode in de kit. Voorbeeld van een scherm door alle lagen: `docs/gouden-pad.md`.
-Gebouwd (stuk 4): `pnpm check:catalogus` ontdekt UI uit beide UI-mappen en eist barrel-exports, bereikbare voorbeelden en eindige
-stringvarianten; geen uitzonderingen. Dezelfde bronindex staat in `feiten.mjs componenten` en op `/design-system` (ADR 0046). De woordenlijsttest
-`src/web/copy/woordenlijst.test.ts`.
-`scanAxe` zonder uitzonderingen: twee lintregels (axe-import en axe-uitzondering in `eslint.config.js`) houden ze tegen.
-Gebouwd (#129): Toast, `useToast().success/error` met `Toaster` in de AppShell en `ToastProvider` in `main.tsx`.
-Gebouwd (#145, #146, #150): Checkbox, RadioGroup, Textarea, StatusBadge, EmptyState, `busy` op Button en DropdownMenu, de
-bijbehorende Form-velden, Combobox, FormComboboxField, Accordion, List en DescriptionList; vindbare catalogusvoorbeelden. De
-actuele lijst staat in `pnpm check:catalogus` en `node scripts/kit/feiten.mjs componenten`.
-Nog niet: screenshot-baselines van de catalogus in de Playwright-image (roadmap, stuk 3c).
+- Componenten: de actuele lijst komt uit `pnpm check:catalogus` en `node scripts/kit/feiten.mjs componenten` (dezelfde bronindex als
+  `/design-system`, ADR 0048); alles via `src/web/ui/index.ts`. Een nieuw component of variant volgt de skill `nieuw-component`.
+- Router en guard: bestandsroutes in `src/web/routes` (`routeTree.gen.ts` is gegenereerd, `_app` = ingelogde layout met guard),
+  `src/web/lib/router.ts` met `RouteError`/`NotFound` als ErrorBoundary, `guard('<permissie>')` uit `src/web/lib/session.ts` voor
+  `beforeLoad`, `createQueryClient` (401 → `/login`). Foutteksten in `src/web/copy/errors.ts`. Voorbeeld door alle lagen: `docs/gouden-pad.md`.
+- Tokens in drie lagen: `src/core/web/styles`, thema van de app in `src/web/styles/theme.css`. `Dialog` is native `<dialog>`, geen Radix (CSP).
+- Meldingen na een mutatie: `useToast().success/error`; `Toaster` staat in de AppShell, `ToastProvider` in `main.tsx`.
+- `/design-system` staat achter `guard('design-system:read')`, alleen voorbeelddata; `src/web/dev/` alleen dynamisch importeren
+  (leeg in de productiebundel).
+- Een nieuwe Button-variant is een nieuwe rij in `test/ui/contrast.test.ts`. `scanAxe` (`e2e/support/axe.ts`) zonder uitzonderingen;
+  twee lintregels in `eslint.config.js` houden die tegen. Componenttests in het Vitest-project `web` (jsdom); woordenlijsttest
+  `src/web/copy/woordenlijst.test.ts`.
+- Nog niet: screenshot-baselines van de catalogus in de Playwright-image (`docs/roadmap.md`, Geparkeerd).

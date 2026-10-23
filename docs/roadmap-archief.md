@@ -24,6 +24,8 @@ Afgevinkte items uit [de roadmap](roadmap.md), per fase en stuk met hun bewijs e
 - [x] CI-lus tot groen en opleveren — ADR 0030 (PR 1: skill `opleveren`, #149); PR 2 staat onder Geparkeerd
 - [x] Duidelijker diff-guard en `pnpm pr:verify` tijdens de overgang — ADR 0031 (PR 1 #154, PR 3 #155); PR 2 staat onder Volgende
 - [x] Volledige UI-catalogus als bron voor agents en `/design-system` — ADR 0028 (`test/rails/catalogus-coverage.test.ts`)
+- [x] ~~Herziening van ADR 0018–0022 en 0024 en de specs onder mandaat (`accountbeheer-uitbreiding`, `eigen-account`, `rate-limit`,
+      `lijstpagina`), "ter herziening"~~ — vervallen (eigenaarbesluit 2026-10-23): opgegaan in de consolidatie, ADR 0043 en 0049–0051
 
 ## Gebouwd
 
