@@ -10,6 +10,8 @@ const outputDir = process.env['RUNNER_OUTPUT_DIR'];
 
 export default defineConfig({
   testDir: 'e2e',
+  // De prod-smoke draait alleen tegen de image (playwright.smoke.config.ts, scripts/check-image.sh).
+  testIgnore: '**/*.smoke.spec.ts',
   forbidOnly: true,
   // Overgangen ingekort (styles/index.css): axe meet anders kleuren halverwege transition-colors (flaky contrast).
   use: { baseURL, reducedMotion: 'reduce' },

@@ -6,6 +6,11 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Toegevoegd
 
+- Browser-smoke van de productie-SPA: de CI-job `image` opent `/` en `/admin/accounts` uit de gebouwde image in Chromium
+  en faalt op een ongevangen JS-fout, een CSP-schending of een mislukte asset (`e2e/prod-spa.smoke.spec.ts`,
+  `playwright.smoke.config.ts`). Lokaal met `SMOKE_BROWSER=1 scripts/check-image.sh <image>` na `pnpm install`; zonder die
+  variabele doet het script hetzelfde als voorheen. De gewone e2e (`playwright.config.ts`) slaat `*.smoke.spec.ts` over.
+
 - Onverwachte fouten in `createApp` en de route-cleanup worden gelogd via `logUnexpectedError()` (`src/core/api/http/safe-error-log.ts`) met alleen requestId, route, errorClass, code en label.
   Het foutobject zelf (message, SQL, parameters, detail, stack, cause) gaat niet meer naar de log; zie framework §6.
   Voor een app: de logregel op stderr heeft een nieuwe vorm, wie op het foutbericht zocht vindt dat niet meer; zoek op requestId.
