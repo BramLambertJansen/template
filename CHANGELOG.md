@@ -8,7 +8,8 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 - Browser-smoke van de productie-SPA: de CI-job `image` opent `/` en `/admin/accounts` uit de gebouwde image in Chromium,
   zonder database. Dat bewijst dat de bundel laadt en dat router en foutscherm renderen; de smoke faalt op een
-  CSP-schending, een ongevangen JS-fout, een mislukte asset of een `console.error` buiten de verwachte 500 van `/api/me`.
+  CSP-schending, een ongevangen JS-fout, een mislukte asset of een `console.error` buiten mislukte `/api/`-requests en
+  de door de ErrorBoundary gevangen serverfout (`ApiError` met status ≥ 500).
   Een crash in een specifiek scherm (bv. login) valt erbuiten (`e2e/prod-spa.smoke.spec.ts`,
   `playwright.smoke.config.ts`). Lokaal met `SMOKE_BROWSER=1 scripts/check-image.sh <image>` na `pnpm install`; zonder die
   variabele doet het script hetzelfde als voorheen. De gewone e2e (`playwright.config.ts`) slaat `*.smoke.spec.ts` over.
