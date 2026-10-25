@@ -6,8 +6,9 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Toegevoegd
 
-- Browser-smoke van de productie-SPA: de CI-job `image` opent `/` en `/admin/accounts` uit de gebouwde image in Chromium
-  en faalt op een ongevangen JS-fout, een CSP-schending of een mislukte asset (`e2e/prod-spa.smoke.spec.ts`,
+- Browser-smoke van de productie-SPA: de CI-job `image` opent `/` en `/admin/accounts` uit de gebouwde image in Chromium,
+  verwacht het inlogscherm en faalt op elke `console.error` (behalve een mislukte `/api/`-request), een ongevangen JS-fout,
+  een CSP-schending of een mislukte asset (`e2e/prod-spa.smoke.spec.ts`,
   `playwright.smoke.config.ts`). Lokaal met `SMOKE_BROWSER=1 scripts/check-image.sh <image>` na `pnpm install`; zonder die
   variabele doet het script hetzelfde als voorheen. De gewone e2e (`playwright.config.ts`) slaat `*.smoke.spec.ts` over.
 

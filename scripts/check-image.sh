@@ -2,7 +2,8 @@
 # Controleert de productie-image (ADR 0049) zonder database: start met APP_ENV=staging en geldige, niet-demo geheimen,
 # daarna: niet als root, liveness 200, readiness 503 (geen database), SPA met CSP, API-fout als { code, requestId },
 # en na SIGTERM netjes gestopt (exitcode 0). Voor CI en de eigenaar; de agent gebruikt geen docker.
-# Met SMOKE_BROWSER=1 daarna ook de browser-smoke (e2e/*.smoke.spec.ts, playwright.smoke.config.ts): vraagt node_modules
+# Met SMOKE_BROWSER=1 daarna ook de browser-smoke (e2e/*.smoke.spec.ts, playwright.smoke.config.ts): schermroutes naar
+# inloggen zonder console-fout, JS-fout, CSP-schending of mislukte asset. Vraagt node_modules
 # (pnpm install) en draait in het Playwright-image van compose.yaml (ui-runner), zonder internet, read-only.
 # Gebruik: [SMOKE_BROWSER=1] scripts/check-image.sh <image>
 set -euo pipefail
@@ -71,7 +72,14 @@ echo "✓ API-fout als { code, requestId }"
 if [[ "${SMOKE_BROWSER:-}" == "1" ]]; then
   [[ -d "$repo/node_modules/@playwright/test" ]] || fail "SMOKE_BROWSER=1 zonder node_modules: draai eerst pnpm install"
   pw_image="$(sed -n 's/^ *image: \(mcr\.microsoft\.com\/playwright:[^ ]*\)$/\1/p' "$repo/compose.yaml")"
-  [[ "$(wc -l <<<"$pw_image")" == "1" && -n "$pw_image" ]] || fail "geen eenduidig Playwright-image in compose.yaml"
+  [[ -n "$pw_image" && "$pw_image" != *$'\n'* ]] || fail "geen eenduidig Playwright-image in compose.yaml"
+  # Elke pull begrensd (zoals scripts/runner.sh): een hangende registry at anders de time-out van de job op.
+  pulled=""
+  for attempt in 1 2 3; do
+    if timeout --kill-after=10s 300 docker pull --quiet "$pw_image" >/dev/null; then pulled=1 && break; fi
+    printf '✗ Playwright-image binnenhalen: poging %s van 3 faalde of hing langer dan 300 s.\n' "$attempt" >&2
+  done
+  [[ -n "$pulled" ]] || fail "Playwright-image binnenhalen faalde na 3 pogingen; draai de job later opnieuw"
   docker network create --internal "$net" >/dev/null
   docker network connect "$net" "$name"
   docker run --rm --network "$net" --shm-size 1gb --read-only --tmpfs /tmp --cap-drop ALL \
@@ -79,7 +87,7 @@ if [[ "${SMOKE_BROWSER:-}" == "1" ]]; then
     -e HOME=/tmp -e CI=true -e SMOKE_BASE_URL="http://${name}:8080" -e SMOKE_OUTPUT_DIR=/tmp/smoke \
     "$pw_image" node node_modules/@playwright/test/cli.js test --config playwright.smoke.config.ts \
     || fail "browser-smoke van de productie-SPA faalt"
-  echo "✓ productie-SPA in de browser zonder JS-fout of CSP-schending"
+  echo "✓ productie-SPA in de browser: / en /admin/accounts naar inloggen, zonder console-fout, JS-fout, CSP-schending of mislukte asset"
 fi
 
 docker stop -t 15 "$name" >/dev/null

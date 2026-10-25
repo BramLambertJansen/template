@@ -1,30 +1,38 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type ConsoleMessage, type Page } from '@playwright/test';
 
-// Prod-SPA-smoke (ADR 0049): opent de productiebuild uit de image in een echte browser, zonder database. Faalt op elke
-// ongevangen JS-fout, elke CSP-schending en elke mislukte niet-API-request (ontbrekende chunk, asset). /api/* geeft
-// zonder database een fout; dat is hier verwacht. De SPA moet dan toch renderen: de guard stuurt naar inloggen (401)
-// of de ErrorBoundary toont de foutpagina (5xx). Beide zijn de enige h1 van het scherm (page-title.tsx).
+// Prod-SPA-smoke (ADR 0049): opent de productiebuild uit de image in een echte browser, zonder database en zonder cookie.
+// Dan geeft /api/me 401 vóór elke databasequery (src/core/api/auth/auth.ts, getSession zonder sessie), dus elke schermroute
+// moet via de guard op het inlogscherm uitkomen. Faalt op elke console.error (ook een route die bij het renderen crasht:
+// React meldt dat alleen zo, en de ErrorBoundary toont gewoon een h1), elke ongevangen JS-fout, elke CSP-schending en
+// elke mislukte niet-API-request (ontbrekende chunk, asset). Alleen "Failed to load resource" van een /api/-URL is verwacht.
 // Draait over http in een intern Docker-netwerk: de CSP (security-headers.ts) heeft geen upgrade-insecure-requests en
 // browsers negeren HSTS over http, dus de assets laden gewoon van dezelfde origin.
 
-const CSP_MELDING = 'Content Security Policy';
 // Een CSP-schending staat niet altijd als console-melding; dit event wel. Als string: init-scripts vallen buiten de CSP.
 const CSP_LUISTERAAR = `document.addEventListener('securitypolicyviolation', (event) => {
-  console.error('${CSP_MELDING}-schending: ' + event.violatedDirective + ' ' + event.blockedURI);
+  console.error('Content Security Policy-schending: ' + event.violatedDirective + ' ' + event.blockedURI);
 });`;
+
+function isApiPath(url: string): boolean {
+  return url !== '' && new URL(url).pathname.startsWith('/api/');
+}
+
+// De browser meldt een API-antwoord ≥ 400 als console-fout; de bron-URL zit in location, niet betrouwbaar in de tekst.
+function isExpectedApiFailure(message: ConsoleMessage): boolean {
+  return message.text().startsWith('Failed to load resource') && isApiPath(message.location().url);
+}
 
 function collectProblems(page: Page): string[] {
   const problems: string[] = [];
   page.on('pageerror', (error) => problems.push(`pageerror: ${error.message}`));
   page.on('console', (message) => {
-    if (message.text().includes(CSP_MELDING)) problems.push(`csp: ${message.text()}`);
+    if (message.type() === 'error' && !isExpectedApiFailure(message)) problems.push(`console.error: ${message.text()}`);
   });
   page.on('requestfailed', (request) => {
-    if (!new URL(request.url()).pathname.startsWith('/api/')) problems.push(`requestfailed: ${request.url()}`);
+    if (!isApiPath(request.url())) problems.push(`requestfailed: ${request.url()}`);
   });
   page.on('response', (response) => {
-    const pathname = new URL(response.url()).pathname;
-    if (response.status() >= 400 && !pathname.startsWith('/api/')) {
+    if (response.status() >= 400 && !isApiPath(response.url())) {
       problems.push(`http ${String(response.status())}: ${response.url()}`);
     }
   });
@@ -32,14 +40,15 @@ function collectProblems(page: Page): string[] {
 }
 
 for (const path of ['/', '/admin/accounts']) {
-  test(`productie-SPA rendert ${path} zonder JS-fout of CSP-schending`, async ({ page }) => {
+  test(`productie-SPA stuurt ${path} naar het inlogscherm zonder console-fout of CSP-schending`, async ({ page }) => {
     const problems = collectProblems(page);
     await page.addInitScript(CSP_LUISTERAAR);
 
     await page.goto(path);
 
-    const heading = page.locator('#root').getByRole('heading', { level: 1, name: /^(Inloggen|Er ging iets mis)$/ });
-    await expect(heading).toBeVisible({ timeout: 20_000 });
+    await expect(page).toHaveURL(/\/login(\?.*)?$/, { timeout: 20_000 });
+    await expect(page.locator('#root').getByRole('heading', { level: 1, name: 'Inloggen' })).toBeVisible();
+    await page.waitForLoadState('networkidle');
     expect(problems).toEqual([]);
   });
 }
