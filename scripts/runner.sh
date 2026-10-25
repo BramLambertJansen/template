@@ -86,7 +86,7 @@ if [[ "${2:-}" != "--sta-wijzigingen-toe" ]]; then check_host_files; fi
 # Git selecteert getrackte en nieuwe niet-genegeerde bestanden. Een gewijzigde test blijft dus gewoon meedraaien.
 RUNNER_INPUTS=(src test e2e public scripts rails db package.json pnpm-workspace.yaml
   tsconfig.base.json tsconfig.json tsconfig.node.json tsconfig.web.json
-  vitest.config.ts playwright.config.ts vite.config.ts index.html)
+  vitest.config.ts playwright.config.ts vite.config.ts .prettierrc.json index.html)
 
 check_input_path() {
   local prefix="$1"
