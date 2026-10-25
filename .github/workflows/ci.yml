@@ -113,9 +113,9 @@ jobs:
           EVENT: ${{ github.event_name }}
 
   # De productie-image (ADR 0049) bouwt en start: niet als root, liveness, readiness, SPA met CSP en netjes stoppen; daarna
-  # de browser-smoke (SMOKE_BROWSER=1): / en /admin/accounts uit de image in Chromium (Playwright-image van ui:check) komen
-  # op het inlogscherm uit, zonder console-fout, JS-fout, CSP-schending of mislukte asset. node_modules alleen voor
-  # @playwright/test, dat in dat image draait.
+  # de browser-smoke (SMOKE_BROWSER=1): / en /admin/accounts uit de image in Chromium (Playwright-image van ui:check),
+  # zonder database: bundel laadt, router en foutscherm renderen, zonder CSP-schending, ongevangen JS-fout, mislukte asset
+  # of onverwachte console.error. node_modules alleen voor @playwright/test, dat in dat image draait.
   image:
     name: image
     runs-on: ubuntu-24.04

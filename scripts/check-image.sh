@@ -2,8 +2,9 @@
 # Controleert de productie-image (ADR 0049) zonder database: start met APP_ENV=staging en geldige, niet-demo geheimen,
 # daarna: niet als root, liveness 200, readiness 503 (geen database), SPA met CSP, API-fout als { code, requestId },
 # en na SIGTERM netjes gestopt (exitcode 0). Voor CI en de eigenaar; de agent gebruikt geen docker.
-# Met SMOKE_BROWSER=1 daarna ook de browser-smoke (e2e/*.smoke.spec.ts, playwright.smoke.config.ts): schermroutes naar
-# inloggen zonder console-fout, JS-fout, CSP-schending of mislukte asset. Vraagt node_modules
+# Met SMOKE_BROWSER=1 daarna ook de browser-smoke (e2e/*.smoke.spec.ts, playwright.smoke.config.ts): de bundel laadt en
+# router en foutscherm renderen, zonder CSP-schending, ongevangen JS-fout, mislukte asset of onverwachte console.error.
+# Vraagt node_modules
 # (pnpm install) en draait in het Playwright-image van compose.yaml (ui-runner), zonder internet, read-only.
 # Gebruik: [SMOKE_BROWSER=1] scripts/check-image.sh <image>
 set -euo pipefail
@@ -87,7 +88,7 @@ if [[ "${SMOKE_BROWSER:-}" == "1" ]]; then
     -e HOME=/tmp -e CI=true -e SMOKE_BASE_URL="http://${name}:8080" -e SMOKE_OUTPUT_DIR=/tmp/smoke \
     "$pw_image" node node_modules/@playwright/test/cli.js test --config playwright.smoke.config.ts \
     || fail "browser-smoke van de productie-SPA faalt"
-  echo "✓ productie-SPA in de browser: / en /admin/accounts naar inloggen, zonder console-fout, JS-fout, CSP-schending of mislukte asset"
+  echo "✓ productie-SPA in de browser: / en /admin/accounts tonen het foutscherm, zonder CSP-schending, JS-fout, mislukte asset of onverwachte console.error"
 fi
 
 docker stop -t 15 "$name" >/dev/null
