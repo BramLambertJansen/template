@@ -6,7 +6,7 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Gewijzigd
 
-- De web-ingang zet zod op `jitless` (`src/web/lib/zod-config.ts`, als eerste import in `src/web/main.tsx`): zod probeerde
+- De web-ingang zet zod op `jitless` (`src/core/web/lib/zod-config.ts`, als eerste import in `src/web/main.tsx`): zod probeerde
   bij het aanmaken van het eerste object-schema `new Function`, wat de CSP als
   `script-src eval`-schending meldt. Gevonden door de browser-smoke van de productie-SPA.
 
