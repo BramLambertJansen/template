@@ -30,6 +30,9 @@ if [[ "$*" == *" run --rm --build "* ]]; then
   test -n "$RUNNER_INPUT_DIR" || exit 91
   find "$RUNNER_INPUT_DIR" -type f -printf '%P\\n' | sort > "$STUB_DIR/inputs"
   cat "$RUNNER_INPUT_DIR/src/main.ts" > "$STUB_DIR/source"
+  if [[ -f "$RUNNER_INPUT_DIR/.prettierrc.json" ]]; then
+    cat "$RUNNER_INPUT_DIR/.prettierrc.json" > "$STUB_DIR/formatting"
+  fi
   test -f "$RUNNER_PRIVATE_CANARY" || exit 92
   echo "$RUNNER_INPUT_DIR" > "$STUB_DIR/snapshot"
 fi
@@ -65,14 +68,17 @@ test('runner krijgt actuele broncode en nieuwe tests, geen werkmapgeheimen of Gi
   expect(spawnSync('test', ['-e', snapshot]).status).toBe(1);
 });
 
-test.each(['src', 'node_modules', '.runner-output'])('weigert een symlink als mountbron of bronmap: %s', (name) => {
-  const dir = fixture();
-  rmSync(path.join(dir, name), { recursive: true, force: true });
-  symlinkSync(path.join(dir, 'stubs'), path.join(dir, name));
-  const result = run(dir);
-  expect(result.status).toBe(1);
-  expect(result.stderr).toMatch(/symlink|veilig pad/);
-});
+test.each(['src', 'node_modules', '.runner-output', '.prettierrc.json'])(
+  'weigert een symlink als mountbron of bronmap: %s',
+  (name) => {
+    const dir = fixture();
+    rmSync(path.join(dir, name), { recursive: true, force: true });
+    symlinkSync(path.join(dir, 'stubs'), path.join(dir, name));
+    const result = run(dir);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/symlink|veilig pad/);
+  },
+);
 
 test('weigert ook een geneste symlink in nieuwe broncode', () => {
   const dir = fixture();
@@ -101,4 +107,19 @@ test('weigert ook een symlinkouder met een regeleinde boven een getrackt bestand
 
 test('compose bindt geen hele werkmap meer aan /repo', () => {
   expect(readFileSync(path.join(root, 'compose.yaml'), 'utf8')).not.toMatch(/-\s+\.:\/repo:ro/);
+});
+
+test('projectopmaak voor de schemagenerator gaat mee, persoonlijke formatterconfig niet', () => {
+  const dir = fixture();
+  const config = JSON.stringify({ singleQuote: true, printWidth: 100 });
+  writeFileSync(path.join(dir, '.prettierrc.json'), config);
+  writeFileSync(path.join(dir, '.prettierrc.private'), 'synthetic private config');
+  writeFileSync(path.join(dir, '.prettierrc.local.json'), 'synthetic local config');
+  const result = run(dir);
+  expect(result.status).toBe(0);
+  const inputs = readFileSync(path.join(dir, 'stubs/inputs'), 'utf8').split('\n');
+  expect(inputs).toContain('.prettierrc.json');
+  expect(inputs).not.toContain('.prettierrc.private');
+  expect(inputs).not.toContain('.prettierrc.local.json');
+  expect(readFileSync(path.join(dir, 'stubs/formatting'), 'utf8')).toBe(config);
 });

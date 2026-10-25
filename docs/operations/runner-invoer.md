@@ -3,7 +3,8 @@
 `scripts/runner.sh` maakt voor elke run een tijdelijke kopie van de benodigde bronpaden (`RUNNER_INPUTS`).
 Getrackte bestanden en nieuwe, niet-genegeerde bronbestanden gaan mee, met hun actuele inhoud; lokaal verwijderde bestanden
 blijven weg. Git-metadata, persoonlijke configuratie, losse werkmapbestanden, genegeerde bestanden en `.env*` gaan niet mee.
-De vaste testwaarden komen uit `db/test.env`. `node_modules` wordt afzonderlijk alleen-lezen gemount.
+De vaste testwaarden komen uit `db/test.env`. De vaste projectconfig `.prettierrc.json` gaat mee zodat de
+schemagenerator dezelfde opmaak gebruikt; persoonlijke formatterconfig gaat niet mee. `node_modules` wordt afzonderlijk alleen-lezen gemount.
 
 De invoer is alleen-lezen in de container. Alleen `.runner-output` is schrijfbaar. Symlinks in de geselecteerde bronpaden
 en naar de afhankelijkheden of uitvoermap worden geweigerd, ook met een eigenaaroverride. De projectnaam bevat een hash
