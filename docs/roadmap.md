@@ -159,7 +159,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   `.github/workflows/guard.yml` met `scripts/kit/check-core.mjs` (regels uit ADR 0040, in de template uit); bewijs `test/rails/check-core.test.ts`.
   aanleiding: `.claude/rules/core.md`
 - [x] **`check-core`: geen oudere core via een merge** (ADR 0040, downgrade-gat). Een merge met een oudere vertrouwde commit kan een oudere
-  `src/core` terugbrengen of core verwijderen. Aanscherping: core van head is gelijk aan die van base of van een `template/main`-commit die
+  `src/core` terugbrengen of core verwijderen. Aanscherping: core van head is gelijk aan die van base of van een vertrouwde templatecommit die
   niet ouder is dan de core op main. Met fixture die de downgrade laat falen. Bewijs: `test/rails/check-core-downgrade.test.ts`.
   aanleiding: #240 (ADR 0040; eigenaarbesluit: nu aanvaard, aanscherping als vervolg)
 - [ ] **Fout die in een app doorglipt wordt eerst een check of regel in de template** (met fixture), daarna gerepareerd in de app (fase 2; doorlopend, P5).
