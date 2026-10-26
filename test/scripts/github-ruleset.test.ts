@@ -24,6 +24,7 @@ const OPDRACHT = [
   'image',
   'check:new-resource',
   'check-core',
+  'specplicht',
   'codeql (actions)',
   'codeql (javascript-typescript)',
   'osv-scanner',

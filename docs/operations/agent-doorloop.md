@@ -187,6 +187,12 @@ Na de vereiste review opent de hoofdsessie de PR en wacht op werkelijke CI:
 pnpm pr:verify 123 --watch
 ```
 
+Bevat de PR een nieuwe migratie, route, permissiesleutel of pagina (`src/web/routes/`) en zit de spec niet in de diff, dan
+noemt de PR-body haar met een regel `Spec: docs/specs/<naam>.md`; anders is de verplichte check `specplicht` rood
+(`docs/specs/specplicht.md`). Bij `pnpm new:resource` is dat de bouw-PR van fase 2: fase 1 levert de spec in een eigen
+besluit-PR, en na de merge (`goedgekeurd` op `main`) noemt de bouw-PR die spec met `Spec:`. De job leest de body via de API;
+de body aanpassen start hem opnieuw.
+
 Controleert huidige commit, PR-branch, repository en verplichte checks uit main. Alleen Actions-uitslagen op de juiste
 SHA tellen; een mislukte rerun maakt eerder groen ongeldig. Zonder `--watch` volgt direct de huidige toestand.
 Bij CodeQL telt ook de aparte `CodeQL`-resultaatcheck van GitHub Advanced Security mee: een geslaagde analysejob kan
@@ -244,7 +250,7 @@ bij volledig werk verzorgt de eigenaar de ontbrekende onafhankelijke stap vóór
 Is de auteur van een PR zelf goedkeurder, dan geeft `diff-guard` de uitslag `overgang` (groen met waarschuwing;
 [ADR 0045](../adr/0045-railwerk.md) punt 17). Dan:
 
-1. Lees de samenvatting van `diff-guard` (de geraakte gate-paden, bewaakte sleutels, gewijzigde tests en het Risico-overzicht: nieuwe, gewijzigde of hernoemde migraties, permissiesleutels, elke tekstwijziging in een contractbestand onder `src/shared/contracts/**` (elk bestandstype, ook alleen commentaar of witruimte; `permission:` oud → nieuw waar eenduidig, anders "controleer permissie met de hand"; buiten het overzicht vallen verwijderde bestanden, hernoeming uit `contracts/` (een hernoeming naar `contracts/` telt als nieuw), `*.spec.*`-bestanden en permissiewaarden uit een bestand buiten `src/shared/contracts/**`), nieuwe dependencies en nieuwe routes (op method en path of contract)) en de uitslag van
+1. Lees de samenvatting van `diff-guard` (de geraakte gate-paden, bewaakte sleutels, gewijzigde tests en het Risico-overzicht: nieuwe, gewijzigde of hernoemde migraties, permissiesleutels, elke tekstwijziging in een contractbestand onder `src/shared/contracts/**` (elk bestandstype, ook alleen commentaar of witruimte; `permission:` oud → nieuw waar eenduidig, anders "controleer permissie met de hand"; buiten het overzicht vallen verwijderde bestanden, hernoeming uit `contracts/` (een hernoeming naar `contracts/` telt als nieuw), `*.spec.*`-bestanden en permissiewaarden uit een bestand buiten `src/shared/contracts/**`), nieuwe dependencies, nieuwe routes (op method en path of contract) en nieuwe pagina's onder `src/web/routes/`) en de uitslag van
    `document-status` (een eigen job in `.github/workflows/guard.yml`, ADR 0045 punt 20; een fout staat als `::error title=document-status::`).
 2. Een label `gate-wijziging` of een review is niet nodig; een review is ook niet mogelijk, want GitHub laat de auteur zijn
    eigen PR niet goedkeuren. De eigenaar merget zelf.

@@ -8,10 +8,7 @@ allowed-tools: Bash(node scripts/kit/feiten.mjs *), Bash(pnpm pr:verify *), Bash
 
 Pas na de reviewer (framework §8 stap 5). Zie ADR 0046 punt 25 en 26.
 
-Toets de route vóór push: alleen beperkte fixes zijn licht, zonder nieuwe ADR/spec/mini-spec. Bij gewijzigd of hersteld
-gedrag hoort een aparte tester. Nieuwe features, pagina's, interacties en risicowerk krijgen de volledige straat.
-Lichte review mag door een aparte agent met leesopdracht als technische isolatie ontbreekt; claim die isolatie dan niet.
-Volledig werk behoudt afgedwongen onafhankelijke review of eigenaarreview. Geen zelfreview; alle eindchecks blijven.
+Toets vóór push of de gekozen route en haar rollen kloppen met framework §8. Geen zelfreview; alle eindchecks blijven.
 
 Feiten nu:
 
@@ -22,6 +19,8 @@ Feiten nu:
 1. Push de featurebranch en open de PR. Nooit naar `main`, nooit force-push; conflicten via `git merge origin/main`.
    De bestaande pre-push-hook draait de volledige `pnpm gate:fast`; start die niet nogmaals alleen voor de overdracht.
    Gerichte feedback is geen volledige groene gate. Iedere PR behoudt alle CI-checks; geen oude uitslag hergebruiken.
+   Bevat de PR een nieuwe migratie, route, permissie of pagina en zit de spec niet in de diff, zet dan een regel
+   `Spec: docs/specs/<naam>.md` in de PR-body (status `goedgekeurd` of `gebouwd` op `main`); anders is `specplicht` rood.
 2. Wacht met `pnpm pr:verify <nr> --watch` (geen kale `gh pr checks --watch`: die toetst SHA, branch en herkomst van de check niet).
 3. Bij rood: `gh run view <run-id> --log-failed`, de oorzaak fixen, committen, pushen en opnieuw wachten. Geen vast aantal rondes.
 4. Na fixes bekijkt de reviewer alleen het verschil: `git diff <reviewer-sha>..HEAD`.

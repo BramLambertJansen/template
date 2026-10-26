@@ -318,7 +318,9 @@ testregels of controles. De rollen hieronder gelden waar de gekozen route ze ver
 
 1. **Spec** (architect, hoofdsessie coördineert) in `docs/specs/` volgens `_template.md` — bij nieuwe features, pagina's,
    interacties, migraties, routes of permissies; bij overig volledig werk het toepasselijke besluit/spec. Geen nieuw document
-   voor een lichte fix. De architect of hoofdsessie schrijft
+   voor een lichte fix. De grens is afgedwongen door de verplichte check `specplicht` (`.github/workflows/guard.yml:70`,
+   `scripts/kit/diff-guard.mjs:542`): een nieuwe migratie, route, permissiesleutel of pagina onder `src/web/routes/` vraagt
+   een spec in de PR-diff of een regel `Spec: docs/specs/<naam>.md` in de PR-body met status `goedgekeurd` of `gebouwd` op `main`. De architect of hoofdsessie schrijft
    de spec of het ADR direct met de bedoelde status (`goedgekeurd`, `geaccepteerd`, `vervallen`, `vervangen door NNNN`); de merge door
    de eigenaar is het besluit, afwijzen is de PR sluiten (ADR 0046). `gebouwd` blijft bij `pnpm docs:status` met bouwbewijs. Een goedgekeurde spec heeft een ingevulde sectie "Hergebruik en UX" (`check-docs`, dat ook een lijstitem met `⚠ open` in "Open vragen" en een niet-bestaand pad in "Kopieer de vorm van" weigert).
    Bij een migratie, route of permissie krijgt de spec vóór de besluit-PR, of bij een mini-spec vóór het bouwen, eerst een spec-review van de reviewer (`.claude/agents/reviewer.md`).

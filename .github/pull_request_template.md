@@ -2,6 +2,10 @@
 
 <!-- Eén onderwerp per PR. Link naar de spec in docs/specs/ als die er is. -->
 
+<!-- Nieuwe migratie, route, permissie of pagina zonder spec in deze PR? Vul de naam in (status goedgekeurd of gebouwd op
+main; de check `specplicht` leest deze regel). Geen specplicht: laat staan of verwijder. -->
+Spec: docs/specs/<naam>.md
+
 ## Gedrag
 
 <!-- Per acceptatiecriterium: de test en de uitslag. Alleen docs of geen gedragsverandering: "n.v.t." met reden. -->

@@ -9,7 +9,8 @@
     "codeql (javascript-typescript)",
     "codeql (actions)",
     "osv-scanner",
-    "document-status"
+    "document-status",
+    "specplicht"
   ],
   "decisions": [
     {

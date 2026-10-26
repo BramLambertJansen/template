@@ -9,11 +9,15 @@
 // `permission:`-regels uit de ruwe tekst (oud → nieuw waar eenduidig) of anders "controleer permissie met de hand". Grenzen:
 // een verwijderd bestand (status D), een hernoeming van contracts/ naar elders (naar contracts/ telt als nieuw), `*.spec.*`-bestanden en permissiewaarden die uit een bestand buiten
 // src/shared/contracts/** komen vallen buiten het overzicht. Puur tekstuele analyse van de voor- en na-versie, PR-code wordt
-// nooit geïmporteerd of uitgevoerd.
+// nooit geïmporteerd of uitgevoerd. Pagina's: een nieuw bestand (A of C) onder src/web/routes/ (.ts/.tsx, geen test of routeTree.gen.ts).
+// Met `--specplicht` draait alleen `beoordeelSpecplicht` (docs/specs/specplicht.md): een nieuwe migratie, route, permissiesleutel
+// of pagina vraagt een spec in de diff of een regel `Spec: docs/specs/<naam>.md` in de PR-body (goedgekeurd of gebouwd op main).
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { documentInfo } from '../../rails/hooks/lib/document-state.mjs';
 import { globMatch } from '../../rails/hooks/lib/rolhek.mjs';
+import { regularGitFile } from './status-git.mjs';
 
 const LABEL = 'gate-wijziging';
 // Een review die de stand bepaalt; COMMENTED en PENDING laten de vorige beslissing staan.
@@ -26,9 +30,11 @@ const TEST_GEWIJZIGD = new Set(['M', 'D', 'R', 'T']);
  * @typedef {{ gates: string[], testpaden: string[], jsonGates: Record<string, string[]>, goedkeurders: string[] }} GuardConfig
  * @typedef {{ user: string, state: string, commitId: string, submittedAt: string }} Review
  * @typedef {{ wijzigingen: Wijziging[], json: Record<string, { voor: string | null, na: string | null }>, labels: string[],
- *   reviews: Review[], auteur: string, headSha: string }} Pr
+ *   reviews: Review[], auteur: string, headSha: string, body?: unknown,
+ *   specsOpMain?: Record<string, string | null> }} Pr  `body` (string of null; al het andere telt als afwezig) en `specsOpMain` alleen bij --specplicht
  * @typedef {{ gates: string[], tests: string[], json: string[] }} Geraakt
- * @typedef {{ migraties: string[], permissies: string[], dependencies: string[], routes: string[] }} Risico
+ * @typedef {{ migraties: string[], permissies: string[], dependencies: string[], routes: string[], paginas: string[] }} Risico
+ * @typedef {{ uitslag: 'groen' | 'rood', redenen: string[], items: string[] }} Specplicht
  * @typedef {{ uitslag: 'groen' | 'overgang' | 'rood', redenen: string[], geraakt: Geraakt }} Uitslag
  * @typedef {Uitslag & { risico: Risico }} Oordeel
  */
@@ -150,7 +156,7 @@ function laatsteBeslissing(pr, goedkeurders) {
  * @returns {Oordeel}
  */
 export function beoordeel(pr, config) {
-  return { ...uitslagVan(pr, config), risico: risico(pr) };
+  return { ...uitslagVan(pr, config), risico: risico(pr, config.testpaden) };
 }
 
 /**
@@ -192,6 +198,7 @@ const PAKKET = 'package.json';
 const MIGRATIE = /^db\/migrations\/.+\.sql$/;
 const CONTRACT = /^src\/shared\/contracts\/(?:.+\/)?(?![^/]*\.test\.)[^/]+$/;
 const BRON = /^src\/.+\.(?:[cm]?ts|tsx)$/;
+const PAGINA = /^src\/web\/routes\/(?:.+\/)?(?!routeTree\.gen\.ts$)[^/]+\.tsx?$/;
 const DEP_SECTIES = ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'];
 // Een sleutel tussen quotes met een object als waarde, zoals `'me:read': { roles: [...] }`.
 const SLEUTEL = /(['"])([^'"\n]+)\1\s*:\s*\{/g;
@@ -391,11 +398,29 @@ function migratieRegel({ status, pad, van }) {
 }
 
 /**
+ * Nieuw paginabestand: toegevoegd of gekopieerd onder src/web/routes/ (hernoemd is niet nieuw), geen test.
+ * @param {Wijziging} wijziging @param {readonly string[]} testpaden
+ */
+function paginaRegel({ status, pad }, testpaden) {
+  return (status === 'A' || status === 'C') && PAGINA.test(pad) && !past(testpaden, pad) ? [pad] : [];
+}
+
+/** @type {GuardConfig | undefined} */
+let standaard;
+
+/** De config van deze checkout (`.claude/gates.json`); alleen gelezen als de aanroeper er geen meegeeft. */
+function standaardConfig() {
+  standaard ??= leesConfig(readFileSync(path.join(import.meta.dirname, '../../.claude/gates.json'), 'utf8'));
+  return standaard;
+}
+
+/**
  * Risico-overzicht uit `pr.wijzigingen` en de voor/na-tekst in `pr.json`; alleen tekstuele analyse.
  * @param {Pr} pr
+ * @param {readonly string[]} [testpaden]  standaard uit `.claude/gates.json`
  * @returns {Risico}
  */
-export function risico(pr) {
+export function risico(pr, testpaden = standaardConfig().testpaden) {
   const versies = new Map(Object.entries(pr.json));
   return {
     migraties: pr.wijzigingen.flatMap(migratieRegel).sort(),
@@ -408,6 +433,7 @@ export function risico(pr) {
       .filter(([pad]) => BRON.test(pad) && pad !== PERMISSIES)
       .flatMap(([pad, v]) => nieuweRoutes(pad, v))
       .sort(),
+    paginas: pr.wijzigingen.flatMap((wijziging) => paginaRegel(wijziging, testpaden)).sort(),
   };
 }
 
@@ -419,6 +445,7 @@ function risicoTekst(risico) {
     ['Permissiesleutels (nieuw of gewijzigd)', risico.permissies],
     ['Dependencies (nieuw)', risico.dependencies],
     ['Routes (nieuwe defineRoute)', risico.routes],
+    ["Pagina's (nieuw bestand onder src/web/routes)", risico.paginas],
   ];
   return [
     '**Risico-overzicht**',
@@ -449,6 +476,89 @@ export function samenvatting(oordeel) {
     ...lijst('Gewijzigde of verwijderde tests', oordeel.geraakt.tests),
     ...lijst('Bewaakte sleutels', oordeel.geraakt.json),
     ...risicoTekst(oordeel.risico),
+  ].join('\n');
+}
+
+// ---------- Specplicht (docs/specs/specplicht.md; framework §8, ADR 0058 punt 2) ----------
+
+const SPECREDEN =
+  'specplicht: nieuwe migratie, route, permissie of pagina zonder spec (framework §8, ADR 0058); voeg docs/specs/<naam>.md toe aan de PR of zet "Spec: docs/specs/<naam>.md" in de PR-body (status goedgekeurd of gebouwd op main)';
+const GEEN_ITEM = 'geen nieuwe migratie, route, permissie of pagina';
+// Zelfde regex als `statusViolations` in scripts/kit/check-docs.mjs.
+const SPEC_IN_DIFF = /^docs\/specs\/[^_/][^/]*\.md$/;
+const SPEC_REGEL = /^Spec: `?(docs\/specs\/[a-z0-9]+(?:-[a-z0-9]+)*\.md)`?\s*$/;
+const SPEC_TELT = new Set(['goedgekeurd', 'gebouwd']);
+const SPEC_WIJZIGING = new Set(['A', 'M', 'R', 'C']);
+
+/** Sleutels in de na-versie die in de voor-versie ontbreken; een andere rolverdeling telt niet. @param {{ voor: string | null, na: string | null } | undefined} versies */
+function nieuwePermissies(versies) {
+  if (versies === undefined) return [];
+  const voor = permissieSleutels(versies.voor);
+  return [...permissieSleutels(versies.na).keys()].filter((sleutel) => !voor.has(sleutel)).sort();
+}
+
+/** @param {Pr} pr @param {readonly string[]} testpaden */
+function specplichtigeItems(pr, testpaden) {
+  const r = risico(pr, testpaden);
+  return [
+    ...r.migraties.map((item) => `migratie: ${item}`),
+    ...r.routes.map((item) => `route: ${item}`),
+    ...nieuwePermissies(new Map(Object.entries(pr.json)).get(PERMISSIES)).map((item) => `permissie: ${item}`),
+    ...r.paginas.map((item) => `pagina: ${item}`),
+  ];
+}
+
+/** De specpaden uit de regels `Spec: …` van de body; geen string: geen paden. @param {unknown} body */
+export function specRegels(body) {
+  if (typeof body !== 'string') return [];
+  return body
+    .replaceAll('\r\n', '\n')
+    .split('\n')
+    .flatMap((regel) => SPEC_REGEL.exec(regel)?.[1] ?? []);
+}
+
+/** Redenen waarom de body-route niet telt; leeg als elke genoemde spec op main goedgekeurd of gebouwd is. @param {Pr} pr */
+function bodyRedenen(pr) {
+  const paden = specRegels(pr.body);
+  if (paden.length === 0) return [SPECREDEN];
+  const opMain = new Map(Object.entries(pr.specsOpMain ?? {}));
+  return paden.flatMap((pad) => {
+    const tekstOpMain = opMain.get(pad);
+    const info = typeof tekstOpMain === 'string' ? documentInfo(pad, tekstOpMain) : null;
+    if (info === null) return [`specplicht: ${pad} bestaat niet op main of is geen leesbare spec`];
+    return SPEC_TELT.has(info.status)
+      ? []
+      : [`specplicht: ${pad} heeft op main status ${info.status}; alleen goedgekeurd of gebouwd telt`];
+  });
+}
+
+/**
+ * Rood als de PR een specplichtig item heeft en geen spec telt: een spec in de diff (elke status) of geldige `Spec:`-regels
+ * in de body. Auteur, label en reviews spelen geen rol; zonder specplichtig item wordt de body niet gelezen.
+ * @param {Pr} pr
+ * @param {GuardConfig} [config]  standaard uit `.claude/gates.json`
+ * @returns {Specplicht}
+ */
+export function beoordeelSpecplicht(pr, config = standaardConfig()) {
+  const items = specplichtigeItems(pr, config.testpaden);
+  if (items.length === 0) return { uitslag: 'groen', redenen: [GEEN_ITEM], items };
+  const inDiff = pr.wijzigingen.find(({ status, pad }) => SPEC_WIJZIGING.has(status) && SPEC_IN_DIFF.test(pad));
+  if (inDiff !== undefined) return { uitslag: 'groen', redenen: [`spec in de PR: ${inDiff.pad}`], items };
+  const redenen = bodyRedenen(pr);
+  if (redenen.length > 0) return { uitslag: 'rood', redenen, items };
+  return { uitslag: 'groen', redenen: specRegels(pr.body).map((pad) => `spec in de PR-body: ${pad}`), items };
+}
+
+/** @param {Specplicht} oordeel */
+export function specplichtSamenvatting(oordeel) {
+  return [
+    `## specplicht: ${oordeel.uitslag}`,
+    '',
+    ...oordeel.redenen.map((reden) => `- ${reden}`),
+    '',
+    ...(oordeel.items.length === 0
+      ? []
+      : ['**Specplichtige items**', '', ...oordeel.items.map((item) => `- \`${item.replaceAll('`', "'")}\``), '']),
   ].join('\n');
 }
 
@@ -538,8 +648,8 @@ export function teLezen(config, wijzigingen) {
   return [...geraakteVaste, ...bron];
 }
 
-/** @param {GuardConfig} config @returns {Promise<Pr>} */
-async function leesPr(config) {
+/** Wijzigingen en voor/na-tekst van de PR, alleen als git-objecten. @param {GuardConfig} config */
+function leesDiff(config) {
   const [base, head] = [env('BASE_SHA'), env('HEAD_SHA')];
   if (![base, head].every((sha) => /^[0-9a-f]{40}$/.test(sha)))
     throw new Error('BASE_SHA en HEAD_SHA moeten 40 tekens hex zijn');
@@ -553,6 +663,12 @@ async function leesPr(config) {
       { voor: van === undefined ? null : versie(splitsing, van), na: versie(head, pad) },
     ]),
   );
+  return { wijzigingen, json, head };
+}
+
+/** @param {GuardConfig} config @returns {Promise<Pr>} */
+async function leesPr(config) {
+  const { wijzigingen, json, head } = leesDiff(config);
   const pr = `https://api.github.com/repos/${env('REPO')}`;
   const nummer = env('PR_NUMBER');
   const labels = (await api(`${pr}/issues/${nummer}/labels`)).map((label) => tekst(veld(label, 'name')));
@@ -565,13 +681,50 @@ async function leesPr(config) {
   return { wijzigingen, json, labels, reviews, auteur: env('AUTHOR'), headSha: head };
 }
 
-async function main() {
-  const config = leesConfig(readFileSync(path.join(import.meta.dirname, '../../.claude/gates.json'), 'utf8'));
-  const oordeel = beoordeel(await leesPr(config), config);
-  const tekstSamenvatting = samenvatting(oordeel);
+/**
+ * De actuele PR-body via de API (de payload is bij een Re-run verouderd); elke fout of geen string geeft `null` (dicht falen).
+ * @returns {Promise<string | null>}
+ */
+async function leesBody() {
+  try {
+    const antwoord = await globalThis.fetch(`https://api.github.com/repos/${env('REPO')}/pulls/${env('PR_NUMBER')}`, {
+      headers: { authorization: `Bearer ${env('GITHUB_TOKEN')}`, accept: 'application/vnd.github+json' },
+    });
+    if (!antwoord.ok) return null;
+    /** @type {unknown} */
+    const pr = await antwoord.json();
+    const body = veld(pr, 'body');
+    return typeof body === 'string' ? body : null;
+  } catch {
+    return null;
+  }
+}
+
+/** De PR voor `--specplicht`: diff, body en de tekst op `refs/guard/base` van elke genoemde spec; geen labels of reviews. @param {GuardConfig} config @returns {Promise<Pr>} */
+async function leesSpecplichtPr(config) {
+  const { wijzigingen, json, head } = leesDiff(config);
+  const body = await leesBody();
+  const root = path.join(import.meta.dirname, '../..');
+  const specsOpMain = Object.fromEntries(
+    specRegels(body).map((pad) => [
+      pad,
+      regularGitFile(root, pad, 'refs/guard/base') ? versie('refs/guard/base', pad) : null,
+    ]),
+  );
+  return { wijzigingen, json, labels: [], reviews: [], auteur: env('AUTHOR'), headSha: head, body, specsOpMain };
+}
+
+/** @param {string} tekstSamenvatting */
+function schrijfSamenvatting(tekstSamenvatting) {
   console.log(tekstSamenvatting);
   const summary = process.env['GITHUB_STEP_SUMMARY'];
   if (summary !== undefined) appendFileSync(summary, `${tekstSamenvatting}\n`);
+}
+
+/** @param {GuardConfig} config */
+async function mainDiffGuard(config) {
+  const oordeel = beoordeel(await leesPr(config), config);
+  schrijfSamenvatting(samenvatting(oordeel));
   if (oordeel.uitslag === 'overgang') console.log(`::warning title=diff-guard::${oordeel.redenen.join('; ')}`);
   if (oordeel.uitslag === 'rood') {
     console.log(`::error title=diff-guard::${oordeel.redenen.join('; ')}`);
@@ -579,4 +732,26 @@ async function main() {
   }
 }
 
-if (import.meta.main) await main();
+/** @param {GuardConfig} config */
+async function mainSpecplicht(config) {
+  const oordeel = beoordeelSpecplicht(await leesSpecplichtPr(config), config);
+  schrijfSamenvatting(specplichtSamenvatting(oordeel));
+  if (oordeel.uitslag === 'rood') {
+    console.log(`::error title=specplicht::${oordeel.redenen.join('; ')}`);
+    process.exitCode = 1;
+  }
+}
+
+/** @param {readonly string[]} args */
+async function main(args) {
+  const [modus, ...rest] = args;
+  if (rest.length > 0 || (modus !== undefined && modus !== '--specplicht')) {
+    console.error(`::error title=diff-guard::onbekend argument: ${args.join(' ')}; alleen --specplicht bestaat`);
+    process.exitCode = 1;
+    return;
+  }
+  const config = standaardConfig();
+  await (modus === '--specplicht' ? mainSpecplicht(config) : mainDiffGuard(config));
+}
+
+if (import.meta.main) await main(process.argv.slice(2));

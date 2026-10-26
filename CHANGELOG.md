@@ -147,6 +147,11 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Gewijzigd
 
+- Specplicht afgedwongen: de nieuwe verplichte job `specplicht` in `.github/workflows/guard.yml` is rood als een PR een
+  nieuwe migratie, `defineRoute`-identiteit, permissiesleutel of pagina onder `src/web/routes/` bevat zonder spec in de
+  diff of een regel `Spec: docs/specs/<naam>.md` in de PR-body (status `goedgekeurd` of `gebouwd` op `main`). Het
+  risico-overzicht van `diff-guard` toont nieuwe pagina's; het PR-sjabloon heeft de regel `Spec:`
+  (`docs/specs/specplicht.md`).
 - Een laat sluitende `EditableSection` trekt focus niet meer weg uit een ander veld of een andere knop. Het gewone
   focusherstel naar Bewerken en het opruimen van de uitgestelde focustimer blijven behouden.
 
@@ -244,6 +249,10 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 Account-lifecycle vereist de nieuwe migratie vóór de nieuwe API-code. Bestaande accounts krijgen geen verzonnen
 loginhistorie: de lijst toont "Onbekend" tot de volgende volledig geslaagde login. Zie
 [de spec](docs/specs/accountstatus-en-laatste-login.md) voor gedrag en tests.
+
+Specplicht: een app-PR met een nieuwe route, permissie, migratie of pagina heeft een spec in de diff nodig, of een regel
+`Spec: docs/specs/<naam>.md` in de PR-body naar een spec met status `goedgekeurd` of `gebouwd` op `main`. Draai daarna
+`scripts/github-ruleset.sh <owner>/<repo>` opnieuw, zodat de ruleset `specplicht` als verplichte check krijgt.
 
 De template heeft nog geen releaseversies. Controleer bij een update de gewijzigde migraties, architectuurbesluiten en instellingen. Een volledige upgradecontrole staat op de roadmap.
 
