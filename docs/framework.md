@@ -22,7 +22,7 @@ check is geen ADR. Anders volstaat een regel in dit document of `docs/` met PR-n
 7. **Prompts alleen voor wat werkt vóór review** (P3, ADR 0046): code die op de machine van de eigenaar of in CI draait, en de eigen
    instructies en rechten van de agent. De rest is zichtbaar in de PR via CODEOWNERS en diff-guard.
 8. **Eén ronde per besluit** (P4, ADR 0046): framework-lane streng (één PR per besluit, de merge is het besluit), feature-lane met
-   mini-spec en spec en bouw in één PR.
+   spec en bouw in één PR waar de feature-lane past; beperkte fixes zonder nieuwe spec (§8, ADR 0058).
 9. **Meten vóór en na** (P6, ADR 0046): een wijziging aan de werkstraat heeft een nulmeting en een vergelijking (§10 Meten).
    Voor nieuw werk geldt P1: geen roadmap-item, rail of ADR zonder aanleiding (app-behoefte, doorgeglipte fout of gemeten wrijving).
 
@@ -80,7 +80,7 @@ Regels voor elke keuze:
 | Elke route vraagt login | `/api/auth/*` (inloggen, aanmelden, reset), de clientfouten-route, `GET /api/health` en `GET /api/ready` | Bestaan juist voor niet-ingelogden; auth en clientfouten met rate limit; health en ready geven alleen `{ ok }`, geen data en geen rate limit (ready: 503 als de database onbereikbaar is; uitkomst 1 s bewaard, hooguit één controle tegelijk, ADR 0049) |
 | Elke schermroute heeft een `can()`-guard | Inlog-, aanmeld- en resetschermen (`/login`, `/uitnodiging`) | Publiek; ze tonen geen data |
 | Spec vóór een nieuwe route | `GET /api/health` (skelet) en `GET /api/ready` (readiness, ADR 0049) | Infrastructuur zonder data of actor; health bestaat vóór `defineRoute`, de skeletpagina die hem toonde, is vervallen met de ingelogde startpagina (PR 7b) |
-| Voorafgaand broncodemandaat voor core | Functionele UI in de template: mini-spec met `scope: functionele-ui`, code, UI-tests en gebruiksdocs in één PR (ADR 0056) | Bestaande componenten in `src/core/web/ui` en vaste teksten in `src/core/web/copy`; overige core, auth, dependencies en bewaking blijven erbuiten; een app wijzigt core niet |
+| Voorafgaand broncodemandaat voor core | Functionele UI in de template: mini-spec met `scope: functionele-ui`, code, UI-tests en gebruiksdocs in één PR (ADR 0056); beperkte fixes zonder nieuwe mini-spec (§8, ADR 0058) | Bestaande componenten in `src/core/web/ui` en vaste teksten in `src/core/web/copy`; overige core, auth, dependencies en bewaking blijven erbuiten; een app wijzigt core niet |
 | Elke route via `defineRoute` en met login | `POST /api/dev/login-as` (ADR 0043) | Alleen bij `APP_ENV=local` geregistreerd (elders 404); logt in als een seed-account, met CSRF-controle |
 
 ## 4. Codeerkaders
@@ -122,8 +122,10 @@ dependency-cruiser); checks op de database lezen de catalogus van de lokale data
 - `gate:slow` = `test:db` met `check-policies` en de functiecatalogus (de runtime-kant van `check-secdef`, op `pg_proc`), squawk op migraties, schema-snapshot zonder verschil, kleine e2e-set — tegen een verse database.
 - Verplicht naast CI: CodeQL en osv-scanner.
 - **Gate-register**: `scripts/kit/gates.mjs` beschrijft per script wat het bewaakt en of het snel is (zonder database, dus in `gate:fast`);
-  het is de enige gate-tabel. `gate:fast` draait de snelle gates uit het register via `scripts/kit/gate-fast.mjs`, in drie banen
-  (`test:unit`, `lint`, de rest na elkaar), met de rode uitvoer eerst en daarna de lijst in registervolgorde; `gate:slow` is de &&-keten van de trage. `test/rails/gates.test.ts`,
+  het is de enige gate-tabel. `gate:fast` draait de snelle gates uit het register via `scripts/kit/gate-fast.mjs`, in maximaal drie banen
+  (`test:unit`, `lint`, de rest na elkaar). Bij minder dan 6 GiB beschikbaar geheugen delen lint en tests een wachtrij;
+  alle gates draaien met dezelfde argumenten en faalvoorwaarden. De rode uitvoer komt eerst en daarna de lijst in registervolgorde;
+  `gate:slow` is de &&-keten van de trage. `test/rails/gates.test.ts`,
   `gate-fast.test.ts` en `gate-slow.test.ts` eisen dat beide precies het register volgen (ADR 0045).
 - **Ratchet**: bestaande overtredingen staan in `.kit/baseline.json` (stabiele sleutels: bestand, policynaam) of in ESLint bulk-suppressions.
   Een nieuwe overtreding faalt; een opgeloste die nog in de baseline staat, faalt ook tot `pnpm ratchet:update` hem weghaalt. Zo daalt schuld
@@ -295,20 +297,44 @@ Elke rol begint met de feiten uit `node scripts/kit/feiten.mjs` (gates, geldende
 migraties, routes, permissies, foutcodes, componenten en de fase uit de roadmap), niet met wat in proza staat. Een rol vraagt alleen de
 secties die hij nodig heeft (stap 1 in `.claude/agents/*.md`); zonder sectie komt alles, `adr --alle` toont ook vervangen ADR's.
 
-1. **Spec** (architect) in `docs/specs/` volgens `_template.md` — alleen bij migratie, nieuwe route of nieuwe permissie. De architect schrijft
+**Twee routes** ([ADR 0058](adr/0058-beperkte-fixroute-en-volledige-featurestraat.md)): de hoofdsessie kiest uit opdracht
+en bestaande kaders de route en noemt kort waarom. De reviewer toetst die keuze; een kleine diff of het woord "bug" is
+geen bewijs. Geen extra label, register of triage-opdracht.
+
+- **Licht:** uitsluitend een afgebakende bugfix of heel kleine UI-/functionaliteitsaanpassing binnen bestaande
+  functionaliteit en interactie. Geen nieuwe feature, pagina, interactie, publiek contract, component-API, route,
+  permissie, migratie of dependency. Geen nieuwe ADR, spec, mini-spec of goedkeuringsrecord: verwacht resultaat,
+  scope en bewijs staan kort in de opdracht/PR. Bestaande specs en besluiten blijven bindend. Bij verandering of
+  herstel van functioneel of toegankelijkheidsgedrag: eerst aparte tester, dan bouwer en aparte reviewagent.
+  Zuivere tekst-, opmaak- of documentcorrecties zonder dat gedrag: bouwer en reviewagent, geen vaste tester.
+- **Volledig:** iedere nieuwe feature, pagina of interactie, ook als die klein of omkeerbaar is; daarnaast A2/A3/A4,
+  auth, gegevensisolatie, RLS-/rollenmodel, vertrouwensgrenzen en moeilijk herstel. Ook ieder werk buiten de lichte
+  grens. Architect en passende spec, contract waar nodig, aparte tester vóór implementatie, bouwer, afgedwongen
+  onafhankelijke review, volledige CI en eigenaarmerge. Een bestaande passende feature-spec kan worden hergebruikt;
+  een feature vraagt niet automatisch een ADR (drempels §1). Wijzigingen van bindende specs volgen de besluitroute.
+
+Bij twijfel of scopegroei: volledig. De route geeft geen extra schrijfrechten of vrijstelling van beschermde paden,
+testregels of controles. De rollen hieronder gelden waar de gekozen route ze vereist.
+
+1. **Spec** (architect, hoofdsessie coördineert) in `docs/specs/` volgens `_template.md` — bij nieuwe features, pagina's,
+   interacties, migraties, routes of permissies; bij overig volledig werk het toepasselijke besluit/spec. Geen nieuw document
+   voor een lichte fix. De architect of hoofdsessie schrijft
    de spec of het ADR direct met de bedoelde status (`goedgekeurd`, `geaccepteerd`, `vervallen`, `vervangen door NNNN`); de merge door
    de eigenaar is het besluit, afwijzen is de PR sluiten (ADR 0046). `gebouwd` blijft bij `pnpm docs:status` met bouwbewijs. Een goedgekeurde spec heeft een ingevulde sectie "Hergebruik en UX" (`check-docs`, dat ook een lijstitem met `⚠ open` in "Open vragen" en een niet-bestaand pad in "Kopieer de vorm van" weigert).
    Bij een migratie, route of permissie krijgt de spec vóór de besluit-PR, of bij een mini-spec vóór het bouwen, eerst een spec-review van de reviewer (`.claude/agents/reviewer.md`).
 2. **Contract**: zod-schema's en routes die `501` teruggeven wanneer de wijziging een API-contract toevoegt.
-3. **Tester-agent** schrijft acceptatietests tegen het contract; ze compileren en falen op hun asserties. Schrijft alleen in testpaden;
-   per permissie en per policy ook de negatieve test. Bij een nieuwe resource neemt hij de declaratie die `pnpm new:resource` afdrukt
+3. **Tests** door een aparte tester vóór implementatie: altijd bij volledig werk, bij licht werk zodra gedrag verandert of herstelt.
+   De tester gebruikt de spec/het contract, of bij lichte fixes de verwachte uitkomst uit de opdracht/PR.
+   Die tester schrijft alleen in testpaden; zijn tests compileren en falen op hun asserties.
+   Per permissie en per policy ook de negatieve test. Bij een nieuwe resource neemt de tester de declaratie die `pnpm new:resource` afdrukt
    over in `test/security/resources.ts` en vult de samples in (`INVULLEN`); tot dan is de securitysuite rood.
 4. **Developer** (hoofdsessie of developer-agent) bouwt tot groen; gate-paden in `voorReview` alleen binnen een geldig exact
    taakmandaat uit main (ADR 0046); een ander gate-pad mag, met de melding "noem het in de PR" (ADR 0046 punt 28). Mag tests toevoegen. Een bestaande test wijzigen mag alleen als de spec of opdracht het geteste
    gedrag verandert; elke gewijzigde test staat met reden in de PR. Verwijderen of skippen alleen met akkoord van de eigenaar.
    Lijkt een test van de tester fout zonder dat het gedrag verandert, dan stopt de hoofdsessie en legt het de eigenaar voor;
    na akkoord past de tester (niet de hoofdsessie) de test aan.
-5. **Reviewer-agent** met schone context controleert `docs/dod.md`: correctheid, duplicatie, spec-afwijking en testinhoud per criterium,
+5. **Reviewer-agent** met schone, taakgerichte context controleert routekeuze en `docs/dod.md`: correctheid, duplicatie,
+   afwijking van de spec of verwachte uitkomst uit de opdracht/PR en testinhoud per criterium,
    en of de doc-wijziging in de PR zit (raakt de diff gedrag, API of conventies; zo ja, ontbreekt de doc, dan is dat een bevinding),
    elke blokkerende bevinding met bestand:regel en een pad van invoer naar fout. Stijl is werk van de lint.
    De review draait op de lokale branch (`git diff origin/main...HEAD`), direct nadat de developer groen is en vóór push en PR;
@@ -322,15 +348,26 @@ secties die hij nodig heeft (stap 1 in `.claude/agents/*.md`); zonder sectie kom
    (ADR 0046, [procedure](operations/agent-doorloop.md)). Rode of ontbrekende checks blokkeren oplevering.
 7. **Eigenaar** reviewt en merget.
 
+**Lokale feedback en eindcontrole:** PostToolUse en Stop/SubagentStop geven gerichte opmaak-, type-, lint- en testfeedback.
+De bouwer voert vóór review ook toepasselijke gerichte controles op de gecommitte branchdiff uit; de Stop-feedback ziet
+alleen nog gewijzigde code. Geen gewijzigde code betekent geen nieuwe feedback, nooit bewijs van een volledige groene gate.
+Developer-stop herhaalt geen volledige `gate:fast`; die draait vóór push via de bestaande pre-push-hook en blijft in volledige CI
+op iedere PR. Geen cache of oude groene uitslag vervangt controles na bronwijzigingen of ongeldige invoer. Alle toepasselijke
+runnerchecks en de inhoudelijke criteria uit `docs/dod.md` blijven gelden; dat document vereist hun groene bewijs bij oplevering.
+
+**Compacte overdracht:** doel, spec/contract, gewijzigde paden, open keuzes en exacte checkuitslagen. Geef een rol alleen
+de benodigde broncontext; laad componenten uitsluitend bij UI-werk. Ruwe logs en afgeronde gesprekken gaan niet standaard mee.
+De ADR-statusfilter houdt historie bereikbaar zonder fysieke archivering als voorwaarde.
+
 **Docs horen bij de wijziging**: de developer werkt bij elke wijziging die gedrag, API, configuratie of conventies raakt de relevante doc
 mee, in dezelfde commit en PR (kort, met `bestand:regel`-verwijzingen, zonder code te kopiëren). Spec naar `gebouwd`, roadmap-vinkje en ADR-status
 horen daar ook bij: een eigenaarstatus staat in het voorstel en de merge beslist (ADR 0046), `gebouwd` met bouwbewijs (ADR 0046 punt 10), roadmap-vinkjes met eigenaarakkoord. Binnen een taakmandaat mag `docs/roadmap.md` alleen het vinkje van het item van de taak meewijzigen; de precieze regel staat in `docs/dod.md`. Een item waarvan het bewijs beschikbaar is, wordt in
 diezelfde PR afgevinkt, en nooit zonder bewijs (`docs/dod.md`, Altijd). `check:docs-drift` waarschuwt in CI (geen blokkade) als `src/`
 wijzigt zonder `docs/` of `CHANGELOG.md`. `check:roadmap` (in `gate:fast`) blokkeert wel: een nieuw of gewijzigd `[x]` zonder testpad, checknaam of PR-nummer, en een spec die naar `gebouwd` gaat zonder bewijs (`scripts/kit/check-roadmap.mjs`). Er is geen docs-stap na de merge.
 
-Licht pad: geen migratie, route of permissie → plan, bouwen, review, opleveren.
-
-**Functionele UI in de template (ADR 0056):** een mini-spec met `scope: functionele-ui` mag samen met de implementatie,
+**Functionele UI in de template (ADR 0056/0058):** beperkte fixes aan bestaande UI binnen de lichte grens hierboven vragen
+geen nieuwe mini-spec; scope, verwachte uitkomst, testbewijs en gewijzigde bestaande UI-tests met reden staan in de PR.
+Voor overige functionele UI mag een mini-spec met `scope: functionele-ui` samen met de implementatie,
 bijbehorende nieuwe of gewijzigde UI-tests en gebruiksdocumentatie in één feature-PR. Geen vooraf gemergde spec of record
 in `.claude/decisions.json`. De uitzondering omvat `src/core/web/ui`, `src/core/web/copy` en de aansluitende app-UI;
 auth, API/contracten, queries, overige core, dependencies, configuratie, rails en agentinstructies blijven erbuiten.
@@ -342,7 +379,14 @@ template-update. `gebouwd` blijft gekoppeld aan groene verplichte checks op de b
 
 CI zet gewijzigde bestaande tests als lijst in de PR.
 
-**Eisen aan de rollen, ongeacht runtime:** de tester kan alleen in testpaden schrijven; de reviewer is read-only (geen schrijfrechten; alleen leescommando's, `git diff/log/show/status`, `gh pr view/diff/checks`, `node scripts/kit/feiten.mjs` en de checks uit `docs/dod.md`) met een begrensd aantal beurten; beide starten met schone context en alleen de afgebakende opdracht. Een rol telt alleen als onafhankelijk, ook als ad-hoc subagent, wanneer de runtime die eisen afdwingt. Is dat niet zo, of ontbreekt de rol, voer dan geen onafhankelijke review voor die rol op: benoem de ontbrekende stap expliciet en laat de eigenaar die uitvoeren vóór samenvoegen. De hoofdsessie reviewt nooit haar eigen werk.
+**Eisen aan de rollen, ongeacht runtime:** de aparte tester schrijft alleen tests; de reviewer schrijft niets en krijgt
+alleen leesopdrachten (`git diff/log/show/status`, `gh pr view/diff/checks`, `node scripts/kit/feiten.mjs` en de checks uit
+`docs/dod.md`), met een begrensd aantal beurten. Beide starten met schone, afgebakende context. Gebruik technische
+rolbeperking waar beschikbaar. Bij licht werk volstaat een aparte reviewagent met deze opdracht als technische isolatie
+ontbreekt; meld die beperking en claim geen afgedwongen onafhankelijkheid. Dat ontbreken alleen vraagt geen menselijke
+of externe reviewer. Ontbreekt een aparte reviewagent geheel, dan reviewt de eigenaar. Bij volledig werk telt een rol
+alleen als onafhankelijk als de runtime testpaden/leesrechten afdwingt; anders benoem je de ontbrekende stap en laat je
+de eigenaar die vóór samenvoegen uitvoeren. De bouwer en hoofdsessie reviewen nooit hun eigen werk.
 
 **Claude Code-implementatie** (ADR 0045): vijf subagents — architect, developer, tester (sonnet), reviewer (opus, `tools: Read, Grep, Glob, Bash`), docs (optioneel, geen vaste stap) —
 elk met `model` en `maxTurns`; schrijfrecht per rol bepaalt de rolhek-hook, niet de tools-lijst. Hooks, permissies, sandboxinstellingen en
@@ -374,7 +418,7 @@ SubagentStop staat in `.claude/settings.json` (matcher = agentnaam), niet in de 
 |---|---|
 | PostToolUse (Edit/Write) | ESLint + Prettier op het bewerkte bestand |
 | Stop | typecheck/lint/unit op geraakte bestanden; `{"decision":"block","reason":…}` met ≤ 40 regels; stopt direct bij `stop_hook_active`; overslaan in plan mode of zonder wijzigingen; nooit netwerk of database |
-| SubagentStop "groen vóór klaar" (developer) | blokkeert met `{"decision":"block"}` en de laatste 40 regels tot `gate:fast` groen is, ook bij een schone werkmap (een commit bewijst niet dat de pre-commit draaide) |
+| SubagentStop (developer) | dezelfde gerichte type-, lint- en unitfeedback als Stop; rood blokkeert met `{"decision":"block"}` en de laatste 40 regels. Geen volledige gate bij elke overdracht; pre-push en CI blijven de eindcontroles |
 | SubagentStop (tester, reviewer) | tester → lint en typecheck groen, en de nieuwe tests falen alleen op asserties (de acceptatietests zijn rood tot de developer klaar is); reviewer → rapport geschreven |
 | SessionStart | spec, branch, achterstand op `origin/main` (haalt die op met een harde timeout van 5 s en zonder ooit om credentials te vragen; een mislukte fetch blokkeert niets), laatste checkuitslag, status lokale stack (`doctor --quick`) als `additionalContext` |
 | PreToolUse rolhek (Edit/Write/Bash, alle rollen) | schrijfrecht per rol uit `.claude/gates.json` (ook voor Bash-schrijfdoelen: redirect, `sed -i`, `tee`, `cp`, `mv`, `rm`, `git checkout/restore`); simuleert Edit/Write op `jsonGates` en vergelijkt de sleutel; blokkeert gegenereerde bestanden, gecommitte migraties (= in de merge-base met `origin/main`, zoals `check:migrations`; onleesbaar → `HEAD` met de hint `git fetch origin`), verwijderen of skippen van bestaande tests en hulpbestanden, wijzigen van fixtures en setup; wijzigen van een bestaande test of hulpbestand meldt hij als `additionalContext` |

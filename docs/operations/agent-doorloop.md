@@ -5,7 +5,51 @@ het voorstel, bouwt, verzamelt bewijs en zet `gebouwd` zodra het bouwbewijs best
 
 ## Besluit en taakscope voorbereiden
 
-Begin met `node scripts/kit/feiten.mjs`. Architect schrijft spec of ADR direct met de bedoelde status; de eigenaar merget
+`pnpm gate:fast` meldt het wanneer minder dan 6 GiB geheugen beschikbaar is: lint en tests wachten dan op elkaar,
+terwijl de overige snelle gates hun bestaande baan houden. Alle controles draaien precies eenmaal, ook na rood.
+Aanleiding: op de gedeelde 8-GiB-host liep een ESLint-proces van 1,8 GiB naast de tests; de swap was vol en de gate
+duurde 486 s met time-outs. Dit is een lokale waarneming, geen vaste looptijd. De CLI-regressies in
+`test/rails/gate-fast-memory.test.ts` bewaken beide planningen en het behoud van alle gates en exitcodes.
+
+Dezelfde geheugengrens begrenst Playwright: één worker onder de grens, anders hooguit vier en nooit meer dan beschikbare
+CPU's. Alle e2e-tests, CSP, axe en time-outs blijven behouden. Aanleiding: de lokale run met acht workers op de gedeelde
+8-GiB-host eindigde na 10,3 minuten met 67 time-outs/fouten en zeven geslaagde tests; de gewone pre-commitcontrole duurde
+tegelijk 422 s. De nieuwe planning is op de echte configuratie getest; uitvoering in de runner vraagt CI-bewijs, omdat
+`playwright.config.ts` hostcode is (ADR 0044). Een nieuwe planning maakt de oude rode run niet groen.
+
+Vraag bij `node scripts/kit/feiten.mjs` alleen de secties die de taak nodig heeft. De UI-catalogus en TypeScript-compiler
+worden pas geladen bij `componenten` of bij een aanroep zonder secties; tekst- en JSON-uitvoer blijven gelijk.
+
+Lokale vergelijking op 25 oktober 2026 (Node 26.11.1, vijf losse processen per versie, `gates --json`): mediaan 426 ms
+vóór en 32 ms na uitgesteld laden. Dit is een momentopname. `test/scripts/feiten-lazy.test.ts` bewaakt de vermeden import;
+de bestaande feiten- en toolchaintests bewaken de uitvoer en foutafhandeling.
+
+`docs/roadmap-archief.md` bevat historisch bouwbewijs en is net als de actieve roadmap een beschermd gate-pad.
+De diff-guard beoordeelt ook verwijderen en weg-hernoemen; CODEOWNERS volgt dezelfde lijst in `.claude/gates.json`.
+
+ADR-nummers worden samen gecontroleerd voor de actieve map en het archief. Verwijderde nummers blijven gereserveerd via
+de Git-geschiedenis van de vertrouwde basis. Heeft main een nummer inmiddels gebruikt, werk de branch dan eerst bij.
+Alleen het bestaande paar 0039-bestanden blijft een ratchet-afwijking; nieuwe dubbelen worden geweigerd.
+Een vervangingsverwijzing eindigt bij een bestaand ADR, zonder zelfverwijzing of cyclus. De besluit-lane accepteert
+uitsluitend records die ook door de bestaande registervalidator komen.
+
+De ADR-sectie van `feiten.mjs` gebruikt dezelfde nummerherkenning en reserveert nummers uit het werkmaparchief en de
+bekende Git-geschiedenis van HEAD en origin/main. Die nummerreservering voegt geen fictieve documenten toe aan de lijst.
+Onleesbare geschiedenis is een fout; haal bij een verse of onvolledige checkout de geschiedenis eerst op.
+
+De app-initialisatie heeft naast geïsoleerde fixtures ook een compatibiliteitsproef met de echte templatebestanden
+(`test/scripts/app-init-template.test.ts`). Na initialisatie vindt die proef de oorspronkelijke invoer in de gekoppelde
+Git-geschiedenis. CI haalt hiervoor de volledige geschiedenis op; er wordt niets teruggeschreven naar de eigen checkout.
+
+Begin met de taakrelevante secties van `node scripts/kit/feiten.mjs`, bijvoorbeeld `gates specs fase`.
+De hoofdsessie bepaalt de route uit framework §8 (ADR 0058). Alleen een beperkte bugfix of heel kleine aanpassing binnen
+bestaande functionaliteit/interactie is licht: geen nieuwe ADR/spec/mini-spec of record; uitkomst, scope en bewijs staan
+kort in de opdracht/PR. Bij gedragsverandering of -herstel schrijft een aparte tester eerst de regressie; zonder gedrag
+geen vaste tester. Daarna bouwer en aparte reviewagent. Nieuwe features, pagina's, interacties en risicowerk krijgen altijd
+architect/spec, contract waar nodig, tester, bouwer en afgedwongen onafhankelijke review. Twijfel of scopegroei gaat
+volledig. Hergebruik passende feature-specs; een feature vraagt niet automatisch een ADR. Een classificatie geeft geen
+extra rechten. Bestaande besluiten, specs, spec-review en negatieve securitytests blijven gelden.
+Architect of hoofdsessie schrijft spec of ADR direct met de bedoelde status; de eigenaar merget
 (besluit) of sluit de PR (afwijzen). Alleen voor een broncodemandaat (`--path`) bereidt de hoofdsessie een besluitrecord voor:
 
 ```sh
@@ -28,13 +72,42 @@ YAML-regel te typen. Intrekking van een mandaat: eigenaar
 verwijdert of vervangt het record op main; lokaal verversen, CI gebruikt de actuele basis. Een verouderde lokale
 basis kan nog oud akkoord zien.
 
+### Gerichte feedback en één volledige lokale eindgate
+
+Developer-stop gebruikt dezelfde typecheck, lint op gewijzigde code en gerelateerde unit-/DOM-tests als Stop.
+Daarbij worden de volledige unit-suite en overige `gate:fast`-onderdelen niet bij iedere overdracht herhaald.
+De gerichte feedback kijkt naar nog gewijzigde bestanden; voer vóór review ook toepasselijke controles op de
+gecommitte branchdiff uit. Geen codewijziging betekent geen feedback, nooit een volledige groene einduitslag.
+
+Pre-push blijft ongewijzigd en start de volledige `pnpm gate:fast`. Alle CI-workflows en vereiste checks blijven
+ongewijzigd op iedere PR. Toepasselijke runnerchecks blijven verplicht. Een codewijziging of ongeldige controle-invoer
+vraagt nieuw bewijs; geen hergebruik van een oude groene uitslag of generieke cache.
+
+Overdracht bevat alleen doel, toepasselijke spec/contract of verwachte uitkomst uit de opdracht/PR, gewijzigde paden,
+open keuzes en echte checkuitslagen. Reviewagent met schone context en leesopdracht bij licht werk; technische isolatie
+waar beschikbaar, zonder die isolatieclaim als ze ontbreekt. Dat ontbreken alleen verplicht geen externe of menselijke
+reviewer. Zonder aparte agent, of zonder afgedwongen rolscheiding bij volledig werk, voert de eigenaar de ontbrekende
+stap uit. De bouwer claimt geen eigen controle als aparte review.
+
+De gerichte feedback volgt ADR 0057; de routegrens en rolkeuze volgen ADR 0058. Eerst de afzonderlijke besluit-PR mergen,
+daarna de implementatie. De vertrouwde
+hooklader gebruikt main; een branch activeert geen nieuwe rechten. De App, live ruleset en strikte build-proof uit dat
+ADR zijn afzonderlijk vervolgwerk en worden door deze hookwijziging niet als gebouwd of actief verklaard.
+
+`test/hooks/lean-workflow.test.ts` bewaakt de gerichte feedback en het blokkeren op type-, lint- en testfouten,
+en voert de echte pre-push-config in een tijdelijke repository uit met groene en rode gate-uitvoer.
+De bestaande tests in `werkstraat.test.ts` en `werkstraat-script.test.ts` zijn aangepast omdat developer-stop
+nu gerichte controles uitvoert; de controle op de git-root uit de payload blijft behouden.
+
 ### Feature-lane en mini-spec (ADR 0046)
 
 Een besluit kost één PR: de merge is het besluit. Architect of hoofdsessie zet de statusregel in het voorstel; commitvolgorde,
 inhoud na de status en committer doen er niet toe (ADR 0046 punt 7). Zonder record herkent `check-document-status` twee gevallen
 (`scripts/kit/lane.mjs`); de samenvatting noemt elk document dat een eigenaarstatus krijgt. Een PR met een eigenaarstatus merget altijd de eigenaar.
 
-**Functionele UI in de template (ADR 0056):** gebruik de mini-spec met aanvullend `scope: functionele-ui` in de frontmatter.
+**Functionele UI in de template (ADR 0056/0058):** een beperkte fix binnen de lichte grens van framework §8 krijgt geen
+nieuwe mini-spec. Noteer de uitkomst, scope en testbewijs kort in de PR, inclusief gewijzigde bestaande UI-tests met reden.
+Voor overige functionele UI gebruik je de mini-spec met aanvullend `scope: functionele-ui` in de frontmatter.
 Beschrijf het gevraagde gedrag en de acceptatiecriteria en bouw in dezelfde PR; een vooraf gemergde spec en een record met
 bronpaden zijn hiervoor niet nodig. De scope omvat bestaande componenten in `src/core/web/ui`, vaste teksten in
 `src/core/web/copy`, aansluitende app-UI, UI-tests en gebruiksdocs. Gewijzigde bestaande UI-tests krijgen per bestand een
@@ -47,13 +120,33 @@ broncommit, repository en geopende PR gebonden. Een gewijzigde implementatie na 
 - **Overige feature-lane:** app-werk met een mini-spec (`docs/specs/_mini.md`, veld `sjabloon: mini`). Alles mag meewijzigen (ook docs,
   `CHANGELOG.md`, de roadmap en gegenereerde bestanden zoals het schema-snapshot) behalve `src/core`, een pad uit `voorReview`
   (`.claude/gates.json`), een ADR, een gewijzigde of verwijderde bestaande test of migratie, en een tweede document met een eigenaarstatus.
-  Een migratie mag alleen een nieuwe tabel maken (`create table (…)`, daarna index, RLS, grants aan `app_*`-rollen en policies, uitsluitend op die tabel; geen kopieën, functies of dollar-quotes) en de mini-spec heeft dan de kop
+  Een PR bevat hoogstens één nieuwe migratie. Die maakt precies één owner-tabel in `public` volgens `pnpm new:resource`:
+  vaste id-, owner_id- en created_at-kolommen, ENABLE en FORCE RLS, vier afzonderlijke eigenaarpolicies met
+  `(select app.current_user_id())` en expliciete SELECT/DELETE-grants aan `app_authenticated`. INSERT/UPDATE-grants
+  zijn alleen per app-kolom toegestaan. Eenvoudige extra velden mogen text, integer/int, bigint, boolean, uuid of
+  timestamptz zijn, eventueel met NOT NULL en een letterlijke default. Indexen bevatten alleen kolomnamen;
+  quoted objectnamen, expressies en andere SQL-vormen volgen de framework-lane (`scripts/kit/lane.mjs`). De vaste
+  verwijzing naar `better_auth."user" (id)` blijft toegestaan. Een retentionregistratie heeft precies de volgorde
+  NO FORCE → één rij voor de nieuwe tabel → FORCE; losse of herhaalde toggles worden geweigerd. De mini-spec heeft de kop
   "Datawijzigingen (met grants)". Een geneste `CLAUDE.md` of `AGENTS.md` valt eruit. Een onbekend pad buiten `gates` en buiten `src/`, `docs/` en `db/` (zoals `.vscode/` of `.mcp.json`) valt eruit. Diff-guard en
   CODEOWNERS blijven gelden voor elk gate-pad in de PR. Het bereik is ruimer dan de letter van ADR 0046 punt 14 (eigenaarbesluit).
 - **Besluit-PR (framework-lane):** een of meer ADR's en specs die een eigenaarstatus krijgen (ook `vervangen door NNNN` of `vervallen`, of nieuwe inhoud van een goedgekeurde spec), met hooguit hun eigen records in `.claude/decisions.json` (andere records of `requiredChecks` wijzigen telt niet), zonder code of andere bestanden: alleen documenten in `docs/adr/` en `docs/specs/` die zelf een besluit krijgen, ook geen index of ander document. Wijzigt de inhoud van een spec met een `--path`-mandaat, dan vervalt dat mandaat; code eronder vraagt een nieuw record. Bouwen volgt in een volgende PR.
 - Past de PR in geen van beide, dan geldt de strenge route: de status heeft een record op main nodig (ADR 0046, hierboven).
 
 ## Ontwikkelen en runnerchecks
+
+`check-core` weigert een core-veranderende merge die een eerder geïmporteerde templateversie terugdraait, ook als de
+oudere ouder zelf vertrouwd is of de merge-ouders omgedraaid zijn (`scripts/kit/check-core.mjs`). De controle gebruikt
+de gedeelde Git-geschiedenis van beide ouders en `template/main`, zonder extra versieregister. Een template-update
+zonder core-wijziging en een nieuwere core met behoud van app-code blijven mogelijk; ontbrekende geschiedenis vraagt
+een volledige fetch. Dit bewaakt core; het vervangt de inhoudelijke review van app-code niet.
+
+Het rolhek reserveert PR-creatie en schrijvende `gh api`-opdrachten voor de hoofdsessie; inline GraphQL-queries
+blijven voor subagents leesbaar, oncontroleerbare GraphQL-invoerbestanden niet. `pnpm format` en `pnpm run format`
+vragen de hoofdsessie expliciet akkoord omdat ze ook beschermde bestanden schrijven; subagents gebruiken gerichte
+formattering. De padcontrole volgt bij cp/mv/ln/install ook `-t` en `--target-directory`.
+`git update-ref --stdin` (ook afgekort) wordt geweigerd omdat de te wijzigen refs niet in de opdracht staan.
+Dit sluit bekende omwegen; de bestaande sandbox en CI blijven nodig voor niet-geclassificeerde programma's.
 
 Een geldig broncodemandaat geeft alleen de bekende developer toegang tot genoemde beschermde bronbestanden.
 Core kan uitsluitend in de template zelf worden ontwikkeld. App-uitbreidingen blijven via registratie en app-code
@@ -132,7 +225,8 @@ Een wijziging aan die guard zelf vraagt, zolang hij nog niet op main staat, eige
 
 Claude Code gebruikt de geteste hooks. Codex en andere runtimes draaien ze niet automatisch: volg dezelfde procedure
 en meld ontbrekende lokale rolgrenzen. Een subagent met dezelfde rechten als de hoofdsessie is geen afgedwongen
-onafhankelijke reviewer. De eigenaar verzorgt de ontbrekende review vóór samenvoegen. De agent merget nooit.
+onafhankelijke reviewer. Bij lichte fixes volstaat een aparte agent met leesopdracht zonder die isolatieclaim;
+bij volledig werk verzorgt de eigenaar de ontbrekende onafhankelijke stap vóór samenvoegen. De agent merget nooit.
 
 ## Bekende beperkingen
 

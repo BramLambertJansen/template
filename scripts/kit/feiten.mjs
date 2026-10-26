@@ -12,7 +12,6 @@ if (probleem !== null) {
   console.error(probleem);
   process.exit(1);
 }
-const { componenten } = await import('./catalogus.mjs');
 const { gates } = await import('./gates.mjs');
 const { adrOverzicht, componentenTekst, faseOverzicht, toText } = await import('./feiten-tekst.mjs');
 
@@ -34,6 +33,36 @@ function adrs() {
       /^Status:\s*(voorgesteld|geaccepteerd|vervangen door \d{4}|vervallen)\b/m.exec(text)?.[1] ?? 'onbekend';
     return { nummer: file.slice(0, 4), titel: /^# \d{4} — (.+)$/m.exec(text)?.[1] ?? file, status };
   });
+}
+
+// Alleen bij de ADR-sectie: nummers uit archief en bekende geschiedenis blijven gereserveerd, zonder fictieve lijstrijen.
+async function gereserveerdeAdrNummers() {
+  const [{ gitText }, { adrNumber }] = await Promise.all([
+    import('../../rails/hooks/lib/authority-context.mjs'),
+    import('./adr-numbers.mjs'),
+  ]);
+  const root = process.cwd();
+  const refs = gitText(root, ['for-each-ref', '--format=%(refname)', 'refs/remotes/origin/main']);
+  if (refs === null) throw new Error('ADR-geschiedenis niet leesbaar; haal de Git-geschiedenis op');
+  const main = refs.split('\n').includes('refs/remotes/origin/main') ? ['refs/remotes/origin/main'] : [];
+  const history = gitText(root, [
+    'log',
+    'HEAD',
+    ...main,
+    '--full-history',
+    '--no-renames',
+    '--format=',
+    '--name-only',
+    '-z',
+    '--',
+    'docs/adr/',
+  ]);
+  if (history === null) throw new Error('ADR-geschiedenis niet leesbaar; haal de Git-geschiedenis op');
+  const archive = existsSync('docs/adr/archief')
+    ? markdownFiles('docs/adr/archief').map((file) => `docs/adr/archief/${file}`)
+    : [];
+  const paths = [...history.split('\0').map((file) => file.replace(/^\n+/, '')), ...archive];
+  return [...new Set(paths.flatMap((file) => adrNumber(file) ?? []))];
 }
 
 function specs() {
@@ -103,13 +132,14 @@ const sections = {
   gates: plain(() =>
     gates.map(({ script, bewaakt, snel }) => ({ script: `pnpm ${script}`, soort: snel ? 'snel' : 'traag', bewaakt })),
   ),
-  adr: plain(() => adrOverzicht(adrs(), alle)),
+  adr: plain(async () => adrOverzicht(adrs(), alle, await gereserveerdeAdrNummers())),
   specs: plain(specs),
   migraties: plain(migrations),
   routes: plain(routes),
   permissies: plain(permissies),
   foutcodes: plain(foutcodes),
-  componenten: () => {
+  componenten: async () => {
+    const { componenten } = await import('./catalogus.mjs');
     const lijst = componenten();
     return {
       json: { catalogus: CATALOGUS, lijst },

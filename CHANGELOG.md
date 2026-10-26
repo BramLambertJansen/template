@@ -20,6 +20,61 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
   `playwright.smoke.config.ts`). Lokaal met `SMOKE_BROWSER=1 scripts/check-image.sh <image>` na `pnpm install`; zonder die
   variabele doet het script hetzelfde als voorheen. De gewone e2e (`playwright.config.ts`) slaat `*.smoke.spec.ts` over.
 
+- DateInput behoudt de native kalender als `showPicker` ontbreekt of wordt geweigerd. De extra kalenderknop verschijnt
+  bij een beschikbare showPicker-functie; een geweigerde aanroep herstelt de native indicator en behoudt waarde en focus.
+
+- De snelle gate laat lint en tests bij weinig beschikbaar geheugen na elkaar draaien. Alle bestaande controles en
+  faalvoorwaarden blijven gelden; met voldoende geheugen blijven de drie parallelle banen beschikbaar.
+- Dezelfde geheugengrens begrenst browserworkers tot één bij weinig ruimte; anders hooguit vier, binnen de CPU-capaciteit.
+  De volledige e2e-suite, toegankelijkheidscontroles en time-outs blijven gelden.
+
+- De feitenopdracht laadt de UI-catalogus alleen wanneer componentinformatie wordt gevraagd. Gerichte vragen over
+  gates, ADR's, specs, migraties, routes, permissies, foutcodes en fase starten zonder de TypeScript-compiler te laden.
+
+- De SQL-feature-lane laat alleen één migratie met één owner-tabel volgens het generatorpatroon toe. Owner-policies,
+  ENABLE/FORCE RLS en grants worden expliciet gecontroleerd; quoted objectnamen, brede schrijfgrants, meerdere tabellen
+  en ongeldige retentionvolgordes gaan naar de framework-lane. Afwijkende SQL blijft mogelijk via de bestaande zwaardere
+  reviewroute (`scripts/kit/lane.mjs`, `docs/operations/agent-doorloop.md`).
+
+- `check-core` weigert een oudere core via een vertrouwde template- of app-main-merge, ook bij omgedraaide ouders.
+  Git-geschiedenis bepaalt welke templateversies al geïmporteerd zijn; er komt geen extra versieregister bij.
+  Een geldige nieuwere update en een merge zonder core-wijziging blijven toegestaan (`scripts/kit/check-core.mjs`).
+
+- Het rolhek weigert PR-creatie en schrijvende GitHub-API-opdrachten door subagents. Brede formattering vraagt
+  expliciet eigenaarakkoord via de hoofdsessie; de automatische toestemming voor `pnpm format` is verwijderd.
+  De Git-padcontrole herkent `--target-directory` en weigert ondoorzichtige refmutaties via `git update-ref --stdin`.
+
+- Het roadmaparchief valt onder de beschermde gate-paden en CODEOWNERS, ook bij verwijderen of weg-hernoemen.
+
+- Documentcontroles bewaken ADR-nummers in actieve bestanden, archief en verwijdergeschiedenis, ook als main sinds het
+  aftakken verderging. De historische dubbele 0039 geeft geen vrijstelling voor nieuwe dubbelen. Vervangingsketens mogen
+  geen cycli bevatten; de besluit-lane valideert het volledige besluitregister. Genummerde open vragen en onjuiste
+  bronvoorbeelden blokkeren nu eveneens een goedgekeurde spec.
+
+- De initialisatietests controleren ook de echte README, CHANGELOG, appnamen, CODEOWNERS en gateconfiguratie. De proef
+  blijft werken na initialisatie van de checkout en detecteert incompatibele wijzigingen aan de template-invoer.
+
+- De resourcegenerator vraagt ook een tweede create-sample voor echte cursorpaginering. De securitysuite weigert een
+  ontbrekend sample en gelijke create-ID's. Resourcemetadata kiest de toegestane rol voor A en B, inclusief admin met MFA.
+
+- De componentskill verwijst naar de verplichte catalogusdekking voor alle componenten en eindige varianten. De oude
+  aanwijzing om een uitzondering in het controlescript te maken is verwijderd; die mogelijkheid bestaat niet.
+
+- De testrunner ziet een tijdelijke selectie van bronbestanden in plaats van de hele werkmap. Privébestanden en
+  Git-metadata blijven erbuiten; symlinkomwegen worden geweigerd. Worktrees krijgen ieder een eigen testprojectnaam.
+
+- `withUser()` onderscheidt bevestigde commit, bevestigde rollback en onbekende uitkomst via de optionele
+  `onTransactionOutcome`. Bij een verloren COMMIT-bevestiging wordt de verbinding vernietigd en draait route-cleanup
+  geen gecommitteerde gegevens terug. Alleen bevestigde rollback staat compensatie toe, ook voor laat geregistreerde
+  acties. Herstel en de gevolgen voor eigen `WithUser`-implementaties staan in `docs/operations/transactie-uitkomsten.md`.
+
+- Ook idle database- en readiness-poolfouten gebruiken de veilige logmetadata. SQL, persoonsgegevens, detail en cause
+  worden niet meer uit het foutbericht overgenomen; SQLSTATE en de vaste waarschuwing blijven bruikbaar. Een logfout
+  beëindigt het proces niet.
+
+- Optionele MFA-inschrijving binnen een bestaande sessie ververst de laatste-loginhistorie niet. De eerste verplichte
+  MFA-inschrijving van een beheerder blijft zijn login voltooien.
+
 - Het spec-skelet van `pnpm new:resource` volgt `docs/specs/_template.md`: sectie "Kopieer de vorm van" (verwijzing naar `src/api/routes/accounts.ts`) en een `OV-1 ⚠ open`-regel onder "Open vragen", zodat een gegenereerd voorstel niet ongemerkt als besluit kan doorgaan (`scripts/kit/templates/spec.md.tmpl`). De status blijft `voorstel`.
 
 - Het rolhek berekent het runnervertrouwen (`trustedRunner`, enkele git-aanroepen) alleen nog wanneer een Bash-opdracht een automatische runner is, en hoogstens eens per hookaanroep; de beslissing blijft fail-closed (`rails/hooks/rolhek.mjs`, `rails/hooks/lib/rolhek.mjs`).
@@ -95,6 +150,15 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Gewijzigd
 
+- De lichte werkstraat geldt alleen voor beperkte bugs en heel kleine aanpassingen binnen bestaande functionaliteit
+  en interactie, zonder nieuwe ADR/spec/mini-spec. Gedragsverandering of -herstel krijgt eerst een aparte tester en
+  daarna een aparte reviewagent; zuivere tekst/opmaak zonder gedrag geen vaste tester. Nieuwe features, pagina's,
+  interacties en risicowerk behouden de volledige straat. Volledige pre-push en CI blijven verplicht (ADR 0058).
+- Developer-stop geeft gerichte type-, lint- en testfeedback. De volledige lokale gate blijft in pre-push en
+  volledige CI blijft op iedere PR; geen oude groene uitslagen of testcache als vervanging.
+- Taakgerichte feiten en compacte overdracht in agentprofielen en skills. Activering volgt na de afzonderlijke
+  eigenaarmerge van ADR 0057; GitHub App, ruleset en build-proof zijn nog vervolgwerk.
+
 - ADR's geconsolideerd: 0001–0038 zijn `vervangen door` de geldende 0039–0051 (#249–#253, #255; verwijzingen in code, docs en tests bijgewerkt in #258–#260). Afgesloten ADR's mogen ongewijzigd naar `docs/adr/archief/` (ADR 0053, #269). Bij een update: verwijs in eigen code en docs naar de nieuwe nummers; `node scripts/kit/feiten.mjs adr` toont welke gelden.
 - Sandbox: de root-weigering op `*secret*` is `Read(/*secret*)` in plaats van `Read(./*secret*)` (`.claude/settings.json`).
   `./*secret*` matcht als kale bestandsnaam op elke diepte en maskeerde daardoor nog steeds `node_modules` (better-auth
@@ -116,6 +180,9 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 - Beslisroute (ADR 0038): de merge door de eigenaar is de acceptatie. Architect en hoofdsessie schrijven de eigenaarstatus in het voorstel; `check-document-status` laat zonder record en zonder web-flow een besluit-PR met meerdere ADR's en specs toe, en guard en rolhek weigeren een ADR met eigenaarstatus terug naar `voorgesteld` of met nieuwe inhoud (`rails/hooks/lib/document-state.mjs`, `scripts/kit/lane.mjs`).
 
 ### Opgelost
+
+- Het foutenoverzicht focust ook bij later ontvangen serverveldfouten na clientvalidatie. Gewone veldcorrecties houden
+  hun focus; de bestaande uitgestelde focus na een mislukte verzendpoging blijft behouden.
 
 - Opnieuw uitnodigen verwijdert de oude reset-tokens en mailt pas na commit van de route-transactie (`reinviteUser(auth, userId, lifecycle?)`), en SMTP heeft time-outs (`SMTP_TIMEOUTS`), zodat een hangende mailserver geen transactie vasthoudt. Een app die `services.invitations.reinvite` aanroept: nieuwe signatuur `reinvite(userId, lifecycle?)`, geef `{ afterCommit }` uit de route-ctx mee.
 

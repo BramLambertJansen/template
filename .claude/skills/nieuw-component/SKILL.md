@@ -6,6 +6,10 @@ allowed-tools: Bash(node scripts/kit/feiten.mjs *)
 
 # Nieuw component of variant
 
+Een nieuwe capability, interactie of component-API volgt de volledige straat met architect/spec en tester vóór bouw
+(framework §8). Een beperkte fix aan een bestaand component volgt de lichte grens, zonder nieuwe spec; bij gewijzigd
+of hersteld gedrag schrijft eerst een aparte tester de regressie. Een kleine variant is niet vanzelf een lichte fix.
+
 Bestaande componenten:
 
 !`node scripts/kit/feiten.mjs componenten`
@@ -13,6 +17,6 @@ Bestaande componenten:
 Eerst: past een bestaand component met een variant? Dan een variant (afleiden uit de variantkaart van core, niet forken).
 1. App-specifiek: `src/web/ui/`; voor elke app: `src/core/web/ui/` (beschermd pad: akkoord eigenaar). Exporteer via `src/web/ui/index.ts`.
 2. Alleen tokens (geen hex of benoemde kleuren), 44 px aanraakdoel en de focusring uit het recept; native elementen alleen hier.
-3. Zet het op `/design-system` (`src/web/features/design-system/design-system-page.tsx`): `pnpm check:catalogus` eist dat, of een uitzondering met reden in `scripts/kit/catalogus.mjs` (beschermd).
+3. Zet het op `/design-system` (`src/web/features/design-system/design-system-page.tsx`): `pnpm check:catalogus` eist een bereikbaar voorbeeld voor elk component en elke eindige variant (ADR 0048). Geen uitzonderingslijst.
 4. Nieuwe Button-variant: een rij in `test/ui/contrast.test.ts`.
 5. Een componenttest (`*.test.tsx`, jsdom) voor gedrag en toegankelijke naam; `pnpm ui:check` voor axe in licht en donker.

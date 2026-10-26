@@ -71,9 +71,8 @@ vangen het later toch, en dan is het werk verloren. Uitzonderingen staan limitat
 **Repo en grenzen** — zodat de kaders zelf niet ongemerkt verschuiven.
 - Bewerk geen gegenereerde bestanden en geen `.env*`; `.env.example` is beschermd (de demo-waarden zijn een securityregel).
 - Beschermde paden (`docs/framework.md` §10) vragen eigenaarakkoord; developer-broncode kan met exact taakmandaat (ADR 0046).
-  Functionele UI in deze template kan met een mini-spec (`scope: functionele-ui`), code, tests en gebruiksdocs in één PR,
-  zonder voorafgaand mandaat (ADR 0056). Auth, overige core, dependencies, agentinstructies en bewaking blijven erbuiten;
-  in een app blijft core gesloten. De eigenaar beoordeelt en merget de PR.
+  Functionele UI in deze template: mini-spec (`scope: functionele-ui`), code, tests en gebruiksdocs in één PR zonder mandaat (ADR 0056); beperkte fixes zonder nieuwe mini-spec (ADR 0058). Auth, overige core,
+  dependencies, agentinstructies en bewaking blijven erbuiten; in een app blijft core gesloten. De eigenaar merget de PR.
 - Geen nieuwe dependency zonder akkoord. Een eigenaarstatus schrijven alleen architect en hoofdsessie in het voorstel (ADR 0046); `gebouwd` via `pnpm docs:status` met bouwbewijs.
 - Push nooit naar `main`, gebruik nooit `--no-verify`, merge nooit. Eén onderwerp per PR, conventional commits.
 - Geen zelfreview of check-status. Gate-label alleen door hoofdsessie via `pnpm pr:label-gate` binnen het mandaat uit main.
@@ -84,12 +83,14 @@ vangen het later toch, en dan is het werk verloren. Uitzonderingen staan limitat
 
 - Ontbreekt een beslissing (bedrag, tekst, randgeval, providerkeuze): vraag het, vul geen aanname in.
 - Raakt een wijziging gedrag, API, configuratie of conventies, werk dan de relevante doc bij in dezelfde PR (kort, `bestand:regel` in plaats van gekopieerde code). `pnpm check:docs-drift` waarschuwt als `src/` wijzigt zonder `docs/` of `CHANGELOG.md`.
-- Migratie, nieuwe route of nieuwe permissie: eerst een spec (`docs/specs/_template.md`), bouwen pas bij `status: goedgekeurd`.
+- Nieuwe feature/pagina/interactie, migratie, route of permissie: architect en spec (`docs/specs/_template.md`), bouwen pas bij `status: goedgekeurd`; passende spec hergebruiken.
 - UI-tekst Nederlands; code, commits en branchnamen Engels. Naamgeving: `docs/framework.md` §5.
 - Volg `docs/dod.md` fasebewust: voer bestaande, toepasselijke checks uit, lever alleen op met een geslaagde uitslag (of expliciet akkoord van de eigenaar) en vermeld exact wat nog niet beschikbaar is; verzin geen commando's of uitslagen.
-- Volg de platformneutrale werkstraat in `docs/framework.md` §8. Agentrollen zijn onafhankelijk waar de runtime dat ondersteunt; ontbreekt een onafhankelijke reviewer, vraag de eigenaar om die review en claim niet dat je eigen werk onafhankelijk is gecontroleerd.
+- Volg `docs/framework.md` §8: alleen beperkte fixes aan bestaande functionaliteit/interactie zijn licht, zonder nieuwe ADR/spec/mini-spec; bij gedragsverandering of -herstel eerst tester, dan bouwer en aparte reviewagent. Zonder gedrag geen vaste tester.
+  Nieuwe features/pagina's/interacties en risicowerk krijgen de volledige straat. Licht geeft geen extra rechten; technische reviewisolatie waar mogelijk.
+  Licht mag met aparte leesopdracht zonder isolatieclaim; zonder agent, of zonder afgedwongen onafhankelijkheid bij volledig werk, reviewt de eigenaar. Geen zelfreview.
 - Voordat je een roadmap-item, rail of ADR toevoegt: toets aan framework §1; ontbreekt een aanleiding, vraag de eigenaar.
-- Begin met de feiten: `node scripts/kit/feiten.mjs` in plaats van wat in proza staat.
+- Begin met taakrelevante feiten uit `node scripts/kit/feiten.mjs`, bijvoorbeeld `gates specs fase`; `componenten` alleen bij UI. Zonder secties komt alles.
 - Runtime-specifieke instructies gelden alleen voor die runtime. De hooks in `.claude/` werken niet in andere runtimes (Codex, sommige
   cloudsessies); daar zijn CI, de diff-guard en GitHub de enige grens. Claim nooit dat een instelling klopt die je niet kunt lezen.
 
