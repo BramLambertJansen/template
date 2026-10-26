@@ -5,7 +5,7 @@
 # Met SMOKE_BROWSER=1 daarna ook de browser-smoke (e2e/*.smoke.spec.ts, playwright.smoke.config.ts): de bundel laadt en
 # router en foutscherm renderen, zonder CSP-schending, ongevangen JS-fout, mislukte asset of onverwachte console.error.
 # Vraagt node_modules
-# (pnpm install) en draait in het Playwright-image van compose.yaml (ui-runner), zonder internet, read-only.
+# (pnpm install) en draait in het Playwright-image van compose.yaml (ui-runner), zonder internet, met beperkte broninvoer.
 # Gebruik: [SMOKE_BROWSER=1] scripts/check-image.sh <image>
 set -euo pipefail
 
@@ -16,14 +16,46 @@ port=18080
 secret="$(head -c 48 /dev/urandom | base64 | tr -d '\n/+=')"
 dbpass="$(head -c 24 /dev/urandom | base64 | tr -d '\n/+=')"
 repo="$(cd "$(dirname "$0")/.." && pwd)"
+smoke_input=""
 
 cleanup() {
   docker rm -f "$name" >/dev/null 2>&1 || true
   docker network rm "$net" >/dev/null 2>&1 || true
+  if [[ -n "$smoke_input" ]]; then rm -rf -- "$smoke_input"; fi
 }
 trap cleanup EXIT
 
 fail() { printf '✗ %s\n' "$1" >&2; docker logs "$name" >&2 || true; exit 1; }
+
+# Alleen zelfstandige smoke-tests en hun configuratie, nooit de hele werkmap (ADR 0044).
+check_smoke_path() {
+  local prefix="$repo/$1"
+  while [[ -n "$prefix" ]]; do
+    [[ ! -L "$prefix" ]] || fail "symlink in smoke-invoer: $1"
+    [[ "$prefix" == */* ]] || break
+    prefix="${prefix%/*}"
+  done
+}
+
+prepare_smoke_input() {
+  local input seen_smoke=""
+  check_smoke_path node_modules
+  smoke_input="$(mktemp -d /tmp/template-image-smoke.XXXXXXXX)"
+  git -C "$repo" ls-files --cached --others --exclude-standard -z -- \
+    package.json playwright.smoke.config.ts 'e2e/*.smoke.spec.ts' > "$smoke_input/files"
+  while IFS= read -r -d '' input; do
+    case "/$input/" in */.env*/*) continue ;; esac
+    check_smoke_path "$input"
+    [[ -e "$repo/$input" ]] || continue
+    [[ -f "$repo/$input" ]] || fail "geen regulier smoke-bestand: $input"
+    (cd "$repo" && cp --parents --no-dereference -- "$input" "$smoke_input/")
+    case "$input" in e2e/*.smoke.spec.ts) seen_smoke=1 ;; esac
+  done < "$smoke_input/files"
+  rm -- "$smoke_input/files"
+  [[ -f "$smoke_input/package.json" && -f "$smoke_input/playwright.smoke.config.ts" && -n "$seen_smoke" ]] \
+    || fail "onvolledige smoke-invoer"
+  mkdir -p "$smoke_input/node_modules"
+}
 
 uid="$(docker run --rm --entrypoint id "$image" -u)"
 [[ "$uid" != "0" ]] || fail "image draait als root"
@@ -71,6 +103,7 @@ echo "✓ API-fout als { code, requestId }"
 # Browser-smoke: hetzelfde Playwright-image als ui:check (één bron in compose.yaml, Renovate houdt het gelijk met
 # @playwright/test). Een intern netwerk (geen internet) tussen smoke en app; de smoke bereikt de app via de containernaam.
 if [[ "${SMOKE_BROWSER:-}" == "1" ]]; then
+  prepare_smoke_input
   [[ -d "$repo/node_modules/@playwright/test" ]] || fail "SMOKE_BROWSER=1 zonder node_modules: draai eerst pnpm install"
   pw_image="$(sed -n 's/^ *image: \(mcr\.microsoft\.com\/playwright:[^ ]*\)$/\1/p' "$repo/compose.yaml")"
   [[ -n "$pw_image" && "$pw_image" != *$'\n'* ]] || fail "geen eenduidig Playwright-image in compose.yaml"
@@ -84,7 +117,8 @@ if [[ "${SMOKE_BROWSER:-}" == "1" ]]; then
   docker network create --internal "$net" >/dev/null
   docker network connect "$net" "$name"
   docker run --rm --network "$net" --shm-size 1gb --read-only --tmpfs /tmp --cap-drop ALL \
-    --security-opt no-new-privileges:true --user "$(id -u):$(id -g)" -v "$repo:/repo:ro" -w /repo \
+    --security-opt no-new-privileges:true --user "$(id -u):$(id -g)" \
+    -v "$smoke_input:/repo:ro" -v "$repo/node_modules:/repo/node_modules:ro" -w /repo \
     -e HOME=/tmp -e CI=true -e SMOKE_BASE_URL="http://${name}:8080" -e SMOKE_OUTPUT_DIR=/tmp/smoke \
     "$pw_image" node node_modules/@playwright/test/cli.js test --config playwright.smoke.config.ts \
     || fail "browser-smoke van de productie-SPA faalt"
