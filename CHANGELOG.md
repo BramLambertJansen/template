@@ -147,6 +147,9 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Gewijzigd
 
+- Een laat sluitende `EditableSection` trekt focus niet meer weg uit een ander veld of een andere knop. Het gewone
+  focusherstel naar Bewerken en het opruimen van de uitgestelde focustimer blijven behouden.
+
 - Uitgeschakelde `Button asChild`-links blokkeren nu ook activering en geven `aria-disabled` door. De middelste
   muisknop kan niet meer langs de blokkering van een disabled of busy linkknop gaan. Link, label en normale bediening
   na herstel blijven behouden; de bestaande component-API verandert niet.
