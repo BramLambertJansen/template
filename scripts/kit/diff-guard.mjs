@@ -17,7 +17,7 @@ import { appendFileSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { documentInfo } from '../../rails/hooks/lib/document-state.mjs';
 import { globMatch } from '../../rails/hooks/lib/rolhek.mjs';
-import { regularGitFile } from './status-git.mjs';
+import { regularGitFile } from './git-object.mjs';
 
 const LABEL = 'gate-wijziging';
 // Een review die de stand bepaalt; COMMENTED en PENDING laten de vorige beslissing staan.
@@ -348,7 +348,19 @@ function nieuweDependencies(versies) {
 function routeAanroepen(bron) {
   if (bron === null) return [];
   const code = zonderCommentaar(bron);
-  return [...code.matchAll(/\bdefineRoute\s*\(/g)].map((t) => compact(blokVanaf(code, t.index + t[0].length - 1)));
+  const aliassen = new Set(routeAliassen(code));
+  // `defineRoute` ook als eigenschap (`r.defineRoute(` via een namespace-import); een alias alleen als losse naam.
+  const isRoute = (/** @type {string} */ naam, /** @type {number} */ index) =>
+    naam === 'defineRoute' || (aliassen.has(naam) && code.charAt(index - 1) !== '.');
+  return [...code.matchAll(/(?<![\w$])([A-Za-z_$][\w$]*)\s*\(/g)]
+    .filter((t) => isRoute(t[1] ?? '', t.index))
+    .map((t) => compact(blokVanaf(code, t.index + t[0].length - 1)));
+}
+
+/** Andere namen voor `defineRoute`: `import { defineRoute as x }` en `const x = defineRoute`. @param {string} code */
+function routeAliassen(code) {
+  const patronen = [/\bdefineRoute\s+as\s+([A-Za-z_$][\w$]*)/g, /\b([A-Za-z_$][\w$]*)\s*=\s*defineRoute\b(?!\s*\()/g];
+  return patronen.flatMap((patroon) => [...code.matchAll(patroon)].map((t) => t[1] ?? ''));
 }
 
 /** Het eerste argument van een compacte aanroep `(…)`, tot de eerste komma op het bovenste niveau. @param {string} aanroep */
@@ -437,6 +449,15 @@ export function risico(pr, testpaden = standaardConfig().testpaden) {
   };
 }
 
+/**
+ * Een item als inline code, zonder workflow-opdracht: `%`, CR en LF gecodeerd (in die volgorde, zoals GitHub Actions), een
+ * backtick als quote. Een pad met een regeleinde kan zo geen `::error::`-regel in de uitvoer zetten.
+ * @param {string} item
+ */
+function veilig(item) {
+  return item.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A').replaceAll('`', "'");
+}
+
 /** @param {Risico} risico */
 function risicoTekst(risico) {
   /** @type {[string, string[]][]} */
@@ -451,9 +472,7 @@ function risicoTekst(risico) {
     '**Risico-overzicht**',
     '',
     ...categorieen.flatMap(([kop, items]) =>
-      items.length === 0
-        ? [`- ${kop}: geen`]
-        : [`- ${kop}:`, ...items.map((item) => `  - \`${item.replaceAll('`', "'")}\``)],
+      items.length === 0 ? [`- ${kop}: geen`] : [`- ${kop}:`, ...items.map((item) => `  - \`${veilig(item)}\``)],
     ),
     '',
   ];
@@ -465,7 +484,7 @@ const OVERGANG_UITLEG =
 /** @param {Oordeel} oordeel */
 export function samenvatting(oordeel) {
   const lijst = (/** @type {string} */ kop, /** @type {string[]} */ items) =>
-    items.length === 0 ? [] : [`**${kop}**`, '', ...items.map((item) => `- \`${item.replaceAll('`', "'")}\``), ''];
+    items.length === 0 ? [] : [`**${kop}**`, '', ...items.map((item) => `- \`${veilig(item)}\``), ''];
   return [
     `## diff-guard: ${oordeel.uitslag}`,
     '',
@@ -493,8 +512,58 @@ const SPEC_WIJZIGING = new Set(['A', 'M', 'R', 'C']);
 /** Sleutels in de na-versie die in de voor-versie ontbreken; een andere rolverdeling telt niet. @param {{ voor: string | null, na: string | null } | undefined} versies */
 function nieuwePermissies(versies) {
   if (versies === undefined) return [];
-  const voor = permissieSleutels(versies.voor);
-  return [...permissieSleutels(versies.na).keys()].filter((sleutel) => !voor.has(sleutel)).sort();
+  const oud = permissieEntries(versies.voor).map(({ id }) => id);
+  return permissieEntries(versies.na)
+    .filter(({ id }) => {
+      const index = oud.indexOf(id);
+      if (index !== -1) oud.splice(index, 1);
+      return index === -1;
+    })
+    .map(({ tekst }) => tekst)
+    .sort();
+}
+
+/**
+ * De entries op het bovenste niveau van de tabel in `definePermissions({…})`. Een letterlijke `'a:b': {…}` heeft de sleutel als
+ * identiteit (een andere rolverdeling is niet nieuw); elke andere entry (spread, constante, sleutel zonder quotes) de compacte
+ * tekst. Geen herkenbare tabel: de hele bron is één entry, zodat elke wijziging telt (dicht falen).
+ * @param {string | null} bron @returns {{ id: string, tekst: string }[]}
+ */
+function permissieEntries(bron) {
+  if (bron === null) return [];
+  const code = zonderCommentaar(bron);
+  const start = /\bdefinePermissions\s*\(\s*\{/.exec(code);
+  if (start === null) return [{ id: compact(code), tekst: 'niet letterlijk (geen definePermissions-tabel)' }];
+  const blok = compact(blokVanaf(code, start.index + start[0].length - 1));
+  return topNiveauDelen(blok.slice(1, -1)).map((deel) => {
+    const sleutel = /^(['"])([^'"]+)\1:\{/.exec(deel)?.[2];
+    return sleutel === undefined
+      ? { id: `entry:${deel}`, tekst: `niet letterlijk (${deel})` }
+      : { id: `sleutel:${sleutel}`, tekst: sleutel };
+  });
+}
+
+/** Een compacte lijst gesplitst op komma's op het bovenste niveau; lege delen vallen weg. @param {string} lijst */
+function topNiveauDelen(lijst) {
+  /** @type {string[]} */
+  const delen = [];
+  let [diepte, vanaf] = [0, 0];
+  for (let i = 0; i < lijst.length; i = stringEinde(lijst, i)) {
+    const teken = lijst.charAt(i);
+    if ('([{'.includes(teken)) diepte += 1;
+    if (')]}'.includes(teken)) diepte -= 1;
+    if (teken === ',' && diepte === 0) {
+      delen.push(lijst.slice(vanaf, i));
+      vanaf = i + 1;
+    }
+  }
+  delen.push(lijst.slice(vanaf));
+  return delen.filter((deel) => deel !== '');
+}
+
+/** Nieuw contractbestand (A of C) onder src/shared/contracts/, geen test. @param {Wijziging} wijziging */
+function contractRegel({ status, pad }) {
+  return (status === 'A' || status === 'C') && CONTRACT.test(pad) ? [`nieuw contractbestand ${pad}`] : [];
 }
 
 /** @param {Pr} pr @param {readonly string[]} testpaden */
@@ -503,6 +572,7 @@ function specplichtigeItems(pr, testpaden) {
   return [
     ...r.migraties.map((item) => `migratie: ${item}`),
     ...r.routes.map((item) => `route: ${item}`),
+    ...pr.wijzigingen.flatMap(contractRegel).map((item) => `route: ${item}`),
     ...nieuwePermissies(new Map(Object.entries(pr.json)).get(PERMISSIES)).map((item) => `permissie: ${item}`),
     ...r.paginas.map((item) => `pagina: ${item}`),
   ];
@@ -549,16 +619,15 @@ export function beoordeelSpecplicht(pr, config = standaardConfig()) {
   return { uitslag: 'groen', redenen: specRegels(pr.body).map((pad) => `spec in de PR-body: ${pad}`), items };
 }
 
-/** @param {Specplicht} oordeel */
+/** @param {{ uitslag: string, redenen: readonly string[], items: unknown }} oordeel  items: een lijst strings (`Specplicht`) */
 export function specplichtSamenvatting(oordeel) {
+  const items = Array.isArray(oordeel.items) ? oordeel.items.map(String) : [];
   return [
-    `## specplicht: ${oordeel.uitslag}`,
+    `## specplicht: ${veilig(oordeel.uitslag)}`,
     '',
-    ...oordeel.redenen.map((reden) => `- ${reden}`),
+    ...oordeel.redenen.map((reden) => `- ${veilig(reden)}`),
     '',
-    ...(oordeel.items.length === 0
-      ? []
-      : ['**Specplichtige items**', '', ...oordeel.items.map((item) => `- \`${item.replaceAll('`', "'")}\``), '']),
+    ...(items.length === 0 ? [] : ['**Specplichtige items**', '', ...items.map((item) => `- \`${veilig(item)}\``), '']),
   ].join('\n');
 }
 

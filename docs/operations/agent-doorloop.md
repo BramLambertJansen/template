@@ -188,7 +188,8 @@ Bevat de PR een nieuwe migratie, route, permissiesleutel of pagina (`src/web/rou
 noemt de PR-body haar met een regel `Spec: docs/specs/<naam>.md`; anders is de verplichte check `specplicht` rood
 (`docs/specs/specplicht.md`). Bij `pnpm new:resource` is dat de bouw-PR van fase 2: fase 1 levert de spec in een eigen
 besluit-PR, en na de merge (`goedgekeurd` op `main`) noemt de bouw-PR die spec met `Spec:`. De job leest de body via de API;
-de body aanpassen start hem opnieuw.
+de body aanpassen start hem opnieuw. Wordt een via de body genoemde spec pas later op `main` goedgekeurd, doe dan een re-run van
+`specplicht` of pas de body aan; de job kijkt alleen bij een run naar `main`.
 
 Controleert huidige commit, PR-branch, repository en verplichte checks uit main. Alleen Actions-uitslagen op de juiste
 SHA tellen; een mislukte rerun maakt eerder groen ongeldig. Zonder `--watch` volgt direct de huidige toestand.

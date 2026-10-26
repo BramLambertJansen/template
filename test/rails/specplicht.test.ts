@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
-import { beoordeel, leesConfig, samenvatting } from '../../scripts/kit/diff-guard.mjs';
+import { beoordeel, leesConfig, risico, samenvatting, specplichtSamenvatting } from '../../scripts/kit/diff-guard.mjs';
 
 // Spec docs/specs/specplicht.md, AC-1 t/m AC-18: `beoordeelSpecplicht(pr)` is pure en geeft { uitslag, redenen, items }.
 // De functie bestaat nog niet: de dynamische import met een expect op de export laat elke test op een assertie falen.
@@ -293,8 +293,86 @@ describe('specplicht: los van de gate-regel (AC-17)', () => {
     const oordeel = beoordeel(p, config);
 
     expect(uitkomst.uitslag).toBe('rood');
-    expect(Object.keys(uitkomst)).not.toContain('overgang');
+    // Eerder `Object.keys(uitkomst)` zonder 'overgang': dat kon nooit falen. Zinvol: de specplicht-redenen noemen de gate-regel niet.
+    expect(uitkomst.redenen.join('\n')).not.toMatch(/auteur én goedkeurder/);
     expect(oordeel.uitslag).toBe('overgang');
     expect(oordeel.redenen.join('\n')).toMatch(/auteur én goedkeurder/);
+  });
+});
+
+describe('specplicht: reviewpunten PR 1 (review-1)', () => {
+  const PERMISSIES_PAD = 'src/shared/permissions.ts';
+  const permissiePr = (na: string) =>
+    pr([{ status: 'M', pad: PERMISSIES_PAD }], { json: { [PERMISSIES_PAD]: { voor: BASIS_PERMISSIES, na } } });
+  const rood = async (p: object) => {
+    const uitkomst = await specplicht(p);
+    expect(uitkomst.uitslag).toBe('rood');
+    expect(uitkomst.redenen).toContain(SPECREDEN);
+    return uitkomst;
+  };
+
+  test.each([
+    {
+      naam: 'waarde via een constante',
+      na: `const ADMIN = { roles: ['admin'] };\n${permissies("  'me:read': { roles: ['user', 'admin'] },\n  'reports:read': ADMIN,")}`,
+    },
+    { naam: 'spread', na: permissies("  'me:read': { roles: ['user', 'admin'] },\n  ...extra,") },
+    {
+      naam: 'sleutel zonder quotes',
+      na: permissies("  'me:read': { roles: ['user', 'admin'] },\n  reportsRead: { roles: ['admin'] },"),
+    },
+  ])('permissie die niet letterlijk is ($naam) zonder spec is rood, als permissie-item', async ({ na }) => {
+    const uitkomst = await rood(permissiePr(na));
+
+    expect(JSON.stringify(uitkomst.items)).toContain('permissie:');
+  });
+
+  test('een route via een import-alias (dr) zonder spec is rood', async () => {
+    const bron = `import { defineRoute as dr } from '#core/api/route.ts';\nexport const a = dr({ method: 'GET', path: '/x', input: i, output: o, permission: 'x', handler: h });\n`;
+    const uitkomst = await rood(nieuweRoute(bron));
+
+    expect(JSON.stringify(uitkomst.items)).toContain('route:');
+  });
+
+  test('een route via een toegewezen alias (const r = defineRoute) zonder spec is rood', async () => {
+    const bron = `import { defineRoute } from '#core/api/route.ts';\nconst r = defineRoute;\nexport const a = r({ method: 'GET', path: '/x', input: i, output: o, permission: 'x', handler: h });\n`;
+    const uitkomst = await rood(nieuweRoute(bron));
+
+    expect(JSON.stringify(uitkomst.items)).toContain('route:');
+  });
+
+  test('een nieuw contractbestand onder src/shared/contracts/ zonder spec is rood, als route', async () => {
+    const pad = 'src/shared/contracts/nieuw.ts';
+    const p = pr([{ status: 'A', pad }], {
+      json: {
+        [pad]: {
+          voor: null,
+          na: "import { z } from 'zod';\nexport const nieuwContract = { method: 'GET', path: '/n', output: z.string() };\n",
+        },
+      },
+    });
+    const uitkomst = await rood(p);
+
+    expect(JSON.stringify(uitkomst.items)).toContain(pad);
+  });
+
+  test('een paginapad met regeleinde, CR en procent kan geen workflow-opdracht (::) in de samenvatting zetten', async () => {
+    const pad = 'src/web/routes/a\n::error::x\r::warning::100%.tsx';
+    const p = pr([{ status: 'A', pad }]);
+    const uitvoer = [specplichtSamenvatting(await specplicht(p)), samenvatting(beoordeel(p, config))].join('\n');
+    const regels = uitvoer.split(/\r\n|\r|\n/);
+
+    expect(uitvoer).toContain('pagina:');
+    expect(regels.filter((regel) => regel.startsWith('::'))).toEqual([]);
+    expect(uitvoer).toContain('a%0A::error::x%0D::warning::100%25.tsx');
+  });
+
+  test('een route via een namespace-import (r.defineRoute) zonder spec is rood en staat in risico().routes', async () => {
+    const bron = `import * as r from '#core/api/route.ts';\nexport const x = r.defineRoute({ method: 'GET', path: '/x', permission: 'a:b' });\n`;
+    const p = nieuweRoute(bron);
+    const uitkomst = await rood(p);
+
+    expect(JSON.stringify(uitkomst.items)).toContain('route:');
+    expect(risico(p).routes.join('\n')).toContain('GET /x');
   });
 });

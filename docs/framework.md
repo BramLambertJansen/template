@@ -319,7 +319,7 @@ testregels of controles. De rollen hieronder gelden waar de gekozen route ze ver
 1. **Spec** in `docs/specs/` volgens `_template.md` — bij nieuwe features, pagina's,
    interacties, migraties, routes of permissies; bij overig volledig werk het toepasselijke besluit/spec. Geen nieuw document
    voor een lichte fix. De grens is afgedwongen door de verplichte check `specplicht` (`.github/workflows/guard.yml:70`,
-   `scripts/kit/diff-guard.mjs:542`): een nieuwe migratie, route, permissiesleutel of pagina onder `src/web/routes/` vraagt
+   `beoordeelSpecplicht` in `scripts/kit/diff-guard.mjs`): een nieuwe migratie, route, permissiesleutel of pagina onder `src/web/routes/` vraagt
    een spec in de PR-diff of een regel `Spec: docs/specs/<naam>.md` in de PR-body met status `goedgekeurd` of `gebouwd` op `main`.
    In de volledige straat schrijft alleen de architect de inhoud van de spec (ADR 0058 punt 2);
    het skelet uit `pnpm new:resource` mag de hoofdsessie genereren, en zij coördineert. Spec of ADR krijgt direct de bedoelde status (`goedgekeurd`, `geaccepteerd`, `vervallen`, `vervangen door NNNN`); de merge door

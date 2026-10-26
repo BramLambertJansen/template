@@ -85,8 +85,4 @@ export function isAncestor(root, commits) {
   return gitText(root, ['merge-base', '--is-ancestor', commits.from, commits.to]) !== null;
 }
 
-/** @param {string} root @param {string} file @param {string} sha */
-export function regularGitFile(root, file, sha) {
-  const tree = gitText(root, ['ls-tree', sha, '--', file]);
-  return tree !== null && /^100(?:644|755) blob [0-9a-f]{40}\t/.test(tree);
-}
+export { regularGitFile } from './git-object.mjs';
