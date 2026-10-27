@@ -724,7 +724,9 @@ const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash']);
 const LEERPUNT = 'leerpunt';
 const GH_ISSUE_WRITE_TEXT = new RegExp(`\\bgh\\b.*\\bissue\\b.*\\b(?:${[...GH_ISSUE_WRITES].join('|')})\\b`);
 // Programma's die een ander commando uitvoeren; het rolhek ziet dat commando niet als eigen segment.
-const COMMAND_RUNNERS = new Set(['xargs', 'eval', 'exec', 'command', 'time', 'timeout', 'nohup', 'nice', 'parallel', 'watch']);
+const COMMAND_RUNNERS = new Set(['xargs', 'eval', 'exec', 'command', 'time', 'timeout', 'nohup', 'nice', 'parallel', 'watch', 'find']);
+// De ingebouwde gh-groepen; een ander eerste woord is een alias (`gh alias set ic 'issue create'`) of extensie.
+const GH_GROUPS = new Set(['agent-task', 'alias', 'api', 'attestation', 'auth', 'browse', 'cache', 'co', 'codespace', 'completion', 'config', 'extension', 'gist', 'gpg-key', 'help', 'issue', 'label', 'org', 'pr', 'preview', 'project', 'release', 'repo', 'ruleset', 'run', 'search', 'secret', 'ssh-key', 'status', 'variable', 'workflow']);
 
 /**
  * Zet een segment van het commando `GH_REPO` of `GH_HOST` (`GH_REPO=… gh`, `env GH_HOST=…`, `export GH_REPO=… &&`)?
@@ -757,7 +759,21 @@ function ghIssueAction(args) {
 function verborgenGhIssue(program, args) {
   const shell = SHELLS.has(program) && args.some((arg) => /^-[a-z]*c[a-z]*$/.test(arg));
   if (shell || COMMAND_RUNNERS.has(program)) return GH_ISSUE_WRITE_TEXT.test(args.join(' '));
-  return args.some((arg) => /\$\(|`/.test(arg) && GH_ISSUE_WRITE_TEXT.test(arg));
+  // Backticks zonder aanhalingstekens splitst de parser over meerdere woorden; toets dan het hele commando.
+  if (args.some((arg) => arg.includes('`'))) return GH_ISSUE_WRITE_TEXT.test(args.join(' '));
+  return args.some((arg) => /\$\(/.test(arg) && GH_ISSUE_WRITE_TEXT.test(arg));
+}
+
+/**
+ * Subagent: een gh-alias kan elke opdracht verbergen, dus geen `gh alias set|import` en geen onbekend eerste woord.
+ * @param {readonly string[]} args
+ */
+function ghAliasReden(args) {
+  const first = args.find((arg) => !arg.startsWith('-')) ?? '';
+  if (first === 'alias' && args.some((arg) => arg === 'set' || arg === 'import'))
+    return 'subagent: gh alias set/import kan een schrijvende opdracht verbergen (ADR 0059)';
+  if (first !== '' && !GH_GROUPS.has(first)) return `subagent: gh ${first} is geen ingebouwde gh-groep (alias of extensie; ADR 0059)`;
+  return '';
 }
 
 /**
@@ -774,6 +790,8 @@ function ghIssue(argv, { role, ctx, setsGhEnv }, decision) {
     gate(decision, role, `gh issue binnen ${program} (string, substitutie of omhulsel): het rolhek kijkt daar niet in; gebruik een los gh-commando (ADR 0059)`);
     return;
   }
+  const alias = program === 'gh' && role !== 'hoofdsessie' ? ghAliasReden(args) : '';
+  if (alias !== '') decision.deny.push(alias);
   const action = program === 'gh' ? ghIssueAction(args) : '';
   if (action === '') return;
   if (role !== 'hoofdsessie') decision.deny.push(`subagent: gh issue ${action} doet alleen de hoofdsessie (ADR 0059)`);

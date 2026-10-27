@@ -199,3 +199,23 @@ describe('leerpuntvorm: onbekende vlaggen, omhulsels en substitutie', () => {
     expect(verdict(bash(`gh --recover '' issue create --label leerpunt -R iemand/anders ${BODY}`))).toBe('ask');
   });
 });
+
+// Herreview ronde 3: aliassen, backticks zonder aanhalingstekens en find -exec.
+describe('leerpuntvorm: aliassen en losse backticks', () => {
+  test.each([
+    "gh alias set ic 'issue create'",
+    'gh alias import aliassen.yml',
+    'gh ic -R o/x -t a -b b',
+    'echo `gh issue create -t a`',
+    'find . -maxdepth 0 -exec gh issue create -t a -b b ;',
+  ])('leerlus/AC-6/AC-7: developer → deny op %s', (command) => {
+    expect(verdict(bash(command, 'developer'))).toBe('deny');
+  });
+
+  test.each(['gh pr view 3', 'gh issue view 12', 'gh alias list', 'gh run view 1 --log-failed'])(
+    'leerlus/AC-7: developer → geen deny op %s',
+    (command) => {
+      expect(decide(bash(command, 'developer'), ctx()).deny).toStrictEqual([]);
+    },
+  );
+});
