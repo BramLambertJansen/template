@@ -469,9 +469,12 @@ function gitMapMelding(file) {
  * @param {Decision} decision
  */
 function decideBash({ command, role }, ctx, decision) {
+  // Tekstueel, over het hele commando: ook `export GH_REPO=… && gh issue create` of `env GH_HOST=…` (ADR 0059).
+  const setsGhEnv = /\bGH_(?:REPO|HOST)=/.test(command);
   for (const parsed of parseCommands(command)) {
     const { assignments, argv, pathWrappers } = splitCommand(parsed.words);
     forbidden({ assignments, argv }, { role, ctx }, decision);
+    ghIssue(argv, { role, ctx, setsGhEnv }, decision);
     if (role === 'reviewer' && (pathWrappers.length > 0 || !reviewerMay(argv, parsed.redirects)))
       decision.deny.push(`reviewer: alleen lezen (\`${argv.slice(0, 3).join(' ')}\` mag niet; framework §8)`);
     const targets = writeTargets(parsed);
@@ -715,6 +718,66 @@ function forcePushes(rest) {
     }
   }
   return false;
+}
+
+const GH_ISSUE_WRITES = new Set(['create', 'edit', 'close', 'reopen', 'delete', 'transfer', 'lock', 'unlock', 'pin', 'unpin', 'comment', 'develop']);
+const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash']);
+const LEERPUNT = 'leerpunt';
+const GH_ISSUE_WRITE_TEXT = new RegExp(`\\bgh\\s+issue\\s+(?:${[...GH_ISSUE_WRITES].join('|')})\\b`);
+
+/**
+ * Leerlus (ADR 0059, spec leerlus): een subagent schrijft geen issues; de hoofdsessie dient zonder vraag alleen een leerpunt
+ * in, met `--repo`/`-R` gelijk aan `onderhoud.repository` en precies één `--label leerpunt`. Elke andere vorm is ask.
+ * @param {readonly string[]} argv
+ * @param {{ role: string, ctx: Ctx, setsGhEnv: boolean }} who
+ * @param {Decision} decision
+ */
+function ghIssue(argv, { role, ctx, setsGhEnv }, decision) {
+  const [word = '', ...args] = argv;
+  const program = programName(word);
+  if (SHELLS.has(program) && args.includes('-c') && args.some((arg) => GH_ISSUE_WRITE_TEXT.test(arg))) {
+    gate(decision, role, `${program} -c met gh issue: het rolhek kijkt niet in de string; schrijf het leerpunt als los gh-commando (ADR 0059)`);
+    return;
+  }
+  if (program !== 'gh' || args[0] !== 'issue' || !GH_ISSUE_WRITES.has(args[1] ?? '')) return;
+  if (role !== 'hoofdsessie') decision.deny.push(`subagent: gh issue ${args[1] ?? ''} doet alleen de hoofdsessie (ADR 0059)`);
+  else if (args[1] === 'create') {
+    const reden = leerpuntAfwijking(args.slice(2), ctx.config.onderhoud?.repository ?? '', setsGhEnv);
+    if (reden !== '') decision.ask.push(`gh issue create buiten de leerpuntvorm: ${reden} (ADR 0059)`);
+  }
+}
+
+/**
+ * Lege string als het commando precies de leerpuntvorm heeft, anders de reden.
+ * @param {readonly string[]} args
+ * @param {string} repository
+ * @param {boolean} setsGhEnv
+ */
+function leerpuntAfwijking(args, repository, setsGhEnv) {
+  if (setsGhEnv) return 'GH_REPO of GH_HOST verlegt het doel';
+  const repos = optionValues(args, ['--repo', '-R']);
+  const labels = optionValues(args, ['--label', '-l']);
+  if (repository === '') return 'onderhoud.repository ontbreekt in .claude/gates.json';
+  if (repos.length !== 1 || (repos[0] ?? '').toLowerCase() !== repository.toLowerCase())
+    return `--repo moet precies één keer ${repository} zijn`;
+  if (labels.length !== 1 || labels[0] !== LEERPUNT) return `precies één --label ${LEERPUNT}, geen ander label`;
+  return '';
+}
+
+/**
+ * Waarden van een optie in de vormen `--naam waarde`, `--naam=waarde` en `-X waarde`.
+ * @param {readonly string[]} args
+ * @param {readonly string[]} names
+ */
+function optionValues(args, names) {
+  /** @type {string[]} */
+  const values = [];
+  args.forEach((arg, index) => {
+    if (names.includes(arg)) values.push(args[index + 1] ?? '');
+    const inline = names.find((name) => name.startsWith('--') && arg.startsWith(`${name}=`));
+    if (inline !== undefined) values.push(arg.slice(inline.length + 1));
+  });
+  return values;
 }
 
 const SELF_REVIEW_API = /\/(?:labels|reviews|statuses|check-runs|check-suites)\b|\/requested_reviewers\b/;
