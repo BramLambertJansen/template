@@ -166,7 +166,7 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Gewijzigd
 
-- Een nieuwe app wordt voorlopig als public repo aangemaakt (`docs/nieuwe-app.md`, fase 4.3): rulesets en CodeQL falen op een private repo zonder Pro/Team/GHAS. Bij een update: bestaande apps blijven zoals ze zijn.
+- Een nieuwe app wordt voorlopig als public repo aangemaakt (`docs/nieuwe-app.md`, fase 4.3) en `START-NIEUWE-APP.md`: rulesets en CodeQL falen op een private repo zonder Pro/Team/GHAS. Bij een update: bestaande apps blijven zoals ze zijn.
 - De vertraagde zoekactie van `ListToolbar` gebruikt de actuele callback. Een ouderwijziging tijdens de wachttijd
   laat de zoekactie geen verouderde filter- of sorteertoestand meer terugschrijven; de bestaande 300 ms blijven gelijk.
 

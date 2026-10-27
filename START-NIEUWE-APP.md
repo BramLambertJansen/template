@@ -13,7 +13,7 @@ Lees eerst de opdracht en eventuele voortgang. Neem een al gegeven naam, beschri
 vraag dat in één bericht en wacht:
 
 > Hoe moet de app heten? Geef ook een korte beschrijving: wat doet de app en voor wie?
-> Ik leid de repo-naam af van de appnaam. Standaard wordt de repo privé.
+> Ik leid de repo-naam af van de appnaam. Standaard wordt de repo public (voorlopig).
 > Wil je een andere repo-naam, eigenaar of zichtbaarheid, zeg het erbij.
 
 Bevestig naam, repo-naam, beschrijving en doelmap kort. Vraag alleen bij een ongeldige, onduidelijke of bezette keuze om
@@ -50,7 +50,7 @@ en staat voordat je hervat. Installeer werkende onderdelen niet opnieuw.
 - Eerst de omgeving controleren, niet eerst de template clonen en ombouwen. De nieuwe app ontstaat via GitHub met de templatefunctie.
 - Vergelijk vóór de eenmalige `-s ours`-merge de tree van de nieuwe repo met `template/main`, zoals het playbook voorschrijft.
   Bij verschil stoppen en een herstelkeuze voorleggen: die merge neemt inhoudsverschillen niet mee.
-- De eigenaar doet de eerste setup-push naar main en latere merges. Geen force-push, checkomzeiling of stilzwijgend public maken.
+- De eigenaar doet de eerste setup-push naar main en latere merges. Geen force-push, checkomzeiling of stilzwijgend van zichtbaarheid wisselen.
 - GitHub-instellingen worden niet meegekopieerd. Rapporteer alleen daadwerkelijk gecontroleerde bescherming.
 - Geen appfunctionaliteit, gekozen proefapp, appseeds of appdata in de template. Appspecificaties en appresultaten horen in de nieuwe app-repo.
 - Maak onderscheid tussen werkinstructie en afdwinging: `.claude/`-hooks bewijzen niets over de sandbox van een andere agent.

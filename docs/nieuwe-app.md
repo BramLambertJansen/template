@@ -131,7 +131,7 @@ Lees eerst de opdracht en eventuele voortgang. Gebruik een al gegeven appnaam, b
 Vraag alleen wat ontbreekt, in één bericht, en wacht:
 
 > Hoe moet de app heten? Geef ook een korte beschrijving: wat doet de app en voor wie?
-> Ik leid de repo-naam af van de appnaam. Standaard wordt de repo privé; de overige instellingen volgen het setup-bestand.
+> Ik leid de repo-naam af van de appnaam. Standaard wordt de repo public (voorlopig); de overige instellingen volgen het setup-bestand.
 > Wil je een andere repo-naam, eigenaar of zichtbaarheid, zeg het erbij.
 
 Toon appnaam → slug, beschrijving, eigenaar, zichtbaarheid en doelmap kort en schrijf die in het voortgangsbestand.
@@ -358,7 +358,7 @@ Controle: `git status` schoon; `git log --oneline -3` toont: hernoem, koppel (me
 **Eerst CI-beschikbaarheid controleren.** Beide CodeQL-checks zijn verplicht in `.claude/decisions.json` en de workflow
 `.github/workflows/codeql.yml` draait ook voor private apps. Laat de eigenaar bevestigen dat CodeQL voor deze repo
 beschikbaar is. Bij onbekende of ontbrekende beschikbaarheid: stop vóór de eerste push en vraag om verificatie of een
-expliciete keuze. Maak de repo nooit zelf public en behandel ontbrekende checks niet als geslaagd.
+expliciete keuze. Wijzig de zichtbaarheid niet buiten de keuze uit de intake om (standaard public) en behandel ontbrekende checks niet als geslaagd.
 
 `--zonder-codeql` wijzigt alleen de ruleset, niet de workflow of de verplichte checks van `pnpm pr:verify`. Het is dus
 geen werkende afrondroute voor deze setup. Wil de eigenaar een profiel zonder CodeQL, dan vraagt dat eerst een
@@ -419,7 +419,7 @@ Geplande inrichting van de App (**nog niet gebouwd**, roadmap ST-01; het besluit
 - Met de App: de ruleset met code-owner-review en 1 goedkeuring, en de diff-guard als verplichte check.
 
 Weigert de API iets:
-- ruleset op een private repo zonder Pro/Team → het script meldt het en stopt; meld de keuze aan de eigenaar (Pro, organisatie met Team, of public). Wijzig zelf de zichtbaarheid niet.
+- (alleen als de eigenaar in de intake private koos) ruleset op een private repo zonder Pro/Team → het script meldt het en stopt; meld de keuze aan de eigenaar (Pro, organisatie met Team, of public). Wijzig zelf de zichtbaarheid niet.
 - `sha_pinning_required` onbekend → meld: Settings → Actions → General → **Require actions to be pinned to a full-length commit SHA**.
 
 Controle: `gh api repos/$R/rulesets --jq '.[].name'` toont `main`; `gh repo view $R --json mergeCommitAllowed,squashMergeAllowed,rebaseMergeAllowed`.
