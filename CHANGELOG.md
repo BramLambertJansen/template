@@ -166,6 +166,12 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Gewijzigd
 
+- Nieuwe app starten is ook te volgen zonder technische kennis: `START-NIEUWE-APP.md` heeft een sectie Begeleiding
+  (één eigenaarstaak tegelijk, met wat je ziet en hoe je meldt dat het gelukt is) en eenmalige Windows-stappen om
+  Ubuntu en Claude Code te installeren. Het playbook (`docs/nieuwe-app.md`) maakt nieuwe app-repo's standaard public
+  (voorlopig; private vraagt Pro/Team en betaalde code scanning) en sluit af met een openingsopdracht voor de nieuwe
+  sessie in de app-map in plaats van featurewerk in de setupsessie.
+
 - De vertraagde zoekactie van `ListToolbar` gebruikt de actuele callback. Een ouderwijziging tijdens de wachttijd
   laat de zoekactie geen verouderde filter- of sorteertoestand meer terugschrijven; de bestaande 300 ms blijven gelijk.
 
