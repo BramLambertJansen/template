@@ -66,7 +66,7 @@ commando's, paden, productnamen (Use this template, Settings → Rules → Rules
 |---|---|
 | Template | `BramLambertJansen/template` (public), branch `main` |
 | Owner van de nieuwe repo | het account van `gh api user --jq .login` |
-| Zichtbaarheid | `private` |
+| Zichtbaarheid | `public` (voorlopig: rulesets en CodeQL falen op een private repo zonder Pro/Team/GHAS; later per ADR heroverwegen) |
 | Map | `~/code/<slug>` |
 | Distro (WSL) | `Ubuntu-24.04`; bestaat alleen `Ubuntu` en is dat 24.04, gebruik die |
 | Poorten | `54322` (Postgres), `54324` (Mailpit UI), `54325` (SMTP), `8787` (API), `5173` (web); bezet → +10 bij alle vijf tot ze vrij zijn |
@@ -280,7 +280,7 @@ gh api repos/BramLambertJansen/template/commits/main --jq .sha
 
 ```bash
 cd ~/code
-gh repo create <owner>/<slug> --private --template BramLambertJansen/template --clone
+gh repo create <owner>/<slug> --public --template BramLambertJansen/template --clone
 cd <slug>
 ```
 
