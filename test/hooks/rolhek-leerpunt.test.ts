@@ -179,3 +179,23 @@ describe('leerpuntvorm: vlaggen vóór het subcommando en substitutie', () => {
     expect(decide(bash(`grep -n 'GH_REPO=' docs/x.md && ${leerpunt()}`), ctx())).toMatchObject({ deny: [], ask: [] });
   });
 });
+
+// Herreview: cobra slaat elke vlag met waarde over, ook onbekende; omhulsels en substitutie in andere programma's.
+describe('leerpuntvorm: onbekende vlaggen, omhulsels en substitutie', () => {
+  test.each([
+    'gh --add-label x issue edit 1',
+    'gh issue --remove-label x edit 1',
+    'gh --duplicate-of 3 issue close 1',
+    "gh --recover '' issue create -t a -b b",
+    'echo "$(gh issue create -t a -b b)"',
+    'sh -lc "gh issue create -t a -b b"',
+    'xargs gh issue create -t a -b b',
+    'eval gh issue close 1',
+  ])('leerlus/AC-6/AC-7: developer → deny op %s', (command) => {
+    expect(verdict(bash(command, 'developer'))).toBe('deny');
+  });
+
+  test('leerlus/AC-5: hoofdsessie, onbekende vlag vóór issue met een andere repo → ask', () => {
+    expect(verdict(bash(`gh --recover '' issue create --label leerpunt -R iemand/anders ${BODY}`))).toBe('ask');
+  });
+});

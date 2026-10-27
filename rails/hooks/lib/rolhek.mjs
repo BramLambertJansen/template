@@ -723,8 +723,8 @@ const GH_ISSUE_WRITES = new Set(['create', 'edit', 'close', 'reopen', 'delete', 
 const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash']);
 const LEERPUNT = 'leerpunt';
 const GH_ISSUE_WRITE_TEXT = new RegExp(`\\bgh\\b.*\\bissue\\b.*\\b(?:${[...GH_ISSUE_WRITES].join('|')})\\b`);
-// gh-vlaggen met een waarde, ook vóór het subcommando (`gh -R x issue create`): cobra slaat ze over bij het zoeken.
-const GH_VALUE_FLAGS = new Set(['-R', '--repo', '-l', '--label', '-t', '--title', '-b', '--body', '-F', '--body-file', '-a', '--assignee', '-m', '--milestone', '-p', '--project', '-T', '--template', '-c', '--comment', '-r', '--reason']);
+// Programma's die een ander commando uitvoeren; het rolhek ziet dat commando niet als eigen segment.
+const COMMAND_RUNNERS = new Set(['xargs', 'eval', 'exec', 'command', 'time', 'timeout', 'nohup', 'nice', 'parallel', 'watch']);
 
 /**
  * Zet een segment van het commando `GH_REPO` of `GH_HOST` (`GH_REPO=… gh`, `env GH_HOST=…`, `export GH_REPO=… &&`)?
@@ -739,18 +739,25 @@ function zetGhOmgeving(commands) {
 }
 
 /**
- * De operanden van een gh-commando zonder vlaggen en hun waarden: `gh -R x issue create` → `['issue', 'create']`.
+ * Wat gh van `issue` maakt, zonder de stand van de vlaggen te raden: cobra slaat vlaggen en hun waarden over, ook vóór het
+ * subcommando (`gh --add-label x issue edit 1`). Telt dus elk woord; liever een vraag te veel dan een omzeiling.
  * @param {readonly string[]} args
  */
-function ghOperands(args) {
-  /** @type {string[]} */
-  const operands = [];
-  for (let index = 0; index < args.length && operands.length < 2; index += 1) {
-    const arg = args[index] ?? '';
-    if (GH_VALUE_FLAGS.has(arg)) index += 1;
-    else if (!arg.startsWith('-')) operands.push(arg);
-  }
-  return operands;
+function ghIssueAction(args) {
+  if (!args.includes('issue')) return '';
+  return args.find((arg) => GH_ISSUE_WRITES.has(arg)) ?? '';
+}
+
+/**
+ * Een gh-issue-schrijfactie die het rolhek niet als eigen commando ziet: in `$( )` of backticks, in `sh -c`/`-lc`, of
+ * achter een programma dat een commando uitvoert (`xargs`, `eval`).
+ * @param {string} program
+ * @param {readonly string[]} args
+ */
+function verborgenGhIssue(program, args) {
+  const shell = SHELLS.has(program) && args.some((arg) => /^-[a-z]*c[a-z]*$/.test(arg));
+  if (shell || COMMAND_RUNNERS.has(program)) return GH_ISSUE_WRITE_TEXT.test(args.join(' '));
+  return args.some((arg) => /\$\(|`/.test(arg) && GH_ISSUE_WRITE_TEXT.test(arg));
 }
 
 /**
@@ -763,17 +770,12 @@ function ghOperands(args) {
 function ghIssue(argv, { role, ctx, setsGhEnv }, decision) {
   const [word = '', ...args] = argv;
   const program = programName(word);
-  const inString = SHELLS.has(program) && args.includes('-c');
-  if ((inString || program === 'gh') && args.some((arg) => /\$\(|`/.test(arg) && GH_ISSUE_WRITE_TEXT.test(arg))) {
-    gate(decision, role, 'gh issue in een string of commandosubstitutie: het rolhek kijkt daar niet in; gebruik een los gh-commando (ADR 0059)');
+  if (verborgenGhIssue(program, args)) {
+    gate(decision, role, `gh issue binnen ${program} (string, substitutie of omhulsel): het rolhek kijkt daar niet in; gebruik een los gh-commando (ADR 0059)`);
     return;
   }
-  if (inString && args.some((arg) => GH_ISSUE_WRITE_TEXT.test(arg))) {
-    gate(decision, role, `${program} -c met gh issue: het rolhek kijkt niet in de string; gebruik een los gh-commando (ADR 0059)`);
-    return;
-  }
-  const [group, action = ''] = ghOperands(args);
-  if (program !== 'gh' || group !== 'issue' || !GH_ISSUE_WRITES.has(action)) return;
+  const action = program === 'gh' ? ghIssueAction(args) : '';
+  if (action === '') return;
   if (role !== 'hoofdsessie') decision.deny.push(`subagent: gh issue ${action} doet alleen de hoofdsessie (ADR 0059)`);
   else if (action === 'create') {
     const reden = leerpuntAfwijking(args, ctx.config.onderhoud?.repository ?? '', setsGhEnv);
