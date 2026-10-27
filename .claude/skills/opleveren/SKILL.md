@@ -71,4 +71,5 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
    <eerder: #nnn bij een terugkerende fout, anders leeg>
    ```
 
+   Zet de body in een tijdelijk bestand en geef het mee met `--body-file`: backticks of `$(` in het commando zelf geven een vraag.
    Bestaat het label nog niet, dan meld je dat; het label maakt de eigenaar. Triage en oppakken zijn van de eigenaar.

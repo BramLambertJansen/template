@@ -469,8 +469,7 @@ function gitMapMelding(file) {
  * @param {Decision} decision
  */
 function decideBash({ command, role }, ctx, decision) {
-  // Tekstueel, over het hele commando: ook `export GH_REPO=… && gh issue create` of `env GH_HOST=…` (ADR 0059).
-  const setsGhEnv = /\bGH_(?:REPO|HOST)=/.test(command);
+  const setsGhEnv = zetGhOmgeving(parseCommands(command));
   for (const parsed of parseCommands(command)) {
     const { assignments, argv, pathWrappers } = splitCommand(parsed.words);
     forbidden({ assignments, argv }, { role, ctx }, decision);
@@ -723,7 +722,36 @@ function forcePushes(rest) {
 const GH_ISSUE_WRITES = new Set(['create', 'edit', 'close', 'reopen', 'delete', 'transfer', 'lock', 'unlock', 'pin', 'unpin', 'comment', 'develop']);
 const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash']);
 const LEERPUNT = 'leerpunt';
-const GH_ISSUE_WRITE_TEXT = new RegExp(`\\bgh\\s+issue\\s+(?:${[...GH_ISSUE_WRITES].join('|')})\\b`);
+const GH_ISSUE_WRITE_TEXT = new RegExp(`\\bgh\\b.*\\bissue\\b.*\\b(?:${[...GH_ISSUE_WRITES].join('|')})\\b`);
+// gh-vlaggen met een waarde, ook vóór het subcommando (`gh -R x issue create`): cobra slaat ze over bij het zoeken.
+const GH_VALUE_FLAGS = new Set(['-R', '--repo', '-l', '--label', '-t', '--title', '-b', '--body', '-F', '--body-file', '-a', '--assignee', '-m', '--milestone', '-p', '--project', '-T', '--template', '-c', '--comment', '-r', '--reason']);
+
+/**
+ * Zet een segment van het commando `GH_REPO` of `GH_HOST` (`GH_REPO=… gh`, `env GH_HOST=…`, `export GH_REPO=… &&`)?
+ * @param {Iterable<{ words: string[] }>} commands
+ */
+function zetGhOmgeving(commands) {
+  return [...commands].some(({ words }) => {
+    const { assignments, argv } = splitCommand(words);
+    const exported = ENV_EXPORTERS.has(programName(argv[0] ?? '')) ? argv.slice(1) : [];
+    return [...assignments, ...exported].some((word) => /^GH_(?:REPO|HOST)=/.test(word));
+  });
+}
+
+/**
+ * De operanden van een gh-commando zonder vlaggen en hun waarden: `gh -R x issue create` → `['issue', 'create']`.
+ * @param {readonly string[]} args
+ */
+function ghOperands(args) {
+  /** @type {string[]} */
+  const operands = [];
+  for (let index = 0; index < args.length && operands.length < 2; index += 1) {
+    const arg = args[index] ?? '';
+    if (GH_VALUE_FLAGS.has(arg)) index += 1;
+    else if (!arg.startsWith('-')) operands.push(arg);
+  }
+  return operands;
+}
 
 /**
  * Leerlus (ADR 0059, spec leerlus): een subagent schrijft geen issues; de hoofdsessie dient zonder vraag alleen een leerpunt
@@ -735,14 +763,20 @@ const GH_ISSUE_WRITE_TEXT = new RegExp(`\\bgh\\s+issue\\s+(?:${[...GH_ISSUE_WRIT
 function ghIssue(argv, { role, ctx, setsGhEnv }, decision) {
   const [word = '', ...args] = argv;
   const program = programName(word);
-  if (SHELLS.has(program) && args.includes('-c') && args.some((arg) => GH_ISSUE_WRITE_TEXT.test(arg))) {
-    gate(decision, role, `${program} -c met gh issue: het rolhek kijkt niet in de string; schrijf het leerpunt als los gh-commando (ADR 0059)`);
+  const inString = SHELLS.has(program) && args.includes('-c');
+  if ((inString || program === 'gh') && args.some((arg) => /\$\(|`/.test(arg) && GH_ISSUE_WRITE_TEXT.test(arg))) {
+    gate(decision, role, 'gh issue in een string of commandosubstitutie: het rolhek kijkt daar niet in; gebruik een los gh-commando (ADR 0059)');
     return;
   }
-  if (program !== 'gh' || args[0] !== 'issue' || !GH_ISSUE_WRITES.has(args[1] ?? '')) return;
-  if (role !== 'hoofdsessie') decision.deny.push(`subagent: gh issue ${args[1] ?? ''} doet alleen de hoofdsessie (ADR 0059)`);
-  else if (args[1] === 'create') {
-    const reden = leerpuntAfwijking(args.slice(2), ctx.config.onderhoud?.repository ?? '', setsGhEnv);
+  if (inString && args.some((arg) => GH_ISSUE_WRITE_TEXT.test(arg))) {
+    gate(decision, role, `${program} -c met gh issue: het rolhek kijkt niet in de string; gebruik een los gh-commando (ADR 0059)`);
+    return;
+  }
+  const [group, action = ''] = ghOperands(args);
+  if (program !== 'gh' || group !== 'issue' || !GH_ISSUE_WRITES.has(action)) return;
+  if (role !== 'hoofdsessie') decision.deny.push(`subagent: gh issue ${action} doet alleen de hoofdsessie (ADR 0059)`);
+  else if (action === 'create') {
+    const reden = leerpuntAfwijking(args, ctx.config.onderhoud?.repository ?? '', setsGhEnv);
     if (reden !== '') decision.ask.push(`gh issue create buiten de leerpuntvorm: ${reden} (ADR 0059)`);
   }
 }
@@ -755,17 +789,18 @@ function ghIssue(argv, { role, ctx, setsGhEnv }, decision) {
  */
 function leerpuntAfwijking(args, repository, setsGhEnv) {
   if (setsGhEnv) return 'GH_REPO of GH_HOST verlegt het doel';
+  if (args.some((arg) => /\$\(|`/.test(arg))) return 'commandosubstitutie in het commando; zet de tekst in --body-file';
   const repos = optionValues(args, ['--repo', '-R']);
   const labels = optionValues(args, ['--label', '-l']);
   if (repository === '') return 'onderhoud.repository ontbreekt in .claude/gates.json';
   if (repos.length !== 1 || (repos[0] ?? '').toLowerCase() !== repository.toLowerCase())
     return `--repo moet precies één keer ${repository} zijn`;
-  if (labels.length !== 1 || labels[0] !== LEERPUNT) return `precies één --label ${LEERPUNT}, geen ander label`;
+  if (labels.length !== 1 || (labels[0] ?? '').toLowerCase() !== LEERPUNT) return `precies één --label ${LEERPUNT}, geen ander label`;
   return '';
 }
 
 /**
- * Waarden van een optie in de vormen `--naam waarde`, `--naam=waarde` en `-X waarde`.
+ * Waarden van een optie in de vormen `--naam waarde`, `--naam=waarde`, `-X waarde` en `-Xwaarde`.
  * @param {readonly string[]} args
  * @param {readonly string[]} names
  */
@@ -774,8 +809,10 @@ function optionValues(args, names) {
   const values = [];
   args.forEach((arg, index) => {
     if (names.includes(arg)) values.push(args[index + 1] ?? '');
-    const inline = names.find((name) => name.startsWith('--') && arg.startsWith(`${name}=`));
-    if (inline !== undefined) values.push(arg.slice(inline.length + 1));
+    const long = names.find((name) => name.startsWith('--') && arg.startsWith(`${name}=`));
+    const short = names.find((name) => /^-\w$/.test(name) && arg.length > 2 && arg.startsWith(name));
+    if (long !== undefined) values.push(arg.slice(long.length + 1));
+    else if (short !== undefined) values.push(arg.slice(2).replace(/^=/, ''));
   });
   return values;
 }

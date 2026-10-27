@@ -142,3 +142,40 @@ describe('hoofdsessie: andere gh issue-opdrachten veranderen niet', () => {
     },
   );
 });
+
+// Review van de bouw-PR: gh vindt het subcommando ook na vlaggen (`gh -R x issue create`), en commandosubstitutie in een
+// commando dat de allow-regel matcht, mag geen schrijvende gh-opdracht verbergen.
+describe('leerpuntvorm: vlaggen vóór het subcommando en substitutie', () => {
+  test.each(SUBAGENTS)('leerlus/AC-6: %s → deny op gh -R <repo> issue create en gh issue -R <repo> create', (agent) => {
+    expect(verdict(bash(`gh -R ${REPO} issue create --label leerpunt ${BODY}`, agent))).toBe('deny');
+    expect(verdict(bash(`gh issue -R ${REPO} create --label leerpunt ${BODY}`, agent))).toBe('deny');
+  });
+
+  test.each(SUBAGENTS)('leerlus/AC-7: %s → deny op gh issue --repo=<repo> comment', (agent) => {
+    expect(verdict(bash(`gh issue --repo=${REPO} comment 5 -b x`, agent))).toBe('deny');
+  });
+
+  test.each([
+    { name: 'gh -R andere repo issue create', command: `gh -R iemand/anders issue create --label leerpunt ${BODY}` },
+    { name: '$( ) in de body', command: `${leerpunt()} --body "$(gh issue comment 42 -R iemand/anders -b x)"` },
+    { name: 'backticks in de body', command: `${leerpunt()} --body "\`gh issue close 1\`"` },
+  ])('leerlus/AC-5: $name → ask met een reden', ({ command }) => {
+    expect(verdict(bash(command))).toBe('ask');
+  });
+
+  test.each([
+    { name: '--repo=<repo> --label=leerpunt', command: `gh issue create --repo=${REPO} --label=leerpunt ${BODY}` },
+    { name: '-R<repo> -lleerpunt', command: `gh issue create -R${REPO} -lleerpunt ${BODY}` },
+    { name: '--label Leerpunt', command: leerpunt(`--repo ${REPO}`, '--label Leerpunt') },
+    {
+      name: '--body-file',
+      command: `gh issue create --repo ${REPO} --label leerpunt --title x --body-file /tmp/leerpunt.md`,
+    },
+  ])('leerlus/AC-5: $name → geen deny en geen ask', ({ command }) => {
+    expect(decide(bash(command), ctx())).toMatchObject({ deny: [], ask: [] });
+  });
+
+  test('leerlus/AC-5: GH_REPO= in een grep-patroon maakt een geldig leerpunt geen ask', () => {
+    expect(decide(bash(`grep -n 'GH_REPO=' docs/x.md && ${leerpunt()}`), ctx())).toMatchObject({ deny: [], ask: [] });
+  });
+});
