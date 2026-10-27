@@ -726,7 +726,7 @@ const GH_ISSUE_WRITE_TEXT = new RegExp(`\\bgh\\b.*\\bissue\\b.*\\b(?:${[...GH_IS
 // Programma's die een ander commando uitvoeren; het rolhek ziet dat commando niet als eigen segment.
 const COMMAND_RUNNERS = new Set(['xargs', 'eval', 'exec', 'command', 'time', 'timeout', 'nohup', 'nice', 'parallel', 'watch', 'find']);
 // De ingebouwde gh-groepen; een ander eerste woord is een alias (`gh alias set ic 'issue create'`) of extensie.
-const GH_GROUPS = new Set(['agent-task', 'alias', 'api', 'attestation', 'auth', 'browse', 'cache', 'co', 'codespace', 'completion', 'config', 'extension', 'gist', 'gpg-key', 'help', 'issue', 'label', 'org', 'pr', 'preview', 'project', 'release', 'repo', 'ruleset', 'run', 'search', 'secret', 'ssh-key', 'status', 'variable', 'workflow']);
+const GH_GROUPS = new Set(['agent-task', 'alias', 'api', 'attestation', 'auth', 'browse', 'cache', 'codespace', 'completion', 'config', 'copilot', 'extension', 'gist', 'gpg-key', 'help', 'issue', 'label', 'licenses', 'org', 'pr', 'preview', 'project', 'release', 'repo', 'ruleset', 'run', 'search', 'secret', 'ssh-key', 'status', 'variable', 'version', 'workflow']);
 
 /**
  * Zet een segment van het commando `GH_REPO` of `GH_HOST` (`GH_REPO=… gh`, `env GH_HOST=…`, `export GH_REPO=… &&`)?
@@ -769,7 +769,7 @@ function verborgenGhIssue(program, args) {
  * @param {readonly string[]} args
  */
 function ghAliasReden(args) {
-  const first = args.find((arg) => !arg.startsWith('-')) ?? '';
+  const first = args.find((arg, index) => !arg.startsWith('-') && !['-R', '--repo'].includes(args[index - 1] ?? '')) ?? '';
   if (first === 'alias' && args.some((arg) => arg === 'set' || arg === 'import'))
     return 'subagent: gh alias set/import kan een schrijvende opdracht verbergen (ADR 0059)';
   if (first !== '' && !GH_GROUPS.has(first)) return `subagent: gh ${first} is geen ingebouwde gh-groep (alias of extensie; ADR 0059)`;
