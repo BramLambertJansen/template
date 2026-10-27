@@ -5,7 +5,7 @@ Werk niet in de template en maak geen fork: maak een nieuwe GitHub-repository va
 ontwikkelmachine, koppel de templatehistorie en draag de gecontroleerde app-repo over voor featureontwikkeling.
 
 Dit is de korte ingang voordat de app-repo bestaat. Het [setup-playbook](docs/nieuwe-app.md) is de enige gedetailleerde
-uitvoerbron. Gebruik de actuele versie op `template/main`; meld tegenstrijdigheden en verzin geen tweede setuppad.
+uitvoerbron; alleen de eenmalige installatie vóór de eerste agentsessie staat hieronder. Gebruik de actuele versie op `template/main`; meld tegenstrijdigheden en verzin geen tweede setuppad.
 
 ## Begeleiding: ook voor wie niet technisch is
 
@@ -89,7 +89,7 @@ stappen hieronder. Voor een andere runtime bevestigt de eigenaar de start- en ve
 Vooraf nodig: een GitHub-account, een Claude-abonnement met Claude Code, en op Windows
 [Visual Studio Code](https://code.visualstudio.com/). Daarna, eenmalig:
 
-1. Klik met de rechtermuisknop op **Start** → **Terminal (Admin)** en typ `wsl --install -d Ubuntu-24.04`.
+1. Klik met de rechtermuisknop op **Start** → **Terminal (Admin)** (Windows 10: **Windows PowerShell (Admin)**) en typ `wsl --install -d Ubuntu-24.04`.
    Herstart de computer als daarom gevraagd wordt.
 2. Open **Ubuntu 24.04** uit het Startmenu. Kies een gebruikersnaam en wachtwoord (dat wachtwoord heb je later nog nodig).
 3. Typ in dat Ubuntu-venster `curl -fsSL https://claude.ai/install.sh | bash`, sluit het venster en open Ubuntu opnieuw.

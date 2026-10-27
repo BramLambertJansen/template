@@ -591,6 +591,7 @@ voor de Claude-sessie die de eigenaar in Fase 9 in de app-map startte, kopieerba
 > projectinstructies. Controleer dat je in `~/code/<slug>` werkt. Leg kort uit wat er al staat en help me de eerste
 > functionaliteit te bedenken. Begin nog niet met bouwen voordat we het doel hebben besproken.
 
+Zeg erbij dat Claude toestemming vraagt om dat bestand buiten de app-map te lezen, en dat de eigenaar die mag geven.
 Zet het voortgangsbestand niet in de app-repo. Stop daarna met de setup: featurewerk gebeurt in die nieuwe sessie, volgens
 de eigen regels van de app. Een antwoord "klaar" op de vorige eigenaarstaak is geen opdracht om features te bouwen.
 
