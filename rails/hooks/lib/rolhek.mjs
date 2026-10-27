@@ -861,8 +861,8 @@ function subagentTokens({ program, args, expanded }) {
   /** @type {string[]} */
   const found = [];
   const text = args.join(' ');
-  // Bewust overal in de tekst (deny-kant): een substring, geen hostcontrole.
-  if (text.toLowerCase().includes('github.com') && /authorization|bearer|token|--user\b|(?:^|\s)-u\b/i.test(text))
+  // Deny-kant, geen hostcontrole: elk `github` telt, dus ook githubusercontent.com en GHE-hosts.
+  if (/github/i.test(text) && /authorization|bearer|token|--user\b|(?:^|\s)-u\b/i.test(text))
     found.push('subagent: GitHub-API met een token via curl/wget omzeilt de gh-allowlist; gebruik een lezende gh-opdracht');
   const headerFile = (/** @type {string} */ arg, /** @type {number} */ index) =>
     /^(?:-[a-zA-Z]*H|--header=?)@/.test(arg) || (/^(?:-[a-zA-Z]*H|--header)$/.test(arg) && (args[index + 1] ?? '').startsWith('@'));
