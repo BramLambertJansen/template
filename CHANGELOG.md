@@ -6,6 +6,13 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Toegevoegd
 
+- Spec en bouw in één PR (ADR 0062, spec `docs/specs/spec-en-bouw-in-een-pr.md`): de feature-lane is de standaard voor
+  volledig werk, met een of meer specs, code, tests en docs. Alleen kritiek werk (ADR's, auth en gegevensisolatie, de
+  bewaking zelf; `kritiekPad` in `scripts/kit/lane.mjs`) gaat eerst in een besluit-PR. Elke spec krijgt een spec-review en
+  staat in een commit vóór de eerste code. `status: gebouwd # #<deze PR>` mag in de PR zelf, zonder statuscommit achteraf
+  (leerpunt #314). `document-status` wordt een verplichte check in `scripts/github-ruleset.sh`: de eigenaar past de
+  ruleset na de merge toe.
+
 - `pnpm check:app-init` (spec `docs/specs/app-init-proef.md`, leerpunt #334): draait `app:init` op een tijdelijke kopie en daarna de
   snelle suite; verplichte CI-check (`requiredChecks`, `scripts/github-ruleset.sh`: de eigenaar past de ruleset na de merge toe). De
   kopie-, opruim- en git-env-logica van `check:new-resource` staat nu in `scripts/kit/proef-kopie.mjs`.
