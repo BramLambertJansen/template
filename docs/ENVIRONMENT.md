@@ -45,19 +45,46 @@ Een sessie controleert dit eerst en stopt bij een fout, voordat ze iets verkent:
 
 | Vereiste | Controle | Bij een fout |
 |---|---|---|
-| Node uit `mise.toml` en installatiebestanden aanwezig | `node scripts/kit/feiten.mjs` geeft geen `✗ toolchain ontbreekt` (`scripts/kit/toolchain.mjs`) | setup-script niet gedraaid of mislukt; zie Problemen |
+| Node, exacte pnpm-pin en installatiebestanden aanwezig | `node scripts/kit/feiten.mjs` geeft geen `✗ toolchain ontbreekt` (`scripts/kit/toolchain.mjs`) | setup-script niet gedraaid of mislukt; zie Problemen |
 | Netwerk vanuit de Bash-tool | `pnpm install --frozen-lockfile` slaagt | zie Problemen, proxy |
 | Branch | `git branch --show-current` | zie Branchnaam |
 
 Zonder Node 26 en dependencies draait geen enkele check die bewijs levert (`pnpm gate:fast`, `pnpm pr:verify`, `pnpm meting`).
 Een overdracht aan een cloudsessie begint daarom met een blok **Vereisten** met deze drie punten.
 
-De snelle Node-controle bewijst alleen versie en aanwezigheid van installatiebestanden. Voor `pnpm run` en `pnpm exec`
+De voorcontrole valideert ook de exacte `packageManager`-pin en vergelijkt die met de werkelijke uitvoer van
+pnpm op `PATH`. Een verkeerde versie met exitcode 0 telt als fout; een waarschuwing over een SQLite-cache gevolgd door
+een andere versie is geen geslaagde versiewissel. Deze controle bewijst geen synchronisatie van dependencies.
+Voor `pnpm run` en `pnpm exec`
 controleert pnpm zelf of de installatie bij de huidige workspace past (`verifyDepsBeforeRun: error` in
 `pnpm-workspace.yaml`). Past een verouderde of gekopieerde installatie niet bij de workspace, dan stopt pnpm met
 `ERR_PNPM_VERIFY_DEPS_BEFORE_RUN` vóór het werkcommando, zonder dependencies automatisch bij te werken. Herstel de installatie expliciet met `pnpm install --frozen-lockfile`
 volgens de setup. De regressieproef in `test/scripts/dependency-readiness.test.ts` draait de gepinde pnpm met lokale
 fixtures en controleert ook dat een weigering installatiebestanden ongemoeid laat.
+
+## Dagelijks werken binnen de Claude Code-sandbox
+
+Volgens [ADR 0061](adr/0061-claude-sandbox-werkstraat.md) selecteert `mise.toml` rechtstreeks de exacte pnpm-versie
+uit `package.json`. De bestaande setup installeert die vooraf, zodat de shell en Git-hooks dezelfde pnpm gebruiken.
+Er staat geen tweede versienummer in mise en dagelijks werk hoeft geen globale pnpm-cache te wijzigen.
+Na een template-update met een andere pin hoort de passende toolchain bij de eenmalige inrichting; een ontbrekende
+versie blijft een installatiefout, geen aanleiding om de sandbox uit te zetten.
+
+`autoAllowBashIfSandboxed` staat expliciet aan. De hoofdsessie kan normale wijzigingen stagen en committen en de
+huidige featurebranch pushen met `git push origin HEAD`. Deze vorm schrijft geen upstreaminstelling in de
+afgeschermde Git-config. Bij PR-aanmaak noemt de hoofdsessie de werkbranch met `--head` en gebruikt zij `--body-file`,
+zodat gh geen extra pushkeuze hoeft te vragen. De volledige pre-commit-, commit-msg- en pre-push-hooks blijven draaien.
+De [agentdoorloop](operations/agent-doorloop.md#ontwikkelen-en-runnerchecks) beschrijft de overdracht aan CI.
+
+`ask`, `deny`, het rolhek uit main en de verplichte GitHub-checks blijven leidend. Subagents krijgen geen push- of
+PR-schrijfrechten; main-push, force, hookoverslaan, PR-merge en zelfreview blijven geweigerd. De bestaande lokale
+merge van main en veilige taakbranchopruiming blijven beschikbaar. Geen nieuwe runneruitzondering, Git-allowWrite
+of schrijfbare globale pnpm-opslag is nodig.
+
+Regressies staan in `test/scripts/mise-pnpm-selection.test.ts`, `test/scripts/toolchain-pnpm-runtime.test.ts`,
+`test/rails/claude-sandbox-werkstraat.test.ts` en `test/hooks/rolhek-sandbox-werkstraat.test.ts`.
+Configuratietests bewijzen niet dat een native Claude-sessie werkt: de implementatie-PR legt afzonderlijk de
+werkelijke versie, prompts, commit-hooks, featurepush, PR-aanmaak en CI vast, in hoofdcheckout én worktree.
 
 ## Grens van de sandbox
 
