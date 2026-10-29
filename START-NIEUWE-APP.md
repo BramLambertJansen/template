@@ -41,7 +41,9 @@ vraag dat in één bericht en wacht:
 > code lezen, niet je gegevens. Wil je een andere projectnaam, eigenaar of zichtbaarheid, zeg het erbij.
 
 Bevestig naam, repo-naam, beschrijving en doelmap kort. Vraag alleen bij een ongeldige, onduidelijke of bezette keuze om
-verduidelijking. Sla de intake en actuele fase op in `SETUP-PROGRESS.md` in de setupmap. Beschrijving en herkomst komen
+verduidelijking. Kiest de eigenaar privé, controleer dan vóór de repo bestaat of het GitHub-plan dat draagt (playbook
+Fase 4.1, *Zichtbaarheid private*); anders blijkt het pas bij de eerste push. Sla de intake en actuele fase op in
+`SETUP-PROGRESS.md` in de setupmap. Beschrijving en herkomst komen
 later in de README van de app; de beschrijving komt ook bij de GitHub-repo. `app:init` verwerkt alleen de bestaande
 hernoemstap, niet de beschrijving. Vraag nog geen volledige backlog, hostingprovider of productiegeheimen. Stel uit de
 antwoorden een repo-naam voor; een appnaam bedenk je niet.
@@ -53,7 +55,7 @@ Deze template bevat geen gekozen proefapp of appdata. Alleen wanneer de eigenaar
 
 | Stap | Uitvoering | Wanneer door? |
 | --- | --- | --- |
-| Intake en preflight | Agent controleert antwoorden, omgeving, bestaande tools, GitHub-login, template-instelling en alle vijf lokale poorten | Ontbrekende keuzes zijn beantwoord; bestaande installatie hoeft niet opnieuw |
+| Intake en preflight | Agent controleert antwoorden, omgeving, bestaande tools, GitHub-login en -plan bij privé, template-instelling, restanten van een eerdere ronde met dezelfde naam en alle vijf lokale poorten | Ontbrekende keuzes zijn beantwoord; bestaande installatie hoeft niet opnieuw |
 | Machine en toegang | Volgens het playbook; eigenaar doet noodzakelijke installatie, login en goedkeuring | Resultaat per eigenaarstap gecontroleerd |
 | App-repo | GitHub-eerst via de templatefunctie, dan klonen naar `~/code/<slug>` | Juiste nieuwe repo, origin en bronversie vastgesteld |
 | Historie en naam | Bron-tree vergelijken, eenmalig koppelen, `app:init`, beschrijving toevoegen | Tree gelijk, merge met twee ouders, eigen appnaam en beschrijving |

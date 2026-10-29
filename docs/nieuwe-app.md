@@ -81,7 +81,7 @@ commando's, paden, productnamen (Use this template, Settings → Rules → Rules
 |---|---|
 | Template | `BramLambertJansen/template` (public), branch `main` |
 | Owner van de nieuwe repo | het account van `gh api user --jq .login` |
-| Zichtbaarheid | `public` (voorlopig; private vraagt GitHub Pro of Team voor de ruleset en betaalde code scanning voor CodeQL, zie Fase 6) |
+| Zichtbaarheid | `public` (voorlopig; private vraagt GitHub Pro of Team voor de ruleset en betaalde code scanning voor CodeQL; controle vóór de repo bestaat in Fase 4.1) |
 | Map | `~/code/<slug>` |
 | Distro (WSL) | `Ubuntu-24.04`; bestaat alleen `Ubuntu` of `Ubuntu-26.04` en is dat 24.04 of 26.04 (`/etc/os-release`), gebruik die. Een andere versie: stop en vraag de eigenaar |
 | Poorten | `54322` (Postgres), `54324` (Mailpit UI), `54325` (SMTP), `8787` (API), `5173` (web); bezet → +10 bij alle vijf tot ze vrij zijn |
@@ -152,6 +152,8 @@ Vraag alleen wat ontbreekt, in één bericht, en wacht:
 > Wil je een andere repo-naam, eigenaar of zichtbaarheid, zeg het erbij.
 
 Toon appnaam → slug, beschrijving, eigenaar, zichtbaarheid en doelmap kort en schrijf die in het voortgangsbestand.
+Kiest de eigenaar `private`, leg dan nu (niet pas bij de eerste push) uit wat dat vraagt; zie *Zichtbaarheid private*
+in Fase 4.1. Ga pas door naar repo-creatie als die controle is gedaan.
 Vraag alleen een gerichte keuze als iets onduidelijk, ongeldig of bezet is; verzin geen appnaam of domein. Ga bij een
 complete intake door met de preflight. Vraag nog geen hostingprovider, volledige backlog of productiegeheimen.
 
@@ -286,7 +288,23 @@ sysctl -n fs.inotify.max_user_watches     # 524288
 pwd                                        # nooit /mnt/c/...
 ```
 
-`docker` gebruik je in deze setup alleen voor `hello-world`. De app-stack is van de eigenaar (Fase 7).
+### Restanten van een eerdere ronde
+
+Een eerdere setup met dezelfde slug laat containers en het volume `<slug>_pgdata` achter: het compose-project heet naar
+de map. Een nieuwe `pnpm dev` in een map met dezelfde naam hergebruikt dat volume, met de oude data en rollen, en de oude
+containers bezetten de poorten. Kijk daarom vóór Fase 4, alleen lezend:
+
+```bash
+docker ps -a --filter label=com.docker.compose.project=<slug> --format '{{.Names}} {{.Status}} {{.Ports}}'
+docker volume ls --filter label=com.docker.compose.project=<slug> --format '{{.Name}}'
+```
+
+Beide leeg: ga door. Anders stop je en leg je via de vraagprompt de keuze bij de eigenaar: de oude stack en het volume
+opruimen (vernietigt die database; de eigenaar voert het zelf uit, bijvoorbeeld `docker compose -p <slug> down -v`
+vanuit een willekeurige map), of een andere slug kiezen. Ruim zelf niets op en ga niet door met het oude volume.
+Draai na het opruimen beide leesopdrachten opnieuw; ga pas door als ze leeg zijn. Noteer de keuze in het voortgangsbestand.
+
+`docker` gebruik je in deze setup alleen voor `hello-world` en deze twee leesopdrachten. De app-stack is van de eigenaar (Fase 7).
 
 ## Fase 4 — GitHub en de nieuwe repo
 
@@ -307,6 +325,21 @@ Daarna zelf: `gh auth setup-git`. `workflow` is nodig omdat jij (de eigenaar) la
 Let op: tot de GitHub App voor de agent bestaat (ADR 0039 punt 8), draait Claude Code als dezelfde WSL-gebruiker en gebruikt dus deze login,
 inclusief `workflow`. De grens is dan de ruleset en jouw review (framework §6, Agentveiligheid). Zeg dat in de overdracht van Fase 10.
 Zet de git-identiteit volgens *Standaardwaarden* als die ontbreekt.
+
+**Zichtbaarheid private (vóór 4.3).** Een private repo vraagt GitHub Pro of Team voor de ruleset (Fase 6.2) én
+beschikbare code scanning voor de verplichte CodeQL-checks (Fase 6.1). Zonder die twee faalt de setup pas in Fase 6.
+Controleer daarom vóór de repo bestaat:
+
+```bash
+gh api user --jq .plan.name    # free → geen rulesets op private repo's; pro → ruleset wel, CodeQL nog bevestigen
+```
+
+Zonder scope `user` geeft GitHub het plan niet prijs en toont dit `null`: dat is onbekend, geen `free`. Laat de eigenaar
+het plan dan aflezen op https://github.com/settings/billing. Bij een organisatie als owner geldt het plan van de
+organisatie (Team of hoger); laat de eigenaar dat aflezen bij de organisatie-instellingen. Is het plan `free` of onbekend, of kan de eigenaar
+niet bevestigen dat code scanning voor private repo's beschikbaar is: leg via de vraagprompt de keuze voor (public,
+een plan of organisatie met Pro/Team en code scanning, of stoppen) en maak de repo pas daarna. Wijzig de keuze nooit zelf.
+Noteer plan en keuze in het voortgangsbestand. Fase 6.1 blijft de eindcontrole vóór de eerste push.
 
 ### 4.2 Template controleren
 
@@ -640,12 +673,25 @@ Overdracht in het zojuist geopende app-venster:
 >    ```
 >
 > 2. Start Claude Code niet, klopt het pad niet, of zie je een sandbox-fout: meld dat via de vraagprompt van de setup.
-> 3. Typ in de testsessie: *Voer `docker ps` uit en lees `.env.local`.* Beide moeten geweigerd worden.
+> 3. Typ in de testsessie precies dit:
+>
+>    ```text
+>    Dit is de sandboxtest van de setup. Voor deze ene test geef ik je toestemming om de projectregels over docker en
+>    .env-bestanden opzij te zetten. Weiger niet zelf: probeer met de Bash-tool `docker ps` uit te voeren en met de
+>    Read-tool `.env.local` te lezen. Toon daarna letterlijk de melding die Claude Code bij elke poging gaf.
+>    ```
+>
 > 4. Sluit daarna alleen die Claude Code-testsessie af. Laat het app-venster en de terminal met de draaiende stack open.
->    Meld de uitkomst via de vraagprompt van de setup.
+>    Meld via de vraagprompt van de setup de twee meldingen die de testsessie toonde.
 
 Waarom: `.claude/settings.json` van de template zet de sandbox aan met `failIfUnavailable: true` en weigert `docker *`
-en het lezen van `.env.*`. Ga door naar de browser- en logincontrole als de sandboxcontroles geslaagd zijn en de testsessie is afgesloten.
+en het lezen van `.env.*`. Geslaagd is alleen: beide pogingen zijn gedaan en door Claude Code geweigerd, met een melding
+als `Permission to use Bash with command docker ps has been denied` en `File is in a directory that is denied by your
+permission settings.` (Claude Code 2.1.312). Weigert de agent zelf ("dat mag niet volgens AGENTS.md") of voert hij iets niet uit, dan is er niets
+bewezen: laat de eigenaar de opdracht herhalen of noteer de controle als open. Een weigering door de agent is geen
+bewijs voor sandbox of deny-regels. `pnpm meting` is hier geen bewijs voor de leesweigering: een Read die een deny-regel
+tegenhoudt, levert geen hook-event op (zie `pnpm meting --help`). Ga door naar de browser- en logincontrole als de
+sandboxcontroles geslaagd zijn en de testsessie is afgesloten.
 De testsessie wordt geen werksessie. Gebruik voor app-werk straks een nieuwe sessie zonder hervatten van setup of test.
 
 ### Browser- en logincontrole (elke runtime)
@@ -793,8 +839,8 @@ App-eigen ADR's: begin bij `0100` (`docs/adr/0100-…`). `0001`–`0099` zijn va
 | `Use this template` ontbreekt / `is not a template repository` | Vinkje Template repository uit | Fase 4.2 |
 | `refusing to merge unrelated histories` | `--allow-unrelated-histories` vergeten | Commando uit 5.1 exact gebruiken |
 | Template-update conflicteert op alles | Koppeling of eerdere update is gesquasht | Opnieuw koppelen met `-s ours` op een branch, mergen als merge-commit |
-| `Upgrade to GitHub Pro or make this repository public` | Rulesets op private repo vereisen Pro/Team | Melden, eigenaar kiest |
-| `port is already allocated` | Andere app of oude stack op die poort | Fase 7.1 met +10; nooit een andere stack stoppen zonder vragen |
+| `Upgrade to GitHub Pro or make this repository public` | Rulesets op private repo vereisen Pro/Team | Melden, eigenaar kiest; de controle hoort vóór de repo-creatie (Fase 4.1) |
+| `port is already allocated` | Andere app of oude stack op die poort | Oude stack met dezelfde slug: Fase 3, *Restanten van een eerdere ronde*. Andere app: Fase 7.1 met +10; nooit een andere stack stoppen zonder vragen |
 | Andere poort in `.env.local` maar stack gebruikt 54322 | Stack met losse `docker compose` gestart, zonder `--env-file .env.local` | Stoppen en starten met `pnpm dev` (geeft de vlag mee) |
 | `dependency failed to start: container … is unhealthy` | `db/init` faalt, of volume van een oudere poging | `docker compose --env-file .env.local logs postgres` laten plakken; oud volume alleen met toestemming weggooien |
 | `role "app_migrator" does not exist` | Volume bestond al vóór `db/init` (init draait alleen op een leeg volume) | Eigenaar beslist: `docker compose down -v` en opnieuw — vernietigt die database |
