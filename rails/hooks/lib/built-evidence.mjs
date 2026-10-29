@@ -42,7 +42,7 @@ export function checkedCommit(checks, required) {
 export function canRecordBuilt(document, evidence, authority) {
   const info = documentInfo(document.file, document.text);
   const reference = builtReference(document.text);
-  if (info?.kind !== 'spec' || info.status !== 'gebouwd' || reference === null) return false;
+  if (info?.kind !== 'spec' || info.status !== 'gebouwd' || reference?.sha === undefined) return false;
   const approved = document.text.replace(/^status:[^\r\n]*$/m, 'status: goedgekeurd');
   const { pr } = evidence;
   if (!/^[0-9a-f]{40}$/.test(evidence.headSha) || !/^[0-9a-f]{40}$/.test(pr.headSha)) return false;
