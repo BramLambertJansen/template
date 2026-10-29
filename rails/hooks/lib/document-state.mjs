@@ -181,10 +181,15 @@ function toegestaanZonderRecord(van, naar, kind) {
   return van === 'goedgekeurd' && naar === 'goedgekeurd';
 }
 
-/** @param {string} text */
+/**
+ * `gebouwd # #<PR>; gevalideerd: <sha>` (bouwbewijs, ADR 0046 punt 10) of `gebouwd # #<PR>` zonder SHA: alleen geldig in de PR
+ * met de implementatie zelf, wat `check-document-status` toetst (ADR 0062 punt 4).
+ * @param {string} text @returns {{ pr: number, sha?: string } | null}
+ */
 export function builtReference(text) {
-  const match = /^status: gebouwd # #(\d+); gevalideerd: ([0-9a-f]{40})\r?$/m.exec(text);
+  const match = /^status: gebouwd # #(\d+)(?:; gevalideerd: ([0-9a-f]{40}))?\r?$/m.exec(text);
   const pr = Number(match?.[1]);
   const sha = match?.[2];
-  return Number.isSafeInteger(pr) && pr > 0 && sha !== undefined ? { pr, sha } : null;
+  if (!Number.isSafeInteger(pr) || pr <= 0) return null;
+  return sha === undefined ? { pr } : { pr, sha };
 }

@@ -9,9 +9,12 @@ afterEach(opruimen);
 const repo = (mandaat: string[]) => maakRepo({ specs: [S1], mandaat, roadmap: basisRoadmap() });
 
 describe('mandaat en inhoudswijziging van de spec', () => {
+  // GEWIJZIGD (spec-en-bouw/AC-7, ADR 0062): de spec-commit staat vóór de bron, zodat de weigering op het vervallen mandaat
+  // berust en niet op de volgordecheck.
   test('inhoud van de spec en een gemandateerd bronbestand in dezelfde PR: faalt (het mandaat is vervallen)', () => {
     const fixture = repo([S1]);
     write(fixture.root, S1, `${read(fixture.root, S1)}\nNieuw gedrag.\n`);
+    commit(fixture.root, 'docs: spec');
     write(fixture.root, SOURCE, 'export const version = 2;\n');
     const uitvoer = draaiChecker(fixture, commit(fixture.root, 'feat: spec en bron'));
     expect(uitvoer.status).toBe(1);

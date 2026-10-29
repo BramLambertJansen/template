@@ -17,12 +17,12 @@ import { parseNameStatus } from './diff-guard.mjs';
 import { pullRequest, checkRuns } from './github-evidence.mjs';
 import { kaderVan, ROADMAP, taakVinkje } from './roadmap-item.mjs';
 import { regularGitFile, statusOnlyDiff, isAncestor } from './status-git.mjs';
-import { laneVan, isMiniSpec, migratieOvertreding, recordAlleenBesluit } from './lane.mjs';
-import { isFunctionalUiSpec, isUiTest } from '../../rails/hooks/lib/functional-ui.mjs';
+import { laneVan, migratieOvertreding, recordAlleenBesluit } from './lane.mjs';
+import { isFunctionalUiSpec, isUiTest, testChangeRisk } from '../../rails/hooks/lib/functional-ui.mjs';
 import { functionalUiApproval, verifyFunctionalUiChanges } from './functional-ui-status.mjs';
 import { adrNumber, duplicateAdrNumbers } from './adr-numbers.mjs';
 
-/** @typedef {{ root: string, base: string, sha: string, split: string, pr: number | null, adrBestanden: string[], adrArchief: string[], authority: import('../../rails/hooks/lib/task-authority.mjs').Authority, config: import('../../rails/hooks/lib/rolhek.mjs').Config }} Context */
+/** @typedef {{ root: string, base: string, sha: string, split: string, pr: number | null, code: boolean, adrBestanden: string[], adrArchief: string[], authority: import('../../rails/hooks/lib/task-authority.mjs').Authority, config: import('../../rails/hooks/lib/rolhek.mjs').Config }} Context */
 
 /** @param {string} name */
 function requiredEnv(name) {
@@ -34,7 +34,7 @@ function requiredEnv(name) {
 /** @param {{ file: string, text: string }} document @param {Context} context */
 function verifyBuilt(document, context) {
   const reference = builtReference(document.text);
-  if (reference === null) return false;
+  if (reference?.sha === undefined) return false;
   const commits = { from: reference.sha, to: context.sha };
   const evidence = {
     pr: pullRequest(context.authority.repository, reference.pr),
@@ -54,7 +54,7 @@ function verifyBuilt(document, context) {
   return canRecordBuilt(document, evidence, context.authority);
 }
 
-/** @typedef {{ file: string, nieuw: boolean, record: boolean }} Besluit */
+/** @typedef {{ file: string, record: boolean }} Besluit */
 
 /**
  * Controleert één document. Geeft een besluit terug als het document in deze PR een eigenaarstatus krijgt of een goedgekeurde
@@ -76,24 +76,72 @@ function verifyDocument(document, context) {
     if (fout !== null) throw new Error(`${document.file}: ${fout}`);
   }
   if (document.before === document.after) return null;
-  const { uitslag, nieuw } = beslisOvergang(document.file, document.before, document.after);
+  const { uitslag } = beslisOvergang(document.file, document.before, document.after);
   if (uitslag === 'a4') throw new Error(`${document.file}: ${A4_MELDING}`);
   if (uitslag === 'vrij') return null;
   // Een herschreven geaccepteerd ADR is een besluit zonder record: alleen een besluit-PR laat het door (verifyInPrStatus).
   if (uitslag === 'herzien') {
     verifyHerzieningPr(document.file, nieuweHerzieningsregels(document.before ?? '', document.after), context.pr);
-    return { file: document.file, nieuw: false, record: false };
+    return { file: document.file, record: false };
   }
   const target = { file: document.file, text: document.after };
-  if (uitslag === 'gebouwd') {
-    if (verifyBuilt(target, context)) return null;
-    throw new Error(`${document.file}: ${GEEN_BESLUIT}`);
-  }
+  if (uitslag === 'gebouwd') return verifyGebouwd(document, target, context);
   const record = canRecordStatus(target, context.authority);
   if (uitslag === 'geweigerd' && !record) throw new Error(`${document.file}: ${GEEN_BESLUIT}`);
   if (uitslag === 'geweigerd') return null;
   verifyVervanger(document.file, info.status, context);
-  return { file: document.file, nieuw, record };
+  return { file: document.file, record };
+}
+
+/**
+ * `gebouwd` met SHA vraagt bouwbewijs (ADR 0046 punt 10). Zonder SHA (ADR 0062 punt 4) alleen met het nummer van deze PR en code
+ * buiten `docs/` en `CHANGELOG.md`; de ruleset eist bij de merge de verplichte checks op de head. Een nieuwe spec of nieuwe inhoud is dan ook een
+ * besluit, dat de lane- en volgordetoets van `verifyInPrStatus` krijgt.
+ * @param {{ file: string, before: string | null }} document @param {{ file: string, text: string }} target @param {Context} context
+ * @returns {Besluit | null}
+ */
+function verifyGebouwd(document, target, context) {
+  const reference = builtReference(target.text);
+  if (reference?.sha !== undefined) {
+    if (verifyBuilt(target, context)) return null;
+    throw new Error(`${document.file}: ${GEEN_BESLUIT}`);
+  }
+  if (reference === null || context.pr === null || reference.pr !== context.pr || !context.code)
+    throw new Error(
+      `${document.file}: ${GEEN_BESLUIT}; gebouwd zonder SHA vraagt het nummer van deze PR en code buiten docs/ en CHANGELOG.md (ADR 0062)`,
+    );
+  const oud = document.before === null ? null : documentInfo(document.file, document.before);
+  // Een vervallen spec komt niet zonder record terug (zoals `vervallen` → `goedgekeurd`, ADR 0046 punt 5).
+  if (oud !== null && !['voorstel', 'goedgekeurd', 'gebouwd'].includes(oud.status))
+    throw new Error(`${document.file}: ${GEEN_BESLUIT}; ${oud.status} naar gebouwd vraagt een record op main`);
+  const info = documentInfo(document.file, target.text);
+  if (oud !== null && oud.status !== 'voorstel' && oud.digest === info?.digest) return null;
+  return { file: document.file, record: false };
+}
+
+/**
+ * ADR 0062 punt 3: de eerste commit die een besluitspec raakt (ook onder een oude naam), staat vóór de eerste commit met een
+ * bestand buiten `docs/`. Merges tellen niet mee; wat een merge van main binnenbrengt, staat al in de basis.
+ * @param {string[]} specs @param {Context} context
+ */
+function verifyVolgorde(specs, context) {
+  const bereik = `${context.split}..${context.sha}`;
+  // Nieuwste eerst: `--follow` werkt niet samen met `--reverse`.
+  const lijst = (/** @type {string[]} */ args) => {
+    const uit = gitText(context.root, ['log', '--no-merges', '--format=%H', ...args]);
+    if (uit === null) throw new Error('Geschiedenis van de PR is niet leesbaar (volgorde, ADR 0062)');
+    return uit.split('\n').filter(Boolean);
+  };
+  const volgorde = lijst(['--topo-order', bereik]).reverse();
+  const eersteCode = lijst([bereik, '--', '.', ':(exclude)docs/']).at(-1);
+  if (eersteCode === undefined) return;
+  for (const spec of specs) {
+    const eersteSpec = lijst(['--follow', bereik, '--', spec]).at(-1);
+    if (eersteSpec === undefined || volgorde.indexOf(eersteSpec) >= volgorde.indexOf(eersteCode))
+      throw new Error(
+        `${spec}: de spec staat niet in een commit vóór de eerste code of test (volgorde, ADR 0062 punt 3); commit de spec eerst`,
+      );
+  }
 }
 
 /**
@@ -209,7 +257,7 @@ function verifyAdrWeg(changes, context) {
   const verdwenen = (/** @type {{ status: string, pad: string, van?: string }} */ { status, pad, van }) =>
     status === 'R' ? (van ?? '') : status === 'D' ? pad : '';
   if (changes.some((wijziging) => documentKind(verdwenen(wijziging)) === 'adr')) verifyVervangersBestaan(context);
-  return weg.map((file) => ({ file, nieuw: false, record: false }));
+  return weg.map((file) => ({ file, record: false }));
 }
 
 /** `vervangen door NNNN` wijst naar een ADR (ook in het archief) op main of in de PR (ADR 0046 punt 5). @param {string} file @param {string} status @param {Context} context */
@@ -329,9 +377,29 @@ function verifyGeenRename(file, changes, context) {
     );
 }
 
-/** Inhoud van de lane: alleen een nieuwe tabel in migraties, en dan een kop "Datawijzigingen" in de mini-spec. @param {string} file @param {{ status: string, pad: string }[]} changes @param {Context} context */
-function verifyFeatureInhoud(file, changes, context) {
-  if (isFunctionalUiSpec(context.authority.working(file) ?? '')) verifyFunctionalUiChanges(context, changes);
+/**
+ * Een gewijzigde bestaande test in de feature-lane mag geen gevallen weghalen of skippen (`docs/dod.md`, Altijd; ADR 0062).
+ * @param {{ status: string, pad: string }[]} changes @param {Context} context
+ */
+function verifyTestwijzigingen(changes, context) {
+  for (const { status, pad } of changes) {
+    if (status !== 'M' || !context.config.testpaden.some((glob) => globMatch(glob, pad))) continue;
+    const risk = testChangeRisk(
+      gitText(context.root, ['show', `${context.split}:${pad}`]) ?? '',
+      gitText(context.root, ['show', `${context.sha}:${pad}`]) ?? '',
+    );
+    if (risk !== null)
+      throw new Error(
+        `${pad}: ${risk === 'skip' ? 'tests skippen' : 'testgevallen weghalen'} vraagt afzonderlijk eigenaarakkoord`,
+      );
+  }
+}
+
+/** Inhoud van de lane: alleen een nieuwe tabel in migraties, en dan een kop "Datawijzigingen" in een van de specs. @param {string[]} files @param {{ status: string, pad: string }[]} changes @param {Context} context */
+function verifyFeatureInhoud(files, changes, context) {
+  const teksten = files.map((file) => context.authority.working(file) ?? '');
+  if (teksten.some((tekst) => isFunctionalUiSpec(tekst))) verifyFunctionalUiChanges(context, changes);
+  verifyTestwijzigingen(changes, context);
   const migraties = changes.filter(
     ({ status, pad }) => status === 'A' && context.config.migraties.some((glob) => globMatch(glob, pad)),
   );
@@ -339,16 +407,13 @@ function verifyFeatureInhoud(file, changes, context) {
     const fout = migratieOvertreding(gitText(context.root, ['show', `${context.sha}:${pad}`]) ?? '\0');
     if (fout !== null) throw new Error(`${pad}: ${fout}; dat is framework-lane met het volledige sjabloon`);
   }
-  if (
-    migraties.length > 0 &&
-    !/^## Datawijzigingen \(met grants\)\n+(?!##)\S/m.test(context.authority.working(file) ?? '')
-  )
-    throw new Error(`${file}: een nieuwe migratie vraagt de kop "Datawijzigingen (met grants)" in de mini-spec`);
+  if (migraties.length > 0 && !teksten.some((tekst) => /^## Datawijzigingen \(met grants\)\n+(?!##)\S/m.test(tekst)))
+    throw new Error(`${files.join(', ')}: een nieuwe migratie vraagt de kop "Datawijzigingen (met grants)" in de spec`);
 }
 
 /**
- * Besluiten in de PR zelf (ADR 0046 punt 1 en 5): zonder record alleen in een besluit-PR (framework-lane: alleen `docs/adr/`,
- * `docs/specs/` en het record) of in de feature-lane (één nieuwe mini-spec met code). De merge door de eigenaar is het besluit.
+ * Besluiten in de PR zelf (ADR 0046 punt 1 en 5, ADR 0062): zonder record alleen in een besluit-PR (framework-lane: alleen
+ * `docs/adr/`, `docs/specs/` en het record) of in de feature-lane (specs met code, zonder ADR of kritiek pad). De merge door de eigenaar is het besluit.
  * @param {{ besluiten: Besluit[], changes: { status: string, pad: string, van?: string }[] }} pr @param {Context} context
  * @returns {string | null} de melding voor de uitvoer, of null zonder besluit zonder record
  */
@@ -357,24 +422,21 @@ function verifyInPrStatus({ besluiten, changes }, context) {
   const [eerste] = open;
   if (eerste === undefined) return null;
   const bestanden = besluiten.map(({ file }) => file);
-  const [enige] = besluiten;
-  const mini =
-    besluiten.length === 1 &&
-    enige?.nieuw === true &&
-    documentKind(enige.file) === 'spec' &&
-    isMiniSpec(context.authority.working(enige.file) ?? '');
-  const functioneleUi = isFunctionalUiSpec(context.authority.working(eerste.file) ?? '');
+  // De UI-uitzondering (ADR 0056) geldt voor precies één spec; bij meer specs geldt de gewone lane (geen volgordeafhankelijkheid).
+  const functioneleUi = besluiten.length === 1 && isFunctionalUiSpec(context.authority.working(eerste.file) ?? '');
   const { lane, reden } = laneVan({
     changes,
     besluiten: bestanden,
-    mini,
     config: context.config,
     repository: context.authority.repository,
     functioneleUi,
   });
   if (lane === null) throw new Error(`${bestanden.join(', ')}: ${GEEN_BESLUIT}; geen herkende lane: ${reden}`);
   for (const { file } of open) verifyGeenRename(file, changes, context);
-  if (lane === 'feature') verifyFeatureInhoud(eerste.file, changes, context);
+  if (lane === 'feature') {
+    verifyFeatureInhoud(bestanden, changes, context);
+    verifyVolgorde(bestanden, context);
+  }
   if (
     lane === 'framework' &&
     changes.some(({ pad }) => pad === RECORD) &&
@@ -456,8 +518,9 @@ async function main() {
   const config = loadConfig(gitText(root, ['show', `${base}:.claude/gates.json`]) ?? '');
   const prNummer = process.env['PR_NUMBER'] ?? '';
   const pr = /^[1-9]\d*$/.test(prNummer) ? Number(prNummer) : null;
+  const code = changes.some(({ pad }) => !pad.startsWith('docs/') && pad !== 'CHANGELOG.md');
   /** @type {Context} */
-  const context = { root, base, sha, split, pr, ...adrLijsten(root, sha), authority: snapshot, config };
+  const context = { root, base, sha, split, pr, code, ...adrLijsten(root, sha), authority: snapshot, config };
   verifyNummerVrij(changes, context);
   const verwijderd = verifyAdrWeg(changes, context);
   const gewijzigd = verifyDocuments(changes, context);

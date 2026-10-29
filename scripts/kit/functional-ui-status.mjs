@@ -51,7 +51,7 @@ export function functionalUiApproval(snapshot) {
   if (diff === null) return null;
   const changes = parseNameStatus(diff);
   const config = loadConfig(gitText(root, ['show', `${base}:.claude/gates.json`]) ?? '');
-  const lane = laneVan({ changes, besluiten: [file], mini: true, functioneleUi: true, repository, config });
+  const lane = laneVan({ changes, besluiten: [file], functioneleUi: true, repository, config });
   if (lane.lane !== 'feature') return null;
   verifyFunctionalUiChanges(snapshot, changes);
   return info.digest;

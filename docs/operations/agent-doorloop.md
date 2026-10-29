@@ -166,9 +166,12 @@ corepaden en bestaande UI-tests voor eigenaarreview. Een app-repository krijgt d
 Na groene verplichte checks werkt `pnpm docs:status` ook voor de nieuwe UI-mini-spec: het bewijs blijft aan dezelfde
 broncommit, repository en geopende PR gebonden. Een gewijzigde implementatie na die broncommit vraagt nieuw bewijs.
 
-- **Overige feature-lane:** app-werk met een mini-spec (`docs/specs/_mini.md`, veld `sjabloon: mini`). Alles mag meewijzigen (ook docs,
-  `CHANGELOG.md`, de roadmap en gegenereerde bestanden zoals het schema-snapshot) behalve `src/core`, een pad uit `voorReview`
-  (`.claude/gates.json`), een ADR, een gewijzigde of verwijderde bestaande test of migratie, en een tweede document met een eigenaarstatus.
+- **Overige feature-lane (de standaard, ADR 0062):** een of meer specs met een eigenaarstatus (nieuw, volledig of mini, of nieuwe
+  inhoud van een goedgekeurde spec) samen met code, tests en docs. Alles mag meewijzigen (ook `CHANGELOG.md`, de roadmap, `scripts/`,
+  `rails/`, overige `src/core`, agentinstructies en gegenereerde bestanden zoals het schema-snapshot) behalve een ADR, een kritiek pad
+  (`kritiekPad` in `scripts/kit/lane.mjs`: `src/core/api/auth`, `src/core/api/db`, `db/init`, `altijdVragen`, `rails/hooks/**` en de besluit-, status- en mergescripts),
+  een verwijderde bestaande test en een gewijzigde of verwijderde migratie. Een gewijzigde bestaande JS/TS-test staat met reden in de PR en mag geen gevallen weghalen of skippen; een gewijzigde pgTAP-test valt erbuiten.
+  De eerste commit die een besluitspec raakt, staat vóór de eerste commit met een bestand buiten `docs/` (spec-review vóór het bouwen).
   Een PR bevat hoogstens één nieuwe migratie. Die maakt precies één owner-tabel in `public` volgens `pnpm new:resource`:
   vaste id-, owner_id- en created_at-kolommen, ENABLE en FORCE RLS, vier afzonderlijke eigenaarpolicies met
   `(select app.current_user_id())` en expliciete SELECT/DELETE-grants aan `app_authenticated`. INSERT/UPDATE-grants
@@ -178,8 +181,8 @@ broncommit, repository en geopende PR gebonden. Een gewijzigde implementatie na 
   verwijzing naar `better_auth."user" (id)` blijft toegestaan. Een retentionregistratie heeft precies de volgorde
   NO FORCE → één rij voor de nieuwe tabel → FORCE; losse of herhaalde toggles worden geweigerd. De mini-spec heeft de kop
   "Datawijzigingen (met grants)". Een geneste `CLAUDE.md` of `AGENTS.md` valt eruit. Een onbekend pad buiten `gates` en buiten `src/`, `docs/` en `db/` (zoals `.vscode/` of `.mcp.json`) valt eruit. Diff-guard en
-  CODEOWNERS blijven gelden voor elk gate-pad in de PR. Het bereik is ruimer dan de letter van ADR 0046 punt 14 (eigenaarbesluit).
-- **Besluit-PR (framework-lane):** een of meer ADR's en specs die een eigenaarstatus krijgen (ook `vervangen door NNNN` of `vervallen`, of nieuwe inhoud van een goedgekeurde spec), met hooguit hun eigen records in `.claude/decisions.json` (andere records of `requiredChecks` wijzigen telt niet), zonder code of andere bestanden: alleen documenten in `docs/adr/` en `docs/specs/` die zelf een besluit krijgen, ook geen index of ander document. Wijzigt de inhoud van een spec met een `--path`-mandaat, dan vervalt dat mandaat; code eronder vraagt een nieuw record. Bouwen volgt in een volgende PR.
+  CODEOWNERS blijven gelden voor elk gate-pad in de PR. Het bereik volgt ADR 0062.
+- **Besluit-PR (framework-lane):** een of meer ADR's en specs die een eigenaarstatus krijgen (ook `vervangen door NNNN` of `vervallen`, of nieuwe inhoud van een goedgekeurde spec), met hooguit hun eigen records in `.claude/decisions.json` (andere records of `requiredChecks` wijzigen telt niet), zonder code of andere bestanden: alleen documenten in `docs/adr/` en `docs/specs/` die zelf een besluit krijgen, ook geen index of ander document. Wijzigt de inhoud van een spec met een `--path`-mandaat, dan vervalt dat mandaat; code eronder vraagt een nieuw record. Bouwen volgt in een volgende PR. Dit is de route voor kritiek werk (ADR 0062 punt 2) en voor wie een besluit los wil voorleggen.
 - Past de PR in geen van beide, dan geldt de strenge route: de status heeft een record op main nodig (ADR 0046, hierboven).
 
 ## Ontwikkelen en runnerchecks
@@ -364,7 +367,15 @@ Dit is administratie. `gateMarker: docs` op main beperkt het tot documentatie; `
 eigenaarbesluit worden ingesteld. De helper zet geen review of check-status. Directe labelschrijfacties blijven
 verboden. Diff-guard behoudt label én eigenaarreview op de uiteindelijke head-SHA, met de overgang uit ADR 0045 punt 17.
 
-Bij afgeronde implementatie en groene verplichte checks registreert de agent:
+**Standaard: `gebouwd` in dezelfde PR** (ADR 0062). Bevat de PR de implementatie van de spec, dan zet de agent de
+statusregel daar zelf op `status: gebouwd # #<n>`, met n het nummer van deze PR (open de PR dus eerst; daarna een commit
+met de statusregel en, als de spec een roadmap-item noemt, het vinkje met `#<n>` erachter). Geen statuscommit na groen en geen
+SHA: `document-status` accepteert de vorm alleen met het eigen PR-nummer en code buiten `docs/` en `CHANGELOG.md`, en de ruleset eist bij de
+merge de verplichte checks op de head. Een `git merge origin/main` of een fix erna mag gewoon; de checks draaien opnieuw.
+`check-docs` eist voor elk AC-id een getagde test.
+
+**Implementatie al eerder gemerged** (bijvoorbeeld een spec die later alsnog naar `gebouwd` gaat): dan geldt de vorm met
+bouwbewijs. Bij afgeronde implementatie en groene verplichte checks registreert de agent:
 
 ```sh
 pnpm docs:status docs/specs/voorbeeld.md gebouwd --pr 123 --roadmap
@@ -375,7 +386,7 @@ De guard mag de groene broncommit gebruiken als de latere diff uitsluitend statu
 of configuratie wijzigen vraagt nieuw bouwbewijs. Gebouwd vereist geen merge. ADR's hebben geen gebouwd-status:
 implementatiebewijs hoort bij hun gekoppelde spec.
 
-Volgorde (leerpunt #314, anders kost het extra CI-rondes of merget de PR zonder `gebouwd`):
+Volgorde voor die vorm (leerpunt #314, anders kost het extra CI-rondes of merget de PR zonder `gebouwd`):
 
 1. `check:roadmap` eist een roadmapwijziging in dezelfde PR zodra de spectekst `ST-<n>` of "roadmap stuk <n>" noemt (bijvoorbeeld ST-09). Gebruik daarvoor `--roadmap`: het vinkje landt dan in de statuscommit. Zet het niet in de implementatie: onder een taakmandaat keurt `document-status` een vinkje vóór de statuscommit af (`BUITEN`), en `--roadmap` faalt als het item al is afgevinkt. Noemt het item het specpad niet tussen backticks, dan kan `--roadmap` het niet afvinken: stop en vraag de eigenaar (met mandaat); zonder mandaat komt de roadmapwijziging in de implementatie.
 2. Wacht op groen op HEAD (`pnpm pr:verify <n> --watch`).
@@ -383,7 +394,7 @@ Volgorde (leerpunt #314, anders kost het extra CI-rondes of merget de PR zonder 
 4. Pas na groen op die statuscommit mag de eigenaar de PR mergen of auto-merge aanzetten. Staat auto-merge al aan, vraag de eigenaar hem uit te zetten tot stap 3 klaar is: na de merge ligt de PR-head vast en eist `canRecordBuilt` dat die gelijk is aan de gecontroleerde HEAD op dezelfde branch, dus een latere statuscommit herstelt het niet.
 5. Landt er toch een commit na de statuscommit (ook `git merge origin/main`), dan is `document-status` rood. Wacht op groen voor de andere checks op de nieuwe HEAD en draai stap 3 opnieuw, zonder `--roadmap` als het item al is afgevinkt. Lukt dat niet, stop en vraag de eigenaar.
 
-Zonder `gh`-authenticatie kan `docs:status … --pr` het bouwbewijs niet ophalen. De statusregel met de hand zetten is geen alternatief: de volgorde hierboven blijft gelden en `document-status` valideert hem tegen de PR. Meld het en laat de eigenaar of een sessie met `gh`-auth stap 3 draaien.
+Zonder `gh`-authenticatie kan `docs:status … --pr` het bouwbewijs niet ophalen. De statusregel met SHA met de hand zetten is geen alternatief: de volgorde hierboven blijft gelden en `document-status` valideert hem tegen de PR. Meld het en laat de eigenaar of een sessie met `gh`-auth stap 3 draaien.
 
 `vervallen` of `vervangen door NNNN` schrijft de architect of hoofdsessie in een besluit-PR; de merge door de eigenaar beslist.
 

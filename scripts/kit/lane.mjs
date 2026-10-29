@@ -1,8 +1,8 @@
-// Lane-herkenning (ADR 0046 punt 14, 15 en 5: besluit-PR met meerdere documenten). Puur: de aanroeper levert de wijzigingen en de besluitdocumenten.
-// Bereik (eigenaarbesluit, ruimer dan de letter van punt 6): alles wat niet in src/core, voorReview of docs/adr/ staat; bestaande
-// tests en migraties blijven dicht. Een pad buiten `gates` telt alleen binnen src/, docs/, db/ of CHANGELOG.md: onbekende
-// dotfiles en configs (.vscode, .envrc, .mcp.json, postcss.config.*) kunnen vóór review effect hebben en vallen dicht.
-// De overige gate-paden zonder voorReview (deploy, renovate, src/api/server.ts) vallen onder CODEOWNERS en de diff-guard.
+// Lane-herkenning (ADR 0046 punt 15 en 5, ADR 0062). Puur: de aanroeper levert de wijzigingen en de besluitdocumenten.
+// Bereik (ADR 0062): een of meer specs met code, behalve een ADR en een kritiek pad (`kritiekPad`); verwijderde tests en
+// gewijzigde of verwijderde migraties blijven dicht. Een pad buiten `gates` telt alleen binnen src/, docs/, db/ of CHANGELOG.md:
+// onbekende dotfiles en configs (.vscode, .envrc, .mcp.json, postcss.config.*) kunnen vóór review effect hebben en vallen dicht.
+// Overige gate-paden vallen onder CODEOWNERS, de diff-guard en het rolhek.
 
 import { globMatch } from '../../rails/hooks/lib/rolhek.mjs';
 import { functionalUiReason } from '../../rails/hooks/lib/functional-ui.mjs';
@@ -12,25 +12,62 @@ import { readRegistry } from '../../rails/hooks/lib/task-authority.mjs';
 /** @typedef {{ lane: 'feature' | 'framework' | null, reden: string }} Uitslag */
 
 const BEKEND = [/^src\//, /^docs\//, /^db\//, /^CHANGELOG\.md$/];
+// Een geneste of onbekende instructie valt dicht; de instructies op hun vaste plek zijn gate-paden en mogen mee (ADR 0062).
 const INSTRUCTIES = /(?:^|\/)(?:(?:CLAUDE|AGENTS)[^/]*\.md|\.claude\/.*)$/;
+const JS_TEST = /\.(?:[cm]?[jt]sx?)$/;
+const VASTE_INSTRUCTIES = /^(?:CLAUDE\.md|AGENTS\.md|\.claude\/(?:agents|skills|rules)\/.+)$/;
+// ADR 0062 punt 2: auth, gegevensisolatie, alle hookcode en de scripts die over besluiten, statussen en merges oordelen
+// (spec spec-en-bouw-in-een-pr, AC-3); `altijdVragen` komt uit de config.
+const KRITIEK = [
+  'src/core/api/auth/**',
+  'src/core/api/db/**',
+  'db/init/**',
+  'rails/hooks/**',
+  ...[
+    'check-document-status',
+    'lane',
+    'functional-ui-status',
+    'status-git',
+    'github-evidence',
+    'diff-guard',
+    'pr-gate-label',
+    'pr-verify',
+    'check-roadmap',
+    'roadmap-item',
+    'document-status',
+    'document-decision',
+    'gates',
+  ].map((naam) => `scripts/kit/${naam}.mjs`),
+];
 const RECORD = '.claude/decisions.json';
 
 /** @param {readonly string[]} globs @param {string} pad */
 const inLijst = (globs, pad) => globs.some((glob) => globMatch(glob, pad));
 
 /**
- * Waarom een pad buiten de feature-lane valt, of null als het erbinnen valt (punt 6 en 7).
- * @param {Wijziging} wijziging @param {import('../../rails/hooks/lib/rolhek.mjs').Config} config @param {boolean} ui
+ * Kritiek werk (ADR 0062 punt 2) krijgt eerst een besluit-PR. Ontbreekt `altijdVragen`, dan telt elk `voorReview`-pad als
+ * kritiek, en zonder `voorReview` elke gate (faalt dicht).
+ * @param {string} pad @param {import('../../rails/hooks/lib/rolhek.mjs').Config} config
  */
-function buitenBereik({ status, pad }, config, ui) {
-  if (inLijst(config.voorReview ?? config.gates, pad)) return `${pad} staat in voorReview`;
-  if (!ui && pad.startsWith('src/core/')) return `${pad} ligt in src/core`;
+export function kritiekPad(pad, config) {
+  const vragen = config.altijdVragen ?? config.voorReview ?? config.gates;
+  return inLijst([...KRITIEK, ...vragen], pad);
+}
+
+/**
+ * Waarom een pad buiten de feature-lane valt, of null als het erbinnen valt (ADR 0062).
+ * @param {Wijziging} wijziging @param {import('../../rails/hooks/lib/rolhek.mjs').Config} config
+ */
+function buitenBereik({ status, pad }, config) {
   if (pad.startsWith('docs/adr/')) return `${pad} is een ADR`;
-  if (inLijst(config.testpaden, pad))
-    return status === 'A' || ui ? null : `${pad}: een bestaande test wijzigen of verwijderen`;
+  if (inLijst(config.testpaden, pad)) {
+    if (status === 'D' || status === 'R') return `${pad}: een bestaande test verwijderen of hernoemen`;
+    // `testChangeRisk` telt alleen JS/TS-gevallen; een gewijzigde pgTAP- of andere test blijft dicht.
+    return status === 'M' && !JS_TEST.test(pad) ? `${pad}: een bestaande test buiten JS/TS wijzigen` : null;
+  }
   if (inLijst(config.migraties, pad)) return status === 'A' ? null : `${pad}: een migratie wijzigen of verwijderen`;
   if (status === 'D' && pad.startsWith('docs/specs/')) return `${pad}: een bestaande spec verwijderen`;
-  if (INSTRUCTIES.test(pad)) return `${pad} wijzigt instructies van de agent`;
+  if (INSTRUCTIES.test(pad) && !VASTE_INSTRUCTIES.test(pad)) return `${pad} wijzigt instructies van de agent`;
   return inLijst(config.gates, pad) || BEKEND.some((patroon) => patroon.test(pad))
     ? null
     : `${pad} is een onbekend pad buiten gates; het kan vóór review effect hebben`;
@@ -49,30 +86,31 @@ function paden(changes) {
 }
 
 /**
- * @param {{ changes: Wijziging[], besluiten: readonly string[], mini: boolean, config: import('../../rails/hooks/lib/rolhek.mjs').Config, repository?: string, functioneleUi?: boolean }} invoer
+ * @param {{ changes: Wijziging[], besluiten: readonly string[], config: import('../../rails/hooks/lib/rolhek.mjs').Config, repository?: string, functioneleUi?: boolean }} invoer
  * @returns {Uitslag}
  */
-export function laneVan({ changes, besluiten, mini, config, repository, functioneleUi = false }) {
-  const [besluit, ...rest] = besluiten;
+export function laneVan({ changes, besluiten, config, repository, functioneleUi = false }) {
+  const [besluit] = besluiten;
   if (besluit === undefined) return { lane: null, reden: 'geen document krijgt een eigenaarstatus in deze PR' };
   const overige = paden(changes).filter(({ pad }) => !besluiten.includes(pad));
   const vreemd = overige.find(({ pad }) => pad !== RECORD);
   if (vreemd === undefined) return { lane: 'framework', reden: 'besluit-PR: alleen besluitdocumenten en hun record' };
-  if (rest.length > 0)
+  const adr = besluiten.find((pad) => pad.startsWith('docs/adr/'));
+  if (adr !== undefined)
     return {
       lane: null,
-      reden: `${vreemd.pad} hoort niet in een besluit-PR met ${besluiten.join(', ')}; de feature-lane is één mini-spec`,
+      reden: `${vreemd.pad} hoort niet in een PR met ${adr}; een ADR gaat in een besluit-PR (ADR 0062)`,
     };
-  if (!mini) return { lane: null, reden: `${vreemd.pad} hoort niet in een PR met een in-PR-status (geen mini-spec)` };
+  const kritiek = overige.find(({ pad }) => kritiekPad(pad, config));
+  if (kritiek !== undefined)
+    return { lane: null, reden: `${kritiek.pad} is kritiek; dat vraagt eerst een besluit-PR (ADR 0062 punt 2)` };
   const migraties = overige.filter(({ status, pad }) => status === 'A' && inLijst(config.migraties, pad));
   if (migraties.length > 1) return { lane: null, reden: 'de feature-lane bevat hoogstens één nieuwe migratie' };
   const scope = functioneleUi ? functionalUiReason({ changes, repository, spec: besluit }) : null;
   if (scope !== null) return { lane: null, reden: scope };
-  const reden = overige
-    .map((wijziging) => buitenBereik(wijziging, config, functioneleUi))
-    .find((melding) => melding !== null);
+  const reden = overige.map((wijziging) => buitenBereik(wijziging, config)).find((melding) => melding !== null);
   return reden === undefined
-    ? { lane: 'feature', reden: functioneleUi ? 'functionele UI (ADR 0056)' : 'mini-spec binnen het bereik van punt 6' }
+    ? { lane: 'feature', reden: functioneleUi ? 'functionele UI (ADR 0056)' : 'spec en bouw in één PR (ADR 0062)' }
     : { lane: null, reden };
 }
 

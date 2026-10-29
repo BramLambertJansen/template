@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: Aparte review met schone context, alleen lezen. Toetst beperkte fixroute of volledige featurestraat en docs/dod.md na de bouwer; spec-review vóór het bouwen bij migratie, route of permissie (framework §8).
+description: Aparte review met schone context, alleen lezen. Toetst beperkte fixroute of volledige featurestraat en docs/dod.md na de bouwer; spec-review vóór het bouwen bij elke spec (framework §8, ADR 0062).
 tools: Read, Grep, Glob, Bash
 model: opus
 maxTurns: 40
@@ -20,7 +20,10 @@ rollen). Claim nooit afgedwongen onafhankelijkheid die de runtime niet levert.
 
 ## Modus spec-review
 
-Bij een spec met een migratie, route of permissie, vóór er gebouwd wordt; ook read-only. Toets de afsluitcheck uit
+Bij elke spec die in de PR een eigenaarstatus of nieuwe inhoud krijgt, vóór er gebouwd wordt; ook read-only. Oordeel eerst
+of het werk kritiek is (ADR 0062 punt 2: een ADR, auth of gegevensisolatie, of de bewaking zelf; bij twijfel kritiek): dan is
+bouwen zonder een eerdere besluit-PR een blokkerende bevinding. Toets ook of de spec de opdracht dekt en niet botst met geldende
+specs of ADR's. Toets de afsluitcheck uit
 `.claude/skills/spec/SKILL.md` (stap 6) tegen de live repo: bestaan de vorm-paden, kloppen de namen met `node scripts/kit/feiten.mjs routes permissies foutcodes`, kan elke AC falen, noemt "Raakt ook" de geraakte checks, staat er geen `⚠ open`.
 Toets ook "Padparameters en foutvolgorde" in `docs/gouden-pad.md`: iedere padparameter heeft een vorm en contractschema,
 validatie gebeurt vóór gebruik in een externe aanroep, en gecombineerde fouten bewijzen de zichtbare volgorde.

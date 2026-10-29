@@ -21,8 +21,8 @@ check is geen ADR. Anders volstaat een regel in dit document of `docs/` met PR-n
    ADR (zie §3); de code raakt de keuze alleen via een adapter.
 7. **Prompts alleen voor wat werkt vóór review** (P3, ADR 0046): code die op de machine van de eigenaar of in CI draait, en de eigen
    instructies en rechten van de agent. De rest is zichtbaar in de PR via CODEOWNERS en diff-guard.
-8. **Eén ronde per besluit** (P4, ADR 0046): framework-lane streng (één PR per besluit, de merge is het besluit), feature-lane met
-   spec en bouw in één PR waar de feature-lane past; beperkte fixes zonder nieuwe spec (§8, ADR 0058).
+8. **Eén ronde per besluit** (P4, ADR 0046, 0062): spec, bouw en `gebouwd` in één PR (feature-lane); alleen kritiek werk (ADR's,
+   auth en gegevensisolatie, de bewaking zelf) eerst in een besluit-PR; beperkte fixes zonder nieuwe spec (§8, ADR 0058).
 9. **Meten vóór en na** (P6, ADR 0046): een wijziging aan de werkstraat heeft een nulmeting en een vergelijking (§10 Meten).
    Voor nieuw werk geldt P1: geen roadmap-item, rail of ADR zonder aanleiding (app-behoefte, doorgeglipte fout of gemeten wrijving).
 
@@ -327,8 +327,9 @@ testregels of controles. De rollen hieronder gelden waar de gekozen route ze ver
    interacties, migraties, routes of permissies; bij overig volledig werk het toepasselijke besluit/spec. Geen nieuw document
    voor een lichte fix. In de volledige straat schrijft alleen de architect de inhoud van de spec (ADR 0058 punt 2);
    het skelet uit `pnpm new:resource` mag de hoofdsessie genereren, en zij coördineert. Spec of ADR krijgt direct de bedoelde status (`goedgekeurd`, `geaccepteerd`, `vervallen`, `vervangen door NNNN`); de merge door
-   de eigenaar is het besluit, afwijzen is de PR sluiten (ADR 0046). `gebouwd` blijft bij `pnpm docs:status` met bouwbewijs. Een goedgekeurde spec heeft een ingevulde sectie "Hergebruik en UX" (`check-docs`, dat ook een regel met `⚠ open` in "Open vragen" en een niet-bestaand pad in "Kopieer de vorm van" weigert).
-   Bij een migratie, route of permissie krijgt de spec vóór de besluit-PR, of bij een mini-spec vóór het bouwen, eerst een spec-review van de reviewer (`.claude/agents/reviewer.md`).
+   de eigenaar is het besluit, afwijzen is de PR sluiten (ADR 0046). `gebouwd` staat in de PR met de implementatie (`status: gebouwd # #<deze PR>`, ADR 0062) of komt later via `pnpm docs:status` met bouwbewijs. Een goedgekeurde spec heeft een ingevulde sectie "Hergebruik en UX" (`check-docs`, dat ook een regel met `⚠ open` in "Open vragen" en een niet-bestaand pad in "Kopieer de vorm van" weigert).
+   Elke spec krijgt vóór het bouwen een spec-review van de reviewer (`.claude/agents/reviewer.md`), die ook toetst of het werk kritiek is (ADR 0062 punt 2); bij kritiek werk vóór de besluit-PR.
+   Spec en bouw gaan in één PR, met de spec in een eerdere commit dan de eerste code of test; kritiek werk krijgt eerst een besluit-PR.
 2. **Contract**: zod-schema's en routes die `501` teruggeven wanneer de wijziging een API-contract toevoegt.
 3. **Tests** door een aparte tester vóór implementatie: altijd bij volledig werk, bij licht werk zodra gedrag verandert of herstelt.
    De tester gebruikt de spec/het contract, of bij lichte fixes de verwachte uitkomst uit de opdracht/PR.
@@ -368,7 +369,7 @@ De ADR-statusfilter houdt historie bereikbaar zonder fysieke archivering als voo
 
 **Docs horen bij de wijziging**: de developer werkt bij elke wijziging die gedrag, API, configuratie of conventies raakt de relevante doc
 mee, in dezelfde commit en PR (kort, met `bestand:regel`-verwijzingen, zonder code te kopiëren). Spec naar `gebouwd`, roadmap-vinkje en ADR-status
-horen daar ook bij: een eigenaarstatus staat in het voorstel en de merge beslist (ADR 0046), `gebouwd` met bouwbewijs (ADR 0046 punt 10), roadmap-vinkjes met eigenaarakkoord. Binnen een taakmandaat mag `docs/roadmap.md` alleen het vinkje van het item van de taak meewijzigen; de precieze regel staat in `docs/dod.md`. Een item waarvan het bewijs beschikbaar is, wordt in
+horen daar ook bij: een eigenaarstatus staat in het voorstel en de merge beslist (ADR 0046), `gebouwd` in dezelfde PR of met bouwbewijs (ADR 0062, 0046 punt 10), roadmap-vinkjes met eigenaarakkoord. Binnen een taakmandaat mag `docs/roadmap.md` alleen het vinkje van het item van de taak meewijzigen; de precieze regel staat in `docs/dod.md`. Een item waarvan het bewijs beschikbaar is, wordt in
 diezelfde PR afgevinkt, en nooit zonder bewijs (`docs/dod.md`, Altijd). `check:docs-drift` waarschuwt in CI (geen blokkade) als `src/`
 wijzigt zonder `docs/` of `CHANGELOG.md`. `check:roadmap` (in `gate:fast`) blokkeert wel: een nieuw of gewijzigd `[x]` zonder testpad, checknaam of PR-nummer, en een spec die naar `gebouwd` gaat zonder bewijs (`scripts/kit/check-roadmap.mjs`). Er is geen docs-stap na de merge.
 
@@ -513,8 +514,9 @@ Live feiten (gates, routes, componenten, nummers) komen uit `scripts/kit/feiten.
 - **Besluit en status** (ADR 0046): de merge is de acceptatie. Architect of hoofdsessie schrijft de eigenaarstatus in het
   voorstel; de eigenaar merget of sluit de PR. Zonder record laat `check-document-status` toe: een nieuw document met een eigenaarstatus,
   `voorstel`/`voorgesteld` naar een eigenaarstatus, `geaccepteerd` naar `vervangen door NNNN` (NNNN op main of in de PR) of `vervallen`, een
-  spec van `goedgekeurd`/`gebouwd` naar `vervallen`, en de inhoud van een goedgekeurde spec. Dat kan alleen in een besluit-PR (alleen
-  die documenten en hun record) of in de feature-lane (één nieuwe mini-spec met code). Een spec terug naar `voorstel` (vanaf elke status)
+  spec van `goedgekeurd`/`gebouwd` naar `vervallen`, en de inhoud van een goedgekeurde spec. Dat kan in een besluit-PR (alleen
+  die documenten en hun record) of in de feature-lane: een of meer specs met code, zonder ADR, kritiek pad (`kritiekPad` in
+  `scripts/kit/lane.mjs`) of verwijderde test, en met de spec-commit vóór de eerste commit buiten `docs/` (ADR 0062). Een spec terug naar `voorstel` (vanaf elke status)
   is geen eigenaarstatus en mag altijd, ook in een PR met code. A4: een geaccepteerd ADR herschrijven (status blijft `geaccepteerd`,
   met een nieuwe herzieningsregel `Herzien: JJJJ-MM-DD (#NNN): wat`) en een ADR met een eigenaarstatus verwijderen mag alleen in een
   besluit-PR; een vervallen of vervangen ADR verandert niet van inhoud, een ADR gaat nooit terug naar `voorgesteld` en wordt niet hernoemd
@@ -523,8 +525,9 @@ Live feiten (gates, routes, componenten, nummers) komen uit `scripts/kit/feiten.
   volgt in een besluit-PR). Een gemandateerde spec
   die van inhoud wijzigt, verliest haar mandaat. Het register `.claude/decisions.json` blijft voor
   broncodemandaat (`--path`) en `requiredChecks`; het bindt inhoudsdigest, repository, exacte branch, status en exacte bronbestanden.
-  `gebouwd` vereist de juiste PR en verplichte Actions-checks op de gevalideerde bron-SHA; uitsluitend latere statusregels mogen daarvan
-  afwijken. Bij CodeQL moet ook de aparte resultaatcheck van GitHub Advanced Security groen zijn; alleen het slagen van de
+  `gebouwd # #<n>` zonder SHA geldt alleen als n deze PR is en de PR code buiten `docs/` en `CHANGELOG.md` bevat; bouwbewijs is dan de ruleset,
+  die de verplichte checks (ook `document-status`) op de gemergde head eist (ADR 0062). De vorm met SHA vereist de juiste PR en
+  verplichte Actions-checks op de gevalideerde bron-SHA; uitsluitend latere statusregels mogen daarvan afwijken. Bij CodeQL moet ook de aparte resultaatcheck van GitHub Advanced Security groen zijn; alleen het slagen van de
   analysejob bewijst niet dat er geen bevindingen zijn. `pr:verify` en bouwbewijs gebruiken dezelfde controle. De CI-guard gebruikt
   `scripts/kit/check-document-status.mjs` uit main, als eigen job `document-status` naast `diff-guard` (ADR 0045 punt 20); een werkversie of commit-auteur geeft zichzelf geen goedkeuring.
   Een nieuwe of gewijzigde ADR-statusregel draagt achter de statuswaarde alleen `(JJJJ-MM-DD)`, `#<nr>` en een link naar een bestaand

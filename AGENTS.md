@@ -73,7 +73,7 @@ vangen het later toch, en dan is het werk verloren. Uitzonderingen staan limitat
 - Beschermde paden (`docs/framework.md` §10) vragen eigenaarakkoord; developer-broncode kan met exact taakmandaat (ADR 0046).
   Functionele UI in deze template: mini-spec (`scope: functionele-ui`), code, tests en gebruiksdocs in één PR zonder mandaat (ADR 0056); beperkte fixes zonder nieuwe mini-spec (ADR 0058). Auth, overige core,
   dependencies, agentinstructies en bewaking blijven erbuiten; in een app blijft core gesloten. De eigenaar merget de PR.
-- Geen nieuwe dependency zonder akkoord. Een eigenaarstatus schrijven alleen architect en hoofdsessie in het voorstel (ADR 0046); `gebouwd` via `pnpm docs:status` met bouwbewijs.
+- Geen nieuwe dependency zonder akkoord. Een eigenaarstatus schrijven alleen architect en hoofdsessie in het voorstel (ADR 0046); `gebouwd` in de bouw-PR zelf of via `pnpm docs:status` (ADR 0062).
 - Push nooit naar `main`, gebruik nooit `--no-verify`, merge nooit. Eén onderwerp per PR, conventional commits.
 - Geen zelfreview of check-status. Gate-label alleen door hoofdsessie via `pnpm pr:label-gate` binnen het mandaat uit main.
 - Geen `docker` of runneroverride. Runnerchecks zelf draaien of CI-bewijs ophalen (`pnpm pr:verify`); zie `docs/operations/agent-doorloop.md`.
@@ -85,7 +85,7 @@ vangen het later toch, en dan is het werk verloren. Uitzonderingen staan limitat
 - Heb je informatie, een keuze of bevestiging van de gebruiker nodig, open dan meteen de beschikbare interactieve vraagprompt; wacht niet tot de gebruiker daarom vraagt. Stel een concrete vraag, met korte antwoordopties waar zinvol, en bundel samenhangende vragen. Verstop geen vragen in uitleg of voortgangstekst. Is voor die vraag geen geschikte vraagtool beschikbaar, meld dat kort en stel de vraag duidelijk apart. Dit geldt bij setup én later; vraag geen bevestiging voor al toegestaan werk.
 - Ontbreekt een beslissing (bedrag, tekst, randgeval, providerkeuze): vraag het, vul geen aanname in.
 - Raakt een wijziging gedrag, API, configuratie of conventies, werk dan de relevante doc bij in dezelfde PR (kort, `bestand:regel` in plaats van gekopieerde code). `pnpm check:docs-drift` waarschuwt als `src/` wijzigt zonder `docs/` of `CHANGELOG.md`.
-- Nieuwe feature/pagina/interactie, migratie, route of permissie: architect en spec (`docs/specs/_template.md`), bouwen pas bij `status: goedgekeurd`; passende spec hergebruiken.
+- Nieuwe feature/pagina/interactie, migratie, route of permissie: architect en spec (`docs/specs/_template.md`), na spec-review bouwen in dezelfde PR; kritiek werk pas na een besluit-PR (ADR 0062); passende spec hergebruiken.
 - UI-tekst Nederlands; code, commits en branchnamen Engels. Naamgeving: `docs/framework.md` §5.
 - Volg `docs/dod.md` fasebewust: voer bestaande, toepasselijke checks uit, lever alleen op met een geslaagde uitslag (of expliciet akkoord van de eigenaar) en vermeld exact wat nog niet beschikbaar is; verzin geen commando's of uitslagen.
 - Licht alleen voor beperkte fixes binnen bestaand gedrag; anders volledig, zonder zelfreview — `docs/framework.md` §8.

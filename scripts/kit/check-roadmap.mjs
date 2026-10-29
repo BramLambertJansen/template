@@ -139,7 +139,8 @@ function itemMeldingen(item, kader) {
 }
 
 /**
- * De ene bewijsvorm voor een spec naar gebouwd: één geldige statusregel `status: gebouwd # #<PR>; gevalideerd: <sha>`,
+ * Bewijsvorm voor een spec naar gebouwd: `status: gebouwd # #<PR>; gevalideerd: <sha>`, of `status: gebouwd # #<PR>` in de PR met
+ * de implementatie (ADR 0062; `check-document-status` toetst het PR-nummer),
  * gelezen met dezelfde code als `check-document-status` (`documentInfo` en `builtReference`).
  * @param {string} bestand
  * @param {string} spec

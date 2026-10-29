@@ -39,8 +39,11 @@ interface Wijziging {
 const A = (pad: string): Wijziging => ({ status: 'A', pad });
 const M = (pad: string): Wijziging => ({ status: 'M', pad });
 
+// GEWIJZIGD (spec-en-bouw, ADR 0062): `mini` vervalt in laneVan. De invoer is geen object-literal, zodat de aanroep zowel
+// vóór als na het vervallen van de parameter compileert; na de bouw telt `mini` niet meer mee.
 function lane(changes: Wijziging[], opties: { besluiten?: string[]; mini?: boolean } = {}) {
-  return laneVan({ changes, besluiten: opties.besluiten ?? [SPEC], mini: opties.mini ?? true, config });
+  const invoer = { changes, besluiten: opties.besluiten ?? [SPEC], mini: opties.mini ?? true, config };
+  return laneVan(invoer);
 }
 
 describe('feature-lane: positief', () => {
@@ -81,8 +84,6 @@ describe('feature-lane: negatief (moet de strenge route geven)', () => {
       'twee nieuwe migraties in één feature',
       [A(SPEC), A('db/migrations/20261018120000_demo.sql'), A('db/migrations/20261018120001_more.sql')],
     ],
-    ['1 een pad in src/core', [A(SPEC), M('src/core/web/ui/toast.tsx')]],
-    ['2a een pad uit voorReview: scripts', [A(SPEC), M('scripts/kit/check-docs.mjs')]],
     ['2b een pad uit voorReview: .claude', [A(SPEC), M('.claude/gates.json')]],
     ['2c een pad uit voorReview: workflow', [A(SPEC), M('.github/workflows/guard.yml')]],
     ['CLAUDE.local.md in src', [A(SPEC), A('src/web/CLAUDE.local.md')]],
@@ -94,19 +95,28 @@ describe('feature-lane: negatief (moet de strenge route geven)', () => {
     ['onbekend: .envrc', [A(SPEC), A('.envrc')]],
     ['onbekend: .mcp.json', [A(SPEC), A('.mcp.json')]],
     ['onbekend: postcss.config.js', [A(SPEC), A('postcss.config.js')]],
-    ['een kopie van src/core naar src/web', [A(SPEC), { status: 'C', van: 'src/core/x.ts', pad: 'src/web/x.ts' }]],
     ['2d een pad uit voorReview: package.json', [A(SPEC), M('package.json')]],
-    ['3a een gewijzigde bestaande test', [A(SPEC), M('src/web/features/demo/page.test.tsx')]],
     ['3b een verwijderde bestaande test', [A(SPEC), { status: 'D', pad: 'test/rails/lane.test.ts' }]],
     ['4 een ADR in dezelfde PR', [A(SPEC), A(ADR)]],
     ['6 een gewijzigde migratie', [A(SPEC), M('db/migrations/20260101000000_oud.sql')]],
     ['6b een verwijderde migratie', [A(SPEC), { status: 'D', pad: 'db/migrations/20260101000000_oud.sql' }]],
-    ['7 een rename van src/core naar src/web', [A(SPEC), { status: 'R', van: 'src/core/x.ts', pad: 'src/web/x.ts' }]],
     ['7b een rename van een bestaande test', [A(SPEC), { status: 'R', van: 'test/a.test.ts', pad: 'test/b.test.ts' }]],
   ])('%s', (_naam, changes) => {
     const resultaat = lane(changes);
     expect(resultaat.lane).toBeNull();
     expect(resultaat.reden).not.toBe('');
+  });
+
+  // GEWIJZIGD (spec-en-bouw/AC-1 en AC-6, ADR 0062): src/core buiten auth en db, voorReview-paden buiten de kritieke lijst en een
+  // gewijzigde bestaande test vallen nu binnen de feature-lane; ze stonden hierboven in de negatieve lijst.
+  test.each([
+    ['1 een pad in src/core', [A(SPEC), M('src/core/web/ui/toast.tsx')]],
+    ['2a een pad uit voorReview: scripts', [A(SPEC), M('scripts/kit/check-docs.mjs')]],
+    ['een kopie van src/core naar src/web', [A(SPEC), { status: 'C', van: 'src/core/x.ts', pad: 'src/web/x.ts' }]],
+    ['3a een gewijzigde bestaande test', [A(SPEC), M('src/web/features/demo/page.test.tsx')]],
+    ['7 een rename van src/core naar src/web', [A(SPEC), { status: 'R', van: 'src/core/x.ts', pad: 'src/web/x.ts' }]],
+  ])('spec-en-bouw/AC-1 %s: nu feature', (_naam, changes) => {
+    expect(lane(changes).lane).toBe('feature');
   });
 
   // GEWIJZIGD (ADR 0046 punt 5): twee specs zonder code zijn nu een besluit-PR (framework-lane); met code blijft het geen lane.
@@ -115,25 +125,31 @@ describe('feature-lane: negatief (moet de strenge route geven)', () => {
     expect(resultaat.lane).toBe('framework');
   });
 
-  test('5b twee mini-specs naar een eigenaarstatus mét code: geen lane (feature-lane is één mini-spec)', () => {
+  // GEWIJZIGD (spec-en-bouw/AC-2, ADR 0062): meerdere specs met een eigenaarstatus en code zijn de feature-lane.
+  test('5b twee mini-specs naar een eigenaarstatus mét code: feature (spec-en-bouw/AC-2)', () => {
     const resultaat = lane([A(SPEC), A('docs/specs/andere.md'), A('src/web/features/demo/page.tsx')], {
       besluiten: [SPEC, 'docs/specs/andere.md'],
     });
-    expect(resultaat.lane).toBeNull();
-    expect(resultaat.reden).not.toBe('');
+    expect(resultaat.lane).toBe('feature');
   });
 
-  test('8 een volledige spec (geen sjabloon: mini) met code', () => {
-    expect(lane([A(SPEC), A('src/api/routes/demo.ts')], { mini: false }).lane).toBeNull();
+  // GEWIJZIGD (spec-en-bouw/AC-1, ADR 0062): een volledige spec met code is de feature-lane.
+  test('8 een volledige spec (geen sjabloon: mini) met code: feature (spec-en-bouw/AC-1)', () => {
+    expect(lane([A(SPEC), A('src/api/routes/demo.ts')], { mini: false }).lane).toBe('feature');
   });
 
-  test('een ontbrekende voorReview telt elke gate als voorReview (faalt dicht)', () => {
+  // GEWIJZIGD (spec-en-bouw/AC-3, ADR 0062): voorReview begrenst de feature-lane niet meer; dicht blijven de kritieke paden
+  // (altijdVragen en de vaste lijst), ook als voorReview ontbreekt.
+  test('een ontbrekende voorReview houdt de kritieke paden dicht (spec-en-bouw/AC-3)', () => {
     const zonder = loadConfig(
       JSON.stringify({ ...JSON.parse(readFileSync('.claude/gates.json', 'utf8')), voorReview: undefined }),
     );
-    expect(
-      laneVan({ changes: [A(SPEC), M('docs/dod.md')], besluiten: [SPEC], mini: true, config: zonder }).lane,
-    ).toBeNull();
+    for (const pad of ['scripts/kit/lane.mjs', '.github/workflows/guard.yml', 'package.json']) {
+      const invoer = { changes: [A(SPEC), M('docs/dod.md'), M(pad)], besluiten: [SPEC], mini: true, config: zonder };
+      const resultaat = laneVan(invoer);
+      expect(resultaat.lane).toBeNull();
+      expect(resultaat.reden).toContain(pad);
+    }
   });
 });
 
@@ -195,8 +211,9 @@ describe('framework-lane', () => {
     },
   );
 
-  test('een volledige spec met code buiten de feature-lane (10): geen lane', () => {
-    expect(lane([A(SPEC), A('src/api/routes/demo.ts')], { mini: false }).lane).toBeNull();
+  // GEWIJZIGD (spec-en-bouw/AC-1, ADR 0062): een volledige spec met code is niet meer buiten de feature-lane.
+  test('een volledige spec met code (10): feature (spec-en-bouw/AC-1)', () => {
+    expect(lane([A(SPEC), A('src/api/routes/demo.ts')], { mini: false }).lane).toBe('feature');
   });
 
   test('zonder besluit in de PR is er geen lane', () => {

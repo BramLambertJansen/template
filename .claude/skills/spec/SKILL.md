@@ -9,8 +9,9 @@ allowed-tools: Bash(node scripts/kit/feiten.mjs *)
 Wanneer: nieuwe feature, pagina, interactie, migratie, route of permissie (volledige straat, framework §8); een lichte fix
 krijgt geen spec. Hergebruik een passende bestaande feature-spec; een ADR is alleen nodig bij de bestaande beslisdrempels.
 
-Bouwen pas als de spec met status `goedgekeurd` op main staat (een mini-spec mag met haar code in één feature-lane-PR):
-de eigenaarmerge is het besluit (ADR 0046). De hoofdsessie coördineert de architect; de route verandert niets aan
+Spec en bouw gaan in één PR (feature-lane, ADR 0062): na de spec-review (stap 7) schrijft de tester de tests en bouwt de
+developer verder op dezelfde branch; de eigenaarmerge is het besluit (ADR 0046). Alleen kritiek werk (ADR 0062 punt 2) bouwt
+pas als de spec met status `goedgekeurd` op main staat. De hoofdsessie coördineert de architect; de route verandert niets aan
 spec-review, broncodemandaat of eigenaarbesluit. Bindende specs inhoudelijk wijzigen volgt de bestaande besluitroute.
 
 Feiten nu:
@@ -36,5 +37,5 @@ Stappen:
    - elk acceptatiecriterium kan falen;
    - "Raakt ook" noemt de checks die de spec raakt: `check:migrations`, `check:secdef`, `test:db`/policies, `test/security/resources.ts`, permissietest per verboden rol;
    - geen `⚠ open` bij `goedgekeurd`: los de vraag eerst op met de eigenaar, of geef haar een `Aanbeveling:`.
-7. Bij een migratie, route of permissie: laat de reviewer de spec in spec-modus toetsen (`.claude/agents/reviewer.md`), vóór de besluit-PR, of bij een mini-spec vóór het bouwen.
-8. Eigen besluit-PR met alleen de spec (en eventueel een broncodemandaat-record via `pnpm docs:decision --path`, hoofdsessie). De eigenaar merget of sluit. Lever op met open vragen; bouwen in een volgende PR. Zie `docs/operations/agent-doorloop.md`.
+7. Laat de reviewer elke spec in spec-modus toetsen (`.claude/agents/reviewer.md`), vóór het bouwen; hij toetst ook of het werk kritiek is.
+8. Commit de spec vóór de eerste code of test (`document-status` controleert de volgorde). Kritiek werk: eigen besluit-PR met alleen de spec (en eventueel een broncodemandaat-record via `pnpm docs:decision --path`, hoofdsessie), bouwen in een volgende PR. Zie `docs/operations/agent-doorloop.md`.
