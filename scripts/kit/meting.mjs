@@ -1,6 +1,6 @@
 // Overzicht van de meethook (ADR 0046 punt 36): `pnpm meting [--json] [--sessie <id>] [--branch <naam>] [--help]`.
 // Leest `<opslagmap>/*.jsonl` (rails/hooks/lib/meting.mjs: METING_DIR of `<git common dir>/agent-meting`) en telt per
-// sessie en per branch: prompts (permissievragen) per pad of commandoprefix en per modus (`m`, ontbrekend → onbekend), weigeringen, beurten, eigenaarberichten na de
+// sessie en per branch: prompts (permissievragen; zo heten ze ook in de tekstuitvoer) per pad of commandoprefix en per modus (`m`, ontbrekend → onbekend), weigeringen, beurten, eigenaarberichten na de
 // opdracht (een bovengrens), pushes (geslaagde `git push`) en CI-rondes via `gh run list` (METING_GH, METING_GH_TIMEOUT_MS):
 // runs met `createdAt` van de eerste `t` van de sessie op die branch tot de laatste `t` + 60 minuten; een fout, timeout of
 // ongeldige uitvoer geeft "onbekend". Kapotte regels slaat hij over. Sleutels zijn vrije tekst: alles in Maps en
@@ -27,8 +27,8 @@ const HELP = `Gebruik: pnpm meting [--json] [--sessie <id>] [--branch <naam>] [-
   --help           Deze uitleg, zonder meetbestanden te lezen of gh aan te roepen.
 
 Teldefinities (alleen ontvangen en opgeslagen Claude Code-events):
-  prompts: PermissionRequest-events (permissievragen), geen UserPromptSubmit of eigenaarberichten.
-  prompts per modus: alleen permissievragen, volgens hun permission_mode; ontbrekend = onbekend.
+  prompts (in tekst: permissievragen): PermissionRequest-events, geen UserPromptSubmit of eigenaarberichten.
+  permissievragen per modus: alleen permissievragen, volgens hun permission_mode; ontbrekend = onbekend.
   Een lege modusverdeling is geen bewijs van een permissiemodus, ook niet bij prompts 0.
   In auto mode is een classifierbeslissing geen bewijs van een klik van de eigenaar.
   eigenaarberichten: UserPromptSubmit na het eerste bericht van de sessie (de opdracht).
@@ -37,7 +37,8 @@ Teldefinities (alleen ontvangen en opgeslagen Claude Code-events):
   Dit is een bovengrens: ook lopende, afgebroken of onvolledig geregistreerde aanroepen tellen mee.
   Tijdens pnpm meting kan de meetaanroep zelf meetellen; na afronding kan de teller dalen.
   Vergelijk dezelfde sessie/branch op hetzelfde afgeronde meetmoment; bewaar tijdstip en momentopname.
-  Een geregistreerde Read-weigering telt; zonder bruikbaar event is een weigering niet te reconstrueren.
+  Een Read- of Edit-weigering door een deny-regel geeft geen hook-event en telt dus niet mee (Claude Code 2.1.312).
+  Een Bash-weigering door een deny-regel telt wel: PreToolUse zonder PostToolUse.
   De hook is fail-open: ontbrekende registraties bewijzen geen nul; andere runtimes leveren niet vanzelf events.
   beurten: Stop-events (een bovengrens).
   pushes: PostToolUse voor git push; een proefpush telt niet mee.
@@ -306,8 +307,8 @@ function regelTekst(t) {
 /** @param {string} naam @param {Telling & { ciRondes: Ci }} b */
 function branchTekst(naam, b) {
   return [
-    `  branch ${naam}: prompts ${String(b.prompts)}${perSleutel(b.promptsPerSleutel)}`,
-    `    prompts per modus${perSleutel(b.promptsPerModus)}`,
+    `  branch ${naam}: permissievragen ${String(b.prompts)}${perSleutel(b.promptsPerSleutel)}`,
+    `    permissievragen per modus${perSleutel(b.promptsPerModus)}`,
     `    weigeringen ${String(b.weigeringen)}${perSleutel(b.weigeringenPerSleutel)} · ${regelTekst(b)}`,
   ];
 }
@@ -317,8 +318,8 @@ export function alsTekst(sessies, dir) {
   if (sessies.size === 0) return `Geen metingen in ${dir ?? '(geen git-repo en geen METING_DIR)'}.\n`;
   const regels = [];
   for (const [sessie, t] of sessies) {
-    regels.push(`sessie ${sessie}`, `  prompts ${String(t.prompts)}${perSleutel(t.promptsPerSleutel)}`);
-    regels.push(`  prompts per modus${perSleutel(t.promptsPerModus)}`);
+    regels.push(`sessie ${sessie}`, `  permissievragen ${String(t.prompts)}${perSleutel(t.promptsPerSleutel)}`);
+    regels.push(`  permissievragen per modus${perSleutel(t.promptsPerModus)}`);
     regels.push(`  weigeringen ${String(t.weigeringen)}${perSleutel(t.weigeringenPerSleutel)}`, `  ${regelTekst(t)}`);
     for (const [naam, b] of t.branches) regels.push(...branchTekst(naam, b));
   }
