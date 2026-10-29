@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd # bedoelde status; geldt pas na eigenaarmerge op main (ADR 0046)
+status: gebouwd # #372; gevalideerd: 9b5b2ac42c8b0355920b344a749e3394c6e6f3f5
 namespace: claude-sandbox-werkstraat
 ---
 

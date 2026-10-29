@@ -184,6 +184,25 @@ broncommit, repository en geopende PR gebonden. Een gewijzigde implementatie na 
 
 ## Ontwikkelen en runnerchecks
 
+### Gewone commits, pushes en PR-aanmaak in Claude Code
+
+De bestaande setup selecteert en installeert de exacte pnpm-pin uit `package.json` via mise (ADR 0061).
+Controleer de werkelijke versie met de voorcontrole uit `docs/ENVIRONMENT.md`; een exitcode 0 met een andere versie
+is geen bewijs. Dagelijks werk gebruikt de geïnstalleerde versie binnen de sandbox, zonder pnpm, Git of gh generiek
+buiten de sandbox te plaatsen.
+
+De hoofdsessie stage en commit alleen de taakbestanden, met de bestaande hooks aan. Push de huidige featurebranch
+met `git push origin HEAD`, zonder upstreamregistratie. Controleer daarvoor dat HEAD op de bedoelde branch staat;
+het bestaande rolhek blijft een HEAD-push vanaf main weigeren. Open de PR met een expliciete `--head` en
+`--body-file`. Maak het tijdelijke bodybestand met een bestands-tool, zodat shell-expansie geen tekst kan uitvoeren.
+Git-config en hooks hoeven hiervoor geen ruimer schrijfrecht te krijgen. Subagents blijven alleen hun eigen rol doen;
+push en PR-aanmaak horen bij de hoofdsessie. De bestaande veilige branchopruiming na merge blijft ongewijzigd.
+
+De expliciete sandbox-auto-allow en gerichte commandotoestemmingen vervangen geen inhoudelijke toestemming,
+broncodebeperkingen, checks of eigenaarmerge. Een lokale of beheerde Claude-instelling kan strenger zijn dan de
+gedeelde projectinstelling; meld de werkelijke weigering en bron, zonder aan te nemen dat een repo-edit die opheft.
+Codex gebruikt zijn eigen runtimebeleid; deze instellingen gelden alleen voor Claude Code.
+
 `check-core` weigert een core-veranderende merge die een eerder geïmporteerde templateversie terugdraait, ook als de
 oudere ouder zelf vertrouwd is of de merge-ouders omgedraaid zijn (`scripts/kit/check-core.mjs`). De controle gebruikt
 de gedeelde Git-geschiedenis van beide ouders en `template/main`, zonder extra versieregister. Een template-update
