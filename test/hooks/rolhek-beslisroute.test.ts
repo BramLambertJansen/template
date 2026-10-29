@@ -137,9 +137,28 @@ describe('developer, tester en docs: dezelfde schrijfacties blijven geweigerd (p
     expect(run(edit(SPEC_GOEDGEKEURD, ['status: goedgekeurd', gebouwd], 'developer')).deny).not.toHaveLength(0);
   });
 
+  test('spec-en-bouw/AC-8 developer: gebouwd # #<PR> zonder SHA via Edit blijft geweigerd (alleen architect en hoofdsessie)', () => {
+    expect(
+      run(edit(SPEC_GOEDGEKEURD, ['status: goedgekeurd', 'status: gebouwd # #5'], 'developer')).deny,
+    ).not.toHaveLength(0);
+  });
+
   test('developer: een voorstel schrijven en wijzigen blijft vrij', () => {
     const decision = run(edit(SPEC_VOORSTEL, ['Bestaande kit.', 'Meer tekst.'], 'developer'));
     expect([decision.deny, decision.ask]).toStrictEqual([[], []]);
+  });
+
+  test('spec-en-bouw/AC-8 hoofdsessie en architect: gebouwd # #<PR> zonder SHA in de PR zelf mag (ADR 0062 punt 4)', () => {
+    for (const agent of [undefined, 'architect']) {
+      const goedgekeurd = run(edit(SPEC_GOEDGEKEURD, ['status: goedgekeurd', 'status: gebouwd # #5'], agent));
+      const nieuw = run(edit(SPEC_VOORSTEL, ['status: voorstel', 'status: gebouwd # #5'], agent));
+      expect([goedgekeurd.deny, nieuw.deny]).toStrictEqual([[], []]);
+    }
+  });
+
+  test('hoofdsessie: gebouwd met een SHA via Edit blijft geweigerd (alleen via pnpm docs:status)', () => {
+    const gebouwd = `status: gebouwd # #5; gevalideerd: ${'a'.repeat(40)}`;
+    expect(run(edit(SPEC_GOEDGEKEURD, ['status: goedgekeurd', gebouwd]))).toMatchObject({ deny: [expect.any(String)] });
   });
 
   test('hoofdsessie en architect: een nieuw ADR met Status: voorgesteld blijft vrij', () => {

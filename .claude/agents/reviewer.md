@@ -22,7 +22,7 @@ rollen). Claim nooit afgedwongen onafhankelijkheid die de runtime niet levert.
 
 Bij elke spec die in de PR een eigenaarstatus of nieuwe inhoud krijgt, vóór er gebouwd wordt; ook read-only. Oordeel eerst
 of het werk kritiek is (ADR 0062 punt 2: een ADR, auth of gegevensisolatie, of de bewaking zelf; bij twijfel kritiek): dan is
-een besluit-PR vóór het bouwen een blokkerende bevinding. Toets ook of de spec de opdracht dekt en niet botst met geldende
+bouwen zonder een eerdere besluit-PR een blokkerende bevinding. Toets ook of de spec de opdracht dekt en niet botst met geldende
 specs of ADR's. Toets de afsluitcheck uit
 `.claude/skills/spec/SKILL.md` (stap 6) tegen de live repo: bestaan de vorm-paden, kloppen de namen met `node scripts/kit/feiten.mjs routes permissies foutcodes`, kan elke AC falen, noemt "Raakt ook" de geraakte checks, staat er geen `⚠ open`.
 Toets ook "Padparameters en foutvolgorde" in `docs/gouden-pad.md`: iedere padparameter heeft een vorm en contractschema,

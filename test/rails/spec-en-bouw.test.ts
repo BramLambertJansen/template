@@ -353,6 +353,14 @@ describe('spec-en-bouw/AC-6: een bestaande test wijzigen mag, verwijderen niet',
     slaagt(fixture, head);
   });
 
+  test.each([
+    ['een skip', "test.skip('oud', () => expect(1).toBe(1));\n", 'tests skippen'],
+    ['minder testgevallen', 'export {};\n', 'testgevallen weghalen'],
+  ])('spec-en-bouw/AC-6 een gewijzigde bestaande test met %s: faalt (review I1)', (_naam, tekst, melding) => {
+    const { fixture, head } = featurePr({ [OUDE_TEST]: tekst, [ROUTE]: CODE });
+    expect(faalt(fixture, head)).toContain(melding);
+  });
+
   test('spec-en-bouw/AC-6 een verwijderde bestaande test: faalt', () => {
     const fixture = nieuw();
     write(fixture.root, SPEC, spec('demo', 'goedgekeurd'));
@@ -455,6 +463,20 @@ describe('spec-en-bouw/AC-9: gebouwd # #<n> zonder SHA faalt buiten de eigen PR 
     schrijf(fixture.root, { 'docs/gouden-pad.md': 'Alleen docs.\n' });
     zetStatusRegel(fixture.root, SPEC, `status: gebouwd # #${String(PR)}`);
     faalt(fixture, commit(fixture.root, 'docs: alleen status'), PR_ENV);
+  });
+
+  test('spec-en-bouw/AC-9 een vervallen spec op main naar gebouwd # #<eigen PR>: faalt (review B2)', () => {
+    const fixture = nieuw({ [SPEC]: spec('demo', 'vervallen') });
+    schrijf(fixture.root, { [WEB]: CODE });
+    zetStatusRegel(fixture.root, SPEC, `status: gebouwd # #${String(PR)}`);
+    expect(faalt(fixture, commit(fixture.root, 'feat: bouw en status'), PR_ENV)).toContain('vervallen naar gebouwd');
+  });
+
+  test('spec-en-bouw/AC-9 alleen CHANGELOG.md naast de spec telt niet als implementatie: faalt (review I2)', () => {
+    const fixture = nieuw({ [SPEC]: spec('demo', 'goedgekeurd') });
+    schrijf(fixture.root, { 'CHANGELOG.md': '# Changelog\n\n- demo\n' });
+    zetStatusRegel(fixture.root, SPEC, `status: gebouwd # #${String(PR)}`);
+    faalt(fixture, commit(fixture.root, 'docs: changelog en status'), PR_ENV);
   });
 
   test('spec-en-bouw/AC-9 zonder PR_NUMBER (vóór gh pr create): faalt', () => {

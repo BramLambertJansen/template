@@ -370,7 +370,7 @@ verboden. Diff-guard behoudt label én eigenaarreview op de uiteindelijke head-S
 **Standaard: `gebouwd` in dezelfde PR** (ADR 0062). Bevat de PR de implementatie van de spec, dan zet de agent de
 statusregel daar zelf op `status: gebouwd # #<n>`, met n het nummer van deze PR (open de PR dus eerst; daarna een commit
 met de statusregel en, als de spec een roadmap-item noemt, het vinkje met `#<n>` erachter). Geen statuscommit na groen en geen
-SHA: `document-status` accepteert de vorm alleen met het eigen PR-nummer en code buiten `docs/`, en de ruleset eist bij de
+SHA: `document-status` accepteert de vorm alleen met het eigen PR-nummer en code buiten `docs/` en `CHANGELOG.md`, en de ruleset eist bij de
 merge de verplichte checks op de head. Een `git merge origin/main` of een fix erna mag gewoon; de checks draaien opnieuw.
 `check-docs` eist voor elk AC-id een getagde test.
 

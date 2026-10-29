@@ -525,7 +525,7 @@ Live feiten (gates, routes, componenten, nummers) komen uit `scripts/kit/feiten.
   volgt in een besluit-PR). Een gemandateerde spec
   die van inhoud wijzigt, verliest haar mandaat. Het register `.claude/decisions.json` blijft voor
   broncodemandaat (`--path`) en `requiredChecks`; het bindt inhoudsdigest, repository, exacte branch, status en exacte bronbestanden.
-  `gebouwd # #<n>` zonder SHA geldt alleen als n deze PR is en de PR code buiten `docs/` bevat; bouwbewijs is dan de ruleset,
+  `gebouwd # #<n>` zonder SHA geldt alleen als n deze PR is en de PR code buiten `docs/` en `CHANGELOG.md` bevat; bouwbewijs is dan de ruleset,
   die de verplichte checks (ook `document-status`) op de gemergde head eist (ADR 0062). De vorm met SHA vereist de juiste PR en
   verplichte Actions-checks op de gevalideerde bron-SHA; uitsluitend latere statusregels mogen daarvan afwijken. Bij CodeQL moet ook de aparte resultaatcheck van GitHub Advanced Security groen zijn; alleen het slagen van de
   analysejob bewijst niet dat er geen bevindingen zijn. `pr:verify` en bouwbewijs gebruiken dezelfde controle. De CI-guard gebruikt

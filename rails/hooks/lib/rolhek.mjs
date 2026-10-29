@@ -3,7 +3,7 @@
 // met echte payloads kan bewijzen. De stdin/stdout-kant staat in rails/hooks/rolhek.mjs.
 import path from 'node:path';
 import { gitSubcommand, parseCommands, programName, splitCommand, writeTargets } from './shell.mjs';
-import { A4_MELDING, beslisOvergang, documentInfo, documentKind, isHerschrijving } from './document-state.mjs';
+import { A4_MELDING, beslisOvergang, builtReference, documentInfo, documentKind, isHerschrijving } from './document-state.mjs';
 import { canRecordStatus, canWriteProtected, TEMPLATE_REPOSITORY } from './task-authority.mjs';
 import { automaticRunner } from './runner-authority.mjs';
 import { isCoreUiSource, testChangeRisk } from './functional-ui.mjs';
@@ -257,7 +257,9 @@ function decideFile({ rel, change, role }, ctx, decision) {
     return;
   }
   // ADR 0046 punt 6: architect en hoofdsessie schrijven de eigenaarstatus in het voorstel; de merge van de eigenaar beslist.
-  const eigenaarstatus = beslisrol && (a4Toegestaan || ['besluit', 'vrij'].includes(overgang?.uitslag ?? ''));
+  // ADR 0062 punt 4: ook `gebouwd # #<PR>` zonder SHA in de PR met de implementatie; document-status toetst het PR-nummer.
+  const inPrGebouwd = overgang?.uitslag === 'gebouwd' && builtReference(change.after ?? '')?.sha === undefined;
+  const eigenaarstatus = beslisrol && (a4Toegestaan || inPrGebouwd || ['besluit', 'vrij'].includes(overgang?.uitslag ?? ''));
   if (!eigenaarstatus && statusZonderBesluit({ rel, change, role }, ctx, decision)) return;
   if (matches(config.testpaden) && ctx.read(rel) !== null) existingTest({ rel, change, role }, ctx, decision);
   decideByRole({ rel, change, role }, ctx, decision);

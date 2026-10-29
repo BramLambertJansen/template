@@ -1,7 +1,8 @@
 # Diff-guard (framework §10, ADR 0045 punt 15–19). pull_request_target draait altijd de workflow en de scripts van de
 # default branch; de PR is hier alleen git-data: geen checkout van de PR, geen install, niets uit de PR uitvoeren.
 # Jobs `diff-guard` en `document-status` (ADR 0045 punt 20) en `check-core` (ADR 0040), elk met een eigen naam in de checklijst.
-# Nog geen verplichte check (ADR 0045 punt 17): dat wordt hij bij de overstap op de GitHub App. Na een goedkeuring draait hij
+# `diff-guard` is nog geen verplichte check (ADR 0045 punt 17): dat wordt hij bij de overstap op de GitHub App;
+# `check-core` en `document-status` wel (`scripts/github-ruleset.sh`, ADR 0062). Na een goedkeuring draait hij
 # opnieuw bij het zetten van het label (OV-3), of via Re-run.
 name: guard
 
