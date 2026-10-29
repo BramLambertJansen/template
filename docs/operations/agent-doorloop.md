@@ -169,7 +169,7 @@ broncommit, repository en geopende PR gebonden. Een gewijzigde implementatie na 
 - **Overige feature-lane (de standaard, ADR 0062):** een of meer specs met een eigenaarstatus (nieuw, volledig of mini, of nieuwe
   inhoud van een goedgekeurde spec) samen met code, tests en docs. Alles mag meewijzigen (ook `CHANGELOG.md`, de roadmap, `scripts/`,
   `rails/`, overige `src/core`, agentinstructies en gegenereerde bestanden zoals het schema-snapshot) behalve een ADR, een kritiek pad
-  (`kritiekPad` in `scripts/kit/lane.mjs`: `src/core/api/auth`, `src/core/api/db`, `db/init`, `altijdVragen` en de besluitscripts),
+  (`kritiekPad` in `scripts/kit/lane.mjs`: `src/core/api/auth`, `src/core/api/db`, `db/init`, `altijdVragen`, `rails/hooks/**` en de besluit-, status- en mergescripts),
   een verwijderde bestaande test en een gewijzigde of verwijderde migratie. Een gewijzigde bestaande test staat met reden in de PR.
   De eerste commit die een besluitspec raakt, staat vóór de eerste commit met een bestand buiten `docs/` (spec-review vóór het bouwen).
   Een PR bevat hoogstens één nieuwe migratie. Die maakt precies één owner-tabel in `public` volgens `pnpm new:resource`:

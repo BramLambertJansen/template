@@ -149,17 +149,31 @@ const KRITIEK = [
   'rails/hooks/lib/document-state.mjs',
   'rails/hooks/lib/built-evidence.mjs',
   'rails/hooks/lib/task-authority.mjs',
+  // Erratum (#376): alle hookcode en de besluit-, status- en mergescripts.
+  'rails/hooks/rolhek.mjs',
+  'rails/hooks/lib/rolhek.mjs',
+  'rails/hooks/lib/functional-ui.mjs',
+  'scripts/kit/functional-ui-status.mjs',
+  'scripts/kit/status-git.mjs',
+  'scripts/kit/github-evidence.mjs',
+  'scripts/kit/diff-guard.mjs',
+  'scripts/kit/pr-gate-label.mjs',
+  'scripts/kit/pr-verify.mjs',
+  'scripts/kit/check-roadmap.mjs',
+  'scripts/kit/roadmap-item.mjs',
+  'scripts/kit/document-status.mjs',
+  'scripts/kit/document-decision.mjs',
+  'scripts/kit/gates.mjs',
   ...altijdVragen(),
 ];
 
 describe('spec-en-bouw/AC-1: een volledige spec met code buiten kritieke paden is de feature-lane', () => {
-  test('spec-en-bouw/AC-1 nieuwe volledige spec op goedgekeurd met src/, scripts/, rails/, docs/ en nieuwe tests: groen', () => {
+  test('spec-en-bouw/AC-1 nieuwe volledige spec op goedgekeurd met src/, overige scripts/, docs/ en nieuwe tests: groen', () => {
     const { fixture, head } = featurePr({
       [WEB]: CODE,
       [ROUTE]: CODE,
       'src/core/web/ui/extra.tsx': CODE,
       'scripts/kit/extra.mjs': CODE,
-      'rails/hooks/lib/extra.mjs': CODE,
       'docs/gouden-pad.md': 'Bijgewerkt.\n',
       [NIEUWE_TEST]: "test('demo', () => {});\n",
       'test/rails/demo.test.ts': "test('demo', () => {});\n",
@@ -171,7 +185,6 @@ describe('spec-en-bouw/AC-1: een volledige spec met code buiten kritieke paden i
     ['een nieuwe route en web-code', [A(SPEC), A(WEB), A(ROUTE), A(NIEUWE_TEST)]],
     ['een pad in src/core buiten auth en db', [A(SPEC), M('src/core/web/ui/toast.tsx')]],
     ['een voorReview-pad in scripts/', [A(SPEC), M('scripts/kit/check-docs.mjs')]],
-    ['een voorReview-pad in rails/', [A(SPEC), M('rails/hooks/lib/functional-ui.mjs')]],
     ['docs/framework.md', [A(SPEC), M('docs/framework.md')]],
     ['AGENTS.md', [A(SPEC), M('AGENTS.md')]],
     ['CLAUDE.md', [A(SPEC), M('CLAUDE.md')]],
@@ -220,13 +233,13 @@ describe('spec-en-bouw/AC-3: een kritiek pad naast een spec met eigenaarstatus f
   test('spec-en-bouw/AC-3 document-status met scripts/kit/lane.mjs naast andere code: faalt met "geen herkende lane" en het pad', () => {
     const { fixture, head } = featurePr({
       [WEB]: CODE,
-      'rails/hooks/lib/extra.mjs': CODE,
+      'scripts/kit/extra.mjs': CODE,
       'scripts/kit/lane.mjs': CODE,
     });
     const stderr = faalt(fixture, head);
     expect(stderr).toContain('geen herkende lane');
     expect(stderr).toContain('scripts/kit/lane.mjs');
-    expect(stderr).not.toContain('rails/hooks/lib/extra.mjs');
+    expect(stderr).not.toContain('scripts/kit/extra.mjs');
   });
 
   test('spec-en-bouw/AC-3 document-status met src/core/api/auth naast src/core/web: faalt met het auth-pad', () => {

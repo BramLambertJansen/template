@@ -15,16 +15,28 @@ const BEKEND = [/^src\//, /^docs\//, /^db\//, /^CHANGELOG\.md$/];
 // Een geneste of onbekende instructie valt dicht; de instructies op hun vaste plek zijn gate-paden en mogen mee (ADR 0062).
 const INSTRUCTIES = /(?:^|\/)(?:(?:CLAUDE|AGENTS)[^/]*\.md|\.claude\/.*)$/;
 const VASTE_INSTRUCTIES = /^(?:CLAUDE\.md|AGENTS\.md|\.claude\/(?:agents|skills|rules)\/.+)$/;
-// ADR 0062 punt 2: auth, gegevensisolatie en de scripts die over besluiten en merges oordelen; `altijdVragen` komt uit de config.
+// ADR 0062 punt 2: auth, gegevensisolatie, alle hookcode en de scripts die over besluiten, statussen en merges oordelen
+// (spec spec-en-bouw-in-een-pr, AC-3); `altijdVragen` komt uit de config.
 const KRITIEK = [
   'src/core/api/auth/**',
   'src/core/api/db/**',
   'db/init/**',
-  'scripts/kit/check-document-status.mjs',
-  'scripts/kit/lane.mjs',
-  'rails/hooks/lib/document-state.mjs',
-  'rails/hooks/lib/built-evidence.mjs',
-  'rails/hooks/lib/task-authority.mjs',
+  'rails/hooks/**',
+  ...[
+    'check-document-status',
+    'lane',
+    'functional-ui-status',
+    'status-git',
+    'github-evidence',
+    'diff-guard',
+    'pr-gate-label',
+    'pr-verify',
+    'check-roadmap',
+    'roadmap-item',
+    'document-status',
+    'document-decision',
+    'gates',
+  ].map((naam) => `scripts/kit/${naam}.mjs`),
 ];
 const RECORD = '.claude/decisions.json';
 

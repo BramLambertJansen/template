@@ -8,7 +8,7 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 - Spec en bouw in één PR (ADR 0062, spec `docs/specs/spec-en-bouw-in-een-pr.md`): de feature-lane is de standaard voor
   volledig werk, met een of meer specs, code, tests en docs. Alleen kritiek werk (ADR's, auth en gegevensisolatie, de
-  bewaking zelf; `kritiekPad` in `scripts/kit/lane.mjs`) gaat eerst in een besluit-PR. Elke spec krijgt een spec-review en
+  bewaking zelf, ook `rails/hooks/**`; `kritiekPad` in `scripts/kit/lane.mjs`) gaat eerst in een besluit-PR. Elke spec krijgt een spec-review en
   staat in een commit vóór de eerste code. `status: gebouwd # #<deze PR>` mag in de PR zelf, zonder statuscommit achteraf
   (leerpunt #314). `document-status` wordt een verplichte check in `scripts/github-ruleset.sh`: de eigenaar past de
   ruleset na de merge toe.
