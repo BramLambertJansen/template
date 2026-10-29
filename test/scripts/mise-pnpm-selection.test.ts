@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, expect, test } from 'vitest';
 
-// AC-1: echte mise-evaluatie, geen eigen imitatie van Tera of shellafleiding.
+// claude-sandbox-werkstraat/AC-1: echte mise-evaluatie, geen eigen imitatie van Tera of shellafleiding.
 // CI levert mise 2026.9.18; lokaal draait dezelfde proef met de aanwezige mise-versie.
 const miseToml = readFileSync('mise.toml', 'utf8');
 const dirs: string[] = [];

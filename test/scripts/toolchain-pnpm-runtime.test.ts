@@ -4,8 +4,9 @@ import path from 'node:path';
 import { afterEach, expect, test, vi } from 'vitest';
 import { toolchainProbleemIn } from '../../scripts/kit/toolchain.mjs';
 
-// AC-2: de bestaande synchrone preflight moet de werkelijk gevonden CLI controleren.
+// claude-sandbox-werkstraat/AC-2 (fixturedeel): de synchrone preflight controleert de gevonden CLI en exacte pin.
 // Alleen de externe pnpm-CLI is een fixture; geen API/database of private helper wordt vervangen.
+// Nieuwe shells en echte Git-hooks na setup vergen afzonderlijk native bewijs in de PR.
 const dirs: string[] = [];
 
 afterEach(() => {

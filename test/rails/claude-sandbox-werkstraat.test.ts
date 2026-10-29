@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from 'vitest';
 
-// AC-3/4/7/8: dit bewijst alleen configuratie; native Claude, hooks en GitHub vergen de afzonderlijke echte proef.
+// Dit bewijst alleen configuratie; native Claude, hooks en GitHub vergen afzonderlijk echt bewijs in de PR.
 function section(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null ? Object.fromEntries(Object.entries(value)) : {};
 }
@@ -20,6 +20,7 @@ const boundaries = section(
   JSON.parse(readFileSync('test/rails/fixtures/claude-sandbox-werkstraat/boundaries.json', 'utf8')),
 );
 
+// claude-sandbox-werkstraat/AC-7: verplichte sandbox en bestaande toestemmingsgrenzen blijven ingesteld.
 test('sandbox voert gewone Bash expliciet automatisch uit binnen de bestaande verplichte grens', () => {
   expect(sandbox['autoAllowBashIfSandboxed']).toBe(true);
   expect(sandbox['enabled']).toBe(true);
@@ -29,6 +30,8 @@ test('sandbox voert gewone Bash expliciet automatisch uit binnen de bestaande ve
   expect(permissions['defaultMode']).toBe('acceptEdits');
 });
 
+// claude-sandbox-werkstraat/AC-3 en claude-sandbox-werkstraat/AC-4 (configdeel): gerichte Git-toestemmingen.
+// Dit voert geen native commit, pre-push of GitHub-opdracht uit; dat bewijs hoort afzonderlijk in de PR.
 test.each(['Bash(git add *)', 'Bash(git commit *)', 'Bash(git push origin HEAD)'])(
   'gerichte gewone werkopdracht krijgt toestemming: %s',
   (rule) => {
@@ -40,6 +43,8 @@ test.each(['create', 'view', 'list', 'diff', 'checks'])('gh pr %s blijft gericht
   expect(allow).toContain(`Bash(gh pr ${action} *)`);
 });
 
+// claude-sandbox-werkstraat/AC-5 (configdeel): geen brede Git-rechten of nieuwe upstream-toestemming.
+// De echte proef in hoofdcheckout en gekoppelde worktree blijft afzonderlijk native bewijs in de PR.
 test('geen brede Git-, gh- of upstream-toestemming bij de dagelijkse HEAD-push', () => {
   const broad = ['Bash(git *)', 'Bash(git push *)', 'Bash(gh *)', 'Bash(gh pr *)'];
   expect(allow.filter((rule) => broad.includes(rule))).toEqual([]);
@@ -62,6 +67,8 @@ test('netwerk en leesgrens blijven gelijk; alleen de bewezen gh-cache kan extra 
   expect([[], ['~/.cache/gh']]).toContainEqual(filesystem['allowWrite'] ?? []);
 });
 
+// claude-sandbox-werkstraat/AC-8 (configdeel): supplychain en verifyDepsBeforeRun blijven bytegelijk ingesteld.
+// Het echte run/exec-weigergedrag staat in test/scripts/dependency-readiness.test.ts.
 test('supplychain en weigering van een afwijkende installatie blijven intact', () => {
   expect(readFileSync('pnpm-workspace.yaml', 'utf8')).toBe(boundaries['workspace']);
 });

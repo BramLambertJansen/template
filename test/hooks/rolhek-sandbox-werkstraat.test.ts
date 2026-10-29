@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { expect, test } from 'vitest';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 
-// AC-6: alleen ontbrekende regressies voor de dagelijkse HEAD-vorm en algemene branchnamen.
+// claude-sandbox-werkstraat/AC-6: rolhekbeslissingen voor de dagelijkse HEAD-vorm en algemene branchnamen.
 // Force/hookomzeiling/merge/zelfreview: rolhek.test.ts; gh/API-omzeilingen en lokale merges: rolhek-gh-allowlist.test.ts.
 const config = loadConfig(readFileSync('.claude/gates.json', 'utf8'));
 
