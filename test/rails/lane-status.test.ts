@@ -61,6 +61,9 @@ function nieuw(): Fixture {
   git(fixture.root, ['commit', '-q', '-m', 'test: bestaande test']);
   const base = git(fixture.root, ['rev-parse', 'HEAD']);
   git(fixture.root, ['update-ref', 'refs/remotes/origin/main', base]);
+  // GEWIJZIGD (spec-en-bouw/AC-7): ook de lokale main wijst naar de basis, zodat een merge van main geen basiscommit in het
+  // bereik van de PR brengt (de volgordecheck telt commits vanaf het afsplitspunt).
+  git(fixture.root, ['branch', '-f', 'main', base]);
   return { root: fixture.root, base };
 }
 
@@ -73,12 +76,14 @@ function zetStatus(root: string, file: string, naar: string): void {
 }
 
 /** De agent legt een voorstel + code voor; daarna zet een committer (standaard web-flow, maar dat doet er niet meer toe) de statusregel. */
+// GEWIJZIGD (spec-en-bouw/AC-7, ADR 0062): de spec krijgt een eigen commit vóór de code (volgordecheck); verder ongewijzigd.
 function feature(
   opties: { mini?: boolean; code?: string[]; statusCommit?: 'agent' | 'web-flow'; extra?: (root: string) => void } = {},
 ) {
   const fixture = nieuw();
   const { root } = fixture;
   write(root, MINI, spec('demo', 'voorstel', opties.mini ?? true));
+  commitAls(root, 'docs: voorstel', 'agent');
   for (const pad of opties.code ?? [WEB, ROUTE, TEST]) write(root, pad, 'export const x = 1;\n');
   commitAls(root, 'feat: demo', 'agent');
   zetStatus(root, MINI, 'goedgekeurd');
@@ -131,32 +136,41 @@ describe('feature-lane', () => {
     expect(uitvoer.status).toBe(0);
   });
 
-  test('de status in dezelfde commit als het nieuwe bestand: slaagt (nieuw document met eigenaarstatus, punt 1)', () => {
+  // GEWIJZIGD (spec-en-bouw/AC-7, ADR 0062): spec en code in dezelfde commit schenden de volgorde; een nieuwe spec met een
+  // eigenaarstatus zonder code in dezelfde commit blijft geldig (punt 1, zie 'nieuwe spec met status').
+  test('de status in dezelfde commit als het nieuwe bestand én de code: faalt op de volgorde (spec-en-bouw/AC-7)', () => {
     const fixture = nieuw();
     write(fixture.root, MINI, spec('demo', 'goedgekeurd', true));
     write(fixture.root, WEB, 'export const x = 1;\n');
     const head = commitAls(fixture.root, 'feat: alles in één', 'agent');
     const uitvoer = draaiChecker(fixture, head);
-    expect(uitvoer.stderr).toBe('');
-    expect(uitvoer.status).toBe(0);
+    expect(uitvoer.status).toBe(1);
+    expect(uitvoer.stderr).toContain('volgorde');
   });
 
+  // GEWIJZIGD (spec-en-bouw/AC-1, ADR 0062): src/core buiten auth en db, een niet-kritiek voorReview-pad en een volledige spec
+  // met code vallen nu binnen de feature-lane.
   test.each([
     ['1 een pad in src/core', { code: ['src/core/web/ui/extra.tsx'] }],
     ['2 een pad uit voorReview', { code: ['scripts/kit/extra.mjs'] }],
     ['8 een volledige spec met code', { mini: false, code: [WEB] }],
-  ])('%s: faalt', (_naam, opties) => {
+  ])('%s: slaagt (spec-en-bouw/AC-1)', (_naam, opties) => {
     const { fixture, head } = feature(opties);
-    expect(draaiChecker(fixture, head).status).toBe(1);
+    const uitvoer = draaiChecker(fixture, head);
+    expect(uitvoer.stderr).toBe('');
+    expect(uitvoer.status).toBe(0);
   });
 
-  test('3 een gewijzigde bestaande test: faalt', () => {
+  // GEWIJZIGD (spec-en-bouw/AC-6, ADR 0062): een gewijzigde bestaande test mag in de feature-lane.
+  test('3 een gewijzigde bestaande test: slaagt (spec-en-bouw/AC-6)', () => {
     const { fixture, head } = feature({
       extra: (root) => {
         write(root, 'src/api/routes/oud.test.ts', "test('anders', () => {});\n");
       },
     });
-    expect(draaiChecker(fixture, head).status).toBe(1);
+    const uitvoer = draaiChecker(fixture, head);
+    expect(uitvoer.stderr).toBe('');
+    expect(uitvoer.status).toBe(0);
   });
 
   test('4 een ADR in dezelfde PR: faalt', () => {
@@ -181,15 +195,21 @@ describe('feature-lane', () => {
     expect(uitvoer.status).toBe(0);
   });
 
-  test('5b twee mini-specs naar een eigenaarstatus mét code: faalt (feature-lane is één mini-spec)', () => {
+  // GEWIJZIGD (spec-en-bouw/AC-2 en AC-7, ADR 0062): meerdere specs met code mogen, met de specs in een commit vóór de code.
+  test('5b twee mini-specs naar een eigenaarstatus mét code: slaagt (spec-en-bouw/AC-2)', () => {
     const fixture = nieuw();
     write(fixture.root, MINI, spec('demo', 'goedgekeurd', true));
     write(fixture.root, 'docs/specs/tweede.md', spec('tweede', 'goedgekeurd', true));
+    commitAls(fixture.root, 'docs: twee specs', 'agent');
     write(fixture.root, WEB, 'export const x = 1;\n');
-    expect(draaiChecker(fixture, commitAls(fixture.root, 'feat: twee specs en code', 'agent')).status).toBe(1);
+    const uitvoer = draaiChecker(fixture, commitAls(fixture.root, 'feat: code', 'agent'));
+    expect(uitvoer.stderr).toBe('');
+    expect(uitvoer.status).toBe(0);
   });
 
-  test('7 een rename van src/core naar src/web: faalt', () => {
+  // GEWIJZIGD (spec-en-bouw/AC-1 en AC-7, ADR 0062): src/core buiten auth en db valt binnen de feature-lane; de spec staat in
+  // een eigen commit vóór de rename.
+  test('7 een rename van src/core naar src/web: slaagt (spec-en-bouw/AC-1)', () => {
     const fixture = nieuw();
     write(fixture.root, 'src/core/web/x.ts', 'export const x = 1;\n');
     git(fixture.root, ['add', '-A']);
@@ -198,14 +218,19 @@ describe('feature-lane', () => {
     git(fixture.root, ['update-ref', 'refs/remotes/origin/main', base]);
     const kaal = { root: fixture.root, base };
     write(kaal.root, MINI, spec('demo', 'voorstel', true));
+    commitAls(kaal.root, 'docs: voorstel', 'agent');
     mkdirSync(path.join(kaal.root, 'src/web'), { recursive: true });
     git(kaal.root, ['mv', 'src/core/web/x.ts', 'src/web/x.ts']);
     commitAls(kaal.root, 'feat: verplaatsen', 'agent');
     zetStatus(kaal.root, MINI, 'goedgekeurd');
-    expect(draaiChecker(kaal, commitAls(kaal.root, 'docs: status', 'web-flow')).status).toBe(1);
+    const uitvoer = draaiChecker(kaal, commitAls(kaal.root, 'docs: status', 'web-flow'));
+    expect(uitvoer.stderr).toBe('');
+    expect(uitvoer.status).toBe(0);
   });
 
-  test('6 een gewijzigde migratie: faalt', () => {
+  // GEWIJZIGD (spec-en-bouw/AC-5 en AC-7, ADR 0062): de spec in een eigen commit vóór de migratie, zodat de weigering op de
+  // migratie berust en niet op de volgorde.
+  test('6 een gewijzigde migratie: faalt (spec-en-bouw/AC-5)', () => {
     const fixture = nieuw();
     write(fixture.root, 'db/migrations/20260101000000_oud.sql', '-- oud\n');
     git(fixture.root, ['add', '-A']);
@@ -213,10 +238,13 @@ describe('feature-lane', () => {
     const kaal = { root: fixture.root, base: git(fixture.root, ['rev-parse', 'HEAD']) };
     git(kaal.root, ['update-ref', 'refs/remotes/origin/main', kaal.base]);
     write(kaal.root, MINI, spec('demo', 'voorstel', true));
+    commitAls(kaal.root, 'docs: voorstel', 'agent');
     write(kaal.root, 'db/migrations/20260101000000_oud.sql', '-- anders\n');
     commitAls(kaal.root, 'feat: migratie', 'agent');
     zetStatus(kaal.root, MINI, 'goedgekeurd');
-    expect(draaiChecker(kaal, commitAls(kaal.root, 'docs: status', 'web-flow')).status).toBe(1);
+    const uitvoer = draaiChecker(kaal, commitAls(kaal.root, 'docs: status', 'web-flow'));
+    expect(uitvoer.status).toBe(1);
+    expect(uitvoer.stderr).toContain('een migratie wijzigen of verwijderen');
   });
 });
 
@@ -308,6 +336,7 @@ describe('feature-lane: migratie en kop', () => {
   });
 });
 
+// GEWIJZIGD (spec-en-bouw/AC-7, ADR 0062): de spec in een eigen commit vóór de migratie.
 function featureMetMigratie(sql: string, kop: boolean, eigen?: string) {
   const fixture = nieuw();
   const tekst = spec('demo', 'voorstel', true);
@@ -316,6 +345,7 @@ function featureMetMigratie(sql: string, kop: boolean, eigen?: string) {
     MINI,
     eigen !== undefined ? `${tekst}\n${eigen}` : kop ? `${tekst}\n## Datawijzigingen (met grants)\n\nnotes.\n` : tekst,
   );
+  commitAls(fixture.root, 'docs: voorstel', 'agent');
   write(fixture.root, MIGRATIE, sql);
   commitAls(fixture.root, 'feat: tabel', 'agent');
   zetStatus(fixture.root, MINI, 'goedgekeurd');
@@ -463,7 +493,13 @@ describe('annotatie voor de job document-status', () => {
     const bestand = path.join(tempDir('samenvatting-'), 'summary.md');
     process.env['GITHUB_STEP_SUMMARY'] = bestand;
     try {
-      const fout = feature({ mini: false }); // GEWIJZIGD: een agent-statuscommit is niet meer fout (ADR 0046 punt 7)
+      // GEWIJZIGD: een agent-statuscommit is niet meer fout (ADR 0046 punt 7), en een volledige spec met code ook niet
+      // (spec-en-bouw/AC-1); de foutcase is nu een onbekend pad buiten gates.
+      const fout = feature({
+        extra: (root) => {
+          write(root, 'README.md', 'Anders.\n');
+        },
+      });
       draaiChecker(fout.fixture, fout.head);
       expect(readFileSync(bestand, 'utf8')).toContain('document-status: afgekeurd');
       const goed = feature();
@@ -475,8 +511,13 @@ describe('annotatie voor de job document-status', () => {
   });
 
   // GEWIJZIGD: de foutcase was een agent-statuscommit en de melding noemde web-flow; beide bestaan niet meer (ADR 0046 punt 7).
+  // GEWIJZIGD (spec-en-bouw/AC-1): een volledige spec met code is geen fout meer; de foutcase is een onbekend pad buiten gates.
   test('een fout komt als ::error title=document-status:: op stdout (ADR 0045 punt 20)', () => {
-    const { fixture, head } = feature({ mini: false });
+    const { fixture, head } = feature({
+      extra: (root) => {
+        write(root, 'README.md', 'Anders.\n');
+      },
+    });
     const uitvoer = draaiChecker(fixture, head);
     expect(uitvoer.status).toBe(1);
     expect(uitvoer.stdout).toContain('::error title=document-status::');
@@ -703,7 +744,9 @@ describe('ADR 0046 punt 2: de tekst van een geaccepteerd ADR verandert niet (A4 
   });
 });
 
-describe('ADR 0046 punt 5: inhoud van een goedgekeurde spec wijzigen alleen in een besluit-PR zonder code', () => {
+// GEWIJZIGD (spec-en-bouw/AC-2, ADR 0062): een inhoudelijke wijziging van een goedgekeurde spec mag nu ook met code, met de
+// spec-commit vóór de code; in één commit faalt het op de volgorde (AC-7).
+describe('ADR 0046 punt 5: inhoud van een goedgekeurde spec wijzigen, met of zonder code', () => {
   test.each([
     ['mini-spec', true],
     ['volledige spec', false],
@@ -716,11 +759,22 @@ describe('ADR 0046 punt 5: inhoud van een goedgekeurde spec wijzigen alleen in e
   test.each([
     ['een bronbestand in src/web', WEB],
     ['een route in src/api', ROUTE],
-  ])('PR met %s: faalt', (_naam, code) => {
+  ])('PR met %s na de spec-commit: slaagt (spec-en-bouw/AC-2)', (_naam, code) => {
+    const fixture = metBasis({ [MINI]: spec('demo', 'goedgekeurd', true) });
+    write(fixture.root, MINI, `${read(fixture.root, MINI)}\n## Extra\n\nNieuw gedrag.\n`);
+    agent(fixture, 'docs: spec');
+    write(fixture.root, code, 'export const x = 1;\n');
+    slaagt(fixture, agent(fixture, 'feat: code'));
+  });
+
+  test.each([
+    ['een bronbestand in src/web', WEB],
+    ['een route in src/api', ROUTE],
+  ])('PR met %s in dezelfde commit als de spec: faalt op de volgorde (spec-en-bouw/AC-7)', (_naam, code) => {
     const fixture = metBasis({ [MINI]: spec('demo', 'goedgekeurd', true) });
     write(fixture.root, MINI, `${read(fixture.root, MINI)}\n## Extra\n\nNieuw gedrag.\n`);
     write(fixture.root, code, 'export const x = 1;\n');
-    faalt(fixture, agent(fixture));
+    expect(faalt(fixture, agent(fixture))).toContain('volgorde');
   });
 });
 
@@ -730,11 +784,23 @@ describe('ADR 0046 punt 5 en 31: besluit-PR en feature-lane', () => {
     slaagt(fixture, head);
   });
 
-  test('een volledige spec met eigenaarstatus én src/api-code, gewone committer: faalt', () => {
+  // GEWIJZIGD (spec-en-bouw/AC-1 en AC-7, ADR 0062): een volledige spec met code is de feature-lane, mits de spec vóór de code
+  // staat; in één commit faalt het op de volgorde.
+  test('een volledige spec met eigenaarstatus én src/api-code, gewone committer: slaagt met de spec eerst (spec-en-bouw/AC-1)', () => {
+    const fixture = nieuw();
+    write(fixture.root, MINI, spec('demo', 'goedgekeurd', false));
+    agent(fixture, 'docs: spec');
+    write(fixture.root, ROUTE, 'export const x = 1;\n');
+    slaagt(fixture, agent(fixture, 'feat: route'));
+  });
+
+  test('een volledige spec met eigenaarstatus én src/api-code in één commit: faalt op de volgorde (spec-en-bouw/AC-7)', () => {
     const fixture = nieuw();
     write(fixture.root, MINI, spec('demo', 'goedgekeurd', false));
     write(fixture.root, ROUTE, 'export const x = 1;\n');
-    expect(faalt(fixture, agent(fixture, 'feat: spec en route'))).toContain(MINI);
+    const stderr = faalt(fixture, agent(fixture, 'feat: spec en route'));
+    expect(stderr).toContain(MINI);
+    expect(stderr).toContain('volgorde');
   });
 
   test('een ADR met eigenaarstatus én een bronbestand, gewone committer: faalt', () => {

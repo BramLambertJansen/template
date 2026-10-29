@@ -43,6 +43,8 @@ function uiFeature() {
   const base = commit(fixture.root, 'test: bestaande UI-test');
   git(fixture.root, ['update-ref', 'refs/remotes/origin/main', base]);
   write(fixture.root, SPEC, MINI);
+  // GEWIJZIGD (spec-en-bouw/AC-7, ADR 0062): de spec krijgt een eigen commit vóór de code (volgordecheck).
+  commit(fixture.root, 'docs: spec');
   write(fixture.root, SOURCE, UI_CODE);
   write(fixture.root, UI_TEST, NEW_TEST);
   return { root: fixture.root, base };
@@ -75,8 +77,13 @@ describe('ADR 0056: functionele UI in dezelfde feature-PR', () => {
   ])('%s: de uitzondering wordt niet actief', (_name, text) => {
     const fixture = uiFeature();
     write(fixture.root, SPEC, text);
+    const result = draaiChecker(fixture, commit(fixture.root));
 
-    expect(draaiChecker(fixture, commit(fixture.root)).status).toBe(1);
+    // GEWIJZIGD (spec-en-bouw/AC-1 en AC-6, ADR 0062): core-UI buiten auth en db en een gewijzigde bestaande test passen nu in
+    // de gewone feature-lane, dus de PR slaagt; dat de UI-uitzondering niet actief is, blijkt uit de ontbrekende melding.
+    expect(result.stderr).toBe('');
+    expect(result.status).toBe(0);
+    expect(result.stdout).not.toContain('functionele UI');
   });
 
   test.each([

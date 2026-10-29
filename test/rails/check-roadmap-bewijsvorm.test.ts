@@ -72,7 +72,9 @@ async function meldingen(opties: Opties): Promise<Melding[]> {
 
 const STATUSREGELS: [regel: string, geldig: boolean, bestanden?: string[]][] = [
   [`status: gebouwd # #130; gevalideerd: ${SHA}`, true],
-  ['status: gebouwd # #130', false],
+  // GEWIJZIGD (spec-en-bouw/AC-8, ADR 0062): `gebouwd # #<PR>` zonder SHA is bouwbewijs in de eigen PR; check-document-status
+  // toetst het PR-nummer, check:roadmap en builtReference lezen de vorm met dezelfde code.
+  ['status: gebouwd # #130', true],
   ['status: gebouwd # test/rails/x.test.ts', false],
   ['status: gebouwd # db/tests/x.sql', false, ['db/tests/x.sql']],
   ['status: gebouwd # `pnpm test:unit`', false],
