@@ -40,7 +40,7 @@ function run(suite: string, hangs: number) {
   const result = spawnSync('bash', [script, suite, '--sta-wijzigingen-toe'], {
     encoding: 'utf8',
     cwd: dir,
-    env: { HOME: dir, PATH: `${dir}:/usr/bin:/bin`, STUB_DIR: dir },
+    env: { HOME: dir, TMPDIR: tmpdir(), PATH: `${dir}:/usr/bin:/bin`, STUB_DIR: dir },
   });
   const calls = readFileSync(path.join(dir, 'log'), 'utf8').split('\n').filter(Boolean);
   const pulls = calls.filter((call) => call.startsWith('timeout '));
