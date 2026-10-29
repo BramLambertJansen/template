@@ -45,11 +45,17 @@ Geen functioneel accountbeheerpad uit `docs/gouden-pad.md` past: dit betreft de 
 ## Acceptatiecriteria
 
 Kritieke paden (AC-3) zijn: `src/core/api/auth/**`, `src/core/api/db/**`, `db/init/**`, elk pad uit `altijdVragen` in
-`.claude/gates.json`, en `scripts/kit/check-document-status.mjs`, `scripts/kit/lane.mjs`, `rails/hooks/lib/document-state.mjs`,
-`rails/hooks/lib/built-evidence.mjs` en `rails/hooks/lib/task-authority.mjs`.
+`.claude/gates.json`, alle hookcode in `rails/hooks/**`, en de scripts die over besluiten, statussen en merges oordelen:
+`scripts/kit/check-document-status.mjs`, `scripts/kit/lane.mjs`, `scripts/kit/functional-ui-status.mjs`,
+`scripts/kit/status-git.mjs`, `scripts/kit/github-evidence.mjs`, `scripts/kit/diff-guard.mjs`, `scripts/kit/pr-gate-label.mjs`,
+`scripts/kit/pr-verify.mjs`, `scripts/kit/check-roadmap.mjs`, `scripts/kit/roadmap-item.mjs`, `scripts/kit/document-status.mjs`,
+`scripts/kit/document-decision.mjs` en `scripts/kit/gates.mjs`.
 
-- **spec-en-bouw/AC-1** — Gegeven een PR met een nieuwe volledige spec op `goedgekeurd` en wijzigingen in `src/`, `scripts/`,
-  `rails/`, `docs/` en nieuwe tests, zonder kritiek pad, wanneer `document-status` draait, dan herkent het de feature-lane en is
+Erratum (2026-10-29): de lijst noemde eerst alleen vijf bestanden. ADR 0062 punt 2 rekent ook hooks en alle besluit- en
+mergescripts tot de bewaking; de onafhankelijke review van de bouw vond dat gat en de eigenaar koos deze verbreding.
+
+- **spec-en-bouw/AC-1** — Gegeven een PR met een nieuwe volledige spec op `goedgekeurd` en wijzigingen in `src/`, overige
+  `scripts/`, `docs/` en nieuwe tests, zonder kritiek pad, wanneer `document-status` draait, dan herkent het de feature-lane en is
   het groen.
 - **spec-en-bouw/AC-2** — Gegeven dezelfde PR met twee specs die een eigenaarstatus krijgen, of met een inhoudelijke wijziging van
   een goedgekeurde spec op main, wanneer `document-status` draait, dan is het groen.
