@@ -137,7 +137,7 @@ function altijdVragen(): string[] {
   if (typeof gates !== 'object' || gates === null || !('altijdVragen' in gates) || !Array.isArray(gates.altijdVragen))
     throw new Error('gates.json zonder altijdVragen');
   const lijst: unknown[] = gates.altijdVragen;
-  return lijst.map((glob) => String(glob).replace('**', 'voorbeeld/x.mjs').replace('*', 'x'));
+  return lijst.map((glob) => String(glob).replaceAll('**', 'voorbeeld/x.mjs').replaceAll('*', 'x'));
 }
 
 const KRITIEK = [
