@@ -302,7 +302,7 @@ docker volume ls --filter label=com.docker.compose.project=<slug> --format '{{.N
 Beide leeg: ga door. Anders stop je en leg je via de vraagprompt de keuze bij de eigenaar: de oude stack en het volume
 opruimen (vernietigt die database; de eigenaar voert het zelf uit, bijvoorbeeld `docker compose -p <slug> down -v`
 vanuit een willekeurige map), of een andere slug kiezen. Ruim zelf niets op en ga niet door met het oude volume.
-Noteer de keuze in het voortgangsbestand.
+Draai na het opruimen beide leesopdrachten opnieuw; ga pas door als ze leeg zijn. Noteer de keuze in het voortgangsbestand.
 
 `docker` gebruik je in deze setup alleen voor `hello-world` en deze twee leesopdrachten. De app-stack is van de eigenaar (Fase 7).
 
@@ -334,7 +334,9 @@ Controleer daarom vóór de repo bestaat:
 gh api user --jq .plan.name    # free → geen rulesets op private repo's; pro → ruleset wel, CodeQL nog bevestigen
 ```
 
-Bij een organisatie als owner geldt het plan van de organisatie (Team of hoger). Is het plan `free`, of kan de eigenaar
+Zonder scope `user` geeft GitHub het plan niet prijs en toont dit `null`: dat is onbekend, geen `free`. Laat de eigenaar
+het plan dan aflezen op https://github.com/settings/billing. Bij een organisatie als owner geldt het plan van de
+organisatie (Team of hoger); laat de eigenaar dat aflezen bij de organisatie-instellingen. Is het plan `free` of onbekend, of kan de eigenaar
 niet bevestigen dat code scanning voor private repo's beschikbaar is: leg via de vraagprompt de keuze voor (public,
 een plan of organisatie met Pro/Team en code scanning, of stoppen) en maak de repo pas daarna. Wijzig de keuze nooit zelf.
 Noteer plan en keuze in het voortgangsbestand. Fase 6.1 blijft de eindcontrole vóór de eerste push.
@@ -685,7 +687,7 @@ Overdracht in het zojuist geopende app-venster:
 Waarom: `.claude/settings.json` van de template zet de sandbox aan met `failIfUnavailable: true` en weigert `docker *`
 en het lezen van `.env.*`. Geslaagd is alleen: beide pogingen zijn gedaan en door Claude Code geweigerd, met een melding
 als `Permission to use Bash with command docker ps has been denied` en `File is in a directory that is denied by your
-permission settings`. Weigert de agent zelf ("dat mag niet volgens AGENTS.md") of voert hij iets niet uit, dan is er niets
+permission settings.` (Claude Code 2.1.312). Weigert de agent zelf ("dat mag niet volgens AGENTS.md") of voert hij iets niet uit, dan is er niets
 bewezen: laat de eigenaar de opdracht herhalen of noteer de controle als open. Een weigering door de agent is geen
 bewijs voor sandbox of deny-regels. `pnpm meting` is hier geen bewijs voor de leesweigering: een Read die een deny-regel
 tegenhoudt, levert geen hook-event op (zie `pnpm meting --help`). Ga door naar de browser- en logincontrole als de
