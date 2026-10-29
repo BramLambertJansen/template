@@ -59,7 +59,7 @@ function run({ repo, stubs }: { repo: string; stubs: string }, env: Record<strin
   const result = spawnSync('bash', args, {
     cwd: repo,
     encoding: 'utf8',
-    env: { HOME: stubs, PATH: `${stubs}:/usr/bin:/bin`, STUB_DIR: stubs, ...GIT_ENV, ...env },
+    env: { HOME: stubs, TMPDIR: tmpdir(), PATH: `${stubs}:/usr/bin:/bin`, STUB_DIR: stubs, ...GIT_ENV, ...env },
   });
   const reachedDocker = readFileSync(path.join(stubs, 'log'), 'utf8').length > 0;
   return { status: result.status, stderr: result.stderr, reachedDocker };

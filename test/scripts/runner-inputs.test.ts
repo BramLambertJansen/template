@@ -47,7 +47,7 @@ function run(dir: string) {
   return spawnSync('bash', ['scripts/runner.sh', 'db', '--sta-wijzigingen-toe'], {
     cwd: dir,
     encoding: 'utf8',
-    env: { HOME: dir, PATH: `${dir}/stubs:/usr/bin:/bin`, STUB_DIR: `${dir}/stubs` },
+    env: { HOME: dir, TMPDIR: tmpdir(), PATH: `${dir}/stubs:/usr/bin:/bin`, STUB_DIR: `${dir}/stubs` },
   });
 }
 
