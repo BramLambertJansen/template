@@ -14,6 +14,7 @@ import { readRegistry } from '../../rails/hooks/lib/task-authority.mjs';
 const BEKEND = [/^src\//, /^docs\//, /^db\//, /^CHANGELOG\.md$/];
 // Een geneste of onbekende instructie valt dicht; de instructies op hun vaste plek zijn gate-paden en mogen mee (ADR 0062).
 const INSTRUCTIES = /(?:^|\/)(?:(?:CLAUDE|AGENTS)[^/]*\.md|\.claude\/.*)$/;
+const JS_TEST = /\.(?:[cm]?[jt]sx?)$/;
 const VASTE_INSTRUCTIES = /^(?:CLAUDE\.md|AGENTS\.md|\.claude\/(?:agents|skills|rules)\/.+)$/;
 // ADR 0062 punt 2: auth, gegevensisolatie, alle hookcode en de scripts die over besluiten, statussen en merges oordelen
 // (spec spec-en-bouw-in-een-pr, AC-3); `altijdVragen` komt uit de config.
@@ -59,8 +60,11 @@ export function kritiekPad(pad, config) {
  */
 function buitenBereik({ status, pad }, config) {
   if (pad.startsWith('docs/adr/')) return `${pad} is een ADR`;
-  if (inLijst(config.testpaden, pad))
-    return status === 'D' || status === 'R' ? `${pad}: een bestaande test verwijderen of hernoemen` : null;
+  if (inLijst(config.testpaden, pad)) {
+    if (status === 'D' || status === 'R') return `${pad}: een bestaande test verwijderen of hernoemen`;
+    // `testChangeRisk` telt alleen JS/TS-gevallen; een gewijzigde pgTAP- of andere test blijft dicht.
+    return status === 'M' && !JS_TEST.test(pad) ? `${pad}: een bestaande test buiten JS/TS wijzigen` : null;
+  }
   if (inLijst(config.migraties, pad)) return status === 'A' ? null : `${pad}: een migratie wijzigen of verwijderen`;
   if (status === 'D' && pad.startsWith('docs/specs/')) return `${pad}: een bestaande spec verwijderen`;
   if (INSTRUCTIES.test(pad) && !VASTE_INSTRUCTIES.test(pad)) return `${pad} wijzigt instructies van de agent`;
