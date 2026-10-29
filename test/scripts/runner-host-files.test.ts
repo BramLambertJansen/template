@@ -130,6 +130,7 @@ function run(omgeving: Omgeving, opties: { ci?: boolean; flag?: string; cwd?: st
     encoding: 'utf8',
     env: {
       HOME: omgeving.stubs,
+      TMPDIR: tmpdir(),
       PATH: `${omgeving.stubs}:/usr/bin:/bin`,
       STUB_DIR: omgeving.stubs,
       PWD: cwd,

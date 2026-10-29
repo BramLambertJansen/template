@@ -118,6 +118,7 @@ function run(dir: string, options: { browserExit?: number; scriptPath?: string }
     timeout: 10_000,
     env: {
       HOME: dir,
+      TMPDIR: tmpdir(),
       PATH: `${dir}/stubs:/usr/bin:/bin`,
       SMOKE_BROWSER: '1',
       STUB_DIR: `${dir}/stubs`,
