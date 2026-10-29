@@ -50,7 +50,7 @@ meetopdracht kan bijvoorbeeld de nog lopende `pnpm meting` meetellen; na de gere
 Vergelijk daarom dezelfde sessie en branch op hetzelfde afgeronde meetmoment en bewaar de momentopname met tijdstip;
 vergelijkingen tijdens en na een aanroep zijn geen gelijke waarnemingen.
 
-Alleen ontvangen en opgeslagen events tellen. Een `Read` of `Edit` die een deny-regel weigert (zoals `Read(.env.*)`), levert
+Alleen ontvangen en opgeslagen events tellen. Een `Read`, `Edit` of `Write` die een deny-regel weigert (zoals `Read(.env.*)`), levert
 in Claude Code geen enkel hook-event op (nagegaan met 2.1.312 voor Read, Edit en Write) en telt dus nooit mee; een Bash-deny zoals `docker ps` wel.
 De deny-regel voor `.env.*` bewijs je daarom met de melding in de sessie (`docs/nieuwe-app.md`, Fase 9.2), niet met deze telling. De hook is fail-open:
 ontbrekende registraties bewijzen geen nul. De telling en regressieproeven staan in `scripts/kit/meting.mjs` en
