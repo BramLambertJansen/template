@@ -63,7 +63,7 @@
 \set ON_ERROR_ROLLBACK off
 begin;
 set search_path = tap, public;
-select plan(95);
+select plan(105);
 
 -- =====================================================================================================================
 -- 0. Registratie- en bewijstabellen
@@ -690,6 +690,20 @@ select is(
   pg_temp.i_stand('sbf_fx.t_ok'::regclass), array['sbf_fx.t_ok|app_authenticated'],
   'database-checks/AC-3: geldige registratie + actieve trigger + uitgevoerde insert met één rij: I is groen (tabel wel ontdekt)'
 );
+-- AC-3: de pg_trigger-controle is onafhankelijk van het uitvoeringsbewijs (de uitvoering met rijen = 1 blijft bestaan).
+alter table sbf_fx.t_ok disable trigger vul;
+select ok(
+  pg_temp.rood(array(select x from pg_temp.i_overtredingen('sbf_fx.t_ok'::regclass, array['app_authenticated']) x
+                     where x like 'I|sbf_fx.t_ok|app_authenticated|b%'),
+               'I|sbf_fx.t_ok|app_authenticated|b')
+  and exists (select 1 from pg_temp.i_uitvoering where tabel = 'sbf_fx.t_ok' and rol = 'app_authenticated' and kolom = 'b' and rijen = 1),
+  'database-checks/AC-3: een uitgeschakelde trigger maakt t_ok rood terwijl de geslaagde uitvoering (rijen = 1) nog bestaat'
+);
+alter table sbf_fx.t_ok enable trigger vul;
+select is(
+  pg_temp.i_stand('sbf_fx.t_ok'::regclass), array['sbf_fx.t_ok|app_authenticated'],
+  'database-checks/AC-3: na het weer inschakelen van de trigger is t_ok opnieuw groen (bestaand bewijs ongewijzigd)'
+);
 select ok(
   pg_temp.rood(array(select x from pg_temp.i_overtredingen('sbf_fx.t_skip'::regclass, array['app_authenticated']) x),
                'I|sbf_fx.t_skip|app_authenticated|b'),
@@ -939,6 +953,11 @@ select is(
 select is(
   (select jsonb_array_length(rijen) from pg_temp.d_observatie where moment = 'voor' and tabel = 'app.rate_limits'), 2,
   'database-checks/AC-7: vóór de delete staan beide rate-limit-proefrijen (verlopen en lopend) in de tabel');
+-- AC-6/AC-7: onder FORCE ziet zelfs de eigenaar de rijen niet; dat maakt de NO FORCE-observatie onafhankelijk.
+select is((select count(*)::integer from sbf_fx.d_vis_false), 0,
+  'database-checks/AC-7: onder FORCE ziet de eigenaar app_migrator in d_vis_false geen rijen (SELECT using (false))');
+select is((select count(*)::integer from sbf_fx.d_all_restr), 0,
+  'database-checks/AC-7: onder FORCE ziet de eigenaar app_migrator in d_all_restr geen rijen (restrictieve SELECT false)');
 
 -- De echte deletes als app_definer (de probe wisselt transactiegebonden van rol en herstelt die altijd).
 do $$
@@ -969,6 +988,15 @@ release savepoint obs_na;
 insert into pg_temp.d_observatie select 'na', key, value from jsonb_each(:'snap_na'::jsonb);
 
 select ok(pg_temp.force_alle(), 'database-checks/AC-6: FORCE RLS is na de observatie na de delete hersteld');
+-- AC-7/AC-9: de NO FORCE-snapshots zagen de verborgen rijen wél en de mislukte delete liet ze ongewijzigd.
+select is(pg_temp.d_uitkomst('sbf_fx.d_vis_false', 'oud'), 'ongewijzigd',
+  'database-checks/AC-7: de verborgen rij oud in d_vis_false is in beide snapshots gezien en ongewijzigd gebleven');
+select is(pg_temp.d_uitkomst('sbf_fx.d_vis_false', 'nieuw'), 'ongewijzigd',
+  'database-checks/AC-7: de verborgen rij nieuw in d_vis_false is in beide snapshots gezien en ongewijzigd gebleven');
+select is(pg_temp.d_uitkomst('sbf_fx.d_all_restr', 'een'), 'ongewijzigd',
+  'database-checks/AC-9: de rij een in d_all_restr is in beide snapshots gezien en ongewijzigd gebleven');
+select is(pg_temp.d_uitkomst('sbf_fx.d_all_restr', 'twee'), 'ongewijzigd',
+  'database-checks/AC-9: de rij twee in d_all_restr is in beide snapshots gezien en ongewijzigd gebleven');
 
 -- AC-6/AC-7: de echte tabellen, per tabel rowcount en per rij de uitkomst.
 select is((select rijen from pg_temp.d_uitvoering where tabel = 'app.audit_log'), 1,
@@ -1011,6 +1039,11 @@ select ok(
                      where x like 'D|sbf_fx.d_vis_false|app_definer|rowcount%'),
                'D|sbf_fx.d_vis_false|app_definer|rowcount'),
   'database-checks/AC-7: de gedragsprobe is rood op rowcount (nul verwijderd, één verwacht) bij een verbergende SELECT-policy');
+select ok(
+  pg_temp.rood(array(select x from pg_temp.d_gedrag('sbf_fx.d_vis_false'::regclass) x
+                     where x like 'D|sbf_fx.d_vis_false|app_definer|rij oud:%'),
+               'D|sbf_fx.d_vis_false|app_definer|rij oud: ongewijzigd verwacht verwijderd'),
+  'database-checks/AC-7: de per-rij-diagnose meldt voor d_vis_false rij oud: ongewijzigd, verwacht verwijderd');
 select is(pg_temp.d_stand_s('sbf_fx.d_restr_false'::regclass), array['sbf_fx.d_restr_false|app_definer'],
   'database-checks/AC-7: met een permissieve SELECT-policy en een restrictieve SELECT false blijft de structuurcheck groen');
 select is((select rijen from pg_temp.d_uitvoering where tabel = 'sbf_fx.d_restr_false'), 0,
@@ -1051,6 +1084,11 @@ select ok(
   pg_temp.rood(array(select x from pg_temp.d_gedrag('sbf_fx.d_all_restr'::regclass) x where x like '%|rowcount%'),
                'D|sbf_fx.d_all_restr|app_definer|rowcount'),
   'database-checks/AC-9: de gedragsprobe is rood op rowcount (nul verwijderd, twee verwacht)');
+select ok(
+  pg_temp.rood(array(select x from pg_temp.d_gedrag('sbf_fx.d_all_restr'::regclass) x
+                     where x like 'D|sbf_fx.d_all_restr|app_definer|rij een:%'),
+               'D|sbf_fx.d_all_restr|app_definer|rij een: ongewijzigd verwacht verwijderd'),
+  'database-checks/AC-9: de per-rij-diagnose meldt voor d_all_restr rij een: ongewijzigd, verwacht verwijderd');
 
 -- =====================================================================================================================
 -- 10. AC-8: opruimen herstelt de beginsituatie; daarna opnieuw de echte gate
