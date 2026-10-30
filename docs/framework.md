@@ -527,7 +527,9 @@ Live feiten (gates, routes, componenten, nummers) komen uit `scripts/kit/feiten.
   broncodemandaat (`--path`) en `requiredChecks`; het bindt inhoudsdigest, repository, exacte branch, status en exacte bronbestanden.
   `gebouwd # #<n>` zonder SHA geldt alleen als n deze PR is en de PR code buiten `docs/` en `CHANGELOG.md` bevat; bouwbewijs is dan de ruleset,
   die de verplichte checks (ook `document-status`) op de gemergde head eist (ADR 0062). De vorm met SHA vereist de juiste PR en
-  verplichte Actions-checks op de gevalideerde bron-SHA; uitsluitend latere statusregels mogen daarvan afwijken. Bij CodeQL moet ook de aparte resultaatcheck van GitHub Advanced Security groen zijn; alleen het slagen van de
+  verplichte Actions-checks op de gevalideerde bron-SHA; uitsluitend latere statusregels mogen daarvan afwijken. Is PR n al gemerged,
+  dan is de gevalideerde SHA de head van PR n en toetst `canRecordBuilt` de mergecommit in HEAD, de ongewijzigde goedgekeurde spec daarin,
+  de verplichte checks uit main vlak vóór de merge en een gewijzigd pad buiten `docs/` dat de spec noemt (spec `gebouwd-na-merge`). Bij CodeQL moet ook de aparte resultaatcheck van GitHub Advanced Security groen zijn; alleen het slagen van de
   analysejob bewijst niet dat er geen bevindingen zijn. `pr:verify` en bouwbewijs gebruiken dezelfde controle. De CI-guard gebruikt
   `scripts/kit/check-document-status.mjs` uit main, als eigen job `document-status` naast `diff-guard` (ADR 0045 punt 20); een werkversie of commit-auteur geeft zichzelf geen goedkeuring.
   Een nieuwe of gewijzigde ADR-statusregel draagt achter de statuswaarde alleen `(JJJJ-MM-DD)`, `#<nr>` en een link naar een bestaand
