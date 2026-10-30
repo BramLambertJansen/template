@@ -56,7 +56,7 @@ function verifyBuilt(document, context) {
       text: document.text,
     }),
     ...(pr.merged && {
-      merged: mergedEvidence(context.root, { mergeSha: pr.mergeSha ?? '', head: context.sha, file: document.file }),
+      merged: mergedEvidence(context.root, { mergeSha: pr.mergeSha ?? '', head: context.split, file: document.file }),
     }),
   };
   const bezwaar = builtRefusal(document, evidence, context.authority);

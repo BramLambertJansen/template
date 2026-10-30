@@ -376,10 +376,10 @@ merge de verplichte checks op de head. Een `git merge origin/main` of een fix er
 
 **Implementatie al gemerged** (spec `docs/specs/gebouwd-na-merge.md`): zet de status in een eigen status-PR vanaf een
 verse branch van main. `docs:status` ziet aan GitHub dat PR n gemerged is en schrijft `gebouwd # #<n>; gevalideerd: <head van PR n>`.
-Het eist dat de mergecommit van PR n in HEAD zit, dat de spec daarin ongewijzigd op `goedgekeurd` stond, dat de verplichte
+Het eist dat PR n naar `main` is gemerged en dat de mergecommit in main zit (via de merge-base van de branch), dat de spec daarin ongewijzigd op `goedgekeurd` stond, dat de verplichte
 checks (uit `.claude/decisions.json` in main vlak vóór de merge) groen waren op de head van PR n, en dat PR n een pad buiten
 `docs/` wijzigde dat de spec tussen backticks noemt. De status-PR wijzigt alleen statusregels en eventueel het eigen
-roadmapvinkje; `git merge origin/main` erna mag. Faalt het, dan noemt de melding de voorwaarde ("Gebouwd na de merge vereist …").
+roadmapvinkje; `git merge origin/main` erna mag. Een spec met `scope: functionele-ui` kan deze route alleen als ze op main al `goedgekeurd` is; het UI-akkoord uit de bouw-PR telt hier niet. Faalt het, dan noemt de melding de voorwaarde ("Gebouwd na de merge vereist …").
 
 ```sh
 pnpm docs:status docs/specs/voorbeeld.md gebouwd --pr 123

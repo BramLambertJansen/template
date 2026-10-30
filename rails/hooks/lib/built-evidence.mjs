@@ -8,9 +8,10 @@ export const GITHUB_ACTIONS_APP_ID = 15368;
 const CODE_SCANNING_APP_ID = 57789;
 
 /** @typedef {{ id: number, name: string, headSha: string, status: string, conclusion: string | null, appId: number }} CheckRun */
-/** @typedef {{ number: number, repository: string, branch: string, headSha: string, state: string, merged: boolean, mergeSha: string | null }} PullRequest */
+/** @typedef {{ number: number, repository: string, branch: string, headSha: string, state: string, merged: boolean, mergeSha: string | null, baseBranch: string }} PullRequest */
 /** Feiten uit Git over de mergecommit van een gemergde PR (spec gebouwd-na-merge). */
 /** @typedef {{ inHead: boolean, parents: string[], specAtMerge: string | null, requiredChecks: string[] | null, bouwpaden: string[] }} MergedEvidence */
+/** `ancestor` en `headSha` gelden alleen voor een open PR; een gemergde PR toetst `merged` (inHead: in main, via de merge-base). */
 /** @typedef {{ pr: PullRequest, checks: CheckRun[], headSha: string, onlyStatuses: boolean, ancestor: boolean, uiApproval?: string | null, merged?: MergedEvidence }} BuiltEvidence */
 
 const ALGEMEEN = 'de juiste PR en gevalideerde commit';
@@ -80,7 +81,7 @@ function mergedRefusal(spec, evidence) {
   const n = String(pr.number);
   if (spec.sha !== pr.headSha) return ALGEMEEN;
   const ouders = merged?.parents ?? [];
-  if (merged === undefined || !merged.inHead || ![1, 2].includes(ouders.length) ||
+  if (merged === undefined || pr.baseBranch !== 'main' || !merged.inHead || ![1, 2].includes(ouders.length) ||
     (ouders.length === 2 && ouders[1] !== pr.headSha)) return `de mergecommit van PR #${n} in HEAD`;
   const bijMerge = documentInfo(spec.file, merged.specAtMerge ?? '');
   if (bijMerge?.kind !== 'spec' || bijMerge.status !== 'goedgekeurd' || bijMerge.digest !== spec.digest)

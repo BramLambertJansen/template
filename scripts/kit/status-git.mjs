@@ -108,9 +108,10 @@ function requiredChecksOp(root, sha) {
 function bouwpadenVan(root, commits, spec) {
   const diff = gitText(root, ['diff', '--name-only', '-z', '--no-renames', commits.from, commits.to]);
   if (diff === null) return [];
+  const genoemd = new Set([...spec.matchAll(/`([^`\s]+)`/g)].map(([, pad]) => pad));
   return diff
     .split('\0')
-    .filter((pad) => pad !== '' && !pad.startsWith('docs/') && pad !== 'CHANGELOG.md' && spec.includes(`\`${pad}\``))
+    .filter((pad) => pad !== '' && !pad.startsWith('docs/') && pad !== 'CHANGELOG.md' && genoemd.has(pad))
     .toSorted();
 }
 

@@ -53,6 +53,7 @@ export function parsePullRequest(raw) {
     number: numberField(raw, 'number'),
     repository,
     branch: textField(head, 'ref'),
+    baseBranch: textField(base, 'ref'),
     headSha: textField(head, 'sha'),
     state: textField(raw, 'state'),
     merged,

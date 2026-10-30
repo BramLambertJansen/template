@@ -106,7 +106,8 @@ function mergedStatus(target, context) {
     checks: checkRuns(context.authority.repository, pr.headSha),
     ancestor: false,
     onlyStatuses: statusOnlyDiff(root, { from: split, to: context.sha }),
-    merged: mergedEvidence(root, { mergeSha: pr.mergeSha ?? '', head: context.sha, file: target.file }),
+    // De mergecommit moet in main liggen, niet alleen in HEAD: een zijbranch kan een mergecommit binnenbrengen.
+    merged: mergedEvidence(root, { mergeSha: pr.mergeSha ?? '', head: split, file: target.file }),
   };
   const bezwaar = builtRefusal({ file: target.file, text: after }, proof, context.authority);
   if (bezwaar !== null) throw new Error(`Gebouwd na de merge vereist ${bezwaar}`);
