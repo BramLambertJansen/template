@@ -2,6 +2,9 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-10-30 (#385): de gevolgregel over mandaatrecords in `.claude/decisions.json` vervalt; de records gaan weg
+([0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md)).
+
 Drempel: A4 (de route uit [0046](0046-werkstraat-en-beslisroute.md) punt 2 en 5 voor ADR's met een eigenaarstatus) en A3 (een
 guard laat een overgang toe die hij nu weigert).
 
@@ -51,6 +54,4 @@ framework §10. Het rolhek (`rails/hooks/lib/rolhek.mjs`) volgt via `documentKin
   map verandert, en de guard toetst dat aan de blob. De afweging van de eigenaar: minder ruis tegenover relatieve links in
   gearchiveerde en geaccepteerde ADR's die op GitHub naar een niet-bestaand pad wijzen (de check vangt ze, een lezer niet),
   plus één guarduitzondering meer om te onderhouden.
-- Records in `.claude/decisions.json` voor gearchiveerde ADR's wijzen naar het oude pad; ze zijn historisch, geven geen recht
-  meer en blijven staan.
 - Een `vervangen door`-keten blijft volgbaar: het nummer verwijst, niet het pad.

@@ -2,6 +2,9 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-10-30 (#385): taakmandaat en gate-label vervallen ([0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md));
+geschrapt in punt 5, 7, 8, 9, 11 en 15.
+
 Vervangt [0025](0025-werkstraat-tot-de-merge.md), [0027](0027-taakmandaat-voor-frameworkwerk.md),
 [0030](0030-ci-lus-en-agent-merge.md) en [0038](0038-beslisroute.md); neemt de delen van [0029](0029-snellere-beslisroute.md)
 over die via 0038 punt 8 nog gelden.
@@ -54,33 +57,28 @@ zo gemarkeerd en is aanvaard met de merge van 0038.
    eigenaarstatus; `voorstel`/`voorgesteld` naar een eigenaarstatus; `geaccepteerd` naar `vervangen door NNNN` (NNNN op main of in
    de PR) of `vervallen`; een spec van `goedgekeurd` of `gebouwd` naar `vervallen`. Het weigert de terugzetting uit punt 2. Inhoud
    van een goedgekeurde spec wijzigen mag alleen in een besluit-PR, nooit met code. Een besluit-PR bevat alleen documenten in
-   `docs/adr/` en `docs/specs/` met hun records; de samenvatting noemt elk document dat een eigenaarstatus krijgt.
+   `docs/adr/` en `docs/specs/`; de samenvatting noemt elk document dat een eigenaarstatus krijgt.
 6. **Rolhek** (was 0038 punt 6; agentvoorstel). Alleen architect en hoofdsessie schrijven een eigenaarstatus of wijzigen de inhoud
    van een goedgekeurde spec; andere rollen niet. De developer houdt alleen `gebouwd` via `docs:status`. De lokale A4-weigering blijft.
 7. **P2-uitzondering** (was 0038 punt 9; agentvoorstel, aanvaard met de merge van 0038). Vervallen zijn: de statuscommit-eisen
    (alleen statusregels, geen inhoud erna, web-flow; was 0029 punt 3), een apart eigenaarspoor in git, in het rolhek voor architect
    en hoofdsessie de weigering van een eigenaarstatus zonder record en van `goedgekeurd`, de beperking tot één document met
-   eigenaarstatus, en de recordeis bij `vervangen door`/`vervallen` en bij een inhoudswijziging aan een goedgekeurde spec. Een
-   `--path`-record van zo'n spec vervalt daardoor; het mandaat vraagt een nieuw record. Anker: de merge door de eigenaar met de
+   eigenaarstatus, en de recordeis bij `vervangen door`/`vervallen` en bij een inhoudswijziging aan een goedgekeurde spec.
+   Anker: de merge door de eigenaar met de
    statusregel in de diff; CODEOWNERS op `docs/adr/` en `docs/specs/` dwingt pas review af met een eigen identiteit voor de agent
    (GitHub App, 0017). Compensatie: punt 2, 5, 6 en 31.
 
 **Taakmandaat** (was 0027; eigenaarakkoord in de opdracht)
 
-8. **Register alleen voor broncodemandaat en `requiredChecks`** (was 0027 punt 2 en 0029 punt 2, gewijzigd door 0038 punt 8).
-   `.claude/decisions.json` op main bindt een record (inhoudsdigest, repository, exacte bouwbranch, exacte bronbestanden) aan een
-   spec die beschermde bronbestanden nodig heeft, en houdt de verplichte checks voor `pr:verify`. Rechten gelden pas na de merge;
-   een werkversie, prompt, label of commit-auteur vervangt dat niet. Een statusbesluit zonder `--path` krijgt geen record.
-9. **Taakgebonden broncode** (was 0027 punt 3). Alleen de bekende developer mag met een geldig record de genoemde bronbestanden
-   wijzigen: core alleen in de template, de beschermde compositie-roots en permissietabel ook in een app. Hooks, CI, scripts,
-   dependencies, tests, fixtures, gegenereerde bestanden en het register krijgen geen extra rechten. Andere branch, repository,
-   inhoud, symlink of intrekking geeft geen mandaat. Lokaal geldt opgehaalde `origin/main`; CI gebruikt de actuele default branch.
+8. **Register alleen voor `requiredChecks`** (was 0027 punt 2 en 0029 punt 2, gewijzigd door 0038 punt 8).
+   `.claude/decisions.json` op main houdt de verplichte checks voor `pr:verify`. Rechten gelden pas na de merge;
+   een werkversie, prompt, label of commit-auteur vervangt dat niet.
+9. *(vervallen, zie 0063)*
 10. **Gebouwd met bouwbewijs** (was 0027 punt 4). Een spec gaat naar `gebouwd` zodra de implementatie is vastgelegd, de PR open is
     en alle verplichte GitHub Actions-checks groen zijn op de broncommit; de statusregel noemt PR en gevalideerde SHA. Daarna mogen
     alleen statusregels en het roadmapvinkje van de eigen spec veranderen. Gebouwd is aangeboden en gecontroleerd, geen merge of
     release. ADR's kennen geen `gebouwd`.
-11. **Label als markering** (was 0027 punt 5). De hoofdsessie zet met `pr:label-gate` het label alleen op documentatie-PR's
-    (`gateMarker: docs` op main). Verruiming vraagt een eigenaarbesluit. Een label vervangt geen eigenaarreview.
+11. *(vervallen, zie 0063)* Een label vervangt geen eigenaarreview.
 
 **Lanes en mini-spec** (was 0029)
 
@@ -95,8 +93,8 @@ zo gemarkeerd en is aanvaard met de merge van 0038.
     document met eigenaarstatus. Het geldende bereik is de lane-herkenning (`scripts/kit/lane.mjs`), beschreven in
     `docs/operations/agent-doorloop.md`.
 15. **Herkenning** (was 0029 punt 7, gewijzigd door 0038 punt 5). `check-document-status` herkent zonder record alleen een
-    besluit-PR of een feature-lane-PR; bij een rename tellen beide paden. Past een PR in geen van beide, dan heeft de status een
-    record op main nodig. Diff-guard en CODEOWNERS blijven voor elk gate-pad gelden.
+    besluit-PR of een feature-lane-PR; bij een rename tellen beide paden. Past een PR in geen van beide, dan wordt de status
+    geweigerd. Diff-guard en CODEOWNERS blijven voor elk gate-pad gelden.
 
 **Werkstraat tot de merge** (was 0025, 0027 punt 7 en 0030 punt 1 en 8)
 

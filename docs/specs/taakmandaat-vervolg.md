@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd # voorstel | goedgekeurd | gebouwd | vervallen — alleen de eigenaar zet goedgekeurd; gebouwd: # PR-nummer of testpad
+status: vervallen
 namespace: mandate-follow-up
 ---
 

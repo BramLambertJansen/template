@@ -2,6 +2,9 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-10-30 (#385): in Gevolgen vervalt het taakmandaat; de bronbestanden blijven als scope
+([0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md)).
+
 ## Context
 
 De eigenaar bevestigde op 2026-10-21 twee keuzes uit de
@@ -75,14 +78,13 @@ beheerview en UI. Geen nieuwe dependency. De generator past niet bij deze uitbre
 bestaande view; de bouw gebruikt de bestaande routecontracten en UI-componenten.
 
 Vóór de bouw worden de uitzondering op auth-kolomrechten in framework §6, de betrokken ADR-verwijzingen en de
-database-invarianten met eigenaarakkoord bijgewerkt. De exacte beschermde bronbestanden voor het taakmandaat
+database-invarianten met eigenaarakkoord bijgewerkt. De bronbestanden van dit besluit
 zijn `src/core/api/auth/auth.ts`, `src/core/api/auth/options.ts`, `src/core/api/auth/hooks.ts`, de nieuwe
 `src/core/api/auth/account-lifecycle.ts`, `src/core/api/auth/session-policy.ts` en
 `src/core/api/auth/session-guard.ts` en `src/core/api/auth/profile.ts`, plus `src/api/app.ts` en `src/api/server.ts`.
 De hulpmodule bundelt de controles en registratie
-uit dit besluit; het mandaat geeft geen extra toegang tot scripts, checks of configuratie.
-De overige beschermde docs en bestaande tests behouden hun eigen reviewvereisten volgens
-[ADR 0027](0027-taakmandaat-voor-frameworkwerk.md).
+uit dit besluit.
+Beschermde docs en bestaande tests behouden hun eigen reviewvereisten.
 
 Integratie- en pgTAP-tests bewijzen versies, auth-toegang, atomaire audit en de gemengde laatste-admin-races.
 E2E bewijst laatste-loginweergave en alle vier statuscombinaties, inclusief ongeldige oude cookies na herstel.

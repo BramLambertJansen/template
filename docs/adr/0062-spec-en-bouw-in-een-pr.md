@@ -4,6 +4,8 @@ Status: geaccepteerd
 
 Herzien: 2026-10-30 (#379): punt 4 geldt ook na de merge; voor een gemergde PR vervalt "de PR open is" uit 0046 punt 10 en
 volgt het bouwbewijs uit de mergecommit ([spec](../specs/gebouwd-na-merge.md)).
+Herzien: 2026-10-30 (#385): in punt 2 vervallen "gate-label" en "of mandaat"
+([0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md)).
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 5, 10, 12, 14 en 15. Drempel: A3 (de lanetoets in
 `check-document-status` laat meer toe) en A4 (afspraken uit een geaccepteerd ADR). De status is de bedoelde acceptatie in dit
@@ -32,8 +34,8 @@ toch samen bij de merge.
      uit `new:resource`, en een gewijzigde of verwijderde migratie;
    - de bewaking zelf: de paden in `altijdVragen` (CI, hooks, Claude-instellingen, het gate- en besluitregister,
      dependencies) en de scripts die over besluiten en merges oordelen.
-   Bij twijfel geldt kritiek. Voor overige `src/core`, `scripts/`, `rails/` en instructies blijven CODEOWNERS, gate-label,
-   diff-guard, rolhek en eigenaarreview gelden; een spec in de PR geeft geen extra schrijfrechten of mandaat.
+   Bij twijfel geldt kritiek. Voor overige `src/core`, `scripts/`, `rails/` en instructies blijven CODEOWNERS,
+   diff-guard, rolhek en eigenaarreview gelden; een spec in de PR geeft geen extra schrijfrechten.
 3. **Borging van de spec in dezelfde PR.** Elke spec in de PR krijgt vóór het bouwen een spec-review door een onafhankelijke
    reviewer, die ook de keuze "niet kritiek" toetst. De spec staat in de PR in een commit vóór de eerste commit met code of
    tests (`document-status` controleert de volgorde). De PR-beschrijving opent met wat er besloten wordt en de uitslag van de

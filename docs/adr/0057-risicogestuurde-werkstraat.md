@@ -2,6 +2,9 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-10-30 (#385): in punt 1 vervallen de exacte mandaten voor beschermde broncode
+([0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md)).
+
 Wijzigt de vaste rolvolgorde uit framework §8 en [0046](0046-werkstraat-en-beslisroute.md), de organisatievoorwaarde
 uit [0039](0039-stack-provider-neutraal-en-toolchain.md) punt 8 en de activering van [0054](0054-gebouwd-in-de-bouw-pr.md).
 Drempel: A3 (lokale dubbele controles en verplichte rolwissels verminderen), A4 (bestaande besluiten aanpassen).
@@ -22,7 +25,7 @@ onnodig opstartwerk, geen algemene garantie voor doorlooptijd of tokenbesparing.
    reviewer. Een aparte tester en architect zijn verplicht bij A2/A3/A4, auth, wijzigingen van het RLS-/rollenmodel,
    migraties op bestaande data of buiten het vaste generatorpatroon, nieuwe dependencies,
    de vertrouwensgrens of moeilijk terug te draaien gedrag. Twijfel gaat naar dit zwaardere pad. De bestaande specplicht
-   voor migraties, routes en permissies en exacte mandaten voor beschermde broncode blijven gelden.
+   voor migraties, routes en permissies blijft gelden.
 2. **Eén lokale volledige eindcontrole.** Bestandsfeedback en gerichte lint-, type- en testcontroles blijven. Developer-stop
    herhaalt geen volledige `gate:fast`; vóór push draait die eenmaal via de bestaande pre-push-hook. Iedere PR behoudt
    volledige CI. Er komt geen hergebruik van een oude groene CI-status of generieke cache die tests kan overslaan.
