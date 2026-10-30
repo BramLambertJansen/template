@@ -235,6 +235,38 @@ describe('gebouwd-na-merge/AC-3: de mergecommit hoort in HEAD en heeft de PR-hea
   });
 });
 
+describe('gebouwd-na-merge/AC-3: alleen een merge naar main telt', () => {
+  test('gebouwd-na-merge/AC-3: PR n gemerged in een zijbranch die via de statusbranch in HEAD zit, faalt in docs:status en CI', () => {
+    const { root, spec } = maakMain();
+    git(root, ['switch', '-q', '-c', 'side-x', 'main']);
+    git(root, ['switch', '-q', '-c', FEATURE, 'side-x']);
+    write(root, SOURCE, 'export const version = 2;\n');
+    const prHead = commit(root, 'feat: bouw');
+    git(root, ['switch', '-q', 'side-x']);
+    git(root, ['merge', '-q', '--no-ff', '-m', `Merge pull request #${String(PR)}`, FEATURE]);
+    const mergeSha = git(root, ['rev-parse', 'HEAD']);
+    expect(git(root, ['rev-parse', 'origin/main'])).toBe(spec);
+    // De statusbranch haalt X binnen en draait de wijzigingen terug: de tree is main plus (straks) de statusregel.
+    statusBranch(root);
+    git(root, ['merge', '-q', '--no-ff', '--no-edit', 'side-x']);
+    git(root, ['checkout', spec, '--', SOURCE]);
+    commit(root, 'revert: zijbranch');
+    expect(git(root, ['diff', '--name-only', spec, 'HEAD'])).toBe('');
+    const merge = { prHead, mergeSha };
+    docsWeigert(root, gemergd(merge), IN_HEAD);
+    ciWeigert(ci(root, statusCommit(root, prHead), gemergd(merge)), IN_HEAD);
+  });
+
+  test('gebouwd-na-merge/AC-3: een PR met basisbranch develop faalt in docs:status en CI', () => {
+    const { root } = maakMain();
+    const merge = mergePr(root);
+    statusBranch(root);
+    const env = gemergd(merge, { STUB_PR_BASE: 'develop' });
+    docsWeigert(root, env, IN_HEAD);
+    ciWeigert(ci(root, statusCommit(root, merge.prHead), env), IN_HEAD);
+  });
+});
+
 describe('gebouwd-na-merge/AC-4: de spec staat ongewijzigd op goedgekeurd in de mergecommit', () => {
   test.each([
     [
@@ -402,6 +434,41 @@ describe('gebouwd-na-merge/AC-10: een gemergde PR zonder bouwpad', () => {
     git(root, ['update-ref', 'refs/remotes/origin/main', mergeSha]);
     statusBranch(root);
     docsWeigert(root, gemergd({ prHead, mergeSha }), BOUWPAD);
+  });
+});
+
+describe('gebouwd-na-merge/AC-10: alleen een volledig backtick-token is een genoemd pad', () => {
+  const TOKENS = [
+    '---\nstatus: goedgekeurd\nnamespace: bouw\n---\n\n# Spec bouw\n\n',
+    '- `src/core/web/ui/a.tsx en src/core/web/ui/b.tsx`\n',
+    `- \`${SOURCE}.bak\`\n`,
+    '- `eerste`src/core/web/ui/c.tsx`tweede`\n',
+  ].join('');
+  const PADEN = [SOURCE, 'src/core/web/ui/a.tsx', 'src/core/web/ui/b.tsx', 'src/core/web/ui/c.tsx'];
+
+  test.each([
+    ['deel van een token met spaties', ['src/core/web/ui/a.tsx', 'src/core/web/ui/b.tsx']],
+    ['voorvoegsel van een langer token (.bak)', [SOURCE]],
+    ['tussen twee tokens (`eerste`pad`tweede`)', ['src/core/web/ui/c.tsx']],
+  ])('gebouwd-na-merge/AC-10: een pad als %s telt niet als bouwpad', async (_naam, paden) => {
+    const { root } = maakMain({ spec: TOKENS });
+    const merge = mergePr(root, {
+      bron: (r) => {
+        for (const pad of paden) write(r, pad, 'gewijzigd\n');
+      },
+    });
+    expect(await mergedEvidence(root, merge.mergeSha, merge.mergeSha)).toMatchObject({ bouwpaden: [] });
+  });
+
+  test('gebouwd-na-merge/AC-10: een PR die alleen zulke paden wijzigt, faalt in docs:status', () => {
+    const { root } = maakMain({ spec: TOKENS });
+    const merge = mergePr(root, {
+      bron: (r) => {
+        for (const pad of PADEN) write(r, pad, 'gewijzigd\n');
+      },
+    });
+    statusBranch(root);
+    docsWeigert(root, gemergd(merge), BOUWPAD);
   });
 });
 

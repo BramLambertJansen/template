@@ -6,8 +6,8 @@ import { parseCheckRun, parsePullRequest } from '../../scripts/kit/github-eviden
 type BuiltEvidence = Parameters<typeof canRecordBuilt>[1];
 type Authority = Parameters<typeof canRecordBuilt>[2];
 type CheckRun = BuiltEvidence['checks'][number];
-// `mergeSha` hoort bij de gemergde route (gebouwd-na-merge); de intersectie houdt de helper geldig voor en na de bouw.
-type PullRequest = BuiltEvidence['pr'] & { mergeSha: string | null };
+// `mergeSha` en `baseBranch` horen bij de gemergde route (gebouwd-na-merge); de intersectie houdt de helper geldig voor en na de bouw.
+type PullRequest = BuiltEvidence['pr'] & { mergeSha: string | null; baseBranch: string };
 
 // Autoritatieve feiten als invoer voor pure validators; deze tests vervangen geen GitHub- of applicatiecontrole.
 const SPEC = 'docs/specs/built-evidence.md';
@@ -41,6 +41,7 @@ function pullRequest(overrides: Partial<PullRequest> = {}): PullRequest {
     state: 'open',
     merged: false,
     mergeSha: null,
+    baseBranch: 'main',
     ...overrides,
   };
 }
@@ -77,7 +78,7 @@ function authority(overrides: Partial<Authority> = {}): Authority {
 function rawPullRequest(overrides: Record<string, unknown> = {}) {
   return {
     number: 123,
-    base: { repo: { full_name: REPOSITORY } },
+    base: { ref: 'main', repo: { full_name: REPOSITORY } },
     head: { repo: { full_name: REPOSITORY }, ref: BRANCH, sha: CURRENT_SHA },
     state: 'open',
     merged: false,
@@ -282,7 +283,9 @@ describe('parsePullRequest: onbekende GitHub JSON omzetten naar verplichte PR-fe
 
   test.each([
     { name: 'base.repo ontbreekt', raw: rawPullRequest({ base: {} }) },
-    { name: 'base.repo.full_name ontbreekt', raw: rawPullRequest({ base: { repo: {} } }) },
+    { name: 'base.repo.full_name ontbreekt', raw: rawPullRequest({ base: { ref: 'main', repo: {} } }) },
+    { name: 'base.ref ontbreekt', raw: rawPullRequest({ base: { repo: { full_name: REPOSITORY } } }) },
+    { name: 'base.ref als getal', raw: rawPullRequest({ base: { ref: 1, repo: { full_name: REPOSITORY } } }) },
     { name: 'head.repo ontbreekt', raw: rawPullRequest({ head: withoutKey(rawPullRequest().head, 'repo') }) },
     { name: 'head.repo.full_name ontbreekt', raw: rawPullRequest({ head: { ...rawPullRequest().head, repo: {} } }) },
     { name: 'head.ref ontbreekt', raw: rawPullRequest({ head: withoutKey(rawPullRequest().head, 'ref') }) },

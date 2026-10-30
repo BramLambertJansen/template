@@ -180,7 +180,7 @@ if (pr !== null) {
     state: process.env.STUB_PR_STATE ?? (merged ? 'closed' : 'open'),
     merged,
     merge_commit_sha: process.env.STUB_MERGE_SHA ?? null,
-    base: { repo: { full_name: repo } },
+    base: { ref: process.env.STUB_PR_BASE ?? 'main', repo: { full_name: repo } },
     head: {
       repo: { full_name: process.env.STUB_PR_HEAD_REPO ?? repo },
       ref: process.env.STUB_PR_REF ?? '${BRANCH}',

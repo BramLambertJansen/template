@@ -9,7 +9,7 @@ import { roep } from '../hooks/follow-up-kit';
 type BuiltEvidence = Parameters<typeof canRecordBuilt>[1];
 type Authority = Parameters<typeof canRecordBuilt>[2];
 type CheckRun = BuiltEvidence['checks'][number];
-type PullRequest = BuiltEvidence['pr'] & { mergeSha: string | null };
+type PullRequest = BuiltEvidence['pr'] & { mergeSha: string | null; baseBranch: string };
 interface Merged {
   inHead: boolean;
   parents: string[];
@@ -61,6 +61,7 @@ function pullRequest(overrides: Partial<PullRequest> = {}): PullRequest {
     state: 'closed',
     merged: true,
     mergeSha: MERGE_SHA,
+    baseBranch: 'main',
     ...overrides,
   };
 }
@@ -144,6 +145,15 @@ describe('gebouwd-na-merge: de gemergde route van builtRefusal', () => {
     expect(await weigering(bewijs)).toBe(IN_HEAD);
     expect(canRecordBuilt({ file: SPEC, text: BUILT }, bewijs, authority())).toBe(false);
   });
+
+  test.each(['feature-x', 'develop'])(
+    'gebouwd-na-merge/AC-3: een PR gemerged in %s in plaats van main faalt',
+    async (baseBranch) => {
+      const bewijs = evidence({ pr: pullRequest({ baseBranch }) });
+      expect(await weigering(bewijs)).toBe(IN_HEAD);
+      expect(canRecordBuilt({ file: SPEC, text: BUILT }, bewijs, authority())).toBe(false);
+    },
+  );
 
   test('gebouwd-na-merge/AC-3: zonder mergebewijs faalt', async () => {
     expect(await weigering(zonderMerged())).toBe(IN_HEAD);
@@ -262,7 +272,7 @@ describe('gebouwd-na-merge: de gemergde route van builtRefusal', () => {
 function rawPullRequest(overrides: Record<string, unknown> = {}) {
   return {
     number: 123,
-    base: { repo: { full_name: REPOSITORY } },
+    base: { ref: 'main', repo: { full_name: REPOSITORY } },
     head: { repo: { full_name: REPOSITORY }, ref: PR_BRANCH, sha: PR_HEAD },
     state: 'closed',
     merged: true,
@@ -274,6 +284,12 @@ function rawPullRequest(overrides: Record<string, unknown> = {}) {
 describe('gebouwd-na-merge: parsePullRequest levert de mergecommit', () => {
   test('gebouwd-na-merge/AC-1: een gemergde PR draagt merge_commit_sha als mergeSha', () => {
     expect(parsePullRequest(rawPullRequest())).toStrictEqual(pullRequest());
+  });
+
+  test('gebouwd-na-merge/AC-3: parsePullRequest leest de basisbranch uit base.ref', () => {
+    const raw = rawPullRequest({ base: { ref: 'feature-x', repo: { full_name: REPOSITORY } } });
+    expect(parsePullRequest(raw)).toStrictEqual(pullRequest({ baseBranch: 'feature-x' }));
+    expect(() => parsePullRequest(rawPullRequest({ base: { repo: { full_name: REPOSITORY } } }))).toThrow();
   });
 
   test('gebouwd-na-merge/AC-8: een open PR heeft geen mergeSha, ook niet met een testmerge-SHA van GitHub', () => {
