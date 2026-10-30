@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: Gebouwd
 namespace: spec-en-bouw
 ---
 
