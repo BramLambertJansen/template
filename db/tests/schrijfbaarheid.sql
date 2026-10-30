@@ -2,10 +2,9 @@
 -- AC-9; leerticket #328): I = elk verplicht insertveld heeft een bron, D = een delete door app_definer ziet de rijen die hij
 -- raakt. Alles draait tegen de echte gemigreerde database in één transactie die terugdraait.
 --
--- TESTER-EERST: de assertions, fixtures en plan(N) staan vast. De BOUWER vult uitsluitend de bodies in van de HELPER-SKELETTEN
--- hieronder (sectie 1: eff_recht, i_kandidaten, i_overtredingen, i_insert_probe, d_kandidaten, d_structuur, d_gedrag,
--- d_delete_probe). Elk skelet is syntactisch geldig en geeft een verkeerde maar geldige waarde (lege set, false, rowcount 0/-1,
--- diagnose 'skelet'), zodat de suite nu inhoudelijk rood is. Geen assertion, geen plan, geen concrete helper of fixture wijzigen.
+-- De catalogushelpers en probe-executors staan in sectie 1. De goede en opzettelijk foute fixtures toetsen zowel hun
+-- structuurcontrole als de werkelijk uitgevoerde insert of delete. Registraties zijn invoer voor die handelingen,
+-- geen vrijstelling van de controles; de observaties leggen ook de ongewijzigde beschermde rijen vast.
 --
 -- HELPERCONTRACTEN (alle in pg_temp; aanroepen met prefix pg_temp.):
 --   eff_recht(p_rel regclass, p_rol text, p_recht text, p_kolom text default null) returns boolean
@@ -77,35 +76,245 @@ create temp table d_uitvoering (tabel text, rijen integer, foutcode text, meldin
 create temp table d_observatie (moment text, tabel text, rijen jsonb);
 
 -- =====================================================================================================================
--- 1. HELPER-SKELETTEN: de bouwer vult alleen deze bodies in (verkeerde maar geldige waarden)
+-- 1. Catalogushelpers en probe-executors
 -- =====================================================================================================================
 create function pg_temp.eff_recht(p_rel regclass, p_rol text, p_recht text, p_kolom text default null)
-  returns boolean language sql stable as $$ select false $$;
+  returns boolean language sql stable as $$
+  select coalesce(case
+    when upper(p_recht) in ('INSERT', 'SELECT', 'UPDATE', 'REFERENCES') then
+      case when p_kolom is null then pg_catalog.has_any_column_privilege(r.oid, p_rel, p_recht)
+           else pg_catalog.has_column_privilege(r.oid, p_rel, a.attnum, p_recht) end
+    else pg_catalog.has_table_privilege(r.oid, p_rel, p_recht) end, false)
+  from pg_catalog.pg_roles r
+  left join pg_catalog.pg_attribute a on a.attrelid = p_rel and a.attname = p_kolom
+    and a.attnum > 0 and not a.attisdropped
+  where r.rolname = p_rol
+$$;
 
 create function pg_temp.i_kandidaten(p_rel regclass default null, p_rollen text[] default null)
-  returns setof text language sql stable as $$ select null::text where false $$;
+  returns setof text language sql stable as $$
+  select format('%I.%I|%s', n.nspname, c.relname, r.rol)
+  from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+  cross join unnest(coalesce(p_rollen, array['app_authenticated', 'api_user', 'auth_service', 'app_definer'])) r(rol)
+  where c.relkind in ('r', 'p')
+    and (case when p_rel is null then n.nspname in ('public', 'app') else c.oid = p_rel end)
+    and pg_temp.eff_recht(c.oid, r.rol, 'INSERT')
+$$;
 
 create function pg_temp.i_overtredingen(p_rel regclass default null, p_rollen text[] default null)
-  returns setof text language sql stable as $$ select null::text where false $$;
+  returns setof text language sql stable as $$
+  with ontbreekt as (
+    select format('%I.%I', n.nspname, c.relname) as tabel, c.oid, r.rol, a.attname as kolom
+    from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+    join pg_catalog.pg_attribute a on a.attrelid = c.oid
+    cross join unnest(coalesce(p_rollen, array['app_authenticated', 'api_user', 'auth_service', 'app_definer'])) r(rol)
+    where c.relkind in ('r', 'p')
+      and (case when p_rel is null then n.nspname in ('public', 'app') else c.oid = p_rel end)
+      and pg_temp.eff_recht(c.oid, r.rol, 'INSERT')
+      and a.attnum > 0 and not a.attisdropped and a.attnotnull
+      and not pg_temp.eff_recht(c.oid, r.rol, 'INSERT', a.attname)
+      and a.attidentity = '' and a.attgenerated = ''
+      and not exists (select 1 from pg_catalog.pg_attrdef d where d.adrelid = c.oid and d.adnum = a.attnum)
+  ), registraties as (
+    select g.*, count(*) over (partition by tabel, rol, kolom) as aantal
+    from pg_temp.i_registratie g
+    where (p_rel is null or g.tabel = (select format('%I.%I', n.nspname, c.relname)
+      from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid = c.relnamespace where c.oid = p_rel))
+      and (p_rollen is null or g.rol = any(p_rollen))
+  ), geldig as (
+    select g.tabel, g.rol, g.kolom from registraties g
+    join ontbreekt m on (m.tabel, m.rol, m.kolom) = (g.tabel, g.rol, g.kolom)
+    where g.aantal = 1 and nullif(btrim(g.reden), '') is not null
+      and jsonb_typeof(g.invoer) = 'object'
+      and exists (select 1 from pg_catalog.pg_trigger t where t.tgrelid = m.oid
+                  and not t.tgisinternal and t.tgenabled in ('O', 'A') and (t.tgtype::integer & 7) = 7)
+      and (select count(*) = 1 and bool_and(u.rijen = 1 and u.foutcode = '00000')
+           from pg_temp.i_uitvoering u where (u.tabel, u.rol, u.kolom) = (g.tabel, g.rol, g.kolom))
+  )
+  select format('I|%s|%s|%s|ontbrekende insertbron', m.tabel, m.rol, m.kolom)
+  from ontbreekt m where not exists (
+    select 1 from geldig g where (g.tabel, g.rol, g.kolom) = (m.tabel, m.rol, m.kolom))
+  union
+  select format('I|%s|%s|%s|ongeldige bronregistratie', g.tabel, g.rol, g.kolom)
+  from registraties g where not exists (
+    select 1 from geldig v where (v.tabel, v.rol, v.kolom) = (g.tabel, g.rol, g.kolom))
+$$;
 
 create function pg_temp.i_insert_probe(p_rel regclass, p_rol text, p_invoer jsonb)
-  returns table (rijen integer, foutcode text, melding text) language sql as $$
-  select 0, 'skelet'::text, 'i_insert_probe is nog niet geïmplementeerd'::text
-$$;
+  returns table (rijen integer, foutcode text, melding text) language plpgsql as $$
+declare v_kolommen text; v_waarden text; v_stmt text;
+begin
+  rijen := 0;
+  begin
+    if p_rol is null or p_rol not in ('app_authenticated', 'app_definer') then
+      raise exception 'INSERT: rol % is niet beschikbaar voor deze executor', p_rol using errcode = '42501';
+    end if;
+    if p_rel is null or jsonb_typeof(p_invoer) is distinct from 'object' then
+      raise exception 'INSERT: ongeldige tabel of invoerregistratie' using errcode = '22023';
+    end if;
+    if exists (select 1 from jsonb_object_keys(p_invoer) k
+               where not exists (select 1 from pg_catalog.pg_attribute a
+                 where a.attrelid = p_rel and a.attname = k and a.attnum > 0 and not a.attisdropped)) then
+      raise exception 'INSERT: onbekende invoerkolom' using errcode = '22023';
+    end if;
+    select string_agg(format('%I', a.attname), ', ' order by a.attnum),
+           string_agg(format('%L::%s', e.value #>> '{}', pg_catalog.format_type(a.atttypid, a.atttypmod)), ', ' order by a.attnum)
+      into v_kolommen, v_waarden
+    from jsonb_each(p_invoer) e join pg_catalog.pg_attribute a on a.attrelid = p_rel and a.attname = e.key;
+    v_stmt := case when v_kolommen is null then format('insert into %s default values', pg_temp.qn(p_rel))
+                   else format('insert into %s (%s) values (%s)', pg_temp.qn(p_rel), v_kolommen, v_waarden) end;
+    execute format('set local role %I', p_rol);
+    execute v_stmt;
+    get diagnostics rijen = row_count;
+    foutcode := '00000'; melding := 'INSERT uitgevoerd';
+  exception when others then
+    rijen := 0; foutcode := sqlstate; melding := 'INSERT: ' || sqlerrm;
+  end;
+  reset role;
+  return next;
+end $$;
 
 create function pg_temp.d_kandidaten(p_rel regclass default null, p_rol text default 'app_definer')
-  returns setof text language sql stable as $$ select null::text where false $$;
+  returns setof text language sql stable as $$
+  select format('%I.%I|%s', n.nspname, c.relname, r.rolname)
+  from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+  cross join pg_catalog.pg_roles r
+  where c.relkind in ('r', 'p') and c.relrowsecurity and c.relforcerowsecurity and r.rolname = p_rol
+    and (case when p_rel is null then n.nspname in ('public', 'app') else c.oid = p_rel end)
+    and pg_catalog.has_table_privilege(r.oid, c.oid, 'DELETE')
+    and exists (select 1 from pg_catalog.pg_policy p where p.polrelid = c.oid and p.polpermissive and p.polcmd in ('d', '*')
+      and exists (select 1 from unnest(p.polroles) pr(oid)
+        where case when pr.oid = 0 then true else pg_catalog.pg_has_role(r.oid, pr.oid, 'USAGE') end))
+$$;
 
 create function pg_temp.d_structuur(p_rel regclass default null, p_rol text default 'app_definer')
-  returns setof text language sql stable as $$ select null::text where false $$;
+  returns setof text language sql stable as $$
+  select format('D|%I.%I|%s|permissieve SELECT/ALL-policy ontbreekt', n.nspname, c.relname, r.rolname)
+  from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+  cross join pg_catalog.pg_roles r
+  where r.rolname = p_rol
+    and format('%I.%I|%s', n.nspname, c.relname, r.rolname) in (select pg_temp.d_kandidaten(p_rel, p_rol))
+    and not exists (select 1 from pg_catalog.pg_policy p where p.polrelid = c.oid and p.polpermissive and p.polcmd in ('r', '*')
+      and exists (select 1 from unnest(p.polroles) pr(oid)
+        where case when pr.oid = 0 then true else pg_catalog.pg_has_role(r.oid, pr.oid, 'USAGE') end))
+$$;
 
 create function pg_temp.d_gedrag(p_rel regclass default null, p_rol text default 'app_definer')
-  returns setof text language sql stable as $$ select null::text where false $$;
+  returns setof text language plpgsql stable as $$
+declare t record; g record; u record; x record; k text; v_prefix text; v_n integer; v_voor jsonb; v_na jsonb;
+        v_observatie boolean; v_uitkomst text; v_voor_n integer; v_na_n integer;
+begin
+  for t in select c.oid, pg_temp.qn(c.oid) as tabel from pg_catalog.pg_class c
+    where pg_temp.qn(c.oid) || '|' || p_rol in (select pg_temp.d_kandidaten(p_rel, p_rol)) loop
+    v_prefix := 'D|' || t.tabel || '|' || p_rol || '|';
+    if (select count(*) from pg_temp.d_probe p where p.tabel = t.tabel) <> 1
+       or not exists (select 1 from pg_temp.d_probe_rij r where r.tabel = t.tabel) then
+      return next v_prefix || 'niet geregistreerd'; continue;
+    end if;
+    select * into g from pg_temp.d_probe p where p.tabel = t.tabel;
+    if cardinality(g.filterkolommen) is null or cardinality(g.filterkolommen) = 0
+       or exists (select 1 from unnest(g.filterkolommen) a(k) group by a.k having a.k is null or count(*) > 1) then
+      return next v_prefix || 'ongeldige filterregistratie'; continue;
+    end if;
+    foreach k in array g.filterkolommen loop
+      if not coalesce(pg_temp.eff_recht(t.oid, p_rol, 'SELECT', k), false) then
+        return next v_prefix || 'SELECT-recht op ' || coalesce(k, '<null>');
+      end if;
+    end loop;
+    if exists (select 1 from pg_temp.d_probe_rij r where r.tabel = t.tabel and (
+      nullif(btrim(r.rij), '') is null or nullif(btrim(r.reden), '') is null
+      or r.verwacht is null or r.verwacht not in ('verwijderd', 'beschermd')
+      or jsonb_typeof(r.waarden) is distinct from 'object')) then
+      return next v_prefix || 'ongeldige rijregistratie'; continue;
+    end if;
+    if exists (select 1 from pg_temp.d_probe_rij r where r.tabel = t.tabel and (
+      not r.waarden ?& g.filterkolommen or (select count(*) from jsonb_object_keys(r.waarden)) <> cardinality(g.filterkolommen)
+      or exists (select 1 from jsonb_each(r.waarden) e where e.value = 'null'::jsonb)))
+      or exists (select 1 from pg_temp.d_probe_rij r where r.tabel = t.tabel group by r.rij having count(*) > 1)
+      or exists (select 1 from pg_temp.d_probe_rij r where r.tabel = t.tabel group by r.waarden having count(*) > 1) then
+      return next v_prefix || 'ongeldige rijregistratie'; continue;
+    end if;
+    select count(*) into v_n from pg_temp.d_probe_rij r where r.tabel = t.tabel and r.verwacht = 'verwijderd';
+    if v_n = 0 then return next v_prefix || 'geen rij verwacht verwijderd'; end if;
+    if t.tabel = 'app.audit_log' and not exists (select 1 from pg_temp.d_probe_rij r
+      where r.tabel = t.tabel and r.verwacht = 'beschermd') then
+      return next v_prefix || 'beschermde grenscasus ontbreekt';
+    end if;
+    if (select count(*) from pg_temp.d_uitvoering e where e.tabel = t.tabel) <> 1 then
+      return next v_prefix || 'niet uitgevoerd';
+    else
+      select * into u from pg_temp.d_uitvoering e where e.tabel = t.tabel;
+      if p_rol <> 'app_definer' or u.foutcode is distinct from '00000' or nullif(btrim(u.stmt), '') is null then
+        return next v_prefix || 'DELETE uitvoering: ' || coalesce(u.foutcode, 'ontbreekt');
+      end if;
+      if u.rijen is null or u.rijen < 1 or u.rijen <> v_n then
+        return next v_prefix || format('rowcount %s verwacht %s', coalesce(u.rijen::text, 'null'), v_n);
+      end if;
+    end if;
+    v_observatie := (select count(*) = 2 and count(*) filter (where o.moment = 'voor') = 1
+      and count(*) filter (where o.moment = 'na') = 1 and bool_and(coalesce(jsonb_typeof(o.rijen) = 'array', false))
+      from pg_temp.d_observatie o where o.tabel = t.tabel);
+    if not coalesce(v_observatie, false) then
+      return next v_prefix || 'observatie ontbreekt'; continue;
+    end if;
+    select o.rijen into v_voor from pg_temp.d_observatie o where o.tabel = t.tabel and o.moment = 'voor';
+    select o.rijen into v_na from pg_temp.d_observatie o where o.tabel = t.tabel and o.moment = 'na';
+    for x in select * from pg_temp.d_probe_rij r where r.tabel = t.tabel loop
+      select count(*) into v_voor_n from jsonb_array_elements(v_voor) e(v) where e.v @> x.waarden;
+      select count(*) into v_na_n from jsonb_array_elements(v_na) e(v) where e.v @> x.waarden;
+      v_uitkomst := pg_temp.d_uitkomst(t.tabel, x.rij);
+      if v_voor_n <> 1 or v_na_n <> (case when x.verwacht = 'verwijderd' then 0 else 1 end)
+         or v_uitkomst is distinct from (case when x.verwacht = 'beschermd' then 'ongewijzigd' else x.verwacht end) then
+        return next v_prefix || format('rij %s: %s verwacht %s', x.rij, v_uitkomst, x.verwacht);
+      end if;
+    end loop;
+  end loop;
+end $$;
 
 create function pg_temp.d_delete_probe(p_tabel text)
-  returns table (rijen integer, foutcode text, melding text, stmt text) language sql as $$
-  select -1, 'skelet'::text, 'd_delete_probe is nog niet geïmplementeerd'::text, ''::text
-$$;
+  returns table (rijen integer, foutcode text, melding text, stmt text) language plpgsql as $$
+declare v_rel regclass; v_filter text[]; v_k text; v_type text; v_waarden text; v_predicaten text[] := '{}';
+begin
+  rijen := 0; stmt := '';
+  begin
+    select c.oid into v_rel from pg_catalog.pg_class c where pg_temp.qn(c.oid) = p_tabel
+      and c.relkind in ('r', 'p') and c.relrowsecurity and c.relforcerowsecurity;
+    if v_rel is null or (select count(*) from pg_temp.d_probe p where p.tabel = p_tabel) <> 1 then
+      raise exception 'DELETE: ongeldige tabel of proberegistratie' using errcode = '22023';
+    end if;
+    select p.filterkolommen into v_filter from pg_temp.d_probe p where p.tabel = p_tabel;
+    if cardinality(v_filter) is null or cardinality(v_filter) = 0
+       or exists (select 1 from unnest(v_filter) a(k) group by a.k having a.k is null or count(*) > 1)
+       or not exists (select 1 from pg_temp.d_probe_rij r where r.tabel = p_tabel) then
+      raise exception 'DELETE: ongeldige filters of ontbrekende proefrijen' using errcode = '22023';
+    end if;
+    if exists (select 1 from pg_temp.d_probe_rij r where r.tabel = p_tabel and jsonb_typeof(r.waarden) is distinct from 'object') then
+      raise exception 'DELETE: ongeldige proefwaarden' using errcode = '22023';
+    end if;
+    if exists (select 1 from pg_temp.d_probe_rij r where r.tabel = p_tabel and (
+      not r.waarden ?& v_filter or (select count(*) from jsonb_object_keys(r.waarden)) <> cardinality(v_filter)
+      or exists (select 1 from jsonb_each(r.waarden) e where e.value = 'null'::jsonb))) then
+      raise exception 'DELETE: elke proefrij moet alle filterkolommen invullen' using errcode = '22023';
+    end if;
+    foreach v_k in array v_filter loop
+      select pg_catalog.format_type(a.atttypid, a.atttypmod) into v_type from pg_catalog.pg_attribute a
+        where a.attrelid = v_rel and a.attname = v_k and a.attnum > 0 and not a.attisdropped;
+      if v_type is null then raise exception 'DELETE: onbekende filterkolom %', v_k using errcode = '22023'; end if;
+      select string_agg(format('%L::%s', r.waarden ->> v_k, v_type), ', ' order by r.rij) into v_waarden
+        from pg_temp.d_probe_rij r where r.tabel = p_tabel;
+      v_predicaten := array_append(v_predicaten, format('%I in (%s)', v_k, v_waarden));
+    end loop;
+    stmt := format('delete from %s where %s', pg_temp.qn(v_rel), array_to_string(v_predicaten, ' and '));
+    execute 'set local role app_definer';
+    execute stmt;
+    get diagnostics rijen = row_count;
+    foutcode := '00000'; melding := 'DELETE uitgevoerd';
+  exception when others then
+    rijen := 0; foutcode := sqlstate; melding := 'DELETE: ' || sqlerrm;
+  end;
+  reset role;
+  return next;
+end $$;
 
 -- =====================================================================================================================
 -- 2. CONCRETE ONDERSTEUNING (niet wijzigen)
