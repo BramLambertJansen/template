@@ -472,7 +472,7 @@ uitslagen met `pnpm pr:verify <nummer> --watch`; ontbrekend runnerbewijs wordt g
 | `.claude/rules/*.md` | Conventies per pad | Bij bestanden op dat pad | ≤ 60 regels |
 | `.claude/skills/*/SKILL.md` | Procedures met live feiten | Bij gebruik | ≤ 200 regels |
 | `docs/specs/` | Featurespecs | Tijdens de feature | ≤ 10 KB per spec |
-| `docs/adr/` | Beslissingen (`archief/`: afgesloten) | Op verzoek | ≤ 6 KB per ADR |
+| `docs/adr/` | Beslissingen (afgesloten in het archief) | Op verzoek | ≤ 6 KB per ADR |
 | `docs/framework.md` | Dit regelboek | Op verzoek | ≤ 40 KB |
 | `docs/operations/` | Release, rollback, back-up en herstel | Bij release of incident | 1–2 pagina's |
 
@@ -514,7 +514,7 @@ Live feiten (gates, routes, componenten, nummers) komen uit `scripts/kit/feiten.
   spec- en ADR-statussen uit de vaste woordenlijst; een goedgekeurde spec heeft "Hergebruik en UX"; elk AC-id van een gebouwde spec heeft een testbestand met `<namespace>/AC-n`, of met het AC-id samen met de specnaam of namespace; elk component heeft een rij in de catalogus.
   Verder (`scripts/kit/check-docs.mjs`): `framework §N` bestaat (§1–§12, §11a; niet in `docs/adr/`); een backtick-pad hier bestaat of
   heeft direct `(nog niet gebouwd)` erachter; een R-id in `.claude/rules/*` staat in dit regelboek, dat elk R-id één keer definieert;
-  links binnen `docs/adr/` lossen ook op naar `archief/`; de budgetten uit §9 als ratchet in `.kit/baseline.json`.
+  links binnen `docs/adr/` lossen ook op naar het archief; de budgetten uit §9 als ratchet in `.kit/baseline.json`.
 - **Besluit en status** (ADR 0046): de merge is de acceptatie. Architect of hoofdsessie schrijft de eigenaarstatus in het
   voorstel; de eigenaar merget of sluit de PR. Zonder record laat `check-document-status` toe: een nieuw document met een eigenaarstatus,
   `voorstel`/`voorgesteld` naar een eigenaarstatus, `geaccepteerd` naar `vervangen door NNNN` (NNNN op main of in de PR) of `vervallen`, een
@@ -526,9 +526,9 @@ Live feiten (gates, routes, componenten, nummers) komen uit `scripts/kit/feiten.
   besluit-PR; een vervallen of vervangen ADR verandert niet van inhoud, een ADR gaat nooit terug naar `voorgesteld` en wordt niet hernoemd
   (`beslisOvergang` en `isHerschrijving` in `rails/hooks/lib/document-state.mjs`, `verifyAdrWeg` in `scripts/kit/check-document-status.mjs`;
   het rolhek vergelijkt met main en laat herschrijven en verwijderen alleen aan architect en hoofdsessie; de tekst van ADR 0046 punt 2
-  volgt in een besluit-PR). Archief: een vervangen of vervallen ADR mag byte-gelijk onder dezelfde naam naar `docs/adr/archief/`
-  (alleen met wijzigingen onder `docs/`), een spec byte-gelijk naar `docs/template/specs/`; elke andere wijziging of verwijdering
-  in `archief/` is A4, voor elke rol (`verifyVerhuizingen`, `isArchief`). Een gemandateerde spec
+  volgt in een besluit-PR). Archief: een vervangen of vervallen ADR mag byte-gelijk onder dezelfde naam naar `docs/adr/archief/` (nog niet gebouwd)
+  (alleen met wijzigingen onder `docs/`), een spec byte-gelijk naar `docs/template/specs/` (nog niet gebouwd); elke andere wijziging of verwijdering
+  in het archief is A4, voor elke rol (`verifyVerhuizingen`, `isArchief`). Een gemandateerde spec
   die van inhoud wijzigt, verliest haar mandaat. Het register `.claude/decisions.json` blijft voor
   broncodemandaat (`--path`) en `requiredChecks`; het bindt inhoudsdigest, repository, exacte branch, status en exacte bronbestanden.
   `gebouwd # #<n>` zonder SHA geldt alleen als n deze PR is en de PR code buiten `docs/` en `CHANGELOG.md` bevat; bouwbewijs is dan de ruleset,

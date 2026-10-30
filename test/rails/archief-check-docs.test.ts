@@ -318,6 +318,22 @@ describe('compacte-kennisbasis-rails/AC-7: een backtick-pad in docs/framework.md
     expect(meldingen.map(({ message }) => message).join('\n')).toContain('scripts/kit/weg2.mjs');
     expect(meldingen.some(({ message }) => message.includes('vendorlink/x.json'))).toBe(false);
   });
+
+  // Elk backtick-woord met een extensie of een afsluitende `/` is een pad, ook in de hoofdmap of onder een onbekende map.
+  test.each(['missing.json', 'unknown-dir/file.md', 'unknown-dir/'])(
+    'compacte-kennisbasis-rails/AC-7 een niet-bestaand pad buiten een getrackte map (%s): rood',
+    async (pad) => {
+      const nieuw = await toegevoegd(BASIS, framework(`Zie \`${pad}\` voor details.`));
+      expect(nieuw.some(({ message }) => message.includes(pad))).toBe(true);
+    },
+  );
+
+  test.each(['package.json', 'echt.mjs', 'kit/'])(
+    'compacte-kennisbasis-rails/AC-7 een bestaand bestand of een kale naam die op een getrackt pad eindigt (%s): groen',
+    async (pad) => {
+      expect(await toegevoegd(BASIS, framework(`Zie \`${pad}\` voor details.`))).toStrictEqual([]);
+    },
+  );
 });
 
 describe("compacte-kennisbasis-rails/AC-8: R-id's in .claude/rules/* en het regelboek", () => {

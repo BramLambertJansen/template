@@ -231,3 +231,26 @@ describe('compacte-kennisbasis-rails/AC-5: een byte-gelijke git mv van een spec 
     faalt(fixture);
   });
 });
+
+describe('compacte-kennisbasis-rails/AC-4: een statusregel linkt naar een gearchiveerd ADR', () => {
+  test('compacte-kennisbasis-rails/AC-4 Status: voorgesteld — [0060](0060-doel.md) met 0060 alleen in archief/: groen', () => {
+    const fixture = metBasis({ [`${ARCHIEF}0060-doel.md`]: adr('0060', 'vervallen') });
+    write(fixture.root, 'docs/adr/0070-nieuw.md', adr('0070', 'voorgesteld — [0060](0060-doel.md)'));
+    slaagt(fixture);
+  });
+
+  test('compacte-kennisbasis-rails/AC-4 een statusregel naar een ADR dat nergens bestaat: rood', () => {
+    const fixture = metBasis({ [`${ARCHIEF}0060-doel.md`]: adr('0060', 'vervallen') });
+    write(fixture.root, 'docs/adr/0070-nieuw.md', adr('0070', 'voorgesteld — [0066](0066-weg.md)'));
+    faalt(fixture);
+  });
+});
+
+describe('compacte-kennisbasis-rails/AC-9: een ADR boven het budget verhuist naar archief/', () => {
+  test('compacte-kennisbasis-rails/AC-9 een vervallen ADR van meer dan 6 KB verhuist byte-gelijk: groen', () => {
+    const groot = `${adr('0050', 'vervallen')}\n${'Lange tekst. '.repeat(600)}\n`;
+    const fixture = metBasis({ ...BASIS, [OUD]: groot });
+    verhuis(fixture, OUD, OUD_ARCHIEF);
+    slaagt(fixture);
+  });
+});

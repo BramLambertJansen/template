@@ -88,19 +88,12 @@ function paragraafViolations(files, read) {
 }
 
 /**
- * Een pad in het regelboek: begint met een getrackte map of bestand op het hoogste niveau en heeft een extensie of eindigt
- * op `/`. Zo tellen `origin/main`, `application/json` en een lintregel als `rails/klassen` niet als pad.
- * @param {string} id @param {readonly string[]} files
+ * Een pad in het regelboek heeft een extensie of eindigt op `/`. Zo tellen `origin/main`, `application/json` en een
+ * lintregel als `rails/klassen` niet als pad.
+ * @param {string} id
  */
-function regelboekPad(id, files) {
-  const pad = id.replace(/^\.\//, '');
-  const top = pad.split('/')[0] ?? '';
-  return (
-    looksLikePath(id) &&
-    pad.includes('/') &&
-    /(?:\.\w+|\/)$/.test(pad) &&
-    files.some((file) => file === top || file.startsWith(`${top}/`))
-  );
+function regelboekPad(id) {
+  return looksLikePath(id) && /(?:\.\w+|\/)$/.test(id);
 }
 
 /**
@@ -111,8 +104,8 @@ function regelboekPad(id, files) {
  */
 function regelboekPadBestaat(root, id, files) {
   const pad = id.replace(/^\.\//, '');
-  const zonderSlash = pad.replace(/\/$/, '');
-  if (files.some((file) => file === zonderSlash || file.startsWith(`${zonderSlash}/`))) return true;
+  // Een kale naam of relatief pad (`queries.ts`, `features/`) telt als een getrackt bestand erop eindigt, zoals regel 1.
+  if (pathExists(pad, files)) return true;
   const { status, stderr } = spawnSync('git', ['check-ignore', '-q', '--no-index', '--', pad], {
     cwd: root,
     encoding: 'utf8',
@@ -130,7 +123,7 @@ function regelboekPadBestaat(root, id, files) {
 function regelboekPadViolations(root, text, files) {
   return [...text.matchAll(/`([^`\n]+)`( \(nog niet gebouwd\))?/g)].flatMap((match) => {
     const [, id = '', markering] = match;
-    if (!regelboekPad(id, files)) return [];
+    if (!regelboekPad(id)) return [];
     const bestaat = regelboekPadBestaat(root, id, files);
     if (bestaat === (markering === undefined)) return [];
     const plek = `${REGELBOEK}:${String(regelVan(text, match.index))}`;
@@ -186,19 +179,21 @@ const KB = 1024;
  * @param {readonly string[]} files @param {(file: string) => string} read @returns {Violation[]}
  */
 function budgetViolations(files, read) {
+  // Een ADR krijgt een sleutel op nummer (ook in het archief): een byte-gelijke verhuizing houdt dezelfde sleutel.
   const budgetten = files.flatMap((file) => {
-    if (file === 'AGENTS.md') return [{ file, budget: 9 * KB }];
-    if (file === REGELBOEK) return [{ file, budget: 40 * KB }];
-    if (/^docs\/specs\/[^_/][^/]*\.md$/.test(file)) return [{ file, budget: 10 * KB }];
-    return /^docs\/adr\/\d{4}-[^/]+\.md$/.test(file) ? [{ file, budget: 6 * KB }] : [];
+    if (file === 'AGENTS.md') return [{ file, sleutel: file, budget: 9 * KB }];
+    if (file === REGELBOEK) return [{ file, sleutel: file, budget: 40 * KB }];
+    if (/^docs\/specs\/[^_/][^/]*\.md$/.test(file)) return [{ file, sleutel: file, budget: 10 * KB }];
+    const nummer = /^docs\/adr\/(?:archief\/)?(\d{4})-[^/]+\.md$/.exec(file)?.[1];
+    return nummer === undefined ? [] : [{ file, sleutel: `adr:${nummer}`, budget: 6 * KB }];
   });
-  const bytes = budgetten.flatMap(({ file, budget }) => {
+  const bytes = budgetten.flatMap(({ file, sleutel, budget }) => {
     const grootte = Buffer.byteLength(read(file));
     return grootte <= budget
       ? []
       : [
           {
-            key: `docs:${file}:budget:${String(grootte)}`,
+            key: `docs:${sleutel}:budget:${String(grootte)}`,
             message: `${file}: ${String(grootte)} bytes, budget ${String(budget)} (framework §9)`,
           },
         ];
