@@ -116,6 +116,8 @@ function regelboekPadBestaat(root, id, files) {
   const { status, stderr } = spawnSync('git', ['check-ignore', '-q', '--no-index', '--', pad], {
     cwd: root,
     encoding: 'utf8',
+    // Git vertaalt zijn meldingen; de C-locale houdt "beyond a symbolic link" taalonafhankelijk.
+    env: { ...process.env, LC_ALL: 'C' },
   });
   return status === 0 || (status === 128 && stderr.includes('beyond a symbolic link'));
 }

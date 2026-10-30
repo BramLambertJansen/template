@@ -297,6 +297,27 @@ describe('compacte-kennisbasis-rails/AC-7: een backtick-pad in docs/framework.md
     const nieuw = await toegevoegd(NEGEER, framework('Zie `scripts/kit/weg.mjs` voor details.'));
     expect(nieuw.some(({ message }) => message.includes('scripts/kit/weg.mjs'))).toBe(true);
   });
+
+  // Een pad achter een symlink kan git niet tracken (zoals `node_modules/.bin` in de proef-kopie); niet in .gitignore.
+  /** De meldingen over docs/framework.md in een repo met `vendorlink` als symlink naar een map buiten de repo. */
+  async function metSymlink(regel: string): Promise<Melding[]> {
+    const { symlinkSync } = await import('node:fs');
+    const root = repo({ ...BASIS, ...framework(regel) });
+    const ergens = mkdtempSync(path.join(tmpdir(), 'archief-check-docs-ergens-'));
+    symlinkSync(ergens, path.join(root, 'vendorlink'), 'dir');
+    execFileSync('git', ['add', '-A'], { cwd: root });
+    return (await docsViolations(root)).filter(({ message }) => message.includes('docs/framework.md'));
+  }
+
+  test('compacte-kennisbasis-rails/AC-7 een pad achter een symlink (vendorlink/x.json): groen', async () => {
+    expect(await metSymlink('Zie `vendorlink/x.json` voor details.')).toStrictEqual([]);
+  });
+
+  test('compacte-kennisbasis-rails/AC-7 een niet-bestaand pad naast een symlink: rood', async () => {
+    const meldingen = await metSymlink('Zie `vendorlink/x.json` en `scripts/kit/weg2.mjs` voor details.');
+    expect(meldingen.map(({ message }) => message).join('\n')).toContain('scripts/kit/weg2.mjs');
+    expect(meldingen.some(({ message }) => message.includes('vendorlink/x.json'))).toBe(false);
+  });
 });
 
 describe("compacte-kennisbasis-rails/AC-8: R-id's in .claude/rules/* en het regelboek", () => {
