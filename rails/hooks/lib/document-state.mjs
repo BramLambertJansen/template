@@ -4,11 +4,16 @@ import { createHash } from 'node:crypto';
 const SPEC_STATES = new Set(['voorstel', 'goedgekeurd', 'gebouwd', 'vervallen']);
 const ADR_STATES = new Set(['voorgesteld', 'geaccepteerd', 'vervallen']);
 
-/** @param {string} file */
+/** Een spec in `docs/specs/` of `docs/template/specs/`, een ADR in `docs/adr/` of `docs/adr/archief/` (framework §10). @param {string} file */
 export function documentKind(file) {
-  if (/^docs\/specs\/[a-z0-9]+(?:-[a-z0-9]+)*\.md$/.test(file)) return 'spec';
-  if (/^docs\/adr\/\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/.test(file)) return 'adr';
+  if (/^docs\/(?:template\/)?specs\/[a-z0-9]+(?:-[a-z0-9]+)*\.md$/.test(file)) return 'spec';
+  if (/^docs\/adr\/(?:archief\/)?\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/.test(file)) return 'adr';
   return null;
+}
+
+/** Een gearchiveerd ADR: wijzigt en verdwijnt nooit, ook niet met een record (framework §10). @param {string} file */
+export function isArchief(file) {
+  return documentKind(file) === 'adr' && file.startsWith('docs/adr/archief/');
 }
 
 /** @param {string} kind @param {string} status */
@@ -151,7 +156,7 @@ function nieuweHerzieningsregel(voor, na) {
 /**
  * Hoe een document zonder record mag veranderen (ADR 0046 punt 1, 2 en 5). Puur; `voor`/`na` zijn de volledige teksten.
  * - `vrij`: geen eigenaarbesluit (voorstel, of niets wezenlijks gewijzigd);
- * - `a4`: een ADR met een eigenaarstatus wijzigt van inhoud of gaat terug naar voorgesteld;
+ * - `a4`: een ADR met een eigenaarstatus wijzigt van inhoud of gaat terug naar voorgesteld, of een gearchiveerd ADR wijzigt;
  * - `herzien`: een geaccepteerd ADR blijft geaccepteerd met andere inhoud en een nieuwe herzieningsregel (alleen in een besluit-PR);
  * - `gebouwd`: alleen met bouwbewijs;
  * - `besluit`: een eigenaarstatus die de merge van de eigenaar beslist (`nieuw`: een nieuw document of vanuit een voorstel);
@@ -163,6 +168,8 @@ export function beslisOvergang(file, voor, na) {
   const oud = voor === null ? null : documentInfo(file, voor);
   const nieuwInfo = documentInfo(file, na);
   const uit = (/** @type {'vrij' | 'a4' | 'herzien' | 'gebouwd' | 'besluit' | 'geweigerd'} */ uitslag, nieuw = false) => ({ uitslag, nieuw });
+  // Het archief komt alleen via een byte-gelijke verhuizing binnen (de guard); elke andere wijziging is A4.
+  if (isArchief(file)) return uit(voor === na ? 'vrij' : 'a4');
   if (voor !== null && isHerschrijving(file, voor, na)) return uit(nieuweHerzieningsregel(voor, na) ? 'herzien' : 'a4');
   if (oud?.kind === 'adr' && oud.status !== 'voorgesteld' &&
     (nieuwInfo === null || oud.digest !== nieuwInfo.digest || nieuwInfo.status === 'voorgesteld'))

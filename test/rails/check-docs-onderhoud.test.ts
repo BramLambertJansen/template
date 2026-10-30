@@ -222,5 +222,11 @@ test('B4: de echte repo: de Edit-regels in permissions.ask zijn precies altijdVr
 
   expect([...edits].sort()).toStrictEqual([...ECHTE_ALTIJD_VRAGEN].sort());
   expect(spiegel(lijst)).toStrictEqual([]);
-  expect(noemt(lijst, /onderhoud|altijdVragen/i)).toStrictEqual([]);
+  // Budgetsleutels (AC-9, compacte-kennisbasis-rails) bevatten bestandsnamen en vallen buiten deze zoekregel.
+  expect(
+    noemt(
+      lijst.filter(({ key }) => !/:(?:budget|regels):/.test(key)),
+      /onderhoud|altijdVragen/i,
+    ),
+  ).toStrictEqual([]);
 });

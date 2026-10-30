@@ -398,7 +398,7 @@ describe('G8: G6 en G7 houden rekening met docs/adr/archief/ (ADR 0053)', () => 
 
   test('G8a het doel (voorgesteld) verhuist naar archief/ met hetzelfde nummer 0060, de verwijzer blijft: slaagt', () => {
     const fixture = metBasis({
-      [DOEL]: adrTekst('0060', 'voorgesteld', uniek('doel')),
+      [DOEL]: adrTekst('0060', 'vervallen', uniek('doel')),
       [VERWIJZER]: adrTekst('0061', 'vervangen door 0060', uniek('verwijzer')),
     });
     mkdirSync(join(fixture.root, 'docs/adr/archief'), { recursive: true });
