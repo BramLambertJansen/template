@@ -104,13 +104,20 @@ function regelboekPad(id, files) {
 }
 
 /**
- * Getrackt (of een map met getrackte bestanden), of genegeerd door git (`.claude/settings.local.json`).
+ * Getrackt (of een map met getrackte bestanden), of een runtime-artefact dat git niet trackt: een pad dat `.gitignore`
+ * negeert, ook als het niet bestaat (`.claude/hooks/.cache/`), of een pad achter een symlink (`node_modules/.bin` in een
+ * kopie met `node_modules` als link). De afsluitende `/` blijft staan: zo matcht een map-regel ook zonder de map.
  * @param {string} root @param {string} id @param {readonly string[]} files
  */
 function regelboekPadBestaat(root, id, files) {
-  const pad = id.replace(/^\.\//, '').replace(/\/$/, '');
-  if (files.some((file) => file === pad || file.startsWith(`${pad}/`))) return true;
-  return spawnSync('git', ['check-ignore', '-q', '--', pad], { cwd: root }).status === 0;
+  const pad = id.replace(/^\.\//, '');
+  const zonderSlash = pad.replace(/\/$/, '');
+  if (files.some((file) => file === zonderSlash || file.startsWith(`${zonderSlash}/`))) return true;
+  const { status, stderr } = spawnSync('git', ['check-ignore', '-q', '--no-index', '--', pad], {
+    cwd: root,
+    encoding: 'utf8',
+  });
+  return status === 0 || (status === 128 && stderr.includes('beyond a symbolic link'));
 }
 
 /**

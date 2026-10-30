@@ -282,6 +282,21 @@ describe('compacte-kennisbasis-rails/AC-7: een backtick-pad in docs/framework.md
     const nieuw = await toegevoegd(BASIS, { 'docs/dod.md': '# Dod\n\nZie `scripts/kit/weg.mjs`.\n' });
     expect(nieuw).toStrictEqual([]);
   });
+
+  // Een runtime-artefact (door .gitignore genegeerd) bestaat in een verse kopie of CI niet; het wordt niet getoetst.
+  const NEGEER = { ...BASIS, '.gitignore': 'scripts/kit/.cache/\n*.log\n' };
+
+  test.each(['scripts/kit/.cache/', 'scripts/kit/.cache/x.json', 'scripts/kit/run.log'])(
+    'compacte-kennisbasis-rails/AC-7 een genegeerd pad dat niet bestaat (%s): groen',
+    async (pad) => {
+      expect(await toegevoegd(NEGEER, framework(`Zie \`${pad}\` voor details.`))).toStrictEqual([]);
+    },
+  );
+
+  test('compacte-kennisbasis-rails/AC-7 een niet-genegeerd pad dat niet bestaat, naast een .gitignore: rood', async () => {
+    const nieuw = await toegevoegd(NEGEER, framework('Zie `scripts/kit/weg.mjs` voor details.'));
+    expect(nieuw.some(({ message }) => message.includes('scripts/kit/weg.mjs'))).toBe(true);
+  });
 });
 
 describe("compacte-kennisbasis-rails/AC-8: R-id's in .claude/rules/* en het regelboek", () => {
