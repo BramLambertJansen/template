@@ -198,6 +198,17 @@ describe('compacte-kennisbasis-rails/AC-9: de ratchet is strikt in twee richting
     expect(readFileSync(path.join(root, BASELINE), 'utf8')).toBe(baseline);
   });
 
+  test('compacte-kennisbasis-rails/AC-9 een te groot ADR alleen in archief/, niet in de baseline: rood', () => {
+    const root = repo({ 'docs/adr/0040-klein.md': `${adrKop('0040')}Kort.\n` });
+    expect(ratchet(root, '--update').status).toBe(0);
+    mkdirSync(path.join(root, 'docs/adr/archief'), { recursive: true });
+    writeFileSync(path.join(root, 'docs/adr/archief/0050-groot.md'), adrKop('0050') + tekst(7 * KB));
+    execFileSync('git', ['add', '-A'], { cwd: root });
+    const uitslag = ratchet(root);
+    expect(uitslag.status).toBe(1);
+    expect(uitslag.stderr).toContain('docs/adr/archief/0050-groot.md');
+  });
+
   test('compacte-kennisbasis-rails/AC-9 binnen alle budgetten en een lege baseline: groen', () => {
     const root = repo({ 'docs/framework.md': tekst(1000), 'AGENTS.md': tekst(1000, 50) });
     expect(ratchet(root, '--update').status).toBe(0);

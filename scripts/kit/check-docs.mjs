@@ -13,8 +13,9 @@
 //  7. Spec-discipline: geen lijstitem met `⚠ open` in "Open vragen" bij goedgekeurd of gebouwd (`:open-vraag`); elk pad in
 //     "Kopieer de vorm van" bestaat bij voorstel of goedgekeurd (`:vorm`).
 //  8. `framework §N` buiten §1–§12 en §11a (niet in docs/adr/); 9. backtick-paden in het regelboek; 10. R-id's in
-//     .claude/rules/* en het regelboek; 11. budgetten (framework §9), sleutels `docs:<bestand>:budget:<bytes>` en
-//     `docs:AGENTS.md:regels:<n>`, zodat de ratchet groei en krimp allebei ziet.
+//     .claude/rules/* en het regelboek; 11. budgetten (framework §9), sleutels `docs:<bestand>:budget:<bytes>`,
+//     `docs:adr:NNNN:budget:<bytes>` (op nummer, ook in archief/) en `docs:AGENTS.md:regels:<n>`, zodat de ratchet groei
+//     en krimp allebei ziet.
 import { Buffer } from 'node:buffer';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
@@ -97,6 +98,22 @@ function regelboekPad(id) {
 }
 
 /**
+ * Begint een pad met een getrackte topmap of een getrackt topbestand, met `./` of met een alias (`#core/…`), dan telt alleen
+ * een match vanaf de hoofdmap. Een kale naam of relatief pad (`queries.ts`, `features/`) telt als een getrackt bestand erop
+ * eindigt, zoals regel 1.
+ * @param {string} id @param {readonly string[]} files
+ */
+function regelboekPadGetrackt(id, files) {
+  const pad = id.replace(/^\.\//, '');
+  const top = pad.split('/')[0] ?? '';
+  const vanafRoot =
+    id.startsWith('./') || id.startsWith('#') || files.some((file) => file === top || file.startsWith(`${top}/`));
+  if (!vanafRoot) return pathExists(pad, files);
+  const doel = doelPad(pad);
+  return files.some((file) => file === doel || file.startsWith(`${doel}/`));
+}
+
+/**
  * Getrackt (of een map met getrackte bestanden), of een runtime-artefact dat git niet trackt: een pad dat `.gitignore`
  * negeert, ook als het niet bestaat (`.claude/hooks/.cache/`), of een pad achter een symlink (`node_modules/.bin` in een
  * kopie met `node_modules` als link). De afsluitende `/` blijft staan: zo matcht een map-regel ook zonder de map.
@@ -104,8 +121,7 @@ function regelboekPad(id) {
  */
 function regelboekPadBestaat(root, id, files) {
   const pad = id.replace(/^\.\//, '');
-  // Een kale naam of relatief pad (`queries.ts`, `features/`) telt als een getrackt bestand erop eindigt, zoals regel 1.
-  if (pathExists(pad, files)) return true;
+  if (regelboekPadGetrackt(id, files)) return true;
   const { status, stderr } = spawnSync('git', ['check-ignore', '-q', '--no-index', '--', pad], {
     cwd: root,
     encoding: 'utf8',

@@ -328,6 +328,12 @@ describe('compacte-kennisbasis-rails/AC-7: een backtick-pad in docs/framework.md
     },
   );
 
+  test('compacte-kennisbasis-rails/AC-7 een pad vanaf een getrackte topmap matcht niet op een dieper pad: rood', async () => {
+    const basis = { ...BASIS, 'docs/dod.md': '# Dod\n', 'x/docs/operations/weg.md': '# Elders\n' };
+    const nieuw = await toegevoegd(basis, framework('Zie `docs/operations/weg.md` voor details.'));
+    expect(nieuw.some(({ message }) => message.includes('docs/operations/weg.md'))).toBe(true);
+  });
+
   test.each(['package.json', 'echt.mjs', 'kit/'])(
     'compacte-kennisbasis-rails/AC-7 een bestaand bestand of een kale naam die op een getrackt pad eindigt (%s): groen',
     async (pad) => {
