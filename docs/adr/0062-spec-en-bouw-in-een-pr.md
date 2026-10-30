@@ -2,6 +2,9 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-10-30 (#379): punt 4 geldt ook na de merge; voor een gemergde PR vervalt "de PR open is" uit 0046 punt 10 en
+volgt het bouwbewijs uit de mergecommit ([spec](../specs/gebouwd-na-merge.md)).
+
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 5, 10, 12, 14 en 15. Drempel: A3 (de lanetoets in
 `check-document-status` laat meer toe) en A4 (afspraken uit een geaccepteerd ADR). De status is de bedoelde acceptatie in dit
 voorstel; alleen de eigenaar maakt het besluit met zijn merge geldend. Uitwerking: [spec](../specs/spec-en-bouw-in-een-pr.md).
@@ -38,7 +41,8 @@ toch samen bij de merge.
 4. **`gebouwd` in dezelfde PR.** Een spec mag in de PR die haar implementatie bevat direct naar `gebouwd` met alleen het eigen
    PR-nummer, zonder gevalideerde SHA en zonder statuscommit achteraf. Bouwbewijs is dan de ruleset op main, die de verplichte
    checks op de gemergde head eist; `document-status` wordt daarom een verplichte check in die ruleset. De bestaande vorm met
-   PR en SHA (0046 punt 10) blijft voor een spec waarvan de implementatie al op main staat.
+   PR en SHA (0046 punt 10) blijft voor een spec waarvan de implementatie al op main staat; bij een gemergde PR toetst
+   `docs:status` dan de mergecommit in plaats van een open PR.
 5. 0046 punt 5 (inhoud van een goedgekeurde spec nooit met code), punt 12 (framework-lane voor alles in `src/core`, rails, gates
    of agentconfiguratie), punt 14 (bereik van de feature-lane) en punt 15 (herkenning) gelden zoals hierboven gewijzigd. De
    besluit-PR uit 0046 blijft bestaan voor punt 2 en voor wie een besluit los wil voorleggen.
