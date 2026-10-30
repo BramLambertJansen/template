@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd # voorgestelde status; de merge door de eigenaar is het besluit (ADR 0046); bouwen pas daarna
+status: gebouwd # #381
 namespace: database-checks
 ---
 
