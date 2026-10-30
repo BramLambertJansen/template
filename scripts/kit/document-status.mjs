@@ -5,11 +5,11 @@ import path from 'node:path';
 import { readAuthority, gitText } from '../../rails/hooks/lib/authority-context.mjs';
 import { changeStatus, documentInfo, documentKind } from '../../rails/hooks/lib/document-state.mjs';
 import { canRecordStatus } from '../../rails/hooks/lib/task-authority.mjs';
-import { canRecordBuilt } from '../../rails/hooks/lib/built-evidence.mjs';
+import { builtRefusal, canRecordBuilt } from '../../rails/hooks/lib/built-evidence.mjs';
 import { loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 import { pullRequest, checkRuns } from './github-evidence.mjs';
 import { kaderVan, ROADMAP, taakVinkje, tikAf } from './roadmap-item.mjs';
-import { statusOnlyDiff, isAncestor, unchangedHead } from './status-git.mjs';
+import { statusOnlyDiff, isAncestor, mergedEvidence, unchangedHead } from './status-git.mjs';
 import { functionalUiApproval } from './functional-ui-status.mjs';
 
 const USAGE = 'Gebruik: pnpm docs:status <document> <status> [--pr <nummer> [--roadmap]]';
@@ -64,6 +64,7 @@ function nextStatus(target, context) {
   const sha = gitText(context.root, ['rev-parse', 'HEAD'])?.trim();
   if (sha === undefined) throw new Error('HEAD is niet leesbaar');
   const pr = pullRequest(context.authority.repository, target.pr);
+  if (pr.merged) return mergedStatus(target, { ...context, pr, sha });
   const after = changeStatus(target.file, context.before, { status: target.status, pr: target.pr, validatedSha: sha });
   const commits = { from: sha, to: sha };
   const proof = {
@@ -83,6 +84,33 @@ function nextStatus(target, context) {
   };
   if (!canRecordBuilt({ file: target.file, text: after }, proof, context.authority))
     throw new Error('Gebouwd vereist de juiste geopende PR en alle verplichte GitHub Actions-checks groen op HEAD');
+  return after;
+}
+
+/**
+ * PR n is al gemerged (spec gebouwd-na-merge): de gevalideerde SHA is de PR-head en het bewijs komt uit de mergecommit in HEAD.
+ * @param {{ file: string, status: string, pr: number }} target
+ * @param {{ root: string, authority: import('../../rails/hooks/lib/task-authority.mjs').Authority, before: string, pr: import('../../rails/hooks/lib/built-evidence.mjs').PullRequest, sha: string }} context
+ */
+function mergedStatus(target, context) {
+  const { pr, root } = context;
+  const after = changeStatus(target.file, context.before, {
+    status: target.status,
+    pr: target.pr,
+    validatedSha: pr.headSha,
+  });
+  const split = gitText(root, ['merge-base', 'origin/main', context.sha])?.trim() ?? '';
+  const proof = {
+    pr,
+    headSha: context.sha,
+    checks: checkRuns(context.authority.repository, pr.headSha),
+    ancestor: false,
+    onlyStatuses: statusOnlyDiff(root, { from: split, to: context.sha }),
+    // De mergecommit moet in main liggen, niet alleen in HEAD: een zijbranch kan een mergecommit binnenbrengen.
+    merged: mergedEvidence(root, { mergeSha: pr.mergeSha ?? '', head: split, file: target.file }),
+  };
+  const bezwaar = builtRefusal({ file: target.file, text: after }, proof, context.authority);
+  if (bezwaar !== null) throw new Error(`Gebouwd na de merge vereist ${bezwaar}`);
   return after;
 }
 

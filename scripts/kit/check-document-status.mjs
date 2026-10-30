@@ -11,12 +11,12 @@ import {
 } from '../../rails/hooks/lib/document-state.mjs';
 import { readAuthority, gitText } from '../../rails/hooks/lib/authority-context.mjs';
 import { canRecordStatus, canWriteProtected } from '../../rails/hooks/lib/task-authority.mjs';
-import { canRecordBuilt } from '../../rails/hooks/lib/built-evidence.mjs';
+import { builtRefusal } from '../../rails/hooks/lib/built-evidence.mjs';
 import { loadConfig, globMatch } from '../../rails/hooks/lib/rolhek.mjs';
 import { parseNameStatus } from './diff-guard.mjs';
 import { pullRequest, checkRuns } from './github-evidence.mjs';
 import { kaderVan, ROADMAP, taakVinkje } from './roadmap-item.mjs';
-import { regularGitFile, statusOnlyDiff, isAncestor } from './status-git.mjs';
+import { regularGitFile, statusOnlyDiff, isAncestor, mergedEvidence } from './status-git.mjs';
 import { laneVan, migratieOvertreding, recordAlleenBesluit } from './lane.mjs';
 import { isFunctionalUiSpec, isUiTest, testChangeRisk } from '../../rails/hooks/lib/functional-ui.mjs';
 import { functionalUiApproval, verifyFunctionalUiChanges } from './functional-ui-status.mjs';
@@ -31,13 +31,18 @@ function requiredEnv(name) {
   return value;
 }
 
-/** @param {{ file: string, text: string }} document @param {Context} context */
+/**
+ * Null bij geldig bouwbewijs, anders de toevoeging aan de melding (leeg voor de route van een open PR).
+ * @param {{ file: string, text: string }} document @param {Context} context @returns {string | null}
+ */
 function verifyBuilt(document, context) {
   const reference = builtReference(document.text);
-  if (reference?.sha === undefined) return false;
-  const commits = { from: reference.sha, to: context.sha };
+  if (reference?.sha === undefined) return '';
+  const pr = pullRequest(context.authority.repository, reference.pr);
+  // Gemergde PR (spec gebouwd-na-merge): de PR wijzigt alleen statusregels tegenover de basis; het bewijs komt uit de mergecommit.
+  const commits = pr.merged ? { from: context.split, to: context.sha } : { from: reference.sha, to: context.sha };
   const evidence = {
-    pr: pullRequest(context.authority.repository, reference.pr),
+    pr,
     checks: checkRuns(context.authority.repository, reference.sha),
     headSha: context.sha,
     ancestor: isAncestor(context.root, commits),
@@ -50,8 +55,13 @@ function verifyBuilt(document, context) {
       file: document.file,
       text: document.text,
     }),
+    ...(pr.merged && {
+      merged: mergedEvidence(context.root, { mergeSha: pr.mergeSha ?? '', head: context.split, file: document.file }),
+    }),
   };
-  return canRecordBuilt(document, evidence, context.authority);
+  const bezwaar = builtRefusal(document, evidence, context.authority);
+  if (bezwaar === null) return null;
+  return pr.merged ? `; gebouwd na de merge vereist ${bezwaar}` : '';
 }
 
 /** @typedef {{ file: string, record: boolean }} Besluit */
@@ -103,8 +113,9 @@ function verifyDocument(document, context) {
 function verifyGebouwd(document, target, context) {
   const reference = builtReference(target.text);
   if (reference?.sha !== undefined) {
-    if (verifyBuilt(target, context)) return null;
-    throw new Error(`${document.file}: ${GEEN_BESLUIT}`);
+    const bezwaar = verifyBuilt(target, context);
+    if (bezwaar === null) return null;
+    throw new Error(`${document.file}: ${GEEN_BESLUIT}${bezwaar}`);
   }
   if (reference === null || context.pr === null || reference.pr !== context.pr || !context.code)
     throw new Error(

@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd # #380
 namespace: gebouwd-na-merge
 ---
 

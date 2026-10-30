@@ -6,6 +6,11 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Toegevoegd
 
+- `gebouwd` na de merge (spec `docs/specs/gebouwd-na-merge.md`, ADR 0062 punt 4, leerpunt #314): `pnpm docs:status <spec>
+  gebouwd --pr <n>` werkt ook als PR n al gemerged is, ook na een squash-merge. Bewijs: PR n ging naar `main` en de mergecommit ligt in main, de spec daarin
+  ongewijzigd op `goedgekeurd`, de verplichte checks uit main vlak vóór de merge groen op de head van PR n, en een pad buiten
+  `docs/` uit de spec dat PR n wijzigde. Een gemergde PR gaat niet meer via de route voor een open PR.
+
 - Cataloguschecks voor databasehandelingen (`db/tests/schrijfbaarheid.sql`, spec `database-schrijfbaarheid`, leerpunt
   #328): `pnpm test:db` ontdekt verplichte insertvelden zonder beschikbare waarde en ontbrekende leespolicies bij
   deletes door `app_definer`. Uitgevoerde insert- en deleteprobes bewijzen triggerbronnen, rijzichtbaarheid en het

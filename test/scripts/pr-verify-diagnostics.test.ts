@@ -46,7 +46,7 @@ function stubGh(fixture: Fixture, prHead: string) {
     number: 329,
     state: 'open',
     merged: false,
-    base: { repo: { full_name: REPOSITORY } },
+    base: { ref: 'main', repo: { full_name: REPOSITORY } },
     head: { repo: { full_name: REPOSITORY }, ref: BRANCH, sha: prHead },
   };
   const checks = {

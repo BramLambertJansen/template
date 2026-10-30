@@ -47,13 +47,17 @@ export function parsePullRequest(raw) {
   if (typeof merged !== 'boolean') throw new Error('GitHub-PR mist zijn merge-uitkomst');
   if (textField(valueOf(head, 'repo'), 'full_name') !== repository)
     throw new Error('Statusbewijs uit een fork wordt niet vertrouwd');
+  const mergeSha = merged ? textField(raw, 'merge_commit_sha') : null;
+  if (mergeSha !== null && !/^[0-9a-f]{40}$/.test(mergeSha)) throw new Error('GitHub-bewijs mist merge_commit_sha');
   return {
     number: numberField(raw, 'number'),
     repository,
     branch: textField(head, 'ref'),
+    baseBranch: textField(base, 'ref'),
     headSha: textField(head, 'sha'),
     state: textField(raw, 'state'),
     merged,
+    mergeSha,
   };
 }
 

@@ -1,5 +1,6 @@
 import { documentInfo } from '../../rails/hooks/lib/document-state.mjs';
 import { gitText } from '../../rails/hooks/lib/authority-context.mjs';
+import { readRegistry } from '../../rails/hooks/lib/task-authority.mjs';
 
 /** @param {string} root @param {{ head: string, branch: string, base: string }} expected */
 export function unchangedHead(root, expected) {
@@ -89,4 +90,51 @@ export function isAncestor(root, commits) {
 export function regularGitFile(root, file, sha) {
   const tree = gitText(root, ['ls-tree', sha, '--', file]);
   return tree !== null && /^100(?:644|755) blob [0-9a-f]{40}\t/.test(tree);
+}
+
+/** `requiredChecks` uit het register in een commit, of null als het ontbreekt of ongeldig is. @param {string} root @param {string} sha */
+function requiredChecksOp(root, sha) {
+  const text = bestandOp(root, sha, '.claude/decisions.json');
+  if (text === null) return null;
+  try {
+    return readRegistry(text).requiredChecks;
+  } catch {
+    return null;
+  }
+}
+
+/** Gewijzigde bestanden buiten docs/ en CHANGELOG.md die de spec letterlijk tussen backticks noemt. */
+/** @param {string} root @param {{ from: string, to: string }} commits @param {string} spec */
+function bouwpadenVan(root, commits, spec) {
+  const diff = gitText(root, ['diff', '--name-only', '-z', '--no-renames', commits.from, commits.to]);
+  if (diff === null) return [];
+  const genoemd = new Set([...spec.matchAll(/`([^`\s]+)`/g)].map(([, pad]) => pad));
+  return diff
+    .split('\0')
+    .filter((pad) => pad !== '' && !pad.startsWith('docs/') && pad !== 'CHANGELOG.md' && genoemd.has(pad))
+    .toSorted();
+}
+
+/**
+ * Bouwbewijs uit Git voor een gemergde PR (spec gebouwd-na-merge): ligt de mergecommit in head, zijn ouders, de spec erin, de
+ * verplichte checks uit main vlak vóór de merge en de bouwpaden.
+ * @param {string} root @param {{ mergeSha: string, head: string, file: string }} doel
+ * @returns {import('../../rails/hooks/lib/built-evidence.mjs').MergedEvidence}
+ */
+export function mergedEvidence(root, { mergeSha, head, file }) {
+  const geldig = /^[0-9a-f]{40}$/.test(mergeSha);
+  const regel = geldig ? gitText(root, ['rev-list', '--parents', '-n', '1', mergeSha]) : null;
+  const parents = (regel?.trim().split(' ') ?? []).slice(1);
+  const specAtMerge = geldig ? bestandOp(root, mergeSha, file) : null;
+  const eerste = parents[0];
+  return {
+    inHead: isAncestor(root, { from: mergeSha, to: head }),
+    parents,
+    specAtMerge,
+    requiredChecks: eerste === undefined ? null : requiredChecksOp(root, eerste),
+    bouwpaden:
+      eerste === undefined || specAtMerge === null
+        ? []
+        : bouwpadenVan(root, { from: eerste, to: mergeSha }, specAtMerge),
+  };
 }
