@@ -11,6 +11,11 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
   ongewijzigd op `goedgekeurd`, de verplichte checks uit main vlak vóór de merge groen op de head van PR n, en een pad buiten
   `docs/` uit de spec dat PR n wijzigde. Een gemergde PR gaat niet meer via de route voor een open PR.
 
+- Cataloguschecks voor databasehandelingen (`db/tests/schrijfbaarheid.sql`, spec `database-schrijfbaarheid`, leerpunt
+  #328): `pnpm test:db` ontdekt verplichte insertvelden zonder beschikbare waarde en ontbrekende leespolicies bij
+  deletes door `app_definer`. Uitgevoerde insert- en deleteprobes bewijzen triggerbronnen, rijzichtbaarheid en het
+  bewaren van beschermde rijen; de checks wijzigen geen productierechten of migraties.
+
 - Spec en bouw in één PR (ADR 0062, spec `docs/specs/spec-en-bouw-in-een-pr.md`): de feature-lane is de standaard voor
   volledig werk, met een of meer specs, code, tests en docs. Alleen kritiek werk (ADR's, auth en gegevensisolatie, de
   bewaking zelf, ook `rails/hooks/**`; `kritiekPad` in `scripts/kit/lane.mjs`) gaat eerst in een besluit-PR. Elke spec krijgt een spec-review en
