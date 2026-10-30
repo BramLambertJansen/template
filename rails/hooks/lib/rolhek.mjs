@@ -3,7 +3,7 @@
 // met echte payloads kan bewijzen. De stdin/stdout-kant staat in rails/hooks/rolhek.mjs.
 import path from 'node:path';
 import { gitSubcommand, parseCommands, programName, splitCommand, writeTargets } from './shell.mjs';
-import { A4_MELDING, beslisOvergang, builtReference, documentInfo, documentKind, isHerschrijving } from './document-state.mjs';
+import { A4_MELDING, beslisOvergang, builtReference, documentInfo, documentKind, isArchief, isHerschrijving } from './document-state.mjs';
 import { canRecordStatus, canWriteProtected, TEMPLATE_REPOSITORY } from './task-authority.mjs';
 import { automaticRunner } from './runner-authority.mjs';
 import { isCoreUiSource, testChangeRisk } from './functional-ui.mjs';
@@ -251,7 +251,9 @@ function decideFile({ rel, change, role }, ctx, decision) {
   const beslisrol = ['hoofdsessie', 'architect'].includes(role);
   // A4 (ADR 0046 punt 2): alleen architect en hoofdsessie herschrijven een geaccepteerd ADR of verwijderen een ADR met een
   // eigenaarstatus; of dat in een besluit-PR gebeurt, met een herzieningsregel, controleert de guard in CI.
-  const a4Toegestaan = beslisrol && (isHerschrijving(rel, basis, change.after) || adrMetEigenaarstatusWeg(rel, basis, change));
+  // Een gearchiveerd ADR wijzigt en verdwijnt voor geen enkele rol, ook niet in een besluit-PR (framework §10).
+  const a4Toegestaan = beslisrol && !isArchief(rel) &&
+    (isHerschrijving(rel, basis, change.after) || adrMetEigenaarstatusWeg(rel, basis, change));
   if (!a4Toegestaan && (['a4', 'herzien'].includes(overgang?.uitslag ?? '') || adrMetEigenaarstatusWeg(rel, basis, change))) {
     decision.deny.push(`${rel}: ${A4_MELDING}`);
     return;

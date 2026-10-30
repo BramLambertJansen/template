@@ -96,12 +96,13 @@ function isChecknaam(token, kader) {
 }
 
 /**
+ * `ADR NNNN` wijst naar een bestaand ADR in `docs/adr/` of `docs/adr/archief/` (framework §10).
  * @param {string} tekst
  * @param {Kader} kader
  */
 function heeftAdr(tekst, kader) {
   return [...tekst.matchAll(/\bADR (\d{4})\b/g)].some(([, nummer = '']) =>
-    kader.bestanden.some((bestand) => bestand.startsWith(`docs/adr/${nummer}-`) && bestand.endsWith('.md')),
+    kader.bestanden.some((bestand) => new RegExp(`^docs/adr/(?:archief/)?${nummer}-[^/]+\\.md$`).test(bestand)),
   );
 }
 

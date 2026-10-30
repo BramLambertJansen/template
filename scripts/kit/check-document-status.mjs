@@ -21,6 +21,7 @@ import { laneVan, migratieOvertreding, recordAlleenBesluit } from './lane.mjs';
 import { isFunctionalUiSpec, isUiTest, testChangeRisk } from '../../rails/hooks/lib/functional-ui.mjs';
 import { functionalUiApproval, verifyFunctionalUiChanges } from './functional-ui-status.mjs';
 import { adrNumber, duplicateAdrNumbers } from './adr-numbers.mjs';
+import path from 'node:path';
 
 /** @typedef {{ root: string, base: string, sha: string, split: string, pr: number | null, code: boolean, adrBestanden: string[], adrArchief: string[], authority: import('../../rails/hooks/lib/task-authority.mjs').Authority, config: import('../../rails/hooks/lib/rolhek.mjs').Config }} Context */
 
@@ -210,15 +211,14 @@ function verifyNummerVrij(changes, context) {
  */
 function verifyVervangersBestaan(context) {
   const nummers = new Set([...context.adrBestanden, ...context.adrArchief].map((f) => f.slice(0, 4)));
-  // Een archiefbestand wordt gelezen als ADR onder zijn naam in `docs/adr/` (documentKind kent het archief nog niet).
   const paden = [
-    ...context.adrBestanden.map((f) => ({ file: `docs/adr/${f}`, alsAdr: `docs/adr/${f}` })),
-    ...context.adrArchief.map((f) => ({ file: `${ARCHIEF}${f}`, alsAdr: `docs/adr/${f}` })),
+    ...context.adrBestanden.map((f) => `docs/adr/${f}`),
+    ...context.adrArchief.map((f) => `${ARCHIEF}${f}`),
   ];
   /** @type {Map<string, string>} */
   const vervangers = new Map();
-  for (const { file, alsAdr } of paden) {
-    const info = documentInfo(alsAdr, context.authority.working(file) ?? '');
+  for (const file of paden) {
+    const info = documentInfo(file, context.authority.working(file) ?? '');
     if (info === null) throw new Error(`${file}: ongeldige ADR-status`);
     const doel = /^vervangen door (\d{4})$/.exec(info.status)?.[1];
     if (doel !== undefined && !nummers.has(doel))
@@ -249,8 +249,9 @@ function verifyAdrWeg(changes, context) {
       documentKind(file) === 'adr' ? documentInfo(file, context.authority.trusted(file) ?? '')?.status : undefined;
     return status !== undefined && status !== 'voorgesteld' ? status : null;
   };
-  for (const { status, van } of changes) {
-    const bron = status === 'R' && van !== undefined ? eigenaarstatus(van) : null;
+  for (const change of changes) {
+    const { status, van } = change;
+    const bron = status === 'R' && van !== undefined && verhuisBron(change) === null ? eigenaarstatus(van) : null;
     if (bron !== null) throw new Error(`${van ?? ''}: hernoemd met status ${bron}; ${A4_MELDING}`);
   }
   const weg = changes.filter(({ status, pad }) => status === 'D' && eigenaarstatus(pad) !== null).map(({ pad }) => pad);
@@ -293,6 +294,50 @@ function statusLine(text) {
 }
 
 const ARCHIEF = 'docs/adr/archief/';
+const TEMPLATE_SPECS = 'docs/template/specs/';
+
+/**
+ * De bron van een verhuizing onder dezelfde bestandsnaam: `docs/adr/` naar `archief/`, of `docs/specs/` naar
+ * `docs/template/specs/` (framework §10). Null voor elke andere wijziging.
+ * @param {{ status: string, pad: string, van?: string }} change @returns {string | null}
+ */
+function verhuisBron({ status, pad, van }) {
+  if (status !== 'R' || van === undefined || documentKind(pad) === null) return null;
+  const naam = path.posix.basename(pad);
+  const map = pad.startsWith(ARCHIEF) ? 'docs/adr/' : pad.startsWith(TEMPLATE_SPECS) ? 'docs/specs/' : null;
+  return map !== null && van === `${map}${naam}` ? van : null;
+}
+
+/**
+ * Verhuizen mag, wijzigen niet (framework §10): een verhuizing is byte-gelijk; naar `archief/` alleen een vervangen of
+ * vervallen ADR, met alleen wijzigingen onder `docs/` ernaast. Elke andere wijziging die `archief/` raakt (nieuw, gewijzigd,
+ * verwijderd, terug of onder een andere naam) is A4, ook in een besluit-PR.
+ * @param {{ status: string, pad: string, van?: string }[]} changes @param {Context} context
+ */
+function verifyVerhuizingen(changes, context) {
+  const naarArchief = changes.filter((change) => verhuisBron(change) !== null && change.pad.startsWith(ARCHIEF));
+  for (const change of changes) {
+    const bron = verhuisBron(change);
+    if (bron === null) {
+      const raakt = [change.pad, change.van ?? ''].find((pad) => pad.startsWith(ARCHIEF));
+      if (raakt !== undefined)
+        throw new Error(`${raakt}: geen byte-gelijke verhuizing naar het archief; ${A4_MELDING}`);
+    } else if (context.authority.trusted(bron) !== context.authority.working(change.pad))
+      throw new Error(`${change.pad}: verhuisd van ${bron} maar niet byte-gelijk (framework §10)`);
+  }
+  for (const { pad, van = '' } of naarArchief) {
+    const status = documentInfo(van, context.authority.trusted(van) ?? '')?.status ?? '';
+    if (status !== 'vervallen' && !/^vervangen door \d{4}$/.test(status))
+      throw new Error(
+        `${pad}: alleen een vervangen of vervallen ADR verhuist naar het archief (status ${status}); ${A4_MELDING}`,
+      );
+  }
+  const vreemd = changes.find(({ pad }) => !pad.startsWith('docs/'));
+  if (naarArchief.length > 0 && vreemd !== undefined)
+    throw new Error(
+      `${vreemd.pad}: een verhuizing naar het archief gaat alleen samen met wijzigingen onder docs/ (framework §10)`,
+    );
+}
 
 /** Bestandsnamen van de ADR's op HEAD in `map` (standaard `docs/adr/`, zonder archief). @param {string} root @param {string} sha @param {string} [map] */
 function adrFiles(root, sha, map = 'docs/adr/') {
@@ -483,11 +528,14 @@ function samenvatting(tekst) {
   if (bestand !== undefined && bestand !== '') appendFileSync(bestand, tekst);
 }
 
-/** @param {{ status: string, pad: string }[]} changes @param {Context} context */
+/** @param {{ status: string, pad: string, van?: string }[]} changes @param {Context} context */
 function verifyDocuments(changes, context) {
-  const gewijzigd = changes.flatMap(({ pad }) => {
+  const gewijzigd = changes.flatMap((change) => {
+    const { pad } = change;
+    // Een byte-gelijke verhuizing (verifyVerhuizingen) is geen nieuw document: de bron op main is de basis.
+    const bron = verhuisBron(change) ?? pad;
     const besluit = verifyDocument(
-      { file: pad, before: context.authority.trusted(pad), after: context.authority.working(pad) },
+      { file: pad, before: context.authority.trusted(bron), after: context.authority.working(pad) },
       context,
     );
     return besluit === null ? [] : [besluit];
@@ -533,6 +581,7 @@ async function main() {
   /** @type {Context} */
   const context = { root, base, sha, split, pr, code, ...adrLijsten(root, sha), authority: snapshot, config };
   verifyNummerVrij(changes, context);
+  verifyVerhuizingen(changes, context);
   const verwijderd = verifyAdrWeg(changes, context);
   const gewijzigd = verifyDocuments(changes, context);
   const besluiten = [...gewijzigd, ...verwijderd];

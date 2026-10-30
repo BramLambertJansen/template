@@ -12,7 +12,11 @@
 //     of de namespace (sleutel `docs:ac:<spec>:<AC-n>`).
 //  7. Spec-discipline: geen lijstitem met `⚠ open` in "Open vragen" bij goedgekeurd of gebouwd (`:open-vraag`); elk pad in
 //     "Kopieer de vorm van" bestaat bij voorstel of goedgekeurd (`:vorm`).
-import { execFileSync } from 'node:child_process';
+//  8. `framework §N` buiten §1–§12 en §11a (niet in docs/adr/); 9. backtick-paden in het regelboek; 10. R-id's in
+//     .claude/rules/* en het regelboek; 11. budgetten (framework §9), sleutels `docs:<bestand>:budget:<bytes>` en
+//     `docs:AGENTS.md:regels:<n>`, zodat de ratchet groei en krimp allebei ziet.
+import { Buffer } from 'node:buffer';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { onderhoudVan } from '../../rails/hooks/lib/rolhek.mjs';
@@ -46,7 +50,162 @@ export async function docsViolations(root = '.') {
     ...mirrorViolations(files, read),
     ...(files.includes('.claude/gates.json') ? schrijfrechtViolations(read('.claude/gates.json')) : []),
     ...(files.includes('.claude/gates.json') ? werkmapNegeerViolations(files, read('.claude/gates.json')) : []),
+    ...paragraafViolations(files, read),
+    ...(files.includes(REGELBOEK) ? regelboekPadViolations(root, read(REGELBOEK), files) : []),
+    ...rIdViolations(files, read),
+    ...budgetViolations(files, read),
   ]);
+}
+
+const REGELBOEK = 'docs/framework.md';
+const ADR_MAP = 'docs/adr/';
+const ARCHIEF = 'docs/adr/archief/';
+// Regel 2: specs in docs/specs/ en docs/template/specs/ (framework §10); `_template.md` en dergelijke tellen niet.
+const SPEC_BESTAND = /^docs\/(?:template\/)?specs\/[^_/][^/]*\.md$/;
+
+/** Regelnummer (1-based) van een positie in een tekst. @param {string} text @param {number} index */
+function regelVan(text, index) {
+  return text.slice(0, index).split('\n').length;
+}
+
+/**
+ * Regel 8: `framework §N` of `framework.md §N` wijst naar een bestaande paragraaf (§1–§12 en §11a). ADR's (ook het archief)
+ * vallen erbuiten: ze wijzigen niet, hun ankers blijven.
+ * @param {readonly string[]} files @param {(file: string) => string} read @returns {Violation[]}
+ */
+function paragraafViolations(files, read) {
+  const geldig = (/** @type {string} */ n) => n === '11a' || (/^\d+$/.test(n) && Number(n) >= 1 && Number(n) <= 12);
+  return files
+    .filter((file) => file.endsWith('.md') && !file.startsWith(ADR_MAP))
+    .flatMap((file) => {
+      const text = read(file);
+      const fout = [...text.matchAll(/\bframework(?:\.md)?`?\s?§(\d+[a-z]?)/g)].filter(([, n = '']) => !geldig(n));
+      return fout.map((match) => ({
+        key: `docs:${file}:paragraaf:§${match[1] ?? ''}`,
+        message: `${file}:${String(regelVan(text, match.index))}: framework §${match[1] ?? ''} bestaat niet; het regelboek kent §1–§12 en §11a (framework §9)`,
+      }));
+    });
+}
+
+/**
+ * Een pad in het regelboek: begint met een getrackte map of bestand op het hoogste niveau en heeft een extensie of eindigt
+ * op `/`. Zo tellen `origin/main`, `application/json` en een lintregel als `rails/klassen` niet als pad.
+ * @param {string} id @param {readonly string[]} files
+ */
+function regelboekPad(id, files) {
+  const pad = id.replace(/^\.\//, '');
+  const top = pad.split('/')[0] ?? '';
+  return (
+    looksLikePath(id) &&
+    pad.includes('/') &&
+    /(?:\.\w+|\/)$/.test(pad) &&
+    files.some((file) => file === top || file.startsWith(`${top}/`))
+  );
+}
+
+/**
+ * Getrackt (of een map met getrackte bestanden), of genegeerd door git (`.claude/settings.local.json`).
+ * @param {string} root @param {string} id @param {readonly string[]} files
+ */
+function regelboekPadBestaat(root, id, files) {
+  const pad = id.replace(/^\.\//, '').replace(/\/$/, '');
+  if (files.some((file) => file === pad || file.startsWith(`${pad}/`))) return true;
+  return spawnSync('git', ['check-ignore', '-q', '--', pad], { cwd: root }).status === 0;
+}
+
+/**
+ * Regel 9: elk backtick-pad in het regelboek bestaat, of staat direct gevolgd door `(nog niet gebouwd)`; die markering bij
+ * een bestaand pad is ook een fout.
+ * @param {string} root @param {string} text @param {readonly string[]} files @returns {Violation[]}
+ */
+function regelboekPadViolations(root, text, files) {
+  return [...text.matchAll(/`([^`\n]+)`( \(nog niet gebouwd\))?/g)].flatMap((match) => {
+    const [, id = '', markering] = match;
+    if (!regelboekPad(id, files)) return [];
+    const bestaat = regelboekPadBestaat(root, id, files);
+    if (bestaat === (markering === undefined)) return [];
+    const plek = `${REGELBOEK}:${String(regelVan(text, match.index))}`;
+    return bestaat
+      ? [
+          {
+            key: `docs:${REGELBOEK}:markering:${id}`,
+            message: `${plek}: \`${id}\` bestaat, haal "(nog niet gebouwd)" weg (framework §9)`,
+          },
+        ]
+      : [
+          {
+            key: `docs:${REGELBOEK}:pad:${id}`,
+            message: `${plek}: \`${id}\` bestaat niet; zet er "(nog niet gebouwd)" direct achter (framework §9)`,
+          },
+        ];
+  });
+}
+
+const R_ID = /\bR-[A-Z]+-\d+(?![\d-])/g;
+
+/**
+ * Regel 10: een R-id in `.claude/rules/*` staat letterlijk in het regelboek, en het regelboek definieert elk R-id één keer
+ * (een definitie begint de regel, eventueel na een opsommingsteken).
+ * @param {readonly string[]} files @param {(file: string) => string} read @returns {Violation[]}
+ */
+function rIdViolations(files, read) {
+  const boek = files.includes(REGELBOEK) ? read(REGELBOEK) : '';
+  const bekend = new Set([...boek.matchAll(R_ID)].map(([id]) => id));
+  const padregels = files
+    .filter((file) => file.startsWith('.claude/rules/'))
+    .flatMap((file) =>
+      [...new Set([...read(file).matchAll(R_ID)].map(([id]) => id))]
+        .filter((id) => !bekend.has(id))
+        .map((id) => ({ key: `docs:${file}:r-id:${id}`, message: `${file}: ${id} staat niet in ${REGELBOEK}` })),
+    );
+  const definities = [...boek.matchAll(/^\s*(?:[-*]\s+)?(?:\*\*)?(R-[A-Z]+-\d+)(?![\d-])/gm)].map(([, id = '']) => id);
+  const dubbel = [...new Set(definities.filter((id, index) => definities.indexOf(id) !== index))];
+  return [
+    ...padregels,
+    ...dubbel.map((id) => ({
+      key: `docs:${REGELBOEK}:r-id-dubbel:${id}`,
+      message: `${REGELBOEK}: ${id} staat er meer dan één keer`,
+    })),
+  ];
+}
+
+const KB = 1024;
+
+/**
+ * Regel 11 (framework §9): budgetten in bytes, als ratchet. De sleutel draagt de waarde, zodat groei, krimp en een te ruime
+ * baseline elk een nieuwe of opgeloste sleutel geven.
+ * @param {readonly string[]} files @param {(file: string) => string} read @returns {Violation[]}
+ */
+function budgetViolations(files, read) {
+  const budgetten = files.flatMap((file) => {
+    if (file === 'AGENTS.md') return [{ file, budget: 9 * KB }];
+    if (file === REGELBOEK) return [{ file, budget: 40 * KB }];
+    if (/^docs\/specs\/[^_/][^/]*\.md$/.test(file)) return [{ file, budget: 10 * KB }];
+    return /^docs\/adr\/\d{4}-[^/]+\.md$/.test(file) ? [{ file, budget: 6 * KB }] : [];
+  });
+  const bytes = budgetten.flatMap(({ file, budget }) => {
+    const grootte = Buffer.byteLength(read(file));
+    return grootte <= budget
+      ? []
+      : [
+          {
+            key: `docs:${file}:budget:${String(grootte)}`,
+            message: `${file}: ${String(grootte)} bytes, budget ${String(budget)} (framework §9)`,
+          },
+        ];
+  });
+  if (!files.includes('AGENTS.md')) return bytes;
+  const tekst = read('AGENTS.md');
+  const regels = tekst.split('\n').length - (tekst.endsWith('\n') ? 1 : 0);
+  return regels <= 100
+    ? bytes
+    : [
+        ...bytes,
+        {
+          key: `docs:AGENTS.md:regels:${String(regels)}`,
+          message: `AGENTS.md: ${String(regels)} regels, budget 100 (framework §9)`,
+        },
+      ];
 }
 
 /**
@@ -135,11 +294,30 @@ function linkViolations(root, files, read) {
     .flatMap((file) =>
       [...read(file).matchAll(/\]\(([^)\s]+)\)/g)].flatMap(([, link = '']) => {
         if (/^(https?:|mailto:|#)/.test(link)) return [];
-        const target = path.join(path.dirname(file), decodeURIComponent(link.split('#')[0] ?? ''));
-        if (existsSync(path.join(root, target))) return [];
+        const doel = decodeURIComponent(link.split('#')[0] ?? '');
+        if (linkDoelen(file, doel).some((target) => existsSync(path.join(root, target)))) return [];
         return [{ key: `docs:${file}:link:${link}`, message: `${file}: link naar ${link} wijst naar niets` }];
       }),
     );
+}
+
+/**
+ * Waar een relatieve link mag landen. Binnen `docs/adr/` en `archief/` (framework §10) leest een link uit het archief alsof
+ * het bestand nog in `docs/adr/` stond, en een ADR-doel in `docs/adr/` lost ook op naar `archief/`. Buiten `docs/adr/`
+ * geldt alleen het letterlijke pad: die links gaan mee naar het nieuwe pad.
+ * @param {string} file @param {string} doel
+ */
+function linkDoelen(file, doel) {
+  const letterlijk = path.posix.join(path.posix.dirname(file), doel);
+  if (path.posix.dirname(file) !== 'docs/adr' && path.posix.dirname(file) !== 'docs/adr/archief') return [letterlijk];
+  const alsActief = path.posix.join(ADR_MAP, doel);
+  return [
+    letterlijk,
+    alsActief,
+    ...[letterlijk, alsActief].flatMap((pad) =>
+      /^docs\/adr\/\d{4}-[^/]+\.md$/.test(pad) ? [pad.replace(ADR_MAP, ARCHIEF)] : [],
+    ),
+  ];
 }
 
 /**
@@ -149,7 +327,7 @@ function linkViolations(root, files, read) {
  */
 function statusViolations(files, read) {
   const adrs = files.filter((file) => adrNumber(file) !== undefined);
-  const specs = files.filter((file) => /^docs\/specs\/[^_/][^/]*\.md$/.test(file));
+  const specs = files.filter((file) => SPEC_BESTAND.test(file));
   return [
     ...duplicateAdrNumbers(adrs),
     ...invalidAdrNames(files),
@@ -279,7 +457,7 @@ function dekt(tekst, spec, ac) {
  */
 function acViolations(files, read) {
   const gebouwd = files
-    .filter((file) => /^docs\/specs\/[^_/][^/]*\.md$/.test(file))
+    .filter((file) => SPEC_BESTAND.test(file))
     .map((file) => ({ file, text: read(file) }))
     .filter(({ text }) => SPEC_STATUS.exec(text)?.[1] === 'gebouwd');
   if (gebouwd.length === 0) return [];

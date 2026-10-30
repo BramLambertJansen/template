@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { exportVan } from '../hooks/follow-up-kit';
@@ -9,8 +9,16 @@ import { exportVan } from '../hooks/follow-up-kit';
 const ROOT = path.join(import.meta.dirname, '../..');
 const GATES_MODULE = ['../../scripts/kit', 'gates.mjs'].join('/');
 
+// GEWIJZIGD (compacte-kennisbasis-rails/AC-10, eigenaarbesluit 2026-10-30, ADR 0053 en 0063): een ADR dat naar `docs/adr/archief/`
+// verhuist (byte-gelijk) staat niet meer op zijn oude pad; een ADR-pad valt terug op het archief.
+function leesPad(bestand: string): string {
+  const pad = path.join(ROOT, bestand);
+  const archief = path.join(ROOT, bestand.replace(/^docs\/adr\//, 'docs/adr/archief/'));
+  return bestand.startsWith('docs/adr/') && !existsSync(pad) && existsSync(archief) ? archief : pad;
+}
+
 function tekstVan(bestand: string): string {
-  return readFileSync(path.join(ROOT, bestand), 'utf8')
+  return readFileSync(leesPad(bestand), 'utf8')
     .split('\n')
     .map((regel) => regel.replace(/^\s*>\s?/, ''))
     .join(' ')

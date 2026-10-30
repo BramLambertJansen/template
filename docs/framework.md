@@ -91,7 +91,7 @@ dependency-cruiser); checks op de database lezen de catalogus van de lokale data
 
 - **Lintmeldingen zijn instructies**: `no-restricted-imports`/`no-restricted-syntax` noemen de juiste helper.
 - **Kleine eenheden**: max-lines-per-function 60 (`.ts`) / 120 (`.tsx`); sonarjs cognitive-complexity 15; max-params 3; max-depth 3.
-- **Parse op elke grens**: zod via `defineRoute()` voor request en response (`.strict()`); env-schema in `src/core/api/env.ts`, de enige plek met `process.env` (de app levert alleen haar uitbreiding in `src/api/env.ts`).
+- **Parse op elke grens**: zod via `defineRoute()` voor request en response (`.strict()`); env-schema in `src/core/api/env.ts`, de enige plek met `process.env` (de app levert alleen haar uitbreiding in `src/api/env.ts` (nog niet gebouwd)).
 - **Geen casts**: type-assertions (`x as T`, `<T>x`) zijn verboden (`consistent-type-assertions: never`); `as const` en `import { a as b }` mogen; `unsafeCast(value, reden)` in `src/core/shared` is de enige uitweg. CI zet het verschil in aantal op de PR.
 - **`assert(cond, msg)`** in `src/core/shared`, actief in productie en gemeld aan de fouttracking; in de frontend vangt een ErrorBoundary per route hem op.
 - **Types per resource** apart geëxporteerd uit de API, zodat de TypeScript-server niet trager wordt naarmate routes groeien.
@@ -467,12 +467,13 @@ uitslagen met `pnpm pr:verify <nummer> --watch`; ontbrekend runnerbewijs wordt g
 
 | Bestand | Inhoud | Laadt | Budget |
 |---|---|---|---|
-| `AGENTS.md` | Stack, commando's, harde regels | Altijd | ≤ 100 regels |
+| `AGENTS.md` | Stack, commando's, harde regels | Altijd | ≤ 100 regels, 9 KB |
 | `CLAUDE.md` | `@AGENTS.md` + werkstraat | Altijd | ≤ 50 regels |
 | `.claude/rules/*.md` | Conventies per pad | Bij bestanden op dat pad | ≤ 60 regels |
 | `.claude/skills/*/SKILL.md` | Procedures met live feiten | Bij gebruik | ≤ 200 regels |
-| `docs/specs/` | Featurespecs | Tijdens de feature | 1–2 pagina's |
-| `docs/adr/` | Beslissingen | Op verzoek | 1 pagina |
+| `docs/specs/` | Featurespecs | Tijdens de feature | ≤ 10 KB per spec |
+| `docs/adr/` | Beslissingen (`archief/`: afgesloten) | Op verzoek | ≤ 6 KB per ADR |
+| `docs/framework.md` | Dit regelboek | Op verzoek | ≤ 40 KB |
 | `docs/operations/` | Release, rollback, back-up en herstel | Bij release of incident | 1–2 pagina's |
 
 Wat een type of check afdwingt, staat niet in proza. Wat soms nodig is, hoort in een skill of padregel, niet in een `@`-import.
@@ -498,19 +499,22 @@ Live feiten (gates, routes, componenten, nummers) komen uit `scripts/kit/feiten.
   `db/init/`, `db/docker/`, `db/tests/`, `compose*.yaml`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.npmrc`, `.pnpmfile.cjs`,
   `mise.toml`, `.env.example`, `eslint.config.*`, `eslint-suppressions.json`, `.kit/`, `osv-scanner.toml`, `.betterleaksignore`,
   `tsconfig*.json`, `.dependency-cruiser.*`, `lefthook.yml`, `renovate.json`, `.gitattributes`,
-  `src/core/`, `src/api/kit.ts`, `src/api/server.ts`, `src/api/env.ts`, `deploy/`,
+  `src/core/`, `src/api/kit.ts`, `src/api/server.ts`, `src/api/env.ts` (nog niet gebouwd), `deploy/`,
   alle `*.test.*`/`*.spec.*`, `e2e/`, `test/`, en de configs die checks bepalen: `vitest.config.ts`, `playwright.config.ts`, `vite.config.ts`,
   `.prettierrc.json`, `.prettierignore`, `Dockerfile`, `.dockerignore`, `db/test.env`, `docs/nieuwe-app.md`.
   `src/api/app.ts` en `src/shared/permissions.ts` zijn geen gate meer (ADR 0046 punt 32); het risico-overzicht van de diff-guard meldt
   elke nieuwe permissie en route. `src/core/` is daarnaast core (ADR 0040): in een app wijzigt alleen een template-merge het, bewaakt door `check-core`.
-- Instellingen als code in `.github/settings/main-protection.json`; `scripts/check-github.mjs` controleert alleen-lezend dat ze actief zijn en faalt als de agent
+- Instellingen als code in `.github/settings/main-protection.json` (nog niet gebouwd); `scripts/check-github.mjs` (nog niet gebouwd) controleert alleen-lezend dat ze actief zijn en faalt als de agent
   onder het account van de eigenaar werkt, als een verplichte check niet van GitHub Actions komt (`app_id`, anders is een status te vervalsen), als
   beheerders de regels kunnen omzeilen of als reviewgesprekken niet opgelost hoeven te zijn. Wat niet als code kan (host, database-provider),
-  staat als checklist in `docs/operations/rails-checklist.md`; een onleesbare instelling telt als fout, nooit als goed.
+  staat als checklist in `docs/operations/rails-checklist.md` (nog niet gebouwd); een onleesbare instelling telt als fout, nooit als goed.
 - `check-docs`: elk pad, `pnpm`-script en identifier tussen backticks in `AGENTS.md`, `CLAUDE.md` en `.claude/**` bestaat; relatieve links in `docs/` kloppen;
   CODEOWNERS = `gates` + `jsonGates`, `voorReview` valt daarbinnen, `altijdVragen` binnen `voorReview`, de Edit-regels in `ask` = `altijdVragen`
   en `onderhoud` heeft de vorm `{ "repository": "<owner>/<repo>" }`; het gate-register is gelijk aan `gate:fast`/`gate:slow`;
   spec- en ADR-statussen uit de vaste woordenlijst; een goedgekeurde spec heeft "Hergebruik en UX"; elk AC-id van een gebouwde spec heeft een testbestand met `<namespace>/AC-n`, of met het AC-id samen met de specnaam of namespace; elk component heeft een rij in de catalogus.
+  Verder (`scripts/kit/check-docs.mjs`): `framework §N` bestaat (§1–§12, §11a; niet in `docs/adr/`); een backtick-pad hier bestaat of
+  heeft direct `(nog niet gebouwd)` erachter; een R-id in `.claude/rules/*` staat in dit regelboek, dat elk R-id één keer definieert;
+  links binnen `docs/adr/` lossen ook op naar `archief/`; de budgetten uit §9 als ratchet in `.kit/baseline.json`.
 - **Besluit en status** (ADR 0046): de merge is de acceptatie. Architect of hoofdsessie schrijft de eigenaarstatus in het
   voorstel; de eigenaar merget of sluit de PR. Zonder record laat `check-document-status` toe: een nieuw document met een eigenaarstatus,
   `voorstel`/`voorgesteld` naar een eigenaarstatus, `geaccepteerd` naar `vervangen door NNNN` (NNNN op main of in de PR) of `vervallen`, een
@@ -522,7 +526,9 @@ Live feiten (gates, routes, componenten, nummers) komen uit `scripts/kit/feiten.
   besluit-PR; een vervallen of vervangen ADR verandert niet van inhoud, een ADR gaat nooit terug naar `voorgesteld` en wordt niet hernoemd
   (`beslisOvergang` en `isHerschrijving` in `rails/hooks/lib/document-state.mjs`, `verifyAdrWeg` in `scripts/kit/check-document-status.mjs`;
   het rolhek vergelijkt met main en laat herschrijven en verwijderen alleen aan architect en hoofdsessie; de tekst van ADR 0046 punt 2
-  volgt in een besluit-PR). Een gemandateerde spec
+  volgt in een besluit-PR). Archief: een vervangen of vervallen ADR mag byte-gelijk onder dezelfde naam naar `docs/adr/archief/`
+  (alleen met wijzigingen onder `docs/`), een spec byte-gelijk naar `docs/template/specs/`; elke andere wijziging of verwijdering
+  in `archief/` is A4, voor elke rol (`verifyVerhuizingen`, `isArchief`). Een gemandateerde spec
   die van inhoud wijzigt, verliest haar mandaat. Het register `.claude/decisions.json` blijft voor
   broncodemandaat (`--path`) en `requiredChecks`; het bindt inhoudsdigest, repository, exacte branch, status en exacte bronbestanden.
   `gebouwd # #<n>` zonder SHA geldt alleen als n deze PR is en de PR code buiten `docs/` en `CHANGELOG.md` bevat; bouwbewijs is dan de ruleset,
