@@ -1,6 +1,6 @@
 # 0055 — Testregisters per resource: één PR per resource
 
-Status: geaccepteerd
+Status: vervallen
 
 Wijzigt [0047](0047-generator-new-resource.md) punt 1 en de eerste gevolgregel, en punt 4 voor het spec-skelet.
 Drempel: A4 (een punt van een geaccepteerd ADR vervangen).

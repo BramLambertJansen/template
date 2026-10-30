@@ -2,6 +2,9 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-10-30 (#385): in punt 6 vervalt "broncodemandaat"
+([0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md)).
+
 Wijzigt [0057](0057-risicogestuurde-werkstraat.md) punt 1 en 4 en de mini-specplicht uit
 [0056](0056-functionele-ui-in-een-pr.md) voor uitsluitend de lichte route hieronder.
 Drempel: A3 (review zonder verplichte technische rolscheiding bij beperkte fixes), A4 (bestaande werkstraatafspraken).
@@ -39,7 +42,7 @@ moeten de volledige straat krijgen. In de lichte route komt een aparte tester al
    geen technisch afgedwongen onafhankelijkheid. De tester schrijft alleen tests. Ontbreekt een aparte reviewagent
    geheel, dan reviewt de eigenaar. Voor volledig werk blijven technische rolscheiding en eigenaar-terugval gelden.
 6. **Controles en rechten blijven.** De classificatie geeft geen extra schrijfrechten en omzeilt geen beschermd pad,
-   broncodemandaat, RLS, testregel of bestaande bindende beslissing. Geen test verwijderen, skippen of afzwakken op
+   RLS, testregel of bestaande bindende beslissing. Geen test verwijderen, skippen of afzwakken op
    grond van de lichte route. Volledige pre-push en CI blijven voor iedere PR; geen oude groene uitslag hergebruiken.
    De eigenaar blijft beslissen over merge. Er komt geen extra label, triageregister of documentcontrole per fix.
 7. **Eén implementatie van deze afspraak.** Na dit besluit volgen framework, agentprofielen, skills en gebruiksdocs

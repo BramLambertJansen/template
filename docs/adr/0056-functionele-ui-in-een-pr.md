@@ -2,6 +2,9 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-10-30 (#385): in punt 5 vervalt de zin over het broncodemandaat, dat met
+[0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md) vervalt.
+
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 8–9 en 12–15 voor functionele UI-wijzigingen in de template.
 Drempel: A3 (de bestaande lane-uitsluiting en het voorafgaande broncodemandaat versoepelen) en A4 (0046 wijzigen).
 
@@ -37,7 +40,7 @@ de automatische uitsluiting van alle core-UI maakt dat onderscheid onbruikbaar v
    geen ruimere rechten. Alle overige uitsluitingen voor bestaande tests en migraties blijven gelden.
 5. **Core blijft van de template.** Deze uitzondering geldt uitsluitend in de template-repository. Een afgeleide app
    verandert core nog steeds alleen via een template-update volgens ADR 0040. App-uitbreidingen blijven via registratie en
-   app-code lopen. Voor overige corebestanden verandert het broncodemandaat niet.
+   app-code lopen.
 6. **Bewijs en eigenaarreview blijven.** De vereiste checks, inhoudelijke testdekking, catalogus- en contrastdekking,
    echte-stack-e2e, CODEOWNERS, diff-guard en eigenaarmerge blijven gelden. De guard rapporteert dat de PR deze functionele
    UI-uitzondering gebruikt, inclusief gewijzigde corepaden en bestaande tests. Een agent voert geen zelfreview of merge uit.

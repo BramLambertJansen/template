@@ -2,6 +2,9 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-10-30 (#385): het label `gate-wijziging` en het taakmandaat vervallen ([0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md));
+geschrapt in punt 5, 7, 10, 15, 17 en 18.
+
 Vervangt [0011](0011-railwerk.md), [0017](0017-diff-guard.md), [0031](0031-guard-en-pr-verify-bruikbaarder.md),
 [0032](0032-developer-volgt-hoofdsessie-buiten-voorreview.md), [0033](0033-onderhoudsmodus-voor-templatewerk.md) en
 [0034](0034-gedeelde-claude-permissies.md). Drempel: A4. Consolidatie zonder inhoudelijke wijziging (eigenaarbesluit
@@ -38,14 +41,14 @@ tot stand komt (merge is acceptatie, drempel, taakmandaat, CI-lus, merge- en for
    sessie; tests importeren de branchversie. `rails/**` is een gate-pad en `voorReview`.
 4. **Groen vóór klaar** (was 0011 punt 3). SubagentStop voor de developer blokkeert tot `gate:fast` groen is, ook bij een
    schone werkmap.
-5. **Geen zelfreview** (was 0011 punt 4). Lokaal geblokkeerd en in CI zonder effect: reviews, het label `gate-wijziging`,
+5. **Geen zelfreview** (was 0011 punt 4). Lokaal geblokkeerd en in CI zonder effect: reviews,
    statussen en check-runs via `gh`.
 6. **Rollen** (was 0011 punt 8, gewijzigd in #94). Architect (spec en ADR), developer, tester, reviewer en een optionele docs-rol. Docs gaan
    mee in de PR van de code; een vaste docs-stap na de merge bestaat niet.
 7. **Developer volgt de hoofdsessie** (was 0032). Op gate-paden buiten `voorReview` krijgt ook de developer-subagent geen deny
    en geen prompt, wel de melding dat het pad eigenaarreview in de PR vraagt. Ongewijzigd: een onbekende subagent krijgt de
    strengste rol (deny op elk gate-pad); het schrijfrecht van de andere rollen; migraties, gegenereerde bestanden en bestaande
-   tests; `jsonGates`; op `voorReview` deny buiten het taakmandaat. Ontbreekt `voorReview`, dan telt elke gate als `voorReview`.
+   tests; `jsonGates`; op `voorReview` deny. Ontbreekt `voorReview`, dan telt elke gate als `voorReview`.
 
 **Onderhoudsmodus en instellingen**
 
@@ -57,7 +60,7 @@ tot stand komt (merge is acceptatie, drempel, taakmandaat, CI-lus, merge- en for
    `package.json` en de lockfile): daar blijft ask voor de hoofdsessie en deny voor een subagent. De Edit-regels in `ask` van
    `.claude/settings.json` zijn gelijk aan `altijdVragen`; buiten de modus vraagt het rolhek zelf en faalt het dicht.
 10. **Ongewijzigd, ook in `onderhoud`** (was 0033 punt 5): deny-regels en verboden git- en `gh`-acties (push naar `main`,
-    force-push, `--no-verify`, mergen, reviews, het label `gate-wijziging`, check-statussen, `docker`), bestaande tests,
+    force-push, `--no-verify`, mergen, reviews, check-statussen, `docker`), bestaande tests,
     gecommitte migraties, gegenereerde bestanden, `.env*`, `jsonGates`, het schrijfrecht van de andere rollen, de diff-guard,
     `check-document-status` en de merge door de eigenaar. De modus versoepelt de statusregels van 0038 niet.
 11. **Gedeelde Claude Code-permissies** (was 0034, wijzigt 0033 punt 6). `acceptEdits` als standaardmodus en `allow` voor snelle
@@ -75,15 +78,15 @@ tot stand komt (merge is acceptatie, drempel, taakmandaat, CI-lus, merge- en for
 **Diff-guard en document-status**
 
 15. **Regel** (was 0011 punt 9). Raakt een PR een gate-pad, `scripts` in `package.json`, of wijzigt hij een bestaande test, dan
-    vraagt hij het label `gate-wijziging` én als laatste beslissende review een APPROVED van een goedkeurder die niet de auteur
+    vraagt hij als laatste beslissende review een APPROVED van een goedkeurder die niet de auteur
     is, op exact de head-SHA. Paden NUL-gesplitst. De guard draait uit `main` (`pull_request_target`), de PR alleen als
     git-data.
 16. **Gewijzigde test** (was 0017 OV-4) is een testpad met status `M`, `D`, `R` of `T` tegen de merge-base; toevoegen is vrij.
     Het rolhek blijft lokaal fijnmaziger; de guard is grof en onomzeilbaar.
 17. **Overgang** (was 0017 OV-1 en OV-2, 0031 besluit 2). De guard is gebouwd maar niet verplicht tot de agent als GitHub App
-    pusht. Is de auteur een goedkeurder, dan slaagt hij met een waarschuwing en een samenvatting van de geraakte paden; label en
-    review worden niet gevraagd en de eigenaar merget zelf. Geen schakelaar: de overgang eindigt vanzelf met de App.
-18. **Opnieuw draaien** (was 0017 OV-3): op `pull_request_target`, ook bij `labeled`; eerst goedkeuren, dan het label; Re-run
+    pusht. Is de auteur een goedkeurder, dan slaagt hij met een waarschuwing en een samenvatting van de geraakte paden;
+    review wordt niet gevraagd en de eigenaar merget zelf. Geen schakelaar: de overgang eindigt vanzelf met de App.
+18. **Opnieuw draaien** (was 0017 OV-3): op `pull_request_target`; Re-run
     als uitweg. `pull_request_review` pas heroverwegen met de App.
 19. **De GitHub App** (was 0017 OV-5). Geen `workflows`-, `administration`- of `secrets`-recht; een goedkeuring door de App telt
     niet; de sleutel staat buiten de repo en is nooit leesbaar in de sandbox. Pas met de App wordt de guard verplicht.
