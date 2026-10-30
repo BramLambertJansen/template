@@ -174,18 +174,25 @@ const endpoint = process.argv[3] ?? '';
 const repo = process.env.STUB_REPO ?? '${REPOSITORY}';
 const pr = /\\/pulls\\/(\\d+)$/.exec(endpoint);
 if (pr !== null) {
+  const merged = process.env.STUB_PR_MERGED === 'true';
   console.log(JSON.stringify({
     number: Number(pr[1]),
-    state: process.env.STUB_PR_STATE ?? 'open',
-    merged: false,
+    state: process.env.STUB_PR_STATE ?? (merged ? 'closed' : 'open'),
+    merged,
+    merge_commit_sha: process.env.STUB_MERGE_SHA ?? null,
     base: { repo: { full_name: repo } },
-    head: { repo: { full_name: repo }, ref: '${BRANCH}', sha: process.env.STUB_PR_HEAD ?? '' },
+    head: {
+      repo: { full_name: process.env.STUB_PR_HEAD_REPO ?? repo },
+      ref: process.env.STUB_PR_REF ?? '${BRANCH}',
+      sha: process.env.STUB_PR_HEAD ?? '',
+    },
   }));
 } else {
   const sha = /commits\\/([0-9a-f]{40})\\/check-runs/.exec(endpoint)?.[1] ?? '';
-  const runs = process.env.STUB_CHECKS === 'geen' ? [] : [
-    { id: 1, name: 'gate:fast', head_sha: sha, status: 'completed', conclusion: 'success', app: { id: 15368 } },
-  ];
+  const names = (process.env.STUB_CHECK_NAMES ?? 'gate:fast').split(',').filter(Boolean);
+  const runs = process.env.STUB_CHECKS === 'geen' ? [] : names.map((name, index) => (
+    { id: index + 1, name, head_sha: sha, status: 'completed', conclusion: 'success', app: { id: 15368 } }
+  ));
   console.log(JSON.stringify({ check_runs: runs }));
 }
 `;

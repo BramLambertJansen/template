@@ -6,7 +6,8 @@ import { parseCheckRun, parsePullRequest } from '../../scripts/kit/github-eviden
 type BuiltEvidence = Parameters<typeof canRecordBuilt>[1];
 type Authority = Parameters<typeof canRecordBuilt>[2];
 type CheckRun = BuiltEvidence['checks'][number];
-type PullRequest = BuiltEvidence['pr'];
+// `mergeSha` hoort bij de gemergde route (gebouwd-na-merge); de intersectie houdt de helper geldig voor en na de bouw.
+type PullRequest = BuiltEvidence['pr'] & { mergeSha: string | null };
 
 // Autoritatieve feiten als invoer voor pure validators; deze tests vervangen geen GitHub- of applicatiecontrole.
 const SPEC = 'docs/specs/built-evidence.md';
@@ -39,6 +40,7 @@ function pullRequest(overrides: Partial<PullRequest> = {}): PullRequest {
     headSha: CURRENT_SHA,
     state: 'open',
     merged: false,
+    mergeSha: null,
     ...overrides,
   };
 }
@@ -184,10 +186,11 @@ describe('canRecordBuilt: bestaand akkoord, PR en gevalideerde implementatie sam
     expect(canRecordBuilt({ file: SPEC, text: BUILT }, validatedHead, authority())).toBe(true);
   });
 
-  test('een gemergde gesloten PR blijft geldig implementatiebewijs', () => {
-    const merged = evidence({ pr: pullRequest({ state: 'closed', merged: true }) });
+  // Gewijzigd door gebouwd-na-merge/AC-8: een gemergde PR gaat nooit via de open route; zonder mergebewijs geen gebouwd.
+  test('gebouwd-na-merge/AC-8: een gemergde gesloten PR is zonder mergebewijs geen open-routebewijs', () => {
+    const merged = evidence({ pr: pullRequest({ state: 'closed', merged: true, mergeSha: 'c'.repeat(40) }) });
 
-    expect(canRecordBuilt({ file: SPEC, text: BUILT }, merged, authority())).toBe(true);
+    expect(canRecordBuilt({ file: SPEC, text: BUILT }, merged, authority())).toBe(false);
   });
 
   test.each([
@@ -261,9 +264,11 @@ describe('parsePullRequest: onbekende GitHub JSON omzetten naar verplichte PR-fe
     expect(parsePullRequest(rawPullRequest())).toStrictEqual(pullRequest());
   });
 
+  // Gewijzigd door gebouwd-na-merge: een gemergde PR draagt zijn `merge_commit_sha` als `mergeSha`.
   test('de gemergde vlag blijft een expliciet booleanfeit', () => {
-    expect(parsePullRequest(rawPullRequest({ state: 'closed', merged: true }))).toStrictEqual(
-      pullRequest({ state: 'closed', merged: true }),
+    const raw = rawPullRequest({ state: 'closed', merged: true, merge_commit_sha: 'c'.repeat(40) });
+    expect(parsePullRequest(raw)).toStrictEqual(
+      pullRequest({ state: 'closed', merged: true, mergeSha: 'c'.repeat(40) }),
     );
   });
 
