@@ -15,7 +15,7 @@ Ook wanneer je een bestaande test mag wijzigen: framework §8.
 
 - Een beslissing ontbreekt, de spec spreekt zichzelf tegen, of een regel staat de opdracht in de weg.
 - Een check faalt en de fix zou een regel, check, hook of test afzwakken.
-- Na twee mislukte correctiepogingen: stop, vat samen wat je probeerde, vraag om richting. Uitzondering: de CI-lus van de skill `opleveren` (ADR 0046) loopt door tot groen; daar gelden alleen de stopgronden uit die skill.
+- Na twee mislukte correctiepogingen: stop, vat samen wat je probeerde, vraag om richting. Uitzondering: de CI-lus van de skill `opleveren` (R-WERK-12) loopt door tot groen; daar gelden alleen de stopgronden uit die skill.
 
 ## Zuinig met context
 
@@ -24,6 +24,6 @@ Ook wanneer je een bestaande test mag wijzigen: framework §8.
 - Lees `db/schema.snapshot.sql` in plaats van alle migraties.
 - Externe diensten via hun CLI (`gh`); MCP alleen read-only. Geen `docker`.
 
-Subagents (`.claude/agents/`), skills en hooks staan er (ADR 0045/0058): gebruik voor vereiste rollen de bijbehorende
+Subagents (`.claude/agents/`), skills en hooks staan er (R-WERK-17, R-ROL-01): gebruik voor vereiste rollen de bijbehorende
 agents, of een ad-hoc subagent met dezelfde schone, afgebakende context. Wanneer die als onafhankelijk telt en wanneer
 de eigenaar reviewt, staat in framework §8 (eisen aan de rollen); je reviewt nooit je eigen werk.

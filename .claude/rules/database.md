@@ -7,47 +7,41 @@ paths:
 
 # Regels voor `db/` en de database-toegang (`src/core/api/db`; `src/api/db` is gegenereerd)
 
-- Lees `db/schema.snapshot.sql` voor de huidige stand, niet alle migraties.
-- Nieuwe wijziging = nieuwe migratie in `db/migrations/` (dbmate-formaat `-- migrate:up`, geen down). Draait als `app_migrator`. Rollen maak je nooit in een migratie (`db/init/`). Een migratie die op `main` staat, raak je nooit aan.
-- Expand/contract: de vorige versie van de code moet blijven werken na de migratie.
-- Elke nieuwe tabel in dezelfde migratie:
-  1. `alter table … enable row level security; alter table … force row level security;`
-  2. expliciete `grant` aan `app_authenticated` met alleen de nodige rechten (nooit TRUNCATE, REFERENCES, TRIGGER);
-     tabellen in `public` of `app`, nooit in `better_auth` of `tap`;
-  3. policies die `(select app.current_user_id())` gebruiken;
-  4. een pgTAP-test in `db/tests/` per policy, met de policynaam letterlijk in de test.
-- pgTAP staat in schema `tap`: elke test begint met `set search_path = tap, public` en roept `plan()` aan vóór
-  `set local role app_authenticated` (die rol heeft geen TEMP).
-- Tabellen en kolommen snake_case; `timestamptz` voor tijd; geld in `bigint`/`integer` centen.
-- CHECK-constraint met een grens uit `src/shared/limits.ts`: test dat beide waarden gelijk zijn.
-- `security definer`-functies: `set search_path = ''`, alles volledig gekwalificeerd (`public.x`, `pg_catalog.y`),
-  eigenaar `app_definer` (`alter function … owner to app_definer`) met alleen de rechten die de functie nodig heeft.
-  Geen overload, nooit `alter function … security definer` en geen `security definer` in een `do`-blok of dynamische SQL
-  (`pnpm check:secdef`, framework §6).
-- Views: standaard `with (security_invoker = true)` (RLS van de aanroeper). Zonder dat leest de view met de rechten van zijn
-  eigenaar en eist `check:secdef` `security_barrier`, namen met schema, een `where` met een `app.`-functie als actorfilter en
-  eigenaar `app_definer`. Geen materialized views.
-- Datamigraties die alle rijen moeten zien: via zo'n functie, nooit door RLS uit te zetten. FORCE RLS geldt ook voor
-  `app_definer`: geef de tabel in dezelfde migratie een policy `to app_definer` met alleen wat de functie nodig heeft, met een pgTAP-test.
-- Auth-tabellen: SQL uit `node scripts/auth-schema.mjs` (gepinde versie) in een migratie die begint met `set local search_path = better_auth;`
-  en eindigt met `reset search_path;` (dbmate schrijft `schema_migrations` in dezelfde transactie); nooit `auth migrate`.
-- Heeft een auth-hook data buiten `better_auth` nodig (bijv. rol uit `user_roles`), of de app gegevens uit `better_auth."user"`:
-  via een `security definer`-functie of -view van `app_definer` (zoals `app.accounts`). `app_definer` leest uit `better_auth` alleen de
-  kolommen in de allowlist van `db/tests/invarianten.sql` (ADR 0043) en schrijft alleen `blocked_at` (ADR 0043); een extra kolom vraagt een ADR.
-- `set_config` en `current_setting` alleen in `src/core/api/db` en in de helpers in schema `app`; nooit in app-SQL of handlers.
-- Rijen in schema `better_auth` zijn van Better Auth (ADR 0041); lees of schrijf ze nooit vanuit `src/core/api/db` of app-code (uitzonderingen: `app.set_account_blocked` voor `blocked_at`, ADR 0043; `asUser` in de testkit, binnen een testtransactie die terugdraait). Geen provider-specifieke schema's of functies (`storage.*`, `realtime.*`, `auth.uid()`).
-- Na een migratie: `pnpm db:generate` (verse test-database in de runner) schrijft `db/schema.snapshot.sql` en
-  `src/api/db/schema.ts`; commit beide met de migratie, nooit met de hand bewerken. Een kolom `id` of `*_id` zonder
-  foreign key naar een gebrande kolom: zet hem in `db/ids.json` met een ID gemaakt met `brandedId()` uit `src/core/shared/ids.ts`, of `null` met reden.
-  Een kolomtype dat de generator niet kent (of `timestamp` zonder tijdzone) laat hem falen.
-- `app.request_id()` leest `app.request_id`, gezet door `withUser()` uit de `requestId` van de server (nooit van de client); `app.audit_log` is append-only, behalve verwijderen na de termijn (`app.retention_cutoff`), schrijven via `app.audit`/`app.audit_account_action` en door `app.assign_role` en `app.set_account_blocked`.
-- `src/core/api/db` exporteert alleen `withUser()`, `pingDatabase()` (alleen voor readiness, vanuit `src/api/server.ts`), `closeDatabase()` (alleen bij het stoppen, vanuit `src/api/server.ts`) en `testing.ts` (alleen voor testbestanden); `audit.ts` (`createAuditFn`, alleen voor `ctx.audit` in de route kit) is het enige andere toegestane bestand buiten index, testing en types. Die controleert aan het begin
-  van elke transactie `current_user = session_user`, zet de rol, `app.user_id` en `app.session_strength` (`password` of `mfa`; elke
-  andere waarde weigert hij) en vertaalt fouten. Buiten `withUser()` geeft `app.session_strength()` `none`.
+Letterlijk uit `docs/framework.md`; bij verschil wint het regelboek.
+
+- **R-DB-12** `db/schema.snapshot.sql` is enige schemabestand; `pnpm db:generate` schrijft het met `src/api/db/schema.ts`, nooit met de hand; lees snapshot, niet alle migraties (0042)
+- **R-DB-07** Migratie = nieuw bestand in `db/migrations/` (dbmate, geen down, als `app_migrator`); nooit gecommitte migratie wijzigen; expand/contract; nooit handmatig aan productie (0042)
+- **R-DB-01** Rollen: `app_migrator` (eigenaar, geen superuser), `app_authenticated` (NOLOGIN), `api_user` (NOINHERIT, alleen `SET LOCAL ROLE app_authenticated`), `auth_service`, `app_definer` (NOLOGIN, eigenaar security definer); rollen nooit in migraties maar in `db/init/` en runbook (0042)
+- **R-DB-05** Elke tabel in `public` of `app` (behalve `public.schema_migrations`), nooit in `better_auth` of `tap`: RLS aan en `FORCE`, expliciete grants met alleen nodige rechten in dezelfde migratie (nooit TRUNCATE, REFERENCES, TRIGGER; PUBLIC niets), policies met `(select app.current_user_id())`, per policy pgTAP-test op naam (0042)
+- **R-DB-17** Bewaarcatalogus `app.retention`: elke tabel in `public` en `app` heeft rij; `app.retention_cutoff()` enige bron voor termijnen in policies en triggers; uitzondering op R-DB-05: migratie die tabel aanmaakt zet `app.retention` `no force`, voegt alleen die rij in, dan `force` (0051)
+- **R-TEST-05** CSRF-wijziging heeft matrix uit ADR 0041 als tests; hooks hebben tabeltests; pgTAP begint met `set search_path = tap, public`, `plan()` vóór `set local role app_authenticated`; screenshot-baselines alleen in gepinde Playwright-image (0041, 0045)
+- **R-CODE-10** Bestanden kebab-case, componenten PascalCase, tabellen en kolommen snake_case; UI Nederlands, code, commits, branches Engels (fw)
+- **R-CODE-07** Bedragen in gehele centen (`Cents`); tijd `timestamptz`/ISO-string; formatteren alleen via `lib/format.ts`; grenzen alleen uit `limits.ts` (CHECK met zelfde waarde krijgt gelijkheidstest) (0040)
+- **R-DB-09** `security definer` alleen met `set search_path = ''`, volledig gekwalificeerde namen, eigenaar `app_definer`, geen overload, nooit `alter function … security definer`, niet in `do`-blok of dynamische SQL (fw)
+- **R-DB-10** Views: `security_invoker = true`; anders `security_barrier`, namen met schema, `app.`-functie als actorfilter (heuristiek: pgTAP en review), eigenaar `app_definer`; geen materialized views (fw)
+- **R-DB-08** Datamigratie over alle rijen: via gereviewde security definer-functie, nooit RLS uitzetten; tabel krijgt policy `to app_definer` met alleen nodige rechten en pgTAP-test (fw)
+- **R-DB-11** Elke functie in `public` en `app` staat in functiecatalogus (`db/tests/functies.sql`) als `client`, `intern` of `job`; client-functie controleert actor (0045, 0050)
+- **R-DB-13** `better_auth`-tabellen uit `node scripts/auth-schema.mjs` in migratie met `set local search_path = better_auth;` en `reset search_path;`, nooit `auth migrate`; rijen zijn van Better Auth: nooit direct uit `src/core/api/db` of app-code, alleen via `app_definer`-functie of -view (R-DB-14) of testkit-`asUser` (terugdraaiend) (0041, 0043)
+- **R-DB-14** `app_definer` leest uit `better_auth` alleen kolom-allowlist in `db/tests/invarianten.sql` (extra kolom: ADR), schrijft alleen `blocked_at`, `deactivated_at`, `session_version`; voor `app.delete_account` ook delete op `"user"`, `verification`, select `verification."value"`; FK naar `better_auth."user"`: `on delete cascade` of `set null` (0043, 0051, 0052)
+- **R-PROV-02** Geen provider-functies of -schema's (`auth.uid()`, Data API, `storage.*`, `realtime.*`); provider-data-API voor browser uit, smoketest bewijst dat (0039)
+- **R-CODE-08** Geen `SET ROLE` of `set_config(…, false)`; `set_config`/`current_setting` alleen in `src/core/api/db` en schema `app` (0042)
+- **R-CODE-05** Branded IDs via zod `.brand()`; kolom `id` of `*_id` krijgt brand via FK of `db/ids.json` (of `null` met reden); types per resource apart geëxporteerd (fw)
+- **R-DB-03** `withUser(actor, tx => …)` enige ingang: één transactie per request (GET read only), controleert `current_user = session_user`, zet rol, `app.user_id`, `app.session_strength`, `app.request_id` (server-`requestId`) met `set_config(…, true)` (0042, 0051)
+- **R-DB-15** `app.audit_log` append-only, RLS geforceerd, regel in dezelfde transactie, details alleen ID's en enums, termijn minstens 1 jaar, lezen alleen admin met MFA. Bekend gat: faalt route-commit na uitnodigen, dan account zonder rol en zonder auditregel (0051)
+- **R-LAAG-06** `src/core/api/db` exporteert alleen `withUser()`, `pingDatabase()` (readiness) en `closeDatabase()` (stoppen) alleen vanuit `src/api/server.ts`, `createAuditFn()` uit audit.ts (enig bestand naast index, testing, types; alleen `app.audit` in `tx`), `testing.ts` (alleen tests) (0042)
+
+Hoe (geen norm):
+
+- Migratie in dbmate-formaat (`-- migrate:up`); expand/contract: de vorige codeversie blijft werken. Grants en schema's: R-DB-05. De policynaam staat letterlijk in de pgTAP-test (`app_authenticated` heeft geen TEMP). Geld in `bigint`/`integer` centen.
+- Security definer: `alter function … owner to app_definer` (`pnpm check:secdef`, R-DB-09). Een view zonder `security_invoker` eist van `check:secdef` een `where` met de actorfilter.
+- Voorbeeld van R-DB-13: `app.accounts` is een view van `app_definer` op `better_auth."user"`; `app.set_account_blocked` schrijft `blocked_at`. dbmate schrijft `schema_migrations` in dezelfde transactie.
+- `pnpm db:generate` draait in de runner op een verse test-database; commit snapshot en `src/api/db/schema.ts` met de migratie. ID's in `db/ids.json` met `brandedId()` uit `src/core/shared/ids.ts`. Een onbekend kolomtype (of `timestamp` zonder tijdzone) laat de generator falen.
+- `app.request_id()` leest `app.request_id`, gezet door `withUser()` (R-DB-03). `app.audit_log`: verwijderen na de termijn via `app.retention_cutoff` (R-DB-17); schrijven via `app.audit`/`app.audit_account_action` en door `app.assign_role` en `app.set_account_blocked`.
+- `audit.ts` levert `createAuditFn` voor `ctx.audit` (R-LAAG-06). `app.session_strength` is `password` of `mfa` (anders weigert `withUser()`); daarbuiten geeft `app.session_strength()` `none`.
 
 ## Besloten, nog niet gebouwd
 
-Gebouwd: `withUser()` met Drizzle-`tx` en foutvertaling (ADR 0042); pgTAP-invarianten (`db/tests/invarianten.sql`: RLS
+Gebouwd: `withUser()` met Drizzle-`tx` en foutvertaling; pgTAP-invarianten (`db/tests/invarianten.sql`: RLS
 geforceerd, geen TRUNCATE/REFERENCES/TRIGGER, `better_auth` dicht, niets voor PUBLIC) en de functiecatalogus
 (`db/tests/functies.sql`: een nieuwe functie krijgt daar een regel, in dezelfde PR als de migratie); de testkit in
 `testing.ts` (`beginTestDb(pool)`: `asUser(rol)`, `withUser` met een savepoint per aanroep, `rollback()`; de pool verbindt
