@@ -164,10 +164,10 @@ describe('leerlus: framework en ST-09-protocol', () => {
     expect(tekst).toContain(ADR_0059);
   });
 
-  test('leerlus/AC-9: framework §8 (rolhektabel) noemt de nieuwe gh issue-regels', () => {
+  test('leerlus/AC-9: framework §8 (rolhekregel) noemt de nieuwe gh issue-regels', () => {
     const rijen = section(framework, /^## 8\. /m, /^## 9\. /m)
       .split('\n')
-      .filter((line) => line.startsWith('|') && /rolhek/i.test(line))
+      .filter((line) => (line.startsWith('|') || line.startsWith('- ')) && /rolhek/i.test(line))
       .map(flat)
       .join('\n');
     expect(rijen).toContain('gh issue create');
