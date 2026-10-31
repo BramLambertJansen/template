@@ -117,18 +117,23 @@ function regelboekPadGetrackt(id, files) {
  * Getrackt (of een map met getrackte bestanden), of een runtime-artefact dat git niet trackt: een pad dat `.gitignore`
  * negeert, ook als het niet bestaat (`.claude/hooks/.cache/`), of een pad achter een symlink (`node_modules/.bin` in een
  * kopie met `node_modules` als link). De afsluitende `/` blijft staan: zo matcht een map-regel ook zonder de map.
+ * Alleen een getrackte `.gitignore` telt: `.git/info/exclude` en de globale `core.excludesFile` verschillen per machine
+ * (leerpunt #390). `-v -z` geeft bron, regel, patroon en pad; een negatie (`!…`) negeert niet.
  * @param {string} root @param {string} id @param {readonly string[]} files
  */
 function regelboekPadBestaat(root, id, files) {
   const pad = id.replace(/^\.\//, '');
   if (regelboekPadGetrackt(id, files)) return true;
-  const { status, stderr } = spawnSync('git', ['check-ignore', '-q', '--no-index', '--', pad], {
+  const { status, stdout, stderr } = spawnSync('git', ['check-ignore', '-v', '-z', '--stdin', '--no-index'], {
     cwd: root,
+    input: `${pad}\0`,
     encoding: 'utf8',
     // Git vertaalt zijn meldingen; de C-locale houdt "beyond a symbolic link" taalonafhankelijk.
     env: { ...process.env, LC_ALL: 'C' },
   });
-  return status === 0 || (status === 128 && stderr.includes('beyond a symbolic link'));
+  if (status === 128) return stderr.includes('beyond a symbolic link');
+  const [bron = '', , patroon = ''] = stdout.split('\0');
+  return status === 0 && path.basename(bron) === '.gitignore' && files.includes(bron) && !patroon.startsWith('!');
 }
 
 /**
