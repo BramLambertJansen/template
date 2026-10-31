@@ -1,6 +1,6 @@
 # Framework
 
-Deze regels gelden altijd. Afwijken alleen na een vraag en een expliciet akkoord van de eigenaar. Dat akkoord wordt vastgelegd in de PR (template) of in app-ADR 0100+ (app). Vaste uitzonderingen staan limitatief in §3.
+Deze regels gelden altijd. Afwijken alleen na een vraag en een expliciet akkoord van de eigenaar. Akkoord staat in de PR (template) of in app-ADR 0100+ (app). Vaste uitzonderingen staan limitatief in §3.
 
 Elke norm is één regel `R-<domein>-<nr>` met herkomst (ADR-nummer, `fw`, `AGENTS`, `rules`, `dod`, `runner`, `nieuwe-app`).
 
@@ -70,7 +70,7 @@ Afgedwongen door: dependency-cruiser, lint, smoketest op provider-data-API.
 
 ## 4. Codeerkaders
 
-Afgedwongen door: ESLint (alle regels `error`, `--max-warnings 0`), dependency-cruiser, `tsc`, gate-register `scripts/kit/gates.mjs`, ratchet `.kit/baseline.json`, `check-migrations`, `check-secdef`, `check-policies`.
+Afgedwongen door: ESLint (`--max-warnings 0`), dependency-cruiser, `tsc`, gate-register `scripts/kit/gates.mjs`, ratchet `.kit/baseline.json`, `check-migrations`, `check-secdef`, `check-policies`.
 
 - **R-CODE-01** Checks op code via AST, op database via catalogus, nooit regex over bronbestanden; lintmeldingen noemen de juiste helper (fw, 0045)
 - **R-CODE-02** Functie ≤ 60 regels (`.ts`) of 120 (`.tsx`), max 3 parameters, diepte 3, cognitive-complexity 15 (AGENTS)
@@ -111,10 +111,10 @@ Afgedwongen door: `check-secdef`, `check-policies`, pgTAP-invarianten en functie
 - **R-DB-01** Rollen: `app_migrator` (eigenaar, geen superuser), `app_authenticated` (NOLOGIN), `api_user` (NOINHERIT, alleen `SET LOCAL ROLE app_authenticated`), `auth_service`, `app_definer` (NOLOGIN, eigenaar security definer); rollen nooit in migraties maar in `db/init/` en runbook (0042)
 - **R-DB-02** `statement_timeout`, `idle_in_transaction_session_timeout` op `api_user` en `auth_service`; `lock_timeout` op `app_migrator` (fw)
 - **R-DB-03** `withUser(actor, tx => …)` enige ingang: één transactie per request (GET read only), controleert `current_user = session_user`, zet rol, `app.user_id`, `app.session_strength`, `app.request_id` (server-`requestId`) met `set_config(…, true)` (0042, 0051)
-- **R-DB-04** Alleen `withUser()` vertaalt databasefouten (23505 `ALREADY_EXISTS`, 23503 `NOT_FOUND`, 42501 `FORBIDDEN`); route vangt ze niet af, gebruikt `ctx.actor`, geen query buiten `tx`, geen tweede verbinding (AGENTS, 0042)
+- **R-DB-04** Alleen `withUser()` vertaalt databasefouten (23505 `ALREADY_EXISTS`, 23503 `NOT_FOUND`, 42501 `FORBIDDEN`); route vangt ze niet af, gebruikt `ctx.actor`, geen query buiten `tx`, geen tweede verbinding (0042)
 - **R-DB-05** Elke tabel in `public` of `app` (behalve `public.schema_migrations`): RLS aan en `FORCE`, expliciete grants in dezelfde migratie (nooit TRUNCATE, REFERENCES, TRIGGER; PUBLIC niets), policies met `(select app.current_user_id())`, per policy pgTAP-test op naam (0042)
 - **R-DB-06** `can()` regelt functieniveau, RLS rijniveau; rollen uit `user_roles`, nooit uit sessie; gebruikersbewerkbare velden nooit voor autorisatie (fw)
-- **R-DB-07** Migratie = nieuw bestand in `db/migrations/` (dbmate, geen down, als `app_migrator`); nooit gecommitte migratie wijzigen; expand/contract; nooit handmatig aan productie (AGENTS, 0042)
+- **R-DB-07** Migratie = nieuw bestand in `db/migrations/` (dbmate, geen down, als `app_migrator`); nooit gecommitte migratie wijzigen; expand/contract; nooit handmatig aan productie (0042)
 - **R-DB-08** Datamigratie over alle rijen: via gereviewde security definer-functie, nooit RLS uitzetten; tabel krijgt policy `to app_definer` met pgTAP-test (fw, rules)
 - **R-DB-09** `security definer` alleen met `set search_path = ''`, volledig gekwalificeerde namen, eigenaar `app_definer`, geen overload, nooit `alter function … security definer`, niet in `do`-blok of dynamische SQL (AGENTS, fw)
 - **R-DB-10** Views: `security_invoker = true`; anders `security_barrier`, namen met schema, `app.`-functie als actorfilter (heuristiek: pgTAP en review), eigenaar `app_definer`; geen materialized views (fw, rules)
@@ -122,9 +122,9 @@ Afgedwongen door: `check-secdef`, `check-policies`, pgTAP-invarianten en functie
 - **R-DB-12** `db/schema.snapshot.sql` is enige schemabestand; `pnpm db:generate` schrijft het met `src/api/db/schema.ts`, nooit met de hand; lees snapshot, niet alle migraties (0042, rules)
 - **R-DB-13** `better_auth`-tabellen uit `node scripts/auth-schema.mjs` in migratie met `set local search_path = better_auth;` en `reset search_path;`, nooit `auth migrate`; rijen zijn van Better Auth (0041, rules)
 - **R-DB-14** `app_definer` leest uit `better_auth` alleen kolom-allowlist in `db/tests/invarianten.sql` (extra kolom: ADR), schrijft alleen `blocked_at`, `deactivated_at`, `session_version`; voor `app.delete_account` ook delete op `"user"`, `verification`, select `verification."value"`; FK naar `better_auth."user"`: `on delete cascade` of `set null` (0043, 0051, 0052)
-- **R-DB-15** `app.audit_log` append-only, RLS geforceerd, regel in dezelfde transactie, details alleen ID's en enums (geen e-mail of vrije tekst), termijn minstens 1 jaar, lezen alleen admin met MFA. Bekend gat: faalt route-commit na uitnodigen, dan account zonder rol en zonder auditregel (0051)
+- **R-DB-15** `app.audit_log` append-only, RLS geforceerd, regel in dezelfde transactie, details alleen ID's en enums, termijn minstens 1 jaar, lezen alleen admin met MFA. Bekend gat: faalt route-commit na uitnodigen, dan account zonder rol en zonder auditregel (0051)
 - **R-DB-16** App-acties in `src/shared/audit.ts` (nooit `core.`) via `ctx.audit()`; core-accountacties via `app.assign_role`, `app.set_account_blocked`, `app.audit_account_action` (0051, rules)
-- **R-DB-17** Bewaarcatalogus `app.retention`: elke tabel in `public` en `app` heeft rij; `app.retention_cutoff()` enige bron voor termijnen in policies en triggers; audit 1 jaar, mail-outbox 30 dagen (0051)
+- **R-DB-17** Bewaarcatalogus `app.retention`: elke tabel in `public` en `app` heeft rij; `app.retention_cutoff()` enige bron voor termijnen in policies en triggers; uitzondering op R-DB-05: migratie die tabel aanmaakt zet `app.retention` `no force`, voegt alleen die rij in, dan `force` (0051)
 - **R-DB-18** Postgres 17 patch exact gepind in `db/docker/Dockerfile`; pgTAP alleen lokaal en CI; PgBouncer transaction mode bewezen zonder lekken (0042)
 - **R-AUTH-01** Alleen inloggen vanuit browser, alle data via API; Better Auth gepind in `src/core/api/auth` op `/api/auth/*`; alleen plugins two-factor en magic link, andere vraagt ADR (fw, 0041)
 - **R-AUTH-02** Sessie in database, `cookieCache` uit; cookie `__Host-`, `httpOnly`, `Secure`, `SameSite=Lax`; geen token in `localStorage`; 7 dagen absoluut, 12 uur idle, `freshAge` 10 min; wachtwoord- of 2FA-wijziging trekt andere sessies in; sessielijst nooit token, IP of ruwe user-agent (0041, 0043)
