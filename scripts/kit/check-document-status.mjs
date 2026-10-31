@@ -82,7 +82,8 @@ function verifyDocument(document, context) {
     const fout = statusregelOvertreding(
       statusLine(document.after) ?? '',
       statusLine(document.before),
-      context.adrBestanden,
+      // Een link naar een gearchiveerd ADR lost op zoals in check-docs (framework §10).
+      [...context.adrBestanden, ...context.adrArchief],
     );
     if (fout !== null) throw new Error(`${document.file}: ${fout}`);
   }

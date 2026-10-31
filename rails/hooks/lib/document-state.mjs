@@ -83,7 +83,7 @@ export function changeStatus(file, text, target) {
  * ADR 0045 punt 22: achter een nieuwe of gewijzigde ADR-statuswaarde alleen `(JJJJ-MM-DD)`, `#<nr>` en `[NNNN](NNNN-<slug>.md)`
  * naar een bestaand ADR, gescheiden door `, ` of ` — `. Een regel gelijk aan main en een spec-regel vallen erbuiten.
  * @param {string} nieuweRegel @param {string | null} oudeRegel
- * @param {readonly string[]} bestaandeAdrBestanden bestandsnamen in `docs/adr/` op HEAD, zoals `0017-diff-guard.md`
+ * @param {readonly string[]} bestaandeAdrBestanden bestandsnamen in `docs/adr/` en `docs/adr/archief/` op HEAD, zoals `0017-diff-guard.md`
  * @returns {string | null} null of de reden
  */
 export function statusregelOvertreding(nieuweRegel, oudeRegel, bestaandeAdrBestanden) {
