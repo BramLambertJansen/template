@@ -298,6 +298,94 @@ describe('compacte-kennisbasis-rails/AC-7: een backtick-pad in docs/framework.md
     expect(nieuw.some(({ message }) => message.includes('scripts/kit/weg.mjs'))).toBe(true);
   });
 
+  // Alleen .gitignore-bestanden in de repo tellen; .git/info/exclude en de globale excludesFile verschillen per machine.
+  const LOKAAL_PAD = 'scripts/kit/.cache/x.json';
+
+  /** De meldingen over docs/framework.md; `exclude` gaat na `git init` in .git/info/exclude. */
+  async function metExclude(files: Record<string, string>, exclude: string): Promise<Melding[]> {
+    const root = repo({ ...BASIS, ...files });
+    mkdirSync(path.join(root, '.git', 'info'), { recursive: true });
+    writeFileSync(path.join(root, '.git', 'info', 'exclude'), exclude);
+    return (await docsViolations(root)).filter(({ message }) => message.includes('docs/framework.md'));
+  }
+
+  test('compacte-kennisbasis-rails/AC-7 een pad alleen in .git/info/exclude, niet bestaand: rood', async () => {
+    const meldingen = await metExclude(framework(`Zie \`${LOKAAL_PAD}\` voor details.`), 'scripts/kit/.cache/\n');
+    expect(meldingen.map(({ message }) => message).join('\n')).toContain(LOKAAL_PAD);
+  });
+
+  test('compacte-kennisbasis-rails/AC-7 een pad alleen in .git/info/exclude met (nog niet gebouwd): groen', async () => {
+    const regel = `Zie \`${LOKAAL_PAD}\` (nog niet gebouwd) voor details.`;
+    expect(await metExclude(framework(regel), 'scripts/kit/.cache/\n')).toStrictEqual([]);
+  });
+
+  test('compacte-kennisbasis-rails/AC-7 een pad alleen via een globale excludesFile, niet bestaand: rood', async () => {
+    const map = mkdtempSync(path.join(tmpdir(), 'archief-check-docs-global-'));
+    writeFileSync(path.join(map, 'ignore'), 'scripts/kit/.cache/\n');
+    writeFileSync(path.join(map, 'gitconfig'), `[core]\n\texcludesFile = ${path.join(map, 'ignore')}\n`);
+    const voor = process.env.GIT_CONFIG_GLOBAL;
+    process.env.GIT_CONFIG_GLOBAL = path.join(map, 'gitconfig');
+    try {
+      const root = repo({ ...BASIS, ...framework(`Zie \`${LOKAAL_PAD}\` voor details.`) });
+      const meldingen = (await docsViolations(root)).map(({ message }) => message).join('\n');
+      expect(meldingen).toContain(LOKAAL_PAD);
+    } finally {
+      if (voor === undefined) delete process.env.GIT_CONFIG_GLOBAL;
+      else process.env.GIT_CONFIG_GLOBAL = voor;
+    }
+  });
+
+  test('compacte-kennisbasis-rails/AC-7 een pad in .gitignore en in .git/info/exclude, niet bestaand: groen', async () => {
+    const meldingen = await metExclude(
+      { ...framework(`Zie \`${LOKAAL_PAD}\` voor details.`), '.gitignore': 'scripts/kit/.cache/\n' },
+      'scripts/kit/.cache/\n',
+    );
+    expect(meldingen).toStrictEqual([]);
+  });
+
+  test('compacte-kennisbasis-rails/AC-7 een pad met een negatie in .gitignore, niet bestaand: rood', async () => {
+    const pad = 'scripts/kit/.cache/keep.json';
+    const nieuw = await toegevoegd(
+      { ...BASIS, '.gitignore': 'scripts/kit/.cache/*\n!scripts/kit/.cache/keep.json\n' },
+      framework(`Zie \`${pad}\` voor details.`),
+    );
+    expect(nieuw.some(({ message }) => message.includes(pad))).toBe(true);
+  });
+
+  const melden = (meldingen: Melding[]): string => meldingen.map(({ message }) => message).join('\n');
+
+  test('compacte-kennisbasis-rails/AC-7 een globale excludesFile met de naam .gitignore buiten de repo: rood', async () => {
+    const map = mkdtempSync(path.join(tmpdir(), 'archief-check-docs-global-'));
+    writeFileSync(path.join(map, '.gitignore'), 'scripts/kit/.cache/\n');
+    writeFileSync(path.join(map, 'gitconfig'), `[core]\n\texcludesFile = ${path.join(map, '.gitignore')}\n`);
+    const voor = process.env.GIT_CONFIG_GLOBAL;
+    process.env.GIT_CONFIG_GLOBAL = path.join(map, 'gitconfig');
+    try {
+      const root = repo({ ...BASIS, ...framework(`Zie \`${LOKAAL_PAD}\` voor details.`) });
+      expect(melden(await docsViolations(root))).toContain(LOKAAL_PAD);
+    } finally {
+      if (voor === undefined) delete process.env.GIT_CONFIG_GLOBAL;
+      else process.env.GIT_CONFIG_GLOBAL = voor;
+    }
+  });
+
+  test('compacte-kennisbasis-rails/AC-7 een relatieve core.excludesFile conf/.gitignore in de repo, niet getrackt: rood', async () => {
+    const root = repo({ ...BASIS, ...framework(`Zie \`${LOKAAL_PAD}\` voor details.`) });
+    execFileSync('git', ['config', 'core.excludesFile', 'conf/.gitignore'], { cwd: root });
+    mkdirSync(path.join(root, 'conf'), { recursive: true });
+    writeFileSync(path.join(root, 'conf', '.gitignore'), 'scripts/kit/.cache/\n');
+    expect(melden(await docsViolations(root))).toContain(LOKAAL_PAD);
+  });
+
+  test('compacte-kennisbasis-rails/AC-7 een geneste getrackte scripts/kit/.gitignore met .cache/, niet bestaand: groen', async () => {
+    const pad = 'scripts/kit/.cache/y.json';
+    const nieuw = await toegevoegd(
+      { ...BASIS, 'scripts/kit/.gitignore': '.cache/\n' },
+      framework(`Zie \`${pad}\` voor details.`),
+    );
+    expect(nieuw).toStrictEqual([]);
+  });
+
   // Een pad achter een symlink kan git niet tracken (zoals `node_modules/.bin` in de proef-kopie); niet in .gitignore.
   /** De meldingen over docs/framework.md in een repo met `vendorlink` als symlink naar een map buiten de repo. */
   async function metSymlink(regel: string): Promise<Melding[]> {
