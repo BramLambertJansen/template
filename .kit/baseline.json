@@ -1,7 +1,6 @@
 {
   "dependency-cruiser": [],
   "check-docs": [
-    "docs:AGENTS.md:budget:9818",
     "docs:adr:0008:budget:8706",
     "docs:adr:0016:budget:12459",
     "docs:adr:0017:budget:7955",

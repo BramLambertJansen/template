@@ -5,16 +5,21 @@ paths:
 
 # Regels voor `src/core`
 
-- `src/core` is van de template (ADR 0040). In een app wijzig je het niet: updates komen alleen via `git merge template/main`,
-  en `check-core` (job in `guard.yml`, `scripts/kit/check-core.mjs`, regels in ADR 0040; in de template zelf uit) laat een andere wijziging falen. In de template zelf mag het met eigenaarakkoord, ook door de developer binnen een exact taakmandaat uit main (ADR 0046 punt 9).
-- Core importeert nooit uit `src/api`, `src/web` of `src/shared`. Wat core van de app nodig heeft, krijgt het als argument van een
-  compositie-root (`src/api/app.ts`, `src/api/kit.ts`, `src/web/lib/api.ts`). Geen globale registratie, geen mutable singleton.
-- Elke uitbreidingsplek (permissies, foutcodes, limieten, env, componentvarianten) heeft in core een test die bewijst dat een app
-  hem gebruikt zonder core te wijzigen.
-- Past iets voor een app niet in core: stop en stel een uitbreidingsplek voor in de template, in plaats van core in de app aan te passen.
-- Nieuwe rol: `ROLES` in `src/core/shared/can.ts`, een migratie voor de CHECK op `public.user_roles.role`, een seed-account in
-  `src/core/api/dev/seed-accounts.ts` en een naam in `roleLabels` (`src/web/copy/ui.ts`). TypeScript dwingt de laatste twee af;
-  de dev-rolwisselaar toont de rol dan vanzelf.
+Letterlijk uit `docs/framework.md`; bij verschil wint het regelboek.
+
+- **R-LAAG-01** Zones: `src/core/{api,web,shared}` is template (in app alleen via template-merge); app-code in `src/{api,web,shared}` (0040)
+- **R-ARCH-07** `check-core` laat wijziging van `src/core/` in app falen behalve vertrouwde template-merge; verplicht in app-ruleset. Bekend gat: merge met oudere template-commit kan core terugzetten of wissen (0040)
+- **R-REPO-03** Beschermde paden in `.claude/gates.json`, eigenaarakkoord; developer-broncode met exact taakmandaat (vervalt met PR 6b); `src/api/app.ts` en `src/shared/permissions.ts` geen gate; geen gegenereerde bestanden of `.env*` bewerken (0046)
+- **R-LAAG-02** App importeert core, core nooit app; core krijgt app-input als argument van compositie-root (`src/api/app.ts`, `src/api/kit.ts`, `src/web/lib/api.ts`); geen globale registratie of singleton (0040)
+- **R-ARCH-02** Elk uitbreidingspunt heeft core-test dat app het zonder core-wijziging gebruikt (plaats en gebruik: ADR 0040 punt 10); core/app-tabel via `src/shared/{permissions,errors,limits,ids,audit}.ts` (0040)
+- **R-ARCH-01** App breidt uit door registreren, nooit core wijzigen; past iets niet: stel uitbreidingsplek in template voor; core-fout oplossen in template (0040)
+- **R-ARCH-03** Nieuwe rol: `ROLES` in `src/core/shared/can.ts`, migratie voor CHECK op `public.user_roles.role`, seed-account in `src/core/api/dev/seed-accounts.ts`, naam in `roleLabels` (rules)
+
+Hoe (geen norm):
+
+- Core-updates in een app via `git merge template/main` (R-LAAG-01); `check-core` is een job in `guard.yml` (`scripts/kit/check-core.mjs`) en staat in de template zelf uit. In de template wijzigt core met eigenaarakkoord (R-REPO-03).
+- `src/shared` is app-code, dus core importeert er niet uit (R-LAAG-02). Uitbreidingsplekken: permissies, foutcodes, limieten, env, componentvarianten.
+- `roleLabels` staat in `src/web/copy/ui.ts`; TypeScript dwingt seed-account en naam af, de dev-rolwisselaar toont de rol dan vanzelf.
 
 ## Besloten, nog niet gebouwd
 
