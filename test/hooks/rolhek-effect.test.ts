@@ -376,6 +376,19 @@ describe('rolhek-effect/AC-7: dicht vallen', () => {
     expect(geblokkeerd(handle('stop', payload(''), repo))).toBe('');
   });
 
+  test('--alles laat een geldige opname van een andere subagent staan', () => {
+    const root = nieuweRepo();
+    const repo = repoVan(root);
+    sh(root, 'mkdir -p test/veel && cd test/veel && seq 1 5001 | xargs touch');
+    handle('subagent-start', payload('tester'), repo);
+    sh(root, 'rm -rf test/veel');
+    handle('subagent-start', payload('developer'), repo);
+    handle('subagent-stop', payload('tester'), repo);
+    neemOver(['--alles'], repo);
+    schrijf(root, 'rails/y.mjs', 'x');
+    expect(geblokkeerd(handle('stop', payload(''), repo))).toContain('rails/y.mjs');
+  });
+
   test('meer dan 5000 paden: een overtreding zonder pad', () => {
     const root = nieuweRepo();
     sh(root, 'mkdir -p test/veel && cd test/veel && seq 1 5001 | xargs touch');

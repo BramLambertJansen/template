@@ -1,12 +1,11 @@
 // Toets op effect (ADR 0066, spec rolhek-effect): na een Bash-commando van een subagent krijgt elk pad dat echt veranderde
 // de beslissing van een Edit van die rol. Opslag in `<git-common-dir>/rolhek-effect/`, buiten de schrijfrechten van de sandbox.
-import { Buffer } from 'node:buffer';
 import { createHash } from 'node:crypto';
 import { lstatSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { decideChange } from './rolhek.mjs';
 import { blobVan, entryVan, gelijk, veranderingen } from './effect-compare.mjs';
-import { MAX_MS, gitDirVan, momentopname } from './effect-snapshot.mjs';
+import { MAX_MS, blobBytes, gitDirVan, momentopname } from './effect-snapshot.mjs';
 
 /**
  * @typedef {import('./effect-snapshot.mjs').Snapshot} Snapshot
@@ -39,10 +38,12 @@ const OPSLAG = new WeakMap();
  * @param {Repo} repo @param {string} blob
  */
 function echteBlob(repo, blob) {
-  const inhoud = repo.git(['cat-file', 'blob', blob]);
+  const bytes = blobBytes(repo.root, blob);
   const algoritme = blob.length === 64 ? 'sha256' : 'sha1';
-  const id = createHash(algoritme).update(`blob ${String(Buffer.byteLength(inhoud))}\0`).update(inhoud).digest('hex');
-  return id === blob ? inhoud : null;
+  const id = createHash(algoritme).update(`blob ${String(bytes.length)}\0`).update(bytes).digest('hex');
+  // Dicht falen: een vervalst object maakt van een bestaande test anders een nieuw bestand (geen toets op weggehaalde tests).
+  if (id !== blob) throw new Error(`object ${blob} klopt niet met zijn hash; de toets valt dicht`);
+  return bytes.toString('utf8');
 }
 
 /** @param {string} file @param {unknown} fallback */
@@ -108,11 +109,7 @@ function leesVoor(repo, voor) {
     if (rel.endsWith('/')) return null;
     const blob = blobVan(entryVan(voor, rel));
     if (blob === null) return rel in voor.paden ? null : repo.ctx.read(rel);
-    try {
-      return echteBlob(repo, blob);
-    } catch {
-      return null;
-    }
+    return echteBlob(repo, blob);
   };
 }
 

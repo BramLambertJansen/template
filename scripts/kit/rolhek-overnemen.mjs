@@ -3,6 +3,7 @@
 // Draait buiten de sandbox (`sandbox.excludedCommands`); het rolhek vraagt de hoofdsessie altijd en weigert het een subagent.
 import { entryVan } from '../../rails/hooks/lib/effect-compare.mjs';
 import {
+  agentOpnamen,
   leesOvergenomen,
   overtredingen,
   schrijfJson,
@@ -30,9 +31,11 @@ export function neemOver(args, repo) {
   const genomen = leesOvergenomen(repo);
   for (const o of gekozen) if (o.rel !== null) genomen[o.rel] = JSON.stringify(entryVan(nu, o.rel));
   schrijfOvergenomen(repo, genomen);
-  // `--alles` laat ook de momentopnamen van subagents vervallen: een te grote opname (AC-7) gaf anders bij elke nacontrole
-  // opnieuw een overtreding zonder pad.
-  if (alles) rmSync(path.join(opslag(repo), 'agent'), { recursive: true, force: true });
+  // `--alles` laat ook de te grote momentopnamen van subagents (AC-7) vervallen: die gaven anders bij elke nacontrole opnieuw
+  // een overtreding zonder pad. Geldige opnamen blijven staan, zodat de nacontrole van andere subagents blijft werken.
+  if (alles)
+    for (const { id, opname } of agentOpnamen(repo, null))
+      if (opname.snap === null) rmSync(path.join(opslag(repo), 'agent', `${id}.json`), { force: true });
   schrijfJson(
     path.join(opslag(repo), 'overtredingen.json'),
     lijst.filter((o) => !gekozen.includes(o)),

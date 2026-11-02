@@ -12,7 +12,7 @@ export const MAX_MS = 5000;
 const GIT_VAST = ['config', 'commondir', 'hooks', 'info'];
 const WERKMAP_VAST = ['.claude/settings.local.json', '.claude/hooks/.cache'];
 // Git zonder programma's uit de config (B1) en zonder GIT_*-omgeving.
-const GIT_VEILIG = ['-c', 'core.fsmonitor=false', '-c', 'diff.external=', '-c', 'core.quotepath=false'];
+const GIT_VEILIG = ['--no-replace-objects', '-c', 'core.fsmonitor=false', '-c', 'diff.external=', '-c', 'core.quotepath=false'];
 
 /**
  * @typedef {{ wt: string, idx: string }} Entry `wt`: `<mode>:<blob>` of `weg`; `idx`: `<mode> <blob> <stage>` of ''.
@@ -37,6 +37,17 @@ export function gitIn(root) {
     if (result.status !== 0) throw new Error(`git ${args[0] ?? ''}: ${result.stderr.trim()}`);
     return result.stdout;
   };
+}
+
+/**
+ * De ruwe bytes van een blob (zonder utf8-decodering), voor de controle van de hash.
+ * @param {string} root @param {string} blob
+ */
+export function blobBytes(root, blob) {
+  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')));
+  const result = spawnSync('git', [...GIT_VEILIG, 'cat-file', 'blob', blob], { cwd: root, env, maxBuffer: 256 * 1024 * 1024, timeout: MAX_MS });
+  if (result.status !== 0) throw new Error(`git cat-file ${blob}: onleesbaar`);
+  return result.stdout;
 }
 
 /** @param {string} text */
