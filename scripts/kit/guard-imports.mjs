@@ -29,6 +29,7 @@ const forbiddenBuiltins = new Set(['module']);
  * @param {string} baseDir
  */
 export function guardEntries(baseDir) {
+  /** @type {Set<string>} */
   const entries = new Set();
   const yml = path.join(baseDir, workflow);
   if (existsSync(yml)) {
