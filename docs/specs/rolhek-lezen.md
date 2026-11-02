@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd # #423
 namespace: rolhek-lezen
 ---
 
@@ -42,14 +42,7 @@ n.v.t. — geen UI. De weigermelding noemt de regel en de toegestane opties.
 
   `gh ... --web`, `-R`/`--repo` en `gh api` blijven geweigerd. Zoeken en tellen doet de Grep-tool; `git grep`, `git blame`, `wc` en pipes komen er niet bij. Tabeltests bevatten `--comments --web` en `--log --web`.
 - **rolhek-lezen/AC-2** — Voor elke rol wordt geweigerd: `--output`, `--output=…` en elke afkorting ervan bij `git diff|log|show`, en `-O`, `-O<commando>`, `--open-files-in-pager` en elke afkorting of cluster ervan (`--open-files`, `-iO`, `-nOvim`) bij `git grep` (nieuwe weigering; ze stonden niet in de schrijfdoelen). Daarmee is leerpunt #409 gesloten.
-- **rolhek-lezen/AC-3** — Een onbekende optie bij een commando uit AC-1 of AC-6 geeft voor de reviewer een weigering die de toegestane opties noemt.
-- **rolhek-lezen/AC-6** — Ook de overige reviewer-commando's hebben een vaste optielijst, met de regels van AC-1 (herzien na de review van 2 november 2026: zonder lijst schreef `pnpm test:unit --outputFile=<pad>` een bestand, herschreef `-u` snapshots en laadde `--config` andere code):
-  - `pnpm check:<naam>`, `pnpm test`, `pnpm test:unit|db|e2e`, `pnpm gate:fast|slow`: geen opties; losse woorden zijn testfilters of paden; na `--` alleen paden, geen woord met `-` vooraan (pnpm geeft dat door aan het script);
-  - `git diff`: vlaggen `--stat --shortstat --numstat --name-only --name-status --no-color -w --ignore-all-space --cached --staged --merge-base`; `git log`: dezelfde diffvlaggen plus `--oneline -p --patch --no-merges --merges --first-parent --reverse --graph --decorate --follow` en `-<n>`, met waarde `-n --max-count --since --until --author --grep`; `git show`: de diffvlaggen plus `--oneline --no-patch -s`; `git status`: `--short -s --porcelain -b --branch`; alle vier met refs en paden als losse woorden en paden na `--`;
-  - `gh pr view <nr>`: vlag `--comments`, met waarde `--json --jq`; `gh pr diff <nr>`: `--name-only --patch`; `gh pr checks <nr>`: vlag `--required`, met waarde `--json --jq`;
-  - `node scripts/kit/feiten.mjs`: secties als losse woorden, vlaggen `--alle --json`.
-
-  Een los woord mag naast de tekens van AC-1 ook `~` en `^` bevatten (`HEAD~1`, `HEAD^:pad`). Tabeltests met de weigeringen hierboven en met de gewone review (`git diff origin/main...HEAD`, `git log --oneline -n 20`, `git show HEAD:pad`, `gh pr view <nr> --json body --jq .body`).
+- **rolhek-lezen/AC-3** — Een onbekende optie bij een commando uit AC-1 geeft voor de reviewer een weigering die de toegestane opties noemt. `git diff|log|show|status` en `gh pr view|diff|checks` blijven zoals nu, behalve AC-2 en AC-4 (AC-4 dicht ook het bestaande gat dat `NODE_OPTIONS=… node scripts/kit/feiten.mjs` doorlaat).
 - **rolhek-lezen/AC-4** — Voor de reviewer wordt elke variabele vóór het commando geweigerd (`X=… cmd`, ook `LC_ALL=C git status`); negatieve tabeltests per commando met `METING_GH`, `GIT_EXTERNAL_DIFF` en `NODE_OPTIONS`, elk met een basis die zonder variabele slaagt (leerpunt #401).
 - **rolhek-lezen/AC-5** — Alle bestaande aanvaltests en vals-positieve tests van het rolhek blijven ongewijzigd groen. Voor hoofdsessie, developer en tester verandert alleen AC-2; `git ls-files`, `gh issue view|list` en `gh run view|list` zijn daar al toegestaan of vragen (ask) zoals nu, en een test legt dat vast.
 
