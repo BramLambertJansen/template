@@ -369,7 +369,10 @@ describe('rolhek-effect/AC-6: opslag buiten de sandbox en zonder vergelijkingspu
     const root = nieuweRepo();
     const wt = `${root}-wt`;
     dirs.push(wt);
-    sh(root, `git worktree add -q ${wt}`);
+    // Argumenten, geen shell: het pad komt uit tmpdir().
+    expect(
+      spawnSync('git', ['worktree', 'add', '-q', wt], { cwd: root, env: { ...process.env, ...GIT_ENV } }).status,
+    ).toBe(0);
     expect(opslag(repoVan(wt)).startsWith(path.join(root, '.git', 'rolhek-effect', 'wt-'))).toBe(true);
     handle('subagent-start', payload('reviewer'), repoVan(root));
     schrijf(wt, 'src/a.ts', 'in worktree b\n');
