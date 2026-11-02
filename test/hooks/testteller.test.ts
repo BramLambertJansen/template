@@ -1,4 +1,4 @@
-// Leerpunt #424: testgevallen en skips tellen via de AST, niet via regexen over de bron (R-CODE-01).
+// Leerpunt #424: testgevallen en skips tellen via een lexer zonder dependency, niet via regexen over de bron (R-CODE-01).
 import { describe, expect, test } from 'vitest';
 import { testChangeRisk } from '../../rails/hooks/lib/functional-ui.mjs';
 
@@ -252,5 +252,54 @@ describe('testteller: parser en overige bestanden', () => {
       "it('b', () => { expect([2]).toEqual([2]); });",
     );
     expect(testChangeRisk(lines(LOS_A, LOS_B), after, FILE)).toBeNull();
+  });
+});
+
+describe('testteller: herreview-gaten', () => {
+  const MET_CTX = "test('a', (ctx) => { expect(1).toBe(1); });";
+
+  test.each(['ctx?.skip();', 'ctx.skip?.();'])('testteller: optional chaining %s erbij is een skip', (aanroep) => {
+    const after = lines(`test('a', (ctx) => { ${aanroep} expect(1).toBe(1); });`);
+    expect(testChangeRisk(lines(MET_CTX), after, FILE)).toBe('skip');
+  });
+
+  test('testteller: skip binnen een template-expressie is een skip', () => {
+    const after = lines("test('a', (ctx) => { const s = `${ctx.skip()}`; void s; });");
+    expect(testChangeRisk(lines("test('a', (ctx) => { const s = `${1}`; void s; });"), after, FILE)).toBe('skip');
+  });
+
+  test('testteller: skip binnen een JSX-expressie in .tsx is een skip', () => {
+    const file = 'src/core/web/ui/kaart.test.tsx';
+    const before = lines("test('a', (ctx) => { render(<div>{1}</div>); });");
+    const after = lines("test('a', (ctx) => { render(<div>{ctx.skip()}</div>); });");
+    expect(testChangeRisk(before, after, file)).toBe('skip');
+  });
+
+  test('testteller: geval binnen een JSX-expressie in .tsx telt', () => {
+    const file = 'src/core/web/ui/kaart.test.tsx';
+    const before = lines("const x = <div>{test('a', () => {})}</div>;", LOS_B);
+    expect(testChangeRisk(before, lines(LOS_B), file)).toBe('removed');
+  });
+
+  test('testteller: regex na de ) van een if laat een volgende skip niet verdwijnen', () => {
+    const after = lines(LOS_A, 'if (ok) /`/.test(s);', "test.skip('x', () => {});");
+    expect(testChangeRisk(lines(LOS_A), after, FILE)).toBe('skip');
+  });
+
+  test('testteller: regex na een blok laat een volgende skip niet verdwijnen', () => {
+    const after = lines(LOS_A, 'if (ok) {', '  void 0;', '}', '/`/.test(s);', "test.skip('x', () => {});");
+    expect(testChangeRisk(lines(LOS_A), after, FILE)).toBe('skip');
+  });
+
+  test('testteller: deling na een ) blijft een deling', () => {
+    const deling = 'const r = (a + b) / 2; const t = c / 2;';
+    expect(testChangeRisk(lines(deling, LOS_A, LOS_B), lines(deling, LOS_B), FILE)).toBe('removed');
+    const opEenRegel = (midden: string) => `const r = (a + b) / 2; ${midden} const t = c / 2;`;
+    expect(testChangeRisk(lines(opEenRegel(LOS_A), LOS_B), lines(opEenRegel(''), LOS_B), FILE)).toBe('removed');
+  });
+
+  test('testteller: typeargument met functietype in test.each telt als geval', () => {
+    const geval = "test.each<() => void>([[() => undefined]])('x', (f) => { f(); });";
+    expect(testChangeRisk(lines(geval, LOS_B), lines(LOS_B), FILE)).toBe('removed');
   });
 });
