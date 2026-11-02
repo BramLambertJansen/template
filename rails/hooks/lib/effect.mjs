@@ -1,0 +1,232 @@
+// Toets op effect (ADR 0066, spec rolhek-effect): na een Bash-commando van een subagent krijgt elk pad dat echt veranderde
+// de beslissing van een Edit van die rol. Opslag in `<git-common-dir>/rolhek-effect/`, buiten de schrijfrechten van de sandbox.
+import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { decideChange } from './rolhek.mjs';
+import { blobVan, entryVan, gelijk, veranderingen } from './effect-compare.mjs';
+import { MAX_MS, gitDirVan, momentopname } from './effect-snapshot.mjs';
+
+/**
+ * @typedef {import('./effect-snapshot.mjs').Snapshot} Snapshot
+ * @typedef {import('./effect-snapshot.mjs').Git} Git
+ * @typedef {import('./effect-compare.mjs').Verandering} Verandering
+ * @typedef {{ rel: string | null, actor: string, rol: string, commando: string, reden: string, voor: import('./effect-snapshot.mjs').Entry | null }} Overtreding
+ * @typedef {{ actor: string, start: number, eind: number, paden: string[] }} Venster
+ * @typedef {{ root: string, git: Git, ctx: import('./rolhek.mjs').Ctx, now: () => number, alleenLezen?: boolean }} Repo
+ * `alleenLezen`: pr:verify in de sandbox; de lijst wordt berekend maar niet weggeschreven.
+ */
+
+// Een momentopname van een subagent geldt een dag (AC-4: tot het einde van de sessie; daarna ruimt SubagentStart op).
+const BEWAAR_MS = 24 * 60 * 60 * 1000;
+
+/** @param {Repo} repo */
+export function opslag(repo) {
+  return path.join(gitDirVan(repo), 'rolhek-effect');
+}
+
+/** @param {string} file @param {unknown} fallback */
+function leesJson(file, fallback) {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8'));
+  } catch {
+    return fallback;
+  }
+}
+
+/** @param {string} file @param {unknown} value */
+function schrijfJson(file, value) {
+  mkdirSync(path.dirname(file), { recursive: true });
+  writeFileSync(file, `${JSON.stringify(value)}\n`);
+}
+
+/** Een veilige bestandsnaam voor een id uit de payload. @param {string} id */
+const sleutel = (id) => id.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 120) || 'leeg';
+
+/** @param {Repo} repo @returns {Overtreding[]} */
+export function overtredingen(repo) {
+  const lijst = leesJson(path.join(opslag(repo), 'overtredingen.json'), []);
+  return Array.isArray(lijst) ? lijst : [];
+}
+
+/** @param {Repo} repo @returns {Record<string, string>} */
+function overgenomen(repo) {
+  const map = leesJson(path.join(opslag(repo), 'overgenomen.json'), {});
+  return typeof map === 'object' && map !== null ? map : {};
+}
+
+/** @param {Repo} repo @returns {Venster[]} */
+function vensters(repo) {
+  try {
+    return readFileSync(path.join(opslag(repo), 'vensters.jsonl'), 'utf8')
+      .split('\n')
+      .filter((regel) => regel !== '')
+      .map((regel) => JSON.parse(regel));
+  } catch {
+    return [];
+  }
+}
+
+/** @param {Repo} repo @param {Venster} venster */
+export function legVensterVast(repo, venster) {
+  const file = path.join(opslag(repo), 'vensters.jsonl');
+  mkdirSync(path.dirname(file), { recursive: true });
+  const bewaard = vensters(repo).filter((oud) => oud.eind > repo.now() - BEWAAR_MS);
+  writeFileSync(file, [...bewaard, venster].map((regel) => `${JSON.stringify(regel)}\n`).join(''));
+}
+
+/** De staat van een pad nu, als sleutel voor vergelijken. @param {Snapshot} snap @param {string} rel */
+const staatSleutel = (snap, rel) => JSON.stringify(entryVan(snap, rel));
+
+/**
+ * De inhoud van vóór het commando (AC-3): het bewaarde voorbeeld, anders de index.
+ * @param {Repo} repo @param {Snapshot} voor
+ * @returns {(rel: string) => string | null}
+ */
+function leesVoor(repo, voor) {
+  return (rel) => {
+    if (rel.endsWith('/')) return null;
+    const blob = blobVan(entryVan(voor, rel));
+    if (blob === null) return rel in voor.paden ? null : repo.ctx.read(rel);
+    try {
+      return repo.git(['cat-file', 'blob', blob]);
+    } catch {
+      return null;
+    }
+  };
+}
+
+/** @param {Repo} repo @param {string} rel */
+function leesNu(repo, rel) {
+  if (rel.endsWith('/')) return null;
+  try {
+    return readFileSync(path.join(repo.root, rel), 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Een verandering met de beslissing van `decideChange` voor deze rol.
+ * @param {Repo} repo @param {{ verandering: Verandering, agentType: string, voor: Snapshot }} doel
+ */
+function beslis(repo, { verandering, agentType, voor }) {
+  const { rel, na } = verandering;
+  const change = na.wt === 'weg'
+    ? { kind: /** @type {const} */ ('delete'), after: null }
+    : { kind: /** @type {const} */ ('write'), after: leesNu(repo, rel) };
+  return decideChange({ rel, change, agentType }, { ...repo.ctx, read: leesVoor(repo, voor) });
+}
+
+/**
+ * Overtredingen en meldingen voor de veranderingen tussen `voor` en `na`; paden die een ander venster verklaart, een
+ * overgenomen staat hebben of al op de lijst staan, tellen niet.
+ * @param {Repo} repo
+ * @param {{ voor: Snapshot, na: Snapshot, start: number }} paar
+ * @param {{ actor: string, agentType: string, commando: string }} wie
+ */
+export function toets(repo, paar, wie) {
+  const anderen = vensters(repo).filter((venster) => venster.actor !== wie.actor && venster.eind >= paar.start);
+  const verklaard = new Set(anderen.flatMap((venster) => venster.paden));
+  const genomen = overgenomen(repo);
+  const branchRef = repo.ctx.branch === '' || repo.ctx.branch === 'HEAD' ? '' : `refs/heads/${repo.ctx.branch}`;
+  const diffPaden = (/** @type {string} */ oud, /** @type {string} */ nieuw) =>
+    repo.git(['diff', '--name-only', '-z', '--no-renames', oud, nieuw]).split('\0').filter((rel) => rel !== '');
+  const lijst = veranderingen(paar, { diffPaden, branchRef });
+  /** @type {Overtreding[]} */
+  const nieuw = [];
+  /** @type {string[]} */
+  const meldingen = [];
+  for (const verandering of lijst) {
+    if (verklaard.has(verandering.rel) || genomen[verandering.rel] === staatSleutel(paar.na, verandering.rel)) continue;
+    const besluit = beslis(repo, { verandering, agentType: wie.agentType, voor: paar.voor });
+    const reden = [...besluit.deny, ...besluit.ask].join('; ');
+    if (reden !== '') nieuw.push({ rel: verandering.rel, actor: wie.actor, rol: wie.agentType || 'hoofdsessie', commando: wie.commando, reden, voor: verandering.voor });
+    meldingen.push(...besluit.context);
+  }
+  return { nieuw, meldingen, paden: lijst.map((verandering) => verandering.rel) };
+}
+
+/**
+ * Voegt overtredingen toe (één per pad) en laat vervallen wat weer gelijk is aan de staat van vóór de overtreding (AC-5).
+ * @param {Repo} repo @param {{ nieuw: Overtreding[], nu: Snapshot | null }} wijziging
+ * @returns {Overtreding[]}
+ */
+export function werkLijstBij(repo, { nieuw, nu }) {
+  const bestaand = overtredingen(repo).filter((oud) =>
+    oud.rel === null || oud.voor === null || nu === null || !gelijk(entryVan(nu, oud.rel), oud.voor));
+  const paden = new Set(bestaand.map((oud) => oud.rel));
+  const lijst = [...bestaand, ...nieuw.filter((overtreding) => !paden.has(overtreding.rel))];
+  if (repo.alleenLezen !== true) schrijfJson(path.join(opslag(repo), 'overtredingen.json'), lijst);
+  return lijst;
+}
+
+/** @param {Repo} repo @param {'pre' | 'agent'} soort @param {string} id */
+const opnamePad = (repo, soort, id) => path.join(opslag(repo), soort, `${sleutel(id)}.json`);
+
+/**
+ * Legt een momentopname vast; `teGroot` of te traag (AC-7) wordt bewaard als `null`, zodat de vergelijking dicht valt.
+ * @param {Repo} repo @param {{ soort: 'pre' | 'agent', id: string }} waar @param {Record<string, unknown>} extra
+ */
+export function legVast(repo, { soort, id }, extra) {
+  const start = repo.now();
+  const snap = momentopname(repo);
+  const bruikbaar = !snap.teGroot && repo.now() - start <= MAX_MS;
+  schrijfJson(opnamePad(repo, soort, id), { ...extra, tijd: start, snap: bruikbaar ? snap : null });
+}
+
+/** @param {Repo} repo @param {'pre' | 'agent'} soort @param {string} id */
+export function leesOpname(repo, soort, id) {
+  /** @type {{ tijd?: number, snap?: Snapshot | null, sessie?: string, agentType?: string, gestopt?: number } | null} */
+  const opname = leesJson(opnamePad(repo, soort, id), null);
+  return opname;
+}
+
+/** @param {Repo} repo @param {string} id */
+export function wisOpname(repo, id) {
+  rmSync(opnamePad(repo, 'pre', id), { force: true });
+}
+
+/** @param {Repo} repo @param {string} id @param {Record<string, unknown>} velden */
+export function werkAgentBij(repo, id, velden) {
+  const opname = leesOpname(repo, 'agent', id);
+  if (opname !== null) schrijfJson(opnamePad(repo, 'agent', id), { ...opname, ...velden });
+}
+
+/** De momentopnamen van subagents, optioneel van één sessie; oudere dan BEWAAR_MS vallen weg. @param {Repo} repo @param {string | null} sessie */
+export function agentOpnamen(repo, sessie) {
+  const map = path.join(opslag(repo), 'agent');
+  return lijstMap(map).flatMap((naam) => {
+    const id = naam.replace(/\.json$/, '');
+    const opname = leesOpname(repo, 'agent', id);
+    if (opname === null || (opname.tijd ?? 0) < repo.now() - BEWAAR_MS) return [];
+    return sessie === null || opname.sessie === sessie ? [{ id, opname }] : [];
+  });
+}
+
+/** @param {string} map @returns {string[]} */
+function lijstMap(map) {
+  try {
+    return readdirSync(map);
+  } catch {
+    return [];
+  }
+}
+
+/** @param {Repo} repo */
+export function ruimOp(repo) {
+  for (const soort of ['agent', 'pre']) {
+    const map = path.join(opslag(repo), soort);
+    for (const naam of lijstMap(map)) {
+      const opname = leesJson(path.join(map, naam), null);
+      const tijd = typeof opname === 'object' && opname !== null && 'tijd' in opname ? Number(opname.tijd) : 0;
+      if (tijd < repo.now() - BEWAAR_MS) rmSync(path.join(map, naam), { force: true });
+    }
+  }
+}
+
+/** @param {Repo} repo @param {Record<string, string>} map */
+export function schrijfOvergenomen(repo, map) {
+  schrijfJson(path.join(opslag(repo), 'overgenomen.json'), map);
+}
+
+export { overgenomen as leesOvergenomen, schrijfJson };
