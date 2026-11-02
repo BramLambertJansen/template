@@ -15,7 +15,9 @@ Elke Vitest-run krijgt één eigen hoofdmap `vitest-run-*` onder de tmpdir van d
 `test/setup/tmp-root.ts`). De globalSetup zet `TMPDIR` daarop vóór de workers starten, dus `mkdtempSync(path.join(tmpdir(), …))`
 in een test of kindproces landt daaronder. Na de run verwijdert de teardown alleen die hoofdmap, ook als tests falen of een test
 zijn eigen map niet opruimt; de rest van `/tmp` blijft onaangeroerd (leerpunt #396). Ruim in een test toch zelf op wanneer
-de map binnen de run groot wordt of vaak terugkomt: de hoofdmap groeit tot het einde van de run.
+de map binnen de run groot wordt of vaak terugkomt: de hoofdmap groeit tot het einde van de run (in watch-modus tot het
+afsluiten). Wordt Vitest hard gestopt (SIGKILL), dan blijft die ene `vitest-run-*`-map staan. Op native Windows leest
+`os.tmpdir()` `TEMP`/`TMP` in plaats van `TMPDIR`; daar werkt dit niet, maar dat platform valt buiten het ondersteunde pad (WSL2 wel).
 
 ## Lokale meting (21 oktober 2026)
 
