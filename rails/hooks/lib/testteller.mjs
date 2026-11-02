@@ -1,7 +1,7 @@
 // Testteller (leerpunt #424): telt testgevallen en skips in een JS/TS-testbestand met een kleine lexer zonder
 // dependency, zodat de guard (geen install, ADR 0045 punt 15–19) en het rolhek (alleen gecontroleerde code van main,
 // R-ROL-09) hem kunnen draaien. Commentaar, strings, template-literals, regex-literals en JSX-tekst leveren geen
-// tokens; daarna telt een pass over aanroepketens (`test.each(t)(…)`, `ctx.skip()`). Eén geval per aanroepplek.
+// tokens (expressies in `${…}` en JSX-`{…}` wel, in een eigen lijst); daarna telt een pass over aanroepketens (`test.each(t)(…)`, `ctx.skip()`). Eén geval per aanroepplek.
 
 /** @typedef {{ soort: 'naam' | 'teken' | 'literal', tekst: string }} Token */
 
@@ -13,12 +13,8 @@ const EXPRESSIE_WOORDEN = new Set([
   'return', 'typeof', 'instanceof', 'in', 'of', 'new', 'delete', 'void', 'throw', 'case', 'do', 'else', 'yield', 'await',
 ]);
 
-/** @param {Token | undefined} vorige */
-function expressieStart(vorige) {
-  if (vorige === undefined) return true;
-  if (vorige.soort === 'teken') return !SLUIT_EXPRESSIE.has(vorige.tekst);
-  return vorige.soort === 'naam' && EXPRESSIE_WOORDEN.has(vorige.tekst);
-}
+/** Na `)` van deze woorden begint een expressie (`if (ok) /re/.test(s)`). */
+const CONTROLE_WOORDEN = new Set(['if', 'while', 'for', 'with']);
 
 class Lexer {
   /** @param {string} bron @param {boolean} jsx */
@@ -28,6 +24,31 @@ class Lexer {
     this.i = 0;
     /** @type {Token[]} */
     this.tokens = [];
+    /** Tokens uit elke `${…}` en JSX-`{…}`: ze tellen mee, maar zetten geen keten van buiten voort. @type {Token[][]} */
+    this.binnen = [];
+    /** Per open `(`: volgt hij op if/while/for/with? @type {boolean[]} */
+    this.haakjes = [];
+    this.naControle = false;
+  }
+
+  /** Begint hier een expressie, zodat `/` een regex is en `<` in .tsx een element? */
+  expressieStart() {
+    const vorige = this.vorige();
+    if (vorige === undefined) return true;
+    if (vorige.soort === 'naam') return EXPRESSIE_WOORDEN.has(vorige.tekst);
+    if (vorige.soort !== 'teken' || !SLUIT_EXPRESSIE.has(vorige.tekst)) return vorige.soort === 'teken';
+    if (vorige.tekst === ')') return this.naControle;
+    // Na `}` (blok of object) beslist de regel: een regex begint een nieuwe regel, een deling zelden.
+    return vorige.tekst === '}' && /\n[ \t]*$/.test(this.bron.slice(Math.max(0, this.i - 200), this.i));
+  }
+
+  /** @param {string} c */
+  teken(c) {
+    const vorige = this.vorige();
+    if (c === '(') this.haakjes.push(vorige?.soort === 'naam' && CONTROLE_WOORDEN.has(vorige.tekst));
+    if (c === ')') this.naControle = this.haakjes.pop() ?? false;
+    this.push('teken', c);
+    this.i += 1;
   }
 
   /** @param {Token['soort']} soort @param {string} tekst */
@@ -62,14 +83,16 @@ class Lexer {
     else if (c === '/' && volgend === '*') this.tot('*/', 2);
     else if (c === "'" || c === '"') this.string(c);
     else if (c === '`') this.template();
-    else if (c === '/' && expressieStart(this.vorige())) this.regex();
-    else if (c === '<' && this.jsx && expressieStart(this.vorige()) && this.element()) this.push('literal', '<>');
+    else if (c === '/' && this.expressieStart()) this.regex();
+    else if (c === '<' && this.jsx && this.expressieStart() && this.element()) this.push('literal', '<>');
+    else if (c === '?' && volgend === '.' && !/[0-9]/.test(this.bron[this.i + 2] ?? '')) {
+      // `a?.b` en `a?.()` als `.`: een optionele keten blijft een keten (`ctx?.skip()`).
+      this.push('teken', '.');
+      this.i += 2;
+    }
     else if (NAAM_START.test(c)) this.naam();
     else if (/[0-9]/.test(c)) this.getal();
-    else {
-      this.push('teken', c);
-      this.i += 1;
-    }
+    else this.teken(c);
   }
 
   /** Slaat over tot en met `einde` (commentaar). @param {string} einde @param {number} start */
@@ -102,13 +125,16 @@ class Lexer {
     this.push('literal', '`');
   }
 
-  /** Lext een `${…}` of `{…}` apart, zodat de tokens erin geen keten van buiten voortzetten. @param {number} open */
+  /** Lext een `${…}` of `{…}` in een eigen lijst, zodat de tokens erin geen keten van buiten voortzetten. @param {number} open */
   binnenExpressie(open) {
-    const buiten = this.tokens;
+    const buiten = { tokens: this.tokens, haakjes: this.haakjes };
     this.tokens = [];
+    this.haakjes = [];
+    this.binnen.push(this.tokens);
     this.i += open;
     this.expressie(true);
-    this.tokens = buiten;
+    this.tokens = buiten.tokens;
+    this.haakjes = buiten.haakjes;
   }
 
   regex() {
@@ -209,7 +235,8 @@ function typeArgumenten(tokens, start) {
   for (let j = start; j < Math.min(tokens.length, start + 500); j += 1) {
     const { soort, tekst } = tokens[j] ?? { soort: 'literal', tekst: '' };
     if (soort !== 'teken') continue;
-    if (tekst === '=') return null;
+    if (tekst === '=' && tokens[j + 1]?.tekst !== '>') return null;
+    if (tekst === '=') j += 1;
     if (tekst === '<') diepte += 1;
     if (tekst === '>') diepte -= 1;
     if (diepte === 0) {
@@ -230,7 +257,9 @@ function keten(tokens, start, paren) {
   for (;;) {
     const token = tokens[j];
     const volgende = tokens[j + 1];
-    if (token?.tekst === '.' && token.soort === 'teken' && volgende?.soort === 'naam') {
+    if (token?.tekst === '.' && token.soort === 'teken' && volgende?.tekst === '(' && volgende.soort === 'teken') {
+      j += 1;
+    } else if (token?.tekst === '.' && token.soort === 'teken' && volgende?.soort === 'naam') {
       schakels.push({ soort: 'eigenschap', naam: volgende.tekst });
       j += 2;
     } else if (token?.soort === 'teken' && token.tekst === '(') {
@@ -284,7 +313,17 @@ function skips(wortel, schakels) {
 export function telTests(bron, pad) {
   const lexer = new Lexer(bron, /\.[jt]sx$/.test(pad));
   lexer.expressie(false);
-  const { tokens } = lexer;
+  const totaal = { cases: 0, skips: 0 };
+  for (const tokens of [lexer.tokens, ...lexer.binnen]) {
+    const deel = telLijst(tokens);
+    totaal.cases += deel.cases;
+    totaal.skips += deel.skips;
+  }
+  return totaal;
+}
+
+/** @param {Token[]} tokens */
+function telLijst(tokens) {
   const paren = haakjesParen(tokens);
   const totaal = { cases: 0, skips: 0 };
   tokens.forEach((token, index) => {
