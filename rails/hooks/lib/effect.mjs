@@ -1,18 +1,19 @@
 // Toets op effect (ADR 0066, spec rolhek-effect): na een Bash-commando van een subagent krijgt elk pad dat echt veranderde
 // de beslissing van een Edit van die rol. Opslag in `<git-common-dir>/rolhek-effect/`, buiten de schrijfrechten van de sandbox.
 import { createHash } from 'node:crypto';
-import { lstatSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { lstatSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { decideChange } from './rolhek.mjs';
 import { blobVan, entryVan, gelijk, veranderingen } from './effect-compare.mjs';
-import { MAX_MS, blobBytes, gitDirVan, momentopname } from './effect-snapshot.mjs';
+import { MAX_MS, blobBytes, gitDirVan, momentopname, padStaten } from './effect-snapshot.mjs';
 
 /**
  * @typedef {import('./effect-snapshot.mjs').Snapshot} Snapshot
  * @typedef {import('./effect-snapshot.mjs').Git} Git
  * @typedef {import('./effect-compare.mjs').Verandering} Verandering
  * @typedef {{ rel: string | null, actor: string, rol: string, commando: string, reden: string, voor: import('./effect-snapshot.mjs').Entry | null }} Overtreding
- * @typedef {{ actor: string, start: number, eind: number, paden: string[] }} Venster
+ * @typedef {{ actor: string, start: number, eind: number, paden: string[], staten?: Record<string, string> }} Venster
+ * `staten`: de werkmapstaat per pad direct na het venster; alleen die staat is verklaard (AC-2).
  * @typedef {{ root: string, git: Git, ctx: import('./rolhek.mjs').Ctx, now: () => number, alleenLezen?: boolean }} Repo
  * `alleenLezen`: pr:verify in de sandbox; de lijst wordt berekend maar niet weggeschreven.
  */
@@ -20,13 +21,24 @@ import { MAX_MS, blobBytes, gitDirVan, momentopname } from './effect-snapshot.mj
 // Een momentopname van een subagent geldt een dag (AC-4: tot het einde van de sessie; daarna ruimt SubagentStart op).
 const BEWAAR_MS = 24 * 60 * 60 * 1000;
 
-/** @param {Repo} repo */
+/** @param {{ root: string, git: Git }} repo */
 export function opslag(repo) {
   const bekend = OPSLAG.get(repo);
   if (bekend !== undefined) return bekend;
-  const map = path.join(gitDirVan(repo), 'rolhek-effect');
+  // Gekoppelde worktrees delen de git-common-dir: elk een eigen deel, anders vergelijkt de ene werkmap opnamen van de andere.
+  const basis = path.join(gitDirVan(repo), 'rolhek-effect');
+  const map = eigenGitMap(repo.root) ? basis : path.join(basis, `wt-${createHash('sha256').update(repo.root).digest('hex').slice(0, 16)}`);
   OPSLAG.set(repo, map);
   return map;
+}
+
+/** @param {string} root */
+function eigenGitMap(root) {
+  try {
+    return statSync(path.join(root, '.git')).isDirectory();
+  } catch {
+    return false;
+  }
 }
 
 /** Eén `git rev-parse` per hook-aanroep. @type {WeakMap<object, string>} */
@@ -93,7 +105,20 @@ export function legVensterVast(repo, venster) {
   const file = path.join(opslag(repo), 'vensters.jsonl');
   mkdirSync(path.dirname(file), { recursive: true });
   const bewaard = vensters(repo).filter((oud) => oud.eind > repo.now() - BEWAAR_MS);
-  writeFileSync(file, [...bewaard, venster].map((regel) => `${JSON.stringify(regel)}\n`).join(''));
+  const met = { ...venster, staten: padStaten(repo, venster.paden) };
+  writeFileSync(file, [...bewaard, met].map((regel) => `${JSON.stringify(regel)}\n`).join(''));
+}
+
+/**
+ * De paden die het venster van een andere actor verklaart: alleen als het pad nu nog de staat heeft die dat venster
+ * achterliet. Een eerdere Edit van de hoofdsessie maakt een latere schrijfactie van een subagent op hetzelfde pad niet vrij.
+ * @param {Repo} repo @param {{ actor: string, start: number, paden: readonly string[] }} vraag
+ */
+function verklaardePaden(repo, { actor, start, paden }) {
+  const anderen = vensters(repo).filter((venster) => venster.actor !== actor && venster.eind >= start);
+  const kandidaten = paden.filter((rel) => anderen.some((venster) => venster.paden.includes(rel)));
+  const nu = padStaten(repo, kandidaten);
+  return new Set(kandidaten.filter((rel) => anderen.some((venster) => venster.staten?.[rel] !== undefined && venster.staten[rel] === nu[rel])));
 }
 
 /** De staat van een pad nu, als sleutel voor vergelijken. @param {Snapshot} snap @param {string} rel */
@@ -113,6 +138,15 @@ function leesVoor(repo, voor) {
   };
 }
 
+/** De blob-id in een indexregel, of null. @param {string} idx */
+function indexBlob(idx) {
+  const blob = idx.split('|')[0]?.split(' ')[1] ?? '';
+  return /^[0-9a-f]{40,64}$/.test(blob) ? blob : null;
+}
+
+/** Weg uit de werkmap: ook een gecommitte verwijdering (schoon en niet in de index). @param {import('./effect-snapshot.mjs').Entry} entry */
+const weg = (entry) => entry.wt === 'weg' || (entry.wt === 'schoon' && entry.idx === '');
+
 /** @param {Repo} repo @param {string} rel */
 function leesNu(repo, rel) {
   if (rel.endsWith('/')) return null;
@@ -131,10 +165,18 @@ function leesNu(repo, rel) {
  */
 function beslis(repo, { verandering, agentType, voor }) {
   const { rel, na } = verandering;
-  const change = na.wt === 'weg'
-    ? { kind: /** @type {const} */ ('delete'), after: null }
-    : { kind: /** @type {const} */ ('write'), after: leesNu(repo, rel) };
-  return decideChange({ rel, change, agentType }, { ...repo.ctx, read: leesVoor(repo, voor) });
+  const ctx = { ...repo.ctx, read: leesVoor(repo, voor) };
+  const del = { kind: /** @type {const} */ ('delete'), after: null };
+  const besluiten = [decideChange({ rel, change: weg(na) ? del : { kind: 'write', after: leesNu(repo, rel) }, agentType }, ctx)];
+  // Een gestagede inhoud telt apart: een tester kan een `test.skip` stagen en de werkmap ongemoeid laten.
+  if (verandering.voor.idx !== na.idx && !rel.endsWith('/')) {
+    const blob = indexBlob(na.idx);
+    const change = blob === null ? del : { kind: /** @type {const} */ ('write'), after: echteBlob(repo, blob) };
+    besluiten.push(decideChange({ rel, change, agentType }, ctx));
+  }
+  /** @param {'deny' | 'ask' | 'context'} soort */
+  const samen = (soort) => [...new Set(besluiten.flatMap((besluit) => besluit[soort]))];
+  return { deny: samen('deny'), ask: samen('ask'), context: samen('context') };
 }
 
 /** @param {Repo} repo @param {{ voor: Snapshot, na: Snapshot }} paar */
@@ -158,16 +200,20 @@ export function veranderdePaden(repo, paar) {
  * @param {{ actor: string, agentType: string, commando: string }} wie
  */
 export function toets(repo, paar, wie) {
-  const anderen = vensters(repo).filter((venster) => venster.actor !== wie.actor && venster.eind >= paar.start);
-  const verklaard = new Set(anderen.flatMap((venster) => venster.paden));
   const genomen = overgenomen(repo);
   const lijst = veranderingenIn(repo, paar);
+  const verklaard = verklaardePaden(repo, { actor: wie.actor, start: paar.start, paden: lijst.map((verandering) => verandering.rel) });
+  // Terugzetten naar de staat van vóór een open overtreding is de uitweg van AC-5, geen nieuwe overtreding.
+  const open = overtredingen(repo);
+  const terug = (/** @type {Verandering} */ verandering) =>
+    open.some((oud) => oud.rel === verandering.rel && oud.voor !== null && gelijk(oud.voor, verandering.na));
   /** @type {Overtreding[]} */
   const nieuw = [];
   /** @type {string[]} */
   const meldingen = [];
   for (const verandering of lijst) {
-    if (verklaard.has(verandering.rel) || genomen[verandering.rel] === staatSleutel(paar.na, verandering.rel)) continue;
+    if (verklaard.has(verandering.rel) || terug(verandering) || genomen[verandering.rel] === staatSleutel(paar.na, verandering.rel))
+      continue;
     const besluit = beslis(repo, { verandering, agentType: wie.agentType, voor: paar.voor });
     const reden = [...besluit.deny, ...besluit.ask].join('; ');
     if (reden !== '') nieuw.push({ rel: verandering.rel, actor: wie.actor, rol: wie.agentType || 'hoofdsessie', commando: wie.commando, reden, voor: verandering.voor });

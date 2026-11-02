@@ -5,9 +5,9 @@ import { pullRequest, checkRuns } from './github-evidence.mjs';
 import { setTimeout } from 'node:timers/promises';
 import { unchangedHead } from './status-git.mjs';
 import { lijstTekst, nacontrole } from '../../rails/hooks/lib/effect-hooks.mjs';
-import { gitDirVan, gitIn } from '../../rails/hooks/lib/effect-snapshot.mjs';
+import { gitIn } from '../../rails/hooks/lib/effect-snapshot.mjs';
+import { opslag } from '../../rails/hooks/lib/effect.mjs';
 import { existsSync } from 'node:fs';
-import path from 'node:path';
 import { rolhekContext } from '../../rails/hooks/lib/rolhek-context.mjs';
 
 /** @param {import('../../rails/hooks/lib/built-evidence.mjs').CheckRun[]} checks @param {{ names: string[], sha: string }} required */
@@ -121,9 +121,10 @@ function verifyHead(context) {
  */
 export function verifyEffect(root) {
   // Zonder opslag heeft geen subagent in deze repo gewerkt; dan is er niets na te controleren.
-  if (!existsSync(path.join(gitDirVan({ root, git: gitIn(root) }), 'rolhek-effect'))) return;
+  const git = gitIn(root);
+  if (!existsSync(opslag({ root, git }))) return;
   const lijst = nacontrole(
-    { root, git: gitIn(root), ctx: rolhekContext(root, root), now: () => Date.now(), alleenLezen: true },
+    { root, git, ctx: rolhekContext(root, root), now: () => Date.now(), alleenLezen: true },
     null,
   );
   if (lijst.length > 0)
@@ -149,7 +150,8 @@ async function main() {
     const progress = checkProgress(checkRuns(authority.repository, head), required);
     verifyHead(context);
     console.log(`PR #${String(target.number)} · ${head}\n${progress.lines.join('\n')}`);
-    if (progress.state === 'success') return;
+    // Opnieuw vlak voor het groene antwoord: een achtergrondproces van een subagent kan tijdens het wachten nog schrijven.
+    if (progress.state === 'success') return verifyEffect(root);
     if (progress.state === 'failure') throw new Error('CI is rood; herstel de oorzaak en controleer de nieuwe commit');
     if (!target.watch || Date.now() >= deadline)
       throw new Error('CI ontbreekt of loopt nog; geen geslaagde oplevering');

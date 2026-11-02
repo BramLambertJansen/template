@@ -168,6 +168,15 @@ export function gitDirVan(repo) {
 }
 
 /**
+ * De werkmapstaat van losse paden, zoals in een momentopname (zonder objecten te schrijven): voor de vensters van AC-2.
+ * @param {{ root: string, git: Git }} repo @param {readonly string[]} paden
+ */
+export function padStaten(repo, paden) {
+  if (paden.length === 0) return {};
+  return werkmapStaat({ root: repo.root, git: repo.git, gitDir: gitDirVan(repo), alleenLezen: true }, paden);
+}
+
+/**
  * De momentopname van AC-1. `teGroot` als er meer dan MAX_PADEN paden zijn (AC-7); dan zonder inhoud.
  * @param {{ root: string, git: Git, alleenLezen?: boolean }} repo
  * @returns {Snapshot}

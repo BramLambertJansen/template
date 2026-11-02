@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync,
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
-import { handle } from '../../rails/hooks/lib/effect-hooks.mjs';
+import { handle, nacontrole } from '../../rails/hooks/lib/effect-hooks.mjs';
 import { gitIn } from '../../rails/hooks/lib/effect-snapshot.mjs';
 import { opslag, overtredingen } from '../../rails/hooks/lib/effect.mjs';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
@@ -162,6 +162,23 @@ describe('rolhek-effect/AC-3: elk programma, dezelfde beslissing als een Edit', 
     const uitslag = geblokkeerd(bash(root, 'tester', `sed -i "s/test('drie'/test.skip('drie'/" test/a.test.ts`));
     expect(uitslag).toContain('skippen');
   });
+
+  test('tester staget een test.skip en laat de werkmap ongemoeid: geblokkeerd op de index', () => {
+    const root = nieuweRepo();
+    const command = [
+      `sed "s/test('twee'/test.skip('twee'/" test/a.test.ts > t.tmp`,
+      'git update-index --cacheinfo "100644,$(git hash-object -w t.tmp),test/a.test.ts"',
+      'rm t.tmp',
+    ].join(' && ');
+    expect(geblokkeerd(bash(root, 'tester', command))).toContain('skippen');
+  });
+
+  test('tester verwijdert een bestaande test en commit dat in één commando: geblokkeerd', () => {
+    const root = nieuweRepo();
+    expect(geblokkeerd(bash(root, 'tester', 'git rm -q test/a.test.ts && git commit -qm weg'))).toContain(
+      'test/a.test.ts',
+    );
+  });
 });
 
 describe('rolhek-effect/AC-1: wat de momentopname ziet', () => {
@@ -198,6 +215,21 @@ describe('rolhek-effect/AC-1: wat de momentopname ziet', () => {
 });
 
 describe('rolhek-effect/AC-2: alleen wat dit commando veranderde', () => {
+  test('een eerdere Edit van de hoofdsessie maakt een latere schrijfactie van de subagent niet vrij', () => {
+    const root = nieuweRepo();
+    const repo = repoVan(root);
+    handle('subagent-start', payload('developer'), repo);
+    schrijf(root, 'rails/x.mjs', 'hoofd\n');
+    handle(
+      'edit-post',
+      payload('', { tool_name: 'Edit', tool_input: { file_path: path.join(root, 'rails/x.mjs') } }),
+      repo,
+    );
+    expect(geblokkeerd(handle('subagent-stop', payload('developer'), repo))).toBe('');
+    schrijf(root, 'rails/x.mjs', 'later\n');
+    expect(geblokkeerd(handle('stop', payload(''), repo))).toContain('rails/x.mjs');
+  });
+
   test('een pad dat al afweek en gelijk bleef, telt niet', () => {
     const root = nieuweRepo();
     schrijf(root, 'rails/x.mjs', 'van de hoofdsessie\n');
@@ -289,6 +321,14 @@ describe('rolhek-effect/AC-5: de lijst voor de hoofdsessie', () => {
     expect(geblokkeerd(handle('stop', payload(''), repo))).toBe('');
   });
 
+  test('de subagent zet zijn eigen overtreding terug: geen nieuwe overtreding', () => {
+    const root = nieuweRepo();
+    const repo = repoVan(root);
+    expect(geblokkeerd(bash(root, 'tester', 'printf x > src/a.ts'))).toContain('src/a.ts');
+    expect(geblokkeerd(bash(root, 'tester', 'git checkout -q -- src/a.ts'))).toBe('');
+    expect(overtredingen(repo)).toStrictEqual([]);
+  });
+
   test('rolhek:overnemen heft de overtreding op; de huidige staat telt daarna niet meer', () => {
     const root = nieuweRepo();
     const repo = repoVan(root);
@@ -325,6 +365,17 @@ describe('rolhek-effect/AC-5: de lijst voor de hoofdsessie', () => {
 });
 
 describe('rolhek-effect/AC-6: opslag buiten de sandbox en zonder vergelijkingspunt', () => {
+  test('een gekoppelde worktree heeft een eigen deel van de opslag', () => {
+    const root = nieuweRepo();
+    const wt = `${root}-wt`;
+    dirs.push(wt);
+    sh(root, `git worktree add -q ${wt}`);
+    expect(opslag(repoVan(wt)).startsWith(path.join(root, '.git', 'rolhek-effect', 'wt-'))).toBe(true);
+    handle('subagent-start', payload('reviewer'), repoVan(root));
+    schrijf(wt, 'src/a.ts', 'in worktree b\n');
+    expect(nacontrole(repoVan(wt), null)).toStrictEqual([]);
+  });
+
   test('de opslag staat onder de git-common-dir en is in de sandbox dicht', () => {
     const root = nieuweRepo();
     expect(opslag(repoVan(root))).toBe(path.join(root, '.git', 'rolhek-effect'));
