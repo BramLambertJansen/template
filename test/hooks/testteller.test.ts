@@ -126,24 +126,103 @@ describe('testteller: skips', () => {
 });
 
 describe('testteller: modifiers', () => {
-  test.each(['test.only', 'test.concurrent', 'test.sequential', 'test.fails', 'it.only'])(
-    'testteller: %s telt als geval',
+  test.each(['test.concurrent', 'test.sequential', 'it.concurrent'])('testteller: %s telt als geval', (aanroep) => {
+    const geval = `${aanroep}('a', () => { expect(1).toBe(1); });`;
+    expect(testChangeRisk(lines(geval, LOS_B), lines(LOS_B), FILE)).toBe('removed');
+  });
+
+  test('testteller: test.concurrent.each(tabel)(…) telt als geval', () => {
+    const geval = "test.concurrent.each([[1]])('waarde %i', (n) => { expect(n).toBe(1); });";
+    expect(testChangeRisk(lines(geval, LOS_B), lines(LOS_B), FILE)).toBe('removed');
+  });
+
+  test.each(['test.skipIf(true)', 'test.runIf(false)', 'test.fails', 'test.only', 'it.only'])(
+    'testteller: test( naar %s( is een skip',
     (aanroep) => {
-      const geval = `${aanroep}('a', () => { expect(1).toBe(1); });`;
-      expect(testChangeRisk(lines(geval, LOS_B), lines(LOS_B), FILE)).toBe('removed');
+      const after = lines(`${aanroep}('a', () => { expect(1).toBe(1); });`, LOS_B);
+      expect(testChangeRisk(lines(LOS_A, LOS_B), after, FILE)).toBe('skip');
     },
   );
 
-  test('testteller: test.skipIf en test.runIf tellen als geval', () => {
-    const skipIf = "test.skipIf(process.platform === 'win32')('a', () => { expect(1).toBe(1); });";
-    const runIf = "test.runIf(process.platform !== 'win32')('a', () => { expect(1).toBe(1); });";
-    expect(testChangeRisk(lines(skipIf, LOS_B), lines(LOS_B), FILE)).toBe('removed');
-    expect(testChangeRisk(lines(runIf, LOS_B), lines(LOS_B), FILE)).toBe('removed');
-  });
+  test.each(['describe.skipIf(true)', 'describe.runIf(false)', 'describe.only'])(
+    'testteller: describe( naar %s( is een skip',
+    (aanroep) => {
+      const before = lines("describe('groep', () => {", `  ${LOS_A}`, '});');
+      const after = lines(`${aanroep}('groep', () => {`, `  ${LOS_A}`, '});');
+      expect(testChangeRisk(before, after, FILE)).toBe('skip');
+    },
+  );
 
   test('testteller: test.todo telt niet als geval', () => {
     expect(testChangeRisk(lines(LOS_A, "test.todo('later');"), lines(LOS_A, LOS_B), FILE)).toBeNull();
     expect(testChangeRisk(lines(LOS_A, LOS_B), lines(LOS_A, "test.todo('later');"), FILE)).toBe('skip');
+  });
+});
+
+describe('testteller: geen dubbeltelling van fabrieksaanroepen', () => {
+  test('testteller: test.each(tabel) zonder tweede aanroep registreert niets', () => {
+    expect(testChangeRisk(lines(LOS_A, LOS_B), lines('test.each([[1]]);', 'test.each([[2]]);'), FILE)).toBe('removed');
+  });
+
+  test('testteller: test.each(tabel)(naam, fn) naar test(naam, fn) is geen verwijdering', () => {
+    const before = lines("test.each([[1]])('a', (n) => { expect(n).toBe(1); });");
+    const after = lines("test('a', () => { expect(1).toBe(1); });");
+    expect(testChangeRisk(before, after, FILE)).toBeNull();
+  });
+
+  test('testteller: twee gevallen samengevoegd in één test.each is één aanroepplek', () => {
+    const after = lines("test.each([[1], [2]])('x %i', (n) => { expect(n).toBeGreaterThan(0); });");
+    expect(testChangeRisk(lines(LOS_A, LOS_B), after, FILE)).toBe('removed');
+  });
+});
+
+describe('testteller: lexer-randgevallen', () => {
+  const LOS_C = "test('c', () => { expect(3).toBe(3); });";
+
+  test('testteller: regex-literal met ) en apostrof erbij is geen risico en laat de teller niet ontsporen', () => {
+    const regex = "expect('x').toMatch(/a)'b/);";
+    expect(testChangeRisk(lines(LOS_A, LOS_C), lines(LOS_A, regex, LOS_C), FILE)).toBeNull();
+    expect(testChangeRisk(lines(LOS_A, regex, LOS_C), lines(LOS_A, regex), FILE)).toBe('removed');
+  });
+
+  test('testteller: deling naast een regex verbergt geen geval', () => {
+    const regel = (midden: string) => `const q = a / b; ${midden} const r = /[)']/.test(s) ? c / d : 0;`;
+    expect(testChangeRisk(lines(LOS_A, regel(LOS_C)), lines(LOS_A, regel('')), FILE)).toBe('removed');
+  });
+
+  test('testteller: geneste template-literal verbergt geen volgend geval', () => {
+    const sjabloon = "const t = `a ${ fn(`x ${'y)'}`) } b`;";
+    expect(testChangeRisk(lines(LOS_B), lines(sjabloon, LOS_B), FILE)).toBeNull();
+    expect(testChangeRisk(lines(sjabloon, LOS_A, LOS_B), lines(sjabloon, LOS_B), FILE)).toBe('removed');
+  });
+
+  test('testteller: escapes in strings laten de teller niet ontsporen', () => {
+    const escapes = 'const s = \'it\\\'s (x\'; const d = "zeg \\"test(\\" niet";';
+    expect(testChangeRisk(lines(LOS_A), lines(escapes, LOS_A), FILE)).toBeNull();
+    expect(testChangeRisk(lines(escapes, LOS_A, LOS_B), lines(escapes, LOS_B), FILE)).toBe('removed');
+  });
+
+  test('testteller: JSX-tekst met apostrof en haakje in .tsx telt niet en ontspoort niet', () => {
+    const file = 'src/core/web/ui/kaart.test.tsx';
+    const jsx = "const v = <div><p>auto's (2)</p><p>test(a)</p></div>;";
+    expect(testChangeRisk(lines(LOS_A), lines(jsx, LOS_A), file)).toBeNull();
+    expect(testChangeRisk(lines(jsx, LOS_A, LOS_B), lines(jsx, LOS_B), file)).toBe('removed');
+    expect(testChangeRisk(lines(LOS_A, LOS_B), lines("const w = <p>test('a', () => {})</p>;", LOS_B), file)).toBe(
+      'removed',
+    );
+  });
+
+  test('testteller: generieke typen in .ts storen niet', () => {
+    const generiek = 'const m = new Map<string, Array<number>>(); foo<T>(x); const n = m.size >> 1;';
+    expect(testChangeRisk(lines(LOS_B), lines(generiek, LOS_B), FILE)).toBeNull();
+    expect(testChangeRisk(lines(generiek, LOS_A, LOS_B), lines(generiek, LOS_B), FILE)).toBe('removed');
+  });
+
+  test('testteller: vergelijking x < y in .tsx stoort niet', () => {
+    const file = 'src/core/web/ui/teller.test.tsx';
+    const vergelijking = 'const k = x < y ? 1 : 2;';
+    expect(testChangeRisk(lines(LOS_B), lines(vergelijking, LOS_B), file)).toBeNull();
+    expect(testChangeRisk(lines(vergelijking, LOS_A, LOS_B), lines(vergelijking, LOS_B), file)).toBe('removed');
   });
 });
 
