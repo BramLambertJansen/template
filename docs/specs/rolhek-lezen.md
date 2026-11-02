@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #425
+status: gebouwd # #426
 namespace: rolhek-lezen
 ---
 
@@ -42,7 +42,7 @@ n.v.t. — geen UI. De weigermelding noemt de regel en de toegestane opties.
 
   `gh ... --web`, `-R`/`--repo` en `gh api` blijven geweigerd. Zoeken en tellen doet de Grep-tool; `git grep`, `git blame`, `wc` en pipes komen er niet bij. Tabeltests bevatten `--comments --web` en `--log --web`.
 - **rolhek-lezen/AC-2** — Voor elke rol wordt geweigerd: `--output`, `--output=…` en elke afkorting ervan bij `git diff|log|show`, en `-O`, `-O<commando>`, `--open-files-in-pager` en elke afkorting of cluster ervan (`--open-files`, `-iO`, `-nOvim`) bij `git grep` (nieuwe weigering; ze stonden niet in de schrijfdoelen). Daarmee is leerpunt #409 gesloten.
-- **rolhek-lezen/AC-3** — Een onbekende optie bij een commando uit AC-1 geeft voor de reviewer een weigering die de toegestane opties noemt. `git diff|log|show|status` en `gh pr view|diff|checks` blijven zoals nu, behalve AC-2 en AC-4 (AC-4 dicht ook het bestaande gat dat `NODE_OPTIONS=… node scripts/kit/feiten.mjs` doorlaat). Erratum #425 (review 2026-11-02, eigenaarakkoord): ook die commando's, de pnpm-checks en `feiten.mjs` hebben nu een vaste optielijst (`REVIEWER_COMMANDS`); zonder die lijst schreef `pnpm test:unit --outputFile=<pad>` toch een bestand.
+- **rolhek-lezen/AC-3** — Een onbekende optie bij een commando uit AC-1 geeft voor de reviewer een weigering die de toegestane opties noemt. `git diff|log|show|status` en `gh pr view|diff|checks` blijven zoals nu, behalve AC-2 en AC-4 (AC-4 dicht ook het bestaande gat dat `NODE_OPTIONS=… node scripts/kit/feiten.mjs` doorlaat). Erratum #426 (review 2026-11-02, eigenaarakkoord): ook die commando's, de pnpm-checks en `feiten.mjs` hebben nu een vaste optielijst (`REVIEWER_COMMANDS`); zonder die lijst schreef `pnpm test:unit --outputFile=<pad>` toch een bestand.
 - **rolhek-lezen/AC-4** — Voor de reviewer wordt elke variabele vóór het commando geweigerd (`X=… cmd`, ook `LC_ALL=C git status`); negatieve tabeltests per commando met `METING_GH`, `GIT_EXTERNAL_DIFF` en `NODE_OPTIONS`, elk met een basis die zonder variabele slaagt (leerpunt #401).
 - **rolhek-lezen/AC-5** — Alle bestaande aanvaltests en vals-positieve tests van het rolhek blijven ongewijzigd groen. Voor hoofdsessie, developer en tester verandert alleen AC-2; `git ls-files`, `gh issue view|list` en `gh run view|list` zijn daar al toegestaan of vragen (ask) zoals nu, en een test legt dat vast.
 
