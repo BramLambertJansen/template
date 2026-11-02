@@ -43,6 +43,8 @@ describe('reviewer: vaste opties', () => {
     'git show HEAD:../x',
     'git diff ../buiten',
     'git ls-files -- ../x',
+    'gh pr diff https://github.com/o/r/pull/1',
+    'gh pr view https://github.com/o/r/pull/1 --json body',
     // pnpm geeft alles na -- door aan het script; een script kan dat als optie lezen.
     'pnpm test:unit -- --outputFile x',
     'pnpm test:unit -- -u',

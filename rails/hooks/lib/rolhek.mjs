@@ -753,11 +753,11 @@ const SAFE_REF = /^[A-Za-z0-9_./,:~^-]+$/;
 
 /**
  * Een los woord of pad van de reviewer blijft binnen de repository (reviewer-opties/AC-3): niet `/` of `~` vooraan en geen
- * segment `..`, ook niet na `<ref>:`. Anders toont `git diff /dev/null .env` (impliciet --no-index) een bestand buiten de leesregels.
+ * segment `..`, ook niet na `<ref>:`, en geen URL (`gh pr view <url>` leest een andere repo). Anders toont `git diff /dev/null .env` (impliciet --no-index) een bestand buiten de leesregels.
  * @param {string} word
  */
 function insideRepo(word) {
-  return SAFE_REF.test(word) && !/^[/~]/.test(word) && !word.split(/[/:]/).includes('..');
+  return SAFE_REF.test(word) && !/^[/~]/.test(word) && !word.includes('://') && !word.split(/[/:]/).includes('..');
 }
 // `--jq` alleen met paden (`.title`, `.a.b,.c`): geen jq-functies zoals `env`, die tokens uit de omgeving tonen.
 const JQ_PATHS = /^\.[A-Za-z0-9_.]*(?:,\.[A-Za-z0-9_.]*)*$/;
