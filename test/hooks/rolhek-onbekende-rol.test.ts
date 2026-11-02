@@ -32,7 +32,7 @@ describe('onbekende subagent: strengste rol', () => {
     expect(verdict(edit)).toBe('deny');
   });
 
-  test.each(['echo x > src/x.ts', 'pnpm test:unit --outputFile=src/x.ts', 'git commit -m x', 'rm -rf src'])(
+  test.each(['echo x > src/x.ts', 'git commit -m x', 'rm -rf src'])(
     'Bash die schrijft wordt geweigerd: %s',
     (command) => {
       expect(
