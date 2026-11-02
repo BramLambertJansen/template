@@ -748,6 +748,8 @@ const REVIEWER_READS = {
 };
 // Geen `$`, backtick, `;`, spatie of aanhalingsteken: de shell van pnpm voert niets uit een waarde uit.
 const SAFE_VALUE = /^[A-Za-z0-9_./,:-]+$/;
+// Een positioneel woord mag ook een ref met `~` of `^` zijn (`HEAD~1`, `HEAD^:pad`).
+const SAFE_REF = /^[A-Za-z0-9_./,:~^-]+$/;
 // `--jq` alleen met paden (`.title`, `.a.b,.c`): geen jq-functies zoals `env`, die tokens uit de omgeving tonen.
 const JQ_PATHS = /^\.[A-Za-z0-9_.]*(?:,\.[A-Za-z0-9_.]*)*$/;
 
@@ -790,14 +792,15 @@ function readArgsAllowed(args, read) {
   let positional = 0;
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index] ?? '';
-    if (arg === '--' && read.paths === true) return args.slice(index + 1).every((path) => SAFE_VALUE.test(path));
+    // Na `--` alleen paden: een woord met `-` vooraan geeft pnpm aan het script door, en dat kan het als optie lezen.
+    if (arg === '--' && read.paths === true) return args.slice(index + 1).every((path) => SAFE_VALUE.test(path) && !path.startsWith('-'));
     if (read.values.includes(arg)) {
       index += 1;
       if (!SAFE_VALUE.test(args[index] ?? '') || (arg === '--jq' && !JQ_PATHS.test(args[index] ?? ''))) return false;
     } else if (arg.startsWith('-')) {
       // `-<n>` (git log -5) is een aantal, geen optie.
       if (!read.flags.includes(arg) && !(read.count === true && /^-\d+$/.test(arg))) return false;
-    } else if (positional >= read.positional || !SAFE_VALUE.test(arg)) return false;
+    } else if (positional >= read.positional || !SAFE_REF.test(arg)) return false;
     else positional += 1;
   }
   return true;

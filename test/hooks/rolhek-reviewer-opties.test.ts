@@ -36,6 +36,10 @@ describe('reviewer: vaste opties', () => {
     'gh pr diff 1 --color always',
     'gh pr checks 1 --watch',
     'node scripts/kit/feiten.mjs --eval x',
+    // pnpm geeft alles na -- door aan het script; een script kan dat als optie lezen.
+    'pnpm test:unit -- --outputFile x',
+    'pnpm test:unit -- -u',
+    'pnpm check:new-resource -- --bewaar',
   ])('geweigerd: %s', (command) => {
     expect(verdict(command)).toBe('deny');
   });
@@ -51,6 +55,9 @@ describe('reviewer: vaste opties', () => {
     'git log --oneline -n 20',
     'git log --stat origin/main..HEAD',
     'git show HEAD:docs/framework.md',
+    'git diff HEAD~1',
+    'git show HEAD^:docs/framework.md',
+    'pnpm test:unit -- test/hooks',
     'git show --stat HEAD',
     'git status --short',
     'git status',
