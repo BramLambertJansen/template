@@ -123,8 +123,9 @@ describe('subagent: schrijvende gh issue- en gh api-opdrachten', () => {
     );
   });
 
-  // De reviewer valt erbuiten: zijn Bash-witlijst (gh pr view/diff/checks) verandert niet en weigert gh issue al.
-  test.each(SUBAGENTS.filter((agent) => agent !== 'reviewer'))(
+  // De reviewer valt erbuiten: zijn Bash-witlijst verandert niet en kent gh issue status niet. Een onbekende subagent
+  // (Explore) telt sinds R-ROL-02 strikt als reviewer en valt er dus ook buiten.
+  test.each(SUBAGENTS.filter((agent) => agent !== 'reviewer' && agent !== 'Explore'))(
     'leerlus/AC-7: %s → gh issue view|list|status blijven toegestaan',
     (agent) => {
       expect(

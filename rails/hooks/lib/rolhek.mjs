@@ -21,7 +21,7 @@ import { staleBranchStart } from './verse-main.mjs';
  *   onbekendeRol?: boolean, onderhoud?: boolean, files?: (rel: string) => string[] }} Ctx
  * `files`: bestanden (getrackt en niet-genegeerd) onder een map, repo-relatief; `''` is de hele repo.
  * `onderhoud`: de onderhoudsmodus is actief (vertrouwde configuratie en origin is die repository, ADR 0045 punt 8–9).
- * `onbekendeRol`: een subagent zonder bekende rol; telt als developer, maar zonder de melding buiten voorReview.
+ * `onbekendeRol`: een subagent zonder bekende rol; telt als reviewer (alleen lezen).
  * `committed`: staat in de merge-base met het anker of met origin/main; 'zonder-origin' = beide onleesbaar en wel in HEAD (terugval).
  * @typedef {{ deny: string[], ask: string[], context: string[], allow?: boolean }} Decision
  * @typedef {{ kind: 'write' | 'delete', after: string | null }} Change
@@ -87,7 +87,7 @@ export function decide(payload, ctx) {
   const tool = field(payload, 'tool_name');
   const input = objectField(payload, 'tool_input');
   const role = roleOf(field(payload, 'agent_type'));
-  // Een onbekende subagent houdt de bestaande developerbeperkingen en leest geen statusbesluit uit main.
+  // Een onbekende subagent leest geen statusbesluit uit main.
   const namedRole = field(payload, 'agent_type');
   const context = ['', 'developer', 'architect'].includes(namedRole)
     ? ctx
@@ -118,12 +118,13 @@ function runnerIsTrusted(ctx) {
 }
 
 /**
- * Hoofdsessie zonder agent_type; een onbekende subagent telt als developer (strengste schrijfrol buiten de reviewer).
+ * Hoofdsessie zonder agent_type; een onbekende subagent krijgt de strengste rol, de reviewer (R-ROL-02): alleen lezen.
+ * Schrijfwerk gaat via een benoemde rol uit .claude/agents.
  * @param {string} agentType
  */
 export function roleOf(agentType) {
   if (agentType === '') return 'hoofdsessie';
-  return SUBAGENT_ROLES.has(agentType) ? agentType : 'developer';
+  return SUBAGENT_ROLES.has(agentType) ? agentType : 'reviewer';
 }
 
 /**
@@ -710,18 +711,31 @@ function treeRoot(ctx, file) {
   return resolved.startsWith('..') || path.isAbsolute(resolved) || !ctx.isDir(resolved) ? null : resolved;
 }
 
+const ALL = Number.POSITIVE_INFINITY;
+const GIT_DIFF_FLAGS = ['--stat', '--shortstat', '--numstat', '--name-only', '--name-status', '--no-color', '-w', '--ignore-all-space'];
+/**
+ * Commando's van de reviewer met een vaste optielijst, op patroon van de kop (git, gh pr, pnpm-scripts, feiten); zelfde
+ * vorm als REVIEWER_READS. Positionele woorden zijn refs, paden, PR-nummers of feitensecties; elke onbekende optie
+ * (`--outputFile`, `-u`, `--config`, `--web`, `-R`) wordt geweigerd.
+ * @type {{ pattern: RegExp, read: { flags: string[], values: string[], positional: number, paths?: boolean, count?: boolean } }[]}
+ */
 const REVIEWER_COMMANDS = [
-  /^pnpm (?:check:\S+|test\S*|gate:\S+)$/,
-  /^git (?:diff|log|show|status)$/,
-  /^gh pr (?:view|diff|checks)$/,
-  // De feiten voor stap 1 van .claude/agents/reviewer.md (gates, specs, fase); scripts/kit/feiten.mjs schrijft niets.
-  /^node scripts\/kit\/feiten\.mjs$/,
+  { pattern: /^pnpm (?:check:[a-z-]+|test(?::(?:unit|db|e2e))?|gate:(?:fast|slow))$/, read: { flags: [], values: [], positional: ALL, paths: true } },
+  { pattern: /^git diff$/, read: { flags: [...GIT_DIFF_FLAGS, '--cached', '--staged', '--merge-base'], values: [], positional: ALL, paths: true } },
+  { pattern: /^git log$/, read: { flags: [...GIT_DIFF_FLAGS, '--oneline', '-p', '--patch', '--no-merges', '--merges', '--first-parent', '--reverse', '--graph', '--decorate', '--follow'], values: ['-n', '--max-count', '--since', '--until', '--author', '--grep'], positional: ALL, paths: true, count: true } },
+  { pattern: /^git show$/, read: { flags: [...GIT_DIFF_FLAGS, '--oneline', '--no-patch', '-s'], values: [], positional: ALL, paths: true } },
+  { pattern: /^git status$/, read: { flags: ['--short', '-s', '--porcelain', '-b', '--branch'], values: [], positional: ALL, paths: true } },
+  { pattern: /^gh pr view$/, read: { flags: ['--comments'], values: ['--json', '--jq'], positional: 1 } },
+  { pattern: /^gh pr diff$/, read: { flags: ['--name-only', '--patch'], values: [], positional: 1 } },
+  { pattern: /^gh pr checks$/, read: { flags: ['--required'], values: ['--json', '--jq'], positional: 1 } },
+  // De feiten voor stap 1 van .claude/agents/reviewer.md (gates, specs, fase, hoofdstuk <n>); feiten.mjs schrijft niets.
+  { pattern: /^node scripts\/kit\/feiten\.mjs$/, read: { flags: ['--alle', '--json'], values: [], positional: ALL } },
 ];
 
 /**
  * Leescommando's van de reviewer met een vaste optielijst (spec rolhek-lezen/AC-1). `values`: opties die altijd het volgende
  * woord als waarde nemen (pflag), ook als dat met `-` begint; `positional`: hoeveel losse woorden; `paths`: paden na `--`.
- * @type {Record<string, { flags: string[], values: string[], positional: number, paths?: boolean }>}
+ * @type {Record<string, { flags: string[], values: string[], positional: number, paths?: boolean, count?: boolean }>}
  */
 const REVIEWER_READS = {
   'git ls-files': { flags: [], values: [], positional: 0, paths: true },
@@ -746,8 +760,7 @@ function reviewerRefusal(argv, redirects) {
   const head = argv[0] === 'gh' ? argv.slice(0, 3).join(' ') : argv.slice(0, 2).join(' ');
   const generic = `reviewer: alleen lezen (\`${argv.slice(0, 3).join(' ')}\` mag niet; framework §8); zoeken en tellen: gebruik de Grep-tool`;
   if (redirects.length > 0) return generic;
-  if (REVIEWER_COMMANDS.some((pattern) => pattern.test(head))) return null;
-  const read = REVIEWER_READS[head];
+  const read = REVIEWER_READS[head] ?? REVIEWER_COMMANDS.find(({ pattern }) => pattern.test(head))?.read;
   if (read === undefined) return generic;
   if (readArgsAllowed(argv.slice(head.split(' ').length), read)) return null;
   const opties = [...read.flags, ...read.values.map((value) => `${value} <waarde>`)];
@@ -771,7 +784,7 @@ function reviewerBash({ assignments, argv, pathWrappers }, redirects, decision) 
 
 /**
  * @param {readonly string[]} args
- * @param {{ flags: string[], values: string[], positional: number, paths?: boolean }} read
+ * @param {{ flags: string[], values: string[], positional: number, paths?: boolean, count?: boolean }} read
  */
 function readArgsAllowed(args, read) {
   let positional = 0;
@@ -782,7 +795,8 @@ function readArgsAllowed(args, read) {
       index += 1;
       if (!SAFE_VALUE.test(args[index] ?? '') || (arg === '--jq' && !JQ_PATHS.test(args[index] ?? ''))) return false;
     } else if (arg.startsWith('-')) {
-      if (!read.flags.includes(arg)) return false;
+      // `-<n>` (git log -5) is een aantal, geen optie.
+      if (!read.flags.includes(arg) && !(read.count === true && /^-\d+$/.test(arg))) return false;
     } else if (positional >= read.positional || !SAFE_VALUE.test(arg)) return false;
     else positional += 1;
   }
