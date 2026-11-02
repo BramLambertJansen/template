@@ -44,7 +44,7 @@ interpreter is niet dicht te zetten zonder de developer zijn werk af te nemen. D
 - Werk per Bash-aanroep van een subagent: twee keer `git status` en een hash per afwijkend pad. Op deze repo kost `git status`
   ongeveer 12 ms. Dat groeit met het aantal afwijkende paden, niet met het aantal programma's of regels.
 - Het effect wordt pas na het commando gezien. Een overtreding is dus al gebeurd, maar valt direct op en blokkeert de oplevering.
-- Wat git negeert (`.gitignore`), ziet de toets niet, behalve een vaste lijst die het rolhek zelf stuurt (`.git/config`,
+- Wat binnen een genegeerde map verandert (`node_modules/`), ziet de toets niet, behalve een vaste lijst die het rolhek zelf stuurt (`.git/config`,
   `.git/hooks`, `.git/info`, `settings.local.json`, de hook-cache) en de index-vlaggen. `.env*` blijft beschermd via de sandbox
   en R-SEC-05.
 - Wat de hoofdsessie of een andere agent in hetzelfde venster schrijft (Edit, Write of Bash), telt niet mee. Alleen twee
