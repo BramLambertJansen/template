@@ -16,7 +16,8 @@ export const gelijk = (a, b) => a.wt === b.wt && a.idx === b.idx;
 
 /**
  * Paden waarvan werkmap of index veranderde, nieuwe genegeerde mappen, de paden van een verschoven HEAD (via `diffPaden`) en
- * veranderde refs buiten `refs/remotes/` en de huidige branch (als `.git/<ref>`).
+ * veranderde branches buiten de huidige (`refs/heads/*`, als `.git/<ref>`). Tags, `refs/stash` en `refs/remotes/` tellen niet:
+ * `git fetch` en een eigen stash veranderen ze, en wat een stash in de werkmap verandert, telt al als pad.
  * @param {{ voor: Snapshot, na: Snapshot }} paar
  * @param {{ diffPaden: (oud: string, nieuw: string) => string[], branchRef: string }} git
  * @returns {Verandering[]}
@@ -38,7 +39,7 @@ export function veranderingen({ voor, na }, git) {
       lijst.push({ rel, voor: oud, na: nieuw });
   }
   for (const ref of new Set([...Object.keys(voor.refs), ...Object.keys(na.refs)])) {
-    if (ref.startsWith('refs/remotes/') || ref === git.branchRef || voor.refs[ref] === na.refs[ref]) continue;
+    if (!ref.startsWith('refs/heads/') || ref === git.branchRef || voor.refs[ref] === na.refs[ref]) continue;
     lijst.push({ rel: `.git/${ref}`, voor: { wt: voor.refs[ref] ?? 'weg', idx: '' }, na: { wt: na.refs[ref] ?? 'weg', idx: '' } });
   }
   return lijst.toSorted((a, b) => a.rel.localeCompare(b.rel));

@@ -8,6 +8,7 @@ import {
   overtredingen,
   ruimOp,
   toets,
+  veranderdePaden,
   werkAgentBij,
   werkLijstBij,
   wisOpname,
@@ -102,9 +103,15 @@ function post(payload, { repo, mislukt }) {
   const opname = leesOpname(repo, 'pre', id);
   wisOpname(repo, id);
   const start = opname?.tijd ?? repo.now();
+  if (wie.agentType === '') {
+    // De hoofdsessie is geen dader (OV-1): alleen haar venster, niets op de lijst.
+    const voor = opname?.snap;
+    const paden = voor === undefined || voor === null ? [] : veranderdePaden(repo, { voor, na: momentopname(repo), start });
+    legVensterVast(repo, { actor: wie.actor, start, eind: repo.now(), paden });
+    return {};
+  }
   const uitslag = vergelijk(repo, { voor: opname === null ? undefined : opname.snap, start }, wie);
   legVensterVast(repo, { actor: wie.actor, start, eind: repo.now(), paden: uitslag.paden });
-  if (wie.agentType === '') return {};
   const event = mislukt ? 'PostToolUseFailure' : 'PostToolUse';
   if (uitslag.nieuw.length === 0) return context(event, uitslag.meldingen);
   const reden = `rolhek-effect: dit commando veranderde paden buiten je rol:\n${lijstTekst(uitslag.nieuw)}\n${UITWEG}`;

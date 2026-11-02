@@ -11,6 +11,7 @@ import {
 } from '../../rails/hooks/lib/effect.mjs';
 import { gitIn, momentopname } from '../../rails/hooks/lib/effect-snapshot.mjs';
 import { rolhekContext } from '../../rails/hooks/lib/rolhek-context.mjs';
+import { rmSync } from 'node:fs';
 import path from 'node:path';
 
 /**
@@ -29,6 +30,9 @@ export function neemOver(args, repo) {
   const genomen = leesOvergenomen(repo);
   for (const o of gekozen) if (o.rel !== null) genomen[o.rel] = JSON.stringify(entryVan(nu, o.rel));
   schrijfOvergenomen(repo, genomen);
+  // `--alles` laat ook de momentopnamen van subagents vervallen: een te grote opname (AC-7) gaf anders bij elke nacontrole
+  // opnieuw een overtreding zonder pad.
+  if (alles) rmSync(path.join(opslag(repo), 'agent'), { recursive: true, force: true });
   schrijfJson(
     path.join(opslag(repo), 'overtredingen.json'),
     lijst.filter((o) => !gekozen.includes(o)),

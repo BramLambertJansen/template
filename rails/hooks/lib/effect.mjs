@@ -1,6 +1,7 @@
 // Toets op effect (ADR 0066, spec rolhek-effect): na een Bash-commando van een subagent krijgt elk pad dat echt veranderde
 // de beslissing van een Edit van die rol. Opslag in `<git-common-dir>/rolhek-effect/`, buiten de schrijfrechten van de sandbox.
-import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { lstatSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { decideChange } from './rolhek.mjs';
 import { blobVan, entryVan, gelijk, veranderingen } from './effect-compare.mjs';
@@ -21,7 +22,26 @@ const BEWAAR_MS = 24 * 60 * 60 * 1000;
 
 /** @param {Repo} repo */
 export function opslag(repo) {
-  return path.join(gitDirVan(repo), 'rolhek-effect');
+  const bekend = OPSLAG.get(repo);
+  if (bekend !== undefined) return bekend;
+  const map = path.join(gitDirVan(repo), 'rolhek-effect');
+  OPSLAG.set(repo, map);
+  return map;
+}
+
+/** Eén `git rev-parse` per hook-aanroep. @type {WeakMap<object, string>} */
+const OPSLAG = new WeakMap();
+
+/**
+ * De inhoud van een blob, alleen als die echt bij de id hoort: `.git/objects` is in de sandbox schrijfbaar, dus een los object
+ * kan vervalst zijn (zoals de lader in `.claude/hooks/laden.mjs` controleert).
+ * @param {Repo} repo @param {string} blob
+ */
+function echteBlob(repo, blob) {
+  const inhoud = repo.git(['cat-file', 'blob', blob]);
+  const algoritme = blob.length === 64 ? 'sha256' : 'sha1';
+  const id = createHash(algoritme).update(`blob ${String(Buffer.byteLength(inhoud))}\0`).update(inhoud).digest('hex');
+  return id === blob ? inhoud : null;
 }
 
 /** @param {string} file @param {unknown} fallback */
@@ -88,7 +108,7 @@ function leesVoor(repo, voor) {
     const blob = blobVan(entryVan(voor, rel));
     if (blob === null) return rel in voor.paden ? null : repo.ctx.read(rel);
     try {
-      return repo.git(['cat-file', 'blob', blob]);
+      return echteBlob(repo, blob);
     } catch {
       return null;
     }
@@ -99,6 +119,8 @@ function leesVoor(repo, voor) {
 function leesNu(repo, rel) {
   if (rel.endsWith('/')) return null;
   try {
+    // Alleen een gewoon bestand: een FIFO zou de hook laten hangen.
+    if (!lstatSync(path.join(repo.root, rel)).isFile()) return null;
     return readFileSync(path.join(repo.root, rel), 'utf8');
   } catch {
     return null;
@@ -117,6 +139,19 @@ function beslis(repo, { verandering, agentType, voor }) {
   return decideChange({ rel, change, agentType }, { ...repo.ctx, read: leesVoor(repo, voor) });
 }
 
+/** @param {Repo} repo @param {{ voor: Snapshot, na: Snapshot }} paar */
+function veranderingenIn(repo, paar) {
+  const branchRef = repo.ctx.branch === '' || repo.ctx.branch === 'HEAD' ? '' : `refs/heads/${repo.ctx.branch}`;
+  const diffPaden = (/** @type {string} */ oud, /** @type {string} */ nieuw) =>
+    repo.git(['diff', '--name-only', '-z', '--no-renames', oud, nieuw]).split('\0').filter((rel) => rel !== '');
+  return veranderingen(paar, { diffPaden, branchRef });
+}
+
+/** Alleen de veranderde paden, voor het venster van de hoofdsessie (AC-2). @param {Repo} repo @param {{ voor: Snapshot, na: Snapshot, start: number }} paar */
+export function veranderdePaden(repo, paar) {
+  return veranderingenIn(repo, paar).map((verandering) => verandering.rel);
+}
+
 /**
  * Overtredingen en meldingen voor de veranderingen tussen `voor` en `na`; paden die een ander venster verklaart, een
  * overgenomen staat hebben of al op de lijst staan, tellen niet.
@@ -128,10 +163,7 @@ export function toets(repo, paar, wie) {
   const anderen = vensters(repo).filter((venster) => venster.actor !== wie.actor && venster.eind >= paar.start);
   const verklaard = new Set(anderen.flatMap((venster) => venster.paden));
   const genomen = overgenomen(repo);
-  const branchRef = repo.ctx.branch === '' || repo.ctx.branch === 'HEAD' ? '' : `refs/heads/${repo.ctx.branch}`;
-  const diffPaden = (/** @type {string} */ oud, /** @type {string} */ nieuw) =>
-    repo.git(['diff', '--name-only', '-z', '--no-renames', oud, nieuw]).split('\0').filter((rel) => rel !== '');
-  const lijst = veranderingen(paar, { diffPaden, branchRef });
+  const lijst = veranderingenIn(repo, paar);
   /** @type {Overtreding[]} */
   const nieuw = [];
   /** @type {string[]} */

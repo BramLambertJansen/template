@@ -224,9 +224,19 @@ describe('rolhek-effect/AC-2: alleen wat dit commando veranderde', () => {
     expect(geblokkeerd(handle('post', input, repo))).toBe('');
   });
 
-  test('een andere ref dan de huidige branch (git tag) is deny', () => {
+  test('een andere branch dan de huidige (git branch -f) is deny; een tag of eigen stash niet', () => {
     const root = nieuweRepo();
-    expect(geblokkeerd(bash(root, 'developer', 'git tag v9'))).toContain('.git/refs/tags/v9');
+    expect(geblokkeerd(bash(root, 'developer', 'git branch -q ander'))).toContain('.git/refs/heads/ander');
+    expect(geblokkeerd(bash(root, 'developer', 'git tag v9'))).toBe('');
+    schrijf(root, 'test/a.test.ts', "test('een', () => {});\ntest('twee', () => {});\ntest('drie', () => {});\n");
+    expect(geblokkeerd(bash(root, 'tester', 'git stash -q && git stash pop -q'))).toBe('');
+  });
+
+  test('de hoofdsessie komt nooit op de lijst, ook niet op een beschermd pad', () => {
+    const root = nieuweRepo();
+    const repo = repoVan(root);
+    expect(geblokkeerd(bash(root, '', 'printf y > rails/x.mjs'))).toBe('');
+    expect(overtredingen(repo)).toStrictEqual([]);
   });
 });
 
@@ -319,7 +329,7 @@ describe('rolhek-effect/AC-6: opslag buiten de sandbox en zonder vergelijkingspu
     const root = nieuweRepo();
     expect(opslag(repoVan(root))).toBe(path.join(root, '.git', 'rolhek-effect'));
     const settings = readFileSync('.claude/settings.json', 'utf8');
-    expect(settings).toContain('"denyWrite": ["./.git/rolhek-effect"]');
+    expect(settings).toContain('"denyWrite": ["./.git/rolhek-effect", "./.git/commondir"]');
     expect(settings).toContain('"pnpm rolhek:overnemen *"');
   });
 
@@ -331,7 +341,41 @@ describe('rolhek-effect/AC-6: opslag buiten de sandbox en zonder vergelijkingspu
   });
 });
 
+describe('rolhek-effect/AC-6: de opslag is niet te verleggen', () => {
+  test('.git/commondir verlegt de opslag niet, en schrijven ervan is deny', () => {
+    const root = nieuweRepo();
+    const uitslag = geblokkeerd(
+      bash(root, 'developer', 'git clone -q --bare . test/nep.git && printf "../test/nep.git\\n" > .git/commondir'),
+    );
+    expect(uitslag).toContain('.git/commondir');
+    expect(opslag(repoVan(root))).toBe(path.join(root, '.git', 'rolhek-effect'));
+  });
+});
+
 describe('rolhek-effect/AC-7: dicht vallen', () => {
+  test('een FIFO in plaats van een bestand laat de hook niet hangen', () => {
+    const root = nieuweRepo();
+    expect(geblokkeerd(bash(root, 'developer', 'rm rails/x.mjs && mkfifo rails/x.mjs'))).toContain('rails/x.mjs');
+  });
+
+  test('een bestandsnaam met een nieuwe regel legt de toets niet stil', () => {
+    const root = nieuweRepo();
+    expect(geblokkeerd(bash(root, 'tester', "touch $'test/a\\nb.test.ts'"))).toBe('');
+    expect(geblokkeerd(bash(root, 'tester', "touch $'src/a\\nb.ts'"))).toContain('rol tester mag');
+  });
+
+  test('--alles ruimt ook een overtreding zonder pad uit een te grote opname op', () => {
+    const root = nieuweRepo();
+    const repo = repoVan(root);
+    sh(root, 'mkdir -p test/veel && cd test/veel && seq 1 5001 | xargs touch');
+    handle('subagent-start', payload('tester'), repo);
+    sh(root, 'rm -rf test/veel');
+    handle('subagent-stop', payload('tester'), repo);
+    expect(geblokkeerd(handle('stop', payload(''), repo))).toContain('hele werkmap');
+    neemOver(['--alles'], repo);
+    expect(geblokkeerd(handle('stop', payload(''), repo))).toBe('');
+  });
+
   test('meer dan 5000 paden: een overtreding zonder pad', () => {
     const root = nieuweRepo();
     sh(root, 'mkdir -p test/veel && cd test/veel && seq 1 5001 | xargs touch');
