@@ -10,9 +10,10 @@ afterEach(cleanup);
 
 const SECTION = 'Text, Heading, Stack en Inline';
 
+// Spec designsystem-toolbox: de sectie staat in het tabblad Navigatie en layout.
 function setup() {
   const route = createRootRoute({ component: DesignSystemPage });
-  const router = createRouter({ routeTree: route, history: createMemoryHistory({ initialEntries: ['/'] }) });
+  const router = createRouter({ routeTree: route, history: createMemoryHistory({ initialEntries: ['/?vak=layout'] }) });
   return render(
     <ToastProvider>
       <QueryClientProvider client={new QueryClient()}>

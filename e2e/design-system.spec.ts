@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { clientIpHeaders, createAccount, PASSWORD, freshTotpFor } from './support/accounts.ts';
 import { collectCspViolations, scanAxe } from './support/axe.ts';
+import { openVak, VAKKEN } from './support/catalogus.ts';
 
 // De catalogus als beveiligde pagina in de app (spec design-system): admin met MFA, binnen de AppShell. Op 375 en 1280 px,
 // licht en donker: axe, geen CSP-schendingen, geen horizontaal scrollen, precies een main/Hoofdmenu/Profielmenu, en de
@@ -24,16 +25,25 @@ for (const width of [375, 1280]) {
   test.describe(`design-system op ${String(width)} px`, () => {
     test.use({ viewport: { width, height: 900 } });
 
+    // Spec designsystem-toolbox/AC-6: axe per tabblad, in licht en donker.
     test('axe in licht en donker, zonder CSP-schendingen of horizontaal scrollen', async ({ page }) => {
       const csp = collectCspViolations(page);
       await signInAsAdmin(page);
       await page.goto('/design-system');
       await expect(page.getByRole('heading', { level: 1, name: 'Design system' })).toBeVisible();
 
-      await scanAxe(page);
+      for (const vak of VAKKEN) {
+        await openVak(page, vak.label);
+        await scanAxe(page);
+      }
       await page.getByRole('button', { name: 'Donker thema' }).click();
       await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-      await scanAxe(page);
+      for (const vak of VAKKEN) {
+        await openVak(page, vak.label);
+        await scanAxe(page);
+        const overflow = await page.evaluate<number>('document.documentElement.scrollWidth - window.innerWidth');
+        expect(overflow, `horizontaal scrollen in ${vak.label}`).toBeLessThanOrEqual(0);
+      }
 
       await expect(page.getByRole('main')).toHaveCount(1);
       await expect(page.getByRole('navigation', { name: 'Hoofdmenu' })).toHaveCount(width === 1280 ? 1 : 0);
@@ -51,7 +61,7 @@ for (const width of [375, 1280]) {
 test('dialoog: focus erin, Esc sluit, focus terug op de knop', async ({ page }) => {
   const csp = collectCspViolations(page);
   await signInAsAdmin(page);
-  await page.goto('/design-system');
+  await page.goto('/design-system?vak=acties');
   const opener = page.getByRole('button', { name: 'Dialoog openen' });
 
   await opener.click();
@@ -68,7 +78,7 @@ test('UI-index toont de echte bron en importnaam; beide toastvoorbeelden zijn be
   page,
 }) => {
   await signInAsAdmin(page);
-  await page.goto('/design-system');
+  await page.goto('/design-system?vak=meldingen');
   const index = page.getByRole('region', { name: 'Componentenindex' });
   await index.getByLabel('Component zoeken').fill('RouteError');
   await expect(page).toHaveURL(/q=RouteError/);
@@ -97,7 +107,7 @@ test('bevestigen: focus op Annuleren, Enter annuleert; tijdens Bezig… houdt oo
 }) => {
   const csp = collectCspViolations(page);
   await signInAsAdmin(page);
-  await page.goto('/design-system');
+  await page.goto('/design-system?vak=acties');
   const opener = page.getByRole('button', { name: 'Account blokkeren' });
   const dialog = page.getByRole('alertdialog', { name: 'Account blokkeren?' });
   const status = page.getByRole('status').filter({ hasText: 'Geblokkeerd' });
@@ -125,7 +135,7 @@ test('bevestigen: focus op Annuleren, Enter annuleert; tijdens Bezig… houdt oo
 test('menu: met het toetsenbord open, Esc sluit, focus terug op de knop', async ({ page }) => {
   const csp = collectCspViolations(page);
   await signInAsAdmin(page);
-  await page.goto('/design-system');
+  await page.goto('/design-system?vak=acties');
   const trigger = page.getByRole('main').getByRole('button', { name: 'Menu openen' });
 
   await trigger.focus();
@@ -184,7 +194,7 @@ test('lijsttoolbar: zoeken met debounce, filter en sortering, wissen houdt sorte
 }) => {
   const csp = collectCspViolations(page);
   await signInAsAdmin(page);
-  await page.goto('/design-system');
+  await page.goto('/design-system?vak=patronen');
   const section = page.getByRole('region', { name: 'ListToolbar' });
   const search = section.getByLabel('Zoeken');
   const role = section.getByLabel('Rol');

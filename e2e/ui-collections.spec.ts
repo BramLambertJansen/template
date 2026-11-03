@@ -1,11 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 import { clientIpHeaders, createAccount } from './support/accounts.ts';
 import { signIn } from './support/eigen-account.ts';
+import { openVak } from './support/catalogus.ts';
 import { collectCspViolations, scanAxe } from './support/axe.ts';
 
 async function openCatalogue(page: Page) {
   await signIn(page, await createAccount('admin', { totp: true }));
-  await page.goto('/design-system');
+  await page.goto('/design-system?vak=formulieren');
   await page.getByRole('region', { name: 'Combobox', exact: true }).waitFor();
 }
 
@@ -99,6 +100,7 @@ for (const width of [375, 1280]) {
     }) => {
       const csp = collectCspViolations(page);
       await openCatalogue(page);
+      await openVak(page, 'Gegevens tonen');
       const section = page.getByRole('region', { name: 'Accordion', exact: true });
       const general = section.getByRole('button', { name: 'Algemeen', exact: true }).first();
       const name = section.getByRole('textbox', { name: 'Naam' });
@@ -156,6 +158,7 @@ test.describe('UI-collecties: alleen lokale data', () => {
     const form = page.getByRole('region', { name: 'FormComboboxField', exact: true });
     await form.getByRole('button', { name: 'Versturen', exact: true }).click();
     await form.getByRole('button', { name: 'Annuleren', exact: true }).click();
+    await openVak(page, 'Gegevens tonen');
     const accordion = page.getByRole('region', { name: 'Accordion', exact: true });
     await accordion.getByRole('button', { name: 'Algemeen', exact: true }).first().click();
     const list = page.getByRole('region', { name: 'List', exact: true });

@@ -9,7 +9,7 @@ for (const width of [375, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     const csp = collectCspViolations(page);
     await signIn(page, await createAccount('admin', { totp: true }));
-    await page.goto('/design-system?q=patronen');
+    await page.goto('/design-system?q=patronen&vak=patronen');
     const detail = page.getByRole('region', { name: 'Detail bekijken en bewerken' });
     const edit = detail.getByRole('button', { name: 'Contactgegevens bewerken' });
     await edit.press('Enter');

@@ -2,10 +2,11 @@ import { expect, test, type Page } from '@playwright/test';
 import { clientIpHeaders, createAccount } from './support/accounts.ts';
 import { collectCspViolations, scanAxe } from './support/axe.ts';
 import { signIn } from './support/eigen-account.ts';
+import { openVak } from './support/catalogus.ts';
 
 async function openCatalog(page: Page) {
   await signIn(page, await createAccount('admin', { totp: true }));
-  await page.goto('/design-system');
+  await page.goto('/design-system?vak=formulieren');
   // De route laadt zijn cataloguschunk lazy; wacht op de echte scherminhoud binnen de bestaande test-timeout.
   await page.getByRole('region', { name: 'Textarea, Checkbox en RadioGroup' }).waitFor();
   await expect(page.getByRole('heading', { level: 1, name: 'Design system' })).toBeVisible();
@@ -76,6 +77,7 @@ for (const width of [375, 1280]) {
     test('AC-6/7/8: badge, lege actie en busy-herstel zonder dubbele activering', async ({ page }) => {
       const csp = collectCspViolations(page);
       await openCatalog(page);
+      await openVak(page, 'Meldingen en status');
       const badges = page.getByRole('region', { name: 'StatusBadge' });
       await expect(badges.getByText('Actief', { exact: true })).toBeVisible();
       await expect(badges.getByText('Uitgenodigd', { exact: true })).toBeVisible();
@@ -83,6 +85,7 @@ for (const width of [375, 1280]) {
       const empty = page.getByRole('region', { name: 'EmptyState en AsyncView' });
       await empty.getByRole('button', { name: 'Versturen' }).click();
       await expect(empty.getByRole('status')).toHaveText('Actief');
+      await openVak(page, 'Acties');
       const buttons = page.getByRole('region', { name: 'Button: busy' });
       const action = buttons.getByRole('button', { name: 'Versturen' });
       await action.click();
