@@ -1,4 +1,6 @@
 // Alleen vaste runner-opdrachten met ongewijzigde hostcode mogen zonder handmatige prompt (ADR 0044 punt 5).
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { gitText, safeRepositoryPath, trustedBase } from './authority-context.mjs';
 
 export const HOST_FILES = ['scripts', 'package.json', 'pnpm-workspace.yaml', '.npmrc', '.pnpmfile.cjs', 'mise.toml',
@@ -8,6 +10,7 @@ export const HOST_FILES = ['scripts', 'package.json', 'pnpm-workspace.yaml', '.n
 // `pnpm pr:merge` (ADR 0069 punt 4) volgt de scriptregel in package.json en laadt pr-merge.mjs met imports uit scripts/ en
 // rails/: die bestanden plus de hostbestanden moeten gelijk zijn aan het anker.
 export const MERGE_FILES = [...HOST_FILES, 'rails'];
+const MERGE_BIN = ['gh', 'git', 'node', 'gh.exe', 'git.exe', 'node.exe'];
 
 /** @param {string} command */
 export function automaticRunner(command) {
@@ -71,5 +74,7 @@ function mergeMode(text) {
  */
 export function trustedMerge(root, basis = trustedBase(root, undefined)) {
   if (basis === null || !mergeMode(basis.read('.claude/gates.json') ?? '')) return false;
+  // `pnpm run` zet `node_modules/.bin` vooraan in PATH; daar hoort geen gh, git of node (ADR 0069 punt 4).
+  if (MERGE_BIN.some((naam) => existsSync(path.join(root, 'node_modules', '.bin', naam)))) return false;
   return unchangedFrom(root, basis.sha, MERGE_FILES);
 }

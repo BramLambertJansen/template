@@ -160,11 +160,20 @@ function leestAlleen(words) {
   return PR_MERGE_GIT.has(subcommand) && config.length === 0;
 }
 
+/** Een glob-woord (`pr-mer*.mjs`, `scripts/kit/pr-*`) dat het mergescript of `pr:merge` kan raken. @param {string} woord */
+function globRaaktMerge(woord) {
+  if (!/[*?[]/.test(woord)) return false;
+  const doelen = ['pr-merge.mjs', 'pr:merge', 'scripts/kit/pr-merge.mjs', './scripts/kit/pr-merge.mjs'];
+  return doelen.some((doel) => path.matchesGlob(doel, woord) || path.matchesGlob(path.basename(doel), path.basename(woord)));
+}
+
 /** @param {string} command */
 function startMergescript(command) {
   const tekst = command.replace(/[\\'"]/g, '');
   if (PR_MERGE_SCRIPT.test(tekst)) return true;
-  return PR_MERGE_BESTAND.test(tekst) && !parseCommands(command).every(({ words }) => leestAlleen(words));
+  const segmenten = parseCommands(command);
+  if (segmenten.some(({ words }) => !leestAlleen(words) && words.some(globRaaktMerge))) return true;
+  return PR_MERGE_BESTAND.test(tekst) && !segmenten.every(({ words }) => leestAlleen(words));
 }
 
 /**

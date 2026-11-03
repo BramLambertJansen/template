@@ -13,6 +13,14 @@ import { checkProgress, verifyEffect } from './pr-verify.mjs';
 export const CODEX = 'chatgpt-codex-connector[bot]';
 const GUARD = '.github/workflows/guard.yml';
 const SHA = /^[0-9a-f]{40}$/;
+// `pnpm run` zet `node_modules/.bin` vooraan in PATH: een daar geplante `gh` mag de GitHub-antwoorden niet leveren.
+const ZONDER_BIN = {
+  ...process.env,
+  PATH: (process.env['PATH'] ?? '')
+    .split(':')
+    .filter((deel) => !/(?:^|\/)node_modules\/\.bin\/?$/.test(deel))
+    .join(':'),
+};
 
 /** @typedef {(endpoint: string) => unknown} Api */
 
@@ -106,6 +114,16 @@ export function mainRedenen(ruw, vereist) {
 }
 
 /**
+ * Een run hoort bij deze PR als `pull_requests` haar nummer bevat; GitHub laat de lijst bij `pull_request_target` soms leeg
+ * (gezien op #445), dan beslissen pad, event, app en head. Een lijst met alleen andere nummers telt niet.
+ * @param {unknown} prs @param {number} nummer
+ */
+function hoortBij(prs, nummer) {
+  const lijst = Array.isArray(prs) ? prs : [];
+  return lijst.length === 0 || lijst.some((pr) => veld(pr, 'number') === nummer);
+}
+
+/**
  * De job `agent-merge` uit guard.yml (pull_request_target) voor déze PR is geslaagd op de head; een gelijknamige check uit een
  * andere workflow, een ander event of een run voor een andere PR met dezelfde head telt niet.
  * @param {Api} api @param {{ repo: string, checks: unknown[], head: string, nummer: number }} doel
@@ -124,7 +142,7 @@ export function guardRedenen(api, { repo, checks, head, nummer }) {
           (run) =>
             veld(run, 'path') === GUARD &&
             veld(run, 'event') === 'pull_request_target' &&
-            [veld(run, 'pull_requests')].flat().some((pr) => veld(pr, 'number') === nummer),
+            hoortBij(veld(run, 'pull_requests'), nummer),
         )
       );
     })
@@ -179,6 +197,8 @@ export function codexRedenen({ comments, reactions, suites }, head) {
     veld(stand, 'has_unresolved_findings') === false
   )
     return [];
+  if (veld(stand, 'commit_sha') === head && veld(stand, 'has_unresolved_findings') === true)
+    return ['Codex heeft open punten op de head; een 👍 telt dan niet'];
   const ontvangen = suites
     .map((s) => tekst(veld(s, 'created_at')))
     .filter(Boolean)
@@ -235,7 +255,9 @@ export function voorwaarden(api, { repo, nummer, head }) {
 /** @param {string} endpoint @returns {unknown} */
 function gh(endpoint) {
   try {
-    return JSON.parse(execFileSync('gh', ['api', endpoint], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
+    return JSON.parse(
+      execFileSync('gh', ['api', endpoint], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], env: ZONDER_BIN }),
+    );
   } catch {
     throw new Error(`GitHub is niet leesbaar: ${endpoint}`);
   }
@@ -270,9 +292,7 @@ function main() {
       '-f',
       `sha=${head}`,
     ],
-    {
-      stdio: ['ignore', 'pipe', 'inherit'],
-    },
+    { stdio: ['ignore', 'pipe', 'inherit'], env: ZONDER_BIN },
   );
   console.log(
     `PR #${String(nummer)} gemerged op ${head}. Meld PR en SHA in de thread en volg de CI op main (ADR 0069 punt 5).`,

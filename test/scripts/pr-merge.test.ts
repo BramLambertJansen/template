@@ -148,6 +148,22 @@ describe('agent-merge-niet-kritiek/AC-3 pr:merge', () => {
       /geen job agent-merge/,
     ],
     [
+      'Codex met open punten op de head, daarna een 👍',
+      (w: Wereld) => {
+        w[`repos/${REPO}/issues/7/comments`] = [
+          { user: { login: 'x' }, body: `Review ${HEAD}: geen blokkerende bevindingen` },
+          {
+            user: { login: CODEX },
+            body: codexSamenvatting({ status: 'completed', commit_sha: HEAD, has_unresolved_findings: true }),
+          },
+        ];
+        w[`repos/${REPO}/issues/7/reactions`] = [
+          { user: { login: CODEX }, content: '+1', created_at: '2026-11-03T10:05:00Z' },
+        ];
+      },
+      /open punten/,
+    ],
+    [
       'agent-merge overgeslagen (conclusie skipped)',
       zet(`commits/${HEAD}/check-runs`, {
         check_runs: [
@@ -272,6 +288,16 @@ describe('agent-merge-niet-kritiek/AC-3 pr:merge', () => {
     };
     expect(redenen(zonderSamenvatting('2026-11-03T10:05:00Z'))).toBe('');
     expect(redenen(zonderSamenvatting('2026-11-03T09:55:00Z'))).toMatch(/Codex/);
+  });
+
+  test('een run zonder pull_requests (GitHub laat die bij pull_request_target soms leeg) telt', () => {
+    expect(
+      redenen(
+        zet('actions/runs?check_suite_id=55', {
+          workflow_runs: [{ path: '.github/workflows/guard.yml', event: 'pull_request_target', pull_requests: [] }],
+        }),
+      ),
+    ).toBe('');
   });
 
   test('agentMerge.codex false slaat Codex over', () => {

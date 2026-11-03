@@ -83,6 +83,11 @@ describe('agent-merge-niet-kritiek/AC-4 rolhek op pnpm pr:merge', () => {
     "git -c alias.x='!node scripts/kit/pr-merge.mjs 12' x",
     'rg --pre node x scripts/kit/pr-merge.mjs',
     'LESSOPEN="|node %s" less scripts/kit/pr-merge.mjs',
+    'node scripts/kit/pr-mer*.mjs 12',
+    'node scripts/kit/pr-merg?.mjs 12',
+    'node scripts/kit/pr-mer[g]e.mjs 12',
+    'cd scripts/kit && node pr-*.mjs 12',
+    'pnpm pr:*e 12',
   ])('andere vorm: deny (%s)', (command) => {
     expect(verdict(command).uitslag).toBe('deny');
   });
@@ -168,6 +173,12 @@ describe('agent-merge-niet-kritiek/AC-4 trustedMerge', () => {
     write(root, 'src/web/x.ts', 'export const a = 1;\n');
     git(root, ['commit', '-qam', 'feat: app']);
     expect(trustedMerge(root, basis)).toBe(true);
+  });
+
+  test.each(['gh', 'git', 'node'])('een geplante node_modules/.bin/%s: niet vertrouwd', (naam) => {
+    const { root, basis } = fixture();
+    write(root, `node_modules/.bin/${naam}`, '#!/bin/sh\n');
+    expect(trustedMerge(root, basis)).toBe(false);
   });
 
   test('modus eigenaar of zonder basis: niet vertrouwd', () => {
