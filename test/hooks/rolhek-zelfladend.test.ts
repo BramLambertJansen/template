@@ -150,6 +150,21 @@ describe('rolhek-vooraf-krimp/AC-3: bewijs voor de developer', () => {
     'cpio -id < x.cpio',
     '7z x x.zip',
     '7z x x.zip -o.claude',
+    // Derde reviewronde.
+    'cp --target-directory=.claude /tmp/x/settings.json',
+    'cp -t.claude /tmp/x/settings.json',
+    'mv -t.claude /tmp/x/settings.json',
+    'mv --target-directory=.claude /tmp/x/hooks',
+    'ln -t.claude /tmp/x/settings.json',
+    'git rm -r .claude',
+    'git rm -rf .',
+    'cd .claude && git rm -r .',
+    "git rm -r ':/'",
+    'git mv .claude x',
+    'git sparse-checkout set src',
+    'env -C.claude cp /tmp/x hooks/x.mjs',
+    'cd ~ && cp /tmp/x lefthook.yml',
+    'cd - && cp /tmp/x lefthook.yml',
   ])('%s is deny', (command) => {
     expect(verdict(command, 'developer')).toBe('deny');
   });
@@ -186,6 +201,10 @@ describe('rolhek-vooraf-krimp/AC-3: bewijs voor de developer', () => {
     "sed -n '1,5p' lefthook.yml",
     'tar -tf x.tar',
     '7z l x.zip',
+    'git rm --cached -r .claude',
+    'git rm src/x.ts',
+    'git mv src/a.ts src/b.ts',
+    'cp -t src /tmp/a.ts',
   ])('%s raakt de zelfladende regel niet', (command) => {
     expect(redenen(command, 'developer')).not.toContain('zelfladend');
   });

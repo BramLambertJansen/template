@@ -22,6 +22,8 @@ export interface Rij {
   /** Uitkomst achteraf als die bewust afwijkt van de uitkomst vooraf, met de reden. */
   readonly achteraf?: Uitkomst;
   readonly reden?: string;
+  /** Uitkomst achteraf als een rij die hier niets verandert, op een andere machine wel iets verandert (gawk op CI). */
+  readonly alsVeranderd?: Uitkomst;
 }
 
 export const PADCORPUS: readonly Rij[] = [
@@ -1724,7 +1726,9 @@ export const PADCORPUS: readonly Rij[] = [
     bestanden: { 'src/api/routes/a.test.ts': "test('a', () => {});\n" },
     uitkomst: 'melding',
     achteraf: 'door',
-    reden: 'verandert op deze machine niets (mawk kent deze gawk-optie niet); achteraf is er niets te toetsen',
+    alsVeranderd: 'deny',
+    reden:
+      'verandert op deze machine niets (mawk kent deze gawk-optie niet); achteraf is er niets te toetsen. Met gawk verdwijnen de tests: strenger dan vooraf',
   },
   {
     bron: 'rolhek-schrijfgaten.test.ts',

@@ -196,7 +196,7 @@ const NIETS = 'verandert op deze machine niets';
  * alleen als er echt niets veranderde; verandert het commando elders wel iets, dan geldt de gewone verwachting.
  */
 function verwacht(rij: Rij, veranderd: boolean): Uitkomst {
-  if (rij.reden?.startsWith(NIETS) === true && veranderd) return standaard(rij.uitkomst);
+  if (rij.reden?.startsWith(NIETS) === true && veranderd) return rij.alsVeranderd ?? standaard(rij.uitkomst);
   return rij.achteraf ?? standaard(rij.uitkomst);
 }
 

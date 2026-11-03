@@ -288,11 +288,14 @@ function mapDoelen(argv) {
   const uitpak = uitpakDoel(naam, { args, losse, waarde });
   if (uitpak !== undefined) return uitpak;
   if (naam === 'find') return findPaden(args);
-  if (WISSEN.has(naam)) return losse;
+  // `-t map`, `-tmap` en `--target-directory=map`: dan zijn alle losse woorden bronnen.
+  const doelOptie = waarde(/^(?:-t|--target-directory)/);
+  if (WISSEN.has(naam)) return doelOptie === null ? losse : [...losse, doelOptie];
   if (!KOPIEER.has(naam)) return [];
+  const bronnen = doelOptie === null ? losse.slice(0, -1) : losse;
   const recursief = args.some((arg) => /^(?:-[a-zA-Z]*[rRa]|--recursive|--archive)/.test(arg));
-  const risico = recursief || losse.slice(0, -1).some((bron) => RISICONAAM.has(path.posix.basename(bron)));
-  const doel = waarde(/^(?:-t|--target-directory)/) ?? losse.at(-1);
+  const risico = recursief || bronnen.some((bron) => RISICONAAM.has(path.posix.basename(bron)));
+  const doel = doelOptie ?? losse.at(-1);
   return risico && doel !== undefined ? [doel] : [];
 }
 
@@ -318,7 +321,8 @@ function zonderOmhulsel(argv, ctx) {
   while ((argv[index] ?? '').startsWith('-')) {
     const optie = argv[index] ?? '';
     const metWaarde = /^-[a-zA-Z]*[CuagUhpDr]$/.test(optie) || /^--(?:chdir|unset|argv0|user|group)$/.test(optie);
-    const map = /^--chdir=/.test(optie) ? optie.slice('--chdir='.length) : /^-[a-zA-Z]*C$|^--chdir$/.test(optie) ? argv[index + 1] : undefined;
+    const vast = /^-[a-zA-Z]*C(.+)$/.exec(optie);
+    const map = /^--chdir=/.test(optie) ? optie.slice('--chdir='.length) : /^-[a-zA-Z]*C$|^--chdir$/.test(optie) ? argv[index + 1] : vast?.[1];
     if (map !== undefined) cwd = path.posix.resolve(cwd, map);
     index += metWaarde ? 2 : 1;
   }
@@ -341,6 +345,14 @@ function gitBesluit(argv, { ctx, omgelegd, role }, besluit) {
   const { subcommand } = gitSubcommand(argv.slice(1));
   if (omgelegd && !GIT_LEZEN.has(subcommand)) {
     weiger(`git ${subcommand} met --work-tree/--git-dir: het rolhek ziet niet welke werkmap wordt geschreven`, role, besluit);
+    return;
+  }
+  const { rest } = gitSubcommand(argv.slice(1));
+  // `git rm -r .claude`, `git mv .claude x`, `git rm -r ':/'`: wissen of verplaatsen boven zelfladende paden;
+  // `git sparse-checkout` haalt hele mappen uit de werkmap.
+  const wist = (subcommand === 'rm' && !rest.some((arg) => /^--cac/.test(arg))) || subcommand === 'mv';
+  if (subcommand === 'sparse-checkout' || (wist && rest.some((woord) => !woord.startsWith('-') && kanZelfladendRaken(woord, ctx)))) {
+    weiger(`git ${subcommand} kan zelfladende paden uit de werkmap halen (spec rolhek-vooraf-krimp AC-3)`, role, besluit);
     return;
   }
   const git = gitWerkmapZonderPaden(argv, ctx);

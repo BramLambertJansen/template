@@ -623,17 +623,17 @@ function decideBash({ command, role }, ctx, decision) {
 }
 
 /**
- * De map na `cd`/`pushd`. Zonder doel of met `~` is dat de home-map: buiten de repository, dus de root als basis (de woorden
- * daarna zijn dan absoluut of vallen buiten de repo). Een doel met `$`, backtick of substitutie is pas bij het uitvoeren
- * bekend: null, en de zelfladende toets valt dicht (AC-3).
+ * De map na `cd`/`pushd`. Een doel dat pas bij het uitvoeren bekend is (geen doel, `~`, `-`, `$`, backtick, substitutie):
+ * null, en de zelfladende toets valt dicht (AC-3). `$(git rev-parse --show-toplevel)` is de root.
  * @param {{ argv: readonly string[], expanded: readonly string[] }} commando @param {string | null} cwd @param {string} root
  * @returns {string | null}
  */
 function volgendeMap({ argv, expanded }, cwd, root) {
   if (!['cd', 'pushd'].includes(programName(argv[0] ?? ''))) return cwd;
-  const doel = argv.slice(1).find((arg) => !arg.startsWith('-'));
-  if (doel === undefined || doel.startsWith('~') || doel === '$(git rev-parse --show-toplevel)') return root;
-  if (expanded.includes(doel) || /[$`]/.test(doel)) return null;
+  const doel = argv.slice(1).find((arg) => arg === '-' || !arg.startsWith('-'));
+  if (doel === '$(git rev-parse --show-toplevel)') return root;
+  // Zonder doel, `~` of `-`: de home-map of de vorige map, pas bij het uitvoeren bekend; net als `$`, backtick of substitutie.
+  if (doel === undefined || doel === '-' || doel.startsWith('~') || expanded.includes(doel) || /[$`]/.test(doel)) return null;
   return cwd === null ? null : path.resolve(cwd, doel);
 }
 
