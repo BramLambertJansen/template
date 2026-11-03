@@ -83,6 +83,19 @@ describe('positieve controle: elk normwoord onder "Hoe (geen norm)" valt op', ()
     ]);
   });
 
+  test('een woordgroep over een regelafbreking, niet over een witregel', async () => {
+    expect(await hoeNorm(regel('- De handler mag\n  niet zelf zoeken.'))).toStrictEqual([
+      'docs:.claude/rules/api.md:hoe-norm:mag-niet',
+    ]);
+    expect(await hoeNorm(regel('- De handler mag.\n\nniet-gerelateerd.'))).toStrictEqual([]);
+  });
+
+  test('een ~~~-blok met een ```-regel erin sluit bij ~~~', async () => {
+    expect(await hoeNorm(regel('~~~markdown\n```\n~~~\n\n- Nooit zelf zoeken.'))).toStrictEqual([
+      'docs:.claude/rules/api.md:hoe-norm:nooit',
+    ]);
+  });
+
   test('de melding noemt bestand, regel en woord, en wijst naar een R-id', async () => {
     const violations = await docsViolations(repo({ '.claude/rules/api.md': regel('- Racetest.\n- Moet dun.') }));
     const melding = violations.find(({ key }) => key.includes(':hoe-norm:'))?.message ?? '';
@@ -98,6 +111,7 @@ describe('toegestaan: buiten de sectie of geen heel woord', () => {
     ['een normwoord na de volgende ##-kop', regel('- Racetest: precies één slaagt.')],
     ['een deel van een woord', regel('- Een alleenstaande handler; nooitgedacht; mustard; onlyness.')],
     ['een normwoord in een codespan', regel('- Draai `pnpm test --only x` of `git log --never`.')],
+    ['een dubbele-backtick-codespan met een backtick erin', regel('- Draai ``pnpm test --only `x` `` lokaal.')],
     ['een normwoord in een codeblok', regel('```bash\npnpm test --only x # moet\n```')],
     ['een beschrijvend woord', regel('- De check eist een test en dient als vangnet; Vitest vereist dat.')],
     ['een sectie zonder "Hoe (geen norm)"', '# Regels\n\n- Nooit `x`.\n\n## Besloten\n\n- Alleen y.\n'],
