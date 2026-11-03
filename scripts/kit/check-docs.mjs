@@ -200,8 +200,9 @@ function regelboekPadViolations(root, text, files) {
 const R_ID = /\bR-[A-Z]+-\d+(?![\d-])/g;
 
 /**
- * Regel 10: een R-id in `.claude/rules/*` staat letterlijk in het regelboek. Dat elk R-id één keer gedefinieerd is, toetst
- * de krimpcontrole (`normen.mjs`, krimp-op-normen/AC-1), buiten de baseline.
+ * Regel 10: een R-id in `.claude/rules/*` staat letterlijk in het regelboek, en het regelboek definieert elk R-id één keer
+ * (een definitie begint de regel, eventueel na een opsommingsteken). De krimpcontrole (`normen.mjs`, krimp-op-normen/AC-1)
+ * toetst dubbele definities in het vaste patroon ook, buiten de baseline.
  * @param {readonly string[]} files @param {(file: string) => string} read @returns {Violation[]}
  */
 function rIdViolations(files, read) {
@@ -214,7 +215,15 @@ function rIdViolations(files, read) {
         .filter((id) => !bekend.has(id))
         .map((id) => ({ key: `docs:${file}:r-id:${id}`, message: `${file}: ${id} staat niet in ${REGELBOEK}` })),
     );
-  return padregels;
+  const definities = [...boek.matchAll(/^\s*(?:[-*]\s+)?(?:\*\*)?(R-[A-Z]+-\d+)(?![\d-])/gm)].map(([, id = '']) => id);
+  const dubbel = [...new Set(definities.filter((id, index) => definities.indexOf(id) !== index))];
+  return [
+    ...padregels,
+    ...dubbel.map((id) => ({
+      key: `docs:${REGELBOEK}:r-id-dubbel:${id}`,
+      message: `${REGELBOEK}: ${id} staat er meer dan één keer`,
+    })),
+  ];
 }
 
 /**
