@@ -1,5 +1,5 @@
 ---
-status: voorstel
+status: goedgekeurd
 namespace: een-proefkopie
 ---
 
@@ -109,5 +109,5 @@ n.v.t.: geen API-route, permissie of foutcode.
 
 ## Open vragen
 
-- **OV-1 ⚠ open**: samenvoegen in één kopie, of overslaan als de invoer gelijk is? Aanbeveling: samenvoegen (ADR 0073,
-  alternatieven). De eigenaar kiest in de projectthread; de merge van deze PR is het besluit.
+- **OV-1 (aanbeveling: samenvoegen)**: samenvoegen in één kopie, of overslaan als de invoer gelijk is? Aanbeveling:
+  samenvoegen (ADR 0073, alternatieven). De eigenaar kiest in de projectthread; de merge van deze PR is het besluit.
