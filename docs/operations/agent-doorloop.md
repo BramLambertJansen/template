@@ -139,7 +139,7 @@ Onleesbare geschiedenis is een fout; haal bij een verse of onvolledige checkout 
 De app-initialisatie heeft naast geïsoleerde fixtures ook een compatibiliteitsproef met de echte templatebestanden
 (`test/scripts/app-init-template.test.ts`). Na initialisatie vindt die proef de oorspronkelijke invoer in de gekoppelde
 Git-geschiedenis. CI haalt hiervoor de volledige geschiedenis op; er wordt niets teruggeschreven naar de eigen checkout.
-`pnpm check:app-init` (verplichte CI-check) draait `app:init` op een tijdelijke kopie en daarna de snelle suite, zodat een test die alleen in de template slaagt de template-CI rood maakt (leerpunt #334).
+`pnpm check:new-resource` (verplichte CI-check) draait in één tijdelijke kopie eerst `app:init`, dan `new:resource` en daarna de snelle suite, zodat een test die alleen in de template slaagt de template-CI rood maakt (leerpunt #334, ADR 0073).
 
 Begin met de taakrelevante secties van `node scripts/kit/feiten.mjs`, bijvoorbeeld `gates specs fase`.
 De hoofdsessie kiest de route: licht alleen voor beperkte fixes binnen bestaand gedrag; anders volledig — framework §8.
@@ -273,6 +273,13 @@ lopen. Tests en bewaking houden hun bestaande bescherming.
 
 Bij een weigering meldt de developer commando/bestand en werkelijke rolhekreden als onvoltooid. De hoofdsessie
 verwerkt de grens of vraagt een concrete scope-uitbreiding. Een blokkadetekst schakelt de groen-eis niet uit.
+
+Blokkeert het rolhek door een storing (ADR 0045 punt 3), dan meldt Claude Code een hookfout of timeout van
+`.claude/hooks/rolhek.mjs` die de aanroep tegenhoudt omdat `onFailure` op `"block"` staat; er staat dan geen
+`rolhek:`-reden bij. Lezen (Read, Grep, Glob), een subagent starten en de eigenaar vragen werken nog; elk Bash-commando
+(ook `git status`), elke MCP-tool (ook uit `mcpLezen`) en elke schrijfactie niet, ook in subagents. De sessie meldt de
+foutregel als leerpunt (`gh issue create … --label leerpunt`, zodra Bash weer werkt; anders aan de eigenaar), vraagt de
+eigenaar en zet de hook nooit uit en omzeilt hem niet (R-PRINC-09). Bij het derde leerpunt hierover beslist de eigenaar.
 
 De bestaande runner start zijn eigen verse teststack; hiervoor hoeft de eigenaar geen dev-stack te starten.
 Zo draait hij (ADR 0044): `scripts/runner.sh` roept compose aan met vaste argumenten: alleen `compose.yaml`, een eigen

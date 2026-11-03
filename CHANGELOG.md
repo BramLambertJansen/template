@@ -273,6 +273,18 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
   omvanggrens niet omzeilen. De diff-guard telt met `git diff -U0`, `pnpm pr:merge` op de REST-patch; beide vallen dicht
   bij een onleesbare of afgekapte telling. Een app zonder `agentMerge.maxBytes` krijgt geen agent-merge (zie Bij een update).
 
+- Eén proefkopie per PR (ADR 0073, spec `een-proefkopie`): `check:new-resource` draait in de template in één kopie eerst
+  `app:init`, dan `new:resource` en één keer de snelle suite; in een app alleen de generator en de suite. `check:app-init`
+  is geen verplichte check meer (`requiredChecks`, `scripts/github-ruleset.sh`); de job draait nog tot de volgende
+  bouw-PR hem weghaalt. Wat verandert voor een app: `check:new-resource` faalt nu ook bij een ontbrekende `node_modules`
+  of `.claude/gates.json`, in plaats van stil te slagen. Zie "Bij een update".
+
+- Het rolhek valt dicht bij elke storing (ADR 0045 punt 3, spec `rolhek-dicht-bij-storing`): `onFailure: "block"` op zijn
+  PreToolUse-hook in `.claude/settings.json`, dus ook een crash, een timeout of ongeldige uitvoer houdt de aanroep tegen.
+  Vereist Claude Code 2.1.295 of nieuwer; `scripts/doctor.sh` en `werkstraat session-start` melden een oudere versie. Wat
+  verandert voor een app: werk Claude Code bij; hapert het rolhek, dan staan schrijven, Bash en MCP stil tot het weer werkt
+  (`docs/operations/agent-doorloop.md`).
+
 - Tijdelijke testmappen (leerpunt #396): elke Vitest-run krijgt één hoofdmap `vitest-run-*` onder de tmpdir van de
   aanroeper (`test/setup/tmp-root.ts`); `os.tmpdir()` in tests en kindprocessen wijst daarheen en de map gaat na de run
   weg. Een test die zijn eigen map vergeet op te ruimen laat `/tmp` niet meer vollopen.
@@ -487,6 +499,10 @@ Een app met een eigen lijst die op een lang tekstveld sorteert: toets met `maxCu
 
 De template heeft nog geen releaseversies. Controleer bij een update de gewijzigde migraties, architectuurbesluiten en instellingen. Een volledige upgradecontrole staat op de roadmap.
 
+- **`check:app-init` niet meer verplicht (ADR 0073).** Wat de eigenaar moet doen: draai na deze update
+  `scripts/github-ruleset.sh <owner>/<slug>` opnieuw (`docs/nieuwe-app.md`), anders blijft de ruleset `check:app-init`
+  eisen en blokkeert elke PR zodra een latere update de job weghaalt. Conflicten: alleen als de app `requiredChecks` in
+  `.claude/decisions.json` zelf aanpaste.
 - **Taakmandaat weg.** Records in `.claude/decisions.json` worden genegeerd; de eigenaar maakt `decisions` leeg (`[]`)
   en haalt de bewerkweigering op dat bestand in `.claude/settings.json` weg als hij wil. De stap in `guard.yml` heet nu
   `Documentstatus`; de job `document-status` (en dus de verplichte check) houdt zijn naam.
