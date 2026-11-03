@@ -4,7 +4,7 @@ Status: geaccepteerd
 Herzien: 2026-11-03 (#456): punt 3 (Codex-voorwaarde drieledig, omvanggrens `agentMerge.maxRegels`), punt 5
 (steekproef, terugval, overgang), Gevolgen en Meten; versoepelt de Codex-voorwaarde; uitwerking in
 [spec](../specs/agent-merge-zonder-codex.md)
-Herzien: 2026-11-03 (#<nr>): punt 3 (een 👀 van Codex of een review die nog bezig is, telt als spoor en houdt de merge tegen),
+Herzien: 2026-11-03 (#468): punt 3 (een 👀 van Codex of een review die nog bezig is, telt als spoor en houdt de merge tegen),
 punt 5 (overgang) en Gevolgen; verscherpt de Codex-voorwaarde; uitwerking in [spec](../specs/agent-merge-codex-wachten.md)
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 30, 31, 33, 34 en 35, de zin "automatische agent-merges vallen af" uit
