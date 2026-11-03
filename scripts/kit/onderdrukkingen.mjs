@@ -63,6 +63,9 @@ export function somPerRegel(onderdrukkingen) {
   return som;
 }
 
+/** Is de basis ongeldig (AC-3)? @param {string | null | undefined} basis */
+const basisOngeldig = (basis) => typeof basis === 'string' && leesOnderdrukkingen(basis).fouten.length > 0;
+
 /** @param {string} detail @param {string} message @returns {Violation} */
 const fout = (detail, message) => ({ key: `onderdrukkingen:${detail}`, message: `${message} (${SPEC})` });
 
@@ -91,7 +94,8 @@ export const ingevoerd = (regel, config) => inConfig(regel, config.nu) && !inCon
 export function onderdrukkingViolations({ basis, nu, hernoemd = new Map(), config = { basis: '', nu: '' } }) {
   const huidig = leesOnderdrukkingen(nu);
   const vorm = huidig.fouten.map((tekst) => fout(`vorm:${tekst}`, `${BESTAND}: ${tekst}`));
-  if (basis === undefined) return vorm;
+  // Zonder of met een ongeldige basis vergelijkt hij niet (AC-3); in CI maakt `onderdrukkingenUitGit` dat rood.
+  if (basis === undefined || basisOngeldig(basis)) return vorm;
   const toen = leesOnderdrukkingen(basis).onderdrukkingen;
   /** @param {string} bestand @param {string} regel */
   const toegestaan = (bestand, regel) =>
@@ -180,12 +184,10 @@ function uitGit(root) {
     return { basis: undefined, nu, gewijzigd: [], hernoemd: new Map(), config: { basis: '', nu: configNu } };
   const gewijzigd = (git(root, ['diff', '--name-only', '-z', basis]) ?? '').split('\0').filter((f) => f !== '');
   const hernoemd = leesHernoemingen(git(root, ['diff', '-M', '--name-status', '-z', basis]) ?? '');
-  const config = { basis: git(root, ['show', `${basis}:${CONFIG}`]) ?? '', nu: configNu };
+  // Geen config op de basis: dan telt niets als ingevoerd (AC-2), anders zou elke regel een melding worden.
+  const config = { basis: git(root, ['show', `${basis}:${CONFIG}`]) ?? configNu, nu: configNu };
   return { basis: git(root, ['show', `${basis}:${BESTAND}`]), nu, gewijzigd, hernoemd, config };
 }
-
-/** Is de basis ongeldig (AC-3)? @param {string | null | undefined} basis */
-const basisOngeldig = (basis) => typeof basis === 'string' && leesOnderdrukkingen(basis).fouten.length > 0;
 
 /**
  * Strikt kanaal van `pnpm ratchet` (AC-1 t/m AC-3); zonder of met ongeldige basis in CI rood (`GITHUB_ACTIONS`, zoals

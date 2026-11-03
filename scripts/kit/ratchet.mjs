@@ -16,13 +16,13 @@ const BASELINE = '.kit/baseline.json';
 /** @typedef {{ key: string, message: string }} Violation */
 
 /** @type {Record<string, () => Promise<Violation[]>>} */
-const checks = {
+export const checks = {
   'dependency-cruiser': () => dependencyViolations(process.cwd()),
   'check-docs': () => docsViolations(process.cwd()),
 };
 
 /** Overtredingen die nooit in de baseline komen (leesbudget/AC-6). @type {Record<string, () => Promise<Violation[]>>} */
-const strikt = {
+export const strikt = {
   'check-docs (krimp)': () => docsKrimp(process.cwd()),
   // Geen onderdrukking in eslint-suppressions.json stijgt (spec onderdrukkingen-ratchet).
   'eslint-onderdrukkingen': () =>
@@ -30,7 +30,7 @@ const strikt = {
 };
 
 /** Meldingen zonder overtreding (leesbudget/AC-2). @type {Record<string, () => Promise<string[]>>} */
-const meldingen = {
+export const meldingen = {
   'check-docs': () => docsMeldingen(process.cwd()),
   'eslint-onderdrukkingen': () => Promise.resolve(onderdrukkingMeldingenUitGit(process.cwd())),
 };

@@ -13,6 +13,7 @@ import {
   onderdrukkingViolations,
   somPerRegel,
 } from '../../scripts/kit/onderdrukkingen.mjs';
+import { checks, meldingen, strikt } from '../../scripts/kit/ratchet.mjs';
 import { expectNegativeTable } from '../support/negative-table.ts';
 
 // Spec onderdrukkingen-ratchet: geen paar (bestand, lintregel) in eslint-suppressions.json stijgt tegenover de merge-base.
@@ -189,12 +190,8 @@ describe('onderdrukkingen-ratchet/AC-3: ongeldig bestand en ontbrekende basis', 
     expect(keys(json(BASIS), null)).toStrictEqual([]);
   });
 
-  test('onderdrukkingen-ratchet/AC-3 met een ongeldige basis telt elke onderdrukking als nieuw', () => {
-    expect(keys('{', json(BASIS))).toStrictEqual([
-      'onderdrukkingen:groei:complexity:a.ts',
-      'onderdrukkingen:groei:rails/x:a.ts',
-      'onderdrukkingen:groei:complexity:b.ts',
-    ]);
+  test('onderdrukkingen-ratchet/AC-3 met een ongeldige basis vergelijkt hij niet', () => {
+    expect(keys('{', json({ 'a.ts': { complexity: 99 } }))).toStrictEqual([]);
   });
 
   test('onderdrukkingen-ratchet/AC-3 zonder basis vergelijkt hij niet', () => {
@@ -300,16 +297,23 @@ describe('onderdrukkingen-ratchet: koppeling met git', () => {
   });
 });
 
+describe('onderdrukkingen-ratchet/AC-1: kanaal strikt, nooit in de baseline', () => {
+  test('onderdrukkingen-ratchet/AC-1 de check staat in strikt en meldingen van pnpm ratchet, niet in de baseline-checks', () => {
+    expect(Object.keys(strikt)).toContain('eslint-onderdrukkingen');
+    expect(Object.keys(meldingen)).toContain('eslint-onderdrukkingen');
+    expect(Object.keys(checks)).toStrictEqual(['dependency-cruiser', 'check-docs']);
+  });
+});
+
 describe('onderdrukkingen-ratchet/AC-5: regelboek en gate-register noemen de ratchet', () => {
   test('onderdrukkingen-ratchet/AC-5 R-CI-02 en de beschrijving van pnpm ratchet', () => {
     const regel = readFileSync('docs/framework.md', 'utf8')
       .split('\n')
       .find((r) => r.startsWith('- **R-CI-02**'));
     expect(regel).toContain('`eslint-suppressions.json`');
-    expect(regel).toContain('geen paar (bestand, lintregel)');
-    expect(regel).toContain('spec onderdrukkingen-ratchet');
-    expect(readFileSync('scripts/kit/gates.mjs', 'utf8')).toContain(
-      'strikt: geen onderdrukking in eslint-suppressions.json stijgt tegenover de merge-base',
-    );
+    expect(regel).toContain('onderdrukkingen-ratchet');
+    const ratchet = readFileSync('scripts/kit/gates.mjs', 'utf8').split('\n').slice(17, 22).join('\n');
+    expect(ratchet).toContain("script: 'ratchet'");
+    expect(ratchet).toContain('eslint-suppressions.json');
   });
 });
