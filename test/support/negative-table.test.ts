@@ -29,7 +29,7 @@ describe('expectNegativeTable', () => {
   test('faalt als de basis al onwaar is, ook als elke rij onwaar geeft (de fout uit #401)', () => {
     expect(() => {
       expectNegativeTable({ base: { ...BASIS, status: 'vervallen' }, check: goed, cases: RIJEN });
-    }).toThrow(/basis/);
+    }).toThrow(/de basis is al onwaar/);
   });
 
   test('faalt als een bewaakte voorwaarde uit de code is, en noemt de rij', () => {
