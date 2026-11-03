@@ -41,8 +41,7 @@ zo gemarkeerd en is aanvaard met de merge van 0038.
    het besluit; afwijzen is de PR sluiten. Agentvoorstel: mergen met `vervallen` als de reden bewaard moet blijven;
    `voorgesteld`/`voorstel` alleen voor een bewust geparkeerd voorstel. Een status geeft zichzelf geen goedkeuring; inhoud, scope,
    intrekking en vervanging zijn eigenaarbesluiten (was 0027 punt 1 en 0025 punt 10, gewijzigd door 0038 punt 8).
-2. **A4 blijft** (herzien door [0073](0073-herziene-adr-punten-gemarkeerd.md)) (was 0038 punt 2; kern eigenaarbesluit).
-   De tekst van een geaccepteerd ADR verandert niet; een normatieve
+2. **A4 blijft** (was 0038 punt 2; kern eigenaarbesluit). De tekst van een geaccepteerd ADR verandert niet; een normatieve
    correctie is een nieuw ADR. Nieuw ADR en `vervangen door NNNN` of `vervallen` op het oude mogen in één PR, zonder record;
    meerdere ADR's per PR mogen. Agentvoorstel: `geaccepteerd` terug naar `voorgesteld` mag niet, en de statusregel volgt de strikte
    vorm uit het ADR dat 0031 vervangt. De sporen voor een correctie (nieuw ADR, verwijzing achter de statuswaarde, niet-normatieve
