@@ -75,12 +75,14 @@ zoals `account-lifecycle.ts`), met een sessie de gebruiker van die sessie.
 
 Op `/api/me/email/bevestigen`, elke stap zonder claim bij falen (`EMAIL_LINK_INVALID`):
 
-1. `readToken` leest header, payload, `requestType` en `exp` (`exp` erbij in `tokenPayload`);
-2. `exp` is een geheel getal in (nu, nu + `EMAIL_CHANGE_TTL_SECONDS`];
-3. het e-mailveld van het token is gelijk aan het adres van de actor, met dezelfde vergelijking als Better Auth (anders weigert die
+1. vorm: precies drie segmenten en een handtekening van precies 43 tekens uit `[A-Za-z0-9_-]` (de lengte van HS256 in
+   base64url, te controleren zonder geheim); zo verbrandt een afgekapte link de volledige niet;
+2. `readToken` leest header, payload, `requestType` en `exp` (`exp` erbij in `tokenPayload`);
+3. `exp` is een geheel getal in (nu, nu + `EMAIL_CHANGE_TTL_SECONDS`];
+4. het e-mailveld van het token is gelijk aan het adres van de actor, met dezelfde vergelijking als Better Auth (anders weigert die
    met `INVALID_USER` en zou een link in het verkeerde account verbranden);
-4. de claim met geldigheid `exp` min nu; al geclaimd → `EMAIL_LINK_INVALID`;
-5. `verifyEmail` (handtekening en de rest, zoals nu).
+5. de claim met geldigheid `exp` min nu; al geclaimd → `EMAIL_LINK_INVALID`;
+6. `verifyEmail` (handtekening en de rest, zoals nu).
 
 ## Kopieer de vorm van
 
@@ -134,6 +136,8 @@ Op `/api/me/email/bevestigen`, elke stap zonder claim bij falen (`EMAIL_LINK_INV
   het wordt bevestigd, dan 409 `EMAIL_LINK_INVALID` (geen 500) en geen rij in `app.one_time_use`.
 - **inloggat-dichten/AC-14** — Gegeven de dev-login (lokaal), wanneer hij tien keer achter elkaar naar admin wisselt, dan lukt elke
   wissel (bestaande test "tien wissels achter elkaar" ongewijzigd groen).
+- **inloggat-dichten/AC-15** — Gegeven link 1 waarvan het einde is afgekapt (handtekening korter dan 43 tekens), wanneer die eerst
+  wordt bevestigd, dan `EMAIL_LINK_INVALID` zonder rij in `app.one_time_use`, en lukt daarna de volledige link.
 
 ## Randgevallen
 
@@ -147,6 +151,7 @@ Op `/api/me/email/bevestigen`, elke stap zonder claim bij falen (`EMAIL_LINK_INV
 | Dev-login (lokaal, `auth.api.verifyTOTP` zonder HTTP-verzoek) | geen claim (OV-3) | — |
 | Link 1 in de sessie van een ander account | geen claim; de link blijft bruikbaar voor de eigenaar | `EMAIL_LINK_INVALID` |
 | Andere spelling van de handtekening na gebruik | zelfde sleutel, geweigerd | `EMAIL_LINK_INVALID` |
+| Afgekapte link (mailclient of kopiëren) | geen claim; de volledige link werkt daarna nog | `EMAIL_LINK_INVALID` |
 | Twee gebruikers toevallig dezelfde code | geen conflict: de gebruikers-ID zit in de sleutel | — |
 | Link 1 opnieuw nodig omdat mail 2 kwijt is | gebruiker vraagt de wijziging opnieuw aan | `EMAIL_LINK_INVALID` |
 | Link 2 tweede keer | ongewijzigd: al ongeldig | `EMAIL_LINK_INVALID` |
@@ -162,17 +167,20 @@ Op `/api/me/email/bevestigen`, elke stap zonder claim bij falen (`EMAIL_LINK_INV
   Het strippen van `token` in `afterChangePassword` blijft als tweede laag.
 - Gegenereerd: `db/schema.snapshot.sql` en `src/api/db/schema.ts` opnieuw (`pnpm check:snapshot`), niet met de hand.
 - Checks: `check:migrations`, `check:secdef`, `check:snapshot`, `test:db` met pgTAP `db/tests/one_time_use.sql` (nieuw) en een
-  nieuwe invariant in `db/tests/invarianten.sql`: "`auth_service` heeft op `public` en `app` alleen `usage` op `app` en execute op
-  de functies van klasse `auth`, verder niets", met een opzettelijke fout die bewijst dat de query hem vangt (die invariant bestaat
+  nieuwe invariant in `db/tests/functies.sql` (daar staan de klassen): "`auth_service` heeft op `public` en `app` alleen `usage` op
+  `app` en execute op de functies van klasse `auth`, verder niets", met een opzettelijke fout die bewijst dat de query hem vangt (die invariant bestaat
   nog niet). `test/security/resources.ts`: n.v.t. (geen resource per eigenaar). Geen nieuwe permissie.
 - Bestaande tests en testhulpen die wijzigen (R-TEST-02, reden: dit besluit maakt een TOTP-code eenmalig):
   - `test/api/eigen-account-deel2.int.test.ts` "link 1 nogmaals geopend binnen de geldigheid: mail 2 gaat opnieuw weg" wordt AC-6;
   - `db/tests/functies.sql`: klasse `auth` erbij en de regel voor de nieuwe functie;
-  - testhulpen `totp()` in `test/auth/harness.ts` en `totpFor()` in `e2e/support/accounts.ts`: geven per geheim elke tijdstap
-    hooguit één keer, eerst de huidige, dan de volgende (valt binnen het venster), en wachten anders tot de volgende stap. Zo
-    blijven tests die snel na elkaar inschrijven en inloggen (o.a. `test/auth/auth.int.test.ts` "inloggen met TOTP",
-    `test/api/account-harness.ts`, `login-tracking`, `roles`, `me.int`, e2e met TOTP) ongewijzigd. Lukt dat voor een test niet,
-    dan staat die test met reden in de bouw-PR.
+  - testhulpen: `totp()` in `test/auth/harness.ts` en `totpFor()` in `e2e/support/accounts.ts` blijven pure berekeningen
+    (ongewijzigd). Erbij komt per hulp een verbruikende variant (`freshTotp()`, `freshTotpFor()`) die per geheim elke tijdstap
+    hooguit één keer geeft: eerst de huidige, dan de volgende (valt binnen het venster). Is ook die op, dan gooit hij een fout met
+    de reden, in plaats van te wachten (integratietests breken na 15 s af, `vitest.config.ts`). Alleen aanroepen die echt
+    verifiëren (inschrijven, inloggen, step-up) gaan naar de verbruikende variant, o.a. in `test/auth/auth.int.test.ts`
+    "inloggen met TOTP", `test/api/account-harness.ts`, `login-tracking`, `roles`, `me.int` en e2e met TOTP; elke gewijzigde
+    test staat met reden in de bouw-PR. Een test die binnen één stap drie codes van hetzelfde geheim nodig heeft, splitst zijn
+    accounts of krijgt een eigen ruimere timeout, met reden in de bouw-PR.
 - Dev-login (`src/core/api/dev/login-as.ts`): ongewijzigd; valt onder de interne aanroep zonder claim (OV-3, AC-14).
 - Docs in de bouw-PR: R-AUTH-06 zonder "Bekend gat" en met de nieuwe regel (eenmalig, geen token in JSON) in `docs/framework.md`;
   R-LAAG-05 (`auth_service` ook execute op de functies van klasse `auth`) en de functiecatalogus in framework §6; ST-02 in

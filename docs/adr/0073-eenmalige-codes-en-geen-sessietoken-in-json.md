@@ -47,9 +47,9 @@ Better Auth (gepind op 1.7.7; 1.7.15 is niet anders) laat drie dingen open die h
    langer dan het venster. Is de code al geclaimd, dan hetzelfde antwoord als bij een foute code (geen orakel "deze code is al
    gebruikt"). Waarom vóór de controle en ook bij een foute code: alleen zo wint bij twee gelijktijdige verzoeken met dezelfde
    code precies één; een geclaimde foute code kost niemand iets. Interne aanroepen zonder HTTP-verzoek (alleen de lokale
-   dev-login, die TOTP met een vast geheim al omzeilt) claimen niet; een test bewaakt dat er geen andere bijkomt.
+   dev-login, die TOTP met een vast geheim al omzeilt) claimen niet; een test bewaakt dat er geen andere bijkomt (spec OV-3).
 3. **E-maillink: claim vóór bevestigen.** De eigen bevestigroute controleert eerst wat zonder geheim te controleren is
-   (geldigheid, en dat het token bij het account van de actor hoort), claimt dan een hash van actor plus de ondertekende inhoud
+   (vorm, geldigheid, en dat het token bij het account van de actor hoort), claimt dan een hash van actor plus de ondertekende inhoud
    van het token (zonder de handtekening, zodat elke spelling dezelfde sleutel geeft) tot het token verloopt, en bevestigt alleen
    bij een nieuwe claim. Een tweede keer geeft de bestaande melding `EMAIL_LINK_INVALID`. Waarom de actor in de sleutel: de
    claim valt vóór de handtekeningcontrole, dus een vervalst token mag alleen de eigen sleutel kunnen bezetten. Het token zelf
