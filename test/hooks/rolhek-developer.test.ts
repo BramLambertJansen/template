@@ -61,6 +61,20 @@ describe('samenhang-checks-rollen/AC-4: de developer schrijft geen spec', () => 
     expect(maak().deny.join('\n')).toContain('dat doet de architect');
   });
 
+  test('samenhang-checks-rollen/AC-4 status terug naar voorstel, ook zonder vastgelegde basis: geweigerd', () => {
+    const werkmap = { [SPEC]: spec('goedgekeurd') };
+    const zonderBasis: Ctx = { ...ctx(werkmap), authority: null };
+    const besluit = decide(
+      {
+        tool_name: 'Edit',
+        tool_input: { file_path: `${ROOT}/${SPEC}`, old_string: 'status: goedgekeurd', new_string: 'status: voorstel' },
+        agent_type: 'developer',
+      },
+      zonderBasis,
+    );
+    expect(besluit.deny).not.toHaveLength(0);
+  });
+
   test('samenhang-checks-rollen/AC-4 een spec verwijderen via de toets op effect: geweigerd', () => {
     const besluit = decideChange({ rel: SPEC, change: { kind: 'delete', after: null }, agentType: 'developer' }, ctx());
     expect(besluit.deny).not.toHaveLength(0);

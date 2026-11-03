@@ -295,17 +295,13 @@ function decideFile({ rel, change, role }, ctx, decision) {
 }
 
 /**
- * ADR 0068 punt 4: de developer maakt, wijzigt, verwijdert of hernoemt geen spec. Toegestaan blijft terugzetten naar de
- * tekst van de basis, en een status terug naar `voorstel` als verder alles gelijk blijft aan de basis (R-WERK-08).
+ * ADR 0068 punt 4: de developer maakt, wijzigt, verwijdert of hernoemt geen spec; alleen terugzetten naar de tekst van de
+ * basis mag. Een status terug naar `voorstel` blijft bij architect en hoofdsessie (R-WERK-08).
  * @param {string} rel @param {Change} change @param {string | null} basis @returns {boolean} true als het geweigerd wordt
  */
 function developerSpec(rel, change, basis) {
   if (!rel.startsWith('docs/specs/')) return false;
-  if (change.after === null || basis === null) return true;
-  if (change.after === basis) return false;
-  const oud = documentInfo(rel, basis);
-  const nieuw = documentInfo(rel, change.after);
-  return !(oud !== null && nieuw !== null && oud.digest === nieuw.digest && nieuw.status === 'voorstel');
+  return change.after === null || change.after !== basis;
 }
 
 /**
@@ -397,7 +393,7 @@ function existingTest({ rel, change, role }, ctx, decision) {
   } else if (helper) {
     decision.context.push(`${rel}: hulpbestand gewijzigd: noem het met reden in de PR (AGENTS.md, framework §8).`);
   } else if (role === 'developer') {
-    decision.deny.push(`${rel} is een bestaande test: de developer wijzigt hem niet; de hoofdsessie doet dat als spec of opdracht het gedrag verandert, de tester als hij fout lijkt (R-TEST-02, ADR 0068 punt 4)`);
+    decision.deny.push(`${rel} is een bestaande test: de developer wijzigt hem niet; de hoofdsessie doet dat als spec of opdracht het gedrag verandert, de tester na akkoord van de eigenaar als hij fout lijkt (R-TEST-02, ADR 0068 punt 4)`);
   } else {
     decision.context.push(`${rel} is een bestaande test: noem de wijziging met reden in de PR (AGENTS.md, framework §8).`);
   }
