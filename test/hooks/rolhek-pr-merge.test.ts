@@ -75,6 +75,14 @@ describe('agent-merge-niet-kritiek/AC-4 rolhek op pnpm pr:merge', () => {
     'pnpm pr:merge 012',
     'pnpm pr:merge $(echo 12)',
     'env X=1 node scripts/kit/pr-merge.mjs 12',
+    '/usr/bin/node scripts/kit/pr-merge.mjs 12',
+    'sh -c "pnpm pr:merge 12"',
+    "bash -c 'node scripts/kit/pr-merge.mjs 12'",
+    'cd scripts/kit && node pr-merge.mjs 12',
+    'pnpm p\\r:merge 12',
+    "git -c alias.x='!node scripts/kit/pr-merge.mjs 12' x",
+    'rg --pre node x scripts/kit/pr-merge.mjs',
+    'LESSOPEN="|node %s" less scripts/kit/pr-merge.mjs',
   ])('andere vorm: deny (%s)', (command) => {
     expect(verdict(command).uitslag).toBe('deny');
   });
@@ -86,12 +94,13 @@ describe('agent-merge-niet-kritiek/AC-4 rolhek op pnpm pr:merge', () => {
     },
   );
 
-  test.each(['cat scripts/kit/pr-merge.mjs', 'git log -- scripts/kit/pr-merge.mjs'])(
-    'lezen blijft vrij (%s)',
-    (command) => {
-      expect(verdict(command).uitslag).not.toBe('deny');
-    },
-  );
+  test.each([
+    'cat scripts/kit/pr-merge.mjs',
+    'git log -- scripts/kit/pr-merge.mjs',
+    'grep -n x scripts/kit/pr-merge.mjs',
+  ])('lezen blijft vrij (%s)', (command) => {
+    expect(verdict(command).uitslag).not.toBe('deny');
+  });
 
   test('settings.json: deny voor gh pr merge, ask en sandbox-uitzondering voor pnpm pr:merge, niet in allow', () => {
     const tekst = readFileSync('.claude/settings.json', 'utf8');

@@ -26,7 +26,8 @@ const TEST_GEWIJZIGD = new Set(['M', 'D', 'R', 'T']);
  * @typedef {{ gates: string[], testpaden: string[], jsonGates: Record<string, string[]>, goedkeurders: string[] }} GuardConfig
  * @typedef {{ user: string, state: string, commitId: string, submittedAt: string }} Review
  * @typedef {{ wijzigingen: Wijziging[], json: Record<string, { voor: string | null, na: string | null }>,
- *   reviews: Review[], auteur: string, headSha: string }} Pr
+ *   reviews: Review[], auteur: string, headSha: string, src?: Record<string, { voor: string | null, na: string | null }> }} Pr
+ *   `src`: elk geraakt bestand onder src/ (ook verwijderd), alleen voor het agent-merge-oordeel
  * @typedef {{ gates: string[], tests: string[], json: string[] }} Geraakt
  * @typedef {{ migraties: string[], permissies: string[], dependencies: string[], routes: string[] }} Risico
  * @typedef {{ uitslag: 'groen' | 'overgang' | 'rood', redenen: string[], geraakt: Geraakt }} Uitslag
@@ -537,6 +538,22 @@ export function teLezen(config, wijzigingen) {
   return [...geraakteVaste, ...bron];
 }
 
+/**
+ * Elk geraakt bestand onder src/, ook verwijderd of buiten `BRON`, voor de permission-regels van het agent-merge-oordeel
+ * (spec agent-merge-niet-kritiek AC-1). Staat los van `teLezen`, zodat de uitslag van de diff-guard niet verandert.
+ * @param {readonly Wijziging[]} wijzigingen
+ */
+export function srcTeLezen(wijzigingen) {
+  return wijzigingen
+    .filter(({ pad, van }) => pad.startsWith('src/') || (van ?? '').startsWith('src/'))
+    .map(({ status, pad, van }) => ({
+      // Hernoemd van src/ naar buiten: de sleutel blijft onder src/, zodat een verhuisde permission-regel meetelt.
+      sleutel: pad.startsWith('src/') ? pad : (van ?? pad),
+      pad,
+      van: status === 'R' ? van : status === 'A' || status === 'C' ? undefined : pad,
+    }));
+}
+
 /** @param {GuardConfig} config @returns {Promise<Pr>} */
 async function leesPr(config) {
   const [base, head] = [env('BASE_SHA'), env('HEAD_SHA')];
@@ -552,6 +569,12 @@ async function leesPr(config) {
       { voor: van === undefined ? null : versie(splitsing, van), na: versie(head, pad) },
     ]),
   );
+  const src = Object.fromEntries(
+    srcTeLezen(wijzigingen).map(({ sleutel, pad, van }) => [
+      sleutel,
+      { voor: van === undefined ? null : versie(splitsing, van), na: versie(head, pad) },
+    ]),
+  );
   const pr = `https://api.github.com/repos/${env('REPO')}`;
   const nummer = env('PR_NUMBER');
   const reviews = (await api(`${pr}/pulls/${nummer}/reviews`)).map((review) => ({
@@ -560,7 +583,7 @@ async function leesPr(config) {
     commitId: tekst(veld(review, 'commit_id')),
     submittedAt: tekst(veld(review, 'submitted_at')),
   }));
-  return { wijzigingen, json, reviews, auteur: env('AUTHOR'), headSha: head };
+  return { wijzigingen, json, reviews, auteur: env('AUTHOR'), headSha: head, src };
 }
 
 /**
@@ -570,7 +593,12 @@ async function leesPr(config) {
  */
 export function agentMerge(pr, oordeel, configTekst) {
   return agentMergeOordeel(
-    { wijzigingen: pr.wijzigingen, json: pr.json, geraakteJson: oordeel.geraakt.json, risico: oordeel.risico },
+    {
+      wijzigingen: pr.wijzigingen,
+      json: { ...pr.src, ...pr.json },
+      geraakteJson: oordeel.geraakt.json,
+      risico: oordeel.risico,
+    },
     leesMergeConfig(configTekst),
   );
 }

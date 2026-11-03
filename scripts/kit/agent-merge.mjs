@@ -22,9 +22,9 @@ const NIEUWE_TEST = /^(?:src|test|e2e|db\/tests)\/.+\.(?:ts|tsx|sql)$/;
 const VANZELF_GELADEN = [
   /(?:^|\/)\./, // een map of bestand dat met een punt begint (.claude/, .mcp.json, .npmrc, .vscode/)
   /(?:^|\/)(?:CLAUDE|AGENTS)[^/]*\.md$/i,
-  /(?:^|\/)[^/]*\.config\.[^/]+$/,
-  /(?:^|\/)package\.json$/,
-  /(?:^|\/)tsconfig[^/]*\.json$/,
+  /(?:^|\/)[^/]*\.config\.[^/]+$/i,
+  /(?:^|\/)package\.json$/i,
+  /(?:^|\/)tsconfig[^/]*\.json$/i,
 ];
 const CONTRACT = /^src\/shared\/contracts\//;
 const PERMISSIE = /permission/i;

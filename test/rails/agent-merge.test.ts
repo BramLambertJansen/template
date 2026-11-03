@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 import { agentMergeOordeel, leesMergeConfig, leesModus } from '../../scripts/kit/agent-merge.mjs';
-import { agentMerge, beoordeel, leesConfig } from '../../scripts/kit/diff-guard.mjs';
+import { agentMerge, beoordeel, leesConfig, srcTeLezen } from '../../scripts/kit/diff-guard.mjs';
 import { agentMergeViolations } from '../../scripts/kit/check-docs.mjs';
 
 // Oordeel agent-merge (ADR 0069 punt 1, spec agent-merge-niet-kritiek AC-1) tegen de echte .claude/gates.json: een toegestane
@@ -61,6 +61,12 @@ describe('agent-merge-niet-kritiek/AC-1 nee: per uitsluiting', () => {
     ['nieuwe .test.md onder .claude/agents', { status: 'A', pad: '.claude/agents/x.test.md' }, /vanzelf geladen/],
     ['nieuwe postcss.config.mjs in de root', { status: 'A', pad: 'postcss.config.mjs' }, /vanzelf geladen/],
     ['nieuwe src/web/postcss.config.mjs', { status: 'A', pad: 'src/web/postcss.config.mjs' }, /vanzelf geladen/],
+    ['hoofdletters (macOS): src/web/Package.json', { status: 'A', pad: 'src/web/Package.json' }, /vanzelf geladen/],
+    [
+      'hoofdletters (macOS): src/web/TSConfig.app.json',
+      { status: 'A', pad: 'src/web/TSConfig.app.json' },
+      /vanzelf geladen/,
+    ],
     ['.mcp.json', { status: 'A', pad: '.mcp.json' }, /vanzelf geladen/],
     ['playwright.smoke.config.ts', { status: 'M', pad: 'playwright.smoke.config.ts' }, /vanzelf geladen/],
     ['src/web/CLAUDE.md', { status: 'A', pad: 'src/web/CLAUDE.md' }, /vanzelf geladen/],
@@ -118,6 +124,34 @@ describe('agent-merge-niet-kritiek/AC-1 nee: per uitsluiting', () => {
     const pad = 'src/api/routes/x.ts';
     const na = "export const r = defineRoute({ method: 'GET', path: '/api/x', handler });\n";
     expect(oordeel([{ status: 'A', pad }], { [pad]: { voor: null, na } }).oordeel).toBe('nee');
+  });
+
+  test('een verwijderd bronbestand met permission (alleen in src, buiten de guard-json)', () => {
+    const pad = 'src/api/routes/x.ts';
+    const wijzigingen = [{ status: 'D', pad }];
+    const p = { ...pr(wijzigingen), src: { [pad]: { voor: "defineRoute({ permission: 'x:read' });\n", na: null } } };
+    const guard = beoordeel(p, guardConfig);
+    expect(guard).toEqual(beoordeel(pr(wijzigingen), guardConfig));
+    const uitslag = agentMerge(p, guard, TEKST);
+    expect(uitslag.oordeel).toBe('nee');
+    expect(uitslag.redenen.join('\n')).toMatch(/x\.ts: regel met permission/);
+  });
+
+  test('srcTeLezen leest elk geraakt bestand onder src/, ook verwijderd, met het basispad', () => {
+    expect(
+      srcTeLezen([
+        { status: 'D', pad: 'src/api/routes/x.ts' },
+        { status: 'M', pad: 'src/web/x.json' },
+        { status: 'A', pad: 'src/web/y.ts' },
+        { status: 'R', pad: 'docs/z.md', van: 'src/web/z.ts' },
+        { status: 'M', pad: 'docs/a.md' },
+      ]),
+    ).toEqual([
+      { sleutel: 'src/api/routes/x.ts', pad: 'src/api/routes/x.ts', van: 'src/api/routes/x.ts' },
+      { sleutel: 'src/web/x.json', pad: 'src/web/x.json', van: 'src/web/x.json' },
+      { sleutel: 'src/web/y.ts', pad: 'src/web/y.ts', van: undefined },
+      { sleutel: 'src/web/z.ts', pad: 'docs/z.md', van: 'src/web/z.ts' },
+    ]);
   });
 
   test('een goedkeuring van de eigenaar maakt een gate-pad niet agent-mergebaar', () => {

@@ -141,8 +141,31 @@ function runnerIsTrusted(ctx) {
 }
 
 const PR_MERGE_EXACT = /^pnpm pr:merge [1-9]\d*$/;
-// Elke andere manier om het mergescript te starten: via een package-manager of node, met of zonder omhulsel.
-const PR_MERGE_ANDERS = /(?:^|[\s;&|(`$])(?:pnpm|npm|yarn|npx|bun|node|deno)\b[^;&|\n]*(?:pr:merge|pr-merge\.mjs)/;
+// Elke andere manier om het mergescript te starten, als vangnet op de tekst zonder `\`, `'` en `"` (zoals bij gh): het
+// scriptwoord `pr:merge` overal, en `pr-merge` naast elk programma dat geen bekend leesprogramma is (`/usr/bin/node …`,
+// `sh -c "…"`, `env node …`). Vals positief (`grep pr:merge package.json`) is bewust geaccepteerd; lezen kan met de leestools.
+const PR_MERGE_SCRIPT = /(?:^|[^\w.-])pr:merge(?=$|[^\w.-])/;
+const PR_MERGE_BESTAND = /pr-merge/;
+// Alleen programma's die niets starten; `rg --pre`, `less` (LESSOPEN) en een git-alias kunnen dat wel.
+const PR_MERGE_LEZERS = new Set(['cat', 'head', 'tail', 'grep', 'wc', 'ls', 'diff', 'stat']);
+const PR_MERGE_GIT = new Set(['log', 'show', 'diff', 'blame']);
+
+/** Een segment dat alleen leest: een leesprogramma of `git log|show|diff|blame` zonder `-c`, zonder omgevingsvariabelen. @param {string[]} words */
+function leestAlleen(words) {
+  const { assignments, argv, pathWrappers } = splitCommand(words);
+  const [woord = '', ...args] = argv;
+  if (assignments.length + pathWrappers.length > 0) return false;
+  if (programName(woord) !== 'git') return PR_MERGE_LEZERS.has(programName(woord));
+  const { subcommand, config } = gitSubcommand(args);
+  return PR_MERGE_GIT.has(subcommand) && config.length === 0;
+}
+
+/** @param {string} command */
+function startMergescript(command) {
+  const tekst = command.replace(/[\\'"]/g, '');
+  if (PR_MERGE_SCRIPT.test(tekst)) return true;
+  return PR_MERGE_BESTAND.test(tekst) && !parseCommands(command).every(({ words }) => leestAlleen(words));
+}
 
 /**
  * `pnpm pr:merge <nr>` (ADR 0069 punt 4, spec agent-merge-niet-kritiek AC-4): alleen de hoofdsessie, alleen precies die vorm,
@@ -152,7 +175,7 @@ const PR_MERGE_ANDERS = /(?:^|[\s;&|(`$])(?:pnpm|npm|yarn|npx|bun|node|deno)\b[^
 function decidePrMerge({ command, role }, ctx, decision) {
   const tekst = command.trim().replace(/ +/g, ' ');
   const exact = PR_MERGE_EXACT.test(tekst);
-  if (!exact && !PR_MERGE_ANDERS.test(command)) return;
+  if (!exact && !startMergescript(command)) return;
   if (role !== 'hoofdsessie') decision.deny.push('Mergen via pnpm pr:merge doet alleen de hoofdsessie (ADR 0069)');
   else if (!exact) decision.deny.push('Het mergescript draait alleen als precies `pnpm pr:merge <nummer>` (ADR 0069)');
   else if (decision.deny.length + decision.ask.length > 0) return;

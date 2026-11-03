@@ -106,11 +106,11 @@ export function mainRedenen(ruw, vereist) {
 }
 
 /**
- * De job `agent-merge` uit guard.yml (pull_request_target) is geslaagd op de head; een gelijknamige check uit een andere
- * workflow of een ander event telt niet.
- * @param {Api} api @param {{ repo: string, checks: unknown[], head: string }} doel
+ * De job `agent-merge` uit guard.yml (pull_request_target) voor déze PR is geslaagd op de head; een gelijknamige check uit een
+ * andere workflow, een ander event of een run voor een andere PR met dezelfde head telt niet.
+ * @param {Api} api @param {{ repo: string, checks: unknown[], head: string, nummer: number }} doel
  */
-export function guardRedenen(api, { repo, checks, head }) {
+export function guardRedenen(api, { repo, checks, head, nummer }) {
   const kandidaten = checks
     .filter((raw) => tekst(veld(raw, 'name')) === 'agent-merge' && tekst(veld(raw, 'head_sha')) === head)
     .filter((raw) => pad(raw, 'app', 'id') === expectedCheckAppId('agent-merge'))
@@ -120,7 +120,12 @@ export function guardRedenen(api, { repo, checks, head }) {
       const runs = veld(api(`repos/${repo}/actions/runs?check_suite_id=${String(suite)}`), 'workflow_runs');
       return (
         Array.isArray(runs) &&
-        runs.some((run) => veld(run, 'path') === GUARD && veld(run, 'event') === 'pull_request_target')
+        runs.some(
+          (run) =>
+            veld(run, 'path') === GUARD &&
+            veld(run, 'event') === 'pull_request_target' &&
+            [veld(run, 'pull_requests')].flat().some((pr) => veld(pr, 'number') === nummer),
+        )
       );
     })
     .toSorted((a, b) => Number(veld(b, 'id')) - Number(veld(a, 'id')));
@@ -159,14 +164,15 @@ export function codexStand(body) {
 
 /**
  * Codex beoordeelde precies de head en heeft geen open punten: de samenvatting zegt `completed` op de head zonder onopgeloste
- * bevindingen, of Codex gaf een 👍 op de PR nadat GitHub de head ontving. 👀 of een lopende review telt niet.
+ * bevindingen (de nieuwste samenvatting telt), of Codex gaf een 👍 op de PR nadat GitHub de head ontving. 👀 of een lopende review telt niet.
  * @param {{ comments: unknown[], reactions: unknown[], suites: unknown[] }} bronnen @param {string} head
  */
 export function codexRedenen({ comments, reactions, suites }, head) {
   const stand = comments
     .filter((c) => pad(c, 'user', 'login') === CODEX)
     .map((c) => codexStand(tekst(veld(c, 'body'))))
-    .find((s) => s !== null && s !== undefined);
+    .filter((s) => s !== null && s !== undefined)
+    .at(-1);
   if (
     veld(stand, 'status') === 'completed' &&
     veld(stand, 'commit_sha') === head &&
@@ -207,7 +213,7 @@ export function voorwaarden(api, { repo, nummer, head }) {
       ? []
       : ['de PR bevat de kop van main niet: eerst git merge origin/main']),
     ...checkRedenen(checks, { names: vereist, sha: head }),
-    ...guardRedenen(api, { repo, checks, head }),
+    ...guardRedenen(api, { repo, checks, head, nummer }),
     ...mainRedenen(alle(api, `repos/${repo}/commits/${mainSha}/check-runs`, 'check_runs'), {
       names: vereist,
       sha: mainSha,

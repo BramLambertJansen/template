@@ -42,7 +42,9 @@ function goed(): Wereld {
       ],
     },
     [`repos/${REPO}/actions/runs?check_suite_id=55`]: {
-      workflow_runs: [{ path: '.github/workflows/guard.yml', event: 'pull_request_target' }],
+      workflow_runs: [
+        { path: '.github/workflows/guard.yml', event: 'pull_request_target', pull_requests: [{ number: 7 }] },
+      ],
     },
     [`repos/${REPO}/commits/${MAIN}/check-runs`]: { check_runs: [check('gate:fast', MAIN)] },
     [`repos/${REPO}/issues/7/comments`]: [
@@ -123,16 +125,52 @@ describe('agent-merge-niet-kritiek/AC-3 pr:merge', () => {
     [
       'agent-merge uit een andere workflow',
       zet('actions/runs?check_suite_id=55', {
-        workflow_runs: [{ path: '.github/workflows/nep.yml', event: 'pull_request_target' }],
+        workflow_runs: [
+          { path: '.github/workflows/nep.yml', event: 'pull_request_target', pull_requests: [{ number: 7 }] },
+        ],
       }),
       /geen job agent-merge/,
     ],
     [
       'agent-merge uit guard.yml maar met event pull_request (PR-branch)',
       zet('actions/runs?check_suite_id=55', {
-        workflow_runs: [{ path: '.github/workflows/guard.yml', event: 'pull_request' }],
+        workflow_runs: [{ path: '.github/workflows/guard.yml', event: 'pull_request', pull_requests: [{ number: 7 }] }],
       }),
       /geen job agent-merge/,
+    ],
+    [
+      'agent-merge uit guard.yml voor een andere PR met dezelfde head',
+      zet('actions/runs?check_suite_id=55', {
+        workflow_runs: [
+          { path: '.github/workflows/guard.yml', event: 'pull_request_target', pull_requests: [{ number: 8 }] },
+        ],
+      }),
+      /geen job agent-merge/,
+    ],
+    [
+      'agent-merge overgeslagen (conclusie skipped)',
+      zet(`commits/${HEAD}/check-runs`, {
+        check_runs: [
+          ...VEREIST.map((n) => check(n, HEAD)),
+          check('agent-merge', HEAD, { id: 9, conclusion: 'skipped', check_suite: { id: 55 } }),
+        ],
+      }),
+      /agent-merge is skipped/,
+    ],
+    [
+      'een oudere Codex-samenvatting zonder punten, de nieuwste met open punten',
+      zet('issues/7/comments', [
+        { user: { login: 'x' }, body: `Review ${HEAD}: geen blokkerende bevindingen` },
+        {
+          user: { login: CODEX },
+          body: codexSamenvatting({ status: 'completed', commit_sha: HEAD, has_unresolved_findings: false }),
+        },
+        {
+          user: { login: CODEX },
+          body: codexSamenvatting({ status: 'completed', commit_sha: HEAD, has_unresolved_findings: true }),
+        },
+      ]),
+      /Codex/,
     ],
     [
       'agent-merge van een andere app',
