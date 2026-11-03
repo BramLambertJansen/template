@@ -140,7 +140,7 @@ function runnerIsTrusted(ctx) {
   return value === true;
 }
 
-const PR_MERGE_EXACT = /^pnpm (?:run )?pr:merge [1-9]\d*$/;
+const PR_MERGE_EXACT = /^pnpm pr:merge [1-9]\d*$/;
 // Elke andere manier om het mergescript te starten: via een package-manager of node, met of zonder omhulsel.
 const PR_MERGE_ANDERS = /(?:^|[\s;&|(`$])(?:pnpm|npm|yarn|npx|bun|node|deno)\b[^;&|\n]*(?:pr:merge|pr-merge\.mjs)/;
 

@@ -157,33 +157,33 @@ describe('agent-merge-niet-kritiek/AC-1 configuratie faalt dicht', () => {
 });
 
 describe('agent-merge-niet-kritiek/AC-5 check-docs toetst modus en de effectieve lijst', () => {
-  const echt = JSON.parse(TEKST);
+  const aangepast = (veranderingen: Record<string, unknown>) => {
+    const ruw: unknown = JSON.parse(TEKST);
+    return JSON.stringify(Object.assign({}, ruw, veranderingen));
+  };
 
   test('de echte gates.json is geldig: docs/** mag, want framework, dod en specs zijn gates', () => {
     expect(agentMergeViolations(['docs/framework.md', 'docs/dod.md', '.claude/settings.json'], TEKST)).toEqual([]);
   });
 
   test.each(['ja', 'altijd', true])('modus %j wordt geweigerd', (merge) => {
-    expect(agentMergeViolations([], JSON.stringify({ ...echt, merge })).map((v) => v.key)).toContain('docs:merge');
+    expect(agentMergeViolations([], aangepast({ merge })).map((v) => v.key)).toContain('docs:merge');
   });
 
   test('een voorReview-pad dat na de uitsluitingen agent-mergebaar wordt, wordt geweigerd', () => {
-    const zonderGate = { ...echt, gates: echt.gates.filter((glob: string) => glob !== 'docs/framework.md') };
-    expect(agentMergeViolations(['docs/framework.md'], JSON.stringify(zonderGate)).map((v) => v.key)).toContain(
+    const zonderGate = aangepast({ gates: config.gates.filter((glob) => glob !== 'docs/framework.md') });
+    expect(agentMergeViolations(['docs/framework.md'], zonderGate).map((v) => v.key)).toContain(
       'docs:agentMerge:docs/framework.md',
     );
   });
 
   test('een voorReview-glob op de toegestane lijst wordt ook via zijn voorbeeldpad gevonden', () => {
-    const ruim = {
-      ...echt,
+    const ruim = aangepast({
       gates: [],
       voorReview: ['src/geheim/**'],
       altijdVragen: [],
-      agentMerge: { ...echt.agentMerge, kritiek: [] },
-    };
-    expect(agentMergeViolations([], JSON.stringify(ruim)).map((v) => v.key)).toContain(
-      'docs:agentMerge:src/geheim/x/y',
-    );
+      agentMerge: { ...config.agentMerge, kritiek: [] },
+    });
+    expect(agentMergeViolations([], ruim).map((v) => v.key)).toContain('docs:agentMerge:src/geheim/x/y');
   });
 });

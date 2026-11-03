@@ -10,6 +10,19 @@ import { MERGE_FILES, trustedMerge } from '../../rails/hooks/lib/runner-authorit
 // alleen met modus `niet-kritiek` in het anker en ongewijzigde scripts, rails en hostbestanden. Andere merge-routes blijven dicht.
 const config = loadConfig(readFileSync('.claude/gates.json', 'utf8'));
 
+/** De lijsten met tekst onder één sectie van een JSON-bestand. */
+function lijsten(tekst: string, sectie: string): Record<string, string[]> {
+  const ruw: unknown = JSON.parse(tekst);
+  const blok: unknown =
+    typeof ruw === 'object' && ruw !== null ? Object.entries(ruw).find(([k]) => k === sectie)?.[1] : undefined;
+  if (typeof blok !== 'object' || blok === null) return {};
+  return Object.fromEntries(
+    Object.entries(blok).flatMap(([k, v]: [string, unknown]) =>
+      Array.isArray(v) && v.every((x) => typeof x === 'string') ? [[k, v.map(String)]] : [],
+    ),
+  );
+}
+
 function verdict(command: string, opties: { agent?: string; vertrouwd?: boolean; cwd?: string } = {}) {
   const decision = decide(
     { tool_name: 'Bash', tool_input: { command }, agent_type: opties.agent ?? '' },
@@ -30,18 +43,14 @@ function verdict(command: string, opties: { agent?: string; vertrouwd?: boolean;
 }
 
 describe('agent-merge-niet-kritiek/AC-4 rolhek op pnpm pr:merge', () => {
-  test.each(['pnpm pr:merge 12', 'pnpm run pr:merge 445', '  pnpm  pr:merge 7 '])(
-    'hoofdsessie, vertrouwd: allow (%s)',
-    (command) => {
-      expect(verdict(command).uitslag).toBe('allow');
-    },
-  );
+  test.each(['pnpm pr:merge 12', '  pnpm  pr:merge 7 '])('hoofdsessie, vertrouwd: allow (%s)', (command) => {
+    expect(verdict(command).uitslag).toBe('allow');
+  });
 
   test('hoofdsessie, niet vertrouwd (modus of bestanden wijken af): deny met de reden', () => {
-    expect(verdict('pnpm pr:merge 12', { vertrouwd: false })).toEqual({
-      uitslag: 'deny',
-      reden: expect.stringMatching(/hostbestanden \(package\.json, \.npmrc/),
-    });
+    const uitslag = verdict('pnpm pr:merge 12', { vertrouwd: false });
+    expect(uitslag.uitslag).toBe('deny');
+    expect(uitslag.reden).toMatch(/hostbestanden \(package\.json, \.npmrc/);
   });
 
   test('buiten de repo-root: deny', () => {
@@ -51,10 +60,9 @@ describe('agent-merge-niet-kritiek/AC-4 rolhek op pnpm pr:merge', () => {
   test.each(['developer', 'tester', 'architect', 'reviewer', 'docs', 'onbekend'])(
     'subagent %s: altijd deny',
     (agent) => {
-      expect(verdict('pnpm pr:merge 12', { agent })).toEqual({
-        uitslag: 'deny',
-        reden: expect.stringMatching(/hoofdsessie|lezen|niet/),
-      });
+      const uitslag = verdict('pnpm pr:merge 12', { agent });
+      expect(uitslag.uitslag).toBe('deny');
+      expect(uitslag.reden).toMatch(/hoofdsessie|lezen|niet/);
     },
   );
 
@@ -63,6 +71,7 @@ describe('agent-merge-niet-kritiek/AC-4 rolhek op pnpm pr:merge', () => {
     'pnpm pr:merge 12 && echo klaar',
     'pnpm pr:merge 12 --force',
     'npm run pr:merge 12',
+    'pnpm run pr:merge 12',
     'pnpm pr:merge 012',
     'pnpm pr:merge $(echo 12)',
     'env X=1 node scripts/kit/pr-merge.mjs 12',
@@ -85,14 +94,13 @@ describe('agent-merge-niet-kritiek/AC-4 rolhek op pnpm pr:merge', () => {
   );
 
   test('settings.json: deny voor gh pr merge, ask en sandbox-uitzondering voor pnpm pr:merge, niet in allow', () => {
-    const settings: { permissions: Record<string, string[]>; sandbox: { excludedCommands: string[] } } = JSON.parse(
-      readFileSync('.claude/settings.json', 'utf8'),
-    );
+    const tekst = readFileSync('.claude/settings.json', 'utf8');
+    const settings = { permissions: lijsten(tekst, 'permissions'), sandbox: lijsten(tekst, 'sandbox') };
     expect(settings.permissions['deny']).toEqual(
       expect.arrayContaining(['Bash(gh pr merge*)', 'Bash(gh api *merge*)']),
     );
     expect(settings.permissions['ask']).toContain('Bash(pnpm pr:merge *)');
-    expect(settings.sandbox.excludedCommands).toContain('pnpm pr:merge *');
+    expect(settings.sandbox['excludedCommands']).toContain('pnpm pr:merge *');
     expect(settings.permissions['allow']?.some((regel) => regel.includes('pr:merge'))).toBe(false);
   });
 });
