@@ -1,7 +1,7 @@
 // Corpus van de padbeslissingen van het rolhek over Bash-commando's (spec rolhek-vooraf-krimp AC-1, ADR 0071). Elke rij is een
-// bestaand testgeval uit de bron, met de uitkomst die de toets vooraf nu geeft. `bestanden` is wat het rolhek vooraf leest
+// bestaand testgeval uit de bron, met de uitkomst die de toets vooraf nu geeft (ook doorlaten). `bestanden` is wat het rolhek vooraf leest
 // (null: bestaat niet); `rolhek-padcorpus.test.ts` toetst elke rij vooraf en speelt hem na in de kooi (AC-2).
-export type Uitkomst = 'deny' | 'ask' | 'melding';
+export type Uitkomst = 'deny' | 'ask' | 'melding' | 'door';
 
 export interface Rij {
   readonly bron: string;
@@ -20,7 +20,7 @@ export interface Rij {
   /** Shell vóór het commando, in dezelfde kooi (bestanden in /tmp). */
   readonly tmp?: string;
   /** Uitkomst achteraf als die bewust afwijkt van de uitkomst vooraf, met de reden. */
-  readonly achteraf?: Uitkomst | 'door';
+  readonly achteraf?: Uitkomst;
   readonly reden?: string;
 }
 
@@ -3379,5 +3379,106 @@ export const PADCORPUS: readonly Rij[] = [
     rol: 'developer',
     bestanden: { 'src/api/routes/a.test.ts': "test('a', () => {});\ntest('b', () => {});\n" },
     uitkomst: 'deny',
+  },
+  { bron: 'rolhek-schrijfgaten.test.ts', commando: 'git restore --staged .', rol: '', bestanden: {}, uitkomst: 'door' },
+  {
+    bron: 'rolhek-schrijfgaten.test.ts',
+    commando: 'git restore --staged .',
+    rol: 'developer',
+    bestanden: {},
+    uitkomst: 'door',
+  },
+  {
+    bron: 'rolhek-schrijfgaten.test.ts',
+    commando: 'git restore --staged src',
+    rol: '',
+    bestanden: { 'src/nieuw-bestand': null },
+    mappen: ['src'],
+    uitkomst: 'door',
+  },
+  {
+    bron: 'rolhek-schrijfgaten.test.ts',
+    commando: 'git restore --staged src',
+    rol: 'developer',
+    bestanden: { 'src/nieuw-bestand': null },
+    mappen: ['src'],
+    uitkomst: 'door',
+  },
+  { bron: 'rolhek-schrijfgaten.test.ts', commando: 'git restore -S .', rol: '', bestanden: {}, uitkomst: 'door' },
+  {
+    bron: 'rolhek-schrijfgaten.test.ts',
+    commando: 'git restore -S .',
+    rol: 'developer',
+    bestanden: {},
+    uitkomst: 'door',
+  },
+  {
+    bron: 'rolhek-schrijfgaten.test.ts',
+    commando: 'git restore --staged -- -Wx .',
+    rol: '',
+    bestanden: { '-Wx': null },
+    uitkomst: 'door',
+  },
+  {
+    bron: 'rolhek-schrijfgaten.test.ts',
+    commando: 'git restore --staged -- -Wx .',
+    rol: 'developer',
+    bestanden: { '-Wx': null },
+    uitkomst: 'door',
+  },
+  { bron: 'rolhek-schrijfgaten.test.ts', commando: 'git restore --stag .', rol: '', bestanden: {}, uitkomst: 'door' },
+  {
+    bron: 'rolhek-schrijfgaten.test.ts',
+    commando: 'git restore --stag .',
+    rol: 'developer',
+    bestanden: {},
+    uitkomst: 'door',
+  },
+  {
+    bron: 'rolhek-schrijfgaten.test.ts',
+    commando: 'echo x > /tmp/uit.txt',
+    rol: 'developer',
+    bestanden: {},
+    uitkomst: 'door',
+  },
+  {
+    bron: 'rolhek-schrijfgaten.test.ts',
+    commando: 'echo x > src/api/routes/nieuw.test.ts',
+    rol: 'tester',
+    bestanden: { 'src/api/routes/nieuw.test.ts': null },
+    uitkomst: 'door',
+  },
+  {
+    bron: 'rolhek.test.ts',
+    commando: "cat > notes.md <<'EOF'\nrm src/core/x.ts > AGENTS.md\nEOF",
+    rol: '',
+    bestanden: { 'notes.md': null },
+    uitkomst: 'door',
+  },
+  { bron: 'rolhek.test.ts', commando: 'pnpm lint > /dev/null 2>&1', rol: '', bestanden: {}, uitkomst: 'door' },
+  {
+    bron: 'rolhek-indirect-writes.test.ts',
+    commando: 'cp --target-directory=src/web /tmp/example.ts',
+    rol: '',
+    bestanden: { 'src/web': null },
+    branch: 'feat/example',
+    uitkomst: 'door',
+  },
+  {
+    bron: 'rolhek-git-map.test.ts',
+    commando: 'echo x >> .gitignore',
+    rol: '',
+    bestanden: { '.gitignore': null },
+    onderhoud: true,
+    uitkomst: 'door',
+  },
+  { bron: 'rolhek-script.test.ts', commando: 'echo x > scripts/x.ts', rol: '', bestanden: {}, uitkomst: 'ask' },
+  {
+    bron: 'rolhek-script.test.ts',
+    commando: 'echo x > scripts/x.ts',
+    rol: '',
+    bestanden: {},
+    onderhoud: true,
+    uitkomst: 'melding',
   },
 ];

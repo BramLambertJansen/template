@@ -584,6 +584,8 @@ function decideBash({ command, role }, ctx, decision) {
   // De inhoud van `$(…)` en backticks is zelf een commando; zo vallen ook geneste substituties onder dezelfde regels.
   for (const inner of substitutions(command)) decideBash({ command: inner, role }, ctx, decision);
   const setsGhEnv = zetGhOmgeving(parseCommands(command));
+  // `cd .git && …` in hetzelfde commando: de zelfladende toets (AC-3) leest de woorden daarna vanuit die map.
+  let cwdNu = ctx.cwd;
   for (const parsed of parseCommands(command)) {
     const { assignments, argv, pathWrappers } = splitCommand(parsed.words);
     // `$G pr merge`, `${x}h …`, `$(echo gh) …`: welk programma draait, is pas bij het uitvoeren bekend.
@@ -605,7 +607,8 @@ function decideBash({ command, role }, ctx, decision) {
     if (envSplitsString(parsed.words))
       decision.deny.push('env -S/--split-string maakt van tekst een nieuw commando dat het rolhek niet ziet; verboden, voor elke rol');
     forbidden({ assignments, argv, expanded: parsed.expanded ?? [] }, { role, ctx }, decision);
-    zelfladend({ argv, redirects: parsed.redirects, role }, ctx, decision);
+    zelfladend({ argv, redirects: parsed.redirects, role }, { ...ctx, cwd: cwdNu }, decision);
+    cwdNu = volgendeMap(argv, cwdNu, ctx.root);
     ghIssue(argv, { role, ctx, setsGhEnv }, decision);
     if (role === 'reviewer') reviewerBash({ assignments, argv, pathWrappers }, parsed.redirects, decision);
     const targets = writeTargets(parsed);
@@ -616,6 +619,16 @@ function decideBash({ command, role }, ctx, decision) {
     for (const target of targets.trees ?? []) treeTarget({ file: target, kind: 'write', role }, ctx, decision);
     for (const target of targets.deletes) treeTarget({ file: target, kind: 'delete', role }, ctx, decision);
   }
+}
+
+/**
+ * De map na `cd`/`pushd`; zonder letterlijk doel (`cd`, `cd -`, `cd ~`) valt hij terug op de root van de repository.
+ * @param {readonly string[]} argv @param {string} cwd @param {string} root
+ */
+function volgendeMap(argv, cwd, root) {
+  if (!['cd', 'pushd'].includes(programName(argv[0] ?? ''))) return cwd;
+  const doel = argv.slice(1).find((arg) => !arg.startsWith('-'));
+  return doel === undefined || doel.startsWith('~') ? root : path.resolve(cwd, doel);
 }
 
 // Opties van env die het volgende woord als waarde nemen (`-u NAAM`, `-C MAP`, `--unset NAAM`, `--chdir MAP`, `--argv0 X`).

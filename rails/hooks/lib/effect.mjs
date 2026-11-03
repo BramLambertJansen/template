@@ -172,7 +172,9 @@ function beslis(repo, { verandering, agentType, voor, verhuisd }) {
   // Een gestagede inhoud telt apart: een tester kan een `test.skip` stagen en de werkmap ongemoeid laten.
   if (verandering.voor.idx !== na.idx && !rel.endsWith('/')) {
     const blob = indexBlob(na.idx);
-    const change = blob === null ? del : { kind: /** @type {const} */ ('write'), after: echteBlob(repo, blob) };
+    const after = blob === null ? null : echteBlob(repo, blob);
+    // `git mv` naar het archief staget dezelfde inhoud: ook die verhuizing telt (AC-5).
+    const change = blob === null ? del : { kind: /** @type {const} */ ('write'), after, verhuizing: nu.verhuizing && after === nu.after };
     besluiten.push(decideChange({ rel, change, agentType }, ctx));
   }
   /** @param {'deny' | 'ask' | 'context'} soort */
@@ -190,7 +192,7 @@ function verhuizingen(repo, { lijst, voor }) {
   const weggehaald = new Set(lijst.filter((verandering) => weg(verandering.na)).map((verandering) => verandering.rel));
   const lees = leesVoor(repo, voor);
   return new Set(lijst
-    .filter((verandering) => verandering.rel.startsWith('docs/adr/archief/') && !weg(verandering.na))
+    .filter((verandering) => verandering.rel.startsWith('docs/adr/archief/') && weg(verandering.voor) && !weg(verandering.na))
     .filter((verandering) => {
       const bron = `docs/adr/${verandering.rel.slice('docs/adr/archief/'.length)}`;
       const inhoud = weggehaald.has(bron) ? lees(bron) : null;

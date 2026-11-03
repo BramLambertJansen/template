@@ -1,4 +1,15 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
@@ -30,7 +41,7 @@ function voorafCtx(rij: Rij) {
   };
 }
 
-function vooraf(rij: Rij): Uitkomst | 'door' {
+function vooraf(rij: Rij): Uitkomst {
   const payload = {
     tool_name: 'Bash',
     tool_input: { command: rij.commando },
@@ -126,14 +137,37 @@ function alsHook(stap: () => { stdout?: string }): { stdout?: string } {
   }
 }
 
-/** Het commando echt, in de kooi, met de hooks eromheen; de uitkomst van de toets op effect. */
-export function achteraf(rij: Rij): Uitkomst | 'door' {
+/** Inhoud van de werkmap (zonder `.git`), de index en HEAD: zo ziet de test of het commando echt iets veranderde. */
+function vingerafdruk(root: string): string {
+  const hash = createHash('sha256');
+  const loop = (rel: string): void => {
+    for (const naam of readdirSync(path.join(root, rel)).sort()) {
+      const pad = rel === '' ? naam : `${rel}/${naam}`;
+      if (pad === '.git') continue;
+      const stat = lstatSync(path.join(root, pad));
+      hash.update(`${pad}\0${stat.mode.toString()}\0`);
+      if (stat.isDirectory()) loop(pad);
+      else if (stat.isFile()) hash.update(readFileSync(path.join(root, pad)));
+    }
+  };
+  loop('');
+  // `find . -delete` wist ook `.git`; dan telt alleen de werkmap.
+  if (existsSync(path.join(root, '.git/HEAD'))) {
+    const git = gitIn(root);
+    hash.update(git(['ls-files', '-s'])).update(git(['rev-parse', '-q', '--verify', 'HEAD']));
+  }
+  return hash.digest('hex');
+}
+
+/** Het commando echt, in de kooi, met de hooks eromheen; de uitkomst van de toets op effect en of er iets veranderde. */
+export function achteraf(rij: Rij): { uitkomst: Uitkomst; veranderd: boolean } {
   const root = beginstand(rij);
   const repo = repoVan(root, rij);
   const basis = { session_id: 's1', ...(rij.rol === '' ? {} : { agent_type: rij.rol, agent_id: `agent-${rij.rol}` }) };
   const input = { ...basis, tool_name: 'Bash', tool_input: { command: rij.commando }, tool_use_id: 't1' };
   if (rij.rol !== '') handle('subagent-start', basis, repo);
   handle('pre', input, repo);
+  const begin = vingerafdruk(root);
   const tmp = rij.tmp === undefined ? '' : `${rij.tmp} && `;
   try {
     // De uitvoer telt niet, alleen het effect; `find / -delete` geeft per alleen-lezen bestand een regel.
@@ -148,12 +182,26 @@ export function achteraf(rij: Rij): Uitkomst | 'door' {
   }
   const post = alsHook(() => handle('post', input, repo));
   const stop = rij.rol === '' ? {} : alsHook(() => handle('subagent-stop', basis, repo));
-  if (isBlok(post) || isBlok(stop)) return 'deny';
-  return isMelding(post) ? 'melding' : 'door';
+  const veranderd = vingerafdruk(root) !== begin;
+  if (isBlok(post) || isBlok(stop)) return { uitkomst: 'deny', veranderd };
+  return { uitkomst: isMelding(post) ? 'melding' : 'door', veranderd };
 }
 
-/** Wat AC-2 achteraf vraagt: deny en ask worden voor een subagent een blokkade, een melding blijft een melding. */
-const verwacht = (rij: Rij) => rij.achteraf ?? (rij.uitkomst === 'melding' ? 'melding' : 'deny');
+/** Wat AC-2 achteraf vraagt: deny en ask worden voor een subagent een blokkade; een melding en doorlaten blijven gelijk. */
+const standaard = (uitkomst: Uitkomst): Uitkomst => (uitkomst === 'melding' || uitkomst === 'door' ? uitkomst : 'deny');
+const NIETS = 'verandert op deze machine niets';
+
+/**
+ * De verwachting achteraf. Een rij die op deze machine niets verandert (mawk, een onbekende afkorting), verwacht `door`
+ * alleen als er echt niets veranderde; verandert het commando elders wel iets, dan geldt de gewone verwachting.
+ */
+function verwacht(rij: Rij, veranderd: boolean): Uitkomst {
+  if (rij.reden?.startsWith(NIETS) === true && veranderd) return standaard(rij.uitkomst);
+  return rij.achteraf ?? standaard(rij.uitkomst);
+}
+
+/** Een rij die een vrij pad in de repository schrijft, moet het pad ook echt veranderen; anders bewijst `door` niets. */
+const moetVeranderen = (rij: Rij) => rij.reden?.startsWith('schrijft een vrij pad') === true;
 
 /** Een rij op een zelfladend pad houdt zijn weigering vooraf (AC-3); de toets op effect komt daarna. */
 function zelfladendVooraf(rij: Rij): boolean {
@@ -170,14 +218,21 @@ const SUBAGENTRIJEN = PADCORPUS.filter((rij) => rij.rol !== '');
 
 describe('rolhek-vooraf-krimp/AC-2: een subagentrij geeft achteraf dezelfde uitkomst, het commando in de kooi', () => {
   test.each(SUBAGENTRIJEN.map((rij) => [naam(rij), rij] as const))('%s', (_naam, rij) => {
-    if (zelfladendVooraf(rij)) expect(vooraf(rij)).toBe('deny');
-    else expect(achteraf(rij)).toBe(verwacht(rij));
+    if (zelfladendVooraf(rij)) {
+      expect(vooraf(rij)).toBe('deny');
+      return;
+    }
+    const { uitkomst, veranderd } = achteraf(rij);
+    // Doorlaten geeft geen blokkade (AC-2); een melding achteraf mag.
+    if (verwacht(rij, veranderd) === 'door') expect(uitkomst).not.toBe('deny');
+    else expect(uitkomst).toBe(verwacht(rij, veranderd));
+    if (moetVeranderen(rij)) expect(veranderd).toBe(true);
   });
 
   test('een bewust verkeerde verwachting faalt (R-PRINC-04)', () => {
     const rij = SUBAGENTRIJEN.find((kandidaat) => kandidaat.commando === 'rm -rf src' && kandidaat.rol === 'Explore');
     expect(rij).toBeDefined();
-    if (rij !== undefined) expect(achteraf(rij)).not.toBe('door');
+    if (rij !== undefined) expect(achteraf(rij).uitkomst).not.toBe('door');
   });
 
   test('een afwijking achteraf heeft altijd een reden', () => {
@@ -186,3 +241,42 @@ describe('rolhek-vooraf-krimp/AC-2: een subagentrij geeft achteraf dezelfde uitk
 });
 
 // De hoofdsessie is pas dader op de werkmap met AC-4 (bouw-PR 2, schaduwmodus); tot dan toetst dit corpus haar rijen vooraf.
+
+// Review PR 1: de toets op effect laat alleen een verhuizing naar het archief door (zelfde naam, zelfde inhoud, nieuw doel;
+// spec rolhek-vooraf-krimp AC-5 en de randgevallen); `git mv` staget die inhoud ook in de index.
+describe('rolhek-vooraf-krimp/AC-5: een verhuizing naar het ADR-archief, achteraf', () => {
+  const ADR = '# 0001 — x\n\nStatus: vervallen\n';
+  const rij = (commando: string, na?: string): Rij => ({
+    bron: 'review',
+    commando,
+    rol: 'architect',
+    bestanden: { 'docs/adr/0001-x.md': ADR },
+    mappen: ['docs/adr/archief'],
+    uitkomst: 'door',
+    ...(na === undefined ? {} : { na }),
+  });
+
+  test.each([
+    'git mv docs/adr/0001-x.md docs/adr/archief/0001-x.md',
+    'mv docs/adr/0001-x.md docs/adr/archief/0001-x.md',
+  ])('%s gaat door', (commando) => {
+    expect(achteraf(rij(commando))).toStrictEqual({ uitkomst: 'door', veranderd: true });
+  });
+
+  test.each([
+    ['een kopie zonder verwijdering', 'cp docs/adr/0001-x.md docs/adr/archief/0001-x.md', undefined],
+    ['een andere naam', 'git mv docs/adr/0001-x.md docs/adr/archief/0002-y.md', undefined],
+    [
+      'een gewijzigde inhoud',
+      'git mv docs/adr/0001-x.md docs/adr/archief/0001-x.md && echo x >> docs/adr/archief/0001-x.md',
+      undefined,
+    ],
+    [
+      'een bestaand archiefbestand overschreven',
+      'mv docs/adr/0001-x.md docs/adr/archief/0001-x.md',
+      "printf 'oud\\n' > docs/adr/archief/0001-x.md && git add -A && git commit -qm archief",
+    ],
+  ])('%s is een blokkade', (_naam, commando, na) => {
+    expect(achteraf(rij(commando, na)).uitkomst).toBe('deny');
+  });
+});
