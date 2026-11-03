@@ -25,7 +25,8 @@ n.v.t. — geen routes.
 ## Kopieer de vorm van
 
 - `scripts/kit/adr-numbers.mjs` — een pure ADR-functie in een eigen module, aangeroepen vanuit `scripts/kit/check-docs.mjs`
-- `rails/hooks/lib/document-state.mjs` — de vorm van een herzieningsregel (`HERZIEN`); hergebruik die, kopieer hem niet
+- `rails/hooks/lib/document-state.mjs` — herzieningsregels lezen via de export `nieuweHerzieningsregels('', tekst)`; geen
+  kopie van de vorm en geen wijziging in dit bestand (ADR 0073 punt 3)
 - `test/rails/check-docs-ac.test.ts` — fixture-repository in een tijdelijke map (`mkdtemp`)
 
 ## Hergebruik en UX
@@ -39,10 +40,12 @@ n.v.t. — geen UI. Melding, één regel per ontbrekend geval:
   `Herziet` of `Vervangt` met een link naar geaccepteerd ADR A, wanneer A geen herzieningsregel heeft (de vorm `HERZIEN`, met
   vervolgregels tot de volgende lege regel of herzieningsregel) die naar B linkt of B's nummer noemt, dan meldt `check-docs` dat en is rood.
 - **adr-herzien/AC-2** — Gegeven dat de clausule na de link naar A puntnummers noemt, wanneer de herzieningsregel(s) in
-  A na de link naar B (tot de volgende link of puntkomma) niet elk van die nummers noemen, dan is `check-docs` rood met
-  de ontbrekende nummers. Puntvormen: `punt N`, lijsten met `,` en `en`, bereiken `N–M` en `N-M` (alle nummers
-  ertussen), en een herhaald `punt` (`punt 10, en punt 5 en 6`). De reeks eindigt bij het eerste woord dat geen nummer,
-  `punt`, `,`, `en` of bereik is.
+  A niet elk van die nummers noemen, dan is `check-docs` rood met de ontbrekende nummers. In een regel met één ADR-link
+  tellen alle puntnummers van de regel (ook vóór de link, zoals `punt 3 en 7 volgen [0064]` in 0063); in een regel met
+  meer ADR-links tellen de nummers na de link naar B tot de volgende link of puntkomma. Puntvormen: `punt N`, lijsten
+  met `,` en `en`, bereiken `N–M` en `N-M` (alle nummers ertussen), en een herhaald `punt` (`punt 10, en punt 5 en 6`).
+  De reeks eindigt bij het eerste woord dat geen nummer, `punt`, `,`, `en` of bereik is. Het testplan neemt de bestaande
+  regels in 0063, 0064 en 0066 als gevallen.
 - **adr-herzien/AC-3** — De clausule loopt van `Wijzigt`/`Herziet`/`Vervangt` tot de eerste puntkomma of het eerste zinseinde
   buiten een link en buiten backticks; elke link naar een ADR binnen de clausule telt als doel. Een link in `vult [A] aan` of
   in een andere zin telt niet.
