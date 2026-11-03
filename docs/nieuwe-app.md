@@ -822,6 +822,9 @@ gh pr create --fill --title "chore: template-update $(git rev-parse --short temp
 
 De eigenaar merget met **Create a merge commit**. Zit er een wijziging in `.github/workflows/` in, dan pusht de eigenaar de branch (de agent heeft geen `workflows`-recht).
 
+Verandert de update `requiredChecks` in `.claude/decisions.json` (een check erbij of eraf), dan draait de eigenaar na de merge
+`scripts/github-ruleset.sh <owner>/<slug>` opnieuw, zodat de ruleset de nieuwe lijst volgt (ADR 0073).
+
 App-eigen ADR's: begin bij `0100` (`docs/adr/0100-…`). `0001`–`0099` zijn van de template; zelfde nummers in de app geven bij een update een conflict (ADR 0040 punt 4).
 
 ## Fout → oorzaak
