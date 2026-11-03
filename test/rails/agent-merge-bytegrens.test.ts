@@ -111,8 +111,12 @@ describe('agent-merge-bytegrens/AC-1 leesAgentMerge en agentMergeFouten lezen ma
     const einde = changelog.indexOf('\n## [', start + 1);
     const open = changelog.slice(start, einde === -1 ? undefined : einde);
     const alinea = open.split('\n\n').find((deel) => deel.includes('agentMerge.maxBytes')) ?? '';
-    expect(alinea).toMatch(/agentMerge\.maxBytes/);
-    expect(alinea).toMatch(/\bapps?\b/);
+    // In een app-kopie vervangt `app:init` (renameChangelog) de hele Unreleased-sectie door de startregel.
+    const template = readFileSync('package.json', 'utf8').includes('"name": "app-template"');
+    const [tekst, patronen] = template
+      ? [alinea, [/agentMerge\.maxBytes/, /\bapps?\b/]]
+      : [open, [/^- Gestart vanaf template \S+\.$/m]];
+    for (const patroon of patronen) expect(tekst).toMatch(patroon);
   });
 });
 
