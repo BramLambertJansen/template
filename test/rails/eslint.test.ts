@@ -408,6 +408,8 @@ const fixtures: Fixture[] = [
     "test.each([1, 2])('rij %s', (n) => { expect(ok(n)).toBeFalsy(); });",
     "test.each([1, 2])('rij %s', (n) => { expect(ok(n)).not.toBe(true); });",
     "test.skip.each([1, 2])('rij %s', (n) => { expect(ok(n)).toBe(false); });",
+    "test.each([1, 2])('rij %s', (n) => { expect(ok(n)).not.toBeTruthy(); });",
+    "test.each`n\n${1}\n${2}`('rij $n', ({ n }) => { expect(ok(n)).toBe(false); });",
   ].map((code) => ({
     name: `negatieve-tabel/#401: ${code}`,
     file: 'test/x.test.ts',

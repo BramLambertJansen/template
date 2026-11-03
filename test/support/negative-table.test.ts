@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { expectAbsent } from './absence.ts';
 import { expectNegativeTable } from './negative-table.ts';
 
 // Leerpunt #401: alle rijen van een negatieve tabel gaven `false`, maar de gedeelde basis was zelf al onwaar. Het weghalen
@@ -48,21 +49,36 @@ describe('expectNegativeTable', () => {
 
   test('faalt op een rij die niets verandert', () => {
     expect(() => {
-      expectNegativeTable({ base: BASIS, check: goed, cases: [...RIJEN, { name: 'leeg', change: (b) => b }] });
-    }).toThrow(/"leeg"/);
+      expectNegativeTable({ base: { ...BASIS }, check: goed, cases: [...RIJEN, { name: 'leeg', change: (b) => b }] });
+    }).toThrow(/"leeg" verandert niets/);
   });
 
-  test('faalt als een rij de basis zelf wijzigt', () => {
-    const muterend = {
-      name: 'muteert',
-      change: (b: { veilig: boolean }) => {
-        b.veilig = false;
-        return { ...b };
+  test('faalt als een rij de basis zelf wijzigt, ook als check dat niet ziet', () => {
+    const basis = { veilig: true, tag: 'basis', diep: { n: 1 } };
+    const stil = {
+      name: 'muteert stil',
+      change: (b: typeof basis) => {
+        b.tag = 'gemuteerd';
+        return { ...b, veilig: false };
       },
     };
-    expect(() => {
-      expectNegativeTable({ base: { veilig: true }, check: (t) => t.veilig, cases: [muterend] });
-    }).toThrow(/"muteert"/);
+    const diep = {
+      name: 'muteert diep',
+      change: (b: typeof basis) => {
+        b.diep.n = 2;
+        return { ...b, veilig: false };
+      },
+    };
+    const goedeRij = { name: 'onveilig', change: (b: typeof basis) => ({ ...b, veilig: false }) };
+    let melding = '';
+    try {
+      expectNegativeTable({ base: basis, check: (t) => t.veilig, cases: [stil, diep, goedeRij] });
+    } catch (error) {
+      melding = String(error);
+    }
+    expect(melding).toMatch(/"muteert stil" wijzigt de basis zelf/);
+    expect(melding).toMatch(/"muteert diep" wijzigt de basis zelf/);
+    expectAbsent(melding, /"onveilig"/, { recognizes: ['"onveilig" geeft nog steeds waar'] });
   });
 
   test('faalt zonder rijen', () => {

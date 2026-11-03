@@ -7,8 +7,8 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 ### Toegevoegd
 
 - Lintregel `rails/negatieve-tabel` en helper `expectNegativeTable` (`test/support/negative-table.ts`, leerpunt #401):
-  een tabeltest die per rij onwaar eist (`test.each`/`it.each`/`describe.each`/`test.for` met `toBe(false)`, `toBeFalsy()`
-  of `not.toBe(true)`) loopt via `expectNegativeTable({ base, check, cases })`. Die bewijst eerst dat de basis waar is en
+  een tabeltest die per rij onwaar eist (`test.each`/`it.each`/`describe.each`/`test.for`, ook als tagged template, met
+  `toBe(false)`, `toBeFalsy()`, `not.toBe(true)` of `not.toBeTruthy()`) loopt via `expectNegativeTable({ base, check, cases })`. Die bewijst eerst dat de basis waar is en
   eist per rij dat de wijziging iets verandert, de uitkomst onwaar maakt en de basis zelf niet wijzigt. Bestaande tabellen
   staan in `eslint-suppressions.json`. Wat verandert voor een app: een nieuwe negatieve tabel wordt rood; geef een geldige
   basis en per rij één gewijzigde voorwaarde.

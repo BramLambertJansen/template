@@ -47,11 +47,12 @@ const TEKST_METHODE = '/^(match|search)$/';
 const VERGELIJK =
   "CallExpression[callee.property.name=/^(toBe|toEqual|toStrictEqual|toBeNull|toBeFalsy|toBeTruthy|toBeUndefined)$/] > MemberExpression.callee > CallExpression.object[callee.name='expect']";
 const ASSERT = "CallExpression:matches([callee.name='assert'], [callee.property.name='ok'], [callee.name='expect'])";
-// Een assertie dat de uitkomst onwaar is: toBe/toEqual/toStrictEqual(false), toBeFalsy() of not.toBe(true).
+// Een assertie dat de uitkomst onwaar is: toBe/toEqual/toStrictEqual(false), toBeFalsy(), not.toBe(true), not.toBeTruthy().
 const ONWAAR = [
   'CallExpression[callee.property.name=/^(toBe|toEqual|toStrictEqual)$/][arguments.0.value=false]',
   "CallExpression[callee.property.name='toBeFalsy']",
   "CallExpression[callee.property.name='toBe'][callee.object.property.name='not'][arguments.0.value=true]",
+  "CallExpression[callee.property.name='toBeTruthy'][callee.object.property.name='not']",
 ].join(', ');
 const ELEMENTS = '/^(button|input|select|textarea|dialog|a)$/';
 const IMPORTS = ['ImportDeclaration', 'ExportNamedDeclaration', 'ExportAllDeclaration', 'ImportExpression'].join(', ');
@@ -248,8 +249,12 @@ const railConfigs = [
     TESTS,
     ['test/support/negative-table.ts'],
     'Een negatieve tabel bewijst alleen iets als de basis eerst waar is (leerpunt #401): gebruik ' +
-      'expectNegativeTable({ base, check, cases }) uit test/support/negative-table.ts; elke rij wijzigt één voorwaarde.',
-    [`CallExpression[callee.callee.property.name=/^(each|for)$/]:has(${ONWAAR})`],
+      'expectNegativeTable({ base, check, cases }) uit test/support/negative-table.ts; elke rij wijzigt één voorwaarde. ' +
+      'Is `false` een bijassertie in een positieve tabel, schrijf die dan als not.toHaveClass of not.toContain.',
+    [
+      `CallExpression[callee.callee.property.name=/^(each|for)$/]:has(${ONWAAR})`,
+      `CallExpression[callee.tag.property.name=/^(each|for)$/]:has(${ONWAAR})`,
+    ],
   ),
   // Toegankelijkheid (framework §7, roadmap 3c): één axe-scan zonder uitzonderingen. Een regel of element uitzetten moet
   // zichtbaar een gate-wijziging zijn, geen regel in een test.
