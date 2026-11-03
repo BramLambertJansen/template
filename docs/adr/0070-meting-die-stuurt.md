@@ -2,8 +2,8 @@
 
 Status: geaccepteerd
 
-Vult [0064](0064-leesbudget-per-laag.md) aan en wijzigt [0065](0065-grenzen-als-meting.md) punt 2 en 4 (wanneer "let
-op" komt); de rest van beide blijft gelden.
+Wijzigt [0064](0064-leesbudget-per-laag.md) punt 1 (de drempel staat erbij, "let op" komt alleen uit het verschil met
+de basis) en [0065](0065-grenzen-als-meting.md) punt 2 en 4 (wanneer "let op" komt); de rest van beide blijft gelden.
 
 ## Context
 
@@ -23,9 +23,10 @@ wanneer er iets verandert, meet wat een agent echt leest, en op het afgesproken 
 ## Besluit
 
 1. **"Let op" alleen bij verschil met de basis.** De basis is de merge-base met `origin/main`, zoals bij
-   `check:roadmap`, gemeten met de huidige scripts op de bestanden van de basis (`git show`, zonder worktree). Een
+   `check:roadmap`, gemeten met de huidige scripts op de bestanden van de basis (`git show`, zonder worktree);
+   feiten-secties die uit code komen, meten aan beide kanten de werkmap en vallen weg in het verschil. Een
    scenario meldt alleen bij minstens 1 KB groei; een soort alleen als een eenheid nieuw boven de streefwaarde komt of
-   erboven groeit. Een gelijk gebleven overschrijding staat er neutraal. *Waarom:* een melding die bij elke run afgaat,
+   erboven minstens 1 KB groeit. Streefdoel en drempel staan erbij, zonder "let op". *Waarom:* een melding die bij elke run afgaat,
    wordt genegeerd; een verschil met de basis zegt iets over deze PR. Het leespad ligt al ver boven het streefdoel en
    telt nu feiten-uitvoer, dus zonder minimale stap meldde elke nieuwe spec weer. Dezelfde code op beide bomen
    vergelijkt appels met appels; een worktree zou zonder `node_modules` niets meten.
@@ -44,9 +45,9 @@ wanneer er iets verandert, meet wat een agent echt leest, en op het afgesproken 
    plafond maakt R-DOC-09 waar in plaats van een wens.
 5. **Herijken krijgt een trigger.** `check:roadmap` ziet dat een PR een fase sluit (op de basis een open item onder "Nu"
    of "Volgende" met die fase, daarna geen) en eist dan een regel `Herijking fase <n>:` met datum, leespad in KB en trend
-   in `docs/roadmap-archief.md`. Een nieuw open item noemt een fase of `doorlopend`. *Waarom:* proza in de DoD werd
-   overgeslagen (0065); een check maakt het herijken onvermijdelijk, en zonder fase op nieuwe items zou de trigger
-   zelden afgaan. Bestaande items zonder fase, en `doorlopend`, tellen niet; dat accepteren we tot ze worden herschreven.
+   in `docs/roadmap-archief.md`. *Waarom:* proza in de DoD werd overgeslagen (0065); een check maakt het herijken
+   onvermijdelijk. Een verplichte fase op elk nieuw item zou vaker triggeren, maar weegt niet op tegen een trigger die
+   een paar keer per levensduur afgaat. Bestaande items zonder fase, en `doorlopend`, tellen niet; dat accepteren we tot ze worden herschreven.
 
 ## Alternatieven
 
