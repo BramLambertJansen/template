@@ -4,6 +4,8 @@ Status: geaccepteerd
 
 Herzien: 2026-10-30 (#385): het label `gate-wijziging` en het taakmandaat vervallen ([0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md));
 geschrapt in punt 5, 7, 10, 15, 17 en 18.
+Herzien: 2026-11-03 (#NNN): punt 3, het rolhek valt ook dicht bij timeout en crash (`onFailure: "block"`), Gevolgen;
+verscherpt de bewaking; uitwerking in [spec](../specs/rolhek-dicht-bij-storing.md).
 
 Vervangt [0011](0011-railwerk.md), [0017](0017-diff-guard.md), [0031](0031-guard-en-pr-verify-bruikbaarder.md),
 [0032](0032-developer-volgt-hoofdsessie-buiten-voorreview.md), [0033](0033-onderhoudsmodus-voor-templatewerk.md) en
@@ -36,8 +38,11 @@ tot stand komt (merge is acceptatie, drempel, taakmandaat, CI-lus, merge- en for
    `.claude/hooks/` bevat alleen stubs die de versie van `main` uitpakken en starten. Het anker is de SHA van `main` op de
    remote, niet de lokale `origin/main`. De lader controleert zelf de hashes van commit, trees en bestanden; een vervalst object
    geeft een dichte hook, geen andere code. Het rolhek gebruikt geen netwerk. Rolhek en werkstraat falen dicht (exit 2) als het
-   anker of de hook op `main` ontbreekt, en het rolhek maakt van elke andere exitcode dan 0 of 2 een 2; alleen de meethook
-   faalt open. Een hookwijziging werkt pas na de merge, in de volgende
+   anker of de hook op `main` ontbreekt, en het rolhek maakt van elke andere exitcode dan 0 of 2 een 2. Het rolhek valt ook
+   dicht als de stub niet start, crasht of zijn timeout haalt: `onFailure: "block"` op zijn PreToolUse-entry (Claude Code
+   2.1.295 of nieuwer, `scripts/doctor.sh` eist die versie). *Waarom (herzien 2026-11-03):* zonder die vlag laat Claude Code
+   de aanroep door bij elke storing buiten de lader, en een grens die bij storing openstaat, is geen grens (R-PRINC-02).
+   Alleen de meethook, de melding en de statusregel falen open; zij beschermen niets. Een hookwijziging werkt pas na de merge, in de volgende
    sessie; tests importeren de branchversie. `rails/**` is een gate-pad en `voorReview`.
 4. **Groen vóór klaar** (was 0011 punt 3). SubagentStop voor de developer blokkeert tot `gate:fast` groen is, ook bij een
    schone werkmap.
@@ -140,5 +145,10 @@ Bewust niet (was 0011): checks op SQL met regex (de template leest de catalogus)
 - Een ongetrackt bestand onder een genegeerd pad valt in `pr:verify` niet op; een ongetrackte `.mcp.json` of
   `.claude/commands/` laat hem weigeren tot de app kiest (was 0031).
 - In andere runtimes werken de hooks niet; daar zijn CI en GitHub de enige grens (was 0033).
+- Een rolhek dat hapert, houdt elke Edit-, Write-, Bash- en MCP-aanroep tegen tot het weer werkt (herzien 2026-11-03).
+  Gemeten op 3 november 2026: mediaan 0,2 s en maximum 0,3 s per aanroep tegen een timeout van 10 s. De sessie meldt zo'n
+  blokkade en vraagt de eigenaar; de hook uitzetten om door te kunnen mag niet (R-PRINC-09). Terugval: stijgt het aantal
+  geblokkeerde beurten door storing (meethook, `pnpm meting --trend`), dan beslist de eigenaar via een PR over terug naar
+  `"continue"`. Een cloudsessie zonder projecthooks (#462) merkt hier niets van.
 - Een bouwbewijs voor `gebouwd` eist ook `document-status` op de bron-SHA (was 0031).
 - `check-github`, `check-release-ci` en `check-deployment-schema` (punt 26–27) zijn besloten, maar nog niet gebouwd.
