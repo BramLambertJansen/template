@@ -40,7 +40,7 @@ Drie dingen maakten dat mogelijk:
    buiten de werkmap kan het niets veranderen en niets bereiken.
 2. **De kooi valt dicht.** Ontbreekt bubblewrap, of lukt de proef niet, dan draait het commando niet en geeft de kooi een fout
    met de oplossing. De proef draait één keer per proces vóór het eerste commando: schrijven binnen de werkmap moet lukken,
-   schrijven op een kanariebestand buiten de werkmap en buiten `/tmp` moet falen. Een werkmap die geen echte submap van de tijdelijke map is
+   schrijven in een systeemmap moet falen omdat die alleen-lezen is. Een werkmap die geen echte submap van de tijdelijke map is
    (de root van de repository, de thuismap, `/`, een link), weigert de kooi. Een test die de kooi nodig heeft, slaat zichzelf
    nooit over; hij faalt.
 3. **Een lintregel houdt shell-uit-data in de kooi.** Buiten `scripts/kit/kooi.mjs` weigert ESLint in code en tests: een

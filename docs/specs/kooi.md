@@ -50,16 +50,18 @@ proef: `✗ kooi: de proef schreef buiten de werkmap; het commando is niet uitge
   `os.tmpdir()` (dus niet die map zelf), of die de root van de repository, de thuismap of `/` is of bevat.
 - **kooi/AC-3** — Dicht vallen. Zonder `bwrap` op het pad, of als bubblewrap niet start, gooit `inKooi` een fout met de
   melding uit Hergebruik en draait het commando niet. Vóór het eerste commando per proces draait een proef: schrijven binnen
-  een proefwerkmap lukt, en afkappen (`: >`) en hernoemen (`mv`) van een kanariebestand buiten die werkmap én buiten `/tmp`
-  (in `.git/` van de repository) falen allebei en laten het kanariebestand onveranderd. Faalt de proef, dan draait geen enkel
-  commando in dat proces.
-- **kooi/AC-4** — Bewijs dat de kooi afschermt, als test in `gate:fast` zonder verwijdercommando's, met kanariebestanden
-  buiten `/tmp`: vanuit de kooi faalt schrijven naar een pad buiten de werkmap via een absoluut pad, via `../`, via `cd /`, via
-  `$HOME` van de aanroeper en via een symlink in de werkmap die naar buiten wijst; schrijven naar
-  `/proc/sys/kernel/core_pattern` faalt; een netwerkverbinding faalt; verbinden met een socketbestand dat de test buiten de
-  werkmap onder `/run` of de thuismap opent, faalt; een bestand in de thuismap van de aanroeper is niet leesbaar; `CapEff` en
-  `CapBnd` in `/proc/self/status` zijn 0, voor elke uid; een `sleep 600` stopt bij de timeout, met zijn kindprocessen. Elk
-  kanariebestand is na afloop byte-gelijk.
+  een proefwerkmap lukt, en schrijven naar `/usr/.kooi-proef` faalt met `Read-only file system` (niet alleen met een
+  rechtenfout, die ook zonder kooi zou komen). Faalt de proef, dan draait geen enkel commando in dat proces; een bestand dat
+  een mislukte proef toch maakte, ruimt de kooi buiten de kooi op.
+- **kooi/AC-4** — Bewijs dat de kooi afschermt, als test in `gate:fast` zonder verwijdercommando's. Kanariebestanden staan
+  buiten de werkmap: in de tijdelijke map van de test, in de repository en in de thuismap van de aanroeper. Vanuit de kooi
+  proberen afkappen (`: >`) en hernoemen (`mv`) via een absoluut pad, via `../`, via `cd /`, via `$HOME` van de aanroeper en via
+  een symlink in de werkmap die naar buiten wijst; na afloop is elk kanariebestand byte-gelijk en op zijn plek. Een kanarie
+  die in de kooi zichtbaar is (alleen-lezen) geeft bovendien `Read-only file system`; een kanarie onder een lege map (`/tmp`,
+  de thuismap) is in de kooi onzichtbaar. Verder: schrijven naar `/proc/sys/kernel/core_pattern` faalt; een netwerkverbinding
+  faalt; verbinden met een socketbestand dat de test onder `/run` of de thuismap opent, faalt; een bestand in de thuismap van de
+  aanroeper is niet leesbaar; `CapEff` en `CapBnd` in `/proc/self/status` zijn 0, voor elke uid; een `sleep 600` stopt bij de
+  timeout, met zijn kindprocessen.
 - **kooi/AC-5** — Lintregel, met hetzelfde bereik als `CODE` in `eslint.config.js` plus `deploy/` en `*.mjs` in de root,
   behalve `scripts/kit/kooi.mjs`. ESLint weigert: `spawn`, `spawnSync`, `execFile` of `execFileSync`, ook als member-aanroep
   (`cp.spawnSync`), met als eerste argument een letterlijke `bash`, `sh`, `zsh`, `dash` of `ksh` (ook met pad, zoals
