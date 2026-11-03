@@ -23,9 +23,9 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { onderhoudVan } from '../../rails/hooks/lib/rolhek.mjs';
 import { adrNumber, duplicateAdrNumbers, invalidAdrNames } from './adr-numbers.mjs';
-import { grensMeldingen, grensViolations, krimpUitGit, krimpZonderBasis } from './leesbudget.mjs';
+import { grensMeldingen, grensViolations, normenMeldingenUitGit, normenUitGit, zonderBasis } from './leesbudget.mjs';
 
-export { krimpViolations } from './leesbudget.mjs';
+export { normViolations } from './normen.mjs';
 
 /** @typedef {{ key: string, message: string }} Violation */
 
@@ -70,18 +70,20 @@ export async function docsViolations(root = '.') {
 export async function docsMeldingen(root = '.') {
   const files = trackedFiles(root);
   const grens = grensMeldingen((file) => (files.includes(file) ? readFileSync(path.join(root, file), 'utf8') : null));
-  return Promise.resolve([...grens, ...krimpZonderBasis(root)]);
+  return Promise.resolve([...grens, ...zonderBasis(root, false).meldingen, ...normenMeldingenUitGit(root)]);
 }
 
 /**
- * Krimp van bindende documenten tegenover `git merge-base origin/main HEAD` (leesbudget/AC-6); nooit in de baseline.
+ * De krimpcontrole op normen tegenover `git merge-base origin/main HEAD` (spec krimp-op-normen); nooit in de baseline.
+ * Zonder basis is ze in CI rood (AC-5).
  * @param {string} root
  * @returns {Promise<Violation[]>}
  */
 export async function docsKrimp(root = '.') {
-  const boek = path.join(root, REGELBOEK);
-  const rIds = existsSync(boek) ? [...readFileSync(boek, 'utf8').matchAll(R_ID)].map(([id]) => id) : [];
-  return Promise.resolve(krimpUitGit(root, rIds));
+  return Promise.resolve([
+    ...zonderBasis(root, process.env['GITHUB_ACTIONS'] === 'true').violations,
+    ...normenUitGit(root),
+  ]);
 }
 
 const REGELBOEK = 'docs/framework.md';
@@ -198,8 +200,8 @@ function regelboekPadViolations(root, text, files) {
 const R_ID = /\bR-[A-Z]+-\d+(?![\d-])/g;
 
 /**
- * Regel 10: een R-id in `.claude/rules/*` staat letterlijk in het regelboek, en het regelboek definieert elk R-id één keer
- * (een definitie begint de regel, eventueel na een opsommingsteken).
+ * Regel 10: een R-id in `.claude/rules/*` staat letterlijk in het regelboek. Dat elk R-id één keer gedefinieerd is, toetst
+ * de krimpcontrole (`normen.mjs`, krimp-op-normen/AC-1), buiten de baseline.
  * @param {readonly string[]} files @param {(file: string) => string} read @returns {Violation[]}
  */
 function rIdViolations(files, read) {
@@ -212,15 +214,7 @@ function rIdViolations(files, read) {
         .filter((id) => !bekend.has(id))
         .map((id) => ({ key: `docs:${file}:r-id:${id}`, message: `${file}: ${id} staat niet in ${REGELBOEK}` })),
     );
-  const definities = [...boek.matchAll(/^\s*(?:[-*]\s+)?(?:\*\*)?(R-[A-Z]+-\d+)(?![\d-])/gm)].map(([, id = '']) => id);
-  const dubbel = [...new Set(definities.filter((id, index) => definities.indexOf(id) !== index))];
-  return [
-    ...padregels,
-    ...dubbel.map((id) => ({
-      key: `docs:${REGELBOEK}:r-id-dubbel:${id}`,
-      message: `${REGELBOEK}: ${id} staat er meer dan één keer`,
-    })),
-  ];
+  return padregels;
 }
 
 /**
