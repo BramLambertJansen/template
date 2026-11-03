@@ -8,11 +8,12 @@ import { canRecordStatus, TEMPLATE_REPOSITORY } from './task-authority.mjs';
 import { automaticRunner } from './runner-authority.mjs';
 import { isCoreUiSource, testChangeRisk } from './functional-ui.mjs';
 import { staleBranchStart } from './verse-main.mjs';
+import { zelfladend } from './zelfladend.mjs';
 
 /**
  * @typedef {{ gates: string[], testpaden: string[], jsonGates: Record<string, string[]>, gegenereerd: string[],
  *   migraties: string[], schrijfrecht: Record<string, string[]>, mcpLezen: string[], voorReview?: string[] | undefined,
- *   altijdVragen?: string[] | undefined, onderhoud?: { repository: string } | undefined }} Config
+ *   altijdVragen?: string[] | undefined, zelfladend?: string[] | undefined, onderhoud?: { repository: string } | undefined }} Config
  * `voorReview` ontbreekt → elke gate telt als voorReview (faalt dicht). `altijdVragen` ontbreekt → in onderhoud blijft elk
  * voorReview-pad een gate (faalt dicht). `onderhoud`: de repository waarin de onderhoudsmodus geldt (ADR 0045 punt 8).
  * @typedef {{ root: string, cwd: string, config: Config, read: (rel: string) => string | null,
@@ -25,7 +26,7 @@ import { staleBranchStart } from './verse-main.mjs';
  * `onbekendeRol`: een subagent zonder bekende rol; telt als reviewer (alleen lezen).
  * `committed`: staat in de merge-base met het anker of met origin/main; 'zonder-origin' = beide onleesbaar en wel in HEAD (terugval).
  * @typedef {{ deny: string[], ask: string[], context: string[], allow?: boolean }} Decision
- * @typedef {{ kind: 'write' | 'delete', after: string | null }} Change
+ * @typedef {{ kind: 'write' | 'delete', after: string | null, verhuizing?: boolean }} Change
  */
 
 const SUBAGENT_ROLES = new Set(['architect', 'developer', 'tester', 'reviewer', 'docs']);
@@ -63,6 +64,7 @@ export function loadConfig(text) {
     schrijfrecht: record('schrijfrecht'),
     voorReview: optionalList('voorReview'),
     altijdVragen: optionalList('altijdVragen'),
+    zelfladend: optionalList('zelfladend'),
     onderhoud: onderhoudVan(value('onderhoud')),
   };
 }
@@ -122,6 +124,11 @@ export function decideChange({ rel, change, agentType }, ctx) {
   const decision = { deny: [], ask: [], context: [] };
   if (inGitMap(rel)) {
     decision.deny.push(gitMapMelding(rel));
+    return decision;
+  }
+  // Het archief verandert via Bash alleen door een verhuizing met dezelfde naam en inhoud (spec rolhek-vooraf-krimp AC-5).
+  if (rel.startsWith('docs/adr/archief/') && change.verhuizing !== true) {
+    decision.deny.push(`${rel}: ${ARCHIEF_MELDING}`);
     return decision;
   }
   const context = ['', 'developer', 'architect'].includes(agentType)
@@ -598,6 +605,7 @@ function decideBash({ command, role }, ctx, decision) {
     if (envSplitsString(parsed.words))
       decision.deny.push('env -S/--split-string maakt van tekst een nieuw commando dat het rolhek niet ziet; verboden, voor elke rol');
     forbidden({ assignments, argv, expanded: parsed.expanded ?? [] }, { role, ctx }, decision);
+    zelfladend({ argv, redirects: parsed.redirects, role }, ctx, decision);
     ghIssue(argv, { role, ctx, setsGhEnv }, decision);
     if (role === 'reviewer') reviewerBash({ assignments, argv, pathWrappers }, parsed.redirects, decision);
     const targets = writeTargets(parsed);
