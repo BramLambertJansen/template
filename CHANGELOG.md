@@ -6,6 +6,16 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Toegevoegd
 
+<<<<<<< HEAD
+=======
+- Lintregel `rails/negatieve-tabel` en helper `expectNegativeTable` (`test/support/negative-table.ts`, leerpunt #401):
+  een tabeltest die per rij onwaar eist (`test.each`/`it.each`/`describe.each`/`test.for`, ook als tagged template, met
+  `toBe(false)`, `toBeFalsy()`, `not.toBe(true)` of `not.toBeTruthy()`) loopt via `expectNegativeTable({ base, check, cases })`. Die bewijst eerst dat de basis waar is en
+  eist per rij dat de wijziging iets verandert, de uitkomst onwaar maakt en de basis zelf niet wijzigt. Bestaande tabellen
+  staan in `eslint-suppressions.json`. Wat verandert voor een app: een nieuwe negatieve tabel wordt rood; geef een geldige
+  basis en per rij één gewijzigde voorwaarde.
+
+>>>>>>> origin/main
 - Lintregel `rails/afwezigheid` en helper `expectAbsent` (`test/support/absence.ts`, leerpunt #402): een negatieve
   regex-assertie in een test (`.not.toMatch`, `expect.not.stringMatching`, `assert.doesNotMatch`) loopt via
   `expectAbsent(tekst, patroon, { recognizes, allows })`, die eerst bewijst dat het patroon elk voorbeeld herkent en geen
@@ -371,6 +381,13 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 - Beslisroute (ADR 0038): de merge door de eigenaar is de acceptatie. Architect en hoofdsessie schrijven de eigenaarstatus in het voorstel; `check-document-status` laat zonder record en zonder web-flow een besluit-PR met meerdere ADR's en specs toe, en guard en rolhek weigeren een ADR met eigenaarstatus terug naar `voorgesteld` of met nieuwe inhoud (`rails/hooks/lib/document-state.mjs`, `scripts/kit/lane.mjs`).
 
 ### Opgelost
+
+- `scripts/cloud-setup.sh` werkt in een cloudsessie (review 3 november, P6): `mise install` faalde daar op pnpm, dbmate,
+  betterleaks en osv-scanner, omdat de proxy de GitHub-API weigert. Een terugval haalt elke ontbrekende tool op exact de versie
+  uit `mise.toml` (node van nodejs.org met `SHASUMS256.txt`, pnpm en dbmate via npm, betterleaks en osv-scanner als
+  release-download met het checksumbestand van de release) en registreert hem met `mise link`; de setup eindigt met de
+  voorcontrole uit `scripts/kit/toolchain.mjs`. Zie `docs/ENVIRONMENT.md`, Terugval. Wat verandert voor een app: niets lokaal of
+  in CI. Wat de eigenaar moet doen: niets; een bestaande cloudomgeving pakt het op bij de volgende setup.
 
 - Een lijst geeft geen cursor meer terug die haar eigen invoer weigert (leerpunt #411, spec `lijstpagina` AC-9 t/m AC-12). Een naam
   van 100 tekens met stuurtekens gaf bij naamsortering een cursor van 852 tekens, terwijl de invoer er 500 toeliet: "Meer laden" liep
