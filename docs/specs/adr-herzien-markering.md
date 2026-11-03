@@ -8,7 +8,7 @@ namespace: adr-herzien
 ## Doel
 
 Elk geaccepteerd ADR waarvan een later geaccepteerd ADR een punt wijzigt, heeft een herzieningsregel die dat latere ADR en de
-punten noemt, en `check-docs` faalt als die ontbreekt ([ADR 0073](../adr/0073-herziene-adr-punten-gemarkeerd.md)).
+punten noemt, en `check-docs` faalt als die ontbreekt ([ADR 0074](../adr/0074-herziene-adr-punten-gemarkeerd.md)).
 
 ## Rollen en wie wat ziet
 
@@ -26,13 +26,13 @@ n.v.t. — geen routes.
 
 - `scripts/kit/adr-numbers.mjs` — een pure ADR-functie in een eigen module, aangeroepen vanuit `scripts/kit/check-docs.mjs`
 - `rails/hooks/lib/document-state.mjs` — herzieningsregels lezen via de export `nieuweHerzieningsregels('', tekst)`; geen
-  kopie van de vorm en geen wijziging in dit bestand (ADR 0073 punt 3)
+  kopie van de vorm en geen wijziging in dit bestand (ADR 0074 punt 3)
 - `test/rails/check-docs-ac.test.ts` — fixture-repository in een tijdelijke map (`mkdtemp`)
 
 ## Hergebruik en UX
 
 n.v.t. — geen UI. Melding, één regel per ontbrekend geval:
-`docs/adr/<A>.md: herzieningsregel voor <B> ontbreekt (punt <N, M>); <B> wijzigt dit ADR (R-CI-05, ADR 0073)`.
+`docs/adr/<A>.md: herzieningsregel voor <B> ontbreekt (punt <N, M>); <B> wijzigt dit ADR (R-CI-05, ADR 0074)`.
 
 ## Acceptatiecriteria
 
@@ -70,11 +70,11 @@ n.v.t. — geen UI. Melding, één regel per ontbrekend geval:
 ## Raakt ook
 
 - `docs/framework.md` R-CI-05 (één zin); `.claude/rules/*` alleen als R-CI-05 daar letterlijk staat.
-- Geen ADR-tekst: de herzieningsregels zet de besluit-PR van ADR 0073 (punt 5).
+- Geen ADR-tekst: de herzieningsregels zet de besluit-PR van ADR 0074 (punt 5).
 
 ## Buiten scope
 
-- Markeringen midden in de tekst van een punt (alternatief in ADR 0073).
+- Markeringen midden in de tekst van een punt (alternatief in ADR 0074).
 - Een samenvatting per ADR in `feiten.mjs adr`; consolideren van 0045 en 0046.
 - `Vult … aan` (de tekst van het oude ADR blijft geldig).
 
@@ -87,5 +87,5 @@ Fixture-tests in een tijdelijke map voor AC-1, AC-2, AC-4, AC-5 en AC-6 en de ra
 
 ## Open vragen
 
-- **OV-1 ✅ besloten** — `Vult … aan` telt niet mee; aanvullen laat de tekst van A geldig (ADR 0073 punt 1). Daardoor krijgt 0045
+- **OV-1 ✅ besloten** — `Vult … aan` telt niet mee; aanvullen laat de tekst van A geldig (ADR 0074 punt 1). Daardoor krijgt 0045
   geen nieuwe regel: 0063 herschreef het al met een herzieningsregel, 0068 en 0071 vullen het alleen aan.

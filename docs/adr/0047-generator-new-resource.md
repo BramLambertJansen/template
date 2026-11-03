@@ -2,6 +2,8 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-03 (#469): gewijzigd door [0073](0073-een-proefkopie-per-pr.md) punt 9
+
 Vervangt [0016](0016-generator-new-resource.md).
 Drempel: A4. Consolidatie zonder inhoudelijke wijziging (eigenaarbesluit 2026-10-21, [0038](0038-beslisroute.md) Gevolgen).
 
