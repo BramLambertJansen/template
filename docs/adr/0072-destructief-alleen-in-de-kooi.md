@@ -1,6 +1,8 @@
 # 0072 — Destructieve en overgenomen commando's alleen in de kooi
 
 Status: geaccepteerd
+Herzien: 2026-11-03 (#466): punt 2 (de proef schrijft in een alleen-lezen systeemmap; uitwerking en `/proc/sys` alleen-lezen in de
+spec)
 
 Vult [0045](0045-railwerk.md) en [0066](0066-schrijfgrens-op-effect.md) aan; voorwaarde voor bouw-PR 1 van
 [0071](0071-rolhek-vooraf-vaste-lijst.md) (corpus op effect). Drempel: A4 (nieuwe bewaking). Uitwerking:
