@@ -5,7 +5,7 @@ namespace: samenhang-checks-rollen
 
 # Eén lijst verplichte checks, handhaving die bestaat, rollen zonder tegenspraak
 
-> Herzien 2026-11-03 (#500, [ADR 0076](../adr/0076-ci-in-delen.md)): de uitzondering in AC-1 ("behalve de matrixdelen van
+> Herzien 2026-11-03 (#503, [ADR 0076](../adr/0076-ci-in-delen.md)): de uitzondering in AC-1 ("behalve de matrixdelen van
 > `gate:slow`") geldt voortaan voor de delen van elke verplichte check met een samenvattende job. Het geldende criterium is
 > `ci-in-delen/AC-8` in spec [ci-in-delen](ci-in-delen.md).
 
