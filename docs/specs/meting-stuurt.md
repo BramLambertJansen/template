@@ -72,4 +72,4 @@ Naast de bestaande tests in `test/rails/leesbudget.test.ts` en `test/rails/metin
 
 - **OV-1** — Waar ziet de eigenaar de meldingen? Opties: samenvatting van de CI-job plus PR-beschrijving via `opleveren`; een PR-comment door CI; alleen de PR-beschrijving. Aanbeveling: de eerste, zonder extra rechten voor de workflow.
 - **OV-2** — Drempel voor de trend: 0,5 en 25 %, of alleen een van beide. Aanbeveling: beide, zodat kleine en grote gemiddelden allebei ruis negeren.
-- **OV-3** — Wanneer krijgt een scenario "let op": bij groei van minstens 1 KB, boven het streefdoel én gegroeid, of bij elke groei. Aanbeveling: minstens 1 KB groei, omdat het leespad al ver boven het streefdoel ligt en anders elke nieuwe spec weer meldt.
+- **OV-3 ✅ besloten** — Een scenario krijgt "let op" bij minstens 1 KB groei tegenover de basis (keuze eigenaar, 3 november 2026): het leespad ligt al ver boven het streefdoel en telt nu feiten-uitvoer, dus zonder minimale stap meldde elke nieuwe spec weer.
