@@ -39,10 +39,13 @@ tot stand komt (merge is acceptatie, drempel, taakmandaat, CI-lus, merge- en for
    remote, niet de lokale `origin/main`. De lader controleert zelf de hashes van commit, trees en bestanden; een vervalst object
    geeft een dichte hook, geen andere code. Het rolhek gebruikt geen netwerk. Rolhek en werkstraat falen dicht (exit 2) als het
    anker of de hook op `main` ontbreekt, en het rolhek maakt van elke andere exitcode dan 0 of 2 een 2. Het rolhek valt ook
-   dicht als de stub niet start, crasht of zijn timeout haalt: `onFailure: "block"` op zijn PreToolUse-entry (Claude Code
-   2.1.295 of nieuwer, `scripts/doctor.sh` eist die versie). *Waarom (herzien 2026-11-03):* zonder die vlag laat Claude Code
-   de aanroep door bij elke storing buiten de lader, en een grens die bij storing openstaat, is geen grens (R-PRINC-02).
-   Alleen de meethook, de melding en de statusregel falen open; zij beschermen niets. Een hookwijziging werkt pas na de merge, in de volgende
+   dicht als de stub niet start, crasht, zijn timeout haalt of ongeldige uitvoer geeft: `onFailure: "block"` op het
+   hook-object van zijn PreToolUse-entry (Claude Code 2.1.295 of nieuwer; de versiecontrole is besloten, nog niet gebouwd,
+   spec AC-3). Werkstraat en de toets op effect vallen dicht bij een fout in de lader en via hun eigen catch-all, maar open
+   bij een timeout of kill: Claude Code kent `onFailure` niet op Stop en SubagentStop, en PostToolUse kan achteraf niets
+   tegenhouden. Meethook, melding en statusregel falen altijd open. *Waarom (herzien 2026-11-03):* een vangnet dat bij
+   elke storing openstaat, vangt juist dan niets; de harde grens blijft CI, de ruleset en de eigenaarmerge (R-PRINC-02,
+   R-ROL-10). Een hookwijziging werkt pas na de merge, in de volgende
    sessie; tests importeren de branchversie. `rails/**` is een gate-pad en `voorReview`.
 4. **Groen vóór klaar** (was 0011 punt 3). SubagentStop voor de developer blokkeert tot `gate:fast` groen is, ook bij een
    schone werkmap.
@@ -145,10 +148,14 @@ Bewust niet (was 0011): checks op SQL met regex (de template leest de catalogus)
 - Een ongetrackt bestand onder een genegeerd pad valt in `pr:verify` niet op; een ongetrackte `.mcp.json` of
   `.claude/commands/` laat hem weigeren tot de app kiest (was 0031).
 - In andere runtimes werken de hooks niet; daar zijn CI en GitHub de enige grens (was 0033).
-- Een rolhek dat hapert, houdt elke Edit-, Write-, Bash- en MCP-aanroep tegen tot het weer werkt (herzien 2026-11-03).
-  Gemeten op 3 november 2026: mediaan 0,2 s en maximum 0,3 s per aanroep tegen een timeout van 10 s. De sessie meldt zo'n
-  blokkade en vraagt de eigenaar; de hook uitzetten om door te kunnen mag niet (R-PRINC-09). Terugval: stijgt het aantal
-  geblokkeerde beurten door storing (meethook, `pnpm meting --trend`), dan beslist de eigenaar via een PR over terug naar
-  `"continue"`. Een cloudsessie zonder projecthooks (#462) merkt hier niets van.
+- Een rolhek dat hapert, houdt elke Edit-, Write-, MultiEdit-, NotebookEdit-, Bash- en MCP-aanroep tegen, ook in subagents
+  en ook `git status` en de alleen-lezen MCP-tools uit `mcpLezen`, tot het weer werkt (herzien 2026-11-03). Lezen (Read,
+  Grep, Glob), een subagent starten en de eigenaar vragen blijven werken. Gemeten in de ontwikkelcontainer op 3 november
+  2026, het script direct: mediaan 0,2 s en maximum 0,3 s tegen een timeout van 10 s; de bouw-PR meet de hele keten via de
+  stub (spec AC-2). De sessie meldt een blokkade door storing als leerpunt en vraagt de eigenaar; de hook uitzetten om door
+  te kunnen mag niet (R-PRINC-09). Terugval: bij het derde leerpunt over een blokkade door storing beslist de eigenaar. Terug
+  naar `"continue"` is een afzwakking: kritiek werk, altijd eigenaarmerge. De `ask`-regel `Bash(gh pr merge*)` blijft als
+  extra laag. In een cloudsessie zonder projecthooks draait het rolhek helemaal niet (#462, [0072](0072-destructief-alleen-in-de-kooi.md)
+  punt 6); dit besluit verandert daar niets.
 - Een bouwbewijs voor `gebouwd` eist ook `document-status` op de bron-SHA (was 0031).
 - `check-github`, `check-release-ci` en `check-deployment-schema` (punt 26–27) zijn besloten, maar nog niet gebouwd.
