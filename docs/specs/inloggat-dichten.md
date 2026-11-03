@@ -180,7 +180,7 @@ Op `/api/me/email/bevestigen`, elke stap zonder claim bij falen (`EMAIL_LINK_INV
     verifiëren (inschrijven, inloggen, step-up) gaan naar de verbruikende variant, o.a. in `test/auth/auth.int.test.ts`
     "inloggen met TOTP", `test/api/account-harness.ts`, `login-tracking`, `roles`, `me.int` en e2e met TOTP; elke gewijzigde
     test staat met reden in de bouw-PR. Een test die binnen één stap drie codes van hetzelfde geheim nodig heeft, splitst zijn
-    accounts of krijgt een eigen ruimere timeout, met reden in de bouw-PR.
+    accounts, of wacht expliciet op de volgende tijdstap met een ruimere timeout, met reden in de bouw-PR.
 - Dev-login (`src/core/api/dev/login-as.ts`): ongewijzigd; valt onder de interne aanroep zonder claim (OV-3, AC-14).
 - Docs in de bouw-PR: R-AUTH-06 zonder "Bekend gat" en met de nieuwe regel (eenmalig, geen token in JSON) in `docs/framework.md`;
   R-LAAG-05 (`auth_service` ook execute op de functies van klasse `auth`) en de functiecatalogus in framework §6; ST-02 in
