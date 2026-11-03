@@ -39,7 +39,8 @@ en een tekst die handhaving claimt die niet bestaat, laat een agent zelf control
    te wijzigen, te verwijderen of te hernoemen, en een bestaande test te wijzigen; ook als een ander programma het pad
    verandert (de toets op effect). De weigering verwijst voor een spec naar de architect (R-WERK-07) en voor een test naar
    de hoofdsessie, die hem wijzigt als spec of opdracht het gedrag verandert, of naar de tester als hij fout lijkt
-   (R-TEST-02). Uitzondering: een spec terugzetten naar de tekst op main. Een status terug naar `voorstel` zetten blijft,
+   (R-TEST-02). Uitzonderingen: een spec terugzetten naar de tekst op main, en een statusregel met geldig bewijs
+   (`pnpm docs:status`, zoals nu). Een status terug naar `voorstel` zetten blijft,
    zoals nu, aan architect en hoofdsessie (R-WERK-08). Een nieuwe test toevoegen blijft vrij. Voor de hoofdsessie, de architect en de tester verandert niets;
    R-ROL-01 zegt dat nu ook voor de hoofdsessie (een bestaande test alleen volgens R-TEST-02, met reden in de PR).
    `new-resource` noemt in beide meldingen R-WERK-08.
@@ -64,7 +65,6 @@ en een tekst die handhaving claimt die niet bestaat, laat een agent zelf control
   `gebouwd`-bewijs van `pnpm docs:status` (dat leest `requiredChecks`). `check-core` draait op elke PR
   (`pull_request_target`), dus dat bewijs blijft haalbaar.
 - Na de merge van de bouw-PR draait de eigenaar het rulesetscript niet opnieuw: de ruleset had `check-core` al.
-- Een developer die een bestaande test of spec moet wijzigen, stopt en geeft het terug aan de hoofdsessie. Commando's die zulke paden indirect veranderen (`prettier --write`, `vitest -u`, `pnpm docs:status`, een
-  rebase of pull), laat de developer ook aan de hoofdsessie.
+- Een developer die een bestaande test of spec moet wijzigen, stopt en geeft het terug aan de hoofdsessie. Commando's die zulke paden indirect veranderen (`prettier --write`, `vitest -u`, een rebase of pull), laat de developer ook aan de hoofdsessie.
 - `docs/nieuwe-app.md` somt de checks voor een app op; die lijsten blijven, want tests bewaken ze al tegen het rulesetscript.
 - Buiten scope: een check die elke regel "Afgedwongen door" toetst op een bestaand mechanisme; dat wordt een roadmap-item.
