@@ -129,20 +129,69 @@ function run(input: string): { exitCode: number | null; stdout: string; stderr: 
 }
 
 const bash = (command: string) => JSON.stringify({ tool_name: 'Bash', tool_input: { command }, cwd: root });
+// Edit door de hoofdsessie (geen agent_type) op een bestaand testbestand: alleen context ("is een bestaande test").
+const editBestaandeTest = JSON.stringify({
+  tool_name: 'Edit',
+  tool_input: { file_path: `${root}/test/hooks/rolhek.test.ts`, old_string: 'Rolhek', new_string: 'Het rolhek' },
+  cwd: root,
+});
 
+/** Het soort uitvoer: exitcode, of stdout leeg is, de permissionDecision en of er additionalContext is. */
+function soort(result: { exitCode: number | null; stdout: string }) {
+  const binnen: unknown = result.stdout === '' ? undefined : child(JSON.parse(result.stdout), 'hookSpecificOutput');
+  return {
+    exitCode: result.exitCode,
+    stdoutLeeg: result.stdout === '',
+    permissionDecision: child(binnen, 'permissionDecision'),
+    context: typeof child(binnen, 'additionalContext') === 'string',
+  };
+}
+
+// Allow (automatische runner of "Status uit main") vraagt een vertrouwde basis van main (runnerIsTrusted, authority uit
+// het anker); dat is als proces niet op te zetten zonder vertrouwde runner-opzet, dus allow staat alleen bij uitvoer().
 describe('rolhek-dicht/AC-4: het rolhek als proces', () => {
   test.each([
-    { vorm: 'deny', command: 'git push origin main', exitCode: 2 },
-    { vorm: 'ask', command: 'echo x > scripts/x.ts', exitCode: 0 },
-    { vorm: 'leeg', command: 'ls', exitCode: 0 },
-  ])('rolhek-dicht/AC-4: $vorm ($command) voldoet aan de vormregels', ({ command, exitCode }) => {
-    const result = run(bash(command));
+    {
+      vorm: 'deny',
+      input: bash('git push origin main'),
+      verwacht: { exitCode: 2, stdoutLeeg: true, permissionDecision: undefined, context: false },
+    },
+    {
+      vorm: 'ask',
+      input: bash('echo x > scripts/x.ts'),
+      verwacht: { exitCode: 0, stdoutLeeg: false, permissionDecision: 'ask' },
+    },
+    {
+      vorm: 'alleen context',
+      input: editBestaandeTest,
+      verwacht: { exitCode: 0, stdoutLeeg: false, permissionDecision: undefined, context: true },
+    },
+    {
+      vorm: 'leeg',
+      input: bash('ls'),
+      verwacht: { exitCode: 0, stdoutLeeg: true, permissionDecision: undefined, context: false },
+    },
+  ])(
+    'rolhek-dicht/AC-4: $vorm als proces voldoet aan de vormregels en geeft het juiste soort uitvoer',
+    ({ input, verwacht }) => {
+      const result = run(input);
 
-    expect(vormfouten(result), result.stdout + result.stderr).toStrictEqual([]);
-    expect(result.exitCode).toBe(exitCode);
+      expect(vormfouten(result), result.stdout + result.stderr).toStrictEqual([]);
+      expect(soort(result)).toMatchObject(verwacht);
+    },
+  );
+
+  test('rolhek-dicht/AC-4: deny als proces zet de reden op stderr', () => {
+    expect(run(bash('git push origin main')).stderr).toBe('rolhek: push naar main is verboden; open een PR\n');
   });
 
-  test('rolhek-dicht/AC-4: deny als proces geeft lege stdout', () => {
-    expect(run(bash('git push origin main')).stdout).toBe('');
+  test('rolhek-dicht/AC-4: alleen context als proces heeft precies hookEventName en additionalContext', () => {
+    const result = run(editBestaandeTest);
+
+    expect(keysOf(child(JSON.parse(result.stdout), 'hookSpecificOutput')).sort()).toStrictEqual([
+      'additionalContext',
+      'hookEventName',
+    ]);
+    expect(result.stdout).toContain('is een bestaande test');
   });
 });

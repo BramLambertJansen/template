@@ -356,7 +356,7 @@ export function sessionStart(deps) {
   const e2e = lastRun === null ? undefined : (/"status":\s*"(\w+)"/.exec(lastRun)?.[1] ?? 'onbekend');
   const status = e2e === undefined || e2e === 'passed' ? '' : `laatste e2e: ${e2e}`;
   const doctor = doctorKort(deps.run('scripts/doctor.sh', ['--quick']).output.trim());
-  const versie = deps.run('claude', ['--version']);
+  const versie = deps.run('claude', ['--version'], { timeout: 5000 });
   const claude = claudeVersieMelding(versie.code === 0 ? versie.output : null).join('\n');
   return {
     stdout: [
