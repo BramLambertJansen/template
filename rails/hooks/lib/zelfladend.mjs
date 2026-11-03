@@ -11,6 +11,16 @@ const GIT_WERKMAP = new Set([
   'checkout', 'switch', 'restore', 'reset', 'stash', 'apply', 'am', 'cherry-pick', 'merge', 'pull', 'rebase', 'revert',
   'read-tree', 'checkout-index',
 ]);
+// Git-subcommando's die de werkmap niet schrijven (AC-3); alleen hun schrijfopties tellen. Elk ander subcommando
+// (`merge-file`, `clone`, `submodule`, `bundle`, een onbekend of nieuw subcommando) toetst elk woord, dicht falen.
+const GIT_LEZEN = new Set([
+  'status', 'log', 'show', 'diff', 'diff-tree', 'diff-index', 'diff-files', 'grep', 'blame', 'ls-files', 'ls-tree', 'ls-remote',
+  'rev-parse', 'rev-list', 'cat-file', 'fetch', 'push', 'branch', 'add', 'commit', 'remote', 'describe', 'shortlog', 'reflog',
+  'for-each-ref', 'merge-base', 'name-rev', 'format-patch', 'var', 'version', 'help', 'check-ignore', 'check-attr',
+  'count-objects', 'show-ref', 'whatchanged', 'range-diff',
+  // `git config` schrijven weigert R-ROL-08 al apart (alleen lezen mag).
+  'config',
+]);
 // Alleen deze nemen paden (na `--`); bij `apply`, `am`, `stash` … is een woord na `--` een patch of iets anders.
 const PAD_SUBCOMMANDO = new Set(['checkout', 'restore', 'checkout-index', 'reset']);
 // Bij deze subcommando's is elk woord zonder `-` een pad (er zijn geen refs als losse woorden).
@@ -20,7 +30,7 @@ const GLOB = /[*?[]/;
 const SCHEIDING = /[^\w./*?[\]@+~-]+/;
 
 /**
- * @typedef {{ root: string, cwd: string, config: { zelfladend?: readonly string[] | undefined } }} ZelfCtx
+ * @typedef {{ root: string, cwd: string, cwdOnbekend?: boolean, config: { zelfladend?: readonly string[] | undefined } }} ZelfCtx
  * @typedef {{ deny: string[], ask: string[] }} ZelfBesluit
  */
 
@@ -104,8 +114,17 @@ function doelen(woorden, ctx) {
  * @param {readonly string[]} args
  */
 function sedSchrijft(args) {
-  return args.some((arg) => /^(?:-[^-]*[if]|--in-place|--file)/.test(arg) ||
-    (!arg.startsWith('-') && /(?:^|[;{}\n])\s*[\d,$]*[wW]\s|\/[gpiImMe\d]*w\s/.test(arg)));
+  if (args.some((arg) => /^(?:-[^-]*[if]|--in-place|--file)/.test(arg))) return true;
+  // Het script: de waarden van `-e`/`--expression`, anders het eerste woord zonder `-`. Elke `w`, `W` of `e` erin kan
+  // schrijven of een commando starten (`s|a|b|w x`, `$!w x`, `e cp …`, `s/a/b/e`); dicht falen, ook bij een letterlijke e.
+  const scripts = args.flatMap((arg, index) => {
+    if (/^--e[a-z]*=/.test(arg)) return [arg.slice(arg.indexOf('=') + 1)];
+    if (/^-[^-]*e./.test(arg)) return [arg.slice(arg.indexOf('e') + 1)];
+    const vorige = args[index - 1] ?? '';
+    return /^-[^-]*e$/.test(vorige) || /^--e[a-z]*$/.test(vorige) ? [arg] : [];
+  });
+  const script = scripts.length > 0 ? scripts : args.filter((arg) => !arg.startsWith('-')).slice(0, 1);
+  return script.some((tekst) => /[wWe]/.test(tekst));
 }
 
 /**
@@ -118,9 +137,9 @@ function schrijfWoorden(argv) {
   const args = argv.slice(1);
   if (naam === 'sed' && !sedSchrijft(args)) return [];
   if (LEESLIJST.has(naam)) return [];
-  if (naam !== 'git') return argv;
+  if (naam !== 'git') return argv.slice(1);
   const { subcommand, rest } = gitSubcommand(args);
-  if (GIT_WERKMAP.has(subcommand)) return argv;
+  if (!GIT_LEZEN.has(subcommand)) return argv.slice(1);
   return rest.flatMap((arg, index) => {
     if (/^--o[a-z-]*=/.test(arg)) return [arg.slice(arg.indexOf('=') + 1)];
     const vorige = rest[index - 1] ?? '';
@@ -157,7 +176,7 @@ function gitWerkmapZonderPaden(argv, ctx) {
   // `git -C /elders …` schrijft een andere repository; de paden zelf toetst `doelen`.
   if (programName(argv[0] ?? '') !== 'git' || relatief(ctx.cwd, ctx) === null && ctx.cwd !== ctx.root) return null;
   const { subcommand, rest } = gitSubcommand(argv.slice(1));
-  if (!GIT_WERKMAP.has(subcommand) || zonderWerkmapPaden(subcommand, rest)) return null;
+  if (!GIT_WERKMAP.has(subcommand) || zonderWerkmapPaden(subcommand, rest, ctx)) return null;
   const paden = gitPaden(subcommand, rest);
   return paden.length > 0 && paden.every((pad) => explicietBuiten(pad, ctx)) ? null : subcommand;
 }
@@ -165,14 +184,22 @@ function gitWerkmapZonderPaden(argv, ctx) {
 /**
  * Een branchwissel zonder paden (`git switch -c x`, `git checkout feat/x`; AC-6, verse main) zet alleen gecommitte inhoud neer;
  * `git restore --staged` raakt alleen de index.
- * @param {string} subcommand @param {readonly string[]} rest
+ * @param {string} subcommand @param {readonly string[]} rest @param {ZelfCtx} ctx
  */
-function zonderWerkmapPaden(subcommand, rest) {
+function zonderWerkmapPaden(subcommand, rest, ctx) {
   const scheiding = rest.indexOf('--');
   if (rest.some((arg) => arg.startsWith('--pathspec-f'))) return false;
   if (subcommand === 'switch') return true;
-  if (subcommand === 'checkout') return scheiding < 0 && rest.filter((arg) => !arg.startsWith('-')).length <= 1;
+  const losse = rest.filter((arg) => !arg.startsWith('-'));
+  // `git checkout .` of `git checkout .claude` is een pad, geen branch: alleen een woord dat geen zelfladend pad of map
+  // erboven kan zijn, telt als branchwissel.
+  if (subcommand === 'checkout') return scheiding < 0 && losse.length <= 1 && losse.every((woord) => !kanZelfladendRaken(woord, ctx));
   return subcommand === 'restore' && alleenIndex(scheiding >= 0 ? rest.slice(0, scheiding) : rest);
+}
+
+/** Een woord dat (via een glob, pathspec-magie of als map erboven) een zelfladend pad kan raken. @param {string} woord @param {ZelfCtx} ctx */
+function kanZelfladendRaken(woord, ctx) {
+  return GLOB.test(woord) || woord.startsWith(':') || woord.includes('\\') || doelen([woord], ctx).length > 0 || bovenZelfladend(woord, ctx);
 }
 
 /** De paden die het commando noemt: na `--`, of de losse woorden waar git ze als pad leest. @param {string} subcommand @param {readonly string[]} rest */
@@ -205,40 +232,97 @@ function gitWerkmap(argv, ctx) {
   return { ctx: { ...ctx, cwd }, omgelegd };
 }
 
-const KOPIEER = new Set(['cp', 'mv', 'rsync', 'install', 'ln']);
+const KOPIEER = new Set(['cp', 'rsync', 'install', 'ln']);
 // Een bronnaam die zelf een zelfladend pad of een map erboven kan worden.
 const RISICONAAM = new Set(['.', '.git', '.claude', 'hooks', 'settings.json', 'lefthook.yml', '.pnpmfile.cjs']);
+// Uitpakkers: het doel is de optiewaarde of, zonder die, de huidige map.
+const UITPAK = [
+  { namen: ['tar', 'bsdtar'], uitpakken: /^(?:-[a-zA-Z]*x|--extract|--get)/, doel: /^(?:-C|--directory|--cd)/ },
+  { namen: ['unzip'], uitpakken: /./, doel: /^-d$/ },
+  { namen: ['cpio'], uitpakken: /^(?:-[a-zA-Z]*i|--extract)/, doel: /^(?:-D|--directory)/ },
+  { namen: ['pax'], uitpakken: /^-[a-zA-Z]*r/, doel: /(?!)/ },
+  { namen: ['ar'], uitpakken: /^-[a-zA-Z]*x/, doel: /^--output/ },
+];
+// Wissen of verplaatsen: elke bron die een map boven zelfladende paden is, kan ze vervangen (`mv .claude /tmp/o`).
+const WISSEN = new Set(['rm', 'rmdir', 'mv', 'shred', 'unlink']);
 
 /**
- * Een kopieer- of uitpakdoel dat een map boven een zelfladend pad is (`cp -r /tmp/x/. .`, `tar -x -C .claude`, `unzip -o x.zip`).
- * @param {readonly string[]} argv
- * @returns {string | null} het doel, of null
+ * Het doel van een uitpakker, of undefined als het programma geen uitpakker is.
+ * @param {string} naam @param {{ args: readonly string[], losse: readonly string[], waarde: (optie: RegExp) => string | null }} commando
+ * @returns {string[] | undefined}
  */
-function mapDoel(argv) {
+function uitpakDoel(naam, { args, losse, waarde }) {
+  const uitpak = UITPAK.find((soort) => soort.namen.includes(naam));
+  // `tar xf x.tar`, `ar x lib.a`: het eerste woord mag een optiecluster zonder `-` zijn.
+  const zonderStreep = /^[a-zA-Z]*x[a-zA-Z]*$/.test(args[0] ?? '') && naam !== 'unzip';
+  if (uitpak !== undefined) return zonderStreep || args.some((arg) => uitpak.uitpakken.test(arg)) ? [waarde(uitpak.doel) ?? '.'] : [];
+  if (/^7z[a-z]?$/.test(naam)) return ['x', 'e'].includes(losse[0] ?? '') ? [waarde(/^-o/) ?? '.'] : [];
+  return undefined;
+}
+
+/** De startpaden van `find` met `-delete` of `-exec` (zonder pad: de huidige map). @param {readonly string[]} args */
+function findPaden(args) {
+  if (!args.some((arg) => /^-(?:delete|exec|execdir|ok|okdir)$/.test(arg))) return [];
+  const eerste = args.findIndex((arg) => arg.startsWith('-'));
+  const paden = eerste < 0 ? args : args.slice(0, eerste);
+  return paden.length > 0 ? [...paden] : ['.'];
+}
+
+/**
+ * Doelmappen van kopiëren, verplaatsen en uitpakken (`cp -r /tmp/x/. .`, `mv /tmp/x .claude`, `tar -x -C .claude`,
+ * `unzip -o x.zip`, `7z x x.zip`), en wat `rm`, `mv` of `find -delete` wist.
+ * @param {readonly string[]} argv
+ * @returns {string[]}
+ */
+function mapDoelen(argv) {
   const naam = programName(argv[0] ?? '');
   const args = argv.slice(1);
+  const losse = args.filter((arg) => !arg.startsWith('-'));
   const waarde = (/** @type {RegExp} */ optie) => {
     const index = args.findIndex((arg) => optie.test(arg));
     if (index < 0) return null;
     const arg = args[index] ?? '';
-    return arg.includes('=') ? arg.slice(arg.indexOf('=') + 1) : args[index + 1] ?? null;
+    if (arg.includes('=')) return arg.slice(arg.indexOf('=') + 1);
+    return /^-[a-zA-Z]$/.test(arg) || arg.startsWith('--') ? args[index + 1] ?? null : arg.slice(2);
   };
-  if (naam === 'tar' && args.some((arg) => /^(?:-?[a-zA-Z]*x|--extract|--get)/.test(arg))) return waarde(/^(?:-C|--directory)/) ?? '.';
-  if (naam === 'unzip') return waarde(/^-d$/) ?? '.';
-  if (!KOPIEER.has(naam)) return null;
-  const losse = args.filter((arg) => !arg.startsWith('-'));
+  const uitpak = uitpakDoel(naam, { args, losse, waarde });
+  if (uitpak !== undefined) return uitpak;
+  if (naam === 'find') return findPaden(args);
+  if (WISSEN.has(naam)) return losse;
+  if (!KOPIEER.has(naam)) return [];
   const recursief = args.some((arg) => /^(?:-[a-zA-Z]*[rRa]|--recursive|--archive)/.test(arg));
   const risico = recursief || losse.slice(0, -1).some((bron) => RISICONAAM.has(path.posix.basename(bron)));
-  return risico ? waarde(/^(?:-t|--target-directory)/) ?? losse.at(-1) ?? null : null;
+  const doel = waarde(/^(?:-t|--target-directory)/) ?? losse.at(-1);
+  return risico && doel !== undefined ? [doel] : [];
 }
 
 /** Een map boven (of gelijk aan) een zelfladend pad, de root inbegrepen. @param {string} doel @param {ZelfCtx} ctx */
 function bovenZelfladend(doel, ctx) {
   const absoluut = path.posix.resolve(ctx.cwd, doel);
   const rel = path.posix.relative(ctx.root, absoluut);
+  // `rm -rf ..` of `/`: een map boven de repository bevat ook alle zelfladende paden.
+  if (rel.split('/').every((stuk) => stuk === '..')) return true;
   if (rel.startsWith('..') || path.posix.isAbsolute(rel)) return false;
   return (ctx.config.zelfladend ?? []).some((patroon) =>
     !patroon.startsWith('!') && (rel === '' || basis(patroon).toLowerCase().startsWith(`${rel.toLowerCase()}/`)));
+}
+
+/**
+ * Opties die van een omhulsel (`env -C map`, `sudo -u x`) in argv achterbleven: weg, met `-C`/`--chdir` als nieuwe map.
+ * @param {readonly string[]} argv @param {ZelfCtx} ctx
+ * @returns {{ argv: readonly string[], ctx: ZelfCtx }}
+ */
+function zonderOmhulsel(argv, ctx) {
+  let index = 0;
+  let cwd = ctx.cwd;
+  while ((argv[index] ?? '').startsWith('-')) {
+    const optie = argv[index] ?? '';
+    const metWaarde = /^-[a-zA-Z]*[CuagUhpDr]$/.test(optie) || /^--(?:chdir|unset|argv0|user|group)$/.test(optie);
+    const map = /^--chdir=/.test(optie) ? optie.slice('--chdir='.length) : /^-[a-zA-Z]*C$|^--chdir$/.test(optie) ? argv[index + 1] : undefined;
+    if (map !== undefined) cwd = path.posix.resolve(cwd, map);
+    index += metWaarde ? 2 : 1;
+  }
+  return { argv: argv.slice(index), ctx: { ...ctx, cwd } };
 }
 
 /** @param {string} melding @param {string} role @param {ZelfBesluit} besluit */
@@ -248,25 +332,43 @@ function weiger(melding, role, besluit) {
 }
 
 /**
+ * Git dat de werkmap schrijft: met `--work-tree`/`--git-dir` dicht; voor een subagent alleen met expliciete paden buiten de
+ * lijst; voor de hoofdsessie ask bij een map boven zelfladende paden of een glob (`git checkout .claude`, `git restore .`).
+ * @param {readonly string[]} argv @param {{ ctx: ZelfCtx, omgelegd: boolean, role: string }} wie @param {ZelfBesluit} besluit
+ */
+function gitBesluit(argv, { ctx, omgelegd, role }, besluit) {
+  if (programName(argv[0] ?? '') !== 'git') return;
+  const { subcommand } = gitSubcommand(argv.slice(1));
+  if (omgelegd && !GIT_LEZEN.has(subcommand)) {
+    weiger(`git ${subcommand} met --work-tree/--git-dir: het rolhek ziet niet welke werkmap wordt geschreven`, role, besluit);
+    return;
+  }
+  const git = gitWerkmapZonderPaden(argv, ctx);
+  if (git === null) return;
+  if (role !== 'hoofdsessie')
+    besluit.deny.push(`subagent: git ${git} schrijft de werkmap, ook zelfladende paden; alleen met expliciete paden buiten de zelfladende lijst (spec rolhek-vooraf-krimp AC-3)`);
+  else if (argv.slice(2).some((woord) => !woord.startsWith('-') && kanZelfladendRaken(woord, ctx)))
+    besluit.ask.push(`git ${git} met een map boven zelfladende paden of een glob schrijft ze mogelijk terug (spec rolhek-vooraf-krimp AC-3)`);
+}
+
+/**
  * AC-3: `.git/**` is deny voor elke rol; de andere zelfladende paden deny voor een subagent en ask voor de hoofdsessie.
  * `ctx.cwd` is de map na een eerdere `cd` in hetzelfde commando.
  * @param {{ argv: readonly string[], redirects: readonly string[], role: string }} commando
  * @param {ZelfCtx} basisCtx @param {ZelfBesluit} besluit
  */
-export function zelfladend({ argv, redirects, role }, basisCtx, besluit) {
-  const { ctx, omgelegd } = gitWerkmap(argv, basisCtx);
+export function zelfladend({ argv: ruw, redirects, role }, basisCtx, besluit) {
+  const kaal = zonderOmhulsel(ruw, basisCtx);
+  const argv = kaal.argv;
+  const { ctx, omgelegd } = gitWerkmap(argv, kaal.ctx);
+  if (ctx.cwdOnbekend === true && (redirects.length > 0 || schrijfWoorden(argv).length > 0 || gitWerkmapZonderPaden(argv, ctx) !== null))
+    weiger('na een `cd` naar een map die pas bij het uitvoeren bekend is ($, backtick), ziet het rolhek niet waar paden landen (spec rolhek-vooraf-krimp AC-3)', role, besluit);
   for (const rel of doelen([...redirects, ...schrijfWoorden(argv)], ctx)) {
     const melding = `${rel} is een zelfladend pad (spec rolhek-vooraf-krimp AC-3): de toets op effect zou daarna niet meer kunnen kijken`;
     if (rel.split('/')[0]?.toLowerCase() === '.git') besluit.deny.push(`${melding}; verboden, voor elke rol (R-ROL-03)`);
     else weiger(melding, role, besluit);
   }
-  const doel = mapDoel(argv);
-  if (doel !== null && bovenZelfladend(doel, ctx))
-    weiger(`\`${doel}\` is een map boven zelfladende paden; kopiëren of uitpakken daarin kan ze vervangen (spec rolhek-vooraf-krimp AC-3)`, role, besluit);
-  const { subcommand } = gitSubcommand(argv.slice(1));
-  if (omgelegd && GIT_WERKMAP.has(subcommand))
-    weiger(`git ${subcommand} met --work-tree/--git-dir: het rolhek ziet niet welke werkmap wordt geschreven`, role, besluit);
-  const git = omgelegd ? null : gitWerkmapZonderPaden(argv, ctx);
-  if (git !== null && role !== 'hoofdsessie')
-    besluit.deny.push(`subagent: git ${git} schrijft de werkmap, ook zelfladende paden; alleen met expliciete paden buiten de zelfladende lijst (spec rolhek-vooraf-krimp AC-3)`);
+  for (const doel of mapDoelen(argv).filter((kandidaat) => bovenZelfladend(kandidaat, ctx)))
+    weiger(`\`${doel}\` is een map boven zelfladende paden; kopiëren, verplaatsen, uitpakken of wissen daar kan ze vervangen (spec rolhek-vooraf-krimp AC-3)`, role, besluit);
+  gitBesluit(argv, { ctx, omgelegd, role }, besluit);
 }

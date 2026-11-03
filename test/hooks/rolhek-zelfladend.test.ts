@@ -124,6 +124,32 @@ describe('rolhek-vooraf-krimp/AC-3: bewijs voor de developer', () => {
     "sed -n 'w .claude/settings.json' src/x.ts",
     "sed 's/a/b/w lefthook.yml' src/x.ts",
     'sed -f script.sed lefthook.yml',
+    // Tweede reviewronde: omhulsels, variabele mappen, paden als branchnaam, wissen boven zelfladende paden, git buiten de
+    // leeslijst, sed-commando's en meer uitpakkers.
+    'env -C .claude git checkout -- hooks/x.mjs',
+    'env --chdir=.claude cp /tmp/x hooks/x.mjs',
+    'D=.claude; cd $D && git checkout -- hooks/x.mjs',
+    'cd "$(echo .claude)" && cp /tmp/x hooks/x.mjs',
+    'git checkout .',
+    'git checkout .claude',
+    'rm -rf .claude',
+    'rm -rf .',
+    'mv .claude /tmp/o',
+    'mv /tmp/evil .claude',
+    'find . -delete',
+    'find .claude -exec rm {} +',
+    'git merge-file lefthook.yml a b',
+    'git clone /tmp/r .claude/hooks/new',
+    'git submodule add /tmp/r .claude/hooks/s',
+    'git bundle create .git/x HEAD',
+    "sed 's|a|b|w lefthook.yml' src/x",
+    "sed '$!w lefthook.yml' src/x",
+    "sed 'e cp /tmp/x lefthook.yml' src/x",
+    "sed -e 's/a/b/e' lefthook.yml",
+    'bsdtar -xf x.tar',
+    'cpio -id < x.cpio',
+    '7z x x.zip',
+    '7z x x.zip -o.claude',
   ])('%s is deny', (command) => {
     expect(verdict(command, 'developer')).toBe('deny');
   });
@@ -147,6 +173,19 @@ describe('rolhek-vooraf-krimp/AC-3: bewijs voor de developer', () => {
     'unzip x.zip -d /tmp/y',
     "sed -n '/x/p' lefthook.yml",
     'git checkout main -- src/x.ts',
+    'git checkout src',
+    'cd "$(git rev-parse --show-toplevel)" && echo x > src/x.ts',
+    'cd $D && git status',
+    'cd $D && cat lefthook.yml',
+    'rm -rf src/tmp',
+    'mv src/a.ts src/b.ts',
+    'find src -name x.tmp -delete',
+    'git log -p lefthook.yml',
+    'git add lefthook.yml',
+    'git commit -m "lefthook.yml bijgewerkt"',
+    "sed -n '1,5p' lefthook.yml",
+    'tar -tf x.tar',
+    '7z l x.zip',
   ])('%s raakt de zelfladende regel niet', (command) => {
     expect(redenen(command, 'developer')).not.toContain('zelfladend');
   });
@@ -156,6 +195,13 @@ describe('rolhek-vooraf-krimp/AC-3: de hoofdsessie', () => {
   test('tee .git/config is deny', () => {
     expect(verdict('tee .git/config')).toBe('deny');
   });
+
+  test.each(['rm -rf .claude', 'mv .claude /tmp/o', 'git checkout .claude', 'cd $D && echo x > hooks/x.mjs'])(
+    '%s is ask',
+    (command) => {
+      expect(verdict(command)).toBe('ask');
+    },
+  );
 
   test('git checkout <ref> -- .claude/hooks/effect.mjs is ask', () => {
     expect(verdict('git checkout main -- .claude/hooks/effect.mjs')).toBe('ask');
@@ -168,6 +214,7 @@ describe('rolhek-vooraf-krimp/AC-3: de hoofdsessie', () => {
     'jq . .claude/settings.json',
     'git merge origin/main',
     'git stash pop',
+    'git checkout feat/y',
   ])('%s gaat door', (command) => {
     expect(redenen(command)).not.toContain('zelfladend');
   });

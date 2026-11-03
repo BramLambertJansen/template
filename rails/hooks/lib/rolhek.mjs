@@ -585,6 +585,7 @@ function decideBash({ command, role }, ctx, decision) {
   for (const inner of substitutions(command)) decideBash({ command: inner, role }, ctx, decision);
   const setsGhEnv = zetGhOmgeving(parseCommands(command));
   // `cd .git && …` in hetzelfde commando: de zelfladende toets (AC-3) leest de woorden daarna vanuit die map.
+  /** @type {string | null} null: een `cd` naar een map die pas bij het uitvoeren bekend is */
   let cwdNu = ctx.cwd;
   for (const parsed of parseCommands(command)) {
     const { assignments, argv, pathWrappers } = splitCommand(parsed.words);
@@ -607,8 +608,8 @@ function decideBash({ command, role }, ctx, decision) {
     if (envSplitsString(parsed.words))
       decision.deny.push('env -S/--split-string maakt van tekst een nieuw commando dat het rolhek niet ziet; verboden, voor elke rol');
     forbidden({ assignments, argv, expanded: parsed.expanded ?? [] }, { role, ctx }, decision);
-    zelfladend({ argv, redirects: parsed.redirects, role }, { ...ctx, cwd: cwdNu }, decision);
-    cwdNu = volgendeMap(argv, cwdNu, ctx.root);
+    zelfladend({ argv, redirects: parsed.redirects, role }, { ...ctx, cwd: cwdNu ?? ctx.root, cwdOnbekend: cwdNu === null }, decision);
+    cwdNu = volgendeMap({ argv, expanded: parsed.expanded ?? [] }, cwdNu, ctx.root);
     ghIssue(argv, { role, ctx, setsGhEnv }, decision);
     if (role === 'reviewer') reviewerBash({ assignments, argv, pathWrappers }, parsed.redirects, decision);
     const targets = writeTargets(parsed);
@@ -622,13 +623,18 @@ function decideBash({ command, role }, ctx, decision) {
 }
 
 /**
- * De map na `cd`/`pushd`; zonder letterlijk doel (`cd`, `cd -`, `cd ~`) valt hij terug op de root van de repository.
- * @param {readonly string[]} argv @param {string} cwd @param {string} root
+ * De map na `cd`/`pushd`. Zonder doel of met `~` is dat de home-map: buiten de repository, dus de root als basis (de woorden
+ * daarna zijn dan absoluut of vallen buiten de repo). Een doel met `$`, backtick of substitutie is pas bij het uitvoeren
+ * bekend: null, en de zelfladende toets valt dicht (AC-3).
+ * @param {{ argv: readonly string[], expanded: readonly string[] }} commando @param {string | null} cwd @param {string} root
+ * @returns {string | null}
  */
-function volgendeMap(argv, cwd, root) {
+function volgendeMap({ argv, expanded }, cwd, root) {
   if (!['cd', 'pushd'].includes(programName(argv[0] ?? ''))) return cwd;
   const doel = argv.slice(1).find((arg) => !arg.startsWith('-'));
-  return doel === undefined || doel.startsWith('~') ? root : path.resolve(cwd, doel);
+  if (doel === undefined || doel.startsWith('~') || doel === '$(git rev-parse --show-toplevel)') return root;
+  if (expanded.includes(doel) || /[$`]/.test(doel)) return null;
+  return cwd === null ? null : path.resolve(cwd, doel);
 }
 
 // Opties van env die het volgende woord als waarde nemen (`-u NAAM`, `-C MAP`, `--unset NAAM`, `--chdir MAP`, `--argv0 X`).
