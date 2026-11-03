@@ -123,7 +123,8 @@ async function docsMeldingen(dir: string): Promise<string[]> {
   return (Array.isArray(uit) ? uit : []).map(String);
 }
 
-function node(cwd: string, [script = '', ...args]: string[], env: Record<string, string> = {}) {
+// Een tijdelijke repo zonder origin/main is lokaal: in CI zou de krimpcontrole daar rood zijn (krimp-op-normen/AC-5).
+function node(cwd: string, [script = '', ...args]: string[], env: Record<string, string> = { GITHUB_ACTIONS: '' }) {
   const r = spawnSync(process.execPath, [path.join(root, script), ...args], {
     cwd,
     encoding: 'utf8',
