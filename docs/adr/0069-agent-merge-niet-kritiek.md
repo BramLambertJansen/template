@@ -37,7 +37,8 @@ punt begint, `*.config.*`, `package.json`, `tsconfig*.json`). Daarnaast: geen be
    dicht.
    In de template is `toegestaan`: `src/**`, `docs/**` en `CHANGELOG.md` (de gates eruit vallen al dicht); `kritiek`:
    `src/api/app.ts`, `src/api/login-policy.ts`, `src/shared/permissions.ts`, `src/shared/limits.ts`,
-   `src/shared/contracts/**`, en de docs die agents of de review sturen: `docs/operations/**`, `docs/reviews/**`. Een app breidt `kritiek` uit met zijn eigen gevoelige paden.
+   `src/shared/contracts/**`, en de docs die agents of de review sturen: `docs/operations/**`, `docs/reviews/**`, `docs/gouden-pad.md`,
+   `docs/ontwerp/**`. Een app breidt `kritiek` uit met zijn eigen gevoelige paden.
    *Waarom:* "kan het niet slopen" laat zich niet als verbodslijst sluiten: elk nieuw configbestand dat een tool automatisch
    laadt, zou erdoor glippen. Een toegestane lijst faalt dicht en groeit niet mee met de repo. Specs en ADR's zijn gates, dus
    elke PR met een besluit of eigenaarstatus merget de eigenaar: daar is de merge het besluit (R-WERK-08). In de praktijk is
@@ -68,8 +69,8 @@ punt begint, `*.config.*`, `package.json`, `tsconfig*.json`). Daarnaast: geen be
 4. **Alle andere merge-routes blijven dicht, en alleen in Claude Code.** `gh pr merge`, `gh api …/merge`, auto-merge,
    MCP-merge en mergen door een subagent blijven voor elke rol geweigerd (rolhek en deny-regels in `.claude/settings.json`).
    Het rolhek staat de hoofdsessie `pnpm pr:merge <nr>` toe zonder prompt (`allow`), alleen als op schijf het script, zijn
-   imports en de bestanden die bepalen wat `pnpm` draait (de lijst `HOST_FILES` van de runner: `package.json`, `.npmrc`,
-   `.pnpmfile.cjs`, `mise.toml` en verwante) gelijk zijn aan het anker op `main`. Valt het rolhek open, dan krijgt de
+   imports en de bestanden die bepalen wat `pnpm` draait (precies de lijst `HOST_FILES` van de runner, met onder meer `package.json`,
+   `.npmrc`, `.pnpmfile.cjs` en `mise.toml`) gelijk zijn aan het anker op `main`. Valt het rolhek open, dan krijgt de
    hoofdsessie een prompt: `pr:merge` staat niet in de `allow` van `.claude/settings.json`. Een andere runtime (zonder rolhek) merget niet. `pr-merge.mjs` wordt een kritiek pad.
    *Waarom:* één smalle route is te toetsen; een prompt per merge maakt de wens ongedaan; een aangepast script op de eigen
    branch mag zichzelf geen recht geven; buiten Claude Code is er geen enkel vangnet.

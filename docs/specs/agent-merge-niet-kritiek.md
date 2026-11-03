@@ -65,7 +65,9 @@ n.v.t. — geen UI. Meldingen van `pr:merge` en het rolhek zijn Nederlands en no
   `agent-merge` `success` in de workflow-run met `path` `.github/workflows/guard.yml` en event `pull_request_target` op de
   head-SHA (een gelijknamige check uit een andere workflow telt niet); de laatste uitslag van `requiredChecks` op de kop van
   `main` is `success`. Koppelt `head_sha` van de `pull_request_target`-run niet aan de PR-head, dan via de check-run op de
-  head en zijn `check_suite`; lukt geen van beide, dan geen merge. Review: een PR-commentaar `Review <head-SHA>: geen blokkerende bevindingen`. Codex (tenzij
+  head en zijn `check_suite`; lukt geen van beide, dan geen merge. Omdat een `pull_request_target`-run aan de basis-SHA kan
+  hangen, draagt de job de head-SHA in zijn naam (`agent-merge <head-SHA>`) en zoekt het script die naam in de jobs van de
+  `guard.yml`-runs; de bouw-PR legt de koppeling vast met een test tegen een echte run. Review: een PR-commentaar `Review <head-SHA>: geen blokkerende bevindingen`. Codex (tenzij
   `agentMerge.codex: false`): een review van `chatgpt-codex-connector[bot]` met `commit_id` gelijk aan de head-SHA, of een
   commentaar of reactie van die bot na het moment dat de head gepusht werd (uit de PR-timeline, niet de commitdatum); en geen onopgeloste review-thread. Elke ontbrekende
   voorwaarde geeft een eigen regel en exit 1 zonder schrijfactie. Alleen REST, geen GraphQL. Unittest per voorwaarde met
@@ -121,7 +123,8 @@ n.v.t. — geen UI. Meldingen van `pr:merge` en het rolhek zijn Nederlands en no
 `test/scripts/github-ruleset.test.ts` (lijst bewust niet verplichte jobs; bestaande test, wijzigt met reden in de PR),
 `test/scripts/guard-workflow.test.ts`, `test/rails/diff-guard.test.ts`, de rolhektests met de merge-weigering (bestaande
 tests; wijzigen met reden in de PR), `docs/framework.md`, `AGENTS.md`, `CLAUDE.md`, `.claude/skills/opleveren/SKILL.md`,
-`docs/operations/agent-doorloop.md`, `docs/specs/agent-merge.md`, `docs/roadmap.md` (ADR 0029 stap 7, ADR 0030 PR 2). De bouw volgt na de bouw van
+`docs/operations/agent-doorloop.md`, `docs/specs/agent-merge.md`, `docs/roadmap.md` (ADR 0029 stap 7, ADR 0030 PR 2, "Volledig pad naar `gh` in het rolhek"),
+`rails/hooks/lib/runner-authority.mjs` (`HOST_FILES`; aanvullen met `.pnpmfile.mjs` als pnpm 11 die laadt). De bouw volgt na de bouw van
 `samenhang-checks-rollen` (0068), die dezelfde rulesettest en `docs/framework.md` raakt.
 
 ## Buiten scope
