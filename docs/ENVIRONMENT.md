@@ -74,6 +74,14 @@ checksum, een mislukte download en een tool die blijft ontbreken.
 - Geen lokale stack: in een cloudsessie draaien `pnpm gate:slow` en `pnpm test:db` in CI (README, Cloud).
 - Geen secrets in de omgeving; `.env*` blijft buiten beeld (`AGENTS.md`, Repo en grenzen).
 
+## Minimale Claude Code-versie
+
+Claude Code 2.1.295 of nieuwer, lokaal en in de cloud. Vanaf die versie bestaat `onFailure: "block"`, waarmee het rolhek
+een aanroep tegenhoudt als het zelf crasht, niet start of zijn timeout haalt (ADR 0045 punt 3). Een oudere versie laat de
+aanroep dan door. `scripts/doctor.sh` (volledig en `--machine`) geeft bij een oudere of onleesbare versie een ✗ en exit 1;
+`werkstraat session-start` zet dezelfde melding in de context (`rails/hooks/lib/claude-versie.mjs`). Zonder `claude` op het
+pad, zoals in CI, slaat de doctor de controle over. In een cloudsessie zonder projecthooks draait het rolhek niet (#462).
+
 ## Eerst controleren in een sessie
 
 Een sessie controleert dit eerst en stopt bij een fout, voordat ze iets verkent:
