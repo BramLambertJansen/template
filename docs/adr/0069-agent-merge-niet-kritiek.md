@@ -2,9 +2,10 @@
 
 Status: geaccepteerd
 
-Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 30, 31, 33, 34 en 35 en de zin "automatische agent-merges vallen af" uit
-[0057](0057-risicogestuurde-werkstraat.md); vult [0062](0062-spec-en-bouw-in-een-pr.md) en
-[0068](0068-samenhang-checks-en-rollen.md) aan. Drempel: A3 (rechten verruimen). Uitwerking:
+Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 30, 31, 33, 34 en 35, de zin "automatische agent-merges vallen af" uit
+[0057](0057-risicogestuurde-werkstraat.md), in [0064](0064-leesbudget-per-laag.md) "zodra de GitHub App er is" (R-DOC-09) en in
+[0068](0068-samenhang-checks-en-rollen.md) punt 3 de eigenaarmerge als grens (voor agent-merges is de grens het vangnet van punt
+3 en 4 hieronder); vult [0062](0062-spec-en-bouw-in-een-pr.md) aan. Drempel: A3 (rechten verruimen). Uitwerking:
 [spec](../specs/agent-merge-niet-kritiek.md).
 
 ## Context
@@ -28,13 +29,15 @@ kritiek en niet-kritiek in dit besluit níet bij GitHub, maar bij het mergescrip
 1. **Wat de agent mag mergen: een toegestane lijst, de rest dicht.** Een PR naar `main` uit dezelfde repository is alleen
    agent-mergebaar als elk geraakt pad op de lijst `agentMerge.toegestaan` in `.claude/gates.json` staat en geen pad op
    `gates`, `agentMerge.kritiek` of `kritiekPad()` (`scripts/kit/lane.mjs`) staat. Een nieuw testbestand is alleen toegestaan
-   onder `src/`, `test/`, `e2e/` of `db/tests/` met een code-extensie. Daarnaast: geen bestaande test gewijzigd of verwijderd,
+   onder `src/`, `test/`, `e2e/` of `db/tests/` met een code-extensie. Overal dicht, ook onder `src/` en `docs/`: een bestand
+dat een tool of agent vanzelf laadt (instructies zoals `CLAUDE.md` en `AGENTS.md`, een pad met een map of naam die met een
+punt begint, `*.config.*`, `package.json`, `tsconfig*.json`). Daarnaast: geen bestaande test gewijzigd of verwijderd,
    een leeg risico-overzicht (migratie, permissiesleutel, dependency, `defineRoute`, contract), en geen toegevoegde of
    verwijderde regel met `permission` in `src/`. Een goedkeuring van de eigenaar verandert de uitslag niet. Een onbekend pad is
    dicht.
-   In de template is `toegestaan`: `src/**` en `docs/**` (buiten de gates, `docs/operations/**` en `docs/reviews/**`) en
-   `CHANGELOG.md`; `kritiek`: `src/api/app.ts`, `src/api/login-policy.ts`, `src/shared/permissions.ts`,
-   `src/shared/limits.ts`, `src/shared/contracts/**`. Een app breidt `kritiek` uit met zijn eigen gevoelige paden.
+   In de template is `toegestaan`: `src/**`, `docs/**` en `CHANGELOG.md` (de gates eruit vallen al dicht); `kritiek`:
+   `src/api/app.ts`, `src/api/login-policy.ts`, `src/shared/permissions.ts`, `src/shared/limits.ts`,
+   `src/shared/contracts/**`, en de docs die agents of de review sturen: `docs/operations/**`, `docs/reviews/**`. Een app breidt `kritiek` uit met zijn eigen gevoelige paden.
    *Waarom:* "kan het niet slopen" laat zich niet als verbodslijst sluiten: elk nieuw configbestand dat een tool automatisch
    laadt, zou erdoor glippen. Een toegestane lijst faalt dicht en groeit niet mee met de repo. Specs en ADR's zijn gates, dus
    elke PR met een besluit of eigenaarstatus merget de eigenaar: daar is de merge het besluit (R-WERK-08). In de praktijk is
@@ -64,8 +67,10 @@ kritiek en niet-kritiek in dit besluit níet bij GitHub, maar bij het mergescrip
    en de agent volgt na de merge de CI op `main`.
 4. **Alle andere merge-routes blijven dicht, en alleen in Claude Code.** `gh pr merge`, `gh api …/merge`, auto-merge,
    MCP-merge en mergen door een subagent blijven voor elke rol geweigerd (rolhek en deny-regels in `.claude/settings.json`).
-   Het rolhek staat de hoofdsessie `pnpm pr:merge <nr>` toe zonder prompt (`allow`), alleen als het script en zijn imports
-   gelijk zijn aan het anker op `main`. Een andere runtime (zonder rolhek) merget niet. `pr-merge.mjs` wordt een kritiek pad.
+   Het rolhek staat de hoofdsessie `pnpm pr:merge <nr>` toe zonder prompt (`allow`), alleen als op schijf het script, zijn
+   imports en de bestanden die bepalen wat `pnpm` draait (de lijst `HOST_FILES` van de runner: `package.json`, `.npmrc`,
+   `.pnpmfile.cjs`, `mise.toml` en verwante) gelijk zijn aan het anker op `main`. Valt het rolhek open, dan krijgt de
+   hoofdsessie een prompt: `pr:merge` staat niet in de `allow` van `.claude/settings.json`. Een andere runtime (zonder rolhek) merget niet. `pr-merge.mjs` wordt een kritiek pad.
    *Waarom:* één smalle route is te toetsen; een prompt per merge maakt de wens ongedaan; een aangepast script op de eigen
    branch mag zichzelf geen recht geven; buiten Claude Code is er geen enkel vangnet.
 5. **De eigenaar houdt de schakelaar.** De modus staat standaard op `"eigenaar"`; de bouw-PR zet hem op `"niet-kritiek"` en de

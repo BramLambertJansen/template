@@ -42,12 +42,15 @@ n.v.t. — geen UI. Meldingen van `pr:merge` en het rolhek zijn Nederlands en no
   of `agent-merge: nee` met redenen geeft. `ja` alleen als: elk geraakt pad (bij hernoeming beide) past op
   `agentMerge.toegestaan` en op geen glob uit `gates`, `agentMerge.kritiek` of `kritiekPad()`, met als enige uitzondering een
   nieuw testbestand uit `testpaden` onder `src/`, `test/`, `e2e/` of `db/tests/` met extensie `.ts`, `.tsx` of `.sql`; geen
+  pad dat op naam vanzelf geladen wordt, waar ook (een segment dat met `.` begint, `CLAUDE*.md`, `AGENTS*.md` zoals
+  `INSTRUCTIES` in `scripts/kit/lane.mjs`, `*.config.*`, `package.json`, `tsconfig*.json`); geen
   `jsonGates`-sleutel verandert; geen bestaande test verandert, verdwijnt of hernoemd wordt; het risico-overzicht leeg is
   (migraties, permissiesleutels, dependencies, routes) en geen contractbestand verandert; en geen toegevoegde of verwijderde
   regel in `src/` het woord `permission` bevat. Een onbekend pad, een ontbrekende of onleesbare `agentMerge` en een APPROVED
   van een goedkeurder geven `nee` respectievelijk geen verandering. Tabeltest met per uitsluiting een PR die `nee` geeft (o.a.
   `docs/adr/0070-x.spec.md`, `.claude/agents/x.test.md`, een nieuwe `postcss.config.mjs`, `playwright.smoke.config.ts`,
-  `src/api/login-policy.ts`, een verwijderde permissiesleutel) en een PR met alleen `src/web`-code, een nieuwe test en een doc
+  `src/api/login-policy.ts`, een verwijderde permissiesleutel, `src/web/CLAUDE.md`, `docs/AGENTS.md`,
+  `src/web/postcss.config.mjs`, `src/x/.claude/skills/y.md`, `docs/operations/agent-doorloop.md`) en een PR met alleen `src/web`-code, een nieuwe test en een doc
   buiten de gates die `ja` geeft.
 - **agent-merge-niet-kritiek/AC-2** — `.github/workflows/guard.yml` krijgt een job `agent-merge` die alleen draait (en
   slaagt) als het oordeel uit AC-1 `ja` is, en anders overgeslagen wordt; hij voert geen PR-code uit en staat niet in
@@ -56,20 +59,23 @@ n.v.t. — geen UI. Meldingen van `pr:merge` en het rolhek zijn Nederlands en no
 - **agent-merge-niet-kritiek/AC-3** — `pnpm pr:merge <nr>` (`scripts/kit/pr-merge.mjs`) merget alleen via
   `PUT /repos/{repo}/pulls/{nr}/merge` met `merge_method=squash` en `sha=<head-SHA>`, en alleen als alle voorwaarden uit
   ADR 0069 punt 3 gelden. Modus en kop van `main` leest het via REST (`GET …/branches/main`, `GET …/contents/.claude/gates.json?ref=<sha>`),
-  niet uit de lokale `origin/main`; ontbrekend of onleesbaar telt als `"eigenaar"`. Voorouder: `GET …/compare/<main-sha>...<head-sha>`
+  niet uit de lokale `origin/main`; ontbrekend of onleesbaar telt als `"eigenaar"`. `requiredChecks` leest het uit
+  `.claude/decisions.json` op dezelfde main-SHA. Voorouder: `GET …/compare/<main-sha>...<head-sha>`
   met `behind_by` 0. Checks: elke naam uit `requiredChecks` (uit dezelfde main-SHA) `success` op de head-SHA, en job
   `agent-merge` `success` in de workflow-run met `path` `.github/workflows/guard.yml` en event `pull_request_target` op de
   head-SHA (een gelijknamige check uit een andere workflow telt niet); de laatste uitslag van `requiredChecks` op de kop van
-  `main` is `success`. Review: een PR-commentaar `Review <head-SHA>: geen blokkerende bevindingen`. Codex (tenzij
+  `main` is `success`. Koppelt `head_sha` van de `pull_request_target`-run niet aan de PR-head, dan via de check-run op de
+  head en zijn `check_suite`; lukt geen van beide, dan geen merge. Review: een PR-commentaar `Review <head-SHA>: geen blokkerende bevindingen`. Codex (tenzij
   `agentMerge.codex: false`): een review van `chatgpt-codex-connector[bot]` met `commit_id` gelijk aan de head-SHA, of een
-  commentaar of reactie van die bot na de commitdatum van de head; en geen onopgeloste review-thread. Elke ontbrekende
+  commentaar of reactie van die bot na het moment dat de head gepusht werd (uit de PR-timeline, niet de commitdatum); en geen onopgeloste review-thread. Elke ontbrekende
   voorwaarde geeft een eigen regel en exit 1 zonder schrijfactie. Alleen REST, geen GraphQL. Unittest per voorwaarde met
   nagebootste API-antwoorden.
 - **agent-merge-niet-kritiek/AC-4** — Het rolhek weigert elke rol `gh pr merge`, `gh api …/merge`, auto-merge en elke
   `mcp__`-merge, zoals nu. Het geeft de hoofdsessie `allow` voor precies `pnpm pr:merge <nr>` (`<nr>` alleen cijfers), alleen
-  als `scripts/kit/pr-merge.mjs` en de bestanden die het importeert gelijk zijn aan de blobs in het anker; anders weigert het
-  met de reden. Een subagent krijgt altijd een weigering. `.claude/settings.json` houdt de deny-regels voor `gh pr merge` en
-  `gh api *merge*`. `scripts/kit/pr-merge.mjs` staat in `KRITIEK` in `scripts/kit/lane.mjs`.
+  als op schijf `scripts/kit/pr-merge.mjs`, de bestanden die het importeert en de bestanden uit `HOST_FILES`
+  (`rails/hooks/lib/runner-authority.mjs`) gelijk zijn aan de blobs in het anker; anders weigert het met de reden. Tabeltest
+  met een gewijzigde scriptregel `pr:merge` in `package.json` en een gewijzigde `.npmrc`. Een subagent krijgt altijd een weigering. `.claude/settings.json` houdt de deny-regels voor `gh pr merge` en
+  `gh api *merge*` en zet `pr:merge` niet in `allow`, zodat een openvallend rolhek een prompt geeft. `scripts/kit/pr-merge.mjs` staat in `KRITIEK` in `scripts/kit/lane.mjs`.
 - **agent-merge-niet-kritiek/AC-5** — `.claude/gates.json` krijgt `merge: "niet-kritiek"` en `agentMerge` met `toegestaan`,
   `kritiek` en `codex` zoals in ADR 0069 punt 1 en 3. `check-docs` weigert voor `merge` elke andere waarde dan `"eigenaar"` of
   `"niet-kritiek"`, en een `agentMerge.toegestaan` met een glob die een pad uit `voorReview` of `altijdVragen` dekt.
@@ -80,7 +86,7 @@ n.v.t. — geen UI. Meldingen van `pr:merge` en het rolhek zijn Nederlands en no
   GitHub, en dat een andere runtime niet merget; R-DOC-09 verwijst naar 0069 in plaats van "na de GitHub App". `AGENTS.md`,
   `CLAUDE.md` en de skill `opleveren` zeggen hetzelfde in één zin elk, met de regel dat de agent na een merge PR en SHA meldt
   en de CI op `main` volgt. `docs/specs/agent-merge.md` staat op `vervallen`; de roadmap-items "ADR 0029 stap 7" en
-  "ADR 0030 PR 2" verwijzen naar deze spec.
+  "ADR 0030 PR 2" en de verwijzing bij "Volledig pad naar `gh` in het rolhek" verwijzen naar deze spec.
 
 ## Randgevallen
 
@@ -103,6 +109,8 @@ n.v.t. — geen UI. Meldingen van `pr:merge` en het rolhek zijn Nederlands en no
 | `main` schoof door na de laatste CI-run | geen merge; eerst `git merge origin/main` en CI opnieuw (AC-3) | n.v.t. |
 | `main` is rood | geen merge tot `main` groen is (AC-3) | n.v.t. |
 | Modus staat op `"eigenaar"` of ontbreekt | geen merge (AC-3) | n.v.t. |
+| Nieuwe `src/web/CLAUDE.md` of `src/web/postcss.config.mjs` | `nee`: vanzelf geladen op naam (AC-1) | n.v.t. |
+| Branch wijzigt de scriptregel `pr:merge` in `package.json` | rolhek weigert: `HOST_FILES` wijkt af van het anker (AC-4) | n.v.t. |
 | Lokaal aangepast `pr-merge.mjs` | rolhek weigert (AC-4); valt het rolhek open, dan eist de ruleset alleen groene checks: de inhoudstoets is dan weg (aanvaard restrisico, ADR 0069) | n.v.t. |
 | Rolhek valt open op `gh pr merge` | deny-regel in `.claude/settings.json` (AC-4) | n.v.t. |
 
