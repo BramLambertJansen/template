@@ -39,8 +39,8 @@ en een tekst die handhaving claimt die niet bestaat, laat een agent zelf control
    te wijzigen, te verwijderen of te hernoemen, en een bestaande test te wijzigen; ook als een ander programma het pad
    verandert (de toets op effect). De weigering verwijst voor een spec naar de architect (R-WERK-07) en voor een test naar
    de hoofdsessie, die hem wijzigt als spec of opdracht het gedrag verandert, of naar de tester als hij fout lijkt
-   (R-TEST-02). Uitzonderingen: een spec terugzetten naar de tekst op main, en een status terug naar `voorstel`
-   als alleen de statusregel wijzigt (R-WERK-08). Een nieuwe test toevoegen blijft vrij. Voor de hoofdsessie, de architect en de tester verandert niets;
+   (R-TEST-02). Uitzondering: een spec terugzetten naar de tekst op main. Een status terug naar `voorstel` zetten blijft,
+   zoals nu, aan architect en hoofdsessie (R-WERK-08). Een nieuwe test toevoegen blijft vrij. Voor de hoofdsessie, de architect en de tester verandert niets;
    R-ROL-01 zegt dat nu ook voor de hoofdsessie (een bestaande test alleen volgens R-TEST-02, met reden in de PR).
    `new-resource` noemt in beide meldingen R-WERK-08.
 5. **Een verse reviewer-subagent telt als onafhankelijke review**, bij licht en bij volledig werk: schone context, geen eigen
