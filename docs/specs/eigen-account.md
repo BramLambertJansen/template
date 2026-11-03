@@ -142,7 +142,7 @@ bevestiging via het oude én het nieuwe adres (roadmap stuk 3e).
 | De eigen huidige sessie beëindigen via `DELETE` | geweigerd: daarvoor is "Uitloggen" | `VALIDATION` |
 | Nieuw adres gelijk aan het huidige (ook met andere hoofdletters) | client-side "Dit is al je e-mailadres."; de server weigert het ook | `VALIDATION` |
 | Bevestigingslink verlopen, vervalst of van een ander account; een link al gebruikt (spec inloggat-dichten) | één melding | `EMAIL_LINK_INVALID` |
-| Link 1 nogmaals geopend binnen de geldigheid | mail 2 gaat opnieuw weg (stateless token, niet in te trekken) | — |
+| Link 1 nogmaals geopend binnen de geldigheid | geweigerd: elke link werkt één keer (spec inloggat-dichten) | `EMAIL_LINK_INVALID` |
 | Nieuw adres wordt tussen aanvraag en bevestiging door een ander account bezet | 23505 bij bijwerken; niets gewijzigd | `EMAIL_LINK_INVALID` |
 | Mail versturen mislukt (aanvraag of stap 1) | niets gewijzigd; melding, opnieuw aanvragen kan | `INTERNAL_ERROR` |
 | Uitgenodigd account (nog geen wachtwoord) | kan niet inloggen, dus n.v.t. | — |
