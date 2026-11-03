@@ -18,6 +18,7 @@ import { staleBranchStart } from './verse-main.mjs';
  * @typedef {{ root: string, cwd: string, config: Config, read: (rel: string) => string | null,
  *   committed: (rel: string) => boolean | 'zonder-origin', isDir: (rel: string) => boolean, branch: string,
  *   authority?: import('./task-authority.mjs').Authority | null, runnerTrusted?: boolean | (() => boolean),
+ *   mergeTrusted?: boolean | (() => boolean),
  *   onbekendeRol?: boolean, onderhoud?: boolean, files?: (rel: string) => string[] }} Ctx
  * `files`: bestanden (getrackt en niet-genegeerd) onder een map, repo-relatief; `''` is de hele repo.
  * `onderhoud`: de onderhoudsmodus is actief (vertrouwde configuratie en origin is die repository, ADR 0045 punt 8–9).
@@ -99,6 +100,7 @@ export function decide(payload, ctx) {
     if (command.includes('--sta-wijzigingen-toe')) decision.deny.push('De agent omzeilt de hostcontrole van de runner nooit; gebruik voor gewijzigd railwerk de CI-runner');
     if (ctx.cwd === ctx.root && automaticRunner(command) && decision.ask.length + decision.deny.length === 0 && runnerIsTrusted(ctx))
       decision.allow = true;
+    decidePrMerge({ command, role }, ctx, decision);
   }
   else if (['Edit', 'Write', 'MultiEdit', 'NotebookEdit'].includes(tool)) {
     decideEdit({ tool, input, role }, context, decision);
@@ -135,6 +137,35 @@ export function decideChange({ rel, change, agentType }, ctx) {
  */
 function runnerIsTrusted(ctx) {
   const value = typeof ctx.runnerTrusted === 'function' ? ctx.runnerTrusted() : ctx.runnerTrusted;
+  return value === true;
+}
+
+const PR_MERGE_EXACT = /^pnpm (?:run )?pr:merge [1-9]\d*$/;
+// Elke andere manier om het mergescript te starten: via een package-manager of node, met of zonder omhulsel.
+const PR_MERGE_ANDERS = /(?:^|[\s;&|(`$])(?:pnpm|npm|yarn|npx|bun|node|deno)\b[^;&|\n]*(?:pr:merge|pr-merge\.mjs)/;
+
+/**
+ * `pnpm pr:merge <nr>` (ADR 0069 punt 4, spec agent-merge-niet-kritiek AC-4): alleen de hoofdsessie, alleen precies die vorm,
+ * en zonder prompt alleen als modus en `MERGE_FILES` uit het anker kloppen; anders een weigering met de reden.
+ * @param {{ command: string, role: string }} bash @param {Ctx} ctx @param {Decision} decision
+ */
+function decidePrMerge({ command, role }, ctx, decision) {
+  const tekst = command.trim().replace(/ +/g, ' ');
+  const exact = PR_MERGE_EXACT.test(tekst);
+  if (!exact && !PR_MERGE_ANDERS.test(command)) return;
+  if (role !== 'hoofdsessie') decision.deny.push('Mergen via pnpm pr:merge doet alleen de hoofdsessie (ADR 0069)');
+  else if (!exact) decision.deny.push('Het mergescript draait alleen als precies `pnpm pr:merge <nummer>` (ADR 0069)');
+  else if (decision.deny.length + decision.ask.length > 0) return;
+  else if (ctx.cwd === ctx.root && mergeIsTrusted(ctx)) decision.allow = true;
+  else
+    decision.deny.push(
+      'pnpm pr:merge alleen vanuit de repo-root, met modus "niet-kritiek" in het anker en scripts, rails en hostbestanden (package.json, .npmrc, …) gelijk aan het anker (ADR 0069)',
+    );
+}
+
+/** @param {{ mergeTrusted?: boolean | (() => boolean) }} ctx */
+function mergeIsTrusted(ctx) {
+  const value = typeof ctx.mergeTrusted === 'function' ? ctx.mergeTrusted() : ctx.mergeTrusted;
   return value === true;
 }
 
