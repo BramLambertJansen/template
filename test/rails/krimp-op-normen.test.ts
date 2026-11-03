@@ -73,6 +73,12 @@ describe('krimp-op-normen/AC-1: elke verdwenen R-id staat op de lijst', () => {
     expect([...definities('- **R-DOC-09** Norm <!-- notitie -->\n').ids.keys()]).toStrictEqual(['R-DOC-09']);
   });
 
+  test('krimp-op-normen/AC-1 commentaar wordt van links naar rechts gelezen, niet weggevervangen', () => {
+    // `<!<!---->--` toont `<!--` als tekst; dat opent geen commentaar, dus de volgende regel blijft zichtbaar.
+    expect([...definities('<!<!---->--\n- **R-DOC-09** Norm\n').ids.keys()]).toStrictEqual(['R-DOC-09']);
+    expect([...definities('<!-- a --> x <!-- b\n- **R-DOC-09** Norm\n-->\n').ids.keys()]).toStrictEqual([]);
+  });
+
   test('krimp-op-normen/AC-1 een langer codeblokhek sluit niet op een korter hek', () => {
     const blok = '````\n```\n- **R-DOC-09** X\n````\n';
     expect([...definities(blok).ids.keys()]).not.toContain('R-DOC-09');

@@ -61,13 +61,20 @@ function zonderCommentaar(regel, staat) {
     rest = rest.slice(einde + 3);
     staat.commentaar = false;
   }
-  if (rest.includes('<!--')) staat.verborgen = true;
-  rest = rest.replace(/<!--[\s\S]*?-->/g, '');
-  const open = rest.indexOf('<!--');
-  if (open !== -1) {
-    staat.commentaar = true;
-    rest = rest.slice(0, open);
+  // Van links naar rechts, zonder vervangen: wat na een `-->` overblijft, wordt opnieuw gelezen (geen `<!<!---->--`-truc).
+  let zichtbaar = '';
+  for (let open = rest.indexOf('<!--'); open !== -1; open = rest.indexOf('<!--')) {
+    staat.verborgen = true;
+    zichtbaar += rest.slice(0, open);
+    const einde = rest.indexOf('-->', open + 4);
+    if (einde === -1) {
+      staat.commentaar = true;
+      rest = '';
+      break;
+    }
+    rest = rest.slice(einde + 3);
   }
+  rest = zichtbaar + rest;
   return rest.trim() === '' && regel.trim() !== '' ? null : rest;
 }
 
