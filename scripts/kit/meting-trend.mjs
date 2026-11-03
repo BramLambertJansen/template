@@ -98,7 +98,8 @@ function codex(opties, nummer) {
  * De nieuwste twintig gemergde PR's met hun maten; null als de lijst faalt. Via REST (`gh api`), niet `gh pr list`:
  * dat loopt via GraphQL en wordt in cloudsessies geweigerd. Eén aanroep haalt de honderd laatst bijgewerkte gesloten
  * PR's, met `--jq` teruggebracht tot de velden die tellen (de volle lijst is groter dan de buffer van execFileSync);
- * daarvan tellen de twintig nieuwste merges, gesorteerd op `merged_at`. Bij minder dan twintig volgen geen
+ * daarvan tellen de twintig nieuwste merges, gesorteerd op `merged_at`. Een merge werkt `updated_at` bij; alleen als na de
+ * twintigste merge meer dan tachtig andere gesloten PR's zijn bijgewerkt (bulklabels, bots), vallen er merges buiten het venster. Bij minder dan twintig volgen geen
  * verdere gh-aanroepen.
  * @param {GhOpties} opties
  * @param {(branch: string) => Waarde} reviewrondes

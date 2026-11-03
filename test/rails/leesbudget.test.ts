@@ -707,7 +707,7 @@ describe('leesbudget/AC-7: pnpm meting --trend als proces', { timeout: 60_000 },
     expect(r.stdout).not.toMatch(/let op: reviewrondes steeg/);
   });
 
-  test("leesbudget/AC-7 leest nooit meer dan twintig PR's", () => {
+  test("leesbudget/AC-7 meet nooit meer dan twintig PR's", () => {
     const r = trendCli(20);
     // GEWIJZIGD (L4): de lijst komt via REST in plaats van `gh pr list` (GraphQL, geweigerd in cloudsessies).
     expect(r.aanroepen.filter((a) => a.startsWith('pr '))).toStrictEqual([]);
@@ -716,6 +716,11 @@ describe('leesbudget/AC-7: pnpm meting --trend als proces', { timeout: 60_000 },
     expect(prList[0]).toContain('state=closed');
     expect(prList[0]).toContain('sort=updated');
     expect(prList[0]).toContain('--jq');
+    expect(prList[0]).toContain('per_page=100');
+    expect(prList[0]).not.toContain('--paginate');
+    const comments = r.aanroepen.filter((a) => a.startsWith('api ') && a.includes('/comments'));
+    expect(comments.length).toBeGreaterThan(0);
+    expect(comments.length).toBeLessThanOrEqual(20);
     const runList = r.aanroepen.filter((a) => a.startsWith('run list'));
     expect(runList.length).toBeGreaterThan(0);
     expect(runList.length).toBeLessThanOrEqual(20);
