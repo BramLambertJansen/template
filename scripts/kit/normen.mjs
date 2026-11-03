@@ -34,7 +34,9 @@ export function zichtbareRegels(tekst) {
   const staat = { blok: '', commentaar: false, verborgen: false };
   tekst.split('\n').forEach((regel, index) => {
     const hek = /^\s*(`{3,}|~{3,})/.exec(regel)?.[1] ?? '';
-    if (!staat.commentaar && hek !== '' && (staat.blok === '' || sluit(staat.blok, hek))) {
+    // Een sluitend hek heeft na de tekens niets dan witruimte; ```` ```voorbeeld ```` binnen een blok sluit het niet.
+    const sluitend = /^\s*(?:`{3,}|~{3,})\s*$/.test(regel);
+    if (!staat.commentaar && hek !== '' && (staat.blok === '' || (sluitend && sluit(staat.blok, hek)))) {
       staat.blok = staat.blok === '' ? hek : '';
       staat.verborgen = true;
     } else if (staat.blok !== '') staat.verborgen = true;
@@ -135,7 +137,12 @@ function sectieRegel(regel, { sectie, nr, fouten }) {
     fouten.push(`regel ${String(nr)}: alleen \`## <pad>\` en \`- <oud> → <doel>\` horen na de uitleg`);
     return;
   }
-  sectie.push({ oud: inhoud.slice(0, pijl).trim(), doel: inhoud.slice(pijl + PIJL.length).trim() });
+  const oud = inhoud.slice(0, pijl).trim();
+  if (oud === '') {
+    fouten.push(`regel ${String(nr)}: de oude norm vóór \`${PIJL}\` is leeg`);
+    return;
+  }
+  sectie.push({ oud, doel: inhoud.slice(pijl + PIJL.length).trim() });
 }
 
 /**

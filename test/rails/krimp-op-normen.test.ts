@@ -84,6 +84,11 @@ describe('krimp-op-normen/AC-1: elke verdwenen R-id staat op de lijst', () => {
     expect([...definities(blok).ids.keys()]).not.toContain('R-DOC-09');
   });
 
+  test('krimp-op-normen/AC-1 een hek met tekst erachter sluit een codeblok niet', () => {
+    const blok = '```markdown\n```voorbeeld\n- **R-DOC-09** X\n```\n';
+    expect([...definities(blok).ids.keys()]).not.toContain('R-DOC-09');
+  });
+
   test('krimp-op-normen/AC-1 een ingesprongen codeblok direct onder een definitie is een vervolgregel', () => {
     expect(definities('- **R-DOC-04** X\n    ```\n    y\n    ```\n').fouten.join('\n')).toContain('vervolgregel');
   });
@@ -142,6 +147,10 @@ describe('krimp-op-normen/AC-3: bytedrempel met de lijst als enige plek', () => 
     expect(krimp(eerder, eerder)).toHaveLength(1);
     expect(krimp(`${eerder}- tweede regel → R-DOC-01\n`, eerder)).toStrictEqual([]);
   });
+
+  test('krimp-op-normen/AC-3 een regel met een lege oude norm telt niet als inventaris', () => {
+    expect(krimp(lijst('-   → R-DOC-01\n', 'AGENTS.md')).length).toBeGreaterThan(0);
+  });
 });
 
 describe('krimp-op-normen/AC-4: de vorm van de lijst, en hij krimpt nooit', () => {
@@ -151,6 +160,7 @@ describe('krimp-op-normen/AC-4: de vorm van de lijst, en hij krimpt nooit', () =
     ['een ingesprongen regel', `${KOP}\n## AGENTS.md\n\n  - a → R-DOC-01\n`],
     ['andere tekst na de uitleg', `${KOP}\n## AGENTS.md\n\nZomaar tekst.\n`],
     ['een lijstregel in de uitleg', `# Vervallen normen\n\n- a → R-DOC-01\n`],
+    ['een lege oude norm', `${KOP}\n## AGENTS.md\n\n-   → R-DOC-01\n`],
   ])('krimp-op-normen/AC-4 %s: rood', (_naam, tekst) => {
     expect(leesLijst(tekst).fouten.length).toBeGreaterThan(0);
   });

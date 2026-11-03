@@ -215,7 +215,9 @@ function rIdViolations(files, read) {
         .filter((id) => !bekend.has(id))
         .map((id) => ({ key: `docs:${file}:r-id:${id}`, message: `${file}: ${id} staat niet in ${REGELBOEK}` })),
     );
-  const definities = [...boek.matchAll(/^\s*(?:[-*]\s+)?(?:\*\*)?(R-[A-Z]+-\d+)(?![\d-])/gm)].map(([, id = '']) => id);
+  const definities = [...boek.matchAll(/^\s*(?:[-*]\s+)?(?:\*\*)?(R-[A-Z]+-\d+[a-z]?)(?![\w-])/gm)].map(
+    ([, id = '']) => id,
+  );
   const dubbel = [...new Set(definities.filter((id, index) => definities.indexOf(id) !== index))];
   return [
     ...padregels,
