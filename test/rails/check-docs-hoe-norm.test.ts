@@ -42,6 +42,15 @@ describe('positieve controle: elk normwoord onder "Hoe (geen norm)" valt op', ()
     ['never', '- Never call `x`.'],
     ['only', '- Only via `src/api/app.ts`.'],
     ['forbidden', '- `cors()` is forbidden.'],
+    ['uitsluitend', '- Uitsluitend via `x`.'],
+    ['altijd', '- Altijd via `x`.'],
+    ['always', '- Always via `x`.'],
+    ['should', '- Handlers should be thin.'],
+    ['shall', '- Handlers shall be thin.'],
+    ['mag-niet', '- Een handler mag niet zelf zoeken.'],
+    ['mogen-niet', '- Handlers mogen  niet zelf zoeken.'],
+    ['verplichten', '- De verplichten.'],
+    ['mandatory', '- A race test is mandatory.'],
   ])('%s in "%s"', async (woord, zin) => {
     expect(await hoeNorm(regel(zin))).toStrictEqual([`docs:.claude/rules/api.md:hoe-norm:${woord}`]);
   });
@@ -50,6 +59,28 @@ describe('positieve controle: elk normwoord onder "Hoe (geen norm)" valt op', ()
     const tekst = `${regel('- Rate limit standaard.')}\nHoe (geen norm):\n\n- Nooit zonder test.\n`;
 
     expect(await hoeNorm(tekst, '.claude/rules/web.md')).toStrictEqual(['docs:.claude/rules/web.md:hoe-norm:nooit']);
+  });
+
+  test.each([
+    ['zonder dubbele punt', 'Hoe (geen norm)'],
+    ['als Markdown-kop', '### Hoe (geen norm)'],
+    ['vet', '**Hoe (geen norm):**'],
+  ])('de kop %s', async (_naam, kop) => {
+    const tekst = `# Regels\n\n${kop}\n\n- Nooit \`x\`.\n`;
+
+    expect(await hoeNorm(tekst)).toStrictEqual(['docs:.claude/rules/api.md:hoe-norm:nooit']);
+  });
+
+  test('tekst op de regel van de kop zelf', async () => {
+    expect(await hoeNorm('# Regels\n\nHoe (geen norm): alleen via `x`.\n')).toStrictEqual([
+      'docs:.claude/rules/api.md:hoe-norm:alleen',
+    ]);
+  });
+
+  test('een # in een codeblok sluit de sectie niet', async () => {
+    expect(await hoeNorm(regel('```bash\n# commentaar\n```\n\n- Nooit `x`.'))).toStrictEqual([
+      'docs:.claude/rules/api.md:hoe-norm:nooit',
+    ]);
   });
 
   test('de melding noemt bestand, regel en woord, en wijst naar een R-id', async () => {
@@ -67,6 +98,8 @@ describe('toegestaan: buiten de sectie of geen heel woord', () => {
     ['een normwoord na de volgende ##-kop', regel('- Racetest: precies één slaagt.')],
     ['een deel van een woord', regel('- Een alleenstaande handler; nooitgedacht; mustard; onlyness.')],
     ['een normwoord in een codespan', regel('- Draai `pnpm test --only x` of `git log --never`.')],
+    ['een normwoord in een codeblok', regel('```bash\npnpm test --only x # moet\n```')],
+    ['een beschrijvend woord', regel('- De check eist een test en dient als vangnet; Vitest vereist dat.')],
     ['een sectie zonder "Hoe (geen norm)"', '# Regels\n\n- Nooit `x`.\n\n## Besloten\n\n- Alleen y.\n'],
   ])('%s', async (_naam, tekst) => {
     expect(await hoeNorm(tekst)).toStrictEqual([]);

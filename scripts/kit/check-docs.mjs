@@ -13,12 +13,12 @@
 //  7. Spec-discipline: geen lijstitem met `⚠ open` in "Open vragen" bij goedgekeurd of gebouwd (`:open-vraag`); elk pad in
 //     "Kopieer de vorm van" bestaat bij voorstel of goedgekeurd (`:vorm`).
 //  8. `framework §N` buiten §1–§12, §11a en de `## <n>.`-koppen van het regelboek (niet in docs/adr/); 9. backtick-paden in
-//     het regelboek; 10. R-id's in .claude/rules/* en het regelboek; 12. geen normwoord onder "Hoe (geen norm)" in
-//     .claude/rules/*.md (leerpunt #393); 11. harde grenzen alleen op `AGENTS.md` (9 KB, 100
+//     het regelboek; 10. R-id's in .claude/rules/* en het regelboek; 11. harde grenzen alleen op `AGENTS.md` (9 KB, 100
 //     regels) en `CLAUDE.md` (50 regels), sleutels `docs:AGENTS.md:budget:<bytes>` en `docs:<bestand>:regels:<n>`, zodat
 //     de ratchet groei en krimp ziet (ADR 0065, scripts/kit/leesbudget.mjs). Hoofdstuk, regelboek, spec en ADR zijn een
 //     meting in `pnpm leespad`, nooit een overtreding. `docsMeldingen` geeft "let op" vanaf 85 % van een grens;
 //     `docsKrimp` de krimpcheck (AC-6), die de ratchet buiten de baseline houdt.
+//  12. Geen normwoord onder "Hoe (geen norm)" in .claude/rules/*.md (leerpunt #393, sleutel `docs:<bestand>:hoe-norm:<woord>`).
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -231,34 +231,48 @@ function rIdViolations(files, read) {
 }
 
 // Regel 12: woorden die een norm maken, als heel woord; Nederlands en Engels, elk met zijn vervoegingen (#402: een te
-// smalle regex blijft stil groen, daarom pint test/rails/check-docs-hoe-norm.test.ts elke vorm).
-const NORMWOORD = /\b(?:nooit|alleen|moet(?:en)?|verboden|verplicht(?:e|en)?|must|never|only|forbidden)\b/gi;
-const HOE_KOP = /^Hoe \(geen norm\):?\s*$/;
+// smalle regex blijft stil groen, daarom pint test/rails/check-docs-hoe-norm.test.ts elke vorm). Bewust erbuiten:
+// woorden die ook beschrijven ("dient als", "vereist", "eist", "dwingt af"): Hoe-tekst mag zeggen wat een check doet.
+const NORMWOORD =
+  /\b(?:nooit|never|alleen|uitsluitend|only|altijd|always|moet(?:en)?|must|should|shall|verboden|forbidden|mag\s+niet|mogen\s+niet|verplicht(?:e|en)?|mandatory)\b/gi;
+// De kop kaal, als Markdown-kop of vet, met of zonder dubbele punt; tekst erachter hoort bij de sectie.
+const HOE_KOP = /^(?:#{1,6}\s+)?(?:\*\*)?Hoe \(geen norm\)(?:\*\*)?:?(?:\*\*)?(.*)$/;
+const CODEHEK = /^\s*(?:```|~~~)/;
+
+/**
+ * De regels onder "Hoe (geen norm)" tot de volgende Markdown-kop, buiten codeblokken (een `# commentaar` daarin is
+ * geen kop) en zonder codespans (`--only` is een optie). @param {string} text
+ */
+function hoeRegels(text) {
+  let inHoe = false;
+  let inCode = false;
+  return text.split('\n').flatMap((line, index) => {
+    if (CODEHEK.test(line)) inCode = !inCode;
+    if (inCode || CODEHEK.test(line)) return [];
+    const kop = HOE_KOP.exec(line);
+    if (kop !== null || /^#{1,6}\s/.test(line)) inHoe = kop !== null;
+    const tekst = kop === null ? line : (kop[1] ?? '');
+    return inHoe ? [{ tekst: tekst.replace(/`[^`]*`/g, ''), index }] : [];
+  });
+}
 
 /**
  * Regel 12 (leerpunt #393): onder "Hoe (geen norm)" in `.claude/rules/*.md` staat geen normwoord. Zo'n sectie noemt
  * zichzelf niet-bindend, dus een norm daar valt buiten het regelboek (R-DOC-03) en buiten de R-id-controles (regel 10,
- * krimp-op-normen). De sectie loopt tot de volgende Markdown-kop; codespans tellen niet (`--only` is een optie).
+ * krimp-op-normen).
  * @param {readonly string[]} files @param {(file: string) => string} read @returns {Violation[]}
  */
 function hoeNormViolations(files, read) {
   return files
     .filter((file) => file.startsWith('.claude/rules/') && file.endsWith('.md'))
-    .flatMap((file) => {
-      let inHoe = false;
-      return read(file)
-        .split('\n')
-        .flatMap((line, index) => {
-          if (HOE_KOP.test(line) || /^#{1,6} /.test(line)) inHoe = HOE_KOP.test(line);
-          else if (inHoe)
-            return [...line.replace(/`[^`]*`/g, '').matchAll(NORMWOORD)].map(([woord]) => ({ woord, index }));
-          return [];
-        })
-        .map(({ woord, index }) => ({
-          key: `docs:${file}:hoe-norm:${woord.toLowerCase()}`,
+    .flatMap((file) =>
+      hoeRegels(read(file)).flatMap(({ tekst, index }) =>
+        [...tekst.matchAll(NORMWOORD)].map(([woord]) => ({
+          key: `docs:${file}:hoe-norm:${woord.toLowerCase().replace(/\s+/g, '-')}`,
           message: `${file}:${String(index + 1)}: "${woord}" onder "Hoe (geen norm)" is een norm zonder R-id; zet hem als regel met R-id in ${REGELBOEK} en boven "Hoe" (R-DOC-03), of beschrijf zonder normwoord`,
-        }));
-    });
+        })),
+      ),
+    );
 }
 
 /**
