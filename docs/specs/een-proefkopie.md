@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: voorstel
 namespace: een-proefkopie
 ---
 
