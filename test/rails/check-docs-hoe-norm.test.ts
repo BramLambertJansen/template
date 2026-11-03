@@ -65,7 +65,7 @@ describe('toegestaan: buiten de sectie of geen heel woord', () => {
   test.each([
     ['een normwoord in de regels boven "Hoe"', regel('- Rate limit standaard GET `lezen`.')],
     ['een normwoord na de volgende ##-kop', regel('- Racetest: precies één slaagt.')],
-    ['een deel van een woord', regel('- Een alleenstaande handler; moeten-lijst; nooitgedacht.')],
+    ['een deel van een woord', regel('- Een alleenstaande handler; nooitgedacht; mustard; onlyness.')],
     ['een normwoord in een codespan', regel('- Draai `pnpm test --only x` of `git log --never`.')],
     ['een sectie zonder "Hoe (geen norm)"', '# Regels\n\n- Nooit `x`.\n\n## Besloten\n\n- Alleen y.\n'],
   ])('%s', async (_naam, tekst) => {

@@ -13,7 +13,8 @@
 //  7. Spec-discipline: geen lijstitem met `⚠ open` in "Open vragen" bij goedgekeurd of gebouwd (`:open-vraag`); elk pad in
 //     "Kopieer de vorm van" bestaat bij voorstel of goedgekeurd (`:vorm`).
 //  8. `framework §N` buiten §1–§12, §11a en de `## <n>.`-koppen van het regelboek (niet in docs/adr/); 9. backtick-paden in
-//     het regelboek; 10. R-id's in .claude/rules/* en het regelboek; 11. harde grenzen alleen op `AGENTS.md` (9 KB, 100
+//     het regelboek; 10. R-id's in .claude/rules/* en het regelboek; 12. geen normwoord onder "Hoe (geen norm)" in
+//     .claude/rules/*.md (leerpunt #393); 11. harde grenzen alleen op `AGENTS.md` (9 KB, 100
 //     regels) en `CLAUDE.md` (50 regels), sleutels `docs:AGENTS.md:budget:<bytes>` en `docs:<bestand>:regels:<n>`, zodat
 //     de ratchet groei en krimp ziet (ADR 0065, scripts/kit/leesbudget.mjs). Hoofdstuk, regelboek, spec en ADR zijn een
 //     meting in `pnpm leespad`, nooit een overtreding. `docsMeldingen` geeft "let op" vanaf 85 % van een grens;
@@ -58,6 +59,7 @@ export async function docsViolations(root = '.') {
     ...paragraafViolations(files, read),
     ...(files.includes(REGELBOEK) ? regelboekPadViolations(root, read(REGELBOEK), files) : []),
     ...rIdViolations(files, read),
+    ...hoeNormViolations(files, read),
     ...grensViolations((file) => (files.includes(file) ? read(file) : null)),
   ]);
 }
@@ -226,6 +228,37 @@ function rIdViolations(files, read) {
       message: `${REGELBOEK}: ${id} staat er meer dan één keer`,
     })),
   ];
+}
+
+// Regel 12: woorden die een norm maken, als heel woord; Nederlands en Engels, elk met zijn vervoegingen (#402: een te
+// smalle regex blijft stil groen, daarom pint test/rails/check-docs-hoe-norm.test.ts elke vorm).
+const NORMWOORD = /\b(?:nooit|alleen|moet(?:en)?|verboden|verplicht(?:e|en)?|must|never|only|forbidden)\b/gi;
+const HOE_KOP = /^Hoe \(geen norm\):?\s*$/;
+
+/**
+ * Regel 12 (leerpunt #393): onder "Hoe (geen norm)" in `.claude/rules/*.md` staat geen normwoord. Zo'n sectie noemt
+ * zichzelf niet-bindend, dus een norm daar valt buiten het regelboek (R-DOC-03) en buiten de R-id-controles (regel 10,
+ * krimp-op-normen). De sectie loopt tot de volgende Markdown-kop; codespans tellen niet (`--only` is een optie).
+ * @param {readonly string[]} files @param {(file: string) => string} read @returns {Violation[]}
+ */
+function hoeNormViolations(files, read) {
+  return files
+    .filter((file) => file.startsWith('.claude/rules/') && file.endsWith('.md'))
+    .flatMap((file) => {
+      let inHoe = false;
+      return read(file)
+        .split('\n')
+        .flatMap((line, index) => {
+          if (HOE_KOP.test(line) || /^#{1,6} /.test(line)) inHoe = HOE_KOP.test(line);
+          else if (inHoe)
+            return [...line.replace(/`[^`]*`/g, '').matchAll(NORMWOORD)].map(([woord]) => ({ woord, index }));
+          return [];
+        })
+        .map(({ woord, index }) => ({
+          key: `docs:${file}:hoe-norm:${woord.toLowerCase()}`,
+          message: `${file}:${String(index + 1)}: "${woord}" onder "Hoe (geen norm)" is een norm zonder R-id; zet hem als regel met R-id in ${REGELBOEK} en boven "Hoe" (R-DOC-03), of beschrijf zonder normwoord`,
+        }));
+    });
 }
 
 /**
