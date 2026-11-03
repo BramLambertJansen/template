@@ -14,6 +14,7 @@ import { execFileSync } from 'node:child_process';
 import { appendFileSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { globMatch } from '../../rails/hooks/lib/rolhek.mjs';
+import { agentMergeOordeel, leesMergeConfig } from './agent-merge.mjs';
 
 // Een review die de stand bepaalt; COMMENTED en PENDING laten de vorige beslissing staan.
 const BESLISSEND = new Set(['APPROVED', 'CHANGES_REQUESTED', 'DISMISSED']);
@@ -562,13 +563,40 @@ async function leesPr(config) {
   return { wijzigingen, json, reviews, auteur: env('AUTHOR'), headSha: head };
 }
 
+/**
+ * Oordeel agent-merge (ADR 0069, spec agent-merge-niet-kritiek AC-1) uit dezelfde invoer als de diff-guard; een goedkeuring
+ * telt niet mee.
+ * @param {Pr} pr @param {Oordeel} oordeel @param {string} configTekst
+ */
+export function agentMerge(pr, oordeel, configTekst) {
+  return agentMergeOordeel(
+    { wijzigingen: pr.wijzigingen, json: pr.json, geraakteJson: oordeel.geraakt.json, risico: oordeel.risico },
+    leesMergeConfig(configTekst),
+  );
+}
+
+/** @param {ReturnType<typeof agentMerge>} uitslag */
+export function agentMergeTekst(uitslag) {
+  return [
+    `## agent-merge: ${uitslag.oordeel}`,
+    '',
+    ...uitslag.redenen.map((reden) => `- \`${reden.replaceAll('`', "'")}\``),
+    '',
+  ].join('\n');
+}
+
 async function main() {
-  const config = leesConfig(readFileSync(path.join(import.meta.dirname, '../../.claude/gates.json'), 'utf8'));
-  const oordeel = beoordeel(await leesPr(config), config);
-  const tekstSamenvatting = samenvatting(oordeel);
+  const configTekst = readFileSync(path.join(import.meta.dirname, '../../.claude/gates.json'), 'utf8');
+  const config = leesConfig(configTekst);
+  const pr = await leesPr(config);
+  const oordeel = beoordeel(pr, config);
+  const merge = agentMerge(pr, oordeel, configTekst);
+  const tekstSamenvatting = `${samenvatting(oordeel)}\n${agentMergeTekst(merge)}`;
   console.log(tekstSamenvatting);
   const summary = process.env['GITHUB_STEP_SUMMARY'];
   if (summary !== undefined) appendFileSync(summary, `${tekstSamenvatting}\n`);
+  const output = process.env['GITHUB_OUTPUT'];
+  if (output !== undefined) appendFileSync(output, `agent-merge=${merge.oordeel}\n`);
   if (oordeel.uitslag === 'overgang') console.log(`::warning title=diff-guard::${oordeel.redenen.join('; ')}`);
   if (oordeel.uitslag === 'rood') {
     console.log(`::error title=diff-guard::${oordeel.redenen.join('; ')}`);
