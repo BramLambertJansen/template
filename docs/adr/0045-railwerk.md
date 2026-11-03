@@ -4,7 +4,7 @@ Status: geaccepteerd
 
 Herzien: 2026-10-30 (#385): het label `gate-wijziging` en het taakmandaat vervallen ([0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md));
 geschrapt in punt 5, 7, 10, 15, 17 en 18.
-Herzien: 2026-11-03 (#NNN): punt 3, het rolhek valt ook dicht bij timeout en crash (`onFailure: "block"`), Gevolgen;
+Herzien: 2026-11-03 (#472): punt 3, het rolhek valt ook dicht bij timeout en crash (`onFailure: "block"`), Gevolgen;
 verscherpt de bewaking; uitwerking in [spec](../specs/rolhek-dicht-bij-storing.md).
 
 Vervangt [0011](0011-railwerk.md), [0017](0017-diff-guard.md), [0031](0031-guard-en-pr-verify-bruikbaarder.md),
