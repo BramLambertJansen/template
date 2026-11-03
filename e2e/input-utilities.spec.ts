@@ -1,8 +1,16 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { clientIpHeaders, createAccount } from './support/accounts.ts';
 import { collectCspViolations, scanAxe } from './support/axe.ts';
 import { signIn } from './support/eigen-account.ts';
-import { openVak } from './support/catalogus.ts';
+
+// Open een tabblad van /design-system (spec designsystem-toolbox); een sectie buiten het open tabblad is verborgen.
+async function openVak(page: Page, label: string): Promise<void> {
+  const tab = page
+    .getByRole('tablist', { name: 'Onderdelen per soort' })
+    .getByRole('tab', { name: label, exact: true });
+  await tab.click();
+  await expect(tab).toHaveAttribute('aria-selected', 'true');
+}
 
 for (const width of [375, 1280]) {
   test(`invoer, klembord en kruimelpad op ${String(width)} px`, async ({ page, context }) => {

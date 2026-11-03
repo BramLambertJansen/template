@@ -163,6 +163,23 @@ describe('designsystem-toolbox/AC-3: Toon opent het tabblad en focust het voorbe
       expect(selectedTab()).toBe('Basis');
     });
   });
+
+  test('designsystem-toolbox/AC-3: Toon TokenSwatch zonder vak in de URL zet vak=basis als nieuwe stap en focust', async () => {
+    const router = setup('/?q=TokenSwatch');
+    await screen.findByRole('tablist', { name: 'Onderdelen per soort' });
+    expect(selectedTab()).toBe('Basis');
+    const historyBefore = router.history.length;
+
+    const show = screen.getByRole('button', { name: 'Toon TokenSwatch' });
+    const targetId = show.getAttribute('aria-controls');
+    fireEvent.click(show);
+
+    await waitFor(() => {
+      expect(document.activeElement?.id).toBe(targetId);
+    });
+    expect(router.state.location.search).toMatchObject({ q: 'TokenSwatch', vak: 'basis' });
+    expect(router.history.length).toBe(historyBefore + 1);
+  });
 });
 
 describe('designsystem-toolbox/AC-4: de lijst volgt de zoekopdracht', () => {

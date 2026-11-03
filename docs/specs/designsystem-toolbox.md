@@ -83,7 +83,7 @@ Gebruikszinnen in de broncode of in `feiten.mjs` (latere stap); nieuwe component
 ## Testplan
 
 - **Unit:** `src/web/features/design-system/*.test.tsx` (AC-1 t/m AC-5: volgorde, `vak`-fallback, Toon zet tabblad en focus, accordion bij `q`, gebruikszin per sectie) en `src/web/ui/section.test.tsx` (`description`, `framed`, standaard ongewijzigd).
-- **E2E:** `e2e/design-system*.spec.ts` (AC-1–AC-3, AC-6, AC-8). Gewijzigde bestaande tests: `e2e/design-system.spec.ts`, `e2e/design-system-coverage.spec.ts`, `e2e/typografie-en-layout.spec.ts`, `e2e/ui-collections.spec.ts`, `e2e/ui-data-display.spec.ts`, `e2e/ui-kit-basics.spec.ts`, `e2e/ui-ux-patterns.spec.ts`, `e2e/input-utilities.spec.ts`, `e2e/semantische-tokens.spec.ts`, `e2e/compound-input-controls.spec.ts` openen, waar ze een sectie buiten Basis bekijken, eerst het juiste tabblad via `?vak=`. Reden: tabbladen verbergen secties buiten het actieve tabblad (deze spec); de asserties blijven.
+- **E2E:** `e2e/design-system*.spec.ts` (AC-1–AC-3, AC-6, AC-8). Gewijzigde bestaande tests: `e2e/design-system.spec.ts`, `e2e/design-system-coverage.spec.ts`, `e2e/typografie-en-layout.spec.ts`, `e2e/ui-collections.spec.ts`, `e2e/ui-data-display.spec.ts`, `e2e/ui-kit-basics.spec.ts`, `e2e/ui-ux-patterns.spec.ts`, `e2e/input-utilities.spec.ts`, `e2e/semantische-tokens.spec.ts`, `e2e/compound-input-controls.spec.ts` openen, waar ze een sectie buiten Basis bekijken, eerst het juiste tabblad via `?vak=`. Reden: tabbladen verbergen secties buiten het actieve tabblad (deze spec); de asserties blijven, behalve dat de URL-controle in `e2e/ui-ux-patterns.spec.ts` nu ook `vak=patronen` verwacht.
 - **Rails:** `pnpm check:catalogus` en `test/ui/bundle-budget.test.ts` ongewijzigd (AC-7).
 
 ## Open vragen

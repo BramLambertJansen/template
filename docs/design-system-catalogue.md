@@ -42,7 +42,7 @@ Voeg daarnaast in [example-targets.ts](../src/web/features/design-system/example
 (`vak`) en een korte bedieningsinstructie toe, en zet de sectie in het juiste tabblad in
 [vak-panels.tsx](../src/web/features/design-system/vak-panels.tsx), met `description` en `framed`. Het doel is het `id`
 van een Section; die wordt alleen met een expliciet id programmatisch focusbaar. Nieuwe Section-aanroepen zonder id
-veranderen niet. In e2e-tests open je een tabblad met `openVak` uit [catalogus.ts](../e2e/support/catalogus.ts) of direct
+veranderen niet. In e2e-tests open je een tabblad met een lokale `openVak`-helper (klik het tabblad in de lijst "Onderdelen per soort") of direct
 via `?vak=`.
 
 `pnpm check:catalogus` controleert bronbereikbaarheid en eindige stringvarianten. De e2e-test

@@ -1,7 +1,25 @@
 import { expect, test, type Page } from '@playwright/test';
 import { clientIpHeaders, createAccount, PASSWORD, freshTotpFor } from './support/accounts.ts';
 import { collectCspViolations, scanAxe } from './support/axe.ts';
-import { openVak, VAKKEN } from './support/catalogus.ts';
+
+// Open een tabblad van /design-system (spec designsystem-toolbox); een sectie buiten het open tabblad is verborgen.
+async function openVak(page: Page, label: string): Promise<void> {
+  const tab = page
+    .getByRole('tablist', { name: 'Onderdelen per soort' })
+    .getByRole('tab', { name: label, exact: true });
+  await tab.click();
+  await expect(tab).toHaveAttribute('aria-selected', 'true');
+}
+
+const VAKKEN = [
+  'Basis',
+  'Acties',
+  'Formulieren',
+  'Meldingen en status',
+  'Gegevens tonen',
+  'Navigatie en layout',
+  'Patronen',
+];
 
 // De catalogus als beveiligde pagina in de app (spec design-system): admin met MFA, binnen de AppShell. Op 375 en 1280 px,
 // licht en donker: axe, geen CSP-schendingen, geen horizontaal scrollen, precies een main/Hoofdmenu/Profielmenu, en de
@@ -33,16 +51,16 @@ for (const width of [375, 1280]) {
       await expect(page.getByRole('heading', { level: 1, name: 'Design system' })).toBeVisible();
 
       for (const vak of VAKKEN) {
-        await openVak(page, vak.label);
+        await openVak(page, vak);
         await scanAxe(page);
       }
       await page.getByRole('button', { name: 'Donker thema' }).click();
       await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
       for (const vak of VAKKEN) {
-        await openVak(page, vak.label);
+        await openVak(page, vak);
         await scanAxe(page);
         const overflow = await page.evaluate<number>('document.documentElement.scrollWidth - window.innerWidth');
-        expect(overflow, `horizontaal scrollen in ${vak.label}`).toBeLessThanOrEqual(0);
+        expect(overflow, `horizontaal scrollen in ${vak}`).toBeLessThanOrEqual(0);
       }
 
       await expect(page.getByRole('main')).toHaveCount(1);
@@ -166,7 +184,7 @@ test('AC-10: de pagina doet geen aanroep naar /api/ buiten /api/me', async ({ pa
   await page.goto('/design-system');
   await expect(page.getByRole('heading', { level: 1, name: 'Design system' })).toBeVisible();
   // Spec designsystem-toolbox/AC-8: ook tabbladen wisselen en Toon doen geen aanroep.
-  for (const vak of VAKKEN) await openVak(page, vak.label);
+  for (const vak of VAKKEN) await openVak(page, vak);
   const index = page.getByRole('region', { name: 'Componentenindex' });
   await index.getByLabel('Component zoeken').fill('Combobox');
   await index.getByRole('button', { name: 'Toon Combobox', exact: true }).click();
