@@ -10,7 +10,7 @@ regelboek is bindend) aan. Drempel: A4 (afspraak over geaccepteerde ADR's) en ee
 ## Context
 
 Een nieuw ADR wijzigt vaak een punt van een ouder ADR zonder dat oudere ADR aan te raken. De kopregel van het nieuwe ADR zegt
-het ("Wijzigt [0046](…) punt 30, 31 …"), het oude ADR zegt het niet. Twaalf geaccepteerde ADR's wijzigen op die manier een
+het ("Wijzigt 0046 punt 30, 31 …"), het oude ADR zegt het niet. Twaalf geaccepteerde ADR's wijzigen op die manier een
 ander geaccepteerd ADR. ADR 0046 telt 194 regels, waarvan een deel door 0054, 0056, 0057, 0062, 0063 en 0069 is gewijzigd;
 alleen de wijziging door 0063 staat in 0046 zelf, als herzieningsregel. Wie 0046 opent, ziet niet welke punten nog gelden.
 
@@ -28,7 +28,7 @@ schrijven als een later ADR het punt wijzigt, en een check die dat afdwingt.
    kop (vóór de eerste `## `-kop) met de bestaande vorm: `Wijzigt`, `Herziet` of `Vervangt`, een link naar A en, waar het om
    punten gaat, de puntnummers. `Vult … aan` wijzigt niets: de tekst van A blijft geldig.
 2. **A krijgt een herzieningsregel die B noemt.** In dezelfde PR als B krijgt A een regel
-   `Herzien: JJJJ-MM-DD (#NNN): gewijzigd door [B](…) punt N, M` (zonder puntnummer: wat B wijzigt, in een paar woorden). Een
+   `Herzien: JJJJ-MM-DD (#NNN): gewijzigd door <link naar B> punt N, M` (zonder puntnummer: wat B wijzigt, in een paar woorden). Een
    bestaande herzieningsregel in A die B noemt, telt ook (zoals de regels die 0063 in 0045 en 0046 zette). De tekst van de
    punten zelf verandert niet; een markering midden in de tekst is niet nodig.
 3. **Geen nieuwe uitzondering.** Dit is een herschrijving volgens R-CI-05 en loopt langs de bestaande guard en het rolhek: de PR
