@@ -184,7 +184,11 @@ Op `/api/me/email/bevestigen`, elke stap zonder claim bij falen (`EMAIL_LINK_INV
 - Dev-login (`src/core/api/dev/login-as.ts`): ongewijzigd; valt onder de interne aanroep zonder claim (OV-3, AC-14).
 - Docs in de bouw-PR: R-AUTH-06 zonder "Bekend gat" en met de nieuwe regel (eenmalig, geen token in JSON) in `docs/framework.md`;
   R-LAAG-05 (`auth_service` ook execute op de functies van klasse `auth`) en de functiecatalogus in framework §6; ST-02 in
-  `docs/roadmap.md` met dit deel en bewijs; spec `eigen-account` verwijst al naar deze spec.
+  `docs/roadmap.md` met dit deel en bewijs.
+- Spec `eigen-account` (gebouwd) beschrijft nog het oude gedrag: link 1 opnieuw stuurt mail 2 opnieuw, en het token-lek bij
+  inloggen als aparte core-taak. Waar ze verschillen, gaat deze spec voor. Inhoud van een gebouwde spec wijzigen kan alleen met
+  `gebouwd # #<PR>` en code in dezelfde PR (`check-document-status`, ADR 0062). Daarom gaat die tekst mee in de bouw-PR, of, als
+  `check-document-status` dat naast kritieke paden weigert, in een eigen PR direct daarna (zoals #464).
 - Fase: fase 1 stuk 3e (ST-02); `docs/dod.md` Fase 1 en Features.
 
 ## Buiten scope
