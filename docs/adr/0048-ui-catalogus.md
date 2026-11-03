@@ -3,7 +3,7 @@
 Status: geaccepteerd
 
 Vervangt [0015](0015-design-system-in-de-app.md) en [0028](0028-volledige-ui-catalogus.md).
-Herzien: 2026-11-03 (#PR): punt 8 en Gevolgen, `/design-system` toont geen bronpad en importnaam meer; die staan alleen in
+Herzien: 2026-11-03 (#501): punt 8 en Gevolgen, `/design-system` toont geen bronpad en importnaam meer; die staan alleen in
 `feiten.mjs componenten` (eigenaarbesluit B3, spec [designsystem-toolbox](../specs/designsystem-toolbox.md)).
 Drempel: A4. Consolidatie zonder inhoudelijke wijziging (eigenaarbesluit 2026-10-21, [0038](0038-beslisroute.md) Gevolgen).
 
