@@ -4,6 +4,8 @@ Status: geaccepteerd
 Herzien: 2026-11-03 (#456): punt 3 (Codex-voorwaarde drieledig, omvanggrens `agentMerge.maxRegels`), punt 5
 (steekproef, terugval, overgang), Gevolgen en Meten; versoepelt de Codex-voorwaarde; uitwerking in
 [spec](../specs/agent-merge-zonder-codex.md)
+Herzien: 2026-11-03 (#NNN): punt 3, bytegrens `agentMerge.maxBytes` naast `maxRegels`; verscherpt de omvanggrens;
+uitwerking in [spec](../specs/agent-merge-bytegrens.md)
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 30, 31, 33, 34 en 35, de zin "automatische agent-merges vallen af" uit
 [0057](0057-risicogestuurde-werkstraat.md), in [0064](0064-leesbudget-per-laag.md) "zodra de GitHub App er is" (R-DOC-09) en in
@@ -62,9 +64,11 @@ punt begint, `*.config.*`, `package.json`, `tsconfig*.json`). Daarnaast: geen be
      head-SHA;
    - de laatste uitslag van `requiredChecks` op de kop van `main` groen is;
    - er een PR-commentaar `Review <head-SHA>: geen blokkerende bevindingen` staat (verse reviewer volgens 0068 punt 5);
-   - de PR klein is: hoogstens `agentMerge.maxRegels` (geheel getal, template 400) toegevoegde plus verwijderde regels, en
-     geen binair bestand; ontbreekt of onleesbaar: geen merge. Dezelfde grens zit in het oordeel van de job `agent-merge`
-     (punt 2, geteld met git op de merge-base);
+   - de PR klein is: hoogstens `agentMerge.maxRegels` (geheel getal, template 400) toegevoegde plus verwijderde regels,
+     hoogstens `agentMerge.maxBytes` (geheel getal, template 40.000) bytes in die regels, en geen binair bestand; ontbreekt
+     of onleesbaar: geen merge. Dezelfde grenzen zitten in het oordeel van de job `agent-merge` (punt 2, geteld met git op
+     de merge-base). *Waarom de bytegrens (herzien 2026-11-03):* regels alleen zijn te omzeilen met weinig, zeer lange
+     regels; de reviewer moet de hele diff kunnen overzien;
    - de Codex-voorwaarde volgens `agentMerge.codex` (ontbreekt of onleesbaar: `true`):
      - `true`: Codex (`chatgpt-codex-connector[bot]`) rondde de head-SHA af zonder open punten (samenvatting met marker
        `codex-review-state:v1` op die SHA, nieuwste telt, of een 👍 na de ontvangst van die SHA) en er is geen onopgeloste
@@ -151,7 +155,7 @@ punt begint, `*.config.*`, `package.json`, `tsconfig*.json`). Daarnaast: geen be
 - De bouw-PR is kritiek (`.github/**`, `.claude/**`, besluitscripts); de eigenaar merget hem en pusht de workflowwijziging.
   `docs/specs/agent-merge.md` gaat daarin naar `vervallen`, met de roadmap-items voor ADR 0029 stap 7 en ADR 0030 PR 2.
 - Met `"indien-aanwezig"` gaat de agent-merge door als het Codex-tegoed op is, maar alleen voor PR's tot `maxRegels`
-  regels zonder binair bestand; een grotere niet-kritieke PR merget de eigenaar, of de agent splitst hem in PR's onder de
+  regels en `maxBytes` bytes zonder binair bestand; een grotere niet-kritieke PR merget de eigenaar, of de agent splitst hem in PR's onder de
   grens, elk met een eigen verse review. Restrisico's (herzien 2026-11-03): komt Codex pas na de merge met punten, dan telden
   ze niet, ook als Codex met tegoed nog bezig was toen de agent mergde; en onder het eigenaaraccount kan de sessie een Codex-commentaar verwijderen of bewerken (het rolhek weigert dat
   nu niet), zodat het spoor verdwijnt; of ze opent de PR als draft, zodat de automatische Codex-review niet start. Een Codex-review
