@@ -23,11 +23,12 @@ wanneer er iets verandert, meet wat een agent echt leest, en op het afgesproken 
 ## Besluit
 
 1. **"Let op" alleen bij verschil met de basis.** De basis is de merge-base met `origin/main`, zoals bij
-   `check:roadmap`, gemeten met zijn eigen scripts. Een scenario meldt alleen als het boven zijn streefdoel ligt én
-   groeide; een soort alleen als een eenheid nieuw boven de streefwaarde komt of erboven groeit. Een gelijk gebleven
-   overschrijding staat er neutraal. *Waarom:* een melding die bij elke run afgaat, wordt genegeerd; een verschil met de
-   basis zegt iets over deze PR. Zonder grens voor scenario's meldde elke nieuwe spec weer, omdat het leespad nu
-   feiten-uitvoer telt.
+   `check:roadmap`, gemeten met de huidige scripts op de bestanden van de basis (`git show`, zonder worktree). Een
+   scenario meldt alleen bij minstens 1 KB groei; een soort alleen als een eenheid nieuw boven de streefwaarde komt of
+   erboven groeit. Een gelijk gebleven overschrijding staat er neutraal. *Waarom:* een melding die bij elke run afgaat,
+   wordt genegeerd; een verschil met de basis zegt iets over deze PR. Het leespad ligt al ver boven het streefdoel en
+   telt nu feiten-uitvoer, dus zonder minimale stap meldde elke nieuwe spec weer. Dezelfde code op beide bomen
+   vergelijkt appels met appels; een worktree zou zonder `node_modules` niets meten.
 2. **De trend meldt alleen een echte stap.** Minstens 0,5 en, bij een vorig gemiddelde boven 0, minstens 25 % hoger,
    op afgeronde waarden. *Waarom:* één extra bevinding over tien PR's is 0,1; absoluut en relatief samen negeren ruis bij
    kleine én grote gemiddelden.
@@ -37,15 +38,15 @@ wanneer er iets verandert, meet wat een agent echt leest, en op het afgesproken 
 4. **Het leespad telt wat een agent verplicht leest.** De `feiten.mjs`-aanroepen komen uit de bestanden van het scenario
    zelf (injecties en de stap "Begin met de feiten"), zodat een nieuwe aanroep vanzelf meetelt; voor `nieuwe-feature`
    tellen de padregels van een app-feature mee. Wat met de repo groeit, krijgt een plafond: `specs` toont open specs,
-   `adr` de voorgestelde en de tien nieuwste geaccepteerde, `fase` alles onder "Nu" en vijf onder "Volgende", elk met
-   een telling en `--alle`. Een groeitest bewijst het plafond. De streefwaarden van 0064 punt 1 stelt de bouw-PR opnieuw
+   `adr` de voorgestelde en de tien geaccepteerde met het hoogste nummer, `fase` alles onder "Nu" en vijf onder "Volgende", elk met
+   een telling en `--alle` (voor `adr` dus niet langer alleen voor historie). Een groeitest bewijst het plafond. De streefwaarden van 0064 punt 1 stelt de bouw-PR opnieuw
    voor op de eerlijke meting; de eigenaarmerge beslist. *Waarom:* de meting onderschatte juist het deel dat groeit; een
    plafond maakt R-DOC-09 waar in plaats van een wens.
 5. **Herijken krijgt een trigger.** `check:roadmap` ziet dat een PR een fase sluit (op de basis een open item onder "Nu"
    of "Volgende" met die fase, daarna geen) en eist dan een regel `Herijking fase <n>:` met datum, leespad in KB en trend
    in `docs/roadmap-archief.md`. Een nieuw open item noemt een fase of `doorlopend`. *Waarom:* proza in de DoD werd
    overgeslagen (0065); een check maakt het herijken onvermijdelijk, en zonder fase op nieuwe items zou de trigger
-   zelden afgaan. Bestaande items zonder fase tellen niet; dat accepteren we tot ze worden herschreven.
+   zelden afgaan. Bestaande items zonder fase, en `doorlopend`, tellen niet; dat accepteren we tot ze worden herschreven.
 
 ## Alternatieven
 
