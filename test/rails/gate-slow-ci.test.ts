@@ -19,10 +19,11 @@ function job(id: string): string {
 // GEWIJZIGD (ADR 0076, ci-in-delen/AC-7): de matrix noemt per deel het script; ui:check staat er in twee helften.
 test('ci-in-delen/AC-7 de delen van gate-slow-part dekken precies de trage gates, ui:check in twee helften', () => {
   const delen = [
-    ...job('gate-slow-part').matchAll(/^ {10}- \{ deel: ([^,]+), script: ([^,]+), ui: ('[^']*'|\S+) \}$/gm),
-  ].map(([, deel = '', script = '', ui = '']) => ({ deel, script, ui: ui.replaceAll("'", '') }));
+    ...job('gate-slow-part').matchAll(/^ {10}- \{ deel: ([^,]+), script: ([^,]+), ui: ("[^"]*"|'[^']*'|\S+) \}$/gm),
+  ].map(([, deel = '', script = '', ui = '']) => ({ deel, script, ui: ui.replaceAll(/["']/g, '') }));
   const trage = gates.filter((gate) => !gate.snel).map((gate) => gate.script);
 
+  expect(delen).toHaveLength(4);
   expect([...new Set(delen.map((d) => d.script))].toSorted()).toStrictEqual(trage.toSorted());
   expect(delen.filter((d) => d.script === 'ui:check').map((d) => d.ui)).toStrictEqual(['1/2', '2/2']);
   expect(delen.filter((d) => d.script !== 'ui:check').every((d) => d.ui === '' && d.deel === d.script)).toBe(true);
