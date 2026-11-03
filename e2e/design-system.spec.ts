@@ -165,6 +165,12 @@ test('AC-10: de pagina doet geen aanroep naar /api/ buiten /api/me', async ({ pa
   });
   await page.goto('/design-system');
   await expect(page.getByRole('heading', { level: 1, name: 'Design system' })).toBeVisible();
+  // Spec designsystem-toolbox/AC-8: ook tabbladen wisselen en Toon doen geen aanroep.
+  for (const vak of VAKKEN) await openVak(page, vak.label);
+  const index = page.getByRole('region', { name: 'Componentenindex' });
+  await index.getByLabel('Component zoeken').fill('Combobox');
+  await index.getByRole('button', { name: 'Toon Combobox', exact: true }).click();
+  await expect(page.getByRole('tab', { name: 'Formulieren', exact: true })).toHaveAttribute('aria-selected', 'true');
 
   expect(calls.filter((pathname) => pathname !== '/api/me')).toStrictEqual([]);
 });

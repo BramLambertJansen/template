@@ -31,7 +31,8 @@ function useCatalogueNavigation() {
       setFilter('vak', vakFrom(id));
     },
     show: (target: ExampleTarget) => {
-      if (target.vak !== vak) setFilter('vak', target.vak);
+      // Ook zonder `vak` in de URL komt het tabblad erin, zodat Terug na Toon altijd een stap is (AC-3).
+      if (target.vak !== vak || search['vak'] !== target.vak) setFilter('vak', target.vak);
       setPending(target);
     },
   };

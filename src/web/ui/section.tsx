@@ -26,12 +26,18 @@ export function Section({ title, children, landmark = true, id: targetId, descri
       {...(landmark ? { 'aria-labelledby': id } : {})}
       className="flex flex-col gap-4"
     >
-      <div className="flex flex-col gap-1">
+      {description === undefined ? (
         <Heading level={2} id={id}>
           {title}
         </Heading>
-        {description === undefined ? null : <Text tone="muted">{description}</Text>}
-      </div>
+      ) : (
+        <div className="flex flex-col gap-1">
+          <Heading level={2} id={id}>
+            {title}
+          </Heading>
+          <Text tone="muted">{description}</Text>
+        </div>
+      )}
       {framed ? <div className="flex min-w-0 flex-col gap-4 rounded-lg border bg-card p-4">{children}</div> : children}
     </section>
   );
