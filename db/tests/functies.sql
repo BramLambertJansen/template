@@ -65,19 +65,22 @@ create function pg_temp.auth_service_buiten_better_auth() returns setof text lan
     from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid = c.relnamespace
     cross join (values ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE'), ('TRUNCATE'), ('REFERENCES'), ('TRIGGER')) p (recht)
     where c.relkind in ('r', 'p', 'v', 'm', 'f') and n.nspname in ('public', 'app')
-      and pg_catalog.has_table_privilege('auth_service', c.oid, p.recht)
+      and case when c.relkind in ('r', 'p', 'v', 'm', 'f') then pg_catalog.has_table_privilege('auth_service', c.oid, p.recht) else false end
     union all
     select format('kolomrecht %s op %I.%I', p.recht, n.nspname, c.relname)
     from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid = c.relnamespace
     cross join (values ('SELECT'), ('INSERT'), ('UPDATE'), ('REFERENCES')) p (recht)
     where c.relkind in ('r', 'p', 'v', 'm', 'f') and n.nspname in ('public', 'app')
-      and not pg_catalog.has_table_privilege('auth_service', c.oid, p.recht)
-      and pg_catalog.has_any_column_privilege('auth_service', c.oid, p.recht)
+      and case when c.relkind in ('r', 'p', 'v', 'm', 'f')
+        then not pg_catalog.has_table_privilege('auth_service', c.oid, p.recht)
+          and pg_catalog.has_any_column_privilege('auth_service', c.oid, p.recht)
+        else false end
     union all
     select format('usage op reeks %I.%I', n.nspname, c.relname)
     from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid = c.relnamespace
     where c.relkind = 'S' and n.nspname in ('public', 'app')
-      and pg_catalog.has_sequence_privilege('auth_service', c.oid, 'USAGE')
+      -- CASE: anders kan de planner de functie op een niet-reeks aanroepen vóór het filter op relkind.
+      and case when c.relkind = 'S' then pg_catalog.has_sequence_privilege('auth_service', c.oid, 'USAGE') else false end
     union all
     select format('%s op schema %s', s.recht, s.schema)
     from (values ('public', 'USAGE'), ('public', 'CREATE'), ('app', 'CREATE')) s (schema, recht)
