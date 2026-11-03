@@ -2,7 +2,7 @@
 
 Status: geaccepteerd
 
-Herzien: 2026-11-03 (#469): gewijzigd door [0073](0073-eenmalige-codes-en-geen-sessietoken-in-json.md) (drie punten
+Herzien: 2026-11-03 (#469): gewijzigd door [0075](0075-eenmalige-codes-en-geen-sessietoken-in-json.md) (drie punten
 onder Gevolgen)
 
 Vervangt [0013](0013-uitnodigen-en-mfa-in-better-auth.md), [0014](0014-dev-login-en-accounts-view.md),
