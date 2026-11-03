@@ -39,7 +39,9 @@ proef: `✗ kooi: de proef schreef buiten de werkmap; het commando is niet uitge
 
 - **kooi/AC-1** — `scripts/kit/kooi.mjs` exporteert `inKooi(commando, { werkmap, env, timeout })` en is als CLI te starten:
   `node scripts/kit/kooi.mjs --werkmap <map> -- <commando>`. Het commando draait als `bash -c` onder bubblewrap, in deze
-  volgorde: `--ro-bind / /`, `--dev /dev`, `--proc /proc`, `--tmpfs /tmp`, `--tmpfs /run`, `--tmpfs /var/run`, `--tmpfs` over
+  volgorde: `--ro-bind / /`, `--dev /dev`, `--proc /proc`, daarna `/proc/sys`, `/proc/sysrq-trigger`, `/proc/irq` en `/proc/bus`
+  weer als `--ro-bind` (een verse `/proc` is voor root schrijfbaar, ook zonder capabilities: een sysctl zoals
+  `kernel.core_pattern` toetst alleen de bestandsrechten), `--tmpfs /tmp`, `--tmpfs /run`, `--tmpfs /var/run`, `--tmpfs` over
   de thuismap en over `$XDG_RUNTIME_DIR` van de aanroeper, daarna de toolchain (de installatiemap van mise en de map van
   `node`) weer als `--ro-bind`, en als laatste de werkmap als enige `--bind`; verder `--unshare-all` (geen netwerk),
   `--cap-drop ALL`, `--die-with-parent`, `--new-session` en `--chdir <werkmap>`. De timeout (standaard 30 s) stopt bubblewrap
@@ -58,7 +60,7 @@ proef: `✗ kooi: de proef schreef buiten de werkmap; het commando is niet uitge
   proberen afkappen (`: >`) en hernoemen (`mv`) via een absoluut pad, via `../`, via `cd /`, via `$HOME` van de aanroeper en via
   een symlink in de werkmap die naar buiten wijst; na afloop is elk kanariebestand byte-gelijk en op zijn plek. Een kanarie
   die in de kooi zichtbaar is (alleen-lezen) geeft bovendien `Read-only file system`; een kanarie onder een lege map (`/tmp`,
-  de thuismap) is in de kooi onzichtbaar. Verder: schrijven naar `/proc/sys/kernel/core_pattern` faalt; een netwerkverbinding
+  de thuismap) is in de kooi onzichtbaar. Verder: schrijven naar `/proc/sys/kernel/core_pattern`, `/proc/sys/vm/drop_caches` en onder `/sys` faalt, ook als root; een netwerkverbinding
   faalt; verbinden met een socketbestand dat de test onder `/run` of de thuismap opent, faalt; een bestand in de thuismap van de
   aanroeper is niet leesbaar; `CapEff` en `CapBnd` in `/proc/self/status` zijn 0, voor elke uid; een `sleep 600` stopt bij de
   timeout, met zijn kindprocessen.
@@ -96,6 +98,7 @@ proef: `✗ kooi: de proef schreef buiten de werkmap; het commando is niet uitge
 | Commando heeft netwerk nodig | niet via de kooi; een overgenomen commando krijgt geen netwerk | n.v.t. |
 | Commando probeert `/var/run/docker.sock` of de Postgres-socket | bestaat niet in de kooi (`--tmpfs /run`, `/var/run`) | n.v.t. |
 | Commando leest `~/.config/gh/hosts.yml` | lege thuismap in de kooi | n.v.t. |
+| Commando als root schrijft een sysctl (`/proc/sys/…`) | faalt: `/proc/sys` is alleen-lezen in de kooi (AC-1) | n.v.t. |
 | Commando loopt vast | timeout; bubblewrap stopt met de aanroeper | n.v.t. |
 | Een git-commando in de kooi op de tijdelijke repository | werkt; `.git` ligt in de werkmap | n.v.t. |
 | Test heeft de kooi nodig maar bubblewrap ontbreekt | test faalt, wordt nooit overgeslagen | n.v.t. |
