@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #438; gevalideerd: 645c5fd16b1abfd5a4a2cd2a6104d8cec1d03675
+status: gebouwd # #439
 namespace: krimp-op-normen
 ---
 
