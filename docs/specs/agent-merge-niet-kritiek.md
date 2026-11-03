@@ -66,12 +66,12 @@ n.v.t. — geen UI. Meldingen van `pr:merge` en het rolhek zijn Nederlands en no
   head-SHA (een gelijknamige check uit een andere workflow telt niet); de laatste uitslag van `requiredChecks` op de kop van
   `main` is `success`. De check-runs van `pull_request_target` hangen aan de PR-head (vastgesteld op #445: `diff-guard`,
   `document-status` en `check-core` stonden op head-SHA `39f0ce8`); het script koppelt de check-run `agent-merge` via zijn
-  `check_suite` aan de workflow-run en eist `path` `.github/workflows/guard.yml` en event `pull_request_target`; lukt dat
-  niet, dan geen merge. De job houdt daarom de vaste naam `agent-merge`. Review: een PR-commentaar `Review <head-SHA>: geen blokkerende bevindingen`. Codex (tenzij
+  `check_suite` aan de workflow-run en eist `path` `.github/workflows/guard.yml` en event `pull_request_target` (een run waarvan
+  `pull_requests` alleen andere PR-nummers noemt, telt niet; leeg kan, gezien op #445); lukt dat niet, dan geen merge. De job houdt daarom de vaste naam `agent-merge`. Review: een PR-commentaar `Review <head-SHA>: geen blokkerende bevindingen`. Codex (tenzij
   `agentMerge.codex: false`): de samenvatting van `chatgpt-codex-connector[bot]` (marker `codex-review-state:v1`) zegt voor
-  `code_review` `status: completed`, `commit_sha` gelijk aan de head-SHA en `has_unresolved_findings: false`; of die bot gaf
-  een 👍 op de PR na het moment dat GitHub de head ontving (de vroegste check-suite op die SHA, niet de commitdatum). Een 👀, een lopende review
-  of een review op een andere SHA telt niet (negatieve test); en geen onopgeloste review-thread: REST kent die stand niet,
+  `code_review` (de nieuwste samenvatting telt) `status: completed`, `commit_sha` gelijk aan de head-SHA en `has_unresolved_findings: false`; of die bot gaf
+  een 👍 op de PR na het moment dat GitHub de head ontving (de vroegste check-suite op die SHA, niet de commitdatum). Een 👀, een lopende review,
+  een review op een andere SHA of open punten op de head (ook met een latere 👍) telt niet (negatieve test); en geen onopgeloste review-thread: REST kent die stand niet,
   dus de ruleset op main (`required_review_thread_resolution`) weigert de merge dan. Elke ontbrekende
   voorwaarde geeft een eigen regel en exit 1 zonder schrijfactie. Alleen REST, geen GraphQL. Unittest per voorwaarde met
   nagebootste API-antwoorden.
