@@ -396,7 +396,7 @@ const fixtures: Fixture[] = [
     file,
     code: 'declare const x: string; expect(x).not.toMatch(/mandat/i);',
     rule: null,
-  })),  // negatieve-tabel (leerpunt #401): een tabel die per rij `false` eist, bewijst alleen iets als de basis eerst waar is;
+  })), // negatieve-tabel (leerpunt #401): een tabel die per rij `false` eist, bewijst alleen iets als de basis eerst waar is;
   // dat bewijs levert expectNegativeTable uit test/support/negative-table.ts.
   ...[
     "test.each([1, 2])('rij %s', (n) => { expect(ok(n)).toBe(false); });",
