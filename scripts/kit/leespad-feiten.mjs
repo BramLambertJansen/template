@@ -14,12 +14,11 @@ const BEGIN = /^(?:\d+\. Begin met de feiten|- Begin met taakrelevante feiten)/;
 /** @typedef {{ secties: string[], alle: boolean }} Aanroep */
 /** @typedef {import('./feiten-secties.mjs').Lezer} Lezer */
 
-/** @param {string} args @returns {Aanroep | null} */
+/** Een herkende aanroep; `hoofdstuk <n>` en een kale aanroep tellen mee als herkend, zonder secties. @param {string} args @returns {Aanroep} */
 function aanroep(args) {
   const woorden = args.trim().split(/\s+/).filter(Boolean);
-  if (woorden[0] === 'hoofdstuk') return null;
-  const secties = woorden.filter((woord) => !woord.startsWith('-'));
-  return secties.length === 0 ? null : { secties, alle: woorden.includes('--alle') };
+  if (woorden[0] === 'hoofdstuk') return { secties: [], alle: false };
+  return { secties: woorden.filter((woord) => !woord.startsWith('-')), alle: woorden.includes('--alle') };
 }
 
 /**
@@ -34,11 +33,11 @@ export function feitenAanroepen(tekst) {
   const zonder = [];
   tekst.split('\n').forEach((regel, index) => {
     const injecties = [...regel.matchAll(INJECTIE)].map(([, args = '']) => aanroep(args));
-    const begin = BEGIN.test(regel) ? aanroep(AANROEP.exec(regel)?.[1] ?? '') : undefined;
-    const gevonden = [...injecties, ...(begin === undefined ? [] : [begin])];
+    const begin = BEGIN.test(regel) ? AANROEP.exec(regel) : null;
+    const gevonden = [...injecties, ...(begin === null ? [] : [aanroep(begin[1] ?? '')])];
     const vraagt = BEGIN.test(regel) || regel.includes('!`node scripts/kit/feiten');
-    for (const a of gevonden) if (a !== null) aanroepen.push(a);
-    if (vraagt && !gevonden.some((a) => a !== null)) zonder.push(index + 1);
+    for (const a of gevonden) if (a.secties.length > 0) aanroepen.push(a);
+    if (vraagt && gevonden.length === 0) zonder.push(index + 1);
   });
   return { aanroepen, zonder };
 }

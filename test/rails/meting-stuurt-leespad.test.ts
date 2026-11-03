@@ -150,6 +150,25 @@ describe('meting-stuurt/AC-1: "let op" alleen tegenover de basis', { timeout: 60
     expect(git(dir, 'status', '--porcelain')).toBe(status);
   });
 
+  test('meting-stuurt/AC-1 de basis is de merge-base, niet de kop van origin/main', () => {
+    const dir = repo({ 'docs/gouden-pad.md': x(2000) });
+    const afsplitsing = git(dir, 'rev-parse', 'HEAD');
+    // main loopt door met een grote groei die niet bij deze branch hoort.
+    git(dir, 'checkout', '-q', '-b', 'main-verder');
+    schrijf(dir, { 'docs/gouden-pad.md': x(9000) });
+    git(dir, 'commit', '-qam', 'main verder');
+    git(dir, 'update-ref', 'refs/remotes/origin/main', 'HEAD');
+    git(dir, 'checkout', '-q', afsplitsing);
+    schrijf(dir, { 'docs/gouden-pad.md': x(2500) });
+    git(dir, 'add', '-A');
+    const r = leespad(dir, ['--json']);
+    expect(r.status, r.stderr).toBe(0);
+    expect(JSON.parse(r.stdout)).toMatchObject({
+      basis: { ref: afsplitsing, scenarios: { 'nieuwe-feature': { totaal: 2000 } } },
+      scenarios: { 'nieuwe-feature': { totaal: 2500 } },
+    });
+  });
+
   test.each([['--basis', 'bestaat-niet-xyz'], ['--basis', '-x'], ['--basis=--upload-pack=touch pwn']])(
     'meting-stuurt/AC-1 ongeldige basis %s: exit 1',
     (...args) => {
@@ -239,7 +258,7 @@ describe('meting-stuurt/AC-4: feiten-aanroepen uit de scenariobestanden', { time
         { secties: ['adr'], alle: true },
         { secties: ['gates'], alle: false },
       ],
-      zonder: [5],
+      zonder: [],
     });
   });
 

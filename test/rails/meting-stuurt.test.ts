@@ -175,6 +175,7 @@ describe('meting-stuurt/AC-5: plafonds in feiten.mjs', () => {
     ['in de Playwright-image (uit fase 2).', null],
     ['(fase 2; doorlopend, P5)', null],
     ['(uit fase 2, nu fase 3)', { nummer: 3, label: 'fase 3' }],
+    ['(uit fase 2, stuk 3)', null],
     ['(ADR 0051)', null],
   ])('meting-stuurt/AC-7 faseVan(%s)', (tekst, verwacht) => {
     expect(faseVan(tekst)).toStrictEqual(verwacht);

@@ -163,7 +163,11 @@ export function eenhedenPerSoort(paden, lees) {
  * @returns {Record<string, Meting>}
  */
 export function metingen(paden, lees) {
-  const perSoort = eenhedenPerSoort(paden, lees);
+  return metingenUit(eenhedenPerSoort(paden, lees));
+}
+
+/** De metingen uit al berekende eenheden. @param {Record<string, readonly Eenheid[]>} perSoort @returns {Record<string, Meting>} */
+function metingenUit(perSoort) {
   return Object.fromEntries(
     Object.entries(SOORTEN).map(([soort, { streefwaarde, eenheid }]) => {
       const lijst = perSoort[soort] ?? [];
@@ -367,12 +371,8 @@ function basisVan(argv, cwd, ref) {
 async function meet(cwd, ref, code) {
   const bestanden = paden(cwd, ref);
   const lees = await lezing(cwd, ref, bestanden);
-  return {
-    lees: lees.lees,
-    scenarios: await meetScenarios(lees, code),
-    eenheden: eenhedenPerSoort(bestanden, lees.lees),
-    metingen: metingen(bestanden, lees.lees),
-  };
+  const eenheden = eenhedenPerSoort(bestanden, lees.lees);
+  return { lees: lees.lees, scenarios: await meetScenarios(lees, code), eenheden, metingen: metingenUit(eenheden) };
 }
 
 /** @param {readonly string[]} argv */

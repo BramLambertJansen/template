@@ -106,7 +106,7 @@ function sectionLines(lines, heading) {
  */
 export function faseVan(first) {
   if (/\bdoorlopend\b/.test(first)) return null;
-  const tekst = first.replace(/\buit fase \d\b/g, ' ');
+  const tekst = first.replace(/\buit fase \d\b(?:,? stuk \d+[a-z]?\b)?/g, ' ');
   const fase = /\bfase (\d)\b(?:,? stuk (\d+[a-z]?))?/.exec(tekst);
   if (fase !== null) {
     const nummer = Number(fase[1]);
