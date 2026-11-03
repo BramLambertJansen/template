@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd # #452
 namespace: meting-stuurt
 ---
 
