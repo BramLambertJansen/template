@@ -68,8 +68,10 @@ n.v.t. — geen UI. Meldingen van `pr:merge` en het rolhek zijn Nederlands en no
   head en zijn `check_suite`; lukt geen van beide, dan geen merge. Omdat een `pull_request_target`-run aan de basis-SHA kan
   hangen, draagt de job de head-SHA in zijn naam (`agent-merge <head-SHA>`) en zoekt het script die naam in de jobs van de
   `guard.yml`-runs; de bouw-PR legt de koppeling vast met een test tegen een echte run. Review: een PR-commentaar `Review <head-SHA>: geen blokkerende bevindingen`. Codex (tenzij
-  `agentMerge.codex: false`): een review van `chatgpt-codex-connector[bot]` met `commit_id` gelijk aan de head-SHA, of een
-  commentaar of reactie van die bot na het moment dat de head gepusht werd (uit de PR-timeline, niet de commitdatum); en geen onopgeloste review-thread. Elke ontbrekende
+  `agentMerge.codex: false`): de samenvatting van `chatgpt-codex-connector[bot]` (marker `codex-review-state:v1`) zegt voor
+  `code_review` `status: completed`, `commit_sha` gelijk aan de head-SHA en `has_unresolved_findings: false`; of die bot gaf
+  een 👍 op de PR na het moment dat de head gepusht werd (uit de PR-timeline, niet de commitdatum). Een 👀, een lopende review
+  of een review op een andere SHA telt niet (negatieve test); en geen onopgeloste review-thread. Elke ontbrekende
   voorwaarde geeft een eigen regel en exit 1 zonder schrijfactie. Alleen REST, geen GraphQL. Unittest per voorwaarde met
   nagebootste API-antwoorden.
 - **agent-merge-niet-kritiek/AC-4** — Het rolhek weigert elke rol `gh pr merge`, `gh api …/merge`, auto-merge en elke
@@ -77,10 +79,15 @@ n.v.t. — geen UI. Meldingen van `pr:merge` en het rolhek zijn Nederlands en no
   als op schijf `scripts/kit/pr-merge.mjs`, de bestanden die het importeert en de bestanden uit `HOST_FILES`
   (`rails/hooks/lib/runner-authority.mjs`) gelijk zijn aan de blobs in het anker; anders weigert het met de reden. Tabeltest
   met een gewijzigde scriptregel `pr:merge` in `package.json` en een gewijzigde `.npmrc`. Een subagent krijgt altijd een weigering. `.claude/settings.json` houdt de deny-regels voor `gh pr merge` en
-  `gh api *merge*` en zet `pr:merge` niet in `allow`, zodat een openvallend rolhek een prompt geeft. `scripts/kit/pr-merge.mjs` staat in `KRITIEK` in `scripts/kit/lane.mjs`.
+  `gh api *merge*`, zet `pnpm pr:merge` in `sandbox.excludedCommands` (anders keurt `autoAllowBashIfSandboxed` hem vanzelf
+  goed) en krijgt een `ask`-regel `Bash(pnpm pr:merge *)`, zodat een openvallend rolhek een prompt geeft. De bouw-PR toetst
+  beide paden: met werkend rolhek geen prompt (hook-`allow`), met falend rolhek een prompt; geeft een hook-`allow` de
+  `ask`-regel niet vrij, dan meldt de bouw-PR dat en kiest de eigenaar. `scripts/kit/pr-merge.mjs` staat in `KRITIEK` in `scripts/kit/lane.mjs`.
 - **agent-merge-niet-kritiek/AC-5** — `.claude/gates.json` krijgt `merge: "niet-kritiek"` en `agentMerge` met `toegestaan`,
   `kritiek` en `codex` zoals in ADR 0069 punt 1 en 3. `check-docs` weigert voor `merge` elke andere waarde dan `"eigenaar"` of
-  `"niet-kritiek"`, en een `agentMerge.toegestaan` met een glob die een pad uit `voorReview` of `altijdVragen` dekt.
+  `"niet-kritiek"`, en een configuratie waarin een pad uit `voorReview` of `altijdVragen` na de uitsluitingen (`gates`, `agentMerge.kritiek`,
+  de naamregel uit AC-1) nog agent-mergebaar is; de toets gebruikt dezelfde functie als AC-1 op de vaste paden en globs van die
+  lijsten. `docs/**` in `toegestaan` is dus geldig zolang `docs/framework.md` en `docs/dod.md` gates zijn.
 - **agent-merge-niet-kritiek/AC-6** — Regelboek en instructies: R-REPO-01 en R-REPO-05 zeggen dat de eigenaar merget, behalve
   dat de hoofdsessie in Claude Code een PR met oordeel `agent-merge: ja` merget via `pnpm pr:merge` (0069); R-ROL-08 noemt
   `pnpm pr:merge` van de hoofdsessie als enige uitzondering op "mergen"; R-WERK-12 en stap 7 van §8 noemen de agent-merge;

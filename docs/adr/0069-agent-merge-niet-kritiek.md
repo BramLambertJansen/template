@@ -71,7 +71,8 @@ punt begint, `*.config.*`, `package.json`, `tsconfig*.json`). Daarnaast: geen be
    Het rolhek staat de hoofdsessie `pnpm pr:merge <nr>` toe zonder prompt (`allow`), alleen als op schijf het script, zijn
    imports en de bestanden die bepalen wat `pnpm` draait (precies de lijst `HOST_FILES` van de runner, met onder meer `package.json`,
    `.npmrc`, `.pnpmfile.cjs` en `mise.toml`) gelijk zijn aan het anker op `main`. Valt het rolhek open, dan krijgt de
-   hoofdsessie een prompt: `pr:merge` staat niet in de `allow` van `.claude/settings.json`. Een andere runtime (zonder rolhek) merget niet. `pr-merge.mjs` wordt een kritiek pad.
+   hoofdsessie een prompt: `pr:merge` krijgt een `ask`-regel in `.claude/settings.json` en valt buiten de automatische
+   goedkeuring van de sandbox. Een andere runtime (zonder rolhek) merget niet. `pr-merge.mjs` wordt een kritiek pad.
    *Waarom:* één smalle route is te toetsen; een prompt per merge maakt de wens ongedaan; een aangepast script op de eigen
    branch mag zichzelf geen recht geven; buiten Claude Code is er geen enkel vangnet.
 5. **De eigenaar houdt de schakelaar.** De modus staat standaard op `"eigenaar"`; de bouw-PR zet hem op `"niet-kritiek"` en de
