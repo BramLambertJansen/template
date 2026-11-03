@@ -3,7 +3,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createRootRoute, createRouter, createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { Toaster, ToastProvider } from '#core/web/ui/toast.tsx';
+import { components } from '#web/ui/component-metadata.ts';
 import { DesignSystemPage } from './design-system-page.tsx';
+import { exampleTarget } from './example-targets.ts';
 
 // Spec designsystem-toolbox, AC-1 t/m AC-5: de catalogus als toolbox met tabbladen per soort (`vak`), een ingeklapte
 // componentenlijst en een gebruikszin per voorbeeldsectie. Opzet zoals design-system-page.test.tsx.
@@ -250,4 +252,16 @@ describe('designsystem-toolbox/AC-5: gebruikszin per sectie', () => {
       }
     },
   );
+});
+
+// designsystem-toolbox/AC-7: de dekking blijft zonder uitzonderingen; elk component uit de bronindex heeft een vindplaats
+// in een tabblad, en die sectie staat in de pagina (ook als haar tabblad dicht is). check:catalogus bewijst de bron.
+test('designsystem-toolbox/AC-7: elk component uit de bronindex heeft een voorbeeld in een tabblad', async () => {
+  setup('/');
+  await screen.findByRole('tablist', { name: 'Onderdelen per soort' });
+  const missing = components.filter((item) => {
+    const target = exampleTarget(item.naam);
+    return target === undefined || document.getElementById(target.id) === null;
+  });
+  expect(missing.map((item) => item.naam)).toStrictEqual([]);
 });
