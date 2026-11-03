@@ -8,11 +8,15 @@ import { canRecordStatus, TEMPLATE_REPOSITORY } from './task-authority.mjs';
 import { automaticRunner } from './runner-authority.mjs';
 import { isCoreUiSource, testChangeRisk } from './functional-ui.mjs';
 import { staleBranchStart } from './verse-main.mjs';
+import { zelfladend } from './zelfladend.mjs';
 
 /**
  * @typedef {{ gates: string[], testpaden: string[], jsonGates: Record<string, string[]>, gegenereerd: string[],
  *   migraties: string[], schrijfrecht: Record<string, string[]>, mcpLezen: string[], voorReview?: string[] | undefined,
- *   altijdVragen?: string[] | undefined, onderhoud?: { repository: string } | undefined }} Config
+ *   altijdVragen?: string[] | undefined, zelfladend?: string[] | undefined, onderhoud?: { repository: string } | undefined,
+ *   rolhekEffectHoofdsessie?: 'uit' | 'schaduw' | 'aan', generatoren?: string[] | undefined }} Config
+ * `rolhekEffectHoofdsessie` (spec rolhek-vooraf-krimp AC-4, AC-7): ontbreekt → `uit`. `generatoren`: commando's die exact zo een
+ * pad onder `gegenereerd` mogen schrijven.
  * `voorReview` ontbreekt → elke gate telt als voorReview (faalt dicht). `altijdVragen` ontbreekt → in onderhoud blijft elk
  * voorReview-pad een gate (faalt dicht). `onderhoud`: de repository waarin de onderhoudsmodus geldt (ADR 0045 punt 8).
  * @typedef {{ root: string, cwd: string, config: Config, read: (rel: string) => string | null,
@@ -25,7 +29,7 @@ import { staleBranchStart } from './verse-main.mjs';
  * `onbekendeRol`: een subagent zonder bekende rol; telt als reviewer (alleen lezen).
  * `committed`: staat in de merge-base met het anker of met origin/main; 'zonder-origin' = beide onleesbaar en wel in HEAD (terugval).
  * @typedef {{ deny: string[], ask: string[], context: string[], allow?: boolean }} Decision
- * @typedef {{ kind: 'write' | 'delete', after: string | null }} Change
+ * @typedef {{ kind: 'write' | 'delete', after: string | null, verhuizing?: boolean }} Change
  */
 
 const SUBAGENT_ROLES = new Set(['architect', 'developer', 'tester', 'reviewer', 'docs']);
@@ -63,8 +67,18 @@ export function loadConfig(text) {
     schrijfrecht: record('schrijfrecht'),
     voorReview: optionalList('voorReview'),
     altijdVragen: optionalList('altijdVragen'),
+    zelfladend: optionalList('zelfladend'),
     onderhoud: onderhoudVan(value('onderhoud')),
+    rolhekEffectHoofdsessie: effectModus(value('rolhekEffectHoofdsessie')),
+    generatoren: optionalList('generatoren'),
   };
+}
+
+/** `uit`, `schaduw` of `aan`; ontbrekend is `uit`, elke andere waarde gooit (dicht falen). @param {unknown} found */
+function effectModus(found) {
+  if (found === undefined) return 'uit';
+  if (found === 'uit' || found === 'schaduw' || found === 'aan') return found;
+  throw new Error('.claude/gates.json: rolhekEffectHoofdsessie is geen "uit", "schaduw" of "aan"');
 }
 
 /** `{ "repository": "<owner>/<repo>" }` of ontbrekend; elke andere vorm gooit. @param {unknown} found */
@@ -122,6 +136,11 @@ export function decideChange({ rel, change, agentType }, ctx) {
   const decision = { deny: [], ask: [], context: [] };
   if (inGitMap(rel)) {
     decision.deny.push(gitMapMelding(rel));
+    return decision;
+  }
+  // Het archief verandert via Bash alleen door een verhuizing met dezelfde naam en inhoud (spec rolhek-vooraf-krimp AC-5).
+  if (rel.startsWith('docs/adr/archief/') && change.verhuizing !== true) {
+    decision.deny.push(`${rel}: ${ARCHIEF_MELDING}`);
     return decision;
   }
   const context = ['', 'developer', 'architect'].includes(agentType)
@@ -577,6 +596,9 @@ function decideBash({ command, role }, ctx, decision) {
   // De inhoud van `$(…)` en backticks is zelf een commando; zo vallen ook geneste substituties onder dezelfde regels.
   for (const inner of substitutions(command)) decideBash({ command: inner, role }, ctx, decision);
   const setsGhEnv = zetGhOmgeving(parseCommands(command));
+  // `cd .git && …` in hetzelfde commando: de zelfladende toets (AC-3) leest de woorden daarna vanuit die map.
+  /** @type {string | null} null: een `cd` naar een map die pas bij het uitvoeren bekend is */
+  let cwdNu = ctx.cwd;
   for (const parsed of parseCommands(command)) {
     const { assignments, argv, pathWrappers } = splitCommand(parsed.words);
     // `$G pr merge`, `${x}h …`, `$(echo gh) …`: welk programma draait, is pas bij het uitvoeren bekend.
@@ -598,6 +620,8 @@ function decideBash({ command, role }, ctx, decision) {
     if (envSplitsString(parsed.words))
       decision.deny.push('env -S/--split-string maakt van tekst een nieuw commando dat het rolhek niet ziet; verboden, voor elke rol');
     forbidden({ assignments, argv, expanded: parsed.expanded ?? [] }, { role, ctx }, decision);
+    zelfladend({ argv, redirects: parsed.redirects, role }, { ...ctx, cwd: cwdNu ?? ctx.root, cwdOnbekend: cwdNu === null }, decision);
+    cwdNu = volgendeMap({ argv, expanded: parsed.expanded ?? [] }, cwdNu, ctx.root);
     ghIssue(argv, { role, ctx, setsGhEnv }, decision);
     if (role === 'reviewer') reviewerBash({ assignments, argv, pathWrappers }, parsed.redirects, decision);
     const targets = writeTargets(parsed);
@@ -608,6 +632,21 @@ function decideBash({ command, role }, ctx, decision) {
     for (const target of targets.trees ?? []) treeTarget({ file: target, kind: 'write', role }, ctx, decision);
     for (const target of targets.deletes) treeTarget({ file: target, kind: 'delete', role }, ctx, decision);
   }
+}
+
+/**
+ * De map na `cd`/`pushd`. Een doel dat pas bij het uitvoeren bekend is (geen doel, `~`, `-`, `$`, backtick, substitutie):
+ * null, en de zelfladende toets valt dicht (AC-3). `$(git rev-parse --show-toplevel)` is de root.
+ * @param {{ argv: readonly string[], expanded: readonly string[] }} commando @param {string | null} cwd @param {string} root
+ * @returns {string | null}
+ */
+function volgendeMap({ argv, expanded }, cwd, root) {
+  if (!['cd', 'pushd'].includes(programName(argv[0] ?? ''))) return cwd;
+  const doel = argv.slice(1).find((arg) => arg === '-' || !arg.startsWith('-'));
+  if (doel === '$(git rev-parse --show-toplevel)') return root;
+  // Zonder doel, `~` of `-`: de home-map of de vorige map, pas bij het uitvoeren bekend; net als `$`, backtick of substitutie.
+  if (doel === undefined || doel === '-' || doel.startsWith('~') || expanded.includes(doel) || /[$`]/.test(doel)) return null;
+  return cwd === null ? null : path.resolve(cwd, doel);
 }
 
 // Opties van env die het volgende woord als waarde nemen (`-u NAAM`, `-C MAP`, `--unset NAAM`, `--chdir MAP`, `--argv0 X`).

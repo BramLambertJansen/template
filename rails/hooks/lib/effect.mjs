@@ -3,7 +3,7 @@
 import { createHash } from 'node:crypto';
 import { lstatSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { decideChange } from './rolhek.mjs';
+import { decideChange, globMatch } from './rolhek.mjs';
 import { blobVan, entryVan, gelijk, veranderingen } from './effect-compare.mjs';
 import { MAX_MS, blobBytes, gitDirVan, momentopname, padStaten } from './effect-snapshot.mjs';
 
@@ -115,7 +115,11 @@ export function legVensterVast(repo, venster) {
  * @param {Repo} repo @param {{ actor: string, start: number, paden: readonly string[] }} vraag
  */
 function verklaardePaden(repo, { actor, start, paden }) {
-  const anderen = vensters(repo).filter((venster) => venster.actor !== actor && venster.eind >= start);
+  // Met de hoofdsessie als dader (AC-4, vlag `aan`) verklaart haar venster een pad van een subagent niet meer: het pad krijgt
+  // dan de beslissing van beide rollen.
+  const hoofdTelt = repo.ctx.config.rolhekEffectHoofdsessie === 'aan';
+  const anderen = vensters(repo).filter((venster) =>
+    venster.actor !== actor && venster.eind >= start && !(hoofdTelt && venster.actor.startsWith('hoofd:')));
   const kandidaten = paden.filter((rel) => anderen.some((venster) => venster.paden.includes(rel)));
   const nu = padStaten(repo, kandidaten);
   return new Set(kandidaten.filter((rel) => anderen.some((venster) => venster.staten?.[rel] !== undefined && venster.staten[rel] === nu[rel])));
@@ -161,22 +165,44 @@ function leesNu(repo, rel) {
 
 /**
  * Een verandering met de beslissing van `decideChange` voor deze rol.
- * @param {Repo} repo @param {{ verandering: Verandering, agentType: string, voor: Snapshot }} doel
+ * @param {Repo} repo @param {{ verandering: Verandering, agentType: string, voor: Snapshot, verhuisd: ReadonlySet<string> }} doel
  */
-function beslis(repo, { verandering, agentType, voor }) {
+function beslis(repo, { verandering, agentType, voor, verhuisd }) {
   const { rel, na } = verandering;
   const ctx = { ...repo.ctx, read: leesVoor(repo, voor) };
   const del = { kind: /** @type {const} */ ('delete'), after: null };
-  const besluiten = [decideChange({ rel, change: weg(na) ? del : { kind: 'write', after: leesNu(repo, rel) }, agentType }, ctx)];
+  const nu = { kind: /** @type {const} */ ('write'), after: leesNu(repo, rel), verhuizing: verhuisd.has(rel) };
+  const besluiten = [decideChange({ rel, change: weg(na) ? del : nu, agentType }, ctx)];
   // Een gestagede inhoud telt apart: een tester kan een `test.skip` stagen en de werkmap ongemoeid laten.
   if (verandering.voor.idx !== na.idx && !rel.endsWith('/')) {
     const blob = indexBlob(na.idx);
-    const change = blob === null ? del : { kind: /** @type {const} */ ('write'), after: echteBlob(repo, blob) };
+    const after = blob === null ? null : echteBlob(repo, blob);
+    // `git mv` naar het archief staget dezelfde inhoud: ook die verhuizing telt (AC-5).
+    const change = blob === null ? del : { kind: /** @type {const} */ ('write'), after, verhuizing: nu.verhuizing && after === nu.after };
     besluiten.push(decideChange({ rel, change, agentType }, ctx));
   }
   /** @param {'deny' | 'ask' | 'context'} soort */
   const samen = (soort) => [...new Set(besluiten.flatMap((besluit) => besluit[soort]))];
   return { deny: samen('deny'), ask: samen('ask'), context: samen('context') };
+}
+
+/**
+ * Verhuizingen naar het ADR-archief (spec rolhek-vooraf-krimp AC-5): een nieuw `docs/adr/archief/<naam>` met dezelfde inhoud
+ * als het `docs/adr/<naam>` dat in hetzelfde commando verdween.
+ * @param {Repo} repo @param {{ lijst: readonly Verandering[], voor: Snapshot }} doel
+ * @returns {Set<string>}
+ */
+function verhuizingen(repo, { lijst, voor }) {
+  const weggehaald = new Set(lijst.filter((verandering) => weg(verandering.na)).map((verandering) => verandering.rel));
+  const lees = leesVoor(repo, voor);
+  return new Set(lijst
+    .filter((verandering) => verandering.rel.startsWith('docs/adr/archief/') && weg(verandering.voor) && !weg(verandering.na))
+    .filter((verandering) => {
+      const bron = `docs/adr/${verandering.rel.slice('docs/adr/archief/'.length)}`;
+      const inhoud = weggehaald.has(bron) ? lees(bron) : null;
+      return !bron.slice('docs/adr/'.length).includes('/') && inhoud !== null && inhoud === leesNu(repo, verandering.rel);
+    })
+    .map((verandering) => verandering.rel));
 }
 
 /** @param {Repo} repo @param {{ voor: Snapshot, na: Snapshot }} paar */
@@ -211,12 +237,59 @@ export function toets(repo, paar, wie) {
   const nieuw = [];
   /** @type {string[]} */
   const meldingen = [];
+  const verhuisd = verhuizingen(repo, { lijst, voor: paar.voor });
   for (const verandering of lijst) {
     if (verklaard.has(verandering.rel) || terug(verandering) || genomen[verandering.rel] === staatSleutel(paar.na, verandering.rel))
       continue;
-    const besluit = beslis(repo, { verandering, agentType: wie.agentType, voor: paar.voor });
+    const besluit = beslis(repo, { verandering, agentType: wie.agentType, voor: paar.voor, verhuisd });
     const reden = [...besluit.deny, ...besluit.ask].join('; ');
     if (reden !== '') nieuw.push({ rel: verandering.rel, actor: wie.actor, rol: wie.agentType || 'hoofdsessie', commando: wie.commando, reden, voor: verandering.voor });
+    meldingen.push(...besluit.context);
+  }
+  return { nieuw, meldingen, paden: lijst.map((verandering) => verandering.rel) };
+}
+
+/**
+ * De inhoud van een pad in de werkmap: `weg`, `b:<blob>` voor een bestand (ook als het gelijk is aan de index), anders de staat
+ * zelf (map, link). Een andere modus of alleen een andere index telt zo niet als werkmapwijziging.
+ * @param {import('./effect-snapshot.mjs').Entry} entry
+ */
+function werkmapInhoud(entry) {
+  if (entry.wt === 'schoon') return entry.idx === '' ? 'weg' : `b:${blobVan(entry) ?? ''}`;
+  const blob = blobVan(entry);
+  return blob === null ? entry.wt.replace(/^\d+:/, '') : `b:${blob}`;
+}
+
+/**
+ * De hoofdsessie als dader op de werkmap (spec rolhek-vooraf-krimp AC-4): elk pad waarvan de werkmapinhoud veranderde krijgt
+ * `decideChange` met rol hoofdsessie. Niet: `.git/`, paden waarvan alleen de index veranderde, en paden die een verschoven HEAD
+ * verklaart (in `git diff --name-only <oud> <nieuw>` en daarna gelijk aan de index). Een pad onder `gegenereerd` mag alleen
+ * het exacte commando uit `generatoren` schrijven. Een venster van een andere actor maakt een pad hier niet vrij: zo krijgt
+ * een pad dat ook een subagent raakte de beslissing van beide rollen (de strengste wint op de lijst).
+ * @param {Repo} repo @param {{ voor: Snapshot, na: Snapshot }} paar @param {{ actor: string, commando: string }} wie
+ * @returns {{ nieuw: (Overtreding & { blokkeer: boolean })[], meldingen: string[], paden: string[] }}
+ */
+export function toetsHoofdsessie(repo, paar, wie) {
+  const headPaden = paar.voor.head !== paar.na.head && paar.voor.head !== '' && paar.na.head !== ''
+    ? new Set(repo.git(['diff', '--name-only', '-z', '--no-renames', paar.voor.head, paar.na.head]).split('\0'))
+    : new Set();
+  const config = repo.ctx.config;
+  const generator = (config.generatoren ?? []).includes(wie.commando.trim());
+  const lijst = veranderingenIn(repo, paar).filter((verandering) =>
+    !verandering.rel.startsWith('.git/') &&
+    werkmapInhoud(verandering.voor) !== werkmapInhoud(verandering.na) &&
+    !(headPaden.has(verandering.rel) && verandering.na.wt === 'schoon') &&
+    !(generator && config.gegenereerd.some((glob) => globMatch(glob, verandering.rel))));
+  const verhuisd = verhuizingen(repo, { lijst, voor: paar.voor });
+  /** @type {(Overtreding & { blokkeer: boolean })[]} */
+  const nieuw = [];
+  /** @type {string[]} */
+  const meldingen = [];
+  for (const verandering of lijst) {
+    const besluit = beslis(repo, { verandering, agentType: '', voor: paar.voor, verhuisd });
+    const reden = [...besluit.deny, ...besluit.ask].join('; ');
+    if (reden !== '')
+      nieuw.push({ rel: verandering.rel, actor: wie.actor, rol: 'hoofdsessie', commando: wie.commando, reden, voor: verandering.voor, blokkeer: besluit.deny.length > 0 });
     meldingen.push(...besluit.context);
   }
   return { nieuw, meldingen, paden: lijst.map((verandering) => verandering.rel) };
@@ -252,7 +325,7 @@ export function legVast(repo, { soort, id }, extra) {
 
 /** @param {Repo} repo @param {'pre' | 'agent'} soort @param {string} id */
 export function leesOpname(repo, soort, id) {
-  /** @type {{ tijd?: number, snap?: Snapshot | null, sessie?: string, agentType?: string, gestopt?: number } | null} */
+  /** @type {{ tijd?: number, snap?: Snapshot | null, sessie?: string, agentType?: string, gestopt?: number, vooraf?: string } | null} */
   const opname = leesJson(opnamePad(repo, soort, id), null);
   return opname;
 }
