@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd # #476
 namespace: agent-merge-codex-wachten
 ---
 
