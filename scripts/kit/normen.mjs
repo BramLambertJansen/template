@@ -18,26 +18,57 @@ const KB = 1024;
 
 /** Het enige patroon van een definitie (krimp-op-normen/AC-1). */
 export const DEFINITIE = /^- \*\*(R-[A-Z]+-\d+[a-z]?)\*\*(?=\s|$)/;
-const LIJKT_OP_DEFINITIE = /^\s*[-*]\s+\*\*\s*R-/;
+// Ook zonder opsommingsteken, genummerd of met `+`: alles wat een lezer voor een definitie kan houden.
+const LIJKT_OP_DEFINITIE = /^\s*(?:[-*+]|\d+[.)])?\s*(?:\*\*|__)?\s*R-[A-Z]+-\d/;
 const R_ID = /^R-[A-Z]+-\d+[a-z]?$/;
 const PIJL = ' → ';
 
 /**
- * De regels buiten codeblokken (```` ``` ````, `~~~`) en HTML-commentaar, met hun regelnummer.
- * @param {string} tekst @returns {{ regel: string, nr: number }[]}
+ * De regels buiten codeblokken (```` ``` ````, `~~~`; een blok sluit met hetzelfde teken en minstens even lang) en buiten
+ * HTML-commentaar, met hun regelnummer. Commentaar binnen een regel valt weg, de rest van de regel blijft.
+ * @param {string} tekst @returns {{ regels: { regel: string, nr: number }[], verborgen: boolean }}
  */
 export function zichtbareRegels(tekst) {
   /** @type {{ regel: string, nr: number }[]} */
-  const uit = [];
-  let blok = '';
-  let commentaar = false;
+  const regels = [];
+  const staat = { blok: '', commentaar: false, verborgen: false };
   tekst.split('\n').forEach((regel, index) => {
-    const hek = /^\s*(`{3,}|~{3,})/.exec(regel)?.[1]?.slice(0, 3) ?? '';
-    if (!commentaar && hek !== '' && (blok === '' || blok === hek)) blok = blok === '' ? hek : '';
-    else if (blok === '' && (commentaar || regel.includes('<!--'))) commentaar = !regel.includes('-->');
-    else if (blok === '') uit.push({ regel, nr: index + 1 });
+    const hek = /^\s*(`{3,}|~{3,})/.exec(regel)?.[1] ?? '';
+    if (!staat.commentaar && hek !== '' && (staat.blok === '' || sluit(staat.blok, hek))) {
+      staat.blok = staat.blok === '' ? hek : '';
+      staat.verborgen = true;
+    } else if (staat.blok !== '') staat.verborgen = true;
+    else {
+      const rest = zonderCommentaar(regel, staat);
+      if (rest !== null) regels.push({ regel: rest, nr: index + 1 });
+    }
   });
-  return uit;
+  return { regels, verborgen: staat.verborgen };
+}
+
+/** Sluit `hek` het blok dat met `open` begon? @param {string} open @param {string} hek */
+const sluit = (open, hek) => hek[0] === open[0] && hek.length >= open.length;
+
+/**
+ * De regel zonder HTML-commentaar, of null als er niets van overblijft; houdt bij of een commentaar doorloopt.
+ * @param {string} regel @param {{ commentaar: boolean, verborgen: boolean }} staat
+ */
+function zonderCommentaar(regel, staat) {
+  let rest = regel;
+  if (staat.commentaar) {
+    const einde = rest.indexOf('-->');
+    if (einde === -1) return null;
+    rest = rest.slice(einde + 3);
+    staat.commentaar = false;
+  }
+  if (rest.includes('<!--')) staat.verborgen = true;
+  rest = rest.replace(/<!--[\s\S]*?-->/g, '');
+  const open = rest.indexOf('<!--');
+  if (open !== -1) {
+    staat.commentaar = true;
+    rest = rest.slice(0, open);
+  }
+  return rest.trim() === '' && regel.trim() !== '' ? null : rest;
 }
 
 /**
@@ -49,12 +80,12 @@ export function definities(tekst) {
   const ids = new Map();
   /** @type {string[]} */
   const fouten = [];
-  let vorige = false;
-  for (const { regel, nr } of zichtbareRegels(tekst)) {
+  const ruw = tekst.split('\n');
+  for (const { regel, nr } of zichtbareRegels(tekst).regels) {
     const id = DEFINITIE.exec(regel)?.[1];
-    if (vorige && /^\s+\S/.test(regel))
-      fouten.push(`regel ${String(nr)}: vervolgregel onder een definitie; een definitie beslaat één regel`);
-    vorige = id !== undefined;
+    // De ruwe volgende regel: ook een ingesprongen codeblok of commentaar direct onder een definitie telt als vervolg.
+    if (id !== undefined && /^\s+\S/.test(ruw[nr] ?? ''))
+      fouten.push(`regel ${String(nr + 1)}: vervolgregel onder een definitie; een definitie beslaat één regel`);
     if (id === undefined) {
       if (LIJKT_OP_DEFINITIE.test(regel))
         fouten.push(`regel ${String(nr)}: lijkt op een definitie maar voldoet niet aan \`- **R-<GROEP>-<n>**\``);
@@ -73,8 +104,8 @@ export function definities(tekst) {
 export function leesLijst(tekst) {
   /** @type {Lijst} */
   const lijst = { intro: [], secties: new Map(), fouten: [] };
-  const zichtbaar = zichtbareRegels(tekst);
-  if (zichtbaar.length !== tekst.split('\n').length) lijst.fouten.push('bevat een codeblok of HTML-commentaar');
+  const { regels: zichtbaar, verborgen } = zichtbareRegels(tekst);
+  if (verborgen) lijst.fouten.push('bevat een codeblok of HTML-commentaar');
   /** @type {Regel[] | null} */
   let sectie = null;
   for (const { regel, nr } of zichtbaar) {
@@ -118,7 +149,7 @@ export function doelProbleem(doel, { gedefinieerd, keten }) {
   }
   const reden = /^geschrapt:\s*(.*)$/.exec(huidig)?.[1] ?? '';
   if (/^geschrapt:/.test(huidig))
-    return reden.split(/\s+/).filter(Boolean).length >= 3
+    return reden.split(/\s+/).filter((woord) => /\p{L}/u.test(woord)).length >= 3
       ? null
       : 'de reden van schrappen heeft minder dan drie woorden';
   return `"${huidig}" is geen R-id en geen "geschrapt: <reden>"`;

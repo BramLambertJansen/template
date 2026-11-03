@@ -57,6 +57,9 @@ describe('krimp-op-normen/AC-1: elke verdwenen R-id staat op de lijst', () => {
     ['ster als opsommingsteken', '* **R-DOC-07** X\n'],
     ['spatie in de vetdruk', '- ** R-DOC-07** X\n'],
     ['ingesprongen', '  - **R-DOC-07** X\n'],
+    ['spatie voor de sluitende vetdruk', '- **R-DOC-07 ** X\n'],
+    ['zonder opsommingsteken', '**R-DOC-07** X\n'],
+    ['genummerd', '1. **R-DOC-07** X\n'],
   ])('krimp-op-normen/AC-1 een regel die op een definitie lijkt (%s): rood', (_naam, regel) => {
     expect(toets({ boek: `${BOEK}${regel}` }).join('\n')).toContain('lijkt op een definitie');
   });
@@ -64,6 +67,19 @@ describe('krimp-op-normen/AC-1: elke verdwenen R-id staat op de lijst', () => {
   test('krimp-op-normen/AC-1 een dubbele definitie en een vervolgregel: rood', () => {
     expect(toets({ boek: `${BOEK}- **R-DOC-01** Weer.\n` }).join('\n')).toContain('meer dan één keer');
     expect(toets({ boek: `${BOEK}- **R-DOC-04** X\n  vervolg\n` }).join('\n')).toContain('vervolgregel');
+  });
+
+  test('krimp-op-normen/AC-1 commentaar binnen de regel laat de definitie staan', () => {
+    expect([...definities('- **R-DOC-09** Norm <!-- notitie -->\n').ids.keys()]).toStrictEqual(['R-DOC-09']);
+  });
+
+  test('krimp-op-normen/AC-1 een langer codeblokhek sluit niet op een korter hek', () => {
+    const blok = '````\n```\n- **R-DOC-09** X\n````\n';
+    expect([...definities(blok).ids.keys()]).not.toContain('R-DOC-09');
+  });
+
+  test('krimp-op-normen/AC-1 een ingesprongen codeblok direct onder een definitie is een vervolgregel', () => {
+    expect(definities('- **R-DOC-04** X\n    ```\n    y\n    ```\n').fouten.join('\n')).toContain('vervolgregel');
   });
 
   test('krimp-op-normen/AC-1 regelboek verwijderd: elke R-id verdween', () => {
@@ -80,6 +96,7 @@ describe('krimp-op-normen/AC-2: doelen op de lijst', () => {
   test.each([
     ['een reden van één woord', '- R-DOC-02 → geschrapt: weg\n', 'drie woorden'],
     ['alles → geschrapt: .', '- alles → geschrapt: .\n', 'drie woorden'],
+    ['een reden van alleen leestekens', '- R-DOC-02 → geschrapt: . . .\n', 'drie woorden'],
     ['een onbekend doel', '- R-DOC-02 → R-DOC-99\n', 'R-DOC-99'],
     ['geen R-id en geen geschrapt', '- R-DOC-02 → elders\n', 'geen R-id'],
   ])('krimp-op-normen/AC-2 %s: rood', (_naam, regel, genoemd) => {
@@ -98,6 +115,8 @@ describe('krimp-op-normen/AC-2: doelen op de lijst', () => {
     const boek = zonder('R-DOC-02').replace('R-DOC-01', 'R-DOC-12');
     const keten = lijst('- R-DOC-02 → R-DOC-01\n- R-DOC-01 → R-DOC-12\n');
     expect(toets({ boek, lijst: keten })).toStrictEqual([]);
+    const naarGeschrapt = lijst('- R-DOC-02 → R-DOC-05\n- R-DOC-05 → geschrapt: later toch overbodig gebleken\n');
+    expect(toets({ boek: zonder('R-DOC-02'), lijst: naarGeschrapt })).toStrictEqual([]);
     const kring = lijst('- R-DOC-02 → R-DOC-05\n- R-DOC-05 → R-DOC-02\n');
     expect(toets({ boek: zonder('R-DOC-02'), lijst: kring }).join('\n')).toContain('kringverwijzing');
   });
@@ -192,6 +211,38 @@ describe('krimp-op-normen/AC-5: zonder basis in CI rood, lokaal een melding', { 
     }
   });
 
+  test('krimp-op-normen/AC-5 zonder basis toetst hij wel de vorm van definities en lijst', async () => {
+    const dir = repo({
+      'docs/framework.md': `${BOEK}- **R-DOC-01** Dubbel.\n`,
+      'docs/normen-vervallen.md': `${KOP}<!-- x -->\n`,
+    });
+    const uit = (await docsKrimp(dir)).map(({ message }) => message).join('\n');
+    expect(uit).toContain('meer dan één keer');
+    expect(uit).toContain('HTML-commentaar');
+  });
+
+  test('krimp-op-normen/AC-5 een verdwenen R-id blijft rood na ratchet --update (nooit in de baseline)', () => {
+    const dir = repo({
+      'docs/framework.md': BOEK,
+      'docs/normen-vervallen.md': KOP,
+      'package.json': JSON.stringify({ scripts: {} }),
+      'src/leeg.ts': 'export {};\n',
+      '.kit/baseline.json': '{}\n',
+    });
+    git(dir, 'update-ref', 'refs/remotes/origin/main', 'HEAD');
+    writeFileSync(path.join(dir, 'docs/framework.md'), zonder('R-DOC-02'));
+    git(dir, 'commit', '-qam', 'schrap');
+    const ratchet = (...args: string[]) =>
+      spawnSync(process.execPath, [path.join(root, 'scripts/kit/ratchet.mjs'), ...args], {
+        cwd: dir,
+        encoding: 'utf8',
+      });
+    expect(ratchet('--update').status).toBe(0);
+    const r = ratchet();
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('R-DOC-02');
+  });
+
   test('krimp-op-normen/AC-5 tegen de merge-base: een geschrapte R-id is rood', async () => {
     const dir = repo({ 'docs/framework.md': BOEK, 'docs/normen-vervallen.md': KOP });
     git(dir, 'update-ref', 'refs/remotes/origin/main', 'HEAD');
@@ -211,7 +262,7 @@ describe('krimp-op-normen/AC-6: melding bij een gewijzigde norm en de reviewer t
 
   test('krimp-op-normen/AC-6 checklist, reviewer en PR-sjabloon noemen de lijst', () => {
     expect(readFileSync('docs/operations/review-checklists.md', 'utf8')).toMatch(/uitgehold[^\n]*normen-vervallen\.md/);
-    expect(readFileSync('.claude/agents/reviewer.md', 'utf8')).toContain('docs/normen-vervallen.md');
+    expect(readFileSync('.claude/agents/reviewer.md', 'utf8')).toContain('bij `normen-vervallen.md` ook Docs');
     expect(readFileSync('.github/pull_request_template.md', 'utf8')).toContain('docs/normen-vervallen.md');
   });
 });

@@ -94,7 +94,7 @@ function nu(root, file) {
   return existsSync(path.join(root, file)) ? readFileSync(path.join(root, file), 'utf8') : null;
 }
 
-/** @param {string} root @param {string} file */
+/** @param {string} root @param {string} basis @param {string} file */
 const toen = (root, basis, file) => git(root, ['show', `${basis}:${file}`]);
 
 /**
@@ -118,7 +118,12 @@ export function zonderBasis(root, inCi) {
  */
 export function normenUitGit(root) {
   const basis = basisVan(root);
-  if (basis === null) return [];
+  // Zonder basis alleen wat geen vergelijking vraagt: de vorm van definities en lijst (AC-1, AC-4).
+  if (basis === null) {
+    const boek = nu(root, REGELBOEK);
+    const bytes = { oud: {}, nieuw: {} };
+    return normViolations({ boek: { oud: boek, nieuw: boek }, lijst: { oud: null, nieuw: nu(root, LIJST) }, bytes });
+  }
   const getrackt = (git(root, ['ls-files', '-z']) ?? '').split('\0').filter((f) => bindend(f) && nu(root, f) !== null);
   const nieuw = Object.fromEntries(getrackt.map((f) => [f, statSync(path.join(root, f)).size]));
   return normViolations({
