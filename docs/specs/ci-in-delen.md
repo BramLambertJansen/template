@@ -108,7 +108,8 @@ n.v.t.: geen API-route, permissie of foutcode.
   (`--deel`), `scripts/runner.sh` of `playwright.config.ts` (deel naar `--shard`), `.github/workflows/ci.yml`.
 - Tests: nieuw voor AC-1 t/m AC-8; `test/rails/gate-slow-ci.test.ts` en `test/scripts/github-ruleset.test.ts` krijgen de
   nieuwe matrix en de bredere uitzondering (bestaande tests gewijzigd omdat deze spec het gedrag verandert, met reden in de PR).
-- Herzien-markering (R-CI-05): ADR 0073 punt 1; spec `samenhang-checks-rollen` AC-1.
+- Herzien-markering (R-CI-05): ADR 0073 punt 1 (in deze besluit-PR); spec `samenhang-checks-rollen` AC-1 (in de bouw-PR,
+  want een gebouwde spec wijzigt alleen samen met code, ADR 0062).
 - Docs: `docs/operations/agent-doorloop.md` (CI-uitslag per deel lezen), `docs/operations/testuitvoering.md`, `CHANGELOG.md`.
 
 ## Buiten scope
