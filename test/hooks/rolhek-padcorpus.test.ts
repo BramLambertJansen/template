@@ -174,7 +174,7 @@ export function achteraf(rij: Rij): { uitkomst: Uitkomst; veranderd: boolean } {
     inKooi(`{ ${tmp}${rij.commando.replaceAll(ROOT, root)}\n} > /dev/null 2>&1`, {
       werkmap: root,
       env: GIT_ENV,
-      timeout: 20_000,
+      timeout: 10_000,
     });
   } catch (fout) {
     // Een commando dat over het hele bestandssysteem loopt (`find / -delete`), stopt op de time-out; de toets kijkt daarna.
@@ -217,17 +217,22 @@ function zelfladendVooraf(rij: Rij): boolean {
 const SUBAGENTRIJEN = PADCORPUS.filter((rij) => rij.rol !== '');
 
 describe('rolhek-vooraf-krimp/AC-2: een subagentrij geeft achteraf dezelfde uitkomst, het commando in de kooi', () => {
-  test.each(SUBAGENTRIJEN.map((rij) => [naam(rij), rij] as const))('%s', (_naam, rij) => {
-    if (zelfladendVooraf(rij)) {
-      expect(vooraf(rij)).toBe('deny');
-      return;
-    }
-    const { uitkomst, veranderd } = achteraf(rij);
-    // Doorlaten geeft geen blokkade (AC-2); een melding achteraf mag.
-    if (verwacht(rij, veranderd) === 'door') expect(uitkomst).not.toBe('deny');
-    else expect(uitkomst).toBe(verwacht(rij, veranderd));
-    if (moetVeranderen(rij)) expect(veranderd).toBe(true);
-  });
+  test.each(SUBAGENTRIJEN.map((rij) => [naam(rij), rij] as const))(
+    '%s',
+    (_naam, rij) => {
+      if (zelfladendVooraf(rij)) {
+        expect(vooraf(rij)).toBe('deny');
+        return;
+      }
+      const { uitkomst, veranderd } = achteraf(rij);
+      // Doorlaten geeft geen blokkade (AC-2); een melding achteraf mag.
+      if (verwacht(rij, veranderd) === 'door') expect(uitkomst).not.toBe('deny');
+      else expect(uitkomst).toBe(verwacht(rij, veranderd));
+      if (moetVeranderen(rij)) expect(veranderd).toBe(true);
+      // `find / -delete` loopt tot de time-out van de kooi; op een CI-runner duurt die langer dan de standaard 15 s.
+    },
+    60_000,
+  );
 
   test('een bewust verkeerde verwachting faalt (R-PRINC-04)', () => {
     const rij = SUBAGENTRIJEN.find((kandidaat) => kandidaat.commando === 'rm -rf src' && kandidaat.rol === 'Explore');
