@@ -79,16 +79,17 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   uit de head en moet daar op minstens één assertie falen (vitest-uitslag `failed` met een assertiefout, geen laad- of
   importfout); het draait op de head en moet slagen. Bij trede Type: `vitest --typecheck` op het `*.test-d.ts`-bestand faalt
   op de basis en slaagt op de head. Slaagt het op de basis, faalt het daar alleen op laden, of faalt het op de head, dan rood
-  met beide uitslagen. De PR-code draait zonder token: labels en beschrijving worden in een eerdere stap gelezen en als bestand
-  doorgegeven; de stappen met de bewijsruns hebben geen `GH_TOKEN`, `GITHUB_TOKEN` of geheimen in hun env
-  (`persist-credentials: false`). De basisrun installeert uit de lockfile van de basis, de headrun uit die van de head, beide met
-  `--ignore-scripts`. Een test leest het workflowbestand en faalt als een bewijsstap een token in zijn env heeft. Fixtures: een test die ook op de basis slaagt, en een test die op de basis
+  met beide uitslagen. De PR-code draait zonder token: beschrijving en labels komen uit de event-payload, als bestand
+  doorgegeven; geen `GH_TOKEN`, `GITHUB_TOKEN` of geheim in de env van workflow, job of bewijsstap, en geen `with: token` bij
+  checkout (`persist-credentials: false`). De basisrun installeert uit de lockfile van de basis, de headrun uit die van de head, beide met
+  `--ignore-scripts`. Een test leest het workflowbestand en faalt op een token in de env op elk niveau of in `with: token`. Fixtures: een test die ook op de basis slaagt, en een test die op de basis
   alleen op een import faalt, maken de job allebei rood.
 - **leerlus-bewijs/AC-4** — `geen test: <reden>` is alleen geldig bij trede Skill, Padregel of AGENTS.md, of bij een
   integratie- of e2e-test, met een niet-lege reden; dan slaagt de job en geeft het agent-merge-oordeel (`diff-guard.mjs`,
   gelezen door `pr-merge.mjs`) `nee` met reden `leerpunt zonder test`. Bij een andere trede of lege reden: rood. De job draait
   ook op `pull_request` type `edited`. Omdat de diff-guard niet op `edited` draait, leest `pr-merge.mjs` de beschrijving zelf op
-  het moment van mergen en weigert bij `geen test:`, ook als het oordeel eerder `ja` was. Test: beschrijving na het oordeel
+  het moment van mergen met dezelfde parser van `## Leerpunt` als `leerpunt-bewijs.mjs`, en weigert bij `geen test:`, ook als
+  het oordeel eerder `ja` was. Het omgekeerde (later `bewijs <pad>`) houdt het oordeel op `nee` tot de volgende push: veilig. Test: beschrijving na het oordeel
   gewijzigd van `bewijs <pad>` naar `geen test: …` geeft een weigering.
 - **leerlus-bewijs/AC-5** — De workflow `leerpunt-check` op `issues` (opened, edited, labeled, reopened) toetst een issue met label
   `leerpunt` tegen `leerpunt.yml`: elke kop aanwezig en in volgorde, verplichte velden niet leeg (`_No response_` telt als leeg),
@@ -134,7 +135,9 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   eigen workflow `leerpunt-bewijs.yml`, workflow `.github/workflows/leerpunt.yml`, `docs/operations/leerpunten-voorsorteren.md`.
 - Gewijzigd: `.claude/skills/opleveren/SKILL.md`, `.github/pull_request_template.md`, `docs/framework.md` (R-SEC-09, R-ROL-12,
   R-WERK-13), `AGENTS.md`, `CLAUDE.md`, `docs/operations/st-09-praktijkproef.md`, `scripts/kit/diff-guard.mjs` en
-  `scripts/kit/pr-merge.mjs` (AC-4), `docs/specs/leerlus.md`.
+  `scripts/kit/pr-merge.mjs` (AC-4), `docs/specs/leerlus.md`, `docs/nieuwe-app.md` (rulesetlijst) en
+  `test/scripts/github-ruleset.test.ts`: `leerpunt-bewijs` erbij, en de job van `leerpunt.yml` (op `issues`, geen PR-check) als
+  uitzondering op "elke workflowjob staat in requiredChecks"; dat wijzigt een bestaande test, met reden in de bouw-PR.
 - Verplichte check: `leerpunt-bewijs` in de ruleset (`scripts/github-ruleset.sh`) en `requiredChecks` in `.claude/decisions.json`.
 - Na de merge: de routine "Leerpunten voorsorteren" verwijst naar het bestand uit AC-9.
 
