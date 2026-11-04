@@ -90,7 +90,8 @@ function parseBaseUrl(baseUrl: string): URL {
 }
 
 function isLocalHost(hostname: string): boolean {
-  const bare = hostname.startsWith('[') && hostname.endsWith(']') ? hostname.slice(1, -1) : hostname;
+  const host = hostname.endsWith('.') ? hostname.slice(0, -1) : hostname;
+  const bare = host.startsWith('[') && host.endsWith(']') ? host.slice(1, -1) : host;
   return isIP(bare) !== 0 || bare === 'localhost' || bare.endsWith('.localhost');
 }
 

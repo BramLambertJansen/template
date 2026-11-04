@@ -107,7 +107,8 @@ aanroep mee; de partnerstap (ADR 0077 punt 7) geeft `c.get('requestId')` door. E
 **Grenzen** in `src/core/shared/limits.ts`, standaard en hard: `OUTBOUND_TIMEOUT_MS` 3 000 en `OUTBOUND_TIMEOUT_MAX_MS` 10 000;
 `OUTBOUND_BUDGET_MS` 8 000 en `OUTBOUND_BUDGET_MAX_MS` 20 000; `OUTBOUND_MAX_ATTEMPTS` 3 en `OUTBOUND_MAX_ATTEMPTS_MAX` 5;
 `OUTBOUND_BACKOFF_BASE_MS` 200, `OUTBOUND_BACKOFF_MAX_MS` 2 000; `OUTBOUND_MAX_RESPONSE_BYTES` 1 048 576, geteld op gedecodeerde
-bytes. Een `Content-Length` boven de grens zonder `Content-Encoding` wordt niet gelezen; anders stopt het lezen bij de grens.
+bytes. Een `Content-Length` boven de grens zonder `Content-Encoding` wordt niet gelezen; anders stopt het lezen bij de grens. Een
+antwoord zonder body (HEAD, 204) telt de `Content-Length` niet.
 
 **Foutcodes:** `coreErrorCodes` (`src/core/shared/errors.ts`), `ErrorStatus` en `STATUS` (`src/core/api/errors.ts`), teksten in
 `src/core/web/copy/errors.ts`. Een onbekende app-code blijft 409, een niet-geregistreerde code `INTERNAL_ERROR`.
@@ -183,20 +184,19 @@ Tegen de nep-partner; "geen aanroep" betekent dat zijn teller 0 blijft.
   `src/core/web/copy/errors.ts`, `src/core/shared/limits.ts`, `src/core/api/http/route-effects.ts`, `src/core/api/http/create-app.ts` (markering om de withUser-callback), `src/api/server.ts`
   (`guardWithUser`). Tests op de codelijst of statussen (`src/core/api/errors.test.ts`) veranderen mee; reden: deze spec.
 - **Nep-partner** `startFakePartner(routes)`: `node:http` op `127.0.0.1`, poort 0; per `'METHODE /pad'` een antwoord of een reeks
-  (de laatste herhaalt) met `status`, `headers`, `json` of ruwe `body`, `delayMs` en `destroy`; `calls(key)`, `requests` (methode,
-  pad met query, headers) en `close()`. `.dependency-cruiser.mjs`: `testing-alleen-in-tests` dekt ook dit bestand (hoofdsessie).
+  (de laatste herhaalt) met `status`, `headers`, `json` of ruwe `body`, `delayMs`, `bodyDelayMs` en `destroy`; `calls(key)`, `requests` (methode,
+  pad met query, headers, body, aankomsttijd `at`) en `close()`. `.dependency-cruiser.mjs`: `testing-alleen-in-tests` dekt ook dit bestand (hoofdsessie).
 - `docs/framework.md`, voorstel (de eigenaarmerge van de PR is het akkoord):
   - §3 Uitzonderingen: "**R-UIT-07** Een integratietest mag een lokale nep-partner gebruiken (`startFakePartner` uit
     `src/core/api/outbound/testing.ts`: echte HTTP-server in de test, vastgelegde antwoorden); eigen code en database blijven echt.
     Elke koppeling krijgt daarnaast één handmatige run tegen de testomgeving van de partner, met commando en uitkomst in de PR (0077)"
   - §4 R-TEST-01: na "nooit gemockt" komt "(uitzondering R-UIT-07)".
   - §4: "**R-CODE-12** Netwerk naar een externe dienst vanuit `src/api` en `src/core/api` alleen via `src/core/api/outbound`
-    (uitgezonderd `src/core/api/mail/smtp.ts`, een opslagadapter die een ADR toestaat en `deploy/<host>/`); de client weigert een
-    aanroep in een `withUser`-transactie en in `afterCommit` (0077)"
+    (uitgezonderd `src/core/api/mail/smtp.ts`, een opslagadapter die een ADR toestaat en `deploy/<host>/`); de client weigert een aanroep in de `withUser` van een route of via `guardWithUser`, en in `afterCommit` (0077)"
   - §6: "**R-SEC-10** Partnerfouten gaan naar buiten alleen als `UPSTREAM_INVALID` (502), `UPSTREAM_UNAVAILABLE` (503) of
     `UPSTREAM_TIMEOUT` (504); nooit tekst, status of body van de partner in het antwoord; in de log alleen de HTTP-status, nooit
     tekst of body (0077)"
-- `docs/gouden-pad.md`, "Transactiegrens in de spec": één zin dat de client weigert in elke `withUser` en in `afterCommit`.
+- `docs/gouden-pad.md`, "Transactiegrens in de spec": één zin dat de client weigert in de `withUser` van een route of via `guardWithUser`, en in `afterCommit`.
 - `docs/roadmap.md` ST-15: niet afvinken; uit "Eisen uit het regelboek" gaan foutcodes, nep-partner en het verbod voor `withUser`
   en `afterCommit` (R-DOC-10); de lintregels tegen netwerk buiten de client en `withJob` blijven.
 - ST-03: de runner wikkelt `withJob` op dezelfde manier en geeft zijn run-ID als `requestId`.
@@ -217,9 +217,9 @@ binaire antwoorden, uitgaande proxy, circuit breaker.
 
 ## Open vragen
 
-- **OV-2** — Andere 4xx dan 429. Aanbeveling: `UPSTREAM_INVALID`, status alleen in de log; een app vangt een verwachte status met
+- **OV-2 ✅ besloten** — Andere 4xx dan 429: `UPSTREAM_INVALID`, status alleen in de log; een app vangt een verwachte status met
   `expect` en maakt er een eigen uitkomst van (bijv. 404 → `NOT_FOUND`), zonder body van de partner.
-- **OV-3** — Ook `afterCommit` markeren? Aanbeveling: ja; ADR 0077 punt 3 verbiedt het, de markering maakt het onmogelijk (R-PRINC-01).
+- **OV-3 ✅ besloten** — Ook `afterCommit` markeren: ja; ADR 0077 punt 3 verbiedt het, de markering maakt het onmogelijk (R-PRINC-01).
 - **OV-4 ✅ besloten** — Grenzen zoals hierboven; `appEnv` als config, niet `env()` in de client.
-- **OV-5** — `shouldRetry` herhaalt een 5xx bij een query tot 2 keer, dus tot 9 partneraanroepen. Aanbeveling: nu niet wijzigen;
+- **OV-5 ✅ besloten** — `shouldRetry` herhaalt een 5xx bij een query tot 2 keer, dus tot 9 partneraanroepen: nu niet wijzigen;
   de spec van de partnerstap beslist, met `rateLimit: 'duur'`.

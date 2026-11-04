@@ -8,12 +8,13 @@ export function cancelBody(response: Response): void {
 // Een Content-Length boven de grens zonder Content-Encoding wordt niet gelezen; anders stopt het lezen bij de grens.
 // null: te groot. Een fout tijdens het lezen (signaal of verbroken verbinding) gaat naar de aanroeper.
 export async function readLimited(response: Response, maxBytes: number): Promise<Uint8Array | null> {
+  // Zonder body (HEAD, 204) telt de Content-Length niet: bij HEAD is dat de lengte van de GET-body.
+  if (response.body === null) return new Uint8Array();
   const length = response.headers.get('content-length');
   if (length !== null && response.headers.get('content-encoding') === null && Number(length) > maxBytes) {
     cancelBody(response);
     return null;
   }
-  if (response.body === null) return new Uint8Array();
   const chunks: Uint8Array[] = [];
   let total = 0;
   // Stoppen bij de grens: het verlaten van de lus breekt de stream af.

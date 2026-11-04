@@ -10,6 +10,8 @@ export interface FakeResponse {
   readonly json?: unknown;
   readonly body?: string | Uint8Array;
   readonly delayMs?: number;
+  // Stuurt status en headers meteen, de body pas na deze vertraging (een body die blijft hangen).
+  readonly bodyDelayMs?: number;
   // Verbreekt de verbinding zonder antwoord.
   readonly destroy?: boolean;
 }
@@ -65,7 +67,14 @@ function respond(response: ServerResponse, answer: FakeResponse): void {
     payload = answer.body;
   }
   response.writeHead(answer.status ?? 200, headers);
-  response.end(payload);
+  if (answer.bodyDelayMs === undefined) {
+    response.end(payload);
+    return;
+  }
+  response.flushHeaders();
+  setTimeout(() => {
+    if (!response.destroyed) response.end(payload);
+  }, answer.bodyDelayMs);
 }
 
 export async function startFakePartner(routes: FakeRoutes): Promise<FakePartner> {
