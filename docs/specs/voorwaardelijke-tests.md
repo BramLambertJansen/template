@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd # #529; gevalideerd: a914e4333ae5007b7d2b0b9897abebea53bed3af
 namespace: voorwaardelijke-tests
 ---
 
