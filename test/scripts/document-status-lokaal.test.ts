@@ -11,7 +11,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { expectNegativeTable } from '../support/negative-table.ts';
 import {
   VOLGORDE,
@@ -21,6 +21,7 @@ import {
   lokaleInvoer,
   oordeel,
   prUitGh,
+  vangOpen,
 } from '../../scripts/kit/document-status-lokaal.mjs';
 
 // Spec document-status-lokaal: pre-push draait de document-status-check lokaal en blokkeert alleen op de volgorde
@@ -215,6 +216,33 @@ describe('draai (AC-7)', () => {
   });
 });
 
+describe('vangOpen (AC-7)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test.each([0, 1])('geeft de uitkomst %d van het werk terug, zonder waarschuwing', (uitkomst) => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    expect(vangOpen(() => uitkomst)).toBe(uitkomst);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  test('werk gooit: exit 0 met een waarschuwing die de fout noemt', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const uitkomst = vangOpen(() => {
+      throw new Error('git is stuk');
+    });
+
+    expect(uitkomst).toBe(0);
+    expect(warn).toHaveBeenCalledTimes(1);
+    const tekst = String(warn.mock.calls[0]?.[0]);
+    expect(tekst.startsWith('pre-push: document-status: niet gecontroleerd')).toBe(true);
+    expect(tekst).toContain('git is stuk');
+  });
+});
+
 // Nep-repository voor eigenVolgorde: een lineaire reeks commits na de split, met per commit de gewijzigde bestanden
 // (null = verwijderd). De nep-git beantwoordt alleen de aanroepen uit het contract.
 interface NepCommit {
@@ -358,6 +386,25 @@ describe('eigenVolgorde (AC-6)', () => {
     ];
 
     expect(volgordeVan({}, commits)).toStrictEqual(['docs/specs/a.md', 'docs/specs/z.md']);
+  });
+
+  /** De nep-repo, met één aanroep die faalt (code 1, lege uitvoer). */
+  const metFout = (git: ReturnType<typeof nepRepo>, faalt: (args: readonly string[]) => boolean) => {
+    return (args: readonly string[]) => (faalt(args) ? { code: 1, output: '' } : git(args));
+  };
+  const gemengd = [{ sha: sha(1), bestanden: { [X]: spec('voorstel'), 'src/x.ts': CODE } }];
+
+  test('merge-base faalt: valt open met []', () => {
+    const git = metFout(nepRepo({}, gemengd), (args) => args[0] === 'merge-base');
+
+    expect(eigenVolgorde(git, { base: BASE, head: HEAD })).toStrictEqual([]);
+  });
+
+  test('commitlijst (--topo-order) faalt bij code en spec in foute volgorde: valt open met []', () => {
+    const git = metFout(nepRepo({}, gemengd), (args) => args[0] === 'log' && args.includes('--topo-order'));
+
+    expect(volgordeVan({}, gemengd)).toStrictEqual([X]);
+    expect(eigenVolgorde(git, { base: BASE, head: HEAD })).toStrictEqual([]);
   });
 });
 
