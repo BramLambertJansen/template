@@ -74,7 +74,8 @@ integrationClient.call(reading: SwitchReading, request: OutboundRequest): Promis
   `readIntegrationSwitch` zelf kan aanroepen is onschadelijk: `call` eist een `SwitchReading`.
 - **Volgorde in `IntegrationClient.call`**, telkens zonder aanroep: 1) onder de markering `OutboundForbiddenError`; 2) lezing
   ongeldig, van een andere koppeling of ouder dan `INTEGRATION_SWITCH_MAX_AGE_MS` (30 000, `limits.ts`) `OutboundUsageError`;
-  3) stand uit `UPSTREAM_UNAVAILABLE` met één logregel `outcome: 'DISABLED'`, `attempt` 0, `status` null. Dan de gewone client.
+  3) stand uit `UPSTREAM_UNAVAILABLE` met één logregel `outcome: 'DISABLED'`, `attempt` 0, `status` null; eerst toetst de client het
+  padsjabloon zoals de gewone client (zelfde `OutboundUsageError`, geen logregel), zodat die regel nooit een query of geheim bevat. Dan de gewone client.
 - **Zetten zonder scherm**: `pnpm integration:switch --name <naam> --on|--off`, vorm van `scripts/admin-create.mjs`, met
   `MIGRATOR_DATABASE_URL`; weigert een naam buiten het register.
 
@@ -97,7 +98,8 @@ Tegen de nep-partner; "geen aanroep" = teller 0.
 - **koppelingsregister/AC-1** — Gegeven een register met dubbele naam, ongeldige of te lange naam, host met `*`, ontbrekend
   kenmerk, `direction: ['write']` of `sensitivity: 'personal-data'`, dan `IntegrationConfigError`; `client('onbekend', …)` ook.
 - **koppelingsregister/AC-2** — Gegeven stand uit, dan geeft `call` `UPSTREAM_UNAVAILABLE` zonder aanroep met één logregel
-  `DISABLED`; een testroute van `createApp` die die fout teruggeeft, antwoordt 503 met precies `{ code, requestId }`.
+  `DISABLED`; met een ongeldig padsjabloon (bijv. `?token=…`) de gebruiksfout en geen logregel; een testroute van `createApp`
+  die die fout teruggeeft, antwoordt 503 met precies `{ code, requestId }`.
 - **koppelingsregister/AC-3** — Gegeven geen rij, dan `app.integration_enabled` `false` en de client geen aanroep.
 - **koppelingsregister/AC-4** — Gegeven aan, daarna uit via het script, dan doet een nieuwe lezing plus `call` geen aanroep.
 - **koppelingsregister/AC-5** — Gegeven een lezing van een andere koppeling, ouder dan de grens, of een nagemaakt object, dan
@@ -133,6 +135,9 @@ Tegen de nep-partner; "geen aanroep" = teller 0.
 - Docs die anders onwaar worden (R-WERK-15): `docs/specs/uitgaande-client.md` ("per koppeling één client" via het register;
   `attempt` 0 bij `DISABLED`), `docs/specs/geheimen-in-env.md` (voorbeeld met `createOutboundClient`),
   `docs/specs/netwerk-en-geheim-rails.md` (melding in criterium 14), `docs/roadmap.md` ST-15 "Gebouwd:".
+  Aanvulling (2026-11-04): de drie gebouwde specs hierboven kunnen niet in de bouw-PR mee, omdat `check-document-status`
+  nieuwe inhoud van een gebouwde spec alleen in de feature-lane toelaat en deze bouw kritieke paden raakt (ADR 0062 punt 2).
+  Ze volgen zodra die lacune is opgelost (leerpunt); tot dan is deze spec de bron voor register, schakelaar en melding.
 
 ## Buiten scope
 
