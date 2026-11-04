@@ -72,7 +72,7 @@ test('app:init verwerkt alle actuele templatebestanden en bewaart de overige con
   expect(owners).toContain('@example/beheer');
   const gates: unknown = JSON.parse(readFileSync(path.join(dir, '.claude/gates.json'), 'utf8'));
   expect(gates).not.toHaveProperty('onderhoud');
-  expect(gates).toHaveProperty('gates');
+  expect(gates).toHaveProperty('paden');
   expect(gates).toHaveProperty('schrijfrecht');
 });
 
