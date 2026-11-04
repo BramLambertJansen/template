@@ -26,12 +26,15 @@ export function markerRegels(text) {
   /** @type {number[]} */
   const regels = [];
   let binnen = false;
-  text.split(/\r?\n/).forEach((regel, index) => {
-    if (BEGIN.test(regel)) binnen = true;
-    else if (EIND.test(regel)) binnen = false;
-    else if (!(binnen && MIDDEN.test(regel))) return;
-    regels.push(index + 1);
-  });
+  text
+    .replace(/^\uFEFF/, '')
+    .split(/\r?\n/)
+    .forEach((regel, index) => {
+      if (BEGIN.test(regel)) binnen = true;
+      else if (EIND.test(regel)) binnen = false;
+      else if (!(binnen && MIDDEN.test(regel))) return;
+      regels.push(index + 1);
+    });
   return regels;
 }
 
@@ -46,7 +49,7 @@ function isBinair(inhoud) {
  * @returns {Violation[]}
  */
 export function conflictMarkerViolations(root) {
-  const files = execFileSync('git', ['ls-files', '-z'], {
+  const files = execFileSync('git', ['ls-files', '-z', '--deduplicate'], {
     cwd: root,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],

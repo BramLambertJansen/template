@@ -27,6 +27,10 @@ describe('conflictmarkers: markerRegels', () => {
     expect(markerRegels(tekst)).toStrictEqual([1, 3, 5, 7]);
   });
 
+  test('een BOM voor de eerste marker verbergt hem niet', () => {
+    expect(markerRegels(`\uFEFF${BEGIN} HEAD\nons\n`)).toStrictEqual([1]);
+  });
+
   test('een half conflict telt ook: alleen begin of alleen eind', () => {
     expect(markerRegels(conflict(`${BEGIN} HEAD`, 'ons'))).toStrictEqual([1]);
     expect(markerRegels(conflict('hun', `${EIND} origin/main`))).toStrictEqual([2]);
@@ -58,12 +62,12 @@ describe('conflictmarkers: getrackte bestanden', () => {
   function repo(bestanden: Record<string, string | Buffer>): string {
     const root = mkdtempSync(path.join(tmpdir(), 'conflictmarkers-'));
     mappen.push(root);
-    spawnSync('git', ['init', '-q'], { cwd: root });
+    expect(spawnSync('git', ['init', '-q'], { cwd: root }).status).toBe(0);
     for (const [naam, inhoud] of Object.entries(bestanden)) {
       mkdirSync(path.dirname(path.join(root, naam)), { recursive: true });
       writeFileSync(path.join(root, naam), inhoud);
     }
-    spawnSync('git', ['add', '-A'], { cwd: root });
+    expect(spawnSync('git', ['add', '-A'], { cwd: root }).status).toBe(0);
     return root;
   }
 
