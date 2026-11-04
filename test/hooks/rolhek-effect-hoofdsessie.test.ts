@@ -288,6 +288,28 @@ describe('rolhek-vooraf-krimp/AC-4: randgevallen (review)', () => {
     expect([isBlok(uit), paden(root)]).toStrictEqual([false, []]);
   });
 
+  test.each([
+    ['aan', true],
+    ['schaduw', false],
+  ] as const)(
+    'geen opname van vóór (pre faalde open), vlag %s: blokkade %s en een schaduwregel met deny',
+    (modus, blok) => {
+      const root = nieuweRepo();
+      const commando = "/usr/bin/sed -i 's/schema/x/' src/api/db/schema.ts";
+      sh(root, commando);
+      const input = {
+        session_id: 's1',
+        tool_name: 'Bash',
+        tool_input: { command: commando },
+        tool_use_id: 'zonder-pre',
+      };
+      expect(isBlok(handle('post', input, repoVan(root, modus)))).toBe(blok);
+      expect(meetregels().filter((r) => r['e'] === 'Schaduw')).toMatchObject([
+        { vooraf: 'onbekend', achteraf: 'deny' },
+      ]);
+    },
+  );
+
   const VEEL = 'mkdir veel && cd veel && seq 1 5001 | xargs touch';
 
   test('te grote momentopname met de vlag aan: een blokkade en een overtreding zonder pad', () => {
@@ -376,13 +398,36 @@ describe('rolhek-vooraf-krimp/AC-7: pnpm meting toont de tellers', () => {
       paden: ['AGENTS.md'],
     },
     { t, e: 'Schaduw', s: 's1', b: 'feat/x', a: 'hoofdsessie', id: 'x2', vooraf: 'door', achteraf: 'door', paden: [] },
+    // Zelfde klasse (melding tegen door) en vooraf onbekend tellen niet als anders.
+    {
+      t,
+      e: 'Schaduw',
+      s: 's1',
+      b: 'feat/x',
+      a: 'hoofdsessie',
+      id: 'x3',
+      vooraf: 'melding',
+      achteraf: 'door',
+      paden: [],
+    },
+    {
+      t,
+      e: 'Schaduw',
+      s: 's1',
+      b: 'feat/x',
+      a: 'hoofdsessie',
+      id: 'x4',
+      vooraf: 'onbekend',
+      achteraf: 'deny',
+      paden: [],
+    },
   ];
 
   test('PR-tabel: blokkades op effect, overnames en schaduw', () => {
     const tabel = meting(nieuw, '--pr-tabel', '--branch', 'feat/x');
     expect(tabel).toContain('| Blokkades op effect | 1 |');
     expect(tabel).toContain('| Overnames | 1 |');
-    expect(tabel).toContain('| Schaduw hoofdsessie (anders dan vooraf) | 1 (1) |');
+    expect(tabel).toContain('| Schaduw hoofdsessie (anders dan vooraf) | 2 (1) |');
   });
 
   test('PR-tabel van vóór de spec: onbekend, nooit 0', () => {
@@ -394,10 +439,10 @@ describe('rolhek-vooraf-krimp/AC-7: pnpm meting toont de tellers', () => {
 
   test('per sessie en per branch, ook als JSON', () => {
     const tekst = meting(nieuw);
-    expect(tekst).toContain('blokkades op effect 1 · overnames 1 · schaduw 1 (anders dan vooraf 1)');
+    expect(tekst).toContain('blokkades op effect 1 · overnames 1 · schaduw 2 (anders dan vooraf 1)');
     const json: unknown = JSON.parse(meting(nieuw, '--json'));
     expect(json).toMatchObject({
-      sessies: { s1: { effect: { blokkades: 1, overnames: 1, schaduw: 1, schaduwAnders: 1 } } },
+      sessies: { s1: { effect: { blokkades: 1, overnames: 1, schaduw: 2, schaduwAnders: 1 } } },
     });
     expect(JSON.parse(meting(oud, '--json'))).toMatchObject({ sessies: { s1: { effect: { blokkades: 'onbekend' } } } });
   });

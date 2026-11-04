@@ -111,10 +111,10 @@ function hoofdsessiePost(repo, { opname, start }, wie) {
   const na = momentopname(repo);
   const paden = voor === undefined || voor === null ? [] : veranderdePaden(repo, { voor, na, start });
   legVensterVast(repo, { actor: wie.actor, start, eind: repo.now(), paden });
-  if (modus(repo) === 'uit' || voor === undefined) return {};
+  if (modus(repo) === 'uit') return {};
   const vooraf = voorafNaam(opname?.vooraf);
-  // Te groot of te traag (rolhek-effect AC-7): in schaduw een teller, met `aan` dicht.
-  if (voor === null || na.teGroot || repo.now() - begin > MAX_MS) return hoofdsessieNietRond(repo, vooraf, wie);
+  // Geen opname van vóór (pre faalde open), te groot of te traag (rolhek-effect AC-7): in schaduw een teller, met `aan` dicht.
+  if (voor === undefined || voor === null || na.teGroot || repo.now() - begin > MAX_MS) return hoofdsessieNietRond(repo, vooraf, wie);
   return hoofdsessieAchteraf(repo, { voor, na, vooraf }, wie);
 }
 

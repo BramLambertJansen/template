@@ -65,7 +65,8 @@ Teldefinities (alleen ontvangen en opgeslagen Claude Code-events):
   blokkades op effect: PostToolUse- en SubagentStop-blokkades van de toets op effect (EffectBlokkade-regels).
   overnames: PostToolUse voor pnpm rolhek:overnemen (per commando, niet per pad).
   schaduw: commando's van de hoofdsessie waarop de toets op effect deny of ask zou geven (vlag rolhekEffectHoofdsessie);
-  anders dan vooraf: de uitkomst achteraf verschilt van die van het rolhek vooraf. Zonder regels van de toets op effect
+  anders dan vooraf: vooraf en achteraf vallen in een andere klasse (deny/ask tegen melding/door); vooraf onbekend telt
+  niet mee. Zonder regels van de toets op effect
   (een PR van vóór spec rolhek-vooraf-krimp) staat er onbekend, nooit 0.
 
 Opslag: METING_DIR of <git common dir>/agent-meting/ (gedeeld door worktrees, buiten git-tracking).
@@ -107,7 +108,8 @@ function parse(lijn, sessie) {
     };
     if (e === 'Schaduw') {
       const achteraf = tekst(r.get('achteraf'), 'door');
-      return { ...uit, achteraf, anders: tekst(r.get('vooraf'), 'onbekend') !== achteraf };
+      const vooraf = tekst(r.get('vooraf'), 'onbekend');
+      return { ...uit, achteraf, anders: vooraf !== 'onbekend' && streng(vooraf) !== streng(achteraf) };
     }
     return uit;
   } catch {
@@ -176,6 +178,11 @@ function leeg() {
 
 // Regels die alleen de toets op effect schrijft (rails/hooks/lib/effect-meting.mjs).
 const EFFECT = new Set(['EffectBlokkade', 'Schaduw']);
+
+/** Strengheidsklasse van een uitkomst: deny en ask houden het commando tegen, melding en door niet. @param {string} uitkomst */
+function streng(uitkomst) {
+  return uitkomst === 'deny' || uitkomst === 'ask';
+}
 
 /** Blokkades op effect, overnames (`pnpm rolhek:overnemen`) en de schaduwbeslissing (AC-7). @param {Telling} t @param {Regel} r */
 function telEffect(t, r) {
