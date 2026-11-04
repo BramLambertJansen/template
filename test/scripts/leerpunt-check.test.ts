@@ -129,7 +129,8 @@ describe('leerlus-bewijs/AC-5 en AC-6 welke gebeurtenis wat toetst', () => {
   });
 
   test('leerlus-bewijs/AC-5: alleen in de onderhoudsrepo', () => {
-    expect(onderhoudRepo(readFileSync('.claude/gates.json', 'utf8'))).toMatch(/^[\w.-]+\/[\w.-]+$/);
+    // Niet het echte gates.json: in een app (check:new-resource na app:init) is `onderhoud` weg.
+    expect(onderhoudRepo('{"onderhoud":{"repository":"eigenaar/template"}}')).toBe('eigenaar/template');
     expect(onderhoudRepo('{}')).toBeNull();
   });
 });

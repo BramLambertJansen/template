@@ -6,9 +6,11 @@ import { describe, expect, test } from 'vitest';
 import { agentMerge, beoordeel, leesConfig } from '../../scripts/kit/diff-guard.mjs';
 import {
   bewijsPlan,
+  graphqlData,
   leerpuntMergeRedenen,
   leesLeerpuntSectie,
   leesVitest,
+  metExit,
   runOordeel,
   typeUitslag,
 } from '../../scripts/kit/leerpunt.mjs';
@@ -287,5 +289,28 @@ describe('leerlus-bewijs/AC-4 geen test: <reden>', () => {
     });
     const bewijs = { ...pr, body: sectie('- #9: trede Check; bewijs test/a.test.ts') };
     expect(agentMerge(bewijs, beoordeel(bewijs, config), tekst)).toEqual(zonder);
+  });
+});
+
+describe('leerlus-bewijs/AC-1 en AC-3 GraphQL-fouten en exitstatus', () => {
+  test('leerlus-bewijs/AC-1: een GraphQL-fout of ontbrekende PR telt niet als "geen leerpunten"', () => {
+    expect(() =>
+      graphqlData({ data: { repository: null }, errors: [{ message: 'Resource not accessible' }] }, ['repository']),
+    ).toThrow(/Resource not accessible/);
+    expect(() => graphqlData({ data: { repository: { pullRequest: null } } }, ['repository', 'pullRequest'])).toThrow(
+      /geen pullRequest/,
+    );
+    const data = { repository: { pullRequest: { closingIssuesReferences: { nodes: [] } } } };
+    expect(graphqlData({ data }, ['repository', 'pullRequest'])).toEqual(data);
+  });
+
+  test('leerlus-bewijs/AC-3: groene asserties met een exitstatus ongelijk aan 0 zijn geen groen en geen bewijs', () => {
+    expect(metExit(leesVitest(GROEN), 0).status).toBe('groen');
+    expect(metExit(leesVitest(GROEN), 1).status).toBe('laadfout');
+    expect(metExit(leesVitest(ASSERTIE), 1).status).toBe('rood');
+    const unit = { pad: 'test/a.test.ts', soort: 'unit' };
+    expect(runOordeel(unit, { basis: leesVitest(ASSERTIE), head: metExit(leesVitest(GROEN), 1) })).toMatch(
+      /faalt op de head/,
+    );
   });
 });

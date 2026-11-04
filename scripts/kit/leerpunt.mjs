@@ -254,6 +254,32 @@ export function sluitOordeel(nummer, { prs, comments }) {
   return achterhaald ? 'achterhaald' : 'zonder-bewijs';
 }
 
+/**
+ * Het `data`-deel van een GraphQL-antwoord, of een fout. GitHub geeft bij een fout vaak HTTP 200 met `errors`; zonder deze
+ * toets zou ontbrekende data als een lege lijst tellen en een verplichte check stil slagen.
+ * @param {unknown} antwoord @param {string[]} pad sleutels onder `data` die er moeten zijn @returns {unknown}
+ */
+export function graphqlData(antwoord, pad) {
+  const fouten = lijst(veld(antwoord, 'errors'));
+  if (fouten.length > 0)
+    throw new Error(`GraphQL: ${fouten.map((f) => String(veld(f, 'message') ?? 'fout')).join('; ')}`);
+  let deel = veld(antwoord, 'data');
+  for (const sleutel of pad) {
+    deel = veld(deel, sleutel);
+    if (typeof deel !== 'object' || deel === null) throw new Error(`GraphQL: geen ${sleutel} in het antwoord`);
+  }
+  return veld(antwoord, 'data');
+}
+
+/**
+ * Een vitest-uitslag samen met de exitstatus: groen telt alleen bij status 0. Een run die faalt zonder gefaalde assertie
+ * (bijv. een onafgehandelde fout) is geen bewijs op de basis en geen groen op de head: laadfout.
+ * @param {RunUitslag} uitslag @param {number | null} status @returns {RunUitslag}
+ */
+export function metExit(uitslag, status) {
+  return status !== 0 && uitslag.status === 'groen' ? { ...uitslag, status: 'laadfout', laadFout: true } : uitslag;
+}
+
 /** @param {unknown} waarde @param {string} sleutel @returns {unknown} */
 export function veld(waarde, sleutel) {
   if (typeof waarde !== 'object' || waarde === null) return undefined;

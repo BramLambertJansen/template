@@ -8,11 +8,10 @@
 //   basis <plan.json> <head-map> <basis-map>            worktree van de merge-base als basismap (vóór de install)
 // Buiten CI lopen de runs via inKooi (R-TOOL-03); in CI is de wegwerp-runner de grens. Alleen `node:`- en relatieve imports.
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { inKooi } from './kooi.mjs';
-import { bewijsPlan, leesVitest, lijst, runOordeel, typeUitslag, veld } from './leerpunt.mjs';
+import { bewijsPlan, graphqlData, leesVitest, lijst, metExit, runOordeel, typeUitslag, veld } from './leerpunt.mjs';
 
 const GRAPHQL = `query($owner: String!, $name: String!, $nummer: Int!) {
   repository(owner: $owner, name: $name) {
@@ -49,7 +48,8 @@ async function voorbereiden(uit) {
   if (!antwoord.ok) throw new Error(`geen toegang tot issuelabels: HTTP ${String(antwoord.status)}`);
   const event = JSON.parse(readFileSync(env('GITHUB_EVENT_PATH'), 'utf8'));
   const body = String(veld(veld(event, 'pull_request'), 'body') ?? '');
-  writeFileSync(uit, JSON.stringify({ gesloten: leesGesloten(await antwoord.json()), body }));
+  const data = graphqlData(await antwoord.json(), ['repository', 'pullRequest']);
+  writeFileSync(uit, JSON.stringify({ gesloten: leesGesloten({ data }), body }));
 }
 
 /** @param {string} map @param {string[]} args */
@@ -103,6 +103,7 @@ export function opdracht(run, verslag) {
 }
 
 export const TYPE_CONFIG = '.leerpunt-tsconfig.json';
+export const VERSLAG = '.leerpunt-vitest.json';
 
 /**
  * De tijdelijke tsconfig voor een typetest: die van de laag (web of node) met alleen het bewijsbestand.
@@ -125,11 +126,13 @@ function start(args, map) {
 
 /** @param {{ pad: string, soort: string }} run @param {string} map */
 function draaiEen(run, map) {
-  const verslag = path.join(mkdtempSync(path.join(tmpdir(), 'leerpunt-')), 'vitest.json');
+  // In de werkmap, niet in de tmp van de host: de kooi ziet alleen de werkmap (R-TOOL-03).
+  const verslag = path.join(map, VERSLAG);
+  rmSync(verslag, { force: true });
   if (run.soort === 'type') writeFileSync(path.join(map, TYPE_CONFIG), typeConfig(run.pad));
-  const status = start(opdracht(run, verslag), map);
+  const status = start(opdracht(run, VERSLAG), map);
   if (run.soort === 'type') return typeUitslag(status);
-  return leesVitest(existsSync(verslag) ? JSON.parse(readFileSync(verslag, 'utf8')) : null);
+  return metExit(leesVitest(existsSync(verslag) ? JSON.parse(readFileSync(verslag, 'utf8')) : null), status);
 }
 
 /** De omgeving zonder token of geheim voor de PR-code (AC-3). */

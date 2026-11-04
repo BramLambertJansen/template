@@ -138,3 +138,13 @@ describe('leerlus-bewijs/AC-7 geen event-tekst in een shellregel', () => {
       });
   });
 });
+
+describe('leerlus-bewijs/AC-1 de bouw-PR zonder script op de basis', () => {
+  test('leerlus-bewijs/AC-1: zonder script op de basis slaagt de job met een melding; anders draait elke stap', () => {
+    const kit = stap(BEWIJS, 'kit');
+    expect(kit).toContain('if [ -f kit/scripts/kit/leerpunt-bewijs.mjs ]');
+    for (const naam of ['voorbereiden', 'plan', 'basis'])
+      expect(stap(BEWIJS, naam)).toContain("if: steps.kit.outputs.aanwezig == 'true'");
+    for (const naam of ['install', 'draai']) expect(stap(BEWIJS, naam)).toContain("steps.basis.outputs.runs == 'true'");
+  });
+});

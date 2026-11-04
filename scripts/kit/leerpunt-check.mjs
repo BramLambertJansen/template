@@ -7,6 +7,7 @@ import path from 'node:path';
 import {
   COMMENT_ZONDER_BEWIJS,
   commentOnvolledig,
+  graphqlData,
   leesSjabloon,
   lijst,
   sluitOordeel,
@@ -91,6 +92,18 @@ async function api(pad, opties = {}) {
   return antwoord.status === 204 || antwoord.status === 404 ? null : antwoord.json();
 }
 
+/** Alle comments van een issue, pagina voor pagina (hooguit 3000). @param {string} issue @returns {Promise<unknown[]>} */
+async function alleComments(issue) {
+  /** @type {unknown[]} */
+  const alle = [];
+  for (let pagina = 1; pagina <= 30; pagina++) {
+    const deel = lijst(await api(`${issue}/comments?per_page=100&page=${String(pagina)}`));
+    alle.push(...deel);
+    if (deel.length < 100) return alle;
+  }
+  throw new Error(`${issue}: meer dan 3000 comments`);
+}
+
 const SLUIT_QUERY = `query($owner: String!, $name: String!, $nummer: Int!) {
   repository(owner: $owner, name: $name) { issue(number: $nummer) {
     closedByPullRequestsReferences(first: 20, includeClosedPrs: true) { nodes { merged body } }
@@ -104,12 +117,12 @@ async function sluitBron(repo, nummer) {
     method: 'POST',
     body: { query: SLUIT_QUERY, variables: { owner, name, nummer } },
   });
-  const issue = veld(veld(veld(data, 'data'), 'repository'), 'issue');
+  const issue = veld(veld(graphqlData(data, ['repository', 'issue']), 'repository'), 'issue');
   const prs = lijst(veld(veld(issue, 'closedByPullRequestsReferences'), 'nodes')).map((pr) => ({
     merged: veld(pr, 'merged') === true,
     body: String(veld(pr, 'body') ?? ''),
   }));
-  const comments = lijst(await api(`repos/${repo}/issues/${String(nummer)}/comments?per_page=100`)).map((c) => ({
+  const comments = (await alleComments(`repos/${repo}/issues/${String(nummer)}`)).map((c) => ({
     body: String(veld(c, 'body') ?? ''),
     association: String(veld(c, 'author_association') ?? ''),
   }));
@@ -125,9 +138,7 @@ async function voerUit(repo, g, stap) {
     await api(`${issue}/labels/${encodeURIComponent(stap.label)}`, { method: 'DELETE' });
   if (stap.comment === null) return;
   const tekst = `${stap.merk}\n${stap.comment}`;
-  const bestaand = lijst(await api(`${issue}/comments?per_page=100`)).find((c) =>
-    String(veld(c, 'body') ?? '').startsWith(stap.merk),
-  );
+  const bestaand = (await alleComments(issue)).find((c) => String(veld(c, 'body') ?? '').startsWith(stap.merk));
   if (bestaand === undefined) await api(`${issue}/comments`, { method: 'POST', body: { body: tekst } });
   else
     await api(`repos/${repo}/issues/comments/${String(veld(bestaand, 'id'))}`, {
