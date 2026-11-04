@@ -4,13 +4,15 @@ import { createOutboundClient } from '../outbound/create.ts';
 import { OutboundForbiddenError } from '../outbound/errors.ts';
 import { safeLog, writeOutboundLine } from '../outbound/log.ts';
 import { outboundForbidden } from '../outbound/marker.ts';
+import { checkTemplate } from '../outbound/url.ts';
 import type { OutboundRequest, OutboundResult } from '../outbound/types.ts';
 import { assertReading } from './reading.ts';
 import type { IntegrationClient, IntegrationClientConfig, IntegrationDef, SwitchReading } from './types.ts';
 
 // De client van één koppeling (spec koppelingsregister, Volgorde in IntegrationClient.call), telkens zonder aanroep:
 // 1) onder de markering OutboundForbiddenError; 2) een lezing die niet geldt OutboundUsageError; 3) stand uit
-// UPSTREAM_UNAVAILABLE met één logregel DISABLED. Dan de gewone uitgaande client.
+// eerst het padsjabloon zoals de gewone client (OutboundUsageError, geen logregel), daarna UPSTREAM_UNAVAILABLE met één
+// logregel DISABLED; zo komt een query of geheim in het pad nooit in het log. Dan de gewone uitgaande client.
 export function createIntegrationClient(def: IntegrationDef, config: IntegrationClientConfig): IntegrationClient {
   const outbound = createOutboundClient({ ...config, name: def.name, hosts: def.hosts });
   const log = config.log ?? writeOutboundLine;
@@ -25,6 +27,7 @@ export function createIntegrationClient(def: IntegrationDef, config: Integration
       }
       assertReading(reading, def.name);
       if (!reading.enabled) {
+        checkTemplate(request.path);
         safeLog(log, {
           time: new Date().toISOString(),
           requestId: request.requestId,
