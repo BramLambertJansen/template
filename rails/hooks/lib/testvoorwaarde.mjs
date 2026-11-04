@@ -117,7 +117,10 @@ function stap({ tokens, index, open, paren }, blokken, bereiken) {
     const functie = blokken.findLast((blok) => blok.soort === 'functie');
     if (functie !== undefined) functie.naReturn = true;
   }
-  if (losseBody(tokens, index, open)) bereiken.push([index + 1, ketenEind(tokens, index + 1, paren)]);
+  if (!losseBody(tokens, index, open)) return;
+  // `if (x) await test(…)`: de keten begint na `await`.
+  const start = naam(tokens[index + 1], 'await') ? index + 2 : index + 1;
+  bereiken.push([index + 1, ketenEind(tokens, start, paren)]);
 }
 
 /** Staat de naam in een import-, export- of destructuringlijst (`import { test } from …`)? @param {Token[]} tokens @param {number} index */
