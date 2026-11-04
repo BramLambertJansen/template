@@ -47,6 +47,7 @@ export interface ListSearch<Config extends ListSearchConfig> {
   readonly api: z.ZodObject<ApiShape<Config>, z.core.$strict>;
   readonly web: z.ZodType<ListSearchWeb<Config>>;
   readonly defaultSort: Config['sorts'][number];
+  readonly cursorKeys: Config['cursorKeys'];
   // Cursor uit de sorteersleutel; het aantal delen volgt `cursorKeys` (anders AssertionError → INTERNAL_ERROR).
   readonly encodeCursor: (sort: Config['sorts'][number], parts: readonly string[]) => string;
 }
@@ -133,6 +134,7 @@ export function defineListSearch<const Config extends ListSearchConfig>(
     api: unsafeCast(api, 'het schema is uit de config opgebouwd; het type beschrijft hetzelfde schema'),
     web: unsafeCast(web, 'het schema is uit de config opgebouwd; de types volgen die config'),
     defaultSort,
+    cursorKeys: config.cursorKeys,
     encodeCursor: (sort, parts) => {
       const expected = keyParts.get(sort);
       assert(

@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { maxCursorLength } from '#core/shared/cursor.ts';
 import { MAX_ID_LENGTH, MAX_TIMESTAMP_LENGTH } from '#core/shared/limits.ts';
 import { MAX_NAME_LENGTH } from '../limits.ts';
 import { ACCOUNT_SORTS, accountsSearch } from './accounts.ts';
@@ -13,6 +14,12 @@ const DECLARED: Record<(typeof ACCOUNT_SORTS)[number], readonly number[]> = {
 };
 
 describe('accountsSearch: slechtste cursor per sortering (lijstpagina/AC-13)', () => {
+  test('de declaratie in het contract is die uit de spec, met een budget van hooguit 3270 tekens', () => {
+    expect(accountsSearch.cursorKeys).toEqual(DECLARED);
+    const budgets = ACCOUNT_SORTS.map((sort) => maxCursorLength([sort.length, ...accountsSearch.cursorKeys[sort]]));
+    expect(Math.max(...budgets)).toBe(3270);
+  });
+
   test.each(ACCOUNT_SORTS)('%s: de cursor met maximale delen wordt door de api weer geaccepteerd', (sort) => {
     const parts = DECLARED[sort].map((length) => '\u0001'.repeat(length));
 

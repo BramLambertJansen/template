@@ -26,6 +26,10 @@ describe('MAX_TIMESTAMP_LENGTH (lijstpagina/AC-13)', () => {
   test('is 48', () => {
     expect(MAX_TIMESTAMP_LENGTH).toBe(48);
   });
+
+  test('past het langste ISO-tijdstip dat Postgres voor een timestamptz geeft', () => {
+    expect('294276-12-31T23:59:59.999999+14:59:59 BC'.length).toBeLessThanOrEqual(MAX_TIMESTAMP_LENGTH);
+  });
 });
 
 describe('te lange sleutel gooit bij definitie (lijstpagina/AC-13)', () => {
