@@ -289,7 +289,8 @@ describe('leerlus-bewijs/AC-9 en AC-10 voorsortering, meting en status', () => {
   });
 
   test('leerlus-bewijs/AC-10: spec leerlus is gebouwd en het protocol telt opgepakt met sluitbewijs of achterhaald', () => {
-    expect(read('docs/specs/leerlus.md')).toMatch(/^status: gebouwd # #312$/m);
+    // De spec noemt #312; document-status eist het nummer van de bouw-PR (ADR 0062), dus #538.
+    expect(read('docs/specs/leerlus.md')).toMatch(/^status: gebouwd # #538$/m);
     const protocol = read('docs/operations/st-09-praktijkproef.md').replace(/\s+/g, ' ');
     expect(protocol).toMatch(/opgepakte leerpunten \(gesloten met sluitbewijs of als achterhaald/);
   });
