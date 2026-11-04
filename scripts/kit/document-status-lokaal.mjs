@@ -143,7 +143,7 @@ export function eigenVolgorde(git, { base, head }) {
     '.',
     ':(exclude)docs/',
   ])[0];
-  if (eersteCode === undefined) return [];
+  if (eersteCode === undefined || !alle.includes(eersteCode)) return [];
   const specs = regels(git, ['diff', '--name-only', '--no-renames', split, head, '--', 'docs/specs/']).filter((pad) =>
     /^docs\/specs\/[^/_][^/]*\.md$/.test(pad),
   );
@@ -230,5 +230,21 @@ function main(prePush) {
   return 0;
 }
 
+/**
+ * Een onverwachte fout valt open (AC-7): een valse blokkade is alleen met het verboden `--no-verify` te omzeilen.
+ * @param {() => number} werk
+ * @returns {number}
+ */
+export function vangOpen(werk) {
+  try {
+    return werk();
+  } catch (error) {
+    console.warn(
+      `${KOP}: niet gecontroleerd, ${error instanceof Error ? error.message : String(error)}; CI toetst het wel`,
+    );
+    return 0;
+  }
+}
+
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href)
-  process.exitCode = main(process.argv.includes('--pre-push'));
+  process.exitCode = vangOpen(() => main(process.argv.includes('--pre-push')));
