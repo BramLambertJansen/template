@@ -51,7 +51,8 @@ Fixtures in `test/rails/eslint-netwerk.test.ts`; per fixture is de verzameling r
   `await import('node:https')`, `export * from 'node:net'`, `export { connect } from 'tls'`, `require('node:http')` (met
   `declare const require: (m: string) => unknown;`), `import { createRequire } from 'node:module'`,
   `import { spawn } from 'node:child_process'`, `import { Worker } from 'node:worker_threads'`, `import vm from 'vm'`,
-  `await import('data:text/javascript,export default 1')`, `eval('1')` en `const e = eval;`.
+  `await import('data:text/javascript,export default 1')`, `eval('1')`, `const e = eval;`, `import c from 'node:cluster'`, `import i from 'node:inspector'` en
+  `import h = require('node:http')`.
 - **netwerk-en-geheim-rails/AC-3** — Gegeven een globale netwerk-API, dan meldt de rail: `await fetch('https://x')`,
   `const f = fetch;`, `use({ fetch })`, `new WebSocket('wss://x')`, `new EventSource('x')`, `new XMLHttpRequest()`, en
   `await fetch('x')` in `src/shared/x.ts` en `src/core/shared/x.ts`.
@@ -61,7 +62,8 @@ Fixtures in `test/rails/eslint-netwerk.test.ts`; per fixture is de verzameling r
   `const o = { fetch: async (r: Request) => app.fetch(r) };`, `interface F { readonly fetch: (r: Request) => Response }`,
   `class C { fetch() {} }`, `type F = typeof fetch;`, `const ok = re.global || x.self;`,
   `const o = { global: true, self: 1 };`, `import type { AddressInfo } from 'node:net'` en
-  `export type { AddressInfo } from 'node:net'`.
+  `export type { AddressInfo } from 'node:net'`, `type P = Parameters<typeof globalThis.fetch>;`,
+  `abstract class A { abstract fetch(): void }` en `enum E { fetch = 1 }`.
 - **netwerk-en-geheim-rails/AC-6** — Gegeven `import { type AddressInfo } from 'node:net'`, dan meldt de rail: onder
   `verbatimModuleSyntax` blijft die import als laadopdracht staan.
 - **netwerk-en-geheim-rails/AC-7** — Gegeven `import http from 'node:http'; await fetch('x');` in
@@ -84,7 +86,8 @@ Fixtures in `test/rails/eslint-netwerk.test.ts`; per fixture is de verzameling r
 - **netwerk-en-geheim-rails/AC-11** — Gegeven in `src/api/env.ts` een import buiten `zod` en `#core/api/env.ts`
   (`import { x } from '#shared/limits.ts'`, `import type { X } from './x.ts'`) of een verbreding van het schema
   (`z.object({}).partial()`, `.deepPartial()`, `.or(z.object({}))`, `z.union([a, b])`, `z.preprocess(f, s)`,
-  `a.catch({})`), dan meldt `rails/geheim`.
+  `a.catch({})`, `.catchall(s)`, `.passthrough()`, `.loose()`, `.merge(s)`, `.and(s)`, `z.record(k, s)`), dan meldt
+  `rails/geheim`. Elke fixture gebruikt `secret` alleen als aanroep, zodat alleen de geteste vorm de melding geeft.
 - **netwerk-en-geheim-rails/AC-12** — Gegeven in `src/api/env.ts` `import { z } from 'zod'; import { readEnv, secret }
 from '#core/api/env.ts'; export const e = readEnv((ctx) => z.object({ PARTNER_API_KEY: secret(ctx, { minBytes: 48 }),
 PORT: z.number().default(1), TOKEN_TTL: z.number(), tokenTtl: z.number() }));` of `const { API_TOKEN } = env;`, of
@@ -102,7 +105,9 @@ PORT: z.number().default(1), TOKEN_TTL: z.number(), tokenTtl: z.number() }));` o
 | `import()` met berekend pad, `process.getBuiltinModule` | al geweigerd door `rails/import`, `rails/process-env` | n.v.t. |
 | `new Function(…)` | al geweigerd door `@typescript-eslint/no-implied-eval` | n.v.t. |
 | `(async function () {}).constructor(…)` | niet gezien (bekend gat); review | n.v.t. |
-| geheim onder een naam buiten de lijst (`PARTNER_KEY`) | niet gezien; review en R-SEC-05 | n.v.t. |
+| geheim onder een naam buiten de lijst (`PARTNER_KEY`, `X_TOKEN_V2`, `X_CREDENTIALS`) | niet gezien; review en R-SEC-05 | n.v.t. |
+| sleutel uit een expressie of constante (`` [`X_${t}`] ``, `[K]`, `Object.fromEntries`) | niet gezien (bekend gat); review | n.v.t. |
+| label of `export { a as fetch }` | geweigerd; kies een andere naam | n.v.t. |
 | `.optional()`, `.transform()` of `z.lazy` om het hele object | niet gezien (bekend gat); review | n.v.t. |
 | optioneel geheim (koppeling uit) | geweigerd; register en schakelaar beslissen later | n.v.t. |
 | lokale binding `fetch` of `global` | geweigerd; kies een andere naam | n.v.t. |

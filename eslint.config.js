@@ -113,20 +113,22 @@ const KOOI_SELECTORS = [
 // SMTP-adapter en de eigen server mogen netwerkmodules laden. Type-imports laden niets; een inline `type` wel.
 // esquery kan geen `/` in een regex aan, ook niet geëscapet: daarom `[/]`.
 const NETWERK_MODULE =
-  '/^((node:)?(http|https|http2|net|tls|dgram|child_process|worker_threads|vm|module)$|undici($|[/])|nodemailer($|[/])|hono[/]client$|data:)/';
+  '/^((node:)?(http|https|http2|net|tls|dgram|child_process|cluster|inspector|worker_threads|vm|module)$|undici($|[/])|nodemailer($|[/])|hono[/]client$|data:)/';
 const NETWERK_GLOBAAL = '/^(fetch|XMLHttpRequest|EventSource|WebSocket|globalThis|global|self|window|eval)$/';
 // Dezelfde naam als eigenschap, sleutel, methode, typeveld of in een typepositie is geen verwijzing naar de globale.
 const GEEN_VERWIJZING = [
   'MemberExpression[computed=false] > Identifier.property',
   'Property[shorthand=false] > Identifier.key',
-  ':matches(MethodDefinition, PropertyDefinition, TSPropertySignature, TSMethodSignature) > Identifier.key',
-  'TSTypeQuery > Identifier.exprName',
+  ':matches(MethodDefinition, PropertyDefinition, TSAbstractMethodDefinition, TSAbstractPropertyDefinition, TSPropertySignature, TSMethodSignature) > Identifier.key',
+  'TSEnumMember > Identifier.id',
+  'TSTypeQuery Identifier',
   'TSQualifiedName > Identifier.right',
   'TSModuleDeclaration > Identifier.id',
 ].join(', ');
 const NETWERK_SELECTORS = [
   `:matches(ImportDeclaration[importKind!='type'], ExportNamedDeclaration[exportKind!='type'], ExportAllDeclaration[exportKind!='type'], ImportExpression)[source.value=${NETWERK_MODULE}]`,
   `CallExpression[callee.name='require'][arguments.0.value=${NETWERK_MODULE}]`,
+  `TSImportEqualsDeclaration[importKind!='type'] > TSExternalModuleReference[expression.value=${NETWERK_MODULE}]`,
   `Identifier[name=${NETWERK_GLOBAAL}]:not(${GEEN_VERWIJZING})`,
   `MemberExpression[computed=true] > Literal.property[value=${NETWERK_GLOBAAL}]`,
 ];
@@ -145,7 +147,7 @@ const GEHEIM_SELECTORS = [
   ),
   "Identifier[name='secret']:not(CallExpression > Identifier.callee, ImportDeclaration[source.value='#core/api/env.ts'] > ImportSpecifier[imported.name='secret'] > Identifier)",
   `:matches(${IMPORTS})[source][source.value!=/^(zod|#core[/]api[/]env[.]ts)$/]`,
-  'CallExpression > MemberExpression.callee[property.name=/^(partial|deepPartial|or|catch|union|discriminatedUnion|preprocess)$/]',
+  'CallExpression > MemberExpression.callee[property.name=/^(partial|deepPartial|or|and|catch|catchall|passthrough|loose|merge|record|union|discriminatedUnion|preprocess)$/]',
 ];
 
 const railConfigs = [

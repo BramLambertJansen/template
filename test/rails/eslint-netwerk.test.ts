@@ -41,8 +41,9 @@ const GEHEIM = 'rails/geheim';
 // Toegestane basis van src/api/env.ts (AC-12): alleen zod en core-env.
 const ENV_IMPORTS = "import { z } from 'zod';\nimport { readEnv, secret } from '#core/api/env.ts';\n";
 
-function schema(velden: string): string {
-  return `${ENV_IMPORTS}export const e = readEnv((ctx) => z.object(${velden}));\nexport const s = secret;\n`;
+// Basis zonder melding: `secret` alleen als aanroep, zodat alleen de geteste vorm (sleutel, import, verbreding) meldt.
+function schema(velden: string, voor = ''): string {
+  return `${ENV_IMPORTS}${voor}export const e = readEnv((ctx) => z.object({ A: secret(ctx), ${velden} }));\n`;
 }
 
 function fixture(name: string, code: string, waar: Rail | readonly [Rail, string]): Fixture {
@@ -112,6 +113,9 @@ const AC2: Fixture[] = [
   ),
   fixture("AC-2: eval('1')", "export const r: unknown = eval('1');\n", NETWERK),
   fixture('AC-2: const e = eval', 'export const e = eval;\n', NETWERK),
+  fixture("AC-2: import c from 'node:cluster'", "import c from 'node:cluster';\nexport const x = c;\n", NETWERK),
+  fixture("AC-2: import i from 'node:inspector'", "import i from 'node:inspector';\nexport const x = i;\n", NETWERK),
+  fixture("AC-2: import h = require('node:http')", "import h = require('node:http');\nexport const x = h;\n", NETWERK),
 ];
 
 // AC-3: globale netwerk-API.
@@ -187,6 +191,13 @@ const AC5: Fixture[] = [
     null,
   ),
   fixture("AC-5: export type uit 'node:net'", "export type { AddressInfo } from 'node:net';\n", null),
+  fixture(
+    'AC-5: type P = Parameters<typeof globalThis.fetch>',
+    'export type P = Parameters<typeof globalThis.fetch>;\n',
+    null,
+  ),
+  fixture('AC-5: abstracte methode fetch', 'export abstract class A {\n  abstract fetch(): void;\n}\n', null),
+  fixture('AC-5: enum-lid fetch', 'export enum E {\n  fetch = 1,\n}\n', null),
 ];
 
 // AC-6: een inline type-import laadt de module onder verbatimModuleSyntax.
@@ -232,21 +243,23 @@ const AC8: Fixture[] = [
   'api_token',
   'apiToken',
   'clientSecret',
-].map((sleutel) => fixture(`AC-8: ${sleutel} zonder secret()`, schema(`{ ${sleutel}: z.string() }`), [GEHEIM, ENV]));
+].map((sleutel) => fixture(`AC-8: ${sleutel} zonder secret()`, schema(`${sleutel}: z.string()`), [GEHEIM, ENV]));
+
+// Controle: dezelfde basis met een gewone sleutel meldt niets, dus de melding hierboven komt van de sleutel.
+const AC8_BASIS: Fixture[] = [
+  fixture('AC-8: basis met NOT_A_KEY meldt niets', schema('NOT_A_KEY: z.string()'), [null, ENV]),
+];
 
 // AC-9: omzeiling van de sleutel.
+const S_DECL = 'declare const s: (c: unknown) => z.ZodString;\n';
 const AC9: Fixture[] = [
-  fixture("AC-9: sleutel als string 'X_SECRET'", schema("{ 'X_SECRET': z.string() }"), [GEHEIM, ENV]),
-  fixture("AC-9: berekende sleutel ['X_SECRET']", schema("{ ['X_SECRET']: z.string() }"), [GEHEIM, ENV]),
-  fixture('AC-9: berekende template-sleutel', schema('{ [`X_SECRET`]: z.string() }'), [GEHEIM, ENV]),
-  fixture('AC-9: spread van een objectliteral', schema('{ ...{ X_SECRET: z.string() } }'), [GEHEIM, ENV]),
-  fixture('AC-9: secret(ctx).optional()', schema('{ X_TOKEN: secret(ctx).optional() }'), [GEHEIM, ENV]),
-  fixture(
-    'AC-9: andere functie s(ctx)',
-    `${ENV_IMPORTS}declare const s: (c: unknown) => z.ZodString;\n` +
-      'export const e = readEnv((ctx) => z.object({ X_TOKEN: s(ctx) }));\nexport const t = secret;\n',
-    [GEHEIM, ENV],
-  ),
+  fixture("AC-9: sleutel als string 'X_SECRET'", schema("'X_SECRET': z.string()"), [GEHEIM, ENV]),
+  fixture("AC-9: berekende sleutel ['X_SECRET']", schema("['X_SECRET']: z.string()"), [GEHEIM, ENV]),
+  fixture('AC-9: berekende template-sleutel', schema('[`X_SECRET`]: z.string()'), [GEHEIM, ENV]),
+  fixture('AC-9: spread van een objectliteral', schema('...{ X_SECRET: z.string() }'), [GEHEIM, ENV]),
+  fixture('AC-9: secret(ctx).optional()', schema('X_TOKEN: secret(ctx).optional()'), [GEHEIM, ENV]),
+  fixture('AC-9: andere functie s(ctx)', schema('X_TOKEN: s(ctx)', S_DECL), [GEHEIM, ENV]),
+  fixture('AC-9: controle: s(ctx) onder een gewone sleutel meldt niets', schema('PORT: s(ctx)', S_DECL), [null, ENV]),
 ];
 
 // AC-10: een eigen secret.
@@ -262,33 +275,36 @@ const AC10: Fixture[] = [
   ),
   fixture(
     "AC-10: import { secret } from './fake.ts'",
-    `${ZOD}import { secret } from './fake.ts';\nexport const s = secret;\n`,
+    `${ZOD}import { secret } from './fake.ts';\nexport const s: unknown = secret(1);\n`,
     [GEHEIM, ENV],
   ),
   fixture(
     'AC-10: readEnv as secret',
-    `${ZOD}import { readEnv as secret } from '#core/api/env.ts';\nexport const s = secret;\n`,
+    `${ZOD}import { readEnv as secret } from '#core/api/env.ts';\nexport const s: unknown = secret(1);\n`,
     [GEHEIM, ENV],
   ),
   fixture(
     'AC-10: import * as secret',
-    `${ZOD}import * as secret from '#core/api/env.ts';\nexport const s = secret;\n`,
+    `${ZOD}import * as secret from '#core/api/env.ts';\nexport const s: unknown = secret(1);\n`,
     [GEHEIM, ENV],
   ),
 ];
 
 // AC-11: imports buiten zod en core-env, en verbreding van het schema.
+const VELD = 'B: z.number()';
+const DECLS =
+  'declare const a: z.ZodObject;\ndeclare const b: z.ZodObject;\ndeclare const s: z.ZodObject;\n' +
+  'declare const k: z.ZodString;\ndeclare const f: (v: unknown) => unknown;\n';
 const AC11: Fixture[] = [
   fixture(
     "AC-11: import uit '#shared/limits.ts'",
-    `${ENV_IMPORTS}import { x } from '#shared/limits.ts';\nexport const l = [x, readEnv, secret, z];\n`,
+    schema(VELD, "import { x } from '#shared/limits.ts';\nexport const l = x;\n"),
     [GEHEIM, ENV],
   ),
-  fixture(
-    "AC-11: import type uit './x.ts'",
-    `${ENV_IMPORTS}import type { X } from './x.ts';\nexport type Y = X;\nexport const l = [readEnv, secret, z];\n`,
-    [GEHEIM, ENV],
-  ),
+  fixture("AC-11: import type uit './x.ts'", schema(VELD, "import type { X } from './x.ts';\nexport type Y = X;\n"), [
+    GEHEIM,
+    ENV,
+  ]),
   ...[
     'z.object({}).partial()',
     'z.object({}).deepPartial()',
@@ -296,13 +312,19 @@ const AC11: Fixture[] = [
     'z.union([a, b])',
     'z.preprocess(f, s)',
     'a.catch({})',
+    'z.object({}).catchall(s)',
+    'z.object({}).passthrough()',
+    'z.object({}).loose()',
+    'z.object({}).merge(s)',
+    'z.object({}).and(s)',
+    'z.record(k, s)',
   ].map((expressie) =>
-    fixture(
-      `AC-11: verbreding ${expressie}`,
-      `${ENV_IMPORTS}declare const a: z.ZodObject;\ndeclare const b: z.ZodObject;\ndeclare const f: (v: unknown) => unknown;\n` +
-        `declare const s: z.ZodObject;\nexport const v = ${expressie};\nexport const l = [readEnv, secret];\n`,
-      [GEHEIM, ENV],
-    ),
+    fixture(`AC-11: verbreding ${expressie}`, schema(VELD, `${DECLS}export const v = ${expressie};\n`), [GEHEIM, ENV]),
+  ),
+  fixture(
+    'AC-11: controle: basis met declaraties en z.object({}) meldt niets',
+    schema(VELD, `${DECLS}export const v = z.object({});\n`),
+    [null, ENV],
   ),
 ];
 
@@ -329,12 +351,23 @@ const AC12: Fixture[] = [
   ),
 ];
 
-test.each([...AC1, ...AC2, ...AC3, ...AC4, ...AC5, ...AC6, ...AC7, ...AC8, ...AC9, ...AC10, ...AC11, ...AC12])(
-  '$name',
-  async ({ file, code, rule }) => {
-    expect(await railsIn(file, code)).toStrictEqual(rule === null ? [] : [rule]);
-  },
-);
+test.each([
+  ...AC1,
+  ...AC2,
+  ...AC3,
+  ...AC4,
+  ...AC5,
+  ...AC6,
+  ...AC7,
+  ...AC8,
+  ...AC8_BASIS,
+  ...AC9,
+  ...AC10,
+  ...AC11,
+  ...AC12,
+])('$name', async ({ file, code, rule }) => {
+  expect(await railsIn(file, code)).toStrictEqual(rule === null ? [] : [rule]);
+});
 
 // AC-14: de meldingen noemen de juiste helper en regel.
 test.each([
@@ -348,7 +381,7 @@ test.each([
   {
     name: 'AC-14: melding van rails/geheim',
     file: ENV,
-    code: schema('{ PARTNER_TOKEN: z.string() }'),
+    code: schema('PARTNER_TOKEN: z.string()'),
     rule: GEHEIM,
     teksten: ['secret(ctx, …)', 'R-SEC-05'],
   },
