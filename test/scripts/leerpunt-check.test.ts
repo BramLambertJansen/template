@@ -114,6 +114,7 @@ describe('leerlus-bewijs/AC-5 en AC-6 welke gebeurtenis wat toetst', () => {
     ['issues', 'labeled', 'open', { sjabloon: true, sluiten: false, heropend: false }],
     ['issues', 'reopened', 'open', { sjabloon: true, sluiten: false, heropend: true }],
     ['issues', 'closed', 'closed', { sjabloon: false, sluiten: true, heropend: false }],
+    ['issues', 'labeled', 'closed', { sjabloon: true, sluiten: true, heropend: false }],
     ['issue_comment', 'created', 'closed', { sjabloon: false, sluiten: true, heropend: false }],
     ['issue_comment', 'created', 'open', { sjabloon: false, sluiten: false, heropend: false }],
   ])('leerlus-bewijs/AC-5: %s %s op een %s issue', (...[naam, actie, state, verwacht]) => {

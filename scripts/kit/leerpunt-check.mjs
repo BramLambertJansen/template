@@ -39,13 +39,15 @@ export function leesGebeurtenis(event, naam) {
 
 /**
  * Wat de check bij deze gebeurtenis moet nagaan (AC-5, AC-6): het sjabloon bij openen, bewerken, labelen en heropenen; het
- * sluitbewijs bij sluiten en bij een nieuwe comment op een gesloten issue; bij heropenen ook het bewijslabel weg.
+ * sluitbewijs bij sluiten, bij labelen van een gesloten issue en bij een nieuwe comment erop; bij heropenen ook het bewijslabel weg.
  * @param {Gebeurtenis} g @returns {{ sjabloon: boolean, sluiten: boolean, heropend: boolean }}
  */
 export function teToetsen(g) {
   if (!g.labels.includes('leerpunt')) return { sjabloon: false, sluiten: false, heropend: false };
   const sjabloon = g.naam === 'issues' && ['opened', 'edited', 'labeled', 'reopened'].includes(g.actie);
-  const sluiten = (g.naam === 'issues' && g.actie === 'closed') || (g.naam === 'issue_comment' && !g.open);
+  const sluiten =
+    (g.naam === 'issues' && (g.actie === 'closed' || (g.actie === 'labeled' && !g.open))) ||
+    (g.naam === 'issue_comment' && !g.open);
   return { sjabloon, sluiten, heropend: g.naam === 'issues' && g.actie === 'reopened' };
 }
 
@@ -135,8 +137,8 @@ async function voerUit(repo, g, stap) {
   const issue = `repos/${repo}/issues/${String(g.nummer)}`;
   if (stap.aan && !g.labels.includes(stap.label))
     await api(`${issue}/labels`, { method: 'POST', body: { labels: [stap.label] } });
-  if (!stap.aan && g.labels.includes(stap.label))
-    await api(`${issue}/labels/${encodeURIComponent(stap.label)}`, { method: 'DELETE' });
+  // Ook als de payload het label niet toont: een eerdere run kan het net gezet hebben (DELETE op 404 is goed).
+  if (!stap.aan) await api(`${issue}/labels/${encodeURIComponent(stap.label)}`, { method: 'DELETE' });
   if (stap.comment === null) return;
   const tekst = `${stap.merk}\n${stap.comment}`;
   // Alleen een eigen comment: een ander kan het merk ook typen (dan zou de bot die comment overschrijven).
