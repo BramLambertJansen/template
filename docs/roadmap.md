@@ -139,6 +139,27 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   catalogusregistratie; een app-exporter en -eraser werkt zonder core-aanpassing. Retention is techniek, geen claim van AVG-conformiteit.
   **Eisen uit het regelboek** (R-DOC-10: tot de bouw staan ze hier; de bouw-PR zet ze terug in het regelboek): inzage `GET /api/me/export` (permissie `app.use`, alleen eigen data, andere actor gemaskeerd, geen sessietoken); de app registreert exporters via `createApp({ privacy })` die expliciet op eigenaar filteren (was R-PRIV-01). Verwijderen via `app.delete_account(id)`; de app registreert verwijderaars (was in R-PRIV-02). `app_definer` krijgt voor `app.delete_account` ook delete op `"user"`, `verification`, select `verification."value"` (was in R-DB-14).
   aanleiding: `docs/adr/0051-audit-log-en-avg.md`
+- [ ] **ST-15 (P1) — externe koppelingen via één vast patroon** ([ADR 0077](adr/0077-externe-koppelingen-via-poorten.md)). Elke koppeling
+  met een externe dienst volgt hetzelfde patroon: indelen op zes kenmerken (machtiging, richting, ritme, gevoeligheid, kosten en quota, bron van
+  waarheid), elke waarde wijst naar een bouwsteen in core. Leverancierneutraal: template-code en -docs noemen geen bestaande dienst.
+  **Werk, in deze volgorde (één onderwerp per PR):** uitgaande client op de ingebouwde `fetch` (verplichte time-out, begrensd herhalen, host-allowlist,
+  schemacontrole, log zonder geheimen, weigert een aanroep in een transactie) met een lokale nep-partner als testhulp; foutcodes
+  `UPSTREAM_UNAVAILABLE`, `UPSTREAM_TIMEOUT`, `UPSTREAM_INVALID` met teksten; `secret()`-schema voor geheimen in env; lintregels tegen netwerk
+  buiten de client; register en schakelaar per koppeling (migratie: eigen besluit-PR); partnerstap in de route kit; vaste vorm per koppeling met
+  contracttestsuite en check; skill `nieuwe-koppeling`, paragraaf "Koppeling" in het spec-template, hoofdstuk in het gouden pad en een sectie in de
+  feiten. Na ST-03, elk met eigen besluit-PR: outbox en sync, machineroute en inbox, tokenkluis per gebruiker, beheerschermen.
+  **Afhankelijkheden:** ADR 0077; ST-03 voor schrijven, sync, terugbellen en tokens; ST-05 voor exporters en erasers van gekoppelde data.
+  **Klaar als:** een agent met alleen de skill deelt een fictieve partner in en bouwt een leeskoppeling zonder eigen keuzes; een gebruiker zonder
+  permissie of een admin zonder MFA bereikt de partner niet (nep-partner telt 0 aanroepen); time-out, 429 met `Retry-After`, 5xx en een ongeldig
+  antwoord geven de vaste foutcode zonder tekst van de partner; een partner-time-out houdt geen databaseverbinding vast; netwerk buiten de client
+  faalt in de lint, ook via omzeiling; een uitgezette koppeling doet geen aanroep.
+  **Eisen uit het regelboek** (R-DOC-10: tot de bouw staan ze hier; de bouw-PR zet ze terug in het regelboek): netwerk naar buiten alleen via de
+  uitgaande client, nooit in een transactie van `withUser` of `withJob` en nooit via `afterCommit` (nieuw, §2/§4); foutcodes 502, 503, 504 in core
+  (nieuw, §6); integratietests mogen een lokale nep-partner gebruiken, eigen code en database blijven echt (uitzondering op R-TEST-01); de machineroute
+  zonder login onder één vast prefix met verifier, tijdvenster, groottegrens, rate limit per IP en inbox (uitzondering naast R-UIT-02, §3); geheimen
+  alleen in env via `secret()`, geen live-sleutel buiten `production` (aanvulling R-SEC-05); een route met partnerstap gebruikt `rateLimit: 'duur'`
+  (aanvulling R-SEC-03).
+  aanleiding: `docs/adr/0077-externe-koppelingen-via-poorten.md` (verzoek van de eigenaar, 3 en 4 november 2026)
 - [ ] **ST-01 (P0) — GitHub-bescherming daadwerkelijk activeren** (stuk 6, diff-guard uit stuk 4). Een agent kan beschermd werk niet zonder de
   juiste eigenaarreview samenvoegen. Gebouwd: `scripts/github-ruleset.sh` met `test/scripts/github-ruleset.test.ts` (#104), de diff-guard met
   `guard.yml` (#62, ADR 0045 punt 17; nog niet verplicht, uitslag `overgang` zolang de auteur zelf goedkeurder is) en CODEOWNERS en PR-template.
