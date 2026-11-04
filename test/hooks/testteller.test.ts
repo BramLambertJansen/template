@@ -404,7 +404,7 @@ describe('testteller: voorwaardelijk geregistreerde tests', () => {
       ),
     },
     { naam: 'test als waarde in een lijst', na: lines('[test, it].forEach((f) => f);', BASIS) },
-  ])('$naam → skip', ({ na }) => {
+  ])('voorwaardelijke-tests/AC-1: $naam → skip', ({ na }) => {
     expect(testChangeRisk(BASIS, na, FILE)).toBe('skip');
   });
 
@@ -438,7 +438,7 @@ describe('testteller: voorwaardelijk geregistreerde tests', () => {
     { naam: 'of', na: lines('for (const x of test) gebruik(x);', BASIS) },
     { naam: 'in', na: lines('for (const k in describe) gebruik(k);', BASIS) },
     { naam: 'parameterannotatie na (', na: lines('function f(test: string) { return 1; }', BASIS) },
-  ])('$naam → null', ({ na }) => {
+  ])('voorwaardelijke-tests/AC-1/AC-2: $naam → null', ({ na }) => {
     expect(testChangeRisk(BASIS, na, FILE)).toBeNull();
   });
 
@@ -465,7 +465,7 @@ describe('testteller: voorwaardelijk geregistreerde tests', () => {
     expect(testChangeRisk(BASIS, suite(`if (x) ${LOS_A}`, LOS_B.replace('test(', 'test.skip(')), FILE)).toBe('skip');
   });
 
-  test('voorwaardelijk telt elk geval in het bereik', () => {
+  test('voorwaardelijke-tests/AC-4: voorwaardelijk telt elk geval in het bereik', () => {
     expect(telTests(lines('if (x) {', BASIS, '}'), FILE)).toStrictEqual({ cases: 2, skips: 0, voorwaardelijk: 2 });
     expect(telTests(suite(`ok && ${LOS_A}`, LOS_B), FILE)).toStrictEqual({ cases: 2, skips: 0, voorwaardelijk: 1 });
     expect(telTests(BASIS, FILE)).toStrictEqual({ cases: 2, skips: 0, voorwaardelijk: 0 });
@@ -483,6 +483,16 @@ describe('testteller: voorwaardelijk geregistreerde tests', () => {
     expect(
       testChangeRisk(sql, `do $$ begin if true then perform 1; end if; end $$;\n${sql}`, 'db/test/a.test.sql'),
     ).toBeNull();
+  });
+});
+
+describe('voorwaardelijke-tests/AC-6: docs', () => {
+  test('voorwaardelijke-tests/AC-6: review-checklists noemt de telling en de grenzen', () => {
+    const regel = readFileSync('docs/operations/review-checklists.md', 'utf8')
+      .split('\n')
+      .find((r) => r.includes('testChangeRisk'));
+    for (const deel of ['#410', 'testvoorwaarde.mjs', '`test.extend`-alias', 'lus', 'netto gelijk', 'JSX', 'helper'])
+      expect(regel).toContain(deel);
   });
 });
 
