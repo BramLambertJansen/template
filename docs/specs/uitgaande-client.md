@@ -180,7 +180,7 @@ Tegen de nep-partner; "geen aanroep" betekent dat zijn teller 0 blijft.
 ## Raakt ook
 
 - Nieuw: `src/core/api/outbound/` met `testing.ts`. Gewijzigd: `src/core/shared/errors.ts`, `src/core/api/errors.ts`,
-  `src/core/web/copy/errors.ts`, `src/core/shared/limits.ts`, `src/core/api/http/route-effects.ts`, `src/core/api/http/create-app.ts` (opstartcontrole), `src/api/server.ts`
+  `src/core/web/copy/errors.ts`, `src/core/shared/limits.ts`, `src/core/api/http/route-effects.ts`, `src/core/api/http/create-app.ts` (markering om de withUser-callback), `src/api/server.ts`
   (`guardWithUser`). Tests op de codelijst of statussen (`src/core/api/errors.test.ts`) veranderen mee; reden: deze spec.
 - **Nep-partner** `startFakePartner(routes)`: `node:http` op `127.0.0.1`, poort 0; per `'METHODE /pad'` een antwoord of een reeks
   (de laatste herhaalt) met `status`, `headers`, `json` of ruwe `body`, `delayMs` en `destroy`; `calls(key)`, `requests` (methode,
