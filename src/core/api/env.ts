@@ -179,8 +179,43 @@ export function onProcessSignal(
   });
 }
 
+type AppEnvName = RawEnv['APP_ENV'];
+
+// SKELET (spec geheimen-in-env): de tester schrijft eerst de tests; de bouw volgt.
+class EnvContext {
+  readonly #appEnv: AppEnvName;
+  constructor(appEnv: AppEnvName) {
+    this.#appEnv = appEnv;
+  }
+  get appEnv(): AppEnvName {
+    return this.#appEnv;
+  }
+}
+export type { EnvContext };
+
+export class Secret {
+  readonly #value: string;
+  constructor(value: string) {
+    this.#value = value;
+  }
+  reveal(): string {
+    return this.#value;
+  }
+}
+
+export interface SecretOptions {
+  readonly minBytes?: number;
+  readonly livePattern?: RegExp;
+  readonly testPattern?: RegExp;
+}
+
+export function secret(ctx: EnvContext, options: SecretOptions = {}): z.ZodType<Secret> {
+  throw new Error(`secret(): nog niet gebouwd (${ctx.appEnv}, ${String(Object.keys(options).length)})`);
+}
+
 // Uitbreidingsplek voor de app (ADR 0040): src/api/env.ts geeft een eigen schema mee.
-export function readEnv<T>(schema: z.ZodType<T>): T {
+export function readEnv<T>(schema: z.ZodType<T> | ((ctx: EnvContext) => z.ZodType<T>)): T {
+  if (typeof schema === 'function') return readEnv(schema(new EnvContext('local')));
   const result = schema.safeParse(process.env);
   if (!result.success) throw new Error(`Ongeldige omgeving (app-env):\n${describe(result.error)}`);
   return result.data;
