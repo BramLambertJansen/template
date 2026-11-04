@@ -226,27 +226,36 @@ export function veranderdePaden(repo, paar) {
  * @param {{ actor: string, agentType: string, commando: string }} wie
  */
 export function toets(repo, paar, wie) {
-  const genomen = overgenomen(repo);
   const lijst = veranderingenIn(repo, paar);
   const verklaard = verklaardePaden(repo, { actor: wie.actor, start: paar.start, paden: lijst.map((verandering) => verandering.rel) });
-  // Terugzetten naar de staat van vóór een open overtreding is de uitweg van AC-5, geen nieuwe overtreding.
-  const open = overtredingen(repo);
-  const terug = (/** @type {Verandering} */ verandering) =>
-    open.some((oud) => oud.rel === verandering.rel && oud.voor !== null && gelijk(oud.voor, verandering.na));
+  const vrij = uitweg(repo, paar.na);
   /** @type {Overtreding[]} */
   const nieuw = [];
   /** @type {string[]} */
   const meldingen = [];
   const verhuisd = verhuizingen(repo, { lijst, voor: paar.voor });
   for (const verandering of lijst) {
-    if (verklaard.has(verandering.rel) || terug(verandering) || genomen[verandering.rel] === staatSleutel(paar.na, verandering.rel))
-      continue;
+    if (verklaard.has(verandering.rel) || vrij(verandering)) continue;
     const besluit = beslis(repo, { verandering, agentType: wie.agentType, voor: paar.voor, verhuisd });
     const reden = [...besluit.deny, ...besluit.ask].join('; ');
     if (reden !== '') nieuw.push({ rel: verandering.rel, actor: wie.actor, rol: wie.agentType || 'hoofdsessie', commando: wie.commando, reden, voor: verandering.voor });
     meldingen.push(...besluit.context);
   }
   return { nieuw, meldingen, paden: lijst.map((verandering) => verandering.rel) };
+}
+
+/**
+ * De uitwegen van AC-5: terugzetten naar de staat van vóór een open overtreding, en een staat die de eigenaar overnam, zijn
+ * geen nieuwe overtreding (voor elke actor, ook de hoofdsessie).
+ * @param {Repo} repo @param {Snapshot} na
+ * @returns {(verandering: Verandering) => boolean}
+ */
+function uitweg(repo, na) {
+  const genomen = overgenomen(repo);
+  const open = overtredingen(repo);
+  return (verandering) =>
+    open.some((oud) => oud.rel === verandering.rel && oud.voor !== null && gelijk(oud.voor, verandering.na)) ||
+    genomen[verandering.rel] === staatSleutel(na, verandering.rel);
 }
 
 /**
@@ -275,8 +284,10 @@ export function toetsHoofdsessie(repo, paar, wie) {
     : new Set();
   const config = repo.ctx.config;
   const generator = (config.generatoren ?? []).includes(wie.commando.trim());
+  const vrij = uitweg(repo, paar.na);
   const lijst = veranderingenIn(repo, paar).filter((verandering) =>
     !verandering.rel.startsWith('.git/') &&
+    !vrij(verandering) &&
     werkmapInhoud(verandering.voor) !== werkmapInhoud(verandering.na) &&
     !(headPaden.has(verandering.rel) && verandering.na.wt === 'schoon') &&
     !(generator && config.gegenereerd.some((glob) => globMatch(glob, verandering.rel))));

@@ -182,7 +182,7 @@ function telEffect(t, r) {
   if (EFFECT.has(r.e)) t.effect.gemeten = true;
   if (r.e === 'EffectBlokkade') t.effect.blokkades += 1;
   if (r.e === 'PostToolUse' && r.k === 'pnpm rolhek:overnemen') t.effect.overnames += 1;
-  if (r.e === 'Schaduw' && r.achteraf !== 'door') t.effect.schaduw += 1;
+  if (r.e === 'Schaduw' && (r.achteraf === 'deny' || r.achteraf === 'ask')) t.effect.schaduw += 1;
   if (r.e === 'Schaduw' && r.anders === true) t.effect.schaduwAnders += 1;
 }
 

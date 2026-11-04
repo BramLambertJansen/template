@@ -7,7 +7,7 @@ import { branch, opslagmap, repoRoot } from './meting.mjs';
 
 /**
  * @typedef {'deny' | 'ask' | 'melding' | 'door'} Uitkomst
- * @typedef {{ e: 'EffectBlokkade', n: number } | { e: 'Overname', n: number } |
+ * @typedef {{ e: 'EffectBlokkade', n: number } |
  *   { e: 'Schaduw', id: string, vooraf: Uitkomst | 'onbekend', achteraf: Uitkomst, paden: string[] }} Teller
  */
 

@@ -107,25 +107,47 @@ function telBlok(repo, wie, reden) {
  */
 function hoofdsessiePost(repo, { opname, start }, wie) {
   const voor = opname?.snap;
-  const paden = voor === undefined || voor === null ? [] : veranderdePaden(repo, { voor, na: momentopname(repo), start });
+  const begin = repo.now();
+  const na = momentopname(repo);
+  const paden = voor === undefined || voor === null ? [] : veranderdePaden(repo, { voor, na, start });
   legVensterVast(repo, { actor: wie.actor, start, eind: repo.now(), paden });
-  if (modus(repo) === 'uit' || voor === undefined || voor === null) return {};
-  return hoofdsessieAchteraf(repo, { voor, start, vooraf: opname?.vooraf }, wie);
+  if (modus(repo) === 'uit' || voor === undefined) return {};
+  const vooraf = voorafNaam(opname?.vooraf);
+  // Te groot of te traag (rolhek-effect AC-7): in schaduw een teller, met `aan` dicht.
+  if (voor === null || na.teGroot || repo.now() - begin > MAX_MS) return hoofdsessieNietRond(repo, vooraf, wie);
+  return hoofdsessieAchteraf(repo, { voor, na, vooraf }, wie);
+}
+
+/** @param {unknown} waarde @returns {'deny' | 'ask' | 'melding' | 'door' | 'onbekend'} */
+const voorafNaam = (waarde) => (waarde === 'deny' || waarde === 'ask' || waarde === 'melding' || waarde === 'door' ? waarde : 'onbekend');
+
+/**
+ * De toets kwam niet rond voor de hoofdsessie: schaduw telt een `deny` zonder pad; `aan` zet een overtreding zonder pad op de
+ * lijst en blokkeert (na een geslaagd commando).
+ * @param {Repo} repo @param {'deny' | 'ask' | 'melding' | 'door' | 'onbekend'} vooraf
+ * @param {{ actor: string, agentType: string, sessie: string, commando: string, id: string, event: string, mislukt: boolean }} wie
+ * @returns {Uitslag}
+ */
+function hoofdsessieNietRond(repo, vooraf, wie) {
+  meet(repo, wie, { e: 'Schaduw', id: wie.id, vooraf, achteraf: 'deny', paden: [] });
+  const reden = `rolhek-effect: ${nietRond(wie).reden}`;
+  if (modus(repo) === 'schaduw') return context(wie.event, [`rolhek-effect (schaduw, AC-4): ${nietRond(wie).reden}`]);
+  werkLijstBij(repo, { nieuw: [nietRond(wie)], nu: null });
+  return wie.mislukt ? context(wie.event, [reden]) : telBlok(repo, wie, `${reden}\n${UITWEG}`);
 }
 
 /**
  * De hoofdsessie na een Bash-commando (AC-4): in schaduwmodus alleen een melding en een teller; met `aan` een blokkade bij
  * `deny`, de open lijst bij `deny` en `ask`, en meldingen als context.
- * @param {Repo} repo @param {{ voor: Snapshot, start: number, vooraf: string | undefined }} basis
+ * @param {Repo} repo @param {{ voor: Snapshot, na: Snapshot, vooraf: 'deny' | 'ask' | 'melding' | 'door' | 'onbekend' }} basis
  * @param {{ actor: string, agentType: string, sessie: string, commando: string, id: string, event: string, mislukt: boolean }} wie
  * @returns {Uitslag}
  */
 function hoofdsessieAchteraf(repo, basis, wie) {
-  const na = momentopname(repo);
+  const na = basis.na;
   const uitslag = toetsHoofdsessie(repo, { voor: basis.voor, na }, wie);
   const achteraf = uitslag.nieuw.some((o) => o.blokkeer) ? 'deny' : uitslag.nieuw.length > 0 ? 'ask' : uitslag.meldingen.length > 0 ? 'melding' : 'door';
-  const vooraf = basis.vooraf === 'deny' || basis.vooraf === 'ask' || basis.vooraf === 'melding' || basis.vooraf === 'door' ? basis.vooraf : 'onbekend';
-  meet(repo, wie, { e: 'Schaduw', id: wie.id, vooraf, achteraf, paden: uitslag.nieuw.map((o) => o.rel ?? '') });
+  meet(repo, wie, { e: 'Schaduw', id: wie.id, vooraf: basis.vooraf, achteraf, paden: uitslag.nieuw.map((o) => o.rel ?? '') });
   const tekst = lijstTekst(uitslag.nieuw);
   if (modus(repo) === 'schaduw')
     return context(wie.event, uitslag.nieuw.length === 0 ? [] : [`rolhek-effect (schaduw, AC-4): met de vlag aan zou dit commando op de open lijst komen:\n${tekst}`]);

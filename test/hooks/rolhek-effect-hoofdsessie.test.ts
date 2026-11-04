@@ -267,6 +267,87 @@ describe('rolhek-vooraf-krimp/AC-7: schaduwmodus en tellers', () => {
   });
 });
 
+describe('rolhek-vooraf-krimp/AC-4: randgevallen (review)', () => {
+  test('git merge && sed -i AGENTS.md: alleen AGENTS.md op de lijst', () => {
+    const root = nieuweRepo();
+    sh(root, 'git checkout -q -b z && echo b > rails/x.mjs && git commit -qam z && git checkout -q main');
+    hoofd(root, { commando: "git merge -q z && sed -i 's/regels/anders/' AGENTS.md", modus: 'aan' });
+    expect(paden(root)).toStrictEqual(['AGENTS.md']);
+  });
+
+  test('de hoofdsessie zet een overtreding van een subagent terug: de lijst raakt leeg, geen nieuwe overtreding', () => {
+    const root = nieuweRepo();
+    handle(
+      'subagent-start',
+      { session_id: 's1', agent_type: 'tester', agent_id: 'agent-tester' },
+      repoVan(root, 'aan'),
+    );
+    hoofd(root, { commando: 'echo y > rails/x.mjs', modus: 'aan', rol: 'tester' });
+    expect(paden(root)).toStrictEqual(['rails/x.mjs']);
+    const uit = hoofd(root, { commando: 'git checkout -- rails/x.mjs', modus: 'aan' });
+    expect([isBlok(uit), paden(root)]).toStrictEqual([false, []]);
+  });
+
+  const VEEL = 'mkdir veel && cd veel && seq 1 5001 | xargs touch';
+
+  test('te grote momentopname met de vlag aan: een blokkade en een overtreding zonder pad', () => {
+    const root = nieuweRepo();
+    const uit = hoofd(root, { commando: 'maak veel bestanden', uitvoer: VEEL, modus: 'aan' });
+    expect(isBlok(uit)).toBe(true);
+    expect(paden(root)).toStrictEqual([null]);
+  });
+
+  test('te grote momentopname in schaduw: een schaduwregel met deny, geen lijst', () => {
+    const root = nieuweRepo();
+    const uit = hoofd(root, { commando: 'maak veel bestanden', uitvoer: VEEL, modus: 'schaduw' });
+    expect(isBlok(uit)).toBe(false);
+    expect(paden(root)).toStrictEqual([]);
+    expect(meetregels().filter((r) => r['e'] === 'Schaduw')).toMatchObject([{ achteraf: 'deny', paden: [] }]);
+  });
+});
+
+describe('rolhek-vooraf-krimp/AC-4: de hooks als proces', () => {
+  const HOOK = path.resolve('rails/hooks/effect.mjs');
+
+  function procesRepo(gates: string): string {
+    const root = nieuweRepo();
+    schrijf(root, '.claude/gates.json', gates);
+    sh(root, 'git add -A && git commit -qm gates');
+    return root;
+  }
+
+  function hook(root: string, event: string, invoer: Record<string, unknown>) {
+    const env: NodeJS.ProcessEnv = { ...process.env, ...GIT_ENV, CLAUDE_PROJECT_DIR: root, METING_DIR: meetmap };
+    delete env['RAILS_ANKER'];
+    const result = spawnSync('node', [HOOK, event], {
+      cwd: root,
+      env,
+      input: JSON.stringify({ ...invoer, cwd: root }),
+      encoding: 'utf8',
+    });
+    return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+  }
+
+  test('vlag aan in .claude/gates.json: sed -i op een gegenereerd pad blokkeert na het commando', () => {
+    const root = procesRepo(
+      JSON.stringify({ ...JSON.parse(readFileSync('.claude/gates.json', 'utf8')), rolhekEffectHoofdsessie: 'aan' }),
+    );
+    const commando = "sed -i 's/schema/x/' src/api/db/schema.ts";
+    const invoer = { session_id: 's1', tool_name: 'Bash', tool_input: { command: commando }, tool_use_id: 'p1' };
+    expect(hook(root, 'pre', invoer).status).toBe(0);
+    sh(root, commando);
+    const na = hook(root, 'post', invoer);
+    expect([na.status, na.stdout.includes('"decision":"block"')]).toStrictEqual([0, true]);
+  });
+
+  test('onleesbare configuratie: de toets na een commando van de hoofdsessie valt dicht', () => {
+    const root = procesRepo('{ kapot');
+    const invoer = { session_id: 's1', tool_name: 'Bash', tool_input: { command: 'true' }, tool_use_id: 'p2' };
+    const na = hook(root, 'post', invoer);
+    expect(na.stdout).toContain('de toets valt dicht');
+  });
+});
+
 describe('rolhek-vooraf-krimp/AC-7: pnpm meting toont de tellers', () => {
   function meting(regels: readonly Record<string, unknown>[], ...args: string[]) {
     writeFileSync(path.join(meetmap, 's1.jsonl'), regels.map((r) => `${JSON.stringify(r)}\n`).join(''));
