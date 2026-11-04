@@ -2,7 +2,7 @@
 
 Status: geaccepteerd
 
-Wijzigt [0059](0059-leerlus-van-app-naar-template.md) punt 3, 4 en 7; vult R-SEC-09 aan met één uitzondering voor MCP.
+Wijzigt [0059](0059-leerlus-van-app-naar-template.md) punt 1, 3, 4 en 7; vult R-SEC-09 aan met één uitzondering voor MCP.
 Drempel: A3 (een nieuwe workflow met schrijfrecht op issues; een uitzondering op "MCP alleen lezend") en A4 (een
 geaccepteerd ADR wijzigt). Uitwerking: [spec leerlus-bewijs](../specs/leerlus-bewijs.md). Aanleiding: de herbeoordeling van de
 leerlus van 4 november 2026 (thread "Zelflerend systeem opnieuw beoordelen"), met de keuzes V1, V2, V5 en "openbaar is prima" van
@@ -24,13 +24,15 @@ agents sluiten opgeloste leerpunten (akkoord eigenaar 3 november 2026), en "opge
 1. **Sluitbewijs.** Een PR die een leerpunt sluit (`Fixes`, `Closes` of `Resolves` gevolgd door het nummer van een issue
    met label `leerpunt`) heeft in de beschrijving een sectie `## Leerpunt` met per issue de trede op de ladder en het bewijs:
    een testbestand dat de PR toevoegt of wijzigt. Een verplichte CI-job draait dat testbestand tegen de code van de basis
-   (alleen het testbestand komt uit de PR) en eist rood, en tegen de head en eist groen. Zo is "de check begint met een
-   fixture die op de oude code faalt" toetsbaar.
+   (alleen het testbestand komt uit de PR) en eist een gefaalde assertie, en tegen de head en eist groen; een laadfout op de
+   basis telt niet als bewijs. Bij trede Type is het bewijs een typetest die op de basis niet compileert. Zo is "de check
+   begint met een fixture die op de oude code faalt" toetsbaar. De job draait onder `pull_request`, niet onder
+   `pull_request_target`: code uit de PR draait nooit met het token of de geheimen van de basis. Het script komt van main.
 2. **Uitzonderingen op het sluitbewijs.** Voor de treden Skill, Padregel en `AGENTS.md`, en voor een integratie- of e2e-test die
    de job niet kan draaien, mag het bewijs `geen test: <reden>` zijn. Dan is de PR niet agent-mergebaar (ADR 0069): de
-   eigenaar merget en toetst de reden. Een leerpunt dat zonder code achterhaald is, sluit met de reden `achterhaald` in een
-   comment, niet via een PR.
-3. **Issue-check.** Een workflow op `issues` (opened, edited, labeled, closed) toetst elk issue met label `leerpunt`:
+   eigenaar merget en toetst de reden. Een leerpunt dat zonder code achterhaald is, sluit met een comment
+   `achterhaald: <reden>` van iemand met schrijfrecht op de repo, niet via een PR.
+3. **Issue-check.** Een workflow op `issues` (opened, edited, labeled, closed, reopened) en `issue_comment` toetst elk issue met label `leerpunt`:
    de koppen en volgorde van `.github/ISSUE_TEMPLATE/leerpunt.yml`, verplichte velden niet leeg, en de keuzelijsten `Soort` en
    `Voorstel voor de plek` met een waarde uit het sjabloon. Bij een fout zet hij het label `leerpunt-onvolledig` met één comment
    die de fouten noemt, en haalt hij het weg zodra het issue klopt. Bij sluiten zonder gemergde PR met sluitbewijs en zonder
@@ -38,8 +40,11 @@ agents sluiten opgeloste leerpunten (akkoord eigenaar 3 november 2026), en "opge
    sluit, heropent of bewerkt geen issues.
 4. **Wie indient, en hoe.** Leerpunten komen uit elke sessie, in een app of in de template zelf. De hoofdsessie dient in via
    `gh issue create` (rolhek R-ROL-07 ongewijzigd) of, waar `gh` niet kan schrijven (cloud), via de MCP-tool voor issues, alleen
-   naar de template-repo en met label `leerpunt`. Dat is de enige uitzondering op "MCP alleen lezend" in R-SEC-09; de
-   issue-check uit punt 3 is daar de grens. Subagents dienen niets in (ongewijzigd).
+   om een issue aan te maken, alleen naar de template-repo en met label `leerpunt`. Dat is de enige uitzondering op "MCP
+   alleen lezend" (R-SEC-09, R-ROL-12); elke andere MCP-schrijfactie blijft verboden. De issue-check uit punt 3 toetst de
+   inhoud van leerpunt-issues, niet wat de tool verder doet: in de cloud draait geen rolhek, dus daar is de beperking een
+   afspraak. In Claude Code blijft het rolhek op de MCP-issuetool vragen (ask); een doorlaat vraagt een eigen besluit met
+   tabeltest. Subagents dienen niets in (ongewijzigd).
 5. **Wie verwerkt.** De eigenaar triageert en bepaalt de volgorde, ook via de wekelijkse voorsortering. Een agent mag een
    leerpunt oppakken waartoe de eigenaar opdracht gaf, en mag het sluiten met sluitbewijs (punt 1) of als achterhaald (punt 2).
    Een roadmap-item met `aanleiding: #nnn` is alleen nodig voor werk dat de roadmap toch al vraagt; het is niet langer de maat

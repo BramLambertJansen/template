@@ -23,7 +23,7 @@ zodra deze op main staat.
 |---|---|---|
 | hoofdsessie | schrijft de sectie `## Leerpunt` in een PR die een leerpunt sluit; dient leerpunten in via `gh` of, in de cloud, via de MCP-tool voor issues | via MCP iets anders schrijven dan een leerpunt-issue in de template-repo |
 | reviewer | toetst bij `geen test: <reden>` of de reden klopt, en meldt dat als bevinding | iets indienen of sluiten (ongewijzigd) |
-| CI-job `leerpunt-bewijs` | draait het bewijsbestand tegen basis en head | iets schrijven |
+| CI-job `leerpunt-bewijs` (`ci.yml`, `pull_request`) | draait het bewijsbestand tegen basis en head, zonder token voor de PR-code | iets schrijven; code uit de PR draaien met token of geheimen |
 | workflow `leerpunt-check` | zet of haalt de labels `leerpunt-onvolledig` en `leerpunt-zonder-bewijs` weg, met één comment | sluiten, heropenen, de body bewerken |
 | eigenaar | maakt de twee labels aan, zet het workflowbestand (GitHub App heeft geen `workflows`-recht), merget PR's met `geen test` | — |
 
@@ -39,9 +39,11 @@ n.v.t. — geen HTTP-route.
 
 n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vormen:
 
-- `.github/workflows/guard.yml` — job `agent-merge` als verplichte job met eigen script onder `scripts/kit/`, `permissions: read-all`
+- `.github/workflows/ci.yml` — job onder `pull_request` met `permissions: read-all`; het script komt via een aparte checkout van main, niet uit de PR (een PR die `.github/workflows/ci.yml` wijzigt, valt al onder de diff-guard en eigenaarreview)
 - `test/rails/leerpunt-sjabloon.test.ts` — sjabloon regelgebaseerd lezen zonder YAML-dependency; de nieuwe body-parser hergebruikt die lezer
-- `scripts/kit/kooi.mjs` — wie code van de basis uitcheckt naast de werkmap, doet dat in een eigen tijdelijke map
+- `scripts/kit/kooi.mjs` — draait het script buiten CI (een agent of pre-push), dan lopen beide bewijsruns via `inKooi`
+  (R-TOOL-03: een werkmap is geen grens). In CI is de wegwerp-runner de grens, zoals voor elke test uit een PR; de
+  basiskopie staat in een eigen tijdelijke map
 
 ## Hergebruik en UX
 
@@ -68,25 +70,36 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   `leerpunt`, zonder regel `- #n:` in de sectie `## Leerpunt`, maakt de job `leerpunt-bewijs` rood met de melding welk nummer
   ontbreekt. Een PR zonder zo'n verwijzing laat de job slagen zonder iets te draaien.
 - **leerlus-bewijs/AC-2** — Bij `bewijs <testpad>`: het pad moet in de diff van de PR staan als toegevoegd of gewijzigd
-  `*.test.ts(x)`-bestand buiten `*.int.test.ts` en `e2e/`. Anders rood.
+  `*.test.ts(x)`-bestand buiten `*.int.test.ts` en `e2e/`, of bij trede Type als `*.test-d.ts`. Anders rood.
 - **leerlus-bewijs/AC-3** — Het bewijsbestand draait in een tijdelijke kopie van de basis (merge-base) met alleen dat bestand
-  uit de head en moet daar falen; het draait op de head en moet slagen. Slaagt het op de basis, of faalt het op de head, dan
-  rood met beide uitslagen. Een fixture: een PR-kopie waarin de test ook op de basis slaagt, maakt de job rood.
+  uit de head en moet daar op minstens één assertie falen (vitest-uitslag `failed` met een assertiefout, geen laad- of
+  importfout); het draait op de head en moet slagen. Bij trede Type: `vitest --typecheck` op het `*.test-d.ts`-bestand faalt
+  op de basis en slaagt op de head. Slaagt het op de basis, faalt het daar alleen op laden, of faalt het op de head, dan rood
+  met beide uitslagen. De PR-code draait zonder token (`persist-credentials: false`, geen geheimen) met een install uit de
+  lockfile van de basis met `--ignore-scripts`. Fixtures: een test die ook op de basis slaagt, en een test die op de basis
+  alleen op een import faalt, maken de job allebei rood.
 - **leerlus-bewijs/AC-4** — `geen test: <reden>` is alleen geldig bij trede Skill, Padregel of AGENTS.md, of bij een
-  integratie- of e2e-test, met een niet-lege reden; dan slaagt de job en geeft het oordeel agent-merge `nee` met reden
-  `leerpunt zonder test`. Bij een andere trede of lege reden: rood.
-- **leerlus-bewijs/AC-5** — De workflow `leerpunt-check` op `issues` (opened, edited, labeled) toetst een issue met label
+  integratie- of e2e-test, met een niet-lege reden; dan slaagt de job en geeft het agent-merge-oordeel (`diff-guard.mjs`,
+  gelezen door `pr-merge.mjs`) `nee` met reden `leerpunt zonder test`. Bij een andere trede of lege reden: rood. De job draait
+  ook op `pull_request` type `edited`, zodat een aangepaste beschrijving opnieuw getoetst wordt.
+- **leerlus-bewijs/AC-5** — De workflow `leerpunt-check` op `issues` (opened, edited, labeled, reopened) toetst een issue met label
   `leerpunt` tegen `leerpunt.yml`: elke kop aanwezig en in volgorde, verplichte velden niet leeg (`_No response_` telt als leeg),
   `Soort` en `Voorstel voor de plek` exact een optie. Bij fouten: label `leerpunt-onvolledig` en de comment uit "Hergebruik en UX";
   zonder fouten: label weg. Tabeltest per fout met echte bodies, ook #424, #487, #500 en #504 als vorm.
-- **leerlus-bewijs/AC-6** — Bij `closed` op een leerpunt: zonder gemergde PR die het issue sluit en een sectie `## Leerpunt` met
-  dat nummer heeft, en zonder comment die begint met `achterhaald:`, zet de workflow `leerpunt-zonder-bewijs` met de comment.
-  Bij heropenen haalt hij het label weg.
-- **leerlus-bewijs/AC-7** — De workflow heeft `permissions: issues: write` en verder niets; een test leest het bestand en faalt
-  bij elk ander recht en bij elke aanroep die sluit, heropent of de body bewerkt.
-- **leerlus-bewijs/AC-8** — De skill `opleveren` stap 8 noemt de MCP-schrijfweg voor de cloud (alleen template-repo, label
-  `leerpunt`, dezelfde body) en de sectie `## Leerpunt`; `.github/pull_request_template.md` heeft de sectie `## Leerpunt` met de
-  regelvorm. `docs/framework.md` R-SEC-09 en R-WERK-13 noemen de uitzondering en het sluitbewijs met ADR 0078.
+- **leerlus-bewijs/AC-6** — Bij `closed` op een leerpunt: zonder gemergde PR die het issue sluit (GraphQL
+  `closedByPullRequestsReferences`) en een sectie `## Leerpunt` met dat nummer heeft, en zonder comment die begint met
+  `achterhaald:` van een auteur met `author_association` OWNER, MEMBER of COLLABORATOR, zet de workflow
+  `leerpunt-zonder-bewijs` met de comment. Bij `reopened`, of bij een geldige `achterhaald:`-comment na het sluiten
+  (`issue_comment`), haalt hij het label weg. Een `achterhaald:` van een andere auteur telt niet.
+- **leerlus-bewijs/AC-7** — De workflow heeft `permissions: issues: write` en verder niets; de job `leerpunt-bewijs` heeft
+  `contents: read`, `pull-requests: read` en `issues: read`. Een test leest beide bestanden en faalt bij elk ander recht, bij
+  elke aanroep die sluit, heropent of de body bewerkt, en bij elke `${{ github.event.* }}` in een `run:`-regel (issuebody en
+  PR-beschrijving alleen via `env` of een bestand).
+- **leerlus-bewijs/AC-8** — De skill `opleveren` stap 8 noemt de MCP-schrijfweg voor de cloud (alleen aanmaken, alleen
+  template-repo, label `leerpunt`, dezelfde body) en de sectie `## Leerpunt`; `.github/pull_request_template.md` heeft de
+  sectie `## Leerpunt` met de regelvorm. `docs/framework.md` R-SEC-09, R-ROL-12 en R-WERK-13, `AGENTS.md` (regel over externe
+  diensten) en `CLAUDE.md` ("MCP alleen read-only") noemen de uitzondering met ADR 0078. Het rolhek blijft op de MCP-issuetool
+  vragen (ask); `mcpLezen` in `.claude/gates.json` verandert niet.
 - **leerlus-bewijs/AC-9** — De voorsortering staat als prompt in `docs/operations/leerpunten-voorsorteren.md`, zonder
   verwijzing naar een uitbreidingsstop, en noemt de labels `leerpunt-onvolledig` en `leerpunt-zonder-bewijs` als eigen bak.
 - **leerlus-bewijs/AC-10** — Spec `leerlus.md` krijgt `status: gebouwd # #312`; het ST-09-protocol telt "opgepakt" als
@@ -98,8 +111,9 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
 |---|---|---|
 | PR sluit twee leerpunten | Twee regels in `## Leerpunt`; elk bewijs apart getoetst | n.v.t. |
 | Eén test bewijst twee leerpunten | Hetzelfde pad op twee regels mag | n.v.t. |
-| Bewijstest heeft een nieuwe helper nodig die op de basis niet bestaat | Op de basis faalt hij dan op de import: telt als rood, dus geldig; de reviewer let erop dat de test het gedrag toetst | n.v.t. |
-| Basis kan het testbestand niet laden door een gewijzigde configuratie | Telt als rood op de basis; melding met de uitvoer | n.v.t. |
+| Bewijstest heeft een nieuwe helper nodig die op de basis niet bestaat | Laadfout op de basis telt niet: de job is rood met de melding "faalt op laden, niet op een assertie"; de helper hoort in de test zelf of de bouwer kiest een test die de bestaande code aanroept | n.v.t. |
+| Basis kan het testbestand niet laden door een gewijzigde configuratie | Rood met de uitvoer; de eigenaar kan dan `geen test: <reden>` met eigenaarmerge laten gelden | n.v.t. |
+| Leerpunt gesloten via een commit op main zonder PR | Geen sluitbewijs: label `leerpunt-zonder-bewijs` | n.v.t. |
 | Issue zonder label `leerpunt` | Workflow en job doen niets | n.v.t. |
 | Issue in een app-repo (via template-merge) | Workflow draait alleen als `github.repository` gelijk is aan `onderhoud.repository` | n.v.t. |
 | Body door GitHub-formulier ingevuld | Zelfde koppen; `_No response_` bij `eerder` is goed | n.v.t. |
@@ -109,10 +123,11 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
 ## Raakt ook
 
 - Nieuw: `scripts/kit/leerpunt-bewijs.mjs`, `scripts/kit/leerpunt-check.mjs` (gedeelde sjabloonlezer), job in
-  `.github/workflows/guard.yml`, workflow `.github/workflows/leerpunt.yml`, `docs/operations/leerpunten-voorsorteren.md`.
-- Gewijzigd: `.claude/skills/opleveren/SKILL.md`, `.github/pull_request_template.md`, `docs/framework.md` (R-SEC-09, R-WERK-13),
-  `docs/operations/st-09-praktijkproef.md`, `scripts/kit/lane.mjs` of de agent-merge-uitslag (AC-4), `docs/specs/leerlus.md`.
-- Verplichte check: `leerpunt-bewijs` in de ruleset (`scripts/github-ruleset.sh`) en `requiredChecks`.
+  `.github/workflows/ci.yml`, workflow `.github/workflows/leerpunt.yml`, `docs/operations/leerpunten-voorsorteren.md`.
+- Gewijzigd: `.claude/skills/opleveren/SKILL.md`, `.github/pull_request_template.md`, `docs/framework.md` (R-SEC-09, R-ROL-12,
+  R-WERK-13), `AGENTS.md`, `CLAUDE.md`, `docs/operations/st-09-praktijkproef.md`, `scripts/kit/diff-guard.mjs` en
+  `scripts/kit/pr-merge.mjs` (AC-4), `docs/specs/leerlus.md`.
+- Verplichte check: `leerpunt-bewijs` in de ruleset (`scripts/github-ruleset.sh`) en `requiredChecks` in `.claude/decisions.json`.
 - Na de merge: de routine "Leerpunten voorsorteren" verwijst naar het bestand uit AC-9.
 
 ## Buiten scope
@@ -136,7 +151,10 @@ als achterhaald.
 ## Open vragen
 
 - **OV-1 ✅ besloten** — V1, V2 en V5 samen; openbare leerpunten zijn prima (eigenaar, 4 november 2026).
-- **OV-2** — Draait het bewijs op de basis in `guard.yml` of in een eigen workflow? Aanbeveling: een job in `guard.yml`, naast
-  `agent-merge`, omdat die al de PR-beschrijving en diff leest.
-- **OV-3** — Mag `achterhaald:` ook van een agent komen? Aanbeveling: ja, met verwijzing naar het bestand of de PR die het
-  overbodig maakte; de voorsortering toont deze sluitingen zodat de eigenaar ze ziet.
+- **OV-2** — Waar draait het bewijs? Opties: een job in `guard.yml` (`pull_request_target`), een job in `ci.yml`
+  (`pull_request`), een eigen workflow. Aanbeveling: `ci.yml` met het script van main en zonder token voor de PR-code; onder
+  `pull_request_target` zou code uit de PR met de rechten van de basis draaien (spec-review, 4 november 2026).
+- **OV-3** — Wie mag `achterhaald:` schrijven? Aanbeveling: alleen auteurs met schrijfrecht (OWNER, MEMBER, COLLABORATOR),
+  dus de eigenaar en de hoofdsessie via zijn token, met verwijzing naar het bestand of de PR die het leerpunt overbodig maakte;
+  de voorsortering toont deze sluitingen.
+- **OV-4** — Mag het rolhek de MCP-issuetool doorlaten? Aanbeveling: nee, ask blijven tot een eigen besluit met tabeltest.
