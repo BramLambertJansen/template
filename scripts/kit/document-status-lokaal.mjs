@@ -4,7 +4,9 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { readFileSync } from 'node:fs';
 import { repositoryName } from '../../rails/hooks/lib/authority-context.mjs';
+import { documentInfo } from '../../rails/hooks/lib/document-state.mjs';
 
 /** @typedef {(args: readonly string[]) => { code: number, output: string }} Git */
 /** @typedef {{ base: string, head: string, ref: string, repo: string }} Invoer */
@@ -67,11 +69,11 @@ const HERSTEL =
   'commit de spec apart, dan de rest); al gepusht, maak een nieuwe branch vanaf origin/main (geen rebase of force-push, R-WERK-12)';
 
 /**
- * Blokkade of waarschuwing (AC-4, AC-5, AC-7).
- * @param {{ status: number | null, uitvoer: string, pr: number | null }} uitslag
+ * Alleen de volgorde blokkeert (AC-4, AC-5, OV-1); de rest is een waarschuwing, ook een kindproces dat niet afliep (AC-7).
+ * @param {{ status: number | null, uitvoer: string }} uitslag
  * @returns {{ exit: 0 | 1, melding: string | null }}
  */
-export function oordeel({ status, uitvoer, pr }) {
+export function oordeel({ status, uitvoer }) {
   const tekst = uitvoer.trim();
   if (status === null)
     return {
@@ -79,17 +81,87 @@ export function oordeel({ status, uitvoer, pr }) {
       melding: `${KOP}: waarschuwing, de check liep niet af (${tekst || 'geen uitvoer'}); CI toetst het wel`,
     };
   if (status === 0) return { exit: 0, melding: null };
-  if (pr !== null) return { exit: 1, melding: `${KOP}: blokkade, CI keurt deze PR zo af:\n${tekst}` };
   if (tekst.includes(VOLGORDE))
     return { exit: 1, melding: `${KOP}: blokkade, CI keurt dit zo af:\n${tekst}\n${HERSTEL}` };
   return {
     exit: 0,
-    melding: `${KOP}: waarschuwing (nog geen PR, dus niet alles is lokaal te toetsen):\n${tekst}`,
+    melding:
+      `${KOP}: waarschuwing, CI keurt dit mogelijk af (lokaal draait de check uit de werkmap, CI uit main):\n${tekst}\n` +
+      'loopt de branch achter, haal main dan eerst binnen met `git merge origin/main`',
   };
 }
 
-/** @param {string} programma @param {readonly string[]} args @param {{ env?: NodeJS.ProcessEnv, timeout?: number }} [opties] */
-function draai(programma, args, opties = {}) {
+/**
+ * Pusht git (pre-push-stdin) de huidige branch op HEAD? Verwijderingen, tags en andere refs niet (AC-2).
+ * @param {string} stdin @param {{ ref: string, head: string }} huidig
+ */
+export function gepushteRef(stdin, { ref, head }) {
+  return stdin.split('\n').some((regel) => {
+    const [lokaal, sha, remote, oud, ...rest] = regel.trim().split(/\s+/);
+    return (
+      rest.length === 0 && remote !== undefined && oud !== undefined && lokaal === `refs/heads/${ref}` && sha === head
+    );
+  });
+}
+
+/** @param {Git} git @param {readonly string[]} args */
+const regels = (git, args) => {
+  const { code, output } = git(args);
+  return code === 0 ? output.split('\n').filter(Boolean) : [];
+};
+
+/**
+ * Wijzigt commit `c` de inhoud van de spec (zonder statusregel)? Een verwijdering telt niet.
+ * @param {Git} git @param {string} c @param {string} spec
+ */
+function wijzigtInhoud(git, c, spec) {
+  const na = git(['show', `${c}:${spec}`]);
+  if (na.code !== 0) return false;
+  const voor = git(['show', `${c}^:${spec}`]);
+  if (voor.code !== 0) return true;
+  const [a, b] = [documentInfo(spec, voor.output), documentInfo(spec, na.output)];
+  return a === null || b === null || a.digest !== b.digest;
+}
+
+/**
+ * Eigen volgordetoets los van de status (AC-6): specs waarvan de eerste inhoudswijziging niet vóór de eerste code staat.
+ * @param {Git} git @param {{ base: string, head: string }} invoer
+ * @returns {string[]}
+ */
+export function eigenVolgorde(git, { base, head }) {
+  const split = git(['merge-base', base, head]).output.trim();
+  if (!SHA.test(split)) return [];
+  const bereik = `${split}..${head}`;
+  const alle = regels(git, ['log', '--no-merges', '--topo-order', '--reverse', '--format=%H', bereik]);
+  const eersteCode = regels(git, [
+    'log',
+    '--no-merges',
+    '--reverse',
+    '--format=%H',
+    bereik,
+    '--',
+    '.',
+    ':(exclude)docs/',
+  ])[0];
+  if (eersteCode === undefined) return [];
+  const specs = regels(git, ['diff', '--name-only', '--no-renames', split, head, '--', 'docs/specs/']).filter((pad) =>
+    /^docs\/specs\/[^/_][^/]*\.md$/.test(pad),
+  );
+  return specs
+    .filter((spec) => {
+      const commits = regels(git, ['log', '--no-merges', '--reverse', '--format=%H', bereik, '--', spec]);
+      const eerste = commits.find((c) => wijzigtInhoud(git, c, spec));
+      return eerste !== undefined && alle.indexOf(eerste) >= alle.indexOf(eersteCode);
+    })
+    .toSorted();
+}
+
+/**
+ * @param {string} programma @param {readonly string[]} args
+ * @param {{ env?: NodeJS.ProcessEnv, timeout?: number }} [opties]
+ * @returns {{ status: number | null, stdout: string, stderr: string }} status null: niet gestart, signaal of timeout
+ */
+export function draai(programma, args, opties = {}) {
   const result = spawnSync(programma, args, {
     encoding: 'utf8',
     env: opties.env ?? process.env,
@@ -118,12 +190,8 @@ function vraagPr({ repo, ref }) {
   return prUitGh(status === 0 ? stdout : null);
 }
 
-function main() {
-  const invoer = lokaleInvoer(git);
-  if ('melding' in invoer) {
-    console.warn(invoer.melding);
-    return 0;
-  }
+/** @param {Invoer} invoer */
+function draaiCheck(invoer) {
   const pr = vraagPr(invoer);
   const check = path.join(path.dirname(fileURLToPath(import.meta.url)), 'check-document-status.mjs');
   const env = {
@@ -136,9 +204,31 @@ function main() {
     GITHUB_STEP_SUMMARY: '',
   };
   const { status, stdout, stderr } = draai(process.execPath, [check], { env, timeout: 60_000 });
-  const { exit, melding } = oordeel({ status, uitvoer: stderr.trim() || stdout, pr });
-  if (melding !== null) console.error(melding);
-  return exit;
+  return oordeel({ status, uitvoer: stderr.trim() || stdout });
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) process.exitCode = main();
+/** @param {boolean} prePush */
+function main(prePush) {
+  const invoer = lokaleInvoer(git);
+  if ('melding' in invoer) {
+    console.warn(invoer.melding);
+    return 0;
+  }
+  if (prePush && !gepushteRef(readFileSync(0, 'utf8'), invoer)) {
+    console.warn(`${KOP}: niet gecontroleerd, deze push gaat niet over de huidige branch op HEAD`);
+    return 0;
+  }
+  const { exit, melding } = draaiCheck(invoer);
+  if (melding !== null) console.error(melding);
+  if (exit !== 0) return exit;
+  const fout = eigenVolgorde(git, invoer);
+  if (fout.length > 0)
+    console.warn(
+      `${KOP}: waarschuwing, ${fout.join(', ')}: de spec staat niet in een commit vóór de eerste code of test; ` +
+        `CI keurt dat af zodra de spec goedgekeurd of gebouwd wordt ${VOLGORDE}\n${HERSTEL}`,
+    );
+  return 0;
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href)
+  process.exitCode = main(process.argv.includes('--pre-push'));
