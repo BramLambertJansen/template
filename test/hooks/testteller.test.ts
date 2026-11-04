@@ -404,6 +404,12 @@ describe('testteller: voorwaardelijk geregistreerde tests', () => {
       ),
     },
     { naam: 'test als waarde in een lijst', na: lines('[test, it].forEach((f) => f);', BASIS) },
+    { naam: 'kortsluiting met haakjes', na: suite(`ok && (${LOS_A.slice(0, -1)});`, LOS_B) },
+    { naam: 'if zonder accolades met haakjes', na: suite(`if (ok) (${LOS_A.slice(0, -1)});`, LOS_B) },
+    {
+      naam: 'if om een getypte describe.each',
+      na: lines("if (ok) describe.each<Thema>(rijen)('s', () => {", `  ${LOS_A}`, `  ${LOS_B}`, '});'),
+    },
   ])('voorwaardelijke-tests/AC-1: $naam → skip', ({ na }) => {
     expect(testChangeRisk(BASIS, na, FILE)).toBe('skip');
   });
@@ -426,6 +432,9 @@ describe('testteller: voorwaardelijk geregistreerde tests', () => {
     { naam: 'export van een extend', na: lines('export const test = base.extend({});', BASIS) },
     { naam: 'importlijst', na: lines("import { describe, expect, test } from 'vitest';", BASIS) },
     { naam: 'objectsleutels', na: lines('const o = { test: 1, it: 2 };', BASIS) },
+    { naam: 'test in een objectwaarde', na: lines(`const geregistreerd = { a: ${LOS_A.slice(0, -1)} };`, LOS_B) },
+    { naam: 'arrow-parameter met returntype', na: lines('const ids = xs.map((it): string => it.id);', BASIS) },
+    { naam: 'ternary binnen een object', na: lines('const o = { a: ok ? 1 : 2 };', BASIS) },
     { naam: 'parameterannotatie', na: lines('function f(a: number, test: string) { return a; }', BASIS) },
     { naam: 'typeof', na: lines('type T = typeof test;', BASIS) },
     { naam: 'standaardwaarde', na: lines('function f(test = 1) { return 1; }', BASIS) },
