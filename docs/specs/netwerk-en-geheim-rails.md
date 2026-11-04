@@ -56,7 +56,7 @@ Fixtures in `test/rails/eslint-netwerk.test.ts`; per fixture is de verzameling r
   `const f = fetch;`, `use({ fetch })`, `new WebSocket('wss://x')`, `new EventSource('x')`, `new XMLHttpRequest()`, en
   `await fetch('x')` in `src/shared/x.ts` en `src/core/shared/x.ts`.
 - **netwerk-en-geheim-rails/AC-4** — Gegeven het globale object, dan meldt de rail: `globalThis.fetch('x')`,
-  `globalThis['fetch']('x')`, `const g = globalThis;`, `self.fetch('x')`, `global.fetch('x')` en `obj['fetch'](1)`.
+  `globalThis['fetch']` als aanroep, `const g = globalThis;`, `self.fetch('x')`, `global.fetch('x')` en `obj['fetch']` als aanroep.
 - **netwerk-en-geheim-rails/AC-5** — Gegeven een toegestane vorm, dan meldt de rail niets: `app.fetch(r); api.fetch(r);`,
   `const o = { fetch: async (r: Request) => app.fetch(r) };`, `interface F { readonly fetch: (r: Request) => Response }`,
   `class C { fetch() {} }`, `type F = typeof fetch;`, `const ok = re.global || x.self;`,
