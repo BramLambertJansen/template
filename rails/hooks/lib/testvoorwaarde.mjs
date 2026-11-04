@@ -52,33 +52,117 @@ function bloksoort(tokens, index, open) {
   return woord !== null && LUS_HAAKJES.has(woord) ? 'neutraal' : 'functie';
 }
 
-/** De laatste index van de aanroepketen vanaf `start` (`a.b(…)(…)`, getagde template). @param {Token[]} tokens @param {number} start @param {Map<number, number>} paren */
-function ketenEind(tokens, start, paren) {
-  let j = start + 1;
-  for (;;) {
+/**
+ * Typeargumenten vóór een aanroep (`test.each<[string, number]>(…)`): de index na de sluitende `>` als daar een `(` of
+ * template volgt, anders null (dan was `<` een vergelijking).
+ * @param {Token[]} tokens @param {number} start
+ */
+export function typeArgumenten(tokens, start) {
+  let diepte = 0;
+  const eind = Math.min(tokens.length, start + 500);
+  for (let j = start; j < eind; j += 1) {
     const token = tokens[j];
-    if (teken(token, '.') && tokens[j + 1]?.soort === 'naam') j += 2;
-    else if (teken(token, '.') && teken(tokens[j + 1], '(')) j += 1;
-    else if (teken(token, '(')) j = (paren.get(j) ?? tokens.length) + 1;
-    else if (token?.soort === 'literal' && token.tekst === '`') j += 1;
-    else return j - 1;
+    if (token?.soort !== 'teken') continue;
+    if (token.tekst === '=') {
+      // `=>` in een functietype mag; een losse `=` betekent dat `<` een vergelijking was.
+      if (!teken(tokens[j + 1], '>')) return null;
+      j += 1;
+      continue;
+    }
+    diepte += hoekDelta(token.tekst);
+    if (diepte === 0) return aanroepNaType(tokens, j);
   }
+  return null;
 }
 
-/** Volgt de keten op kortsluiting (`&&`, `||`, `??`) of op `?`/`:` van een ternary (AC-1b)? @param {Token[]} tokens @param {number} index */
-function naKortsluiting(tokens, index) {
+/** @param {string} tekst */
+function hoekDelta(tekst) {
+  if (tekst === '<') return 1;
+  return tekst === '>' ? -1 : 0;
+}
+
+/** De index na de sluitende `>` als daar een `(` of template volgt, anders null. @param {Token[]} tokens @param {number} j */
+function aanroepNaType(tokens, j) {
+  const na = tokens[j + 1];
+  return teken(na, '(') || (na?.soort === 'literal' && na.tekst === '`') ? j + 1 : null;
+}
+
+/**
+ * De laatste index van de aanroepketen vanaf `start` (`a.b<T>(…)(…)`, getagde template); begint hij met `(`, dan eerst die
+ * groep (`ok && (test(…))`). @param {Token[]} tokens @param {number} start @param {Map<number, number>} paren
+ */
+function ketenEind(tokens, start, paren) {
+  let j = teken(tokens[start], '(') ? (paren.get(start) ?? tokens.length) + 1 : start + 1;
+  for (let verder = ketenStap(tokens, j, paren); verder !== null; verder = ketenStap(tokens, j, paren)) j = verder;
+  return j - 1;
+}
+
+/** Eén stap in de keten: de volgende index, of null als de keten op `j` eindigt. @param {Token[]} tokens @param {number} j @param {Map<number, number>} paren */
+function ketenStap(tokens, j, paren) {
+  const token = tokens[j];
+  const volgende = tokens[j + 1];
+  if (teken(token, '.') && volgende?.soort === 'naam') return j + 2;
+  if (teken(token, '.')) return teken(volgende, '(') ? j + 1 : null;
+  if (teken(token, '(')) return (paren.get(j) ?? tokens.length) + 1;
+  if (teken(token, '<')) return typeArgumenten(tokens, j);
+  return token?.soort === 'literal' && token.tekst === '`' ? j + 1 : null;
+}
+
+const OPEN = new Set(['(', '[', '{']);
+const SLUIT = new Set([')', ']', '}']);
+
+/** Is de `?` op `index` een ternary (geen `??`, geen optionele parameter `a?:`, `a?)`, `a?,`)? @param {Token[]} tokens @param {number} index */
+function ternaryVraag(tokens, index) {
+  const volgende = tokens[index + 1];
+  if (teken(tokens[index - 1], '?') || teken(volgende, '?')) return false;
+  return !(teken(volgende, ':') || teken(volgende, ')') || teken(volgende, ',') || teken(volgende, '='));
+}
+
+/** De indexen van elke `:` die bij een ternary hoort, niet bij een objectsleutel, case, label of type (AC-1b). @param {Token[]} tokens */
+function ternaryDubbelepunten(tokens) {
+  /** @type {Set<number>} */
+  const uit = new Set();
+  /** @type {number[]} */
+  const open = [];
+  let diepte = 0;
+  tokens.forEach((token, index) => {
+    if (token.soort !== 'teken') return;
+    if (OPEN.has(token.tekst)) diepte += 1;
+    else if (SLUIT.has(token.tekst)) diepte -= 1;
+    else if (token.tekst === '?' && ternaryVraag(tokens, index)) open.push(diepte);
+    else if (token.tekst === ':' && open.at(-1) === diepte) {
+      open.pop();
+      uit.add(index);
+    }
+  });
+  return uit;
+}
+
+/**
+ * Volgt de keten op kortsluiting (`&&`, `||`, `??`) of op `?`/`:` van een ternary (AC-1b)?
+ * @param {Token[]} tokens @param {number} index @param {Set<number>} ternary de `:`-indexen van ternaries
+ */
+function naKortsluiting(tokens, index, ternary) {
   const vorige = tokens[index - 1];
   const ervoor = tokens[index - 2];
   if (teken(vorige, '&')) return teken(ervoor, '&');
   if (teken(vorige, '|')) return teken(ervoor, '|');
-  return teken(vorige, '?') || teken(vorige, ':');
+  return teken(vorige, '?') || ternary.has(index - 1);
+}
+
+/** Begint hier een keten of een groep `(…)` (geen aanroep: geen naam, `)` of `]` ervoor)? @param {Token[]} tokens @param {number} index */
+function ketenStart(tokens, index) {
+  const token = tokens[index];
+  const vorige = tokens[index - 1];
+  if (token?.soort === 'naam') return !teken(vorige, '.');
+  return teken(token, '(') && vorige?.soort !== 'naam' && !teken(vorige, ')') && !teken(vorige, ']');
 }
 
 /** Begint op `index + 1` een body zonder accolades van `if (…)` of `else`? @param {Token[]} tokens @param {number} index @param {Map<number, number>} open */
 function losseBody(tokens, index, open) {
   const token = tokens[index];
   const volgende = tokens[index + 1];
-  if (volgende?.soort !== 'naam' || volgende.tekst === 'if') return false;
+  if (naam(volgende, 'if') || (volgende?.soort !== 'naam' && !teken(volgende, '('))) return false;
   if (naam(token, 'else')) return true;
   return teken(token, ')') && haakjesWoord(tokens, index, open) === 'if';
 }
@@ -89,13 +173,14 @@ function losseBody(tokens, index, open) {
  */
 export function voorwaardelijkeTokens(tokens, paren) {
   const open = openers(paren);
+  const ternary = ternaryDubbelepunten(tokens);
   /** @type {Blok[]} */
   const blokken = [{ soort: 'functie', naReturn: false }];
   /** @type {Array<[number, number]>} */
   const bereiken = [];
   return tokens.map((token, index) => {
-    const losstaand = token.soort === 'naam' && !teken(tokens[index - 1], '.');
-    if (losstaand && naKortsluiting(tokens, index)) bereiken.push([index, ketenEind(tokens, index, paren)]);
+    if (ketenStart(tokens, index) && naKortsluiting(tokens, index, ternary))
+      bereiken.push([index, ketenEind(tokens, index, paren)]);
     const uitslag =
       blokken.some((blok) => blok.soort === 'voorwaarde' || blok.naReturn) ||
       bereiken.some(([van, tot]) => van <= index && index <= tot);
@@ -131,6 +216,28 @@ function inDeclaratieLijst(tokens, index) {
   return teken(tokens[j], '{') && voor?.soort === 'naam' && DECLARATIE_LIJST.has(voor.tekst);
 }
 
+/** Volgt op `index` een `=>`, eventueel na een returntype (`(it): string =>`)? @param {Token[]} tokens @param {number} index */
+function pijlNa(tokens, index) {
+  if (!teken(tokens[index], ':')) return teken(tokens[index], '=') && teken(tokens[index + 1], '>');
+  let diepte = 0;
+  for (let j = index + 1; j < Math.min(tokens.length, index + 200); j += 1) {
+    const token = tokens[j];
+    if (diepte === 0 && teken(token, '=')) return teken(tokens[j + 1], '>');
+    if (diepte === 0 && EINDE_TYPE.has(token?.tekst ?? '') && token?.soort === 'teken') return false;
+    diepte += typeDiepte(token);
+  }
+  return false;
+}
+
+const EINDE_TYPE = new Set([';', ',', ')']);
+
+/** +1 bij een openend haakje of `<`, -1 bij een sluitend of `>`. @param {Token | undefined} token */
+function typeDiepte(token) {
+  if (token?.soort !== 'teken') return 0;
+  if (OPEN.has(token.tekst) || token.tekst === '<') return 1;
+  return SLUIT.has(token.tekst) || token.tekst === '>' ? -1 : 0;
+}
+
 /** Staat de naam in de parameterlijst van een arrow-functie (`(it) => it.id`)? @param {Token[]} tokens @param {number} index @param {Map<number, number>} paren */
 function inArrowParameters(tokens, index, paren) {
   let diepte = 0;
@@ -138,8 +245,7 @@ function inArrowParameters(tokens, index, paren) {
     if (teken(tokens[j], ')')) diepte += 1;
     if (teken(tokens[j], '(')) {
       if (diepte === 0) {
-        const sluit = paren.get(j) ?? tokens.length;
-        return teken(tokens[sluit + 1], '=') && teken(tokens[sluit + 2], '>');
+        return pijlNa(tokens, (paren.get(j) ?? tokens.length) + 1);
       }
       diepte -= 1;
     }

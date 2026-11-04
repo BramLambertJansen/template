@@ -3,7 +3,7 @@
 // R-ROL-09) hem kunnen draaien. Commentaar, strings, template-literals, regex-literals en JSX-tekst leveren geen
 // tokens (expressies in `${…}` en JSX-`{…}` wel, in een eigen lijst); daarna telt een pass over aanroepketens (`test.each(t)(…)`, `ctx.skip()`). Eén geval per aanroepplek.
 
-import { testAlsWaarde, voorwaardelijkeTokens } from './testvoorwaarde.mjs';
+import { testAlsWaarde, typeArgumenten, voorwaardelijkeTokens } from './testvoorwaarde.mjs';
 
 /** @typedef {{ soort: 'naam' | 'teken' | 'literal', tekst: string }} Token */
 
@@ -228,27 +228,6 @@ function haakjesParen(tokens) {
   return paren;
 }
 
-/**
- * Typeargumenten vóór een aanroep (`test.each<[string, number]>(…)`): de index na de sluitende `>` als daar een `(` of
- * template volgt, anders null (dan was `<` een vergelijking).
- * @param {Token[]} tokens @param {number} start
- */
-function typeArgumenten(tokens, start) {
-  let diepte = 0;
-  for (let j = start; j < Math.min(tokens.length, start + 500); j += 1) {
-    const { soort, tekst } = tokens[j] ?? { soort: 'literal', tekst: '' };
-    if (soort !== 'teken') continue;
-    if (tekst === '=' && tokens[j + 1]?.tekst !== '>') return null;
-    if (tekst === '=') j += 1;
-    if (tekst === '<') diepte += 1;
-    if (tekst === '>') diepte -= 1;
-    if (diepte === 0) {
-      const na = tokens[j + 1];
-      return na?.tekst === '(' || (na?.soort === 'literal' && na.tekst === '`') ? j + 1 : null;
-    }
-  }
-  return null;
-}
 
 /** @typedef {{ soort: 'eigenschap', naam: string } | { soort: 'aanroep' }} Schakel */
 
