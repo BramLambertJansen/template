@@ -21,7 +21,7 @@ agents sluiten opgeloste leerpunten (akkoord eigenaar 3 november 2026), en "opge
 
 ## Besluit
 
-1. **Sluitbewijs.** Een PR die een leerpunt sluit (`Fixes`, `Closes` of `Resolves` gevolgd door het nummer van een issue
+1. **Sluitbewijs.** Een PR die een leerpunt sluit (elk sluitwoord of elke koppeling die GitHub kent, naar een issue
    met label `leerpunt`) heeft in de beschrijving een sectie `## Leerpunt` met per issue de trede op de ladder en het bewijs:
    een testbestand dat de PR toevoegt of wijzigt. Een verplichte CI-job draait dat testbestand tegen de code van de basis
    (alleen het testbestand komt uit de PR) en eist een gefaalde assertie, en tegen de head en eist groen; een laadfout op de

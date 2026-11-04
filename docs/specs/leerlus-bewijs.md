@@ -70,8 +70,9 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
 
 ## Acceptatiecriteria
 
-- **leerlus-bewijs/AC-1** — Een PR waarvan de beschrijving `Fixes|Closes|Resolves #n` bevat voor een issue met label
-  `leerpunt`, zonder regel `- #n:` in de sectie `## Leerpunt`, maakt de job `leerpunt-bewijs` rood met de melding welk nummer
+- **leerlus-bewijs/AC-1** — Welke issues een PR sluit, komt uit GitHub zelf (GraphQL `closingIssuesReferences`), dus elk
+  sluitwoord dat GitHub kent (close, closes, closed, fix, fixes, fixed, resolve, resolves, resolved, met of zonder dubbele
+  punt) en een handmatige koppeling tellen. Een PR die zo een issue met label `leerpunt` sluit, zonder regel `- #n:` in de sectie `## Leerpunt`, maakt de job `leerpunt-bewijs` rood met de melding welk nummer
   ontbreekt. Een PR zonder zo'n verwijzing laat de job slagen zonder iets te draaien.
 - **leerlus-bewijs/AC-2** — Bij `bewijs <testpad>`: het pad moet in de diff van de PR staan als toegevoegd of gewijzigd
   `*.test.ts(x)`-bestand buiten `*.int.test.ts` en `e2e/`, of bij trede Type als `*.test-d.ts`. Anders rood.
@@ -79,10 +80,11 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   uit de head en moet daar op minstens één assertie falen (vitest-uitslag `failed` met een assertiefout, geen laad- of
   importfout); het draait op de head en moet slagen. Bij trede Type: `vitest --typecheck` op het `*.test-d.ts`-bestand faalt
   op de basis en slaagt op de head. Slaagt het op de basis, faalt het daar alleen op laden, of faalt het op de head, dan rood
-  met beide uitslagen. De PR-code draait zonder token: beschrijving en labels komen uit de event-payload, als bestand
-  doorgegeven; geen `GH_TOKEN`, `GITHUB_TOKEN` of geheim in de env van workflow, job of bewijsstap, en geen `with: token` bij
-  checkout (`persist-credentials: false`). De basisrun installeert uit de lockfile van de basis, de headrun uit die van de head, beide met
-  `--ignore-scripts`. Een test leest het workflowbestand en faalt op een token in de env op elk niveau of in `with: token`. Fixtures: een test die ook op de basis slaagt, en een test die op de basis
+  met beide uitslagen. De PR-code draait zonder token: een voorbereidende stap met alleen-lezend token haalt de gesloten
+  issues met hun labels op en zet die, met de beschrijving uit de event-payload, in een bestand; daarna geen `GH_TOKEN`,
+  `GITHUB_TOKEN` of geheim in de env van workflow, job of bewijsstap, en geen `with: token` bij checkout
+  (`persist-credentials: false`). Het token staat alleen in de env van die voorbereidende stap. De basisrun installeert uit de lockfile van de basis, de headrun uit die van de head, beide met
+  `--ignore-scripts`. Een test leest het workflowbestand en faalt op een token in de env van workflow, job of een bewijsstap, of in `with: token`. Fixtures: een test die ook op de basis slaagt, en een test die op de basis
   alleen op een import faalt, maken de job allebei rood.
 - **leerlus-bewijs/AC-4** — `geen test: <reden>` is alleen geldig bij trede Skill, Padregel of AGENTS.md, of bij een
   integratie- of e2e-test, met een niet-lege reden; dan slaagt de job en geeft het agent-merge-oordeel (`diff-guard.mjs`,
