@@ -3,6 +3,8 @@
 // R-ROL-09) hem kunnen draaien. Commentaar, strings, template-literals, regex-literals en JSX-tekst leveren geen
 // tokens (expressies in `${…}` en JSX-`{…}` wel, in een eigen lijst); daarna telt een pass over aanroepketens (`test.each(t)(…)`, `ctx.skip()`). Eén geval per aanroepplek.
 
+import { testAlsWaarde, voorwaardelijkeTokens } from './testvoorwaarde.mjs';
+
 /** @typedef {{ soort: 'naam' | 'teken' | 'literal', tekst: string }} Token */
 
 const NAAM_START = /[\p{ID_Start}$_]/u;
@@ -327,15 +329,21 @@ function eigenschapSkip(tokens, index, paren) {
   return keten(tokens, index, paren).some((schakel) => schakel.soort === 'aanroep') ? 1 : 0;
 }
 
-/** @param {string} bron @param {string} pad repo-pad; `.jsx`/`.tsx` zet JSX aan @returns {{ cases: number, skips: number }} */
+/**
+ * `voorwaardelijk`: gevallen die voorwaardelijk geregistreerd worden plus plekken met `test` als waarde (spec
+ * voorwaardelijke-tests, `testvoorwaarde.mjs`). Elke `${…}`- en JSX-lijst telt los, zonder context van buiten.
+ * @param {string} bron @param {string} pad repo-pad; `.jsx`/`.tsx` zet JSX aan
+ * @returns {{ cases: number, skips: number, voorwaardelijk: number }}
+ */
 export function telTests(bron, pad) {
   const lexer = new Lexer(bron, /\.[jt]sx$/.test(pad));
   lexer.expressie(false);
-  const totaal = { cases: 0, skips: 0 };
+  const totaal = { cases: 0, skips: 0, voorwaardelijk: 0 };
   for (const tokens of [lexer.tokens, ...lexer.binnen]) {
     const deel = telLijst(tokens);
     totaal.cases += deel.cases;
     totaal.skips += deel.skips;
+    totaal.voorwaardelijk += deel.voorwaardelijk;
   }
   return totaal;
 }
@@ -343,14 +351,17 @@ export function telTests(bron, pad) {
 /** @param {Token[]} tokens */
 function telLijst(tokens) {
   const paren = haakjesParen(tokens);
-  const totaal = { cases: 0, skips: 0 };
+  const voorwaardelijk = voorwaardelijkeTokens(tokens, paren);
+  const totaal = { cases: 0, skips: 0, voorwaardelijk: testAlsWaarde(tokens, paren) };
   tokens.forEach((token, index) => {
     if (token.soort !== 'naam') return;
     const vorige = tokens[index - 1];
     totaal.skips += eigenschapSkip(tokens, index, paren);
     if (vorige?.soort === 'teken' && vorige.tekst === '.') return;
     const schakels = keten(tokens, index, paren);
-    totaal.cases += gevallen(token.tekst, schakels);
+    const aantal = gevallen(token.tekst, schakels);
+    totaal.cases += aantal;
+    if (voorwaardelijk[index] === true) totaal.voorwaardelijk += aantal;
     totaal.skips += skips(token.tekst, schakels);
   });
   return totaal;
