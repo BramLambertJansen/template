@@ -56,8 +56,8 @@ function draai(commando: string, stub: string | null) {
 describe('lefthook pre-push: job document-status (AC-1)', () => {
   const commando = runCommando(job(lefthookSectie('pre-push'), 'document-status'));
 
-  test('draait scripts/kit/document-status-lokaal.mjs achter een bestaansguard', () => {
-    expect(commando).toContain('scripts/kit/document-status-lokaal.mjs');
+  test('draait scripts/kit/document-status-lokaal.mjs --pre-push achter een bestaansguard', () => {
+    expect(commando).toContain('scripts/kit/document-status-lokaal.mjs --pre-push');
     // `test -f … &&` of `test ! -f … ||`: beide slaan de job over als het script ontbreekt.
     expect(commando).toMatch(/\btest\s+(?:!\s+)?-f\s+scripts\/kit\/document-status-lokaal\.mjs\b/);
   });
@@ -69,14 +69,23 @@ describe('lefthook pre-push: job document-status (AC-1)', () => {
     expect(job(sectie, 'main-achterstand')).not.toStrictEqual([]);
   });
 
+  test('ná main-achterstand (die origin/main ophaalt), met use_stdin: true', () => {
+    const sectie = lefthookSectie('pre-push');
+    const positie = (naam: string) => sectie.findIndex((regel) => regel.trim() === `- name: ${naam}`);
+
+    expect(positie('main-achterstand')).toBeGreaterThan(-1);
+    expect(positie('document-status')).toBeGreaterThan(positie('main-achterstand'));
+    expect(job(sectie, 'document-status').map((regel) => regel.trim())).toContain('use_stdin: true');
+  });
+
   test('zonder het script in de werkmap (oude checkout) slaagt de job', () => {
     expect(commando).not.toBe('');
     expect(draai(commando, null)).toBe(0);
   });
 
-  test('met het script blokkeert een exitcode 1 de push (geen || true)', () => {
+  test('met het script blokkeert een exitcode 1 de push (geen || true), met --pre-push als argument', () => {
     expect(commando).not.toBe('');
-    expect(draai(commando, 'process.exit(1);\n')).not.toBe(0);
+    expect(draai(commando, "process.exit(process.argv.includes('--pre-push') ? 1 : 0);\n")).not.toBe(0);
   });
 
   test('met het script slaagt een exitcode 0', () => {
@@ -102,5 +111,20 @@ describe('docs noemen dat git push de volgorde toetst (AC-8)', () => {
     expect(alinea).toBeDefined();
     // De volgorde van ADR 0062 punt 3: bij naam of in de vorm van de regel.
     expect(alinea).toMatch(/volgorde|vóór de eerste code/);
+  });
+
+  test('R-CI-04 in docs/framework.md', () => {
+    const regel = readFileSync('docs/framework.md', 'utf8')
+      .split('\n')
+      .find((tekst) => tekst.startsWith('- **R-CI-04**'));
+
+    expect(regel).toMatch(/pre-push|git push/);
+    expect(regel).toContain('volgorde');
+  });
+
+  test('de git-hooks in docs/nieuwe-app.md', () => {
+    const regels = readFileSync('docs/nieuwe-app.md', 'utf8').split('\n');
+
+    expect(regels.some((tekst) => /pre-push|git push/.test(tekst) && tekst.includes('volgorde'))).toBe(true);
   });
 });

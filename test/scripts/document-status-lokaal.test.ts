@@ -1,23 +1,45 @@
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
-import { VOLGORDE, lokaleInvoer, oordeel, prUitGh } from '../../scripts/kit/document-status-lokaal.mjs';
+import { expectNegativeTable } from '../support/negative-table.ts';
+import {
+  VOLGORDE,
+  draai,
+  eigenVolgorde,
+  gepushteRef,
+  lokaleInvoer,
+  oordeel,
+  prUitGh,
+} from '../../scripts/kit/document-status-lokaal.mjs';
 
-// Spec document-status-lokaal: pre-push draait de document-status-check lokaal en blokkeert op de volgorde (ADR 0062 punt 3).
+// Spec document-status-lokaal: pre-push draait de document-status-check lokaal en blokkeert alleen op de volgorde
+// (ADR 0062 punt 3); de eigen volgordetoets (AC-6) waarschuwt.
 
 const PREFIX = 'pre-push: document-status';
 const BASE = 'a'.repeat(40);
 const HEAD = 'b'.repeat(40);
+const NUL = '0'.repeat(40);
 
 interface Antwoord {
   readonly originMain?: string | null;
-  readonly head?: string;
+  readonly head?: string | null;
   readonly branch?: string;
   readonly url?: string | null;
   readonly opgenomen?: boolean;
 }
+
+const geenRef = { code: 1, output: '' };
 
 /** Nep-git die op de argumenten matcht; de volgorde van de aanroepen telt niet. */
 function nepGit(antwoord: Antwoord = {}) {
@@ -26,11 +48,11 @@ function nepGit(antwoord: Antwoord = {}) {
   return (args: readonly string[]) => {
     const sleutel = args.join(' ');
     if (sleutel === 'rev-parse --verify --quiet refs/remotes/origin/main')
-      return originMain === null ? { code: 1, output: '' } : { code: 0, output: `${originMain}\n` };
-    if (sleutel === 'rev-parse --verify --quiet HEAD') return { code: 0, output: `${head}\n` };
+      return originMain === null ? geenRef : { code: 0, output: `${originMain}\n` };
+    if (sleutel === 'rev-parse --verify --quiet HEAD')
+      return head === null ? geenRef : { code: 0, output: `${head}\n` };
     if (sleutel === 'branch --show-current') return { code: 0, output: `${branch}\n` };
-    if (sleutel === 'config --get remote.origin.url')
-      return url === null ? { code: 1, output: '' } : { code: 0, output: `${url}\n` };
+    if (sleutel === 'config --get remote.origin.url') return url === null ? geenRef : { code: 0, output: `${url}\n` };
     if (sleutel === 'merge-base --is-ancestor HEAD refs/remotes/origin/main')
       return { code: opgenomen ? 0 : 1, output: '' };
     return { code: 1, output: 'onverwacht' };
@@ -41,7 +63,7 @@ function meldingVan(uitslag: ReturnType<typeof lokaleInvoer>): string | null {
   return 'melding' in uitslag ? uitslag.melding : null;
 }
 
-describe('lokaleInvoer (AC-2, AC-6)', () => {
+describe('lokaleInvoer (AC-3, AC-7)', () => {
   test('volledige invoer: origin/main, HEAD, branch en owner/naam, getrimd', () => {
     expect(lokaleInvoer(nepGit())).toStrictEqual({ base: BASE, head: HEAD, ref: 'feat/x', repo: 'voorbeeld/repo' });
   });
@@ -52,46 +74,48 @@ describe('lokaleInvoer (AC-2, AC-6)', () => {
     expect(uitslag).toStrictEqual({ base: BASE, head: HEAD, ref: 'feat/x', repo: 'voorbeeld/repo' });
   });
 
-  test('geen origin/main: melding, geen invoer', () => {
-    const uitslag = lokaleInvoer(nepGit({ originMain: null }));
+  test.each<[string, Antwoord]>([
+    ['geen origin/main', { originMain: null }],
+    ['geen HEAD', { head: null }],
+    ['detached HEAD (geen huidige branch)', { branch: '' }],
+    ['geen remote.origin.url', { url: null }],
+    ['remote zonder herkenbare owner/naam op github.com', { url: 'https://gitlab.com/voorbeeld/repo.git' }],
+    ['HEAD opgenomen in origin/main (niets te pushen)', { opgenomen: true }],
+    ['HEAD gelijk aan origin/main', { head: BASE, opgenomen: true }],
+  ])('%s: melding, geen invoer', (_naam, antwoord) => {
+    const uitslag = lokaleInvoer(nepGit(antwoord));
 
     expect(meldingVan(uitslag)?.startsWith(PREFIX)).toBe(true);
     expect(uitslag).not.toHaveProperty('base');
   });
+});
 
-  test('detached HEAD (geen huidige branch): melding, geen invoer', () => {
-    const uitslag = lokaleInvoer(nepGit({ branch: '' }));
+describe('gepushteRef (AC-2)', () => {
+  const doel = { ref: 'feat/x', head: HEAD };
 
-    expect(meldingVan(uitslag)?.startsWith(PREFIX)).toBe(true);
-    expect(uitslag).not.toHaveProperty('base');
+  test.each([
+    ['nieuwe branch', `refs/heads/feat/x ${HEAD} refs/heads/feat/x ${NUL}\n`],
+    ['bestaande branch', `refs/heads/feat/x ${HEAD} refs/heads/feat/x ${BASE}\n`],
+    ['naast een tag', `refs/tags/v1 ${BASE} refs/tags/v1 ${NUL}\nrefs/heads/feat/x ${HEAD} refs/heads/feat/x ${NUL}\n`],
+  ])('%s: de huidige branch op HEAD wordt gepusht', (_naam, stdin) => {
+    expect(gepushteRef(stdin, doel)).toBe(true);
   });
 
-  test('geen remote.origin.url: melding, geen invoer', () => {
-    const uitslag = lokaleInvoer(nepGit({ url: null }));
-
-    expect(meldingVan(uitslag)?.startsWith(PREFIX)).toBe(true);
-    expect(uitslag).not.toHaveProperty('base');
-  });
-
-  test('remote zonder herkenbare owner/naam op github.com: melding, geen invoer', () => {
-    const uitslag = lokaleInvoer(nepGit({ url: 'https://gitlab.com/voorbeeld/repo.git' }));
-
-    expect(meldingVan(uitslag)?.startsWith(PREFIX)).toBe(true);
-    expect(uitslag).not.toHaveProperty('base');
-  });
-
-  test('HEAD opgenomen in origin/main (niets te pushen): melding, geen invoer', () => {
-    const uitslag = lokaleInvoer(nepGit({ opgenomen: true }));
-
-    expect(meldingVan(uitslag)?.startsWith(PREFIX)).toBe(true);
-    expect(uitslag).not.toHaveProperty('base');
-  });
-
-  test('HEAD gelijk aan origin/main: melding, geen invoer', () => {
-    const uitslag = lokaleInvoer(nepGit({ head: BASE, opgenomen: true }));
-
-    expect(meldingVan(uitslag)?.startsWith(PREFIX)).toBe(true);
-    expect(uitslag).not.toHaveProperty('base');
+  test('niet getoetst: lege stdin, verwijdering, tag, andere branch, andere sha, kapotte regel', () => {
+    const regel = (lokaal: string, sha: string) => `${lokaal} ${sha} ${lokaal} ${NUL}\n`;
+    expectNegativeTable({
+      base: regel('refs/heads/feat/x', HEAD),
+      check: (stdin: string) => gepushteRef(stdin, doel),
+      cases: [
+        { name: 'lege stdin', change: () => '' },
+        { name: 'verwijdering', change: () => `(delete) ${NUL} refs/heads/feat/x ${BASE}\n` },
+        { name: 'tag', change: () => regel('refs/tags/v1', HEAD) },
+        { name: 'andere branch', change: () => regel('refs/heads/feat/y', HEAD) },
+        { name: 'branch met dezelfde prefix', change: () => regel('refs/heads/feat/x-2', HEAD) },
+        { name: 'andere sha', change: () => regel('refs/heads/feat/x', BASE) },
+        { name: 'kapotte regel', change: () => 'refs/heads/feat/x\n' },
+      ],
+    });
   });
 });
 
@@ -131,12 +155,11 @@ describe('oordeel (AC-4, AC-5, AC-7)', () => {
   });
 
   test('check geslaagd: exit 0 zonder melding', () => {
-    expect(oordeel({ status: 0, uitvoer: 'document-status: ok', pr: null })).toStrictEqual({ exit: 0, melding: null });
-    expect(oordeel({ status: 0, uitvoer: '', pr: 7 })).toStrictEqual({ exit: 0, melding: null });
+    expect(oordeel({ status: 0, uitvoer: 'document-status: ok' })).toStrictEqual({ exit: 0, melding: null });
   });
 
-  test.each([7, null])('kindproces zonder exitcode (pr %s): waarschuwing, exit 0', (pr) => {
-    const uitslag = oordeel({ status: null, uitvoer: VOLGORDEFOUT, pr });
+  test('kindproces zonder exitcode: waarschuwing, exit 0, ook bij volgorde-uitvoer', () => {
+    const uitslag = oordeel({ status: null, uitvoer: VOLGORDEFOUT });
 
     expect(uitslag.exit).toBe(0);
     expect(uitslag.melding?.startsWith(PREFIX)).toBe(true);
@@ -144,38 +167,201 @@ describe('oordeel (AC-4, AC-5, AC-7)', () => {
     expect(uitslag.melding).not.toContain('blokkade');
   });
 
-  test.each([FOUT, VOLGORDEFOUT])('bekende PR, afkeuring "%s": blokkade met de melding van de check', (uitvoer) => {
-    const uitslag = oordeel({ status: 1, uitvoer, pr: 7 });
+  test.each([1, 2])('afkeuring op de volgorde (status %d): blokkade met uitvoer en herstelroute', (status) => {
+    const uitslag = oordeel({ status, uitvoer: VOLGORDEFOUT });
 
     expect(uitslag.exit).toBe(1);
     expect(uitslag.melding?.startsWith(PREFIX)).toBe(true);
-    expect(uitslag.melding).toContain('blokkade');
-    expect(uitslag.melding).toContain(uitvoer);
+    for (const deel of ['blokkade', VOLGORDEFOUT, 'git reset --soft', 'nieuwe branch', 'origin/main'])
+      expect(uitslag.melding).toContain(deel);
   });
 
-  test('onbekende PR, afkeuring op de volgorde: blokkade met herstelroute', () => {
-    const uitslag = oordeel({ status: 1, uitvoer: VOLGORDEFOUT, pr: null });
-
-    expect(uitslag.exit).toBe(1);
-    expect(uitslag.melding?.startsWith(PREFIX)).toBe(true);
-    expect(uitslag.melding).toContain('blokkade');
-    expect(uitslag.melding).toContain('git reset --soft');
-    expect(uitslag.melding).toContain('nieuwe branch');
-    expect(uitslag.melding).toContain('origin/main');
-  });
-
-  test.each([1, 2])('onbekende PR, andere afkeuring (status %d): waarschuwing met de uitvoer, exit 0', (status) => {
-    const uitslag = oordeel({ status, uitvoer: FOUT, pr: null });
+  test.each([1, 2])('andere afkeuring (status %d): waarschuwing met uitvoer en merge-hint, exit 0', (status) => {
+    const uitslag = oordeel({ status, uitvoer: FOUT });
 
     expect(uitslag.exit).toBe(0);
     expect(uitslag.melding?.startsWith(PREFIX)).toBe(true);
     expect(uitslag.melding).toContain('waarschuwing');
     expect(uitslag.melding).toContain(FOUT);
+    expect(uitslag.melding).toContain('git merge origin/main');
     expect(uitslag.melding).not.toContain('blokkade');
   });
 });
 
-// Het echte script met de echte check, in een tijdelijke repo met origin/main en zonder `gh` in PATH (AC-2, AC-3).
+describe('draai (AC-7)', () => {
+  test('gewone exitcode en uitvoer', () => {
+    const uitslag = draai(process.execPath, ['-e', 'console.log("hoi"); process.exit(3)'], { timeout: 10_000 });
+
+    expect(uitslag.status).toBe(3);
+    expect(uitslag.stdout).toContain('hoi');
+  });
+
+  test('kind dat zichzelf SIGKILLt: status null', () => {
+    const uitslag = draai(process.execPath, ['-e', 'process.kill(process.pid, "SIGKILL")'], { timeout: 10_000 });
+
+    expect(uitslag.status).toBeNull();
+  });
+
+  test('timeout: status null', () => {
+    const uitslag = draai(process.execPath, ['-e', 'setTimeout(() => {}, 10_000)'], { timeout: 200 });
+
+    expect(uitslag.status).toBeNull();
+  });
+
+  test('onbestaand programma: status null', () => {
+    const uitslag = draai(path.join(tmpdir(), 'bestaat-niet-document-status'), [], { timeout: 10_000 });
+
+    expect(uitslag.status).toBeNull();
+  });
+});
+
+// Nep-repository voor eigenVolgorde: een lineaire reeks commits na de split, met per commit de gewijzigde bestanden
+// (null = verwijderd). De nep-git beantwoordt alleen de aanroepen uit het contract.
+interface NepCommit {
+  readonly sha: string;
+  readonly bestanden: Readonly<Record<string, string | null>>;
+}
+
+const SPLIT = 'c'.repeat(40);
+const sha = (n: number) => String(n).padStart(40, 'd');
+const spec = (status: string, inhoud = 'Inhoud.') => `---\nstatus: ${status}\nnamespace: x\n---\n\n# X\n\n${inhoud}\n`;
+
+/** De stand van elk pad na `tot` commits (0 = de split). */
+function stand(basis: Record<string, string>, commits: readonly NepCommit[], tot: number) {
+  const uit = new Map<string, string>(Object.entries(basis));
+  for (const commit of commits.slice(0, tot))
+    for (const [pad, tekst] of Object.entries(commit.bestanden))
+      if (tekst === null) uit.delete(pad);
+      else uit.set(pad, tekst);
+  return uit;
+}
+
+function regels(lijst: readonly string[]) {
+  return { code: 0, output: lijst.map((regel) => `${regel}\n`).join('') };
+}
+
+function toonBestand(basis: Record<string, string>, commits: readonly NepCommit[], args: readonly string[]) {
+  const match = /^([0-9a-f]{40})(\^?):(.+)$/.exec(args[1] ?? '');
+  const index = commits.findIndex((commit) => commit.sha === match?.[1]);
+  if (match?.[3] === undefined || index === -1) return { code: 128, output: '' };
+  const tekst = stand(basis, commits, match[2] === '^' ? index : index + 1).get(match[3]);
+  return tekst === undefined ? { code: 128, output: '' } : { code: 0, output: tekst };
+}
+
+function nepRepo(basis: Record<string, string>, commits: readonly NepCommit[]) {
+  const bereik = `${SPLIT}..${HEAD}`;
+  const alle = commits.map((commit) => commit.sha);
+  const raakt = (filter: (pad: string) => boolean) =>
+    commits.filter((commit) => Object.keys(commit.bestanden).some(filter)).map((commit) => commit.sha);
+  return (args: readonly string[]) => {
+    const sleutel = args.join(' ');
+    if (sleutel === `merge-base ${BASE} ${HEAD}`) return { code: 0, output: `${SPLIT}\n` };
+    if (sleutel === `log --no-merges --topo-order --reverse --format=%H ${bereik}`) return regels(alle);
+    if (sleutel === `log --no-merges --reverse --format=%H ${bereik} -- . :(exclude)docs/`)
+      return regels(raakt((pad) => !pad.startsWith('docs/')));
+    if (sleutel === `diff --name-only --no-renames ${SPLIT} ${HEAD} -- docs/specs/`) {
+      const voor = stand(basis, commits, 0);
+      const na = stand(basis, commits, commits.length);
+      const paden = new Set([...voor.keys(), ...na.keys()]);
+      return regels([...paden].filter((pad) => pad.startsWith('docs/specs/') && voor.get(pad) !== na.get(pad)).sort());
+    }
+    const perSpec = /^log --no-merges --reverse --format=%H \S+ -- (docs\/specs\/\S+)$/.exec(sleutel)?.[1];
+    if (perSpec !== undefined && sleutel.includes(bereik)) return regels(raakt((pad) => pad === perSpec));
+    if (args[0] === 'show') return toonBestand(basis, commits, args);
+    return { code: 1, output: 'onverwacht' };
+  };
+}
+
+const volgordeVan = (basis: Record<string, string>, commits: readonly NepCommit[]) =>
+  eigenVolgorde(nepRepo(basis, commits), { base: BASE, head: HEAD });
+
+const X = 'docs/specs/x.md';
+const CODE = 'export const x = 1;\n';
+
+describe('eigenVolgorde (AC-6)', () => {
+  test('nieuwe spec en code in één commit: spec in foute volgorde', () => {
+    expect(volgordeVan({}, [{ sha: sha(1), bestanden: { [X]: spec('voorstel'), 'src/x.ts': CODE } }])).toStrictEqual([
+      X,
+    ]);
+  });
+
+  test('spec eerst, daarna code: in orde', () => {
+    const commits = [
+      { sha: sha(1), bestanden: { [X]: spec('voorstel') } },
+      { sha: sha(2), bestanden: { 'src/x.ts': CODE } },
+    ];
+
+    expect(volgordeVan({}, commits)).toStrictEqual([]);
+  });
+
+  test('geen code (alleen docs/): in orde', () => {
+    expect(volgordeVan({}, [{ sha: sha(1), bestanden: { [X]: spec('voorstel') } }])).toStrictEqual([]);
+  });
+
+  test('spec eerst, code, dan alleen een statuswijziging: in orde', () => {
+    const commits = [
+      { sha: sha(1), bestanden: { [X]: spec('goedgekeurd') } },
+      { sha: sha(2), bestanden: { 'src/x.ts': CODE } },
+      { sha: sha(3), bestanden: { [X]: spec('gebouwd # #7') } },
+    ];
+
+    expect(volgordeVan({}, commits)).toStrictEqual([]);
+  });
+
+  test('bestaande spec krijgt nieuwe inhoud na de code (#506): foute volgorde', () => {
+    const commits = [
+      { sha: sha(1), bestanden: { 'src/x.ts': CODE } },
+      { sha: sha(2), bestanden: { [X]: spec('goedgekeurd', 'Nieuwe inhoud.') } },
+    ];
+
+    expect(volgordeVan({ [X]: spec('goedgekeurd') }, commits)).toStrictEqual([X]);
+  });
+
+  test('bestaande spec krijgt na de code alleen een nieuwe status: in orde', () => {
+    const commits = [
+      { sha: sha(1), bestanden: { 'src/x.ts': CODE } },
+      { sha: sha(2), bestanden: { [X]: spec('gebouwd # #7') } },
+    ];
+
+    expect(volgordeVan({ [X]: spec('goedgekeurd') }, commits)).toStrictEqual([]);
+  });
+
+  test('bestaande spec na de code ongeldig gemaakt (documentInfo null): foute volgorde', () => {
+    const commits = [
+      { sha: sha(1), bestanden: { 'src/x.ts': CODE } },
+      { sha: sha(2), bestanden: { [X]: '# X zonder frontmatter\n' } },
+    ];
+
+    expect(volgordeVan({ [X]: spec('goedgekeurd') }, commits)).toStrictEqual([X]);
+  });
+
+  test('bestaande spec na de code verwijderd: geen inhoudswijziging', () => {
+    const commits = [
+      { sha: sha(1), bestanden: { 'src/x.ts': CODE } },
+      { sha: sha(2), bestanden: { [X]: null } },
+    ];
+
+    expect(volgordeVan({ [X]: spec('goedgekeurd') }, commits)).toStrictEqual([]);
+  });
+
+  test('sjabloon (_-naam) en spec in een submap tellen niet', () => {
+    const bestanden = { 'docs/specs/_sjabloon.md': spec('voorstel'), 'docs/specs/sub/y.md': spec('voorstel') };
+
+    expect(volgordeVan({}, [{ sha: sha(1), bestanden: { ...bestanden, 'src/x.ts': CODE } }])).toStrictEqual([]);
+  });
+
+  test('meer specs in foute volgorde: gesorteerd, de goede ontbreekt', () => {
+    const commits = [
+      { sha: sha(1), bestanden: { 'docs/specs/m.md': spec('voorstel') } },
+      { sha: sha(2), bestanden: { 'docs/specs/z.md': spec('voorstel'), 'src/x.ts': CODE } },
+      { sha: sha(3), bestanden: { 'docs/specs/a.md': spec('voorstel') } },
+    ];
+
+    expect(volgordeVan({}, commits)).toStrictEqual(['docs/specs/a.md', 'docs/specs/z.md']);
+  });
+});
+
+// Het echte script met de echte check, in een tijdelijke repo met origin/main; `gh` ontbreekt of is een nep (AC-2, AC-3).
 const root = process.cwd();
 const dirs: string[] = [];
 afterEach(() => {
@@ -189,43 +375,36 @@ function git(cwd: string, ...args: string[]) {
     { cwd, encoding: 'utf8' },
   );
   if (result.status !== 0) throw new Error(result.stderr);
-}
-
-function schrijf(cwd: string, bestand: string, inhoud: string) {
-  mkdirSync(path.dirname(path.join(cwd, bestand)), { recursive: true });
-  writeFileSync(path.join(cwd, bestand), inhoud);
+  return result.stdout.trim();
 }
 
 function commit(cwd: string, bericht: string, bestanden: Record<string, string>) {
-  for (const [bestand, inhoud] of Object.entries(bestanden)) schrijf(cwd, bestand, inhoud);
+  for (const [bestand, inhoud] of Object.entries(bestanden)) {
+    mkdirSync(path.dirname(path.join(cwd, bestand)), { recursive: true });
+    writeFileSync(path.join(cwd, bestand), inhoud);
+  }
   git(cwd, 'add', '.');
   git(cwd, 'commit', '-qm', bericht);
 }
 
-const SPEC = '---\nstatus: goedgekeurd\nnamespace: x\n---\n\n# X\n\nEen nieuwe spec voor de proef.\n';
-const CODE = 'export const x = 1;\n';
-
-/** Repo met een basis (gates en besluiten uit de template) op origin/main en een branch feat/x. */
-function fixture() {
+/** Repo met een basis (gates, besluiten en `opMain`) op origin/main en een branch feat/x. */
+function fixture(opMain: Record<string, string> = {}) {
   const basis = mkdtempSync(path.join(tmpdir(), 'document-status-lokaal-'));
   dirs.push(basis);
   const repo = path.join(basis, 'repo');
-  mkdirSync(repo);
+  mkdirSync(path.join(repo, '.claude'), { recursive: true });
   git(repo, 'init', '-q', '-b', 'main');
-  for (const bestand of ['.claude/gates.json', '.claude/decisions.json']) {
-    mkdirSync(path.join(repo, '.claude'), { recursive: true });
+  for (const bestand of ['.claude/gates.json', '.claude/decisions.json'])
     copyFileSync(path.join(root, bestand), path.join(repo, bestand));
-  }
-  git(repo, 'add', '.');
-  git(repo, 'commit', '-qm', 'basis');
+  commit(repo, 'basis', opMain);
   git(repo, 'config', 'remote.origin.url', 'https://github.com/voorbeeld/repo.git');
   git(repo, 'update-ref', 'refs/remotes/origin/main', 'HEAD');
   git(repo, 'switch', '-qc', 'feat/x');
   return { basis, repo };
 }
 
-/** PATH met alleen node en git, zodat `gh` ontbreekt en het PR-nummer onbekend is. */
-function padZonderGh(basis: string) {
+/** PATH met alleen node en git, en met `pr` een nep-`gh` die die ene open PR meldt. */
+function pad(basis: string, pr: number | null) {
   const bin = path.join(basis, 'bin');
   mkdirSync(bin);
   const gitPad = (process.env['PATH'] ?? '')
@@ -235,55 +414,151 @@ function padZonderGh(basis: string) {
   if (gitPad === undefined) throw new Error('git niet gevonden in PATH');
   symlinkSync(gitPad, path.join(bin, 'git'));
   symlinkSync(process.execPath, path.join(bin, 'node'));
+  if (pr !== null) {
+    writeFileSync(path.join(bin, 'gh'), `#!/bin/sh\necho '[{"number":${String(pr)}}]'\n`);
+    chmodSync(path.join(bin, 'gh'), 0o755);
+  }
   return bin;
 }
 
-function script(basis: string, repo: string) {
+interface Run {
+  readonly pr?: number | null;
+  readonly stdin?: string;
+}
+
+function script(fx: { basis: string; repo: string }, run: Run = {}) {
   const weg = ['GITHUB_STEP_SUMMARY', 'BASE_SHA', 'HEAD_SHA', 'HEAD_REF', 'REPO', 'PR_NUMBER'];
   const env = {
     ...Object.fromEntries(Object.entries(process.env).filter(([naam]) => !weg.includes(naam))),
-    PATH: padZonderGh(basis),
+    PATH: pad(fx.basis, run.pr ?? null),
     GIT_TERMINAL_PROMPT: '0',
   };
-  const result = spawnSync(process.execPath, [path.join(root, 'scripts/kit/document-status-lokaal.mjs')], {
-    cwd: repo,
+  const args = [path.join(root, 'scripts/kit/document-status-lokaal.mjs')];
+  if (run.stdin !== undefined) args.push('--pre-push');
+  const result = spawnSync(process.execPath, args, {
+    cwd: fx.repo,
     encoding: 'utf8',
     env,
+    input: run.stdin ?? '',
     timeout: 60_000,
   });
   return { status: result.status, uitvoer: `${result.stdout}${result.stderr}` };
 }
 
-describe('script scripts/kit/document-status-lokaal.mjs', () => {
-  test('spec en code in één commit, geen PR: blokkade op de volgorde', { timeout: 60_000 }, () => {
-    const { basis, repo } = fixture();
-    commit(repo, 'feat: x', { 'docs/specs/x.md': SPEC, 'src/x.ts': CODE });
+const SPEC_GOED = spec('goedgekeurd', 'Een nieuwe spec voor de proef.');
 
-    const result = script(basis, repo);
+describe('script scripts/kit/document-status-lokaal.mjs', { timeout: 60_000 }, () => {
+  test('(a) spec goedgekeurd en code in één commit, geen PR: blokkade op de volgorde', () => {
+    const fx = fixture();
+    commit(fx.repo, 'feat: x', { [X]: SPEC_GOED, 'src/x.ts': CODE });
+
+    const result = script(fx);
 
     expect(result.status, result.uitvoer).toBe(1);
     expect(result.uitvoer).toContain(VOLGORDE);
     expect(result.uitvoer).toContain('blokkade');
   });
 
-  test('spec in een eerdere commit, daarna code: exit 0', { timeout: 60_000 }, () => {
-    const { basis, repo } = fixture();
-    commit(repo, 'docs: spec x', { 'docs/specs/x.md': SPEC });
-    commit(repo, 'feat: x', { 'src/x.ts': CODE });
+  test('(b) spec in een eerdere commit, daarna code: exit 0', () => {
+    const fx = fixture();
+    commit(fx.repo, 'docs: spec x', { [X]: SPEC_GOED });
+    commit(fx.repo, 'feat: x', { 'src/x.ts': CODE });
 
-    const result = script(basis, repo);
+    const result = script(fx);
 
     expect(result.status, result.uitvoer).toBe(0);
     expect(result.uitvoer).not.toContain('blokkade');
     expect(result.uitvoer).not.toContain(VOLGORDE);
   });
 
-  test('HEAD gelijk aan origin/main: niets te pushen, exit 0', { timeout: 60_000 }, () => {
-    const { basis, repo } = fixture();
-
-    const result = script(basis, repo);
+  test('(c) HEAD gelijk aan origin/main: niets te pushen, exit 0', () => {
+    const result = script(fixture());
 
     expect(result.status, result.uitvoer).toBe(0);
     expect(result.uitvoer).not.toContain('blokkade');
+  });
+
+  test('(d) commitvorm #517: spec voorstel en code in één commit: waarschuwing met het specpad, exit 0', () => {
+    const fx = fixture();
+    commit(fx.repo, 'feat: x', { [X]: spec('voorstel'), 'src/x.ts': CODE });
+
+    const result = script(fx);
+
+    expect(result.status, result.uitvoer).toBe(0);
+    expect(result.uitvoer).toContain('waarschuwing');
+    expect(result.uitvoer).toContain(X);
+    expect(result.uitvoer).not.toContain('blokkade');
+  });
+
+  test('(e) #506: spec op main krijgt nieuwe inhoud na de code, PR 7: blokkade op de volgorde', () => {
+    const fx = fixture({ [X]: SPEC_GOED });
+    commit(fx.repo, 'feat: x', { 'src/x.ts': CODE });
+    commit(fx.repo, 'docs: spec x', { [X]: spec('goedgekeurd', 'Nieuwe inhoud na de code.') });
+
+    const result = script(fx, { pr: 7 });
+
+    expect(result.status, result.uitvoer).toBe(1);
+    expect(result.uitvoer).toContain(VOLGORDE);
+  });
+
+  test('(f) spec eerst, code, dan alleen status gebouwd # #7, PR 7: exit 0 zonder waarschuwing', () => {
+    const fx = fixture();
+    commit(fx.repo, 'docs: spec x', { [X]: SPEC_GOED });
+    commit(fx.repo, 'feat: x', { 'src/x.ts': CODE });
+    commit(fx.repo, 'docs: status x', { [X]: spec('gebouwd # #7', 'Een nieuwe spec voor de proef.') });
+
+    const result = script(fx, { pr: 7 });
+
+    expect(result.status, result.uitvoer).toBe(0);
+    expect(result.uitvoer).not.toContain('waarschuwing');
+    expect(result.uitvoer).not.toContain('blokkade');
+    expect(result.uitvoer).not.toContain(VOLGORDE);
+  });
+
+  test('(g) andere afkeuring (gebouwd # #8 bij PR 7): waarschuwing met merge-hint, exit 0', () => {
+    const fx = fixture();
+    commit(fx.repo, 'docs: spec x', { [X]: SPEC_GOED });
+    commit(fx.repo, 'feat: x', { 'src/x.ts': CODE });
+    commit(fx.repo, 'docs: status x', { [X]: spec('gebouwd # #8', 'Een nieuwe spec voor de proef.') });
+
+    const result = script(fx, { pr: 7 });
+
+    expect(result.status, result.uitvoer).toBe(0);
+    expect(result.uitvoer).toContain('waarschuwing');
+    expect(result.uitvoer).toContain('git merge origin/main');
+    expect(result.uitvoer).not.toContain('blokkade');
+  });
+});
+
+describe('script met --pre-push (AC-2)', { timeout: 60_000 }, () => {
+  /** Foute volgorde (zoals (a)), zodat een getoetste push zeker blokkeert. */
+  function fouteVolgorde() {
+    const fx = fixture();
+    commit(fx.repo, 'feat: x', { [X]: SPEC_GOED, 'src/x.ts': CODE });
+    return { ...fx, head: git(fx.repo, 'rev-parse', 'HEAD') };
+  }
+
+  test('de huidige branch op HEAD: getoetst, blokkade zoals (a)', () => {
+    const fx = fouteVolgorde();
+
+    const result = script(fx, { stdin: `refs/heads/feat/x ${fx.head} refs/heads/feat/x ${NUL}\n` });
+
+    expect(result.status, result.uitvoer).toBe(1);
+    expect(result.uitvoer).toContain(VOLGORDE);
+  });
+
+  test.each([
+    ['een andere branch', (head: string) => `refs/heads/feat/y ${head} refs/heads/feat/y ${NUL}\n`],
+    ['een verwijdering', () => `(delete) ${NUL} refs/heads/oud ${BASE}\n`],
+    ['een tag', (head: string) => `refs/tags/v1 ${head} refs/tags/v1 ${NUL}\n`],
+    ['lege stdin', () => ''],
+  ])('%s: niet getoetst, exit 0, ook bij foute volgorde', (_naam, stdin) => {
+    const fx = fouteVolgorde();
+
+    const result = script(fx, { stdin: stdin(fx.head) });
+
+    expect(result.status, result.uitvoer).toBe(0);
+    expect(result.uitvoer).not.toContain('blokkade');
+    expect(result.uitvoer).not.toContain(VOLGORDE);
   });
 });
