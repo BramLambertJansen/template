@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd # voorstel | goedgekeurd | gebouwd | vervallen (ADR 0046, 0062)
+status: gebouwd # #536
 namespace: partnerstap
 ---
 
