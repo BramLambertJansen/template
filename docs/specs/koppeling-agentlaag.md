@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd # #540
 namespace: koppeling-agentlaag
 ---
 
