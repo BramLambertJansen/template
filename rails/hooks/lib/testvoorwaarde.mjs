@@ -178,7 +178,7 @@ export function voorwaardelijkeTokens(tokens, paren) {
   const blokken = [{ soort: 'functie', naReturn: false }];
   /** @type {Array<[number, number]>} */
   const bereiken = [];
-  return tokens.map((token, index) => {
+  return tokens.map((_token, index) => {
     if (ketenStart(tokens, index) && naKortsluiting(tokens, index, ternary))
       bereiken.push([index, ketenEind(tokens, index, paren)]);
     const uitslag =
