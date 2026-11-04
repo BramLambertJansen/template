@@ -382,3 +382,14 @@ describe('leerlus-bewijs/AC-3 alleen een echte assertie is bewijs', () => {
     expect(runOordeel(type, { basis, head: typeUitslag(0, '') })).toMatch(/op laden, niet op een assertie/);
   });
 });
+
+describe('leerlus-bewijs/AC-3 overgeslagen tests', () => {
+  test('leerlus-bewijs/AC-3: alleen overgeslagen tests op de head zijn geen groen', () => {
+    expect(leesVitest(verslag('passed', ['skipped']), PAD).status).toBe('laadfout');
+    expect(leesVitest(verslag('passed', ['skipped', 'passed']), PAD).status).toBe('groen');
+    const unit = { pad: PAD, soort: 'unit' };
+    expect(
+      runOordeel(unit, { basis: leesVitest(ASSERTIE, PAD), head: leesVitest(verslag('passed', ['skipped']), PAD) }),
+    ).toMatch(/faalt op de head/);
+  });
+});

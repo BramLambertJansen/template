@@ -216,13 +216,18 @@ export function leesVitest(verslag, pad) {
     return naam === pad || naam.endsWith(`/${pad}`);
   });
   let assertieFouten = 0;
+  let geslaagd = 0;
   let laadFout = resultaten.length === 0;
   for (const bestand of resultaten) {
-    const gefaald = lijst(veld(bestand, 'assertionResults')).filter((a) => veld(a, 'status') === 'failed');
+    const tests = lijst(veld(bestand, 'assertionResults'));
+    geslaagd += tests.filter((a) => veld(a, 'status') === 'passed').length;
+    const gefaald = tests.filter((a) => veld(a, 'status') === 'failed');
     const asserties = gefaald.filter(isAssertie).length;
     assertieFouten += asserties;
     if (asserties < gefaald.length || (veld(bestand, 'status') === 'failed' && gefaald.length === 0)) laadFout = true;
   }
+  // Alles overgeslagen is geen groen: er moet minstens één test echt slagen.
+  if (!laadFout && assertieFouten === 0 && geslaagd === 0) laadFout = true;
   return { status: laadFout ? 'laadfout' : assertieFouten > 0 ? 'rood' : 'groen', assertieFouten, laadFout };
 }
 
