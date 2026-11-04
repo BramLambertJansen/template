@@ -26,8 +26,9 @@ agents sluiten opgeloste leerpunten (akkoord eigenaar 3 november 2026), en "opge
    een testbestand dat de PR toevoegt of wijzigt. Een verplichte CI-job draait dat testbestand tegen de code van de basis
    (alleen het testbestand komt uit de PR) en eist een gefaalde assertie, en tegen de head en eist groen; een laadfout op de
    basis telt niet als bewijs. Bij trede Type is het bewijs een typetest die op de basis niet compileert. Zo is "de check
-   begint met een fixture die op de oude code faalt" toetsbaar. De job draait onder `pull_request`, niet onder
+   begint met een fixture die op de oude code faalt" toetsbaar. De job staat in een eigen workflow onder `pull_request`, niet onder
    `pull_request_target`: code uit de PR draait nooit met het token of de geheimen van de basis. Het script komt van main.
+   `pnpm pr:merge` leest de beschrijving zelf bij het mergen, zodat een later gewijzigd bewijs niet langs de eigenaar glipt.
 2. **Uitzonderingen op het sluitbewijs.** Voor de treden Skill, Padregel en `AGENTS.md`, en voor een integratie- of e2e-test die
    de job niet kan draaien, mag het bewijs `geen test: <reden>` zijn. Dan is de PR niet agent-mergebaar (ADR 0069): de
    eigenaar merget en toetst de reden. Een leerpunt dat zonder code achterhaald is, sluit met een comment

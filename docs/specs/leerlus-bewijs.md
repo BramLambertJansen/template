@@ -23,7 +23,7 @@ zodra deze op main staat.
 |---|---|---|
 | hoofdsessie | schrijft de sectie `## Leerpunt` in een PR die een leerpunt sluit; dient leerpunten in via `gh` of, in de cloud, via de MCP-tool voor issues | via MCP iets anders schrijven dan een leerpunt-issue in de template-repo |
 | reviewer | toetst bij `geen test: <reden>` of de reden klopt, en meldt dat als bevinding | iets indienen of sluiten (ongewijzigd) |
-| CI-job `leerpunt-bewijs` (`ci.yml`, `pull_request`) | draait het bewijsbestand tegen basis en head, zonder token voor de PR-code | iets schrijven; code uit de PR draaien met token of geheimen |
+| CI-job `leerpunt-bewijs` (eigen workflow `leerpunt-bewijs.yml`, `pull_request`) | draait het bewijsbestand tegen basis en head, zonder token voor de PR-code | iets schrijven; code uit de PR draaien met token of geheimen |
 | workflow `leerpunt-check` | zet of haalt de labels `leerpunt-onvolledig` en `leerpunt-zonder-bewijs` weg, met één comment | sluiten, heropenen, de body bewerken |
 | eigenaar | maakt de twee labels aan, zet het workflowbestand (GitHub App heeft geen `workflows`-recht), merget PR's met `geen test` | — |
 
@@ -39,7 +39,11 @@ n.v.t. — geen HTTP-route.
 
 n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vormen:
 
-- `.github/workflows/ci.yml` — job onder `pull_request` met `permissions: read-all`; het script komt via een aparte checkout van main, niet uit de PR (een PR die `.github/workflows/ci.yml` wijzigt, valt al onder de diff-guard en eigenaarreview)
+- `.github/workflows/ci.yml` — vorm van een workflow onder `pull_request` met `permissions: read-all`. De bewijsjob krijgt een eigen
+  workflow leerpunt-bewijs (types opened, synchronize, reopened, edited; eigen concurrency-groep), zodat een bewerkte
+  beschrijving niet de hele CI afbreekt of verplichte checks op `skipped` zet. Het script komt via een aparte checkout van main.
+  Een PR die dat workflowbestand wijzigt, draait onder `pull_request` zijn eigen versie; dat vangen alleen de diff-guard (die
+  het oordeel `agent-merge` dan op nee zet) en de eigenaarreview
 - `test/rails/leerpunt-sjabloon.test.ts` — sjabloon regelgebaseerd lezen zonder YAML-dependency; de nieuwe body-parser hergebruikt die lezer
 - `scripts/kit/kooi.mjs` — draait het script buiten CI (een agent of pre-push), dan lopen beide bewijsruns via `inKooi`
   (R-TOOL-03: een werkmap is geen grens). In CI is de wegwerp-runner de grens, zoals voor elke test uit een PR; de
@@ -75,13 +79,17 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   uit de head en moet daar op minstens één assertie falen (vitest-uitslag `failed` met een assertiefout, geen laad- of
   importfout); het draait op de head en moet slagen. Bij trede Type: `vitest --typecheck` op het `*.test-d.ts`-bestand faalt
   op de basis en slaagt op de head. Slaagt het op de basis, faalt het daar alleen op laden, of faalt het op de head, dan rood
-  met beide uitslagen. De PR-code draait zonder token (`persist-credentials: false`, geen geheimen) met een install uit de
-  lockfile van de basis met `--ignore-scripts`. Fixtures: een test die ook op de basis slaagt, en een test die op de basis
+  met beide uitslagen. De PR-code draait zonder token: labels en beschrijving worden in een eerdere stap gelezen en als bestand
+  doorgegeven; de stappen met de bewijsruns hebben geen `GH_TOKEN`, `GITHUB_TOKEN` of geheimen in hun env
+  (`persist-credentials: false`). De basisrun installeert uit de lockfile van de basis, de headrun uit die van de head, beide met
+  `--ignore-scripts`. Een test leest het workflowbestand en faalt als een bewijsstap een token in zijn env heeft. Fixtures: een test die ook op de basis slaagt, en een test die op de basis
   alleen op een import faalt, maken de job allebei rood.
 - **leerlus-bewijs/AC-4** — `geen test: <reden>` is alleen geldig bij trede Skill, Padregel of AGENTS.md, of bij een
   integratie- of e2e-test, met een niet-lege reden; dan slaagt de job en geeft het agent-merge-oordeel (`diff-guard.mjs`,
   gelezen door `pr-merge.mjs`) `nee` met reden `leerpunt zonder test`. Bij een andere trede of lege reden: rood. De job draait
-  ook op `pull_request` type `edited`, zodat een aangepaste beschrijving opnieuw getoetst wordt.
+  ook op `pull_request` type `edited`. Omdat de diff-guard niet op `edited` draait, leest `pr-merge.mjs` de beschrijving zelf op
+  het moment van mergen en weigert bij `geen test:`, ook als het oordeel eerder `ja` was. Test: beschrijving na het oordeel
+  gewijzigd van `bewijs <pad>` naar `geen test: …` geeft een weigering.
 - **leerlus-bewijs/AC-5** — De workflow `leerpunt-check` op `issues` (opened, edited, labeled, reopened) toetst een issue met label
   `leerpunt` tegen `leerpunt.yml`: elke kop aanwezig en in volgorde, verplichte velden niet leeg (`_No response_` telt als leeg),
   `Soort` en `Voorstel voor de plek` exact een optie. Bij fouten: label `leerpunt-onvolledig` en de comment uit "Hergebruik en UX";
@@ -123,7 +131,7 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
 ## Raakt ook
 
 - Nieuw: `scripts/kit/leerpunt-bewijs.mjs`, `scripts/kit/leerpunt-check.mjs` (gedeelde sjabloonlezer), job in
-  `.github/workflows/ci.yml`, workflow `.github/workflows/leerpunt.yml`, `docs/operations/leerpunten-voorsorteren.md`.
+  eigen workflow `leerpunt-bewijs.yml`, workflow `.github/workflows/leerpunt.yml`, `docs/operations/leerpunten-voorsorteren.md`.
 - Gewijzigd: `.claude/skills/opleveren/SKILL.md`, `.github/pull_request_template.md`, `docs/framework.md` (R-SEC-09, R-ROL-12,
   R-WERK-13), `AGENTS.md`, `CLAUDE.md`, `docs/operations/st-09-praktijkproef.md`, `scripts/kit/diff-guard.mjs` en
   `scripts/kit/pr-merge.mjs` (AC-4), `docs/specs/leerlus.md`.
@@ -152,8 +160,9 @@ als achterhaald.
 
 - **OV-1 ✅ besloten** — V1, V2 en V5 samen; openbare leerpunten zijn prima (eigenaar, 4 november 2026).
 - **OV-2** — Waar draait het bewijs? Opties: een job in `guard.yml` (`pull_request_target`), een job in `ci.yml`
-  (`pull_request`), een eigen workflow. Aanbeveling: `ci.yml` met het script van main en zonder token voor de PR-code; onder
-  `pull_request_target` zou code uit de PR met de rechten van de basis draaien (spec-review, 4 november 2026).
+  (`pull_request`), een eigen workflow. Aanbeveling: een eigen workflow onder `pull_request` met `edited` en een eigen
+  concurrency-groep, het script van main en geen token voor de PR-code. Onder `pull_request_target` zou code uit de PR met de
+  rechten van de basis draaien; in `ci.yml` zou `edited` de hele CI herstarten (spec-reviews, 4 november 2026).
 - **OV-3** — Wie mag `achterhaald:` schrijven? Aanbeveling: alleen auteurs met schrijfrecht (OWNER, MEMBER, COLLABORATOR),
   dus de eigenaar en de hoofdsessie via zijn token, met verwijzing naar het bestand of de PR die het leerpunt overbodig maakte;
   de voorsortering toont deze sluitingen.
