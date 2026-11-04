@@ -8,7 +8,7 @@ Herzien: 2026-11-03 (#469): gewijzigd door [0054](0054-gebouwd-in-de-bouw-pr.md)
 [0056](0056-functionele-ui-in-een-pr.md) punt 8–9 en 12–15; [0057](0057-risicogestuurde-werkstraat.md) de vaste
 rolvolgorde; [0062](0062-spec-en-bouw-in-een-pr.md) punt 5, 10, 12, 14 en 15; [0069](0069-agent-merge-niet-kritiek.md)
 punt 30, 31, 33, 34 en 35; [0074](0074-herziene-adr-punten-gemarkeerd.md) punt 2
-Herzien: 2026-11-04 (#535): gewijzigd door [0078](0078-een-padtabel.md) punt 27 en 28, de lijst `voorReview` wordt de
+Herzien: 2026-11-04 (#535): gewijzigd door [0079](0079-een-padtabel.md) punt 27 en 28, de lijst `voorReview` wordt de
 kolom `schrijven` van de padtabel in `.claude/gates.json` (wat erin hoort, blijft gelijk), en CODEOWNERS volgt de afgeleide
 gates plus `jsonGates`
 

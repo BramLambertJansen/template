@@ -9,7 +9,7 @@ model: opus
 ## Doel
 
 Hoe zwaar een pad beschermd is, staat op één plek (`paden` in `.claude/gates.json`) en wordt overal afgeleid, zonder dat één
-pad losser wordt ([ADR 0078](../adr/0078-een-padtabel.md)); `.claude/decisions.json` verliest zijn dode records.
+pad losser wordt ([ADR 0079](../adr/0079-een-padtabel.md)); `.claude/decisions.json` verliest zijn dode records.
 
 **Toets aan framework §1.** Aanleiding: vraag van de eigenaar (4 november 2026), bevinding A en B. Geen nieuwe dependency.
 Raakt rolhek, lane en agent-merge (kritiek), daarom eerst deze besluit-PR.
@@ -56,7 +56,7 @@ n.v.t.: geen API-route, permissie of foutcode.
   - check-docs, telkens na `.claude/gates.json: paden.<glob>: `: `altijdVragen vraagt besluit besluit-pr`,
     `schrijven <niveau> met besluit agent`, `onbekende <sleutel of waarde> <x>`, `rij zonder kolom`, `dubbele sleutel`,
     `een glob begint niet met !`, `vloer: verwacht altijdVragen en besluit-pr`; verder `.claude/gates.json: paden naast de
-    oude lijsten` en `.claude/gates.json: oude vorm zonder paden; zet de lijsten om naar paden (ADR 0078)`.
+    oude lijsten` en `.claude/gates.json: oude vorm zonder paden; zet de lijsten om naar paden (ADR 0079)`.
 
 ### Werking (bindend)
 
@@ -171,7 +171,7 @@ n.v.t.: geen API-route, permissie of foutcode.
   oude vorm blijven in check-docs (AC-8, AC-11, `agentMergeViolations`); (2) bewijs: AC-2 en AC-6, en de bestaande tests van
   rolhek, lane en agent-merge met gelijke verwachte uitkomsten groen (OV-1); (3) meting vóór en na: `pnpm leespad` en
   `pnpm meting --trend`, uitslag in de PR; (4) terugval: één pad losser dan op 30cc352 ⇒ revert van de bouw-PR, de eigenaar
-  beslist (ADR 0078 punt 9).
+  beslist (ADR 0079 punt 9).
 
 ## Open vragen
 
@@ -193,6 +193,6 @@ n.v.t.: geen API-route, permissie of foutcode.
     `leesAgentMerge` en `agentMergeFouten`), en tests die alleen `loadConfig`/`leesConfig` op de echte `gates.json` gebruiken
     (o.a. `test/rails/diff-guard.test.ts`, `test/rails/roadmap-archive-protection.test.ts`, de `rolhek-*`-tests): de
     afgeleide vorm is gelijk.
-- **OV-2 ✅ besloten** — Strengste-wint in plaats van eerste-treffer (ADR 0078, Alternatieven).
+- **OV-2 ✅ besloten** — Strengste-wint in plaats van eerste-treffer (ADR 0079, Alternatieven).
 - **OV-3** — Is de oude vorm in check-docs rood (aanbeveling) of een waarschuwing? Aanbeveling: rood; anders blijft een app na
   een template-merge stil op twee vormen staan. Hooks en scripts accepteren hem wel, voor de overgang en oude commits.
