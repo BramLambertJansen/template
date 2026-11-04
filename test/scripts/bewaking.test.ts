@@ -266,7 +266,8 @@ describe('feiten.mjs fouttak (AC-4)', () => {
 });
 
 describe('docs (AC-5)', () => {
-  test.each(['docs/ENVIRONMENT.md', 'CHANGELOG.md'])('%s noemt de melding van feiten.mjs', (bestand) => {
+  // CHANGELOG.md niet: app:init herschrijft hem in een app (check:new-resource).
+  test.each(['docs/ENVIRONMENT.md'])('%s noemt de melding van feiten.mjs', (bestand) => {
     expect(readFileSync(path.join(REPO, bestand), 'utf8').includes('⚠ bewaking niet actief in deze sessie')).toBe(true);
   });
 });
