@@ -63,6 +63,8 @@ Toets de foutvolgorde aan de bestaande kit, na de algemene HTTP-middleware: sess
 ontbrekende rol, permissie, MFA, handler en outputvalidatie. Bronnen: `routeHandler` in
 `src/core/api/http/create-app.ts`, `createWithUser` in `src/core/api/db/with-user.ts` en `check` in
 `src/core/shared/can.ts`. Een nieuwe voor-stap mag die zichtbare foutvolgorde niet stilzwijgend veranderen.
+Een route met partnerstap (`definePartnerRoute`) volgt de volgorde van spec partnerstap, bron
+`src/core/api/http/partner-route.ts`: bestaan en eigenaar van een resource uit de input toetst `load`, dus vóór de aanroep.
 
 Specificeer bij een voor-stap welke validatie eraan voorafgaat, welke externe aanroep zij doet en wanneer haar fout
 zichtbaar wordt. Een fout van de externe dienst mag `FORBIDDEN` of `MFA_REQUIRED` niet vervangen. Beschrijf zo nodig
@@ -91,6 +93,12 @@ Een aanroep via `ctx.services` vanuit de handler gebeurt ook binnen die transact
 netwerkaanroep tussen twee databasestappen zonder een open transactie of vastgehouden verbinding, leg dan eerst een
 expliciet kitmechanisme vast in de spec en controleer of de kit het al ondersteunt. Het `prepare`-ontwerp uit
 [ADR 0060](adr/0060-bestandsopslag-als-poort.md) is geen beschikbare handler-API zolang de route kit het niet implementeert.
+
+Een koppeling met een externe dienst volgt de vaste vorm uit spec [koppelingsvorm](specs/koppelingsvorm.md):
+`src/api/integrations/<naam>/` met `port.ts`, `adapter.ts`, `schemas.ts`, `contract.test.ts` en `fixtures/`. De adapter krijgt
+zijn client van de compositie-root (`integrations.client(naam, config)`); de route kent alleen de poort, via `ctx.services`, en
+roept die aan in de `call` van de partnerstap (`definePartnerRoute`) met `{ reading, requestId }`. Het volledige hoofdstuk volgt
+met de skill `nieuwe-koppeling`.
 
 `ctx.afterCommit` en `ctx.afterRollback` plannen externe gevolgen of compensatie na de transactie; ze splitsen de handler
 niet in twee transacties (`src/core/api/http/route-effects.ts`). Een fout na commit draait gecommitteerde data niet terug.
