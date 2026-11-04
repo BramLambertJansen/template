@@ -56,6 +56,22 @@ describe('uitgaande-client/AC-1: time-out per poging', () => {
   });
 });
 
+describe('time-out geldt ook voor de body (spec uitgaande-client, Herhalen)', () => {
+  test('een body die blijft hangen: bodyDelayMs 2000 met timeoutMs 300 en maxAttempts 1 geeft UPSTREAM_TIMEOUT binnen 1000 ms', async () => {
+    const partner = await partnerWith({
+      'GET /items': { status: 200, json: { id: 'traag' }, bodyDelayMs: 2000 },
+    });
+    const client = createOutboundClient(configFor(partner, { timeoutMs: 300, maxAttempts: 1 }));
+    const started = performance.now();
+
+    const code = await upstreamCode(client.call(getItems));
+
+    expect(code).toBe('UPSTREAM_TIMEOUT');
+    expect(performance.now() - started).toBeLessThan(1000);
+    expect(partner.calls('GET /items')).toBe(1);
+  });
+});
+
 describe('uitgaande-client/AC-2: het budget begrenst de pogingen', () => {
   test('uitgaande-client/AC-2: elke 503 na 900 ms met budget 1500 geeft hooguit 2 aanroepen, binnen 1800 ms, UPSTREAM_TIMEOUT', async () => {
     const partner = await partnerWith({ 'GET /items': { status: 503, delayMs: 900 } });
@@ -112,9 +128,10 @@ describe('uitgaande-client/AC-5: Retry-After', () => {
 
     expect(result).toStrictEqual({ ok: true, status: 200, data: { id: 'i-1' } });
     expect(partner.calls('GET /items')).toBe(2);
-    // Aankomsttijden zoals de nep-partner ze vastlegt (`at`, performance.now()). Het eerste antwoord heeft geen
-    // vertraging, dus aankomst 1 ligt vóór het eerste antwoord en aankomst 2 na de start van de tweede aanroep: het gat
-    // tussen de aankomsten is ten minste de wachttijd, zonder extra marge.
+    // Aankomsttijden zoals de nep-partner ze vastlegt (`at`, performance.now()). Aankomst 1 ligt vóór het eerste antwoord
+    // en aankomst 2 na de start van de tweede aanroep: het gemeten gat is de wachttijd plus de antwoordtijd van poging 1
+    // (lokaal enkele ms, het eerste antwoord heeft geen vertraging). Het kan dus nooit kleiner zijn dan de wachttijd; de
+    // grens van 1000 ms uit de spec geldt zonder marge.
     const [first, second] = partner.requests;
     if (first === undefined || second === undefined) throw new Error('twee verzoeken verwacht');
     return second.at - first.at;

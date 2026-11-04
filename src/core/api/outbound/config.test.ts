@@ -41,12 +41,19 @@ describe('uitgaande-client/AC-8: opstartfouten geven een OutboundConfigError', (
     },
   );
 
-  test.each([['Host'], ['Idempotency-Key'], ['idempotency-key'], ['host']])(
-    'uitgaande-client/AC-8: header %s in headers',
-    (header) => {
-      expect(create({ headers: { [header]: 'x' } })).toThrow(OutboundConfigError);
-    },
-  );
+  test.each([
+    ['Host'],
+    ['Idempotency-Key'],
+    ['idempotency-key'],
+    ['host'],
+    ['Content-Type'],
+    ['Content-Length'],
+    ['Connection'],
+    ['Transfer-Encoding'],
+    ['Proxy-Authorization'],
+  ])('uitgaande-client/AC-8: header %s in headers', (header) => {
+    expect(create({ headers: { [header]: 'x' } })).toThrow(OutboundConfigError);
+  });
 
   test.each([
     ['staging', 'http://api.partner.nl/v1', 'api.partner.nl'],
@@ -55,6 +62,7 @@ describe('uitgaande-client/AC-8: opstartfouten geven een OutboundConfigError', (
     ['production', 'https://127.0.0.1/v1', '127.0.0.1'],
     ['staging', 'https://localhost/v1', 'localhost'],
     ['production', 'https://localhost/v1', 'localhost'],
+    ['production', 'https://localhost./v1', 'localhost.'],
   ] as const)('uitgaande-client/AC-8: met appEnv %s is %s niet toegestaan', (appEnv, baseUrl, host) => {
     expect(create({ appEnv, baseUrl, hosts: [host] })).toThrow(OutboundConfigError);
   });

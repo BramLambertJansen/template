@@ -1,3 +1,4 @@
+import { gzipSync } from 'node:zlib';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { z } from 'zod';
 import { AppError } from '../errors.ts';
@@ -250,6 +251,48 @@ describe('uitgaande-client/AC-13: antwoord boven maxResponseBytes', () => {
     );
 
     expect(code).toBe('UPSTREAM_INVALID');
+  });
+
+  test('uitgaande-client/AC-13: een gzip-body onder de grens die gedecodeerd erboven uitkomt geeft UPSTREAM_INVALID', async () => {
+    const decoded = JSON.stringify({ id: 'x'.repeat(5000) });
+    const compressed = gzipSync(Buffer.from(decoded));
+    const partner = await partnerWith({
+      'GET /items': {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+          'content-encoding': 'gzip',
+          'content-length': String(compressed.byteLength),
+        },
+        body: compressed,
+      },
+    });
+    const client = createOutboundClient(configFor(partner, { maxResponseBytes: 1000 }));
+
+    const code = await upstreamCode(
+      client.call({ requestId: 'r-1', method: 'GET', path: '/items', schema: z.object({ id: z.string() }) }),
+    );
+
+    expect(compressed.byteLength).toBeLessThan(1000);
+    expect(code).toBe('UPSTREAM_INVALID');
+  });
+
+  test('uitgaande-client/AC-13: een HEAD met Content-Length 5000000 en geen body geeft het schema undefined', async () => {
+    const partner = await partnerWith({
+      'HEAD /items': { status: 200, headers: { 'content-type': 'application/json', 'content-length': '5000000' } },
+    });
+    const client = createOutboundClient(configFor(partner));
+    const seen: unknown[] = [];
+    const schema = z.custom<undefined>((value) => {
+      seen.push(value);
+      return value === undefined;
+    });
+
+    const result = await client.call({ requestId: 'r-1', method: 'HEAD', path: '/items', schema });
+
+    expect(result).toStrictEqual({ ok: true, status: 200, data: undefined });
+    expect(seen).toStrictEqual([undefined]);
+    expect(partner.calls('HEAD /items')).toBe(1);
   });
 });
 
