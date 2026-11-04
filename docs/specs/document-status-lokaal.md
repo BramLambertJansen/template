@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd # voorstel | goedgekeurd | gebouwd | vervallen — de merge door de eigenaar is het besluit (ADR 0046)
+status: gebouwd # #521
 namespace: document-status-lokaal
 model: sonnet
 ---
