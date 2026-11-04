@@ -1,5 +1,5 @@
 ---
-status: voorstel
+status: gebouwd # #525
 namespace: netwerk-en-geheim-rails
 ---
 
