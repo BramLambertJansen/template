@@ -197,29 +197,47 @@ export function leerpuntMergeRedenen(body) {
   return leesLeerpuntSectie(body).some((regel) => regel.reden !== null) ? [REDEN_ZONDER_TEST] : [];
 }
 
+/** @param {unknown} test */
+function isAssertie(test) {
+  const melding = String(lijst(veld(test, 'failureMessages'))[0] ?? '');
+  return /^AssertionError\b/.test(melding);
+}
+
 /**
- * Uitslag van één vitest-run uit het JSON-verslag: aantal gefaalde asserties en of een bestand niet laadde.
- * @param {unknown} verslag @returns {RunUitslag}
+ * Uitslag van één vitest-run uit het JSON-verslag, alleen voor het bewijsbestand (vitest filtert op deelstring, dus
+ * `a.test.ts` neemt ook `a.test.tsx` mee). Een gefaalde test telt alleen als assertie bij een `AssertionError`; elke andere
+ * fout is een laadfout. Zo telt een ontbrekende export op de basis (`TypeError: … is not a function`, vite geeft `undefined`
+ * in plaats van een importfout) niet als bewijs (spec randgeval "nieuwe helper die op de basis niet bestaat").
+ * @param {unknown} verslag @param {string} pad @returns {RunUitslag}
  */
-export function leesVitest(verslag) {
-  const resultaten = lijst(veld(verslag, 'testResults'));
+export function leesVitest(verslag, pad) {
+  const resultaten = lijst(veld(verslag, 'testResults')).filter((r) => {
+    const naam = String(veld(r, 'name') ?? '').replaceAll('\\', '/');
+    return naam === pad || naam.endsWith(`/${pad}`);
+  });
   let assertieFouten = 0;
   let laadFout = resultaten.length === 0;
   for (const bestand of resultaten) {
-    const asserties = lijst(veld(bestand, 'assertionResults'));
-    const gefaald = asserties.filter((a) => veld(a, 'status') === 'failed').length;
-    assertieFouten += gefaald;
-    if (veld(bestand, 'status') === 'failed' && gefaald === 0) laadFout = true;
+    const gefaald = lijst(veld(bestand, 'assertionResults')).filter((a) => veld(a, 'status') === 'failed');
+    const asserties = gefaald.filter(isAssertie).length;
+    assertieFouten += asserties;
+    if (asserties < gefaald.length || (veld(bestand, 'status') === 'failed' && gefaald.length === 0)) laadFout = true;
   }
   return { status: laadFout ? 'laadfout' : assertieFouten > 0 ? 'rood' : 'groen', assertieFouten, laadFout };
 }
 
+/** tsc-codes voor een ontbrekend bestand of een ontbrekende export: geen bewijs (AC-3). */
+export const TYPE_LAADFOUT = /\berror TS(2305|2307|2614|2724|2792|6053)\b/;
+
 /**
- * Uitslag van een typetest uit de exitstatus van `tsc` (AC-3): 0 is groen, anders rood (compileert niet).
- * @param {number | null} status @returns {RunUitslag}
+ * Uitslag van een typetest uit de exitstatus en uitvoer van `tsc` (AC-3): 0 is groen; een ontbrekend bestand of een
+ * ontbrekende export is een laadfout; elke andere compileerfout is rood.
+ * @param {number | null} status @param {string} uitvoer @returns {RunUitslag}
  */
-export function typeUitslag(status) {
-  return { status: status === 0 ? 'groen' : 'rood', assertieFouten: status === 0 ? 0 : 1, laadFout: false };
+export function typeUitslag(status, uitvoer) {
+  if (status === 0) return { status: 'groen', assertieFouten: 0, laadFout: false };
+  if (TYPE_LAADFOUT.test(uitvoer)) return { status: 'laadfout', assertieFouten: 0, laadFout: true };
+  return { status: 'rood', assertieFouten: 1, laadFout: false };
 }
 
 /**
@@ -230,7 +248,6 @@ export function typeUitslag(status) {
 export function runOordeel(run, { basis, head }) {
   const beide = `basis ${basis.status}, head ${head.status}`;
   if (head.status !== 'groen') return `${run.pad}: faalt op de head (${beide})`;
-  if (run.soort === 'type') return basis.status === 'groen' ? `${run.pad}: slaagt ook op de basis (${beide})` : null;
   if (basis.status === 'groen') return `${run.pad}: slaagt ook op de basis (${beide})`;
   if (basis.laadFout) return `${run.pad}: faalt op de basis op laden, niet op een assertie (${beide})`;
   return null;

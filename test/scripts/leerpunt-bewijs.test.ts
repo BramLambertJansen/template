@@ -30,21 +30,36 @@ const LP = (nummer: number) => ({ nummer, labels: ['leerpunt'] });
 const plan = (body: string, diff: string[] = [], gesloten = [LP(9)]) => bewijsPlan({ gesloten, body, diff });
 
 // Vitest-verslagen in de vorm die `vitest run --reporter=json` echt schrijft (vastgelegd met vitest 4 in deze repo).
-const verslag = (status: string, asserties: string[], message = '') => ({
+const verslag = (
+  status: string,
+  asserties: string[],
+  { message = '', melding = 'AssertionError: expected 1 to be 2 // Object.is equality' } = {},
+) => ({
   numTotalTests: asserties.length,
   success: status === 'passed',
   testResults: [
     {
-      name: '/repo/test/scripts/x.test.ts',
+      name: '/repo/test/a.test.ts',
       status,
       message,
-      assertionResults: asserties.map((s) => ({ status: s, title: 't', failureMessages: s === 'failed' ? ['x'] : [] })),
+      assertionResults: asserties.map((s) => ({
+        status: s,
+        title: 't',
+        failureMessages: s === 'failed' ? [melding] : [],
+      })),
     },
   ],
 });
 const GROEN = verslag('passed', ['passed']);
 const ASSERTIE = verslag('failed', ['failed']);
-const IMPORT = verslag('failed', [], "Cannot find module './nergens.mjs' imported from /repo/test/scripts/x.test.ts");
+const IMPORT = verslag('failed', [], {
+  message: "Cannot find module './nergens.mjs' imported from /repo/test/a.test.ts",
+});
+// Een ontbrekende export: vite geeft `undefined`, de test faalt met een TypeError (vastgelegd met vitest 5.0.3).
+const EXPORT = verslag('failed', ['failed'], {
+  melding: 'TypeError: (0 , __vite_ssr_import_1__.nieuw) is not a function',
+});
+const PAD = 'test/a.test.ts';
 
 describe('leerlus-bewijs/AC-1 welke leerpunten de PR sluit', () => {
   test('leerlus-bewijs/AC-1: gesloten issues komen uit closingIssuesReferences', () => {
@@ -139,10 +154,10 @@ describe('leerlus-bewijs/AC-2 het bewijspad', () => {
 
 describe('leerlus-bewijs/AC-3 rood op de basis, groen op de head', () => {
   test('leerlus-bewijs/AC-3: leesVitest op echte verslagvormen', () => {
-    expect(leesVitest(GROEN).status).toBe('groen');
-    expect(leesVitest(ASSERTIE).status).toBe('rood');
-    expect(leesVitest(IMPORT).status).toBe('laadfout');
-    expect(leesVitest(null).status).toBe('laadfout');
+    expect(leesVitest(GROEN, PAD).status).toBe('groen');
+    expect(leesVitest(ASSERTIE, PAD).status).toBe('rood');
+    expect(leesVitest(IMPORT, PAD).status).toBe('laadfout');
+    expect(leesVitest(null, PAD).status).toBe('laadfout');
   });
 
   const unit = { pad: 'test/a.test.ts', soort: 'unit' };
@@ -150,18 +165,34 @@ describe('leerlus-bewijs/AC-3 rood op de basis, groen op de head', () => {
     ['assertie op de basis, groen op de head', ASSERTIE, GROEN, null],
     ['slaagt ook op de basis', GROEN, GROEN, /slaagt ook op de basis \(basis groen, head groen\)/],
     ['faalt op de basis alleen op een import', IMPORT, GROEN, /op laden, niet op een assertie \(basis laadfout/],
+    [
+      'faalt op de basis op een ontbrekende export (TypeError)',
+      EXPORT,
+      GROEN,
+      /op laden, niet op een assertie \(basis laadfout/,
+    ],
     ['faalt op de head', ASSERTIE, ASSERTIE, /faalt op de head \(basis rood, head rood\)/],
   ])('leerlus-bewijs/AC-3: %s', (...[, basis, head, fout]) => {
-    const uitslag = runOordeel(unit, { basis: leesVitest(basis), head: leesVitest(head) });
+    const uitslag = runOordeel(unit, { basis: leesVitest(basis, PAD), head: leesVitest(head, PAD) });
     if (fout === null) expect(uitslag).toBeNull();
     else expect(uitslag).toMatch(fout);
   });
 
   test('leerlus-bewijs/AC-3: typetest: compileert niet op de basis, wel op de head', () => {
     const type = { pad: 'test/a.test-d.ts', soort: 'type' };
-    expect(runOordeel(type, { basis: typeUitslag(2), head: typeUitslag(0) })).toBeNull();
-    expect(runOordeel(type, { basis: typeUitslag(0), head: typeUitslag(0) })).toMatch(/slaagt ook op de basis/);
-    expect(runOordeel(type, { basis: typeUitslag(2), head: typeUitslag(2) })).toMatch(/faalt op de head/);
+    expect(
+      runOordeel(type, {
+        basis: typeUitslag(2, "x.ts(1,7): error TS2322: Type 'string' is not assignable to type 'number'."),
+        head: typeUitslag(0, ''),
+      }),
+    ).toBeNull();
+    expect(runOordeel(type, { basis: typeUitslag(0, ''), head: typeUitslag(0, '') })).toMatch(/slaagt ook op de basis/);
+    expect(
+      runOordeel(type, {
+        basis: typeUitslag(2, "x.ts(1,7): error TS2322: Type 'string' is not assignable to type 'number'."),
+        head: typeUitslag(2, "x.ts(1,7): error TS2322: Type 'string' is not assignable to type 'number'."),
+      }),
+    ).toMatch(/faalt op de head/);
   });
 
   test('leerlus-bewijs/AC-3: opdracht en tsconfig per soort', () => {
@@ -305,12 +336,49 @@ describe('leerlus-bewijs/AC-1 en AC-3 GraphQL-fouten en exitstatus', () => {
   });
 
   test('leerlus-bewijs/AC-3: groene asserties met een exitstatus ongelijk aan 0 zijn geen groen en geen bewijs', () => {
-    expect(metExit(leesVitest(GROEN), 0).status).toBe('groen');
-    expect(metExit(leesVitest(GROEN), 1).status).toBe('laadfout');
-    expect(metExit(leesVitest(ASSERTIE), 1).status).toBe('rood');
+    expect(metExit(leesVitest(GROEN, PAD), 0).status).toBe('groen');
+    expect(metExit(leesVitest(GROEN, PAD), 1).status).toBe('laadfout');
+    expect(metExit(leesVitest(ASSERTIE, PAD), 1).status).toBe('rood');
     const unit = { pad: 'test/a.test.ts', soort: 'unit' };
-    expect(runOordeel(unit, { basis: leesVitest(ASSERTIE), head: metExit(leesVitest(GROEN), 1) })).toMatch(
+    expect(runOordeel(unit, { basis: leesVitest(ASSERTIE, PAD), head: metExit(leesVitest(GROEN, PAD), 1) })).toMatch(
       /faalt op de head/,
     );
+  });
+});
+
+describe('leerlus-bewijs/AC-3 alleen een echte assertie is bewijs', () => {
+  test('leerlus-bewijs/AC-3: een TypeError telt als laadfout, ook naast een assertie', () => {
+    expect(leesVitest(EXPORT, PAD)).toMatchObject({ status: 'laadfout', laadFout: true, assertieFouten: 0 });
+    const gemengd = verslag('failed', ['failed', 'failed']);
+    const tests = gemengd.testResults[0]?.assertionResults ?? [];
+    if (tests[1] !== undefined) tests[1].failureMessages = ['TypeError: x is not a function'];
+    expect(leesVitest(gemengd, PAD).status).toBe('laadfout');
+  });
+
+  test('leerlus-bewijs/AC-3: alleen het bewijsbestand telt, niet een ander bestand met dezelfde deelstring', () => {
+    const ander = {
+      ...GROEN,
+      testResults: [...GROEN.testResults, { ...ASSERTIE.testResults[0], name: '/repo/test/a.test.tsx' }],
+    };
+    expect(leesVitest(ander, PAD).status).toBe('groen');
+    expect(leesVitest(GROEN, 'test/b.test.ts').status).toBe('laadfout');
+  });
+
+  test.each([
+    ["error TS2305: Module '\"./mod.ts\"' has no exported member 'nieuw'.", 'laadfout'],
+    ["error TS2307: Cannot find module './nergens' or its corresponding type declarations.", 'laadfout'],
+    ["error TS2724: '\"./mod.ts\"' has no exported member named 'nieuw'. Did you mean 'oud'?", 'laadfout'],
+    ["error TS2322: Type 'string' is not assignable to type 'number'.", 'rood'],
+  ])('leerlus-bewijs/AC-3: typetest met %s op de basis: %s', (uitvoer, status) => {
+    expect(typeUitslag(2, `t.test-d.ts(1,10): ${uitvoer}`).status).toBe(status);
+  });
+
+  test('leerlus-bewijs/AC-3: typetest met een ontbrekende export op de basis is geen bewijs', () => {
+    const type = { pad: 'test/a.test-d.ts', soort: 'type' };
+    const basis = typeUitslag(
+      2,
+      "t.test-d.ts(1,10): error TS2305: Module '\"./mod.ts\"' has no exported member 'nieuw'.",
+    );
+    expect(runOordeel(type, { basis, head: typeUitslag(0, '') })).toMatch(/op laden, niet op een assertie/);
   });
 });

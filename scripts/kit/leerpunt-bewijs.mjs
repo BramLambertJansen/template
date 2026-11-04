@@ -114,14 +114,15 @@ export function typeConfig(pad) {
   return JSON.stringify({ extends: laag, compilerOptions: { incremental: false }, files: [pad], include: [] });
 }
 
-/** @param {string[]} args @param {string} map @returns {number | null} */
+/** @param {string[]} args @param {string} map @returns {{ status: number | null, uitvoer: string }} */
 function start(args, map) {
-  if (process.env['CI'] === 'true')
-    return spawnSync('pnpm', args, { cwd: map, stdio: 'inherit', env: zonderToken() }).status;
-  const r = inKooi(['pnpm', ...args].join(' '), { werkmap: map, timeout: 600_000 });
+  const r =
+    process.env['CI'] === 'true'
+      ? spawnSync('pnpm', args, { cwd: map, encoding: 'utf8', env: zonderToken(), maxBuffer: 64 * 1024 * 1024 })
+      : inKooi(['pnpm', ...args].join(' '), { werkmap: map, timeout: 600_000 });
   process.stdout.write(r.stdout);
   process.stderr.write(r.stderr);
-  return r.status;
+  return { status: r.status, uitvoer: `${r.stdout}\n${r.stderr}` };
 }
 
 /** @param {{ pad: string, soort: string }} run @param {string} map */
@@ -130,9 +131,10 @@ function draaiEen(run, map) {
   const verslag = path.join(map, VERSLAG);
   rmSync(verslag, { force: true });
   if (run.soort === 'type') writeFileSync(path.join(map, TYPE_CONFIG), typeConfig(run.pad));
-  const status = start(opdracht(run, VERSLAG), map);
-  if (run.soort === 'type') return typeUitslag(status);
-  return metExit(leesVitest(existsSync(verslag) ? JSON.parse(readFileSync(verslag, 'utf8')) : null), status);
+  const { status, uitvoer } = start(opdracht(run, VERSLAG), map);
+  if (run.soort === 'type') return typeUitslag(status, uitvoer);
+  const json = existsSync(verslag) ? JSON.parse(readFileSync(verslag, 'utf8')) : null;
+  return metExit(leesVitest(json, run.pad), status);
 }
 
 /** De omgeving zonder token of geheim voor de PR-code (AC-3). */

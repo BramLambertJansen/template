@@ -18,6 +18,7 @@ import {
 const ROOT = path.join(import.meta.dirname, '..', '..');
 export const LABEL_ONVOLLEDIG = 'leerpunt-onvolledig';
 export const LABEL_ZONDER_BEWIJS = 'leerpunt-zonder-bewijs';
+const BOT = 'github-actions[bot]';
 const MERK = { onvolledig: '<!-- leerpunt-check:onvolledig -->', bewijs: '<!-- leerpunt-check:zonder-bewijs -->' };
 
 /** @typedef {{ naam: string, actie: string, nummer: number, open: boolean, body: string, labels: string[] }} Gebeurtenis */
@@ -138,7 +139,10 @@ async function voerUit(repo, g, stap) {
     await api(`${issue}/labels/${encodeURIComponent(stap.label)}`, { method: 'DELETE' });
   if (stap.comment === null) return;
   const tekst = `${stap.merk}\n${stap.comment}`;
-  const bestaand = (await alleComments(issue)).find((c) => String(veld(c, 'body') ?? '').startsWith(stap.merk));
+  // Alleen een eigen comment: een ander kan het merk ook typen (dan zou de bot die comment overschrijven).
+  const bestaand = (await alleComments(issue)).find(
+    (c) => veld(veld(c, 'user'), 'login') === BOT && String(veld(c, 'body') ?? '').startsWith(stap.merk),
+  );
   if (bestaand === undefined) await api(`${issue}/comments`, { method: 'POST', body: { body: tekst } });
   else
     await api(`repos/${repo}/issues/comments/${String(veld(bestaand, 'id'))}`, {
