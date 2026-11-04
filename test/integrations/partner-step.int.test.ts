@@ -86,10 +86,10 @@ beforeAll(async () => {
   observer = await commitUser('admin');
 });
 afterAll(async () => {
-  // Auditregels zijn niet te wissen (audit_log_delete_expired_only); de koppeling gaat uit, gebruikers en rollen weg.
+  // Schakelaarrijen en auditregels blijven staan (geen DELETE-policy, audit_log_delete_expired_only); de unieke naam per
+  // run voorkomt botsingen, zoals in race.int.test.ts. De koppeling gaat uit, gebruikers en rollen gaan weg.
   await Promise.allSettled([
     migrator.query('select app.set_integration_enabled($1, false)', [ON]),
-    migrator.query('delete from app.integration_switches where name = any($1)', [[ON, OFF]]),
     ...created.toReversed().map((id) => authDb.query('delete from "user" where id = $1', [id])),
   ]);
   await Promise.all([pool.end(), migrator.end(), authDb.end()]);
