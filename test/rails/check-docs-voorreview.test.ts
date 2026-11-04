@@ -158,7 +158,12 @@ const ECHT = afgeleid(lees('.claude/gates.json'));
 test('de echte .claude/gates.json: voorReview is precies de lijst uit ADR 0046 punt 27', () => {
   const voorReview = ECHT.voorReview;
 
-  expect(Array.isArray(voorReview) ? voorReview.map(String).sort() : voorReview).toStrictEqual([...VOOR_REVIEW].sort());
+  // GEWIJZIGD (spec padtabel AC-10, ADR 0079, eigenaarakkoord 2026-11-04): de vloer geeft vier `.claude/`-paden een eigen
+  // rij; ze vielen al onder `.claude/**`, dus het niveau verandert niet, maar ze staan nu ook in de afgeleide lijst.
+  const VLOERRIJEN = ['.claude/hooks/**', '.claude/settings.json', '.claude/gates.json', '.claude/decisions.json'];
+  expect(Array.isArray(voorReview) ? voorReview.map(String).sort() : voorReview).toStrictEqual(
+    [...VOOR_REVIEW, ...VLOERRIJEN].sort(),
+  );
 });
 
 test.each([
