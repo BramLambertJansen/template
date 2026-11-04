@@ -47,7 +47,7 @@ select is(
   'app.integration_switches: RLS aan en geforceerd'
 );
 select results_eq(
-  $$select a.attname::text, pg_catalog.format_type(a.atttypid, a.atttypmod), a.attnotnull
+  $$select a.attname::text collate "default", pg_catalog.format_type(a.atttypid, a.atttypmod), a.attnotnull
     from pg_catalog.pg_attribute a
     where a.attrelid = to_regclass('app.integration_switches') and a.attnum > 0 and not a.attisdropped order by a.attnum$$,
   $$values ('name', 'text', true), ('enabled', 'boolean', true), ('updated_at', 'timestamp with time zone', true)$$,
@@ -68,19 +68,19 @@ select policies_are(
   'app.integration_switches heeft precies deze policies (geen delete)'
 );
 select results_eq(
-  $$select cmd, roles::text[], permissive, coalesce(qual, '-'), coalesce(with_check, '-') from pg_catalog.pg_policies
+  $$select cmd, roles::text[] collate "default", permissive, coalesce(qual, '-'), coalesce(with_check, '-') from pg_catalog.pg_policies
     where schemaname = 'app' and tablename = 'integration_switches' and policyname = 'integration_switches_definer_select'$$,
   $$values ('SELECT', array['app_definer'], 'PERMISSIVE', 'true', '-')$$,
   'integration_switches_definer_select: for select to app_definer using (true)'
 );
 select results_eq(
-  $$select cmd, roles::text[], permissive, coalesce(qual, '-'), coalesce(with_check, '-') from pg_catalog.pg_policies
+  $$select cmd, roles::text[] collate "default", permissive, coalesce(qual, '-'), coalesce(with_check, '-') from pg_catalog.pg_policies
     where schemaname = 'app' and tablename = 'integration_switches' and policyname = 'integration_switches_definer_insert'$$,
   $$values ('INSERT', array['app_definer'], 'PERMISSIVE', '-', 'true')$$,
   'integration_switches_definer_insert: for insert to app_definer with check (true)'
 );
 select results_eq(
-  $$select cmd, roles::text[], permissive, coalesce(qual, '-'), coalesce(with_check, '-') from pg_catalog.pg_policies
+  $$select cmd, roles::text[] collate "default", permissive, coalesce(qual, '-'), coalesce(with_check, '-') from pg_catalog.pg_policies
     where schemaname = 'app' and tablename = 'integration_switches' and policyname = 'integration_switches_definer_update'$$,
   $$values ('UPDATE', array['app_definer'], 'PERMISSIVE', 'true', 'true')$$,
   'integration_switches_definer_update: for update to app_definer using (true) with check (true)'

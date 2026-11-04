@@ -5,6 +5,7 @@ import { INTEGRATION_SWITCH_MAX_AGE_MS } from '../../shared/limits.ts';
 import { unsafeCast } from '../../shared/unsafe-cast.ts';
 import type { Tx, WithUser } from '../db/types.ts';
 import { AppError } from '../errors.ts';
+import { createOutboundClient } from '../outbound/create.ts';
 import { guardWithUser, OutboundForbiddenError, OutboundUsageError, type OutboundLogEntry } from '../outbound/index.ts';
 import { startFakePartner, type FakePartner } from '../outbound/testing.ts';
 import { readSwitch, registerIntegrations, type IntegrationClient, type SwitchReading } from './index.ts';
@@ -140,6 +141,30 @@ describe('koppelingsregister/AC-2: stand uit geeft UPSTREAM_UNAVAILABLE zonder a
       outcome: 'DISABLED',
       retry: false,
     });
+  });
+
+  // Randgeval: ook bij stand uit controleert call eerst het sjabloon, zodat een geheim in de query nooit in de log komt.
+  test('koppelingsregister/AC-2: stand uit met een ongeldig sjabloon (/items?token=geheim): dezelfde gebruiksfout als de gewone client, geen logregel', async () => {
+    const reading = await readingOf('partner');
+    expect(reading.enabled).toBe(false);
+    const invalid = { requestId: 'r-1', method: 'GET', path: '/items?token=geheim', schema: item } as const;
+    const plain = createOutboundClient({
+      name: 'partner',
+      baseUrl: partner.url,
+      hosts: ['127.0.0.1'],
+      appEnv: 'test',
+      log: () => undefined,
+    });
+    const expected = await failure(plain.call(invalid));
+    expect(expected).toBeInstanceOf(OutboundUsageError);
+
+    const error = await failure(client.call(reading, invalid));
+
+    expect(error).toBeInstanceOf(OutboundUsageError);
+    expect(error).toMatchObject({ message: expected instanceof Error ? expected.message : '' });
+    expect(partner.requests).toHaveLength(0);
+    expect(lines).toHaveLength(0);
+    expect(JSON.stringify(lines)).not.toContain('token');
   });
 
   test('koppelingsregister/AC-2: stand aan: de gewone client doet de aanroep', async () => {
