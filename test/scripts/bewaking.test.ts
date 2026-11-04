@@ -169,11 +169,33 @@ describe('bewakingMeldingIn (AC-2, AC-3)', () => {
     ).not.toContain('projecthooks');
   });
 
-  test('zonder METING_DIR: de git common dir van de root, zoals de meethook', () => {
+  test('zonder METING_DIR en buiten een repo: geen opslagmap', () => {
     const regel =
       bewakingMeldingIn(tijdelijk(), { CLAUDECODE: '1', CLAUDE_CODE_SESSION_ID: 'x', METING_DIR: undefined }, NU) ?? '';
 
     expect(regel).toContain('(geen opslagmap)');
+  });
+
+  test('zonder METING_DIR in een repo: <git common dir>/agent-meting, zoals de meethook', () => {
+    const root = path.join(tijdelijk(), 'repo');
+    mkdirSync(root);
+    spawnSync('git', ['init', '-q'], { cwd: root });
+    const env = { CLAUDECODE: '1', CLAUDE_CODE_SESSION_ID: 'sessie-1', METING_DIR: undefined };
+
+    expect(bewakingMeldingIn(root, env, NU)).toContain(
+      `geen recente meting in ${path.join(root, '.git', 'agent-meting')})`,
+    );
+    meting(path.join(root, '.git', 'agent-meting'), 'sessie-1.jsonl', 0);
+    expect(bewakingMeldingIn(root, env, NU) ?? '').not.toContain('projecthooks');
+  });
+
+  test('access op de ouder faalt: geen sandboxdeel', () => {
+    const map = tijdelijk();
+    const env = { CLAUDECODE: '1', CLAUDE_CODE_SESSION_ID: 'sessie-1', METING_DIR: map };
+
+    const regel = bewakingMeldingIn(path.join(map, 'bestaat-niet', 'repo'), env, NU) ?? '';
+    expect(regel).toContain('projecthooks');
+    expect(regel).not.toContain('Bash-sandbox');
   });
 });
 
@@ -214,6 +236,32 @@ describe('feiten.mjs (AC-4)', () => {
 
     expect(bron.indexOf("import('./bewaking.mjs')")).toBeGreaterThan(-1);
     expect(bron.indexOf("import('./bewaking.mjs')")).toBeLessThan(bron.indexOf('toolchainProbleemIn(fileURLToPath'));
+  });
+});
+
+describe('feiten.mjs fouttak (AC-4)', () => {
+  test('bewaking.mjs ontbreekt: waarschuwing op stderr, feiten draait door', () => {
+    const root = tijdelijk();
+    const kit = path.join(root, 'scripts/kit');
+    mkdirSync(kit, { recursive: true });
+    for (const naam of ['feiten.mjs', 'toolchain.mjs'])
+      writeFileSync(path.join(kit, naam), readFileSync(path.join(REPO, 'scripts/kit', naam)));
+    writeFileSync(path.join(root, 'mise.toml'), readFileSync(path.join(REPO, 'mise.toml')));
+
+    const metCc = spawnSync('node', ['scripts/kit/feiten.mjs', 'specs'], {
+      cwd: root,
+      encoding: 'utf8',
+      env: { ...process.env, CLAUDECODE: '1' },
+    });
+    const zonderCc = spawnSync('node', ['scripts/kit/feiten.mjs', 'specs'], {
+      cwd: root,
+      encoding: 'utf8',
+      env: { ...process.env, CLAUDECODE: undefined },
+    });
+
+    expect(metCc.stderr).toMatch(/^⚠ bewaking niet te controleren: /m);
+    expect(metCc.stderr).toContain('✗ toolchain ontbreekt');
+    expect(zonderCc.stderr).not.toContain('bewaking');
   });
 });
 
