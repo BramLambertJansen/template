@@ -1,11 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'drizzle-orm';
-import pg from 'pg';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { z } from 'zod';
-import type { AuthGateway } from '../../src/core/api/auth/auth.ts';
+import { authGateway, inviteUser, type AuthGateway } from '../../src/core/api/auth/index.ts';
 import { createAuditFn } from '../../src/core/api/db/audit.ts';
-import { createPool, createWithUser } from '../../src/core/api/db/testing.ts';
 import type { Tx, WithUser } from '../../src/core/api/db/types.ts';
 import { AppError } from '../../src/core/api/errors.ts';
 import { createApp } from '../../src/core/api/http/create-app.ts';
@@ -22,19 +20,20 @@ import { definePermissions, type Role, type SessionStrength } from '../../src/co
 import { createContracts } from '../../src/core/shared/contract.ts';
 import { UserId } from '../../src/core/shared/ids.ts';
 import { RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_SECONDS, type RateLimits } from '../../src/core/shared/limits.ts';
-import { required } from '../auth/harness.ts';
+import { createAccountTestApp, PASSWORD } from '../api/account-harness.ts';
+import { APP_ORIGIN, Browser, latestMailTo, required, tokenFrom, uniqueEmail } from '../auth/harness.ts';
 
 // Spec partnerstap (AC-1 t/m AC-4, AC-6 t/m AC-12, AC-14): een route met partnerstap (definePartnerRoute) door de echte
-// createApp, de echte withUser op een eigen pool (createWithUser uit testing.ts, niet beginTestDb: die houdt zelf een
-// verbinding vast en negeert readOnly) en de echte database (`pnpm test:db`). Alleen de partner is nagebootst (R-UIT-07);
-// "0 aanroepen" = de teller van de nep-partner blijft 0. Gebruikers, rollen en de stand van de koppeling worden gecommit;
-// elke run een eigen koppelingsnaam. De AuthGateway van de test leest bij elke getSession de rij in "user" en geeft null
-// bij deactivated_at of blocked_at, zoals de echte gateway (die vertaling bewijst test/api/account-lifecycle.int.test.ts).
+// createApp, echte sessies (Better Auth via de productie-authGateway, een cookie per browser, MFA via TOTP), de echte
+// withUser op een eigen pool (createWithUser via createTestApp, niet beginTestDb: die houdt zelf een verbinding vast en
+// negeert readOnly) en de echte database (`pnpm test:db`). Alleen de partner is nagebootst (R-UIT-07); "0 aanroepen" =
+// de teller van de nep-partner blijft 0. De tellers van AC-12 zijn spionnen die doorgeven aan de echte gateway en withUser.
+// Gebruikers, rollen en de stand van de koppeling worden gecommit; elke run een eigen koppelingsnaam.
 
-const pool = createPool(required('DATABASE_URL'));
-const realWithUser = createWithUser(pool);
-const migrator = new pg.Pool({ connectionString: required('MIGRATOR_DATABASE_URL'), max: 2 });
-const authDb = new pg.Pool({ connectionString: required('AUTH_DATABASE_URL'), max: 2 });
+const setup = createAccountTestApp();
+const { pool, migrator, authDb } = setup;
+const realWithUser = setup.withUser;
+const realGateway = authGateway(setup.auth);
 
 const ON = `partner-${randomUUID().slice(0, 8)}`;
 const OFF = `${ON}-uit`;
@@ -51,39 +50,38 @@ const integrations = registerIntegrations([
   { name: OFF, hosts: ['127.0.0.1'], traits: TRAITS },
 ]);
 
-interface CommittedUser {
+// Een echte gebruiker met een echte sessie (cookie in de browser): uitgenodigd, wachtwoord ingesteld, ingelogd.
+interface SignedIn {
   readonly id: UserId;
-  readonly name: string;
-  readonly email: string;
+  readonly browser: Browser;
 }
 const created: UserId[] = [];
 
-// Een gebruiker met een credential-account (telt mee voor de laatste-admin-regel en kan gedeactiveerd of geblokkeerd
-// worden), gecommit; de rol via app.assign_role als app_migrator zonder actor.
-async function commitUser(role: Role | null): Promise<CommittedUser> {
-  const id = UserId.parse(`partnerstap-${randomUUID()}`);
-  const user = { id, name: 'Partnerstap Test', email: `${id}@partnerstap.test` };
-  await authDb.query('insert into "user" (id, name, email, "emailVerified") values ($1, $2, $3, true)', [
-    id,
-    user.name,
-    user.email,
-  ]);
-  created.push(id);
-  await authDb.query(
-    `insert into account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt")
-     values ($1, $2, 'credential', $2, 'hash', now(), now())`,
-    [`${id}-credential`, id],
-  );
-  if (role !== null) await migrator.query('select app.assign_role($1, $2)', [id, role]);
-  return user;
+// Zonder rol: zoals setup.account, maar zonder app.assign_role.
+async function withoutRole(): Promise<{ userId: string; browser: Browser }> {
+  const email = uniqueEmail('partnerstap-geen-rol');
+  const { userId } = await inviteUser(setup.auth, { name: 'Partnerstap Zonder Rol', email });
+  const token = tokenFrom((await latestMailTo(email)).text);
+  await new Browser(setup.app).post('/api/auth/reset-password', { token, newPassword: PASSWORD });
+  return { userId, browser: await setup.signIn(email) };
 }
 
-// Een tweede admin met MFA: leest de auditregels en deactiveert of blokkeert (vorm account-lifecycle).
-let observer: CommittedUser;
+// Een sessie van deze sterkte; 'mfa' schrijft TOTP in en bevestigt hem, zodat de sessie een MFA-sessie wordt.
+async function signedIn(role: Role | null, strength: SessionStrength): Promise<SignedIn> {
+  const { userId, browser } = role === null ? await withoutRole() : await setup.account(role, 'Partnerstap Test');
+  const id = UserId.parse(userId);
+  created.push(id);
+  if (strength === 'mfa') await setup.enableTotp(browser);
+  return { id, browser };
+}
+
+// Een tweede admin: leest de auditregels en deactiveert of blokkeert, via withUser met een MFA-actor (vorm
+// account-lifecycle).
+let observer: SignedIn;
 beforeAll(async () => {
   await migrator.query('select app.set_integration_enabled($1, true)', [ON]);
   await migrator.query('select app.set_integration_enabled($1, false)', [OFF]);
-  observer = await commitUser('admin');
+  observer = await signedIn('admin', 'password');
 });
 afterAll(async () => {
   // Schakelaarrijen en auditregels blijven staan (geen DELETE-policy, audit_log_delete_expired_only); de unieke naam per
@@ -92,7 +90,7 @@ afterAll(async () => {
     migrator.query('select app.set_integration_enabled($1, false)', [ON]),
     ...created.toReversed().map((id) => authDb.query('delete from "user" where id = $1', [id])),
   ]);
-  await Promise.all([pool.end(), migrator.end(), authDb.end()]);
+  await setup.close();
 });
 
 // Wat de routes van deze test doen en achterlaten; elke test zet het opnieuw.
@@ -248,54 +246,42 @@ const plainRoute = defineRoute(contractFor('/partnerstap/gewoon'), () => {
 });
 const routes = [onRoute, offRoute, handlerCallsRoute, plainRoute];
 
-// Zoals de echte gateway: elke getSession leest de rij; gedeactiveerd of geblokkeerd geeft geen sessie.
-function gatewayFor(user: CommittedUser, sessionStrength: SessionStrength): AuthGateway {
-  return {
-    handler: () => Promise.resolve(new Response(null, { status: 404 })),
-    getSession: async () => {
-      state.sessionCalls += 1;
-      const { rows } = await authDb.query<{ deactivated_at: Date | null; blocked_at: Date | null }>(
-        'select deactivated_at, blocked_at from "user" where id = $1',
-        [user.id],
-      );
-      const row = rows[0];
-      if (row === undefined || row.deactivated_at !== null || row.blocked_at !== null) {
-        return { session: null, setCookie: [] };
-      }
-      const { id, name, email } = user;
-      return { session: { userId: id, sessionId: `sessie-${id}`, sessionStrength, name, email }, setCookie: [] };
-    },
-  };
-}
-
-// Een spion om withUser (AC-12): telt elke aanroep en geeft door aan de echte withUser.
+// Spionnen (AC-12): tellen elke aanroep en geven door aan de echte gateway en de echte withUser.
+const countedGateway: AuthGateway = {
+  handler: realGateway.handler,
+  getSession: async (headers) => {
+    state.sessionCalls += 1;
+    return realGateway.getSession(headers);
+  },
+};
 const countedWithUser: WithUser = async (actor, work, options) => {
   state.withUserCalls += 1;
   return realWithUser(actor, work, options);
 };
 
 interface Send {
-  readonly user: CommittedUser;
-  readonly strength?: SessionStrength;
+  readonly user: SignedIn;
   readonly body?: unknown;
 }
-function send(path: string, { user, strength = 'mfa', body = {} }: Send): Promise<Response> {
+// Een POST met de cookies, het IP en de CSRF-headers van de browser van de gebruiker, zoals de SPA (Browser.send).
+function send(path: string, { user, body = {} }: Send): Promise<Response> {
   const app = createApp<Services>({
-    appOrigin: 'http://localhost:5173',
-    auth: gatewayFor(user, strength),
+    appOrigin: APP_ORIGIN,
+    auth: countedGateway,
     withUser: countedWithUser,
     routes,
     integrations,
     services,
     rateLimits: state.rateLimits,
   });
-  return app.fetch(
-    new Request(`http://localhost/api${path}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin' },
-      body: JSON.stringify(body),
-    }),
-  );
+  const headers = new Headers({
+    'content-type': 'application/json',
+    'sec-fetch-site': 'same-origin',
+    origin: APP_ORIGIN,
+  });
+  headers.set(required('CLIENT_IP_HEADER'), user.browser.ip);
+  headers.set('cookie', [...user.browser.cookies].map(([name, value]) => `${name}=${value}`).join('; '));
+  return app.fetch(new Request(`${APP_ORIGIN}/api${path}`, { method: 'POST', headers, body: JSON.stringify(body) }));
 }
 
 const errorBody = (response: Response, code: string) => ({ code, requestId: response.headers.get('x-request-id') });
@@ -332,9 +318,9 @@ describe('partnerstap: rol, permissie en MFA vóór de aanroep', () => {
   ] as const)(
     'partnerstap/AC-1: %s krijgt 403 FORBIDDEN, 0 aanroepen; load en handler draaien niet',
     async (_, role) => {
-      const user = await commitUser(role);
+      const user = await signedIn(role, 'password');
 
-      const response = await send('/partnerstap/aan', { user, strength: 'password' });
+      const response = await send('/partnerstap/aan', { user });
 
       expect(await outcome(response)).toStrictEqual([403, errorBody(response, 'FORBIDDEN')]);
       expect([calls(), state.loads, state.handlers]).toStrictEqual([0, 0, 0]);
@@ -342,13 +328,14 @@ describe('partnerstap: rol, permissie en MFA vóór de aanroep', () => {
   );
 
   test('partnerstap/AC-2: een admin zonder MFA krijgt 403 MFA_REQUIRED en 0 aanroepen; met MFA 200 na precies 1 aanroep', async () => {
-    const admin = await commitUser('admin');
+    const admin = await signedIn('admin', 'password');
 
-    const withoutMfa = await send('/partnerstap/aan', { user: admin, strength: 'password' });
+    const withoutMfa = await send('/partnerstap/aan', { user: admin });
     expect(await outcome(withoutMfa)).toStrictEqual([403, errorBody(withoutMfa, 'MFA_REQUIRED')]);
     expect(calls()).toBe(0);
 
-    const withMfa = await send('/partnerstap/aan', { user: admin, strength: 'mfa' });
+    await setup.enableTotp(admin.browser);
+    const withMfa = await send('/partnerstap/aan', { user: admin });
     expect(await outcome(withMfa)).toStrictEqual([200, { id: 'p-1' }]);
     expect(calls()).toBe(1);
   });
@@ -358,9 +345,9 @@ describe('partnerstap/AC-3: samen optredende situaties, elk met 0 aanroepen', ()
   test('partnerstap/AC-3: geen permissie + koppeling uit + partner zou time-outen: FORBIDDEN', async () => {
     await replacePartner({ status: 200, json: { id: 'p-1' }, delayMs: 2000 });
     state.timeoutMs = 300;
-    const user = await commitUser('user');
+    const user = await signedIn('user', 'password');
 
-    const response = await send('/partnerstap/uit', { user, strength: 'password' });
+    const response = await send('/partnerstap/uit', { user });
 
     expect(await outcome(response)).toStrictEqual([403, errorBody(response, 'FORBIDDEN')]);
     expect(calls()).toBe(0);
@@ -368,18 +355,18 @@ describe('partnerstap/AC-3: samen optredende situaties, elk met 0 aanroepen', ()
 
   test('partnerstap/AC-3: admin zonder MFA + partner geeft 503: MFA_REQUIRED', async () => {
     await replacePartner({ status: 503 });
-    const admin = await commitUser('admin');
+    const admin = await signedIn('admin', 'password');
 
-    const response = await send('/partnerstap/aan', { user: admin, strength: 'password' });
+    const response = await send('/partnerstap/aan', { user: admin });
 
     expect(await outcome(response)).toStrictEqual([403, errorBody(response, 'MFA_REQUIRED')]);
     expect(calls()).toBe(0);
   });
 
   test('partnerstap/AC-3: ongeldige input + geen permissie: VALIDATION', async () => {
-    const user = await commitUser('user');
+    const user = await signedIn('user', 'password');
 
-    const response = await send('/partnerstap/aan', { user, strength: 'password', body: { onbekend: 1 } });
+    const response = await send('/partnerstap/aan', { user, body: { onbekend: 1 } });
 
     expect(await outcome(response)).toStrictEqual([400, errorBody(response, 'VALIDATION')]);
     expect(calls()).toBe(0);
@@ -387,7 +374,7 @@ describe('partnerstap/AC-3: samen optredende situaties, elk met 0 aanroepen', ()
 
   test('partnerstap/AC-3: load geeft NOT_FOUND + koppeling uit: NOT_FOUND', async () => {
     state.loadMode = 'not-found';
-    const admin = await commitUser('admin');
+    const admin = await signedIn('admin', 'mfa');
 
     const response = await send('/partnerstap/uit', { user: admin });
 
@@ -397,7 +384,7 @@ describe('partnerstap/AC-3: samen optredende situaties, elk met 0 aanroepen', ()
 
   test('partnerstap/AC-3: rate limit op + alles verder geldig: RATE_LIMITED', async () => {
     state.rateLimits = { ...RATE_LIMIT_MAX, duur: 1 };
-    const admin = await commitUser('admin');
+    const admin = await signedIn('admin', 'mfa');
     // De enige plek van duur in dit venster vooraf verbruiken, met dezelfde sleutel als de route (bucket + actor).
     await realWithUser({ userId: admin.id, sessionStrength: 'mfa' }, () => Promise.resolve(null), {
       rateLimit: { bucket: 'duur', windowSeconds: RATE_LIMIT_WINDOW_SECONDS, max: 1 },
@@ -414,7 +401,7 @@ describe('partnerstap: de aanroep buiten elke transactie', () => {
   test('partnerstap/AC-4: tijdens de aanroep houdt de app geen verbinding vast; time-out geeft 504 en de handler draait niet', async () => {
     await replacePartner({ status: 200, json: { id: 'p-1' }, delayMs: 2000 });
     state.timeoutMs = 300;
-    const admin = await commitUser('admin');
+    const admin = await signedIn('admin', 'mfa');
 
     const pending = send('/partnerstap/aan', { user: admin });
     await untilPartnerReceived();
@@ -428,7 +415,7 @@ describe('partnerstap: de aanroep buiten elke transactie', () => {
   }, 15_000);
 
   test('partnerstap/AC-6: koppeling uit: 503 met precies { code, requestId }, 0 aanroepen, één logregel DISABLED, geen handler', async () => {
-    const admin = await commitUser('admin');
+    const admin = await signedIn('admin', 'mfa');
 
     const response = await send('/partnerstap/uit', { user: admin });
 
@@ -441,7 +428,7 @@ describe('partnerstap: de aanroep buiten elke transactie', () => {
 
   test('partnerstap/AC-7: met rateLimits.duur 2 slagen twee verzoeken (één telling per verzoek), het derde 429 met Retry-After', async () => {
     state.rateLimits = { ...RATE_LIMIT_MAX, duur: 2 };
-    const admin = await commitUser('admin');
+    const admin = await signedIn('admin', 'mfa');
 
     const first = await send('/partnerstap/aan', { user: admin });
     const second = await send('/partnerstap/aan', { user: admin });
@@ -456,7 +443,7 @@ describe('partnerstap: de aanroep buiten elke transactie', () => {
 
 describe('partnerstap/AC-8: load, call en handler samen', () => {
   test('partnerstap/AC-8: load leest de eigen rol, de partner ziet hem in het pad, requestId klopt en de auditregel bestaat', async () => {
-    const admin = await commitUser('admin');
+    const admin = await signedIn('admin', 'mfa');
 
     const response = await send('/partnerstap/aan', { user: admin });
     const requestId = response.headers.get('x-request-id');
@@ -468,7 +455,7 @@ describe('partnerstap/AC-8: load, call en handler samen', () => {
   });
 
   test('partnerstap/AC-8: roept de handler zelf de client aan, dan 500 INTERNAL_ERROR, geen auditregel en de partner telt 1', async () => {
-    const admin = await commitUser('admin');
+    const admin = await signedIn('admin', 'mfa');
 
     const response = await send('/partnerstap/handler-roept-aan', { user: admin });
 
@@ -489,7 +476,7 @@ describe('partnerstap/AC-9: een partnerfout gaat ongewijzigd naar buiten', () =>
     'partnerstap/AC-9: %s geeft precies { code, requestId }, zonder partnertekst, en de handler draait niet',
     async (_, { answer, status, code }) => {
       await replacePartner(answer);
-      const admin = await commitUser('admin');
+      const admin = await signedIn('admin', 'mfa');
 
       const response = await send('/partnerstap/aan', { user: admin });
       const text = await response.text();
@@ -503,7 +490,7 @@ describe('partnerstap/AC-9: een partnerfout gaat ongewijzigd naar buiten', () =>
 
   test('partnerstap/AC-9: gooit call een gewone Error, dan 500 INTERNAL_ERROR', async () => {
     state.callMode = 'error';
-    const admin = await commitUser('admin');
+    const admin = await signedIn('admin', 'mfa');
 
     const response = await send('/partnerstap/aan', { user: admin });
 
@@ -514,7 +501,7 @@ describe('partnerstap/AC-9: een partnerfout gaat ongewijzigd naar buiten', () =>
 
 test('partnerstap/AC-10: een load die een auditregel schrijft geeft 500 INTERNAL_ERROR, geen regel en 0 aanroepen (read-only)', async () => {
   state.loadMode = 'audit';
-  const admin = await commitUser('admin');
+  const admin = await signedIn('admin', 'mfa');
 
   const response = await send('/partnerstap/aan', { user: admin });
 
@@ -526,7 +513,7 @@ test('partnerstap/AC-10: een load die een auditregel schrijft geeft 500 INTERNAL
 describe('partnerstap: na de aanroep opnieuw sessie, rol en permissie', () => {
   test('partnerstap/AC-11: rol ingetrokken tijdens de aanroep: 403 FORBIDDEN uit de tweede transactie, geen handler, partner telt 1', async () => {
     await replacePartner({ status: 200, json: { id: 'p-1' }, delayMs: 1500 });
-    const admin = await commitUser('admin');
+    const admin = await signedIn('admin', 'mfa');
 
     const pending = send('/partnerstap/aan', { user: admin });
     await untilPartnerReceived();
@@ -544,7 +531,7 @@ describe('partnerstap: na de aanroep opnieuw sessie, rol en permissie', () => {
     'partnerstap/AC-14: account %s tijdens de aanroep: 401 UNAUTHENTICATED, geen handler, geen auditregel, partner telt 1',
     async (_, operation) => {
       await replacePartner({ status: 200, json: { id: 'p-1' }, delayMs: 1500 });
-      const admin = await commitUser('admin');
+      const admin = await signedIn('admin', 'mfa');
 
       const pending = send('/partnerstap/aan', { user: admin });
       await untilPartnerReceived();
@@ -563,7 +550,7 @@ describe('partnerstap: na de aanroep opnieuw sessie, rol en permissie', () => {
 });
 
 test('partnerstap/AC-12: met partnerstap 2 keer withUser en 2 keer getSession, zonder stap 1 en 1', async () => {
-  const admin = await commitUser('admin');
+  const admin = await signedIn('admin', 'mfa');
 
   const withStep = await send('/partnerstap/aan', { user: admin });
   const stepCounts = [state.withUserCalls, state.sessionCalls];
