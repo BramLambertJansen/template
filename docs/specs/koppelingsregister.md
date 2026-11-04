@@ -132,7 +132,7 @@ Tegen de nep-partner; "geen aanroep" = teller 0.
   R-LAAG-06 in `docs/framework.md` en `AGENTS.md` (export `readIntegrationSwitch`); R-DB-16 (`core.integration.*`).
 - Docs die anders onwaar worden (R-WERK-15): `docs/specs/uitgaande-client.md` ("per koppeling één client" via het register;
   `attempt` 0 bij `DISABLED`), `docs/specs/geheimen-in-env.md` (voorbeeld met `createOutboundClient`),
-  `docs/specs/netwerk-en-geheim-rails.md` AC-14 (melding), `docs/roadmap.md` ST-15 "Gebouwd:".
+  `docs/specs/netwerk-en-geheim-rails.md` (melding in criterium 14), `docs/roadmap.md` ST-15 "Gebouwd:".
 
 ## Buiten scope
 
