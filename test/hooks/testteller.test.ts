@@ -429,8 +429,25 @@ describe('testteller: voorwaardelijk geregistreerde tests', () => {
     { naam: 'parameterannotatie', na: lines('function f(a: number, test: string) { return a; }', BASIS) },
     { naam: 'typeof', na: lines('type T = typeof test;', BASIS) },
     { naam: 'standaardwaarde', na: lines('function f(test = 1) { return 1; }', BASIS) },
+    { naam: 'let', na: lines('let test;', BASIS) },
+    { naam: 'var', na: lines('var it;', BASIS) },
+    { naam: 'function', na: lines('function suite() { return 1; }', BASIS) },
+    { naam: 'export-lijst', na: lines('export { test };', BASIS) },
+    { naam: 'standaardimport', na: lines("import test from 'x';", BASIS) },
+    { naam: 'as', na: lines("import * as it from 'x';", BASIS) },
+    { naam: 'of', na: lines('for (const x of test) gebruik(x);', BASIS) },
+    { naam: 'in', na: lines('for (const k in describe) gebruik(k);', BASIS) },
+    { naam: 'parameterannotatie na (', na: lines('function f(test: string) { return 1; }', BASIS) },
   ])('$naam → null', ({ na }) => {
     expect(testChangeRisk(BASIS, na, FILE)).toBeNull();
+  });
+
+  test('== telt wel als waarde (AC-2)', () => {
+    expect(testChangeRisk(BASIS, lines('const gelijk = test == f;', BASIS), FILE)).toBe('skip');
+  });
+
+  test('if zonder accolades met await (AC-1a)', () => {
+    expect(testChangeRisk(BASIS, suite(`if (x) await ${LOS_A}`, LOS_B), FILE)).toBe('skip');
   });
 
   test('alleen een stijging telt: een bestaand voorwaardelijk geval blijft staan (OV-1)', () => {
