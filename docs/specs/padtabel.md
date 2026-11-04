@@ -20,13 +20,15 @@ Raakt rolhek, lane en agent-merge (kritiek), daarom eerst deze besluit-PR.
 |---|---|---|
 | elke rol | leest het niveau met `feiten.mjs pad <pad>` | — |
 | hoofdsessie / developer | schrijft volgens het afgeleide niveau | `gates.json` wijzigen zonder besluit-PR |
+| architect, tester, reviewer, docs | schrijven binnen `schrijfrecht`, getoetst tegen de afgeleide gates | een gate-pad schrijven |
 | eigenaar | merget de bouw-PR, beslist over de terugval | — |
 
 ## Datawijzigingen (met grants)
 
 n.v.t.: geen migratie, tabel of policy. Wel een configvorm:
 `"paden": { "<glob>": { "schrijven"?: "gate"|"voorReview"|"altijdVragen", "besluit"?: "agent"|"eigenaar"|"besluit-pr" } }`.
-Vervalt: `gates`, `voorReview`, `altijdVragen`, `agentMerge.toegestaan` en `.kritiek`; de rest blijft.
+Vervalt: `gates`, `voorReview`, `altijdVragen`, `agentMerge.toegestaan` en `agentMerge.kritiek` (de "oude lijsten"); de rest
+blijft, ook `merge`, `jsonGates` en `agentMerge.codex`/`maxRegels`/`maxBytes`.
 
 ## Routes en foutcodes
 
@@ -44,85 +46,111 @@ n.v.t.: geen API-route, permissie of foutcode.
 
 ## Hergebruik en UX
 
-- Hergebruikt: `globMatch` uit `rails/hooks/lib/rolhek.mjs`, `padReden` en `kritiekPad` (signatuur ongewijzigd),
-  `voorbeeldPad` uit `check-docs.mjs`.
+- Hergebruikt: `globMatch` (`rails/hooks/lib/rolhek.mjs`), `padReden` en `kritiekPad` (signatuur en meldingen ongewijzigd,
+  ook "staat niet op agentMerge.toegestaan" en "staat op agentMerge.kritiek"), `voorbeeldPad` en `globsOverlap` (`check-docs.mjs`).
 - Bestaande componenten, staten per scherm, focusvolgorde: n.v.t., geen UI.
 - Alle zichtbare tekst letterlijk:
-  - `feiten.mjs pad <pad>`: `<pad>: schrijven <niveau> (<globs>), besluit <niveau> (<globs>)`; zonder passende glob
-    `(geen rij)`; vrij heet `vrij`.
+  - `feiten.mjs pad <pad>`: `<pad>: schrijven <niveau> (<bronnen>), besluit <niveau> (<bronnen>)`. Bronnen zijn de globs die
+    de winnende waarde leveren, met komma's; komt de waarde uit de standaard, dan `standaard`. Vrij heet `vrij`.
   - zonder argument: `Gebruik: node scripts/kit/feiten.mjs pad <pad>` en exit 1.
   - check-docs, telkens na `.claude/gates.json: paden.<glob>: `: `altijdVragen vraagt besluit besluit-pr`,
-    `schrijven <niveau> met besluit agent`, `onbekende <sleutel of waarde> <x>`, `rij zonder kolom`; en
-    `.claude/gates.json: paden naast gates, voorReview of altijdVragen`.
+    `schrijven <niveau> met besluit agent`, `onbekende <sleutel of waarde> <x>`, `rij zonder kolom`, `dubbele sleutel`,
+    `een glob begint niet met !`, `vloer: verwacht altijdVragen en besluit-pr`; verder `.claude/gates.json: paden naast de
+    oude lijsten` en `.claude/gates.json: oude vorm zonder paden; zet de lijsten om naar paden (ADR 0078)`.
 
 ### Werking (bindend)
 
 1. **Lezer.** `rails/hooks/lib/padtabel.mjs` exporteert `padNiveau(pad, ruw)` → `{ schrijven, besluit, bronnen }` en
    `afgeleid(ruw)` → `{ gates, voorReview, altijdVragen, kritiek, agentMerge: { toegestaan, kritiek } }`. Orde:
    vrij < gate < voorReview < altijdVragen; agent < eigenaar < besluit-pr. Elke passende rij telt mee met haar waarde of de
-   standaard (vrij, eigenaar). Afgeleid: `gates` = schrijven ≥ gate zonder `jsonGates`-bestanden; `kritiek` = besluit-pr;
-   `agentMerge.toegestaan` = besluit agent; `agentMerge.kritiek` = elke andere rij.
-2. **Oude vorm.** Zonder `paden` levert `afgeleid` de lijsten zoals ze staan, met `kritiek` = de bevroren lijst `OUDE_KRITIEK`
-   (de `KRITIEK` van `lane.mjs` op 30cc352) plus `altijdVragen ?? voorReview ?? gates`. `paden` naast een van de oude lijsten:
-   fout (de lezer gooit, de aanroeper faalt dicht zoals nu).
-3. **Aanroepers.** `loadConfig`, diff-guard `leesConfig` en `leesMergeConfig` roepen `afgeleid` aan en geven dezelfde vorm
-   terug als nu, plus `kritiek`. `kritiekPad(pad, config)` gebruikt `config.kritiek`, en zonder dat veld de oude regel.
-4. **Onleesbare rij.** Een rij die geen object is of een onbekende waarde heeft, telt bij lezen als
-   `{ schrijven: altijdVragen, besluit: besluit-pr }`; `paden` zelf geen object: de lezer gooit.
-5. **decisions.json.** `readRegistry` accepteert `{ version, requiredChecks }` en `{ version, requiredChecks, decisions }`,
-   en geeft `decisions: []` als de sleutel ontbreekt. Elke andere sleutel blijft een fout.
+   standaard (vrij, eigenaar).
+2. **Afleiding, defensief.** `gates` = rijen met schrijven ≥ gate, behalve een sleutel die letterlijk gelijk is aan een
+   bestand in `jsonGates`; `voorReview` = schrijven ≥ voorReview; `altijdVragen` = schrijven altijdVragen;
+   `kritiek` = besluit-pr ∪ schrijven altijdVragen; `agentMerge.toegestaan` = rijen met besluit `agent` én schrijven vrij;
+   `agentMerge.kritiek` = elke andere rij. Zo is een pad alleen agent-mergebaar als elke passende rij `agent` en vrij is.
+3. **Geen terugval in de nieuwe vorm.** De afgeleide lijsten zijn er altijd; een lege lijst is `[]` en betekent leeg, zoals
+   `[]` nu. De terugvallen bij een ontbrekende lijst (`voorReview ?? gates`, `altijdVragen ?? voorReview ?? gates`) gelden alleen
+   voor de oude vorm. De vloer in check-docs (stap 6) voorkomt een stil lege bewaking.
+4. **Oude vorm.** Zonder `paden` geeft `afgeleid` de oude lijsten door zoals ze staan (ontbrekend blijft ontbrekend), met
+   `kritiek` = de bevroren lijst `OUDE_KRITIEK` (de `KRITIEK` van `lane.mjs` op 30cc352) plus `altijdVragen ?? voorReview ?? gates`.
+   `paden` naast een van de oude lijsten: de lezer gooit, de aanroeper faalt dicht.
+5. **Onleesbare rij.** Een rij die geen object is, een onbekende kolom of een onbekende waarde heeft, telt bij lezen als
+   `{ schrijven: altijdVragen, besluit: besluit-pr }`. Een lege rij `{}` is leesbaar en telt als vrij/eigenaar. `paden` geen
+   object: de lezer gooit.
+6. **check-docs.** Elke lezer van ruwe lijsten in `check-docs` gaat via `afgeleid`: `gatesViolations` (CODEOWNERS = afgeleide
+   gates plus `jsonGates`-bestanden), `askViolations` (Edit-`ask` = afgeleide `altijdVragen`), `schrijfrechtViolations`
+   (overlap van rolglobs met de afgeleide gates), `agentMergeVorm` en `agentMergeViolations` (blijft als gedragscheck per pad:
+   geen pad met schrijven ≠ vrij is agent-mergebaar). Nieuw: de samenhangregels, dubbele sleutels in de ruwe tekst
+   (`JSON.parse` houdt stil de laatste), sleutels die met `!` beginnen, `{}`, en de vloer: `.github/**`, `.claude/hooks/**`,
+   `.claude/settings.json`, `.claude/gates.json`, `.claude/decisions.json`, `package.json` en `pnpm-lock.yaml` hebben elk een
+   eigen rij met `altijdVragen` en `besluit-pr`. De oude vorm is rood (migratiemelding); de overige regels draaien dan op
+   `afgeleid` van de oude vorm. Vervallen: `voorReview` ⊆ gates en `altijdVragen` ⊆ `voorReview`.
+7. **Aanroepers.** `loadConfig`, diff-guard `leesConfig`, `leesMergeConfig`, `leesAgentMerge` en `agentMergeFouten` (ook direct
+   aangeroepen door `pr:merge` op de `gates.json` van main) lezen via `afgeleid` en geven dezelfde vorm terug als nu, plus
+   `kritiek`. `kritiekPad(pad, config)` gebruikt `config.kritiek`, en zonder dat veld de oude regel.
+8. **decisions.json.** `readRegistry` accepteert `{ version, requiredChecks }` en de oude vorm met `decisions`, en geeft
+   `decisions: []` als de sleutel ontbreekt. Elke andere sleutel blijft een fout.
 
 ## Acceptatiecriteria
 
-- **padtabel/AC-1** — Gegeven twee rijen `src/**` (agent) en `src/core/**` (gate), dan is `padNiveau('src/core/x.ts')`
-  schrijven gate, besluit eigenaar, ongeacht de volgorde van de rijen in het object.
-- **padtabel/AC-2** — Gegeven de fixture van main 30cc352 (oude lijsten plus `OUDE_KRITIEK`) en de nieuwe `gates.json`, dan is
-  voor elk pad uit `git ls-files` en elk `voorbeeldPad` van een glob uit beide: het rolhekniveau (vrij < gate < voorReview <
-  altijdVragen, `jsonGates` apart) nieuw ≥ oud; `kritiekPad` oud waar ⇒ nieuw waar; `padReden` (status `M` en `A`) oud niet
-  null ⇒ nieuw niet null. De paden waar nieuw strenger is, zijn precies `docs/adr/**` voor `kritiekPad`; elk ander verschil
-  is rood.
-- **padtabel/AC-3** — Gegeven een rij met `schrijven: altijdVragen` zonder `besluit: besluit-pr`, of `schrijven` ≥ gate met
-  `besluit: agent`, dan geeft `check-docs` de melding uit Hergebruik en UX.
-- **padtabel/AC-4** — Gegeven een onbekende kolom, een onbekende waarde of `{}` als rij, dan is `check-docs` rood, en geeft
-  `padNiveau` voor die glob altijdVragen en besluit-pr.
-- **padtabel/AC-5** — Gegeven `paden` en `gates` (of `voorReview`, `altijdVragen`) tegelijk, dan gooien `loadConfig`,
-  `leesConfig` en `leesMergeConfig`; het rolhek weigert de schrijfactie en `pr:merge` merget niet.
-- **padtabel/AC-6** — Gegeven de oude `gates.json` van 30cc352, dan leveren de drie lezers precies dezelfde lijsten als op
-  30cc352, en `kritiekPad` dezelfde uitslag voor elk pad uit AC-2.
-- **padtabel/AC-7** — CODEOWNERS noemt precies de globs met `schrijven` plus de `jsonGates`-bestanden; de Edit-`ask` in
-  `.claude/settings.json` is precies de globs met `schrijven: altijdVragen`; een afwijking is rood.
-- **padtabel/AC-8** — `scripts/kit/lane.mjs` bevat geen lijst met paden voor kritiek meer; `OUDE_KRITIEK` staat alleen in
-  `padtabel.mjs` en een test eist dat hij gelijk is aan de fixture.
-- **padtabel/AC-9** — `feiten.mjs pad docs/adr/0001-x.md` toont `schrijven gate (docs/adr/**)` en
-  `besluit besluit-pr (docs/adr/**)`; `feiten.mjs pad` zonder argument geeft exit 1 met de gebruiksregel.
-- **padtabel/AC-10** — `.claude/decisions.json` heeft precies de sleutels `version` en `requiredChecks` (ongewijzigde
-  waarden); `readRegistry` leest het, en leest ook het register van 30cc352 met zijn 26 records.
+- **padtabel/AC-1** — Gegeven rijen `src/**` (agent) en `src/core/**` (gate), dan is `padNiveau('src/core/x.ts')` schrijven
+  gate en besluit eigenaar, in beide volgordes van de rijen.
+- **padtabel/AC-2** — Gegeven de fixture van 30cc352 (oude lijsten plus `OUDE_KRITIEK`) en de huidige `gates.json`, dan geldt
+  voor elk pad uit `git ls-files` en elk `voorbeeldPad` van een glob uit beide: rolhekniveau nieuw ≥ oud; `kritiekPad` oud waar
+  ⇒ nieuw waar; `padReden` (status `M` en `A`) oud niet null ⇒ nieuw niet null. Blijvende test: een latere PR die één pad
+  losser maakt dan de fixture, is rood.
+- **padtabel/AC-3** — Een rij met `altijdVragen` zonder `besluit-pr`, of schrijven ≥ gate met `agent`, geeft de melding uit
+  Hergebruik en UX.
+- **padtabel/AC-4** — Een onbekende kolom of waarde: check-docs rood en `padNiveau` altijdVragen/besluit-pr voor die glob.
+  `{}`: check-docs rood (`rij zonder kolom`) en `padNiveau` vrij/eigenaar voor die glob.
+- **padtabel/AC-5** — Gegeven als `gates.json` van main (a) de nieuwe vorm en (b) de oude vorm van 30cc352, dan geeft
+  `pr:merge` (`beoordeelMerge`) voor dezelfde PR-bestanden dezelfde redenen per pad als `padReden` op `afgeleid`, en voor
+  `src/web/x.ts` geen padreden. Gegeven (c) `paden` naast `gates`, dan merget `pr:merge` niet en gooien `loadConfig` en `leesConfig`.
+- **padtabel/AC-6** — Gegeven de oude vorm van 30cc352, dan leveren de lezers precies de lijsten van 30cc352.
+- **padtabel/AC-7** — CODEOWNERS is precies de afgeleide gates plus de `jsonGates`-bestanden; de Edit-`ask` is precies de
+  afgeleide `altijdVragen`; een afwijking is rood.
+- **padtabel/AC-8** — In de nieuwe vorm geeft een `schrijfrecht`-glob van architect, tester, reviewer of docs die een rij met
+  schrijven ≥ gate overlapt (bv. docs: `docs/**`), de melding `schrijfrecht van <rol> (<glob>) overlapt met gate <glob>`.
+- **padtabel/AC-9** — Twee keer dezelfde sleutel in `paden` in de ruwe tekst, of een sleutel `!x/**`, is rood.
+- **padtabel/AC-10** — Ontbreekt de rij `.claude/gates.json` of heeft hij een lager niveau dan altijdVragen/besluit-pr, dan is
+  check-docs rood (vloer); hetzelfde voor elk ander vloerpad.
+- **padtabel/AC-11** — Een `gates.json` zonder `paden` (oude vorm) geeft in check-docs de migratiemelding; hooks en scripts
+  lezen hem zonder fout.
+- **padtabel/AC-12** — `scripts/kit/lane.mjs` bevat geen padlijst voor kritiek meer; `OUDE_KRITIEK` staat alleen in
+  `padtabel.mjs`, gelijk aan de fixture.
+- **padtabel/AC-13** — `feiten.mjs pad docs/adr/0001-x.md` toont `schrijven gate (docs/adr/**)` en
+  `besluit besluit-pr (docs/adr/**)`; `feiten.mjs pad notities.md` toont `schrijven vrij (standaard), besluit eigenaar (standaard)`;
+  zonder argument exit 1 met de gebruiksregel.
+- **padtabel/AC-14** — `.claude/decisions.json` heeft precies `version` en `requiredChecks` (ongewijzigde waarden); `readRegistry`
+  leest het, en ook het register van 30cc352 met zijn 26 records.
 
 ## Randgevallen
 
 | Situatie | Gedrag | Foutcode |
 |---|---|---|
-| Onleesbare rij (geen object, onbekende waarde) | lezen: strengste niveau in beide kolommen; check-docs rood | n.v.t. |
-| Oude en nieuwe vorm tegelijk | ongeldig: lezers gooien, hook en agent-merge falen dicht | n.v.t. |
-| Glob zonder kolommen (`{}`) | lezen: vrij/eigenaar (sluit `agent` van een bredere glob uit); check-docs rood: schrijf `besluit: eigenaar` | n.v.t. |
-| Pad in `jsonGates` (`package.json`) | geen gate voor het rolhek (sleutels bewaakt zoals nu), wel `voorReview`, `altijdVragen` en `besluit-pr` | n.v.t. |
-| Pad zonder passende glob | vrij en eigenaar: geen agent-merge (zoals een onbekend pad nu) | n.v.t. |
-| App voegt eigen rijen toe | mag, in een besluit-PR (`gates.json` is besluit-pr); strengste-wint maakt template-rijen niet losser | n.v.t. |
-| Oude code leest nieuwe `gates.json` uit main | `list('gates')` gooit of valt op `['**']`: dicht tot rebase | n.v.t. |
+| Onbekende kolom of waarde, rij geen object | lezen: altijdVragen/besluit-pr; check-docs rood | n.v.t. |
+| Lege rij `{}` | lezen: vrij/eigenaar (sluit `agent` van een bredere glob uit); check-docs rood | n.v.t. |
+| Dubbele sleutel in de ruwe tekst | check-docs rood (de lezer ziet alleen de laatste) | n.v.t. |
+| Oude en nieuwe vorm tegelijk | lezers gooien; hook en `pr:merge` falen dicht | n.v.t. |
+| Alleen de oude vorm | lezers accepteren (overgang, oude commits); check-docs rood met migratiemelding | n.v.t. |
+| Pad in `jsonGates` (`package.json`) | geen gate voor het rolhek (sleutels bewaakt zoals nu); wel voorReview, altijdVragen, kritiek | n.v.t. |
+| Pad zonder passende glob | vrij en eigenaar: geen agent-merge | n.v.t. |
+| App voegt eigen rijen toe | mag, in een besluit-PR; strengste-wint maakt template-rijen niet losser; de vloer geldt ook in de app | n.v.t. |
+| Oude code leest nieuwe `gates.json` of `decisions.json` uit main | oude lezers gooien of vallen op `['**']`: dicht tot rebase | n.v.t. |
 
 ## Raakt ook
 
-- Code: `rails/hooks/lib/padtabel.mjs` (nieuw), `rails/hooks/lib/rolhek.mjs` (`loadConfig`), `scripts/kit/lane.mjs`
-  (`KRITIEK` weg), `scripts/kit/agent-merge.mjs`, `scripts/kit/diff-guard.mjs` (`leesConfig`), `scripts/kit/check-docs.mjs`
-  (spiegelregels tussen lijsten vervangen door AC-3/AC-4; CODEOWNERS en `ask` volgens AC-7), `scripts/kit/feiten.mjs`
-  (`pad <pad>`), `rails/hooks/lib/task-authority.mjs` (`readRegistry`).
+- Code: `rails/hooks/lib/padtabel.mjs` (nieuw), `rails/hooks/lib/rolhek.mjs` (`loadConfig`; ook via `check-document-status.mjs`,
+  `document-status.mjs`, `functional-ui-status.mjs`), `scripts/kit/lane.mjs` (`KRITIEK` weg), `scripts/kit/agent-merge.mjs`
+  (`leesMergeConfig`, `leesAgentMerge`, `agentMergeFouten`), `scripts/kit/pr-merge.mjs`, `scripts/kit/diff-guard.mjs`
+  (`leesConfig`), `scripts/kit/check-docs.mjs` (Werking 6), `scripts/kit/feiten.mjs` (`pad <pad>`),
+  `rails/hooks/lib/task-authority.mjs` (`readRegistry`).
 - Config: `.claude/gates.json` (`paden`, `$comment`), `.claude/decisions.json`, commentaar in `.github/CODEOWNERS`.
-- Docs: `docs/framework.md` §8 (R-WERK-05 verwijst naar `besluit: besluit-pr`; R-WERK-10, R-WERK-24, R-ROL-01/02) en §10
-  (R-REPO-01, R-REPO-03), `AGENTS.md` waar het "kritiek" noemt, `CHANGELOG.md`. Geen R-id verdwijnt.
-- Herzien-markering (R-CI-05): ADR 0046 punt 27, 0062 punt 2, 0069 punt 1 (in deze besluit-PR).
-- Tests die de ruwe vorm van de echte `gates.json` lezen of samenstellen (o.a. in `test/rails/`: `spec-en-bouw`,
-  `check-docs-voorreview`, `check-docs-onderhoud`, `agent-merge`; in `test/hooks/`: `rolhek-onderhoud`, `authority-git`):
-  alleen het lezen gaat via `afgeleid`, verwachte uitkomsten gelijk, reden in de PR (R-TEST-02, OV-1).
+- Docs en instructies: `docs/framework.md` §8 (R-WERK-05 naar de padtabel; R-WERK-10, R-WERK-24, R-ROL-01/02) en §10 (R-REPO-01,
+  R-REPO-03), `AGENTS.md` waar het "kritiek" noemt, `.claude/agents/developer.md` (stap 3), `.claude/rules/core.md` (R-REPO-03),
+  `CHANGELOG.md`. Geen R-id verdwijnt.
+- Herzien-markering (R-CI-05): ADR 0045 punt 1, 7 en 9; 0046 punt 27 en 28; 0062 punt 2; 0069 punt 1 (in deze besluit-PR).
+- Bestaande tests: zie OV-1.
 
 ## Buiten scope
 
@@ -132,19 +160,39 @@ n.v.t.: geen API-route, permissie of foutcode.
 
 ## Testplan
 
-- Unit: AC-1, AC-3 t/m AC-6, AC-8 en AC-10 tegen `padtabel.mjs`, de drie lezers, `check-docs` en `readRegistry`; AC-7 tegen
-  de echte bestanden; AC-9 als CLI-test van `feiten.mjs`.
-- Gelijkwaardigheid (AC-2): fixture `test/rails/fixtures/padtabel/` met `gates.json` van 30cc352 en `OUDE_KRITIEK`.
-- Negatief bewijs in de PR: een tijdelijke commit die één `besluit-pr` weghaalt, met de rode AC-2 als link.
-- **Vangnet**: (1) de samenhangregels (AC-3, AC-4) en de lezer die dicht faalt nemen de spiegelregels tussen de lijsten
-  over; (2) bewijs: de gelijkwaardigheidstest (AC-2, AC-6) en de bestaande tests van rolhek, lane en agent-merge met
-  ongewijzigde verwachte uitkomsten groen; (3) meting vóór en na: `pnpm leespad` en `pnpm meting --trend`, uitslag in de
-  PR; (4) terugval: één pad losser dan op 30cc352 ⇒ revert van de bouw-PR, de eigenaar beslist (ADR 0078 punt 9).
+- Unit: AC-1, AC-3, AC-4, AC-6 t/m AC-12 en AC-14 tegen `padtabel.mjs`, de lezers, `check-docs` en `readRegistry`; AC-5 met de
+  nep-API van `test/scripts/pr-merge.test.ts`; AC-13 als CLI-test van `feiten.mjs`.
+- Gelijkwaardigheid (AC-2): fixture `test/rails/fixtures/padtabel/` met de `gates.json` van 30cc352 en `OUDE_KRITIEK`; de test
+  blijft staan als vloer. Het precieze verschil (alleen `docs/adr/**` strenger, voor `kritiekPad`) staat eenmalig als bewijs in
+  de beschrijving van de bouw-PR.
+- Negatief bewijs in de PR: een tijdelijke commit die één `besluit-pr` weghaalt, met de rode AC-2 en AC-10 als link.
+- **Vangnet**: (1) de samenhangregels, de vloer, de controle op dubbele sleutels en de lezer die dicht faalt nemen de
+  spiegelregels tussen de lijsten over; het schrijfrecht van de rollen, het agent-mergegedrag per pad en de melding voor de
+  oude vorm blijven in check-docs (AC-8, AC-11, `agentMergeViolations`); (2) bewijs: AC-2 en AC-6, en de bestaande tests van
+  rolhek, lane en agent-merge met gelijke verwachte uitkomsten groen (OV-1); (3) meting vóór en na: `pnpm leespad` en
+  `pnpm meting --trend`, uitslag in de PR; (4) terugval: één pad losser dan op 30cc352 ⇒ revert van de bouw-PR, de eigenaar
+  beslist (ADR 0078 punt 9).
 
 ## Open vragen
 
-- **OV-1** — Tests die de ruwe lijsten van de echte `gates.json` lezen of er oude sleutels in mengen (Raakt ook), breken
-  onvermijdelijk: de sleutels verdwijnen en `paden` naast `gates` is ongeldig (AC-5). Opties: (a) alleen het lezen omzetten
-  naar `afgeleid`; (b) de oude lijsten als gegenereerde kopie laten staan. Aanbeveling: (a); (b) brengt de dubbele bron
-  terug. Geen verwachte uitkomst verandert, en AC-2 vergelijkt het gedrag per pad.
+- **OV-1 ✅ besloten** — Bestaande tests die de ruwe vorm van de echte `gates.json` lezen of samenstellen, of een vervallen
+  regel toetsen, veranderen in de bouw-PR, elk met reden in de PR (R-TEST-02). De merge van deze besluit-PR is het
+  eigenaarakkoord. Vastgesteld op 30cc352; de bouwer controleert de lijst met Grep en meldt een afwijking.
+  - **(i) Alleen lezen of samenstellen omgezet, verwachte uitkomst gelijk:** in `test/rails/`: `spec-en-bouw.test.ts`
+    (`altijdVragen()` uit de ruwe tekst), `agent-merge.test.ts` (`aangepast` met oude lijsten), `agent-merge-bytegrens.test.ts`
+    (`gatesMet`), `agent-merge-zonder-codex.test.ts` (`metGrens`, `aangepast`, het blok met `toegestaan`/`kritiek` op de echte
+    tekst), `lane.test.ts` (`voorReview: undefined` wordt een fixture in oude vorm, anders test hij niets meer),
+    `check-docs-voorreview.test.ts` en `check-docs-onderhoud.test.ts` (de tests op de ruwe lijsten van de echte
+    `gates.json`); in `test/hooks/`: `rolhek-onderhoud.test.ts` (`kaal`/`withKeys`), `rolhek-voorreview.test.ts` ("voorReview
+    ontbreekt" wordt een fixture in oude vorm), `vertrouwde-basis-anker.test.ts` (`VOOR`), `authority-git.test.ts`
+    (`replaceAll('".github/**",')` haalt de rij uit `paden`).
+  - **(ii) Regel vervalt of nieuwe uitkomst:** `test/rails/check-docs-voorreview.test.ts` (`docs:spiegel:voorreview-gates:*`:
+    vervalt), `test/rails/check-docs-onderhoud.test.ts` (`altijdVragen` ⊆ `voorReview`: vervalt), `test/rails/check-docs-gates.test.ts`
+    en `test/rails/check-docs.test.ts` (fixture in oude vorm: de verwachte sleutels krijgen de migratiemelding erbij).
+  - **Blijft ongewijzigd:** fixtures in oude vorm voor de lezers (`test/scripts/pr-merge*.test.ts`, de directe aanroepen van
+    `leesAgentMerge` en `agentMergeFouten`), en tests die alleen `loadConfig`/`leesConfig` op de echte `gates.json` gebruiken
+    (o.a. `test/rails/diff-guard.test.ts`, `test/rails/roadmap-archive-protection.test.ts`, de `rolhek-*`-tests): de
+    afgeleide vorm is gelijk.
 - **OV-2 ✅ besloten** — Strengste-wint in plaats van eerste-treffer (ADR 0078, Alternatieven).
+- **OV-3** — Is de oude vorm in check-docs rood (aanbeveling) of een waarschuwing? Aanbeveling: rood; anders blijft een app na
+  een template-merge stil op twee vormen staan. Hooks en scripts accepteren hem wel, voor de overgang en oude commits.
