@@ -9,6 +9,15 @@ import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { toolchainProbleemIn } from './toolchain.mjs';
 
+// Eerst de bewaking (leerpunt #462): ook een verse cloudsessie die op de toolchain faalt, hoort dat hooks of sandbox ontbreken.
+try {
+  const { bewakingMeldingIn } = await import('./bewaking.mjs');
+  const melding = bewakingMeldingIn(fileURLToPath(new URL('../..', import.meta.url)), process.env, Date.now());
+  if (melding !== null) console.error(melding);
+} catch (fout) {
+  console.error(`⚠ bewaking niet te controleren: ${fout instanceof Error ? fout.message : String(fout)}`);
+}
+
 // Eerst de toolchain: catalogus.mjs laadt typescript, dus zonder node_modules anders een stacktrace (docs/ENVIRONMENT.md).
 const probleem = toolchainProbleemIn(fileURLToPath(new URL('../..', import.meta.url)));
 if (probleem !== null) {
