@@ -21,6 +21,8 @@ import { createRouteEffects } from './route-effects.ts';
 
 type Route<Services> = RouteDef<Contract, Services>;
 type Step<Services> = NonNullable<Route<Services>['partner']>;
+// De geparste input zoals de handler hem verwacht (z.output van het contract).
+type ParsedInput<Services> = Parameters<Step<Services>['handler']>[0]['input'];
 
 export interface PartnerRequest<Services> {
   readonly auth: AuthGateway;
@@ -76,7 +78,11 @@ async function refreshSession<Services>({ c, request }: Run<Services>): Promise<
 }
 
 // Stap 5: zonder rate limit, read-only alleen bij GET; afterCommit en afterRollback zoals bij een gewone route.
-function handlerStep<Services>(run: Run<Services>, session: SessionInfo, before: { input: unknown; partner: unknown }) {
+function handlerStep<Services>(
+  run: Run<Services>,
+  session: SessionInfo,
+  before: { input: ParsedInput<Services>; partner: unknown },
+) {
   const { c, route, step, request } = run;
   const { contract } = route;
   const requestId = c.get('requestId');
