@@ -66,7 +66,8 @@ integrationClient.call(reading: SwitchReading, request: OutboundRequest): Promis
   `normal`, `money`; `cost` en `source` vrij. Elke latere bouw-PR breidt de lijst uit. Ook `client` met een onbekende naam.
 - **App**: `src/api/integrations/index.ts` exporteert het register (template: leeg), zonder bijwerking (geen env);
   `buildApp` geeft het als optie `integrations` aan `createApp`, voor de partnerstap (M2) en het beheer (M7).
-- **Lezen** (OV-1). `readIntegrationSwitch(tx, name)` in `src/core/api/db` (vorm `createAuditFn`) roept
+- **Lezen** (OV-1). `readIntegrationSwitch(tx, name)` in `src/core/api/db/integration-switch.ts`, doorgegeven via
+  `index.ts` (vorm `createAuditFn`; eigen bestand zodat het register de pool niet laadt, depcruise `db-alleen-via-index` staat het toe) roept
   `app.integration_enabled` aan. `readSwitch` in het register gebruikt hem, alleen onder de markering (binnen `withUser`;
   anders `OutboundUsageError`), en geeft een `SwitchReading` (naam, stand, `performance.now()`). Een lezing is
   alleen geldig als core haar maakte: een module-private `WeakSet`, dus `unsafeCast` werkt niet. Dat de app
@@ -146,6 +147,8 @@ een eigen `job`-functie met migratie.
 - **pgTAP** `db/tests/integration_switches.sql`: AC-3, AC-6 t/m AC-8; fixture in `test/rails/depcruise.test.ts`.
 
 ## Open vragen
+
+Besluit eigenaar (merge #530, 2026-11-04): alle aanbevelingen hieronder gevolgd.
 
 - **OV-1** — Waar lezen? Aanbeveling: `readIntegrationSwitch` in `src/core/api/db` (kritiek pad, past in deze besluit-PR);
   elders mag geen SQL (`database-alleen-in-core-db`). Geen cache: één indexlezing in een transactie die er al is, gelijk over processen.

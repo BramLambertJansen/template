@@ -32,8 +32,8 @@ n.v.t. — geen route of foutcode.
 
 - Bestaande componenten, staten, focus: n.v.t. — geen UI.
 - Meldingen letterlijk:
-  - `rails/netwerk-api`: "Netwerk vanuit api- en shared-code alleen via de uitgaande client: gebruik createOutboundClient
-    uit '#core/api/outbound' (R-CODE-12, ADR 0077). Geen node:http(s), net, tls, undici, nodemailer, child_process,
+  - `rails/netwerk-api`: "Netwerk vanuit api- en shared-code alleen via de uitgaande client: gebruik integrations.client(…)
+    uit het register in '#core/api/integrations' (R-CODE-12, ADR 0077). Geen node:http(s), net, tls, undici, nodemailer, child_process,
     worker_threads, vm, node:module, data:-import, eval, globale fetch/WebSocket of globalThis."
   - `rails/geheim`: "Een geheim van een koppeling alleen via secret(ctx, …) uit '#core/api/env.ts' in readEnv((ctx) => …)
     (R-SEC-05, ADR 0077); geen eigen secret, geen andere imports, geen .partial/.or/.catch/z.union."
@@ -96,7 +96,7 @@ PORT: z.number().default(1), TOKEN_TTL: z.number(), tokenTtl: z.number() }));` o
 - **netwerk-en-geheim-rails/AC-13** — Gegeven de huidige repo, dan is `pnpm lint` groen zonder nieuwe regels in
   `eslint-suppressions.json`. Een proef met de selectors op alle 82 niet-testbestanden van de zone gaf geen melding;
   `src/core/api/env.ts` (met `pattern.global`) valt onder `rails/netwerk-api` maar buiten `rails/geheim`.
-- **netwerk-en-geheim-rails/AC-14** — De meldingen bevatten letterlijk `createOutboundClient` en `R-CODE-12`, resp.
+- **netwerk-en-geheim-rails/AC-14** — De meldingen bevatten letterlijk `integrations.client` (sinds spec koppelingsregister) en `R-CODE-12`, resp.
   `secret(ctx, …)` en `R-SEC-05`; `pnpm test:unit` is groen.
 
 ## Randgevallen
