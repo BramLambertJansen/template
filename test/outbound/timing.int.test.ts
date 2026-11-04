@@ -40,22 +40,6 @@ async function upstreamCode(promise: Promise<unknown>): Promise<string> {
   return error.code;
 }
 
-// Wanneer elk verzoek bij de partner binnenkwam (performance.now), gemeten door de verzoekenlijst elke milliseconde te lezen.
-// Die meting kan een paar milliseconden schuiven: daarom ondergrens 990 voor de 1000 ms uit de spec (ruimer, niet strakker).
-const AT_LEAST_ONE_SECOND = 990;
-function arrivals(partner: FakePartner): { readonly times: number[]; readonly stop: () => void } {
-  const times: number[] = [];
-  const timer = setInterval(() => {
-    while (times.length < partner.requests.length) times.push(performance.now());
-  }, 1);
-  return {
-    times,
-    stop: () => {
-      clearInterval(timer);
-    },
-  };
-}
-
 describe('uitgaande-client/AC-1: time-out per poging', () => {
   test('uitgaande-client/AC-1: GET met timeoutMs 300, maxAttempts 1 en 2 s vertraging geeft UPSTREAM_TIMEOUT binnen 300–1000 ms na 1 aanroep', async () => {
     const partner = await partnerWith({ 'GET /items': { status: 200, json: { id: 'laat' }, delayMs: 2000 } });
@@ -123,26 +107,25 @@ describe('uitgaande-client/AC-5: Retry-After', () => {
       ],
     });
     const client = createOutboundClient(configFor(partner));
-    const seen = arrivals(partner);
-    try {
-      const result = await client.call(getItems);
 
-      expect(result).toStrictEqual({ ok: true, status: 200, data: { id: 'i-1' } });
-      expect(partner.calls('GET /items')).toBe(2);
-    } finally {
-      seen.stop();
-    }
-    const [first, second] = seen.times;
-    if (first === undefined || second === undefined) throw new Error('twee aankomsttijden verwacht');
-    return second - first;
+    const result = await client.call(getItems);
+
+    expect(result).toStrictEqual({ ok: true, status: 200, data: { id: 'i-1' } });
+    expect(partner.calls('GET /items')).toBe(2);
+    // Aankomsttijden zoals de nep-partner ze vastlegt (`at`, performance.now()). Het eerste antwoord heeft geen
+    // vertraging, dus aankomst 1 ligt vóór het eerste antwoord en aankomst 2 na de start van de tweede aanroep: het gat
+    // tussen de aankomsten is ten minste de wachttijd, zonder extra marge.
+    const [first, second] = partner.requests;
+    if (first === undefined || second === undefined) throw new Error('twee verzoeken verwacht');
+    return second.at - first.at;
   }
 
   test('uitgaande-client/AC-5: 429 met Retry-After 1, dan 200: de tweede aanroep start ten minste 1000 ms later', async () => {
-    expect(await gapAfter('1')).toBeGreaterThanOrEqual(AT_LEAST_ONE_SECOND);
+    expect(await gapAfter('1')).toBeGreaterThanOrEqual(1000);
   });
 
   test('uitgaande-client/AC-5: 429 met een HTTP-datum 2 s vooruit: ten minste 1000 ms', async () => {
-    expect(await gapAfter(new Date(Date.now() + 2000).toUTCString())).toBeGreaterThanOrEqual(AT_LEAST_ONE_SECOND);
+    expect(await gapAfter(new Date(Date.now() + 2000).toUTCString())).toBeGreaterThanOrEqual(1000);
   });
 
   test('uitgaande-client/AC-5: 429 met Retry-After soon: de backoff geldt (hooguit 200 ms voor de eerste herhaling)', async () => {

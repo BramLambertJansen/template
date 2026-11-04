@@ -23,6 +23,8 @@ export interface FakeRequest {
   readonly path: string;
   readonly headers: Readonly<Record<string, string | string[] | undefined>>;
   readonly body: string;
+  // `performance.now()` bij aankomst (vóór het lezen van de body): voor tijdmetingen tussen pogingen.
+  readonly at: number;
 }
 
 export interface FakePartner {
@@ -72,12 +74,13 @@ export async function startFakePartner(routes: FakeRoutes): Promise<FakePartner>
   const sockets = new Set<Socket>();
   const server = createServer((request, response) => {
     void (async () => {
+      const at = performance.now();
       const body = await readBody(request);
       const path = request.url ?? '/';
       const key = `${request.method ?? 'GET'} ${path.split('?')[0] ?? path}`;
       const index = counts.get(key) ?? 0;
       counts.set(key, index + 1);
-      requests.push({ method: request.method ?? 'GET', path, headers: { ...request.headers }, body });
+      requests.push({ method: request.method ?? 'GET', path, headers: { ...request.headers }, body, at });
       const answer = pick(routes[key], index);
       if (answer.delayMs !== undefined) await new Promise((resolve) => setTimeout(resolve, answer.delayMs));
       if (!response.destroyed) respond(response, answer);
