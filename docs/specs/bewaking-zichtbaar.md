@@ -41,7 +41,7 @@ n.v.t. — geen UI. De melding is één regel die begint met `⚠ bewaking niet 
   buitenWerkmapSchrijfbaar, map, ouder })`. Zonder `inClaudeCode` geeft hij `null` (CI, een terminal, een git-hook). Anders
   geeft hij `null` als `recenteMeting` waar is en `buitenWerkmapSchrijfbaar` onwaar, en in elk ander geval één regel die
   begint met `⚠ bewaking niet actief in deze sessie:`, per gevonden probleem een deel noemt (`projecthooks uit
-  .claude/settings.json draaien niet (geen meting in <map> van de laatste 120 s)` en/of `de Bash-sandbox schermt niet af
+  .claude/settings.json draaien niet (geen recente meting in <map>)` en/of `de Bash-sandbox schermt niet af
   (<ouder> is schrijfbaar)`) en eindigt met de gevolgen: rolhek, toets op effect en werkstraat-hooks houden niets tegen, claim
   ze niet (R-WERK-23), destructieve of overgenomen commando's alleen in de kooi (R-TOOL-03), zie `docs/ENVIRONMENT.md`.
 - **bewaking-zichtbaar/AC-2** — `bewakingMeldingIn(root, env, nu)` verzamelt de feiten: `inClaudeCode` is `env.CLAUDECODE ===
