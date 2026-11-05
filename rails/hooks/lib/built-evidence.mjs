@@ -78,7 +78,19 @@ export function openRefusal(document, evidence, authority) {
   if (info?.kind !== 'spec' || info.status !== 'gebouwd' || reference?.sha !== undefined || reference === null) return true;
   if (pr.number !== reference.pr || pr.repository !== authority.repository || pr.state !== 'open' || pr.merged ||
     pr.branch !== authority.branch || !evidence.code) return true;
-  return !approvedBefore(document, { uiApproval: evidence.uiApproval }, authority);
+  return !approvedBefore(document, { uiApproval: evidence.uiApproval }, authority) && !gebouwdOpMain(document, authority);
+}
+
+/**
+ * Vervolgbouw van een levende spec (ADR 0080 punt 4): de spec staat al `gebouwd` op main met dezelfde inhoud (de digest telt
+ * zonder markering), dus de bouw-PR die alleen de markering weghaalt mag `gebouwd # #<deze PR>` schrijven.
+ * @param {{ file: string, text: string }} document @param {import('./task-authority.mjs').Authority} authority
+ */
+function gebouwdOpMain(document, authority) {
+  if (!authority.safe(document.file)) return false;
+  const trusted = documentInfo(document.file, authority.trusted(document.file) ?? '');
+  return trusted?.kind === 'spec' && trusted.status === 'gebouwd' &&
+    trusted.digest === documentInfo(document.file, document.text)?.digest;
 }
 
 /** De spec stond goedgekeurd op main of in een besluit (of had UI-akkoord) vóór `gebouwd`. */
