@@ -91,6 +91,13 @@ describe('specarchief-en-bouwvorm/AC-7: nieuwe inhoud van een gebouwde spec in e
       `${SPEC}: nieuwe inhoud van een gebouwde spec: besluit-PR zonder code of gebouwd # #<deze PR> (ADR 0080)`,
     );
   });
+  test('specarchief-en-bouwvorm/AC-7 gebouwd naar vervallen met code: geen melding over nieuwe inhoud', () => {
+    const fixture = metBasis(spec('gebouwd # #120'));
+    write(fixture.root, SPEC, spec('vervallen # vervangen door demo-twee'));
+    write(fixture.root, CODE, 'export const x = 1;\n');
+    const uitvoer = draaiChecker(fixture, commit(fixture.root, 'feat: demo'));
+    expect(uitvoer.stderr).not.toContain('nieuwe inhoud van een gebouwde spec');
+  });
 });
 
 describe('specarchief-en-bouwvorm/AC-7: de markering valt alleen bij een spec uit de digest', () => {
