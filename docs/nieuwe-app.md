@@ -16,10 +16,10 @@ De enige startroute vóór de app-repo bestaat is [START-NIEUWE-APP.md](../START
 opdracht waarmee de gebruiker dit bestand klaarzet en de agent laat beginnen. Deze instructie hier blijft de enige
 gedetailleerde setup-procedure. Werk altijd met de versie op `main` van de template.
 
-De machine- en sandboxstappen hieronder beschrijven Claude Code op Ubuntu/WSL2. Stel eerst vast welke runtime werkelijk draait.
-Bij een andere agent zijn `.claude/`-hooks geen automatisch actieve grens. Installeer of wissel niet stilzwijgend van agent;
-laat de eigenaar de start- en veiligheidsstappen voor die runtime bevestigen. Behoud de bestaande GitHub-, installatie- en
-runnerregels en rapporteer precies welke lokale rol- en sandboxgrenzen ontbreken.
+**Alleen Claude Code.** De machine-, sandbox- en vensterstappen hieronder beschrijven Claude Code op Ubuntu/WSL2; een andere
+agent of runtime wordt niet ondersteund en niet stilzwijgend ingewisseld (`.claude/`-hooks zijn daar geen actieve grens).
+Draait er toch een andere runtime, stop dan, meld precies welke lokale rol- en sandboxgrenzen ontbreken en laat de eigenaar
+beslissen.
 
 ## Begeleiding: ook voor wie niet technisch is
 
@@ -107,9 +107,8 @@ Stop als dit allemaal waar is, niet eerder:
    `scripts/doctor.sh` is groen.
 7. De migraties zijn toegepast als `app_migrator`, en je hebt met `psql` bewezen wat Fase 8 noemt.
 8. De setup heeft het juiste app-venster op `~/code/<slug>` in Ubuntu geopend en laten controleren.
-   Bij Claude Code zijn VS Code, sandbox en deny-regels volgens Fase 9 gecontroleerd en is de testsessie afgesloten.
-   Bij een andere runtime zijn startwijze en ontbrekende lokale grenzen expliciet met de eigenaar besproken,
-   niet als werkzaam opgevoerd. De browser-, login- en MFA-controles uit Fase 9 blijven verplicht.
+   VS Code, sandbox en deny-regels zijn volgens Fase 9 gecontroleerd en de testsessie is afgesloten.
+   De browser-, login- en MFA-controles uit Fase 9 blijven verplicht.
 9. Je hebt het afkappunt uit Fase 10 gemeld, met het juiste venster, het absolute app-pad en één kopieerbaar blok
    om daar een schone werksessie te starten. De setupsessie stopt daar.
 
@@ -197,7 +196,7 @@ Herschrijf het na elke fase:
 - Publieke app-origin: http://localhost:<web>
 - Template-commit: <sha van template/main bij koppeling>
 - Werkvenster: <agent, Ubuntu/distro, absoluut app-pad; nog niet geopend | gecontroleerd>
-- Sandboxcontrole: <nog niet gedaan | geslaagd; testsessie afgesloten | andere runtime: vastgelegde grenzen>
+- Sandboxcontrole: <nog niet gedaan | geslaagd; testsessie afgesloten>
 
 ## Fasen
 
@@ -330,8 +329,7 @@ echo "root-setup klaar"
 
 ### 3.2 Gebruikersgereedschap (als gewone gebruiker, geen root)
 
-De installatieregel voor Claude Code geldt alleen wanneer dat de gekozen runtime is en de CLI ontbreekt. Sla die regel bij
-een andere agent over; bevestig diens bestaande installatie en veiligheidsstappen met de eigenaar, zonder van agent te wisselen.
+De installatieregel voor Claude Code geldt alleen wanneer de CLI ontbreekt.
 
 ```bash
 curl -fsSL https://mise.run | sh                       # ~/.local/bin/mise
@@ -741,12 +739,6 @@ Een afwijking is een bevinding over de template, geen setupfout: niet repareren,
 > **Zeg tegen de gebruiker — Alles testen.** Wat: ik open het projectvenster, we testen of de beveiliging van Claude werkt en we loggen in op je app.
 > Waarom: tot dit gelukt is, weten we niet zeker dat alles goed staat. Jij: ja, een paar keer klikken en typen; ik leg bij elke stap uit wat er gebeurt.
 
-Deze venster- en agentstappen gelden voor Claude Code. Bij een andere runtime bevestigt de eigenaar hoe die
-in de app-repo start en welke lokale beveiliging daadwerkelijk werkt. Gebruik de Claude-stappen niet als bewijs
-voor een andere runtime; laat een onuitvoerbare controle expliciet open en schakel geen bestaande grens uit.
-Leg voor die runtime dezelfde overgang vast: het juiste app-venster is gecontroleerd, de testsessie afgesloten
-en de startwijze voor een schone werksessie bevestigd. Wissel niet stilzwijgend naar Claude Code.
-
 **Drie sessies, drie plekken.** Zeg de gebruiker vóór 9.1, in gewone woorden, wat de tabel *Drie sessies, drie plekken* bovenaan dit bestand zegt; hier ontstaat de meeste verwarring.
 
 De terminal waarin `pnpm dev` draait (Fase 7.3) blijft steeds open; start daar nooit een sessie in.
@@ -848,9 +840,7 @@ van je laatste bericht. Vul alle placeholders in, inclusief het absolute app-pad
 Bij native Ubuntu schrijf je Ubuntu zonder WSL-label. Zolang een vereiste setupcontrole ontbreekt of faalt, inclusief browser/login/MFA uit Fase 9, meld je de concrete
 blokkade en ontbrekende stap; gebruik dan geen klaar-melding en vink Fase 10 niet af.
 
-Bij een andere bevestigde runtime vervang je het Claude-startblok en de vensteromschrijving door de geverifieerde
-startwijze voor die agent, zonder stilzwijgend te wisselen. Is de eigenaar zelf het venster gaan openen na een
-mislukte automatische start, schrijf dat dan eerlijk in de klaar-melding.
+Is de eigenaar zelf het venster gaan openen na een mislukte automatische start, schrijf dat dan eerlijk in de klaar-melding.
 
 > **Ik ben klaar met de setup. Vanaf hier kun je verder in een schone sessie in het geopende app-venster.**
 >
