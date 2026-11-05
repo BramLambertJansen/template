@@ -1,6 +1,6 @@
 # Review-checklists per risicoklasse
 
-De reviewer bepaalt de klasse(n) van de diff en loopt alleen die lijsten af. Elke regel is een patroon dat eerder doorgleed; een nummer verwijst naar het leerpunt, zonder nummer naar de PR- of Codex-review. Een nieuw patroon komt hier als regel, via een leerpunt.
+De reviewer bepaalt de klasse(n) van de diff en loopt alleen die lijsten af. Elke regel is een patroon dat eerder doorgleed; een nummer verwijst naar het leerpunt, zonder nummer naar de PR-review. Een nieuw patroon komt hier als regel, via een leerpunt.
 
 ## Werkwijze
 
@@ -39,6 +39,6 @@ De reviewer bepaalt de klasse(n) van de diff en loopt alleen die lijsten af. Elk
 
 ## Docs en instructies
 
-- Gedrag, API of conventies gewijzigd: doc in dezelfde PR (R-WERK-15); Codex vraagt hier steeds naar.
+- Gedrag, API of conventies gewijzigd: doc in dezelfde PR (R-WERK-15).
 - Een omgezette test noemt reden en regel in de PR; verwijderen of skippen vraagt eigenaarakkoord.
 - Wijzigt of verdwijnt een definitie `- **R-…**`: is de norm niet uitgehold, staat een verplaatste norm inhoudelijk bij de nieuwe R-id, is de schrapreden aanvaardbaar (`docs/normen-vervallen.md`, ADR 0067)? Mist er een norm zonder R-id? Die vangt geen check.

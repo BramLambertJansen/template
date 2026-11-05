@@ -32,7 +32,7 @@ const TEST_GEWIJZIGD = new Set(['M', 'D', 'R', 'T']);
  *   reviews: Review[], auteur: string, headSha: string, src?: Record<string, { voor: string | null, na: string | null }>,
  *   regels?: number, binair?: string[], bytes?: number | undefined, body?: string }} Pr
  *   `src`: elk geraakt bestand onder src/ (ook verwijderd), alleen voor het agent-merge-oordeel; `regels` en `binair` uit
- *   `parseNumstat`, `bytes` uit `leesBytes`, ook alleen voor dat oordeel (spec agent-merge-zonder-codex AC-2, agent-merge-bytegrens
+ *   `parseNumstat`, `bytes` uit `leesBytes`, ook alleen voor dat oordeel (spec agent-merge-niet-kritiek AC-9, agent-merge-bytegrens
  *   AC-3); `body`: de PR-beschrijving, voor de leerpuntreden (ADR 0078 punt 2)
  * @typedef {{ gates: string[], tests: string[], json: string[] }} Geraakt
  * @typedef {{ migraties: string[], permissies: string[], dependencies: string[], routes: string[] }} Risico
@@ -65,7 +65,7 @@ export function parseNameStatus(tekst) {
 }
 
 /**
- * De git-aanroep voor de omvang (spec agent-merge-zonder-codex AC-2); apart zodat een test hem op een echte repo draait.
+ * De git-aanroep voor de omvang (spec agent-merge-niet-kritiek AC-9); apart zodat een test hem op een echte repo draait.
  * @param {string} splitsing @param {string} head
  */
 export const numstatArgs = (splitsing, head) => [
@@ -686,7 +686,7 @@ async function leesPr(config) {
 
 /**
  * Oordeel agent-merge (ADR 0069, spec agent-merge-niet-kritiek AC-1) uit dezelfde invoer als de diff-guard; een goedkeuring
- * telt niet mee. Omvang uit `pr.regels`, `pr.binair` en `pr.bytes` (spec agent-merge-zonder-codex AC-2, agent-merge-bytegrens
+ * telt niet mee. Omvang uit `pr.regels`, `pr.binair` en `pr.bytes` (spec agent-merge-niet-kritiek AC-9, agent-merge-bytegrens
  * AC-3). Ontbreekt `agentMerge.maxRegels` of `agentMerge.maxBytes`, dan meldt het oordeel "agentMerge ontbreekt of is onleesbaar" (leesAgentMerge geeft null), niet de
  * omvangreden; die verschijnt hier alleen als de telling ontbreekt. Een leerpunt met `geen test` maakt het oordeel `nee`
  * (ADR 0078 punt 2); `pnpm pr:merge` leest de beschrijving bij het mergen opnieuw.

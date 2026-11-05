@@ -73,7 +73,7 @@ Deze accounts en waarden zijn alleen voor lokaal gebruik. Voor een eerste beheer
 
 Opdrachten geven vanaf telefoon of browser (claude.ai/code, Code-tab in de app) gaat via een cloudsessie: een verse clone in een VM van Anthropic.
 
-Deze inrichting is voor Claude Code. Andere runtimes, zoals Codex, voeren de hooks en permissieregels uit `.claude/` niet automatisch uit; zie de [agentinstructies](AGENTS.md).
+Deze inrichting is voor Claude Code. Andere runtimes voeren de hooks en permissieregels uit `.claude/` niet automatisch uit; zie de [agentinstructies](AGENTS.md).
 
 Eenmalig per repo:
 

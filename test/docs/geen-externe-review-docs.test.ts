@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 
 // agent-merge-niet-kritiek/AC-10: geen externe reviewdienst in de actieve werkstraat. De opdracht uit de spec (zonder de
-// fixtures) mag alleen nog de vier uitzonderingen geven, letterlijk. Het zoekwoord wordt samengesteld, zodat dit bestand zichzelf
+// fixtures) mag alleen nog de vijf uitzonderingen geven, letterlijk. Het zoekwoord wordt samengesteld, zodat dit bestand zichzelf
 // niet vindt; het sluit zichzelf bovendien uit (uitzondering 4). Een treffer in docs/adr/ of docs/specs/ telt niet: die mappen
 // staan niet in de opdracht (historie blijft).
 const WOORD = ['co', 'dex'].join('');
@@ -39,6 +39,17 @@ const SKILL = '.claude/skills/opleveren/SKILL.md';
 const DOORLOOP = 'docs/operations/agent-doorloop.md';
 const STAP_8 = new RegExp(`CI-rood of ${WOORD}-bevindingen`, 'i');
 const MAAT = new RegExp(`${WOORD}-bevindingen`, 'i');
+// Uitzondering 5: per regel, alleen wat de vervallen sleutel of de bot herkent, meldt of nabouwt: in de twee scripts de
+// regels met de sleutel tussen aanhalingstekens of `agentMerge.<woord>` (herkennen en de reden uit AC-8); in de twee opvolgers
+// van de oude omvang- en steekproeftests de regels met de botnaam, de marker, de sleutel tussen aanhalingstekens of
+// `agentMerge.<woord>`. Elke andere regel in die vier bestanden die het woord noemt, is een treffer.
+const SLEUTEL_REGEL = new RegExp(`['"]${WOORD}['"]|agentMerge\\.${WOORD}`, 'i');
+const BOT_REGEL = new RegExp(`chatgpt-${WOORD}-connector|${WOORD}-review-state|${SLEUTEL_REGEL.source}`, 'i');
+const UITZ5_SCRIPTS = new Set(['scripts/kit/agent-merge.mjs', 'scripts/kit/check-docs.mjs']);
+const UITZ5_TESTS = new Set([
+  'test/scripts/pr-merge-omvang-steekproef.test.ts',
+  'test/rails/agent-merge-omvang.test.ts',
+]);
 // Uitzondering 3: de constante `KOP_0069` (vaste historische kop), per regel binnen zijn `lines(…)`.
 const ADR_HERZIEN = 'test/rails/adr-herzien.test.ts';
 
@@ -53,11 +64,13 @@ function bereikKop(tekst: string): [number, number] {
   return [start + 1, einde === -1 ? regels.length : einde + 1];
 }
 
-/** Alle treffers buiten de vier uitzonderingen. `lees` geeft de tekst van een bestand (voor het bereik van `KOP_0069`). */
+/** Alle treffers buiten de vijf uitzonderingen. `lees` geeft de tekst van een bestand (voor het bereik van `KOP_0069`). */
 function buitenUitzonderingen(treffers: Treffer[], lees: (bestand: string) => string): Treffer[] {
   const [kopVan, kopTot] = bereikKop(lees(ADR_HERZIEN));
   return treffers.filter((t) => {
     if (t.bestand === ZICHZELF || METING.has(t.bestand)) return false;
+    if (UITZ5_SCRIPTS.has(t.bestand)) return !SLEUTEL_REGEL.test(t.tekst);
+    if (UITZ5_TESTS.has(t.bestand)) return !BOT_REGEL.test(t.tekst);
     if (t.bestand === SKILL) return !STAP_8.test(t.tekst);
     if (t.bestand === DOORLOOP) return !MAAT.test(t.tekst);
     if (t.bestand === ADR_HERZIEN) return !(t.regel >= kopVan && t.regel <= kopTot);
@@ -118,6 +131,24 @@ describe('agent-merge-niet-kritiek/AC-10 de uitzonderingen per regel', () => {
     expect(buitenUitzonderingen([binnen, buiten], lees)).toEqual([buiten]);
   });
 
+  test('uitzondering 5: sleutelregels in de twee scripts zijn vrij, een andere regel met het woord niet', () => {
+    const herkennen = T('scripts/kit/agent-merge.mjs', 117, `Object.keys(blok).includes('${WOORD}')`);
+    const melden = T('scripts/kit/check-docs.mjs', 884, `key: 'docs:agentMerge.${WOORD}',`);
+    const ander = T('scripts/kit/check-docs.mjs', 12, `// ${WOORD} beoordeelt de PR ook nog`);
+    const anderAgent = T('scripts/kit/agent-merge.mjs', 20, `const ${WOORD}Wacht = true;`);
+    expect(buitenUitzonderingen([herkennen, melden, ander, anderAgent], lees)).toEqual([ander, anderAgent]);
+  });
+
+  test('uitzondering 5: botwereld- en sleutelregels in de twee testbestanden zijn vrij, een andere regel niet', () => {
+    const steekproef = 'test/scripts/pr-merge-omvang-steekproef.test.ts';
+    const bot = T(steekproef, 7, `const BOT = 'chatgpt-${WOORD}-connector[bot]';`);
+    const marker = T(steekproef, 8, `const MARKER = '<!-- ${WOORD}-review-state:v1';`);
+    const sleutel = T('test/rails/agent-merge-omvang.test.ts', 21, `const SLEUTEL = '${WOORD}';`);
+    const ander = T('test/rails/agent-merge-omvang.test.ts', 99, `// de ${WOORD} doet ook mee`);
+    const andereTest = T(steekproef, 98, `test('${WOORD} wacht niet', () => {`);
+    expect(buitenUitzonderingen([bot, marker, sleutel, ander, andereTest], lees)).toEqual([ander, andereTest]);
+  });
+
   test('uitzondering 4: dit bestand sluit zichzelf uit', () => {
     expect(buitenUitzonderingen([T(ZICHZELF, 1, WOORD)], lees)).toEqual([]);
   });
@@ -137,7 +168,7 @@ describe('agent-merge-niet-kritiek/AC-10 de vervangende zinnen', () => {
 });
 
 describe('agent-merge-niet-kritiek/AC-10 geen externe reviewdienst in de actieve werkstraat', () => {
-  test('de git grep uit de spec geeft alleen de vier uitzonderingen', () => {
+  test('de git grep uit de spec geeft alleen de vijf uitzonderingen', () => {
     const over = buitenUitzonderingen(treffers(), lees).map((t) => `${t.bestand}:${String(t.regel)}`);
     expect(over).toEqual([]);
   });

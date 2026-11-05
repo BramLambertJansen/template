@@ -47,9 +47,7 @@ Kritiek of beschermd werk merget de eigenaar, niet-kritiek werk (ADR 0069) de ho
 1. De job `agent-merge` van de PR is geslaagd (overgeslagen: de eigenaar merget).
 2. Een verse reviewer keurde precies de head goed: PR-commentaar `Review <head-SHA>: geen blokkerende bevindingen`, na
    elke push opnieuw.
-3. Codex telt als het een afgeronde review op de PR of een niet-gemergde PR van zijn branch liet; vraag dan na een push
-   `@codex review` op de nieuwe head. Zonder spoor: geen extra review, niet ontwijken (draft, commentaar weghalen), meld
-   "steekproef". Threads zijn opgelost.
+3. Threads zijn opgelost; een externe review is geen voorwaarde.
 4. `pnpm pr:merge <nr>` toetst alles via GitHub en noemt wat ontbreekt. Nooit `gh pr merge`, `gh api …/merge` of een andere route.
 5. Meld PR en SHA aan de eigenaar en volg de CI op `main`; rood: revert-PR. Na revert, rode `main` of
    kritieke merge geen `pr:merge` meer (ADR 0069 punt 5).

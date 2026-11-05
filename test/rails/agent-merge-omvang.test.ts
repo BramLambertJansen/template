@@ -13,13 +13,12 @@ import { agentMerge, beoordeel, leesConfig, numstatArgs, parseNumstat } from '..
 import { agentMergeViolations } from '../../scripts/kit/check-docs.mjs';
 
 // Agent-merge met een omvanggrens (spec agent-merge-niet-kritiek AC-9) en de vervallen blokssleutel van de externe review
-// (AC-8, ADR 0069 herzien 2026-11-05): die sleutel bestaat niet meer en een overgebleven sleutel faalt dicht. Het woord wordt
-// samengesteld, zodat dit bestand de afwezigheidstoets van AC-10 niet raakt.
+// (AC-8, ADR 0069 herzien 2026-11-05): die sleutel bestaat niet meer en een overgebleven sleutel faalt dicht.
 const TEKST = readFileSync('.claude/gates.json', 'utf8');
 const guardConfig = leesConfig(TEKST);
 const HEAD = 'a'.repeat(40);
 const BLOK = { toegestaan: ['src/**'], kritiek: [], maxBytes: 40000 };
-const SLEUTEL = ['co', 'dex'].join('');
+const SLEUTEL = 'codex';
 const VERVALLEN = `agentMerge.${SLEUTEL} bestaat niet meer: haal de sleutel weg (ADR 0069)`;
 
 type Wijziging = { status: string; pad: string; van?: string };

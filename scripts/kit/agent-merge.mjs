@@ -2,7 +2,7 @@
 // de diff-guard levert de wijzigingen, de tekst van de bronbestanden en het risico-overzicht. Een toegestane lijst, de rest
 // dicht: elk pad moet op `agentMerge.toegestaan` staan en op geen gate, `agentMerge.kritiek` of kritiek pad (ADR 0062); die
 // lijsten komen uit de padtabel `paden` (rails/hooks/lib/padtabel.mjs, ADR 0079: toegestaan = besluit agent met schrijven vrij). Een
-// goedkeuring telt niet mee; reviews worden hier niet gelezen. Omvang (spec agent-merge-zonder-codex AC-2): hoogstens
+// goedkeuring telt niet mee; reviews worden hier niet gelezen. Omvang (spec agent-merge-niet-kritiek AC-9): hoogstens
 // `agentMerge.maxRegels` regels, hoogstens `agentMerge.maxBytes` gewijzigde bytes (spec agent-merge-bytegrens: weinig maar
 // zeer lange regels omzeilen de regelgrens niet) en geen binair bestand. Ontbreekt `maxRegels` of `maxBytes`, dan is
 // `agentMerge` null en meldt het oordeel de bestaande reden "agentMerge ontbreekt of is onleesbaar"; een omvangreden
@@ -15,16 +15,14 @@ import { agentMergeLijsten, afgeleid, globMatch } from '../../rails/hooks/lib/pa
 import { kritiekPad } from './lane.mjs';
 
 /**
- * @typedef {true | false | 'indien-aanwezig'} CodexModus
- * @typedef {{ toegestaan: string[], kritiek: string[], codex: CodexModus, maxRegels: number,
- *   maxBytes: number }} AgentMerge
+ * @typedef {{ toegestaan: string[], kritiek: string[], maxRegels: number, maxBytes: number }} AgentMerge
  * @typedef {{ gates: string[], testpaden: string[], jsonGates: Record<string, string[]>, voorReview?: string[] | undefined,
  *   altijdVragen?: string[] | undefined, kritiek?: string[] | undefined, agentMerge: AgentMerge | null,
  *   merge: 'eigenaar' | 'niet-kritiek' }} MergeConfig
  * @typedef {{ status: string, pad: string, van?: string }} Wijziging
  * @typedef {{ wijzigingen: Wijziging[], json: Record<string, { voor: string | null, na: string | null }>,
  *   geraakteJson: string[], risico: Record<string, string[]>, regels?: unknown, binair?: unknown, bytes?: unknown }} MergeInvoer
- *   `regels`: toegevoegd plus verwijderd; `binair`: paden van binaire bestanden (spec agent-merge-zonder-codex AC-2);
+ *   `regels`: toegevoegd plus verwijderd; `binair`: paden van binaire bestanden (spec agent-merge-niet-kritiek AC-9);
  *   `bytes`: gewijzigde bytes volgens `patchBytes()` (spec agent-merge-bytegrens AC-3)
  */
 
@@ -71,16 +69,6 @@ function veld(ruw, sleutel) {
 export const geheelVanaf = (waarde, minimum) => Number.isInteger(waarde) && Number(waarde) >= minimum;
 
 /**
- * `agentMerge.codex`: `false` en `"indien-aanwezig"` zoals ze staan, elke andere of ontbrekende waarde `true` (faalt dicht,
- * spec agent-merge-zonder-codex AC-1); `check-docs` toetst de vorm apart.
- * @param {unknown} waarde @returns {CodexModus}
- */
-export function leesCodex(waarde) {
-  if (waarde === false) return false;
-  return waarde === 'indien-aanwezig' ? 'indien-aanwezig' : true;
-}
-
-/**
  * Gewijzigde bytes van een hunk-tekst (spec agent-merge-bytegrens AC-2): elke regel die met `+` of `-` begint telt met de
  * UTF-8-bytes ná dat eerste teken, een `\r` incluis; `@@`-regels, contextregels en `\ No newline at end of file` tellen
  * niet. De tekst bevat geen kopregels: de diff-guard slaat ze over, REST levert ze niet.
@@ -107,9 +95,10 @@ function padLijsten(ruw) {
 }
 
 /**
- * `agentMerge` uit .claude/gates.json: het blok (`codex`, `maxRegels`, `maxBytes`) met `toegestaan` en `kritiek` uit de
- * padtabel (in de oude vorm uit het blok), of null als iets ontbreekt of een andere vorm heeft (faalt dicht); ook null zonder
- * `maxRegels` of `maxBytes` als geheel getal ≥ 1 (spec agent-merge-zonder-codex AC-1, agent-merge-bytegrens AC-1).
+ * `agentMerge` uit .claude/gates.json: het blok (`maxRegels`, `maxBytes`) met `toegestaan` en `kritiek` uit de padtabel (in
+ * de oude vorm uit het blok), of null als iets ontbreekt of een andere vorm heeft (faalt dicht); ook null zonder `maxRegels`
+ * of `maxBytes` als geheel getal ≥ 1 (spec agent-merge-niet-kritiek AC-9, agent-merge-bytegrens AC-1) en bij een overgebleven
+ * verouderde sleutel (AC-8).
  * @param {unknown} ruw
  * @returns {AgentMerge | null}
  */
@@ -120,8 +109,12 @@ export function leesAgentMerge(ruw) {
   const maxBytes = veld(blok, 'maxBytes');
   if (toegestaan === undefined || kritiek === undefined || !geheelVanaf(maxRegels, 1) || !geheelVanaf(maxBytes, 1))
     return null;
-  return { toegestaan, kritiek, codex: leesCodex(veld(blok, 'codex')), maxRegels, maxBytes };
+  if (verouderd(blok)) return null;
+  return { toegestaan, kritiek, maxRegels, maxBytes };
 }
+
+/** Heeft het blok de verouderde sleutel (welke waarde ook)? @param {unknown} blok */
+const verouderd = (blok) => typeof blok === 'object' && blok !== null && Object.keys(blok).includes('codex');
 
 /**
  * Waarom `leesAgentMerge()` null geeft, per fout één reden (leeg als het blok geldig is): de fout van de padtabellezer (beide
@@ -139,6 +132,7 @@ export function agentMergeFouten(ruw) {
     ...(lijsten ? [] : [AGENT_MERGE_ONLEESBAAR]),
     ...(geheelVanaf(veld(blok, 'maxRegels'), 1) ? [] : [OMVANG_ONLEESBAAR]),
     ...(geheelVanaf(veld(blok, 'maxBytes'), 1) ? [] : [BYTES_ONLEESBAAR]),
+    ...(verouderd(blok) ? ['agentMerge.codex bestaat niet meer: haal de sleutel weg (ADR 0069)'] : []),
   ];
 }
 
@@ -228,7 +222,7 @@ export function permissieRegels(json) {
 
 /**
  * Omvang: meer dan `maxRegels` regels of `maxBytes` bytes, een binair bestand of een onleesbare telling sluit uit (spec
- * agent-merge-zonder-codex AC-2, agent-merge-bytegrens AC-3); precies `maxRegels` of `maxBytes` mag.
+ * agent-merge-niet-kritiek AC-9, agent-merge-bytegrens AC-3); precies `maxRegels` of `maxBytes` mag.
  * @param {MergeInvoer} invoer @param {Pick<AgentMerge, 'maxRegels' | 'maxBytes'>} grenzen
  */
 export function omvangRedenen({ regels, binair, bytes }, { maxRegels, maxBytes }) {
@@ -242,7 +236,7 @@ export function omvangRedenen({ regels, binair, bytes }, { maxRegels, maxBytes }
 }
 
 /**
- * Het oordeel: `ja` alleen zonder enige reden (spec agent-merge-niet-kritiek AC-1, agent-merge-zonder-codex AC-2).
+ * Het oordeel: `ja` alleen zonder enige reden (spec agent-merge-niet-kritiek AC-1 en AC-9).
  * @param {MergeInvoer} invoer @param {MergeConfig} config
  * @returns {{ oordeel: 'ja' | 'nee', redenen: string[] }}
  */

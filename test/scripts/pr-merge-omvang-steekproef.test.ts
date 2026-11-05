@@ -4,10 +4,8 @@ import { STEEKPROEF, beoordeelMerge, slotRegels } from '../../scripts/kit/pr-mer
 // `pnpm pr:merge` met omvanggrens (spec agent-merge-niet-kritiek AC-9) en zonder externe-reviewvoorwaarde met
 // steekproefregel na de merge (AC-7): nagebootste REST-antwoorden. De wereld `goed` is mergebaar en kent bewust geen enkel
 // endpoint voor reacties, check-suites, reviews of branch-PR's: een onbekend endpoint gooit.
-// De naam van de externe reviewbot wordt samengesteld, zodat dit bestand de afwezigheidstoets van AC-10 niet raakt.
-const NAAM = ['co', 'dex'].join('');
-const BOT = `chatgpt-${NAAM}-connector[bot]`;
-const MARKER = `<!-- ${NAAM}-review-state:v1`;
+const BOT = 'chatgpt-codex-connector[bot]';
+const MARKER = '<!-- codex-review-state:v1';
 const REPO = 'BramLambertJansen/template';
 const HEAD = 'a'.repeat(40);
 const MAIN = 'b'.repeat(40);

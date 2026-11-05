@@ -233,7 +233,7 @@ push en PR-aanmaak horen bij de hoofdsessie. De bestaande veilige branchopruimin
 De expliciete sandbox-auto-allow en gerichte commandotoestemmingen vervangen geen inhoudelijke toestemming,
 broncodebeperkingen, checks of eigenaarmerge. Een lokale of beheerde Claude-instelling kan strenger zijn dan de
 gedeelde projectinstelling; meld de werkelijke weigering en bron, zonder aan te nemen dat een repo-edit die opheft.
-Codex gebruikt zijn eigen runtimebeleid; deze instellingen gelden alleen voor Claude Code.
+Andere runtimes gebruiken hun eigen beleid; deze instellingen gelden alleen voor Claude Code.
 
 `check-core` weigert een core-veranderende merge die een eerder geïmporteerde templateversie terugdraait, ook als de
 oudere ouder zelf vertrouwd is of de merge-ouders omgedraaid zijn (`scripts/kit/check-core.mjs`). De controle gebruikt
@@ -437,7 +437,7 @@ De invoering is gebeurd (#130, #144): de guard staat op main en
 helpers worden vanuit main actief; werkbranchconfig activeert geen automatische runner.
 Een wijziging aan die guard zelf vraagt, zolang hij nog niet op main staat, eigenaarreview vóór merge.
 
-Claude Code gebruikt de geteste hooks. Codex en andere runtimes draaien ze niet automatisch: volg dezelfde procedure
+Claude Code gebruikt de geteste hooks. Andere runtimes draaien ze niet automatisch: volg dezelfde procedure
 en meld ontbrekende lokale rolgrenzen. Een subagent met dezelfde rechten als de hoofdsessie is geen afgedwongen
 onafhankelijke reviewer; wat dan per route volstaat, staat in framework §8. De agent merget nooit.
 
