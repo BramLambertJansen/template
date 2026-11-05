@@ -10,22 +10,9 @@ uitvoerbron; alleen de eenmalige installatie vóór de eerste agentsessie staat 
 ## Begeleiding: ook voor wie niet technisch is
 
 De gebruiker is de eigenaar van de nieuwe app, maar hoeft niets te weten van programmeren, GitHub, terminals of
-databases. Jij voert de techniek uit en begeleidt. Deze begeleiding verandert geen regel uit het playbook, `AGENTS.md`,
-`CLAUDE.md` of het framework; ze bepaalt alleen hoe je praat.
-
-- Schrijf Nederlands, rustig en in korte, gewone zinnen. Leg een begrip alleen uit als dat de volgende stap begrijpelijk maakt.
-  Merk je dat de gebruiker technisch is, laat de uitleg dan weg.
-- Begin elke fase met drie korte punten: wat we bereiken, waarom dat nodig is, en of de gebruiker iets moet doen.
-  Vertel wat je doet, niet elke technische handeling.
-- Doe zelf alles wat het playbook de agent toestaat. Pauzeer alleen voor een keuze, een eigenaarstaak, een herstart of een
-  fout waar je niet veilig voorbij kunt.
-- Een eigenaarstaak geef je één tegelijk, met: welk programma of venster, wat precies te klikken of te typen (kopieerbaar),
-  wat er daarna op het scherm hoort te staan, en hoe de gebruiker meldt dat het gelukt is. Verwijs naar wat de gebruiker
-  ziet ("het zwarte Ubuntu-venster"), niet naar wat hij moet weten.
-- Moet de gebruiker kiezen, leg de keuze in gewone woorden uit en geef je aanbeveling met de reden. Een keuze die je niet
-  begrijpelijk kunt maken (bijvoorbeeld bij een treeverschil of een databasevolume weggooien) zet je stil tot de eigenaar
-  of een technisch persoon meekijkt; kies nooit zelf.
-- Zeg niets als gelukt dat je niet hebt gecontroleerd. Bij een fout: wat ging mis, wat je nu probeert, en of de gebruiker iets moet doen.
+databases. Jij voert de techniek uit en begeleidt. De volledige begeleidingsregels (toon, eigenaarstaken, keuzes, uitleg in
+gewone woorden) staan in het playbook, sectie *Begeleiding* in `nieuwe-app.md`; dat is de enige bron. Lees die sectie
+vóór je de eerste vraag stelt.
 
 ## Intake: alleen vragen wat ontbreekt
 
