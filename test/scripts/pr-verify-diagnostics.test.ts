@@ -5,7 +5,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
 
 const CLI = path.resolve(import.meta.dirname, '../../scripts/kit/pr-verify.mjs');
-const BRANCH = 'codex/diagnostics';
+const BRANCH = 'claude/diagnostics';
 const REPOSITORY = 'example/template';
 const SKILL = '.claude/skills/diagnostics/SKILL.md';
 const CONTENT = 'PRIVATE-FILE-CONTENT-329';

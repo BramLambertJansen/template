@@ -6,7 +6,7 @@ import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 // Force/hookomzeiling/merge/zelfreview: rolhek.test.ts; gh/API-omzeilingen en lokale merges: rolhek-gh-allowlist.test.ts.
 const config = loadConfig(readFileSync('.claude/gates.json', 'utf8'));
 
-function result(command: string, branch = 'codex/sandbox-runtime', role = 'hoofdsessie') {
+function result(command: string, branch = 'claude/sandbox-runtime', role = 'hoofdsessie') {
   return decide(
     { tool_name: 'Bash', tool_input: { command }, ...(role === 'hoofdsessie' ? {} : { agent_type: role }) },
     { root: '/repo', cwd: '/repo', config, branch, read: () => null, committed: () => false, isDir: () => false },
@@ -17,7 +17,7 @@ test('exacte dagelijkse HEAD-push blijft geweigerd vanaf main', () => {
   expect(result('git push origin HEAD', 'main').deny.length).toBeGreaterThan(0);
 });
 
-test.each(['feat/x', 'fix/x', 'docs/x', 'chore/x', 'test/x', 'refactor/x', 'claude/x', 'codex/x', 'feature/x', 'taak'])(
+test.each(['feat/x', 'fix/x', 'docs/x', 'chore/x', 'test/x', 'refactor/x', 'claude/x', 'feature/x', 'taak'])(
   'HEAD-push vanaf %s vraagt geen nieuw branchnaamformaat',
   (branch) => {
     const decision = result('git push origin HEAD', branch);
@@ -36,16 +36,16 @@ test.each(['git push origin --delete main', 'git push origin :main', 'git push -
 test.each(['developer', 'tester', 'architect', 'docs', 'reviewer'])(
   '%s krijgt geen HEAD-push of PR-aanmaak door de nieuwe Bash-toestemming',
   (role) => {
-    expect(result('git push origin HEAD', 'codex/sandbox-runtime', role).deny.length).toBeGreaterThan(0);
+    expect(result('git push origin HEAD', 'claude/sandbox-runtime', role).deny.length).toBeGreaterThan(0);
     expect(
-      result('gh pr create --head codex/sandbox-runtime --body-file /tmp/pr.md', 'codex/sandbox-runtime', role).deny
+      result('gh pr create --head claude/sandbox-runtime --body-file /tmp/pr.md', 'claude/sandbox-runtime', role).deny
         .length,
     ).toBeGreaterThan(0);
   },
 );
 
 test('veilige taakbranchopruiming blijft toegestaan', () => {
-  const decision = result('git branch -d codex/afgerond');
+  const decision = result('git branch -d claude/afgerond');
   expect(decision.deny).toEqual([]);
   expect(decision.ask).toEqual([]);
 });

@@ -40,7 +40,6 @@ const oudeMergeConfig = {
   agentMerge: {
     toegestaan: OUD.toegestaan,
     kritiek: OUD.agentKritiek,
-    codex: 'indien-aanwezig' as const,
     maxRegels: 400,
     maxBytes: 40000,
   },

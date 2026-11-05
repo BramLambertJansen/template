@@ -307,7 +307,7 @@ describe('testteller: herreview-gaten', () => {
   });
 });
 
-describe('testteller: codex-bevindingen', () => {
+describe('testteller: review op #433', () => {
   test('testteller: generieke arrow-functies met lange typeparameter in .tsx storen niet', () => {
     const file = 'src/core/web/ui/generiek.test.tsx';
     const generiek = [
