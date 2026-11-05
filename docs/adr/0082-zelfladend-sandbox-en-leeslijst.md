@@ -2,6 +2,8 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-05 (#553): punt 2, `./.git/commondir` blijft in `denyWrite`; S0 vervalt na meting M0 deel 2.
+
 Wijzigt [0071](0071-rolhek-vooraf-vaste-lijst.md) punt 2 en [0061](0061-claude-sandbox-werkstraat.md) punt 3. Drempel: A3
 (een grens verschuift van tekst naar het besturingssysteem). Aanleiding: leerpunt #500 (PR #494, drie reviewrondes met
 telkens nieuwe omwegen). Uitwerking, metingen en volgorde: [spec rolhek-vooraf-krimp](../specs/rolhek-vooraf-krimp.md) AC-3
@@ -44,13 +46,12 @@ draait dat deels om. Voor `settings.json` en de stubs geldt het falen van git al
    paden hangt de grens dan niet meer af van wat Claude Code zelf afschermt. Buiten `.git` komt in `denyWrite` alleen een
    pad dat git volgt. In een gekoppelde worktree is `.git` een bestand: of de `.git`-paden daar werken, bepaalt een meting.
    Tot die meting geldt de grens alleen in de hoofdcheckout.
-2. **`.git/commondir` beschermen de hooks, niet de sandbox** (besluit eigenaar, 4 november 2026). Elke hook die git
-   aanroept, zet `GIT_COMMON_DIR` expliciet. Is `.git` een map en bestaat `.git/commondir`, dan weigert de hook vóór de
-   eerste git-aanroep. Pas in dezelfde stap gaat `./.git/commondir` uit `denyWrite`. Dat gebeurt alleen als een proef
-   in de kooi aantoont dat het git van Claude Code zelf het bestand niet volgt (besluit eigenaar, 5 november 2026).
-   Anders blijft het in `denyWrite`, en werkt git in Bash alleen in een worktree. De waarde komt van `CLAUDE_PROJECT_DIR` en nooit uit het `.git`-bestand van een worktree. Ze
-   staat alleen op de git-aanroepen van de hook zelf en gaat niet naar kindprocessen. Na een weigering blokkeren de hooks
-   alles, tot de eigenaar het bestand buiten de sessie weghaalt.
+2. **`./.git/commondir` blijft in `denyWrite`** (besluit eigenaar, 4 en 5 november 2026; gemeten 5 november 2026). De
+   eigenaar besliste dat het pas uit `denyWrite` gaat, met `GIT_COMMON_DIR` en een weigering in elke hook die git aanroept
+   (S0), als een proef in de kooi aantoont dat het git van Claude Code zelf het bestand niet volgt. De proef (M0 deel 2,
+   Claude Code 2.1.318, git 2.53.0) toonde het omgekeerde: dat git leest de config uit een nieuw `.git/commondir`, vóór
+   een hook kan weigeren. S0 vervalt daarmee. Git in Bash blijft in de hoofdcheckout kapot en werkt alleen in een
+   worktree (leerpunt #553). Meting en beperkingen: spec rolhek-vooraf-krimp, M0.
 3. **Vooraf een leeslijst, ook voor wat geen pad letterlijk noemt.** Een woord kan naar een zelfladend pad wijzen:
    letterlijk, als glob, als map erboven, of als niet-herleidbare expansie. Een commando met zo'n woord gaat alleen door
    bij een programma van een vaste leeslijst, of bij git volgens de bestaande git-regels. Elk ander programma valt dicht.
@@ -69,9 +70,10 @@ draait dat deels om. Voor `settings.json` en de stubs geldt het falen van git al
      gaat dicht als elke hook git start met de veilige opties van de toets op effect (`-c core.fsmonitor=false` en
      dergelijke); dat is een eigen leerpunt;
    - het git dat Claude Code zelf buiten de sandbox draait, zonder hook ertussen (de `gitStatus`-context bij start,
-     hervatten of compacteren). Na S0 is `.git/commondir` in de hoofdcheckout schrijfbaar vanuit Bash. Een `node -e`
-     kan het dan naar een map met eigen config laten wijzen (`core.fsmonitor`), en de weigering van de hooks komt te laat.
-     Of dat zo is, meet de spec vóór S0 (M0 deel 2). Blijkt het zo, dan vervalt S0 en blijft `./.git/commondir` in `denyWrite` (de terugval van punt 2);
+     hervatten of compacteren). Gemeten (M0 deel 2): het leest de config uit een nieuw `.git/commondir`. Het zet op
+     elke aanroep `core.fsmonitor=`, `core.hooksPath=/dev/null` en `hook.*.enabled=false`, zodat een geplante
+     `core.fsmonitor` niets uitvoert. Dat is gedrag van die versie, niet iets wat de repo afdwingt. Daarom blijft
+     `./.git/commondir` in `denyWrite` (punt 2);
    - wat een excludedCommand buiten de sandbox doet, ook git. Die commando's beschermt alleen het rolhek vooraf.
      Schrijft er een een zelfladend pad, dan draait de vervangen stub de toets zelf. Er staat dan geen toets meer
      tussen, alleen de vraag aan de eigenaar vooraf (`permissions.ask`, of bij
@@ -81,8 +83,8 @@ draait dat deels om. Voor `settings.json` en de stubs geldt het falen van git al
 
 - **De opsomming blijven dichten.** Elke ronde een nieuwe vorm, en `node -e` gaat nooit dicht.
 - **Heel `.git`, of `node_modules`, in `denyWrite`.** Dan falen `commit`, `fetch` en `pnpm install`.
-- **`./.git/commondir` altijd in `denyWrite` laten.** Dan blijft git in Bash in de hoofdcheckout kapot. Dit is de
-  terugval als de proef van punt 2 faalt.
+- **`./.git/commondir` uit `denyWrite` halen, de hooks weigeren laten (S0).** Vervallen: het git van Claude Code
+  volgt het bestand vóór een hook kan weigeren (M0 deel 2). Git in Bash blijft daardoor kapot in de hoofdcheckout.
 - **Alleen de sandbox, geen regel vooraf.** Dan blijft voor `.git/refs` alleen een toets achteraf, en die ziet ze niet.
 - **Bash van subagents helemaal beperken tot de leeslijst.** Dan kunnen developer en tester geen tests meer draaien.
 - **Een sandbox per rol.** Die kent Claude Code niet.
