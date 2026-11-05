@@ -11,16 +11,32 @@ import {
 } from '../../scripts/kit/agent-merge.mjs';
 import { agentMerge, beoordeel, leesConfig, numstatArgs, parseNumstat } from '../../scripts/kit/diff-guard.mjs';
 import { agentMergeViolations } from '../../scripts/kit/check-docs.mjs';
+import { expectAbsent } from '../support/absence';
 
-// Agent-merge zonder Codex-tegoed, met een omvanggrens (ADR 0069 herzien, spec agent-merge-zonder-codex AC-1, AC-2, AC-6).
+// Agent-merge met een omvanggrens (spec agent-merge-niet-kritiek AC-9) en de vervallen blokssleutel van de externe review
+// (AC-8, ADR 0069 herzien 2026-11-05): die sleutel bestaat niet meer en een overgebleven sleutel faalt dicht.
 const TEKST = readFileSync('.claude/gates.json', 'utf8');
 const guardConfig = leesConfig(TEKST);
 const HEAD = 'a'.repeat(40);
 const BLOK = { toegestaan: ['src/**'], kritiek: [], maxBytes: 40000 };
+const SLEUTEL = 'codex';
+const VERVALLEN = `agentMerge.${SLEUTEL} bestaat niet meer: haal de sleutel weg (ADR 0069)`;
 
 type Wijziging = { status: string; pad: string; van?: string };
 
-function oordeel(wijzigingen: Wijziging[], omvang: { regels?: number; binair?: string[] }, tekst = TEKST) {
+// Het oordeel op een gates.json zonder de vervallen sleutel, ook als de echte tekst die (nog) heeft: AC-9 toetst alleen de omvang.
+const zonderSleutel = (tekst: string) => {
+  const ruw: unknown = JSON.parse(tekst);
+  const blok: unknown = typeof ruw === 'object' && ruw !== null ? Reflect.get(ruw, 'agentMerge') : undefined;
+  const schoon =
+    typeof blok === 'object' && blok !== null
+      ? Object.fromEntries(Object.entries(blok).filter(([sleutel]) => sleutel !== SLEUTEL))
+      : {};
+  return JSON.stringify(Object.assign({}, ruw, { agentMerge: schoon }));
+};
+const TEKST_SCHOON = zonderSleutel(TEKST);
+
+function oordeel(wijzigingen: Wijziging[], omvang: { regels?: number; binair?: string[] }, tekst = TEKST_SCHOON) {
   const p = { wijzigingen, json: {}, reviews: [], auteur: 'BramLambertJansen', headSha: HEAD, bytes: 0, ...omvang };
   return agentMerge(p, beoordeel(p, guardConfig), tekst);
 }
@@ -32,54 +48,34 @@ const zonderLijsten = (blok: unknown): Record<string, unknown> =>
     : {};
 
 const metGrens = (maxRegels: number) => {
-  const ruw: unknown = JSON.parse(TEKST);
+  const ruw: unknown = JSON.parse(TEKST_SCHOON);
   const blok: unknown = typeof ruw === 'object' && ruw !== null ? Reflect.get(ruw, 'agentMerge') : undefined;
   return JSON.stringify(Object.assign({}, ruw, { agentMerge: { ...zonderLijsten(blok), maxRegels } }));
 };
 
-describe('agent-merge-zonder-codex/AC-1 leesAgentMerge: codex en maxRegels', () => {
-  test.each([
-    [true, true],
-    [false, false],
-    ['indien-aanwezig', 'indien-aanwezig'],
-    ['ja', true],
-    [undefined, true],
-    [null, true],
-    [0, true],
-  ])('codex %j wordt %j', (codex, verwacht) => {
-    expect(leesAgentMerge({ agentMerge: { ...BLOK, codex, maxRegels: 400 } })?.codex).toBe(verwacht);
-  });
-
-  test('maxRegels 400 wordt gelezen', () => {
-    expect(leesAgentMerge({ agentMerge: { ...BLOK, codex: true, maxRegels: 400 } })).toEqual({
-      ...BLOK,
-      codex: true,
-      maxRegels: 400,
-    });
+describe('agent-merge-niet-kritiek/AC-9 leesAgentMerge: maxRegels', () => {
+  test('maxRegels 400 wordt gelezen, zonder de vervallen sleutel in het resultaat', () => {
+    expect(leesAgentMerge({ agentMerge: { ...BLOK, maxRegels: 400 } })).toEqual({ ...BLOK, maxRegels: 400 });
   });
 
   test.each([[undefined], [0], [-1], [400.5], ['400'], [null]])(
     'maxRegels %j: het hele resultaat is null',
     (maxRegels) => {
-      expect(leesAgentMerge({ agentMerge: { ...BLOK, codex: true, maxRegels } })).toBeNull();
+      expect(leesAgentMerge({ agentMerge: { ...BLOK, maxRegels } })).toBeNull();
     },
   );
 
   test('zonder maxRegels is het oordeel nee met de bestaande reden (geen omvangreden in de diff-guard)', () => {
-    const ruw: unknown = JSON.parse(TEKST);
-    const zonder = JSON.stringify(Object.assign({}, ruw, { agentMerge: { ...zonderLijsten(BLOK), codex: true } }));
+    const ruw: unknown = JSON.parse(TEKST_SCHOON);
+    const zonder = JSON.stringify(Object.assign({}, ruw, { agentMerge: zonderLijsten(BLOK) }));
     expect(oordeel([{ status: 'M', pad: 'src/web/x.ts' }], { regels: 1, binair: [] }, zonder)).toEqual({
       oordeel: 'nee',
       redenen: ['agentMerge ontbreekt of is onleesbaar in .claude/gates.json'],
     });
   });
-
-  test('de echte gates.json: codex indien-aanwezig, grens 400', () => {
-    expect(leesMergeConfig(TEKST).agentMerge).toMatchObject({ codex: 'indien-aanwezig', maxRegels: 400 });
-  });
 });
 
-describe('agent-merge-zonder-codex/AC-2 oordeel op omvang en binaire bestanden', () => {
+describe('agent-merge-niet-kritiek/AC-9 oordeel op omvang en binaire bestanden', () => {
   const src = [{ status: 'M', pad: 'src/web/x.ts' }];
 
   test.each([
@@ -116,7 +112,7 @@ describe('agent-merge-zonder-codex/AC-2 oordeel op omvang en binaire bestanden',
     ['binair ontbreekt', { regels: 3 }],
   ])('regels %s: nee met de omvangreden', (_naam, omvang) => {
     const invoer = { wijzigingen: src, json: {}, geraakteJson: [], risico: {}, bytes: 0, ...omvang };
-    expect(agentMergeOordeel(invoer, leesMergeConfig(TEKST))).toEqual({
+    expect(agentMergeOordeel(invoer, leesMergeConfig(TEKST_SCHOON))).toEqual({
       oordeel: 'nee',
       redenen: ['omvang van de PR niet leesbaar of agentMerge.maxRegels ontbreekt: geen agent-merge'],
     });
@@ -169,41 +165,33 @@ describe('agent-merge-zonder-codex/AC-2 oordeel op omvang en binaire bestanden',
   test('agentMergeOordeel zonder regels in de invoer geeft nee', () => {
     const uitslag = agentMergeOordeel(
       { wijzigingen: src, json: {}, geraakteJson: [], risico: {} },
-      leesMergeConfig(TEKST),
+      leesMergeConfig(TEKST_SCHOON),
     );
     expect(uitslag.oordeel).toBe('nee');
   });
 });
 
-describe('agent-merge-zonder-codex/AC-6 check-docs toetst de vorm van codex en maxRegels', () => {
+describe('agent-merge-niet-kritiek/AC-9 check-docs toetst de vorm van maxRegels', () => {
   const aangepast = (blok: Record<string, unknown>) => {
     const ruw: unknown = JSON.parse(TEKST);
     return JSON.stringify(Object.assign({}, ruw, { agentMerge: zonderLijsten(blok) }));
   };
   const sleutels = (blok: Record<string, unknown>) => agentMergeViolations([], aangepast(blok)).map((v) => v.key);
 
-  test('de echte gates.json is geldig', () => {
-    expect(agentMergeViolations([], TEKST)).toEqual([]);
-  });
-
-  test('codex "ja" wordt geweigerd', () => {
-    expect(sleutels({ ...BLOK, codex: 'ja', maxRegels: 400 })).toContain('docs:agentMerge.codex');
-  });
-
   test.each([
-    ['ontbrekend', { ...BLOK, codex: true }],
-    ['"400"', { ...BLOK, codex: true, maxRegels: '400' }],
-    ['0', { ...BLOK, codex: true, maxRegels: 0 }],
+    ['ontbrekend', { ...BLOK }],
+    ['"400"', { ...BLOK, maxRegels: '400' }],
+    ['0', { ...BLOK, maxRegels: 0 }],
   ])('maxRegels %s wordt geweigerd, ook al leest het script hem dicht', (_naam, blok) => {
     expect(sleutels(blok)).toContain('docs:agentMerge.maxRegels');
   });
 
-  test.each([[true], [false], ['indien-aanwezig']])('codex %j met maxRegels 400 is geldig', (codex) => {
-    expect(sleutels({ ...BLOK, codex, maxRegels: 400 })).toEqual([]);
+  test('maxRegels 400 zonder de vervallen sleutel is geldig', () => {
+    expect(sleutels({ ...BLOK, maxRegels: 400 })).toEqual([]);
   });
 });
 
-describe('agent-merge-zonder-codex/AC-2 numstat op een echte repo', () => {
+describe('agent-merge-niet-kritiek/AC-9 numstat op een echte repo', () => {
   test('de git-aanroep uit leesPr telt tekst, ziet een hernoemde binary en een leeg verwijderd bestand', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'numstat-'));
     const git = (...args: string[]) =>
@@ -233,7 +221,7 @@ describe('agent-merge-zonder-codex/AC-2 numstat op een echte repo', () => {
   });
 });
 
-describe('agent-merge-zonder-codex/AC-3 agentMergeFouten: één reden per fout', () => {
+describe('agent-merge-niet-kritiek/AC-9 agentMergeFouten: één reden per fout', () => {
   test.each([
     ['geldig', { ...BLOK, maxRegels: 400 }, []],
     [
@@ -259,5 +247,57 @@ describe('agent-merge-zonder-codex/AC-3 agentMergeFouten: één reden per fout',
     const ruw = { agentMerge: blok };
     expect(agentMergeFouten(ruw)).toEqual(verwacht);
     expect(leesAgentMerge(ruw) === null).toBe(verwacht.length > 0);
+  });
+});
+
+describe('agent-merge-niet-kritiek/AC-8 de vervallen blokssleutel bestaat niet meer', () => {
+  const sleutelInTekst = (waarde: unknown) => {
+    const ruw: unknown = JSON.parse(TEKST_SCHOON);
+    const blok: unknown = typeof ruw === 'object' && ruw !== null ? Reflect.get(ruw, 'agentMerge') : undefined;
+    return JSON.stringify(Object.assign({}, ruw, { agentMerge: { ...zonderLijsten(blok), [SLEUTEL]: waarde } }));
+  };
+
+  test('de echte gates.json heeft de vervallen sleutel niet en blijft geldig', () => {
+    const blok = leesMergeConfig(TEKST).agentMerge;
+    expect(blok).toMatchObject({ maxRegels: 400 });
+    expect(blok).not.toHaveProperty(SLEUTEL);
+    expectAbsent(TEKST, /codex/i, {
+      recognizes: ['codex', 'Codex', '"codex": "indien-aanwezig"', 'agentMerge.codex', 'chatgpt-codex-connector'],
+      allows: ['agentMerge', 'maxRegels'],
+    });
+    expect(agentMergeViolations([], TEKST)).toEqual([]);
+  });
+
+  test.each([[true], [false], ['indien-aanwezig'], ['ja']])(
+    'sleutel %j: leesAgentMerge geeft null en agentMergeFouten de reden',
+    (waarde) => {
+      const ruw = { agentMerge: { ...BLOK, maxRegels: 400, [SLEUTEL]: waarde } };
+      expect(leesAgentMerge(ruw)).toBeNull();
+      expect(agentMergeFouten(ruw)).toContain(VERVALLEN);
+    },
+  );
+
+  test('zonder de vervallen sleutel is het blok geldig: geen fout, wel een resultaat', () => {
+    const ruw = { agentMerge: { ...BLOK, maxRegels: 400 } };
+    expect(agentMergeFouten(ruw)).toEqual([]);
+    expect(leesAgentMerge(ruw)).toEqual({ ...BLOK, maxRegels: 400 });
+  });
+
+  test.each([[true], [false], ['indien-aanwezig'], ['ja']])('check-docs meldt de sleutel met waarde %j', (waarde) => {
+    expect(agentMergeViolations([], sleutelInTekst(waarde))).toContainEqual({
+      key: `docs:agentMerge.${SLEUTEL}`,
+      message: `.claude/gates.json: agentMerge.${SLEUTEL} bestaat niet meer (ADR 0069); haal de sleutel weg`,
+    });
+  });
+
+  test('check-docs meldt zonder de vervallen sleutel geen overtreding op die sleutel', () => {
+    expect(agentMergeViolations([], TEKST_SCHOON).map((v) => v.key)).not.toContain(`docs:agentMerge.${SLEUTEL}`);
+  });
+
+  test('de omvanggrens blijft: maxRegels en maxBytes worden nog getoetst', () => {
+    expect(agentMergeFouten({ agentMerge: { toegestaan: [], kritiek: [], maxBytes: 0, maxRegels: 0 } })).toEqual([
+      'omvang van de PR niet leesbaar of agentMerge.maxRegels ontbreekt: geen agent-merge',
+      'omvang van de PR niet leesbaar of agentMerge.maxBytes ontbreekt: geen agent-merge',
+    ]);
   });
 });

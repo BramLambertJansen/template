@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 import { AGENT_MERGE_ONLEESBAAR, agentMergeFouten, leesAgentMerge } from '../../scripts/kit/agent-merge.mjs';
 import { agentMerge, leesConfig } from '../../scripts/kit/diff-guard.mjs';
-import { CODEX, beoordeelMerge } from '../../scripts/kit/pr-merge.mjs';
+import { beoordeelMerge } from '../../scripts/kit/pr-merge.mjs';
 import { OUD, nieuw, object } from '../rails/padtabel-kit';
 
 // padtabel/AC-5: `pr:merge` en de diff-guard lezen de `gates.json` van main in de nieuwe vorm (a) en de oude vorm van
@@ -26,9 +26,6 @@ const check = (name: string, sha: string, extra: Record<string, unknown> = {}) =
   app: { id: ACTIONS },
   ...extra,
 });
-
-const codexSamenvatting = (stand: Record<string, unknown>) =>
-  `<!-- codex-pull-request-review-summary -->\n<!-- codex-review-state:v1 ${JSON.stringify({ code_review: stand }).replaceAll('{', '&#123;').replaceAll('}', '&#125;')} -->`;
 
 function wereld(gates: unknown, regels = 12): Wereld {
   return {
@@ -70,13 +67,7 @@ function wereld(gates: unknown, regels = 12): Wereld {
     [`repos/${REPO}/commits/${MAIN}/check-runs`]: { check_runs: [check('gate:fast', MAIN)] },
     [`repos/${REPO}/issues/7/comments`]: [
       { user: { login: 'BramLambertJansen' }, body: `Review ${HEAD}: geen blokkerende bevindingen` },
-      {
-        user: { login: CODEX },
-        body: codexSamenvatting({ status: 'completed', commit_sha: HEAD, has_unresolved_findings: false }),
-      },
     ],
-    [`repos/${REPO}/issues/7/reactions`]: [],
-    [`repos/${REPO}/commits/${HEAD}/check-suites`]: { check_suites: [{ created_at: '2026-11-03T10:00:00Z' }] },
   };
 }
 
@@ -141,18 +132,6 @@ describe('padtabel/AC-5 pr:merge leest agentMerge uit main in beide vormen', () 
   test.each(VORMEN)('%s: beoordeelMerge gebruikt maxBytes uit het blok (padtabel/AC-5)', (_n, ruw) => {
     const blok = { ...object(ruw['agentMerge']), maxBytes: 3 };
     expect(redenen(wereld({ ...ruw, agentMerge: blok })).join('\n')).toMatch(/grens 3 \(agentMerge\.maxBytes\)/);
-  });
-
-  test.each(VORMEN)('%s: beoordeelMerge gebruikt codex uit het blok (padtabel/AC-5)', (_n, ruw) => {
-    const zonderCodex = (codex: boolean) => {
-      const w = wereld({ ...ruw, agentMerge: { ...object(ruw['agentMerge']), codex } });
-      w[`repos/${REPO}/issues/7/comments`] = [
-        { user: { login: 'x' }, body: `Review ${HEAD}: geen blokkerende bevindingen` },
-      ];
-      return redenen(w);
-    };
-    expect(zonderCodex(false)).toEqual([]);
-    expect(zonderCodex(true).join('\n')).toMatch(/Codex/);
   });
 });
 

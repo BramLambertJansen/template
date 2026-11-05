@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from 'vitest';
 import { PR, SOURCE, commit, draaiDocsStatus, git, maakRepo, opruimen, read, write } from './follow-up-kit';
 
 // docs/specs/specarchief-en-bouwvorm.md (ADR 0080 punt 4 en 5), AC-7 en AC-9: een vervolgbouw van een levende spec die al
-// gebouwd is. De bouw-PR haalt de markering weg; `docs:status` schrijft dan `gebouwd # #<deze PR>` (Codex-bevinding op #544).
+// gebouwd is. De bouw-PR haalt de markering weg; `docs:status` schrijft dan `gebouwd # #<deze PR>` (review op #544).
 afterEach(opruimen);
 
 const SPEC = 'docs/specs/bouw.md';

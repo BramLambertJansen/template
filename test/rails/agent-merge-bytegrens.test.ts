@@ -16,7 +16,7 @@ import { agentMerge, beoordeel, leesConfig } from '../../scripts/kit/diff-guard.
 const TEKST = readFileSync('.claude/gates.json', 'utf8');
 const guardConfig = leesConfig(TEKST);
 const HEAD = 'a'.repeat(40);
-const BLOK = { toegestaan: ['src/**'], kritiek: [], codex: true, maxRegels: 400 };
+const BLOK = { toegestaan: ['src/**'], kritiek: [], maxRegels: 400 };
 
 const AGENT_MERGE_ONLEESBAAR = 'agentMerge ontbreekt of is onleesbaar in .claude/gates.json';
 const OMVANG_ONLEESBAAR = 'omvang van de PR niet leesbaar of agentMerge.maxRegels ontbreekt: geen agent-merge';

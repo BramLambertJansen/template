@@ -169,7 +169,7 @@ describe('verse main: timeout achter een toewijzing', () => {
   });
 });
 
-describe('verse main: vormen uit de Codex-review', () => {
+describe('verse main: vormen uit de review van de verse-main-regel', () => {
   test.each([
     {
       name: 'fetch die na || overgeslagen kan worden',

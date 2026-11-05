@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { CODEX, codexStand, nummerUit, voorwaarden } from '../../scripts/kit/pr-merge.mjs';
+import { nummerUit, voorwaarden } from '../../scripts/kit/pr-merge.mjs';
 
 // `pnpm pr:merge` (ADR 0069 punt 3, spec agent-merge-niet-kritiek AC-3): per voorwaarde een nagebootst REST-antwoord dat
 // de merge tegenhoudt. De wereld `goed` is mergebaar; elke test verandert precies één antwoord.
@@ -16,9 +16,6 @@ function check(name: string, sha: string, extra: Record<string, unknown> = {}) {
   return { id: 1, name, head_sha: sha, status: 'completed', conclusion: 'success', app: { id: ACTIONS }, ...extra };
 }
 
-const codexSamenvatting = (stand: Record<string, unknown>) =>
-  `<!-- codex-pull-request-review-summary -->\n<!-- codex-review-state:v1 ${JSON.stringify({ code_review: stand }).replaceAll('{', '&#123;').replaceAll('}', '&#125;')} -->`;
-
 const PR = { state: 'open', draft: false, base: { ref: 'main' }, head: { sha: HEAD, repo: { full_name: REPO } } };
 
 function goed(): Wereld {
@@ -27,7 +24,7 @@ function goed(): Wereld {
     [`repos/${REPO}/contents/.claude/gates.json?ref=${MAIN}`]: {
       content: b64({
         merge: 'niet-kritiek',
-        agentMerge: { toegestaan: ['src/**'], kritiek: [], codex: true, maxRegels: 400, maxBytes: 40000 },
+        agentMerge: { toegestaan: ['src/**'], kritiek: [], maxRegels: 400, maxBytes: 40000 },
       }),
     },
     [`repos/${REPO}/contents/.claude/decisions.json?ref=${MAIN}`]: { content: b64({ requiredChecks: VEREIST }) },
@@ -64,13 +61,7 @@ function goed(): Wereld {
     [`repos/${REPO}/commits/${MAIN}/check-runs`]: { check_runs: [check('gate:fast', MAIN)] },
     [`repos/${REPO}/issues/7/comments`]: [
       { user: { login: 'BramLambertJansen' }, body: `Review ${HEAD}: geen blokkerende bevindingen` },
-      {
-        user: { login: CODEX },
-        body: codexSamenvatting({ status: 'completed', commit_sha: HEAD, has_unresolved_findings: false }),
-      },
     ],
-    [`repos/${REPO}/issues/7/reactions`]: [],
-    [`repos/${REPO}/commits/${HEAD}/check-suites`]: { check_suites: [{ created_at: '2026-11-03T10:00:00Z' }] },
   };
 }
 
@@ -163,22 +154,6 @@ describe('agent-merge-niet-kritiek/AC-3 pr:merge', () => {
       /geen job agent-merge/,
     ],
     [
-      'Codex met open punten op de head, daarna een 👍',
-      (w: Wereld) => {
-        w[`repos/${REPO}/issues/7/comments`] = [
-          { user: { login: 'x' }, body: `Review ${HEAD}: geen blokkerende bevindingen` },
-          {
-            user: { login: CODEX },
-            body: codexSamenvatting({ status: 'completed', commit_sha: HEAD, has_unresolved_findings: true }),
-          },
-        ];
-        w[`repos/${REPO}/issues/7/reactions`] = [
-          { user: { login: CODEX }, content: '+1', created_at: '2026-11-03T10:05:00Z' },
-        ];
-      },
-      /open punten/,
-    ],
-    [
       'agent-merge overgeslagen (conclusie skipped)',
       zet(`commits/${HEAD}/check-runs`, {
         check_runs: [
@@ -187,21 +162,6 @@ describe('agent-merge-niet-kritiek/AC-3 pr:merge', () => {
         ],
       }),
       /agent-merge is skipped/,
-    ],
-    [
-      'een oudere Codex-samenvatting zonder punten, de nieuwste met open punten',
-      zet('issues/7/comments', [
-        { user: { login: 'x' }, body: `Review ${HEAD}: geen blokkerende bevindingen` },
-        {
-          user: { login: CODEX },
-          body: codexSamenvatting({ status: 'completed', commit_sha: HEAD, has_unresolved_findings: false }),
-        },
-        {
-          user: { login: CODEX },
-          body: codexSamenvatting({ status: 'completed', commit_sha: HEAD, has_unresolved_findings: true }),
-        },
-      ]),
-      /Codex/,
     ],
     [
       'agent-merge van een andere app',
@@ -234,75 +194,11 @@ describe('agent-merge-niet-kritiek/AC-3 pr:merge', () => {
       'review op een oude SHA',
       zet('issues/7/comments', [
         { user: { login: 'x' }, body: `Review ${'c'.repeat(40)}: geen blokkerende bevindingen` },
-        {
-          user: { login: CODEX },
-          body: codexSamenvatting({ status: 'completed', commit_sha: HEAD, has_unresolved_findings: false }),
-        },
       ]),
       /verse review/,
     ],
-    [
-      'Codex loopt nog (👀)',
-      (w: Wereld) => {
-        w[`repos/${REPO}/issues/7/comments`] = [
-          { user: { login: 'x' }, body: `Review ${HEAD}: geen blokkerende bevindingen` },
-          {
-            user: { login: CODEX },
-            body: codexSamenvatting({ status: 'running', commit_sha: HEAD, has_unresolved_findings: null }),
-          },
-        ];
-        w[`repos/${REPO}/issues/7/reactions`] = [
-          { user: { login: CODEX }, content: 'eyes', created_at: '2026-11-03T10:01:00Z' },
-        ];
-      },
-      /Codex/,
-    ],
-    [
-      'Codex op een andere SHA',
-      zet('issues/7/comments', [
-        { user: { login: 'x' }, body: `Review ${HEAD}: geen blokkerende bevindingen` },
-        {
-          user: { login: CODEX },
-          body: codexSamenvatting({ status: 'completed', commit_sha: MAIN, has_unresolved_findings: false }),
-        },
-      ]),
-      /Codex/,
-    ],
-    [
-      'Codex met open punten',
-      zet('issues/7/comments', [
-        { user: { login: 'x' }, body: `Review ${HEAD}: geen blokkerende bevindingen` },
-        {
-          user: { login: CODEX },
-          body: codexSamenvatting({ status: 'completed', commit_sha: HEAD, has_unresolved_findings: true }),
-        },
-      ]),
-      /Codex/,
-    ],
-    [
-      'Codex-samenvatting door iemand anders geschreven',
-      zet('issues/7/comments', [
-        { user: { login: 'x' }, body: `Review ${HEAD}: geen blokkerende bevindingen` },
-        {
-          user: { login: 'BramLambertJansen' },
-          body: codexSamenvatting({ status: 'completed', commit_sha: HEAD, has_unresolved_findings: false }),
-        },
-      ]),
-      /Codex/,
-    ],
   ])('%s', (_naam, aanpassing, reden) => {
     expect(redenen(aanpassing)).toMatch(reden);
-  });
-
-  test('een 👍 van Codex na de push telt, een 👍 van vóór de push niet', () => {
-    const zonderSamenvatting = (tijd: string) => (w: Wereld) => {
-      w[`repos/${REPO}/issues/7/comments`] = [
-        { user: { login: 'x' }, body: `Review ${HEAD}: geen blokkerende bevindingen` },
-      ];
-      w[`repos/${REPO}/issues/7/reactions`] = [{ user: { login: CODEX }, content: '+1', created_at: tijd }];
-    };
-    expect(redenen(zonderSamenvatting('2026-11-03T10:05:00Z'))).toBe('');
-    expect(redenen(zonderSamenvatting('2026-11-03T09:55:00Z'))).toMatch(/Codex/);
   });
 
   test('een run zonder pull_requests (GitHub laat die bij pull_request_target soms leeg) telt', () => {
@@ -313,30 +209,6 @@ describe('agent-merge-niet-kritiek/AC-3 pr:merge', () => {
         }),
       ),
     ).toBe('');
-  });
-
-  test('agentMerge.codex false slaat Codex over', () => {
-    expect(
-      redenen((w) => {
-        w[`repos/${REPO}/contents/.claude/gates.json?ref=${MAIN}`] = {
-          content: b64({
-            merge: 'niet-kritiek',
-            agentMerge: { toegestaan: ['src/**'], kritiek: [], codex: false, maxRegels: 400, maxBytes: 40000 },
-          }),
-        };
-        w[`repos/${REPO}/issues/7/comments`] = [
-          { user: { login: 'x' }, body: `Review ${HEAD}: geen blokkerende bevindingen` },
-        ];
-      }),
-    ).toBe('');
-  });
-
-  test('de Codex-stand komt uit het HTML-gecodeerde commentaar', () => {
-    expect(codexStand(codexSamenvatting({ status: 'completed', commit_sha: HEAD }))).toEqual({
-      status: 'completed',
-      commit_sha: HEAD,
-    });
-    expect(codexStand('geen marker')).toBeNull();
   });
 
   test.each([[[]], [['0']], [['7', '8']], [['7;x']], [['abc']]])('ongeldig argument %j', (args) => {

@@ -24,8 +24,8 @@ function fixture() {
   const gitdir = path.join(primary, '.git/worktrees/na');
   mkdirSync(gitdir, { recursive: true });
   mkdirSync(worktree);
-  writeFileSync(path.join(primary, '.git/HEAD'), 'ref: refs/heads/codex/sandbox-voor\n');
-  writeFileSync(path.join(gitdir, 'HEAD'), 'ref: refs/heads/codex/sandbox-na\n');
+  writeFileSync(path.join(primary, '.git/HEAD'), 'ref: refs/heads/claude/sandbox-voor\n');
+  writeFileSync(path.join(gitdir, 'HEAD'), 'ref: refs/heads/claude/sandbox-na\n');
   writeFileSync(path.join(gitdir, 'commondir'), '../..\n');
   writeFileSync(path.join(worktree, '.git'), `gitdir: ${gitdir}\n`);
   return { primary, worktree };
@@ -96,7 +96,7 @@ test('gedeelde worktree-opslag houdt voor/na en hergebruikte tool-ID’s geschei
         pushes: 0,
         ciRondes: 'onbekend',
         beurten: 1,
-        branches: { 'codex/sandbox-voor': { prompts: 1, weigeringen: 2, pushes: 0, ciRondes: 'onbekend' } },
+        branches: { 'claude/sandbox-voor': { prompts: 1, weigeringen: 2, pushes: 0, ciRondes: 'onbekend' } },
       },
       na: {
         prompts: 0,
@@ -105,7 +105,7 @@ test('gedeelde worktree-opslag houdt voor/na en hergebruikte tool-ID’s geschei
         pushes: 1,
         ciRondes: 'onbekend',
         beurten: 1,
-        branches: { 'codex/sandbox-na': { prompts: 0, weigeringen: 0, pushes: 1, ciRondes: 'onbekend' } },
+        branches: { 'claude/sandbox-na': { prompts: 0, weigeringen: 0, pushes: 1, ciRondes: 'onbekend' } },
       },
     },
   });

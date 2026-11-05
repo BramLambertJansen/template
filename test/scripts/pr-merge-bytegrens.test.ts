@@ -139,7 +139,7 @@ describe('agent-merge-bytegrens/AC-4 beoordeelMerge leest maxBytes van main', ()
   const gates = (agentMerge: Record<string, unknown>) => ({
     content: b64({
       merge: 'niet-kritiek',
-      agentMerge: { toegestaan: ['src/**'], kritiek: [], codex: false, maxRegels: 400, ...agentMerge },
+      agentMerge: { toegestaan: ['src/**'], kritiek: [], maxRegels: 400, ...agentMerge },
     }),
   });
 
@@ -177,7 +177,7 @@ describe('agent-merge-bytegrens/AC-4 beoordeelMerge leest maxBytes van main', ()
 
   test('agent-merge-bytegrens/AC-4: 40.000 bytes: geen reden', () => {
     const api = wereld([bestand('src/web/a.ts', reeks(400, 100))]);
-    expect(beoordeelMerge(api, { repo: REPO, nummer: 7, head: HEAD })).toEqual({ redenen: [], codex: 'uit' });
+    expect(beoordeelMerge(api, { repo: REPO, nummer: 7, head: HEAD })).toEqual({ redenen: [] });
   });
 
   test('agent-merge-bytegrens/AC-4: 40.001 bytes: de bytes-reden', () => {
@@ -191,7 +191,6 @@ describe('agent-merge-bytegrens/AC-4 beoordeelMerge leest maxBytes van main', ()
       const api = wereld([bestand('src/web/a.ts', reeks(1, 1))], { maxBytes });
       expect(beoordeelMerge(api, { repo: REPO, nummer: 7, head: HEAD })).toEqual({
         redenen: [BYTES_ONLEESBAAR],
-        codex: null,
       });
     },
   );

@@ -384,7 +384,7 @@ describe('spec-en-bouw/AC-6: een bestaande test wijzigen mag, verwijderen niet',
     expect(stderr).toContain(OUDE_TEST);
   });
 
-  test('spec-en-bouw/AC-6 laneVan: een gewijzigde pgTAP-test blijft buiten de lane (review Codex)', async () => {
+  test('spec-en-bouw/AC-6 laneVan: een gewijzigde pgTAP-test blijft buiten de lane (review op #377)', async () => {
     const uitslag = await lane([A(SPEC), A(WEB), M('db/tests/notes.sql')]);
     expect(uitslag.lane).toBeNull();
     expect(uitslag.reden).toContain('db/tests/notes.sql');

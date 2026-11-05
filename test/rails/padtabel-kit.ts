@@ -8,7 +8,19 @@ import path from 'node:path';
 export const REPO = path.join(import.meta.dirname, '../..');
 const FIXTURES = path.join(import.meta.dirname, 'fixtures/padtabel');
 
-export const OUDE_GATES_TEKST = readFileSync(path.join(FIXTURES, 'gates-30cc352.json'), 'utf8');
+// De bevroren stand van 30cc352 heeft in `agentMerge` nog een sleutel die vervallen is en dicht faalt (agent-merge-niet-kritiek
+// AC-8): de fixture wordt gelezen met alleen de huidige sleutels van het blok. Het bronbestand blijft historie en ongewijzigd.
+const AGENT_MERGE_SLEUTELS = new Set(['toegestaan', 'kritiek', 'maxRegels', 'maxBytes']);
+function metHuidigeSleutels(tekst: string): string {
+  const ruw: unknown = JSON.parse(tekst);
+  if (typeof ruw !== 'object' || ruw === null) return tekst;
+  const blok: unknown = Reflect.get(ruw, 'agentMerge');
+  if (typeof blok !== 'object' || blok === null) return tekst;
+  const schoon = Object.fromEntries(Object.entries(blok).filter(([sleutel]) => AGENT_MERGE_SLEUTELS.has(sleutel)));
+  return JSON.stringify({ ...ruw, agentMerge: schoon });
+}
+
+export const OUDE_GATES_TEKST = metHuidigeSleutels(readFileSync(path.join(FIXTURES, 'gates-30cc352.json'), 'utf8'));
 export const OUDE_DECISIONS_TEKST = readFileSync(path.join(FIXTURES, 'decisions-30cc352.json'), 'utf8');
 
 /** Een object (geen lijst) of een fout: de fixtures zijn hand geschreven en moeten deze vorm hebben. */
@@ -68,7 +80,7 @@ export function nieuw(paden: Record<string, unknown> = nieuwePaden()): Record<st
   return {
     paden,
     merge: 'niet-kritiek',
-    agentMerge: { codex: true, maxRegels: 400, maxBytes: 40000 },
+    agentMerge: { maxRegels: 400, maxBytes: 40000 },
     testpaden: ['**/*.test.*', 'test/**'],
     jsonGates: { 'package.json': ['scripts'] },
     gegenereerd: [],

@@ -856,17 +856,15 @@ function voorbeeldPad(glob) {
 }
 
 /**
- * Vorm van `agentMerge.codex`, `agentMerge.maxRegels` en `agentMerge.maxBytes` op het ruwe blok (spec agent-merge-zonder-codex
- * AC-6, agent-merge-bytegrens AC-1): het script
- * leest een afwijkende vorm dicht, maar hij moet zichtbaar fout zijn. Zonder `agentMerge`-blok geen toets (het oordeel is dan
- * altijd nee); een ontbrekende `codex` leest het script als `true` en is geldig.
+ * Vorm van `agentMerge.maxRegels` en `agentMerge.maxBytes` op het ruwe blok (spec agent-merge-niet-kritiek AC-9,
+ * agent-merge-bytegrens AC-1): het script leest een afwijkende vorm dicht, maar hij moet zichtbaar fout zijn. Een overgebleven
+ * verouderde sleutel is een overtreding (AC-8). Zonder `agentMerge`-blok geen toets (het oordeel is dan altijd nee).
  * @param {unknown} ruw
  * @returns {Violation[]}
  */
 function agentMergeVorm(ruw) {
   const blok = typeof ruw === 'object' && ruw !== null && 'agentMerge' in ruw ? ruw.agentMerge : undefined;
   if (typeof blok !== 'object' || blok === null) return [];
-  const codex = 'codex' in blok ? blok.codex : undefined;
   /** @param {string} sleutel */
   const grens = (sleutel) => {
     const waarde = sleutel in blok ? Reflect.get(blok, sleutel) : undefined;
@@ -880,14 +878,14 @@ function agentMergeVorm(ruw) {
         ];
   };
   return [
-    ...(codex === undefined || codex === true || codex === false || codex === 'indien-aanwezig'
-      ? []
-      : [
+    ...('codex' in blok
+      ? [
           {
             key: 'docs:agentMerge.codex',
-            message: `.claude/gates.json: agentMerge.codex is ${JSON.stringify(codex)}, niet true, false of "indien-aanwezig"`,
+            message: '.claude/gates.json: agentMerge.codex bestaat niet meer (ADR 0069); haal de sleutel weg',
           },
-        ]),
+        ]
+      : []),
     ...grens('maxRegels'),
     ...grens('maxBytes'),
   ];
