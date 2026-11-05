@@ -133,7 +133,6 @@ describe('padtabel/AC-5 pr:merge leest agentMerge uit main in beide vormen', () 
     const blok = { ...object(ruw['agentMerge']), maxBytes: 3 };
     expect(redenen(wereld({ ...ruw, agentMerge: blok })).join('\n')).toMatch(/grens 3 \(agentMerge\.maxBytes\)/);
   });
-
 });
 
 describe('padtabel/AC-5 het padoordeel van de diff-guard in beide vormen', () => {

@@ -176,10 +176,12 @@ describe('agent-merge-niet-kritiek/AC-7 geen externe-reviewvoorwaarde, steekproe
     expect(u).toEqual({ redenen: [] });
   });
 
-  test('de beoordeling leest geen reacties, check-suites, reviews, inline-commentaar of branch-PR\'s', () => {
+  test("de beoordeling leest geen reacties, check-suites, reviews, inline-commentaar of branch-PR's", () => {
     const gelezen: string[] = [];
     beoordeelMerge(api(goed(), gelezen), { repo: REPO, nummer: 7, head: HEAD });
-    expect(gelezen.filter((e) => /reactions|check-suites|\/reviews|pulls\/7\/comments|pulls\?head=/.test(e))).toEqual([]);
+    expect(gelezen.filter((e) => /reactions|check-suites|\/reviews|pulls\/7\/comments|pulls\?head=/.test(e))).toEqual(
+      [],
+    );
   });
 
   test('een samenvatting van de bot met open punten op de head houdt de merge niet tegen', () => {
