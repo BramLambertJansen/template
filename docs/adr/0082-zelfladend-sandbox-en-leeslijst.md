@@ -1,7 +1,6 @@
 # 0082 — Zelfladende paden: afscherming door de sandbox, vooraf een leeslijst
 
 Status: geaccepteerd
-
 Herzien: 2026-11-05 (#553): punt 2, `./.git/commondir` blijft in `denyWrite`; S0 vervalt na meting M0 deel 2.
 
 Wijzigt [0071](0071-rolhek-vooraf-vaste-lijst.md) punt 2 en [0061](0061-claude-sandbox-werkstraat.md) punt 3. Drempel: A3
@@ -49,8 +48,9 @@ draait dat deels om. Voor `settings.json` en de stubs geldt het falen van git al
 2. **`./.git/commondir` blijft in `denyWrite`** (besluit eigenaar, 4 en 5 november 2026; gemeten 5 november 2026). De
    eigenaar besliste dat het pas uit `denyWrite` gaat, met `GIT_COMMON_DIR` en een weigering in elke hook die git aanroept
    (S0), als een proef in de kooi aantoont dat het git van Claude Code zelf het bestand niet volgt. De proef (M0 deel 2,
-   Claude Code 2.1.318, git 2.53.0) toonde het omgekeerde: dat git leest de config uit een nieuw `.git/commondir`, vóór
-   een hook kan weigeren. S0 vervalt daarmee. Git in Bash blijft in de hoofdcheckout kapot en werkt alleen in een
+   Claude Code 2.1.318, git 2.53.0) toonde het omgekeerde: dat git leest de config uit een nieuw `.git/commondir`,
+   zonder dat een hook ertussen zit. Een weigering in een hook houdt dat dus niet tegen (afgeleid; de hooks van de
+   template zelf zijn niet beproefd). S0 vervalt daarmee. Git in Bash blijft in de hoofdcheckout kapot en werkt alleen in een
    worktree (leerpunt #553). Meting en beperkingen: spec rolhek-vooraf-krimp, M0.
 3. **Vooraf een leeslijst, ook voor wat geen pad letterlijk noemt.** Een woord kan naar een zelfladend pad wijzen:
    letterlijk, als glob, als map erboven, of als niet-herleidbare expansie. Een commando met zo'n woord gaat alleen door
@@ -70,7 +70,7 @@ draait dat deels om. Voor `settings.json` en de stubs geldt het falen van git al
      gaat dicht als elke hook git start met de veilige opties van de toets op effect (`-c core.fsmonitor=false` en
      dergelijke); dat is een eigen leerpunt;
    - het git dat Claude Code zelf buiten de sandbox draait, zonder hook ertussen (de `gitStatus`-context bij start,
-     hervatten of compacteren). Gemeten (M0 deel 2): het leest de config uit een nieuw `.git/commondir`. Het zet op
+     hervatten of compacteren). Gemeten (M0 deel 2, alleen in `claude -p`, niet interactief): het leest de config uit een nieuw `.git/commondir`. Het zet op
      elke aanroep `core.fsmonitor=`, `core.hooksPath=/dev/null` en `hook.*.enabled=false`, zodat een geplante
      `core.fsmonitor` niets uitvoert. Dat is gedrag van die versie, niet iets wat de repo afdwingt. Daarom blijft
      `./.git/commondir` in `denyWrite` (punt 2);
