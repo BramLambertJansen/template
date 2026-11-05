@@ -2,12 +2,12 @@
 
 Status: geaccepteerd
 
-Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 5 en 10 (een gebouwde spec mag in een besluit-PR terug naar
-`goedgekeurd` met nieuwe inhoud; `gebouwd` noemt alleen de PR), [0054](0054-gebouwd-in-de-bouw-pr.md) punt 1 en 5
+Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 5 en 10 (een gebouwde spec krijgt in een besluit-PR nieuwe AC's
+met de markering `(nog niet gebouwd)`; `gebouwd` noemt alleen de PR), [0054](0054-gebouwd-in-de-bouw-pr.md) punt 1 en 5
 (`docs:status` schrijft ook na de merge alleen `# #<PR>`; de bestaande SHA-regels worden omgezet),
 [0062](0062-spec-en-bouw-in-een-pr.md) punt 4 (de vorm met SHA vervalt ook voor een gemergde PR) en
 [0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md) punt 4 (een vervallen spec gaat naar `docs/specs/archief/`;
-`docs/template/` blijft voor documenten die alleen de template betreffen). Drempel: A3 (de guard laat een overgang toe die hij
+`docs/template/` blijft voor documenten die alleen de template betreffen). Drempel: A3 (de guard laat een inhoudswijziging toe die hij
 nu weigert) en A4. Uitwerking: [spec](../specs/specarchief-en-bouwvorm.md). Aanleiding: overzicht "Framework versimpelen" van
 de eigenaar (5 november 2026), bevinding C en D.
 
@@ -20,7 +20,8 @@ rolhek in vier. Drie vervallen specs (108 KB) staan tussen de levende in `docs/s
 `gebouwd` kent twee vormen: `# #<PR>` en `# #<PR>; gevalideerd: <sha>`. De SHA-vorm in een open PR wordt rood zodra er na die
 SHA nog code verandert. Na de merge staat de SHA al bij GitHub (de head van PR N); de tekst herhaalt hem. Het bouwbewijs is de
 merge met alle verplichte checks groen op de head (R-CI-08). Spec `padtabel` staat op `goedgekeurd` terwijl bouw-PR #537
-gemerged is; een latere PR moet `gebouwd # #537` kunnen zetten.
+gemerged is. Een latere status-PR kan dat nu al rechtzetten, maar alleen met de SHA-vorm (`mergedRefusal` eist hem); zonder
+SHA weigert de guard elk ander nummer dan dat van de eigen PR.
 
 ## Besluit
 
@@ -33,17 +34,21 @@ gemerged is; een latere PR moet `gebouwd # #537` kunnen zetten.
 3. **Eén levende spec per mechanisme.** Een wijziging aan een bestaand mechanisme werkt de spec van dat mechanisme bij met
    nieuwe AC's onder dezelfde naam en namespace; een nieuwe spec alleen voor een nieuw mechanisme. Vervangt een spec een andere,
    dan gaat de oude naar `vervallen` en het archief. Een AC-id van een spec met eigenaarstatus verdwijnt nooit.
-4. **Hoe dat door de guard gaat.** Inhoud van een goedgekeurde spec wijzigen blijft een besluit. Een gebouwde spec krijgt nieuwe
-   inhoud in de bouw-PR met `gebouwd # #<deze PR>` (bestaat al), of in een besluit-PR terug naar `goedgekeurd`: die overgang
-   met gewijzigde inhoud is nieuw een besluit; zonder inhoudswijziging blijft hij geweigerd.
+4. **Hoe dat door de guard gaat.** Inhoud van een goedgekeurde spec wijzigen blijft een besluit. Een gebouwde spec blijft
+   `gebouwd`: in een besluit-PR is nieuwe inhoud een besluit, en elke nieuwe AC krijgt `(nog niet gebouwd)` (patroon van
+   R-DOC-10); de AC-dekking slaat alleen gemarkeerde AC's over. De bouw-PR haalt de markering weg en zet
+   `gebouwd # #<deze PR>`; met een markering kan dat niet. Een spec die ooit een eigenaarstatus had, verlaat `docs/specs/`
+   alleen via `vervallen` naar het archief; verwijderen, of een stap terug (naar `voorstel` of `vervallen`) waarbij een AC-id
+   wegvalt, is rood. AC-id's vergelijken op het volledige id `<namespace>/AC-n`.
 5. **Eén vorm: `gebouwd # #<PR>`.** In de bouw-PR het eigen nummer (0054, 0062). Later het nummer van de gemergde bouw-PR; de
    guard haalt de head-SHA en de mergecommit bij GitHub en toetst hetzelfde als nu na de merge: mergecommit in main, spec
    ongewijzigd goedgekeurd in de mergecommit, verplichte checks groen op de head, een bouwpad, en de status-PR wijzigt alleen
    statusregels en het eigen vinkje. `docs:status` schrijft alleen deze vorm.
 6. **Bestaande SHA-regels** worden in de bouw-PR omgezet: alleen `; gevalideerd: <sha>` gaat weg, het PR-nummer blijft. De
    lezers kennen de oude vorm nog (apps, geschiedenis). `check-docs` weigert de oude vorm in een statusregel. Een gebouwd-regel
-   die een ander PR-nummer krijgt, toetst als nieuw `gebouwd`.
-7. **Niets wordt losser.** Spec-vóór-code, AC-dekking en het bouwbewijs blijven; punt 3 en 6 zijn strenger dan nu.
+   die een ander PR-nummer krijgt, of de SHA verliest terwijl de inhoud verandert, toetst als nieuw `gebouwd` (nu gaat dat als
+   `vrij` door, omdat de statusregel buiten de digest valt).
+7. **Niets wordt losser.** Spec-vóór-code, AC-dekking en het bouwbewijs blijven; punt 3, 4 en 6 zijn strenger dan nu.
 8. **Terugval.** Komt een gebouwde spec zonder gemergde bouw-PR met groene checks door de guard, of verliest een spec een AC
    zonder melding, dan gaat de bouw-PR terug. De eigenaar beslist.
 
