@@ -89,7 +89,8 @@ export function documentInfo(file, text) {
   if (status === null) return null;
   lines.splice(index, 1);
   // De markering telt niet mee: alleen weghalen is geen inhoudswijziging (ADR 0080 punt 4).
-  const canonical = lines.join('\n').replaceAll(AC_REGEL, (regel, _id, markering) =>
+  const tekst = lines.join('\n');
+  const canonical = kind !== 'spec' ? tekst : tekst.replaceAll(AC_REGEL, (regel, _id, markering) =>
     markering === undefined ? regel : regel.slice(0, -MARKERING.length));
   const digest = createHash('sha256').update(canonical).digest('hex');
   return { kind, status, digest, canonical };
@@ -225,6 +226,9 @@ export function beslisOvergang(file, voor, na) {
 function gebouwdBlijft(voor, na, zelfdeInhoud) {
   const oud = builtReference(voor);
   const nieuw = builtReference(na);
+  // Een weggehaalde markering vraagt nieuw bouwbewijs: `gebouwd # #<deze PR>` (ADR 0080 punt 4).
+  const gemarkeerd = acIds(na).gemarkeerd;
+  if ([...acIds(voor).gemarkeerd].some((id) => !gemarkeerd.has(id))) return 'gebouwd';
   if (oud === null || nieuw === null || oud.pr !== nieuw.pr) return 'gebouwd';
   if (oud.sha === nieuw.sha) return zelfdeInhoud ? 'vrij' : 'besluit';
   return zelfdeInhoud && nieuw.sha === undefined ? 'vrij' : 'gebouwd';

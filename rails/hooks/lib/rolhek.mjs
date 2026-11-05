@@ -781,7 +781,7 @@ function archiefViaBash(argv, { writes, redirects }, ctx) {
     // Ook `cp -t map`/`--target-directory=map`: het doel staat dan niet tussen de operanden.
     const isMap = eigen && sources.length > 0 && (file.endsWith('/') || ctx.isDir(rel));
     const doelen = isMap ? sources.map((source) => `${rel}/${path.basename(source)}`) : [rel];
-    return doelen.filter(isArchief).flatMap((doel) => {
+    return doelen.filter((doel) => /^docs\/(?:adr|specs)\/archief\//.test(doel)).flatMap((doel) => {
       const verplaatsing = eigen && gitMv && sources.length === 1 && ctx.read(doel) === null &&
         relative(ctx, sources[0] ?? '') === archiefBron(doel);
       return verplaatsing ? [] : [`${doel}: ${ARCHIEF_MELDING}`];

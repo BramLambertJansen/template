@@ -417,24 +417,54 @@ function verifySpecWeg(changes, context) {
  * @param {{ file: string, before: string | null, after: string }} document @param {string} uitslag @param {Context} context
  */
 function verifyLevendeSpec({ file, before, after }, uitslag, context) {
+  if (documentKind(file) !== 'spec') return;
   const oud = before === null ? null : documentInfo(file, before);
-  if (oud?.kind !== 'spec' || before === null) return;
-  const voor = acIds(before);
+  const voor = before === null ? { alle: new Set(), gemarkeerd: new Set() } : acIds(before);
   const na = acIds(after);
-  if (oud.status !== 'voorstel')
-    verifyAcIdsBlijven(file, specNamespace(file, before), { voor: voor.alle, na: na.alle });
+  if (oud !== null && oud.status !== 'voorstel')
+    verifyAcIdsBlijven(file, specNamespace(file, before ?? ''), { voor: voor.alle, na: na.alle });
+  verifyMarkering({ file, after, oudStatus: oud?.status ?? null }, { voor, na }, { uitslag, context });
+  if (uitslag === 'besluit' && oud?.status === 'gebouwd') verifyGebouwdeInhoud(file, { voor, na }, context);
+}
+
+/**
+ * Nieuwe inhoud van een gebouwde spec met dezelfde verwijzing: alleen in een besluit-PR zonder code, en elke nieuwe AC gemarkeerd.
+ * @param {string} file
+ * @param {{ voor: { alle: Set<string> }, na: { alle: Set<string>, gemarkeerd: Set<string> } }} ids
+ * @param {Context} context
+ */
+function verifyGebouwdeInhoud(file, { voor, na }, context) {
+  if (context.code)
+    throw new Error(
+      `${file}: nieuwe inhoud van een gebouwde spec: besluit-PR zonder code of gebouwd # #<deze PR> (ADR 0080)`,
+    );
+  const kaal = [...na.alle].filter((id) => !voor.alle.has(id) && !na.gemarkeerd.has(id));
+  if (kaal.length > 0)
+    throw new Error(`${file}: ${kaal.join(', ')} is nieuw in een gebouwde spec en mist${MARKERING} (ADR 0080)`);
+}
+
+/**
+ * De markering (ADR 0080 punt 4, R-DOC-10): een nieuwe staat alleen op een nieuw id, in een spec die op main `gebouwd` is, in een
+ * PR zonder code; `gebouwd` met een markering of een weggehaalde markering zonder `gebouwd # #<deze PR>` is rood.
+ * @param {{ file: string, after: string, oudStatus: string | null }} spec
+ * @param {{ voor: { alle: Set<string>, gemarkeerd: Set<string> }, na: { alle: Set<string>, gemarkeerd: Set<string> } }} ids
+ * @param {{ uitslag: string, context: Context }} pr
+ */
+function verifyMarkering({ file, after, oudStatus }, { voor, na }, { uitslag, context }) {
   const verwijzing = builtReference(after);
   if (uitslag === 'gebouwd' && verwijzing !== null && na.gemarkeerd.size > 0)
     throw new Error(`${file}: gebouwd # #${String(verwijzing.pr)} met een AC${MARKERING} (ADR 0080)`);
+  const weg = [...voor.gemarkeerd].some((id) => na.alle.has(id) && !na.gemarkeerd.has(id));
+  if (weg && (verwijzing === null || verwijzing.pr !== context.pr))
+    throw new Error(`${file}: een AC zonder${MARKERING} vraagt gebouwd # #<deze PR> (ADR 0080)`);
   const nieuw = [...na.gemarkeerd].filter((id) => !voor.gemarkeerd.has(id));
   const opMain = nieuw.find((id) => voor.alle.has(id));
   if (opMain !== undefined)
     throw new Error(`${file}: ${opMain}${MARKERING} staat al op main; markeer alleen een nieuw AC-id (ADR 0080)`);
-  if (nieuw.length > 0 && context.code)
-    throw new Error(`${file}: een AC${MARKERING} hoort in een besluit-PR zonder code (ADR 0080)`);
-  const kaal = [...na.alle].filter((id) => !voor.alle.has(id) && !na.gemarkeerd.has(id));
-  if (uitslag === 'besluit' && oud.status === 'gebouwd' && kaal.length > 0)
-    throw new Error(`${file}: ${kaal.join(', ')} is nieuw in een gebouwde spec en mist${MARKERING} (ADR 0080)`);
+  if (nieuw.length > 0 && (context.code || oudStatus !== 'gebouwd'))
+    throw new Error(
+      `${file}: een AC${MARKERING} hoort in een besluit-PR zonder code op een spec die op main gebouwd is (ADR 0080)`,
+    );
 }
 
 /**

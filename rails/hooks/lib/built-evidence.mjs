@@ -1,5 +1,5 @@
 // Gebouwd betekent: implementatie gecontroleerd en aangeboden in een PR. Het is geen release of nieuw mandaat.
-import { builtReference, documentInfo } from './document-state.mjs';
+import { MARKERING, acIds, builtReference, documentInfo } from './document-state.mjs';
 import { canRecordStatus, TEMPLATE_REPOSITORY } from './task-authority.mjs';
 import { isFunctionalUiSpec } from './functional-ui.mjs';
 
@@ -105,6 +105,8 @@ function mergedRefusal(spec, evidence) {
   const bijMerge = documentInfo(spec.file, merged.specAtMerge ?? '');
   if (bijMerge?.kind !== 'spec' || bijMerge.status !== 'goedgekeurd' || bijMerge.digest !== spec.digest)
     return 'de spec ongewijzigd en goedgekeurd in de mergecommit';
+  if (acIds(merged.specAtMerge ?? '').gemarkeerd.size > 0)
+    return `de spec zonder AC${MARKERING} in de mergecommit (ADR 0080)`;
   const names = merged.requiredChecks ?? [];
   if (!checkedCommit(evidence.checks, { names, sha: pr.headSha }))
     return `alle verplichte GitHub Actions-checks groen op de head van PR #${n}`;
