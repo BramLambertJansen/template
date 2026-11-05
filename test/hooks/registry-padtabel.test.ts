@@ -10,14 +10,19 @@ const OUD = object(JSON.parse(OUDE_DECISIONS_TEKST));
 const TEKST = readFileSync(path.join(REPO, '.claude/decisions.json'), 'utf8');
 
 describe('padtabel/AC-14 decisions.json met alleen version en requiredChecks', () => {
-  test('precies version en requiredChecks, met de waarden van 30cc352 (padtabel/AC-14)', () => {
+  // Na 30cc352 mag main een verplichte check toevoegen (ADR 0078: leerpunt-bewijs); geen check van 30cc352 mag wegvallen.
+  test('precies version en requiredChecks, zonder een verplichte check van 30cc352 te verliezen (padtabel/AC-14)', () => {
     const ruw = object(JSON.parse(TEKST));
     expect(Object.keys(ruw).sort()).toEqual(['requiredChecks', 'version']);
-    expect(ruw).toEqual({ version: OUD['version'], requiredChecks: OUD['requiredChecks'] });
+    expect(ruw['version']).toBe(OUD['version']);
+    expect(ruw['requiredChecks']).toEqual(
+      expect.arrayContaining(Array.isArray(OUD['requiredChecks']) ? OUD['requiredChecks'] : [null]),
+    );
   });
 
   test('readRegistry leest het huidige register, decisions leeg (padtabel/AC-14)', () => {
-    expect(readRegistry(TEKST)).toEqual({ version: 1, requiredChecks: OUD['requiredChecks'], decisions: [] });
+    const ruw = object(JSON.parse(TEKST));
+    expect(readRegistry(TEKST)).toEqual({ version: 1, requiredChecks: ruw['requiredChecks'], decisions: [] });
   });
 
   test('readRegistry leest ook het register van 30cc352 met zijn 26 records (padtabel/AC-14)', () => {
