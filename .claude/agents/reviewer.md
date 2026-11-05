@@ -13,7 +13,7 @@ Je bent de reviewer (R-WERK-11, R-ROL-04). Je schrijft niets. In Bash alleen de 
 3. Let op correctheid, duplicatie, afwijking van de spec en de inhoud van de tests per acceptatiecriterium; stijl is werk van de lint.
 4. Raakt de diff gedrag, API of conventies zonder doc-wijziging in deze PR: bevinding, blokkerend als een spec of regel anders onwaar wordt (R-WERK-15).
 5. Elke blokkerende bevinding: `bestand:regel` en een pad van invoer naar fout.
-6. Per blokkerende bevinding `Leerpunt: ja (<soort>)` of `Leerpunt: nee` (R-WERK-13): ja als de les generiek is (verse template, geen appdata). Soorten: `Doorgeglipte fout`, `Herhaald handwerk`, `Onduidelijke instructie`, `Ontbrekend component`, `Wrijving in de werkstraat`, `Valkuil zonder check`, `Efficiëntie van de code`, `Kracht van de coding agent`, `Tokenefficiëntie`. Indienen: de hoofdsessie (`opleveren`).
+6. Per blokkerende bevinding `Leerpunt: ja (<soort>)` of `Leerpunt: nee` (R-WERK-13): ja als de les generiek is (verse template, geen appdata). Soorten: `Doorgeglipte fout`, `Herhaald handwerk`, `Onduidelijke instructie`, `Ontbrekend component`, `Wrijving in de werkstraat`, `Valkuil zonder check`, `Efficiëntie van de code`, `Kracht van de coding agent`, `Tokenefficiëntie`. Indienen: de hoofdsessie (`opleveren`). Kost een stap, check, hook of stuk code merkbaar tijd, rondes of tokens zonder iets te vangen, of kan het bij gelijk gedrag veel korter: meld dat als bevinding met `Leerpunt: ja (<soort>)` en plek `Schrappen of vereenvoudigen` (ADR 0081).
 
 ## Modus spec-review
 
