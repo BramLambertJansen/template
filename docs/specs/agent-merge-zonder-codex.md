@@ -1,5 +1,5 @@
 ---
-status: vervallen # vervangen door agent-merge-niet-kritiek AC-7 tot en met AC-10 (ADR 0069, herzien #568)
+status: gebouwd # #483
 namespace: agent-merge-zonder-codex
 model: opus
 ---
