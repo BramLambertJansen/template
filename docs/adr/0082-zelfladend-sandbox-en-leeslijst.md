@@ -84,7 +84,7 @@ draait dat deels om. Voor `settings.json` en de stubs geldt het falen van git al
 - **De opsomming blijven dichten.** Elke ronde een nieuwe vorm, en `node -e` gaat nooit dicht.
 - **Heel `.git`, of `node_modules`, in `denyWrite`.** Dan falen `commit`, `fetch` en `pnpm install`.
 - **`./.git/commondir` uit `denyWrite` halen, de hooks weigeren laten (S0).** Vervallen: het git van Claude Code
-  volgt het bestand vóór een hook kan weigeren (M0 deel 2). Git in Bash blijft daardoor kapot in de hoofdcheckout.
+  volgt het bestand zonder dat een hook ertussen zit (M0 deel 2). Git in Bash blijft daardoor kapot in de hoofdcheckout.
 - **Alleen de sandbox, geen regel vooraf.** Dan blijft voor `.git/refs` alleen een toets achteraf, en die ziet ze niet.
 - **Bash van subagents helemaal beperken tot de leeslijst.** Dan kunnen developer en tester geen tests meer draaien.
 - **Een sandbox per rol.** Die kent Claude Code niet.
