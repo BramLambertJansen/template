@@ -25,3 +25,5 @@ wordt nooit opnieuw gebruikt. `check-docs` toetst hem (ADR 0067, spec krimp-op-n
 - R-REL-02, check-release-ci en check-deployment-schema → geschrapt: verhuisd naar roadmap ST-10 tot de bouw
 - R-DB-14, grants van app_definer voor app.delete_account → geschrapt: verhuisd naar roadmap ST-05 tot de bouw
 - R-DEPLOY-01, readiness-ping als app_jobs → geschrapt: verhuisd naar roadmap ST-03 tot de bouw
+- R-CI-06, spec naar docs/template/specs/ → R-CI-06
+- R-WERK-08, gebouwd later met gevalideerd: <sha> → R-WERK-08
