@@ -2,13 +2,19 @@
 // De beslissingen staan in lib/werkstraat.mjs (getest in test/hooks/werkstraat.test.ts); hier alleen stdin, commando's en uitvoer.
 // Root: de git-root van `cwd` uit de payload (een worktree), terugval CLAUDE_PROJECT_DIR en dan process.cwd() (lib/root.mjs).
 // Een fout in de hook: bij stop en subagent-stop blokkeert hij met de fout (Claude Code stopt zelf na 8 keer), bij de
-// andere meldt hij hem alleen; die blokkeren nooit iets.
+// andere meldt hij hem alleen; die blokkeren nooit iets. Session-start legt als eerste stap het venster `hook` van de toets
+// op effect vast over `.claude/hooks/.cache/` (de stub-lader ververste het anker al; spec rolhek-effect AC-10 c), fail-open.
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { checkEnv } from './lib/check-env.mjs';
+import { legVensterVast } from './lib/effect.mjs';
+import { bestandenOnder, gitIn } from './lib/effect-snapshot.mjs';
+import { rolhekContext } from './lib/rolhek-context.mjs';
 import { payloadCwd, projectRoot } from './lib/root.mjs';
 import { changedFiles, postEdit, sessionStart, stop, subagentStop } from './lib/werkstraat.mjs';
+
+const CACHE = '.claude/hooks/.cache';
 
 const event = process.argv[2] ?? '';
 
@@ -65,6 +71,23 @@ function onthoud(run, root, sleutel) {
   }
 }
 
+/**
+ * Het venster van de actor `hook` (spec rolhek-effect AC-10 c): elk bestand onder `.claude/hooks/.cache/`, in de staat van
+ * nu. Fail-open: session-start blokkeert nooit; zonder cachebestanden geen venster.
+ * @param {string} root
+ */
+function hookVenster(root) {
+  try {
+    const paden = bestandenOnder(path.join(root, CACHE), CACHE);
+    if (paden.length === 0) return;
+    const nu = Date.now();
+    const repo = { root, git: gitIn(root), ctx: rolhekContext(root, root), now: () => Date.now() };
+    legVensterVast(repo, { actor: 'hook', start: nu, eind: nu, paden });
+  } catch (error) {
+    process.stderr.write(`werkstraat-hook session-start: venster van de hook niet vastgelegd: ${error instanceof Error ? error.message : String(error)}\n`);
+  }
+}
+
 /** Lege stdin (session-start kan zonder payload komen) telt als `{}`; kapotte JSON is een fout. */
 function readPayload() {
   const text = readFileSync(0, 'utf8');
@@ -85,6 +108,7 @@ function handle(payload) {
     case 'subagent-stop':
       return subagentStop(payload, deps);
     case 'session-start':
+      hookVenster(root);
       return sessionStart(deps);
     default:
       throw new Error(`onbekende hook "${event}"`);

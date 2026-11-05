@@ -428,7 +428,9 @@ describe('rolhek-effect/AC-7: dicht vallen', () => {
     expect(geblokkeerd(handle('stop', payload(''), repo))).toBe('');
   });
 
-  test('--alles laat een geldige opname van een andere subagent staan', () => {
+  // Herzien door spec rolhek-effect AC-10 (d), ADR 0083 punt 2 (#588): `--alles` wist ook de geldige opnamen van andere
+  // subagents, zodat de eigenaar een echte herstart heeft; de lijst blijft leeg tot de volgende subagent.
+  test('--alles wist ook een geldige opname van een andere subagent; de lijst blijft leeg tot de volgende subagent', () => {
     const root = nieuweRepo();
     const repo = repoVan(root);
     sh(root, 'mkdir -p test/veel && cd test/veel && seq 1 5001 | xargs touch');
@@ -438,7 +440,10 @@ describe('rolhek-effect/AC-7: dicht vallen', () => {
     handle('subagent-stop', payload('tester'), repo);
     neemOver(['--alles'], repo);
     schrijf(root, 'rails/y.mjs', 'x');
-    expect(geblokkeerd(handle('stop', payload(''), repo))).toContain('rails/y.mjs');
+    expect(geblokkeerd(handle('stop', payload(''), repo))).toBe('');
+    handle('subagent-start', payload('developer'), repo);
+    schrijf(root, 'rails/z.mjs', 'x');
+    expect(geblokkeerd(handle('stop', payload(''), repo))).toContain('rails/z.mjs');
   });
 
   test('meer dan 5000 paden: een overtreding zonder pad', () => {

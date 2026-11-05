@@ -1,4 +1,6 @@
-// De hook-gebeurtenissen van de toets op effect (ADR 0066, spec rolhek-effect AC-1 t/m AC-7).
+// De hook-gebeurtenissen van de toets op effect (ADR 0066, spec rolhek-effect AC-1 t/m AC-7, AC-10). SubagentStop sluit het
+// venster: de opname wordt de staat van dat moment; Stop en de context blokkeren alleen op de eigen sessie, `nacontrole(repo,
+// null)` (pr:verify) toetst alle sessies; `session-end` wist de opnamen van de sessie.
 import path from 'node:path';
 import {
   agentOpnamen,
@@ -12,6 +14,7 @@ import {
   veranderdePaden,
   werkAgentBij,
   werkLijstBij,
+  wisAgentOpnamen,
   wisOpname,
 } from './effect.mjs';
 import { MAX_MS, momentopname } from './effect-snapshot.mjs';
@@ -21,6 +24,7 @@ import { decide } from './rolhek.mjs';
 /**
  * @typedef {import('./effect.mjs').Repo} Repo
  * @typedef {import('./effect.mjs').Overtreding} Overtreding
+ * @typedef {import('./effect.mjs').Wie} Wie
  * @typedef {import('./effect-snapshot.mjs').Snapshot} Snapshot
  * @typedef {{ stdout?: string, stderr?: string, exit?: number }} Uitslag
  */
@@ -58,24 +62,37 @@ export function lijstTekst(lijst) {
 
 const UITWEG = 'De hook zet niets terug. Zet het pad terug naar de staat van vóór het commando, of laat de eigenaar de wijziging overnemen met `pnpm rolhek:overnemen <pad>` (spec rolhek-effect AC-5).';
 
-/** Te groot of te traag (AC-7): een overtreding zonder pad. @param {{ actor: string, agentType: string, commando: string }} wie @returns {Overtreding} */
+/** Te groot of te traag (AC-7): een overtreding zonder pad. @param {Wie} wie @returns {Overtreding} */
 function nietRond(wie) {
-  return { rel: null, actor: wie.actor, rol: wie.agentType || 'hoofdsessie', commando: wie.commando, reden: 'meer dan 5000 paden of langer dan 5 s: de toets valt dicht (AC-7)', voor: null };
+  const sessie = wie.sessie === undefined || wie.sessie === '' ? {} : { sessie: wie.sessie };
+  return { rel: null, actor: wie.actor, rol: wie.agentType || 'hoofdsessie', commando: wie.commando, reden: 'meer dan 5000 paden of langer dan 5 s: de toets valt dicht (AC-7)', voor: null, ...sessie };
 }
 
 /**
- * Vergelijkt `voor` met nu voor deze actor en werkt de lijst bij.
- * @param {Repo} repo @param {{ voor: Snapshot | null | undefined, start: number }} basis @param {{ actor: string, agentType: string, commando: string }} wie
+ * Vergelijkt `voor` met nu voor deze actor en werkt de lijst bij. `snap`: de momentopname van nu als die bruikbaar is
+ * (AC-7), voor SubagentStop (AC-10 a).
+ * @param {Repo} repo @param {{ voor: Snapshot | null | undefined, start: number }} basis @param {Wie} wie
  */
 function vergelijk(repo, basis, wie) {
   const begin = repo.now();
   const na = momentopname(repo);
-  if (na.teGroot || basis.voor === null || repo.now() - begin > MAX_MS)
-    return { nieuw: [nietRond(wie)], meldingen: [], paden: [], lijst: werkLijstBij(repo, { nieuw: [nietRond(wie)], nu: null }) };
+  const rond = !na.teGroot && repo.now() - begin <= MAX_MS;
+  const snap = rond ? na : null;
+  if (!rond || basis.voor === null)
+    return { nieuw: [nietRond(wie)], meldingen: [], paden: [], snap, lijst: werkLijstBij(repo, { nieuw: [nietRond(wie)], nu: null }) };
   const zonder = basis.voor === undefined;
   const uitslag = toets(repo, { voor: basis.voor ?? zonderVoor(na), na, start: basis.start }, wie);
   const meldingen = zonder ? ['rolhek-effect: geen momentopname van vóór het commando; elk afwijkend pad getoetst (AC-6)', ...uitslag.meldingen] : uitslag.meldingen;
-  return { ...uitslag, meldingen, lijst: werkLijstBij(repo, { nieuw: uitslag.nieuw, nu: na }) };
+  return { ...uitslag, meldingen, snap, lijst: werkLijstBij(repo, { nieuw: uitslag.nieuw, nu: na }) };
+}
+
+/**
+ * De overtredingen waarop deze sessie blokkeert (AC-10 f): van haar subagents, van de hoofdsessie zelf, en oude entries
+ * zonder `sessie`-veld (dicht).
+ * @param {readonly Overtreding[]} lijst @param {string} sessie
+ */
+function vanSessie(lijst, sessie) {
+  return lijst.filter((o) => o.sessie === undefined || o.sessie === sessie || o.actor === `hoofd:${sessie}`);
 }
 
 /** @param {string} reden @returns {Uitslag} */
@@ -151,7 +168,7 @@ function hoofdsessieAchteraf(repo, basis, wie) {
   const tekst = lijstTekst(uitslag.nieuw);
   if (modus(repo) === 'schaduw')
     return context(wie.event, uitslag.nieuw.length === 0 ? [] : [`rolhek-effect (schaduw, AC-4): met de vlag aan zou dit commando op de open lijst komen:\n${tekst}`]);
-  werkLijstBij(repo, { nieuw: uitslag.nieuw.map((o) => ({ rel: o.rel, actor: o.actor, rol: o.rol, commando: o.commando, reden: o.reden, voor: o.voor })), nu: na });
+  werkLijstBij(repo, { nieuw: uitslag.nieuw.map((o) => ({ rel: o.rel, actor: o.actor, rol: o.rol, commando: o.commando, reden: o.reden, voor: o.voor, ...(o.sessie === undefined ? {} : { sessie: o.sessie }) })), nu: na });
   if (uitslag.nieuw.length === 0) return context(wie.event, uitslag.meldingen);
   const reden = `rolhek-effect: dit commando van de hoofdsessie veranderde paden buiten haar rol:\n${tekst}\n${UITWEG}`;
   return achteraf === 'deny' && !wie.mislukt ? telBlok(repo, wie, reden) : context(wie.event, [reden, ...uitslag.meldingen]);
@@ -168,7 +185,7 @@ function pre(payload, repo) {
   const wie = actorVan(payload);
   const vooraf = wie.agentType === '' && modus(repo) !== 'uit' ? voorafUitkomst(payload, repo) : undefined;
   legVast(repo, { soort: 'pre', id: veld(payload, 'tool_use_id') }, vooraf === undefined ? wie : { ...wie, vooraf });
-  const open = wie.agentType === '' ? overtredingen(repo) : [];
+  const open = wie.agentType === '' ? vanSessie(overtredingen(repo), wie.sessie) : [];
   return open.length === 0 ? {} : context('PreToolUse', [`rolhek-effect: open overtredingen van subagents:\n${lijstTekst(open)}\n${UITWEG}`]);
 }
 
@@ -214,12 +231,17 @@ function subagentStart(payload, repo) {
   return {};
 }
 
-/** SubagentStop: eindvergelijking met de stand bij de start; blokkeert één keer (AC-4). @param {unknown} payload @param {Repo} repo */
+/**
+ * SubagentStop: eindvergelijking met de stand bij de start; blokkeert één keer (AC-4). Daarna wordt de opname de staat van
+ * dit moment, met `tijd` van nu (AC-10 a): een nacontrole telt alleen wat sindsdien veranderde.
+ * @param {unknown} payload @param {Repo} repo
+ */
 function subagentStop(payload, repo) {
   const wie = { ...actorVan(payload), commando: '' };
   const opname = leesOpname(repo, 'agent', wie.actor);
   const uitslag = vergelijk(repo, { voor: opname === null ? undefined : opname.snap, start: opname?.tijd ?? 0 }, wie);
-  werkAgentBij(repo, wie.actor, { gestopt: repo.now() });
+  const nu = repo.now();
+  werkAgentBij(repo, wie.actor, { tijd: nu, snap: uitslag.snap, gestopt: nu });
   const eigen = uitslag.lijst.filter((o) => o.actor === wie.actor);
   if (eigen.length === 0 || objectVeld(payload, 'stop_hook_active') === true) return {};
   return telBlok(repo, wie, `rolhek-effect: je veranderde paden buiten je rol:\n${lijstTekst(eigen)}\n${UITWEG} Meld dit in je overdracht.`);
@@ -227,22 +249,31 @@ function subagentStop(payload, repo) {
 
 /**
  * Stop van de hoofdsessie: de eindvergelijking opnieuw voor elke subagent van de sessie (ook schrijven na SubagentStop),
- * daarna één blokkade per stop zolang de lijst niet leeg is (AC-4, AC-5).
+ * daarna één blokkade per stop zolang de lijst van deze sessie niet leeg is (AC-4, AC-5, AC-10 f).
  * @param {unknown} payload @param {Repo} repo
  */
 function stop(payload, repo) {
   if (objectVeld(payload, 'stop_hook_active') === true) return {};
-  const lijst = nacontrole(repo, veld(payload, 'session_id'));
+  const sessie = veld(payload, 'session_id');
+  const lijst = vanSessie(nacontrole(repo, sessie), sessie);
   return lijst.length === 0 ? {} : blok(`rolhek-effect: open overtredingen van subagents:\n${lijstTekst(lijst)}\n${UITWEG}`);
 }
 
+/** SessionEnd: de opnamen van de subagents van deze sessie vervallen (AC-10 e); zonder `session_id` niets. @param {unknown} payload @param {Repo} repo */
+function sessionEnd(payload, repo) {
+  const sessie = veld(payload, 'session_id');
+  if (sessie !== '') wisAgentOpnamen(repo, sessie);
+  return {};
+}
+
 /**
- * De nacontrole van AC-4 voor de subagents van een sessie (null: alle sessies, voor pr:verify). Geeft de bijgewerkte lijst.
+ * De nacontrole van AC-4 voor de subagents van een sessie (null: alle sessies, voor pr:verify). Geeft de bijgewerkte lijst
+ * over alle sessies.
  * @param {Repo} repo @param {string | null} sessie
  */
 export function nacontrole(repo, sessie) {
   const nieuw = agentOpnamen(repo, sessie).flatMap(({ id, opname }) =>
-    vergelijk(repo, { voor: opname.snap, start: opname.tijd ?? 0 }, { actor: id, agentType: opname.agentType ?? 'reviewer', commando: '' }).nieuw);
+    vergelijk(repo, { voor: opname.snap, start: opname.tijd ?? 0 }, { actor: id, agentType: opname.agentType ?? 'reviewer', commando: '', sessie: opname.sessie }).nieuw);
   return werkLijstBij(repo, { nieuw, nu: momentopname(repo) });
 }
 
@@ -268,6 +299,8 @@ export function handle(event, payload, repo) {
       return subagentStop(payload, repo);
     case 'stop':
       return stop(payload, repo);
+    case 'session-end':
+      return sessionEnd(payload, repo);
     default:
       throw new Error(`onbekende gebeurtenis "${event}"`);
   }
