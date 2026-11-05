@@ -59,7 +59,7 @@ Deze template bevat geen gekozen proefapp of appdata. Alleen wanneer de eigenaar
 | Machine en toegang | Volgens het playbook; eigenaar doet noodzakelijke installatie, login en goedkeuring | Resultaat per eigenaarstap gecontroleerd |
 | App-repo | GitHub-eerst via de templatefunctie, dan klonen naar `~/code/<slug>` | Juiste nieuwe repo, origin en bronversie vastgesteld |
 | Historie en naam | Bron-tree vergelijken, eenmalig koppelen, `app:init`, beschrijving toevoegen | Tree gelijk, merge met twee ouders, eigen appnaam en beschrijving |
-| Push en bescherming | Eerst CodeQL-beschikbaarheid vaststellen; eigenaar doet eerste main-push en aangewezen beveiligingsstappen | Bij ontbrekende of onbekende CodeQL stoppen; werkelijke push en instellingen gecontroleerd |
+| Push en bescherming | Eerst CodeQL-beschikbaarheid vaststellen; eigenaar doet eerste main-push en aangewezen beveiligingsstappen; de agent geeft daarvoor het genummerde blok van playbook Fase 6.1 en laat de eigenaar niet zelf uitzoeken wat te typen | Bij ontbrekende of onbekende CodeQL stoppen; werkelijke push en instellingen gecontroleerd |
 | Bootstrap en stack | Eigenaar installeert eerst met machinecontrole en start daarna de app | Machinecontrole groen; vervolgens volledige doctor, migraties en databasebewijs groen |
 | Agent en browser | Runtimegrenzen controleren; browser-, login- en MFA-controle volgens playbook | Uitvoerder en uitslag vastgelegd; niet-uitgevoerde controles blijven open |
 | Overdracht | Locatie, URL's, bewijs, beperkingen en de openingsopdracht voor de nieuwe sessie in de app-map | Stoppen; featurewerk begint in die nieuwe sessie |
@@ -91,26 +91,58 @@ stappen hieronder. Voor een andere runtime bevestigt de eigenaar de start- en ve
 Vooraf nodig: een GitHub-account, een Claude-abonnement met Claude Code, en op Windows
 [Visual Studio Code](https://code.visualstudio.com/). Daarna, eenmalig:
 
-1. Klik met de rechtermuisknop op **Start** → **Terminal (Admin)** (Windows 10: **Windows PowerShell (Admin)**) en typ `wsl --install -d Ubuntu-24.04`.
-   Herstart de computer als daarom gevraagd wordt. Heb je al Ubuntu 26.04, dan is dat ook goed en sla je deze stap over.
-2. Open **Ubuntu 24.04** (of je bestaande Ubuntu 26.04) uit het Startmenu. Kies een gebruikersnaam en wachtwoord (dat wachtwoord heb je later nog nodig).
-3. Typ in dat Ubuntu-venster `curl -fsSL https://claude.ai/install.sh | bash`, sluit het venster en open Ubuntu opnieuw.
-4. Typ `claude` en log in zoals het scherm aangeeft; sluit Claude daarna af met `/exit`.
+Staat Ubuntu of Claude Code er al, sla die stap over.
 
-Staat Ubuntu of Claude Code er al, sla die stap over. Zet daarna in hetzelfde Ubuntu-venster de publieke instructies klaar:
+1. **Windows installeren: Ubuntu.** Klik met de rechtermuisknop op **Start** → **Terminal (Admin)** (Windows 10:
+   **Windows PowerShell (Admin)**), plak dit en druk op Enter. Verwacht: Ubuntu wordt geïnstalleerd; herstart de computer
+   als daarom gevraagd wordt. Heb je al Ubuntu 26.04, dan is dat ook goed en sla je deze stap over.
 
-```bash
-mkdir -p ~/setup
-curl -fsSL https://raw.githubusercontent.com/BramLambertJansen/template/main/START-NIEUWE-APP.md -o ~/setup/START-NIEUWE-APP.md
-curl -fsSL https://raw.githubusercontent.com/BramLambertJansen/template/main/docs/nieuwe-app.md -o ~/setup/nieuwe-app.md
-cd ~/setup
-```
+   ```powershell
+   wsl --install -d Ubuntu-24.04
+   ```
 
-Start daar de agent (`claude`) en geef deze opdracht:
+2. **Ubuntu openen.** Open **Ubuntu 24.04** (of je bestaande Ubuntu 26.04) uit het Startmenu. Kies een gebruikersnaam en
+   wachtwoord (dat wachtwoord heb je later nog nodig).
+3. **Claude Code installeren.** Plak in dat Ubuntu-venster dit en druk op Enter. Sluit het venster daarna en open Ubuntu
+   opnieuw. Verwacht: geen foutmelding.
 
-> Start een nieuwe app vanuit BramLambertJansen/template. Volg START-NIEUWE-APP.md en daarna nieuwe-app.md.
-> Vraag alleen de ontbrekende appnaam en korte beschrijving. Voer de setup stap voor stap uit, wacht bij eigenaarstaken
-> op mijn reactie en controleer het resultaat voordat je doorgaat. Begin nog niet aan features.
+   ```bash
+   curl -fsSL https://claude.ai/install.sh | bash
+   ```
+
+4. **Inloggen.** Plak in het nieuwe Ubuntu-venster dit en log in zoals het scherm aangeeft:
+
+   ```bash
+   claude
+   ```
+
+5. **Claude afsluiten.** Typ in Claude dit en druk op Enter. Verwacht: je ziet weer de Ubuntu-prompt.
+
+   ```text
+   /exit
+   ```
+
+6. **Instructies klaarzetten.** Plak in hetzelfde Ubuntu-venster dit hele blok. Verwacht: geen foutmelding en je staat
+   in `~/setup`.
+
+   ```bash
+   mkdir -p ~/setup
+   curl -fsSL https://raw.githubusercontent.com/BramLambertJansen/template/main/START-NIEUWE-APP.md -o ~/setup/START-NIEUWE-APP.md
+   curl -fsSL https://raw.githubusercontent.com/BramLambertJansen/template/main/docs/nieuwe-app.md -o ~/setup/nieuwe-app.md
+   cd ~/setup
+   ```
+
+7. **Agent starten.** Plak in dezelfde terminal dit en druk op Enter:
+
+   ```bash
+   claude
+   ```
+
+8. **Opdracht geven.** Plak in de geopende Claude-sessie deze opdracht:
+
+   > Start een nieuwe app vanuit BramLambertJansen/template. Volg START-NIEUWE-APP.md en daarna nieuwe-app.md.
+   > Vraag alleen de ontbrekende appnaam en korte beschrijving. Voer de setup stap voor stap uit, wacht bij eigenaarstaken
+   > op mijn reactie en controleer het resultaat voordat je doorgaat. Begin nog niet aan features.
 
 Vul naam en beschrijving gerust al in de opdracht in; de agent vraagt die dan niet opnieuw. Ga niet ontwikkelen in de
 setupmap. Na de gecontroleerde setup geeft de agent je een openingsopdracht voor een nieuwe sessie in de app-map
