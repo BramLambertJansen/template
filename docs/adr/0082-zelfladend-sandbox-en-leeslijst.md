@@ -3,6 +3,7 @@
 Status: geaccepteerd
 Herzien: 2026-11-05 (#566): punt 2, `./.git/commondir` blijft in `denyWrite`; S0 vervalt na meting M0 deel 2.
 Herzien: 2026-11-05 (#584): punt 2, een echt `.git/commondir` helpt niet; een agentsessie werkt in een worktree.
+Herzien: 2026-11-05 (#0): punt 2 en 4, gewijzigd door [0083](0083-bewaking-met-minder-wrijving.md): `./.git/commondir` gaat uit `denyWrite`, elke hook valt dicht bij een geplant bestand; de worktree is een keuze.
 
 Wijzigt [0071](0071-rolhek-vooraf-vaste-lijst.md) punt 2 en [0061](0061-claude-sandbox-werkstraat.md) punt 3. Drempel: A3
 (een grens verschuift van tekst naar het besturingssysteem). Aanleiding: leerpunt #500 (PR #494, drie reviewrondes met
