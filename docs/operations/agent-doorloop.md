@@ -108,6 +108,18 @@ Elk nieuw ticket, elke feature en elke fix begint op een eigen branch vanaf een 
 git fetch origin main && git switch -c <naam> origin/main
 ```
 
+**Agentsessie in Claude Code: werk in een worktree (#553).** In de hoofdcheckout faalt elk git-commando in Bash
+(`failed to read .git/commondir: Permission denied`): `./.git/commondir` blijft in `denyWrite` (ADR 0082 punt 2), het
+bestand bestaat daar niet en de sandbox maskeert het. Ook `gh` faalt daar, behalve met `-R <eigenaar>/<repo>` vanuit een
+map buiten de repo. Begin nieuw werk daarom met de Claude Code-tool `EnterWorktree` (naam = de branchnaam zonder `/`):
+die maakt buiten de sandbox een worktree onder `.claude/worktrees/` (genegeerd door git) vanaf een vers opgehaalde
+`origin/main` en zet de sessie erin. Daar is `.git` een bestand, niets wordt gemaskeerd en git werkt in Bash
+(gemeten 5 november 2026). Geef de branch daarna een naam met `git branch -m <naam>`; de foutmelding over
+`.git/config` is een sandboxmasker, de naam is wel gezet. De sandbox-overlays in de root (`.bashrc`, `.mcp.json`,
+`.claude/commands` …) tellen daar als untracked; verwijder ze niet. Push werkt. De eigenaar ruimt de worktree na de merge op
+(`ExitWorktree` of `git worktree remove <pad>` in een eigen terminal). De SessionStart-melding noemt nog
+`git switch -c`; dat volgt in een aparte besluit-PR (`rails/hooks/**`).
+
 Het rolhek weigert voor elke rol een nieuwe branch in een andere vorm (`rails/hooks/lib/verse-main.mjs`): zonder fetch
 ervoor, met `;` of `||` ertussen, of vanaf een andere basis dan `origin/main` (lokale `main`, de vorige featurebranch,
 HEAD). Het rolhek gebruikt geen netwerk; door de `&&` ontstaat er geen branch als de fetch faalt. De SessionStart-melding
