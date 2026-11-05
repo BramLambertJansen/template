@@ -641,6 +641,16 @@ voor een andere runtime; laat een onuitvoerbare controle expliciet open en schak
 Leg voor die runtime dezelfde overgang vast: het juiste app-venster is gecontroleerd, de testsessie afgesloten
 en de startwijze voor een schone werksessie bevestigd. Wissel niet stilzwijgend naar Claude Code.
 
+**Drie sessies, drie plekken.** Zeg dit de eigenaar vóór 9.1, in gewone woorden; hier ontstaat de meeste verwarring:
+
+| Sessie | Waar | Wat ermee gebeurt |
+|---|---|---|
+| Setupsessie | Het Ubuntu-venster waarin `~/setup` staat (dit gesprek) | Blijft open tot de klaar-melding van Fase 10, dan sluiten |
+| Testsessie | Een nieuwe terminal in het **app-venster** (VS Code op `~/code/<slug>`) | Alleen voor de sandboxtest van 9.2, daarna met `/exit` afsluiten |
+| Werksessie | Weer een **nieuwe** terminal in hetzelfde app-venster | Hier begint het echte app-werk (Fase 10) |
+
+De terminal waarin `pnpm dev` draait (Fase 7.3) blijft steeds open; start daar nooit een sessie in.
+
 ### 9.1 De setup opent het werkvenster
 
 Open vanuit Ubuntu een apart VS Code-venster op de app-map. Voer dit als setup-agent zelf uit; bij een Windows-runtime
@@ -681,8 +691,19 @@ Overdracht in het zojuist geopende app-venster:
 >    Read-tool `.env.local` te lezen. Toon daarna letterlijk de melding die Claude Code bij elke poging gaf.
 >    ```
 >
-> 4. Sluit daarna alleen die Claude Code-testsessie af. Laat het app-venster en de terminal met de draaiende stack open.
->    Meld via de vraagprompt van de setup de twee meldingen die de testsessie toonde.
+> 4. Sluit daarna alleen die testsessie af: typ in de testsessie dit en druk op Enter. Verwacht: je ziet weer de gewone
+>    terminalprompt in de app-map.
+>
+>    ```text
+>    /exit
+>    ```
+>
+> 5. Laat het app-venster en de terminal met de draaiende stack open. Meld via de vraagprompt van de setup de twee
+>    meldingen die de testsessie toonde.
+> 6. Typ *klaar* als dit gelukt is; plak bij een fout de melding, zonder geheimen.
+
+Controleer na "klaar" zelf dat de testsessie echt is afgesloten: vraag of de gewone terminalprompt in de app-map weer
+zichtbaar is. Een proces of venster dat de agent niet kan zien, blijft anders onbevestigd.
 
 Waarom: `.claude/settings.json` van de template zet de sandbox aan met `failIfUnavailable: true` en weigert `docker *`
 en het lezen van `.env.*`. Geslaagd is alleen: beide pogingen zijn gedaan en door Claude Code geweigerd, met een melding
@@ -730,8 +751,9 @@ mislukte automatische start, schrijf dat dan eerlijk in de klaar-melding.
 > **Juiste venster:** VS Code met **<app-naam>** in **WSL: <distro>**, map **<absoluut-app-pad>**.
 > De setup heeft dit venster geopend en je hebt het gecontroleerd.
 >
-> 1. Ga naar dat app-venster en open **Terminal → New Terminal**. Laat de terminal met de draaiende stack open.
-> 2. Kopieer dit hele blok. Het start een nieuwe Claude Code-sessie in de app-map:
+> 1. Ga naar dat app-venster en open **Terminal → New Terminal**. Dat moet een **nieuwe** terminal zijn: niet de terminal
+>    met `pnpm dev` en niet de terminal van de testsessie. Laat de terminal met `pnpm dev` open.
+> 2. Plak dit hele blok in die nieuwe terminal en druk op Enter. Verwacht: Claude Code start in de app-map:
 >
 >    ```bash
 >    cd <absoluut-app-pad> && claude
