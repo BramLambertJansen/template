@@ -2,9 +2,14 @@
 
 Je bent een coding agent. Dit bestand is jouw instructie, geen documentatie voor de gebruiker. Volg het van boven naar beneden.
 
+## Stap 0 — eerst dit
+
+1. Zoek `SETUP-PROGRESS.md` naast dit bestand (zie *Voortgangsbestand*). Bestaat het: lees het, controleer de laatst afgevinkte fase opnieuw en ga verder bij de eerste open fase. Bestaat het niet: begin bij Fase 1.
+2. Dit bestand is langer dan één leesactie (meer dan 900 regels); de Read-tool kapt af en meldt dat. Lees het in blokken met `offset` en `limit` (ongeveer 400 regels), nooit alleen het begin, en lees een fase volledig voordat je eraan begint. Fase 9, Fase 10 en de foutentabel staan achteraan.
+
 De gebruiker is de eigenaar van de nieuwe app: soms technisch, soms zonder enige technische kennis. Hij beslist; jij voert
-uit binnen dit bestand. Begeleid volgens [Begeleiding](../START-NIEUWE-APP.md#begeleiding-ook-voor-wie-niet-technisch-is):
-kort en zonder jargon, uitleg alleen waar die de volgende stap begrijpelijk maakt; laat de uitleg weg bij een technische gebruiker.
+uit binnen dit bestand. Begeleid volgens *Begeleiding* hieronder: kort en zonder jargon, uitleg alleen waar die de volgende
+stap begrijpelijk maakt; laat de uitleg weg bij een technische gebruiker.
 
 Dit bestand staat in de template als `docs/nieuwe-app.md` en volgt de afspraken in [ADR 0040](adr/0040-template-app-en-grens-core-app.md).
 Voor een korte start vóór de app-repo bestaat: [START-NIEUWE-APP.md](../START-NIEUWE-APP.md). Deze instructie hier blijft de enige gedetailleerde setup-procedure.
@@ -24,6 +29,78 @@ De machine- en sandboxstappen hieronder beschrijven Claude Code op Ubuntu/WSL2. 
 Bij een andere agent zijn `.claude/`-hooks geen automatisch actieve grens. Installeer of wissel niet stilzwijgend van agent;
 laat de eigenaar de start- en veiligheidsstappen voor die runtime bevestigen. Behoud de bestaande GitHub-, installatie- en
 runnerregels en rapporteer precies welke lokale rol- en sandboxgrenzen ontbreken.
+
+## Begeleiding: ook voor wie niet technisch is
+
+De gebruiker is de eigenaar van de nieuwe app, maar hoeft niets te weten van programmeren, GitHub, terminals of databases.
+Jij voert de techniek uit en begeleidt. Deze begeleiding verandert geen regel uit dit bestand, `AGENTS.md`, `CLAUDE.md` of
+het framework; ze bepaalt alleen hoe je praat.
+
+- Schrijf Nederlands, rustig en in korte, gewone zinnen. Leg een begrip alleen uit als dat de volgende stap begrijpelijk maakt.
+  Merk je dat de gebruiker technisch is, laat de uitleg dan weg.
+- Begin elke fase met drie korte punten: wat we bereiken, waarom dat nodig is, en of de gebruiker iets moet doen. Bij elke fase
+  staat een blokje *Zeg tegen de gebruiker* met de strekking; zeg het in je eigen woorden en noem de fase bij de naam uit de tabel hieronder.
+- Gebruik voor begrippen de zinnen uit *Uitleg in gewone woorden*; verzin geen eigen vergelijkingen.
+- Vertel wat je doet, niet elke technische handeling.
+- Doe zelf alles wat dit bestand de agent toestaat. Pauzeer alleen voor een keuze, een eigenaarstaak, een herstart of een
+  fout waar je niet veilig voorbij kunt.
+- Een eigenaarstaak geef je één tegelijk, met: welk programma of venster, wat precies te klikken of te typen (kopieerbaar),
+  wat er daarna op het scherm hoort te staan, en hoe de gebruiker meldt dat het gelukt is. Verwijs naar wat de gebruiker
+  ziet ("het zwarte Ubuntu-venster"), niet naar wat hij moet weten.
+- Moet de gebruiker kiezen, leg de keuze in gewone woorden uit en geef je aanbeveling met de reden. Een keuze die je niet
+  begrijpelijk kunt maken (bijvoorbeeld bij een treeverschil of een databasevolume weggooien) zet je stil tot de eigenaar
+  of een technisch persoon meekijkt; kies nooit zelf.
+- Zeg niets als gelukt dat je niet hebt gecontroleerd. Bij een fout: wat ging mis, wat je nu probeert, en of de gebruiker iets moet doen.
+
+## Wat de gebruiker vooraf hoort
+
+Geef in je eerste bericht, samen met de vraag uit Fase 1, in je eigen woorden dit overzicht: wat er gaat gebeuren, dat jij
+het meeste zelf doet, en dat de gebruiker ongeveer tien keer iets moet doen (klikken, plakken, een wachtwoord invoeren, één
+keer herstarten; minder als de machine al klaar is). Bij elke taak zeg je precies wat en wat de gebruiker daarna ziet.
+Installaties kunnen even duren; meld dat vooraf. Noem de fasen bij deze namen:
+
+| Fase | Naam voor de gebruiker |
+|---|---|
+| 1 | Je app een naam geven |
+| 2 | Windows voorbereiden (alleen bij WSL) |
+| 3 | Je computer klaarmaken |
+| 4 | Je project op GitHub zetten |
+| 5 | Je project aan de template koppelen en jouw naam geven |
+| 6 | Je project beveiligen |
+| 7 | De app voor het eerst starten |
+| 8 | De database controleren |
+| 9 | Alles testen |
+| 10 | Klaar: aan de slag met je eerste functie |
+
+### Drie sessies, drie plekken
+
+Hier ontstaat de meeste verwarring. Noem het in het eerste overzicht in één zin en herhaal de tabel in gewone woorden vóór 9.1.
+
+| Sessie | Waar | Wat ermee gebeurt |
+|---|---|---|
+| Setupsessie | Het Ubuntu-venster waarin `~/setup` staat (dit gesprek) | Blijft open tot de klaar-melding van Fase 10, dan sluiten |
+| Testsessie | Een nieuwe terminal in het **app-venster** (VS Code op `~/code/<slug>`) | Alleen voor de sandboxtest van 9.2, daarna met `/exit` afsluiten |
+| Werksessie | Weer een **nieuwe** terminal in hetzelfde app-venster | Hier begint het echte app-werk (Fase 10) |
+
+De terminal waarin `pnpm dev` draait (Fase 7.3) blijft steeds open; start daar nooit een sessie in.
+
+## Uitleg in gewone woorden
+
+Gebruik deze zinnen zoals ze zijn, alleen op het moment dat de gebruiker het begrip nodig heeft om de volgende stap te begrijpen.
+
+| Begrip | Zeg |
+|---|---|
+| template | Een kant-en-klare basis die je kopieert, zodat je niet bij nul begint. |
+| repository (repo) | De map van je project op GitHub, met de hele geschiedenis van wijzigingen. |
+| commit | Een opgeslagen stap in die geschiedenis, met een korte omschrijving. |
+| merge-commit | Een stap die twee lijnen van wijzigingen samenvoegt; hier verbindt hij je project met de template. |
+| push | Je wijzigingen vanaf je computer naar GitHub sturen. |
+| pull request (PR) | Een voorstel om een wijziging in de hoofdversie op te nemen, dat eerst gecontroleerd wordt. |
+| ruleset | Een slot op de hoofdversie van je code: wijzigingen komen er alleen in via een gecontroleerd voorstel. |
+| WSL, Ubuntu | Een Linux-onderdeel binnen Windows waarin de bouwgereedschappen draaien. |
+| Docker | Het programma dat de database en de testmailbox in een afgesloten doosje draait. |
+| sandbox | Een afgesloten werkruimte voor Claude, zodat hij alleen bij mag wat nodig is. |
+| migratie | Een stap die de database aanpast, bijvoorbeeld een tabel toevoegen. |
 
 ## Je doel
 
@@ -53,7 +130,7 @@ Stop als dit allemaal waar is, niet eerder:
   Squash gooit de tweede ouder weg; de volgende `git merge template/main` conflicteert dan op elk bestand.
 - **Niets aan de inhoud van de template veranderen** behalve wat Fase 5 noemt. Geen regels "verbeteren", geen bestanden opruimen, geen dependencies toevoegen.
   Zie je iets wat fout lijkt in de template: noteer het voor de overdracht.
-- **`.env.local` alleen maken met `cp` uit `.env.example`** en daarna alleen poortnummers vervangen (Fase 7). Geen andere waarden, geen echte geheimen, nooit `.env.example` aanpassen.
+- **`.env.local` alleen maken met `cp` uit `.env.example`** en daarna alleen de poortnummers vervangen en `API_PORT` en `WEB_PORT` toevoegen, zoals Fase 7.1 beschrijft (de code leest ze; `.env.example` noemt ze niet). Geen andere waarden, geen echte geheimen, nooit `.env.example` aanpassen.
 - **Geen destructieve commando's.** Nooit `docker compose down -v`, `docker system prune`, `rm -rf` buiten mappen die je in deze run zelf hebt gemaakt, `wsl --unregister`.
 - **`wsl --shutdown` alleen in Fase 3.3**, vóór er een stack draait. Draai je zelf in WSL, dan beëindigt het jouw sessie — dan is het een overdracht.
 - **Jij installeert geen toolchain en draait geen checks of tests.** `mise install`, `pnpm install`, `lefthook install` en
@@ -65,9 +142,17 @@ Stop als dit allemaal waar is, niet eerder:
   plak bij een fout de melding, zonder geheimen." Stop en wacht. Geef nog geen volgende eigenaarstaak.
 - **Klaar is geen bewijs.** Controleer na de reactie de uitkomst. Kun je die niet zelf lezen, vraag de relevante uitvoer of
   waarneming, zonder geheimen. Vink pas daarna af. Bij een fout blijf je bij de huidige fase; herhaal geen geslaagde installatie.
-- **Vragen via de vraagprompt.** Heb je informatie, een keuze of bevestiging nodig (ook de app-naam), gebruik dan direct de beschikbare interactieve vraagtool. De gebruiker hoeft daar niet eerst om te vragen. Geef waar zinvol korte antwoordopties en bundel samenhangende vragen; verstop geen vragen in lopende tekst. Is voor die vraag geen geschikte vraagtool beschikbaar, meld dat kort en stel de vraag duidelijk apart. Dit geldt ook na de setup; zie [AGENTS.md](../AGENTS.md#werkafspraken). Vraag geen bevestiging voor al toegestaan werk.
+- **Vragen via de vraagprompt.** Heb je informatie, een keuze of bevestiging nodig (ook de app-naam), gebruik dan direct de beschikbare interactieve vraagtool. De gebruiker hoeft daar niet eerst om te vragen.
+  - Geef waar zinvol korte antwoordopties en bundel samenhangende vragen; verstop geen vragen in lopende tekst.
+  - Is voor die vraag geen geschikte vraagtool beschikbaar, meld dat kort en stel de vraag duidelijk apart.
+  - Vraag geen bevestiging voor al toegestaan werk.
+  - Dit geldt ook na de setup; zie [AGENTS.md](../AGENTS.md#werkafspraken).
 - **Vast einde van de setup.** Na de controles uit Fase 9 volgt de klaar-melding uit Fase 10. Het nieuwe app-venster is dan geopend en gecontroleerd. App-werk begint in een schone sessie vanuit die app-map; neem de setup- of testsessie niet over en begin daarin geen feature, ADR of spec.
-- **Commando's in één keer overnemen.** Geef per stap aan welke terminal en werkmap nodig zijn en wat de gebruiker daarna ziet of terugmeldt. Bundel alles wat achtereen kan in één kopieerbaar codeblok met de juiste shell; splits alleen bij interactie, controle of een andere terminal. Geen uitvoercommando's in lopende tekst of prompttekens. Vervang bekende placeholders door de echte waarden. Dit geldt ook voor foutafhandeling en werk na de setup; zie [AGENTS.md](../AGENTS.md#werkafspraken).
+- **Commando's in één keer overnemen.** Geef per stap aan welke terminal en werkmap nodig zijn en wat de gebruiker daarna ziet of terugmeldt.
+  - Bundel alles wat achtereen kan in één kopieerbaar codeblok met de juiste shell; splits alleen bij interactie, controle of een andere terminal.
+  - Geen uitvoercommando's in lopende tekst of prompttekens.
+  - Vervang bekende placeholders door de echte waarden.
+  - Dit geldt ook voor foutafhandeling en werk na de setup; zie [AGENTS.md](../AGENTS.md#werkafspraken).
 - **Faalt iets:** lees de fout, kijk in de tabel onderaan, zeg in één zin wat je nu probeert. Na twee mislukte pogingen voor hetzelfde: stoppen en melden.
 
 ## Taal
@@ -144,6 +229,9 @@ Herschrijf het na elke fase:
 
 ## Fase 1 — Naam en beschrijving
 
+> **Zeg tegen de gebruiker — Je app een naam geven.** Wat: we geven je app een naam en leggen vast wat hij moet doen.
+> Waarom: daar leid ik de naam van je project van af; verder vraag ik nu niets. Jij: ja, naam en korte beschrijving.
+
 Lees eerst de opdracht en eventuele voortgang. Gebruik een al gegeven appnaam, beschrijving of repo-naam zonder opnieuw te vragen.
 Vraag alleen wat ontbreekt, in één bericht, en wacht:
 
@@ -158,6 +246,9 @@ Vraag alleen een gerichte keuze als iets onduidelijk, ongeldig of bezet is; verz
 complete intake door met de preflight. Vraag nog geen hostingprovider, volledige backlog of productiegeheimen.
 
 ## Fase 2 — Windows (alleen bij WSL)
+
+> **Zeg tegen de gebruiker — Windows voorbereiden.** Wat: Windows krijgt een ingebouwd Linux-onderdeel (Ubuntu) waarin de app gebouwd wordt.
+> Waarom: de bouwgereedschappen draaien daar betrouwbaarder. Jij: alleen als Ubuntu nog niet is geïnstalleerd.
 
 Sla over bij native Ubuntu.
 
@@ -183,6 +274,10 @@ Sla over bij native Ubuntu.
 Draai je op Windows, dan kun je dit zelf; draai je in WSL, dan zijn 2.2 en 2.3 een overdracht met de exacte tekst.
 
 ## Fase 3 — Ubuntu: gereedschap en Docker Engine
+
+> **Zeg tegen de gebruiker — Je computer klaarmaken.** Wat: ik controleer wat er al op je computer staat en laat installeren wat ontbreekt,
+> onder andere Docker (dat de database draait) en GitHub-gereedschap. Waarom: zonder deze onderdelen kan de app niet lokaal draaien.
+> Jij: alleen als er iets geïnstalleerd moet worden; dan één keer je wachtwoord invoeren en soms één herstart.
 
 ### 3.1 Root-script
 
@@ -308,6 +403,10 @@ Draai na het opruimen beide leesopdrachten opnieuw; ga pas door als ze leeg zijn
 
 ## Fase 4 — GitHub en de nieuwe repo
 
+> **Zeg tegen de gebruiker — Je project op GitHub zetten.** Wat: we maken je eigen project op GitHub, gebaseerd op de template,
+> en zetten een kopie op je computer. Waarom: daar staat straks al je code, met controle op elke wijziging.
+> Jij: alleen inloggen bij GitHub, als dat nog niet is gebeurd.
+
 ### 4.1 Inloggen
 
 `gh auth status`. Niet ingelogd of scope `workflow` ontbreekt: overdracht —
@@ -351,7 +450,11 @@ gh api repos/BramLambertJansen/template/commits/main --jq .sha
 - `is_template` is `false`: overdracht — vraag toestemming en voer dan uit `gh repo edit BramLambertJansen/template --template`
   (gelijk aan Settings → **Template repository**). Zonder dat vinkje kan **Use this template** niet.
 - Noteer de sha in het voortgangsbestand. Verschilt `docs/nieuwe-app.md` op `main` van het bestand dat je volgt:
-  `curl` het opnieuw (zie de kop), meld het en begin bij de eerste open fase.
+  `curl` het opnieuw (zie de kop), meld het en begin bij de eerste open fase. Vergelijk zo (geen uitvoer betekent gelijk):
+
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/BramLambertJansen/template/main/docs/nieuwe-app.md | diff -q - ~/setup/nieuwe-app.md
+  ```
 
 ### 4.3 Repo maken en klonen
 
@@ -367,6 +470,9 @@ wacht 5 seconden, `git pull origin main` (of opnieuw `gh repo clone <owner>/<slu
 Controle: `git log --oneline` toont één commit; `ls` toont `AGENTS.md`, `compose.yaml`, `db/`, `docs/`; `pwd` is `/home/<user>/code/<slug>`.
 
 ## Fase 5 — Koppelen aan de template en hernoemen (lokaal, nog niet pushen)
+
+> **Zeg tegen de gebruiker — Je project koppelen en jouw naam geven.** Wat: ik verbind je project met de template en geef het jouw naam.
+> Waarom: zo kun je verbeteringen uit de template later in je app overnemen. Jij: nee.
 
 ### 5.1 Koppelen
 
@@ -430,6 +536,9 @@ Controle: `git status` schoon; `git log --oneline -3` toont: hernoem, koppel (me
 
 ## Fase 6 — Pushen door de eigenaar, daarna `main` dichtzetten
 
+> **Zeg tegen de gebruiker — Je project beveiligen.** Wat: jij zet je project voor het eerst online; daarna zet ik een slot op de hoofdversie.
+> Waarom: vanaf dan komt er niets in de hoofdversie zonder dat het eerst automatisch is gecontroleerd. Jij: ja, twee korte opdrachten.
+
 ### 6.1 Push (overdracht)
 
 **Eerst CI-beschikbaarheid controleren.** Beide CodeQL-checks zijn verplicht in `.claude/decisions.json` en de workflow
@@ -442,22 +551,19 @@ geen werkende afrondroute voor deze setup. Wil de eigenaar een profiel zonder Co
 appspecifiek ADR en een samenhangende aanpassing van workflow, ruleset en verificatieregister. Tot die route gebouwd
 en gecontroleerd is, blijft de setup hier open; een overdrachtsnotitie alleen lost dit niet op.
 
-> Ik heb twee commits lokaal klaargezet: de koppeling met de template (merge-commit) en de hernoeming.
+Controleer vóór de overdracht zelf, alleen lezend: `git -C ~/code/<slug> log --oneline --graph -4` toont de hernoem-commit
+boven een merge-commit met twee ouders. Klopt dat niet, stop dan en meld het; de eigenaar hoeft de git-geschiedenis niet te beoordelen.
+
+> Ik heb twee wijzigingen lokaal klaargezet en gecontroleerd: de koppeling met de template (merge-commit) en de hernoeming.
 > Agents pushen nooit naar `main`, dus dit doe jij, één keer:
 >
-> 1. Voer in je Ubuntu-terminal uit en controleer dat je een merge en een hernoem-commit ziet:
+> 1. Voer in je Ubuntu-terminal dit blok uit. Verwacht: een paar regels die eindigen op `main -> main`, zonder foutmelding.
 >
 >    ```bash
->    cd ~/code/<slug> && git log --oneline --graph -4
+>    cd ~/code/<slug> && git push origin main
 >    ```
 >
-> 2. Klopt dat, push dan vanuit dezelfde terminal:
->
->    ```bash
->    git push origin main
->    ```
->
-> 3. Typ *klaar*.
+> 2. Typ *klaar*, of plak de melding als er een fout staat.
 
 Controle: `git status -sb` toont geen `ahead`; `gh api repos/<owner>/<slug>/commits/main --jq '.parents | length'` is `1` (hernoem-commit) en
 `gh api repos/<owner>/<slug>/commits/main~1 --jq '.parents | length'` is `2`.
@@ -521,6 +627,9 @@ Controle: `gh api repos/$R/rulesets --jq '.[].name'` toont `main`; `gh repo view
 Niets controleert daarna nog of de ruleset blijft staan: `check-github` bestaat nog niet (roadmap ST-01).
 
 ## Fase 7 — Toolchain, git-hooks en lokale stack
+
+> **Zeg tegen de gebruiker — De app voor het eerst starten.** Wat: we installeren de bouwgereedschappen en starten de app op je eigen computer, met een eigen database.
+> Waarom: zo kun je de app bekijken terwijl we eraan bouwen. Jij: ja, twee stappen; de eerste keer duurt het enkele minuten.
 
 Jij maakt `.env.local` (7.1); de eigenaar installeert de toolchain (7.2) en start de stack (7.3). Zonder 7.2 heeft de app geen
 pre-commit, commit-msg en pre-push, en is de afdwinging lokaal zwakker dan in de template.
@@ -609,6 +718,9 @@ psql "postgres://app_migrator:app_migrator@127.0.0.1:<pg>/app" -Atc "select curr
 
 ## Fase 8 — Migraties en databasebewijs
 
+> **Zeg tegen de gebruiker — De database controleren.** Wat: ik controleer dat alle database-wijzigingen zijn toegepast en dat de toegangsrechten kloppen.
+> Waarom: dat is de basis van de beveiliging van je gegevens. Jij: nee, tenzij een stap opnieuw moet.
+
 `pnpm dev` heeft de migraties al gedraaid. Moeten ze opnieuw zonder de rest van de stack, geef de eigenaar dan deze stap:
 
 1. Voer in je Ubuntu-terminal dit blok uit. Verwacht: de migraties worden zonder fouten toegepast.
@@ -635,19 +747,16 @@ Een afwijking is een bevinding over de template, geen setupfout: niet repareren,
 
 ## Fase 9 — Nieuw app-venster openen en controleren
 
+> **Zeg tegen de gebruiker — Alles testen.** Wat: ik open het projectvenster, we testen of de beveiliging van Claude werkt en we loggen in op je app.
+> Waarom: tot dit gelukt is, weten we niet zeker dat alles goed staat. Jij: ja, een paar keer klikken en typen; ik leg bij elke stap uit wat er gebeurt.
+
 Deze venster- en agentstappen gelden voor Claude Code. Bij een andere runtime bevestigt de eigenaar hoe die
 in de app-repo start en welke lokale beveiliging daadwerkelijk werkt. Gebruik de Claude-stappen niet als bewijs
 voor een andere runtime; laat een onuitvoerbare controle expliciet open en schakel geen bestaande grens uit.
 Leg voor die runtime dezelfde overgang vast: het juiste app-venster is gecontroleerd, de testsessie afgesloten
 en de startwijze voor een schone werksessie bevestigd. Wissel niet stilzwijgend naar Claude Code.
 
-**Drie sessies, drie plekken.** Zeg dit de eigenaar vóór 9.1, in gewone woorden; hier ontstaat de meeste verwarring:
-
-| Sessie | Waar | Wat ermee gebeurt |
-|---|---|---|
-| Setupsessie | Het Ubuntu-venster waarin `~/setup` staat (dit gesprek) | Blijft open tot de klaar-melding van Fase 10, dan sluiten |
-| Testsessie | Een nieuwe terminal in het **app-venster** (VS Code op `~/code/<slug>`) | Alleen voor de sandboxtest van 9.2, daarna met `/exit` afsluiten |
-| Werksessie | Weer een **nieuwe** terminal in hetzelfde app-venster | Hier begint het echte app-werk (Fase 10) |
+**Drie sessies, drie plekken.** Zeg de gebruiker vóór 9.1, in gewone woorden, wat de tabel *Drie sessies, drie plekken* bovenaan dit bestand zegt; hier ontstaat de meeste verwarring.
 
 De terminal waarin `pnpm dev` draait (Fase 7.3) blijft steeds open; start daar nooit een sessie in.
 
@@ -672,6 +781,9 @@ en het absolute app-pad in het voortgangsbestand. Eerste keer: VS Code kan de VS
 vraagt hij om de **WSL**-extensie, laat de gebruiker **Install** kiezen.
 
 ### 9.2 Tijdelijke testsessie, daarna afsluiten
+
+Zeg de gebruiker vooraf in één zin waarom: *We doen nu één bewuste proef om te zien of de beveiliging van Claude werkt: de
+nieuwe sessie probeert twee dingen die niet mogen. Worden ze geweigerd, dan is dat de bedoeling.*
 
 Overdracht in het zojuist geopende app-venster:
 
@@ -737,6 +849,9 @@ blijft open en wordt in de overdracht genoemd; claim dan niet dat de setup volle
 
 ## Fase 10 — Afkappunt: setup klaar, verder in een schone sessie
 
+> **Zeg tegen de gebruiker — Klaar: aan de slag met je eerste functie.** Wat: de setup is klaar; je begint een nieuwe sessie in je app-venster.
+> Waarom: een schone sessie begint zonder de rommel van de setup. Jij: ja, één blok kopiëren.
+
 Controleer de doelen bovenaan, schrijf het voortgangsbestand af en stuur de volgende klaar-melding als eerste deel
 van je laatste bericht. Vul alle placeholders in, inclusief het absolute app-pad en de werkelijk gekozen distro.
 Bij native Ubuntu schrijf je Ubuntu zonder WSL-label. Zolang een vereiste setupcontrole ontbreekt of faalt, inclusief browser/login/MFA uit Fase 9, meld je de concrete
@@ -764,8 +879,15 @@ mislukte automatische start, schrijf dat dan eerlijk in de klaar-melding.
 >
 > **Deze setupsessie stopt hier.** Je kunt deze sessie sluiten; het app-venster en de draaiende stack blijven open.
 
-Voeg onder die melding alleen de korte setupuitkomst en relevante beperkingen toe. De dagelijkse commando's en
-template-updates staan in de naslag hieronder; laat die de overdracht niet onderbreken.
+Voeg onder die melding eerst de korte samenvatting voor de gebruiker toe en daarna de technische bijlage met de setupuitkomst
+en relevante beperkingen. De dagelijkse commando's en template-updates staan in de naslag hieronder; laat die de overdracht niet onderbreken.
+
+> **Kort samengevat:** je app **<App-naam>** staat klaar op je computer en op GitHub en draait lokaal op http://localhost:<web>.
+> De hoofdversie op GitHub is beveiligd: wijzigingen komen er alleen in via een voorstel (pull request) dat eerst automatisch
+> gecontroleerd wordt, en jij beslist over de merge. Dit geldt voor zover ik het heb gecontroleerd; wat nog niet kon of niet
+> is gecontroleerd, staat hieronder bij *Wat er nog níet is*.
+
+**Technische bijlage** (voor de eigenaar die het wil nalezen en voor latere sessies):
 
 > **<App-naam> staat klaar** in **<absoluut-app-pad>** → github.com/<owner>/<slug>.
 > Draait: Postgres 17 + pgTAP op 127.0.0.1:<pg>, Mailpit op http://127.0.0.1:<mailui>. Migraties toegepast, rollen bewezen.

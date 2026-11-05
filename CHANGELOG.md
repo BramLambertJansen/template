@@ -546,6 +546,7 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 - De README beschrijft de huidige basis, lokale installatie en beschikbare controles.
 - Een leeswijzer maakt onderscheid tussen gebruiksdocumentatie, ontwikkelafspraken en agentinstructies.
 - De lichte en volledige route staan alleen nog in `docs/framework.md` §8; instructies, agents en skills verwijzen ernaar.
+- Het setup-playbook (`docs/nieuwe-app.md`) is gelaagd voor niet-technische eigenaren: stap 0 (voortgang eerst, lees in blokken), de Begeleiding staat nu in het bestand zelf, per fase een blokje *Zeg tegen de gebruiker*, een tabel met uitleg in gewone woorden en een korte samenvatting boven de technische bijlage in de klaar-melding. De eigenaar hoeft bij de eerste push de git-geschiedenis niet meer te beoordelen. `START-NIEUWE-APP.md` verwijst voor de Begeleiding naar het playbook. Een app hoeft niets te doen: het bestand komt mee met een template-update en blijft in een app onaangepast.
 
 ### Bij een update
 
