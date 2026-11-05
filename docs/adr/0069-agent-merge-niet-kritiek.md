@@ -10,6 +10,10 @@ Herzien: 2026-11-03 (#473): punt 3, bytegrens `agentMerge.maxBytes` naast `maxRe
 uitwerking in [spec](../specs/agent-merge-bytegrens.md)
 Herzien: 2026-11-04 (#535): gewijzigd door [0079](0079-een-padtabel.md) punt 1, `agentMerge.toegestaan` en
 `agentMerge.kritiek` worden de kolom `besluit` van de padtabel (`agent` of strenger); de uitslag per pad blijft gelijk
+Herzien: 2026-11-05 (#565): punt 3 en 5, Alternatieven, Gevolgen en Meten; versoepelt de Codex-voorwaarde: ze vervalt,
+met `agentMerge.codex`, ook als Codex wél reviewt; elke agent-merge is een steekproef (leerpunt #562: Codex is geen
+vereiste); uitwerking in
+[spec](../specs/agent-merge-niet-kritiek.md) AC-7 tot en met AC-10
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 30, 31, 33, 34 en 35, de zin "automatische agent-merges vallen af" uit
 [0057](0057-risicogestuurde-werkstraat.md), in [0064](0064-leesbudget-per-laag.md) "zodra de GitHub App er is" (R-DOC-09) en in
@@ -73,33 +77,18 @@ punt begint, `*.config.*`, `package.json`, `tsconfig*.json`). Daarnaast: geen be
      of onleesbaar: geen merge. Dezelfde grenzen zitten in het oordeel van de job `agent-merge` (punt 2, geteld met git op
      de merge-base). *Waarom de bytegrens (herzien 2026-11-03):* regels alleen zijn te omzeilen met weinig, zeer lange
      regels; de reviewer moet de hele diff kunnen overzien;
-   - de Codex-voorwaarde volgens `agentMerge.codex` (ontbreekt of onleesbaar: `true`):
-     - `true`: Codex (`chatgpt-codex-connector[bot]`) rondde de head-SHA af zonder open punten (samenvatting met marker
-       `codex-review-state:v1` op die SHA, nieuwste telt, of een 👍 na de ontvangst van die SHA), Codex is niet meer bezig op
-       deze PR (geen 👀 van die bot op de PR of op een issue-commentaar ervan, en de nieuwste samenvatting, als die er is,
-       heeft status `completed` of `failed`) en er is geen onopgeloste review-thread (afspraak);
-     - `"indien-aanwezig"` (template): rondde Codex ooit een review af, dan geldt de voorwaarde van `true` volledig; zonder
-       zo'n spoor vervalt ze. Een spoor is een samenvatting met marker en status `completed`, een PR-review, een
-       inline-reviewcommentaar of een 👍 van die bot, op welke SHA ook, op deze PR of op een andere PR met dezelfde
-       head-branch die open is of zonder merge gesloten. Ook een review die nog bezig is (een 👀 van die bot op de PR of op
-       een issue-commentaar ervan, of een nieuwste samenvatting met een andere status dan `completed` of `failed`) is een spoor: dan wacht de merge. Geen spoor: een
-       samenvatting met status `failed`, een commentaar zonder marker, een 👍 op een commentaar;
-     - `false`: geen Codex-voorwaarde (een app zonder Codex).
+   - `agentMerge` geen sleutel `codex` heeft; een overgebleven `codex` (welke waarde ook) maakt het blok onleesbaar: geen
+     merge (herzien 2026-11-05).
    *Waarom:* elke voorwaarde dekt een eigen faalwijze: verkeerde PR of SHA, verouderde basis, verouderde lokale `origin/main`,
-   rode CI, kritieke inhoud, doorbouwen op rode `main`, review van een oudere versie, genegeerde Codex-punten, een diff te groot
-   om te overzien. *Waarom drieledig (herzien 2026-11-03):* met `true` hing de agent-merge aan het Codex-reviewtegoed; was dat
-   op, dan merget geen agent meer (review 3 november 2026, P2). Dit versoepelt de Codex-voorwaarde (R-PRINC-09, met
-   eigenaarsbesluit); in de plaats komen de omvanggrens, de steekproef en de terugval (punt 5). `"indien-aanwezig"` houdt
-   een gegeven Codex-oordeel bindend: een inline-punt zonder samenvatting of een nieuwe PR van dezelfde branch laat de
-   voorwaarde niet vervallen. Alleen een afgeronde of nog lopende review telt, omdat Codex bij tegoed op zelf een samenvatting met marker
-   (status `failed`, `has_unresolved_findings: true` zonder bevinding) en een limietmelding plaatst (PR #447 tot en met #453,
-   met `gh api` nagegaan); "elke marker" of "elk commentaar" blokkeerde dan elke PR. Een gemergde PR van dezelfde branch telt
-   niet, omdat een thread meerdere PR's na elkaar van één branch maakt. *Waarom wachten (herzien 2026-11-03):* een 👀 of
-   een ronde die nog bezig is, telt als spoor (besluit van de eigenaar); anders mergt een snelle agent terwijl Codex met
-   tegoed nog bezig is, en is Codex ook met tegoed in de praktijk optioneel. Bij tegoed op zet Codex geen 👀 (PR #447 tot en
-   met #453), dus daar vervalt de voorwaarde zoals eerder. Prijs: een 👀 die blijft hangen, faalt dicht; dan merget de
-   eigenaar. *Waarom een omvanggrens, ook met Codex:* zonder Codex is
-   de verse reviewer de enige inhoudelijke lezer, en een kleine diff is wat die betrouwbaar overziet. Voorbeeld is de praktijk
+   rode CI, kritieke inhoud, doorbouwen op rode `main`, review van een oudere versie, een diff te groot om te overzien.
+   *Waarom geen Codex-voorwaarde (herzien 2026-11-05):* Codex is geen vereiste van de werkstraat (eigenaar, eerste testronde
+   5 november 2026); of het op een app-PR reviewt, is onbekend. Een voorwaarde die aan een externe dienst en haar tegoed hangt,
+   maakte de route grillig (tegoed op bij PR #447 tot en met #453, een hangende 👀 die dicht faalt) en bleef sinds de herziening
+   van 2026-11-03 al optioneel. Het vangnet is de verse reviewer op precies de head, met de omvanggrens die hem de hele diff
+   laat overzien, plus de steekproef en de terugval (punt 5); dat stond er al voor een merge zonder Codex-spoor en geldt nu
+   voor elke agent-merge. Een externe review die toch komt, telt niet als voorwaarde; een open review-thread houdt de ruleset
+   op `main` tegen. Een overgebleven `codex` faalt dicht, zodat een app die op Codex rekende niet stil losser wordt.
+   *Waarom een omvanggrens:* de verse reviewer is de enige inhoudelijke lezer, en een kleine diff is wat die betrouwbaar overziet. Voorbeeld is de praktijk
    van Ona die de eigenaar aanhaalde (opdracht 3 november 2026: laag-risico-PR's automatisch goedgekeurd onder 1.000 regels
    met een deterministische padregel; cijfers niet zelf nagegaan), hier strenger omdat er geen mens meekijkt. Een binair
    bestand telt GitHub als 0 regels en kan de reviewer niet lezen, dus dat sluit uit. De review-regel en het oplossen van threads zijn afspraken, geen harde voorwaarden: de sessie zet ze onder het account van de
@@ -116,24 +105,20 @@ punt begint, `*.config.*`, `package.json`, `tsconfig*.json`). Daarnaast: geen be
    branch mag zichzelf geen recht geven; buiten Claude Code is er geen enkel vangnet.
 5. **De eigenaar houdt de schakelaar.** De modus staat standaard op `"eigenaar"`; de bouw-PR zet hem op `"niet-kritiek"` en de
    eigenaar activeert met die merge. Terugzetten is één regel. Na elke agent-merge meldt de agent PR en SHA in de thread; een
-   fout herstelt hij met een revert-PR, die zelf ook punt 1 moet halen. Elke agent-merge zonder Codex-spoor meldt de
-   hoofdsessie in de thread met het woord "steekproef"; de eigenaar telt en kijkt de eerste tien achteraf na en zegt daarna of
-   de melding blijft. Terugval: na een revert van een agent-merge, één rode `main` door een agent-merge of een agent-merge die
-   achteraf kritiek blijkt, merget de hoofdsessie niets meer via `pr:merge`, opent een PR die `merge` op `"eigenaar"` zet,
-   meldt dat, en dit besluit wordt herzien; pas na de merge van die PR of een ander besluit van de eigenaar gaat het verder.
-   Overgang: de herziening van punt 3 en 5 geldt vanaf de merge van de bouw-PR; tot dan merget de hoofdsessie geen PR boven
-   400 regels. De wachtregel van punt 3 (tweede herziening van 2026-11-03) zit pas met de merge van zijn bouw-PR in
-   `pr:merge`; tot dan kijkt de hoofdsessie vóór `pnpm pr:merge` zelf naar een 👀 van Codex en de status van de nieuwste
-   samenvatting, en merget ze niet zolang Codex bezig is. Bij `"indien-aanwezig"` vraagt de hoofdsessie geen extra `@codex review` zolang er geen spoor is, en met spoor
-   vraagt ze er een op elke nieuwe head; ze ontwijkt Codex niet (geen draft om de automatische review te mijden, geen
-   commentaar weghalen, ook niet het eigen commentaar `@codex review`). Elke agent-merge bij `codex: false` geldt ook als steekproef. Steekproef, terugval, overgang en het
-   vragen van Codex zijn afspraken, geen gate: het script meldt alleen dat de Codex-voorwaarde
-   verviel, en `.claude/gates.json` wijzigen is een gate die de eigenaar merget.
-   *Waarom (herzien 2026-11-03):* zonder Codex valt een vangnet weg; de steekproef laat de eigenaar zien of de reviewer en de
-   omvanggrens het opvangen, en de terugval maakt een fout goedkoop in plaats van ongemerkt. Geen teller in het script: niets
-   in de kit telt nu agent-merges, en een sessie onthoudt het niet; de eigenaar telt in de thread. Zonder stop na een trigger
-   kon de agent doormergen tot de eigenaar de terugzet-PR merget. Een gevraagde review die afrondt, maakt de voorwaarde
-   bindend; vrij vragen gaf de agent dus een keuze om het vangnet te mijden.
+   fout herstelt hij met een revert-PR, die zelf ook punt 1 moet halen. Elke agent-merge meldt de hoofdsessie in de thread
+   met het woord "steekproef" (`pr:merge` drukt die regel na elke merge af); de eigenaar telt en kijkt de eerste tien achteraf
+   na en zegt daarna of de melding blijft. Terugval: na een revert van een agent-merge, één rode `main` door een agent-merge
+   of een agent-merge die achteraf kritiek blijkt, merget de hoofdsessie niets meer via `pr:merge`, opent een PR die `merge`
+   op `"eigenaar"` zet, meldt dat, en dit besluit wordt herzien; pas na de merge van die PR of een ander besluit van de
+   eigenaar gaat het verder. Overgang: de herziening van 2026-11-05 geldt vanaf de merge van haar bouw-PR. Tot dan staat
+   `agentMerge.codex: "indien-aanwezig"` op `main` en toetst `pr:merge` de Codex-voorwaarde zoals vóór deze herziening, en
+   gelden de Codex-afspraken van toen: met een Codex-spoor vraagt de hoofdsessie `@codex review` op elke nieuwe head, ze
+   ontwijkt Codex niet (geen draft, geen commentaar weghalen) en meldt een merge zonder spoor als steekproef. Steekproef, terugval en overgang zijn afspraken, geen gate:
+   het script drukt alleen de steekproefregel af, en `.claude/gates.json` wijzigen is een gate die de eigenaar merget.
+   *Waarom (herzien 2026-11-05):* de verse reviewer is bij elke agent-merge de enige inhoudelijke lezer; de steekproef laat
+   de eigenaar zien of de reviewer en de omvanggrens dat opvangen, en de terugval maakt een fout goedkoop in plaats van
+   ongemerkt. Geen teller in het script: niets in de kit telt agent-merges, en een sessie onthoudt het niet; de eigenaar telt
+   in de thread. Zonder stop na een trigger kon de agent doormergen tot de eigenaar de terugzet-PR merget.
 6. **Tot de bouw-PR gemerged is, merget geen agent.** R-REPO-01, R-REPO-05, R-ROL-08, R-WERK-23, R-ROL-10 en `AGENTS.md`
    veranderen pas in de bouw-PR, met het mechanisme, zodat geen tekst een recht geeft dat nog niet bestaat.
 
@@ -150,9 +135,13 @@ punt begint, `*.config.*`, `package.json`, `tsconfig*.json`). Daarnaast: geen be
   een harde grens, met een eigen besluit; tot dan geldt dit besluit binnen Claude Code.
 - **Ruimer (gate-paden buiten `voorReview`, zoals `src/core` buiten auth):** dan merget een agent template-code die elke app
   erft. Niet nu.
-- **Codex uitzetten (`false`) zonder vervanging (herzien 2026-11-03):** dan blijft alleen de verse reviewer over, zonder grens
-  aan wat die moet overzien. Verworpen: geen tweede vangnet.
+- **Codex als voorwaarde schrappen, met omvanggrens, steekproef en terugval als vangnet (gekozen, herzien 2026-11-05):**
+  op 2026-11-03 verworpen zolang er geen grens was aan wat de verse reviewer moet overzien; die grens, de steekproef en de
+  terugval bestaan nu, dus zonder Codex blijft er een tweede vangnet.
 - **Codex verplicht houden:** de autonomie hangt dan aan een betaalde externe dienst en stopt als het tegoed op is. Verworpen.
+- **`agentMerge.codex` houden met `false` als standaard (herzien 2026-11-05):** een tak die de template niet gebruikt en niet
+  in de praktijk toetst, met de hele spoor- en wachtlogica erachter. Verworpen; een app die een externe reviewer als
+  voorwaarde wil, legt dat vast in een eigen app-ADR.
 - **Een andere externe reviewer:** een nieuwe dienst met eigen besluit en kosten. Niet nu.
 
 ## Gevolgen
@@ -164,17 +153,12 @@ punt begint, `*.config.*`, `package.json`, `tsconfig*.json`). Daarnaast: geen be
   omzeilt, houdt GitHub niet tegen.
 - De bouw-PR is kritiek (`.github/**`, `.claude/**`, besluitscripts); de eigenaar merget hem en pusht de workflowwijziging.
   `docs/specs/agent-merge.md` gaat daarin naar `vervallen`, met de roadmap-items voor ADR 0029 stap 7 en ADR 0030 PR 2.
-- Met `"indien-aanwezig"` gaat de agent-merge door als het Codex-tegoed op is, maar alleen voor PR's tot `maxRegels`
-  regels en `maxBytes` bytes zonder binair bestand; een grotere niet-kritieke PR merget de eigenaar, of de agent splitst hem in PR's onder de
-  grens, elk met een eigen verse review. Restrisico's (herzien 2026-11-03): komt Codex pas na de merge met punten, dan telden
-  ze niet; met de wachtregel alleen nog als Codex zijn ronde pas na de controle van `pr:merge` begon (nog geen 👀); een
-  👀 die blijft hangen op die PR, houdt de agent-merge ervan tegen tot Codex de head afrondt of de eigenaar merget (op een
-  andere PR van de branch geeft ze alleen een spoor); en onder het eigenaaraccount kan de sessie een Codex-commentaar
-  verwijderen of bewerken, of haar eigen commentaar `@codex review` met de 👀 erop verwijderen (het rolhek weigert beide nu
-  niet), zodat het spoor verdwijnt; of ze opent de PR als draft, zodat de automatische Codex-review niet start. Een Codex-review
-  die mislukt terwijl er tegoed is, laat geen spoor na. Het verwijderen en de draft zijn een bewuste omzeiling, net als het script omzeilen hierboven; de steekproef
-  en de terugval vangen het achteraf op.
-- Meten (0046 punt 36): aantal agent-merges, met en zonder Codex-signaal, reverts daarvan en rode `main` na een agent-merge.
+- De agent-merge hangt niet aan een externe dienst (herzien 2026-11-05), maar geldt alleen voor PR's tot `maxRegels`
+  regels en `maxBytes` bytes zonder binair bestand; een grotere niet-kritieke PR merget de eigenaar, of de agent splitst hem
+  in PR's onder de grens, elk met een eigen verse review. Restrisico: de verse reviewer is de enige inhoudelijke lezer; een
+  fout die hij mist, ziet de eigenaar pas in de steekproef of na een rode `main`. Een app met een overgebleven
+  `agentMerge.codex` krijgt na de template-update een rode `check-docs` en geen agent-merge tot de sleutel weg is.
+- Meten (0046 punt 36): aantal agent-merges, reverts daarvan en rode `main` na een agent-merge.
   Terugval zoals in punt 5: een revert van een agent-merge, één rode `main` door een agent-merge of één agent-merge van iets
   dat achteraf kritiek blijkt: modus via een PR terug naar `"eigenaar"`, melden, en dit besluit herzien. *Waarom (herzien
   2026-11-03):* ook een revert telt nu, omdat zonder Codex een fout eerder pas na de merge zichtbaar wordt.
