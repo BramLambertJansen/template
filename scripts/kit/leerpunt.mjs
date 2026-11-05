@@ -110,7 +110,7 @@ export function plekVan(body) {
 
 /**
  * Bij plek `Schrappen of vereenvoudigen` moet `Onderbouwing` per deel een regel `<deel>: <tekst>` hebben, ook na `- ` of
- * met `**` (spec leerlus-herzien AC-2). Bij een andere plek: geen eis.
+ * met `**` of na `1. ` (spec leerlus-herzien AC-2). Bij een andere plek: geen eis.
  * @param {{ kop: string, waarde: string }[]} koppen @returns {string[]}
  */
 function onderbouwingFouten(koppen) {
@@ -119,7 +119,7 @@ function onderbouwingFouten(koppen) {
     .split('\n')
     .map((regel) =>
       regel
-        .replace(/^\s*[-*]\s+/, '')
+        .replace(/^\s*(?:[-*]|\d+\.)\s+/, '')
         .replaceAll('**', '')
         .trim(),
     );
@@ -198,7 +198,7 @@ export function regelFout(regel, diff) {
 }
 
 /** `<voor> → <na> (<bron>)`: voor en na beginnen met een cijfer, de bron is niet leeg (spec leerlus-herzien AC-3). */
-const METING = /^\d.*?\s*(?:→|->)\s*\d.*\(\s*\S[^()]*\)\s*$/;
+const METING = /^\d[^→>]*?\s*(?:→|->)\s*\d[^→>]*\(\s*\S[^()]*\)\s*$/;
 
 /** @param {Regel} regel @param {string} naam */
 function metingFout(regel, naam) {

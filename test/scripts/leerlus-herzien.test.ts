@@ -49,6 +49,7 @@ describe('leerlus-herzien/AC-2 onderbouwing in het issue', () => {
       [],
     ],
     ['CRLF', met({}).replaceAll('\n', '\r\n'), []],
+    ['genummerde lijst', met({ Onderbouwing: '1. Meting: 3 → 1 (regels)\n2. Overname: x\n3. Terugval: y' }), []],
     ['Meting weg', met({ Onderbouwing: 'Overname: x\nTerugval: y' }), ['onderbouwing ontbreekt: Meting']],
     [
       'Overname leeg',
@@ -99,6 +100,7 @@ describe('leerlus-herzien/AC-3 meting als sluitbewijs', () => {
     ['onbekend', `- #9: trede ${PLEK_SCHRAPPEN}; bewijs meting: onbekend → 30 s (CI)`, /niet de vorm/],
     ['zonder bron', `- #9: trede ${PLEK_SCHRAPPEN}; bewijs meting: 90 s → 30 s`, /niet de vorm/],
     ['lege bron', `- #9: trede ${PLEK_SCHRAPPEN}; bewijs meting: 90 → 30 ( )`, /niet de vorm/],
+    ['twee pijlen', `- #9: trede ${PLEK_SCHRAPPEN}; bewijs meting: 5 → onbekend → 3 (b)`, /niet de vorm/],
     ['zonder pijl', `- #9: trede ${PLEK_SCHRAPPEN}; bewijs meting: 90 s (CI)`, /niet de vorm/],
     ['testpad bij deze trede', `- #9: trede ${PLEK_SCHRAPPEN}; bewijs test/a.test.ts`, /is het bewijs "meting:/],
     ['geen test bij deze trede', `- #9: trede ${PLEK_SCHRAPPEN}; bewijs geen test: x`, /is het bewijs "meting:/],
