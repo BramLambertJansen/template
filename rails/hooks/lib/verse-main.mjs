@@ -1,11 +1,13 @@
 // Nieuw werk begint vanaf een verse main (framework §8): een commando dat een nieuwe lokale branch maakt, start van
 // `origin/main` en haalt die in hetzelfde commando eerst op, verbonden met alleen `&&`. Het rolhek gebruikt geen netwerk;
-// door de `&&` ontstaat er geen branch als de fetch faalt. Geldt voor elke rol, in de template en in elke app.
+// door de `&&` ontstaat er geen branch als de fetch faalt. Geldt voor elke rol, in de template en in elke app. De melding
+// noemt alleen de vorm met `switch --no-track -c` (ADR 0083 punt 1); de andere vormen (`checkout -b`, `git branch`,
+// `worktree add -b`) blijven toegestaan, alleen de tekst noemt ze niet.
 import { gitSubcommand, programName, splitCommand, tokenize } from './shell.mjs';
 
 export const VERSE_MAIN_MELDING =
-  'nieuw werk begint vanaf een verse main: `git fetch origin main && git switch -c <naam> origin/main` in één commando ' +
-  '(ook `checkout -b`, `git branch`, `worktree add -b`; framework §8). Een branch op een andere basis maakt de eigenaar zelf.';
+  'nieuw werk begint vanaf een verse main: `git fetch origin main && git switch --no-track -c <naam> origin/main` in één ' +
+  'commando (framework §8). Een branch op een andere basis maakt de eigenaar zelf.';
 
 // Sleutelwoorden vóór een commando (`{ git …; }`, `! git …`, `if git …`); het commando erna telt gewoon.
 const SHELL_KEYWORDS = new Set(['{', '!', 'if', 'then', 'elif', 'else', 'do', 'while', 'until', 'time']);

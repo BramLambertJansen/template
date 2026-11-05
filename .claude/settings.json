@@ -146,7 +146,7 @@
         "~/.aws"
       ],
       "allowRead": ["./.env.example"],
-      "denyWrite": ["./.git/rolhek-effect", "./.git/commondir"]
+      "denyWrite": ["./.git/rolhek-effect"]
     },
     "network": {
       "allowedDomains": [

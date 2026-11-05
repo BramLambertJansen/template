@@ -105,38 +105,40 @@ ontbrekende registraties bewijzen geen nul. De telling en regressieproeven staan
 Elk nieuw ticket, elke feature en elke fix begint op een eigen branch vanaf een vers opgehaalde main, in één commando:
 
 ```sh
-git fetch origin main && git switch -c <naam> origin/main
-```
-
-**Agentsessie in Claude Code: werk in een worktree (#553).** In de hoofdcheckout faalt elk git-commando in Bash
-(`failed to read .git/commondir: Permission denied`): `./.git/commondir` blijft in `denyWrite` (ADR 0082 punt 2), het
-bestand bestaat daar niet en de sandbox maskeert het. Ook `gh` faalt daar, behalve met `-R <eigenaar>/<repo>` vanuit een
-map buiten de repo. Begin nieuw werk daarom met de Claude Code-tool `EnterWorktree` (naam `<map>` = de branchnaam met `-` in
-plaats van `/`): die maakt buiten de sandbox een worktree onder `.claude/worktrees/<map>` (genegeerd door git) en zet de
-sessie erin. Daar is `.git` een bestand en wordt `commondir` niet gemaskeerd; git werkt in Bash (gemeten 5 november 2026).
-`EnterWorktree` haalt niet zelf op (gemeten: `origin/main` liep achter) en maakt een branch `worktree-<map>`. Daarna, in
-de worktree, als twee losse commando's:
-
-```sh
 git fetch origin main && git switch --no-track -c <naam> origin/main
-pnpm install --frozen-lockfile --store-dir "$TMPDIR/pnpm-store"
 ```
 
-`--no-track` is nodig: zonder die optie schrijft git de upstream in `.git/config`, waarvan het lockbestand een masker van
-de sandbox is; git breekt dan af met exit 1 nadat het de bestanden al heeft bijgewerkt, maar vóór HEAD verplaatst.
-Gebeurde dat, gebruik dan geen `reset --hard`: zet de gestagede paden expliciet terug met `git checkout HEAD -- <paden>`
-en verwijder de half gemaakte branch met `git branch -D <naam>`. Het rolhek telt `--no-track` als gewone optie bij de
-verse-main-vorm (`createOperands` in `verse-main.mjs`; nog geen test). Een nieuwe worktree heeft geen `node_modules`;
-zonder toolchain falen `feiten.mjs`, lint en de git-hooks (installeren duurde 12 seconden). Om dezelfde reden geeft
-`git branch -D` de melding `could not lock config file`; de branch is wel verwijderd (`-m` is niet gemeten).
+**Agentsessie in Claude Code: hoofdcheckout of worktree (#553).** Git werkt weer in de hoofdcheckout: `./.git/commondir`
+staat niet meer in `denyWrite` (ADR 0083 punt 1; `.claude/settings.json`, `sandbox.filesystem.denyWrite`). De startvorm
+hierboven is in elke werkmap gelijk. `--no-track` is nodig: Claude Code koppelt `.git/config` in de hoofdcheckout
+alleen-lezen; zonder die optie schrijft git de upstream in `.git/config` en breekt het af met exit 1 nadat het de bestanden
+al heeft bijgewerkt, maar vóór HEAD verplaatst (gemeten in de worktree, voor de hoofdcheckout afgeleid uit hetzelfde
+mechanisme). Gebeurde dat, gebruik dan geen `reset --hard`: zet de gestagede paden expliciet terug met
+`git checkout HEAD -- <paden>` en verwijder de half gemaakte branch met `git branch -D <naam>`. Het rolhek telt `--no-track`
+als gewone optie bij de verse-main-vorm (`test/hooks/rolhek-verse-main.test.ts`, "de vorm met --no-track"); de
+SessionStart-melding noemt dezelfde vorm (`sessionStart` in `rails/hooks/lib/werkstraat.mjs`).
 
-Andere maskers blijven: `.claude/settings.json`, `.claude/hooks` en `.claude/skills` van de worktree zijn niet
-schrijfbaar, de overlays in de root van de worktree (`.bashrc`, `.mcp.json`, `.claude/commands` …) tellen als untracked en een
-`*secret*`-bestand dat de sandbox verbergt (`src/core/api/env-secret.test.ts`) staat als gewijzigd. Verwijder, herstel of
-verberg ze niet en stage paden expliciet, nooit `git add -A` of `git commit -a`. **Open:** `git merge origin/main` faalt
-in de worktree (`fatal: stash failed`): git maakt vóór de merge een stash en kan het verborgen bestand niet lezen. Loopt
-een branch achter op `origin/main`, dan laat de hoofdsessie de merge aan de eigenaar. Of de `denyWrite`-grens op de
-`.git`-paden in een worktree geldt, is niet gemeten (ADR 0082 punt 1).
+Een geplant `.git/commondir` (een hoofdcheckout heeft dat bestand nooit; git zou er config en hooks van elders door volgen)
+zet de stub-lader weg als `.git/commondir.geplant-<tijd>` en blokkeert waar het event dat kent, zonder git-aanroep
+(`geplantCommondir` in `.claude/hooks/laden.mjs`; `test/hooks/laden-commondir.test.ts`). Lukt het hernoemen niet, dan noemt
+de melding hoe de eigenaar het bestand buiten Claude Code weghaalt. Het restrisico staat in ADR 0083 punt 1.
+
+**Worktree, voor wie parallel werkt (keuze, geen voorschrift).** De Claude Code-tool `EnterWorktree` (naam `<map>` = de
+branchnaam met `-` in plaats van `/`) maakt buiten de sandbox een worktree onder `.claude/worktrees/<map>` (genegeerd door
+git) en zet de sessie erin. Hij haalt niet zelf op (gemeten: `origin/main` liep achter) en maakt een branch
+`worktree-<map>`; daarna, in de worktree, de startvorm hierboven en `pnpm install --frozen-lockfile --store-dir
+"$TMPDIR/pnpm-store"` als twee losse commando's (een nieuwe worktree heeft geen `node_modules`; zonder toolchain falen
+`feiten.mjs`, lint en de git-hooks; installeren duurde 12 seconden). Om dezelfde reden als bij `--no-track` geeft
+`git branch -D` daar de melding `could not lock config file`; de branch is wel verwijderd (`-m` is niet gemeten).
+
+In de worktree zijn `.claude/settings.json`, `.claude/hooks` en `.claude/skills` alleen-lezen door Claude Code zelf, maar de
+gedeelde `.git` van de hoofdcheckout is daar schrijfbaar (ADR 0083, Context; eigen leerpunt volgt). De overlays in de root
+van de worktree (`.bashrc`, `.mcp.json`, `.claude/commands` …) tellen als untracked en een `*secret*`-bestand dat de sandbox
+verbergt (`src/core/api/env-secret.test.ts`) staat als gewijzigd. Verwijder, herstel of verberg ze niet en stage paden
+expliciet, nooit `git add -A` of `git commit -a`. **Open:** `git merge origin/main` faalt in de worktree
+(`fatal: stash failed`): git maakt vóór de merge een stash en kan het verborgen bestand niet lezen. Loopt een branch achter
+op `origin/main`, dan laat de hoofdsessie de merge aan de eigenaar; ook de skill `opleveren` lost conflicten op met
+`git merge origin/main`, wat in de worktree faalt.
 
 Na de merge vraagt de eigenaar de sessie `ExitWorktree` aan te roepen, of ruimt de worktree zelf op in een eigen terminal
 in de hoofdcheckout (niet gemeten: of `remove` zonder `--force` slaagt):
@@ -145,10 +147,6 @@ in de hoofdcheckout (niet gemeten: of `remove` zonder `--force` slaagt):
 git worktree remove .claude/worktrees/<map>
 git branch -D <naam> worktree-<map>
 ```
-
-Nog niet bijgewerkt, elk in een eigen PR: de SessionStart-melding en de weigermelding van het rolhek
-(`VERSE_MAIN_MELDING`) noemen `git switch -c` zonder `--no-track` (besluit-PR, `rails/hooks/**`), en de skill
-`opleveren` lost conflicten op met `git merge origin/main`, wat in de worktree faalt (beschermd pad).
 
 Het rolhek weigert voor elke rol een nieuwe branch in een andere vorm (`rails/hooks/lib/verse-main.mjs`): zonder fetch
 ervoor, met `;` of `||` ertussen, of vanaf een andere basis dan `origin/main` (lokale `main`, de vorige featurebranch,

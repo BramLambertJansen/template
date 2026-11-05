@@ -360,7 +360,7 @@ export function sessionStart(deps) {
   const claude = claudeVersieMelding(versie.code === 0 ? versie.output : null).join('\n');
   return {
     stdout: [
-      `Branch: ${branch}${branch === 'main' ? ' (begin nieuw werk met `git fetch origin main && git switch -c <naam> origin/main`)' : ''}`,
+      `Branch: ${branch}${branch === 'main' ? ' (begin nieuw werk met `git fetch origin main && git switch --no-track -c <naam> origin/main`)' : ''}`,
       mainLag(deps),
       prRegel(deps, branch),
       `Gewijzigde bestanden: ${changed.length === 0 ? 'geen' : changed.slice(0, 20).join(', ')}`,
