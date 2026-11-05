@@ -9,7 +9,7 @@ model: opus
 ## Doel
 
 De hoofdsessie merget een PR zelf met `pnpm pr:merge <nr>` als die niet kritiek is en geen beschermd pad raakt, en alleen als
-CI, review en Codex dat aantoonbaar zeggen ([ADR 0069](../adr/0069-agent-merge-niet-kritiek.md)). Alle andere merge-routes
+CI en review dat aantoonbaar zeggen ([ADR 0069](../adr/0069-agent-merge-niet-kritiek.md)). Alle andere merge-routes
 blijven dicht. Aanleiding: opdracht van de eigenaar, 3 november 2026.
 
 ## Rollen en wie wat ziet
@@ -52,7 +52,7 @@ n.v.t. — geen UI. Meldingen van `pr:merge` en het rolhek zijn Nederlands en no
   `src/api/login-policy.ts`, een verwijderde permissiesleutel, `src/web/CLAUDE.md`, `docs/AGENTS.md`,
   `src/web/postcss.config.mjs`, `src/x/.claude/skills/y.md`, `docs/operations/agent-doorloop.md`) en een PR met alleen `src/web`-code, een nieuwe test en een doc
   buiten de gates die `ja` geeft. Omvanggrens: ook `nee` boven `agentMerge.maxRegels` regels, met een binair bestand of een
-  onleesbare telling ([agent-merge-zonder-codex](agent-merge-zonder-codex.md) AC-2).
+  onleesbare telling (AC-9).
 - **agent-merge-niet-kritiek/AC-2** — `.github/workflows/guard.yml` krijgt een job `agent-merge` die alleen draait (en
   slaagt) als het oordeel uit AC-1 `ja` is, en anders overgeslagen wordt; hij voert geen PR-code uit en staat niet in
   `requiredChecks`, maar op de lijst bewust niet verplichte jobs naast `diff-guard` (0068 punt 1). De diff-guard zelf
@@ -68,17 +68,11 @@ n.v.t. — geen UI. Meldingen van `pr:merge` en het rolhek zijn Nederlands en no
   `main` is `success`. De check-runs van `pull_request_target` hangen aan de PR-head (vastgesteld op #445: `diff-guard`,
   `document-status` en `check-core` stonden op head-SHA `39f0ce8`); het script koppelt de check-run `agent-merge` via zijn
   `check_suite` aan de workflow-run en eist `path` `.github/workflows/guard.yml` en event `pull_request_target` (een run waarvan
-  `pull_requests` alleen andere PR-nummers noemt, telt niet; leeg kan, gezien op #445); lukt dat niet, dan geen merge. De job houdt daarom de vaste naam `agent-merge`. Review: een PR-commentaar `Review <head-SHA>: geen blokkerende bevindingen`. Codex (tenzij
-  `agentMerge.codex: false`): de samenvatting van `chatgpt-codex-connector[bot]` (marker `codex-review-state:v1`) zegt voor
-  `code_review` (de nieuwste samenvatting telt) `status: completed`, `commit_sha` gelijk aan de head-SHA en `has_unresolved_findings: false`; of die bot gaf
-  een 👍 op de PR na het moment dat GitHub de head ontving (de vroegste check-suite op die SHA, niet de commitdatum). Een 👀, een lopende review,
-  een review op een andere SHA of open punten op de head (ook met een latere 👍) telt niet als afronding (negatieve test);
-  een 👀 van die bot of een lopende review geeft de wachtreden ([agent-merge-codex-wachten](agent-merge-codex-wachten.md) AC-3); en geen onopgeloste review-thread: REST kent die stand niet,
-  dus de ruleset op main (`required_review_thread_resolution`) weigert de merge dan. Elke ontbrekende
-  voorwaarde geeft een eigen regel en exit 1 zonder schrijfactie. Alleen REST, geen GraphQL. Unittest per voorwaarde met
-  nagebootste API-antwoorden. De Codex-voorwaarde kent drie waarden (`true`, `false`, `"indien-aanwezig"`: alleen bij een
-  spoor van Codex: een afgeronde review of een die nog bezig is) en `pr:merge` telt de omvang via REST tegen `agentMerge.maxRegels`
-  ([agent-merge-zonder-codex](agent-merge-zonder-codex.md) AC-3 tot en met AC-5).
+  `pull_requests` alleen andere PR-nummers noemt, telt niet; leeg kan, gezien op #445); lukt dat niet, dan geen merge. De job houdt daarom de vaste naam `agent-merge`. Review: een PR-commentaar `Review <head-SHA>: geen blokkerende bevindingen`. Geen onopgeloste review-thread: REST kent die
+  stand niet, dus de ruleset op main (`required_review_thread_resolution`) weigert de merge dan. Een externe review is geen
+  voorwaarde (AC-7). Elke ontbrekende voorwaarde geeft een eigen regel en exit 1 zonder schrijfactie. Alleen REST, geen
+  GraphQL. Unittest per voorwaarde met nagebootste API-antwoorden. `pr:merge` telt de omvang via REST tegen
+  `agentMerge.maxRegels` (AC-9).
 - **agent-merge-niet-kritiek/AC-4** — Het rolhek weigert elke rol `gh pr merge`, `gh api …/merge`, auto-merge en elke
   `mcp__`-merge, zoals nu. Het geeft de hoofdsessie `allow` voor precies `pnpm pr:merge <nr>` (`<nr>` alleen cijfers), alleen
   als op schijf `scripts/kit/pr-merge.mjs`, de bestanden die het importeert en de bestanden uit `HOST_FILES`
@@ -88,13 +82,12 @@ n.v.t. — geen UI. Meldingen van `pr:merge` en het rolhek zijn Nederlands en no
   goed) en krijgt een `ask`-regel `Bash(pnpm pr:merge *)`, zodat een openvallend rolhek een prompt geeft. De bouw-PR toetst
   beide paden: met werkend rolhek geen prompt (hook-`allow`), met falend rolhek een prompt; geeft een hook-`allow` de
   `ask`-regel niet vrij, dan meldt de bouw-PR dat en kiest de eigenaar. `scripts/kit/pr-merge.mjs` staat in `KRITIEK` in `scripts/kit/lane.mjs`.
-- **agent-merge-niet-kritiek/AC-5** — `.claude/gates.json` krijgt `merge: "niet-kritiek"` en `agentMerge` met `toegestaan`,
-  `kritiek` en `codex` zoals in ADR 0069 punt 1 en 3. `check-docs` weigert voor `merge` elke andere waarde dan `"eigenaar"` of
+- **agent-merge-niet-kritiek/AC-5** — `.claude/gates.json` krijgt `merge: "niet-kritiek"` en `agentMerge` met `toegestaan`
+  en `kritiek` zoals in ADR 0069 punt 1 en 3. `check-docs` weigert voor `merge` elke andere waarde dan `"eigenaar"` of
   `"niet-kritiek"`, en een configuratie waarin een pad uit `voorReview` of `altijdVragen` na de uitsluitingen (`gates`, `agentMerge.kritiek`,
   de naamregel uit AC-1) nog agent-mergebaar is; de toets gebruikt dezelfde functie als AC-1 op de vaste paden en globs van die
-  lijsten. `docs/**` in `toegestaan` is dus geldig zolang `docs/framework.md` en `docs/dod.md` gates zijn. Nieuwe vorm van
-  `agentMerge`: `codex` is `true`, `false` of `"indien-aanwezig"` en `maxRegels` een geheel getal ≥ 1, ook getoetst door
-  `check-docs` ([agent-merge-zonder-codex](agent-merge-zonder-codex.md) AC-1, AC-6).
+  lijsten. `docs/**` in `toegestaan` is dus geldig zolang `docs/framework.md` en `docs/dod.md` gates zijn. Vorm van `agentMerge`:
+  `maxRegels` een geheel getal ≥ 1, ook getoetst door `check-docs` (AC-8, AC-9).
 - **agent-merge-niet-kritiek/AC-6** — Regelboek en instructies: R-REPO-01 en R-REPO-05 zeggen dat de eigenaar merget, behalve
   dat de hoofdsessie in Claude Code een PR met oordeel `agent-merge: ja` merget via `pnpm pr:merge` (0069); R-ROL-08 noemt
   `pnpm pr:merge` van de hoofdsessie als enige uitzondering op "mergen"; R-WERK-12 en stap 7 van §8 noemen de agent-merge;
@@ -164,7 +157,6 @@ n.v.t. — geen UI. Meldingen van `pr:merge` en het rolhek zijn Nederlands en no
 | Wijziging in `src/api/login-policy.ts` of `src/shared/limits.ts` | `nee`: `agentMerge.kritiek` (AC-1) | n.v.t. |
 | Permissiesleutel verwijderd of inline `permission:` gewijzigd | `nee` (AC-1) | n.v.t. |
 | Eigenaar zette de modus terug, lokale `origin/main` is oud | geen merge: modus komt via REST van de kop van `main` (AC-3) | n.v.t. |
-| App zonder Codex | tot de bouw van AC-7: `agentMerge.codex: false` in die app (AC-3); daarna vervalt deze rij (AC-9): geen Codex-voorwaarde, voor geen enkele app | n.v.t. |
 | Agent in een andere runtime dan Claude Code | merget niet (AC-6) | n.v.t. |
 | PR met een nieuwe migratie in het owner-patroon | `nee`; migraties zijn onherroepelijk in de geschiedenis (AC-1) | n.v.t. |
 | PR met nieuwe permissie zonder spec | `nee` via het risico-overzicht (AC-1) | n.v.t. |
