@@ -424,7 +424,7 @@ function verifyLevendeSpec({ file, before, after }, uitslag, context) {
   if (oud !== null && oud.status !== 'voorstel')
     verifyAcIdsBlijven(file, specNamespace(file, before ?? ''), { voor: voor.alle, na: na.alle });
   verifyMarkering({ file, after, oudStatus: oud?.status ?? null }, { voor, na }, { uitslag, context });
-  if (uitslag === 'besluit' && oud?.status === 'gebouwd' && documentInfo(file, after).status === 'gebouwd')
+  if (uitslag === 'besluit' && oud?.status === 'gebouwd' && documentInfo(file, after)?.status === 'gebouwd')
     verifyGebouwdeInhoud(file, { voor, na }, context);
 }
 
