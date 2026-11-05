@@ -11,6 +11,7 @@ import {
 } from '../../scripts/kit/agent-merge.mjs';
 import { agentMerge, beoordeel, leesConfig, numstatArgs, parseNumstat } from '../../scripts/kit/diff-guard.mjs';
 import { agentMergeViolations } from '../../scripts/kit/check-docs.mjs';
+import { expectAbsent } from '../support/absence';
 
 // Agent-merge met een omvanggrens (spec agent-merge-niet-kritiek AC-9) en de vervallen blokssleutel van de externe review
 // (AC-8, ADR 0069 herzien 2026-11-05): die sleutel bestaat niet meer en een overgebleven sleutel faalt dicht.
@@ -260,7 +261,10 @@ describe('agent-merge-niet-kritiek/AC-8 de vervallen blokssleutel bestaat niet m
     const blok = leesMergeConfig(TEKST).agentMerge;
     expect(blok).toMatchObject({ maxRegels: 400 });
     expect(blok).not.toHaveProperty(SLEUTEL);
-    expect(TEKST).not.toMatch(new RegExp(SLEUTEL, 'i'));
+    expectAbsent(TEKST, /codex/i, {
+      recognizes: ['codex', 'Codex', '"codex": "indien-aanwezig"', 'agentMerge.codex', 'chatgpt-codex-connector'],
+      allows: ['agentMerge', 'maxRegels'],
+    });
     expect(agentMergeViolations([], TEKST)).toEqual([]);
   });
 

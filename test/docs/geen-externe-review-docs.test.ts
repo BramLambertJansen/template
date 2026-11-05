@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
+import { expectAbsent } from '../support/absence';
 
 // agent-merge-niet-kritiek/AC-10: geen externe reviewdienst in de actieve werkstraat. De opdracht uit de spec (zonder de
 // fixtures) mag alleen nog de vijf uitzonderingen geven, letterlijk. Het zoekwoord wordt samengesteld, zodat dit bestand zichzelf
@@ -44,7 +45,11 @@ const MAAT = new RegExp(`${WOORD}-bevindingen`, 'i');
 // van de oude omvang- en steekproeftests de regels met de botnaam, de marker, de sleutel tussen aanhalingstekens of
 // `agentMerge.<woord>`. Elke andere regel in die vier bestanden die het woord noemt, is een treffer.
 const SLEUTEL_REGEL = new RegExp(`['"]${WOORD}['"]|agentMerge\\.${WOORD}`, 'i');
-const BOT_REGEL = new RegExp(`chatgpt-${WOORD}-connector|${WOORD}-review-state|${SLEUTEL_REGEL.source}`, 'i');
+// In de testbestanden herkent ook de afwezigheidstoets (`expectAbsent(…, /<woord>/i, …)`) de sleutel in de echte gates.json.
+const BOT_REGEL = new RegExp(
+  `chatgpt-${WOORD}-connector|${WOORD}-review-state|expectAbsent\\(.*/${WOORD}/|${SLEUTEL_REGEL.source}`,
+  'i',
+);
 const UITZ5_SCRIPTS = new Set(['scripts/kit/agent-merge.mjs', 'scripts/kit/check-docs.mjs']);
 const UITZ5_TESTS = new Set([
   'test/scripts/pr-merge-omvang-steekproef.test.ts',
@@ -144,9 +149,10 @@ describe('agent-merge-niet-kritiek/AC-10 de uitzonderingen per regel', () => {
     const bot = T(steekproef, 7, `const BOT = 'chatgpt-${WOORD}-connector[bot]';`);
     const marker = T(steekproef, 8, `const MARKER = '<!-- ${WOORD}-review-state:v1';`);
     const sleutel = T('test/rails/agent-merge-omvang.test.ts', 21, `const SLEUTEL = '${WOORD}';`);
+    const afwezig = T('test/rails/agent-merge-omvang.test.ts', 263, `expectAbsent(TEKST, /${WOORD}/i, {`);
     const ander = T('test/rails/agent-merge-omvang.test.ts', 99, `// de ${WOORD} doet ook mee`);
     const andereTest = T(steekproef, 98, `test('${WOORD} wacht niet', () => {`);
-    expect(buitenUitzonderingen([bot, marker, sleutel, ander, andereTest], lees)).toEqual([ander, andereTest]);
+    expect(buitenUitzonderingen([bot, marker, sleutel, afwezig, ander, andereTest], lees)).toEqual([ander, andereTest]);
   });
 
   test('uitzondering 4: dit bestand sluit zichzelf uit', () => {
@@ -162,7 +168,10 @@ describe('agent-merge-niet-kritiek/AC-10 de vervangende zinnen', () => {
   test('review-checklists: de PR-review, zonder de vraag van de externe dienst', () => {
     const tekst = lees('docs/operations/review-checklists.md');
     expect(tekst).toContain('de PR-review');
-    expect(tekst).not.toMatch(/de PR- of \S+-review/);
+    expectAbsent(tekst, /de PR- of \S+-review/, {
+      recognizes: ['de PR- of Codex-review', 'de PR- of codex-review', 'de PR- of externe-review'],
+      allows: ['de PR-review', 'de PR- en CI-uitslag'],
+    });
     expect(tekst).not.toContain('vraagt hier steeds naar.');
   });
 });
