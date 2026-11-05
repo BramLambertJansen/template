@@ -692,3 +692,62 @@ describe('rolhek-effect/AC-10 (g): na SubagentStop telt een remote-tracking ref 
     MIN,
   );
 });
+
+describe('rolhek-effect/AC-10 (review): dicht en open vallen', () => {
+  test(
+    'AC-7 bij SubagentStop: een te grote na-opname wordt snap null en de volgende Stop blijft dicht',
+    () => {
+      const { a } = wereld();
+      const tester: Wie = { sessie: 'S1', rol: 'tester' };
+      start(a, tester);
+      for (let nummer = 1; nummer <= 5001; nummer += 1) schrijf(a, `test/veel/${String(nummer)}`, '');
+      stopAgent(a, tester);
+      expect(veld(opnameVan(a, tester), 'snap')).toBeNull();
+      rmSync(path.join(a, 'test/veel'), { recursive: true, force: true });
+      expect(blok(stopHoofd(a, 'S1'))).toContain('hele werkmap');
+      expect(blok(stopHoofd(a, 'S1'))).toContain('hele werkmap');
+    },
+    MIN,
+  );
+
+  function sessionStartUit(root: string) {
+    return spawnSync(process.execPath, [WERKSTRAAT, 'session-start'], {
+      cwd: root,
+      input: JSON.stringify({ cwd: root, session_id: 'S1' }),
+      encoding: 'utf8',
+      env: procEnv(),
+      timeout: 30_000,
+    });
+  }
+
+  const hookPaden = (root: string): string[] =>
+    vensters(vensterBestand(root))
+      .filter((venster) => venster.actor === 'hook')
+      .flatMap((venster) => venster.paden);
+
+  test(
+    'hookVenster valt open: zonder .claude/hooks/.cache/ geen venster hook, exit 0 en de melding',
+    () => {
+      const { a } = wereld();
+      const result = sessionStartUit(a);
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain('Branch:');
+      expect(hookPaden(a)).toStrictEqual([]);
+    },
+    MIN,
+  );
+
+  test(
+    'hookVenster valt open: met een cache maar zonder .claude/gates.json toch een venster hook en exit 0',
+    () => {
+      const { a } = wereld();
+      rmSync(path.join(a, '.claude/gates.json'));
+      schrijf(a, '.claude/hooks/.cache/anker', 'v1\n');
+      const result = sessionStartUit(a);
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain('Branch:');
+      expect(hookPaden(a)).toContain('.claude/hooks/.cache/anker');
+    },
+    MIN,
+  );
+});

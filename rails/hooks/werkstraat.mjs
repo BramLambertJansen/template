@@ -10,7 +10,6 @@ import path from 'node:path';
 import { checkEnv } from './lib/check-env.mjs';
 import { legVensterVast } from './lib/effect.mjs';
 import { bestandenOnder, gitIn } from './lib/effect-snapshot.mjs';
-import { rolhekContext } from './lib/rolhek-context.mjs';
 import { payloadCwd, projectRoot } from './lib/root.mjs';
 import { changedFiles, postEdit, sessionStart, stop, subagentStop } from './lib/werkstraat.mjs';
 
@@ -73,7 +72,8 @@ function onthoud(run, root, sleutel) {
 
 /**
  * Het venster van de actor `hook` (spec rolhek-effect AC-10 c): elk bestand onder `.claude/hooks/.cache/`, in de staat van
- * nu. Fail-open: session-start blokkeert nooit; zonder cachebestanden geen venster.
+ * nu. Zonder `rolhekContext`: het venster hangt niet af van `gates.json`. Fail-open: session-start blokkeert nooit; zonder
+ * cachebestanden geen venster.
  * @param {string} root
  */
 function hookVenster(root) {
@@ -81,8 +81,7 @@ function hookVenster(root) {
     const paden = bestandenOnder(path.join(root, CACHE), CACHE);
     if (paden.length === 0) return;
     const nu = Date.now();
-    const repo = { root, git: gitIn(root), ctx: rolhekContext(root, root), now: () => Date.now() };
-    legVensterVast(repo, { actor: 'hook', start: nu, eind: nu, paden });
+    legVensterVast({ root, git: gitIn(root), now: () => Date.now() }, { actor: 'hook', start: nu, eind: nu, paden });
   } catch (error) {
     process.stderr.write(`werkstraat-hook session-start: venster van de hook niet vastgelegd: ${error instanceof Error ? error.message : String(error)}\n`);
   }

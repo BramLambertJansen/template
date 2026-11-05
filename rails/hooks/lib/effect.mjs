@@ -105,7 +105,7 @@ function venstersUit(file) {
   }
 }
 
-/** De vensters van de eigen opslag. @param {Repo} repo */
+/** De vensters van de eigen opslag. @param {{ root: string, git: Git }} repo */
 const eigenVensters = (repo) => venstersUit(path.join(opslag(repo), 'vensters.jsonl'));
 
 /**
@@ -120,7 +120,7 @@ function vensters(repo) {
   return [...mappen].flatMap((map) => venstersUit(path.join(map, 'vensters.jsonl')));
 }
 
-/** Schrijft alleen in de eigen opslag. @param {Repo} repo @param {Venster} venster */
+/** Schrijft alleen in de eigen opslag; zonder `ctx` (ook voor de hook zelf, AC-10 c). @param {{ root: string, git: Git, now: () => number }} repo @param {Venster} venster */
 export function legVensterVast(repo, venster) {
   const file = path.join(opslag(repo), 'vensters.jsonl');
   mkdirSync(path.dirname(file), { recursive: true });
@@ -252,8 +252,8 @@ export function veranderdePaden(repo, paar) {
   return vensterPaden(repo, paar, veranderingenIn(repo, paar));
 }
 
-/** Het veld `sessie` van een overtreding, alleen als de dader een sessie heeft. @param {Wie} wie */
-const sessieVeld = (wie) => (wie.sessie === undefined || wie.sessie === '' ? {} : { sessie: wie.sessie });
+/** Het veld `sessie` van een overtreding, alleen als de dader een sessie heeft (AC-10 f). @param {{ sessie?: string }} wie */
+export const sessieVeld = (wie) => (wie.sessie === undefined || wie.sessie === '' ? {} : { sessie: wie.sessie });
 
 /**
  * Overtredingen en meldingen voor de veranderingen tussen `voor` en `na`; paden die een ander venster verklaart, een

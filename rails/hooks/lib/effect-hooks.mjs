@@ -9,6 +9,7 @@ import {
   leesOpname,
   overtredingen,
   ruimOp,
+  sessieVeld,
   toets,
   toetsHoofdsessie,
   veranderdePaden,
@@ -64,8 +65,7 @@ const UITWEG = 'De hook zet niets terug. Zet het pad terug naar de staat van vó
 
 /** Te groot of te traag (AC-7): een overtreding zonder pad. @param {Wie} wie @returns {Overtreding} */
 function nietRond(wie) {
-  const sessie = wie.sessie === undefined || wie.sessie === '' ? {} : { sessie: wie.sessie };
-  return { rel: null, actor: wie.actor, rol: wie.agentType || 'hoofdsessie', commando: wie.commando, reden: 'meer dan 5000 paden of langer dan 5 s: de toets valt dicht (AC-7)', voor: null, ...sessie };
+  return { rel: null, actor: wie.actor, rol: wie.agentType || 'hoofdsessie', commando: wie.commando, reden: 'meer dan 5000 paden of langer dan 5 s: de toets valt dicht (AC-7)', voor: null, ...sessieVeld(wie) };
 }
 
 /**
@@ -168,7 +168,7 @@ function hoofdsessieAchteraf(repo, basis, wie) {
   const tekst = lijstTekst(uitslag.nieuw);
   if (modus(repo) === 'schaduw')
     return context(wie.event, uitslag.nieuw.length === 0 ? [] : [`rolhek-effect (schaduw, AC-4): met de vlag aan zou dit commando op de open lijst komen:\n${tekst}`]);
-  werkLijstBij(repo, { nieuw: uitslag.nieuw.map((o) => ({ rel: o.rel, actor: o.actor, rol: o.rol, commando: o.commando, reden: o.reden, voor: o.voor, ...(o.sessie === undefined ? {} : { sessie: o.sessie }) })), nu: na });
+  werkLijstBij(repo, { nieuw: uitslag.nieuw.map((o) => ({ rel: o.rel, actor: o.actor, rol: o.rol, commando: o.commando, reden: o.reden, voor: o.voor, ...sessieVeld(o) })), nu: na });
   if (uitslag.nieuw.length === 0) return context(wie.event, uitslag.meldingen);
   const reden = `rolhek-effect: dit commando van de hoofdsessie veranderde paden buiten haar rol:\n${tekst}\n${UITWEG}`;
   return achteraf === 'deny' && !wie.mislukt ? telBlok(repo, wie, reden) : context(wie.event, [reden, ...uitslag.meldingen]);

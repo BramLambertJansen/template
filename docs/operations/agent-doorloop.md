@@ -73,10 +73,11 @@ de subagent door de staat van dat moment (`rails/hooks/lib/effect-hooks.mjs:suba
 tellen alleen wat sindsdien veranderde zonder venster van een andere actor; de vensters van elke worktree op dezelfde
 git-common-dir tellen mee (`rails/hooks/lib/effect.mjs:vensters`), de schrijfacties van de hooks zelf zijn een venster van de
 actor `hook` (`rails/hooks/werkstraat.mjs:hookVenster`), en een `fetch` (`refs/remotes/**`) telt niet; een andere ref, een
-verschoven HEAD of een commit van de eigenaar in zijn eigen terminal wel (`pnpm rolhek:overnemen <pad>`). De Stop-hook en de
-context bij elke tool-aanroep blokkeren alleen op de eigen sessie (`effect-hooks.mjs:vanSessie`); `pr:verify` toetst alle
-sessies. SessionEnd wist de opnamen van die sessie (`effect.mjs session-end`); 24 uur blijft de bovengrens.
-`pnpm rolhek:overnemen --alles` wist ook alle opnamen en vensters (`scripts/kit/rolhek-overnemen.mjs:neemOver`).
+verschoven HEAD of een commit van de eigenaar in zijn eigen terminal wel (`pnpm rolhek:overnemen <pad>`). De Stop-hook
+blokkeert alleen op de eigen sessie en de context bij elke tool-aanroep noemt dezelfde selectie (`effect-hooks.mjs:vanSessie`);
+`pr:verify` toetst alle sessies. SessionEnd wist de opnamen van die sessie (`effect.mjs session-end`); 24 uur blijft de
+bovengrens. `pnpm rolhek:overnemen --alles` wist ook alle opnamen en vensters van de opslag van deze werkmap
+(`scripts/kit/rolhek-overnemen.mjs:neemOver`).
 
 Wanneer een meting "let op" zegt (ADR 0070, spec `meting-stuurt`):
 
