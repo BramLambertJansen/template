@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #585
+status: gebouwd # #483
 namespace: agent-merge-niet-kritiek
 model: opus
 ---
@@ -96,7 +96,7 @@ n.v.t. — geen UI. Meldingen van `pr:merge` en het rolhek zijn Nederlands en no
   `CLAUDE.md` en de skill `opleveren` zeggen hetzelfde in één zin elk, met de regel dat de agent na een merge PR en SHA meldt
   en de CI op `main` volgt. `docs/specs/agent-merge.md` staat op `vervallen`; de roadmap-items "ADR 0029 stap 7" en
   "ADR 0030 PR 2" en de verwijzing bij "Volledig pad naar `gh` in het rolhek" verwijzen naar deze spec.
-- **agent-merge-niet-kritiek/AC-7** — Geen Codex-voorwaarde meer (ADR 0069 herzien 2026-11-05):
+- **agent-merge-niet-kritiek/AC-7** (nog niet gebouwd) — Geen Codex-voorwaarde meer (ADR 0069 herzien 2026-11-05):
   `scripts/kit/pr-merge.mjs` verliest `CODEX`, `CODEX_LOOPT`, `codexStand()`, `codexRedenen()`, `codexBezig()`,
   `codexSpoorOp()`, `codexVoorwaarde()` en `branchPrs()`, en leest geen reacties, check-suites of reviews meer voor Codex.
   `beoordeelMerge()` geeft `{ redenen }` zonder stand; `slotRegels(nummer, head)` geeft na elke geslaagde merge precies twee
@@ -104,14 +104,14 @@ n.v.t. — geen UI. Meldingen van `pr:merge` en het rolhek zijn Nederlands en no
   `STEEKPROEF_VERVIEL` en `STEEKPROEF_UIT`). Unittest: een wereld met een 👀 of een samenvatting `running` van
   `chatgpt-codex-connector[bot]` geeft geen reden (faalt op de huidige code met de wachtreden); de steekproefregel komt ook
   bij een wereld zonder enig Codex-spoor en is letterlijk deze tekst.
-- **agent-merge-niet-kritiek/AC-8** — `agentMerge.codex` vervalt: `.claude/gates.json` en zijn
+- **agent-merge-niet-kritiek/AC-8** (nog niet gebouwd) — `agentMerge.codex` vervalt: `.claude/gates.json` en zijn
   `$comment` noemen `codex` niet meer; `leesAgentMerge()` in `scripts/kit/agent-merge.mjs` geeft `null` en
   `agentMergeFouten()` de reden `agentMerge.codex bestaat niet meer: haal de sleutel weg (ADR 0069)` zodra het blok een sleutel
   `codex` heeft, welke waarde ook; `CodexModus` en `leesCodex()` verdwijnen. `check-docs` (`agentMergeVorm`) meldt dan
   `docs:agentMerge.codex` met `.claude/gates.json: agentMerge.codex bestaat niet meer (ADR 0069); haal de sleutel weg`.
   Tabeltest met `codex` `true`, `false`, `"indien-aanwezig"` en `"ja"`: elk geeft `null`, de reden en de overtreding; zonder
   `codex` is het blok geldig. De omvanggrens (`maxRegels`, `maxBytes`, binair) blijft ongewijzigd.
-- **agent-merge-niet-kritiek/AC-9** — Deze spec draagt de omvanggrens: het oordeel (AC-1) en `pr:merge`
+- **agent-merge-niet-kritiek/AC-9** (nog niet gebouwd) — Deze spec draagt de omvanggrens: het oordeel (AC-1) en `pr:merge`
   (AC-3) geven `nee` respectievelijk een reden boven `agentMerge.maxRegels` regels, met een binair bestand of bij een
   onleesbare telling, zoals tot nu in [agent-merge-zonder-codex](agent-merge-zonder-codex.md) AC-1 tot en met AC-3 en AC-6
   (de bytegrens blijft in [agent-merge-bytegrens](agent-merge-bytegrens.md)); de tests daarvan dragen voortaan deze AC-id en
@@ -120,7 +120,7 @@ n.v.t. — geen UI. Meldingen van `pr:merge` en het rolhek zijn Nederlands en no
   randgeval "App zonder Codex" vervalt; de AC-id's blijven. In dezelfde bouw-PR gaan
   [agent-merge-zonder-codex](agent-merge-zonder-codex.md) en [agent-merge-codex-wachten](agent-merge-codex-wachten.md) naar
   `vervallen` (in deze besluit-PR houden ze hun status, omdat de code ze tot de bouw nog uitvoert).
-- **agent-merge-niet-kritiek/AC-10** — Geen Codex in de actieve werkstraat. Uitgangspunt is
+- **agent-merge-niet-kritiek/AC-10** (nog niet gebouwd) — Geen Codex in de actieve werkstraat. Uitgangspunt is
   `git grep -il codex -- scripts .claude README.md docs/operations test src rails db e2e .github package.json AGENTS.md CLAUDE.md docs/framework.md docs/dod.md`
   zonder `test/rails/fixtures/` (stand bij dit besluit: de 32 bestanden onder "Raakt ook"). Na de bouw-PR geeft die
   opdracht alleen nog deze uitzonderingen, letterlijk:
