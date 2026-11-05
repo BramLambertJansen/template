@@ -54,9 +54,11 @@ draait dat deels om. Voor `settings.json` en de stubs geldt het falen van git al
    template zelf zijn niet beproefd). S0 vervalt daarmee. Git in Bash blijft in de hoofdcheckout kapot en werkt alleen in een
    worktree (leerpunt #553). Meting en beperkingen: spec rolhek-vooraf-krimp, M0.
    Een echt `.git/commondir` met inhoud `.` helpt ook niet (gemeten 5 november 2026, Claude Code 2.1.318, git 2.53.0, in
-   een verse sessie in de hoofdcheckout). Het eerste Bash-commando zag een gewoon bestand en git werkte. Het tweede
-   weigerde schrijven (`EACCES`) en hernoemen en verwijderen (`EBUSY`). Daarna stond het `/dev/null`-masker er weer, en
-   in een terminal buiten de sandbox was het bestand weg. Wat het verwijdert, is niet vastgesteld; de repo doet het niet.
+   een verse sessie in de hoofdcheckout). Het eerste Bash-commando zag een gewoon bestand en git werkte. Bij het tweede
+   was het pad weer gemaskeerd: schrijven gaf `EACCES`, hernoemen en verwijderen `EBUSY`, en `stat` gaf een character
+   device van `nobody` (afgeleid: `/dev/null`). Buiten de sandbox was het bestand daarna weg. Wanneer en waardoor het
+   verdween, is niet vastgesteld. De hooks van de repo verwijderen alleen hun eigen cache en opnames (afgeleid uit de code:
+   `.claude/hooks/laden.mjs`, `rails/hooks/lib/effect.mjs`).
    Een agentsessie in Claude Code werkt daarom in een worktree. De SessionStart-melding noemt in elke hoofdcheckout
    (`.git` is een map) `EnterWorktree` en daarna `git fetch origin main && git switch --no-track -c <naam> origin/main`.
    De verse-main-melding van het rolhek noemt die vorm met `--no-track`. Uitwerking: spec rolhek-vooraf-krimp AC-3.
@@ -94,7 +96,7 @@ draait dat deels om. Voor `settings.json` en de stubs geldt het falen van git al
 - **`./.git/commondir` uit `denyWrite` halen, de hooks weigeren laten (S0).** Vervallen: het git van Claude Code
   volgt het bestand zonder dat een hook ertussen zit (M0 deel 2). Git in Bash blijft daardoor kapot in de hoofdcheckout.
 - **Een echt `.git/commondir` met inhoud `.` in de hoofdcheckout, gezet door bootstrap.** Vervallen: het bestand
-  verdwijnt tussen twee Bash-commando's en het masker komt terug (punt 2, gemeten 5 november 2026).
+  is bij het volgende Bash-commando weer gemaskeerd en daarna weg (punt 2, gemeten 5 november 2026).
 - **Alleen de sandbox, geen regel vooraf.** Dan blijft voor `.git/refs` alleen een toets achteraf, en die ziet ze niet.
 - **Bash van subagents helemaal beperken tot de leeslijst.** Dan kunnen developer en tester geen tests meer draaien.
 - **Een sandbox per rol.** Die kent Claude Code niet.
