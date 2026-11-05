@@ -67,7 +67,10 @@ Drie lagen van de bewaking zijn elk apart verdedigbaar, maar geven samen meer va
    venster: de bewaarde opname wordt de staat van dat moment. Een latere nacontrole (Stop, `pr:verify`) telt alleen wat
    sindsdien in de werkmap of de vaste lijst veranderde en geen venster van een andere actor verklaart, waarbij de vensters
    van alle worktrees op dezelfde git-common-dir meetellen en de schrijfacties van de hooks zelf (anker, cache) een venster
-   van de actor `hook` zijn; een ref of HEAD die na SubagentStop verschuift, telt niet meer voor de subagent. Een opname
+   van de actor `hook` zijn; een remote-tracking ref die na SubagentStop verschuift (een `fetch`), telt niet meer voor de
+   subagent, een andere ref of een verschoven HEAD wel, zodat een achtergrondproces van de subagent dat later nog commit
+   zichtbaar blijft; een commit of merge van de eigenaar in zijn eigen terminal blijft een geval voor
+   `pnpm rolhek:overnemen`. Een opname
    vervalt aan het einde van de sessie die de subagent startte; 24 uur blijft de bovengrens. De Stop-hook blokkeert alleen
    op subagents van de eigen sessie; `pr:verify` toetst alle sessies. `pnpm rolhek:overnemen --alles` wist ook de opnamen
    en vensters, zodat de eigenaar een echte herstart heeft.
@@ -106,5 +109,7 @@ Drie lagen van de bewaking zijn elk apart verdedigbaar, maar geven samen meer va
   `test/hooks/werkstraat.test.ts` en de constante `STARTVORM` in `test/hooks/rolhek-verse-main.test.ts` veranderen: de reden
   staat in de bouw-PR, de merge van dit besluit is het akkoord.
 - Na punt 2 bevat de open lijst alleen nog wat een subagent zelf kan hebben geschreven; een Stop-hook blokkeert niet meer
-  op subagents van een vorige sessie, en `pr:verify` niet meer op werk van de hoofdsessie of de eigenaar.
+  op subagents van een vorige sessie, en `pr:verify` niet meer op werk van de hoofdsessie in Claude Code. Een commit of
+  merge die de eigenaar in zijn eigen terminal doet terwijl een opname open staat, neemt hij over met
+  `pnpm rolhek:overnemen`.
 - De schrijfbare gedeelde `.git` in een worktree is een eigen leerpunt, buiten dit besluit.
