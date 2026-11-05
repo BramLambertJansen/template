@@ -240,6 +240,18 @@ describe('laden: een geplant .git/commondir wordt hernoemd, zonder git-aanroep',
     expect(existsSync(uitkomst.marker)).toBe(false);
   });
 
+  test('zonder .git: de lader roept git aan en hernoemt niets', () => {
+    const root = tmp('laden-cd-zondergit-');
+    kopieerStubs(root);
+    zetAnker(root);
+
+    const uitkomst = draai(root, 'rolhek');
+
+    expect(existsSync(path.join(root, '.git'))).toBe(false);
+    expect(existsSync(uitkomst.marker)).toBe(true);
+    expect(readdirSync(root).filter((naam) => GEPLANT.test(naam))).toStrictEqual([]);
+  });
+
   test('gekoppelde worktree: .git is een bestand, de lader roept git aan en hernoemt niets', () => {
     const hoofd = nieuweRepo();
     writeFileSync(path.join(hoofd, 'README.md'), 'x\n');

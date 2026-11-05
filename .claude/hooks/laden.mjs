@@ -222,6 +222,21 @@ function uitkomstBijGeplant(naam, event) {
 }
 
 /**
+ * De melding als het hernoemen mislukt. Hooks van één event draaien parallel: ENOENT betekent dat een andere hook het
+ * bestand net eerder wegzette; elke andere fout vraagt de eigenaar om het buiten Claude Code weg te halen.
+ * @param {string} pad @param {unknown} error
+ */
+function meldingBijRename(pad, error) {
+  if (error instanceof Error && 'code' in error && error.code === 'ENOENT')
+    return `een geplant ${pad} is al door een andere hook van dit event weggezet als ${pad}.geplant-*`;
+  const reden = error instanceof Error ? error.message : String(error);
+  return (
+    `een geplant ${pad} kon niet worden weggezet (${reden}); haal het buiten Claude Code zelf weg, bijvoorbeeld met ` +
+    '`mv .git/commondir .git/commondir.geplant` in een eigen terminal'
+  );
+}
+
+/**
  * ADR 0083 punt 1 (leerpunt #553): een hoofdcheckout heeft nooit `.git/commondir`; staat het er, dan leidt het git om naar
  * config en hooks van elders. Zonder git-aanroep zet de lader het weg als `commondir.geplant-<tijd>` en stopt hij. Lukt het
  * hernoemen niet, dan haalt de eigenaar het buiten Claude Code weg en blijft de uitkomst per event gelijk. Geeft true als de
@@ -237,10 +252,7 @@ function geplantCommondir(naam) {
     renameSync(pad, nieuw);
     melding = `een geplant ${pad} is weggezet als ${nieuw}`;
   } catch (error) {
-    const reden = error instanceof Error ? error.message : String(error);
-    melding =
-      `een geplant ${pad} kon niet worden weggezet (${reden}); haal het buiten Claude Code zelf weg, bijvoorbeeld met ` +
-      '`mv .git/commondir .git/commondir.geplant` in een eigen terminal';
+    melding = meldingBijRename(pad, error);
   }
   const soort = uitkomstBijGeplant(naam, process.argv[2]);
   const tekst = `hook ${naam} (ADR 0083 punt 1): ${melding}; de hook deed geen git-aanroep`;
