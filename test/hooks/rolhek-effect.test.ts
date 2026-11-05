@@ -381,7 +381,7 @@ describe('rolhek-effect/AC-6: opslag buiten de sandbox en zonder vergelijkingspu
     const root = nieuweRepo();
     expect(opslag(repoVan(root))).toBe(path.join(root, '.git', 'rolhek-effect'));
     const settings = readFileSync('.claude/settings.json', 'utf8');
-    expect(settings).toContain('"denyWrite": ["./.git/rolhek-effect", "./.git/commondir"]');
+    expect(settings).toContain('"denyWrite": ["./.git/rolhek-effect"]');
     expect(settings).toContain('"pnpm rolhek:overnemen *"');
   });
 

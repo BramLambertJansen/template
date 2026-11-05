@@ -71,3 +71,10 @@ test('de grens blijft: sandbox verplicht, geen ontsnapping, inloggegevens en .en
     expect.arrayContaining(['Read(.env)', 'Read(.env.*)', 'Read(~/.ssh/**)', 'Read(~/.aws/**)']),
   );
 });
+
+// ADR 0083 punt 1 (leerpunt #553): een denyWrite-pad dat in de hoofdcheckout niet bestaat, maskeert de sandbox met
+// /dev/null; dan ziet git een bestand `.git/commondir` en breekt elke git-aanroep. Alleen de effect-opslag blijft dicht.
+test('denyWrite is precies de effect-opslag en bevat geen ./.git/commondir', () => {
+  expect(strings(filesystem['denyWrite'])).toStrictEqual(['./.git/rolhek-effect']);
+  expect(strings(filesystem['denyWrite'])).not.toContain('./.git/commondir');
+});

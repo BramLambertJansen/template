@@ -247,7 +247,17 @@ test('session-start op main: noemt de startvorm voor een nieuwe branch vanaf een
   const text = sessionStart(deps).stdout ?? '';
 
   expect(text).toContain('Branch: main');
-  expect(text).toContain('git fetch origin main && git switch -c <naam> origin/main');
+  expect(text).toContain('git fetch origin main && git switch --no-track -c <naam> origin/main');
+  expect(text).not.toContain('EnterWorktree');
+});
+
+test('session-start op een featurebranch: geen startvorm en geen EnterWorktree', () => {
+  const { deps } = fakeDeps({ output: 'feat/x' });
+  const text = sessionStart(deps).stdout ?? '';
+
+  expect(text).toContain('Branch: feat/x');
+  expect(text).not.toContain('git switch');
+  expect(text).not.toContain('EnterWorktree');
 });
 
 test('hulpjes: git status en de laatste regels', () => {

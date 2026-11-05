@@ -2,13 +2,16 @@
 // nooit de versie uit de werkmap, de branch of een omgebogen lokale `origin/main`. Anker en cache staan in `.claude/hooks/.cache/`,
 // een map die de sandbox van Claude Code niet laat beschrijven: `main` (de commit-SHA van de remote, ververst bij de start van een
 // sessie) en per tree-oid de uitgepakte versie, vóór elke run gecontroleerd tegen de blob-hashes. Rolhek en werkstraat falen dicht.
+// Vóór de eerste git-aanroep zet de lader een geplant `.git/commondir` in een hoofdcheckout weg (ADR 0083 punt 1): git zou anders
+// config en hooks van elders volgen. Dat hernoemen is de enige, bewuste uitzondering op "de hook zet niets terug".
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { lstatSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HIER = path.dirname(fileURLToPath(import.meta.url));
+const GIT_DIR = path.resolve(HIER, '..', '..', '.git');
 const CACHE = path.join(HIER, '.cache');
 const ANKER = path.join(CACHE, 'main');
 const COMPLEET = '.compleet';
@@ -191,6 +194,62 @@ function leesStdin() {
   }
 }
 
+/**
+ * Het pad `.git/commondir` als er in een hoofdcheckout iets op staat (bestand, symlink, map) of `lstat` een andere fout dan
+ * ENOENT geeft; null in een worktree (`.git` is daar een bestand) en als het pad niet bestaat.
+ */
+function geplantPad() {
+  try {
+    if (!lstatSync(GIT_DIR).isDirectory()) return null;
+  } catch {
+    return null;
+  }
+  const pad = path.join(GIT_DIR, 'commondir');
+  try {
+    lstatSync(pad);
+    return pad;
+  } catch (error) {
+    return error instanceof Error && 'code' in error && error.code === 'ENOENT' ? null : pad;
+  }
+}
+
+/** Blokkeren waar het event dat kent, melden waar het alleen context geeft, zwijgen bij meting en statusregel. @param {string} naam @param {string | undefined} event */
+function uitkomstBijGeplant(naam, event) {
+  if (naam === 'meting' || naam === 'statusregel') return 'zwijgt';
+  if (naam === 'melding' || (naam === 'werkstraat' && event === 'session-start')) return 'meldt';
+  if (naam === 'effect' && (event === 'subagent-start' || event === 'post-failure')) return 'meldt';
+  return 'blokkeert';
+}
+
+/**
+ * ADR 0083 punt 1 (leerpunt #553): een hoofdcheckout heeft nooit `.git/commondir`; staat het er, dan leidt het git om naar
+ * config en hooks van elders. Zonder git-aanroep zet de lader het weg als `commondir.geplant-<tijd>` en stopt hij. Lukt het
+ * hernoemen niet, dan haalt de eigenaar het buiten Claude Code weg en blijft de uitkomst per event gelijk. Geeft true als de
+ * lader moet stoppen.
+ * @param {string} naam
+ */
+function geplantCommondir(naam) {
+  const pad = geplantPad();
+  if (pad === null) return false;
+  const nieuw = `${pad}.geplant-${String(Date.now())}`;
+  let melding;
+  try {
+    renameSync(pad, nieuw);
+    melding = `een geplant ${pad} is weggezet als ${nieuw}`;
+  } catch (error) {
+    const reden = error instanceof Error ? error.message : String(error);
+    melding =
+      `een geplant ${pad} kon niet worden weggezet (${reden}); haal het buiten Claude Code zelf weg, bijvoorbeeld met ` +
+      '`mv .git/commondir .git/commondir.geplant` in een eigen terminal';
+  }
+  const soort = uitkomstBijGeplant(naam, process.argv[2]);
+  const tekst = `hook ${naam} (ADR 0083 punt 1): ${melding}; de hook deed geen git-aanroep`;
+  if (soort === 'blokkeert') process.stderr.write(`${tekst}; de hook faalt dicht\n`);
+  else if (soort === 'meldt') process.stdout.write(`${tekst}\n`);
+  process.exitCode = soort === 'blokkeert' ? 2 : 0;
+  return true;
+}
+
 /** @param {string} naam @param {boolean} dicht @param {string} reden */
 function weiger(naam, dicht, reden) {
   process.stderr.write(`hook ${naam} (ADR 0045): ${reden}${dicht ? '; de hook faalt dicht' : ''}\n`);
@@ -205,6 +264,7 @@ function weiger(naam, dicht, reden) {
  */
 export function draai(naam, dicht) {
   const invoer = leesStdin();
+  if (geplantCommondir(naam)) return;
   let map;
   let anker;
   try {

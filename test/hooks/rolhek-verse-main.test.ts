@@ -7,7 +7,7 @@ import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 // rolhek gebruikt geen netwerk; de `&&` zorgt dat een mislukte fetch geen branch maakt.
 const ROOT = '/repo';
 const config = loadConfig(readFileSync('.claude/gates.json', 'utf8'));
-const STARTVORM = 'git fetch origin main && git switch -c';
+const STARTVORM = 'git fetch origin main && git switch --no-track -c';
 const ROLLEN = ['hoofdsessie', 'developer'] as const;
 
 function decision(command: string, role: (typeof ROLLEN)[number]) {
@@ -203,5 +203,25 @@ describe('verse main: sleutelwoorden vóór het commando', () => {
     'if git switch -c feat/x feat/y; then :; fi',
   ])('geweigerd: %s', (command) => {
     expect(ROLLEN.map((role) => verdict(command, role))).toStrictEqual(['deny', 'deny']);
+  });
+});
+
+// Spec rolhek-vooraf-krimp AC-3: de startvorm met --no-track gaat door, en de melding noemt alleen die vorm.
+describe('verse main: de vorm met --no-track', () => {
+  test('toegestaan: switch --no-track -c na fetch origin main', () => {
+    const command = 'git fetch origin main && git switch --no-track -c x origin/main';
+
+    expect(ROLLEN.map((role) => verdict(command, role))).toStrictEqual(['allow', 'allow']);
+  });
+
+  test('de weigering noemt de varianten niet meer (checkout -b, git branch, worktree add -b), het rolhek laat ze wel toe', () => {
+    for (const role of ROLLEN) {
+      const melding = decision('git switch -c feat/x', role).deny.join('\n');
+
+      expect(melding).not.toContain('checkout -b');
+      expect(melding).not.toContain('git branch');
+      expect(melding).not.toContain('worktree add');
+    }
+    expect(verdict('git fetch origin main && git checkout -b feat/x origin/main', 'developer')).toBe('allow');
   });
 });
