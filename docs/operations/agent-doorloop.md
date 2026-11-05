@@ -111,14 +111,30 @@ git fetch origin main && git switch -c <naam> origin/main
 **Agentsessie in Claude Code: werk in een worktree (#553).** In de hoofdcheckout faalt elk git-commando in Bash
 (`failed to read .git/commondir: Permission denied`): `./.git/commondir` blijft in `denyWrite` (ADR 0082 punt 2), het
 bestand bestaat daar niet en de sandbox maskeert het. Ook `gh` faalt daar, behalve met `-R <eigenaar>/<repo>` vanuit een
-map buiten de repo. Begin nieuw werk daarom met de Claude Code-tool `EnterWorktree` (naam = de branchnaam zonder `/`):
-die maakt buiten de sandbox een worktree onder `.claude/worktrees/` (genegeerd door git) vanaf een vers opgehaalde
-`origin/main` en zet de sessie erin. Daar is `.git` een bestand, niets wordt gemaskeerd en git werkt in Bash
-(gemeten 5 november 2026). Geef de branch daarna een naam met `git branch -m <naam>`; de foutmelding over
-`.git/config` is een sandboxmasker, de naam is wel gezet. De sandbox-overlays in de root (`.bashrc`, `.mcp.json`,
-`.claude/commands` …) tellen daar als untracked; verwijder ze niet. Push werkt. De eigenaar ruimt de worktree na de merge op
-(`ExitWorktree` of `git worktree remove <pad>` in een eigen terminal). De SessionStart-melding noemt nog
-`git switch -c`; dat volgt in een aparte besluit-PR (`rails/hooks/**`).
+map buiten de repo. Begin nieuw werk daarom met de Claude Code-tool `EnterWorktree` (naam = de branchnaam met `-` in
+plaats van `/`): die maakt buiten de sandbox een worktree onder `.claude/worktrees/<naam>` (genegeerd door git) en zet de
+sessie erin. Daar is `.git` een bestand en wordt `commondir` niet gemaskeerd; git werkt in Bash (gemeten 5 november 2026).
+Daarna, in de worktree:
+
+1. `git fetch origin main && git merge origin/main`: `EnterWorktree` haalt niet zelf op (gemeten: `origin/main` liep achter).
+2. `git branch -m <naam>`: de melding `could not lock config file …/.git/config` komt van een masker van de sandbox; de naam is wel gezet.
+3. `pnpm install --frozen-lockfile --store-dir "$TMPDIR/pnpm-store"`: een nieuwe worktree heeft geen `node_modules`, en
+   zonder toolchain falen `feiten.mjs`, lint en de git-hooks.
+
+Wissel in de worktree niet van branch: een `git switch` terug bleef halverwege steken (HEAD verplaatst, bestanden niet)
+zonder foutcode. Andere maskers blijven: `.claude/settings.json`, `.claude/hooks` en `.claude/skills` van de worktree zijn
+niet schrijfbaar, de overlays in de root (`.bashrc`, `.mcp.json`, `.claude/commands` …) tellen als untracked en een
+`*secret*`-bestand dat de sandbox verbergt (`src/core/api/env-secret.test.ts`) staat als gewijzigd. Verwijder of herstel
+ze niet en stage paden expliciet, nooit `git add -A` of `git commit -a`. Of de `denyWrite`-grens op de `.git`-paden in
+een worktree geldt, is niet gemeten (ADR 0082 punt 1). Na de merge vraagt de eigenaar de sessie `ExitWorktree` aan te
+roepen, of ruimt de worktree zelf op in een eigen terminal in de hoofdcheckout (niet gemeten: of `remove` zonder `--force` slaagt):
+
+```sh
+git worktree remove .claude/worktrees/<naam>
+git branch -D <naam>
+```
+
+De SessionStart-melding noemt nog `git switch -c`; dat volgt in een aparte besluit-PR (`rails/hooks/**`).
 
 Het rolhek weigert voor elke rol een nieuwe branch in een andere vorm (`rails/hooks/lib/verse-main.mjs`): zonder fetch
 ervoor, met `;` of `||` ertussen, of vanaf een andere basis dan `origin/main` (lokale `main`, de vorige featurebranch,
