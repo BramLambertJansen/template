@@ -12,18 +12,9 @@ uit binnen dit bestand. Begeleid volgens *Begeleiding* hieronder: kort en zonder
 stap begrijpelijk maakt; laat de uitleg weg bij een technische gebruiker.
 
 Dit bestand staat in de template als `docs/nieuwe-app.md` en volgt de afspraken in [ADR 0040](adr/0040-template-app-en-grens-core-app.md).
-Voor een korte start vóór de app-repo bestaat: [START-NIEUWE-APP.md](../START-NIEUWE-APP.md). Deze instructie hier blijft de enige gedetailleerde setup-procedure.
-Werk altijd met de versie op `main` van de template. De gebruiker zet hem zo klaar:
-
-1. Open een Ubuntu-terminal en kopieer dit hele blok:
-
-   ```bash
-   mkdir -p ~/setup && cd ~/setup &&
-     curl -fsSL https://raw.githubusercontent.com/BramLambertJansen/template/main/docs/nieuwe-app.md -o nieuwe-app.md &&
-     claude
-   ```
-
-2. Zeg in de geopende sessie: *Volg nieuwe-app.md*.
+De enige startroute vóór de app-repo bestaat is [START-NIEUWE-APP.md](../START-NIEUWE-APP.md): daar staan het curl-blok en de
+opdracht waarmee de gebruiker dit bestand klaarzet en de agent laat beginnen. Deze instructie hier blijft de enige
+gedetailleerde setup-procedure. Werk altijd met de versie op `main` van de template.
 
 De machine- en sandboxstappen hieronder beschrijven Claude Code op Ubuntu/WSL2. Stel eerst vast welke runtime werkelijk draait.
 Bij een andere agent zijn `.claude/`-hooks geen automatisch actieve grens. Installeer of wissel niet stilzwijgend van agent;
