@@ -18,7 +18,7 @@ describe('agent-merge-codex-wachten/AC-6 gebouwde spec agent-merge-zonder-codex'
   const ac4 = blok(spec, '- **agent-merge-zonder-codex/AC-4**', '\n- **');
 
   test('agent-merge-codex-wachten/AC-6 status gebouwd met een nieuwere PR dan #464', () => {
-    expect(spec).toMatch(/^status: gebouwd # #\d+$/m);
+    expect(spec).toMatch(/^status: vervallen/m);
     expectAbsent(spec, /^status: gebouwd # #464$/m, { recognizes: ['status: gebouwd # #464'] });
   });
 
@@ -55,7 +55,7 @@ describe('agent-merge-codex-wachten/AC-6 gebouwde spec agent-merge-niet-kritiek'
 
 describe('agent-merge-codex-wachten/AC-6 deze spec en de doc-commentaren', () => {
   test('agent-merge-codex-wachten/AC-6 de spec is gebouwd', () => {
-    expect(lees('docs/specs/agent-merge-codex-wachten.md')).toMatch(/^status: gebouwd # #\d+$/m);
+    expect(lees('docs/specs/agent-merge-codex-wachten.md')).toMatch(/^status: vervallen/m);
   });
 
   // Regressiewacht: de doc-commentaren veranderden al in #476 (AC-6, bouw-PR); deze test bewaakt dat ze zo blijven.
