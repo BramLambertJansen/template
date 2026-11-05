@@ -649,7 +649,7 @@ en de startwijze voor een schone werksessie bevestigd. Wissel niet stilzwijgend 
 | Testsessie | Een nieuwe terminal in het **app-venster** (VS Code op `~/code/<slug>`) | Alleen voor de sandboxtest van 9.2, daarna met `/exit` afsluiten |
 | Werksessie | Weer een **nieuwe** terminal in hetzelfde app-venster | Hier begint het echte app-werk (Fase 10) |
 
-De terminal met `pnpm dev` blijft steeds ongemoeid open; gebruik daar nooit een sessie in.
+De terminal waarin `pnpm dev` draait (Fase 7.3) blijft steeds open; start daar nooit een sessie in.
 
 ### 9.1 De setup opent het werkvenster
 
@@ -699,7 +699,11 @@ Overdracht in het zojuist geopende app-venster:
 >    ```
 >
 > 5. Laat het app-venster en de terminal met de draaiende stack open. Meld via de vraagprompt van de setup de twee
->    meldingen die de testsessie toonde. Het sluiten controleer je zelf: vraag of de prompt weer zichtbaar is.
+>    meldingen die de testsessie toonde.
+> 6. Typ *klaar* als dit gelukt is; plak bij een fout de melding, zonder geheimen.
+
+Controleer na "klaar" zelf dat de testsessie echt is afgesloten: vraag of de gewone terminalprompt in de app-map weer
+zichtbaar is. Een proces of venster dat de agent niet kan zien, blijft anders onbevestigd.
 
 Waarom: `.claude/settings.json` van de template zet de sandbox aan met `failIfUnavailable: true` en weigert `docker *`
 en het lezen van `.env.*`. Geslaagd is alleen: beide pogingen zijn gedaan en door Claude Code geweigerd, met een melding
@@ -748,7 +752,7 @@ mislukte automatische start, schrijf dat dan eerlijk in de klaar-melding.
 > De setup heeft dit venster geopend en je hebt het gecontroleerd.
 >
 > 1. Ga naar dat app-venster en open **Terminal → New Terminal**. Dat moet een **nieuwe** terminal zijn: niet de terminal
->    met `pnpm dev` en niet de terminal van de testsessie. Laat die twee open of dicht zoals ze waren.
+>    met `pnpm dev` en niet de terminal van de testsessie. Laat de terminal met `pnpm dev` open.
 > 2. Plak dit hele blok in die nieuwe terminal en druk op Enter. Verwacht: Claude Code start in de app-map:
 >
 >    ```bash
