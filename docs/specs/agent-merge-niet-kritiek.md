@@ -137,14 +137,20 @@ n.v.t. — geen UI. Meldingen van `pr:merge` en het rolhek zijn Nederlands en no
   2. in `.claude/skills/opleveren/SKILL.md` alleen stap 8 ("CI-rood of Codex-bevindingen"), en in
      `docs/operations/agent-doorloop.md` alleen de twee zinnen over `pnpm meting --pr-tabel` en `--trend` (idem);
   3. de constante `KOP_0069` in `test/rails/adr-herzien.test.ts` (vaste historische kop, niet vergeleken met het echte ADR);
-  4. de nieuwe docs-test van deze AC zelf.
+  4. de nieuwe docs-test van deze AC zelf;
+  5. alleen regels die de verouderde sleutel of de bot herkennen, melden of nabootsen: in `scripts/kit/agent-merge.mjs` en
+     `scripts/kit/check-docs.mjs` de regels die de sleutel `codex` herkennen of melden (de reden en `docs:agentMerge.codex`
+     uit AC-8); in de opvolgers van `test/scripts/pr-merge-zonder-codex.test.ts` en
+     `test/rails/agent-merge-zonder-codex.test.ts` (naam zonder "codex") de regels die de wereld met
+     `chatgpt-codex-connector[bot]` (AC-7) of de `codex`-fixtures en de verwachte reden en `docs:agentMerge.codex` (AC-8)
+     opbouwen. Andere regels in die vier bestanden noemen het woord niet (eigenaar, 5 november 2026).
   Elke andere treffer is weg: stap 3 van "Mergen" in de skill wordt `Threads zijn opgelost; een externe review is geen
   voorwaarde.`; de runtimezinnen in `README.md` en `docs/operations/agent-doorloop.md` zeggen "andere runtimes" zonder
   naam; in `docs/operations/review-checklists.md` vervalt "Codex vraagt hier steeds naar." en wordt "de PR- of Codex-review"
   "de PR-review"; herkomst in testnamen en commentaar ("review Codex", "Codex-review", "Codex-bevinding op #544",
   "codex-bevindingen") wordt "review op #<nr>", branchnamen `codex/…` in tests worden `claude/…`. Een nieuwe docs-test in
-  `test/docs/` draait de opdracht hierboven en faalt op elke treffer buiten de vier uitzonderingen (op regelniveau voor 2
-  en 3); een treffer in `docs/adr/` of `docs/specs/` telt niet (historie blijft).
+  `test/docs/` draait de opdracht hierboven en faalt op elke treffer buiten de vijf uitzonderingen (op regelniveau voor 2,
+  3 en 5); een treffer in `docs/adr/` of `docs/specs/` telt niet (historie blijft).
 
 ## Randgevallen
 
@@ -173,6 +179,7 @@ n.v.t. — geen UI. Meldingen van `pr:merge` en het rolhek zijn Nederlands en no
 | Rolhek valt open op `gh pr merge` | deny-regel in `.claude/settings.json` (AC-4) | n.v.t. |
 | Codex reviewt toch en zet een 👀 of open punten | geen voorwaarde, ook niet als Codex wél reviewt: `pr:merge` wacht niet; een open review-thread houdt de ruleset tegen (AC-7, OV-2) | n.v.t. |
 | App heeft na de template-update nog `agentMerge.codex: true` | `check-docs` rood en geen agent-merge tot de sleutel weg is (AC-8, OV-4) | n.v.t. |
+| Docs-test van AC-10 vindt "codex" in `agent-merge.mjs`, `check-docs.mjs` of de opvolgers van de twee AC-7/AC-8-testbestanden | toegestaan op een regel die de oude sleutel herkent of meldt, of de botwereld of `codex`-fixture opbouwt (uitzondering 5); elke andere regel in die bestanden met "codex" faalt (AC-10) | n.v.t. |
 | Besluit-PR gemerged, bouw-PR nog niet | `agentMerge.codex: "indien-aanwezig"` staat nog op main en `pr:merge` toetst hem; de Codex-afspraken uit ADR 0069 punt 5 van vóór 2026-11-05 (spoor, `@codex review` op een nieuwe head, niet ontwijken) gelden tot de merge van de bouw-PR (ADR 0069, overgang) | n.v.t. |
 
 ## Raakt ook
@@ -197,14 +204,14 @@ bestaande tests hieronder, R-TEST-02). Per treffer uit de `git grep` van AC-10 (
 | `docs/operations/agent-doorloop.md` | runtimezinnen (rond "eigen runtimebeleid" en "draaien ze niet automatisch") zonder naam; de twee metingzinnen blijven (uitzondering 2) |
 | `docs/operations/review-checklists.md` | twee zinnen zoals AC-10 |
 | `scripts/kit/pr-merge.mjs` | Codex-logica weg, `STEEKPROEF` (AC-7) |
-| `scripts/kit/agent-merge.mjs` | `CodexModus`, `leesCodex()` weg, sleutel `codex` faalt dicht (AC-8); specverwijzingen in commentaar naar deze spec |
-| `scripts/kit/check-docs.mjs` | `agentMergeVorm` zoals AC-8 |
+| `scripts/kit/agent-merge.mjs` | `CodexModus`, `leesCodex()` weg, sleutel `codex` faalt dicht (AC-8); specverwijzingen in commentaar naar deze spec; alleen de regels die de sleutel `codex` herkennen of melden houden het woord (uitzondering 5) |
+| `scripts/kit/check-docs.mjs` | `agentMergeVorm` zoals AC-8; alleen de regels die de sleutel herkennen of `docs:agentMerge.codex` melden houden het woord (uitzondering 5) |
 | `scripts/kit/diff-guard.mjs` | specverwijzingen in commentaar naar deze spec (AC-9) |
 | `scripts/kit/meting.mjs`, `scripts/kit/meting-trend.mjs` | ongewijzigd (uitzondering 1) |
 | `test/docs/agent-merge-codex-wachten-docs.test.ts`, `test/docs/agent-merge-zonder-codex-docs.test.ts` | weg (toetsen Codex-tekst die verdwijnt) |
 | `test/scripts/pr-merge.test.ts` | weg: de rijen "Codex met open punten op de head, daarna een 👍", "een oudere Codex-samenvatting zonder punten, de nieuwste met open punten", "Codex loopt nog (👀)", "Codex op een andere SHA", "Codex met open punten", "Codex-samenvatting door iemand anders geschreven" en de tests "een 👍 van Codex na de push telt, een 👍 van vóór de push niet", "agentMerge.codex false slaat Codex over", "de Codex-stand komt uit het HTML-gecodeerde commentaar"; de goede wereld zonder Codex-samenvatting en fixtures zonder `codex` |
-| `test/scripts/pr-merge-zonder-codex.test.ts` | weg: de describes "agent-merge-zonder-codex/AC-4 Codex-voorwaarde bij indien-aanwezig", "agent-merge-codex-wachten/AC-1 Codex is bezig", "…/AC-2 een lopende review op een andere PR van de branch is een spoor", "…/AC-3 wachtreden bij true en indien-aanwezig, niet bij false", "…/AC-4 bij tegoed op verandert niets", "…/AC-5 tabel via beoordeelMerge()"; "agent-merge-zonder-codex/AC-3" (omvang) blijft als AC-9, "…/AC-5 steekproefregel na de merge" wordt AC-7 met de ene regel `STEEKPROEF`; bestand krijgt een naam zonder "codex" |
-| `test/rails/agent-merge-zonder-codex.test.ts` | AC-1, AC-2, AC-3 en AC-6 blijven als AC-9 (omvang) en AC-8 (sleutel `codex`: de rijen met geldige `codex`-waarden worden rijen met `null` en een overtreding); naam zonder "codex" |
+| `test/scripts/pr-merge-zonder-codex.test.ts` | weg: de describes "agent-merge-zonder-codex/AC-4 Codex-voorwaarde bij indien-aanwezig", "agent-merge-codex-wachten/AC-1 Codex is bezig", "…/AC-2 een lopende review op een andere PR van de branch is een spoor", "…/AC-3 wachtreden bij true en indien-aanwezig, niet bij false", "…/AC-4 bij tegoed op verandert niets", "…/AC-5 tabel via beoordeelMerge()"; "agent-merge-zonder-codex/AC-3" (omvang) blijft als AC-9, "…/AC-5 steekproefregel na de merge" wordt AC-7 met de ene regel `STEEKPROEF`; bestand krijgt een naam zonder "codex"; alleen de regels die de wereld met `chatgpt-codex-connector[bot]` opbouwen houden het woord (uitzondering 5) |
+| `test/rails/agent-merge-zonder-codex.test.ts` | AC-1, AC-2, AC-3 en AC-6 blijven als AC-9 (omvang) en AC-8 (sleutel `codex`: de rijen met geldige `codex`-waarden worden rijen met `null` en een overtreding); naam zonder "codex"; alleen de regels die de `codex`-fixtures en de verwachte reden en overtreding opbouwen houden het woord (uitzondering 5) |
 | `test/scripts/pr-merge-padtabel.test.ts`, `test/scripts/pr-merge-bytegrens.test.ts`, `test/rails/agent-merge-bytegrens.test.ts`, `test/rails/padtabel-kit.ts`, `test/rails/padtabel-gelijkwaardig.test.ts`, `test/scripts/pr-verify-diagnostics.test.ts` | fixtures zonder `codex` en zonder `beoordeelMerge().codex`; uitkomst verder gelijk |
 | `test/rails/spec-en-bouw.test.ts`, `test/hooks/testteller.test.ts`, `test/hooks/rolhek-verse-main.test.ts`, `test/hooks/bouwvorm-vervolgbouw.test.ts` | herkomst in testnaam of commentaar wordt "review op #<nr>" (AC-10) |
 | `test/hooks/rolhek-sandbox-werkstraat.test.ts`, `test/rails/meting-sandbox-werkstraat.test.ts` | branchnamen `codex/…` worden `claude/…`; in de prefixtabel vervalt `codex/x` (AC-10) |
