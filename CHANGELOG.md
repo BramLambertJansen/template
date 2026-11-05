@@ -543,10 +543,12 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Documentatie
 
+- Het setup-playbook (`docs/nieuwe-app.md`) kent geen varianten meer voor een andere runtime of agent (leerpunt #575): één alinea zegt dat alleen Claude Code wordt ondersteund en dat een andere runtime een stop en een eigenaarbesluit is. Een app hoeft niets te doen.
 - De README beschrijft de huidige basis, lokale installatie en beschikbare controles.
 - Een leeswijzer maakt onderscheid tussen gebruiksdocumentatie, ontwikkelafspraken en agentinstructies.
 - De lichte en volledige route staan alleen nog in `docs/framework.md` §8; instructies, agents en skills verwijzen ernaar.
 - Het setup-playbook (`docs/nieuwe-app.md`) is gelaagd voor niet-technische eigenaren: stap 0 (voortgang eerst, lees in blokken), de Begeleiding staat nu in het bestand zelf, per fase een blokje *Zeg tegen de gebruiker*, een tabel met uitleg in gewone woorden en een korte samenvatting boven de technische bijlage in de klaar-melding. De eigenaar hoeft bij de eerste push de git-geschiedenis niet meer te beoordelen. `START-NIEUWE-APP.md` verwijst voor de Begeleiding naar het playbook. Een app hoeft niets te doen: het bestand komt mee met een template-update en blijft in een app onaangepast.
+- Nieuwe app starten heeft één route (leerpunt #572): `START-NIEUWE-APP.md` met het curl-blok en de opdracht. De README en de kop van `docs/nieuwe-app.md` verwijzen er alleen naar. Een app hoeft niets te doen.
 
 ### Bij een update
 
