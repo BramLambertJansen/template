@@ -128,7 +128,7 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   `.claude/agents/reviewer.md`, `.github/pull_request_template.md`, `docs/operations/leerpunten-voorsorteren.md`.
 - `scripts/kit/leerpunt-bewijs.mjs` (voorbereiden haalt de issuebody op, AC-3).
 - Bestaande tests die velden, ladder of regelvorm letterlijk lezen, veranderen: `VELDEN`, `LADDER` en de tests op "zeven
-  velden" in `test/rails/leerpunt-sjabloon.test.ts`, de slotstap en het CLI-blok in `test/rails/opleveren-skill.test.ts`. De
+  velden" in `test/rails/leerpunt-sjabloon.test.ts`, de slotstap (zinstest, wordt structuurtest volgens R-TEST-02) en het CLI-blok in `test/rails/opleveren-skill.test.ts`. De
   merge van deze besluit-PR is het eigenaarakkoord daarvoor (R-TEST-02), met reden in de bouw-PR.
 - Spec `leerlus` AC-1 en AC-2 wijzigen door ADR 0081 (acht velden); de tekst volgt na de bouw van ADR 0080 (zie ADR 0081,
   Gevolgen).
@@ -146,7 +146,10 @@ Fase 1. De tester schrijft vóór de bouw, rood op asserties:
 - `test/scripts/leerpunt-check.test.ts` — AC-2 als tabel; AC-5 als regressietest (al groen op de basis).
 - `test/scripts/leerpunt-bewijs.test.ts` — AC-3 en AC-4 met PR-beschrijvingen als tabel.
 - `test/rails/leerpunt-sjabloon.test.ts` — AC-1.
-- `test/rails/opleveren-skill.test.ts` — AC-6 en AC-7 (letterlijke zinnen in skill, reviewer, PR-template en prompt).
+- `test/rails/opleveren-skill.test.ts` — AC-6 en AC-7 op structuur (R-TEST-02): de plek `Schrappen of vereenvoudigen`, de
+  koppen `### Voorstel voor de plek` en direct daarna `### Onderbouwing` in het CLI-blok, de regelvorm `bewijs meting:`, de bak
+  in de prompt en de verwijzing naar ADR 0081; letterlijk alleen wat een machine leest (koppen, labels, regelvorm). Een
+  bestaande zinstest die de bouw raakt (de slotstap), wordt omgezet naar zo'n structuurtest, met reden in de bouw-PR.
 
 Handmatig na de merge: één proefleerpunt met plek "Schrappen of vereenvoudigen" zonder `Terugval:` indienen en zien dat het
 label en de fout komen; daarna aanvullen en zien dat het label weggaat.
