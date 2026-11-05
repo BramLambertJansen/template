@@ -123,13 +123,15 @@ pnpm install --frozen-lockfile --store-dir "$TMPDIR/pnpm-store"
 ```
 
 `--no-track` is nodig: zonder die optie schrijft git de upstream in `.git/config`, waarvan het lockbestand een masker van
-de sandbox is; git breekt dan af met exit 1 nadat het de bestanden al heeft bijgewerkt, maar vóór HEAD verplaatst. Het
-rolhek telt `--no-track` als gewone optie bij de verse-main-vorm. Een nieuwe worktree heeft geen `node_modules`; zonder
-toolchain falen `feiten.mjs`, lint en de git-hooks (installeren duurde 12 seconden). Om dezelfde reden geeft
-`git branch -D` of `-m` de melding `could not lock config file`; de branch is wel verwijderd of hernoemd.
+de sandbox is; git breekt dan af met exit 1 nadat het de bestanden al heeft bijgewerkt, maar vóór HEAD verplaatst.
+Gebeurde dat, gebruik dan geen `reset --hard`: zet de gestagede paden expliciet terug met `git checkout HEAD -- <paden>`
+en verwijder de half gemaakte branch met `git branch -D <naam>`. Het rolhek telt `--no-track` als gewone optie bij de
+verse-main-vorm (`createOperands` in `verse-main.mjs`; nog geen test). Een nieuwe worktree heeft geen `node_modules`;
+zonder toolchain falen `feiten.mjs`, lint en de git-hooks (installeren duurde 12 seconden). Om dezelfde reden geeft
+`git branch -D` de melding `could not lock config file`; de branch is wel verwijderd (`-m` is niet gemeten).
 
 Andere maskers blijven: `.claude/settings.json`, `.claude/hooks` en `.claude/skills` van de worktree zijn niet
-schrijfbaar, de overlays in de root (`.bashrc`, `.mcp.json`, `.claude/commands` …) tellen als untracked en een
+schrijfbaar, de overlays in de root van de worktree (`.bashrc`, `.mcp.json`, `.claude/commands` …) tellen als untracked en een
 `*secret*`-bestand dat de sandbox verbergt (`src/core/api/env-secret.test.ts`) staat als gewijzigd. Verwijder, herstel of
 verberg ze niet en stage paden expliciet, nooit `git add -A` of `git commit -a`. **Open:** `git merge origin/main` faalt
 in de worktree (`fatal: stash failed`): git maakt vóór de merge een stash en kan het verborgen bestand niet lezen. Loopt
@@ -144,7 +146,9 @@ git worktree remove .claude/worktrees/<map>
 git branch -D <naam> worktree-<map>
 ```
 
-De SessionStart-melding noemt nog `git switch -c`; dat volgt in een aparte besluit-PR (`rails/hooks/**`).
+Nog niet bijgewerkt, elk in een eigen PR: de SessionStart-melding en de weigermelding van het rolhek
+(`VERSE_MAIN_MELDING`) noemen `git switch -c` zonder `--no-track` (besluit-PR, `rails/hooks/**`), en de skill
+`opleveren` lost conflicten op met `git merge origin/main`, wat in de worktree faalt (beschermd pad).
 
 Het rolhek weigert voor elke rol een nieuwe branch in een andere vorm (`rails/hooks/lib/verse-main.mjs`): zonder fetch
 ervoor, met `;` of `||` ertussen, of vanaf een andere basis dan `origin/main` (lokale `main`, de vorige featurebranch,
@@ -157,7 +161,7 @@ rolhek niet af (`timeout` wel); een `git -C <map>` die tussen fetch en branch ve
 `git worktree add <pad> <branch>`.
 
 Pre-push waarschuwt (blokkeert niet) als de branch achterloopt op `origin/main`; haal main dan binnen met
-`git merge origin/main` (`scripts/kit/main-achterstand.mjs`). Pre-push draait ook `document-status` zoals CI (`scripts/kit/document-status-lokaal.mjs`): `git push` blokkeert
+`git merge origin/main` (`scripts/kit/main-achterstand.mjs`); in een agentworktree faalt die merge, zie hierboven. Pre-push draait ook `document-status` zoals CI (`scripts/kit/document-status-lokaal.mjs`): `git push` blokkeert
 op de volgorde: als een spec niet in een commit vóór de eerste code of test staat, en noemt de herstelroute. Andere afkeuringen zijn een waarschuwing,
 net als een spec die niet vóór de code staat maar nog geen besluit is (bijv. `voorstel`); een push van een andere branch of tag toetst het niet. Een commitkop volgt conventional commits
 (`fix(hooks): …`); de commit-msg-hook weigert een andere vorm (`scripts/kit/commit-msg.mjs`). Bij de start van een sessie op een
