@@ -543,6 +543,7 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Documentatie
 
+- Het setup-playbook (`docs/nieuwe-app.md`) kent geen varianten meer voor een andere runtime of agent (leerpunt #575): één alinea zegt dat alleen Claude Code wordt ondersteund en dat een andere runtime een stop en een eigenaarbesluit is. Een app hoeft niets te doen.
 - De README beschrijft de huidige basis, lokale installatie en beschikbare controles.
 - Een leeswijzer maakt onderscheid tussen gebruiksdocumentatie, ontwikkelafspraken en agentinstructies.
 - De lichte en volledige route staan alleen nog in `docs/framework.md` §8; instructies, agents en skills verwijzen ernaar.
