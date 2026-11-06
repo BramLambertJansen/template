@@ -18,11 +18,11 @@ const OPERATORS = ['&>>', '>>', '>|', '&>', '>&', '<<-', '<<<', '<<', '<&', '&&'
 
 // Allowlist (eigenaarbesluit 6 november 2026, AC-10 (b)): `patterns` neutraliseert alleen wat deze lezer zeker leest, gewone
 // enkele en dubbele aanhalingstekens. Elke constructie die de quotegrenzen kan verschuiven en die de lezer niet volledig kent,
-// maakt het hele commando onzeker: `#` (commentaar), `${`, `$'` (ANSI-C), `$(`, backtick, `\` en een newline (heredoc,
-// meerdere regels). Een verkeerde quotegrens zou echte onaangehaalde tekst als aangehaald lezen (reviews B1, R2-B1); dan
+// maakt het hele commando onzeker: `#` (commentaar), `${`, `$'` (ANSI-C), `$(`, `((` (arithmetic, review R4-1), backtick, `\`
+// en een newline (heredoc, meerdere regels). Een verkeerde quotegrens zou echte onaangehaalde tekst als aangehaald lezen (reviews B1, R2-B1); dan
 // neutraliseert `patterns` niets, ook niet in een substitutie daarbinnen (`onzeker` van de aanroeper). Een quote zonder
 // sluitteken hoeft er niet bij: bash voert zo'n commando niet uit.
-const ONZEKERE_TEKST = /[#`\\\n]|\$[{'(]/;
+const ONZEKERE_TEKST = /[#`\\\n]|\$[{'(]|\(\(/;
 
 /**
  * @param {string} script
@@ -124,6 +124,9 @@ export function tokenize(script) {
     const char = script[index] ?? '';
     if (char === ' ' || char === '\t') {
       index += 1;
+    } else if (char === '\\' && script[index + 1] === '\n') {
+      // Een voortzetting tussen woorden is geen (leeg) woord; zo blijft `argv[0]` het echte commandowoord (review R4-2).
+      index += 2;
     } else if (char === '#' && (index === 0 || /\s/.test(script[index - 1] ?? ''))) {
       while (index < script.length && script[index] !== '\n') index += 1;
     } else {
