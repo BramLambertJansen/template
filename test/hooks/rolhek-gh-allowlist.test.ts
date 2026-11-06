@@ -738,14 +738,18 @@ describe('AC-10: vangnetten per segment', () => {
 
   // (a) Het gh-subcommando staat in een ander segment dan het geëxpandeerde argument (eigenaarsbesluit: voor de hoofdsessie;
   // een kaal `$TMPDIR` telt als letterlijk onder de voorwaarde van (d)). Subagents houden "gh alleen als één direct gh-leescommando".
-  test.each([
-    'cd $TMPDIR && gh issue list --limit 5',
-    'cd $TMPDIR; gh pr view 1',
-    'cd "$TMPDIR" && gh pr view 1',
-    'ls $HOME | gh run list',
-  ])('(a) hoofdsessie: subcommando in ander segment gaat door: %s', (command) => {
-    doorgelaten(command, [undefined]);
+  test('(a) hoofdsessie: subcommando in ander segment gaat door: ls $HOME | gh run list', () => {
+    doorgelaten('ls $HOME | gh run list', [undefined]);
   });
+
+  // Eigenaarbesluit: na `cd $TMPDIR` is de werkmap onbekend (TMPDIR_MAP vervalt); een ask uit AC-3 is toegestaan, een deny niet.
+  test.each(['cd $TMPDIR && gh issue list --limit 5', 'cd $TMPDIR; gh pr view 1', 'cd "$TMPDIR" && gh pr view 1'])(
+    '(a) hoofdsessie: geen deny en geen melding over een variabel woord naast een gh-subcommando: %s',
+    (command) => {
+      const decision = run(command);
+      expect(decision.deny).toEqual([]);
+    },
+  );
 
   test.each(['cd $TMPDIR && gh issue list --limit 5', 'cd $TMPDIR; gh pr view 1', 'ls $HOME | gh run list'])(
     '(a) subagent: geen melding over een variabel woord naast een gh-subcommando: %s',
@@ -1085,5 +1089,44 @@ describe('AC-10: vangnetten per segment', () => {
     const met = run('\\\n gh api repos/o/r/labels -f name=x');
     expect(met.deny).toEqual(zonder.deny);
     expect(met.ask).toEqual(zonder.ask);
+  });
+
+  // Codex P1-1: een lusvariabele kan een git- of programma-optie worden (`--output=docs/framework.md`, `-rf`, een glob).
+  test('Codex P1-1: lus met een optiewaarde als git-argument: subagent deny, hoofdsessie ask of deny', () => {
+    const command = 'for d in --output=docs/framework.md; do git diff "$d"; done';
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+    const main = run(command);
+    expect(main.deny.length + main.ask.length).toBeGreaterThan(0);
+  });
+
+  test.each([
+    'for f in -rf; do rm "$f" x; done',
+    'for d in *; do git diff "$d"; done',
+    'for d in $X; do git log "$d"; done',
+  ])('Codex P1-1: lus met onzekere waarde gaat niet volledig door (hoofdsessie ask of deny): %s', (command) => {
+    const main = run(command);
+    expect(main.deny.length + main.ask.length).toBeGreaterThan(0);
+  });
+
+  test.each([
+    'for d in .claude/worktrees/*/; do git -C "$d" status -sb; done',
+    'for f in docs/*.md; do cat "$f"; done',
+  ])('Codex P1-1: lus met een veilig voorvoegsel blijft doorgelaten: %s', (command) => {
+    doorgelaten(command, [undefined, 'developer']);
+  });
+
+  // Codex P1-2: de checkout kan onder TMPDIR staan; na `cd $TMPDIR` is de werkmap onbekend.
+  test.each([
+    'cd "$TMPDIR/repo/.claude" && cp /tmp/payload settings.json',
+    'cd "$TMPDIR/repo/.git" && cp /tmp/payload config',
+  ])('Codex P1-2: checkout onder TMPDIR, schrijven na cd gaat voor geen rol volledig door: %s', (command) => {
+    const tmpCtx = { ...ctx, root: '/tmp/repo', cwd: '/tmp/repo' };
+    for (const role of [undefined, ...SUBAGENTS]) {
+      const decision = decide(
+        { tool_name: 'Bash', tool_input: { command }, ...(role === undefined ? {} : { agent_type: role }) },
+        tmpCtx,
+      );
+      expect({ role, dicht: decision.deny.length + decision.ask.length > 0 }).toEqual({ role, dicht: true });
+    }
   });
 });
