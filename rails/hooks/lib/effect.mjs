@@ -1,5 +1,7 @@
 // Toets op effect (ADR 0066, spec rolhek-effect): na een Bash-commando van een subagent krijgt elk pad dat echt veranderde
 // de beslissing van een Edit van die rol. Opslag in `<git-common-dir>/rolhek-effect/`, buiten de schrijfrechten van de sandbox.
+// De vensters van elke worktree op dezelfde git-common-dir verklaren een pad (AC-10 b); een overtreding draagt de sessie die
+// de subagent startte (AC-10 f).
 import { createHash } from 'node:crypto';
 import { lstatSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -12,14 +14,16 @@ import { MAX_MS, blobBytes, gitDirVan, momentopname, padStaten } from './effect-
  * @typedef {import('./effect-snapshot.mjs').Snapshot} Snapshot
  * @typedef {import('./effect-snapshot.mjs').Git} Git
  * @typedef {import('./effect-compare.mjs').Verandering} Verandering
- * @typedef {{ rel: string | null, actor: string, rol: string, commando: string, reden: string, voor: import('./effect-snapshot.mjs').Entry | null }} Overtreding
+ * @typedef {{ rel: string | null, actor: string, rol: string, commando: string, reden: string, voor: import('./effect-snapshot.mjs').Entry | null, sessie?: string }} Overtreding
+ * `sessie`: de sessie van de dader (AC-10 f); een oude overtreding zonder dit veld telt voor elke sessie.
+ * @typedef {{ actor: string, agentType: string, commando: string, sessie?: string }} Wie
  * @typedef {{ actor: string, start: number, eind: number, paden: string[], staten?: Record<string, string> }} Venster
  * `staten`: de werkmapstaat per pad direct na het venster; alleen die staat is verklaard (AC-2).
  * @typedef {{ root: string, git: Git, ctx: import('./rolhek.mjs').Ctx, now: () => number, alleenLezen?: boolean }} Repo
  * `alleenLezen`: pr:verify in de sandbox; de lijst wordt berekend maar niet weggeschreven.
  */
 
-// Een momentopname van een subagent geldt een dag (AC-4: tot het einde van de sessie; daarna ruimt SubagentStart op).
+// Een momentopname van een subagent vervalt bij SessionEnd van zijn sessie (AC-10 e); een dag is de bovengrens (SubagentStart ruimt op).
 const BEWAAR_MS = 24 * 60 * 60 * 1000;
 
 /** @param {{ root: string, git: Git }} repo */
@@ -89,10 +93,10 @@ function overgenomen(repo) {
   return typeof map === 'object' && map !== null ? map : {};
 }
 
-/** @param {Repo} repo @returns {Venster[]} */
-function vensters(repo) {
+/** @param {string} file @returns {Venster[]} */
+function venstersUit(file) {
   try {
-    return readFileSync(path.join(opslag(repo), 'vensters.jsonl'), 'utf8')
+    return readFileSync(file, 'utf8')
       .split('\n')
       .filter((regel) => regel !== '')
       .map((regel) => JSON.parse(regel));
@@ -101,11 +105,26 @@ function vensters(repo) {
   }
 }
 
-/** @param {Repo} repo @param {Venster} venster */
+/** De vensters van de eigen opslag. @param {{ root: string, git: Git }} repo */
+const eigenVensters = (repo) => venstersUit(path.join(opslag(repo), 'vensters.jsonl'));
+
+/**
+ * De vensters van elke worktree op dezelfde git-common-dir (AC-10 b): de basismap en elke `wt-*`-map. Een pad in `.git/`
+ * (een ref) ligt in de gedeelde common dir, dus zijn staat is per worktree gelijk; een werkmappad telt alleen als de eigen
+ * werkmap dezelfde staat heeft (`verklaardePaden`).
+ * @param {Repo} repo @returns {Venster[]}
+ */
+function vensters(repo) {
+  const basis = path.join(gitDirVan(repo), 'rolhek-effect');
+  const mappen = new Set([opslag(repo), basis, ...lijstMap(basis).filter((naam) => naam.startsWith('wt-')).map((naam) => path.join(basis, naam))]);
+  return [...mappen].flatMap((map) => venstersUit(path.join(map, 'vensters.jsonl')));
+}
+
+/** Schrijft alleen in de eigen opslag; zonder `ctx` (ook voor de hook zelf, AC-10 c). @param {{ root: string, git: Git, now: () => number }} repo @param {Venster} venster */
 export function legVensterVast(repo, venster) {
   const file = path.join(opslag(repo), 'vensters.jsonl');
   mkdirSync(path.dirname(file), { recursive: true });
-  const bewaard = vensters(repo).filter((oud) => oud.eind > repo.now() - BEWAAR_MS);
+  const bewaard = eigenVensters(repo).filter((oud) => oud.eind > repo.now() - BEWAAR_MS);
   const met = { ...venster, staten: padStaten(repo, venster.paden) };
   writeFileSync(file, [...bewaard, met].map((regel) => `${JSON.stringify(regel)}\n`).join(''));
 }
@@ -206,25 +225,42 @@ function verhuizingen(repo, { lijst, voor }) {
     .map((verandering) => verandering.rel));
 }
 
+/** De ref van de huidige branch, of '' (detached). @param {Repo} repo */
+const branchRefVan = (repo) => (repo.ctx.branch === '' || repo.ctx.branch === 'HEAD' ? '' : `refs/heads/${repo.ctx.branch}`);
+
 /** @param {Repo} repo @param {{ voor: Snapshot, na: Snapshot }} paar */
 function veranderingenIn(repo, paar) {
-  const branchRef = repo.ctx.branch === '' || repo.ctx.branch === 'HEAD' ? '' : `refs/heads/${repo.ctx.branch}`;
   const diffPaden = (/** @type {string} */ oud, /** @type {string} */ nieuw) =>
     repo.git(['diff', '--name-only', '-z', '--no-renames', oud, nieuw]).split('\0').filter((rel) => rel !== '');
-  return veranderingen(paar, { diffPaden, branchRef });
+  return veranderingen(paar, { diffPaden, branchRef: branchRefVan(repo) });
+}
+
+/**
+ * De paden voor het venster van deze actor: de veranderingen plus de ref van de eigen branch als die verschoof (ook een
+ * nieuwe branch). Die ref telt niet als overtreding (AC-2), maar wel als verklaard pad voor de nacontrole in een andere
+ * worktree op dezelfde git-common-dir (AC-10 b).
+ * @param {Repo} repo @param {{ voor: Snapshot, na: Snapshot }} paar @param {readonly Verandering[]} lijst
+ */
+function vensterPaden(repo, paar, lijst) {
+  const ref = branchRefVan(repo);
+  const paden = lijst.map((verandering) => verandering.rel);
+  return ref !== '' && paar.voor.refs[ref] !== paar.na.refs[ref] ? [...paden, `.git/${ref}`] : paden;
 }
 
 /** Alleen de veranderde paden, voor het venster van de hoofdsessie (AC-2). @param {Repo} repo @param {{ voor: Snapshot, na: Snapshot, start: number }} paar */
 export function veranderdePaden(repo, paar) {
-  return veranderingenIn(repo, paar).map((verandering) => verandering.rel);
+  return vensterPaden(repo, paar, veranderingenIn(repo, paar));
 }
+
+/** Het veld `sessie` van een overtreding, alleen als de dader een sessie heeft (AC-10 f). @param {{ sessie?: string }} wie */
+export const sessieVeld = (wie) => (wie.sessie === undefined || wie.sessie === '' ? {} : { sessie: wie.sessie });
 
 /**
  * Overtredingen en meldingen voor de veranderingen tussen `voor` en `na`; paden die een ander venster verklaart, een
  * overgenomen staat hebben of al op de lijst staan, tellen niet.
  * @param {Repo} repo
  * @param {{ voor: Snapshot, na: Snapshot, start: number }} paar
- * @param {{ actor: string, agentType: string, commando: string }} wie
+ * @param {Wie} wie
  */
 export function toets(repo, paar, wie) {
   const lijst = veranderingenIn(repo, paar);
@@ -239,10 +275,11 @@ export function toets(repo, paar, wie) {
     if (verklaard.has(verandering.rel) || vrij(verandering)) continue;
     const besluit = beslis(repo, { verandering, agentType: wie.agentType, voor: paar.voor, verhuisd });
     const reden = [...besluit.deny, ...besluit.ask].join('; ');
-    if (reden !== '') nieuw.push({ rel: verandering.rel, actor: wie.actor, rol: wie.agentType || 'hoofdsessie', commando: wie.commando, reden, voor: verandering.voor });
+    if (reden !== '')
+      nieuw.push({ rel: verandering.rel, actor: wie.actor, rol: wie.agentType || 'hoofdsessie', commando: wie.commando, reden, voor: verandering.voor, ...sessieVeld(wie) });
     meldingen.push(...besluit.context);
   }
-  return { nieuw, meldingen, paden: lijst.map((verandering) => verandering.rel) };
+  return { nieuw, meldingen, paden: vensterPaden(repo, paar, lijst) };
 }
 
 /**
@@ -276,7 +313,7 @@ function werkmapInhoud(entry) {
  * verklaart (in `git diff --name-only <oud> <nieuw>` en daarna gelijk aan de index). Een pad onder `gegenereerd` mag alleen
  * het exacte commando uit `generatoren` schrijven. Een venster van een andere actor maakt een pad hier niet vrij: zo krijgt
  * een pad dat ook een subagent raakte de beslissing van beide rollen (de strengste wint op de lijst).
- * @param {Repo} repo @param {{ voor: Snapshot, na: Snapshot }} paar @param {{ actor: string, commando: string }} wie
+ * @param {Repo} repo @param {{ voor: Snapshot, na: Snapshot }} paar @param {Wie} wie
  * @returns {{ nieuw: (Overtreding & { blokkeer: boolean })[], meldingen: string[], paden: string[] }}
  */
 export function toetsHoofdsessie(repo, paar, wie) {
@@ -301,7 +338,7 @@ export function toetsHoofdsessie(repo, paar, wie) {
     const besluit = beslis(repo, { verandering, agentType: '', voor: paar.voor, verhuisd });
     const reden = [...besluit.deny, ...besluit.ask].join('; ');
     if (reden !== '')
-      nieuw.push({ rel: verandering.rel, actor: wie.actor, rol: 'hoofdsessie', commando: wie.commando, reden, voor: verandering.voor, blokkeer: besluit.deny.length > 0 });
+      nieuw.push({ rel: verandering.rel, actor: wie.actor, rol: 'hoofdsessie', commando: wie.commando, reden, voor: verandering.voor, blokkeer: besluit.deny.length > 0, ...sessieVeld(wie) });
     meldingen.push(...besluit.context);
   }
   return { nieuw, meldingen, paden: lijst.map((verandering) => verandering.rel) };
@@ -345,6 +382,15 @@ export function leesOpname(repo, soort, id) {
 /** @param {Repo} repo @param {string} id */
 export function wisOpname(repo, id) {
   rmSync(opnamePad(repo, 'pre', id), { force: true });
+}
+
+/** Wist elke momentopname van een subagent die deze sessie startte (AC-10 e: SessionEnd). @param {Repo} repo @param {string} sessie */
+export function wisAgentOpnamen(repo, sessie) {
+  const map = path.join(opslag(repo), 'agent');
+  for (const naam of lijstMap(map)) {
+    const opname = leesJson(path.join(map, naam), null);
+    if (typeof opname === 'object' && opname !== null && 'sessie' in opname && opname.sessie === sessie) rmSync(path.join(map, naam), { force: true });
+  }
 }
 
 /** @param {Repo} repo @param {string} id @param {Record<string, unknown>} velden */

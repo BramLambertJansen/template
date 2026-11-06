@@ -88,8 +88,8 @@ function indexVan(git) {
   return { index, vlaggen };
 }
 
-/** @param {string} dir @param {string} voor @returns {string[]} */
-function bestandenOnder(dir, voor) {
+/** Elk bestand onder `dir`, recursief, als `<voor>/<naam>`; een los bestand als `voor` zelf. @param {string} dir @param {string} voor @returns {string[]} */
+export function bestandenOnder(dir, voor) {
   /** @type {import('node:fs').Stats} */
   let stat;
   try {

@@ -1,7 +1,7 @@
-// Hook "effect" (ADR 0066, spec rolhek-effect): `node rails/hooks/effect.mjs <pre|post|post-failure|edit-post|subagent-start|subagent-stop|stop>`.
+// Hook "effect" (ADR 0066, spec rolhek-effect): `node rails/hooks/effect.mjs <pre|post|post-failure|edit-post|subagent-start|subagent-stop|stop|session-end>`.
 // Faalt dicht waar dat kan blokkeren (AC-7): na een Bash-commando, bij SubagentStop en Stop een `decision: block`, vóór een
 // Bash-commando van een subagent exit 2. Voor de hoofdsessie faalt hij open (vóór een commando, het venster, de schaduwmodus),
-// behalve na haar commando met `rolhekEffectHoofdsessie: "aan"` (spec rolhek-vooraf-krimp AC-4).
+// behalve na haar commando met `rolhekEffectHoofdsessie: "aan"` (spec rolhek-vooraf-krimp AC-4). `session-end` (AC-10 e) valt open.
 import { readFileSync } from 'node:fs';
 import { actorVan, handle } from './lib/effect-hooks.mjs';
 import { gitIn } from './lib/effect-snapshot.mjs';
