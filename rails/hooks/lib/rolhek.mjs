@@ -581,21 +581,22 @@ function gitMapMelding(file) {
 
 
 /**
- * @param {{ command: string, role: string, tmpdirVrij?: boolean }} call `tmpdirVrij`: van het buitenste commando
- *   (`tmpdirLetterlijk`), zodat een substitutie een toewijzing erbuiten niet mist.
+ * @param {{ command: string, role: string, tmpdirVrij?: boolean, onzeker?: boolean }} call `tmpdirVrij`: van het buitenste
+ *   commando (`tmpdirLetterlijk`), zodat een substitutie een toewijzing erbuiten niet mist. `onzeker`: een substitutie; haar
+ *   grenzen zijn niet zeker gelezen, dus geen neutralisatie van aangehaalde tekens (`parseCommands`, R2-B1).
  * @param {Ctx} ctx
  * @param {Decision} decision
  */
-function decideBash({ command, role, tmpdirVrij = tmpdirLetterlijk(command) }, ctx, decision) {
-  decision.deny.push(...rawForbidden(command, role));
+function decideBash({ command, role, tmpdirVrij = tmpdirLetterlijk(command), onzeker = false }, ctx, decision) {
+  decision.deny.push(...rawForbidden(command, { role, onzeker }));
   decision.deny.push(...staleBranchStart(command));
   // De inhoud van `$(…)` en backticks is zelf een commando; zo vallen ook geneste substituties onder dezelfde regels.
-  for (const inner of substitutions(command)) decideBash({ command: inner, role, tmpdirVrij }, ctx, decision);
+  for (const inner of substitutions(command)) decideBash({ command: inner, role, tmpdirVrij, onzeker: true }, ctx, decision);
   const setsGhEnv = zetGhOmgeving(parseCommands(command));
   // `cd .git && …` in hetzelfde commando: de zelfladende toets (AC-3) leest de woorden daarna vanuit die map.
   /** @type {string | null} null: een `cd` naar een map die pas bij het uitvoeren bekend is */
   let cwdNu = ctx.cwd;
-  for (const { parsed, variabel } of vangnetSegmenten(command, tmpdirVrij)) {
+  for (const { parsed, variabel } of vangnetSegmenten(command, { tmpdirVrij, onzeker })) {
     const { assignments, argv, pathWrappers } = splitCommand(parsed.words);
     vangnetten({ parsed, argv, variabel }, role, decision);
     forbidden({ assignments, argv, expanded: parsed.expanded ?? [] }, { role, ctx }, decision);
@@ -654,11 +655,11 @@ function vangnetten({ parsed, argv, variabel }, role, decision) {
  * tellen: een woord dat met `$TMPDIR/` begint als `tmpdirVrij` (d), en in de romp van een veilige `for`-lus (e) een woord dat
  * alleen de lusvariabele noemt; daar valt ook `do` vooraan weg, zodat elke toets het echte programma ziet. `parsed.expanded`
  * blijft volledig voor de andere regels.
- * @param {string} command @param {boolean} tmpdirVrij
+ * @param {string} command @param {{ tmpdirVrij: boolean, onzeker: boolean }} opties `onzeker`: zie `decideBash`
  * @returns {{ parsed: Command, variabel: string[] }[]}
  */
-function vangnetSegmenten(command, tmpdirVrij) {
-  const segmenten = parseCommands(command);
+function vangnetSegmenten(command, { tmpdirVrij, onzeker }) {
+  const segmenten = parseCommands(command, onzeker);
   const { romp } = veiligeLussen(segmenten);
   return segmenten.map((segment, index) => {
     const lus = romp.get(index);
@@ -847,10 +848,10 @@ const BRACE_TRICK = /\{[^}]*(?:,|\.\.)[^}]*\}/;
  * Voor een subagent: tekst die gh, de GitHub-API of git credential noemt mag alleen één direct gh-commando zonder shell-trucs zijn; vals positief
  * (`grep gh x`) is bewust geaccepteerd.
  * @param {string} command
- * @param {string} role
+ * @param {{ role: string, onzeker: boolean }} opties `onzeker`: zie `decideBash`
  * @returns {string[]}
  */
-function rawForbidden(command, role) {
+function rawForbidden(command, { role, onzeker }) {
   /** @type {string[]} */
   const found = [];
   // Zonder `\`, `'` en `"`: `g\h`, `g""h` en `mer''ge` zijn voor de shell gewoon gh en merge.
@@ -864,7 +865,7 @@ function rawForbidden(command, role) {
   else if (RAW_PR_MERGE.test(text) || MERGE_MUTATION.test(text) || (RAW_PR_REVIEW.test(text) && RAW_APPROVE.test(text)))
     found.push('`pr merge`, `pr review --approve` of een GraphQL-merge is voor elke rol verboden, ook zonder herkenbaar gh (vangnet op de ruwe tekst, WS-04)');
   if (role === 'hoofdsessie' || !RAW_SUBAGENT.test(text)) return found;
-  const segments = parseCommands(command);
+  const segments = parseCommands(command, onzeker);
   const brace = segments.some(({ words, patterns = words }) => patterns.some((pattern) => BRACE_TRICK.test(pattern)));
   if (segments.length !== 1 || segments[0]?.words[0] !== 'gh' || SHELL_TRICKS.test(command) || brace)
     found.push('subagent: gh, de GitHub-API of git credential alleen als één direct gh-leescommando zonder shell-trucs');

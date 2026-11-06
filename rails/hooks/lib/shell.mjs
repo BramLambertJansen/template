@@ -16,11 +16,18 @@ export const QUOTED = '\u0000';
 const SEPARATORS = new Set([';', '&&', '||', '|', '&', '|&', '\n', '(', ')']);
 const OPERATORS = ['&>>', '>>', '>|', '&>', '>&', '<<-', '<<<', '<<', '<&', '&&', '||', '|&', '<', '>', ';', '|', '&', '(', ')', '\n'];
 
+// Een commando met `$'`, een backtick of `$(` leest deze lezer niet zeker (geen backtick-groep, haakjes tellen zonder quotes):
+// een verkeerde quotegrens kan echte onaangehaalde tekst als aangehaald lezen (review B1, R2-B1). Dan neutraliseert
+// `patterns` niets; ook een substitutie daarbinnen (`onzeker` van de aanroeper).
+const ONZEKERE_QUOTES = /\$'|`|\$\(/;
+
 /**
  * @param {string} script
+ * @param {boolean} [onzeker] true: `patterns` gelijk aan `words`, ook als `script` zelf geen `ONZEKERE_QUOTES` heeft
  * @returns {Command[]}
  */
-export function parseCommands(script) {
+export function parseCommands(script, onzeker = false) {
+  const neutraal = onzeker || ONZEKERE_QUOTES.test(script);
   /** @type {Command[]} */
   const commands = [];
   /** @type {Command} */
@@ -40,7 +47,7 @@ export function parseCommands(script) {
       if (expect === 'redirect' || (expect === 'dup' && !/^(?:\d+|-)$/.test(token.value))) current.redirects.push(token.value);
       else if (expect === null) {
         current.words.push(token.value);
-        current.patterns?.push(token.pattern ?? token.value);
+        current.patterns?.push(neutraal ? token.value : (token.pattern ?? token.value));
       }
       if (token.expands === true) current.expanded?.push(token.value);
       expect = null;
@@ -70,9 +77,10 @@ export function tmpdirLetterlijk(script) {
   return !parseCommands(script).some(({ words }) => zetVariabele(splitCommand(words).argv));
 }
 
-// Builtins die een variabelenaam als woord nemen en die dus TMPDIR kunnen zetten of wissen.
+// Builtins die een variabelenaam als woord nemen of tekst als shell uitvoeren, en die dus TMPDIR kunnen zetten of wissen;
+// `builtin` en `source`/`.` omdat ze zo'n builtin of een script kunnen starten.
 const NAAM_BUILTINS = new Set(['declare', 'typeset', 'local', 'export', 'readonly', 'read', 'unset', 'mapfile', 'readarray',
-  'getopts', 'eval']);
+  'getopts', 'eval', 'builtin', 'source', '.']);
 
 /** @param {readonly string[]} argv */
 function zetVariabele(argv) {
