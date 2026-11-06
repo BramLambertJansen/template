@@ -595,7 +595,7 @@ function decideBash({ command, role, tmpdirVrij = tmpdirLetterlijk(command) }, c
     vangnetten({ parsed, argv, variabel }, role, decision);
     forbidden({ assignments, argv, expanded: parsed.expanded ?? [] }, { role, ctx }, decision);
     zelfladend({ argv, redirects: parsed.redirects, role }, { ...ctx, cwd: cwdNu ?? ctx.root, cwdOnbekend: cwdNu === null }, decision);
-    cwdNu = volgendeMap({ argv, expanded: parsed.expanded ?? [] }, cwdNu, ctx.root);
+    cwdNu = volgendeMap({ argv, expanded: parsed.expanded ?? [] }, cwdNu, { root: ctx.root, tmpdirVrij });
     ghIssue(argv, { role, ctx, setsGhEnv }, decision);
     if (role === 'reviewer') reviewerBash({ assignments, argv, pathWrappers }, parsed.redirects, decision);
     const targets = writeTargets(parsed);
@@ -720,17 +720,34 @@ function alleenLusvariabele(word, naam) {
 
 /**
  * De map na `cd`/`pushd`. Een doel dat pas bij het uitvoeren bekend is (geen doel, `~`, `-`, `$`, backtick, substitutie):
- * null, en de zelfladende toets valt dicht (AC-3). `$(git rev-parse --show-toplevel)` is de root.
- * @param {{ argv: readonly string[], expanded: readonly string[] }} commando @param {string | null} cwd @param {string} root
+ * null, en de zelfladende toets valt dicht (AC-3). `$(git rev-parse --show-toplevel)` is de root. Met `tmpdirVrij` is
+ * `cd $TMPDIR` (of `$TMPDIR/…`) een bekende map buiten de repo: `TMPDIR_MAP` (AC-10 (a), eigenaarbesluit 6 november 2026).
+ * @param {{ argv: readonly string[], expanded: readonly string[] }} commando @param {string | null} cwd
+ * @param {{ root: string, tmpdirVrij: boolean }} opties
  * @returns {string | null}
  */
-function volgendeMap({ argv, expanded }, cwd, root) {
+function volgendeMap({ argv, expanded }, cwd, { root, tmpdirVrij }) {
   if (!['cd', 'pushd'].includes(programName(argv[0] ?? ''))) return cwd;
   const doel = argv.slice(1).find((arg) => arg === '-' || !arg.startsWith('-'));
   if (doel === '$(git rev-parse --show-toplevel)') return root;
+  if (doel !== undefined && tmpdirVrij && tmpdirWoord(doel)) return inTmpdir(path.posix.join(TMPDIR_MAP, doel.replace(/^\$\{?TMPDIR\}?/, '')));
   // Zonder doel, `~` of `-`: de home-map of de vorige map, pas bij het uitvoeren bekend; net als `$`, backtick of substitutie.
   if (doel === undefined || doel === '-' || doel.startsWith('~') || expanded.includes(doel) || /[$`]/.test(doel)) return null;
-  return cwd === null ? null : path.resolve(cwd, doel);
+  if (cwd === null) return null;
+  // Een relatief doel vanuit de TMPDIR-map blijft daaronder of wordt onbekend (`cd ..` klimt naar een onbekende plek);
+  // een absoluut doel is gewoon bekend.
+  return path.posix.isAbsolute(doel) || !inTmpdir(cwd) ? path.resolve(cwd, doel) : inTmpdir(path.posix.resolve(cwd, doel));
+}
+
+// De werkmap na `cd $TMPDIR`. De echte waarde kent het rolhek niet: de hook draait buiten de Bash-sandbox, die TMPDIR per
+// commando zet, dus `process.env.TMPDIR` van de hook kan een andere map zijn. Een vaste map direct onder `/` met een naam die
+// geen echte map heeft, ligt buiten elke repository-root (behalve root `/`), zodat `relatief` en `bovenZelfladend` in
+// zelfladend.mjs een relatief pad daarna als "buiten root" zien; een absoluut repopad blijft gewoon getoetst.
+const TMPDIR_MAP = '/$TMPDIR';
+
+/** `map` als die onder `TMPDIR_MAP` ligt, anders null (onbekend). @param {string} map @returns {string | null} */
+function inTmpdir(map) {
+  return map === TMPDIR_MAP || map.startsWith(`${TMPDIR_MAP}/`) ? map : null;
 }
 
 // Opties van env die het volgende woord als waarde nemen (`-u NAAM`, `-C MAP`, `--unset NAAM`, `--chdir MAP`, `--argv0 X`).

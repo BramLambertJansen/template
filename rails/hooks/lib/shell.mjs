@@ -50,12 +50,13 @@ export function parseCommands(script) {
   return commands;
 }
 
-// `$TMPDIR/`, `"$TMPDIR/` of `"$TMPDIR"/` aan het begin van een woord (spec rolhek-vooraf-krimp OV-6, AC-10 (d)).
-const TMPDIR_VOORAAN = /(?<=^|[\s;&|()<>])"?\$TMPDIR"?\//g;
+// `$TMPDIR/`, `"$TMPDIR/` of `"$TMPDIR"/` aan het begin van een woord (spec rolhek-vooraf-krimp OV-6, AC-10 (d)), of een
+// woord dat precies `$TMPDIR`, `${TMPDIR}` of `"$TMPDIR"` is (AC-10 (a), eigenaarbesluit 6 november 2026).
+const TMPDIR_VOORAAN = /(?<=^|[\s;&|()<>])(?:"?\$TMPDIR"?\/|(?:\$TMPDIR|\$\{TMPDIR\}|"\$TMPDIR")(?=$|[\s;&|()<>]))/g;
 
 /**
- * Of `$TMPDIR/` vooraan een woord in dit commando letterlijk telt: alleen als het commando `TMPDIR` nergens anders noemt
- * (geen `TMPDIR=…`, `export TMPDIR`, `${TMPDIR…}`, `$TMPDIR` zonder `/`). Geef het hele commando, ook bij een substitutie.
+ * Of `$TMPDIR` (kaal of met `/…`) in dit commando letterlijk telt: alleen als het commando `TMPDIR` nergens anders noemt
+ * (geen `TMPDIR=…`, `export TMPDIR`, `${TMPDIR:-…}`, `$TMPDIRX`). Geef het hele commando, ook bij een substitutie.
  * @param {string} script
  */
 export function tmpdirLetterlijk(script) {
@@ -74,11 +75,12 @@ export function globKlasse(inhoud) {
 }
 
 /**
- * Een woord (waarde uit `Command.words`) dat met `$TMPDIR/` begint en daarna niets meer expandeert.
+ * Een woord (waarde uit `Command.words`) dat `$TMPDIR` of `${TMPDIR}` is, of met `$TMPDIR/` begint en daarna niets meer
+ * expandeert. Telt alleen samen met `tmpdirLetterlijk`.
  * @param {string} word
  */
 export function tmpdirWoord(word) {
-  return /^\$TMPDIR\/[^$`]*$/.test(word);
+  return /^(?:\$TMPDIR|\$\{TMPDIR\})$|^\$TMPDIR\/[^$`]*$/.test(word);
 }
 
 /**
