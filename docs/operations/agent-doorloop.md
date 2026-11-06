@@ -414,6 +414,11 @@ Een veranderende PR of werkmap vraagt nieuwe verificatie.
 
 ### Als pr:verify niet start of de werkmap weigert
 
+Geeft `pnpm --version` een SQLite-waarschuwing en daarna een andere versie dan `packageManager` in `package.json`?
+Controleer in dezelfde sandbox de projectselectie met `mise exec -- pnpm --version`. Geeft die de exacte versie,
+herhaal de oorspronkelijke opdracht via mise, bijvoorbeeld `mise exec -- pnpm pr:verify <nr> --watch`.
+Ontbreekt de exacte versie, volg dan de [toolchain-setup](../ENVIRONMENT.md#dagelijks-werken-binnen-de-claude-code-sandbox).
+
 `pnpm` controleert vóór `run` en `exec` of de installatie bij de workspace past. `verifyDepsBeforeRun: error` in
 `pnpm-workspace.yaml` laat een afwijking stoppen met `ERR_PNPM_VERIFY_DEPS_BEFORE_RUN`, voordat het werkcommando
 start. De controle werkt daarbij geen dependencies bij. Voer het expliciete installatieherstel uit volgens de setup; de snelle
