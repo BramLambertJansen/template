@@ -1115,6 +1115,13 @@ describe('AC-10: vangnetten per segment', () => {
     doorgelaten(command, [undefined, 'developer']);
   });
 
+  test('een brace in de lus-kop is onveilig: hoofdsessie ask of deny, subagent deny', () => {
+    const command = 'for f in {-rf,x}; do rm "$f" y; done';
+    const main = run(command);
+    expect(main.deny.length + main.ask.length).toBeGreaterThan(0);
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+  });
+
   // Codex P1-2: de checkout kan onder TMPDIR staan; na `cd $TMPDIR` is de werkmap onbekend.
   test.each([
     'cd "$TMPDIR/repo/.claude" && cp /tmp/payload settings.json',
