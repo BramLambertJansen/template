@@ -1006,6 +1006,14 @@ describe('AC-10: vangnetten per segment', () => {
     doorgelaten("echo '{a,b}'", ['developer', 'tester']);
   });
 
+  test.each(['source x; cd $TMPDIR && gh issue list', '. x; cd $TMPDIR && gh issue list'])(
+    'review: source of punt maakt de TMPDIR-uitzondering ongeldig (hoofdsessie ask of deny): %s',
+    (command) => {
+      const decision = run(command);
+      expect(decision.deny.length + decision.ask.length).toBeGreaterThan(0);
+    },
+  );
+
   test('review: builtin declare met een ge-escapete TMPDIR-naam maakt cd $TMPDIR niet bekend (hoofdsessie ask of deny)', () => {
     const decision = run(String.raw`builtin declare T\MPDIR=x; cd $TMPDIR && gh issue list`);
     expect(decision.deny.length + decision.ask.length).toBeGreaterThan(0);
