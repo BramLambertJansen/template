@@ -955,4 +955,26 @@ describe('AC-10: vangnetten per segment', () => {
   ])('regressie: (e) lus met een onveilig segment geweigerd voor een subagent: %s', (command) => {
     for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
   });
+
+  test.each([
+    String.raw`unset TMPDIR; cd $TMPDIR && gh issue list`,
+    'n=TMP; declare ${n}DIR=x; cd $TMPDIR && gh issue list',
+    'for d in a b; do git -C "$d" reflog; done',
+    'for d in a b; do git -C "$d" format-patch -1; done',
+    'for d in a b; do git -C "$d" ls-remote; done',
+  ])('review: hoofdsessie ask of deny: %s', (command) => {
+    const decision = run(command);
+    expect(decision.deny.length + decision.ask.length).toBeGreaterThan(0);
+  });
+
+  test('review: een ongeldige klasse na een escape geeft geen throw', () => {
+    const command = String.raw`echo '\ [[:alpha:]]h'`;
+    for (const role of ROLES) expect(() => run(command, role)).not.toThrow();
+  });
+
+  test('geaccepteerd vals positief (R-ROL-11): een gesplitst woord als "x g"* wordt geweigerd', () => {
+    const command = 'echo "x g"*';
+    expect(run(command, 'developer').deny.length).toBeGreaterThan(0);
+    expect(run(command).deny.length).toBeGreaterThan(0);
+  });
 });
