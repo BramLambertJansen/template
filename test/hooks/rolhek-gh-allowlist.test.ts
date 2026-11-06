@@ -1018,4 +1018,35 @@ describe('AC-10: vangnetten per segment', () => {
     const decision = run(String.raw`builtin declare T\MPDIR=x; cd $TMPDIR && gh issue list`);
     expect(decision.deny.length + decision.ask.length).toBeGreaterThan(0);
   });
+
+  // Eigenaarbesluit (b), 6 november 2026: aanhalingstekens tellen alleen als het hele commando geen onzekere constructie bevat
+  // (`#`, `${`, `$'`, `$(`, backtick, `\`, newline). Anders telt elk woord als ongequote voor de glob- en brace-toetsen.
+  test.each([
+    "echo a; # it's\necho {g,x}h\necho x'",
+    "true && # it's\necho /usr/bin/g[h]\necho x'",
+    "echo a | # it's\ncat g*\necho x'",
+    "echo a ; # it's\necho {g,x}h '\necho '",
+    'echo "${x#\'x"y\'}" {g,x}h \'',
+    'echo "${x#\'x"y\'}" /usr/bin/g[h]',
+    'echo /usr/bin/g\\\n* pr',
+    'echo /usr/bin/g\\\n[h]',
+    'echo {g,\\\nx}h',
+  ])('review ronde 3: onzekere constructie maakt aanhalingstekens ongeldig, subagent deny: %s', (command) => {
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+  });
+
+  test.each([
+    "echo '{a,b}'",
+    `python3 -c "print(s.get('hooks', {}))"`,
+    `gh pr view 1 --json files --jq '.files[] | {path: .path, n: .additions}'`,
+  ])('(b) blijft doorgelaten voor hoofdsessie, developer en tester: %s', (command) => {
+    doorgelaten(command, [undefined, 'developer', 'tester']);
+  });
+
+  test.each(["echo '{a,b}' # x", 'echo "${HOME}" \'{a,b}\''])(
+    'geaccepteerd vals positief (R-ROL-11): aangehaalde brace naast een onzekere constructie wordt geweigerd voor een subagent: %s',
+    (command) => {
+      for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+    },
+  );
 });
