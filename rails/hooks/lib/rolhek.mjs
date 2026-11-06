@@ -2,7 +2,7 @@
 // verboden is (deny). Puur: alles wat van de schijf of git komt, zit in `ctx`, zodat test/hooks/rolhek.test.ts elke regel
 // met echte payloads kan bewijzen. De stdin/stdout-kant staat in rails/hooks/rolhek.mjs.
 import path from 'node:path';
-import { gitSubcommand, globKlasse, parseCommands, programName, splitCommand, tmpdirLetterlijk, tmpdirWoord, writeTargets } from './shell.mjs';
+import { gitSubcommand, globKlasse, parseCommands, programName, splitCommand, tmpdirLetterlijk, tmpdirWoord, writeTargets, zetVariabele } from './shell.mjs';
 import { A4_MELDING, archiefBron, beslisOvergang, builtReference, documentInfo, documentKind, isArchief, isHerschrijving } from './document-state.mjs';
 import { canRecordStatus, TEMPLATE_REPOSITORY } from './task-authority.mjs';
 import { automaticRunner } from './runner-authority.mjs';
@@ -676,10 +676,14 @@ function vangnetSegmenten(command, { tmpdirVrij, onzeker }) {
 
 /**
  * `for NAAM in …; do …; done` waarvan elk segment in de romp een programma uit `EXPANSION_SAFE` start of git met een
- * subcommando uit `GIT_LUS_LEZEN` (AC-10 (e)). Elke waarde in de kop (`for d in …`) moet letterlijk zijn (geen `$` of
- * backtick) en mag niet met `-` of een wildcard of brace (`*`, `?`, `[`, `{`) beginnen: anders kan de lusvariabele een optie
- * worden (`--output=…` voor git, `-rf` voor rm) die de toetsen op de romp niet zien (Codex P1-1). `koppen`: de index van het
- * `for`-segment; `romp`: index → lusvariabele.
+ * subcommando uit `GIT_LUS_LEZEN` (AC-10 (e)). Strikte allowlist (review ronde 6), anders geldt het normale vangnet:
+ * - de lusnaam is `[a-z_][a-z0-9_]*` (geen `PATH`, `D` …);
+ * - elke kopwaarde is, op de ruwe tekst, een eenvoudig pad `LUS_WAARDE`: geen witruimte, quote, `$`, `?`, `[` of `{`, en `*`
+ *   niet vooraan, dus geen woordsplitsing en geen waarde die met `-` begint (`--output=…` voor git, `-rf` voor rm);
+ * - elk romp-woord met de lusvariabele heeft die alleen tussen dubbele aanhalingstekens en nooit direct na een `-`
+ *   (`lusWoordVeilig`), zodat `--$d`, `"-$d"` en een onaangehaald `$d` dicht blijven;
+ * - geen romp-segment zet een variabele (toewijzing, `zetVariabele`: `printf -v`, `read`, `declare` …).
+ * `koppen`: de index van het `for`-segment; `romp`: index → lusvariabele.
  * @param {readonly Command[]} segmenten
  */
 function veiligeLussen(segmenten) {
@@ -687,30 +691,57 @@ function veiligeLussen(segmenten) {
   const koppen = new Set();
   /** @type {Map<number, string>} */
   const romp = new Map();
-  segmenten.forEach(({ words, expanded = [] }, start) => {
-    const [woord, naam = '', inWoord, ...waarden] = words;
-    if (woord !== 'for' || inWoord !== 'in' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(naam)) return;
-    if (waarden.some((waarde) => expanded.includes(waarde) || /[$`]/.test(waarde) || /^[-*?[{]/.test(waarde))) return;
+  segmenten.forEach(({ words, raws = words }, start) => {
+    const [woord, naam = '', inWoord] = words;
+    if (woord !== 'for' || inWoord !== 'in' || !/^[a-z_][a-z0-9_]*$/.test(naam)) return;
+    if (!raws.slice(3).every((waarde) => LUS_WAARDE.test(waarde))) return;
     const einde = segmenten.findIndex((segment, index) => index > start && segment.words[0] === 'done');
     const lijf = segmenten.slice(start + 1, einde);
     if (einde === -1 || lijf[0]?.words[0] !== 'do') return;
-    if (!lijf.every((segment, index) => veiligLusSegment(index === 0 ? segment.words.slice(1) : segment.words))) return;
+    if (!lijf.every((segment, index) => veiligLusSegment(index === 0 ? zonderEerste(segment) : segment, naam))) return;
     koppen.add(start);
     for (let index = start + 1; index < einde; index += 1) romp.set(index, naam);
   });
   return { koppen, romp };
 }
 
+const LUS_WAARDE = /^[A-Za-z0-9_./][A-Za-z0-9_./*-]*$/;
+
+/** Het segment zonder zijn eerste woord (`do`). @param {Command} segment @returns {Command} */
+function zonderEerste(segment) {
+  const { words, raws = words } = segment;
+  return { ...segment, words: words.slice(1), raws: raws.slice(1) };
+}
+
+/**
+ * Een romp-woord (ruwe tekst) met de lusvariabele: niet met `-` beginnend, en elke `$naam`/`${naam}` binnen dubbele
+ * aanhalingstekens, direct na de openende quote of na een letterlijk teken dat geen `-` is. Een `\` of geneste quote telt dicht.
+ * @param {string} raw @param {string} naam
+ */
+function lusWoordVeilig(raw, naam) {
+  const verwijzing = new RegExp(`^\\$(?:\\{${naam}\\}|${naam}(?![A-Za-z0-9_]))`);
+  if (raw.startsWith('-') || /[\\']/.test(raw)) return false;
+  let binnen = false;
+  for (let index = 0; index < raw.length; index += 1) {
+    if (raw[index] === '"') binnen = !binnen;
+    else if (verwijzing.test(raw.slice(index)) && (!binnen || raw[index - 1] === '-')) return false;
+  }
+  return true;
+}
+
 /**
  * Een segment in een lusromp: leeg, een programma uit `EXPANSION_SAFE` zonder pad, toewijzing of omhulsel, of git met een
- * subcommando uit `GIT_LUS_LEZEN`, zonder `-c` en met als globale optie alleen `-C <map>` of een optie zonder waarde uit `GIT_LUS`.
- * @param {readonly string[]} words
+ * subcommando uit `GIT_LUS_LEZEN`, zonder `-c` en met als globale optie alleen `-C <map>` of een optie zonder waarde uit `GIT_LUS`;
+ * elk woord met de lusvariabele volgens `lusWoordVeilig`, geen redirect met `$`, en het zet geen variabele.
+ * @param {Command} segment @param {string} naam
  */
-function veiligLusSegment(words) {
+function veiligLusSegment({ words, raws = words, redirects }, naam) {
   if (words.length === 0) return true;
-  const { argv } = splitCommand(words);
+  const { assignments, argv } = splitCommand(words);
   const [woord = '', ...args] = argv;
-  if (argv.length !== words.length) return false;
+  if (assignments.length > 0 || zetVariabele(argv) || argv.length !== words.length) return false;
+  if (redirects.some((doel) => /[$`]/.test(doel))) return false;
+  if (!raws.every((raw) => !raw.includes('$') || lusWoordVeilig(raw, naam))) return false;
   if (EXPANSION_SAFE.has(woord)) return true;
   if (woord !== 'git') return false;
   const { subcommand, rest, config } = gitSubcommand(args);
@@ -739,7 +770,7 @@ function alleenLusvariabele(word, naam) {
 /**
  * De map na `cd`/`pushd`. Een doel dat pas bij het uitvoeren bekend is (geen doel, `~`, `-`, `$`, backtick, substitutie):
  * null, en de zelfladende toets valt dicht (AC-3). `$(git rev-parse --show-toplevel)` is de root. Ook na `cd $TMPDIR` blijft
- * de werkmap onbekend (eigenaarbesluit, Codex P1-2): de checkout kan zelf onder TMPDIR liggen, en de hook kent de TMPDIR van
+ * de werkmap onbekend (eigenaarbesluit na de externe review, P1-2): de checkout kan zelf onder TMPDIR liggen, en de hook kent de TMPDIR van
  * de shell niet.
  * @param {{ argv: readonly string[], expanded: readonly string[] }} commando @param {string | null} cwd @param {string} root
  * @returns {string | null}

@@ -3,13 +3,14 @@
 // volledige shell: wat tekstheuristiek niet vangt (`bash -c`, `node -e`, `$(…)`), vangt de diff-guard in CI.
 
 /**
- * @typedef {{ words: string[], redirects: string[], expanded?: string[], patterns?: string[] }} Command
+ * @typedef {{ words: string[], redirects: string[], expanded?: string[], patterns?: string[], raws?: string[] }} Command
+ * `raws`: per woord van `words` (zelfde index) de ruwe tekst zoals in het commando, met quotes en escapes.
  * `expanded`: woorden waarin de shell nog uitbreidt (`$` of een backtick buiten enkele aanhalingstekens, ook `$'…'`); hun
  * waarde hier is dus niet wat het programma krijgt.
  * `patterns`: per woord van `words` (zelfde index) de vorm waarin glob-, brace- en tildetekens tussen aanhalingstekens of na
  * een backslash `QUOTED` zijn; bash expandeert die daar niet (spec rolhek-vooraf-krimp AC-10 (b)).
  */
-/** @typedef {{ kind: 'word' | 'op', value: string, expands?: boolean, pattern?: string }} Token */
+/** @typedef {{ kind: 'word' | 'op', value: string, expands?: boolean, pattern?: string, raw?: string }} Token */
 
 // Staat in `Command.patterns` voor een aangehaald glob-, brace- of tildeteken: zelf geen glob-teken en geen letter van `gh`.
 export const QUOTED = '\u0000';
@@ -34,13 +35,13 @@ export function parseCommands(script, onzeker = false) {
   /** @type {Command[]} */
   const commands = [];
   /** @type {Command} */
-  let current = { words: [], redirects: [], expanded: [], patterns: [] };
+  let current = { words: [], redirects: [], expanded: [], patterns: [], raws: [] };
   /** @type {'redirect' | 'dup' | 'skip' | null} */
   let expect = null;
   for (const token of tokenize(script)) {
     if (token.kind === 'op' && SEPARATORS.has(token.value)) {
       if (current.words.length > 0 || current.redirects.length > 0) commands.push(current);
-      current = { words: [], redirects: [], expanded: [], patterns: [] };
+      current = { words: [], redirects: [], expanded: [], patterns: [], raws: [] };
       expect = null;
     } else if (token.kind === 'op') {
       // `<`, `<<<`, `<<` en kopieën van een descriptor (`>&2`, `2>&1`, `>&-`) schrijven geen bestand; `>&bestand` wel.
@@ -51,6 +52,7 @@ export function parseCommands(script, onzeker = false) {
       else if (expect === null) {
         current.words.push(token.value);
         current.patterns?.push(neutraal ? token.value : (token.pattern ?? token.value));
+        current.raws?.push(token.raw ?? token.value);
       }
       if (token.expands === true) current.expanded?.push(token.value);
       expect = null;
@@ -85,8 +87,8 @@ export function tmpdirLetterlijk(script) {
 const NAAM_BUILTINS = new Set(['declare', 'typeset', 'local', 'export', 'readonly', 'read', 'unset', 'mapfile', 'readarray',
   'getopts', 'eval', 'builtin', 'source', '.']);
 
-/** @param {readonly string[]} argv */
-function zetVariabele(argv) {
+/** Of dit commando een variabele kan zetten of wissen (`NAAM_BUILTINS`, `printf -v`). @param {readonly string[]} argv */
+export function zetVariabele(argv) {
   const [woord = '', ...args] = argv;
   return NAAM_BUILTINS.has(woord) || (woord === 'printf' && args.some((arg) => arg.startsWith('-v')));
 }
@@ -150,7 +152,7 @@ function nextToken(script, index, { tokens, heredocs }) {
     const previous = tokens.at(-1);
     if (previous?.kind === 'op' && (previous.value === '<<' || previous.value === '<<-'))
       heredocs.push({ delimiter: word.value, strip: previous.value === '<<-' });
-    tokens.push({ kind: 'word', value: word.value, expands: word.expands, pattern: word.pattern });
+    tokens.push({ kind: 'word', value: word.value, expands: word.expands, pattern: word.pattern, raw: script.slice(index, word.end) });
     return word.end;
   }
   tokens.push({ kind: 'op', value: op });
