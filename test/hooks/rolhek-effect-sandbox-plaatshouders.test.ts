@@ -56,6 +56,9 @@ const HOOFD_WIE = { actor: 'hoofd:S1', agentType: '', commando: '', sessie: 'S1'
 type Staat = 'weg' | 'leeg644' | 'leeg664' | 'apparaat';
 const STATEN: Staat[] = ['weg', 'leeg644', 'leeg664', 'apparaat'];
 
+const isSoort = (waarde: Staat | Soort): waarde is Soort =>
+  waarde !== 'weg' && waarde !== 'leeg644' && waarde !== 'leeg664' && waarde !== 'apparaat';
+
 /** Zet elk pad in de gegeven staat op schijf en maakt de momentopname (met de geïnjecteerde lstat voor `apparaat`). */
 function neem(root: string, paden: readonly string[], staat: Staat | Soort) {
   for (const rel of paden) {
@@ -64,7 +67,7 @@ function neem(root: string, paden: readonly string[], staat: Staat | Soort) {
     schrijf(root, rel, '');
     chmodSync(path.join(root, rel), staat === 'leeg664' ? 0o664 : 0o644);
   }
-  const nep = staat === 'apparaat' ? 'apparaat-1-3' : staat === 'weg' || staat.startsWith('leeg') ? null : staat;
+  const nep: Soort | null = staat === 'apparaat' ? 'apparaat-1-3' : isSoort(staat) ? staat : null;
   const lstat = nep === null ? undefined : lstatMet(Object.fromEntries(paden.map((rel) => [rel, nep])));
   return momentopname({ root, git: gitIn(root), lstat });
 }
