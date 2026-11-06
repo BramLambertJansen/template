@@ -1049,4 +1049,19 @@ describe('AC-10: vangnetten per segment', () => {
       for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
     },
   );
+
+  // Backslash-newline is een regelvoortzetting, zoals in bash.
+  test('regelvoortzetting: ca\\<nl>t x leest als cat en gaat door voor developer en hoofdsessie', () => {
+    doorgelaten('ca\\\nt x', [undefined, 'developer']);
+  });
+
+  test('regelvoortzetting: g\\<nl>h pr merge 1 leest als gh pr merge en wordt geweigerd voor elke rol', () => {
+    const command = 'g\\\nh pr merge 1';
+    expect(run(command).deny.length).toBeGreaterThan(0);
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+  });
+
+  test('regelvoortzetting: git pu\\<nl>sh wordt geweigerd voor een subagent', () => {
+    for (const role of SUBAGENTS) expect(run('git pu\\\nsh', role).deny.length).toBeGreaterThan(0);
+  });
 });
