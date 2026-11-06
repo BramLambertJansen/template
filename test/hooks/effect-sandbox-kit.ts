@@ -1,14 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import {
-  existsSync,
-  lstatSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  realpathSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach } from 'vitest';
@@ -118,12 +109,21 @@ export function objecten(root: string): string[] {
     .filter((regel) => regel !== '');
 }
 
+/** De inhoud van een bestand, of null als het niet te lezen is (zonder aparte controle vooraf: geen race). */
+function leesOfNull(vol: string): string | null {
+  try {
+    return readFileSync(vol, 'utf8');
+  } catch {
+    return null;
+  }
+}
+
 export function repoVan(root: string) {
   const ctx = {
     root,
     cwd: root,
     config,
-    read: (rel: string) => (existsSync(path.join(root, rel)) ? readFileSync(path.join(root, rel), 'utf8') : null),
+    read: (rel: string) => leesOfNull(path.join(root, rel)),
     committed: () => false,
     isDir: () => false,
     branch: git(root, 'rev-parse', '--abbrev-ref', 'HEAD').trim(),

@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { type Dirent, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { gitIn, momentopname } from '../../rails/hooks/lib/effect-snapshot.mjs';
@@ -25,11 +25,17 @@ const UNIEK = 'GEHEIM-9f3a1c7e-uniek';
 
 /** Alle bestanden onder een map, als tekst, om te zoeken naar een tekenreeks. */
 function alleTekst(map: string): string {
-  if (!existsSync(map)) return '';
-  return readdirSync(map)
-    .map((naam) => {
-      const vol = path.join(map, naam);
-      return statSync(vol).isDirectory() ? alleTekst(vol) : readFileSync(vol, 'utf8');
+  let items: Dirent[];
+  try {
+    items = readdirSync(map, { withFileTypes: true });
+  } catch {
+    return '';
+  }
+  return items
+    .map((item) => {
+      const vol = path.join(map, item.name);
+      if (item.isDirectory()) return alleTekst(vol);
+      return item.isFile() ? readFileSync(vol, 'utf8') : '';
     })
     .join('\n');
 }
