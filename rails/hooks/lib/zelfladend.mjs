@@ -2,7 +2,7 @@
 // (`.git/**`, de hook-stubs, `.claude/settings.json`, `lefthook.yml`, `.pnpmfile.cjs`). Een schrijfactie daar kan de toets op
 // effect uitschakelen voordat die kijkt; daarom toetst het rolhek deze paden vooraf, op elk woord van het commando.
 import path from 'node:path';
-import { gitSubcommand, programName } from './shell.mjs';
+import { gitSubcommand, globKlasse, programName } from './shell.mjs';
 
 // Lezen zonder schrijven; `sed` alleen zonder `-i`/`--in-place` (AC-3).
 const LEESLIJST = new Set(['cat', 'head', 'tail', 'ls', 'stat', 'wc', 'diff', 'grep', 'rg', 'jq']);
@@ -13,7 +13,7 @@ const GIT_WERKMAP = new Set([
 ]);
 // Git-subcommando's die de werkmap niet schrijven (AC-3); alleen hun schrijfopties tellen. Elk ander subcommando
 // (`merge-file`, `clone`, `submodule`, `bundle`, een onbekend of nieuw subcommando) toetst elk woord, dicht falen.
-const GIT_LEZEN = new Set([
+export const GIT_LEZEN = new Set([
   'status', 'log', 'show', 'diff', 'diff-tree', 'diff-index', 'diff-files', 'grep', 'blame', 'ls-files', 'ls-tree', 'ls-remote',
   'rev-parse', 'rev-list', 'cat-file', 'fetch', 'push', 'branch', 'add', 'commit', 'remote', 'describe', 'shortlog', 'reflog',
   'for-each-ref', 'merge-base', 'name-rev', 'format-patch', 'var', 'version', 'help', 'check-ignore', 'check-attr',
@@ -51,7 +51,10 @@ function stukRegex(stuk) {
     if (teken === '*') uit += '[^/]*';
     else if (teken === '?') uit += '[^/]';
     else if (sluit > 0) {
-      uit += `[${stuk.slice(index + 1, sluit).replace(/^!/, '^').replace(/\\/g, '\\\\')}]`;
+      // Een omgekeerd bereik (`[z-a]`) past op niets en is geen interne fout (AC-10 (c)).
+      const inhoud = stuk.slice(index + 1, sluit);
+      const negatie = inhoud.startsWith('!');
+      uit += `[${negatie ? '^' : ''}${globKlasse(negatie ? inhoud.slice(1) : inhoud).replace(/\\/g, '\\\\')}]`;
       index = sluit;
     } else uit += teken.replace(/[.+^${}()|\\[\]]/g, '\\$&');
   }

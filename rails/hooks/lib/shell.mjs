@@ -3,12 +3,16 @@
 // volledige shell: wat tekstheuristiek niet vangt (`bash -c`, `node -e`, `$(…)`), vangt de diff-guard in CI.
 
 /**
- * @typedef {{ words: string[], redirects: string[], expanded?: string[] }} Command
+ * @typedef {{ words: string[], redirects: string[], expanded?: string[], patterns?: string[] }} Command
  * `expanded`: woorden waarin de shell nog uitbreidt (`$` of een backtick buiten enkele aanhalingstekens, ook `$'…'`); hun
  * waarde hier is dus niet wat het programma krijgt.
+ * `patterns`: per woord van `words` (zelfde index) de vorm waarin glob-, brace- en tildetekens tussen aanhalingstekens of na
+ * een backslash `QUOTED` zijn; bash expandeert die daar niet (spec rolhek-vooraf-krimp AC-10 (b)).
  */
-/** @typedef {{ kind: 'word' | 'op', value: string, expands?: boolean }} Token */
+/** @typedef {{ kind: 'word' | 'op', value: string, expands?: boolean, pattern?: string }} Token */
 
+// Staat in `Command.patterns` voor een aangehaald glob-, brace- of tildeteken: zelf geen glob-teken en geen letter van `gh`.
+export const QUOTED = '\u0000';
 const SEPARATORS = new Set([';', '&&', '||', '|', '&', '|&', '\n', '(', ')']);
 const OPERATORS = ['&>>', '>>', '>|', '&>', '>&', '<<-', '<<<', '<<', '<&', '&&', '||', '|&', '<', '>', ';', '|', '&', '(', ')', '\n'];
 
@@ -20,13 +24,13 @@ export function parseCommands(script) {
   /** @type {Command[]} */
   const commands = [];
   /** @type {Command} */
-  let current = { words: [], redirects: [], expanded: [] };
+  let current = { words: [], redirects: [], expanded: [], patterns: [] };
   /** @type {'redirect' | 'dup' | 'skip' | null} */
   let expect = null;
   for (const token of tokenize(script)) {
     if (token.kind === 'op' && SEPARATORS.has(token.value)) {
       if (current.words.length > 0 || current.redirects.length > 0) commands.push(current);
-      current = { words: [], redirects: [], expanded: [] };
+      current = { words: [], redirects: [], expanded: [], patterns: [] };
       expect = null;
     } else if (token.kind === 'op') {
       // `<`, `<<<`, `<<` en kopieën van een descriptor (`>&2`, `2>&1`, `>&-`) schrijven geen bestand; `>&bestand` wel.
@@ -34,13 +38,47 @@ export function parseCommands(script) {
       else expect = token.value.startsWith('<') || token.value.endsWith('&') ? 'skip' : 'redirect';
     } else {
       if (expect === 'redirect' || (expect === 'dup' && !/^(?:\d+|-)$/.test(token.value))) current.redirects.push(token.value);
-      else if (expect === null) current.words.push(token.value);
+      else if (expect === null) {
+        current.words.push(token.value);
+        current.patterns?.push(token.pattern ?? token.value);
+      }
       if (token.expands === true) current.expanded?.push(token.value);
       expect = null;
     }
   }
   if (current.words.length > 0 || current.redirects.length > 0) commands.push(current);
   return commands;
+}
+
+// `$TMPDIR/`, `"$TMPDIR/` of `"$TMPDIR"/` aan het begin van een woord (spec rolhek-vooraf-krimp OV-6, AC-10 (d)).
+const TMPDIR_VOORAAN = /(?<=^|[\s;&|()<>])"?\$TMPDIR"?\//g;
+
+/**
+ * Of `$TMPDIR/` vooraan een woord in dit commando letterlijk telt: alleen als het commando `TMPDIR` nergens anders noemt
+ * (geen `TMPDIR=…`, `export TMPDIR`, `${TMPDIR…}`, `$TMPDIR` zonder `/`). Geef het hele commando, ook bij een substitutie.
+ * @param {string} script
+ */
+export function tmpdirLetterlijk(script) {
+  const genoemd = script.match(/TMPDIR/g)?.length ?? 0;
+  return genoemd > 0 && genoemd === (script.match(TMPDIR_VOORAAN)?.length ?? 0);
+}
+
+/**
+ * De inhoud van een glob-klasse (`[…]`, zonder haken en `!`) zonder omgekeerde bereiken (`z-a`): die passen in bash op niets,
+ * en een reguliere expressie weigert ze. Zo is `[z-a]` geen interne fout en past `g[z-a]h` nergens op, terwijl `g[z-ah]`
+ * via `h` nog wel op gh past (spec rolhek-vooraf-krimp AC-10 (c)).
+ * @param {string} inhoud
+ */
+export function globKlasse(inhoud) {
+  return inhoud.replace(/([^-])-([^-])/gs, (bereik, van = '', tot = '') => (van > tot ? '' : bereik));
+}
+
+/**
+ * Een woord (waarde uit `Command.words`) dat met `$TMPDIR/` begint en daarna niets meer expandeert.
+ * @param {string} word
+ */
+export function tmpdirWoord(word) {
+  return /^\$TMPDIR\/[^$`]*$/.test(word);
 }
 
 /**
@@ -80,7 +118,7 @@ function nextToken(script, index, { tokens, heredocs }) {
     const previous = tokens.at(-1);
     if (previous?.kind === 'op' && (previous.value === '<<' || previous.value === '<<-'))
       heredocs.push({ delimiter: word.value, strip: previous.value === '<<-' });
-    tokens.push({ kind: 'word', value: word.value, expands: word.expands });
+    tokens.push({ kind: 'word', value: word.value, expands: word.expands, pattern: word.pattern });
     return word.end;
   }
   tokens.push({ kind: 'op', value: op });
@@ -108,12 +146,14 @@ function skipHeredocBodies(script, from, heredocs) {
 }
 
 /**
- * Leest één woord; haalt aanhalingstekens en escapes weg. `$(…)` blijft letterlijk in het woord.
+ * Leest één woord; haalt aanhalingstekens en escapes weg. `$(…)` blijft letterlijk in het woord. `pattern`: de waarde met
+ * aangehaalde glob-, brace- en tildetekens als `QUOTED`.
  * @param {string} script
  * @param {number} start
  */
 function readWord(script, start) {
   let value = '';
+  let pattern = '';
   let expands = false;
   let index = start;
   while (index < script.length) {
@@ -124,9 +164,10 @@ function readWord(script, start) {
     if (char === '$' || char === '`' || (char === '"' && /[$`]/.test(script.slice(index + 1, part.end - 1).replace(/\\./g, ''))))
       expands = true;
     value += part.text;
+    pattern += char === '\\' || char === "'" || char === '"' ? part.text.replace(/[*?[{,~]/g, QUOTED) : part.text;
     index = part.end;
   }
-  return { value, end: index, expands };
+  return { value, end: index, expands, pattern };
 }
 
 /**

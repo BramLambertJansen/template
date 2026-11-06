@@ -2,13 +2,13 @@
 // verboden is (deny). Puur: alles wat van de schijf of git komt, zit in `ctx`, zodat test/hooks/rolhek.test.ts elke regel
 // met echte payloads kan bewijzen. De stdin/stdout-kant staat in rails/hooks/rolhek.mjs.
 import path from 'node:path';
-import { gitSubcommand, parseCommands, programName, splitCommand, writeTargets } from './shell.mjs';
+import { gitSubcommand, globKlasse, parseCommands, programName, splitCommand, tmpdirLetterlijk, tmpdirWoord, writeTargets } from './shell.mjs';
 import { A4_MELDING, archiefBron, beslisOvergang, builtReference, documentInfo, documentKind, isArchief, isHerschrijving } from './document-state.mjs';
 import { canRecordStatus, TEMPLATE_REPOSITORY } from './task-authority.mjs';
 import { automaticRunner } from './runner-authority.mjs';
 import { isCoreUiSource, testChangeRisk } from './functional-ui.mjs';
 import { staleBranchStart } from './verse-main.mjs';
-import { zelfladend } from './zelfladend.mjs';
+import { GIT_LEZEN, zelfladend } from './zelfladend.mjs';
 import { afgeleid, globMatch } from './padtabel.mjs';
 
 /**
@@ -32,6 +32,7 @@ import { afgeleid, globMatch } from './padtabel.mjs';
  * `committed`: staat in de merge-base met het anker of met origin/main; 'zonder-origin' = beide onleesbaar en wel in HEAD (terugval).
  * @typedef {{ deny: string[], ask: string[], context: string[], allow?: boolean }} Decision
  * @typedef {{ kind: 'write' | 'delete', after: string | null, verhuizing?: boolean }} Change
+ * @typedef {import('./shell.mjs').Command} Command
  */
 
 const SUBAGENT_ROLES = new Set(['architect', 'developer', 'tester', 'reviewer', 'docs']);
@@ -196,8 +197,11 @@ function startMergescript(command) {
   const tekst = command.replace(/[\\'"]/g, '');
   if (PR_MERGE_SCRIPT.test(tekst)) return true;
   const segmenten = parseCommands(command);
-  if (segmenten.some(({ words }) => !leestAlleen(words) && words.some(globRaaktMerge))) return true;
-  return PR_MERGE_BESTAND.test(tekst) && !segmenten.every(({ words }) => leestAlleen(words));
+  // De kop van een veilige `for`-lus (AC-10 (e)) start niets: zijn woorden gaan alleen naar programma's in de romp die zelf niets starten.
+  const { koppen } = veiligeLussen(segmenten);
+  const leest = (/** @type {Command} */ { words }, /** @type {number} */ index) => koppen.has(index) || leestAlleen(words);
+  if (segmenten.some((segment, index) => !leest(segment, index) && segment.words.some(globRaaktMerge))) return true;
+  return PR_MERGE_BESTAND.test(tekst) && !segmenten.every(leest);
 }
 
 /**
@@ -572,39 +576,23 @@ function gitMapMelding(file) {
 
 
 /**
- * @param {{ command: string, role: string }} call
+ * @param {{ command: string, role: string, tmpdirVrij?: boolean }} call `tmpdirVrij`: van het buitenste commando
+ *   (`tmpdirLetterlijk`), zodat een substitutie een toewijzing erbuiten niet mist.
  * @param {Ctx} ctx
  * @param {Decision} decision
  */
-function decideBash({ command, role }, ctx, decision) {
+function decideBash({ command, role, tmpdirVrij = tmpdirLetterlijk(command) }, ctx, decision) {
   decision.deny.push(...rawForbidden(command, role));
   decision.deny.push(...staleBranchStart(command));
   // De inhoud van `$(…)` en backticks is zelf een commando; zo vallen ook geneste substituties onder dezelfde regels.
-  for (const inner of substitutions(command)) decideBash({ command: inner, role }, ctx, decision);
+  for (const inner of substitutions(command)) decideBash({ command: inner, role, tmpdirVrij }, ctx, decision);
   const setsGhEnv = zetGhOmgeving(parseCommands(command));
   // `cd .git && …` in hetzelfde commando: de zelfladende toets (AC-3) leest de woorden daarna vanuit die map.
   /** @type {string | null} null: een `cd` naar een map die pas bij het uitvoeren bekend is */
   let cwdNu = ctx.cwd;
-  for (const parsed of parseCommands(command)) {
+  for (const { parsed, variabel } of vangnetSegmenten(command, tmpdirVrij)) {
     const { assignments, argv, pathWrappers } = splitCommand(parsed.words);
-    // `$G pr merge`, `${x}h …`, `$(echo gh) …`: welk programma draait, is pas bij het uitvoeren bekend.
-    const hidden = hiddenCommandWord(parsed.words);
-    const ghGlob = parsed.words.find((word) => globForGh(word) || SHELL_EXPANSION.test(word));
-    // `${G}h pr merge` achter een onbekend omhulsel: een variabel woord na het commandowoord bij een gh-subcommando.
-    const expandedArg = argv.slice(1).some((word) => (parsed.expanded ?? []).includes(word));
-    if (expandedArg && GH_SUBCOMMAND.test(command.replace(/[\\'"]/g, '')))
-      decision.deny.push('een variabel woord naast een gh-subcommando (pr, api, run …) is verboden, voor elke rol');
-    // Allowlist: met een geëxpandeerd argument mag alleen een programma dat zelf geen commando of netwerkopdracht start.
-    if (expandedArg && !EXPANSION_SAFE.has(programName(argv[0] ?? ''))) {
-      const melding = `\`${argv[0] ?? ''}\` met een geëxpandeerd argument ($, backtick): het rolhek ziet niet wat er draait`;
-      if (role === 'hoofdsessie') decision.ask.push(melding);
-      else decision.deny.push(`subagent: ${melding}`);
-    }
-    if (ghGlob !== undefined) decision.deny.push(`\`${ghGlob}\` kan naar gh wijzen (glob, brace-expansie of POSIX-klasse); verboden, voor elke rol`);
-    if (hidden !== null)
-      decision.deny.push(`een commandowoord dat niet letterlijk is (\`${hidden}\`) is verboden, voor elke rol`);
-    if (envSplitsString(parsed.words))
-      decision.deny.push('env -S/--split-string maakt van tekst een nieuw commando dat het rolhek niet ziet; verboden, voor elke rol');
+    vangnetten({ parsed, argv, variabel }, role, decision);
     forbidden({ assignments, argv, expanded: parsed.expanded ?? [] }, { role, ctx }, decision);
     zelfladend({ argv, redirects: parsed.redirects, role }, { ...ctx, cwd: cwdNu ?? ctx.root, cwdOnbekend: cwdNu === null }, decision);
     cwdNu = volgendeMap({ argv, expanded: parsed.expanded ?? [] }, cwdNu, ctx.root);
@@ -618,6 +606,116 @@ function decideBash({ command, role }, ctx, decision) {
     for (const target of targets.trees ?? []) treeTarget({ file: target, kind: 'write', role }, ctx, decision);
     for (const target of targets.deletes) treeTarget({ file: target, kind: 'delete', role }, ctx, decision);
   }
+}
+
+/**
+ * De vangnetten vooraf, per segment (spec rolhek-vooraf-krimp AC-10): een commandowoord dat niet letterlijk is, een woord dat
+ * naar gh kan wijzen, een variabel woord naast een gh-subcommando of bij een programma buiten `EXPANSION_SAFE`, en `env -S`.
+ * `variabel`: de geëxpandeerde woorden die voor deze vangnetten tellen (`vangnetSegmenten`).
+ * @param {{ parsed: Command, argv: readonly string[], variabel: readonly string[] }} segment
+ * @param {string} role
+ * @param {Decision} decision
+ */
+function vangnetten({ parsed, argv, variabel }, role, decision) {
+  const patterns = parsed.patterns ?? parsed.words;
+  // `$G pr merge`, `${x}h …`, `$(echo gh) …`: welk programma draait, is pas bij het uitvoeren bekend.
+  const hidden = hiddenCommandWord(parsed.words, patterns);
+  const ghGlob = parsed.words.find((word, index) => {
+    const pattern = patterns[index] ?? word;
+    return globForGh(pattern) || SHELL_EXPANSION.test(pattern);
+  });
+  // `${G}h pr merge` achter een onbekend omhulsel: een variabel woord na het commandowoord bij een gh-subcommando, in
+  // hetzelfde segment.
+  const expandedArg = argv.slice(1).some((word) => variabel.includes(word));
+  if (expandedArg && GH_SUBCOMMAND.test(parsed.words.join(' ')))
+    decision.deny.push('een variabel woord naast een gh-subcommando (pr, api, run …) is verboden, voor elke rol');
+  // Allowlist: met een geëxpandeerd argument mag alleen een programma dat zelf geen commando of netwerkopdracht start.
+  if (expandedArg && !EXPANSION_SAFE.has(programName(argv[0] ?? ''))) {
+    const melding = `\`${argv[0] ?? ''}\` met een geëxpandeerd argument ($, backtick): het rolhek ziet niet wat er draait`;
+    if (role === 'hoofdsessie') decision.ask.push(melding);
+    else decision.deny.push(`subagent: ${melding}`);
+  }
+  if (ghGlob !== undefined) decision.deny.push(`\`${ghGlob}\` kan naar gh wijzen (glob, brace-expansie of POSIX-klasse); verboden, voor elke rol`);
+  if (hidden !== null)
+    decision.deny.push(`een commandowoord dat niet letterlijk is (\`${hidden}\`) is verboden, voor elke rol`);
+  if (envSplitsString(parsed.words))
+    decision.deny.push('env -S/--split-string maakt van tekst een nieuw commando dat het rolhek niet ziet; verboden, voor elke rol');
+}
+
+/**
+ * De segmenten van een commando, met per segment de geëxpandeerde woorden die voor de vangnetten tellen (AC-10). Niet mee
+ * tellen: een woord dat met `$TMPDIR/` begint als `tmpdirVrij` (d), en in de romp van een veilige `for`-lus (e) een woord dat
+ * alleen de lusvariabele noemt; daar valt ook `do` vooraan weg, zodat elke toets het echte programma ziet. `parsed.expanded`
+ * blijft volledig voor de andere regels.
+ * @param {string} command @param {boolean} tmpdirVrij
+ * @returns {{ parsed: Command, variabel: string[] }[]}
+ */
+function vangnetSegmenten(command, tmpdirVrij) {
+  const segmenten = parseCommands(command);
+  const { romp } = veiligeLussen(segmenten);
+  return segmenten.map((segment, index) => {
+    const lus = romp.get(index);
+    const zonderDo = lus !== undefined && segment.words[0] === 'do';
+    const parsed = zonderDo
+      ? { ...segment, words: segment.words.slice(1), patterns: (segment.patterns ?? segment.words).slice(1) }
+      : segment;
+    const variabel = (segment.expanded ?? []).filter(
+      (word) => !(tmpdirVrij && tmpdirWoord(word)) && !(lus !== undefined && alleenLusvariabele(word, lus)),
+    );
+    return { parsed, variabel };
+  });
+}
+
+/**
+ * `for NAAM in …; do …; done` waarvan elk segment in de romp een programma uit `EXPANSION_SAFE` start of git met een
+ * subcommando uit `GIT_LEZEN` (AC-10 (e)). `koppen`: de index van het `for`-segment; `romp`: index → lusvariabele.
+ * @param {readonly Command[]} segmenten
+ */
+function veiligeLussen(segmenten) {
+  /** @type {Set<number>} */
+  const koppen = new Set();
+  /** @type {Map<number, string>} */
+  const romp = new Map();
+  segmenten.forEach(({ words }, start) => {
+    const [woord, naam = '', inWoord] = words;
+    if (woord !== 'for' || inWoord !== 'in' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(naam)) return;
+    const einde = segmenten.findIndex((segment, index) => index > start && segment.words[0] === 'done');
+    const lijf = segmenten.slice(start + 1, einde);
+    if (einde === -1 || lijf[0]?.words[0] !== 'do') return;
+    if (!lijf.every((segment, index) => veiligLusSegment(index === 0 ? segment.words.slice(1) : segment.words))) return;
+    koppen.add(start);
+    for (let index = start + 1; index < einde; index += 1) romp.set(index, naam);
+  });
+  return { koppen, romp };
+}
+
+/**
+ * Een segment in een lusromp: leeg, een programma uit `EXPANSION_SAFE` zonder pad, toewijzing of omhulsel, of git met een
+ * subcommando uit `GIT_LEZEN`, zonder `-c` en met als globale optie alleen `-C <map>` of een optie zonder waarde uit `GIT_LUS`.
+ * @param {readonly string[]} words
+ */
+function veiligLusSegment(words) {
+  if (words.length === 0) return true;
+  const { argv } = splitCommand(words);
+  const [woord = '', ...args] = argv;
+  if (argv.length !== words.length) return false;
+  if (EXPANSION_SAFE.has(woord)) return true;
+  if (woord !== 'git') return false;
+  const { subcommand, rest, config } = gitSubcommand(args);
+  const globaal = args.slice(0, args.length - rest.length - 1);
+  const opties = globaal.filter((_, index) => globaal[index - 1] !== '-C');
+  return GIT_LEZEN.has(subcommand) && config.length === 0 && opties.every((arg) => arg === '-C' || GIT_LUS.has(arg));
+}
+
+const GIT_LUS = new Set(['--no-pager', '-P', '--no-optional-locks']);
+
+/**
+ * Een woord dat na het wegdenken van `$NAAM` en `${NAAM}` niets meer expandeert (`"== $d"`, `"$d"`).
+ * @param {string} word @param {string} naam
+ */
+function alleenLusvariabele(word, naam) {
+  const zonder = word.replace(new RegExp(`\\$(?:\\{${naam}\\}|${naam}(?![A-Za-z0-9_]))`, 'g'), '');
+  return !/[$`]/.test(zonder);
 }
 
 /**
@@ -708,7 +806,10 @@ const RAW_PR_MERGE = /(?:^|[^\w.-])pr\s+merge(?=$|[^\w.-])/m;
 const RAW_PR_REVIEW = /(?:^|[^\w.-])pr\s+review(?=$|[^\w.-])/m;
 const RAW_APPROVE = /--approve|(?:^|\s)-a/;
 const RAW_SUBAGENT = new RegExp(`${GH_WORD.source}|api\\.github\\.com|git\\s+credential`, 'm');
-const SHELL_TRICKS = /\$\(|`|\beval\b|\bsource\b|(?:^|[\s;&|(])\.\s|\{[^}]*(?:,|\.\.)[^}]*\}|\|\s*(?:ba|z|da|k)?sh\b|<</;
+const SHELL_TRICKS = /\$\(|`|\beval\b|\bsource\b|(?:^|[\s;&|(])\.\s|\|\s*(?:ba|z|da|k)?sh\b|<</;
+// Brace-expansie als shell-truc, alleen in een onaangehaald deel van een woord (`Command.patterns`): een `--jq`-filter of
+// JS-object met komma tussen aanhalingstekens expandeert bash niet (AC-10 (b)).
+const BRACE_TRICK = /\{[^}]*(?:,|\.\.)[^}]*\}/;
 
 /**
  * Voor elke rol: mergen of goedkeuren in tekst die naar gh, …/pulls/, de GitHub-API of GraphQL wijst, en `pr review` naast gh.
@@ -733,7 +834,8 @@ function rawForbidden(command, role) {
     found.push('`pr merge`, `pr review --approve` of een GraphQL-merge is voor elke rol verboden, ook zonder herkenbaar gh (vangnet op de ruwe tekst, WS-04)');
   if (role === 'hoofdsessie' || !RAW_SUBAGENT.test(text)) return found;
   const segments = parseCommands(command);
-  if (segments.length !== 1 || segments[0]?.words[0] !== 'gh' || SHELL_TRICKS.test(command))
+  const brace = segments.some(({ words, patterns = words }) => patterns.some((pattern) => BRACE_TRICK.test(pattern)));
+  if (segments.length !== 1 || segments[0]?.words[0] !== 'gh' || SHELL_TRICKS.test(command) || brace)
     found.push('subagent: gh, de GitHub-API of git credential alleen als één direct gh-leescommando zonder shell-trucs');
   return found;
 }
@@ -1008,11 +1110,12 @@ const SHELL_WORDS = new Set(['{', '}', '[', '[[', ']]', '!']);
 
 /**
  * Letterlijk: geen expansie (`$`, backtick), geen glob (`*`, `?`, `[`, `{`) en geen `~` vooraan; dan weet het rolhek
- * vóór het uitvoeren welk programma draait.
+ * vóór het uitvoeren welk programma draait. `pattern` (`Command.patterns`): aangehaalde glob-tekens tellen niet (AC-10 (b)).
  * @param {string} word
+ * @param {string} [pattern]
  */
-function literalWord(word) {
-  return SHELL_WORDS.has(word) || (!/[$`*?[{]/.test(word) && !word.startsWith('~'));
+function literalWord(word, pattern = word) {
+  return SHELL_WORDS.has(word) || (!/[$`]/.test(word) && !/[*?[{]/.test(pattern) && !pattern.startsWith('~'));
 }
 
 // Sleutelwoorden en omhulsels vóór het commandowoord. Hun opties zijn niet te overzien (`sudo --weird v`), dus na zo'n
@@ -1022,19 +1125,23 @@ const COMMAND_WRAPPERS = new Set(['time', 'env', 'nice', 'command', 'nohup', 'ex
   'setsid', 'flock', 'watch', 'chroot', 'doas', 'unbuffer', 'parallel', 'script']);
 
 // Brace-expansie (`{` met verderop `,` of `..`: `g{h..h}`, `{g,x}h`) en POSIX-klassen (`[[:alpha:]]`, `[[=h=]]`, `[[.h.]]`, ook `[![:digit:]]`)
-// kunnen elke naam opleveren; een vangnet heeft geen expander nodig, dus dicht (ook `echo {a,b}`). `[[` als los woord mag.
+// kunnen elke naam opleveren; een vangnet heeft geen expander nodig, dus dicht, ook onaangehaald `echo {a,b}`. Getoetst op
+// `Command.patterns`: tussen aanhalingstekens (`echo '{a,b}'`, een `--jq`-filter, `python3 -c "…{…}…"`) expandeert bash
+// niets en telt het teken niet (AC-10 (b)). `[[` als los woord mag.
 // Programma's die met een geëxpandeerd argument (`$X`, `$(…)`) geen ander commando of GitHub-aanroep kunnen starten.
 // `sed` (`e`) en `awk` (`system()`) kunnen dat wel en staan er daarom niet in.
 const EXPANSION_SAFE = new Set(['echo', 'printf', 'cat', 'ls', 'cp', 'mv', 'rm', 'mkdir', 'rmdir', 'touch', 'grep',
   'head', 'tail', 'wc', 'sort', 'uniq', 'diff', 'cmp', 'test', '[', 'cd', 'basename', 'dirname', 'realpath', 'readlink', 'stat',
   'file', 'du', 'df']);
-// Losse woorden die op een gh-opdracht wijzen; bewust vals positief: `echo $HOME run`.
+// Losse woorden die op een gh-opdracht wijzen, in hetzelfde segment als het variabele woord; bewust vals positief:
+// `echo $HOME run`, maar niet `cd $TMPDIR && gh issue list` (AC-10 (a)).
 const GH_SUBCOMMAND = /(?:^|[\s;&|(){}<>])(?:pr|api|repo|release|workflow|run|issue|label|secret|merge|review|create)(?=$|[\s;&|(){}<>])/;
 const SHELL_EXPANSION = /\{.*(?:,|\.\.)|\[[^\]]*\[[:=.]/s;
 
 /**
  * Een woord met een glob (`*`, `?`, `[…]`) waarvan de naam `gh` of `gh.exe` kan zijn, op elke positie: zo hangt de regel
- * niet af van een lijst omhulsels (`setsid /usr/bin/g[h] …`). `cat g*.txt` en `ls src/*.ts` matchen niet.
+ * niet af van een lijst omhulsels (`setsid /usr/bin/g[h] …`). `cat g*.txt` en `ls src/*.ts` matchen niet. `word` is de
+ * vorm uit `Command.patterns`: een aangehaald glob-teken telt niet (AC-10 (b)).
  * @param {string} word
  */
 function globForGh(word) {
@@ -1042,8 +1149,13 @@ function globForGh(word) {
   if (!/[*?]|\[[!^]?\]?[^\]]*\]/.test(name)) return false;
   // Een klasse mag direct na `[`, `[!` of `[^` een `]` bevatten (`g[]h]` matcht gh); een losse `[` is letterlijk.
   const pattern = name.replace(/\[[!^]?\]?[^\]]*\]|./g, globPart);
-  const matcher = new RegExp(`^${pattern}$`, 'i');
-  return matcher.test('gh') || matcher.test('gh.exe');
+  try {
+    const matcher = new RegExp(`^${pattern}$`, 'i');
+    return matcher.test('gh') || matcher.test('gh.exe');
+  } catch {
+    // Na `globKlasse` hoort elk patroon geldig te zijn; lukt het toch niet, dan dicht.
+    return true;
+  }
 }
 
 /**
@@ -1052,7 +1164,7 @@ function globForGh(word) {
  */
 function globPart(part) {
   const negated = /^\[[!^]/.test(part);
-  if (part.length > 1) return `[${negated ? '^' : ''}${part.slice(negated ? 2 : 1, -1).replace(/[\\\]^]/g, '\\$&')}]`;
+  if (part.length > 1) return `[${negated ? '^' : ''}${globKlasse(part.slice(negated ? 2 : 1, -1)).replace(/[\\\]^]/g, '\\$&')}]`;
   if (part === '*') return '.*';
   if (part === '?') return '.';
   return part.replace(/[.+^${}()|[\]\\]/g, '\\$&');
@@ -1060,17 +1172,22 @@ function globPart(part) {
 
 /**
  * Het eerste woord dat als commandowoord kan dienen en niet letterlijk is, of null. Na toewijzingen telt het eerste woord;
- * begint het segment met een sleutelwoord of omhulsel, dan telt elk woord.
+ * begint het segment met een sleutelwoord of omhulsel, dan telt elk woord. `patterns`: `Command.patterns` (zelfde index).
  * @param {readonly string[]} words
+ * @param {readonly string[]} patterns
  * @returns {string | null}
  */
-function hiddenCommandWord(words) {
+function hiddenCommandWord(words, patterns) {
   const start = words.findIndex((word) => !/^[A-Za-z_][A-Za-z0-9_]*=/.test(word));
   if (start === -1) return null;
-  const rest = words.slice(start);
-  const [first = ''] = rest;
+  const [first = ''] = words.slice(start);
   const all = KEYWORDS.has(first) || COMMAND_WRAPPERS.has(programName(first));
-  return (all ? rest : [first]).find((word) => !literalWord(word)) ?? null;
+  const einde = all ? words.length : start + 1;
+  for (let index = start; index < einde; index += 1) {
+    const word = words[index] ?? '';
+    if (!literalWord(word, patterns[index] ?? word)) return word;
+  }
+  return null;
 }
 
 const FIND_EXEC = new Set(['-exec', '-execdir', '-ok', '-okdir']);
