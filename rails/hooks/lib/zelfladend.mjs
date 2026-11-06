@@ -13,7 +13,7 @@ const GIT_WERKMAP = new Set([
 ]);
 // Git-subcommando's die de werkmap niet schrijven (AC-3); alleen hun schrijfopties tellen. Elk ander subcommando
 // (`merge-file`, `clone`, `submodule`, `bundle`, een onbekend of nieuw subcommando) toetst elk woord, dicht falen.
-export const GIT_LEZEN = new Set([
+const GIT_LEZEN = new Set([
   'status', 'log', 'show', 'diff', 'diff-tree', 'diff-index', 'diff-files', 'grep', 'blame', 'ls-files', 'ls-tree', 'ls-remote',
   'rev-parse', 'rev-list', 'cat-file', 'fetch', 'push', 'branch', 'add', 'commit', 'remote', 'describe', 'shortlog', 'reflog',
   'for-each-ref', 'merge-base', 'name-rev', 'format-patch', 'var', 'version', 'help', 'check-ignore', 'check-attr',

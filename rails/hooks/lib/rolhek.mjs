@@ -8,7 +8,7 @@ import { canRecordStatus, TEMPLATE_REPOSITORY } from './task-authority.mjs';
 import { automaticRunner } from './runner-authority.mjs';
 import { isCoreUiSource, testChangeRisk } from './functional-ui.mjs';
 import { staleBranchStart } from './verse-main.mjs';
-import { GIT_LEZEN, zelfladend } from './zelfladend.mjs';
+import { zelfladend } from './zelfladend.mjs';
 import { afgeleid, globMatch } from './padtabel.mjs';
 
 /**
@@ -189,7 +189,12 @@ function leestAlleen(words) {
 function globRaaktMerge(woord) {
   if (!/[*?[]/.test(woord)) return false;
   const doelen = ['pr-merge.mjs', 'pr:merge', 'scripts/kit/pr-merge.mjs', './scripts/kit/pr-merge.mjs'];
-  return doelen.some((doel) => path.matchesGlob(doel, woord) || path.matchesGlob(path.basename(doel), path.basename(woord)));
+  try {
+    return doelen.some((doel) => path.matchesGlob(doel, woord) || path.matchesGlob(path.basename(doel), path.basename(woord)));
+  } catch {
+    // `path.matchesGlob` gooit op sommige patronen (`\ [[:alpha:]]h`); geen interne fout, maar dicht.
+    return true;
+  }
 }
 
 /** @param {string} command */
@@ -620,9 +625,11 @@ function vangnetten({ parsed, argv, variabel }, role, decision) {
   const patterns = parsed.patterns ?? parsed.words;
   // `$G pr merge`, `${x}h …`, `$(echo gh) …`: welk programma draait, is pas bij het uitvoeren bekend.
   const hidden = hiddenCommandWord(parsed.words, patterns);
+  // Ook per stuk tussen spaties: een woord waarvan de lezer de quotes niet zeker kent (`$'\''`, review B1), kan in bash
+  // meerdere woorden zijn (`$'\'' g*` is `'` en `g*`).
   const ghGlob = parsed.words.find((word, index) => {
     const pattern = patterns[index] ?? word;
-    return globForGh(pattern) || SHELL_EXPANSION.test(pattern);
+    return [pattern, ...pattern.split(/\s+/)].some((stuk) => globForGh(stuk) || SHELL_EXPANSION.test(stuk));
   });
   // `${G}h pr merge` achter een onbekend omhulsel: een variabel woord na het commandowoord bij een gh-subcommando, in
   // hetzelfde segment.
@@ -668,7 +675,7 @@ function vangnetSegmenten(command, tmpdirVrij) {
 
 /**
  * `for NAAM in …; do …; done` waarvan elk segment in de romp een programma uit `EXPANSION_SAFE` start of git met een
- * subcommando uit `GIT_LEZEN` (AC-10 (e)). `koppen`: de index van het `for`-segment; `romp`: index → lusvariabele.
+ * subcommando uit `GIT_LUS_LEZEN` (AC-10 (e)). `koppen`: de index van het `for`-segment; `romp`: index → lusvariabele.
  * @param {readonly Command[]} segmenten
  */
 function veiligeLussen(segmenten) {
@@ -691,7 +698,7 @@ function veiligeLussen(segmenten) {
 
 /**
  * Een segment in een lusromp: leeg, een programma uit `EXPANSION_SAFE` zonder pad, toewijzing of omhulsel, of git met een
- * subcommando uit `GIT_LEZEN`, zonder `-c` en met als globale optie alleen `-C <map>` of een optie zonder waarde uit `GIT_LUS`.
+ * subcommando uit `GIT_LUS_LEZEN`, zonder `-c` en met als globale optie alleen `-C <map>` of een optie zonder waarde uit `GIT_LUS`.
  * @param {readonly string[]} words
  */
 function veiligLusSegment(words) {
@@ -704,10 +711,16 @@ function veiligLusSegment(words) {
   const { subcommand, rest, config } = gitSubcommand(args);
   const globaal = args.slice(0, args.length - rest.length - 1);
   const opties = globaal.filter((_, index) => globaal[index - 1] !== '-C');
-  return GIT_LEZEN.has(subcommand) && config.length === 0 && opties.every((arg) => arg === '-C' || GIT_LUS.has(arg));
+  return GIT_LUS_LEZEN.has(subcommand) && config.length === 0 && opties.every((arg) => arg === '-C' || GIT_LUS.has(arg));
 }
 
 const GIT_LUS = new Set(['--no-pager', '-P', '--no-optional-locks']);
+// Het echt lezende deel van `GIT_LEZEN` (zelfladend.mjs) voor een lusromp (eigenaarbesluit 6 november 2026): niet `commit`,
+// `add`, `fetch`, `push`, `branch`, `remote`, `config`, `reflog` (expire/delete), `format-patch` (schrijft bestanden) of
+// `ls-remote` (netwerk); die geven in een lus de normale ask of deny.
+const GIT_LUS_LEZEN = new Set(['status', 'log', 'show', 'diff', 'diff-tree', 'diff-index', 'diff-files', 'grep', 'blame',
+  'ls-files', 'ls-tree', 'rev-parse', 'rev-list', 'cat-file', 'describe', 'shortlog', 'for-each-ref', 'merge-base',
+  'name-rev', 'show-ref', 'check-ignore', 'check-attr', 'count-objects', 'whatchanged', 'range-diff']);
 
 /**
  * Een woord dat na het wegdenken van `$NAAM` en `${NAAM}` niets meer expandeert (`"== $d"`, `"$d"`).
@@ -742,7 +755,8 @@ function volgendeMap({ argv, expanded }, cwd, { root, tmpdirVrij }) {
 // De werkmap na `cd $TMPDIR`. De echte waarde kent het rolhek niet: de hook draait buiten de Bash-sandbox, die TMPDIR per
 // commando zet, dus `process.env.TMPDIR` van de hook kan een andere map zijn. Een vaste map direct onder `/` met een naam die
 // geen echte map heeft, ligt buiten elke repository-root (behalve root `/`), zodat `relatief` en `bovenZelfladend` in
-// zelfladend.mjs een relatief pad daarna als "buiten root" zien; een absoluut repopad blijft gewoon getoetst.
+// zelfladend.mjs een relatief pad daarna als "buiten root" zien; een absoluut repopad blijft gewoon getoetst. `cd $TMPDIR/sub`
+// valt onder (d) (een woord dat met `$TMPDIR/` begint) en landt dus onder deze map.
 const TMPDIR_MAP = '/$TMPDIR';
 
 /** `map` als die onder `TMPDIR_MAP` ligt, anders null (onbekend). @param {string} map @returns {string | null} */

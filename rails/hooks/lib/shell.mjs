@@ -57,11 +57,27 @@ const TMPDIR_VOORAAN = /(?<=^|[\s;&|()<>])(?:"?\$TMPDIR"?\/|(?:\$TMPDIR|\$\{TMPD
 /**
  * Of `$TMPDIR` (kaal of met `/…`) in dit commando letterlijk telt: alleen als het commando `TMPDIR` nergens anders noemt
  * (geen `TMPDIR=…`, `export TMPDIR`, `${TMPDIR:-…}`, `$TMPDIRX`). Geef het hele commando, ook bij een substitutie.
+ * Dicht falen bij een naam die pas na het weghalen van quotes of escapes `TMPDIR` is (`declare T\MPDIR=x`), en bij elke
+ * builtin die een variabelenaam neemt (`NAAM_BUILTINS`, `printf -v`): die kan TMPDIR zetten zonder het letterlijk te noemen
+ * (review B2).
  * @param {string} script
  */
 export function tmpdirLetterlijk(script) {
   const genoemd = script.match(/TMPDIR/g)?.length ?? 0;
-  return genoemd > 0 && genoemd === (script.match(TMPDIR_VOORAAN)?.length ?? 0);
+  if (genoemd === 0 || genoemd !== (script.match(TMPDIR_VOORAAN)?.length ?? 0)) return false;
+  const woorden = tokenize(script).filter((token) => token.kind === 'word').map((token) => token.value);
+  if (woorden.some((woord) => woord.includes('TMPDIR') && !tmpdirWoord(woord))) return false;
+  return !parseCommands(script).some(({ words }) => zetVariabele(splitCommand(words).argv));
+}
+
+// Builtins die een variabelenaam als woord nemen en die dus TMPDIR kunnen zetten of wissen.
+const NAAM_BUILTINS = new Set(['declare', 'typeset', 'local', 'export', 'readonly', 'read', 'unset', 'mapfile', 'readarray',
+  'getopts', 'eval']);
+
+/** @param {readonly string[]} argv */
+function zetVariabele(argv) {
+  const [woord = '', ...args] = argv;
+  return NAAM_BUILTINS.has(woord) || (woord === 'printf' && args.some((arg) => arg.startsWith('-v')));
 }
 
 /**
@@ -149,7 +165,8 @@ function skipHeredocBodies(script, from, heredocs) {
 
 /**
  * Leest één woord; haalt aanhalingstekens en escapes weg. `$(…)` blijft letterlijk in het woord. `pattern`: de waarde met
- * aangehaalde glob-, brace- en tildetekens als `QUOTED`.
+ * aangehaalde glob-, brace- en tildetekens als `QUOTED`, maar alleen als de lezer elke quote in het woord zeker begrijpt;
+ * anders is `pattern` gelijk aan `value` en vallen de glob- en brace-toetsen dicht (`onzekereQuote`).
  * @param {string} script
  * @param {number} start
  */
@@ -157,6 +174,7 @@ function readWord(script, start) {
   let value = '';
   let pattern = '';
   let expands = false;
+  let onzeker = false;
   let index = start;
   while (index < script.length) {
     const char = script[index] ?? '';
@@ -165,11 +183,25 @@ function readWord(script, start) {
     // Buiten enkele aanhalingstekens breidt de shell `$` en backticks uit; binnen dubbele ook, tenzij geëscaped.
     if (char === '$' || char === '`' || (char === '"' && /[$`]/.test(script.slice(index + 1, part.end - 1).replace(/\\./g, ''))))
       expands = true;
+    if (onzekereQuote(script, index, part.end)) onzeker = true;
     value += part.text;
     pattern += char === '\\' || char === "'" || char === '"' ? part.text.replace(/[*?[{,~]/g, QUOTED) : part.text;
     index = part.end;
   }
-  return { value, end: index, expands, pattern };
+  return { value, end: index, expands, pattern: onzeker ? value : pattern };
+}
+
+/**
+ * Een woorddeel waarvan deze lezer de quotegrenzen niet zeker kent (review B1): `$'…'` (ANSI-C, kent `\'`), een quote zonder
+ * sluitteken, of dubbele aanhalingstekens met `$(…)` of een backtick erin (geneste quotes daarbinnen leest `findClose` niet).
+ * @param {string} script @param {number} index het begin van het deel @param {number} end het einde van het deel
+ */
+function onzekereQuote(script, index, end) {
+  const char = script[index] ?? '';
+  if (char === '$') return script[index + 1] === "'";
+  if (char !== "'" && char !== '"') return false;
+  if (end > script.length || script[end - 1] !== char) return true;
+  return char === '"' && /\$\(|`/.test(script.slice(index + 1, end - 1));
 }
 
 /**
