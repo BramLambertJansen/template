@@ -79,7 +79,7 @@ en `test`.
 ## Kopieer de vorm van
 
 - `src/core/api/env.ts` — `superRefine` met `ctx.addIssue({ code: 'custom', … })`, `describe()` voor de melding.
-- `src/core/api/env-schema.test.ts` (stijl; de nieuwe tests staan in `src/core/api/env-credentials.test.ts`) — `vi.stubEnv` en `test.each` per regel met fixtures uit herhaling (`'ab12'.repeat(n)`).
+- `src/core/api/env-schema.test.ts` (stijl; de nieuwe tests staan in `src/core/api/env-secret.test.ts`) — `vi.stubEnv` en `test.each` per regel met fixtures uit herhaling (`'ab12'.repeat(n)`).
 
 ## Hergebruik en UX
 
@@ -122,7 +122,7 @@ Fixtures via `vi.stubEnv` en `readEnv((ctx) => z.object({ PARTNER_API_KEY: secre
 ## Raakt ook
 
 - Gewijzigd: `src/core/api/env.ts` (`secret`, `Secret`, `EnvContext`, `secretIssues`, `readEnv`, kopcommentaar regel 4) en
-  `src/core/api/env-credentials.test.ts` (nieuwe tests; bestaande ongewijzigd). Core, dus volledige route met eigenaarmerge.
+  `src/core/api/env-secret.test.ts` (nieuwe tests; bestaande ongewijzigd). Core, dus volledige route met eigenaarmerge.
 - `docs/framework.md` §6 R-SEC-05, voorstel (de eigenaarmerge is het akkoord): na "`AUTH_BASE_URL` ≠ `APP_ORIGIN`" komt "; een geheim
   van een koppeling staat alleen in env, in `src/api/env.ts` via `readEnv((ctx) => …)` met `secret(ctx, opties)`: overal verplicht,
   buiten `local`/`test` ten minste 32 bytes (per geheim hoger) zonder demo-waarde, buiten `production` niet passend op het live-patroon en
@@ -142,7 +142,7 @@ waarde blijft in `process.env` staan; dat is inherent aan env en lost `Secret` n
 
 ## Testplan
 
-- **Unit** (`src/core/api/env-credentials.test.ts`, `vi.stubEnv`): AC-1 tot en met AC-5 als `test.each` over de vier omgevingen; AC-6 tot
+- **Unit** (`src/core/api/env-secret.test.ts`, `vi.stubEnv`): AC-1 tot en met AC-5 als `test.each` over de vier omgevingen; AC-6 tot
   en met AC-9 als losse tests, AC-6 met een hulpfunctie die alle deelreeksen van vier tekens zoekt.
 - **Regressie**: AC-10 door de bestaande suites ongewijzigd te draaien (`pnpm test`); de bestaande `readEnv`-tests blijven zonder
   `APP_ENV` werken.
