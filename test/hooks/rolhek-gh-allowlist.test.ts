@@ -1149,6 +1149,25 @@ describe('AC-10: vangnetten per segment', () => {
     expect(main.deny.length + main.ask.length).toBeGreaterThan(0);
   });
 
+  // R6-1: een gequote streepje vóór de lusvariabele maakt de waarde na het weghalen van de quotes tot een optie.
+  test.each([
+    'for d in output; do git diff "-""$d"; done',
+    'for d in output; do git diff "--""$d"; done',
+    'for d in output; do git grep "-""$d"; done',
+    'for d in output; do git grep "--""$d"; done',
+    'for d in output; do git diff "-"\'\'"$d"; done',
+    'for d in output; do git diff "--"\'\'"$d"; done',
+    'for d in output; do git diff \'\'"-""$d"; done',
+    'for d in Output; do git diff "-""${d}"; done',
+  ])(
+    'review ronde 7: gequote streepje vóór de lusvariabele is onveilig, subagent deny, hoofdsessie ask of deny: %s',
+    (command) => {
+      for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+      const main = run(command);
+      expect(main.deny.length + main.ask.length).toBeGreaterThan(0);
+    },
+  );
+
   test.each([
     'for d in .claude/worktrees/*/; do echo "== $d"; git -C "$d" status -sb; done',
     'for f in docs/*.md; do cat "$f"; done',
