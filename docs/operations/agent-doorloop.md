@@ -414,10 +414,23 @@ Een veranderende PR of werkmap vraagt nieuwe verificatie.
 
 ### Als pr:verify niet start of de werkmap weigert
 
-Geeft `pnpm --version` een SQLite-waarschuwing en daarna een andere versie dan `packageManager` in `package.json`?
-Controleer in dezelfde sandbox de projectselectie met `mise exec -- pnpm --version`. Geeft die de exacte versie,
-herhaal de oorspronkelijke opdracht via mise, bijvoorbeeld `mise exec -- pnpm pr:verify <nr> --watch`.
-Ontbreekt de exacte versie, volg dan de [toolchain-setup](../ENVIRONMENT.md#dagelijks-werken-binnen-de-claude-code-sandbox).
+Geeft de pnpm-versiecontrole een SQLite-waarschuwing en daarna een andere versie dan `packageManager` in `package.json`?
+
+1. **Bash-terminal in dezelfde sandbox, vanuit de repositoryroot.** Controleer de projectselectie. Verwacht de exacte
+   versie uit `packageManager`. Ontbreekt die, volg dan de
+   [toolchain-setup](../ENVIRONMENT.md#dagelijks-werken-binnen-de-claude-code-sandbox).
+
+   ```sh
+   mise exec -- pnpm --version
+   ```
+
+2. **Dezelfde terminal en werkmap, zodra de versie klopt.** Herhaal de oorspronkelijke pnpm-opdracht met mise als
+   voorvoegsel en behoud alle argumenten. De opdracht hoort te starten. Hieronder staat de roadmapcheck als voorbeeld.
+   Verwacht de bevestiging dat elk nieuw vinkje en elke gebouwde spec naar bewijs verwijst.
+
+   ```sh
+   mise exec -- pnpm check:roadmap
+   ```
 
 `pnpm` controleert vóór `run` en `exec` of de installatie bij de workspace past. `verifyDepsBeforeRun: error` in
 `pnpm-workspace.yaml` laat een afwijking stoppen met `ERR_PNPM_VERIFY_DEPS_BEFORE_RUN`, voordat het werkcommando
