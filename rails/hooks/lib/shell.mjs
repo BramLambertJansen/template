@@ -64,7 +64,7 @@ export function parseCommands(script, onzeker = false) {
 
 // `$TMPDIR/`, `"$TMPDIR/` of `"$TMPDIR"/` aan het begin van een woord (spec rolhek-vooraf-krimp OV-6, AC-10 (d)), of een
 // woord dat precies `$TMPDIR`, `${TMPDIR}` of `"$TMPDIR"` is (AC-10 (a), eigenaarbesluit 6 november 2026).
-const TMPDIR_VOORAAN = /(?<=^|[\s;&|()<>])(?:"?\$TMPDIR"?\/|(?:\$TMPDIR|\$\{TMPDIR\}|"\$TMPDIR")(?=$|[\s;&|()<>]))/g;
+const TMPDIR_VOORAAN = /(?<=^|[ \t\n;&|()<>])(?:"?\$TMPDIR"?\/|(?:\$TMPDIR|\$\{TMPDIR\}|"\$TMPDIR")(?=$|[ \t\n;&|()<>]))/g;
 
 /**
  * Of `$TMPDIR` (kaal of met `/…`) in dit commando letterlijk telt: alleen als het commando `TMPDIR` nergens anders noemt
@@ -129,7 +129,7 @@ export function tokenize(script) {
     } else if (char === '\\' && script[index + 1] === '\n') {
       // Een voortzetting tussen woorden is geen (leeg) woord; zo blijft `argv[0]` het echte commandowoord (review R4-2).
       index += 2;
-    } else if (char === '#' && (index === 0 || /\s/.test(script[index - 1] ?? ''))) {
+    } else if (char === '#' && (index === 0 || /[ \t\n]/.test(script[index - 1] ?? ''))) {
       while (index < script.length && script[index] !== '\n') index += 1;
     } else {
       index = nextToken(script, index, { tokens, heredocs });
@@ -192,7 +192,8 @@ function readWord(script, start) {
   let index = start;
   while (index < script.length) {
     const char = script[index] ?? '';
-    if (/[\s;&|<>()]/.test(char)) break;
+    // Bash scheidt woorden alleen op spatie, tab, newline en metatekens; andere witruimte (`\r`, `\v`, U+00A0, U+2028) hoort bij het woord (#604).
+    if (/[ \t\n;&|<>()]/.test(char)) break;
     const part = wordPart(script, index, char);
     // Buiten enkele aanhalingstekens breidt de shell `$` en backticks uit; binnen dubbele ook, tenzij geëscaped.
     if (char === '$' || char === '`' || (char === '"' && /[$`]/.test(script.slice(index + 1, part.end - 1).replace(/\\./g, ''))))
