@@ -744,10 +744,11 @@ describe('AC-10: vangnetten per segment', () => {
 
   // Eigenaarbesluit: na `cd $TMPDIR` is de werkmap onbekend (TMPDIR_MAP vervalt); een ask uit AC-3 is toegestaan, een deny niet.
   test.each(['cd $TMPDIR && gh issue list --limit 5', 'cd $TMPDIR; gh pr view 1', 'cd "$TMPDIR" && gh pr view 1'])(
-    '(a) hoofdsessie: geen deny en geen melding over een variabel woord naast een gh-subcommando: %s',
+    '(a) hoofdsessie: geen deny, en een ask alleen met de AC-3-melding: %s',
     (command) => {
       const decision = run(command);
       expect(decision.deny).toEqual([]);
+      for (const melding of decision.ask) expect(melding).toContain('AC-3');
     },
   );
 
@@ -1091,8 +1092,8 @@ describe('AC-10: vangnetten per segment', () => {
     expect(met.ask).toEqual(zonder.ask);
   });
 
-  // Codex P1-1: een lusvariabele kan een git- of programma-optie worden (`--output=docs/framework.md`, `-rf`, een glob).
-  test('Codex P1-1: lus met een optiewaarde als git-argument: subagent deny, hoofdsessie ask of deny', () => {
+  // review ronde 6 P1-1: een lusvariabele kan een git- of programma-optie worden (`--output=docs/framework.md`, `-rf`, een glob).
+  test('review ronde 6 P1-1: lus met een optiewaarde als git-argument: subagent deny, hoofdsessie ask of deny', () => {
     const command = 'for d in --output=docs/framework.md; do git diff "$d"; done';
     for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
     const main = run(command);
@@ -1103,15 +1104,57 @@ describe('AC-10: vangnetten per segment', () => {
     'for f in -rf; do rm "$f" x; done',
     'for d in *; do git diff "$d"; done',
     'for d in $X; do git log "$d"; done',
-  ])('Codex P1-1: lus met onzekere waarde gaat niet volledig door (hoofdsessie ask of deny): %s', (command) => {
+  ])(
+    'review ronde 6 P1-1: lus met onzekere waarde gaat niet volledig door (hoofdsessie ask of deny): %s',
+    (command) => {
+      const main = run(command);
+      expect(main.deny.length + main.ask.length).toBeGreaterThan(0);
+    },
+  );
+
+  test.each([
+    'for d in .claude/worktrees/*/; do git -C "$d" status -sb; done',
+    'for f in docs/*.md; do cat "$f"; done',
+  ])('review ronde 6 P1-1: lus met een veilig voorvoegsel blijft doorgelaten: %s', (command) => {
+    doorgelaten(command, [undefined, 'developer']);
+  });
+
+  // Strikte allowlist voor veilige lussen: lusnaam [a-z_][a-z0-9_]*, kopwaarden ^[A-Za-z0-9_./][A-Za-z0-9_./*-]*$, lusvariabele in
+  // de romp alleen tussen dubbele aanhalingstekens en beginnend met $d of een letterlijk teken dat geen `-` is, geen toewijzing in de romp.
+  test.each([
+    // B1: een voorvoegsel maakt van een onschuldige waarde een optie
+    'for d in output=x; do git diff --$d; done',
+    'for d in output=x; do git grep -$d; done',
+    'for d in output; do git diff --"$d"; done',
+    'for d in output; do git diff "-$d"; done',
+    // B2: woordsplitsing en een gequote waarde met een spatie
+    "for d in 'a --output=x'; do git diff $d; done",
+    'for d in "a --output=x"; do git diff $d; done',
+    'for d in a; do git diff $d; done',
+    // B3: de lusvariabele wordt in de romp opnieuw toegewezen
+    'for d in a b; do printf -v d --output=x; git diff "$d"; done',
+    'for d in a b; do read d <<< --output=x; git diff "$d"; done',
+    'for d in a b; do d=--output=x; git diff "$d"; done',
+    'for d in a b; do declare d=--output=x; git diff "$d"; done',
+    // lusnaam in hoofdletters
+    'for PATH in a b; do git -C "$PATH" log -1; done',
+    'for D in a b; do git diff "$D"; done',
+    // een klasse die niet op gh past onderscheidt de nieuwe regel van globForGh
+    'for d in [-]x; do git diff "$d"; done',
+    'for d in ?x; do git diff "$d"; done',
+    'for d in *x; do git diff "$d"; done',
+  ])('review ronde 6: strikte lus-allowlist, subagent deny, hoofdsessie ask of deny: %s', (command) => {
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
     const main = run(command);
     expect(main.deny.length + main.ask.length).toBeGreaterThan(0);
   });
 
   test.each([
-    'for d in .claude/worktrees/*/; do git -C "$d" status -sb; done',
+    'for d in .claude/worktrees/*/; do echo "== $d"; git -C "$d" status -sb; done',
     'for f in docs/*.md; do cat "$f"; done',
-  ])('Codex P1-1: lus met een veilig voorvoegsel blijft doorgelaten: %s', (command) => {
+    'for d in a b; do git -C "$d" log -1; done',
+    'for d in a b; do git -C "$d" diff "$d"/x; done',
+  ])('review ronde 6: veilige lus blijft doorgelaten voor hoofdsessie en developer: %s', (command) => {
     doorgelaten(command, [undefined, 'developer']);
   });
 
@@ -1122,11 +1165,11 @@ describe('AC-10: vangnetten per segment', () => {
     for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
   });
 
-  // Codex P1-2: de checkout kan onder TMPDIR staan; na `cd $TMPDIR` is de werkmap onbekend.
+  // review ronde 6 P1-2: de checkout kan onder TMPDIR staan; na `cd $TMPDIR` is de werkmap onbekend.
   test.each([
     'cd "$TMPDIR/repo/.claude" && cp /tmp/payload settings.json',
     'cd "$TMPDIR/repo/.git" && cp /tmp/payload config',
-  ])('Codex P1-2: checkout onder TMPDIR, schrijven na cd gaat voor geen rol volledig door: %s', (command) => {
+  ])('review ronde 6 P1-2: checkout onder TMPDIR, schrijven na cd gaat voor geen rol volledig door: %s', (command) => {
     const tmpCtx = { ...ctx, root: '/tmp/repo', cwd: '/tmp/repo' };
     for (const role of [undefined, ...SUBAGENTS]) {
       const decision = decide(
