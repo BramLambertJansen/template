@@ -977,4 +977,37 @@ describe('AC-10: vangnetten per segment', () => {
     expect(run(command, 'developer').deny.length).toBeGreaterThan(0);
     expect(run(command).deny.length).toBeGreaterThan(0);
   });
+
+  // Reviewronde 2, R2-B1: een onaangehaalde backtick met een `'` erin, of een `$(…)` met een `)` tussen aanhalingstekens,
+  // brengt de lezer uit de pas; wat daarachter onaangehaald staat, blijft brace of glob. Subagent: deny.
+  test.each([
+    "echo `echo '` {g,x}h '`",
+    "echo `echo '` /usr/bin/g[h] '`",
+    "echo `echo '` g* '`",
+    "echo `printf '%s' a` x' {g,x}h '",
+    String.raw`echo $(echo ')') {g,x}h`,
+    String.raw`echo $(echo ')' ) g*`,
+    String.raw`echo $(printf '%s' ')') /usr/bin/g[h]`,
+    String.raw`echo $(echo "(" ) g*`,
+    String.raw`echo $(echo ')') '{x}' {g,x}h '`,
+  ])('review R2-B1: backtick of $( ) met quotes verbergt geen brace of glob voor een subagent: %s', (command) => {
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+  });
+
+  // Besloten gedrag: staat ergens in het commando `$'`, een backtick of `$(`, dan telt geen woord als aangehaald voor de glob- en brace-toetsen.
+  test.each([String.raw`echo $(date) '{a,b}'`, String.raw`echo "$(date)" '{a,b}'`])(
+    'geaccepteerd vals positief (R-ROL-11): aangehaalde brace naast een substitutie wordt geweigerd voor een subagent: %s',
+    (command) => {
+      for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+    },
+  );
+
+  test("zonder substitutie blijft echo '{a,b}' doorgelaten voor een subagent", () => {
+    doorgelaten("echo '{a,b}'", ['developer', 'tester']);
+  });
+
+  test('review: builtin declare met een ge-escapete TMPDIR-naam maakt cd $TMPDIR niet bekend (hoofdsessie ask of deny)', () => {
+    const decision = run(String.raw`builtin declare T\MPDIR=x; cd $TMPDIR && gh issue list`);
+    expect(decision.deny.length + decision.ask.length).toBeGreaterThan(0);
+  });
 });
