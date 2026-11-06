@@ -5,6 +5,7 @@ Status: geaccepteerd
 Herzien: 2026-11-03 (#454): punt 3 en de buitenscope "hoofdsessie" volgen [0071](0071-rolhek-vooraf-vaste-lijst.md)
 Herzien: 2026-11-03 (#469): gewijzigd door [0071](0071-rolhek-vooraf-vaste-lijst.md) punt 3
 Herzien: 2026-11-05 (#588): punt 2, gewijzigd door [0083](0083-bewaking-met-minder-wrijving.md): de nacontrole is begrensd tot wat de subagent zelf kan hebben gedaan.
+Herzien: 2026-11-06 (#608): punt 1, gewijzigd door [0084](0084-sandbox-afscherming-geen-effect.md): een plaatshouder van de sandbox telt niet als verandering, en geheimen worden gehasht zonder ze in `.git/objects` te schrijven.
 
 Vult [0045](0045-railwerk.md) aan: het rolhek blijft vooraf toetsen, en toetst daarnaast achteraf wat een Bash-commando
 van een subagent echt veranderde. Uitwerking: spec [rolhek-effect](../specs/rolhek-effect.md).
@@ -50,7 +51,7 @@ interpreter is niet dicht te zetten zonder de developer zijn werk af te nemen. D
 - Het effect wordt pas na het commando gezien. Een overtreding is dus al gebeurd, maar valt direct op en blokkeert de oplevering.
 - Wat binnen een genegeerde map verandert (`node_modules/`), ziet de toets niet, behalve een vaste lijst die het rolhek zelf stuurt (`.git/config`,
   `.git/hooks`, `.git/info`, `settings.local.json`, de hook-cache) en de index-vlaggen. `.env*` blijft beschermd via de sandbox
-  en R-SEC-05.
+  en R-SEC-05; de toets hasht het zonder het in `.git/objects` te schrijven (0084).
 - Wat de hoofdsessie of een andere agent in hetzelfde venster schrijft (Edit, Write of Bash), telt niet mee. Alleen twee
   Bash-commando's van verschillende subagents tegelijk kunnen elkaars wijziging krijgen. Dat is een geaccepteerd vals positief aan de veilige kant.
 - Anders dan de toets vooraf valt deze toets dicht bij een fout, een timeout of een te grote werkmap. De eigenaar heft een

@@ -2,6 +2,8 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-06 (#608): punt 2, gewijzigd door [0084](0084-sandbox-afscherming-geen-effect.md): een nacontrole telt een plaatshouder van de sandbox niet, en `pr:verify` slaat een bevestigd afgeschermd pad over.
+
 Wijzigt [0082](0082-zelfladend-sandbox-en-leeslijst.md) punt 2 en 4 en [0066](0066-schrijfgrens-op-effect.md) punt 2.
 Drempel: A3 (een grens van het besturingssysteem vervalt en een vangnet wordt smaller) en A4. Aanleiding: melding van de
 eigenaar (5 november 2026) dat git, commit en push, de sandbox en de subagents "lopende band" falen, ook bij het opstarten van
