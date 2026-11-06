@@ -364,8 +364,10 @@ function decideFile({ rel, change, role }, ctx, decision) {
     decision.deny.push(`${rel} is een gecommitte migratie: wijzig hem nooit, maak een nieuwe (AGENTS.md)${hint}`);
     return;
   }
-  // A4 en de overgang vergelijken met main (de vertrouwde basis); alleen zonder authority is de werkmap de terugval.
-  const basis = ctx.authority == null ? ctx.read(rel) : ctx.authority.trusted(rel);
+  // A4 en de overgang vergelijken met main (de vertrouwde basis); alleen zonder authority is de werkmap de terugval. Alleen
+  // een ADR of spec heeft een basis nodig: een ander pad (ook een geheim, spec rolhek-effect AC-11 c) wordt niet gelezen.
+  const docPad = documentKind(rel) !== null || rel.startsWith('docs/specs/');
+  const basis = !docPad ? null : ctx.authority == null ? ctx.read(rel) : ctx.authority.trusted(rel);
   const overgang = change.after === null || documentKind(rel) === null ? null : beslisOvergang(rel, basis, change.after);
   const beslisrol = ['hoofdsessie', 'architect'].includes(role);
   // A4 (ADR 0046 punt 2): alleen architect en hoofdsessie herschrijven een geaccepteerd ADR of verwijderen een ADR met een
@@ -438,7 +440,7 @@ function statusZonderBesluit({ rel, change, role }, ctx, decision) {
  * @param {Decision} decision
  */
 function recordedStatus({ rel, change, role }, ctx, decision) {
-  if (ctx.authority == null || change.kind !== 'write' || change.after === null) return false;
+  if (ctx.authority == null || change.kind !== 'write' || change.after === null || documentKind(rel) === null) return false;
   const before = ctx.read(rel);
   const old = documentInfo(rel, before ?? '');
   const next = documentInfo(rel, change.after);
