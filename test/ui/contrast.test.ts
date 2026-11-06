@@ -13,7 +13,7 @@ const css = ['core/web/styles/primitives.css', 'core/web/styles/semantic.css', '
 type Theme = 'light' | 'dark';
 
 function block(source: string, selector: string): string {
-  const pattern = new RegExp(`${selector.replace(/[[\]'()]/g, '\\$&')}\\s*\\{([^}]*)\\}`, 'g');
+  const pattern = new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\']/g, '\\$&')}\\s*\\{([^}]*)\\}`, 'g');
   return [...source.matchAll(pattern)].map((match) => match[1] ?? '').join('\n');
 }
 
