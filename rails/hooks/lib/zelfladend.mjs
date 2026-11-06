@@ -47,14 +47,15 @@ function stukRegex(stuk) {
   let uit = GLOB.test(stuk[0] ?? '') ? '(?!\\.)' : '';
   for (let index = 0; index < stuk.length; index += 1) {
     const teken = stuk[index] ?? '';
-    const sluit = teken === '[' ? stuk.indexOf(']', index + 2) : -1;
+    // Negatie met `!` of `^` (bash); een `]` direct na `[`, `[!` of `[^` hoort bij de klasse (AC-10 (c)).
+    const negatie = teken === '[' && /[!^]/.test(stuk[index + 1] ?? '');
+    const sluit = teken === '[' ? stuk.indexOf(']', index + (negatie ? 3 : 2)) : -1;
     if (teken === '*') uit += '[^/]*';
     else if (teken === '?') uit += '[^/]';
     else if (sluit > 0) {
       // Een omgekeerd bereik (`[z-a]`) past op niets en is geen interne fout (AC-10 (c)).
-      const inhoud = stuk.slice(index + 1, sluit);
-      const negatie = inhoud.startsWith('!');
-      uit += `[${negatie ? '^' : ''}${globKlasse(negatie ? inhoud.slice(1) : inhoud).replace(/\\/g, '\\\\')}]`;
+      const inhoud = globKlasse(stuk.slice(index + (negatie ? 2 : 1), sluit));
+      uit += `[${negatie ? '^' : ''}${inhoud.replace(/[\\\]^]/g, '\\$&')}]`;
       index = sluit;
     } else uit += teken.replace(/[.+^${}()|\\[\]]/g, '\\$&');
   }
