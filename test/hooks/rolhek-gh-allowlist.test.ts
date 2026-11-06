@@ -869,4 +869,38 @@ describe('AC-10: vangnetten per segment', () => {
       expect(run(command).deny.length).toBeGreaterThan(0);
     },
   );
+
+  // Na `cd $TMPDIR` (een vaste map buiten de repo; ctx.root is /repo) blijft het schrijven naar beschermde paden dicht.
+  test.each([
+    'cd $TMPDIR && cp x /repo/.claude/settings.json',
+    'cd $TMPDIR && cd .. && cp x repo/.claude/settings.json',
+    'cd $TMPDIR/.. && cp x .claude/settings.json',
+    'cd $TMPDIR && rm -rf ..',
+    'cd $TMPDIR && cd /repo && cp x .claude/settings.json',
+  ])('regressie: na cd $TMPDIR blijft dicht (hoofdsessie ask of deny, subagent deny): %s', (command) => {
+    const main = run(command);
+    expect(main.deny.length + main.ask.length).toBeGreaterThan(0);
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+  });
+
+  test('regressie: na cd $TMPDIR blijft schrijven in .git dicht voor elke rol', () => {
+    const command = 'cd $TMPDIR && echo x > /repo/.git/config';
+    expect(run(command).deny.length).toBeGreaterThan(0);
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+  });
+
+  test('regressie: (c) een klasse die nog gh oplevert blijft geweigerd', () => {
+    const command = 'foo /usr/bin/g[z-ah] pr list';
+    expect(run(command, 'developer').deny.length).toBeGreaterThan(0);
+    expect(run(command).deny.length).toBeGreaterThan(0);
+  });
+
+  test.each([
+    'for d in a/*/; do git -c x=y -C "$d" status; done',
+    'for d in a/*/; do git --git-dir=x -C "$d" log; done',
+    'for d in a/*/; do env echo "$d"; done',
+    'for d in a/*/; do /tmp/echo "$d"; done',
+  ])('regressie: (e) lus met een onveilig segment geweigerd voor een subagent: %s', (command) => {
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+  });
 });
