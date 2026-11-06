@@ -16,18 +16,21 @@ export const QUOTED = '\u0000';
 const SEPARATORS = new Set([';', '&&', '||', '|', '&', '|&', '\n', '(', ')']);
 const OPERATORS = ['&>>', '>>', '>|', '&>', '>&', '<<-', '<<<', '<<', '<&', '&&', '||', '|&', '<', '>', ';', '|', '&', '(', ')', '\n'];
 
-// Een commando met `$'`, een backtick of `$(` leest deze lezer niet zeker (geen backtick-groep, haakjes tellen zonder quotes):
-// een verkeerde quotegrens kan echte onaangehaalde tekst als aangehaald lezen (review B1, R2-B1). Dan neutraliseert
-// `patterns` niets; ook een substitutie daarbinnen (`onzeker` van de aanroeper).
-const ONZEKERE_QUOTES = /\$'|`|\$\(/;
+// Allowlist (eigenaarbesluit 6 november 2026, AC-10 (b)): `patterns` neutraliseert alleen wat deze lezer zeker leest, gewone
+// enkele en dubbele aanhalingstekens. Elke constructie die de quotegrenzen kan verschuiven en die de lezer niet volledig kent,
+// maakt het hele commando onzeker: `#` (commentaar), `${`, `$'` (ANSI-C), `$(`, backtick, `\` en een newline (heredoc,
+// meerdere regels). Een verkeerde quotegrens zou echte onaangehaalde tekst als aangehaald lezen (reviews B1, R2-B1); dan
+// neutraliseert `patterns` niets, ook niet in een substitutie daarbinnen (`onzeker` van de aanroeper). Een quote zonder
+// sluitteken hoeft er niet bij: bash voert zo'n commando niet uit.
+const ONZEKERE_TEKST = /[#`\\\n]|\$[{'(]/;
 
 /**
  * @param {string} script
- * @param {boolean} [onzeker] true: `patterns` gelijk aan `words`, ook als `script` zelf geen `ONZEKERE_QUOTES` heeft
+ * @param {boolean} [onzeker] true: `patterns` gelijk aan `words`, ook als `script` zelf geen `ONZEKERE_TEKST` heeft
  * @returns {Command[]}
  */
 export function parseCommands(script, onzeker = false) {
-  const neutraal = onzeker || ONZEKERE_QUOTES.test(script);
+  const neutraal = onzeker || ONZEKERE_TEKST.test(script);
   /** @type {Command[]} */
   const commands = [];
   /** @type {Command} */
@@ -173,8 +176,7 @@ function skipHeredocBodies(script, from, heredocs) {
 
 /**
  * Leest één woord; haalt aanhalingstekens en escapes weg. `$(…)` blijft letterlijk in het woord. `pattern`: de waarde met
- * aangehaalde glob-, brace- en tildetekens als `QUOTED`, maar alleen als de lezer elke quote in het woord zeker begrijpt;
- * anders is `pattern` gelijk aan `value` en vallen de glob- en brace-toetsen dicht (`onzekereQuote`).
+ * aangehaalde glob-, brace- en tildetekens als `QUOTED`; `parseCommands` gebruikt die vorm alleen zonder `ONZEKERE_TEKST`.
  * @param {string} script
  * @param {number} start
  */
@@ -182,7 +184,6 @@ function readWord(script, start) {
   let value = '';
   let pattern = '';
   let expands = false;
-  let onzeker = false;
   let index = start;
   while (index < script.length) {
     const char = script[index] ?? '';
@@ -191,25 +192,11 @@ function readWord(script, start) {
     // Buiten enkele aanhalingstekens breidt de shell `$` en backticks uit; binnen dubbele ook, tenzij geëscaped.
     if (char === '$' || char === '`' || (char === '"' && /[$`]/.test(script.slice(index + 1, part.end - 1).replace(/\\./g, ''))))
       expands = true;
-    if (onzekereQuote(script, index, part.end)) onzeker = true;
     value += part.text;
-    pattern += char === '\\' || char === "'" || char === '"' ? part.text.replace(/[*?[{,~]/g, QUOTED) : part.text;
+    pattern += char === "'" || char === '"' ? part.text.replace(/[*?[{,~]/g, QUOTED) : part.text;
     index = part.end;
   }
-  return { value, end: index, expands, pattern: onzeker ? value : pattern };
-}
-
-/**
- * Een woorddeel waarvan deze lezer de quotegrenzen niet zeker kent (review B1): `$'…'` (ANSI-C, kent `\'`), een quote zonder
- * sluitteken, of dubbele aanhalingstekens met `$(…)` of een backtick erin (geneste quotes daarbinnen leest `findClose` niet).
- * @param {string} script @param {number} index het begin van het deel @param {number} end het einde van het deel
- */
-function onzekereQuote(script, index, end) {
-  const char = script[index] ?? '';
-  if (char === '$') return script[index + 1] === "'";
-  if (char !== "'" && char !== '"') return false;
-  if (end > script.length || script[end - 1] !== char) return true;
-  return char === '"' && /\$\(|`/.test(script.slice(index + 1, end - 1));
+  return { value, end: index, expands, pattern };
 }
 
 /**
@@ -219,6 +206,8 @@ function onzekereQuote(script, index, end) {
  * @returns {{ text: string, end: number }}
  */
 function wordPart(script, index, char) {
+  // `\` + regeleinde is een voortzetting: bash haalt beide weg en plakt de regels aaneen (`g\⏎[h]` is `g[h]`).
+  if (char === '\\' && script[index + 1] === '\n') return { text: '', end: index + 2 };
   if (char === '\\') return { text: script[index + 1] ?? '', end: index + 2 };
   if (char === "'" || char === '"') {
     const close = findClose(script, index + 1, char);
