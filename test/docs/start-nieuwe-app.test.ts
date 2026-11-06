@@ -1,8 +1,8 @@
-import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, onTestFinished, test } from 'vitest';
+import { inKooi } from '../../scripts/kit/kooi.mjs';
 
 const document = readFileSync(new URL('../../START-NIEUWE-APP.md', import.meta.url), 'utf8');
 const firstDocument = 'START-NIEUWE-APP.md';
@@ -13,7 +13,7 @@ function runBootstrap(failure = '') {
   const block = step?.match(/^ {3}```bash\n([\s\S]+?)^ {3}```/m)?.[1];
   if (block === undefined) throw new Error('Het Bash-blok van stap 6 ontbreekt');
 
-  const home = mkdtempSync(join(tmpdir(), 'start-nieuwe-app-'));
+  const home = realpathSync(mkdtempSync(join(tmpdir(), 'start-nieuwe-app-')));
   onTestFinished(() => {
     rmSync(home, { recursive: true, force: true });
   });
@@ -54,14 +54,11 @@ done`,
     writeFileSync(join(bin, name), `#!/bin/bash\n${script}\n`, { mode: 0o700 });
   }
 
-  const result = spawnSync('/bin/bash', ['--noprofile', '--norc'], {
-    cwd: home,
-    encoding: 'utf8',
-    env: { HOME: home, PATH: bin, TRACE: trace, FAILURE: failure },
-    input: block,
-    timeout: 3000,
+  const result = inKooi(`PATH="$HOME/bin"\n${block}`, {
+    werkmap: home,
+    env: { TRACE: trace, FAILURE: failure },
+    timeout: 3_000,
   });
-  if (result.error !== undefined) throw result.error;
   return { result, setup, calls: readFileSync(trace, 'utf8').trim().split('\n') };
 }
 
