@@ -956,7 +956,7 @@ App-eigen ADR's: begin bij `0100` (`docs/adr/0100-…`). `0001`–`0099` zijn va
 
 | Je ziet | Oorzaak | Doe |
 |---|---|---|
-| `pwd` begint met `/mnt/c` | Gestart vanuit een Windows-map | `cd ~/code/<slug>`; nooit daar klonen |
+| `pwd` begint met `/mnt/c`, of `doctor.sh` meldt "de repo staat op een Windows-schijf" | Gestart vanuit een Windows-map | `cd ~/code/<slug>`; nooit daar klonen |
 | `ps -p 1` geeft `init`, niet `systemd` | `wsl.conf` niet toegepast | `/etc/wsl.conf` controleren, opnieuw `wsl --shutdown` |
 | `permission denied … /var/run/docker.sock` | Groep `docker` nog niet actief | WSL herstarten of opnieuw inloggen; tijdelijk `sg docker -c "…"` |
 | `docker` wijst naar `docker-desktop` | WSL-integratie van Docker Desktop aan | Fase 2.3 |

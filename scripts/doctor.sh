@@ -69,6 +69,14 @@ else
     "stop en vraag de eigenaar (docs/nieuwe-app.md, Standaardwaarden)"
 fi
 
+# Niet op een Windows-schijf (R-WERK-25): via 9p is alles veel trager en werkt file-watching niet. DOCTOR_REPO_PATH alleen voor test/scripts/doctor.test.ts.
+repo_path="${DOCTOR_REPO_PATH:-$(pwd -P)}"
+if [[ "$repo_path" == /mnt/[a-zA-Z] || "$repo_path" == /mnt/[a-zA-Z]/* ]]; then
+  fail "de repo staat op een Windows-schijf ($repo_path)" "kloon naar ext4, bijvoorbeeld ~/code/<slug> (docs/nieuwe-app.md, Fout → oorzaak)"
+else
+  ok "de repo staat niet op een Windows-schijf"
+fi
+
 mise_version() { sed -nE "s/^$1 = \"([^\"]+)\"/\1/p" mise.toml; }
 expect_version node "v$(mise_version node)" mise exec -- node --version
 expect_version pnpm "$(sed -nE 's/.*"packageManager": "pnpm@([^"]+)".*/\1/p' package.json)" mise exec -- pnpm --version

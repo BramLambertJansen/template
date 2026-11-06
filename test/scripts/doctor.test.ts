@@ -6,7 +6,7 @@ import { afterEach, expect, test } from 'vitest';
 
 const ROOT = path.join(import.meta.dirname, '../..');
 const dirs: string[] = [];
-type Options = { stack?: boolean; fail?: string; hooks?: boolean; osRelease?: string | null };
+type Options = { stack?: boolean; fail?: string; hooks?: boolean; osRelease?: string | null; repoPath?: string };
 
 function stub(root: string, name: string, body: string) {
   const file = path.join(root, 'bin', name);
@@ -54,6 +54,7 @@ function run(script: string, args: string[], options: Options = {}) {
     cwd: root,
     encoding: 'utf8',
     env: {
+      ...(options.repoPath === undefined ? {} : { DOCTOR_REPO_PATH: options.repoPath }),
       HOME: root,
       PATH: `${root}/bin:/usr/bin:/bin`,
       STUB_LOG: path.join(root, 'log'),
@@ -201,3 +202,21 @@ test('quick doet geen besturingssysteemcontrole', () => {
   expect(result.stdout).not.toContain('besturingssysteem');
   expect(result.stdout).not.toContain('Ubuntu');
 });
+
+test.each(['/mnt/c/Users/bmj/code/app', '/mnt/d', '/mnt/c'])(
+  'machinecontrole faalt op een repo onder %s (R-WERK-25)',
+  (repoPath) => {
+    const result = run('doctor.sh', ['--machine'], { repoPath });
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain('de repo staat op een Windows-schijf');
+  },
+);
+
+test.each(['/home/bmj/code/app', '/mnt/wsl/app', '/mnt/cache/app'])(
+  'machinecontrole accepteert een repo op %s',
+  (repoPath) => {
+    const result = run('doctor.sh', ['--machine'], { repoPath });
+    expect(result.status, result.stdout).toBe(0);
+    expect(result.stdout).toContain('de repo staat niet op een Windows-schijf');
+  },
+);
