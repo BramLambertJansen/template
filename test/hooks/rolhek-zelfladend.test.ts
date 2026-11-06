@@ -238,3 +238,28 @@ describe('rolhek-vooraf-krimp/AC-3: de hoofdsessie', () => {
     expect(redenen(command)).not.toContain('zelfladend');
   });
 });
+
+// Leerpunten #583 en #587, spec rolhek-vooraf-krimp AC-10 (c): een `]` direct na `[` (of na `[!`/`[^`) hoort bij de klasse, zoals
+// in bash; een patroon dat geen geldige klasse oplevert is geen glob en geeft geen interne fout.
+describe('rolhek-vooraf-krimp/AC-10 (c): tekenklasse met ] als eerste teken', () => {
+  test.each([
+    ['lefthook.ym[]l]', 'lefthook.yml'],
+    ['lefthook.ym[!]]', 'lefthook.yml'],
+    ['.git/confi[]g]', '.git/**'],
+    ['lefthook.ym[^x]', 'lefthook.yml'],
+    ['lefthook.ym[!x]', 'lefthook.yml'],
+  ])('%s wijst naar %s', (rel, patroon) => {
+    expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBe(patroon);
+  });
+
+  test('[]x(] is geen geldige klasse: geen throw, geen treffer', () => {
+    expect(() => zelfladendPatroon('[]x(]', config.zelfladend ?? [])).not.toThrow();
+    expect(zelfladendPatroon('[]x(]', config.zelfladend ?? [])).toBeNull();
+  });
+
+  test('echo x > lefthook.ym[]l] is deny voor de developer, zoals echo x > lefthook.yml', () => {
+    expect(verdict('echo x > lefthook.yml', 'developer')).toBe('deny');
+    expect(verdict('echo x > lefthook.ym[]l]', 'developer')).toBe('deny');
+    expect(redenen('echo x > lefthook.ym[]l]', 'developer')).toContain('zelfladend');
+  });
+});

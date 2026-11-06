@@ -1199,3 +1199,15 @@ describe('AC-10: vangnetten per segment', () => {
     }
   });
 });
+
+// Leerpunten #583 en #587, rolhek-vooraf-krimp AC-10 (c): een `]` direct na `[` is een klasse-teken; geen interne fout.
+describe('AC-10 (c): ] als eerste teken van een klasse geeft geen interne fout', () => {
+  test.each([
+    "echo '[]x(]'",
+    `gh issue list --json number,title --jq '.[] | "\\(.number)\\t\\(.createdAt[:10])"'`,
+  ])('doorgelaten voor de hoofdsessie, geen throw: %s', (command) => {
+    expect(() => run(command)).not.toThrow();
+    const decision = run(command);
+    expect({ deny: decision.deny, ask: decision.ask }).toEqual({ deny: [], ask: [] });
+  });
+});
