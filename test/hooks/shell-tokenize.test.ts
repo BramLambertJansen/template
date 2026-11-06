@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { describe, expect, test } from 'vitest';
+import { expectNegativeTable } from '../support/negative-table.ts';
 
 // Gedragsherstel leerpunt #604: `tokenize` (rails/hooks/lib/shell.mjs) sloeg tussen woorden alleen spatie en tab over, terwijl
 // `readWord` stopt op elke `\s`: een leeg woord zonder voortgang, een eindeloze lus. Gewenst gedrag = bash: woorden splitsen
@@ -30,21 +31,29 @@ else uit = lib.tmpdirLetterlijk(script);
 process.stdout.write(JSON.stringify(uit));
 `;
 
-function draai(functie: Functie, script: string): { hangt: boolean; uit: unknown } {
+// Een hang (timeout) of crash in het kindproces faalt hier op een assertie, met de functie en het script in de melding.
+function draai(functie: Functie, script: string): unknown {
   const result = spawnSync(process.execPath, ['--input-type=module', '-e', KINDPROCES, SHELL, functie, script], {
     encoding: 'utf8',
     timeout: TIMEOUT_MS,
   });
-  if (result.error !== undefined || result.status !== 0) return { hangt: true, uit: result.stderr };
+  const melding = `${functie}(${JSON.stringify(script)}) hangt of crasht: ${result.stderr}`;
+  expect(result.error, melding).toBeUndefined();
+  expect(result.status, melding).toBe(0);
   const uit: unknown = JSON.parse(result.stdout);
-  return { hangt: false, uit };
+  return uit;
+}
+
+function eerste(woorden: unknown): unknown {
+  if (!Array.isArray(woorden)) return undefined;
+  const woord: unknown = woorden[0];
+  return woord;
 }
 
 function programmas(script: string): unknown[] {
-  const { hangt, uit } = draai('parseCommands', script);
-  expect(hangt, 'parseCommands hangt of crasht (geen resultaat binnen de timeout)').toBe(false);
+  const uit = draai('parseCommands', script);
   if (!Array.isArray(uit)) throw new Error('parseCommands gaf geen lijst');
-  return uit.map((woorden: unknown) => (Array.isArray(woorden) ? woorden[0] : undefined));
+  return uit.map(eerste);
 }
 
 // Andere witruimte dan spatie, tab en `\n`: hoort in bash bij het woord.
@@ -63,14 +72,12 @@ const MET_SCHEIDING: readonly (readonly [string, string])[] = [
 
 describe('tokenize: witruimte', () => {
   test.each(ZONDER_SCHEIDING)('%s scheidt geen woorden', (_naam, teken) => {
-    const { hangt, uit } = draai('tokenize', `ls${teken}a`);
-    expect(hangt, 'tokenize hangt of crasht (geen resultaat binnen de timeout)').toBe(false);
+    const uit = draai('tokenize', `ls${teken}a`);
     expect(uit).toEqual([['word', `ls${teken}a`]]);
   });
 
   test.each(MET_SCHEIDING)('%s scheidt woorden', (_naam, teken) => {
-    const { hangt, uit } = draai('tokenize', `ls${teken}a`);
-    expect(hangt, 'tokenize hangt of crasht (geen resultaat binnen de timeout)').toBe(false);
+    const uit = draai('tokenize', `ls${teken}a`);
     expect(uit).toEqual([
       ['word', 'ls'],
       ['word', 'a'],
@@ -78,8 +85,7 @@ describe('tokenize: witruimte', () => {
   });
 
   test('\\n blijft een op-token', () => {
-    const { hangt, uit } = draai('tokenize', 'ls\na');
-    expect(hangt, 'tokenize hangt of crasht (geen resultaat binnen de timeout)').toBe(false);
+    const uit = draai('tokenize', 'ls\na');
     expect(uit).toEqual([
       ['word', 'ls'],
       ['op', '\n'],
@@ -106,8 +112,7 @@ describe('parseCommands: commentaar en heredoc', () => {
   });
 
   test('`#` midden in een woord is geen commentaar', () => {
-    const { hangt, uit } = draai('tokenize', 'echo a#b');
-    expect(hangt, 'tokenize hangt of crasht (geen resultaat binnen de timeout)').toBe(false);
+    const uit = draai('tokenize', 'echo a#b');
     expect(uit).toEqual([
       ['word', 'echo'],
       ['word', 'a#b'],
@@ -116,12 +121,21 @@ describe('parseCommands: commentaar en heredoc', () => {
 });
 
 describe('tmpdirLetterlijk: andere witruimte', () => {
-  test.each([
-    ['`$TMPDIR` gevolgd door `\\v`', 'ls $TMPDIR\v'],
-    ['`\\v` voor `$TMPDIR/a`', 'ls x\v$TMPDIR/a'],
-  ])('%s is niet letterlijk en hangt niet', (_naam, script) => {
-    const { hangt, uit } = draai('tmpdirLetterlijk', script);
-    expect(hangt, 'tmpdirLetterlijk hangt of crasht (geen resultaat binnen de timeout)').toBe(false);
-    expect(uit).toBe(false);
+  const letterlijk = (script: string): boolean => draai('tmpdirLetterlijk', script) === true;
+
+  test('`$TMPDIR` gevolgd door `\\v` is niet letterlijk en hangt niet', () => {
+    expectNegativeTable({
+      base: 'ls $TMPDIR',
+      check: letterlijk,
+      cases: [{ name: '`\\v` achter `$TMPDIR`', change: (base) => `${base}\v` }],
+    });
+  });
+
+  test('`\\v` voor `$TMPDIR/a` is niet letterlijk en hangt niet', () => {
+    expectNegativeTable({
+      base: 'ls x $TMPDIR/a',
+      check: letterlijk,
+      cases: [{ name: '`\\v` in plaats van de spatie voor `$TMPDIR/a`', change: (base) => base.replace('x ', 'x\v') }],
+    });
   });
 });
