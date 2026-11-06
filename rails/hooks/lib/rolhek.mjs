@@ -601,7 +601,7 @@ function decideBash({ command, role, tmpdirVrij = tmpdirLetterlijk(command), onz
     vangnetten({ parsed, argv, variabel }, role, decision);
     forbidden({ assignments, argv, expanded: parsed.expanded ?? [] }, { role, ctx }, decision);
     zelfladend({ argv, redirects: parsed.redirects, role }, { ...ctx, cwd: cwdNu ?? ctx.root, cwdOnbekend: cwdNu === null }, decision);
-    cwdNu = volgendeMap({ argv, expanded: parsed.expanded ?? [] }, cwdNu, { root: ctx.root, tmpdirVrij });
+    cwdNu = volgendeMap({ argv, expanded: parsed.expanded ?? [] }, cwdNu, ctx.root);
     ghIssue(argv, { role, ctx, setsGhEnv }, decision);
     if (role === 'reviewer') reviewerBash({ assignments, argv, pathWrappers }, parsed.redirects, decision);
     const targets = writeTargets(parsed);
@@ -676,7 +676,10 @@ function vangnetSegmenten(command, { tmpdirVrij, onzeker }) {
 
 /**
  * `for NAAM in …; do …; done` waarvan elk segment in de romp een programma uit `EXPANSION_SAFE` start of git met een
- * subcommando uit `GIT_LUS_LEZEN` (AC-10 (e)). `koppen`: de index van het `for`-segment; `romp`: index → lusvariabele.
+ * subcommando uit `GIT_LUS_LEZEN` (AC-10 (e)). Elke waarde in de kop (`for d in …`) moet letterlijk zijn (geen `$` of
+ * backtick) en mag niet met `-` of een wildcard of brace (`*`, `?`, `[`, `{`) beginnen: anders kan de lusvariabele een optie
+ * worden (`--output=…` voor git, `-rf` voor rm) die de toetsen op de romp niet zien (Codex P1-1). `koppen`: de index van het
+ * `for`-segment; `romp`: index → lusvariabele.
  * @param {readonly Command[]} segmenten
  */
 function veiligeLussen(segmenten) {
@@ -684,9 +687,10 @@ function veiligeLussen(segmenten) {
   const koppen = new Set();
   /** @type {Map<number, string>} */
   const romp = new Map();
-  segmenten.forEach(({ words }, start) => {
-    const [woord, naam = '', inWoord] = words;
+  segmenten.forEach(({ words, expanded = [] }, start) => {
+    const [woord, naam = '', inWoord, ...waarden] = words;
     if (woord !== 'for' || inWoord !== 'in' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(naam)) return;
+    if (waarden.some((waarde) => expanded.includes(waarde) || /[$`]/.test(waarde) || /^[-*?[{]/.test(waarde))) return;
     const einde = segmenten.findIndex((segment, index) => index > start && segment.words[0] === 'done');
     const lijf = segmenten.slice(start + 1, einde);
     if (einde === -1 || lijf[0]?.words[0] !== 'do') return;
@@ -734,35 +738,19 @@ function alleenLusvariabele(word, naam) {
 
 /**
  * De map na `cd`/`pushd`. Een doel dat pas bij het uitvoeren bekend is (geen doel, `~`, `-`, `$`, backtick, substitutie):
- * null, en de zelfladende toets valt dicht (AC-3). `$(git rev-parse --show-toplevel)` is de root. Met `tmpdirVrij` is
- * `cd $TMPDIR` (of `$TMPDIR/…`) een bekende map buiten de repo: `TMPDIR_MAP` (AC-10 (a), eigenaarbesluit 6 november 2026).
- * @param {{ argv: readonly string[], expanded: readonly string[] }} commando @param {string | null} cwd
- * @param {{ root: string, tmpdirVrij: boolean }} opties
+ * null, en de zelfladende toets valt dicht (AC-3). `$(git rev-parse --show-toplevel)` is de root. Ook na `cd $TMPDIR` blijft
+ * de werkmap onbekend (eigenaarbesluit, Codex P1-2): de checkout kan zelf onder TMPDIR liggen, en de hook kent de TMPDIR van
+ * de shell niet.
+ * @param {{ argv: readonly string[], expanded: readonly string[] }} commando @param {string | null} cwd @param {string} root
  * @returns {string | null}
  */
-function volgendeMap({ argv, expanded }, cwd, { root, tmpdirVrij }) {
+function volgendeMap({ argv, expanded }, cwd, root) {
   if (!['cd', 'pushd'].includes(programName(argv[0] ?? ''))) return cwd;
   const doel = argv.slice(1).find((arg) => arg === '-' || !arg.startsWith('-'));
   if (doel === '$(git rev-parse --show-toplevel)') return root;
-  if (doel !== undefined && tmpdirVrij && tmpdirWoord(doel)) return inTmpdir(path.posix.join(TMPDIR_MAP, doel.replace(/^\$\{?TMPDIR\}?/, '')));
   // Zonder doel, `~` of `-`: de home-map of de vorige map, pas bij het uitvoeren bekend; net als `$`, backtick of substitutie.
   if (doel === undefined || doel === '-' || doel.startsWith('~') || expanded.includes(doel) || /[$`]/.test(doel)) return null;
-  if (cwd === null) return null;
-  // Een relatief doel vanuit de TMPDIR-map blijft daaronder of wordt onbekend (`cd ..` klimt naar een onbekende plek);
-  // een absoluut doel is gewoon bekend.
-  return path.posix.isAbsolute(doel) || !inTmpdir(cwd) ? path.resolve(cwd, doel) : inTmpdir(path.posix.resolve(cwd, doel));
-}
-
-// De werkmap na `cd $TMPDIR`. De echte waarde kent het rolhek niet: de hook draait buiten de Bash-sandbox, die TMPDIR per
-// commando zet, dus `process.env.TMPDIR` van de hook kan een andere map zijn. Een vaste map direct onder `/` met een naam die
-// geen echte map heeft, ligt buiten elke repository-root (behalve root `/`), zodat `relatief` en `bovenZelfladend` in
-// zelfladend.mjs een relatief pad daarna als "buiten root" zien; een absoluut repopad blijft gewoon getoetst. `cd $TMPDIR/sub`
-// valt onder (d) (een woord dat met `$TMPDIR/` begint) en landt dus onder deze map.
-const TMPDIR_MAP = '/$TMPDIR';
-
-/** `map` als die onder `TMPDIR_MAP` ligt, anders null (onbekend). @param {string} map @returns {string | null} */
-function inTmpdir(map) {
-  return map === TMPDIR_MAP || map.startsWith(`${TMPDIR_MAP}/`) ? map : null;
+  return cwd === null ? null : path.resolve(cwd, doel);
 }
 
 // Opties van env die het volgende woord als waarde nemen (`-u NAAM`, `-C MAP`, `--unset NAAM`, `--chdir MAP`, `--argv0 X`).
