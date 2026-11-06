@@ -895,6 +895,58 @@ describe('AC-10: vangnetten per segment', () => {
     expect(run(command).deny.length).toBeGreaterThan(0);
   });
 
+  // Review B1: ANSI-C quoting `$'…'` kent `\'`; een enkele quote daarin sluit het woord niet. Wat daarna onaangehaald staat,
+  // blijft brace-expansie of glob, ook zonder letterlijk `gh`. Subagent: deny.
+  test.each([
+    String.raw`echo $'\'' {g,x}h`,
+    String.raw`echo $'a\'b' {g,x}h`,
+    String.raw`echo $'\'' /usr/bin/g[h]`,
+    String.raw`echo $'\'' g*`,
+    String.raw`echo $'\'' g?`,
+    String.raw`echo $'\'' [[:alpha:]]h`,
+    String.raw`echo $'\'' g{h..h}`,
+    String.raw`echo $'x' $'\'' /usr/bin/g[h]`,
+    String.raw`echo $(echo "it's") {g,x}h`,
+    String.raw`echo "$(echo '"')" {g,x}h`,
+    String.raw`echo $(echo $'\'') /usr/bin/g[h]`,
+    String.raw`echo "$(echo "a'b")" g*`,
+  ])('review B1: ANSI-C- of geneste quotes verbergen geen brace of glob voor een subagent: %s', (command) => {
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+  });
+
+  // Review B2: een toewijzing van TMPDIR via een builtin met een gequote of ge-escapete naam maakt `cd $TMPDIR` niet bekend.
+  test.each([
+    String.raw`printf -v 'TMPDIR' %s x; cd $TMPDIR && gh issue list`,
+    String.raw`printf -v "TMPDIR" %s x; cd $TMPDIR && gh issue list`,
+    String.raw`printf -v TMP\DIR %s x; cd $TMPDIR && gh issue list`,
+    String.raw`read "TMPDIR" <<< x; cd $TMPDIR && gh issue list`,
+    String.raw`read 'TMPDIR' <<< x; cd $TMPDIR && gh issue list`,
+    String.raw`declare T\MPDIR=x; cd $TMPDIR && gh issue list`,
+    String.raw`declare 'TMPDIR=x'; cd $TMPDIR && gh issue list`,
+    String.raw`export "TMPDIR=x"; cd $TMPDIR && gh issue list`,
+    String.raw`typeset T"MP"DIR=x; cd $TMPDIR && gh issue list`,
+    String.raw`local TMP''DIR=x; cd $TMPDIR && gh issue list`,
+  ])('review B2: indirecte TMPDIR-toewijzing, hoofdsessie ask of deny: %s', (command) => {
+    const decision = run(command);
+    expect(decision.deny.length + decision.ask.length).toBeGreaterThan(0);
+  });
+
+  // Review B3 (eigenaarbesluit): een lus gaat alleen door met echt lezende git, niet met de volledige GIT_LEZEN.
+  test.each(['commit -m x', 'add .', 'fetch', 'push', 'config x y', 'branch x', 'remote add x y'])(
+    'review B3: lus met git %s gaat voor de hoofdsessie niet volledig door',
+    (sub) => {
+      const decision = run(`for d in a b; do git -C "$d" ${sub}; done`);
+      expect(decision.deny.length + decision.ask.length).toBeGreaterThan(0);
+    },
+  );
+
+  test.each(['status -sb', 'log -1', 'diff', 'show'])(
+    'review B3: lus met git %s blijft doorgelaten voor de hoofdsessie',
+    (sub) => {
+      doorgelaten(`for d in a b; do git -C "$d" ${sub}; done`, [undefined]);
+    },
+  );
+
   test.each([
     'for d in a/*/; do git -c x=y -C "$d" status; done',
     'for d in a/*/; do git --git-dir=x -C "$d" log; done',
