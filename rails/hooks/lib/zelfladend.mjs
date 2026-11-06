@@ -2,7 +2,7 @@
 // (`.git/**`, de hook-stubs, `.claude/settings.json`, `lefthook.yml`, `.pnpmfile.cjs`). Een schrijfactie daar kan de toets op
 // effect uitschakelen voordat die kijkt; daarom toetst het rolhek deze paden vooraf, op elk woord van het commando.
 import path from 'node:path';
-import { gitSubcommand, programName } from './shell.mjs';
+import { gitSubcommand, globKlasse, programName } from './shell.mjs';
 
 // Lezen zonder schrijven; `sed` alleen zonder `-i`/`--in-place` (AC-3).
 const LEESLIJST = new Set(['cat', 'head', 'tail', 'ls', 'stat', 'wc', 'diff', 'grep', 'rg', 'jq']);
@@ -51,7 +51,10 @@ function stukRegex(stuk) {
     if (teken === '*') uit += '[^/]*';
     else if (teken === '?') uit += '[^/]';
     else if (sluit > 0) {
-      uit += `[${stuk.slice(index + 1, sluit).replace(/^!/, '^').replace(/\\/g, '\\\\')}]`;
+      // Een omgekeerd bereik (`[z-a]`) past op niets en is geen interne fout (AC-10 (c)).
+      const inhoud = stuk.slice(index + 1, sluit);
+      const negatie = inhoud.startsWith('!');
+      uit += `[${negatie ? '^' : ''}${globKlasse(negatie ? inhoud.slice(1) : inhoud).replace(/\\/g, '\\\\')}]`;
       index = sluit;
     } else uit += teken.replace(/[.+^${}()|\\[\]]/g, '\\$&');
   }

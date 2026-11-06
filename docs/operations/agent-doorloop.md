@@ -144,12 +144,11 @@ git) en zet de sessie erin. Hij haalt niet zelf op (gemeten: `origin/main` liep 
 
 In de worktree zijn `.claude/settings.json`, `.claude/hooks` en `.claude/skills` alleen-lezen door Claude Code zelf, maar de
 gedeelde `.git` van de hoofdcheckout is daar schrijfbaar (ADR 0083, Context; eigen leerpunt volgt). De overlays in de root
-van de worktree (`.bashrc`, `.mcp.json`, `.claude/commands` …) tellen als untracked en een `*secret*`-bestand dat de sandbox
-verbergt (`src/core/api/env-secret.test.ts`) staat als gewijzigd. Verwijder, herstel of verberg ze niet en stage paden
-expliciet, nooit `git add -A` of `git commit -a`. **Open:** `git merge origin/main` faalt in de worktree
-(`fatal: stash failed`): git maakt vóór de merge een stash en kan het verborgen bestand niet lezen. Loopt een branch achter
-op `origin/main`, dan laat de hoofdsessie de merge aan de eigenaar; ook de skill `opleveren` lost conflicten op met
-`git merge origin/main`, wat in de worktree faalt.
+van de worktree (`.bashrc`, `.mcp.json`, `.claude/commands` …) tellen als untracked. Verwijder, herstel of verberg ze niet
+en stage paden expliciet, nooit `git add -A` of `git commit -a`. Een getrackt bestand mag niet onder een leesweigering van
+de sandbox vallen (`*secret*`, `.env*` behalve `.env.example`): de sandbox verbergt het dan, `git status` toont het als gewijzigd en
+`git merge origin/main` faalt op `fatal: stash failed`. Daarom heet de test van `secret()`
+`src/core/api/env-credentials.test.ts` (leerpunt #567); of de merge in een worktree nu slaagt, is nog niet gemeten.
 
 Na de merge vraagt de eigenaar de sessie `ExitWorktree` aan te roepen, of ruimt de worktree zelf op in een eigen terminal
 in de hoofdcheckout (niet gemeten: of `remove` zonder `--force` slaagt):
@@ -299,8 +298,8 @@ weigert voor elke rol mergen en goedkeuren in tekst die gh, `/pulls/`, `api.gith
 (`g\h`, `mer""ge`), ook binnen `$(…)` en backticks; een commandowoord dat niet letterlijk is (`$CMD …`, `$(…)`, een glob of
 `~` vooraan, na `!`, `if`, `while` of een omhulsel als `env`/`nice`/`sudo` moet elk woord van het segment
 letterlijk zijn; en achter xargs of find
-`-exec`). Een glob op welke positie ook die naar `gh` kan wijzen (`/usr/bin/g[h]`, `g?`), brace-expansie (`g{h..h}`, `{g,x}h`) en POSIX-klassen (`[[:alpha:]]`) zijn los daarvan dicht (bewust vals positief: `echo {a,b}`, `echo {1..3}`, een `--jq`-object met een komma), een variabel woord (`${G}h`, `$G`) naast een gh-subcommandowoord als `pr`, `api` of `run`
-(bewust vals positief: `echo $HOME run`); met een geëxpandeerd argument mag alleen een programma uit een vaste lijst
+`-exec`). Een glob op welke positie ook die naar `gh` kan wijzen (`/usr/bin/g[h]`, `g?`), brace-expansie (`g{h..h}`, `{g,x}h`) en POSIX-klassen (`[[:alpha:]]`) zijn los daarvan dicht (bewust vals positief: onaangehaald `echo {a,b}`, `echo {1..3}`; tussen aanhalingstekens, zoals een `--jq`-filter of `python3 -c "…{…}…"`, telt zo'n teken niet, behalve in een commando met `#`, `${`, `$'`, `$(`, `((`, backtick, `\` of een newline (`rails/hooks/lib/shell.mjs`, `ONZEKERE_TEKST`), en een ongeldige klasse als `[z-a]` is letterlijk; de lezer leest `\`+newline als voortzetting, zoals bash), een variabel woord (`${G}h`, `$G`) naast een gh-subcommandowoord als `pr`, `api` of `run` in hetzelfde segment
+(bewust vals positief: `echo $HOME run`; `$TMPDIR/…` vooraan en een kaal `$TMPDIR` tellen letterlijk als het commando `TMPDIR` verder niet noemt; na `cd $TMPDIR` blijft de werkmap onbekend); per segment, zie `rails/hooks/lib/rolhek.mjs` (`vangnetten`, `vangnetSegmenten`; spec rolhek-vooraf-krimp AC-10). Een `for`-lus waarvan elk segment een programma uit die vaste lijst of git met een lezend subcommando (`GIT_LUS_LEZEN` in `rails/hooks/lib/rolhek.mjs`; niet `commit`, `add`, `fetch`, `push`) start, gaat alleen door met een lusnaam in kleine letters, kopwaarden als eenvoudig pad (geen spatie, quote, `$`, `?`, `[` of `{`, niet beginnend met `-` of `*`), de lusvariabele alleen tussen dubbele aanhalingstekens en geen woord met de lusvariabele dat met `-` begint, en een romp die geen variabele zet (`veiligeLussen`); met een geëxpandeerd argument mag alleen een programma uit een vaste lijst
 (`echo`, `cat`, `ls`, `cp`, `rm`, `grep`, …; niet `sed`/`awk`, die zelf een commando kunnen uitvoeren), anders deny voor subagents en ask voor de hoofdsessie; en `eval`/`bash -c` met expansie zijn voor elke rol dicht; subagents
 gebruiken geen xargs met een commando en geen find `-exec`. `gh` telt alleen als los woord (niet in `gh-notes` of een testpad). Bewuste valse meldingen: een PR-titel of
 -body met het woord `merge ` als argument (gebruik `--body-file` en een titel zonder dat woord), en een commitbericht

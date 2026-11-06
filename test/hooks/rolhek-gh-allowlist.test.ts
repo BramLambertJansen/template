@@ -724,3 +724,478 @@ describe('omzeilingen ronde 4: leeg woord vóór de gh-groep', () => {
     expect(run(command).deny).toEqual([]);
   });
 });
+
+// rolhek-vooraf-krimp/AC-10 (ADR 0083 punt 3, leerpunten #583 en #587): vangnetten per segment, alleen op woorden die de shell
+// echt expandeert. Elk doorgelaten geval hieronder faalt op de vangnetten die het hele commando of aangehaalde woorden toetsen.
+describe('AC-10: vangnetten per segment', () => {
+  const ROLES: (string | undefined)[] = [undefined, ...SUBAGENTS];
+  const doorgelaten = (command: string, roles: readonly (string | undefined)[] = ROLES) => {
+    for (const role of roles) {
+      const decision = run(command, role);
+      expect({ role, deny: decision.deny, ask: decision.ask }).toEqual({ role, deny: [], ask: [] });
+    }
+  };
+
+  // (a) Het gh-subcommando staat in een ander segment dan het geëxpandeerde argument (eigenaarsbesluit: voor de hoofdsessie;
+  // een kaal `$TMPDIR` telt als letterlijk onder de voorwaarde van (d)). Subagents houden "gh alleen als één direct gh-leescommando".
+  test('(a) hoofdsessie: subcommando in ander segment gaat door: ls $HOME | gh run list', () => {
+    doorgelaten('ls $HOME | gh run list', [undefined]);
+  });
+
+  // Eigenaarbesluit: na `cd $TMPDIR` is de werkmap onbekend (TMPDIR_MAP vervalt); een ask uit AC-3 is toegestaan, een deny niet.
+  test.each(['cd $TMPDIR && gh issue list --limit 5', 'cd $TMPDIR; gh pr view 1', 'cd "$TMPDIR" && gh pr view 1'])(
+    '(a) hoofdsessie: geen deny, en een ask alleen met de AC-3-melding: %s',
+    (command) => {
+      const decision = run(command);
+      expect(decision.deny).toEqual([]);
+      for (const melding of decision.ask) expect(melding).toContain('AC-3');
+    },
+  );
+
+  test.each(['cd $TMPDIR && gh issue list --limit 5', 'cd $TMPDIR; gh pr view 1', 'ls $HOME | gh run list'])(
+    '(a) subagent: geen melding over een variabel woord naast een gh-subcommando: %s',
+    (command) => {
+      for (const role of SUBAGENTS) {
+        expect(
+          run(command, role).deny.filter((melding) => melding.includes('variabel woord naast een gh-subcommando')),
+        ).toEqual([]);
+      }
+    },
+  );
+
+  test('(a) hoofdsessie: TMPDIR elders toegewezen is niet letterlijk, dus niet volledig doorgelaten', () => {
+    const decision = run('TMPDIR=x; cd $TMPDIR && gh issue list');
+    expect(decision.deny.length + decision.ask.length).toBeGreaterThan(0);
+  });
+
+  // (b) Aangehaald is geen glob, brace-expansie of POSIX-klasse.
+  test.each([
+    `python3 -c "print(s.get('hooks', {}), {1: 2, 3: 4})"`,
+    `gh pr view 1 --json files --jq '.files[] | {path: .path, n: .additions}'`,
+    `echo '{a,b}'`,
+    `echo "{a,b}"`,
+    `echo '{1..3}'`,
+    `node -e "console.log({a:1,b:2})"`,
+    `echo '[[:alpha:]]'`,
+  ])('(b) aangehaald woord is letterlijk: %s', (command) => {
+    doorgelaten(command, [undefined, 'developer', 'tester']);
+  });
+
+  test.each([`echo '{a,b}'`])('(b) aangehaald woord is letterlijk voor architect en docs: %s', (command) => {
+    doorgelaten(command, ['architect', 'docs']);
+  });
+
+  // De spec-voorbeelden zelf slagen al op de huidige code (geen komma voor `{`, geen klasse die gh oplevert); ze blijven vastgelegd.
+  // Reviewer valt af: die mag alleen `--jq` met waarden uit [A-Za-z0-9_./,:-] (spec rolhek-lezen).
+  test.each([`python3 -c "print(s.get('hooks', {}))"`, `gh pr view 1 --json files --jq '.files[].path'`])(
+    '(b) spec-voorbeeld blijft doorgelaten: %s',
+    (command) => {
+      doorgelaten(command, [undefined, 'developer', 'tester']);
+    },
+  );
+
+  // `$` en backtick tussen dubbele aanhalingstekens blijven tellen.
+  test.each([
+    'G=gh; "$G" pr merge 1',
+    '"$G" pr merge 1',
+    'G=gh; "${G}" pr create --title t --body b',
+    'echo "`gh pr merge 1`"',
+    'echo "$(gh pr merge 1)"',
+  ])(
+    '(b) $ en backtick tussen dubbele aanhalingstekens blijven geweigerd voor developer en hoofdsessie: %s',
+    (command) => {
+      expect(run(command, 'developer').deny.length).toBeGreaterThan(0);
+      expect(run(command).deny.length).toBeGreaterThan(0);
+    },
+  );
+
+  // (c) Geen geldige tekenklasse: geen interne fout, het woord telt letterlijk.
+  test.each(['echo [z-a]', 'echo a[z-a]b', 'echo g[', 'echo [h', 'echo /usr/bin/g[z-a]h', 'ls x[', 'ls g[z-a]'])(
+    '(c) ongeldige klasse is letterlijk, geen interne fout: %s',
+    (command) => {
+      for (const role of ROLES) expect(() => run(command, role)).not.toThrow();
+      doorgelaten(command);
+    },
+  );
+
+  // (d) `$TMPDIR/` aan het begin van een woord is letterlijk, zolang TMPDIR nergens anders in het commando staat.
+  test.each(['ls $TMPDIR/x', 'cat "$TMPDIR/x"', 'cat "$TMPDIR"/x', 'cat $TMPDIR/x pr', 'cat "$TMPDIR/x" run'])(
+    '(d) $TMPDIR/ is letterlijk: %s',
+    (command) => {
+      doorgelaten(command);
+    },
+  );
+
+  test.each(['TMPDIR=x; cat "$TMPDIR/a" pr', 'export TMPDIR=x && cat $TMPDIR/a run'])(
+    '(d) TMPDIR elders toegewezen: niet letterlijk, variabel woord naast subcommando geweigerd voor elke rol: %s',
+    (command) => {
+      expect(run(command, 'developer').deny.length).toBeGreaterThan(0);
+      expect(run(command).deny.length).toBeGreaterThan(0);
+    },
+  );
+
+  // (e) Een for-lus waarvan elk segment een EXPANSION_SAFE-programma of git met een GIT_LEZEN-subcommando start.
+  test.each([
+    'for d in .claude/worktrees/*/; do echo "== $d"; git -C "$d" status -sb; done',
+    'for f in docs/*.md; do cat "$f"; done',
+    'for d in .claude/worktrees/*/; do git -C "$d" log -1; done',
+  ])('(e) for-lus met alleen veilige segmenten: %s', (command) => {
+    doorgelaten(command);
+  });
+
+  test('(e) for-lus met een schrijvend git-subcommando blijft geweigerd voor een subagent', () => {
+    const command = 'for d in .claude/worktrees/*/; do git -C "$d" reset --hard; done';
+    expect(run(command, 'developer').deny.length).toBeGreaterThan(0);
+  });
+
+  // Regressie: wat blijft weigeren.
+  test.each([
+    'G=gh; $G pr merge 1',
+    'x=g; ${x}h pr merge 1',
+    '$(echo gh) pr merge 1',
+    'g[h] pr merge 1',
+    '{g,x}h pr merge 1',
+    '[[:alpha:]]h pr merge 1',
+  ])('regressie: niet-letterlijk gh blijft geweigerd voor elke rol: %s', (command) => {
+    expect(run(command, 'developer').deny.length).toBeGreaterThan(0);
+    expect(run(command).deny.length).toBeGreaterThan(0);
+  });
+  test.each(["env -S'gh pr merge 1'", 'env -Sgh pr merge 1', "env --split-string='gh pr merge 1'"])(
+    'regressie: env -S blijft geweigerd voor elke rol: %s',
+    (command) => {
+      expect(run(command, 'developer').deny.length).toBeGreaterThan(0);
+      expect(run(command).deny.length).toBeGreaterThan(0);
+    },
+  );
+  test.each(['echo {a,b}', 'echo {1..3}', 'echo $HOME run', 'echo $HOME pr; echo x'])(
+    'regressie: onaangehaalde brace-expansie en variabel woord naast subcommando in hetzelfde segment blijven geweigerd: %s',
+    (command) => {
+      expect(run(command, 'developer').deny.length).toBeGreaterThan(0);
+      expect(run(command).deny.length).toBeGreaterThan(0);
+    },
+  );
+
+  // Na `cd $TMPDIR` (een vaste map buiten de repo; ctx.root is /repo) blijft het schrijven naar beschermde paden dicht.
+  test.each([
+    'cd $TMPDIR && cp x /repo/.claude/settings.json',
+    'cd $TMPDIR && cd .. && cp x repo/.claude/settings.json',
+    'cd $TMPDIR/.. && cp x .claude/settings.json',
+    'cd $TMPDIR && rm -rf ..',
+    'cd $TMPDIR && cd /repo && cp x .claude/settings.json',
+  ])('regressie: na cd $TMPDIR blijft dicht (hoofdsessie ask of deny, subagent deny): %s', (command) => {
+    const main = run(command);
+    expect(main.deny.length + main.ask.length).toBeGreaterThan(0);
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+  });
+
+  test('regressie: na cd $TMPDIR blijft schrijven in .git dicht voor elke rol', () => {
+    const command = 'cd $TMPDIR && echo x > /repo/.git/config';
+    expect(run(command).deny.length).toBeGreaterThan(0);
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+  });
+
+  test('regressie: (c) een klasse die nog gh oplevert blijft geweigerd', () => {
+    const command = 'foo /usr/bin/g[z-ah] pr list';
+    expect(run(command, 'developer').deny.length).toBeGreaterThan(0);
+    expect(run(command).deny.length).toBeGreaterThan(0);
+  });
+
+  // Review B1: ANSI-C quoting `$'…'` kent `\'`; een enkele quote daarin sluit het woord niet. Wat daarna onaangehaald staat,
+  // blijft brace-expansie of glob, ook zonder letterlijk `gh`. Subagent: deny.
+  test.each([
+    String.raw`echo $'\'' {g,x}h`,
+    String.raw`echo $'a\'b' {g,x}h`,
+    String.raw`echo $'\'' /usr/bin/g[h]`,
+    String.raw`echo $'\'' g*`,
+    String.raw`echo $'\'' g?`,
+    String.raw`echo $'\'' [[:alpha:]]h`,
+    String.raw`echo $'\'' g{h..h}`,
+    String.raw`echo $'x' $'\'' /usr/bin/g[h]`,
+    String.raw`echo $(echo "it's") {g,x}h`,
+    String.raw`echo "$(echo '"')" {g,x}h`,
+    String.raw`echo $(echo $'\'') /usr/bin/g[h]`,
+    String.raw`echo "$(echo "a'b")" g*`,
+  ])('review B1: ANSI-C- of geneste quotes verbergen geen brace of glob voor een subagent: %s', (command) => {
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+  });
+
+  // Review B2: een toewijzing van TMPDIR via een builtin met een gequote of ge-escapete naam maakt `cd $TMPDIR` niet bekend.
+  test.each([
+    String.raw`printf -v 'TMPDIR' %s x; cd $TMPDIR && gh issue list`,
+    String.raw`printf -v "TMPDIR" %s x; cd $TMPDIR && gh issue list`,
+    String.raw`printf -v TMP\DIR %s x; cd $TMPDIR && gh issue list`,
+    String.raw`read "TMPDIR" <<< x; cd $TMPDIR && gh issue list`,
+    String.raw`read 'TMPDIR' <<< x; cd $TMPDIR && gh issue list`,
+    String.raw`declare T\MPDIR=x; cd $TMPDIR && gh issue list`,
+    String.raw`declare 'TMPDIR=x'; cd $TMPDIR && gh issue list`,
+    String.raw`export "TMPDIR=x"; cd $TMPDIR && gh issue list`,
+    String.raw`typeset T"MP"DIR=x; cd $TMPDIR && gh issue list`,
+    String.raw`local TMP''DIR=x; cd $TMPDIR && gh issue list`,
+  ])('review B2: indirecte TMPDIR-toewijzing, hoofdsessie ask of deny: %s', (command) => {
+    const decision = run(command);
+    expect(decision.deny.length + decision.ask.length).toBeGreaterThan(0);
+  });
+
+  // Review B3 (eigenaarbesluit): een lus gaat alleen door met echt lezende git, niet met de volledige GIT_LEZEN.
+  test.each(['commit -m x', 'add .', 'fetch', 'push', 'config x y', 'branch x', 'remote add x y'])(
+    'review B3: lus met git %s gaat voor de hoofdsessie niet volledig door',
+    (sub) => {
+      const decision = run(`for d in a b; do git -C "$d" ${sub}; done`);
+      expect(decision.deny.length + decision.ask.length).toBeGreaterThan(0);
+    },
+  );
+
+  test.each(['status -sb', 'log -1', 'diff', 'show'])(
+    'review B3: lus met git %s blijft doorgelaten voor de hoofdsessie',
+    (sub) => {
+      doorgelaten(`for d in a b; do git -C "$d" ${sub}; done`, [undefined]);
+    },
+  );
+
+  test.each([
+    'for d in a/*/; do git -c x=y -C "$d" status; done',
+    'for d in a/*/; do git --git-dir=x -C "$d" log; done',
+    'for d in a/*/; do env echo "$d"; done',
+    'for d in a/*/; do /tmp/echo "$d"; done',
+  ])('regressie: (e) lus met een onveilig segment geweigerd voor een subagent: %s', (command) => {
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+  });
+
+  test.each([
+    String.raw`unset TMPDIR; cd $TMPDIR && gh issue list`,
+    'n=TMP; declare ${n}DIR=x; cd $TMPDIR && gh issue list',
+    'for d in a b; do git -C "$d" reflog; done',
+    'for d in a b; do git -C "$d" format-patch -1; done',
+    'for d in a b; do git -C "$d" ls-remote; done',
+  ])('review: hoofdsessie ask of deny: %s', (command) => {
+    const decision = run(command);
+    expect(decision.deny.length + decision.ask.length).toBeGreaterThan(0);
+  });
+
+  test('review: een ongeldige klasse na een escape geeft geen throw', () => {
+    const command = String.raw`echo '\ [[:alpha:]]h'`;
+    for (const role of ROLES) expect(() => run(command, role)).not.toThrow();
+  });
+
+  test('geaccepteerd vals positief (R-ROL-11): een gesplitst woord als "x g"* wordt geweigerd', () => {
+    const command = 'echo "x g"*';
+    expect(run(command, 'developer').deny.length).toBeGreaterThan(0);
+    expect(run(command).deny.length).toBeGreaterThan(0);
+  });
+
+  // Reviewronde 2, R2-B1: een onaangehaalde backtick met een `'` erin, of een `$(…)` met een `)` tussen aanhalingstekens,
+  // brengt de lezer uit de pas; wat daarachter onaangehaald staat, blijft brace of glob. Subagent: deny.
+  test.each([
+    "echo `echo '` {g,x}h '`",
+    "echo `echo '` /usr/bin/g[h] '`",
+    "echo `echo '` g* '`",
+    "echo `printf '%s' a` x' {g,x}h '",
+    String.raw`echo $(echo ')') {g,x}h`,
+    String.raw`echo $(echo ')' ) g*`,
+    String.raw`echo $(printf '%s' ')') /usr/bin/g[h]`,
+    String.raw`echo $(echo "(" ) g*`,
+    String.raw`echo $(echo ')') '{x}' {g,x}h '`,
+  ])('review R2-B1: backtick of $( ) met quotes verbergt geen brace of glob voor een subagent: %s', (command) => {
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+  });
+
+  // Besloten gedrag: staat ergens in het commando `$'`, een backtick of `$(`, dan telt geen woord als aangehaald voor de glob- en brace-toetsen.
+  test.each([String.raw`echo $(date) '{a,b}'`, String.raw`echo "$(date)" '{a,b}'`])(
+    'geaccepteerd vals positief (R-ROL-11): aangehaalde brace naast een substitutie wordt geweigerd voor een subagent: %s',
+    (command) => {
+      for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+    },
+  );
+
+  test("zonder substitutie blijft echo '{a,b}' doorgelaten voor een subagent", () => {
+    doorgelaten("echo '{a,b}'", ['developer', 'tester']);
+  });
+
+  test.each(['source x; cd $TMPDIR && gh issue list', '. x; cd $TMPDIR && gh issue list'])(
+    'review: source of punt maakt de TMPDIR-uitzondering ongeldig (hoofdsessie ask of deny): %s',
+    (command) => {
+      const decision = run(command);
+      expect(decision.deny.length + decision.ask.length).toBeGreaterThan(0);
+    },
+  );
+
+  test('review: builtin declare met een ge-escapete TMPDIR-naam maakt cd $TMPDIR niet bekend (hoofdsessie ask of deny)', () => {
+    const decision = run(String.raw`builtin declare T\MPDIR=x; cd $TMPDIR && gh issue list`);
+    expect(decision.deny.length + decision.ask.length).toBeGreaterThan(0);
+  });
+
+  // Eigenaarbesluit (b), 6 november 2026: aanhalingstekens tellen alleen als het hele commando geen onzekere constructie bevat
+  // (`#`, `${`, `$'`, `$(`, backtick, `\`, newline). Anders telt elk woord als ongequote voor de glob- en brace-toetsen.
+  test.each([
+    "echo a; # it's\necho {g,x}h\necho x'",
+    "true && # it's\necho /usr/bin/g[h]\necho x'",
+    "echo a | # it's\ncat g*\necho x'",
+    "echo a ; # it's\necho {g,x}h '\necho '",
+    'echo "${x#\'x"y\'}" {g,x}h \'',
+    'echo "${x#\'x"y\'}" /usr/bin/g[h]',
+    'echo /usr/bin/g\\\n* pr',
+    'echo /usr/bin/g\\\n[h]',
+    'echo {g,\\\nx}h',
+  ])('review ronde 3: onzekere constructie maakt aanhalingstekens ongeldig, subagent deny: %s', (command) => {
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+  });
+
+  test.each([
+    "echo '{a,b}'",
+    `python3 -c "print(s.get('hooks', {}))"`,
+    `gh pr view 1 --json files --jq '.files[] | {path: .path, n: .additions}'`,
+  ])('(b) blijft doorgelaten voor hoofdsessie, developer en tester: %s', (command) => {
+    doorgelaten(command, [undefined, 'developer', 'tester']);
+  });
+
+  test.each(["echo '{a,b}' # x", 'echo "${HOME}" \'{a,b}\''])(
+    'geaccepteerd vals positief (R-ROL-11): aangehaalde brace naast een onzekere constructie wordt geweigerd voor een subagent: %s',
+    (command) => {
+      for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+    },
+  );
+
+  // Backslash-newline is een regelvoortzetting, zoals in bash.
+  test('regelvoortzetting: ca\\<nl>t x leest als cat en gaat door voor developer en hoofdsessie', () => {
+    doorgelaten('ca\\\nt x', [undefined, 'developer']);
+  });
+
+  test('regelvoortzetting: g\\<nl>h pr merge 1 leest als gh pr merge en wordt geweigerd voor elke rol', () => {
+    const command = 'g\\\nh pr merge 1';
+    expect(run(command).deny.length).toBeGreaterThan(0);
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+  });
+
+  test('regelvoortzetting: git pu\\<nl>sh wordt geweigerd voor een subagent', () => {
+    for (const role of SUBAGENTS) expect(run('git pu\\\nsh', role).deny.length).toBeGreaterThan(0);
+  });
+
+  // R4-1: `((` (arithmetic command, zonder `$`) telt als onzekere constructie.
+  test.each([
+    "(( x = 1 )); echo ' ; echo {g,x}h '",
+    "(( x = 1 )) && echo it's && echo /usr/bin/g[h] '",
+    "(( x = ')' )); echo {g,x}h '",
+    '(( x = 1 )); echo "\'" g* \'',
+  ])('review R4-1: ((-commando met een quote maakt aanhalingstekens ongeldig, subagent deny: %s', (command) => {
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+  });
+
+  test("geaccepteerd vals positief (R-ROL-11): (( 1 )); echo '{a,b}' wordt geweigerd voor een subagent", () => {
+    for (const role of SUBAGENTS) expect(run("(( 1 )); echo '{a,b}'", role).deny.length).toBeGreaterThan(0);
+  });
+
+  // R4-2: een voortzetting als los woord vóór gh maakt het eerste woord leeg en verandert de uitkomst niet.
+  test('review R4-2: een losse regelvoortzetting vóór gh geeft voor de hoofdsessie dezelfde uitkomst', () => {
+    const zonder = run('gh api repos/o/r/labels -f name=x');
+    const met = run('\\\n gh api repos/o/r/labels -f name=x');
+    expect(met.deny).toEqual(zonder.deny);
+    expect(met.ask).toEqual(zonder.ask);
+  });
+
+  // review ronde 6 P1-1: een lusvariabele kan een git- of programma-optie worden (`--output=docs/framework.md`, `-rf`, een glob).
+  test('review ronde 6 P1-1: lus met een optiewaarde als git-argument: subagent deny, hoofdsessie ask of deny', () => {
+    const command = 'for d in --output=docs/framework.md; do git diff "$d"; done';
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+    const main = run(command);
+    expect(main.deny.length + main.ask.length).toBeGreaterThan(0);
+  });
+
+  test.each([
+    'for f in -rf; do rm "$f" x; done',
+    'for d in *; do git diff "$d"; done',
+    'for d in $X; do git log "$d"; done',
+  ])(
+    'review ronde 6 P1-1: lus met onzekere waarde gaat niet volledig door (hoofdsessie ask of deny): %s',
+    (command) => {
+      const main = run(command);
+      expect(main.deny.length + main.ask.length).toBeGreaterThan(0);
+    },
+  );
+
+  test.each([
+    'for d in .claude/worktrees/*/; do git -C "$d" status -sb; done',
+    'for f in docs/*.md; do cat "$f"; done',
+  ])('review ronde 6 P1-1: lus met een veilig voorvoegsel blijft doorgelaten: %s', (command) => {
+    doorgelaten(command, [undefined, 'developer']);
+  });
+
+  // Strikte allowlist voor veilige lussen: lusnaam [a-z_][a-z0-9_]*, kopwaarden ^[A-Za-z0-9_./][A-Za-z0-9_./*-]*$, lusvariabele in
+  // de romp alleen tussen dubbele aanhalingstekens en beginnend met $d of een letterlijk teken dat geen `-` is, geen toewijzing in de romp.
+  test.each([
+    // B1: een voorvoegsel maakt van een onschuldige waarde een optie
+    'for d in output=x; do git diff --$d; done',
+    'for d in output=x; do git grep -$d; done',
+    'for d in output; do git diff --"$d"; done',
+    'for d in output; do git diff "-$d"; done',
+    // B2: woordsplitsing en een gequote waarde met een spatie
+    "for d in 'a --output=x'; do git diff $d; done",
+    'for d in "a --output=x"; do git diff $d; done',
+    'for d in a; do git diff $d; done',
+    // B3: de lusvariabele wordt in de romp opnieuw toegewezen
+    'for d in a b; do printf -v d --output=x; git diff "$d"; done',
+    'for d in a b; do read d <<< --output=x; git diff "$d"; done',
+    'for d in a b; do d=--output=x; git diff "$d"; done',
+    'for d in a b; do declare d=--output=x; git diff "$d"; done',
+    // lusnaam in hoofdletters
+    'for PATH in a b; do git -C "$PATH" log -1; done',
+    'for D in a b; do git diff "$D"; done',
+    // een klasse die niet op gh past onderscheidt de nieuwe regel van globForGh
+    'for d in [-]x; do git diff "$d"; done',
+    'for d in ?x; do git diff "$d"; done',
+    'for d in *x; do git diff "$d"; done',
+  ])('review ronde 6: strikte lus-allowlist, subagent deny, hoofdsessie ask of deny: %s', (command) => {
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+    const main = run(command);
+    expect(main.deny.length + main.ask.length).toBeGreaterThan(0);
+  });
+
+  // R6-1: een gequote streepje vóór de lusvariabele maakt de waarde na het weghalen van de quotes tot een optie.
+  test.each([
+    'for d in output; do git diff "-""$d"; done',
+    'for d in output; do git diff "--""$d"; done',
+    'for d in output; do git grep "-""$d"; done',
+    'for d in output; do git grep "--""$d"; done',
+    'for d in output; do git diff "-"\'\'"$d"; done',
+    'for d in output; do git diff "--"\'\'"$d"; done',
+    'for d in output; do git diff \'\'"-""$d"; done',
+    'for d in Output; do git diff "-""${d}"; done',
+  ])(
+    'review ronde 7: gequote streepje vóór de lusvariabele is onveilig, subagent deny, hoofdsessie ask of deny: %s',
+    (command) => {
+      for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+      const main = run(command);
+      expect(main.deny.length + main.ask.length).toBeGreaterThan(0);
+    },
+  );
+
+  test.each([
+    'for d in .claude/worktrees/*/; do echo "== $d"; git -C "$d" status -sb; done',
+    'for f in docs/*.md; do cat "$f"; done',
+    'for d in a b; do git -C "$d" log -1; done',
+    'for d in a b; do git -C "$d" diff "$d"/x; done',
+  ])('review ronde 6: veilige lus blijft doorgelaten voor hoofdsessie en developer: %s', (command) => {
+    doorgelaten(command, [undefined, 'developer']);
+  });
+
+  test('een brace in de lus-kop is onveilig: hoofdsessie ask of deny, subagent deny', () => {
+    const command = 'for f in {-rf,x}; do rm "$f" y; done';
+    const main = run(command);
+    expect(main.deny.length + main.ask.length).toBeGreaterThan(0);
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+  });
+
+  // review ronde 6 P1-2: de checkout kan onder TMPDIR staan; na `cd $TMPDIR` is de werkmap onbekend.
+  test.each([
+    'cd "$TMPDIR/repo/.claude" && cp /tmp/payload settings.json',
+    'cd "$TMPDIR/repo/.git" && cp /tmp/payload config',
+  ])('review ronde 6 P1-2: checkout onder TMPDIR, schrijven na cd gaat voor geen rol volledig door: %s', (command) => {
+    const tmpCtx = { ...ctx, root: '/tmp/repo', cwd: '/tmp/repo' };
+    for (const role of [undefined, ...SUBAGENTS]) {
+      const decision = decide(
+        { tool_name: 'Bash', tool_input: { command }, ...(role === undefined ? {} : { agent_type: role }) },
+        tmpCtx,
+      );
+      expect({ role, dicht: decision.deny.length + decision.ask.length > 0 }).toEqual({ role, dicht: true });
+    }
+  });
+});
