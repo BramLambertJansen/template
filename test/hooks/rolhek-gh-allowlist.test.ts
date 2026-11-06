@@ -1064,4 +1064,26 @@ describe('AC-10: vangnetten per segment', () => {
   test('regelvoortzetting: git pu\\<nl>sh wordt geweigerd voor een subagent', () => {
     for (const role of SUBAGENTS) expect(run('git pu\\\nsh', role).deny.length).toBeGreaterThan(0);
   });
+
+  // R4-1: `((` (arithmetic command, zonder `$`) telt als onzekere constructie.
+  test.each([
+    "(( x = 1 )); echo ' ; echo {g,x}h '",
+    "(( x = 1 )) && echo it's && echo /usr/bin/g[h] '",
+    "(( x = ')' )); echo {g,x}h '",
+    '(( x = 1 )); echo "\'" g* \'',
+  ])('review R4-1: ((-commando met een quote maakt aanhalingstekens ongeldig, subagent deny: %s', (command) => {
+    for (const role of SUBAGENTS) expect(run(command, role).deny.length).toBeGreaterThan(0);
+  });
+
+  test("geaccepteerd vals positief (R-ROL-11): (( 1 )); echo '{a,b}' wordt geweigerd voor een subagent", () => {
+    for (const role of SUBAGENTS) expect(run("(( 1 )); echo '{a,b}'", role).deny.length).toBeGreaterThan(0);
+  });
+
+  // R4-2: een voortzetting als los woord vóór gh maakt het eerste woord leeg en verandert de uitkomst niet.
+  test('review R4-2: een losse regelvoortzetting vóór gh geeft voor de hoofdsessie dezelfde uitkomst', () => {
+    const zonder = run('gh api repos/o/r/labels -f name=x');
+    const met = run('\\\n gh api repos/o/r/labels -f name=x');
+    expect(met.deny).toEqual(zonder.deny);
+    expect(met.ask).toEqual(zonder.ask);
+  });
 });
