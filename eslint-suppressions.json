@@ -16,7 +16,7 @@
   },
   "rails/hooks/lib/rolhek.mjs": {
     "complexity": {
-      "count": 10
+      "count": 9
     }
   },
   "rails/hooks/lib/shell.mjs": {
