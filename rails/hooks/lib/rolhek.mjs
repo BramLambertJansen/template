@@ -680,8 +680,9 @@ function vangnetSegmenten(command, { tmpdirVrij, onzeker }) {
  * - de lusnaam is `[a-z_][a-z0-9_]*` (geen `PATH`, `D` …);
  * - elke kopwaarde is, op de ruwe tekst, een eenvoudig pad `LUS_WAARDE`: geen witruimte, quote, `$`, `?`, `[` of `{`, en `*`
  *   niet vooraan, dus geen woordsplitsing en geen waarde die met `-` begint (`--output=…` voor git, `-rf` voor rm);
- * - elk romp-woord met de lusvariabele heeft die alleen tussen dubbele aanhalingstekens en nooit direct na een `-`
- *   (`lusWoordVeilig`), zodat `--$d`, `"-$d"` en een onaangehaald `$d` dicht blijven;
+ * - elk romp-woord met de lusvariabele heeft die alleen tussen dubbele aanhalingstekens, en geen woord met de lusvariabele
+ *   begint (na het weghalen van de quotes) met `-` (`lusWoordVeilig`), zodat `--$d`, `"-$d"`, `""-"$d"` en een onaangehaald
+ *   `$d` dicht blijven;
  * - geen romp-segment zet een variabele (toewijzing, `zetVariabele`: `printf -v`, `read`, `declare` …).
  * `koppen`: de index van het `for`-segment; `romp`: index → lusvariabele.
  * @param {readonly Command[]} segmenten
@@ -714,17 +715,19 @@ function zonderEerste(segment) {
 }
 
 /**
- * Een romp-woord (ruwe tekst) met de lusvariabele: niet met `-` beginnend, en elke `$naam`/`${naam}` binnen dubbele
- * aanhalingstekens, direct na de openende quote of na een letterlijk teken dat geen `-` is. Een `\` of geneste quote telt dicht.
- * @param {string} raw @param {string} naam
+ * Een romp-woord met de lusvariabele: de waarde zonder quotes (`word`) begint niet met `-` (review ronde 7: `""-"$d"` heeft
+ * ruw geen `-` vooraan), en in de ruwe tekst (`raw`) staat elke `$naam`/`${naam}` binnen dubbele aanhalingstekens. Een `\`
+ * of enkele quote telt dicht. De waardetoets maakt een aparte toets op "direct na een `-`" overbodig: een `-` midden in een
+ * woord maakt er geen optie van.
+ * @param {{ word: string, raw: string }} woord @param {string} naam
  */
-function lusWoordVeilig(raw, naam) {
+function lusWoordVeilig({ word, raw }, naam) {
   const verwijzing = new RegExp(`^\\$(?:\\{${naam}\\}|${naam}(?![A-Za-z0-9_]))`);
-  if (raw.startsWith('-') || /[\\']/.test(raw)) return false;
+  if (word.startsWith('-') || /[\\']/.test(raw)) return false;
   let binnen = false;
   for (let index = 0; index < raw.length; index += 1) {
     if (raw[index] === '"') binnen = !binnen;
-    else if (verwijzing.test(raw.slice(index)) && (!binnen || raw[index - 1] === '-')) return false;
+    else if (!binnen && verwijzing.test(raw.slice(index))) return false;
   }
   return true;
 }
@@ -741,7 +744,7 @@ function veiligLusSegment({ words, raws = words, redirects }, naam) {
   const [woord = '', ...args] = argv;
   if (assignments.length > 0 || zetVariabele(argv) || argv.length !== words.length) return false;
   if (redirects.some((doel) => /[$`]/.test(doel))) return false;
-  if (!raws.every((raw) => !raw.includes('$') || lusWoordVeilig(raw, naam))) return false;
+  if (!raws.every((raw, index) => !raw.includes('$') || lusWoordVeilig({ word: words[index] ?? '', raw }, naam))) return false;
   if (EXPANSION_SAFE.has(woord)) return true;
   if (woord !== 'git') return false;
   const { subcommand, rest, config } = gitSubcommand(args);
