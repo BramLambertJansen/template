@@ -1053,7 +1053,7 @@ const JQ_PATHS = /^\.[A-Za-z0-9_.]*(?:,\.[A-Za-z0-9_.]*)*$/;
  */
 function reviewerRefusal(argv, redirects) {
   const head = argv[0] === 'gh' ? argv.slice(0, 3).join(' ') : argv.slice(0, 2).join(' ');
-  const generic = `reviewer: alleen lezen (\`${argv.slice(0, 3).join(' ')}\` mag niet; framework §8); zoeken en tellen: gebruik de Grep-tool`;
+  const generic = `reviewer: alleen lezen (\`${argv.slice(0, 3).join(' ')}\` mag niet; framework §8); zoeken en tellen: gebruik de Grep-tool; ontbreekt die in de sessie, zoek bestanden dan met \`git ls-files\`, lees ze met Read en noem in je rapport wat je niet kon nazoeken`;
   if (redirects.length > 0) return generic;
   const read = REVIEWER_READS[head] ?? REVIEWER_COMMANDS.find(({ pattern }) => pattern.test(head))?.read;
   if (read === undefined) return generic;

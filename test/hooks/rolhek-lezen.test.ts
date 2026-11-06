@@ -160,14 +160,22 @@ describe('rolhek-lezen/AC-1: de leeslijst van de reviewer', () => {
     expect(verdict(command, REVIEWER)).toBe('deny');
   });
 
-  // Randgevallen: zoeken en tellen doet de Grep-tool.
+  // Randgevallen: zoeken en tellen doet de Grep-tool; ontbreekt die, dan wijst de weigering naar Read, Glob en de hoofdsessie (#609).
   test.each(['git grep foo', 'git blame src/api/server.ts', 'wc -l src/api/server.ts', 'git log | head'])(
-    '%s → deny met "gebruik de Grep-tool"',
+    '%s → deny met "gebruik de Grep-tool" en een route die ook zonder Grep-tool bestaat',
     (command) => {
       const decision = run(command, REVIEWER);
-      expect(decision.deny.join('\n')).toMatch(/gebruik de Grep-tool/);
+      const melding = decision.deny.join('\n');
+      expect(melding).toMatch(/gebruik de Grep-tool/);
+      expect(melding).toMatch(
+        /ontbreekt die in de sessie, zoek bestanden dan met `git ls-files`, lees ze met Read en noem in je rapport wat je niet kon nazoeken/,
+      );
     },
   );
+
+  test('de route die de weigering noemt is zelf toegestaan voor de reviewer (#609)', () => {
+    expect(verdict('git ls-files', REVIEWER)).toBe('allow');
+  });
 
   test('git show <ref>:<pad> blijft toegestaan', () => {
     expect(verdict('git show HEAD:src/api/server.ts', REVIEWER)).toBe('allow');
