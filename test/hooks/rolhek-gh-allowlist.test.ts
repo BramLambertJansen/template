@@ -724,3 +724,127 @@ describe('omzeilingen ronde 4: leeg woord vóór de gh-groep', () => {
     expect(run(command).deny).toEqual([]);
   });
 });
+
+// rolhek-vooraf-krimp/AC-10 (ADR 0083 punt 3, leerpunten #583 en #587): vangnetten per segment, alleen op woorden die de shell
+// echt expandeert. Elk doorgelaten geval hieronder faalt op de vangnetten die het hele commando of aangehaalde woorden toetsen.
+describe('AC-10: vangnetten per segment', () => {
+  const ROLES: (string | undefined)[] = [undefined, ...SUBAGENTS];
+  const doorgelaten = (command: string, roles: readonly (string | undefined)[] = ROLES) => {
+    for (const role of roles) {
+      const decision = run(command, role);
+      expect({ role, deny: decision.deny, ask: decision.ask }).toEqual({ role, deny: [], ask: [] });
+    }
+  };
+
+  // (a) Het gh-subcommando staat in een ander segment dan het geëxpandeerde argument.
+  test.each(['cd $TMPDIR && gh issue list --limit 5', 'cd $TMPDIR; gh pr view 1', 'ls $HOME | gh run list'])(
+    '(a) subcommando in ander segment: %s',
+    (command) => {
+      doorgelaten(command);
+    },
+  );
+
+  // (b) Aangehaald is geen glob, brace-expansie of POSIX-klasse.
+  test.each([
+    `python3 -c "print(s.get('hooks', {}), {1: 2, 3: 4})"`,
+    `gh pr view 1 --json files --jq '.files[] | {path: .path, n: .additions}'`,
+    `echo '{a,b}'`,
+    `echo "{a,b}"`,
+    `echo '{1..3}'`,
+    `node -e "console.log({a:1,b:2})"`,
+    `echo '[[:alpha:]]'`,
+  ])('(b) aangehaald woord is letterlijk: %s', (command) => {
+    doorgelaten(command, [undefined, 'developer', 'tester']);
+  });
+
+  test.each([`echo '{a,b}'`])('(b) aangehaald woord is letterlijk voor architect en docs: %s', (command) => {
+    doorgelaten(command, ['architect', 'docs']);
+  });
+
+  // De spec-voorbeelden zelf slagen al op de huidige code (geen komma voor `{`, geen klasse die gh oplevert); ze blijven vastgelegd.
+  // Reviewer valt af: die mag alleen `--jq` met waarden uit [A-Za-z0-9_./,:-] (spec rolhek-lezen).
+  test.each([`python3 -c "print(s.get('hooks', {}))"`, `gh pr view 1 --json files --jq '.files[].path'`])(
+    '(b) spec-voorbeeld blijft doorgelaten: %s',
+    (command) => {
+      doorgelaten(command, [undefined, 'developer', 'tester']);
+    },
+  );
+
+  // `$` en backtick tussen dubbele aanhalingstekens blijven tellen.
+  test.each([
+    'G=gh; "$G" pr merge 1',
+    '"$G" pr merge 1',
+    'G=gh; "${G}" pr create --title t --body b',
+    'echo "`gh pr merge 1`"',
+    'echo "$(gh pr merge 1)"',
+  ])('(b) $ en backtick tussen dubbele aanhalingstekens blijven geweigerd voor developer en hoofdsessie: %s', (command) => {
+    expect(run(command, 'developer').deny.length).toBeGreaterThan(0);
+    expect(run(command).deny.length).toBeGreaterThan(0);
+  });
+
+  // (c) Geen geldige tekenklasse: geen interne fout, het woord telt letterlijk.
+  test.each(['echo [z-a]', 'echo a[z-a]b', 'echo g[', 'echo [h', 'echo /usr/bin/g[z-a]h', 'ls x[', 'ls g[z-a]'])(
+    '(c) ongeldige klasse is letterlijk, geen interne fout: %s',
+    (command) => {
+      for (const role of ROLES) expect(() => run(command, role)).not.toThrow();
+      doorgelaten(command);
+    },
+  );
+
+  // (d) `$TMPDIR/` aan het begin van een woord is letterlijk, zolang TMPDIR nergens anders in het commando staat.
+  test.each(['ls $TMPDIR/x', 'cat "$TMPDIR/x"', 'cat "$TMPDIR"/x', 'cat $TMPDIR/x pr', 'cat "$TMPDIR/x" run'])(
+    '(d) $TMPDIR/ is letterlijk: %s',
+    (command) => {
+      doorgelaten(command);
+    },
+  );
+
+  test.each([
+    'TMPDIR=x; cat "$TMPDIR/a" pr',
+    'export TMPDIR=x && cat $TMPDIR/a run',
+  ])('(d) TMPDIR elders toegewezen: niet letterlijk, variabel woord naast subcommando geweigerd voor elke rol: %s', (command) => {
+    expect(run(command, 'developer').deny.length).toBeGreaterThan(0);
+    expect(run(command).deny.length).toBeGreaterThan(0);
+  });
+
+  // (e) Een for-lus waarvan elk segment een EXPANSION_SAFE-programma of git met een GIT_LEZEN-subcommando start.
+  test.each([
+    'for d in .claude/worktrees/*/; do echo "== $d"; git -C "$d" status -sb; done',
+    'for f in docs/*.md; do cat "$f"; done',
+    'for d in .claude/worktrees/*/; do git -C "$d" log -1; done',
+  ])('(e) for-lus met alleen veilige segmenten: %s', (command) => {
+    doorgelaten(command);
+  });
+
+  test('(e) for-lus met een schrijvend git-subcommando blijft geweigerd voor een subagent', () => {
+    const command = 'for d in .claude/worktrees/*/; do git -C "$d" reset --hard; done';
+    expect(run(command, 'developer').deny.length).toBeGreaterThan(0);
+  });
+
+  // Regressie: wat blijft weigeren.
+  test.each([
+    'G=gh; $G pr merge 1',
+    'x=g; ${x}h pr merge 1',
+    '$(echo gh) pr merge 1',
+    'g[h] pr merge 1',
+    '{g,x}h pr merge 1',
+    '[[:alpha:]]h pr merge 1',
+  ])('regressie: niet-letterlijk gh blijft geweigerd voor elke rol: %s', (command) => {
+    expect(run(command, 'developer').deny.length).toBeGreaterThan(0);
+    expect(run(command).deny.length).toBeGreaterThan(0);
+  });
+  test.each(["env -S'gh pr merge 1'", 'env -Sgh pr merge 1', "env --split-string='gh pr merge 1'"])(
+    'regressie: env -S blijft geweigerd voor elke rol: %s',
+    (command) => {
+      expect(run(command, 'developer').deny.length).toBeGreaterThan(0);
+      expect(run(command).deny.length).toBeGreaterThan(0);
+    },
+  );
+  test.each(['echo {a,b}', 'echo {1..3}', 'echo $HOME run', 'echo $HOME pr; echo x'])(
+    'regressie: onaangehaalde brace-expansie en variabel woord naast subcommando in hetzelfde segment blijven geweigerd: %s',
+    (command) => {
+      expect(run(command, 'developer').deny.length).toBeGreaterThan(0);
+      expect(run(command).deny.length).toBeGreaterThan(0);
+    },
+  );
+});
