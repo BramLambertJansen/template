@@ -161,6 +161,28 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   zonder login onder één vast prefix met verifier, tijdvenster, groottegrens, rate limit per IP en inbox, en een check die elke route buiten
   `defineRoute` en buiten de lijst van §3 laat falen (uitzondering naast R-UIT-02, §3).
   aanleiding: `docs/adr/0077-externe-koppelingen-via-poorten.md` (verzoek van de eigenaar, 3 en 4 november 2026)
+- [ ] **ST-16 (P1) — rollen als register van de app** (na de nulmeting van ST-09, vóór een tweede app). Nu staat `ROLES` in
+  `src/core/shared/can.ts` en hangen MFA-eis en laatste-admin-trigger aan de naam `admin`; een nieuwe rol wijzigt core (R-ARCH-03), wat in een app dicht is.
+  **Werk:** de app levert `src/shared/roles.ts` (standaard `user` en `admin`); `definePermissions`, `withUser` en de dev-login typeren de rol uit dat register.
+  MFA-eis en laatste-beheerder hangen aan de vlag `beheer` (besluit eigenaar 2026-11-06), niet aan de naam; een app kan de vlag niet uitzetten voor een rol met
+  accountbeheer. Database: `app.roles (name, beheer)` en een foreign key op `user_roles.role` in plaats van het CHECK, via expand/contract; `app.is_mfa_admin()`,
+  de trigger, de laatste-admin-controle in `app.set_account_blocked` en `app.set_account_deactivated`, en de policies lezen `beheer`; `app.use` geldt voor
+  elke rol uit het register. Seed-accounts komen uit de compositie-root, één per rol, zodat de demoswitcher elke rol toont. Eén rol per account.
+  **Afhankelijkheden:** ST-09; besluit-PR met ADR (A2: rollen, RLS, auth) dat ADR 0043 punt 13, 15 en 16, R-ARCH-03, R-AUTH-03, R-AUTH-07 en R-DB-15 herziet, daarna spec en bouw.
+  **Klaar als:** bestaande negatieve tests ongewijzigd groen; een test faalt als register en `app.roles` verschillen; een nieuwe rol zonder `beheer` krijgt
+  alleen expliciete permissies en `app.use`; een beheerrol zonder MFA krijgt `MFA_REQUIRED`; laatste-beheerder-racetest; blokkeren en deactiveren van de
+  laatste beheerder met een beheerrol die niet `admin` heet geeft `LAST_ADMIN`; de proef-app voegt één rol toe zonder core-wijziging en wisselt ernaartoe
+  in de demoswitcher.
+  aanleiding: `docs/reviews/2026-11-06-herbouw.md` (§4.3, besluit eigenaar 2026-11-06)
+- [ ] **ST-17 (P1) — accountbeheer als module van de template** (na ST-16). Nu bezit elke app de routes, contracten en schermen van accountbeheer en
+  eigen account als startcode, zodat elke template-verbetering daaraan bij `git merge template/main` conflicteert.
+  **Werk:** één module in core met lagen api, shared en web, door de template onderhouden; de app registreert routes, services, permissies en schermen in
+  haar compositie-roots en kiest pad en navigatie. Core krijgt een eigen gegenereerd schema uit de core-migraties en importeert niets uit
+  `src/api/db/schema.ts`. Eerst de accountlijst (contract, permissie, query via `tx`, RLS, API-client, scherm), dan de overige flows.
+  **Afhankelijkheden:** ST-16; besluit-PR met ADR (A1: contract tussen zones) dat R-LAAG-01, R-DB-12 met ADR 0042 en R-WEB-05 herziet, daarna spec en bouw.
+  **Klaar als:** HTTP-paden, contracten, foutcodes en teksten ongewijzigd; bestaande contract- en integratietests groen; core importeert geen app-code;
+  de browserbundel bevat geen API-code; een template-update in de proef-app conflicteert niet in accountbestanden.
+  aanleiding: `docs/reviews/2026-11-06-herbouw.md` (§4.3, besluit eigenaar 2026-11-06)
 - [ ] **ST-01 (P0) — GitHub-bescherming daadwerkelijk activeren** (stuk 6, diff-guard uit stuk 4). Een agent kan beschermd werk niet zonder de
   juiste eigenaarreview samenvoegen. Gebouwd: `scripts/github-ruleset.sh` met `test/scripts/github-ruleset.test.ts` (#104), de diff-guard met
   `guard.yml` (#62, ADR 0045 punt 17; nog niet verplicht, uitslag `overgang` zolang de auteur zelf goedkeurder is) en CODEOWNERS en PR-template.
