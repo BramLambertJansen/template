@@ -203,14 +203,20 @@ test('quick doet geen besturingssysteemcontrole', () => {
   expect(result.stdout).not.toContain('Ubuntu');
 });
 
-test.each(['/mnt/c/Users/bmj/code/app', '/mnt/d', '/mnt/c'])('machinecontrole faalt op een repo onder %s (R-WERK-25)', (repoPath) => {
-  const result = run('doctor.sh', ['--machine'], { repoPath });
-  expect(result.status).toBe(1);
-  expect(result.stdout).toContain('de repo staat op een Windows-schijf');
-});
+test.each(['/mnt/c/Users/bmj/code/app', '/mnt/d', '/mnt/c'])(
+  'machinecontrole faalt op een repo onder %s (R-WERK-25)',
+  (repoPath) => {
+    const result = run('doctor.sh', ['--machine'], { repoPath });
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain('de repo staat op een Windows-schijf');
+  },
+);
 
-test.each(['/home/bmj/code/app', '/mnt/wsl/app', '/mnt/cache/app'])('machinecontrole accepteert een repo op %s', (repoPath) => {
-  const result = run('doctor.sh', ['--machine'], { repoPath });
-  expect(result.status, result.stdout).toBe(0);
-  expect(result.stdout).toContain('de repo staat niet op een Windows-schijf');
-});
+test.each(['/home/bmj/code/app', '/mnt/wsl/app', '/mnt/cache/app'])(
+  'machinecontrole accepteert een repo op %s',
+  (repoPath) => {
+    const result = run('doctor.sh', ['--machine'], { repoPath });
+    expect(result.status, result.stdout).toBe(0);
+    expect(result.stdout).toContain('de repo staat niet op een Windows-schijf');
+  },
+);
