@@ -273,7 +273,7 @@ function sessionEnd(payload, repo) {
  */
 export function nacontrole(repo, sessie) {
   const nieuw = agentOpnamen(repo, sessie).flatMap(({ id, opname }) =>
-    vergelijk(repo, { voor: opname.snap, start: opname.tijd ?? 0 }, { actor: id, agentType: opname.agentType ?? 'reviewer', commando: '', sessie: opname.sessie }).nieuw);
+    vergelijk(repo, { voor: opname.snap, start: opname.tijd ?? 0 }, { actor: id, agentType: opname.agentType ?? 'reviewer', commando: '', ...sessieVeld(opname) }).nieuw);
   return werkLijstBij(repo, { nieuw, nu: momentopname(repo) });
 }
 
