@@ -144,12 +144,11 @@ git) en zet de sessie erin. Hij haalt niet zelf op (gemeten: `origin/main` liep 
 
 In de worktree zijn `.claude/settings.json`, `.claude/hooks` en `.claude/skills` alleen-lezen door Claude Code zelf, maar de
 gedeelde `.git` van de hoofdcheckout is daar schrijfbaar (ADR 0083, Context; eigen leerpunt volgt). De overlays in de root
-van de worktree (`.bashrc`, `.mcp.json`, `.claude/commands` …) tellen als untracked en een `*secret*`-bestand dat de sandbox
-verbergt (`src/core/api/env-secret.test.ts`) staat als gewijzigd. Verwijder, herstel of verberg ze niet en stage paden
-expliciet, nooit `git add -A` of `git commit -a`. **Open:** `git merge origin/main` faalt in de worktree
-(`fatal: stash failed`): git maakt vóór de merge een stash en kan het verborgen bestand niet lezen. Loopt een branch achter
-op `origin/main`, dan laat de hoofdsessie de merge aan de eigenaar; ook de skill `opleveren` lost conflicten op met
-`git merge origin/main`, wat in de worktree faalt.
+van de worktree (`.bashrc`, `.mcp.json`, `.claude/commands` …) tellen als untracked. Verwijder, herstel of verberg ze niet
+en stage paden expliciet, nooit `git add -A` of `git commit -a`. Een getrackt bestand mag niet onder een leesweigering van
+de sandbox vallen (`*secret*`, `.env*` behalve `.env.example`): de sandbox verbergt het dan, `git status` toont het als gewijzigd en
+`git merge origin/main` faalt op `fatal: stash failed`. Daarom heet de test van `secret()`
+`src/core/api/env-credentials.test.ts` (leerpunt #567); of de merge in een worktree nu slaagt, is nog niet gemeten.
 
 Na de merge vraagt de eigenaar de sessie `ExitWorktree` aan te roepen, of ruimt de worktree zelf op in een eigen terminal
 in de hoofdcheckout (niet gemeten: of `remove` zonder `--force` slaagt):
