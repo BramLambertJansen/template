@@ -736,13 +736,32 @@ describe('AC-10: vangnetten per segment', () => {
     }
   };
 
-  // (a) Het gh-subcommando staat in een ander segment dan het geëxpandeerde argument.
+  // (a) Het gh-subcommando staat in een ander segment dan het geëxpandeerde argument (eigenaarsbesluit: voor de hoofdsessie;
+  // een kaal `$TMPDIR` telt als letterlijk onder de voorwaarde van (d)). Subagents houden "gh alleen als één direct gh-leescommando".
+  test.each([
+    'cd $TMPDIR && gh issue list --limit 5',
+    'cd $TMPDIR; gh pr view 1',
+    'cd "$TMPDIR" && gh pr view 1',
+    'ls $HOME | gh run list',
+  ])('(a) hoofdsessie: subcommando in ander segment gaat door: %s', (command) => {
+    doorgelaten(command, [undefined]);
+  });
+
   test.each(['cd $TMPDIR && gh issue list --limit 5', 'cd $TMPDIR; gh pr view 1', 'ls $HOME | gh run list'])(
-    '(a) subcommando in ander segment: %s',
+    '(a) subagent: geen melding over een variabel woord naast een gh-subcommando: %s',
     (command) => {
-      doorgelaten(command);
+      for (const role of SUBAGENTS) {
+        expect(
+          run(command, role).deny.filter((melding) => melding.includes('variabel woord naast een gh-subcommando')),
+        ).toEqual([]);
+      }
     },
   );
+
+  test('(a) hoofdsessie: TMPDIR elders toegewezen is niet letterlijk, dus niet volledig doorgelaten', () => {
+    const decision = run('TMPDIR=x; cd $TMPDIR && gh issue list');
+    expect(decision.deny.length + decision.ask.length).toBeGreaterThan(0);
+  });
 
   // (b) Aangehaald is geen glob, brace-expansie of POSIX-klasse.
   test.each([
@@ -777,10 +796,13 @@ describe('AC-10: vangnetten per segment', () => {
     'G=gh; "${G}" pr create --title t --body b',
     'echo "`gh pr merge 1`"',
     'echo "$(gh pr merge 1)"',
-  ])('(b) $ en backtick tussen dubbele aanhalingstekens blijven geweigerd voor developer en hoofdsessie: %s', (command) => {
-    expect(run(command, 'developer').deny.length).toBeGreaterThan(0);
-    expect(run(command).deny.length).toBeGreaterThan(0);
-  });
+  ])(
+    '(b) $ en backtick tussen dubbele aanhalingstekens blijven geweigerd voor developer en hoofdsessie: %s',
+    (command) => {
+      expect(run(command, 'developer').deny.length).toBeGreaterThan(0);
+      expect(run(command).deny.length).toBeGreaterThan(0);
+    },
+  );
 
   // (c) Geen geldige tekenklasse: geen interne fout, het woord telt letterlijk.
   test.each(['echo [z-a]', 'echo a[z-a]b', 'echo g[', 'echo [h', 'echo /usr/bin/g[z-a]h', 'ls x[', 'ls g[z-a]'])(
@@ -799,13 +821,13 @@ describe('AC-10: vangnetten per segment', () => {
     },
   );
 
-  test.each([
-    'TMPDIR=x; cat "$TMPDIR/a" pr',
-    'export TMPDIR=x && cat $TMPDIR/a run',
-  ])('(d) TMPDIR elders toegewezen: niet letterlijk, variabel woord naast subcommando geweigerd voor elke rol: %s', (command) => {
-    expect(run(command, 'developer').deny.length).toBeGreaterThan(0);
-    expect(run(command).deny.length).toBeGreaterThan(0);
-  });
+  test.each(['TMPDIR=x; cat "$TMPDIR/a" pr', 'export TMPDIR=x && cat $TMPDIR/a run'])(
+    '(d) TMPDIR elders toegewezen: niet letterlijk, variabel woord naast subcommando geweigerd voor elke rol: %s',
+    (command) => {
+      expect(run(command, 'developer').deny.length).toBeGreaterThan(0);
+      expect(run(command).deny.length).toBeGreaterThan(0);
+    },
+  );
 
   // (e) Een for-lus waarvan elk segment een EXPANSION_SAFE-programma of git met een GIT_LEZEN-subcommando start.
   test.each([
