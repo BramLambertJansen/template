@@ -146,7 +146,7 @@ In de worktree zijn `.claude/settings.json`, `.claude/hooks` en `.claude/skills`
 gedeelde `.git` van de hoofdcheckout is daar schrijfbaar (ADR 0083, Context; eigen leerpunt volgt). De overlays in de root
 van de worktree (`.bashrc`, `.mcp.json`, `.claude/commands` …) tellen als untracked. Verwijder, herstel of verberg ze niet
 en stage paden expliciet, nooit `git add -A` of `git commit -a`. Een getrackt bestand mag niet onder een leesweigering van
-de sandbox vallen (`*secret*`, `.env*`): de sandbox verbergt het dan, `git status` toont het als gewijzigd en
+de sandbox vallen (`*secret*`, `.env*` behalve `.env.example`): de sandbox verbergt het dan, `git status` toont het als gewijzigd en
 `git merge origin/main` faalt op `fatal: stash failed`. Daarom heet de test van `secret()`
 `src/core/api/env-credentials.test.ts` (leerpunt #567); of de merge in een worktree nu slaagt, is nog niet gemeten.
 
