@@ -111,12 +111,13 @@ Staat Ubuntu of Claude Code er al, sla die stap over.
    ```
 
 6. **Instructies klaarzetten en agent starten.** Plak in hetzelfde Ubuntu-venster dit hele blok en druk op Enter.
-   Verwacht: geen foutmelding en Claude Code opent in de map `~/setup`.
+   Verwacht: Claude Code opent in `~/setup` zodra beide instructiebestanden zijn opgehaald. Bij een fout stopt het blok
+   en blijf je in Ubuntu.
 
    ```bash
-   mkdir -p ~/setup
-   curl -fsSL https://raw.githubusercontent.com/BramLambertJansen/template/main/START-NIEUWE-APP.md -o ~/setup/START-NIEUWE-APP.md
-   curl -fsSL https://raw.githubusercontent.com/BramLambertJansen/template/main/docs/nieuwe-app.md -o ~/setup/nieuwe-app.md
+   mkdir -p ~/setup &&
+   curl -fsSL https://raw.githubusercontent.com/BramLambertJansen/template/main/START-NIEUWE-APP.md -o ~/setup/START-NIEUWE-APP.md &&
+   curl -fsSL https://raw.githubusercontent.com/BramLambertJansen/template/main/docs/nieuwe-app.md -o ~/setup/nieuwe-app.md &&
    cd ~/setup && claude
    ```
 
