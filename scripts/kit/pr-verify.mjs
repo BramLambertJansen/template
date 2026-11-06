@@ -5,9 +5,16 @@ import { pullRequest, checkRuns } from './github-evidence.mjs';
 import { setTimeout } from 'node:timers/promises';
 import { unchangedHead } from './status-git.mjs';
 import { lijstTekst, nacontrole } from '../../rails/hooks/lib/effect-hooks.mjs';
-import { gitIn } from '../../rails/hooks/lib/effect-snapshot.mjs';
+import {
+  SANDBOX_LEEG,
+  afgeschermdePaden,
+  gitIn,
+  isNulApparaat,
+  koppelingen,
+} from '../../rails/hooks/lib/effect-snapshot.mjs';
 import { opslag } from '../../rails/hooks/lib/effect.mjs';
-import { existsSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, realpathSync } from 'node:fs';
+import path from 'node:path';
 import { rolhekContext } from '../../rails/hooks/lib/rolhek-context.mjs';
 
 /** @param {import('../../rails/hooks/lib/built-evidence.mjs').CheckRun[]} checks @param {{ names: string[], sha: string }} required */
@@ -90,12 +97,28 @@ export function werkmapNegeer(root, base) {
   }
 }
 
+/**
+ * Een ongetrackte statusregel voor een plaatshouder van de sandbox (spec rolhek-effect AC-11 e): een pad op `SANDBOX_LEEG`
+ * dat een leeg gewoon bestand zonder uitvoerbit of een tekenapparaat 1,3 is. Een fout is geen plaatshouder (dicht).
+ * @param {string} root @param {string} regel
+ */
+function isPlaatshouderRegel(root, regel) {
+  if (!regel.startsWith('?? ') || !SANDBOX_LEEG.includes(regel.slice(3))) return false;
+  try {
+    const stat = lstatSync(path.join(root, regel.slice(3)));
+    return isNulApparaat(stat) || (stat.isFile() && stat.size === 0 && (stat.mode & 0o7111) === 0);
+  } catch {
+    return false;
+  }
+}
+
 /** @param {{ root: string, base: string }} context */
-function verifyWorktree({ root, base }) {
+export function verifyWorktree({ root, base }) {
   const status = gitText(root, ['status', '--porcelain', '--untracked-files=all', '--', '.', ':!node_modules']);
   if (status === null)
     throw new Error('Werkmapstatus is niet leesbaar; controleer Git-toegang en haal het bewijs opnieuw op');
-  const blocked = onbekendeWerkmapBestanden(status, werkmapNegeer(root, base));
+  const regels = status.split('\n').filter((regel) => regel !== '' && !isPlaatshouderRegel(root, regel));
+  const blocked = onbekendeWerkmapBestanden(regels.join('\n'), werkmapNegeer(root, base));
   if (blocked.length > 0)
     throw new Error(
       `Werkmap bevat blokkerende wijzigingen:\n${blocked.map((file) => `- ${file}`).join('\n')}\nControleer werkmap en index; haal het bewijs opnieuw op`,
@@ -116,17 +139,48 @@ function verifyHead(context) {
 }
 
 /**
- * Open overtredingen van de toets op effect, na de nacontrole van elke subagent (spec rolhek-effect AC-4, AC-5); alleen lezen.
+ * De paden onder de werkmap die de sandbox bevestigd afschermt (spec rolhek-effect AC-11 a): alleen uit de eigen
+ * `/proc/self/mountinfo` en `lstat`, nooit uit de omgeving, een CLI-vlag of een bestand. Onleesbaar: geen.
  * @param {string} root
+ * @returns {Set<string>}
  */
-export function verifyEffect(root) {
+function afgeschermdNu(root) {
+  /** @type {string} */
+  let mountinfo;
+  try {
+    mountinfo = readFileSync('/proc/self/mountinfo', 'utf8');
+  } catch {
+    return new Set();
+  }
+  const git = gitIn(root);
+  const voor = `${realpathSync(root)}/`;
+  const paden = [...koppelingen(mountinfo).keys()]
+    .filter((punt) => punt.startsWith(voor))
+    .map((punt) => punt.slice(voor.length));
+  /** @param {string} rel */
+  const getrackt = (rel) =>
+    git(['--literal-pathspecs', 'ls-files', '-z', '--', rel]) !== '' ||
+    git(['--literal-pathspecs', 'ls-tree', '-z', '--name-only', 'HEAD', '--', rel]) !== '';
+  return afgeschermdePaden({ mountinfo, root, paden, lstat: lstatSync, getrackt });
+}
+
+/**
+ * Open overtredingen van de toets op effect, na de nacontrole van elke subagent (spec rolhek-effect AC-4, AC-5); alleen lezen.
+ * Een pad in `afgeschermd` (AC-11 a) telt niet als verandering; met `melden` noemt één regel die paden (AC-11 b).
+ * @param {string} root @param {ReadonlySet<string>} [afgeschermd] @param {{ melden: boolean }} [opties]
+ */
+export function verifyEffect(root, afgeschermd = new Set(), opties = { melden: true }) {
   // Zonder opslag heeft geen subagent in deze repo gewerkt; dan is er niets na te controleren.
   const git = gitIn(root);
   if (!existsSync(opslag({ root, git }))) return;
   const lijst = nacontrole(
-    { root, git, ctx: rolhekContext(root, root), now: () => Date.now(), alleenLezen: true },
+    { root, git, ctx: rolhekContext(root, root), now: () => Date.now(), alleenLezen: true, afgeschermd },
     null,
   );
+  if (opties.melden && afgeschermd.size > 0)
+    console.log(
+      `rolhek-effect: niet getoetst in de sandbox, wel door de hooks: ${[...afgeschermd].toSorted().join(', ')}`,
+    );
   if (lijst.length > 0)
     throw new Error(
       `Open overtredingen van subagents (rolhek-effect):\n${lijstTekst(lijst)}\nZet de paden terug of laat de eigenaar ze overnemen: pnpm rolhek:overnemen <pad>`,
@@ -136,7 +190,8 @@ export function verifyEffect(root) {
 async function main() {
   const root = process.cwd();
   const target = argumentsFor(process.argv.slice(2));
-  verifyEffect(root);
+  const afgeschermd = afgeschermdNu(root);
+  verifyEffect(root, afgeschermd);
   const base = gitText(root, ['rev-parse', 'origin/main'])?.trim();
   const authority = base === undefined ? null : readAuthority({ root, base });
   const head = gitText(root, ['rev-parse', 'HEAD'])?.trim();
@@ -151,7 +206,7 @@ async function main() {
     verifyHead(context);
     console.log(`PR #${String(target.number)} · ${head}\n${progress.lines.join('\n')}`);
     // Opnieuw vlak voor het groene antwoord: een achtergrondproces van een subagent kan tijdens het wachten nog schrijven.
-    if (progress.state === 'success') return verifyEffect(root);
+    if (progress.state === 'success') return verifyEffect(root, afgeschermd, { melden: false });
     if (progress.state === 'failure') throw new Error('CI is rood; herstel de oorzaak en controleer de nieuwe commit');
     if (!target.watch || Date.now() >= deadline)
       throw new Error('CI ontbreekt of loopt nog; geen geslaagde oplevering');

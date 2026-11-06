@@ -1,4 +1,6 @@
 // Vergelijking van twee momentopnamen (ADR 0066, spec rolhek-effect AC-2): welke paden een commando veranderde.
+import { createHash } from 'node:crypto';
+import { NUL } from './effect-snapshot.mjs';
 
 /**
  * @typedef {import('./effect-snapshot.mjs').Snapshot} Snapshot
@@ -43,6 +45,27 @@ export function veranderingen({ voor, na }, git) {
     lijst.push({ rel: `.git/${ref}`, voor: { wt: voor.refs[ref] ?? 'weg', idx: '' }, na: { wt: na.refs[ref] ?? 'weg', idx: '' } });
   }
   return lijst.toSorted((a, b) => a.rel.localeCompare(b.rel));
+}
+
+/**
+ * Een plaatshouder van de sandbox (spec rolhek-effect AC-11 d) zonder index: `weg`, een leeg gewoon bestand zonder uitvoerbit
+ * (de lege blob van het objectformaat, sha1 of sha256) of een tekenapparaat 1,3 (`<mode>:nul`).
+ * @param {Entry} entry
+ */
+export function isPlaatshouder(entry) {
+  if (entry.idx !== '') return false;
+  if (entry.wt === 'weg' || entry.wt === 'schoon') return true;
+  const [mode = '', staat = '', ...rest] = entry.wt.split(':');
+  if (rest.length > 0 || !/^[0-7]+$/.test(mode)) return false;
+  const bits = Number.parseInt(mode, 8);
+  if ((bits & 0o170000) === 0o020000) return staat === NUL;
+  return (bits & 0o170000) === 0o100000 && (bits & 0o7111) === 0 && isLegeBlob(staat);
+}
+
+/** @param {string} blob */
+function isLegeBlob(blob) {
+  const algoritme = blob.length === 64 ? 'sha256' : blob.length === 40 ? 'sha1' : null;
+  return algoritme !== null && createHash(algoritme).update('blob 0\0').digest('hex') === blob;
 }
 
 /**

@@ -7,8 +7,8 @@ import { lstatSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writ
 import path from 'node:path';
 import { decideChange, globMatch } from './rolhek.mjs';
 import { archiefBron } from './document-state.mjs';
-import { blobVan, entryVan, gelijk, veranderingen } from './effect-compare.mjs';
-import { MAX_MS, blobBytes, gitDirVan, momentopname, padStaten } from './effect-snapshot.mjs';
+import { blobVan, entryVan, gelijk, isPlaatshouder, veranderingen } from './effect-compare.mjs';
+import { MAX_MS, SANDBOX_LEEG, blobBytes, gitDirVan, isGeheim, momentopname, padStaten } from './effect-snapshot.mjs';
 
 /**
  * @typedef {import('./effect-snapshot.mjs').Snapshot} Snapshot
@@ -19,8 +19,10 @@ import { MAX_MS, blobBytes, gitDirVan, momentopname, padStaten } from './effect-
  * @typedef {{ actor: string, agentType: string, commando: string, sessie?: string }} Wie
  * @typedef {{ actor: string, start: number, eind: number, paden: string[], staten?: Record<string, string> }} Venster
  * `staten`: de werkmapstaat per pad direct na het venster; alleen die staat is verklaard (AC-2).
- * @typedef {{ root: string, git: Git, ctx: import('./rolhek.mjs').Ctx, now: () => number, alleenLezen?: boolean }} Repo
- * `alleenLezen`: pr:verify in de sandbox; de lijst wordt berekend maar niet weggeschreven.
+ * @typedef {{ root: string, git: Git, ctx: import('./rolhek.mjs').Ctx, now: () => number, alleenLezen?: boolean,
+ *   afgeschermd?: ReadonlySet<string>, lstat?: import('./effect-snapshot.mjs').Lstat | undefined }} Repo
+ * `alleenLezen`: pr:verify in de sandbox; de lijst wordt berekend maar niet weggeschreven. `afgeschermd`: de paden van vorm A
+ * die pr:verify zelf bevestigde (spec rolhek-effect AC-11 a); alleen in het geheugen, nooit opgeslagen. `lstat`: voor tests.
  */
 
 // Een momentopname van een subagent vervalt bij SessionEnd van zijn sessie (AC-10 e); een dag is de bovengrens (SubagentStart ruimt op).
@@ -156,8 +158,13 @@ const staatSleutel = (snap, rel) => JSON.stringify(entryVan(snap, rel));
 function leesVoor(repo, voor) {
   return (rel) => {
     if (rel.endsWith('/')) return null;
-    const blob = blobVan(entryVan(voor, rel));
+    const entry = entryVan(voor, rel);
+    const blob = blobVan(entry);
     if (blob === null) return rel in voor.paden ? null : repo.ctx.read(rel);
+    // Een geheim in de werkmap is gehasht zonder `-w` (AC-11 c): die inhoud is niet bewaard, ook niet als een ander bestand
+    // toevallig dezelfde blob heeft. Alleen de index is dan een bron; anders valt de toets dicht.
+    if (isGeheim(rel) && entry.wt !== 'schoon' && blob !== indexBlob(entry.idx))
+      throw new Error(`${rel}: de inhoud van vóór het commando is niet bewaard (geheim, spec rolhek-effect AC-11 c); de toets valt dicht`);
     return echteBlob(repo, blob);
   };
 }
@@ -228,11 +235,38 @@ function verhuizingen(repo, { lijst, voor }) {
 /** De ref van de huidige branch, of '' (detached). @param {Repo} repo */
 const branchRefVan = (repo) => (repo.ctx.branch === '' || repo.ctx.branch === 'HEAD' ? '' : `refs/heads/${repo.ctx.branch}`);
 
-/** @param {Repo} repo @param {{ voor: Snapshot, na: Snapshot }} paar */
+/**
+ * De veranderingen tussen twee opnamen, zonder wat volgens spec rolhek-effect AC-11 niet telt: een pad in `repo.afgeschermd`
+ * (vorm A, alleen pr:verify) en een overgang tussen plaatshouders op `SANDBOX_LEEG` van een pad buiten HEAD en index (d).
+ * @param {Repo} repo @param {{ voor: Snapshot, na: Snapshot }} paar
+ */
 function veranderingenIn(repo, paar) {
   const diffPaden = (/** @type {string} */ oud, /** @type {string} */ nieuw) =>
     repo.git(['diff', '--name-only', '-z', '--no-renames', oud, nieuw]).split('\0').filter((rel) => rel !== '');
-  return veranderingen(paar, { diffPaden, branchRef: branchRefVan(repo) });
+  const lijst = veranderingen(paar, { diffPaden, branchRef: branchRefVan(repo) })
+    .filter((verandering) => repo.afgeschermd?.has(verandering.rel) !== true);
+  const kandidaten = lijst.filter((verandering) =>
+    LIJST.has(verandering.rel) &&
+    !(verandering.rel in paar.voor.index) &&
+    !(verandering.rel in paar.na.index) &&
+    isPlaatshouder(verandering.voor) &&
+    isPlaatshouder(verandering.na));
+  if (kandidaten.length === 0) return lijst;
+  const getrackt = inHead(repo, paar, kandidaten.map((verandering) => verandering.rel));
+  const vrij = new Set(kandidaten.filter((verandering) => !getrackt.has(verandering.rel)));
+  return lijst.filter((verandering) => !vrij.has(verandering));
+}
+
+const LIJST = new Set(SANDBOX_LEEG);
+
+/**
+ * De paden die in de HEAD van vóór of na staan (`git ls-tree`, ook een map).
+ * @param {Repo} repo @param {{ voor: Snapshot, na: Snapshot }} paar @param {readonly string[]} paden
+ */
+function inHead(repo, paar, paden) {
+  const heads = [...new Set([paar.voor.head, paar.na.head])].filter((head) => head !== '');
+  return new Set(heads.flatMap((head) =>
+    repo.git(['--literal-pathspecs', 'ls-tree', '-z', '--name-only', head, '--', ...paden]).split('\0').filter((rel) => rel !== '')));
 }
 
 /**
@@ -350,8 +384,9 @@ export function toetsHoofdsessie(repo, paar, wie) {
  * @returns {Overtreding[]}
  */
 export function werkLijstBij(repo, { nieuw, nu }) {
+  // Een open overtreding op een afgeschermd pad vervalt nooit (AC-11 a): pr:verify ziet de echte staat daar niet.
   const bestaand = overtredingen(repo).filter((oud) =>
-    oud.rel === null || oud.voor === null || nu === null || !gelijk(entryVan(nu, oud.rel), oud.voor));
+    oud.rel === null || oud.voor === null || nu === null || repo.afgeschermd?.has(oud.rel) === true || !gelijk(entryVan(nu, oud.rel), oud.voor));
   const paden = new Set(bestaand.map((oud) => oud.rel));
   const lijst = [...bestaand, ...nieuw.filter((overtreding) => !paden.has(overtreding.rel))];
   if (repo.alleenLezen !== true) schrijfJson(path.join(opslag(repo), 'overtredingen.json'), lijst);

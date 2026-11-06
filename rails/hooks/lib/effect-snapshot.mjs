@@ -2,7 +2,7 @@
 // afwijken van HEAD, met inhoud en mode, plus de index, de refs, de genegeerde lijst en een vaste lijst die het rolhek stuurt.
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { lstatSync, readdirSync, readlinkSync, statSync } from 'node:fs';
+import { lstatSync, readdirSync, readlinkSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 // Grens van AC-7: daarboven valt de toets dicht.
@@ -15,11 +15,128 @@ const WERKMAP_VAST = ['.claude/settings.local.json', '.claude/hooks/.cache'];
 const GIT_VEILIG = ['--no-replace-objects', '-c', 'core.fsmonitor=false', '-c', 'diff.external=', '-c', 'core.quotepath=false'];
 
 /**
- * @typedef {{ wt: string, idx: string }} Entry `wt`: `<mode>:<blob>` of `weg`; `idx`: `<mode> <blob> <stage>` of ''.
+ * Plaatshouders van Claude Code (spec rolhek-effect AC-11 d, ADR 0084 punt 2): voor een ongetrackt pad op deze lijst zijn `weg`,
+ * een leeg gewoon bestand zonder uitvoerbit en een tekenapparaat 1,3 gelijk. De lijst groeit alleen met eigenaarakkoord (OV-4).
+ */
+export const SANDBOX_LEEG = Object.freeze([
+  '.bash_profile',
+  '.bashrc',
+  '.profile',
+  '.zshrc',
+  '.zprofile',
+  '.gitconfig',
+  '.gitmodules',
+  '.ripgreprc',
+  '.mcp.json',
+  '.idea',
+  '.claude/commands',
+  '.claude/launch.json',
+  '.claude/loop.md',
+  '.claude/output-styles',
+  '.claude/routines',
+  '.claude/scheduled_tasks.json',
+  '.claude/workflows',
+]);
+
+/** De staat van een tekenapparaat 1,3 (`/dev/null`) in de werkmap: `<mode>:nul`. */
+export const NUL = 'nul';
+
+/**
+ * @typedef {{ wt: string, idx: string }} Entry `wt`: `<mode>:<blob>`, `<mode>:nul` (tekenapparaat 1,3) of `weg`; `idx`:
+ *   `<mode> <blob> <stage>` of ''.
  * @typedef {{ head: string, refs: Record<string, string>, paden: Record<string, Entry>, index: Record<string, string>,
  *   genegeerd: string[], teGroot: boolean }} Snapshot
  * @typedef {(args: readonly string[], input?: string) => string} Git
+ * @typedef {{ mode: number, rdev: number, isCharacterDevice: () => boolean, isDirectory: () => boolean, isFile: () => boolean,
+ *   isSymbolicLink: () => boolean }} StatUit Wat de toets van `lstat` gebruikt.
+ * @typedef {(vol: string) => unknown} Lstat Zoals `lstatSync`; wat geen `StatUit` is, telt als `anders`.
  */
+
+// `makedev(1, 3)` in de Linux-codering (glibc): de codering is eenduidig, dus alleen deze waarde is major 1, minor 3.
+const RDEV_NUL = 1 * 256 + 3;
+
+/** Een tekenapparaat met major 1 en minor 3 (`/dev/null`). @param {StatUit} stat */
+export const isNulApparaat = (stat) => stat.isCharacterDevice() && stat.rdev === RDEV_NUL;
+
+/**
+ * Een pad van de `.env`-familie (`.env`, `.env.*` behalve `.env.example`) of met `secret` in de basisnaam, op elke diepte
+ * (spec rolhek-effect AC-11 c): de momentopname hasht het zonder `-w`.
+ * @param {string} vol
+ */
+export function isGeheim(vol) {
+  const naam = path.basename(vol);
+  return naam === '.env' || (naam.startsWith('.env.') && naam !== '.env.example') || naam.includes('secret');
+}
+
+/** Ontsleutelt `\NNN` (octaal) in een veld van mountinfo, precies één keer. @param {string} veld */
+const ontsleutel = (veld) => veld.replace(/\\([0-7]{3})/g, (_heel, code) => String.fromCharCode(Number.parseInt(code, 8)));
+
+/**
+ * De koppelingen uit de tekst van `/proc/self/mountinfo`, per koppelpunt de laatste regel: root (veld 4), mount-opties
+ * (veld 6) en bestandssysteem (het veld na `-`). Een regel die niet past, telt niet.
+ * @param {string} mountinfo
+ * @returns {Map<string, { root: string, opties: string[], fs: string }>}
+ */
+export function koppelingen(mountinfo) {
+  /** @type {Map<string, { root: string, opties: string[], fs: string }>} */
+  const map = new Map();
+  for (const regel of mountinfo.split('\n')) {
+    const velden = regel.split(' ');
+    const streep = velden.indexOf('-', 6);
+    if (streep < 0 || velden.length < streep + 2) continue;
+    map.set(ontsleutel(velden[4] ?? ''), {
+      root: ontsleutel(velden[3] ?? ''),
+      opties: (velden[5] ?? '').split(','),
+      fs: velden[streep + 1] ?? '',
+    });
+  }
+  return map;
+}
+
+/**
+ * Vorm A van spec rolhek-effect AC-11 (a), ADR 0084 punt 1: de paden die bevestigd afgeschermd zijn door een alleen-lezen
+ * koppeling van `/dev/null`. Alleen voor `pr:verify`; gooit nooit (een fout of twijfel is "niet erkend", dus dicht).
+ * @param {{ mountinfo: string | null, root: string, paden: readonly string[], lstat: (vol: string) => unknown,
+ *   getrackt: (rel: string) => boolean, realpath?: ((pad: string) => string) | undefined }} invoer
+ * @returns {Set<string>}
+ */
+export function afgeschermdePaden({ mountinfo, root, paden, lstat, getrackt, realpath = realpathSync }) {
+  /** @type {Set<string>} */
+  const erkend = new Set();
+  try {
+    if (mountinfo === null || mountinfo === '') return erkend;
+    const map = koppelingen(mountinfo);
+    const wortel = realpath(root);
+    for (const rel of paden) if (bevestigd({ map, vol: path.posix.join(wortel, rel), rel, lstat, getrackt })) erkend.add(rel);
+  } catch {
+    return new Set();
+  }
+  return erkend;
+}
+
+/**
+ * @param {{ map: Map<string, { root: string, opties: string[], fs: string }>, vol: string, rel: string,
+ *   lstat: (vol: string) => unknown, getrackt: (rel: string) => boolean }} vraag
+ */
+function bevestigd({ map, vol, rel, lstat, getrackt }) {
+  try {
+    const koppeling = map.get(vol);
+    if (koppeling === undefined || !koppeling.opties.includes('ro') || koppeling.root !== '/null' || koppeling.fs !== 'devtmpfs') return false;
+    const stat = lstat(vol);
+    if (!isStat(stat) || !isNulApparaat(stat)) return false;
+    return getrackt(rel) === false;
+  } catch {
+    return false;
+  }
+}
+
+/** @param {unknown} waarde @returns {waarde is StatUit} */
+function isStat(waarde) {
+  if (typeof waarde !== 'object' || waarde === null) return false;
+  const getallen = ['mode', 'rdev'].every((naam) => typeof Reflect.get(waarde, naam) === 'number');
+  const vragen = ['isCharacterDevice', 'isDirectory', 'isFile', 'isSymbolicLink'].every((naam) => typeof Reflect.get(waarde, naam) === 'function');
+  return getallen && vragen;
+}
 
 /** @param {string} root @returns {Git} */
 export function gitIn(root) {
@@ -104,9 +221,11 @@ export function bestandenOnder(dir, voor) {
 /**
  * Inhoud en mode van een pad in de werkmap: `<mode>:<blob>`, een symlink zelf (lstat), een map als `map`, of `weg`. De
  * blob gaat met `git hash-object -w` de objectdatabase in, zodat de inhoud van vóór een commando leesbaar blijft (AC-1).
- * Alleen een gewoon bestand wordt gehasht; een FIFO, socket of apparaat telt als `<mode>:anders`. Met `alleenLezen` (pr:verify)
- * zonder `-w`.
- * @param {{ root: string, git: Git, gitDir: string, alleenLezen?: boolean }} repo @param {readonly string[]} paden
+ * Alleen een gewoon bestand wordt gehasht; een tekenapparaat 1,3 telt als `<mode>:nul` (AC-11 d), een FIFO, socket of ander
+ * apparaat als `<mode>:anders`. Met `alleenLezen` (pr:verify) zonder `-w`, een geheim altijd zonder (AC-11 c). `lstat`: alleen
+ * voor tests (een tekenapparaat kan een test niet maken).
+ * @param {{ root: string, git: Git, gitDir: string, alleenLezen?: boolean, lstat?: Lstat | undefined }} repo
+ * @param {readonly string[]} paden
  * @returns {Record<string, string>}
  */
 function werkmapStaat(repo, paden) {
@@ -114,13 +233,19 @@ function werkmapStaat(repo, paden) {
   const staat = {};
   /** @type {string[]} */
   const gewoon = [];
+  const lstat = repo.lstat ?? lstatSync;
   for (const pad of paden) {
     const vol = pad.startsWith('.git/') ? path.join(repo.gitDir, pad.slice(5)) : path.join(repo.root, pad);
     try {
-      const stat = lstatSync(vol);
+      const stat = lstat(vol);
+      if (!isStat(stat)) {
+        staat[pad] = 'anders';
+        continue;
+      }
       const mode = (stat.mode & 0o777777).toString(8);
       if (stat.isSymbolicLink()) staat[pad] = `${mode}:link-${createHash('sha256').update(readlinkSync(vol)).digest('hex')}`;
       else if (stat.isDirectory()) staat[pad] = `${mode}:map`;
+      else if (isNulApparaat(stat)) staat[pad] = `${mode}:${NUL}`;
       else if (!stat.isFile()) staat[pad] = `${mode}:anders`;
       else {
         staat[pad] = mode;
@@ -140,15 +265,25 @@ function werkmapStaat(repo, paden) {
 }
 
 /**
- * Blob-id's van gewone bestanden: in één `--stdin-paths`, behalve een pad met een nieuwe regel (dat splitst stdin), dat apart.
+ * Blob-id's van gewone bestanden. Een geheim (AC-11 c) en alles met `alleenLezen` zonder `-w`, de rest met; per groep in één
+ * `--stdin-paths`, behalve een pad met een nieuwe regel (dat splitst stdin), dat apart.
  * @param {{ git: Git, alleenLezen?: boolean }} repo @param {readonly string[]} bestanden
  */
 function hashes(repo, bestanden) {
-  const schrijf = repo.alleenLezen === true ? [] : ['-w'];
+  const metW = (/** @type {string} */ vol) => repo.alleenLezen !== true && !isGeheim(vol);
+  const perPad = new Map([
+    ...hashGroep(repo.git, bestanden.filter(metW), ['-w']),
+    ...hashGroep(repo.git, bestanden.filter((vol) => !metW(vol)), []),
+  ]);
+  return bestanden.map((vol) => perPad.get(vol) ?? '');
+}
+
+/** @param {Git} git @param {readonly string[]} bestanden @param {readonly string[]} schrijf @returns {[string, string][]} */
+function hashGroep(git, bestanden, schrijf) {
   const gewoon = bestanden.filter((vol) => !vol.includes('\n'));
-  const lijst = gewoon.length === 0 ? [] : repo.git(['hash-object', ...schrijf, '--stdin-paths'], `${gewoon.join('\n')}\n`).trim().split('\n');
+  const lijst = gewoon.length === 0 ? [] : git(['hash-object', ...schrijf, '--stdin-paths'], `${gewoon.join('\n')}\n`).trim().split('\n');
   const perPad = new Map(gewoon.map((vol, index) => [vol, lijst[index] ?? '']));
-  return bestanden.map((vol) => perPad.get(vol) ?? repo.git(['hash-object', ...schrijf, '--', vol]).trim());
+  return bestanden.map((vol) => [vol, perPad.get(vol) ?? git(['hash-object', ...schrijf, '--', vol]).trim()]);
 }
 
 /**
@@ -169,16 +304,16 @@ export function gitDirVan(repo) {
 
 /**
  * De werkmapstaat van losse paden, zoals in een momentopname (zonder objecten te schrijven): voor de vensters van AC-2.
- * @param {{ root: string, git: Git }} repo @param {readonly string[]} paden
+ * @param {{ root: string, git: Git, lstat?: Lstat | undefined }} repo @param {readonly string[]} paden
  */
 export function padStaten(repo, paden) {
   if (paden.length === 0) return {};
-  return werkmapStaat({ root: repo.root, git: repo.git, gitDir: gitDirVan(repo), alleenLezen: true }, paden);
+  return werkmapStaat({ root: repo.root, git: repo.git, gitDir: gitDirVan(repo), alleenLezen: true, lstat: repo.lstat }, paden);
 }
 
 /**
- * De momentopname van AC-1. `teGroot` als er meer dan MAX_PADEN paden zijn (AC-7); dan zonder inhoud.
- * @param {{ root: string, git: Git, alleenLezen?: boolean }} repo
+ * De momentopname van AC-1. `teGroot` als er meer dan MAX_PADEN paden zijn (AC-7); dan zonder inhoud. `lstat`: zie `werkmapStaat`.
+ * @param {{ root: string, git: Git, alleenLezen?: boolean, lstat?: Lstat | undefined }} repo
  * @returns {Snapshot}
  */
 export function momentopname(repo) {
@@ -198,7 +333,7 @@ export function momentopname(repo) {
   ];
   const paden = [...new Set([...afwijkend, ...genegeerd.filter((pad) => !pad.endsWith('/')), ...vlaggen, ...vast])];
   if (paden.length > MAX_PADEN) return { head, refs, paden: {}, index, genegeerd, teGroot: true };
-  const staat = werkmapStaat({ root, git, gitDir, alleenLezen: repo.alleenLezen === true }, paden);
+  const staat = werkmapStaat({ root, git, gitDir, alleenLezen: repo.alleenLezen === true, lstat: repo.lstat }, paden);
   return {
     head,
     refs,

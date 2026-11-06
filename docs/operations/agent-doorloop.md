@@ -79,6 +79,15 @@ blokkeert alleen op de eigen sessie en de context bij elke tool-aanroep noemt de
 bovengrens. `pnpm rolhek:overnemen --alles` wist ook alle opnamen en vensters van de opslag van deze werkmap
 (`scripts/kit/rolhek-overnemen.mjs:neemOver`).
 
+Afscherming door de sandbox is geen effect (spec `rolhek-effect` AC-11, ADR 0084). Voor een ongetrackt pad op de vaste lijst
+`SANDBOX_LEEG` (`rails/hooks/lib/effect-snapshot.mjs:21`) zijn weg, een leeg bestand zonder uitvoerbit en een tekenapparaat 1,3
+gelijk, in elke toets (`rails/hooks/lib/effect.mjs:243`, `effect-compare.mjs:55`); inhoud, een uitvoerbit of een pad buiten de
+lijst telt zoals nu, en de lijst groeit alleen met eigenaarakkoord. Alleen `pr:verify` erkent daarnaast een pad dat de sandbox
+met een alleen-lezen koppeling van `/dev/null` afschermt; die set bepaalt het zelf uit `/proc/self/mountinfo` en `lstat`
+(`scripts/kit/pr-verify.mjs:147`, `effect-snapshot.mjs:103`), nooit uit de omgeving, een vlag of een bestand. Zo'n pad telt
+niet als verandering, en een open overtreding erop vervalt niet. Een geheim (`.env`, `.env.*` behalve `.env.example`,
+`*secret*`) gaat niet in `.git/objects` (`effect-snapshot.mjs:272`); een toets die de oude inhoud nodig heeft, valt dicht.
+
 Wanneer een meting "let op" zegt (ADR 0070, spec `meting-stuurt`):
 
 - **Tegenover de basis.** `pnpm leespad` meet ook de basis, standaard `git merge-base origin/main HEAD`
@@ -409,7 +418,9 @@ SHA tellen; een mislukte rerun maakt eerder groen ongeldig. Zonder `--watch` vol
 Bij CodeQL telt ook de aparte `CodeQL`-resultaatcheck van GitHub Advanced Security mee: een geslaagde analysejob kan
 bevindingen hebben. Een rode, lopende of nog ontbrekende resultaatcheck geeft geen groen oplever- of bouwbewijs.
 Met `--watch` maximaal 30 minuten wachten; een deadline is onvoltooid, daarna controleert de agent opnieuw.
-Een veranderende PR of werkmap vraagt nieuwe verificatie.
+Een veranderende PR of werkmap vraagt nieuwe verificatie. Als bewijs telt alleen de uitvoer van `pr:verify` die de hoofdsessie
+zelf draaide, niet die van een subagent (spec `rolhek-effect` AC-11 g, ADR 0084 punt 5); dat is een procesregel die geen check
+afdwingt (R-ROL-05).
 
 ### Als pr:verify niet start of de werkmap weigert
 
@@ -461,6 +472,12 @@ niet uit. Lees `git status --porcelain`, `git diff --name-status` en `git diff -
 herkomst vóór committen of herstellen. Alleen de bestaande uitzonderingen uit `werkmapNegeer` op de vertrouwde basis
 gelden. Na een afgebroken branchwissel volg je "Branchwissels in een sandbox" hierboven (leerpunt #338); voeg geen
 onbekende paden aan de uitzonderingen toe om de weigering op te heffen (leerpunt #329).
+
+Een plaatshouder van de sandbox blokkeert de werkmap niet (spec `rolhek-effect` AC-11 e): een ongetrackt pad op `SANDBOX_LEEG`
+dat leeg is zonder uitvoerbit, of een tekenapparaat 1,3 (`scripts/kit/pr-verify.mjs:105`); met inhoud, uitvoerbit of gestaged
+blokkeert het wel. Een pad dat de sandbox afschermt, toetst `pr:verify` niet; het meldt die paden in één regel
+`rolhek-effect: niet getoetst in de sandbox, wel door de hooks: <paden>` (AC-11 b). Staan er nog meldingen van plaatshouders
+van vóór deze regel op de open lijst, dan wist `pnpm rolhek:overnemen --alles` ze eenmalig.
 
 Een agent zet geen PR-label (R-ROL-08). Diff-guard vraagt alleen een eigenaarreview op de uiteindelijke head-SHA, met de
 overgang uit ADR 0045 punt 17; een label telt niet (R-CI-07).

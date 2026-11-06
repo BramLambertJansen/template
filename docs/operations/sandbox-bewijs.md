@@ -34,6 +34,9 @@ Twee lagen: een eerder, samengesteld commando dat ook `.env` las, weigerde de pe
   `denyOnly`; `probe-secret.txt` in de root en `.claude/` geweigerd; `secret-utils.mjs` in `node_modules` en in
   `.claude/worktrees/*/node_modules` leesbaar. Leest de sandbox `/` absoluut, dan is de root onbeschermd en volgt direct
   een herstel.
+- **Plaatshouders** (meting 6 november 2026, Claude Code 2.1.318): in de sandbox is een afgeschermd pad een alleen-lezen
+  koppeling van `/dev/null` (tekenapparaat 1,3 van `nobody`); buiten de sandbox bestaat geen pad van `SANDBOX_LEEG`. De toets op
+  effect telt ze niet (spec `rolhek-effect` AC-11, ADR 0084).
 - **`~/.ssh` en `~/.aws`** zijn alleen als regel aanwezig; bewijs volgt op een machine waar die mappen bestaan.
 - **`excludedCommands`** (`.claude/settings.json:122`: `pnpm test:db`, `ui:check`, `gate:slow`, `db:generate`, `check:snapshot`)
   draaien buiten de sandbox, met `ask`; ADR 0044 beschrijft dat gat.
