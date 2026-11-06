@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd # #596
 namespace: rolhek-vooraf-krimp
 ---
 
