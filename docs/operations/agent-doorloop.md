@@ -221,6 +221,16 @@ Daarbij worden de volledige unit-suite en overige `gate:fast`-onderdelen niet bi
 De gerichte feedback kijkt naar nog gewijzigde bestanden; voer vóór review ook toepasselijke controles op de
 gecommitte branchdiff uit. Geen codewijziging betekent geen feedback, nooit een volledige groene einduitslag.
 
+Als alleen pnpm niet start en de vereiste Node-versie en projectdependencies aantoonbaar beschikbaar zijn, draai dan
+in Bash vanuit de repositoryroot de lokale TypeScript-compiler met dezelfde buildmodus als `typecheck` in `package.json`.
+
+```sh
+node node_modules/typescript/bin/tsc -b
+```
+
+De buildmodus volgt de projectreferenties en controleert zo ook `rails/`. Bij een typefout geeft de compiler een diagnose
+en een exitcode ongelijk aan nul. Herstel pnpm voor de volledige pre-pushcontrole.
+
 Pre-push blijft ongewijzigd en start de volledige `pnpm gate:fast`. Alle CI-workflows en vereiste checks blijven
 ongewijzigd op iedere PR. Toepasselijke runnerchecks blijven verplicht. Een codewijziging of ongeldige controle-invoer
 vraagt nieuw bewijs; geen hergebruik van een oude groene uitslag of generieke cache.
