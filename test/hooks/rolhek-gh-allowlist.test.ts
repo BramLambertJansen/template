@@ -1254,3 +1254,16 @@ describe('AC-10 (c): negatie met een hoofdletter kan naar gh wijzen', () => {
     expect([...decision.deny, ...decision.ask].join('\n')).toContain('[!G]h');
   });
 });
+
+// Leerpunt #622 (B3): een escape in een klasse (`[\!g]`) kan bash naar `gh` laten uitvouwen; de tokenizer ziet het niet. Dichtvallen.
+describe('AC-10 (c) (B3): escape in een glob-klasse kan naar gh wijzen', () => {
+  test.each(['ionice /usr/bin/[\\!g]h issue create', 'setsid /usr/bin/g[\\!x] pr merge 1'])(
+    'dicht voor elke rol: %s',
+    (command) => {
+      for (const role of [undefined, ...SUBAGENTS]) {
+        const decision = run(command, role);
+        expect({ role, dicht: decision.deny.length + decision.ask.length > 0 }).toEqual({ role, dicht: true });
+      }
+    },
+  );
+});

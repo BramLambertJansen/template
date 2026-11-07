@@ -401,3 +401,32 @@ describe('rolhek-vooraf-krimp/AC-3 (B2): collatiesymbool als bereikbegin of -ein
     },
   );
 });
+
+// Leerpunt #622 (B3): de tokenizer haalt escapes en aanhalingen weg vóór de glob-omzetting; bash leest ze als klassetekens.
+// Eigenaarsbesluit: dichtvallen. Een glob-klasse in een woord of redirect van een commando waarvan de ruwe tekst een `\`
+// bevat, past op elk teken.
+describe('AC-3 (B3): escape in een glob-klasse valt dicht', () => {
+  test.each(['echo x > .g[\\!i]t/config', 'echo x > .gi[a\\]t]/config', "echo x > .gi[a'\\'-u]/config"])(
+    '%s is deny voor de hoofdsessie en de developer',
+    (command) => {
+      for (const agent of [undefined, 'developer']) {
+        expect({ agent, v: verdict(command, agent) }).toEqual({ agent, v: 'deny' });
+      }
+    },
+  );
+
+  test('echo x > lefthook.y[\\!m]l is deny voor de developer en ask voor de hoofdsessie', () => {
+    expect(verdict('echo x > lefthook.y[\\!m]l', 'developer')).toBe('deny');
+    expect(verdict('echo x > lefthook.y[\\!m]l')).toBe('ask');
+  });
+
+  // Regressiebewaking: een `\` zonder klasse naar een gewoon pad verandert niet.
+  test('echo x > src/a\\ b.txt (backslash, geen klasse, gewoon pad) is ask noch deny', () => {
+    for (const agent of [undefined, 'developer']) {
+      expect({ agent, v: verdict('echo x > src/a\\ b.txt', agent) }).toEqual({
+        agent,
+        v: verdict('echo x > src/a-b.txt', agent),
+      });
+    }
+  });
+});
