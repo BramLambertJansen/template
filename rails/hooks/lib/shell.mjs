@@ -275,17 +275,51 @@ const RUIM_MAX = 16;
  * `\`, `'` of `"`, die de tokenizer al weghaalde; welke `[` een klasse opent en welke `]` haar sluit, is dan niet meer te zien
  * (`.g[\!i]t`, `.gi[a\]t]`, `.gi[t']']`). Dan telt elke `[` met een `]` erna op drie manieren: letterlijk, als bash-klasse
  * en als één willekeurig teken tot elke latere `]`. Zo is de regex nooit nauwer dan bash; zonder `[` verandert niets.
+ * Een klasse met een `[=x=]`-, `[:naam:]`- of `[.x.]`-deel (`benoemdDeel`) heeft ook zonder `ruim` twee lezingen
+ * (`klasseBash52`): als bash-klasse, en als één willekeurig teken tot elke `]` na haar sluitende `]`. Bash 5.2 (Ubuntu 24.04,
+ * de CI-runner) slaat in `sm_loop.c` (BRACKMATCH) na een geslaagde `[=x=]` nog een teken over, zodat de klasse pas bij een
+ * latere `]` eindigt (`.gi[[=t=]]x]` past in 5.2 op `.git`, in 5.3 niet); `[:naam:]` en `[.x.]` volgen uit voorzorg (#622).
+ * Samen een superset van de lezingen van bash 5.2 en 5.3; de letterlijke lezing hoort alleen bij `ruim`.
  * `glob`: de tekst bevat een `*`, `?` of klasse.
  * @param {string} tekst @param {GlobOpties} opties
  * @returns {{ regex: string, glob: boolean }}
  */
 export function globTekstRegex(tekst, opties) {
-  const open = tekst.split('[').length - 1;
-  if (opties.ruim && open * (tekst.split(']').length - 1) > RUIM_MAX) return { regex: opties.alles, glob: true };
+  const open = opties.ruim ? tekst.split('[').length - 1 : benoemdeKlassen(tekst);
+  if (open * (tekst.split(']').length - 1) > RUIM_MAX) return { regex: opties.alles, glob: true };
   /** @type {GlobStand} */
   const stand = { ...opties, memo: new Map(), glob: false };
   const regex = regexVanaf(tekst, 0, stand);
   return { regex, glob: stand.glob };
+}
+
+/**
+ * Heeft de klasse vanaf de `[` op `index` (eindigend op `eind`, `globKlasseRegex`) een `[=x=]`-, `[:naam:]`- of `[.x.]`-deel?
+ * @param {string} tekst @param {number} index @param {number} eind
+ */
+function benoemdDeel(tekst, index, eind) {
+  return /\[[=:.]/.test(tekst.slice(index + 1, eind));
+}
+
+/**
+ * Heeft de klasse vanaf `index` tot `eind` een tweede lezing in bash 5.2 (`klasseBash52`): een benoemd deel en een `]` erna?
+ * @param {string} tekst @param {number} index @param {number} eind
+ */
+function lezingBash52(tekst, index, eind) {
+  return benoemdDeel(tekst, index, eind) && tekst.includes(']', eind + 1);
+}
+
+/**
+ * Het aantal `[` dat een klasse met een benoemd deel opent (`benoemdDeel`), voor de grens `RUIM_MAX`.
+ * @param {string} tekst
+ */
+function benoemdeKlassen(tekst) {
+  let aantal = 0;
+  for (let index = tekst.indexOf('['); index !== -1; index = tekst.indexOf('[', index + 1)) {
+    const klasse = globKlasseRegex(tekst, index);
+    if (klasse !== null && benoemdDeel(tekst, index, klasse.eind)) aantal += 1;
+  }
+  return aantal;
 }
 
 /** @param {string} tekst @param {number} start @param {GlobStand} stand */
@@ -301,12 +335,30 @@ function regexVanaf(tekst, start, stand) {
       break;
     }
     const klasse = teken === '[' ? globKlasseRegex(tekst, index) : null;
+    if (klasse !== null && lezingBash52(tekst, index, klasse.eind)) {
+      uit += klasseBash52(tekst, klasse, stand);
+      break;
+    }
     stand.glob ||= klasse !== null || teken === '*' || teken === '?';
     uit += klasse === null ? stand.teken(teken) : klasse.regex;
     index = klasse === null ? index + 1 : klasse.eind + 1;
   }
   stand.memo.set(start, uit);
   return uit;
+}
+
+/**
+ * De lezingen van een klasse met een benoemd deel (`benoemdDeel`) buiten een ruime tekst: als bash-klasse (bash 5.3) en als
+ * één willekeurig teken tot elke `]` na de sluitende `]` (bash 5.2, `sm_loop.c`: na een geslaagde `[=x=]` slaat BRACKMATCH
+ * nog een teken over, zodat de klasse pas bij een latere `]` eindigt; `[:naam:]` en `[.x.]` uit voorzorg, #622).
+ * @param {string} tekst @param {{ regex: string, eind: number }} klasse @param {GlobStand} stand
+ */
+function klasseBash52(tekst, klasse, stand) {
+  stand.glob = true;
+  const lezingen = [klasse.regex + regexVanaf(tekst, klasse.eind + 1, stand)];
+  for (let sluit = tekst.indexOf(']', klasse.eind + 1); sluit !== -1; sluit = tekst.indexOf(']', sluit + 1))
+    lezingen.push(stand.elk + regexVanaf(tekst, sluit + 1, stand));
+  return `(?:${lezingen.join('|')})`;
 }
 
 /**

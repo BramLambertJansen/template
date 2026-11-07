@@ -444,11 +444,13 @@ describe('AC-3: bash 5.2 na een gelijkheidsklasse', () => {
     expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBe(verwacht);
   });
 
-  test.each(['echo x > .gi[[=t=]]x]/config', 'echo x > lefthook.y[[=m=]]q]l'])(
-    '%s is deny voor de hoofdsessie en de developer',
-    (command) => {
-      expect(verdict(command)).toBe('deny');
-      expect(verdict(command, 'developer')).toBe('deny');
-    },
-  );
+  test('echo x > .gi[[=t=]]x]/config is deny voor de hoofdsessie en de developer', () => {
+    expect(verdict('echo x > .gi[[=t=]]x]/config')).toBe('deny');
+    expect(verdict('echo x > .gi[[=t=]]x]/config', 'developer')).toBe('deny');
+  });
+
+  test('echo x > lefthook.y[[=m=]]q]l is ask voor de hoofdsessie en deny voor de developer, zoals lefthook.yml', () => {
+    expect(verdict('echo x > lefthook.y[[=m=]]q]l')).toBe('ask');
+    expect(verdict('echo x > lefthook.y[[=m=]]q]l', 'developer')).toBe('deny');
+  });
 });
