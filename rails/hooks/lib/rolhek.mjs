@@ -2,7 +2,7 @@
 // verboden is (deny). Puur: alles wat van de schijf of git komt, zit in `ctx`, zodat test/hooks/rolhek.test.ts elke regel
 // met echte payloads kan bewijzen. De stdin/stdout-kant staat in rails/hooks/rolhek.mjs.
 import path from 'node:path';
-import { gitSubcommand, globKlasse, parseCommands, programName, splitCommand, tmpdirLetterlijk, tmpdirWoord, writeTargets, zetVariabele } from './shell.mjs';
+import { gitSubcommand, globKlasseRegex, parseCommands, programName, splitCommand, tmpdirLetterlijk, tmpdirWoord, writeTargets, zetVariabele } from './shell.mjs';
 import { A4_MELDING, archiefBron, beslisOvergang, builtReference, documentInfo, documentKind, isArchief, isHerschrijving } from './document-state.mjs';
 import { canRecordStatus, TEMPLATE_REPOSITORY } from './task-authority.mjs';
 import { automaticRunner } from './runner-authority.mjs';
@@ -1202,25 +1202,36 @@ const SHELL_EXPANSION = /\{.*(?:,|\.\.)|\[[^\]]*\[[:=.]/s;
  */
 function globForGh(word) {
   const name = word.slice(word.lastIndexOf('/') + 1);
-  if (!/[*?]|\[[!^]?\]?[^\]]*\]/.test(name)) return false;
-  // Een klasse mag direct na `[`, `[!` of `[^` een `]` bevatten (`g[]h]` matcht gh); een losse `[` is letterlijk.
-  const pattern = name.replace(/\[[!^]?\]?[^\]]*\]|./g, globPart);
+  let pattern = '';
+  let glob = false;
+  for (let index = 0; index < name.length; index += 1) {
+    // Een klasse volgens bash: `g[]h]` en `g[[:alpha:]]` passen op gh; zonder sluitende `]` is de `[` letterlijk
+    // (`g[!]`, `[^]h`; AC-10 (c), #622).
+    const klasse = name[index] === '[' ? globKlasseRegex(name, index) : null;
+    if (klasse === null) {
+      glob ||= name[index] === '*' || name[index] === '?';
+      pattern += globPart(name[index] ?? '');
+    } else {
+      pattern += klasse.regex;
+      index = klasse.eind;
+      glob = true;
+    }
+  }
+  if (!glob) return false;
   try {
     const matcher = new RegExp(`^${pattern}$`, 'i');
     return matcher.test('gh') || matcher.test('gh.exe');
   } catch {
-    // Na `globKlasse` hoort elk patroon geldig te zijn; lukt het toch niet, dan dicht.
+    // Na `globKlasseRegex` hoort elk patroon geldig te zijn; lukt het toch niet, dan dicht.
     return true;
   }
 }
 
 /**
- * Eén deel van een shell-glob als reguliere expressie: een klasse `[…]`/`[!…]`, `*`, `?` of een letterlijk teken.
+ * Eén teken van een shell-glob buiten een klasse als reguliere expressie: `*`, `?` of een letterlijk teken.
  * @param {string} part
  */
 function globPart(part) {
-  const negated = /^\[[!^]/.test(part);
-  if (part.length > 1) return `[${negated ? '^' : ''}${globKlasse(part.slice(negated ? 2 : 1, -1)).replace(/[\\\]^]/g, '\\$&')}]`;
   if (part === '*') return '.*';
   if (part === '?') return '.';
   return part.replace(/[.+^${}()|[\]\\]/g, '\\$&');

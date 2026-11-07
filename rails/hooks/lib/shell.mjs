@@ -103,6 +103,86 @@ export function globKlasse(inhoud) {
   return inhoud.replace(/([^-])-([^-])/gs, (bereik, van = '', tot = '') => (van > tot ? '' : bereik));
 }
 
+// POSIX-klassen als ASCII-inhoud van een reguliere klasse (al geëscaped). `upper` en `lower` staan apart: de aanroepers
+// gebruiken vlag `i`, en `[[:upper:]]` past in bash niet op `l` (spec rolhek-vooraf-krimp AC-3, #618).
+/** @type {Readonly<Record<string, string>>} */
+const POSIX_KLASSE = {
+  alpha: 'A-Za-z', digit: '0-9', alnum: 'A-Za-z0-9', space: ' \\t\\n\\r\\f\\v', blank: ' \\t',
+  punct: '!-\\/:-@\\[-`{-~', print: ' -~', graph: '!-~', cntrl: '\\x00-\\x1f\\x7f', xdigit: '0-9A-Fa-f', word: 'A-Za-z0-9_',
+};
+/** @type {Readonly<Record<string, string>>} */
+const POSIX_HOOFDLETTER = { upper: 'A-Z', lower: 'a-z' };
+
+/**
+ * @typedef {{ gewoon: string, vast: string, hoofd: string, elk: boolean }} KlasseDelen
+ */
+
+/**
+ * Een deel `[:naam:]`, `[=x=]` of `[.x.]` binnen een klasse, vanaf de `[` op `index`; null als het niet gesloten is (dan is
+ * die `[` een gewoon teken). Een `]` binnen zo'n deel sluit de klasse niet. Met een onbekende naam of een meerletterig
+ * collatie-element past de hele klasse, ook genegeerd, op elk teken: meer treffers is een strenger vangnet (AC-3, #618).
+ * @param {string} tekst @param {number} index @param {KlasseDelen} delen
+ * @returns {number | null} de index na de afsluitende `:]`, `=]` of `.]`
+ */
+function subKlasse(tekst, index, delen) {
+  const soort = tekst[index + 1] ?? '';
+  const sluit = tekst.indexOf(`${soort}]`, index + 2);
+  if (sluit === -1) return null;
+  const naam = tekst.slice(index + 2, sluit);
+  if (soort !== ':') {
+    if (naam.length === 1) delen.gewoon += naam;
+    else delen.elk = true;
+  } else if (Object.hasOwn(POSIX_HOOFDLETTER, naam)) delen.hoofd += POSIX_HOOFDLETTER[naam] ?? '';
+  else if (Object.hasOwn(POSIX_KLASSE, naam)) delen.vast += POSIX_KLASSE[naam] ?? '';
+  else delen.elk = true;
+  return sluit + 2;
+}
+
+/**
+ * De reguliere expressie bij de delen van een klasse. Een lege klasse past op niets; een lege negatie op elk teken, zoals
+ * `[!z-a]` in bash (een omgekeerd bereik past op niets). `hoofd` staat in `(?-i:…)`, zodat vlag `i` het niet verruimt.
+ * @param {KlasseDelen} delen @param {boolean} negatie
+ */
+function klasseUit(delen, negatie) {
+  const gewoon = globKlasse(delen.gewoon).replace(/[\\\]^[]/g, '\\$&') + delen.vast;
+  const hoofd = delen.hoofd === '' ? '' : `(?-i:[${negatie ? '^' : ''}${delen.hoofd}])`;
+  if (delen.elk) return '[\\s\\S]';
+  if (negatie) {
+    if (hoofd === '') return gewoon === '' ? '[\\s\\S]' : `[^${gewoon}]`;
+    return gewoon === '' ? hoofd : `(?![${gewoon}])${hoofd}`;
+  }
+  const delenUit = [gewoon === '' ? '' : `[${gewoon}]`, hoofd].filter((deel) => deel !== '');
+  if (delenUit.length === 0) return '(?!)';
+  return delenUit.length === 1 ? (delenUit[0] ?? '') : `(?:${delenUit.join('|')})`;
+}
+
+/**
+ * Een bash-glob-klasse vanaf de `[` op `index` als reguliere expressie (zonder vlag `u`, geschikt voor vlag `i`), of null
+ * als er geen sluitende `]` is: dan is de `[` letterlijk (`g[!]`, `[^]h`). Na `[` mag `!` of `^` (negatie) staan; een `]`
+ * direct daarna hoort bij de klasse. Binnen de klasse tellen `[:naam:]`, `[=x=]` en `[.x.]` (spec rolhek-vooraf-krimp AC-3
+ * en AC-10 (c), leerpunten #618 en #622). Gedeeld door `globForGh` (rolhek.mjs) en `stukRegex` (zelfladend.mjs).
+ * @param {string} tekst @param {number} index
+ * @returns {{ regex: string, eind: number } | null} `eind`: de index van de sluitende `]`
+ */
+export function globKlasseRegex(tekst, index) {
+  const negatie = /[!^]/.test(tekst[index + 1] ?? '');
+  let positie = index + (negatie ? 2 : 1);
+  /** @type {KlasseDelen} */
+  const delen = { gewoon: '', vast: '', hoofd: '', elk: false };
+  if (tekst[positie] === ']') {
+    delen.gewoon += ']';
+    positie += 1;
+  }
+  while (positie < tekst.length && tekst[positie] !== ']') {
+    const na = tekst[positie] === '[' && /[:=.]/.test(tekst[positie + 1] ?? '') ? subKlasse(tekst, positie, delen) : null;
+    if (na === null) {
+      delen.gewoon += tekst[positie] ?? '';
+      positie += 1;
+    } else positie = na;
+  }
+  return positie < tekst.length ? { regex: klasseUit(delen, negatie), eind: positie } : null;
+}
+
 /**
  * Een woord (waarde uit `Command.words`) dat `$TMPDIR` of `${TMPDIR}` is, of met `$TMPDIR/` begint en daarna niets meer
  * expandeert. Telt alleen samen met `tmpdirLetterlijk`.

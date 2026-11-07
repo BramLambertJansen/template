@@ -2,7 +2,7 @@
 // (`.git/**`, de hook-stubs, `.claude/settings.json`, `lefthook.yml`, `.pnpmfile.cjs`). Een schrijfactie daar kan de toets op
 // effect uitschakelen voordat die kijkt; daarom toetst het rolhek deze paden vooraf, op elk woord van het commando.
 import path from 'node:path';
-import { gitSubcommand, globKlasse, programName } from './shell.mjs';
+import { gitSubcommand, globKlasseRegex, programName } from './shell.mjs';
 
 // Lezen zonder schrijven; `sed` alleen zonder `-i`/`--in-place` (AC-3).
 const LEESLIJST = new Set(['cat', 'head', 'tail', 'ls', 'stat', 'wc', 'diff', 'grep', 'rg', 'jq']);
@@ -47,16 +47,13 @@ function stukRegex(stuk) {
   let uit = GLOB.test(stuk[0] ?? '') ? '(?!\\.)' : '';
   for (let index = 0; index < stuk.length; index += 1) {
     const teken = stuk[index] ?? '';
-    // Negatie met `!` of `^` (bash); een `]` direct na `[`, `[!` of `[^` hoort bij de klasse (AC-10 (c)).
-    const negatie = teken === '[' && /[!^]/.test(stuk[index + 1] ?? '');
-    const sluit = teken === '[' ? stuk.indexOf(']', index + (negatie ? 3 : 2)) : -1;
+    // Een klasse volgens bash, ook met POSIX-klassen (AC-3, #618); zonder sluitende `]` is de `[` letterlijk (AC-10 (c), #622).
+    const klasse = teken === '[' ? globKlasseRegex(stuk, index) : null;
     if (teken === '*') uit += '[^/]*';
     else if (teken === '?') uit += '[^/]';
-    else if (sluit > 0) {
-      // Een omgekeerd bereik (`[z-a]`) past op niets en is geen interne fout (AC-10 (c)).
-      const inhoud = globKlasse(stuk.slice(index + (negatie ? 2 : 1), sluit));
-      uit += `[${negatie ? '^' : ''}${inhoud.replace(/[\\\]^]/g, '\\$&')}]`;
-      index = sluit;
+    else if (klasse !== null) {
+      uit += klasse.regex;
+      index = klasse.eind;
     } else uit += teken.replace(/[.+^${}()|\\[\]]/g, '\\$&');
   }
   return new RegExp(`^${uit}$`, 'i');
@@ -381,7 +378,8 @@ export function zelfladend({ argv: ruw, redirects, role }, basisCtx, besluit) {
     weiger('na een `cd` naar een map die pas bij het uitvoeren bekend is ($, backtick), ziet het rolhek niet waar paden landen (spec rolhek-vooraf-krimp AC-3)', role, besluit);
   for (const rel of doelen([...redirects, ...schrijfWoorden(argv)], ctx)) {
     const melding = `${rel} is een zelfladend pad (spec rolhek-vooraf-krimp AC-3): de toets op effect zou daarna niet meer kunnen kijken`;
-    if (rel.split('/')[0]?.toLowerCase() === '.git') besluit.deny.push(`${melding}; verboden, voor elke rol (R-ROL-03)`);
+    // Ook een glob die bash op `.git` laat passen (`.gi[t]`, `.gi[[:alpha:]]`) valt onder `.git/**` (AC-3, #618).
+    if (stukRegex(rel.split('/')[0] ?? '').test('.git')) besluit.deny.push(`${melding}; verboden, voor elke rol (R-ROL-03)`);
     else weiger(melding, role, besluit);
   }
   for (const doel of mapDoelen(argv).filter((kandidaat) => bovenZelfladend(kandidaat, ctx)))
