@@ -310,7 +310,8 @@ describe('rolhek-vooraf-krimp/AC-3: POSIX-klassen in een glob', () => {
 });
 
 // Leerpunt #618/#622, rolhek-vooraf-krimp AC-10 (c): `a-[:digit:]` in een klasse geeft geen interne fout. Bash leest
-// `[a-[:digit:]]` als {a, -, 0-9}: het koppelteken is dan een letterlijk teken naast het bereik.
+// `[a-[:digit:]]` als {a, -, 0-9}: het koppelteken is dan een letterlijk teken naast het bereik. Dat is strenger dan
+// bash (bash past `lefthook.ym[a-[:digit:]l]` niet op `lefthook.yml`); strenger mag, nooit nauwer.
 describe('rolhek-vooraf-krimp/AC-10 (c): bereik gevolgd door een POSIX-klasse geeft geen interne fout', () => {
   test.each(['foo[a-[:digit:]]', 'foo[a-[:alpha:]]', 'foo[!a-[:punct:]]'])(
     '%s: geen throw in zelfladendPatroon',
@@ -333,7 +334,7 @@ describe('rolhek-vooraf-krimp/AC-10 (c): bereik gevolgd door een POSIX-klasse ge
     },
   );
 
-  test('lefthook.ym[a-[:digit:]l] wijst naar lefthook.yml (klasse {a, -, 0-9, l})', () => {
+  test('lefthook.ym[a-[:digit:]l] wijst naar lefthook.yml (strenger dan bash: klasse {a, -, 0-9, l})', () => {
     expect(zelfladendPatroon('lefthook.ym[a-[:digit:]l]', config.zelfladend ?? [])).toBe('lefthook.yml');
   });
 });
@@ -377,6 +378,26 @@ describe('rolhek-vooraf-krimp/AC-3: .git via een klasse of ?', () => {
     (command) => {
       expect(verdict(command)).toBe('deny');
       expect(verdict(command, 'developer')).toBe('deny');
+    },
+  );
+});
+
+// Leerpunt #622 (B2): in bash mag een collatiesymbool `[.x.]` een bereik begrenzen (`[a-[.z.]]`, `[[.a.]-z]`); `[=x=]` en
+// `[:naam:]` niet. Bash laat `.gi[a-[.z.]]` en `.gi[[.a.]-z]` dus passen op `.git`: een sluiproute als de code ze mist.
+describe('rolhek-vooraf-krimp/AC-3 (B2): collatiesymbool als bereikbegin of -eind', () => {
+  test.each([
+    ['.gi[a-[.z.]]/config', '.git/**'],
+    ['.gi[[.a.]-z]/config', '.git/**'],
+    ['lefthook.y[a-[.z.]]l', 'lefthook.yml'],
+  ])('zelfladendPatroon(%s) is %s', (rel, verwacht) => {
+    expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBe(verwacht);
+  });
+
+  test.each(['.gi[a-[.z.]]/config', '.gi[[.a.]-z]/config'])(
+    'echo x > %s is deny voor de hoofdsessie en de developer',
+    (pad) => {
+      expect(verdict(`echo x > ${pad}`)).toBe('deny');
+      expect(verdict(`echo x > ${pad}`, 'developer')).toBe('deny');
     },
   );
 });
