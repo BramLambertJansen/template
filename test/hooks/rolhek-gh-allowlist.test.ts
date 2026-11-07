@@ -1211,3 +1211,59 @@ describe('AC-10 (c): ] als eerste teken van een klasse geeft geen interne fout',
     },
   );
 });
+
+// Leerpunt #622, rolhek-vooraf-krimp AC-10 (c): zonder sluitende `]` is de `[` letterlijk (bash); `[!]` of `[^]` zonder latere `]`
+// is dus geen klasse en kan niet naar gh wijzen. Een echte klasse die op gh past blijft dicht.
+describe('AC-10 (c): [ zonder sluitende ] is letterlijk', () => {
+  test.each(['ls g[!]', 'ls g[^]', 'ls g[!', 'ls [!]h', 'ls [^]h'])(
+    'geen gh-glob-weigering voor hoofdsessie en developer: %s',
+    (command) => {
+      for (const role of [undefined, 'developer']) {
+        const decision = run(command, role);
+        expect({ role, deny: decision.deny, ask: decision.ask }).toEqual({ role, deny: [], ask: [] });
+      }
+    },
+  );
+
+  test.each(['ls g[h]', 'ls g[!x]', 'ls [[:alpha:]]h', 'ls g[[:alpha:]]', 'ls g[]h]'])(
+    'een klasse die op gh kan passen blijft dicht: %s',
+    (command) => {
+      for (const role of [undefined, 'developer']) {
+        const decision = run(command, role);
+        expect({ role, dicht: decision.deny.length + decision.ask.length > 0 }).toEqual({ role, dicht: true });
+      }
+    },
+  );
+});
+
+// Leerpunt #618/#622, rolhek-vooraf-krimp AC-10 (c): een negatie is hoofdlettergevoelig (bash): `[!G]` laat `g` toe, dus
+// `/usr/bin/[!G]h` kan `gh` zijn en blijft dicht voor elke rol.
+describe('AC-10 (c): negatie met een hoofdletter kan naar gh wijzen', () => {
+  test.each(['/usr/bin/[!G]h pr merge 1', '/usr/bin/[!G]h pr list', '/usr/bin/[!H]h pr list'])(
+    'dicht voor elke rol: %s',
+    (command) => {
+      for (const role of [undefined, ...SUBAGENTS]) {
+        const decision = run(command, role);
+        expect({ role, dicht: decision.deny.length + decision.ask.length > 0 }).toEqual({ role, dicht: true });
+      }
+    },
+  );
+
+  test('de weigering noemt het woord met de klasse', () => {
+    const decision = run('/usr/bin/[!G]h pr list');
+    expect([...decision.deny, ...decision.ask].join('\n')).toContain('[!G]h');
+  });
+});
+
+// Leerpunt #622 (B3): een escape in een klasse (`[\!g]`) kan bash naar `gh` laten uitvouwen; de tokenizer ziet het niet. Dichtvallen.
+describe('AC-10 (c) (B3): escape in een glob-klasse kan naar gh wijzen', () => {
+  test.each(['ionice /usr/bin/[\\!g]h issue create', 'setsid /usr/bin/g[\\!x] pr merge 1'])(
+    'dicht voor elke rol: %s',
+    (command) => {
+      for (const role of [undefined, ...SUBAGENTS]) {
+        const decision = run(command, role);
+        expect({ role, dicht: decision.deny.length + decision.ask.length > 0 }).toEqual({ role, dicht: true });
+      }
+    },
+  );
+});

@@ -263,3 +263,278 @@ describe('rolhek-vooraf-krimp/AC-10 (c): tekenklasse met ] als eerste teken', ()
     expect(redenen('echo x > lefthook.ym[]l]', 'developer')).toContain('zelfladend');
   });
 });
+
+// Leerpunt #618, spec rolhek-vooraf-krimp AC-3: een glob die er volgens bash (zonder dotglob) op kan passen, telt als het pad.
+// POSIX-klassen (`[:lower:]`), equivalentieklassen (`[=l=]`) en collatietekens (`[.l.]`) horen binnen de klasse.
+describe('rolhek-vooraf-krimp/AC-3: POSIX-klassen in een glob', () => {
+  test.each([
+    ['lefthook.ym[[:lower:]]', 'lefthook.yml'],
+    ['lefthook.ym[[:alpha:]]', 'lefthook.yml'],
+    ['lefthook.ym[![:digit:]]', 'lefthook.yml'],
+    ['lefthook.ym[[=l=]]', 'lefthook.yml'],
+    ['lefthook.ym[[.l.]]', 'lefthook.yml'],
+    ['.gi[[:alpha:]]/config', '.git/**'],
+    ['.git/confi[[:alpha:]]', '.git/**'],
+  ])('%s wijst naar %s', (rel, patroon) => {
+    expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBe(patroon);
+  });
+
+  // Eigenaarbesluit 7 november 2026: een klasse met een benoemd deel valt dicht (bash 5.2 en 5.3 lezen haar verschillend). Ook
+  // een klasse die in bash niet past, telt dus: strenger dan bash, nooit nauwer. Was: null (past niet).
+  test.each(['lefthook.ym[[:digit:]]', 'lefthook.ym[[:upper:]]', 'lefthook.ym[![:alpha:]]', 'lefthook.ym[[=x=]]'])(
+    '%s: strenger dan bash, de klasse valt dicht en wijst naar lefthook.yml',
+    (rel) => {
+      expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBe('lefthook.yml');
+    },
+  );
+
+  // Precisie: ook na het dichtvallen past hier geen één-teken-lezing op de naam (andere stam of een staart die niet past).
+  test.each(['lefthook.yz[[:digit:]]', 'lefthook.ym[[:digit:]]x', 'lefthook.y[[:upper:]]', 'lefthook.ym[![:alpha:]]x'])(
+    '%s past ook na het dichtvallen niet op een zelfladend pad',
+    (rel) => {
+      expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBeNull();
+    },
+  );
+
+  test('[ zonder sluitende ] is letterlijk: lefthook.ym[!] raakt lefthook.yml niet', () => {
+    expect(zelfladendPatroon('lefthook.ym[!]', config.zelfladend ?? [])).toBeNull();
+    expect(zelfladendPatroon('lefthook.ym[^]', config.zelfladend ?? [])).toBeNull();
+  });
+
+  test('echo x > lefthook.ym[[:lower:]] is deny voor de developer, zoals echo x > lefthook.yml', () => {
+    expect(verdict('echo x > lefthook.yml', 'developer')).toBe('deny');
+    expect(verdict('echo x > lefthook.ym[[:lower:]]', 'developer')).toBe('deny');
+    expect(redenen('echo x > lefthook.ym[[:lower:]]', 'developer')).toContain('zelfladend');
+    expect(verdict('echo x > lefthook.ym[[=l=]]', 'developer')).toBe('deny');
+  });
+
+  test('echo x > lefthook.ym[[:lower:]] is ask voor de hoofdsessie, zoals echo x > lefthook.yml', () => {
+    expect(verdict('echo x > lefthook.yml')).toBe('ask');
+    expect(verdict('echo x > lefthook.ym[[:lower:]]')).toBe('ask');
+    expect(verdict('echo x > .gi[[:alpha:]]/config')).toBe('deny');
+  });
+
+  // Was: raakt de regel niet. Nu strenger dan bash (eigenaarbesluit 7 november 2026: benoemde klasse valt dicht).
+  test('een POSIX-klasse die in bash niet past valt dicht: strenger dan bash, zelfladend voor de developer', () => {
+    expect(redenen('echo x > lefthook.ym[[:digit:]]', 'developer')).toContain('zelfladend');
+  });
+
+  test('een POSIX-klasse waar geen één-teken-lezing op past raakt de regel niet', () => {
+    expect(redenen('echo x > lefthook.ym[[:digit:]]x', 'developer')).not.toContain('zelfladend');
+  });
+});
+
+// Leerpunt #618/#622, rolhek-vooraf-krimp AC-10 (c): `a-[:digit:]` in een klasse geeft geen interne fout. Bash leest
+// `[a-[:digit:]]` als {a, -, 0-9}: het koppelteken is dan een letterlijk teken naast het bereik. Dat is strenger dan
+// bash (bash past `lefthook.ym[a-[:digit:]l]` niet op `lefthook.yml`); strenger mag, nooit nauwer.
+describe('rolhek-vooraf-krimp/AC-10 (c): bereik gevolgd door een POSIX-klasse geeft geen interne fout', () => {
+  test.each(['foo[a-[:digit:]]', 'foo[a-[:alpha:]]', 'foo[!a-[:punct:]]'])(
+    '%s: geen throw in zelfladendPatroon',
+    (rel) => {
+      expect(() => zelfladendPatroon(rel, config.zelfladend ?? [])).not.toThrow();
+      expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBeNull();
+    },
+  );
+
+  test.each(['foo[a-[:digit:]]', 'foo[a-[:alpha:]]', 'foo[!a-[:punct:]]'])(
+    'echo x > %s: geen interne fout en geen zelfladend-reden voor hoofdsessie en developer',
+    (pad) => {
+      for (const agent of [undefined, 'developer']) {
+        const command = `echo x > ${pad}`;
+        expect(() => redenen(command, agent)).not.toThrow();
+        const tekst = redenen(command, agent);
+        expect({ agent, interneFout: /interne fout/i.test(tekst) }).toEqual({ agent, interneFout: false });
+        expect({ agent, zelfladend: /zelfladend/i.test(tekst) }).toEqual({ agent, zelfladend: false });
+      }
+    },
+  );
+
+  test('lefthook.ym[a-[:digit:]l] wijst naar lefthook.yml (strenger dan bash: klasse {a, -, 0-9, l})', () => {
+    expect(zelfladendPatroon('lefthook.ym[a-[:digit:]l]', config.zelfladend ?? [])).toBe('lefthook.yml');
+  });
+});
+
+// Leerpunt #618/#622, rolhek-vooraf-krimp AC-3: een equivalentie- of collatieklasse direct na een tekst is in bash een
+// letterlijk koppelteken plus die klasse: `[t[=-=]a]` is {t, -, a}. Sluiproute naar `.git` en lefthook.yml.
+describe('rolhek-vooraf-krimp/AC-3: [=-=] en [.-.] in een klasse', () => {
+  test.each([
+    ['.gi[t[=-=]a]/packed-refs', '.git/**'],
+    ['.gi[t[.-.]a]/packed-refs', '.git/**'],
+    ['lefthook.y[m[=-=]a]l', 'lefthook.yml'],
+    ['lefthook.y[m[.-.]a]l', 'lefthook.yml'],
+  ])('%s wijst naar %s', (rel, patroon) => {
+    expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBe(patroon);
+  });
+
+  test('echo x > .gi[t[=-=]a]/packed-refs is deny voor hoofdsessie en developer', () => {
+    for (const agent of [undefined, 'developer']) {
+      expect({ agent, v: verdict('echo x > .gi[t[=-=]a]/packed-refs', agent) }).toEqual({ agent, v: 'deny' });
+      expect({ agent, v: verdict('echo x > .gi[t[.-.]a]/packed-refs', agent) }).toEqual({ agent, v: 'deny' });
+    }
+  });
+});
+
+// Leerpunt #618/#622, AC-3: een negatie telt hoofdlettergevoelig (bash): `[!L]` sluit `l` niet uit.
+describe('rolhek-vooraf-krimp/AC-3: negatie met een hoofdletter', () => {
+  test('lefthook.ym[!L] wijst naar lefthook.yml', () => {
+    expect(zelfladendPatroon('lefthook.ym[!L]', config.zelfladend ?? [])).toBe('lefthook.yml');
+  });
+
+  test('echo x > lefthook.ym[!L] is deny voor de developer en ask voor de hoofdsessie', () => {
+    expect(verdict('echo x > lefthook.ym[!L]', 'developer')).toBe('deny');
+    expect(verdict('echo x > lefthook.ym[!L]')).toBe('ask');
+  });
+});
+
+// Leerpunt #618/#622, AC-3: dekking van het .git-gedrag voor een klasse of `?` (regressiebewaking).
+describe('rolhek-vooraf-krimp/AC-3: .git via een klasse of ?', () => {
+  test.each(['echo x > .gi[t]/config', 'echo x > .g?t/config'])(
+    '%s is deny voor de hoofdsessie en de developer',
+    (command) => {
+      expect(verdict(command)).toBe('deny');
+      expect(verdict(command, 'developer')).toBe('deny');
+    },
+  );
+});
+
+// Leerpunt #622 (B2): in bash mag een collatiesymbool `[.x.]` een bereik begrenzen (`[a-[.z.]]`, `[[.a.]-z]`); `[=x=]` en
+// `[:naam:]` niet. Bash laat `.gi[a-[.z.]]` en `.gi[[.a.]-z]` dus passen op `.git`: een sluiproute als de code ze mist.
+describe('rolhek-vooraf-krimp/AC-3 (B2): collatiesymbool als bereikbegin of -eind', () => {
+  test.each([
+    ['.gi[a-[.z.]]/config', '.git/**'],
+    ['.gi[[.a.]-z]/config', '.git/**'],
+    ['lefthook.y[a-[.z.]]l', 'lefthook.yml'],
+  ])('zelfladendPatroon(%s) is %s', (rel, verwacht) => {
+    expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBe(verwacht);
+  });
+
+  test.each(['.gi[a-[.z.]]/config', '.gi[[.a.]-z]/config'])(
+    'echo x > %s is deny voor de hoofdsessie en de developer',
+    (pad) => {
+      expect(verdict(`echo x > ${pad}`)).toBe('deny');
+      expect(verdict(`echo x > ${pad}`, 'developer')).toBe('deny');
+    },
+  );
+});
+
+// Leerpunt #622 (B3): de tokenizer haalt escapes en aanhalingen weg vóór de glob-omzetting; bash leest ze als klassetekens.
+// Eigenaarsbesluit: dichtvallen. Een glob-klasse in een woord of redirect van een commando waarvan de ruwe tekst een `\`
+// bevat, past op elk teken.
+describe('AC-3 (B3): escape in een glob-klasse valt dicht', () => {
+  test.each(['echo x > .g[\\!i]t/config', 'echo x > .gi[a\\]t]/config', "echo x > .gi[a'\\'-u]/config"])(
+    '%s is deny voor de hoofdsessie en de developer',
+    (command) => {
+      for (const agent of [undefined, 'developer']) {
+        expect({ agent, v: verdict(command, agent) }).toEqual({ agent, v: 'deny' });
+      }
+    },
+  );
+
+  test('echo x > lefthook.y[\\!m]l is deny voor de developer en ask voor de hoofdsessie', () => {
+    expect(verdict('echo x > lefthook.y[\\!m]l', 'developer')).toBe('deny');
+    expect(verdict('echo x > lefthook.y[\\!m]l')).toBe('ask');
+  });
+
+  // Regressiebewaking: een `\` zonder klasse naar een gewoon pad verandert niet.
+  test('echo x > src/a\\ b.txt (backslash, geen klasse, gewoon pad) is ask noch deny', () => {
+    for (const agent of [undefined, 'developer']) {
+      expect({ agent, v: verdict('echo x > src/a\\ b.txt', agent) }).toEqual({
+        agent,
+        v: verdict('echo x > src/a-b.txt', agent),
+      });
+    }
+  });
+});
+
+// Eigenaarbesluit 7 november 2026: een klasse met een benoemd deel (`[=x=]`, `[:naam:]`, `[.x.]`) valt dicht. Reden: bash 5.2
+// (Ubuntu 24.04, de CI-runner) en 5.3 lezen zo'n klasse verschillend (`.gi[[=t=]]x]` past in 5.2 op `.git`, in 5.3 niet), en
+// de code bouwt geen van beide na. Ze leest zo'n klasse letterlijk, als bash-klasse en als één willekeurig teken tot elke
+// latere `]`, op elke bash-versie: strenger dan bash, nooit nauwer. Het 5.2-gedrag is de reden voor deze gevallen, niet het
+// getoetste model.
+describe('AC-3: een klasse met een benoemd deel valt dicht (reden: bash 5.2 en 5.3 verschillen)', () => {
+  test.each([
+    ['.gi[[=t=]]x]/config', '.git/**'],
+    ['lefthook.y[[=m=]]q]l', 'lefthook.yml'],
+  ])('zelfladendPatroon(%s) is %s', (rel, verwacht) => {
+    expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBe(verwacht);
+  });
+
+  test('echo x > .gi[[=t=]]x]/config is deny voor de hoofdsessie en de developer', () => {
+    expect(verdict('echo x > .gi[[=t=]]x]/config')).toBe('deny');
+    expect(verdict('echo x > .gi[[=t=]]x]/config', 'developer')).toBe('deny');
+  });
+
+  test('echo x > lefthook.y[[=m=]]q]l is ask voor de hoofdsessie en deny voor de developer, zoals lefthook.yml', () => {
+    expect(verdict('echo x > lefthook.y[[=m=]]q]l')).toBe('ask');
+    expect(verdict('echo x > lefthook.y[[=m=]]q]l', 'developer')).toBe('deny');
+  });
+
+  // Is het overgeslagen teken de `[` van een volgend benoemd deel, dan eindigt de klasse eerder, bij de `]` van dat deel, en
+  // is de rest gewoon patroon: `lefthook.y[[=m=][=z=][l]` is `m` (via `[=m=]`), klasse dicht bij het `=]` van `[=z=]`, dan de
+  // nieuwe klasse `[l]`: `lefthook.yml`. Idem `.g[[=i=][=z=][t]` is `.git`.
+  test.each([
+    ['.g[[=i=][=z=][t]/config', '.git/**'],
+    ['lefthook.y[[=m=][=z=][l]', 'lefthook.yml'],
+  ])('zelfladendPatroon(%s) is %s (overgeslagen teken is de [ van een volgend deel)', (rel, verwacht) => {
+    expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBe(verwacht);
+  });
+
+  test('echo x > .g[[=i=][=z=][t]/config is deny voor de hoofdsessie en de developer', () => {
+    expect(verdict('echo x > .g[[=i=][=z=][t]/config')).toBe('deny');
+    expect(verdict('echo x > .g[[=i=][=z=][t]/config', 'developer')).toBe('deny');
+  });
+
+  test('echo x > lefthook.y[[=m=][=z=][l] is ask voor de hoofdsessie en deny voor de developer, zoals lefthook.yml', () => {
+    expect(verdict('echo x > lefthook.y[[=m=][=z=][l]')).toBe('ask');
+    expect(verdict('echo x > lefthook.y[[=m=][=z=][l]', 'developer')).toBe('deny');
+  });
+
+  // Was: wijst nergens naar. Nu strenger dan bash (eigenaarbesluit 7 november 2026: benoemde klasse valt dicht): `ym` plus
+  // één willekeurig teken tot een latere `]` is `lefthook.yml`.
+  test.each(['lefthook.ym[[:digit:]]', 'lefthook.ym[[=x=]]', 'lefthook.ym[[=x=]]]'])(
+    'zelfladendPatroon(%s): strenger dan bash, wijst naar lefthook.yml',
+    (rel) => {
+      expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBe('lefthook.yml');
+    },
+  );
+
+  // Precisiebewaking: waar geen één-teken-lezing op de naam past, wijst een benoemd deel nergens naar.
+  test.each(['lefthook.ym[[:digit:]]x', 'lefthook.ym[[=x=]]x', 'lefthook.yz[[=x=]]'])(
+    'zelfladendPatroon(%s) wijst nergens naar',
+    (rel) => {
+      expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBeNull();
+    },
+  );
+
+  // Review: na een benoemd deel nog tekst vóór de sluitende `]`; elke lezing van de klasse telt.
+  test('echo x > lefthook.ym[[=x=]]l] is ask voor de hoofdsessie en deny voor de developer', () => {
+    expect(zelfladendPatroon('lefthook.ym[[=x=]]l]', config.zelfladend ?? [])).toBe('lefthook.yml');
+    expect(verdict('echo x > lefthook.ym[[=x=]]l]')).toBe('ask');
+    expect(verdict('echo x > lefthook.ym[[=x=]]l]', 'developer')).toBe('deny');
+  });
+
+  test('echo x > .gi[![=x=]]q]/config is deny voor de hoofdsessie en de developer', () => {
+    expect(zelfladendPatroon('.gi[![=x=]]q]/config', config.zelfladend ?? [])).toBe('.git/**');
+    expect(verdict('echo x > .gi[![=x=]]q]/config')).toBe('deny');
+    expect(verdict('echo x > .gi[![=x=]]q]/config', 'developer')).toBe('deny');
+  });
+});
+
+// Review leerpunt #622: een misvormd benoemd deel (`[=][x=]`) slokt de laatste `]` op, zodat onze lezer de klasse niet ziet
+// sluiten. Bash 5.2 laat `.gi[t[=][x=]` toch op `.git` passen. Bevat een woord ergens `[=`, `[:` of `[.`, dan wordt elke `[`
+// met een latere `]` in dat woord ruim gelezen.
+describe('AC-3: een misvormd benoemd deel dat de sluitende ] opslokt valt dicht', () => {
+  test.each([
+    ['.gi[t[=][x=]/config', '.git/**'],
+    ['.gi[t[:][x:]/config', '.git/**'],
+    ['.gi[t[.][x.]/config', '.git/**'],
+    ['lefthook.ym[l[=][x=]', 'lefthook.yml'],
+  ])('zelfladendPatroon(%s) is %s', (rel, verwacht) => {
+    expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBe(verwacht);
+  });
+
+  test('echo x > .gi[t[=][x=]/config is deny voor de hoofdsessie en de developer', () => {
+    expect(verdict('echo x > .gi[t[=][x=]/config')).toBe('deny');
+    expect(verdict('echo x > .gi[t[=][x=]/config', 'developer')).toBe('deny');
+  });
+});
