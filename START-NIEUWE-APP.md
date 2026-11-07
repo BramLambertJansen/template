@@ -7,6 +7,11 @@ ontwikkelmachine, koppel de templatehistorie en draag de gecontroleerde app-repo
 Dit is de korte ingang voordat de app-repo bestaat. Het [setup-playbook](docs/nieuwe-app.md) is de enige gedetailleerde
 uitvoerbron; alleen de eenmalige installatie vóór de eerste agentsessie staat hieronder. Gebruik de actuele versie op `template/main`; meld tegenstrijdigheden en verzin geen tweede setuppad.
 
+## Ondersteunde besturingssystemen
+
+Deze setup ondersteunt **Ubuntu 24.04** en **Ubuntu 26.04**, rechtstreeks op de computer of op Windows via **WSL2**.
+macOS valt buiten de huidige ondersteuning.
+
 ## Begeleiding: ook voor wie niet technisch is
 
 De gebruiker is de eigenaar van de nieuwe app, maar hoeft niets te weten van programmeren, GitHub, terminals of
