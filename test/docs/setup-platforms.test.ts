@@ -1,13 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from 'vitest';
 
-test('de startgids noemt vóór de installatiestappen welke besturingssystemen worden ondersteund', () => {
-  const startgids = readFileSync('START-NIEUWE-APP.md', 'utf8');
-  const [inleiding, eersteSessie] = startgids.split(/^## Eerste agentsessie$/m);
-  const platforms =
-    inleiding?.split(/^## Ondersteunde besturingssystemen$/m)[1]?.split(/^## /m)[0]?.replaceAll('**', '') ?? '';
+const startgids = readFileSync('START-NIEUWE-APP.md', 'utf8');
+const platformkop = /^## Ondersteunde besturingssystemen$/m;
 
-  expect(eersteSessie, 'De sectie Eerste agentsessie ontbreekt').toBeDefined();
+test('de startgids noemt welke besturingssystemen worden ondersteund', () => {
+  const platforms = startgids.split(platformkop)[1]?.split(/^## /m)[0]?.replaceAll('**', '') ?? '';
+
   expect(platforms).toMatch(/\bUbuntu 24\.04\b/);
   expect(platforms).toMatch(/\bUbuntu 26\.04\b/);
   expect(platforms).toMatch(/\b(?:rechtstreeks|native)\b/);
@@ -15,7 +14,15 @@ test('de startgids noemt vóór de installatiestappen welke besturingssystemen w
   expect(platforms).toMatch(/\bmacOS\b[^.!?]*\bbuiten de huidige ondersteuning\b/);
 });
 
-test('de README linkt rechtstreeks naar het platformoverzicht in de startgids', () => {
-  const readme = readFileSync('README.md', 'utf8');
-  expect(readme).toContain('](START-NIEUWE-APP.md#ondersteunde-besturingssystemen)');
+test('het platformoverzicht staat vóór de installatiestappen en is vindbaar vanuit de template-README', () => {
+  const [inleiding = '', eersteSessie] = startgids.split(/^## Eerste agentsessie$/m);
+  expect(eersteSessie, 'De sectie Eerste agentsessie ontbreekt').toBeDefined();
+  expect(inleiding).toMatch(platformkop);
+
+  const gates: unknown = JSON.parse(readFileSync('.claude/gates.json', 'utf8'));
+  const isTemplate = typeof gates === 'object' && gates !== null && 'onderhoud' in gates;
+  if (isTemplate) {
+    const readme = readFileSync('README.md', 'utf8');
+    expect(readme).toContain('](START-NIEUWE-APP.md#ondersteunde-besturingssystemen)');
+  }
 });
