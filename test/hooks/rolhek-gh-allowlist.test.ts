@@ -1235,3 +1235,22 @@ describe('AC-10 (c): [ zonder sluitende ] is letterlijk', () => {
     },
   );
 });
+
+// Leerpunt #618/#622, rolhek-vooraf-krimp AC-10 (c): een negatie is hoofdlettergevoelig (bash): `[!G]` laat `g` toe, dus
+// `/usr/bin/[!G]h` kan `gh` zijn en blijft dicht voor elke rol.
+describe('AC-10 (c): negatie met een hoofdletter kan naar gh wijzen', () => {
+  test.each(['/usr/bin/[!G]h pr merge 1', '/usr/bin/[!G]h pr list', '/usr/bin/[!H]h pr list'])(
+    'dicht voor elke rol: %s',
+    (command) => {
+      for (const role of [undefined, ...SUBAGENTS]) {
+        const decision = run(command, role);
+        expect({ role, dicht: decision.deny.length + decision.ask.length > 0 }).toEqual({ role, dicht: true });
+      }
+    },
+  );
+
+  test('de weigering noemt het woord met de klasse', () => {
+    const decision = run('/usr/bin/[!G]h pr list');
+    expect([...decision.deny, ...decision.ask].join('\n')).toContain('[!G]h');
+  });
+});

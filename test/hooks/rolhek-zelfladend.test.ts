@@ -308,3 +308,75 @@ describe('rolhek-vooraf-krimp/AC-3: POSIX-klassen in een glob', () => {
     expect(redenen('echo x > lefthook.ym[[:digit:]]', 'developer')).not.toContain('zelfladend');
   });
 });
+
+// Leerpunt #618/#622, rolhek-vooraf-krimp AC-10 (c): `a-[:digit:]` in een klasse geeft geen interne fout. Bash leest
+// `[a-[:digit:]]` als {a, -, 0-9}: het koppelteken is dan een letterlijk teken naast het bereik.
+describe('rolhek-vooraf-krimp/AC-10 (c): bereik gevolgd door een POSIX-klasse geeft geen interne fout', () => {
+  test.each(['foo[a-[:digit:]]', 'foo[a-[:alpha:]]', 'foo[!a-[:punct:]]'])(
+    '%s: geen throw in zelfladendPatroon',
+    (rel) => {
+      expect(() => zelfladendPatroon(rel, config.zelfladend ?? [])).not.toThrow();
+      expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBeNull();
+    },
+  );
+
+  test.each(['foo[a-[:digit:]]', 'foo[a-[:alpha:]]', 'foo[!a-[:punct:]]'])(
+    'echo x > %s: geen interne fout en geen zelfladend-reden voor hoofdsessie en developer',
+    (pad) => {
+      for (const agent of [undefined, 'developer']) {
+        const command = `echo x > ${pad}`;
+        expect(() => redenen(command, agent)).not.toThrow();
+        const tekst = redenen(command, agent);
+        expect({ agent, interneFout: /interne fout/i.test(tekst) }).toEqual({ agent, interneFout: false });
+        expect({ agent, zelfladend: /zelfladend/i.test(tekst) }).toEqual({ agent, zelfladend: false });
+      }
+    },
+  );
+
+  test('lefthook.ym[a-[:digit:]l] wijst naar lefthook.yml (klasse {a, -, 0-9, l})', () => {
+    expect(zelfladendPatroon('lefthook.ym[a-[:digit:]l]', config.zelfladend ?? [])).toBe('lefthook.yml');
+  });
+});
+
+// Leerpunt #618/#622, rolhek-vooraf-krimp AC-3: een equivalentie- of collatieklasse direct na een tekst is in bash een
+// letterlijk koppelteken plus die klasse: `[t[=-=]a]` is {t, -, a}. Sluiproute naar `.git` en lefthook.yml.
+describe('rolhek-vooraf-krimp/AC-3: [=-=] en [.-.] in een klasse', () => {
+  test.each([
+    ['.gi[t[=-=]a]/packed-refs', '.git/**'],
+    ['.gi[t[.-.]a]/packed-refs', '.git/**'],
+    ['lefthook.y[m[=-=]a]l', 'lefthook.yml'],
+    ['lefthook.y[m[.-.]a]l', 'lefthook.yml'],
+  ])('%s wijst naar %s', (rel, patroon) => {
+    expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBe(patroon);
+  });
+
+  test('echo x > .gi[t[=-=]a]/packed-refs is deny voor hoofdsessie en developer', () => {
+    for (const agent of [undefined, 'developer']) {
+      expect({ agent, v: verdict('echo x > .gi[t[=-=]a]/packed-refs', agent) }).toEqual({ agent, v: 'deny' });
+      expect({ agent, v: verdict('echo x > .gi[t[.-.]a]/packed-refs', agent) }).toEqual({ agent, v: 'deny' });
+    }
+  });
+});
+
+// Leerpunt #618/#622, AC-3: een negatie telt hoofdlettergevoelig (bash): `[!L]` sluit `l` niet uit.
+describe('rolhek-vooraf-krimp/AC-3: negatie met een hoofdletter', () => {
+  test('lefthook.ym[!L] wijst naar lefthook.yml', () => {
+    expect(zelfladendPatroon('lefthook.ym[!L]', config.zelfladend ?? [])).toBe('lefthook.yml');
+  });
+
+  test('echo x > lefthook.ym[!L] is deny voor de developer en ask voor de hoofdsessie', () => {
+    expect(verdict('echo x > lefthook.ym[!L]', 'developer')).toBe('deny');
+    expect(verdict('echo x > lefthook.ym[!L]')).toBe('ask');
+  });
+});
+
+// Leerpunt #618/#622, AC-3: dekking van het .git-gedrag voor een klasse of `?` (regressiebewaking).
+describe('rolhek-vooraf-krimp/AC-3: .git via een klasse of ?', () => {
+  test.each(['echo x > .gi[t]/config', 'echo x > .g?t/config'])(
+    '%s is deny voor de hoofdsessie en de developer',
+    (command) => {
+      expect(verdict(command)).toBe('deny');
+      expect(verdict(command, 'developer')).toBe('deny');
+    },
+  );
+});
