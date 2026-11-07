@@ -72,8 +72,9 @@ const ATOMEN = [
 ];
 // Groep voor de drie-atoomlaag: alleen de beslissende namen, anders loopt de test te lang op.
 const DRIE_ATOMEN = STAMMEN.length;
-// Groep voor namen van twee tekens na de stam `.g` tegen patronen met twee benoemde delen (bash 5.2 slaat na een geslaagd
-// benoemd deel een teken over: de klasse eindigt dan later of, bij een `[`, eerder).
+// Groep voor namen van twee tekens na de stam `.g` tegen patronen met twee benoemde delen. Reden voor dit corpus: bash 5.2
+// slaat na een geslaagd benoemd deel een teken over (de klasse eindigt dan later of, bij een `[`, eerder), bash 5.3 niet; de
+// test toetst de code, niet een model van 5.2.
 const TWEE_DELEN = STAMMEN.length + 1;
 const TWEE_DELEN_STAM = '.g';
 const TWEE_DELEN_TEKENS = ['i', 't', 'z', 'm', 'l', ']', '[', '='];
@@ -158,8 +159,13 @@ function patronen(): { groep: number; patroon: string }[] {
     '[\\]]',
     '[\\a]',
     '[a\\-z]',
-    // Bash 5.2 slaat na een geslaagde `[=x=]` het volgende teken over (klasse sluit pas bij een latere `]`); 5.3 niet. Zelfde
-    // vormen met `[:naam:]` en `[.x.]`, zodat een gelijk 5.2-gedrag daar in CI (Ubuntu 24.04, bash 5.2) zichtbaar wordt.
+    // Reden voor deze vormen: bash 5.2 slaat na een geslaagde `[=x=]` het volgende teken over (klasse sluit pas bij een latere
+    // `]`), 5.3 niet. Zelfde vormen met `[:naam:]` en `[.x.]`, zodat dit verschil in CI (Ubuntu 24.04, bash 5.2) zichtbaar wordt.
+    // Dan misvormde delen die een `]` opslokken (review #622): bash 5.2 laat `.gi[t[=][x=]` op `.git` passen.
+    '[t[=][x=]',
+    '[t[:][x:]',
+    '[t[.][x.]',
+    '[[=][t]',
     '[[=t=]]x]',
     '[[=t=]]]',
     '[![=t=]]x]',
@@ -335,8 +341,8 @@ describe.skipIf(!bashAanwezig)(
       expect([...(een ?? [])]).toEqual(['0']);
       expect([...(twee ?? [])]).toEqual(['0']);
       expect([...(drie ?? [])]).toEqual([]);
-      // Bash 5.2 (CI): ja, na een geslaagd `[=i=]` wordt de `[` van `[=z=]` overgeslagen en sluit de klasse bij `=]`; de rest
-      // `[t]` is een nieuwe klasse. Bash 5.3 (lokaal): waarschijnlijk nee. Dus bash ja óf nee; de code zegt in beide gevallen ja.
+      // Bash 5.2 (CI) laat dit passen: na een geslaagd `[=i=]` wordt de `[` van `[=z=]` overgeslagen en sluit de klasse bij `=]`;
+      // de rest `[t]` is een nieuwe klasse. Bash 5.3 (lokaal) waarschijnlijk niet. Dus bash ja óf nee; de code zegt in beide gevallen ja.
       for (const bash of [vier, vijf]) expect(bash?.size ?? 0).toBeLessThanOrEqual(1);
       expect(codeRegex('.g[[=i=][=z=][t]').test('.git')).toBe(true);
       expect(codeRegex('lefthook.y[[=m=][=z=][l]').test('lefthook.yml')).toBe(true);
@@ -348,6 +354,16 @@ describe.skipIf(!bashAanwezig)(
       ['.gi[![=a=]]^]', '.git'],
       ['.gi[[=a=]]]', '.gi]'],
     ])('de code zegt ja voor %s met %s (CI-faallijst)', (patroon, naam) => {
+      expect(codeRegex(patroon).test(naam)).toBe(true);
+    });
+
+    // Misvormd benoemd deel dat de laatste `]` opslokt (review #622): bash 5.2 laat `.gi[t[=][x=]` op `.git` passen; de code
+    // moet op elke bash-versie ja zeggen.
+    test.each([
+      ['.gi[t[=][x=]', '.git'],
+      ['.gi[t[:][x:]', '.git'],
+      ['.gi[t[.][x.]', '.git'],
+    ])('de code zegt ja voor %s met %s (misvormd deel slokt een ] op)', (patroon, naam) => {
       expect(codeRegex(patroon).test(naam)).toBe(true);
     });
 

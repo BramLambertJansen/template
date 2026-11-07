@@ -446,11 +446,12 @@ describe('AC-3 (B3): escape in een glob-klasse valt dicht', () => {
   });
 });
 
-// Eigenaarbesluit 7 november 2026: een klasse met een benoemd deel (`[=x=]`, `[:naam:]`, `[.x.]`) valt dicht. Bash 5.2 (Ubuntu
-// 24.04, de CI-runner) en 5.3 lezen zo'n klasse verschillend (`.gi[[=t=]]x]` past in 5.2 op `.git`, in 5.3 niet) en ons model
-// van 5.2 bleek driemaal fout. De code bouwt dat gedrag niet na: ze leest zo'n klasse letterlijk, als bash-klasse en als één
-// willekeurig teken tot elke latere `]`, op elke bash-versie. Daarmee is ze strenger dan bash, nooit nauwer.
-describe('AC-3: bash 5.2 na een gelijkheidsklasse', () => {
+// Eigenaarbesluit 7 november 2026: een klasse met een benoemd deel (`[=x=]`, `[:naam:]`, `[.x.]`) valt dicht. Reden: bash 5.2
+// (Ubuntu 24.04, de CI-runner) en 5.3 lezen zo'n klasse verschillend (`.gi[[=t=]]x]` past in 5.2 op `.git`, in 5.3 niet), en
+// de code bouwt geen van beide na. Ze leest zo'n klasse letterlijk, als bash-klasse en als één willekeurig teken tot elke
+// latere `]`, op elke bash-versie: strenger dan bash, nooit nauwer. Het 5.2-gedrag is de reden voor deze gevallen, niet het
+// getoetste model.
+describe('AC-3: een klasse met een benoemd deel valt dicht (reden: bash 5.2 en 5.3 verschillen)', () => {
   test.each([
     ['.gi[[=t=]]x]/config', '.git/**'],
     ['lefthook.y[[=m=]]q]l', 'lefthook.yml'],
@@ -516,5 +517,24 @@ describe('AC-3: bash 5.2 na een gelijkheidsklasse', () => {
     expect(zelfladendPatroon('.gi[![=x=]]q]/config', config.zelfladend ?? [])).toBe('.git/**');
     expect(verdict('echo x > .gi[![=x=]]q]/config')).toBe('deny');
     expect(verdict('echo x > .gi[![=x=]]q]/config', 'developer')).toBe('deny');
+  });
+});
+
+// Review leerpunt #622: een misvormd benoemd deel (`[=][x=]`) slokt de laatste `]` op, zodat onze lezer de klasse niet ziet
+// sluiten. Bash 5.2 laat `.gi[t[=][x=]` toch op `.git` passen. Bevat een woord ergens `[=`, `[:` of `[.`, dan wordt elke `[`
+// met een latere `]` in dat woord ruim gelezen.
+describe('AC-3: een misvormd benoemd deel dat de sluitende ] opslokt valt dicht', () => {
+  test.each([
+    ['.gi[t[=][x=]/config', '.git/**'],
+    ['.gi[t[:][x:]/config', '.git/**'],
+    ['.gi[t[.][x.]/config', '.git/**'],
+    ['lefthook.ym[l[=][x=]', 'lefthook.yml'],
+  ])('zelfladendPatroon(%s) is %s', (rel, verwacht) => {
+    expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBe(verwacht);
+  });
+
+  test('echo x > .gi[t[=][x=]/config is deny voor de hoofdsessie en de developer', () => {
+    expect(verdict('echo x > .gi[t[=][x=]/config')).toBe('deny');
+    expect(verdict('echo x > .gi[t[=][x=]/config', 'developer')).toBe('deny');
   });
 });
