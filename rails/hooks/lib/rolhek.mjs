@@ -2,7 +2,7 @@
 // verboden is (deny). Puur: alles wat van de schijf of git komt, zit in `ctx`, zodat test/hooks/rolhek.test.ts elke regel
 // met echte payloads kan bewijzen. De stdin/stdout-kant staat in rails/hooks/rolhek.mjs.
 import path from 'node:path';
-import { gitSubcommand, globKlasse, parseCommands, programName, splitCommand, tmpdirLetterlijk, tmpdirWoord, writeTargets, zetVariabele } from './shell.mjs';
+import { gitSubcommand, globTekstRegex, parseCommands, programName, splitCommand, tmpdirLetterlijk, tmpdirWoord, writeTargets, zetVariabele } from './shell.mjs';
 import { A4_MELDING, archiefBron, beslisOvergang, builtReference, documentInfo, documentKind, isArchief, isHerschrijving } from './document-state.mjs';
 import { canRecordStatus, TEMPLATE_REPOSITORY } from './task-authority.mjs';
 import { automaticRunner } from './runner-authority.mjs';
@@ -602,7 +602,7 @@ function decideBash({ command, role, tmpdirVrij = tmpdirLetterlijk(command), onz
     const { assignments, argv, pathWrappers } = splitCommand(parsed.words);
     vangnetten({ parsed, argv, variabel }, role, decision);
     forbidden({ assignments, argv, expanded: parsed.expanded ?? [] }, { role, ctx }, decision);
-    zelfladend({ argv, redirects: parsed.redirects, role }, { ...ctx, cwd: cwdNu ?? ctx.root, cwdOnbekend: cwdNu === null }, decision);
+    zelfladend({ argv, redirects: parsed.redirects, role, ruim: parsed.ruim },{ ...ctx, cwd: cwdNu ?? ctx.root, cwdOnbekend: cwdNu === null }, decision);
     cwdNu = volgendeMap({ argv, expanded: parsed.expanded ?? [] }, cwdNu, ctx.root);
     ghIssue(argv, { role, ctx, setsGhEnv }, decision);
     if (role === 'reviewer') reviewerBash({ assignments, argv, pathWrappers }, parsed.redirects, decision);
@@ -632,7 +632,7 @@ function vangnetten({ parsed, argv, variabel }, role, decision) {
   // meerdere woorden zijn (`$'\'' g*` is `'` en `g*`).
   const ghGlob = parsed.words.find((word, index) => {
     const pattern = patterns[index] ?? word;
-    return [pattern, ...pattern.split(/\s+/)].some((stuk) => globForGh(stuk) || SHELL_EXPANSION.test(stuk));
+    return [pattern, ...pattern.split(/\s+/)].some((stuk) => globForGh(stuk, parsed.ruim) || SHELL_EXPANSION.test(stuk));
   });
   // `${G}h pr merge` achter een onbekend omhulsel: een variabel woord na het commandowoord bij een gh-subcommando, in
   // hetzelfde segment.
@@ -1197,30 +1197,30 @@ const SHELL_EXPANSION = /\{.*(?:,|\.\.)|\[[^\]]*\[[:=.]/s;
 /**
  * Een woord met een glob (`*`, `?`, `[…]`) waarvan de naam `gh` of `gh.exe` kan zijn, op elke positie: zo hangt de regel
  * niet af van een lijst omhulsels (`setsid /usr/bin/g[h] …`). `cat g*.txt` en `ls src/*.ts` matchen niet. `word` is de
- * vorm uit `Command.patterns`: een aangehaald glob-teken telt niet (AC-10 (b)).
- * @param {string} word
+ * vorm uit `Command.patterns`: een aangehaald glob-teken telt niet (AC-10 (b)). Een klasse volgens bash: `g[]h]` en
+ * `g[[:alpha:]]` passen op gh; zonder sluitende `]` is de `[` letterlijk (`g[!]`, `[^]h`; AC-10 (c), #622). `ruim`
+ * (`Command.ruim`): het commando had een `\`, `'` of `"`; een klasse kan dan op elk teken passen (`/usr/bin/[\!g]h`; review
+ * B3, eigenaarbesluit 7 november 2026). Een aangehaalde `[` is in `patterns` al `QUOTED` en opent dus nooit een klasse.
+ * @param {string} word @param {boolean} [ruim]
  */
-function globForGh(word) {
+function globForGh(word, ruim = false) {
   const name = word.slice(word.lastIndexOf('/') + 1);
-  if (!/[*?]|\[[!^]?\]?[^\]]*\]/.test(name)) return false;
-  // Een klasse mag direct na `[`, `[!` of `[^` een `]` bevatten (`g[]h]` matcht gh); een losse `[` is letterlijk.
-  const pattern = name.replace(/\[[!^]?\]?[^\]]*\]|./g, globPart);
+  const { regex: pattern, glob } = globTekstRegex(name, { teken: globPart, elk: '.', alles: '.*', ruim });
+  if (!glob) return false;
   try {
     const matcher = new RegExp(`^${pattern}$`, 'i');
     return matcher.test('gh') || matcher.test('gh.exe');
   } catch {
-    // Na `globKlasse` hoort elk patroon geldig te zijn; lukt het toch niet, dan dicht.
+    // Na `globTekstRegex` hoort elk patroon geldig te zijn; lukt het toch niet, dan dicht.
     return true;
   }
 }
 
 /**
- * Eén deel van een shell-glob als reguliere expressie: een klasse `[…]`/`[!…]`, `*`, `?` of een letterlijk teken.
+ * Eén teken van een shell-glob buiten een klasse als reguliere expressie: `*`, `?` of een letterlijk teken.
  * @param {string} part
  */
 function globPart(part) {
-  const negated = /^\[[!^]/.test(part);
-  if (part.length > 1) return `[${negated ? '^' : ''}${globKlasse(part.slice(negated ? 2 : 1, -1)).replace(/[\\\]^]/g, '\\$&')}]`;
   if (part === '*') return '.*';
   if (part === '?') return '.';
   return part.replace(/[.+^${}()|[\]\\]/g, '\\$&');

@@ -263,3 +263,170 @@ describe('rolhek-vooraf-krimp/AC-10 (c): tekenklasse met ] als eerste teken', ()
     expect(redenen('echo x > lefthook.ym[]l]', 'developer')).toContain('zelfladend');
   });
 });
+
+// Leerpunt #618, spec rolhek-vooraf-krimp AC-3: een glob die er volgens bash (zonder dotglob) op kan passen, telt als het pad.
+// POSIX-klassen (`[:lower:]`), equivalentieklassen (`[=l=]`) en collatietekens (`[.l.]`) horen binnen de klasse.
+describe('rolhek-vooraf-krimp/AC-3: POSIX-klassen in een glob', () => {
+  test.each([
+    ['lefthook.ym[[:lower:]]', 'lefthook.yml'],
+    ['lefthook.ym[[:alpha:]]', 'lefthook.yml'],
+    ['lefthook.ym[![:digit:]]', 'lefthook.yml'],
+    ['lefthook.ym[[=l=]]', 'lefthook.yml'],
+    ['lefthook.ym[[.l.]]', 'lefthook.yml'],
+    ['.gi[[:alpha:]]/config', '.git/**'],
+    ['.git/confi[[:alpha:]]', '.git/**'],
+  ])('%s wijst naar %s', (rel, patroon) => {
+    expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBe(patroon);
+  });
+
+  test.each(['lefthook.ym[[:digit:]]', 'lefthook.ym[[:upper:]]', 'lefthook.ym[![:alpha:]]', 'lefthook.ym[[=x=]]'])(
+    '%s past niet op een zelfladend pad',
+    (rel) => {
+      expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBeNull();
+    },
+  );
+
+  test('[ zonder sluitende ] is letterlijk: lefthook.ym[!] raakt lefthook.yml niet', () => {
+    expect(zelfladendPatroon('lefthook.ym[!]', config.zelfladend ?? [])).toBeNull();
+    expect(zelfladendPatroon('lefthook.ym[^]', config.zelfladend ?? [])).toBeNull();
+  });
+
+  test('echo x > lefthook.ym[[:lower:]] is deny voor de developer, zoals echo x > lefthook.yml', () => {
+    expect(verdict('echo x > lefthook.yml', 'developer')).toBe('deny');
+    expect(verdict('echo x > lefthook.ym[[:lower:]]', 'developer')).toBe('deny');
+    expect(redenen('echo x > lefthook.ym[[:lower:]]', 'developer')).toContain('zelfladend');
+    expect(verdict('echo x > lefthook.ym[[=l=]]', 'developer')).toBe('deny');
+  });
+
+  test('echo x > lefthook.ym[[:lower:]] is ask voor de hoofdsessie, zoals echo x > lefthook.yml', () => {
+    expect(verdict('echo x > lefthook.yml')).toBe('ask');
+    expect(verdict('echo x > lefthook.ym[[:lower:]]')).toBe('ask');
+    expect(verdict('echo x > .gi[[:alpha:]]/config')).toBe('deny');
+  });
+
+  test('een POSIX-klasse die niet past raakt de regel niet', () => {
+    expect(redenen('echo x > lefthook.ym[[:digit:]]', 'developer')).not.toContain('zelfladend');
+  });
+});
+
+// Leerpunt #618/#622, rolhek-vooraf-krimp AC-10 (c): `a-[:digit:]` in een klasse geeft geen interne fout. Bash leest
+// `[a-[:digit:]]` als {a, -, 0-9}: het koppelteken is dan een letterlijk teken naast het bereik. Dat is strenger dan
+// bash (bash past `lefthook.ym[a-[:digit:]l]` niet op `lefthook.yml`); strenger mag, nooit nauwer.
+describe('rolhek-vooraf-krimp/AC-10 (c): bereik gevolgd door een POSIX-klasse geeft geen interne fout', () => {
+  test.each(['foo[a-[:digit:]]', 'foo[a-[:alpha:]]', 'foo[!a-[:punct:]]'])(
+    '%s: geen throw in zelfladendPatroon',
+    (rel) => {
+      expect(() => zelfladendPatroon(rel, config.zelfladend ?? [])).not.toThrow();
+      expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBeNull();
+    },
+  );
+
+  test.each(['foo[a-[:digit:]]', 'foo[a-[:alpha:]]', 'foo[!a-[:punct:]]'])(
+    'echo x > %s: geen interne fout en geen zelfladend-reden voor hoofdsessie en developer',
+    (pad) => {
+      for (const agent of [undefined, 'developer']) {
+        const command = `echo x > ${pad}`;
+        expect(() => redenen(command, agent)).not.toThrow();
+        const tekst = redenen(command, agent);
+        expect({ agent, interneFout: /interne fout/i.test(tekst) }).toEqual({ agent, interneFout: false });
+        expect({ agent, zelfladend: /zelfladend/i.test(tekst) }).toEqual({ agent, zelfladend: false });
+      }
+    },
+  );
+
+  test('lefthook.ym[a-[:digit:]l] wijst naar lefthook.yml (strenger dan bash: klasse {a, -, 0-9, l})', () => {
+    expect(zelfladendPatroon('lefthook.ym[a-[:digit:]l]', config.zelfladend ?? [])).toBe('lefthook.yml');
+  });
+});
+
+// Leerpunt #618/#622, rolhek-vooraf-krimp AC-3: een equivalentie- of collatieklasse direct na een tekst is in bash een
+// letterlijk koppelteken plus die klasse: `[t[=-=]a]` is {t, -, a}. Sluiproute naar `.git` en lefthook.yml.
+describe('rolhek-vooraf-krimp/AC-3: [=-=] en [.-.] in een klasse', () => {
+  test.each([
+    ['.gi[t[=-=]a]/packed-refs', '.git/**'],
+    ['.gi[t[.-.]a]/packed-refs', '.git/**'],
+    ['lefthook.y[m[=-=]a]l', 'lefthook.yml'],
+    ['lefthook.y[m[.-.]a]l', 'lefthook.yml'],
+  ])('%s wijst naar %s', (rel, patroon) => {
+    expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBe(patroon);
+  });
+
+  test('echo x > .gi[t[=-=]a]/packed-refs is deny voor hoofdsessie en developer', () => {
+    for (const agent of [undefined, 'developer']) {
+      expect({ agent, v: verdict('echo x > .gi[t[=-=]a]/packed-refs', agent) }).toEqual({ agent, v: 'deny' });
+      expect({ agent, v: verdict('echo x > .gi[t[.-.]a]/packed-refs', agent) }).toEqual({ agent, v: 'deny' });
+    }
+  });
+});
+
+// Leerpunt #618/#622, AC-3: een negatie telt hoofdlettergevoelig (bash): `[!L]` sluit `l` niet uit.
+describe('rolhek-vooraf-krimp/AC-3: negatie met een hoofdletter', () => {
+  test('lefthook.ym[!L] wijst naar lefthook.yml', () => {
+    expect(zelfladendPatroon('lefthook.ym[!L]', config.zelfladend ?? [])).toBe('lefthook.yml');
+  });
+
+  test('echo x > lefthook.ym[!L] is deny voor de developer en ask voor de hoofdsessie', () => {
+    expect(verdict('echo x > lefthook.ym[!L]', 'developer')).toBe('deny');
+    expect(verdict('echo x > lefthook.ym[!L]')).toBe('ask');
+  });
+});
+
+// Leerpunt #618/#622, AC-3: dekking van het .git-gedrag voor een klasse of `?` (regressiebewaking).
+describe('rolhek-vooraf-krimp/AC-3: .git via een klasse of ?', () => {
+  test.each(['echo x > .gi[t]/config', 'echo x > .g?t/config'])(
+    '%s is deny voor de hoofdsessie en de developer',
+    (command) => {
+      expect(verdict(command)).toBe('deny');
+      expect(verdict(command, 'developer')).toBe('deny');
+    },
+  );
+});
+
+// Leerpunt #622 (B2): in bash mag een collatiesymbool `[.x.]` een bereik begrenzen (`[a-[.z.]]`, `[[.a.]-z]`); `[=x=]` en
+// `[:naam:]` niet. Bash laat `.gi[a-[.z.]]` en `.gi[[.a.]-z]` dus passen op `.git`: een sluiproute als de code ze mist.
+describe('rolhek-vooraf-krimp/AC-3 (B2): collatiesymbool als bereikbegin of -eind', () => {
+  test.each([
+    ['.gi[a-[.z.]]/config', '.git/**'],
+    ['.gi[[.a.]-z]/config', '.git/**'],
+    ['lefthook.y[a-[.z.]]l', 'lefthook.yml'],
+  ])('zelfladendPatroon(%s) is %s', (rel, verwacht) => {
+    expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBe(verwacht);
+  });
+
+  test.each(['.gi[a-[.z.]]/config', '.gi[[.a.]-z]/config'])(
+    'echo x > %s is deny voor de hoofdsessie en de developer',
+    (pad) => {
+      expect(verdict(`echo x > ${pad}`)).toBe('deny');
+      expect(verdict(`echo x > ${pad}`, 'developer')).toBe('deny');
+    },
+  );
+});
+
+// Leerpunt #622 (B3): de tokenizer haalt escapes en aanhalingen weg vóór de glob-omzetting; bash leest ze als klassetekens.
+// Eigenaarsbesluit: dichtvallen. Een glob-klasse in een woord of redirect van een commando waarvan de ruwe tekst een `\`
+// bevat, past op elk teken.
+describe('AC-3 (B3): escape in een glob-klasse valt dicht', () => {
+  test.each(['echo x > .g[\\!i]t/config', 'echo x > .gi[a\\]t]/config', "echo x > .gi[a'\\'-u]/config"])(
+    '%s is deny voor de hoofdsessie en de developer',
+    (command) => {
+      for (const agent of [undefined, 'developer']) {
+        expect({ agent, v: verdict(command, agent) }).toEqual({ agent, v: 'deny' });
+      }
+    },
+  );
+
+  test('echo x > lefthook.y[\\!m]l is deny voor de developer en ask voor de hoofdsessie', () => {
+    expect(verdict('echo x > lefthook.y[\\!m]l', 'developer')).toBe('deny');
+    expect(verdict('echo x > lefthook.y[\\!m]l')).toBe('ask');
+  });
+
+  // Regressiebewaking: een `\` zonder klasse naar een gewoon pad verandert niet.
+  test('echo x > src/a\\ b.txt (backslash, geen klasse, gewoon pad) is ask noch deny', () => {
+    for (const agent of [undefined, 'developer']) {
+      expect({ agent, v: verdict('echo x > src/a\\ b.txt', agent) }).toEqual({
+        agent,
+        v: verdict('echo x > src/a-b.txt', agent),
+      });
+    }
+  });
+});
