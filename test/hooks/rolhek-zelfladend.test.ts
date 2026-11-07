@@ -263,3 +263,48 @@ describe('rolhek-vooraf-krimp/AC-10 (c): tekenklasse met ] als eerste teken', ()
     expect(redenen('echo x > lefthook.ym[]l]', 'developer')).toContain('zelfladend');
   });
 });
+
+// Leerpunt #618, spec rolhek-vooraf-krimp AC-3: een glob die er volgens bash (zonder dotglob) op kan passen, telt als het pad.
+// POSIX-klassen (`[:lower:]`), equivalentieklassen (`[=l=]`) en collatietekens (`[.l.]`) horen binnen de klasse.
+describe('rolhek-vooraf-krimp/AC-3: POSIX-klassen in een glob', () => {
+  test.each([
+    ['lefthook.ym[[:lower:]]', 'lefthook.yml'],
+    ['lefthook.ym[[:alpha:]]', 'lefthook.yml'],
+    ['lefthook.ym[![:digit:]]', 'lefthook.yml'],
+    ['lefthook.ym[[=l=]]', 'lefthook.yml'],
+    ['lefthook.ym[[.l.]]', 'lefthook.yml'],
+    ['.gi[[:alpha:]]/config', '.git/**'],
+    ['.git/confi[[:alpha:]]', '.git/**'],
+  ])('%s wijst naar %s', (rel, patroon) => {
+    expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBe(patroon);
+  });
+
+  test.each(['lefthook.ym[[:digit:]]', 'lefthook.ym[[:upper:]]', 'lefthook.ym[![:alpha:]]', 'lefthook.ym[[=x=]]'])(
+    '%s past niet op een zelfladend pad',
+    (rel) => {
+      expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBeNull();
+    },
+  );
+
+  test('[ zonder sluitende ] is letterlijk: lefthook.ym[!] raakt lefthook.yml niet', () => {
+    expect(zelfladendPatroon('lefthook.ym[!]', config.zelfladend ?? [])).toBeNull();
+    expect(zelfladendPatroon('lefthook.ym[^]', config.zelfladend ?? [])).toBeNull();
+  });
+
+  test('echo x > lefthook.ym[[:lower:]] is deny voor de developer, zoals echo x > lefthook.yml', () => {
+    expect(verdict('echo x > lefthook.yml', 'developer')).toBe('deny');
+    expect(verdict('echo x > lefthook.ym[[:lower:]]', 'developer')).toBe('deny');
+    expect(redenen('echo x > lefthook.ym[[:lower:]]', 'developer')).toContain('zelfladend');
+    expect(verdict('echo x > lefthook.ym[[=l=]]', 'developer')).toBe('deny');
+  });
+
+  test('echo x > lefthook.ym[[:lower:]] is ask voor de hoofdsessie, zoals echo x > lefthook.yml', () => {
+    expect(verdict('echo x > lefthook.yml')).toBe('ask');
+    expect(verdict('echo x > lefthook.ym[[:lower:]]')).toBe('ask');
+    expect(verdict('echo x > .gi[[:alpha:]]/config')).toBe('deny');
+  });
+
+  test('een POSIX-klasse die niet past raakt de regel niet', () => {
+    expect(redenen('echo x > lefthook.ym[[:digit:]]', 'developer')).not.toContain('zelfladend');
+  });
+});

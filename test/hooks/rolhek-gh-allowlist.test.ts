@@ -1211,3 +1211,27 @@ describe('AC-10 (c): ] als eerste teken van een klasse geeft geen interne fout',
     },
   );
 });
+
+// Leerpunt #622, rolhek-vooraf-krimp AC-10 (c): zonder sluitende `]` is de `[` letterlijk (bash); `[!]` of `[^]` zonder latere `]`
+// is dus geen klasse en kan niet naar gh wijzen. Een echte klasse die op gh past blijft dicht.
+describe('AC-10 (c): [ zonder sluitende ] is letterlijk', () => {
+  test.each(['ls g[!]', 'ls g[^]', 'ls g[!', 'ls [!]h', 'ls [^]h'])(
+    'geen gh-glob-weigering voor hoofdsessie en developer: %s',
+    (command) => {
+      for (const role of [undefined, 'developer']) {
+        const decision = run(command, role);
+        expect({ role, deny: decision.deny, ask: decision.ask }).toEqual({ role, deny: [], ask: [] });
+      }
+    },
+  );
+
+  test.each(['ls g[h]', 'ls g[!x]', 'ls [[:alpha:]]h', 'ls g[[:alpha:]]', 'ls g[]h]'])(
+    'een klasse die op gh kan passen blijft dicht: %s',
+    (command) => {
+      for (const role of [undefined, 'developer']) {
+        const decision = run(command, role);
+        expect({ role, dicht: decision.deny.length + decision.ask.length > 0 }).toEqual({ role, dicht: true });
+      }
+    },
+  );
+});
