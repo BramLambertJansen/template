@@ -237,64 +237,30 @@ function geldigeKlasse(delen, negatie) {
 }
 
 /**
- * Een benoemd deel van een klasse, voor de bash-5.2-lezing (`klasseBash52`): `regex` past op de tekens van het deel (`[=m=]`
- * op m, `[:digit:]` op 0-9, een onbekende of meerletterige naam op elk teken; staat het in een bereik, dan het bereik);
- * `eind` is de index van de sluitende `]` van het deel.
- * @typedef {{ regex: string, eind: number }} BenoemdDeel
- */
-
-/**
  * Een bash-glob-klasse vanaf de `[` op `index` als reguliere expressie (zonder vlag `u`, geschikt voor vlag `i`), of null
  * als er geen sluitende `]` is: dan is de `[` letterlijk (`g[!]`, `[^]h`). Na `[` mag `!` of `^` (negatie) staan; een `]`
  * direct daarna hoort bij de klasse. De inhoud wordt gelezen als atomen (`klasseStuk`): letterlijke tekens, `\x`,
  * `[:naam:]`, `[=x=]` en `[.x.]` (spec rolhek-vooraf-krimp AC-3 en AC-10 (c), leerpunten #618 en #622). Gebruikt door
- * `globTekstRegex`, en via die functie door `globForGh` (rolhek.mjs) en `stukRegex` (zelfladend.mjs). `benoemd`: de
- * stukken met een `[=x=]`-, `[:naam:]`- of `[.x.]`-deel, voor de bash-5.2-lezing (`klasseBash52`, #622); leeg bij een
- * negatie: bash 5.2 geeft na een treffer op een deel `not ? NULL : p` terug (`sm_loop.c`), een genegeerde klasse faalt dan.
+ * `globTekstRegex`, en via die functie door `globForGh` (rolhek.mjs) en `stukRegex` (zelfladend.mjs). `benoemd`: de inhoud
+ * heeft een `[=`, `[:` of `[.`; zo'n klasse leest `globTekstRegex` ruim (dicht; ook een `\[:` telt, dat is strenger).
  * @param {string} tekst @param {number} index
- * @returns {{ regex: string, eind: number, benoemd: BenoemdDeel[] } | null} `eind`: de index van de sluitende `]`
+ * @returns {{ regex: string, eind: number, benoemd: boolean } | null} `eind`: de index van de sluitende `]`
  */
 export function globKlasseRegex(tekst, index) {
   const negatie = /[!^]/.test(tekst[index + 1] ?? '');
-  let positie = index + (negatie ? 2 : 1);
+  const begin = index + (negatie ? 2 : 1);
+  let positie = begin;
   /** @type {KlasseDelen} */
   const delen = { vast: '', hoofd: '', elk: false, escape: false };
-  /** @type {BenoemdDeel[]} */
-  const benoemd = [];
   // Het eerste atoom hoort altijd bij de klasse, ook een `]`; daarna sluit een `]` buiten een atoom de klasse.
   let eerste = true;
   while (positie < tekst.length && (eerste || tekst[positie] !== ']')) {
-    /** @type {KlasseDelen} */
-    const stuk = { vast: '', hoofd: '', elk: false, escape: false };
-    const na = klasseStuk(tekst, positie, stuk);
-    const deelEind = benoemdEind(tekst, positie, na);
-    if (deelEind !== -1) benoemd.push({ regex: geldigeKlasse(stuk, false), eind: deelEind });
-    voegDelenSamen(delen, stuk);
-    positie = na;
+    positie = klasseStuk(tekst, positie, delen);
     eerste = false;
   }
   if (positie >= tekst.length) return null;
-  return { regex: geldigeKlasse(delen, negatie), eind: positie, benoemd: negatie ? [] : benoemd };
-}
-
-/** Voegt de delen van één klassestuk toe aan die van de hele klasse. @param {KlasseDelen} delen @param {KlasseDelen} stuk */
-function voegDelenSamen(delen, stuk) {
-  delen.vast += stuk.vast;
-  delen.hoofd += stuk.hoofd;
-  delen.elk ||= stuk.elk;
-  delen.escape ||= stuk.escape;
-}
-
-/**
- * De index van de sluitende `]` van het eerste `[=x=]`-, `[:naam:]`- of `[.x.]`-deel in het klassestuk van `positie` tot
- * `na` (`klasseStuk`), of -1 zonder zo'n deel. Een `[` die geen afgesloten deel opent, is in `klasseAtoom` een eigen
- * atoom van één teken; een `[=`, `[:` of `[.` binnen een stuk opent dus altijd een afgesloten deel.
- * @param {string} tekst @param {number} positie @param {number} na
- */
-function benoemdEind(tekst, positie, na) {
-  const gevonden = /\[([=:.])/.exec(tekst.slice(positie, na));
-  if (gevonden === null) return -1;
-  return tekst.indexOf(`${gevonden[1] ?? ''}]`, positie + gevonden.index + 2) + 1;
+  const benoemd = /\[[=:.]/.test(tekst.slice(begin, positie));
+  return { regex: geldigeKlasse(delen, negatie), eind: positie, benoemd };
 }
 
 /**
@@ -304,29 +270,24 @@ function benoemdEind(tekst, positie, na) {
  * @typedef {GlobOpties & { memo: Map<number, string>, glob: boolean }} GlobStand
  */
 
-// Bovengrens voor het aantal lezingen van een tekst (ruim: `[` maal `]`; anders benoemde delen maal `]`, `klasseBash52`);
-// daarboven past de hele tekst op alles (dicht).
+// Bovengrens voor het aantal extra lezingen van een tekst: per `[` die ruim gelezen wordt (`ruimeKlasse`) het aantal latere
+// `]`; daarboven past de hele tekst op alles (dicht).
 const RUIM_MAX = 16;
 
 /**
  * Een glob-tekst (een woordwaarde zonder quotes en escapes) als reguliere expressie, met klassen volgens `globKlasseRegex`.
  * `ruim` (review B3, #622, spec rolhek-vooraf-krimp AC-3 en AC-10 (c), eigenaarbesluit 7 november 2026): het commando had een
  * `\`, `'` of `"`, die de tokenizer al weghaalde; welke `[` een klasse opent en welke `]` haar sluit, is dan niet meer te zien
- * (`.g[\!i]t`, `.gi[a\]t]`, `.gi[t']']`). Dan telt elke `[` met een `]` erna op drie manieren: letterlijk, als bash-klasse
- * en als één willekeurig teken tot elke latere `]`. Zo is de regex nooit nauwer dan bash; zonder `[` verandert niets.
- * Een klasse met een `[=x=]`-, `[:naam:]`- of `[.x.]`-deel (`BenoemdDeel`) heeft ook zonder `ruim` meer lezingen
- * (`klasseBash52`): als bash-klasse, en per deel als één teken dat dat deel treft tot elke `]` na het deel. Bash 5.2 (Ubuntu
- * 24.04, de CI-runner) slaat in `sm_loop.c` (BRACKMATCH) na een geslaagde `[=x=]` nog een teken over, zodat de klasse bij
- * een andere `]` eindigt (`.gi[[=t=]]x]` past in 5.2 op `.git`, in 5.3 niet); `[:naam:]` en `[.x.]` volgen uit voorzorg
- * (#622). Samen een superset van de lezingen van bash 5.2 en 5.3; de letterlijke lezing hoort alleen bij `ruim`. Ook die
- * extra lezingen tellen mee voor `RUIM_MAX`.
+ * (`.g[\!i]t`, `.gi[a\]t]`, `.gi[t']']`). Dan telt elke `[` met een `]` erna op drie manieren (`ruimeKlasse`): letterlijk,
+ * als bash-klasse en als één willekeurig teken tot elke latere `]`. Zo is de regex nooit nauwer dan bash; zonder `[`
+ * verandert niets. Een klasse met een `[=x=]`-, `[:naam:]`- of `[.x.]`-deel leest ook zonder `ruim` zo: bash 5.2 en 5.3
+ * lezen zo'n klasse verschillend, en de lezer bouwt geen bash-versie na (eigenaarbesluit 7 november 2026, #622).
  * `glob`: de tekst bevat een `*`, `?` of klasse.
  * @param {string} tekst @param {GlobOpties} opties
  * @returns {{ regex: string, glob: boolean }}
  */
 export function globTekstRegex(tekst, opties) {
-  const open = opties.ruim ? tekst.split('[').length - 1 : benoemdeDelen(tekst);
-  if (open * (tekst.split(']').length - 1) > RUIM_MAX) return { regex: opties.alles, glob: true };
+  if (ruimeLezingen(tekst, opties.ruim) > RUIM_MAX) return { regex: opties.alles, glob: true };
   /** @type {GlobStand} */
   const stand = { ...opties, memo: new Map(), glob: false };
   const regex = regexVanaf(tekst, 0, stand);
@@ -334,14 +295,14 @@ export function globTekstRegex(tekst, opties) {
 }
 
 /**
- * Het aantal benoemde delen (`BenoemdDeel`) in de klassen van `tekst`, voor de grens `RUIM_MAX`: elk deel geeft in
- * `klasseBash52` hooguit één lezing per `]`. Een `[` binnen een klasse telt ook als begin; dat telt hooguit te veel (dicht).
- * @param {string} tekst
+ * Het aantal extra lezingen voor `RUIM_MAX`: per `[` die ruim gelezen wordt (bij `ruim` elke, anders een klasse met
+ * `benoemd`) het aantal latere `]`. Een `[` binnen een klasse telt ook; dat telt hooguit te veel (dicht).
+ * @param {string} tekst @param {boolean} ruim
  */
-function benoemdeDelen(tekst) {
+function ruimeLezingen(tekst, ruim) {
   let aantal = 0;
   for (let index = tekst.indexOf('['); index !== -1; index = tekst.indexOf('[', index + 1))
-    aantal += globKlasseRegex(tekst, index)?.benoemd.length ?? 0;
+    if (ruim || globKlasseRegex(tekst, index)?.benoemd === true) aantal += tekst.slice(index + 1).split(']').length - 1;
   return aantal;
 }
 
@@ -353,13 +314,9 @@ function regexVanaf(tekst, start, stand) {
   let index = start;
   while (index < tekst.length) {
     const teken = tekst[index] ?? '';
-    if (teken === '[' && stand.ruim && tekst.includes(']', index + 1)) {
-      uit += ruimeKlasse(tekst, index, stand);
-      break;
-    }
     const klasse = teken === '[' ? globKlasseRegex(tekst, index) : null;
-    if (klasse !== null && klasse.benoemd.length > 0) {
-      uit += klasseBash52(tekst, klasse, stand);
+    if (teken === '[' && (klasse?.benoemd === true || (stand.ruim && tekst.includes(']', index + 1)))) {
+      uit += ruimeKlasse(tekst, index, stand);
       break;
     }
     stand.glob ||= klasse !== null || teken === '*' || teken === '?';
@@ -371,25 +328,8 @@ function regexVanaf(tekst, start, stand) {
 }
 
 /**
- * De lezingen van een klasse met benoemde delen (`BenoemdDeel`) buiten een ruime tekst: als bash-klasse (bash 5.3), en per
- * deel D en per `]` op positie p na de sluitende `]` van D (binnen of buiten de klasse) als één teken dat D treft, gevolgd
- * door de rest vanaf p + 1. Bash 5.2 (`sm_loop.c`, BRACKMATCH) slaat na een geslaagde treffer op `[=x=]` het teken direct
- * na dat deel over en sluit de klasse bij een volgende `]`: later dan normaal (`.gi[[=t=]]x]` is `.git`) of eerder, binnen
- * de klasse (`lefthook.y[[=m=][=z=][l]` is `lefthook.yml`). Alleen een deel dat treft verlengt iets: `lefthook.ym[[=x=]]]`
- * past niet op `lefthook.yml`. `[:naam:]` en `[.x.]` volgen uit voorzorg (#622, spec rolhek-vooraf-krimp AC-3).
- * @param {string} tekst @param {{ regex: string, eind: number, benoemd: BenoemdDeel[] }} klasse @param {GlobStand} stand
- */
-function klasseBash52(tekst, klasse, stand) {
-  stand.glob = true;
-  const lezingen = [klasse.regex + regexVanaf(tekst, klasse.eind + 1, stand)];
-  for (const deel of klasse.benoemd)
-    for (let sluit = tekst.indexOf(']', deel.eind + 1); sluit !== -1; sluit = tekst.indexOf(']', sluit + 1))
-      lezingen.push(deel.regex + regexVanaf(tekst, sluit + 1, stand));
-  return `(?:${lezingen.join('|')})`;
-}
-
-/**
- * De lezingen van een `[` in een ruime tekst (`globTekstRegex`): letterlijk, als bash-klasse en als één teken tot elke `]` erna.
+ * De lezingen van een `[` die ruim gelezen wordt (`globTekstRegex`): letterlijk, als bash-klasse en als één willekeurig
+ * teken tot elke `]` erna.
  * @param {string} tekst @param {number} index @param {GlobStand} stand
  */
 function ruimeKlasse(tekst, index, stand) {
