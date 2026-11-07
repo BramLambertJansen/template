@@ -3,12 +3,14 @@
 // volledige shell: wat tekstheuristiek niet vangt (`bash -c`, `node -e`, `$(…)`), vangt de diff-guard in CI.
 
 /**
- * @typedef {{ words: string[], redirects: string[], expanded?: string[], patterns?: string[], raws?: string[] }} Command
+ * @typedef {{ words: string[], redirects: string[], expanded?: string[], patterns?: string[], raws?: string[], ruim?: boolean }} Command
  * `raws`: per woord van `words` (zelfde index) de ruwe tekst zoals in het commando, met quotes en escapes.
  * `expanded`: woorden waarin de shell nog uitbreidt (`$` of een backtick buiten enkele aanhalingstekens, ook `$'…'`); hun
  * waarde hier is dus niet wat het programma krijgt.
  * `patterns`: per woord van `words` (zelfde index) de vorm waarin glob-, brace- en tildetekens tussen aanhalingstekens of na
  * een backslash `QUOTED` zijn; bash expandeert die daar niet (spec rolhek-vooraf-krimp AC-10 (b)).
+ * `ruim`: het commando (of de substitutie eromheen) bevat een `\`, `'` of `"`; een glob-klasse in een woord of redirect leest
+ * dan ruim (`globTekstRegex`; review B3, #622, AC-3, eigenaarbesluit 7 november 2026).
  */
 /** @typedef {{ kind: 'word' | 'op', value: string, expands?: boolean, pattern?: string, raw?: string }} Token */
 
@@ -24,6 +26,9 @@ const OPERATORS = ['&>>', '>>', '>|', '&>', '>&', '<<-', '<<<', '<<', '<&', '&&'
 // neutraliseert `patterns` niets, ook niet in een substitutie daarbinnen (`onzeker` van de aanroeper). Een quote zonder
 // sluitteken hoeft er niet bij: bash voert zo'n commando niet uit.
 const ONZEKERE_TEKST = /[#`\\\n]|\$[{'(]|\(\(/;
+// Review B3 (#622, eigenaarbesluit 7 november 2026): de tokenizer haalt escapes en aanhalingen weg vóór de glob-omzetting;
+// met een van deze tekens in het commando is de klassegrens in een woordwaarde niet meer zeker (`Command.ruim`).
+const KLASSE_ONZEKER = /[\\'"]/;
 
 /**
  * @param {string} script
@@ -32,16 +37,17 @@ const ONZEKERE_TEKST = /[#`\\\n]|\$[{'(]|\(\(/;
  */
 export function parseCommands(script, onzeker = false) {
   const neutraal = onzeker || ONZEKERE_TEKST.test(script);
+  const ruim = onzeker || KLASSE_ONZEKER.test(script);
   /** @type {Command[]} */
   const commands = [];
   /** @type {Command} */
-  let current = { words: [], redirects: [], expanded: [], patterns: [], raws: [] };
+  let current = { words: [], redirects: [], expanded: [], patterns: [], raws: [], ruim };
   /** @type {'redirect' | 'dup' | 'skip' | null} */
   let expect = null;
   for (const token of tokenize(script)) {
     if (token.kind === 'op' && SEPARATORS.has(token.value)) {
       if (current.words.length > 0 || current.redirects.length > 0) commands.push(current);
-      current = { words: [], redirects: [], expanded: [], patterns: [], raws: [] };
+      current = { words: [], redirects: [], expanded: [], patterns: [], raws: [], ruim };
       expect = null;
     } else if (token.kind === 'op') {
       // `<`, `<<<`, `<<` en kopieën van een descriptor (`>&2`, `2>&1`, `>&-`) schrijven geen bestand; `>&bestand` wel.
@@ -251,6 +257,70 @@ export function globKlasseRegex(tekst, index) {
     eerste = false;
   }
   return positie < tekst.length ? { regex: geldigeKlasse(delen, negatie), eind: positie } : null;
+}
+
+/**
+ * @typedef {{ teken: (teken: string) => string, elk: string, alles: string, ruim: boolean }} GlobOpties
+ * `teken`: een teken buiten een klasse als regex (`*`, `?`, letterlijk); `elk`: één willekeurig teken; `alles`: de hele tekst
+ * als die te veel lezingen heeft; `ruim`: zie `globTekstRegex`.
+ * @typedef {GlobOpties & { memo: Map<number, string>, glob: boolean }} GlobStand
+ */
+
+// Bovengrens voor het aantal lezingen van een ruime tekst (`[` maal `]`); daarboven past de hele tekst op alles (dicht).
+const RUIM_MAX = 16;
+
+/**
+ * Een glob-tekst (een woordwaarde zonder quotes en escapes) als reguliere expressie, met klassen volgens `globKlasseRegex`.
+ * `ruim` (review B3, #622, spec rolhek-vooraf-krimp AC-3 en AC-10 (c), eigenaarbesluit 7 november 2026): het commando had een
+ * `\`, `'` of `"`, die de tokenizer al weghaalde; welke `[` een klasse opent en welke `]` haar sluit, is dan niet meer te zien
+ * (`.g[\!i]t`, `.gi[a\]t]`, `.gi[t']']`). Dan telt elke `[` met een `]` erna op drie manieren: letterlijk, als bash-klasse
+ * en als één willekeurig teken tot elke latere `]`. Zo is de regex nooit nauwer dan bash; zonder `[` verandert niets.
+ * `glob`: de tekst bevat een `*`, `?` of klasse.
+ * @param {string} tekst @param {GlobOpties} opties
+ * @returns {{ regex: string, glob: boolean }}
+ */
+export function globTekstRegex(tekst, opties) {
+  const open = tekst.split('[').length - 1;
+  if (opties.ruim && open * (tekst.split(']').length - 1) > RUIM_MAX) return { regex: opties.alles, glob: true };
+  /** @type {GlobStand} */
+  const stand = { ...opties, memo: new Map(), glob: false };
+  const regex = regexVanaf(tekst, 0, stand);
+  return { regex, glob: stand.glob };
+}
+
+/** @param {string} tekst @param {number} start @param {GlobStand} stand */
+function regexVanaf(tekst, start, stand) {
+  const bekend = stand.memo.get(start);
+  if (bekend !== undefined) return bekend;
+  let uit = '';
+  let index = start;
+  while (index < tekst.length) {
+    const teken = tekst[index] ?? '';
+    if (teken === '[' && stand.ruim && tekst.includes(']', index + 1)) {
+      uit += ruimeKlasse(tekst, index, stand);
+      break;
+    }
+    const klasse = teken === '[' ? globKlasseRegex(tekst, index) : null;
+    stand.glob ||= klasse !== null || teken === '*' || teken === '?';
+    uit += klasse === null ? stand.teken(teken) : klasse.regex;
+    index = klasse === null ? index + 1 : klasse.eind + 1;
+  }
+  stand.memo.set(start, uit);
+  return uit;
+}
+
+/**
+ * De lezingen van een `[` in een ruime tekst (`globTekstRegex`): letterlijk, als bash-klasse en als één teken tot elke `]` erna.
+ * @param {string} tekst @param {number} index @param {GlobStand} stand
+ */
+function ruimeKlasse(tekst, index, stand) {
+  stand.glob = true;
+  const lezingen = [stand.teken('[') + regexVanaf(tekst, index + 1, stand)];
+  const klasse = globKlasseRegex(tekst, index);
+  if (klasse !== null) lezingen.push(klasse.regex + regexVanaf(tekst, klasse.eind + 1, stand));
+  for (let sluit = tekst.indexOf(']', index + 1); sluit !== -1; sluit = tekst.indexOf(']', sluit + 1))
+    lezingen.push(stand.elk + regexVanaf(tekst, sluit + 1, stand));
+  return `(?:${lezingen.join('|')})`;
 }
 
 /**

@@ -2,7 +2,7 @@
 // (`.git/**`, de hook-stubs, `.claude/settings.json`, `lefthook.yml`, `.pnpmfile.cjs`). Een schrijfactie daar kan de toets op
 // effect uitschakelen voordat die kijkt; daarom toetst het rolhek deze paden vooraf, op elk woord van het commando.
 import path from 'node:path';
-import { gitSubcommand, globKlasseRegex, programName } from './shell.mjs';
+import { gitSubcommand, globTekstRegex, programName } from './shell.mjs';
 
 // Lezen zonder schrijven; `sed` alleen zonder `-i`/`--in-place` (AC-3).
 const LEESLIJST = new Set(['cat', 'head', 'tail', 'ls', 'stat', 'wc', 'diff', 'grep', 'rg', 'jq']);
@@ -30,7 +30,8 @@ const GLOB = /[*?[]/;
 const SCHEIDING = /[^\w./*?[\]@+~-]+/;
 
 /**
- * @typedef {{ root: string, cwd: string, cwdOnbekend?: boolean, config: { zelfladend?: readonly string[] | undefined } }} ZelfCtx
+ * @typedef {{ root: string, cwd: string, cwdOnbekend?: boolean, ruim?: boolean, config: { zelfladend?: readonly string[] | undefined } }} ZelfCtx
+ * `ruim`: `Command.ruim` van het segment; een glob-klasse leest dan ruim (`globTekstRegex`, review B3, #622).
  * @typedef {{ deny: string[], ask: string[] }} ZelfBesluit
  */
 
@@ -41,37 +42,38 @@ function basis(glob) {
 
 /**
  * Een glob-woord als reguliere expressie per padstuk; `*`, `?` en `[…]` passen niet op een `.` vooraan (bash zonder dotglob).
- * @param {string} stuk
+ * Een klasse volgens bash, ook met POSIX-klassen (AC-3, #618); zonder sluitende `]` is de `[` letterlijk (AC-10 (c), #622).
+ * `ruim`: het commando had een `\`, `'` of `"`; een klasse kan dan op elk teken passen (review B3, eigenaarbesluit
+ * 7 november 2026, `globTekstRegex`).
+ * @param {string} stuk @param {boolean} [ruim]
  */
-function stukRegex(stuk) {
-  let uit = GLOB.test(stuk[0] ?? '') ? '(?!\\.)' : '';
-  for (let index = 0; index < stuk.length; index += 1) {
-    const teken = stuk[index] ?? '';
-    // Een klasse volgens bash, ook met POSIX-klassen (AC-3, #618); zonder sluitende `]` is de `[` letterlijk (AC-10 (c), #622).
-    const klasse = teken === '[' ? globKlasseRegex(stuk, index) : null;
-    if (teken === '*') uit += '[^/]*';
-    else if (teken === '?') uit += '[^/]';
-    else if (klasse !== null) {
-      uit += klasse.regex;
-      index = klasse.eind;
-    } else uit += teken.replace(/[.+^${}()|\\[\]]/g, '\\$&');
-  }
-  return new RegExp(`^${uit}$`, 'i');
+function stukRegex(stuk, ruim = false) {
+  const voor = GLOB.test(stuk[0] ?? '') ? '(?!\\.)' : '';
+  const { regex } = globTekstRegex(stuk, { teken: stukTeken, elk: '[^/]', alles: '[\\s\\S]*', ruim });
+  return new RegExp(`^${voor}${regex}$`, 'i');
+}
+
+/** Eén teken buiten een klasse: `*`, `?` of letterlijk. @param {string} teken */
+function stukTeken(teken) {
+  if (teken === '*') return '[^/]*';
+  if (teken === '?') return '[^/]';
+  return teken.replace(/[.+^${}()|\\[\]]/g, '\\$&');
 }
 
 /**
  * Het zelfladende patroon waar `rel` naar wijst, of null. Een gewoon woord wijst naar het pad zelf of de map van een `/**`-patroon;
  * een glob wijst ernaar als bash hem op zo'n pad kan laten passen. Hoofdletters tellen niet (`.Git` op macOS).
- * @param {string} rel @param {readonly string[]} lijst
+ * `ruim`: zie `stukRegex` (review B3, #622).
+ * @param {string} rel @param {readonly string[]} lijst @param {boolean} [ruim]
  */
-export function zelfladendPatroon(rel, lijst) {
+export function zelfladendPatroon(rel, lijst, ruim = false) {
   const behalve = lijst.filter((item) => item.startsWith('!')).map((item) => item.slice(1));
   const stukken = rel.split('/');
   for (const patroon of lijst.filter((item) => !item.startsWith('!'))) {
     const onder = patroon.endsWith('/**');
     const doel = basis(patroon).split('/');
     if (stukken.length < doel.length || (!onder && stukken.length !== doel.length)) continue;
-    if (!doel.every((stuk, index) => stukRegex(stukken[index] ?? '').test(stuk))) continue;
+    if (!doel.every((stuk, index) => stukRegex(stukken[index] ?? '', ruim).test(stuk))) continue;
     const uitgezonderd = behalve.some((uitzondering) => {
       const map = basis(uitzondering).split('/');
       return stukken.length >= map.length && map.every((stuk, index) => (stukken[index] ?? '').toLowerCase() === stuk.toLowerCase());
@@ -105,7 +107,7 @@ function doelen(woorden, ctx) {
   for (const woord of woorden)
     for (const deel of [woord, ...woord.split(SCHEIDING)]) {
       const rel = deel === '' ? null : padVan(deel, ctx);
-      if (rel !== null && zelfladendPatroon(rel, lijst) !== null) gevonden.add(rel);
+      if (rel !== null && zelfladendPatroon(rel, lijst, ctx.ruim) !== null) gevonden.add(rel);
     }
   return [...gevonden];
 }
@@ -367,11 +369,13 @@ function gitBesluit(argv, { ctx, omgelegd, role }, besluit) {
 /**
  * AC-3: `.git/**` is deny voor elke rol; de andere zelfladende paden deny voor een subagent en ask voor de hoofdsessie.
  * `ctx.cwd` is de map na een eerdere `cd` in hetzelfde commando.
- * @param {{ argv: readonly string[], redirects: readonly string[], role: string }} commando
+ * `ruim`: `Command.ruim`; dan past een glob-klasse in elk woord en elke redirect op elk teken (review B3, #622, eigenaarbesluit
+ * 7 november 2026).
+ * @param {{ argv: readonly string[], redirects: readonly string[], role: string, ruim?: boolean }} commando
  * @param {ZelfCtx} basisCtx @param {ZelfBesluit} besluit
  */
-export function zelfladend({ argv: ruw, redirects, role }, basisCtx, besluit) {
-  const kaal = zonderOmhulsel(ruw, basisCtx);
+export function zelfladend({ argv: ruw, redirects, role, ruim = false }, basisCtx, besluit) {
+  const kaal = zonderOmhulsel(ruw, { ...basisCtx, ruim });
   const argv = kaal.argv;
   const { ctx, omgelegd } = gitWerkmap(argv, kaal.ctx);
   if (ctx.cwdOnbekend === true && (redirects.length > 0 || schrijfWoorden(argv).length > 0 || gitWerkmapZonderPaden(argv, ctx) !== null))
@@ -379,7 +383,7 @@ export function zelfladend({ argv: ruw, redirects, role }, basisCtx, besluit) {
   for (const rel of doelen([...redirects, ...schrijfWoorden(argv)], ctx)) {
     const melding = `${rel} is een zelfladend pad (spec rolhek-vooraf-krimp AC-3): de toets op effect zou daarna niet meer kunnen kijken`;
     // Ook een glob die bash op `.git` laat passen (`.gi[t]`, `.gi[[:alpha:]]`) valt onder `.git/**` (AC-3, #618).
-    if (stukRegex(rel.split('/')[0] ?? '').test('.git')) besluit.deny.push(`${melding}; verboden, voor elke rol (R-ROL-03)`);
+    if (stukRegex(rel.split('/')[0] ?? '', ruim).test('.git')) besluit.deny.push(`${melding}; verboden, voor elke rol (R-ROL-03)`);
     else weiger(melding, role, besluit);
   }
   for (const doel of mapDoelen(argv).filter((kandidaat) => bovenZelfladend(kandidaat, ctx)))
