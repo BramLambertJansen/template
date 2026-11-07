@@ -4,9 +4,10 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
-import { globTekstRegex } from '../../rails/hooks/lib/shell.mjs';
+import { globKlasseRegex, globTekstRegex } from '../../rails/hooks/lib/shell.mjs';
 
-// Differentieel: `globKlasseRegex` tegen echte bash (leerpunten #618/#622, spec rolhek-vooraf-krimp AC-3, AC-10 (c)).
+// Differentieel: `globKlasseRegex` en het echte pad `globTekstRegex` tegen echte bash (leerpunten #618/#622, spec
+// rolhek-vooraf-krimp AC-3, AC-10 (c)); de differentiële test toetst `globTekstRegex`, via `codeRegex`.
 // Eis: elke bash-treffer is ook een treffer van de code. De code mag strenger zijn (meer treffers), nooit nauwer: een
 // glob die bash laat passen op `.git` en de code niet, is een sluiproute. De code werkt bewust onder vlag `i`.
 
@@ -71,6 +72,13 @@ const ATOMEN = [
 ];
 // Groep voor de drie-atoomlaag: alleen de beslissende namen, anders loopt de test te lang op.
 const DRIE_ATOMEN = STAMMEN.length;
+// Groep voor namen van twee tekens na de stam `.g` tegen patronen met twee benoemde delen (bash 5.2 slaat na een geslaagd
+// benoemd deel een teken over: de klasse eindigt dan later of, bij een `[`, eerder).
+const TWEE_DELEN = STAMMEN.length + 1;
+const TWEE_DELEN_STAM = '.g';
+const TWEE_DELEN_TEKENS = ['i', 't', 'z', 'm', 'l', ']', '[', '='];
+const TWEE_DELEN_ATOMEN = ['[=i=]', '[=z=]', '[:alpha:]', '[.i.]', '[=x=]'];
+const TWEE_DELEN_STAARTEN = ['', ']', '[t]', 'x]', '[x', ']]', '[=i=]', '[=z=]]'];
 const DRIE_ATOMEN_NAMEN = ['.git', '.GIT', '.gi]', '.gi-', '.gi!', '.gi^', '.gi['];
 const POSIX_NAMEN = [
   'alnum',
@@ -178,6 +186,13 @@ function patronen(): { groep: number; patroon: string }[] {
   for (const body of lengteTot(3).filter((tekst) => tekst.length > 0)) {
     for (const voor of ['', '!']) lijst.push({ groep: DRIE_ATOMEN, patroon: `.gi[${voor}${body}]` });
   }
+  const paren = TWEE_DELEN_ATOMEN.flatMap((eerste) => TWEE_DELEN_ATOMEN.map((tweede) => eerste + tweede));
+  for (const paar of paren) {
+    for (const staart of TWEE_DELEN_STAARTEN) {
+      for (const voor of ['', '!'])
+        lijst.push({ groep: TWEE_DELEN, patroon: `${TWEE_DELEN_STAM}[${voor}${paar}${staart}` });
+    }
+  }
   return lijst;
 }
 
@@ -189,6 +204,11 @@ function namen(): { groep: number; naam: string }[] {
   // Hoofdletters en de volledige namen: `.git` en `gh` zitten al in de stam plus teken; `lefthook.yml` ook (`l`).
   lijst.push({ groep: 0, naam: '.GIT' }, { groep: 1, naam: 'LEFTHOOK.YML' }, { groep: 2, naam: 'gH' });
   for (const naam of DRIE_ATOMEN_NAMEN) lijst.push({ groep: DRIE_ATOMEN, naam });
+  lijst.push({ groep: TWEE_DELEN, naam: TWEE_DELEN_STAM });
+  for (const een of TWEE_DELEN_TEKENS) {
+    lijst.push({ groep: TWEE_DELEN, naam: TWEE_DELEN_STAM + een });
+    for (const twee of TWEE_DELEN_TEKENS) lijst.push({ groep: TWEE_DELEN, naam: TWEE_DELEN_STAM + een + twee });
+  }
   return lijst;
 }
 
@@ -272,85 +292,106 @@ function codeRegex(patroon: string): RegExp {
   return new RegExp(`^${regex}$`, 'i');
 }
 
-describe.skipIf(!bashAanwezig)('globKlasseRegex tegen bash: de code is nooit nauwer dan bash', () => {
-  const pats = patronen();
-  const nms = namen();
+describe.skipIf(!bashAanwezig)(
+  'globTekstRegex (het echte pad) en globKlasseRegex tegen bash: de code is nooit nauwer dan bash',
+  () => {
+    const pats = patronen();
+    const nms = namen();
 
-  test('elke bash-treffer is ook een treffer van de code', () => {
-    const treffers = bashTreffers(pats, nms);
-    const mis: string[] = [];
-    let bashJa = 0;
-    pats.forEach((item, index) => {
-      const regex = codeRegex(item.patroon);
-      for (const naamIndex of treffers[index] ?? []) {
-        bashJa += 1;
-        const naam = nms[Number(naamIndex)]?.naam ?? '';
-        if (!regex.test(naam))
-          mis.push(`patroon ${JSON.stringify(item.patroon)} naam ${JSON.stringify(naam)}: bash ja, code nee`);
-      }
+    test('elke bash-treffer is ook een treffer van de code', () => {
+      const treffers = bashTreffers(pats, nms);
+      const mis: string[] = [];
+      let bashJa = 0;
+      pats.forEach((item, index) => {
+        const regex = codeRegex(item.patroon);
+        for (const naamIndex of treffers[index] ?? []) {
+          bashJa += 1;
+          const naam = nms[Number(naamIndex)]?.naam ?? '';
+          if (!regex.test(naam))
+            mis.push(`patroon ${JSON.stringify(item.patroon)} naam ${JSON.stringify(naam)}: bash ja, code nee`);
+        }
+      });
+      expect(bashJa).toBeGreaterThan(1000);
+      const paren = pats.reduce((som, item) => som + nms.filter((naam) => naam.groep === item.groep).length, 0);
+      expect(paren).toBeGreaterThan(300_000);
+      const patronenMis = [...new Set(mis.map((regel) => regel.split(' naam ')[0]))];
+      expect(patronenMis).toEqual([]);
+      expect(mis).toEqual([]);
+    }, 120_000);
+
+    test('de bash-uitkomst voor de sluiproutes van de reviews is zoals verwacht (controle op het corpus zelf)', () => {
+      const eigen = [
+        { groep: 0, patroon: '.gi[a-[.z.]]' },
+        { groep: 0, patroon: '.gi[[.a.]-z]' },
+        { groep: 1, patroon: 'lefthook.ym[a-[:digit:]l]' },
+        { groep: 0, patroon: '.g[[=i=][=z=][t]' },
+        { groep: 1, patroon: 'lefthook.y[[=m=][=z=][l]' },
+      ];
+      const lijst = [
+        { groep: 0, naam: '.git' },
+        { groep: 1, naam: 'lefthook.yml' },
+      ];
+      const [een, twee, drie, vier, vijf] = bashTreffers(eigen, lijst);
+      expect([...(een ?? [])]).toEqual(['0']);
+      expect([...(twee ?? [])]).toEqual(['0']);
+      expect([...(drie ?? [])]).toEqual([]);
+      // Bash 5.2 (CI): ja, na een geslaagd `[=i=]` wordt de `[` van `[=z=]` overgeslagen en sluit de klasse bij `=]`; de rest
+      // `[t]` is een nieuwe klasse. Bash 5.3 (lokaal): waarschijnlijk nee. Dus bash ja óf nee; de code zegt in beide gevallen ja.
+      for (const bash of [vier, vijf]) expect(bash?.size ?? 0).toBeLessThanOrEqual(1);
+      expect(codeRegex('.g[[=i=][=z=][t]').test('.git')).toBe(true);
+      expect(codeRegex('lefthook.y[[=m=][=z=][l]').test('lefthook.yml')).toBe(true);
     });
-    expect(bashJa).toBeGreaterThan(1000);
-    const paren = pats.reduce((som, item) => som + nms.filter((naam) => naam.groep === item.groep).length, 0);
-    expect(paren).toBeGreaterThan(300_000);
-    const patronenMis = [...new Set(mis.map((regel) => regel.split(' naam ')[0]))];
-    expect(patronenMis).toEqual([]);
-    expect(mis).toEqual([]);
-  }, 120_000);
 
-  test('de bash-uitkomst voor de sluiproutes van de reviews is zoals verwacht (controle op het corpus zelf)', () => {
-    const eigen = [
-      { groep: 0, patroon: '.gi[a-[.z.]]' },
-      { groep: 0, patroon: '.gi[[.a.]-z]' },
-      { groep: 1, patroon: 'lefthook.ym[a-[:digit:]l]' },
-    ];
-    const lijst = [
-      { groep: 0, naam: '.git' },
-      { groep: 1, naam: 'lefthook.yml' },
-    ];
-    const [een, twee, drie] = bashTreffers(eigen, lijst);
-    expect([...(een ?? [])]).toEqual(['0']);
-    expect([...(twee ?? [])]).toEqual(['0']);
-    expect([...(drie ?? [])]).toEqual([]);
-  });
-
-  // Op commandoniveau (review B3): de tokenizer haalt escapes en aanhalingen weg vóór de omzetting, bash leest ze als
-  // klassetekens. Ruwe woorden met escapes en aanhalingen in een klasse, tegen `[[ naam == <ruw woord> ]]` in bash. Faalt
-  // alleen als bash past op een zelfladende naam en `decide` voor de developer geen deny geeft. Valt onder de skip hierboven.
-  describe('rolhek (decide): een klasse met escape of aanhaling die bash op een zelfladende naam laat passen', () => {
-    const config = loadConfig(readFileSync('.claude/gates.json', 'utf8'));
-    const ctx = {
-      root: '/repo',
-      cwd: '/repo',
-      config,
-      read: () => null,
-      committed: () => false,
-      isDir: () => false,
-      branch: 'feat/x',
-    };
-    const deny = (command: string): boolean =>
-      decide({ tool_name: 'Bash', tool_input: { command }, agent_type: 'developer' }, ctx).deny.length > 0;
-
-    test.each(RUWE_STAMMEN)(
-      '$naam: elk ruw woord waarop bash past is deny voor de developer',
-      ({ stam, naam, commando }) => {
-        const woorden = ruweKlassen().map((klasse) => stam + klasse);
-        const treffers = bashRuwTreffers(naam, woorden);
-        expect(treffers.size).toBeGreaterThan(100);
-        const mis = [...treffers]
-          .map((index) => woorden[index] ?? '')
-          .filter((woord) => !deny(commando(woord)))
-          .map((woord) => `${commando(woord)}: bash past op ${naam}, geen deny`);
-        expect(mis).toEqual([]);
-      },
-      60_000,
-    );
-
-    test('de bash-uitkomst voor de B3-routes is zoals verwacht (controle op het corpus zelf)', () => {
-      const woorden = [".gi[a'\\'-u]", '.gi[a\\]t]', '.gi[\\!t]'];
-      expect([...bashRuwTreffers('.git', woorden)]).toEqual([0, 1, 2]);
+    // `globKlasseRegex` zelf: de klasse dekt minstens de bash-5.3-lezing (`[[=a=]]` plus de rest als letterlijk).
+    test('globKlasseRegex geeft voor `.gi[[=a=]]]` en `.gi[![=a=]]x]` een klasse die minstens de bash-5.3-lezing dekt', () => {
+      const een = globKlasseRegex('.gi[[=a=]]]', 3);
+      const twee = globKlasseRegex('.gi[![=a=]]x]', 3);
+      // 5.3: klasse `[[=a=]]` (eind 8) en negatie `[![=a=]]` (eind 9); een klasse die verder reikt dekt dat ook.
+      expect(een?.eind).toBeGreaterThanOrEqual(8);
+      expect(twee?.eind).toBeGreaterThanOrEqual(9);
+      expect(new RegExp(`^${een?.regex ?? '(?!)'}$`, 'i').test('a')).toBe(true);
+      expect(new RegExp(`^${twee?.regex ?? '(?!)'}$`, 'i').test('t')).toBe(true);
     });
-  });
-});
+
+    // Op commandoniveau (review B3): de tokenizer haalt escapes en aanhalingen weg vóór de omzetting, bash leest ze als
+    // klassetekens. Ruwe woorden met escapes en aanhalingen in een klasse, tegen `[[ naam == <ruw woord> ]]` in bash. Faalt
+    // alleen als bash past op een zelfladende naam en `decide` voor de developer geen deny geeft. Valt onder de skip hierboven.
+    describe('rolhek (decide): een klasse met escape of aanhaling die bash op een zelfladende naam laat passen', () => {
+      const config = loadConfig(readFileSync('.claude/gates.json', 'utf8'));
+      const ctx = {
+        root: '/repo',
+        cwd: '/repo',
+        config,
+        read: () => null,
+        committed: () => false,
+        isDir: () => false,
+        branch: 'feat/x',
+      };
+      const deny = (command: string): boolean =>
+        decide({ tool_name: 'Bash', tool_input: { command }, agent_type: 'developer' }, ctx).deny.length > 0;
+
+      test.each(RUWE_STAMMEN)(
+        '$naam: elk ruw woord waarop bash past is deny voor de developer',
+        ({ stam, naam, commando }) => {
+          const woorden = ruweKlassen().map((klasse) => stam + klasse);
+          const treffers = bashRuwTreffers(naam, woorden);
+          expect(treffers.size).toBeGreaterThan(100);
+          const mis = [...treffers]
+            .map((index) => woorden[index] ?? '')
+            .filter((woord) => !deny(commando(woord)))
+            .map((woord) => `${commando(woord)}: bash past op ${naam}, geen deny`);
+          expect(mis).toEqual([]);
+        },
+        60_000,
+      );
+
+      test('de bash-uitkomst voor de B3-routes is zoals verwacht (controle op het corpus zelf)', () => {
+        const woorden = [".gi[a'\\'-u]", '.gi[a\\]t]', '.gi[\\!t]'];
+        expect([...bashRuwTreffers('.git', woorden)]).toEqual([0, 1, 2]);
+      });
+    });
+  },
+);
 
 // Ruwe woorden voor de test hierboven; de bash-kant staat in `bashRuwTreffers`.
 const RUWE_ATOMEN = [

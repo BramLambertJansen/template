@@ -453,4 +453,32 @@ describe('AC-3: bash 5.2 na een gelijkheidsklasse', () => {
     expect(verdict('echo x > lefthook.y[[=m=]]q]l')).toBe('ask');
     expect(verdict('echo x > lefthook.y[[=m=]]q]l', 'developer')).toBe('deny');
   });
+
+  // Is het overgeslagen teken de `[` van een volgend benoemd deel, dan eindigt de klasse eerder, bij de `]` van dat deel, en
+  // is de rest gewoon patroon: `lefthook.y[[=m=][=z=][l]` is `m` (via `[=m=]`), klasse dicht bij het `=]` van `[=z=]`, dan de
+  // nieuwe klasse `[l]`: `lefthook.yml`. Idem `.g[[=i=][=z=][t]` is `.git`.
+  test.each([
+    ['.g[[=i=][=z=][t]/config', '.git/**'],
+    ['lefthook.y[[=m=][=z=][l]', 'lefthook.yml'],
+  ])('zelfladendPatroon(%s) is %s (overgeslagen teken is de [ van een volgend deel)', (rel, verwacht) => {
+    expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBe(verwacht);
+  });
+
+  test('echo x > .g[[=i=][=z=][t]/config is deny voor de hoofdsessie en de developer', () => {
+    expect(verdict('echo x > .g[[=i=][=z=][t]/config')).toBe('deny');
+    expect(verdict('echo x > .g[[=i=][=z=][t]/config', 'developer')).toBe('deny');
+  });
+
+  test('echo x > lefthook.y[[=m=][=z=][l] is ask voor de hoofdsessie en deny voor de developer, zoals lefthook.yml', () => {
+    expect(verdict('echo x > lefthook.y[[=m=][=z=][l]')).toBe('ask');
+    expect(verdict('echo x > lefthook.y[[=m=][=z=][l]', 'developer')).toBe('deny');
+  });
+
+  // Precisiebewaking: een benoemd deel dat niet treft, verlengt niets.
+  test.each(['lefthook.ym[[:digit:]]', 'lefthook.ym[[=x=]]', 'lefthook.ym[[=x=]]]'])(
+    'zelfladendPatroon(%s) wijst nergens naar',
+    (rel) => {
+      expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBeNull();
+    },
+  );
 });
