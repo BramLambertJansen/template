@@ -430,3 +430,25 @@ describe('AC-3 (B3): escape in een glob-klasse valt dicht', () => {
     }
   });
 });
+
+// Bash 5.2 (Ubuntu 24.04, de CI-runner) na een geslaagde `[=x=]`: `sm_loop.c` (BRACKMATCH) doet nog een `p++` vóór `goto matched`,
+// zodat het teken direct na `[=x=]` wordt overgeslagen en de klasse pas bij een latere `]` eindigt. `.gi[[=t=]]x]` past in 5.2
+// dus op `.git` (`t` via `[=t=]`, `x]` overgeslagen en gelezen als klasse-inhoud tot de laatste `]`): `.gi` plus één teken. In
+// bash 5.3 is dat anders (`[[=t=]]` is de klasse, `x]` letterlijk): daar past `.git` NIET op dit patroon. Dit is dus echt
+// 5.2-gedrag dat we vastleggen, los van de lokale bash-versie; de code mag nooit nauwer zijn dan de ruimste bash.
+describe('AC-3: bash 5.2 na een gelijkheidsklasse', () => {
+  test.each([
+    ['.gi[[=t=]]x]/config', '.git/**'],
+    ['lefthook.y[[=m=]]q]l', 'lefthook.yml'],
+  ])('zelfladendPatroon(%s) is %s', (rel, verwacht) => {
+    expect(zelfladendPatroon(rel, config.zelfladend ?? [])).toBe(verwacht);
+  });
+
+  test.each(['echo x > .gi[[=t=]]x]/config', 'echo x > lefthook.y[[=m=]]q]l'])(
+    '%s is deny voor de hoofdsessie en de developer',
+    (command) => {
+      expect(verdict(command)).toBe('deny');
+      expect(verdict(command, 'developer')).toBe('deny');
+    },
+  );
+});

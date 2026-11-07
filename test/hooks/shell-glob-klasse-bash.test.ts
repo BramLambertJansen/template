@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
-import { globKlasseRegex } from '../../rails/hooks/lib/shell.mjs';
+import { globTekstRegex } from '../../rails/hooks/lib/shell.mjs';
 
 // Differentieel: `globKlasseRegex` tegen echte bash (leerpunten #618/#622, spec rolhek-vooraf-krimp AC-3, AC-10 (c)).
 // Eis: elke bash-treffer is ook een treffer van de code. De code mag strenger zijn (meer treffers), nooit nauwer: een
@@ -150,6 +150,20 @@ function patronen(): { groep: number; patroon: string }[] {
     '[\\]]',
     '[\\a]',
     '[a\\-z]',
+    // Bash 5.2 slaat na een geslaagde `[=x=]` het volgende teken over (klasse sluit pas bij een latere `]`); 5.3 niet. Zelfde
+    // vormen met `[:naam:]` en `[.x.]`, zodat een gelijk 5.2-gedrag daar in CI (Ubuntu 24.04, bash 5.2) zichtbaar wordt.
+    '[[=t=]]x]',
+    '[[=t=]]]',
+    '[![=t=]]x]',
+    '[[=t=]]x]y]',
+    '[[:alpha:]]x]',
+    '[[:alpha:]]]',
+    '[![:alpha:]]x]',
+    '[[:alpha:]]x]y]',
+    '[[.t.]]x]',
+    '[[.t.]]]',
+    '[![.t.]]x]',
+    '[[.t.]]x]y]',
   ];
   STAMMEN.forEach((stam, groep) => {
     for (const body of ['', ...lengteTot(2)])
@@ -243,18 +257,19 @@ function bashTreffers(
   }
 }
 
-/** Het hele glob-woord (letterlijk en klassen) als regex, zoals `stukRegex` het opbouwt, maar zonder `(?!\.)`-voorvoegsel. */
+/**
+ * Het hele glob-woord als regex via `globTekstRegex`, met dezelfde opties als `stukRegex` (zelfladend.mjs: `teken` voor `*`,
+ * `?` en letterlijk; `elk` `[^/]`; `alles` `[\s\S]*`; `ruim: false`), maar zonder `(?!\.)`-voorvoegsel. Zo toetst de test het
+ * echte pad en niet `globKlasseRegex` los.
+ */
 function codeRegex(patroon: string): RegExp {
-  let uit = '';
-  for (let index = 0; index < patroon.length; index += 1) {
-    const teken = patroon[index] ?? '';
-    const klasse = teken === '[' ? globKlasseRegex(patroon, index) : null;
-    if (klasse !== null) {
-      uit += klasse.regex;
-      index = klasse.eind;
-    } else uit += teken.replace(/[.+^${}()|\\[\]*?]/g, '\\$&');
-  }
-  return new RegExp(`^${uit}$`, 'i');
+  const teken = (char: string): string => {
+    if (char === '*') return '[^/]*';
+    if (char === '?') return '[^/]';
+    return char.replace(/[.+^${}()|\\[\]]/g, '\\$&');
+  };
+  const { regex } = globTekstRegex(patroon, { teken, elk: '[^/]', alles: '[\\s\\S]*', ruim: false });
+  return new RegExp(`^${regex}$`, 'i');
 }
 
 describe.skipIf(!bashAanwezig)('globKlasseRegex tegen bash: de code is nooit nauwer dan bash', () => {
