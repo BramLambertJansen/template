@@ -342,6 +342,15 @@ describe.skipIf(!bashAanwezig)(
       expect(codeRegex('lefthook.y[[=m=][=z=][l]').test('lefthook.yml')).toBe(true);
     });
 
+    // Paren uit de CI-faallijst (bash 5.2 op 165c57b): bash ja, dus de code moet ja zeggen, op elke bash-versie
+    // (eigenaarbesluit 7 november 2026: een klasse met een benoemd deel valt dicht).
+    test.each([
+      ['.gi[![=a=]]^]', '.git'],
+      ['.gi[[=a=]]]', '.gi]'],
+    ])('de code zegt ja voor %s met %s (CI-faallijst)', (patroon, naam) => {
+      expect(codeRegex(patroon).test(naam)).toBe(true);
+    });
+
     // `globKlasseRegex` zelf: de klasse dekt minstens de bash-5.3-lezing (`[[=a=]]` plus de rest als letterlijk).
     test('globKlasseRegex geeft voor `.gi[[=a=]]]` en `.gi[![=a=]]x]` een klasse die minstens de bash-5.3-lezing dekt', () => {
       const een = globKlasseRegex('.gi[[=a=]]]', 3);
