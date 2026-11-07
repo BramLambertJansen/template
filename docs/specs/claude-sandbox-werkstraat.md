@@ -93,6 +93,20 @@ komt exact `~/.cache/gh` in `allowWrite`. Geen bredere caches, Git-config/hookre
   afwijkende dependency-installatie stopt nog steeds vóór run/exec. Geen installatiereparatie via lokaal `CI=true`.
 - **claude-sandbox-werkstraat/AC-9** — Vergelijkbare native Claude-metingen vóór/na noemen runtime/toolchainversies,
   checkoutvorm, opdracht, exitcode, promptaantal en hook-/CI-bewijs. Onuitgevoerde stappen blijven expliciet onbewezen.
+- **claude-sandbox-werkstraat/AC-10** (nog niet gebouwd) — `node scripts/kit/worktree-install.mjs` ([ADR 0085](../adr/0085-worktree-installatie-in-de-sandbox.md))
+  draait in een gekoppelde worktree zonder `node_modules`, binnen de sandbox, `pnpm install --frozen-lockfile` met store,
+  cache en state onder `os.tmpdir()`; daarna slagen `node scripts/kit/feiten.mjs` en `pnpm typecheck` met
+  `verifyDepsBeforeRun: error`. Het weigert met een melding en zonder install in de hoofdcheckout, als `node_modules` een
+  symlink is, en als `pnpm-lock.yaml`, `package.json` of `pnpm-workspace.yaml` niet-gecommitte wijzigingen hebben ten
+  opzichte van HEAD; de lockfile verandert niet.
+- **claude-sandbox-werkstraat/AC-11** (nog niet gebouwd) — `.claude/settings.json` staat `node scripts/kit/worktree-install.mjs`
+  letterlijk toe; `pnpm install *`, `pnpm i *` en de andere installatievormen blijven op `ask`, en geen globale pnpm-map komt
+  in `allowWrite`.
+- **claude-sandbox-werkstraat/AC-12** (nog niet gebouwd) — De melding van `scripts/kit/toolchain.mjs` noemt per probleem
+  apart het herstel. Ontbreekt `node_modules` in een gekoppelde worktree, dan is dat herstel letterlijk
+  `node scripts/kit/worktree-install.mjs` en niet `scripts/bootstrap.sh`; een afwijkende Node- of pnpm-versie blijft ook
+  in een worktree naar `scripts/bootstrap.sh` wijzen, ook als `node_modules` tegelijk ontbreekt (dan staan beide er). In de
+  hoofdcheckout blijft elk herstel `scripts/bootstrap.sh`.
 
 ## Randgevallen
 
@@ -110,12 +124,14 @@ komt exact `~/.cache/gh` in `allowWrite`. Geen bredere caches, Git-config/hookre
 Implementatie beperkt tot `mise.toml`, `.claude/settings.json`, noodzakelijke bestaande toolchain-/setupcontrole en hun
 tests, met gebruiksdocumentatie in `docs/ENVIRONMENT.md` en `docs/operations/agent-doorloop.md`. Wijzig setupscripts
 alleen wanneer de versiecontrole dat vereist. Bestaande sandboxtests wijzigen uitsluitend voor het besloten gedrag,
-met reden in de PR. Beschermde paden, rolhek uit main, CI en eigenaarmerge blijven gelden; geen nieuw broncodemandaat.
+met reden in de PR. Beschermde paden, rolhek uit main, CI en eigenaarmerge blijven gelden; geen nieuw broncodemandaat,
+behalve voor AC-10 tot en met AC-12: het nieuwe script `scripts/kit/worktree-install.mjs` met zijn test
+`test/scripts/worktree-install.test.ts`, plus `scripts/kit/toolchain.mjs` en `.claude/settings.json` met hun tests.
 
 ## Buiten scope
 
 Codexinstellingen, modelkeuze, provider/dependencywijzigingen, runner- of netwerkverruiming, nieuwe pijplijn,
-projectstore/cache/stateherinrichting, globale pnpm-writes, Git-upstreamregistratie, nieuwe rolheklogica en PR-mergen.
+projectstore/cache/stateherinrichting (behalve de worktree-installatie van AC-10), globale pnpm-writes, Git-upstreamregistratie, nieuwe rolheklogica en PR-mergen.
 
 ## Testplan
 

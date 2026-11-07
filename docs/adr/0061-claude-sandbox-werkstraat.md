@@ -3,6 +3,9 @@
 Status: geaccepteerd
 Herzien: 2026-11-04 (#555): punt 3, `git merge origin/main` en fast-forward falen in de sandbox als ze een afgeschermd
 zelfladend pad meenemen ([0082](0082-zelfladend-sandbox-en-leeslijst.md))
+Herzien: 2026-11-07 (#623): alternatief "Projectstore, cache en state opnieuw inrichten", herzien door
+[0085](0085-worktree-installatie-in-de-sandbox.md): in een worktree installeert de agent `node_modules` frozen, met store,
+cache en state onder de tijdelijke map; punt 4 blijft
 
 Dit is de bedoelde status in een besluitvoorstel. Het besluit geldt pas na merge door de eigenaar op `main`; bouwen
 volgt in een afzonderlijke PR volgens [0046](0046-werkstraat-en-beslisroute.md). Drempel: A3, agentrechten expliciteren
