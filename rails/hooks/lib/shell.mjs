@@ -102,28 +102,6 @@ function klasseTeken(teken) {
   return /\w/.test(teken) ? teken : `\\${teken}`;
 }
 
-/**
- * Een stuk gewone tekst uit een glob-klasse (bereiken en losse tekens) als inhoud van een reguliere klasse. Een `-` tussen
- * twee tekens is een bereik; aan de rand van het stuk is hij letterlijk, zoals in bash naast het begin, de `]` of een deel
- * `[:naam:]`. Een omgekeerd bereik (`z-a`) valt weg: het past in bash op niets, en een reguliere expressie weigert het. Zo
- * is `[z-a]` geen interne fout en past `g[z-a]h` nergens op, terwijl `g[z-ah]` via `h` nog op gh past (spec
- * rolhek-vooraf-krimp AC-10 (c)). Elk teken staat geëscaped: aan elkaar geplakte stukken vormen nooit een nieuw bereik (#622).
- * @param {string} tekst
- */
-function klasseStuk(tekst) {
-  let uit = '';
-  for (let index = 0; index < tekst.length; index += 1) {
-    const van = tekst[index] ?? '';
-    const tot = tekst[index + 2];
-    if (tekst[index + 1] !== '-' || tot === undefined) uit += klasseTeken(van);
-    else {
-      if (van <= tot) uit += `${klasseTeken(van)}-${klasseTeken(tot)}`;
-      index += 2;
-    }
-  }
-  return uit;
-}
-
 // POSIX-klassen als ASCII-inhoud van een reguliere klasse (al geëscaped). `upper` en `lower` staan apart: de aanroepers
 // gebruiken vlag `i`, en `[[:upper:]]` past in bash niet op `l` (spec rolhek-vooraf-krimp AC-3, #618).
 /** @type {Readonly<Record<string, string>>} */
@@ -135,49 +113,104 @@ const POSIX_KLASSE = {
 const POSIX_HOOFDLETTER = { upper: 'A-Z', lower: 'a-z' };
 
 /**
- * `gewoon`: tekst van de klasse zelf sinds het laatste deel `[:naam:]`; `vast`: inhoud van een reguliere klasse die al af en
- * geëscaped is; `hoofd`: upper en lower (hoofdlettergevoelig); `elk`: de klasse past op elk teken.
- * @typedef {{ gewoon: string, vast: string, hoofd: string, elk: boolean }} KlasseDelen
+ * `vast`: inhoud van een reguliere klasse, al geëscaped; `hoofd`: upper en lower (hoofdlettergevoelig); `elk`: de klasse
+ * past op elk teken; `escape`: de klasse bevat een `\x`.
+ * @typedef {{ vast: string, hoofd: string, elk: boolean, escape: boolean }} KlasseDelen
  */
 
 /**
- * Een deel `[:naam:]`, `[=x=]` of `[.x.]` binnen een klasse, vanaf de `[` op `index`; null als het niet gesloten is (dan is
- * die `[` een gewoon teken). Een `]` binnen zo'n deel sluit de klasse niet. Het teken uit `[=x=]` of `[.x.]` is altijd een
- * los, letterlijk teken (`[t[=-=]a]` is {t, -, a}). Met een onbekende naam of een meerletterig collatie-element past de
- * hele klasse, ook genegeerd, op elk teken: meer treffers is een strenger vangnet (AC-3, #618, #622).
- * @param {string} tekst @param {number} index @param {KlasseDelen} delen
- * @returns {number | null} de index na de afsluitende `:]`, `=]` of `.]`
+ * Eén atoom van de klasse-inhoud. `teken`: een letterlijk teken (gewoon, uit `\x` of uit `[.x.]`); alleen dit atoom kan
+ * een bereik begrenzen. `gelijk`: het teken uit `[=x=]`; `posix`: de naam uit `[:naam:]`; `elk`: een meerletterig
+ * `[.naam.]` of `[=naam=]`. `escape`: het atoom kwam uit `\x`.
+ * @typedef {{ soort: 'teken' | 'gelijk' | 'posix' | 'elk', waarde: string, escape: boolean }} KlasseAtoom
  */
-function subKlasse(tekst, index, delen) {
-  const soort = tekst[index + 1] ?? '';
-  const sluit = tekst.indexOf(`${soort}]`, index + 2);
-  if (sluit === -1) return null;
-  const naam = tekst.slice(index + 2, sluit);
-  // De gewone tekst ervoor is af: een `-` vlak voor dit deel is letterlijk, geen begin van een bereik (`[a-[:digit:]]`).
-  delen.vast += klasseStuk(delen.gewoon);
-  delen.gewoon = '';
-  if (soort !== ':') {
-    if (naam.length === 1) delen.vast += klasseTeken(naam);
-    else delen.elk = true;
-  } else if (Object.hasOwn(POSIX_HOOFDLETTER, naam)) delen.hoofd += POSIX_HOOFDLETTER[naam] ?? '';
-  else if (Object.hasOwn(POSIX_KLASSE, naam)) delen.vast += POSIX_KLASSE[naam] ?? '';
+
+/**
+ * Het atoom bij een afgesloten deel `[:naam:]`, `[=x=]` of `[.x.]` (`soort` is `:`, `=` of `.`). Een meerletterige naam
+ * bij `=` of `.` wordt `elk`: bash kent namen als `[.hyphen.]`, en meer treffers is een strenger vangnet (AC-3, #622).
+ * @param {string} soort @param {string} naam
+ * @returns {KlasseAtoom}
+ */
+function deelAtoom(soort, naam) {
+  if (soort === ':') return { soort: 'posix', waarde: naam, escape: false };
+  if (naam.length !== 1) return { soort: 'elk', waarde: '', escape: false };
+  return { soort: soort === '.' ? 'teken' : 'gelijk', waarde: naam, escape: false };
+}
+
+/**
+ * Leest één atoom vanaf `positie`, zoals bash in een klasse: `\x` is het teken x (een `\]` sluit de klasse dus niet). Een
+ * deel `[:naam:]`, `[=x=]` of `[.x.]` telt alleen als het gesloten is, anders is de `[` een gewoon teken; een `]` binnen
+ * zo'n deel sluit de klasse niet.
+ * @param {string} tekst @param {number} positie
+ * @returns {{ atoom: KlasseAtoom, na: number }}
+ */
+function klasseAtoom(tekst, positie) {
+  const teken = tekst[positie] ?? '';
+  const volgende = tekst[positie + 1] ?? '';
+  if (teken === '\\' && volgende !== '') return { atoom: { soort: 'teken', waarde: volgende, escape: true }, na: positie + 2 };
+  const sluit = teken === '[' && /[:=.]/.test(volgende) ? tekst.indexOf(`${volgende}]`, positie + 2) : -1;
+  if (sluit === -1) return { atoom: { soort: 'teken', waarde: teken, escape: false }, na: positie + 1 };
+  return { atoom: deelAtoom(volgende, tekst.slice(positie + 2, sluit)), na: sluit + 2 };
+}
+
+/**
+ * Een los atoom als inhoud van de klasse; een atoom uit `\x` zet `escape` (zie `klasseUit`). Met een onbekende POSIX-naam
+ * past de hele klasse, ook genegeerd, op elk teken (AC-3, #618).
+ * @param {KlasseAtoom} atoom @param {KlasseDelen} delen
+ */
+function voegAtoomToe(atoom, delen) {
+  delen.escape ||= atoom.escape;
+  if (atoom.soort === 'elk') delen.elk = true;
+  else if (atoom.soort !== 'posix') delen.vast += klasseTeken(atoom.waarde);
+  else if (Object.hasOwn(POSIX_HOOFDLETTER, atoom.waarde)) delen.hoofd += POSIX_HOOFDLETTER[atoom.waarde] ?? '';
+  else if (Object.hasOwn(POSIX_KLASSE, atoom.waarde)) delen.vast += POSIX_KLASSE[atoom.waarde] ?? '';
   else delen.elk = true;
-  return sluit + 2;
+}
+
+/**
+ * Leest vanaf `positie` één atoom of één bereik en voegt het toe; geeft de positie erna. Een bereik ontstaat alleen op
+ * atoomniveau: een atoom `teken` (ook `[.x.]` of `\x`), dan een echte `-` die niet vlak voor `]` staat, dan een atoom
+ * `teken` (of `elk`) als eind. Een `[.-.]` is dus nooit de bereik-`-`. Naast `[=x=]` of `[:naam:]` is een `-` letterlijk
+ * (`[a-[:digit:]]` is {a, -, 0-9}): bash leest daar de `[` als eindteken en sluit de klasse eerder, maar dat past alleen op
+ * namen met een `]`, en zo past de klasse op meer gewone namen. Een omgekeerd bereik (`z-a`) valt weg: het past in bash
+ * op niets, en een reguliere expressie weigert het. Zo is `[z-a]` geen interne fout en past `g[z-ah]` via `h` nog op gh
+ * (spec rolhek-vooraf-krimp AC-3 en AC-10 (c), #622). Elk teken staat geëscaped, zodat aan elkaar geplakte stukken nooit
+ * een nieuw bereik vormen.
+ * @param {string} tekst @param {number} positie @param {KlasseDelen} delen
+ */
+function klasseStuk(tekst, positie, delen) {
+  const begin = klasseAtoom(tekst, positie);
+  const streep = begin.na;
+  const bereik = begin.atoom.soort === 'teken' && tekst[streep] === '-' && (tekst[streep + 1] ?? ']') !== ']';
+  const eind = bereik ? klasseAtoom(tekst, streep + 1) : null;
+  if (eind === null || eind.atoom.soort === 'gelijk' || eind.atoom.soort === 'posix') {
+    voegAtoomToe(begin.atoom, delen);
+    return begin.na;
+  }
+  const van = begin.atoom;
+  const tot = eind.atoom;
+  delen.escape ||= van.escape || tot.escape;
+  if (tot.soort === 'elk') delen.elk = true;
+  else if (van.waarde <= tot.waarde) delen.vast += `${klasseTeken(van.waarde)}-${klasseTeken(tot.waarde)}`;
+  return eind.na;
 }
 
 /**
  * De reguliere expressie bij de delen van een klasse. Een lege klasse past op niets; een lege negatie op elk teken, zoals
  * `[!z-a]` in bash (een omgekeerd bereik past op niets). Een negatie en `hoofd` staan in `(?-i:…)`: bash telt hoofdletters
  * daar (`[!L]` past op `l`, `[[:upper:]]` niet), en vlag `i` mag dat niet veranderen. Een positieve gewone klasse blijft
- * onder `i`: die past dan op meer, een strenger vangnet.
+ * onder `i`: die past dan op meer, een strenger vangnet. Met een `\x` neemt een positieve klasse ook `\` zelf op: of de
+ * tokenizer een rauwe `\` laat staan is niet zeker, en zo past de klasse op x en op `\` (strenger mag, nauwer niet). Een
+ * negatie sluit `\` niet extra uit: dat zou haar nauwer maken dan bash.
  * @param {KlasseDelen} delen @param {boolean} negatie
  */
 function klasseUit(delen, negatie) {
-  const gewoon = delen.vast + klasseStuk(delen.gewoon);
+  const gewoon = delen.vast;
   if (delen.elk) return '[\\s\\S]';
   if (negatie) return gewoon + delen.hoofd === '' ? '[\\s\\S]' : `(?-i:[^${gewoon}${delen.hoofd}])`;
+  const positief = delen.escape ? gewoon + klasseTeken('\\') : gewoon;
   const hoofd = delen.hoofd === '' ? '' : `(?-i:[${delen.hoofd}])`;
-  const delenUit = [gewoon === '' ? '' : `[${gewoon}]`, hoofd].filter((deel) => deel !== '');
+  const delenUit = [positief === '' ? '' : `[${positief}]`, hoofd].filter((deel) => deel !== '');
   if (delenUit.length === 0) return '(?!)';
   return delenUit.length === 1 ? (delenUit[0] ?? '') : `(?:${delenUit.join('|')})`;
 }
@@ -200,8 +233,9 @@ function geldigeKlasse(delen, negatie) {
 /**
  * Een bash-glob-klasse vanaf de `[` op `index` als reguliere expressie (zonder vlag `u`, geschikt voor vlag `i`), of null
  * als er geen sluitende `]` is: dan is de `[` letterlijk (`g[!]`, `[^]h`). Na `[` mag `!` of `^` (negatie) staan; een `]`
- * direct daarna hoort bij de klasse. Binnen de klasse tellen `[:naam:]`, `[=x=]` en `[.x.]` (spec rolhek-vooraf-krimp AC-3
- * en AC-10 (c), leerpunten #618 en #622). Gedeeld door `globForGh` (rolhek.mjs) en `stukRegex` (zelfladend.mjs).
+ * direct daarna hoort bij de klasse. De inhoud wordt gelezen als atomen (`klasseStuk`): letterlijke tekens, `\x`,
+ * `[:naam:]`, `[=x=]` en `[.x.]` (spec rolhek-vooraf-krimp AC-3 en AC-10 (c), leerpunten #618 en #622). Gedeeld door
+ * `globForGh` (rolhek.mjs) en `stukRegex` (zelfladend.mjs).
  * @param {string} tekst @param {number} index
  * @returns {{ regex: string, eind: number } | null} `eind`: de index van de sluitende `]`
  */
@@ -209,17 +243,12 @@ export function globKlasseRegex(tekst, index) {
   const negatie = /[!^]/.test(tekst[index + 1] ?? '');
   let positie = index + (negatie ? 2 : 1);
   /** @type {KlasseDelen} */
-  const delen = { gewoon: '', vast: '', hoofd: '', elk: false };
-  if (tekst[positie] === ']') {
-    delen.gewoon += ']';
-    positie += 1;
-  }
-  while (positie < tekst.length && tekst[positie] !== ']') {
-    const na = tekst[positie] === '[' && /[:=.]/.test(tekst[positie + 1] ?? '') ? subKlasse(tekst, positie, delen) : null;
-    if (na === null) {
-      delen.gewoon += tekst[positie] ?? '';
-      positie += 1;
-    } else positie = na;
+  const delen = { vast: '', hoofd: '', elk: false, escape: false };
+  // Het eerste atoom hoort altijd bij de klasse, ook een `]`; daarna sluit een `]` buiten een atoom de klasse.
+  let eerste = true;
+  while (positie < tekst.length && (eerste || tekst[positie] !== ']')) {
+    positie = klasseStuk(tekst, positie, delen);
+    eerste = false;
   }
   return positie < tekst.length ? { regex: geldigeKlasse(delen, negatie), eind: positie } : null;
 }
