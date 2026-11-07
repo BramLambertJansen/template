@@ -241,10 +241,9 @@ function geldigeKlasse(delen, negatie) {
  * als er geen sluitende `]` is: dan is de `[` letterlijk (`g[!]`, `[^]h`). Na `[` mag `!` of `^` (negatie) staan; een `]`
  * direct daarna hoort bij de klasse. De inhoud wordt gelezen als atomen (`klasseStuk`): letterlijke tekens, `\x`,
  * `[:naam:]`, `[=x=]` en `[.x.]` (spec rolhek-vooraf-krimp AC-3 en AC-10 (c), leerpunten #618 en #622). Gebruikt door
- * `globTekstRegex`, en via die functie door `globForGh` (rolhek.mjs) en `stukRegex` (zelfladend.mjs). `benoemd`: de inhoud
- * heeft een `[=`, `[:` of `[.`; zo'n klasse leest `globTekstRegex` ruim (dicht; ook een `\[:` telt, dat is strenger).
+ * `globTekstRegex`, en via die functie door `globForGh` (rolhek.mjs) en `stukRegex` (zelfladend.mjs).
  * @param {string} tekst @param {number} index
- * @returns {{ regex: string, eind: number, benoemd: boolean } | null} `eind`: de index van de sluitende `]`
+ * @returns {{ regex: string, eind: number } | null} `eind`: de index van de sluitende `]`
  */
 export function globKlasseRegex(tekst, index) {
   const negatie = /[!^]/.test(tekst[index + 1] ?? '');
@@ -259,8 +258,7 @@ export function globKlasseRegex(tekst, index) {
     eerste = false;
   }
   if (positie >= tekst.length) return null;
-  const benoemd = /\[[=:.]/.test(tekst.slice(begin, positie));
-  return { regex: geldigeKlasse(delen, negatie), eind: positie, benoemd };
+  return { regex: geldigeKlasse(delen, negatie), eind: positie };
 }
 
 /**
@@ -271,7 +269,8 @@ export function globKlasseRegex(tekst, index) {
  */
 
 // Bovengrens voor het aantal extra lezingen van een tekst: per `[` die ruim gelezen wordt (`ruimeKlasse`) het aantal latere
-// `]`; daarboven past de hele tekst op alles (dicht).
+// `]`; daarboven past de hele tekst op alles (dicht). Elk vervolg staat één keer per startindex in de memo, dus de regex
+// groeit hooguit met dit aantal keer de tekstlengte en blijft zo in de praktijk begrensd (review N1).
 const RUIM_MAX = 16;
 
 /**
@@ -280,29 +279,32 @@ const RUIM_MAX = 16;
  * `\`, `'` of `"`, die de tokenizer al weghaalde; welke `[` een klasse opent en welke `]` haar sluit, is dan niet meer te zien
  * (`.g[\!i]t`, `.gi[a\]t]`, `.gi[t']']`). Dan telt elke `[` met een `]` erna op drie manieren (`ruimeKlasse`): letterlijk,
  * als bash-klasse en als één willekeurig teken tot elke latere `]`. Zo is de regex nooit nauwer dan bash; zonder `[`
- * verandert niets. Een klasse met een `[=x=]`-, `[:naam:]`- of `[.x.]`-deel leest ook zonder `ruim` zo: bash 5.2 en 5.3
- * lezen zo'n klasse verschillend, en de lezer bouwt geen bash-versie na (eigenaarbesluit 7 november 2026, #622).
+ * verandert niets. Bevat de tekst ergens `[=`, `[:` of `[.`, dan leest ze ook zonder `ruim` zo, per hele tekst: bash 5.2
+ * en 5.3 lezen een klasse met een benoemd deel verschillend, een misvormd deel kan de sluitende `]` opslokken
+ * (`.gi[t[=][x=]`), en de lezer bouwt geen bash-versie na (eigenaarbesluit 7 november 2026, #622).
  * `glob`: de tekst bevat een `*`, `?` of klasse.
  * @param {string} tekst @param {GlobOpties} opties
  * @returns {{ regex: string, glob: boolean }}
  */
 export function globTekstRegex(tekst, opties) {
-  if (ruimeLezingen(tekst, opties.ruim) > RUIM_MAX) return { regex: opties.alles, glob: true };
+  const ruim = opties.ruim || /\[[=:.]/.test(tekst);
+  if (ruimeLezingen(tekst, ruim) > RUIM_MAX) return { regex: opties.alles, glob: true };
   /** @type {GlobStand} */
-  const stand = { ...opties, memo: new Map(), glob: false };
+  const stand = { ...opties, ruim, memo: new Map(), glob: false };
   const regex = regexVanaf(tekst, 0, stand);
   return { regex, glob: stand.glob };
 }
 
 /**
- * Het aantal extra lezingen voor `RUIM_MAX`: per `[` die ruim gelezen wordt (bij `ruim` elke, anders een klasse met
- * `benoemd`) het aantal latere `]`. Een `[` binnen een klasse telt ook; dat telt hooguit te veel (dicht).
+ * Het aantal extra lezingen voor `RUIM_MAX`: bij `ruim` per `[` het aantal latere `]`, anders nul. Een `[` binnen een
+ * klasse telt ook; dat telt hooguit te veel (dicht).
  * @param {string} tekst @param {boolean} ruim
  */
 function ruimeLezingen(tekst, ruim) {
   let aantal = 0;
+  if (!ruim) return aantal;
   for (let index = tekst.indexOf('['); index !== -1; index = tekst.indexOf('[', index + 1))
-    if (ruim || globKlasseRegex(tekst, index)?.benoemd === true) aantal += tekst.slice(index + 1).split(']').length - 1;
+    aantal += tekst.slice(index + 1).split(']').length - 1;
   return aantal;
 }
 
@@ -314,11 +316,11 @@ function regexVanaf(tekst, start, stand) {
   let index = start;
   while (index < tekst.length) {
     const teken = tekst[index] ?? '';
-    const klasse = teken === '[' ? globKlasseRegex(tekst, index) : null;
-    if (teken === '[' && (klasse?.benoemd === true || (stand.ruim && tekst.includes(']', index + 1)))) {
+    if (teken === '[' && stand.ruim && tekst.includes(']', index + 1)) {
       uit += ruimeKlasse(tekst, index, stand);
       break;
     }
+    const klasse = teken === '[' ? globKlasseRegex(tekst, index) : null;
     stand.glob ||= klasse !== null || teken === '*' || teken === '?';
     uit += klasse === null ? stand.teken(teken) : klasse.regex;
     index = klasse === null ? index + 1 : klasse.eind + 1;
