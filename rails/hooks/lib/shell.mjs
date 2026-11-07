@@ -94,13 +94,34 @@ export function zetVariabele(argv) {
 }
 
 /**
- * De inhoud van een glob-klasse (`[…]`, zonder haken en `!`) zonder omgekeerde bereiken (`z-a`): die passen in bash op niets,
- * en een reguliere expressie weigert ze. Zo is `[z-a]` geen interne fout en past `g[z-a]h` nergens op, terwijl `g[z-ah]`
- * via `h` nog wel op gh past (spec rolhek-vooraf-krimp AC-10 (c)).
- * @param {string} inhoud
+ * Eén teken als letterlijk deel van een reguliere klasse (zonder vlag `u`): een woordteken blijft staan, elk ander teken
+ * krijgt een backslash. Zo wordt een `-`, `]`, `^` of `\` nooit syntaxis van de klasse.
+ * @param {string} teken
  */
-export function globKlasse(inhoud) {
-  return inhoud.replace(/([^-])-([^-])/gs, (bereik, van = '', tot = '') => (van > tot ? '' : bereik));
+function klasseTeken(teken) {
+  return /\w/.test(teken) ? teken : `\\${teken}`;
+}
+
+/**
+ * Een stuk gewone tekst uit een glob-klasse (bereiken en losse tekens) als inhoud van een reguliere klasse. Een `-` tussen
+ * twee tekens is een bereik; aan de rand van het stuk is hij letterlijk, zoals in bash naast het begin, de `]` of een deel
+ * `[:naam:]`. Een omgekeerd bereik (`z-a`) valt weg: het past in bash op niets, en een reguliere expressie weigert het. Zo
+ * is `[z-a]` geen interne fout en past `g[z-a]h` nergens op, terwijl `g[z-ah]` via `h` nog op gh past (spec
+ * rolhek-vooraf-krimp AC-10 (c)). Elk teken staat geëscaped: aan elkaar geplakte stukken vormen nooit een nieuw bereik (#622).
+ * @param {string} tekst
+ */
+function klasseStuk(tekst) {
+  let uit = '';
+  for (let index = 0; index < tekst.length; index += 1) {
+    const van = tekst[index] ?? '';
+    const tot = tekst[index + 2];
+    if (tekst[index + 1] !== '-' || tot === undefined) uit += klasseTeken(van);
+    else {
+      if (van <= tot) uit += `${klasseTeken(van)}-${klasseTeken(tot)}`;
+      index += 2;
+    }
+  }
+  return uit;
 }
 
 // POSIX-klassen als ASCII-inhoud van een reguliere klasse (al geëscaped). `upper` en `lower` staan apart: de aanroepers
@@ -114,13 +135,16 @@ const POSIX_KLASSE = {
 const POSIX_HOOFDLETTER = { upper: 'A-Z', lower: 'a-z' };
 
 /**
+ * `gewoon`: tekst van de klasse zelf sinds het laatste deel `[:naam:]`; `vast`: inhoud van een reguliere klasse die al af en
+ * geëscaped is; `hoofd`: upper en lower (hoofdlettergevoelig); `elk`: de klasse past op elk teken.
  * @typedef {{ gewoon: string, vast: string, hoofd: string, elk: boolean }} KlasseDelen
  */
 
 /**
  * Een deel `[:naam:]`, `[=x=]` of `[.x.]` binnen een klasse, vanaf de `[` op `index`; null als het niet gesloten is (dan is
- * die `[` een gewoon teken). Een `]` binnen zo'n deel sluit de klasse niet. Met een onbekende naam of een meerletterig
- * collatie-element past de hele klasse, ook genegeerd, op elk teken: meer treffers is een strenger vangnet (AC-3, #618).
+ * die `[` een gewoon teken). Een `]` binnen zo'n deel sluit de klasse niet. Het teken uit `[=x=]` of `[.x.]` is altijd een
+ * los, letterlijk teken (`[t[=-=]a]` is {t, -, a}). Met een onbekende naam of een meerletterig collatie-element past de
+ * hele klasse, ook genegeerd, op elk teken: meer treffers is een strenger vangnet (AC-3, #618, #622).
  * @param {string} tekst @param {number} index @param {KlasseDelen} delen
  * @returns {number | null} de index na de afsluitende `:]`, `=]` of `.]`
  */
@@ -129,8 +153,11 @@ function subKlasse(tekst, index, delen) {
   const sluit = tekst.indexOf(`${soort}]`, index + 2);
   if (sluit === -1) return null;
   const naam = tekst.slice(index + 2, sluit);
+  // De gewone tekst ervoor is af: een `-` vlak voor dit deel is letterlijk, geen begin van een bereik (`[a-[:digit:]]`).
+  delen.vast += klasseStuk(delen.gewoon);
+  delen.gewoon = '';
   if (soort !== ':') {
-    if (naam.length === 1) delen.gewoon += naam;
+    if (naam.length === 1) delen.vast += klasseTeken(naam);
     else delen.elk = true;
   } else if (Object.hasOwn(POSIX_HOOFDLETTER, naam)) delen.hoofd += POSIX_HOOFDLETTER[naam] ?? '';
   else if (Object.hasOwn(POSIX_KLASSE, naam)) delen.vast += POSIX_KLASSE[naam] ?? '';
@@ -140,20 +167,34 @@ function subKlasse(tekst, index, delen) {
 
 /**
  * De reguliere expressie bij de delen van een klasse. Een lege klasse past op niets; een lege negatie op elk teken, zoals
- * `[!z-a]` in bash (een omgekeerd bereik past op niets). `hoofd` staat in `(?-i:…)`, zodat vlag `i` het niet verruimt.
+ * `[!z-a]` in bash (een omgekeerd bereik past op niets). Een negatie en `hoofd` staan in `(?-i:…)`: bash telt hoofdletters
+ * daar (`[!L]` past op `l`, `[[:upper:]]` niet), en vlag `i` mag dat niet veranderen. Een positieve gewone klasse blijft
+ * onder `i`: die past dan op meer, een strenger vangnet.
  * @param {KlasseDelen} delen @param {boolean} negatie
  */
 function klasseUit(delen, negatie) {
-  const gewoon = globKlasse(delen.gewoon).replace(/[\\\]^[]/g, '\\$&') + delen.vast;
-  const hoofd = delen.hoofd === '' ? '' : `(?-i:[${negatie ? '^' : ''}${delen.hoofd}])`;
+  const gewoon = delen.vast + klasseStuk(delen.gewoon);
   if (delen.elk) return '[\\s\\S]';
-  if (negatie) {
-    if (hoofd === '') return gewoon === '' ? '[\\s\\S]' : `[^${gewoon}]`;
-    return gewoon === '' ? hoofd : `(?![${gewoon}])${hoofd}`;
-  }
+  if (negatie) return gewoon + delen.hoofd === '' ? '[\\s\\S]' : `(?-i:[^${gewoon}${delen.hoofd}])`;
+  const hoofd = delen.hoofd === '' ? '' : `(?-i:[${delen.hoofd}])`;
   const delenUit = [gewoon === '' ? '' : `[${gewoon}]`, hoofd].filter((deel) => deel !== '');
   if (delenUit.length === 0) return '(?!)';
   return delenUit.length === 1 ? (delenUit[0] ?? '') : `(?:${delenUit.join('|')})`;
+}
+
+/**
+ * `klasseUit`, gecontroleerd: is de uitkomst onverwacht geen geldige reguliere expressie, dan past de klasse op elk teken.
+ * Dichtvallen is hier meer treffers, zodat een vreemde klasse geen interne fout of sluiproute wordt (#622).
+ * @param {KlasseDelen} delen @param {boolean} negatie
+ */
+function geldigeKlasse(delen, negatie) {
+  const regex = klasseUit(delen, negatie);
+  try {
+    new RegExp(regex, 'i');
+    return regex;
+  } catch {
+    return '[\\s\\S]';
+  }
 }
 
 /**
@@ -180,7 +221,7 @@ export function globKlasseRegex(tekst, index) {
       positie += 1;
     } else positie = na;
   }
-  return positie < tekst.length ? { regex: klasseUit(delen, negatie), eind: positie } : null;
+  return positie < tekst.length ? { regex: geldigeKlasse(delen, negatie), eind: positie } : null;
 }
 
 /**
