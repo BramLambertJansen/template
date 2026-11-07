@@ -77,13 +77,14 @@ en staat voordat je hervat. Installeer werkende onderdelen niet opnieuw.
 ## Eerste agentsessie
 
 Er moet eerst een werkende coding agent in een Ubuntu-/WSL2-omgeving beschikbaar zijn. Een agent kan zichzelf niet
-installeren voordat hij gestart is. De eigenaar verzorgt die minimale bootstrap; voor Claude Code op Windows zijn dat de
-stappen hieronder. Voor een andere runtime bevestigt de eigenaar de start- en veiligheidsstappen, zonder stilzwijgend te wisselen.
+installeren voordat hij gestart is. De eigenaar verzorgt die minimale bootstrap. Hieronder staan de stappen voor Claude Code.
+Voor een andere runtime bevestigt de eigenaar de start- en veiligheidsstappen, zonder stilzwijgend te wisselen.
 
 Vooraf nodig: een GitHub-account, een Claude-abonnement met Claude Code, en op Windows
 [Visual Studio Code](https://code.visualstudio.com/). Daarna, eenmalig:
 
-Staat Ubuntu of Claude Code er al, sla die stap over.
+Draai je Ubuntu rechtstreeks op je computer, open dan een terminal en begin bij stap 3. Staat Ubuntu of Claude Code er al,
+sla dan de bijbehorende installatiestap over.
 
 1. **In Windows: Ubuntu installeren.** Klik met de rechtermuisknop op **Start** → **Terminal (Admin)** (Windows 10:
    **Windows PowerShell (Admin)**), plak dit en druk op Enter. Verwacht: Ubuntu wordt geïnstalleerd; herstart de computer

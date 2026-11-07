@@ -3,10 +3,11 @@ import { expect, test } from 'vitest';
 
 test('de startgids noemt vóór de installatiestappen welke besturingssystemen worden ondersteund', () => {
   const startgids = readFileSync('START-NIEUWE-APP.md', 'utf8');
-  const inleiding = startgids.split(/^## Eerste agentsessie$/m)[0];
+  const [inleiding, eersteSessie] = startgids.split(/^## Eerste agentsessie$/m);
   const platforms =
     inleiding?.split(/^## Ondersteunde besturingssystemen$/m)[1]?.split(/^## /m)[0]?.replaceAll('**', '') ?? '';
 
+  expect(eersteSessie, 'De sectie Eerste agentsessie ontbreekt').toBeDefined();
   expect(platforms).toMatch(/\bUbuntu 24\.04\b/);
   expect(platforms).toMatch(/\bUbuntu 26\.04\b/);
   expect(platforms).toMatch(/\b(?:rechtstreeks|native)\b/);
