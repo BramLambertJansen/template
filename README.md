@@ -104,6 +104,8 @@ De [agentdoorloop](docs/operations/agent-doorloop.md) beschrijft taakgebonden co
 
 ## Nieuwe app starten
 
+Controleer vóór de installatie de [ondersteunde besturingssystemen](START-NIEUWE-APP.md#ondersteunde-besturingssystemen).
+
 Start een nieuwe app via [START-NIEUWE-APP.md](START-NIEUWE-APP.md): dat is de enige startroute, met de installatiestappen, het curl-blok en de opdracht voor Claude Code. De uitvoering daarna staat in het [setup-playbook](docs/nieuwe-app.md), dat de agent volgt om de app aan te maken, te hernoemen en aan de templategeschiedenis te koppelen.
 
 De eigenaar moet **Settings → Template repository** inschakelen voordat **Use this template** beschikbaar is. Een nieuwe app krijgt daarna eenmalig een merge-commit die de geschiedenis koppelt. Latere updates gaan met `git merge template/main` op een branch en via een PR. Merge zulke updates met **Create a merge commit**, zodat de koppeling behouden blijft; zie [ADR 0040](docs/adr/0040-template-app-en-grens-core-app.md).
