@@ -25,10 +25,10 @@ import { expectAbsent } from '../support/absence.ts';
 //     'map' installeert wel (eigenaarbesluit: een idempotente frozen install maakt een halve installatie af).
 //   worktreeInstallCommando(tmp: string) -> { command: 'pnpm', args: string[], env: Record<string, string> }
 //     args = ['install', '--frozen-lockfile', '--package-import-method=copy', '--store-dir=<p>'], <p> onder tmp, en geen enkele
-//     andere optie. Dit is een eigen keuze (de enige opties die het script meegeeft), met echte pnpm 11.28.5 gemeten als
-//     geldig: `pnpm help install` kent --store-dir, en pnpm weigert `--state-dir` en `--cache-dir` met `Unknown option`
-//     (exit 1). Cache en state staan dus alleen in de omgeving:
-//     env zet XDG_DATA_HOME, XDG_CACHE_HOME en XDG_STATE_HOME onder tmp.
+//     andere optie. Dit is een eigen keuze (de enige opties die het script meegeeft); hun geldigheid is met echte pnpm
+//     11.28.x gemeten (zie worktree-install-real-pnpm.test.ts): `--state-dir` weigert pnpm met `Unknown option` (exit 1),
+//     `--cache-dir` wordt geaccepteerd. Cache en state gaan bewust alleen via de omgeving (eigen keuze, geen weigering van
+//     pnpm): env zet XDG_DATA_HOME, XDG_CACHE_HOME en XDG_STATE_HOME onder tmp.
 //   worktreeInstallFeiten(root: string) -> { worktree, nodeModules, gewijzigd } uit het echte bestandssysteem en git;
 //     gewijzigd = beheerde bestanden die in de werkmap afwijken van HEAD (gewijzigd, verwijderd of untracked).
 // De module wordt dynamisch geladen, zodat de typecheck ook vóór de implementatie slaagt en de tests op een assertie falen.
@@ -101,7 +101,8 @@ const INHOUD: Record<string, string> = {
 };
 const BEHEERD = Object.keys(INHOUD);
 const ALLEEN_UNTRACKED = ['.npmrc', '.pnpmfile.cjs', '.pnpmfile.mjs'];
-// Eigen keuze: de enige opties die worktreeInstallCommando mag meegeven. Hun geldigheid is gemeten met echte pnpm 11.28.5.
+// Eigen keuze: de enige opties die worktreeInstallCommando mag meegeven (cache en state gaan via XDG_*). Hun geldigheid is
+// gemeten met echte pnpm 11.28.x; alleen `--state-dir` wordt door pnpm geweigerd.
 const PNPM_INSTALL_OPTIES = ['frozen-lockfile', 'package-import-method', 'store-dir'];
 const XDG = ['XDG_DATA_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME'];
 const dirs: string[] = [];
@@ -283,7 +284,8 @@ describe('worktreeInstallBesluit', () => {
 });
 
 describe('worktreeInstallCommando', () => {
-  // Gewijzigd t.o.v. #630: --cache-dir en --state-dir bestaan niet als pnpm-installoptie (gemeten met pnpm 11.28.5).
+  // Gewijzigd t.o.v. #630: --state-dir bestaat niet als pnpm-installoptie (gemeten met pnpm 11.28.x); --cache-dir wel, maar
+  // wordt bewust niet gebruikt: cache en state gaan via XDG_*.
   test('gemeten pnpm 11.28.5-contract: frozen lockfile, copy-import en --store-dir onder tmp; cache en state via XDG_*', () => {
     const basis = path.join(tmpdir(), 'pnpm-wt');
     const { command, args, env } = worktreeInstallCommando(basis);
@@ -302,9 +304,9 @@ describe('worktreeInstallCommando', () => {
     });
   });
 
-  // Allowlist: onze eigen keuze van opties, waarvan de geldigheid met pnpm 11.28.5 is gemeten; een nieuwe vlag valt hier op
+  // Allowlist: onze eigen keuze van opties (geen weigering van pnpm voor --cache-dir), geldigheid gemeten met pnpm 11.28.x; een nieuwe vlag valt hier op
   // en moet eerst tegen echte pnpm gemeten en aan PNPM_INSTALL_OPTIES toegevoegd worden.
-  test('alleen de met pnpm 11.28.5 gemeten geldige opties (--frozen-lockfile, --package-import-method, --store-dir), geen --state-dir of --cache-dir', () => {
+  test('eigen keuze: alleen --frozen-lockfile, --package-import-method en --store-dir (gemeten geldig met pnpm 11.28.x); geen --state-dir of --cache-dir', () => {
     const basis = path.join(tmpdir(), 'pnpm-wt');
     const { args, env } = worktreeInstallCommando(basis);
 
@@ -421,7 +423,8 @@ describe('worktreeInstallFeiten (echte git-fixture)', () => {
 });
 
 describe('node scripts/kit/worktree-install.mjs (nep-pnpm)', () => {
-  // Gewijzigd t.o.v. #630: de oude assertie eiste --cache-dir en --state-dir onder tmpdir; echte pnpm 11.28.5 weigert die.
+  // Gewijzigd t.o.v. #630: de oude assertie eiste --cache-dir en --state-dir onder tmpdir; echte pnpm 11.28.x weigert --state-dir
+  // en cache gaat nu (net als state) via XDG_*.
   test('gekoppelde worktree: pnpm install met alleen geldige opties, store en XDG-mappen onder tmpdir; lockfile ongewijzigd', () => {
     const { wt } = fixture();
     const { bin, log } = nepPnpm();

@@ -42,8 +42,9 @@ export function worktreeInstallBesluit({ worktree, nodeModules, gewijzigd }) {
 }
 
 /**
- * Het pnpm-commando met alle schrijfbare mappen onder `tmp`. `pnpm install` kent van de mappen alleen `--store-dir`
- * (gemeten met pnpm 11.28.5: `--cache-dir` en `--state-dir` geven `Unknown option`); cache en state gaan via XDG_*.
+ * Het pnpm-commando met alle schrijfbare mappen onder `tmp`. Gemeten met pnpm 11.28.2 en 11.28.5: `--state-dir` geeft
+ * `Unknown option`; `--cache-dir` wordt geaccepteerd maar staat niet in `pnpm help install`. Eigen keuze: alleen
+ * `--store-dir` als vlag, en cache en state via XDG_CACHE_HOME en XDG_STATE_HOME onder `tmp`.
  * @param {string} tmp
  * @returns {{ command: 'pnpm', args: string[], env: Record<string, string> }}
  */
