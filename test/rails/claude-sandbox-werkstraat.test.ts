@@ -67,6 +67,45 @@ test('netwerk en leesgrens blijven gelijk; alleen de bewezen gh-cache kan extra 
   expect([[], ['~/.cache/gh']]).toContainEqual(filesystem['allowWrite'] ?? []);
 });
 
+// claude-sandbox-werkstraat/AC-11 (ADR 0085): alleen het worktree-installatiescript is toegestaan; installatievormen
+// van pnpm blijven op ask en geen globale pnpm-map wordt schrijfbaar.
+const ask = strings(permissions['ask']);
+
+test('het worktree-installatiescript staat letterlijk in allow', () => {
+  expect(allow).toContain('Bash(node scripts/kit/worktree-install.mjs)');
+});
+
+// De volledige set pnpm-vormen die dependencies wijzigen. Elke vorm moet op ask staan (ondergrens, zodat de lijst niet
+// kan krimpen); daarnaast wordt de set afgeleid uit ask zelf, zodat een later toegevoegde vorm ook bewaakt is.
+const INSTALL_VERBEN = ['add', 'install', 'i', 'update', 'up', 'upgrade', 'remove', 'rm', 'uninstall', 'un'];
+const INSTALL_REGEL = new RegExp(`^Bash\\(pnpm (${INSTALL_VERBEN.join('|')})[ )]`);
+const askInstallRegels = ask.filter((rule) => INSTALL_REGEL.test(rule));
+
+test.each(INSTALL_VERBEN.map((verb) => `Bash(pnpm ${verb} *)`))(
+  'installatievorm blijft op ask en komt niet in allow: %s',
+  (rule) => {
+    expect(ask).toContain(rule);
+    expect(allow).not.toContain(rule);
+  },
+);
+
+test('elke installatieregel op ask (afgeleid uit settings.json) ontbreekt in allow', () => {
+  expect(askInstallRegels.length).toBeGreaterThanOrEqual(INSTALL_VERBEN.length);
+  expect(allow.filter((rule) => askInstallRegels.includes(rule))).toEqual([]);
+});
+
+test('allow bevat geen pnpm-installatievorm en geen brede node- of pnpm-regel', () => {
+  expect(allow.filter((rule) => INSTALL_REGEL.test(rule))).toEqual([]);
+  expect(allow).not.toContain('Bash(node *)');
+  expect(allow).not.toContain('Bash(node scripts/kit/*)');
+  expect(allow).not.toContain('Bash(pnpm *)');
+});
+
+test('geen globale pnpm-map schrijfbaar of leesbaar gemaakt in sandbox.filesystem', () => {
+  const paden = [...strings(filesystem['allowWrite']), ...strings(filesystem['allowRead'])];
+  expect(paden.filter((pad) => /pnpm|\.local\/(share|state)|\.cache/i.test(pad) && pad !== '~/.cache/gh')).toEqual([]);
+});
+
 // claude-sandbox-werkstraat/AC-8 (configdeel): supplychain en verifyDepsBeforeRun blijven bytegelijk ingesteld.
 // Het echte run/exec-weigergedrag staat in test/scripts/dependency-readiness.test.ts.
 test('supplychain en weigering van een afwijkende installatie blijven intact', () => {

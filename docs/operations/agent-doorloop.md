@@ -146,9 +146,18 @@ de melding hoe de eigenaar het bestand buiten Claude Code weghaalt. Het restrisi
 **Worktree, voor wie parallel werkt (keuze, geen voorschrift).** De Claude Code-tool `EnterWorktree` (naam `<map>` = de
 branchnaam met `-` in plaats van `/`) maakt buiten de sandbox een worktree onder `.claude/worktrees/<map>` (genegeerd door
 git) en zet de sessie erin. Hij haalt niet zelf op (gemeten: `origin/main` liep achter) en maakt een branch
-`worktree-<map>`; daarna, in de worktree, de startvorm hierboven en `pnpm install --frozen-lockfile --store-dir
-"$TMPDIR/pnpm-store"` als twee losse commando's (een nieuwe worktree heeft geen `node_modules`; zonder toolchain falen
-`feiten.mjs`, lint en de git-hooks; installeren duurde 12 seconden). Om dezelfde reden als bij `--no-track` geeft
+`worktree-<map>`; daarna, in de worktree, de startvorm hierboven en `node scripts/kit/worktree-install.mjs` (een nieuwe
+worktree heeft geen `node_modules`; zonder toolchain falen `feiten.mjs`, lint en de git-hooks; installeren duurde 12
+seconden). Dat script installeert frozen met `--package-import-method=copy` en store, cache en state onder `os.tmpdir()`
+(een bestaande, ook lege of halve `node_modules`-map wordt afgemaakt), draait vanuit de worktree-root en weigert in de
+hoofdcheckout, bij een symlink als `node_modules` en als een van `package.json`, `pnpm-lock.yaml`,
+`pnpm-workspace.yaml`, `.npmrc`, `.pnpmfile.cjs` of `.pnpmfile.mjs` afwijkt van HEAD (gewijzigd, verwijderd of
+untracked; vergeleken op inhoud met HEAD, ook bij `--assume-unchanged` of `--skip-worktree`; commit eerst of vraag de
+eigenaar; ADR 0085, spec `claude-sandbox-werkstraat` AC-10). Die weigering is geen beveiligingsgrens: CI en de
+eigenaarmerge zijn de grens. Open aandachtspunt (niet gemeten): hoort een bestaande `node_modules` bij een andere store
+(andere `TMPDIR` bij een eerdere run, of eerder een handmatige `pnpm install`), dan kan pnpm zonder TTY afbreken met een
+fout over het verwijderen van de modules-map (`ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY`); vraag dan de eigenaar, wis
+`node_modules` niet zelf en voeg geen pnpm-vlag toe. De melding van `feiten.mjs` noemt het zelf (AC-12). Om dezelfde reden als bij `--no-track` geeft
 `git branch -D` daar de melding `could not lock config file`; de branch is wel verwijderd (`-m` is niet gemeten).
 
 In de worktree zijn `.claude/settings.json`, `.claude/hooks` en `.claude/skills` alleen-lezen door Claude Code zelf, maar de

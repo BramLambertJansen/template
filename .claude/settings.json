@@ -98,6 +98,7 @@
       "Bash(gh issue create --repo BramLambertJansen/template --label leerpunt *)",
       "Bash(node scripts/kit/feiten.mjs)",
       "Bash(node scripts/kit/feiten.mjs *)",
+      "Bash(node scripts/kit/worktree-install.mjs)",
       "Bash(pnpm gate:fast)",
       "Bash(pnpm format:check)",
       "Bash(pnpm lint)",

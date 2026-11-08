@@ -1,7 +1,7 @@
 // Preflight van de toolchain (docs/ENVIRONMENT.md): vóór een script modules met dependencies laadt, één leesbare regel in
 // plaats van een stacktrace als Node niet de versie uit mise.toml is of node_modules ontbreekt of onvolledig is (verse cloudsessie zonder setup, onderbroken install).
 // Zonder dependencies, zodat het ook op een kale Node draait.
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
@@ -22,23 +22,49 @@ function passend(node, verwacht) {
   return true;
 }
 
+const BOOTSTRAP = '`scripts/bootstrap.sh`';
+const WORKTREE_INSTALL = '`node scripts/kit/worktree-install.mjs`';
+
 /**
- * @param {{ node: string, miseToml: string, nodeModules: boolean }} feiten
- * @returns {string | null}
+ * Per probleem het herstel (spec claude-sandbox-werkstraat AC-12): één regel, segmenten gescheiden door '; ', elk segment
+ * "probleem → herstel". In de hoofdcheckout is elk herstel de bootstrap. In een gekoppelde worktree is een ontbrekende
+ * node_modules iets wat de agent zelf herstelt; Node en pnpm blijven bij de eigenaar.
+ * @param {{ reden: string, nodeModules?: boolean }[]} problemen
+ * @param {boolean} worktree
  */
-export function toolchainProbleem({ node, miseToml, nodeModules }) {
-  const verwacht = /^node\s*=\s*"([^"]+)"/m.exec(miseToml)?.[1];
-  const problemen = [];
-  if (verwacht !== undefined && !passend(node, verwacht))
-    problemen.push(`Node ${node}, verwacht ${verwacht} of nieuwer binnen dezelfde major (mise.toml)`);
-  if (!nodeModules) problemen.push('node_modules ontbreekt of is onvolledig');
-  if (problemen.length === 0) return null;
-  return setupProbleem(problemen.join('; '));
+function setupProbleem(problemen, worktree) {
+  const delen = problemen.map(({ reden, nodeModules }) => {
+    const herstel = worktree && nodeModules === true ? WORKTREE_INSTALL : BOOTSTRAP;
+    return `${reden} → draai ${herstel}`;
+  });
+  const cloud = worktree ? '' : ', in de cloud `bash scripts/cloud-setup.sh`';
+  return `✗ toolchain ontbreekt: ${delen.join('; ')}${cloud}, zie docs/ENVIRONMENT.md`;
 }
 
-/** @param {string} reden */
-function setupProbleem(reden) {
-  return `✗ toolchain ontbreekt: ${reden} → draai \`bash scripts/cloud-setup.sh\` (cloud) of \`scripts/bootstrap.sh\` (lokaal), zie docs/ENVIRONMENT.md`;
+/** @typedef {{ reden: string, nodeModules?: boolean }} Probleem */
+
+/**
+ * @param {{ node: string, miseToml: string, nodeModules: boolean }} feiten
+ * @returns {Probleem[]}
+ */
+function nodeProblemen({ node, miseToml, nodeModules }) {
+  const verwacht = /^node\s*=\s*"([^"]+)"/m.exec(miseToml)?.[1];
+  /** @type {Probleem[]} */
+  const problemen = [];
+  if (verwacht !== undefined && !passend(node, verwacht))
+    problemen.push({ reden: `Node ${node}, verwacht ${verwacht} of nieuwer binnen dezelfde major (mise.toml)` });
+  if (!nodeModules) problemen.push({ reden: 'node_modules ontbreekt of is onvolledig', nodeModules: true });
+  return problemen;
+}
+
+/**
+ * @param {{ node: string, miseToml: string, nodeModules: boolean, worktree?: boolean }} feiten
+ *   `worktree`: gekoppelde worktree (`.git` is een bestand); weggelaten = hoofdcheckout.
+ * @returns {string | null}
+ */
+export function toolchainProbleem({ node, miseToml, nodeModules, worktree = false }) {
+  const problemen = nodeProblemen({ node, miseToml, nodeModules });
+  return problemen.length === 0 ? null : setupProbleem(problemen, worktree);
 }
 
 /** @param {string} root */
@@ -54,10 +80,13 @@ function pnpmPin(root) {
   }
 }
 
-/** @param {string} root */
+/**
+ * @param {string} root
+ * @returns {Probleem | null}
+ */
 function pnpmProbleem(root) {
   const verwacht = pnpmPin(root);
-  if (verwacht === null) return setupProbleem('packageManager moet een exacte pnpm@x.y.z-versie bevatten');
+  if (verwacht === null) return { reden: 'packageManager moet een exacte pnpm@x.y.z-versie bevatten' };
   const result = spawnSync('pnpm', ['--version'], {
     cwd: root,
     encoding: 'utf8',
@@ -66,24 +95,39 @@ function pnpmProbleem(root) {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   if (result.error !== undefined || result.status !== 0)
-    return setupProbleem(`pnpm ontbreekt of start niet, verwacht ${verwacht}`);
+    return { reden: `pnpm ontbreekt of start niet, verwacht ${verwacht}` };
   const werkelijk = result.stdout.trim().replace(/\s+/g, ' ').slice(0, 120) || 'onbekend';
-  return werkelijk === verwacht
-    ? null
-    : setupProbleem(`pnpm ${werkelijk}, verwacht exact ${verwacht} (packageManager)`);
+  return werkelijk === verwacht ? null : { reden: `pnpm ${werkelijk}, verwacht exact ${verwacht} (packageManager)` };
 }
 
 // Snelle aanwezigheidscontrole: deze bestanden bewijzen geen synchronisatie met lockfile of workspace.
 // Voor run/exec controleert pnpm dat zelf met verifyDepsBeforeRun: error (pnpm-workspace.yaml).
 const INSTALLATIE = ['.modules.yaml', 'typescript/package.json'];
 
+/**
+ * Gekoppelde worktree: `.git` is een bestand (in de hoofdcheckout een map).
+ * @param {string} root
+ */
+function isWorktree(root) {
+  try {
+    return statSync(path.join(root, '.git')).isFile();
+  } catch {
+    return false;
+  }
+}
+
 /** @param {string} root */
 export function toolchainProbleemIn(root) {
+  const worktree = isWorktree(root);
   const mise = path.join(root, 'mise.toml');
-  const probleem = toolchainProbleem({
+  const problemen = nodeProblemen({
     node: process.version,
     miseToml: existsSync(mise) ? readFileSync(mise, 'utf8') : '',
     nodeModules: INSTALLATIE.every((rel) => existsSync(path.join(root, 'node_modules', rel))),
   });
-  return probleem ?? pnpmProbleem(root);
+  // pnpm wordt ook gecontroleerd als node_modules ontbreekt: beide staan dan in één regel, elk met eigen herstel.
+  // Ook een ontbrekende of ongeldige packageManager-pin staat erbij, met herstel scripts/bootstrap.sh.
+  const pnpm = pnpmProbleem(root);
+  if (pnpm !== null) problemen.push(pnpm);
+  return problemen.length === 0 ? null : setupProbleem(problemen, worktree);
 }
