@@ -161,7 +161,20 @@ branchnaam voor; de PR komt van de opgelegde branch. Is een vaste naam nodig, da
 
 - **`✗ toolchain ontbreekt`** (bijvoorbeeld `Node v22…, verwacht 26…` of `node_modules ontbreekt of is onvolledig`): het setup-script is niet
   gedraaid, mislukt of de omgeving is gecachet van vóór het script. Controleer in claude.ai/code dat het setup-script precies
-  `bash scripts/cloud-setup.sh` is en ververs de omgevingscache.
+  `bash scripts/cloud-setup.sh` is en ververs de omgevingscache. Elk probleem in de melding noemt zijn eigen herstel. In een
+  gekoppelde worktree (`.git` is een bestand) zonder `node_modules` is dat `node scripts/kit/worktree-install.mjs`: frozen
+  install met `--package-import-method=copy` en store, cache en state onder `os.tmpdir()`, binnen de sandbox (een
+  bestaande, ook lege of halve map `node_modules` wordt afgemaakt). Het draait vanuit de worktree-root en weigert in de
+  hoofdcheckout, als `node_modules` een symlink is en als een van `package.json`, `pnpm-lock.yaml`,
+  `pnpm-workspace.yaml`, `.npmrc`, `.pnpmfile.cjs` of `.pnpmfile.mjs` afwijkt van HEAD (gewijzigd, verwijderd of
+  untracked; vergeleken op inhoud met HEAD, dus ook bij `--assume-unchanged` of `--skip-worktree`;
+  [ADR 0085](adr/0085-worktree-installatie-in-de-sandbox.md)); commit of herstel zo'n bestand eerst, of vraag de
+  eigenaar. Die weigering is geen beveiligingsgrens: CI en de eigenaarmerge zijn de grens. Open aandachtspunt (niet
+  gemeten): hoort een bestaande `node_modules` bij een andere store (andere `TMPDIR` bij een eerdere run, of eerder een
+  handmatige `pnpm install`), dan kan pnpm zonder TTY afbreken met een fout over het verwijderen van de modules-map
+  (`ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY`). Volgende stap: vraag de eigenaar; wis `node_modules` niet zelf en
+  voeg geen pnpm-vlag toe. Node en pnpm blijven bij `scripts/bootstrap.sh`; ook een ontbrekende of ongeldige
+  `packageManager`-pin wijst daarheen.
 - **`! mise install onvolledig`** gevolgd door `✓ <tool> <versie> via terugval`: verwacht in een cloudsessie (zie Terugval).
 - **`✗ checksum van … klopt niet`**: de download wijkt af van het checksumbestand van de release; er is niets geïnstalleerd.
   Draai het script opnieuw; blijft het, meld het als leerpunt en ga niet zonder controle verder.
