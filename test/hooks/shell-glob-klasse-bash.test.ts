@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { describe, expect, test } from 'vitest';
+import { beforeAll, describe, expect, test } from 'vitest';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 import { globKlasseRegex, globTekstRegex } from '../../rails/hooks/lib/shell.mjs';
 
@@ -13,8 +13,10 @@ import { globKlasseRegex, globTekstRegex } from '../../rails/hooks/lib/shell.mjs
 
 // Bash draait onder `LC_ALL=C`. Onder UTF-8 met `globasciiranges` (standaard sinds bash 5) zijn bereiken voor ASCII-doelen
 // gelijk aan die onder C, dus de uitkomst voor `.git` en `lefthook.yml` verschilt niet per locale.
-const versie = spawnSync('bash', ['--version'], { encoding: 'utf8' });
-const bashHoofdversie = versie.status === 0 ? Number(/version (\d+)\./.exec(versie.stdout)?.[1] ?? '0') : 0;
+const bashOmgeving = { PATH: process.env['PATH'] ?? '/usr/bin:/bin', LC_ALL: 'C' };
+const versie = spawnSync('bash', ['--version'], { env: bashOmgeving, encoding: 'utf8' });
+const bashVersieregel = versie.status === 0 ? (versie.stdout.split('\n', 1)[0] ?? '') : '';
+const bashHoofdversie = Number(/version (\d+)\./.exec(bashVersieregel)?.[1] ?? '0');
 // De test gebruikt `mapfile` (bash 4+); macOS levert bash 3.2 en slaat hem dus over.
 const bashAanwezig = bashHoofdversie >= 4;
 
@@ -237,7 +239,7 @@ function bashGroep(map: string, patronen: string[], namenLijst: string[]): Set<n
   writeFileSync(path.join(map, 'n.txt'), namenLijst.join('\n') + '\n');
   writeFileSync(path.join(map, 'run.sh'), BASH_SCRIPT);
   const uit = spawnSync('bash', [path.join(map, 'run.sh'), path.join(map, 'p.txt'), path.join(map, 'n.txt')], {
-    env: { PATH: process.env['PATH'] ?? '/usr/bin:/bin', LC_ALL: 'C' },
+    env: bashOmgeving,
     encoding: 'utf8',
     maxBuffer: 256 * 1024 * 1024,
   });
@@ -301,6 +303,12 @@ function codeRegex(patroon: string): RegExp {
 describe.skipIf(!bashAanwezig)(
   'globTekstRegex (het echte pad) en globKlasseRegex tegen bash: de code is nooit nauwer dan bash',
   () => {
+    beforeAll(() => {
+      expect(bashVersieregel).toMatch(/^GNU bash, version \d+\.\d+\.\d+\b/);
+      // De standaard Vitest-reporter verbergt console-uitvoer bij geslaagde tests.
+      process.stdout.write(`${bashVersieregel}\n`);
+    });
+
     const pats = patronen();
     const nms = namen();
 
@@ -463,7 +471,7 @@ function bashRuwTreffers(naam: string, woorden: string[]): Set<number> {
       woorden.map((woord, index) => `[[ $1 == ${woord} ]] && echo ${String(index)}`).join('\n') + '\nexit 0\n';
     writeFileSync(path.join(map, 'run.sh'), script);
     const uit = spawnSync('bash', [path.join(map, 'run.sh'), naam], {
-      env: { PATH: process.env['PATH'] ?? '/usr/bin:/bin', LC_ALL: 'C' },
+      env: bashOmgeving,
       encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,
     });

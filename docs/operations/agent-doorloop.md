@@ -218,6 +218,10 @@ De app-initialisatie heeft naast geïsoleerde fixtures ook een compatibiliteitsp
 Git-geschiedenis. CI haalt hiervoor de volledige geschiedenis op; er wordt niets teruggeschreven naar de eigen checkout.
 `pnpm check:new-resource` (verplichte CI-check) draait in één tijdelijke kopie eerst `app:init`, dan `new:resource` en daarna de snelle suite, zodat een test die alleen in de template slaagt de template-CI rood maakt (leerpunt #334, ADR 0073). In CI draait die check, net als `gate:fast` en `ui:check`, in delen naast elkaar; de samenvattende job houdt de verplichte naam en is rood als één deel niet slaagt. Lees bij rood het deel met de fout (`gate:fast (test-1)` enz.) en speel het na met `--deel` (ADR 0076).
 
+Vergelijk bij afwijkende resultaten de Bash-versie in de uitvoer van `test/hooks/shell-glob-klasse-bash.test.ts`. Faalt deze
+test in CI, kijk dan in het log van het betreffende testdeel (`gate:fast (test-1)` of `gate:fast (test-2)`) op Ubuntu 24.04.
+Hetzelfde patroon kan per Bash-versie op andere namen passen (#626).
+
 Begin met de taakrelevante secties van `node scripts/kit/feiten.mjs`, bijvoorbeeld `gates specs fase`.
 De hoofdsessie kiest de route: licht alleen voor beperkte fixes binnen bestaand gedrag; anders volledig — framework §8.
 Spec (in de volledige straat door de architect) of ADR krijgt direct de bedoelde status; de eigenaar merget
