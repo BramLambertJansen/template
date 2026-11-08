@@ -24,7 +24,10 @@ import { expectAbsent } from '../support/absence.ts';
 //     -> { actie: 'installeren' } | { actie: 'weigeren', melding: string }
 //     'map' installeert wel (eigenaarbesluit: een idempotente frozen install maakt een halve installatie af).
 //   worktreeInstallCommando(tmp: string) -> { command: 'pnpm', args: string[], env: Record<string, string> }
-//     args = ['install', '--frozen-lockfile', '--store-dir=<p>', '--cache-dir=<p>', '--state-dir=<p>'], elk <p> onder tmp;
+//     args = ['install', '--frozen-lockfile', '--package-import-method=copy', '--store-dir=<p>'], <p> onder tmp, en geen enkele
+//     andere optie. Dit is een eigen keuze (de enige opties die het script meegeeft), met echte pnpm 11.28.5 gemeten als
+//     geldig: `pnpm help install` kent --store-dir, en pnpm weigert `--state-dir` en `--cache-dir` met `Unknown option`
+//     (exit 1). Cache en state staan dus alleen in de omgeving:
 //     env zet XDG_DATA_HOME, XDG_CACHE_HOME en XDG_STATE_HOME onder tmp.
 //   worktreeInstallFeiten(root: string) -> { worktree, nodeModules, gewijzigd } uit het echte bestandssysteem en git;
 //     gewijzigd = beheerde bestanden die in de werkmap afwijken van HEAD (gewijzigd, verwijderd of untracked).
@@ -98,7 +101,8 @@ const INHOUD: Record<string, string> = {
 };
 const BEHEERD = Object.keys(INHOUD);
 const ALLEEN_UNTRACKED = ['.npmrc', '.pnpmfile.cjs', '.pnpmfile.mjs'];
-const VLAGGEN = ['store-dir', 'cache-dir', 'state-dir'];
+// Eigen keuze: de enige opties die worktreeInstallCommando mag meegeven. Hun geldigheid is gemeten met echte pnpm 11.28.5.
+const PNPM_INSTALL_OPTIES = ['frozen-lockfile', 'package-import-method', 'store-dir'];
 const XDG = ['XDG_DATA_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME'];
 const dirs: string[] = [];
 
@@ -141,13 +145,18 @@ function fixture(zonderInHead: string[] = []): { main: string; wt: string } {
 }
 
 // Nep-pnpm vooraan in PATH: legt argumenten en de volledige omgeving vast, installeert niets, eindigt met `exit`.
+// Net als de echte pnpm weigert hij een onbekende optie (allowlist PNPM_INSTALL_OPTIES): `Unknown option` op stderr, exit 1 (gemeten met pnpm 11.28.5).
 function nepPnpm(exit = 0): { bin: string; log: string } {
   const bin = tmp('wti-bin-');
   const log = path.join(bin, 'aanroep.json');
   const regels = [
     `#!${process.execPath}`,
-    `require('node:fs').writeFileSync(${JSON.stringify(log)}, JSON.stringify({ args: process.argv.slice(2), env: process.env }));`,
-    `process.exitCode = ${String(exit)};`,
+    `const toegestaan = ${JSON.stringify(PNPM_INSTALL_OPTIES)};`,
+    'const args = process.argv.slice(2);',
+    `require('node:fs').writeFileSync(${JSON.stringify(log)}, JSON.stringify({ args, env: process.env }));`,
+    "const onbekend = args.filter((a) => a.startsWith('-')).map((a) => a.replace(/^-+/, '').split('=')[0]).find((n) => !toegestaan.includes(n));",
+    "if (onbekend !== undefined) { process.stderr.write('[ERROR] Unknown option: \\'' + onbekend + '\\'\\n'); process.exitCode = 1; }",
+    `else process.exitCode = ${String(exit)};`,
     '',
   ];
   writeFileSync(path.join(bin, 'pnpm'), regels.join('\n'));
@@ -225,6 +234,10 @@ function vlagWaarde(args: string[], vlag: string): string | undefined {
   return args.find((a) => a.startsWith(voorvoegsel))?.slice(voorvoegsel.length);
 }
 
+function optieNamen(args: string[]): string[] {
+  return args.slice(1).map((a) => a.replace(/^-+/, '').split('=')[0] ?? '');
+}
+
 function onder(basis: string, pad: string | undefined): boolean {
   return pad !== undefined && !path.relative(basis, path.resolve(pad)).startsWith('..');
 }
@@ -270,7 +283,8 @@ describe('worktreeInstallBesluit', () => {
 });
 
 describe('worktreeInstallCommando', () => {
-  test('frozen lockfile en store, cache en state onder de tijdelijke map', () => {
+  // Gewijzigd t.o.v. #630: --cache-dir en --state-dir bestaan niet als pnpm-installoptie (gemeten met pnpm 11.28.5).
+  test('gemeten pnpm 11.28.5-contract: frozen lockfile, copy-import en --store-dir onder tmp; cache en state via XDG_*', () => {
     const basis = path.join(tmpdir(), 'pnpm-wt');
     const { command, args, env } = worktreeInstallCommando(basis);
 
@@ -279,13 +293,52 @@ describe('worktreeInstallCommando', () => {
     expect(args).not.toContain('--no-frozen-lockfile');
     expect(args).not.toContain('--force');
     expect(args).toContain('--package-import-method=copy');
-    for (const vlag of VLAGGEN) expect(onder(basis, vlagWaarde(args, vlag)), vlag).toBe(true);
+    expect(onder(basis, vlagWaarde(args, 'store-dir')), 'store-dir').toBe(true);
     for (const naam of XDG) expect(onder(basis, env[naam]), naam).toBe(true);
     // Geen verwijzing naar een globale pnpm-map van de gebruiker.
     expectAbsent(JSON.stringify({ args, env }), /\.local\/share\/pnpm|\.cache\/pnpm|\.local\/state\/pnpm/, {
       recognizes: ['/home/u/.local/share/pnpm/store', '/home/u/.cache/pnpm', '/home/u/.local/state/pnpm'],
       allows: ['/tmp/pnpm-wt/store'],
     });
+  });
+
+  // Allowlist: onze eigen keuze van opties, waarvan de geldigheid met pnpm 11.28.5 is gemeten; een nieuwe vlag valt hier op
+  // en moet eerst tegen echte pnpm gemeten en aan PNPM_INSTALL_OPTIES toegevoegd worden.
+  test('alleen de met pnpm 11.28.5 gemeten geldige opties (--frozen-lockfile, --package-import-method, --store-dir), geen --state-dir of --cache-dir', () => {
+    const basis = path.join(tmpdir(), 'pnpm-wt');
+    const { args, env } = worktreeInstallCommando(basis);
+
+    expect(args[0]).toBe('install');
+    expect(args.slice(1).every((a) => a.startsWith('--'))).toBe(true);
+    expect([...optieNamen(args)].sort()).toStrictEqual([...PNPM_INSTALL_OPTIES].sort());
+    expectAbsent(args.join(' '), /--(state|cache)-dir/, {
+      recognizes: ['--state-dir=/x', '--cache-dir=/x'],
+      allows: ['--store-dir=/x'],
+    });
+    // Cache en state komen in samenhang daarmee alleen via de omgeving onder tmp.
+    for (const naam of XDG) expect(onder(basis, env[naam]), naam).toBe(true);
+    expect(new Set(XDG.map((naam) => env[naam])).size).toBe(XDG.length);
+  });
+});
+
+describe('nep-pnpm (testhulp)', () => {
+  test('weigert een onbekende optie zoals de echte pnpm: exit 1 en `Unknown option` op stderr', () => {
+    const { bin } = nepPnpm();
+
+    const r = spawnSync(path.join(bin, 'pnpm'), ['install', '--frozen-lockfile', '--state-dir=/x'], {
+      encoding: 'utf8',
+    });
+
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain("Unknown option: 'state-dir'");
+  });
+
+  test.each(PNPM_INSTALL_OPTIES)('accepteert de geldige optie --%s', (optie) => {
+    const { bin } = nepPnpm();
+
+    const r = spawnSync(path.join(bin, 'pnpm'), ['install', '--' + optie + '=x'], { encoding: 'utf8' });
+
+    expect(r.status, r.stderr).toBe(0);
   });
 });
 
@@ -368,7 +421,8 @@ describe('worktreeInstallFeiten (echte git-fixture)', () => {
 });
 
 describe('node scripts/kit/worktree-install.mjs (nep-pnpm)', () => {
-  test('gekoppelde worktree: pnpm install --frozen-lockfile met paden en XDG-mappen onder tmpdir; lockfile ongewijzigd', () => {
+  // Gewijzigd t.o.v. #630: de oude assertie eiste --cache-dir en --state-dir onder tmpdir; echte pnpm 11.28.5 weigert die.
+  test('gekoppelde worktree: pnpm install met alleen geldige opties, store en XDG-mappen onder tmpdir; lockfile ongewijzigd', () => {
     const { wt } = fixture();
     const { bin, log } = nepPnpm();
     const lockVoor = readFileSync(path.join(wt, 'pnpm-lock.yaml'), 'utf8');
@@ -378,9 +432,14 @@ describe('node scripts/kit/worktree-install.mjs (nep-pnpm)', () => {
     const r = draai(wt, bin, { tmpdir: tb });
 
     expect(r.status, r.stderr).toBe(0);
+    expectAbsent(r.stderr, /Unknown option/, {
+      recognizes: ["[ERROR] Unknown option: 'x'"],
+      allows: ['install klaar'],
+    });
     const { args, xdg } = logUit(log);
     expect(args.slice(0, 2)).toStrictEqual(['install', '--frozen-lockfile']);
-    for (const vlag of VLAGGEN) expect(onder(tb, vlagWaarde(args, vlag)), vlag).toBe(true);
+    expect([...optieNamen(args)].sort()).toStrictEqual([...PNPM_INSTALL_OPTIES].sort());
+    expect(onder(tb, vlagWaarde(args, 'store-dir')), 'store-dir').toBe(true);
     for (const naam of XDG) expect(onder(tb, xdg[naam]), naam).toBe(true);
     expect(readFileSync(path.join(wt, 'pnpm-lock.yaml'), 'utf8')).toBe(lockVoor);
   });

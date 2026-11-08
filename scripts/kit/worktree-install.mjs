@@ -1,5 +1,5 @@
 // Installeert de dependencies in een gekoppelde worktree (ADR 0085, spec claude-sandbox-werkstraat AC-10):
-// `pnpm install --frozen-lockfile` met store, cache en state onder os.tmpdir(), zodat het binnen de Claude Code-sandbox
+// `pnpm install --frozen-lockfile` met store (`--store-dir`), cache en state (XDG_*) onder os.tmpdir(), zodat het binnen de Claude Code-sandbox
 // slaagt zonder globale pnpm-map. Weigert in de hoofdcheckout, bij een symlink als node_modules en bij wijzigingen ten
 // opzichte van HEAD in de beheerde bestanden. Een bestaande map node_modules (ook leeg of half) wordt gewoon afgemaakt:
 // een frozen install is idempotent. Zonder dependencies, zodat het op een kale Node draait (zoals toolchain.mjs).
@@ -42,21 +42,15 @@ export function worktreeInstallBesluit({ worktree, nodeModules, gewijzigd }) {
 }
 
 /**
- * Het pnpm-commando met alle schrijfbare mappen onder `tmp`.
+ * Het pnpm-commando met alle schrijfbare mappen onder `tmp`. `pnpm install` kent van de mappen alleen `--store-dir`
+ * (gemeten met pnpm 11.28.5: `--cache-dir` en `--state-dir` geven `Unknown option`); cache en state gaan via XDG_*.
  * @param {string} tmp
  * @returns {{ command: 'pnpm', args: string[], env: Record<string, string> }}
  */
 export function worktreeInstallCommando(tmp) {
   return {
     command: 'pnpm',
-    args: [
-      'install',
-      '--frozen-lockfile',
-      '--package-import-method=copy',
-      `--store-dir=${path.join(tmp, 'store')}`,
-      `--cache-dir=${path.join(tmp, 'cache')}`,
-      `--state-dir=${path.join(tmp, 'state')}`,
-    ],
+    args: ['install', '--frozen-lockfile', '--package-import-method=copy', `--store-dir=${path.join(tmp, 'store')}`],
     env: {
       XDG_DATA_HOME: path.join(tmp, 'data'),
       XDG_CACHE_HOME: path.join(tmp, 'xdg-cache'),
