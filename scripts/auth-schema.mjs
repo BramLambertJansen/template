@@ -1,7 +1,7 @@
 // Genereert de SQL voor de tabellen van Better Auth uit exact de opties van src/core/api/auth (framework §6: "auth generate",
 // nooit "auth migrate"). Zonder database: een nep-pool antwoordt "leeg schema", zodat getMigrations alles als nieuw ziet.
 // Gebruik: node scripts/auth-schema.mjs > db/migrations/<tijdstempel>_better_auth.sql (daarna controleren en committen).
-// test/auth/schema.int.test.ts bewijst tegen de echte database dat er na de migraties niets meer te migreren valt.
+// test/auth/auth.int.test.ts bewijst tegen de echte database dat er na de migraties niets meer te migreren valt.
 import { getMigrations } from 'better-auth/db/migration';
 import pg from 'pg';
 import { createAuthOptions } from '../src/core/api/auth/options.ts';
