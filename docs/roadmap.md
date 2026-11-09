@@ -62,6 +62,19 @@ Hooguit drie open items (`check:roadmap`); nummer 1 is bewijs vóór uitbreiding
   bereikbaar totdat die taak is afgerond; raakt opruimen tests, fixtures, migraties, gates, veiligheidsregels of goedkeuringshistorie, leg de
   wijziging dan apart aan de eigenaar voor. **Afhankelijkheden:** eigenaarreview van de opruiminventaris; geldende besluiten en bewijscriteria;
   `app:init` dat README en changelog gebruikt.
+  **Opruimronde 2026-11-09 (gedaan):** vervallen agent-merge-specs naar `archief/` (#640); README-sectie Cloud ingekort, login-wachtwoorddoc
+  in `docs/ui-input-utilities.md` opgenomen en een dode verwijzing in `money.ts` weg (#641); `eigen-account-deel2.test.ts` in
+  `eigen-account.test.ts` samengevoegd met gelijke testnamen (#643). Onderzocht en bewust gelaten: het kopje "Besloten, nog niet gebouwd"
+  (R-DOC-02 schrijft het voor), de git-testkits (geen kopieën van één helper), de "GEWIJZIGD"-markeringen (sporen van testwijzigingen met reden).
+  **Open uit die ronde, voor netheid en vóór de eerste productierelease (eigenaar, 2026-11-09; ook als netheidspunt zonder meetbare winst):** (1) CHANGELOG netjes indelen: nu één `[Unreleased]` van ca. 88 KB; hou
+  alles wat een app bij een update moet doen of waar een conflict kan ontstaan, snij eerst een gedateerde release of bouw de
+  changelogfragmenten (ontwerp en eigenaarkeuzes 2026-10-23) en lees daarna per sectie na; (2) `docs/operations/agent-doorloop.md` (55 KB) herindelen:
+  negen testbestanden, de skills `opleveren` en `spec` en `meting.mjs` pinnen tekst of kopjes, dus alleen met eigenaarakkoord per test
+  (R-TEST-02); idem `docs/nieuwe-app.md` (980 regels) en `START-NIEUWE-APP.md`, met bewijs dat de start van een nieuwe app blijft werken; (3) `docs/reviews/` (12 bestanden) een
+  bestemming per ST-14-inventaris; (4) dubbele blokken in `.github/workflows` (mise-versie op 11 plekken, bubblewrap op 2, het SHA-controleblok in `guard.yml` drie keer;
+  de mise-blokken verschillen in `install_args`, `if` en `working_directory`, dus de composite action krijgt parameters) via een composite action,
+  met verplichte checknamen ongewijzigd; elke wijziging in `.github/workflows` gaat apart aan de eigenaar (gate-pad) en `guard.yml` alleen via
+  besluit-PR; (5) lange regels in `docs/framework.md` en `docs/dod.md` inkorten binnen de grens van de R-DOC-07-krimpcheck; (6) leerpunten uit de ronde, zie #642.
   aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (categorie C, besluit 1)
 
 ## Volgende
