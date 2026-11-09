@@ -1,6 +1,10 @@
-import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
+import { inKooi } from '../../scripts/kit/kooi.mjs';
 
 const ctx = {
   root: '/repo',
@@ -1266,4 +1270,81 @@ describe('AC-10 (c) (B3): escape in een glob-klasse kan naar gh wijzen', () => {
       }
     },
   );
+});
+
+// Leerpunt #619, spec rolhek-vooraf-krimp AC-11 (ADR 0086): de body van een heredoc met aangehaalde delimiter is letterlijk
+// voor de substitutiezoeker; alles wat bash wel uitvoert, blijft dicht. De bashversie staat in de testnaam (#626).
+const BASH_VERSIE = spawnSync('bash', ['--version'], { encoding: 'utf8' }).stdout.split('\n')[0] ?? 'bash onbekend';
+const NIET_LETTERLIJK = 'een commandowoord dat niet letterlijk is';
+
+function geweigerd(command: string, role?: string): boolean {
+  return run(command, role).deny.some((melding) => melding.includes(NIET_LETTERLIJK));
+}
+
+describe('rolhek-vooraf-krimp/AC-11: aangehaalde heredoc is geen substitutie', () => {
+  const DOORGELATEN = [
+    "cat > /tmp/x.txt <<'EOF'\nso `g*.md` did not match\nEOF",
+    "cat > /tmp/x.txt <<'EOF'\nso `lefthook.ym[]l]` x\nEOF",
+    'cat > /tmp/x.txt <<"EOF"\nso `g*.md` x\nEOF',
+    'cat > /tmp/x.txt <<\\EOF\nso `g*.md` x\nEOF',
+    "cat > /tmp/x.txt <<-'EOF'\n\tso `g*.md` x\n\tEOF",
+    "cat > /tmp/x.txt <<'EOF'\n$(rm -rf x) `g*.md`\nEOF",
+    "git commit -F - <<'EOF'\nfix `g*.md` and `x[y]`\n\nMore text\nEOF",
+    "cat <<'A' <<'B'\n`g*.md`\nA\n`h*.md`\nB",
+    "cat <<'A B'\n`g*.md`\nA B",
+    'cat <<E"O"F\n`g*.md`\nEOF',
+  ];
+
+  test.each(DOORGELATEN)('doorgelaten voor hoofdsessie en subagent: %j', (command) => {
+    for (const role of [undefined, ...SUBAGENTS])
+      expect({ role, geweigerd: geweigerd(command, role) }).toEqual({ role, geweigerd: false });
+  });
+
+  const BLIJFT_DICHT = [
+    ['onaangehaalde delimiter', 'cat > /tmp/x.txt <<EOF\nso `g*.md` x\nEOF'],
+    ['delimiter met variabele', 'cat <<$x\n`g*.md`\nx'],
+    ['body zonder sluitregel', "cat <<'EOF'\n`g*.md`\nEOFX"],
+    ['sluitregel met spatie erachter', "cat <<'EOF'\n`g*.md`\nEOF \n"],
+    ['sluitregel met CRLF', "cat <<'EOF'\n`g*.md`\nEOF\r\n"],
+    ['here-string', "cat <<<'EOF'\n`g*.md`\nEOF"],
+    ['rest van de operatorregel', "cat <<'E'; `g*.md`\nx\nE"],
+    ['commando na de sluitregel', "cat <<'E'\nx\nE\n`g*.md`"],
+    ['operator tussen aanhalingstekens', 'echo "<<\'EOF\'"\n`g*.md`\nEOF'],
+    ['operator in commentaar', "# <<'EOF'\n`g*.md`\nEOF"],
+    ['shift in rekenkundige haakjes', '(( 1 << "2" ))\n`g*.md`\n2'],
+    ['patroon in dubbele blokhaken', '[[ a == "<<\'E\'" ]]\n`g*.md`\nE'],
+    ['ANSI-C-delimiter: de lezer decodeert hem niet', "cat <<$'EOF'\n`g*.md`\nEOF"],
+    ['regelvoortzetting in de delimiter is geen aanhaling', 'cat <<EO\\\nF\n`g*.md`\nEOF'],
+    ['shift in $[…]', 'echo $[1 << "2" ]\n`g*.md`\n2'],
+    ['heredoc binnen $(…) blijft toetsen', 'echo $(cat <<E\n`g*.md`\nE\n)'],
+  ] as const;
+
+  test.each(BLIJFT_DICHT)('blijft dicht voor hoofdsessie en subagent: %s', (_naam, command) => {
+    for (const role of [undefined, ...SUBAGENTS])
+      expect({ role, geweigerd: geweigerd(command, role) }).toEqual({ role, geweigerd: true });
+  });
+
+  test('de ruwe vangnetten zien de body nog: gh pr merge in een aangehaalde heredoc blijft geweigerd', () => {
+    const command = "cat <<'EOF'\ngh pr merge 1\nEOF";
+    for (const role of [undefined, ...SUBAGENTS]) {
+      const decision = run(command, role);
+      expect({ role, dicht: decision.deny.length > 0 }).toEqual({ role, dicht: true });
+    }
+  });
+
+  test(`differentieel (${BASH_VERSIE}): bash voert niets uit in een aangehaalde heredoc, wel in een onaangehaalde en bij een shift`, () => {
+    const map = mkdtempSync(path.join(tmpdir(), 'heredoc-'));
+    try {
+      const draai = (naam: string, script: string): boolean => {
+        const marker = path.join(map, naam);
+        inKooi(script.replaceAll('MARKER', marker), { werkmap: map });
+        return existsSync(marker);
+      };
+      expect(draai('aangehaald', "cat > /dev/null <<'EOF'\n`touch MARKER`\n$(touch MARKER)\nEOF")).toBe(false);
+      expect(draai('onaangehaald', 'cat > /dev/null <<EOF\n`touch MARKER`\nEOF')).toBe(true);
+      expect(draai('shift', '(( 1 << "2" ))\n`touch MARKER`\n2')).toBe(true);
+    } finally {
+      rmSync(map, { recursive: true, force: true });
+    }
+  });
 });

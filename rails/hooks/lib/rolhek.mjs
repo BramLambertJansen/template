@@ -2,7 +2,7 @@
 // verboden is (deny). Puur: alles wat van de schijf of git komt, zit in `ctx`, zodat test/hooks/rolhek.test.ts elke regel
 // met echte payloads kan bewijzen. De stdin/stdout-kant staat in rails/hooks/rolhek.mjs.
 import path from 'node:path';
-import { gitSubcommand, globTekstRegex, parseCommands, programName, splitCommand, tmpdirLetterlijk, tmpdirWoord, writeTargets, zetVariabele } from './shell.mjs';
+import { gitSubcommand, globTekstRegex, parseCommands, programName, splitCommand, tmpdirLetterlijk, tmpdirWoord, tokenize, writeTargets, zetVariabele } from './shell.mjs';
 import { A4_MELDING, archiefBron, beslisOvergang, builtReference, documentInfo, documentKind, isArchief, isHerschrijving } from './document-state.mjs';
 import { canRecordStatus, TEMPLATE_REPOSITORY } from './task-authority.mjs';
 import { automaticRunner } from './runner-authority.mjs';
@@ -817,13 +817,24 @@ function envSplitsString(words) {
 
 /**
  * De inhoud van elke `$(…)` en elk backtick-paar op het buitenste niveau (geneste vangt de recursie in decideBash).
+ * De body van een heredoc met aangehaalde delimiter blijft buiten beeld: bash voert er niets in uit (ADR 0086, AC-11); de
+ * grens komt van `tokenize`.
  * @param {string} command
  * @returns {string[]}
  */
 function substitutions(command) {
+  /** @type {import('./shell.mjs').HeredocBody[]} */
+  const bodies = [];
+  tokenize(command, bodies);
+  const letterlijk = bodies.filter((body) => body.letterlijk);
   /** @type {string[]} */
   const found = [];
   for (let index = 0; index < command.length; index += 1) {
+    const body = letterlijk.find(({ start, end }) => index >= start && index < end);
+    if (body !== undefined) {
+      index = body.end - 1;
+      continue;
+    }
     const close = command.startsWith('$(', index) ? matchingParen(command, index + 2)
       : command[index] === '`' ? command.indexOf('`', index + 1) : -1;
     if (close === -1) continue;
