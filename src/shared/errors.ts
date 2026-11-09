@@ -1,6 +1,6 @@
 import { defineErrorCodes, type ErrorCodeOf } from '#core/shared/errors.ts';
 
-// Foutcodes van de app (spec accountbeheer, eigen-account). Teksten: src/web/copy/errors.ts (stuk 3b).
+// Foutcodes van de app (spec accountbeheer, eigen-account). Teksten: src/web/copy/errors.ts.
 export const errors = defineErrorCodes([
   'INVALID_CREDENTIALS',
   'INVALID_TOTP',
