@@ -13,6 +13,12 @@
  * dan ruim (`globTekstRegex`; review B3, #622, AC-3, eigenaarbesluit 7 november 2026).
  */
 /** @typedef {{ kind: 'word' | 'op', value: string, expands?: boolean, pattern?: string, raw?: string }} Token */
+/**
+ * Een heredoc-body: `start` tot `end` (de sluitregel valt erbuiten). `letterlijk`: bash voert er niets in uit, want de
+ * delimiter is aangehaald, de body is gesloten en vóór de operator staat geen `((` of `[[` (ADR 0086).
+ * @typedef {{ start: number, end: number, letterlijk: boolean }} HeredocBody
+ */
+/** @typedef {{ delimiter: string, strip: boolean, letterlijk: boolean }} Heredoc */
 
 // Staat in `Command.patterns` voor een aangehaald glob-, brace- of tildeteken: zelf geen glob-teken en geen letter van `gh`.
 export const QUOTED = '\u0000';
@@ -355,12 +361,13 @@ export function tmpdirWoord(word) {
 
 /**
  * @param {string} script
+ * @param {HeredocBody[]} [bodies] ontvangt de bodybereiken van de heredocs die de lezer overslaat (ADR 0086)
  * @returns {Token[]}
  */
-export function tokenize(script) {
+export function tokenize(script, bodies = []) {
   /** @type {Token[]} */
   const tokens = [];
-  /** @type {{ delimiter: string, strip: boolean }[]} */
+  /** @type {Heredoc[]} */
   const heredocs = [];
   let index = 0;
   while (index < script.length) {
@@ -373,49 +380,70 @@ export function tokenize(script) {
     } else if (char === '#' && (index === 0 || /[ \t\n]/.test(script[index - 1] ?? ''))) {
       while (index < script.length && script[index] !== '\n') index += 1;
     } else {
-      index = nextToken(script, index, { tokens, heredocs });
+      index = nextToken(script, index, { tokens, heredocs, bodies });
     }
   }
   return tokens;
 }
 
+// Een aangehaalde delimiter: aanhalingstekens of backslash, en geen `$` of backtick. `$'…'` valt dicht: de lezer decodeert
+// geen ANSI-C-escapes (hij leest `$'E'` als `$E`), bash wel.
+const DELIMITER_AANGEHAALD = /^[^$`]*['"\\][^$`]*$/;
+// Rekenkundige haakjes en `[[`: een `<<` daarin is een shift of een patroon, geen heredoc (ADR 0086).
+const REKEN_CONTEXT = /\(\(|\[\[/;
+
 /**
  * Leest het token op `index`, voegt het toe en geeft de positie erna. Na een regeleinde slaat hij openstaande heredocs over.
  * @param {string} script
  * @param {number} index
- * @param {{ tokens: Token[], heredocs: { delimiter: string, strip: boolean }[] }} state
+ * @param {{ tokens: Token[], heredocs: Heredoc[], bodies: HeredocBody[] }} state
  */
-function nextToken(script, index, { tokens, heredocs }) {
+function nextToken(script, index, { tokens, heredocs, bodies }) {
   const descriptor = /^\d+(?=[<>])/.exec(script.slice(index))?.[0] ?? '';
   const op = OPERATORS.find((candidate) => script.startsWith(candidate, index + descriptor.length));
   if (op === undefined) {
     const word = readWord(script, index);
     const previous = tokens.at(-1);
+    const raw = script.slice(index, word.end);
     if (previous?.kind === 'op' && (previous.value === '<<' || previous.value === '<<-'))
-      heredocs.push({ delimiter: word.value, strip: previous.value === '<<-' });
-    tokens.push({ kind: 'word', value: word.value, expands: word.expands, pattern: word.pattern, raw: script.slice(index, word.end) });
+      heredocs.push({
+        delimiter: word.value,
+        strip: previous.value === '<<-',
+        letterlijk: DELIMITER_AANGEHAALD.test(raw) && !REKEN_CONTEXT.test(script.slice(0, index)),
+      });
+    tokens.push({ kind: 'word', value: word.value, expands: word.expands, pattern: word.pattern, raw });
     return word.end;
   }
   tokens.push({ kind: 'op', value: op });
   const end = index + descriptor.length + op.length;
-  return op === '\n' && heredocs.length > 0 ? skipHeredocBodies(script, end, heredocs.splice(0)) : end;
+  return op === '\n' && heredocs.length > 0 ? skipHeredocBodies(script, end, { heredocs: heredocs.splice(0), bodies }) : end;
 }
 
 /**
- * Slaat de tekst van de heredocs over die op de vorige regel begonnen; geeft de positie na de laatste sluitregel.
+ * Slaat de tekst van de heredocs over die op de vorige regel begonnen; geeft de positie na de laatste sluitregel en
+ * legt per heredoc het bodybereik vast. Zonder sluitregel loopt de body tot het einde en is hij nooit letterlijk.
  * @param {string} script
  * @param {number} from
- * @param {{ delimiter: string, strip: boolean }[]} heredocs
+ * @param {{ heredocs: Heredoc[], bodies: HeredocBody[] }} state
  */
-function skipHeredocBodies(script, from, heredocs) {
+function skipHeredocBodies(script, from, { heredocs, bodies }) {
   let index = from;
-  for (const { delimiter, strip } of heredocs) {
+  for (const { delimiter, strip, letterlijk } of heredocs) {
+    const start = index;
+    let bodyEinde = script.length;
+    let gesloten = false;
     while (index < script.length) {
+      const lijnStart = index;
       const end = script.indexOf('\n', index);
       const line = script.slice(index, end === -1 ? script.length : end);
       index = end === -1 ? script.length : end + 1;
-      if ((strip ? line.replace(/^\t+/, '') : line) === delimiter) break;
+      if ((strip ? line.replace(/^\t+/, '') : line) === delimiter) {
+        bodyEinde = lijnStart;
+        gesloten = true;
+        break;
+      }
     }
+    bodies.push({ start, end: bodyEinde, letterlijk: letterlijk && gesloten });
   }
   return index;
 }
