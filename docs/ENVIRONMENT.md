@@ -7,7 +7,7 @@ document bij in dezelfde PR.
 ## Opzetten
 
 1. Maak op claude.ai/code een omgeving met netwerktoegang **Trusted** (de standaard).
-2. Zet als setup-script precies dit, verder niets:
+2. Zet als setup-script precies dit, verder niets (klaar binnen ongeveer vijf minuten betekent dat de omgeving wordt gecachet):
 
    ```bash
    bash scripts/cloud-setup.sh
@@ -71,7 +71,7 @@ checksum, een mislukte download en een tool die blijft ontbreken.
 
 - Netwerk: alleen de standaard-allowlist (Trusted); `github.com`, `nodejs.org`, de npm-registry en de pakketbron van
   `apt-get` volstaan. De GitHub-API is niet nodig (zie Terugval).
-- Geen lokale stack: in een cloudsessie draaien `pnpm gate:slow` en `pnpm test:db` in CI (README, Cloud).
+- Geen lokale stack: in een cloudsessie draaien `pnpm gate:slow` en `pnpm test:db` in CI. De GitHub-proxy beperkt niet naar welke branch gepusht wordt, dus de ruleset op `main` is daar de grens.
 - Geen secrets in de omgeving; `.env*` blijft buiten beeld (`AGENTS.md`, Repo en grenzen).
 
 ## Minimale Claude Code-versie

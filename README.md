@@ -71,7 +71,7 @@ Deze accounts en waarden zijn alleen voor lokaal gebruik. Voor een eerste beheer
 
 ## Cloud
 
-Opdrachten geven vanaf telefoon of browser (claude.ai/code) gaat via een cloudsessie: een verse clone in een VM van Anthropic. Deze inrichting is voor Claude Code; andere runtimes voeren de hooks en permissieregels uit `.claude/` niet uit, zie de [agentinstructies](AGENTS.md).
+Opdrachten geven vanaf telefoon of browser (claude.ai/code, Code-tab in de app) gaat via een cloudsessie: een verse clone in een VM van Anthropic. Deze inrichting is voor Claude Code; andere runtimes voeren de hooks en permissieregels uit `.claude/` niet uit, zie de [agentinstructies](AGENTS.md).
 
 Eenmalig per repo: een omgeving met netwerktoegang **Trusted** en `bash scripts/cloud-setup.sh` als setup-script, en elke sessie met één repo. Stappen, wat een cloudsessie anders doet dan lokaal, de grens van de sandbox en de probleemdiagnose staan in [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md).
 
