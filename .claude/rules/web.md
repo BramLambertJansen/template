@@ -33,7 +33,7 @@ Hoe (geen norm):
 
 ## Gebouwd en nog open
 
-Gebouwd (stuk 3b): bestandsroutes in `src/web/routes` (TanStack Router; `routeTree.gen.ts` is gegenereerd), de router in
+Gebouwd: bestandsroutes in `src/web/routes` (TanStack Router; `routeTree.gen.ts` is gegenereerd), de router in
 `src/web/lib/router.ts` met `RouteError`/`NotFound` als ErrorBoundary per route, de guard `guard('<permissie>')` uit
 `src/web/lib/session.ts` voor `beforeLoad`, `createQueryClient` (401 → `/login`), `AsyncView`, `Form`/`FormField`/`useZodForm`,
 `format` en `readWebEnv`/`isDev`, foutteksten in `src/web/copy/errors.ts`. Componenttests in het Vitest-project `web` (jsdom).
