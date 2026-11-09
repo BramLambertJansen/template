@@ -119,7 +119,7 @@ AC-12, in `test/hooks/rolhek-effect-sandbox-plaatshouders.test.ts`. Elk hookgeva
 - (r6) een symlink `.env` naar een leeg bestand;
 - (r7) een map `.env/`;
 - (r8) een leeg `.env.local` dat getrackt is (in de index) en verschijnt of leeg wordt;
-- (r9) `.env` in HEAD maar niet in de index, dat leeg wordt;
+- (r9) een leeg `.env` dat in HEAD staat en na `git rm --cached` uit de index verdwijnt (van leeg naar weg): alleen de HEAD-controle (`inHead`) maakt hiervan een overtreding, dus de test faalt zonder die controle;
 - (r10) een leeg `.env.production`;
 - (r11) een leeg `.env.example` (getrackt in de template);
 - (r12) een leeg `config/.env`; een herkenning op basisnaam in plaats van op het volledige pad laat deze test falen;
