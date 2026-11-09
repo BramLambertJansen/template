@@ -35,9 +35,11 @@ op een opslag per aanroep die niet atomair is. Het tweede vond de eigenaar te zw
 
 Een subagent kan via een programma, in zijn eigen commando of via een achtergrondproces, zonder melding een regel uit
 de klasse zetten of weghalen. Het rolhek weigert `git config` vooraf nog steeds, maar een kenmerk per aanroep is er niet.
-Een push naar een andere bestaande remote is uitgesloten, want alleen `origin` is neutraal. Twee risico's blijven over:
+Een push naar een andere bestaande remote is uitgesloten, want alleen `origin` is neutraal. Drie risico's blijven over:
 
 - een `merge` binnen `origin` naar een andere branch verleggen, zodat `git pull` vreemde code merget die daarna draait;
+- met een globale `push.default` `upstream` of `tracking` duwt `git push` zonder argumenten naar de verlegde
+  `origin/<branch>`, zodat een andere PR-branch fast-forward overschreven kan worden (de ruleset beschermt alleen `main`);
 - een andere lezer van `.git/config` (libgit2, JGit, een editor-extensie) leest dezelfde bytes anders dan git, en ziet zo
   een regel die voor git neutraal is maar voor die lezer niet.
 
@@ -63,6 +65,7 @@ CI, de ruleset en de eigenaarmerge blijven de grens.
   `pnpm rolhek:overnemen`, net als de sleutels van de GitHub-extensie.
 - De momentopname schrijft `.git/config` niet meer als blob in `.git/objects`. Een opname van vóór de bouw heeft nog de
   oude staat, en de eerste vergelijking daarmee telt één keer als verandering. `pnpm rolhek:overnemen --alles` wist de
-  opnamen van subagents, maar niet die van lopende commando's. De overgang is pas voorbij als elke sessie van vóór de
+  opnamen van subagents, maar niet die van lopende commando's en niet `overgenomen.json`; een oude overgenomen staat
+  geeft hooguit één extra melding. De overgang is pas voorbij als elke sessie van vóór de
   bouw gestopt of herstart is.
 - Framework R-ROL-10 en `docs/operations/agent-doorloop.md` volgen in de bouw-PR.
