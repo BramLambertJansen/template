@@ -6,6 +6,7 @@ Herzien: 2026-11-03 (#454): punt 3 en de buitenscope "hoofdsessie" volgen [0071]
 Herzien: 2026-11-03 (#469): gewijzigd door [0071](0071-rolhek-vooraf-vaste-lijst.md) punt 3
 Herzien: 2026-11-05 (#588): punt 2, gewijzigd door [0083](0083-bewaking-met-minder-wrijving.md): de nacontrole is begrensd tot wat de subagent zelf kan hebben gedaan.
 Herzien: 2026-11-06 (#608): punt 1, gewijzigd door [0084](0084-sandbox-afscherming-geen-effect.md): een plaatshouder van de sandbox telt niet als verandering, en geheimen worden gehasht zonder ze in `.git/objects` te schrijven.
+Herzien: 2026-11-09 (#649): punt 1, gewijzigd door [0087](0087-branchsleutels-in-git-config-geen-effect.md): een verandering in `.git/config` die alleen vaste branchsleutels raakt, telt niet als verandering.
 
 Vult [0045](0045-railwerk.md) aan: het rolhek blijft vooraf toetsen, en toetst daarnaast achteraf wat een Bash-commando
 van een subagent echt veranderde. Uitwerking: spec [rolhek-effect](../specs/rolhek-effect.md).
