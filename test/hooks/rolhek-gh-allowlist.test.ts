@@ -1314,6 +1314,8 @@ describe('rolhek-vooraf-krimp/AC-11: aangehaalde heredoc is geen substitutie', (
     ['shift in rekenkundige haakjes', '(( 1 << "2" ))\n`g*.md`\n2'],
     ['patroon in dubbele blokhaken', '[[ a == "<<\'E\'" ]]\n`g*.md`\nE'],
     ['ANSI-C-delimiter: de lezer decodeert hem niet', "cat <<$'EOF'\n`g*.md`\nEOF"],
+    ['regelvoortzetting in de delimiter is geen aanhaling', 'cat <<EO\\\nF\n`g*.md`\nEOF'],
+    ['shift in $[…]', 'echo $[1 << "2" ]\n`g*.md`\n2'],
     ['heredoc binnen $(…) blijft toetsen', 'echo $(cat <<E\n`g*.md`\nE\n)'],
   ] as const;
 

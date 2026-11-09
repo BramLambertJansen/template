@@ -388,9 +388,9 @@ export function tokenize(script, bodies = []) {
 
 // Een aangehaalde delimiter: aanhalingstekens of backslash, en geen `$` of backtick. `$'…'` valt dicht: de lezer decodeert
 // geen ANSI-C-escapes (hij leest `$'E'` als `$E`), bash wel.
-const DELIMITER_AANGEHAALD = /^[^$`]*['"\\][^$`]*$/;
+const DELIMITER_AANGEHAALD = /^[^$`\n]*['"\\][^$`\n]*$/;
 // Rekenkundige haakjes en `[[`: een `<<` daarin is een shift of een patroon, geen heredoc (ADR 0086).
-const REKEN_CONTEXT = /\(\(|\[\[/;
+const REKEN_CONTEXT = /\(\(|\[\[|\$\[/;
 
 /**
  * Leest het token op `index`, voegt het toe en geeft de positie erna. Na een regeleinde slaat hij openstaande heredocs over.
