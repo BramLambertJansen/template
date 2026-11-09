@@ -36,8 +36,9 @@ Twee lagen: een eerder, samengesteld commando dat ook `.env` las, weigerde de pe
   een herstel.
 - **Plaatshouders** (meting 6 november 2026, Claude Code 2.1.318): in de sandbox waren de gemeten afgeschermde paden
   een alleen-lezen koppeling van `/dev/null` (tekenapparaat 1,3 van `nobody`, `rdev` 259); buiten de sandbox bestond geen pad
-  van `SANDBOX_LEEG`. AC-11 dekt ook de vorm van een leeg bestand, die bij de meting van AC-11 (f) niet is gezien. De toets op
-  effect telt ze niet (spec `rolhek-effect` AC-11, ADR 0084).
+  van de toen zeventien paden van `SANDBOX_LEEG`. AC-11 dekt ook de vorm van een leeg bestand, die bij de meting van AC-11 (f)
+  niet is gezien. `.env` en `.env.local` kwamen er later bij (AC-12, leerpunt #642) en zijn bij die meting buiten de sandbox
+  niet gemeten. De toets op effect telt ze niet (spec `rolhek-effect` AC-11 en AC-12, ADR 0084).
 - **`~/.ssh` en `~/.aws`** zijn alleen als regel aanwezig; bewijs volgt op een machine waar die mappen bestaan.
 - **`excludedCommands`** (`.claude/settings.json:122`: `pnpm test:db`, `ui:check`, `gate:slow`, `db:generate`, `check:snapshot`)
   draaien buiten de sandbox, met `ask`; ADR 0044 beschrijft dat gat.
