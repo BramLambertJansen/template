@@ -1,7 +1,9 @@
-import { chmodSync, rmSync, symlinkSync } from 'node:fs';
+import { chmodSync, mkdirSync, rmSync, symlinkSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, test } from 'vitest';
+import { nacontrole } from '../../rails/hooks/lib/effect-hooks.mjs';
 import * as snapshot from '../../rails/hooks/lib/effect-snapshot.mjs';
+import * as prVerify from '../../scripts/kit/pr-verify.mjs';
 import { gitIn, momentopname } from '../../rails/hooks/lib/effect-snapshot.mjs';
 import { toets, toetsHoofdsessie } from '../../rails/hooks/lib/effect.mjs';
 import {
@@ -13,7 +15,9 @@ import {
   legeBlob,
   lstatMet,
   MIN,
+  nieuweDir,
   REVIEWER,
+  roep,
   repoVan,
   schrijf,
   start,
@@ -49,6 +53,8 @@ const LIJST = [
   '.claude/routines',
   '.claude/scheduled_tasks.json',
   '.claude/workflows',
+  '.env',
+  '.env.local',
 ];
 const REVIEWER_WIE = { actor: 'agent-reviewer-S1', agentType: 'reviewer', commando: '', sessie: 'S1' };
 const HOOFD_WIE = { actor: 'hoofd:S1', agentType: '', commando: '', sessie: 'S1' };
@@ -77,7 +83,7 @@ const nieuweRels = (uit: { nieuw: { rel: string | null }[] }): (string | null)[]
 const paar = (voor: ReturnType<typeof neem>, na: ReturnType<typeof neem>) => ({ voor, na, start: 0 });
 
 describe('rolhek-effect/AC-11 (d): de vaste lijst SANDBOX_LEEG', () => {
-  test('SANDBOX_LEEG staat letterlijk in effect-snapshot.mjs en bevat precies de 17 paden uit de spec', () => {
+  test('SANDBOX_LEEG staat letterlijk in effect-snapshot.mjs en bevat precies de 19 paden uit de spec', () => {
     const lijst = exportWaarde(snapshot, 'SANDBOX_LEEG');
     const paden = lijst instanceof Set ? [...lijst] : Array.isArray(lijst) ? lijst : [];
     expect(paden.toSorted()).toStrictEqual(LIJST.toSorted());
@@ -90,7 +96,7 @@ describe('rolhek-effect/AC-11 (d): een overgang tussen weg, leeg bestand en teke
   );
 
   test.each(overgangen)(
-    '%s naar %s op alle 17 paden: geen overtreding',
+    '%s naar %s op alle 19 paden: geen overtreding',
     (van, naar) => {
       const { a } = wereld();
       const voor = neem(a, LIJST, van);
@@ -317,6 +323,321 @@ describe('rolhek-effect/AC-11 (d): in de hooks als proces (reviewer: SubagentSta
       });
       expect(blok(uit)).toContain('.gitmodules');
       expect(git(a, 'status', '--porcelain')).toContain('.gitmodules');
+    },
+    MIN,
+  );
+});
+
+// docs/specs/rolhek-effect.md AC-12 (leerpunt #642, OV-6): `.env` en `.env.local` staan letterlijk op SANDBOX_LEEG. Elk hookgeval
+// draait in een repository met de `.gitignore`-regels van de template en een getrackt bestand in `config/`; de hooks als proces
+// (SubagentStart, een Bash-commando met PreToolUse en PostToolUse, SubagentStop), daarna `nacontrole` zoals `pr:verify` haar aanroept.
+const TEMPLATE_IGNORE = 'node_modules/\n.env\n.env.*\n!.env.example\n';
+
+function templateWereld(): string {
+  const { a } = wereld();
+  commit(a, { '.gitignore': TEMPLATE_IGNORE, 'config/app.ts': 'export {};\n', '.env.example': 'A=\n' });
+  git(a, 'push', '-q', 'origin', 'main');
+  return a;
+}
+
+const leegMet = (a: string, rel: string, mode = 0o644): void => {
+  schrijf(a, rel, '');
+  chmodSync(path.join(a, rel), mode);
+};
+
+/** Eén commando van de reviewer; de uitvoer van PostToolUse als blokkade ('' als er geen is). */
+const doeAlsReviewer = (a: string, command: string, doe: () => void): string =>
+  blok(bash(a, REVIEWER, { command, doe }));
+const openRels = (a: string): (string | null)[] =>
+  nacontrole({ ...repoVan(a), alleenLezen: true }, null).map((o) => o.rel);
+
+describe('rolhek-effect/AC-12: een leeg .env of .env.local telt niet (hooks als proces, groen)', () => {
+  test.each<[string, string, number]>([
+    ['.env', '100644', 0o644],
+    ['.env', '100664', 0o664],
+    ['.env.local', '100644', 0o644],
+    ['.env.local', '100664', 0o664],
+  ])(
+    '(g1, g2) een leeg %s (mode %s) verschijnt en verdwijnt weer: geen overtreding',
+    (rel, _label, mode) => {
+      const a = templateWereld();
+      start(a, REVIEWER);
+      expect(
+        doeAlsReviewer(a, `: > ${rel}`, () => {
+          leegMet(a, rel, mode);
+        }),
+      ).toBe('');
+      expect(
+        doeAlsReviewer(a, `rm ${rel}`, () => {
+          rmSync(path.join(a, rel));
+        }),
+      ).toBe('');
+      expect(blok(stopAgent(a, REVIEWER))).toBe('');
+      expect(openRels(a)).toStrictEqual([]);
+    },
+    MIN,
+  );
+
+  test.each<[string, Staat, Staat]>([
+    ['.env', 'apparaat', 'leeg644'],
+    ['.env', 'leeg644', 'apparaat'],
+    ['.env', 'apparaat', 'weg'],
+    ['.env', 'weg', 'apparaat'],
+    ['.env.local', 'apparaat', 'leeg664'],
+    ['.env.local', 'apparaat', 'weg'],
+  ])(
+    '(g3) %s van %s naar %s, zonder set afgeschermde paden: geen overtreding',
+    (rel, van, naar) => {
+      const a = templateWereld();
+      const voor = neem(a, [rel], van);
+      const na = neem(a, [rel], naar);
+      expect(nieuweRels(toets(repoVan(a), paar(voor, na), REVIEWER_WIE))).toStrictEqual([]);
+    },
+    MIN,
+  );
+});
+
+describe('rolhek-effect/AC-12: wat wel telt rond .env (hooks als proces, rood)', () => {
+  const vul = (a: string, rel: string): void => {
+    schrijf(a, rel, 'A=1\n');
+  };
+  const weg = (a: string, rel: string): void => {
+    rmSync(path.join(a, rel), { recursive: true, force: true });
+  };
+
+  /** `rel` moet in de overtreding staan; `vooraf` gebeurt vóór SubagentStart, `doe` is wat `command` in de werkmap doet. */
+  type Geval = { naam: string; rel: string; vooraf?: (a: string) => void; command: string; doe: (a: string) => void };
+  const gevallen: Geval[] = [
+    {
+      naam: '(r1) .env met inhoud',
+      rel: '.env',
+      command: 'echo A=1 > .env',
+      doe: (a) => {
+        vul(a, '.env');
+      },
+    },
+    {
+      naam: '(r2) een nieuw .env.local met inhoud',
+      rel: '.env.local',
+      command: 'echo A=1 > .env.local',
+      doe: (a) => {
+        vul(a, '.env.local');
+      },
+    },
+    ...['.env', '.env.local'].map((rel) => ({
+      naam: `(r3) een gevuld ${rel} dat verwijderd wordt`,
+      rel,
+      vooraf: (a: string) => {
+        vul(a, rel);
+      },
+      command: `rm ${rel}`,
+      doe: (a: string) => {
+        weg(a, rel);
+      },
+    })),
+    {
+      naam: '(r4) een gevuld .env dat leeg wordt',
+      rel: '.env',
+      vooraf: (a) => {
+        vul(a, '.env');
+      },
+      command: ': > .env',
+      doe: (a) => {
+        leegMet(a, '.env');
+      },
+    },
+    {
+      naam: '(r5) een leeg .env met uitvoerbit',
+      rel: '.env',
+      command: ': > .env && chmod +x .env',
+      doe: (a) => {
+        leegMet(a, '.env', 0o755);
+      },
+    },
+    {
+      naam: '(r6) een symlink .env naar een leeg bestand',
+      rel: '.env',
+      command: 'ln -s /tmp/leeg .env',
+      doe: (a) => {
+        const map = nieuweDir('doel');
+        schrijf(map, 'leeg', '');
+        symlinkSync(path.join(map, 'leeg'), path.join(a, '.env'));
+      },
+    },
+    {
+      naam: '(r8) een leeg .env.local dat in de index staat en verschijnt',
+      rel: '.env.local',
+      vooraf: (a) => {
+        leegMet(a, '.env.local');
+        git(a, 'add', '-f', '.env.local');
+        rmSync(path.join(a, '.env.local'));
+      },
+      command: ': > .env.local',
+      doe: (a) => {
+        leegMet(a, '.env.local');
+      },
+    },
+    {
+      naam: '(r8) een getrackt .env.local dat leeg wordt',
+      rel: '.env.local',
+      vooraf: (a) => {
+        vul(a, '.env.local');
+        git(a, 'add', '-f', '.env.local');
+      },
+      command: ': > .env.local',
+      doe: (a) => {
+        leegMet(a, '.env.local');
+      },
+    },
+    {
+      // De index verandert in het commando niet (git rm --cached gebeurt vooraf): alleen `inHead` maakt dit een overtreding.
+      naam: '(r9) een leeg .env in HEAD, na git rm --cached niet in de index, verdwijnt (leeg naar weg)',
+      rel: '.env',
+      vooraf: (a) => {
+        leegMet(a, '.env');
+        git(a, 'add', '-f', '.env');
+        git(a, 'commit', '-qm', 'leeg .env in HEAD');
+        git(a, 'rm', '-q', '--cached', '.env');
+      },
+      command: 'rm .env',
+      doe: (a) => {
+        weg(a, '.env');
+      },
+    },
+    ...[
+      ['(r10) een leeg .env.production', '.env.production'],
+      ['(r11) een leeg .env.example (getrackt)', '.env.example'],
+      ['(r12) een leeg config/.env', 'config/.env'],
+      ['(r13) een leeg x.env (buiten de lijst)', 'x.env'],
+    ].map(([naam = '', rel = '']) => ({
+      naam,
+      rel,
+      command: `: > ${rel}`,
+      doe: (a: string) => {
+        leegMet(a, rel);
+      },
+    })),
+  ];
+
+  test.each(gevallen)(
+    '$naam: wel een overtreding',
+    ({ rel, vooraf, command, doe }) => {
+      const a = templateWereld();
+      vooraf?.(a);
+      start(a, REVIEWER);
+      expect(
+        doeAlsReviewer(a, command, () => {
+          doe(a);
+        }),
+      ).toContain(rel);
+      stopAgent(a, REVIEWER);
+      expect(openRels(a)).toContain(rel);
+    },
+    MIN,
+  );
+
+  // Een nieuwe genegeerde map staat in de momentopname alleen als één regel (`genegeerd`), niet in `paden`; daarom blijft de
+  // overtreding na PostToolUse niet op de open lijst (bestaand gedrag, los van AC-12, eigen leerpunt). Deze test toetst de
+  // overtreding zelf, zoals de spec (r7) vraagt.
+  test(
+    '(r7) een map .env/: wel een overtreding bij PostToolUse',
+    () => {
+      const a = templateWereld();
+      start(a, REVIEWER);
+      const uit = doeAlsReviewer(a, 'mkdir .env && : > .env/leeg', () => {
+        mkdirSync(path.join(a, '.env'));
+        schrijf(a, '.env/leeg', '');
+      });
+      expect(uit).toContain('.env/');
+    },
+    MIN,
+  );
+
+  test(
+    "(r14) in twee commando's van weg naar gevuld en dan naar leeg: na het tweede staat de overtreding nog op de lijst",
+    () => {
+      const a = templateWereld();
+      start(a, REVIEWER);
+      expect(
+        doeAlsReviewer(a, 'echo A=1 > .env', () => {
+          vul(a, '.env');
+        }),
+      ).toContain('.env');
+      doeAlsReviewer(a, ': > .env', () => {
+        leegMet(a, '.env');
+      });
+      stopAgent(a, REVIEWER);
+      expect(openRels(a)).toContain('.env');
+    },
+    MIN,
+  );
+});
+
+describe('rolhek-effect/AC-12: geen verschil tussen twee momentopnamen', () => {
+  test.each<[string, (a: string) => void]>([
+    [
+      'leeg ervoor en erna',
+      (a) => {
+        leegMet(a, '.env');
+      },
+    ],
+    ['weg ervoor, leeg erna', () => undefined],
+  ])(
+    '.env %s, met inhoud tussendoor in hetzelfde commando: geen overtreding',
+    (_naam, vooraf) => {
+      const a = templateWereld();
+      vooraf(a);
+      start(a, REVIEWER);
+      const uit = doeAlsReviewer(a, 'echo A=1 > .env && : > .env', () => {
+        schrijf(a, '.env', 'A=1\n');
+        leegMet(a, '.env');
+      });
+      expect(uit).toBe('');
+      stopAgent(a, REVIEWER);
+      expect(openRels(a)).toStrictEqual([]);
+    },
+    MIN,
+  );
+});
+
+describe('rolhek-effect/AC-12: werkmapcontrole (verifyWorktree)', () => {
+  const werkmap = (a: string) => ({ root: a, base: 'origin/main' });
+
+  /** Een repository die `.env` niet negeert. */
+  function zonderEnvRegels(): string {
+    const { a } = wereld();
+    commit(a, { '.gitignore': 'node_modules/\n' });
+    git(a, 'push', '-q', 'origin', 'main');
+    return a;
+  }
+
+  test.each(['.env', '.env.local'])(
+    'zonder .env-regels in .gitignore: een ongetrackt leeg %s blokkeert niet',
+    (rel) => {
+      const a = zonderEnvRegels();
+      leegMet(a, rel);
+      expect(() => roep(prVerify, 'verifyWorktree', werkmap(a))).not.toThrow();
+    },
+    MIN,
+  );
+
+  test(
+    'zonder .env-regels in .gitignore: een .env met inhoud blokkeert wel',
+    () => {
+      const a = zonderEnvRegels();
+      schrijf(a, '.env', 'A=1\n');
+      expect(() => roep(prVerify, 'verifyWorktree', werkmap(a))).toThrow('.env');
+    },
+    MIN,
+  );
+
+  test(
+    'met de regels van de template ziet verifyWorktree een leeg of gevuld .env en .env.local niet',
+    () => {
+      const a = templateWereld();
+      leegMet(a, '.env');
+      schrijf(a, '.env.local', 'A=1\n');
+      expect(() => roep(prVerify, 'verifyWorktree', werkmap(a))).not.toThrow();
     },
     MIN,
   );

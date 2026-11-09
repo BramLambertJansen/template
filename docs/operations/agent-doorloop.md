@@ -82,7 +82,9 @@ bovengrens. `pnpm rolhek:overnemen --alles` wist ook alle opnamen en vensters va
 Afscherming door de sandbox is geen effect (spec `rolhek-effect` AC-11, ADR 0084). Voor een ongetrackt pad op de vaste lijst
 `SANDBOX_LEEG` (`rails/hooks/lib/effect-snapshot.mjs:21`) zijn weg, een leeg bestand zonder uitvoerbit en een tekenapparaat 1,3
 gelijk, in elke toets (`rails/hooks/lib/effect.mjs:243`, `effect-compare.mjs:55`); inhoud, een uitvoerbit of een pad buiten de
-lijst telt zoals nu, en de lijst groeit alleen met eigenaarakkoord. Alleen `pr:verify` erkent daarnaast een pad dat de sandbox
+lijst telt zoals nu, en de lijst groeit alleen met eigenaarakkoord. Sinds AC-12 staan ook `.env` en `.env.local` op de lijst,
+alleen als volledig pad vanaf de wortel: een leeg ongetrackt `.env` dat de sandbox achterlaat, telt niet; een `.env` met
+inhoud, `.env.production` of `config/.env` telt zoals nu (`effect-snapshot.mjs:40`). Alleen `pr:verify` erkent daarnaast een pad dat de sandbox
 met een alleen-lezen koppeling van `/dev/null` afschermt; die set bepaalt het zelf uit `/proc/self/mountinfo` en `lstat`
 (`scripts/kit/pr-verify.mjs:147`, `effect-snapshot.mjs:103`), nooit uit de omgeving, een vlag of een bestand. Zo'n pad telt
 niet als verandering, en een open overtreding erop vervalt niet. Een geheim (`.env`, `.env.*` behalve `.env.example`,

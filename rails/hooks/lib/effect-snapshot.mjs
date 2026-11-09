@@ -17,6 +17,7 @@ const GIT_VEILIG = ['--no-replace-objects', '-c', 'core.fsmonitor=false', '-c', 
 /**
  * Plaatshouders van Claude Code (spec rolhek-effect AC-11 d, ADR 0084 punt 2): voor een ongetrackt pad op deze lijst zijn `weg`,
  * een leeg gewoon bestand zonder uitvoerbit en een tekenapparaat 1,3 gelijk. De lijst groeit alleen met eigenaarakkoord (OV-4).
+ * `.env` en `.env.local` (AC-12, leerpunt #642): alleen deze volledige paden vanaf de wortel, geen basisnaam of patroon.
  */
 export const SANDBOX_LEEG = Object.freeze([
   '.bash_profile',
@@ -36,6 +37,8 @@ export const SANDBOX_LEEG = Object.freeze([
   '.claude/routines',
   '.claude/scheduled_tasks.json',
   '.claude/workflows',
+  '.env',
+  '.env.local',
 ]);
 
 /** De staat van een tekenapparaat 1,3 (`/dev/null`) in de werkmap: `<mode>:nul`. */
