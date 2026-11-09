@@ -3,8 +3,8 @@ import type { UserId } from '../../shared/ids.ts';
 
 // Alleen types (geen pool, geen verbinding): route-code en createApp typen hiermee zonder index.ts te laden.
 
-// Drizzle over de verbinding van één transactie (ADR 0042); de handler ziet nooit de pool. Het schema is
-// `src/api/db/schema.ts` (gegenereerd met `pnpm db:generate`).
+// Drizzle over de verbinding van één transactie (ADR 0042); de handler ziet nooit de pool. Tabellen en views voor queries op
+// `tx`: `src/api/db/schema.ts` in de app (gegenereerd met `pnpm db:generate`); core importeert dat schema niet.
 export type Tx = NodePgDatabase;
 
 export type SessionStrength = 'password' | 'mfa';
