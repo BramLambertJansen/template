@@ -71,20 +71,9 @@ Deze accounts en waarden zijn alleen voor lokaal gebruik. Voor een eerste beheer
 
 ## Cloud
 
-Opdrachten geven vanaf telefoon of browser (claude.ai/code, Code-tab in de app) gaat via een cloudsessie: een verse clone in een VM van Anthropic.
+Opdrachten geven vanaf telefoon of browser (claude.ai/code) gaat via een cloudsessie: een verse clone in een VM van Anthropic. Deze inrichting is voor Claude Code; andere runtimes voeren de hooks en permissieregels uit `.claude/` niet uit, zie de [agentinstructies](AGENTS.md).
 
-Deze inrichting is voor Claude Code. Andere runtimes voeren de hooks en permissieregels uit `.claude/` niet automatisch uit; zie de [agentinstructies](AGENTS.md).
-
-Eenmalig per repo:
-
-1. Maak op claude.ai/code een omgeving met netwerktoegang **Trusted** (de standaard). `mise.run` staat niet op die allowlist; het script haalt mise daarom van github.com.
-2. Zet als setup-script `bash scripts/cloud-setup.sh`. Het installeert de sandbox-pakketten (bubblewrap, socat), mise, de toolchain uit `mise.toml`, de dependencies en de git-hooks, zonder geheimen. Klaar binnen ongeveer vijf minuten betekent dat de omgeving wordt gecachet.
-3. Start elke sessie met **één repo**. Alleen dan gelden de hooks en permissieregels uit `.claude/settings.json`.
-
-Een cloudsessie heeft geen lokale stack: `pnpm gate:slow` en `pnpm test:db` draaien in CI. De GitHub-proxy beperkt niet naar welke branch gepusht wordt, dus de ruleset op `main` is daar de grens. Wat in een cloudsessie anders werkt dan lokaal (sandbox, projecthooks, het rolhek), staat in [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md#minimale-claude-code-versie) en [Grens van de sandbox](docs/ENVIRONMENT.md#grens-van-de-sandbox).
-
-Wat het script doet en waarom, staat in [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md).
-Bij installatie-, proxy- of sandboxproblemen volg je de [probleemdiagnose voor de cloudomgeving](docs/ENVIRONMENT.md#problemen).
+Eenmalig per repo: een omgeving met netwerktoegang **Trusted** en `bash scripts/cloud-setup.sh` als setup-script, en elke sessie met één repo. Stappen, wat een cloudsessie anders doet dan lokaal, de grens van de sandbox en de probleemdiagnose staan in [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md).
 
 ## Controles
 
