@@ -74,7 +74,11 @@ Hooguit drie open items (`check:roadmap`); nummer 1 is bewijs vóór uitbreiding
   bestemming per ST-14-inventaris; (4) dubbele blokken in `.github/workflows` (mise-versie op 11 plekken, bubblewrap op 2, het SHA-controleblok in `guard.yml` drie keer;
   de mise-blokken verschillen in `install_args`, `if` en `working_directory`, dus de composite action krijgt parameters) via een composite action,
   met verplichte checknamen ongewijzigd; elke wijziging in `.github/workflows` gaat apart aan de eigenaar (gate-pad) en `guard.yml` alleen via
-  besluit-PR; (5) lange regels in `docs/framework.md` en `docs/dod.md` inkorten binnen de grens van de R-DOC-07-krimpcheck; (6) leerpunten uit de ronde, zie #642.
+  besluit-PR; (5) lange regels in `docs/framework.md` en `docs/dod.md` inkorten binnen de grens van de R-DOC-07-krimpcheck; (6) leerpunten uit de ronde, zie #642; (7) verouderde verwijzingen met eigenaarakkoord: testcommentaar dat naar `docs/specs/taakmandaat-vervolg.md`
+  wijst (nu in `archief/`; `test/hooks/follow-up-kit.ts:7`, `mandate-follow-up-ci.test.ts:19`, `check-roadmap-bewijsvorm.test.ts:6` en twee andere,
+  R-TEST-02), en zes overbodige `.gitkeep`-bestanden in mappen met andere getrackte bestanden (`.claude/agents`, `.claude/hooks`,
+  `.claude/skills`, `.github/workflows`, `scripts`, `src/core/web/ui`; de plaatshouders in `.github/settings`, `deploy`, `designs` en
+  `src/api/domain` blijven).
   aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (categorie C, besluit 1)
 
 ## Volgende
