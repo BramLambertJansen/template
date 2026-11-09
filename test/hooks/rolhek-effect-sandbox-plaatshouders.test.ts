@@ -457,7 +457,7 @@ describe('rolhek-effect/AC-12: wat wel telt rond .env (hooks als proces, rood)',
     {
       naam: '(r6) een symlink .env naar een leeg bestand',
       rel: '.env',
-      command: 'ln -s /tmp/leeg .env',
+      command: 'ln -s "$doel/leeg" .env',
       doe: (a) => {
         const map = nieuweDir('doel');
         schrijf(map, 'leeg', '');
@@ -537,7 +537,7 @@ describe('rolhek-effect/AC-12: wat wel telt rond .env (hooks als proces, rood)',
   );
 
   // Een nieuwe genegeerde map staat in de momentopname alleen als één regel (`genegeerd`), niet in `paden`; daarom blijft de
-  // overtreding na PostToolUse niet op de open lijst (bestaand gedrag, los van AC-12, eigen leerpunt). Deze test toetst de
+  // overtreding na PostToolUse niet op de open lijst (bestaand gedrag, los van AC-12, leerpunt #649). Deze test toetst de
   // overtreding zelf, zoals de spec (r7) vraagt.
   test(
     '(r7) een map .env/: wel een overtreding bij PostToolUse',
