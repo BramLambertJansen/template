@@ -21,8 +21,10 @@ extra stap.
 1. **De body van een heredoc met een aangehaalde delimiter is letterlijk voor `substitutions()`.** Aangehaald is
    `<<'EOF'`, `<<"EOF"`, `<<\EOF` en dezelfde vormen met `<<-`. Bij een onaangehaalde delimiter, een delimiter die niet
    letterlijk te lezen is (`<<$x`) of een body zonder sluitregel blijft alles zoals nu: de body wordt toetsend gelezen.
-2. **De grens komt van de tokenizer, niet van een tweede lezer.** Alleen een `<<`-operator die `tokenize` zelf als operator
-   leest, opent een body. `<<'EOF'` in een string, commentaar of `$'…'` doet dat niet, zodat tekst na een
+2. **De grens komt van de tokenizer, niet van een tweede lezer.** Alleen een `<<`-operator op commandoniveau die `tokenize`
+   zelf als operator leest, opent een body; een `<<` binnen `(( … ))` of `[[ … ]]` is een rekenkundige shift en opent niets
+   (bash voert daar de regels erna wel uit; gemeten met bash 5.2). `tokenize` geeft daarvoor de bodybereiken terug, met of
+   de body aangehaald en gesloten is; een ongesloten body valt dicht. `<<'EOF'` in een string, commentaar of `$'…'` doet dat niet, zodat tekst na een
    schijn-heredoc niet aan het zicht onttrokken wordt (de les van #603: een tweede bash-model laat telkens een sluiproute open).
 3. **Alleen de substitutiezoeker verandert.** De rest van de regel met de operator blijft volledig gelezen (`cat <<'E'; $(x)`).
    De ruwe vangnetten (`RAW_*`, `SHELL_TRICKS`) blijven de heredoc-tekst bekijken (eigenaarsbesluit 26 oktober 2026): een
