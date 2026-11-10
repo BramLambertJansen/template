@@ -5,6 +5,7 @@ import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 import { inKooi } from '../../scripts/kit/kooi.mjs';
+import { vermogen } from '../setup/vermogen.ts';
 
 const ctx = {
   root: '/repo',
@@ -1332,7 +1333,8 @@ describe('rolhek-vooraf-krimp/AC-11: aangehaalde heredoc is geen substitutie', (
     }
   });
 
-  test(`differentieel (${BASH_VERSIE}): bash voert niets uit in een aangehaalde heredoc, wel in een onaangehaalde en bij een shift`, () => {
+  test(`differentieel (${BASH_VERSIE}): bash voert niets uit in een aangehaalde heredoc, wel in een onaangehaalde en bij een shift`, (ctx) => {
+    ctx.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding);
     const map = mkdtempSync(path.join(tmpdir(), 'heredoc-'));
     try {
       const draai = (naam: string, script: string): boolean => {
