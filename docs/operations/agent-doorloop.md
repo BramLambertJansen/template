@@ -79,6 +79,18 @@ blokkeert alleen op de eigen sessie en de context bij elke tool-aanroep noemt de
 bovengrens. `pnpm rolhek:overnemen --alles` wist ook alle opnamen en vensters van de opslag van deze werkmap
 (`scripts/kit/rolhek-overnemen.mjs:neemOver`).
 
+**Een overtreding overnemen** (spec `rolhek-effect` AC-13). De hoofdsessie start `pnpm rolhek:overnemen <pad>` zelf; het
+rolhek vraagt de eigenaar om akkoord en weigert het een subagent (`rails/hooks/lib/rolhek.mjs:isOvernemen`). Ook een pad
+onder `.git/` gaat zo, maar alleen in de letterlijke vorm `pnpm [run] rolhek:overnemen <pad>…` vanuit de wortel, zonder
+pnpm-optie, toewijzing of omhulsel (`rails/hooks/lib/zelfladend.mjs:overnemenVrij`). Controleer zo'n pad eerst. Voor
+`.git/config`: `git config --local --list` (in een gekoppelde worktree is dat de config van de git-common-dir; staat
+`extensions.worktreeConfig` aan, dan ook `git config --worktree --list`). Staat er een sleutel die een programma start of de
+bron verlegt (`core.hooksPath`, `core.fsmonitor`, `core.sshCommand`, `core.editor`, `core.pager`, `core.askPass`, `alias.*`,
+`credential.*`, `url.*.insteadOf`, `include.*`, `includeIf.*`, `filter.*`, `diff.*`, `merge.*.driver`, `gpg.program`) die de
+eigenaar niet zelf zette, neem dan niet over: meld het en zet het terug. Voor een ref of HEAD: `git log -1 <ref>` toont of het
+de eigen commit of merge is. `--alles` blijft de laatste uitweg; het wist elke open overtreding. Dit is een werkafspraak, geen
+check.
+
 Afscherming door de sandbox is geen effect (spec `rolhek-effect` AC-11, ADR 0084). Voor een ongetrackt pad op de vaste lijst
 `SANDBOX_LEEG` (`rails/hooks/lib/effect-snapshot.mjs:22`) zijn weg, een leeg bestand zonder uitvoerbit en een tekenapparaat 1,3
 gelijk, in elke toets (`rails/hooks/lib/effect.mjs:243`, `effect-compare.mjs:55`); inhoud, een uitvoerbit of een pad buiten de

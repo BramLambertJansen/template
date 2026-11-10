@@ -602,7 +602,7 @@ function decideBash({ command, role, tmpdirVrij = tmpdirLetterlijk(command), onz
     const { assignments, argv, pathWrappers } = splitCommand(parsed.words);
     vangnetten({ parsed, argv, variabel }, role, decision);
     forbidden({ assignments, argv, expanded: parsed.expanded ?? [] }, { role, ctx }, decision);
-    zelfladend({ argv, redirects: parsed.redirects, role, ruim: parsed.ruim === true },{ ...ctx, cwd: cwdNu ?? ctx.root, cwdOnbekend: cwdNu === null }, decision);
+    zelfladend({ argv, letterlijk: zonderOmhulselOfSchaduw(argv, parsed.words, command), redirects: parsed.redirects, role, ruim: parsed.ruim === true },{ ...ctx, cwd: cwdNu ?? ctx.root, cwdOnbekend: cwdNu === null }, decision);
     cwdNu = volgendeMap({ argv, expanded: parsed.expanded ?? [] }, cwdNu, ctx.root);
     ghIssue(argv, { role, ctx, setsGhEnv }, decision);
     if (role === 'reviewer') reviewerBash({ assignments, argv, pathWrappers }, parsed.redirects, decision);
@@ -1120,6 +1120,17 @@ function isNewResource(program, args) {
   return program === 'node' && args.some((arg) => /(?:^|\/)scripts\/kit\/new-resource\.mjs$/.test(arg));
 }
 
+// Een commando dat `pnpm` zelf kan overschaduwen (functie, alias, hash, PATH): geen vrijstelling van AC-13 (b).
+const PNPM_SCHADUW = /\b(?:alias|hash|function|enable|builtin)\b|\bpnpm\s*\(|PATH=/;
+
+/**
+ * Het segment had geen toewijzing of omhulsel en het commando overschaduwt `pnpm` niet (spec rolhek-effect AC-13 b).
+ * @param {readonly string[]} argv @param {readonly string[]} woorden @param {string} command
+ */
+function zonderOmhulselOfSchaduw(argv, woorden, command) {
+  return argv.length === woorden.length && !PNPM_SCHADUW.test(command);
+}
+
 /**
  * `pnpm rolhek:overnemen` (ook via `run`) of het script rechtstreeks met node.
  * @param {string} program
@@ -1164,7 +1175,7 @@ function forbidden({ assignments, argv, expanded }, { role, ctx }, decision) {
     decision.deny.push(...subagentGitHub(command), ...subagentTokens(command), ...subagentFormatting(command, ctx));
   }
   if (isOvernemen(program, args)) {
-    const melding = 'rolhek:overnemen heft een overtreding van de toets op effect op (spec rolhek-effect AC-5); de eigenaar beslist';
+    const melding = 'rolhek:overnemen heft een overtreding van de toets op effect op (spec rolhek-effect AC-5, AC-13); de hoofdsessie startte het, de eigenaar geeft akkoord';
     if (role === 'hoofdsessie') decision.ask.push(melding);
     else decision.deny.push(`subagent: ${melding}`);
   }
