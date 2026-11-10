@@ -24,11 +24,12 @@ import { expectAbsent } from '../support/absence.ts';
 //     -> { actie: 'installeren' } | { actie: 'weigeren', melding: string }
 //     'map' installeert wel (eigenaarbesluit: een idempotente frozen install maakt een halve installatie af).
 //   worktreeInstallCommando(tmp: string) -> { command: 'pnpm', args: string[], env: Record<string, string> }
-//     args = ['install', '--frozen-lockfile', '--package-import-method=copy', '--store-dir=<p>'], <p> onder tmp, en geen enkele
-//     andere optie. Dit is een eigen keuze (de enige opties die het script meegeeft); hun geldigheid is met echte pnpm
-//     11.28.x gemeten (zie worktree-install-real-pnpm.test.ts): `--state-dir` weigert pnpm met `Unknown option` (exit 1),
-//     `--cache-dir` wordt geaccepteerd. Cache en state gaan bewust alleen via de omgeving (eigen keuze, geen weigering van
-//     pnpm): env zet XDG_DATA_HOME, XDG_CACHE_HOME en XDG_STATE_HOME onder tmp.
+//     args = ['install', '--frozen-lockfile', '--package-import-method=copy', '--store-dir=<p>', '--cache-dir=<q>'], <p> en <q>
+//     onder tmp (en verschillend), en geen enkele andere optie. Dit is een eigen keuze (de enige opties die het script
+//     meegeeft); hun geldigheid is met echte pnpm 11.28.x gemeten (zie worktree-install-real-pnpm.test.ts): `--state-dir`
+//     weigert pnpm met `Unknown option` (exit 1), `--cache-dir` wordt geaccepteerd. Eigen keuze: de cache gaat met een
+//     CLI-vlag, want een CLI-vlag gaat voor op een globale pnpm-config van de gebruiker en XDG_CACHE_HOME niet. De state
+//     heeft geen vlag en gaat via XDG_STATE_HOME: env zet XDG_DATA_HOME, XDG_CACHE_HOME en XDG_STATE_HOME onder tmp.
 //   worktreeInstallFeiten(root: string) -> { worktree, nodeModules, gewijzigd } uit het echte bestandssysteem en git;
 //     gewijzigd = beheerde bestanden die in de werkmap afwijken van HEAD (gewijzigd, verwijderd of untracked).
 // De module wordt dynamisch geladen, zodat de typecheck ook vóór de implementatie slaagt en de tests op een assertie falen.
@@ -101,9 +102,9 @@ const INHOUD: Record<string, string> = {
 };
 const BEHEERD = Object.keys(INHOUD);
 const ALLEEN_UNTRACKED = ['.npmrc', '.pnpmfile.cjs', '.pnpmfile.mjs'];
-// Eigen keuze: de enige opties die worktreeInstallCommando mag meegeven (cache en state gaan via XDG_*). Hun geldigheid is
-// gemeten met echte pnpm 11.28.x; alleen `--state-dir` wordt door pnpm geweigerd.
-const PNPM_INSTALL_OPTIES = ['frozen-lockfile', 'package-import-method', 'store-dir'];
+// Eigen keuze: de enige opties die worktreeInstallCommando mag meegeven (de state gaat via XDG_STATE_HOME). Hun geldigheid
+// is gemeten met echte pnpm 11.28.x; alleen `--state-dir` wordt door pnpm geweigerd.
+const PNPM_INSTALL_OPTIES = ['frozen-lockfile', 'package-import-method', 'store-dir', 'cache-dir'];
 const XDG = ['XDG_DATA_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME'];
 const dirs: string[] = [];
 
@@ -284,9 +285,10 @@ describe('worktreeInstallBesluit', () => {
 });
 
 describe('worktreeInstallCommando', () => {
-  // Gewijzigd t.o.v. #630: --state-dir bestaat niet als pnpm-installoptie (gemeten met pnpm 11.28.x); --cache-dir wel, maar
-  // wordt bewust niet gebruikt: cache en state gaan via XDG_*.
-  test('gemeten pnpm 11.28.5-contract: frozen lockfile, copy-import en --store-dir onder tmp; cache en state via XDG_*', () => {
+  // Gewijzigd t.o.v. #630: --state-dir bestaat niet als pnpm-installoptie (gemeten met pnpm 11.28.x), de state gaat via
+  // XDG_STATE_HOME. --cache-dir wel, en die staat bewust in de args (eigen keuze): een CLI-vlag gaat voor op een globale
+  // pnpm-config van de gebruiker, XDG_CACHE_HOME niet. XDG_CACHE_HOME blijft als vangnet onder tmp.
+  test('gemeten pnpm 11.28.5-contract: frozen lockfile, copy-import, --store-dir en --cache-dir onder tmp; state en vangnet via XDG_*', () => {
     const basis = path.join(tmpdir(), 'pnpm-wt');
     const { command, args, env } = worktreeInstallCommando(basis);
 
@@ -296,6 +298,7 @@ describe('worktreeInstallCommando', () => {
     expect(args).not.toContain('--force');
     expect(args).toContain('--package-import-method=copy');
     expect(onder(basis, vlagWaarde(args, 'store-dir')), 'store-dir').toBe(true);
+    expect(onder(basis, vlagWaarde(args, 'cache-dir')), 'cache-dir').toBe(true);
     for (const naam of XDG) expect(onder(basis, env[naam]), naam).toBe(true);
     // Geen verwijzing naar een globale pnpm-map van de gebruiker.
     expectAbsent(JSON.stringify({ args, env }), /\.local\/share\/pnpm|\.cache\/pnpm|\.local\/state\/pnpm/, {
@@ -304,20 +307,22 @@ describe('worktreeInstallCommando', () => {
     });
   });
 
-  // Allowlist: onze eigen keuze van opties (geen weigering van pnpm voor --cache-dir), geldigheid gemeten met pnpm 11.28.x; een nieuwe vlag valt hier op
-  // en moet eerst tegen echte pnpm gemeten en aan PNPM_INSTALL_OPTIES toegevoegd worden.
-  test('eigen keuze: alleen --frozen-lockfile, --package-import-method en --store-dir (gemeten geldig met pnpm 11.28.x); geen --state-dir of --cache-dir', () => {
+  // Allowlist: onze eigen keuze van opties, geldigheid gemeten met pnpm 11.28.x; een nieuwe vlag valt hier op en moet eerst
+  // tegen echte pnpm gemeten en aan PNPM_INSTALL_OPTIES toegevoegd worden.
+  test('eigen keuze: alleen --frozen-lockfile, --package-import-method, --store-dir en --cache-dir (gemeten geldig met pnpm 11.28.x); geen --state-dir', () => {
     const basis = path.join(tmpdir(), 'pnpm-wt');
     const { args, env } = worktreeInstallCommando(basis);
 
     expect(args[0]).toBe('install');
     expect(args.slice(1).every((a) => a.startsWith('--'))).toBe(true);
     expect([...optieNamen(args)].sort()).toStrictEqual([...PNPM_INSTALL_OPTIES].sort());
-    expectAbsent(args.join(' '), /--(state|cache)-dir/, {
-      recognizes: ['--state-dir=/x', '--cache-dir=/x'],
-      allows: ['--store-dir=/x'],
+    expect(onder(basis, vlagWaarde(args, 'cache-dir')), 'cache-dir').toBe(true);
+    expect(vlagWaarde(args, 'cache-dir')).not.toBe(vlagWaarde(args, 'store-dir'));
+    expectAbsent(args.join(' '), /--state-dir/, {
+      recognizes: ['--state-dir=/x'],
+      allows: ['--store-dir=/x', '--cache-dir=/x'],
     });
-    // Cache en state komen in samenhang daarmee alleen via de omgeving onder tmp.
+    // De state heeft geen vlag en komt in samenhang daarmee alleen via de omgeving onder tmp (cache: ook als vangnet).
     for (const naam of XDG) expect(onder(basis, env[naam]), naam).toBe(true);
     expect(new Set(XDG.map((naam) => env[naam])).size).toBe(XDG.length);
   });
@@ -424,8 +429,8 @@ describe('worktreeInstallFeiten (echte git-fixture)', () => {
 
 describe('node scripts/kit/worktree-install.mjs (nep-pnpm)', () => {
   // Gewijzigd t.o.v. #630: de oude assertie eiste --cache-dir en --state-dir onder tmpdir; echte pnpm 11.28.x weigert --state-dir
-  // en cache gaat nu (net als state) via XDG_*.
-  test('gekoppelde worktree: pnpm install met alleen geldige opties, store en XDG-mappen onder tmpdir; lockfile ongewijzigd', () => {
+  // (state gaat via XDG_STATE_HOME), maar accepteert --cache-dir, en dat staat weer in de args (eigen keuze: een CLI-vlag gaat voor op een globale pnpm-config, XDG_CACHE_HOME niet).
+  test('gekoppelde worktree: pnpm install met alleen geldige opties, store, cache en XDG-mappen onder tmpdir; lockfile ongewijzigd', () => {
     const { wt } = fixture();
     const { bin, log } = nepPnpm();
     const lockVoor = readFileSync(path.join(wt, 'pnpm-lock.yaml'), 'utf8');
@@ -443,6 +448,7 @@ describe('node scripts/kit/worktree-install.mjs (nep-pnpm)', () => {
     expect(args.slice(0, 2)).toStrictEqual(['install', '--frozen-lockfile']);
     expect([...optieNamen(args)].sort()).toStrictEqual([...PNPM_INSTALL_OPTIES].sort());
     expect(onder(tb, vlagWaarde(args, 'store-dir')), 'store-dir').toBe(true);
+    expect(onder(tb, vlagWaarde(args, 'cache-dir')), 'cache-dir').toBe(true);
     for (const naam of XDG) expect(onder(tb, xdg[naam]), naam).toBe(true);
     expect(readFileSync(path.join(wt, 'pnpm-lock.yaml'), 'utf8')).toBe(lockVoor);
   });

@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #372
+status: gebouwd # #665
 namespace: claude-sandbox-werkstraat
 ---
 
@@ -93,16 +93,16 @@ komt exact `~/.cache/gh` in `allowWrite`. Geen bredere caches, Git-config/hookre
   afwijkende dependency-installatie stopt nog steeds vóór run/exec. Geen installatiereparatie via lokaal `CI=true`.
 - **claude-sandbox-werkstraat/AC-9** — Vergelijkbare native Claude-metingen vóór/na noemen runtime/toolchainversies,
   checkoutvorm, opdracht, exitcode, promptaantal en hook-/CI-bewijs. Onuitgevoerde stappen blijven expliciet onbewezen.
-- **claude-sandbox-werkstraat/AC-10** (nog niet gebouwd) — `node scripts/kit/worktree-install.mjs` ([ADR 0085](../adr/0085-worktree-installatie-in-de-sandbox.md))
+- **claude-sandbox-werkstraat/AC-10** — `node scripts/kit/worktree-install.mjs` ([ADR 0085](../adr/0085-worktree-installatie-in-de-sandbox.md))
   draait in een gekoppelde worktree zonder `node_modules`, binnen de sandbox, `pnpm install --frozen-lockfile` met store,
   cache en state onder `os.tmpdir()`; daarna slagen `node scripts/kit/feiten.mjs` en `pnpm typecheck` met
   `verifyDepsBeforeRun: error`. Het weigert met een melding en zonder install in de hoofdcheckout, als `node_modules` een
   symlink is, en als `pnpm-lock.yaml`, `package.json` of `pnpm-workspace.yaml` niet-gecommitte wijzigingen hebben ten
   opzichte van HEAD; de lockfile verandert niet.
-- **claude-sandbox-werkstraat/AC-11** (nog niet gebouwd) — `.claude/settings.json` staat `node scripts/kit/worktree-install.mjs`
+- **claude-sandbox-werkstraat/AC-11** — `.claude/settings.json` staat `node scripts/kit/worktree-install.mjs`
   letterlijk toe; `pnpm install *`, `pnpm i *` en de andere installatievormen blijven op `ask`, en geen globale pnpm-map komt
   in `allowWrite`.
-- **claude-sandbox-werkstraat/AC-12** (nog niet gebouwd) — De melding van `scripts/kit/toolchain.mjs` noemt per probleem
+- **claude-sandbox-werkstraat/AC-12** — De melding van `scripts/kit/toolchain.mjs` noemt per probleem
   apart het herstel. Ontbreekt `node_modules` in een gekoppelde worktree, dan is dat herstel letterlijk
   `node scripts/kit/worktree-install.mjs` en niet `scripts/bootstrap.sh`; een afwijkende Node- of pnpm-versie blijft ook
   in een worktree naar `scripts/bootstrap.sh` wijzen, ook als `node_modules` tegelijk ontbreekt (dan staan beide er). In de
