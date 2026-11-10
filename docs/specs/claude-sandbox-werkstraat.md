@@ -96,9 +96,10 @@ komt exact `~/.cache/gh` in `allowWrite`. Geen bredere caches, Git-config/hookre
 - **claude-sandbox-werkstraat/AC-10** — `node scripts/kit/worktree-install.mjs` ([ADR 0085](../adr/0085-worktree-installatie-in-de-sandbox.md))
   draait in een gekoppelde worktree zonder `node_modules`, binnen de sandbox, `pnpm install --frozen-lockfile` met store,
   cache en state onder `os.tmpdir()`; daarna slagen `node scripts/kit/feiten.mjs` en `pnpm typecheck` met
-  `verifyDepsBeforeRun: error`. Het weigert met een melding en zonder install in de hoofdcheckout, als `node_modules` een
-  symlink is, en als `pnpm-lock.yaml`, `package.json` of `pnpm-workspace.yaml` niet-gecommitte wijzigingen hebben ten
-  opzichte van HEAD; de lockfile verandert niet.
+  `verifyDepsBeforeRun: error`. Een bestaande, ook lege of halve `node_modules`-map weigert het niet: de frozen install maakt die af. Het weigert met een
+  melding en zonder install in de hoofdcheckout, vanuit een submap, als `node_modules` een symlink is, en als
+  `pnpm-lock.yaml`, `package.json`, `pnpm-workspace.yaml`, `.npmrc`, `.pnpmfile.cjs` of `.pnpmfile.mjs` afwijkt van HEAD
+  (inhoud, verwijderd of untracked); de lockfile verandert niet.
 - **claude-sandbox-werkstraat/AC-11** — `.claude/settings.json` staat `node scripts/kit/worktree-install.mjs`
   letterlijk toe; `pnpm install *`, `pnpm i *` en de andere installatievormen blijven op `ask`, en geen globale pnpm-map komt
   in `allowWrite`.
