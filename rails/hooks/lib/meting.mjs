@@ -1,7 +1,7 @@
 // Meten per sessie en branch (ADR 0046 punt 36): de pure delen van de meethook (rails/hooks/meting.mjs) en de opslag
 // die het overzicht (scripts/kit/meting.mjs) leest. Alleen tellingen en sleutels: nooit prompt- of antwoordtekst,
 // commando-argumenten buiten het prefix, bestandsinhoud of geheimen. Getest in test/hooks/meting.test.ts.
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { payloadCwd } from './root.mjs';
 
@@ -35,11 +35,21 @@ export function repoRoot(cwd) {
   }
 }
 
-/** De git-dir van `root`; een worktree (`.git` als bestand) volgt `gitdir:`. @param {string} root */
+/**
+ * De git-dir van `root`; een worktree (`.git` als bestand) volgt `gitdir:`. Leest direct, zonder stat vooraf: `EISDIR`
+ * betekent een gewone checkout (de map zelf), elke andere fout gaat door. @param {string} root
+ */
 function gitDir(root) {
   const dir = path.join(root, '.git');
-  if (!statSync(dir).isFile()) return dir;
-  const verwijzing = /^gitdir:\s*(.+)$/m.exec(readFileSync(dir, 'utf8'))?.[1]?.trim() ?? '';
+  /** @type {string} */
+  let inhoud;
+  try {
+    inhoud = readFileSync(dir, 'utf8');
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'EISDIR') return dir;
+    throw error;
+  }
+  const verwijzing = /^gitdir:\s*(.+)$/m.exec(inhoud)?.[1]?.trim() ?? '';
   return path.resolve(root, verwijzing);
 }
 
