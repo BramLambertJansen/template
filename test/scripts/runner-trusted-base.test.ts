@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
 import { inKooi } from '../../scripts/kit/kooi.mjs';
+import { vermogen } from '../setup/vermogen.ts';
 
 // PR 3 (plan alright-ga-hier-een-bright-dahl): runner.sh vergelijkt met de echte remote-main (git ls-remote), niet met de
 // lokale ref origin/main; compose faalt dicht zonder RUNNER_INPUT_DIR; kleine invoerpunten. Zoals runner-guard.test.ts.
@@ -171,7 +172,8 @@ describe('compose.yaml: dicht falen zonder runner-invoer', () => {
   });
 
   // db/tests bevat in de template tests, dus geen PGTAP_ALLOW_EMPTY-uitzondering: leeg moet altijd falen.
-  test('test-pgtap: een lege testmap geeft een niet-nul exitcode', () => {
+  test('test-pgtap: een lege testmap geeft een niet-nul exitcode', (ctx) => {
+    ctx.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding);
     const start = COMPOSE.indexOf('set -- /db/tests/*.sql;');
     const einde = COMPOSE.indexOf('fi;', start);
     expect(start).toBeGreaterThan(-1);
