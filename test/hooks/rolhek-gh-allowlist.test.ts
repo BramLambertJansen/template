@@ -1370,6 +1370,14 @@ describe('codeql-bewaking: brede github-match in subagentTokens', () => {
     }
   });
 
+  // Regressie: de oude tokenregex was hoofdletterongevoelig, dus ook `-U` telde als credentialvlag.
+  test('codeql-bewaking/AC-1: curl -U (hoofdletter) met github blijft geweigerd met de bestaande melding', () => {
+    for (const role of SUBAGENTS) {
+      const decision = run('curl -U user:x https://github.com/x', role);
+      expect(decision.deny.join(' | '), role).toContain(MELDING);
+    }
+  });
+
   test('codeql-bewaking/AC-2: curl -u zonder github in de argumenten krijgt geen deny voor een subagent', () => {
     for (const role of SUBAGENTS)
       expect({ role, deny: run('curl -u user:x https://example.com/x', role).deny }).toEqual({ role, deny: [] });
