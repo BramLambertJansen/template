@@ -16,8 +16,8 @@ Kritiek werk (ADR, A3/A4): deze besluit-PR bevat alleen `docs/adr/` en `docs/spe
 ## Rollen en wie wat ziet
 
 n.v.t. — testinfrastructuur voor hoofdsessie, subagents, eigenaar en CI; geen app-gebruikers. De bestaande testbestanden
-wijzigt de hoofdsessie: het rolhek weigert tester en developer een extra skip en vraagt de hoofdsessie per testbestand om
-akkoord; deze merge is dat eigenaarakkoord (R-TEST-02). `verifyTestwijzigingen` in `scripts/kit/check-document-status.mjs`
+wijzigt de hoofdsessie: het rolhek weigert tester en developer een extra skip en kan de hoofdsessie per testbestand om
+akkoord vragen; deze merge is dat eigenaarakkoord (R-TEST-02). `verifyTestwijzigingen` in `scripts/kit/check-document-status.mjs`
 draait alleen in de feature-lane met een open besluit en blokkeert de bouw-PR dus niet.
 
 ## Datawijzigingen (met grants)
@@ -64,8 +64,8 @@ n.v.t. — geen UI. Letterlijke teksten (`<…>` wordt ingevuld):
 - **tests-naar-vermogen/AC-3** — Een testbestand zet de voorwaarde met één zichtbare `ctx.skip(<ontbreekt>, <melding>)` in een
   `beforeEach` van het kleinste bestaande `describe`-blok of in de test zelf, met waarden alleen uit `vermogen('kooi')`.
   Terugval als `ctx.skip(voorwaarde, notitie)` in vitest 5.0.3 niet bestaat: `describe.skipIf(vermogen('kooi').ontbreekt)` of
-  `test.skipIf(…)` op dezelfde plek (de teller in `rails/hooks/lib/testteller.mjs` telt `skipIf` als skip); de melding komt dan
-  alleen uit de setup (AC-5).
+  `test.skipIf(…)` op dezelfde plek (de teller in `rails/hooks/lib/testteller.mjs` telt `skipIf` als skip); de reporter (AC-6) telt dan
+  ook die overgeslagen tests en noemt de reden uit de setup.
 - **tests-naar-vermogen/AC-4** — De voorwaarde `kooi` komt in `test/hooks/rolhek-padcorpus.test.ts`,
   `test/hooks/rolhek-effect.test.ts`, `test/hooks/rolhek-effect-hoofdsessie.test.ts`, `test/hooks/rolhek-specarchief-effect.test.ts`,
   `test/docs/start-nieuwe-app.test.ts`, `test/rails/ci-scan.test.ts`, `test/rails/document-status-lokaal-config.test.ts`,
@@ -77,10 +77,12 @@ n.v.t. — geen UI. Letterlijke teksten (`<…>` wordt ingevuld):
   exitcode 0, slagen `cloud-setup.test.ts` en de test "zonder bubblewrap", en drukt de run precies één regel `⚠ overgeslagen: …`
   af.
 - **tests-naar-vermogen/AC-6** — CI is `GITHUB_ACTIONS` of `CI` met een niet-lege waarde anders dan `false` of `0`. Een reporter in
-  `test/setup/` (in `vitest.config.ts` naast de standaardreporter) telt na elke run de overgeslagen en `todo`-tests; in CI met
-  minstens één zo'n test is de exitcode van vitest niet 0 en staat elke test in de uitvoer met de CI-melding. Terugval als
-  een reporter de exitcode niet kan zetten: de reporter drukt de CI-melding af en `scripts/kit/gate-fast.mjs` maakt `test:unit`
-  rood zodra de uitvoer een regel `✗ overgeslagen in CI:` bevat (in CI is `pnpm gate:fast` de enige aanroep van `test:unit`).
+  `test/setup/` (in `vitest.config.ts` naast de standaardreporter) telt na elke run de overgeslagen en `todo`-tests, alleen
+  in de projecten `unit` en `web` (net als de globale setup in AC-1; `int` telt niet mee); in CI met minstens één zo'n test is
+  de exitcode van vitest niet 0 en staat elke test in de uitvoer met de CI-melding. Terugval als een reporter de exitcode niet
+  kan zetten: de reporter drukt de CI-melding af en `scripts/kit/gate-fast.mjs` maakt `test:unit` rood zodra de uitvoer een
+  regel `✗ overgeslagen in CI:` bevat. De bouw bevestigt dat elke CI-aanroep van `test:unit` via `gate-fast.mjs` loopt, ook die
+  van `pnpm check:new-resource --deel`; loopt een aanroep er niet via, dan dekt de terugval ook dat pad.
 - **tests-naar-vermogen/AC-7** — In CI met een ontbrekende kooi faalt de globale setup met de CI-melding en draait geen test.
 - **tests-naar-vermogen/AC-8** — `gate:fast` toont onder elke groene gate de uitvoerregels die met `⚠` en een spatie beginnen,
   vóór de lijst; een groene gate zonder zulke regels toont niets extra.
