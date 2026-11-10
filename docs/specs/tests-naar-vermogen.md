@@ -9,7 +9,7 @@ model: sonnet
 ## Doel
 
 Tests die de kooi nodig hebben, slaan over waar een proef laat zien dat de kooi hier niet kan starten (de sandbox van Claude
-Code), met één melding; in CI is elke overgeslagen test rood ([ADR 0087](../adr/0087-tests-naar-vermogen.md), leerpunt #607).
+Code), met één melding; in CI is elke overgeslagen test rood ([ADR 0088](../adr/0088-tests-naar-vermogen.md), leerpunt #607).
 
 Kritiek werk (ADR, A3/A4): deze besluit-PR bevat alleen `docs/adr/` en `docs/specs/`; de bouw is een tweede PR.
 
@@ -43,9 +43,9 @@ n.v.t. — geen externe dienst.
 
 n.v.t. — geen UI. Letterlijke teksten (`<…>` wordt ingevuld):
 
-- lokaal, aan het eind van de run: `⚠ overgeslagen: <n> tests, want de kooi kan hier niet starten (<reden>); ze draaien in CI, waar overslaan rood is (ADR 0087)`
-- in CI, per overgeslagen test: `✗ overgeslagen in CI: <bestand> > <testnaam>; in CI slaat geen test over (ADR 0087)`
-- in CI bij een ontbrekende kooi, in de setup: `✗ kooi ontbreekt in CI (<reden>); in CI slaat geen test over (ADR 0087)`
+- lokaal, aan het eind van de run: `⚠ overgeslagen: <n> tests, want de kooi kan hier niet starten (<reden>); ze draaien in CI, waar overslaan rood is (ADR 0088)`
+- in CI, per overgeslagen test: `✗ overgeslagen in CI: <bestand> > <testnaam>; in CI slaat geen test over (ADR 0088)`
+- in CI bij een ontbrekende kooi, in de setup: `✗ kooi ontbreekt in CI (<reden>); in CI slaat geen test over (ADR 0088)`
 - skipnotitie per test: `kooi ontbreekt hier; draait in CI`
 
 `<reden>` is de melding uit de proef van `scripts/kit/kooi.mjs` (`✗ kooi: bubblewrap start niet …` of `MELDING_GEEN_BWRAP`).
@@ -100,7 +100,7 @@ n.v.t. — geen UI. Letterlijke teksten (`<…>` wordt ingevuld):
 |---|---|---|
 | Sandbox van Claude Code: bubblewrap mag geen namespace maken | `kooi` ontbreekt; tests slaan over met melding (AC-5) | n.v.t. |
 | Kooi start, schrijft toch buiten de werkmap (`schermt-niet-af`) | `kooi` aanwezig; tests falen, ook lokaal (AC-1) | n.v.t. |
-| Lokaal zonder bubblewrap, of `PATH` zonder `bwrap` | `kooi` ontbreekt; melding noemt de installatie; aanvaard restrisico (ADR 0087) | n.v.t. |
+| Lokaal zonder bubblewrap, of `PATH` zonder `bwrap` | `kooi` ontbreekt; melding noemt de installatie; aanvaard restrisico (ADR 0088) | n.v.t. |
 | De proef gooit zelf een uitzondering | run faalt, niets slaat over (AC-2) | n.v.t. |
 | Project zonder de globale setup (`int`) roept `vermogen()` aan | fout met projectnaam, niet overslaan (AC-2) | n.v.t. |
 | CI zonder werkende kooi | setup faalt (AC-7); de workflowstap `kooi.mjs --proef` faalt al eerder | n.v.t. |

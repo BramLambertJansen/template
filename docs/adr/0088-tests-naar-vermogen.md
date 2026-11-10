@@ -1,4 +1,4 @@
-# 0087 — Tests naar vermogen: overslaan waar de kooi niet kan starten, nooit in CI
+# 0088 — Tests naar vermogen: overslaan waar de kooi niet kan starten, nooit in CI
 
 Status: geaccepteerd
 
