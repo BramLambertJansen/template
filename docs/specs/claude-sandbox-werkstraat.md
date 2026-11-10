@@ -1,6 +1,7 @@
 ---
-status: gebouwd # #665
+status: gebouwd # #667
 namespace: claude-sandbox-werkstraat
+model: sonnet
 ---
 
 # Dagelijks werk in de Claude Code-sandbox
@@ -70,6 +71,19 @@ rolbeperkingen blijven leidend.
 Git-metadata blijft bij Claude's ingebouwde ondersteuning. Alleen als de echte gh-logproef een cacheblokkade bewijst,
 komt exact `~/.cache/gh` in `allowWrite`. Geen bredere caches, Git-config/hookrechten of credentialwrites.
 
+### Runnermelding bij een onleesbare remote (leerpunt #658)
+
+`excludedCommands` haalt een runnercommando volgens de documentatie van Claude Code alleen uit de sandbox als elk commando
+in de Bash-aanroep op de lijst past. Meting 2026-11-10: kaal `pnpm db:generate` en `pnpm check:snapshot` draaiden buiten de
+sandbox; met een pipe erachter (`pnpm check:snapshot | tail -5`) startte de runner in de sandbox; met `cd <wortel> &&`
+ervoor of `2>&1` erachter draaide hij er toch buiten. De kale vorm is de enige die zeker werkt. Gemeten in de sandbox: de
+omgeving bevat `GIT_CONFIG_PARAMETERS='http.proxyAuthMethod=basic' 'credential.http://127.0.0.1:3128.helper='`;
+`env -u GIT_CONFIG_PARAMETERS git ls-remote origin refs/heads/main` gaf `fatal: unable to access ...: Proxy CONNECT aborted`,
+`env -u GIT_CONFIG_COUNT git ls-remote ...` slaagde. De proxy komt uit `HTTPS_PROXY`, die de runner laat staan; wat wegvalt
+is de auth-methode uit `GIT_CONFIG_PARAMETERS`, die de runner wist. Het advies `git fetch origin main` helpt dan niet. ADR 0044
+(runner buiten de sandbox) blijft. De runner vult de melding van ADR 0044 punt 3 aan met de kale vorm; hij vervangt niets
+(geen A4), verandert geen recht of check (geen A3) en gooit de stderr van de lezing weg zoals nu.
+
 ## Acceptatiecriteria
 
 - **claude-sandbox-werkstraat/AC-1** — De geldige exacte `packageManager`-pin bepaalt de mise-selectie; zowel de lokale
@@ -108,6 +122,21 @@ komt exact `~/.cache/gh` in `allowWrite`. Geen bredere caches, Git-config/hookre
   `node scripts/kit/worktree-install.mjs` en niet `scripts/bootstrap.sh`; een afwijkende Node- of pnpm-versie blijft ook
   in een worktree naar `scripts/bootstrap.sh` wijzen, ook als `node_modules` tegelijk ontbreekt (dan staan beide er). In de
   hoofdcheckout blijft elk herstel `scripts/bootstrap.sh`.
+- **claude-sandbox-werkstraat/AC-13** — Faalt in `scripts/runner.sh` de lezing
+  `git ls-remote origin refs/heads/main` (exit ≠ 0, ook bij een timeout van die lezing), dan stopt de runner met exit 1 en
+  zet op stderr de bestaande regel ongewijzigd
+  (`✗ main bij de remote is niet te lezen, dus de host-bestanden zijn niet te vergelijken: draai git fetch origin main.`)
+  en direct daarna, met twee spaties ingesprongen, de regel
+  `→ Agent in Claude Code: draai het runnercommando kaal, als enige commando in de aanroep, vanuit de wortel, zonder cd, &&, pipe, omleiding of omhulsel; anders blijft het in de sandbox.`
+  De stderr van git blijft weggegooid. Toets 1: origin `https://127.0.0.1:<poort>/repo.git` in `.git/config`, waarbij de test
+  de poort neemt door te binden en weer te sluiten. Toets 2 (timeout): een `timeout`-stub vooraan op `PATH` (de runner zoekt
+  `timeout` met `command -v`) die meteen met exit 124 stopt; dezelfde twee regels, zonder 30 s te wachten. Zonder de
+  aanvulling falen beide.
+- **claude-sandbox-werkstraat/AC-14** — Regressiepin, op de huidige code al groen (geen rode test
+  vereist): een aanroeper met `GIT_CONFIG_PARAMETERS="'remote.origin.url=<andere bare>'"` krijgt dezelfde exitcode en basis
+  als zonder, zoals in `test/scripts/runner-trusted-base-bypass.test.ts`; en een vaste toets stelt vast dat `scripts/runner.sh`
+  geen toewijzing aan `GIT_CONFIG_PARAMETERS`, `GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_*` of `GIT_CONFIG_VALUE_*` bevat (ook
+  niet als tijdelijke toewijzing vóór een commando), geen `git -c` en geen `--config-env`; `GIT_CONFIG_NOSYSTEM=1` blijft. De bestaande runnertests blijven ongewijzigd groen.
 
 ## Randgevallen
 
@@ -119,6 +148,9 @@ komt exact `~/.cache/gh` in `allowWrite`. Geen bredere caches, Git-config/hookre
 | gh-logcache is al schrijfbaar | geen extra allowWrite toevoegen | n.v.t. |
 | Native Git weigert beschermde metadata | blokkade melden; geen brede Git-rechten | n.v.t. |
 | Native Claude-proef ontbreekt | geen claim dat de dagelijkse flow werkt | n.v.t. |
+| Runnercommando met een pipe of een andere niet-kale vorm | kan in de sandbox blijven; melding van AC-13 noemt de kale vorm | n.v.t. |
+| Remote-lezing hangt | na 30 s gestopt; dezelfde melding als AC-13 | n.v.t. |
+| Sha ontbreekt lokaal na een geslaagde lezing | bestaande melding met `git fetch origin main` | n.v.t. |
 
 ## Raakt ook
 
@@ -129,10 +161,24 @@ met reden in de PR. Beschermde paden, rolhek uit main, CI en eigenaarmerge blijv
 behalve voor AC-10 tot en met AC-12: het nieuwe script `scripts/kit/worktree-install.mjs` met zijn test
 `test/scripts/worktree-install.test.ts`, plus `scripts/kit/toolchain.mjs` en `.claude/settings.json` met hun tests.
 
+AC-13 en AC-14 (route volledig, R-WERK-04: vertrouwensgrens van de runner): `scripts/runner.sh` en een nieuw testbestand
+onder `test/scripts/`; bestaande runnertests ongewijzigd. Docs in dezelfde PR: `docs/operations/sandbox-bewijs.md` (punt
+`excludedCommands`: alleen als elk commando in de aanroep op de lijst past, meting 2026-11-10; de verouderde verwijzingen
+naar `.claude/settings.json` op regel 3, 13, 43 en 45 bijwerken), `docs/operations/agent-doorloop.md` (de bestaande passage "zonder … samengestelde
+shellopdracht" in "Ontwikkelen en runnerchecks" aanvullen, geen nieuwe alinea; de verwijzingen naar `scripts/runner.sh`
+bijwerken) en `docs/operations/runner-invoer.md` (alinea over de basis: de aanvullende regel). R-RUNNER-02 en ADR 0044
+blijven waar. `.claude/hooks/laden.mjs` en `rails/hooks/lib/runner-authority.mjs`: geen wijziging. De PR sluit #658 (sectie
+`## Leerpunt` in de PR-body). `check:migrations`, `check:secdef`, `test:db`/policies, `test/security/resources.ts` en
+permissietests: n.v.t. — geen database, route of permissie.
+
 ## Buiten scope
 
 Codexinstellingen, modelkeuze, provider/dependencywijzigingen, runner- of netwerkverruiming, nieuwe pijplijn,
 projectstore/cache/stateherinrichting (behalve de worktree-installatie van AC-10), globale pnpm-writes, Git-upstreamregistratie, nieuwe rolheklogica en PR-mergen.
+AC-13 en AC-14 verruimen niets. Bewust buiten scope, elk met een eigen besluit: (a) het rolhek dat de samengestelde
+vorm van een runnercommando vooraf weigert met dezelfde aanwijzing (`rails/hooks/**` is `besluit-pr`; nu kijkt
+`rails/hooks/lib/rolhek.mjs` naar `ctx.cwd === ctx.root && automaticRunner(command)`); (b) de kale vorm in `.claude/agents/`
+en skills (beschermd pad). Ook buiten scope: leerpunt #607 en de pre-commit-job `secrets`/mise trust.
 
 ## Testplan
 
@@ -147,6 +193,10 @@ exit 0; die exacte pnpm gaf met `exec prettier --version` in dezelfde proef 3.9.
 `mise exec -- betterleaks version` gaf 1.9.0 met exit 0. Dit bewijst uitsluitend die probes. Leg vóór en na
 implementatie daarnaast AC-9 vast in echte Claude Code-sessies; echte commits/pushes/PR-aanmaak en hooks horen bij
 die proef, geen gemockte vervanging of overslaan van controles.
+
+AC-13 en AC-14: een aparte tester schrijft eerst de unittests onder `test/scripts/`, met echte git en de echte runner
+(rood voor AC-13; AC-14 is een regressiepin). Omdat de PR hostcode wijzigt, krijgen `test:db` en `ui:check` hun bewijs via
+de wegwerp-CI en `pnpm pr:verify` (R-RUNNER-03).
 
 ## Open vragen
 
