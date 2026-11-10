@@ -982,7 +982,7 @@ App-eigen ADR's: begin bij `0100` (`docs/adr/0100-…`). `0001`–`0099` zijn va
 | `port is already allocated` | Andere app of oude stack op die poort | Oude stack met dezelfde slug: Fase 3, *Restanten van een eerdere ronde*. Andere app: Fase 7.1 met +10; nooit een andere stack stoppen zonder vragen |
 | Andere poort in `.env.local` maar stack gebruikt 54322 | Stack met losse `docker compose` gestart, zonder `--env-file .env.local` | Stoppen en starten met `pnpm dev` (geeft de vlag mee) |
 | `dependency failed to start: container … is unhealthy` | `db/init` faalt, of volume van een oudere poging | `docker compose --env-file .env.local logs postgres` laten plakken; oud volume alleen met toestemming weggooien |
-| `role "app_migrator" does not exist` | Volume bestond al vóór `db/init` (init draait alleen op een leeg volume) | Eigenaar beslist: `docker compose down -v` en opnieuw — vernietigt die database |
+| `role "app_migrator" does not exist` | Volume bestond al vóór `db/init` (init draait alleen op een leeg volume) | Eigenaar beslist: oude stack opruimen met het blok in Fase 3, *Restanten van een eerdere ronde*, en opnieuw — vernietigt die database |
 | dbmate `permission denied for database app` | Gedraaid als verkeerde rol | Alleen via `pnpm db:migrate` / `scripts/db-migrate.sh` (gebruikt `MIGRATOR_DATABASE_URL`) |
 | `doctor.sh`: ✗ git-hooks ontbreken | `scripts/bootstrap.sh` niet (helemaal) gedraaid | Eigenaar draait `scripts/bootstrap.sh` opnieuw (Fase 7.2) |
 | `mise: command not found` in een script | Niet-interactieve shell zonder `mise activate` | Eigenaar draait het in een nieuwe terminal; jij gebruikt `~/.local/bin/mise exec --` |
