@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expect, test } from 'vitest';
 import { inKooi } from '../../scripts/kit/kooi.mjs';
+import { vermogen } from '../setup/vermogen.ts';
 
 // De job `secrets` leest op een PR alleen de commits van die PR (`origin/main..HEAD`) en op main alle gefetchte refs.
 // Alle refs scannen op een PR liet één valse melding op één branch elke open PR rood maken (#97, #99); de scan op main houdt
@@ -38,7 +39,8 @@ function scan(event: string): string {
   }
 }
 
-test('op een PR alleen de commits van die PR, met eigen config en zonder inline allows', () => {
+test('op een PR alleen de commits van die PR, met eigen config en zonder inline allows', (ctx) => {
+  ctx.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding);
   const args = scan('pull_request');
 
   expect(args).toContain('--log-opts origin/main..HEAD');
@@ -46,13 +48,17 @@ test('op een PR alleen de commits van die PR, met eigen config en zonder inline 
   expect(args).toContain('--ignore-gitleaks-allow');
 });
 
-test.each(['push', 'merge_group', 'workflow_dispatch'])('bij %s alle gefetchte refs, zonder beperking', (event) => {
-  const args = scan(event);
+// test.each geeft geen testcontext mee: hier de vorm met skipIf (tests-naar-vermogen AC-3, terugval).
+test.skipIf(vermogen('kooi').ontbreekt).each(['push', 'merge_group', 'workflow_dispatch'])(
+  'bij %s alle gefetchte refs, zonder beperking',
+  (event) => {
+    const args = scan(event);
 
-  expect(args).not.toContain('--log-opts');
-  expect(args).toContain('-c scripts/kit/betterleaks.toml');
-  expect(args).toContain('--ignore-gitleaks-allow');
-});
+    expect(args).not.toContain('--log-opts');
+    expect(args).toContain('-c scripts/kit/betterleaks.toml');
+    expect(args).toContain('--ignore-gitleaks-allow');
+  },
+);
 
 test('EVENT komt uit het event van de workflow, niet uit iets anders', () => {
   expect(job).toMatch(/env:\n\s+EVENT: \$\{\{ github\.event_name \}\}/);
