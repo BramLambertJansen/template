@@ -75,15 +75,15 @@ n.v.t. — geen UI. De melding noemt per pad de rol, het pad, de regel uit `deci
 | `.bashrc` is op de host een tekenapparaat 1,3, of verdwijnt na afloop | telt niet (AC-11 d) | n.v.t. |
 | App trackt `.gitmodules`; subagent maakt het leeg | telt (getrackt pad, AC-11 d) | n.v.t. |
 | Editor of IDE (bijvoorbeeld VS Code: `branch.<naam>.vscode-merge-base`) schrijft `.git/config` zonder venster terwijl een subagent loopt | komt op de lijst op naam van die subagent; geaccepteerd vals positief, de hoofdsessie neemt over met `pnpm rolhek:overnemen .git/config` na de controle van AC-13 (c) (AC-13); geen uitzondering, want `.git/config` kan ook `core.hooksPath` of `core.fsmonitor` zetten (buiten AC-11, eigen leerpunt) | n.v.t. |
-| Sandbox laat een leeg ongetrackt `.env` of `.env.local` achter (0 bytes, oude wijzigingstijd), of het verdwijnt weer (AC-12, nog niet gebouwd) | telt niet in elk toetsmoment (AC-11 d) | n.v.t. |
-| `pr:verify` in de sandbox, mountinfo bevestigt de koppeling van `.env` (AC-12, nog niet gebouwd) | zoals nu: overgeslagen en gemeld in de regel van AC-11 (b) | n.v.t. |
-| `pr:verify` in de sandbox, mountinfo onleesbaar of niet bevestigend; `.env` is een tekenapparaat 1,3; de opname van de hook had een lege `.env` of geen (AC-12, nog niet gebouwd) | gelijk, stil (AC-11 d); vandaag een overtreding | n.v.t. |
-| Idem, maar de opname van de hook had een `.env` met inhoud (AC-12, nog niet gebouwd) | geen plaatshouder; overtreding zoals nu | n.v.t. |
-| Subagent schrijft inhoud in `.env`, maakt een gevuld `.env.local` leeg of verwijdert het, zet een uitvoerbit, een symlink of een map neer, of zet een leeg `.env.production` of `config/.env` neer (AC-12, nog niet gebouwd) | telt zoals nu | n.v.t. |
-| In één commando: `.env` van weg naar gevuld en weer naar leeg (AC-12, nog niet gebouwd) | de toets ziet alleen weg tegenover leeg: telt niet; de tussenstand is onzichtbaar, zoals voor elk pad | n.v.t. |
-| In twee commando's: `.env` van weg naar gevuld, dan naar leeg (AC-12, nog niet gebouwd) | het eerste geeft een overtreding (staat van vóór: weg); het tweede vervalt die niet, want leeg is niet gelijk aan de bewaarde staat `weg` (AC-5); de eigenaar neemt over | n.v.t. |
-| `.env` staat in HEAD maar niet in de index (`git rm --cached .env`) en wordt leeg of verdwijnt (AC-12, nog niet gebouwd) | telt zoals nu (in HEAD, AC-11 d) | n.v.t. |
-| Leeg `.env.local` op de host terwijl `pnpm dev` het uit `.env.example` wil maken (`scripts/dev.mjs` kopieert alleen als het bestand niet bestaat) (AC-12, nog niet gebouwd) | telt niet voor het rolhek; `pnpm dev` start dan zonder waarden. Gevolg van de plaatshouder zelf, niet van deze spec; eigen leerpunt | n.v.t. |
+| Sandbox laat een leeg ongetrackt `.env` of `.env.local` achter (0 bytes, oude wijzigingstijd), of het verdwijnt weer (AC-12) | telt niet in elk toetsmoment (AC-11 d) | n.v.t. |
+| `pr:verify` in de sandbox, mountinfo bevestigt de koppeling van `.env` (AC-12) | zoals nu: overgeslagen en gemeld in de regel van AC-11 (b) | n.v.t. |
+| `pr:verify` in de sandbox, mountinfo onleesbaar of niet bevestigend; `.env` is een tekenapparaat 1,3; de opname van de hook had een lege `.env` of geen (AC-12) | gelijk, stil (AC-11 d); vandaag een overtreding | n.v.t. |
+| Idem, maar de opname van de hook had een `.env` met inhoud (AC-12) | geen plaatshouder; overtreding zoals nu | n.v.t. |
+| Subagent schrijft inhoud in `.env`, maakt een gevuld `.env.local` leeg of verwijdert het, zet een uitvoerbit, een symlink of een map neer, of zet een leeg `.env.production` of `config/.env` neer (AC-12) | telt zoals nu | n.v.t. |
+| In één commando: `.env` van weg naar gevuld en weer naar leeg (AC-12) | de toets ziet alleen weg tegenover leeg: telt niet; de tussenstand is onzichtbaar, zoals voor elk pad | n.v.t. |
+| In twee commando's: `.env` van weg naar gevuld, dan naar leeg (AC-12) | het eerste geeft een overtreding (staat van vóór: weg); het tweede vervalt die niet, want leeg is niet gelijk aan de bewaarde staat `weg` (AC-5); de eigenaar neemt over | n.v.t. |
+| `.env` staat in HEAD maar niet in de index (`git rm --cached .env`) en wordt leeg of verdwijnt (AC-12) | telt zoals nu (in HEAD, AC-11 d) | n.v.t. |
+| Leeg `.env.local` op de host terwijl `pnpm dev` het uit `.env.example` wil maken (`scripts/dev.mjs` kopieert alleen als het bestand niet bestaat) (AC-12) | telt niet voor het rolhek; `pnpm dev` start dan zonder waarden. Gevolg van de plaatshouder zelf, niet van deze spec; eigen leerpunt | n.v.t. |
 | Hoofdsessie: `pnpm rolhek:overnemen .git/config` of `.git/refs/heads/x` (AC-13) | `ask` aan de eigenaar; geen `deny` meer om het zelfladende argument | n.v.t. |
 | Hoofdsessie: `pnpm rolhek:overnemen .git/config > .git/hooks/pre-commit`, of `… && echo x > .git/config` (AC-13) | `deny` zoals nu: de omleiding en het tweede commando tellen | n.v.t. |
 | Subagent: `pnpm rolhek:overnemen .git/config` (AC-13) | `deny` zoals nu | n.v.t. |
