@@ -147,7 +147,7 @@ is de auth-methode uit `GIT_CONFIG_PARAMETERS`, die de runner wist. Het advies `
 | gh-logcache is al schrijfbaar | geen extra allowWrite toevoegen | n.v.t. |
 | Native Git weigert beschermde metadata | blokkade melden; geen brede Git-rechten | n.v.t. |
 | Native Claude-proef ontbreekt | geen claim dat de dagelijkse flow werkt | n.v.t. |
-| Runnercommando samengesteld aangeroepen | runner in de sandbox; melding van AC-13 noemt de kale vorm | n.v.t. |
+| Runnercommando met een pipe of een andere niet-kale vorm | kan in de sandbox blijven; melding van AC-13 noemt de kale vorm | n.v.t. |
 | Remote-lezing hangt | na 30 s gestopt; dezelfde melding als AC-13 | n.v.t. |
 | Sha ontbreekt lokaal na een geslaagde lezing | bestaande melding met `git fetch origin main` | n.v.t. |
 
