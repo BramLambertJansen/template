@@ -1,23 +1,24 @@
 ---
 status: goedgekeurd
 namespace: tests-naar-vermogen
-model: opus
+model: sonnet
 ---
 
 # Tests naar vermogen: overslaan waar de kooi niet kan starten, nooit in CI
 
 ## Doel
 
-Tests die de kooi of schrijfrechten in systeemmappen nodig hebben, slaan over waar een proef laat zien dat dat vermogen
-ontbreekt (de sandbox van Claude Code), met één melding; in CI is elke overgeslagen test rood
-([ADR 0087](../adr/0087-tests-naar-vermogen.md), leerpunt #607).
+Tests die de kooi nodig hebben, slaan over waar een proef laat zien dat de kooi hier niet kan starten (de sandbox van Claude
+Code), met één melding; in CI is elke overgeslagen test rood ([ADR 0087](../adr/0087-tests-naar-vermogen.md), leerpunt #607).
 
 Kritiek werk (ADR, A3/A4): deze besluit-PR bevat alleen `docs/adr/` en `docs/specs/`; de bouw is een tweede PR.
 
 ## Rollen en wie wat ziet
 
-n.v.t. — testinfrastructuur voor hoofdsessie, subagents, eigenaar en CI; geen app-gebruikers. De tien bestaande testbestanden
-wijzigt de hoofdsessie (het rolhek weigert tester en developer een extra skip; deze merge is het eigenaarakkoord, R-TEST-02).
+n.v.t. — testinfrastructuur voor hoofdsessie, subagents, eigenaar en CI; geen app-gebruikers. De bestaande testbestanden
+wijzigt de hoofdsessie: het rolhek weigert tester en developer een extra skip en vraagt de hoofdsessie per testbestand om
+akkoord; deze merge is dat eigenaarakkoord (R-TEST-02). `verifyTestwijzigingen` in `scripts/kit/check-document-status.mjs`
+draait alleen in de feature-lane met een open besluit en blokkeert de bouw-PR dus niet.
 
 ## Datawijzigingen (met grants)
 
@@ -42,73 +43,80 @@ n.v.t. — geen externe dienst.
 
 n.v.t. — geen UI. Letterlijke teksten (`<…>` wordt ingevuld):
 
-- lokaal, per vermogen, aan het eind van de run: `⚠ overgeslagen: <n> tests, want <vermogen> ontbreekt hier (<reden>); ze draaien in CI, waar overslaan rood is (ADR 0087)`
+- lokaal, aan het eind van de run: `⚠ overgeslagen: <n> tests, want de kooi kan hier niet starten (<reden>); ze draaien in CI, waar overslaan rood is (ADR 0087)`
 - in CI, per overgeslagen test: `✗ overgeslagen in CI: <bestand> > <testnaam>; in CI slaat geen test over (ADR 0087)`
-- in CI bij een ontbrekend vermogen, in de setup: `✗ vermogen <vermogen> ontbreekt in CI (<reden>); in CI slaat geen test over (ADR 0087)`
-- skipnotitie per test: `<vermogen> ontbreekt hier; draait in CI`
+- in CI bij een ontbrekende kooi, in de setup: `✗ kooi ontbreekt in CI (<reden>); in CI slaat geen test over (ADR 0087)`
+- skipnotitie per test: `kooi ontbreekt hier; draait in CI`
 
-`<reden>` is voor `kooi` de melding van `beoordeelProef` (`✗ kooi: bubblewrap start niet …` of de melding zonder bubblewrap).
+`<reden>` is de melding uit de proef van `scripts/kit/kooi.mjs` (`✗ kooi: bubblewrap start niet …` of `MELDING_GEEN_BWRAP`).
 
 ## Acceptatiecriteria
 
-- **tests-naar-vermogen/AC-1** — Eén module `test/setup/vermogen.ts` kent precies twee vermogens: `kooi` (de proef van
-  `scripts/kit/kooi.mjs` geeft `goed`, of een andere melding dan "bubblewrap start niet" of "bubblewrap ontbreekt") en
-  `systeemmappen` (een map aanmaken en weghalen lukt in `/tmp`, `/var/tmp` en de thuismap). De proef draait één keer per
-  vitest-run als globale setup ná `test/setup/tmp-root.ts` en geeft de uitslag aan de tests via `provide`/`inject`. Geen
-  omgevingsvariabele, omgevingsnaam of CLI-optie verandert de uitslag. Test: met een kooi die niet start is `kooi` afwezig;
-  met `MELDING_PROEF` (kooi start, schermt niet af) is `kooi` aanwezig.
-- **tests-naar-vermogen/AC-2** — De helper `vermogen(naam)` uit dezelfde module geeft `{ ontbreekt, melding }`. Een testbestand
-  zet de voorwaarde met één zichtbare `ctx.skip(<ontbreekt>, <melding>)`-aanroep (in een `beforeEach` van het kleinste
-  bestaande `describe`-blok, of in de test zelf), met voorwaarde en tekst alleen uit `vermogen(naam)`. `testChangeRisk` geeft
-  op die wijziging van een bestaand bestand `'skip'` (bestaand gedrag, ongewijzigd).
-- **tests-naar-vermogen/AC-3** — De tien bestanden uit #607 krijgen de voorwaarde: `kooi` in `test/hooks/rolhek-padcorpus.test.ts`,
+- **tests-naar-vermogen/AC-1** — `scripts/kit/kooi.mjs` geeft naast de melding een gestructureerde uitslag van de proef met
+  een geëxporteerde soort: `goed`, `start-niet` (bubblewrap ontbreekt of start niet) of `schermt-niet-af` (`MELDING_PROEF`).
+  Eén module `test/setup/vermogen.ts` kent één vermogen, `kooi`: afwezig alleen bij `start-niet`; bij `schermt-niet-af` is het
+  aanwezig en falen de tests. Geen variabele, omgevingsnaam of optie schakelt overslaan rechtstreeks; de proef meet de omgeving.
+  De proef draait één keer per vitest-run als globale setup van de projecten `unit` en `web` (niet `int`), ná
+  `test/setup/tmp-root.ts`, en geeft de uitslag door via `provide`/`inject`.
+- **tests-naar-vermogen/AC-2** — Dicht vallen in de setup: gooit de proef zelf een uitzondering, dan faalt de run met die fout
+  (geen overslaan). De helper `vermogen('kooi')` geeft `{ ontbreekt, melding }`; levert `inject` niets op (een project zonder
+  deze globale setup), dan gooit `vermogen()` een fout met de projectnaam, nooit `ontbreekt: true`.
+- **tests-naar-vermogen/AC-3** — Een testbestand zet de voorwaarde met één zichtbare `ctx.skip(<ontbreekt>, <melding>)` in een
+  `beforeEach` van het kleinste bestaande `describe`-blok of in de test zelf, met waarden alleen uit `vermogen('kooi')`.
+  Terugval als `ctx.skip(voorwaarde, notitie)` in vitest 5.0.3 niet bestaat: `describe.skipIf(vermogen('kooi').ontbreekt)` of
+  `test.skipIf(…)` op dezelfde plek (de teller in `rails/hooks/lib/testteller.mjs` telt `skipIf` als skip); de melding komt dan
+  alleen uit de setup (AC-5).
+- **tests-naar-vermogen/AC-4** — De voorwaarde `kooi` komt in `test/hooks/rolhek-padcorpus.test.ts`,
   `test/hooks/rolhek-effect.test.ts`, `test/hooks/rolhek-effect-hoofdsessie.test.ts`, `test/hooks/rolhek-specarchief-effect.test.ts`,
   `test/docs/start-nieuwe-app.test.ts`, `test/rails/ci-scan.test.ts`, `test/rails/document-status-lokaal-config.test.ts`,
-  `test/scripts/runner-trusted-base.test.ts` en `test/scripts/kooi.test.ts`; `kooi` en `systeemmappen` voor de kanarietests
-  van kooi/AC-4; voor `test/scripts/cloud-setup.test.ts` en de test "zonder bubblewrap" in `kooi.test.ts` volgens OV-1. Geen
-  assertie, testnaam of aantal testgevallen verandert. De PR noemt per bestand het aantal overgeslagen tests in de sandbox
-  naast het aantal dat nu faalt; meer overgeslagen dan faalt heeft een reden per bestand.
-- **tests-naar-vermogen/AC-4** — In de sandbox van Claude Code (zonder `GITHUB_ACTIONS`) eindigt `pnpm test:unit` met exitcode 0
-  en drukt het per ontbrekend vermogen precies één regel `⚠ overgeslagen: …` af.
-- **tests-naar-vermogen/AC-5** — Een reporter in `test/setup/` (in `vitest.config.ts` naast de standaardreporter) telt na elke
-  run de overgeslagen en `todo`-tests. Met `GITHUB_ACTIONS=true` en minstens één zo'n test is de exitcode van vitest niet 0
-  en noemt de uitvoer elke test met de CI-melding. Bewijs: een test draait vitest op een fixture met één `ctx.skip` en
-  verwacht met `GITHUB_ACTIONS=true` exit ≠ 0 met de melding, zonder die variabele exit 0 met de `⚠`-regel (R-PRINC-04).
-- **tests-naar-vermogen/AC-6** — Met `GITHUB_ACTIONS=true` en een ontbrekend vermogen faalt de globale setup met de CI-melding
-  en draait geen test. Test met een geïnjecteerde proef.
-- **tests-naar-vermogen/AC-7** — `gate:fast` toont onder elke groene gate de uitvoerregels die met `⚠ ` beginnen, vóór de
-  lijst; een groene gate zonder zulke regels toont niets extra. Test in de bestaande tabeltest van `gateFast`.
-- **tests-naar-vermogen/AC-8** — Op de head van de bouw-PR is de CI-job `gate:fast` groen met 0 overgeslagen tests in
-  `test-1` en `test-2` (AC-5 actief); het bestaande `test.skipIf(IS_ROOT)` in `test/hooks/laden-commondir.test.ts` slaat in CI
-  niet over. Lukt dat niet, dan stopt de bouw en vraagt de eigenaar.
-- **tests-naar-vermogen/AC-9** — Docs: `docs/operations/testuitvoering.md` (nieuwe sectie: vermogens, melding, CI rood bij
-  overslaan), `docs/operations/agent-doorloop.md` (lokaal groen met `⚠ overgeslagen` is geen bewijs; CI via `pnpm pr:verify`),
-  `docs/operations/sandbox-bewijs.md` (geen geneste kooi in de sandbox), de randgevalregel in `docs/specs/kooi.md` en
-  `CHANGELOG.md`.
+  `test/scripts/runner-trusted-base.test.ts` en `test/scripts/kooi.test.ts` (ook de kanarietests van kooi/AC-4). In
+  `test/scripts/cloud-setup.test.ts` en in de kooi/AC-3-test "zonder bubblewrap" krijgt het kindproces `TMPDIR: tmpdir()` mee,
+  zonder voorwaarde. Geen assertie, testnaam of aantal testgevallen verandert. De PR noemt per bestand het aantal overgeslagen
+  tests in de sandbox naast het aantal dat nu faalt; meer overgeslagen dan faalt heeft een reden per bestand.
+- **tests-naar-vermogen/AC-5** — In de sandbox van Claude Code (zonder `GITHUB_ACTIONS` en `CI`) eindigt `pnpm test:unit` met
+  exitcode 0, slagen `cloud-setup.test.ts` en de test "zonder bubblewrap", en drukt de run precies één regel `⚠ overgeslagen: …`
+  af.
+- **tests-naar-vermogen/AC-6** — CI is `GITHUB_ACTIONS` of `CI` met een niet-lege waarde anders dan `false` of `0`. Een reporter in
+  `test/setup/` (in `vitest.config.ts` naast de standaardreporter) telt na elke run de overgeslagen en `todo`-tests; in CI met
+  minstens één zo'n test is de exitcode van vitest niet 0 en staat elke test in de uitvoer met de CI-melding. Terugval als
+  een reporter de exitcode niet kan zetten: de reporter drukt de CI-melding af en `scripts/kit/gate-fast.mjs` maakt `test:unit`
+  rood zodra de uitvoer een regel `✗ overgeslagen in CI:` bevat (in CI is `pnpm gate:fast` de enige aanroep van `test:unit`).
+- **tests-naar-vermogen/AC-7** — In CI met een ontbrekende kooi faalt de globale setup met de CI-melding en draait geen test.
+- **tests-naar-vermogen/AC-8** — `gate:fast` toont onder elke groene gate de uitvoerregels die met `⚠` en een spatie beginnen,
+  vóór de lijst; een groene gate zonder zulke regels toont niets extra.
+- **tests-naar-vermogen/AC-9** — Op de head van de bouw-PR zijn de CI-jobs `gate:fast (test-1)`, `gate:fast (test-2)`,
+  `check:new-resource (test-1)` en `check:new-resource (test-2)` groen met AC-6 actief en 0 overgeslagen tests; dat bewijst ook
+  dat `describe.skipIf(!bashAanwezig)` in `test/hooks/shell-glob-klasse-bash.test.ts` en de vier `test.skipIf(IS_ROOT)` in
+  `test/hooks/laden-commondir.test.ts` in CI niet overslaan. Lukt dat niet, dan stopt de bouw en vraagt de eigenaar.
+- **tests-naar-vermogen/AC-10** — Docs in de bouw-PR: `docs/operations/testuitvoering.md` (de voorwaarde, de melding, rood in CI),
+  `docs/operations/agent-doorloop.md` (lokaal groen met `⚠ overgeslagen` is geen bewijs; CI via `pnpm pr:verify`),
+  `docs/operations/sandbox-bewijs.md` (geen geneste kooi in de sandbox), `CHANGELOG.md`, en in `docs/specs/kooi.md` de
+  randgevalregel "Test heeft de kooi nodig maar bubblewrap ontbreekt" naar: slaat over met melding waar de kooi niet kan
+  starten, nooit in CI; een kooi die start maar niet afschermt: test faalt.
 
 ## Randgevallen
 
 | Situatie | Gedrag | Foutcode |
 |---|---|---|
-| Sandbox van Claude Code: bubblewrap mag geen namespace maken | `kooi` ontbreekt; tests slaan over met melding (AC-4) | n.v.t. |
-| Kooi start, schrijft toch buiten de werkmap (`MELDING_PROEF`) | `kooi` aanwezig; tests falen, ook lokaal (AC-1) | n.v.t. |
-| Lokaal zonder bubblewrap | `kooi` ontbreekt; melding noemt de installatie (OV-2) | n.v.t. |
-| CI zonder werkende kooi | setup faalt (AC-6); de bestaande workflowstap `kooi.mjs --proef` faalt al eerder | n.v.t. |
-| `ctx.skip(true, …)` in een bestand dat al een voorwaarde had | teller ziet geen stijging; CI rood (AC-5) | n.v.t. |
+| Sandbox van Claude Code: bubblewrap mag geen namespace maken | `kooi` ontbreekt; tests slaan over met melding (AC-5) | n.v.t. |
+| Kooi start, schrijft toch buiten de werkmap (`schermt-niet-af`) | `kooi` aanwezig; tests falen, ook lokaal (AC-1) | n.v.t. |
+| Lokaal zonder bubblewrap, of `PATH` zonder `bwrap` | `kooi` ontbreekt; melding noemt de installatie; aanvaard restrisico (ADR 0087) | n.v.t. |
+| De proef gooit zelf een uitzondering | run faalt, niets slaat over (AC-2) | n.v.t. |
+| Project zonder de globale setup (`int`) roept `vermogen()` aan | fout met projectnaam, niet overslaan (AC-2) | n.v.t. |
+| CI zonder werkende kooi | setup faalt (AC-7); de workflowstap `kooi.mjs --proef` faalt al eerder | n.v.t. |
+| Bestaande voorwaarde inhoudelijk uitgezet (`ctx.skip(true, …)`) | teller ziet geen stijging; CI rood (AC-6) | n.v.t. |
 | Lokaal eigen `--reporter` | geen `⚠`-regel; CI gebruikt de vaste aanroep | n.v.t. |
-| Agent zet `GITHUB_ACTIONS=true` lokaal | strenger: kooitests rood; het rolhek hoeft dat niet te weigeren | n.v.t. |
+| Agent zet lokaal `CI` of `GITHUB_ACTIONS` | strenger: kooitests rood | n.v.t. |
 | Nieuwe kooitest zonder voorwaarde | rood in de sandbox: valt op | n.v.t. |
-| `test:db` in de runner (geen `GITHUB_ACTIONS` in de container) | AC-5 niet actief; daar bestaan geen skips | n.v.t. |
-| AC-4-test "de timeout stopt het commando" | slaagt nu in de sandbox om de verkeerde reden (`inKooi` gooit al bij de proef); krijgt de voorwaarde mee | n.v.t. |
+| kooi/AC-4-test "de timeout stopt het commando" | slaagt nu in de sandbox om de verkeerde reden (`inKooi` gooit al bij de proef); krijgt de voorwaarde mee | n.v.t. |
 
 ## Raakt ook
 
-`vitest.config.ts` (voorReview: globale setup en reporter), `test/setup/vermogen.ts` en de reporter (gate: hoofdsessie),
-`scripts/kit/gate-fast.mjs` en zijn test (voorReview), de tien testbestanden (gate: hoofdsessie, reden in de PR), een fixture
-voor AC-5. Ongewijzigd: `lefthook.yml`, `.github/workflows/ci.yml`, `rails/hooks/**`, `scripts/kit/kooi.mjs`. In dezelfde
-besluit-PR zet de hoofdsessie, zodra het PR-nummer bekend is, een herzieningsregel in ADR 0072 en ADR 0085 (ADR 0074).
-`check:migrations`, `check:secdef`, `test:db`/policies, `test/security/resources.ts` en permissietests: n.v.t. (geen database,
-route of permissie).
+`scripts/kit/kooi.mjs` (gestructureerde uitslag, AC-1; voorReview), `vitest.config.ts` (globale setup per project en reporter;
+voorReview), `test/setup/vermogen.ts` en de reporter (gate: hoofdsessie), `scripts/kit/gate-fast.mjs` en zijn test
+(voorReview), de tien testbestanden (gate: hoofdsessie, reden in de PR), een fixture onder `test/rails/fixtures/`. Ongewijzigd:
+`lefthook.yml`, `.github/workflows/ci.yml`, `rails/hooks/**`. `check:migrations`, `check:secdef`, `test:db`/policies,
+`test/security/resources.ts` en permissietests: n.v.t. (geen database, route of permissie).
 
 ## Buiten scope
 
@@ -117,17 +125,15 @@ Leerpunt #658 (runnermelding), de pre-commit-job `secrets`/mise trust, CI-logs o
 
 ## Testplan
 
-`test/setup/vermogen.test.ts`: AC-1 en AC-6 met een geïnjecteerde proef (start niet, ontbreekt, schermt niet af, goed). Een
-railtest voor AC-5 op een fixture onder `test/rails/fixtures/`. De bestaande tabeltest van `gate-fast` voor AC-7. AC-2 met
-`testChangeRisk` op een voor/na-paar. AC-4 en AC-8 als uitslag in de PR (sandbox lokaal, CI via `pnpm pr:verify`).
+`test/setup/vermogen.test.ts`: AC-1, AC-2 en AC-7 met een geïnjecteerde proef (`goed`, `start-niet`, `schermt-niet-af`, de
+proef gooit) en een ontbrekende `inject`. `test/scripts/kooi.test.ts`: de soort van de uitslag per tak. Een railtest voor AC-6
+die vitest draait op een fixture met één skip: met `CI=true` exit niet 0 en de CI-melding, zonder exit 0 en de `⚠`-regel
+(R-PRINC-04); bij de terugval dezelfde toets op `gate:fast`. De bestaande tabeltest van `gate-fast` voor AC-8. AC-5 en AC-9
+als uitslag in de PR (sandbox lokaal, CI via `pnpm pr:verify`).
 
 ## Open vragen
 
-- **OV-1** — `test/scripts/cloud-setup.test.ts` (2 tests) en de kooi/AC-3-test "zonder bubblewrap" falen alleen omdat de test
-  een kindproces start zonder `TMPDIR`, zodat `mktemp`/`mkdtemp` naar `/tmp` schrijft (`EROFS`). Opties: voorwaarde
-  `systeemmappen`, of `TMPDIR: tmpdir()` meegeven. Aanbeveling: `TMPDIR` meegeven; dan draaien ze overal en slaat niets over.
-  Dat wijzigt de testopzet (geen assertie) en valt buiten het akkoord "alleen de voorwaarde"; de merge van deze PR is dat akkoord.
-- **OV-2** — Telt een ontbrekende `bwrap` (ENOENT) lokaal als ontbrekend vermogen? Aanbeveling: ja, met de installatiemelding
-  in `<reden>`; CI blijft dicht (AC-5, AC-6).
-- **OV-3** — Geldt AC-5 voor elke overgeslagen test of alleen voor tests met een vermogen-notitie? Aanbeveling: elke; geen lijst,
-  vangt ook een uitgezette voorwaarde, en vandaag slaat in CI niets over (AC-8 bewijst het).
+- **OV-1 ✅ besloten** — `cloud-setup.test.ts` en de test "zonder bubblewrap" krijgen `TMPDIR` mee in plaats van een voorwaarde
+  (AC-4); daarmee vervalt het vermogen voor schrijfbare systeemmappen.
+- **OV-2 ✅ besloten** — Een ontbrekende `bwrap` telt lokaal als ontbrekende kooi, met de installatiemelding (AC-1, AC-5).
+- **OV-3 ✅ besloten** — In CI maakt elke overgeslagen test de run rood, niet alleen een test met de kooinotitie (AC-6).
