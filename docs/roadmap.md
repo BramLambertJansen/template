@@ -419,6 +419,11 @@ Bewust nog niet, tot de genoemde aanleiding er is (P1). Niets verdwijnt: elk ite
   (`docs/specs/agent-merge-niet-kritiek.md`); dit item gaat alleen nog over agent-merge van kritiek werk. Zie `.claude/skills/opleveren/SKILL.md`
   en `docs/operations/agent-doorloop.md`.
   terug als: er ≥ 10 feature-PR's zijn zonder gevolgfout, de AC→test-check en het risico-overzicht actief zijn en ST-01 is besloten
+- [ ] **R-CODE-10 consequent: Engelse technische namen, Nederlandse UI** (was #407). Nederlandse identifiers, scriptnamen, configsleutels
+  (`.claude/gates.json`), API-velden en documentstatussen naar Engels, in afgebakende PR's met een inventaris eerst; contracten en
+  documentformaten apart, met een upgradeaanpak voor bestaande apps. Geen bewezen winst in tokens of snelheid; de aanpak en
+  acceptatiecriteria staan in #407.
+  terug als: gemengde taal in technische namen aantoonbaar een fout veroorzaakt of een check verbergt (zoals #402), of bij de release-reset (#384)
 
 ## Besluiten
 
