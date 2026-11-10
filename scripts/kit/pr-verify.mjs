@@ -4,7 +4,7 @@ import { checkedCommit, expectedCheckAppId, requiredProofChecks } from '../../ra
 import { pullRequest, checkRuns } from './github-evidence.mjs';
 import { setTimeout } from 'node:timers/promises';
 import { unchangedHead } from './status-git.mjs';
-import { lijstTekst, nacontrole } from '../../rails/hooks/lib/effect-hooks.mjs';
+import { lijstTekst, nacontrole, UITWEG } from '../../rails/hooks/lib/effect-hooks.mjs';
 import {
   SANDBOX_LEEG,
   afgeschermdePaden,
@@ -182,9 +182,7 @@ export function verifyEffect(root, afgeschermd = new Set(), opties = { melden: t
       `rolhek-effect: niet getoetst in de sandbox, wel door de hooks: ${[...afgeschermd].toSorted().join(', ')}`,
     );
   if (lijst.length > 0)
-    throw new Error(
-      `Open overtredingen van subagents (rolhek-effect):\n${lijstTekst(lijst)}\nZet de paden terug of laat de eigenaar ze overnemen: pnpm rolhek:overnemen <pad>`,
-    );
+    throw new Error(`Open overtredingen van subagents (rolhek-effect):\n${lijstTekst(lijst)}\n${UITWEG}`);
 }
 
 async function main() {

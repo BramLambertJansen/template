@@ -61,7 +61,9 @@ export function lijstTekst(lijst) {
     .join('\n');
 }
 
-const UITWEG = 'De hook zet niets terug. Zet het pad terug naar de staat van vóór het commando, of laat de eigenaar de wijziging overnemen met `pnpm rolhek:overnemen <pad>` (spec rolhek-effect AC-5).';
+/** De uitweg bij een open overtreding, voor elke melding van AC-5 en voor `pr:verify` (spec rolhek-effect AC-13 a). */
+export const UITWEG =
+  'De hook zet niets terug. Zet het pad terug naar de staat van vóór het commando, of laat de hoofdsessie zelf `pnpm rolhek:overnemen <pad>` starten: het rolhek vraagt de eigenaar dan om akkoord, en een subagent mag het niet. Voor een pad onder `.git/` eerst de controle uit docs/operations/agent-doorloop.md ("Een overtreding overnemen"). Laatste uitweg: `pnpm rolhek:overnemen --alles` wist elke open overtreding (spec rolhek-effect AC-5, AC-13).';
 
 /** Te groot of te traag (AC-7): een overtreding zonder pad. @param {Wie} wie @returns {Overtreding} */
 function nietRond(wie) {
