@@ -2,13 +2,14 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, TestRunner } from 'vitest';
 import { handle, nacontrole } from '../../rails/hooks/lib/effect-hooks.mjs';
 import { gitIn } from '../../rails/hooks/lib/effect-snapshot.mjs';
 import { opslag, overtredingen } from '../../rails/hooks/lib/effect.mjs';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 import { inKooi } from '../../scripts/kit/kooi.mjs';
 import { neemOver } from '../../scripts/kit/rolhek-overnemen.mjs';
+import { vermogen } from '../setup/vermogen.ts';
 
 // docs/specs/rolhek-effect.md (ADR 0066): na een Bash-commando van een subagent krijgt elk pad dat echt veranderde de
 // beslissing van een Edit van die rol, welk programma ook schreef. Echte tijdelijke git-repository's; de commando's draaien
@@ -30,7 +31,9 @@ afterEach(() => {
 });
 
 // Het commando draait in de kooi (ADR 0072): buiten de tijdelijke repository kan het niets veranderen.
+// Kan de kooi hier niet starten, dan slaat de lopende test over; nooit in CI (ADR 0088, spec tests-naar-vermogen).
 function sh(root: string, command: string): void {
+  TestRunner.getCurrentTest()?.context.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding);
   const result = inKooi(command, { werkmap: root, env: GIT_ENV });
   if (result.status !== 0) throw new Error(`${command}: ${result.stderr}`);
 }

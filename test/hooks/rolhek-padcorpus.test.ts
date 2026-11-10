@@ -12,11 +12,12 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, TestRunner } from 'vitest';
 import { handle } from '../../rails/hooks/lib/effect-hooks.mjs';
 import { gitIn } from '../../rails/hooks/lib/effect-snapshot.mjs';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 import { inKooi } from '../../scripts/kit/kooi.mjs';
+import { vermogen } from '../setup/vermogen.ts';
 import { PADCORPUS, type Rij, type Uitkomst } from './rolhek-padcorpus.ts';
 
 // Spec rolhek-vooraf-krimp AC-1 en AC-2 (ADR 0071): elke padbeslissing van het rolhek over een Bash-commando staat in één
@@ -96,6 +97,8 @@ function zetBestanden(root: string, rij: Rij): void {
 
 /** De beginstand: de bestanden die het rolhek vooraf las, gecommit in een verse repository. */
 function beginstand(rij: Rij): string {
+  // Kan de kooi hier niet starten, dan slaat de lopende test over; nooit in CI (ADR 0088, spec tests-naar-vermogen).
+  TestRunner.getCurrentTest()?.context.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding);
   const root = realpathSync(mkdtempSync(path.join(tmpdir(), 'rolhek-corpus-')));
   mappen.push(root);
   zetBestanden(root, rij);
