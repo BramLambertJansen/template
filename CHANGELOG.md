@@ -6,6 +6,12 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Toegevoegd
 
+- Gedeelde lijstquery-helpers (leerpunt #662, spec lijstpagina): `containsPattern()` (escape van `%`, `_` en `\` voor `ilike`) en
+  `decodeListCursor()` (cursor decoderen, een gemanipuleerde cursor wordt `VALIDATION`, een bug in een sleutelschema niet) in
+  `src/core/api/route/list-query.ts`; `src/api/routes/accounts.ts` gebruikt ze. De ESLint-rail `lijstquery` weigert in `src/api` een
+  eigen kopie of een directe import van `decodeCursor`/`encodeCursor`; `new:resource` verwijst ernaar. Wat verandert voor een app: een
+  lijstroute die deze helpers zelf had gekopieerd, vervangt ze door de import uit `#core/api/route/list-query.ts` (anders faalt `pnpm lint`).
+
 - Agentlaag voor koppelingen (ST-15, spec koppeling-agentlaag): skill `nieuwe-koppeling` (indelen op zes kenmerken, stoppen
   bij een waarde zonder bouwsteen), sectie `koppelingen` in `node scripts/kit/feiten.mjs` (register van de app en per kenmerk
   welke waarden gebouwd zijn), kop "Koppeling" in het spec-template en een hoofdstuk in het gouden pad. Core:

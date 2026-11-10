@@ -1,8 +1,7 @@
 import { type SQL, and, asc, desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { AppError } from '#core/api/errors.ts';
+import { containsPattern, decodeListCursor } from '#core/api/route/list-query.ts';
 import { ROLES } from '#core/shared/can.ts';
-import { decodeCursor } from '#core/shared/cursor.ts';
 import {
   ACCOUNT_SORTS,
   accountsListContract,
@@ -37,27 +36,9 @@ const accountRow = z.object({
 
 type Sort = (typeof ACCOUNT_SORTS)[number];
 
-// De cursor hoort bij één sortering: [sort, sleutel, id]. Een cursor van een andere sortering geeft VALIDATION.
-const cursorKey = (sort: Sort) =>
-  z.tuple([
-    z.literal(sort),
-    sort === 'nieuwste' || sort === 'oudste' ? z.iso.datetime({ offset: true }) : z.string(),
-    z.string(),
-  ]);
-
-function after(cursor: string | undefined, sort: Sort): readonly [string, string, string] | null {
-  if (cursor === undefined) return null;
-  // decodeCursor gooit een ZodError bij een gemanipuleerde cursor: dat is invoer van de client, dus VALIDATION.
-  try {
-    return decodeCursor(cursor, cursorKey(sort));
-  } catch {
-    throw new AppError('VALIDATION');
-  }
-}
-
-// `%`, `_` en `\` zoeken letterlijk (ilike gebruikt `\` als escape).
-function containsPattern(q: string): string {
-  return `%${q.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
+// De cursor hoort bij één sortering: [sort, sleutel, id]; de helper levert sleutel en id, een vreemde cursor geeft VALIDATION.
+function keyParts(sort: Sort): readonly [z.ZodType<string>, z.ZodType<string>] {
+  return [sort === 'nieuwste' || sort === 'oudste' ? z.iso.datetime({ offset: true }) : z.string(), z.string()];
 }
 
 const STATUS_COLUMN = {
@@ -81,7 +62,7 @@ export const accountsListRoute = defineRoute(accountsListContract, async ({ inpu
   const { sort, q, rol, status } = input;
   const byName = sort === 'naam-az' || sort === 'naam-za';
   const descending = sort === 'nieuwste' || sort === 'naam-za';
-  const from = after(input.cursor, sort);
+  const from = decodeListCursor(accountsSearch, input, keyParts(sort));
   const keyColumn = byName ? sql`lower(${appAccounts.name})` : sql`${appAccounts.createdAt}`;
   const keyCast = byName ? sql`` : sql`::timestamptz`;
   const conditions: SQL[] = [];
@@ -93,7 +74,7 @@ export const accountsListRoute = defineRoute(accountsListContract, async ({ inpu
   if (status !== undefined) conditions.push(STATUS_COLUMN[status]);
   if (from !== null) {
     const operator = descending ? sql`<` : sql`>`;
-    conditions.push(sql`(${keyColumn}, ${appAccounts.id}) ${operator} (${from[1]}${keyCast}, ${from[2]})`);
+    conditions.push(sql`(${keyColumn}, ${appAccounts.id}) ${operator} (${from[0]}${keyCast}, ${from[1]})`);
   }
   const order = descending ? desc : asc;
   const rows = await tx

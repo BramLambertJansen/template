@@ -60,9 +60,9 @@ Een rij van een ander bestaat voor de gebruiker niet: `NOT_FOUND`, niet `FORBIDD
 (`__NAAM___PAGE_SIZE`, hooguit `MAX_PAGE_SIZE`) en een cursor.
 
 Zoeken en sorteren (spec lijstpagina): `GET` neemt `/api/__naam__?q=&sort=&cursor=` (`q` zoekt, `sort` is `nieuwste` of `oudste`).
-De cursor is aan de sortering gebonden: een cursor van een andere sortering, een vreemde cursor of een ongeldige `sort` geeft `VALIDATION`.
+De cursor is aan de sortering gebonden: een cursor van een andere sortering, een vreemde cursor of een ongeldige `sort` geeft `VALIDATION`; de route decodeert hem met `decodeListCursor`.
 Een nieuwe sortering krijgt in `cursorKeys` de maximale lengte van elk sleuteldeel; `defineListSearch` weigert bij het laden een sleutel die niet in `MAX_CURSOR_LENGTH` past (spec lijstpagina, sleutelbudget).
-In `q` worden `%`, `_` en `\` ge-escaped, zodat ze letterlijk worden gezocht. Velden en filters: zie "Open vragen", vraag "Zoeken en filters".
+In `q` worden `%`, `_` en `\` ge-escaped (`containsPattern`), zodat ze letterlijk worden gezocht. Velden en filters: zie "Open vragen", vraag "Zoeken en filters".
 
 ## Koppeling
 

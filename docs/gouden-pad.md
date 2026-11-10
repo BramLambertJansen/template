@@ -125,7 +125,8 @@ partner noemt en een spec met de paragraaf "Koppeling". De bouwstenen:
 4. **Permissie** en **foutcode**: `src/shared/permissions.ts`, `src/shared/errors.ts`, tekst in `src/web/copy/errors.ts`.
 5. **Contract** (zod, `.strict()`): `src/shared/contracts/accounts.ts`, opgenomen in `src/shared/contracts/index.ts`.
 6. **Route** met `defineRoute` en `tx`: `src/api/routes/accounts.ts`, opgenomen in `src/api/app.ts`. Iets buiten de database
-   via `ctx.services`: `src/api/services.ts`.
+   via `ctx.services`: `src/api/services.ts`. Een lijstroute decodeert de cursor met `decodeListCursor` en maakt `q` geschikt voor `ilike`
+   met `containsPattern`, beide uit `#core/api/route/list-query.ts`; een eigen kopie weigert de lintregel `lijstquery`.
 7. **Integratietests** (verboden rol, admin zonder MFA, ongeldige input, ACs): `test/api/accounts.int.test.ts` met de testkit
    (`beginTestDb`, `asUser`).
 8. **Queries** (key-factory met de search in de key, hooks, `placeholderData`, mutaties die invalideren): `src/web/features/accounts/queries.ts`.
