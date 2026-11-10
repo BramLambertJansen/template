@@ -24,6 +24,49 @@ interface Fixture {
   also?: string[];
 }
 
+// Vormen 1 t/m 5 van de rail lijstquery: één fixture per vorm (spec lijstpagina/AC-21). `declare` houdt de code zonder
+// ongedefinieerde namen; de rails zijn puur syntactisch.
+const lijstqueryFouten = [
+  // Vorm 1: bron #core/shared/cursor.ts (alias of relatief pad)
+  "import { decodeCursor } from '#core/shared/cursor.ts'; export const a = decodeCursor;",
+  "import { encodeCursor } from '#core/shared/cursor.ts'; export const a = encodeCursor;",
+  "import * as cursor from '#core/shared/cursor.ts'; export const a = cursor;",
+  "import cursor from '#core/shared/cursor.ts'; export const a = cursor;",
+  "import { decodeCursor } from '../../core/shared/cursor.ts'; export const a = decodeCursor;",
+  "export { decodeCursor } from '#core/shared/cursor.ts';",
+  "export * from '#core/shared/cursor.ts';",
+  "const m = await import('#core/shared/cursor.ts'); export const a = m;",
+  // Vorm 2: regex-literal met zowel % als _
+  'export const a = /[\\\\%_]/g;',
+  // Vorm 3: RegExp met een tekstliteral of expressieloze template met zowel % als _
+  "export const a = new RegExp('[%_]');",
+  "export const a = RegExp('[%_]');",
+  'export const a = RegExp(`[%_]`);',
+  // Vorm 4: .replace/.replaceAll van %, _ of \ met een escape of functie als tweede argument
+  "declare const q: string; export const a = q.replaceAll('%', '\\\\%');",
+  "declare const q: string; export const a = q.replace('_', '\\\\_');",
+  "declare const q: string; export const a = q.replaceAll('\\\\', '\\\\\\\\');",
+  "declare const q: string; export const a = q.replaceAll('%', `\\\\%`);",
+  "declare const q: string; export const a = q.replaceAll('_', (c) => c);",
+  // Vorm 5: eigen functie of variabele met de naam van een helper
+  'function containsPattern() {} export const a = containsPattern;',
+  "const containsPattern = () => ''; export const a = containsPattern;",
+  'function decodeListCursor() {} export const a = decodeListCursor;',
+  'const decodeListCursor = () => null; export const a = decodeListCursor;',
+];
+
+// De bestaande rail rails/import weigert in src/ elke import() met een niet-literal bron, dus ook een template literal zonder
+// expressies: die fixture geeft dan ook rails/import (in de bereiken van lijstquery en daarbuiten).
+const lijstqueryImportTemplate = 'const m = await import(`#core/shared/cursor.ts`); export const a = m;';
+
+const lijstqueryMag = [
+  "declare const naam: string; export const a = naam.replaceAll('_', ' ');",
+  "declare const slug: string; export const a = slug.replace(/_/g, '-');",
+  "import { pageQuery } from '#core/shared/cursor.ts'; export const a = pageQuery;",
+  "import { pageSchema, maxCursorLength } from '#core/shared/cursor.ts'; export const a = [pageSchema, maxCursorLength];",
+  "import { decodeListCursor, containsPattern } from '#core/api/route/list-query.ts'; export const a = [decodeListCursor, containsPattern];",
+];
+
 const fixtures: Fixture[] = [
   // process.env
   { name: 'process.env', file: 'src/api/x.ts', code: 'export const a = process.env.X;', rule: 'rails/process-env' },
@@ -482,6 +525,41 @@ const fixtures: Fixture[] = [
     code: "import { spawnSync } from 'node:child_process'; spawnSync('bwrap', ['--', 'bash', '-c', 'x']);",
     rule: null,
   },
+  // lijstquery (spec lijstpagina, Lijstquery-helpers, AC-21, leerpunt #662): een route gebruikt decodeListCursor en containsPattern
+  // uit #core/api/route/list-query.ts en maakt de cursor met search.encodeCursor; geen eigen kopie in src/api buiten tests.
+  ...lijstqueryFouten.map((code) => ({
+    name: `lijstquery: ${code}`,
+    file: 'src/api/routes/x.ts',
+    code,
+    rule: 'rails/lijstquery',
+  })),
+  {
+    name: `lijstquery: ${lijstqueryImportTemplate}`,
+    file: 'src/api/routes/x.ts',
+    code: lijstqueryImportTemplate,
+    rule: 'rails/lijstquery',
+    also: ['rails/import'],
+  },
+  ...['src/core/api/x.ts', 'src/api/routes/x.test.ts'].map((file) => ({
+    name: `lijstquery: buiten het bereik mag (alleen rails/import): ${lijstqueryImportTemplate}`,
+    file,
+    code: lijstqueryImportTemplate,
+    rule: 'rails/import',
+  })),
+  ...lijstqueryMag.map((code) => ({
+    name: `lijstquery: mag: ${code}`,
+    file: 'src/api/routes/x.ts',
+    code,
+    rule: null,
+  })),
+  ...lijstqueryFouten.flatMap((code) =>
+    ['src/core/api/x.ts', 'src/api/routes/x.test.ts'].map((file) => ({
+      name: `lijstquery: buiten het bereik mag: ${code}`,
+      file,
+      code,
+      rule: null,
+    })),
+  ),
 ];
 
 describe('rails in eslint.config.js', () => {
