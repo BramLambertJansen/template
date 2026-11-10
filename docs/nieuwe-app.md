@@ -250,8 +250,8 @@ Sla over bij native Ubuntu.
    ```
 
    Kies daarna een gebruikersnaam en wachtwoord en typ "verder".
-   De WSL-versie moet 2 zijn. Toont `wsl -l -v` bij de distro versie 1: overdracht — in dezelfde PowerShell, met de
-   distronaam ingevuld; verwacht resultaat: "De conversie is voltooid" en daarna versie 2 in `wsl -l -v`:
+   De WSL-versie moet 2 zijn. Toont `wsl -l -v` bij de distro versie 1: overdracht — open PowerShell (werkmap maakt niet
+   uit), met de distronaam ingevuld; verwacht resultaat: daarna toont `wsl -l -v` versie 2 bij de distro:
 
    ```powershell
    wsl --set-version <distro> 2
