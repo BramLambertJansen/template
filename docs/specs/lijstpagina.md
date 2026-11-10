@@ -117,8 +117,11 @@ cursor-contract (`src/core/shared/cursor.ts`) en `Table`; eerst op `/admin/accou
     - een escape in een ander bestand of met andere tekens;
     - een functie onder een andere naam.
 
-    Stand op deze branch: buiten `src/api/routes/accounts.ts:60` staat in `src/api` (zonder tests) geen `.replace` of `.replaceAll` en geen regex
-    met `%` en `_`. Buiten tests importeert alleen `src/api/routes/accounts.ts:5` uit `#core/shared/cursor.ts`.
+    Stand vóór de bouw-PR: buiten `src/api/routes/accounts.ts` stond in `src/api` (zonder tests) geen `.replace` of `.replaceAll` en geen regex
+    met `%` en `_`, en buiten tests importeerde alleen `accounts.ts` uit `#core/shared/cursor.ts`. Na de bouw-PR doet geen enkel bestand
+    in `src/api` dat nog.
+    Ook niet gedekt: een template literal als tweede argument van `.replace` met een `\` in een derde of latere vaste deel, en een import met een
+    tekstnaam (`import { 'decodeCursor' as d } from …`).
     `src/api/routes/accounts-cursor.test.ts` importeert `encodeCursor` uit dat bestand, maar valt als test buiten de rail.
   - **Generator:** in `scripts/kit/templates/route.ts.tmpl` wordt de commentaarzin "escape `%`, `_` en `\` in `q` voordat je zoekt met ilike"
     (regel 14–15) vervangen door een verwijzing naar `decodeListCursor` en `containsPattern` uit `#core/api/route/list-query.ts`. De routes blijven
@@ -298,7 +301,7 @@ cursor-contract (`src/core/shared/cursor.ts`) en `Table`; eerst op `/admin/accou
      eigenaar is het besluit.
   2. **Bouw-PR** (volledige route, eigenaarmerge): eerst een stub van `src/core/api/route/list-query.ts` met de definitieve signaturen
      (`containsPattern` geeft `q` terug, `decodeListCursor` geeft `null`). De tester-hook eist dat een test op een assertie faalt en niet op een
-     ontbrekende import, dus een module die nog niet bestaat heeft eerst zo'n stub nodig (leerpunt). Dan de tester: AC-17, AC-19, AC-20,
+     ontbrekende import, dus een module die nog niet bestaat heeft eerst zo'n stub nodig. Dan de tester: AC-17, AC-19, AC-20,
      AC-21 en AC-23 falen rood op asserties. AC-18 is een beschermtest en is al groen tegen de oude `accounts.ts`; hij bewaakt dat de
      verhuizing de escape niet verandert. Dan de developer (core-helper, `accounts.ts`), dan de hoofdsessie (`eslint.config.js`, sjablonen).
      Daarna haalt de bouw-PR de markeringen weg en zet hij `gebouwd # #<deze PR>`. Docs (`docs/gouden-pad.md`, `CHANGELOG.md`) gaan in dezelfde
