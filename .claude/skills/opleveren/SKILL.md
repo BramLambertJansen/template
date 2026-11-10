@@ -83,6 +83,7 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
    te vangen, of las je code die bij gelijk gedrag veel korter of sneller kan? Dan een leerpunt met plek
    `Schrappen of vereenvoudigen` en een `Onderbouwing` met de regels `Meting:`, `Overname:` en `Terugval:`.
    De repo is `onderhoud.repository` uit `.claude/gates.json`; precies één `--label leerpunt`, geen andere vorm (anders vraagt het rolhek).
+   In een app heeft `pnpm app:init` die regel verwijderd; de repo is dan `BramLambertJansen/template` (ADR 0059), net als in het rolhek.
    Titel `Leerpunt: <soort>: <één zin>`; body in de volgorde van `.github/ISSUE_TEMPLATE/leerpunt.yml`, zonder appcode, appdata of geheimen:
 
    ```text

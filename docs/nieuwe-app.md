@@ -250,7 +250,13 @@ Sla over bij native Ubuntu.
    ```
 
    Kies daarna een gebruikersnaam en wachtwoord en typ "verder".
-   WSL-versie moet 2 zijn (`wsl --set-version <distro> 2`).
+   WSL-versie moet 2 zijn. Toont `wsl -l -v` bij de distro versie 1: overdracht in dezelfde PowerShell (Administrator),
+   met `<distro>` vervangen door de naam uit `wsl -l -v`. Verwacht: de omzetting meldt dat ze klaar is; daarna toont `wsl -l -v` versie 2.
+
+   ```powershell
+   wsl --set-version <distro> 2
+   ```
+
 2. **`.wslconfig`** in `%UserProfile%`. Voeg onder `[wsl2]` toe wat ontbreekt; bestaande regels laten staan:
    ```ini
    [wsl2]
@@ -384,8 +390,14 @@ docker volume ls --filter label=com.docker.compose.project=<slug> --format '{{.N
 ```
 
 Beide leeg: ga door. Anders stop je en leg je via de vraagprompt de keuze bij de eigenaar: de oude stack en het volume
-opruimen (vernietigt die database; de eigenaar voert het zelf uit, bijvoorbeeld `docker compose -p <slug> down -v`
-vanuit een willekeurige map), of een andere slug kiezen. Ruim zelf niets op en ga niet door met het oude volume.
+opruimen (vernietigt die database; de eigenaar voert het zelf uit), of een andere slug kiezen. Ruim zelf niets op en ga
+niet door met het oude volume. Kiest de eigenaar opruimen, geef dan dit blok met de slug ingevuld: terminal Ubuntu, werkmap
+maakt niet uit. Verwacht: Docker meldt per container en per volume `Removed`.
+
+```bash
+docker compose -p <slug> down -v
+```
+
 Draai na het opruimen beide leesopdrachten opnieuw; ga pas door als ze leeg zijn. Noteer de keuze in het voortgangsbestand.
 
 `docker` gebruik je in deze setup alleen voor `hello-world` en deze twee leesopdrachten. De app-stack is van de eigenaar (Fase 7).
