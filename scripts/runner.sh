@@ -114,6 +114,7 @@ trusted_base() {
   if command -v timeout >/dev/null 2>&1; then limit=(timeout --kill-after=5s 30); fi
   if ! remote="$("${limit[@]}" git ls-remote origin refs/heads/main 2>/dev/null)"; then
     printf '✗ main bij de remote is niet te lezen, dus de host-bestanden zijn niet te vergelijken: draai git fetch origin main.\n' >&2
+    printf '  → Agent in Claude Code: draai het runnercommando kaal, als enige commando in de aanroep, vanuit de wortel, zonder cd, &&, pipe, omleiding of omhulsel; anders blijft het in de sandbox.\n' >&2
     exit 1
   fi
   # Exact refs/heads/main: ls-remote matcht op het staartstuk, dus ook bijvoorbeeld refs/heads/fix/refs/heads/main.

@@ -34,6 +34,9 @@ ongewijzigd. `test-pgtap` faalt als `db/tests` geen tests bevat.
 De basis is de sha bij exact `refs/heads/main` in `git ls-remote origin refs/heads/main` (met `timeout` als dat
 beschikbaar is); een gelijkende ref als `refs/heads/fix/refs/heads/main` telt niet. Is ls-remote onleesbaar, is de sha
 geen geldige object-id of ontbreekt die commit lokaal, dan stopt de runner met de melding `git fetch origin main`.
+Alleen bij een onleesbare ls-remote (ook na de timeout) volgt direct daarna een tweede regel voor een agent in Claude
+Code: draai het runnercommando kaal, anders blijft het in de sandbox (`scripts/runner.sh:117`, spec
+`claude-sandbox-werkstraat` AC-13). De stderr van git blijft weggegooid.
 De hardlinkcontrole gebruikt `find -links +1`; faalt `find`, dan telt het bestand als hardlink en stopt de runner.
 
 ## Container

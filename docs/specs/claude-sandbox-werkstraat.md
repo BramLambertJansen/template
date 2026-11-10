@@ -120,7 +120,7 @@ is de auth-methode uit `GIT_CONFIG_PARAMETERS`, die de runner wist. Het advies `
   `node scripts/kit/worktree-install.mjs` en niet `scripts/bootstrap.sh`; een afwijkende Node- of pnpm-versie blijft ook
   in een worktree naar `scripts/bootstrap.sh` wijzen, ook als `node_modules` tegelijk ontbreekt (dan staan beide er). In de
   hoofdcheckout blijft elk herstel `scripts/bootstrap.sh`.
-- **claude-sandbox-werkstraat/AC-13** (nog niet gebouwd) — Faalt in `scripts/runner.sh` de lezing
+- **claude-sandbox-werkstraat/AC-13** — Faalt in `scripts/runner.sh` de lezing
   `git ls-remote origin refs/heads/main` (exit ≠ 0, ook bij een timeout van die lezing), dan stopt de runner met exit 1 en
   zet op stderr de bestaande regel ongewijzigd
   (`✗ main bij de remote is niet te lezen, dus de host-bestanden zijn niet te vergelijken: draai git fetch origin main.`)
@@ -130,7 +130,7 @@ is de auth-methode uit `GIT_CONFIG_PARAMETERS`, die de runner wist. Het advies `
   de poort neemt door te binden en weer te sluiten. Toets 2 (timeout): een `timeout`-stub vooraan op `PATH` (de runner zoekt
   `timeout` met `command -v`) die meteen met exit 124 stopt; dezelfde twee regels, zonder 30 s te wachten. Zonder de
   aanvulling falen beide.
-- **claude-sandbox-werkstraat/AC-14** (nog niet gebouwd) — Regressiepin, op de huidige code al groen (geen rode test
+- **claude-sandbox-werkstraat/AC-14** — Regressiepin, op de huidige code al groen (geen rode test
   vereist): een aanroeper met `GIT_CONFIG_PARAMETERS="'remote.origin.url=<andere bare>'"` krijgt dezelfde exitcode en basis
   als zonder, zoals in `test/scripts/runner-trusted-base-bypass.test.ts`; en een vaste toets stelt vast dat `scripts/runner.sh`
   geen toewijzing aan `GIT_CONFIG_PARAMETERS`, `GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_*` of `GIT_CONFIG_VALUE_*` bevat (ook
