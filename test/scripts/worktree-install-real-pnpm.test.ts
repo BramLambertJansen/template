@@ -13,6 +13,9 @@ import { expectAbsent } from '../support/absence.ts';
 // noodzakelijk met de pnpm-versie die package.json pint; de fixture pint die gevonden versie, anders schakelt pnpm om en
 // downloadt. De repo-instellingen uit pnpm-workspace.yaml (strictDepBuilds, minimumReleaseAge, trustPolicy,
 // verifyDepsBeforeRun) vallen buiten deze test.
+// Let op: de assertie dat pnpm zijn cache onder `--cache-dir` schrijft hangt aan een interne pnpm-bestandsnaam
+// (`lockfile-verified.jsonl`, gemeten met pnpm 11.28.5). Is die test rood na een pnpm-bump, controleer dan eerst of die
+// bestandsnaam nog klopt voordat je de implementatie of het script verdenkt.
 const MODULE_PAD = '../../scripts/kit/worktree-install.mjs';
 const mod: unknown = await import(MODULE_PAD);
 const PNPM = process.env['npm_execpath'] ?? 'pnpm';
@@ -98,7 +101,7 @@ function tmp(prefix: string): string {
   return dir;
 }
 
-// Kleine fixture met een lockfile; de eigen tijdelijke map `eigen` bevat store en XDG-mappen, `home` is een lege nephome.
+// Kleine fixture met een lockfile; de eigen tijdelijke map `eigen` bevat store, cache en XDG-mappen, `home` is een lege nephome.
 function fixture() {
   const base = tmp('wti-real-pnpm-');
   const dir = path.join(base, 'project');
@@ -108,8 +111,8 @@ function fixture() {
   for (const map of [dir, dependency, eigen, home]) mkdirSync(map);
   writeFileSync(path.join(dependency, 'package.json'), JSON.stringify({ name: 'local', version: '1.0.0' }));
   const { args, env } = commando(eigen);
-  // De MISE_*-mappen worden afgeleid vóór HOME wordt vervangen. HOME wijst naar een lege map: lekt pnpm naast XDG_* en
-  // --store-dir toch naar de home, dan zie je dat daar terug.
+  // De MISE_*-mappen worden afgeleid vóór HOME wordt vervangen. HOME wijst naar een lege map: lekt pnpm naast XDG_*,
+  // --store-dir en --cache-dir toch naar de home, dan zie je dat daar terug.
   const uitvoerEnv = { ...basisEnv(), ...miseMappen(), HOME: home, ...env };
   writeFileSync(
     path.join(dir, 'package.json'),
@@ -152,12 +155,39 @@ describe('worktreeInstallCommando tegen de echte pnpm', () => {
       expect(existsSync(path.join(eigen, 'store')), 'store onder tmp').toBe(true);
       expect(readdirSync(path.join(eigen, 'store')).length).toBeGreaterThan(0);
       expect(readdirSync(home), 'niets in de home van de gebruiker').toStrictEqual([]);
+      // Gemeten met pnpm 11.28.5: ook een frozen install met alleen een `file:`-dependency schrijft in de cache-map (het pad
+      // uit `--cache-dir`) een `lockfile-verified.jsonl`; dat is het enige dat deze fixture daar aantoonbaar laat landen.
+      const cacheDir = args.find((a) => a.startsWith('--cache-dir='))?.slice('--cache-dir='.length);
+      expect(cacheDir, '--cache-dir in de args van het script').toBeDefined();
+      expect(
+        path.relative(eigen, path.resolve(cacheDir ?? '')).startsWith('..'),
+        'cache-dir onder de eigen tmp-map',
+      ).toBe(false);
+      expect(
+        existsSync(path.join(cacheDir ?? '', 'lockfile-verified.jsonl')),
+        'pnpm schreef zijn cache in --cache-dir',
+      ).toBe(true);
     },
   );
 });
 
 describe('contract van echte pnpm (bewaakt dat de test zelf geloofwaardig blijft)', () => {
-  // Alleen --state-dir: gemeten met pnpm 11.28.2 en 11.28.5 weigert `install` die, maar accepteert `--cache-dir` (exit 0).
+  // Gemeten met pnpm 11.28.2 en 11.28.5: `install` weigert --state-dir, maar accepteert --cache-dir (exit 0).
+  test('accepteert --cache-dir als installoptie en schrijft zijn cache daar', { timeout: TEST_TIMEOUT }, () => {
+    const { dir, eigen, env } = fixture();
+    const cache = path.join(eigen, 'proef-cache');
+
+    const r = pnpm(dir, ['install', '--frozen-lockfile', `--cache-dir=${cache}`], env);
+
+    expect(r.error, uitvoer(r)).toBeUndefined();
+    expectAbsent(r.stderr, /Unknown option/, {
+      recognizes: ["[ERROR] Unknown option: 'cache-dir'"],
+      allows: ['Lockfile is up to date, resolution step is skipped'],
+    });
+    expect(r.status, uitvoer(r)).toBe(0);
+    expect(existsSync(path.join(cache, 'lockfile-verified.jsonl'))).toBe(true);
+  });
+
   test('weigert --state-dir als installoptie met `Unknown option` en niet-nul exit', { timeout: TEST_TIMEOUT }, () => {
     const { dir, eigen, env } = fixture();
 

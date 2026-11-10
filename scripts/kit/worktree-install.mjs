@@ -1,6 +1,6 @@
 // Installeert de dependencies in een gekoppelde worktree (ADR 0085, spec claude-sandbox-werkstraat AC-10):
-// `pnpm install --frozen-lockfile` met store (`--store-dir`), cache en state (XDG_*) onder os.tmpdir(), zodat het binnen de Claude Code-sandbox
-// slaagt zonder globale pnpm-map. Weigert in de hoofdcheckout, bij een symlink als node_modules en bij wijzigingen ten
+// `pnpm install --frozen-lockfile` met store (`--store-dir`) en cache (`--cache-dir`) als vlag en state (XDG_STATE_HOME)
+// onder os.tmpdir(), zodat het binnen de Claude Code-sandbox slaagt zonder globale pnpm-map. Weigert in de hoofdcheckout, bij een symlink als node_modules en bij wijzigingen ten
 // opzichte van HEAD in de beheerde bestanden. Een bestaande map node_modules (ook leeg of half) wordt gewoon afgemaakt:
 // een frozen install is idempotent. Zonder dependencies, zodat het op een kale Node draait (zoals toolchain.mjs).
 import { lstatSync, mkdirSync } from 'node:fs';
@@ -42,16 +42,24 @@ export function worktreeInstallBesluit({ worktree, nodeModules, gewijzigd }) {
 }
 
 /**
- * Het pnpm-commando met alle schrijfbare mappen onder `tmp`. Gemeten met pnpm 11.28.2 en 11.28.5: `--state-dir` geeft
- * `Unknown option`; `--cache-dir` wordt geaccepteerd maar staat niet in `pnpm help install`. Eigen keuze: alleen
- * `--store-dir` als vlag, en cache en state via XDG_CACHE_HOME en XDG_STATE_HOME onder `tmp`.
+ * Het pnpm-commando met alle schrijfbare mappen onder `tmp`. Gemeten met pnpm 11.28.2 en 11.28.5: `pnpm install`
+ * accepteert `--cache-dir` (het staat niet in `pnpm help install`) en schrijft daar `lockfile-verified.jsonl` en
+ * `v11/metadata/…` in; `--state-dir` geeft `Unknown option`. Daarom gaan store en cache als vlag mee, want een CLI-vlag
+ * gaat voor op een globale pnpm-config en een XDG-variabele niet. State heeft geen vlag en loopt via XDG_STATE_HOME
+ * onder `tmp`, naast XDG_CACHE_HOME en XDG_DATA_HOME.
  * @param {string} tmp
  * @returns {{ command: 'pnpm', args: string[], env: Record<string, string> }}
  */
 export function worktreeInstallCommando(tmp) {
   return {
     command: 'pnpm',
-    args: ['install', '--frozen-lockfile', '--package-import-method=copy', `--store-dir=${path.join(tmp, 'store')}`],
+    args: [
+      'install',
+      '--frozen-lockfile',
+      '--package-import-method=copy',
+      `--store-dir=${path.join(tmp, 'store')}`,
+      `--cache-dir=${path.join(tmp, 'cache')}`,
+    ],
     env: {
       XDG_DATA_HOME: path.join(tmp, 'data'),
       XDG_CACHE_HOME: path.join(tmp, 'xdg-cache'),
