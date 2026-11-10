@@ -1348,3 +1348,48 @@ describe('rolhek-vooraf-krimp/AC-11: aangehaalde heredoc is geen substitutie', (
     }
   });
 });
+
+// codeql-bewaking/AC-1, AC-2, AC-3: subagentTokens toetst een brede "github"-substring plus een tokenvorm (geen hostparsing).
+// codeql-bewaking/AC-4 en AC-5 hebben geen eigen gedragstest: AC-4 (gitDir zonder statSync) wordt gedekt door de bestaande
+// tests in test/hooks/meting.test.ts ("zonder METING_DIR, gewone repo", "branch uit .git/HEAD", "zonder METING_DIR,
+// worktree met gitdir en commondir"); dat er geen statSync meer is en de CodeQL-uitslag (AC-5) toetsen review en CodeQL.
+describe('codeql-bewaking: brede github-match in subagentTokens', () => {
+  const MELDING =
+    'subagent: GitHub-API met een token via curl/wget omzeilt de gh-allowlist; gebruik een lezende gh-opdracht';
+
+  test.each([
+    'curl -H "Authorization: token x" https://raw.githubusercontent.com/o/r/main/f',
+    'curl -u user:x https://github.example.org/api/v3/user',
+    'curl -su user:x https://uploads.github.com/x',
+    'curl -uuser:x https://github.com/x',
+    'wget --http-user=u --http-password=x https://github.example.org/x',
+  ])('codeql-bewaking/AC-1: subagent geweigerd met de bestaande melding: %s', (command) => {
+    for (const role of SUBAGENTS) {
+      const decision = run(command, role);
+      expect(decision.deny.join(' | '), role).toContain(MELDING);
+    }
+  });
+
+  // Regressie: de oude tokenregex was hoofdletterongevoelig, dus ook `-U` telde als credentialvlag.
+  test('codeql-bewaking/AC-1: curl -U (hoofdletter) met github blijft geweigerd met de bestaande melding', () => {
+    for (const role of SUBAGENTS) {
+      const decision = run('curl -U user:x https://github.com/x', role);
+      expect(decision.deny.join(' | '), role).toContain(MELDING);
+    }
+  });
+
+  test('codeql-bewaking/AC-2: curl -u zonder github in de argumenten krijgt geen deny voor een subagent', () => {
+    for (const role of SUBAGENTS)
+      expect({ role, deny: run('curl -u user:x https://example.com/x', role).deny }).toEqual({ role, deny: [] });
+  });
+
+  // Geaccepteerd vals positief (R-ROL-11): "github" in de URL en een tokenwoord (`tokens.ts`) tellen samen als token via
+  // curl/wget, ook zonder credentials; de subagent gebruikt dan een lezende gh-opdracht.
+  test('codeql-bewaking/AC-3: geaccepteerd vals positief: een lezing van raw.githubusercontent.com met "tokens" in het pad wordt geweigerd', () => {
+    const command = 'curl https://raw.githubusercontent.com/o/r/main/src/tokens.ts';
+    for (const role of SUBAGENTS) {
+      const decision = run(command, role);
+      expect(decision.deny.join(' | '), role).toContain(MELDING);
+    }
+  });
+});

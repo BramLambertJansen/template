@@ -1355,9 +1355,14 @@ function subagentGitHub({ program, args }) {
 }
 
 const CURL_CONFIG = /^(?:-[a-zA-Z]*K|--config(?:=|$)|--netrc|-e$|--execute(?:=|$))/;
+// Tokenvormen voor curl/wget: een tokenwoord of credentialoptie (curl `--user`, wget `--http-user`, `--http-password`,
+// `--password`), of `-u`/`-U` alleen of in een cluster van korte opties (`-u`, `-su`, `-uuser:x`; één `-`, niet `--…`).
+const TOKEN_WOORD = /authorization|bearer|token|--user\b|--http-user\b|--http-password\b|--password\b/i;
+const KORT_U = /(?:^|\s)-[a-zA-Z]*u/i;
 
 /**
- * curl/wget met een token naar GitHub, een config- of headerbestand (`-K`, een headerbestand via -H) of een niet-letterlijk argument
+ * curl/wget met een token en ergens "github" in de argumenten (hoofdletterongevoelig, elke vorm: github.com, GHES,
+ * raw.githubusercontent.com), een config- of headerbestand (`-K`, een headerbestand via -H) of een niet-letterlijk argument
  * (`"$U"`): wat er dan naar buiten gaat, ziet het rolhek niet.
  * @param {Invocation} command
  * @returns {string[]}
@@ -1367,8 +1372,8 @@ function subagentTokens({ program, args, expanded }) {
   /** @type {string[]} */
   const found = [];
   const text = args.join(' ');
-  // Bewust overal in de tekst (deny-kant): een substring, geen hostcontrole.
-  if (text.toLowerCase().includes('github.com') && /authorization|bearer|token|--user\b|(?:^|\s)-u\b/i.test(text))
+  // Bewust overal in de tekst (deny-kant): "github" in elke vorm, geen hostparsing (spec codeql-bewaking, OV-1).
+  if (/github/i.test(text) && (TOKEN_WOORD.test(text) || KORT_U.test(text)))
     found.push('subagent: GitHub-API met een token via curl/wget omzeilt de gh-allowlist; gebruik een lezende gh-opdracht');
   const headerFile = (/** @type {string} */ arg, /** @type {number} */ index) =>
     /^(?:-[a-zA-Z]*H|--header=?)@/.test(arg) || (/^(?:-[a-zA-Z]*H|--header)$/.test(arg) && (args[index + 1] ?? '').startsWith('@'));
