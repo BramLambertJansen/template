@@ -156,6 +156,24 @@ describe('claude-sandbox-werkstraat/AC-14: runner zet geen git-config via de omg
     expect(zonder.reachedDocker).toBe(false);
   });
 
+  test('AC-14 GIT_CONFIG_PARAMETERS bij HEAD gelijk aan main bij origin: zelfde geaccepteerde uitkomst als zonder', () => {
+    const omgeving = maakRepo();
+    const nep = tmp('runner-rm-nep-');
+    git(nep, 'init', '-q', '--bare', '-b', 'main');
+    git(omgeving.repo, 'push', '-q', nep, 'HEAD:refs/heads/main');
+
+    const zonder = run(omgeving);
+    const met = run(omgeving, { GIT_CONFIG_PARAMETERS: `'remote.origin.url=${nep}'` });
+
+    // Zonder wordt de run geaccepteerd. Haalt de runner de GIT_*-variabelen niet weg, dan telt check_origin_url twee
+    // waarden voor remote.origin.url en stopt met exit 1: deze toets wordt dan rood.
+    expect({ status: zonder.status, reachedDocker: zonder.reachedDocker }).toStrictEqual({
+      status: 0,
+      reachedDocker: true,
+    });
+    expect({ status: met.status, reachedDocker: met.reachedDocker }).toStrictEqual({ status: 0, reachedDocker: true });
+  });
+
   test('AC-14 scripts/runner.sh bevat geen toewijzing aan GIT_CONFIG_*, geen git -c en geen --config-env', () => {
     const code = SCRIPT.split('\n')
       .filter((regel) => !regel.trimStart().startsWith('#'))

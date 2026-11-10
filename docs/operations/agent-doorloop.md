@@ -397,9 +397,9 @@ bewijst de isolatie: geen internet, geen route naar de host, `postgres` geweiger
 `pnpm test:db`, `pnpm ui:check` en `pnpm gate:slow` mogen automatisch bij `autoRunner` op main en onveranderde
 hostbestanden. Start ze vanuit de repositoryroot; een package in een submap krijgt geen automatische hosttoestemming.
 Alleen de exacte opdrachten krijgen expliciete toestemming, zonder extra argumenten, environment-
-overrides of samengestelde shellopdracht. Dezelfde vorm bepaalt de sandbox: alleen als elk commando in de Bash-aanroep op
-`excludedCommands` past (`.claude/settings.json:135-143`), draait de runner erbuiten; met `cd`, `&&`, een pipe, een
-omleiding of `$(...)` blijft de hele aanroep in de sandbox, faalt de remote-lezing en noemt de runner de kale vorm
+overrides of samengestelde shellopdracht. Dezelfde vorm bepaalt volgens de documentatie van Claude Code de sandbox: alleen als elk commando in de Bash-aanroep op
+`excludedCommands` past (`.claude/settings.json:135-143`), draait de runner erbuiten; gemeten bleef een aanroep met een pipe
+in de sandbox: dan faalt de remote-lezing en noemt de runner de kale vorm, de enige die zeker werkt
 (`scripts/runner.sh:117`; meting in `docs/operations/sandbox-bewijs.md`).
 
 `pnpm pr:verify` weigert een vuile werkmap, behalve ongetrackte bestanden onder `werkmapNegeer` in `.claude/gates.json`

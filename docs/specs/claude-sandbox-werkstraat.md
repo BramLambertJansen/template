@@ -73,9 +73,10 @@ komt exact `~/.cache/gh` in `allowWrite`. Geen bredere caches, Git-config/hookre
 
 ### Runnermelding bij een onleesbare remote (leerpunt #658)
 
-`excludedCommands` haalt een runnercommando alleen uit de sandbox als elk commando in de Bash-aanroep op de lijst past
-(meting 2026-11-10: kaal `pnpm db:generate` en `pnpm check:snapshot` slaagden buiten de sandbox). In een samengestelde vorm
-(`cd <map> && pnpm test:db`, `pnpm test:db | tail`) start de runner in de sandbox. Gemeten op 2026-11-10 in de sandbox: de
+`excludedCommands` haalt een runnercommando volgens de documentatie van Claude Code alleen uit de sandbox als elk commando
+in de Bash-aanroep op de lijst past. Meting 2026-11-10: kaal `pnpm db:generate` en `pnpm check:snapshot` draaiden buiten de
+sandbox; met een pipe erachter (`pnpm check:snapshot | tail -5`) startte de runner in de sandbox; met `cd <wortel> &&`
+ervoor of `2>&1` erachter draaide hij er toch buiten. De kale vorm is de enige die zeker werkt. Gemeten in de sandbox: de
 omgeving bevat `GIT_CONFIG_PARAMETERS='http.proxyAuthMethod=basic' 'credential.http://127.0.0.1:3128.helper='`;
 `env -u GIT_CONFIG_PARAMETERS git ls-remote origin refs/heads/main` gaf `fatal: unable to access ...: Proxy CONNECT aborted`,
 `env -u GIT_CONFIG_COUNT git ls-remote ...` slaagde. De proxy komt uit `HTTPS_PROXY`, die de runner laat staan; wat wegvalt

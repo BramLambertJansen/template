@@ -41,10 +41,12 @@ Twee lagen: een eerder, samengesteld commando dat ook `.env` las, weigerde de pe
   niet gemeten. De toets op effect telt ze niet (spec `rolhek-effect` AC-11 en AC-12, ADR 0084).
 - **`~/.ssh` en `~/.aws`** zijn alleen als regel aanwezig; bewijs volgt op een machine waar die mappen bestaan.
 - **`excludedCommands`** (`.claude/settings.json:135-143`: onder meer `pnpm test:db`, `ui:check`, `gate:slow`,
-  `db:generate`, `check:snapshot`) draaien buiten de sandbox, met `ask`; ADR 0044 beschrijft dat gat. De uitzondering geldt
-  alleen als elk commando in de Bash-aanroep op de lijst past: `cd`, `&&`, een pipe, een omleiding of `$(...)` houdt de hele
-  aanroep in de sandbox. Meting 2026-11-10: kaal `pnpm db:generate` (hoofdsessie) en kaal `pnpm check:snapshot` en
-  `pnpm db:generate` (developer-subagent) draaiden buiten de sandbox met exit 0. In de sandbox faalt de remote-lezing van de
-  runner; de melding noemt dan de kale vorm (`scripts/runner.sh:117`, spec `claude-sandbox-werkstraat` AC-13).
+  `db:generate`, `check:snapshot`) draaien buiten de sandbox, met `ask`; ADR 0044 beschrijft dat gat. Volgens de documentatie van
+  Claude Code geldt de uitzondering alleen als elk commando in de Bash-aanroep op de lijst past: `cd`, `&&`, een pipe, een
+  omleiding of `$(...)` houdt de hele aanroep in de sandbox. Meting 2026-11-10: kaal `pnpm db:generate` (hoofdsessie) en kaal
+  `pnpm check:snapshot` en `pnpm db:generate` (developer-subagent) draaiden buiten de sandbox met exit 0; met een pipe erachter
+  (`pnpm check:snapshot | tail -5`) bleef de aanroep in de sandbox; met `cd <wortel> &&` ervoor of `2>&1` erachter draaide
+  hij er, anders dan de documentatie zegt, toch buiten. Alleen de kale vorm is dus zeker. In de sandbox faalt de
+  remote-lezing van de runner; de melding noemt dan de kale vorm (`scripts/runner.sh:117`, spec `claude-sandbox-werkstraat` AC-13).
 - **Niet getoetst:** `failIfUnavailable` en `allowUnsandboxedCommands: false` (`.claude/settings.json:133`–`:134`).
 - De deny- en ask-patronen in `permissions` zijn gemak, geen grens (framework §8); dit verslag bewijst de sandbox.
