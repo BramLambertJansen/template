@@ -3,7 +3,8 @@ import { mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSy
 import { createServer, type Server } from 'node:net';
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterAll, afterEach, describe, expect, test } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { vermogen } from '../setup/vermogen.ts';
 import { expectAbsent } from '../support/absence.ts';
 import {
   MELDING_GEEN_BWRAP,
@@ -79,7 +80,8 @@ describe('kooi/AC-3: dicht vallen', () => {
     const werkmap = map(tmpdir(), 'kooi-werk-');
     const r = spawnSync(process.execPath, [KOOI, '--werkmap', werkmap, '--', ': > gedraaid'], {
       encoding: 'utf8',
-      env: { PATH: '/nergens' },
+      // TMPDIR mee: zonder schrijft het kindproces in /tmp, dat niet overal schrijfbaar is (tests-naar-vermogen AC-4).
+      env: { PATH: '/nergens', TMPDIR: tmpdir() },
     });
     expect(r.status).toBe(1);
     expect(r.stderr).toContain(MELDING_GEEN_BWRAP);
@@ -93,14 +95,16 @@ describe('kooi/AC-3: dicht vallen', () => {
     expect(beoordeelProef({ stdout: 'x: Read-only file system', stderr: '' }, true)).toBe('goed');
   });
 
-  test('de proef keurt een echte kooi af die een systeemmap schrijfbaar laat (R-PRINC-04)', () => {
+  test('de proef keurt een echte kooi af die een systeemmap schrijfbaar laat (R-PRINC-04)', (ctx) => {
+    ctx.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding);
     // Kapot: een lege, schrijfbare /usr/share in de kooi. Schrijven lukt daar zonder de echte map te raken.
     const kapot = (werkmap: string) => [...bwrapArgs(werkmap), '--tmpfs', '/usr/share'];
     expect(proef(kapot, '/usr/share/.kooi-proef')).toBe(MELDING_PROEF);
     expect(proef()).toBe('goed');
   });
 
-  test('de proef van de CLI slaagt hier', () => {
+  test('de proef van de CLI slaagt hier', (ctx) => {
+    ctx.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding);
     const r = spawnSync(process.execPath, [KOOI, '--proef'], { encoding: 'utf8' });
     expect(r.stdout).toContain('✓ kooi');
     expect(r.status).toBe(0);
@@ -108,7 +112,8 @@ describe('kooi/AC-3: dicht vallen', () => {
 });
 
 describe('kooi/AC-1: het commando draait in de werkmap', () => {
-  test('schrijven en lezen in de werkmap, met de toolchain en zonder tokens uit de omgeving', () => {
+  test('schrijven en lezen in de werkmap, met de toolchain en zonder tokens uit de omgeving', (ctx) => {
+    ctx.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding);
     const werkmap = map(tmpdir(), 'kooi-werk-');
     process.env['KOOI_GEHEIM'] = 'lekt';
     const r = inKooi(
@@ -127,6 +132,9 @@ describe('kooi/AC-1: het commando draait in de werkmap', () => {
 
 describe('kooi/AC-4: de kooi schermt af', () => {
   const sockets: Server[] = [];
+  beforeEach((ctx) => {
+    ctx.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding);
+  });
   afterAll(() => {
     for (const s of sockets) s.close();
   });
