@@ -1356,9 +1356,9 @@ function subagentGitHub({ program, args }) {
 
 const CURL_CONFIG = /^(?:-[a-zA-Z]*K|--config(?:=|$)|--netrc|-e$|--execute(?:=|$))/;
 // Tokenvormen voor curl/wget: een tokenwoord of credentialoptie (curl `--user`, wget `--http-user`, `--http-password`,
-// `--password`), of `-u` alleen of in een cluster van korte opties (`-u`, `-su`, `-uuser:x`; één `-`, niet `--…`).
+// `--password`), of `-u`/`-U` alleen of in een cluster van korte opties (`-u`, `-su`, `-uuser:x`; één `-`, niet `--…`).
 const TOKEN_WOORD = /authorization|bearer|token|--user\b|--http-user\b|--http-password\b|--password\b/i;
-const KORT_U = /(?:^|\s)-[a-zA-Z]*u/;
+const KORT_U = /(?:^|\s)-[a-zA-Z]*u/i;
 
 /**
  * curl/wget met een token en ergens "github" in de argumenten (hoofdletterongevoelig, elke vorm: github.com, GHES,
