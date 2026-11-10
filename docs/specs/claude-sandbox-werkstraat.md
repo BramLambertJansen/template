@@ -133,7 +133,8 @@ is de auth-methode uit `GIT_CONFIG_PARAMETERS`, die de runner wist. Het advies `
 - **claude-sandbox-werkstraat/AC-14** (nog niet gebouwd) — Regressiepin, op de huidige code al groen (geen rode test
   vereist): een aanroeper met `GIT_CONFIG_PARAMETERS="'remote.origin.url=<andere bare>'"` krijgt dezelfde exitcode en basis
   als zonder, zoals in `test/scripts/runner-trusted-base-bypass.test.ts`; en een vaste toets stelt vast dat `scripts/runner.sh`
-  geen `git -c` en geen `export GIT_CONFIG` bevat. De bestaande runnertests blijven ongewijzigd groen.
+  geen toewijzing aan `GIT_CONFIG_PARAMETERS`, `GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_*` of `GIT_CONFIG_VALUE_*` bevat (ook
+  niet als tijdelijke toewijzing vóór een commando), geen `git -c` en geen `--config-env`; `GIT_CONFIG_NOSYSTEM=1` blijft. De bestaande runnertests blijven ongewijzigd groen.
 
 ## Randgevallen
 
@@ -160,8 +161,8 @@ behalve voor AC-10 tot en met AC-12: het nieuwe script `scripts/kit/worktree-ins
 
 AC-13 en AC-14 (route volledig, R-WERK-04: vertrouwensgrens van de runner): `scripts/runner.sh` en een nieuw testbestand
 onder `test/scripts/`; bestaande runnertests ongewijzigd. Docs in dezelfde PR: `docs/operations/sandbox-bewijs.md` (punt
-`excludedCommands`: alleen als elk commando in de aanroep op de lijst past, meting 2026-11-10; de verwijzingen `:43`/`:45`
-naar `.claude/settings.json` bijwerken), `docs/operations/agent-doorloop.md` (de bestaande passage "zonder … samengestelde
+`excludedCommands`: alleen als elk commando in de aanroep op de lijst past, meting 2026-11-10; de verouderde verwijzingen
+naar `.claude/settings.json` op regel 3, 13, 43 en 45 bijwerken), `docs/operations/agent-doorloop.md` (de bestaande passage "zonder … samengestelde
 shellopdracht" in "Ontwikkelen en runnerchecks" aanvullen, geen nieuwe alinea; de verwijzingen naar `scripts/runner.sh`
 bijwerken) en `docs/operations/runner-invoer.md` (alinea over de basis: de aanvullende regel). R-RUNNER-02 en ADR 0044
 blijven waar. `.claude/hooks/laden.mjs` en `rails/hooks/lib/runner-authority.mjs`: geen wijziging. De PR sluit #658 (sectie
