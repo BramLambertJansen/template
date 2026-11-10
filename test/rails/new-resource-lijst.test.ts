@@ -303,3 +303,32 @@ describe('vorm van de gegenereerde pagina en queries (lijstpagina/AC-8)', () => 
     expect(argument?.getText()).toContain('cursor');
   });
 });
+
+// Lijstquery-helpers (lijstpagina/AC-23, leerpunt #662): het sjabloon verwijst naar de gedeelde helpers in plaats van een eigen escape.
+describe('route en spec verwijzen naar de lijstquery-helpers (lijstpagina/AC-23)', () => {
+  test('de gemaakte route noemt decodeListCursor, containsPattern en list-query.ts', () => {
+    const route = inhoud('src/api/routes/notities.ts');
+
+    expect(route).toContain('decodeListCursor');
+    expect(route).toContain('containsPattern');
+    expect(route).toContain('#core/api/route/list-query.ts');
+  });
+
+  test('de gemaakte route bevat de oude zin "escape `%`, `_` en `\\` in `q`" niet meer', () => {
+    expect(inhoud('src/api/routes/notities.ts')).not.toContain('escape `%`, `_` en `\\` in `q`');
+  });
+
+  test('de gemaakte spec houdt de zin "In `q` worden `%`, `_` en `\\` ge-escaped" en noemt daarbij containsPattern en bij de cursor decodeListCursor', async () => {
+    const root = tijdelijk('new-resource-lijst-ac23-');
+    for (const pad of NODIG) cpSync(pad, path.join(root, pad), { recursive: true });
+    mkdirSync(path.join(root, 'docs/specs'), { recursive: true });
+    const p = await plan(root, 'notities');
+    const spec = p.bestanden.find(({ pad }) => pad === 'docs/specs/notities.md')?.inhoud ?? '';
+    const zin = 'In `q` worden `%`, `_` en `\\` ge-escaped';
+    const alinea = spec.split(/\n\s*\n/).find((blok) => blok.includes(zin)) ?? '';
+
+    expect(spec).toContain(zin);
+    expect(alinea).toContain('containsPattern');
+    expect(alinea).toMatch(/cursor[^\n]*decodeListCursor|decodeListCursor[^\n]*cursor/i);
+  });
+});

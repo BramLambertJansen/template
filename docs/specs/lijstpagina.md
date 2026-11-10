@@ -184,21 +184,21 @@ cursor-contract (`src/core/shared/cursor.ts`) en `Table`; eerst op `/admin/accou
 - **lijstpagina/AC-15** — Gegeven `search.encodeCursor(sort, parts)` met een ander aantal delen dan gedeclareerd, dan een `AssertionError`; met het
   juiste aantal is de uitkomst gelijk aan `encodeCursor([sort, ...parts])`.
 - **lijstpagina/AC-16** — Gegeven `pnpm new:resource notities`, dan declareert het contract `cursorKeys` voor elke sortering en slaagt `check:new-resource`.
-- **lijstpagina/AC-17** (nog niet gebouwd) — Gegeven `containsPattern`, dan geeft `abc` → `%abc%`, `50%_a\b` → `%50\%\_a\\b%`, `''` → `%%`,
+- **lijstpagina/AC-17** — Gegeven `containsPattern`, dan geeft `abc` → `%abc%`, `50%_a\b` → `%50\%\_a\\b%`, `''` → `%%`,
   `MAX_SEARCH_LENGTH` keer `\` → een tekst van `2 * MAX_SEARCH_LENGTH + 2` tekens die met `%` begint en eindigt, met daartussen alleen `\\`-paren, en
   `MAX_SEARCH_LENGTH` keer `a` → ongewijzigd tussen twee `%`.
-- **lijstpagina/AC-18** (nog niet gebouwd) — In het nieuwe `test/api/accounts-search-escape.int.test.ts` maakt de test accounts aan met de namen
+- **lijstpagina/AC-18** — In het nieuwe `test/api/accounts-search-escape.int.test.ts` maakt de test accounts aan met de namen
   "Zoek a_b", "Zoek axb", "Zoek 5%", "Zoek 5x" en "Zoek a\b". Een admin met MFA roept `GET /api/accounts` aan:
   - met `q=a_b` staat van deze vijf alleen "Zoek a_b" in `items`, precies één keer;
   - met `q=5%` alleen "Zoek 5%", precies één keer;
   - met `q=\` staat "Zoek a\b" precies één keer in `items`, en geen van de andere vier.
-- **lijstpagina/AC-19** (nog niet gebouwd) — Gegeven `decodeListCursor` met een `defineListSearch` waarvan `cursorKeys.nieuwste` twee delen heeft:
+- **lijstpagina/AC-19** — Gegeven `decodeListCursor` met een `defineListSearch` waarvan `cursorKeys.nieuwste` twee delen heeft:
   zonder `cursor` → `null`; met `search.encodeCursor('nieuwste', [t, id])` → `[t, id]`; met een cursor van een andere sortering, geen base64url, geen
   JSON, een sleuteldeel van het verkeerde type of een ander aantal delen → `AppError` met `code` `VALIDATION`.
-- **lijstpagina/AC-20** (nog niet gebouwd) — Gegeven `decodeListCursor` met `parts` van een andere lengte dan `cursorKeys[sort]`, dan een
+- **lijstpagina/AC-20** — Gegeven `decodeListCursor` met `parts` van een andere lengte dan `cursorKeys[sort]`, dan een
   `AssertionError` (geen `AppError`); en gegeven een sleutelschema dat een gewone `Error` gooit, dan komt die `Error` ongewijzigd naar buiten, niet als
   `VALIDATION`.
-- **lijstpagina/AC-21** (nog niet gebouwd) — Gegeven de rail `lijstquery`, dan geeft ESLint in `src/api/routes/` met de melding uit
+- **lijstpagina/AC-21** — Gegeven de rail `lijstquery`, dan geeft ESLint in `src/api/routes/` met de melding uit
   "Lijstquery-helpers" een fout op één fixture per vorm.
   - Vorm 1 (bron `#core/shared/cursor.ts`):
     - `import { decodeCursor } from '#core/shared/cursor.ts'`;
@@ -209,7 +209,8 @@ cursor-contract (`src/core/shared/cursor.ts`) en `Table`; eerst op `/admin/accou
     - `export { decodeCursor } from '#core/shared/cursor.ts'`;
     - `export * from '#core/shared/cursor.ts'`;
     - `await import('#core/shared/cursor.ts')`;
-    - ``await import(`#core/shared/cursor.ts`)``.
+    - ``await import(`#core/shared/cursor.ts`)``; die geeft in `src/` ook de bestaande rail `rails/import` (niet-literal bron), dus de fixture
+      verwacht beide meldingen.
   - Vorm 2: de regex `/[\\%_]/g` uit `accounts.ts`.
   - Vorm 3: `new RegExp('[%_]')`, `RegExp('[%_]')` en ``RegExp(`[%_]`)``.
   - Vorm 4:
@@ -226,12 +227,12 @@ cursor-contract (`src/core/shared/cursor.ts`) en `Table`; eerst op `/admin/accou
   - `import { pageQuery } from '#core/shared/cursor.ts'`;
   - een import van `decodeListCursor` en `containsPattern` uit `#core/api/route/list-query.ts`;
   - dezelfde foute fixtures in `src/core/` of in een `*.test.ts`.
-- **lijstpagina/AC-22** (nog niet gebouwd) — Gegeven de bouw-PR, dan importeert `src/api/routes/accounts.ts` `decodeListCursor` en `containsPattern`
+- **lijstpagina/AC-22** — Gegeven de bouw-PR, dan importeert `src/api/routes/accounts.ts` `decodeListCursor` en `containsPattern`
   uit `#core/api/route/list-query.ts` en slaagt `pnpm lint` met de rail aan. Deze bestaande tests blijven groen zonder dat ze wijzigen:
   - de integratietests van `GET /api/accounts` (`test/api/accounts.int.test.ts`, `test/api/accounts-sort.int.test.ts`,
     `test/api/accounts-cursor-validation.int.test.ts`);
   - de unittest `src/api/routes/accounts-cursor.test.ts`, die `rejects.toEqual(new AppError('VALIDATION'))` eist.
-- **lijstpagina/AC-23** (nog niet gebouwd) — Gegeven `pnpm new:resource notities`:
+- **lijstpagina/AC-23** — Gegeven `pnpm new:resource notities`:
   - de gemaakte `src/api/routes/notities.ts` noemt `decodeListCursor`, `containsPattern` en `#core/api/route/list-query.ts`, en bevat de zin
     "escape `%`, `_` en `\` in `q`" niet meer (de vorm uit `scripts/kit/templates/route.ts.tmpl`, regel 14);
   - de gemaakte spec houdt de zin "In `q` worden `%`, `_` en `\` ge-escaped" en noemt daarbij `containsPattern`, en bij de cursor
@@ -292,12 +293,16 @@ cursor-contract (`src/core/shared/cursor.ts`) en `Table`; eerst op `/admin/accou
   - Geen ADR. Een hulpfunctie in core die de app importeert, valt onder de bestaande zonegrens (ADR 0040): geen nieuw uitbreidingspunt, en geen
     A1 t/m A4 (de rail maakt een check strenger, niet losser).
 - **PR-indeling** (R-WERK-05, R-WERK-07, ADR 0080 punt 4; geen pad is `besluit-pr` of `altijdVragen`, dus geen kritiek werk):
-  1. **Besluit-PR:** alleen `docs/specs/lijstpagina.md`, met AC-17 t/m AC-23 als `(nog niet gebouwd)`. De status blijft `gebouwd # #514`. De
-     markering mag niet in een PR met code (spec specarchief-en-bouwvorm, AC-7), dus deze PR gaat eerst. De merge door de eigenaar is het besluit.
-  2. **Bouw-PR** (volledige route, eigenaarmerge): eerst de tester. AC-18, AC-21 en AC-23 falen rood op asserties. De unittests voor AC-17,
-     AC-19 en AC-20 falen eerst op een importfout, omdat `src/core/api/route/list-query.ts` nog niet bestaat; dat telt hier als het rode
-     bewijs, er komt geen stub-export. Dan de developer (core-helper, `accounts.ts`), dan de hoofdsessie (`eslint.config.js`, sjablonen). Daarna haalt de bouw-PR de markeringen weg en zet hij
-     `gebouwd # #<deze PR>`. Docs (`docs/gouden-pad.md`, `CHANGELOG.md`) gaan in dezelfde PR mee.
+  1. **Besluit-PR (#669, gemerged):** alleen `docs/specs/lijstpagina.md`, met AC-17 t/m AC-23 als `(nog niet gebouwd)`. De status bleef
+     `gebouwd # #514`. De markering mag niet in een PR met code (spec specarchief-en-bouwvorm, AC-7), dus die PR ging eerst. De merge door de
+     eigenaar is het besluit.
+  2. **Bouw-PR** (volledige route, eigenaarmerge): eerst een stub van `src/core/api/route/list-query.ts` met de definitieve signaturen
+     (`containsPattern` geeft `q` terug, `decodeListCursor` geeft `null`). De tester-hook eist dat een test op een assertie faalt en niet op een
+     ontbrekende import, dus een module die nog niet bestaat heeft eerst zo'n stub nodig (leerpunt). Dan de tester: AC-17, AC-19, AC-20,
+     AC-21 en AC-23 falen rood op asserties. AC-18 is een beschermtest en is al groen tegen de oude `accounts.ts`; hij bewaakt dat de
+     verhuizing de escape niet verandert. Dan de developer (core-helper, `accounts.ts`), dan de hoofdsessie (`eslint.config.js`, sjablonen).
+     Daarna haalt de bouw-PR de markeringen weg en zet hij `gebouwd # #<deze PR>`. Docs (`docs/gouden-pad.md`, `CHANGELOG.md`) gaan in dezelfde
+     PR mee.
 
 ## Buiten scope
 

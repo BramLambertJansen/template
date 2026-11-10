@@ -133,7 +133,9 @@ partner noemt en een spec met de paragraaf "Koppeling". De bouwstenen:
    `invite-dialog.tsx`. Een lijst met zoeken en sorteren in de search params (`defineListSearch`, `useListSearch`, `uniqueById`, `ListToolbar`;
    spec [lijstpagina](specs/lijstpagina.md)); `new:resource` maakt die uit de sjablonen, met de sorteringen nieuwste en oudste. Elke sortering
    noemt in `cursorKeys` de maximale lengte van haar sleuteldelen; `defineListSearch` weigert bij het laden een te lange sleutel en de route
-   maakt de cursor met `search.encodeCursor` (`src/shared/contracts/accounts.ts`).
+   maakt de cursor met `search.encodeCursor` (`src/shared/contracts/accounts.ts`). De route decodeert de cursor met `decodeListCursor`
+   en maakt `q` geschikt voor `ilike` met `containsPattern`, beide uit `#core/api/route/list-query.ts` (`src/api/routes/accounts.ts`); een eigen
+   kopie weigert de lintregel `lijstquery`.
 10. **Route** met guard: `src/web/routes/_app/admin/accounts.tsx`; menu-item per rol in `src/web/lib/nav.ts`.
 11. **E2E** per AC met axe op 375 en 1280 px: `e2e/accounts.spec.ts`.
 
