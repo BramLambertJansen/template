@@ -73,6 +73,60 @@ cursor-contract (`src/core/shared/cursor.ts`) en `Table`; eerst op `/admin/accou
   (eerste voorkomen wint); een overgeslagen rij verschijnt pas na herladen. Geldt ook voor de generator.
 - **Cursor niet in de URL** (OV-1): "Meer laden" blijft (`useInfiniteQuery`); de URL bewaart zoeken, filters en sortering. Framework §5 ("cursor in de
   URL") wordt daarop aangepast.
+- **Lijstquery-helpers** (leerpunt #662): de cursor-decoder en de `ilike`-escape staan nu alleen lokaal in `src/api/routes/accounts.ts`
+  (`after()`, `containsPattern()`), en elke resource kopieert ze. Ze komen één keer in core, in `src/core/api/route/list-query.ts`. Daar en niet in
+  `src/core/shared/list-search.ts`, want de decoder gooit `AppError` (`src/core/api/errors.ts`) en core/shared importeert niets uit core/api. De escape
+  hoort bij SQL en niet in de browserbundel, en de route krijgt één importplek. Geen nieuw uitbreidingspunt en geen nieuwe foutcode, alleen
+  bestaande `VALIDATION`.
+  - `containsPattern(q: string): string` geeft `%` + `q` + `%`, waarbij in `q` elke `\`, `%` en `_` een `\` ervoor krijgt (`ilike` gebruikt `\` als
+    standaard-escape). De functie is totaal: lege invoer geeft `%%`, en de lengte is `2 + q.length + aantal ge-escapete tekens`.
+  - `decodeListCursor(search, { sort, cursor }, parts)`: `search` is het resultaat van `defineListSearch`, `{ sort, cursor }` komt uit de geparste
+    input, en `parts` is een niet-lege tuple van zod-schema's voor de sleuteldelen na de sorteernaam. Zonder `cursor` geeft hij `null`. Met een
+    cursor decodeert hij met `decodeCursor(cursor, z.tuple([z.literal(sort), ...parts]))` en geeft hij alleen de geparste sleuteldelen terug, zonder de
+    sorteernaam. Het uitvoertype is `{ [K in keyof Parts]: z.infer<Parts[K]> } | null`, met
+    `Parts extends readonly [z.ZodType, ...z.ZodType[]]`. TypeScript leidt dat type niet af uit de gespreide tuple. Daarom mag de helper bij
+    `z.tuple([z.literal(sort), ...parts])` en bij het afknippen van de sorteernaam `unsafeCast(waarde, reden)` gebruiken, nooit `as` (R-CODE-04).
+    Een `ZodError` (vreemde base64, geen JSON, andere sortering, verkeerd type of aantal delen) wordt `new AppError('VALIDATION')` zonder `cause`.
+    De fout is daarmee gelijk aan wat `src/api/routes/accounts-cursor.test.ts` nu eist (`rejects.toEqual(new AppError('VALIDATION'))`). Elke
+    andere fout gaat ongewijzigd door, dus een bug wordt `INTERNAL_ERROR` en geen `VALIDATION`; de huidige `catch {}` vangt alles. Vóór het
+    decoderen eist `assert()` dat `parts.length` gelijk is aan `search.cursorKeys[sort].length` (anders `AssertionError` → `INTERNAL_ERROR`). Zo
+    volgen decoderen en `search.encodeCursor` dezelfde declaratie.
+  - `src/api/routes/accounts.ts` gebruikt beide en verliest `after()`, `containsPattern()` en de import van `decodeCursor`. Gedrag en foutcodes van
+    `GET /api/accounts` blijven gelijk, en `src/api/routes/accounts-cursor.test.ts` blijft ongewijzigd groen.
+  - **Rail `lijstquery`** (ESLint, `eslint.config.js`, fixtures in `test/rails/eslint.test.ts`; R-DOC-02) geldt in `src/api/**/*.ts` buiten tests
+    (`TESTS` in `eslint.config.js`). Elk van deze vormen geeft een fout:
+    1. Een import, re-export (`export { … } from`, `export * from`) of `import()` van een bron die past op
+       `/(^#core|core)[/]shared[/]cursor[.]ts$/` (alias of relatief pad). Dat geldt met een benoemde specifier `decodeCursor` of `encodeCursor`,
+       met een namespace-specifier (`import * as`), met een default-specifier, en altijd bij `export *` en `import()`.
+       Benoemde imports van `pageSchema`, `pageQuery` en `maxCursorLength` mogen wel.
+    2. Een regex-literal waarvan het patroon zowel `%` als `_` bevat.
+    3. `RegExp(…)` of `new RegExp(…)` met als eerste argument een tekstliteral, of een template literal zonder expressies, die zowel `%` als `_`
+       bevat.
+    4. `.replace(…)` of `.replaceAll(…)` met als eerste argument de tekstliteral `%`, `_` of `\`, of een regex-literal die `%`, `_` of een
+       letterlijke `\` bevat, maar alleen als het tweede argument een `\` bevat (tekstliteral, of een template literal met `\` in een vast deel)
+       of een functie is (pijl- of functie-expressie). `naam.replaceAll('_', ' ')` en `slug.replace(/_/g, '-')` mogen dus.
+    5. Een functie- of variabeledeclaratie (`function`, `const`, `let`) met de naam `containsPattern` of `decodeListCursor`.
+
+    Melding, letterlijk: "Lijstquery: decodeer de cursor met decodeListCursor en escape de zoekterm met containsPattern uit
+    #core/api/route/list-query.ts; maak de cursor met search.encodeCursor. Geen eigen kopie (spec lijstpagina, leerpunt #662)."
+
+    Gedekt zijn ook template literals zonder expressies, als bron van `import()` en als eerste argument van `RegExp`. Niet gedekt, en daarvoor
+    blijft de review de grens:
+    - een template literal mét expressies, als bron of als patroon;
+    - een bronpad of patroon dat in een variabele is opgebouwd;
+    - een escape in een ander bestand of met andere tekens;
+    - een functie onder een andere naam.
+
+    Stand op deze branch: buiten `src/api/routes/accounts.ts:60` staat in `src/api` (zonder tests) geen `.replace` of `.replaceAll` en geen regex
+    met `%` en `_`. Buiten tests importeert alleen `src/api/routes/accounts.ts:5` uit `#core/shared/cursor.ts`.
+    `src/api/routes/accounts-cursor.test.ts` importeert `encodeCursor` uit dat bestand, maar valt als test buiten de rail.
+  - **Generator:** in `scripts/kit/templates/route.ts.tmpl` wordt de commentaarzin "escape `%`, `_` en `\` in `q` voordat je zoekt met ilike"
+    (regel 14–15) vervangen door een verwijzing naar `decodeListCursor` en `containsPattern` uit `#core/api/route/list-query.ts`. De routes blijven
+    `notImplemented` (R-ROL-06, stap 2 van de werkstraat). Een import die nog niet gebruikt wordt, zou op lint falen; de rail houdt een kopie
+    tegen zodra de developer de route bouwt (OV-7). In `scripts/kit/templates/spec.md.tmpl` blijft regel 65 ("In `q` worden `%`, `_` en `\`
+    ge-escaped …") staan, want `test/rails/new-resource-lijst.test.ts` (test "escapen van %, _ en \\ bij zoeken") eist die tekst. Die regel krijgt
+    er alleen `containsPattern` bij, en de cursorregel `decodeListCursor`. Geen andere test leest de tekst van `route.ts.tmpl` letterlijk.
+    `test/rails/new-resource.test.ts` en `test/rails/contract-sjabloon-cursor-keys.test.ts` lezen wel andere bestanden, maar niet deze zin.
 
 ## Hergebruik en UX
 
@@ -130,6 +184,59 @@ cursor-contract (`src/core/shared/cursor.ts`) en `Table`; eerst op `/admin/accou
 - **lijstpagina/AC-15** — Gegeven `search.encodeCursor(sort, parts)` met een ander aantal delen dan gedeclareerd, dan een `AssertionError`; met het
   juiste aantal is de uitkomst gelijk aan `encodeCursor([sort, ...parts])`.
 - **lijstpagina/AC-16** — Gegeven `pnpm new:resource notities`, dan declareert het contract `cursorKeys` voor elke sortering en slaagt `check:new-resource`.
+- **lijstpagina/AC-17** (nog niet gebouwd) — Gegeven `containsPattern`, dan geeft `abc` → `%abc%`, `50%_a\b` → `%50\%\_a\\b%`, `''` → `%%`,
+  `MAX_SEARCH_LENGTH` keer `\` → een tekst van `2 * MAX_SEARCH_LENGTH + 2` tekens die met `%` begint en eindigt, met daartussen alleen `\\`-paren, en
+  `MAX_SEARCH_LENGTH` keer `a` → ongewijzigd tussen twee `%`.
+- **lijstpagina/AC-18** (nog niet gebouwd) — In het nieuwe `test/api/accounts-search-escape.int.test.ts` maakt de test accounts aan met de namen
+  "Zoek a_b", "Zoek axb", "Zoek 5%", "Zoek 5x" en "Zoek a\b". Een admin met MFA roept `GET /api/accounts` aan:
+  - met `q=a_b` staat van deze vijf alleen "Zoek a_b" in `items`, precies één keer;
+  - met `q=5%` alleen "Zoek 5%", precies één keer;
+  - met `q=\` staat "Zoek a\b" precies één keer in `items`, en geen van de andere vier.
+- **lijstpagina/AC-19** (nog niet gebouwd) — Gegeven `decodeListCursor` met een `defineListSearch` waarvan `cursorKeys.nieuwste` twee delen heeft:
+  zonder `cursor` → `null`; met `search.encodeCursor('nieuwste', [t, id])` → `[t, id]`; met een cursor van een andere sortering, geen base64url, geen
+  JSON, een sleuteldeel van het verkeerde type of een ander aantal delen → `AppError` met `code` `VALIDATION`.
+- **lijstpagina/AC-20** (nog niet gebouwd) — Gegeven `decodeListCursor` met `parts` van een andere lengte dan `cursorKeys[sort]`, dan een
+  `AssertionError` (geen `AppError`); en gegeven een sleutelschema dat een gewone `Error` gooit, dan komt die `Error` ongewijzigd naar buiten, niet als
+  `VALIDATION`.
+- **lijstpagina/AC-21** (nog niet gebouwd) — Gegeven de rail `lijstquery`, dan geeft ESLint in `src/api/routes/` met de melding uit
+  "Lijstquery-helpers" een fout op één fixture per vorm.
+  - Vorm 1 (bron `#core/shared/cursor.ts`):
+    - `import { decodeCursor } from '#core/shared/cursor.ts'`;
+    - `import { encodeCursor } from '#core/shared/cursor.ts'`;
+    - `import * as cursor from '#core/shared/cursor.ts'`;
+    - `import cursor from '#core/shared/cursor.ts'`;
+    - `import { decodeCursor } from '../../core/shared/cursor.ts'`;
+    - `export { decodeCursor } from '#core/shared/cursor.ts'`;
+    - `export * from '#core/shared/cursor.ts'`;
+    - `await import('#core/shared/cursor.ts')`;
+    - ``await import(`#core/shared/cursor.ts`)``.
+  - Vorm 2: de regex `/[\\%_]/g` uit `accounts.ts`.
+  - Vorm 3: `new RegExp('[%_]')`, `RegExp('[%_]')` en ``RegExp(`[%_]`)``.
+  - Vorm 4:
+    - `q.replaceAll('%', '\\%')`;
+    - `q.replace('_', '\\_')`;
+    - `q.replaceAll('\\', '\\\\')`;
+    - ``q.replaceAll('%', `\\%`)``;
+    - `q.replaceAll('_', (c) => c)`.
+  - Vorm 5: `function containsPattern() {}`, `const containsPattern = () => ''`, `function decodeListCursor() {}` en
+    `const decodeListCursor = () => null`.
+
+  Geen fout geven:
+  - `naam.replaceAll('_', ' ')` en `slug.replace(/_/g, '-')`;
+  - `import { pageQuery } from '#core/shared/cursor.ts'`;
+  - een import van `decodeListCursor` en `containsPattern` uit `#core/api/route/list-query.ts`;
+  - dezelfde foute fixtures in `src/core/` of in een `*.test.ts`.
+- **lijstpagina/AC-22** (nog niet gebouwd) — Gegeven de bouw-PR, dan importeert `src/api/routes/accounts.ts` `decodeListCursor` en `containsPattern`
+  uit `#core/api/route/list-query.ts` en slaagt `pnpm lint` met de rail aan. Deze bestaande tests blijven groen zonder dat ze wijzigen:
+  - de integratietests van `GET /api/accounts` (`test/api/accounts.int.test.ts`, `test/api/accounts-sort.int.test.ts`,
+    `test/api/accounts-cursor-validation.int.test.ts`);
+  - de unittest `src/api/routes/accounts-cursor.test.ts`, die `rejects.toEqual(new AppError('VALIDATION'))` eist.
+- **lijstpagina/AC-23** (nog niet gebouwd) — Gegeven `pnpm new:resource notities`:
+  - de gemaakte `src/api/routes/notities.ts` noemt `decodeListCursor`, `containsPattern` en `#core/api/route/list-query.ts`, en bevat de zin
+    "escape `%`, `_` en `\` in `q`" niet meer (de vorm uit `scripts/kit/templates/route.ts.tmpl`, regel 14);
+  - de gemaakte spec houdt de zin "In `q` worden `%`, `_` en `\` ge-escaped" en noemt daarbij `containsPattern`, en bij de cursor
+    `decodeListCursor`;
+  - `check:new-resource` slaagt.
 
 ## Randgevallen
 
@@ -140,6 +247,10 @@ cursor-contract (`src/core/shared/cursor.ts`) en `Table`; eerst op `/admin/accou
 | `q` langer dan `MAX_SEARCH_LENGTH` (100) | web: afgekapt in het veld (`maxLength`); API: geweigerd | `VALIDATION` |
 | Onbekende sleutel in de search params | web: genegeerd; API: geweigerd (`.strict()`) | `VALIDATION` |
 | Gemanipuleerde of vreemde cursor | geweigerd, geen SQL-fout | `VALIDATION` |
+| Bug in een sleutelschema of in het aantal `parts` van de route | zichtbaar als fout van de server, niet verstopt als ongeldige invoer (AC-20) | `INTERNAL_ERROR` |
+| Cursor die `atob` of de strikte `TextDecoder` laat falen (`TypeError`, `DOMException`) | `decodeCursor` maakt er binnen zijn eigen `try` al een `ZodError` van, dus `VALIDATION`; AC-20 toetst dit niet, AC-19 ("geen base64url") wel | `VALIDATION` |
+| `src/api` gebruikt `.replace`/`.replaceAll` met `_` voor iets anders dan een escape (bv. `_` → spatie) | geen fout van de rail: het tweede argument bevat geen `\` en is geen functie (AC-21) | — |
+| Nieuwe resource kopieert `after()`/`containsPattern()` uit een oude versie van `accounts.ts` | lint faalt met de melding van de rail (AC-21) | — |
 | Cursor langer dan `MAX_CURSOR_LENGTH` | geweigerd | `VALIDATION` |
 | Naam van 100 tekens met stuurtekens of aanhalingstekens als sorteersleutel | de cursor past in het budget; "Meer laden" werkt (AC-9) | — |
 | Sleutel die buiten de contracten om te lang is opgeslagen (bijv. `pnpm admin:create --name`; de naamkolom heeft geen lengte-CHECK) | zichtbare fout op die sortering in plaats van een stil vastgelopen "Meer laden" (AC-11) | `INTERNAL_ERROR` |
@@ -162,13 +273,41 @@ cursor-contract (`src/core/shared/cursor.ts`) en `Table`; eerst op `/admin/accou
   gate-pad); `src/shared/contracts/accounts.ts`, `src/api/routes/accounts.ts`; generator `contract.ts.tmpl`, `route.ts.tmpl`, `spec.md.tmpl` (gate-paden)
   met `check:new-resource`; `docs/gouden-pad.md`, `CHANGELOG.md`. Geen migratie, route of permissie.
 - `src/core/shared/cursor.ts`: het commentaar zegt "cursor in de URL"; dat wordt "cursor alleen in de query van TanStack Query" (OV-1).
+- Lijstquery-helpers (#662), per pad met het niveau uit `feiten.mjs pad`:
+  - `src/core/api/route/list-query.ts` (nieuw) en `src/core/api/route/list-query.test.ts`: schrijven `gate` (`src/core/**`), besluit eigenaar. De
+    developer schrijft de code met de melding "noem het in de PR", de tester schrijft de test (R-WERK-10).
+  - `eslint.config.js` (rail `lijstquery` in `ruleNames` en een `restrict(...)`-blok): schrijven `voorReview`, besluit eigenaar. Alleen de
+    hoofdsessie schrijft dit (R-ROL-02). Een nieuwe lintregel uit de PR zelf is voor `pnpm ratchet` een melding, geen fout (R-CI-02).
+  - `scripts/kit/templates/route.ts.tmpl`, `scripts/kit/templates/spec.md.tmpl`: schrijven `voorReview`, besluit eigenaar. Alleen de
+    hoofdsessie schrijft dit; daarna draait `check:new-resource`.
+  - `test/rails/eslint.test.ts` en `test/rails/new-resource-lijst.test.ts`: tests toevoegen, niets wijzigen. Nieuw
+    `test/api/accounts-search-escape.int.test.ts` (AC-18). Alle drie `gate`, R-TEST-02; de tester schrijft ze. Bestaande tests die
+    ongewijzigd groen blijven: `src/api/routes/accounts-cursor.test.ts` (eist `new AppError('VALIDATION')` zonder `cause`), de drie
+    integratietests uit AC-22, en de test "escapen van %, _ en \\ bij zoeken" in `test/rails/new-resource-lijst.test.ts` (eist de escapezin
+    in `spec.md.tmpl`). Geen test leest de tekst van `route.ts.tmpl` letterlijk.
+  - `src/api/routes/accounts.ts`: schrijven vrij. `docs/gouden-pad.md` (stap 6 Route: de lijst gebruikt de helpers): besluit eigenaar.
+    `CHANGELOG.md`: vrij.
+  - Geen migratie, route, permissie, foutcode of resource. `check:migrations`, `check:secdef`, `test:db`-policies,
+    `test/security/resources.ts` en permissietests per verboden rol zijn dus niet geraakt. `pnpm test:db` draait wel, voor AC-18 en AC-22.
+  - Geen ADR. Een hulpfunctie in core die de app importeert, valt onder de bestaande zonegrens (ADR 0040): geen nieuw uitbreidingspunt, en geen
+    A1 t/m A4 (de rail maakt een check strenger, niet losser).
+- **PR-indeling** (R-WERK-05, R-WERK-07, ADR 0080 punt 4; geen pad is `besluit-pr` of `altijdVragen`, dus geen kritiek werk):
+  1. **Besluit-PR:** alleen `docs/specs/lijstpagina.md`, met AC-17 t/m AC-23 als `(nog niet gebouwd)`. De status blijft `gebouwd # #514`. De
+     markering mag niet in een PR met code (spec specarchief-en-bouwvorm, AC-7), dus deze PR gaat eerst. De merge door de eigenaar is het besluit.
+  2. **Bouw-PR** (volledige route, eigenaarmerge): eerst de tester. AC-18, AC-21 en AC-23 falen rood op asserties. De unittests voor AC-17,
+     AC-19 en AC-20 falen eerst op een importfout, omdat `src/core/api/route/list-query.ts` nog niet bestaat; dat telt hier als het rode
+     bewijs, er komt geen stub-export. Dan de developer (core-helper, `accounts.ts`), dan de hoofdsessie (`eslint.config.js`, sjablonen). Daarna haalt de bouw-PR de markeringen weg en zet hij
+     `gebouwd # #<deze PR>`. Docs (`docs/gouden-pad.md`, `CHANGELOG.md`) gaan in dezelfde PR mee.
 
 ## Buiten scope
 
 Totaal aantal resultaten, paginanummers, kolomkoppen als sorteerknop, opgeslagen weergaven, full-text search of `pg_trgm`, filters op datum,
 meerdere waarden per filter, zoeken op `/design-system`-voorbeelddata. Bij het cursorbudget (#411): een lengte-CHECK op de naam in de database
 (`better_auth."user"` is auth, dus eerst een besluit-PR) en stuurtekens in namen weigeren (een aparte keuze, met bestaande gegevens). Bij het sleutelbudget (#444): een lintregel die de losse `encodeCursor` in
-app-routes verbiedt, en een lengte-CHECK in de database.
+app-routes verbiedt (sinds #662 in de rail `lijstquery`), en een lengte-CHECK in de database. Bij de lijstquery-helpers (#662) valt buiten scope: de
+escape in de securitysuite (`test/security/`), want daar lopen #656, #657 en #661 (vervolg, OV-6); de webkant uit hetzelfde leerpunt ("Meer laden"
+en focus per lijstscherm, OV-8); een keyset-voorwaarde als helper (de kolommen en de cast verschillen per sortering); en een `max`-lengte per
+sleuteldeel die uit `cursorKeys` wordt afgeleid.
 
 ## Testplan
 
@@ -185,6 +324,12 @@ app-routes verbiedt, en een lengte-CHECK in de database.
   Volgorde op naam: exacte asserts alleen op ASCII-namen; namen met accenten of hoofdletters alleen op aanwezigheid en zonder dubbele rij, want de
   collatie verschilt per database (OV-3) en lokaal is niet gelijk aan de provider.
 - **Generator:** `check:new-resource` maakt een resource uit de nieuwe sjablonen en draait typecheck, lint en unit (AC-8, AC-16).
+- **Lijstquery-helpers (#662):** unit `src/core/api/route/list-query.test.ts` voor AC-17, AC-19 en AC-20 (de geparste sleuteldelen exact, de
+  `code` van de fout exact, `AssertionError` op klasse). Railfixtures in `test/rails/eslint.test.ts` voor AC-21, positief en negatief.
+  Integratie (`pnpm test:db`) voor AC-18 in het nieuwe `test/api/accounts-search-escape.int.test.ts`. De test maakt de vijf accounts zelf aan
+  en telt per `q` hoe vaak elk ervan in `items` staat, zodat een lege lijst niet kan slagen.
+  AC-22 via `pnpm lint` en de bestaande integratietests, ongewijzigd. AC-23 in `test/rails/new-resource-lijst.test.ts` op de sjabloontekst, plus
+  `check:new-resource`.
 - **E2E (`pnpm ui:check`, echte stack, CSP aan):** AC-1 t/m AC-6 op `/admin/accounts` met seed-accounts; axe op 375 en 1280 px met lege lijst,
   gefilterde lijst en "verouderd"; op 375 px geen horizontale scroll buiten de tabel.
 
@@ -199,3 +344,15 @@ app-routes verbiedt, en een lengte-CHECK in de database.
 - **OV-4** — Index voor zoeken (`pg_trgm`) nu al? Aanbeveling: nee; pas bij een lijst die aantoonbaar traag is, met ADR voor de extensie.
 - **OV-5** — Welke sorteringen krijgt de generator standaard? Aanbeveling: alleen "Nieuwste eerst" en "Oudste eerst" op `aangemaakt` plus zoeken;
   filters per resource vanuit de spec.
+- **OV-6** — De securitysuite toetst de escape niet (leerpunt #662, stap 4). Nu meenemen of als vervolg? Aanbeveling: als vervolg, na #656, #657 en
+  #661. Die werken in `test/security/`, en een gelijktijdige wijziging botst. Na hun merge een roadmap-item of leerpunt: per resource met
+  `q` toetst de suite dat `%` en `_` geen wildcard zijn. AC-17 (unit) en AC-18 (accounts, echte database) dekken het gat tot dan.
+- **OV-7** — Moet de generator een gebouwde lijstroute emitteren die de helpers al gebruikt, of alleen het commentaar plus de rail? Aanbeveling:
+  commentaar plus rail. Een gebouwde handler kent de zoekvelden en de tabelkolommen nog niet (die komen uit de spec van de resource), en zonder
+  goedgekeurde spec maakt de generator alleen een skelet (R-ROL-06). Een ongebruikte import faalt op lint.
+- **OV-8** — Het leerpunt noemt ook de webkant ("Meer laden" en focus per lijstscherm). Hoort die hierbij? Aanbeveling: nee, die gaat apart. Hij
+  raakt `src/core/web/lib` en UI-tests, en eerst moet blijken met een tweede lijstscherm wat er echt herhaald wordt (de generator heeft al
+  `useListSearch` en `ListToolbar`).
+- **OV-9** — Komt de import van `encodeCursor` uit `#core/shared/cursor.ts` ook in de rail, zodat routes alleen `search.encodeCursor` gebruiken? Dat
+  stond bij #444 nog buiten scope. Aanbeveling: ja. `accounts.ts` en het sjabloon gebruiken al `search.encodeCursor`, dus het kost niets, en het
+  houdt decoderen en coderen aan dezelfde `cursorKeys`.

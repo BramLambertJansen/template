@@ -388,16 +388,19 @@ eigenaar en zet de hook nooit uit en omzeilt hem niet (R-PRINC-09). Bij het derd
 
 De bestaande runner start zijn eigen verse teststack; hiervoor hoeft de eigenaar geen dev-stack te starten.
 Zo draait hij (ADR 0044): `scripts/runner.sh` roept compose aan met vaste argumenten: alleen `compose.yaml`, een eigen
-projectnaam, `--env-file db/test.env` en `--profile test` (`scripts/runner.sh:91`), nooit `.env`, `.env.local` of een
+projectnaam, `--env-file db/test.env` en `--profile test` (`scripts/runner.sh:212`), nooit `.env`, `.env.local` of een
 override. Het anker `x-runner` (`compose.yaml:9`) zet de container op `read_only`, `cap_drop: [ALL]` en
 `no-new-privileges`, mount de repo read-only met één uitvoermap `.runner-output`, houdt `/tmp` (ook de caches,
-`RUNNER_CACHE_DIR`) in tmpfs en hangt hem alleen aan het interne netwerk `test-net` (`compose.yaml:231`). Vooraf weigert
-`check_host_files` bij afwijkende hostbestanden (`HOST_FILES`, `scripts/runner.sh:15`). `test/isolatie/runner.int.test.ts`
+`RUNNER_CACHE_DIR`) in tmpfs en hangt hem alleen aan het interne netwerk `test-net` (`compose.yaml:255`). Vooraf weigert
+`check_host_files` bij afwijkende hostbestanden (`HOST_FILES`, `scripts/runner.sh:38`). `test/isolatie/runner.int.test.ts`
 bewijst de isolatie: geen internet, geen route naar de host, `postgres` geweigerd en een read-only repo.
 `pnpm test:db`, `pnpm ui:check` en `pnpm gate:slow` mogen automatisch bij `autoRunner` op main en onveranderde
 hostbestanden. Start ze vanuit de repositoryroot; een package in een submap krijgt geen automatische hosttoestemming.
 Alleen de exacte opdrachten krijgen expliciete toestemming, zonder extra argumenten, environment-
-overrides of samengestelde shellopdracht.
+overrides of samengestelde shellopdracht. Dezelfde vorm bepaalt volgens de documentatie van Claude Code de sandbox: alleen als elk commando in de Bash-aanroep op
+`excludedCommands` past (`.claude/settings.json:135-143`), draait de runner erbuiten; gemeten bleef een aanroep met een pipe
+in de sandbox: dan faalt de remote-lezing en noemt de runner de kale vorm, de enige die zeker werkt
+(`scripts/runner.sh:117`; meting in `docs/operations/sandbox-bewijs.md`).
 
 `pnpm pr:verify` weigert een vuile werkmap, behalve ongetrackte bestanden onder `werkmapNegeer` in `.claude/gates.json`
 (uit `origin/main`, nooit uit de werkmap; `scripts/kit/pr-verify.mjs`, ADR 0045 punt 23). Een getrackte wijziging onder zo'n
