@@ -1,7 +1,7 @@
 # 0085 — Dependencies in een worktree installeert de agent, binnen de sandbox
 
 Status: geaccepteerd
-Herzien: 2026-11-10 (#670): gewijzigd door [0088](0088-tests-naar-vermogen.md): het gevolg over de unit-tests die in de sandbox
+Herzien: 2026-11-10 (#672): gewijzigd door [0088](0088-tests-naar-vermogen.md): het gevolg over de unit-tests die in de sandbox
 falen (ze slaan over met een melding; CI blijft het bewijs)
 
 Herziet de afweging in [0061](0061-claude-sandbox-werkstraat.md) (alternatief "Projectstore, cache en state opnieuw

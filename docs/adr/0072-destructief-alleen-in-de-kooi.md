@@ -3,7 +3,7 @@
 Status: geaccepteerd
 Herzien: 2026-11-03 (#466): punt 2 (de proef schrijft in een alleen-lezen systeemmap; uitwerking en `/proc/sys` alleen-lezen in de
 spec)
-Herzien: 2026-11-10 (#670): gewijzigd door [0088](0088-tests-naar-vermogen.md) punt 2 (een kooitest slaat over waar de kooi
+Herzien: 2026-11-10 (#672): gewijzigd door [0088](0088-tests-naar-vermogen.md) punt 2 (een kooitest slaat over waar de kooi
 niet kan starten, nooit in CI) en het gevolg dat `gate:fast` zonder bubblewrap rood is
 
 Vult [0045](0045-railwerk.md) en [0066](0066-schrijfgrens-op-effect.md) aan; voorwaarde voor bouw-PR 1 van
