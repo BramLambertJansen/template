@@ -28,6 +28,7 @@ const ruleNames = [
   'kooi',
   'netwerk-api',
   'geheim',
+  'lijstquery',
 ];
 const rails = { rules: Object.fromEntries(ruleNames.map((name) => [name, restrictedSyntax])) };
 
@@ -72,6 +73,32 @@ function restrict(rule, files, ignores, message, selectors) {
     rules: { [`rails/${rule}`]: ['error', ...selectors.map((selector) => ({ selector, message }))] },
   };
 }
+
+// Rail lijstquery (spec lijstpagina, AC-21): vijf vormen. esquery kan geen `/` in een regex aan, dus `[/]` en `[.]`.
+const CURSOR_BRON = '/core[/]shared[/]cursor[.]ts$/';
+const CURSOR_FUNCTIE = '/^(decodeCursor|encodeCursor)$/';
+const ESCAPE_TEKEN = String.raw`/^[%_\\]$/`;
+const ESCAPE_PATROON = String.raw`/%|_|\\/`;
+const BACKSLASH = String.raw`/\\/`;
+const LIJSTQUERY_SELECTORS = [
+  // 1. Cursor-functies, namespace of default uit shared/cursor.ts, ook via re-export of import(); pageSchema e.d. mag.
+  `ImportDeclaration[source.value=${CURSOR_BRON}] > ImportSpecifier[imported.name=${CURSOR_FUNCTIE}]`,
+  `ImportDeclaration[source.value=${CURSOR_BRON}] > :matches(ImportNamespaceSpecifier, ImportDefaultSpecifier)`,
+  `ExportNamedDeclaration[source.value=${CURSOR_BRON}] > ExportSpecifier[local.name=${CURSOR_FUNCTIE}]`,
+  `ExportAllDeclaration[source.value=${CURSOR_BRON}]`,
+  `ImportExpression[source.value=${CURSOR_BRON}]`,
+  `ImportExpression[source.type='TemplateLiteral'][source.quasis.0.value.raw=${CURSOR_BRON}]`,
+  // 2. Regex-literal met zowel % als _.
+  'Literal[regex.pattern=/%/][regex.pattern=/_/]',
+  // 3. RegExp(…) of new RegExp(…) met een tekst- of expressieloze templateliteral met zowel % als _.
+  ":matches(CallExpression, NewExpression)[callee.name='RegExp'][arguments.0.type='Literal'][arguments.0.value=/%/][arguments.0.value=/_/]",
+  ":matches(CallExpression, NewExpression)[callee.name='RegExp'][arguments.0.type='TemplateLiteral'][arguments.0.expressions.length=0][arguments.0.quasis.0.value.raw=/%/][arguments.0.quasis.0.value.raw=/_/]",
+  // 4. .replace/.replaceAll van %, _ of \ waarbij het tweede argument een \ bevat of een functie is; naam.replaceAll('_', ' ') mag.
+  `CallExpression[callee.property.name=/^(replace|replaceAll)$/]:matches([arguments.0.value=${ESCAPE_TEKEN}], [arguments.0.regex.pattern=${ESCAPE_PATROON}]):matches([arguments.1.value=${BACKSLASH}], [arguments.1.quasis.0.value.raw=${BACKSLASH}], [arguments.1.quasis.1.value.raw=${BACKSLASH}], [arguments.1.type=/^(ArrowFunctionExpression|FunctionExpression)$/])`,
+  // 5. Een eigen declaratie met de naam van een helper.
+  'FunctionDeclaration[id.name=/^(containsPattern|decodeListCursor)$/]',
+  'VariableDeclarator[id.name=/^(containsPattern|decodeListCursor)$/]',
+];
 
 // Layout-utilities die features/ en routes/ zelf mogen zetten (framework §7, spec klassenrail); kleur, typografie, rand
 // en schaduw komen uit de kit. Eén token: hooguit één responsieve prefix plus een layoutklasse, nooit arbitrary of `!`.
@@ -302,6 +329,17 @@ const railConfigs = [
     [],
     "Alleen import('letterlijk pad'): een berekend pad ziet dependency-cruiser niet, dus ook de lagenregels niet.",
     ["ImportExpression[source.type!='Literal']"],
+  ),
+  // Lijstquery (spec lijstpagina, Lijstquery-helpers, leerpunt #662): de cursor-decoder en de ilike-escape staan één keer in
+  // core. Niet gedekt: een template literal met expressies, een pad of patroon uit een variabele, een andere escape of een
+  // functie onder een andere naam; daar blijft de review de grens.
+  restrict(
+    'lijstquery',
+    ['src/api/**/*.ts'],
+    TESTS,
+    'Lijstquery: decodeer de cursor met decodeListCursor en escape de zoekterm met containsPattern uit ' +
+      '#core/api/route/list-query.ts; maak de cursor met search.encodeCursor. Geen eigen kopie (spec lijstpagina, leerpunt #662).',
+    LIJSTQUERY_SELECTORS,
   ),
   // Stijl in schermen alleen via de kit (framework §7, spec klassenrail): className als gewone string met layout-tokens.
   restrict(

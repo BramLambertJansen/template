@@ -84,6 +84,8 @@ export function adminHeeftPermissie(permissie: string): boolean {
 // ---------------------------------------------------------------------------------------------------------------------
 const SAMPLE_BOODSCHAP = 'voeg sample toe aan test/security/resources.ts';
 export const SAMPLE_EMAIL_PREFIX = 'beveiligingstest-sample';
+// Vaste uuid (versie 4, RFC-variant) die z.uuid() accepteert; deterministisch, dus herhaalbare tests.
+const SAMPLE_UUID = '6f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a4b';
 
 export interface RouteSample {
   // Waarden voor de padparameters (`:id`).
@@ -128,6 +130,7 @@ function getal(field: object, naam: string): number | undefined {
 function sampleString(field: z.core.$ZodType): string {
   const format: unknown = 'format' in field ? field.format : undefined;
   if (format === 'email') return `${SAMPLE_EMAIL_PREFIX}@template.test`;
+  if (format === 'uuid') return SAMPLE_UUID;
   if (typeof format === 'string') throw new Error(`${SAMPLE_BOODSCHAP} (stringformaat '${format}')`);
   const min = getal(field, 'minLength') ?? 1;
   const max = getal(field, 'maxLength') ?? 50;
