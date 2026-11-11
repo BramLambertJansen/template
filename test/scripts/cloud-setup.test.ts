@@ -97,6 +97,8 @@ function run({ home, stubs, log, systeem }: Opstelling, extra: Record<string, st
     encoding: 'utf8',
     env: {
       HOME: home,
+      // TMPDIR mee: zonder schrijft mktemp in /tmp, dat niet overal schrijfbaar is (tests-naar-vermogen AC-4).
+      TMPDIR: tmpdir(),
       PATH: `${stubs}:${basis}`,
       STUB_LOG: log,
       MISE_FAIL: '__nooit__',
@@ -113,6 +115,7 @@ function runMetStderr({ home, stubs, log }: Opstelling, extra: Record<string, st
     encoding: 'utf8',
     env: {
       HOME: home,
+      TMPDIR: tmpdir(),
       PATH: `${stubs}:/usr/bin:/bin`,
       STUB_LOG: log,
       MISE_FAIL: '__nooit__',

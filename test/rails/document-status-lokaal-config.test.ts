@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
 import { inKooi } from '../../scripts/kit/kooi.mjs';
+import { vermogen } from '../setup/vermogen.ts';
 
 // Spec document-status-lokaal, AC-1 (pre-push-job) en AC-8 (docs noemen dat git push de volgorde al toetst).
 
@@ -78,17 +79,20 @@ describe('lefthook pre-push: job document-status (AC-1)', () => {
     expect(job(sectie, 'document-status').map((regel) => regel.trim())).toContain('use_stdin: true');
   });
 
-  test('zonder het script in de werkmap (oude checkout) slaagt de job', () => {
+  test('zonder het script in de werkmap (oude checkout) slaagt de job', (ctx) => {
+    ctx.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding);
     expect(commando).not.toBe('');
     expect(draai(commando, null)).toBe(0);
   });
 
-  test('met het script blokkeert een exitcode 1 de push (geen || true), met --pre-push als argument', () => {
+  test('met het script blokkeert een exitcode 1 de push (geen || true), met --pre-push als argument', (ctx) => {
+    ctx.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding);
     expect(commando).not.toBe('');
     expect(draai(commando, "process.exit(process.argv.includes('--pre-push') ? 1 : 0);\n")).not.toBe(0);
   });
 
-  test('met het script slaagt een exitcode 0', () => {
+  test('met het script slaagt een exitcode 0', (ctx) => {
+    ctx.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding);
     expect(commando).not.toBe('');
     expect(draai(commando, 'process.exit(0);\n')).toBe(0);
   });

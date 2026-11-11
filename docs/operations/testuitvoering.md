@@ -28,6 +28,29 @@ de map binnen de run groot wordt of vaak terugkomt: de hoofdmap groeit tot het e
 afsluiten). Wordt Vitest hard gestopt (SIGKILL), dan blijft die ene `vitest-run-*`-map staan. Op native Windows leest
 `os.tmpdir()` `TEMP`/`TMP` in plaats van `TMPDIR`; daar werkt dit niet, maar dat platform valt buiten het ondersteunde pad (WSL2 wel).
 
+## Tests naar vermogen: de kooi
+
+Een test die de kooi (`scripts/kit/kooi.mjs`, ADR 0072) start, slaat over waar de kooi niet kan starten, en nergens anders
+(ADR 0088, spec `tests-naar-vermogen`). De globale setup van de projecten `unit` en `web` (`vitest.config.ts:38`, `:47`) draait
+de proef één keer per run (`test/setup/vermogen.ts:24`); `vermogen('kooi')` geeft `{ ontbreekt, melding }`
+(`test/setup/vermogen.ts:44`). Geen variabele schakelt overslaan: de proef meet de omgeving. Een kooi die start maar niet
+afschermt, is geen reden om over te slaan: die test faalt. Een project zonder deze setup laat `vermogen()` gooien.
+
+- **Melding lokaal:** precies één regel na de run, `⚠ overgeslagen: <n> tests, want de kooi kan hier niet starten (<reden>);
+  ze draaien in CI, waar overslaan rood is (ADR 0088)` (`test/setup/skip-reporter.ts:44`). `gate:fast` toont regels die met
+  `⚠ ` beginnen ook onder een groene gate (`scripts/kit/gate-fast.mjs:76`).
+- **Rood in CI** (`GITHUB_ACTIONS` of `CI` met een niet-lege waarde anders dan `false` of `0`, `test/setup/vermogen.ts:17`):
+  kan de kooi niet starten, dan faalt de setup en draait geen test (`test/setup/vermogen.ts:29`); elke overgeslagen of
+  todo-test in `unit` en `web` geeft `✗ overgeslagen in CI: <bestand> > <naam>; in CI slaat geen test over (ADR 0088)` en een
+  exitcode die niet 0 is (`test/setup/skip-reporter.ts:36`). Het project `int` telt niet mee.
+- **Nieuwe kooitest:** zet de voorwaarde zichtbaar in het testbestand zelf, met waarden alleen uit `vermogen('kooi')`:
+  `ctx.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding)` in de test of een `beforeEach`
+  (`test/scripts/runner-trusted-base.test.ts:176`), `test.skipIf(…)` bij `test.each` (`test/rails/ci-scan.test.ts:52`), of
+  dezelfde skip-regel in de lokale hulpfunctie die de kooi start (`test/hooks/rolhek-effect.test.ts:36`).
+
+Lokaal groen met de `⚠`-regel is dus geen bewijs voor de kooi-, rolhek- en effecttests; dat is alleen CI (`pnpm pr:verify`).
+Meting in de Claude Code-sandbox: `docs/operations/sandbox-bewijs.md` (Beperkingen).
+
 ## Lokale meting (21 oktober 2026)
 
 De gewone volledige `pnpm gate:fast` is vóór en na de configuratiewijziging uitgevoerd in dezelfde werkmap op

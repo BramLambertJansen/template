@@ -269,7 +269,11 @@ node node_modules/typescript/bin/tsc -b
 De buildmodus volgt de projectreferenties en controleert zo ook `rails/`. Bij een typefout geeft de compiler een diagnose
 en een exitcode ongelijk aan nul. Herstel pnpm voor de volledige pre-pushcontrole.
 
-Pre-push blijft ongewijzigd en start de volledige `pnpm gate:fast`. Alle CI-workflows en vereiste checks blijven
+Pre-push blijft ongewijzigd en start de volledige `pnpm gate:fast`. In de Claude Code-sandbox kan de kooi niet starten:
+de tests die haar nodig hebben slaan daar over, de pre-push-hook is groen en toont één regel `⚠ overgeslagen: …`
+(ADR 0088, `docs/operations/testuitvoering.md`; vóór die wijziging weigerde de hook er elke push van een agent, leerpunt #607).
+Lokaal groen met die regel is geen bewijs voor de kooi-, rolhek- en effecttests; dat is alleen CI, waar overslaan rood is
+(`pnpm pr:verify`). Alle CI-workflows en vereiste checks blijven
 ongewijzigd op iedere PR. Toepasselijke runnerchecks blijven verplicht. Een codewijziging of ongeldige controle-invoer
 vraagt nieuw bewijs; geen hergebruik van een oude groene uitslag of generieke cache.
 

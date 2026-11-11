@@ -9,6 +9,10 @@ const runnerCache = process.env['RUNNER_CACHE_DIR'];
 const gitEnv = './test/setup/git-env.ts';
 // Eén tijdelijke hoofdmap per testrun, na afloop weg (test/setup/tmp-root.ts, leerpunt #396).
 const tmpRoot = './test/setup/tmp-root.ts';
+// De proef van de kooi, één keer per run voor unit en web; int draait in de runner en doet niet mee (ADR 0088).
+const vermogen = './test/setup/vermogen.ts';
+// Telt overgeslagen tests in unit en web: lokaal één waarschuwing, in CI rood (ADR 0088).
+const skipReporter = './test/setup/skip-reporter.ts';
 
 export default defineConfig({
   plugins: [catalogusIndex(import.meta.dirname)],
@@ -18,6 +22,7 @@ export default defineConfig({
     maxWorkers: Math.min(4, availableParallelism()),
     // Eén keer per run, voor alle projecten samen: test/setup/tmp-root.ts.
     globalSetup: [tmpRoot],
+    reporters: ['default', skipReporter],
     projects: [
       {
         test: {
@@ -30,6 +35,7 @@ export default defineConfig({
           // Unitbestanden hebben eigen fixtures; de gedeelde database hoort bij het seriële int-project.
           fileParallelism: true,
           setupFiles: [gitEnv],
+          globalSetup: [vermogen],
         },
       },
       {
@@ -38,6 +44,7 @@ export default defineConfig({
           name: 'web',
           include: ['src/**/*.test.tsx'],
           environment: 'jsdom',
+          globalSetup: [vermogen],
         },
       },
       {

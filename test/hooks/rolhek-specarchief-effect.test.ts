@@ -1,11 +1,12 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { handle } from '../../rails/hooks/lib/effect-hooks.mjs';
 import { gitIn } from '../../rails/hooks/lib/effect-snapshot.mjs';
 import { loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 import { inKooi } from '../../scripts/kit/kooi.mjs';
+import { vermogen } from '../setup/vermogen.ts';
 
 // docs/specs/specarchief-en-bouwvorm.md (ADR 0080 punt 1), AC-3 "de toets op effect ook": het commando draait echt, in de
 // kooi (ADR 0072), in een tijdelijke git-repository, met de hooks eromheen. Alleen een verhuizing naar het specarchief (zelfde
@@ -82,6 +83,10 @@ function achteraf(commando: string, rol: string, na?: string): 'deny' | 'door' {
 }
 
 describe('specarchief-en-bouwvorm/AC-3: de toets op effect laat alleen een verhuizing naar het specarchief door', () => {
+  beforeEach((ctx) => {
+    ctx.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding);
+  });
+
   test.each(['git mv docs/specs/x.md docs/specs/archief/x.md', 'mv docs/specs/x.md docs/specs/archief/x.md'])(
     'specarchief-en-bouwvorm/AC-3 architect: %s gaat door',
     (commando) => {

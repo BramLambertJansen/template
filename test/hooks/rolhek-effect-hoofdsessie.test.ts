@@ -11,12 +11,13 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, TestRunner } from 'vitest';
 import { handle } from '../../rails/hooks/lib/effect-hooks.mjs';
 import { gitIn } from '../../rails/hooks/lib/effect-snapshot.mjs';
 import { overtredingen } from '../../rails/hooks/lib/effect.mjs';
 import { loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 import { inKooi } from '../../scripts/kit/kooi.mjs';
+import { vermogen } from '../setup/vermogen.ts';
 
 // Spec rolhek-vooraf-krimp AC-4 en AC-7: de hoofdsessie als dader op de werkmap (vlag `aan`) en in schaduwmodus (vlag
 // `schaduw`), met de tellers in het meetbestand. Echte tijdelijke git-repository's; de commando's draaien in de kooi (ADR 0072).
@@ -46,7 +47,9 @@ afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
+// Kan de kooi hier niet starten, dan slaat de lopende test over; nooit in CI (ADR 0088, spec tests-naar-vermogen).
 function sh(root: string, command: string): void {
+  TestRunner.getCurrentTest()?.context.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding);
   const result = inKooi(command, { werkmap: root, env: GIT_ENV });
   if (result.status !== 0) throw new Error(`${command}: ${result.stderr}`);
 }

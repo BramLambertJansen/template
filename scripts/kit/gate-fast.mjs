@@ -73,6 +73,15 @@ function draai(script, args = []) {
 }
 
 /**
+ * De uitvoerregels die met `⚠ ` beginnen (tests-naar-vermogen AC-8): een groene gate toont verder niets, deze wel.
+ * @param {string} output
+ * @returns {string[]}
+ */
+function waarschuwingen(output) {
+  return output.split(/\r?\n/).filter((regel) => regel.startsWith('⚠ '));
+}
+
+/**
  * Draait de banen tegelijk, elke baan na elkaar, en drukt de uitslagen af in de volgorde van `scripts`. Met een object
  * draait het een deel en noemt de slotregel dat deel.
  * @param {readonly string[] | { scripts: readonly string[], naam: string }} keuze
@@ -97,10 +106,23 @@ export async function gateFast(keuze, run = draai, write = (text) => process.std
     const uitslag = await lopend.get(script);
     if (uitslag !== undefined) uitslagen.push(uitslag);
   }
+  return rapporteer(uitslagen, naam, write);
+}
+
+/**
+ * Drukt de uitslagen af en geeft de exitcode: eerst de uitvoer van de rode gates, dan de ⚠-regels van de groene, dan de
+ * lijst en de samenvatting. Ook een korte rapportage van de staart toont zo welke gates rood zijn en het einde van de
+ * laatste fout.
+ * @param {readonly Uitslag[]} uitslagen
+ * @param {string} naam
+ * @param {(text: string) => void} write
+ */
+function rapporteer(uitslagen, naam, write) {
   const rood = uitslagen.filter((uitslag) => uitslag.code !== 0);
-  // Eerst de uitvoer van de rode gates, dan de lijst en de samenvatting: ook een korte rapportage van de staart toont
-  // zo welke gates rood zijn en het einde van de laatste fout.
+  const groen = uitslagen.filter((uitslag) => uitslag.code === 0);
   for (const { script, output } of rood) write(`── ${script} ──\n${output}${output.endsWith('\n') ? '' : '\n'}`);
+  // De ⚠-regels van een rode gate staan al in zijn uitvoer hierboven.
+  for (const regel of groen.flatMap(({ output }) => waarschuwingen(output))) write(`${regel}\n`);
   for (const { script, code, seconds } of uitslagen)
     write(`${code === 0 ? '✓' : '✗'} ${script} (${seconds.toFixed(1)} s)\n`);
   write(rood.length === 0 ? `✓ ${naam} groen\n` : `✗ ${naam} rood: ${rood.map(({ script }) => script).join(', ')}\n`);

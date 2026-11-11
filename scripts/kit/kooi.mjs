@@ -106,28 +106,50 @@ function draai(werkmap, commando, { env, timeout }) {
 
 /**
  * Oordeel over de proef (AC-3): de proef schreef in de werkmap en kreeg op de systeemmap `Read-only file system`.
+ * Naast de melding de soort (tests-naar-vermogen AC-1): `start-niet` is een omgeving zonder werkende bubblewrap,
+ * `schermt-niet-af` een kooi die draait maar buiten de werkmap laat schrijven.
+ * @param {{ error?: Error, stdout: string, stderr: string }} r
+ * @param {boolean} binnenGeschreven
+ * @returns {{ soort: 'goed' | 'start-niet' | 'schermt-niet-af', melding: string }}
+ */
+export function oordeelProef(r, binnenGeschreven) {
+  if (r.error !== undefined) {
+    const code = /** @type {NodeJS.ErrnoException} */ (r.error).code;
+    const melding =
+      code === 'ENOENT'
+        ? MELDING_GEEN_BWRAP
+        : `✗ kooi: bubblewrap start niet (${String(code)}); het commando is niet uitgevoerd`;
+    return { soort: 'start-niet', melding };
+  }
+  if (!binnenGeschreven)
+    return {
+      soort: 'start-niet',
+      melding: `✗ kooi: bubblewrap start niet; het commando is niet uitgevoerd (${r.stderr.trim()})`,
+    };
+  return r.stdout.includes('Read-only file system')
+    ? { soort: 'goed', melding: 'goed' }
+    : { soort: 'schermt-niet-af', melding: MELDING_PROEF };
+}
+
+/**
+ * De melding van `oordeelProef`: `goed` of de foutmelding.
  * @param {{ error?: Error, stdout: string, stderr: string }} r
  * @param {boolean} binnenGeschreven
  * @returns {'goed' | string}
  */
 export function beoordeelProef(r, binnenGeschreven) {
-  if (r.error !== undefined) {
-    const code = /** @type {NodeJS.ErrnoException} */ (r.error).code;
-    return code === 'ENOENT'
-      ? MELDING_GEEN_BWRAP
-      : `✗ kooi: bubblewrap start niet (${String(code)}); het commando is niet uitgevoerd`;
-  }
-  if (!binnenGeschreven) return `✗ kooi: bubblewrap start niet; het commando is niet uitgevoerd (${r.stderr.trim()})`;
-  return r.stdout.includes('Read-only file system') ? 'goed' : MELDING_PROEF;
+  return oordeelProef(r, binnenGeschreven).melding;
 }
 
 /**
  * Proef (AC-3): binnen de werkmap schrijven lukt, in een systeemmap schrijven faalt op een alleen-lezen bestandssysteem.
  * `bouw` en `pad` zijn er voor de test die de proef tegen een kapotte kooi draait (R-PRINC-04).
+ * Geeft de soort en de melding (tests-naar-vermogen AC-1); `proef` geeft alleen de melding.
  * @param {(werkmap: string) => string[]} [bouw]
  * @param {string} [pad]
+ * @returns {{ soort: 'goed' | 'start-niet' | 'schermt-niet-af', melding: string }}
  */
-export function proef(bouw = bwrapArgs, pad = PROEF_PAD) {
+export function proefOordeel(bouw = bwrapArgs, pad = PROEF_PAD) {
   const map = echt(mkdtempSync(path.join(tmpdir(), 'kooi-proef-')));
   const bestondAl = existsSync(pad);
   try {
@@ -137,11 +159,21 @@ export function proef(bouw = bwrapArgs, pad = PROEF_PAD) {
       timeout: STANDAARD_TIMEOUT,
       killSignal: 'SIGKILL',
     });
-    return beoordeelProef(r, existsSync(path.join(map, 'binnen')));
+    return oordeelProef(r, existsSync(path.join(map, 'binnen')));
   } finally {
     if (!bestondAl && existsSync(pad)) rmSync(pad, { force: true });
     rmSync(map, { recursive: true, force: true });
   }
+}
+
+/**
+ * De melding van `proefOordeel`: `goed` of de foutmelding.
+ * @param {(werkmap: string) => string[]} [bouw]
+ * @param {string} [pad]
+ * @returns {'goed' | string}
+ */
+export function proef(bouw = bwrapArgs, pad = PROEF_PAD) {
+  return proefOordeel(bouw, pad).melding;
 }
 
 /** Gooit als de kooi niet afschermt; één proef per proces. */

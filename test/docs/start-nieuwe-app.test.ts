@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, onTestFinished, test } from 'vitest';
 import { inKooi } from '../../scripts/kit/kooi.mjs';
+import { vermogen } from '../setup/vermogen.ts';
 
 const document = readFileSync(new URL('../../START-NIEUWE-APP.md', import.meta.url), 'utf8');
 const firstDocument = 'START-NIEUWE-APP.md';
@@ -62,7 +63,8 @@ done`,
   return { result, setup, calls: readFileSync(trace, 'utf8').trim().split('\n') };
 }
 
-test('stap 6 start Claude vanuit de setupmap nadat beide instructies zijn opgehaald', () => {
+test('stap 6 start Claude vanuit de setupmap nadat beide instructies zijn opgehaald', (ctx) => {
+  ctx.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding);
   const { result, setup, calls } = runBootstrap();
   expect(result.status, result.stderr).toBe(0);
   expect(calls).toEqual([
@@ -75,7 +77,8 @@ test('stap 6 start Claude vanuit de setupmap nadat beide instructies zijn opgeha
   ]);
 });
 
-test.each([
+// test.each geeft geen testcontext mee: hier de vorm met skipIf (tests-naar-vermogen AC-3, terugval).
+test.skipIf(vermogen('kooi').ontbreekt).each([
   { failure: 'mkdir', expected: ['mkdir'] },
   { failure: firstDocument, expected: ['mkdir', `curl ${firstDocument}`] },
   { failure: secondDocument, expected: ['mkdir', `curl ${firstDocument}`, `curl ${secondDocument}`] },
