@@ -101,7 +101,7 @@ proef: `✗ kooi: de proef schreef buiten de werkmap; het commando is niet uitge
 | Commando als root schrijft een sysctl (`/proc/sys/…`) | faalt: `/proc/sys` is alleen-lezen in de kooi (AC-1) | n.v.t. |
 | Commando loopt vast | timeout; bubblewrap stopt met de aanroeper | n.v.t. |
 | Een git-commando in de kooi op de tijdelijke repository | werkt; `.git` ligt in de werkmap | n.v.t. |
-| Test heeft de kooi nodig maar bubblewrap ontbreekt | slaat over met melding waar de kooi niet kan starten, nooit in CI; een kooi die start maar niet afschermt: test faalt (ADR 0088) | n.v.t. |
+| Test heeft de kooi nodig maar bubblewrap ontbreekt | slaat over met melding waar de kooi niet kan starten, nooit in CI; een kooi die start maar niet afschermt: test faalt (ADR 0088; bouw: spec `tests-naar-vermogen`) | n.v.t. |
 
 ## Raakt ook
 

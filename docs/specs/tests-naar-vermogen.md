@@ -100,9 +100,8 @@ n.v.t. — geen UI. Letterlijke teksten (`<…>` wordt ingevuld):
   `test/hooks/laden-commondir.test.ts` in CI niet overslaan. Lukt dat niet, dan stopt de bouw en vraagt de eigenaar.
 - **tests-naar-vermogen/AC-10** — Docs in de bouw-PR: `docs/operations/testuitvoering.md` (de voorwaarde, de melding, rood in CI),
   `docs/operations/agent-doorloop.md` (lokaal groen met `⚠ overgeslagen` is geen bewijs; CI via `pnpm pr:verify`),
-  `docs/operations/sandbox-bewijs.md` (geen geneste kooi in de sandbox), `CHANGELOG.md`, en in `docs/specs/kooi.md` de
-  randgevalregel "Test heeft de kooi nodig maar bubblewrap ontbreekt" naar: slaat over met melding waar de kooi niet kan
-  starten, nooit in CI; een kooi die start maar niet afschermt: test faalt.
+  `docs/operations/sandbox-bewijs.md` (geen geneste kooi in de sandbox) en `CHANGELOG.md`. De randgevalregel in
+  `docs/specs/kooi.md` staat er sinds de besluit-PR met de vormen van AC-3 al; de bouw-PR raakt `kooi.md` niet.
 
 ## Randgevallen
 
