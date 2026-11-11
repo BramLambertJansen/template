@@ -44,6 +44,7 @@ n.v.t. — geen externe dienst.
 n.v.t. — geen UI. Letterlijke teksten (`<…>` wordt ingevuld):
 
 - lokaal, aan het eind van de run: `⚠ overgeslagen: <n> tests, want de kooi kan hier niet starten (<reden>); ze draaien in CI, waar overslaan rood is (ADR 0088)`
+- lokaal, als tests overslaan terwijl de kooi wél werkt: `⚠ overgeslagen: <n> tests; ze draaien in CI, waar overslaan rood is (ADR 0088)`
 - in CI, per overgeslagen test: `✗ overgeslagen in CI: <bestand> > <testnaam>; in CI slaat geen test over (ADR 0088)`
 - in CI bij een ontbrekende kooi, in de setup: `✗ kooi ontbreekt in CI (<reden>); in CI slaat geen test over (ADR 0088)`
 - skipnotitie per test: `kooi ontbreekt hier; draait in CI`
@@ -61,15 +62,20 @@ n.v.t. — geen UI. Letterlijke teksten (`<…>` wordt ingevuld):
 - **tests-naar-vermogen/AC-2** — Dicht vallen in de setup: gooit de proef zelf een uitzondering, dan faalt de run met die fout
   (geen overslaan). De helper `vermogen('kooi')` geeft `{ ontbreekt, melding }`; levert `inject` niets op (een project zonder
   deze globale setup), dan gooit `vermogen()` een fout met de projectnaam, nooit `ontbreekt: true`.
-- **tests-naar-vermogen/AC-3** — Een testbestand zet de voorwaarde met één zichtbare `ctx.skip(<ontbreekt>, <melding>)` in een
-  `beforeEach` van het kleinste bestaande `describe`-blok of in de test zelf, met waarden alleen uit `vermogen('kooi')`.
-  Terugval als `ctx.skip(voorwaarde, notitie)` in vitest 5.0.3 niet bestaat: `describe.skipIf(vermogen('kooi').ontbreekt)` of
-  `test.skipIf(…)` op dezelfde plek (de teller in `rails/hooks/lib/testteller.mjs` telt `skipIf` als skip); de reporter (AC-6) telt dan
-  ook die overgeslagen tests en noemt de reden uit de setup.
-- **tests-naar-vermogen/AC-4** — De voorwaarde `kooi` komt in `test/hooks/rolhek-padcorpus.test.ts`,
+- **tests-naar-vermogen/AC-3** — Een testbestand zet de voorwaarde in één van drie vormen, met waarden alleen uit
+  `vermogen('kooi')`: (a) één zichtbare `ctx.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding)` in een `beforeEach` van
+  het kleinste bestaande `describe`-blok of in de test zelf; (b) bij een top-level `test.each`, waarvan de callback geen
+  testcontext krijgt: `test.skipIf(vermogen('kooi').ontbreekt).each(…)`; (c) start de kooi via een eigen hulpfunctie van het
+  testbestand en mengen de blokken kooi- en gewone tests: één zichtbare regel
+  `TestRunner.getCurrentTest()?.context.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding);` in die lokale hulpfunctie.
+  De voorwaarde staat altijd in het testbestand zelf en de teller in `rails/hooks/lib/testteller.mjs` ziet haar als skip
+  (`.skip(` met een aanroep op elke ontvanger, en `skipIf`); een skip in een gedeelde helper onder `test/setup/` is verboden
+  (ADR 0088, Alternatieven). De reporter (AC-6) telt de overgeslagen tests van alle drie vormen.
+- **tests-naar-vermogen/AC-4** — De voorwaarde `kooi` komt in tien bestanden: `test/hooks/rolhek-padcorpus.test.ts`,
   `test/hooks/rolhek-effect.test.ts`, `test/hooks/rolhek-effect-hoofdsessie.test.ts`, `test/hooks/rolhek-specarchief-effect.test.ts`,
-  `test/docs/start-nieuwe-app.test.ts`, `test/rails/ci-scan.test.ts`, `test/rails/document-status-lokaal-config.test.ts`,
-  `test/scripts/runner-trusted-base.test.ts` en `test/scripts/kooi.test.ts` (ook de kanarietests van kooi/AC-4). In
+  `test/hooks/rolhek-gh-allowlist.test.ts`, `test/docs/start-nieuwe-app.test.ts`, `test/rails/ci-scan.test.ts`,
+  `test/rails/document-status-lokaal-config.test.ts`, `test/scripts/runner-trusted-base.test.ts` en `test/scripts/kooi.test.ts`
+  (ook de kanarietests van kooi/AC-4). In
   `test/scripts/cloud-setup.test.ts` en in de kooi/AC-3-test "zonder bubblewrap" krijgt het kindproces `TMPDIR: tmpdir()` mee,
   zonder voorwaarde. Geen assertie, testnaam of aantal testgevallen verandert. De PR noemt per bestand het aantal overgeslagen
   tests in de sandbox naast het aantal dat nu faalt; meer overgeslagen dan faalt heeft een reden per bestand.
@@ -82,7 +88,9 @@ n.v.t. — geen UI. Letterlijke teksten (`<…>` wordt ingevuld):
   de exitcode van vitest niet 0 en staat elke test in de uitvoer met de CI-melding. Terugval als een reporter de exitcode niet
   kan zetten: de reporter drukt de CI-melding af en `scripts/kit/gate-fast.mjs` maakt `test:unit` rood zodra de uitvoer een
   regel `✗ overgeslagen in CI:` bevat. De bouw bevestigt dat elke CI-aanroep van `test:unit` via `gate-fast.mjs` loopt, ook die
-  van `pnpm check:new-resource --deel`; loopt een aanroep er niet via, dan dekt de terugval ook dat pad.
+  van `pnpm check:new-resource --deel`; loopt een aanroep er niet via, dan dekt de terugval ook dat pad. Buiten CI drukt de
+  reporter bij minstens één zo'n test één `⚠ overgeslagen`-regel af: met de reden uit de setup als `kooi` ontbreekt, zonder het
+  deel "want de kooi kan hier niet starten (…)" als `kooi` aanwezig is.
 - **tests-naar-vermogen/AC-7** — In CI met een ontbrekende kooi faalt de globale setup met de CI-melding en draait geen test.
 - **tests-naar-vermogen/AC-8** — `gate:fast` toont onder elke groene gate de uitvoerregels die met `⚠` en een spatie beginnen,
   vóór de lijst; een groene gate zonder zulke regels toont niets extra.
@@ -111,12 +119,16 @@ n.v.t. — geen UI. Letterlijke teksten (`<…>` wordt ingevuld):
 | Agent zet lokaal `CI` of `GITHUB_ACTIONS` | strenger: kooitests rood | n.v.t. |
 | Nieuwe kooitest zonder voorwaarde | rood in de sandbox: valt op | n.v.t. |
 | kooi/AC-4-test "de timeout stopt het commando" | slaagt nu in de sandbox om de verkeerde reden (`inKooi` gooit al bij de proef); krijgt de voorwaarde mee | n.v.t. |
+| Top-level `test.each`: de callback krijgt geen testcontext | `test.skipIf(vermogen('kooi').ontbreekt).each(…)` (AC-3, vorm b) | n.v.t. |
+| Kooi start via een lokale hulpfunctie in een blok met kooi- en gewone tests | één regel `TestRunner.getCurrentTest()?.context.skip(…)` in die hulpfunctie, in het testbestand zelf (AC-3, vorm c) | n.v.t. |
+| Lokaal slaan tests over terwijl `kooi` aanwezig is | één `⚠ overgeslagen`-regel zonder het deel "want de kooi kan hier niet starten (…)"; exit 0 (AC-6) | n.v.t. |
 
 ## Raakt ook
 
 `scripts/kit/kooi.mjs` (gestructureerde uitslag, AC-1; voorReview), `vitest.config.ts` (globale setup per project en reporter;
 voorReview), `test/setup/vermogen.ts` en de reporter (gate: hoofdsessie), `scripts/kit/gate-fast.mjs` en zijn test
-(voorReview), de tien testbestanden (gate: hoofdsessie, reden in de PR), een fixture onder `test/rails/fixtures/`. Ongewijzigd:
+(voorReview), de tien testbestanden met de voorwaarde (AC-4) en `test/scripts/cloud-setup.test.ts` (gate: hoofdsessie, reden
+in de PR), een fixture onder `test/rails/fixtures/`. Ongewijzigd:
 `lefthook.yml`, `.github/workflows/ci.yml`, `rails/hooks/**`. `check:migrations`, `check:secdef`, `test:db`/policies,
 `test/security/resources.ts` en permissietests: n.v.t. (geen database, route of permissie).
 
