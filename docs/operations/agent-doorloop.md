@@ -174,6 +174,17 @@ fout over het verwijderen van de modules-map (`ERR_PNPM_ABORTED_REMOVE_MODULES_D
 `node_modules` niet zelf en voeg geen pnpm-vlag toe. De melding van `feiten.mjs` noemt het zelf (AC-12). Om dezelfde reden als bij `--no-track` geeft
 `git branch -D` daar de melding `could not lock config file`; de branch is wel verwijderd (`-m` is niet gemeten).
 
+Vóór de eerste commit in een nieuwe worktree vertrouwt de eigenaar de `mise.toml` van die worktree (leerpunt #682). Zonder
+die stap faalt de pre-commit-job `secrets` op `mise exec` (`mise.toml` niet vertrouwd); de agent kan het niet zelf, want
+mise schrijft zijn trust-symlink onder `~/.local/state`, en dat is in de sandbox alleen-lezen. Een kale `mise trust` helpt
+niet (in een gewone terminal in de worktree gemeten: `No untrusted config files found`, geen symlink); noem het pad. De
+eigenaar draait in een eigen terminal, in de root van de hoofdcheckout (verwachte uitkomst: een regel dat het bestand
+vertrouwd is):
+
+```sh
+~/.local/bin/mise trust "$PWD/.claude/worktrees/<map>/mise.toml"
+```
+
 In de worktree zijn `.claude/settings.json`, `.claude/hooks` en `.claude/skills` alleen-lezen door Claude Code zelf, maar de
 gedeelde `.git` van de hoofdcheckout is daar schrijfbaar (ADR 0083, Context; eigen leerpunt volgt). De overlays in de root
 van de worktree (`.bashrc`, `.mcp.json`, `.claude/commands` …) tellen als untracked. Verwijder, herstel of verberg ze niet
