@@ -107,6 +107,22 @@ describe('agent-merge-niet-kritiek/AC-4 rolhek op pnpm pr:merge', () => {
     expect(verdict(command).uitslag).not.toBe('deny');
   });
 
+  // rolhek-lezen/AC-8: aangehaalde globs bij git ls-files en git grep (pad onder scripts/kit) blijven voor elke rol vrij.
+  describe.each([
+    { agent: undefined, naam: 'hoofdsessie' },
+    ...['developer', 'tester', 'architect', 'docs', 'reviewer'].map((agent) => ({ agent, naam: agent })),
+  ])('lezen met een aangehaalde glob: $naam', ({ agent }) => {
+    test.each(["git ls-files -- 'docs/**'", "git grep -n -e x -- 'scripts/kit/*'"])('%s → niet deny', (command) => {
+      expect(verdict(command, agent === undefined ? {} : { agent }).uitslag).not.toBe('deny');
+    });
+
+    test("git -c x=y ls-files -- 'docs/**' → deny (basis zonder -c slaagt)", () => {
+      const opties = agent === undefined ? {} : { agent };
+      expect(verdict("git ls-files -- 'docs/**'", opties).uitslag).not.toBe('deny');
+      expect(verdict("git -c x=y ls-files -- 'docs/**'", opties).uitslag).toBe('deny');
+    });
+  });
+
   test('settings.json: deny voor gh pr merge, ask en sandbox-uitzondering voor pnpm pr:merge, niet in allow', () => {
     const tekst = readFileSync('.claude/settings.json', 'utf8');
     const settings = { permissions: lijsten(tekst, 'permissions'), sandbox: lijsten(tekst, 'sandbox') };

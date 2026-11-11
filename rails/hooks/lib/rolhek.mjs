@@ -173,9 +173,10 @@ const PR_MERGE_SCRIPT = /(?:^|[^\w.-])pr:merge(?=$|[^\w.-])/;
 const PR_MERGE_BESTAND = /pr-merge/;
 // Alleen programma's die niets starten; `rg --pre`, `less` (LESSOPEN) en een git-alias kunnen dat wel.
 const PR_MERGE_LEZERS = new Set(['cat', 'head', 'tail', 'grep', 'wc', 'ls', 'diff', 'stat']);
-const PR_MERGE_GIT = new Set(['log', 'show', 'diff', 'blame']);
+// `ls-files` en `grep` lezen ook alleen (spec rolhek-lezen/AC-8: `git ls-files -- 'docs/**'`); `git grep -O` is voor elke rol dicht (AC-2).
+const PR_MERGE_GIT = new Set(['log', 'show', 'diff', 'blame', 'ls-files', 'grep']);
 
-/** Een segment dat alleen leest: een leesprogramma of `git log|show|diff|blame` zonder `-c`, zonder omgevingsvariabelen. @param {string[]} words */
+/** Een segment dat alleen leest: een leesprogramma of `git log|show|diff|blame|ls-files|grep` zonder `-c`, zonder omgevingsvariabelen. @param {string[]} words */
 function leestAlleen(words) {
   const { assignments, argv, pathWrappers } = splitCommand(words);
   const [woord = '', ...args] = argv;
@@ -605,7 +606,7 @@ function decideBash({ command, role, tmpdirVrij = tmpdirLetterlijk(command), onz
     zelfladend({ argv, letterlijk: zonderOmhulselOfSchaduw(argv, parsed.words, command), redirects: parsed.redirects, role, ruim: parsed.ruim === true },{ ...ctx, cwd: cwdNu ?? ctx.root, cwdOnbekend: cwdNu === null }, decision);
     cwdNu = volgendeMap({ argv, expanded: parsed.expanded ?? [] }, cwdNu, ctx.root);
     ghIssue(argv, { role, ctx, setsGhEnv }, decision);
-    if (role === 'reviewer') reviewerBash({ assignments, argv, pathWrappers }, parsed.redirects, decision);
+    if (role === 'reviewer') reviewerBash({ assignments, argv, pathWrappers, parsed }, { cwd: cwdNu, root: ctx.root }, decision);
     const targets = writeTargets(parsed);
     for (const target of targets.writes) bashTarget({ file: target, kind: 'write', role }, ctx, decision);
     for (const target of targets.deletes) bashTarget({ file: target, kind: 'delete', role }, ctx, decision);
@@ -1033,7 +1034,6 @@ const REVIEWER_COMMANDS = [
  * @type {Record<string, { flags: string[], values: string[], positional: number, paths?: boolean, count?: boolean }>}
  */
 const REVIEWER_READS = {
-  'git ls-files': { flags: [], values: [], positional: 0, paths: true },
   'gh issue view': { flags: ['--comments'], values: ['--json', '--jq'], positional: 1 },
   'gh issue list': { flags: [], values: ['--label', '--state', '--limit', '--json', '--jq'], positional: 0 },
   'gh run view': { flags: ['--log', '--log-failed'], values: ['--json', '--jq', '--job'], positional: 1 },
@@ -1057,15 +1057,36 @@ function insideRepo(word) {
 // `--jq` alleen met paden (`.title`, `.a.b,.c`): geen jq-functies zoals `env`, die tokens uit de omgeving tonen.
 const JQ_PATHS = /^\.[A-Za-z0-9_.]*(?:,\.[A-Za-z0-9_.]*)*$/;
 
+// De generieke weigering van de reviewer (spec rolhek-lezen/AC-10): één sjabloon met de plaatshouders `<commando>`, `<tekst>`
+// en `<glob>`. Elke term met `<tekst>` of `<glob>` is ingevuld zelf toegestaan; de test rolhek-lezen/AC-10 bewaakt dat.
+const REVIEWER_ROUTE = "reviewer: alleen lezen (`<commando>` mag niet; framework §8); zoeken en tellen: gebruik de Grep-tool; zonder die tool: zoeken met `git grep -n -F -e '<tekst>' -- '<glob>'`, bestanden vinden met `git ls-files '<glob>'`, tellen met `git grep -c -F -e '<tekst>'`; noem in je rapport wat je niet kon nazoeken";
+
+// rolhek-lezen/AC-6: `git grep` van de reviewer, elke optie als los woord.
+const GREP_FLAGS = ['-n', '-i', '-w', '-v', '-l', '-L', '-c', '--count', '-h', '-F', '-E', '-I'];
+const GREP_AANTAL = ['-C', '-A', '-B'];
+const GREP_MELDING = `reviewer: \`git grep\` alleen met: ${GREP_FLAGS.join(', ')}, -e <patroon> (mag vaker), ${GREP_AANTAL.map((optie) => `${optie} <n>`).join(', ')} (<n> uit [0-9]{1,3}), elk als los woord (geen cluster, vastgeplakte waarde of =-vorm); patroon zonder stuurteken (newline, tab) en zonder $ of backtick buiten enkele aanhalingstekens; daarna refs of paden binnen de repo, een glob aangehaald na -- (spec rolhek-lezen; framework §8)`;
+const GREP_WERKMAP = 'reviewer: `git grep` alleen met de werkmap in de repo; deze werkmap ligt erbuiten of is onbekend (na een `cd`), en dan kan git buiten de repo lezen (spec rolhek-lezen/AC-9)';
+const GREP_GLOB_PATROON = "reviewer: een patroon met `*`, `?`, `[` of `{` alleen tussen enkele aanhalingstekens (`'a.*b'`), anders breidt bash het uit tot bestandsnamen; het rolhek leest de aanhaling niet zeker bij #, ${, $', $(, ((, backtick, \\ of een newline in het commando (spec rolhek-lezen/AC-7, R-ROL-11)";
+const LS_FILES_MELDING = "reviewer: `git ls-files` alleen zonder opties; paden of een aangehaalde glob (`'*.md'`), los of na -- (spec rolhek-lezen; framework §8)";
+const PAD_MELDING = 'reviewer: een pad of glob blijft binnen de repo: geen `:` (pathspec-magie), `/` of `~` vooraan, geen segment `..` en alleen [A-Za-z0-9_./,:~^-] met de globtekens *, ?, [ en ] (spec rolhek-lezen/AC-8)';
+// rolhek-lezen/AC-8: `insideRepo` met daarbij de globtekens `*`, `?`, `[` en `]`.
+const SAFE_PATHSPEC = /^[A-Za-z0-9_./,:~^*?[\]-]+$/;
+
+/** @typedef {{ word: string, pattern: string, raw: string, expands: boolean }} Woord een woord met zijn vormen uit `Command` */
+/** @type {Woord} */
+const GEEN_WOORD = { word: '', pattern: '', raw: '', expands: false };
+
 /**
  * Waarom de reviewer dit commando niet mag, of null als het mag (framework §8, spec rolhek-lezen).
  * @param {readonly string[]} argv
- * @param {readonly string[]} redirects
+ * @param {{ parsed: Command, werkmapInRepo: boolean }} segment `werkmapInRepo`: de werkmap van het segment ligt in de repo (AC-9)
  */
-function reviewerRefusal(argv, redirects) {
+function reviewerRefusal(argv, { parsed, werkmapInRepo }) {
   const head = argv[0] === 'gh' ? argv.slice(0, 3).join(' ') : argv.slice(0, 2).join(' ');
-  const generic = `reviewer: alleen lezen (\`${argv.slice(0, 3).join(' ')}\` mag niet; framework §8); zoeken en tellen: gebruik de Grep-tool; ontbreekt die in de sessie, zoek bestanden dan met \`git ls-files\`, lees ze met Read en noem in je rapport wat je niet kon nazoeken`;
-  if (redirects.length > 0) return generic;
+  const generic = REVIEWER_ROUTE.replace('<commando>', () => argv.slice(0, 3).join(' '));
+  if (parsed.redirects.length > 0) return generic;
+  if (head === 'git grep') return werkmapInRepo ? grepRefusal(alsWoorden(argv, parsed).slice(2)) : GREP_WERKMAP;
+  if (head === 'git ls-files') return lsFilesRefusal(alsWoorden(argv, parsed).slice(2));
   const read = REVIEWER_READS[head] ?? REVIEWER_COMMANDS.find(({ pattern }) => pattern.test(head))?.read;
   if (read === undefined) return generic;
   if (readArgsAllowed(argv.slice(head.split(' ').length), read)) return null;
@@ -1075,16 +1096,139 @@ function reviewerRefusal(argv, redirects) {
 }
 
 /**
+ * De woorden van `argv` met hun vorm uit `Command.patterns` en `Command.raws` en of bash ze expandeert. `argv` is het
+ * staartstuk van `words`; `patterns` en `raws` lopen achteraan gelijk op (`vangnetSegmenten` kan vooraan `do` weglaten).
+ * @param {readonly string[]} argv @param {Command} parsed
+ * @returns {Woord[]}
+ */
+function alsWoorden(argv, parsed) {
+  const patterns = parsed.patterns ?? parsed.words;
+  const raws = parsed.raws ?? parsed.words;
+  const expanded = parsed.expanded ?? [];
+  return argv.map((word, index) => ({
+    word,
+    pattern: patterns[patterns.length - argv.length + index] ?? word,
+    raw: raws[raws.length - argv.length + index] ?? word,
+    expands: expanded.includes(word),
+  }));
+}
+
+/**
+ * `git grep` van de reviewer (rolhek-lezen/AC-6 en AC-7): vaste opties als los woord; zonder `-e` is het eerste losse woord
+ * het patroon, daarna refs of paden volgens `insideRepo` zonder `:` vooraan; na `--` alleen paden volgens AC-8.
+ * @param {readonly Woord[]} woorden de woorden na `git grep`
+ */
+function grepRefusal(woorden) {
+  // Zonder `-e` is het eerste losse woord het patroon; met `-e` zijn alle losse woorden refs of paden (zoals git ze leest).
+  const stand = { patroonVolgt: !woorden.some(({ word }) => word === '-e') };
+  for (let index = 0; index < woorden.length; index += 1) {
+    const woord = woorden[index] ?? GEEN_WOORD;
+    if (woord.word === '--') return pathspecsRefusal(woorden.slice(index + 1), 'git grep');
+    const metWaarde = woord.word === '-e' || GREP_AANTAL.includes(woord.word);
+    const fout = metWaarde ? grepWaardeRefusal(woord.word, woorden[index + 1]) : grepWoordRefusal(woord, stand);
+    if (fout !== null) return fout;
+    if (metWaarde) index += 1;
+  }
+  return null;
+}
+
+/**
+ * De waarde na `-e` (altijd het patroon, ook met `-` vooraan) of na `-C`, `-A`, `-B` (`[0-9]{1,3}`).
+ * @param {string} optie @param {Woord | undefined} waarde
+ */
+function grepWaardeRefusal(optie, waarde) {
+  if (waarde === undefined) return GREP_MELDING;
+  if (optie === '-e') return patroonRefusal(waarde);
+  return /^[0-9]{1,3}$/.test(waarde.word) ? null : GREP_MELDING;
+}
+
+/**
+ * Een vlag uit `GREP_FLAGS`, het patroon (als `stand.patroonVolgt`) of een ref of pad volgens `insideRepo` zonder `:` vooraan.
+ * @param {Woord} woord @param {{ patroonVolgt: boolean }} stand
+ */
+function grepWoordRefusal(woord, stand) {
+  if (woord.word.startsWith('-')) return GREP_FLAGS.includes(woord.word) ? null : GREP_MELDING;
+  if (stand.patroonVolgt) {
+    stand.patroonVolgt = false;
+    return patroonRefusal(woord);
+  }
+  return insideRepo(woord.word) && !woord.word.startsWith(':') ? null : GREP_MELDING;
+}
+
+/**
+ * Een patroon van `git grep` (rolhek-lezen/AC-7), getoetst op het woord zoals bash het aan git geeft: geen stuurteken
+ * (U+0000 tot U+001F, U+007F), geen expansie (`$`, backtick buiten enkele aanhalingstekens) en geen onaangehaald glob- of
+ * brace-teken (`Command.patterns`), dat bash tot bestandsnamen of extra woorden (`{x,-O}`) zou uitbreiden.
+ * @param {Woord} woord
+ */
+function patroonRefusal({ word, pattern, expands }) {
+  const stuurteken = [...word].some((teken) => teken.charCodeAt(0) < 0x20 || teken.charCodeAt(0) === 0x7f);
+  if (stuurteken) return `${GREP_MELDING}; zoek een newline of tab met -E en [[:space:]]`;
+  if (expands) return GREP_MELDING;
+  return /[*?[{]/.test(pattern) ? GREP_GLOB_PATROON : null;
+}
+
+/**
+ * `git ls-files` van de reviewer (rolhek-lezen/AC-1 en AC-8): geen opties; elk woord, los of na `--`, is een pad volgens
+ * `pathspecRefusal`.
+ * @param {readonly Woord[]} woorden de woorden na `git ls-files`
+ */
+function lsFilesRefusal(woorden) {
+  const streep = woorden.findIndex(({ word }) => word === '--');
+  const voor = streep === -1 ? woorden : woorden.slice(0, streep);
+  if (voor.some(({ word }) => word.startsWith('-'))) return LS_FILES_MELDING;
+  return pathspecsRefusal(streep === -1 ? woorden : [...voor, ...woorden.slice(streep + 1)], 'git ls-files');
+}
+
+/**
+ * @param {readonly Woord[]} paden @param {'git grep' | 'git ls-files'} head
+ */
+function pathspecsRefusal(paden, head) {
+  for (const pad of paden) {
+    const fout = pathspecRefusal(pad, head);
+    if (fout !== null) return fout;
+  }
+  return null;
+}
+
+/**
+ * Eén padregel voor `git ls-files` en `git grep` (rolhek-lezen/AC-8): `insideRepo` met de globtekens `*`, `?`, `[` en `]`,
+ * geen `:` vooraan (pathspec-magie). Een globteken moet aangehaald zijn (`Command.patterns`), zodat git de glob in de repo
+ * toepast en niet bash. Leest het rolhek de aanhaling niet zeker (R-ROL-11), dan is de weigering een geaccepteerd
+ * vals-positief met een eigen melding; een woord zonder aanhalingsteken of `\` in `Command.raws` is echt onaangehaald.
+ * @param {Woord} pad @param {'git grep' | 'git ls-files'} head
+ */
+function pathspecRefusal({ word, pattern, raw }, head) {
+  const binnen = SAFE_PATHSPEC.test(word) && !/^[-/~:]/.test(word) && !word.split(/[/:]/).includes('..');
+  if (!binnen) return PAD_MELDING;
+  if (!/[*?[]/.test(pattern)) return null;
+  if (/['"\\]/.test(raw))
+    return `reviewer: het rolhek leest niet zeker dat de glob \`${word}\` aangehaald is (#, \${, $', $(, ((, backtick, \\ of een newline in het commando, R-ROL-11); laat de glob weg of zoek in een map (bijv. \`-- docs\`) (spec rolhek-lezen/AC-8)`;
+  const vorm = head === 'git grep' ? `git grep -n -F -e '<tekst>' -- '${word}'` : `git ls-files -- '${word}'`;
+  return `reviewer: haal de glob aan, dan past git hem binnen de repo toe en niet bash: \`${vorm}\` (spec rolhek-lezen/AC-8)`;
+}
+
+/**
+ * De werkmap ligt in de repo: de root of een map eronder (rolhek-lezen/AC-9); onbekend (null) telt als erbuiten.
+ * @param {string | null} cwd @param {string} root
+ */
+function werkmapInRepo(cwd, root) {
+  if (cwd === null) return false;
+  const rel = path.relative(root, cwd);
+  return rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
+}
+
+/**
  * Pad-wrapper, variabele vóór het commando (`X=… cmd`, `env X=… cmd`) of een commando buiten de leeslijst (rolhek-lezen/AC-4).
- * @param {{ assignments: readonly string[], argv: readonly string[], pathWrappers: readonly string[] }} command
- * @param {readonly string[]} redirects
+ * @param {{ assignments: readonly string[], argv: readonly string[], pathWrappers: readonly string[], parsed: Command }} command
+ * @param {{ cwd: string | null, root: string }} plek de werkmap van het segment (null: onbekend) en de root van de repo
  * @param {Decision} decision
  */
-function reviewerBash({ assignments, argv, pathWrappers }, redirects, decision) {
+function reviewerBash({ assignments, argv, pathWrappers, parsed }, { cwd, root }, decision) {
   if (pathWrappers.length > 0) decision.deny.push(`reviewer: een pad-wrapper (\`${pathWrappers[0] ?? ''}\`) is verboden; framework §8`);
   if (assignments.length > 0)
     decision.deny.push(`reviewer: geen variabele vóór het commando (\`${(assignments[0] ?? '').split('=')[0] ?? ''}\`); framework §8`);
-  const refusal = reviewerRefusal(argv, redirects);
+  const refusal = reviewerRefusal(argv, { parsed, werkmapInRepo: werkmapInRepo(cwd, root) });
   if (refusal !== null) decision.deny.push(refusal);
 }
 

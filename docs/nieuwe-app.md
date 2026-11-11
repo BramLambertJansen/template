@@ -972,7 +972,7 @@ App-eigen ADR's: begin bij `0100` (`docs/adr/0100-…`). `0001`–`0099` zijn va
 | `permission denied … /var/run/docker.sock` | Groep `docker` nog niet actief | WSL herstarten of opnieuw inloggen; tijdelijk `sg docker -c "…"` |
 | `docker` wijst naar `docker-desktop` | WSL-integratie van Docker Desktop aan | Fase 2.3 |
 | `Cannot connect to the Docker daemon` | Docker-service draait niet | `sudo systemctl start docker` (overdracht) |
-| `mise ERROR … not trusted` | Nieuwe map, `mise.toml` niet vertrouwd | `mise trust` in de repo |
+| `mise ERROR … not trusted` | Nieuwe map, `mise.toml` niet vertrouwd | `mise trust` in de repo; in een worktree met het pad: `mise trust <worktree>/mise.toml` (`docs/operations/agent-doorloop.md`) |
 | `node: command not found` na `mise install` | `.bashrc` niet geladen | `mise exec -- …`, of nieuwe terminal |
 | Clone is leeg / `couldn't find remote ref main` | Template-generatie nog bezig | 5 s wachten, opnieuw (max 3×) |
 | `Use this template` ontbreekt / `is not a template repository` | Vinkje Template repository uit | Fase 4.2 |
