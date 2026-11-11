@@ -110,7 +110,7 @@ describe('agent-merge-niet-kritiek/AC-4 rolhek op pnpm pr:merge', () => {
   // rolhek-lezen/AC-8: aangehaalde globs bij git ls-files en git grep (pad onder scripts/kit) blijven voor elke rol vrij.
   describe.each([
     { agent: undefined, naam: 'hoofdsessie' },
-    ...['developer', 'tester', 'architect', 'reviewer'].map((agent) => ({ agent, naam: agent })),
+    ...['developer', 'tester', 'architect', 'docs', 'reviewer'].map((agent) => ({ agent, naam: agent })),
   ])('lezen met een aangehaalde glob: $naam', ({ agent }) => {
     test.each(["git ls-files -- 'docs/**'", "git grep -n -e x -- 'scripts/kit/*'"])('%s → niet deny', (command) => {
       expect(verdict(command, agent === undefined ? {} : { agent }).uitslag).not.toBe('deny');

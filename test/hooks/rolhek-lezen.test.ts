@@ -454,6 +454,7 @@ describe('rolhek-lezen/AC-6 en AC-7: git grep voor de reviewer', () => {
   test.each(['git grep x*', 'git grep -e a?', 'git grep {a,b}', 'git grep -n -e x[ab]'])('%s → deny', (command) => {
     expect(verdict("git grep 'x*'", REVIEWER)).toBe('allow');
     expect(verdict(command, REVIEWER)).toBe('deny');
+    expect(melding(command)).toContain('alleen tussen enkele aanhalingstekens');
   });
 
   // Voor de andere rollen verandert git grep niet.
