@@ -311,6 +311,15 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Gewijzigd
 
+- Tests naar vermogen (leerpunt #607, ADR 0088, spec tests-naar-vermogen): een test die de kooi start, slaat over waar de
+  kooi niet kan starten (bijvoorbeeld in de Claude Code-sandbox) en nergens anders. De globale setup `test/setup/vermogen.ts`
+  draait de proef één keer per run; lokaal drukt `test/setup/skip-reporter.ts` één regel `⚠ overgeslagen: <n> tests, …` af,
+  die `gate:fast` ook onder een groene gate toont. In CI is elke overgeslagen of todo-test in `unit` en `web` rood, en faalt
+  de setup als de kooi ontbreekt. Gemeten in de sandbox: `pnpm test:unit` exit 0 met 381 van 10.688 tests overgeslagen, waar
+  eerder 382 tests faalden en de pre-push-hook elke push van een agent weigerde. Wat verandert voor een app: lokaal groen
+  met de `⚠`-regel is geen bewijs voor de kooi-, rolhek- en effecttests (alleen CI); een nieuwe test die de kooi nodig heeft,
+  krijgt de skip-regel uit `docs/operations/testuitvoering.md`, en een eigen `test.skip`/`test.todo` maakt CI rood.
+
 - Specarchief en één vorm voor `gebouwd` (ADR 0080, spec specarchief-en-bouwvorm): een vervallen spec verhuist byte-gelijk
   naar `docs/specs/archief/` (onwijzigbaar, zoals het ADR-archief; rolhek, toets op effect en `check-document-status`); links
   lossen op zoals bij ADR's en een naam uit het archief komt niet terug (`check-docs`). Een gebouwde spec blijft levend: een
