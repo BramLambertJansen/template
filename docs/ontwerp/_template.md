@@ -1,6 +1,6 @@
 # Ontwerp: <bron>
 
-Mappingdocument van de skill `ontwerp-overnemen` (spec [ontwerp-overnemen](../specs/ontwerp-overnemen.md)). Kopieer dit
+Mappingdocument van de skill `ontwerp-overnemen` (spec [ontwerp-overnemen](../template/specs/ontwerp-overnemen.md)). Kopieer dit
 sjabloon naar `docs/ontwerp/<bron>.md` en verwijs ernaar vanuit de spec van de PR die de stijl overneemt. Screenshots en
 meetuitvoer komen niet in de repo (OV-1); noem hier alleen herkomst, datum en het pad.
 

@@ -178,4 +178,4 @@ Aanvullende primaire referenties, geraadpleegd op 2026-10-14:
 - [WAI-ARIA APG Grid](https://www.w3.org/WAI/ARIA/apg/patterns/grid/): extra focus-/toetsenbordmodel bij interactieve grids.
 - [WAI-ARIA APG Carousel](https://www.w3.org/WAI/ARIA/apg/patterns/carousel/): bediening, focus en beperkingen van rotatie.
 
-Bouwspec voor de eerste tranche: [UI-collecties en Combobox](../specs/ui-collections.md).
+Bouwspec voor de eerste tranche: [UI-collecties en Combobox](../template/specs/ui-collections.md).

@@ -9,6 +9,7 @@ import {
   componentenTekst,
   faseOverzicht,
   koppelingenOverzicht,
+  perMap,
   specsOverzicht,
   tokenOverzicht,
   tokensTekst,
@@ -45,10 +46,17 @@ export function markdownFiles(lezer, dir) {
     .sort();
 }
 
+/** De mappen van de app en van de template (ADR 0089 punt 1), app eerst. */
+export const ADR_MAPPEN = /** @type {const} */ (['docs/adr', 'docs/template/adr']);
+export const SPEC_MAPPEN = /** @type {const} */ (['docs/specs', 'docs/template/specs']);
+
+/** @typedef {Readonly<Record<string, readonly string[]>>} Gereserveerd nummers per ADR-map (`docs/adr/`, `docs/template/adr/`) */
+
 // Alleen bij de ADR-sectie: nummers uit archief en bekende geschiedenis blijven gereserveerd, zonder fictieve lijstrijen.
-// Altijd uit de Git-geschiedenis van de werkmap.
+// Altijd uit de Git-geschiedenis van de werkmap, per map (ADR 0089 punt 6): een pad telt in de map waarin het stond.
+/** @returns {Promise<Gereserveerd>} */
 export async function gereserveerdeAdrNummers() {
-  const [{ gitText }, { adrNumber }] = await Promise.all([
+  const [{ gitText }, { adrMap, adrNumber }] = await Promise.all([
     import('../../rails/hooks/lib/authority-context.mjs'),
     import('./adr-numbers.mjs'),
   ]);
@@ -66,50 +74,76 @@ export async function gereserveerdeAdrNummers() {
     '--name-only',
     '-z',
     '--',
-    'docs/adr/',
+    ...ADR_MAPPEN,
   ]);
   if (history === null) throw new Error('ADR-geschiedenis niet leesbaar; haal de Git-geschiedenis op');
   const archive = markdownFiles(werkmap, 'docs/adr/archief').map((file) => `docs/adr/archief/${file}`);
   const paths = [...history.split('\0').map((file) => file.replace(/^\n+/, '')), ...archive];
-  return [...new Set(paths.flatMap((file) => adrNumber(file) ?? []))];
+  /** @type {Record<string, string[]>} */
+  const uit = {};
+  for (const file of paths) {
+    const [map, nummer] = [adrMap(file), adrNumber(file)];
+    if (map === undefined || nummer === undefined) continue;
+    const lijst = (uit[map] ??= []);
+    if (!lijst.includes(nummer)) lijst.push(nummer);
+  }
+  return uit;
 }
 
-/** @param {Lezer} lezer */
-export function adrs(lezer) {
-  return markdownFiles(lezer, 'docs/adr').map((file) => {
-    const text = lezer.lees(`docs/adr/${file}`) ?? '';
+/** De ADR's van één map. @param {Lezer} lezer @param {string} [map] */
+export function adrs(lezer, map = 'docs/adr') {
+  return markdownFiles(lezer, map).map((file) => {
+    const text = lezer.lees(`${map}/${file}`) ?? '';
     const status =
       /^Status:\s*(voorgesteld|geaccepteerd|vervangen door \d{4}|vervallen)\b/m.exec(text)?.[1] ?? 'onbekend';
     return { nummer: file.slice(0, 4), titel: /^# \d{4} — (.+)$/m.exec(text)?.[1] ?? file, status };
   });
 }
 
-/** @param {Lezer} lezer */
-export function specs(lezer) {
-  return markdownFiles(lezer, 'docs/specs').map((file) => {
-    const status = /^status:\s*(\S+)/m.exec(lezer.lees(`docs/specs/${file}`) ?? '')?.[1] ?? 'onbekend';
+/** De specs van één map. @param {Lezer} lezer @param {string} [map] */
+export function specs(lezer, map = 'docs/specs') {
+  return markdownFiles(lezer, map).map((file) => {
+    const status = /^status:\s*(\S+)/m.exec(lezer.lees(`${map}/${file}`) ?? '')?.[1] ?? 'onbekend';
     return { spec: file, status };
   });
 }
 
 /**
- * `specs`, `adr` en `fase` over een lezer. `volgende` (het vrije ADR-nummer) komt van de aanroeper: uit de Git-geschiedenis van
- * de werkmap, ook als de lezer de basis is.
- * @param {Lezer} lezer @param {{ alle: boolean, gereserveerd?: readonly string[], volgende?: string }} opties
+ * De ADR-sectie: per map een lijst en een telregel, en één regel `volgende` met het vrije nummer per map.
+ * @param {Lezer} lezer @param {{ alle: boolean, gereserveerd: Gereserveerd, volgende?: string | undefined }} opties
+ */
+function adrSectie(lezer, { alle, gereserveerd, volgende }) {
+  const delen = ADR_MAPPEN.map((dir) => {
+    const map = `${dir}/`;
+    const { volgende: vrij, ...overzicht } = adrOverzicht(adrs(lezer, dir), alle, gereserveerd[map] ?? []);
+    return { map, overzicht, vrij };
+  });
+  return {
+    ...perMap(delen),
+    volgende: volgende ?? delen.map(({ map, vrij }) => `${vrij} (${map})`).join(' · '),
+  };
+}
+
+/**
+ * `specs`, `adr` en `fase` over een lezer; `specs` en `adr` tonen een lijst per map, app eerst (templateregime/AC-11).
+ * `volgende` (het vrije ADR-nummer per map) komt van de aanroeper: uit de Git-geschiedenis van de werkmap, ook als de lezer
+ * de basis is.
+ * @param {Lezer} lezer @param {{ alle: boolean, gereserveerd?: Gereserveerd, volgende?: string }} opties
  * @returns {Record<(typeof LEZER_SECTIES)[number], () => unknown>}
  */
-export function lezerSecties(lezer, { alle, gereserveerd = [], volgende }) {
+export function lezerSecties(lezer, { alle, gereserveerd = {}, volgende }) {
+  const alleSpecs = () => SPEC_MAPPEN.flatMap((dir) => specs(lezer, dir));
   return {
-    specs: () => specsOverzicht(specs(lezer), alle),
-    adr: () => {
-      const overzicht = adrOverzicht(adrs(lezer), alle, gereserveerd);
-      return volgende === undefined ? overzicht : { ...overzicht, volgende };
-    },
+    specs: () =>
+      perMap(
+        SPEC_MAPPEN.map((dir) => ({ map: `${dir}/`, overzicht: specsOverzicht(specs(lezer, dir), alle, `${dir}/`) })),
+      ),
+    adr: () => adrSectie(lezer, { alle, gereserveerd, volgende }),
     fase: () =>
       faseOverzicht({
         roadmap: lezer.lees('docs/roadmap.md'),
         dod: lezer.lees('docs/dod.md'),
-        specs: specs(lezer),
+        specs: alleSpecs(),
         alle,
       }),
   };

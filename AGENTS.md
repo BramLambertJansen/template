@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Webapp-template, gebouwd door agents binnen afgedwongen kaders. Bindend regelboek: `docs/framework.md` (R-id's; bij twijfel wint het, daarna de eigenaar); voortgang `docs/roadmap.md`; het waarom `docs/adr/`.
+Webapp-template, gebouwd door agents binnen afgedwongen kaders. Bindend regelboek: `docs/framework.md` (R-id's; bij twijfel wint het, daarna de eigenaar); voortgang `docs/roadmap.md`; het waarom `docs/template/adr/` (app: `docs/adr/`).
 
 ## Status
 

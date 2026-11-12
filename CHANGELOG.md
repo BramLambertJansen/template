@@ -4,6 +4,14 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ## [Unreleased]
 
+### Gewijzigd
+
+- De ADR's en specs van de template staan in `docs/template/adr/` en `docs/template/specs/`; `docs/adr/` en `docs/specs/` zijn van
+  de app en bevatten in de template alleen de sjablonen (ADR 0089 punt 1, 6 en 7). De archieven zijn verwijderd: git is de
+  historie. De nummerreeks 0001–0099 / vanaf 0100 vervalt; een ADR-nummer is uniek per map. `feiten.mjs adr` en `specs` tonen een
+  lijst per map, de app eerst. Wat verandert voor een app: nog geen app volgt deze template; een app die dat later doet, schrijft
+  zijn eigen ADR's en specs in `docs/adr/` en `docs/specs/` en wijzigt `docs/template/` niet (`check-core`).
+
 ### Verwijderd
 
 - De CI-job `document-status` en de verplichte check met die naam (ADR 0089 punt 5): de review van code-eigenaren op GitHub bewaakt

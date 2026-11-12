@@ -1,4 +1,4 @@
-// check:roadmap (spec docs/specs/roadmap-vinkjes.md, framework §8 "Docs horen bij de wijziging"): een nieuw of gewijzigd `[x]` in
+// check:roadmap (spec docs/template/specs/roadmap-vinkjes.md, framework §8 "Docs horen bij de wijziging"): een nieuw of gewijzigd `[x]` in
 // docs/roadmap.md moet naar bewijs verwijzen (PR-nummer, testpad of checknaam), en een spec die naar `gebouwd` gaat heeft de ene
 // bewijsvorm die `pnpm docs:status` schrijft (spec taakmandaat-vervolg, B2). Het vergelijkt met het punt waar de branch van
 // origin/main afsplitste, niet met de kop van main. Is origin/main niet te lezen, dan faalt de check: onleesbaar telt als fout
@@ -24,7 +24,7 @@ import { herijkingMeldingen } from './roadmap-herijking.mjs';
 const BASE = 'origin/main';
 const ROADMAP = 'docs/roadmap.md';
 const ARCHIEF = 'docs/roadmap-archief.md';
-const SPEC_PAD = /^docs\/specs\/[^_/][^/]*\.md$/;
+const SPEC_PAD = /^docs\/(?:template\/)?specs\/[^_/][^/]*\.md$/;
 const ITEM = /^(\s*)- \[([ xX])\] (.*)$/;
 // `#`, cijfers, niet direct na een woordteken en niet gevolgd door een woordteken of `-` (dus geen kopanker als `(#4-rails)`).
 const PR = /(?<!\w)#\d+(?![\w-])/;
@@ -99,13 +99,16 @@ function isChecknaam(token, kader) {
 }
 
 /**
- * `ADR NNNN` wijst naar een bestaand ADR in `docs/adr/` of `docs/adr/archief/` (framework §10).
+ * `ADR NNNN` wijst naar een bestaand ADR in `docs/adr/`, `docs/adr/archief/` of `docs/template/adr/` (framework §10, ADR 0089
+ * punt 1).
  * @param {string} tekst
  * @param {Kader} kader
  */
 function heeftAdr(tekst, kader) {
   return [...tekst.matchAll(/\bADR (\d{4})\b/g)].some(([, nummer = '']) =>
-    kader.bestanden.some((bestand) => new RegExp(`^docs/adr/(?:archief/)?${nummer}-[^/]+\\.md$`).test(bestand)),
+    kader.bestanden.some((bestand) =>
+      new RegExp(`^docs/(?:template/adr|adr(?:/archief)?)/${nummer}-[^/]+\\.md$`).test(bestand),
+    ),
   );
 }
 

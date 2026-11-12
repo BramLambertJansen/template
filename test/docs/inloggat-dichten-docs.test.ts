@@ -18,7 +18,7 @@ describe('inloggat-dichten: regelboek en spec eigen-account volgen het gebouwde 
   });
 
   test('eigen-account: link 1 nogmaals geopend geeft EMAIL_LINK_INVALID; geen herzending van mail 2', () => {
-    const spec = lees('docs/specs/eigen-account.md');
+    const spec = lees('docs/template/specs/eigen-account.md');
     const rij = spec.split('\n').find((r) => r.startsWith('| Link 1 nogmaals geopend')) ?? '';
     expect(rij).toMatch(/`EMAIL_LINK_INVALID` \|$/);
     expectAbsent(spec, /stuurt mail 2 opnieuw|mail 2 gaat opnieuw weg/, {
@@ -27,7 +27,7 @@ describe('inloggat-dichten: regelboek en spec eigen-account volgen het gebouwde 
   });
 
   test('eigen-account: het token-lek is geen aparte core-taak meer', () => {
-    const spec = lees('docs/specs/eigen-account.md');
+    const spec = lees('docs/template/specs/eigen-account.md');
     expect(spec).toMatch(/\*\*Sessietoken in JSON:\*\* `authGateway\.handler` haalt elke `token`/);
     expectAbsent(spec, /Aparte core-taak|het token-lek bij inloggen/, {
       recognizes: ['**Aparte core-taak (buiten deze spec):**', 'het token-lek bij inloggen (core-taak hierboven)'],

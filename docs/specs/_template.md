@@ -26,7 +26,7 @@ zie "Padparameters en foutvolgorde" in `docs/gouden-pad.md`. Zonder routes: "n.v
 
 ## Koppeling
 
-Zonder externe dienst: "n.v.t. — reden". Anders volgens de skill `nieuwe-koppeling` en het app-ADR (0100+) dat de partner noemt.
+Zonder externe dienst: "n.v.t. — reden". Anders volgens de skill `nieuwe-koppeling` en het app-ADR dat de partner noemt.
 Indeling: machtiging, richting, ritme, gevoeligheid, kosten en quota, bron van waarheid; elke waarde gebouwd volgens
 `node scripts/kit/feiten.mjs koppelingen`. Per aanroep:
 

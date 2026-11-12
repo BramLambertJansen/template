@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { afterEach, expect, test } from 'vitest';
 import { docsViolations } from '../../scripts/kit/check-docs.mjs';
 import { git, maakRepo, opruimen, write } from '../hooks/follow-up-kit';
@@ -45,11 +44,7 @@ test('bronvoorbeelden verwijzen naar het exacte repositorypad', async () => {
   expect((await docsViolations(f.root)).some(({ key }) => key.endsWith(':vorm'))).toBe(true);
 });
 
-test('de twee historische 0039-bestanden blijven als bestaande ratchet-afwijking herkenbaar', async () => {
-  const violations = await docsViolations();
-  expect(violations.find(({ key }) => key === 'docs:adr:0039:dubbel')).toBeDefined();
-  expect(readFileSync('.kit/baseline.json', 'utf8')).toContain('docs:adr:0039:dubbel');
-});
+// GEWIJZIGD (templateregime AC-11, ADR 0089 punt 1): de test op het historische 0039-paar is weg; het paar stond in het verwijderde archief.
 
 test.each([
   'docs/adr/0060_second.md',

@@ -6,7 +6,7 @@ allowed-tools: Bash(node scripts/kit/feiten.mjs *)
 
 # Ontwerp overnemen
 
-Spec: `docs/specs/ontwerp-overnemen.md`. Uit een referentie komen drie dingen: semantische tokens in
+Spec: `docs/template/specs/ontwerp-overnemen.md`. Uit een referentie komen drie dingen: semantische tokens in
 `src/web/styles/theme.css`, een mappingdocument `docs/ontwerp/<bron>.md` (referentie → token of component, plus wat
 bewust buiten valt) en variantvoorstellen waar geen component past. Features stylen nooit los.
 

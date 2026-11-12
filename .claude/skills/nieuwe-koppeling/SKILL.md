@@ -11,7 +11,7 @@ Elke koppeling volgt hetzelfde patroon. Je kiest geen eigen vorm: je deelt in, e
 ## 1. Voorwaarden
 
 Indelen (stap 3 en 4) en het app-ADR en de spec schrijven (stap 5 en 6) mag meteen. Bouwen (stap 7) pas met een app-ADR
-(0100+) dat de partner noemt en een spec met `status: goedgekeurd`. De template noemt geen bestaande dienst
+(in `docs/adr/`) dat de partner noemt en een spec met `status: goedgekeurd`. De template noemt geen bestaande dienst
 (ADR 0077 punt 8): voorbeelden alleen met `<naam>`, `<host>` en `<partner>`.
 
 ## 2. Feiten nu
@@ -64,23 +64,23 @@ testomgeving van de partner en het patroon van een live-sleutel.
 
 Paragraaf "Koppeling" uit `docs/specs/_template.md`: per aanroep methode, padsjabloon (het pad na de basis-URL van het
 app-ADR), time-out (zonder opgave van de partner de standaard van de client, en dat noteren), herhaalbaar, schema en
-foutcode. De route volgt "Foutvolgorde" in [partnerstap](../../../docs/specs/partnerstap.md); een uitgezette koppeling en
-een 429 van de partner gelden zoals in [uitgaande-client](../../../docs/specs/uitgaande-client.md).
+foutcode. De route volgt "Foutvolgorde" in [partnerstap](../../../docs/template/specs/partnerstap.md); een uitgezette koppeling en
+een 429 van de partner gelden zoals in [uitgaande-client](../../../docs/template/specs/uitgaande-client.md).
 
 ## 7. Bouwen
 
 1. Registreer de koppeling in `src/api/integrations/index.ts`
-   ([koppelingsregister](../../../docs/specs/koppelingsregister.md)).
+   ([koppelingsregister](../../../docs/template/specs/koppelingsregister.md)).
 2. Zet de sleutel met `secret(ctx, { livePattern })` (patroon uit het app-ADR) in één schemafunctie per partner in het
-   env-bestand van de app (nieuw, gate-pad, eigenaarakkoord; [geheimen-in-env](../../../docs/specs/geheimen-in-env.md));
+   env-bestand van de app (nieuw, gate-pad, eigenaarakkoord; [geheimen-in-env](../../../docs/template/specs/geheimen-in-env.md));
    de handmatige run gebruikt dezelfde functie.
 3. Maak de client met `integrations.client` in de compositie-root
-   ([uitgaande-client](../../../docs/specs/uitgaande-client.md)) en geef hem aan `create<Naam>Adapter`; de route krijgt
+   ([uitgaande-client](../../../docs/template/specs/uitgaande-client.md)) en geef hem aan `create<Naam>Adapter`; de route krijgt
    de poort via `ctx.services` en roept haar aan in `call` met `{ reading, requestId }`.
-4. Schrijf de vijf onderdelen van R-CODE-13 met `describeContract` ([koppelingsvorm](../../../docs/specs/koppelingsvorm.md)).
-5. Roep de poort aan in een route met `definePartnerRoute` en `rateLimit: 'duur'` ([partnerstap](../../../docs/specs/partnerstap.md)).
+4. Schrijf de vijf onderdelen van R-CODE-13 met `describeContract` ([koppelingsvorm](../../../docs/template/specs/koppelingsvorm.md)).
+5. Roep de poort aan in een route met `definePartnerRoute` en `rateLimit: 'duur'` ([partnerstap](../../../docs/template/specs/partnerstap.md)).
 
-Faalt de lintregel voor netwerk of voor geheimen ([netwerk-en-geheim-rails](../../../docs/specs/netwerk-en-geheim-rails.md)):
+Faalt de lintregel voor netwerk of voor geheimen ([netwerk-en-geheim-rails](../../../docs/template/specs/netwerk-en-geheim-rails.md)):
 stop, niet omzeilen.
 
 ## 8. Veiligheid

@@ -5,12 +5,12 @@ const SPEC_STATES = new Set(['voorstel', 'goedgekeurd', 'gebouwd', 'vervallen'])
 const ADR_STATES = new Set(['voorgesteld', 'geaccepteerd', 'vervallen']);
 
 /**
- * Een spec in `docs/specs/`, `docs/specs/archief/` of `docs/template/specs/`, een ADR in `docs/adr/` of `docs/adr/archief/`
- * (framework §10, ADR 0080). @param {string} file
+ * Een spec in `docs/specs/`, `docs/specs/archief/` of `docs/template/specs/`, een ADR in `docs/adr/`, `docs/adr/archief/` of
+ * `docs/template/adr/` (framework §10, ADR 0080, ADR 0089 punt 1). @param {string} file
  */
 export function documentKind(file) {
   if (/^docs\/(?:template\/specs|specs(?:\/archief)?)\/[a-z0-9]+(?:-[a-z0-9]+)*\.md$/.test(file)) return 'spec';
-  if (/^docs\/adr\/(?:archief\/)?\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/.test(file)) return 'adr';
+  if (/^docs\/(?:template\/adr|adr(?:\/archief)?)\/\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/.test(file)) return 'adr';
   return null;
 }
 

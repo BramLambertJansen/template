@@ -93,13 +93,16 @@ describe('koppeling-agentlaag/AC-8: stopregels volgen de catalogus', () => {
 });
 
 describe('koppeling-agentlaag/AC-9: links naar de zes specs en het schakelscript', () => {
-  test.each(SPECS)('koppeling-agentlaag/AC-9: de skill linkt naar docs/specs/%s.md, en het doel bestaat', (spec) => {
-    const links = [...skill.matchAll(/\]\(([^)\s]+)\)/g)].map((match) => match[1] ?? '');
-    const naarSpec = links.filter((link) => link.endsWith(`docs/specs/${spec}.md`));
+  test.each(SPECS)(
+    'koppeling-agentlaag/AC-9: de skill linkt naar docs/template/specs/%s.md, en het doel bestaat',
+    (spec) => {
+      const links = [...skill.matchAll(/\]\(([^)\s]+)\)/g)].map((match) => match[1] ?? '');
+      const naarSpec = links.filter((link) => link.endsWith(`docs/template/specs/${spec}.md`));
 
-    expect(naarSpec).not.toHaveLength(0);
-    for (const link of naarSpec) expect(existsSync(path.join(path.dirname(SKILL), link))).toBe(true);
-  });
+      expect(naarSpec).not.toHaveLength(0);
+      for (const link of naarSpec) expect(existsSync(path.join(path.dirname(SKILL), link))).toBe(true);
+    },
+  );
 
   test('koppeling-agentlaag/AC-9: de skill noemt pnpm integration:switch', () => {
     expect(skill).toContain('pnpm integration:switch');
@@ -130,12 +133,13 @@ describe('koppeling-agentlaag/AC-11: paragraaf "Koppeling" in het spec-template'
     expect(lijst.indexOf('Koppeling')).toBe(lijst.indexOf('Routes en foutcodes') + 1);
   });
 
-  test('koppeling-agentlaag/AC-11: de zes kenmerknamen, "n.v.t." en "0100"', () => {
+  test('koppeling-agentlaag/AC-11: de zes kenmerknamen, "n.v.t." en het app-ADR', () => {
     for (const naam of ['machtiging', 'richting', 'ritme', 'gevoeligheid', 'kosten en quota', 'bron van waarheid']) {
       expect(koppeling.toLowerCase()).toContain(naam);
     }
     expect(koppeling).toContain('n.v.t.');
-    expect(koppeling).toContain('0100');
+    // GEWIJZIGD (templateregime AC-11, ADR 0089 punt 1 en 6): de reeks 0100+ is vervallen; de paragraaf noemt het app-ADR.
+    expect(koppeling).toContain('app-ADR');
   });
 
   test('koppeling-agentlaag/AC-11: een tabel met precies de zes kolommen per aanroep', () => {
@@ -166,7 +170,7 @@ describe('koppeling-agentlaag/AC-12: hoofdstuk in het gouden pad', () => {
   });
 
   test.each(SPECS)('koppeling-agentlaag/AC-12: het hoofdstuk linkt naar de spec %s', (spec) => {
-    expect(hoofdstuk).toMatch(new RegExp(`\\]\\((?:\\./)?specs/${spec}\\.md\\)`));
+    expect(hoofdstuk).toMatch(new RegExp(`\\]\\((?:\\./)?template/specs/${spec}\\.md\\)`));
   });
 
   test('koppeling-agentlaag/AC-12: de zin "Het volledige hoofdstuk volgt" is weg', () => {

@@ -73,14 +73,15 @@ const { codeSecties, gereserveerdeAdrNummers, lezerSecties, plain, VOLGORDE, wer
 
 const args = process.argv.slice(2);
 const alle = args.includes('--alle');
-const uitLezer = (/** @type {readonly string[]} */ gereserveerd) => lezerSecties(werkmap, { alle, gereserveerd });
+const uitLezer = (/** @type {import('./feiten-secties.mjs').Gereserveerd} */ gereserveerd) =>
+  lezerSecties(werkmap, { alle, gereserveerd });
 
 /** @type {Record<string, () => Promise<import('./feiten-secties.mjs').Result> | import('./feiten-secties.mjs').Result>} */
 const sections = {
   ...codeSecties,
   adr: plain(async () => uitLezer(await gereserveerdeAdrNummers()).adr()),
-  specs: plain(() => uitLezer([]).specs()),
-  fase: plain(() => uitLezer([]).fase()),
+  specs: plain(() => uitLezer({}).specs()),
+  fase: plain(() => uitLezer({}).fase()),
 };
 
 const wanted = args.filter((arg) => !arg.startsWith('--'));

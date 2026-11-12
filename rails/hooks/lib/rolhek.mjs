@@ -367,7 +367,7 @@ function decideFile({ rel, change, role }, ctx, decision) {
   }
   // A4 en de overgang vergelijken met main (de vertrouwde basis); alleen zonder authority is de werkmap de terugval. Alleen
   // een ADR of spec heeft een basis nodig: een ander pad (ook een geheim, spec rolhek-effect AC-11 c) wordt niet gelezen.
-  const docPad = documentKind(rel) !== null || rel.startsWith('docs/specs/');
+  const docPad = documentKind(rel) !== null || inSpecMap(rel);
   const basis = !docPad ? null : ctx.authority == null ? ctx.read(rel) : ctx.authority.trusted(rel);
   const overgang = change.after === null || documentKind(rel) === null ? null : beslisOvergang(rel, basis, change.after);
   const beslisrol = ['hoofdsessie', 'architect'].includes(role);
@@ -394,13 +394,18 @@ function decideFile({ rel, change, role }, ctx, decision) {
   decideByRole({ rel, change, role }, ctx, decision);
 }
 
+/** De specmap van de app of van de template (ADR 0089 punt 1): beide krijgen dezelfde behandeling. @param {string} rel */
+function inSpecMap(rel) {
+  return rel.startsWith('docs/specs/') || rel.startsWith('docs/template/specs/');
+}
+
 /**
  * ADR 0068 punt 4: de developer maakt, wijzigt, verwijdert of hernoemt geen spec; alleen terugzetten naar de tekst van de
  * basis mag. Een status terug naar `voorstel` blijft bij architect en hoofdsessie (R-WERK-08).
  * @param {string} rel @param {Change} change @param {string | null} basis @returns {boolean} true als het geweigerd wordt
  */
 function developerSpec(rel, change, basis) {
-  if (!rel.startsWith('docs/specs/')) return false;
+  if (!inSpecMap(rel)) return false;
   return change.after === null || change.after !== basis;
 }
 
@@ -458,7 +463,7 @@ function recordedStatus({ rel, change, role }, ctx, decision) {
  * @param {Ctx} ctx
  */
 function approvesSpec(rel, change, ctx) {
-  if (!rel.startsWith('docs/specs/') || change.after === null) return false;
+  if (!inSpecMap(rel) || change.after === null) return false;
   const approved = /^status:\s*goedgekeurd\b/m;
   return approved.test(change.after) && !approved.test(ctx.read(rel) ?? '');
 }
@@ -519,7 +524,7 @@ function decideByRole({ rel, change, role }, ctx, decision) {
     return;
   }
   // Tests (toevoegen is vrij) en specs (de agent schrijft ze; goedgekeurd bewaakt de check) zijn geen gate voor schrijven.
-  const free = config.testpaden.some((glob) => globMatch(glob, rel)) || rel.startsWith('docs/specs/');
+  const free = config.testpaden.some((glob) => globMatch(glob, rel)) || inSpecMap(rel);
   if (free || !config.gates.some((glob) => globMatch(glob, rel))) return;
   // ADR 0046 punt 28: buiten voorReview geen prompt, wel een melding; de eigenaar reviewt het in de PR.
   const voorReview = config.voorReview ?? config.gates;

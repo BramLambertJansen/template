@@ -368,11 +368,6 @@
       "count": 2
     }
   },
-  "test/scripts/feiten.test.ts": {
-    "rails/afwezigheid": {
-      "count": 1
-    }
-  },
   "test/scripts/geheugen.test.ts": {
     "rails/negatieve-tabel": {
       "count": 1

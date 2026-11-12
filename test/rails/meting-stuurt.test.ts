@@ -364,7 +364,7 @@ describe('meting-stuurt/AC-9: regelboek en operations-doc', () => {
 
 describe('meting-stuurt/AC-8: leesbudget volgt de meting die stuurt', () => {
   const ac = (n: number) =>
-    lees('docs/specs/leesbudget.md')
+    lees('docs/template/specs/leesbudget.md')
       .split('\n')
       .find((r) => r.startsWith(`- **leesbudget/AC-${String(n)}**`)) ?? '';
 

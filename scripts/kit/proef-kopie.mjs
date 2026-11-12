@@ -1,4 +1,4 @@
-// Kern van de proefkopie van check:new-resource (docs/specs/app-init-proef.md OV-3, docs/specs/een-proefkopie.md): een
+// Kern van de proefkopie van check:new-resource (docs/template/specs/app-init-proef.md OV-3, docs/template/specs/een-proefkopie.md): een
 // tijdelijke kopie van de repo (git ls-files, ook nieuwe bestanden) met een link naar node_modules, een
 // package.json-script zonder pnpm, en een opruimguard. Geen bijwerkingen bij import. Elk kindproces krijgt de omgeving
 // zonder de repovariabelen van git (`git rev-parse --local-env-vars`, zoals test/setup/git-env.ts), zodat een git-hook

@@ -115,7 +115,7 @@ fixtures en controleert ook dat een weigering installatiebestanden ongemoeid laa
 
 ## Dagelijks werken binnen de Claude Code-sandbox
 
-Volgens [ADR 0061](adr/0061-claude-sandbox-werkstraat.md) selecteert `mise.toml` rechtstreeks de exacte pnpm-versie
+Volgens [ADR 0061](template/adr/0061-claude-sandbox-werkstraat.md) selecteert `mise.toml` rechtstreeks de exacte pnpm-versie
 uit `package.json`. De bestaande setup installeert die vooraf, zodat de shell en Git-hooks dezelfde pnpm gebruiken.
 Er staat geen tweede versienummer in mise en dagelijks werk hoeft geen globale pnpm-cache te wijzigen.
 Na een template-update met een andere pin hoort de passende toolchain bij de eenmalige inrichting; een ontbrekende
@@ -168,7 +168,7 @@ branchnaam voor; de PR komt van de opgelegde branch. Is een vaste naam nodig, da
   hoofdcheckout, als `node_modules` een symlink is en als een van `package.json`, `pnpm-lock.yaml`,
   `pnpm-workspace.yaml`, `.npmrc`, `.pnpmfile.cjs` of `.pnpmfile.mjs` afwijkt van HEAD (gewijzigd, verwijderd of
   untracked; vergeleken op inhoud met HEAD, dus ook bij `--assume-unchanged` of `--skip-worktree`;
-  [ADR 0085](adr/0085-worktree-installatie-in-de-sandbox.md)); commit of herstel zo'n bestand eerst, of vraag de
+  [ADR 0085](template/adr/0085-worktree-installatie-in-de-sandbox.md)); commit of herstel zo'n bestand eerst, of vraag de
   eigenaar. Die weigering is geen beveiligingsgrens: CI en de eigenaarmerge zijn de grens. Open aandachtspunt (niet
   gemeten): hoort een bestaande `node_modules` bij een andere store (andere `TMPDIR` bij een eerdere run, of eerder een
   handmatige `pnpm install`), dan kan pnpm zonder TTY afbreken met een fout over het verwijderen van de modules-map

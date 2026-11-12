@@ -12,7 +12,7 @@ Hover en focus pauzeren de aftellers; een nieuwe melding herstart bestaande afte
 sluiten of verdringing door het bestaande maximum. Regressies: `src/core/web/ui/toast-effect-timers.test.tsx`.
 Werk dit gebruiksvoorbeeld bij wanneer de plaatsing verandert; daarvoor hoeft de agentinstructie niet mee te wijzigen.
 
-Kopieer van accountbeheer (spec `docs/specs/accountbeheer.md`). Volgorde zoals de werkstraat (framework §8): eerst de spec,
+Kopieer van accountbeheer (spec `docs/template/specs/accountbeheer.md`). Volgorde zoals de werkstraat (framework §8): eerst de spec,
 dan van database naar scherm. Elke stap verwijst naar het bestand dat het voordoet.
 
 ## Begin met `pnpm new:resource <naam>`
@@ -92,29 +92,29 @@ transactie af; wijzigingen en audit worden teruggedraaid. Een wijziging bewaren 
 Een aanroep via `ctx.services` vanuit de handler gebeurt ook binnen die transactie. Vereist de flow een externe
 netwerkaanroep tussen twee databasestappen zonder een open transactie of vastgehouden verbinding, leg dan eerst een
 expliciet kitmechanisme vast in de spec en controleer of de kit het al ondersteunt. Het `prepare`-ontwerp uit
-[ADR 0060](adr/0060-bestandsopslag-als-poort.md) is geen beschikbare handler-API zolang de route kit het niet implementeert.
+[ADR 0060](template/adr/0060-bestandsopslag-als-poort.md) is geen beschikbare handler-API zolang de route kit het niet implementeert.
 
 `ctx.afterCommit` en `ctx.afterRollback` plannen externe gevolgen of compensatie na de transactie; ze splitsen de handler
 niet in twee transacties (`src/core/api/http/route-effects.ts`). Een fout na commit draait gecommitteerde data niet terug.
 Een partner aanroepen kan daarom niet vanuit de handler of `afterCommit`: de uitgaande client (`src/core/api/outbound`) weigert
-een aanroep in de `withUser` van een route of via `guardWithUser`, en in `afterCommit` (R-CODE-12, spec [uitgaande-client](specs/uitgaande-client.md)).
+een aanroep in de `withUser` van een route of via `guardWithUser`, en in `afterCommit` (R-CODE-12, spec [uitgaande-client](template/specs/uitgaande-client.md)).
 
 ## Koppeling met een externe dienst
 
 Een koppeling volgt de skill `nieuwe-koppeling`: eerst indelen op zes kenmerken en toetsen aan
-`node scripts/kit/feiten.mjs koppelingen` (een waarde zonder bouwsteen: stoppen en melden), dan een app-ADR (0100+) dat de
+`node scripts/kit/feiten.mjs koppelingen` (een waarde zonder bouwsteen: stoppen en melden), dan een app-ADR dat de
 partner noemt en een spec met de paragraaf "Koppeling". De bouwstenen:
 
-- Register en schakelaar: [koppelingsregister](specs/koppelingsregister.md); aan en uit met `pnpm integration:switch`.
-- Uitgaande client met time-out, herhalen en schemacontrole: [uitgaande-client](specs/uitgaande-client.md).
-- Geheimen in env met `secret()`: [geheimen-in-env](specs/geheimen-in-env.md).
-- Lintregels tegen netwerk en geheimen buiten de client: [netwerk-en-geheim-rails](specs/netwerk-en-geheim-rails.md).
-- Partnerstap in de route (`definePartnerRoute`, `rateLimit: 'duur'`): [partnerstap](specs/partnerstap.md).
-- Vaste vorm per koppeling met contracttest (`describeContract`) en check: [koppelingsvorm](specs/koppelingsvorm.md).
+- Register en schakelaar: [koppelingsregister](template/specs/koppelingsregister.md); aan en uit met `pnpm integration:switch`.
+- Uitgaande client met time-out, herhalen en schemacontrole: [uitgaande-client](template/specs/uitgaande-client.md).
+- Geheimen in env met `secret()`: [geheimen-in-env](template/specs/geheimen-in-env.md).
+- Lintregels tegen netwerk en geheimen buiten de client: [netwerk-en-geheim-rails](template/specs/netwerk-en-geheim-rails.md).
+- Partnerstap in de route (`definePartnerRoute`, `rateLimit: 'duur'`): [partnerstap](template/specs/partnerstap.md).
+- Vaste vorm per koppeling met contracttest (`describeContract`) en check: [koppelingsvorm](template/specs/koppelingsvorm.md).
 
 ## Stappen
 
-1. **Spec** met status `goedgekeurd`: `docs/specs/accountbeheer.md` (routes, foutcodes, teksten, ACs, testplan).
+1. **Spec** met status `goedgekeurd`: `docs/template/specs/accountbeheer.md` (routes, foutcodes, teksten, ACs, testplan).
 2. **Migratie** met RLS, grants en policies, of een view van `app_definer`: `db/migrations/*_user_roles.sql`, `*_accounts_view.sql`; een functie van `app_definer` die in `better_auth` schrijft: `*_account_blocking.sql` (ADR 0043).
    pgTAP per policy: `db/tests/user_roles.sql`, `db/tests/accounts.sql`; nieuwe functie → regel in `db/tests/functies.sql`.
    `db/tests/schrijfbaarheid.sql` bewaakt daarnaast verplichte insertvelden en leeszichtbaarheid bij deletes door
@@ -132,7 +132,7 @@ partner noemt en een spec met de paragraaf "Koppeling". De bouwstenen:
 8. **Queries** (key-factory met de search in de key, hooks, `placeholderData`, mutaties die invalideren): `src/web/features/accounts/queries.ts`.
 9. **Scherm** met kitcomponenten uit `src/web/ui` en teksten uit `src/web/copy/ui.ts`: `src/web/features/accounts/accounts-page.tsx`,
    `invite-dialog.tsx`. Een lijst met zoeken en sorteren in de search params (`defineListSearch`, `useListSearch`, `uniqueById`, `ListToolbar`;
-   spec [lijstpagina](specs/lijstpagina.md)); `new:resource` maakt die uit de sjablonen, met de sorteringen nieuwste en oudste. Elke sortering
+   spec [lijstpagina](template/specs/lijstpagina.md)); `new:resource` maakt die uit de sjablonen, met de sorteringen nieuwste en oudste. Elke sortering
    noemt in `cursorKeys` de maximale lengte van haar sleuteldelen; `defineListSearch` weigert bij het laden een te lange sleutel en de route
    maakt de cursor met `search.encodeCursor` (`src/shared/contracts/accounts.ts`).
 10. **Route** met guard: `src/web/routes/_app/admin/accounts.tsx`; menu-item per rol in `src/web/lib/nav.ts`.

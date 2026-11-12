@@ -1,4 +1,4 @@
-// De proef in een tijdelijke kopie (docs/specs/app-init-proef.md, docs/specs/een-proefkopie.md, ADR 0073): in de template
+// De proef in een tijdelijke kopie (docs/template/specs/app-init-proef.md, docs/template/specs/een-proefkopie.md, ADR 0073): in de template
 // eerst `app:init`, dan (met `genereer`) de generator, en daarna één keer de snelle suite. Zo maakt een test die alleen in
 // de template slaagt (leerpunt #334) of gegenereerde code die gate:fast niet haalt de template-CI rood in plaats van de
 // eerste app. `check:new-resource` roept `draaiProef` aan met de echte generator; deze module heeft zelf geen CLI meer
