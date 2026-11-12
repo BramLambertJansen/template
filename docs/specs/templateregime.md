@@ -39,9 +39,10 @@ n.v.t. — geen UI.
 
 Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van punt 5; stap 4 = verhuizing.
 
-- **templateregime/AC-1** — Stap 2, tokenscript: neemt geen argumenten voor pad of rechten, vraagt alleen een token voor deze
-  ene repository aan met looptijd van hoogstens een uur, en drukt de sleutel nooit af; de sleutel staat op een pad dat de
-  sandbox niet laat lezen. Unit-tests op argumenten, repository en uitvoer.
+- **templateregime/AC-1** — Token: er komt geen tokenscript in de repo. De eigenaar maakt een installatietoken van hoogstens
+  een uur aan met een commando buiten de repo, en de agent geeft het per commando mee (`GH_TOKEN` vóór een
+  letterlijk `gh`- of `git push`-commando, gelezen uit een bestand, nooit letterlijk in de opdracht); de sleutel van de App staat op een pad
+  dat de sandbox niet laat lezen. Geen test: er is geen code.
 - **templateregime/AC-2** — Stap 2, rulesetscript: eist review van een code-eigenaar met nul vereiste goedkeuringen, trekt een
   goedkeuring in bij een nieuwe push, eist geen bijgewerkte branch, en eist precies `requiredChecks` (ook `check-core`,
   `leerpunt-bewijs`, `codeql (javascript-typescript)` en, tot stap 3, `document-status`). Zonder de optie `--bypass-beheerder`
@@ -60,12 +61,13 @@ Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van pun
 - **templateregime/AC-5** — Proef, geen pad van een code-eigenaar: geleverd op 2026-11-12. PR #694 van de App
   (`docs/proef-app-vrij.md`) was mergebaar zonder review zodra de verplichte checks groen waren. Na stap 2 herhaald.
 - **templateregime/AC-6** — Identiteit, nog niet bewezen: in de agentsessie mislukt lezen van `~/.config/gh/`, levert
-  `git credential fill` voor github.com niets, ontbreken `GH_TOKEN`, `GITHUB_TOKEN` en `SSH_AUTH_SOCK`, en tonen de auteur van
-  push en PR de App. Bewijs: een sandboxtest per punt plus de uitvoer in een PR, bevestigd door de eigenaar. Stap 3 en de bypass
-  beginnen pas na dit AC.
-- **templateregime/AC-7** — Stap 3, na AC-4 tot en met AC-6: `.github/workflows/guard.yml` heeft geen jobs `diff-guard`,
+  `git credential fill` voor github.com niets, ontbreken `GH_TOKEN`, `GITHUB_TOKEN` en `SSH_AUTH_SOCK` in de sessieomgeving, en tonen de auteur van
+  push en PR de App. Bewijs: een sandboxtest per punt plus de uitvoer in een PR, bevestigd door de eigenaar. De bypass en
+  ADR 0089 punt 9 beginnen pas na dit AC; stap 3 hangt er niet van af.
+- **templateregime/AC-7** — Stap 3, na AC-4 en AC-5: `.github/workflows/guard.yml` heeft geen jobs `diff-guard`,
   `agent-merge` en `document-status`; `document-status` staat niet meer in `requiredChecks` en de eigenaar werkt de ruleset
-  direct na de merge bij; de scripts uit "Raakt ook" zijn weg; `pnpm pr:merge` toetst alleen nog head-SHA en groene checks.
+  direct na de merge bij; de scripts uit "Raakt ook" zijn weg; `pnpm pr:merge` verliest de inhoudstoets en
+  houdt head-SHA, groene checks, de effecttoets en de modus `merge` uit `.claude/gates.json` tot ADR 0089 punt 9.
 
   | Onderdeel | Overgenomen door |
   |---|---|
@@ -103,7 +105,7 @@ Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van pun
 
 | Situatie | Gedrag | Foutcode |
 |---|---|---|
-| AC-6 niet bewezen | geen bypass, geen stap 3; de huidige checks blijven | n.v.t. |
+| AC-6 niet bewezen | geen bypass; de identiteitsregels van het rolhek blijven | n.v.t. |
 | PR raakt alleen paden met besluit `agent` | de App merget na groene checks | n.v.t. |
 | PR raakt `src/x/CLAUDE.md` of een `.`-bestand | goedkeuring van de eigenaar nodig | n.v.t. |
 
@@ -138,7 +140,7 @@ De effecttoets en de identiteitsregels van het rolhek (ADR 0089 punt 9).
 
 ## Testplan
 
-Tests eerst (R-PRINC-04). AC-1, AC-2, AC-3, AC-8, AC-9 en AC-10 als unit-tests, eerst rood; AC-6 met sandboxtests. AC-4 en
+Tests eerst (R-PRINC-04). AC-2, AC-3, AC-8, AC-9 en AC-10 als unit-tests, eerst rood; AC-6 met sandboxtests. AC-4 en
 AC-5 met proef-PR's (geleverd, herhaald na stap 2). AC-7 en AC-13 in stap 3 met `pnpm ratchet` en `pnpm gate:fast` groen.
 AC-11 in stap 4.
 
