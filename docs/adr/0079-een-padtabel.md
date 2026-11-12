@@ -2,6 +2,8 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-12 (#692): door ADR 0089 punt 3, in de template deels: punt 4, "elk ADR is `besluit-pr`" betekent daar eigenaarmerge, geen aparte PR; blijft: de padtabel als enige definitie van kritiek
+
 Wijzigt [0045](0045-railwerk.md) punt 1, 7 en 9 (de lijsten worden kolommen, de terugval bij een ontbrekende lijst
 vervalt), [0046](0046-werkstraat-en-beslisroute.md) punt 27 en 28 (`voorReview` en de bron van CODEOWNERS komen uit de
 padtabel), [0062](0062-spec-en-bouw-in-een-pr.md) punt 2 (de kritieke paden komen uit de padtabel) en

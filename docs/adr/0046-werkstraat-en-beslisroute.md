@@ -13,6 +13,7 @@ kolom `schrijven` van de padtabel in `.claude/gates.json` (wat erin hoort, blijf
 gates plus `jsonGates`
 Herzien: 2026-11-05 (#541): gewijzigd door [0080](0080-specarchief-en-bouwvorm.md) punt 5 en 10, een gebouwde spec krijgt in een besluit-PR nieuwe
 AC's met `(nog niet gebouwd)`, en `gebouwd` noemt alleen de PR (`# #<PR>`), zonder gevalideerde SHA
+Herzien: 2026-11-12 (#692): door ADR 0089 punt 1–3, in de template deels: punt 2, vervalt: A4 en de herzieningsroute; blijft: nooit terug naar `voorgesteld`, de strikte statusregel; punt 5, vervalt: de besluit-PR zonder code; blijft: de toegestane overgangen; punt 6, vervalt: de lokale A4-weigering, alleen voor architect en hoofdsessie in de onderhoudsmodus en alleen voor de gevallen uit spec templateregime AC-10; blijft: alleen architect en hoofdsessie schrijven een eigenaarstatus; punt 10, vervalt: daarna mogen alleen statusregels veranderen; blijft: het bouwbewijs; punt 12 en 15 (er komt een derde lane `template` bij)
 
 Vervangt [0025](0025-werkstraat-tot-de-merge.md), [0027](0027-taakmandaat-voor-frameworkwerk.md),
 [0030](0030-ci-lus-en-agent-merge.md) en [0038](0038-beslisroute.md); neemt de delen van [0029](0029-snellere-beslisroute.md)

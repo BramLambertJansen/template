@@ -9,6 +9,7 @@ verscherpt de bewaking; uitwerking in [spec](../specs/rolhek-dicht-bij-storing.m
 Herzien: 2026-11-04 (#535): gewijzigd door [0079](0079-een-padtabel.md) punt 1, 7 en 9, de lijsten in `.claude/gates.json`
 worden de padtabel `paden`, de terugval bij een ontbrekende `voorReview` geldt alleen nog voor de oude vorm, en `ask` volgt
 de afgeleide `altijdVragen`
+Herzien: 2026-11-12 (#692): door ADR 0089 punt 1 en 2, in de template deels: punt 10, de onderhoudsmodus versoepelt de statusregels wel (A4, archief, besluit-PR); blijft: de overige regels van punt 10; punt 21 vervalt in de template: een geaccepteerd ADR wordt ter plekke herschreven; blijft in een app
 
 Vervangt [0011](0011-railwerk.md), [0017](0017-diff-guard.md), [0031](0031-guard-en-pr-verify-bruikbaarder.md),
 [0032](0032-developer-volgt-hoofdsessie-buiten-voorreview.md), [0033](0033-onderhoudsmodus-voor-templatewerk.md) en
