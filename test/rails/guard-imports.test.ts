@@ -58,7 +58,9 @@ describe('overtredingen in de fixtures', async () => {
 describe('deze repo', () => {
   test('heeft guard-jobs en hooks als ingang', () => {
     const entries = guardEntries(process.cwd());
-    expect(entries).toContain('scripts/kit/check-document-status.mjs');
+    // GEWIJZIGD (templateregime AC-7, ADR 0089 punt 5): de job `document-status` is weg, dus zijn script is geen ingang meer.
+    expect(entries).not.toContain('scripts/kit/check-document-status.mjs');
+    expect(entries).toContain('scripts/kit/check-core.mjs');
     expect(entries).toContain('scripts/kit/diff-guard.mjs');
     expect(entries).toContain('rails/hooks/rolhek.mjs');
     expect(entries).toContain('.claude/hooks/laden.mjs');

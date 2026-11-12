@@ -11,13 +11,15 @@ const TEKST = readFileSync(path.join(REPO, '.claude/decisions.json'), 'utf8');
 
 describe('padtabel/AC-14 decisions.json met alleen version en requiredChecks', () => {
   // Na 30cc352 mag main een verplichte check toevoegen (ADR 0078: leerpunt-bewijs); geen check van 30cc352 mag wegvallen.
+  // GEWIJZIGD (templateregime AC-7, ADR 0089 punt 5): `document-status` is de ene check die bewust wegviel; GitHub bewaakt het besluit.
   test('precies version en requiredChecks, zonder een verplichte check van 30cc352 te verliezen (padtabel/AC-14)', () => {
     const ruw = object(JSON.parse(TEKST));
     expect(Object.keys(ruw).sort()).toEqual(['requiredChecks', 'version']);
     expect(ruw['version']).toBe(OUD['version']);
-    expect(ruw['requiredChecks']).toEqual(
-      expect.arrayContaining(Array.isArray(OUD['requiredChecks']) ? OUD['requiredChecks'] : [null]),
-    );
+    const oud: unknown[] = Array.isArray(OUD['requiredChecks']) ? OUD['requiredChecks'] : [null];
+    expect(oud).toContain('document-status');
+    expect(ruw['requiredChecks']).not.toContain('document-status');
+    expect(ruw['requiredChecks']).toEqual(expect.arrayContaining(oud.filter((check) => check !== 'document-status')));
   });
 
   test('readRegistry leest het huidige register, decisions leeg (padtabel/AC-14)', () => {

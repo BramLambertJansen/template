@@ -130,9 +130,11 @@ describe('templateregime/AC-2 de reviewregels van de ruleset', () => {
     const { status, payload } = run(['eigenaar/app']);
 
     expect(status).toBe(0);
+    // GEWIJZIGD (templateregime AC-7, ADR 0089 punt 5): `document-status` is geen verplichte check meer.
     expect(requiredChecks()).toEqual(
-      expect.arrayContaining(['check-core', 'leerpunt-bewijs', 'codeql (javascript-typescript)', 'document-status']),
+      expect.arrayContaining(['check-core', 'leerpunt-bewijs', 'codeql (javascript-typescript)']),
     );
+    expect(requiredChecks()).not.toContain('document-status');
     expect(checks(payload).toSorted((a, b) => a.context.localeCompare(b.context))).toStrictEqual(
       requiredChecks()
         .toSorted((a, b) => a.localeCompare(b))

@@ -161,7 +161,7 @@ Afgedwongen door: lint (`klassen`, rauwe elementen, axe), `check:catalogus`, `te
 
 ## 8. Werkstraat
 
-Afgedwongen door: rolhek en hooks (`.claude/gates.json`), `check-document-status`, `check-roadmap`, CI; diff-guard meldt zichtbaar maar is nog geen verplichte check (0045).
+Afgedwongen door: rolhek en hooks (`.claude/gates.json`), `check-roadmap`, CI en de review van code-eigenaren op GitHub (0089); de job `document-status` is weg; diff-guard meldt zichtbaar maar is nog geen verplichte check (0045).
 
 - **R-WERK-01** Elke rol begint met `node scripts/kit/feiten.mjs`, alleen taakrelevante secties (`componenten` alleen bij UI); `specs`, `adr` en `fase` zijn begrensd, `--alle` voor historie of een geldig ADR buiten de tien (0045, 0057, 0070)
 - **R-WERK-02** Twee routes: hoofdsessie kiest en noemt waarom, reviewer toetst keuze; "bug" of kleine diff is geen bewijs; bij twijfel volledig; route geeft geen extra schrijfrechten of vrijstelling (0058)
@@ -224,7 +224,7 @@ Afgedwongen door: `check-docs` (grenzen van `AGENTS.md` en `CLAUDE.md` als ratch
 
 ## 10. Versiebeheer, CI en release
 
-Afgedwongen door: ruleset op `main`, `guard.yml` (`document-status`, `check-core`; diff-guard nog niet verplicht, 0045), `check-docs`.
+Afgedwongen door: ruleset op `main`, `guard.yml` (`check-core`; diff-guard nog niet verplicht, 0045; de job `document-status` is weg, 0089 punt 5), `check-docs`.
 
 - **R-CI-01** Vereiste checks: precies `requiredChecks` in `.claude/decisions.json`, de enige lijst; ruleset en `pr:verify` volgen hem, `test/scripts/github-ruleset.test.ts` toetst ruleset en workflows ertegen; `gate:slow` precies volgens gate-register (fw, 0048, 0068); CI: runner `ubuntu-24.04`, toolchain via `jdx/mise-action` (geen Corepack), `.github/workflows/ci.yml` op elke push naar `main` en elke PR, `gate:fast` en `gate:slow` naast elkaar, concurrency annuleert oude runs (fw)
 - **R-CI-04** Feedbacklus in lagen, van snel naar volledig: per bewerking (PostToolUse), commit (pre-commit: format-controle, ESLint op staged, Betterleaks; commit-msg), einde beurt (Stop-hook), pre-push en CI; pre-push draait `gate:fast` en `document-status` zoals CI, blokkerend alleen op de volgorde spec vóór code; `pnpm test:db` voor integratie en pgTAP; CI `gate:fast` en `gate:slow`; bron `lefthook.yml` en `.claude/settings.json` (fw)
