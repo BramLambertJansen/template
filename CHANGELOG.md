@@ -14,6 +14,8 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Opgelost
 
+- `@hono/node-server` van 2.1.3 naar 2.1.6: twee beveiligingsmeldingen van niveau medium (GHSA-jpvv-r467-5p4w, GHSA-qv5m-9pm6-hqp3) maakten
+  `osv-scanner` rood. Wat verandert voor een app: na de template-update `pnpm install`.
 - `pnpm check:snapshot` vergelijkt de twee commentaarregels met de versie van Postgres en pg_dump niet meer; een patchrelease van het
   Postgres-image maakte CI rood terwijl het schema gelijk was. Wat verandert voor een app: niets; de check vergelijkt het schema nog
   volledig.
