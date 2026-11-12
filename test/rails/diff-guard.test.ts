@@ -10,7 +10,10 @@ const config = leesConfig(readFileSync('.claude/gates.json', 'utf8'));
 const HEAD = 'a'.repeat(40);
 const OUD = 'b'.repeat(40);
 const BOT = 'template-agent[bot]';
-const EIGENAAR = 'BramLambertJansen';
+// GEWIJZIGD (templateregime, ADR 0089 punt 3): de test nam de handle van de template aan (`BramLambertJansen`); `app:init --owner`
+// zet `goedkeurders` nu op de handle van de app. De eigenaar komt daarom uit dezelfde bron als de code onder test: de eerste
+// goedkeurder van de echte gates.json.
+const EIGENAAR = config.goedkeurders[0] ?? '';
 
 type Wijziging = { status: string; pad: string; van?: string };
 type Review = { user: string; state: string; commitId: string; submittedAt: string };
@@ -150,7 +153,8 @@ describe('oordeel', () => {
     },
     {
       naam: 'goedkeurder in andere hoofdletters telt',
-      p: pr([core], { labels: ['gate-wijziging'], reviews: [review('APPROVED', 1, { user: 'bramlambertjansen' })] }),
+      // GEWIJZIGD (templateregime, ADR 0089 punt 3): dezelfde handle in andere hoofdletters, afgeleid van de goedkeurder.
+      p: pr([core], { labels: ['gate-wijziging'], reviews: [review('APPROVED', 1, { user: EIGENAAR.toUpperCase() })] }),
       uitslag: 'groen',
       reden: null,
     },

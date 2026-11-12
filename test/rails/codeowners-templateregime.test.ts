@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { describe, expect, test } from 'vitest';
 import { padNiveau } from '../../rails/hooks/lib/padtabel.mjs';
 import { docsViolations } from '../../scripts/kit/check-docs.mjs';
+import { eersteGoedkeurder } from '../../scripts/kit/codeowners.mjs';
 
 // templateregime/AC-3 (docs/specs/templateregime.md, ADR 0089 punt 2): `.github/CODEOWNERS` wordt afgeleid uit de padtabel in
 // `.claude/gates.json`: eerst `* @<eigenaar>`, dan elke glob met besluit `agent` zonder eigenaar, dan elke glob met een ander
@@ -16,7 +17,6 @@ import { docsViolations } from '../../scripts/kit/check-docs.mjs';
 //   eigenaarVan(codeownersTekst: string, pad: string): string | null   de eigenaar (met of zonder `@`) of null
 const ROOT = path.join(import.meta.dirname, '../..');
 const MODULE = path.join(ROOT, 'scripts/kit/codeowners.mjs');
-const EIGENAAR = 'bramlambertjansen';
 
 type Codeowners = {
   codeownersTekst: (gatesJson: unknown, eigenaar: string) => string;
@@ -55,6 +55,9 @@ const schoon = (eigenaar: string | null): string | null => (eigenaar === null ? 
 
 const gatesTekst = readFileSync(path.join(ROOT, '.claude/gates.json'), 'utf8');
 const echteGates: unknown = JSON.parse(gatesTekst);
+// GEWIJZIGD (templateregime, ADR 0089 punt 3): de eigenaar is de eerste handle uit `goedkeurders` van de echte gates.json,
+// geen constante: `app:init --owner` zet die lijst in een app op de handle van de app.
+const EIGENAAR = eersteGoedkeurder(echteGates) ?? '';
 
 function getrackt(): string[] {
   return execFileSync('git', ['ls-files', '-z'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
