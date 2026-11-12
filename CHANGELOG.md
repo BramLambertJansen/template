@@ -12,6 +12,12 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
   lijst per map, de app eerst. Wat verandert voor een app: nog geen app volgt deze template; een app die dat later doet, schrijft
   zijn eigen ADR's en specs in `docs/adr/` en `docs/specs/` en wijzigt `docs/template/` niet (`check-core`).
 
+### Opgelost
+
+- `pnpm check:snapshot` vergelijkt de twee commentaarregels met de versie van Postgres en pg_dump niet meer; een patchrelease van het
+  Postgres-image maakte CI rood terwijl het schema gelijk was. Wat verandert voor een app: niets; de check vergelijkt het schema nog
+  volledig.
+
 ### Verwijderd
 
 - De CI-job `document-status` en de verplichte check met die naam (ADR 0089 punt 5): de review van code-eigenaren op GitHub bewaakt
@@ -508,6 +514,7 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 - `node scripts/kit/feiten.mjs` per rol en zuiniger: componenten leesbaar (`variant=a|b`, label `publiek`/`intern`, catalogus-URL één keer in de kop), `adr` toont standaard alleen geldende en voorgestelde ADR's (`--alle` voor alles; het volgende nummer telt alles), nieuwe sectie `fase` met de open roadmap-items en hun fase voor de reviewer (`docs/dod.md`). Elke agent vraagt in stap 1 alleen zijn secties (`.claude/agents/*.md`); de reviewer mag het script draaien (`rails/hooks/lib/rolhek.mjs`). Bij een update: `--json` van `componenten` is nu `{ catalogus, lijst }` en `adr --json` is standaard gefilterd met een veld `overig` (`--alle` voor de volledige lijst); `.claude/settings.json` staat `node scripts/kit/feiten.mjs` met secties toe.
 - Unittests draaien parallel per bestand en Vitest gebruikt hooguit vier workers (`vitest.config.ts`); de integratietests (`int`) blijven serieel. Bij een update: eigen unittests (`src/**/*.test.ts`) mogen geen gedeelde state hebben (vaste poorten, vaste paden, de echte database); zie `docs/operations/testuitvoering.md`.
 - Beslisroute (ADR 0038): de merge door de eigenaar is de acceptatie. Architect en hoofdsessie schrijven de eigenaarstatus in het voorstel; `check-document-status` laat zonder record en zonder web-flow een besluit-PR met meerdere ADR's en specs toe, en guard en rolhek weigeren een ADR met eigenaarstatus terug naar `voorgesteld` of met nieuwe inhoud (`rails/hooks/lib/document-state.mjs`, `scripts/kit/lane.mjs`).
+
 
 ### Opgelost
 
