@@ -4,6 +4,12 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ## [Unreleased]
 
+### Verwijderd
+
+- De CI-job `document-status` en de verplichte check met die naam (ADR 0089 punt 5): de review van code-eigenaren op GitHub bewaakt
+  besluiten op ADR's, specs en beschermde paden. Wat verandert voor een app: draai na de template-update
+  `scripts/github-ruleset.sh <owner>/<repo>`; anders wacht elke PR op een check die niet meer draait.
+
 ### Toegevoegd
 
 - Gedeelde lijstquery-helpers (leerpunt #662, spec lijstpagina): `containsPattern()` (escape van `%`, `_` en `\` voor `ilike`) en

@@ -10,7 +10,7 @@ const ROOT = path.join(import.meta.dirname, '../..');
 const SCRIPT = path.join(ROOT, 'scripts/github-ruleset.sh');
 const WORKFLOWS = path.join(ROOT, '.github/workflows');
 // Geen verplichte check tot de GitHub App er is (ADR 0045, guard.yml). `check-core` (ADR 0040 punt 17) is wel verplicht in de
-// app-ruleset. GEWIJZIGD (spec-en-bouw/AC-12, ADR 0062): `document-status` staat voortaan in de ruleset.
+// app-ruleset. GEWIJZIGD (templateregime AC-7, ADR 0089 punt 5): `document-status` bestaat niet meer als job en staat niet in de ruleset.
 // `agent-merge` (ADR 0069): verplicht zou hij elke kritieke PR ook voor de eigenaar blokkeren.
 // GEWIJZIGD (ADR 0073, bouw-PR 2): de job `check:app-init` bestaat niet meer, dus ook niet in deze lijst.
 // leerpunt-check (leerpunt.yml, ADR 0078 punt 3) draait op issues, niet op een PR: nooit een verplichte check.
@@ -31,7 +31,6 @@ const OPDRACHT = [
   'image',
   'check:new-resource',
   'check-core',
-  'document-status',
   'leerpunt-bewijs',
   'codeql (actions)',
   'codeql (javascript-typescript)',
@@ -153,12 +152,13 @@ describe('checknamen', () => {
     );
   });
 
-  test('spec-en-bouw/AC-12 de ruleset eist document-status van GitHub Actions, gelijk met de workflows', () => {
+  // GEWIJZIGD (templateregime AC-7, ADR 0089 punt 5): was "de ruleset eist document-status"; de job is weg.
+  test('templateregime/AC-7 de ruleset eist document-status niet meer en blijft gelijk met de workflows', () => {
     const { status, payload } = run(['eigenaar/app']);
 
     expect(status).toBe(0);
-    expect(checksUitWorkflows()).toContain('document-status');
-    expect(checks(payload)).toContainEqual({ context: 'document-status', integration_id: GITHUB_ACTIONS });
+    expect(checksUitWorkflows()).not.toContain('document-status');
+    expect(checks(payload).map((check) => check.context)).not.toContain('document-status');
     expect(ontbrekend(payload, checksUitWorkflows())).toStrictEqual([]);
   });
 

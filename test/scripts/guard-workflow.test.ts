@@ -1,9 +1,12 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, test } from 'vitest';
+import { expectAbsent } from '../support/absence.ts';
 
-// ADR 0045 punt 20: guard.yml heeft de jobs `diff-guard` en `document-status`; `check-core` (ADR 0040) kwam erbij. Alle
-// draaien met pull_request_target en behandelen de PR als git-data: geen checkout van de PR, `persist-credentials: false`, geen install.
+// guard.yml heeft de jobs `diff-guard` (ADR 0045) en `check-core` (ADR 0040). Alle draaien met pull_request_target en
+// behandelen de PR als git-data: geen checkout van de PR, `persist-credentials: false`, geen install.
+// GEWIJZIGD (templateregime AC-7, ADR 0089 punt 5): de job `document-status` is weg; zijn rijen en de test "eigen job, niet
+// als stap van diff-guard" zijn vervangen door de test dat de job en zijn script ontbreken.
 const WORKFLOW = readFileSync(path.join(import.meta.dirname, '../../.github/workflows/guard.yml'), 'utf8');
 
 function job(name: string): string {
@@ -16,7 +19,6 @@ function job(name: string): string {
 
 describe.each([
   ['diff-guard', 'diff-guard.mjs'],
-  ['document-status', 'check-document-status.mjs'],
   ['check-core', 'check-core.mjs'],
 ])('guard.yml job %s', (name, script) => {
   const tekst = job(name);
@@ -46,8 +48,11 @@ describe.each([
   });
 });
 
-test('het script van document-status draait in een eigen job, niet als stap van diff-guard', () => {
-  expect(job('diff-guard')).not.toContain('check-document-status.mjs');
+test('templateregime/AC-7 guard.yml heeft geen job document-status en roept zijn script nergens aan', () => {
+  expectAbsent(WORKFLOW, /document-status/, {
+    recognizes: ['  document-status:', 'name: document-status', 'node scripts/kit/check-document-status.mjs'],
+    allows: ['  check-core:', 'node scripts/kit/diff-guard.mjs'],
+  });
 });
 
 // De jobs zijn gelijk tot en met de laatste stap (de eigen controle): wie een stap toevoegt, moet dat in beide doen en
@@ -66,13 +71,12 @@ function stappen(tekst: string): string[] {
 }
 
 describe('beide jobs behandelen de PR als git-data', () => {
-  test.each(['document-status', 'check-core'])('%s: gelijk aan diff-guard tot en met de laatste stap', (name) => {
+  test.each(['check-core'])('%s: gelijk aan diff-guard tot en met de laatste stap', (name) => {
     expect(zonderLaatsteStap(job(name), name)).toBe(zonderLaatsteStap(job('diff-guard'), 'diff-guard'));
   });
 
   test.each([
     ['diff-guard', 'diff-guard.mjs'],
-    ['document-status', 'check-document-status.mjs'],
     ['check-core', 'check-core.mjs'],
   ])('%s: precies één checkout, één node-aanroep en alleen zijn eigen script', (name, script) => {
     const tekst = job(name);
@@ -82,7 +86,7 @@ describe('beide jobs behandelen de PR als git-data', () => {
     expect(tekst).not.toMatch(/\bgit (?:checkout|switch|merge(?!-base)|cherry-pick|worktree|reset)\b/);
   });
 
-  test.each(['diff-guard', 'document-status', 'check-core'])(
+  test.each(['diff-guard', 'check-core'])(
     '%s: de laatste stap is de controle zelf, daarvoor geen run met PR-code',
     (name) => {
       const laatste = stappen(job(name)).at(-1) ?? '';

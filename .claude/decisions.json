@@ -10,7 +10,6 @@
     "codeql (javascript-typescript)",
     "codeql (actions)",
     "osv-scanner",
-    "document-status",
     "leerpunt-bewijs"
   ]
 }
