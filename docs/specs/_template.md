@@ -5,7 +5,9 @@ namespace: <resource>
 
 # <Feature>
 
-Geen kop weglaten; "n.v.t. — reden" mag. Ontbreekt een antwoord, dan vraagt de agent het.
+Verplicht: Doel, Rollen en wie wat ziet, Acceptatiecriteria, Hergebruik en UX, Open vragen. Laat een andere kop weg als hij
+niet van toepassing is (geen "n.v.t."-regels); de spec-review toetst of er niets ontbreekt. Ontbreekt een antwoord, dan vraagt
+de agent het.
 
 ## Doel
 
