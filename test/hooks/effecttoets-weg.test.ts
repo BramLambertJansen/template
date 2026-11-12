@@ -209,7 +209,8 @@ describe('effecttoets-weg: de lege huls (rails/hooks/effect.mjs)', () => {
     'effecttoets-weg: effect.mjs $event ($agent): exit 0, geen uitvoer, niets op schijf',
     ({ event, agent }) => {
       const root = hulsRepo();
-      const voor = namenOnder(root);
+      // Zonder `.git`: git ruimt daar zelf bestanden op (gezien in CI); dat de map `rolhek-effect` ontbreekt, staat hieronder apart.
+      const voor = namenOnder(root, ['.git']);
       const result = spawnSync(process.execPath, [path.join(ROOT, 'rails/hooks/effect.mjs'), event], {
         cwd: root,
         input: JSON.stringify(payloadVoor(root, event, agent)),
@@ -223,7 +224,7 @@ describe('effecttoets-weg: de lege huls (rails/hooks/effect.mjs)', () => {
         stderr: '',
       });
       expect(readdirSync(path.join(root, '.git'))).not.toContain('rolhek-effect');
-      expect(namenOnder(root)).toStrictEqual(voor);
+      expect(namenOnder(root, ['.git'])).toStrictEqual(voor);
     },
     MIN,
   );
@@ -289,7 +290,7 @@ describe('effecttoets-weg: de huls via de stub en de lader, zoals settings.json 
     'effecttoets-weg: .claude/hooks/effect.mjs %s: exit 0, geen uitvoer, niets in de git-map',
     (event) => {
       const root = laderRepo();
-      const voor = namenOnder(root, ['.claude/hooks/.cache']);
+      const voor = namenOnder(root, ['.claude/hooks/.cache', '.git']);
       const result = spawnSync(process.execPath, [path.join(root, '.claude/hooks/effect.mjs'), event], {
         cwd: root,
         input: JSON.stringify(payloadVoor(root, event, 'developer')),
@@ -303,7 +304,7 @@ describe('effecttoets-weg: de huls via de stub en de lader, zoals settings.json 
         stderr: '',
       });
       expect(readdirSync(path.join(root, '.git'))).not.toContain('rolhek-effect');
-      expect(namenOnder(root, ['.claude/hooks/.cache'])).toStrictEqual(voor);
+      expect(namenOnder(root, ['.claude/hooks/.cache', '.git'])).toStrictEqual(voor);
     },
     MIN,
   );
