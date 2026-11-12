@@ -5,6 +5,7 @@ Status: geaccepteerd
 Herzien: 2026-11-03 (#469): gewijzigd door [0057](0057-risicogestuurde-werkstraat.md) (de activering)
 Herzien: 2026-11-05 (#541): gewijzigd door [0080](0080-specarchief-en-bouwvorm.md) punt 1 en 5, `docs:status` schrijft ook na de merge alleen
 `# #<PR>`; bestaande regels met `; gevalideerd: <sha>` worden omgezet
+Herzien: 2026-11-12 (#696): door ADR 0089 punt 2, 5 en 8, punt 2 vervalt met `check-document-status`: `gebouwd` in de bouw-PR is een afspraak; punt 4, de ruleset eist precies `requiredChecks`; punt 3 blijft: het bouwbewijs is de merge
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 10, en punt 5 en 6 waar ze `gebouwd` noemen.
 Drempel: A4 (een punt van een geaccepteerd ADR vervangen) en A3 (de guard aanvaardt `gebouwd` zonder eigen checkcontrole).

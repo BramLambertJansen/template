@@ -5,6 +5,7 @@ Status: geaccepteerd
 Herzien: 2026-10-30 (#385): de gevolgregel over mandaatrecords in `.claude/decisions.json` vervalt; de records gaan weg
 ([0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md)).
 Herzien: 2026-11-12 (#692): door ADR 0089 punt 2, in de template deels: punt 1 en 2, vervalt: het archief wijzigt niet en verdwijnt niet; blijft: verhuizen onder dezelfde naam mag, nummers worden niet hergebruikt
+Herzien: 2026-11-12 (#696): door ADR 0089 punt 1, 5, 6 en 7, de vorige regel vervalt: punt 1, 2, 3, 4 en 5 vervallen; het archief verdwijnt bij de verhuizing, de guard die het bewaakte verdwijnt, en `docs/template/adr/` heeft geen archief (git is de historie); nummers zijn uniek per map; `feiten.mjs adr` toont twee lijsten, app eerst
 
 Drempel: A4 (de route uit [0046](0046-werkstraat-en-beslisroute.md) punt 2 en 5 voor ADR's met een eigenaarstatus) en A3 (een
 guard laat een overgang toe die hij nu weigert).

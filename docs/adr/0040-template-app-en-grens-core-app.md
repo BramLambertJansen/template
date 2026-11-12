@@ -2,6 +2,8 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-12 (#696): door ADR 0089 punt 1, 4, 5 en 6, punt 4 vervalt (elke map nummert zelf, geen reeks 0001–0099 en 0100+); punt 8 en 16, `docs/template` is een tweede templatezone naast `src/core`, die `check-core` per zone bewaakt; punt 17, `check-core` blijft en wordt verplicht in de ruleset via `requiredChecks`, `check-document-status` verdwijnt
+
 Vervangt [0006](0006-app-uit-template.md), [0008](0008-grens-core-en-app.md) en [0037](0037-check-core-correcties.md).
 Drempel: A4. Consolidatie zonder inhoudelijke wijziging (eigenaarbesluit 2026-10-21, [0038](0038-beslisroute.md) Gevolgen).
 

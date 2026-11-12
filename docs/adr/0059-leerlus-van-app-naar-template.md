@@ -6,6 +6,8 @@ Herzien: 2026-11-04 (#534): gewijzigd door [0078](0078-leerlus-met-bewijs.md) pu
 
 Herzien: 2026-11-05 (#543): gewijzigd door [0081](0081-leerlus-schrappen-en-vereenvoudigen.md) punt 1, 2 en 4 (signaal bij inefficiëntie, veld Onderbouwing, plek Schrappen of vereenvoudigen vóór de ladder)
 
+Herzien: 2026-11-12 (#696): door ADR 0089 punt 6, in punt 2 wordt "ADR (vanaf 0100) in de app" een ADR in `docs/adr/` van de app; de nummerreeks vervalt
+
 Drempel: A3 (de agent krijgt een nieuw schrijfrecht buiten de eigen repo: een issue aanmaken in de template-repo).
 Eigenaarbesluit 2026-10-27; de merge door de eigenaar maakt het geldend. Uitwerking: [spec leerlus](../specs/leerlus.md).
 
