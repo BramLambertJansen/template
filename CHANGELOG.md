@@ -4,6 +4,12 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ## [Unreleased]
 
+### Opgelost
+
+- `pnpm check:snapshot` vergelijkt de twee commentaarregels met de versie van Postgres en pg_dump niet meer; een patchrelease van het
+  Postgres-image maakte CI rood terwijl het schema gelijk was. Wat verandert voor een app: niets; de check vergelijkt het schema nog
+  volledig.
+
 ### Verwijderd
 
 - De CI-job `document-status` en de verplichte check met die naam (ADR 0089 punt 5): de review van code-eigenaren op GitHub bewaakt
