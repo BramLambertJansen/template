@@ -1,14 +1,14 @@
 // `pnpm pr:merge <nr>` (ADR 0069 punt 3, ADR 0089 punt 5): de enige route waarlangs de hoofdsessie een PR zelf merget. Alles
 // wordt via de REST-API van GitHub gelezen, niet uit de lokale `origin/main`; elke ontbrekende voorwaarde geeft een eigen
 // regel en exit 1 zonder schrijfactie. Pas als alles klopt: squash-merge met de head-SHA als voorwaarde. Geen inhoudstoets:
-// wie een pad goedkeurt, bewaakt de ruleset op main met `.github/CODEOWNERS` (ADR 0089); blijft tot punt 9 van dat ADR: de
-// effecttoets, de modus `merge` uit `.claude/gates.json` op main, de verplichte checks op de head en een groene main. De leerpuntreden blijft (ADR 0078 punt 2).
+// wie een pad goedkeurt, bewaakt de ruleset op main met `.github/CODEOWNERS` (ADR 0089); blijft: de
+// modus `merge` uit `.claude/gates.json` op main, de verplichte checks op de head en een groene main. De leerpuntreden blijft (ADR 0078 punt 2).
 import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
 import { gitText, readAuthority } from '../../rails/hooks/lib/authority-context.mjs';
 import { parseCheckRun } from './github-evidence.mjs';
 import { leerpuntMergeRedenen } from './leerpunt.mjs';
-import { checkProgress, verifyEffect } from './pr-verify.mjs';
+import { checkProgress } from './pr-verify.mjs';
 
 const SHA = /^[0-9a-f]{40}$/;
 // `pnpm run` zet `node_modules/.bin` vooraan in PATH: een daar geplante `gh` mag de GitHub-antwoorden niet leveren.
@@ -184,7 +184,6 @@ export function nummerUit(args) {
 function main() {
   const root = process.cwd();
   const nummer = nummerUit(process.argv.slice(2));
-  verifyEffect(root);
   const base = gitText(root, ['rev-parse', 'origin/main'])?.trim();
   const authority = base === undefined ? null : readAuthority({ root, base });
   const head = gitText(root, ['rev-parse', 'HEAD'])?.trim() ?? '';

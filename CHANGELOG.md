@@ -20,6 +20,13 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Verwijderd
 
+- De effecttoets van het rolhek (ADR 0091): de toets achteraf op wat een Bash-commando van een subagent veranderde, de open
+  lijst, de schaduwmodus voor de hoofdsessie, `pnpm rolhek:overnemen` en de controle op die lijst in de Stop-hook,
+  `pnpm pr:verify` en `pnpm pr:merge`; ook de effecttellers in `pnpm meting`. De toets vooraf, het schrijfrecht per rol en de
+  review van code-eigenaren blijven; `rails/hooks/effect.mjs` blijft als lege huls tot de aanroep uit `.claude/settings.json` is.
+  Wat verandert voor een app: `generatoren` en `rolhekEffectHoofdsessie` in `.claude/gates.json` worden niet meer gelezen en
+  mogen weg; de map `rolhek-effect` in de git-map heeft geen functie meer en mag weg; een schrijfactie van een subagent buiten
+  zijn rol via een interpreter of eigen script valt lokaal niet meer op, alleen in de review van de PR.
 - De CI-job `document-status` en de verplichte check met die naam (ADR 0089 punt 5): de review van code-eigenaren op GitHub bewaakt
   besluiten op ADR's, specs en beschermde paden. Wat verandert voor een app: draai na de template-update
   `scripts/github-ruleset.sh <owner>/<repo>`; anders wacht elke PR op een check die niet meer draait.
@@ -27,7 +34,7 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
   `agent-merge`, `document-status-lokaal`, `functional-ui-status` en `adr-herzien` in `scripts/kit/`, de jobs `diff-guard` en
   `agent-merge` in `guard.yml`, de pre-push-stap `document-status`, en in `check-docs` de herzieningscheck en de archiefnaamregel.
   `pnpm pr:merge` doet geen inhoudstoets meer (omvang, bytes, binaire bestanden, job `agent-merge`, reviewcommentaar, kop van
-  main in de PR, leerpuntreden) en houdt de modus `merge`, de head-SHA, de verplichte checks, een groene `main` en de effecttoets.
+  main in de PR, leerpuntreden) en houdt de modus `merge`, de head-SHA, de verplichte checks en een groene `main`.
   Wat verandert voor een app: draai na de template-update `pnpm exec lefthook install`; het blok `agentMerge` in
   `.claude/gates.json` wordt niet meer gelezen.
 

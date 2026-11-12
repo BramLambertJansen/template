@@ -1,5 +1,4 @@
-// Context van het rolhek (ADR 0045): configuratie uit het anker, vertrouwde basis, lezen uit de werkmap. Gedeeld door de
-// PreToolUse-hook en de toets op effect (ADR 0066).
+// Context van het rolhek (ADR 0045): configuratie uit het anker, vertrouwde basis, lezen uit de werkmap.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
 import path from 'node:path';

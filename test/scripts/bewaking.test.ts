@@ -66,7 +66,8 @@ describe('bewakingMelding (AC-1)', () => {
     ).toBe(hooks);
     expect(regel.includes('de Bash-sandbox schermt niet af (/home is schrijfbaar)')).toBe(sandbox);
     for (const deel of [
-      'Rolhek, toets op effect en werkstraat-hooks',
+      // GEWIJZIGD (ADR 0091): de melding noemt de toets op effect niet meer.
+      'Rolhek en werkstraat-hooks',
       'R-WERK-23',
       'kooi (R-TOOL-03)',
       'docs/ENVIRONMENT.md',

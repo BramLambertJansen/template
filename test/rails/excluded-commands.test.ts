@@ -103,7 +103,11 @@ describe('excludedCommands: .claude/settings.json tegen package.json', () => {
   const config = load('.claude/settings.json', 'package.json');
 
   test('elk patroon noemt een script dat bestaat', () => {
-    expect(problems(config, 'scripts').filter((line) => line.includes('bestaat niet'))).toStrictEqual([]);
+    // GEWIJZIGD (ADR 0091): `pnpm rolhek:overnemen *` staat nog in .claude/settings.json tot de eigenaar de aanroepen van de
+    // effecttoets daar weghaalt (ADR 0091 punt 4); het script zelf is al weg. Precies deze ene regel is toegestaan.
+    expect(problems(config, 'scripts').filter((line) => line.includes('bestaat niet'))).toStrictEqual([
+      'excludedCommands "pnpm rolhek:overnemen *": script bestaat niet in package.json',
+    ]);
   });
 
   test('elk script dat Docker start staat in excludedCommands en in ask', () => {

@@ -8,6 +8,8 @@ besluiten, de eigen documentbewaking verdwijnt en template-documenten verhuizen 
 
 Herzien: 2026-11-12 (#698): het weghalen uit punt 5 wacht niet op het bewijs van de identiteit, en er komt geen tokenscript in de repo (punt 2, 5, 9 en 10; eigenaarbesluiten 2026-11-12)
 
+Herzien: 2026-11-12 (#705): punt 9 en 10: de effecttoets wacht niet op de identiteit en is weg; de identiteitsregels en de bypass wachten wel (ADR 0091 punt 5)
+
 Wijzigt [0039](0039-stack-provider-neutraal-en-toolchain.md) punt 8, [0040](0040-template-app-en-grens-core-app.md) punt 4, 8,
 16 en 17, [0045](0045-railwerk.md) punt 10, 16, 17, 18, 19, 20, 21, 22 en 24, [0046](0046-werkstraat-en-beslisroute.md) punt
 2, 5, 6, 10, 12, 15 en 31, [0053](0053-adr-archief.md) punt 1, 2, 3, 4 en 5, [0054](0054-gebouwd-in-de-bouw-pr.md) punt 2, 3 en
@@ -68,11 +70,11 @@ agentomgeving is.
 8. **Afspraak in plaats van check:** spec vóór de bouw, spec-review, `gebouwd` in de bouw-PR, een ADR bij A1 tot en met A4, een
    herzieningsregel, routes en permissies alleen via `src/shared/contracts/` en `permissions.ts` (R-WERK-09, getoetst door de
    reviewer). Het besluit is de goedkeuring van de eigenaar op de PR.
-9. **Later, in een eigen stap:** de effecttoets en de identiteitsregels van het rolhek verdwijnen; het rolhek krimpt tot het
-   schrijfrecht per rol uit de padtabel. De identiteitsregels en de bypass wachten tot het token van de eigenaar uit de
-   agentomgeving is.
-10. **Volgorde:** de besluit-PR (#696); bouw van punt 2 en 3 en activering (#697); weghalen van punt 5; verhuizing; daarna de
-    identiteit, de bypass en punt 9.
+9. **Rolhek.** De effecttoets is weg (ADR 0091). Later, in een eigen stap, verdwijnen de identiteitsregels van het rolhek;
+   het rolhek krimpt dan tot het schrijfrecht per rol uit de padtabel. Die stap en de bypass wachten tot het token van de
+   eigenaar uit de agentomgeving is.
+10. **Volgorde:** de besluit-PR (#696); bouw van punt 2 en 3 en activering (#697); weghalen van punt 5 (#699, #700);
+    verhuizing (#701); de effecttoets (ADR 0091); daarna de identiteit, de bypass en de rest van punt 9.
 
 ## Alternatieven
 

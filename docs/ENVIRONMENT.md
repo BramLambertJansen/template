@@ -86,7 +86,7 @@ installaties kan dat een andere zijn dan die de sessie draait. In een cloudsessi
 niet (#462); `node scripts/kit/feiten.mjs` meldt dat dan op stderr met `⚠ bewaking niet actief in deze sessie:`
 (`scripts/kit/bewaking.mjs`, spec bewaking-zichtbaar): geen recente meting van de meethook in `.git/agent-meting/` (of
 `METING_DIR`), of de map boven de repository is schrijfbaar, dus de Bash-sandbox schermt niet af. De melding blokkeert niets;
-de sessie claimt dan geen rolhek, toets op effect of sandbox (R-WERK-23), draait destructieve of overgenomen commando's alleen
+de sessie claimt dan geen rolhek of sandbox (R-WERK-23), draait destructieve of overgenomen commando's alleen
 in de kooi (R-TOOL-03) en noemt het in de PR-tekst.
 
 ## Eerst controleren in een sessie

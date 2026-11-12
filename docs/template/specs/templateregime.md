@@ -67,7 +67,7 @@ Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van pun
 - **templateregime/AC-7** — Stap 3, na AC-4 en AC-5: `.github/workflows/guard.yml` heeft geen jobs `diff-guard`,
   `agent-merge` en `document-status`; `document-status` staat niet meer in `requiredChecks` en de eigenaar werkt de ruleset
   direct na de merge bij; de scripts uit "Raakt ook" zijn weg; `pnpm pr:merge` verliest de inhoudstoets en
-  houdt head-SHA, groene checks, de effecttoets en de modus `merge` uit `.claude/gates.json` tot ADR 0089 punt 9.
+  houdt head-SHA, groene checks en de modus `merge` uit `.claude/gates.json` tot ADR 0089 punt 9 (de effecttoets is weg, ADR 0091).
 
   | Onderdeel | Overgenomen door |
   |---|---|
@@ -136,7 +136,7 @@ Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van pun
 
 ## Buiten scope
 
-De effecttoets en de identiteitsregels van het rolhek (ADR 0089 punt 9).
+De identiteitsregels van het rolhek (ADR 0089 punt 9); de effecttoets is weg met ADR 0091.
 
 ## Testplan
 

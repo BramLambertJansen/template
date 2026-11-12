@@ -6,6 +6,8 @@ Herzien: 2026-11-06 (#608): punt 2, gewijzigd door [0084](0084-sandbox-afschermi
 
 Herzien: 2026-11-09 (#634): punt 3, gewijzigd door [0086](0086-aangehaalde-heredoc-is-geen-substitutie.md): de tekst van een aangehaalde heredoc is geen substitutie voor het vangnet.
 
+Herzien: 2026-11-12 (#705): punt 2: de effecttoets is weg (ADR 0091 punt 1)
+
 Wijzigt [0082](0082-zelfladend-sandbox-en-leeslijst.md) punt 2 en 4 en [0066](0066-schrijfgrens-op-effect.md) punt 2.
 Drempel: A3 (een grens van het besturingssysteem vervalt en een vangnet wordt smaller) en A4. Aanleiding: melding van de
 eigenaar (5 november 2026) dat git, commit en push, de sandbox en de subagents "lopende band" falen, ook bij het opstarten van
