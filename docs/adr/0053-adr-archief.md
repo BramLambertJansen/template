@@ -4,6 +4,7 @@ Status: geaccepteerd
 
 Herzien: 2026-10-30 (#385): de gevolgregel over mandaatrecords in `.claude/decisions.json` vervalt; de records gaan weg
 ([0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md)).
+Herzien: 2026-11-12 (#692): door ADR 0089 punt 2, in de template deels: punt 1 en 2, vervalt: het archief wijzigt niet en verdwijnt niet; blijft: verhuizen onder dezelfde naam mag, nummers worden niet hergebruikt
 
 Drempel: A4 (de route uit [0046](0046-werkstraat-en-beslisroute.md) punt 2 en 5 voor ADR's met een eigenaarstatus) en A3 (een
 guard laat een overgang toe die hij nu weigert).

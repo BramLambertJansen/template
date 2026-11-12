@@ -10,6 +10,7 @@ Herzien: 2026-11-04 (#535): gewijzigd door [0079](0079-een-padtabel.md) punt 2, 
 `besluit: besluit-pr` van de padtabel in `.claude/gates.json`, niet meer uit een lijst in `scripts/kit/lane.mjs`
 Herzien: 2026-11-05 (#541): gewijzigd door [0080](0080-specarchief-en-bouwvorm.md) punt 4, ook voor een gemergde PR vervalt de vorm met SHA;
 `gebouwd # #<PR>` noemt dan de gemergde bouw-PR
+Herzien: 2026-11-12 (#692): door ADR 0089 punt 1 en 3, in de template deels: punt 2 en 5, vervalt: kritiek werk en elk ADR eerst in een aparte besluit-PR; blijft: spec-review, spec vóór code, eigenaarmerge
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 5, 10, 12, 14 en 15. Drempel: A3 (de lanetoets in
 `check-document-status` laat meer toe) en A4 (afspraken uit een geaccepteerd ADR). De status is de bedoelde acceptatie in dit
