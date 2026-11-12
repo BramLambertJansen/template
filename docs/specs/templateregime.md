@@ -28,8 +28,8 @@ n.v.t. — geen externe dienst; `template/main` komt van `TEMPLATE_URL` zoals in
 
 ## Kopieer de vorm van
 
-- `scripts/kit/check-core.mjs` — `isTemplateRepo` als enige herkenning, en `template/main` vers ophalen van `TEMPLATE_URL` in
-  een eigen ref (`refs/guard/template`), dicht vallend als dat niet lukt.
+- `scripts/kit/check-core.mjs` — de functie isTemplateRepo als enige herkenning, en de main-branch van de template vers
+  ophalen van de vaste template-URL in een eigen guard-ref, dicht vallend als dat niet lukt.
 
 ## Hergebruik en UX
 
