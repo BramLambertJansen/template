@@ -78,14 +78,14 @@ describe('framework §8 stap 6 en CLAUDE.md', () => {
   });
 });
 
-// Spec leerlus (docs/specs/leerlus.md), ADR 0059: de slotstap na de slotregel, de signaalmomenten en de documentatie.
+// Spec leerlus (docs/template/specs/leerlus.md), ADR 0059: de slotstap na de slotregel, de signaalmomenten en de documentatie.
 // De tekst wordt vergeleken na het weghalen van backticks en het samenvoegen van witruimte (regelafbreking in markdown).
 const flat = (text: string): string => text.replace(/`/g, '').replace(/\s+/g, ' ');
 const SLOTREGEL =
   'Wat moet er in het spec-sjabloon, het gouden pad of een check veranderen zodat de volgende feature dit niet opnieuw betaalt?';
 const SLOTSTAP =
-  'Loop de signaalmomenten van deze sessie af: slotvraag, derde CI-ronde, eigenaarcorrectie (pnpm meting), blokkerende reviewbevinding (Leerpunt: ja), tweede mislukte correctiepoging. Per les: Leerpunt? Generiek: dien het in volgens het sjabloon leerpunt (gh issue create naar onderhoud.repository met --label leerpunt) en toon de tekst. Alleen voor deze app: een padregel, spec of ADR (vanaf 0100) in de app, geen issue. Niets: zeg "geen leerpunt".';
-const ADR_0059 = 'adr/0059-leerlus-van-app-naar-template.md';
+  'Loop de signaalmomenten van deze sessie af: slotvraag, derde CI-ronde, eigenaarcorrectie (pnpm meting), blokkerende reviewbevinding (Leerpunt: ja), tweede mislukte correctiepoging. Per les: Leerpunt? Generiek: dien het in volgens het sjabloon leerpunt (gh issue create naar onderhoud.repository met --label leerpunt) en toon de tekst. Alleen voor deze app: een padregel, spec of ADR (docs/specs/, docs/adr/) in de app, geen issue. Niets: zeg "geen leerpunt".';
+const ADR_0059 = 'template/adr/0059-leerlus-van-app-naar-template.md';
 const PROTOCOL = 'docs/operations/st-09-praktijkproef.md';
 const protocol = existsSync(PROTOCOL) ? readFileSync(PROTOCOL, 'utf8') : '';
 
@@ -118,12 +118,15 @@ describe('leerlus: slotstap in opleveren', () => {
     expect(text.slice(regel + SLOTREGEL.length, stap).length).toBeLessThanOrEqual(40);
   });
 
+  // GEWIJZIGD (templateregime AC-9, ADR 0089 punt 6): de slotstap en spec leerlus noemen de mappen van de app in plaats van de reeks vanaf 0100.
   test('leerlus/AC-3: de slotstap noemt gh issue create, --label leerpunt, onderhoud.repository en de app-uitzondering', () => {
     const stap = flat(skill).slice(flat(skill).indexOf('Loop de signaalmomenten'));
     expect(stap).toContain('gh issue create');
     expect(stap).toContain('--label leerpunt');
     expect(stap).toContain('onderhoud.repository');
-    expect(stap).toMatch(/Alleen voor deze app: een padregel, spec of ADR \(vanaf 0100\) in de app, geen issue\./);
+    expect(stap).toMatch(
+      /Alleen voor deze app: een padregel, spec of ADR \(docs\/specs\/, docs\/adr\/\) in de app, geen issue\./,
+    );
   });
 
   test('leerlus/AC-3: stopgrond (b) verwijst naar de slotstap', () => {

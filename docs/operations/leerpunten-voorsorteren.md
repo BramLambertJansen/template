@@ -1,7 +1,7 @@
 # Leerpunten voorsorteren
 
 De prompt van de wekelijkse routine "Leerpunten voorsorteren" (maandag 07:36, Europe/Amsterdam). De routine verwijst naar
-dit bestand; wat hier staat, geldt ([ADR 0078](../adr/0078-leerlus-met-bewijs.md) punt 8). Wijzig de prompt hier, niet in de
+dit bestand; wat hier staat, geldt ([ADR 0078](../template/adr/0078-leerlus-met-bewijs.md) punt 8). Wijzig de prompt hier, niet in de
 routine.
 
 ## Prompt
@@ -10,8 +10,8 @@ Wekelijkse voorsortering van leerpunten voor de eigenaar van de template-repo (`
 `.claude/gates.json`). Antwoord in het Nederlands. Je werkt alleen lezend: geen issues sluiten, geen labels, geen comments,
 geen branches, commits of PR's. De eigenaar beslist; jij sorteert alleen voor.
 
-1. Lees `AGENTS.md`, het deel "Nu" van `docs/roadmap.md`, [ADR 0078](../adr/0078-leerlus-met-bewijs.md) en
-   [ADR 0081](../adr/0081-leerlus-schrappen-en-vereenvoudigen.md).
+1. Lees `AGENTS.md`, het deel "Nu" van `docs/roadmap.md`, [ADR 0078](../template/adr/0078-leerlus-met-bewijs.md) en
+   [ADR 0081](../template/adr/0081-leerlus-schrappen-en-vereenvoudigen.md).
 2. Haal alle open issues met label `leerpunt` op (GitHub MCP, alleen lezen), en de gesloten issues met label
    `leerpunt-zonder-bewijs`. Lees per issue de tekst en de comments.
 3. Controleer per open issue op main of het al is opgelost: zoek het issuenummer in `docs/specs/`, `docs/adr/`,

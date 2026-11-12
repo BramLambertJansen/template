@@ -1,7 +1,7 @@
 # Herstel van de codereview van 19 oktober
 
 De negen bevindingen uit de review van `977b886` worden samen hersteld. Dit is onderhoud aan het bestaande fundament,
-geen nieuwe feature. Voor de auditmigratie blijven `docs/specs/audit-log.md` (AC-25), ADR 0021 en ADR 0026 leidend;
+geen nieuwe feature. Voor de auditmigratie blijven `docs/template/specs/audit-log.md` (AC-25), ADR 0021 en ADR 0026 leidend;
 de bescherming van de laatste admin, grants, permissies en routes veranderen niet.
 
 | Bevinding | Herstel | Regressiebewijs |

@@ -113,7 +113,7 @@ const SOORTEN = /** @type {const} */ ({
   hoofdstukken: { streefwaarde: 12 * KB, eenheid: 'bytes', pad: null },
   regelboek: { streefwaarde: 40 * KB, eenheid: 'bytes', pad: /^docs\/framework\.md$/ },
   specs: { streefwaarde: 10 * KB, eenheid: 'bytes', pad: /^docs\/(?:template\/)?specs\/[^_/][^/]*\.md$/ },
-  adrs: { streefwaarde: 6 * KB, eenheid: 'bytes', pad: /^docs\/adr\/\d{4}-[^/]+\.md$/ },
+  adrs: { streefwaarde: 6 * KB, eenheid: 'bytes', pad: /^docs\/(?:template\/)?adr\/\d{4}-[^/]+\.md$/ },
   rules: { streefwaarde: 60, eenheid: 'regels', pad: /^\.claude\/rules\/.+\.md$/ },
   skills: { streefwaarde: 200, eenheid: 'regels', pad: /^\.claude\/skills\/[^/]+\/SKILL\.md$/ },
   operations: { streefwaarde: null, eenheid: 'bytes', pad: /^docs\/operations\/.+\.md$/ },

@@ -1,6 +1,6 @@
 # Gegevensweergave en navigatie
 
-Deze componenten horen bij [de spec](specs/ui-data-display.md) en staan met werkende voorbeelden op de bestaande
+Deze componenten horen bij [de spec](template/specs/ui-data-display.md) en staan met werkende voorbeelden op de bestaande
 adminpagina `/design-system`. Importeer componenten en types uit de app-barrel `src/web/ui/index.ts`.
 Geen nieuwe dependency, netwerklaag, token of autorisatie is nodig.
 De lokale voorbeeldafbeeldingen staan in `src/web/public/`, onder de Vite-root (`vite.config.ts:95`). Ze laden daardoor

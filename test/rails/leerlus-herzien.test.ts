@@ -59,7 +59,7 @@ describe('leerlus-herzien/AC-7 de voorsortering', () => {
 
   test('leerlus-herzien/AC-7: stap 1 linkt naar ADR 0081', () => {
     const stap1 = /^1\. [\s\S]*?(?=^2\. )/m.exec(stappen)?.[0] ?? '';
-    expect(stap1).toContain('(../adr/0081-leerlus-schrappen-en-vereenvoudigen.md)');
+    expect(stap1).toContain('(../template/adr/0081-leerlus-schrappen-en-vereenvoudigen.md)');
   });
 
   test('leerlus-herzien/AC-7: een eigen bak vóór Klein', () => {

@@ -35,19 +35,18 @@ Feiten nu:
    bouwbewijs (gemergde PR, verplichte checks groen op de head) komt van GitHub, zonder SHA in de statusregel (ADR 0080).
    Zonder `gh`-auth: stop en meld het. Noemt het roadmap-item het specpad niet tussen backticks (dan kan `--roadmap` het
    niet afvinken), dan komt de roadmapwijziging in de implementatie; een status-PR wijzigt alleen statusregels en
-   vinkjes, elke andere wijziging erin maakt `document-status` rood (`docs/operations/agent-doorloop.md`, "PR en
-   statussen afronden").
+   vinkjes (`docs/operations/agent-doorloop.md`, "PR en statussen afronden").
 8. Draai `pnpm meting --trend` en `pnpm leespad`. Zet elke "let op"-regel (de trend: een echte stap omhoog in reviewrondes,
    CI-rood of Codex-bevindingen; het leespad: groei tegenover de basis) in de PR-beschrijving en noem hem in de oplevermelding
    aan de eigenaar; de eigenaar beslist (R-DOC-08, ADR 0070). "onbekend" meld je als onbekend.
 
 ## Mergen
 
-Kritiek of beschermd werk merget de eigenaar, niet-kritiek werk (ADR 0069) de hoofdsessie, alleen zo:
+Een PR die een pad van een code-eigenaar raakt (`.github/CODEOWNERS`) merget de eigenaar na zijn goedkeuring; ander werk
+(ADR 0069, ADR 0089) de hoofdsessie, alleen zo:
 
-1. De job `agent-merge` van de PR is geslaagd (overgeslagen: de eigenaar merget).
-2. Een verse reviewer keurde precies de head goed: PR-commentaar `Review <head-SHA>: geen blokkerende bevindingen`, na
-   elke push opnieuw.
+1. De PR raakt geen pad van een code-eigenaar en de verplichte checks zijn groen op de head.
+2. Een verse reviewer keurde precies de head goed, na elke push opnieuw (afspraak; het script toetst dit niet meer).
 3. Threads zijn opgelost; een externe review is geen voorwaarde.
 4. `pnpm pr:merge <nr>` toetst alles via GitHub en noemt wat ontbreekt. Nooit `gh pr merge`, `gh api …/merge` of een andere route.
 5. Meld PR en SHA aan de eigenaar en volg de CI op `main`; rood: revert-PR. Na revert, rode `main` of
@@ -78,7 +77,7 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
 8. Leerpunt (ADR 0059): Loop de signaalmomenten van deze sessie af: slotvraag, derde CI-ronde, eigenaarcorrectie (pnpm meting),
    blokkerende reviewbevinding (Leerpunt: ja), tweede mislukte correctiepoging. Per les: Leerpunt? Generiek: dien het in volgens
    het sjabloon leerpunt (gh issue create naar onderhoud.repository met --label leerpunt) en toon de tekst. Alleen voor deze app:
-   een padregel, spec of ADR (vanaf 0100) in de app, geen issue. Niets: zeg "geen leerpunt".
+   een padregel, spec of ADR (`docs/specs/`, `docs/adr/`) in de app, geen issue. Niets: zeg "geen leerpunt".
    Vraag ook (ADR 0081): kostte een stap, check, hook of instructie in deze sessie merkbaar tijd, rondes of tokens zonder iets
    te vangen, of las je code die bij gelijk gedrag veel korter of sneller kan? Dan een leerpunt met plek
    `Schrappen of vereenvoudigen` en een `Onderbouwing` met de regels `Meting:`, `Overname:` en `Terugval:`.

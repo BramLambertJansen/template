@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 
 // Regelboek en instructies voor de agent-merge (ADR 0069, spec agent-merge-niet-kritiek AC-6): elke regel uit de AC staat
@@ -61,16 +61,11 @@ describe('agent-merge-niet-kritiek/AC-6 instructies', () => {
 });
 
 describe('agent-merge-niet-kritiek/AC-6 specs en roadmap', () => {
-  test('spec agent-merge staat op vervallen', () => {
-    // GEWIJZIGD (specarchief-en-bouwvorm, ADR 0080, OV-1): de vervallen spec verhuist naar docs/specs/archief/; lees het pad dat bestaat.
-    const pad = existsSync('docs/specs/agent-merge.md') ? 'docs/specs/agent-merge.md' : 'docs/specs/archief/agent-merge.md';
-    expect(readFileSync(pad, 'utf8')).toMatch(/^status: vervallen\b/m);
-  });
-
+  // GEWIJZIGD (templateregime AC-11, ADR 0089 punt 1 en 6): de test op de gearchiveerde spec agent-merge is weg met het archief; de roadmap noemt het nieuwe pad.
   test.each(['ADR 0029 stap 7', 'ADR 0030 PR 2', 'Volledig pad naar `gh` in het rolhek'])(
     'roadmap-item %s verwijst naar de spec agent-merge-niet-kritiek',
     (titel) => {
-      expect(item(titel)).toMatch(/docs\/specs\/agent-merge-niet-kritiek\.md/);
+      expect(item(titel)).toMatch(/docs\/template\/specs\/agent-merge-niet-kritiek\.md/);
     },
   );
 });

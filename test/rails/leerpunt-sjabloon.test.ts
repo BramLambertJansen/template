@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 import { expectAbsent } from '../support/absence.ts';
 
-// Spec leerlus (docs/specs/leerlus.md), ADR 0059: het issue form `leerpunt`, de CLI-koppen in de skill `opleveren`
+// Spec leerlus (docs/template/specs/leerlus.md), ADR 0059: het issue form `leerpunt`, de CLI-koppen in de skill `opleveren`
 // en de reviewermelding houden dezelfde velden, labels en soorten.
 //
 // Vaste opmaak van .github/ISSUE_TEMPLATE/leerpunt.yml (geen YAML-dependency; deze test leest regel voor regel en
@@ -301,7 +301,7 @@ describe('leerlus-bewijs/AC-9 en AC-10 voorsortering, meting en status', () => {
 
   test('leerlus-bewijs/AC-10: spec leerlus is gebouwd en het protocol telt opgepakt met sluitbewijs of achterhaald', () => {
     // De spec noemt #312; document-status eist het nummer van de bouw-PR (ADR 0062), dus #538.
-    expect(read('docs/specs/leerlus.md')).toMatch(/^status: gebouwd # #538$/m);
+    expect(read('docs/template/specs/leerlus.md')).toMatch(/^status: gebouwd # #538$/m);
     const protocol = read('docs/operations/st-09-praktijkproef.md').replace(/\s+/g, ' ');
     expect(protocol).toMatch(/opgepakte leerpunten \(gesloten met sluitbewijs of als achterhaald/);
   });

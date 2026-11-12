@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
-import { adrOverzicht, componentenTekst, faseOverzicht, nextAdr, toText } from '../../scripts/kit/feiten-tekst.mjs';
+import { adrOverzicht, componentenTekst, faseOverzicht, toText } from '../../scripts/kit/feiten-tekst.mjs';
 import { describe, expect, test } from 'vitest';
 
 // scripts/kit/feiten.mjs en feiten-tekst.mjs: leesbare componenten, ADR-filter met --alle, volgende nummer en de fase-sectie.
@@ -77,29 +77,8 @@ describe('adr', () => {
     expect(overzicht).not.toHaveProperty('overig');
   });
 
-  test('het volgende nummer rekent over de volledige lijst, ook als de hoogste vervallen is', () => {
-    const lijst = [...ADRS, { nummer: '0052', titel: 'Laatste', status: 'vervallen' }];
-
-    expect(adrOverzicht(lijst, false).volgende).toBe('0053 (template, tot 0099) · 0100 (app, vanaf 0100)');
-    expect(nextAdr([{ nummer: '0039' }, { nummer: '0039' }, { nummer: '0101' }])).toBe(
-      '0040 (template, tot 0099) · 0102 (app, vanaf 0100)',
-    );
-  });
-
-  test("in de echte repo: --alle toont meer ADR's dan standaard en hetzelfde volgende nummer", () => {
-    const standaard = feiten('adr');
-    const alles = feiten('adr', '--alle');
-    const telling = (tekst: string) => tekst.split('\n').filter((regel) => regel.startsWith('- ')).length;
-    const volgende = (tekst: string) => tekst.split('\n').find((regel) => regel.startsWith('volgende: '));
-
-    expect([standaard.status, alles.status]).toStrictEqual([0, 0]);
-    expect(standaard.stdout).not.toMatch(/· (vervallen|vervangen door \d{4})$/m);
-    // GEWIJZIGD (meting-stuurt/AC-5): de telregel noemt ook de oudere geaccepteerde ADR's.
-    expect(standaard.stdout).toMatch(/^overig: \d+ oudere geaccepteerd, \d+ vervangen\/vervallen \(feiten adr --alle/m);
-    expect(alles.stdout).not.toContain('overig: ');
-    expect(telling(alles.stdout)).toBeGreaterThan(telling(standaard.stdout));
-    expect(volgende(standaard.stdout)).toBe(volgende(alles.stdout));
-  });
+  // GEWIJZIGD (templateregime AC-11, ADR 0089 punt 6): de twee tests op het volgende nummer (reeks 0099/0100) en op `--alle` in de echte repo staan in de
+  // nieuwe vorm in test/scripts/feiten-per-map.test.ts.
 });
 
 const ROADMAP = [

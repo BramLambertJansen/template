@@ -8,8 +8,8 @@ alleen in de aparte app-repo. Een werkende setup is het eerste checkpoint, niet 
 
 1. Begin met [de startinstructie](../../START-NIEUWE-APP.md) en het actuele [setup-playbook](../nieuwe-app.md).
    Lees de app-instructies en de bestaande [werkstraat](../framework.md#8-werkstraat), [DoD](../dod.md),
-   [agentdoorloop](agent-doorloop.md), [ADR 0040](../adr/0040-template-app-en-grens-core-app.md) en
-   [ADR 0046](../adr/0046-werkstraat-en-beslisroute.md). Controleer feiten, code en open PR's; beschreven is niet bewezen.
+   [agentdoorloop](agent-doorloop.md), [ADR 0040](../template/adr/0040-template-app-en-grens-core-app.md) en
+   [ADR 0046](../template/adr/0046-werkstraat-en-beslisroute.md). Controleer feiten, code en open PR's; beschreven is niet bewezen.
 2. Vraag alleen ontbrekende appnaam en korte beschrijving. De gekozen app moet een kleine verticale flow met een
    owner-scoped resource en een adminactie kunnen bewijzen. Bespreek concrete velden, rechten en gedrag pas bij de
    featurespec in de app-repo; dit protocol is geen goedgekeurde app-featurespec of providerbesluit.
@@ -129,7 +129,7 @@ verbeter-PR, zonder appdata of een tweede resultatenregister. Vink ST-09 alleen 
 Alleen een werkende demo, setup of mocktest is onvoldoende. Ontbreekt een voorwaarde, noteer geblokkeerd met reden;
 verlaag geen gate en claim geen groen voor controles die niet draaiden.
 
-Templatebevindingen gaan alleen als issue met label `leerpunt` naar de template-repo ([ADR 0059](../adr/0059-leerlus-van-app-naar-template.md),
+Templatebevindingen gaan alleen als issue met label `leerpunt` naar de template-repo ([ADR 0059](../template/adr/0059-leerlus-van-app-naar-template.md),
 skill `opleveren`, Opruimen stap 8); geen tweede register in de app. Het eindrapport telt met
 `gh issue list --label leerpunt --state all` op de template-repo als overzicht; voor de telling haal je alle pagina's op
 met het commando uit "Nulmeting van leerpunten". De standaardlimiet van `gh issue list` bewijst geen volledig totaal.
@@ -137,7 +137,7 @@ Bewaar ook het eindpeilmoment en de uitvoer. Selecteer issues met nummer groter 
 en met bronbewijs uit deze proef; bevindingen uit gelijktijdige andere apps tellen niet mee.
 
 Rapporteer binnen die selectie het totaal, het aantal opgepakte leerpunten (gesloten met sluitbewijs of als achterhaald,
-[ADR 0078](../adr/0078-leerlus-met-bewijs.md) punt 6; een label `leerpunt-zonder-bewijs` telt niet als opgepakt) en het aantal herhalingen (met `eerder:`). Vergelijk deze drie tellingen met de nulmeting 0 nieuwe
+[ADR 0078](../template/adr/0078-leerlus-met-bewijs.md) punt 6; een label `leerpunt-zonder-bewijs` telt niet als opgepakt) en het aantal herhalingen (met `eerder:`). Vergelijk deze drie tellingen met de nulmeting 0 nieuwe
 proefbevindingen. Een gesloten issue blijft meetellen; een herhaling mag naar een issue van vóór de grens verwijzen,
 maar alleen het nieuwe issue telt als herhaling. Vermeld N, start- en eindpeilmoment en de geselecteerde issuenummers,
 zodat de selectie controleerbaar is. Het totale aantal leerpunten in de repository mag apart als context staan en is

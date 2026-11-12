@@ -51,14 +51,6 @@ const DOORLOOP_ZIN =
   'Schrijft alleen de statusregel `status: gebouwd # #<n>`, en met `--roadmap` het vinkje van het item dat de spec noemt.';
 const DOORLOOP_REGEL81 = 'als de latere diff uitsluitend statusregels en het vinkje van de eigen taak wijzigt';
 
-const NOTITIE = `Deels vervallen door [taakmandaat-vervolg](taakmandaat-vervolg.md) (B2): roadmap/AC-10 voor zover vrij commentaar achter \`status: gebouwd\` als bewijs telt, en de route "vink het roadmap-item af" als vervanging van statusbewijs. De enige vorm is nu \`status: gebouwd # #<PR>; gevalideerd: <sha>\`.`;
-
-const ADR_0027 =
-  'Daarna mogen uitsluitend statusregels en het vinkje van het roadmap-item van de eigen spec veranderen (spec taakmandaat-vervolg);';
-const MANDAAT_37 =
-  '`pnpm docs:status` wijzigt alleen de statusregel, met `--roadmap` ook het vinkje van de eigen taak;';
-const MANDAAT_AC9 = 'uitsluitend latere statuswijzigingen en het vinkje van het roadmap-item van de eigen spec';
-
 describe('mandate-follow-up/AC-14: nieuwe documentatieteksten', () => {
   test.each([
     ['docs/dod.md (regel 10)', 'docs/dod.md', DOD],
@@ -87,26 +79,14 @@ describe('mandate-follow-up/AC-14: nieuwe documentatieteksten', () => {
 });
 
 describe('mandate-follow-up/AC-26: de OV-8- en OV-10-teksten in de implementatie-PR', () => {
-  test('roadmap-vinkjes.md: de notitie direct onder de titel', () => {
-    const regels = readFileSync(path.join(ROOT, 'docs/specs/roadmap-vinkjes.md'), 'utf8').split('\n');
-    const titel = regels.findIndex((regel) => regel.startsWith('# '));
-    const onderTitel = samen(
-      regels
-        .slice(titel + 1, titel + 8)
-        .map((regel) => regel.replace(/^>\s?/, ''))
-        .join(' '),
-    );
-    expect(onderTitel.startsWith(samen(NOTITIE))).toBe(true);
-  });
-
-  test.each([
-    ['docs/adr/0027-taakmandaat-voor-frameworkwerk.md', ADR_0027],
-    ['docs/specs/taakmandaat-frameworkwerk.md', MANDAAT_37],
-    ['docs/specs/taakmandaat-frameworkwerk.md', MANDAAT_AC9],
-    ['docs/operations/agent-doorloop.md', DOORLOOP_REGEL81],
-  ])('%s bevat de versoepelde tekst', (bestand, tekst) => {
-    expect(tekstVan(bestand).includes(samen(tekst)), `${bestand} bevat niet: ${samen(tekst)}`).toBe(true);
-  });
+  // GEWIJZIGD (templateregime AC-11, ADR 0089 punt 1 en 6): de notitietest van roadmap-vinkjes (pinde een zin met een link naar het archief) en de drie rijen op
+  // gearchiveerde documenten (ADR 0027, spec taakmandaat-frameworkwerk) zijn weg met het archief.
+  test.each([['docs/operations/agent-doorloop.md', DOORLOOP_REGEL81]])(
+    '%s bevat de versoepelde tekst',
+    (bestand, tekst) => {
+      expect(tekstVan(bestand).includes(samen(tekst)), `${bestand} bevat niet: ${samen(tekst)}`).toBe(true);
+    },
+  );
 });
 
 // compacte-kennisbasis-rails/AC-14 (PR 6b): het taakmandaat bestaat niet meer; geen document, agentinstructie of skill noemt het.

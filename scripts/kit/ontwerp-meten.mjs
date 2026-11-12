@@ -1,4 +1,4 @@
-// Meetscript voor de skill ontwerp-overnemen (docs/specs/ontwerp-overnemen.md): screenshots op 375 en 1280 px en een
+// Meetscript voor de skill ontwerp-overnemen (docs/template/specs/ontwerp-overnemen.md): screenshots op 375 en 1280 px en een
 // samenvatting van de berekende stijlen van een ontwerpreferentie, als basis voor thematokens.
 // Gebruik: node scripts/kit/ontwerp-meten.mjs <bron.html|https-url> --naam <bron> [--js] [--uit <map>]
 // Uitvoer in --uit (standaard .runner-output/ontwerp/<naam>/, door git genegeerd): 375.png, 1280.png en stijlen.json.

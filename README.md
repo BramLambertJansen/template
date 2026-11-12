@@ -87,7 +87,7 @@ Eenmalig per repo: een omgeving met netwerktoegang **Trusted** en `bash scripts/
 | `scripts/doctor.sh` | De lokale ontwikkelomgeving |
 | `node scripts/kit/feiten.mjs` | Beschikbare controles, registraties en documentstatussen |
 
-Database- en schermtests draaien in de runner-container. Zie [ADR 0044](docs/adr/0044-tests-buiten-de-sandbox.md) voor de inrichting en [de DoD](docs/dod.md) voor controles per wijziging. GitHub Actions voert controles uit; branchbescherming wordt apart ingesteld.
+Database- en schermtests draaien in de runner-container. Zie [ADR 0044](docs/template/adr/0044-tests-buiten-de-sandbox.md) voor de inrichting en [de DoD](docs/dod.md) voor controles per wijziging. GitHub Actions voert controles uit; branchbescherming wordt apart ingesteld.
 
 De [agentdoorloop](docs/operations/agent-doorloop.md) beschrijft taakgebonden core-ontwikkeling, statusadministratie op basis van eigenaarbesluiten en automatische runner/CI-opvolging. De agent verwerkt het bewijs; de eigenaar beslist inhoudelijk en merget.
 
@@ -97,6 +97,6 @@ Controleer vóór de installatie de [ondersteunde besturingssystemen](START-NIEU
 
 Start een nieuwe app via [START-NIEUWE-APP.md](START-NIEUWE-APP.md): dat is de enige startroute, met de installatiestappen, het curl-blok en de opdracht voor Claude Code. De uitvoering daarna staat in het [setup-playbook](docs/nieuwe-app.md), dat de agent volgt om de app aan te maken, te hernoemen en aan de templategeschiedenis te koppelen.
 
-De eigenaar moet **Settings → Template repository** inschakelen voordat **Use this template** beschikbaar is. Een nieuwe app krijgt daarna eenmalig een merge-commit die de geschiedenis koppelt. Latere updates gaan met `git merge template/main` op een branch en via een PR. Merge zulke updates met **Create a merge commit**, zodat de koppeling behouden blijft; zie [ADR 0040](docs/adr/0040-template-app-en-grens-core-app.md).
+De eigenaar moet **Settings → Template repository** inschakelen voordat **Use this template** beschikbaar is. Een nieuwe app krijgt daarna eenmalig een merge-commit die de geschiedenis koppelt. Latere updates gaan met `git merge template/main` op een branch en via een PR. Merge zulke updates met **Create a merge commit**, zodat de koppeling behouden blijft; zie [ADR 0040](docs/template/adr/0040-template-app-en-grens-core-app.md).
 
-App-eigen architectuurbesluiten nummeren vanaf `0100`. De keuze voor hosting en een beheerde database volgt bij de eerste release.
+App-eigen architectuurbesluiten staan in `docs/adr/`, met een eigen nummering; die van de template staan in `docs/template/adr/`. De keuze voor hosting en een beheerde database volgt bij de eerste release.

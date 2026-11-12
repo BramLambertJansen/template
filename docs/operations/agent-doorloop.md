@@ -1,7 +1,7 @@
 # Agentdoorloop met bewijs
 
-De eigenaar beslist inhoudelijk met zijn merge ([ADR 0046](../adr/0046-werkstraat-en-beslisroute.md)). De agent schrijft de bedoelde status in
-het voorstel, bouwt, verzamelt bewijs en zet `gebouwd` zodra het bouwbewijs bestaat ([ADR 0046](../adr/0046-werkstraat-en-beslisroute.md) punt 10).
+De eigenaar beslist inhoudelijk met zijn merge ([ADR 0046](../template/adr/0046-werkstraat-en-beslisroute.md)). De agent schrijft de bedoelde status in
+het voorstel, bouwt, verzamelt bewijs en zet `gebouwd` zodra het bouwbewijs bestaat ([ADR 0046](../template/adr/0046-werkstraat-en-beslisroute.md) punt 10).
 
 ## Lokale belasting
 
@@ -224,12 +224,10 @@ uit met `KIT_MELDING=uit`) en toont de statusregel branch, achterstand, gewijzig
 CODEOWNERS is gegenereerd uit de besluitkolom van de padtabel in
 `.claude/gates.json` (`node scripts/kit/codeowners.mjs --schrijf`): elk pad met een ander besluit dan `agent` heeft de eigenaar.
 
-ADR-nummers worden samen gecontroleerd voor de actieve map en het archief. Verwijderde nummers blijven gereserveerd via
+ADR-nummers zijn uniek per map (`docs/adr/` van de app, `docs/template/adr/` van de template; ADR 0089 punt 6). Verwijderde nummers blijven gereserveerd via
 de Git-geschiedenis van de vertrouwde basis (afspraak: geen check leest die geschiedenis nog, ADR 0089 punt 5). Heeft main een nummer inmiddels gebruikt, werk de branch dan eerst bij.
-Alleen het bestaande paar 0039-bestanden blijft een ratchet-afwijking; nieuwe dubbelen worden geweigerd.
-Een link naar `docs/adr/NNNN-*.md` vanuit een ADR of een spec lost ook op naar `docs/adr/archief/`, voor elke spec (reden: specs met
-een eigenaarstatus wijzigen niet; een `voorstel`-spec werk je bij de verhuizing zelf bij); vanuit andere documenten gaat de link mee naar het nieuwe pad
-(`linkDoelen` in `scripts/kit/check-docs.mjs`, ADR 0053 punt 4).
+Een dubbel nummer binnen een map wordt geweigerd.
+Een link naar een ADR of spec wijst naar het letterlijke pad; een archief waarnaar een link kan terugvallen bestaat niet meer.
 Een vervangingsverwijzing eindigt bij een bestaand ADR, zonder zelfverwijzing of cyclus. Een besluit-PR bevat
 geen `.claude/decisions.json` (ADR 0063).
 
@@ -544,7 +542,7 @@ SHA: de vorm hoort bij het eigen PR-nummer en code buiten `docs/` en `CHANGELOG.
 merge de verplichte checks op de head. Een `git merge origin/main` of een fix erna mag gewoon; de checks draaien opnieuw.
 `check-docs` eist voor elk AC-id een getagde test.
 
-**Implementatie al gemerged** (spec `docs/specs/gebouwd-na-merge.md`, ADR 0080): zet de status in een eigen status-PR vanaf een
+**Implementatie al gemerged** (spec `docs/template/specs/gebouwd-na-merge.md`, ADR 0080): zet de status in een eigen status-PR vanaf een
 verse branch van main. `docs:status` ziet aan GitHub dat PR n gemerged is en schrijft `gebouwd # #<n>`; de guard haalt de head
 van PR n bij GitHub. Het eist dat PR n naar `main` is gemerged en dat de mergecommit in main zit (via de merge-base van de branch), dat de spec daarin ongewijzigd op `goedgekeurd` stond, dat de verplichte
 checks (uit `.claude/decisions.json` in main vlak vóór de merge) groen waren op de head van PR n, en dat PR n een pad buiten
@@ -565,7 +563,7 @@ is dat zonder GitHub-aanroep groen. ADR's hebben geen gebouwd-status: implementa
 **Levende spec** (ADR 0080 punt 3 en 4): een wijziging aan een bestaand mechanisme werkt de spec van dat mechanisme bij. Een
 gebouwde spec blijft in een besluit-PR `gebouwd`; elke nieuwe AC krijgt `- **<ns>/AC-n** (nog niet gebouwd)`, alleen op een id
 dat niet op main staat. De bouw-PR haalt de markering weg en zet `gebouwd # #<deze PR>`. Een AC-id verdwijnt nooit; een
-vervallen spec verhuist met `git mv docs/specs/<naam> docs/specs/archief/` in een PR met alleen `docs/`.
+vervallen spec krijgt `status: vervallen` of wordt verwijderd; er is geen archief meer (ADR 0089 punt 1).
 
 Zonder `gh`-authenticatie kan `docs:status … --pr` PR n niet ophalen. Meld het en laat de eigenaar of een sessie met `gh`-auth het draaien.
 
@@ -606,9 +604,9 @@ goedkeuren: een eigen PR van de eigenaar op zo'n pad merget alleen met de bypass
 ## Correctie aan een geaccepteerd ADR
 
 Een geaccepteerd ADR herschrijven of een ADR met een eigenaarstatus op main verwijderen mag alleen in een besluit-PR (alleen `docs/adr/`,
-`docs/specs/` en het record), door architect of hoofdsessie. Een vervallen of vervangen ADR verandert niet van inhoud, en geen ADR gaat terug
+`docs/specs/`, `docs/template/` en het record), door architect of hoofdsessie. Een vervallen of vervangen ADR verandert niet van inhoud, en geen ADR gaat terug
 naar `voorgesteld` of wordt hernoemd: het rolhek (dat vergelijkt met main) weigert dat; op GitHub beslist de goedkeuring van de eigenaar (A4, ADR 0046 punt 2). Kies het spoor naar wat
-er verandert ([ADR 0045](../adr/0045-railwerk.md) punt 21):
+er verandert ([ADR 0045](../template/adr/0045-railwerk.md) punt 21):
 
 1. **Normatief** (wat besloten is): herschrijf het bestaande ADR in een besluit-PR, met een nieuwe herzieningsregel
    `Herzien: JJJJ-MM-DD (#NNN): wat` (bestaande datum, het PR-nummer, wat er verandert; oude regels blijven staan). Een nieuw ADR

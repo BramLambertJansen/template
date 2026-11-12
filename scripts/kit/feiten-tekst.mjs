@@ -2,7 +2,6 @@
 // tekstweergave.
 // Geen bestandstoegang, zodat test/scripts/feiten.test.ts ze met invoer als tekst kan toetsen.
 
-const TEMPLATE_ADR_MAX = 99;
 const ROADMAP = 'docs/roadmap.md';
 
 /** @typedef {{ nummer: string, titel: string, status: string }} Adr */
@@ -14,14 +13,12 @@ function isHistorisch(status) {
 }
 
 /**
- * Volgende vrije nummers over de volledige lijst (ook vervangen en vervallen ADR's, en dubbele nummers).
+ * Het volgende vrije nummer van één ADR-map, over de volledige lijst (ook vervangen en vervallen ADR's, en dubbele nummers).
+ * Nummers tellen per map (ADR 0089 punt 6).
  * @param {readonly { nummer: string }[]} list
  */
 export function nextAdr(list) {
-  const numbers = list.map((adr) => Number(adr.nummer));
-  const template = Math.max(0, ...numbers.filter((n) => n <= TEMPLATE_ADR_MAX)) + 1;
-  const app = Math.max(TEMPLATE_ADR_MAX, ...numbers.filter((n) => n > TEMPLATE_ADR_MAX)) + 1;
-  return `${String(template).padStart(4, '0')} (template, tot 0099) · ${String(app).padStart(4, '0')} (app, vanaf 0100)`;
+  return String(Math.max(0, ...list.map((adr) => Number(adr.nummer))) + 1).padStart(4, '0');
 }
 
 const ADR_GETOOND = 10;
@@ -31,6 +28,7 @@ const VOLGENDE_GETOOND = 5;
 /**
  * Standaard de voorgestelde (en onbekende) ADR's en de tien geaccepteerde met het hoogste nummer, plus één telregel; `alle` toont
  * de volledige lijst (meting-stuurt/AC-5). Zo groeit de uitvoer niet met elk nieuw ADR (R-DOC-09).
+ * De lijst is van één map; `volgende` is het vrije nummer van die map.
  * @param {readonly Adr[]} list
  * @param {boolean} alle
  * @param {readonly string[]} [gereserveerd]
@@ -54,8 +52,9 @@ export function adrOverzicht(list, alle, gereserveerd = []) {
  * volledige lijst (meting-stuurt/AC-5).
  * @param {readonly Spec[]} list
  * @param {boolean} alle
+ * @param {string} [map] de map van deze lijst, voor de telregel
  */
-export function specsOverzicht(list, alle) {
+export function specsOverzicht(list, alle, map = 'docs/specs/') {
   if (alle) return list;
   /** @type {Map<string, number>} */
   const anders = new Map();
@@ -63,8 +62,26 @@ export function specsOverzicht(list, alle) {
   const telling = [...anders].map(([status, aantal]) => `${String(aantal)} ${status}`).join(', ');
   return {
     lijst: list.filter(({ status }) => SPEC_OPEN.includes(status)),
-    overig: `${telling === '' ? 'geen andere' : telling} (feiten specs --alle of docs/specs/)`,
+    overig: `${telling === '' ? 'geen andere' : telling} (feiten specs --alle of ${map})`,
   };
+}
+
+/**
+ * Eén sectie met een kop per map (templateregime/AC-11): de lijst onder de mapnaam, de telregel onder `overig <map>`. Zo blijft
+ * elke lijst een eigen lijst in de tekstweergave.
+ * @param {readonly { map: string, overzicht: unknown }[]} delen
+ * @returns {Record<string, unknown>}
+ */
+export function perMap(delen) {
+  /** @type {Record<string, unknown>} */
+  const uit = {};
+  for (const { map, overzicht } of delen) {
+    if (Array.isArray(overzicht)) uit[map] = overzicht;
+    else if (typeof overzicht === 'object' && overzicht !== null)
+      for (const [sleutel, waarde] of Object.entries(overzicht))
+        uit[sleutel === 'lijst' ? map : `${sleutel} ${map}`] = waarde;
+  }
+  return uit;
 }
 
 /**

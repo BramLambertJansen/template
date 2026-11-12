@@ -1,6 +1,6 @@
 # UI-basiselementen gebruiken
 
-De uitbreiding volgt [de goedgekeurde spec](specs/ui-kit-basics.md). Importeer componenten via
+De uitbreiding volgt [de goedgekeurde spec](template/specs/ui-kit-basics.md). Importeer componenten via
 `src/web/ui/index.ts`; de voorbeelden staan op de bestaande, beveiligde `/design-system`-route.
 
 ## Invoervelden
@@ -60,7 +60,7 @@ De tabel beschrijft de testdekking; de werkelijke uitslagen en gevalideerde comm
 
 ## Typografie en layout
 
-Spec: [typografie-en-layout](specs/typografie-en-layout.md). In `features/` komen typografie en kleur uit deze
+Spec: [typografie-en-layout](template/specs/typografie-en-layout.md). In `features/` komen typografie en kleur uit deze
 componenten, niet uit utility-klassen; layout-klassen mogen blijven.
 
 - `Text` voor lopende tekst: `as` (`p`, `span`, `div`), `size` (`sm`, `base`), `tone` (`default`, `muted`) en `weight`
@@ -79,7 +79,7 @@ Voorbeelden: `src/web/features/design-system/typography-examples.tsx`. Bewijs pe
 
 ## Thema en tokens
 
-Spec: [semantische-tokens](specs/semantische-tokens.md). Een app overschrijft alleen semantische tokens, in
+Spec: [semantische-tokens](template/specs/semantische-tokens.md). Een app overschrijft alleen semantische tokens, in
 `src/web/styles/theme.css` (geïmporteerd ná de core-index, `src/web/styles/app.css:2-3`); de standaard staat in
 `src/core/web/styles/semantic.css`. Elk token met klasse, standaard, app-waarde en `bestand:regel`:
 `node scripts/kit/feiten.mjs tokens` (een naam in `theme.css` die niet in `semantic.css` staat: `onbekend`, vaak een
@@ -111,7 +111,7 @@ tikfout; een override van een token zonder groep, zoals `--radius`: `overig`). Z
   (`test/ui/semantische-tokens-3b.test.ts`, AC-15).
 
 Een ontwerp overnemen (HTML-bestand, URL, afbeelding of niets): de skill `ontwerp-overnemen`
-(`.claude/skills/ontwerp-overnemen/SKILL.md`, spec [ontwerp-overnemen](specs/ontwerp-overnemen.md)). Zonder referentie
+(`.claude/skills/ontwerp-overnemen/SKILL.md`, spec [ontwerp-overnemen](template/specs/ontwerp-overnemen.md)). Zonder referentie
 blijft de bestaande stijl de basis; met een referentie meet `node scripts/kit/ontwerp-meten.mjs <bron> --naam <naam>`
 screenshots op 375 en 1280 px en de berekende stijlen (`oklch`, `rem`) naar `.runner-output/ontwerp/<naam>/` (door git
 genegeerd; exitcode 3 zonder Chromium). De vertaling naar tokens en componenten staat in `docs/ontwerp/<bron>.md`, volgens

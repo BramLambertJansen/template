@@ -4,6 +4,8 @@
 //     (een kale naam of relatief pad telt als een bestand in git erop eindigt; `/route` is een URL, geen pad).
 //  2. Relatieve links in docs/**/*.md en README.md wijzen naar een bestaand bestand.
 //  3. ADR- en spec-statussen komen uit de vaste woordenlijst; een goedgekeurde of gebouwde spec heeft "Hergebruik en UX".
+//     Een ADR-nummer is uniek per map en staat in de kop (`:adr-kop`). Regel 2, 3, 6 en 7 gelden gelijk in docs/adr/,
+//     docs/specs/, docs/template/adr/ en docs/template/specs/ (ADR 0089 punt 4 en 6, templateregime/AC-9).
 //  4. De padtabel `paden` in .claude/gates.json (ADR 0079, spec padtabel Werking 6): samenhang (altijdVragen ⇒ besluit-pr,
 //     schrijven ≥ gate ⇒ niet agent), geen onbekende kolom of waarde, geen `{}`, dubbele of `!`-sleutel, en de vloer (VLOER);
 //     de oude vorm is rood. CODEOWNERS is gelijk aan de afleiding uit de padtabel voor de eerste handle uit `goedkeurders`
@@ -14,7 +16,7 @@
 //     of de namespace (sleutel `docs:ac:<spec>:<AC-n>`).
 //  7. Spec-discipline: geen lijstitem met `⚠ open` in "Open vragen" bij goedgekeurd of gebouwd (`:open-vraag`); elk pad in
 //     "Kopieer de vorm van" bestaat bij voorstel of goedgekeurd (`:vorm`).
-//  8. `framework §N` buiten §1–§12, §11a en de `## <n>.`-koppen van het regelboek (niet in docs/adr/); 9. backtick-paden in
+//  8. `framework §N` buiten §1–§12, §11a en de `## <n>.`-koppen van het regelboek (niet in de ADR-mappen); 9. backtick-paden in
 //     het regelboek; 10. R-id's in .claude/rules/* en het regelboek; 11. harde grenzen alleen op `AGENTS.md` (9 KB, 100
 //     regels) en `CLAUDE.md` (50 regels), sleutels `docs:AGENTS.md:budget:<bytes>` en `docs:<bestand>:regels:<n>`, zodat
 //     de ratchet groei en krimp ziet (ADR 0065, scripts/kit/leesbudget.mjs). Hoofdstuk, regelboek, spec en ADR zijn een
@@ -34,7 +36,7 @@ import {
 } from '../../rails/hooks/lib/padtabel.mjs';
 import { onderhoudVan } from '../../rails/hooks/lib/rolhek.mjs';
 import { acIds } from '../../rails/hooks/lib/document-state.mjs';
-import { adrNumber, duplicateAdrNumbers, invalidAdrNames } from './adr-numbers.mjs';
+import { ADR_MAPPEN, adrKopViolations, adrNumber, duplicateAdrNumbers, invalidAdrNames } from './adr-numbers.mjs';
 import { CODEOWNERS, codeownersTekst, eersteGoedkeurder, HERSTEL } from './codeowners.mjs';
 import { grensMeldingen, grensViolations, normenMeldingenUitGit, normenUitGit, zonderBasis } from './leesbudget.mjs';
 
@@ -106,7 +108,7 @@ export async function docsKrimp(root = '.') {
 const REGELBOEK = 'docs/framework.md';
 const ADR_MAP = 'docs/adr/';
 const ARCHIEF = 'docs/adr/archief/';
-// Regel 2: specs in docs/specs/ en docs/template/specs/ (framework §10); `_template.md` en dergelijke tellen niet.
+// Regel 3, 6 en 7: specs in docs/specs/ en docs/template/specs/ (framework §10); `_template.md` en dergelijke tellen niet.
 const SPEC_BESTAND = /^docs\/(?:template\/)?specs\/[^_/][^/]*\.md$/;
 const SPEC_ARCHIEF = 'docs/specs/archief/';
 
@@ -128,7 +130,7 @@ function paragraafViolations(files, read) {
   const anker = (/** @type {string} */ n) => n === '11a' || (/^\d+$/.test(n) && Number(n) >= 1 && Number(n) <= 12);
   const geldig = (/** @type {string} */ n) => anker(n) || koppen.has(n);
   return files
-    .filter((file) => file.endsWith('.md') && !file.startsWith(ADR_MAP))
+    .filter((file) => file.endsWith('.md') && !ADR_MAPPEN.some((map) => file.startsWith(map)))
     .flatMap((file) => {
       const text = read(file);
       const fout = [...text.matchAll(/\bframework(?:\.md)?`?\s?§(\d+[a-z]?)/g)].filter(([, n = '']) => !geldig(n));
@@ -411,7 +413,8 @@ function linkViolations(root, files, read) {
  * eigenaarstatus mag niet van inhoud wijzigen, dus ook vanuit een spec lost een ADR-doel op naar `archief/`. Zo ook het
  * specarchief (ADR 0080): een link uit `docs/specs/archief/` leest alsof in `docs/specs/`, en een doel `docs/specs/<naam>.md`
  * lost vanuit `docs/adr/**` en `docs/specs/**` ook op naar `docs/specs/archief/`. Elders geldt alleen het letterlijke pad: die
- * links gaan mee naar het nieuwe pad (ADR 0053 punt 4).
+ * links gaan mee naar het nieuwe pad (ADR 0053 punt 4). `docs/template/adr/` en `docs/template/specs/` hebben geen archief
+ * (ADR 0089 punt 1): daar geldt het letterlijke pad.
  * @param {string} file @param {string} doel
  */
 function linkDoelen(file, doel) {
@@ -443,13 +446,13 @@ function adrLinkDoelen(file, doel) {
 }
 
 /**
- * ADR 0080: een statusregel in `docs/specs/` heeft de ene vorm `gebouwd # #<PR>` (de oude vorm met SHA leest check-roadmap
+ * ADR 0080: een statusregel in `docs/specs/` of `docs/template/specs/` heeft de ene vorm `gebouwd # #<PR>` (de oude vorm met SHA leest check-roadmap
  * nog).
  * @param {readonly string[]} files @param {(file: string) => string} read
  * @returns {Violation[]}
  */
 function statusvormViolations(files, read) {
-  const specs = files.filter((file) => /^docs\/specs\/[^/]+\.md$/.test(file));
+  const specs = files.filter((file) => /^docs\/(?:template\/)?specs\/[^/]+\.md$/.test(file));
   return specs.flatMap((file) => {
     const sha = /^status: gebouwd # #(\d+); gevalideerd: (\S+)/m.exec(read(file));
     return sha === null
@@ -474,6 +477,7 @@ function statusViolations(files, read) {
   return [
     ...duplicateAdrNumbers(adrs),
     ...invalidAdrNames(files),
+    ...adrKopViolations(adrs, read),
     ...adrs
       .filter((file) => !ADR_STATUS.test(read(file)))
       .map((file) => ({

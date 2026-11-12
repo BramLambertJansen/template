@@ -11,7 +11,7 @@ De gebruiker is de eigenaar van de nieuwe app: soms technisch, soms zonder enige
 uit binnen dit bestand. Begeleid volgens *Begeleiding* hieronder: kort en zonder jargon, uitleg alleen waar die de volgende
 stap begrijpelijk maakt; laat de uitleg weg bij een technische gebruiker.
 
-Dit bestand staat in de template als `docs/nieuwe-app.md` en volgt de afspraken in [ADR 0040](adr/0040-template-app-en-grens-core-app.md).
+Dit bestand staat in de template als `docs/nieuwe-app.md` en volgt de afspraken in [ADR 0040](template/adr/0040-template-app-en-grens-core-app.md).
 De enige startroute vóór de app-repo bestaat is [START-NIEUWE-APP.md](../START-NIEUWE-APP.md): daar staan het curl-blok en de
 opdracht waarmee de gebruiker dit bestand klaarzet en de agent laat beginnen. Deze instructie hier blijft de enige
 gedetailleerde setup-procedure. Werk altijd met de versie op `main` van de template.
@@ -972,7 +972,7 @@ De eigenaar merget met **Create a merge commit**. Zit er een wijziging in `.gith
 Verandert de update `requiredChecks` in `.claude/decisions.json` (een check erbij of eraf), dan draait de eigenaar na de merge
 `scripts/github-ruleset.sh <owner>/<slug>` opnieuw, zodat de ruleset de nieuwe lijst volgt (ADR 0073).
 
-App-eigen ADR's: begin bij `0100` (`docs/adr/0100-…`). `0001`–`0099` zijn van de template; zelfde nummers in de app geven bij een update een conflict (ADR 0040 punt 4).
+App-eigen ADR's staan in `docs/adr/` en app-specs in `docs/specs/`, met een eigen nummering; `node scripts/kit/feiten.mjs adr` noemt het volgende vrije nummer. De documenten van de template staan in `docs/template/` en wijzigt een app niet (ADR 0089 punt 1 en 6).
 
 ## Fout → oorzaak
 
