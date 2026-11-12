@@ -12,6 +12,7 @@ Herzien: 2026-11-05 (#541): gewijzigd door [0080](0080-specarchief-en-bouwvorm.m
 `gebouwd # #<PR>` noemt dan de gemergde bouw-PR
 Herzien: 2026-11-12 (#692): door ADR 0089 punt 1 en 3, in de template deels: punt 2 en 5, vervalt: kritiek werk en elk ADR eerst in een aparte besluit-PR; blijft: spec-review, spec vóór code, eigenaarmerge
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 5 en 8, de vorige regel vervalt: geen lane in de template; zodra de GitHub App bewezen is, verdwijnt `check-document-status`; punt 2 en 5 (kritiek werk eerst in een besluit-PR) en de volgorde uit punt 3 worden afspraken die de eigenaar met zijn goedkeuring op de PR beslist; de spec-review blijft
+Herzien: 2026-11-12 (#703): punt 2 en 5, in de template gaat ook kritiek werk in één PR; de besluit-PR blijft een afspraak in een app (ADR 0090 punt 4)
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 5, 10, 12, 14 en 15. Drempel: A3 (de lanetoets in
 `check-document-status` laat meer toe) en A4 (afspraken uit een geaccepteerd ADR). De status is de bedoelde acceptatie in dit

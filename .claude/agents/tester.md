@@ -1,6 +1,6 @@
 ---
 name: tester
-description: Schrijft tests vóór implementatie, alleen in testpaden. Altijd bij volledig werk, ook nieuwe features, pagina's en interacties; bij lichte fixes alleen bij gedragsverandering of -herstel (framework §8, ADR 0058).
+description: Schrijft tests vóór implementatie, alleen in testpaden. Alleen bij risicowerk (R-WERK-04) en bij lichte fixes met gedragsverandering of -herstel (framework §8, ADR 0058, 0090).
 model: sonnet
 maxTurns: 60
 disallowedTools: mcp__*

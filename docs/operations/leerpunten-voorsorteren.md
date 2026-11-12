@@ -26,7 +26,7 @@ geen branches, commits of PR's. De eigenaar beslist; jij sorteert alleen voor.
    - **Klein**: beperkte fix binnen bestaand gedrag, niet kritiek; een agent kan het oppakken en zelf mergen als de PR geen pad van
      een code-eigenaar raakt en de checks groen zijn, met een test die op de basis faalt.
    - **Besluit nodig**: de eigenaar moet eerst kiezen; noem de keuze in één zin.
-   - **Kritiek**: raakt auth, rolhek, hooks, bewaking, gates, ruleset of overige core; besluit-PR en eigenaarmerge nodig.
+   - **Kritiek**: raakt auth, rolhek, hooks, bewaking, gates, ruleset of overige core; eigenaarmerge nodig, in een app eerst een besluit-PR.
 5. Noem herhalingen: issues met `eerder: #nnn`, en issues die over hetzelfde mechanisme gaan zonder die verwijzing. Zet
    bovenaan elk paar van een gesloten schrap-leerpunt en een later leerpunt met `eerder:` ernaar. Vraag per cluster welke
    oudere regel of check de nieuwe overbodig maakt. Zijn er tien of meer schrap-leerpunten gesloten, noem dat aantal en het

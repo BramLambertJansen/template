@@ -4,6 +4,7 @@ Status: geaccepteerd
 
 Herzien: 2026-10-30 (#385): in punt 6 vervalt "broncodemandaat"
 ([0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md)).
+Herzien: 2026-11-12 (#703): punt 2, in de volledige route schrijft de developer buiten risicowerk de tests eerst; architect in de template op verzoek (ADR 0090 punt 1 en 3)
 
 Wijzigt [0057](0057-risicogestuurde-werkstraat.md) punt 1 en 4 en de mini-specplicht uit
 [0056](0056-functionele-ui-in-een-pr.md) voor uitsluitend de lichte route hieronder.
