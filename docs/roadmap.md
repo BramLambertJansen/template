@@ -205,8 +205,9 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
 - [ ] **ST-01 (P0) — GitHub-bescherming daadwerkelijk activeren** (stuk 6, diff-guard uit stuk 4). Een agent kan beschermd werk niet zonder de
   juiste eigenaarreview samenvoegen. Gebouwd: `scripts/github-ruleset.sh` met `test/scripts/github-ruleset.test.ts` (#104), de diff-guard met
   `guard.yml` (#62, ADR 0045 punt 17; nog niet verplicht, uitslag `overgang` zolang de auteur zelf goedkeurder is) en CODEOWNERS en PR-template.
-  Open: organisatie, GitHub App voor de agent, org-ruleset via custom property en Actions-instellingen (daarna code-owner-review en 1 goedkeuring
-  aan; private repo's vragen Pro/Team); `.github/settings/` met `scripts/check-github.mjs` (alleen-lezend, een onleesbare instelling is een fout;
+  Open: organisatie, GitHub App voor de agent, org-ruleset via custom property en Actions-instellingen (code-owner-review met 0 goedkeuringen
+  zet `scripts/github-ruleset.sh` nu al, en het script weigert bij fouten in `CODEOWNERS`; daarna `--bypass-beheerder`, pas na het bewijs dat het
+  token van de eigenaar uit de agentomgeving is; private repo's vragen Pro/Team); `.github/settings/` met `scripts/check-github.mjs` (alleen-lezend, een onleesbare instelling is een fout;
   ook `app_id` van verplichte checks, `enforce_admins`, conversation resolution) en `check-spec-approval`; `docs/operations/rails-checklist.md` met
   per stuk bewijs; pushen met een kortlevend App-token zonder het eigenaar-token in de agentomgeving, daarna `denyRead` op `~/.config/gh`;
   de diff-guard verplicht bij de overstap op de App, met goedkeuring op exact de head-SHA die niet van de auteur is (framework §10). Onderscheid de overgang onder het eigenaaraccount van de definitieve App-opzet; de eigenaar

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, expect, test } from 'vitest';
 import { planAppInit } from '../../scripts/kit/app-init.mjs';
+import { docsViolations } from '../../scripts/kit/check-docs.mjs';
 
 const root = path.join(import.meta.dirname, '../..');
 const files = [
@@ -79,6 +80,18 @@ test('app:init verwerkt alle actuele templatebestanden en bewaart de overige con
   expect(gates).toHaveProperty('schrijfrecht');
 });
 
+// Nieuw (templateregime, ADR 0089 punt 3): de CODEOWNERS die app:init --owner genereert is gelijk aan de afleiding die
+// check-docs eist, dus geen `docs:spiegel:codeowners` op de kopie.
+test('na app:init --owner geeft check-docs geen docs:spiegel:codeowners', async () => {
+  const dir = copy();
+  initialize(dir);
+  writeFileSync(path.join(dir, '.claude/settings.json'), JSON.stringify({ permissions: { ask: [] } }));
+  git(dir, ['init', '-q']);
+  git(dir, ['add', '-A']);
+  const sleutels = (await docsViolations(dir)).map((violation) => violation.key);
+  expect(sleutels).not.toContain('docs:spiegel:codeowners');
+});
+
 test('dezelfde compatibiliteitscontrole blijft bruikbaar nadat deze checkout al een app is geworden', () => {
   const inputs = templateInputs(root);
   const app = copy(inputs);
@@ -92,10 +105,13 @@ test('dezelfde compatibiliteitscontrole blijft bruikbaar nadat deze checkout al 
   expect(recovered).toStrictEqual(inputs);
 });
 
+// GEWIJZIGD (templateregime, ADR 0089 punt 3): CODEOWNERS is geen invoer van planAppInit meer (gegenereerd uit de padtabel en
+// `goedkeurders`); de rij met een gemuteerde handle in CODEOWNERS is een mutatie van `goedkeurders` in gates.json, die
+// de controle nu wel laat gooien (`"goedkeurders"` niet meer te vinden).
 test.each([
   ['README.md', '# App-template', '# Gewijzigde template'],
   ['CHANGELOG.md', '## [Unreleased]', '## Geschiedenis'],
-  ['.github/CODEOWNERS', '@bramlambertjansen', '@changed-owner'],
+  ['.claude/gates.json', '"goedkeurders":', '"beslissers":'],
   ['.claude/gates.json', '"onderhoud": {', '"onderhoud":{'],
 ])('de echte invoercontrole detecteert incompatibele templatewijzigingen in %s', (file, before, after) => {
   const inputs = templateInputs(root);

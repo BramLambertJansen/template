@@ -518,8 +518,8 @@ Later in de app heet hetzelfde `pnpm app:init`. Het script (`scripts/kit/app-ini
 | `README.md` | Kop `# App-template` → `# <App-naam>`; eerste alinea → herkomstzin ("Gebouwd op [BramLambertJansen/template](https://github.com/BramLambertJansen/template)."); sectie **Nieuwe app starten** verwijderen (geldt alleen voor de template); de rest blijft |
 | `docs/nieuwe-app.md` | Niets — laten staan. Verwijderen geeft bij elke template-update een conflict |
 | `CHANGELOG.md` | Onder `## [Unreleased]` de template-regels vervangen door: `- Gestart vanaf template <sha>.` |
-| `.claude/gates.json` | De regel `"onderhoud": { … }` verwijderen: de onderhoudsmodus (ADR 0045) hoort bij de template-repo; het script weigert als die regel niet meer te vinden is |
-| `.github/CODEOWNERS` | Alleen als de owner niet `bramlambertjansen` is (`--owner`): handle vervangen door `@<login>` of `@<org>/<team>` |
+| `.claude/gates.json` | De regel `"onderhoud": { … }` verwijderen: de onderhoudsmodus (ADR 0045) hoort bij de template-repo; het script weigert als die regel niet meer te vinden is. Alleen als de owner niet `bramlambertjansen` is (`--owner`): `goedkeurders` wordt `["<login>"]` of `["<org>/<team>"]` |
+| `.github/CODEOWNERS` | Alleen met `--owner`: opnieuw gegenereerd uit de padtabel voor de handle uit `goedkeurders` (`scripts/kit/codeowners.mjs`); het script weigert zonder padtabel of `goedkeurders`. `check-docs` eist dat bestand en afleiding gelijk blijven |
 
 `app:init` verwerkt geen beschrijving. Voeg daarna de opgegeven korte beschrijving als eigen alinea onder de appnaam in
 `README.md` toe, met behoud van de herkomstzin. Zet tijdens Fase 6.2 dezelfde beschrijving bij de GitHub-repo. Behandel invoer
@@ -587,11 +587,16 @@ Zet de korte beschrijving uit de intake met `gh repo edit "$R" --description "<k
 `gh repo view "$R" --json description`. Quote de werkelijke waarde veilig; voer geen shellcode uit de beschrijving uit.
 
 **Ruleset op `main` (overdracht).** `scripts/github-ruleset.sh` zet de ruleset `main` volgens framework §10: geen delete of force push,
-PR-plicht, opgeloste reviewgesprekken, merge en squash, en de verplichte checks uit `.github/workflows/` (`gate:fast`, `gate:slow`,
+PR-plicht met review van een code-eigenaar (`.github/CODEOWNERS`) en 0 vereiste goedkeuringen, opgeloste reviewgesprekken, merge en squash,
+en als verplichte checks precies `requiredChecks` uit `.claude/decisions.json` (`gate:fast`, `gate:slow`,
 `secrets`, `image`, `check:new-resource`, `check-core`, `document-status`, `leerpunt-bewijs`, `codeql (actions)`, `codeql (javascript-typescript)`, `osv-scanner`, alle van GitHub Actions). Dat is `main-dicht` van de template plus opgeloste gesprekken en `codeql (javascript-typescript)`.
-`check-core` bewaakt in een app de grens rond `src/core` (ADR 0040); in de template is die check altijd groen.
+`check-core` bewaakt in een app de grens rond `src/core` en `docs/template` (ADR 0040, ADR 0089); in de template is die check altijd groen.
 `test/scripts/github-ruleset.test.ts` houdt de ruleset gelijk aan de workflows en deze playbooklijst gelijk aan de rulesetpayload.
 Opnieuw draaien werkt de bestaande ruleset bij.
+Na het zetten vraagt het script bij GitHub de fouten in `CODEOWNERS` op en eindigt met een ✗ als er een is: GitHub slaat een regel
+met een ongeldige eigenaar (bijvoorbeeld een handle zonder schrijfrecht) stil over, en dan is met 0 goedkeuringen elke PR zonder
+review mergebaar. Weigert het script daarop: zet in `goedkeurders` (`.claude/gates.json`) een account met schrijfrecht, draai
+`node scripts/kit/codeowners.mjs --schrijf`, merge dat naar `main` en draai het script opnieuw.
 Het script schrijft naar GitHub met de login van de eigenaar; jij draait het niet.
 
 > 1. Voer in je Ubuntu-terminal dit hele blok uit. Verwacht: de ruleset wordt zonder fouten ingesteld.
@@ -605,9 +610,15 @@ Het script schrijft naar GitHub met de login van de eigenaar; jij draait het nie
 Controleer de werkelijke ruleset en de checknamen. De CI-beschikbaarheidscontrole uit 6.1 blijft van kracht; laat geen
 verplichte checks weg om deze stap groen te krijgen.
 
-Waarom 0 goedkeuringen en geen code-owner-review: zolang de agent nog onder het account van de eigenaar pusht, is de eigenaar ook de PR-auteur,
-en GitHub laat je je eigen PR niet goedkeuren. Zodra de GitHub App voor de agent bestaat (roadmap ST-01, ADR 0039 punt 8), gaan beide aan.
-De diff-guard (`guard.yml`) is tot dan geen verplichte check (ADR 0045 punt 17). Zet dat in de overdracht.
+Code-owner-review met 0 goedkeuringen (ADR 0089 punt 2): een PR die alleen paden zonder eigenaar in `.github/CODEOWNERS` raakt
+(besluit `agent` in de padtabel), is mergebaar zodra de checks groen zijn; elke andere PR vraagt de goedkeuring van de eigenaar, en
+een nieuwe push trekt die in. GitHub laat je je eigen PR niet goedkeuren: zolang de agent onder het account van de eigenaar pusht,
+blijft zo'n PR geblokkeerd. De agent pusht daarom als GitHub App.
+
+De optie `--bypass-beheerder` (`scripts/github-ruleset.sh <owner>/<slug> --bypass-beheerder`) laat de beheerder de ruleset passeren,
+alleen bij het mergen van een pull request, zodat de eigenaar een eigen PR op een beschermd pad kan mergen. Gebruik haar pas als
+bewezen is dat het token van de eigenaar uit de agentomgeving is (spec templateregime AC-6); zonder de optie is er geen bypass.
+De diff-guard (`guard.yml`) is geen verplichte check (ADR 0045 punt 17). Zet dat in de overdracht.
 
 Geplande inrichting van de App (**nog niet gebouwd**, roadmap ST-01; het besluit is ADR 0045 punt 19):
 
@@ -617,7 +628,7 @@ Geplande inrichting van de App (**nog niet gebouwd**, roadmap ST-01; het besluit
 - Sleutel buiten de repo (`~/.config/template-agent/app.pem`, modus 600), nooit leesbaar in de sandbox. Een token van één uur
   via een script zonder dependency (`node:crypto`, JWT RS256) dat als git-credential-helper en als `GH_TOKEN` dient; dat script
   komt in de App-PR.
-- Met de App: de ruleset met code-owner-review en 1 goedkeuring, en de diff-guard als verplichte check.
+- Met de App en het bewijs van de identiteit: de ruleset opnieuw met `--bypass-beheerder`.
 
 Weigert de API iets:
 - ruleset op een private repo zonder Pro/Team → het script meldt het en stopt; meld de keuze aan de eigenaar (Pro, organisatie met Team, of public). Wijzig zelf de zichtbaarheid niet.
@@ -897,7 +908,7 @@ en relevante beperkingen. De dagelijkse commando's en template-updates staan in 
 >
 > **Template-updates binnenhalen:** zie hieronder. Altijd **Create a merge commit**, nooit squash.
 >
-> **Later aanzetten:** goedkeuring en code-owner-review in de ruleset, en de diff-guard als verplichte check, zodra de agent via de GitHub App pusht.
+> **Later aanzetten:** de bypass voor de beheerder (`scripts/github-ruleset.sh <owner>/<slug> --bypass-beheerder`), zodra de agent via de GitHub App pusht en het token van de eigenaar uit de agentomgeving is.
 > CodeQL: <beschikbaarheid en beide verplichte checks gecontroleerd, of setup nog geblokkeerd bij Fase 6.1>.
 >
 > **Bevindingen:** <notities uit het voortgangsbestand, of "geen">

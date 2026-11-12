@@ -118,7 +118,7 @@ export function rijFouten(rij) {
  * Het niveau van één rij met per kolom of het uit de rij komt (niet uit de standaard); onleesbaar telt als het strengste.
  * @param {unknown} rij @returns {Niveau & { eigen: { schrijven: boolean, besluit: boolean } }}
  */
-function rijNiveau(rij) {
+export function rijNiveau(rij) {
   const leesbaar = isObject(rij) && rijFouten(rij).every((fout) => fout === 'rij zonder kolom');
   if (!leesbaar) return { ...STRENGST, eigen: { schrijven: true, besluit: true } };
   const schrijven = veld(rij, 'schrijven');

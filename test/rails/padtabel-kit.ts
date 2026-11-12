@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { codeownersTekst } from '../../scripts/kit/codeowners.mjs';
 
 // Gedeelde fixtures voor de tests van spec padtabel (ADR 0079): de bevroren stand van 30cc352 (oude lijsten, `KRITIEK` uit
 // lane.mjs en het register met 26 records) en een kleine gates.json in de nieuwe vorm die elke samenhangregel en de vloer haalt.
@@ -110,14 +111,27 @@ export const NIEUW_ALTIJD_VRAGEN = [...VLOER];
 
 type RepoOpties = { gatesTekst: string; codeowners?: string[]; ask?: string[] };
 
+// GEWIJZIGD (templateregime, ADR 0089 punt 3): CODEOWNERS is gelijk aan `codeownersTekst(gates, eigenaar)` en niet meer aan
+// de gates plus jsonGates; zonder `codeowners` maakt de kit die tekst uit `gatesTekst`. Een gates.json die geen afleiding
+// geeft (de oude vorm, een onleesbare `paden`) houdt de oude lijst: check-docs slaat de CODEOWNERS-check dan over.
+function codeownersVan(gatesTekst: string): string {
+  try {
+    return codeownersTekst(JSON.parse(gatesTekst), 'eigenaar');
+  } catch {
+    return [...NIEUW_GATES, 'package.json'].map((glob) => `${glob} @eigenaar`).join('\n') + '\n';
+  }
+}
+
 /** Een tijdelijke git-repo voor `docsViolations`: CODEOWNERS en de Edit-`ask` spiegelen standaard de nieuwe vorm. */
 export function repo({ gatesTekst, codeowners, ask }: RepoOpties): string {
   const root = mkdtempSync(path.join(tmpdir(), 'padtabel-'));
-  const eigenaars = codeowners ?? [...NIEUW_GATES, 'package.json'];
   const vragen = ask ?? NIEUW_ALTIJD_VRAGEN;
   const files: Record<string, string> = {
     'package.json': JSON.stringify({ scripts: {} }),
-    '.github/CODEOWNERS': eigenaars.map((glob) => `${glob} @eigenaar`).join('\n') + '\n',
+    '.github/CODEOWNERS':
+      codeowners === undefined
+        ? codeownersVan(gatesTekst)
+        : codeowners.map((glob) => `${glob} @eigenaar`).join('\n') + '\n',
     '.claude/settings.json': JSON.stringify({ permissions: { ask: vragen.map((glob) => `Edit(${glob})`) } }),
     '.claude/gates.json': gatesTekst,
   };

@@ -6,7 +6,8 @@
 //  3. ADR- en spec-statussen komen uit de vaste woordenlijst; een goedgekeurde of gebouwde spec heeft "Hergebruik en UX".
 //  4. De padtabel `paden` in .claude/gates.json (ADR 0079, spec padtabel Werking 6): samenhang (altijdVragen ⇒ besluit-pr,
 //     schrijven ≥ gate ⇒ niet agent), geen onbekende kolom of waarde, geen `{}`, dubbele of `!`-sleutel, en de vloer (VLOER);
-//     de oude vorm is rood. CODEOWNERS noemt precies de afgeleide gates en jsonGates, de Edit-regels in `ask` van
+//     de oude vorm is rood. CODEOWNERS is gelijk aan de afleiding uit de padtabel voor de eerste handle uit `goedkeurders`
+//     (ADR 0089, scripts/kit/codeowners.mjs; sleutel `docs:spiegel:codeowners`), de Edit-regels in `ask` van
 //     .claude/settings.json zijn precies de afgeleide `altijdVragen` (ADR 0045 punt 9). `onderhoud` heeft de vorm { repository }.
 //  5. `schrijfrecht` van een rol overlapt niet met de afgeleide gates (WS-02), op de uitzonderingen in SCHRIJFRECHT_VRIJ na.
 //  6. Elk AC-id van een gebouwde spec heeft een testbestand met `<namespace>/AC-n`, of met het AC-id samen met de specnaam
@@ -39,6 +40,7 @@ import { acIds } from '../../rails/hooks/lib/document-state.mjs';
 import { adrHerzienViolations } from './adr-herzien.mjs';
 import { adrNumber, duplicateAdrNumbers, invalidAdrNames } from './adr-numbers.mjs';
 import { geheelVanaf, leesMergeConfig, padReden } from './agent-merge.mjs';
+import { CODEOWNERS, codeownersTekst, eersteGoedkeurder, HERSTEL } from './codeowners.mjs';
 import { grensMeldingen, grensViolations, normenMeldingenUitGit, normenUitGit, zonderBasis } from './leesbudget.mjs';
 
 export { normViolations } from './normen.mjs';
@@ -652,22 +654,16 @@ function acViolations(files, read) {
  * @returns {Violation[]}
  */
 function mirrorViolations(files, read) {
-  if (!files.includes('.github/CODEOWNERS') || !files.includes('.claude/settings.json')) return [];
-  const owners = new Set(
-    read('.github/CODEOWNERS')
-      .split('\n')
-      .map((line) => line.trim().split(/\s+/)[0] ?? '')
-      .filter((entry) => entry !== '' && !entry.startsWith('#'))
-      .map((entry) => entry.replace(/^\//, '').replace(/\/$/, '/**')),
-  );
   if (!files.includes('.claude/gates.json')) return [];
   /** @type {unknown} */
   const ruw = JSON.parse(read('.claude/gates.json'));
+  const eigenaars = codeownersViolations(ruw, files.includes(CODEOWNERS) ? read(CODEOWNERS) : null);
+  if (!files.includes(CODEOWNERS) || !files.includes('.claude/settings.json')) return eigenaars;
   const lijsten = lijstenVan(ruw);
   const naam = lijsten?.altijdVragen === undefined ? 'voorReview' : 'altijdVragen';
   const ask = new Set(askEditPaths(read('.claude/settings.json')));
   return [
-    ...(lijsten === null ? [] : gatesViolations(owners, lijsten.gates, veld(ruw, 'jsonGates'))),
+    ...eigenaars,
     ...(lijsten === null ? [] : askViolations(new Set(lijsten.altijdVragen ?? lijsten.voorReview ?? []), naam, ask)),
     ...onderhoudViolations(veld(ruw, 'onderhoud')),
   ];
@@ -822,31 +818,56 @@ function onderhoudViolations(value) {
   }
 }
 
+/** De regels van een CODEOWNERS-tekst zonder lege regels en zonder uitlijning. @param {string} tekst */
+function codeownersRegels(tekst) {
+  return tekst
+    .split('\n')
+    .map((regel) => regel.trim().replace(/\s+/g, ' '))
+    .filter((regel) => regel !== '');
+}
+
 /**
- * CODEOWNERS = de afgeleide gates + jsonGates uit .claude/gates.json (spec padtabel AC-7).
- * @param {ReadonlySet<string>} owners
- * @param {readonly string[]} gates
- * @param {unknown} jsonGates
+ * CODEOWNERS is gelijk aan de afleiding uit de padtabel voor de eerste handle uit `goedkeurders` (ADR 0089, spec
+ * templateregime AC-3): regel voor regel, in dezelfde volgorde (het laatste passende patroon wint), uitlijning telt niet.
+ * In de oude vorm of met een onleesbare `paden` is er geen afleiding; die fout meldt `padenViolations`. Een ontbrekend
+ * bestand en een glob die GitHub anders leest (`codeownersTekst` gooit) zijn ook een melding.
+ * @param {unknown} ruw de geparste gates.json
+ * @param {string | null} tekst de inhoud van CODEOWNERS, of null als het bestand ontbreekt
  * @returns {Violation[]}
  */
-function gatesViolations(owners, gates, jsonGates) {
-  const expected = new Set([
-    ...gates,
-    ...(typeof jsonGates === 'object' && jsonGates !== null ? Object.keys(jsonGates) : []),
-  ]);
+function codeownersViolations(ruw, tekst) {
+  const key = 'docs:spiegel:codeowners';
+  try {
+    if (padenVan(ruw) === null) return [];
+  } catch {
+    return [];
+  }
+  const eigenaar = eersteGoedkeurder(ruw);
+  if (eigenaar === null)
+    return [
+      { key, message: `.claude/gates.json: goedkeurders is leeg; ${CODEOWNERS} is niet af te leiden uit de padtabel` },
+    ];
+  if (tekst === null)
+    return [{ key, message: `${CODEOWNERS} ontbreekt; genereer het uit de padtabel met \`${HERSTEL}\`` }];
+  /** @type {string[]} */
+  let verwacht;
+  try {
+    verwacht = codeownersRegels(codeownersTekst(ruw, eigenaar));
+  } catch (error) {
+    return [
+      { key, message: `${CODEOWNERS} is niet af te leiden: ${error instanceof Error ? error.message : String(error)}` },
+    ];
+  }
+  const staat = codeownersRegels(tekst);
+  const index = verwacht.findIndex((regel, nummer) => regel !== staat[nummer]);
+  const eerste = index === -1 && staat.length > verwacht.length ? verwacht.length : index;
+  if (eerste === -1) return [];
+  const verschil = `verwacht "${verwacht[eerste] ?? '(geen regel)'}", er staat "${staat[eerste] ?? '(geen regel)'}"`;
   return [
-    ...[...expected]
-      .filter((path) => !owners.has(path))
-      .map((path) => ({
-        key: `docs:spiegel:codeowners-gates:${path}`,
-        message: `.claude/gates.json noemt ${path}, CODEOWNERS niet`,
-      })),
-    ...[...owners]
-      .filter((path) => !expected.has(path))
-      .map((path) => ({
-        key: `docs:spiegel:gates:${path}`,
-        message: `CODEOWNERS noemt ${path}, .claude/gates.json niet`,
-      })),
+    {
+      key,
+      message: `${CODEOWNERS} is niet gelijk aan de afleiding uit de padtabel voor @${eigenaar} (eerste verschil: ${verschil}); herstel met \`${HERSTEL}\``,
+    },
   ];
 }
 
@@ -978,11 +999,12 @@ function askEditPaths(text) {
 }
 
 // Uitzonderingen op check 5 (besluit eigenaar, 2026-10-12). Architect en tester schrijven bewust in een gate: specs en ADR's
-// (status `goedgekeurd` bewaakt check-spec-approval) en testpaden (bestaande tests bewaakt het rolhek). Developer en hoofdsessie
+// (status `goedgekeurd` bewaakt check-spec-approval), ook die van de template onder `docs/template/` (spec templateregime
+// AC-10; de rest van `docs/template/**` blijft dicht), en testpaden (bestaande tests bewaakt het rolhek). Developer en hoofdsessie
 // zijn vrijgesteld: voor hen handelt het rolhek gates af met ask/deny (rails/hooks/lib/rolhek.mjs, decideByRole).
 /** @type {Record<string, (config: { testpaden: string[] }) => string[]>} */
 const SCHRIJFRECHT_VRIJ = {
-  architect: () => ['docs/adr/**', 'docs/specs/**'],
+  architect: () => ['docs/adr/**', 'docs/specs/**', 'docs/template/adr/**', 'docs/template/specs/**'],
   tester: (config) => config.testpaden,
 };
 const SCHRIJFRECHT_ALLES = new Set(['developer', 'hoofdsessie']);
