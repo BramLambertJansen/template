@@ -11,10 +11,12 @@ krijgt geen spec. Hergebruik een passende bestaande feature-spec; de feiten hier
 gebouwde op aanvraag met `node scripts/kit/feiten.mjs specs --alle` of in `docs/specs/`. Een ADR is alleen nodig bij de
 bestaande beslisdrempels.
 
-Spec en bouw gaan in één PR (feature-lane, ADR 0062): na de spec-review (stap 7) schrijft de tester de tests en bouwt de
-developer verder op dezelfde branch; de eigenaarmerge is het besluit (ADR 0046). Alleen kritiek werk (ADR 0062 punt 2) bouwt
-pas als de spec met status `goedgekeurd` op main staat. De hoofdsessie coördineert de architect; de route verandert niets aan
-spec-review of eigenaarbesluit. Bindende specs inhoudelijk wijzigen volgt de bestaande besluitroute. Van het regelboek lees je alleen de geraakte hoofdstukken (`node scripts/kit/feiten.mjs hoofdstuk <n>`).
+Wie schrijft (ADR 0090): in een app de architect; in de template de hoofdsessie, de architect op verzoek; bij
+risicowerk stelt de hoofdsessie hem voor aan de eigenaar.
+Spec en bouw gaan in één PR (ADR 0062): na de spec-review (stap 7) schrijft bij risicowerk de tester de tests, anders de
+developer eerst, en bouwt de developer verder op dezelfde branch; de goedkeuring van de eigenaar op de PR is het besluit. In
+een app bouwt kritiek werk pas als de spec met status `goedgekeurd` op main staat (besluit-PR, R-WERK-05). De route verandert
+niets aan spec-review of eigenaarbesluit. Bindende specs inhoudelijk wijzigen volgt de bestaande besluitroute. Van het regelboek lees je alleen de geraakte hoofdstukken (`node scripts/kit/feiten.mjs hoofdstuk <n>`).
 
 Feiten nu:
 
@@ -41,4 +43,4 @@ Stappen:
    - bij een koppeling (skill `nieuwe-koppeling`): elk kenmerk gebouwd volgens `node scripts/kit/feiten.mjs koppelingen`, elke aanroep met de zes velden uit "Koppeling", alleen het app-ADR noemt de partner;
    - geen `⚠ open` bij `goedgekeurd`: los de vraag eerst op met de eigenaar, of geef haar een `Aanbeveling:`.
 7. Laat de reviewer elke spec in spec-modus toetsen (`.claude/agents/reviewer.md`), vóór het bouwen; hij toetst ook of het werk kritiek is.
-8. Commit de spec vóór de eerste code of test (afspraak, ADR 0089 punt 8; geen check meer). Kritiek werk: eigen besluit-PR met alleen de spec, bouwen in een volgende PR (R-WERK-05). Zie `docs/operations/agent-doorloop.md`.
+8. Commit de spec vóór de eerste code of test (afspraak, ADR 0089 punt 8; geen check meer). Kritiek werk in een app: eigen besluit-PR met alleen de spec, bouwen in een volgende PR (R-WERK-05); in de template één PR. Zie `docs/operations/agent-doorloop.md`.

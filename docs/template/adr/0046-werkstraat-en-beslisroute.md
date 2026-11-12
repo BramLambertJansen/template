@@ -15,6 +15,7 @@ Herzien: 2026-11-05 (#541): gewijzigd door [0080](0080-specarchief-en-bouwvorm.m
 AC's met `(nog niet gebouwd)`, en `gebouwd` noemt alleen de PR (`# #<PR>`), zonder gevalideerde SHA
 Herzien: 2026-11-12 (#692): door ADR 0089 punt 1–3, in de template deels: punt 2, vervalt: A4 en de herzieningsroute; blijft: nooit terug naar `voorgesteld`, de strikte statusregel; punt 5, vervalt: de besluit-PR zonder code; blijft: de toegestane overgangen; punt 6, vervalt: de lokale A4-weigering, alleen voor architect en hoofdsessie in de onderhoudsmodus en alleen voor de gevallen uit spec templateregime AC-10; blijft: alleen architect en hoofdsessie schrijven een eigenaarstatus; punt 10, vervalt: daarna mogen alleen statusregels veranderen; blijft: het bouwbewijs; punt 12 en 15 (er komt een derde lane `template` bij)
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 2, 5, 8 en 9, de vorige regel vervalt: geen licht regime en geen lane `template`; zodra de GitHub App bewezen is, verdwijnt `check-document-status` en worden punt 2, 5, 10, 12 en 15 afspraken die de eigenaar met zijn goedkeuring op de PR beslist; punt 6, het rolhek houdt het schrijfrecht per rol en verliest zijn A4-logica in een latere stap (ADR 0089 punt 9); punt 31, wie merget volgt `CODEOWNERS` en de ruleset
+Herzien: 2026-11-12 (#703): punt 1, architect in de template op verzoek; punt 18, model per spec vervalt; geen besluit-PR in de template (ADR 0090 punt 1, 4 en 5)
 
 Vervangt 0025, 0027,
 0030 en 0038; neemt de delen van 0029

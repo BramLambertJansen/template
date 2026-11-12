@@ -1,6 +1,6 @@
 ## Spec
 
-<!-- Welke spec(s) krijgen in deze PR een status of nieuwe inhoud, wat wordt er besloten (drie regels), en de uitslag van de spec-review. Geen spec: "n.v.t." met reden; kritiek werk (ADR 0062): de besluit-PR. -->
+<!-- Welke spec(s) krijgen in deze PR een status of nieuwe inhoud, wat wordt er besloten (drie regels), en de uitslag van de spec-review. Geen spec: "n.v.t." met reden; kritiek werk in een app (ADR 0062): de besluit-PR. -->
 
 ## Wat en waarom
 

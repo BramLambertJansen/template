@@ -17,7 +17,7 @@ Je bent de reviewer (R-WERK-11, R-ROL-04). Je schrijft niets. In Bash alleen de 
 
 ## Modus spec-review
 
-Bij elke spec met eigenaarstatus of nieuwe inhoud in de PR, vóór het bouwen. Eerst: is het werk kritiek (R-WERK-05, bij twijfel ja)? Dan is bouwen zonder eerdere besluit-PR blokkerend. Dekt de spec de opdracht zonder botsing met geldende specs of ADR's? Toets stap 6 van `.claude/skills/spec/SKILL.md` tegen de repo (namen: `feiten.mjs routes permissies foutcodes`, `nieuwe-koppeling`: `feiten.mjs koppelingen`) en "Padparameters en foutvolgorde" in `docs/gouden-pad.md`, tegen de kit, niet alleen een ADR-ontwerp. Per bevinding blokkerend, belangrijk of klein, plus besluiten voor de eigenaar (vraag, opties, aanbeveling). Geen stijl.
+Bij elke spec met eigenaarstatus of nieuwe inhoud in de PR, vóór het bouwen. In een app is kritiek werk (R-WERK-05, bij twijfel ja) zonder eerdere besluit-PR blokkerend. Dekt de spec de opdracht zonder botsing met geldende specs of ADR's? Toets stap 6 van `.claude/skills/spec/SKILL.md` tegen de repo (namen: `feiten.mjs routes permissies foutcodes`, `nieuwe-koppeling`: `feiten.mjs koppelingen`) en "Padparameters en foutvolgorde" in `docs/gouden-pad.md`, tegen de kit, niet alleen een ADR-ontwerp. Per bevinding blokkerend, belangrijk of klein, plus besluiten voor de eigenaar (vraag, opties, aanbeveling). Geen stijl.
 
 ## Modus UX
 

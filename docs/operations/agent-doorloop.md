@@ -246,7 +246,7 @@ Hetzelfde patroon kan per Bash-versie op andere namen passen (#626).
 
 Begin met de taakrelevante secties van `node scripts/kit/feiten.mjs`, bijvoorbeeld `gates specs fase`.
 De hoofdsessie kiest de route: licht alleen voor beperkte fixes binnen bestaand gedrag; anders volledig — framework §8.
-Spec (in de volledige straat door de architect) of ADR krijgt direct de bedoelde status; de eigenaar merget
+Spec (app: architect; template: hoofdsessie, architect op verzoek van de eigenaar of de hoofdsessie; bij risicowerk stelt de hoofdsessie hem voor aan de eigenaar) of ADR krijgt direct de bedoelde status; de eigenaar merget
 (besluit) of sluit de PR (afwijzen). `pnpm docs:status` zet geen eigenaarstatus, alleen `gebouwd` (ADR 0063).
 
 ### Gerichte feedback en één volledige lokale eindgate
@@ -306,9 +306,9 @@ niet of als `voorstel`, de genoemde PR is open op deze branch in deze repository
 
 - **Overige feature-lane (de standaard, ADR 0062):** een of meer specs met een eigenaarstatus (nieuw, volledig of mini, of nieuwe
   inhoud van een goedgekeurde spec) samen met code, tests en docs. Alles mag meewijzigen (ook `CHANGELOG.md`, de roadmap, `scripts/`,
-  `rails/`, overige `src/core`, agentinstructies en gegenereerde bestanden zoals het schema-snapshot) behalve een ADR, een kritiek pad
-  (`besluit-pr` of `altijdVragen` in de padtabel, onder meer `src/core/api/auth`, `src/core/api/db`, `db/init`, `rails/hooks/**`, elk ADR en de besluit-, status- en mergescripts),
-  een verwijderde bestaande test en een gewijzigde of verwijderde migratie. Een gewijzigde bestaande JS/TS-test staat met reden in de PR en mag geen gevallen weghalen of skippen; een gewijzigde pgTAP-test valt erbuiten.
+  `rails/`, overige `src/core`, agentinstructies en gegenereerde bestanden zoals het schema-snapshot), in de template ook een ADR of kritiek pad (ADR 0090 punt 4;
+  `besluit-pr` of `altijdVragen` in de padtabel, onder meer `src/core/api/auth`, `src/core/api/db`, `db/init`, `rails/hooks/**`, elk ADR en de besluit-, status- en mergescripts);
+  in elk geval niet: een verwijderde bestaande test, een gewijzigde of verwijderde migratie. Een gewijzigde bestaande JS/TS-test staat met reden in de PR en mag geen gevallen weghalen of skippen; een gewijzigde pgTAP-test valt erbuiten.
   De eerste commit die een besluitspec raakt, staat vóór de eerste commit met een bestand buiten `docs/` (spec-review vóór het bouwen).
   Een PR bevat hoogstens één nieuwe migratie. Die maakt precies één owner-tabel in `public` volgens `pnpm new:resource`:
   vaste id-, owner_id- en created_at-kolommen, ENABLE en FORCE RLS, vier afzonderlijke eigenaarpolicies met
@@ -320,7 +320,7 @@ niet of als `voorstel`, de genoemde PR is open op deze branch in deze repository
   NO FORCE → één rij voor de nieuwe tabel → FORCE; losse of herhaalde toggles worden geweigerd. De mini-spec heeft de kop
   "Datawijzigingen (met grants)". Een geneste `CLAUDE.md` of `AGENTS.md` valt eruit. Een onbekend pad buiten `gates` en buiten `src/`, `docs/` en `db/` (zoals `.vscode/` of `.mcp.json`) valt eruit. CODEOWNERS
   blijft gelden voor elk pad van een code-eigenaar in de PR. Het bereik volgt ADR 0062.
-- **Besluit-PR (framework-lane):** een of meer ADR's en specs die een eigenaarstatus krijgen (ook `vervangen door NNNN` of `vervallen`, of nieuwe inhoud van een goedgekeurde spec), zonder `.claude/decisions.json`, code of andere bestanden: alleen documenten in `docs/adr/` en `docs/specs/` die zelf een besluit krijgen, ook geen index of ander document. Bouwen volgt in een volgende PR. Dit is de route voor kritiek werk (ADR 0062 punt 2) en voor wie een besluit los wil voorleggen.
+- **Besluit-PR (framework-lane):** een of meer ADR's en specs die een eigenaarstatus krijgen (ook `vervangen door NNNN` of `vervallen`, of nieuwe inhoud van een goedgekeurde spec), zonder `.claude/decisions.json`, code of andere bestanden: alleen documenten in `docs/adr/` en `docs/specs/` die zelf een besluit krijgen, ook geen index of ander document. Bouwen volgt in een volgende PR. In een app is dit de route voor kritiek werk (ADR 0062 punt 2); in de template alleen voor wie een besluit los wil voorleggen (ADR 0090 punt 4).
 - Past de PR in geen van beide, dan is dat een bevinding van de reviewer; een besluitrecord bestaat niet meer (ADR 0063).
 
 ## Ontwikkelen en runnerchecks
@@ -567,7 +567,7 @@ vervallen spec krijgt `status: vervallen` of wordt verwijderd; er is geen archie
 
 Zonder `gh`-authenticatie kan `docs:status … --pr` PR n niet ophalen. Meld het en laat de eigenaar of een sessie met `gh`-auth het draaien.
 
-`vervallen` of `vervangen door NNNN` schrijft de architect of hoofdsessie in een besluit-PR; de merge door de eigenaar beslist.
+`vervallen` of `vervangen door NNNN` schrijft de architect of hoofdsessie in een app in een besluit-PR, in de template in elke PR; de merge door de eigenaar beslist.
 
 ## Invoering en runtime
 
@@ -603,15 +603,15 @@ goedkeuren: een eigen PR van de eigenaar op zo'n pad merget alleen met de bypass
 
 ## Correctie aan een geaccepteerd ADR
 
-Een geaccepteerd ADR herschrijven of een ADR met een eigenaarstatus op main verwijderen mag alleen in een besluit-PR (alleen `docs/adr/`,
+Een geaccepteerd ADR herschrijven of een ADR met een eigenaarstatus op main verwijderen mag in de template in elke PR en in een app alleen in een besluit-PR (alleen `docs/adr/`,
 `docs/specs/`, `docs/template/` en het record), door architect of hoofdsessie. Een vervallen of vervangen ADR verandert niet van inhoud, en geen ADR gaat terug
 naar `voorgesteld` of wordt hernoemd: het rolhek (dat vergelijkt met main) weigert dat; op GitHub beslist de goedkeuring van de eigenaar (A4, ADR 0046 punt 2). Kies het spoor naar wat
 er verandert ([ADR 0045](../template/adr/0045-railwerk.md) punt 21):
 
-1. **Normatief** (wat besloten is): herschrijf het bestaande ADR in een besluit-PR, met een nieuwe herzieningsregel
+1. **Normatief** (wat besloten is): herschrijf het bestaande ADR in een app in een besluit-PR, in de template in elke PR, met een nieuwe herzieningsregel
    `Herzien: JJJJ-MM-DD (#NNN): wat` (bestaande datum, het PR-nummer, wat er verandert; oude regels blijven staan). Een nieuw ADR
    alleen voor een onderwerp dat in geen bestaand ADR past; `vervangen door NNNN` op het oude mag in dezelfde PR, zonder record.
-   Een oud ADR verwijderen mag in een besluit-PR nadat een reviewer heeft bevestigd dat de inhoud volledig in het nieuwe staat.
+   Een oud ADR verwijderen mag in een app in een besluit-PR, in de template in elke PR, nadat een reviewer heeft bevestigd dat de inhoud volledig in het nieuwe staat.
    Afspraak, getoetst door de reviewer (ADR 0089 punt 8): een nieuwe herzieningsregel noemt deze PR, een verwijderd nummer komt nooit terug, en na een
    verwijdering wijst elke `vervangen door NNNN` nog naar een bestaand ADR; `docs/adr/archief/` telt daarbij mee als doel en
    als verwijzer, en een nummer dat alleen nog in het archief staat blijft bezet.
