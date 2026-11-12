@@ -6,6 +6,8 @@ Herzien: 2026-11-12 (#696): geen templateregime meer; de agent krijgt een GitHub
 besluiten, de eigen documentbewaking verdwijnt en template-documenten verhuizen naar `docs/template/` (eigenaarbesluiten
 2026-11-12)
 
+Herzien: 2026-11-12 (#698): het weghalen uit punt 5 wacht niet op het bewijs van de identiteit, en er komt geen tokenscript in de repo (punt 2, 5, 9 en 10; eigenaarbesluiten 2026-11-12)
+
 Wijzigt [0039](0039-stack-provider-neutraal-en-toolchain.md) punt 8, [0040](0040-template-app-en-grens-core-app.md) punt 4, 8,
 16 en 17, [0045](0045-railwerk.md) punt 10, 16, 17, 18, 19, 20, 21, 22 en 24, [0046](0046-werkstraat-en-beslisroute.md) punt
 2, 5, 6, 10, 12, 15 en 31, [0053](0053-adr-archief.md) punt 1, 2, 3, 4 en 5, [0054](0054-gebouwd-in-de-bouw-pr.md) punt 2, 3 en
@@ -36,8 +38,10 @@ agentomgeving is.
 
 1. **Eigen plek.** Template-ADR's staan in `docs/template/adr/`, template-specs in `docs/template/specs/`, zonder archief: git
    is de historie. `docs/adr/` en `docs/specs/` zijn van de app; in de template staan daar alleen de sjablonen.
-2. **GitHub bewaakt wie beslist.** De agent pusht en opent PR's als GitHub App, met een kortlevend installatietoken voor één
-   repository, zonder het token van de eigenaar in zijn omgeving. Rechten van de App: contents, issues en pull requests
+2. **GitHub bewaakt wie beslist.** De agent pusht en opent PR's als GitHub App, met een installatietoken van hoogstens een
+   uur dat de eigenaar aanmaakt met een commando buiten de repo; een tokenscript met een ververs-proces komt er niet, want dat
+   is eigen machinerie die onderhoud vraagt. Het token van de eigenaar staat nog in de agentomgeving: tot dat weg is, blijven
+   de identiteitsregels van het rolhek. Rechten van de App: contents, issues en pull requests
    schrijven; actions, checks, statuses en metadata lezen; geen workflows en geen administration. De ruleset eist review van een
    code-eigenaar met nul vereiste goedkeuringen, een nieuwe push trekt een goedkeuring in, en de verplichte checks zijn precies
    `requiredChecks` uit `.claude/decisions.json` (de vier die nu ontbreken komen erbij). Pas als het token van de eigenaar uit
@@ -52,10 +56,11 @@ agentomgeving is.
 4. **Wat blijft:** de CI-checks op code; `check-core`, met `docs/template` als tweede zone naast `src/core`; `leerpunt-bewijs`;
    in `check-docs` de links, statuswoorden, unieke nummers per map, kopnummer gelijk aan bestandsnummer, AC→test en de
    kopcontroles voor specs; de padtabel; de sandbox.
-5. **Wat verdwijnt**, in template en app, pas als punt 2 inclusief de identiteit bewezen is: `check-document-status` (A4 met de
+5. **Wat verdwijnt**, in template en app, nu de proef slaagde en de ruleset actief is: `check-document-status` (A4 met de
    herzieningsroute, archief, levende spec en AC-id's, bouwbewijs, lanes, besluit-PR), in `check-docs` de herzieningscheck
    (`adrHerzienViolations`) en de archiefnaamregel, de diff-guard, de job `agent-merge`, de inhoudstoets van `pnpm pr:merge` en
-   `document-status` in `requiredChecks`.
+   `document-status` in `requiredChecks`. Dit hangt niet af van de identiteit: geen van deze checks voegde naast het rolhek
+   een grens toe tegen een agent die als de eigenaar handelt, en het rolhek blijft tot punt 9.
 6. **Nummers per map.** De reeks 0001–0099 / vanaf 0100 vervalt. Een kaal nummer verwijst naar de eigen map; template-documenten
    buiten de ADR-mappen verwijzen naar template-ADR's. Een app-document noemt een template-ADR in tekst, zonder link.
 7. **Verhuizing in een eigen PR**, na punt 5: documenten verplaatsen, archieven verwijderen, links bijwerken. Voorwaarde: er
@@ -64,9 +69,10 @@ agentomgeving is.
    herzieningsregel, routes en permissies alleen via `src/shared/contracts/` en `permissions.ts` (R-WERK-09, getoetst door de
    reviewer). Het besluit is de goedkeuring van de eigenaar op de PR.
 9. **Later, in een eigen stap:** de effecttoets en de identiteitsregels van het rolhek verdwijnen; het rolhek krimpt tot het
-   schrijfrecht per rol uit de padtabel.
-10. **Volgorde:** deze besluit-PR; bouw van punt 2 en 3 en activering; bewijs van de identiteit, daarna de bypass; weghalen van
-    punt 5; verhuizing; punt 9.
+   schrijfrecht per rol uit de padtabel. De identiteitsregels en de bypass wachten tot het token van de eigenaar uit de
+   agentomgeving is.
+10. **Volgorde:** de besluit-PR (#696); bouw van punt 2 en 3 en activering (#697); weghalen van punt 5; verhuizing; daarna de
+    identiteit, de bypass en punt 9.
 
 ## Alternatieven
 
@@ -76,10 +82,10 @@ agentomgeving is.
 
 ## Gevolgen
 
-- Na punt 5 kan de agent ook met `gh pr merge` mergen; `pnpm pr:merge` is gemak, geen grens. Agent-merge (0069) wordt: geen pad
+- Na punt 9 kan de agent ook met `gh pr merge` mergen; `pnpm pr:merge` is gemak, geen grens. Agent-merge (0069) wordt: geen pad
   van een code-eigenaar en checks groen; omvanggrens, binaire-bestandentoets en reviewcommentaar op de head vervallen als check,
-  de review blijft een werkafspraak. De noodschakelaar `merge: eigenaar` vervalt: de eigenaar zet zo nodig één vereiste
-  goedkeuring. De eis dat de PR de kop van main bevat, vervalt; de ruleset eist geen bijgewerkte branch. Aanvaard risico: een
+  de review blijft een werkafspraak. De noodschakelaar `merge: eigenaar` vervalt met punt 9, omdat het rolhek hem tot dan
+  leest; daarna zet de eigenaar zo nodig één vereiste goedkeuring. De eis dat de PR de kop van main bevat, vervalt; de ruleset eist geen bijgewerkte branch. Aanvaard risico: een
   PR die achterloopt kan main na de merge rood maken; de CI op main vangt dat (R-WERK-12).
 - `contents: write` laat de App ook tags pushen; een app met release via tag krijgt een tag-ruleset. Buiten Claude Code is er
   geen sandbox.
