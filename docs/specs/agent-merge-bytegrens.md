@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #482
+status: vervallen
 namespace: agent-merge-bytegrens
 sjabloon: mini
 ---

@@ -1,28 +1,15 @@
-// `pnpm pr:merge <nr>` (ADR 0069 punt 3, spec agent-merge-niet-kritiek AC-3): de enige route waarlangs de hoofdsessie een PR
-// zelf merget. Alles wordt via de REST-API van GitHub gelezen, niet uit de lokale `origin/main`; elke ontbrekende voorwaarde
-// geeft een eigen regel en exit 1 zonder schrijfactie. Pas als alles klopt: squash-merge met de head-SHA als voorwaarde.
-// Onopgeloste review-threads houdt de ruleset op main tegen (`required_review_thread_resolution`); REST kent hun stand niet.
-// Omvang en steekproefregel: spec agent-merge-niet-kritiek AC-7 en AC-9; bytegrens: spec agent-merge-bytegrens AC-4.
+// `pnpm pr:merge <nr>` (ADR 0069 punt 3, ADR 0089 punt 5): de enige route waarlangs de hoofdsessie een PR zelf merget. Alles
+// wordt via de REST-API van GitHub gelezen, niet uit de lokale `origin/main`; elke ontbrekende voorwaarde geeft een eigen
+// regel en exit 1 zonder schrijfactie. Pas als alles klopt: squash-merge met de head-SHA als voorwaarde. Geen inhoudstoets:
+// wie een pad goedkeurt, bewaakt de ruleset op main met `.github/CODEOWNERS` (ADR 0089); blijft tot punt 9 van dat ADR: de
+// effecttoets, de modus `merge` uit `.claude/gates.json` op main, de verplichte checks op de head en een groene main. De leerpuntreden blijft (ADR 0078 punt 2).
 import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
 import { gitText, readAuthority } from '../../rails/hooks/lib/authority-context.mjs';
-import { expectedCheckAppId } from '../../rails/hooks/lib/built-evidence.mjs';
-import {
-  BYTES_ONLEESBAAR,
-  OMVANG_ONLEESBAAR,
-  agentMergeFouten,
-  binairReden,
-  leesAgentMerge,
-  leesModus,
-  patchBytes,
-  teGroot,
-  teGrootBytes,
-} from './agent-merge.mjs';
 import { parseCheckRun } from './github-evidence.mjs';
 import { leerpuntMergeRedenen } from './leerpunt.mjs';
 import { checkProgress, verifyEffect } from './pr-verify.mjs';
 
-const GUARD = '.github/workflows/guard.yml';
 const SHA = /^[0-9a-f]{40}$/;
 // `pnpm run` zet `node_modules/.bin` vooraan in PATH: een daar geplante `gh` mag de GitHub-antwoorden niet leveren.
 const ZONDER_BIN = {
@@ -75,6 +62,11 @@ function bestandOp(api, { repo, sha, bestand }) {
   }
 }
 
+/** `merge` uit .claude/gates.json; ontbrekend of onbekend telt als `eigenaar` (ADR 0069 punt 3). @param {unknown} ruw */
+export function leesModus(ruw) {
+  return veld(ruw, 'merge') === 'niet-kritiek' ? 'niet-kritiek' : 'eigenaar';
+}
+
 /** @param {unknown} decisions @returns {string[]} */
 function requiredChecks(decisions) {
   const lijst = veld(decisions, 'requiredChecks');
@@ -125,110 +117,8 @@ export function mainRedenen(ruw, vereist) {
 }
 
 /**
- * Een run hoort bij deze PR als `pull_requests` haar nummer bevat; GitHub laat de lijst bij `pull_request_target` soms leeg
- * (gezien op #445), dan beslissen pad, event, app en head. Een lijst met alleen andere nummers telt niet.
- * @param {unknown} prs @param {number} nummer
- */
-function hoortBij(prs, nummer) {
-  const lijst = Array.isArray(prs) ? prs : [];
-  return lijst.length === 0 || lijst.some((pr) => veld(pr, 'number') === nummer);
-}
-
-/**
- * De job `agent-merge` uit guard.yml (pull_request_target) voor déze PR is geslaagd op de head; een gelijknamige check uit een
- * andere workflow, een ander event of een run voor een andere PR met dezelfde head telt niet.
- * @param {Api} api @param {{ repo: string, checks: unknown[], head: string, nummer: number }} doel
- */
-export function guardRedenen(api, { repo, checks, head, nummer }) {
-  const kandidaten = checks
-    .filter((raw) => tekst(veld(raw, 'name')) === 'agent-merge' && tekst(veld(raw, 'head_sha')) === head)
-    .filter((raw) => pad(raw, 'app', 'id') === expectedCheckAppId('agent-merge'))
-    .filter((raw) => {
-      const suite = pad(raw, 'check_suite', 'id');
-      if (typeof suite !== 'number') return false;
-      const runs = veld(api(`repos/${repo}/actions/runs?check_suite_id=${String(suite)}`), 'workflow_runs');
-      return (
-        Array.isArray(runs) &&
-        runs.some(
-          (run) =>
-            veld(run, 'path') === GUARD &&
-            veld(run, 'event') === 'pull_request_target' &&
-            hoortBij(veld(run, 'pull_requests'), nummer),
-        )
-      );
-    })
-    .toSorted((a, b) => Number(veld(b, 'id')) - Number(veld(a, 'id')));
-  const laatste = kandidaten[0];
-  if (laatste === undefined)
-    return ['geen job agent-merge uit guard.yml (pull_request_target) op de head: oordeel nee of nog bezig'];
-  return veld(laatste, 'conclusion') === 'success'
-    ? []
-    : [`agent-merge is ${tekst(veld(laatste, 'conclusion')) || 'nog bezig'}`];
-}
-
-/** Een PR-commentaar `Review <head>: geen blokkerende bevindingen` (ADR 0069: een afspraak). @param {unknown[]} comments @param {string} head */
-export function reviewRedenen(comments, head) {
-  const regel = `Review ${head}: geen blokkerende bevindingen`;
-  return comments.some((c) =>
-    tekst(veld(c, 'body'))
-      .split('\n')
-      .some((r) => r.trim() === regel),
-  )
-    ? []
-    : [`geen commentaar "${regel}" (verse review op deze head)`];
-}
-
-/**
- * Omvang via REST (spec agent-merge-niet-kritiek AC-9): `additions + deletions` uit `pulls/<nr>` hoogstens `maxRegels`, en elk
- * bestand uit `pulls/<nr>/files` heeft een `patch`, behalve een zuivere hernoeming (`renamed`, `changes: 0`). Zonder `patch`
- * zijn: een binair bestand, een nieuw of verwijderd leeg bestand, een diff die GitHub te groot vindt en een wijziging van
- * alleen de bestandsmodus. Alle worden geweigerd met de letterlijke spectekst `binairReden` (faalt dicht), ook als het
- * bestand niet binair is; de diff-guard geeft bij het lege bestand en de moduswijziging wel `ja` (numstat `0 0`). Een
- * hernoemde binary, zuiver of ook gewijzigd, lijkt hier een zuivere hernoeming en komt door; die vangt de job `agent-merge`
- * (numstat `-`, `nee`).
- * Bytes (spec agent-merge-bytegrens AC-4): zie `bytesRedenen`.
- * @param {unknown} pull @param {unknown[]} files @param {{ maxRegels: number, maxBytes: number }} grenzen
- */
-export function omvangRedenen(pull, files, { maxRegels, maxBytes }) {
-  const [erbij, eraf] = [veld(pull, 'additions'), veld(pull, 'deletions')];
-  const regels = Number.isInteger(erbij) && Number.isInteger(eraf) ? Number(erbij) + Number(eraf) : Number.NaN;
-  const zonderPatch = files
-    .filter((f) => typeof veld(f, 'patch') !== 'string')
-    .filter((f) => !(veld(f, 'status') === 'renamed' && veld(f, 'changes') === 0))
-    .map((f) => binairReden(tekst(veld(f, 'filename'))));
-  const bytes = bytesRedenen(regels, files, maxBytes);
-  if (!(regels >= 0)) return [OMVANG_ONLEESBAAR, ...bytes, ...zonderPatch];
-  return [...(regels > maxRegels ? [teGroot(regels, maxRegels)] : []), ...bytes, ...zonderPatch];
-}
-
-/**
- * Per bestand met `patch`: bytes via `patchBytes()`, en het aantal `+`- en `-`-regels moet gelijk zijn aan `additions` en
- * `deletions` van dat bestand; de som van alle getelde regels moet gelijk zijn aan `regels` (additions + deletions van de
- * PR). Wijkt iets af, bijvoorbeeld een afgekapte patch, dan de onleesbaar-melding (faalt dicht). Een bestand zonder patch
- * telt hier niet en heeft zijn eigen reden in `omvangRedenen`.
- * @param {number} regels @param {unknown[]} files @param {number} maxBytes
- */
-function bytesRedenen(regels, files, maxBytes) {
-  let [bytes, som, klopt] = [0, 0, true];
-  for (const f of files) {
-    const patch = veld(f, 'patch');
-    if (typeof patch !== 'string') continue;
-    const lijnen = patch.split('\n');
-    const erbij = lijnen.filter((r) => r.startsWith('+')).length;
-    const eraf = lijnen.filter((r) => r.startsWith('-')).length;
-    klopt &&= veld(f, 'additions') === erbij && veld(f, 'deletions') === eraf;
-    som += erbij + eraf;
-    bytes += patchBytes(patch);
-  }
-  if (!klopt || som !== regels) return [BYTES_ONLEESBAAR];
-  return bytes > maxBytes ? [teGrootBytes(bytes, maxBytes)] : [];
-}
-
-/**
- * Alle voorwaarden uit ADR 0069 punt 3; geen redenen betekent mergen. Is `agentMerge`
- * op main onleesbaar (AC-3), dan één reden per fout (`agentMergeFouten`): de omvangreden `OMVANG_ONLEESBAAR` bij een
- * ongeldige `maxRegels`, `BYTES_ONLEESBAAR` bij een ongeldige `maxBytes`, "agentMerge ontbreekt of is onleesbaar" bij een ontbrekend blok of een ongeldige lijst,
- * en de fout van de padtabellezer bij `paden` naast de oude lijsten (spec padtabel AC-5): nooit een crash, nooit een merge.
+ * De voorwaarden die na ADR 0089 punt 5 blijven; geen redenen betekent mergen. Een onleesbare of ontbrekende modus op main
+ * telt als `eigenaar`: nooit een crash, nooit een merge.
  * @param {Api} api @param {{ repo: string, nummer: number, head: string }} doel
  * @returns {{ redenen: string[] }}
  */
@@ -239,33 +129,23 @@ export function beoordeelMerge(api, { repo, nummer, head }) {
   const gates = bestandOp(api, { repo, sha: mainSha, bestand: '.claude/gates.json' });
   if (leesModus(gates) !== 'niet-kritiek')
     return { redenen: ['de modus op main is niet "niet-kritiek": de eigenaar merget'] };
-  const agentMerge = leesAgentMerge(gates);
-  if (agentMerge === null) return { redenen: agentMergeFouten(gates) };
   const vereist = requiredChecks(bestandOp(api, { repo, sha: mainSha, bestand: '.claude/decisions.json' }));
-  const checks = alle(api, `repos/${repo}/commits/${head}/check-runs`, 'check_runs');
-  const comments = alle(api, `repos/${repo}/issues/${String(nummer)}/comments`);
   const pull = api(`repos/${repo}/pulls/${String(nummer)}`);
   const redenen = [
     ...prRedenen(pull, { repo, head }),
-    ...omvangRedenen(pull, alle(api, `repos/${repo}/pulls/${String(nummer)}/files`), agentMerge),
-    ...(veld(api(`repos/${repo}/compare/${mainSha}...${head}`), 'behind_by') === 0
-      ? []
-      : ['de PR bevat de kop van main niet: eerst git merge origin/main']),
-    ...checkRedenen(checks, { names: vereist, sha: head }),
-    ...guardRedenen(api, { repo, checks, head, nummer }),
+    ...checkRedenen(alle(api, `repos/${repo}/commits/${head}/check-runs`, 'check_runs'), { names: vereist, sha: head }),
     ...mainRedenen(alle(api, `repos/${repo}/commits/${mainSha}/check-runs`, 'check_runs'), {
       names: vereist,
       sha: mainSha,
     }),
-    ...reviewRedenen(comments, head),
-    // Leest de beschrijving op het moment van mergen: een later gewijzigd bewijs glipt zo niet langs de eigenaar, ook
-    // als het oordeel van de diff-guard (die niet op `edited` draait) nog `ja` was (ADR 0078 punt 1, leerlus-bewijs AC-4).
+    // Leest de beschrijving op het moment van mergen: `geen test:` of `meting:` in de sectie Leerpunt merget de eigenaar
+    // (ADR 0078 punt 2, leerlus-bewijs AC-4).
     ...leerpuntMergeRedenen(tekst(veld(pull, 'body'))).map((reden) => `${reden}: de eigenaar merget`),
   ];
   return { redenen };
 }
 
-/** Alle voorwaarden uit ADR 0069 punt 3; een lege lijst betekent mergen. @param {Api} api @param {{ repo: string, nummer: number, head: string }} doel */
+/** De voorwaarden van `beoordeelMerge`; een lege lijst betekent mergen. @param {Api} api @param {{ repo: string, nummer: number, head: string }} doel */
 export function voorwaarden(api, doel) {
   return beoordeelMerge(api, doel).redenen;
 }

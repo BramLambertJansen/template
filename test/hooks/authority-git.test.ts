@@ -12,7 +12,6 @@ const SPEC = 'docs/specs/example.md';
 const SOURCE = 'src/core/web/ui/example.tsx';
 const BODY = '---\nstatus: voorstel\nnamespace: example\n---\n\n# Voorbeeld\n\n## Hergebruik en UX\n\nBestaande kit.\n';
 const SCRIPT = path.resolve('scripts/kit/document-status.mjs');
-const CHECKER = path.resolve('scripts/kit/check-document-status.mjs');
 const HOOK = path.resolve('rails/hooks/rolhek.mjs');
 const CONFIG = readFileSync('.claude/gates.json', 'utf8');
 const directories: string[] = [];
@@ -71,21 +70,6 @@ function approve(root: string): string {
     cwd: root,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
-  });
-}
-
-function check(context: { root: string; base: string }): string {
-  return execFileSync(process.execPath, [CHECKER], {
-    cwd: context.root,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-    env: {
-      ...process.env,
-      BASE_SHA: context.base,
-      HEAD_SHA: git(context.root, ['rev-parse', 'HEAD']),
-      HEAD_REF: 'feat/example',
-      REPO: 'BramLambertJansen/template',
-    },
   });
 }
 
@@ -203,27 +187,6 @@ describe('taakmandaat tegen echte git-objecten', () => {
     // Controle: het ontbreken van de basis is de oorzaak; met de basis terug is er weer een authority.
     git(root, ['update-ref', 'refs/remotes/origin/main', base]);
     expect(readAuthority({ root })).not.toBeNull();
-  });
-
-  // AC-14/AC-15: de taakscope bestaat niet meer; de check slaagt voor code bij een record op main zonder mandaat- of
-  // taakscopetekst. De scope-uitbreiding via de PR-registry (tweede helft van de oude test) is vervallen met het mandaat.
-  test('de CI-check slaagt voor een codewijziging bij een record op main, zonder mandaat- of taakscopetekst', () => {
-    const context = fixture();
-    write(context.root, SOURCE, 'export const version = 2;\n');
-    commit(context.root);
-    const uitvoer = check(context);
-    expect(uitvoer).toContain('document-status:');
-    expect(uitvoer).not.toMatch(/manda+te?|taakscope/i);
-  });
-
-  // GEWIJZIGD (ADR 0046 punt 7): inhoud van een goedgekeurde spec wijzigen mag in een besluit-PR zonder code; het record
-  // (--path-mandaat) vervalt daardoor. Code onder dat mandaat in dezelfde PR blijft geweigerd tot er een nieuw record is.
-  // AC-14: het tweede deel (code onder het vervallen mandaat faalt) is vervallen met het mandaat; `approve` (goedgekeurd) wordt nu altijd geweigerd.
-  test('de CI-check laat inhoudswijziging van een spec toe zonder code', () => {
-    const context = fixture();
-    write(context.root, SPEC, readFileSync(path.join(context.root, SPEC), 'utf8') + '\nNieuw gedrag.\n');
-    commit(context.root);
-    expect(check(context)).toContain('gecontroleerd');
   });
 });
 

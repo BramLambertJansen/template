@@ -1,33 +1,33 @@
 import { describe, expect, test } from 'vitest';
-import { loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
-import { AGENT_MERGE_ONLEESBAAR, agentMergeFouten, leesAgentMerge } from '../../scripts/kit/agent-merge.mjs';
-import { agentMerge, leesConfig } from '../../scripts/kit/diff-guard.mjs';
 import { beoordeelMerge } from '../../scripts/kit/pr-merge.mjs';
-import { OUD, nieuw, object } from '../rails/padtabel-kit';
+import { OUD, nieuw } from '../rails/padtabel-kit';
 
-// padtabel/AC-5: `pr:merge` en de diff-guard lezen de `gates.json` van main in de nieuwe vorm (a) en de oude vorm van
-// 30cc352 (b); beide vormen tegelijk (c) faalt dicht zonder crash. Nep-API zoals test/scripts/pr-merge.test.ts.
+// padtabel/AC-5: `pr:merge` leest de `gates.json` van main in de nieuwe vorm (a) en de oude vorm van 30cc352 (b).
+// Nep-API zoals test/scripts/pr-merge.test.ts.
+// GEWIJZIGD (templateregime AC-7, ADR 0089 punt 5): `pr:merge` leest alleen nog de modus `merge`, niet meer het blok
+// agentMerge of de padtabel. Verwijderd: de gevallen over `leesAgentMerge`, `agentMergeFouten`, maxRegels, maxBytes en het
+// padoordeel van de diff-guard, en "(c) paden naast gates faalt dicht" (dat was de lezer van de inhoudstoets; de samenhang
+// van gates.json toetst check-docs in CI). De wereld heeft geen bestandenlijst, compare, job agent-merge of review meer.
 const REPO = 'BramLambertJansen/template';
 const HEAD = 'a'.repeat(40);
 const MAIN = 'b'.repeat(40);
 const ACTIONS = 15368;
-const VEREIST = ['gate:fast', 'document-status'];
+const VEREIST = ['gate:fast', 'check-core'];
 const GATES = `repos/${REPO}/contents/.claude/gates.json?ref=${MAIN}`;
 const b64 = (waarde: unknown) => Buffer.from(JSON.stringify(waarde)).toString('base64');
 
 type Wereld = Record<string, unknown>;
 
-const check = (name: string, sha: string, extra: Record<string, unknown> = {}) => ({
+const check = (name: string, sha: string) => ({
   id: 1,
   name,
   head_sha: sha,
   status: 'completed',
   conclusion: 'success',
   app: { id: ACTIONS },
-  ...extra,
 });
 
-function wereld(gates: unknown, regels = 12): Wereld {
+function wereld(gates: unknown): Wereld {
   return {
     [`repos/${REPO}/branches/main`]: { commit: { sha: MAIN } },
     [GATES]: { content: b64(gates) },
@@ -37,37 +37,9 @@ function wereld(gates: unknown, regels = 12): Wereld {
       draft: false,
       base: { ref: 'main' },
       head: { sha: HEAD, repo: { full_name: REPO } },
-      additions: regels - 2,
-      deletions: 2,
     },
-    [`repos/${REPO}/pulls/7/files`]: [
-      {
-        filename: 'src/web/x.ts',
-        status: 'modified',
-        additions: regels - 2,
-        deletions: 2,
-        changes: regels,
-        patch: ['@@ -1,2 +1,10 @@', '-a', '-b', ...Array.from({ length: regels - 2 }, (_, i) => `+r${String(i)}`)].join(
-          '\n',
-        ),
-      },
-    ],
-    [`repos/${REPO}/compare/${MAIN}...${HEAD}`]: { behind_by: 0 },
-    [`repos/${REPO}/commits/${HEAD}/check-runs`]: {
-      check_runs: [
-        ...VEREIST.map((n) => check(n, HEAD)),
-        check('agent-merge', HEAD, { id: 9, check_suite: { id: 55 } }),
-      ],
-    },
-    [`repos/${REPO}/actions/runs?check_suite_id=55`]: {
-      workflow_runs: [
-        { path: '.github/workflows/guard.yml', event: 'pull_request_target', pull_requests: [{ number: 7 }] },
-      ],
-    },
+    [`repos/${REPO}/commits/${HEAD}/check-runs`]: { check_runs: VEREIST.map((n) => check(n, HEAD)) },
     [`repos/${REPO}/commits/${MAIN}/check-runs`]: { check_runs: [check('gate:fast', MAIN)] },
-    [`repos/${REPO}/issues/7/comments`]: [
-      { user: { login: 'BramLambertJansen' }, body: `Review ${HEAD}: geen blokkerende bevindingen` },
-    ],
   };
 }
 
@@ -81,83 +53,17 @@ function api(w: Wereld) {
 
 const redenen = (w: Wereld) => beoordeelMerge(api(w), { repo: REPO, nummer: 7, head: HEAD }).redenen;
 
-const NIEUW = nieuw();
-const BEIDE = { ...nieuw(), gates: ['src/core/**'] };
 const VORMEN: [string, Record<string, unknown>][] = [
-  ['(a) nieuwe vorm', NIEUW],
+  ['(a) nieuwe vorm', nieuw()],
   ['(b) oude vorm van 30cc352', OUD.ruw],
 ];
 
-const OORDEEL = {
-  uitslag: 'groen' as const,
-  redenen: [],
-  geraakt: { gates: [], tests: [], json: [] },
-  risico: { migraties: [], permissies: [], dependencies: [], routes: [] },
-};
-
-function pr(paden: string[]) {
-  return {
-    wijzigingen: paden.map((pad) => ({ status: 'M', pad })),
-    json: {},
-    reviews: [],
-    auteur: 'BramLambertJansen',
-    headSha: HEAD,
-    regels: 2,
-    binair: [],
-    bytes: 10,
-  };
-}
-
-describe('padtabel/AC-5 pr:merge leest agentMerge uit main in beide vormen', () => {
-  test.each(VORMEN)(
-    '%s: leesAgentMerge en agentMergeFouten zonder "ontbreekt of is onleesbaar" (padtabel/AC-5)',
-    (_n, ruw) => {
-      expect(leesAgentMerge(ruw)).not.toBeNull();
-      expect(agentMergeFouten(ruw)).not.toContain(AGENT_MERGE_ONLEESBAAR);
-      expect(agentMergeFouten(ruw)).toEqual([]);
-    },
-  );
-
+describe('padtabel/AC-5 pr:merge leest de modus uit main in beide vormen', () => {
   test.each(VORMEN)('%s: beoordeelMerge merget een geldige PR (padtabel/AC-5)', (_n, ruw) => {
     expect(redenen(wereld(ruw))).toEqual([]);
   });
 
-  test.each(VORMEN)('%s: beoordeelMerge gebruikt maxRegels uit het blok (padtabel/AC-5)', (_n, ruw) => {
-    const blok = { ...object(ruw['agentMerge']), maxRegels: 5 };
-    expect(redenen(wereld({ ...ruw, agentMerge: blok })).join('\n')).toMatch(
-      /PR te groot.*grens 5 \(agentMerge\.maxRegels\)/,
-    );
-  });
-
-  test.each(VORMEN)('%s: beoordeelMerge gebruikt maxBytes uit het blok (padtabel/AC-5)', (_n, ruw) => {
-    const blok = { ...object(ruw['agentMerge']), maxBytes: 3 };
-    expect(redenen(wereld({ ...ruw, agentMerge: blok })).join('\n')).toMatch(/grens 3 \(agentMerge\.maxBytes\)/);
-  });
-});
-
-describe('padtabel/AC-5 het padoordeel van de diff-guard in beide vormen', () => {
-  test.each(VORMEN)('%s: alleen src/web/x.ts is ja, met .claude/settings.json erbij nee (padtabel/AC-5)', (_n, ruw) => {
-    const tekst = JSON.stringify(ruw);
-    expect(agentMerge(pr(['src/web/x.ts']), OORDEEL, tekst)).toEqual({ oordeel: 'ja', redenen: [] });
-    expect(agentMerge(pr(['src/web/x.ts', '.claude/settings.json']), OORDEEL, tekst).oordeel).toBe('nee');
-  });
-});
-
-describe('padtabel/AC-5 (c) paden naast gates faalt dicht', () => {
-  const tekst = JSON.stringify(BEIDE);
-
-  test('loadConfig en leesConfig gooien (padtabel/AC-5)', () => {
-    expect(() => loadConfig(tekst)).toThrow();
-    expect(() => leesConfig(tekst)).toThrow();
-  });
-
-  test('agentMerge geeft nee, zonder te gooien (padtabel/AC-5)', () => {
-    expect(agentMerge(pr(['src/web/x.ts']), OORDEEL, tekst).oordeel).toBe('nee');
-  });
-
-  test('beoordeelMerge geeft de lezerfout als reden en merget niet (padtabel/AC-5)', () => {
-    const lijst = redenen(wereld(BEIDE));
-    expect(lijst.length).toBeGreaterThan(0);
-    expect(lijst.join('\n')).toMatch(/paden/);
+  test.each(VORMEN)('%s: zonder modus niet-kritiek merget beoordeelMerge niet (padtabel/AC-5)', (_n, ruw) => {
+    expect(redenen(wereld({ ...ruw, merge: 'eigenaar' })).join('\n')).toMatch(/modus/);
   });
 });

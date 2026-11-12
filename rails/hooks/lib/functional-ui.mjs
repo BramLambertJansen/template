@@ -56,7 +56,7 @@ export function functionalUiReason({ changes, repository, spec }) {
 // Testgevallen en skips tellen (leerpunt #424): scriptbestanden via de lexer in `testteller.mjs`, zodat commentaar,
 // strings en haakjes in een test.each-tabel nooit meetellen. Inhoudelijke testkwaliteit blijft eigenaarreview.
 const SCRIPT = /\.(?:[cm]?[jt]s|[jt]sx)$/;
-/** Pgtap en andere niet-scriptbestanden: ongewijzigd de bestaande heuristiek (lane.mjs houdt ze toch dicht). */
+/** Pgtap en andere niet-scriptbestanden: ongewijzigd de bestaande heuristiek. */
 const SQL_SKIP = /\.(?:skip|todo|fixme)\s*\(|\b(?:xit|xtest|xdescribe)\s*\(|\bskip\s*\(/g;
 const SQL_CASES = /\b(?:test|it)(?:\.each\b[^(]*\([^)]*\))?\s*\(/g;
 

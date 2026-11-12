@@ -42,17 +42,7 @@
       "count": 1
     }
   },
-  "scripts/kit/check-document-status.mjs": {
-    "complexity": {
-      "count": 1
-    }
-  },
   "scripts/kit/document-status.mjs": {
-    "complexity": {
-      "count": 1
-    }
-  },
-  "scripts/kit/lane.mjs": {
     "complexity": {
       "count": 1
     }
@@ -187,11 +177,6 @@
       "count": 1
     }
   },
-  "test/hooks/authority-git.test.ts": {
-    "rails/afwezigheid": {
-      "count": 1
-    }
-  },
   "test/hooks/authority.test.ts": {
     "rails/negatieve-tabel": {
       "count": 3
@@ -210,11 +195,6 @@
   "test/hooks/hooks-van-main.test.ts": {
     "rails/negatieve-tabel": {
       "count": 1
-    }
-  },
-  "test/hooks/mandate-follow-up-ci.test.ts": {
-    "rails/afwezigheid": {
-      "count": 2
     }
   },
   "test/hooks/mandate-follow-up-status.test.ts": {
@@ -259,7 +239,7 @@
   },
   "test/hooks/taakmandaat-weg.test.ts": {
     "rails/afwezigheid": {
-      "count": 5
+      "count": 2
     }
   },
   "test/rails/archief-check-docs.test.ts": {
@@ -267,19 +247,9 @@
       "count": 1
     }
   },
-  "test/rails/diff-guard-risico.test.ts": {
-    "rails/afwezigheid": {
-      "count": 13
-    }
-  },
-  "test/rails/diff-guard.test.ts": {
-    "rails/afwezigheid": {
-      "count": 3
-    }
-  },
   "test/rails/gate-label-weg.test.ts": {
     "rails/afwezigheid": {
-      "count": 4
+      "count": 3
     }
   },
   "test/rails/gebouwd-na-merge.test.ts": {
@@ -360,7 +330,7 @@
   },
   "test/rails/samenhang-checks-rollen.test.ts": {
     "rails/afwezigheid": {
-      "count": 2
+      "count": 1
     }
   },
   "test/rails/security-review-skill.test.ts": {

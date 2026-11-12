@@ -21,15 +21,9 @@ function item(titel: string): string {
   return ROADMAP.slice(start, einde === -1 ? undefined : einde);
 }
 
+// GEWIJZIGD (templateregime AC-13, ADR 0089 punt 5): vier tests die de formulering "oordeel agent-merge: ja" in R-REPO-01,
+// R-WERK-12, AGENTS.md en CLAUDE.md vastpinden zijn verwijderd; de job agent-merge en dat oordeel bestaan niet meer.
 describe('agent-merge-niet-kritiek/AC-6 regelboek', () => {
-  test('R-REPO-01: eigenaar merget, behalve agent-merge ja via pnpm pr:merge door de hoofdsessie', () => {
-    const tekst = regel('R-REPO-01');
-    expect(tekst).toMatch(/alleen eigenaar merget, behalve/);
-    expect(tekst).toMatch(/`agent-merge: ja`/);
-    expect(tekst).toMatch(/hoofdsessie in Claude Code merget via `pnpm pr:merge`/);
-    expect(tekst).toMatch(/0069/);
-  });
-
   test('R-REPO-05: mergen alleen via pnpm pr:merge', () => {
     expect(regel('R-REPO-05')).toMatch(/merge alleen via `pnpm pr:merge`/);
   });
@@ -38,17 +32,16 @@ describe('agent-merge-niet-kritiek/AC-6 regelboek', () => {
     expect(regel('R-ROL-08')).toMatch(/mergen \(behalve `pnpm pr:merge <nr>` van de hoofdsessie[^)]*0069\)/);
   });
 
-  test('R-WERK-12 en stap 7 van §8 noemen de agent-merge', () => {
-    expect(regel('R-WERK-12')).toMatch(/zelf mergen alleen via `pnpm pr:merge <nr>`, daarna PR en SHA melden en de CI op `main` volgen/);
-    expect(FRAMEWORK).toMatch(/7\. \*\*Eigenaar\*\* reviewt en merget; niet-kritiek werk met oordeel `agent-merge: ja` merget de hoofdsessie zelf via `pnpm pr:merge`/);
-  });
-
   test('R-WERK-23: alleen de hoofdsessie in Claude Code merget, een andere runtime nooit', () => {
     expect(regel('R-WERK-23')).toMatch(/alleen de hoofdsessie in Claude Code merget zelf, een andere runtime nooit \(0069\)/);
   });
 
-  test('R-ROL-10: inhoudstoets en rolhek zijn bij een agent-merge een vangnet, geen grens van GitHub', () => {
-    expect(regel('R-ROL-10')).toMatch(/bij een agent-merge zijn de inhoudstoets \(`agent-merge`, `pnpm pr:merge`\) en het rolhek een vangnet, geen grens van GitHub/);
+  // GEWIJZIGD (templateregime AC-12, ADR 0089 punt 5): de inhoudstoets bestaat niet meer; de regel noemt nu de review van
+  // een code-eigenaar als grens. Sleutelwoorden in plaats van de oude zin.
+  test('R-ROL-10: pnpm pr:merge en rolhek zijn een vangnet, de grens is de review van een code-eigenaar', () => {
+    const tekst = regel('R-ROL-10');
+    expect(tekst).toContain('CODEOWNERS');
+    expect(tekst).toMatch(/`pnpm pr:merge` en het rolhek zijn een vangnet, geen grens/);
   });
 
   test('R-DOC-09 verwijst naar 0069, niet naar "na de GitHub App"', () => {
@@ -59,16 +52,6 @@ describe('agent-merge-niet-kritiek/AC-6 regelboek', () => {
 });
 
 describe('agent-merge-niet-kritiek/AC-6 instructies', () => {
-  test('AGENTS.md: één zin met pnpm pr:merge, PR en SHA melden en CI op main volgen', () => {
-    expect(readFileSync('AGENTS.md', 'utf8')).toMatch(
-      /behalve niet-kritiek werk met oordeel `agent-merge: ja`: dat merget de hoofdsessie via `pnpm pr:merge`, meldt PR en SHA en volgt de CI op `main`/,
-    );
-  });
-
-  test('CLAUDE.md: zelf mergen alleen via pnpm pr:merge bij agent-merge ja', () => {
-    expect(readFileSync('CLAUDE.md', 'utf8')).toMatch(/zelf mergen alleen via `pnpm pr:merge` bij oordeel `agent-merge: ja` \(ADR 0069\)/);
-  });
-
   test('skill opleveren: mergen via pnpm pr:merge, daarna PR en SHA melden en CI op main volgen', () => {
     const skill = readFileSync('.claude/skills/opleveren/SKILL.md', 'utf8');
     expect(skill).toMatch(/`pnpm pr:merge <nr>`/);

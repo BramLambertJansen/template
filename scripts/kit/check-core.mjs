@@ -192,7 +192,7 @@ function main() {
     process.exitCode = 1;
     return;
   }
-  // De workflow haalt de PR en main op als refs/guard/{head,base} en controleert ze (zoals voor de diff-guard).
+  // De workflow haalt de PR en main op als refs/guard/{head,base} en controleert ze (guard.yml).
   const fouten = coreFouten('.', { base: 'refs/guard/base', head: 'refs/guard/head', template: TEMPLATE_REF });
   if (fouten.length === 0) {
     meld(`✓ check-core: ${ZONE_PADEN} alleen gewijzigd via template-merges`);

@@ -26,11 +26,4 @@ describe('compacte-kennisbasis-rails/AC-14: het gate-label is weg', () => {
   test('compacte-kennisbasis-rails/AC-14 de ratchetmelding noemt geen label', () => {
     expect(readFileSync('scripts/kit/ratchet.mjs', 'utf8')).not.toMatch(/label/i);
   });
-
-  test('compacte-kennisbasis-rails/AC-16 diff-guard.mjs leest geen label meer', () => {
-    const bron = readFileSync('scripts/kit/diff-guard.mjs', 'utf8');
-
-    expect(bron).not.toContain('gate-wijziging');
-    expect(bron).not.toMatch(/\.labels\b|\/labels`/);
-  });
 });

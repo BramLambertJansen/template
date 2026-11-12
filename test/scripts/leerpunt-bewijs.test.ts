@@ -3,7 +3,6 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, test } from 'vitest';
-import { agentMerge, beoordeel, leesConfig } from '../../scripts/kit/diff-guard.mjs';
 import {
   bewijsPlan,
   graphqlData,
@@ -297,29 +296,6 @@ describe('leerlus-bewijs/AC-4 geen test: <reden>', () => {
     ]);
     expect(leerpuntMergeRedenen(sectie('- #9: trede Check; bewijs test/a.test.ts'))).toEqual([]);
     expect(leerpuntMergeRedenen('')).toEqual([]);
-  });
-
-  test('leerlus-bewijs/AC-4: diff-guard: agent-merge nee met reden leerpunt zonder test', () => {
-    const tekst = readFileSync('.claude/gates.json', 'utf8');
-    const config = leesConfig(tekst);
-    const pr = {
-      wijzigingen: [],
-      json: {},
-      reviews: [],
-      auteur: 'x',
-      headSha: 'a'.repeat(40),
-      regels: 1,
-      binair: [],
-      bytes: 1,
-    };
-    const zonder = agentMerge(pr, beoordeel(pr, config), tekst);
-    const met = { ...pr, body: sectie('- #9: trede Skill; bewijs geen test: tekst') };
-    expect(agentMerge(met, beoordeel(met, config), tekst)).toEqual({
-      oordeel: 'nee',
-      redenen: [...zonder.redenen, 'leerpunt zonder test: de eigenaar merget'],
-    });
-    const bewijs = { ...pr, body: sectie('- #9: trede Check; bewijs test/a.test.ts') };
-    expect(agentMerge(bewijs, beoordeel(bewijs, config), tekst)).toEqual(zonder);
   });
 });
 

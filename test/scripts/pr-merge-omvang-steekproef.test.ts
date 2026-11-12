@@ -10,63 +10,31 @@ const REPO = 'BramLambertJansen/template';
 const HEAD = 'a'.repeat(40);
 const MAIN = 'b'.repeat(40);
 const ACTIONS = 15368;
-const VEREIST = ['gate:fast', 'document-status'];
+const VEREIST = ['gate:fast', 'check-core'];
 const REVIEW = { user: { login: 'BramLambertJansen' }, body: `Review ${HEAD}: geen blokkerende bevindingen` };
 const b64 = (waarde: unknown) => Buffer.from(JSON.stringify(waarde)).toString('base64');
 
 type Wereld = Record<string, unknown>;
 
-function check(name: string, sha: string, extra: Record<string, unknown> = {}) {
-  return { id: 1, name, head_sha: sha, status: 'completed', conclusion: 'success', app: { id: ACTIONS }, ...extra };
+function check(name: string, sha: string) {
+  return { id: 1, name, head_sha: sha, status: 'completed', conclusion: 'success', app: { id: ACTIONS } };
 }
-
-const gatesMet = (agentMerge: Record<string, unknown>) => ({
-  content: b64({
-    merge: 'niet-kritiek',
-    agentMerge: { toegestaan: ['src/**'], kritiek: [], maxBytes: 40000, ...agentMerge },
-  }),
-});
 
 const PULL = {
   state: 'open',
   draft: false,
   base: { ref: 'main' },
   head: { sha: HEAD, ref: 'claude/x', repo: { full_name: REPO } },
-  additions: 300,
-  deletions: 100,
 };
-const BYTES_ONLEESBAAR = 'omvang van de PR niet leesbaar of agentMerge.maxBytes ontbreekt: geen agent-merge';
-// Een REST-bestand waarvan de patch klopt met `additions` en `deletions` (spec agent-merge-bytegrens AC-4).
-const bestand = (erbij: number, eraf: number) => ({
-  filename: 'src/web/x.ts',
-  status: 'modified',
-  additions: erbij,
-  deletions: eraf,
-  changes: erbij + eraf,
-  patch: ['@@', ...Array.from({ length: eraf }, () => '-a'), ...Array.from({ length: erbij }, () => '+b')].join('\n'),
-});
 
 function goed(): Wereld {
   return {
     [`repos/${REPO}/branches/main`]: { commit: { sha: MAIN } },
-    [`repos/${REPO}/contents/.claude/gates.json?ref=${MAIN}`]: gatesMet({ maxRegels: 400 }),
+    [`repos/${REPO}/contents/.claude/gates.json?ref=${MAIN}`]: { content: b64({ merge: 'niet-kritiek' }) },
     [`repos/${REPO}/contents/.claude/decisions.json?ref=${MAIN}`]: { content: b64({ requiredChecks: VEREIST }) },
     [`repos/${REPO}/pulls/7`]: PULL,
-    [`repos/${REPO}/pulls/7/files`]: [bestand(300, 100)],
-    [`repos/${REPO}/compare/${MAIN}...${HEAD}`]: { behind_by: 0 },
-    [`repos/${REPO}/commits/${HEAD}/check-runs`]: {
-      check_runs: [
-        ...VEREIST.map((n) => check(n, HEAD)),
-        check('agent-merge', HEAD, { id: 9, check_suite: { id: 55 } }),
-      ],
-    },
-    [`repos/${REPO}/actions/runs?check_suite_id=55`]: {
-      workflow_runs: [
-        { path: '.github/workflows/guard.yml', event: 'pull_request_target', pull_requests: [{ number: 7 }] },
-      ],
-    },
+    [`repos/${REPO}/commits/${HEAD}/check-runs`]: { check_runs: VEREIST.map((n) => check(n, HEAD)) },
     [`repos/${REPO}/commits/${MAIN}/check-runs`]: { check_runs: [check('gate:fast', MAIN)] },
-    [`repos/${REPO}/issues/7/comments`]: [REVIEW],
   };
 }
 
@@ -93,68 +61,18 @@ const zet =
     for (const [sleutel, waarde] of paren) w[`repos/${REPO}/${sleutel}`] = waarde;
   };
 
-describe('agent-merge-niet-kritiek/AC-9 pr:merge telt de omvang via REST', () => {
-  test('400 regels bij grens 400: geen reden', () => {
+// GEWIJZIGD (templateregime AC-7, ADR 0089 punt 5): de describe "AC-9 pr:merge telt de omvang via REST" (9 tests) is
+// verwijderd met de omvanggrens; de wereld heeft geen agentMerge-blok, bestandenlijst, compare of job agent-merge meer.
+// Nieuw: de beoordeling leest de bestandenlijst en de workflow-runs niet meer.
+describe('templateregime/AC-7 pr:merge doet geen inhoudstoets', () => {
+  test('een PR van elke omvang zonder bestandenlijst in de wereld: geen reden', () => {
     expect(redenen()).toBe('');
   });
 
-  test.each([
-    [
-      '401 regels',
-      zet(['pulls/7', { ...PULL, deletions: 101 }], ['pulls/7/files', [bestand(300, 101)]]),
-      'PR te groot voor een agent-merge: 401 regels, grens 400 (agentMerge.maxRegels)',
-    ],
-    [
-      'een bestand zonder patch met changes 3',
-      zet(['pulls/7/files', [{ filename: 'src/web/groot.ts', status: 'modified', changes: 3 }]]),
-      [BYTES_ONLEESBAAR, 'binair bestand in de PR: geen agent-merge (src/web/groot.ts)'],
-    ],
-    [
-      'een binair bestand (changes 0, geen patch)',
-      zet(['pulls/7/files', [{ filename: 'docs/x.png', status: 'added', changes: 0 }]]),
-      [BYTES_ONLEESBAAR, 'binair bestand in de PR: geen agent-merge (docs/x.png)'],
-    ],
-    [
-      'additions onleesbaar',
-      zet(['pulls/7', { ...PULL, additions: undefined }]),
-      ['omvang van de PR niet leesbaar of agentMerge.maxRegels ontbreekt: geen agent-merge', BYTES_ONLEESBAAR],
-    ],
-    [
-      'agentMerge zonder maxRegels',
-      zet([`contents/.claude/gates.json?ref=${MAIN}`, gatesMet({})]),
-      'omvang van de PR niet leesbaar of agentMerge.maxRegels ontbreekt: geen agent-merge',
-    ],
-    [
-      'agentMerge.toegestaan is tekst, maxRegels geldig',
-      zet([`contents/.claude/gates.json?ref=${MAIN}`, gatesMet({ toegestaan: 'src/**', maxRegels: 400 })]),
-      'agentMerge ontbreekt of is onleesbaar in .claude/gates.json',
-    ],
-  ])('%s', (_naam, aanpassing, reden) => {
-    expect(uitslag(aanpassing).redenen).toEqual([reden].flat());
-  });
-
-  test('agentMerge ontbreekt op main: beide redenen', () => {
-    expect(
-      uitslag(zet([`contents/.claude/gates.json?ref=${MAIN}`, { content: b64({ merge: 'niet-kritiek' }) }])).redenen,
-    ).toEqual([
-      'agentMerge ontbreekt of is onleesbaar in .claude/gates.json',
-      'omvang van de PR niet leesbaar of agentMerge.maxRegels ontbreekt: geen agent-merge',
-      BYTES_ONLEESBAAR,
-    ]);
-  });
-
-  test('zuivere hernoeming (renamed, changes 0, geen patch): geen reden', () => {
-    expect(
-      redenen(
-        zet(
-          ['pulls/7', { ...PULL, additions: 0, deletions: 0 }],
-          [
-            'pulls/7/files',
-            [{ filename: 'src/web/nieuw.ts', previous_filename: 'src/web/oud.ts', status: 'renamed', changes: 0 }],
-          ],
-        ),
-      ),
-    ).toBe('');
+  test('de beoordeling leest geen bestandenlijst, compare, workflow-runs of commentaar', () => {
+    const gelezen: string[] = [];
+    beoordeelMerge(api(goed(), gelezen), { repo: REPO, nummer: 7, head: HEAD });
+    expect(gelezen.filter((e) => /pulls\/7\/files|compare\/|actions\/runs|issues\/7\/comments/.test(e))).toEqual([]);
   });
 });
 

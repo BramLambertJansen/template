@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: vervallen
 namespace: specplicht
 sjabloon: mini
 ---

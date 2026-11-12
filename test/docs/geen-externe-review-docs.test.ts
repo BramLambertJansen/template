@@ -50,35 +50,22 @@ const BOT_REGEL = new RegExp(
   `chatgpt-${WOORD}-connector|${WOORD}-review-state|expectAbsent\\(.*/${WOORD}/|${SLEUTEL_REGEL.source}`,
   'i',
 );
-const UITZ5_SCRIPTS = new Set(['scripts/kit/agent-merge.mjs', 'scripts/kit/check-docs.mjs']);
+const UITZ5_SCRIPTS = new Set(['scripts/kit/check-docs.mjs']);
 const UITZ5_TESTS = new Set([
   'test/scripts/pr-merge-omvang-steekproef.test.ts',
-  'test/rails/agent-merge-omvang.test.ts',
 ]);
-// Uitzondering 3: de constante `KOP_0069` (vaste historische kop), per regel binnen zijn `lines(…)`.
-const ADR_HERZIEN = 'test/rails/adr-herzien.test.ts';
-
+// GEWIJZIGD (templateregime AC-13, ADR 0089 punt 5): uitzondering 3 (de kop in test/rails/adr-herzien.test.ts) is vervallen;
+// dat testbestand is met adr-herzien.mjs verwijderd.
 type Treffer = { bestand: string; regel: number; tekst: string };
 
-/** Het bereik (1-based, inclusief) van de constante `KOP_0069` in de tekst van adr-herzien.test.ts. */
-function bereikKop(tekst: string): [number, number] {
-  const regels = tekst.split('\n');
-  const start = regels.findIndex((r) => r.startsWith('const KOP_0069 = '));
-  if (start === -1) return [0, 0];
-  const einde = regels.findIndex((r, i) => i > start && r === ');');
-  return [start + 1, einde === -1 ? regels.length : einde + 1];
-}
-
-/** Alle treffers buiten de vijf uitzonderingen. `lees` geeft de tekst van een bestand (voor het bereik van `KOP_0069`). */
-function buitenUitzonderingen(treffers: Treffer[], lees: (bestand: string) => string): Treffer[] {
-  const [kopVan, kopTot] = bereikKop(lees(ADR_HERZIEN));
+/** Alle treffers buiten de uitzonderingen. */
+function buitenUitzonderingen(treffers: Treffer[]): Treffer[] {
   return treffers.filter((t) => {
     if (t.bestand === ZICHZELF || METING.has(t.bestand)) return false;
     if (UITZ5_SCRIPTS.has(t.bestand)) return !SLEUTEL_REGEL.test(t.tekst);
     if (UITZ5_TESTS.has(t.bestand)) return !BOT_REGEL.test(t.tekst);
     if (t.bestand === SKILL) return !STAP_8.test(t.tekst);
     if (t.bestand === DOORLOOP) return !MAAT.test(t.tekst);
-    if (t.bestand === ADR_HERZIEN) return !(t.regel >= kopVan && t.regel <= kopTot);
     return true;
   });
 }
@@ -103,60 +90,48 @@ const lees = (bestand: string) => readFileSync(bestand, 'utf8');
 const T = (bestand: string, regel: number, tekst: string): Treffer => ({ bestand, regel, tekst });
 
 describe('agent-merge-niet-kritiek/AC-10 de uitzonderingen per regel', () => {
-  const [kopVan, kopTot] = bereikKop(lees(ADR_HERZIEN));
-
-  test('de constante KOP_0069 bestaat en heeft een bereik', () => {
-    expect(kopVan).toBeGreaterThan(0);
-    expect(kopTot).toBeGreaterThan(kopVan);
-  });
 
   test('uitzondering 1: de vijf metingbestanden zijn vrij, een ander bestand niet', () => {
     const vrij = [...METING].map((b) => T(b, 1, WOORD));
-    expect(buitenUitzonderingen(vrij, lees)).toEqual([]);
+    expect(buitenUitzonderingen(vrij)).toEqual([]);
     const fout = T('scripts/kit/pr-merge.mjs', 1, WOORD);
-    expect(buitenUitzonderingen([fout], lees)).toEqual([fout]);
+    expect(buitenUitzonderingen([fout])).toEqual([fout]);
   });
 
   test('uitzondering 2: in de skill alleen stap 8, een andere regel in de skill niet', () => {
     const stap8 = T(SKILL, 40, `CI-rood of ${WOORD}-bevindingen; het leespad: groei`);
     const stap3 = T(SKILL, 50, `3. ${WOORD} telt als het een afgeronde review liet`);
-    expect(buitenUitzonderingen([stap8, stap3], lees)).toEqual([stap3]);
+    expect(buitenUitzonderingen([stap8, stap3])).toEqual([stap3]);
   });
 
   test('uitzondering 2: in de doorloop alleen de twee metingzinnen, een runtimezin niet', () => {
     const pr = T(DOORLOOP, 56, `reviewrondes, CI-rood, weigeringen, ${WOORD}-bevindingen handmatig via gh api`);
     const trend = T(DOORLOOP, 61, `vergelijkt CI-rood, ${WOORD}-bevindingen en reviewrondes`);
     const runtime = T(DOORLOOP, 236, `${WOORD} gebruikt zijn eigen runtimebeleid`);
-    expect(buitenUitzonderingen([pr, trend, runtime], lees)).toEqual([runtime]);
-  });
-
-  test('uitzondering 3: alleen regels binnen KOP_0069 in adr-herzien.test.ts', () => {
-    const binnen = T(ADR_HERZIEN, kopVan + 4, `Herzien: versoepelt de ${WOORD}-voorwaarde`);
-    const buiten = T(ADR_HERZIEN, kopTot + 5, `// ${WOORD}`);
-    expect(buitenUitzonderingen([binnen, buiten], lees)).toEqual([buiten]);
+    expect(buitenUitzonderingen([pr, trend, runtime])).toEqual([runtime]);
   });
 
   test('uitzondering 5: sleutelregels in de twee scripts zijn vrij, een andere regel met het woord niet', () => {
-    const herkennen = T('scripts/kit/agent-merge.mjs', 117, `Object.keys(blok).includes('${WOORD}')`);
+    const herkennen = T('scripts/kit/check-docs.mjs', 117, `Object.keys(blok).includes('${WOORD}')`);
     const melden = T('scripts/kit/check-docs.mjs', 884, `key: 'docs:agentMerge.${WOORD}',`);
     const ander = T('scripts/kit/check-docs.mjs', 12, `// ${WOORD} beoordeelt de PR ook nog`);
-    const anderAgent = T('scripts/kit/agent-merge.mjs', 20, `const ${WOORD}Wacht = true;`);
-    expect(buitenUitzonderingen([herkennen, melden, ander, anderAgent], lees)).toEqual([ander, anderAgent]);
+    const anderAgent = T('scripts/kit/check-docs.mjs', 20, `const ${WOORD}Wacht = true;`);
+    expect(buitenUitzonderingen([herkennen, melden, ander, anderAgent])).toEqual([ander, anderAgent]);
   });
 
   test('uitzondering 5: botwereld- en sleutelregels in de twee testbestanden zijn vrij, een andere regel niet', () => {
     const steekproef = 'test/scripts/pr-merge-omvang-steekproef.test.ts';
     const bot = T(steekproef, 7, `const BOT = 'chatgpt-${WOORD}-connector[bot]';`);
     const marker = T(steekproef, 8, `const MARKER = '<!-- ${WOORD}-review-state:v1';`);
-    const sleutel = T('test/rails/agent-merge-omvang.test.ts', 21, `const SLEUTEL = '${WOORD}';`);
-    const afwezig = T('test/rails/agent-merge-omvang.test.ts', 263, `expectAbsent(TEKST, /${WOORD}/i, {`);
-    const ander = T('test/rails/agent-merge-omvang.test.ts', 99, `// de ${WOORD} doet ook mee`);
+    const sleutel = T(steekproef,21, `const SLEUTEL = '${WOORD}';`);
+    const afwezig = T(steekproef,263, `expectAbsent(TEKST, /${WOORD}/i, {`);
+    const ander = T(steekproef,99, `// de ${WOORD} doet ook mee`);
     const andereTest = T(steekproef, 98, `test('${WOORD} wacht niet', () => {`);
-    expect(buitenUitzonderingen([bot, marker, sleutel, afwezig, ander, andereTest], lees)).toEqual([ander, andereTest]);
+    expect(buitenUitzonderingen([bot, marker, sleutel, afwezig, ander, andereTest])).toEqual([ander, andereTest]);
   });
 
   test('uitzondering 4: dit bestand sluit zichzelf uit', () => {
-    expect(buitenUitzonderingen([T(ZICHZELF, 1, WOORD)], lees)).toEqual([]);
+    expect(buitenUitzonderingen([T(ZICHZELF, 1, WOORD)])).toEqual([]);
   });
 });
 
@@ -178,7 +153,7 @@ describe('agent-merge-niet-kritiek/AC-10 de vervangende zinnen', () => {
 
 describe('agent-merge-niet-kritiek/AC-10 geen externe reviewdienst in de actieve werkstraat', () => {
   test('de git grep uit de spec geeft alleen de vijf uitzonderingen', () => {
-    const over = buitenUitzonderingen(treffers(), lees).map((t) => `${t.bestand}:${String(t.regel)}`);
+    const over = buitenUitzonderingen(treffers()).map((t) => `${t.bestand}:${String(t.regel)}`);
     expect(over).toEqual([]);
   });
 });

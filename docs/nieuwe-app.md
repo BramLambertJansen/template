@@ -618,7 +618,7 @@ blijft zo'n PR geblokkeerd. De agent pusht daarom als GitHub App.
 De optie `--bypass-beheerder` (`scripts/github-ruleset.sh <owner>/<slug> --bypass-beheerder`) laat de beheerder de ruleset passeren,
 alleen bij het mergen van een pull request, zodat de eigenaar een eigen PR op een beschermd pad kan mergen. Gebruik haar pas als
 bewezen is dat het token van de eigenaar uit de agentomgeving is (spec templateregime AC-6); zonder de optie is er geen bypass.
-De diff-guard (`guard.yml`) is geen verplichte check (ADR 0045 punt 17). Zet dat in de overdracht.
+`guard.yml` heeft alleen de job `check-core`; de diff-guard bestaat niet meer (ADR 0089 punt 5).
 
 Geplande inrichting van de App (**nog niet gebouwd**, roadmap ST-01; het besluit is ADR 0045 punt 19):
 
@@ -895,13 +895,13 @@ en relevante beperkingen. De dagelijkse commando's en template-updates staan in 
 > **<App-naam> staat klaar** in **<absoluut-app-pad>** → github.com/<owner>/<slug>.
 > Draait: Postgres 17 + pgTAP op 127.0.0.1:<pg>, Mailpit op http://127.0.0.1:<mailui>. Migraties toegepast, rollen bewezen.
 > API: http://localhost:<api>; web en beide origins: http://localhost:<web>.
-> Afgedwongen zoals in de template: git-hooks (pre-commit: format, lint, secrets; commit-msg: conventional commits; pre-push: `pnpm gate:fast`, een waarschuwing bij achterstand op `origin/main` en `document-status`, dat blokkeert op de volgorde spec vóór code), de hooks, sandbox en
+> Afgedwongen zoals in de template: git-hooks (pre-commit: format, lint, secrets; commit-msg: conventional commits; pre-push: `pnpm gate:fast`, een waarschuwing bij achterstand op `origin/main`), de hooks, sandbox en
 > permissies van Claude Code (`.claude/`), CI (`gate:fast`, `gate:slow`, `secrets`, `image`, `check:new-resource`, `check-core`, `leerpunt-bewijs`, CodeQL, osv-scanner)
 > en de ruleset op `main` met die checks verplicht, uitsluitend voor zover hierboven werkelijk gecontroleerd.
 > Browser/login/MFA: <uitvoerder en uitslag, of niet uitgevoerd met reden>.
 >
 > **Wat er nog níet is:** de GitHub App voor de agent (roadmap ST-01, ADR 0039 punt 8; geplande inrichting in 6.2) — tot dan pusht de agent onder jouw account, met jouw
-> `gh`-login inclusief `workflow`, en is de diff-guard (`guard.yml`) geen verplichte check; `check-github`, dat controleert of de
+> `gh`-login inclusief `workflow`; `check-github`, dat controleert of de
 > ruleset blijft staan (ST-01). Herbruikbare templateverbeteringen horen in de template.
 > Een eventuele ST-09-proef en alle appfunctionaliteit, appspecificaties en appgegevens horen in de **aparte app-repo**;
 > alleen generieke verbeteringen en beknopt bewijs komen terug naar de template.

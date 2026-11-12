@@ -21,14 +21,11 @@
 //     meting in `pnpm leespad`, nooit een overtreding. `docsMeldingen` geeft "let op" vanaf 85 % van een grens;
 //     `docsKrimp` de krimpcheck (AC-6), die de ratchet buiten de baseline houdt.
 //  12. Geen normwoord onder "Hoe (geen norm)" in .claude/rules/*.md (leerpunt #393, sleutel `docs:<bestand>:hoe-norm:<woord>`).
-//  13. Een geaccepteerd ADR dat door een later ADR wordt gewijzigd, noemt dat in een herzieningsregel met de punten
-//      (`docsKrimp`, sleutel `docs:adr-herzien:<A>:<B>`, scripts/kit/adr-herzien.mjs, ADR 0074).
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import {
   afgeleid,
-  globMatch,
   OUDE_VORM_ZONDER_PADEN,
   padenVan,
   rijFouten,
@@ -37,9 +34,7 @@ import {
 } from '../../rails/hooks/lib/padtabel.mjs';
 import { onderhoudVan } from '../../rails/hooks/lib/rolhek.mjs';
 import { acIds } from '../../rails/hooks/lib/document-state.mjs';
-import { adrHerzienViolations } from './adr-herzien.mjs';
 import { adrNumber, duplicateAdrNumbers, invalidAdrNames } from './adr-numbers.mjs';
-import { geheelVanaf, leesMergeConfig, padReden } from './agent-merge.mjs';
 import { CODEOWNERS, codeownersTekst, eersteGoedkeurder, HERSTEL } from './codeowners.mjs';
 import { grensMeldingen, grensViolations, normenMeldingenUitGit, normenUitGit, zonderBasis } from './leesbudget.mjs';
 
@@ -69,13 +64,13 @@ export async function docsViolations(root = '.') {
     ...identifierViolations(files, read),
     ...linkViolations(root, files, read),
     ...statusViolations(files, read),
-    ...specarchiefViolations(files, read),
+    ...statusvormViolations(files, read),
     ...acViolations(files, read),
     ...mirrorViolations(files, read),
     ...(files.includes('.claude/gates.json') ? padenViolations(read('.claude/gates.json')) : []),
     ...(files.includes('.claude/gates.json') ? schrijfrechtViolations(read('.claude/gates.json')) : []),
     ...(files.includes('.claude/gates.json') ? werkmapNegeerViolations(files, read('.claude/gates.json')) : []),
-    ...(files.includes('.claude/gates.json') ? agentMergeViolations(files, read('.claude/gates.json')) : []),
+    ...(files.includes('.claude/gates.json') ? agentMergeViolations(read('.claude/gates.json')) : []),
     ...paragraafViolations(files, read),
     ...(files.includes(REGELBOEK) ? regelboekPadViolations(root, read(REGELBOEK), files) : []),
     ...rIdViolations(files, read),
@@ -96,18 +91,15 @@ export async function docsMeldingen(root = '.') {
 }
 
 /**
- * De krimpcontrole op normen tegenover `git merge-base origin/main HEAD` (spec krimp-op-normen) en de herzieningsregels van
- * gewijzigde ADR's (ADR 0074, spec adr-herzien-markering); nooit in de baseline.
+ * De krimpcontrole op normen tegenover `git merge-base origin/main HEAD` (spec krimp-op-normen); nooit in de baseline.
  * Zonder basis is ze in CI rood (AC-5).
  * @param {string} root
  * @returns {Promise<Violation[]>}
  */
 export async function docsKrimp(root = '.') {
-  const read = (/** @type {string} */ file) => readFileSync(path.join(root, file), 'utf8');
   return Promise.resolve([
     ...zonderBasis(root, process.env['GITHUB_ACTIONS'] === 'true').violations,
     ...normenUitGit(root),
-    ...adrHerzienViolations(trackedFiles(root), read),
   ]);
 }
 
@@ -451,36 +443,23 @@ function adrLinkDoelen(file, doel) {
 }
 
 /**
- * ADR 0080: een naam uit het specarchief komt niet terug in `docs/specs/`, en een statusregel in `docs/specs/` heeft de ene
- * vorm `gebouwd # #<PR>` (de oude vorm met SHA lezen de guard en check-roadmap nog).
+ * ADR 0080: een statusregel in `docs/specs/` heeft de ene vorm `gebouwd # #<PR>` (de oude vorm met SHA leest check-roadmap
+ * nog).
  * @param {readonly string[]} files @param {(file: string) => string} read
  * @returns {Violation[]}
  */
-function specarchiefViolations(files, read) {
-  const archief = new Set(
-    files.filter((file) => file.startsWith(SPEC_ARCHIEF)).map((file) => path.posix.basename(file)),
-  );
+function statusvormViolations(files, read) {
   const specs = files.filter((file) => /^docs\/specs\/[^/]+\.md$/.test(file));
   return specs.flatMap((file) => {
     const sha = /^status: gebouwd # #(\d+); gevalideerd: (\S+)/m.exec(read(file));
-    return [
-      ...(archief.has(path.posix.basename(file))
-        ? [
-            {
-              key: `docs:${file}:archief`,
-              message: `${file}: de naam staat ook in docs/specs/archief/; een naam komt niet terug (ADR 0080)`,
-            },
-          ]
-        : []),
-      ...(sha === null
-        ? []
-        : [
-            {
-              key: `docs:${file}:gevalideerd`,
-              message: `${file}: statusregel met gevalideerd: ${sha[2] ?? ''}; schrijf status: gebouwd # #${sha[1] ?? ''} (ADR 0080)`,
-            },
-          ]),
-    ];
+    return sha === null
+      ? []
+      : [
+          {
+            key: `docs:${file}:gevalideerd`,
+            message: `${file}: statusregel met gevalideerd: ${sha[2] ?? ''}; schrijf status: gebouwd # #${sha[1] ?? ''} (ADR 0080)`,
+          },
+        ];
   });
 }
 
@@ -871,90 +850,24 @@ function codeownersViolations(ruw, tekst) {
   ];
 }
 
-/** Een pad dat een glob dekt: `**` en `*` worden een gewoon segment. @param {string} glob */
-function voorbeeldPad(glob) {
-  return glob.replaceAll('**', 'x/y').replaceAll('*', 'x');
-}
-
 /**
- * Vorm van `agentMerge.maxRegels` en `agentMerge.maxBytes` op het ruwe blok (spec agent-merge-niet-kritiek AC-9,
- * agent-merge-bytegrens AC-1): het script leest een afwijkende vorm dicht, maar hij moet zichtbaar fout zijn. Een overgebleven
- * verouderde sleutel is een overtreding (AC-8). Zonder `agentMerge`-blok geen toets (het oordeel is dan altijd nee).
- * @param {unknown} ruw
- * @returns {Violation[]}
- */
-function agentMergeVorm(ruw) {
-  const blok = typeof ruw === 'object' && ruw !== null && 'agentMerge' in ruw ? ruw.agentMerge : undefined;
-  if (typeof blok !== 'object' || blok === null) return [];
-  /** @param {string} sleutel */
-  const grens = (sleutel) => {
-    const waarde = sleutel in blok ? Reflect.get(blok, sleutel) : undefined;
-    return geheelVanaf(waarde, 1)
-      ? []
-      : [
-          {
-            key: `docs:agentMerge.${sleutel}`,
-            message: `.claude/gates.json: agentMerge.${sleutel} is ${waarde === undefined ? 'afwezig' : JSON.stringify(waarde)}, geen geheel getal ≥ 1`,
-          },
-        ];
-  };
-  return [
-    ...('codex' in blok
-      ? [
-          {
-            key: 'docs:agentMerge.codex',
-            message: '.claude/gates.json: agentMerge.codex bestaat niet meer (ADR 0069); haal de sleutel weg',
-          },
-        ]
-      : []),
-    ...grens('maxRegels'),
-    ...grens('maxBytes'),
-  ];
-}
-
-/**
- * `merge` en `agentMerge` (ADR 0069, spec agent-merge-niet-kritiek AC-5): de modus is `eigenaar` of `niet-kritiek`, en na de
- * uitsluitingen is geen pad met schrijven ≠ vrij (afgeleide gates, `voorReview` of `altijdVragen`, spec padtabel Werking 6)
- * agent-mergebaar; getoetst met dezelfde functie als het oordeel, op elk getrackt pad en een voorbeeldpad per glob.
- * @param {readonly string[]} files
+ * `merge` (ADR 0069; blijft tot ADR 0089 punt 9): de modus is `eigenaar` of `niet-kritiek`; `pnpm pr:merge` en het rolhek
+ * lezen hem.
  * @param {string} text
  * @returns {Violation[]}
  */
-export function agentMergeViolations(files, text) {
+export function agentMergeViolations(text) {
   /** @type {unknown} */
   const ruw = JSON.parse(text);
   const modus = typeof ruw === 'object' && ruw !== null && 'merge' in ruw ? ruw.merge : undefined;
-  /** @type {Violation[]} */
-  const fouten = [
-    ...(modus === undefined || modus === 'eigenaar' || modus === 'niet-kritiek'
-      ? []
-      : [
-          {
-            key: 'docs:merge',
-            message: `.claude/gates.json: merge is ${JSON.stringify(modus)}, niet "eigenaar" of "niet-kritiek"`,
-          },
-        ]),
-    ...agentMergeVorm(ruw),
-  ];
-  const config = leesMergeConfig(text);
-  const agentMerge = config.agentMerge;
-  if (agentMerge === null) return fouten;
-  const bewaakt = [...config.gates, ...(config.voorReview ?? []), ...(config.altijdVragen ?? [])];
-  const kandidaten = [
-    ...new Set([
-      ...bewaakt.map(voorbeeldPad),
-      ...files.filter((file) => bewaakt.some((glob) => globMatch(glob, file))),
-    ]),
-  ];
-  return [
-    ...fouten,
-    ...kandidaten
-      .filter((pad) => padReden(pad, 'M', { ...config, agentMerge }) === null)
-      .map((pad) => ({
-        key: `docs:agentMerge:${pad}`,
-        message: `agentMerge maakt ${pad} (schrijven niet vrij) agent-mergebaar`,
-      })),
-  ];
+  return modus === undefined || modus === 'eigenaar' || modus === 'niet-kritiek'
+    ? []
+    : [
+        {
+          key: 'docs:merge',
+          message: `.claude/gates.json: merge is ${JSON.stringify(modus)}, niet "eigenaar" of "niet-kritiek"`,
+        },
+      ];
 }
 
 /**

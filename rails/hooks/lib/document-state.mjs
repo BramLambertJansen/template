@@ -44,11 +44,6 @@ export function acIds(text) {
   };
 }
 
-/** De namespace van een spec, anders de bestandsnaam. @param {string} file @param {string} text */
-export function specNamespace(file, text) {
-  return /^namespace:\s*(\S+)\s*$/m.exec(text)?.[1] ?? file.replace(/^.*\//, '').replace(/\.md$/, '');
-}
-
 /** @param {string} kind @param {string} status */
 export function validStatus(kind, status) {
   return kind === 'spec' ? SPEC_STATES.has(status) :
@@ -152,7 +147,7 @@ function bestaandeDatum(deel) {
 
 const VOORSTEL = new Set(['voorstel', 'voorgesteld']);
 
-/** De melding bij A4 (ADR 0046 punt 2), gedeeld door guard en rolhek. */
+/** De melding bij A4 (ADR 0046 punt 2) van het rolhek. */
 export const A4_MELDING =
   'een geaccepteerd ADR herschrijven of een ADR met een eigenaarstatus verwijderen mag alleen in een besluit-PR, door architect of hoofdsessie, en een herschreven ADR krijgt een herzieningsregel (`Herzien: JJJJ-MM-DD (#NNN): wat`); een vervallen of vervangen ADR wijzigt niet en een ADR gaat nooit terug naar voorgesteld; buiten een besluit-PR schrijf je een nieuw ADR dat het vervangt (`vervangen door NNNN`) (A4, ADR 0046 punt 2)';
 
@@ -174,12 +169,6 @@ export function isHerschrijving(file, voor, na) {
   const kopNummer = (/** @type {string} */ text) => /^# (\d{4}) — /.exec(text)?.[1];
   return oud?.kind === 'adr' && oud.status === 'geaccepteerd' && nieuw?.status === 'geaccepteerd' &&
     oud.digest !== nieuw.digest && kopNummer(voor ?? '') === kopNummer(na ?? '');
-}
-
-/** De geldige herzieningsregels die de nieuwe tekst toevoegt. @param {string} voor @param {string} na */
-export function nieuweHerzieningsregels(voor, na) {
-  const oud = herzieningen(voor);
-  return [...herzieningen(na)].filter((regel) => !oud.has(regel));
 }
 
 /** Elke oude geldige herzieningsregel staat er nog, en er is er minstens één bij. @param {string} voor @param {string} na */
@@ -242,8 +231,8 @@ function toegestaanZonderRecord(van, naar, kind) {
 }
 
 /**
- * `gebouwd # #<PR>` (ADR 0080 punt 5): in de PR met de implementatie zelf of daarna de gemergde bouw-PR, wat
- * `check-document-status` toetst. De oude vorm `gebouwd # #<PR>; gevalideerd: <sha>` wordt nog gelezen (apps, geschiedenis).
+ * `gebouwd # #<PR>` (ADR 0080 punt 5): in de PR met de implementatie zelf of daarna de gemergde bouw-PR; `pnpm docs:status`
+ * toetst het bewijs. De oude vorm `gebouwd # #<PR>; gevalideerd: <sha>` wordt nog gelezen (apps, geschiedenis).
  * @param {string} text @returns {{ pr: number, sha?: string } | null}
  */
 export function builtReference(text) {

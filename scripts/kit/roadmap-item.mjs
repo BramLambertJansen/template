@@ -1,5 +1,5 @@
 // Met `pnpm docs:status --roadmap` mag in docs/roadmap.md alleen het vinkje van het item van de eigen spec wijzigen
-// (B1 van spec taakmandaat-vervolg). Eén gedeelde controle voor check-document-status (CI), statusOnlyDiff en `pnpm docs:status --roadmap`.
+// (B1 van spec taakmandaat-vervolg). Eén gedeelde controle voor statusOnlyDiff en `pnpm docs:status --roadmap`.
 // Pure functies: geen git, geen fs; de aanroeper levert tekst en kader.
 import { packageScripts } from './check-docs.mjs';
 import { heeftBewijs, leesItems } from './check-roadmap.mjs';

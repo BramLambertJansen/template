@@ -3,11 +3,14 @@ import { nummerUit, voorwaarden } from '../../scripts/kit/pr-merge.mjs';
 
 // `pnpm pr:merge` (ADR 0069 punt 3, spec agent-merge-niet-kritiek AC-3): per voorwaarde een nagebootst REST-antwoord dat
 // de merge tegenhoudt. De wereld `goed` is mergebaar; elke test verandert precies één antwoord.
+// GEWIJZIGD (templateregime AC-7, ADR 0089 punt 5): de inhoudstoets is weg. De rijen over de job agent-merge (6), "achter
+// main" en "review op een oude SHA", en de test over een run zonder pull_requests zijn verwijderd; de wereld heeft geen
+// agentMerge-blok, bestandenlijst, compare, job agent-merge, workflow-runs of reviewcommentaar meer.
 const REPO = 'BramLambertJansen/template';
 const HEAD = 'a'.repeat(40);
 const MAIN = 'b'.repeat(40);
 const ACTIONS = 15368;
-const VEREIST = ['gate:fast', 'document-status'];
+const VEREIST = ['gate:fast', 'check-core'];
 const b64 = (waarde: unknown) => Buffer.from(JSON.stringify(waarde)).toString('base64');
 
 type Wereld = Record<string, unknown>;
@@ -22,10 +25,7 @@ function goed(): Wereld {
   return {
     [`repos/${REPO}/branches/main`]: { commit: { sha: MAIN } },
     [`repos/${REPO}/contents/.claude/gates.json?ref=${MAIN}`]: {
-      content: b64({
-        merge: 'niet-kritiek',
-        agentMerge: { toegestaan: ['src/**'], kritiek: [], maxRegels: 400, maxBytes: 40000 },
-      }),
+      content: b64({ merge: 'niet-kritiek' }),
     },
     [`repos/${REPO}/contents/.claude/decisions.json?ref=${MAIN}`]: { content: b64({ requiredChecks: VEREIST }) },
     [`repos/${REPO}/pulls/7`]: {
@@ -36,32 +36,8 @@ function goed(): Wereld {
       additions: 10,
       deletions: 2,
     },
-    [`repos/${REPO}/pulls/7/files`]: [
-      {
-        filename: 'src/web/x.ts',
-        status: 'modified',
-        additions: 10,
-        deletions: 2,
-        changes: 12,
-        patch: ['@@ -1,2 +1,10 @@', '-a', '-b', ...Array.from({ length: 10 }, (_, i) => `+r${String(i)}`)].join('\n'),
-      },
-    ],
-    [`repos/${REPO}/compare/${MAIN}...${HEAD}`]: { behind_by: 0 },
-    [`repos/${REPO}/commits/${HEAD}/check-runs`]: {
-      check_runs: [
-        ...VEREIST.map((n) => check(n, HEAD)),
-        check('agent-merge', HEAD, { id: 9, check_suite: { id: 55 } }),
-      ],
-    },
-    [`repos/${REPO}/actions/runs?check_suite_id=55`]: {
-      workflow_runs: [
-        { path: '.github/workflows/guard.yml', event: 'pull_request_target', pull_requests: [{ number: 7 }] },
-      ],
-    },
+    [`repos/${REPO}/commits/${HEAD}/check-runs`]: { check_runs: VEREIST.map((n) => check(n, HEAD)) },
     [`repos/${REPO}/commits/${MAIN}/check-runs`]: { check_runs: [check('gate:fast', MAIN)] },
-    [`repos/${REPO}/issues/7/comments`]: [
-      { user: { login: 'BramLambertJansen' }, body: `Review ${HEAD}: geen blokkerende bevindingen` },
-    ],
   };
 }
 
@@ -115,63 +91,24 @@ describe('agent-merge-niet-kritiek/AC-3 pr:merge', () => {
       }),
       /lokale HEAD/,
     ],
-    ['achter main', zet(`compare/${MAIN}...${HEAD}`, { behind_by: 1 }), /kop van main niet/],
     [
       'verplichte check rood',
       zet(`commits/${HEAD}/check-runs`, {
-        check_runs: [check('gate:fast', HEAD, { conclusion: 'failure' }), check('document-status', HEAD)],
+        check_runs: [check('gate:fast', HEAD, { conclusion: 'failure' }), check('check-core', HEAD)],
       }),
       /verplichte checks niet groen/,
     ],
     [
-      'agent-merge overgeslagen (oordeel nee)',
-      zet(`commits/${HEAD}/check-runs`, { check_runs: VEREIST.map((n) => check(n, HEAD)) }),
-      /geen job agent-merge/,
+      'verplichte check ontbreekt op de head',
+      zet(`commits/${HEAD}/check-runs`, { check_runs: [check('gate:fast', HEAD)] }),
+      /verplichte checks niet groen/,
     ],
     [
-      'agent-merge uit een andere workflow',
-      zet('actions/runs?check_suite_id=55', {
-        workflow_runs: [
-          { path: '.github/workflows/nep.yml', event: 'pull_request_target', pull_requests: [{ number: 7 }] },
-        ],
-      }),
-      /geen job agent-merge/,
-    ],
-    [
-      'agent-merge uit guard.yml maar met event pull_request (PR-branch)',
-      zet('actions/runs?check_suite_id=55', {
-        workflow_runs: [{ path: '.github/workflows/guard.yml', event: 'pull_request', pull_requests: [{ number: 7 }] }],
-      }),
-      /geen job agent-merge/,
-    ],
-    [
-      'agent-merge uit guard.yml voor een andere PR met dezelfde head',
-      zet('actions/runs?check_suite_id=55', {
-        workflow_runs: [
-          { path: '.github/workflows/guard.yml', event: 'pull_request_target', pull_requests: [{ number: 8 }] },
-        ],
-      }),
-      /geen job agent-merge/,
-    ],
-    [
-      'agent-merge overgeslagen (conclusie skipped)',
+      'verplichte check van een andere app',
       zet(`commits/${HEAD}/check-runs`, {
-        check_runs: [
-          ...VEREIST.map((n) => check(n, HEAD)),
-          check('agent-merge', HEAD, { id: 9, conclusion: 'skipped', check_suite: { id: 55 } }),
-        ],
+        check_runs: [check('gate:fast', HEAD), check('check-core', HEAD, { app: { id: 1 } })],
       }),
-      /agent-merge is skipped/,
-    ],
-    [
-      'agent-merge van een andere app',
-      zet(`commits/${HEAD}/check-runs`, {
-        check_runs: [
-          ...VEREIST.map((n) => check(n, HEAD)),
-          check('agent-merge', HEAD, { app: { id: 1 }, check_suite: { id: 55 } }),
-        ],
-      }),
-      /geen job agent-merge/,
+      /verplichte checks niet groen/,
     ],
     [
       'main rood',
@@ -190,25 +127,8 @@ describe('agent-merge-niet-kritiek/AC-3 pr:merge', () => {
       zet(`commits/${MAIN}/check-runs`, { check_runs: [] }),
       /geen verplichte check op de kop van main/,
     ],
-    [
-      'review op een oude SHA',
-      zet('issues/7/comments', [
-        { user: { login: 'x' }, body: `Review ${'c'.repeat(40)}: geen blokkerende bevindingen` },
-      ]),
-      /verse review/,
-    ],
   ])('%s', (_naam, aanpassing, reden) => {
     expect(redenen(aanpassing)).toMatch(reden);
-  });
-
-  test('een run zonder pull_requests (GitHub laat die bij pull_request_target soms leeg) telt', () => {
-    expect(
-      redenen(
-        zet('actions/runs?check_suite_id=55', {
-          workflow_runs: [{ path: '.github/workflows/guard.yml', event: 'pull_request_target', pull_requests: [] }],
-        }),
-      ),
-    ).toBe('');
   });
 
   test.each([[[]], [['0']], [['7', '8']], [['7;x']], [['abc']]])('ongeldig argument %j', (args) => {

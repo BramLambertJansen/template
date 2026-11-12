@@ -1,19 +1,8 @@
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { OUDE_KRITIEK, afgeleid, padNiveau } from '../../rails/hooks/lib/padtabel.mjs';
-import { loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
-import { leesAgentMerge, leesMergeConfig } from '../../scripts/kit/agent-merge.mjs';
 import { docsViolations } from '../../scripts/kit/check-docs.mjs';
-import { leesConfig } from '../../scripts/kit/diff-guard.mjs';
-import { kritiekPad } from '../../scripts/kit/lane.mjs';
-import { expectAbsent } from '../support/absence';
-import { OUD, OUDE_GATES_TEKST, REPO, nieuw, nieuwePaden, repo } from './padtabel-kit';
-
-// Spec padtabel (ADR 0079): de lezer `padNiveau`/`afgeleid` in rails/hooks/lib/padtabel.mjs, de oude vorm en `OUDE_KRITIEK`.
-
-const OUDE_VOLLEDIGE_KRITIEK = [...OUD.kritiek, ...OUD.altijdVragen];
+import { OUD, REPO, nieuw, nieuwePaden, repo } from './padtabel-kit';
 
 async function meldingen(paden: Record<string, unknown>): Promise<string[]> {
   return (await docsViolations(repo({ gatesTekst: JSON.stringify(nieuw(paden)) }))).map((v) => v.message);
@@ -62,34 +51,6 @@ describe('padtabel/AC-4 onleesbare rij telt streng, een lege rij als vrij/eigena
 });
 
 describe('padtabel/AC-6 de oude vorm van 30cc352 levert precies de lijsten van 30cc352', () => {
-  test('afgeleid geeft de oude lijsten door, met kritiek = OUDE_KRITIEK plus altijdVragen (padtabel/AC-6)', () => {
-    expect(afgeleid(OUD.ruw)).toEqual({
-      gates: OUD.gates,
-      voorReview: OUD.voorReview,
-      altijdVragen: OUD.altijdVragen,
-      kritiek: OUDE_VOLLEDIGE_KRITIEK,
-      agentMerge: { toegestaan: OUD.toegestaan, kritiek: OUD.agentKritiek },
-    });
-  });
-
-  test('loadConfig, leesConfig en leesMergeConfig lezen dezelfde lijsten, plus kritiek (padtabel/AC-6)', () => {
-    expect(loadConfig(OUDE_GATES_TEKST)).toMatchObject({
-      gates: OUD.gates,
-      voorReview: OUD.voorReview,
-      altijdVragen: OUD.altijdVragen,
-      kritiek: OUDE_VOLLEDIGE_KRITIEK,
-    });
-    expect(leesConfig(OUDE_GATES_TEKST)).toMatchObject({ gates: OUD.gates, testpaden: OUD.testpaden });
-    expect(leesMergeConfig(OUDE_GATES_TEKST)).toMatchObject({
-      gates: OUD.gates,
-      voorReview: OUD.voorReview,
-      altijdVragen: OUD.altijdVragen,
-      kritiek: OUDE_VOLLEDIGE_KRITIEK,
-      agentMerge: { toegestaan: OUD.toegestaan, kritiek: OUD.agentKritiek },
-    });
-    expect(leesAgentMerge(OUD.ruw)).toMatchObject({ toegestaan: OUD.toegestaan, kritiek: OUD.agentKritiek });
-  });
-
   test('oude vorm zonder voorReview en altijdVragen: ontbrekend blijft ontbrekend (padtabel/AC-6)', () => {
     const kaal = Object.fromEntries(
       Object.entries(OUD.ruw).filter(([sleutel]) => sleutel !== 'voorReview' && sleutel !== 'altijdVragen'),
@@ -101,43 +62,9 @@ describe('padtabel/AC-6 de oude vorm van 30cc352 levert precies de lijsten van 3
   });
 });
 
-describe('padtabel/AC-11 de oude vorm: hooks en scripts lezen hem zonder fout', () => {
-  test('loadConfig, leesConfig, leesMergeConfig en afgeleid gooien niet; kritiekPad volgt OUDE_KRITIEK (padtabel/AC-11)', () => {
-    expect(() => loadConfig(OUDE_GATES_TEKST)).not.toThrow();
-    expect(() => leesConfig(OUDE_GATES_TEKST)).not.toThrow();
-    expect(() => leesMergeConfig(OUDE_GATES_TEKST)).not.toThrow();
-    const lijsten = afgeleid(OUD.ruw);
-    expect(lijsten.kritiek).toEqual(OUDE_VOLLEDIGE_KRITIEK);
-    expect(kritiekPad('scripts/kit/lane.mjs', loadConfig(OUDE_GATES_TEKST))).toBe(true);
-  });
-});
-
 describe('padtabel/AC-12 KRITIEK staat alleen nog bevroren in padtabel.mjs', () => {
   test('OUDE_KRITIEK is gelijk aan de fixture van 30cc352 (padtabel/AC-12)', () => {
     expect(OUDE_KRITIEK).toEqual(OUD.kritiek);
-  });
-
-  test('lane.mjs bevat geen padlijst voor kritiek meer (padtabel/AC-12)', () => {
-    const lane = readFileSync(path.join(REPO, 'scripts/kit/lane.mjs'), 'utf8');
-    expectAbsent(
-      lane,
-      /\bKRITIEK\s*=|'src\/core\/api\/(?:auth|db)\/\*\*'|'rails\/hooks\/\*\*'|'check-document-status'/,
-      {
-        recognizes: [
-          'const KRITIEK = [',
-          'export const KRITIEK = [',
-          "'src/core/api/auth/**',",
-          "'src/core/api/db/**',",
-          "'rails/hooks/**',",
-          "'check-document-status',",
-        ],
-        allows: [
-          'kritiekPad(pad, config)',
-          'config.kritiek',
-          "import { OUDE_KRITIEK } from '../../rails/hooks/lib/padtabel.mjs';",
-        ],
-      },
-    );
   });
 
   test('alleen padtabel.mjs definieert OUDE_KRITIEK, buiten tests en docs (padtabel/AC-12)', () => {

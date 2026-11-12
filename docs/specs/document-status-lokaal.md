@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #521
+status: vervallen
 namespace: document-status-lokaal
 model: sonnet
 ---

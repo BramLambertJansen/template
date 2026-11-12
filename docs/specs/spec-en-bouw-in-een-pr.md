@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #377
+status: vervallen
 namespace: spec-en-bouw
 ---
 

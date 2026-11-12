@@ -6,13 +6,11 @@ import { readAuthority } from '../../rails/hooks/lib/authority-context.mjs';
 import { documentInfo } from '../../rails/hooks/lib/document-state.mjs';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 import * as taskAuthority from '../../rails/hooks/lib/task-authority.mjs';
-import { kritiekPad, laneVan } from '../../scripts/kit/lane.mjs';
 import {
   BRANCH,
   REPOSITORY,
   S1,
   commit,
-  draaiChecker,
   draaiDocsStatus,
   git,
   opruimen,
@@ -88,12 +86,6 @@ describe('compacte-kennisbasis-rails/AC-14: de mandaatonderdelen bestaan niet me
     expect(typeof scripts === 'object' && scripts !== null ? Object.keys(scripts) : []).not.toContain('docs:decision');
   });
 
-  test('document-decision staat niet meer in KRITIEK van lane.mjs', () => {
-    expect(kritiekPad('scripts/kit/document-decision.mjs', loadConfig(GATES))).toBe(false);
-    // Controle: de andere besluit- en statusscripts blijven kritiek.
-    expect(kritiekPad('scripts/kit/document-status.mjs', loadConfig(GATES))).toBe(true);
-  });
-
   test('task-authority exporteert canWriteProtected niet meer, readRegistry en canRecordStatus wel', () => {
     expect(Object.keys(taskAuthority)).not.toContain('canWriteProtected');
     expect(Object.keys(taskAuthority)).toEqual(expect.arrayContaining(['readRegistry', 'canRecordStatus']));
@@ -107,12 +99,10 @@ describe('compacte-kennisbasis-rails/AC-14: de mandaatonderdelen bestaan niet me
     expect(authority).not.toContain('canWriteProtected');
   });
 
-  test.each(['scripts/kit/check-document-status.mjs', '.github/workflows/guard.yml'])(
-    '%s noemt geen mandaat of taakscope',
-    (bestand) => {
-      expect(readFileSync(path.join(ROOT, bestand), 'utf8')).not.toMatch(NIET_NEUTRAAL);
-    },
-  );
+  // GEWIJZIGD (templateregime AC-13, ADR 0089 punt 5): de rij voor het verwijderde check-document-status.mjs is weg.
+  test.each(['.github/workflows/guard.yml'])('%s noemt geen mandaat of taakscope', (bestand) => {
+    expect(readFileSync(path.join(ROOT, bestand), 'utf8')).not.toMatch(NIET_NEUTRAAL);
+  });
 
   test('readAuthority leest een oud register met een record nog (tolerant), zonder er rechten aan te hangen', () => {
     const { root } = maakRepo({ status: 'goedgekeurd', metRecord: true });
@@ -251,76 +241,6 @@ describe('compacte-kennisbasis-rails/AC-15: docs:status schrijft alleen nog gebo
     const uitvoer = draaiDocsStatus(root, [S1, 'goedgekeurd']);
     expect(uitvoer.status).toBe(1);
     expect(uitvoer.stderr).toMatch(/besluit-PR/i);
-  });
-});
-
-describe('compacte-kennisbasis-rails/AC-15: check-document-status (randgeval "status zonder lane, na 6b")', () => {
-  function zetGoedgekeurd(root: string): void {
-    write(root, S1, read(root, S1).replace('status: voorstel', 'status: goedgekeurd'));
-  }
-
-  test('een statuswijziging buiten een lane met alleen een record op main: geweigerd', () => {
-    const fixture = maakRepo({ status: 'voorstel', metRecord: true });
-    zetGoedgekeurd(fixture.root);
-    write(fixture.root, 'README.md', 'Gewijzigd.\n');
-    const uitvoer = draaiChecker(fixture, commit(fixture.root, 'docs: status en readme'));
-    expect(uitvoer.status).toBe(1);
-    expect(uitvoer.stderr).toContain(S1);
-    expect(uitvoer.stderr).not.toMatch(NIET_NEUTRAAL);
-  });
-
-  test('controle: dezelfde statuswijziging als besluit-PR (alleen de spec) slaagt, met of zonder record', () => {
-    for (const metRecord of [true, false]) {
-      const fixture = maakRepo({ status: 'voorstel', metRecord });
-      zetGoedgekeurd(fixture.root);
-      const uitvoer = draaiChecker(fixture, commit(fixture.root, 'docs: status'));
-      expect(uitvoer.stderr).toBe('');
-      expect(uitvoer.status).toBe(0);
-    }
-  });
-
-  test('de uitvoer van een geslaagde check noemt geen mandaat of taakscope', () => {
-    const fixture = maakRepo({ status: 'goedgekeurd', metRecord: true });
-    write(fixture.root, 'README.md', 'Gewijzigd.\n');
-    const uitvoer = draaiChecker(fixture, commit(fixture.root, 'docs: readme'));
-    expect(uitvoer.status).toBe(0);
-    expect(uitvoer.stdout).toContain('document-status:');
-    expect(uitvoer.stdout).not.toMatch(NIET_NEUTRAAL);
-  });
-
-  test('een code- of roadmapwijziging bij een record op main kent geen mandaatscope meer', () => {
-    const fixture = maakRepo({ status: 'goedgekeurd', metRecord: true });
-    write(fixture.root, 'src/core/web/ui/example.tsx', 'export const version = 2;\n');
-    write(fixture.root, 'docs/roadmap.md', '# Roadmap\n\n- [x] Iets (#1)\n');
-    const uitvoer = draaiChecker(fixture, commit(fixture.root, 'feat: bron en roadmap'));
-    expect(uitvoer.stderr).not.toMatch(NIET_NEUTRAAL);
-    expect(uitvoer.status).toBe(0);
-  });
-});
-
-describe('compacte-kennisbasis-rails/AC-14: .claude/decisions.json in een besluit-PR', () => {
-  const ADR = 'docs/adr/0098-demo.md';
-  const config = loadConfig(GATES);
-  const lane = (changes: { status: string; pad: string }[], besluiten: string[]) =>
-    laneVan({ changes, besluiten, config, repository: REPOSITORY });
-
-  test.each([
-    ['een ADR met het register', ADR],
-    ['een spec met het register', 'docs/specs/demo.md'],
-  ])('%s: geen lane; het register telt niet meer als eigen record', (_naam, besluit) => {
-    const uitslag = lane(
-      [
-        { status: 'A', pad: besluit },
-        { status: 'M', pad: RECORD },
-      ],
-      [besluit],
-    );
-    expect(uitslag.lane).toBeNull();
-    expect(uitslag.reden).toContain(RECORD);
-  });
-
-  test('controle: alleen het besluitdocument is nog steeds de framework-lane', () => {
-    expect(lane([{ status: 'A', pad: ADR }], [ADR]).lane).toBe('framework');
   });
 });
 

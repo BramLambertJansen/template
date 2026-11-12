@@ -143,9 +143,9 @@ function itemMeldingen(item, kader) {
 }
 
 /**
- * Bewijsvorm voor een spec naar gebouwd: `status: gebouwd # #<PR>` (ADR 0080; `check-document-status` toetst het PR-nummer en
+ * Bewijsvorm voor een spec naar gebouwd: `status: gebouwd # #<PR>` (ADR 0080; `pnpm docs:status` toetst het PR-nummer en
  * het bewijs); de oude vorm met `; gevalideerd: <sha>` telt nog,
- * gelezen met dezelfde code als `check-document-status` (`documentInfo` en `builtReference`).
+ * gelezen met `documentInfo` en `builtReference`.
  * @param {string} bestand
  * @param {string} spec
  */

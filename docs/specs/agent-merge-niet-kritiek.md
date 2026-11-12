@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #483
+status: vervallen
 namespace: agent-merge-niet-kritiek
 model: opus
 ---

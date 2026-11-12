@@ -1,6 +1,6 @@
 // Padtabel (ADR 0079, spec padtabel): hoe zwaar een pad beschermd is, staat op één plek, `paden` in .claude/gates.json, per
 // glob `schrijven` (gate, voorReview, altijdVragen; ontbrekend = vrij) en `besluit` (agent, eigenaar, besluit-pr; ontbrekend =
-// eigenaar). Per kolom wint de strengste waarde over alle passende globs. Rolhek, diff-guard, lane, agent-merge, `pr:merge`
+// eigenaar). Per kolom wint de strengste waarde over alle passende globs. Rolhek
 // en check-docs lezen de afgeleide lijsten uit `afgeleid()`. Puur: de aanroeper levert de geparste gates.json.
 // De oude vorm (lijsten zonder `paden`) wordt doorgegeven zoals hij staat, met `OUDE_KRITIEK`; beide vormen tegelijk gooit.
 

@@ -5,7 +5,7 @@
 //    en teksten. Geen tests: die schrijft de tester.
 // Bestaande tests (permissions.test.ts, de menutest) schrijft hij niet: hij drukt de exacte wijziging af en de hoofdsessie
 // zet die met Edit en noemt ze met reden in de PR (OV-4). permissions.ts en app.ts schrijft hij wel: ze zijn
-// geen gate meer (ADR 0046 punt 32); het risico-overzicht van de diff-guard meldt een nieuwe permissie of route. Bestaat een doel al, dan schrijft hij niets (OV-5).
+// geen gate meer (ADR 0046 punt 32); een nieuwe permissie of route toetst de reviewer (R-WERK-09, ADR 0089 punt 8). Bestaat een doel al, dan schrijft hij niets (OV-5).
 // test/security/resources.ts (spec security-suite, PR 4) schrijft hij evenmin: hij drukt de declaratie af (routeClassificatie en
 // resources, samples als INVULLEN) en de tester neemt die over en vult de samples.
 // Templates in scripts/kit/templates/; check:new-resource bewijst dat de uitvoer gate:fast haalt (OV-7).

@@ -10,8 +10,31 @@ export function unchangedHead(root, expected) {
     gitText(root, ['rev-parse', 'origin/main'])?.trim() === expected.base
   );
 }
-import { parseNameStatus } from './diff-guard.mjs';
 import { kaderVan, ROADMAP, taakVinkje } from './roadmap-item.mjs';
+
+/**
+ * Uitvoer van `git diff --name-status -z --find-renames`: NUL-gesplitst, dus paden met spatie of regeleinde blijven heel.
+ * @param {string} tekst
+ * @returns {{ status: string, pad: string, van?: string }[]}
+ */
+export function parseNameStatus(tekst) {
+  const velden = tekst.split('\0');
+  /** @type {{ status: string, pad: string, van?: string }[]} */
+  const wijzigingen = [];
+  for (let i = 0; i < velden.length;) {
+    const code = velden[i] ?? '';
+    if (code === '') break;
+    const status = code.charAt(0);
+    if (status === 'R' || status === 'C') {
+      wijzigingen.push({ status, van: velden[i + 1] ?? '', pad: velden[i + 2] ?? '' });
+      i += 3;
+    } else {
+      wijzigingen.push({ status, pad: velden[i + 1] ?? '' });
+      i += 2;
+    }
+  }
+  return wijzigingen;
+}
 
 /** @param {string} root @param {string} sha @param {string} pad */
 function bestandOp(root, sha, pad) {
