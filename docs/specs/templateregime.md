@@ -7,16 +7,17 @@ namespace: templateregime
 
 ## Doel
 
-In de template-repo vervallen de besluit-PR en de onwijzigbaarheid van ADR's, archief en gebouwde specs (ADR 0089); in een app
-blijft alles streng, behalve voor templatedocumenten die de app ongewijzigd uit `template/main` overneemt.
+GitHub bewaakt wie beslist (GitHub App, `CODEOWNERS` uit de padtabel, ruleset), waarna de eigen documentbewaking verdwijnt en
+template-documenten naar `docs/template/` verhuizen (ADR 0089).
 
 ## Rollen en wie wat ziet
 
-Architect en hoofdsessie schrijven ADR's en specs; de eigenaar merget. Andere rollen blijven op documenten geweigerd zoals nu.
+De agent werkt als GitHub App; de eigenaar keurt goed op paden van een code-eigenaar en activeert App en ruleset. Architect
+en hoofdsessie schrijven ADR's en specs.
 
 ## Datawijzigingen (met grants)
 
-n.v.t. — alleen scripts, hooklib en docs.
+n.v.t. — scripts, workflow, padtabel, `CODEOWNERS`, tests en docs.
 
 ## Routes en foutcodes
 
@@ -24,113 +25,122 @@ n.v.t. — geen API-route.
 
 ## Koppeling
 
-n.v.t. — geen externe dienst; `template/main` komt van `TEMPLATE_URL` zoals in `check-core`.
+n.v.t. — GitHub is de bestaande host, geen nieuwe koppeling van de app.
 
 ## Kopieer de vorm van
 
-- `scripts/kit/check-core.mjs` — de functie isTemplateRepo als enige herkenning, en de main-branch van de template vers
-  ophalen van de vaste template-URL in een eigen guard-ref, dicht vallend als dat niet lukt.
+- `scripts/kit/check-core.mjs` — `coreTree` en `commitFout` als vorm voor de tweede zone.
 
 ## Hergebruik en UX
 
-n.v.t. — geen UI; meldingen houden hun tekst, behalve AC-11.
+n.v.t. — geen UI.
 
 ## Acceptatiecriteria
 
-Template = `isTemplateRepo(<gates.json van de vertrouwde basis>, <repository>)` is waar; app = elk ander geval. Wat in AC-2 tot
-en met AC-5 vervalt, vervalt alleen in de template. Functies uit `check-document-status.mjs` tenzij anders genoemd.
+Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van punt 5; stap 4 = verhuizing.
 
-- **templateregime/AC-1** — Template alleen als `isTemplateRepo` waar is voor de `gates.json` van de basis en `REPO`. Zonder
-  `onderhoud`, met een andere naam, of als `isTemplateRepo` gooit (ongeldige JSON): streng; een unit-test per geval.
-- **templateregime/AC-2** — Template, ADR's: `beslisOvergang` geeft `besluit` (niet `vrij`, `geweigerd` of `a4`) voor een
-  herschreven geaccepteerd ADR zonder herzieningsregel, een gewijzigd vervallen of vervangen ADR waarvan de status gelijk
-  blijft, geaccepteerd → `vervangen door NNNN` of `vervallen` met nieuwe inhoud, een gewijzigd kopnummer en een wijziging in het
-  archief; elke andere statusovergang volgt `toegestaanZonderRecord`; `verifyHerzieningPr` toetst niet. Een ADR met
-  eigenaarstatus verwijderen of hernoemen, ook naast een nieuw ADR met hetzelfde nummer, slaagt (`verifyAdrWeg`).
-- **templateregime/AC-3** — Template, archief: wijzigen, verwijderen of hernoemen onder `docs/adr/archief/` of
-  `docs/specs/archief/` slaagt; alle eisen van `verifyVerhuizingen` vervallen (byte-gelijk, `verifyArchiefStatus`, alleen met
-  `docs/`).
-- **templateregime/AC-4** — Template, specs: slagen, ook naast code: een gebouwde spec van inhoud wijzigen
-  (`verifyGebouwdeInhoud`), een AC-id laten verdwijnen (`verifyAcIdsBlijven`), een markering zonder de eisen van
-  `verifyMarkering`, een spec met eigenaarstatus verwijderen of hernoemen (`verifySpecWeg`, `verifyGeenRename`).
-- **templateregime/AC-5** — Template, lane: elk besluit naast elk ander pad geeft in `laneVan` de lane `template`, ook naast
-  `docs/framework.md`, `docs/operations/*` of een kritiek pad (`kritiekPad`). Daar vervallen "een ADR gaat in een besluit-PR
-  (ADR 0062)", "is kritiek; dat vraagt eerst een besluit-PR (ADR 0062 punt 2)", en uit `buitenBereik` "is een ADR" en "een
-  bestaande spec verwijderen"; in `verifyFeatureInhoud` vervallen `migratieOvertreding` en de grens van één nieuwe migratie.
-  Blijven rood met hun melding: de rest van `buitenBereik` ("wijzigt instructies van de agent", "onbekend pad buiten gates",
-  "een bestaande test verwijderen of hernoemen", "een bestaande test buiten JS/TS wijzigen", "een migratie wijzigen of
-  verwijderen"), `functionalUiReason` en `verifyFunctionalUiChanges` voor een functionele-UI-spec, de kop "Datawijzigingen (met
-  grants)" bij een nieuwe migratie, `verifyVolgorde` en `verifyTestwijzigingen`.
-- **templateregime/AC-6** — Template, wat blijft, elk rood met de melding van nu: ongeldige statusregel
-  (`statusregelOvertreding`); een ADR terug naar `voorgesteld`; een andere `geweigerd`-overgang (`GEEN_BESLUIT`); "is al gebruikt
-  door een verwijderd ADR"; "is inmiddels op main gebruikt"; een dubbel nummer (`duplicateAdrNumbers`); `vervangen door NNNN`
-  zonder doel (`verifyVervanger`, `verifyVervangersBestaan`) of met een cyclus; `gebouwd # #<PR>` zonder bouwbewijs
-  (`verifyGebouwd`, `verifyGemergd`, `verifyBuilt`); in het rolhek een eigenaarstatus door een andere rol dan architect of
-  hoofdsessie; in `check-docs` een dode link, een AC zonder test en een krimpovertreding.
-- **templateregime/AC-7** — App: elk geval uit AC-2 tot en met AC-5 wordt geweigerd met de melding van nu; de bestaande tests in
-  `test/rails/` en `test/hooks/` blijven ongewijzigd groen. Rood bewijs: dezelfde test met `onderhoud.repository` gelijk aan
-  `REPO` faalt.
-- **templateregime/AC-8** — App, template-update: `check-document-status` haalt `template/main` altijd vers op van `TEMPLATE_URL`
-  in een eigen ref; een bestaande ref zoals `refs/remotes/template/main` telt niet. Een pad is een ongewijzigd templatedocument
-  als (a) de versie op de basis byte-gelijk is aan dat pad op `merge-base(<basis>, template/main)`, of het pad op beide ontbreekt,
-  én (b) de versie na de PR byte-gelijk is aan `template/main`, of het pad ontbreekt zowel na de PR als op `template/main`; bij
-  een rename bron en doel apart. Zo'n pad valt buiten AC-2 tot en met AC-4 en telt niet als besluit in
-  `verifyInPrStatus`/`laneVan` of in `verifyGebouwd`/`verifyGemergd`. Elk ander pad krijgt de strenge toets, ook zonder of met
-  meer dan één merge-base en als ophalen of lezen mislukt; de uitvoer noemt dan de reden, en bij een afwijking dat
-  `template/main` intussen verder kan zijn.
-- **templateregime/AC-9** — `check-docs`: `adrHerzienViolations` en `specarchiefViolations` ("een naam komt niet terug") geven in
-  de template geen overtreding; in een app toetst `adrHerzienViolations` alleen een wijzigend ADR vanaf 0100. De repository komt
-  uit `GITHUB_REPOSITORY` in CI en lokaal uit de `origin`-URL; onbekend is streng. `check-docs` is geen grens (het draait de code
-  en `gates.json` van de PR); de guard is de grens.
-- **templateregime/AC-10** — Rolhek in de onderhoudsmodus (`ctx.onderhoud === true`), voor een `beslisrol`: niet meer geweigerd,
-  elk nu eerst rood: Edit, Write of verwijderen in het archief (`archiefWeg`, `beslisOvergang`); een Bash-schrijfactie in het
-  archief (`decideChange`, `archiefViaBash`, `ARCHIEF_MELDING`); een inhoudswijziging aan een vervallen of vervangen ADR;
-  geaccepteerd → vervangen met nieuwe inhoud; een gewijzigd kopnummer. Blijft geweigerd: terug naar `voorgesteld`, en elk geval
-  voor een andere rol of zonder onderhoudsmodus.
-- **templateregime/AC-11** — Meldingen: in de template noemt geen weigering uit AC-6 of AC-10 "besluit-PR" als uitweg (een test
-  per melding faalt op die tekst); in een app blijft `A4_MELDING` letterlijk.
-- **templateregime/AC-12** — Docs, reviewpunt (de reviewer toetst per R-id): `docs/framework.md` R-WERK-05, R-WERK-07, R-WERK-08,
-  R-WERK-24, R-CI-05, R-CI-06, R-ROL-02 en R-ROL-08 noemen het onderscheid template/app; `.claude/agents/architect.md` en
-  `docs/adr/_template.md` spreken het niet tegen.
+- **templateregime/AC-1** — Stap 2, tokenscript: neemt geen argumenten voor pad of rechten, vraagt alleen een token voor deze
+  ene repository aan met looptijd van hoogstens een uur, en drukt de sleutel nooit af; de sleutel staat op een pad dat de
+  sandbox niet laat lezen. Unit-tests op argumenten, repository en uitvoer.
+- **templateregime/AC-2** — Stap 2, rulesetscript: eist review van een code-eigenaar met nul vereiste goedkeuringen, trekt een
+  goedkeuring in bij een nieuwe push, eist geen bijgewerkte branch, en eist precies `requiredChecks` (ook `check-core`,
+  `leerpunt-bewijs`, `codeql (javascript-typescript)` en, tot stap 3, `document-status`). Zonder de optie `--bypass-beheerder`
+  is `bypass_actors` leeg; de eigenaar gebruikt die optie pas na AC-6. De test is rood bij een ontbrekende of extra check, bij
+  een bypass zonder de optie, als de App erin staat en bij een andere `bypass_mode` dan `pull_request`.
+  Bewijs na activering: de eigenaar leest de ruleset met `gh api` en zet de uitvoer in de PR.
+- **templateregime/AC-3** — Stap 2, `CODEOWNERS`: eerst `* @<eigenaar>`, dan elke glob met besluit `agent` zonder eigenaar
+  (nu `/src/`, `/docs/` en `/CHANGELOG.md`), dan elke glob met een besluit anders dan `agent`, met `/` vooraan bij een glob zonder `**/`. De padtabel heeft rijen
+  met besluit `eigenaar` voor `docs/template/**`, `**/CLAUDE*.md`, `**/AGENTS*.md`, `**/.*`, `**/.*/**`, `**/*.config.*`,
+  `**/package.json` en `**/tsconfig*.json`. De test rekent met "laatste passende patroon wint" over alle getrackte paden plus
+  `db/migrations/x.sql`, `docs/template/adr/x.md` en `src/x/CLAUDE.md`, en is rood als een pad een andere eigenaar krijgt dan
+  het besluit in de padtabel. Bij de activering meldt GitHub geen fouten in `CODEOWNERS` (bewijs: eigenaar, in de PR).
+- **templateregime/AC-4** — Proef, pad van een code-eigenaar: geleverd op 2026-11-12. PR #695 van de App
+  (`scripts/proef-app-beschermd.md`) was geblokkeerd met alle checks groen, mergebaar na goedkeuring van de eigenaar, en weer
+  geblokkeerd na een nieuwe commit van de App. Na stap 2 herhaald met de echte `CODEOWNERS` op `docs/template/adr/`.
+- **templateregime/AC-5** — Proef, geen pad van een code-eigenaar: geleverd op 2026-11-12. PR #694 van de App
+  (`docs/proef-app-vrij.md`) was mergebaar zonder review zodra de verplichte checks groen waren. Na stap 2 herhaald.
+- **templateregime/AC-6** — Identiteit, nog niet bewezen: in de agentsessie mislukt lezen van `~/.config/gh/`, levert
+  `git credential fill` voor github.com niets, ontbreken `GH_TOKEN`, `GITHUB_TOKEN` en `SSH_AUTH_SOCK`, en tonen de auteur van
+  push en PR de App. Bewijs: een sandboxtest per punt plus de uitvoer in een PR, bevestigd door de eigenaar. Stap 3 en de bypass
+  beginnen pas na dit AC.
+- **templateregime/AC-7** — Stap 3, na AC-4 tot en met AC-6: `.github/workflows/guard.yml` heeft geen jobs `diff-guard`,
+  `agent-merge` en `document-status`; `document-status` staat niet meer in `requiredChecks` en de eigenaar werkt de ruleset
+  direct na de merge bij; de scripts uit "Raakt ook" zijn weg; `pnpm pr:merge` toetst alleen nog head-SHA en groene checks.
+
+  | Onderdeel | Overgenomen door |
+  |---|---|
+  | A4 met herzieningsroute, archief, levende spec, AC-id's, besluit-PR, lanes | goedkeuring op `docs/adr/**`, `docs/specs/**`, `docs/template/**` |
+  | bouwbewijs van `gebouwd` | de merge met verplichte checks; de vorm toetst `check:roadmap` |
+  | inhoudstoets van de agent-merge op zelfladende bestanden | `CODEOWNERS`-rijen uit AC-3 |
+  | spec vóór code, testgevallen weghalen of skippen, onbekende paden, binaire bestanden | goedkeuring op testpaden en gates; anders afspraak |
+  | routes en permissies buiten `src/shared/contracts/` en `permissions.ts` | afspraak R-WERK-09, getoetst door de reviewer |
+  | kop van main in de PR | niets: aanvaard risico, de CI op main vangt het |
+  | `merge: eigenaar` | de eigenaar zet zo nodig één vereiste goedkeuring |
+
+- **templateregime/AC-8** — `check-core` bewaakt `src/core` en `docs/template` elk als zone (`coreTree`, `coreBron`,
+  `oudereCore`, `commitFout` en meldingen per zone): een app-PR die `docs/template/` buiten een vertrouwde template-merge
+  wijzigt, faalt met de zone in de melding.
+- **templateregime/AC-9** — `check-docs` toetst in `docs/adr/`, `docs/specs/`, `docs/template/adr/` en `docs/template/specs/`:
+  links, statuswoorden, unieke nummers per map, kopnummer gelijk aan bestandsnummer, AC→test en de kopcontroles voor specs.
+  `adrHerzienViolations` en de archiefnaamregel verdwijnen in stap 3; de reeks 0001–0099 / 0100+ staat nergens meer.
+- **templateregime/AC-10** — Stap 2, rolhek: het schrijfrecht van de architect omvat `docs/template/adr/**` en
+  `docs/template/specs/**` (ook in `SCHRIJFRECHT_VRIJ`); `check-docs` is groen op de samenhang met de padtabel. De A4- en
+  identiteitsregels van het rolhek blijven tot ADR 0089 punt 9.
+- **templateregime/AC-11** — Stap 4: onder `docs/adr/` en `docs/specs/` staan alleen `_template.md` en `_mini.md`; geen
+  `archief/`; elk verplaatst document staat onder dezelfde naam in `docs/template/`; `check-docs` is groen; `feiten.mjs adr` en
+  `specs` tonen twee lijsten met een kop per map, app eerst.
+- **templateregime/AC-12** — Docs, reviewpunt per plek: `docs/framework.md` (opening, §8 met de kop "Afgedwongen door", §10,
+  R-PROV-01, R-WERK-05 tot en met R-WERK-09, R-WERK-12, R-WERK-23, R-WERK-24, R-CI-01, R-CI-04 tot en met R-CI-08, R-REPO-01,
+  R-REPO-02 met de bypass, R-REPO-05, R-ROL-10, R-ARCH-07), `AGENTS.md`, `CLAUDE.md`, `docs/operations/agent-doorloop.md`, de
+  skill `opleveren`, `.claude/agents/architect.md` en `docs/nieuwe-app.md`. Die laatste en de stap voor template-updates lezen
+  vóór de merge de ruleset van de app en noemen: de App op de app-repo, de handle uit `goedkeurders` in `CODEOWNERS`, een
+  installatie met `issues: write` op de template-repo voor leerpunten, en het betaalde abonnement voor een ruleset op een
+  privé-repo.
+- **templateregime/AC-13** — Stap 3 verwijdert de tests uit "Raakt ook" die alleen verdwenen code toetsen, en uit de gemengde
+  tests alleen die gevallen; de lijst met reden staat in de PR (eigenaarakkoord via deze spec, R-TEST-02).
 
 ## Randgevallen
 
 | Situatie | Gedrag | Foutcode |
 |---|---|---|
-| `REPO` ontbreekt of is leeg | rood: "REPO ontbreekt" (`requiredEnv`) | n.v.t. |
-| `isTemplateRepo` gooit op ongeldige JSON | streng | n.v.t. |
-| PR in de template haalt `onderhoud` uit `gates.json` | de basis telt, niet de PR | n.v.t. |
-| App voegt een eigen document toe | streng: (b) faalt | n.v.t. |
-| App verwijdert een eigen document | streng: (a) faalt | n.v.t. |
-| Template voegt een spec toe met de naam van een app-spec | streng: (a) faalt | n.v.t. |
-| App paste een templatedocument eerder aan | streng: (a) faalt | n.v.t. |
-| App nooit aan de template gekoppeld, of meerdere merge-bases | streng | n.v.t. |
+| AC-6 niet bewezen | geen bypass, geen stap 3; de huidige checks blijven | n.v.t. |
+| PR raakt alleen paden met besluit `agent` | de App merget na groene checks | n.v.t. |
+| PR raakt `src/x/CLAUDE.md` of een `.`-bestand | goedkeuring van de eigenaar nodig | n.v.t. |
 
 ## Raakt ook
 
-- `scripts/kit/check-document-status.mjs`, `scripts/kit/lane.mjs` (`laneVan`, `buitenBereik`),
-  `rails/hooks/lib/document-state.mjs` (`beslisOvergang`, `A4_MELDING`), `scripts/kit/check-docs.mjs`,
-  `scripts/kit/adr-herzien.mjs`, `rails/hooks/lib/rolhek.mjs`; `scripts/kit/check-core.mjs` hergebruikt.
-- Tests in `test/rails/` en `test/hooks/` (onder meer `archief-guard`, `bouwvorm-levende-spec`, `adr-herzien`, `rolhek-archief`,
-  `rolhek-archief-bash`, `rolhek-beslisroute`, `rolhek-onderhoud`): nieuwe gevallen, bestaande ongewijzigd.
-- Docs: `docs/framework.md`, `.claude/agents/architect.md`, `docs/adr/_template.md`, `docs/operations/agent-doorloop.md`.
-- Niet: `check:migrations`, `check:secdef`, `test:db`, `test/security/resources.ts`, permissietests, workflows,
-  `.claude/decisions.json`.
+- Stap 2: `.claude/gates.json` (rijen), `.github/CODEOWNERS`, `scripts/github-ruleset.sh`, `scripts/kit/check-docs.mjs`,
+  `rails/hooks/lib/padtabel.mjs`, `scripts/kit/check-core.mjs`.
+- Stap 3 verwijdert: `scripts/kit/check-document-status.mjs`, `lane.mjs`, `diff-guard.mjs`, `agent-merge.mjs`,
+  `document-status-lokaal.mjs`, `functional-ui-status.mjs`, `adr-herzien.mjs`, de inhoudstoets in `pr-merge.mjs`, drie jobs in
+  `.github/workflows/guard.yml`; past aan: `.claude/decisions.json` (`document-status` weg) en `lefthook.yml`.
+  `rails/hooks/lib/document-state.mjs` houdt wat `check-docs`, `pnpm docs:status` en het rolhek (tot punt 9) gebruiken.
+- Blijven: `scripts/kit/document-status.mjs`, `status-git.mjs`, `github-evidence.mjs`, `rails/hooks/lib/built-evidence.mjs`,
+  `scripts/kit/leerpunt.mjs`, `scripts/kit/leerpunt-bewijs.mjs`.
+- Tests die verdwijnen, alleen verdwijnende code: `test/rails/` `agent-merge`, `agent-merge-bytegrens`, `agent-merge-omvang`,
+  `diff-guard`, `diff-guard-bytegrens`, `diff-guard-risico`, `lane`, `lane-security`, `lane-status`, `lane-status-a4`,
+  `functional-ui-status`, `document-status-lokaal-config`, `archief-guard`, `specarchief-guard`, `spec-en-bouw`,
+  `bouwvorm-levende-spec`, `bouwvorm-review`, `gate-label-weg`, `adr-herzien`; `test/hooks/` `adr-statusregel`,
+  `beslisroute-review`, `taakmandaat-weg`, `mandate-follow-up-ci`, `mandate-follow-up-status`, `follow-up-kit.ts`;
+  `test/scripts/` `document-status-lokaal`, `pr-merge-bytegrens`, `pr-merge-omvang-steekproef`; `test/docs/`
+  `agent-merge-bytegrens-docs`.
+- Gemengd, alleen die gevallen: `test/rails/` `bouwvorm-na-merge`, `gebouwd-na-merge`, `gebouwd-na-merge-git`,
+  `check-roadmap-bewijsvorm`, `document-integrity`, `roadmap-adr-archief`, `roadmap-archive-protection`,
+  `mandate-follow-up-docs`, `padtabel`, `padtabel-gelijkwaardig`, `samenhang-checks-rollen`, `guard-imports`; `test/hooks/`
+  `bouwvorm-docs-status`, `bouwvorm-vervolgbouw`, `authority-git`, `rolhek-pr-merge`; `test/scripts/` `guard-workflow`,
+  `github-ruleset`, `pr-merge`, `pr-merge-padtabel`, `feiten-adr-history`, `feiten-archief`, `leerlus-herzien`,
+  `leerpunt-bewijs`; `test/docs/` `geen-externe-review-docs`. Stap 3 bevestigt de indeling per bestand.
+- Niet: `check:migrations`, `check:secdef`, `test:db`, `test/security/resources.ts`, permissietests.
 
 ## Buiten scope
 
-Korte specs, architect op verzoek, tester bij risicowerk en ADR's samenvoegen; `check-docs` als grens; ander appgedrag dan AC-8
-en AC-9.
+De effecttoets en de identiteitsregels van het rolhek (ADR 0089 punt 9).
 
 ## Testplan
 
-Tests eerst (R-PRINC-04), elk eerst rood. Fixtures: template (`onderhoud.repository` gelijk aan `REPO`), app (zonder
-`onderhoud`), app met template-update (een lokale bare repo als vervanger van `TEMPLATE_URL`). AC-2 tot en met AC-6 en AC-11 in
-de template-fixture; AC-7: bestaande tests ongewijzigd, plus een nieuwe app-test per geval zonder bestaande app-fixture. AC-8:
-byte-gelijk gewijzigd, verwijderd door de template, rename, eigen document verwijderd, eigen document toegevoegd (ontbreekt op
-alle drie de plekken), afwijkend, `template/main` onleesbaar, geen merge-base, meerdere merge-bases, een verouderde
-`refs/remotes/template/main` genegeerd, een nieuw template-ADR met code, een gebouwde templatespec met een vreemd PR-nummer.
-AC-1 en AC-9 als unit-test; AC-10 in de rolhektests. Geen bestaande fixture krijgt een `onderhoud`-regel.
+Tests eerst (R-PRINC-04). AC-1, AC-2, AC-3, AC-8, AC-9 en AC-10 als unit-tests, eerst rood; AC-6 met sandboxtests. AC-4 en
+AC-5 met proef-PR's (geleverd, herhaald na stap 2). AC-7 en AC-13 in stap 3 met `pnpm ratchet` en `pnpm gate:fast` groen.
+AC-11 in stap 4.
 
 ## Open vragen
 

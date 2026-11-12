@@ -2,6 +2,8 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-12 (#696): door ADR 0089 punt 6, in punt 1 wordt "ADR (`0100`+)" een app-ADR in `docs/adr/` van de app; de nummerreeks vervalt
+
 Drempel: A1 (nieuw contract tussen core en app: een app registreert een opslagadapter, [0040](0040-template-app-en-grens-core-app.md))
 en A3 (de browser krijgt contact met een origin buiten de app via een kortlevende signed URL en een ruimere `connect-src`; een dev-route
 buiten CSRF en `bodyLimit`). Aanleiding: leerpunt #313 ("documentupload wordt per app opnieuw bedacht"); activeert het storage-deel van

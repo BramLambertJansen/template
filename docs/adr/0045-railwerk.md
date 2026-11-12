@@ -10,6 +10,7 @@ Herzien: 2026-11-04 (#535): gewijzigd door [0079](0079-een-padtabel.md) punt 1, 
 worden de padtabel `paden`, de terugval bij een ontbrekende `voorReview` geldt alleen nog voor de oude vorm, en `ask` volgt
 de afgeleide `altijdVragen`
 Herzien: 2026-11-12 (#692): door ADR 0089 punt 1 en 2, in de template deels: punt 10, de onderhoudsmodus versoepelt de statusregels wel (A4, archief, besluit-PR); blijft: de overige regels van punt 10; punt 21 vervalt in de template: een geaccepteerd ADR wordt ter plekke herschreven; blijft in een app
+Herzien: 2026-11-12 (#696): door ADR 0089 punt 2, 5 en 8, de vorige regel vervalt: geen licht regime; zodra de GitHub App bewezen is, verdwijnen de diff-guard en `check-document-status`, en daarmee punt 16, 17, 18, 19, 20 en 24 vervallen; punt 21, een correctie aan een ADR is een afspraak die de eigenaar met zijn goedkeuring beslist; punt 22, de strikte statusregel vervalt als guardtoets; punt 10 noemt die twee checks niet meer
 
 Vervangt [0011](0011-railwerk.md), [0017](0017-diff-guard.md), [0031](0031-guard-en-pr-verify-bruikbaarder.md),
 [0032](0032-developer-volgt-hoofdsessie-buiten-voorreview.md), [0033](0033-onderhoudsmodus-voor-templatewerk.md) en

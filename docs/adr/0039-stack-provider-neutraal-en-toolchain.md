@@ -3,6 +3,7 @@
 Status: geaccepteerd
 
 Herzien: 2026-11-03 (#469): gewijzigd door [0057](0057-risicogestuurde-werkstraat.md) punt 8 (de organisatievoorwaarde)
+Herzien: 2026-11-12 (#696): door ADR 0089 punt 2 en 10, in punt 8 is de GitHub App de identiteit waarmee de agent pusht en PR's opent; het installatietoken is kortlevend en de sleutel van de App staat buiten het bereik van de agent
 
 Vervangt [0001](0001-stack-en-architectuur.md), [0002](0002-provider-neutraal.md) en
 [0005](0005-toolchain-en-identiteit.md). Drempel: A4. Consolidatie zonder inhoudelijke wijziging (eigenaarbesluit 2026-10-21,

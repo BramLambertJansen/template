@@ -2,6 +2,8 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-12 (#696): door ADR 0089 punt 6, in punt 8 wordt "app-ADR (`0100`+)" een app-ADR in `docs/adr/` van de app; de nummerreeks vervalt
+
 Vult [0060](0060-bestandsopslag-als-poort.md) punt 7 aan met een tweede soort voor-stap, de partnerstap; de voor-stap voor
 opslag, spec [bestandsopslag](../specs/bestandsopslag.md) en R-OPSL-03 veranderen niet. Drempel: A1 (nieuw contract tussen
 core en app: register, uitgaande client, foutcodes met status 502, 503 en 504) en A3 (een machineroute zonder login als

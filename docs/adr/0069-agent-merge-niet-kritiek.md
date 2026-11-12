@@ -14,6 +14,7 @@ Herzien: 2026-11-05 (#568): punt 3 en 5, Alternatieven, Gevolgen en Meten; verso
 met `agentMerge.codex`, ook als Codex wél reviewt; elke agent-merge is een steekproef (leerpunt #562: Codex is geen
 vereiste); uitwerking in
 [spec](../specs/agent-merge-niet-kritiek.md) AC-7 tot en met AC-10
+Herzien: 2026-11-12 (#696): door ADR 0089 punt 2, 3 en 5, punt 1, 2 en 3 worden: geen pad van een code-eigenaar geraakt en checks groen; de lijst uit de padtabel wordt `CODEOWNERS`, de job `agent-merge` en de inhoudstoets van `pnpm pr:merge` verdwijnen, de omvanggrens en het reviewcommentaar op de head vervallen als check (de review blijft een werkafspraak)
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 30, 31, 33, 34 en 35, de zin "automatische agent-merges vallen af" uit
 [0057](0057-risicogestuurde-werkstraat.md), in [0064](0064-leesbudget-per-laag.md) "zodra de GitHub App er is" (R-DOC-09) en in

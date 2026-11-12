@@ -4,6 +4,7 @@ Status: geaccepteerd
 
 Herzien: 2026-11-05 (#542): punt 4 en 7 aangescherpt na de spec-review: de markering alleen op een nieuw AC-id, de digest zonder markering, een rename alleen naar `docs/specs/archief/`; de route via `voorstel` is een bestaand gat
 Herzien: 2026-11-12 (#692): door ADR 0089 punt 2, in de template deels: punt 1, vervalt: het archief verandert niet, een archiefnaam komt niet terug; blijft: verhuizen onder dezelfde naam; punt 3 en 4, vervalt: AC-id's blijven, een spec verdwijnt niet; blijft: één levende spec per mechanisme, inhoud van een goedgekeurde spec wijzigen is een besluit
+Herzien: 2026-11-12 (#696): door ADR 0089 punt 1, 5, 7 en 8, de vorige regel vervalt: punt 1, het specarchief verdwijnt bij de verhuizing en `docs/template/specs/` heeft geen archief; punt 3 en 4, AC-id's die blijven en een spec die niet verdwijnt zijn afspraken, geen guardtoets meer; punt 5, `gebouwd # #<PR>` blijft de vorm (`check:roadmap`), het bouwbewijs is de merge
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 5 en 10 (een gebouwde spec krijgt in een besluit-PR nieuwe AC's
 met de markering `(nog niet gebouwd)`; `gebouwd` noemt alleen de PR), [0054](0054-gebouwd-in-de-bouw-pr.md) punt 1 en 5
