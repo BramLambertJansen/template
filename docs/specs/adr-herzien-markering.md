@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #485
+status: vervallen
 namespace: adr-herzien
 ---
 

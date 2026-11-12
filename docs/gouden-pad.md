@@ -31,7 +31,7 @@ draait hem; `--dry-run` toont het plan zonder te schrijven, en bestaat een doel 
    - gewijzigd: `src/shared/contracts/index.ts`, `src/shared/ids.ts` (aangemaakt als hij ontbreekt) en `db/ids.json` (brand `<Naam>Id`), `src/shared/limits.ts`
      (paginagrootte), `src/web/copy/ui.ts` (teksten, te vervangen door die uit de spec), `src/web/lib/nav.ts` (menu-item),
      `src/shared/permissions.ts` (`<naam>:read` en `<naam>:write`) en `src/api/app.ts` (de routes); die twee zijn geen
-     gate meer (ADR 0046 punt 32), het risico-overzicht van de diff-guard noemt de nieuwe permissie en routes;
+     gate meer (ADR 0046 punt 32), de reviewer toetst de nieuwe permissie en routes (R-WERK-09);
    - bestaande tests, als afgedrukte wijziging die de hoofdsessie met Edit zet: `src/shared/permissions.test.ts` en
      `src/web/routes.test.tsx` (menu per rol). Noem de twee testwijzigingen met reden in de PR;
    - de declaratie voor de securitysuite, als afgedrukte wijziging (`--- test/security/resources.ts`): één regel per route in

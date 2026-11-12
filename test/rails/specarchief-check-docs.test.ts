@@ -89,13 +89,6 @@ describe('specarchief-en-bouwvorm/AC-4: links lossen op naar het specarchief', (
 });
 
 describe('specarchief-en-bouwvorm/AC-5: een naam uit het archief komt niet terug', () => {
-  test('specarchief-en-bouwvorm/AC-5 docs/specs/a.md en docs/specs/archief/a.md samen: rood met de melding', async () => {
-    const lijst = await meldingen({ ...GEARCHIVEERD, 'docs/specs/a.md': spec('voorstel') });
-    expect(lijst).toContain(
-      'docs/specs/a.md: de naam staat ook in docs/specs/archief/; een naam komt niet terug (ADR 0080)',
-    );
-  });
-
   test('specarchief-en-bouwvorm/AC-5 verschillende namen in beide mappen: geen melding over het archief', async () => {
     const lijst = await meldingen({ ...GEARCHIVEERD, 'docs/specs/b.md': spec('voorstel', 'b') });
     expect(lijst.filter((message) => message.includes('archief'))).toStrictEqual([]);

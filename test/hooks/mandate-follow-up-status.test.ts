@@ -7,7 +7,6 @@ import {
   bouw,
   commit,
   doneItem,
-  draaiChecker,
   draaiDocsStatus,
   git,
   maakRepo,
@@ -113,46 +112,6 @@ function momentopname(root: string): { spec: string; roadmap: string; status: st
   };
 }
 
-describe('AC-8: één stap voor status en vinkje', () => {
-  test.each([
-    ['een item van één regel', basisRoadmap(), `- [x] Taak voor \`${S1}\` (#130)`],
-    [
-      'een item met een vervolgregel (bewijs achter de laatste regel)',
-      basisRoadmap().map((regel) => (regel === openItem(S1) ? `${openItem(S1)}\n  vervolgregel` : regel)),
-      `- [x] Taak voor \`${S1}\`\n  vervolgregel (#130)`,
-    ],
-  ])(
-    '%s: schrijft alleen statusregel en vinkje, en alle checks accepteren het resultaat',
-    async (_naam, roadmap, verwacht) => {
-      const fixture = docsRepo(roadmap);
-      const { root } = fixture;
-      const sha = git(root, ['rev-parse', 'HEAD']);
-      const voor = momentopname(root);
-
-      const uitvoer = draaiDocsStatus(root, GEBOUWD_ARGS);
-
-      expect(uitvoer.stderr).toBe('');
-      expect(uitvoer.status).toBe(0);
-      expect(uitvoer.stdout).toBe(
-        `${S1}: gebouwd; bewijs gecontroleerd, alleen de statusregel en het vinkje van het item gewijzigd\n`,
-      );
-      expect(git(root, ['diff', '--name-only']).split('\n').sort()).toStrictEqual([ROADMAP, S1]);
-      // GEWIJZIGD (specarchief-en-bouwvorm, ADR 0080 punt 5, OV-1): de regel zonder SHA; de guard toetst haar met PR_NUMBER.
-      expect(read(root, S1)).toBe(voor.spec.replace('status: goedgekeurd', 'status: gebouwd # #130'));
-      expect(read(root, ROADMAP)).toBe(
-        voor.roadmap.replace(roadmap.find((r) => r.startsWith(`- [ ] Taak voor \`${S1}\``)) ?? '', verwacht),
-      );
-
-      const head = commit(root, 'docs: administratie');
-      expect(await statusOnly(root, sha, head)).toBe(true);
-      const uitvoerCi = draaiChecker(fixture, head, { PR_NUMBER: '130' });
-      expect(uitvoerCi.stderr).toBe('');
-      expect(uitvoerCi.status).toBe(0);
-      expect(await roadmapSleutels(root)).toStrictEqual([]);
-    },
-  );
-});
-
 describe('AC-9: weigeren zonder iets te schrijven', () => {
   function weigert(aanroep: {
     root: string;
@@ -248,5 +207,40 @@ describe('AC-23: gebruiksfouten', () => {
     expect(uitvoer.status).toBe(1);
     expect(uitvoer.stderr).toBe('--roadmap kan alleen met een spec, status gebouwd en --pr\n');
     expect(momentopname(root)).toStrictEqual(voor);
+  });
+});
+
+// GEWIJZIGD (templateregime AC-13, ADR 0089 punt 5): alleen de drie regels die `check-document-status` startten zijn weg;
+// de rest toetst `pnpm docs:status --roadmap`, dat blijft.
+describe('AC-8: één stap voor status en vinkje', () => {
+  test.each([
+    ['een item van één regel', basisRoadmap(), `- [x] Taak voor \`${S1}\` (#130)`],
+    [
+      'een item met een vervolgregel (bewijs achter de laatste regel)',
+      basisRoadmap().map((regel) => (regel === openItem(S1) ? `${openItem(S1)}\n  vervolgregel` : regel)),
+      `- [x] Taak voor \`${S1}\`\n  vervolgregel (#130)`,
+    ],
+  ])('%s: schrijft alleen statusregel en vinkje', async (_naam, roadmap, verwacht) => {
+    const fixture = docsRepo(roadmap);
+    const { root } = fixture;
+    const sha = git(root, ['rev-parse', 'HEAD']);
+    const voor = momentopname(root);
+
+    const uitvoer = draaiDocsStatus(root, GEBOUWD_ARGS);
+
+    expect(uitvoer.stderr).toBe('');
+    expect(uitvoer.status).toBe(0);
+    expect(uitvoer.stdout).toBe(
+      `${S1}: gebouwd; bewijs gecontroleerd, alleen de statusregel en het vinkje van het item gewijzigd\n`,
+    );
+    expect(git(root, ['diff', '--name-only']).split('\n').sort()).toStrictEqual([ROADMAP, S1]);
+    expect(read(root, S1)).toBe(voor.spec.replace('status: goedgekeurd', 'status: gebouwd # #130'));
+    expect(read(root, ROADMAP)).toBe(
+      voor.roadmap.replace(roadmap.find((r) => r.startsWith(`- [ ] Taak voor \`${S1}\``)) ?? '', verwacht),
+    );
+
+    const head = commit(root, 'docs: administratie');
+    expect(await statusOnly(root, sha, head)).toBe(true);
+    expect(await roadmapSleutels(root)).toStrictEqual([]);
   });
 });

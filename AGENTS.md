@@ -49,7 +49,7 @@ Botst een regel met de opdracht: stop en vraag, omzeil of verzwak niets (R-WERK-
 **Repo en grenzen**
 - Geen gegenereerde bestanden of `.env*` bewerken; `.env.example` is beschermd (R-REPO-03, R-SEC-05).
 - Beschermde paden (framework §10): eigenaarakkoord; niveau per pad: `node scripts/kit/feiten.mjs pad <pad>`; developer: `voorReview` geweigerd, in onderhoudsmodus buiten `altijdVragen` met melding (R-REPO-03). Functionele UI in de template: mini-spec, code, tests, gebruiksdocs in één PR zonder voorafgaand besluit, beperkte fixes zonder mini-spec; niet voor auth, overige core, dependencies, agentinstructies, bewaking (R-WERK-18, R-UIT-04, R-WERK-03). In een app is core dicht (R-ARCH-07).
-- Status zet architect of hoofdsessie in het voorstel, de eigenaarmerge is het besluit; `gebouwd` in de bouw-PR of via `pnpm docs:status` (R-WERK-08). Alleen de eigenaar merget, behalve niet-kritiek werk met oordeel `agent-merge: ja`: dat merget de hoofdsessie via `pnpm pr:merge`, meldt PR en SHA en volgt de CI op `main` (R-REPO-01). Geen nieuwe dependency zonder akkoord (R-SEC-06).
+- Status zet architect of hoofdsessie in het voorstel, de eigenaarmerge is het besluit; `gebouwd` in de bouw-PR of via `pnpm docs:status` (R-WERK-08). Alleen de eigenaar merget, behalve een PR zonder pad van een code-eigenaar: die merget de hoofdsessie via `pnpm pr:merge`, meldt PR en SHA en volgt de CI op `main` (R-REPO-01). Geen nieuwe dependency zonder akkoord (R-SEC-06).
 - Nooit pushen naar `main` of `--no-verify`, mergen alleen via `pnpm pr:merge`; één onderwerp per PR, conventional commits (R-REPO-05). Geen zelfreview, PR-label of check-status (R-WERK-17, R-ROL-08, R-ROL-12).
 - Een commando dat buiten zijn werkmap kan wissen of overschrijven en dat je niet letterlijk zelf schreef (corpusrij, fragment, gegenereerd), of een destructief experiment: alleen in de kooi (`node scripts/kit/kooi.mjs`, `inKooi`); een werkmap is geen grens, ook buiten de repo en in de cloud (R-TOOL-03).
 - Geen `docker` of runneroverride; runnerchecks zelf draaien of CI-bewijs ophalen (`pnpm pr:verify`, `docs/operations/agent-doorloop.md`) (R-TOOL-02, R-RUNNER-03). Externe diensten via hun CLI (`gh`); MCP alleen read-only, versie gepind, behalve een leerpunt-issue in de cloud (ADR 0078) (R-SEC-09, R-ROL-12).
@@ -63,7 +63,7 @@ Botst een regel met de opdracht: stop en vraag, omzeil of verzwak niets (R-WERK-
 - Route licht of volledig, nooit zelfreview: framework §8 (R-WERK-03, R-WERK-04). Volg `docs/dod.md` fasebewust; lever alleen op met geslaagde uitslag van bestaande checks (of eigenaarakkoord), meld wat nog niet bestaat (R-WERK-22).
 - UI-tekst Nederlands; code, commits, branches Engels (R-CODE-10). Roadmap-item, rail of ADR alleen met aanleiding (framework §1), anders vraag de eigenaar (R-PRINC-08).
 - Begin met taakrelevante feiten (`node scripts/kit/feiten.mjs gates specs fase`; `componenten` alleen bij UI); het regelboek per geraakt hoofdstuk: `feiten.mjs hoofdstuk <n>` (R-WERK-01, R-DOC-05).
-- Runtime-specifieke instructies gelden alleen voor die runtime: hooks in `.claude/` werken alleen in Claude Code, elders zijn CI, de ruleset op GitHub en de eigenaarmerge de grens (diff-guard: nog geen verplichte check). Claim nooit een instelling die je niet kunt lezen (R-WERK-23).
+- Runtime-specifieke instructies gelden alleen voor die runtime: hooks in `.claude/` werken alleen in Claude Code, elders zijn CI, de ruleset op GitHub en de eigenaarmerge de grens. Claim nooit een instelling die je niet kunt lezen (R-WERK-23).
 
 ## Waar een regel woont
 

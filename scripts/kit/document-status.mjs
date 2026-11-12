@@ -5,11 +5,11 @@ import path from 'node:path';
 import { readAuthority, gitText } from '../../rails/hooks/lib/authority-context.mjs';
 import { changeStatus, documentInfo, documentKind } from '../../rails/hooks/lib/document-state.mjs';
 import { builtRefusal, openRefusal } from '../../rails/hooks/lib/built-evidence.mjs';
+import { isFunctionalUiSpec } from '../../rails/hooks/lib/functional-ui.mjs';
 import { loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 import { pullRequest, checkRuns } from './github-evidence.mjs';
 import { kaderVan, ROADMAP, taakVinkje, tikAf } from './roadmap-item.mjs';
 import { statusOnlyDiff, mergedEvidence, unchangedHead } from './status-git.mjs';
-import { functionalUiApproval } from './functional-ui-status.mjs';
 
 const USAGE = 'Gebruik: pnpm docs:status <document> <status> [--pr <nummer> [--roadmap]]';
 const ROADMAP_ONLY = '--roadmap kan alleen met een spec, status gebouwd en --pr';
@@ -66,18 +66,26 @@ function nextStatus(target, context) {
   const evidence = {
     pr,
     code: codeBuitenDocs(context.root, sha),
-    uiApproval: functionalUiApproval({
-      root: context.root,
-      base: 'origin/main',
-      sha,
-      repository: context.authority.repository,
-      file: target.file,
-      text: after,
-    }),
+    uiApproval: functionalUiApproval({ root: context.root, sha, file: target.file, text: after }),
   };
   if (openRefusal({ file: target.file, text: after }, evidence, context.authority))
     throw new Error('Gebouwd vereist de juiste geopende PR op deze branch en code buiten docs/');
   return after;
+}
+
+/**
+ * Akkoord voor functionele UI in de template (R-WERK-18): de spec is functionele UI, staat op `sha` goedgekeurd met dezelfde
+ * inhoud als `text`, en stond op main nog niet of als voorstel. Welke paden de PR raakt, bewaakt de goedkeuring uit
+ * `CODEOWNERS` (ADR 0089).
+ * @param {{ root: string, sha: string, file: string, text: string }} snapshot @returns {string | null} de digest, of null
+ */
+function functionalUiApproval({ root, sha, file, text }) {
+  const source = gitText(root, ['show', `${sha}:${file}`]) ?? '';
+  const info = documentInfo(file, source);
+  const original = documentInfo(file, gitText(root, ['show', `origin/main:${file}`]) ?? '');
+  if (!isFunctionalUiSpec(source) || info?.status !== 'goedgekeurd' || info.digest !== documentInfo(file, text)?.digest)
+    return null;
+  return original === null || original.status === 'voorstel' ? info.digest : null;
 }
 
 /** De branch wijzigt tegenover main iets buiten `docs/` en `CHANGELOG.md` (ADR 0062 punt 4). @param {string} root @param {string} sha */

@@ -18,7 +18,6 @@ export const ROADMAP = 'docs/roadmap.md';
 export const PR = 130;
 export const KOP = '# Roadmap\n\n## Stuk\n\n';
 
-const CHECKER = path.resolve('scripts/kit/check-document-status.mjs');
 const DOCS_STATUS = path.resolve('scripts/kit/document-status.mjs');
 const GATES = readFileSync('.claude/gates.json', 'utf8');
 const directories: string[] = [];
@@ -211,24 +210,6 @@ function env(stub: string, extra: Record<string, string>): Record<string, string
   const schoon = Object.fromEntries(Object.entries(process.env).flatMap(([k, v]) => (v === undefined ? [] : [[k, v]])));
   delete schoon['PR_NUMBER'];
   return { ...schoon, PATH: `${stub}:${process.env['PATH'] ?? ''}`, ...extra };
-}
-
-/** `check-document-status` zoals guard.yml hem draait, met main als vertrouwde basis. */
-export function draaiChecker(fixture: Fixture, head: string, extra: Record<string, string> = {}): Uitvoer {
-  const stub = ghStub();
-  const { status, stdout, stderr } = spawnSync(process.execPath, [CHECKER], {
-    cwd: fixture.root,
-    encoding: 'utf8',
-    env: env(stub, {
-      BASE_SHA: fixture.base,
-      HEAD_SHA: head,
-      HEAD_REF: BRANCH,
-      REPO: REPOSITORY,
-      STUB_PR_HEAD: head,
-      ...extra,
-    }),
-  });
-  return { status, stdout, stderr };
 }
 
 /** `node scripts/kit/document-status.mjs <args>` in de fixture; HEAD is de gevalideerde broncommit. */

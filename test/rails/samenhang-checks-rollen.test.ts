@@ -9,36 +9,8 @@ const regel = (id: string): string =>
     .split('\n')
     .find((r) => r.startsWith(`- **${id}**`)) ?? '';
 
-describe('samenhang-checks-rollen/AC-3: de diff-guard heet geen grens', () => {
-  const plekken = [
-    ['R-WERK-23', regel('R-WERK-23')],
-    ['R-ROL-10', regel('R-ROL-10')],
-    [
-      'AGENTS.md',
-      lees('AGENTS.md')
-        .split('\n')
-        .find((r) => r.includes('R-WERK-23')) ?? '',
-    ],
-    ...lees('docs/framework.md')
-      .split('\n')
-      .filter((r) => r.startsWith('Afgedwongen door:') && r.includes('diff-guard'))
-      .map((r) => ['Afgedwongen door', r]),
-  ];
-
-  test('samenhang-checks-rollen/AC-3 alle plekken gevonden', () => {
-    expect(plekken.length).toBeGreaterThanOrEqual(5);
-  });
-
-  test.each(plekken)(
-    'samenhang-checks-rollen/AC-3 %s: diff-guard alleen met "nog geen verplichte check"',
-    (_plek, tekst) => {
-      expect(tekst).toContain('diff-guard');
-      expect(tekst).toMatch(/nog (geen verplichte check|niet verplicht)/);
-      expect(tekst).not.toMatch(/(CI, diff-guard|diff-guard en GitHub|GitHub, CI, diff-guard)/);
-    },
-  );
-});
-
+// GEWIJZIGD (templateregime AC-13, ADR 0089 punt 5): de describe AC-3 (de diff-guard heet geen grens, 6 tests) is verwijderd;
+// de diff-guard bestaat niet meer.
 describe('samenhang-checks-rollen/AC-4: regels en developer-instructie zeggen wat het rolhek doet', () => {
   test('samenhang-checks-rollen/AC-4 R-ROL-01 sluit specs en bestaande tests uit voor de developer en noemt R-TEST-02', () => {
     const tekst = regel('R-ROL-01');

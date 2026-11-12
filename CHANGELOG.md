@@ -9,6 +9,13 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 - De CI-job `document-status` en de verplichte check met die naam (ADR 0089 punt 5): de review van code-eigenaren op GitHub bewaakt
   besluiten op ADR's, specs en beschermde paden. Wat verandert voor een app: draai na de template-update
   `scripts/github-ruleset.sh <owner>/<repo>`; anders wacht elke PR op een check die niet meer draait.
+- De documentbewaking (ADR 0089 punt 5, spec templateregime AC-7): de scripts `check-document-status`, `lane`, `diff-guard`,
+  `agent-merge`, `document-status-lokaal`, `functional-ui-status` en `adr-herzien` in `scripts/kit/`, de jobs `diff-guard` en
+  `agent-merge` in `guard.yml`, de pre-push-stap `document-status`, en in `check-docs` de herzieningscheck en de archiefnaamregel.
+  `pnpm pr:merge` doet geen inhoudstoets meer (omvang, bytes, binaire bestanden, job `agent-merge`, reviewcommentaar, kop van
+  main in de PR, leerpuntreden) en houdt de modus `merge`, de head-SHA, de verplichte checks, een groene `main` en de effecttoets.
+  Wat verandert voor een app: draai na de template-update `pnpm exec lefthook install`; het blok `agentMerge` in
+  `.claude/gates.json` wordt niet meer gelezen.
 
 ### Toegevoegd
 

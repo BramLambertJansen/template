@@ -212,9 +212,7 @@ rolhek niet af (`timeout` wel); een `git -C <map>` die tussen fetch en branch ve
 `git worktree add <pad> <branch>`.
 
 Pre-push waarschuwt (blokkeert niet) als de branch achterloopt op `origin/main`; haal main dan binnen met
-`git merge origin/main` (`scripts/kit/main-achterstand.mjs`); in een agentworktree faalt die merge, zie hierboven. Pre-push draait ook `document-status` zoals CI (`scripts/kit/document-status-lokaal.mjs`): `git push` blokkeert
-op de volgorde: als een spec niet in een commit vóór de eerste code of test staat, en noemt de herstelroute. Andere afkeuringen zijn een waarschuwing,
-net als een spec die niet vóór de code staat maar nog geen besluit is (bijv. `voorstel`); een push van een andere branch of tag toetst het niet. Een commitkop volgt conventional commits
+`git merge origin/main` (`scripts/kit/main-achterstand.mjs`); in een agentworktree faalt die merge, zie hierboven. Een commitkop volgt conventional commits
 (`fix(hooks): …`); de commit-msg-hook weigert een andere vorm (`scripts/kit/commit-msg.mjs`). Bij de start van een sessie op een
 featurebranch staat de open PR met checks en reviewstatus in de context, zodat een hervatte sessie rode checks en
 reviewcommentaar direct ziet. Lokaal geeft Claude Code een melding als het op de eigenaar wacht (WSL2: Windows-melding;
@@ -223,16 +221,16 @@ uit met `KIT_MELDING=uit`) en toont de statusregel branch, achterstand, gewijzig
 ## Besluit en taakscope voorbereiden
 
 `docs/roadmap-archief.md` bevat historisch bouwbewijs en is net als de actieve roadmap een beschermd gate-pad.
-De diff-guard beoordeelt ook verwijderen en weg-hernoemen. CODEOWNERS is gegenereerd uit de besluitkolom van de padtabel in
+CODEOWNERS is gegenereerd uit de besluitkolom van de padtabel in
 `.claude/gates.json` (`node scripts/kit/codeowners.mjs --schrijf`): elk pad met een ander besluit dan `agent` heeft de eigenaar.
 
 ADR-nummers worden samen gecontroleerd voor de actieve map en het archief. Verwijderde nummers blijven gereserveerd via
-de Git-geschiedenis van de vertrouwde basis. Heeft main een nummer inmiddels gebruikt, werk de branch dan eerst bij.
+de Git-geschiedenis van de vertrouwde basis (afspraak: geen check leest die geschiedenis nog, ADR 0089 punt 5). Heeft main een nummer inmiddels gebruikt, werk de branch dan eerst bij.
 Alleen het bestaande paar 0039-bestanden blijft een ratchet-afwijking; nieuwe dubbelen worden geweigerd.
 Een link naar `docs/adr/NNNN-*.md` vanuit een ADR of een spec lost ook op naar `docs/adr/archief/`, voor elke spec (reden: specs met
 een eigenaarstatus wijzigen niet; een `voorstel`-spec werk je bij de verhuizing zelf bij); vanuit andere documenten gaat de link mee naar het nieuwe pad
 (`linkDoelen` in `scripts/kit/check-docs.mjs`, ADR 0053 punt 4).
-Een vervangingsverwijzing eindigt bij een bestaand ADR, zonder zelfverwijzing of cyclus. De besluit-lane accepteert
+Een vervangingsverwijzing eindigt bij een bestaand ADR, zonder zelfverwijzing of cyclus. Een besluit-PR bevat
 geen `.claude/decisions.json` (ADR 0063).
 
 De ADR-sectie van `feiten.mjs` gebruikt dezelfde nummerherkenning en reserveert nummers uit het werkmaparchief en de
@@ -293,8 +291,8 @@ nu gerichte controles uitvoert; de controle op de git-root uit de payload blijft
 ### Feature-lane en mini-spec (ADR 0046)
 
 Een besluit kost één PR: de merge is het besluit. Architect of hoofdsessie zet de statusregel in het voorstel; commitvolgorde,
-inhoud na de status en committer doen er niet toe (ADR 0046 punt 7). `check-document-status` herkent twee gevallen
-(`scripts/kit/lane.mjs`); de samenvatting noemt elk document dat een eigenaarstatus krijgt. Een PR met een eigenaarstatus merget altijd de eigenaar. Niet-kritiek werk zonder besluit (oordeel `agent-merge: ja`) merget de hoofdsessie zelf via `pnpm pr:merge` (ADR 0069, skill `opleveren`).
+inhoud na de status en committer doen er niet toe (ADR 0046 punt 7). De twee routes hieronder zijn afspraak, getoetst door de
+reviewer; geen check toetst ze nog (ADR 0089 punt 5 en 8). Het besluit is de goedkeuring van de eigenaar op `docs/adr/**` en `docs/specs/**` (`.github/CODEOWNERS`). Een PR met een eigenaarstatus merget altijd de eigenaar. Een PR zonder pad van een code-eigenaar merget de hoofdsessie zelf via `pnpm pr:merge` (ADR 0069, ADR 0089, skill `opleveren`).
 
 **Functionele UI in de template (ADR 0056/0058):** een lichte fix volgt framework §8, zonder mini-spec.
 Voor overige functionele UI gebruik je de mini-spec met aanvullend `scope: functionele-ui` in de frontmatter.
@@ -302,15 +300,16 @@ Beschrijf het gevraagde gedrag en de acceptatiecriteria en bouw in dezelfde PR; 
 nodig. De scope omvat bestaande componenten in `src/core/web/ui`, vaste teksten in
 `src/core/web/copy`, aansluitende app-UI, UI-tests en gebruiksdocs. Gewijzigde bestaande UI-tests krijgen per bestand een
 reden en vervangend bewijs in de PR. Auth, API/contracten, queries, andere core, dependencies, agentinstructies, gedeelde
-fixtures en testsetup blijven erbuiten; een gemengde PR volgt de strengste route. De guard meldt de gebruikte uitzondering,
-corepaden en bestaande UI-tests voor eigenaarreview. Een app-repository krijgt deze core-uitzondering niet.
-Na groene verplichte checks werkt `pnpm docs:status` ook voor de nieuwe UI-mini-spec: het bewijs blijft aan dezelfde
-broncommit, repository en geopende PR gebonden. Een gewijzigde implementatie na die broncommit vraagt nieuw bewijs.
+fixtures en testsetup blijven erbuiten; een gemengde PR volgt de strengste route. Een pad van een code-eigenaar
+(`.github/CODEOWNERS`) vraagt diens goedkeuring. Een app-repository krijgt deze core-uitzondering niet.
+`pnpm docs:status` werkt ook voor de nieuwe UI-mini-spec: zij staat op HEAD `goedgekeurd` met dezelfde inhoud en op `main` nog
+niet of als `voorstel`, de genoemde PR is open op deze branch in deze repository en de branch wijzigt iets buiten `docs/` en
+`CHANGELOG.md`. Check-runs toetst het commando niet; die eist de ruleset bij de merge.
 
 - **Overige feature-lane (de standaard, ADR 0062):** een of meer specs met een eigenaarstatus (nieuw, volledig of mini, of nieuwe
   inhoud van een goedgekeurde spec) samen met code, tests en docs. Alles mag meewijzigen (ook `CHANGELOG.md`, de roadmap, `scripts/`,
   `rails/`, overige `src/core`, agentinstructies en gegenereerde bestanden zoals het schema-snapshot) behalve een ADR, een kritiek pad
-  (`kritiekPad` in `scripts/kit/lane.mjs`: `besluit-pr` of `altijdVragen` in de padtabel, onder meer `src/core/api/auth`, `src/core/api/db`, `db/init`, `rails/hooks/**`, elk ADR en de besluit-, status- en mergescripts),
+  (`besluit-pr` of `altijdVragen` in de padtabel, onder meer `src/core/api/auth`, `src/core/api/db`, `db/init`, `rails/hooks/**`, elk ADR en de besluit-, status- en mergescripts),
   een verwijderde bestaande test en een gewijzigde of verwijderde migratie. Een gewijzigde bestaande JS/TS-test staat met reden in de PR en mag geen gevallen weghalen of skippen; een gewijzigde pgTAP-test valt erbuiten.
   De eerste commit die een besluitspec raakt, staat vóór de eerste commit met een bestand buiten `docs/` (spec-review vóór het bouwen).
   Een PR bevat hoogstens één nieuwe migratie. Die maakt precies één owner-tabel in `public` volgens `pnpm new:resource`:
@@ -318,13 +317,13 @@ broncommit, repository en geopende PR gebonden. Een gewijzigde implementatie na 
   `(select app.current_user_id())` en expliciete SELECT/DELETE-grants aan `app_authenticated`. INSERT/UPDATE-grants
   zijn alleen per app-kolom toegestaan. Eenvoudige extra velden mogen text, integer/int, bigint, boolean, uuid of
   timestamptz zijn, eventueel met NOT NULL en een letterlijke default. Indexen bevatten alleen kolomnamen;
-  quoted objectnamen, expressies en andere SQL-vormen volgen de framework-lane (`scripts/kit/lane.mjs`). De vaste
+  quoted objectnamen, expressies en andere SQL-vormen volgen de framework-lane. De vaste
   verwijzing naar `better_auth."user" (id)` blijft toegestaan. Een retentionregistratie heeft precies de volgorde
   NO FORCE → één rij voor de nieuwe tabel → FORCE; losse of herhaalde toggles worden geweigerd. De mini-spec heeft de kop
-  "Datawijzigingen (met grants)". Een geneste `CLAUDE.md` of `AGENTS.md` valt eruit. Een onbekend pad buiten `gates` en buiten `src/`, `docs/` en `db/` (zoals `.vscode/` of `.mcp.json`) valt eruit. Diff-guard en
-  CODEOWNERS blijven gelden voor elk gate-pad in de PR. Het bereik volgt ADR 0062.
+  "Datawijzigingen (met grants)". Een geneste `CLAUDE.md` of `AGENTS.md` valt eruit. Een onbekend pad buiten `gates` en buiten `src/`, `docs/` en `db/` (zoals `.vscode/` of `.mcp.json`) valt eruit. CODEOWNERS
+  blijft gelden voor elk pad van een code-eigenaar in de PR. Het bereik volgt ADR 0062.
 - **Besluit-PR (framework-lane):** een of meer ADR's en specs die een eigenaarstatus krijgen (ook `vervangen door NNNN` of `vervallen`, of nieuwe inhoud van een goedgekeurde spec), zonder `.claude/decisions.json`, code of andere bestanden: alleen documenten in `docs/adr/` en `docs/specs/` die zelf een besluit krijgen, ook geen index of ander document. Bouwen volgt in een volgende PR. Dit is de route voor kritiek werk (ADR 0062 punt 2) en voor wie een besluit los wil voorleggen.
-- Past de PR in geen van beide, dan weigert `document-status` de status; een besluitrecord bestaat niet meer (ADR 0063).
+- Past de PR in geen van beide, dan is dat een bevinding van de reviewer; een besluitrecord bestaat niet meer (ADR 0063).
 
 ## Ontwikkelen en runnerchecks
 
@@ -535,13 +534,13 @@ blokkeert het wel. Een pad dat de sandbox afschermt, toetst `pr:verify` niet; he
 `rolhek-effect: niet getoetst in de sandbox, wel door de hooks: <paden>` (AC-11 b). Staan er nog meldingen van plaatshouders
 van vóór deze regel op de open lijst, dan wist `pnpm rolhek:overnemen --alles` ze eenmalig.
 
-Een agent zet geen PR-label (R-ROL-08). Diff-guard vraagt alleen een eigenaarreview op de uiteindelijke head-SHA, met de
-overgang uit ADR 0045 punt 17; een label telt niet (R-CI-07).
+Een agent zet geen PR-label (R-ROL-08). De ruleset vraagt de goedkeuring van een code-eigenaar op de uiteindelijke head-SHA;
+een label telt niet (R-CI-07).
 
 **Standaard: `gebouwd` in dezelfde PR** (ADR 0062). Bevat de PR de implementatie van de spec, dan zet de agent de
 statusregel daar zelf op `status: gebouwd # #<n>`, met n het nummer van deze PR (open de PR dus eerst; daarna een commit
 met de statusregel en, als de spec een roadmap-item noemt, het vinkje met `#<n>` erachter). Geen statuscommit na groen en geen
-SHA: `document-status` accepteert de vorm alleen met het eigen PR-nummer en code buiten `docs/` en `CHANGELOG.md`, en de ruleset eist bij de
+SHA: de vorm hoort bij het eigen PR-nummer en code buiten `docs/` en `CHANGELOG.md` (afspraak; `pnpm docs:status` toetst het als het de regel schrijft), en de ruleset eist bij de
 merge de verplichte checks op de head. Een `git merge origin/main` of een fix erna mag gewoon; de checks draaien opnieuw.
 `check-docs` eist voor elk AC-id een getagde test.
 
@@ -595,38 +594,33 @@ onafhankelijke reviewer; wat dan per route volstaat, staat in framework §8. De 
 ook een fetch van `origin` met als bestemming `refs/remotes/origin/main`, `git replace` (behalve `--list`), config op
 `include.*`/`includeIf.*` en, voor elke rol en elk programma, `GIT_CONFIG_*`, `GIT_DIR` of `GIT_WORK_TREE` als
 toewijzing, `export` of `declare -x`. `scripts/runner.sh` vergelijkt niet met die lokale ref maar met `git ls-remote origin refs/heads/main`.
-  Een commando buiten de hooks, of een andere runtime, valt daar niet onder; de CI-guard leest `main` bij GitHub en is de echte grens
-  (`scripts/kit/check-document-status.mjs`).
+  Een commando buiten de hooks, of een andere runtime, valt daar niet onder; de ruleset op `main` met `.github/CODEOWNERS` is de echte grens
+  (ADR 0089).
 
 ## Gate-PR in de overgang
 
-Is de auteur van een PR zelf goedkeurder, dan geeft `diff-guard` de uitslag `overgang` (groen met waarschuwing;
-[ADR 0045](../adr/0045-railwerk.md) punt 17). Dan:
-
-1. Lees de samenvatting van `diff-guard` (de geraakte gate-paden, bewaakte sleutels, gewijzigde tests en het Risico-overzicht: nieuwe, gewijzigde of hernoemde migraties, permissiesleutels, elke tekstwijziging in een contractbestand onder `src/shared/contracts/**` (elk bestandstype, ook alleen commentaar of witruimte; `permission:` oud → nieuw waar eenduidig, anders "controleer permissie met de hand"; buiten het overzicht vallen verwijderde bestanden, hernoeming uit `contracts/` (een hernoeming naar `contracts/` telt als nieuw), `*.spec.*`-bestanden en permissiewaarden uit een bestand buiten `src/shared/contracts/**`), nieuwe dependencies en nieuwe routes (op method en path of contract)) en de uitslag van
-   `document-status` (een eigen job in `.github/workflows/guard.yml`, ADR 0045 punt 20; een fout staat als `::error title=document-status::`).
-2. Een review is niet nodig; een review is ook niet mogelijk, want GitHub laat de auteur zijn
-   eigen PR niet goedkeuren. De eigenaar merget zelf.
-3. Is `document-status` rood, merge dan niet: laat de oorzaak herstellen.
+De diff-guard, de uitslag `overgang` en de job `document-status` bestaan niet meer (ADR 0089 punt 5). Een PR met een pad van
+een code-eigenaar (`.github/CODEOWNERS`) vraagt diens goedkeuring op de head. GitHub laat de auteur zijn eigen PR niet
+goedkeuren: een eigen PR van de eigenaar op zo'n pad merget alleen met de bypass uit R-REPO-02.
 
 ## Correctie aan een geaccepteerd ADR
 
 Een geaccepteerd ADR herschrijven of een ADR met een eigenaarstatus op main verwijderen mag alleen in een besluit-PR (alleen `docs/adr/`,
 `docs/specs/` en het record), door architect of hoofdsessie. Een vervallen of vervangen ADR verandert niet van inhoud, en geen ADR gaat terug
-naar `voorgesteld` of wordt hernoemd: guard en rolhek (dat vergelijkt met main) weigeren dat (A4, ADR 0046 punt 2). Kies het spoor naar wat
+naar `voorgesteld` of wordt hernoemd: het rolhek (dat vergelijkt met main) weigert dat; op GitHub beslist de goedkeuring van de eigenaar (A4, ADR 0046 punt 2). Kies het spoor naar wat
 er verandert ([ADR 0045](../adr/0045-railwerk.md) punt 21):
 
 1. **Normatief** (wat besloten is): herschrijf het bestaande ADR in een besluit-PR, met een nieuwe herzieningsregel
    `Herzien: JJJJ-MM-DD (#NNN): wat` (bestaande datum, het PR-nummer, wat er verandert; oude regels blijven staan). Een nieuw ADR
    alleen voor een onderwerp dat in geen bestaand ADR past; `vervangen door NNNN` op het oude mag in dezelfde PR, zonder record.
    Een oud ADR verwijderen mag in een besluit-PR nadat een reviewer heeft bevestigd dat de inhoud volledig in het nieuwe staat.
-   De guard eist dat een nieuwe herzieningsregel deze PR noemt, dat een verwijderd nummer nooit terugkomt, en dat na een
-   verwijdering elke `vervangen door NNNN` nog naar een bestaand ADR wijst; `docs/adr/archief/` telt daarbij mee als doel en
-   als verwijzer, en een nummer dat alleen nog in het archief staat blijft bezet (`scripts/kit/check-document-status.mjs`).
+   Afspraak, getoetst door de reviewer (ADR 0089 punt 8): een nieuwe herzieningsregel noemt deze PR, een verwijderd nummer komt nooit terug, en na een
+   verwijdering wijst elke `vervangen door NNNN` nog naar een bestaand ADR; `docs/adr/archief/` telt daarbij mee als doel en
+   als verwijzer, en een nummer dat alleen nog in het archief staat blijft bezet.
 2. **Verwijzing naar een later ADR**: een ADR-link achter de statuswaarde, met alleen het nummer als linktekst en het
    bestand ernaast als doel (zoals `0045` naar het bestand van ADR 0045). Geen record nodig; de eigenaar ziet het in de gate-PR.
    Achter de statuswaarde mag verder alleen `(JJJJ-MM-DD)` en `#<nr>`, gescheiden door `, ` of ` — ` (punt 22,
-   `statusregelOvertreding` in `rails/hooks/lib/document-state.mjs`); anders is `document-status` rood. Een ongewijzigde regel
+   `statusregelOvertreding` in `rails/hooks/lib/document-state.mjs`); anders is het een bevinding van de reviewer. Een ongewijzigde regel
    op main blijft geldig.
 
 Een niet-normatieve tekstcorrectie (taalfout, kapotte link) heeft geen eigen spoor meer: ze verdwijnt bij de volgende vervanging.

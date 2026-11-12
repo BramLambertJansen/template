@@ -1,16 +1,5 @@
 import { afterEach, describe, expect, test } from 'vitest';
-import {
-  BRANCH,
-  commit,
-  draaiChecker,
-  git,
-  maakRepo,
-  opruimen,
-  roep,
-  write,
-  bouw,
-  type Fixture,
-} from './follow-up-kit';
+import { opruimen, roep } from './follow-up-kit';
 
 // ADR 0045 punt 22 (strikte statusregel voor ADR's), tests vóór de bouw.
 //
@@ -96,79 +85,5 @@ describe('statusregelOvertreding: ongewijzigd en buiten de regel', () => {
   test('spec met #-commentaar (builtReference) valt buiten de regel', async () => {
     const regel = `status: gebouwd # #153; gevalideerd: ${'a'.repeat(40)}`;
     expect(await overtreding(regel, 'status: goedgekeurd')).toBeNull();
-  });
-});
-
-// --- check-document-status zelf: nieuwe of gewijzigde ADR-statusregel met vrije tekst faalt ---------------------------------
-
-const NIEUW = 'docs/adr/0002-nieuw.md';
-const BESTAAND_ADR = 'docs/adr/0001-voorbeeld.md';
-
-function adr(nummer: string, titel: string, regel: string): string {
-  return `# ${nummer} — ${titel}\n\n${regel}\n\n## Context\n\nTekst.\n`;
-}
-
-/** Een branch met één administratiecommit; `bewerk` schrijft de ADR-wijziging. Geen taakmandaat. */
-function draai(bewerk: (root: string) => void, voorbereiding?: (fixture: Fixture) => Fixture) {
-  const start = maakRepo({ specs: [], mandaat: [], roadmap: [] });
-  const fixture = voorbereiding === undefined ? start : voorbereiding(start);
-  const { head } = bouw(fixture, { gebouwd: [], admin: bewerk });
-  return draaiChecker(fixture, head);
-}
-
-/** Zet een ADR met de gegeven regel op main (en dus in de vertrouwde basis); de branch start daarna vanaf main. */
-function metBasisRegel(regel: string): (fixture: Fixture) => Fixture {
-  return ({ root }) => {
-    git(root, ['switch', '-q', 'main']);
-    write(root, BESTAAND_ADR, adr('0001', 'Voorbeeld', regel));
-    const base = commit(root, 'baseline met vrije tekst');
-    git(root, ['update-ref', 'refs/remotes/origin/main', base]);
-    git(root, ['switch', '-q', '-C', BRANCH]);
-    return { root, base };
-  };
-}
-
-describe('check-document-status: strikte ADR-statusregel', () => {
-  test('een nieuw ADR met vrije tekst op de statusregel faalt', () => {
-    const uitvoer = draai((root) => {
-      write(root, NIEUW, adr('0002', 'Nieuw', 'Status: voorgesteld — zie opmerking van de agent'));
-    });
-    expect(uitvoer.status).toBe(1);
-    expect(uitvoer.stderr).toContain(NIEUW);
-    expect(uitvoer.stderr).toContain('statusregel');
-  });
-
-  test('een gewijzigde statusregel met vrije tekst faalt', () => {
-    const uitvoer = draai((root) => {
-      write(root, BESTAAND_ADR, adr('0001', 'Voorbeeld', 'Status: voorgesteld — extra uitleg'));
-    });
-    expect(uitvoer.status).toBe(1);
-    expect(uitvoer.stderr).toContain(BESTAAND_ADR);
-    expect(uitvoer.stderr).toContain('statusregel');
-  });
-
-  test('een nieuw ADR met link naar een niet-bestaand ADR faalt', () => {
-    const uitvoer = draai((root) => {
-      write(root, NIEUW, adr('0002', 'Nieuw', 'Status: voorgesteld (2026-10-14), [0099](0099-bestaat-niet.md)'));
-    });
-    expect(uitvoer.status).toBe(1);
-    expect(uitvoer.stderr).toContain('statusregel');
-  });
-
-  test('een nieuw ADR met datum, PR en link naar een bestaand ADR slaagt', () => {
-    const uitvoer = draai((root) => {
-      write(root, NIEUW, adr('0002', 'Nieuw', 'Status: voorgesteld (2026-10-14), #153, [0001](0001-voorbeeld.md)'));
-    });
-    expect(uitvoer.stderr).toBe('');
-    expect(uitvoer.status).toBe(0);
-  });
-
-  test('vrije tekst in een regel die gelijk is aan main blijft geldig als de rest van het ADR wijzigt', () => {
-    const regel = 'Status: voorgesteld — herkomsttekst van voor besluit 4';
-    const uitvoer = draai((root) => {
-      write(root, BESTAAND_ADR, `${adr('0001', 'Voorbeeld', regel)}\nExtra alinea.\n`);
-    }, metBasisRegel(regel));
-    expect(uitvoer.stderr).toBe('');
-    expect(uitvoer.status).toBe(0);
   });
 });

@@ -6,7 +6,6 @@ import {
   builtLine,
   commit,
   doneItem,
-  draaiChecker,
   draaiDocsStatus,
   git,
   maakRepo,
@@ -15,7 +14,6 @@ import {
   read,
   roep,
   write,
-  type Uitvoer,
 } from '../hooks/follow-up-kit';
 
 // docs/specs/gebouwd-na-merge.md met echte tijdelijke git-repo's: een squash- of mergecommit van PR n op main, daarna een
@@ -33,8 +31,6 @@ const IN_HEAD = `de mergecommit van PR #${String(PR)} in HEAD`;
 const SPEC_BIJ_MERGE = 'de spec ongewijzigd en goedgekeurd in de mergecommit';
 const CHECKS = `alle verplichte GitHub Actions-checks groen op de head van PR #${String(PR)}`;
 const BOUWPAD = `een wijziging buiten docs/ in PR #${String(PR)} op een pad dat de spec noemt`;
-const ALLEEN = 'alleen statusregels en het eigen roadmapvinkje in deze PR';
-const GENERIEK = 'de juiste PR en gevalideerde commit';
 
 function specTekst(status = 'goedgekeurd', extra = ''): string {
   return `---\nstatus: ${status}\nnamespace: bouw\n---\n\n# Spec bouw\n\n## Raakt ook\n\n- \`${SOURCE}\`\n- \`CHANGELOG.md\` en \`docs/roadmap.md\`\n- \`src/core/web/ui/other.tsx\` en src/core/web/ui/plain.tsx\n${extra}`;
@@ -134,11 +130,6 @@ function statusCommit(root: string, sha: string, bewerk?: (root: string) => void
   return commit(root, 'docs: gebouwd');
 }
 
-function ci(root: string, head: string, env: Record<string, string>): Uitvoer {
-  const base = git(root, ['rev-parse', 'origin/main']);
-  return draaiChecker({ root, base }, head, { HEAD_REF: STATUS_BRANCH, ...env });
-}
-
 function docsWeigert(root: string, env: Record<string, string>, voorwaarde: string): void {
   const voor = read(root, SPEC);
   const uitvoer = draaiDocsStatus(root, ARGS, env);
@@ -146,16 +137,6 @@ function docsWeigert(root: string, env: Record<string, string>, voorwaarde: stri
   expect(uitvoer.status).toBe(1);
   expect(read(root, SPEC)).toBe(voor);
   expect(git(root, ['status', '--porcelain'])).toBe('');
-}
-
-function ciWeigert(uitvoer: Uitvoer, voorwaarde: string): void {
-  expect(uitvoer.stderr).toContain(`gebouwd na de merge vereist ${voorwaarde}`);
-  expect(uitvoer.status).toBe(1);
-}
-
-function ciGroen(uitvoer: Uitvoer): void {
-  expect(uitvoer.stderr).toBe('');
-  expect(uitvoer.status).toBe(0);
 }
 
 // GEWIJZIGD (specarchief-en-bouwvorm, ADR 0080 punt 5, OV-1): docs:status schrijft `gebouwd # #<n>`, zonder SHA.
@@ -173,7 +154,6 @@ describe('gebouwd-na-merge/AC-1: docs:status schrijft gebouwd na een squash- of 
       expect(uitvoer.status).toBe(0);
       expect(read(root, SPEC)).toBe(specTekst(`gebouwd # #${String(PR)}`));
       expect(git(root, ['diff', '--name-only'])).toBe(SPEC);
-      ciGroen(ci(root, commit(root, 'docs: gebouwd'), gemergd(merge)));
     },
   );
 });
@@ -184,36 +164,13 @@ describe('gebouwd-na-merge/AC-2: de status-PR wijzigt alleen statusregels en het
     const merge = mergePr(root);
     statusBranch(root);
     expect(draaiDocsStatus(root, [...ARGS, '--roadmap'], gemergd(merge)).status).toBe(0);
-    const head = commit(root, 'docs: gebouwd');
-    ciGroen(ci(root, head, gemergd(merge)));
+    commit(root, 'docs: gebouwd');
 
     naDeMerge(root, (r) => {
       write(r, 'README.md', 'Ander werk op main.\n');
     });
     git(root, ['switch', '-q', STATUS_BRANCH]);
     git(root, ['merge', '-q', '--no-edit', 'main']);
-    ciGroen(ci(root, git(root, ['rev-parse', 'HEAD']), gemergd(merge)));
-  });
-
-  test.each([
-    [
-      'een ander bestand',
-      (r: string) => {
-        write(r, 'README.md', 'Gewijzigd.\n');
-      },
-    ],
-    [
-      'andere tekst in de roadmap',
-      (r: string) => {
-        write(r, ROADMAP, roadmap().replace('Toelichting.', 'Andere toelichting.'));
-      },
-    ],
-  ])('gebouwd-na-merge/AC-2: de status-PR wijzigt ook %s: CI faalt', (_naam, bewerk) => {
-    const { root } = maakMain();
-    const merge = mergePr(root);
-    statusBranch(root);
-    const head = statusCommit(root, merge.prHead, bewerk);
-    ciWeigert(ci(root, head, gemergd(merge)), ALLEEN);
   });
 });
 
@@ -223,7 +180,6 @@ describe('gebouwd-na-merge/AC-3: de mergecommit hoort in HEAD en heeft de PR-hea
     const merge = mergePr(root);
     statusBranch(root, spec);
     docsWeigert(root, gemergd(merge), IN_HEAD);
-    ciWeigert(ci(root, statusCommit(root, merge.prHead), gemergd(merge)), IN_HEAD);
   });
 
   test('gebouwd-na-merge/AC-3: een mergecommit waarvan de tweede ouder niet de PR-head is, faalt', () => {
@@ -232,7 +188,6 @@ describe('gebouwd-na-merge/AC-3: de mergecommit hoort in HEAD en heeft de PR-hea
     const verkeerd = { prHead: merge.eerste, mergeSha: merge.mergeSha };
     statusBranch(root);
     docsWeigert(root, gemergd(verkeerd), IN_HEAD);
-    ciWeigert(ci(root, statusCommit(root, merge.eerste), gemergd(verkeerd)), IN_HEAD);
   });
 });
 
@@ -255,7 +210,6 @@ describe('gebouwd-na-merge/AC-3: alleen een merge naar main telt', () => {
     expect(git(root, ['diff', '--name-only', spec, 'HEAD'])).toBe('');
     const merge = { prHead, mergeSha };
     docsWeigert(root, gemergd(merge), IN_HEAD);
-    ciWeigert(ci(root, statusCommit(root, prHead), gemergd(merge)), IN_HEAD);
   });
 
   test('gebouwd-na-merge/AC-3: een PR met basisbranch develop faalt in docs:status en CI', () => {
@@ -264,7 +218,6 @@ describe('gebouwd-na-merge/AC-3: alleen een merge naar main telt', () => {
     statusBranch(root);
     const env = gemergd(merge, { STUB_PR_BASE: 'develop' });
     docsWeigert(root, env, IN_HEAD);
-    ciWeigert(ci(root, statusCommit(root, merge.prHead), env), IN_HEAD);
   });
 });
 
@@ -297,7 +250,6 @@ describe('gebouwd-na-merge/AC-4: de spec staat ongewijzigd op goedgekeurd in de 
     naDeMerge(root, naMerge);
     statusBranch(root);
     docsWeigert(root, gemergd(merge), SPEC_BIJ_MERGE);
-    ciWeigert(ci(root, statusCommit(root, merge.prHead), gemergd(merge)), SPEC_BIJ_MERGE);
   });
 });
 
@@ -310,7 +262,6 @@ describe('gebouwd-na-merge/AC-5: verplichte checks uit de eerste ouder, groen op
     const merge = mergePr(root);
     statusBranch(root);
     docsWeigert(root, gemergd(merge, checks), CHECKS);
-    ciWeigert(ci(root, statusCommit(root, merge.prHead), gemergd(merge, checks)), CHECKS);
   });
 
   test('gebouwd-na-merge/AC-5: een check die pas na de merge aan requiredChecks is toegevoegd, telt niet mee', () => {
@@ -327,21 +278,7 @@ describe('gebouwd-na-merge/AC-5: verplichte checks uit de eerste ouder, groen op
     const uitvoer = draaiDocsStatus(root, ARGS, gemergd(merge));
     expect(uitvoer.stderr).toBe('');
     expect(uitvoer.status).toBe(0);
-    ciGroen(ci(root, commit(root, 'docs: gebouwd'), gemergd(merge)));
   });
-});
-
-describe('gebouwd-na-merge/AC-6: gevalideerd is de PR-head', () => {
-  test.each(['mergecommit', 'eerste ouder'] as const)(
-    'gebouwd-na-merge/AC-6: gevalideerd: de %s in plaats van de PR-head faalt in CI',
-    (welke) => {
-      const { root, spec } = maakMain();
-      const merge = mergePr(root);
-      statusBranch(root);
-      const head = statusCommit(root, welke === 'mergecommit' ? merge.mergeSha : spec);
-      ciWeigert(ci(root, head, gemergd(merge)), GENERIEK);
-    },
-  );
 });
 
 describe('gebouwd-na-merge/AC-7: gesloten zonder merge of uit een fork', () => {
@@ -356,9 +293,6 @@ describe('gebouwd-na-merge/AC-7: gesloten zonder merge of uit een fork', () => {
     const docs = draaiDocsStatus(root, ARGS, gemergd(merge, extra));
     expect(docs.status).toBe(1);
     expect(read(root, SPEC)).toBe(voor);
-    const uitvoer = ci(root, statusCommit(root, merge.prHead), gemergd(merge, extra));
-    expect(uitvoer.status).toBe(1);
-    expect(uitvoer.stderr).not.toBe('');
   });
 });
 
@@ -381,15 +315,6 @@ describe('gebouwd-na-merge/AC-8: een open PR via de bestaande route, een gemergd
     git(root, ['switch', '-q', FEATURE]);
     expect(git(root, ['rev-parse', 'HEAD'])).toBe(merge.prHead);
     docsWeigert(root, gemergd(merge), IN_HEAD);
-  });
-
-  test('gebouwd-na-merge/AC-8: CI toetst een gemergde PR met de head van de status-PR via de gemergde route', () => {
-    const { root } = maakMain();
-    const merge = mergePr(root);
-    git(root, ['switch', '-q', FEATURE]);
-    const head = statusCommit(root, merge.prHead);
-    const uitvoer = ci(root, head, { ...gemergd(merge, { STUB_PR_HEAD: head }), HEAD_REF: FEATURE });
-    ciWeigert(uitvoer, GENERIEK);
   });
 });
 
@@ -418,7 +343,6 @@ describe('gebouwd-na-merge/AC-10: een gemergde PR zonder bouwpad', () => {
     const besluit = { prHead: spec, mergeSha: spec };
     statusBranch(root);
     docsWeigert(root, gemergd(besluit), BOUWPAD);
-    ciWeigert(ci(root, statusCommit(root, spec), gemergd(besluit)), BOUWPAD);
   });
 
   test.each([
@@ -489,7 +413,6 @@ describe('gebouwd-na-merge/AC-11: requiredChecks in de eerste ouder', () => {
       });
     statusBranch(root);
     docsWeigert(root, gemergd(merge), CHECKS);
-    ciWeigert(ci(root, statusCommit(root, merge.prHead), gemergd(merge)), CHECKS);
   });
 });
 

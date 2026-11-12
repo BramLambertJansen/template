@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
-import { agentMerge, beoordeel, leesConfig } from '../../scripts/kit/diff-guard.mjs';
 import {
   bewijsPlan,
   leerpuntMergeRedenen,
@@ -132,24 +131,6 @@ describe('leerlus-herzien/AC-4 de eigenaar merget', () => {
   test('leerlus-herzien/AC-4: meting geeft zonderTest en de merge-reden', () => {
     expect(plan(SCHRAP).zonderTest).toBe(true);
     expect(leerpuntMergeRedenen(sectie(SCHRAP))).toEqual(['leerpunt zonder test']);
-  });
-
-  test('leerlus-herzien/AC-4: diff-guard: agent-merge nee', () => {
-    const tekst = readFileSync('.claude/gates.json', 'utf8');
-    const config = leesConfig(tekst);
-    const pr = {
-      wijzigingen: [],
-      json: {},
-      reviews: [],
-      auteur: 'x',
-      headSha: 'a'.repeat(40),
-      regels: 1,
-      binair: [],
-      bytes: 1,
-      body: sectie(SCHRAP),
-    };
-    expect(agentMerge(pr, beoordeel(pr, config), tekst)).toMatchObject({ oordeel: 'nee' });
-    expect(agentMerge(pr, beoordeel(pr, config), tekst).redenen).toContain('leerpunt zonder test: de eigenaar merget');
   });
 });
 

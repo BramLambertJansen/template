@@ -23,8 +23,8 @@ geen branches, commits of PR's. De eigenaar beslist; jij sorteert alleen voor.
    - **Kan dicht**: al opgelost op main of achterhaald; noem de PR met sluitbewijs of de reden voor `achterhaald:`.
    - **Schrappen of vereenvoudigen**: elk issue met die plek, alleen in deze bak (nooit "Klein"); gesorteerd op de gemeten
      winst uit `Meting:`, met per issue of `Overname:` het gedekte risico echt opvangt.
-   - **Klein**: beperkte fix binnen bestaand gedrag, niet kritiek; een agent kan het met `agent-merge: ja` oppakken, met een
-     test die op de basis faalt.
+   - **Klein**: beperkte fix binnen bestaand gedrag, niet kritiek; een agent kan het oppakken en zelf mergen als de PR geen pad van
+     een code-eigenaar raakt en de checks groen zijn, met een test die op de basis faalt.
    - **Besluit nodig**: de eigenaar moet eerst kiezen; noem de keuze in één zin.
    - **Kritiek**: raakt auth, rolhek, hooks, bewaking, gates, ruleset of overige core; besluit-PR en eigenaarmerge nodig.
 5. Noem herhalingen: issues met `eerder: #nnn`, en issues die over hetzelfde mechanisme gaan zonder die verwijzing. Zet

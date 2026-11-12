@@ -1,6 +1,6 @@
 // Kleine shell-lezer voor het rolhek (framework §8, ADR 0045): splitst een Bash-commando in losse commando's (`;`, `&&`, `||`,
 // `|`, `&`, regeleinde), haalt aanhalingstekens weg, slaat heredoc-teksten over en verzamelt redirect-doelen. Bewust geen
-// volledige shell: wat tekstheuristiek niet vangt (`bash -c`, `node -e`, `$(…)`), vangt de diff-guard in CI.
+// volledige shell: wat tekstheuristiek niet vangt (`bash -c`, `node -e`, `$(…)`), vangt de toets op effect en de goedkeuring uit CODEOWNERS (ADR 0089).
 
 /**
  * @typedef {{ words: string[], redirects: string[], expanded?: string[], patterns?: string[], raws?: string[], ruim?: boolean }} Command
