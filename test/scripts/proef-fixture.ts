@@ -25,8 +25,25 @@ const FILES: Readonly<Record<string, string>> = {
   '.github/CODEOWNERS': '/AGENTS.md                @bramlambertjansen\n',
   '.gitignore': 'node_modules\n',
 };
-export const TEMPLATE_GATES =
-  '{\n  "onderhoud": { "repository": "BramLambertJansen/template" },\n  "altijdVragen": []\n}\n';
+// GEWIJZIGD (templateregime, ADR 0089 punt 3): `app:init --owner` zet `goedkeurders` in gates.json en genereert CODEOWNERS uit
+// de padtabel; de template-gates hebben dus `paden` en `goedkeurders` (niet meer de oude vorm met `altijdVragen`).
+export const TEMPLATE_GATES = `${[
+  '{',
+  '  "onderhoud": { "repository": "BramLambertJansen/template" },',
+  '  "paden": {',
+  '    "AGENTS.md": { "besluit": "eigenaar" },',
+  '    "src/**": { "besluit": "agent" }',
+  '  },',
+  '  "goedkeurders": ["bramlambertjansen"]',
+  '}',
+].join('\n')}\n`;
+
+/** De modules die `scripts/kit/app-init.mjs` in een kopie nodig heeft (hij importeert `./codeowners.mjs`, dat `padtabel.mjs`). */
+export const APP_INIT_MODULES = [
+  'scripts/kit/app-init.mjs',
+  'scripts/kit/codeowners.mjs',
+  'rails/hooks/lib/padtabel.mjs',
+] as const;
 
 export interface BronOptions {
   scripts?: Record<string, string>;
@@ -64,8 +81,11 @@ export function maakBron(werkmap: Werkmap, options: BronOptions = {}): string {
     mkdirSync(path.dirname(path.join(bron, file)), { recursive: true });
     writeFileSync(path.join(bron, file), content);
   }
-  mkdirSync(path.join(bron, 'scripts/kit'), { recursive: true });
-  cpSync(path.join(ROOT, 'scripts/kit/app-init.mjs'), path.join(bron, 'scripts/kit/app-init.mjs'));
+  // GEWIJZIGD (templateregime, ADR 0089 punt 3): app-init importeert codeowners.mjs en padtabel.mjs; die gaan mee in de bron.
+  for (const module of APP_INIT_MODULES) {
+    mkdirSync(path.dirname(path.join(bron, module)), { recursive: true });
+    cpSync(path.join(ROOT, module), path.join(bron, module));
+  }
   if (options.nodeModules !== false) {
     mkdirSync(path.join(bron, 'node_modules/.bin'), { recursive: true });
     writeFileSync(path.join(bron, 'node_modules/.bin/tool'), '#!/bin/sh\n');

@@ -223,7 +223,8 @@ uit met `KIT_MELDING=uit`) en toont de statusregel branch, achterstand, gewijzig
 ## Besluit en taakscope voorbereiden
 
 `docs/roadmap-archief.md` bevat historisch bouwbewijs en is net als de actieve roadmap een beschermd gate-pad.
-De diff-guard beoordeelt ook verwijderen en weg-hernoemen; CODEOWNERS volgt dezelfde lijst in `.claude/gates.json`.
+De diff-guard beoordeelt ook verwijderen en weg-hernoemen. CODEOWNERS is gegenereerd uit de besluitkolom van de padtabel in
+`.claude/gates.json` (`node scripts/kit/codeowners.mjs --schrijf`): elk pad met een ander besluit dan `agent` heeft de eigenaar.
 
 ADR-nummers worden samen gecontroleerd voor de actieve map en het archief. Verwijderde nummers blijven gereserveerd via
 de Git-geschiedenis van de vertrouwde basis. Heeft main een nummer inmiddels gebruikt, werk de branch dan eerst bij.

@@ -1,11 +1,14 @@
 // pnpm app:init <slug> "<App-naam>" [--owner <login>] [--dry-run] (roadmap stuk 6): de hernoemstap uit docs/nieuwe-app.md
 // (fase 5.2) als script, zodat elke nieuwe app hem hetzelfde doet. Eén keer, direct na de koppeling met de template; hij
 // weigert als de app al hernoemd is. Raakt alleen de bestanden uit de tabel in nieuwe-app.md, plus de twee plekken met de
-// app-naam (src/shared/app.ts voor mails, src/web/index.html voor de paginatitel).
+// app-naam (src/shared/app.ts voor mails, src/web/index.html voor de paginatitel). Met --owner komt de handle op één plek,
+// `goedkeurders` in .claude/gates.json; .github/CODEOWNERS wordt daaruit en uit de padtabel gegenereerd (ADR 0089,
+// scripts/kit/codeowners.mjs), niet met tekstvervanging.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
+import { CODEOWNERS, codeownersTekst } from './codeowners.mjs';
 
 const TEMPLATE_NAME = 'app-template';
 const TEMPLATE_TITLE = 'App-template';
@@ -13,7 +16,8 @@ const SLUG = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 const MAX_SLUG = 50;
 // Een GitHub-login of een team (org/team).
 const LOGIN = /^[A-Za-z0-9][A-Za-z0-9-]{0,38}(?:\/[A-Za-z0-9][A-Za-z0-9_.-]*)?$/;
-const TEMPLATE_OWNER = '@bramlambertjansen';
+const GATES = '.claude/gates.json';
+const GOEDKEURDERS = /"goedkeurders"\s*:\s*\[[^\]]*\]/;
 
 const ONDERHOUD = '  "onderhoud": { "repository": "BramLambertJansen/template" },\n';
 
@@ -78,6 +82,46 @@ function renameChangelog(changelog, sha) {
 }
 
 /**
+ * De eigenaar op één plek: `goedkeurders` in gates.json krijgt de handle, CODEOWNERS is de afleiding uit de padtabel
+ * voor die handle. Zonder padtabel (geen gates.json, de oude vorm) of zonder `goedkeurders` is er geen afleiding: fout.
+ * @param {string | null} gates de tekst van gates.json, na het weghalen van de onderhoud-regel
+ * @param {string} owner
+ * @returns {Wijziging[]}
+ */
+function eigenaarWijzigingen(gates, owner) {
+  if (gates === null) throw new AppInitError(`${GATES} ontbreekt; zonder padtabel is ${CODEOWNERS} niet af te leiden`);
+  if (!GOEDKEURDERS.test(gates)) throw new AppInitError(`${GATES}: goedkeurders niet gevonden`);
+  const inhoud = gates.replace(GOEDKEURDERS, () => `"goedkeurders": [${JSON.stringify(owner)}]`);
+  try {
+    return [
+      { pad: GATES, inhoud },
+      { pad: CODEOWNERS, inhoud: codeownersTekst(JSON.parse(inhoud), owner) },
+    ];
+  } catch (error) {
+    throw new AppInitError(
+      `${CODEOWNERS} is niet af te leiden: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+/**
+ * De wijzigingen aan .claude/gates.json en, met --owner, .github/CODEOWNERS.
+ * @param {string} root
+ * @param {string | undefined} owner
+ * @returns {Wijziging[]}
+ */
+function gatesWijzigingen(root, owner) {
+  const gates = readOptional(path.join(root, GATES));
+  // De onderhoudsmodus hoort bij de template-repo, niet bij een app (ADR 0045 punt 8).
+  const metOnderhoud = gates !== null && /"onderhoud"\s*:/.test(gates);
+  if (metOnderhoud && !gates.includes(ONDERHOUD))
+    throw new AppInitError(`${GATES}: de onderhoud-regel is niet gevonden`);
+  const zonder = metOnderhoud ? gates.replace(ONDERHOUD, '') : gates;
+  if (owner !== undefined) return eigenaarWijzigingen(zonder, owner);
+  return metOnderhoud && zonder !== null ? [{ pad: GATES, inhoud: zonder }] : [];
+}
+
+/**
  * De wijzigingen voor een nieuwe app, zonder iets te schrijven.
  * @param {string} root
  * @param {Options} options
@@ -119,18 +163,7 @@ export function planAppInit(root, options) {
       ),
     },
   ];
-  // De onderhoudsmodus hoort bij de template-repo, niet bij een app (ADR 0045 punt 8).
-  const gates = readOptional(path.join(root, '.claude/gates.json'));
-  if (gates !== null && /"onderhoud"\s*:/.test(gates)) {
-    if (!gates.includes(ONDERHOUD)) throw new AppInitError('.claude/gates.json: de onderhoud-regel is niet gevonden');
-    plan.push({ pad: '.claude/gates.json', inhoud: gates.replace(ONDERHOUD, '') });
-  }
-  if (options.owner !== undefined) {
-    const codeowners = read('.github/CODEOWNERS');
-    if (!codeowners.includes(TEMPLATE_OWNER))
-      throw new AppInitError(`.github/CODEOWNERS: ${TEMPLATE_OWNER} niet gevonden`);
-    plan.push({ pad: '.github/CODEOWNERS', inhoud: codeowners.replaceAll(TEMPLATE_OWNER, `@${options.owner}`) });
-  }
+  plan.push(...gatesWijzigingen(root, options.owner));
   return plan;
 }
 

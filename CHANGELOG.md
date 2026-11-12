@@ -311,6 +311,21 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Gewijzigd
 
+- GitHub bewaakt wie beslist, stap 2a (ADR 0089, spec templateregime AC-2, AC-3, AC-8, AC-10): `scripts/github-ruleset.sh` eist
+  review van een code-eigenaar met 0 goedkeuringen en leest de verplichte checks uit `requiredChecks` in
+  `.claude/decisions.json`; de optie `--bypass-beheerder` geeft de beheerdersrol een bypass alleen via pull requests.
+  `.github/CODEOWNERS` is gegenereerd uit de padtabel (`node scripts/kit/codeowners.mjs --schrijf`): alles van de eigenaar,
+  behalve de paden met besluit `agent`; `check-docs` eist dat het bestand gelijk is aan de afleiding voor de eerste handle uit
+  `goedkeurders` (sleutel `docs:spiegel:codeowners`). `check-core` bewaakt naast `src/core/` ook `docs/template/` en noemt de
+  zone in elke melding. `pnpm app:init --owner <handle>` zet de handle in `goedkeurders` en genereert `CODEOWNERS` daaruit
+  (geen tekstvervanging meer). Wat verandert voor een app: een PR die een pad met een code-eigenaar raakt, vraagt de
+  goedkeuring van de eigenaar, en een app-PR die `docs/template/` wijzigt buiten een template-merge is rood. Wat de eigenaar
+  moet doen: een nieuwe app niets extra (`app:init` regelt de handle); een bestaande app zet na de template-update
+  `goedkeurders` in `.claude/gates.json` op de eigen handle en draait `node scripts/kit/codeowners.mjs --schrijf`; daarna
+  `scripts/github-ruleset.sh <owner>/<repo>` opnieuw, met `--bypass-beheerder` pas als het token van de eigenaar uit de
+  agentomgeving is. Het script vraagt daarna zelf bij GitHub de fouten in `CODEOWNERS` op; weigert het, zet dan in
+  `goedkeurders` een account met schrijfrecht, genereer `CODEOWNERS` opnieuw, merge dat en draai het script nogmaals.
+
 - Tests naar vermogen (leerpunt #607, ADR 0088, spec tests-naar-vermogen): een test die de kooi start, slaat over waar de
   kooi niet kan starten (bijvoorbeeld in de Claude Code-sandbox) en nergens anders. De globale setup `test/setup/vermogen.ts`
   draait de proef één keer per run; lokaal drukt `test/setup/skip-reporter.ts` één regel `⚠ overgeslagen: <n> tests, …` af,

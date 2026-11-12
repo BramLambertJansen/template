@@ -43,6 +43,8 @@ const dirs: string[] = [];
 
 type Uitvoer = { status: number | null; stdout: string; stderr: string; aanroepen: string[]; payload: unknown };
 
+// GEWIJZIGD (templateregime, ADR 0089 punt 3): het script vraagt na de ruleset `codeowners/errors` op; de stub antwoordt daarop
+// met een lege lijst, zodat de bestaande gevallen blijven slagen.
 // gh-stub. GH_MODE: leeg (geen ruleset `main`), bestaat (ruleset 42 bestaat), upgrade (private repo zonder Pro/Team).
 const GH = `
 echo "gh $*" >> "$STUB_DIR/log"
@@ -50,6 +52,7 @@ if [[ "$GH_MODE" == upgrade ]]; then
   echo 'gh: Upgrade to GitHub Pro or make this repository public to enable this feature. (HTTP 403)' >&2
   exit 1
 fi
+if [[ " $* " == *"/codeowners/errors"* ]]; then echo '{"errors":[]}'; exit 0; fi
 if [[ " $* " == *" --input - "* ]]; then cat > "$STUB_DIR/payload.json"; echo '{"id":42}'; exit 0; fi
 if [[ "$GH_MODE" == bestaat ]]; then echo 42; fi
 `;
@@ -241,7 +244,11 @@ describe('scripts/github-ruleset.sh', () => {
     const pullRequest = regels(payload).find((regel) => regel.type === 'pull_request');
 
     expect(status).toBe(0);
-    expect(aanroepen.at(-1)).toBe('gh api -X POST repos/eigenaar/app/rulesets --input -');
+    // GEWIJZIGD (templateregime, ADR 0089 punt 3): de POST is niet meer de laatste aanroep (daarna volgt codeowners/errors);
+    // er is precies één schrijvende aanroep.
+    expect(aanroepen.filter((aanroep) => aanroep.includes('-X '))).toStrictEqual([
+      'gh api -X POST repos/eigenaar/app/rulesets --input -',
+    ]);
     expect(ontbrekend(payload, checksUitWorkflows())).toStrictEqual([]);
     expect(checks(payload)).toHaveLength(checksUitWorkflows().length);
     expect(payload).toMatchObject({
@@ -263,7 +270,11 @@ describe('scripts/github-ruleset.sh', () => {
     const { status, aanroepen } = run(['eigenaar/app'], 'bestaat');
 
     expect(status).toBe(0);
-    expect(aanroepen.at(-1)).toBe('gh api -X PUT repos/eigenaar/app/rulesets/42 --input -');
+    // GEWIJZIGD (templateregime, ADR 0089 punt 3): de PUT is niet meer de laatste aanroep (daarna volgt codeowners/errors);
+    // er is precies één schrijvende aanroep.
+    expect(aanroepen.filter((aanroep) => aanroep.includes('-X '))).toStrictEqual([
+      'gh api -X PUT repos/eigenaar/app/rulesets/42 --input -',
+    ]);
   });
 
   test('--zonder-codeql: alleen de twee CodeQL-checks vallen weg', () => {

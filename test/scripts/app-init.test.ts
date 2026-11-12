@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
 import { AppInitError, planAppInit } from '../../scripts/kit/app-init.mjs';
+import { codeownersTekst } from '../../scripts/kit/codeowners.mjs';
 
 // pnpm app:init (roadmap stuk 6): vaste template-invoer, ook nadat de checkout zelf al een app geworden is.
 const ROOT = path.join(import.meta.dirname, '../..');
@@ -16,7 +17,17 @@ const FILES: Readonly<Record<string, string>> = {
   '.github/CODEOWNERS': '/AGENTS.md                @bramlambertjansen\n',
 };
 const TEMPLATE_GATES = '{\n  "onderhoud": { "repository": "BramLambertJansen/template" },\n  "altijdVragen": []\n}\n';
+// Nieuw (templateregime, ADR 0089 punt 3): gates.json met padtabel en `goedkeurders`, de invoer van `--owner`.
+const GATES_MET_PADEN =
+  '{\n  "paden": {\n    "AGENTS.md": { "besluit": "eigenaar" },\n    "src/**": { "besluit": "agent" }\n  },\n  "goedkeurders": ["bramlambertjansen"]\n}\n';
 const dirs: string[] = [];
+
+function copyMetPaden(gates = GATES_MET_PADEN): string {
+  const dir = copy();
+  mkdirSync(path.join(dir, '.claude'), { recursive: true });
+  writeFileSync(path.join(dir, '.claude/gates.json'), gates);
+  return dir;
+}
 
 function copy(): string {
   const dir = mkdtempSync(path.join(tmpdir(), 'app-init-'));
@@ -37,7 +48,14 @@ const options = { slug: 'urenregistratie', name: 'Urenregistratie', sha: 'abc123
 test('de initialisatietests blijven slagen in een hernoemde app', () => {
   const dir = copy();
   for (const change of planAppInit(dir, options)) writeFileSync(path.join(dir, change.pad), change.inhoud);
-  for (const file of ['scripts/kit/app-init.mjs', 'test/scripts/app-init.test.ts']) {
+  // GEWIJZIGD (templateregime, ADR 0089 punt 3): app-init importeert codeowners.mjs en padtabel.mjs; die gaan mee in de kopie.
+  const bestanden = [
+    'scripts/kit/app-init.mjs',
+    'scripts/kit/codeowners.mjs',
+    'rails/hooks/lib/padtabel.mjs',
+    'test/scripts/app-init.test.ts',
+  ];
+  for (const file of bestanden) {
     mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
     cpSync(path.join(ROOT, file), path.join(dir, file));
   }
@@ -112,9 +130,13 @@ describe('planAppInit', () => {
     expect(() => planAppInit(dir, options)).toThrow(/onderhoud-regel/);
   });
 
+  // GEWIJZIGD (templateregime, ADR 0089 punt 3): de handle komt in `goedkeurders` in gates.json en CODEOWNERS wordt uit de
+  // padtabel gegenereerd; vroeger een tekstvervanging in een CODEOWNERS-fixture zonder gates.json.
   test('--owner mag ook een team zijn', () => {
-    const codeowners = changed(planAppInit(copy(), { ...options, owner: 'acme/beheer' }), '.github/CODEOWNERS');
-    expect(codeowners).toContain('/AGENTS.md                @acme/beheer');
+    const plan = planAppInit(copyMetPaden(), { ...options, owner: 'acme/beheer' });
+    const gates = changed(plan, '.claude/gates.json');
+    expect(JSON.parse(gates)).toMatchObject({ goedkeurders: ['acme/beheer'] });
+    expect(changed(plan, '.github/CODEOWNERS')).toBe(codeownersTekst(JSON.parse(gates), 'acme/beheer'));
   });
 
   test('een README die anders begint, weigert hij in plaats van blind te overschrijven', () => {
@@ -123,17 +145,30 @@ describe('planAppInit', () => {
     expect(() => planAppInit(dir, options)).toThrow(/README\.md: begint niet met/);
   });
 
-  test('--owner zonder template-handle in CODEOWNERS: fout in plaats van stil niets', () => {
-    const dir = copy();
-    writeFileSync(path.join(dir, '.github/CODEOWNERS'), '/AGENTS.md @iemand-anders\n');
-    expect(() => planAppInit(dir, { ...options, owner: 'acme' })).toThrow(
-      /CODEOWNERS: @bramlambertjansen niet gevonden/,
-    );
+  // GEWIJZIGD (templateregime, ADR 0089 punt 3): CODEOWNERS is geen invoer meer; "fout in plaats van stil niets" geldt nu voor
+  // een gates.json zonder `goedkeurders` (de melding CODEOWNERS: @bramlambertjansen niet gevonden bestaat niet meer).
+  test('--owner zonder goedkeurders in gates.json: fout in plaats van stil niets', () => {
+    const dir = copyMetPaden(GATES_MET_PADEN.replace('"goedkeurders"', '"beslissers"'));
+    expect(() => planAppInit(dir, { ...options, owner: 'acme' })).toThrow(/goedkeurders niet gevonden/);
   });
 
-  test('--owner vervangt de handle in CODEOWNERS', () => {
-    const codeowners = changed(planAppInit(copy(), { ...options, owner: 'acme-team' }), '.github/CODEOWNERS');
-    expect(codeowners).toContain('/AGENTS.md                @acme-team');
+  // Nieuw (templateregime, ADR 0089 punt 3): de twee andere weigeringen van --owner.
+  test('--owner zonder .claude/gates.json: fout, geen CODEOWNERS uit niets', () => {
+    expect(() => planAppInit(copy(), { ...options, owner: 'acme' })).toThrow(/gates\.json ontbreekt/);
+  });
+
+  test('--owner zonder padtabel in gates.json: fout, CODEOWNERS is niet af te leiden', () => {
+    const oud = '{\n  "goedkeurders": ["bramlambertjansen"],\n  "altijdVragen": []\n}\n';
+    expect(() => planAppInit(copyMetPaden(oud), { ...options, owner: 'acme' })).toThrow(/niet af te leiden/);
+  });
+
+  // GEWIJZIGD (templateregime, ADR 0089 punt 3): vroeger werd de handle in de bestaande CODEOWNERS-regel vervangen; nu staat
+  // de handle in `goedkeurders` en is CODEOWNERS de afleiding (`* @<handle>` en elk pad met besluit anders dan agent).
+  test('--owner genereert CODEOWNERS uit de padtabel voor die handle', () => {
+    const plan = planAppInit(copyMetPaden(), { ...options, owner: 'acme-team' });
+    const codeowners = changed(plan, '.github/CODEOWNERS');
+    expect(codeowners).toBe(codeownersTekst(JSON.parse(changed(plan, '.claude/gates.json')), 'acme-team'));
+    expect(codeowners).toContain('@acme-team');
     expect(codeowners).not.toContain('@bramlambertjansen');
   });
 

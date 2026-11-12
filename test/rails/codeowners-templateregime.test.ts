@@ -332,3 +332,69 @@ describe('templateregime/AC-3 check-docs eist dat CODEOWNERS gelijk is aan de af
     }
   });
 });
+
+// Nieuw (templateregime/AC-3, ADR 0089 punt 3): een ontbrekend .github/CODEOWNERS is zelf een afwijking van de afleiding.
+// Aangenomen: de sleutel is `docs:spiegel:codeowners` (of begint ermee); het bestand weglaten geeft die melding, het
+// gegenereerde bestand niet. Nu slaat check-docs de spiegel over als CODEOWNERS niet in de repo staat.
+describe('templateregime/AC-3 check-docs meldt een ontbrekende CODEOWNERS', () => {
+  function repoMet(codeowners: string | null): string {
+    const root = mkdtempSync(path.join(tmpdir(), 'check-docs-codeowners-weg-'));
+    const files: Record<string, string> = {
+      'package.json': JSON.stringify({ scripts: {} }),
+      '.claude/settings.json': readFileSync(path.join(ROOT, '.claude/settings.json'), 'utf8'),
+      '.claude/gates.json': gatesTekst,
+    };
+    if (codeowners !== null) files['.github/CODEOWNERS'] = codeowners;
+    for (const [file, content] of Object.entries(files)) {
+      mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
+      writeFileSync(path.join(root, file), content);
+    }
+    execFileSync('git', ['init', '-q'], { cwd: root });
+    execFileSync('git', ['add', '-A'], { cwd: root });
+    return root;
+  }
+
+  const spiegelKeys = async (codeowners: string | null): Promise<string[]> =>
+    (await docsViolations(repoMet(codeowners)))
+      .map((v) => v.key)
+      .filter((key) => key.startsWith('docs:spiegel:codeowners'));
+
+  test('templateregime/AC-3 zonder .github/CODEOWNERS geeft docsViolations een melding docs:spiegel:codeowners', async () => {
+    expect(await spiegelKeys(null)).toStrictEqual(['docs:spiegel:codeowners']);
+  });
+
+  test('templateregime/AC-3 dezelfde repo met het gegenereerde CODEOWNERS geeft die melding niet', async () => {
+    const { codeownersTekst } = await vereis();
+
+    expect(await spiegelKeys(codeownersTekst(echteGates, EIGENAAR))).toStrictEqual([]);
+  });
+});
+
+// Nieuw (templateregime/AC-3, ADR 0089 punt 3): GitHub leest sommige globs anders dan de padtabel (`**` midden in een
+// segment, `[`/`]`, een spatie, `#` vooraan); codeownersTekst weigert die met een fout die de glob noemt, in plaats van
+// een CODEOWNERS te schrijven die GitHub anders uitlegt.
+describe('templateregime/AC-3 codeownersTekst weigert een glob die GitHub anders leest', () => {
+  const rij = { besluit: 'eigenaar' };
+
+  test.each(['src/**.ts', 'src/a**/b.ts', 'src/a[1].ts', 'src/a]b.ts', 'src/een bestand.ts', '#geheim.md'])(
+    'templateregime/AC-3 de glob %s geeft een fout die de glob noemt',
+    async (glob) => {
+      const { codeownersTekst } = await vereis();
+
+      expect(() => codeownersTekst({ paden: { [glob]: rij } }, EIGENAAR)).toThrow(glob);
+    },
+  );
+
+  test('templateregime/AC-3 elke glob uit de echte .claude/gates.json gaat goed, ook de hele tabel in één keer', async () => {
+    const { codeownersTekst } = await vereis();
+    const paden: unknown =
+      typeof echteGates === 'object' && echteGates !== null ? Reflect.get(echteGates, 'paden') : {};
+    const globs = typeof paden === 'object' && paden !== null ? Object.keys(paden) : [];
+
+    expect(globs.length).toBeGreaterThan(20);
+    for (const glob of globs) {
+      expect(() => codeownersTekst({ paden: { [glob]: rij } }, EIGENAAR), glob).not.toThrow();
+    }
+    expect(() => codeownersTekst(echteGates, EIGENAAR)).not.toThrow();
+  });
+});

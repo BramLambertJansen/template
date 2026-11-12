@@ -5,14 +5,22 @@ import path from 'node:path';
 import { expect, test } from 'vitest';
 import { afgeleid } from '../../rails/hooks/lib/padtabel.mjs';
 import { docsViolations } from '../../scripts/kit/check-docs.mjs';
+import { eersteGoedkeurder, eigenaarVan } from '../../scripts/kit/codeowners.mjs';
 
 // ADR 0046 punt 27, 28 en 32 (stap 7): `voorReview` in .claude/gates.json is een deelverzameling van gates + jsonGates en
-// de `Edit(...)`-regels in permissions.ask van .claude/settings.json zijn er exact aan gelijk. CODEOWNERS blijft = gates +
-// jsonGates. Sleutels (contract van de developer): `docs:spiegel:voorreview-gates:<pad>` (voorReview-item buiten gates en
+// de `Edit(...)`-regels in permissions.ask van .claude/settings.json zijn er exact aan gelijk. CODEOWNERS volgt de
+// besluitkolom van de padtabel (ADR 0089 punt 3), niet gates + jsonGates. Sleutels (contract van de developer): `docs:spiegel:voorreview-gates:<pad>` (voorReview-item buiten gates en
 // jsonGates), `docs:spiegel:ask:<pad>` (voorReview-item zonder Edit-regel) en `docs:spiegel:voorreview:<pad>` (Edit-regel
 // die niet in voorReview staat).
 
-type Opzet = { gates: string[]; voorReview: string[]; ask: string[]; owners?: string[] };
+// GEWIJZIGD (templateregime, ADR 0089 punt 3): `gatesJson` vervangt de gates.json in de oude vorm door een in de nieuwe vorm.
+type Opzet = {
+  gates: string[];
+  voorReview: string[];
+  ask: string[];
+  owners?: string[];
+  gatesJson?: Record<string, unknown>;
+};
 
 function repo(opzet: Opzet): string {
   const root = mkdtempSync(path.join(tmpdir(), 'check-docs-voorreview-'));
@@ -21,11 +29,13 @@ function repo(opzet: Opzet): string {
     'package.json': JSON.stringify({ scripts: {} }),
     '.github/CODEOWNERS': owners.map((entry) => `/${entry.replace(/\/\*\*$/, '/')} @eigenaar`).join('\n') + '\n',
     '.claude/settings.json': JSON.stringify({ permissions: { ask: opzet.ask } }),
-    '.claude/gates.json': JSON.stringify({
-      gates: opzet.gates,
-      voorReview: opzet.voorReview,
-      jsonGates: { 'package.json': ['scripts'] },
-    }),
+    '.claude/gates.json': JSON.stringify(
+      opzet.gatesJson ?? {
+        gates: opzet.gates,
+        voorReview: opzet.voorReview,
+        jsonGates: { 'package.json': ['scripts'] },
+      },
+    ),
   };
   for (const [file, content] of Object.entries(files)) {
     mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
@@ -96,15 +106,28 @@ test('een Edit-regel in ask die niet in voorReview staat (ook al is het een gate
   expect(await keys(root)).toStrictEqual(['docs:spiegel:voorreview:src/core/**']);
 });
 
-test('CODEOWNERS blijft gates + jsonGates: een gate buiten voorReview moet er wel in staan', async () => {
+// GEWIJZIGD (templateregime, ADR 0089 punt 3): CODEOWNERS is niet meer gates + jsonGates maar de afleiding uit de padtabel; de
+// fixture staat in de nieuwe vorm en een gate buiten de Edit-ask (src/core/**) die in CODEOWNERS ontbreekt geeft
+// `docs:spiegel:codeowners` in plaats van `docs:spiegel:codeowners-gates:src/core/**`.
+test('CODEOWNERS volgt de padtabel: een gate buiten de Edit-ask moet er wel in staan', async () => {
+  const STRENG = { schrijven: 'altijdVragen', besluit: 'besluit-pr' };
   const root = repo({
     gates: GATES,
     voorReview: ['scripts/**'],
-    ask: ['Edit(scripts/**)'],
+    ask: ['Edit(scripts/**)', 'Edit(package.json)'],
     owners: ['scripts/**', 'docs/adr/**', 'package.json'],
+    gatesJson: {
+      paden: {
+        'scripts/**': STRENG,
+        'package.json': STRENG,
+        'docs/adr/**': { schrijven: 'gate', besluit: 'besluit-pr' },
+        'src/core/**': { schrijven: 'gate' },
+      },
+      goedkeurders: ['eigenaar'],
+    },
   });
 
-  expect(await keys(root)).toStrictEqual(['docs:spiegel:codeowners-gates:src/core/**']);
+  expect(await keys(root)).toStrictEqual(['docs:spiegel:codeowners']);
 });
 
 // De echte lijst, letterlijk uit de lijst uit ADR 0046 punt 27, plus `rails/**` (ADR 0045 punt 3: de hookbroncode) en
@@ -189,13 +212,17 @@ test.each([
   expect(Array.isArray(voorReview) ? voorReview : null).not.toContain(pad);
 });
 
+// GEWIJZIGD (templateregime, ADR 0089 punt 3): CODEOWNERS volgt de besluitkolom van de padtabel; deze twee paden staan nog
+// steeds niet in gates, maar hebben (besluit `eigenaar`) nu wel de eigenaar in CODEOWNERS (`eigenaarVan`, laatste patroon wint).
 test.each(['src/api/app.ts', 'src/shared/permissions.ts'])(
-  'punt 18: %s staat niet in gates en niet in CODEOWNERS',
+  'punt 18: %s staat niet in gates maar heeft in CODEOWNERS de eigenaar',
   (pad) => {
     const gates = ECHT.gates;
+    const eigenaar = eersteGoedkeurder(lees('.claude/gates.json'));
 
     expect(Array.isArray(gates) ? gates : null).not.toContain(pad);
-    expect(readFileSync('.github/CODEOWNERS', 'utf8')).not.toContain(pad);
+    expect(eigenaar).not.toBeNull();
+    expect(eigenaarVan(readFileSync('.github/CODEOWNERS', 'utf8'), pad)).toBe(`@${eigenaar ?? ''}`);
   },
 );
 

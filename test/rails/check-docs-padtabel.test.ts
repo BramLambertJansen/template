@@ -3,6 +3,7 @@ import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { afgeleid } from '../../rails/hooks/lib/padtabel.mjs';
 import { docsViolations } from '../../scripts/kit/check-docs.mjs';
+import { codeownersTekst, eersteGoedkeurder } from '../../scripts/kit/codeowners.mjs';
 import {
   NIEUW_ALTIJD_VRAGEN,
   NIEUW_GATES,
@@ -53,16 +54,17 @@ describe('padtabel/AC-3 samenhang tussen schrijven en besluit', () => {
 });
 
 describe('padtabel/AC-7 CODEOWNERS en de Edit-ask spiegelen de afgeleide lijsten', () => {
+  // GEWIJZIGD (templateregime, ADR 0089 punt 3): één melding `docs:spiegel:codeowners` voor een CODEOWNERS die afwijkt van de afleiding, niet meer twee sleutels per glob.
   test('CODEOWNERS mist een afgeleide gate en noemt er een te veel: rood (padtabel/AC-7)', async () => {
     const codeowners = [...NIEUW_GATES.filter((g) => g !== 'src/core/**'), 'package.json', 'deploy/**'];
     const keys = (await uitslag(JSON.stringify(nieuw()), { codeowners })).map((v) => v.key);
-    expect(keys).toContain('docs:spiegel:codeowners-gates:src/core/**');
-    expect(keys).toContain('docs:spiegel:gates:deploy/**');
+    expect(keys).toContain('docs:spiegel:codeowners');
   });
 
+  // GEWIJZIGD (templateregime, ADR 0089 punt 3): een CODEOWNERS zonder package.json wijkt af van de afleiding; de sleutel is `docs:spiegel:codeowners`.
   test('CODEOWNERS zonder de jsonGates-sleutel package.json: rood (padtabel/AC-7)', async () => {
     const keys = (await uitslag(JSON.stringify(nieuw()), { codeowners: NIEUW_GATES })).map((v) => v.key);
-    expect(keys).toContain('docs:spiegel:codeowners-gates:package.json');
+    expect(keys).toContain('docs:spiegel:codeowners');
   });
 
   test('Edit-ask wijkt af van de afgeleide altijdVragen: rood (padtabel/AC-7)', async () => {
@@ -72,15 +74,13 @@ describe('padtabel/AC-7 CODEOWNERS en de Edit-ask spiegelen de afgeleide lijsten
     expect(keys).toContain('docs:spiegel:voorreview:.claude/**');
   });
 
-  test('de echte CODEOWNERS en Edit-ask zijn precies de afgeleide gates plus jsonGates en altijdVragen (padtabel/AC-7)', () => {
+  // GEWIJZIGD (templateregime, ADR 0089 punt 3): de echte CODEOWNERS is gelijk aan `codeownersTekst` (de besluitkolom van de padtabel), niet aan gates plus jsonGates; de helft over de Edit-ask blijft gelijk.
+  test('de echte CODEOWNERS is de afleiding uit de padtabel en de Edit-ask precies de afgeleide altijdVragen (padtabel/AC-7)', () => {
     const ruw = object(JSON.parse(readFileSync(path.join(REPO, '.claude/gates.json'), 'utf8')));
     const lijsten = afgeleid(ruw);
-    const owners = readFileSync(path.join(REPO, '.github/CODEOWNERS'), 'utf8')
-      .split('\n')
-      .map((line) => line.trim().split(/\s+/)[0] ?? '')
-      .filter((entry) => entry !== '' && !entry.startsWith('#'))
-      .map((entry) => entry.replace(/^\//, '').replace(/\/$/, '/**'));
-    expect(new Set(owners)).toEqual(new Set([...lijsten.gates, ...Object.keys(object(ruw['jsonGates']))]));
+    const eigenaar = eersteGoedkeurder(ruw) ?? '';
+    expect(eigenaar).not.toBe('');
+    expect(readFileSync(path.join(REPO, '.github/CODEOWNERS'), 'utf8')).toBe(codeownersTekst(ruw, eigenaar));
     const settings = object(JSON.parse(readFileSync(path.join(REPO, '.claude/settings.json'), 'utf8')));
     const ask = tekstLijst(object(settings['permissions'])['ask'])
       .map((regel) => /^Edit\((.+)\)$/.exec(regel)?.[1])

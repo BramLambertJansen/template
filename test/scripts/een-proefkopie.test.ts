@@ -1,4 +1,6 @@
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
 import { expectAbsent } from '../support/absence';
@@ -223,6 +225,32 @@ describe('AC-8: de waarborgen van app-init-proef, met de nieuwe naam en het ene 
   });
 });
 
+// De contexts van de required_status_checks die scripts/github-ruleset.sh naar GitHub stuurt; `gh` is een stub die de payload
+// van `--input -` bewaart (zelfde vorm als test/scripts/github-ruleset-templateregime.test.ts), er gaat niets naar GitHub.
+function rulesetChecks(): string[] {
+  const dir = mkdtempSync(path.join(tmpdir(), 'proefkopie-ruleset-'));
+  dirs.push(dir);
+  const stub = 'if [[ " $* " == *" --input - "* ]]; then cat > "$STUB_DIR/payload.json"; echo \'{"id":42}\'; fi\n';
+  writeFileSync(path.join(dir, 'gh'), `#!/usr/bin/env bash\n${stub}`);
+  chmodSync(path.join(dir, 'gh'), 0o755);
+  spawnSync('bash', [path.join(ROOT, 'scripts/github-ruleset.sh'), 'eigenaar/app'], {
+    encoding: 'utf8',
+    env: { HOME: dir, PATH: `${dir}:/usr/bin:/bin`, STUB_DIR: dir },
+  });
+  const payload: unknown = JSON.parse(readFileSync(path.join(dir, 'payload.json'), 'utf8'));
+  const rules: unknown = typeof payload === 'object' && payload !== null ? Reflect.get(payload, 'rules') : [];
+  const regel: unknown = Array.isArray(rules)
+    ? rules.find(
+        (kandidaat) => typeof kandidaat === 'object' && Reflect.get(kandidaat, 'type') === 'required_status_checks',
+      )
+    : undefined;
+  const parameters: unknown =
+    typeof regel === 'object' && regel !== null ? Reflect.get(regel, 'parameters') : undefined;
+  const lijst: unknown =
+    typeof parameters === 'object' && parameters !== null ? Reflect.get(parameters, 'required_status_checks') : [];
+  return Array.isArray(lijst) ? lijst.map((check) => String(Reflect.get(check, 'context'))) : [];
+}
+
 // GEWIJZIGD (bouw-PR 2): AC-9 eiste dat job en script nog bestonden; AC-10 haalt ze weg.
 describe('AC-9: check:app-init is geen verplichte check meer', () => {
   test('requiredChecks, de ruleset en nieuwe-app.md noemen check:new-resource en niet check:app-init', () => {
@@ -233,8 +261,9 @@ describe('AC-9: check:app-init is geen verplichte check meer', () => {
         : [];
     expect(required).toContain('check:new-resource');
     expect(required).not.toContain('check:app-init');
-    const ruleset = readFileSync(path.join(ROOT, 'scripts/github-ruleset.sh'), 'utf8');
-    const lijst = (/^checks=\(([^)]*)\)/m.exec(ruleset)?.[1] ?? '').split(/\s+/);
+    // GEWIJZIGD (templateregime, ADR 0089 punt 3): scripts/github-ruleset.sh heeft geen letterlijke lijst `checks=(…)` meer
+    // maar leest `requiredChecks`; de payload van de ruleset (gh als stub) noemt dus check:new-resource en niet check:app-init.
+    const lijst = rulesetChecks();
     expect(lijst).toContain('check:new-resource');
     expect(lijst).not.toContain('check:app-init');
     const nieuweApp = readFileSync(path.join(ROOT, 'docs/nieuwe-app.md'), 'utf8');
