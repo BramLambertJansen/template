@@ -154,7 +154,9 @@ function effectEvents(): string[] {
   return [...new Set(events)].toSorted();
 }
 
-const EVENTS = effectEvents();
+// GEWIJZIGD (ADR 0091 punt 4, stap 2): de eigenaar haalde de aanroepen uit .claude/settings.json; de huls blijft voor werkmappen met de oude
+// instellingen, dus de events staan hier vast.
+const EVENTS = ['edit-post', 'post', 'post-failure', 'pre', 'session-end', 'stop', 'subagent-start', 'subagent-stop'];
 
 /** De payload die Claude Code bij dit event stuurt (voor de hoofdsessie of een subagent). */
 function payloadVoor(root: string, event: string, agent: 'hoofd' | 'developer' | 'reviewer'): Record<string, unknown> {
@@ -185,20 +187,8 @@ function hulsRepo(): string {
 }
 
 describe('effecttoets-weg: de lege huls (rails/hooks/effect.mjs)', () => {
-  test('effecttoets-weg: settings.json registreert de effect-hook nog voor alle events die de lader nodig heeft', () => {
-    // De huls moet elk event aankunnen dat settings.json nog aanroept; dit bewaakt dat de lijst uit het echte bestand komt.
-    expect(EVENTS).toEqual(
-      expect.arrayContaining([
-        'pre',
-        'post',
-        'post-failure',
-        'edit-post',
-        'stop',
-        'session-end',
-        'subagent-start',
-        'subagent-stop',
-      ]),
-    );
+  test('effecttoets-weg: settings.json roept de effect-hook nergens meer aan', () => {
+    expect(effectEvents()).toStrictEqual([]);
   });
 
   const gevallen = EVENTS.flatMap((event) =>
