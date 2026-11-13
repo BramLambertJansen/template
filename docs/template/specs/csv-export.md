@@ -48,8 +48,9 @@ Notatie: `﻿` is de BOM, `\r\n` is CRLF, `\n` LF, `\r` CR, `\t` tab. Voorbeeldk
   `'x` blijven ongewijzigd; een lege cel blijft leeg. Koppen volgen dezelfde regels als cellen.
 - **csv-export/AC-4** — Gegeven nul rijen, dan is de uitvoer exact `﻿` plus de koprij (`﻿Naam;Rol`). Gegeven
   nul kolommen of een kop die na trimmen leeg is, dan gooit `toCsv` via `assert()`; dubbele koppen zijn toegestaan.
-- **csv-export/AC-5** — Gegeven een cel met `é`, `ë`, `€` en een emoji, dan bevat het gedownloade bestand die tekens als
-  UTF-8 en beginnen de bytes met `EF BB BF`; er wordt niets vervangen of weggelaten.
+- **csv-export/AC-5** — Gegeven een cel met `é`, `ë`, `€` en een emoji, dan begint de UTF-8-codering (`TextEncoder`) van
+  de uitvoer van `toCsv` met de bytes `EF BB BF` en bevat ze die tekens ongewijzigd; er wordt niets vervangen of
+  weggelaten. De bytes van het gedownloade bestand toetst AC-12.
 - **csv-export/AC-6** — Gegeven `ExportCsvButton` met rows, columns en `filename="voorbeeldgegevens"`, wanneer de
   gebruiker klikt, dan ontstaat precies één `Blob` met type `text/csv;charset=utf-8` en inhoud gelijk aan
   `toCsv(rows, columns)`, wordt één ankerelement met `download="voorbeeldgegevens.csv"` en de object-URL als `href`
@@ -57,7 +58,9 @@ Notatie: `﻿` is de BOM, `\r\n` is CRLF, `\n` LF, `\r` CR, `\t` tab. Voorbeeldk
   macrotaak met `URL.revokeObjectURL` vrijgegeven.
 - **csv-export/AC-7** — Bestandsnaam: `filename` wordt getrimd; eindigt hij niet op `.csv` (hoofdletterongevoelig), dan
   wordt `.csv` toegevoegd. Exact: `rapport` → `rapport.csv`, ` rapport.csv ` → `rapport.csv`, `Rapport.CSV` →
-  `Rapport.CSV`. Een `filename` die na trimmen leeg is, of een lege `columns`, gooit via `assert()` tijdens render.
+  `Rapport.CSV`. Een `filename` die na trimmen leeg is, een lege `columns` of een kolom waarvan de `header` na trimmen
+  leeg is, gooit via `assert()` tijdens render, zodat die programmeerfouten de ErrorBoundary bereiken; met geldige props
+  kan `toCsv` in de klikhandler niet op die asserts falen.
 - **csv-export/AC-8** — Gegeven het DataTable-voorbeeld op `/design-system` met twee getoonde rijen, wanneer de gebruiker
   "CSV exporteren" kiest, dan bevat het bestand de koprij plus exact die twee rijen in de getoonde volgorde (filter en
   sortering toegepast), zonder totaalregel, aantalregel of rijen die niet geladen zijn; na "Meer laden" bevat een nieuwe
@@ -65,7 +68,9 @@ Notatie: `﻿` is de BOM, `\r\n` is CRLF, `\n` LF, `\r` CR, `\t` tab. Voorbeeldk
 - **csv-export/AC-9** — Na een geslaagde export toont de `role="status"`-regel "CSV-bestand aangemaakt." en is de
   `role="alert"`-regel leeg. Gooit het opbouwen (bijvoorbeeld een `value`-functie) of het downloaden (bijvoorbeeld
   `URL.createObjectURL`), dan toont de alert "Exporteren is niet gelukt. Probeer het opnieuw.", blijft de status leeg,
-  wordt geen anker aangeklikt en bereikt de fout geen ErrorBoundary. Elke nieuwe klik maakt beide regels eerst leeg.
+  wordt geen anker aangeklikt en bereikt de fout geen ErrorBoundary. De uitkomst van een klik vervangt de vorige
+  melding: na een fout gevolgd door een geslaagde export is de alert leeg en staat de status er; na een geslaagde export
+  gevolgd door een fout is de status leeg en staat de alert er.
   Eigen `label`, `doneLabel` en `errorLabel` vervangen de drie standaardteksten.
 - **csv-export/AC-10** — Met `disabled` is de knop native disabled en ontstaat bij klikken geen Blob en geen download.
   Enter en Spatie op de gefocuste knop starten de export; na de export blijft de focus op de knop.
@@ -84,7 +89,8 @@ Notatie: `﻿` is de BOM, `\r\n` is CRLF, `\n` LF, `\r` CR, `\t` tab. Voorbeeldk
   programmatisch gemaakt (`document.createElement('a')`) en nooit gerenderd.
 - API (bron `src/core/web/ui/csv.ts` en `src/core/web/ui/export-csv-button.tsx`):
   - `interface CsvColumn<Row> { readonly header: string; readonly value: (row: Row) => string }` — de waarde is altijd
-    een string: getallen, bedragen en datums formatteert de aanroeper zelf via `lib/format.ts` (R-CODE-07), zodat het
+    een string: getallen, bedragen en datums formatteert de aanroeper zelf via `src/core/web/lib/format.ts` (import
+    `#core/web/lib/format.ts`, R-CODE-07), zodat het
     Nederlandse formaat (komma als decimaalteken) in het bestand staat.
   - `toCsv<Row>(rows: readonly Row[], columns: readonly CsvColumn<Row>[]): string` — puur, zonder DOM.
   - `ExportCsvButton<Row>` met props `rows`, `columns`, `filename`, optioneel `label`, `doneLabel`, `errorLabel`,
@@ -116,7 +122,7 @@ Notatie: `﻿` is de BOM, `\r\n` is CRLF, `\n` LF, `\r` CR, `\t` tab. Voorbeeldk
 | Situatie | Gedrag | Foutcode |
 | --- | --- | --- |
 | Nul rijen | Alleen BOM + koprij | n.v.t. |
-| Nul kolommen, lege kop of lege bestandsnaam | `assert()` gooit (programmeerfout, ErrorBoundary) | n.v.t. |
+| Nul kolommen, lege kop of lege bestandsnaam | `ExportCsvButton`: `assert()` gooit tijdens render (ErrorBoundary); `toCsv` los aangeroepen: `assert()` gooit naar de aanroeper | n.v.t. |
 | Cel begint met `=` `+` `-` `@` tab of CR | Apostrof vooraan, daarna quoten indien nodig | n.v.t. |
 | Negatief getal als tekst (`-5`) | Wordt `'-5` (tekst in Excel); veiligheid boven rekenbaarheid | n.v.t. |
 | `value` gooit of `createObjectURL` faalt | Alertmelding, geen download, geen ErrorBoundary | n.v.t. |
@@ -137,7 +143,7 @@ Bouw-PR (functionele UI in de template, R-WERK-18), exact deze bestanden:
   rijen) en `src/web/features/design-system/example-targets.ts` (`ExportCsvButton` in de groep `example-data-table`,
   tekst zoals hierboven);
 - gebruiksdoc: `docs/ui-data-display.md` (sectie "CSV-export": API, Excel-formaat, formule-neutralisatie, alleen
-  geladen rijen, formatteren via `lib/format.ts`).
+  geladen rijen, formatteren via `src/core/web/lib/format.ts`).
 
 Checks die dit raakt: `pnpm check:catalogus`, `src/web/copy/woordenlijst.test.ts` (nieuwe teksten), de bestaande
 index-naar-voorbeeldtest, `check-docs` (AC-traceerbaarheid naar tests) en `pnpm ui:check`. N.v.t.: `check:migrations`,
@@ -152,23 +158,26 @@ rijlimiet, automatisch getal- of datumformatteren in `toCsv`, en het toevoegen v
 
 ## Testplan
 
-- Unit (`csv.test.ts`): exacte strings van AC-1 t/m AC-4, inclusief alle voorbeelden uit AC-2 en AC-3; bytes van de
-  Blob voor AC-5.
+- Unit (`csv.test.ts`): exacte strings van AC-1 t/m AC-4, inclusief alle voorbeelden uit AC-2 en AC-3; de
+  `TextEncoder`-bytes van de uitvoer voor AC-5.
 - Component (`export-csv-button.test.tsx`, jsdom): `URL.createObjectURL`/`revokeObjectURL` en de ankerklik bespied;
   Blob-type en -inhoud, `download`-naam per AC-7-voorbeeld, anker weg uit het document, revoke na timers, status- en
-  alerttekst, eigen labels, disabled, Enter/Spatie en focusbehoud, assert bij lege bestandsnaam of kolommen.
+  alerttekst, eigen labels, disabled, Enter/Spatie en focusbehoud, assert tijdens render bij lege bestandsnaam, lege
+  kolommen of lege kop.
 - E2e (`e2e/csv-export.spec.ts`, echte lokale stack): Playwright-download op `/design-system`, naam en bytes, export
   vóór en na "Meer laden", `scanAxe` op 375 en 1280 px.
 - Format, lint, typecheck, ratchet, `check:catalogus` en de bestaande tests ongewijzigd groen.
 
 ## Open vragen
 
-- **OV-1** — Standaardteksten van de knop en meldingen. Aanbeveling: "CSV exporteren", "CSV-bestand aangemaakt." en
+- **OV-1 ✅ besloten (aanbeveling gevolgd; de eigenaar kan bij de merge anders beslissen)** — Standaardteksten van de knop en meldingen: "CSV exporteren", "CSV-bestand aangemaakt." en
   "Exporteren is niet gelukt. Probeer het opnieuw." (infinitief volgens de woordenlijst; de browser meldt de download
   zelf, dus "gedownload" zou niet te controleren zijn).
-- **OV-2** — Een cel die met `-` begint, zoals een negatief getal, wordt tekst in Excel. Aanbeveling: zo laten, zoals de
+- **OV-2 ✅ besloten** — Een cel die met `-` begint, zoals een negatief getal, wordt tekst in Excel: zo laten, zoals de
   eigenaar vroeg; neutraliseren van formule-injectie weegt zwaarder dan rekenen met negatieve getallen in de export.
-- **OV-3** — Gedrag bij nul rijen. Aanbeveling: knop blijft bruikbaar en levert alleen de koprij; een disabled knop
+- **OV-3 ✅ besloten (aanbeveling gevolgd; de eigenaar kan bij de merge anders beslissen)** — Gedrag bij nul rijen: knop blijft bruikbaar en levert alleen de koprij; een disabled knop
   zonder uitleg is onduidelijker, en de ouder kan `disabled` zelf zetten.
 - **OV-4 ✅ besloten** — Alleen meegegeven/geladen rijen, geen fictieve totalen; volledig in de browser, in
   `src/core/web/ui`, voorbeeld bij de DataTable-voorbeelden (opdracht eigenaar 2026-11-13).
+- **OV-5 ✅ besloten** — Rolverdeling: het neutraliseren van formule-injectie is security, dus risicowerk (R-WERK-04);
+  een aparte tester schrijft de tests vóór de developer.
