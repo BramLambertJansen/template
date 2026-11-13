@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #652
+status: vervallen
 namespace: rolhek-effect
 ---
 

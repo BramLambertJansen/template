@@ -46,9 +46,9 @@ afschermt, is geen reden om over te slaan: die test faalt. Een project zonder de
 - **Nieuwe kooitest:** zet de voorwaarde zichtbaar in het testbestand zelf, met waarden alleen uit `vermogen('kooi')`:
   `ctx.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding)` in de test of een `beforeEach`
   (`test/scripts/runner-trusted-base.test.ts:176`), `test.skipIf(…)` bij `test.each` (`test/rails/ci-scan.test.ts:52`), of
-  dezelfde skip-regel in de lokale hulpfunctie die de kooi start (`test/hooks/rolhek-effect.test.ts:36`).
+  dezelfde skip-regel in de lokale hulpfunctie die de kooi start.
 
-Lokaal groen met de `⚠`-regel is dus geen bewijs voor de kooi-, rolhek- en effecttests; dat is alleen CI (`pnpm pr:verify`).
+Lokaal groen met de `⚠`-regel is dus geen bewijs voor de kooi- en rolhektests; dat is alleen CI (`pnpm pr:verify`).
 Meting in de Claude Code-sandbox: `docs/operations/sandbox-bewijs.md` (Beperkingen).
 
 ## Lokale meting (21 oktober 2026)

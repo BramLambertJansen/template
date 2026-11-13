@@ -24,7 +24,7 @@ export function bewakingMelding({ inClaudeCode, recenteMeting, buitenWerkmapSchr
   if (buitenWerkmapSchrijfbaar) delen.push(`de Bash-sandbox schermt niet af (${ouder} is schrijfbaar)`);
   if (delen.length === 0) return null;
   return (
-    `⚠ bewaking niet actief in deze sessie: ${delen.join('; ')}. Rolhek, toets op effect en werkstraat-hooks houden niets ` +
+    `⚠ bewaking niet actief in deze sessie: ${delen.join('; ')}. Rolhek en werkstraat-hooks houden niets ` +
     `tegen: claim ze niet (R-WERK-23); destructieve of overgenomen commando's alleen in de kooi (R-TOOL-03). Zie docs/ENVIRONMENT.md.`
   );
 }

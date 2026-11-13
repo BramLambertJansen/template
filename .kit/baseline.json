@@ -1,1 +1,4 @@
-{ "dependency-cruiser": [], "check-docs": [] }
+{
+  "dependency-cruiser": [],
+  "check-docs": ["docs:ac:kooi:AC-9", "docs:ac:tests-naar-vermogen:AC-10", "docs:ac:tests-naar-vermogen:AC-9"]
+}

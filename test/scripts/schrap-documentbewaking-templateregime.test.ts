@@ -320,14 +320,8 @@ describe('templateregime/AC-7 pnpm pr:merge zonder inhoudstoets', () => {
     expect(redenen(zet(`contents/.claude/gates.json?ref=${MAIN}`, gates))).toMatch(/modus/);
   });
 
-  test('templateregime/AC-7: pr:merge doet de effecttoets (verifyEffect uit pr-verify.mjs) vóór de merge-aanroep', () => {
-    const bron = lees('scripts/kit/pr-merge.mjs');
-    expect(bron).toMatch(/import\s*\{[^}]*\bverifyEffect\b[^}]*\}\s*from\s*'\.\/pr-verify\.mjs'/);
-    const toets = bron.indexOf('verifyEffect(root)');
-    const merge = bron.indexOf("'PUT'");
-    expect(toets).toBeGreaterThan(-1);
-    expect(merge).toBeGreaterThan(toets);
-  });
+  // GEWIJZIGD (ADR 0091): de test "pr:merge doet de effecttoets vóór de merge-aanroep" is weg met de effecttoets; dat
+  // pr:merge hem niet meer aanroept, toetst test/hooks/effecttoets-weg.test.ts.
 });
 
 describe('templateregime/AC-13 geen test toetst nog verdwenen code', () => {

@@ -61,47 +61,6 @@ en de metingen van hoofdstukken, regelboek, specs, ADR's, rules, skills en opera
 nooit rood). `pnpm meting --trend` vergelijkt CI-rood, Codex-bevindingen en reviewrondes over de laatste tien gemergde PR's met
 de tien daarvoor (`scripts/kit/meting-trend.mjs`; leesbudget/AC-7).
 
-De toets op effect telt mee (spec `rolhek-vooraf-krimp` AC-7): blokkades op effect (`EffectBlokkade`-regels uit
-`rails/hooks/lib/effect-meting.mjs`), overnames (`pnpm rolhek:overnemen`) en de schaduw van de hoofdsessie: met
-`rolhekEffectHoofdsessie: "schaduw"` in `.claude/gates.json` toetst de hook ook elk Bash-commando van de hoofdsessie op effect,
-geeft alleen een melding en legt per `tool_use_id` de uitkomst vooraf en achteraf vast (alleen uitkomst en paden,
-`rails/hooks/lib/effect-hooks.mjs:hoofdsessieAchteraf`). Zonder zulke regels staat er `onbekend`, nooit 0. Met `"aan"` geldt
-AC-4: een `deny` blokkeert en komt op de open lijst, een `ask` komt op de open lijst.
-
-De nacontrole na SubagentStop is begrensd (spec `rolhek-effect` AC-10, ADR 0083 punt 2): SubagentStop vervangt de opname van
-de subagent door de staat van dat moment (`rails/hooks/lib/effect-hooks.mjs:subagentStop`), dus Stop en `pnpm pr:verify`
-tellen alleen wat sindsdien veranderde zonder venster van een andere actor; de vensters van elke worktree op dezelfde
-git-common-dir tellen mee (`rails/hooks/lib/effect.mjs:vensters`), de schrijfacties van de hooks zelf zijn een venster van de
-actor `hook` (`rails/hooks/werkstraat.mjs:hookVenster`), en een `fetch` (`refs/remotes/**`) telt niet; een andere ref, een
-verschoven HEAD of een commit van de eigenaar in zijn eigen terminal wel (`pnpm rolhek:overnemen <pad>`). De Stop-hook
-blokkeert alleen op de eigen sessie en de context bij elke tool-aanroep noemt dezelfde selectie (`effect-hooks.mjs:vanSessie`);
-`pr:verify` toetst alle sessies. SessionEnd wist de opnamen van die sessie (`effect.mjs session-end`); 24 uur blijft de
-bovengrens. `pnpm rolhek:overnemen --alles` wist ook alle opnamen en vensters van de opslag van deze werkmap
-(`scripts/kit/rolhek-overnemen.mjs:neemOver`).
-
-**Een overtreding overnemen** (spec `rolhek-effect` AC-13). De hoofdsessie start `pnpm rolhek:overnemen <pad>` zelf; het
-rolhek vraagt de eigenaar om akkoord en weigert het een subagent (`rails/hooks/lib/rolhek.mjs:isOvernemen`). Ook een pad
-onder `.git/` gaat zo, maar alleen in de letterlijke vorm `pnpm [run] rolhek:overnemen <pad>…` vanuit de wortel, zonder
-pnpm-optie, toewijzing of omhulsel (`rails/hooks/lib/zelfladend.mjs:overnemenVrij`). Controleer zo'n pad eerst. Voor
-`.git/config`: `git config --local --list` (in een gekoppelde worktree is dat de config van de git-common-dir; staat
-`extensions.worktreeConfig` aan, dan ook `git config --worktree --list`). Staat er een sleutel die een programma start of de
-bron verlegt (`core.hooksPath`, `core.fsmonitor`, `core.sshCommand`, `core.editor`, `core.pager`, `core.askPass`, `alias.*`,
-`credential.*`, `url.*.insteadOf`, `include.*`, `includeIf.*`, `filter.*`, `diff.*`, `merge.*.driver`, `gpg.program`) die de
-eigenaar niet zelf zette, neem dan niet over: meld het en zet het terug. Voor een ref of HEAD: `git log -1 <ref>` toont of het
-de eigen commit of merge is. `--alles` blijft de laatste uitweg; het wist elke open overtreding. Dit is een werkafspraak, geen
-check.
-
-Afscherming door de sandbox is geen effect (spec `rolhek-effect` AC-11, ADR 0084). Voor een ongetrackt pad op de vaste lijst
-`SANDBOX_LEEG` (`rails/hooks/lib/effect-snapshot.mjs:22`) zijn weg, een leeg bestand zonder uitvoerbit en een tekenapparaat 1,3
-gelijk, in elke toets (`rails/hooks/lib/effect.mjs:243`, `effect-compare.mjs:55`); inhoud, een uitvoerbit of een pad buiten de
-lijst telt zoals nu, en de lijst groeit alleen met eigenaarakkoord. Sinds AC-12 staan ook `.env` en `.env.local` op de lijst,
-alleen als volledig pad vanaf de wortel: een leeg ongetrackt `.env` dat de sandbox achterlaat, telt niet; een `.env` met
-inhoud, `.env.production` of `config/.env` telt zoals nu (`effect-snapshot.mjs:40`). Alleen `pr:verify` erkent daarnaast een pad dat de sandbox
-met een alleen-lezen koppeling van `/dev/null` afschermt; die set bepaalt het zelf uit `/proc/self/mountinfo` en `lstat`
-(`scripts/kit/pr-verify.mjs:147`, `effect-snapshot.mjs:106`), nooit uit de omgeving, een vlag of een bestand. Zo'n pad telt
-niet als verandering, en een open overtreding erop vervalt niet. Een geheim (`.env`, `.env.*` behalve `.env.example`,
-`*secret*`) gaat niet in `.git/objects` (`effect-snapshot.mjs:275`); een toets die de oude inhoud nodig heeft, valt dicht.
-
 Wanneer een meting "let op" zegt (ADR 0070, spec `meting-stuurt`):
 
 - **Tegenover de basis.** `pnpm leespad` meet ook de basis, standaard `git merge-base origin/main HEAD`
@@ -269,7 +228,7 @@ en een exitcode ongelijk aan nul. Herstel pnpm voor de volledige pre-pushcontrol
 Pre-push blijft ongewijzigd en start de volledige `pnpm gate:fast`. In de Claude Code-sandbox kan de kooi niet starten:
 de tests die haar nodig hebben slaan daar over, de pre-push-hook is groen en toont één regel `⚠ overgeslagen: …`
 (ADR 0088, `docs/operations/testuitvoering.md`; vóór die wijziging weigerde de hook er elke push van een agent, leerpunt #607).
-Lokaal groen met die regel is geen bewijs voor de kooi-, rolhek- en effecttests; dat is alleen CI, waar overslaan rood is
+Lokaal groen met die regel is geen bewijs voor de kooi- en rolhektests; dat is alleen CI, waar overslaan rood is
 (`pnpm pr:verify`). Alle CI-workflows en vereiste checks blijven
 ongewijzigd op iedere PR. Toepasselijke runnerchecks blijven verplicht. Een codewijziging of ongeldige controle-invoer
 vraagt nieuw bewijs; geen hergebruik van een oude groene uitslag of generieke cache.
@@ -472,7 +431,7 @@ Bij CodeQL telt ook de aparte `CodeQL`-resultaatcheck van GitHub Advanced Securi
 bevindingen hebben. Een rode, lopende of nog ontbrekende resultaatcheck geeft geen groen oplever- of bouwbewijs.
 Met `--watch` maximaal 30 minuten wachten; een deadline is onvoltooid, daarna controleert de agent opnieuw.
 Een veranderende PR of werkmap vraagt nieuwe verificatie. Als bewijs telt alleen de uitvoer van `pr:verify` die de hoofdsessie
-zelf draaide, niet die van een subagent (spec `rolhek-effect` AC-11 g, ADR 0084 punt 5); dat is een procesregel die geen check
+zelf draaide, niet die van een subagent (ADR 0084 punt 5); dat is een procesregel die geen check
 afdwingt (R-ROL-05).
 
 ### Als pr:verify niet start of de werkmap weigert
@@ -526,11 +485,11 @@ herkomst vóór committen of herstellen. Alleen de bestaande uitzonderingen uit 
 gelden. Na een afgebroken branchwissel volg je "Branchwissels in een sandbox" hierboven (leerpunt #338); voeg geen
 onbekende paden aan de uitzonderingen toe om de weigering op te heffen (leerpunt #329).
 
-Een plaatshouder van de sandbox blokkeert de werkmap niet (spec `rolhek-effect` AC-11 e): een ongetrackt pad op `SANDBOX_LEEG`
-dat leeg is zonder uitvoerbit, of een tekenapparaat 1,3 (`scripts/kit/pr-verify.mjs:105`); met inhoud, uitvoerbit of gestaged
-blokkeert het wel. Een pad dat de sandbox afschermt, toetst `pr:verify` niet; het meldt die paden in één regel
-`rolhek-effect: niet getoetst in de sandbox, wel door de hooks: <paden>` (AC-11 b). Staan er nog meldingen van plaatshouders
-van vóór deze regel op de open lijst, dan wist `pnpm rolhek:overnemen --alles` ze eenmalig.
+Een plaatshouder van de sandbox blokkeert de werkmap niet (ADR 0084 punt 2, ADR 0091 punt 2): een ongetrackt pad op
+`SANDBOX_LEEG` (`rails/hooks/lib/sandbox-plaatshouders.mjs:9`) dat leeg is zonder uitvoerbit, of een tekenapparaat 1,3
+(`scripts/kit/pr-verify.mjs:96`); met inhoud, uitvoerbit of gestaged blokkeert het wel. `.env` en `.env.local` staan alleen als
+volledig pad vanaf de wortel op de lijst; de lijst groeit alleen met eigenaarakkoord. De toets op effect en haar open lijst zijn
+vervallen (ADR 0091): `pr:verify` leest `<git-dir>/rolhek-effect` niet meer; de eigenaar verwijdert die map.
 
 Een agent zet geen PR-label (R-ROL-08). De ruleset vraagt de goedkeuring van een code-eigenaar op de uiteindelijke head-SHA;
 een label telt niet (R-CI-07).

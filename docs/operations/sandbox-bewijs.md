@@ -38,12 +38,12 @@ Twee lagen: een eerder, samengesteld commando dat ook `.env` las, weigerde de pe
   een alleen-lezen koppeling van `/dev/null` (tekenapparaat 1,3 van `nobody`, `rdev` 259); buiten de sandbox bestond geen pad
   van de toen zeventien paden van `SANDBOX_LEEG`. AC-11 dekt ook de vorm van een leeg bestand, die bij de meting van AC-11 (f)
   niet is gezien. `.env` en `.env.local` kwamen er later bij (AC-12, leerpunt #642) en zijn bij die meting buiten de sandbox
-  niet gemeten. De toets op effect telt ze niet (spec `rolhek-effect` AC-11 en AC-12, ADR 0084).
+  niet gemeten. `pnpm pr:verify` telt ze niet als wijziging van de werkmap (ADR 0084, ADR 0091).
 - **Geen geneste kooi** (meting 2026-11-11, hoofdsessie): binnen de sandbox kan de kooi (`scripts/kit/kooi.mjs`, ADR 0072)
   niet starten. De tests die haar nodig hebben slaan er over (ADR 0088, `docs/operations/testuitvoering.md`): `pnpm test:unit`
   exit 0 met 10.688 tests, 10.307 geslaagd, 381 overgeslagen, 0 mislukt, en één regel `⚠ overgeslagen: …`. Daarvoor faalden
   er 382 tests in 10 bestanden en weigerde de pre-push-hook elke push van een agent (leerpunt #607). Groen in de sandbox
-  bewijst de kooi-, rolhek- en effecttests niet; dat doet alleen CI (`pnpm pr:verify`).
+  bewijst de kooi- en rolhektests niet; dat doet alleen CI (`pnpm pr:verify`).
 - **`~/.ssh` en `~/.aws`** zijn alleen als regel aanwezig; bewijs volgt op een machine waar die mappen bestaan.
 - **`excludedCommands`** (`.claude/settings.json:135-143`: onder meer `pnpm test:db`, `ui:check`, `gate:slow`,
   `db:generate`, `check:snapshot`) draaien buiten de sandbox, met `ask`; ADR 0044 beschrijft dat gat. Volgens de documentatie van

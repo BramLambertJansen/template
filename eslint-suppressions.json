@@ -9,11 +9,6 @@
       "count": 1
     }
   },
-  "rails/hooks/lib/effect-compare.mjs": {
-    "complexity": {
-      "count": 1
-    }
-  },
   "rails/hooks/lib/rolhek.mjs": {
     "complexity": {
       "count": 9

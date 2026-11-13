@@ -14,10 +14,7 @@ import { afgeleid, globMatch } from './padtabel.mjs';
 /**
  * @typedef {{ gates: string[], testpaden: string[], jsonGates: Record<string, string[]>, gegenereerd: string[],
  *   migraties: string[], schrijfrecht: Record<string, string[]>, mcpLezen: string[], voorReview?: string[] | undefined,
- *   altijdVragen?: string[] | undefined, kritiek?: string[] | undefined, zelfladend?: string[] | undefined, onderhoud?: { repository: string } | undefined,
- *   rolhekEffectHoofdsessie?: 'uit' | 'schaduw' | 'aan', generatoren?: string[] | undefined }} Config
- * `rolhekEffectHoofdsessie` (spec rolhek-vooraf-krimp AC-4, AC-7): ontbreekt → `uit`. `generatoren`: commando's die exact zo een
- * pad onder `gegenereerd` mogen schrijven.
+ *   altijdVragen?: string[] | undefined, kritiek?: string[] | undefined, zelfladend?: string[] | undefined, onderhoud?: { repository: string } | undefined }} Config
  * De lijsten komen uit `afgeleid` (rails/hooks/lib/padtabel.mjs, ADR 0079); alleen in de oude vorm kunnen ze ontbreken:
  * `voorReview` ontbreekt → elke gate telt als voorReview (faalt dicht). `altijdVragen` ontbreekt → in onderhoud blijft elk
  * voorReview-pad een gate (faalt dicht). `onderhoud`: de repository waarin de onderhoudsmodus geldt (ADR 0045 punt 8).
@@ -31,7 +28,7 @@ import { afgeleid, globMatch } from './padtabel.mjs';
  * `onbekendeRol`: een subagent zonder bekende rol; telt als reviewer (alleen lezen).
  * `committed`: staat in de merge-base met het anker of met origin/main; 'zonder-origin' = beide onleesbaar en wel in HEAD (terugval).
  * @typedef {{ deny: string[], ask: string[], context: string[], allow?: boolean }} Decision
- * @typedef {{ kind: 'write' | 'delete', after: string | null, verhuizing?: boolean }} Change
+ * @typedef {{ kind: 'write' | 'delete', after: string | null }} Change
  * @typedef {import('./shell.mjs').Command} Command
  */
 
@@ -75,16 +72,7 @@ export function loadConfig(text) {
     kritiek: lijsten.kritiek,
     zelfladend: optionalList('zelfladend'),
     onderhoud: onderhoudVan(value('onderhoud')),
-    rolhekEffectHoofdsessie: effectModus(value('rolhekEffectHoofdsessie')),
-    generatoren: optionalList('generatoren'),
   };
-}
-
-/** `uit`, `schaduw` of `aan`; ontbrekend is `uit`, elke andere waarde gooit (dicht falen). @param {unknown} found */
-function effectModus(found) {
-  if (found === undefined) return 'uit';
-  if (found === 'uit' || found === 'schaduw' || found === 'aan') return found;
-  throw new Error('.claude/gates.json: rolhekEffectHoofdsessie is geen "uit", "schaduw" of "aan"');
 }
 
 /** `{ "repository": "<owner>/<repo>" }` of ontbrekend; elke andere vorm gooit. @param {unknown} found */
@@ -127,32 +115,6 @@ export function decide(payload, ctx) {
     if (decision.context.some((reason) => reason.startsWith('Status uit main:')) && decision.ask.length + decision.deny.length === 0)
       decision.allow = true;
   }
-  return decision;
-}
-
-/**
- * De beslissing van een Edit voor een pad dat een Bash-commando veranderde (ADR 0066, spec rolhek-effect AC-3): dezelfde
- * rolcontext als `decide`, met `ctx.read` als inhoud van vóór het commando. Een pad in `.git` is voor elke rol deny (R-ROL-03).
- * @param {{ rel: string, change: Change, agentType: string }} target
- * @param {Ctx} ctx
- * @returns {Decision}
- */
-export function decideChange({ rel, change, agentType }, ctx) {
-  /** @type {Decision} */
-  const decision = { deny: [], ask: [], context: [] };
-  if (inGitMap(rel)) {
-    decision.deny.push(gitMapMelding(rel));
-    return decision;
-  }
-  // Het archief verandert via Bash alleen door een verhuizing met dezelfde naam en inhoud (spec rolhek-vooraf-krimp AC-5, ADR 0080).
-  if (/^docs\/(?:adr|specs)\/archief\//.test(rel) && change.verhuizing !== true) {
-    decision.deny.push(`${rel}: ${ARCHIEF_MELDING}`);
-    return decision;
-  }
-  const context = ['', 'developer', 'architect'].includes(agentType)
-    ? ctx
-    : { ...ctx, authority: null, onbekendeRol: !SUBAGENT_ROLES.has(agentType) };
-  decideFile({ rel, change, role: roleOf(agentType) }, context, decision);
   return decision;
 }
 
@@ -366,7 +328,7 @@ function decideFile({ rel, change, role }, ctx, decision) {
     return;
   }
   // A4 en de overgang vergelijken met main (de vertrouwde basis); alleen zonder authority is de werkmap de terugval. Alleen
-  // een ADR of spec heeft een basis nodig: een ander pad (ook een geheim, spec rolhek-effect AC-11 c) wordt niet gelezen.
+  // een ADR of spec heeft een basis nodig: een ander pad (ook een geheim) wordt niet gelezen.
   const docPad = documentKind(rel) !== null || inSpecMap(rel);
   const basis = !docPad ? null : ctx.authority == null ? ctx.read(rel) : ctx.authority.trusted(rel);
   const overgang = change.after === null || documentKind(rel) === null ? null : beslisOvergang(rel, basis, change.after);
@@ -598,6 +560,7 @@ function gitMapMelding(file) {
 function decideBash({ command, role, tmpdirVrij = tmpdirLetterlijk(command), onzeker = false }, ctx, decision) {
   decision.deny.push(...rawForbidden(command, { role, onzeker }));
   decision.deny.push(...staleBranchStart(command));
+  decision.deny.push(...overnemenVervallen(command, { onzeker, al: decision.deny }));
   // De inhoud van `$(…)` en backticks is zelf een commando; zo vallen ook geneste substituties onder dezelfde regels.
   for (const inner of substitutions(command)) decideBash({ command: inner, role, tmpdirVrij, onzeker: true }, ctx, decision);
   const setsGhEnv = zetGhOmgeving(parseCommands(command));
@@ -608,7 +571,7 @@ function decideBash({ command, role, tmpdirVrij = tmpdirLetterlijk(command), onz
     const { assignments, argv, pathWrappers } = splitCommand(parsed.words);
     vangnetten({ parsed, argv, variabel }, role, decision);
     forbidden({ assignments, argv, expanded: parsed.expanded ?? [] }, { role, ctx }, decision);
-    zelfladend({ argv, letterlijk: zonderOmhulselOfSchaduw(argv, parsed.words, command), redirects: parsed.redirects, role, ruim: parsed.ruim === true },{ ...ctx, cwd: cwdNu ?? ctx.root, cwdOnbekend: cwdNu === null }, decision);
+    zelfladend({ argv, redirects: parsed.redirects, role, ruim: parsed.ruim === true },{ ...ctx, cwd: cwdNu ?? ctx.root, cwdOnbekend: cwdNu === null }, decision);
     cwdNu = volgendeMap({ argv, expanded: parsed.expanded ?? [] }, cwdNu, ctx.root);
     ghIssue(argv, { role, ctx, setsGhEnv }, decision);
     if (role === 'reviewer') reviewerBash({ assignments, argv, pathWrappers, parsed }, { cwd: cwdNu, root: ctx.root }, decision);
@@ -620,6 +583,32 @@ function decideBash({ command, role, tmpdirVrij = tmpdirLetterlijk(command), onz
     for (const target of targets.trees ?? []) treeTarget({ file: target, kind: 'write', role }, ctx, decision);
     for (const target of targets.deletes) treeTarget({ file: target, kind: 'delete', role }, ctx, decision);
   }
+}
+
+// ADR 0091: het overnamescript is met de effecttoets vervallen, maar `.claude/settings.json` heeft `pnpm rolhek:overnemen *`
+// nog in `excludedCommands` (draait buiten de sandbox). Dicht voor elke rol, in elke vorm (scriptnaam of bestand).
+const OVERNEMEN_NAAM = /rolhek[:-]overnemen/;
+const OVERNEMEN_VERVALLEN =
+  '`pnpm rolhek:overnemen` is vervallen met de effecttoets (ADR 0091); het script bestaat niet meer, voor elke rol verboden';
+// Schrijven alleen hun argumenten uit en starten niets; achter een omhulsel of met een toewijzing telt dat niet.
+const OVERNEMEN_NOEMERS = new Set(['echo', 'printf']);
+
+/**
+ * Vangnet op de tekst zonder `\`, `'` en `"` (zoals `startMergescript`): de naam staat in het commando en niet elk segment
+ * leest of noemt alleen (`git grep rolhek:overnemen docs`, `echo "pnpm rolhek:overnemen"`). Zo vallen ook omhulsels,
+ * `bash -c`, `eval` en een pijp naar een shell eronder; de inhoud van `$(…)` toetst `decideBash` zelf opnieuw.
+ * @param {string} command @param {{ onzeker: boolean, al: readonly string[] }} opties `onzeker`: zie `decideBash`; `al`: de
+ *   weigeringen tot nu toe, zodat de melding één keer valt (ook als `$(…)` haar opnieuw raakt).
+ * @returns {string[]}
+ */
+function overnemenVervallen(command, { onzeker, al }) {
+  if (al.includes(OVERNEMEN_VERVALLEN) || !OVERNEMEN_NAAM.test(command.replace(/[\\'"]/g, ''))) return [];
+  const noemt = (/** @type {string[]} */ words) => {
+    const { assignments, argv, pathWrappers } = splitCommand(words);
+    return assignments.length + pathWrappers.length === 0 && OVERNEMEN_NOEMERS.has(argv[0] ?? '');
+  };
+  const start = !parseCommands(command, onzeker).every(({ words }) => leestAlleen(words) || noemt(words));
+  return start ? [OVERNEMEN_VERVALLEN] : [];
 }
 
 /**
@@ -1269,27 +1258,6 @@ function isNewResource(program, args) {
   return program === 'node' && args.some((arg) => /(?:^|\/)scripts\/kit\/new-resource\.mjs$/.test(arg));
 }
 
-// Een commando dat `pnpm` zelf kan overschaduwen (functie, alias, hash, PATH): geen vrijstelling van AC-13 (b).
-const PNPM_SCHADUW = /\b(?:alias|hash|function|enable|builtin)\b|\bpnpm\s*\(|PATH=/;
-
-/**
- * Het segment had geen toewijzing of omhulsel en het commando overschaduwt `pnpm` niet (spec rolhek-effect AC-13 b).
- * @param {readonly string[]} argv @param {readonly string[]} woorden @param {string} command
- */
-function zonderOmhulselOfSchaduw(argv, woorden, command) {
-  return argv.length === woorden.length && !PNPM_SCHADUW.test(command);
-}
-
-/**
- * `pnpm rolhek:overnemen` (ook via `run`) of het script rechtstreeks met node.
- * @param {string} program
- * @param {readonly string[]} args
- */
-function isOvernemen(program, args) {
-  if (program === 'pnpm') return pnpmCommand(args)[0] === 'rolhek:overnemen';
-  return program === 'node' && args.some((arg) => /(?:^|\/)scripts\/kit\/rolhek-overnemen\.mjs$/.test(arg));
-}
-
 /**
  * Wat voor elke rol verboden is (zelfreview, hooks overslaan, push naar main), plus wat alleen een subagent niet mag.
  * @param {{ assignments: string[], argv: string[], expanded: readonly string[] }} command
@@ -1322,11 +1290,6 @@ function forbidden({ assignments, argv, expanded }, { role, ctx }, decision) {
   if (role !== 'hoofdsessie') {
     const command = { program, args, expanded };
     decision.deny.push(...subagentGitHub(command), ...subagentTokens(command), ...subagentFormatting(command, ctx));
-  }
-  if (isOvernemen(program, args)) {
-    const melding = 'rolhek:overnemen heft een overtreding van de toets op effect op (spec rolhek-effect AC-5, AC-13); de hoofdsessie startte het, de eigenaar geeft akkoord';
-    if (role === 'hoofdsessie') decision.ask.push(melding);
-    else decision.deny.push(`subagent: ${melding}`);
   }
   if (role !== 'hoofdsessie' && isNewResource(program, args))
     decision.deny.push('pnpm new:resource: alleen de hoofdsessie (ADR 0047 punt 6); wat hij schrijft, ziet het rolhek niet');

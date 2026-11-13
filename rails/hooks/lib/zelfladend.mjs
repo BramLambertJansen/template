@@ -1,6 +1,6 @@
 // Zelfladende paden (ADR 0071 punt 2, spec rolhek-vooraf-krimp AC-3): wat Claude Code, git of pnpm zelf laadt of uitvoert
-// (`.git/**`, de hook-stubs, `.claude/settings.json`, `lefthook.yml`, `.pnpmfile.cjs`). Een schrijfactie daar kan de toets op
-// effect uitschakelen voordat die kijkt; daarom toetst het rolhek deze paden vooraf, op elk woord van het commando.
+// (`.git/**`, de hook-stubs, `.claude/settings.json`, `lefthook.yml`, `.pnpmfile.cjs`). Een schrijfactie daar kan het rolhek
+// zelf uitschakelen; daarom toetst het deze paden vooraf, op elk woord van het commando.
 import path from 'node:path';
 import { gitSubcommand, globTekstRegex, programName } from './shell.mjs';
 
@@ -367,35 +367,21 @@ function gitBesluit(argv, { ctx, omgelegd, role }, besluit) {
 }
 
 /**
- * Spec rolhek-effect AC-13 (b): `pnpm [run] rolhek:overnemen <arg>…` van de hoofdsessie, letterlijk, zonder pnpm-optie,
- * toewijzing of omhulsel, in de wortel. Het script opent een genoemd `.git/<x>`-label niet (het is een label op de open
- * lijst); daarom tellen die argumenten niet als zelfladend doel. Omleidingen en andere commando's toetst `zelfladend` zoals nu.
- * `letterlijk`: het segment had geen toewijzing en geen omhulsel (`env`, `command`, …), dus `argv` is alle woorden.
- * @param {{ argv: readonly string[], letterlijk: boolean, role: string, ruim: boolean }} commando @param {ZelfCtx} ctx
- */
-function overnemenVrij({ argv, letterlijk, role, ruim }, ctx) {
-  if (role !== 'hoofdsessie' || !letterlijk || ruim || ctx.cwdOnbekend === true || ctx.cwd !== ctx.root) return false;
-  const args = argv[1] === 'run' ? argv.slice(2) : argv.slice(1);
-  if (argv[0] !== 'pnpm' || args[0] !== 'rolhek:overnemen') return false;
-  return args.slice(1).every((arg) => arg !== '' && !arg.startsWith('-') && !/[$`*?[\]{}~\\'"]/.test(arg) && !arg.split('/').includes('..'));
-}
-
-/**
  * AC-3: `.git/**` is deny voor elke rol; de andere zelfladende paden deny voor een subagent en ask voor de hoofdsessie.
  * `ctx.cwd` is de map na een eerdere `cd` in hetzelfde commando.
  * `ruim`: `Command.ruim`; dan past een glob-klasse in elk woord en elke redirect op elk teken (review B3, #622, eigenaarbesluit
  * 7 november 2026).
- * @param {{ argv: readonly string[], redirects: readonly string[], role: string, ruim?: boolean, letterlijk?: boolean }} commando
+ * @param {{ argv: readonly string[], redirects: readonly string[], role: string, ruim?: boolean }} commando
  * @param {ZelfCtx} basisCtx @param {ZelfBesluit} besluit
  */
-export function zelfladend({ argv: ruw, redirects, role, ruim = false, letterlijk = false }, basisCtx, besluit) {
+export function zelfladend({ argv: ruw, redirects, role, ruim = false }, basisCtx, besluit) {
   const kaal = zonderOmhulsel(ruw, { ...basisCtx, ruim });
-  const argv = overnemenVrij({ argv: ruw, letterlijk, role, ruim }, basisCtx) ? ruw.filter((woord) => !woord.startsWith('.git/')) : kaal.argv;
+  const { argv } = kaal;
   const { ctx, omgelegd } = gitWerkmap(argv, kaal.ctx);
   if (ctx.cwdOnbekend === true && (redirects.length > 0 || schrijfWoorden(argv).length > 0 || gitWerkmapZonderPaden(argv, ctx) !== null))
     weiger('na een `cd` naar een map die pas bij het uitvoeren bekend is ($, backtick), ziet het rolhek niet waar paden landen (spec rolhek-vooraf-krimp AC-3)', role, besluit);
   for (const rel of doelen([...redirects, ...schrijfWoorden(argv)], ctx)) {
-    const melding = `${rel} is een zelfladend pad (spec rolhek-vooraf-krimp AC-3): de toets op effect zou daarna niet meer kunnen kijken`;
+    const melding = `${rel} is een zelfladend pad (spec rolhek-vooraf-krimp AC-3): Claude Code, git of pnpm laadt het zelf, buiten het rolhek om`;
     // Ook een glob die bash op `.git` laat passen (`.gi[t]`, `.gi[[:alpha:]]`) valt onder `.git/**` (AC-3, #618).
     if (stukRegex(rel.split('/')[0] ?? '', ruim).test('.git')) besluit.deny.push(`${melding}; verboden, voor elke rol (R-ROL-03)`);
     else weiger(melding, role, besluit);
