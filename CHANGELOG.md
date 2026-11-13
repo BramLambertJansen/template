@@ -14,6 +14,9 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Opgelost
 
+- `hono` van 4.13.12 naar 4.13.16: vijf beveiligingsmeldingen (vier medium, één laag) maakten `osv-scanner` rood. De template gebruikt de
+  standaardrouter met middleware op `*`, waar GHSA-h7mg-cq63-vhpq over gaat; `csrf()`, `validator('form')`, `mount()` en de
+  `css`-helper van hono gebruikt de template niet. Wat verandert voor een app: na de template-update `pnpm install`.
 - `@hono/node-server` van 2.1.3 naar 2.1.6: twee beveiligingsmeldingen van niveau medium (GHSA-jpvv-r467-5p4w, GHSA-qv5m-9pm6-hqp3) maakten
   `osv-scanner` rood. Wat verandert voor een app: na de template-update `pnpm install`.
 - `pnpm check:snapshot` vergelijkt de twee commentaarregels met de versie van Postgres en pg_dump niet meer; een patchrelease van het
