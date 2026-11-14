@@ -7,6 +7,15 @@
   "internalChecksFilter": "strict",
   "rangeStrategy": "pin",
   "labels": ["dependencies"],
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "description": "Een update voor een bekend lek wacht niet op maandag en niet op de zeven dagen (osv-scanner is dan al rood)",
+    "enabled": true,
+    "schedule": ["at any time"],
+    "minimumReleaseAge": null,
+    "groupName": null,
+    "labels": ["dependencies", "security"]
+  },
   "packageRules": [
     {
       "description": "Niet-majors in één PR per week (framework §6: gegroepeerd)",
