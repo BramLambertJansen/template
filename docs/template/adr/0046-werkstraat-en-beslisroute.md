@@ -44,7 +44,7 @@ beslist (review van code-eigenaren, ruleset) en zijn de eigen documentbewaking, 
    afwijzen is de PR sluiten. `voorgesteld`/`voorstel` alleen voor een bewust geparkeerd voorstel. Een status geeft zichzelf geen
    goedkeuring; inhoud, scope, intrekking en vervanging zijn eigenaarbesluiten. Wie de spec schrijft: 0090 punt 1.
 2. **A4 na 0089 en 0090.** Een geaccepteerd ADR herschrijven of verwijderen mag in de template in elke PR, in een app alleen in
-   een besluit-PR (0090 punt 4), met een herzieningsregel. Geen ADR gaat terug naar `voorgesteld`; een vervallen of vervangen
+   een besluit-PR, met een herzieningsregel (R-CI-05). Geen ADR gaat terug naar `voorgesteld`; een vervallen of vervangen
    ADR wijzigt niet; de statusregel houdt zijn strikte vorm. Het rolhek laat alleen architect en hoofdsessie een geaccepteerd
    ADR herschrijven of verwijderen. Geen check toetst dit nog (0089 punt 5 en 8): de goedkeuring van de eigenaar is het besluit.
 3. **Korte ADR's** (kern eigenaarbesluit). Richtlijn één pagina: context, besluit, alternatieven, gevolgen; geen regelnummers en
