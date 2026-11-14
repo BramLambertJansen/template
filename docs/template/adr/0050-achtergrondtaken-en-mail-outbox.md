@@ -81,4 +81,4 @@ staat: alleen `src/core/api/db` en `src/core/api/auth` maken databaseverbindinge
   `src/core/api/auth`; de exportlijst van `src/core/api/db` in `AGENTS.md` en framework §1 en §2 groeit, en framework §3 en §6
   wijzigen: beschermd, akkoord van de eigenaar in de PR die het bouwt.
 - `inviteUser` maakt alleen nog het account; de route zet de mail in de outbox. SMTP en `sendResetPassword` draaien in de worker.
-- Readiness controleert de `app_jobs`-verbinding niet (0049 punt 3 is vervallen); de runner controleert hem bij het opstarten.
+- Readiness controleert de `app_jobs`-verbinding niet; zie 0049 punt 3.

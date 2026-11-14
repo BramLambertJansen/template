@@ -27,7 +27,8 @@ geaccepteerd ADR", `docs/operations/agent-doorloop.md:141`, spoor 1):
 - ADR 0021 punt 6 en Tests ("`delete` van een rij binnen de termijn faalt voor iedereen", ook voor `app_migrator`): onder FORCE RLS filtert
   `audit_log_definer_delete` zo'n rij weg vóór de trigger, dus de `delete` slaagt met 0 rijen in plaats van te falen; de trigger weigert alleen
   wie RLS omzeilt (jobs/AC-6, AC-7).
-- ADR 0018 punt 2 en Gevolgen (specwijziging 2026-10-19, OV-C4): `pingDatabase()` controleert naast `select 1` als `api_user` ook een
+- **Vervallen door het eigenaarbesluit van 2026-11-11 (zie "Open vragen voor de eigenaar", OV-C4): readiness blijft één ping als
+  `api_user`.** Oude tekst: ADR 0018 punt 2 en Gevolgen (specwijziging 2026-10-19, OV-C4): `pingDatabase()` controleert naast `select 1` als `api_user` ook een
   tweede eigen verbinding als `app_jobs` (`JOBS_DATABASE_URL`); readiness is dus pas 200 als beide slagen, en elke instantie heeft twee
   extra verbindingen in plaats van één. ADR 0018 punt 4 ("ready raakt de database hooguit één keer per seconde") wordt: hooguit één
   controle per seconde, met twee verbindingen (één als `api_user`, één als `app_jobs`). De rest van ADR 0018 (200/503 zonder data, 900 ms
@@ -406,17 +407,19 @@ een nieuwe kolom het vraagt, `CHANGELOG.md`, `docs/roadmap.md` ST-03/ST-05 (stan
 
 ## Open vragen voor de eigenaar
 
-**Eigenaarbesluit 2026-11-11 over OV-C4:** readiness hangt niet aan de jobs-verbinding; gekozen zijn (b) en (c): een controle als
-`app_jobs` bij het opstarten en een logregel per mislukte ronde (ADR 0049 punt 3 is vervallen). Daarmee vervallen jobs/AC-45, de afwijking
-van ADR 0018 en de bijbehorende rijen in randgevallen en testplan, en geldt jobs/AC-44 alleen voor de opstartcontrole. Die passages staan
-hieronder en in deel C nog in de oude vorm; de herziening van deze spec vóór de bouw (ST-03) zet ze om.
+**Eigenaarbesluit 2026-11-11 over OV-C4:** readiness hangt niet aan de jobs-verbinding; gekozen zijn (b) en (c) zoals OV-C4
+ze hieronder beschrijft: één verbinding als `app_jobs` vóór `startServer` (faalt die, dan stopt het proces) en een logregel per mislukte
+ronde (ADR 0049 punt 3 is vervallen). Daarmee vervallen jobs/AC-45 en de afwijking van ADR 0018, en geldt jobs/AC-44 alleen voor de
+opstartcontrole. Deze passages staan nog in de oude vorm en zet de herziening van deze spec vóór de bouw (ST-03) om: de afwijking onder
+"Afwijkingen van de ADR's" (daar gemarkeerd), de rij van deel C in het overzicht, "Readiness met de jobs-verbinding" in deel C, jobs/AC-44
+en AC-45, de randgevallenrij over `app_jobs`, twee regels onder "Raakt ook", de alinea en OV-C4 hieronder, en drie rijen in het testplan.
 
 **Specwijziging 2026-10-19 na Codex-review op #209:** de readiness met de jobs-verbinding (deel C, OV-C4, jobs/AC-44 en AC-45, de afwijking
 van ADR 0018 en twee randgevallen) is een aanpassing van de architect/hoofdsessie ter beoordeling door de eigenaar met de merge; geen
 eigenaarbesluit, behalve dat de eigenaar vroeg de Codex-reviews op te pakken. Voor OV-C4 geldt bij merge (a); de eigenaar kan in de PR (b)
 of (c) kiezen, dan vervalt AC-45 en de afwijking van ADR 0018.
 
-- **OV-C4 — Readiness en de jobs-verbinding (bij merge geldt (a), zie hierboven).** Codex-review op #209: `src/api/server.ts:41` geeft alleen
+- **OV-C4 — Readiness en de jobs-verbinding (besloten op 2026-11-11: (b) en (c), zie hierboven).** Codex-review op #209: `src/api/server.ts:41` geeft alleen
   `pingDatabase` (pool van `DATABASE_URL`) aan readiness; de pool van `withJob` is lui, dus bij een fout die alleen `app_jobs` raakt blijft
   readiness 200 en blijft uitnodigen slagen terwijl elke mail blijft hangen. (a) `pingDatabase()` controleert ook `app_jobs` (voorstel in
   deel C): een instantie zonder werkende jobs-verbinding krijgt geen verkeer, maar een storing die alleen `app_jobs` raakt haalt dan **alle**
