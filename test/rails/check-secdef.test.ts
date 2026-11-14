@@ -187,6 +187,15 @@ test('de migraties in db/migrations zijn groen, en zonder `owner to app_definer`
     'db/migrations/20261103160000_one_time_use.sql:28: app.claim_one_time_use',
     'db/migrations/20261104160000_integration_switches.sql:28: app.integration_enabled',
     'db/migrations/20261104160000_integration_switches.sql:52: app.set_integration_enabled',
+    'db/migrations/20261114120000_roles_register.sql:43: app.has_counted_beheer',
+    'db/migrations/20261114120000_roles_register.sql:65: app.assert_roles_registered',
+    'db/migrations/20261114120000_roles_register.sql:87: app.roles_keep_one_beheer',
+    'db/migrations/20261114120000_roles_register.sql:120: app.register_role',
+    'db/migrations/20261114120000_roles_register.sql:136: app.unregister_role',
+    'db/migrations/20261114120000_roles_register.sql:157: app.is_mfa_admin',
+    'db/migrations/20261114120000_roles_register.sql:171: app.user_roles_keep_one_admin',
+    'db/migrations/20261114120000_roles_register.sql:186: app.set_account_blocked',
+    'db/migrations/20261114120000_roles_register.sql:230: app.set_account_deactivated',
   ]);
 });
 
