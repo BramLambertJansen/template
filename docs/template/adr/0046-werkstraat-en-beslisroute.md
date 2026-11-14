@@ -2,16 +2,23 @@
 
 Status: geaccepteerd
 
-Herzien: 2026-11-14: ingekort tot wat nog geldt. Een punt dat door een later ADR is ingehaald, is één regel met de plek waar
-het nu staat; de puntnummers zijn ongewijzigd. De eerdere herzieningsregels (#385, #469, #535, #541, #692, #696, #703) en de
-oude tekst staan in git.
+Herzien: 2026-10-30 (#385): taakmandaat en gate-label vervallen ([0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md));
+geschrapt in punt 5, 7, 8, 9, 11 en 15.
+Herzien: 2026-11-03 (#469): gewijzigd door [0054](0054-gebouwd-in-de-bouw-pr.md) punt 5, 6 en 10;
+[0056](0056-functionele-ui-in-een-pr.md) punt 8–9 en 12–15; [0057](0057-risicogestuurde-werkstraat.md) de vaste
+rolvolgorde; [0062](0062-spec-en-bouw-in-een-pr.md) punt 5, 10, 12, 14 en 15; [0069](0069-agent-merge-niet-kritiek.md)
+punt 30, 31, 33, 34 en 35; [0074](0074-herziene-adr-punten-gemarkeerd.md) punt 2
+Herzien: 2026-11-04 (#535): gewijzigd door [0079](0079-een-padtabel.md) punt 27 en 28, de lijst `voorReview` wordt de
+kolom `schrijven` van de padtabel in `.claude/gates.json` (wat erin hoort, blijft gelijk), en CODEOWNERS volgt de afgeleide
+gates plus `jsonGates`
+Herzien: 2026-11-05 (#541): gewijzigd door [0080](0080-specarchief-en-bouwvorm.md) punt 5 en 10, een gebouwde spec krijgt in een besluit-PR nieuwe
+AC's met `(nog niet gebouwd)`, en `gebouwd` noemt alleen de PR (`# #<PR>`), zonder gevalideerde SHA
+Herzien: 2026-11-12 (#692): door ADR 0089 punt 1–3, in de template deels: punt 2, vervalt: A4 en de herzieningsroute; blijft: nooit terug naar `voorgesteld`, de strikte statusregel; punt 5, vervalt: de besluit-PR zonder code; blijft: de toegestane overgangen; punt 6, vervalt: de lokale A4-weigering, alleen voor architect en hoofdsessie in de onderhoudsmodus en alleen voor de gevallen uit spec templateregime AC-10; blijft: alleen architect en hoofdsessie schrijven een eigenaarstatus; punt 10, vervalt: daarna mogen alleen statusregels veranderen; blijft: het bouwbewijs; punt 12 en 15 (er komt een derde lane `template` bij)
+Herzien: 2026-11-12 (#696): door ADR 0089 punt 2, 5, 8 en 9, de vorige regel vervalt: geen licht regime en geen lane `template`; zodra de GitHub App bewezen is, verdwijnt `check-document-status` en worden punt 2, 5, 10, 12 en 15 afspraken die de eigenaar met zijn goedkeuring op de PR beslist; punt 6, het rolhek houdt het schrijfrecht per rol en verliest zijn A4-logica in een latere stap (ADR 0089 punt 9); punt 31, wie merget volgt `CODEOWNERS` en de ruleset
+Herzien: 2026-11-12 (#703): punt 1, architect in de template op verzoek; punt 18, model per spec vervalt; geen besluit-PR in de template (ADR 0090 punt 1, 4 en 5)
+Herzien: 2026-11-14: ingekort tot wat nog geldt; een ingehaald punt is één regel met de plek waar het nu staat, de puntnummers zijn ongewijzigd, de oude tekst staat in git
 
 Vervangt 0025, 0027, 0030 en 0038; neemt de delen van 0029 over die via 0038 punt 8 nog golden. Drempel: A4.
-Gewijzigd door [0054](0054-gebouwd-in-de-bouw-pr.md), [0056](0056-functionele-ui-in-een-pr.md),
-[0057](0057-risicogestuurde-werkstraat.md), [0062](0062-spec-en-bouw-in-een-pr.md),
-[0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md), [0069](0069-agent-merge-niet-kritiek.md),
-[0079](0079-een-padtabel.md), [0080](0080-specarchief-en-bouwvorm.md), [0089](0089-templateregime.md) en
-[0090](0090-lichtere-werkstraat.md).
 
 ## Context
 
@@ -36,9 +43,10 @@ beslist (review van code-eigenaren, ruleset) en zijn de eigen documentbewaking, 
    bedoelde status (`geaccepteerd`, `goedgekeurd`, `vervallen`, `vervangen door NNNN`). De merge door de eigenaar is het besluit;
    afwijzen is de PR sluiten. `voorgesteld`/`voorstel` alleen voor een bewust geparkeerd voorstel. Een status geeft zichzelf geen
    goedkeuring; inhoud, scope, intrekking en vervanging zijn eigenaarbesluiten. Wie de spec schrijft: 0090 punt 1.
-2. *(vervallen, zie 0089 punt 5 en 8 en 0090 punt 4)* Een geaccepteerd ADR herschrijven mag in de template in elke PR. Blijft:
-   `geaccepteerd` gaat niet terug naar `voorgesteld`, de statusregel houdt zijn strikte vorm, en het rolhek laat alleen
-   architect en hoofdsessie een geaccepteerd ADR herschrijven of verwijderen.
+2. **A4 na 0089 en 0090.** Een geaccepteerd ADR herschrijven of verwijderen mag in de template in elke PR, in een app alleen in
+   een besluit-PR (0090 punt 4), met een herzieningsregel. Geen ADR gaat terug naar `voorgesteld`; een vervallen of vervangen
+   ADR wijzigt niet; de statusregel houdt zijn strikte vorm. Het rolhek laat alleen architect en hoofdsessie een geaccepteerd
+   ADR herschrijven of verwijderen. Geen check toetst dit nog (0089 punt 5 en 8): de goedkeuring van de eigenaar is het besluit.
 3. **Korte ADR's** (kern eigenaarbesluit). Richtlijn één pagina: context, besluit, alternatieven, gevolgen; geen regelnummers en
    geen werkinstructie (die horen in `docs/`).
 4. **Drempel** (kern eigenaarbesluit). Een ADR is nodig bij A2 (moeilijk terug te draaien: migratie op bestaande rijen,
@@ -46,19 +54,22 @@ beslist (review van code-eigenaren, ruleset) en zijn de eigen documentbewaking, 
    afzwakken), A4 (geaccepteerd ADR wijzigen of vervangen) en, van A1, alleen een wijziging van het contract tussen zones. Het ADR
    noemt welke. Een strengere check is geen ADR; anders een regel in `docs/`. De toets: "als de twee mensen die dit besloten
    morgen weg zijn, weet de rest dan waarom?"
-5. *(vervallen, zie 0089 punt 5 en 8)* `check-document-status` bestaat niet meer; de toegestane statusovergangen zijn een
-   afspraak die de eigenaar met zijn goedkeuring op de PR beslist.
+5. **Statusovergangen.** Toegestaan: een nieuw document met een eigenaarstatus; `voorstel`/`voorgesteld` naar een
+   eigenaarstatus; een ADR van `geaccepteerd` naar `vervangen door NNNN` of `vervallen`; een spec van `goedgekeurd` of `gebouwd`
+   naar `vervallen`; een spec terug naar `voorstel` (R-WERK-08). Het rolhek toetst dit per rol; `check-document-status` bestaat
+   niet meer (0089 punt 5), dus in CI is het een afspraak die de eigenaar met zijn goedkeuring beslist.
 6. **Rolhek.** Alleen architect en hoofdsessie schrijven een eigenaarstatus of wijzigen de inhoud van een goedgekeurde spec;
    andere rollen niet. De developer houdt alleen `gebouwd` via `docs:status`.
-7. *(vervallen, zie 0089 punt 2 en 3)* Het anker is de review van de code-eigenaar op GitHub, met een eigen identiteit voor de agent.
+7. **Anker.** Commitvolgorde, inhoud na de status en committer doen er niet toe; het anker is de review van de code-eigenaar op
+   GitHub, met een eigen identiteit voor de agent (0089 punt 2 en 3).
 
 **Taakmandaat**
 
 8. **Register alleen voor `requiredChecks`.** `.claude/decisions.json` op main houdt de verplichte checks voor `pr:verify`.
    Rechten gelden pas na de merge; een werkversie, prompt, label of commit-auteur vervangt dat niet.
 9. *(vervallen, zie 0063)*
-10. **Gebouwd met bouwbewijs.** Een spec gaat naar `gebouwd` in de PR met de implementatie (0054); de statusregel noemt alleen de
-    PR (0080 punt 5). Gebouwd is aangeboden en gecontroleerd, geen merge of release. ADR's kennen geen `gebouwd`.
+10. **Gebouwd met bouwbewijs.** Een spec gaat naar `gebouwd` in de PR met de implementatie (0054); of later via `pnpm docs:status` met
+    het nummer van de gemergde bouw-PR, samen met het eigen roadmapvinkje; de statusregel noemt alleen de PR (0080 punt 5). Gebouwd is aangeboden en gecontroleerd, geen merge of release. ADR's kennen geen `gebouwd`.
 11. *(vervallen, zie 0063)* Een label vervangt geen eigenaarreview.
 
 **Mini-spec**
@@ -99,7 +110,7 @@ beslist (review van code-eigenaren, ruleset) en zijn de eigen documentbewaking, 
     werkt vóór de review: (a) gereedschap dat lokaal of in CI draait (scripts, CI, hooks, dependencies, omgeving, configs; niet
     app- en testcode, die in de runner draaien), (b) instructies, rechten of hooks van de agent, (c) de vertrouwde basis van
     checks. De roadmap, ADR's, specs, `docs/nieuwe-app.md`, `src/api`, `src/core`, `deploy/**` en testpaden horen er niet in. De
-    lijst is de kolom `schrijven` van de padtabel in `.claude/gates.json` (0079).
+    lijst is elk pad met `schrijven` op `voorReview` of `altijdVragen` in de padtabel in `.claude/gates.json` (0079).
 28. **Prompts.** Buiten de onderhoudsmodus vraagt het rolhek de hoofdsessie op een pad uit punt 27; op de andere beschermde
     paden geeft het een melding. Commando-`ask`'s, migraties, gegenereerde bestanden en bestaande tests blijven ongewijzigd.
     Welke Edit-regels `ask` zijn en wat subagentrollen op beschermde paden krijgen: [0045](0045-railwerk.md). `CODEOWNERS` volgt
@@ -110,7 +121,7 @@ beslist (review van code-eigenaren, ruleset) en zijn de eigen documentbewaking, 
     (0089 punt 2 en 3, R-REPO-01).
 32. **`src/api/app.ts` en `src/shared/permissions.ts` geen beschermd pad** (eigenaarbesluit 2026-10-15; A3). Compensatie:
     `defineRoute`, een test per verboden rol en `can()` blijven, en de reviewer toetst elke nieuwe of gewijzigde permissie en route
-    (R-WERK-09). Zwakte: minder menselijke review op wie wat mag.
+    (0089 punt 8). Zwakte: minder menselijke review op wie wat mag.
 33. *(vervallen, zie 0089 punt 5)*
 34. **Harde grens is GitHub** (eigenaarbesluit 2026-10-14). De ruleset eist groene checks; de agent zet geen review of label
     rechtstreeks.

@@ -2,14 +2,27 @@
 
 Status: geaccepteerd
 
-Herzien: 2026-11-14: ingekort tot wat nog geldt na [0089](0089-templateregime.md). De toegestane lijst, de job `agent-merge`,
-de inhoudstoets, de omvanggrens en de Codex-voorwaarde zijn weg; de puntnummers zijn ongewijzigd. De eerdere herzieningsregels
-(#456, #468, #473, #535, #568, #696) en de oude tekst staan in git.
+Herzien: 2026-11-03 (#456): punt 3 (Codex-voorwaarde drieledig, omvanggrens `agentMerge.maxRegels`), punt 5
+(steekproef, terugval, overgang), Gevolgen en Meten; versoepelt de Codex-voorwaarde; uitwerking in
+spec
+Herzien: 2026-11-03 (#468): punt 3 (een 👀 van Codex of een review die nog bezig is, telt als spoor en houdt de merge tegen),
+punt 5 (overgang) en Gevolgen; verscherpt de Codex-voorwaarde; uitwerking in spec
+Herzien: 2026-11-03 (#473): punt 3, bytegrens `agentMerge.maxBytes` naast `maxRegels`; verscherpt de omvanggrens;
+uitwerking in [spec](../specs/agent-merge-bytegrens.md)
+Herzien: 2026-11-04 (#535): gewijzigd door [0079](0079-een-padtabel.md) punt 1, `agentMerge.toegestaan` en
+`agentMerge.kritiek` worden de kolom `besluit` van de padtabel (`agent` of strenger); de uitslag per pad blijft gelijk
+Herzien: 2026-11-05 (#568): punt 3 en 5, Alternatieven, Gevolgen en Meten; versoepelt de Codex-voorwaarde: ze vervalt,
+met `agentMerge.codex`, ook als Codex wél reviewt; elke agent-merge is een steekproef (leerpunt #562: Codex is geen
+vereiste); uitwerking in
+[spec](../specs/agent-merge-niet-kritiek.md) AC-7 tot en met AC-10
+Herzien: 2026-11-12 (#696): door ADR 0089 punt 2, 3 en 5, punt 1, 2 en 3 worden: geen pad van een code-eigenaar geraakt en checks groen; de lijst uit de padtabel wordt `CODEOWNERS`, de job `agent-merge` en de inhoudstoets van `pnpm pr:merge` verdwijnen, de omvanggrens en het reviewcommentaar op de head vervallen als check (de review blijft een werkafspraak)
+Herzien: 2026-11-14: ingekort tot wat nog geldt na ADR 0089; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 30, 31, 33, 34 en 35, de zin "automatische agent-merges vallen af" uit
 [0057](0057-risicogestuurde-werkstraat.md), in [0064](0064-leesbudget-per-laag.md) "zodra de GitHub App er is" (R-DOC-09) en in
 [0068](0068-samenhang-checks-en-rollen.md) punt 3 de eigenaarmerge als grens; vult
-[0062](0062-spec-en-bouw-in-een-pr.md) aan. Drempel: A3 (rechten verruimen).
+[0062](0062-spec-en-bouw-in-een-pr.md) aan. Drempel: A3 (rechten verruimen). Uitwerking:
+[spec](../specs/agent-merge-niet-kritiek.md) (vervallen; de code noemt er nog acceptatiecriteria uit).
 
 ## Context
 
@@ -48,9 +61,10 @@ een pad van een code-eigenaar vraagt zijn review.
    Dit vervalt met de identiteitsregels van het rolhek (0089 punt 9); daarna is `pnpm pr:merge` gemak en GitHub de grens.
 5. **De eigenaar houdt de schakelaar.** De modus staat standaard op `"eigenaar"`; terugzetten is één regel in een beschermd
    bestand. Na elke agent-merge meldt de agent PR en SHA in de thread, met het woord "steekproef" (`pr:merge` drukt die regel
-   af); een fout herstelt hij met een revert-PR. Terugval: na een revert van een agent-merge, één rode `main` door een
+   af); de eigenaar kijkt de eerste tien achteraf na en zegt daarna of de melding blijft. Een fout herstelt de agent met een
+   revert-PR. Terugval: na een revert van een agent-merge, één rode `main` door een
    agent-merge of een agent-merge die achteraf kritiek blijkt, merget de hoofdsessie niets meer via `pr:merge`, opent een PR die
-   `merge` op `"eigenaar"` zet en meldt dat; pas na een besluit van de eigenaar gaat het verder. Steekproef en terugval zijn
+   `merge` op `"eigenaar"` zet en meldt dat, en dit besluit wordt herzien; pas na een besluit van de eigenaar gaat het verder. Steekproef en terugval zijn
    afspraken, geen check. De schakelaar vervalt met 0089 punt 9; daarna zet de eigenaar zo nodig één vereiste goedkeuring.
 6. *(vervallen: de bouw-PR is gemerged)*
 
