@@ -2,7 +2,7 @@
 
 Status: geaccepteerd
 
-Herzien: 2026-11-14: punt 3 vervalt (eigenaarbesluit 2026-11-11): readiness hangt niet aan de jobs-verbinding
+Herzien: 2026-11-14: punt 3 herschreven (eigenaarbesluit 2026-11-11): readiness hangt niet aan de jobs-verbinding
 
 Vervangt 0018 en 0019. Drempel: A4. Consolidatie zonder inhoudelijke wijziging
 (eigenaarbesluit 2026-10-21, 0038 Gevolgen).
@@ -25,7 +25,7 @@ containerhost heeft geen statische host die de SPA-headers zet.
 2. **Controle op een eigen verbinding** (was 0018 punt 2). `pingDatabase()` uit `src/core/api/db` doet `select 1` als
    `api_user`, zonder `withUser()`, over een eigen pool met max 1, niet de pool van `withUser()`. Verbinden en de query zijn elk
    begrensd op 900 ms. Na een fout wordt de verbinding weggegooid; een idle verbinding die wegvalt, stopt het proces niet.
-3. *(vervallen, eigenaarbesluit 2026-11-11)* Readiness hangt niet aan de jobs-verbinding: een storing die alleen `app_jobs`
+3. **Opstartcontrole in plaats van een jobs-ping** (vervangt het voorwaardelijke punt, eigenaarbesluit 2026-11-11). Readiness hangt niet aan de jobs-verbinding: een storing die alleen `app_jobs`
    raakt, zou alle instanties uit de rotatie halen, ook voor routes die geen taak nodig hebben. In plaats daarvan
    (spec achtergrondtaken OV-C4, optie (b) en (c)): bij het opstarten, vóór `startServer`, één verbinding als `app_jobs` via
    `src/core/api/db`; faalt die, dan stopt het proces. Een latere mislukte ronde geeft een logregel.
