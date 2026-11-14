@@ -9,7 +9,8 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 - Renovate opent een PR voor een bekend beveiligingslek meteen: niet pas op maandag, niet na zeven dagen en niet in de wekelijkse
   groep, met het label `security` (`renovate.json`, `vulnerabilityAlerts` en `osvVulnerabilityAlerts`). pnpm weigert een versie
   jonger dan zeven dagen nog steeds; is de fix zo nieuw, dan komt de exacte versie met reden en akkoord van de eigenaar in
-  `minimumReleaseAgeExclude` (`pnpm-workspace.yaml`, R-SEC-06). Wat verandert voor een app: niets, tot er een beveiligingsupdate is.
+  `minimumReleaseAgeExclude` (`pnpm-workspace.yaml`, R-SEC-06). De oude uitzondering zonder reden voor `nodemailer@10.1.4` is weg:
+  die versie is ouder dan zeven dagen. Wat verandert voor een app: niets, tot er een beveiligingsupdate is.
 - De ADR's en specs van de template staan in `docs/template/adr/` en `docs/template/specs/`; `docs/adr/` en `docs/specs/` zijn van
   de app en bevatten in de template alleen de sjablonen (ADR 0089 punt 1, 6 en 7). De archieven zijn verwijderd: git is de
   historie. De nummerreeks 0001–0099 / vanaf 0100 vervalt; een ADR-nummer is uniek per map. `feiten.mjs adr` en `specs` tonen een
