@@ -406,6 +406,11 @@ een nieuwe kolom het vraagt, `CHANGELOG.md`, `docs/roadmap.md` ST-03/ST-05 (stan
 
 ## Open vragen voor de eigenaar
 
+**Eigenaarbesluit 2026-11-11 over OV-C4:** readiness hangt niet aan de jobs-verbinding; gekozen zijn (b) en (c): een controle als
+`app_jobs` bij het opstarten en een logregel per mislukte ronde (ADR 0049 punt 3 is vervallen). Daarmee vervallen jobs/AC-45, de afwijking
+van ADR 0018 en de bijbehorende rijen in randgevallen en testplan, en geldt jobs/AC-44 alleen voor de opstartcontrole. Die passages staan
+hieronder en in deel C nog in de oude vorm; de herziening van deze spec vóór de bouw (ST-03) zet ze om.
+
 **Specwijziging 2026-10-19 na Codex-review op #209:** de readiness met de jobs-verbinding (deel C, OV-C4, jobs/AC-44 en AC-45, de afwijking
 van ADR 0018 en twee randgevallen) is een aanpassing van de architect/hoofdsessie ter beoordeling door de eigenaar met de merge; geen
 eigenaarbesluit, behalve dat de eigenaar vroeg de Codex-reviews op te pakken. Voor OV-C4 geldt bij merge (a); de eigenaar kan in de PR (b)

@@ -68,7 +68,7 @@ compact" (0038).
 **Accountlijst en dev-login** (was 0014)
 
 10. **`app.accounts`** (was 0014 punt 2, 0026 punt 5). View van `app_definer`, `security_barrier`, alleen rijen bij
-    `app.is_mfa_admin()`; status `blocked`, `active` of `invited`. `app_definer` leest uit `better_auth` alleen
+    `app.is_mfa_admin()`; status `blocked`, `deactivated` (ADR 0052), `active` of `invited`. `app_definer` leest uit `better_auth` alleen
     `"user"(id, name, email, "createdAt", blocked_at)` en `account("userId", "providerId")`: geen wachtwoord, sessies of
     TOTP-geheimen, en geen grant op `better_auth.session`. De allowlist staat in `db/tests/invarianten.sql`; elke andere
     grant, ook een extra kolom, faalt. Een nieuwe kolom vraagt een ADR.
