@@ -1,8 +1,12 @@
 import { definePermissions } from '#core/shared/can.ts';
+// TIJDELIJK (rollenregister fase 2): via de alias en niet './roles.ts', zolang test/rails/new-resource-lijst.test.ts dit
+// bestand zonder src/shared/roles.ts naar een tijdelijke map kopieert; daarna een relatieve import.
+import { roles } from '#shared/roles.ts';
 
-// Permissietabel van de app (spec accountbeheer). Core voegt 'app.use' toe en eist MFA voor elke permissie van een admin.
+// Permissietabel van de app (spec accountbeheer) over het rollenregister van de app (src/shared/roles.ts). Core voegt 'app.use'
+// toe en eist MFA voor elke permissie van een beheerrol.
 // Een nieuwe permissie krijgt een test per verboden rol (src/shared/permissions.test.ts doet dat voor de hele tabel).
-export const permissions = definePermissions({
+export const permissions = definePermissions(roles, {
   'me:read': { roles: ['user', 'admin'] },
   // Spec eigen-account: het eigen account (naam, sessies, e-mailbevestiging); altijd het account uit de sessie.
   'me:update': { roles: ['user', 'admin'] },

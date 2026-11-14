@@ -1,7 +1,6 @@
 import { type SQL, and, asc, desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { containsPattern, decodeListCursor } from '#core/api/route/list-query.ts';
-import { ROLES } from '#core/shared/can.ts';
 import {
   ACCOUNT_SORTS,
   accountsListContract,
@@ -14,6 +13,7 @@ import {
   unblockContract,
 } from '#shared/contracts/accounts.ts';
 import { ACCOUNTS_PAGE_SIZE } from '#shared/limits.ts';
+import { roles } from '#shared/roles.ts';
 import { appAccounts } from '../db/schema.ts';
 import { defineRoute } from '../kit.ts';
 
@@ -25,7 +25,7 @@ const accountRow = z.object({
   id: z.string(),
   naam: z.string(),
   email: z.string(),
-  rol: z.enum(ROLES),
+  rol: z.enum(roles.names),
   status: z.enum(['active', 'invited', 'blocked', 'deactivated']),
   aangemaakt: z.string(),
   naamKey: z.string(),

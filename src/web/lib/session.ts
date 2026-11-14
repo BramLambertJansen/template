@@ -1,7 +1,8 @@
 import { queryOptions, type QueryClient } from '@tanstack/react-query';
-import type { CanActor, Role } from '#core/shared/can.ts';
+import type { CanActor } from '#core/shared/can.ts';
 import { createGuard } from '#core/web/lib/guard.ts';
 import { permissions } from '#shared/permissions.ts';
+import { roles } from '#shared/roles.ts';
 import { api } from './api.ts';
 
 // De context van elke route (main.tsx) en de can()-guard van de app: `beforeLoad: guard('accounts:read')`.
@@ -14,15 +15,15 @@ const REDIRECT_ORIGIN = 'https://redirect.invalid';
 
 export const meQuery = queryOptions({ queryKey: ['me'], queryFn: () => api.call('GET /me', {}) });
 
-// /api/me geeft geen sessiesterkte, maar een admin krijgt /me alleen met een MFA-sessie (me:read; core eist MFA voor
-// elke permissie van een admin). Voor een user telt de sterkte in can() niet.
-export function actorFromMe(me: { readonly rol: CanActor['role'] }): CanActor {
-  return { role: me.rol, sessionStrength: me.rol === 'admin' ? 'mfa' : 'password' };
+// /api/me geeft geen sessiesterkte, maar een beheerrol krijgt /me alleen met een MFA-sessie (me:read; core eist MFA voor
+// elke permissie van een beheerrol uit het register). Voor een andere rol telt de sterkte in can() niet.
+export function actorFromMe(me: { readonly rol: string }): CanActor {
+  return { role: me.rol, sessionStrength: roles.isBeheer(me.rol) ? 'mfa' : 'password' };
 }
 
-// Na inloggen per rol (spec accountbeheer): user → /, admin → /admin.
-export function homeFor(role: Role): '/' | '/admin' {
-  return role === 'admin' ? '/admin' : '/';
+// Na inloggen (spec accountbeheer, spec rollenregister): wie accounts mag zien naar /admin, de rest naar /.
+export function homeFor(actor: CanActor): '/' | '/admin' {
+  return permissions.can(actor, 'accounts:read') ? '/admin' : '/';
 }
 
 // Alleen een pad binnen de app als terugweg na inloggen; nooit een andere origin (//host) of de inlogpagina zelf.

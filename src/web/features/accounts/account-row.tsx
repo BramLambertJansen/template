@@ -30,7 +30,7 @@ export function AccountRow({
     <TableRow>
       <TableCell>{account.naam}</TableCell>
       <TableCell>{account.email}</TableCell>
-      <TableCell>{copy.accounts.roles[account.rol]}</TableCell>
+      <TableCell>{copy.accounts.roleName(account.rol)}</TableCell>
       <TableCell>{accountStatusText(account)}</TableCell>
       <TableCell>
         {account.laatstIngelogd === null ? copy.accounts.unknownLogin : format.dateTime(account.laatstIngelogd)}

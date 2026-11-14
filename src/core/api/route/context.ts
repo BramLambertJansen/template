@@ -1,4 +1,4 @@
-import type { Role, SessionStrength } from '../../shared/can.ts';
+import type { SessionStrength } from '../../shared/can.ts';
 import type { AuditActions, AuditFn } from '../../shared/audit.ts';
 import type { UserId } from '../../shared/ids.ts';
 import type { Tx } from '../db/types.ts';
@@ -10,7 +10,8 @@ export interface RouteActor {
   readonly userId: UserId;
   // De sessie van dit verzoek (niet het token): voor routes die sessies tonen of beëindigen.
   readonly sessionId: string;
-  readonly role: Role;
+  // De rol uit user_roles; de permissiecontrole heeft al vastgesteld dat het register van de app hem kent.
+  readonly role: string;
   readonly sessionStrength: SessionStrength;
   readonly name: string;
   readonly email: string;

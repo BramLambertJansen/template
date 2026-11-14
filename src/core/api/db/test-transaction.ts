@@ -20,7 +20,7 @@ export interface TestUser {
 }
 
 export interface AsUserOptions {
-  // Standaard: mfa voor admin (de gewone admin-sessie), anders password.
+  // Standaard: mfa voor een beheerrol uit app.roles (de gewone beheersessie), anders password.
   readonly sessionStrength?: SessionStrength;
   readonly name?: string;
 }
@@ -35,8 +35,8 @@ export type TestWithUser = <T>(
 export interface TestDb {
   // Zelfde contract als withUser; `readOnly` telt hier niet (een savepoint kan niet read-only worden), `rateLimit` wel.
   readonly withUser: TestWithUser;
-  // Een nieuwe gebruiker met deze rol (null: zonder rij in user_roles), alleen zichtbaar binnen deze test.
-  readonly asUser: (role: 'user' | 'admin' | null, options?: AsUserOptions) => Promise<TestUser>;
+  // Een nieuwe gebruiker met deze rol uit app.roles (null: zonder rij in user_roles), alleen zichtbaar binnen deze test.
+  readonly asUser: (role: string | null, options?: AsUserOptions) => Promise<TestUser>;
   readonly rollback: () => Promise<void>;
 }
 
@@ -101,6 +101,13 @@ export function createTestWithUser(pool: Pool): TestWithUser {
   return (actor, work, options) => withUser(actor, work, { ...options, requestId: options?.requestId ?? randomUUID() });
 }
 
+// De beheervlag van de rol uit app.roles (spec rollenregister): de testkit kent het register van de app niet.
+async function isBeheer(client: PoolClient, role: string | null): Promise<boolean> {
+  if (role === null) return false;
+  const { rows } = await client.query<{ beheer: boolean }>('select beheer from app.roles where name = $1', [role]);
+  return rows[0]?.beheer === true;
+}
+
 function gatewayFor(session: SessionInfo): AuthGateway {
   return {
     handler: () => Promise.resolve(new Response(null, { status: 404 })),
@@ -124,7 +131,7 @@ export async function beginTestDb(pool: Pool): Promise<TestDb> {
       email,
     ]);
     if (role !== null) await client.query('select app.assign_role($1, $2)', [id, role]);
-    const sessionStrength = options.sessionStrength ?? (role === 'admin' ? 'mfa' : 'password');
+    const sessionStrength = options.sessionStrength ?? ((await isBeheer(client, role)) ? 'mfa' : 'password');
     const actor = { userId: id, sessionStrength };
     return { actor, name, email, auth: gatewayFor({ ...actor, sessionId: `sessie-${id}`, name, email }) };
   };

@@ -47,7 +47,7 @@ export async function enterActor(client: PoolClient, actor: Actor, requestId: st
     [actor.userId],
   );
   const role = roles[0]?.role;
-  return { role: role === 'user' || role === 'admin' ? role : null };
+  return { role: role ?? null };
 }
 
 // De telling zelf (spec rate-limit), binnen een open transactie of savepoint ná enterActor: 0 = toegestaan, anders het

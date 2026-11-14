@@ -1,9 +1,16 @@
-import type { Role } from '#core/shared/can.ts';
+import type { Role } from '#shared/roles.ts';
 
 // Nederlandse schermteksten, inclusief toegankelijke namen en validatie. Specs en featurebeschrijvingen leggen het
 // bijbehorende gedrag vast.
-// Naam per rol: Record<Role, …>, dus een nieuwe rol in ROLES zonder naam is een typefout (accounts, rolwisselaar).
+// Naam per rol: Record<Role, …>, dus een nieuwe rol in het register (src/shared/roles.ts) zonder naam is een typefout
+// (accounts, rolwisselaar).
 export const roleLabels = { user: 'Gebruiker', admin: 'Beheerder' } as const satisfies Record<Role, string>;
+
+// De naam van een rol zoals de API hem geeft (tekst); een rol zonder naam (alleen in de database) toont zijn eigen naam.
+export function roleLabel(rol: string): string {
+  const labels: Readonly<Record<string, string>> = roleLabels;
+  return labels[rol] ?? rol;
+}
 
 export const copy = {
   login: {
@@ -54,7 +61,7 @@ export const copy = {
     unknownLogin: 'Onbekend',
     // Kop van de kolom met "Opnieuw uitnodigen"; alleen voor schermlezers.
     actions: 'Acties',
-    roles: roleLabels,
+    roleName: roleLabel,
     statuses: {
       actief: 'Actief',
       uitgenodigd: 'Uitgenodigd',

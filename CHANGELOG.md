@@ -6,16 +6,20 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Gewijzigd
 
-- Renovate opent een PR voor een bekend beveiligingslek meteen: niet pas op maandag, niet na zeven dagen en niet in de wekelijkse
-  groep, met het label `security` (`renovate.json`, `vulnerabilityAlerts` en `osvVulnerabilityAlerts`). pnpm weigert een versie
-  jonger dan zeven dagen nog steeds; is de fix zo nieuw, dan komt de exacte versie met reden en akkoord van de eigenaar in
-  `minimumReleaseAgeExclude` (`pnpm-workspace.yaml`, R-SEC-06). De oude uitzondering zonder reden voor `nodemailer@10.1.4` is weg:
-  die versie is ouder dan zeven dagen. Wat verandert voor een app: niets, tot er een beveiligingsupdate is.
-- De ADR's en specs van de template staan in `docs/template/adr/` en `docs/template/specs/`; `docs/adr/` en `docs/specs/` zijn van
-  de app en bevatten in de template alleen de sjablonen (ADR 0089 punt 1, 6 en 7). De archieven zijn verwijderd: git is de
-  historie. De nummerreeks 0001–0099 / vanaf 0100 vervalt; een ADR-nummer is uniek per map. `feiten.mjs adr` en `specs` tonen een
-  lijst per map, de app eerst. Wat verandert voor een app: nog geen app volgt deze template; een app die dat later doet, schrijft
-  zijn eigen ADR's en specs in `docs/adr/` en `docs/specs/` en wijzigt `docs/template/` niet (`check-core`).
+- Rollen zijn een register van de app (spec `rollenregister`, ST-16): `src/shared/roles.ts` (`defineRoles`) en de tabel `app.roles`
+  met de vlag `beheer`. De MFA-eis (`can()`, `app.is_mfa_admin()`, inlogbeleid) en de laatste-beheerder-regel hangen aan `beheer`,
+  niet meer aan de naam `admin`; `user` en `admin` blijven vast. `ROLES` is weg uit `src/core/shared/can.ts`,
+  `definePermissions(roles, tabel)` en `createDevLogin(steps, { roles, seedAccounts })` krijgen het register als argument,
+  `withUser` geeft `role: string | null`, en `homeFor` neemt de actor (`/admin` voor wie `accounts:read` heeft). Een rol toevoegen
+  of weghalen: `docs/gouden-pad.md`. Wat verandert voor een app: na de template-update `pnpm db:migrate` en deze app-bestanden
+  bijwerken: `src/shared/roles.ts` (nieuw), `src/shared/permissions.ts`, `src/shared/contracts/accounts.ts` en `me.ts`,
+  `src/api/kit.ts`, `src/api/app.ts`, `src/api/server.ts`, `src/api/login-policy.ts`, `src/api/routes/accounts.ts`,
+  `src/api/dev/seed-accounts.ts` (nieuw: de seed-accounts verhuizen uit core), `src/web/copy/ui.ts`, `src/web/lib/session.ts`,
+  `src/web/dev/role-switcher.tsx`, `src/web/dev/switch-role.ts` en `src/web/features/accounts/invite-dialog.tsx`; eigen tests
+  met `definePermissions(tabel)`, `ROLES` of `Role` uit core volgen dezelfde vorm. Heeft de app een eigen CHECK op
+  `public.user_roles.role` en rijen met een andere rol dan `user` of `admin`, dan stopt de migratie met "registreer eerst rol
+  <naam>" en verandert er niets (bestaande rijen in `public.user_roles` blijven ongewijzigd). Nog geen app volgt deze template
+  met eigen rollen; een pad om zo'n rol vóór deze migratie te registreren bestaat nog niet.
 
 ### Opgelost
 

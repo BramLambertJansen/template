@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { z } from 'zod';
 import { LoginPage } from '#web/features/login/login-page.tsx';
-import { homeFor, meQuery } from '#web/lib/session.ts';
+import { actorFromMe, homeFor, meQuery } from '#web/lib/session.ts';
 
 // Publiek (framework §3): het inlogscherm. Al ingelogd → door naar de start van de rol (spec accountbeheer).
 const search = z.object({
@@ -14,7 +14,7 @@ export const Route = createFileRoute('/login')({
   validateSearch: search,
   beforeLoad: async ({ context }) => {
     const me = await context.queryClient.query(meQuery).catch(() => null);
-    if (me !== null) redirect({ to: homeFor(me.rol), throw: true });
+    if (me !== null) redirect({ to: homeFor(actorFromMe(me)), throw: true });
   },
   component: LoginRoute,
 });

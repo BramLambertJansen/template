@@ -1,9 +1,12 @@
-// Lokale seed (spec accountbeheer): vaste accounts per rol, de admin met vast TOTP-geheim. Idempotent; draait in `pnpm dev`
+// Lokale seed (spec accountbeheer, spec rollenregister): een vast account per rol van het register (src/shared/roles.ts), elke
+// beheerrol met het vaste TOTP-geheim. Een rol zonder rij in app.roles faalt hier op de foreign key (23503). Idempotent; draait in `pnpm dev`
 // na de migraties en via `pnpm db:seed`. Weigert buiten APP_ENV=local of tegen een niet-lokale database.
 import pg from 'pg';
 import { createAuth } from '../src/core/api/auth/index.ts';
 import { ensureAccount } from '../src/core/api/dev/ensure-account.ts';
-import { SEED_ACCOUNTS, SEED_ADMIN_TOTP_SLEUTEL, SEED_DEMO_WACHTWOORD } from '../src/core/api/dev/seed-accounts.ts';
+import { SEED_ADMIN_TOTP_SLEUTEL, SEED_DEMO_WACHTWOORD } from '../src/core/api/dev/seed-accounts.ts';
+import { SEED_ACCOUNTS } from '../src/api/dev/seed-accounts.ts';
+import { roles } from '../src/shared/roles.ts';
 
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
 
@@ -37,7 +40,7 @@ try {
       email: account.email,
       name: account.name,
       password: SEED_DEMO_WACHTWOORD,
-      ...(role === 'admin' ? { totpSecret: SEED_ADMIN_TOTP_SLEUTEL } : {}),
+      ...(roles.isBeheer(role) ? { totpSecret: SEED_ADMIN_TOTP_SLEUTEL } : {}),
     });
     await migrator.query('select app.assign_role($1, $2)', [userId, role]);
     console.info(`✓ ${account.email} (${role})`);

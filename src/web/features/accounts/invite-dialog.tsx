@@ -1,11 +1,10 @@
-import type { Role } from '#core/shared/can.ts';
 import { inviteInput, ROLLEN } from '#shared/contracts/accounts.ts';
 import { errorTexts } from '#web/copy/errors.ts';
 import { copy } from '#web/copy/ui.ts';
 import { Button, Dialog, ErrorTextsProvider, Form, FormField, Input, Select, useZodForm } from '#web/ui/index.ts';
 import { useInvite } from './queries.ts';
 
-const roleOptions = ROLLEN.map((role) => ({ value: role, label: copy.accounts.roles[role] }));
+const roleOptions = ROLLEN.map((role) => ({ value: role, label: copy.accounts.roleName(role) }));
 
 // In dit formulier betekent ALREADY_EXISTS: dit e-mailadres heeft al een account (spec accountbeheer).
 const inviteErrorTexts = { ...errorTexts, ALREADY_EXISTS: copy.inviteDialog.exists };
@@ -19,7 +18,7 @@ interface InviteDialogProps {
 function InviteForm({ onDone, onInvited }: { onDone: () => void; onInvited: (email: string) => void }) {
   const invite = useInvite();
   const form = useZodForm(inviteInput, { naam: '', email: '', rol: 'user' });
-  const submit = async (values: { naam: string; email: string; rol: Role }) => {
+  const submit = async (values: { naam: string; email: string; rol: string }) => {
     await invite.mutateAsync(values);
     onInvited(values.email);
     onDone();

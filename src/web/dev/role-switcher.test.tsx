@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from '@tanstack/react-router';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, test } from 'vitest';
-import { ROLES } from '#core/shared/can.ts';
+import { roles } from '#shared/roles.ts';
 import { roleLabels } from '#web/copy/ui.ts';
 import { meQuery } from '#web/lib/session.ts';
 import { DevRoleSwitcher } from './role-switcher.tsx';
@@ -34,10 +34,16 @@ describe('DevRoleSwitcher', () => {
   test('open: een knop per rol uit ROLES, met de naam uit roleLabels; de huidige rol is gemarkeerd', async () => {
     fireEvent.click(await show('admin'));
 
-    const buttons = ROLES.map((role) => screen.getByRole('button', { name: roleLabels[role] }));
-    expect(buttons).toHaveLength(ROLES.length);
+    const labels = new Map(Object.entries(roleLabels));
+    const label = (role: string) => {
+      const naam = labels.get(role);
+      if (naam === undefined) throw new Error(`geen label voor rol ${role}`);
+      return naam;
+    };
+    const buttons = roles.names.map((role) => screen.getByRole('button', { name: label(role) }));
+    expect(buttons).toHaveLength(roles.names.length);
     expect(buttons.map((button) => button.getAttribute('aria-pressed'))).toStrictEqual(
-      ROLES.map((role) => String(role === 'admin')),
+      roles.names.map((role) => String(role === 'admin')),
     );
     expect(document.activeElement).toBe(buttons[0]);
   });
