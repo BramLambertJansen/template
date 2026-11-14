@@ -55,7 +55,7 @@ de PR, en blijft. Van dit besluit gelden nog de vaste lijst (punt 1), de zelflad
 - **Zelfladende bestanden in `sandbox.filesystem.denyWrite`.** Sterker dan een tekstregel, maar git draait in de sandbox:
   elke `checkout`, `pull` of `merge origin/main` die zo'n bestand meeneemt, faalt halverwege. In `.git` schrijft git zelf
   (`fetch`, `push -u`, `lefthook install`). Daarom de tekstregel van punt 2; 0082 koos dit later toch voor een deel
-  van de paden; inmiddels is `denyWrite` weer leeg (0091 punt 4).
+  van de paden; inmiddels is `denyWrite` weer leeg (0083 punt 1, 0091 punt 4).
 - **De padtoets vooraf weghalen en achteraf toetsen.** Het oorspronkelijke besluit; vervallen met de toets op effect (0091).
 
 ## Gevolgen
