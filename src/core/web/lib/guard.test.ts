@@ -1,11 +1,12 @@
 import { isRedirect } from '@tanstack/react-router';
 import { describe, expect, test } from 'vitest';
 import { definePermissions, type CanActor } from '../../shared/can.ts';
+import { baseRoles } from '../../shared/roles.ts';
 import { ApiError } from './api-client.ts';
 import { createGuard, ForbiddenError } from './guard.ts';
 
 // De can()-guard van een schermroute (framework §5): dezelfde beslissing als de API.
-const permissions = definePermissions({
+const permissions = definePermissions(baseRoles, {
   'notes:read': { roles: ['user', 'admin'] },
   'beheer:read': { roles: ['admin'] },
 });

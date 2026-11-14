@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { defineAuditActions } from '../../shared/audit.ts';
 import { definePermissions, type Role, type SessionStrength } from '../../shared/can.ts';
+import { baseRoles } from '../../shared/roles.ts';
 import { createContracts } from '../../shared/contract.ts';
 import { defineErrorCodes } from '../../shared/errors.ts';
 import { unsafeCast } from '../../shared/unsafe-cast.ts';
@@ -11,7 +12,7 @@ import { createRouteKit, type RouteDef } from './kit.ts';
 import { UserId } from '../../shared/ids.ts';
 
 // Een app in het klein, zonder database: nep-sessie en nep-withUser waarvan tx.execute de rol teruggeeft.
-export const permissions = definePermissions({
+export const permissions = definePermissions(baseRoles, {
   'notes:read': { roles: ['user', 'admin'] },
   'notes:admin': { roles: ['admin'] },
 });

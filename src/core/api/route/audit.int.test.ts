@@ -2,6 +2,7 @@ import { describe, expect, expectTypeOf, test } from 'vitest';
 import { z } from 'zod';
 import { defineAuditActions, type AuditAction, type AuditDetails } from '../../shared/audit.ts';
 import { definePermissions } from '../../shared/can.ts';
+import { baseRoles } from '../../shared/roles.ts';
 import { createContracts } from '../../shared/contract.ts';
 import { createRouteKit, isRouteDef, type RouteContext } from './kit.ts';
 
@@ -11,7 +12,7 @@ import { createRouteKit, isRouteDef, type RouteContext } from './kit.ts';
 const audit = defineAuditActions({
   'note.archive': { target: 'note', details: z.object({ reason: z.string() }) },
 });
-const permissions = definePermissions({ 'notes:write': { roles: ['user', 'admin'] } });
+const permissions = definePermissions(baseRoles, { 'notes:write': { roles: ['user', 'admin'] } });
 const { defineContract } = createContracts(permissions);
 
 describe('createRouteKit met de auditacties van een app', () => {

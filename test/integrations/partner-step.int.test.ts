@@ -17,6 +17,7 @@ import { startFakePartner, type FakePartner, type FakeResponse } from '../../src
 import { createRouteKit } from '../../src/core/api/route/kit.ts';
 import { defineAuditActions } from '../../src/core/shared/audit.ts';
 import { definePermissions, type Role, type SessionStrength } from '../../src/core/shared/can.ts';
+import { baseRoles } from '../../src/core/shared/roles.ts';
 import { createContracts } from '../../src/core/shared/contract.ts';
 import { UserId } from '../../src/core/shared/ids.ts';
 import { RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_SECONDS, type RateLimits } from '../../src/core/shared/limits.ts';
@@ -167,7 +168,7 @@ const services: Services = {
     }),
 };
 
-const permissions = definePermissions({ 'partner:read': { roles: ['admin'] } });
+const permissions = definePermissions(baseRoles, { 'partner:read': { roles: ['admin'] } });
 type Permission = (typeof permissions.names)[number];
 const audit = defineAuditActions({ 'partner.read': { target: 'partner', details: z.object({ id: z.string() }) } });
 const { defineContract } = createContracts(permissions);

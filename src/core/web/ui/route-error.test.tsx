@@ -9,6 +9,7 @@ import {
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, test } from 'vitest';
 import { definePermissions } from '../../shared/can.ts';
+import { baseRoles } from '../../shared/roles.ts';
 import { ApiError } from '../lib/api-client.ts';
 import { createGuard } from '../lib/guard.ts';
 import { ErrorTextsProvider } from './error-texts.tsx';
@@ -17,7 +18,7 @@ import { NotFound, RouteError } from './route-error.tsx';
 afterEach(cleanup);
 
 // Een router in het klein: guard in beforeLoad, ErrorBoundary en "niet gevonden" als standaard voor elke route.
-const permissions = definePermissions({ 'beheer:read': { roles: ['admin'] } });
+const permissions = definePermissions(baseRoles, { 'beheer:read': { roles: ['admin'] } });
 const guard = createGuard({
   permissions,
   loadActor: () => Promise.resolve({ role: 'user', sessionStrength: 'password' }),

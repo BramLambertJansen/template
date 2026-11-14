@@ -14,6 +14,7 @@ import { startFakePartner, type FakePartner } from '../../src/core/api/outbound/
 import { createRouteKit } from '../../src/core/api/route/kit.ts';
 import { defineAuditActions } from '../../src/core/shared/audit.ts';
 import { definePermissions } from '../../src/core/shared/can.ts';
+import { baseRoles } from '../../src/core/shared/roles.ts';
 import { createContracts } from '../../src/core/shared/contract.ts';
 import { required } from '../auth/harness.ts';
 
@@ -67,7 +68,7 @@ afterEach(async () => {
   await db.rollback();
 });
 
-const permissions = definePermissions({ 'notes:write': { roles: ['user', 'admin'] } });
+const permissions = definePermissions(baseRoles, { 'notes:write': { roles: ['user', 'admin'] } });
 const { defineContract } = createContracts(permissions);
 const { defineRoute } = createRouteKit({ permissions, audit: defineAuditActions({}) });
 const contractFor = (path: `/${string}`) =>
