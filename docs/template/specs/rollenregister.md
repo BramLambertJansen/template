@@ -1,5 +1,5 @@
 ---
-status: voorstel
+status: goedgekeurd
 namespace: rollenregister
 ---
 
@@ -88,8 +88,10 @@ Meer rollen per account; hernoemen; opstartcontrole; ST-17.
 
 ## Open vragen
 
-- **OV-1**: Rollen: (a) vaste `user`/`admin`, de app voegt toe; (b) vrij. Aanbeveling: (a): `admin-create` en de nooduitgang hangen aan `admin`.
-- **OV-2**: Opstartcontrole register tegen `app.roles`? Aanbeveling: nee, mits `test:db` verplicht is (anders extra export, R-LAAG-06).
-- **OV-3**: `app.is_mfa_admin()` hernoemen? Aanbeveling: nee.
-- **OV-4**: Audit bij `register_role`/`unregister_role`? Aanbeveling: nee; alleen via gereviewde migratie.
-- **OV-5**: Eén PR of twee? Aanbeveling: één (R-WERK-07), databasecommit eerst.
+Geen. Besloten door de eigenaar op 2026-11-14:
+
+- **OV-1**: vaste `user`/`admin`, de app voegt rollen toe.
+- **OV-2**: geen opstartcontrole; `test:db` is een verplichte check.
+- **OV-3**: `app.is_mfa_admin()` houdt zijn naam.
+- **OV-4**: geen auditregel bij `register_role`/`unregister_role`.
+- **OV-5**: één PR, databasecommit eerst.
