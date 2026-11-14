@@ -55,7 +55,8 @@ Drie lagen van de bewaking zijn elk apart verdedigbaar, maar geven samen meer va
    zou lezen. Het rolhek houdt `.git/**` vooraf dicht.
    Het restrisico, benoemd en aanvaard: (a) tussen het planten en de eerstvolgende hook kan het git van Claude Code zelf
    (bij start, hervatten of compacteren) de geplante config lezen; wat die versie daarvan onschadelijk maakt, is alleen
-   gemeten in `claude -p` en kan per versie verschillen; (b) het rolhek vooraf ziet alleen een letterlijk pad, en sinds 0091 toetst niets achteraf; (d) in een worktree is `.git` een bestand, daar doet de controle
+   gemeten in `claude -p` en kan per versie verschillen; (b) het rolhek vooraf ziet alleen een letterlijk pad, en sinds 0091 toetst niets achteraf;
+   (c) in een worktree is `.git` een bestand, daar doet de controle
    niets en hangt de bescherming van het `commondir` van de worktree af van de alleen-lezen koppeling die Claude Code zelf
    maakt. Dat is minder dan het masker beloofde, en meer dan het masker gaf: in een worktree, waar het masker iedereen heen
    dwong, was de hele `.git` schrijfbaar.
@@ -71,7 +72,7 @@ Drie lagen van de bewaking zijn elk apart verdedigbaar, maar geven samen meer va
    dubbele aanhalingstekens (`$` en backtick tussen dubbele aanhalingstekens blijven tellen), en een patroon dat geen
    geldige klasse is, is geen glob (bash neemt het letterlijk) en geeft geen interne fout. Een woord dat met `$TMPDIR/`
    begint, is letterlijk, zoals de leeslijst al doet. De lijst van aanvaarde valse positieven krimpt mee.
-4. *(vervallen: de bouw-PR's zijn gemerged)*
+4. *(vervallen: de drie bouw-PR's zijn gemerged, de effecttoets uit punt 2 is daarna weggehaald, zie 0091)*
 
 ## Alternatieven
 

@@ -11,7 +11,7 @@ Herzien: 2026-11-14: ingekort tot wat nog geldt na ADR 0091; de puntnummers zijn
 Wijzigt [0066](0066-schrijfgrens-op-effect.md) punt 3 ("de toets vooraf blijft"), de buitenscope "de hoofdsessie als dader"
 van spec rolhek-effect (OV-1) en in spec rolhek-lezen AC-2 en AC-5 het `--output`-verbod (voortaan op effect); vult
 [0045](0045-railwerk.md) aan. Drempel: A3 (een check vooraf vervalt; de controle verschuift naar achteraf) en A4. Uitwerking:
-[spec](../specs/rolhek-vooraf-krimp.md).
+[spec](../specs/rolhek-vooraf-krimp.md). De verschuiving naar achteraf is teruggedraaid (0091).
 
 ## Context
 
@@ -48,14 +48,14 @@ de PR, en blijft. Van dit besluit gelden nog de vaste lijst (punt 1), de zelflad
 4. *(vervallen, zie 0091 punt 1)* Er is geen toets op effect meer, ook niet voor de hoofdsessie.
 5. **Het corpus blijft.** Elk testgeval dat een Bash-commando op een pad laat weigeren, vragen, melden of doorlaten, is een
    rij in één corpus (`test/hooks/rolhek-padcorpus-vooraf.test.ts`); het toetst nu de beslissing vooraf.
-6. *(vervallen, zie 0091 punt 3)* De schaduwmodus en de meetreeks zijn met de toets op effect weg.
+6. *(vervallen, zie 0091 punt 1 en 3)* De schaduwmodus en de meetreeks zijn met de toets op effect weg.
 
 ## Alternatieven
 
 - **Zelfladende bestanden in `sandbox.filesystem.denyWrite`.** Sterker dan een tekstregel, maar git draait in de sandbox:
   elke `checkout`, `pull` of `merge origin/main` die zo'n bestand meeneemt, faalt halverwege. In `.git` schrijft git zelf
-  (`fetch`, `push -u`, `lefthook install`). Daarom de tekstregel van punt 2; 0082 heeft dit voor een deel van de paden later
-  toch gekozen.
+  (`fetch`, `push -u`, `lefthook install`). Daarom de tekstregel van punt 2; 0082 koos dit later toch voor een deel
+  van de paden; inmiddels is `denyWrite` weer leeg (0091 punt 4).
 - **De padtoets vooraf weghalen en achteraf toetsen.** Het oorspronkelijke besluit; vervallen met de toets op effect (0091).
 
 ## Gevolgen

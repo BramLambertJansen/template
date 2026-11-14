@@ -35,8 +35,8 @@ tot stand komt (merge is acceptatie, drempel, taakmandaat, CI-lus, merge- en for
 
 **Rolhek en hooks**
 
-1. **Eén rolhek** (was 0011 punt 1). `.claude/gates.json` is de enige bron voor beschermde paden, testpaden, goedkeurders en
-   schrijfrecht per rol (de padtabel, 0079). `check-docs` vergelijkt `CODEOWNERS` en `ask` ermee (0089 punt 3).
+1. **Eén rolhek** (was 0011 punt 1). `.claude/gates.json` is de enige bron voor beschermde paden, testpaden, `jsonGates`
+   (`package.json` → `scripts`), goedkeurders en schrijfrecht per rol (de padtabel, 0079). `check-docs` vergelijkt `CODEOWNERS` en `ask` ermee (0089 punt 3).
 2. **Hooks zijn gates** (was 0011 punt 2 en 11). Elke hook heeft een tabeltest met echte stdin-payloads en verwachte exitcode,
    inclusief bekende omzeilingen. Een rail-fix begint met een test die op de oude code faalt.
 3. **Hooks draaien van `main`** (was 0033 punt 1; correctie op de plek uit 0011). De broncode staat in `rails/hooks/`;
@@ -97,11 +97,12 @@ tot stand komt (merge is acceptatie, drempel, taakmandaat, CI-lus, merge- en for
 19. **De GitHub App.** Geen `workflows`-, `administration`- of `secrets`-recht; een goedkeuring door de App telt niet; de
     sleutel staat buiten de repo en is nooit leesbaar in de sandbox. De rechten staan in 0089 punt 2.
 20. *(vervallen, zie 0089 punt 5)*
-21. *(vervallen, zie 0046 punt 2 en R-CI-05)*
+21. *(vervallen, zie R-CI-05)* De link achter de statuswaarde staat in punt 22.
 22. **Strikte statusregel** (was 0031 besluit 4). Is de statusregel van een ADR nieuw of gewijzigd, dan staat achter de
     statuswaarde alleen een datum `(JJJJ-MM-DD)`, PR-nummers `#<nr>` en links naar bestaande ADR's met alleen het nummer als
-    tekst, gescheiden door `, ` of ` — `. Ongewijzigde statusregels blijven geldig. Specs vallen erbuiten. Het rolhek toetst
-    dit lokaal; in CI toetst niets het meer (0089 punt 5).
+    tekst, gescheiden door `, ` of ` — `. Ongewijzigde statusregels blijven geldig. Specs vallen erbuiten. Dit is een
+    afspraak die de reviewer toetst (0089 punt 8): de vorm staat in `statusregelOvertreding`
+    (`rails/hooks/lib/document-state.mjs`), maar geen hook of check roept die aan.
 23. **`pr:verify` in een agent-worktree** (was 0031 besluit 5). Alleen ongetrackte bestanden onder `werkmapNegeer` (exacte paden
     of mapvoorvoegsels onder `.claude/`, gelezen uit `main`) tellen niet als vuile werkmap; een getrackte wijziging blijft
     weigeren. `.mcp.json` en `.claude/commands/` staan er niet in: dat beslist de app.
