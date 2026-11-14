@@ -1,7 +1,7 @@
 import type { Auth } from '../auth/auth.ts';
 import type { DevLogin } from '../http/create-app.ts';
-import { baseRoles, type Roles } from '../../shared/roles.ts';
-import { SEED_ACCOUNTS, SEED_ADMIN_TOTP_SLEUTEL, SEED_DEMO_WACHTWOORD, type SeedAccounts } from './seed-accounts.ts';
+import type { Roles } from '../../shared/roles.ts';
+import { SEED_ADMIN_TOTP_SLEUTEL, SEED_DEMO_WACHTWOORD, type SeedAccount, type SeedAccounts } from './seed-accounts.ts';
 import { totpCode } from './totp.ts';
 
 // Dev-login (spec accountbeheer, spec rollenregister, ADR 0043): logt echt in via Better Auth als het seed-account van de rol,
@@ -61,14 +61,9 @@ export interface DevLoginConfig<Name extends string> {
   readonly seedAccounts: SeedAccounts<Name>;
 }
 
-export function createDevLogin<Name extends string>(steps: DevAuthSteps, config: DevLoginConfig<Name>): DevLogin;
-// TIJDELIJK (rollenregister fase 2): weg zodra de bestaande tests zijn omgezet. Zonder register: het standaardregister.
-export function createDevLogin(steps: DevAuthSteps): DevLogin;
-export function createDevLogin(
-  steps: DevAuthSteps,
-  config: DevLoginConfig<string> = { roles: baseRoles, seedAccounts: SEED_ACCOUNTS },
-): DevLogin {
-  const { roles, seedAccounts } = config;
+export function createDevLogin<Name extends string>(steps: DevAuthSteps, config: DevLoginConfig<Name>): DevLogin {
+  const roles: Roles = config.roles;
+  const seedAccounts: Readonly<Record<string, SeedAccount | undefined>> = config.seedAccounts;
   return async (requested, incoming) => {
     const role = roles.parse(requested);
     const account = role === null ? undefined : seedAccounts[role];

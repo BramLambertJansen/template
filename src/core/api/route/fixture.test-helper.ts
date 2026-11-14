@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { defineAuditActions } from '../../shared/audit.ts';
-import { definePermissions, type Role, type SessionStrength } from '../../shared/can.ts';
-import { baseRoles } from '../../shared/roles.ts';
+import { definePermissions, type SessionStrength } from '../../shared/can.ts';
+import { baseRoles, type BaseRole as Role } from '../../shared/roles.ts';
 import { createContracts } from '../../shared/contract.ts';
 import { defineErrorCodes } from '../../shared/errors.ts';
 import { unsafeCast } from '../../shared/unsafe-cast.ts';

@@ -1,5 +1,3 @@
-import type { BaseRole } from '../../shared/roles.ts';
-
 // Vaste lokale waarden voor de seed-accounts (spec accountbeheer: "altijd iemand binnen"). Alleen voor APP_ENV=local:
 // scripts/seed.mjs weigert elders, en de dev-rolwisselaar bestaat buiten local niet. Demo-waarden, bewust in de repo; nergens
 // anders geldig. De accounts zelf (één per rol van het register) levert de app: src/api/dev/seed-accounts.ts (spec
@@ -18,10 +16,3 @@ export interface SeedAccount {
 // Eén account per rol (spec accountbeheer: één account heeft één rol). De app typt haar tabel als SeedAccounts<Role>: een rol
 // in het register zonder seed-account is een typefout, zodat de dev-rolwisselaar elke rol kan tonen.
 export type SeedAccounts<Name extends string> = Readonly<Record<Name, SeedAccount>>;
-
-// TIJDELIJK (rollenregister fase 2): weg zodra de bestaande tests zijn omgezet. De seed-accounts van de app staan in
-// src/api/dev/seed-accounts.ts; dit zijn alleen die van het standaardregister, voor createDevLogin(steps) zonder register.
-export const SEED_ACCOUNTS = {
-  user: { email: 'gebruiker@template.test', name: 'Lokale Gebruiker' },
-  admin: { email: 'admin@template.test', name: 'Lokale Beheerder' },
-} as const satisfies SeedAccounts<BaseRole>;

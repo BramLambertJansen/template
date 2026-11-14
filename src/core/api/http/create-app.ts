@@ -16,7 +16,7 @@ import type { AuthGateway, SessionInfo } from '../auth/auth.ts';
 import type { WithUser } from '../db/types.ts';
 import { AppError, statusFor } from '../errors.ts';
 import { z } from 'zod';
-import { baseRoles, type Roles } from '../../shared/roles.ts';
+import type { Roles } from '../../shared/roles.ts';
 import { rateLimitCategory, type Contract } from '../../shared/contract.ts';
 import { requestLog, timeDatabase, type RequestLog } from '../obs/request-log.ts';
 import { logUnexpectedError } from './safe-error-log.ts';
@@ -223,9 +223,8 @@ export function createApp<Services>(config: BaseConfig<Services> & { readonly se
 
   const { devLogin } = config;
   if (devLogin !== undefined) {
-    // TIJDELIJK (rollenregister fase 2): weg zodra de bestaande tests zijn omgezet. Zonder `roles` geldt het standaardregister;
-    // daarna weigert createApp een devLogin zonder register bij opstart.
-    const devLoginInput = z.object({ rol: z.enum((config.roles ?? baseRoles).names) }).strict();
+    if (config.roles === undefined) throw new Error('createApp: devLogin vraagt roles (het rollenregister van de app)');
+    const devLoginInput = z.object({ rol: z.enum(config.roles.names) }).strict();
     app.post('/dev/login-as', async (c) => {
       const parsed = devLoginInput.safeParse(await c.req.json().catch(() => null));
       if (!parsed.success) throw new AppError('VALIDATION');

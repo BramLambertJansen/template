@@ -1,6 +1,6 @@
 import { definePermissions } from '#core/shared/can.ts';
-// TIJDELIJK (rollenregister fase 2): via de alias en niet './roles.ts', zolang test/rails/new-resource-lijst.test.ts dit
-// bestand zonder src/shared/roles.ts naar een tijdelijke map kopieert; daarna een relatieve import.
+// Via de alias en niet './roles.ts': test/rails/new-resource-lijst.test.ts kopieert dit bestand zonder src/shared/roles.ts
+// naar een tijdelijke map.
 import { roles } from '#shared/roles.ts';
 
 // Permissietabel van de app (spec accountbeheer) over het rollenregister van de app (src/shared/roles.ts). Core voegt 'app.use'

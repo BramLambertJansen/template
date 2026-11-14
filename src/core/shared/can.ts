@@ -1,4 +1,4 @@
-import { baseRoles, type BaseRole, type Roles } from './roles.ts';
+import type { Roles } from './roles.ts';
 
 // Rechten (framework §6, ADR 0040): één functie voor API en frontend; de API blijft de echte controle, RLS de tweede laag.
 // De app levert het rollenregister (src/shared/roles.ts) en de tabel (src/shared/permissions.ts). Core voegt 'app.use' toe
@@ -6,10 +6,6 @@ import { baseRoles, type BaseRole, type Roles } from './roles.ts';
 // rol een MFA-sessie. De app kan dat niet uitzetten; de RLS-helper app.is_mfa_admin() hanteert dezelfde regel. Een rol buiten
 // het register (alleen in de database) is FORBIDDEN op elke permissie.
 export type SessionStrength = 'password' | 'mfa';
-
-// TIJDELIJK (rollenregister fase 2): weg zodra de bestaande tests zijn omgezet. De rollen van een app staan in haar register
-// (`Role` uit src/shared/roles.ts); dit is alleen het standaardregister.
-export type Role = BaseRole;
 
 export interface CanActor {
   // De rol zoals de database hem geeft; het register beslist of hij bestaat.
@@ -37,10 +33,6 @@ export interface Permissions<Permission extends string> {
 }
 
 type Table = Record<string, PermissionRule>;
-
-function isRoles(value: object): value is Roles {
-  return 'isBeheer' in value && typeof value.isBeheer === 'function' && 'names' in value && Array.isArray(value.names);
-}
 
 function assertTable(roles: Roles, appTable: Table): void {
   for (const [name, rule] of Object.entries(appTable)) {
@@ -70,11 +62,6 @@ function build(roles: Roles, appTable: Table): Permissions<string> {
 export function definePermissions<const T extends Table>(
   roles: Roles,
   appTable: T,
-): Permissions<CorePermission | (keyof T & string)>;
-// TIJDELIJK (rollenregister fase 2): weg zodra de bestaande tests zijn omgezet. De oude vorm zonder register gebruikt het
-// standaardregister (user, admin).
-export function definePermissions<const T extends Table>(appTable: T): Permissions<CorePermission | (keyof T & string)>;
-export function definePermissions(first: Roles | Table, appTable?: Table): Permissions<string> {
-  if (isRoles(first)) return build(first, appTable ?? {});
-  return build(baseRoles, first);
+): Permissions<CorePermission | (keyof T & string)> {
+  return build(roles, appTable);
 }

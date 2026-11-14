@@ -2,6 +2,16 @@ import { describe, expect, test } from 'vitest';
 import { createDevLogin, type DevAuthSteps } from './login-as.ts';
 import { SEED_ADMIN_TOTP_SLEUTEL, SEED_DEMO_WACHTWOORD } from './seed-accounts.ts';
 import { totpCode } from './totp.ts';
+import { baseRoles } from '../../shared/roles.ts';
+
+// Het register en de seed-accounts die de app meegeeft (spec rollenregister); hier het standaardregister.
+const config = {
+  roles: baseRoles,
+  seedAccounts: {
+    user: { email: 'gebruiker@template.test', name: 'Lokale Gebruiker' },
+    admin: { email: 'admin@template.test', name: 'Lokale Beheerder' },
+  },
+};
 
 // De stappen van Better Auth nagebootst, om de volgorde, de cookies en de TOTP-code te zien. Tegen de echte Better Auth
 // (ook: geen rate limit bij snel wisselen): test/auth/dev-login.int.test.ts.
@@ -24,7 +34,7 @@ function fakeSteps(fail = false) {
 describe('createDevLogin', () => {
   test('user: inloggen met het seed-account en het demo-wachtwoord, zonder de oude cookies; de cookies gaan naar de browser', async () => {
     const { steps, calls } = fakeSteps();
-    const cookies = await createDevLogin(steps)('user', new Headers({ cookie: 'oud=1' }));
+    const cookies = await createDevLogin(steps, config)('user', new Headers({ cookie: 'oud=1' }));
 
     expect(calls).toStrictEqual([
       {
@@ -38,7 +48,7 @@ describe('createDevLogin', () => {
 
   test('admin: daarna de TOTP-stap met de code uit het vaste lokale geheim en het cookie van stap één', async () => {
     const { steps, calls } = fakeSteps();
-    const cookies = await createDevLogin(steps)('admin', new Headers());
+    const cookies = await createDevLogin(steps, config)('admin', new Headers());
 
     expect(calls.map((call) => call.step)).toStrictEqual(['signIn', 'verifyTotp']);
     expect(calls[1]?.cookie).toBe('__Host-auth.two_factor=tf1');
@@ -49,7 +59,7 @@ describe('createDevLogin', () => {
   test('een geweigerde stap faalt hard (bijv. zonder seed)', async () => {
     const { steps } = fakeSteps(true);
 
-    await expect(createDevLogin(steps)('user', new Headers())).rejects.toThrow('draait de seed?');
+    await expect(createDevLogin(steps, config)('user', new Headers())).rejects.toThrow('draait de seed?');
   });
 });
 
