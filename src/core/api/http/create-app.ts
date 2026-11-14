@@ -168,6 +168,21 @@ function routeHandler<Services>(
   };
 }
 
+// POST /api/dev/login-as (ADR 0043): de rol wordt gevalideerd tegen het register van de app; zonder register weigert
+// createApp bij opstart.
+function devLoginHandler(devLogin: DevLogin, roles: Roles | undefined) {
+  if (roles === undefined) throw new Error('createApp: devLogin vraagt roles (het rollenregister van de app)');
+  const input = z.object({ rol: z.enum(roles.names) }).strict();
+  return async (c: Context) => {
+    const parsed = input.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) throw new AppError('VALIDATION');
+    for (const cookie of await devLogin(parsed.data.rol, c.req.raw.headers)) {
+      c.header('set-cookie', cookie, { append: true });
+    }
+    return c.body(null, 204);
+  };
+}
+
 // Vaste volgorde (framework §6): requestId, request-log (als log is meegegeven), secureHeaders, CSRF, bodyLimit, routes; één onError en notFound met alleen
 // `{ code, requestId }`. Health (liveness) en ready (readiness) zijn de publieke uitzonderingen uit framework §3.
 export function createApp(): App;
@@ -221,19 +236,7 @@ export function createApp<Services>(config: BaseConfig<Services> & { readonly se
     app.get('/ready', async (c) => ((await ready()) ? c.json({ ok: true }) : c.json({ ok: false }, 503)));
   }
 
-  const { devLogin } = config;
-  if (devLogin !== undefined) {
-    if (config.roles === undefined) throw new Error('createApp: devLogin vraagt roles (het rollenregister van de app)');
-    const devLoginInput = z.object({ rol: z.enum(config.roles.names) }).strict();
-    app.post('/dev/login-as', async (c) => {
-      const parsed = devLoginInput.safeParse(await c.req.json().catch(() => null));
-      if (!parsed.success) throw new AppError('VALIDATION');
-      for (const cookie of await devLogin(parsed.data.rol, c.req.raw.headers)) {
-        c.header('set-cookie', cookie, { append: true });
-      }
-      return c.body(null, 204);
-    });
-  }
+  if (config.devLogin !== undefined) app.post('/dev/login-as', devLoginHandler(config.devLogin, config.roles));
   for (const route of routes)
     app.on(route.contract.method, route.contract.path, routeHandler(route, config, rateLimits));
   return { fetch: async (request) => app.fetch(request) };
