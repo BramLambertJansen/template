@@ -162,7 +162,7 @@ export function parseEnv(source: Readonly<Record<string, string | undefined>>): 
   };
 }
 
-// Leest en controleert process.env; alleen bij opstart aanroepen (server.ts, db/index.ts), niet per request.
+// Leest en controleert process.env; alleen bij opstart aanroepen (runServer in server.ts, db/index.ts), niet per request.
 export function env(): Env {
   return parseEnv(process.env);
 }
