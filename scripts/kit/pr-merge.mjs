@@ -2,12 +2,12 @@
 // wordt via de REST-API van GitHub gelezen, niet uit de lokale `origin/main`; elke ontbrekende voorwaarde geeft een eigen
 // regel en exit 1 zonder schrijfactie. Pas als alles klopt: squash-merge met de head-SHA als voorwaarde. Geen inhoudstoets:
 // wie een pad goedkeurt, bewaakt de ruleset op main met `.github/CODEOWNERS` (ADR 0089); blijft: de
-// modus `merge` uit `.claude/gates.json` op main, de verplichte checks op de head en een groene main. De leerpuntreden blijft (ADR 0078 punt 2).
+// modus `merge` uit `.claude/gates.json` op main, de verplichte checks op de head en een groene main. De beschrijving leest het niet: dat
+// de eigenaar merget bij `geen test:` of `meting:` in de sectie Leerpunt, is een afspraak (ADR 0078 punt 1 en 2, herzien in #696).
 import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
 import { gitText, readAuthority } from '../../rails/hooks/lib/authority-context.mjs';
 import { parseCheckRun } from './github-evidence.mjs';
-import { leerpuntMergeRedenen } from './leerpunt.mjs';
 import { checkProgress } from './pr-verify.mjs';
 
 const SHA = /^[0-9a-f]{40}$/;
@@ -138,9 +138,6 @@ export function beoordeelMerge(api, { repo, nummer, head }) {
       names: vereist,
       sha: mainSha,
     }),
-    // Leest de beschrijving op het moment van mergen: `geen test:` of `meting:` in de sectie Leerpunt merget de eigenaar
-    // (ADR 0078 punt 2, leerlus-bewijs AC-4).
-    ...leerpuntMergeRedenen(tekst(veld(pull, 'body'))).map((reden) => `${reden}: de eigenaar merget`),
   ];
   return { redenen };
 }

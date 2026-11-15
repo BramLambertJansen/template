@@ -576,8 +576,8 @@ er verandert ([ADR 0045](../template/adr/0045-railwerk.md) punt 21):
    als verwijzer, en een nummer dat alleen nog in het archief staat blijft bezet.
 2. **Verwijzing naar een later ADR**: een ADR-link achter de statuswaarde, met alleen het nummer als linktekst en het
    bestand ernaast als doel (zoals `0045` naar het bestand van ADR 0045). Geen record nodig; de eigenaar ziet het in de gate-PR.
-   Achter de statuswaarde mag verder alleen `(JJJJ-MM-DD)` en `#<nr>`, gescheiden door `, ` of ` — ` (punt 22,
-   `statusregelOvertreding` in `rails/hooks/lib/document-state.mjs`); anders is het een bevinding van de reviewer. Een ongewijzigde regel
+   Achter de statuswaarde mag verder alleen `(JJJJ-MM-DD)` en `#<nr>`, gescheiden door `, ` of ` — ` (ADR 0045
+   punt 22); anders is het een bevinding van de reviewer. Een ongewijzigde regel
    op main blijft geldig.
 
 Een niet-normatieve tekstcorrectie (taalfout, kapotte link) heeft geen eigen spoor meer: ze verdwijnt bij de volgende vervanging.

@@ -42,10 +42,20 @@ requests.
   het antwoord van `/api/health` letterlijk met `{"ok":true}` vergelijkt, leest voortaan `ok`; een app die in `buildApp`
   (`src/api/app.ts`) haar config uitpakt in plaats van doorgeeft (`...config`), geeft `build` zelf door aan `createApp`.
 
+### Opgelost
+
+- `pnpm pr:merge` las nog de sectie Leerpunt van de beschrijving en weigerde bij `geen test:` of `meting:`, terwijl ADR 0078
+  punt 1 en 2 (herzien in #696) en ADR 0089 punt 5 die toets lieten vervallen. Het script leest de beschrijving niet meer;
+  `leerpuntMergeRedenen` en `REDEN_ZONDER_TEST` in `scripts/kit/leerpunt.mjs` zijn weg. Dat de eigenaar merget bij een leerpunt
+  zonder test, blijft een afspraak.
+
 ### Verwijderd
 
 - Het blok `agentMerge` (`maxRegels`, `maxBytes`) uit `.claude/gates.json`: sinds 0.1.0 leest geen code het nog (ADR 0089 punt
   5). Wat verandert voor een app: haal het blok ook uit je eigen `.claude/gates.json`; laten staan kan geen kwaad.
+- `statusregelOvertreding` in `rails/hooks/lib/document-state.mjs` met de test `test/hooks/adr-statusregel.test.ts`: geen hook
+  of check riep de functie nog aan sinds de strikte statusregel een afspraak is die de reviewer toetst (ADR 0045 punt 22, ADR
+  0089 punt 8). De regel zelf blijft.
 
 ## [0.1.0] - 2026-11-15
 

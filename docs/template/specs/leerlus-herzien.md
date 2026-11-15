@@ -90,7 +90,8 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   bij een meting geen test. Tabeltest per geval.
 - **leerlus-herzien/AC-4** — Een regel met `bewijs meting:` geeft agent-merge `nee` met reden `leerpunt zonder test`, in de
   diff-guard en in `pr-merge.mjs` bij het mergen (dezelfde parser, zoals leerlus-bewijs AC-4); `bewijsPlan` zet dan ook
-  `zonderTest`.
+  `zonderTest`. Vervallen voor de diff-guard en het mergescript door ADR 0089 punt 5 (ADR 0078 Herzien #696): de eigenaar
+  merget volgens afspraak; `zonderTest` blijft.
 - **leerlus-herzien/AC-5** — `sluitOordeel` telt een gemergde PR met een regel `bewijs meting:` voor dat nummer als bewijs
   (al waar op de basis; regressietest).
 - **leerlus-herzien/AC-6** — De skill `opleveren` stap 8 krijgt het signaal uit ADR 0081 punt 4 als eigen zin na de
