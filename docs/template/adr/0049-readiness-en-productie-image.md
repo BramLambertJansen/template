@@ -2,7 +2,7 @@
 
 Status: geaccepteerd
 
-Herzien: 2026-11-15: punt 1: `GET /api/health` toont ook de templateversie en de build-SHA (eigenaarbesluit 2026-11-15, spec release-versie)
+Herzien: 2026-11-15 (#724): punt 1: `GET /api/health` toont ook de templateversie en de build-SHA (eigenaarbesluit 2026-11-15, spec release-versie)
 
 Herzien: 2026-11-14 (#712): punt 3 herschreven (eigenaarbesluit 2026-11-11): readiness hangt niet aan de jobs-verbinding
 

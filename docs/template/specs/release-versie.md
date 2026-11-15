@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd # #724
 namespace: release-versie
 ---
 
@@ -45,6 +45,8 @@ Geen schermen.
 
 ## Acceptatiecriteria
 
+Bestaande tests blijven groen; alleen de onder "Raakt ook" genoemde tests wijzigen (een voorwaarde voor de hele wijziging, geen eigen testbaar criterium).
+
 - **release-versie/AC-1**: `TEMPLATE_VERSION` is een semver-tekst en gelijk aan de nieuwste kop `## [x.y.z] - JJJJ-MM-DD` in `docs/template-changelog.md`; een test faalt bij verschil, bij een releasekop zonder datum en als `## [Unreleased]` ontbreekt of niet de eerste kop is.
 - **release-versie/AC-2**: `docs/template-changelog.md` bevat `## [Unreleased]` en `## [0.1.0] - 2026-11-15`. Dat elke regel die onder `[Unreleased]` in `CHANGELOG.md` stond nu onder `[0.1.0]` staat, is eenmalig bewijs in de PR (de verplaatsing in de diff, door de reviewer getoetst), geen blijvende test.
 - **release-versie/AC-3**: `CHANGELOG.md` in de hoofdmap van de template bevat alleen een kop en een verwijzing naar `docs/template-changelog.md` (de test legt vast dat er geen releasekop van de template in staat; hij geldt ook in een app, waar het bestand van de app is, en wordt nergens overgeslagen).
@@ -55,7 +57,6 @@ Geen schermen.
 - **release-versie/AC-8**: `composeServer` geeft `build` in `deps` aan `buildApp` als `env.buildSha` gezet is, en laat de sleutel anders weg; `buildApp` van de app geeft hem door aan `createApp` (een test op `src/api/app.ts` met `build: 'abc1234'` ziet hem terug op `/api/health`).
 - **release-versie/AC-9**: `scripts/check-image.sh` met de nagebootste docker en curl: slaagt bij `{"ok":true,"version":"<TEMPLATE_VERSION>"}` zonder `EXPECT_BUILD_SHA`; faalt bij een andere of ontbrekende `version`; faalt als `build` aanwezig is zonder `EXPECT_BUILD_SHA`; met `EXPECT_BUILD_SHA=abc1234` slaagt het alleen bij `"build":"abc1234"`. Dat de echte image met `--build-arg BUILD_SHA=<sha>` die waarde toont, is alleen in CI of bij de eigenaar te bewijzen en hoort bij de vervolg-PR.
 - **release-versie/AC-10**: Een PR die code wijzigt en `docs/template-changelog.md` bijwerkt, geeft geen docs-drift-waarschuwing (`test/rails/check-docs-drift-template-changelog.test.ts`; `check-docs-drift` zelf verandert niet, het telt alles onder `docs/` al als docs).
-- **release-versie/AC-11**: Bestaande tests blijven groen; alleen de onder "Raakt ook" genoemde tests wijzigen.
 
 ## Raakt ook
 
