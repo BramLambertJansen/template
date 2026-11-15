@@ -251,11 +251,12 @@ describe('de beheervlag verandert mee met het register', () => {
     await migrator.query("select app.register_role('eigenaar', false)");
     try {
       const eigenaar = await db.asUser('eigenaar', { sessionStrength: 'mfa' });
+      // Na elkaar, niet tegelijk: de testkit heeft één verbinding, en een geweigerde aanroep naast een lopende query laat
+      // die query in een afgebroken transactie vallen.
+      expect(await isMfaAdmin(eigenaar)).toBe(false);
       const assign = db.withUser(eigenaar.actor, async (tx) => {
         await tx.execute(sql`select app.assign_role(${eigenaar.actor.userId}, 'user')`);
       });
-
-      expect(await isMfaAdmin(eigenaar)).toBe(false);
       await expect(assign).rejects.toMatchObject({ code: 'FORBIDDEN' });
     } finally {
       await migrator.query("select app.register_role('eigenaar', true)");
