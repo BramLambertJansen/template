@@ -1,9 +1,12 @@
-// De tweede bouw van check:snapshot (spec template-update, AC-7): welke toegevoegde migraties zijn niet later dan de nieuwste
-// bestaande, en onder welke naam komen ze in de bouw op volgorde van binnenkomst. Dezelfde selectie als de volgorderegel in
-// check-migrations.mjs (op main tegen de eerste ouder van HEAD), maar zonder de uitzondering voor een templatemigratie: juist
-// de migratie die check:migrations doorlaat, moet bewezen worden. De template-ref wordt niet gelezen.
-// De nieuwe naam verschilt alleen in de versie: later dan elke versie in db/migrations, in de versievolgorde van de oudere
-// migraties onderling. Dit script wijzigt niets; scripts/runner.sh gen-volgorde hernoemt in de tijdelijke invoermap.
+// De tweede bouw van check:snapshot (spec template-update, AC-7): is er een toegevoegde migratie die niet later is dan de
+// nieuwste bestaande, onder welke namen komen de toegevoegde migraties dan in de bouw op volgorde van binnenkomst. De
+// aanleiding is dezelfde selectie als de volgorderegel in check-migrations.mjs (op main tegen de eerste ouder van HEAD), maar
+// zonder de uitzondering voor een templatemigratie: juist de migratie die check:migrations doorlaat, moet bewezen worden. De
+// template-ref wordt niet gelezen.
+// Productie heeft de bestaande migraties al en past daarna alle nieuwe toe op versievolgorde. Daarom krijgt ELKE toegevoegde
+// migratie een nieuwe naam, niet alleen de oudere: allemaal later dan elke versie in db/migrations, in hun onderlinge
+// versievolgorde. Zo blijft een latere toegevoegde migratie ná een oudere toegevoegde waar ze van afhangt. De naam verschilt
+// alleen in de versie. Dit script wijzigt niets; scripts/runner.sh gen-volgorde hernoemt in de tijdelijke invoermap.
 // CLI: per migratie één regel `<bestandsnaam> <nieuwe bestandsnaam>`, niets als er geen is. Is origin/main niet te lezen,
 // dan faalt het script: onleesbaar telt als fout.
 import { readdirSync } from 'node:fs';
@@ -27,19 +30,22 @@ function versie(naam) {
  * Een derde argument (de template-ref, zoals bij `migratieFouten`) mag meegegeven worden en wordt genegeerd.
  * @param {string} [root]
  * @param {string} [base]
- * @returns {Hernoeming[]} op versievolgorde van de oudere migraties
+ * @returns {Hernoeming[]} elke toegevoegde migratie, op versievolgorde; leeg als geen ervan ouder is dan een bestaande
  */
 export function volgordeHernoemingen(root = '.', base = BASE) {
   const punt = vergelijkingspunt(root, base);
   if (punt === undefined) throw new Error(baseOnleesbaar(base));
   if (punt.bestaand === undefined) return [];
   // Alleen bestanden direct in db/migrations met de vaste naamvorm: dbmate leest geen submappen.
-  const ouder = ouderToegevoegd(root, punt.bestaand)
-    .ouder.filter((pad) => path.posix.dirname(pad) === DIR)
-    .map((pad) => path.posix.basename(pad))
-    .filter((naam) => NAAM.test(naam))
-    .toSorted();
-  if (ouder.length === 0) return [];
+  const namen = (/** @type {readonly string[]} */ paden) =>
+    paden
+      .filter((pad) => path.posix.dirname(pad) === DIR)
+      .map((pad) => path.posix.basename(pad))
+      .filter((naam) => NAAM.test(naam))
+      .toSorted();
+  const selectie = ouderToegevoegd(root, punt.bestaand);
+  if (namen(selectie.ouder).length === 0) return [];
+  const ouder = namen(selectie.toegevoegd);
   const versies = readdirSync(path.join(root, DIR))
     .map(versie)
     .filter((getal) => getal !== undefined);

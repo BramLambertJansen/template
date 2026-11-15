@@ -23,8 +23,9 @@ if [[ "$fail" -ne 0 ]]; then
 fi
 
 # Tweede bouw (spec template-update, AC-7): is een toegevoegde migratie niet later dan de nieuwste bestaande, dan draait ze in
-# productie na die nieuwere en op een verse database ervoor. Het hulpscript noemt die migraties; alleen dan bouwt de runner het
-# schema nog eens op volgorde van binnenkomst (gen-volgorde hernoemt ze in zijn tijdelijke invoermap, nooit in de werkmap) en
+# productie na die nieuwere en op een verse database ervoor. Het hulpscript noemt dan alle toegevoegde migraties; alleen dan
+# bouwt de runner het schema nog eens op volgorde van binnenkomst (gen-volgorde zet ze in zijn tijdelijke invoermap, nooit in
+# de werkmap, in hun versievolgorde achter de bestaande) en
 # moet die dump gelijk zijn aan de eerste. Beide doelen schrijven naar .runner-output/gen: de eerste dump gaat eerst opzij.
 hernoemingen="$(node scripts/kit/migratie-volgorde.mjs)"
 if [[ -n "$hernoemingen" ]]; then
@@ -36,12 +37,12 @@ if [[ -n "$hernoemingen" ]]; then
   cp .runner-output/gen/schema.snapshot.stabiel.sql .runner-output/volgorde/versievolgorde.sql
   rm -rf .runner-output/gen
   if ! scripts/runner.sh gen-volgorde "$@" || [[ ! -f .runner-output/gen/schema.snapshot.sql ]]; then
-    echo "✗ check:snapshot: de bouw op volgorde van binnenkomst faalt (eerst de bestaande migraties, daarna $namen) → in productie faalt deze migratie na de nieuwere; $herstel." >&2
+    echo "✗ check:snapshot: de bouw op volgorde van binnenkomst faalt (eerst de bestaande migraties, daarna $namen) → in productie, waar de bestaande migraties al zijn toegepast, faalt een van deze migraties; $herstel." >&2
     exit 1
   fi
   grep -v -E "$ONSTABIEL" .runner-output/gen/schema.snapshot.sql > .runner-output/volgorde/binnenkomst.sql
   if ! diff -u .runner-output/volgorde/versievolgorde.sql .runner-output/volgorde/binnenkomst.sql; then
-    echo "✗ check:snapshot: op volgorde van binnenkomst (eerst de bestaande migraties, daarna $namen) ontstaat een ander schema dan op versievolgorde → deze migratie en een nieuwere raken hetzelfde object; $herstel." >&2
+    echo "✗ check:snapshot: op volgorde van binnenkomst (eerst de bestaande migraties, daarna $namen) ontstaat een ander schema dan op versievolgorde → een van deze migraties en een bestaande, nieuwere migratie raken hetzelfde object; $herstel." >&2
     exit 1
   fi
   echo "✓ check:snapshot: db/schema.snapshot.sql en src/api/db/schema.ts zijn gelijk aan de migraties, ook op volgorde van binnenkomst ($namen)"

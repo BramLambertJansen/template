@@ -17,8 +17,9 @@ Docker weigert dan de container te starten omdat de bronmap niet bestaat en niet
 ongewijzigd. `test-pgtap` faalt als `db/tests` geen tests bevat.
 
 Het doel `gen-volgorde` (`pnpm check:snapshot`, spec `template-update` AC-7) is `gen` met één stap extra na het kopiëren:
-de runner vraagt `scripts/kit/migratie-volgorde.mjs` (hostcode onder `scripts`, met een lege omgeving gestart) welke
-toegevoegde migraties ouder zijn dan een bestaande en hernoemt die in de kopie, nooit in de werkmap. Elke regel moet precies
+de runner vraagt `scripts/kit/migratie-volgorde.mjs` (hostcode onder `scripts`, met een lege omgeving gestart) om de nieuwe
+namen: is een toegevoegde migratie ouder dan een bestaande, dan krijgen alle toegevoegde migraties in de kopie, nooit in de
+werkmap, een versie na de bestaande, in hun versievolgorde (zo past productie ze toe). Elke regel moet precies
 twee kale bestandsnamen `<14 cijfers>_<naam>.sql` zijn, de bron een gewoon bestand in de kopie en het doel vrij; faalt het
 hulpscript, geeft het niets of een andere regel, dan stopt de runner (`rename_arrival_order` in `scripts/runner.sh`).
 

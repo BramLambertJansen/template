@@ -19,8 +19,8 @@ requests.
   migratie die ouder is dan een migratie op `main`, krijgt een nieuw tijdstempel.
 - De volgorde van een oudere templatemigratie wordt nu bewezen (spec `template-update`, AC-7): is een toegevoegde migratie
   niet later dan de nieuwste bestaande, dan bouwt `check:snapshot` het schema een tweede keer op volgorde van binnenkomst
-  (`scripts/runner.sh gen-volgorde` hernoemt die migraties in de tijdelijke invoermap naar een latere versie, nooit in de
-  werkmap; welke, zegt `scripts/kit/migratie-volgorde.mjs`) en moet die dump gelijk zijn aan de bouw op versievolgorde
+  (`scripts/runner.sh gen-volgorde` zet dan alle toegevoegde migraties in de tijdelijke invoermap, nooit in de werkmap, in
+  hun versievolgorde achter de bestaande, zoals productie ze toepast; de namen geeft `scripts/kit/migratie-volgorde.mjs`) en moet die dump gelijk zijn aan de bouw op versievolgorde
   (`scripts/check-snapshot.sh`). Verschilt het schema of faalt de tweede bouw, dan is de check rood met de namen van de
   migraties. Zonder zo'n migratie draait de tweede bouw niet. Wat verandert voor een app: `check:snapshot` leest `origin/main`
   (zoals `check:migrations`) en kan na een template-update rood worden op "volgorde van binnenkomst"; wat dan te doen staat in

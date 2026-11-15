@@ -45,7 +45,7 @@ case "$suite" in
   db) services=(test-pgtap runner) ;;
   ui) services=(ui-runner) ;;
   # Uitvoer naar .runner-output/gen; scripts/db-generate.sh zet die op zijn plek.
-  # gen-volgorde (scripts/check-snapshot.sh): dezelfde bouw, met de oudere toegevoegde migraties in de tijdelijke invoermap
+  # gen-volgorde (scripts/check-snapshot.sh): dezelfde bouw, met de toegevoegde migraties in de tijdelijke invoermap
   # hernoemd naar een latere versie (rename_arrival_order hieronder).
   gen|gen-volgorde) services=(gen-snapshot gen-schema) ;;
   *) echo "Gebruik: scripts/runner.sh db|ui|gen|gen-volgorde [--sta-wijzigingen-toe]" >&2; exit 2 ;;
@@ -213,7 +213,8 @@ arrival_order_failed() {
 }
 
 # gen-volgorde (spec template-update, AC-7): de bouw op volgorde van binnenkomst. scripts/kit/migratie-volgorde.mjs noemt
-# per toegevoegde migratie die niet later is dan de nieuwste bestaande één regel `<naam> <nieuwe naam>`; die bestanden
+# per toegevoegde migratie één regel `<naam> <nieuwe naam>`, zodra er een is die niet later is dan de nieuwste bestaande (alle
+# toegevoegde, want productie past ze na de bestaande toe op versievolgorde); die bestanden
 # krijgen alleen in de kopie ($RUNNER_INPUT_DIR), nooit in de werkmap, de latere versie. Het hulpscript is hostcode onder
 # scripts (HOST_FILES) en draait met een lege omgeving: geen NODE_OPTIONS of andere variabele van de aanroeper. Zijn
 # uitvoer komt uit namen in de werkmap en is dus invoer: elke regel moet precies twee kale bestandsnamen van de vaste vorm

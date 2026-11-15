@@ -130,16 +130,17 @@ function inTemplate(root, templateRef, pad) {
  * later zijn dan de nieuwste versie in `bestaand`. Ook gebruikt door migratie-volgorde.mjs (de tweede bouw van check:snapshot).
  * @param {string} root
  * @param {string} bestaand de commit met de bestaande migraties
- * @returns {{ nieuwste: string | undefined, ouder: string[] }} `ouder`: paden; leeg als `bestaand` geen migraties heeft
+ * @returns {{ nieuwste: string | undefined, ouder: string[], toegevoegd: string[] }} paden; `toegevoegd` is elke toegevoegde
+ *   migratie, `ouder` het deel dat niet later is dan `nieuwste`; beide leeg als `bestaand` geen migraties heeft
  */
 export function ouderToegevoegd(root, bestaand) {
   const nieuwste = nieuwsteVersie(root, bestaand);
-  if (nieuwste === undefined) return { nieuwste, ouder: [] };
-  const ouder = wijzigingenSinds(root, bestaand)
+  if (nieuwste === undefined) return { nieuwste, ouder: [], toegevoegd: [] };
+  const toegevoegd = wijzigingenSinds(root, bestaand)
     .filter(({ status }) => status === 'A')
-    .map(({ pad }) => pad)
-    .filter((pad) => (NAAM.exec(path.posix.basename(pad))?.[1] ?? '99999999999999') <= nieuwste);
-  return { nieuwste, ouder };
+    .map(({ pad }) => pad);
+  const ouder = toegevoegd.filter((pad) => (NAAM.exec(path.posix.basename(pad))?.[1] ?? '99999999999999') <= nieuwste);
+  return { nieuwste, ouder, toegevoegd };
 }
 
 /**

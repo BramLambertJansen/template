@@ -209,15 +209,19 @@ test('template-update/AC-7: twee oudere toegevoegde migraties worden beide herno
   expect(versie(vroeg.naar)).toBeLessThan(versie(tussen.naar));
 });
 
-test('template-update/AC-7: bij een oudere en een latere toegevoegde migratie wordt alleen de oudere hernoemd, achter de latere', async () => {
+// Productie heeft de bestaande migraties al en past daarna ALLE nieuwe toe op versievolgorde. Een latere toegevoegde migratie
+// kan van een oudere toegevoegde afhangen (de template maakt een tabel en wijzigt haar in een volgende migratie), dus beide
+// krijgen een nieuwe naam en de oudere blijft vóór de latere.
+test('template-update/AC-7: bij een oudere en een latere toegevoegde migratie worden beide hernoemd, de oudere vóór de latere', async () => {
   const root = werkRepo(false);
   voegToe(root, [TUSSEN, LATER]);
 
   const lijst = await hernoemingen(root, 'main');
 
-  expect(lijst).toHaveLength(1);
-  const { naar } = hernoemingVan(lijst, TUSSEN, hoogsteVersie(root));
-  expect(versie(naar)).toBeGreaterThan(versie(LATER));
+  expect(lijst).toHaveLength(2);
+  const tussen = hernoemingVan(lijst, TUSSEN, hoogsteVersie(root));
+  const later = hernoemingVan(lijst, LATER, hoogsteVersie(root));
+  expect(versie(tussen.naar)).toBeLessThan(versie(later.naar));
 });
 
 // Ontwerpkeuze: de uitzondering voor een templatemigratie in `check:migrations` laat deze migratie door; juist daarom moet de
@@ -281,7 +285,7 @@ test('template-update/AC-7: de werkmap blijft zoals ze was: de bestanden in db/m
 
   const lijst = await hernoemingen(root, 'main');
 
-  expect(lijst).toHaveLength(2);
+  expect(lijst).toHaveLength(3);
   expect(migratieNamen(root)).toStrictEqual(voor);
   expect(execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' })).toBe('');
 });
@@ -295,7 +299,7 @@ function cli(root: string): { status: number | null; stdout: string; stderr: str
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 
-test('template-update/AC-7: de CLI drukt per oudere toegevoegde migratie één regel "<naam> <nieuwe naam>" af', () => {
+test('template-update/AC-7: de CLI drukt, zodra er een oudere is, per toegevoegde migratie één regel "<naam> <nieuwe naam>" af', () => {
   const root = werkRepo(false);
   voegToe(root, [TUSSEN, VROEG, LATER]);
 
@@ -303,8 +307,8 @@ test('template-update/AC-7: de CLI drukt per oudere toegevoegde migratie één r
 
   expect(uitkomst.status).toBe(0);
   const regels = uitkomst.stdout.trimEnd().split('\n');
-  expect(regels).toHaveLength(2);
-  expect(regels.map((regel) => regel.split(' ')[0]).toSorted()).toStrictEqual([VROEG, TUSSEN]);
+  expect(regels).toHaveLength(3);
+  expect(regels.map((regel) => regel.split(' ')[0])).toStrictEqual([VROEG, TUSSEN, LATER]);
   for (const regel of regels) expect(regel).toMatch(/^\d{14}_[a-z0-9_]+\.sql \d{14}_[a-z0-9_]+\.sql$/);
 });
 
