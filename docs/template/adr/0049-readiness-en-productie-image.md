@@ -2,9 +2,10 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-14 (#712): punt 3 herschreven (eigenaarbesluit 2026-11-11): readiness hangt niet aan de jobs-verbinding
+
 Vervangt 0018 en 0019. Drempel: A4. Consolidatie zonder inhoudelijke wijziging
-(eigenaarbesluit 2026-10-21, 0038 Gevolgen). Punt 3 is het voorwaardelijke agentvoorstel uit
-0036 punt 6, met dezelfde voorwaarde; geen eigenaarbesluit over de inhoud.
+(eigenaarbesluit 2026-10-21, 0038 Gevolgen).
 
 ## Context
 
@@ -24,16 +25,14 @@ containerhost heeft geen statische host die de SPA-headers zet.
 2. **Controle op een eigen verbinding** (was 0018 punt 2). `pingDatabase()` uit `src/core/api/db` doet `select 1` als
    `api_user`, zonder `withUser()`, over een eigen pool met max 1, niet de pool van `withUser()`. Verbinden en de query zijn elk
    begrensd op 900 ms. Na een fout wordt de verbinding weggegooid; een idle verbinding die wegvalt, stopt het proces niet.
-3. **Ook de jobs-verbinding, voorwaardelijk** (agentvoorstel, was 0036 punt 6; spec achtergrondtaken OV-C4 optie (a)). Naast de
-   ping van punt 2 doet `pingDatabase()` tegelijk een tweede ping over een eigen verbinding als `app_jobs`
-   (`JOBS_DATABASE_URL`): `select session_user`, die faalt als het antwoord niet `app_jobs` is. Hij wacht op beide uitkomsten;
-   readiness is pas 200 als beide slagen. Elke ping is begrensd op 900 ms en ze lopen parallel, dus samen binnen de 2 s van
-   punt 4. Dit geldt tenzij de eigenaar in spec achtergrondtaken OV-C4 optie (b) (controle bij opstart) of (c) (alleen een
-   logregel) kiest; dan vervalt dit punt.
+3. **Opstartcontrole in plaats van een jobs-ping** (vervangt het voorwaardelijke punt, eigenaarbesluit 2026-11-11). Readiness hangt niet aan de jobs-verbinding: een storing die alleen `app_jobs`
+   raakt, zou alle instanties uit de rotatie halen, ook voor routes die geen taak nodig hebben. In plaats daarvan
+   (spec achtergrondtaken OV-C4, optie (b) en (c)): bij het opstarten, vóór `startServer`, één verbinding als `app_jobs` via
+   `src/core/api/db`; faalt die, dan stopt het proces. Een latere mislukte ronde geeft een logregel.
 4. **Cache en single-flight** (was 0018 punt 3). `createReadiness` bewaart de uitkomst 1 s (monotone klok), laat hooguit één
    controle tegelijk lopen en telt na 2 s een controle als mislukt.
 5. **Geen rate limit** op health en ready (was 0018 punt 4): health doet niets, ready raakt de database hooguit één keer per
-   seconde (met punt 3: één controle per seconde over twee verbindingen, was 0036 punt 6).
+   seconde.
 
 **Productie-image**
 
@@ -66,8 +65,7 @@ containerhost heeft geen statische host die de SPA-headers zet.
 ## Gevolgen
 
 - Elke API-instantie heeft één extra databaseverbinding, alleen in gebruik tijdens een probe; `closeDatabase()` sluit hem ook
-  (was 0018 Gevolgen). Met punt 3 zijn het er twee, en een storing die alleen `app_jobs` raakt, haalt dan alle instanties uit
-  de rotatie, ook voor routes die geen taak nodig hebben (was 0036 punt 6).
+  (was 0018 Gevolgen).
 - Een host-adapter of runbook gebruikt `/api/health` voor liveness en `/api/ready` voor readiness (was 0018).
 - De image bevat de broncode van de serverkant, geen geheimen; `AUTH_SECRET` en de database-URL's komen altijd van de host
   (was 0019).
