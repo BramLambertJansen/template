@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd # #732
 namespace: template-update
 ---
 
@@ -46,7 +46,7 @@ Geen schermen. De meldingen van de twee checks zeggen wat er mis is en wat de op
 
 ## Acceptatiecriteria
 
-PR 1:
+PR 1. Documentatie, getoetst door de reviewer en niet door een test (een test legt gedrag vast, geen formulering): `docs/nieuwe-app.md` heeft één sectie "Een template-update binnenhalen" met de stappen uit het ontwerp en geen tweede procedure ernaast; de verwijzing ernaar klopt; `docs/template-changelog.md` verwijst ernaar bovenaan `[Unreleased]`.
 
 - **template-update/AC-1**: Een toegevoegde migratie met een versie later dan alle bestaande: `check:migrations` groen. Met een versie eerder dan een bestaande: rood, met de naam van de migratie, de nieuwste bestaande versie en de aanwijzing om het tijdstempel te vernieuwen. Zonder migraties op het afsplitspunt: groen.
 - **template-update/AC-2**: Twee toegevoegde migraties in één branch, beide later dan alle bestaande: groen, ongeacht hun onderlinge volgorde; met dezelfde versie: rood door de bestaande regel voor dubbele versies.
@@ -54,11 +54,10 @@ PR 1:
 - **template-update/AC-4**: In de template (met `onderhoud.repository` in `.claude/gates.json`) bestaat de uitzondering niet: elke toegevoegde migratie moet later zijn, ook als de template-ref bestaat.
 - **template-update/AC-5**: De bestaande regels van `check:migrations` blijven: gewijzigde of verwijderde migratie, naamvorm, dubbele versie, onleesbare `origin/main`.
 - **template-update/AC-8**: Op main zelf (`HEAD` gelijk aan `origin/main`): voegde de laatste merge een migratie toe die ouder is dan een migratie van de eerste ouder, dan is `check:migrations` rood met de naam en de aanwijzing dat het herstel een nieuwe migratie is; voegde hij een latere toe, of niets, dan groen. Een eerste commit zonder ouder: groen. De vergelijking geldt voor elke commit op main, ook een gewone (geen merge). De uitzondering van AC-3 geldt hier ook: in een app is een oudere migratie die met dezelfde inhoud in de template-ref staat groen, anders zou main na elke template-update met een oudere templatemigratie rood blijven.
-- **template-update/AC-6**: `docs/nieuwe-app.md` heeft één sectie "Een template-update binnenhalen" met de stappen uit het ontwerp en geen tweede procedure ernaast; de verwijzing ernaar klopt; `docs/template-changelog.md` verwijst ernaar bovenaan `[Unreleased]`.
 
 PR 2:
 
-- **template-update/AC-7**: `check:snapshot` met een toegevoegde, oudere migratie die niets raakt wat een nieuwere raakt: groen. Met een oudere migratie waarvan het resultaat van de volgorde afhangt (fixture: twee migraties die dezelfde kolomstandaard zetten): rood, met beide namen. Faalt de bouw op volgorde van binnenkomst (fixture: een oudere migratie die een kolom verplicht maakt nadat een nieuwere rijen heeft ingevoegd): rood, met de naam van de migratie. Zonder toegevoegde oudere migratie draait de tweede bouw niet.
+- **template-update/AC-7** (nog niet gebouwd): `check:snapshot` met een toegevoegde, oudere migratie die niets raakt wat een nieuwere raakt: groen. Met een oudere migratie waarvan het resultaat van de volgorde afhangt (fixture: twee migraties die dezelfde kolomstandaard zetten): rood, met beide namen. Faalt de bouw op volgorde van binnenkomst (fixture: een oudere migratie die een kolom verplicht maakt nadat een nieuwere rijen heeft ingevoegd): rood, met de naam van de migratie. Zonder toegevoegde oudere migratie draait de tweede bouw niet.
 
 ## Raakt ook
 
