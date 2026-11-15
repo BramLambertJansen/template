@@ -7,7 +7,7 @@
 -- eigenaar (beheer) en toezicht (beheer). pgTAP draait op een verse database zonder accounts (zoals db/tests/user_roles.sql).
 begin;
 set search_path = tap, public;
-select plan(117);
+select plan(118);
 
 -- Voert SQL uit en geeft '00000' (gelukt) of 'sqlstate|melding' terug; de fout draait alleen dit statement terug.
 create function pg_temp.attempt(p_sql text) returns text language plpgsql as $$
@@ -188,6 +188,11 @@ select is(
   pg_temp.scalar_as('app_authenticated', '', '', $$select count(*) from app.roles$$),
   '0',
   'roles_select_authenticated: app_authenticated zonder actor ziet geen rollen'
+);
+select is(
+  pg_temp.scalar_as('app_authenticated', 'r-ingelogd', 'password', $select count(*) from app.roles$),
+  pg_temp.scalar($select count(*) from app.roles$),
+  'roles_select_authenticated: een ingelogde actor ziet alle rollen'
 );
 select is(
   pg_temp.scalar_as('app_definer', '', '', $$select count(*) from app.roles$$),
