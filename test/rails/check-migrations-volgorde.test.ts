@@ -14,7 +14,9 @@
 // - AC-5: gewijzigd, verwijderd, foute naam, dubbele versie (elk naast een geldige nieuwe migratie, exact één melding) en
 //   onleesbare origin/main (exacte bestaande melding).
 // - AC-8 (HEAD == base `main`, merge met --no-ff): oudere migratie toegevoegd rood (één regel met naam en "nieuwe migratie");
-//   latere groen; niets toegevoegd groen; één commit zonder ouder groen.
+//   latere groen; niets toegevoegd groen; één commit zonder ouder groen. Aangevuld na de specwijziging: app-fixture met een
+//   merge die een oudere migratie met gelijke inhoud in de template-ref toevoegde groen, met andere inhoud rood (met naam);
+//   template-fixture met een gewone commit (geen merge) met een oudere migratie rood (met naam).
 //
 // Ontwerpkeuzes voor de developer (ook als commentaar boven de tests):
 // - `migratieFouten(root, base, templateRef)`; de test roept hem aan via `unsafeCast` omdat de JSDoc nu twee parameters heeft.
@@ -24,21 +26,19 @@
 // - Template-uitzondering per migratie: gelijke bestandsnaam en gelijke inhoud in `templateRef`; leesbaarheid van de ref alleen
 //   toetsen als er een oudere toegevoegde migratie is; onleesbaar = melding met `git fetch` (de test zet een ref die niet bestaat;
 //   het ophalen zelf hoort in de CLI-ingang, niet in de functie, anders haalt een test het netwerk op).
-// - AC-8: bij HEAD == base is "bestaand" de eerste ouder van HEAD; zonder ouder geen vergelijking.
+// - AC-8: bij HEAD == base is "bestaand" de eerste ouder van HEAD, voor elke commit (merge of gewoon); zonder ouder geen
+//   vergelijking; de uitzondering van AC-3 (app, gelijke inhoud in templateRef) geldt ook op main.
 //
-// Gedraaid (tsc -b --noEmit, eslint: schoon; vitest: 24 tests, 8 rood, 16 groen).
-// Rood op een assertie (verwachte regel ontbreekt, nu geen melding): AC-1 (3 gevallen: tussen, eerder dan alle, app), AC-3
-// (andere inhoud, twee oudere, ref niet te lezen), AC-4, AC-8 (oudere migratie toegevoegd).
+// Gedraaid (tsc -b --noEmit, eslint, vitest op dit bestand): zie de eindmelding van de tester; verwacht rood: AC-1 (3 gevallen),
+// AC-3 (andere inhoud, twee oudere, ref niet te lezen), AC-4, AC-8 (oudere migratie in merge, app met andere inhoud, gewone
+// commit). Op een assertie rood (verwachte regel ontbreekt, nu geen melding).
 // Groen en terecht: AC-1/2 groene gevallen, AC-2 dubbele versie (bestaande regel), AC-3 gelijke inhoud en ref niet gelezen
-// zonder oudere migratie (die tellen als regressie voor de nieuwe code), AC-5 (bestaande regels, nu al groen), AC-8 groene gevallen.
+// zonder oudere migratie (regressie voor de nieuwe code), AC-5 (bestaande regels, nu al groen), AC-8 groene gevallen (waaronder
+// app met gelijke inhoud: nu groen omdat AC-8 nog niet bestaat; moet groen blijven).
 //
 // Onduidelijk in de spec:
-// - AC-8 noemt geen uitzondering voor een templatemigratie. Een app-PR met een oudere templatemigratie is groen door AC-3, maar
-//   de merge-commit op main voegt die dan toe aan de eerste ouder: AC-8 maakt main rood. Ik heb dat niet getest (AC-8-fixtures
-//   zijn template-fixtures); de architect moet beslissen of AC-8 de uitzondering van AC-3 ook kent.
 // - De precieze plek van het ophalen van de template-ref (functie of CLI) en de tekst van het commando staan niet vast; ik toets
 //   alleen op `git fetch`.
-// - AC-8 bij een gewone (niet-merge) commit op main: wel of niet vergelijken met de eerste ouder is niet gespecificeerd; niet getest.
 //
 // Aangemaakte bestanden: test/rails/check-migrations-volgorde.test.ts (dit bestand).
 import { execFileSync } from 'node:child_process';
@@ -113,14 +113,14 @@ function voegToe(root: string, namen: readonly string[]): void {
   }
 }
 
-// De template-ref (een tweede ref in dezelfde repo) bevat de basis plus de gegeven bestanden; terug op `werk`.
-function zetTemplate(root: string, bestanden: Readonly<Record<string, string>>): void {
+// De template-ref (een tweede ref in dezelfde repo) bevat main plus de gegeven bestanden; daarna terug op `terug`.
+function zetTemplate(root: string, bestanden: Readonly<Record<string, string>>, terug = 'werk'): void {
   git(root, 'switch', '-q', '-c', 'sjabloon', 'main');
   for (const [naam, sql] of Object.entries(bestanden)) schrijf(root, naam, sql);
   git(root, 'add', '-A');
   git(root, 'commit', '-q', '--allow-empty', '-m', 'template');
   git(root, 'update-ref', TEMPLATE_REF, 'HEAD');
-  git(root, 'switch', '-q', 'werk');
+  git(root, 'switch', '-q', terug);
 }
 
 // main loopt door nadat `werk` afsplitste.
@@ -355,6 +355,32 @@ test('template-update/AC-8: op main is een merge die geen migratie toevoegde gro
   mergeZijtak(root, []);
 
   expect(fouten(root, 'main', TEMPLATE_REF)).toStrictEqual([]);
+});
+
+// Ontwerpkeuze: op main geldt de uitzondering van AC-3 ook (app, gelijke inhoud in de template-ref); de template-ref wordt hier
+// gezet nadat de merge op main staat, en bevat de migratie dus met de inhoud van de merge (gelijk) of met een andere inhoud.
+test('template-update/AC-8: in een app is een merge met een oudere migratie met dezelfde inhoud in de template-ref groen', () => {
+  const root = repo(true);
+  mergeZijtak(root, [TUSSEN]);
+  zetTemplate(root, { [TUSSEN]: inhoud(TUSSEN) }, 'main');
+
+  expect(fouten(root, 'main', TEMPLATE_REF)).toStrictEqual([]);
+});
+
+test('template-update/AC-8: in een app is een merge met een oudere migratie met andere inhoud in de template-ref rood met de naam', () => {
+  const root = repo(true);
+  mergeZijtak(root, [TUSSEN]);
+  zetTemplate(root, { [TUSSEN]: 'create table anders ();\n' }, 'main');
+
+  expect(eenRegelMet(fouten(root, 'main', TEMPLATE_REF), TUSSEN)).toMatch(/nieuwe migratie/i);
+});
+
+// Ontwerpkeuze: elke commit op main wordt met zijn eerste ouder vergeleken, ook een gewone commit (geen merge).
+test('template-update/AC-8: in de template is een gewone commit op main met een oudere migratie rood met de naam', () => {
+  const root = repo(false);
+  voegToe(root, [TUSSEN]);
+
+  expect(eenRegelMet(fouten(root, 'main', TEMPLATE_REF), TUSSEN)).toMatch(/nieuwe migratie/i);
 });
 
 test('template-update/AC-8: een eerste commit zonder ouder is groen', () => {
