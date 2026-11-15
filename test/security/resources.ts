@@ -2,7 +2,8 @@ import { routeLabel, sampleFor, type AppRoute, type RouteSample } from './fixtur
 import type { Role } from '../../src/shared/roles.ts';
 
 // Wat alleen de spec weet (spec security-suite, "Wat niet generiek kan"): welke route bij welke tabel hoort en wie de eigenaar is.
-// Alleen gegevens, geen asserties; een testpad, dus een developer kan hier geen uitzondering in zetten (rolhek, diff-guard).
+// Alleen gegevens, geen asserties; een testpad, dus een developer kan hier geen uitzondering in zetten (rolhek;
+// op GitHub de review van een code-eigenaar, R-REPO-02).
 // Eén regel per route in het register (`routes` in src/api/app.ts) en één regel per owner-tabel; ontbreekt er een, dan is de
 // suite rood met de naam ervan (AC-11), nooit stil overgeslagen.
 
