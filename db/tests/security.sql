@@ -3,7 +3,7 @@
 -- de policies (C2) en een allowlist van grants per tabel en recht (C3). Elke invariant is een query die de overtredingen met de
 -- naam van tabel of policy teruggeeft; de test eist dat die leeg is en bewijst daarna met opzettelijke fouten dat de query ze
 -- vangt en de goede variant doorlaat. De uitzonderingenlijsten staan hier (testpad, gate-pad): een developer kan ze niet
--- verruimen zonder diff-guard. Een uitzondering zonder reden is zelf een overtreding. Alles in één transactie die terugdraait.
+-- verruimen zonder de review van een code-eigenaar (R-REPO-02). Een uitzondering zonder reden is zelf een overtreding. Alles in één transactie die terugdraait.
 begin;
 set search_path = tap, public;
 select plan(15);

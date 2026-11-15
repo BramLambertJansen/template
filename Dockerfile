@@ -33,6 +33,10 @@ COPY src/core/api ./src/core/api
 COPY src/core/shared ./src/core/shared
 COPY src/shared ./src/shared
 COPY --from=build /app/dist/web ./dist/web
+# De commit van de build (spec release-versie): `docker build --build-arg BUILD_SHA=<sha>`; GET /api/health toont hem. Na de
+# COPY-stappen, zodat een andere SHA de lagen erboven niet ongeldig maakt. Zonder build-arg leeg: dan toont health geen build.
+ARG BUILD_SHA
+ENV BUILD_SHA=${BUILD_SHA}
 # Niet als root (framework §6); de bestanden blijven van root, dus de app kan zichzelf niet wijzigen.
 USER node
 EXPOSE 8080
