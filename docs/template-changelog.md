@@ -36,6 +36,11 @@ requests.
   het antwoord van `/api/health` letterlijk met `{"ok":true}` vergelijkt, leest voortaan `ok`; een app die in `buildApp`
   (`src/api/app.ts`) haar config uitpakt in plaats van doorgeeft (`...config`), geeft `build` zelf door aan `createApp`.
 
+### Verwijderd
+
+- Het blok `agentMerge` (`maxRegels`, `maxBytes`) uit `.claude/gates.json`: sinds 0.1.0 leest geen code het nog (ADR 0089 punt
+  5). Wat verandert voor een app: haal het blok ook uit je eigen `.claude/gates.json`; laten staan kan geen kwaad.
+
 ## [0.1.0] - 2026-11-15
 
 ### Gewijzigd
