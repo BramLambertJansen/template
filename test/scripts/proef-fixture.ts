@@ -38,11 +38,12 @@ export const TEMPLATE_GATES = `${[
   '}',
 ].join('\n')}\n`;
 
-/** De modules die `scripts/kit/app-init.mjs` in een kopie nodig heeft (hij importeert `./codeowners.mjs`, dat `padtabel.mjs`). */
+/** De modules die `scripts/kit/app-init.mjs` in een kopie nodig heeft (hij importeert `./codeowners.mjs`, dat `padtabel.mjs`, en de templateversie). */
 export const APP_INIT_MODULES = [
   'scripts/kit/app-init.mjs',
   'scripts/kit/codeowners.mjs',
   'rails/hooks/lib/padtabel.mjs',
+  'src/core/shared/template-version.ts',
 ] as const;
 
 export interface BronOptions {

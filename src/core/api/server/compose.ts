@@ -31,6 +31,8 @@ export interface ServerAppDeps<Services> {
   readonly ready: Readiness;
   // Alleen bij APP_ENV=local (ADR 0043); in elke andere omgeving ontbreekt de sleutel en bestaat de route niet.
   readonly devLogin?: DevLogin;
+  // De build-SHA uit BUILD_SHA (spec release-versie); zonder die variabele ontbreekt de sleutel.
+  readonly build?: string;
 }
 
 // Wat van de app is (R-LAAG-02: als argument, core importeert niets uit de app).
@@ -98,6 +100,8 @@ export function composeServer<Services, Name extends string>(
     ready: createReadiness(parts.pingDatabase, { timeoutMs: READY_TIMEOUT_MS, cacheMs: READY_CACHE_MS }),
     // Dev-login alleen lokaal (ADR 0043); in elke andere omgeving bestaat de route niet.
     ...(env.appEnv === 'local' ? { devLogin: createDevLogin(devAuthSteps(auth), config.devLogin) } : {}),
+    // GET /api/health toont de build alleen als de image hem meekreeg (spec release-versie).
+    ...(env.buildSha === undefined ? {} : { build: env.buildSha }),
   });
 
   // Met WEB_DIR (de containerimage) serveert dezelfde server de SPA op dezelfde origin (ADR 0049); lokaal doet Vite dat.

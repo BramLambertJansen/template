@@ -13,6 +13,7 @@ import {
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, expect, test } from 'vitest';
+import { TEMPLATE_VERSION } from '../../src/core/shared/template-version.ts';
 
 const root = path.join(import.meta.dirname, '../..');
 const script = readFileSync(path.join(root, 'scripts/check-image.sh'), 'utf8');
@@ -84,6 +85,12 @@ function fixture() {
   write(dir, 'playwright.smoke.config.ts', 'export default { testDir: "e2e" };');
   write(dir, 'e2e/prod-spa.smoke.spec.ts', '// baseline smoke');
   write(dir, 'compose.yaml', 'services:\n  ui-runner:\n    image: mcr.microsoft.com/playwright:v1.63.0-noble\n');
+  // Het script leest de verwachte versie uit het bronbestand (spec release-versie, AC-9).
+  write(
+    dir,
+    'src/core/shared/template-version.ts',
+    readFileSync(path.join(root, 'src/core/shared/template-version.ts'), 'utf8'),
+  );
   write(dir, '.gitignore', 'node_modules/\n.env*\n*.private\nstubs/\n');
   mkdirSync(path.join(dir, 'node_modules/@playwright/test'), { recursive: true });
   for (const args of [
@@ -99,7 +106,7 @@ function fixture() {
     dir,
     'curl',
     `case "\${!#}" in
-  */api/health) printf '{"ok":true}' ;;
+  */api/health) printf '{"ok":true,"version":"${TEMPLATE_VERSION}"}' ;;
   */api/ready) printf 503 ;;
   */admin/accounts) printf "content-security-policy: default-src 'self'\\ncache-control: no-cache\\n" ;;
   */assets/*) printf 'cache-control: public, max-age=31536000, immutable\\n' ;;

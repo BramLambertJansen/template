@@ -11,6 +11,7 @@ import {
   RATE_LIMIT_WINDOW_SECONDS,
   type RateLimits,
 } from '../../shared/limits.ts';
+import { TEMPLATE_VERSION } from '../../shared/template-version.ts';
 import { unsafeCast } from '../../shared/unsafe-cast.ts';
 import type { AuthGateway, SessionInfo } from '../auth/auth.ts';
 import type { WithUser } from '../db/types.ts';
@@ -59,6 +60,9 @@ interface BaseConfig<Services> {
   // (definePartnerRoute, spec partnerstap) vraagt het: zonder, of met een onbekende koppeling, weigert createApp bij
   // opstart. Straks ook voor het beheer (M7).
   readonly integrations?: Integrations;
+  // De build-SHA van de image (spec release-versie): GET /api/health toont hem naast de templateversie; zonder waarde
+  // ontbreekt de sleutel in het antwoord. composeServer geeft hem mee als BUILD_SHA gezet is.
+  readonly build?: string;
 }
 
 // Wat handlers via ctx.services krijgen (bijv. uitnodigen via Better Auth): verplicht zodra de app een Services-type kiest
@@ -204,6 +208,12 @@ export function createApp<Services>(config: BaseConfig<Services> & { readonly se
   const fail = (c: Context, code: string) => c.json({ code, requestId: c.get('requestId') }, statusFor(code));
   const core: readonly string[] = coreErrorCodes;
   const isPublic = (code: string) => config.errors?.is(code) ?? core.includes(code);
+  // Openbaar (spec release-versie, ADR 0049): de templateversie en, als de image hem meekreeg, de build-SHA.
+  const health = {
+    ok: true,
+    version: TEMPLATE_VERSION,
+    ...(config.build === undefined ? {} : { build: config.build }),
+  };
 
   // De ID maakt de server altijd zelf (nooit uit X-Request-Id van de client): hij koppelt de request-log aan foutmeldingen
   // en straks aan auditregels (ADR 0051), dus een client mag hem niet kiezen of een bestaande nadoen.
@@ -228,7 +238,7 @@ export function createApp<Services>(config: BaseConfig<Services> & { readonly se
       return fail(c, 'INTERNAL_ERROR');
     })
     .notFound((c) => fail(c, 'NOT_FOUND'))
-    .get('/health', (c) => c.json({ ok: true }))
+    .get('/health', (c) => c.json(health))
     .on(['GET', 'POST'], '/auth/*', (c) => (config.auth === undefined ? c.notFound() : config.auth.handler(c.req.raw)));
 
   const { ready } = config;

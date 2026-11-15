@@ -21,7 +21,8 @@ Deze template is bedoeld om webapps met code-agents te bouwen. De documentatie h
 | Controles uitvoeren en CI-resultaten verzamelen | [Agentdoorloop met bewijs](operations/agent-doorloop.md#ontwikkelen-en-runnerchecks) |
 | Weten hoe de tests parallel draaien | [Testuitvoering](operations/testuitvoering.md) |
 | Weten wat nog ontbreekt | [Roadmap](roadmap.md) |
-| Weten wat een template-update verandert | [Changelog](../CHANGELOG.md) |
+| Weten wat een template-update verandert | [Wijzigingen van de template](template-changelog.md) |
+| Weten welke templateversie een server draait | `GET /api/health` geeft `version` en, met `BUILD_SHA` in de image, `build` (`src/core/shared/template-version.ts`) |
 | Een beheerder aanmaken of herstellen | [Beheerdersrunbook](operations/eerste-admin.md) |
 | Weten waarom een core-onderdeel zich zo gedraagt | [Loginregistratie en MFA](operations/loginregistratie.md), [focus van het foutenoverzicht](operations/formulierfocus.md), [datumkiezer](operations/datumkiezer.md), [foutlogging van idle databaseverbindingen](operations/databasefoutlogging.md) |
 

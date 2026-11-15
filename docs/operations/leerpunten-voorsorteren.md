@@ -15,7 +15,7 @@ geen branches, commits of PR's. De eigenaar beslist; jij sorteert alleen voor.
 2. Haal alle open issues met label `leerpunt` op (GitHub MCP, alleen lezen), en de gesloten issues met label
    `leerpunt-zonder-bewijs`. Lees per issue de tekst en de comments.
 3. Controleer per open issue op main of het al is opgelost: zoek het issuenummer in `docs/specs/`, `docs/adr/`,
-   `CHANGELOG.md`, `docs/roadmap.md` en in gemergde PR's die het nummer noemen.
+   `docs/template-changelog.md`, `docs/roadmap.md` en in gemergde PR's die het nummer noemen.
 4. Sorteer elk issue in precies één bak, met één zin waarom en het bewijs (PR-nummer, `bestand:regel` of spec):
    - **Sjabloon of bewijs ontbreekt**: label `leerpunt-onvolledig` (het issue volgt het sjabloon niet; noem de fouten uit
      de comment) of `leerpunt-zonder-bewijs` (gesloten zonder sluitbewijs; noem wat ontbreekt: een PR met sectie

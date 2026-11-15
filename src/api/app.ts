@@ -57,6 +57,9 @@ export interface BuildAppConfig {
   readonly ready?: Readiness;
   // Alleen in integratietests: een lagere rate limit dan die van de app (spec rate-limit); server.ts laat hem weg.
   readonly rateLimits?: RateLimits;
+  // De build-SHA voor GET /api/health (spec release-versie); runServer geeft hem mee als BUILD_SHA gezet is. Een app die
+  // haar config uitpakt in plaats van doorgeeft (`...config`), geeft `build` zelf door aan createApp.
+  readonly build?: string;
 }
 
 export function buildApp(config: BuildAppConfig) {
