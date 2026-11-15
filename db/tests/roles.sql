@@ -151,8 +151,8 @@ select results_eq(
   $$select p.cmd::text collate "default", p.roles::text collate "default", p.permissive::text collate "default",
            coalesce(p.qual, '-')::text collate "default", coalesce(p.with_check, '-')::text collate "default"
     from pg_catalog.pg_policies p where p.schemaname = 'app' and p.tablename = 'roles' and p.policyname = 'roles_select_authenticated'$$,
-  $$values ('SELECT', '{app_authenticated}', 'PERMISSIVE', 'true', '-')$$,
-  'roles_select_authenticated: for select to app_authenticated using (true)'
+  $$values ('SELECT', '{app_authenticated}', 'PERMISSIVE', '(( SELECT app.current_user_id() AS current_user_id) IS NOT NULL)', '-')$$,
+  'roles_select_authenticated: for select to app_authenticated using ((select app.current_user_id()) is not null)'
 );
 select results_eq(
   $$select p.cmd::text collate "default", p.roles::text collate "default", p.permissive::text collate "default",
@@ -186,8 +186,8 @@ select results_eq(
 -- Gedrag per policy.
 select is(
   pg_temp.scalar_as('app_authenticated', '', '', $$select count(*) from app.roles$$),
-  pg_temp.scalar($$select count(*) from app.roles$$),
-  'roles_select_authenticated: app_authenticated ziet alle rollen, ook zonder actor'
+  '0',
+  'roles_select_authenticated: app_authenticated zonder actor ziet geen rollen'
 );
 select is(
   pg_temp.scalar_as('app_definer', '', '', $$select count(*) from app.roles$$),

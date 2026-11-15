@@ -24,11 +24,11 @@ alter table app.roles force row level security;
 grant select on app.roles to app_authenticated;
 grant select, insert, update, delete on app.roles to app_definer;
 
--- Lezen mag elke actor (namen en een vlag, geen geheim). Schrijven alleen via de security definer-functies hieronder
+-- Lezen mag elke ingelogde actor (namen en een vlag, geen geheim; zonder actor niets). Schrijven alleen via de security definer-functies hieronder
 -- (framework §6: FORCE RLS geldt ook voor app_definer). Alleen de delete-policy sluit de basisrollen uit; bij update bewaakt
 -- de CHECK ze. app_migrator erft deze rechten via app_definer.
 create policy roles_select_authenticated on app.roles
-  for select to app_authenticated using (true);
+  for select to app_authenticated using ((select app.current_user_id()) is not null);
 create policy roles_definer_select on app.roles
   for select to app_definer using (true);
 create policy roles_definer_insert on app.roles
