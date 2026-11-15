@@ -60,15 +60,15 @@ test('release-versie/AC-2: de wijzigingenlijst van de template heeft [Unreleased
   expect(heads).toContain('## [0.1.0] - 2026-11-15');
 });
 
-// In een app is CHANGELOG.md van de app (app:init herschrijft hem); de eis geldt alleen in de template zelf.
-const isTemplate = read('package.json').includes('"name": "app-template"');
+// CHANGELOG.md in de hoofdmap is van de app (app:init herschrijft hem); in de template is het alleen een verwijzing. In beide
+// gevallen staat er geen release van de template in: geen kop uit docs/template-changelog.md komt er letterlijk in voor.
+// Niet overslaan buiten de template: een overgeslagen test is in CI rood (ADR 0088), ook in een app.
+test('release-versie/AC-3: CHANGELOG.md in de hoofdmap bevat geen releasekop van de template', () => {
+  const templateReleases = read('docs/template-changelog.md')
+    .split('\n')
+    .filter((line) => RELEASE.test(line));
+  const rootLines = read('CHANGELOG.md').split('\n');
 
-test.skipIf(!isTemplate)(
-  'release-versie/AC-3: CHANGELOG.md in de hoofdmap heeft alleen een kop en een verwijzing, geen releasekop',
-  () => {
-    const changelog = read('CHANGELOG.md');
-    expect(changelog.split('\n').filter((line) => /^#{1,6} /.test(line))).toStrictEqual(['# Changelog']);
-    expect(changelog).toContain('](docs/template-changelog.md)');
-    expect(changelog.includes('## [')).toBe(false);
-  },
-);
+  expect(templateReleases.length).toBeGreaterThan(0);
+  expect(rootLines.filter((line) => templateReleases.includes(line))).toStrictEqual([]);
+});
