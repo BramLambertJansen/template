@@ -12,9 +12,9 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { TEMPLATE_URL } from './check-core.mjs';
 
-const DIR = 'db/migrations';
-const BASE = 'origin/main';
-const NAAM = /^(\d{14})_[a-z0-9_]+\.sql$/;
+export const DIR = 'db/migrations';
+export const BASE = 'origin/main';
+export const NAAM = /^(\d{14})_[a-z0-9_]+\.sql$/;
 const TEMPLATE_REF = 'refs/remotes/template/main';
 const OPGEHAALDE_REF = 'refs/check-migrations/template';
 
@@ -126,21 +126,35 @@ function inTemplate(root, templateRef, pad) {
 }
 
 /**
+ * De selectie van de volgorderegel, zonder de uitzondering voor een templatemigratie: de toegevoegde migraties die niet
+ * later zijn dan de nieuwste versie in `bestaand`. Ook gebruikt door migratie-volgorde.mjs (de tweede bouw van check:snapshot).
+ * @param {string} root
+ * @param {string} bestaand de commit met de bestaande migraties
+ * @returns {{ nieuwste: string | undefined, ouder: string[] }} `ouder`: paden; leeg als `bestaand` geen migraties heeft
+ */
+export function ouderToegevoegd(root, bestaand) {
+  const nieuwste = nieuwsteVersie(root, bestaand);
+  if (nieuwste === undefined) return { nieuwste, ouder: [] };
+  const ouder = wijzigingenSinds(root, bestaand)
+    .filter(({ status }) => status === 'A')
+    .map(({ pad }) => pad)
+    .filter((pad) => (NAAM.exec(path.posix.basename(pad))?.[1] ?? '99999999999999') <= nieuwste);
+  return { nieuwste, ouder };
+}
+
+/**
  * De volgorderegel: elke toegevoegde migratie is strikt later dan de nieuwste versie in `bestaand`.
  * @param {string} root
  * @param {Vergelijking} vergelijking
  * @returns {Oordeel}
  */
 function volgorde(root, { bestaand, opMain, templateRef }) {
-  const nieuwste = nieuwsteVersie(root, bestaand);
+  const { nieuwste, ouder: geselecteerd } = ouderToegevoegd(root, bestaand);
   if (nieuwste === undefined) return { fouten: [], templateOntbreekt: false };
   const herstel = opMain
     ? 'hernoemen kan op main niet meer, herstel met een nieuwe migratie'
     : 'geef je eigen, nog niet gemergde migratie een nieuw tijdstempel (hernoem het bestand)';
-  let ouder = wijzigingenSinds(root, bestaand)
-    .filter(({ status }) => status === 'A')
-    .map(({ pad }) => pad)
-    .filter((pad) => (NAAM.exec(path.posix.basename(pad))?.[1] ?? '99999999999999') <= nieuwste);
+  let ouder = geselecteerd;
   if (ouder.length > 0 && !isTemplate(root)) {
     if (gitOf(root, ['rev-parse', '--verify', '--quiet', `${templateRef}^{commit}`]) === undefined) {
       const fout = `${templateRef} is niet te lezen, dus niet te zien of ${ouder.join(', ')} (niet later dan de nieuwste bestaande versie ${nieuwste}) ongewijzigd uit de template komt; haal de template op (git fetch template main), of: ${herstel}`;
@@ -155,22 +169,38 @@ function volgorde(root, { bestaand, opMain, templateRef }) {
 }
 
 /**
+ * Waarmee de werkmap vergeleken wordt. Ook gebruikt door migratie-volgorde.mjs.
+ * @param {string} root
+ * @param {string} base
+ * @returns {{ afsplitsing: string, bestaand: string | undefined, opMain: boolean } | undefined} undefined: `base` is niet
+ *   te lezen. `bestaand`: de commit met de bestaande migraties; undefined op main bij een eerste commit zonder ouder.
+ */
+export function vergelijkingspunt(root, base) {
+  const afsplitsing = gitOf(root, ['merge-base', base, 'HEAD']);
+  if (afsplitsing === undefined) return undefined;
+  // Op main zelf (HEAD is de base): wat de laatste commit toevoegde, moet later zijn dan wat zijn eerste ouder al had.
+  const opMain =
+    gitOf(root, ['rev-parse', '--verify', '--quiet', `${base}^{commit}`]) === gitOf(root, ['rev-parse', 'HEAD']);
+  const bestaand = opMain ? gitOf(root, ['rev-parse', '--verify', '--quiet', 'HEAD^1^{commit}']) : afsplitsing;
+  return { afsplitsing, bestaand, opMain };
+}
+
+/** @param {string} base */
+export function baseOnleesbaar(base) {
+  return `${base} is niet te lezen; haal hem op (git fetch origin main) of gebruik in CI fetch-depth: 0`;
+}
+
+/**
  * @param {string} [root]
  * @param {string} [base]
  * @param {string} [templateRef] de ref van de template; alleen gelezen in een app met een oudere toegevoegde migratie
  * @returns {Oordeel}
  */
 export function migratieOordeel(root = '.', base = BASE, templateRef = TEMPLATE_REF) {
-  const afsplitsing = gitOf(root, ['merge-base', base, 'HEAD']);
-  if (afsplitsing === undefined) {
-    const fout = `${base} is niet te lezen; haal hem op (git fetch origin main) of gebruik in CI fetch-depth: 0`;
-    return { fouten: [fout], templateOntbreekt: false };
-  }
+  const punt = vergelijkingspunt(root, base);
+  if (punt === undefined) return { fouten: [baseOnleesbaar(base)], templateOntbreekt: false };
+  const { afsplitsing, bestaand, opMain } = punt;
   const regels = migratieRegels(wijzigingenSinds(root, afsplitsing), readdirSync(path.join(root, DIR)));
-  // Op main zelf (HEAD is de base): wat de laatste commit toevoegde, moet later zijn dan wat zijn eerste ouder al had.
-  const opMain =
-    gitOf(root, ['rev-parse', '--verify', '--quiet', `${base}^{commit}`]) === gitOf(root, ['rev-parse', 'HEAD']);
-  const bestaand = opMain ? gitOf(root, ['rev-parse', '--verify', '--quiet', 'HEAD^1^{commit}']) : afsplitsing;
   if (bestaand === undefined) return { fouten: regels, templateOntbreekt: false };
   const { fouten, templateOntbreekt } = volgorde(root, { bestaand, opMain, templateRef });
   return { fouten: [...regels, ...fouten], templateOntbreekt };

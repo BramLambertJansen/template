@@ -92,8 +92,11 @@ jobs:
           - { deel: ui:check 2/2, script: ui:check, ui: 2/2 }
           - { deel: check:snapshot, script: check:snapshot, ui: "" }
     steps:
+      # Volledige historie: check:snapshot vergelijkt met origin/main welke migraties zijn toegevoegd (spec template-update,
+      # AC-7); in een ondiepe checkout is dat afsplitspunt niet te lezen en faalt de check dicht.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: jdx/mise-action@7a4e45a543138629540c9a1616d08632b893e492 # v5.0.1
         with:

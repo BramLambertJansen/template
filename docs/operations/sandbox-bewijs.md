@@ -52,6 +52,6 @@ Twee lagen: een eerder, samengesteld commando dat ook `.env` las, weigerde de pe
   `pnpm check:snapshot` en `pnpm db:generate` (developer-subagent) draaiden buiten de sandbox met exit 0; met een pipe erachter
   (`pnpm check:snapshot | tail -5`) bleef de aanroep in de sandbox; met `cd <wortel> &&` ervoor of `2>&1` erachter draaide
   hij er, anders dan de documentatie zegt, toch buiten. Alleen de kale vorm is dus zeker. In de sandbox faalt de
-  remote-lezing van de runner; de melding noemt dan de kale vorm (`scripts/runner.sh:117`, spec `claude-sandbox-werkstraat` AC-13).
+  remote-lezing van de runner; de melding noemt dan de kale vorm (`scripts/runner.sh:120`, spec `claude-sandbox-werkstraat` AC-13).
 - **Niet getoetst:** `failIfUnavailable` en `allowUnsandboxedCommands: false` (`.claude/settings.json:133`–`:134`).
 - De deny- en ask-patronen in `permissions` zijn gemak, geen grens (framework §8); dit verslag bewijst de sandbox.

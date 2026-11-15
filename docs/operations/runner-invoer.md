@@ -16,6 +16,12 @@ De invoermounts van het profiel `test` in `compose.yaml` zijn lange bind-mounts 
 Docker weigert dan de container te starten omdat de bronmap niet bestaat en niet wordt aangemaakt. De dev-stack (postgres, mailpit) gebruikt die mounts niet en start
 ongewijzigd. `test-pgtap` faalt als `db/tests` geen tests bevat.
 
+Het doel `gen-volgorde` (`pnpm check:snapshot`, spec `template-update` AC-7) is `gen` met één stap extra na het kopiëren:
+de runner vraagt `scripts/kit/migratie-volgorde.mjs` (hostcode onder `scripts`, met een lege omgeving gestart) welke
+toegevoegde migraties ouder zijn dan een bestaande en hernoemt die in de kopie, nooit in de werkmap. Elke regel moet precies
+twee kale bestandsnamen `<14 cijfers>_<naam>.sql` zijn, de bron een gewoon bestand in de kopie en het doel vrij; faalt het
+hulpscript, geeft het niets of een andere regel, dan stopt de runner (`rename_arrival_order` in `scripts/runner.sh`).
+
 ## Zelfverdediging van de runner
 
 `scripts/runner.sh` vertrouwt de aanroeper niet, ook niet bij een eigenaaroverride. Vóór de eerste git-aanroep:
@@ -35,7 +41,7 @@ De basis is de sha bij exact `refs/heads/main` in `git ls-remote origin refs/hea
 beschikbaar is); een gelijkende ref als `refs/heads/fix/refs/heads/main` telt niet. Is ls-remote onleesbaar, is de sha
 geen geldige object-id of ontbreekt die commit lokaal, dan stopt de runner met de melding `git fetch origin main`.
 Alleen bij een onleesbare ls-remote (ook na de timeout) volgt direct daarna een tweede regel voor een agent in Claude
-Code: draai het runnercommando kaal, anders blijft het in de sandbox (`scripts/runner.sh:117`, spec
+Code: draai het runnercommando kaal, anders blijft het in de sandbox (`scripts/runner.sh:120`, spec
 `claude-sandbox-werkstraat` AC-13). De stderr van git blijft weggegooid.
 De hardlinkcontrole gebruikt `find -links +1`; faalt `find`, dan telt het bestand als hardlink en stopt de runner.
 

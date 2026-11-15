@@ -1028,12 +1028,14 @@ Een rode check bij een template-update:
 | `check:migrations`: "gewijzigd" of "verwijderd" | Een gecommitte migratie is bij het oplossen van conflicten aangepast | Zet haar terug zoals op `origin/main`; een wijziging is een nieuwe migratie |
 | `check:migrations` op `main` na de merge: "herstel met een nieuwe migratie" | Een migratie kwam op `main` na een nieuwere (een PR die groen was tegen een oudere `main`) | Niet hernoemen; schrijf een nieuwe migratie die het bedoelde eindresultaat vastlegt |
 | `check:snapshot` (in `gate:slow`) | Het gegenereerde schema loopt achter op de migraties | Stap 5 opnieuw en committen; nooit met de hand bewerken |
+| `check:snapshot`: "op volgorde van binnenkomst … ontstaat een ander schema" of "de bouw op volgorde van binnenkomst faalt" | Een toegevoegde migratie (meestal een templatemigratie) is ouder dan een migratie van de app en beide raken hetzelfde object: productie, waar de oudere ná de nieuwere draait, krijgt een ander schema dan een verse database, of de migratie faalt daar | Hernoem of wijzig de genoemde migratie niet; schrijf een nieuwe migratie die het bedoelde eindresultaat vastlegt, daarna stap 5 opnieuw. Is de templatemigratie de oorzaak: meld het als leerpunt aan de template |
 | `check-core` | `src/core/` of `docs/template/` wijkt af van de template, of de update is geen echte merge van `template/main` (squash, rebase, cherry-pick) | `git checkout template/main -- src/core docs/template` en committen; anders de branch opnieuw maken vanaf stap 2 |
 
 Een templatemigratie die ouder is dan een migratie die de app al heeft toegepast, draait in productie na die nieuwere en op
 een verse database ervoor. `check:migrations` laat haar door als ze ongewijzigd uit de template komt
-(`scripts/kit/check-migrations.mjs`); tot `check:snapshot` de tweede bouw heeft (spec `template-update`, AC-7) is er geen
-bewijs dat de volgorde niets uitmaakt. Lees zo'n migratie daarom na op objecten die een nieuwere migratie van de app ook raakt.
+(`scripts/kit/check-migrations.mjs`), en `check:snapshot` bewijst dan dat de volgorde voor het schema niets uitmaakt: het
+bouwt het schema ook op volgorde van binnenkomst en vergelijkt de twee dumps (`scripts/check-snapshot.sh`). Rijen die een
+migratie invoegt of bijwerkt, vallen buiten die vergelijking; lees zo'n migratie daarop zelf na.
 
 App-eigen ADR's staan in `docs/adr/` en app-specs in `docs/specs/`, met een eigen nummering; `node scripts/kit/feiten.mjs adr` noemt het volgende vrije nummer. De documenten van de template staan in `docs/template/` en wijzigt een app niet (ADR 0089 punt 1 en 6).
 
