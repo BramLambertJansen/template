@@ -1,5 +1,5 @@
 // Testteller (leerpunt #424): telt testgevallen en skips in een JS/TS-testbestand met een kleine lexer zonder
-// dependency, zodat de guard (geen install, ADR 0045 punt 15–19) en het rolhek (alleen gecontroleerde code van main,
+// dependency, zodat de guard (geen install, R-CI-07) en het rolhek (alleen gecontroleerde code van main,
 // R-ROL-09) hem kunnen draaien. Commentaar, strings, template-literals, regex-literals en JSX-tekst leveren geen
 // tokens (expressies in `${…}` en JSX-`{…}` wel, in een eigen lijst); daarna telt een pass over aanroepketens (`test.each(t)(…)`, `ctx.skip()`). Eén geval per aanroepplek.
 

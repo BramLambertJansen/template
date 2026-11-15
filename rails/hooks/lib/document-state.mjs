@@ -149,7 +149,7 @@ const VOORSTEL = new Set(['voorstel', 'voorgesteld']);
 
 /** De melding bij A4 (ADR 0046 punt 2) van het rolhek. */
 export const A4_MELDING =
-  'een geaccepteerd ADR herschrijven of een ADR met een eigenaarstatus verwijderen mag alleen in een besluit-PR, door architect of hoofdsessie, en een herschreven ADR krijgt een herzieningsregel (`Herzien: JJJJ-MM-DD (#NNN): wat`); een vervallen of vervangen ADR wijzigt niet en een ADR gaat nooit terug naar voorgesteld; buiten een besluit-PR schrijf je een nieuw ADR dat het vervangt (`vervangen door NNNN`) (A4, ADR 0046 punt 2)';
+  'een geaccepteerd ADR herschrijven of een ADR met een eigenaarstatus verwijderen mag alleen door architect of hoofdsessie (in de template in elke PR, in een app alleen in een besluit-PR), en een herschreven ADR krijgt een herzieningsregel (`Herzien: JJJJ-MM-DD (#NNN): wat`); een vervallen of vervangen ADR wijzigt niet en een ADR gaat nooit terug naar voorgesteld; anders schrijf je een nieuw ADR dat het vervangt (`vervangen door NNNN`) (A4, ADR 0046 punt 2, R-CI-05)';
 
 const HERZIEN = /^Herzien: (\d{4}-\d{2}-\d{2}) \(#[1-9]\d*\): \S.*$/;
 

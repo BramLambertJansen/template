@@ -4,7 +4,7 @@ import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 
 // docs/specs/specarchief-en-bouwvorm.md (ADR 0080 punt 1), AC-3 vooraf: het rolhek weigert elke rol elke schrijfactie in
 // docs/specs/archief/ met de melding uit Hergebruik en UX; alleen `git mv docs/specs/<naam> docs/specs/archief/` met dezelfde
-// naam gaat door. Vorm van rolhek-archief-bash.test.ts en rolhek-archief.test.ts. De toets op effect: rolhek-specarchief-effect.
+// naam gaat door. Vorm van rolhek-archief-bash.test.ts en rolhek-archief.test.ts.
 const ROOT = '/repo';
 const config = loadConfig(readFileSync('.claude/gates.json', 'utf8'));
 type Ctx = Parameters<typeof decide>[1];

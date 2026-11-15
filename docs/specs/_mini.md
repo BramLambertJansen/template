@@ -8,7 +8,7 @@ sjabloon: mini
 
 Lichte fixes zonder mini-spec; een mini-spec verkort het document, niet de rollen — route en rollen: framework §8 (ADR 0058).
 
-Korte spec voor app-werk in de feature-lane (ADR 0046 punt 13–14), of een functionele UI-wijziging in de template
+Korte spec voor app-werk (ADR 0046 punt 13), of een functionele UI-wijziging in de template
 (ADR 0056). Voor die UI-scope voeg je `scope: functionele-ui` toe aan de frontmatter. Bestaande componenten in
 `src/core/web/ui` en vaste teksten in `src/core/web/copy` mogen dan met hun UI-tests en gebruiksdocumentatie in dezelfde PR,
 zonder voorafgaand broncodemandaat. De eigenaar beoordeelt het gedrag en de gewijzigde tests en merget de complete PR.

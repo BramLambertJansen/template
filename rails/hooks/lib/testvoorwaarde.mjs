@@ -1,7 +1,7 @@
 // Voorwaardelijk geregistreerde tests (spec voorwaardelijke-tests, leerpunt #410): een pass over de tokens van
 // testteller.mjs die per token zegt of een aanroep daar voorwaardelijk loopt (binnen `if`/`else`/`switch`/`catch`, na
 // kortsluiting of een ternary, of na een `return`/`throw` in dezelfde of een omsluitende functie), en die `test` als waarde
-// telt. Lussen en `try`/`finally` tellen niet (OV-2). Lexicaal, zonder dependency (ADR 0045 punt 15–19).
+// telt. Lussen en `try`/`finally` tellen niet (OV-2). Lexicaal, zonder dependency (R-CI-07).
 
 /** @typedef {{ soort: 'naam' | 'teken' | 'literal', tekst: string }} Token */
 /** @typedef {{ soort: 'functie' | 'voorwaarde' | 'neutraal', naReturn: boolean }} Blok */

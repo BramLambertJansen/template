@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { STEEKPROEF, beoordeelMerge, slotRegels } from '../../scripts/kit/pr-merge.mjs';
 
-// `pnpm pr:merge` met omvanggrens (spec agent-merge-niet-kritiek AC-9) en zonder externe-reviewvoorwaarde met
+// `pnpm pr:merge` zonder omvanggrens (verwijderd, ADR 0089 punt 5) en zonder externe-reviewvoorwaarde met
 // steekproefregel na de merge (AC-7): nagebootste REST-antwoorden. De wereld `goed` is mergebaar en kent bewust geen enkel
 // endpoint voor reacties, check-suites, reviews of branch-PR's: een onbekend endpoint gooit.
 const BOT = 'chatgpt-codex-connector[bot]';
