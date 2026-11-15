@@ -67,7 +67,7 @@ De core-test (`src/core/api/server/compose.test.ts`) gebruikt nagebootste `parts
 
 ## Buiten scope
 
-Accountbeheer als core-module (ST-17); de achtergrondtaken (`startJobs`, ST-03); een opstartcontrole voor `app_jobs`; sluiten van de pools als het starten zelf mislukt.
+Accountbeheer als core-module; de achtergrondtaken (`startJobs`); een opstartcontrole voor `app_jobs`; sluiten van de pools als het starten zelf mislukt.
 
 ## Open vragen
 
