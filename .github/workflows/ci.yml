@@ -87,17 +87,17 @@ jobs:
       # ui:check in twee helften, elk met een eigen stack (ADR 0076 punt 4); UI_DEEL leeg draait alles.
       matrix:
         include:
-          - { deel: test:db, script: test:db, ui: "", diepte: 1 }
-          - { deel: ui:check 1/2, script: ui:check, ui: 1/2, diepte: 1 }
-          - { deel: ui:check 2/2, script: ui:check, ui: 2/2, diepte: 1 }
-          - { deel: check:snapshot, script: check:snapshot, ui: "", diepte: 0 }
+          - { deel: test:db, script: test:db, ui: "" }
+          - { deel: ui:check 1/2, script: ui:check, ui: 1/2 }
+          - { deel: ui:check 2/2, script: ui:check, ui: 2/2 }
+          - { deel: check:snapshot, script: check:snapshot, ui: "" }
     steps:
-      # diepte 0 is de volledige historie, alleen voor check:snapshot: die vergelijkt met origin/main welke migraties zijn
-      # toegevoegd (spec template-update, AC-7); in een ondiepe checkout is dat afsplitspunt niet te lezen en faalt de
-      # check dicht. Elke rij noemt zijn diepte, want een lege waarde en 0 zijn in een expressie niet te onderscheiden.
+      # Volledige historie (0) alleen voor check:snapshot: die vergelijkt met origin/main welke migraties zijn toegevoegd
+      # (spec template-update, AC-7); in een ondiepe checkout is dat afsplitspunt niet te lezen en faalt de check dicht.
+      # De andere delen blijven ondiep. De tekst '0' is in een expressie waar, het getal 0 niet.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: ${{ matrix.diepte }}
+          fetch-depth: ${{ matrix.script == 'check:snapshot' && '0' || '1' }}
           persist-credentials: false
       - uses: jdx/mise-action@7a4e45a543138629540c9a1616d08632b893e492 # v5.0.1
         with:
