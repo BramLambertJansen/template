@@ -21,7 +21,6 @@ export const SCHRIJFRECHT = ['OWNER', 'MEMBER', 'COLLABORATOR'];
 export const COMMENT_ONVOLLEDIG = 'Dit leerpunt volgt het sjabloon niet:';
 export const COMMENT_ZONDER_BEWIJS =
   'Gesloten zonder sluitbewijs (ADR 0078): geen gemergde PR met een sectie Leerpunt voor dit issue en geen comment "achterhaald: <reden>".';
-export const REDEN_ZONDER_TEST = 'leerpunt zonder test';
 
 /** @param {string} waarde */
 function ontquote(waarde) {
@@ -137,7 +136,7 @@ const REGEL = /^\s*[-*]\s+#(\d+):\s*trede\s+(.+?);\s*bewijs\s+(.+?)\s*$/;
 
 /**
  * De regels uit de sectie `## Leerpunt` van een PR-beschrijving (AC-1): `- #<nr>: trede <trede>; bewijs <pad>` of
- * `- #<nr>: trede <trede>; bewijs geen test: <reden>`. Eén parser voor de bewijsjob en `pr:merge` (AC-4).
+ * `- #<nr>: trede <trede>; bewijs geen test: <reden>`. De parser van de bewijsjob en de issue-check.
  * @param {string} body @returns {Regel[]}
  */
 export function leesLeerpuntSectie(body) {
@@ -251,14 +250,6 @@ export function bewijsPlan({ gesloten, body, diff }) {
 /** `geen test:` of `meting:`: de eigenaar merget (ADR 0078 punt 2, ADR 0081 punt 3). @param {Regel} regel */
 function zonderTest(regel) {
   return regel.reden !== null || regel.meting !== null;
-}
-
-/**
- * De reden waarom `pnpm pr:merge` niet merget (AC-4): een regel met `geen test:` of `meting:` in de sectie. Leeg zonder zo'n regel.
- * @param {string} body @returns {string[]}
- */
-export function leerpuntMergeRedenen(body) {
-  return leesLeerpuntSectie(body).some(zonderTest) ? [REDEN_ZONDER_TEST] : [];
 }
 
 /** @param {unknown} test */

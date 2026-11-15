@@ -6,7 +6,6 @@ import { describe, expect, test } from 'vitest';
 import {
   bewijsPlan,
   graphqlData,
-  leerpuntMergeRedenen,
   leesLeerpuntSectie,
   leesVitest,
   metExit,
@@ -288,14 +287,6 @@ describe('leerlus-bewijs/AC-4 geen test: <reden>', () => {
       expect(uitslag.runs).toEqual([]);
       expect(uitslag.zonderTest).toBe(true);
     } else expect(uitslag.fouten.join('\n')).toMatch(fout);
-  });
-
-  test('leerlus-bewijs/AC-4: geen test geeft de merge-reden, bewijs met pad niet', () => {
-    expect(leerpuntMergeRedenen(sectie('- #9: trede Skill; bewijs geen test: tekst'))).toEqual([
-      'leerpunt zonder test',
-    ]);
-    expect(leerpuntMergeRedenen(sectie('- #9: trede Check; bewijs test/a.test.ts'))).toEqual([]);
-    expect(leerpuntMergeRedenen('')).toEqual([]);
   });
 });
 

@@ -93,6 +93,8 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   het moment van mergen met dezelfde parser van `## Leerpunt` als `leerpunt-bewijs.mjs`, en weigert bij `geen test:`, ook als
   het oordeel eerder `ja` was. Het omgekeerde (later `bewijs <pad>`) houdt het oordeel op `nee` tot de volgende push: veilig. Test: beschrijving na het oordeel
   gewijzigd van `bewijs <pad>` naar `geen test: …` geeft een weigering.
+  Vervallen voor de diff-guard en het mergescript door ADR 0089 punt 5 (ADR 0078 Herzien #696): de eigenaar merget volgens
+  afspraak; de job blijft zoals hierboven.
 - **leerlus-bewijs/AC-5** — De workflow `leerpunt-check` op `issues` (opened, edited, labeled, reopened) toetst een issue met label
   `leerpunt` tegen `leerpunt.yml`: elke kop aanwezig en in volgorde, verplichte velden niet leeg (`_No response_` telt als leeg),
   `Soort` en `Voorstel voor de plek` exact een optie. Bij fouten: label `leerpunt-onvolledig` en de comment uit "Hergebruik en UX";
