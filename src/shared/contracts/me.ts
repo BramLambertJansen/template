@@ -1,11 +1,13 @@
 import { z } from 'zod';
-import { ROLES } from '#core/shared/can.ts';
 import { MAX_ID_LENGTH } from '#core/shared/limits.ts';
 import { MAX_NAME_LENGTH } from '../limits.ts';
+import { roles } from '../roles.ts';
 import { defineContract } from './kit.ts';
 
 // GET /api/me (spec accountbeheer): wie ben ik, met de rol uit de database.
-export const meOutput = z.object({ id: z.string(), naam: z.string(), email: z.string(), rol: z.enum(ROLES) }).strict();
+export const meOutput = z
+  .object({ id: z.string(), naam: z.string(), email: z.string(), rol: z.enum(roles.names) })
+  .strict();
 
 export const meContract = defineContract({
   method: 'GET',

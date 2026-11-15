@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { z } from 'zod';
 import { createContracts } from '../../shared/contract.ts';
 import { definePermissions } from '../../shared/can.ts';
+import { baseRoles } from '../../shared/roles.ts';
 import { UserId } from '../../shared/ids.ts';
 import { defineAuditActions } from '../../shared/audit.ts';
 import { unsafeCast } from '../../shared/unsafe-cast.ts';
@@ -13,7 +14,7 @@ import { createApp } from './create-app.ts';
 
 // requestId van de server in de transactie (spec audit-log AC-1, AC-2): createApp geeft c.get('requestId') door aan withUser,
 // nooit de X-Request-Id van de client. De database-kant (app.request_id) staat in test/datapad/request-id.int.test.ts.
-const permissions = definePermissions({ 'notes:read': { roles: ['user', 'admin'] } });
+const permissions = definePermissions(baseRoles, { 'notes:read': { roles: ['user', 'admin'] } });
 const { defineContract } = createContracts(permissions);
 const { defineRoute } = createRouteKit({ permissions, audit: defineAuditActions({}) });
 const ping = defineRoute(

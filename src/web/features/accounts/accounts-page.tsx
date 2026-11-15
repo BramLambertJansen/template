@@ -29,7 +29,7 @@ type Message = AccountMessage;
 
 const roleOptions: readonly SelectOption[] = [
   { value: '', label: copy.accounts.allRoles },
-  ...ROLLEN.map((rol) => ({ value: rol, label: copy.accounts.roles[rol] })),
+  ...ROLLEN.map((rol) => ({ value: rol, label: copy.accounts.roleName(rol) })),
 ];
 const statusOptions: readonly SelectOption[] = [
   { value: '', label: copy.accounts.allStatuses },

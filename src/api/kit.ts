@@ -3,7 +3,8 @@ import { auditActions } from '#shared/audit.ts';
 import { permissions, type Permission } from '#shared/permissions.ts';
 import type { AppServices } from './services.ts';
 
-// Compositie-root (ADR 0040): defineRoute en definePartnerRoute (spec partnerstap) met de permissietabel, de auditacties en de services van de app.
+// Compositie-root (ADR 0040): defineRoute en definePartnerRoute (spec partnerstap) met de permissietabel (en daarmee het
+// rollenregister, `permissions.roles`), de auditacties en de services van de app.
 export const { defineRoute, definePartnerRoute } = createRouteKit<Permission, AppServices, typeof auditActions>({
   permissions,
   audit: auditActions,

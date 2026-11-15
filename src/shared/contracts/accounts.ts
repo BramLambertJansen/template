@@ -1,14 +1,14 @@
 import { z } from 'zod';
-import { ROLES } from '#core/shared/can.ts';
 import { pageSchema } from '#core/shared/cursor.ts';
 import { MAX_ID_LENGTH, MAX_TIMESTAMP_LENGTH } from '#core/shared/limits.ts';
 import { defineListSearch } from '#core/shared/list-search.ts';
 import { MAX_EMAIL_LENGTH, MAX_NAME_LENGTH } from '../limits.ts';
+import { roles } from '../roles.ts';
 import { defineContract } from './kit.ts';
 
 // Accountbeheer (spec accountbeheer): lijst met cursor, uitnodigen en opnieuw uitnodigen; alleen een admin met MFA.
-// De rollen komen uit core (ROLES); een nieuwe rol verschijnt hier vanzelf.
-export const ROLLEN = ROLES;
+// De rollen komen uit het register van de app (src/shared/roles.ts); een nieuwe rol verschijnt hier vanzelf.
+export const ROLLEN = roles.names;
 
 export const STATUSSEN = ['actief', 'uitgenodigd', 'geblokkeerd', 'gedeactiveerd'] as const;
 export const ACCOUNT_SORTS = ['nieuwste', 'oudste', 'naam-az', 'naam-za'] as const;

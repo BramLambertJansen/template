@@ -14,7 +14,7 @@ import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { unpluginRouterGeneratorFactory } from '@tanstack/router-plugin';
 import * as prettier from 'prettier';
-import { ROLES } from '../../src/core/shared/can.ts';
+import { roles } from '../../src/shared/roles.ts';
 import { unsafeCast } from '../../src/core/shared/unsafe-cast.ts';
 
 const TEMPLATES = path.join(import.meta.dirname, 'templates');
@@ -77,14 +77,14 @@ export function fase(spec, naam) {
  */
 export function parseRollen(rollen) {
   if (rollen === undefined || rollen.trim() === '')
-    throw new NewResourceError(`--rollen is verplicht (bijv. --rollen ${ROLES.join(',')}); er is geen standaard`);
+    throw new NewResourceError(`--rollen is verplicht (bijv. --rollen ${roles.names.join(',')}); er is geen standaard`);
   const lijst = rollen.split(',').map((rol) => rol.trim());
-  const onbekend = lijst.filter((rol) => !ROLES.some((bekend) => bekend === rol));
+  const onbekend = lijst.filter((rol) => roles.parse(rol) === null);
   if (onbekend.length > 0)
-    throw new NewResourceError(`onbekende rol: ${onbekend.join(', ')} (rollen: ${ROLES.join(', ')})`);
+    throw new NewResourceError(`onbekende rol: ${onbekend.join(', ')} (rollen: ${roles.names.join(', ')})`);
   if (new Set(lijst).size !== lijst.length) throw new NewResourceError(`--rollen noemt een rol twee keer`);
-  // Volgorde van ROLES, zodat de permissietabel niet afhangt van de volgorde op de commandoregel.
-  return ROLES.filter((rol) => lijst.includes(rol));
+  // Volgorde van het register (src/shared/roles.ts), zodat de permissietabel niet afhangt van de volgorde op de commandoregel.
+  return roles.names.filter((rol) => lijst.includes(rol));
 }
 
 /** @param {string} sjabloon @param {Namen} n */

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { z } from 'zod';
 import { defineAuditActions } from '../../shared/audit.ts';
 import { definePermissions } from '../../shared/can.ts';
+import { baseRoles } from '../../shared/roles.ts';
 import { createContracts } from '../../shared/contract.ts';
 import type { RateLimitCategory } from '../../shared/limits.ts';
 import { registerIntegrations, type Integrations } from '../integrations/index.ts';
@@ -24,7 +25,7 @@ const TRAITS = {
 const INTEGRATION = 'partner-opstart';
 const integrations: Integrations = registerIntegrations([{ name: INTEGRATION, hosts: ['127.0.0.1'], traits: TRAITS }]);
 
-const permissions = definePermissions({ 'partner:read': { roles: ['admin'] } });
+const permissions = definePermissions(baseRoles, { 'partner:read': { roles: ['admin'] } });
 const { defineContract } = createContracts(permissions);
 const { defineRoute, definePartnerRoute } = createRouteKit({ permissions, audit: defineAuditActions({}) });
 

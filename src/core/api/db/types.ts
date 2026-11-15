@@ -37,8 +37,9 @@ export interface WithUserOptions {
 }
 
 // Wat withUser binnen de transactie al weet: de rol uit user_roles (framework §6: per request uit de database), of null.
+// Een naam uit app.roles; of het register van de app hem kent, beslist can() (spec rollenregister).
 export interface ActorRole {
-  readonly role: 'user' | 'admin' | null;
+  readonly role: string | null;
 }
 
 export type WithUser = <T>(

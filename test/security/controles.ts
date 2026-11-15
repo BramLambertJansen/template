@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { routes } from '../../src/api/app.ts';
 import type { TestDb, TestUser } from '../../src/core/api/db/testing.ts';
 import type { Contract, Method } from '../../src/core/shared/contract.ts';
-import type { Role } from '../../src/core/shared/can.ts';
+import type { Role } from '../../src/shared/roles.ts';
 import { routeLabel, type Antwoord, type SecurityFixtures } from './fixtures.ts';
 import {
   codeVan,

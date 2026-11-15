@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import { type CanActor, definePermissions } from './can.ts';
+import { baseRoles } from './roles.ts';
 
-const permissions = definePermissions({
+const permissions = definePermissions(baseRoles, {
   'notes:read': { roles: ['user', 'admin'] },
   'users:manage': { roles: ['admin'] },
 });
@@ -35,6 +36,6 @@ describe('can() (framework §6, ADR 0040)', () => {
   });
 
   test("een app kan 'app.use' niet herdefiniëren", () => {
-    expect(() => definePermissions({ 'app.use': { roles: ['admin'] } })).toThrow('bestaat al in core');
+    expect(() => definePermissions(baseRoles, { 'app.use': { roles: ['admin'] } })).toThrow('bestaat al in core');
   });
 });

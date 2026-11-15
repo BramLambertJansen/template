@@ -524,8 +524,8 @@ select is(
 );
 select is(
   array(select x from pg_temp.d_kandidaten() x order by x),
-  array['app.audit_log|app_definer', 'app.one_time_use|app_definer', 'app.rate_limits|app_definer'],
-  'database-checks/AC-6: D ontdekt precies app.audit_log, app.one_time_use en app.rate_limits (FORCE RLS, DELETE, permissieve DELETE/ALL-policy)'
+  array['app.audit_log|app_definer', 'app.one_time_use|app_definer', 'app.rate_limits|app_definer', 'app.roles|app_definer'],
+  'database-checks/AC-6: D ontdekt precies app.audit_log, app.one_time_use, app.rate_limits en app.roles (FORCE RLS, DELETE, permissieve DELETE/ALL-policy)'
 );
 select is(
   array(select x from pg_temp.d_structuur() x order by x), '{}'::text[],
@@ -880,6 +880,13 @@ insert into pg_temp.d_probe_rij values
   ('app.one_time_use', 'oud', '{"key": "sbf:oud"}', 'verwijderd', 'claim verlopen (termijn 0 seconden na expires_at)'),
   ('app.one_time_use', 'nieuw', '{"key": "sbf:nieuw"}', 'beschermd', 'geldige claim: restrictieve policy one_time_use_definer_delete_expired');
 
+-- Rollenregister (spec rollenregister, ADR 0092): een rol zonder dragers mag weg, een basisrol nooit.
+select app.register_role('sbf_oud', false);
+insert into pg_temp.d_probe values ('app.roles', array['name']);
+insert into pg_temp.d_probe_rij values
+  ('app.roles', 'oud', '{"name": "sbf_oud"}', 'verwijderd', 'testrol zonder dragers'),
+  ('app.roles', 'basis', '{"name": "admin"}', 'beschermd', 'basisrol: policy roles_definer_delete sluit user en admin uit');
+
 -- Synthetische D-tabellen (rijen vóór RLS, als eigenaar). Domeinbeleid oud/nieuw: alleen v = 'oud' mag weg.
 select pg_temp.maak_d('d_vis_false', false, 'select, delete',
   array[$$for delete to app_definer using (v = 'oud')$$, 'for select to app_definer using (false)']);
@@ -944,6 +951,7 @@ savepoint obs_voor;
 alter table app.audit_log no force row level security;
 alter table app.rate_limits no force row level security;
 alter table app.one_time_use no force row level security;
+alter table app.roles no force row level security;
 alter table sbf_fx.d_vis_false no force row level security;
 alter table sbf_fx.d_restr_false no force row level security;
 alter table sbf_fx.d_all_true no force row level security;
@@ -976,7 +984,7 @@ select is((select count(*)::integer from sbf_fx.d_all_restr), 0,
 do $$
 declare t text;
 begin
-  foreach t in array array['app.audit_log', 'app.rate_limits', 'app.one_time_use', 'sbf_fx.d_vis_false', 'sbf_fx.d_restr_false',
+  foreach t in array array['app.audit_log', 'app.rate_limits', 'app.one_time_use', 'app.roles', 'sbf_fx.d_vis_false', 'sbf_fx.d_restr_false',
                            'sbf_fx.d_all_true', 'sbf_fx.d_all_restr', 'sbf_fx.d_geen_pos'] loop
     perform pg_temp.d_voer_uit(t);
   end loop;
@@ -989,6 +997,7 @@ savepoint obs_na;
 alter table app.audit_log no force row level security;
 alter table app.rate_limits no force row level security;
 alter table app.one_time_use no force row level security;
+alter table app.roles no force row level security;
 alter table sbf_fx.d_vis_false no force row level security;
 alter table sbf_fx.d_restr_false no force row level security;
 alter table sbf_fx.d_all_true no force row level security;
@@ -1140,10 +1149,10 @@ select is(array(select x from pg_temp.d_structuur() x order by x), '{}'::text[],
 select is(
   array(select x from pg_temp.d_kandidaten() x order by x),
   array(select tabel || '|app_definer' from pg_temp.d_probe order by tabel),
-  'database-checks/AC-7: iedere ontdekte D-tabel (audit_log, one_time_use en rate_limits) heeft een geregistreerde probe');
+  'database-checks/AC-7: iedere ontdekte D-tabel (audit_log, one_time_use, rate_limits en roles) heeft een geregistreerde probe');
 select is(
   array(select tabel from pg_temp.d_uitvoering where rijen >= 1 order by tabel),
-  array['app.audit_log', 'app.one_time_use', 'app.rate_limits'],
+  array['app.audit_log', 'app.one_time_use', 'app.rate_limits', 'app.roles'],
   'database-checks/AC-7: iedere ontdekte D-tabel is werkelijk uitgevoerd met een positieve rowcount');
 select is(array(select x from pg_temp.d_gedrag() x order by x), '{}'::text[],
   'database-checks/AC-8: na opruimen is de echte D-gedragsgate groen (registratie, rechten, rowcount en per-rij-uitkomst)');

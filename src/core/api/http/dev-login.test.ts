@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { createApp, type DevLogin } from './create-app.ts';
 import { parseErrorBody } from './error-body.test-helper.ts';
 import { request } from './request.test-helper.ts';
+import { baseRoles } from '../../shared/roles.ts';
 
 // POST /api/dev/login-as (ADR 0043): bestaat alleen als server.ts een devLogin meegeeft (APP_ENV=local).
 const ORIGIN = 'http://localhost:5173';
@@ -23,7 +24,7 @@ describe('/api/dev/login-as', () => {
   });
 
   test('met devLogin: 204 en de sessiecookie van de rol', async () => {
-    const app = createApp({ appOrigin: ORIGIN, devLogin });
+    const app = createApp({ appOrigin: ORIGIN, roles: baseRoles, devLogin });
     const response = await request(app, '/api/dev/login-as', post('{"rol":"admin"}'));
 
     expect(response.status).toBe(204);
@@ -34,7 +35,7 @@ describe('/api/dev/login-as', () => {
   });
 
   test('een onbekende rol of een extra veld: 400 VALIDATION', async () => {
-    const app = createApp({ appOrigin: ORIGIN, devLogin });
+    const app = createApp({ appOrigin: ORIGIN, roles: baseRoles, devLogin });
 
     for (const body of ['{"rol":"baas"}', '{"rol":"user","x":1}', 'kapot']) {
       const response = await request(app, '/api/dev/login-as', post(body));
@@ -44,7 +45,7 @@ describe('/api/dev/login-as', () => {
 
   test('cross-site: geweigerd door de CSRF-controle, zoals elke POST', async () => {
     const response = await request(
-      createApp({ appOrigin: ORIGIN, devLogin }),
+      createApp({ appOrigin: ORIGIN, roles: baseRoles, devLogin }),
       '/api/dev/login-as',
       post('{"rol":"user"}', 'cross-site'),
     );

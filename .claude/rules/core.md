@@ -11,9 +11,9 @@ Letterlijk uit `docs/framework.md`; bij verschil wint het regelboek.
 - **R-ARCH-07** `check-core` laat wijziging van `src/core/` in app falen behalve vertrouwde template-merge; verplicht in app-ruleset. Bekend gat: merge met oudere template-commit kan core terugzetten of wissen (0040)
 - **R-REPO-03** Beschermde paden in de padtabel `paden` (`.claude/gates.json`), eigenaarakkoord; developer volgens R-WERK-10; `src/api/app.ts` en `src/shared/permissions.ts` geen gate; geen gegenereerde bestanden of `.env*` bewerken (0046)
 - **R-LAAG-02** App importeert core, core nooit app; core krijgt app-input als argument van compositie-root (`src/api/app.ts`, `src/api/kit.ts`, `src/web/lib/api.ts`); geen globale registratie of singleton (0040)
-- **R-ARCH-02** Elk uitbreidingspunt heeft core-test dat app het zonder core-wijziging gebruikt (plaats en gebruik: ADR 0040 punt 10); core/app-tabel via `src/shared/{permissions,errors,limits,ids,audit}.ts` (0040)
+- **R-ARCH-02** Elk uitbreidingspunt heeft core-test dat app het zonder core-wijziging gebruikt (plaats en gebruik: ADR 0040 punt 10); core/app-tabel via `src/shared/{permissions,roles,errors,limits,ids,audit}.ts` (0040, 0092)
 - **R-ARCH-01** App breidt uit door registreren, nooit core wijzigen; past iets niet: stel uitbreidingsplek in template voor; core-fout oplossen in template (0040)
-- **R-ARCH-03** Nieuwe rol: `ROLES` in `src/core/shared/can.ts`, migratie voor CHECK op `public.user_roles.role`, seed-account in `src/core/api/dev/seed-accounts.ts`, naam in `roleLabels` (rules)
+- **R-ARCH-03** Nieuwe rol: registreren in `src/shared/roles.ts` (`defineRoles`, vlag `beheer`; `user` en `admin` zijn vast), migratie met `app.register_role`, seed-account in `src/api/dev/seed-accounts.ts`, naam in `roleLabels`; weghalen via `app.unregister_role`; core noemt geen rolnamen (0092)
 
 Hoe (geen norm):
 

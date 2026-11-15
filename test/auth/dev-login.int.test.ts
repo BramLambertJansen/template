@@ -4,7 +4,9 @@ import { createServices } from '../../src/api/services.ts';
 import { authGateway } from '../../src/core/api/auth/index.ts';
 import { createDevLogin, devAuthSteps } from '../../src/core/api/dev/login-as.ts';
 import { ensureAccount } from '../../src/core/api/dev/ensure-account.ts';
-import { SEED_ACCOUNTS, SEED_ADMIN_TOTP_SLEUTEL, SEED_DEMO_WACHTWOORD } from '../../src/core/api/dev/seed-accounts.ts';
+import { SEED_ADMIN_TOTP_SLEUTEL, SEED_DEMO_WACHTWOORD } from '../../src/core/api/dev/seed-accounts.ts';
+import { SEED_ACCOUNTS } from '../../src/api/dev/seed-accounts.ts';
+import { roles } from '../../src/shared/roles.ts';
 import { APP_ORIGIN, Browser, createTestApp } from './harness.ts';
 
 // Dev-rolwisselaar (ADR 0043) tegen de echte Better Auth: snel wisselen vanaf één IP loopt niet tegen de rate limit van
@@ -16,7 +18,7 @@ const app = buildApp({
   auth: gateway,
   withUser,
   services: createServices(auth),
-  devLogin: createDevLogin(devAuthSteps(auth)),
+  devLogin: createDevLogin(devAuthSteps(auth), { roles, seedAccounts: SEED_ACCOUNTS }),
 });
 
 beforeAll(async () => {

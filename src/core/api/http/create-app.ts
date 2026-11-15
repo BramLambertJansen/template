@@ -16,7 +16,7 @@ import type { AuthGateway, SessionInfo } from '../auth/auth.ts';
 import type { WithUser } from '../db/types.ts';
 import { AppError, statusFor } from '../errors.ts';
 import { z } from 'zod';
-import { ROLES, type Role } from '../../shared/can.ts';
+import type { Roles } from '../../shared/roles.ts';
 import { rateLimitCategory, type Contract } from '../../shared/contract.ts';
 import { requestLog, timeDatabase, type RequestLog } from '../obs/request-log.ts';
 import { logUnexpectedError } from './safe-error-log.ts';
@@ -31,7 +31,8 @@ import type { Integrations } from '../integrations/index.ts';
 
 // Dev-login (spec accountbeheer, framework §3: limitatieve uitzondering, ADR 0043): logt echt in als het seed-account van de
 // rol en geeft de set-cookie-regels terug. Alleen meegeven bij APP_ENV=local; zonder bestaat /api/dev/login-as niet (404).
-export type DevLogin = (role: Role, headers: Headers) => Promise<readonly string[]>;
+// De rol is een naam uit het register van de app (config.roles); createApp weigert elke andere met VALIDATION.
+export type DevLogin = (role: string, headers: Headers) => Promise<readonly string[]>;
 
 interface BaseConfig<Services> {
   // Exact de origin van de SPA (ADR 0041); zonder waarde weigert de CSRF-controle elke Origin-header.
@@ -42,6 +43,9 @@ interface BaseConfig<Services> {
   // Alleen routes uit defineRoute of definePartnerRoute (ADR 0040); iets anders weigert createApp bij opstart.
   readonly routes?: readonly RouteDef<Contract, Services>[];
   readonly devLogin?: DevLogin;
+  // Het rollenregister van de app (spec rollenregister, R-LAAG-02): bepaalt welke rollen /api/dev/login-as aanneemt. De
+  // permissiecontrole van een route leest het register uit haar permissietabel (createRouteKit).
+  readonly roles?: Roles;
   // Foutcodes die naar buiten mogen; een onbekende code wordt INTERNAL_ERROR.
   readonly errors?: ErrorRegistry<string>;
   // Eén regel per request (src/core/api/obs); server.ts geeft writeJsonLine mee, zonder waarde logt de app niets.
@@ -164,10 +168,23 @@ function routeHandler<Services>(
   };
 }
 
+// POST /api/dev/login-as (ADR 0043): de rol wordt gevalideerd tegen het register van de app; zonder register weigert
+// createApp bij opstart.
+function devLoginHandler(devLogin: DevLogin, roles: Roles | undefined) {
+  if (roles === undefined) throw new Error('createApp: devLogin vraagt roles (het rollenregister van de app)');
+  const input = z.object({ rol: z.enum(roles.names) }).strict();
+  return async (c: Context) => {
+    const parsed = input.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) throw new AppError('VALIDATION');
+    for (const cookie of await devLogin(parsed.data.rol, c.req.raw.headers)) {
+      c.header('set-cookie', cookie, { append: true });
+    }
+    return c.body(null, 204);
+  };
+}
+
 // Vaste volgorde (framework §6): requestId, request-log (als log is meegegeven), secureHeaders, CSRF, bodyLimit, routes; één onError en notFound met alleen
 // `{ code, requestId }`. Health (liveness) en ready (readiness) zijn de publieke uitzonderingen uit framework §3.
-const devLoginInput = z.object({ rol: z.enum(ROLES) }).strict();
-
 export function createApp(): App;
 export function createApp<Services = undefined>(config: AppConfig<Services>): App;
 export function createApp<Services>(config: BaseConfig<Services> & { readonly services?: Services } = {}): App {
@@ -219,17 +236,7 @@ export function createApp<Services>(config: BaseConfig<Services> & { readonly se
     app.get('/ready', async (c) => ((await ready()) ? c.json({ ok: true }) : c.json({ ok: false }, 503)));
   }
 
-  const { devLogin } = config;
-  if (devLogin !== undefined) {
-    app.post('/dev/login-as', async (c) => {
-      const parsed = devLoginInput.safeParse(await c.req.json().catch(() => null));
-      if (!parsed.success) throw new AppError('VALIDATION');
-      for (const cookie of await devLogin(parsed.data.rol, c.req.raw.headers)) {
-        c.header('set-cookie', cookie, { append: true });
-      }
-      return c.body(null, 204);
-    });
-  }
+  if (config.devLogin !== undefined) app.post('/dev/login-as', devLoginHandler(config.devLogin, config.roles));
   for (const route of routes)
     app.on(route.contract.method, route.contract.path, routeHandler(route, config, rateLimits));
   return { fetch: async (request) => app.fetch(request) };

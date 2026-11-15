@@ -1,10 +1,11 @@
 import { describe, expect, test } from 'vitest';
-import { ROLES, type CanActor, type Role } from '#core/shared/can.ts';
+import type { CanActor } from '#core/shared/can.ts';
 import { check, permissions } from './permissions.ts';
+import { roles } from './roles.ts';
 
 // Per permissie de toegestane rollen, letterlijk (spec accountbeheer). Een nieuwe permissie laat de eerste test falen tot
 // hij hier staat; daarmee krijgt elke permissie automatisch een test per verboden rol en voor een admin zonder MFA.
-const expected: Record<string, readonly Role[]> = {
+const expected: Record<string, readonly string[]> = {
   'app.use': ['user', 'admin'],
   'me:read': ['user', 'admin'],
   'me:update': ['user', 'admin'],
@@ -15,7 +16,7 @@ const expected: Record<string, readonly Role[]> = {
 };
 
 const entries = Object.entries(expected).flatMap(([permission, allowed]) =>
-  ROLES.flatMap((role) =>
+  roles.names.flatMap((role) =>
     (['password', 'mfa'] as const).map((sessionStrength) => ({
       permission,
       role,

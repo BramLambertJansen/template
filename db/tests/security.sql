@@ -256,7 +256,9 @@ insert into grant_allowlist values
   ('app.accounts', 'app_authenticated', 'SELECT',
    'view voor de accountlijst van een admin (owner app_definer leest better_auth); de view zelf filtert op admin met MFA (spec accountbeheer, ADR 0043)'),
   ('app.audit_log', 'app_authenticated', 'SELECT',
-   'een admin met MFA leest de audit log (policy audit_log_select_admin, ADR 0051); schrijven alleen via app.audit (security definer)');
+   'een admin met MFA leest de audit log (policy audit_log_select_admin, ADR 0051); schrijven alleen via app.audit (security definer)'),
+  ('app.roles', 'app_authenticated', 'SELECT',
+   'een ingelogde actor leest de rolnamen en de beheervlag (policy roles_select_authenticated, ADR 0092); schrijven alleen via app.register_role en app.unregister_role (security definer, alleen in een migratie)');
 
 create function pg_temp.c3_grants() returns setof text language sql stable as $$
   with rel as (

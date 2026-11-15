@@ -1,48 +1,67 @@
+import type { Roles } from './roles.ts';
+
 // Rechten (framework §6, ADR 0040): één functie voor API en frontend; de API blijft de echte controle, RLS de tweede laag.
-// De app levert alleen de tabel (src/shared/permissions.ts). Core voegt 'app.use' toe (elke ingelogde rol) en leidt de
-// MFA-eis af uit de rol: elke permissie die de rol admin heeft, eist voor een admin een MFA-sessie. De app kan dat niet uitzetten;
-// de RLS-helper app.is_mfa_admin() hanteert dezelfde regel.
-export const ROLES = ['user', 'admin'] as const;
-export type Role = (typeof ROLES)[number];
+// De app levert het rollenregister (src/shared/roles.ts) en de tabel (src/shared/permissions.ts). Core voegt 'app.use' toe
+// (elke rol uit het register) en leidt de MFA-eis af uit het register: elke permissie die een beheerrol heeft, eist voor die
+// rol een MFA-sessie. De app kan dat niet uitzetten; de RLS-helper app.is_mfa_admin() hanteert dezelfde regel. Een rol buiten
+// het register (alleen in de database) is FORBIDDEN op elke permissie.
 export type SessionStrength = 'password' | 'mfa';
 
 export interface CanActor {
-  readonly role: Role;
+  // De rol zoals de database hem geeft; het register beslist of hij bestaat.
+  readonly role: string;
   readonly sessionStrength: SessionStrength;
 }
 
 export interface PermissionRule {
-  readonly roles: readonly Role[];
+  // Namen uit het register; een naam daarbuiten weigert definePermissions bij het laden.
+  readonly roles: readonly string[];
 }
 
 export type Decision =
   { readonly ok: true } | { readonly ok: false; readonly code: 'UNAUTHENTICATED' | 'FORBIDDEN' | 'MFA_REQUIRED' };
 
-const CORE_PERMISSIONS = { 'app.use': { roles: ['user', 'admin'] } } as const satisfies Record<string, PermissionRule>;
+const CORE_PERMISSION = 'app.use';
+type CorePermission = typeof CORE_PERMISSION;
 
 export interface Permissions<Permission extends string> {
   readonly names: readonly Permission[];
+  // Het register waarmee de tabel gemaakt is; de routekit en de app lezen het hier.
+  readonly roles: Roles;
   readonly check: (actor: CanActor | null, permission: Permission) => Decision;
   readonly can: (actor: CanActor | null, permission: Permission) => boolean;
 }
 
-export function definePermissions<const Table extends Record<string, PermissionRule>>(
-  appTable: Table,
-): Permissions<keyof typeof CORE_PERMISSIONS | (keyof Table & string)> {
-  for (const name of Object.keys(appTable)) {
-    if (name in CORE_PERMISSIONS) throw new Error(`Permissie '${name}' bestaat al in core`);
+type Table = Record<string, PermissionRule>;
+
+function assertTable(roles: Roles, appTable: Table): void {
+  for (const [name, rule] of Object.entries(appTable)) {
+    if (name === CORE_PERMISSION) throw new Error(`Permissie '${name}' bestaat al in core`);
+    const unknown = rule.roles.filter((role) => roles.parse(role) === null);
+    if (unknown.length > 0) {
+      throw new Error(`Permissie '${name}' noemt een rol buiten het register: ${unknown.join(', ')}`);
+    }
   }
-  const table: Readonly<Record<string, PermissionRule>> = { ...CORE_PERMISSIONS, ...appTable };
+}
+
+function build(roles: Roles, appTable: Table): Permissions<string> {
+  assertTable(roles, appTable);
+  const table: Readonly<Record<string, PermissionRule>> = { [CORE_PERMISSION]: { roles: roles.names }, ...appTable };
   const check = (actor: CanActor | null, permission: string): Decision => {
     if (actor === null) return { ok: false, code: 'UNAUTHENTICATED' };
     const rule = Object.hasOwn(table, permission) ? table[permission] : undefined;
-    if (rule === undefined || !rule.roles.includes(actor.role)) return { ok: false, code: 'FORBIDDEN' };
-    if (actor.role === 'admin' && actor.sessionStrength !== 'mfa') return { ok: false, code: 'MFA_REQUIRED' };
+    if (rule === undefined || roles.parse(actor.role) === null || !rule.roles.includes(actor.role)) {
+      return { ok: false, code: 'FORBIDDEN' };
+    }
+    if (roles.isBeheer(actor.role) && actor.sessionStrength !== 'mfa') return { ok: false, code: 'MFA_REQUIRED' };
     return { ok: true };
   };
-  return {
-    names: Object.keys(table),
-    check,
-    can: (actor, permission) => check(actor, permission).ok,
-  };
+  return { names: Object.keys(table), roles, check, can: (actor, permission) => check(actor, permission).ok };
+}
+
+export function definePermissions<const T extends Table>(
+  roles: Roles,
+  appTable: T,
+): Permissions<CorePermission | (keyof T & string)> {
+  return build(roles, appTable);
 }

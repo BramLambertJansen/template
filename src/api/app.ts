@@ -6,6 +6,7 @@ import type { RequestLog } from '#core/api/obs/request-log.ts';
 import type { RateLimits } from '#core/shared/limits.ts';
 import { errors } from '#shared/errors.ts';
 import { RATE_LIMITS } from '#shared/limits.ts';
+import { roles } from '#shared/roles.ts';
 import { integrations } from './integrations/index.ts';
 import {
   accountsListRoute,
@@ -26,7 +27,7 @@ import {
 } from './routes/me.ts';
 import type { AppServices } from './services.ts';
 
-// Compositie-root van de app (ADR 0040): routes, foutcodes en wat server.ts aanlevert (auth, withUser, services, devLogin).
+// Compositie-root van de app (ADR 0040): routes, rollenregister, foutcodes en wat server.ts aanlevert (auth, withUser, services, devLogin).
 export const routes = [
   meRoute,
   renameRoute,
@@ -62,6 +63,7 @@ export function buildApp(config: BuildAppConfig) {
   return createApp<AppServices>({
     ...config,
     routes,
+    roles,
     errors,
     integrations,
     rateLimits: config.rateLimits ?? RATE_LIMITS,

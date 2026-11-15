@@ -9,7 +9,9 @@ import { guardWithUser } from '#core/api/outbound/index.ts';
 import { createSmtpMailer } from '#core/api/mail/smtp.ts';
 import { createDevLogin, devAuthSteps } from '#core/api/dev/login-as.ts';
 import { APP_NAME } from '#shared/app.ts';
+import { roles } from '#shared/roles.ts';
 import { buildApp } from './app.ts';
+import { SEED_ACCOUNTS } from './dev/seed-accounts.ts';
 import { invitationMail } from './mail/invitation.ts';
 import { createServices } from './services.ts';
 import { createLoginPolicy } from './login-policy.ts';
@@ -45,7 +47,9 @@ const api = buildApp({
   log: writeJsonLine,
   ready: createReadiness(pingDatabase, { timeoutMs: READY_TIMEOUT_MS, cacheMs: READY_CACHE_MS }),
   // Dev-login alleen lokaal (ADR 0043); in elke andere omgeving bestaat de route niet.
-  ...(config.appEnv === 'local' ? { devLogin: createDevLogin(devAuthSteps(auth)) } : {}),
+  ...(config.appEnv === 'local'
+    ? { devLogin: createDevLogin(devAuthSteps(auth), { roles, seedAccounts: SEED_ACCOUNTS }) }
+    : {}),
 });
 
 // Met WEB_DIR (de containerimage) serveert dezelfde server de SPA op dezelfde origin (ADR 0049); lokaal doet Vite dat.

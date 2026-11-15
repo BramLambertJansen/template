@@ -7,6 +7,7 @@ import { createApp } from '../../src/core/api/http/create-app.ts';
 import { createRouteKit } from '../../src/core/api/route/kit.ts';
 import { defineAuditActions } from '../../src/core/shared/audit.ts';
 import { definePermissions } from '../../src/core/shared/can.ts';
+import { baseRoles } from '../../src/core/shared/roles.ts';
 import { createContracts } from '../../src/core/shared/contract.ts';
 import { UserId } from '../../src/core/shared/ids.ts';
 import { required } from '../auth/harness.ts';
@@ -112,7 +113,7 @@ describe('createApp: de requestId is die van de server (AC-2)', () => {
     await db.rollback();
   });
 
-  const permissions = definePermissions({ 'notes:read': { roles: ['user', 'admin'] } });
+  const permissions = definePermissions(baseRoles, { 'notes:read': { roles: ['user', 'admin'] } });
   const { defineContract } = createContracts(permissions);
   const { defineRoute } = createRouteKit({ permissions, audit: defineAuditActions({}) });
   const whoAmI = defineRoute(

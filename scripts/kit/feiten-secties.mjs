@@ -170,11 +170,12 @@ async function routes() {
 
 async function permissies() {
   const { permissions } = await import('../../src/shared/permissions.ts');
-  const { ROLES } = await import('../../src/core/shared/can.ts');
   return permissions.names.map((permission) => ({
     permissie: permission,
     rollen:
-      ROLES.filter((role) => permissions.can({ role, sessionStrength: 'mfa' }, permission)).join(', ') || '(geen)',
+      permissions.roles.names
+        .filter((role) => permissions.can({ role, sessionStrength: 'mfa' }, permission))
+        .join(', ') || '(geen)',
   }));
 }
 
