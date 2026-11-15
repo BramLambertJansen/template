@@ -2,7 +2,7 @@
 
 Status: geaccepteerd
 
-Herzien: 2026-11-14: punt 3 herschreven (eigenaarbesluit 2026-11-11): readiness hangt niet aan de jobs-verbinding
+Herzien: 2026-11-14 (#712): punt 3 herschreven (eigenaarbesluit 2026-11-11): readiness hangt niet aan de jobs-verbinding
 
 Vervangt 0018 en 0019. Drempel: A4. Consolidatie zonder inhoudelijke wijziging
 (eigenaarbesluit 2026-10-21, 0038 Gevolgen).
