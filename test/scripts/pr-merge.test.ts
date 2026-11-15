@@ -136,7 +136,7 @@ describe('agent-merge-niet-kritiek/AC-3 pr:merge', () => {
   });
 });
 
-// GEWIJZIGD (ADR 0078 punt 2, herzien in #696; ADR 0089 punt 5): pr:merge leest de sectie Leerpunt niet meer; bij
+// GEWIJZIGD (ADR 0078 punt 1 en 2, herzien in #696; ADR 0089 punt 5): pr:merge leest de sectie Leerpunt niet meer; bij
 // `geen test:` merget de eigenaar volgens afspraak.
 describe('leerlus-bewijs/AC-4 pr:merge leest de sectie Leerpunt niet', () => {
   const PULL = goed()[`repos/${REPO}/pulls/7`];

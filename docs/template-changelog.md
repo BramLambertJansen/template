@@ -29,7 +29,7 @@ requests.
 ### Opgelost
 
 - `pnpm pr:merge` las nog de sectie Leerpunt van de beschrijving en weigerde bij `geen test:` of `meting:`, terwijl ADR 0078
-  punt 2 (herzien in #696) en ADR 0089 punt 5 die toets lieten vervallen. Het script leest de beschrijving niet meer;
+  punt 1 en 2 (herzien in #696) en ADR 0089 punt 5 die toets lieten vervallen. Het script leest de beschrijving niet meer;
   `leerpuntMergeRedenen` en `REDEN_ZONDER_TEST` in `scripts/kit/leerpunt.mjs` zijn weg. Dat de eigenaar merget bij een leerpunt
   zonder test, blijft een afspraak.
 

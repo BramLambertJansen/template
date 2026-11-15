@@ -3,7 +3,7 @@
 // regel en exit 1 zonder schrijfactie. Pas als alles klopt: squash-merge met de head-SHA als voorwaarde. Geen inhoudstoets:
 // wie een pad goedkeurt, bewaakt de ruleset op main met `.github/CODEOWNERS` (ADR 0089); blijft: de
 // modus `merge` uit `.claude/gates.json` op main, de verplichte checks op de head en een groene main. De beschrijving leest het niet: dat
-// de eigenaar merget bij `geen test:` of `meting:` in de sectie Leerpunt, is een afspraak (ADR 0078 punt 2, herzien in #696).
+// de eigenaar merget bij `geen test:` of `meting:` in de sectie Leerpunt, is een afspraak (ADR 0078 punt 1 en 2, herzien in #696).
 import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
 import { gitText, readAuthority } from '../../rails/hooks/lib/authority-context.mjs';
