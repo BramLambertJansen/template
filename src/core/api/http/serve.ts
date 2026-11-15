@@ -12,7 +12,7 @@ export interface ServeOptions {
   readonly port: number;
   // Hoe lang lopende requests na SIGTERM mogen doorlopen; daarna worden hun verbindingen verbroken.
   readonly shutdownTimeoutMs: number;
-  // Na de laatste request: databasepools en andere bronnen sluiten; de compositie-root (src/api/server.ts) geeft ze mee.
+  // Na de laatste request: databasepools en andere bronnen sluiten; composeServer (src/core/api/server/compose.ts) geeft ze mee.
   readonly onStopped: () => Promise<void>;
   // Standaard SIGTERM (containerhost) en SIGINT (Ctrl+C); tests geven een lege lijst.
   readonly signals?: readonly NodeJS.Signals[];
