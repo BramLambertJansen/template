@@ -190,8 +190,8 @@ select is(
   'roles_select_authenticated: app_authenticated zonder actor ziet geen rollen'
 );
 select is(
-  pg_temp.scalar_as('app_authenticated', 'r-ingelogd', 'password', $select count(*) from app.roles$),
-  pg_temp.scalar($select count(*) from app.roles$),
+  pg_temp.scalar_as('app_authenticated', 'r-ingelogd', 'password', $$select count(*) from app.roles$$),
+  pg_temp.scalar($$select count(*) from app.roles$$),
   'roles_select_authenticated: een ingelogde actor ziet alle rollen'
 );
 select is(
