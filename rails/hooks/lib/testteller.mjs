@@ -1,6 +1,6 @@
 // Testteller (leerpunt #424): telt testgevallen en skips in een JS/TS-testbestand met een kleine lexer zonder
-// dependency, zodat de guard (geen install, R-CI-07) en het rolhek (alleen gecontroleerde code van main,
-// R-ROL-09) hem kunnen draaien. Commentaar, strings, template-literals, regex-literals en JSX-tekst leveren geen
+// dependency, zodat het rolhek (via `functional-ui.mjs`; alleen gecontroleerde code van main, R-ROL-09) hem kan
+// draaien. Commentaar, strings, template-literals, regex-literals en JSX-tekst leveren geen
 // tokens (expressies in `${…}` en JSX-`{…}` wel, in een eigen lijst); daarna telt een pass over aanroepketens (`test.each(t)(…)`, `ctx.skip()`). Eén geval per aanroepplek.
 
 import { testAlsWaarde, typeArgumenten, voorwaardelijkeTokens } from './testvoorwaarde.mjs';
