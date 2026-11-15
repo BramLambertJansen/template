@@ -110,32 +110,6 @@ export function changeStatus(file, text, target) {
   return text.replace(pattern, () => line);
 }
 
-/**
- * ADR 0045 punt 22: achter een nieuwe of gewijzigde ADR-statuswaarde alleen `(JJJJ-MM-DD)`, `#<nr>` en `[NNNN](NNNN-<slug>.md)`
- * naar een bestaand ADR, gescheiden door `, ` of ` — `. Een regel gelijk aan main en een spec-regel vallen erbuiten.
- * @param {string} nieuweRegel @param {string | null} oudeRegel
- * @param {readonly string[]} bestaandeAdrBestanden bestandsnamen in `docs/adr/` en `docs/adr/archief/` op HEAD, zoals `0017-diff-guard.md`
- * @returns {string | null} null of de reden
- */
-export function statusregelOvertreding(nieuweRegel, oudeRegel, bestaandeAdrBestanden) {
-  if (!nieuweRegel.startsWith('Status:') || nieuweRegel === oudeRegel) return null;
-  const rest = /^Status: (?:voorgesteld|geaccepteerd|vervallen|vervangen door \d{4})(.*)$/.exec(nieuweRegel)?.[1];
-  if (rest === undefined) return 'statusregel heeft geen geldige statuswaarde';
-  if (rest === '') return null;
-  const delen = /^ (?:— )?(.+)$/.exec(rest)?.[1]?.split(/, | — /) ?? [rest];
-  const fout = delen.find((deel) => !toegestaanDeel(deel, bestaandeAdrBestanden));
-  return fout === undefined
-    ? null
-    : `statusregel: "${fout}" mag niet achter de statuswaarde; alleen (JJJJ-MM-DD), #<nr> en [NNNN](NNNN-<slug>.md) naar een bestaand ADR (ADR 0045 punt 22)`;
-}
-
-/** @param {string} deel @param {readonly string[]} bestaandeAdrBestanden */
-function toegestaanDeel(deel, bestaandeAdrBestanden) {
-  if (/^#\d+$/.test(deel) || bestaandeDatum(deel)) return true;
-  const link = /^\[(\d{4})\]\(((\d{4})-[a-z0-9]+(?:-[a-z0-9]+)*\.md)\)$/.exec(deel);
-  return link !== null && link[1] === link[3] && bestaandeAdrBestanden.includes(link[2] ?? '');
-}
-
 /** `(JJJJ-MM-DD)` met een datum die in de kalender bestaat. @param {string} deel */
 function bestaandeDatum(deel) {
   const datum = /^\((\d{4})-(\d{2})-(\d{2})\)$/.exec(deel);

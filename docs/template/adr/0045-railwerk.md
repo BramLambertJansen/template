@@ -101,8 +101,7 @@ tot stand komt (merge is acceptatie, drempel, taakmandaat, CI-lus, merge- en for
 22. **Strikte statusregel** (was 0031 besluit 4). Is de statusregel van een ADR nieuw of gewijzigd, dan staat achter de
     statuswaarde alleen een datum `(JJJJ-MM-DD)`, PR-nummers `#<nr>` en links naar bestaande ADR's met alleen het nummer als
     tekst, gescheiden door `, ` of ` — `. Ongewijzigde statusregels blijven geldig. Specs vallen erbuiten. Dit is een
-    afspraak die de reviewer toetst (0089 punt 8): de vorm staat in `statusregelOvertreding`
-    (`rails/hooks/lib/document-state.mjs`), maar geen hook of check roept die aan.
+    afspraak die de reviewer toetst (0089 punt 8); geen hook of check toetst de vorm.
 23. **`pr:verify` in een agent-worktree** (was 0031 besluit 5). Alleen ongetrackte bestanden onder `werkmapNegeer` (exacte paden
     of mapvoorvoegsels onder `.claude/`, gelezen uit `main`) tellen niet als vuile werkmap; een getrackte wijziging blijft
     weigeren. `.mcp.json` en `.claude/commands/` staan er niet in: dat beslist de app.

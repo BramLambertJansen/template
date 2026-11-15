@@ -42,6 +42,9 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Verwijderd
 
+- `statusregelOvertreding` in `rails/hooks/lib/document-state.mjs` met de test `test/hooks/adr-statusregel.test.ts`: geen hook
+  of check riep de functie nog aan sinds de strikte statusregel een afspraak is die de reviewer toetst (ADR 0045 punt 22, ADR
+  0089 punt 8). De regel zelf blijft.
 - De effecttoets van het rolhek (ADR 0091): de toets achteraf op wat een Bash-commando van een subagent veranderde, de open
   lijst, de schaduwmodus voor de hoofdsessie, `pnpm rolhek:overnemen` en de controle op die lijst in de Stop-hook,
   `pnpm pr:verify` en `pnpm pr:merge`; ook de effecttellers in `pnpm meting`. De toets vooraf, het schrijfrecht per rol en de
