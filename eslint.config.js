@@ -468,7 +468,9 @@ export default defineConfig(
   },
   railConfigs,
   // R-LAAG-06 (spec create-server, AC-11): pingDatabase en closeDatabase alleen in de serveringang van core en in de
-  // databasemodule zelf. Op de naam, niet op het pad: de rest van src/core/api/db/index.ts blijft vrij importeerbaar.
+  // databasemodule zelf. Op de naam binnen de databasemodule (elk pad dat op db/index.ts eindigt, alias of relatief): de
+  // rest van src/core/api/db/index.ts blijft vrij importeerbaar. Niet op elk pad: `import * as x from '<iets>'` telt voor
+  // ESLint als import van elke naam en zou dan overal falen.
   {
     files: ['**/*.{ts,tsx}'],
     ignores: ['src/core/api/server.ts', 'src/core/api/db/**'],
@@ -478,7 +480,7 @@ export default defineConfig(
         {
           patterns: [
             {
-              regex: '.',
+              regex: '(^|/)db/index\\.ts$',
               importNames: ['pingDatabase', 'closeDatabase'],
               message:
                 'pingDatabase en closeDatabase alleen in src/core/api/server.ts (runServer) en src/core/api/db (R-LAAG-06); elders komen ze als argument binnen (parts van composeServer).',

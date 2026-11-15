@@ -91,7 +91,24 @@ const VRIJ: Fixture[] = [
     file: 'src/core/api/http/x.ts',
     code: `import { createAuditFn, readIntegrationSwitch } from '${DB}';\nexport const a = [createAuditFn, readIntegrationSwitch];\n`,
   },
+  // Een namespace-import telt voor ESLint als import van elke naam: de regel mag alleen op de databasemodule slaan.
+  {
+    name: 'een namespace-import uit een andere module',
+    file: 'src/api/x.ts',
+    code: "import * as path from 'node:path';\nexport const p = path.sep;\n",
+  },
+  {
+    name: 'een namespace-import uit een andere core-module',
+    file: 'src/core/api/http/x.ts',
+    code: "import * as limits from '#core/shared/limits.ts';\nexport const l = limits;\n",
+  },
 ];
+
+// De omweg via een namespace-import van de databasemodule zelf valt wel onder de regel.
+test('create-server/AC-11: een namespace-import van de databasemodule faalt', async () => {
+  const code = `import * as db from '${DB}';\nexport const p = db.pingDatabase;\n`;
+  expect(await restrictedImports('src/api/x.ts', code)).toBeGreaterThan(0);
+});
 
 test.each(WEIGERT)('create-server/AC-11: een import van $name faalt', async ({ file, code }) => {
   expect(await restrictedImports(file, code)).toBeGreaterThan(0);
