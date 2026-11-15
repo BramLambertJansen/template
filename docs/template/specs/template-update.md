@@ -25,7 +25,7 @@ Twee PR's (zie OV-2). **PR 1: de regel voor eigen migraties en de procedure.**
 
 - **Eigen migraties: altijd later.** `check:migrations` weigert een migratie die in deze branch is toegevoegd en waarvan de versie niet later is dan die van elke migratie op het punt waar de branch van `origin/main` afsplitste. De oplossing is de eigen, nog niet gemergde migratie een nieuw tijdstempel geven. Twee toegevoegde migraties met dezelfde versie vangt de bestaande regel voor dubbele versies; zonder migraties op het afsplitspunt is elke versie later.
 - **Uitzondering voor een templatemigratie.** Alleen in een app, en alleen als er een oudere toegevoegde migratie ís (anders geen netwerk en geen lookup): het bestand staat met dezelfde inhoud in de template. De ref is lokaal `refs/remotes/template/main` en in CI een fetch van `TEMPLATE_URL` naar een eigen ref, zoals `check-core` dat doet in `guard.yml`; `check:migrations` draait in `gate:fast`, waar die ref nu niet bestaat, dus de check haalt hem zelf op. Is de template niet te lezen, dan is de check rood met de reden en het commando om hem op te halen. Gelijke inhoud is een houdbare herkenning: een migratie verandert nooit, ook niet in de template. `migratieFouten(root, base, templateRef)` krijgt de ref als parameter, zodat een test hem met een fixture-repo kan zetten.
-- **Controle op main achteraf** (eigenaarbesluit 2026-11-15). Een PR die groen was tegen een oudere main, mag gemerged worden zonder bij te werken (de ruleset eist geen bijgewerkte branch), dus twee PR's met elk een migratie kunnen toch in de verkeerde volgorde op main komen. Staat `HEAD` op `origin/main` (het afsplitspunt is `HEAD` zelf), dan vergelijkt `check:migrations` met de eerste ouder van `HEAD`: wat de laatste merge toevoegde, moet later zijn dan wat er al stond. De CI op main wordt dan rood; het herstel is een nieuwe migratie, niet een hernoemde.
+- **Controle op main achteraf** (eigenaarbesluit 2026-11-15). Een PR die groen was tegen een oudere main, mag gemerged worden zonder bij te werken (de ruleset eist geen bijgewerkte branch), dus twee PR's met elk een migratie kunnen toch in de verkeerde volgorde op main komen. Staat `HEAD` op `origin/main` (ze zijn gelijk; een branch die alleen achterloopt telt niet), dan vergelijkt `check:migrations` met de eerste ouder van `HEAD`: wat de laatste merge toevoegde, moet later zijn dan wat er al stond. De CI op main wordt dan rood; het herstel is een nieuwe migratie, niet een hernoemde.
 - **De template herkent zichzelf** aan `onderhoud.repository` in `.claude/gates.json` (`pnpm app:init` haalt die regel weg); daar bestaat de uitzondering niet.
 - **Procedure.** De bestaande sectie in `docs/nieuwe-app.md` wordt uitgebreid en heet "Een template-update binnenhalen" (de verwijzing ernaar eerder in het document volgt): de versie en de "Bij een update"-notities in `docs/template-changelog.md` lezen en per versie uitvoeren; een branch vanaf `origin/main`; `git fetch template` en `git merge template/main` als echte merge-commit (geen squash); conflicten oplossen (`CHANGELOG.md` is van de app); `pnpm install`; `pnpm db:migrate` (de lokale database, niet productie) en `pnpm db:generate`, en het gegenereerde schema committen; `pnpm gate:fast`; push (met `.github/workflows/` pusht de eigenaar), PR, CI, merge door de eigenaar; `scripts/github-ruleset.sh` als de verplichte checks wijzigden. Met per rode check wat te doen: `check:migrations`, `check:snapshot`, `check-core`.
 
@@ -42,7 +42,7 @@ Twee PR's (zie OV-2). **PR 1: de regel voor eigen migraties en de procedure.**
 
 ## Hergebruik en UX
 
-Geen schermen. De meldingen van de twee checks zeggen wat er mis is en wat de oplossing is, in één regel per migratie.
+Geen schermen. De meldingen van de twee checks zeggen wat er mis is en wat de oplossing is, in één regel per migratie; is de template niet te lezen, dan één regel met alle betrokken namen, want dan is er één oorzaak en één herstel.
 
 ## Acceptatiecriteria
 
@@ -68,6 +68,8 @@ PR 2:
 
 ## Buiten scope
 
+- De controle op main achteraf ziet niet elke commit: de CI annuleert een lopende run op main als er een nieuwe merge komt (`cancel-in-progress`), en de check vergelijkt alleen de laatste commit met zijn ouder. Bij snel opeenvolgende merges kan een te oude migratie in een eerdere merge dus ongemeld blijven. Sluiten vraagt een workflowwijziging (vergelijken met de vorige gepushte stand, of geen annulering op main); dat is een vervolg voor de eigenaar.
+- De tak waarin de check de template zelf ophaalt (in CI, als de lokale ref ontbreekt) heeft geen test; het eerste bewijs is de CI van een app met een oudere templatemigratie.
 - Data-effecten: de vergelijking in PR 2 is `pg_dump` van het schema; rijen die een migratie invoegt of bijwerkt, vallen erbuiten.
 - De tweede bouw geeft de volgorde van binnenkomst als main na elke merge is uitgerold. Rolt een app meerdere merges tegelijk uit, dan draait productie ze op versievolgorde en valt dat samen met de verse bouw; beide gevallen zijn dus gedekt.
 - App-configuratie naast templateconfiguratie; een migratie-runbook voor productie (deel C); `dbmate --strict` in de uitrol (maakt een update net zo vast als weigeren).
