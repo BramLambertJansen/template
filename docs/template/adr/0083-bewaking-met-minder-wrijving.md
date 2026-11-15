@@ -8,7 +8,7 @@ Herzien: 2026-11-09 (#634): punt 3, gewijzigd door [0086](0086-aangehaalde-hered
 
 Herzien: 2026-11-12 (#705): punt 2: de effecttoets is weg (ADR 0091 punt 1)
 
-Herzien: 2026-11-14: ingekort tot wat nog geldt na ADR 0091; de puntnummers zijn ongewijzigd, de oude tekst staat in git
+Herzien: 2026-11-14 (#714): ingekort tot wat nog geldt na ADR 0091; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 
 Wijzigt [0082](0082-zelfladend-sandbox-en-leeslijst.md) punt 2 en 4 en [0066](0066-schrijfgrens-op-effect.md) punt 2.
 Drempel: A3 (een grens van het besturingssysteem vervalt en een vangnet wordt smaller) en A4. Aanleiding: melding van de
