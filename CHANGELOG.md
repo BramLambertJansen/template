@@ -58,7 +58,7 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
   `pnpm pr:merge` doet geen inhoudstoets meer (omvang, bytes, binaire bestanden, job `agent-merge`, reviewcommentaar, kop van
   main in de PR, leerpuntreden) en houdt de modus `merge`, de head-SHA, de verplichte checks en een groene `main`.
   Wat verandert voor een app: draai na de template-update `pnpm exec lefthook install`; het blok `agentMerge` in
-  `.claude/gates.json` wordt niet meer gelezen.
+  `.claude/gates.json` wordt niet meer gelezen en is uit de template gehaald: haal het ook uit de `gates.json` van je app.
 
 ### Toegevoegd
 
