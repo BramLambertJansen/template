@@ -174,10 +174,15 @@ jobs:
           version: 2026.9.18
           install_args: node pnpm
       - run: pnpm install --frozen-lockfile
-      - run: docker build -t app:ci .
+      # De build-SHA (spec release-versie, AC-9): de image krijgt de commit mee en GET /api/health moet precies die tonen.
+      # Op een PR de kop van de PR, niet de tijdelijke merge-commit.
+      - run: docker build --build-arg "BUILD_SHA=$BUILD_SHA" -t app:ci .
+        env:
+          BUILD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       - run: scripts/check-image.sh app:ci
         env:
           SMOKE_BROWSER: "1"
+          EXPECT_BUILD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
   # Eén proefkopie (ADR 0073): in de template eerst app:init, dan pnpm new:resource, dan één keer de snelle suite, zodat
   # gegenereerde code en een test die alleen in de template slaagt (leerpunt #334) hier rood worden. Duurt minuten, daarom
