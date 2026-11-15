@@ -41,7 +41,8 @@ n.v.t.: geen API-route, permissie of foutcode.
 
 - `scripts/kit/agent-merge.mjs`: `leesMergeConfig` (ontbrekend of onleesbaar valt dicht) en `padReden` (oordeel per pad).
 - `rails/hooks/lib/rolhek.mjs`: `loadConfig` (vorm van de afgeleide `Config`, die gelijk blijft).
-- `scripts/kit/check-docs.mjs`: `agentMergeViolations` (elk getrackt pad plus `voorbeeldPad` per glob).
+- `scripts/kit/check-docs.mjs`: `agentMergeViolations` (elk getrackt pad plus `voorbeeldPad` per glob). Vervallen: sinds
+  ADR 0089 punt 5 toetst de functie alleen de modus `merge` en heet ze `mergeModusViolations`.
 - `scripts/kit/feiten.mjs`: `hoofdstuk <n>` (CLI-vorm met één argument, foutmelding en exit 1).
 
 ## Hergebruik en UX
@@ -80,7 +81,8 @@ n.v.t.: geen API-route, permissie of foutcode.
 6. **check-docs.** Elke lezer van ruwe lijsten in `check-docs` gaat via `afgeleid`: `gatesViolations` (CODEOWNERS = afgeleide
    gates plus `jsonGates`-bestanden), `askViolations` (Edit-`ask` = afgeleide `altijdVragen`), `schrijfrechtViolations`
    (overlap van rolglobs met de afgeleide gates), `agentMergeVorm` en `agentMergeViolations` (blijft als gedragscheck per pad:
-   geen pad met schrijven ≠ vrij is agent-mergebaar). Nieuw: de samenhangregels, dubbele sleutels in de ruwe tekst
+   geen pad met schrijven ≠ vrij is agent-mergebaar; vervallen met ADR 0089 punt 5, nu `mergeModusViolations` voor alleen
+   de modus `merge`). Nieuw: de samenhangregels, dubbele sleutels in de ruwe tekst
    (`JSON.parse` houdt stil de laatste), sleutels die met `!` beginnen, `{}`, en de vloer: `.github/**`, `.claude/hooks/**`,
    `.claude/settings.json`, `.claude/gates.json`, `.claude/decisions.json`, `package.json` en `pnpm-lock.yaml` hebben elk een
    eigen rij met `altijdVragen` en `besluit-pr`. De oude vorm is rood (migratiemelding); de overige regels draaien dan op
