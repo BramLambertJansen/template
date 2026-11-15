@@ -2,6 +2,8 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-15 (#722): punt 11 aangevuld: de app-zone bevat configuratie en registraties, geen koppeling tussen core-onderdelen; die doet `runServer` in core (spec create-server)
+
 Herzien: 2026-11-15 (#715): door ADR 0092 punt 1 en 2, punt 10 en 11: rollen zijn een uitbreidingspunt (`src/shared/roles.ts`, `defineRoles`); core noemt geen rolnamen meer
 
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 1, 4, 5 en 6, punt 4 vervalt (elke map nummert zelf, geen reeks 0001–0099 en 0100+); punt 8 en 16, `docs/template` is een tweede templatezone naast `src/core`, die `check-core` per zone bewaakt; punt 17, `check-core` blijft en wordt verplicht in de ruleset via `requiredChecks`, `check-document-status` verdwijnt
@@ -63,6 +65,9 @@ Een app ontstaat met **Use this template**: nieuwe geschiedenis, geen instelling
     app-limiet boven een harde grens uit core weigert `createApp` bij opstart.
     Componentvarianten bouwt de app uit de geëxporteerde basis van core; `src/web/ui/index.ts` is de enige importbron voor
     `features/`. Een basiscomponent voor elke app komt via de template in `src/core/web/ui`.
+    De app-zone bevat configuratie en registraties, geen koppeling tussen core-onderdelen: omgeving, mail, auth, readiness,
+    dev-login, de SPA en starten en stoppen knoopt `runServer` in `src/core/api/server.ts` aan elkaar, en `src/api/server.ts`
+    geeft alleen mee wat van de app is. Zo botst een wijziging aan die koppeling niet in elke app bij een template-update.
 12. **Contracten** (was 0008 Aanvulling). De API-client is getypt op `src/shared/contracts`; web importeert niets uit
     `src/api`, ook geen types. Server en client lezen hetzelfde zod-schema.
 13. **Startinhoud** (was 0008). Compositie-roots, de referentie-feature en de app-tabellen in `permissions.ts`/`errors.ts`

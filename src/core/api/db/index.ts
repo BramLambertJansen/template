@@ -4,7 +4,7 @@ import { createWithUser } from './with-user.ts';
 
 const { databaseUrl } = env();
 const pool = createPool(databaseUrl);
-// Verbinden en query elk hooguit 900 ms: samen korter dan de timeout van readiness (2 s, src/api/server.ts), zodat de
+// Verbinden en query elk hooguit 900 ms: samen korter dan de timeout van readiness (2 s, src/core/api/server/compose.ts), zodat de
 // ping altijd vóór de volgende controle zelf eindigt.
 const PING_TIMEOUT_MS = 900;
 const ping = createPing(databaseUrl, PING_TIMEOUT_MS);

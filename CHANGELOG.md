@@ -6,6 +6,14 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 
 ### Gewijzigd
 
+- De serverkoppeling staat in core (spec `create-server`, ADR 0040): `runServer(config)` in `src/core/api/server.ts` leest de
+  omgeving en koppelt mail, auth, readiness, de dev-login (alleen `APP_ENV=local`), de SPA (`WEB_DIR`), starten en stoppen
+  (`composeServer` in `src/core/api/server/compose.ts`). `src/api/server.ts` bevat alleen nog wat van de app is; het gedrag van de
+  draaiende server is gelijk. Een lintregel weigert `pingDatabase` en `closeDatabase` buiten `src/core/api/server.ts` en
+  `src/core/api/db/**` (R-LAAG-06). Wat verandert voor een app: na de template-update vervangt de app haar `src/api/server.ts`
+  door één aanroep, `await runServer({ appName, devLogin: { roles, seedAccounts }, invitationMail, loginRequiresMfa, createServices, buildApp })`
+  (voorbeeld: `src/api/server.ts` van de template), met `runServer` als enige import uit core; eigen koppelcode in dat bestand
+  vervalt. `src/api/app.ts`, `kit.ts`, `services.ts` en `login-policy.ts` blijven ongewijzigd.
 - Rollen zijn een register van de app (spec `rollenregister`, ST-16): `src/shared/roles.ts` (`defineRoles`) en de tabel `app.roles`
   met de vlag `beheer`. De MFA-eis (`can()`, `app.is_mfa_admin()`, inlogbeleid) en de laatste-beheerder-regel hangen aan `beheer`,
   niet meer aan de naam `admin`; `user` en `admin` blijven vast. `ROLES` is weg uit `src/core/shared/can.ts`,
