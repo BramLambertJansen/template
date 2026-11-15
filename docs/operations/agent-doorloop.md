@@ -274,7 +274,7 @@ niet of als `voorstel`, de genoemde PR is open op deze branch in deze repository
   `(select app.current_user_id())` en expliciete SELECT/DELETE-grants aan `app_authenticated`. INSERT/UPDATE-grants
   zijn alleen per app-kolom toegestaan. Eenvoudige extra velden mogen text, integer/int, bigint, boolean, uuid of
   timestamptz zijn, eventueel met NOT NULL en een letterlijke default. Indexen bevatten alleen kolomnamen;
-  quoted objectnamen, expressies en andere SQL-vormen volgen de volledige route. De vaste
+  quoted objectnamen, expressies en andere SQL-vormen zijn kritiek werk (ADR 0062 punt 2, R-WERK-05): in een app eerst een besluit-PR. De vaste
   verwijzing naar `better_auth."user" (id)` blijft toegestaan. Een retentionregistratie heeft precies de volgorde
   NO FORCE → één rij voor de nieuwe tabel → FORCE; losse of herhaalde toggles worden geweigerd. De mini-spec heeft de kop
   "Datawijzigingen (met grants)". Een geneste `CLAUDE.md` of `AGENTS.md` valt eruit. Een onbekend pad buiten `gates` en buiten `src/`, `docs/` en `db/` (zoals `.vscode/` of `.mcp.json`) valt eruit. CODEOWNERS
