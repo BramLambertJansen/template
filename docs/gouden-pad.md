@@ -5,7 +5,7 @@ Licht alleen voor beperkte fixes binnen bestaand gedrag; anders volledig — fra
 Voor overige functionele UI-wijzigingen aan bestaande componenten in de template mag de mini-spec met
 `scope: functionele-ui`, samen met code, tests en gebruiksdocumentatie in één PR (ADR 0056). De mini-spec verkort het
 document, niet de rollen: architect, tester en onafhankelijke review blijven zoals framework §8 ze vraagt. De
-[agentdoorloop](operations/agent-doorloop.md#feature-lane-en-mini-spec-adr-0046) beschrijft scope en bouwbewijs.
+[agentdoorloop](operations/agent-doorloop.md#routes-en-mini-spec-adr-0046) beschrijft scope en bouwbewijs.
 De bestaande toast-API is `useToast().success/error`, met `ToastProvider` in `src/web/main.tsx` en `Toaster` in AppShell.
 Een succesmelding verdwijnt na vijf seconden actieve tijd, ook als een scherm haar vanuit een mount-effect aanmaakt.
 Hover en focus pauzeren de aftellers; een nieuwe melding herstart bestaande aftellers niet. Foutmeldingen blijven tot
