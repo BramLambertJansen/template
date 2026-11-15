@@ -467,6 +467,27 @@ export default defineConfig(
     languageOptions: { globals: { process: 'readonly', console: 'readonly', URL: 'readonly' } },
   },
   railConfigs,
+  // R-LAAG-06 (spec create-server, AC-11): pingDatabase en closeDatabase alleen in de serveringang van core en in de
+  // databasemodule zelf. Op de naam, niet op het pad: de rest van src/core/api/db/index.ts blijft vrij importeerbaar.
+  {
+    files: ['**/*.{ts,tsx}'],
+    ignores: ['src/core/api/server.ts', 'src/core/api/db/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '.',
+              importNames: ['pingDatabase', 'closeDatabase'],
+              message:
+                'pingDatabase en closeDatabase alleen in src/core/api/server.ts (runServer) en src/core/api/db (R-LAAG-06); elders komen ze als argument binnen (parts van composeServer).',
+            },
+          ],
+        },
+      ],
+    },
+  },
   // Kleine functies (AGENTS.md, framework §4): ≤ 60 regels in .ts/.mjs, ≤ 120 in .tsx, max 3 parameters, max diepte 3,
   // cyclomatische complexiteit ≤ 15 (R-CODE-02, ADR 0068). In tests geldt de lengte niet (een describe-blok is een lijst
   // gevallen); parameters, diepte en complexiteit wel.

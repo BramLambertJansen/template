@@ -30,7 +30,7 @@ export function createAuth(config: CreateAuthConfig) {
   pool.on('error', (error) => {
     console.warn(`auth-database: idle verbinding verbroken (${error.message})`);
   });
-  // closePool: alleen bij het stoppen van het proces (src/api/server.ts), na de laatste request.
+  // closePool: alleen bij het stoppen van het proces (composeServer, src/core/api/server/compose.ts), na de laatste request.
   // mailing: de mails van een e-mailwijziging, ook voor de service die na stap 2 het oude adres meldt (null zonder sendMail).
   return Object.assign(betterAuth(createAuthOptions(config, pool)), {
     closePool: () => pool.end(),

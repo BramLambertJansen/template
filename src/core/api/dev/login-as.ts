@@ -5,7 +5,7 @@ import { SEED_ADMIN_TOTP_SLEUTEL, SEED_DEMO_WACHTWOORD, type SeedAccount, type S
 import { totpCode } from './totp.ts';
 
 // Dev-login (spec accountbeheer, spec rollenregister, ADR 0043): logt echt in via Better Auth als het seed-account van de rol,
-// voor elke beheerrol van het register met de TOTP-code uit het ene vaste lokale geheim. Alleen voor APP_ENV=local; server.ts geeft hem elders niet aan createApp.
+// voor elke beheerrol van het register met de TOTP-code uit het ene vaste lokale geheim. Alleen voor APP_ENV=local; composeServer (server/compose.ts) geeft hem elders niet aan buildApp.
 //
 // Via auth.api (server-side) en niet via de HTTP-handler: dezelfde hooks (session_strength 'mfa' na de TOTP-stap), maar
 // buiten de rate limit van de router. Anders telt elke wissel als inlogpoging en weigert Better Auth na drie wissels.
@@ -55,7 +55,7 @@ function headersWith(incoming: Headers, cookies: readonly string[]): Headers {
   return headers;
 }
 
-// Het register en de seed-accounts van de app (R-LAAG-02: als argument, src/api/server.ts geeft ze mee).
+// Het register en de seed-accounts van de app (R-LAAG-02: als argument; src/api/server.ts geeft ze mee aan runServer).
 export interface DevLoginConfig<Name extends string> {
   readonly roles: Roles<Name>;
   readonly seedAccounts: SeedAccounts<Name>;

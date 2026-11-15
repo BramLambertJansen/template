@@ -1,55 +1,3 @@
-// VERSLAG TESTER (verwijderen na de bouw):
-// Testbestand per AC (spec docs/template/specs/create-server.md):
-// - AC-1: test/rails/create-server-ingang.test.ts (leest src/api/server.ts als tekst: negen verboden teksten uit de spec,
-//   elke import uit core is precies { runServer } uit '#core/api/server.ts', en een regel `await runServer(`).
-// - AC-2 t/m AC-8: dit bestand (composeServer met nagebootste parts; AC-2 per omgeving een geval: local, test, staging, production).
-// - AC-9: test/rails/create-server-compose-imports.test.ts (compose.ts bestaat, importeert geen databasemodule en niets uit
-//   de app; toegestaan is alleen '<...>/db/types.ts'); met fixtures voor de importlezer zelf (die slagen al).
-// - AC-10: bewust geen test (bestaande tests blijven groen; pnpm ui:check en de job image bewijzen de echte bedrading).
-// - AC-11: test/rails/eslint-server-db.test.ts (ESLint met de echte eslint.config.js; 10 weigeringen, 3 toegestane plekken,
-//   2 controles dat de regel op de namen kijkt). Een melding telt als ruleId eindigt op 'no-restricted-imports'.
-//
-// Ontwerpkeuzes die de developer volgt (ook bovenaan in het commentaar hieronder):
-// - ServerAppDeps<Services> en composeServer komen uit ./compose.ts; composeServer is synchroon (bouwt alles, ook buildApp, bij
-//   de aanroep); het resultaat is { app, start }; de config heet { appName, devLogin: { roles, seedAccounts }, invitationMail,
-//   loginRequiresMfa(withUser) => (userId) => Promise<boolean>, createServices(auth), buildApp(deps) }.
-// - parts.startServer(app, options) heeft de signatuur van startServer uit http/serve.ts; de test leest de app en de opties uit
-//   parts.startServer.mock.calls. parts.createMailer(smtpUrl, from) en parts.createAuth(config) volgen createSmtpMailer en createAuth.
-// - Eén bewaakte withUser (guardWithUser om parts.withUser) hoeft niet dezelfde functie te zijn voor buildApp en loginRequiresMfa;
-//   de test toetst het gedrag (outboundForbidden() is waar binnen de callback, parts.withUser is aangeroepen).
-// - AC-3 toetst daarbij de vaste waarden van readiness via HTTP: een uitkomst 1 s bewaard (tweede request pingt niet opnieuw) en
-//   een probe die niet antwoordt geeft na precies 2000 ms 503.
-// - AC-8 bevat een extra geval: faalt closeDatabase, dan wordt auth.closePool toch aangeroepen en blijft de fout zichtbaar
-//   (gedrag van nu: Promise.all).
-// - Met WEB_DIR toetst AC-7 de app die start() doorgeeft (niet result.app), want de spec legt niet vast of result.app de API of
-//   de samengestelde app is; AC-2/3/6 gebruiken result.app zonder WEB_DIR, waar beide gelijk zijn.
-//
-// Gedraaid (één keer):
-// - pnpm exec tsc -b --noEmit: één fout, TS2307 "Cannot find module './compose.ts'" in compose.test.ts (de ontbrekende module).
-//   Ook eslint op dit bestand meldt alleen no-unsafe-* fouten die voortkomen uit die onoplosbare import.
-// - pnpm exec vitest run <vier bestanden>: 23 gefaald, 27 geslaagd. compose.test.ts faalt bij het laden (module ontbreekt) en
-//   is dus nog niet in zijn gevallen uitgevoerd: de logica van AC-2 t/m AC-8 is niet tegen een implementatie geprobeerd.
-//   AC-1: 11 van 12 falen op een assertie (negen verboden teksten, importlijst, await runServer; de lezer-fixture slaagt).
-//   AC-9: 2 falen op "compose.ts bestaat"; de 21 lezer-fixtures slagen. AC-11: 10 weigerfixtures falen (0 meldingen), de 5 andere slagen.
-//
-// Onduidelijk of niet toetsbaar in de spec:
-// - AC-1 eist dat het bestand de tekst `env(` niet bevat: ook commentaar in src/api/server.ts telt mee (letterlijk uit de spec).
-// - AC-9 zegt "importeert #core/api/db niet"; ik laat db/types.ts toe (alleen types, laadt geen pool of env()), maar
-//   weiger elke andere databasemodule. Is ook types.ts ongewenst: pas DB_TYPES_ONLY in de AC-9-test aan.
-// - AC-11: de spec zegt niet of de regel op pad of op naam werkt; de fixtures eisen alleen dat de namen geweigerd worden
-//   vanuit '#core/api/db/index.ts' en '../db/index.ts', en dat withUser/createAuditFn/readIntegrationSwitch vrij blijven.
-//   Tests (*.test.ts) elders die pingDatabase importeren zijn niet getoetst (nu bestaan er geen).
-// - AC-3 'withUser weigert een uitgaande aanroep': getoetst via outboundForbidden() uit outbound/marker.ts (dezelfde
-//   markering waar de uitgaande client op weigert), niet met een echte client.
-// - AC-4 'precies': de test vergelijkt de sleutels van de createAuth-config exact (op sendInvitation na, dat alleen als functie
-//   telt); een extra sleutel in de config laat de test falen.
-// - AC-5/AC-8: spec zegt niets over een mislukte start; niet getoetst (OV-2).
-//
-// Aangemaakte bestanden:
-// - src/core/api/server/compose.test.ts
-// - test/rails/create-server-ingang.test.ts
-// - test/rails/create-server-compose-imports.test.ts
-// - test/rails/eslint-server-db.test.ts
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -141,12 +89,16 @@ async function call(app: Fetchable, requestPath: string, init?: RequestInit): Pr
 
 // Een nagebootste Better Auth met alleen wat de koppeling aanroept: sessie (gateway), inloggen (dev-login) en sluiten.
 function fakeAuth() {
-  const signInEmail = vi.fn((_options: unknown) =>
+  const signInEmail = vi.fn<(options: unknown) => Promise<{ headers: Headers }>>(() =>
     Promise.resolve({ headers: new Headers([['set-cookie', 'sessie=planner; Path=/']]) }),
   );
-  const getSession = vi.fn((_options: unknown) => Promise.resolve({ headers: new Headers(), response: null }));
+  const getSession = vi.fn<(options: unknown) => Promise<{ headers: Headers; response: null }>>(() =>
+    Promise.resolve({ headers: new Headers(), response: null }),
+  );
   const closePool = vi.fn(() => Promise.resolve());
-  const handler = vi.fn((_request: Request) => Promise.resolve(new Response(null, { status: 204 })));
+  const handler = vi.fn<(request: Request) => Promise<Response>>(() =>
+    Promise.resolve(new Response(null, { status: 204 })),
+  );
   const auth = unsafeCast<Auth>(
     { api: { signInEmail, getSession }, handler, closePool },
     'test: alleen de onderdelen die de koppeling aanroept, geen echte Better Auth en geen pool',
@@ -176,13 +128,13 @@ function harness(env: Env = ENV) {
   const { parts, mailer } = fakeParts(fake);
   const received: ServerAppDeps<Services>[] = [];
   const services: Services = { tag: 'services-van-de-test' };
-  const policy = vi.fn((_userId: string) => Promise.resolve(true));
+  const policy = vi.fn<(userId: string) => Promise<boolean>>(() => Promise.resolve(true));
   const config = {
     appName: 'Testapp',
     devLogin: { roles, seedAccounts },
-    invitationMail: vi.fn((_invitation: Invitation): Mail => INVITATION_MAIL),
-    loginRequiresMfa: vi.fn((_withUser: WithUser) => policy),
-    createServices: vi.fn((_auth: Auth): Services => services),
+    invitationMail: vi.fn<(invitation: Invitation) => Mail>(() => INVITATION_MAIL),
+    loginRequiresMfa: vi.fn<(withUser: WithUser) => typeof policy>(() => policy),
+    createServices: vi.fn<(auth: Auth) => Services>(() => services),
     buildApp: (deps: ServerAppDeps<Services>): App => {
       received.push(deps);
       return createApp<Services>({ ...deps, roles });

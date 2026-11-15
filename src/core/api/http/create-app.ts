@@ -48,9 +48,9 @@ interface BaseConfig<Services> {
   readonly roles?: Roles;
   // Foutcodes die naar buiten mogen; een onbekende code wordt INTERNAL_ERROR.
   readonly errors?: ErrorRegistry<string>;
-  // Eén regel per request (src/core/api/obs); server.ts geeft writeJsonLine mee, zonder waarde logt de app niets.
+  // Eén regel per request (src/core/api/obs); composeServer (server/compose.ts) geeft writeJsonLine mee, zonder waarde logt de app niets.
   readonly log?: RequestLog;
-  // GET /api/ready (framework §3): zonder waarde bestaat de route niet; server.ts geeft createReadiness(pingDatabase) mee.
+  // GET /api/ready (framework §3): zonder waarde bestaat de route niet; composeServer geeft createReadiness(pingDatabase) mee.
   readonly ready?: Readiness;
   // Maximum per categorie per venster (spec rate-limit): standaard de harde grens uit core; de app geeft die uit
   // src/shared/limits.ts mee, een integratietest een lagere. Boven de harde grens weigert createApp bij opstart.

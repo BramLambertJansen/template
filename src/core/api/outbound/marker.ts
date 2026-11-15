@@ -20,7 +20,7 @@ export function outboundForbidden(): boolean {
   return marker.getStore() === true;
 }
 
-// Wikkelt de work-callback van withUser in de markering; server.ts past het één keer toe op de withUser buiten routes.
+// Wikkelt de work-callback van withUser in de markering; composeServer (server/compose.ts) past het één keer toe op de withUser buiten routes.
 export function guardWithUser(withUser: WithUser): WithUser {
   return <T>(actor: Actor, work: (tx: Tx, actorRole: ActorRole) => Promise<T>, options: WithUserOptions) =>
     withUser(actor, async (tx, actorRole) => forbidOutbound(async () => work(tx, actorRole)), options);
