@@ -68,6 +68,8 @@ n.v.t.: geen API-route, permissie of foutcode.
    bestand in `jsonGates`; `voorReview` = schrijven ≥ voorReview; `altijdVragen` = schrijven altijdVragen;
    `kritiek` = besluit-pr ∪ schrijven altijdVragen; `agentMerge.toegestaan` = rijen met besluit `agent` én schrijven vrij;
    `agentMerge.kritiek` = elke andere rij. Zo is een pad alleen agent-mergebaar als elke passende rij `agent` en vrij is.
+   Vervallen voor punt 1 en 2: `afgeleid()` geeft `agentMerge` niet meer terug, agent-merge is weg (ADR 0089 punt 5);
+   `padenVan` herkent `agentMerge.toegestaan` en `agentMerge.kritiek` nog als oude vorm.
 3. **Geen terugval in de nieuwe vorm.** De afgeleide lijsten zijn er altijd; een lege lijst is `[]` en betekent leeg, zoals
    `[]` nu. De terugvallen bij een ontbrekende lijst (`voorReview ?? gates`, `altijdVragen ?? voorReview ?? gates`) gelden alleen
    voor de oude vorm. De vloer in check-docs (stap 6) voorkomt een stil lege bewaking.
