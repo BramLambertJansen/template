@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Draait door de agent geschreven tests en configs in de runner-container (ADR 0044): beperkte read-only invoer, geen
 # capabilities, alleen op het interne netwerk test-net met een eigen, verse test-database.
-# Gebruik: scripts/runner.sh db|ui|gen [--sta-wijzigingen-toe]   (via pnpm test:db, pnpm ui:check en pnpm db:generate)
+# Gebruik: scripts/runner.sh db|ui|gen|gen-volgorde [--sta-wijzigingen-toe]   (via pnpm test:db, pnpm ui:check,
+# pnpm db:generate en pnpm check:snapshot)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -44,8 +45,10 @@ case "$suite" in
   db) services=(test-pgtap runner) ;;
   ui) services=(ui-runner) ;;
   # Uitvoer naar .runner-output/gen; scripts/db-generate.sh zet die op zijn plek.
-  gen) services=(gen-snapshot gen-schema) ;;
-  *) echo "Gebruik: scripts/runner.sh db|ui|gen [--sta-wijzigingen-toe]" >&2; exit 2 ;;
+  # gen-volgorde (scripts/check-snapshot.sh): dezelfde bouw, met de toegevoegde migraties in de tijdelijke invoermap
+  # hernoemd naar een latere versie (rename_arrival_order hieronder).
+  gen|gen-volgorde) services=(gen-snapshot gen-schema) ;;
+  *) echo "Gebruik: scripts/runner.sh db|ui|gen|gen-volgorde [--sta-wijzigingen-toe]" >&2; exit 2 ;;
 esac
 
 unsafe_host_path() {
@@ -202,6 +205,39 @@ while IFS= read -r -d '' input; do
 done < "$RUNNER_INPUT_DIR/files"
 rm -- "$RUNNER_INPUT_DIR/files"
 mkdir -p "$RUNNER_INPUT_DIR/node_modules"
+
+arrival_order_failed() {
+  printf '✗ gen-volgorde: %s\n' "$1" >&2
+  printf '  → de bouw op volgorde van binnenkomst draait niet; geen agentoverride.\n' >&2
+  exit 1
+}
+
+# gen-volgorde (spec template-update, AC-7): de bouw op volgorde van binnenkomst. scripts/kit/migratie-volgorde.mjs noemt
+# per toegevoegde migratie één regel `<naam> <nieuwe naam>`, zodra er een is die niet later is dan de nieuwste bestaande (alle
+# toegevoegde, want productie past ze na de bestaande toe op versievolgorde); die bestanden
+# krijgen alleen in de kopie ($RUNNER_INPUT_DIR), nooit in de werkmap, de latere versie. Het hulpscript is hostcode onder
+# scripts (HOST_FILES) en draait met een lege omgeving: geen NODE_OPTIONS of andere variabele van de aanroeper. Zijn
+# uitvoer komt uit namen in de werkmap en is dus invoer: elke regel moet precies twee kale bestandsnamen van de vaste vorm
+# zijn (geen pad), de bron een gewoon bestand in de kopie en het doel vrij; anders stopt de runner.
+rename_arrival_order() {
+  local lines line from to dir="$RUNNER_INPUT_DIR/db/migrations"
+  local form='^([0-9]{14}_[a-z0-9_]+\.sql) ([0-9]{14}_[a-z0-9_]+\.sql)$'
+  local LC_ALL=C # de tekenreeksen [a-z] hangen anders van de locale af
+  command -v node >/dev/null 2>&1 || arrival_order_failed "node ontbreekt op de host"
+  lines="$(env -i PATH="$PATH" HOME="$HOME" GIT_NO_REPLACE_OBJECTS=1 GIT_TERMINAL_PROMPT=0 GIT_CONFIG_NOSYSTEM=1 \
+    node scripts/kit/migratie-volgorde.mjs)" || arrival_order_failed "scripts/kit/migratie-volgorde.mjs faalde"
+  [[ -n "$lines" ]] || arrival_order_failed "geen toegevoegde migratie die ouder is dan een bestaande"
+  [[ -d "$dir" && ! -L "$dir" ]] || arrival_order_failed "db/migrations ontbreekt in de invoermap"
+  while IFS= read -r line; do
+    [[ "$line" =~ $form ]] || arrival_order_failed "onverwachte regel van scripts/kit/migratie-volgorde.mjs"
+    from="${BASH_REMATCH[1]}"
+    to="${BASH_REMATCH[2]}"
+    [[ -f "$dir/$from" && ! -L "$dir/$from" ]] || arrival_order_failed "$from is geen gewoon bestand in de invoermap"
+    [[ ! -e "$dir/$to" && ! -L "$dir/$to" ]] || arrival_order_failed "$to bestaat al in de invoermap"
+    mv -- "$dir/$from" "$dir/$to"
+  done <<<"$lines"
+}
+if [[ "$suite" == "gen-volgorde" ]]; then rename_arrival_order; fi
 
 # Geen invloed van de shell op compose: vaste bestanden, eigen projectnaam, nooit .env of .env.local.
 while IFS= read -r name; do unset "$name"; done < <(compgen -e | grep '^COMPOSE_' || true)
