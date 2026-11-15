@@ -2,7 +2,7 @@
 
 Status: geaccepteerd
 
-Herzien: 2026-11-15 (#721): punt 11 aangevuld: de app-zone bevat configuratie en registraties, geen koppeling tussen core-onderdelen; die doet `runServer` in core (spec create-server)
+Herzien: 2026-11-15 (#722): punt 11 aangevuld: de app-zone bevat configuratie en registraties, geen koppeling tussen core-onderdelen; die doet `runServer` in core (spec create-server)
 
 Herzien: 2026-11-15 (#715): door ADR 0092 punt 1 en 2, punt 10 en 11: rollen zijn een uitbreidingspunt (`src/shared/roles.ts`, `defineRoles`); core noemt geen rolnamen meer
 
