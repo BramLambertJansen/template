@@ -2,6 +2,8 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-15: door ADR 0092 punt 1 en 2, punt 10 en 11: rollen zijn een uitbreidingspunt (`src/shared/roles.ts`, `defineRoles`); core noemt geen rolnamen meer
+
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 1, 4, 5 en 6, punt 4 vervalt (elke map nummert zelf, geen reeks 0001–0099 en 0100+); punt 8 en 16, `docs/template` is een tweede templatezone naast `src/core`, die `check-core` per zone bewaakt; punt 17, `check-core` blijft en wordt verplicht in de ruleset via `requiredChecks`, `check-document-status` verdwijnt
 
 Vervangt 0006, 0008 en 0037.
