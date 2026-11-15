@@ -11,6 +11,7 @@ worden de padtabel `paden`, de terugval bij een ontbrekende `voorReview` geldt a
 de afgeleide `altijdVragen`
 Herzien: 2026-11-12 (#692): door ADR 0089 punt 1 en 2, in de template deels: punt 10, de onderhoudsmodus versoepelt de statusregels wel (A4, archief, besluit-PR); blijft: de overige regels van punt 10; punt 21 vervalt in de template: een geaccepteerd ADR wordt ter plekke herschreven; blijft in een app
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 2, 5 en 8, de vorige regel vervalt: geen licht regime; zodra de GitHub App bewezen is, verdwijnen de diff-guard en `check-document-status`, en daarmee punt 16, 17, 18, 19, 20 en 24 vervallen; punt 21, een correctie aan een ADR is een afspraak die de eigenaar met zijn goedkeuring beslist; punt 22, de strikte statusregel vervalt als guardtoets; punt 10 noemt die twee checks niet meer
+Herzien: 2026-11-14 (#714): ingekort tot wat nog geldt na ADR 0089 en 0091; een ingehaald punt is één regel met de plek waar het nu staat, de puntnummers zijn ongewijzigd, de oude tekst staat in git
 
 Vervangt 0011, 0017, 0031,
 0032, 0033 en
@@ -34,9 +35,8 @@ tot stand komt (merge is acceptatie, drempel, taakmandaat, CI-lus, merge- en for
 
 **Rolhek en hooks**
 
-1. **Eén rolhek** (was 0011 punt 1). `.claude/gates.json` is de enige lijst van gate-paden, testpaden, `jsonGates`
-   (`package.json` → `scripts`), goedkeurders en schrijfrecht per rol. CODEOWNERS (`gates` + `jsonGates`) en `ask` worden ermee
-   vergeleken door `check-docs`; de diff-guard leest dezelfde lijst.
+1. **Eén rolhek** (was 0011 punt 1). `.claude/gates.json` is de enige bron voor beschermde paden, testpaden, `jsonGates`
+   (`package.json` → `scripts`), goedkeurders en schrijfrecht per rol (de padtabel, 0079). `check-docs` vergelijkt `CODEOWNERS` en `ask` ermee (0089 punt 3).
 2. **Hooks zijn gates** (was 0011 punt 2 en 11). Elke hook heeft een tabeltest met echte stdin-payloads en verwachte exitcode,
    inclusief bekende omzeilingen. Een rail-fix begint met een test die op de oude code faalt.
 3. **Hooks draaien van `main`** (was 0033 punt 1; correctie op de plek uit 0011). De broncode staat in `rails/hooks/`;
@@ -46,9 +46,8 @@ tot stand komt (merge is acceptatie, drempel, taakmandaat, CI-lus, merge- en for
    anker of de hook op `main` ontbreekt, en het rolhek maakt van elke andere exitcode dan 0 of 2 een 2. Het rolhek valt ook
    dicht als de stub niet start, crasht, zijn timeout haalt of ongeldige uitvoer geeft: `onFailure: "block"` op het
    hook-object van zijn PreToolUse-entry (Claude Code 2.1.295 of nieuwer; de versiecontrole is besloten, nog niet gebouwd,
-   spec AC-3). Werkstraat en de toets op effect vallen dicht bij een fout in de lader en via hun eigen catch-all, maar open
-   bij een timeout of kill: Claude Code kent `onFailure` niet op Stop en SubagentStop, en PostToolUse kan achteraf niets
-   tegenhouden. Meethook, melding en statusregel falen altijd open. *Waarom (herzien 2026-11-03):* een vangnet dat bij
+   spec AC-3). De werkstraat-hook valt dicht bij een fout in de lader en via zijn eigen catch-all, maar open
+   bij een timeout of kill: Claude Code kent `onFailure` niet op Stop en SubagentStop. Meethook, melding en statusregel falen altijd open. *Waarom (herzien 2026-11-03):* een vangnet dat bij
    elke storing openstaat, vangt juist dan niets; de harde grens blijft CI, de ruleset en de eigenaarmerge (R-PRINC-02,
    R-ROL-10). Een hookwijziging werkt pas na de merge, in de volgende
    sessie; tests importeren de branchversie. `rails/**` is een gate-pad en `voorReview`.
@@ -74,8 +73,8 @@ tot stand komt (merge is acceptatie, drempel, taakmandaat, CI-lus, merge- en for
    `.claude/settings.json` zijn gelijk aan `altijdVragen`; buiten de modus vraagt het rolhek zelf en faalt het dicht.
 10. **Ongewijzigd, ook in `onderhoud`** (was 0033 punt 5): deny-regels en verboden git- en `gh`-acties (push naar `main`,
     force-push, `--no-verify`, mergen, reviews, check-statussen, `docker`), bestaande tests,
-    gecommitte migraties, gegenereerde bestanden, `.env*`, `jsonGates`, het schrijfrecht van de andere rollen, de diff-guard,
-    `check-document-status` en de merge door de eigenaar. De modus versoepelt de statusregels van 0038 niet.
+    gecommitte migraties, gegenereerde bestanden, `.env*`, `jsonGates`, het schrijfrecht van de andere rollen en de merge door
+    de eigenaar.
 11. **Gedeelde Claude Code-permissies** (was 0034, wijzigt 0033 punt 6). `acceptEdits` als standaardmodus en `allow` voor snelle
     checks, pushen naar een featurebranch, PR's aanmaken en lezend `gh`-werk staan in de gedeelde `.claude/settings.json`, niet
     alleen lokaal. Een `allow` heft geen `deny` of `ask` op; sandbox en hooks van `main` blijven gelden.
@@ -88,34 +87,26 @@ tot stand komt (merge is acceptatie, drempel, taakmandaat, CI-lus, merge- en for
 14. **Live feiten** (was 0011 punt 7). `scripts/kit/feiten.mjs` levert de feiten waarmee elke rol begint; proza die ze
     tegenspreekt, telt niet.
 
-**Diff-guard en document-status**
+**Review op beschermde paden en statusregel**
 
-15. **Regel** (was 0011 punt 9). Raakt een PR een gate-pad, `scripts` in `package.json`, of wijzigt hij een bestaande test, dan
-    vraagt hij als laatste beslissende review een APPROVED van een goedkeurder die niet de auteur
-    is, op exact de head-SHA. Paden NUL-gesplitst. De guard draait uit `main` (`pull_request_target`), de PR alleen als
-    git-data.
-16. **Gewijzigde test** (was 0017 OV-4) is een testpad met status `M`, `D`, `R` of `T` tegen de merge-base; toevoegen is vrij.
-    Het rolhek blijft lokaal fijnmaziger; de guard is grof en onomzeilbaar.
-17. **Overgang** (was 0017 OV-1 en OV-2, 0031 besluit 2). De guard is gebouwd maar niet verplicht tot de agent als GitHub App
-    pusht. Is de auteur een goedkeurder, dan slaagt hij met een waarschuwing en een samenvatting van de geraakte paden;
-    review wordt niet gevraagd en de eigenaar merget zelf. Geen schakelaar: de overgang eindigt vanzelf met de App.
-18. **Opnieuw draaien** (was 0017 OV-3): op `pull_request_target`; Re-run
-    als uitweg. `pull_request_review` pas heroverwegen met de App.
-19. **De GitHub App** (was 0017 OV-5). Geen `workflows`-, `administration`- of `secrets`-recht; een goedkeuring door de App telt
-    niet; de sleutel staat buiten de repo en is nooit leesbaar in de sandbox. Pas met de App wordt de guard verplicht.
-20. **Twee jobs** (was 0031 besluit 1). `diff-guard` en `document-status` zijn aparte jobs met hun eigen naam, elk met de
-    veiligheidscontroles en een `::error`-annotatie. `document-status` staat in `requiredChecks`; `diff-guard` niet (met de App
-    is hij rood tot de eigenaarreview). Wordt de guard verplicht, dan beide namen.
-21. **Correctie aan een geaccepteerd ADR** (was 0031 besluit 3, met 0038 punt 8). Normatief: een nieuw ADR. Een verwijzing naar
-    een later ADR mag achter de statuswaarde. Een niet-normatieve correctie heeft geen eigen route meer; die verdwijnt bij
-    vervanging.
+15. *(vervallen, zie 0089 punt 2, 3 en 5)* De diff-guard bestaat niet meer. Een PR die een beschermd pad of een testbestand
+    raakt, vraagt de review van de code-eigenaar; een nieuwe push trekt een goedkeuring in.
+16. *(vervallen, zie 0089 punt 5)*
+17. *(vervallen, zie 0089 punt 2)* De agent pusht als GitHub App.
+18. *(vervallen, zie 0089 punt 5)*
+19. **De GitHub App.** Geen `workflows`-, `administration`- of `secrets`-recht; een goedkeuring door de App telt niet; de
+    sleutel staat buiten de repo en is nooit leesbaar in de sandbox. De rechten staan in 0089 punt 2.
+20. *(vervallen, zie 0089 punt 5)*
+21. *(vervallen, zie R-CI-05)* De link achter de statuswaarde staat in punt 22.
 22. **Strikte statusregel** (was 0031 besluit 4). Is de statusregel van een ADR nieuw of gewijzigd, dan staat achter de
     statuswaarde alleen een datum `(JJJJ-MM-DD)`, PR-nummers `#<nr>` en links naar bestaande ADR's met alleen het nummer als
-    tekst, gescheiden door `, ` of ` — `. Ongewijzigde statusregels blijven geldig. Specs vallen erbuiten.
+    tekst, gescheiden door `, ` of ` — `. Ongewijzigde statusregels blijven geldig. Specs vallen erbuiten. Dit is een
+    afspraak die de reviewer toetst (0089 punt 8): de vorm staat in `statusregelOvertreding`
+    (`rails/hooks/lib/document-state.mjs`), maar geen hook of check roept die aan.
 23. **`pr:verify` in een agent-worktree** (was 0031 besluit 5). Alleen ongetrackte bestanden onder `werkmapNegeer` (exacte paden
     of mapvoorvoegsels onder `.claude/`, gelezen uit `main`) tellen niet als vuile werkmap; een getrackte wijziging blijft
     weigeren. `.mcp.json` en `.claude/commands/` staan er niet in: dat beslist de app.
-24. **Guard-preview later** (was 0031 besluit 6): een alleen-lezende voorspelling van de guard pas met de App, in een eigen PR.
+24. *(vervallen, zie 0089 punt 5)*
 
 **Database en uitrol**
 
@@ -135,10 +126,8 @@ Bewust niet (was 0011): checks op SQL met regex (de template leest de catalogus)
 
 - **Losse hooks per rol met eigen lijsten** (was 0011): lijsten lopen uit elkaar, omzeilingen per hook opnieuw gevonden.
 - **Alleen CI als bewaker** (was 0011): de agent hoort pas na een push dat hij een grens raakte.
-- **Alleen CODEOWNERS met code-owner-review** (was 0017): ziet niet of een bestaande test wijzigt, en werkt pas met de App.
-- **De guard als stap in de CI van de PR** (was 0017): draait de workflow van de PR zelf, die kan hem dan uitzetten.
-- **Guard nu verplicht, of label genoeg** (was 0017): blokkeert elke gate-PR, of de agent zet het label met hetzelfde token zelf.
-- **Eén job of een matrix-job** (was 0031): de checklijst toont de verkeerde naam of het is een rename.
+- **Een eigen diff-guard naast `CODEOWNERS`** (was 0017): gebouwd en weer weggehaald; met de App dwingt GitHub de review af (0089).
+- **Een label als akkoord** (was 0017): de agent zet het label met hetzelfde token zelf.
 - **`pr:verify` met `--untracked-files=no`** (was 0031): een vergeten nieuw bestand valt weg, ook een test.
 - **Alleen `settings.local.json`, hooks uitzetten, of `voorReview` inkorten voor iedereen** (was 0033): een lokale `allow`
   heft een project-`ask` niet op; zonder hooks vallen ook de deny's weg; in een app moeten `.claude/**` en `scripts/**` dicht.
@@ -148,8 +137,8 @@ Bewust niet (was 0011): checks op SQL met regex (de template leest de catalogus)
 
 ## Gevolgen
 
-- De echte grens is de diff-guard uit `main` plus de merge door de eigenaar. Een developer-subagent kan zonder prompt
-  `src/core/**` en `deploy/**` wijzigen; daar beschermen CODEOWNERS, de guard en de review (was 0032).
+- De echte grens is de review van de code-eigenaar op GitHub plus zijn merge (0089). Een developer-subagent kan zonder prompt
+  `src/core/**` en `deploy/**` wijzigen; daar beschermen `CODEOWNERS` en de review (was 0032).
 - Een ongetrackt bestand onder een genegeerd pad valt in `pr:verify` niet op; een ongetrackte `.mcp.json` of
   `.claude/commands/` laat hem weigeren tot de app kiest (was 0031).
 - In andere runtimes werken de hooks niet; daar zijn CI en GitHub de enige grens (was 0033).
@@ -162,5 +151,4 @@ Bewust niet (was 0011): checks op SQL met regex (de template leest de catalogus)
   naar `"continue"` is een afzwakking: kritiek werk, altijd eigenaarmerge. De `ask`-regel `Bash(gh pr merge*)` blijft als
   extra laag. In een cloudsessie zonder projecthooks draait het rolhek helemaal niet (#462, [0072](0072-destructief-alleen-in-de-kooi.md)
   punt 6); dit besluit verandert daar niets.
-- Een bouwbewijs voor `gebouwd` eist ook `document-status` op de bron-SHA (was 0031).
 - `check-github`, `check-release-ci` en `check-deployment-schema` (punt 26–27) zijn besloten, maar nog niet gebouwd.
