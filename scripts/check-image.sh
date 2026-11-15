@@ -6,7 +6,9 @@
 # router en foutscherm renderen, zonder CSP-schending, ongevangen JS-fout, mislukte asset of onverwachte console.error.
 # Vraagt node_modules
 # (pnpm install) en draait in het Playwright-image van compose.yaml (ui-runner), zonder internet, met beperkte broninvoer.
-# Gebruik: [SMOKE_BROWSER=1] scripts/check-image.sh <image>
+# GET /api/health toont de templateversie uit src/core/shared/template-version.ts. Met EXPECT_BUILD_SHA=<sha> (de image is
+# gebouwd met --build-arg BUILD_SHA=<sha>) toont hij ook die build; zonder die variabele hoort build te ontbreken.
+# Gebruik: [SMOKE_BROWSER=1] [EXPECT_BUILD_SHA=<sha>] scripts/check-image.sh <image>
 set -euo pipefail
 
 image="${1:?Gebruik: scripts/check-image.sh <image>}"
@@ -26,6 +28,11 @@ cleanup() {
 trap cleanup EXIT
 
 fail() { printf '✗ %s\n' "$1" >&2; docker logs "$name" >&2 || true; exit 1; }
+
+# De versie die de image moet tonen, uit het bronbestand (spec release-versie).
+version_file="src/core/shared/template-version.ts"
+expected_version="$(sed -n "s/^export const TEMPLATE_VERSION = '\([^']*\)';\$/\1/p" "$repo/$version_file" 2>/dev/null || true)"
+[[ -n "$expected_version" && "$expected_version" != *$'\n'* ]] || fail "geen TEMPLATE_VERSION in $version_file"
 
 # Alleen zelfstandige smoke-tests en hun configuratie, nooit de hele werkmap (ADR 0044).
 check_smoke_path() {
@@ -81,8 +88,20 @@ done
 
 status() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
 
-[[ "$(curl -fsS "$base/api/health")" == '{"ok":true}' ]] || fail "GET /api/health geeft geen {\"ok\":true}"
-echo "✓ liveness 200"
+health="$(curl -fsS "$base/api/health")" || fail "GET /api/health faalt"
+[[ "$health" == *"\"version\":\"${expected_version}\""* ]] \
+  || fail "GET /api/health toont niet version ${expected_version} uit $version_file: $health"
+expected_health="{\"ok\":true,\"version\":\"${expected_version}\""
+if [[ -n "${EXPECT_BUILD_SHA:-}" ]]; then
+  expected_health+=",\"build\":\"${EXPECT_BUILD_SHA}\"}"
+  [[ "$health" == "$expected_health" ]] || fail "GET /api/health toont niet build ${EXPECT_BUILD_SHA}: $health"
+  echo "✓ liveness 200, version ${expected_version}, build ${EXPECT_BUILD_SHA}"
+else
+  expected_health+="}"
+  [[ "$health" == "$expected_health" ]] \
+    || fail "GET /api/health is niet ${expected_health} (build hoort te ontbreken zonder EXPECT_BUILD_SHA): $health"
+  echo "✓ liveness 200, version ${expected_version}, zonder build"
+fi
 [[ "$(status "$base/api/ready")" == "503" ]] || fail "GET /api/ready zonder database geeft geen 503"
 echo "✓ readiness 503 zonder database"
 headers="$(curl -fsS -D - -o /dev/null "$base/admin/accounts")" || fail "GET /admin/accounts faalt"

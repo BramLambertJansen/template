@@ -2,6 +2,8 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-15: punt 1: `GET /api/health` toont ook de templateversie en de build-SHA (eigenaarbesluit 2026-11-15, spec release-versie)
+
 Herzien: 2026-11-14 (#712): punt 3 herschreven (eigenaarbesluit 2026-11-11): readiness hangt niet aan de jobs-verbinding
 
 Vervangt 0018 en 0019. Drempel: A4. Consolidatie zonder inhoudelijke wijziging
@@ -19,7 +21,9 @@ containerhost heeft geen statische host die de SPA-headers zet.
 
 **Readiness**
 
-1. **Twee routes** (was 0018 punt 1). `GET /api/health` is liveness en hangt van niets af. `GET /api/ready` geeft 200
+1. **Twee routes** (was 0018 punt 1). `GET /api/health` is liveness en hangt van niets af; het antwoord is
+   `{ ok: true, version, build? }` met de templateversie en, als `BUILD_SHA` gezet is, de build. Aanvaard risico: het adres is
+   openbaar, dus een buitenstaander ziet welke versie een host draait. `GET /api/ready` geeft 200
    `{ ok: true }` of 503 `{ ok: false }`, zonder verdere data; `createApp({ ready })` registreert hem, zonder `ready` bestaat hij
    niet. Beide zijn een uitzondering in framework §3 (publiek, geen spec vooraf).
 2. **Controle op een eigen verbinding** (was 0018 punt 2). `pingDatabase()` uit `src/core/api/db` doet `select 1` als

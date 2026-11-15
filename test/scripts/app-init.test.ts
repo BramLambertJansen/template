@@ -53,6 +53,7 @@ test('de initialisatietests blijven slagen in een hernoemde app', () => {
     'scripts/kit/app-init.mjs',
     'scripts/kit/codeowners.mjs',
     'rails/hooks/lib/padtabel.mjs',
+    'src/core/shared/template-version.ts',
     'test/scripts/app-init.test.ts',
   ];
   for (const file of bestanden) {
@@ -102,7 +103,9 @@ describe('planAppInit', () => {
     ]);
     expect(readme).not.toContain('## Nieuwe app starten');
     expect(readme).toContain('## Lokaal draaien');
-    expect(changed(plan, 'CHANGELOG.md')).toMatch(/## \[Unreleased\]\n\n- Gestart vanaf template abc1234\.\n/);
+    expect(changed(plan, 'CHANGELOG.md')).toMatch(
+      /^# Changelog\n\n## \[Unreleased\]\n\n- Gestart vanaf template v\d+\.\d+\.\d+ \(abc1234\)\.\n$/,
+    );
     expect(changed(plan, 'src/shared/app.ts')).toContain("export const APP_NAME = 'Urenregistratie';");
     expect(changed(plan, 'src/web/index.html')).toContain('<title>Urenregistratie</title>');
   });
