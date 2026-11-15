@@ -180,7 +180,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   zonder login onder één vast prefix met verifier, tijdvenster, groottegrens, rate limit per IP en inbox, en een check die elke route buiten
   `defineRoute` en buiten de lijst van §3 laat falen (uitzondering naast R-UIT-02, §3).
   aanleiding: `docs/template/adr/0077-externe-koppelingen-via-poorten.md` (verzoek van de eigenaar, 3 en 4 november 2026)
-- [ ] **ST-16 (P1) — rollen als register van de app** (vóór de proef-app, besluit eigenaar 2026-11-11). Nu staat `ROLES` in
+- [x] **ST-16 (P1) — rollen als register van de app** (vóór de proef-app, besluit eigenaar 2026-11-11; gebouwd in #715). Nu staat `ROLES` in
   `src/core/shared/can.ts` en hangen MFA-eis en laatste-admin-trigger aan de naam `admin`; een nieuwe rol wijzigt core (R-ARCH-03), wat in een app dicht is.
   **Werk:** de app levert `src/shared/roles.ts` (standaard `user` en `admin`); `definePermissions`, `withUser` en de dev-login typeren de rol uit dat register.
   MFA-eis en laatste-beheerder hangen aan de vlag `beheer` (besluit eigenaar 2026-11-06), niet aan de naam; een app kan de vlag niet uitzetten voor een rol met
