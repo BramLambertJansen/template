@@ -699,7 +699,7 @@ select is(
   '00000',
   'rollenregister/AC-17: zonder rij met een onbekende rol slaagt app.assert_roles_registered()'
 );
-select like(
+select alike(
   pg_temp.assert_with_unregistered_row(),
   'P0001|registreer eerst rol baas%',
   'rollenregister/AC-17: met de FK weg en een rij met rol baas geeft assert_roles_registered P0001 registreer eerst rol baas'
