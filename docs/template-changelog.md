@@ -33,6 +33,11 @@ requests.
   `leerpuntMergeRedenen` en `REDEN_ZONDER_TEST` in `scripts/kit/leerpunt.mjs` zijn weg. Dat de eigenaar merget bij een leerpunt
   zonder test, blijft een afspraak.
 
+### Verwijderd
+
+- Het blok `agentMerge` (`maxRegels`, `maxBytes`) uit `.claude/gates.json`: sinds 0.1.0 leest geen code het nog (ADR 0089 punt
+  5). Wat verandert voor een app: haal het blok ook uit je eigen `.claude/gates.json`; laten staan kan geen kwaad.
+
 ## [0.1.0] - 2026-11-15
 
 ### Gewijzigd
