@@ -9,9 +9,7 @@
  * @typedef {'agent' | 'eigenaar' | 'besluit-pr'} Besluit
  * @typedef {{ schrijven: Schrijven, besluit: Besluit }} Niveau
  * @typedef {{ schrijven: Schrijven, besluit: Besluit, bronnen: { schrijven: string[], besluit: string[] } }} PadNiveau
- * @typedef {{ toegestaan: string[] | undefined, kritiek: string[] | undefined }} AgentMergeLijsten
- * @typedef {{ gates: string[], voorReview: string[] | undefined, altijdVragen: string[] | undefined, kritiek: string[],
- *   agentMerge: AgentMergeLijsten }} Afgeleid
+ * @typedef {{ gates: string[], voorReview: string[] | undefined, altijdVragen: string[] | undefined, kritiek: string[] }} Afgeleid
  */
 
 // De `KRITIEK` van scripts/kit/lane.mjs op 30cc352 (ADR 0062 punt 2), bevroren voor de oude vorm (spec padtabel, Werking 4).
@@ -169,27 +167,6 @@ export function padNiveau(pad, ruw) {
 }
 
 /**
- * `agentMerge.toegestaan` en `agentMerge.kritiek`: in de nieuwe vorm afgeleid (toegestaan = besluit agent én schrijven vrij,
- * kritiek = elke andere rij), in de oude vorm zoals ze staan (geen lijst blijft undefined). Gooit zoals `padenVan`.
- * @param {unknown} ruw @returns {AgentMergeLijsten}
- */
-export function agentMergeLijsten(ruw) {
-  const paden = padenVan(ruw);
-  if (paden === null) {
-    const blok = veld(ruw, 'agentMerge');
-    const toegestaan = veld(blok, 'toegestaan');
-    const kritiek = veld(blok, 'kritiek');
-    return { toegestaan: tekstLijst(toegestaan) ? toegestaan : undefined, kritiek: tekstLijst(kritiek) ? kritiek : undefined };
-  }
-  const rijen = Object.entries(paden).map(([glob, rij]) => ({ glob, ...rijNiveau(rij) }));
-  const agent = (/** @type {Niveau} */ rij) => rij.besluit === 'agent' && rij.schrijven === 'vrij';
-  return {
-    toegestaan: rijen.filter((rij) => agent(rij)).map((rij) => rij.glob),
-    kritiek: rijen.filter((rij) => !agent(rij)).map((rij) => rij.glob),
-  };
-}
-
-/**
  * De oude vorm: de lijsten zoals ze staan (`voorReview` en `altijdVragen` mogen ontbreken), `kritiek` = `OUDE_KRITIEK` plus
  * `altijdVragen ?? voorReview ?? gates`. Gooit als `gates` geen lijst is (zoals de lezers nu).
  * @param {unknown} ruw @returns {Afgeleid}
@@ -207,7 +184,7 @@ function oudeVorm(ruw) {
   const voorReview = optioneel('voorReview');
   const altijdVragen = optioneel('altijdVragen');
   const kritiek = [...OUDE_KRITIEK, ...(altijdVragen ?? voorReview ?? gates)];
-  return { gates, voorReview, altijdVragen, kritiek, agentMerge: agentMergeLijsten(ruw) };
+  return { gates, voorReview, altijdVragen, kritiek };
 }
 
 /**
@@ -229,6 +206,5 @@ export function afgeleid(ruw) {
     voorReview: globs((rij) => rang(SCHRIJVEN, rij.schrijven) >= 2),
     altijdVragen: globs((rij) => rij.schrijven === 'altijdVragen'),
     kritiek: globs((rij) => rij.besluit === 'besluit-pr' || rij.schrijven === 'altijdVragen'),
-    agentMerge: agentMergeLijsten(ruw),
   };
 }
