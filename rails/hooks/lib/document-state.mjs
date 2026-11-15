@@ -160,7 +160,8 @@ function herzieningen(text) {
 }
 
 /**
- * Een geaccepteerd ADR dat geaccepteerd blijft met andere inhoud: de herschrijving die alleen in een besluit-PR mag (A4).
+ * Een geaccepteerd ADR dat geaccepteerd blijft met andere inhoud: de herschrijving uit A4 (in de template in elke PR, in een app
+ * alleen in een besluit-PR; R-CI-05).
  * @param {string} file @param {string | null} voor @param {string | null} na
  */
 export function isHerschrijving(file, voor, na) {
@@ -182,7 +183,7 @@ function nieuweHerzieningsregel(voor, na) {
  * Hoe een document zonder record mag veranderen (ADR 0046 punt 1, 2 en 5). Puur; `voor`/`na` zijn de volledige teksten.
  * - `vrij`: geen eigenaarbesluit (voorstel, of niets wezenlijks gewijzigd);
  * - `a4`: een ADR met een eigenaarstatus wijzigt van inhoud of gaat terug naar voorgesteld, of een gearchiveerd ADR wijzigt;
- * - `herzien`: een geaccepteerd ADR blijft geaccepteerd met andere inhoud en een nieuwe herzieningsregel (alleen in een besluit-PR);
+ * - `herzien`: een geaccepteerd ADR blijft geaccepteerd met andere inhoud en een nieuwe herzieningsregel (in een app alleen in een besluit-PR);
  * - `gebouwd`: alleen met bouwbewijs;
  * - `besluit`: een eigenaarstatus die de merge van de eigenaar beslist (`nieuw`: een nieuw document of vanuit een voorstel);
  * - `geweigerd`: een andere overgang (bijv. vervallen terug naar goedgekeurd); alleen met een record.

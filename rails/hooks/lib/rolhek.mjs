@@ -345,7 +345,8 @@ function decideFile({ rel, change, role }, ctx, decision) {
     return;
   }
   // ADR 0046 punt 6: architect en hoofdsessie schrijven de eigenaarstatus in het voorstel; de merge van de eigenaar beslist.
-  // ADR 0062 punt 4: ook `gebouwd # #<PR>` zonder SHA in de PR met de implementatie; document-status toetst het PR-nummer.
+  // ADR 0062 punt 4: ook `gebouwd # #<PR>` zonder SHA in de PR met de implementatie; de job document-status die het
+  // PR-nummer toetste, is weg (ADR 0089 punt 5).
   const inPrGebouwd = overgang?.uitslag === 'gebouwd' && builtReference(change.after ?? '')?.sha === undefined;
   const eigenaarstatus = beslisrol && (a4Toegestaan || inPrGebouwd || ['besluit', 'vrij'].includes(overgang?.uitslag ?? ''));
   if (!eigenaarstatus && statusZonderBesluit({ rel, change, role }, ctx, decision)) return;
