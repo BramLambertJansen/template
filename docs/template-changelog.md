@@ -26,6 +26,13 @@ requests.
   het antwoord van `/api/health` letterlijk met `{"ok":true}` vergelijkt, leest voortaan `ok`; een app die in `buildApp`
   (`src/api/app.ts`) haar config uitpakt in plaats van doorgeeft (`...config`), geeft `build` zelf door aan `createApp`.
 
+### Opgelost
+
+- `pnpm pr:merge` las nog de sectie Leerpunt van de beschrijving en weigerde bij `geen test:` of `meting:`, terwijl ADR 0078
+  punt 2 (herzien in #696) en ADR 0089 punt 5 die toets lieten vervallen. Het script leest de beschrijving niet meer;
+  `leerpuntMergeRedenen` en `REDEN_ZONDER_TEST` in `scripts/kit/leerpunt.mjs` zijn weg. Dat de eigenaar merget bij een leerpunt
+  zonder test, blijft een afspraak.
+
 ## [0.1.0] - 2026-11-15
 
 ### Gewijzigd

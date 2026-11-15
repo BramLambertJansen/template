@@ -136,7 +136,9 @@ describe('agent-merge-niet-kritiek/AC-3 pr:merge', () => {
   });
 });
 
-describe('leerlus-bewijs/AC-4 pr:merge leest de sectie Leerpunt bij het mergen', () => {
+// GEWIJZIGD (ADR 0078 punt 2, herzien in #696; ADR 0089 punt 5): pr:merge leest de sectie Leerpunt niet meer; bij
+// `geen test:` merget de eigenaar volgens afspraak.
+describe('leerlus-bewijs/AC-4 pr:merge leest de sectie Leerpunt niet', () => {
   const PULL = goed()[`repos/${REPO}/pulls/7`];
   const metBody = (body: string) => zet('pulls/7', { ...Object(PULL), body });
 
@@ -144,9 +146,7 @@ describe('leerlus-bewijs/AC-4 pr:merge leest de sectie Leerpunt bij het mergen',
     expect(redenen(metBody('## Leerpunt\n\n- #9: trede Check; bewijs test/scripts/x.test.ts'))).toBe('');
   });
 
-  test('leerlus-bewijs/AC-4: beschrijving na het oordeel gewijzigd naar geen test: weigering', () => {
-    expect(redenen(metBody('## Leerpunt\n\n- #9: trede Skill; bewijs geen test: alleen skilltekst'))).toMatch(
-      /leerpunt zonder test: de eigenaar merget/,
-    );
+  test('leerlus-bewijs/AC-4: geen test: in de beschrijving geeft geen reden meer', () => {
+    expect(redenen(metBody('## Leerpunt\n\n- #9: trede Skill; bewijs geen test: alleen skilltekst'))).toBe('');
   });
 });
