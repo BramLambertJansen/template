@@ -37,6 +37,31 @@ CREATE SCHEMA better_auth;
 ALTER SCHEMA better_auth OWNER TO app_migrator;
 
 --
+-- Name: assert_roles_registered(); Type: FUNCTION; Schema: app; Owner: app_definer
+--
+
+CREATE FUNCTION app.assert_roles_registered() RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  declare
+    v_role text;
+  begin
+    select r.role into v_role
+      from public.user_roles r
+      where not exists (select 1 from app.roles ro where ro.name = r.role)
+      order by r.role
+      limit 1;
+    if found then
+      raise exception 'registreer eerst rol %', v_role using errcode = 'P0001';
+    end if;
+  end
+  $$;
+
+
+ALTER FUNCTION app.assert_roles_registered() OWNER TO app_definer;
+
+--
 -- Name: assign_role(text, text); Type: FUNCTION; Schema: app; Owner: app_definer
 --
 
@@ -235,6 +260,31 @@ CREATE FUNCTION app.current_user_id() RETURNS text
 ALTER FUNCTION app.current_user_id() OWNER TO app_migrator;
 
 --
+-- Name: has_counted_beheer(); Type: FUNCTION; Schema: app; Owner: app_definer
+--
+
+CREATE FUNCTION app.has_counted_beheer() RETURNS boolean
+    LANGUAGE sql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+    select exists (
+      select 1
+      from public.user_roles r
+      join app.roles ro on ro.name = r.role
+      join better_auth."user" u on u.id = r.user_id
+      where ro.beheer
+        and u.blocked_at is null
+        and u.deactivated_at is null
+        and exists (
+          select 1 from better_auth.account a where a."userId" = u.id and a."providerId" = 'credential'
+        )
+    )
+  $$;
+
+
+ALTER FUNCTION app.has_counted_beheer() OWNER TO app_definer;
+
+--
 -- Name: integration_enabled(text); Type: FUNCTION; Schema: app; Owner: app_definer
 --
 
@@ -268,11 +318,36 @@ CREATE FUNCTION app.is_mfa_admin() RETURNS boolean
     SET search_path TO ''
     AS $$
     select app.session_strength() = 'mfa'
-       and exists (select 1 from public.user_roles r where r.user_id = app.current_user_id() and r.role = 'admin')
+       and exists (
+         select 1
+         from public.user_roles r
+         join app.roles ro on ro.name = r.role
+         where r.user_id = app.current_user_id() and ro.beheer
+       )
   $$;
 
 
 ALTER FUNCTION app.is_mfa_admin() OWNER TO app_definer;
+
+--
+-- Name: register_role(text, boolean); Type: FUNCTION; Schema: app; Owner: app_definer
+--
+
+CREATE FUNCTION app.register_role(p_name text, p_beheer boolean) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  begin
+    if p_name is null or p_beheer is null or p_name in ('user', 'admin') then
+      raise exception 'ongeldige rol' using errcode = '22023';
+    end if;
+    insert into app.roles (name, beheer) values (p_name, p_beheer)
+      on conflict (name) do update set beheer = excluded.beheer;
+  end
+  $$;
+
+
+ALTER FUNCTION app.register_role(p_name text, p_beheer boolean) OWNER TO app_definer;
 
 --
 -- Name: request_id(); Type: FUNCTION; Schema: app; Owner: app_migrator
@@ -309,6 +384,38 @@ CREATE FUNCTION app.retention_cutoff(p_table regclass) RETURNS timestamp with ti
 
 
 ALTER FUNCTION app.retention_cutoff(p_table regclass) OWNER TO app_definer;
+
+--
+-- Name: roles_keep_one_beheer(); Type: FUNCTION; Schema: app; Owner: app_definer
+--
+
+CREATE FUNCTION app.roles_keep_one_beheer() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  begin
+    if old.beheer and (tg_op = 'DELETE' or not new.beheer) then
+      perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtext('public.user_roles:last_admin'));
+      if exists (
+        select 1
+        from public.user_roles r
+        join better_auth."user" u on u.id = r.user_id
+        where r.role = old.name
+          and u.blocked_at is null
+          and u.deactivated_at is null
+          and exists (
+            select 1 from better_auth.account a where a."userId" = u.id and a."providerId" = 'credential'
+          )
+      ) and not app.has_counted_beheer() then
+        raise exception 'LAST_ADMIN' using errcode = 'P0001', detail = 'De laatste beheerder kan niet weg.';
+      end if;
+    end if;
+    return null;
+  end
+  $$;
+
+
+ALTER FUNCTION app.roles_keep_one_beheer() OWNER TO app_definer;
 
 --
 -- Name: session_strength(); Type: FUNCTION; Schema: app; Owner: app_migrator
@@ -362,18 +469,8 @@ CREATE FUNCTION app.set_account_blocked(p_user_id text, p_blocked boolean) RETUR
     update better_auth."user"
       set blocked_at = pg_catalog.now(), session_version = session_version + 1
       where id = p_user_id;
-    if not exists (
-      select 1
-      from public.user_roles r
-      join better_auth."user" u on u.id = r.user_id
-      where r.role = 'admin'
-        and u.blocked_at is null
-        and u.deactivated_at is null
-        and exists (
-          select 1 from better_auth.account a where a."userId" = u.id and a."providerId" = 'credential'
-        )
-    ) then
-      raise exception 'LAST_ADMIN' using detail = 'De laatste admin kan niet weg.';
+    if not app.has_counted_beheer() then
+      raise exception 'LAST_ADMIN' using detail = 'De laatste beheerder kan niet weg.';
     end if;
     insert into app.audit_log (actor_id, action, target_type, target_id, request_id, details)
       values (app.current_user_id(), 'core.account.block', 'account', p_user_id, app.request_id(), '{}'::jsonb);
@@ -424,18 +521,8 @@ CREATE FUNCTION app.set_account_deactivated(p_user_id text, p_deactivated boolea
     update better_auth."user"
       set deactivated_at = pg_catalog.now(), session_version = session_version + 1
       where id = p_user_id;
-    if not exists (
-      select 1
-      from public.user_roles r
-      join better_auth."user" u on u.id = r.user_id
-      where r.role = 'admin'
-        and u.blocked_at is null
-        and u.deactivated_at is null
-        and exists (
-          select 1 from better_auth.account a where a."userId" = u.id and a."providerId" = 'credential'
-        )
-    ) then
-      raise exception 'LAST_ADMIN' using detail = 'De laatste admin kan niet weg.';
+    if not app.has_counted_beheer() then
+      raise exception 'LAST_ADMIN' using detail = 'De laatste beheerder kan niet weg.';
     end if;
     insert into app.audit_log (actor_id, action, target_type, target_id, request_id, details)
       values (app.current_user_id(), 'core.account.deactivate', 'account', p_user_id, app.request_id(), '{}'::jsonb);
@@ -488,6 +575,25 @@ CREATE FUNCTION app.set_integration_enabled(p_name text, p_enabled boolean) RETU
 ALTER FUNCTION app.set_integration_enabled(p_name text, p_enabled boolean) OWNER TO app_definer;
 
 --
+-- Name: unregister_role(text); Type: FUNCTION; Schema: app; Owner: app_definer
+--
+
+CREATE FUNCTION app.unregister_role(p_name text) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  begin
+    if p_name is null or p_name in ('user', 'admin') then
+      raise exception 'ongeldige rol' using errcode = '22023';
+    end if;
+    delete from app.roles where name = p_name;
+  end
+  $$;
+
+
+ALTER FUNCTION app.unregister_role(p_name text) OWNER TO app_definer;
+
+--
 -- Name: user_roles_keep_one_admin(); Type: FUNCTION; Schema: app; Owner: app_definer
 --
 
@@ -497,18 +603,10 @@ CREATE FUNCTION app.user_roles_keep_one_admin() RETURNS trigger
     AS $$
   begin
     perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtext('public.user_roles:last_admin'));
-    if old.role = 'admin' and (tg_op = 'DELETE' or new.role <> 'admin') and not exists (
-      select 1
-      from public.user_roles r
-      join better_auth."user" u on u.id = r.user_id
-      where r.role = 'admin'
-        and u.blocked_at is null
-        and u.deactivated_at is null
-        and exists (
-          select 1 from better_auth.account a where a."userId" = u.id and a."providerId" = 'credential'
-        )
-    ) then
-      raise exception 'LAST_ADMIN' using errcode = 'P0001', detail = 'De laatste admin kan niet weg.';
+    if exists (select 1 from app.roles ro where ro.name = old.role and ro.beheer)
+       and (tg_op = 'DELETE' or not exists (select 1 from app.roles ro where ro.name = new.role and ro.beheer))
+       and not app.has_counted_beheer() then
+      raise exception 'LAST_ADMIN' using errcode = 'P0001', detail = 'De laatste beheerder kan niet weg.';
     end if;
     return null;
   end
@@ -573,8 +671,7 @@ ALTER TABLE better_auth."user" OWNER TO app_migrator;
 CREATE TABLE public.user_roles (
     user_id text NOT NULL,
     role text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT user_roles_role_check CHECK ((role = ANY (ARRAY['user'::text, 'admin'::text])))
+    created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 ALTER TABLE ONLY public.user_roles FORCE ROW LEVEL SECURITY;
@@ -717,6 +814,22 @@ ALTER TABLE ONLY app.retention FORCE ROW LEVEL SECURITY;
 ALTER TABLE app.retention OWNER TO app_migrator;
 
 --
+-- Name: roles; Type: TABLE; Schema: app; Owner: app_migrator
+--
+
+CREATE TABLE app.roles (
+    name text NOT NULL,
+    beheer boolean NOT NULL,
+    CONSTRAINT roles_check CHECK ((((name <> 'admin'::text) OR beheer) AND ((name <> 'user'::text) OR (NOT beheer)))),
+    CONSTRAINT roles_name_check CHECK (((name ~ '^[a-z][a-z0-9_]*$'::text) AND (length(name) <= 32)))
+);
+
+ALTER TABLE ONLY app.roles FORCE ROW LEVEL SECURITY;
+
+
+ALTER TABLE app.roles OWNER TO app_migrator;
+
+--
 -- Name: rateLimit; Type: TABLE; Schema: better_auth; Owner: app_migrator
 --
 
@@ -833,6 +946,14 @@ ALTER TABLE ONLY app.rate_limits
 
 ALTER TABLE ONLY app.retention
     ADD CONSTRAINT retention_pkey PRIMARY KEY (table_name);
+
+
+--
+-- Name: roles roles_pkey; Type: CONSTRAINT; Schema: app; Owner: app_migrator
+--
+
+ALTER TABLE ONLY app.roles
+    ADD CONSTRAINT roles_pkey PRIMARY KEY (name);
 
 
 --
@@ -994,6 +1115,13 @@ CREATE TRIGGER audit_log_no_update BEFORE UPDATE ON app.audit_log FOR EACH STATE
 
 
 --
+-- Name: roles roles_keep_one_beheer; Type: TRIGGER; Schema: app; Owner: app_migrator
+--
+
+CREATE TRIGGER roles_keep_one_beheer AFTER DELETE OR UPDATE ON app.roles FOR EACH ROW EXECUTE FUNCTION app.roles_keep_one_beheer();
+
+
+--
 -- Name: user_roles user_roles_keep_one_admin; Type: TRIGGER; Schema: public; Owner: app_migrator
 --
 
@@ -1022,6 +1150,14 @@ ALTER TABLE ONLY better_auth.session
 
 ALTER TABLE ONLY better_auth."twoFactor"
     ADD CONSTRAINT "twoFactor_userId_fkey" FOREIGN KEY ("userId") REFERENCES better_auth."user"(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_roles user_roles_role_fkey; Type: FK CONSTRAINT; Schema: public; Owner: app_migrator
+--
+
+ALTER TABLE ONLY public.user_roles
+    ADD CONSTRAINT user_roles_role_fkey FOREIGN KEY (role) REFERENCES app.roles(name) ON DELETE RESTRICT;
 
 
 --
@@ -1147,6 +1283,47 @@ CREATE POLICY retention_definer_select ON app.retention FOR SELECT TO app_define
 
 
 --
+-- Name: roles; Type: ROW SECURITY; Schema: app; Owner: app_migrator
+--
+
+ALTER TABLE app.roles ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: roles roles_definer_delete; Type: POLICY; Schema: app; Owner: app_migrator
+--
+
+CREATE POLICY roles_definer_delete ON app.roles FOR DELETE TO app_definer USING ((name <> ALL (ARRAY['user'::text, 'admin'::text])));
+
+
+--
+-- Name: roles roles_definer_insert; Type: POLICY; Schema: app; Owner: app_migrator
+--
+
+CREATE POLICY roles_definer_insert ON app.roles FOR INSERT TO app_definer WITH CHECK (true);
+
+
+--
+-- Name: roles roles_definer_select; Type: POLICY; Schema: app; Owner: app_migrator
+--
+
+CREATE POLICY roles_definer_select ON app.roles FOR SELECT TO app_definer USING (true);
+
+
+--
+-- Name: roles roles_definer_update; Type: POLICY; Schema: app; Owner: app_migrator
+--
+
+CREATE POLICY roles_definer_update ON app.roles FOR UPDATE TO app_definer USING (true) WITH CHECK (true);
+
+
+--
+-- Name: roles roles_select_authenticated; Type: POLICY; Schema: app; Owner: app_migrator
+--
+
+CREATE POLICY roles_select_authenticated ON app.roles FOR SELECT TO app_authenticated USING (true);
+
+
+--
 -- Name: user_roles; Type: ROW SECURITY; Schema: public; Owner: app_migrator
 --
 
@@ -1197,6 +1374,13 @@ GRANT USAGE ON SCHEMA better_auth TO app_definer;
 REVOKE USAGE ON SCHEMA public FROM PUBLIC;
 GRANT USAGE ON SCHEMA public TO app_authenticated;
 GRANT USAGE ON SCHEMA public TO app_definer;
+
+
+--
+-- Name: FUNCTION assert_roles_registered(); Type: ACL; Schema: app; Owner: app_definer
+--
+
+REVOKE ALL ON FUNCTION app.assert_roles_registered() FROM PUBLIC;
 
 
 --
@@ -1264,6 +1448,13 @@ GRANT ALL ON FUNCTION app.current_user_id() TO app_definer;
 
 
 --
+-- Name: FUNCTION has_counted_beheer(); Type: ACL; Schema: app; Owner: app_definer
+--
+
+REVOKE ALL ON FUNCTION app.has_counted_beheer() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION integration_enabled(p_name text); Type: ACL; Schema: app; Owner: app_definer
 --
 
@@ -1280,6 +1471,13 @@ GRANT ALL ON FUNCTION app.is_mfa_admin() TO app_authenticated;
 
 
 --
+-- Name: FUNCTION register_role(p_name text, p_beheer boolean); Type: ACL; Schema: app; Owner: app_definer
+--
+
+REVOKE ALL ON FUNCTION app.register_role(p_name text, p_beheer boolean) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION request_id(); Type: ACL; Schema: app; Owner: app_migrator
 --
 
@@ -1292,6 +1490,13 @@ GRANT ALL ON FUNCTION app.request_id() TO app_definer;
 --
 
 REVOKE ALL ON FUNCTION app.retention_cutoff(p_table regclass) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION roles_keep_one_beheer(); Type: ACL; Schema: app; Owner: app_definer
+--
+
+REVOKE ALL ON FUNCTION app.roles_keep_one_beheer() FROM PUBLIC;
 
 
 --
@@ -1326,6 +1531,13 @@ GRANT ALL ON FUNCTION app.set_account_deactivated(p_user_id text, p_deactivated 
 REVOKE ALL ON FUNCTION app.set_integration_enabled(p_name text, p_enabled boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION app.set_integration_enabled(p_name text, p_enabled boolean) TO app_authenticated;
 GRANT ALL ON FUNCTION app.set_integration_enabled(p_name text, p_enabled boolean) TO app_migrator;
+
+
+--
+-- Name: FUNCTION unregister_role(p_name text); Type: ACL; Schema: app; Owner: app_definer
+--
+
+REVOKE ALL ON FUNCTION app.unregister_role(p_name text) FROM PUBLIC;
 
 
 --
@@ -1510,6 +1722,14 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE app.rate_limits TO app_definer;
 --
 
 GRANT SELECT ON TABLE app.retention TO app_definer;
+
+
+--
+-- Name: TABLE roles; Type: ACL; Schema: app; Owner: app_migrator
+--
+
+GRANT SELECT ON TABLE app.roles TO app_authenticated;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE app.roles TO app_definer;
 
 
 --
