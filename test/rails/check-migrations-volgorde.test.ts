@@ -1,62 +1,14 @@
-// VERSLAG TESTER (verwijderen na de bouw):
-//
-// Per AC (testnaam begint met `template-update/AC-n:`; AC-6 en AC-7 geen test):
-// - AC-1: later dan alle bestaande groen; tussen bestaande versies en eerder dan alle (template-fixture) rood, met precies één
-//   regel met naam, nieuwste bestaande versie (20261010120000) en het woord "tijdstempel"; dezelfde melding in een app met
-//   leesbare template-ref die het bestand niet heeft; geen migraties op het afsplitspunt groen; een migratie ouder dan wat main
-//   ná het afsplitsen kreeg maar later dan het afsplitspunt groen.
-// - AC-2: twee later toegevoegde migraties in beide volgorden groen; dezelfde versie: exact de bestaande melding "versie ...
-//   komt meer dan één keer voor" (en niets extra).
-// - AC-3 (app-fixture, template-ref `refs/remotes/template/main` in dezelfde fixture-repo): oudere migratie met gelijke inhoud
-//   groen; andere inhoud rood (één regel met naam en nieuwste versie); twee oudere waarvan één in de template: alleen de andere
-//   genoemd; template-ref ontbreekt met oudere migratie rood met `git fetch`; ref ontbreekt zonder oudere migratie groen.
-// - AC-4 (template-fixture): oudere migratie rood ook als de template-ref hetzelfde bestand heeft.
-// - AC-5: gewijzigd, verwijderd, foute naam, dubbele versie (elk naast een geldige nieuwe migratie, exact één melding) en
-//   onleesbare origin/main (exacte bestaande melding).
-// - AC-8 (HEAD == base `main`, merge met --no-ff): oudere migratie toegevoegd rood (één regel met naam en "nieuwe migratie");
-//   latere groen; niets toegevoegd groen; één commit zonder ouder groen. Aangevuld na de specwijziging: app-fixture met een
-//   merge die een oudere migratie met gelijke inhoud in de template-ref toevoegde groen, met andere inhoud rood (met naam);
-//   template-fixture met een gewone commit (geen merge) met een oudere migratie rood (met naam).
-//
-// Ontwerpkeuzes voor de developer (ook als commentaar boven de tests):
-// - `migratieFouten(root, base, templateRef)`; de test roept hem aan via `unsafeCast` omdat de JSDoc nu twee parameters heeft.
-// - Strikt later dan de nieuwste versie op het afsplitspunt; één meldingsregel per migratie (naam, nieuwste versie, "tijdstempel").
-// - Bestanden zonder geldige versie in de naam leveren alleen de bestaande naamfout, geen volgordemelding.
-// - Zelfherkenning aan `onderhoud.repository` in `.claude/gates.json` (de fixture commit dat bestand; niet-template = `{ "paden": {} }`).
-// - Template-uitzondering per migratie: gelijke bestandsnaam en gelijke inhoud in `templateRef`; leesbaarheid van de ref alleen
-//   toetsen als er een oudere toegevoegde migratie is; onleesbaar = melding met `git fetch` (de test zet een ref die niet bestaat;
-//   het ophalen zelf hoort in de CLI-ingang, niet in de functie, anders haalt een test het netwerk op).
-// - AC-8: bij HEAD == base is "bestaand" de eerste ouder van HEAD, voor elke commit (merge of gewoon); zonder ouder geen
-//   vergelijking; de uitzondering van AC-3 (app, gelijke inhoud in templateRef) geldt ook op main.
-//
-// Gedraaid (tsc -b --noEmit, eslint, vitest op dit bestand): zie de eindmelding van de tester; verwacht rood: AC-1 (3 gevallen),
-// AC-3 (andere inhoud, twee oudere, ref niet te lezen), AC-4, AC-8 (oudere migratie in merge, app met andere inhoud, gewone
-// commit). Op een assertie rood (verwachte regel ontbreekt, nu geen melding).
-// Groen en terecht: AC-1/2 groene gevallen, AC-2 dubbele versie (bestaande regel), AC-3 gelijke inhoud en ref niet gelezen
-// zonder oudere migratie (regressie voor de nieuwe code), AC-5 (bestaande regels, nu al groen), AC-8 groene gevallen (waaronder
-// app met gelijke inhoud: nu groen omdat AC-8 nog niet bestaat; moet groen blijven).
-//
-// Onduidelijk in de spec:
-// - De precieze plek van het ophalen van de template-ref (functie of CLI) en de tekst van het commando staan niet vast; ik toets
-//   alleen op `git fetch`.
-//
-// Aangemaakte bestanden: test/rails/check-migrations-volgorde.test.ts (dit bestand).
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expect, test } from 'vitest';
 import { migratieFouten } from '../../scripts/kit/check-migrations.mjs';
-import { unsafeCast } from '../../src/core/shared/unsafe-cast.ts';
 
 // template-update PR 1 (docs/template/specs/template-update.md): `check:migrations` weigert een toegevoegde migratie die niet
 // later is dan alle migraties op het afsplitspunt, met een uitzondering voor een ongewijzigde templatemigratie in een app,
 // en controleert op main achteraf de laatste merge tegen de eerste ouder. Fixture-repo's, geen mocks.
-type MetTemplateRef = (root: string, base: string, templateRef: string) => string[];
-const fouten = unsafeCast<MetTemplateRef>(
-  migratieFouten,
-  'test: de derde parameter templateRef komt met de implementatie; de JSDoc kent nu twee',
-);
+const fouten = migratieFouten;
 
 const BASIS = '20261009000000_baseline.sql';
 const NOTES = '20261010120000_notes.sql';

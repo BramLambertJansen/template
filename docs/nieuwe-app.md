@@ -884,7 +884,7 @@ Is de eigenaar zelf het venster gaan openen na een mislukte automatische start, 
 > **Deze setupsessie stopt hier.** Je kunt deze sessie sluiten; het app-venster en de draaiende stack blijven open.
 
 Voeg onder die melding eerst de korte samenvatting voor de gebruiker toe en daarna de technische bijlage met de setupuitkomst
-en relevante beperkingen. De dagelijkse commando's en template-updates staan in de naslag hieronder; laat die de overdracht niet onderbreken.
+en relevante beperkingen. De dagelijkse commando's en de procedure voor een template-update staan hieronder; laat die de overdracht niet onderbreken.
 
 > **Kort samengevat:** je app **<App-naam>** staat klaar op je computer en op GitHub en draait lokaal op http://localhost:<web>.
 > De hoofdversie op GitHub is beveiligd: wijzigingen komen er alleen in via een voorstel (pull request) dat eerst automatisch
@@ -907,7 +907,7 @@ en relevante beperkingen. De dagelijkse commando's en template-updates staan in 
 > Een eventuele ST-09-proef en alle appfunctionaliteit, appspecificaties en appgegevens horen in de **aparte app-repo**;
 > alleen generieke verbeteringen en beknopt bewijs komen terug naar de template.
 >
-> **Template-updates binnenhalen:** zie hieronder. Altijd **Create a merge commit**, nooit squash.
+> **Template-updates binnenhalen:** zie "Een template-update binnenhalen" hieronder. Altijd **Create a merge commit**, nooit squash.
 >
 > **Later aanzetten:** de bypass voor de beheerder (`scripts/github-ruleset.sh <owner>/<slug> --bypass-beheerder`), zodra de agent via de GitHub App pusht en het token van de eigenaar uit de agentomgeving is.
 > CodeQL: <beschikbaarheid en beide verplichte checks gecontroleerd, of setup nog geblokkeerd bij Fase 6.1>.
@@ -955,23 +955,85 @@ Voer alleen de gewenste stap uit in een Ubuntu-terminal; dit zijn geen vervolgst
 
 Verwijder geen volumes tenzij je de database kwijt wilt.
 
-## Naslag: template-updates naar de app
+## Een template-update binnenhalen
 
-Door de eigenaar, of door de agent tot en met de PR:
+Door de eigenaar, of door de agent tot en met de PR. Dit is de enige procedure voor een template-update; voer de stappen op
+volgorde uit in een Ubuntu-terminal, met een schone werkmap (`git status --short` is leeg).
 
-```bash
-cd ~/code/<slug>
-git fetch template
-git fetch origin main && git switch -c chore/template-$(git rev-parse --short template/main) origin/main
-git merge template/main                # conflicten: app-specifiek behouden, regels uit de template overnemen
-git push -u origin HEAD
-gh pr create --fill --title "chore: template-update $(git rev-parse --short template/main)"
-```
+1. Haal de template op en lees wat er verandert: in `docs/template-changelog.md` van de template elke versie boven de versie
+   die de app nu heeft (`TEMPLATE_VERSION` in `src/core/shared/template-version.ts`), met de notities "Bij een update".
+   Verwacht: je weet per versie wat je na de merge moet doen.
 
-De eigenaar merget met **Create a merge commit**. Zit er een wijziging in `.github/workflows/` in, dan pusht de eigenaar de branch (de agent heeft geen `workflows`-recht).
+   ```bash
+   cd ~/code/<slug>
+   git fetch template
+   git show template/main:docs/template-changelog.md | less
+   ```
 
-Verandert de update `requiredChecks` in `.claude/decisions.json` (een check erbij of eraf), dan draait de eigenaar na de merge
-`scripts/github-ruleset.sh <owner>/<slug>` opnieuw, zodat de ruleset de nieuwe lijst volgt (ADR 0073).
+2. Maak een branch vanaf `origin/main` en merge de template als echte merge-commit (geen squash, geen rebase). Verwacht:
+   een merge-commit met twee ouders, of een lijst conflicten.
+
+   ```bash
+   cd ~/code/<slug>
+   git fetch origin main && git switch -c chore/template-$(git rev-parse --short template/main) origin/main
+   git merge template/main
+   ```
+
+3. Los conflicten op en rond de merge af met `git commit`. App-specifiek blijft, regels uit de template neem je over;
+   `CHANGELOG.md` is van de app (houd de versie van de app); `src/core/` en `docs/template/` neem je ongewijzigd uit de
+   template (`git checkout template/main -- src/core docs/template`). Verwacht: `git status` meldt geen conflicten meer en
+   `git log --oneline --graph -3` toont de merge met twee ouders.
+4. Voer per versie de notities "Bij een update" uit stap 1 uit, in eigen commits op deze branch. Verwacht: elke notitie is
+   uitgevoerd of aantoonbaar niet van toepassing.
+5. Installeer de dependencies, pas de migraties toe op de lokale database (niet productie), genereer het schema opnieuw en
+   commit het. Verwacht: `pnpm install` eindigt zonder fout, `pnpm db:migrate` past de nieuwe migraties toe, en na
+   `pnpm db:generate` toont `git status --short` hooguit `db/schema.snapshot.sql` en `src/api/db/schema.ts`.
+
+   ```bash
+   cd ~/code/<slug>
+   pnpm install
+   pnpm db:migrate
+   pnpm db:generate
+   git add db/schema.snapshot.sql src/api/db/schema.ts
+   git diff --cached --quiet || git commit -m "chore: regenerate schema after template update"
+   ```
+
+6. Draai de snelle gates. Verwacht: elke gate ✓. Rood: zie de tabel hieronder.
+
+   ```bash
+   cd ~/code/<slug> && pnpm gate:fast
+   ```
+
+7. Push en open de PR. Zit er een wijziging in `.github/workflows/` in, dan pusht de eigenaar de branch (de agent heeft
+   geen `workflows`-recht). Verwacht: een PR waarvan de CI groen wordt (`gate:fast`, `gate:slow`, `check-core` en de overige
+   verplichte checks).
+
+   ```bash
+   cd ~/code/<slug>
+   git push -u origin HEAD
+   gh pr create --fill --title "chore: template-update $(git rev-parse --short template/main)"
+   ```
+
+8. De eigenaar merget met **Create a merge commit**, nooit squash. Verwacht: de CI op `main` is groen.
+9. Verandert de update `requiredChecks` in `.claude/decisions.json` (een check erbij of eraf), dan draait de eigenaar na de
+   merge `scripts/github-ruleset.sh <owner>/<slug>` opnieuw. Verwacht: de ruleset volgt de nieuwe lijst (ADR 0073).
+
+Een rode check bij een template-update:
+
+| Check en melding | Oorzaak | Doe |
+|---|---|---|
+| `check:migrations`: "niet later dan de nieuwste bestaande versie" op een migratie van de app | Een eigen, nog niet gemergde migratie is ouder dan een migratie die al op `main` staat | Geef de eigen migratie een nieuw tijdstempel (hernoem het bestand), `pnpm db:generate`, commit |
+| `check:migrations`: dezelfde melding op een migratie van de template | Het bestand is in de merge gewijzigd of hernoemd; alleen een oudere migratie met dezelfde naam en inhoud als in de template is uitgezonderd | `git checkout template/main -- db/migrations/<bestand>`; wijzig een templatemigratie nooit |
+| `check:migrations`: "`refs/remotes/template/main` is niet te lezen" | De template is lokaal niet opgehaald, of in CI niet bereikbaar | `git fetch template main` en opnieuw; in CI haalt de check de template zelf op en moet de template-repo zonder inlog leesbaar zijn |
+| `check:migrations`: "gewijzigd" of "verwijderd" | Een gecommitte migratie is bij het oplossen van conflicten aangepast | Zet haar terug zoals op `origin/main`; een wijziging is een nieuwe migratie |
+| `check:migrations` op `main` na de merge: "herstel met een nieuwe migratie" | Een migratie kwam op `main` na een nieuwere (een PR die groen was tegen een oudere `main`) | Niet hernoemen; schrijf een nieuwe migratie die het bedoelde eindresultaat vastlegt |
+| `check:snapshot` (in `gate:slow`) | Het gegenereerde schema loopt achter op de migraties | Stap 5 opnieuw en committen; nooit met de hand bewerken |
+| `check-core` | `src/core/` of `docs/template/` wijkt af van de template, of de update is geen echte merge van `template/main` (squash, rebase, cherry-pick) | `git checkout template/main -- src/core docs/template` en committen; anders de branch opnieuw maken vanaf stap 2 |
+
+Een templatemigratie die ouder is dan een migratie die de app al heeft toegepast, draait in productie na die nieuwere en op
+een verse database ervoor. `check:migrations` laat haar door als ze ongewijzigd uit de template komt
+(`scripts/kit/check-migrations.mjs`); tot `check:snapshot` de tweede bouw heeft (spec `template-update`, AC-7) is er geen
+bewijs dat de volgorde niets uitmaakt. Lees zo'n migratie daarom na op objecten die een nieuwere migratie van de app ook raakt.
 
 App-eigen ADR's staan in `docs/adr/` en app-specs in `docs/specs/`, met een eigen nummering; `node scripts/kit/feiten.mjs adr` noemt het volgende vrije nummer. De documenten van de template staan in `docs/template/` en wijzigt een app niet (ADR 0089 punt 1 en 6).
 
