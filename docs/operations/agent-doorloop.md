@@ -245,7 +245,7 @@ en voert de echte pre-push-config in een tijdelijke repository uit met groene en
 De bestaande tests in `werkstraat.test.ts` en `werkstraat-script.test.ts` zijn aangepast omdat developer-stop
 nu gerichte controles uitvoert; de controle op de git-root uit de payload blijft behouden.
 
-### Feature-lane en mini-spec (ADR 0046)
+### Routes en mini-spec (ADR 0046)
 
 Een besluit kost één PR: de merge is het besluit. Architect of hoofdsessie zet de statusregel in het voorstel; commitvolgorde,
 inhoud na de status en committer doen er niet toe (ADR 0046 punt 7). De twee routes hieronder zijn afspraak, getoetst door de
@@ -263,7 +263,7 @@ fixtures en testsetup blijven erbuiten; een gemengde PR volgt de strengste route
 niet of als `voorstel`, de genoemde PR is open op deze branch in deze repository en de branch wijzigt iets buiten `docs/` en
 `CHANGELOG.md`. Check-runs toetst het commando niet; die eist de ruleset bij de merge.
 
-- **Overige feature-lane (de standaard, ADR 0062):** een of meer specs met een eigenaarstatus (nieuw, volledig of mini, of nieuwe
+- **Spec met bouw (de standaard, ADR 0062):** een of meer specs met een eigenaarstatus (nieuw, volledig of mini, of nieuwe
   inhoud van een goedgekeurde spec) samen met code, tests en docs. Alles mag meewijzigen (ook `CHANGELOG.md`, de roadmap, `scripts/`,
   `rails/`, overige `src/core`, agentinstructies en gegenereerde bestanden zoals het schema-snapshot), in de template ook een ADR of kritiek pad (ADR 0090 punt 4;
   `besluit-pr` of `altijdVragen` in de padtabel, onder meer `src/core/api/auth`, `src/core/api/db`, `db/init`, `rails/hooks/**`, elk ADR en de besluit-, status- en mergescripts);
@@ -274,12 +274,12 @@ niet of als `voorstel`, de genoemde PR is open op deze branch in deze repository
   `(select app.current_user_id())` en expliciete SELECT/DELETE-grants aan `app_authenticated`. INSERT/UPDATE-grants
   zijn alleen per app-kolom toegestaan. Eenvoudige extra velden mogen text, integer/int, bigint, boolean, uuid of
   timestamptz zijn, eventueel met NOT NULL en een letterlijke default. Indexen bevatten alleen kolomnamen;
-  quoted objectnamen, expressies en andere SQL-vormen volgen de framework-lane. De vaste
+  quoted objectnamen, expressies en andere SQL-vormen volgen de volledige route. De vaste
   verwijzing naar `better_auth."user" (id)` blijft toegestaan. Een retentionregistratie heeft precies de volgorde
   NO FORCE → één rij voor de nieuwe tabel → FORCE; losse of herhaalde toggles worden geweigerd. De mini-spec heeft de kop
   "Datawijzigingen (met grants)". Een geneste `CLAUDE.md` of `AGENTS.md` valt eruit. Een onbekend pad buiten `gates` en buiten `src/`, `docs/` en `db/` (zoals `.vscode/` of `.mcp.json`) valt eruit. CODEOWNERS
   blijft gelden voor elk pad van een code-eigenaar in de PR. Het bereik volgt ADR 0062.
-- **Besluit-PR (framework-lane):** een of meer ADR's en specs die een eigenaarstatus krijgen (ook `vervangen door NNNN` of `vervallen`, of nieuwe inhoud van een goedgekeurde spec), zonder `.claude/decisions.json`, code of andere bestanden: alleen documenten in `docs/adr/` en `docs/specs/` die zelf een besluit krijgen, ook geen index of ander document. Bouwen volgt in een volgende PR. In een app is dit de route voor kritiek werk (ADR 0062 punt 2); in de template alleen voor wie een besluit los wil voorleggen (ADR 0090 punt 4).
+- **Besluit-PR:** een of meer ADR's en specs die een eigenaarstatus krijgen (ook `vervangen door NNNN` of `vervallen`, of nieuwe inhoud van een goedgekeurde spec), zonder `.claude/decisions.json`, code of andere bestanden: alleen documenten in `docs/adr/` en `docs/specs/` die zelf een besluit krijgen, ook geen index of ander document. Bouwen volgt in een volgende PR. In een app is dit de route voor kritiek werk (ADR 0062 punt 2); in de template alleen voor wie een besluit los wil voorleggen (ADR 0090 punt 4).
 - Past de PR in geen van beide, dan is dat een bevinding van de reviewer; een besluitrecord bestaat niet meer (ADR 0063).
 
 ## Ontwikkelen en runnerchecks
