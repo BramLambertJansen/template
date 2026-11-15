@@ -16,7 +16,7 @@ Een nieuwe resource met een eigenaar per rij begint met `pnpm new:resource <naam
 migratie met het tabelpatroon. Velden komen daarna in een nieuwe migratie, met kolomgrants (`docs/gouden-pad.md`).
 
 Regels (AGENTS.md, `.claude/rules/database.md`):
-1. `db/migrations/<tijdstempel>_<naam>.sql` met een tijdstempel na de laatste; nooit rollen maken.
+1. `db/migrations/<tijdstempel>_<naam>.sql`; nooit rollen maken. Het tijdstempel is later dan dat van elke bestaande migratie (`check:migrations`); botst het doordat main intussen een latere migratie kreeg, vernieuw dan het tijdstempel van je eigen, nog niet gemergde migratie.
 2. Elke tabel: RLS aan en geforceerd, expliciete grants in dezelfde migratie. Policies met `(select app.current_user_id())`.
 3. `security definer` alleen met `set search_path = ''`, volledig gekwalificeerde namen en eigenaar `app_definer`; zet de functie in de catalogus in `db/tests/functies.sql`.
 4. pgTAP per policy in `db/tests/`, met een assert waarvan de beschrijving met de policynaam begint (`'<naam>: …'`): check-policies in `pnpm test:db` eist dat.
