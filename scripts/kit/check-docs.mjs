@@ -72,7 +72,7 @@ export async function docsViolations(root = '.') {
     ...(files.includes('.claude/gates.json') ? padenViolations(read('.claude/gates.json')) : []),
     ...(files.includes('.claude/gates.json') ? schrijfrechtViolations(read('.claude/gates.json')) : []),
     ...(files.includes('.claude/gates.json') ? werkmapNegeerViolations(files, read('.claude/gates.json')) : []),
-    ...(files.includes('.claude/gates.json') ? agentMergeViolations(read('.claude/gates.json')) : []),
+    ...(files.includes('.claude/gates.json') ? mergeModusViolations(read('.claude/gates.json')) : []),
     ...paragraafViolations(files, read),
     ...(files.includes(REGELBOEK) ? regelboekPadViolations(root, read(REGELBOEK), files) : []),
     ...rIdViolations(files, read),
@@ -860,7 +860,7 @@ function codeownersViolations(ruw, tekst) {
  * @param {string} text
  * @returns {Violation[]}
  */
-export function agentMergeViolations(text) {
+export function mergeModusViolations(text) {
   /** @type {unknown} */
   const ruw = JSON.parse(text);
   const modus = typeof ruw === 'object' && ruw !== null && 'merge' in ruw ? ruw.merge : undefined;
