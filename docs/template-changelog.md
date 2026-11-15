@@ -9,6 +9,16 @@ requests.
 
 ### Gewijzigd
 
+- Volgorde van migraties en de procedure voor een template-update (spec `template-update`): `check:migrations` weigert een
+  toegevoegde migratie waarvan de versie niet later is dan de nieuwste migratie op het afsplitspunt met `origin/main`; geef de
+  eigen, nog niet gemergde migratie dan een nieuw tijdstempel. Op `main` zelf vergelijkt de check elke commit achteraf met zijn
+  eerste ouder; het herstel is daar een nieuwe migratie. In een app is een oudere migratie die met dezelfde naam en inhoud in
+  de template staat uitgezonderd (lokaal `refs/remotes/template/main`; ontbreekt die, dan haalt de check de template zelf op);
+  in de template bestaat de uitzondering niet (`scripts/kit/check-migrations.mjs`). Tot de volgende PR (de tweede bouw in
+  `check:snapshot`) is zo'n oudere templatemigratie zonder bewijs uitgezonderd: niets toont nog aan dat de volgorde voor het
+  schema niet uitmaakt. Bij een update: volg de sectie "Een template-update binnenhalen" in `docs/nieuwe-app.md`, de enige
+  procedure, met per rode check (`check:migrations`, `check:snapshot`, `check-core`) wat te doen; een open branch met een eigen
+  migratie die ouder is dan een migratie op `main`, krijgt een nieuw tijdstempel.
 - Templateversie en eigen wijzigingenlijst (spec `release-versie`): de template heeft een versie in code, `TEMPLATE_VERSION` in
   `src/core/shared/template-version.ts`, gelijk aan de nieuwste releasekop in dit bestand. De wijzigingen van de template staan
   voortaan hier, in `docs/template-changelog.md`; `CHANGELOG.md` in de hoofdmap is van de app en bevat in de template alleen een
