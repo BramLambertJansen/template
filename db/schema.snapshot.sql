@@ -1320,7 +1320,7 @@ CREATE POLICY roles_definer_update ON app.roles FOR UPDATE TO app_definer USING 
 -- Name: roles roles_select_authenticated; Type: POLICY; Schema: app; Owner: app_migrator
 --
 
-CREATE POLICY roles_select_authenticated ON app.roles FOR SELECT TO app_authenticated USING (true);
+CREATE POLICY roles_select_authenticated ON app.roles FOR SELECT TO app_authenticated USING ((( SELECT app.current_user_id() AS current_user_id) IS NOT NULL));
 
 
 --
