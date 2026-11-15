@@ -180,18 +180,18 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   zonder login onder één vast prefix met verifier, tijdvenster, groottegrens, rate limit per IP en inbox, en een check die elke route buiten
   `defineRoute` en buiten de lijst van §3 laat falen (uitzondering naast R-UIT-02, §3).
   aanleiding: `docs/template/adr/0077-externe-koppelingen-via-poorten.md` (verzoek van de eigenaar, 3 en 4 november 2026)
-- [ ] **ST-16 (P1) — rollen als register van de app** (na de nulmeting van ST-09, vóór een tweede app). Nu staat `ROLES` in
+- [x] **ST-16 (P1) — rollen als register van de app** (vóór de proef-app, besluit eigenaar 2026-11-11; gebouwd in #715). Nu staat `ROLES` in
   `src/core/shared/can.ts` en hangen MFA-eis en laatste-admin-trigger aan de naam `admin`; een nieuwe rol wijzigt core (R-ARCH-03), wat in een app dicht is.
   **Werk:** de app levert `src/shared/roles.ts` (standaard `user` en `admin`); `definePermissions`, `withUser` en de dev-login typeren de rol uit dat register.
   MFA-eis en laatste-beheerder hangen aan de vlag `beheer` (besluit eigenaar 2026-11-06), niet aan de naam; een app kan de vlag niet uitzetten voor een rol met
   accountbeheer. Database: `app.roles (name, beheer)` en een foreign key op `user_roles.role` in plaats van het CHECK, via expand/contract; `app.is_mfa_admin()`,
   de trigger, de laatste-admin-controle in `app.set_account_blocked` en `app.set_account_deactivated`, en de policies lezen `beheer`; `app.use` geldt voor
   elke rol uit het register. Seed-accounts komen uit de compositie-root, één per rol, zodat de demoswitcher elke rol toont. Eén rol per account.
-  **Afhankelijkheden:** ST-09; besluit-PR met ADR (A2: rollen, RLS, auth) dat ADR 0043 punt 13, 15 en 16, R-ARCH-03, R-AUTH-03, R-AUTH-07 en R-DB-15 herziet, daarna spec en bouw.
-  **Klaar als:** bestaande negatieve tests ongewijzigd groen; een test faalt als register en `app.roles` verschillen; een nieuwe rol zonder `beheer` krijgt
+  **Afhankelijkheden:** geen; spec `docs/template/specs/rollenregister.md`, ADR 0092 en bouw in één PR (ADR 0090), met ADR 0043 punt 13, 15 en 16, R-ARCH-03, R-AUTH-03, R-AUTH-07 en R-DB-15 herzien.
+  **Klaar als:** bestaande negatieve tests groen (gewijzigd alleen wat de spec onder "Raakt ook" noemt); een test faalt als register en `app.roles` verschillen; een nieuwe rol zonder `beheer` krijgt
   alleen expliciete permissies en `app.use`; een beheerrol zonder MFA krijgt `MFA_REQUIRED`; laatste-beheerder-racetest; blokkeren en deactiveren van de
-  laatste beheerder met een beheerrol die niet `admin` heet geeft `LAST_ADMIN`; de proef-app voegt één rol toe zonder core-wijziging en wisselt ernaartoe
-  in de demoswitcher.
+  laatste beheerder met een beheerrol die niet `admin` heet geeft `LAST_ADMIN`; een core-test voegt rollen toe zonder core-wijziging (in de proef-app: één rol toevoegen en ernaartoe wisselen
+  in de demoswitcher, meetpunt van ST-09).
   aanleiding: `docs/reviews/2026-11-06-herbouw.md` (§4.3, besluit eigenaar 2026-11-06)
 - [ ] **ST-17 (P1) — accountbeheer als module van de template** (na ST-16). Nu bezit elke app de routes, contracten en schermen van accountbeheer en
   eigen account als startcode, zodat elke template-verbetering daaraan bij `git merge template/main` conflicteert.

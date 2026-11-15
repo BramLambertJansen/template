@@ -73,3 +73,7 @@ export const OUTBOUND_MAX_RESPONSE_BYTES = 1_048_576;
 // schakelaar geldt (OV-3: langer dan één aanroep, OUTBOUND_BUDGET_MAX_MS).
 export const INTEGRATION_NAME_MAX_LENGTH = 63;
 export const INTEGRATION_SWITCH_MAX_AGE_MS = 30_000;
+
+// Rollenregister (spec rollenregister): de naam van een rol, gelijk aan de CHECK op app.roles.name (test in
+// test/auth/role-name-limit.test.ts).
+export const ROLE_NAME_MAX_LENGTH = 32;

@@ -28,7 +28,13 @@ insert into catalogus values
   ('app.claim_one_time_use(text, integer)', 'auth', 'claim van een TOTP-code of e-maillink door Better Auth'),
   -- Register en schakelaar per koppeling (spec koppelingsregister, AC-8).
   ('app.integration_enabled(text)', 'client', null),
-  ('app.set_integration_enabled(text, boolean)', 'client', null);
+  ('app.set_integration_enabled(text, boolean)', 'client', null),
+  -- Rollenregister (spec rollenregister, ADR 0092).
+  ('app.has_counted_beheer()', 'intern', 'gelezen na de lock door de laatste-beheerder-regels'),
+  ('app.assert_roles_registered()', 'intern', 'controle in de migratie voor de foreign key op user_roles.role'),
+  ('app.roles_keep_one_beheer()', 'intern', 'triggerfunctie van app.roles'),
+  ('app.register_role(text, boolean)', 'intern', 'alleen app_migrator, in een migratie'),
+  ('app.unregister_role(text)', 'intern', 'alleen app_migrator, in een migratie');
 
 -- Functies van extensies tellen niet mee (pgTAP staat in schema tap).
 create temp view functies as

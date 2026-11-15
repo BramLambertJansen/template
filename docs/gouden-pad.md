@@ -112,6 +112,34 @@ partner noemt en een spec met de paragraaf "Koppeling". De bouwstenen:
 - Partnerstap in de route (`definePartnerRoute`, `rateLimit: 'duur'`): [partnerstap](template/specs/partnerstap.md).
 - Vaste vorm per koppeling met contracttest (`describeContract`) en check: [koppelingsvorm](template/specs/koppelingsvorm.md).
 
+## Een rol toevoegen of weghalen
+
+Een app voegt rollen toe zonder `src/core` te wijzigen (spec [rollenregister](template/specs/rollenregister.md)). `user` en
+`admin` liggen vast; `beheer: true` eist een MFA-sessie voor elke permissie van de rol en telt mee voor de laatste beheerder.
+Het register staat op twee plekken die gelijk moeten zijn: de code en de tabel `app.roles`.
+
+Toevoegen, in één PR:
+
+1. **Migratie**: `select app.register_role('planner', false);` in een nieuwe migratie (`db/migrations/`), daarna
+   `pnpm db:generate`. De naam past op `^[a-z][a-z0-9_]*$` en is hooguit 32 tekens (`ROLE_NAME_MAX_LENGTH`).
+2. **Register**: `defineRoles({ planner: { beheer: false } })` in `src/shared/roles.ts`, met dezelfde vlag als de migratie.
+3. **Permissies**: de rol bij elke permissie die hij krijgt in `src/shared/permissions.ts`; `app.use` heeft elke rol vanzelf.
+   Een naam buiten het register weigert `definePermissions` bij het laden.
+4. **Seed-account en naam**: een regel in `src/api/dev/seed-accounts.ts` en in `roleLabels` (`src/web/copy/ui.ts`); zonder
+   is het een typefout. De dev-rolwisselaar, de rolfilter en het uitnodigformulier tonen de rol dan vanzelf.
+5. **Tests**: een test per verboden rol voor elke permissie (`src/shared/permissions.test.ts`), een actorsoort in
+   `test/security/fixtures.ts`, en `pnpm test:db`: `test/auth/roles-register.int.test.ts` faalt zolang code en database
+   verschillen.
+
+Weghalen gaat andersom: eerst de dragers een andere rol geven (`app.assign_role`), dan de rol uit de permissies, het
+seed-account, `roleLabels` en `src/shared/roles.ts`, en een migratie met `select app.unregister_role('planner');` (met
+dragers weigert de database: `23503`). De vlag wijzigen: `app.register_role` opnieuw aanroepen en `src/shared/roles.ts`
+gelijk zetten; de database weigert met `LAST_ADMIN` als daardoor geen telbare beheerder overblijft.
+
+Loopt het uiteen, dan faalt het dicht: een rol alleen in de code is niet toe te kennen (`23503`), een rol alleen in de
+database is `FORBIDDEN` op elke route, en accountbeheer blijft achter `app.is_mfa_admin()` (de vlag in de database).
+Geeft de permissietabel accountbeheer aan een rol zonder `beheer`, dan weigert de database (`FORBIDDEN`).
+
 ## Stappen
 
 1. **Spec** met status `goedgekeurd`: `docs/template/specs/accountbeheer.md` (routes, foutcodes, teksten, ACs, testplan).
@@ -127,7 +155,7 @@ partner noemt en een spec met de paragraaf "Koppeling". De bouwstenen:
 6. **Route** met `defineRoute` en `tx`: `src/api/routes/accounts.ts`, opgenomen in `src/api/app.ts`. Iets buiten de database
    via `ctx.services`: `src/api/services.ts`. Een lijstroute decodeert de cursor met `decodeListCursor` en maakt `q` geschikt voor `ilike`
    met `containsPattern`, beide uit `#core/api/route/list-query.ts`; een eigen kopie weigert de lintregel `lijstquery`.
-7. **Integratietests** (verboden rol, admin zonder MFA, ongeldige input, ACs): `test/api/accounts.int.test.ts` met de testkit
+7. **Integratietests** (verboden rol, beheerrol zonder MFA, ongeldige input, ACs): `test/api/accounts.int.test.ts` met de testkit
    (`beginTestDb`, `asUser`).
 8. **Queries** (key-factory met de search in de key, hooks, `placeholderData`, mutaties die invalideren): `src/web/features/accounts/queries.ts`.
 9. **Scherm** met kitcomponenten uit `src/web/ui` en teksten uit `src/web/copy/ui.ts`: `src/web/features/accounts/accounts-page.tsx`,

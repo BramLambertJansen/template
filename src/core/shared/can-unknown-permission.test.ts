@@ -1,8 +1,9 @@
 import { expect, test } from 'vitest';
 import { definePermissions, type PermissionRule } from './can.ts';
+import { baseRoles } from './roles.ts';
 
 const table: Record<string, PermissionRule> = { 'notes:read': { roles: ['user', 'admin'] } };
-const permissions = definePermissions(table);
+const permissions = definePermissions(baseRoles, table);
 
 test.each(['constructor', 'toString', '__proto__', 'hasOwnProperty'])(
   'onbekende permissie %s wordt geweigerd',

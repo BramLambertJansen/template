@@ -1,10 +1,11 @@
 import type { Auth } from '../auth/auth.ts';
 import type { DevLogin } from '../http/create-app.ts';
-import { SEED_ACCOUNTS, SEED_ADMIN_TOTP_SLEUTEL, SEED_DEMO_WACHTWOORD } from './seed-accounts.ts';
+import type { Roles } from '../../shared/roles.ts';
+import { SEED_ADMIN_TOTP_SLEUTEL, SEED_DEMO_WACHTWOORD, type SeedAccount, type SeedAccounts } from './seed-accounts.ts';
 import { totpCode } from './totp.ts';
 
-// Dev-login (spec accountbeheer, ADR 0043): logt echt in via Better Auth als het seed-account van de rol, voor de admin met
-// de TOTP-code uit het vaste lokale geheim. Alleen voor APP_ENV=local; server.ts geeft hem elders niet aan createApp.
+// Dev-login (spec accountbeheer, spec rollenregister, ADR 0043): logt echt in via Better Auth als het seed-account van de rol,
+// voor elke beheerrol van het register met de TOTP-code uit het ene vaste lokale geheim. Alleen voor APP_ENV=local; server.ts geeft hem elders niet aan createApp.
 //
 // Via auth.api (server-side) en niet via de HTTP-handler: dezelfde hooks (session_strength 'mfa' na de TOTP-stap), maar
 // buiten de rate limit van de router. Anders telt elke wissel als inlogpoging en weigert Better Auth na drie wissels.
@@ -54,11 +55,21 @@ function headersWith(incoming: Headers, cookies: readonly string[]): Headers {
   return headers;
 }
 
-export function createDevLogin(steps: DevAuthSteps): DevLogin {
-  return async (role, incoming) => {
-    const account = SEED_ACCOUNTS[role];
+// Het register en de seed-accounts van de app (R-LAAG-02: als argument, src/api/server.ts geeft ze mee).
+export interface DevLoginConfig<Name extends string> {
+  readonly roles: Roles<Name>;
+  readonly seedAccounts: SeedAccounts<Name>;
+}
+
+export function createDevLogin<Name extends string>(steps: DevAuthSteps, config: DevLoginConfig<Name>): DevLogin {
+  const roles: Roles = config.roles;
+  const seedAccounts: Readonly<Record<string, SeedAccount | undefined>> = config.seedAccounts;
+  return async (requested, incoming) => {
+    const role = roles.parse(requested);
+    const account = role === null ? undefined : seedAccounts[role];
+    if (account === undefined) throw new Error('dev-login: de rol staat niet in het register van de app');
     const signedIn = await steps.signIn(account.email, SEED_DEMO_WACHTWOORD, headersWith(incoming, []));
-    if (role !== 'admin') return signedIn;
+    if (!roles.isBeheer(role)) return signedIn;
     const verified = await steps.verifyTotp(totpCode(SEED_ADMIN_TOTP_SLEUTEL), headersWith(incoming, signedIn));
     return [...signedIn, ...verified];
   };

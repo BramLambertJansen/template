@@ -64,6 +64,11 @@ export const appRetention = appSchema.table('retention', {
   reason: text('reason').notNull(),
 });
 
+export const appRoles = appSchema.table('roles', {
+  name: text('name').primaryKey(),
+  beheer: boolean('beheer').notNull(),
+});
+
 export const userRoles = pgTable('user_roles', {
   userId: text('user_id').$type<UserId>().primaryKey(),
   role: text('role').notNull(),

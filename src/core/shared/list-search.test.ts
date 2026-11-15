@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { z } from 'zod';
 import { createContracts } from './contract.ts';
 import { definePermissions } from './can.ts';
+import { baseRoles } from './roles.ts';
 import { MAX_SEARCH_LENGTH } from './limits.ts';
 import { defineListSearch } from './list-search.ts';
 
@@ -108,7 +109,7 @@ describe('defineListSearch: web (.catch per veld)', () => {
 
 describe('defineListSearch: contract en gereserveerde sleutels', () => {
   test('api is een strict ZodObject dat als input door defineContract komt, en blijft ongeldige velden weigeren', () => {
-    const { defineContract } = createContracts(definePermissions({}));
+    const { defineContract } = createContracts(definePermissions(baseRoles, {}));
 
     const contract = defineContract({
       method: 'GET',

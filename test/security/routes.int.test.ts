@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { z } from 'zod';
 import { routes } from '../../src/api/app.ts';
-import { ROLES } from '../../src/core/shared/can.ts';
+import { roles } from '../../src/shared/roles.ts';
 import {
   adminHeeftPermissie,
   createSecurityFixtures,
@@ -116,7 +116,7 @@ describe('security/AC-4: rechten per permissie en rol', { timeout: LANG }, () =>
   });
 
   test('security/AC-4: de suite kent elke rol uit ROLES (een nieuwe rol vraagt een actorsoort)', () => {
-    expect([...ROLES].sort()).toStrictEqual(['admin', 'user']);
+    expect([...roles.names].sort()).toStrictEqual(['admin', 'user']);
   });
 
   // Alleen de combinaties die de oracle weigert; een toegestane aanroep zou de handler uitvoeren (acceptatietest van de resource).

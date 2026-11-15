@@ -2,6 +2,8 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-15 (#715): door ADR 0092 punt 5, punt 6: de laatste beheerder heeft één definitie, `app.has_counted_beheer()`, voor elke beheerrol
+
 Herzien: 2026-10-30 (#385): in Gevolgen vervalt het taakmandaat; de bronbestanden blijven als scope
 ([0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md)).
 

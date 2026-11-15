@@ -1,5 +1,5 @@
 import { routeLabel, sampleFor, type AppRoute, type RouteSample } from './fixtures.ts';
-import type { Role } from '../../src/core/shared/can.ts';
+import type { Role } from '../../src/shared/roles.ts';
 
 // Wat alleen de spec weet (spec security-suite, "Wat niet generiek kan"): welke route bij welke tabel hoort en wie de eigenaar is.
 // Alleen gegevens, geen asserties; een testpad, dus een developer kan hier geen uitzondering in zetten (rolhek, diff-guard).

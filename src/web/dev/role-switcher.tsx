@@ -2,18 +2,20 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { UserCog, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { ROLES, type Role } from '#core/shared/can.ts';
+import { roles } from '#shared/roles.ts';
 import { roleLabels } from '#web/copy/ui.ts';
 import { Button, cn, Notice, useErrorText } from '#web/ui/index.ts';
 import { useCurrentRole } from './queries.ts';
 import { switchRole } from './switch-role.ts';
 
 // Dev-rolwisselaar (spec accounts/AC-8, besluit eigenaar 2026-10-10): op elk scherm, ook ingelogd, een tabje rechts; een
-// klik schuift een paneel in met een knop per rol uit ROLES. Een nieuwe rol staat er dus vanzelf bij (seed-account en naam
+// klik schuift een paneel in met een knop per rol uit het register (src/shared/roles.ts). Een nieuwe rol staat er dus vanzelf bij (seed-account en naam
 // zijn Record<Role, …>). Alleen lokaal: src/web/dev is leeg in de productiebundel. De teksten staan daarom hier en niet
 // in src/web/copy.
 
 const PANEL_ID = 'dev-rolwisselaar';
+// roleLabels is Record<Role, …>; hier op naam gelezen, want het register geeft zijn namen als tekst.
+const labels: Readonly<Record<string, string>> = roleLabels;
 
 export function DevRoleSwitcher() {
   const queryClient = useQueryClient();
@@ -40,7 +42,7 @@ export function DevRoleSwitcher() {
     };
   }, [open]);
 
-  const choose = (role: Role) => {
+  const choose = (role: string) => {
     setError(null);
     switchRole(role, queryClient, navigate).then(
       () => {
@@ -95,7 +97,7 @@ export function DevRoleSwitcher() {
         </div>
         {error === null ? null : <Notice tone="error">{error}</Notice>}
         <div className="flex flex-col gap-2">
-          {ROLES.map((role) => (
+          {roles.names.map((role) => (
             <Button
               key={role}
               variant={role === current ? 'primary' : 'outline'}
@@ -104,7 +106,7 @@ export function DevRoleSwitcher() {
                 choose(role);
               }}
             >
-              {roleLabels[role]}
+              {labels[role] ?? role}
             </Button>
           ))}
         </div>

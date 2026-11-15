@@ -8,7 +8,7 @@ import type { AppServices } from '../../src/api/services.ts';
 import { inviteUser } from '../../src/core/api/auth/index.ts';
 import { beginTestDb, createPool, type TestDb, type TestUser } from '../../src/core/api/db/testing.ts';
 import { createApp, type App } from '../../src/core/api/http/create-app.ts';
-import type { Role } from '../../src/core/shared/can.ts';
+import type { Role } from '../../src/shared/roles.ts';
 import { rateLimitCategory, type Method } from '../../src/core/shared/contract.ts';
 import { MAX_BODY_BYTES, SESSION_ABSOLUTE_SECONDS, type RateLimitCategory } from '../../src/core/shared/limits.ts';
 import { defineContract } from '../../src/shared/contracts/kit.ts';

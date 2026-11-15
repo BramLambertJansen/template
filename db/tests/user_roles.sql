@@ -16,7 +16,7 @@ insert into better_auth.account (id, "accountId", "providerId", "userId", passwo
 
 select lives_ok($$select app.assign_role('u-user', 'user')$$, 'app_migrator (seed, admin:create) mag een rol toekennen');
 select lives_ok($$select app.assign_role('u-admin', 'admin')$$, 'app_migrator mag de eerste admin maken');
-select throws_ok($$select app.assign_role('u-user', 'baas')$$, '23514', null, 'alleen de rollen user en admin bestaan');
+select throws_ok($$select app.assign_role('u-user', 'baas')$$, '23503', null, 'alleen de rollen user en admin bestaan');
 select throws_ok($$select app.assign_role('onbekend', 'user')$$, '23503', null, 'een rol hoort bij een bestaande gebruiker');
 
 -- Policies als app_authenticated, met de actor zoals withUser hem zet (set_config met is_local = true).
