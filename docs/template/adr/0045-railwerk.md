@@ -12,6 +12,7 @@ de afgeleide `altijdVragen`
 Herzien: 2026-11-12 (#692): door ADR 0089 punt 1 en 2, in de template deels: punt 10, de onderhoudsmodus versoepelt de statusregels wel (A4, archief, besluit-PR); blijft: de overige regels van punt 10; punt 21 vervalt in de template: een geaccepteerd ADR wordt ter plekke herschreven; blijft in een app
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 2, 5 en 8, de vorige regel vervalt: geen licht regime; zodra de GitHub App bewezen is, verdwijnen de diff-guard en `check-document-status`, en daarmee punt 16, 17, 18, 19, 20 en 24 vervallen; punt 21, een correctie aan een ADR is een afspraak die de eigenaar met zijn goedkeuring beslist; punt 22, de strikte statusregel vervalt als guardtoets; punt 10 noemt die twee checks niet meer
 Herzien: 2026-11-14 (#714): ingekort tot wat nog geldt na ADR 0089 en 0091; een ingehaald punt is één regel met de plek waar het nu staat, de puntnummers zijn ongewijzigd, de oude tekst staat in git
+Herzien: 2026-11-15 (#728): punt 22 verwijst niet meer naar `statusregelOvertreding`, die functie is weg; de afspraak blijft
 
 Vervangt 0011, 0017, 0031,
 0032, 0033 en
@@ -101,8 +102,7 @@ tot stand komt (merge is acceptatie, drempel, taakmandaat, CI-lus, merge- en for
 22. **Strikte statusregel** (was 0031 besluit 4). Is de statusregel van een ADR nieuw of gewijzigd, dan staat achter de
     statuswaarde alleen een datum `(JJJJ-MM-DD)`, PR-nummers `#<nr>` en links naar bestaande ADR's met alleen het nummer als
     tekst, gescheiden door `, ` of ` — `. Ongewijzigde statusregels blijven geldig. Specs vallen erbuiten. Dit is een
-    afspraak die de reviewer toetst (0089 punt 8): de vorm staat in `statusregelOvertreding`
-    (`rails/hooks/lib/document-state.mjs`), maar geen hook of check roept die aan.
+    afspraak die de reviewer toetst (0089 punt 8); geen hook of check toetst de vorm.
 23. **`pr:verify` in een agent-worktree** (was 0031 besluit 5). Alleen ongetrackte bestanden onder `werkmapNegeer` (exacte paden
     of mapvoorvoegsels onder `.claude/`, gelezen uit `main`) tellen niet als vuile werkmap; een getrackte wijziging blijft
     weigeren. `.mcp.json` en `.claude/commands/` staan er niet in: dat beslist de app.

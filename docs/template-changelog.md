@@ -47,6 +47,9 @@ requests.
 
 - Het blok `agentMerge` (`maxRegels`, `maxBytes`) uit `.claude/gates.json`: sinds 0.1.0 leest geen code het nog (ADR 0089 punt
   5). Wat verandert voor een app: haal het blok ook uit je eigen `.claude/gates.json`; laten staan kan geen kwaad.
+- `statusregelOvertreding` in `rails/hooks/lib/document-state.mjs` met de test `test/hooks/adr-statusregel.test.ts`: geen hook
+  of check riep de functie nog aan sinds de strikte statusregel een afspraak is die de reviewer toetst (ADR 0045 punt 22, ADR
+  0089 punt 8). De regel zelf blijft.
 
 ## [0.1.0] - 2026-11-15
 
