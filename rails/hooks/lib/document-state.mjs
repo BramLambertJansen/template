@@ -149,7 +149,7 @@ const VOORSTEL = new Set(['voorstel', 'voorgesteld']);
 
 /** De melding bij A4 (ADR 0046 punt 2) van het rolhek. */
 export const A4_MELDING =
-  'een geaccepteerd ADR herschrijven of een ADR met een eigenaarstatus verwijderen mag alleen in een besluit-PR, door architect of hoofdsessie, en een herschreven ADR krijgt een herzieningsregel (`Herzien: JJJJ-MM-DD (#NNN): wat`); een vervallen of vervangen ADR wijzigt niet en een ADR gaat nooit terug naar voorgesteld; buiten een besluit-PR schrijf je een nieuw ADR dat het vervangt (`vervangen door NNNN`) (A4, ADR 0046 punt 2)';
+  'een geaccepteerd ADR herschrijven of een ADR met een eigenaarstatus verwijderen mag alleen door architect of hoofdsessie (in de template in elke PR, in een app alleen in een besluit-PR), en een herschreven ADR krijgt een herzieningsregel (`Herzien: JJJJ-MM-DD (#NNN): wat`); een vervallen of vervangen ADR wijzigt niet en een ADR gaat nooit terug naar voorgesteld; anders schrijf je een nieuw ADR dat het vervangt (`vervangen door NNNN`) (A4, ADR 0046 punt 2, R-CI-05)';
 
 const HERZIEN = /^Herzien: (\d{4}-\d{2}-\d{2}) \(#[1-9]\d*\): \S.*$/;
 
@@ -160,7 +160,8 @@ function herzieningen(text) {
 }
 
 /**
- * Een geaccepteerd ADR dat geaccepteerd blijft met andere inhoud: de herschrijving die alleen in een besluit-PR mag (A4).
+ * Een geaccepteerd ADR dat geaccepteerd blijft met andere inhoud: de herschrijving uit A4 (in de template in elke PR, in een app
+ * alleen in een besluit-PR; R-CI-05).
  * @param {string} file @param {string | null} voor @param {string | null} na
  */
 export function isHerschrijving(file, voor, na) {
@@ -182,7 +183,7 @@ function nieuweHerzieningsregel(voor, na) {
  * Hoe een document zonder record mag veranderen (ADR 0046 punt 1, 2 en 5). Puur; `voor`/`na` zijn de volledige teksten.
  * - `vrij`: geen eigenaarbesluit (voorstel, of niets wezenlijks gewijzigd);
  * - `a4`: een ADR met een eigenaarstatus wijzigt van inhoud of gaat terug naar voorgesteld, of een gearchiveerd ADR wijzigt;
- * - `herzien`: een geaccepteerd ADR blijft geaccepteerd met andere inhoud en een nieuwe herzieningsregel (alleen in een besluit-PR);
+ * - `herzien`: een geaccepteerd ADR blijft geaccepteerd met andere inhoud en een nieuwe herzieningsregel (in een app alleen in een besluit-PR);
  * - `gebouwd`: alleen met bouwbewijs;
  * - `besluit`: een eigenaarstatus die de merge van de eigenaar beslist (`nieuw`: een nieuw document of vanuit een voorstel);
  * - `geweigerd`: een andere overgang (bijv. vervallen terug naar goedgekeurd); alleen met een record.

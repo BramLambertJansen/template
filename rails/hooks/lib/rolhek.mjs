@@ -334,7 +334,8 @@ function decideFile({ rel, change, role }, ctx, decision) {
   const overgang = change.after === null || documentKind(rel) === null ? null : beslisOvergang(rel, basis, change.after);
   const beslisrol = ['hoofdsessie', 'architect'].includes(role);
   // A4 (ADR 0046 punt 2): alleen architect en hoofdsessie herschrijven een geaccepteerd ADR of verwijderen een ADR met een
-  // eigenaarstatus; of dat in een besluit-PR gebeurt, met een herzieningsregel, controleert de guard in CI.
+  // eigenaarstatus. De herzieningsregel en (in een app) de besluit-PR toetst geen check: de goedkeuring van de eigenaar
+  // op de PR is het besluit (ADR 0046 punt 2, R-CI-05).
   // Een gearchiveerd ADR wijzigt en verdwijnt voor geen enkele rol, ook niet in een besluit-PR (framework §10).
   const a4Toegestaan = beslisrol && !isArchief(rel) &&
     (isHerschrijving(rel, basis, change.after) || adrMetEigenaarstatusWeg(rel, basis, change));
@@ -344,7 +345,8 @@ function decideFile({ rel, change, role }, ctx, decision) {
     return;
   }
   // ADR 0046 punt 6: architect en hoofdsessie schrijven de eigenaarstatus in het voorstel; de merge van de eigenaar beslist.
-  // ADR 0062 punt 4: ook `gebouwd # #<PR>` zonder SHA in de PR met de implementatie; document-status toetst het PR-nummer.
+  // ADR 0062 punt 4: ook `gebouwd # #<PR>` zonder SHA in de PR met de implementatie; de job document-status die het
+  // PR-nummer toetste, is weg (ADR 0089 punt 5).
   const inPrGebouwd = overgang?.uitslag === 'gebouwd' && builtReference(change.after ?? '')?.sha === undefined;
   const eigenaarstatus = beslisrol && (a4Toegestaan || inPrGebouwd || ['besluit', 'vrij'].includes(overgang?.uitslag ?? ''));
   if (!eigenaarstatus && statusZonderBesluit({ rel, change, role }, ctx, decision)) return;
