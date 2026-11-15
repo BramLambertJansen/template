@@ -1,5 +1,5 @@
 ---
-status: voorstel
+status: goedgekeurd
 namespace: template-update
 ---
 
@@ -25,6 +25,7 @@ Twee PR's (zie OV-2). **PR 1: de regel voor eigen migraties en de procedure.**
 
 - **Eigen migraties: altijd later.** `check:migrations` weigert een migratie die in deze branch is toegevoegd en waarvan de versie niet later is dan die van elke migratie op het punt waar de branch van `origin/main` afsplitste. De oplossing is de eigen, nog niet gemergde migratie een nieuw tijdstempel geven. Twee toegevoegde migraties met dezelfde versie vangt de bestaande regel voor dubbele versies; zonder migraties op het afsplitspunt is elke versie later.
 - **Uitzondering voor een templatemigratie.** Alleen in een app, en alleen als er een oudere toegevoegde migratie ís (anders geen netwerk en geen lookup): het bestand staat met dezelfde inhoud in de template. De ref is lokaal `refs/remotes/template/main` en in CI een fetch van `TEMPLATE_URL` naar een eigen ref, zoals `check-core` dat doet in `guard.yml`; `check:migrations` draait in `gate:fast`, waar die ref nu niet bestaat, dus de check haalt hem zelf op. Is de template niet te lezen, dan is de check rood met de reden en het commando om hem op te halen. Gelijke inhoud is een houdbare herkenning: een migratie verandert nooit, ook niet in de template. `migratieFouten(root, base, templateRef)` krijgt de ref als parameter, zodat een test hem met een fixture-repo kan zetten.
+- **Controle op main achteraf** (eigenaarbesluit 2026-11-15). Een PR die groen was tegen een oudere main, mag gemerged worden zonder bij te werken (de ruleset eist geen bijgewerkte branch), dus twee PR's met elk een migratie kunnen toch in de verkeerde volgorde op main komen. Staat `HEAD` op `origin/main` (het afsplitspunt is `HEAD` zelf), dan vergelijkt `check:migrations` met de eerste ouder van `HEAD`: wat de laatste merge toevoegde, moet later zijn dan wat er al stond. De CI op main wordt dan rood; het herstel is een nieuwe migratie, niet een hernoemde.
 - **De template herkent zichzelf** aan `onderhoud.repository` in `.claude/gates.json` (`pnpm app:init` haalt die regel weg); daar bestaat de uitzondering niet.
 - **Procedure.** De bestaande sectie in `docs/nieuwe-app.md` wordt uitgebreid en heet "Een template-update binnenhalen" (de verwijzing ernaar eerder in het document volgt): de versie en de "Bij een update"-notities in `docs/template-changelog.md` lezen en per versie uitvoeren; een branch vanaf `origin/main`; `git fetch template` en `git merge template/main` als echte merge-commit (geen squash); conflicten oplossen (`CHANGELOG.md` is van de app); `pnpm install`; `pnpm db:migrate` (de lokale database, niet productie) en `pnpm db:generate`, en het gegenereerde schema committen; `pnpm gate:fast`; push (met `.github/workflows/` pusht de eigenaar), PR, CI, merge door de eigenaar; `scripts/github-ruleset.sh` als de verplichte checks wijzigden. Met per rode check wat te doen: `check:migrations`, `check:snapshot`, `check-core`.
 
@@ -52,6 +53,7 @@ PR 1:
 - **template-update/AC-3**: In een app: een toegevoegde, oudere migratie die met dezelfde inhoud in de template-ref staat: groen. Met een andere inhoud: rood. Template-ref niet te lezen: rood, met de reden en het commando. Zonder oudere toegevoegde migratie wordt de template-ref niet gelezen (de check slaagt ook als de ref niet bestaat).
 - **template-update/AC-4**: In de template (met `onderhoud.repository` in `.claude/gates.json`) bestaat de uitzondering niet: elke toegevoegde migratie moet later zijn, ook als de template-ref bestaat.
 - **template-update/AC-5**: De bestaande regels van `check:migrations` blijven: gewijzigde of verwijderde migratie, naamvorm, dubbele versie, onleesbare `origin/main`.
+- **template-update/AC-8**: Op main zelf (`HEAD` gelijk aan `origin/main`): voegde de laatste merge een migratie toe die ouder is dan een migratie van de eerste ouder, dan is `check:migrations` rood met de naam en de aanwijzing dat het herstel een nieuwe migratie is; voegde hij een latere toe, of niets, dan groen. Een eerste commit zonder ouder: groen.
 - **template-update/AC-6**: `docs/nieuwe-app.md` heeft één sectie "Een template-update binnenhalen" met de stappen uit het ontwerp en geen tweede procedure ernaast; de verwijzing ernaar klopt; `docs/template-changelog.md` verwijst ernaar bovenaan `[Unreleased]`.
 
 PR 2:
@@ -72,6 +74,9 @@ PR 2:
 
 ## Open vragen
 
-- **OV-1**: Een templatemigratie die ouder is dan een migratie die de app al heeft toegepast. (a) Bewijzen dat de volgorde niet uitmaakt met de tweede bouw (PR 2). (b) Alleen de regel en de procedure, met de afspraak dat een app-migratie geen object van de template raakt; die afspraak is niet te controleren en nu al onwaar, want een nieuwe app-tabel krijgt per ontwerp een rij in `app.retention`. (c) Weigeren: verworpen, de update zit dan vast. Aanbeveling van spec en spec-review: (a).
-- **OV-2**: Twee PR's (eerst regel en procedure, dan de tweede bouw met hostbestanden)? Aanbeveling: ja.
-- **OV-3**: Het gat dat overblijft. Een PR die groen was tegen een oudere main, mag nu gemerged worden zonder eerst bij te werken (`strict_required_status_checks_policy: false` in de ruleset). Twee PR's met elk een migratie kunnen dan toch in de verkeerde volgorde op main komen, en geen check ziet het daarna nog. (i) De ruleset eist een bijgewerkte branch: sluit het gat, maar elke PR moet vóór de merge main binnenhalen en opnieuw door de CI. (ii) Een controle op main na de merge: meldt het achteraf, blokkeert niets. (iii) Aanvaarden en benoemen. Aanbeveling: (ii) nu, in PR 1; (i) is een grotere verandering van de werkwijze die apart besloten hoort te worden.
+Geen. Besloten door de eigenaar op 2026-11-15:
+
+- **OV-1**: bewijzen dat de volgorde niet uitmaakt, met de tweede bouw in `check:snapshot` (PR 2).
+- **OV-3**: het gat van een verouderde maar groene PR krijgt een controle op main achteraf (AC-8); de ruleset eist geen bijgewerkte branch.
+
+Keuze van de hoofdsessie, met instemming van de spec-review: twee PR's, eerst de regel en de procedure, dan de tweede bouw (OV-2).
