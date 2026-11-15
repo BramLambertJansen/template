@@ -254,7 +254,7 @@ function zonderTest(regel) {
 }
 
 /**
- * De reden voor agent-merge `nee` (AC-4): een regel met `geen test:` of `meting:` in de sectie. Leeg zonder zo'n regel.
+ * De reden waarom `pnpm pr:merge` niet merget (AC-4): een regel met `geen test:` of `meting:` in de sectie. Leeg zonder zo'n regel.
  * @param {string} body @returns {string[]}
  */
 export function leerpuntMergeRedenen(body) {

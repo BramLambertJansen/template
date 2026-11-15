@@ -4,8 +4,8 @@ import { describe, expect, test } from 'vitest';
 import { exportVan, roep, testpaden } from '../hooks/follow-up-kit';
 
 // B2 (docs/specs/taakmandaat-vervolg.md, mandate-follow-up/AC-10 t/m AC-13 en AC-22): `check:roadmap` leest voor een spec die naar
-// `gebouwd` gaat alleen `status: gebouwd # #<PR>; gevalideerd: <40 hex>`, met dezelfde code als `check-document-status`
-// (`documentInfo` en `builtReference`). Inline invoer: elke regel van AC-10 is één statusregel in een spec die naar gebouwd gaat.
+// `gebouwd` gaat alleen `status: gebouwd # #<PR>; gevalideerd: <40 hex>`, met dezelfde code als het rolhek
+// (`documentInfo` en `builtReference` in `rails/hooks/lib/document-state.mjs`). Inline invoer: elke regel van AC-10 is één statusregel in een spec die naar gebouwd gaat.
 // De gewijzigde bestaande gevallen staan in test/rails/check-roadmap.test.ts (spec "Bestaande tests die wijzigen").
 const ROADMAP_MODULE = ['../../scripts/kit', 'check-roadmap.mjs'].join('/');
 const DOCUMENT_STATE_MODULE = ['../../rails/hooks/lib', 'document-state.mjs'].join('/');
@@ -72,8 +72,8 @@ async function meldingen(opties: Opties): Promise<Melding[]> {
 
 const STATUSREGELS: [regel: string, geldig: boolean, bestanden?: string[]][] = [
   [`status: gebouwd # #130; gevalideerd: ${SHA}`, true],
-  // GEWIJZIGD (spec-en-bouw/AC-8, ADR 0062): `gebouwd # #<PR>` zonder SHA is bouwbewijs in de eigen PR; check-document-status
-  // toetst het PR-nummer, check:roadmap en builtReference lezen de vorm met dezelfde code.
+  // GEWIJZIGD (spec-en-bouw/AC-8, ADR 0062): `gebouwd # #<PR>` zonder SHA is bouwbewijs in de eigen PR; het PR-nummer
+  // toetst geen check meer (ADR 0089 punt 5), check:roadmap en builtReference lezen de vorm met dezelfde code.
   ['status: gebouwd # #130', true],
   ['status: gebouwd # test/rails/x.test.ts', false],
   ['status: gebouwd # db/tests/x.sql', false, ['db/tests/x.sql']],
@@ -98,7 +98,7 @@ describe('mandate-follow-up/AC-10: alleen status: gebouwd # #<PR>; gevalideerd: 
   });
 });
 
-describe('mandate-follow-up/AC-12: dezelfde parser als check-document-status', () => {
+describe('mandate-follow-up/AC-12: dezelfde parser als het rolhek (document-state.mjs)', () => {
   test.each(STATUSREGELS)(
     'builtReference en "geen spec:bewijs" geven dezelfde uitkomst voor %s',
     async (regel, geldig, bestanden = []) => {

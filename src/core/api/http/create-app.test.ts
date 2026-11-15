@@ -1,12 +1,13 @@
 import { describe, expect, test } from 'vitest';
+import { TEMPLATE_VERSION } from '../../shared/template-version.ts';
 import { createApp } from './create-app.ts';
 import { request } from './request.test-helper.ts';
 
-test('GET /api/health geeft alleen { ok: true }', async () => {
+test('GET /api/health geeft { ok: true } en de templateversie', async () => {
   const response = await request(createApp(), '/api/health');
 
   expect(response.status).toBe(200);
-  expect(await response.json()).toStrictEqual({ ok: true });
+  expect(await response.json()).toStrictEqual({ ok: true, version: TEMPLATE_VERSION });
 });
 
 test('onbekende route geeft 404', async () => {

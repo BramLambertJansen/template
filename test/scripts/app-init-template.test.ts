@@ -67,7 +67,9 @@ test('app:init verwerkt alle actuele templatebestanden en bewaart de overige con
     inputs['package.json']?.replace('"name": "app-template"', '"name": "compatibility-app"'),
   );
   expect(readFileSync(path.join(dir, 'README.md'), 'utf8')).toContain('# Compatibiliteitsapp');
-  expect(readFileSync(path.join(dir, 'CHANGELOG.md'), 'utf8')).toContain('Gestart vanaf template abc1234');
+  expect(readFileSync(path.join(dir, 'CHANGELOG.md'), 'utf8')).toMatch(
+    /- Gestart vanaf template v\d+\.\d+\.\d+ \(abc1234\)\./,
+  );
   const owners = readFileSync(path.join(dir, '.github/CODEOWNERS'), 'utf8');
   expect(owners).not.toContain('@bramlambertjansen');
   expect(owners).toContain('@example/beheer');
@@ -110,7 +112,6 @@ test('dezelfde compatibiliteitscontrole blijft bruikbaar nadat deze checkout al 
 // de controle nu wel laat gooien (`"goedkeurders"` niet meer te vinden).
 test.each([
   ['README.md', '# App-template', '# Gewijzigde template'],
-  ['CHANGELOG.md', '## [Unreleased]', '## Geschiedenis'],
   ['.claude/gates.json', '"goedkeurders":', '"beslissers":'],
   ['.claude/gates.json', '"onderhoud": {', '"onderhoud":{'],
 ])('de echte invoercontrole detecteert incompatibele templatewijzigingen in %s', (file, before, after) => {

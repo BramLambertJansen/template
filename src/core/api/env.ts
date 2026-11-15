@@ -72,6 +72,15 @@ const baseSchema = z.object({
     .string()
     .regex(/^[a-z0-9-]+$/, 'kleine letters, cijfers en streepjes')
     .optional(),
+  // De commit waaruit de image is gebouwd (spec release-versie): de Dockerfile zet hem uit een build-arg, GET /api/health
+  // toont hem. Lokaal en in tests leeg.
+  BUILD_SHA: z.preprocess(
+    unsetIfEmpty,
+    z
+      .string()
+      .regex(/^[0-9a-f]{7,40}$/, '7 tot 40 kleine hexadecimale tekens')
+      .optional(),
+  ),
 });
 
 type RawEnv = z.infer<typeof baseSchema>;
@@ -136,6 +145,8 @@ export interface Env {
   readonly smtpUrl: string;
   readonly clientIpHeader: string | undefined;
   readonly webDir: string | undefined;
+  // Optioneel in het type: een env-object zonder dit veld (tests) is een omgeving zonder build-SHA.
+  readonly buildSha?: string | undefined;
 }
 
 function describe(error: z.ZodError): string {
@@ -159,6 +170,7 @@ export function parseEnv(source: Readonly<Record<string, string | undefined>>): 
     smtpUrl: raw.SMTP_URL,
     clientIpHeader: raw.CLIENT_IP_HEADER,
     webDir: raw.WEB_DIR,
+    buildSha: raw.BUILD_SHA,
   };
 }
 

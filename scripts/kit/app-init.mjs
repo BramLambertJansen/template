@@ -8,6 +8,9 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
+// De templateversie waar de app op start (spec release-versie). Ontbreekt het bestand, dan laadt het script niet en noemt
+// Node het pad in de fout.
+import { TEMPLATE_VERSION } from '../../src/core/shared/template-version.ts';
 import { CODEOWNERS, codeownersTekst } from './codeowners.mjs';
 
 const TEMPLATE_NAME = 'app-template';
@@ -72,13 +75,13 @@ function renameReadme(readme, name) {
   return `${kept.join('\n').trimEnd()}\n`;
 }
 
-/** @param {string} changelog @param {string} sha */
-function renameChangelog(changelog, sha) {
-  const start = changelog.indexOf('## [Unreleased]');
-  if (start === -1) throw new AppInitError('CHANGELOG.md: "## [Unreleased]" niet gevonden');
-  const next = changelog.indexOf('\n## ', start + 1);
-  const rest = next === -1 ? '' : changelog.slice(next);
-  return `${changelog.slice(0, start)}## [Unreleased]\n\n- Gestart vanaf template ${sha}.\n${rest}`;
+/**
+ * CHANGELOG.md is van de app (spec release-versie): opnieuw geschreven, met de templateversie en -commit waar de app op
+ * start. De wijzigingen van de template zelf staan in docs/template-changelog.md; dat bestand blijft ongemoeid.
+ * @param {string} sha
+ */
+function appChangelog(sha) {
+  return `# Changelog\n\n## [Unreleased]\n\n- Gestart vanaf template v${TEMPLATE_VERSION} (${sha}).\n`;
 }
 
 /**
@@ -145,7 +148,7 @@ export function planAppInit(root, options) {
       ),
     },
     { pad: 'README.md', inhoud: renameReadme(read('README.md'), options.name) },
-    { pad: 'CHANGELOG.md', inhoud: renameChangelog(read('CHANGELOG.md'), options.sha) },
+    { pad: 'CHANGELOG.md', inhoud: appChangelog(options.sha) },
     {
       pad: 'src/shared/app.ts',
       inhoud: replaceOnce(

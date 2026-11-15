@@ -2,7 +2,7 @@ import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { guardEntries, guardImportViolations } from '../../scripts/kit/guard-imports.mjs';
 
-// Leerpunt #432: code die de guard (`.github/workflows/guard.yml`, zonder install, ADR 0045 punt 15–19) of een hook
+// Leerpunt #432: code die de guard (`.github/workflows/guard.yml`, zonder install, R-CI-07) of een hook
 // (alleen de eigen hookmap staat er op runtime, R-ROL-09) draait, laadt alleen Node-builtins en bestanden die er dan
 // zijn. Lokaal staan node_modules en de hele repo er wel, dus lint, typecheck en unit-tests zien het verschil niet.
 const fixtures = path.join(import.meta.dirname, 'fixtures/guard-imports');

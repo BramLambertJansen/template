@@ -202,15 +202,15 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   **Klaar als:** HTTP-paden, contracten, foutcodes en teksten ongewijzigd; bestaande contract- en integratietests groen; core importeert geen app-code;
   de browserbundel bevat geen API-code; een template-update in de proef-app conflicteert niet in accountbestanden.
   aanleiding: `docs/reviews/2026-11-06-herbouw.md` (§4.3, besluit eigenaar 2026-11-06)
-- [ ] **ST-01 (P0) — GitHub-bescherming daadwerkelijk activeren** (stuk 6, diff-guard uit stuk 4). Een agent kan beschermd werk niet zonder de
-  juiste eigenaarreview samenvoegen. Gebouwd: `scripts/github-ruleset.sh` met `test/scripts/github-ruleset.test.ts` (#104), de diff-guard met
-  `guard.yml` (#62, ADR 0045 punt 17; nog niet verplicht, uitslag `overgang` zolang de auteur zelf goedkeurder is) en CODEOWNERS en PR-template.
+- [ ] **ST-01 (P0) — GitHub-bescherming daadwerkelijk activeren** (stuk 6). Een agent kan beschermd werk niet zonder de
+  juiste eigenaarreview samenvoegen. Gebouwd: `scripts/github-ruleset.sh` met `test/scripts/github-ruleset.test.ts` (#104), `guard.yml` met alleen de job
+  `check-core` (R-CI-07; de diff-guard is weg, ADR 0089 punt 5) en CODEOWNERS (gegenereerd uit de padtabel) en PR-template.
   Open: organisatie, GitHub App voor de agent, org-ruleset via custom property en Actions-instellingen (code-owner-review met 0 goedkeuringen
   zet `scripts/github-ruleset.sh` nu al, en het script weigert bij fouten in `CODEOWNERS`; daarna `--bypass-beheerder`, pas na het bewijs dat het
   token van de eigenaar uit de agentomgeving is; private repo's vragen Pro/Team); `.github/settings/` met `scripts/check-github.mjs` (alleen-lezend, een onleesbare instelling is een fout;
   ook `app_id` van verplichte checks, `enforce_admins`, conversation resolution) en `check-spec-approval`; `docs/operations/rails-checklist.md` met
   per stuk bewijs; pushen met een kortlevend App-token zonder het eigenaar-token in de agentomgeving, daarna `denyRead` op `~/.config/gh`;
-  de diff-guard verplicht bij de overstap op de App, met goedkeuring op exact de head-SHA die niet van de auteur is (framework §10). Onderscheid de overgang onder het eigenaaraccount van de definitieve App-opzet; de eigenaar
+  bij de overstap op de App de review van een code-eigenaar verplicht op exact de head-SHA, niet van de auteur (R-REPO-02, framework §10). Onderscheid de overgang onder het eigenaaraccount van de definitieve App-opzet; de eigenaar
   activeert organisatie, App en instellingen.
   **Afhankelijkheden:** ADR 0039, 0040 en 0045; beschikbaarheid van de vereiste CI-checks.
   **Klaar als:** negatieve fixtures voor ontbrekende of bypassbare instellingen; bewijs dat een directe push naar main wordt geweigerd en een
@@ -258,7 +258,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   Weigeringen en schrijfdoelen kijken nu naar de naam zonder pad (`programName` in `rails/hooks/lib/shell.mjs`), ook voor `git`, `rm` en `sed`;
   bewijs `test/hooks/rolhek-volledig-pad.test.ts`. De `deny`-patronen in `.claude/settings.json` vangen de vorm met pad niet (gemak, geen grens; framework §8).
   Niet in deze klasse gedicht: omhulsels met opties (`sudo -u x gh …`, `env -i gh …`) en omhulsels buiten de lijst (`timeout`, `xargs`);
-  expansie (`$GH`, `bash -c`) is werk van de diff-guard. Ook open, voor de reviewer: `reviewerMay` negeert voorafgaande variabelen
+  expansie (`$GH`, `bash -c`) ziet alleen de review van de diff (R-ROL-10). Ook open, voor de reviewer: `reviewerMay` negeert voorafgaande variabelen
   (`GIT_PAGER=…`, `PATH=…`) en opties als `git diff --output=<bestand>`.
   aanleiding: `rails/hooks/lib/rolhek.mjs` (spec `agent-merge`, Bekende gaten; vervallen, nu `docs/template/specs/agent-merge-niet-kritiek.md`)
 - [x] **Schrijven via een programma buiten `fileTargets` omzeilt het rolhek.** `writeTargets` in `rails/hooks/lib/shell.mjs` kent alleen een
@@ -373,7 +373,7 @@ Bewust nog niet, tot de genoemde aanleiding er is (P1). Niets verdwijnt: elk ite
   geen service of runtimeverplichting toe.
   **Eisen uit het regelboek** (R-DOC-10: tot de bouw staan ze hier; de bouw-PR zet ze terug in het regelboek): core levert poort `FileStorage` met contracttestsuite (was in R-OPSL-01, ADR 0060).
   terug als: een concrete app notificaties of bestanden nodig heeft
-- [ ] **ST-12 (P2) — templateversies en upgradecontrole** (stuk 6 template-versie; ADR 0040). Nu: `CHANGELOG.md` met "Bij een update"-notities en
+- [ ] **ST-12 (P2) — templateversies en upgradecontrole** (stuk 6 template-versie; ADR 0040). Nu: `docs/template-changelog.md` met "Bij een update"-notities, `TEMPLATE_VERSION` en de versie in `GET /api/health` (spec release-versie) en
   `scripts/kit/app-init.mjs` die de template-SHA vastlegt; nog geen tags of versieschema. **Werk:** onderscheid releaseversie, opgenomen
   templatecommit en app-build-SHA; leg herkomst vast bij app-init en update; upgrade-notities bij breaking changes, migraties, instellingen en
   handstappen; een adviserende controle op core/app-grens en ontbrekende stappen die niets automatisch wijzigt en de mergeprocedure niet vervangt.
@@ -415,7 +415,7 @@ Bewust nog niet, tot de genoemde aanleiding er is (P1). Niets verdwijnt: elk ite
   - Renovate automatisch mergen en OpenTelemetry; terug als: de basis stabiel draait
   - devcontainer of agent-sandbox in Docker; terug als: iemand meewerkt of agents zonder toestemmingsprompts draaien
   aanleiding: `docs/framework.md` §12 (R-FASE-01; één plek per norm, R-DOC-06)
-- [ ] **ADR 0030 PR 2: algemene agent-merge** (voor de framework-lane). Voor niet-kritiek werk vervangen door ADR 0069
+- [ ] **ADR 0030 PR 2: algemene agent-merge**. Voor niet-kritiek werk vervangen door ADR 0069
   (`docs/template/specs/agent-merge-niet-kritiek.md`); dit item gaat alleen nog over agent-merge van kritiek werk. Zie `.claude/skills/opleveren/SKILL.md`
   en `docs/operations/agent-doorloop.md`.
   terug als: er ≥ 10 feature-PR's zijn zonder gevolgfout, de AC→test-check en het risico-overzicht actief zijn en ST-01 is besloten

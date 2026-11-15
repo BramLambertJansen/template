@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterAll, afterEach, describe, expect, test, vi } from 'vitest';
 import { UserId } from '../../shared/ids.ts';
 import { defineRoles, type RoleOf } from '../../shared/roles.ts';
+import { TEMPLATE_VERSION } from '../../shared/template-version.ts';
 import { unsafeCast } from '../../shared/unsafe-cast.ts';
 import type { Auth, CreateAuthConfig, Invitation } from '../auth/index.ts';
 import type { Tx, WithUser } from '../db/types.ts';
@@ -333,7 +334,7 @@ describe('create-server/AC-7: de SPA via WEB_DIR', () => {
 
     expect([(await call(app, '/api/health')).status, await (await call(app, '/api/health')).json()]).toStrictEqual([
       200,
-      { ok: true },
+      { ok: true, version: TEMPLATE_VERSION },
     ]);
     expect((await call(app, '/robots.txt')).status).toBe(404);
   });
@@ -344,7 +345,7 @@ describe('create-server/AC-7: de SPA via WEB_DIR', () => {
     const file = await call(app, '/robots.txt');
     expect([file.status, await file.text()]).toStrictEqual([200, 'User-agent: compose-test']);
     const health = await call(app, '/api/health');
-    expect([health.status, await health.json()]).toStrictEqual([200, { ok: true }]);
+    expect([health.status, await health.json()]).toStrictEqual([200, { ok: true, version: TEMPLATE_VERSION }]);
     const unknown = await call(app, '/api/bestaat-niet');
     expect([unknown.status, parseErrorBody(await unknown.json()).code]).toStrictEqual([404, 'NOT_FOUND']);
   });

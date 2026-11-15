@@ -1,7 +1,7 @@
 # gate:fast en gate:slow op elke push naar main en elke PR (framework §10); check:new-resource als eigen job met app:init en generator in één kopie (ADR 0047 punt 9, ADR 0073);
 # gate:fast, check:new-resource en ui:check in delen naast elkaar, elk met een samenvattende job onder de verplichte naam (ADR 0076);
 # image bouwt en controleert de productie-image (ADR 0049); secrets draait Betterleaks (PR: eigen commits, anders alle gefetchte refs). CodeQL in codeql.yml.
-# osv-scanner in osv.yml, de diff-guard in guard.yml. Actions op volledige SHA; Renovate werkt ze bij.
+# osv-scanner in osv.yml, check-core in guard.yml. Actions op volledige SHA; Renovate werkt ze bij.
 name: ci
 
 on:
