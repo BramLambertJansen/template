@@ -285,7 +285,7 @@ async function vanRepo(root: string, basisRef: string): Promise<Melding[]> {
 }
 
 describe('roadmapVanRepo (git-laag)', () => {
-  test('een branch die achterloopt op main meldt wat main daarna deed niet (vergelijkt met het afsplitspunt)', async () => {
+  test('roadmap/AC-14: een branch die achterloopt op main meldt wat main daarna deed niet (vergelijkt met het afsplitspunt)', async () => {
     const root = repo({ 'docs/roadmap.md': `${KOP}- [x] Oud item zonder verwijzing\n- [ ] Open taak\n` });
     git(root, 'switch', '-q', 'main');
     schrijf(root, 'docs/roadmap.md', `${KOP}- [x] Oud item zonder verwijzing, aangepast\n- [x] Open taak\n`);

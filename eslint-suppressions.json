@@ -167,11 +167,6 @@
       "count": 2
     }
   },
-  "test/docs/agent-merge-docs.test.ts": {
-    "rails/afwezigheid": {
-      "count": 1
-    }
-  },
   "test/hooks/authority.test.ts": {
     "rails/negatieve-tabel": {
       "count": 3
