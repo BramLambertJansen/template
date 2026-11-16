@@ -49,6 +49,10 @@ cursor-contract (`src/core/shared/cursor.ts`) en `Table`; eerst op `/admin/accou
 - **Cursor aan de sortering gebonden:** de cursor is `encodeCursor([sort, …sleutel])`; `decodeCursor` met een tuple per sortering. Een cursor van een
   andere sortering of met een ander sleuteltype geeft `VALIDATION`. Zoek- en filterwaarden zitten in de query key van TanStack Query: elke wijziging
   begint bij de eerste pagina. De paginagrootte blijft `ACCOUNTS_PAGE_SIZE`.
+- **Paginagrootte in het contract** (spec `suite-volgt-contract`): `defineListSearch({ …, pageSize })` geeft de API-input een veld
+  `limit` van 1 t/m `pageSize` (standaard `pageSize`), niet in de URL; zonder `pageSize` is `limit` een onbekend veld. Een lijst uit
+  `pnpm new:resource` geeft `pageSize: <NAAM>_PAGE_SIZE` mee, zodat de securitysuite met `limit: 1` de cursor beproeft; de
+  accountslijst geeft geen `pageSize`.
 - **Cursorbudget** (leerpunt #411): een cursor is nooit langer dan `MAX_CURSOR_LENGTH` (4096, `src/core/shared/limits.ts`). `pageQuery` en
   `defineListSearch` weigeren een langere (`VALIDATION`); `encodeCursor` eist met `assert()` dat hij erbinnen valt (anders `INTERNAL_ERROR`, gelogd).
   Zo geeft de server nooit stil een `nextCursor` terug die zijn eigen invoer weigert. `maxCursorLength(maxLengths)` rekent de langst mogelijke cursor

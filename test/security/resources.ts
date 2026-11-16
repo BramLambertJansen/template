@@ -30,8 +30,12 @@ export interface ResourceRegel {
     // Een geldige, van create en createTweede verschillende (unieke) create-input voor de spoof-controle (AC-10): die voegt er een
     // onbekend veld aan toe en eist 400 VALIDATION. Verplicht zodra er een create-route is; ontbreekt hij, dan is de suite rood.
     readonly spoof?: Readonly<Record<string, unknown>>;
-    // Geldige velden voor de update-route; verplicht zodra er een update-route is.
+    // Geldige velden voor de update-route. Alleen nodig bij een update-route (API-controle) of als de app-rol UPDATE-recht op
+    // de tabel heeft (databasecontrole, tenzij `updateRij` er is); zonder update-route en zonder update-grant mag hij weg.
     readonly update?: Readonly<Record<string, unknown>>;
+    // De kolom (met waarde) voor de directe update-proef op de database, als de veldnamen van de API afwijken van de
+    // kolomnamen (zelfde patroon als `rij` naast `create`). Gaat voor op `update`.
+    readonly updateRij?: Readonly<Record<string, unknown>>;
     // De kolommen voor een directe insert, als de veldnamen van de API afwijken van de kolomnamen.
     readonly rij?: Readonly<Record<string, unknown>>;
   };
@@ -80,13 +84,37 @@ export const probeRouteClassificatie: Readonly<Record<string, RouteKlasse>> = {
   'DELETE /probes/:id': { scope: 'eigenaar', resource: 'security_probes', actie: 'delete' },
 };
 
+// De probe in generatorvorm (test/security/probe-eigenaar.ts, openGeneratorProbe; spec suite-volgt-contract, ontwerp 6): de
+// tabel uit de sjabloon met alleen `grant insert (label)`, en de routes die de generator maakt minus bewerken. Geen
+// sample.update: er is geen update-route en geen update-grant.
+export const generatorProbeResources: Readonly<Record<string, ResourceRegel>> = {
+  security_probes_gen: {
+    tabel: 'public.security_probes_gen',
+    sample: {
+      create: { label: 'beveiligingstest-gen-a' },
+      createTweede: { label: 'beveiligingstest-gen-b' },
+      spoof: { label: 'beveiligingstest-gen-spoof' },
+    },
+    lijst: 'GET /probes-gen',
+  },
+};
+
+export const generatorProbeRouteClassificatie: Readonly<Record<string, RouteKlasse>> = {
+  'POST /probes-gen': { scope: 'eigenaar', resource: 'security_probes_gen', actie: 'create' },
+  'GET /probes-gen': { scope: 'eigenaar', resource: 'security_probes_gen', actie: 'list' },
+  'DELETE /probes-gen/:id': { scope: 'eigenaar', resource: 'security_probes_gen', actie: 'delete' },
+};
+
 // Een voorbeeldinput die niet uit het zod-schema af te leiden is, per route ('METHODE /pad'). Leeg zolang elke route afleidbaar
-// is. fixtures.sampleFor wijst hierheen ("voeg sample toe aan test/security/resources.ts"); routes.int.test.ts roept sampleFor
-// rechtstreeks aan, dus een sample hier geldt voor de tests in dit deel (sampleVoor) en pas voor AC-2 t/m AC-7 zodra die
-// test sampleVoor gebruikt.
+// is. fixtures.sampleFor wijst hierheen ("voeg sample toe aan test/security/resources.ts"). Elke test haalt zijn sample via
+// sampleVoor (ook routes.int.test.ts, AC-2 t/m AC-7), dus een regel hier geldt voor de hele suite.
 export const routeSamples: Readonly<Record<string, RouteSample>> = {};
 
-export function sampleVoor(route: AppRoute): RouteSample {
-  const gedeclareerd = new Map(Object.entries(routeSamples)).get(routeLabel(route));
+// De gedeclareerde sample voor de route, anders de afgeleide (sampleFor). De samples-map is alleen voor tests van deze functie.
+export function sampleVoor(
+  route: AppRoute,
+  samples: Readonly<Record<string, RouteSample>> = routeSamples,
+): RouteSample {
+  const gedeclareerd = new Map(Object.entries(samples)).get(routeLabel(route));
   return gedeclareerd ?? sampleFor(route);
 }
