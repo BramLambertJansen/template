@@ -72,6 +72,16 @@ jobs:
         run: |
           (cd head && pnpm install --frozen-lockfile --ignore-scripts)
           (cd "$RUNNER_TEMP/basis" && pnpm install --frozen-lockfile --ignore-scripts)
+      # De kooi zoals in ci.yml (ADR 0072, spec kooi AC-7): de testsetup weigert in CI zonder kooi (ADR 0088), dus de
+      # bewijstests van een leerpunt draaien alleen met bubblewrap en een user-namespace voor /usr/bin/bwrap.
+      - name: kooi
+        if: steps.basis.outputs.runs == 'true'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q bubblewrap
+          printf 'abi <abi/4.0>,\ninclude <tunables/global>\nprofile bwrap /usr/bin/bwrap flags=(unconfined) {\n  userns,\n}\n' | sudo tee /etc/apparmor.d/bwrap > /dev/null
+          sudo apparmor_parser -r /etc/apparmor.d/bwrap
+          node kit/scripts/kit/kooi.mjs --proef
       - name: draai
         if: steps.basis.outputs.runs == 'true'
         run: node kit/scripts/kit/leerpunt-bewijs.mjs draai "$RUNNER_TEMP/plan.json" "$GITHUB_WORKSPACE/head" "$RUNNER_TEMP/basis"
