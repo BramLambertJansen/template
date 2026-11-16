@@ -23,6 +23,9 @@
 //     meting in `pnpm leespad`, nooit een overtreding. `docsMeldingen` geeft "let op" vanaf 85 % van een grens;
 //     `docsKrimp` de krimpcheck (AC-6), die de ratchet buiten de baseline houdt.
 //  12. Geen normwoord onder "Hoe (geen norm)" in .claude/rules/*.md (leerpunt #393, sleutel `docs:<bestand>:hoe-norm:<woord>`).
+//  13. Een gebouwde spec noemt tussen backticks geen repopad (src/, scripts/, rails/, test/, e2e/, db/, deploy/, .claude/,
+//     .github/, met extensie) dat niet bestaat, tenzij direct gevolgd door `(vervallen)`, `(nieuw)` of `(voorbeeld)`, of
+//     in een nieuwe AC met `(nog niet gebouwd)` achter het id (leerpunt #738, sleutel `docs:<spec>:dood-pad:<pad>`).
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -494,7 +497,11 @@ function statusViolations(files, read) {
             message: `${file}: status niet uit voorstel | goedgekeurd | gebouwd | vervallen`,
           },
         ];
-      return [...specVormViolations(file, text, status), ...disciplineViolations({ file, text, status }, files)];
+      return [
+        ...specVormViolations(file, text, status),
+        ...disciplineViolations({ file, text, status }, files),
+        ...(status === 'gebouwd' ? doodPadViolations(file, text, files) : []),
+      ];
     }),
   ];
 }
@@ -554,6 +561,31 @@ function disciplineViolations({ file, text, status }, files) {
         ]
       : []),
   ];
+}
+
+// Regel 13: een volledig repopad onder een codemap, met extensie en zonder glob of placeholder; een regelnummer telt niet mee.
+const REPOPAD = /^(?:src|scripts|rails|test|e2e|db|deploy|\.claude|\.github)\/[\w.\-/]*\.[a-z]+$/;
+
+// Een nieuwe AC in een gebouwde spec (R-WERK-07): het lijstitem met `(nog niet gebouwd)` achter het id, met vervolgregels.
+const NIEUWE_AC = /^- \*\*[^*\n]*AC-\d+\*\* \(nog niet gebouwd\)[^\n]*(?:\n(?![ \t]*(?:[-#]|$))[^\n]*)*/gm;
+
+/**
+ * Regel 13 (leerpunt #738): een gebouwde spec noemt geen repopad dat niet bestaat, tenzij er direct `(vervallen)`,
+ * `(nieuw)` of `(voorbeeld)` achter staat of het in een nieuwe AC met `(nog niet gebouwd)` staat (R-WERK-07, R-DOC-10).
+ * Eén sleutel per pad, zodat de ratchet bestaande treffers in de baseline houdt.
+ * @param {string} file @param {string} text @param {readonly string[]} files
+ * @returns {Violation[]}
+ */
+function doodPadViolations(file, text, files) {
+  const bestaand = new Set(files);
+  const dood = [...text.replace(NIEUWE_AC, '').matchAll(/`([^`\n]+)`( \((?:vervallen|nieuw|voorbeeld)\))?/g)]
+    .filter((match) => match[2] === undefined)
+    .map((match) => (match[1] ?? '').replace(/:\d+(-\d+)?$/, ''))
+    .filter((pad) => REPOPAD.test(pad) && !bestaand.has(pad));
+  return [...new Set(dood)].map((pad) => ({
+    key: `docs:${file}:dood-pad:${pad}`,
+    message: `${file}: gebouwde spec noemt \`${pad}\`, dat niet bestaat; zet er "(vervallen)", "(nieuw)" of "(voorbeeld)" direct achter (leerpunt #738)`,
+  }));
 }
 
 const MINI_KOPPEN = ['Doel', 'Rollen en wie wat ziet', 'Routes en foutcodes', 'Acceptatiecriteria', 'Hergebruik en UX'];
