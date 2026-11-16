@@ -12,7 +12,7 @@ import { parseArgs } from 'node:util';
 // Node het pad in de fout.
 import { TEMPLATE_VERSION } from '../../src/core/shared/template-version.ts';
 import { CODEOWNERS, codeownersTekst } from './codeowners.mjs';
-import { templateUitGates } from '../../rails/hooks/lib/rolhek.mjs';
+import { templateUitGates } from '../../rails/hooks/lib/padtabel.mjs';
 
 const TEMPLATE_NAME = 'app-template';
 const TEMPLATE_TITLE = 'App-template';

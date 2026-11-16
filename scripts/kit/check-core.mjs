@@ -11,7 +11,7 @@
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { templateUitGates } from '../../rails/hooks/lib/rolhek.mjs';
+import { templateUitGates } from '../../rails/hooks/lib/padtabel.mjs';
 
 /** @typedef {{ pad: string, naam: string }} Zone `naam` staat in de melding over een oudere versie. */
 /** @type {readonly Zone[]} */

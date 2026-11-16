@@ -1,7 +1,7 @@
 // Gebouwd betekent: implementatie gecontroleerd en aangeboden in een PR. Het is geen release of nieuw mandaat.
 import { MARKERING, acIds, builtReference, documentInfo } from './document-state.mjs';
 import { canRecordStatus } from './task-authority.mjs';
-import { templateUitGates } from './rolhek.mjs';
+import { templateUitGates } from './padtabel.mjs';
 import { isFunctionalUiSpec } from './functional-ui.mjs';
 
 export const GITHUB_ACTIONS_APP_ID = 15368;
