@@ -7,6 +7,7 @@ Herzien: 2026-11-04 (#534): gewijzigd door [0078](0078-leerlus-met-bewijs.md) pu
 Herzien: 2026-11-05 (#543): gewijzigd door [0081](0081-leerlus-schrappen-en-vereenvoudigen.md) punt 1, 2 en 4 (signaal bij inefficiëntie, veld Onderbouwing, plek Schrappen of vereenvoudigen vóór de ladder)
 
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 6, in punt 2 wordt "ADR (vanaf 0100) in de app" een ADR in `docs/adr/` van de app; de nummerreeks vervalt
+Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 
 Drempel: A3 (de agent krijgt een nieuw schrijfrecht buiten de eigen repo: een issue aanmaken in de template-repo).
 Eigenaarbesluit 2026-10-27; de merge door de eigenaar maakt het geldend. Uitwerking: [spec leerlus](../specs/leerlus.md).
@@ -20,28 +21,26 @@ Nulmeting: nul teruggebrachte templateverbeteringen uit apps. Altijd-geladen pro
 
 ## Besluit
 
-1. **Signaleren** in de app-sessie op vaste momenten: de slotvraag van `opleveren` na de merge, de derde CI-ronde op
+1. **Signaleren** in elke sessie (0078 punt 4) op vaste momenten: de slotvraag van `opleveren` na de merge, de derde CI-ronde op
    dezelfde oorzaak (stopgrond b), een eigenaarcorrectie (al geteld door `pnpm meting`), een blokkerende reviewbevinding
    en een tweede mislukte correctiepoging. De slotstap van `opleveren` verzamelt ze alle vijf uit de sessie.
 2. **Vastleggen** volgens het issue-sjabloon `leerpunt` van de template, met de velden soort, bron, kosten (alleen
    tellingen), generieke reproductie, voorstel voor de plek op de ladder, template-SHA van de app en optioneel `eerder: #nnn`.
    Soorten: doorgeglipte fout, herhaald handwerk, onduidelijke instructie, ontbrekend component, wrijving in de werkstraat,
    valkuil zonder check, efficiëntie van de code, kracht van de coding agent en tokenefficiëntie.
-   Een les die alleen voor die app geldt, wordt geen issue maar een padregel, spec of ADR (vanaf 0100) in de app.
+   Een les die alleen voor die app geldt, wordt geen issue maar een padregel, spec of ADR in `docs/adr/` van de app.
 3. **Terugbrengen**: het enige kanaal is een GitHub-issue in de template-repo met label `leerpunt`. Generieke reproductie,
    geen appcode, appdata of geheimen. De hoofdsessie mag het issue zonder vraag aanmaken met `gh issue create`, maar alleen
    naar de template-repo en met label `leerpunt`. Elke andere `gh issue create` blijft de gewone permissievraag aan de
    eigenaar: dit besluit regelt het kanaal voor leerpunten en verbiedt geen andere issues. Triage blijft van de eigenaar.
-4. **Verwerken** doet alleen de eigenaar: hij triageert en beslist wat wanneer wordt opgepakt. Een opgepakt leerpunt wordt
-   een roadmap-item met het issue als aanleiding en volgt de bestaande werkstraat. De les landt zo hoog mogelijk op de
+4. **Verwerken** volgens 0078 punt 5, langs de bestaande werkstraat. De les landt zo hoog mogelijk op de
    ladder type → check → gouden pad/generator → skill → padregel → `AGENTS.md`; een check begint met een fixture die op
    de oude code faalt (framework §1.5).
 5. **Verspreiden** via de bestaande `git merge template/main`. Een terugkerende fout krijgt een nieuw issue met
    `eerder: #nnn`: het signaal dat de rail niet werkt.
-6. **Uitvoering binnen ST-09**, zonder nieuw roadmap-item (ST09-08, -09 en -11 vragen dit al). Stap 1 bouwt sjabloon,
-   skillstap, reviewermelding, rolhekregel en documentatie; de spec beschrijft wat en hoe het getoetst wordt.
-7. **Meten** (P6): na ST-09 het aantal leerpunt-issues, het aantal opgepakte en het aantal herhalingen (`eerder:`),
-   tegen de nulmeting van nul.
+6. **Uitvoering binnen ST-09**, zonder nieuw roadmap-item (ST09-08, -09 en -11 vragen dit al).
+7. **Meten** (P6): na ST-09 het aantal leerpunt-issues, het aantal opgepakte (0078 punt 6) en het aantal herhalingen
+   (`eerder:`), tegen de nulmeting van nul.
 
 ## Alternatieven
 
@@ -58,5 +57,3 @@ Nulmeting: nul teruggebrachte templateverbeteringen uit apps. Altijd-geladen pro
   technisch af te dwingen: de agent toont de tekst in de eindmelding en de eigenaar toetst bij triage.
 - Geen telemetrie naar buiten: `pnpm meting` blijft lokaal; in het issue staan alleen tellingen.
 - Geen leerpunt zonder reproductie; de eigenaar sluit zo'n issue.
-- Later, op aanleiding (buiten stap 1): een `pnpm leerpunt`-script, een periodieke oogst van open leerpunten en een
-  terugkeermeting.
