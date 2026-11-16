@@ -239,17 +239,7 @@ export function bewijsPlan({ gesloten, body, diff }) {
     else if (regel.pad !== null && !runs.some((run) => run.pad === regel.pad))
       runs.push({ pad: regel.pad, soort: soortBewijs(regel.pad) ?? 'unit' });
   }
-  return {
-    leerpunten,
-    fouten,
-    runs,
-    zonderTest: regels.some((r) => leerpunten.includes(r.nummer) && zonderTest(r)),
-  };
-}
-
-/** `geen test:` of `meting:`: de eigenaar merget (ADR 0078 punt 2, ADR 0081 punt 3). @param {Regel} regel */
-function zonderTest(regel) {
-  return regel.reden !== null || regel.meting !== null;
+  return { leerpunten, fouten, runs };
 }
 
 /** @param {unknown} test */
