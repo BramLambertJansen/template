@@ -7,7 +7,7 @@ namespace: template-repo
 
 ## Doel
 
-Welke repository de template is, staat op één plek in de configuratie (`template.repository` in `.claude/gates.json`) in plaats van vast in drie bestanden met code, zodat een fork van de template één regel aanpast en elke app de waarde via de template-update meekrijgt.
+Welke repository de template is, staat op één plek in de configuratie (`template.repository` in `.claude/gates.json`) in plaats van vast in drie bestanden met code, zodat een fork van de template één regel configuratie aanpast (plus de letterlijke allow-regel in `.claude/settings.json`, die AC-11 eraan bindt) en elke app de waarde via de template-update meekrijgt.
 
 **Toets aan framework §1.** Aanleiding: de volgorde die de eigenaar op 2026-11-15 goedkeurde ("prima volgorde - ga door"), stap 1 "app-configuratie naast templateconfiguratie", en de regel "Buiten scope" van spec [template-update](template-update.md). Geen nieuwe dependency. Deel 2 van die stap, de padtabel-uitbreiding van een app, staat in spec `app-padtabel` (aparte PR); de twee zijn onafhankelijk.
 
@@ -34,8 +34,9 @@ De enige waarde in configuratie, `onderhoud.repository`, haalt `app:init` in een
   - Rolhek, doel van een leerpunt (`rolhek.mjs` bij `leerpuntAfwijking`): `ctx.config.template?.repository`. De configuratie komt in een hook uit het anker (`rolhek-context.mjs` `configuratie`). Ontbreekt de sleutel, dan is elk `gh issue create` van de hoofdsessie ask met de reden `template.repository ontbreekt in .claude/gates.json`.
   - Rolhek, de melding bij core-UI (`rolhek.mjs` bij `isCoreUiSource`): `ctx.authority?.repository` gelijk aan `ctx.config.template?.repository`; ontbrekend telt als ongelijk.
   - `built-evidence.mjs` `approvedBefore`: de waarde uit `authority.trusted('.claude/gates.json')` (anker of `origin/main`, nooit de werkmap, want het beslist over een akkoord); ontbrekend of onleesbaar telt als "niet de template".
-  - `functional-ui.mjs` `functionalUiReason`: krijgt `templateRepository` als invoerveld naast `repository`; ontbreekt het, dan is de reden de bestaande melding "functionele core-UI is uitsluitend toegestaan in de template-repository".
-  - `check-core.mjs`: de URL `https://github.com/<template.repository>.git` uit de `gates.json` die het script al leest (in `guard.yml` de checkout van `BASE_SHA`). Ontbreekt of klopt de sleutel niet, dan is de check rood met `✗ check-core: template.repository ontbreekt of is ongeldig in .claude/gates.json`. `isTemplateRepo` blijft op `onderhoud`.
+  - `functional-ui.mjs` `functionalUiReason` heeft geen aanroeper (geen code, geen test); de functie en haar alleen daar gebruikte helpers `invalidUiPath` en `isUiSource` vervallen, in plaats van een dode functie uit te breiden. `docs/template/specs/spec-en-bouw-in-een-pr.md:91` noemt haar een bestaande extra toets; die regel volgt.
+  - `check-core.mjs`: eerst `isTemplateRepo` (onderhoud gelijk aan `REPO`: de check staat uit, ook zonder geldige `template`-sleutel); daarna de URL uit de pure functie `templateUrl(gatesJson)` → `https://github.com/<template.repository>.git`, op de `gates.json` die het script al leest (in `guard.yml` de checkout van `BASE_SHA`). Ontbreekt of klopt de sleutel niet, dan is de check rood met `✗ check-core: template.repository ontbreekt of is ongeldig in .claude/gates.json` en de annotatie `::error title=check-core::template.repository ontbreekt of is ongeldig`. `isTemplateRepo` blijft op `onderhoud`.
+  - Eén parser: `check-core.mjs`, `check-migrations.mjs`, `check-docs.mjs` en `app-init.mjs` gebruiken `templateVan` uit `rolhek.mjs` (zoals `check-docs.mjs` nu al `onderhoudVan` importeert).
   - `check-migrations.mjs`: alleen als de template echt nodig is (een oudere toegevoegde migratie in een app, zonder lokale `template/main`), leest het de URL uit `git show origin/main:.claude/gates.json`, niet uit de werkmap: de werkmap komt van de PR. Ontbreekt de sleutel daar, dan is de check rood met de reden.
   - `app-init.mjs`: leest `template.repository` uit de `gates.json` van de verse kopie. Het haalt de onderhoud-regel weg als die precies `"onderhoud": { "repository": "<template.repository>" },` is (anders de bestaande fout), en schrijft de herkomstregel van de README met die waarde. Ontbreekt de sleutel, dan stopt `app:init` met `.claude/gates.json: template.repository ontbreekt`.
 - **Weg:** `TEMPLATE_REPOSITORY` (`task-authority.mjs`) en de vaste `TEMPLATE_URL` (`check-core.mjs`). Er blijft geen letterlijke template-repo in `rails/` of `scripts/kit/`.
@@ -64,11 +65,11 @@ Geen schermen. Meldingen letterlijk:
 - **template-repo/AC-3** — Rolhek, hoofdsessie, `gh issue create --repo <x> --label leerpunt …`: met `template.repository` = x en zonder `onderhoud` (een app) geen ask; met een andere repo ask; zonder `template` ask met de reden uit Hergebruik en UX.
 - **template-repo/AC-4** — Rolhek, core-UI-melding: gelijk aan de bestaande uitkomst als origin gelijk is aan `template.repository`; een andere origin of een ontbrekende sleutel geeft de melding niet.
 - **template-repo/AC-5** — `approvedBefore` met UI-akkoord: alleen akkoord als `authority.repository` gelijk is aan `template.repository` uit `authority.trusted('.claude/gates.json')`; staat de sleutel alleen in de werkmap (niet in de vertrouwde bron), dan geen akkoord.
-- **template-repo/AC-6** — `functionalUiReason` met `templateRepository` gelijk aan `repository`: zoals nu; ongelijk of ontbrekend: de melding "functionele core-UI is uitsluitend toegestaan in de template-repository".
-- **template-repo/AC-7** — check-core haalt de template op van `https://github.com/<template.repository>.git`; zonder geldige sleutel rood met de melding. In de template (onderhoud gelijk aan `REPO`) blijft hij uit.
+- **template-repo/AC-6** — `functionalUiReason`, `invalidUiPath` en `isUiSource` bestaan niet meer in `rails/hooks/lib/functional-ui.mjs`; de overige exports (`isFunctionalUiSpec`, `isCoreUiSource`, `isUiTest`, `testChangeRisk`) zijn ongewijzigd.
+- **template-repo/AC-7** — `templateUrl(gatesJson)` geeft `https://github.com/<template.repository>.git` en gooit zonder geldige sleutel; check-core haalt de template op van die URL en is zonder geldige sleutel rood met melding en annotatie. In de template (onderhoud gelijk aan `REPO`) blijft hij uit, ook zonder geldige `template`-sleutel.
 - **template-repo/AC-8** — check-migrations, app, oudere toegevoegde migratie, geen lokale template-ref: de URL komt uit `origin/main:.claude/gates.json`, ook als de werkmap een andere `template.repository` heeft; zonder sleutel op `origin/main` rood met de melding. De uitzondering voor de template blijft op `onderhoud` (een app met `template` maar zonder `onderhoud` is geen template).
 - **template-repo/AC-9** — `app:init`: de `template`-regel blijft, de onderhoud-regel met dezelfde repo gaat weg, de README-regel noemt `template.repository`; met een andere repo in `template` (een fork) volgt alles die repo; zonder `template` stopt het met de melding.
-- **template-repo/AC-10** — Geen `TEMPLATE_REPOSITORY` of `TEMPLATE_URL` meer in `rails/` en `scripts/`, en geen letterlijke `BramLambertJansen/template` in `rails/` en `scripts/kit/`.
+- **template-repo/AC-10** — Geen `TEMPLATE_REPOSITORY` of `TEMPLATE_URL` meer in `rails/` en `scripts/`, en de waarde van `template.repository` (gelezen uit `.claude/gates.json`, niet letterlijk in de test) komt niet voor in de bestanden onder `rails/` en `scripts/kit/`.
 - **template-repo/AC-11** — `test/rails/leerpunt-settings.test.ts`: de allow-regel noemt `template.repository`.
 
 ## Randgevallen
@@ -77,17 +78,18 @@ Geen schermen. Meldingen letterlijk:
 |---|---|---|
 | Fork van de template | één regel in `gates.json`; check-core, leerpunt, app:init volgen | n.v.t. |
 | App zonder `template` (oude kopie) | leerpunt ask, check-core rood met melding, geen stil verkeerd doel | n.v.t. |
+| Eerste template-update van een app van vóór deze versie | check:migrations leest `origin/main`, waar de sleutel nog ontbreekt: met een oudere templatemigratie is hij rood. Er bestaan nog geen apps (de proef-app volgt); de "Bij een update"-notitie in `docs/template-changelog.md` zegt dat zo'n app de sleutel eerst in een eigen PR toevoegt | n.v.t. |
 | PR wijzigt `template.repository` | `gates.json` is altijdVragen/besluit-pr; check-migrations leest `origin/main`; het rolhek leest het anker | n.v.t. |
-| Hoofdletters in de repo-naam | vergelijkingen zoals nu: check-core hoofdletterongevoelig, het rolhek exact | n.v.t. |
+| Hoofdletters in de repo-naam | vergelijkingen zoals nu: check-core en het leerpuntdoel hoofdletterongevoelig, de core-UI-melding en `approvedBefore` exact | n.v.t. |
 
 ## Raakt ook
 
 - Risicowerk (het rolhek en een vertrouwensgrens): aparte tester; kritiek (`rails/hooks/**`, `.claude/gates.json`): de eigenaar keurt de PR goed.
 - Code: `rails/hooks/lib/rolhek.mjs`, `task-authority.mjs`, `built-evidence.mjs`, `functional-ui.mjs`; `scripts/kit/check-core.mjs`, `check-migrations.mjs`, `check-docs.mjs`, `app-init.mjs`.
 - Config: `.claude/gates.json` (`template`, `$comment`).
-- Docs: `docs/framework.md` R-ROL-07, ADR 0040 (herzien-regel: geen vaste template-URL meer), spec `template-update` (de herkenning van de template blijft `onderhoud`), `docs/nieuwe-app.md` (een fork past `template.repository` aan), `docs/template-changelog.md`.
+- Docs: `docs/framework.md` R-ROL-07, ADR 0040 (herzien-regel: geen vaste template-URL meer), spec `template-update` (`:27` de fetch komt van `template.repository` op `origin/main`; de herkenning van de template blijft `onderhoud`), spec `leerlus` (`:38`, `:98`: het leerpuntdoel in een app is `template.repository`), spec `spec-en-bouw-in-een-pr` (`:91`, de vervallen `functionalUiReason`), `docs/nieuwe-app.md` (een fork past `template.repository` en de allow-regel aan; `:482` `git remote add template` noemt de repo letterlijk en blijft een opstartstap), `docs/template-changelog.md` (met de "Bij een update"-notitie uit Randgevallen).
 - `.claude/skills/opleveren/SKILL.md` noemt het leerpuntdoel in een app letterlijk; de sandbox van de agent kan `.claude/skills/` niet schrijven, dus die regel past de eigenaar aan (staat in de PR).
-- Bestaande tests (R-TEST-02, met reden in de PR): `test/hooks/rolhek-leerpunt.test.ts`, `test/hooks/functional-ui-role.test.ts`, `test/rails/leerpunt-settings.test.ts` (de export verdwijnt), `test/scripts/app-init.test.ts` (de onderhoud-regel en de README-regel komen uit de configuratie), `test/rails/check-docs-onderhoud.test.ts` alleen als hij de exacte sleutelset van de echte `gates.json` pint.
+- Bestaande tests (R-TEST-02, met reden in de PR): `test/hooks/rolhek-leerpunt.test.ts`, `test/hooks/functional-ui-role.test.ts`, `test/rails/leerpunt-settings.test.ts` (de export verdwijnt), `test/scripts/app-init.test.ts` (de onderhoud-regel en de README-regel komen uit de configuratie), en elke test die check-docs of `app:init` op een fixture-`gates.json` zonder `template` draait (onder meer `test/scripts/proef-fixture.ts`; `test/rails/fixtures/padtabel/gates-30cc352.json` is een bevroren fixture en blijft, de test die check-docs erop draait verwacht dan de melding `template ontbreekt` erbij).
 
 ## Buiten scope
 
@@ -97,8 +99,9 @@ Geen schermen. Meldingen letterlijk:
 
 ## Testplan
 
-- Unit: AC-1, AC-2 tegen `rolhek.mjs` en `check-docs.mjs`; AC-3, AC-4 met `decide` en een geladen configuratie; AC-5 met een nep-`authority`; AC-6 tegen `functionalUiReason`; AC-7 met de pure delen van `check-core.mjs` (URL uit de tekst); AC-8 met een fixture-repo zoals `test/rails/check-migrations-volgorde.test.ts`; AC-9 met `planAppInit` op een fixture; AC-10 met `git grep` in een test; AC-11 de bestaande test omgezet.
+- Unit: AC-1, AC-2 tegen `rolhek.mjs` en `check-docs.mjs`; AC-3, AC-4 met `decide` en een geladen configuratie; AC-5 met een nep-`authority`; AC-6 met een import van de module; AC-7 tegen `templateUrl` en `isTemplateRepo`; AC-8 met een fixture-repo zoals `test/rails/check-migrations-volgorde.test.ts`; AC-9 met `planAppInit` op een fixture; AC-10 met `git grep` in een test; AC-11 de bestaande test omgezet.
 
 ## Open vragen
 
 - **OV-1 ✅ besloten** — Waar de template-repo staat: in `.claude/gates.json` als `template.repository` (aanbeveling van de hoofdsessie, vooraf aanvaard door de eigenaar op 2026-11-16).
+- **OV-2 ✅ besloten** — `functionalUiReason` zonder aanroeper: schrappen in plaats van uitbreiden (bevinding van de spec-review; aanbeveling van de hoofdsessie, vooraf aanvaard).
