@@ -9,7 +9,6 @@ Herzien: 2026-11-12 (#703): punt 2, in de volledige route schrijft de developer 
 Wijzigt [0057](0057-risicogestuurde-werkstraat.md) punt 1 en 4 en de mini-specplicht uit
 [0056](0056-functionele-ui-in-een-pr.md) voor uitsluitend de lichte route hieronder.
 Drempel: A3 (review zonder verplichte technische rolscheiding bij beperkte fixes), A4 (bestaande werkstraatafspraken).
-De status is de bedoelde acceptatie in dit voorstel; alleen de eigenaar maakt het besluit met zijn merge geldend.
 
 ## Aanleiding
 
@@ -24,14 +23,14 @@ moeten de volledige straat krijgen. In de lichte route komt een aparte tester al
    corrigeren of bestaande layout/focus herstellen. Geen nieuwe feature, pagina, interactie, publiek contract,
    component-API, route, permissie, migratie of dependency. Auth, gegevensisolatie, het RLS-/rollenmodel,
    vertrouwensgrenzen, moeilijk herstel en A2/A3/A4 zijn altijd volledig. Twijfel of scopegroei gaat naar volledig.
-2. **Volledige featurestraat.** Nieuwe features, pagina's en interacties krijgen altijd architect en spec, contract
-   waar van toepassing, aparte tester vóór implementatie, bouwer, afgedwongen onafhankelijke review, volledige CI
-   en eigenaarmerge. Dat geldt ook als de code kort of omkeerbaar is. Een passende bestaande feature-spec kan worden
+2. **Volledige featurestraat.** Nieuwe features, pagina's en interacties krijgen altijd een spec (architect: 0090 punt 1),
+   contract waar van toepassing, tests vóór implementatie (tester: 0090 punt 3), bouwer, onafhankelijke review, volledige
+   CI en eigenaarmerge. Dat geldt ook als de code kort of omkeerbaar is. Een passende bestaande feature-spec kan worden
    hergebruikt; de bestaande besluitroute voor wijzigingen van bindende specs blijft gelden.
 3. **Tester wanneer gedrag verandert.** Licht werk dat functioneel gedrag verandert of herstelt krijgt een aparte
    tester vóór de bouwer. Die schrijft een inhoudelijke regressie tegen de bedoelde uitkomst, eerst rood op een
    assertie. Zuivere tekst-, opmaak- of documentcorrecties zonder functioneel of toegankelijkheidsgedrag krijgen geen
-   vaste tester. Toepasselijke bestaande controles blijven; in de volledige straat is de tester altijd aanwezig.
+   vaste tester. Toepasselijke bestaande controles blijven; in de volledige straat geldt 0090 punt 3.
 4. **Geen document per kleine fix.** Licht werk krijgt geen nieuwe ADR, spec of mini-spec en geen apart
    goedkeuringsrecord. Verwacht gedrag, begrensde scope en bewijs staan kort in de opdracht/PR; bestaande
    feature-specs blijven bindend. Werk relevante bestaande gebruiksdocs mee bij. Dit geldt ook voor beperkte fixes
@@ -46,9 +45,7 @@ moeten de volledige straat krijgen. In de lichte route komt een aparte tester al
    RLS, testregel of bestaande bindende beslissing. Geen test verwijderen, skippen of afzwakken op
    grond van de lichte route. Volledige pre-push en CI blijven voor iedere PR; geen oude groene uitslag hergebruiken.
    De eigenaar blijft beslissen over merge. Er komt geen extra label, triageregister of documentcontrole per fix.
-7. **Eén implementatie van deze afspraak.** Na dit besluit volgen framework, agentprofielen, skills en gebruiksdocs
-   dezelfde twee routes. Een voorstelbranch activeert niets; vertrouwde hooks blijven uit main komen. Bestaande
-   ADR's en specs blijven bewaard. De App-, ruleset- en build-proofvoorwaarden uit 0057 veranderen niet.
+7. **Eén implementatie van deze afspraak.** Framework, agentprofielen, skills en gebruiksdocs volgen dezelfde twee routes.
 
 ## Gevolgen
 

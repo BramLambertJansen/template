@@ -15,8 +15,7 @@ Herzien: 2026-11-12 (#696): door ADR 0089 punt 5 en 8, de vorige regel vervalt: 
 Herzien: 2026-11-12 (#703): punt 2 en 5, in de template gaat ook kritiek werk in één PR; de besluit-PR blijft een afspraak in een app (ADR 0090 punt 4)
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 5, 10, 12, 14 en 15. Drempel: A3 (de lanetoets in
-`check-document-status` laat meer toe) en A4 (afspraken uit een geaccepteerd ADR). De status is de bedoelde acceptatie in dit
-voorstel; alleen de eigenaar maakt het besluit met zijn merge geldend. Uitwerking: [spec](../specs/spec-en-bouw-in-een-pr.md).
+`check-document-status` laat meer toe) en A4 (afspraken uit een geaccepteerd ADR). Uitwerking: [spec](../specs/spec-en-bouw-in-een-pr.md).
 
 ## Context
 
@@ -35,26 +34,22 @@ toch samen bij de merge.
 1. **Eén PR is de standaard.** Een of meer specs met een eigenaarstatus (nieuw, volledig of mini, of een inhoudelijke wijziging
    van een goedgekeurde spec) mogen samen met code, tests en docs in één PR. De merge door de eigenaar blijft het besluit
    (0046 punt 1); afwijzen blijft de PR sluiten.
-2. **Kritiek blijft in een aparte besluit-PR vóór het bouwen:**
+2. **Kritiek werk in een app eerst in een aparte besluit-PR (R-WERK-05); in de template in één PR (0090 punt 4):**
    - elk ADR (nieuw, herschreven, vervangen of vervallen);
    - auth en gegevensisolatie: `src/core/api/auth/`, `src/core/api/db/`, `db/init/`, een migratie buiten het owner-tabelpatroon
      uit `new:resource`, en een gewijzigde of verwijderde migratie;
    - de bewaking zelf: de paden in `altijdVragen` (CI, hooks, Claude-instellingen, het gate- en besluitregister,
      dependencies) en de scripts die over besluiten en merges oordelen.
    Bij twijfel geldt kritiek. Voor overige `src/core`, `scripts/`, `rails/` en instructies blijven CODEOWNERS,
-   diff-guard, rolhek en eigenaarreview gelden; een spec in de PR geeft geen extra schrijfrechten.
+   rolhek en eigenaarreview gelden; een spec in de PR geeft geen extra schrijfrechten.
 3. **Borging van de spec in dezelfde PR.** Elke spec in de PR krijgt vóór het bouwen een spec-review door een onafhankelijke
    reviewer, die ook de keuze "niet kritiek" toetst. De spec staat in de PR in een commit vóór de eerste commit met code of
-   tests (`document-status` controleert de volgorde). De PR-beschrijving opent met wat er besloten wordt en de uitslag van de
+   tests. De PR-beschrijving opent met wat er besloten wordt en de uitslag van de
    spec-review.
 4. **`gebouwd` in dezelfde PR.** Een spec mag in de PR die haar implementatie bevat direct naar `gebouwd` met alleen het eigen
    PR-nummer, zonder gevalideerde SHA en zonder statuscommit achteraf. Bouwbewijs is dan de ruleset op main, die de verplichte
-   checks op de gemergde head eist; `document-status` wordt daarom een verplichte check in die ruleset. De bestaande vorm met
-   PR en SHA (0046 punt 10) blijft voor een spec waarvan de implementatie al op main staat; bij een gemergde PR toetst
-   `docs:status` dan de mergecommit in plaats van een open PR.
-5. 0046 punt 5 (inhoud van een goedgekeurde spec nooit met code), punt 12 (framework-lane voor alles in `src/core`, rails, gates
-   of agentconfiguratie), punt 14 (bereik van de feature-lane) en punt 15 (herkenning) gelden zoals hierboven gewijzigd. De
-   besluit-PR uit 0046 blijft bestaan voor punt 2 en voor wie een besluit los wil voorleggen.
+   checks op de gemergde head eist. Staat de implementatie al op main, dan toetst `docs:status` de mergecommit (0080 punt 5).
+5. *(vervallen, zie 0089 punt 5 en 0090 punt 4)*
 
 ## Alternatieven
 
@@ -67,7 +62,5 @@ toch samen bij de merge.
 
 ## Gevolgen
 
-Gewoon volledig werk is één PR met één CI-lus. Leerpunt #314 vervalt voor nieuw werk. De ruleset krijgt één extra verplichte
-check; de eigenaar draait het rulesetscript na de merge opnieuw. Deze wijziging is zelf kritiek en volgt daarom nog de oude
-route: dit besluit en de spec eerst, de bouw in een volgende PR. Meting (P6): het aantal PR's per spec tot de eindstatus op main,
+Gewoon volledig werk is één PR met één CI-lus. Leerpunt #314 vervalt voor nieuw werk. Meting (P6): het aantal PR's per spec tot de eindstatus op main,
 vóór (basislijn twee PR's en een statuscommit) en na de eerste vijf specs onder dit besluit.

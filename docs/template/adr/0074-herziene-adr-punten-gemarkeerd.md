@@ -34,14 +34,9 @@ schrijven als een later ADR het punt wijzigt, en een check die dat afdwingt.
    `Herzien: JJJJ-MM-DD (#NNN): gewijzigd door <link naar B> punt N, M` (zonder puntnummer: wat B wijzigt, in een paar woorden). Een
    bestaande herzieningsregel in A die B noemt, telt ook (zoals de regels die 0063 in acht ADR's zette). De tekst van de
    punten zelf verandert niet; een markering midden in de tekst is niet nodig.
-3. **Geen nieuwe uitzondering.** Dit is een herschrijving volgens R-CI-05 en loopt langs de bestaande guard en het rolhek: de PR
-   van B is door de A4-drempel al een besluit-PR. Er verandert niets aan `check-document-status`, `document-state.mjs` of het
-   rolhek. Een vervangen of vervallen ADR en het archief krijgen geen regel.
-4. **`check-docs` dwingt het af.** De check leest de kop van elk geaccepteerd ADR en eist per genoemd geaccepteerd ADR een
-   herzieningsregel die B noemt, en als B punten noemt, die puntnummers in die regel. Ontbreekt dat, dan is `check-docs` rood met
-   A, B en de ontbrekende punten in de melding, nooit via de baseline. De check heeft een falende fixture.
-5. **Eenmalig bijwerken in deze PR.** Omdat een herzieningsregel alleen in een besluit-PR mag, zet deze PR hem in elk bestaand
-   geval, ook voor dit ADR zelf (0046 punt 2). De bouw-PR voegt alleen de check en de zin in R-CI-05 toe.
+3. **Geen nieuwe uitzondering.** Dit is een herschrijving volgens R-CI-05. Een vervangen of vervallen ADR krijgt geen regel.
+4. *(vervallen, zie 0089 punt 5)*
+5. *(vervallen: uitgevoerd)*
 
 ## Alternatieven
 
@@ -58,6 +53,4 @@ schrijven als een later ADR het punt wijzigt, en een check die dat afdwingt.
 
 - Elke PR met een nieuw ADR dat een ouder ADR wijzigt, raakt ook dat oudere ADR (één herzieningsregel); de reviewer ziet zo in
   de diff welk punt vervalt.
-- De check leest alleen `docs/adr/*.md` buiten het archief; de kosten groeien met het aantal template-ADR's (begrensd op
-  0001–0099) en niet met de geschiedenis (R-DOC-09).
 - Een vrije formulering in een kopregel ("de vaste rolvolgorde") blijft mogelijk; de herzieningsregel zegt dan in woorden wat.

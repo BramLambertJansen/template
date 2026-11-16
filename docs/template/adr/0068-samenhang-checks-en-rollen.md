@@ -28,19 +28,16 @@ en een tekst die handhaving claimt die niet bestaat, laat een agent zelf control
 
 1. **`requiredChecks` in `.claude/decisions.json` is de enige lijst verplichte checks.** `check-core` komt erbij. Het
    rulesetscript zet precies die lijst (met `--zonder-codeql` zonder de twee CodeQL-checks), een test toetst dat, en een test
-   toetst dat elke job uit `.github/workflows/` op de lijst staat of bewust niet verplicht is (nu alleen `diff-guard`).
+   toetst dat elke job uit `.github/workflows/` op de lijst staat of bewust niet verplicht is.
    R-CI-01 en `docs/dod.md` verwijzen naar de lijst in plaats van de vereiste checks op te sommen.
 2. **R-CODE-02 wordt afgedwongen met de ESLint-kernregel `complexity` op 15.** Dat is cyclomatische complexiteit, geen
    cognitive complexity; de tekst zegt dat precies. Geen nieuwe dependency. De overschrijdingen op main gaan in de
    bestaande onderdrukkingen (`eslint-suppressions.json`, met `eslint --suppress-rule complexity`). Die tellen per bestand:
    in een bestand met een onderdrukking valt een nieuwe overschrijding pas op als het aantal stijgt. Dat is de bestaande
    werking van de ratchet voor elke lintregel en blijft zo.
-3. **De diff-guard heet geen grens zolang hij niet verplicht is.** R-WERK-23, R-ROL-10, `AGENTS.md` en de regels
-   "Afgedwongen door" noemen als grens CI, de ruleset op GitHub en de eigenaarmerge; de diff-guard staat erbij als
-   zichtbare check die nog niet verplicht is (0045).
+3. *(vervallen, zie 0089 punt 5)*
 4. **Het rolhek volgt de rolregels voor de developer.** Het weigert de developer een spec onder `docs/specs/` aan te maken,
-   te wijzigen, te verwijderen of te hernoemen, en een bestaande test te wijzigen; ook als een ander programma het pad
-   verandert (de toets op effect). De weigering verwijst voor een spec naar de architect (R-WERK-07) en voor een test naar
+   te wijzigen, te verwijderen of te hernoemen, en een bestaande test te wijzigen. De weigering verwijst voor een spec naar de architect (R-WERK-07) en voor een test naar
    de hoofdsessie, die hem wijzigt als spec of opdracht het gedrag verandert, of naar de tester als hij fout lijkt
    (R-TEST-02). Uitzonderingen: een spec terugzetten naar de tekst op main, en een statusregel met geldig bewijs
    (`pnpm docs:status`, zoals nu). Een status terug naar `voorstel` zetten blijft,
@@ -57,8 +54,7 @@ en een tekst die handhaving claimt die niet bestaat, laat een agent zelf control
 
 - **Ruleset als bron van de checks:** staat buiten de repo en is lokaal niet te lezen. Verworpen.
 - **`eslint-plugin-sonarjs` voor echte cognitive complexity:** nieuwe dependency, eerder geparkeerd. Verworpen.
-- **De claims schrappen:** maakt de tekst eerlijk, maar laat de norm onbewaakt. Verworpen voor complexiteit; voor de
-  diff-guard is het de keuze tot de GitHub App er is.
+- **De claims schrappen:** maakt de tekst eerlijk, maar laat de norm onbewaakt. Verworpen voor complexiteit.
 - **Regels ruimer maken voor de developer:** de regels zijn bewust zo, en een melding wordt overgeslagen. Verworpen.
 - **Eigenaarreview bij al het volledige werk:** schaalt met de tijd van de eigenaar, niet met de uitvoer. Verworpen.
 
@@ -67,7 +63,6 @@ en een tekst die handhaving claimt die niet bestaat, laat een agent zelf control
 - `pnpm pr:verify` en de ruleset vragen dezelfde checks; `check-core` telt voortaan ook in `pr:verify` en in het
   `gebouwd`-bewijs van `pnpm docs:status` (dat leest `requiredChecks`). `check-core` draait op elke PR
   (`pull_request_target`), dus dat bewijs blijft haalbaar.
-- Na de merge van de bouw-PR draait de eigenaar het rulesetscript niet opnieuw: de ruleset had `check-core` al.
 - Een developer die een bestaande test of spec moet wijzigen, stopt en geeft het terug aan de hoofdsessie. Commando's die zulke paden indirect veranderen (`prettier --write`, `vitest -u`, een rebase of pull), laat de developer ook aan de hoofdsessie.
 - `docs/nieuwe-app.md` somt de checks voor een app op; die lijsten blijven, want tests bewaken ze al tegen het rulesetscript.
 - Buiten scope: een check die elke regel "Afgedwongen door" toetst op een bestaand mechanisme; dat wordt een roadmap-item.

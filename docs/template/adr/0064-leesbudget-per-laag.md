@@ -19,22 +19,18 @@ tot inkorten, en bij inkorten verdwenen eerder normen ongemerkt. Daarnaast kost 
 
 ## Besluit
 
-1. **Harde grenzen alleen waar elke sessie ervoor betaalt of één eenheid in één keer gelezen wordt.** `AGENTS.md` ≤ 9 KB en
-   100 regels; een hoofdstuk van het regelboek ≤ 12 KB (het totaal van `framework.md` is een meting, geen grens); een nieuwe spec
-   ≤ 10 KB; een nieuw ADR ≤ 6 KB. `CLAUDE.md` ≤ 50, rules ≤ 60 en skills ≤ 200 regels blijven normen uit R-DOC-01 en worden
-   gemeten, niet rood. Het leespad per scenario (`pnpm leespad`, van het regelboek telt §8 en zijn letter-subhoofdstukken) is een
-   meting: streefdoel ≤ 25 KB voor een nieuwe feature, waarschuwing vanaf 56 KB (review 28 KB, lichte fix 16 KB).
+1. **Harde grenzen alleen op `AGENTS.md` en `CLAUDE.md`** (0065 punt 1); de rest is een meting, met streefwaarden in R-DOC-01
+   en 0070. Het leespad per scenario (`pnpm leespad`, van het regelboek telt §8 en zijn letter-subhoofdstukken) is een meting.
 2. **Lezen.** Een agent leest van het regelboek alleen de hoofdstukken die de taak raakt, via
    `node scripts/kit/feiten.mjs hoofdstuk <n>` (met de openingszin van het boek), en een document op aanvraag alleen als de taak het raakt.
 3. **Groeien zonder wildgroei.**
    - Groei door eenheden toe te voegen (hoofdstuk §13 en verder of letter-subhoofdstuk zoals §8a, rule, doc), niet door ze op te
-     blazen; een eenheid over haar grens wordt gesplitst. De ankers §1–§12 blijven.
+     blazen; splitsen alleen op inhoud (0065 punt 3). De ankers §1–§12 blijven.
    - Eén plek per norm: één R-id in het regelboek, `.claude/rules/*` letterlijk, elders een verwijzing. Laagste laag eerst
      (type, check, gouden pad, rules, `AGENTS.md`); wat in `AGENTS.md` bijkomt, gaat er netto uit.
-   - Tot 85 % van de grens van `AGENTS.md` en van een hoofdstuk is groei vrij; vanaf 85 % waarschuwt `check-docs` (zichtbaar in `pnpm ratchet` en `pnpm leespad`)
-     zonder rode check; boven 100 % is het rood.
-   - Over de grens: eerst splitsen of verplaatsen; lukt dat niet zonder verlies, dan verhogen als gate-wijziging met reden in de
-     PR en eigenaarakkoord. Bij elke release herijkt de hoofdsessie de streefwaarden met `pnpm leespad` en de kwaliteitscijfers.
+   - Vanaf 85 % van een harde grens waarschuwt `check-docs` zonder rode check; boven 100 % is het rood.
+   - Over de grens: eerst verplaatsen; lukt dat niet zonder verlies, dan verhogen als gate-wijziging met reden in de PR en
+     eigenaarakkoord. Herijken: 0065 punt 5.
    - Kwaliteit is de tegenmaat: stijgen Codex-bevindingen, CI-rood of reviewrondes (`pnpm meting --pr-tabel`), dan versoepelen we.
 4. **Ratchet alleen op overschrijdingen.** Bestaande overschrijdingen staan in `.kit/baseline.json` en mogen alleen dalen.
 5. **Rolhek: lezen wordt ruimer voor de reviewer, schrijven blijft streng, het oppervlak blijft klein.** Alleen wat de Read-, Grep- en
@@ -50,7 +46,7 @@ tot inkorten, en bij inkorten verdwenen eerder normen ongemerkt. Daarnaast kost 
      lees-actie leest alleen wat de vraag nodig heeft (een roadmap-item, nog niet gebouwd).
    - Afdwingen gebeurt zoveel mogelijk in de sandbox, de CI en de ruleset; het rolhek is een vangnet en krijgt geen nieuwe
      uitzondering zonder leerpunt en tabeltest (punt 5).
-   - De eigenaarmerge blijft het besluit; zo ingericht dat risicoloos werk later gebundeld of automatisch kan, zodra de GitHub App er is.
+   - Wie merget: 0046 punt 31.
 
 ## Alternatieven
 
@@ -61,6 +57,6 @@ tot inkorten, en bij inkorten verdwenen eerder normen ongemerkt. Daarnaast kost 
 
 ## Gevolgen
 
-- `check-docs` toetst hoofdstukken (met waarschuwingszone) en laat hoofdstukken §13 en verder en letter-subhoofdstukken toe;
-  het totaal van `framework.md` is een meting. `scripts/kit/leespad.mjs` telt §8 en zijn subhoofdstukken.
+- `check-docs` laat hoofdstukken §13 en verder en letter-subhoofdstukken toe; hoofdstukken en het totaal van `framework.md`
+  zijn een meting (0065 punt 2). `scripts/kit/leespad.mjs` telt §8 en zijn subhoofdstukken.
 - `feiten.mjs` krijgt `hoofdstuk <n>`; het rolhek krijgt de leeslijst van punt 5; de instructies en framework §9 volgen.

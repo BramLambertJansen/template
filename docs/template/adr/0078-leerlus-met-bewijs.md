@@ -31,10 +31,9 @@ agents sluiten opgeloste leerpunten (akkoord eigenaar 3 november 2026), en "opge
    basis telt niet als bewijs. Bij trede Type is het bewijs een typetest die op de basis niet compileert. Zo is "de check
    begint met een fixture die op de oude code faalt" toetsbaar. De job staat in een eigen workflow onder `pull_request`, niet onder
    `pull_request_target`: code uit de PR draait nooit met het token of de geheimen van de basis. Het script komt van main.
-   `pnpm pr:merge` leest de beschrijving zelf bij het mergen, zodat een later gewijzigd bewijs niet langs de eigenaar glipt.
 2. **Uitzonderingen op het sluitbewijs.** Voor de treden Skill, Padregel en `AGENTS.md`, en voor een integratie- of e2e-test die
-   de job niet kan draaien, mag het bewijs `geen test: <reden>` zijn. Dan is de PR niet agent-mergebaar (ADR 0069): de
-   eigenaar merget en toetst de reden. Een leerpunt dat zonder code achterhaald is, sluit met een comment
+   de job niet kan draaien, mag het bewijs `geen test: <reden>` zijn. Dan merget de eigenaar en toetst hij de reden
+   (afspraak). Een leerpunt dat zonder code achterhaald is, sluit met een comment
    `achterhaald: <reden>` van iemand met schrijfrecht op de repo, niet via een PR.
 3. **Issue-check.** Een workflow op `issues` (opened, edited, labeled, closed, reopened) en `issue_comment` toetst elk issue met label `leerpunt`:
    de koppen en volgorde van `.github/ISSUE_TEMPLATE/leerpunt.yml`, verplichte velden niet leeg, en de keuzelijsten `Soort` en
@@ -71,8 +70,5 @@ agents sluiten opgeloste leerpunten (akkoord eigenaar 3 november 2026), en "opge
 ## Gevolgen
 
 - Een fix voor een leerpunt kost één extra korte CI-job (één testbestand, twee keer). Een PR zonder leerpunt merkt niets.
-- De workflow komt in `.github/workflows/`; de GitHub App heeft geen `workflows`-recht (R-SEC-09), dus de eigenaar zet of
-  keurt dat bestand in de bouw-PR. Het label `leerpunt-onvolledig` en `leerpunt-zonder-bewijs` maakt de eigenaar aan.
+- De GitHub App heeft geen `workflows`-recht (R-SEC-09); de workflows zet of keurt de eigenaar.
 - Bestaande gesloten leerpunten worden niet opnieuw beoordeeld; de check geldt vanaf de bouw.
-- Spec [leerlus](../specs/leerlus.md) krijgt de status `gebouwd` in de bouw-PR; de punten die dit ADR wijzigt, staan daar als
-  verwijzing naar deze spec.

@@ -39,8 +39,8 @@ alleen als hij aantoonbaar helpt).
    `trede Schrappen of vereenvoudigen; bewijs meting: <voor> → <na> (<bron>)`, met twee getallen en een bron. De bestaande
    tests en verplichte checks blijven groen; een test weghalen of verzwakken blijft eigenaarakkoord (R-TEST-02). De job
    `leerpunt-bewijs` toetst de vorm en dat het issue zelf de plek "Schrappen of vereenvoudigen" heeft, zodat een gewone fix
-   de eis "rood op de basis" niet via deze plek ontloopt. De PR is niet agent-mergebaar (zoals `geen test:` in 0078 punt 2):
-   de eigenaar toetst meting en overname.
+   de eis "rood op de basis" niet via deze plek ontloopt. De eigenaar merget (afspraak, zoals `geen test:` in 0078 punt 2)
+   en toetst meting en overname.
 4. **Signaal in de sessie.** De slotstap van `opleveren` vraagt ook: was er een stap, check, hook of instructie die in deze
    sessie merkbaar tijd, rondes of tokens kostte zonder iets te vangen, of code die je las en die bij gelijk gedrag veel korter
    of sneller kan? Zo ja: een leerpunt met deze plek. De reviewer mag zo'n stuk als bevinding melden met het voorstel voor een
@@ -70,8 +70,5 @@ alleen als hij aantoonbaar helpt).
 - Sjabloon, ladder, issue-check, sluitbewijs, `opleveren`, reviewer en voorsortering wijzigen in één bouw-PR; geen nieuwe
   workflow, recht of dependency.
 - Een schrap-PR kost de eigenaar een merge met een korte toets van meting en overname; een PR zonder leerpunt merkt niets.
-- Afwijking van 0080 punt 3: spec `leerlus-bewijs` is gebouwd en kan in een besluit-PR nog niet uitbreiden (0080 punt 4 is
-  nog niet gebouwd); daarom een eigen spec. Na de bouw van 0080 gaat die spec op in `leerlus-bewijs`, met een eigen PR.
 - Spec `leerlus` AC-1 en AC-2 ("precies de zeven velden", `ladder` met zes opties) wijzigen door dit besluit: acht velden, de
-  plek vooraan, en het achtste veld met dezelfde uitsluiting van appdata. De tests daarop veranderen in de bouw-PR; de tekst
-  van die gebouwde spec volgt in dezelfde PR als het samenvoegen hierboven, omdat de guard haar nu niet laat wijzigen.
+  plek vooraan, en het achtste veld met dezelfde uitsluiting van appdata.

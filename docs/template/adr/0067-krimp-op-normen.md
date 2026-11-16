@@ -46,5 +46,3 @@ de omvang van het regelboek.
 
 - Elke geschrapte norm laat een spoor na met reden; samen met R-DOC-07 is dat ook de geschiedenis van het regelboek.
 - Een PR die normen verplaatst of hernummert, krijgt meer regels op de lijst; dat is bedoeld.
-- R-DOC-07, de spec leesbudget/AC-6 en de bijbehorende tests veranderen in de bouw-PR; de bestaande inventarissen in
-  oude PR's blijven geldig voor die PR's.
