@@ -27,10 +27,12 @@ const GOEDKEURDERS = /"goedkeurders"\s*:\s*\[[^\]]*\]/;
 const onderhoudRegel = (repository) => `  "onderhoud": { "repository": "${repository}" },\n`;
 
 /**
- * `template.repository` uit de gates.json van de verse kopie (spec template-repo AC-9); zonder geldige sleutel stopt app:init.
+ * De gates.json van de verse kopie en `template.repository` daaruit (spec template-repo AC-9); zonder bestand of zonder
+ * geldige sleutel stopt app:init.
  * @param {string | null} gates
+ * @returns {{ gates: string, template: string }}
  */
-function templateRepository(gates) {
+function gatesMetTemplate(gates) {
   if (gates === null) throw new AppInitError(`${GATES} ontbreekt; template.repository is niet te lezen`);
   /** @type {{ repository: string } | undefined} */
   let template;
@@ -41,7 +43,7 @@ function templateRepository(gates) {
     throw new AppInitError(error instanceof Error ? error.message : String(error));
   }
   if (template === undefined) throw new AppInitError(`${GATES}: template.repository ontbreekt`);
-  return template.repository;
+  return { gates, template: template.repository };
 }
 
 /** @param {string} file */
@@ -106,13 +108,12 @@ function appChangelog(sha) {
 
 /**
  * De eigenaar op één plek: `goedkeurders` in gates.json krijgt de handle, CODEOWNERS is de afleiding uit de padtabel
- * voor die handle. Zonder padtabel (geen gates.json, de oude vorm) of zonder `goedkeurders` is er geen afleiding: fout.
- * @param {string | null} gates de tekst van gates.json, na het weghalen van de onderhoud-regel
+ * voor die handle. Zonder `goedkeurders` is er geen afleiding: fout.
+ * @param {string} gates de tekst van gates.json, na het weghalen van de onderhoud-regel
  * @param {string} owner
  * @returns {Wijziging[]}
  */
 function eigenaarWijzigingen(gates, owner) {
-  if (gates === null) throw new AppInitError(`${GATES} ontbreekt; zonder padtabel is ${CODEOWNERS} niet af te leiden`);
   if (!GOEDKEURDERS.test(gates)) throw new AppInitError(`${GATES}: goedkeurders niet gevonden`);
   const inhoud = gates.replace(GOEDKEURDERS, () => `"goedkeurders": [${JSON.stringify(owner)}]`);
   try {
@@ -129,18 +130,18 @@ function eigenaarWijzigingen(gates, owner) {
 
 /**
  * De wijzigingen aan .claude/gates.json en, met --owner, .github/CODEOWNERS. De `template`-regel blijft staan.
- * @param {{ gates: string | null, template: string }} bron de tekst van gates.json en `template.repository` daaruit
+ * @param {{ gates: string, template: string }} bron de tekst van gates.json en `template.repository` daaruit
  * @param {string | undefined} owner
  * @returns {Wijziging[]}
  */
 function gatesWijzigingen({ gates, template }, owner) {
   // De onderhoudsmodus hoort bij de template-repo, niet bij een app (ADR 0045 punt 8).
   const regel = onderhoudRegel(template);
-  const metOnderhoud = gates !== null && /"onderhoud"\s*:/.test(gates);
+  const metOnderhoud = /"onderhoud"\s*:/.test(gates);
   if (metOnderhoud && !gates.includes(regel)) throw new AppInitError(`${GATES}: de onderhoud-regel is niet gevonden`);
   const zonder = metOnderhoud ? gates.replace(regel, '') : gates;
   if (owner !== undefined) return eigenaarWijzigingen(zonder, owner);
-  return metOnderhoud && zonder !== null ? [{ pad: GATES, inhoud: zonder }] : [];
+  return metOnderhoud ? [{ pad: GATES, inhoud: zonder }] : [];
 }
 
 /**
@@ -156,8 +157,7 @@ export function planAppInit(root, options) {
   if (!pkg.includes(`"name": "${TEMPLATE_NAME}"`)) {
     throw new AppInitError(`package.json heet niet meer "${TEMPLATE_NAME}": app:init draait maar één keer`);
   }
-  const gates = readOptional(path.join(root, GATES));
-  const template = templateRepository(gates);
+  const { gates, template } = gatesMetTemplate(readOptional(path.join(root, GATES)));
   /** @type {Wijziging[]} */
   const plan = [
     {
