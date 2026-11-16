@@ -9,6 +9,19 @@ requests.
 
 ### Gewijzigd
 
+- De template-repo uit de configuratie (spec `template-repo`): welke repository de template is, staat op één plek,
+  `"template": { "repository": "<owner>/<repo>" }` in `.claude/gates.json`, in de template en in een app (`pnpm app:init` laat
+  die regel staan en haalt alleen de onderhoud-regel met dezelfde repo weg). Daaruit lezen het rolhek (het doel van een
+  leerpunt, `rails/hooks/lib/rolhek.mjs` `templateVan`), `check-core` (de fetch-URL, `scripts/kit/check-core.mjs`
+  `templateUrl`), `check:migrations` (uit `origin/main:.claude/gates.json`), de UI-akkoordtoets in
+  `rails/hooks/lib/built-evidence.mjs` (uit de vertrouwde bron) en `app:init` (herkomstregel in de README). De constanten
+  `TEMPLATE_REPOSITORY` en `TEMPLATE_URL` en de ongebruikte `functionalUiReason` vervallen. `check-docs` eist de sleutel en
+  dat `onderhoud.repository`, als hij er is, gelijk is (`docs:gates:template`, `docs:gates:template-onderhoud`). Een fork past
+  `template.repository` en de leerpunt-allow-regel in `.claude/settings.json` aan. Bij een update: een app van vóór deze versie
+  heeft de sleutel nog niet; voeg eerst in een eigen PR `"template": { "repository": "BramLambertJansen/template" }` toe aan
+  `.claude/gates.json` (op een eigen regel, niet naast de onderhoud-regel), anders zijn het leerpunt (ask), `check-core` en,
+  met een oudere templatemigratie, `check:migrations` rood.
+
 - Volgorde van migraties en de procedure voor een template-update (spec `template-update`): `check:migrations` weigert een
   toegevoegde migratie waarvan de versie niet later is dan de nieuwste migratie op het afsplitspunt met `origin/main`; geef de
   eigen, nog niet gemergde migratie dan een nieuw tijdstempel. Op `main` zelf vergelijkt de check elke commit achteraf met zijn

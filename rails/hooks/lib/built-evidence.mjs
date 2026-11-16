@@ -1,6 +1,7 @@
 // Gebouwd betekent: implementatie gecontroleerd en aangeboden in een PR. Het is geen release of nieuw mandaat.
 import { MARKERING, acIds, builtReference, documentInfo } from './document-state.mjs';
-import { canRecordStatus, TEMPLATE_REPOSITORY } from './task-authority.mjs';
+import { canRecordStatus } from './task-authority.mjs';
+import { templateVan } from './rolhek.mjs';
 import { isFunctionalUiSpec } from './functional-ui.mjs';
 
 export const GITHUB_ACTIONS_APP_ID = 15368;
@@ -67,7 +68,7 @@ export function builtRefusal(document, evidence, authority) {
  * `docs:status` voor een open PR (ADR 0080 punt 5, Werking 3): `gebouwd # #N` met PR N open op deze branch, code buiten
  * `docs/` en een spec die goedgekeurd op main stond (of UI-akkoord had); geen check-runs, die eist de ruleset bij de merge.
  * @param {{ file: string, text: string }} document
- * @param {{ pr: PullRequest, code: boolean, uiApproval?: string | null }} evidence
+ * @param {{ pr: PullRequest, code: boolean, uiApproval?: string | null | undefined }} evidence
  * @param {import('./task-authority.mjs').Authority} authority
  * @returns {boolean} true als het geweigerd wordt
  */
@@ -97,9 +98,25 @@ function gebouwdOpMain(document, authority) {
 /** @param {{ file: string, text: string }} document @param {{ uiApproval?: string | null | undefined }} evidence @param {import('./task-authority.mjs').Authority} authority */
 function approvedBefore(document, evidence, authority) {
   const approved = document.text.replace(/^status:[^\r\n]*$/m, 'status: goedgekeurd');
-  const ui = authority.repository === TEMPLATE_REPOSITORY && authority.safe(document.file) &&
+  const ui = authority.repository === vertrouwdeTemplate(authority) && authority.safe(document.file) &&
     isFunctionalUiSpec(approved) && evidence.uiApproval === documentInfo(document.file, approved)?.digest;
   return ui || canRecordStatus({ file: document.file, text: approved }, authority);
+}
+
+/**
+ * Spec template-repo AC-5: `template.repository` uit de vertrouwde `.claude/gates.json` (anker of origin/main, nooit de werkmap:
+ * dit beslist over een akkoord). Ontbrekend, onleesbaar of een verkeerde vorm: `null`, dus "niet de template".
+ * @param {import('./task-authority.mjs').Authority} authority @returns {string | null}
+ */
+function vertrouwdeTemplate(authority) {
+  try {
+    /** @type {unknown} */
+    const raw = JSON.parse(authority.trusted('.claude/gates.json') ?? 'null');
+    const found = typeof raw === 'object' && raw !== null ? Object.entries(raw).find(([name]) => name === 'template')?.[1] : undefined;
+    return templateVan(found)?.repository ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**

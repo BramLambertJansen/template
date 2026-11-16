@@ -12,6 +12,7 @@ import { parseArgs } from 'node:util';
 // Node het pad in de fout.
 import { TEMPLATE_VERSION } from '../../src/core/shared/template-version.ts';
 import { CODEOWNERS, codeownersTekst } from './codeowners.mjs';
+import { templateVan } from '../../rails/hooks/lib/rolhek.mjs';
 
 const TEMPLATE_NAME = 'app-template';
 const TEMPLATE_TITLE = 'App-template';
@@ -22,7 +23,35 @@ const LOGIN = /^[A-Za-z0-9][A-Za-z0-9-]{0,38}(?:\/[A-Za-z0-9][A-Za-z0-9_.-]*)?$/
 const GATES = '.claude/gates.json';
 const GOEDKEURDERS = /"goedkeurders"\s*:\s*\[[^\]]*\]/;
 
-const ONDERHOUD = '  "onderhoud": { "repository": "BramLambertJansen/template" },\n';
+/** De onderhoud-regel van de template; `pnpm app:init` haalt hem weg (ADR 0045 punt 8). @param {string} repository */
+const onderhoudRegel = (repository) => `  "onderhoud": { "repository": "${repository}" },\n`;
+
+/**
+ * `template.repository` uit de gates.json van de verse kopie (spec template-repo AC-9); zonder geldige sleutel stopt app:init.
+ * @param {string | null} gates
+ */
+function templateRepository(gates) {
+  /** @type {unknown} */
+  let ruw;
+  try {
+    ruw = gates === null ? null : JSON.parse(gates);
+  } catch {
+    throw new AppInitError(`${GATES} is geen geldige JSON`);
+  }
+  const found =
+    typeof ruw === 'object' && ruw !== null
+      ? Object.entries(ruw).find(([naam]) => naam === 'template')?.[1]
+      : undefined;
+  /** @type {{ repository: string } | undefined} */
+  let template;
+  try {
+    template = templateVan(found);
+  } catch (error) {
+    throw new AppInitError(error instanceof Error ? error.message : String(error));
+  }
+  if (template === undefined) throw new AppInitError(`${GATES}: template.repository ontbreekt`);
+  return template.repository;
+}
 
 /** @param {string} file */
 function readOptional(file) {
@@ -60,8 +89,8 @@ function replaceOnce({ file, source }, search, replacement) {
   return source.replace(search, () => replacement);
 }
 
-/** @param {string} readme @param {string} name */
-function renameReadme(readme, name) {
+/** @param {string} readme @param {{ name: string, template: string }} app */
+function renameReadme(readme, { name, template }) {
   const lines = readme.split('\n');
   if (lines[0] !== `# ${TEMPLATE_TITLE}` || lines[1] !== '' || lines[2]?.startsWith('Fundering') !== true) {
     throw new AppInitError('README.md: begint niet met "# App-template", een lege regel en de alinea "Fundering …"');
@@ -71,7 +100,7 @@ function renameReadme(readme, name) {
   const kept = start === -1 ? lines : [...lines.slice(0, start), ...(end === -1 ? [] : lines.slice(end))];
   // Kop en eerste alinea (regel 3) vervangen; de rest blijft.
   kept[0] = `# ${name}`;
-  kept[2] = 'Gebouwd op [BramLambertJansen/template](https://github.com/BramLambertJansen/template).';
+  kept[2] = `Gebouwd op [${template}](https://github.com/${template}).`;
   return `${kept.join('\n').trimEnd()}\n`;
 }
 
@@ -108,18 +137,17 @@ function eigenaarWijzigingen(gates, owner) {
 }
 
 /**
- * De wijzigingen aan .claude/gates.json en, met --owner, .github/CODEOWNERS.
- * @param {string} root
+ * De wijzigingen aan .claude/gates.json en, met --owner, .github/CODEOWNERS. De `template`-regel blijft staan.
+ * @param {{ gates: string | null, template: string }} bron de tekst van gates.json en `template.repository` daaruit
  * @param {string | undefined} owner
  * @returns {Wijziging[]}
  */
-function gatesWijzigingen(root, owner) {
-  const gates = readOptional(path.join(root, GATES));
+function gatesWijzigingen({ gates, template }, owner) {
   // De onderhoudsmodus hoort bij de template-repo, niet bij een app (ADR 0045 punt 8).
+  const regel = onderhoudRegel(template);
   const metOnderhoud = gates !== null && /"onderhoud"\s*:/.test(gates);
-  if (metOnderhoud && !gates.includes(ONDERHOUD))
-    throw new AppInitError(`${GATES}: de onderhoud-regel is niet gevonden`);
-  const zonder = metOnderhoud ? gates.replace(ONDERHOUD, '') : gates;
+  if (metOnderhoud && !gates.includes(regel)) throw new AppInitError(`${GATES}: de onderhoud-regel is niet gevonden`);
+  const zonder = metOnderhoud ? gates.replace(regel, '') : gates;
   if (owner !== undefined) return eigenaarWijzigingen(zonder, owner);
   return metOnderhoud && zonder !== null ? [{ pad: GATES, inhoud: zonder }] : [];
 }
@@ -137,6 +165,8 @@ export function planAppInit(root, options) {
   if (!pkg.includes(`"name": "${TEMPLATE_NAME}"`)) {
     throw new AppInitError(`package.json heet niet meer "${TEMPLATE_NAME}": app:init draait maar één keer`);
   }
+  const gates = readOptional(path.join(root, GATES));
+  const template = templateRepository(gates);
   /** @type {Wijziging[]} */
   const plan = [
     {
@@ -147,7 +177,7 @@ export function planAppInit(root, options) {
         `"name": "${options.slug}"`,
       ),
     },
-    { pad: 'README.md', inhoud: renameReadme(read('README.md'), options.name) },
+    { pad: 'README.md', inhoud: renameReadme(read('README.md'), { name: options.name, template }) },
     { pad: 'CHANGELOG.md', inhoud: appChangelog(options.sha) },
     {
       pad: 'src/shared/app.ts',
@@ -166,7 +196,7 @@ export function planAppInit(root, options) {
       ),
     },
   ];
-  plan.push(...gatesWijzigingen(root, options.owner));
+  plan.push(...gatesWijzigingen({ gates, template }, options.owner));
   return plan;
 }
 
