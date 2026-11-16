@@ -50,6 +50,8 @@ n.v.t.: geen API-route, permissie of foutcode.
 
 - Hergebruikt: `globMatch` (`rails/hooks/lib/rolhek.mjs`), `padReden` en `kritiekPad` (signatuur en meldingen ongewijzigd,
   ook "staat niet op agentMerge.toegestaan" en "staat op agentMerge.kritiek"), `voorbeeldPad` en `globsOverlap` (`check-docs.mjs`).
+  Vervallen met ADR 0089 punt 5: `padReden` en `kritiekPad` zijn geschrapt; `voorbeeldPad` bestaat alleen nog als testhelper
+  in `test/rails/padtabel-kit.ts`.
 - Bestaande componenten, staten per scherm, focusvolgorde: n.v.t., geen UI.
 - Alle zichtbare tekst letterlijk:
   - `feiten.mjs pad <pad>`: `<pad>: schrijven <niveau> (<bronnen>), besluit <niveau> (<bronnen>)`. Bronnen zijn de globs die
@@ -95,7 +97,7 @@ n.v.t.: geen API-route, permissie of foutcode.
 7. **Aanroepers.** `loadConfig`, diff-guard `leesConfig`, `leesMergeConfig`, `leesAgentMerge` en `agentMergeFouten` (ook direct
    aangeroepen door `pr:merge` op de `gates.json` van main) lezen via `afgeleid` en geven dezelfde vorm terug als nu, plus
    `kritiek`. `kritiekPad(pad, config)` gebruikt `config.kritiek`, en zonder dat veld de oude regel. Vervallen met ADR 0089
-   punt 5: de diff-guard (`leesConfig`), `leesMergeConfig`, `leesAgentMerge` en `agentMergeFouten` zijn geschrapt; `pr:merge`
+   punt 5: de diff-guard (`leesConfig`), `leesMergeConfig`, `leesAgentMerge`, `agentMergeFouten` en `kritiekPad` zijn geschrapt; `pr:merge`
    leest alleen nog de modus `merge`. `loadConfig` blijft.
 8. **decisions.json.** `readRegistry` accepteert `{ version, requiredChecks }` en de oude vorm met `decisions`, en geeft
    `decisions: []` als de sleutel ontbreekt. Elke andere sleutel blijft een fout.
@@ -107,8 +109,8 @@ n.v.t.: geen API-route, permissie of foutcode.
 - **padtabel/AC-2** — Gegeven de fixture van 30cc352 (oude lijsten plus `OUDE_KRITIEK`) en de huidige `gates.json`, dan geldt
   voor elk pad uit `git ls-files` en elk `voorbeeldPad` van een glob uit beide: rolhekniveau nieuw ≥ oud; `kritiekPad` oud waar
   ⇒ nieuw waar; `padReden` (status `M` en `A`) oud niet null ⇒ nieuw niet null. Blijvende test: een latere PR die één pad
-  losser maakt dan de fixture, is rood. Het deel over `padReden` is vervallen met ADR 0089 punt 5 (`agent-merge.mjs`
-  geschrapt).
+  losser maakt dan de fixture, is rood. De delen over `padReden` en `kritiekPad` zijn vervallen met ADR 0089 punt 5
+  (`agent-merge.mjs` en `kritiekPad` geschrapt); het rolhekniveau blijft getoetst.
 - **padtabel/AC-3** — Een rij met `altijdVragen` zonder `besluit-pr`, of schrijven ≥ gate met `agent`, geeft de melding uit
   Hergebruik en UX.
 - **padtabel/AC-4** — Een onbekende kolom of waarde: check-docs rood en `padNiveau` altijdVragen/besluit-pr voor die glob.
@@ -157,8 +159,8 @@ n.v.t.: geen API-route, permissie of foutcode.
   `document-status.mjs`, `functional-ui-status.mjs`), `scripts/kit/lane.mjs` (vervallen) (`KRITIEK` weg), `scripts/kit/agent-merge.mjs` (vervallen)
   (`leesMergeConfig`, `leesAgentMerge`, `agentMergeFouten`), `scripts/kit/pr-merge.mjs`, `scripts/kit/diff-guard.mjs` (vervallen)
   (`leesConfig`), `scripts/kit/check-docs.mjs` (Werking 6), `scripts/kit/feiten.mjs` (`pad <pad>`),
-  `rails/hooks/lib/task-authority.mjs` (`readRegistry`). Sindsdien geschrapt: `lane.mjs`, `agent-merge.mjs` en
-  `diff-guard.mjs` (ADR 0089 punt 5).
+  `rails/hooks/lib/task-authority.mjs` (`readRegistry`). Sindsdien geschrapt: `lane.mjs`, `agent-merge.mjs`,
+  `diff-guard.mjs`, `check-document-status.mjs` en `functional-ui-status.mjs` (ADR 0089 punt 5).
 - Config: `.claude/gates.json` (`paden`, `$comment`), `.claude/decisions.json`, commentaar in `.github/CODEOWNERS`.
 - Docs en instructies: `docs/framework.md` §8 (R-WERK-05 naar de padtabel; R-WERK-10, R-WERK-24, R-ROL-01/02) en §10 (R-REPO-01,
   R-REPO-03), `AGENTS.md` waar het "kritiek" noemt, `.claude/agents/developer.md` (stap 3), `.claude/rules/core.md` (R-REPO-03),

@@ -566,8 +566,9 @@ function disciplineViolations({ file, text, status }, files) {
 // Regel 13: een volledig repopad onder een codemap, met extensie en zonder glob of placeholder; een regelnummer telt niet mee.
 const REPOPAD = /^(?:src|scripts|rails|test|e2e|db|deploy|\.claude|\.github)\/[\w.\-/]*\.[a-z]+$/;
 
-// Een nieuwe AC in een gebouwde spec (R-WERK-07): het lijstitem met `(nog niet gebouwd)` achter het id, met vervolgregels.
-const NIEUWE_AC = /^- \*\*[^*\n]*AC-\d+\*\* \(nog niet gebouwd\)[^\n]*(?:\n(?![ \t]*(?:[-#]|$))[^\n]*)*/gm;
+// Een nieuwe AC in een gebouwde spec (R-WERK-07): het lijstitem met `(nog niet gebouwd)` achter het id, met vervolgregels
+// en ingesprongen sub-bullets; het item eindigt bij een niet-ingesprongen `-` of `#`, of een lege regel.
+const NIEUWE_AC = /^- \*\*[^*\n]*AC-\d+\*\* \(nog niet gebouwd\)[^\n]*(?:\n(?![-#]|[ \t]*$)[^\n]*)*/gm;
 
 /**
  * Regel 13 (leerpunt #738): een gebouwde spec noemt geen repopad dat niet bestaat, tenzij er direct `(vervallen)`,
