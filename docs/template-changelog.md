@@ -9,6 +9,10 @@ requests.
 
 ### Gewijzigd
 
+- `node scripts/kit/check-docs.mjs` los gedraaid geeft geen stil groen meer (leerpunt #693): het script vergelijkt niet met
+  `.kit/baseline.json` en eindigt nu met exit 1 en een verwijzing naar `pnpm ratchet`, de enige gate voor check-docs
+  (`scripts/kit/check-docs.mjs`, `test/scripts/check-docs-los.test.ts`). Wat verandert voor een app: niets, tenzij een eigen
+  script `check-docs.mjs` direct aanroept; gebruik dan `pnpm ratchet`.
 - Securitysuite en generator volgen hetzelfde contract (spec `suite-volgt-contract`, leerpunten #656, #657, #681):
   `defineListSearch` kent een optionele `pageSize` (de API-input krijgt dan `limit` van 1 t/m `pageSize`), en een lijst uit
   `pnpm new:resource` geeft hem mee. De suite stuurt `limit: 1` alleen als het lijstcontract het kent en is anders rood met een
