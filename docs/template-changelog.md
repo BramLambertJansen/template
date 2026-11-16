@@ -9,6 +9,17 @@ requests.
 
 ### Gewijzigd
 
+- Securitysuite en generator volgen hetzelfde contract (spec `suite-volgt-contract`, leerpunten #656, #657, #681):
+  `defineListSearch` kent een optionele `pageSize` (de API-input krijgt dan `limit` van 1 t/m `pageSize`), en een lijst uit
+  `pnpm new:resource` geeft hem mee. De suite stuurt `limit: 1` alleen als het lijstcontract het kent en is anders rood met een
+  melding die `pageSize` noemt; `q` alleen als het contract `q` heeft. Op de database leidt de suite de update-proef af uit het
+  updaterecht van de app-rol: zonder updaterecht geen `sample.update` nodig (de update moet dan `42501` geven); een afwijkende
+  kolomnaam gaat in `sample.updateRij`. AC-5 met MFA accepteert alleen `200` of `404 NOT_FOUND`. `new:resource` drukt ook de
+  regels voor `PERMISSIE_ORACLE` (`test/security/fixtures.ts`) af. Bij een update: een eigen lijst zonder `limit` met
+  eigenaar-routes krijgt een `pageSize` in `defineListSearch` (of een eigen `limit`) en een handler die `input.limit` gebruikt;
+  een hand toegevoegd `limit` in een app-contract mag blijven; een `sample.update` die alleen bestond om de suite te laten
+  slagen, kan weg samen met het ongebruikte updaterecht.
+
 - Volgorde van migraties en de procedure voor een template-update (spec `template-update`): `check:migrations` weigert een
   toegevoegde migratie waarvan de versie niet later is dan de nieuwste migratie op het afsplitspunt met `origin/main`; geef de
   eigen, nog niet gemergde migratie dan een nieuw tijdstempel. Op `main` zelf vergelijkt de check elke commit achteraf met zijn

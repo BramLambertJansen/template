@@ -8,11 +8,11 @@ import {
   foutvormProblemen,
   heeftBody,
   metVeld,
+  mfaDoorgangProbleem,
   onjuisteVelden,
   openProbe,
   oracleSleutelsVerschil,
   routeLabel,
-  sampleFor,
   teGroteBody,
   verplichteVelden,
   verwachteUitkomst,
@@ -23,11 +23,14 @@ import {
   type Probe,
   type Verzoek,
 } from './fixtures.ts';
+import { sampleVoor } from './resources.ts';
 
 // Generieke securitysuite, deel 1 (spec security-suite, AC-1 t/m AC-7): elke route uit het register (`routes` in
 // src/api/app.ts) krijgt sessie-, rechten-, MFA-, input- en foutvormtests, zonder dat er per route iets te schrijven is.
 // Echte stack: Better Auth-sessies, Postgres met RLS, Mailpit; niets gemockt. Draait via `pnpm test:db`.
-// Alleen weigeringen worden aangeroepen: elk verzoek eindigt vóór de handler (401, 403, 400 of 413).
+// Alleen weigeringen worden aangeroepen: elk verzoek eindigt vóór de handler (401, 403, 400 of 413). Eén uitzondering
+// (spec suite-volgt-contract, ontwerp 5): AC-5 roept met adminMfa de handler van elke admin-GET aan; goed is alleen 200
+// of 404 NOT_FOUND (mfaDoorgangProbleem). Samples komen via sampleVoor, zodat een regel in routeSamples ook hier geldt.
 const LANG = 120_000;
 const t = createSecurityFixtures();
 afterAll(async () => {
@@ -77,7 +80,7 @@ describe('security/AC-2: geen sessie', { timeout: LANG }, () => {
   test.each(perRoute)(
     'security/AC-2: %s zonder cookie geeft 401 UNAUTHENTICATED { code, requestId }',
     async (label, route) => {
-      const antwoord = await t.stuurAls('geenSessie', route, { sample: sampleFor(route) });
+      const antwoord = await t.stuurAls('geenSessie', route, { sample: sampleVoor(route) });
 
       verwachtFout({ ac: 'AC-2', label, antwoord }, { status: 401, code: 'UNAUTHENTICATED' });
     },
@@ -100,7 +103,7 @@ describe('security/AC-3: verlopen sessie', { timeout: LANG }, () => {
       const browser = await t.verlopenBrowser(variant);
       const voor = await t.bijwerkingen();
 
-      const antwoord = await t.stuurMetBrowser(browser, route, { sample: sampleFor(route) });
+      const antwoord = await t.stuurMetBrowser(browser, route, { sample: sampleVoor(route) });
 
       verwachtFout({ ac: 'AC-3', label, antwoord }, { status: 401, code: 'UNAUTHENTICATED' });
       expect(zichtbaar(await t.bijwerkingen(voor.ids))).toStrictEqual(zichtbaar(voor));
@@ -132,7 +135,7 @@ describe('security/AC-4: rechten per permissie en rol', { timeout: LANG }, () =>
     async (soort, label, route) => {
       const voor = await t.bijwerkingen();
 
-      const antwoord = await t.stuurAls(soort, route, { sample: sampleFor(route) });
+      const antwoord = await t.stuurAls(soort, route, { sample: sampleVoor(route) });
 
       verwachtFout({ ac: 'AC-4', label, antwoord }, weigering(soort, route));
       expect(await t.bijwerkingen(voor.ids)).toStrictEqual(voor);
@@ -149,7 +152,7 @@ describe('security/AC-5: MFA voor admin', { timeout: LANG }, () => {
     async (label, route) => {
       const voor = await t.bijwerkingen();
 
-      const antwoord = await t.stuurAls('adminZonderMfa', route, { sample: sampleFor(route) });
+      const antwoord = await t.stuurAls('adminZonderMfa', route, { sample: sampleVoor(route) });
 
       verwachtFout({ ac: 'AC-5', label, antwoord }, weigering('adminZonderMfa', route));
       expect(weigering('adminZonderMfa', route).code).toBe('MFA_REQUIRED');
@@ -161,19 +164,18 @@ describe('security/AC-5: MFA voor admin', { timeout: LANG }, () => {
   const leesRoutes = adminRoutesMetLabel.filter(([, route]) => route.contract.method === 'GET');
 
   test.each(leesRoutes)(
-    'security/AC-5: adminMfa op %s geeft niet MFA_REQUIRED, FORBIDDEN of UNAUTHENTICATED',
+    'security/AC-5: adminMfa op %s komt voorbij de MFA-controle (200 of 404 NOT_FOUND)',
     async (_, route) => {
-      const antwoord = await t.stuurAls('adminMfa', route, { sample: sampleFor(route) });
+      const antwoord = await t.stuurAls('adminMfa', route, { sample: sampleVoor(route) });
 
-      expect(antwoord.status, antwoord.tekst.slice(0, 200)).toBe(200);
-      expect(codeVan(antwoord)).toBeUndefined();
+      expect(mfaDoorgangProbleem(antwoord)).toBeUndefined();
     },
   );
 });
 
 // De ongeldige varianten van een route: onbekend veld, ontbrekend verplicht veld, verkeerd type per veld, kapotte JSON, arraybody.
 function ongeldigeGevallen(route: AppRoute): { readonly omschrijving: string; readonly verzoek: Verzoek }[] {
-  const sample = sampleFor(route);
+  const sample = sampleVoor(route);
   const gevallen = [
     { omschrijving: 'onbekend veld', verzoek: { sample: metVeld(sample, 'beveiligingstest_onbekend', 1) } },
     ...verplichteVelden(route).map((veld) => ({
@@ -223,7 +225,7 @@ describe('security/AC-6: ongeldige input', { timeout: LANG }, () => {
   test.each(metBody)(
     'security/AC-6: een body boven MAX_BODY_BYTES op %s geeft 413 PAYLOAD_TOO_LARGE',
     async (label, route) => {
-      const antwoord = await t.stuurAls('user', route, { sample: sampleFor(route), ruw: teGroteBody() });
+      const antwoord = await t.stuurAls('user', route, { sample: sampleVoor(route), ruw: teGroteBody() });
 
       grootboek.push({ ac: 'AC-6', label, antwoord });
       expect({ status: antwoord.status, code: codeVan(antwoord) }).toStrictEqual({

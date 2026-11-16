@@ -11,6 +11,7 @@ import {
   spoofDbProblemen,
   strictProblemen,
   tabelEigenaarProblemen,
+  tabelEigenaarVerslag,
 } from './controles.ts';
 import { createSecurityFixtures, routeLabel } from './fixtures.ts';
 import {
@@ -41,7 +42,11 @@ describe('security/AC-8: eigenaarschap op de database', { timeout: LANG }, () =>
   });
 
   test('security/AC-8: bij elke owner-tabel raakt B met select, update en delete 0 rijen en blijft de rij van A ongewijzigd', async () => {
-    expect(await tabelEigenaarProblemen(ep.spelers, resources)).toStrictEqual([]);
+    // Het verslag geeft naast de problemen de meldingen (spec suite-volgt-contract, ontwerp 4): een overgeslagen
+    // update-proef bij een tabel zonder UPDATE-recht staat zo in de testuitvoer.
+    const verslag = await tabelEigenaarVerslag(ep.spelers, resources);
+    for (const melding of verslag.meldingen) console.info(melding);
+    expect(verslag.problemen).toStrictEqual([]);
   });
 });
 
@@ -99,6 +104,7 @@ describe('security/AC-9: eigenaarschap via de API', { timeout: LANG }, () => {
           zend: echteZender(t, rol),
           classificatie,
           resources: { [naam]: regel },
+          routes,
           gebruikers: { A: (await t.A(rol)).userId, B: (await t.B(rol)).userId },
         };
         expect(await eigenaarApiProblemen(opzet)).toStrictEqual([]);
