@@ -7,7 +7,8 @@
 // zet die met Edit en noemt ze met reden in de PR (OV-4). permissions.ts en app.ts schrijft hij wel: ze zijn
 // geen gate meer (ADR 0046 punt 32); een nieuwe permissie of route toetst de reviewer (R-WERK-09, ADR 0089 punt 8). Bestaat een doel al, dan schrijft hij niets (OV-5).
 // test/security/resources.ts (spec security-suite, PR 4) schrijft hij evenmin: hij drukt de declaratie af (routeClassificatie en
-// resources, samples als INVULLEN) en de tester neemt die over en vult de samples.
+// resources, samples als INVULLEN) en de tester neemt die over en vult de samples. Hetzelfde geldt voor de regels van
+// PERMISSIE_ORACLE in test/security/fixtures.ts (spec suite-volgt-contract): afgedrukt, niet geschreven.
 // Templates in scripts/kit/templates/; check:new-resource bewijst dat de uitvoer gate:fast haalt (OV-7).
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -361,6 +362,7 @@ function declaratieInhoud(root, n, rollen) {
     '\n      create: {\n        // INVULLEN: geldige velden voor de create-route\n      },',
     '\n      createTweede: {\n        // INVULLEN: een tweede, unieke geldige create-input voor paginering\n      },',
     '\n      spoof: {\n        // INVULLEN: een andere, unieke geldige create-input\n      },',
+    '\n      // update: alleen nodig bij een update-route of een update-grant op de tabel; anders mag hij weg.',
     '\n      update: {\n        // INVULLEN: geldige velden voor de update-route\n      },',
     '\n    },',
     `\n    lijst: 'GET /${n.naam}',`,
@@ -371,6 +373,25 @@ function declaratieInhoud(root, n, rollen) {
     { [RESOURCES]: voegIn(bron, { anker: '\n};', tot: 'export const resources' }, routes) },
     { [RESOURCES]: voegIn(bron, { anker: '\n};', tot: 'export const probeRouteClassificatie' }, regel) },
   ];
+}
+
+const FIXTURES = 'test/security/fixtures.ts';
+
+/**
+ * De regels voor PERMISSIE_ORACLE (spec suite-volgt-contract, ontwerp 2): zonder `<naam>:read` en `<naam>:write` in de oracle is
+ * security/AC-4 rood zodra permissions.ts ze heeft. Los van resources.ts; leeg als fixtures.ts er niet is.
+ * @param {string} root
+ * @param {Namen} n
+ * @param {readonly string[]} rollen
+ * @returns {Record<string, string>[]} per wijziging: pad → nieuwe inhoud
+ */
+function oracleInhoud(root, n, rollen) {
+  const tekst = leesAls(root, FIXTURES);
+  if (tekst === null) return [];
+  const lijst = rollen.map((rol) => `'${rol}'`).join(', ');
+  const regels = `\n  '${n.naam}:read': [${lijst}],\n  '${n.naam}:write': [${lijst}],`;
+  const plek = { anker: '\n} as const satisfies', tot: 'export type ActorSoort' };
+  return [{ [FIXTURES]: voegIn(bestand(tekst, FIXTURES), plek, regels) }];
 }
 
 /**
@@ -441,7 +462,7 @@ export function bestandsplan(n, versie) {
       'src/api/app.ts',
     ],
     gates: ['src/shared/permissions.test.ts', 'src/web/routes.test.tsx'],
-    declaratie: [RESOURCES],
+    declaratie: [RESOURCES, FIXTURES],
   };
 }
 
@@ -512,7 +533,7 @@ export async function plan(root, naam, opties = {}) {
     ),
   );
   const declaratie = await Promise.all(
-    declaratieInhoud(root, n, rollen)
+    [...declaratieInhoud(root, n, rollen), ...oracleInhoud(root, n, rollen)]
       .flatMap(Object.entries)
       .map(async ([pad, inhoud]) => hunk(pad, lees(root, pad), await opgemaakt(root, pad, inhoud))),
   );
@@ -586,7 +607,7 @@ function verslag(p, proef) {
       ? []
       : [
           '',
-          'Securitysuite: de tester zet deze declaratie met Edit en vult de samples in (INVULLEN):',
+          'Securitysuite: de tester zet deze declaratie met Edit en vult de samples in (INVULLEN); de regels voor PERMISSIE_ORACLE (test/security/fixtures.ts) gaan ongewijzigd mee:',
           ...p.declaratie.flatMap(blok),
         ];
   return [

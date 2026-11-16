@@ -108,7 +108,10 @@ Geen nieuwe route, geen nieuwe permissie, geen nieuwe foutcode. De suite gebruik
   is rood als de sleutels van de oracle niet gelijk zijn aan `permissions.names`, zodat een nieuwe permissie er niet buiten valt. De
   dubbeling met `permissions.test.ts` is bewust: twee onafhankelijke verwachtingen, beide in testpaden.
 - **Alleen weigeringen worden aangeroepen.** Een toegestane aanroep zou de handler uitvoeren (mail, Better Auth); dat is de
-  acceptatietest van de resource zelf. Elke generieke aanroep eindigt vóór de handler: 401, 403, 400 of 413.
+  acceptatietest van de resource zelf. Elke generieke aanroep eindigt vóór de handler: 401, 403, 400 of 413. Eén uitzondering:
+  AC-5 roept met `adminMfa` de admin-routes met `GET` aan (alleen-lezen transactie), omdat een doorgang langs de MFA-controle
+  niet zonder handler te bewijzen is (`VALIDATION` komt ervóór); goed is alleen `200` of `404 NOT_FOUND` (spec
+  `suite-volgt-contract`).
 - **Geldige voorbeeldinput** (nodig, want `VALIDATION` komt vóór `FORBIDDEN`): afgeleid uit het zod-schema (string met `min`, enum eerste waarde,
   uuid, getal binnen grenzen, optionele velden weggelaten). Lukt dat niet, dan is de test rood met de boodschap `voeg sample toe aan test/security/resources.ts` (nooit stil overslaan).
 
@@ -149,7 +152,7 @@ n.v.t. — geen scherm, geen component en geen tekst voor gebruikers. Hergebruik
 - Alle zichtbare tekst letterlijk: n.v.t. De suite toont alleen testuitvoer; foutboodschappen van de suite (bijv. `voeg sample toe aan test/security/resources.ts`) zijn Nederlands zoals de rest van de testcode.
 - Focusvolgorde en toetsenbord: n.v.t.
 - Techniek die we hergebruiken: `test/api/account-harness.ts` (fixtures, `ageSession`, `enableTotp`), `test/auth/harness.ts` (`Browser`, CSRF-headers),
-  `src/core/api/db/testing.ts` (`beginTestDb`, `asUser`), de catalogusfuncties uit `db/tests/invarianten.sql` (patroon: `pg_temp`-functie die overtredingen teruggeeft, plus probe), `ROLES` uit `src/core/shared/can.ts`.
+  `src/core/api/db/testing.ts` (`beginTestDb`, `asUser`), de catalogusfuncties uit `db/tests/invarianten.sql` (patroon: `pg_temp`-functie die overtredingen teruggeeft, plus probe), `roles` uit `src/shared/roles.ts`.
 
 ## Acceptatiecriteria
 
@@ -159,11 +162,11 @@ Bestanden: `test/security/*.int.test.ts` (draaien in `pnpm test:db`, dus in `gat
 - **security/AC-2** — Gegeven geen sessie (geen cookie), wanneer elke route wordt aangeroepen, dan is het antwoord `401 UNAUTHENTICATED` met precies `{ code, requestId }`.
 - **security/AC-3** — Gegeven een sessie die absoluut (> 7 dagen, `ageSession`) of idle (`expiresAt` verstreken, `expireSession`) is verlopen, wanneer elke route wordt aangeroepen, dan is het antwoord `401 UNAUTHENTICATED` en is er niets gewijzigd.
 - **security/AC-4** — Gegeven elke route, wanneer een actor wordt gebruikt die volgens de permissietabel niet is toegestaan (`user` voor een admin-permissie, `zonderRol` voor elke route), dan is het antwoord `403 FORBIDDEN` en is de handler niet uitgevoerd.
-- **security/AC-5** — Gegeven elke route waarvan de permissie aan `admin` is toegekend, wanneer `adminZonderMfa` haar aanroept, dan is het antwoord `403 MFA_REQUIRED`; met `adminMfa` is dat antwoord het niet (alleen gecontroleerd op routes zonder bijwerking, zie Randgevallen).
+- **security/AC-5** — Gegeven elke route waarvan de permissie aan `admin` is toegekend, wanneer `adminZonderMfa` haar aanroept, dan is het antwoord `403 MFA_REQUIRED`; met `adminMfa` is het antwoord op een admin-route met `GET` `200` of `404 NOT_FOUND` en anders rood met status en code (spec `suite-volgt-contract`, AC-11).
 - **security/AC-6** — Gegeven elke route met input, wanneer een onbekend veld, een ontbrekend verplicht veld, een verkeerd type per veld, kapotte JSON of een arraybody wordt gestuurd, dan is het antwoord `400 VALIDATION` en is de handler niet uitgevoerd; een body boven `MAX_BODY_BYTES` geeft `413 PAYLOAD_TOO_LARGE`.
 - **security/AC-7** — Gegeven elk foutantwoord uit AC-2 t/m AC-6 en elk databasefoutpad uit de probe-app (23505, 23503, 42501 en een onverwachte uitzondering), dan is de body precies `{ code, requestId }`, is `requestId` gelijk aan de `X-Request-Id`-header, is `code` een publieke code, en bevat het antwoord geen stacktrace, SQL, tabel- of constraintnaam.
-- **security/AC-8** — Gegeven elke owner-tabel in de catalogus (C1), wanneer `A` een rij maakt en `B` onder dezelfde app-rol `select`, `update` en `delete` probeert, dan raakt `B` 0 rijen, en is de rij van `A` ongewijzigd.
-- **security/AC-9** — Gegeven elke route met `scope: 'eigenaar'`, wanneer `B` het id van `A` gebruikt voor lezen, wijzigen en verwijderen, dan is het antwoord `404 NOT_FOUND` (zelfde antwoord als voor een onbekend id, geen enumeratie), bevat de lijst van `B` niets van `A` (ook met paginering via cursor en met `q`), en is de rij van `A` ongewijzigd.
+- **security/AC-8** — Gegeven elke owner-tabel in de catalogus (C1), wanneer `A` een rij maakt en `B` onder dezelfde app-rol `select`, `update` en `delete` probeert, dan raakt `B` 0 rijen, en is de rij van `A` ongewijzigd. De kolom voor de update-proef komt uit `sample.updateRij`, anders uit `sample.update`. Heeft de app-rol op geen enkele kolom UPDATE-recht, dan vervalt de update-proef met een melding en geeft een update door `A` en `B` `42501`; een niet vast te stellen recht is rood (spec `suite-volgt-contract`, AC-7 t/m AC-9).
+- **security/AC-9** — Gegeven elke route met `scope: 'eigenaar'`, wanneer `B` het id van `A` gebruikt voor lezen, wijzigen en verwijderen, dan is het antwoord `404 NOT_FOUND` (zelfde antwoord als voor een onbekend id, geen enumeratie), bevat de lijst van `B` niets van `A` (ook met paginering via cursor, `limit: 1`, als het lijstcontract `limit` kent, en met `q` als het contract `q` heeft; zonder `limit` is de suite rood met een melding, spec `suite-volgt-contract`), en is de rij van `A` ongewijzigd.
 - **security/AC-10** — Gegeven een insert of update met `owner_id` van `B` door `A` (direct op de database en via de API-input), wanneer dat wordt geprobeerd, dan faalt het (`42501` direct; `400 VALIDATION` via de API omdat de input `.strict()` is) en verandert er niets; ook `id` en `created_at` zijn voor `A` niet te kiezen.
 - **security/AC-11** — Gegeven een route die niet in `routeClassificatie` staat, een `eigenaar`-route zonder `resources`-regel of een owner-tabel zonder `resources`-regel, wanneer de suite draait, dan is ze rood met de naam van het ontbrekende item (fail-closed, nooit overslaan).
 - **security/AC-12** — Gegeven `db/tests/security.sql`, wanneer de catalogus een overtreding van C1, C2 of C3 bevat, dan faalt de test met de naam van tabel of policy; voor elke invariant is bewezen met een probe dat hij een opzettelijke fout vangt en de goede variant doorlaat.
@@ -179,7 +182,7 @@ Bestanden: `test/security/*.int.test.ts` (draaien in `pnpm test:db`, dus in `gat
 | `GET`/`DELETE` | input uit de querystring, niet uit een body; ongeldige query is dezelfde `VALIDATION` | `VALIDATION` |
 | Rate limit raakt de suite | Fixture-gebruikers worden niet voor alle routes hergebruikt; per routefamilie een verse gebruiker of een telbudget onder `RATE_LIMIT_MAX` | `RATE_LIMITED` (429) alleen als de suite zelf fout rekent: dan rood |
 | `duur`-routes (mail) | Alleen weigeringen worden aangeroepen; er gaat geen mail uit | n.v.t. |
-| AC-5 met `adminMfa` | Alleen controleren dat het antwoord niet `MFA_REQUIRED` is op routes waar dat zonder bijwerking kan (GET, of weigering door validatie met geldige maar niet-bestaande doelen); de positieve flow is de acceptatietest van de resource | n.v.t. |
+| AC-5 met `adminMfa` | Alleen op routes met `GET` (alleen-lezen transactie); goed is `200` of `404 NOT_FOUND`, elk ander antwoord (ook `400` of `429`, die vóór de MFA-controle komen) is rood; de positieve flow van schrijfroutes is de acceptatietest van de resource | n.v.t. |
 | Sample niet af te leiden uit het zod-schema | Suite rood met aanwijzing; geen stille skip | n.v.t. |
 | Route die buiten `routes` bestaat (Better Auth `/api/auth/*`, `/api/health`, `/api/ready`, `/api/dev/login-as`) | Buiten deze suite: Better Auth heeft eigen tests (`test/auth/`); de publieke uitzonderingen zijn limitatief (framework §3) | n.v.t. |
 | Nieuwe rol (`ROLES`) | De rolmatrix itereert over `ROLES`; de suite dekt de nieuwe rol zonder wijziging | n.v.t. |
