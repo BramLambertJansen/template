@@ -16,25 +16,30 @@ const FILES: Readonly<Record<string, string>> = {
   'src/web/index.html': '<!doctype html><html lang="nl"><head><title>App-template</title></head></html>\n',
   '.github/CODEOWNERS': '/AGENTS.md                @bramlambertjansen\n',
 };
-const TEMPLATE_GATES = '{\n  "onderhoud": { "repository": "BramLambertJansen/template" },\n  "altijdVragen": []\n}\n';
+// GEWIJZIGD (spec template-repo, AC-9): `app:init` leest `template.repository` uit gates.json en stopt zonder; elke fixture heeft
+// hem, op een eigen regel die niet grenst aan de onderhoud-regel.
+const TEMPLATE_REGEL = '"template": { "repository": "BramLambertJansen/template" }';
+const ALLEEN_TEMPLATE = `{\n  ${TEMPLATE_REGEL}\n}\n`;
+const TEMPLATE_GATES = `{\n  "onderhoud": { "repository": "BramLambertJansen/template" },\n  "altijdVragen": [],\n  ${TEMPLATE_REGEL}\n}\n`;
 // Nieuw (templateregime, ADR 0089 punt 3): gates.json met padtabel en `goedkeurders`, de invoer van `--owner`.
-const GATES_MET_PADEN =
-  '{\n  "paden": {\n    "AGENTS.md": { "besluit": "eigenaar" },\n    "src/**": { "besluit": "agent" }\n  },\n  "goedkeurders": ["bramlambertjansen"]\n}\n';
+const GATES_MET_PADEN = `{\n  "paden": {\n    "AGENTS.md": { "besluit": "eigenaar" },\n    "src/**": { "besluit": "agent" }\n  },\n  ${TEMPLATE_REGEL},\n  "goedkeurders": ["bramlambertjansen"]\n}\n`;
 const dirs: string[] = [];
 
 function copyMetPaden(gates = GATES_MET_PADEN): string {
-  const dir = copy();
-  mkdirSync(path.join(dir, '.claude'), { recursive: true });
-  writeFileSync(path.join(dir, '.claude/gates.json'), gates);
-  return dir;
+  return copy(gates);
 }
 
-function copy(): string {
+// `gates` is de tekst van .claude/gates.json van de kopie; `null` laat het bestand weg.
+function copy(gates: string | null = ALLEEN_TEMPLATE): string {
   const dir = mkdtempSync(path.join(tmpdir(), 'app-init-'));
   dirs.push(dir);
   for (const [file, content] of Object.entries(FILES)) {
     mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
     writeFileSync(path.join(dir, file), content);
+  }
+  if (gates !== null) {
+    mkdirSync(path.join(dir, '.claude'), { recursive: true });
+    writeFileSync(path.join(dir, '.claude/gates.json'), gates);
   }
   return dir;
 }
@@ -117,19 +122,14 @@ describe('planAppInit', () => {
   });
 
   test('haalt de onderhoudsmodus uit .claude/gates.json: die hoort bij de template-repo (ADR 0045 punt 8)', () => {
-    const dir = copy();
-    mkdirSync(path.join(dir, '.claude'), { recursive: true });
-    writeFileSync(path.join(dir, '.claude/gates.json'), TEMPLATE_GATES);
+    const dir = copy(TEMPLATE_GATES);
     const gates: unknown = JSON.parse(changed(planAppInit(dir, options), '.claude/gates.json'));
     expect(typeof gates === 'object' && gates !== null && 'onderhoud' in gates).toBe(false);
     expect(typeof gates === 'object' && gates !== null && 'altijdVragen' in gates).toBe(true);
   });
 
   test('weigert luid als de onderhoud-regel in .claude/gates.json niet meer te vinden is', () => {
-    const dir = copy();
-    mkdirSync(path.join(dir, '.claude'), { recursive: true });
-    const gates = TEMPLATE_GATES.replace('"onderhoud": {', '"onderhoud":{');
-    writeFileSync(path.join(dir, '.claude/gates.json'), gates);
+    const dir = copy(TEMPLATE_GATES.replace('"onderhoud": {', '"onderhoud":{'));
     expect(() => planAppInit(dir, options)).toThrow(/onderhoud-regel/);
   });
 
@@ -156,12 +156,14 @@ describe('planAppInit', () => {
   });
 
   // Nieuw (templateregime, ADR 0089 punt 3): de twee andere weigeringen van --owner.
+  // GEWIJZIGD (spec template-repo, AC-9): zonder gates.json stopt app:init nu al bij het lezen van `template.repository`; de
+  // melding noemt nog steeds dat het bestand ontbreekt.
   test('--owner zonder .claude/gates.json: fout, geen CODEOWNERS uit niets', () => {
-    expect(() => planAppInit(copy(), { ...options, owner: 'acme' })).toThrow(/gates\.json ontbreekt/);
+    expect(() => planAppInit(copy(null), { ...options, owner: 'acme' })).toThrow(/gates\.json ontbreekt/);
   });
 
   test('--owner zonder padtabel in gates.json: fout, CODEOWNERS is niet af te leiden', () => {
-    const oud = '{\n  "goedkeurders": ["bramlambertjansen"],\n  "altijdVragen": []\n}\n';
+    const oud = `{\n  "goedkeurders": ["bramlambertjansen"],\n  ${TEMPLATE_REGEL},\n  "altijdVragen": []\n}\n`;
     expect(() => planAppInit(copyMetPaden(oud), { ...options, owner: 'acme' })).toThrow(/niet af te leiden/);
   });
 

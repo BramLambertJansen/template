@@ -22,6 +22,8 @@ const FILES: Readonly<Record<string, string>> = {
   'docs/template-changelog.md': TEMPLATE_CHANGELOG,
   'src/shared/app.ts': "export const APP_NAME = 'App-template';\n",
   'src/web/index.html': '<!doctype html><html lang="nl"><head><title>App-template</title></head></html>\n',
+  // GEWIJZIGD (spec template-repo, AC-9): `app:init` leest `template.repository` uit gates.json en stopt zonder.
+  '.claude/gates.json': '{\n  "template": { "repository": "BramLambertJansen/template" }\n}\n',
 };
 // De modules die het script als CLI nodig heeft, zonder het versiebestand.
 const MODULES = ['scripts/kit/app-init.mjs', 'scripts/kit/codeowners.mjs', 'rails/hooks/lib/padtabel.mjs'];

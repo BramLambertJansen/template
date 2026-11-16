@@ -83,7 +83,10 @@ function draaiCli(root: string, omleiding: { repo: string; naar: string } | null
   const gericht: [string, string][] =
     omleiding === null ? [] : [[`https://github.com/${omleiding.repo}.git`, omleiding.naar]];
   // Al het andere op github.com bestaat niet: geen netwerk, een duidelijke fout.
-  const omleidingen: [string, string][] = [...gericht, ['https://github.com/', 'file:///bestaat-niet-template-repo-test/']];
+  const omleidingen: [string, string][] = [
+    ...gericht,
+    ['https://github.com/', 'file:///bestaat-niet-template-repo-test/'],
+  ];
   const env: Record<string, string> = {
     ...Object.fromEntries(Object.entries(process.env).filter((e): e is [string, string] => typeof e[1] === 'string')),
     GIT_TERMINAL_PROMPT: '0',
