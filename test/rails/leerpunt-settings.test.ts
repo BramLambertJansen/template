@@ -1,13 +1,15 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
-import { TEMPLATE_REPOSITORY } from '../../rails/hooks/lib/task-authority.mjs';
 
 // Spec leerlus (docs/specs/leerlus.md) AC-8, ADR 0059 punt 3. Exacte vorm van de allow-regel in .claude/settings.json:
 //
-//   "Bash(gh issue create --repo <onderhoud.repository> --label leerpunt *)"
+//   "Bash(gh issue create --repo <template.repository> --label leerpunt *)"
 //
-// met <onderhoud.repository> letterlijk de waarde uit .claude/gates.json (in een app zonder die regel: TEMPLATE_REPOSITORY). Geen andere allow-regel mag een
+// met <template.repository> letterlijk de waarde uit .claude/gates.json. Geen andere allow-regel mag een
 // `gh issue create` dekken (ook geen `Bash(gh *)`, `Bash(gh issue *)` of de oude vorm `Bash(gh issue create:*)`).
+// GEWIJZIGD (template-repo AC-11, R-TEST-02: de spec noemt dit bestand): de allow-regel noemt `template.repository`; vroeger
+// `onderhoud.repository`, in een app de constante TEMPLATE_REPOSITORY die vervalt. Settings lezen geen configuratie, dus de
+// regel blijft letterlijk; deze test bindt hem aan de sleutel.
 
 function strings(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
@@ -21,9 +23,8 @@ function child(value: unknown, key: string): unknown {
 const settings: unknown = JSON.parse(readFileSync('.claude/settings.json', 'utf8'));
 const gates: unknown = JSON.parse(readFileSync('.claude/gates.json', 'utf8'));
 const allow = strings(child(child(settings, 'permissions'), 'allow'));
-const repoValue = child(child(gates, 'onderhoud'), 'repository');
-// In een app verwijdert `pnpm app:init` de onderhoud-regel (ADR 0045 punt 8); de allow-regel moet dan naar de template wijzen.
-const REPO = typeof repoValue === 'string' ? repoValue : TEMPLATE_REPOSITORY;
+const repoValue = child(child(gates, 'template'), 'repository');
+const REPO = String(repoValue);
 const RULE = `Bash(gh issue create --repo ${REPO} --label leerpunt *)`;
 
 /** Bash-permissieregel als regex: `*` is willekeurige tekst, een afsluitende `:*` is een prefix (oude vorm). */
@@ -41,7 +42,12 @@ function matcher(rule: string): RegExp | null {
 const coveredBy = (command: string): string[] => allow.filter((rule) => matcher(rule)?.test(command) === true);
 
 describe('settings: allow-regel voor leerpunten', () => {
-  test('leerlus/AC-8: precies één allow-regel in de exacte vorm, met de repo uit onderhoud.repository', () => {
+  test('template-repo/AC-11: .claude/gates.json heeft een template.repository waaraan de allow-regel gebonden wordt', () => {
+    expect(repoValue).toEqual(expect.any(String));
+    expect(allow).toContain(`Bash(gh issue create --repo ${String(repoValue)} --label leerpunt *)`);
+  });
+
+  test('leerlus/AC-8 en template-repo/AC-11: precies één allow-regel in de exacte vorm, met de repo uit template.repository', () => {
     expect(REPO).toMatch(/^[\w.-]+\/[\w.-]+$/);
     expect(allow.filter((rule) => rule === RULE)).toStrictEqual([RULE]);
     expect(allow.filter((rule) => rule.includes('gh issue create'))).toStrictEqual([RULE]);

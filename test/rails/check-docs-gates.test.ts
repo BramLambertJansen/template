@@ -12,7 +12,11 @@ function repo(gates: Record<string, unknown>): string {
     'package.json': JSON.stringify({ scripts: {} }),
     '.github/CODEOWNERS': '/src/core/ @eigenaar\n/package.json @eigenaar\n**/*.test.* @eigenaar\n',
     '.claude/settings.json': JSON.stringify({ permissions: { ask: ['Edit(src/core/**)', 'Edit(package.json)'] } }),
-    '.claude/gates.json': JSON.stringify({ voorReview: ['src/core/**', 'package.json'], ...gates }),
+    '.claude/gates.json': JSON.stringify({
+      voorReview: ['src/core/**', 'package.json'],
+      template: { repository: 'BramLambertJansen/template' },
+      ...gates,
+    }),
   };
   for (const [file, content] of Object.entries(files)) {
     mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
@@ -23,6 +27,8 @@ function repo(gates: Record<string, unknown>): string {
   return root;
 }
 
+// GEWIJZIGD (spec template-repo, AC-2): check-docs eist `template` in gates.json; de opgebouwde fixtures krijgen die sleutel,
+// zodat deze tests blijven toetsen waar ze over gaan (CODEOWNERS en de oude vorm) en niet over `docs:gates:template`.
 // GEWIJZIGD (spec padtabel AC-11, OV-1 ii): de fixtures staan in de oude vorm; check-docs meldt die erbij (ADR 0079 punt 6).
 const OUDE_VORM = {
   key: 'docs:paden:oude-vorm',

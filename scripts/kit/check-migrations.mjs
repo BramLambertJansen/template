@@ -5,12 +5,13 @@
 // na een nieuwere en op een verse database ervoor. Staat HEAD op origin/main, dan is "bestaand" de eerste ouder van HEAD
 // (controle achteraf op elke commit op main; zonder ouder geen vergelijking). Uitzondering, alleen in een app (geen
 // `onderhoud.repository` in `.claude/gates.json`): een oudere migratie die met dezelfde naam en inhoud in de template staat
-// (lokaal refs/remotes/template/main; ontbreekt die, dan haalt de CLI-ingang de vaste TEMPLATE_URL van check-core op).
-// Is origin/main of een benodigde template niet te lezen, dan faalt de check: onleesbaar telt als fout.
+// (lokaal refs/remotes/template/main; ontbreekt die, dan haalt de CLI-ingang de template op van `template.repository` in
+// `origin/main:.claude/gates.json`, spec template-repo). Is origin/main of een benodigde template niet te lezen, dan faalt
+// de check: onleesbaar telt als fout.
 import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { TEMPLATE_URL } from './check-core.mjs';
+import { templateUrl } from './check-core.mjs';
 
 export const DIR = 'db/migrations';
 export const BASE = 'origin/main';
@@ -217,15 +218,34 @@ export function migratieFouten(root = '.', base = BASE, templateRef = TEMPLATE_R
   return migratieOordeel(root, base, templateRef).fouten;
 }
 
+/**
+ * De template-URL uit `origin/main:.claude/gates.json` (spec template-repo AC-8), niet uit de werkmap: die komt van de PR.
+ * Ontbrekend, onleesbaar of ongeldig: undefined.
+ */
+function vertrouwdeTemplateUrl() {
+  const gates = gitOf('.', ['show', `${BASE}:.claude/gates.json`]);
+  if (gates === undefined) return undefined;
+  try {
+    return templateUrl(gates);
+  } catch {
+    return undefined;
+  }
+}
+
 /** De CLI-ingang: alleen als de lokale template-ref nodig is en ontbreekt (zoals in CI), de template zelf ophalen. */
 function main() {
   let { fouten, templateOntbreekt } = migratieOordeel();
   if (templateOntbreekt) {
-    try {
-      git('.', ['fetch', '--no-tags', '--quiet', TEMPLATE_URL, `+refs/heads/main:${OPGEHAALDE_REF}`]);
-      ({ fouten } = migratieOordeel('.', BASE, OPGEHAALDE_REF));
-    } catch {
-      fouten = [...fouten, `${TEMPLATE_URL} is niet op te halen (privé of onbereikbaar)`];
+    const url = vertrouwdeTemplateUrl();
+    if (url === undefined) {
+      fouten = [...fouten, `template.repository ontbreekt of is ongeldig in ${BASE}:.claude/gates.json`];
+    } else {
+      try {
+        git('.', ['fetch', '--no-tags', '--quiet', url, `+refs/heads/main:${OPGEHAALDE_REF}`]);
+        ({ fouten } = migratieOordeel('.', BASE, OPGEHAALDE_REF));
+      } catch {
+        fouten = [...fouten, `${url} is niet op te halen (privé of onbereikbaar)`];
+      }
     }
   }
   if (fouten.length > 0) {
