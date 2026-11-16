@@ -122,6 +122,20 @@ describe('leerlus-bewijs/AC-3 en AC-7 geen token bij de PR-code', () => {
   });
 });
 
+describe('leerlus-bewijs/AC-3 kooi vóór de bewijsruns', () => {
+  // De testsetup weigert in CI zonder kooi (ADR 0088); zonder deze stap faalt elke bewijsrun (PR #742).
+  test('leerlus-bewijs/AC-3: stap kooi installeert bubblewrap, toetst met de proef van de basis en komt vóór draai', () => {
+    const kooi = stap(BEWIJS, 'kooi');
+    expect(kooi).toContain("if: steps.basis.outputs.runs == 'true'");
+    expect(kooi).toContain('sudo apt-get install -y -q bubblewrap');
+    expect(kooi).toContain('sudo apparmor_parser -r /etc/apparmor.d/bwrap');
+    expect(kooi).toContain('node kit/scripts/kit/kooi.mjs --proef');
+    const namen = stappen(BEWIJS).map((s) => /name: (\S+)\n/.exec(s)?.[1] ?? '');
+    expect(namen.indexOf('kooi')).toBeGreaterThan(namen.indexOf('install'));
+    expect(namen.indexOf('kooi')).toBeLessThan(namen.indexOf('draai'));
+  });
+});
+
 describe('leerlus-bewijs/AC-7 geen event-tekst in een shellregel', () => {
   test.each([
     ['leerpunt.yml', CHECK],
