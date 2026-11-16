@@ -110,6 +110,17 @@ function permissieNamen(tekst: string): string[] {
 
 const sorteer = (lijst: Iterable<string>): string[] => [...lijst].sort();
 
+// De sleutels die maar aan één kant staan. In de repo zelf is dat leeg (security/AC-4 bewaakt dat in test:db); in de kopie van
+// check:new-resource staat al een gegenereerde resource in permissions.ts waarvan de afgedrukte oracle-regel niet is toegepast.
+// De tests hieronder vergelijken daarom het verschil vóór en ná de generator, niet de volledige lijsten.
+function verschil(oracle: Iterable<string>, tabel: readonly string[]): string[] {
+  const links = new Set(oracle);
+  const rechts = new Set(tabel);
+  return sorteer([...[...links].filter((s) => !rechts.has(s)), ...[...rechts].filter((s) => !links.has(s))]);
+}
+const basisVerschil = (uit: Uitkomst): string[] =>
+  verschil(oracleVan(uit.origineel).keys(), permissieNamen(readFileSync(PERMISSIES, 'utf8')));
+
 interface Uitkomst {
   readonly root: string;
   readonly origineel: string;
@@ -204,15 +215,15 @@ describe('suitecontract/AC-4: de sleutels van de oracle zijn gelijk aan die van 
 
     expect(permissieNamen(uit.permissies)).toContain('invoices:read');
     expect(permissieNamen(uit.permissies)).toContain('invoices:write');
-    expect(sorteer(oracleVan(uit.na).keys())).toStrictEqual(sorteer(permissieNamen(uit.permissies)));
+    expect(verschil(oracleVan(uit.na).keys(), permissieNamen(uit.permissies))).toStrictEqual(basisVerschil(uit));
   });
 
   test('suitecontract/AC-4: de vergelijking bewijst iets: zonder de oracle-regel verschillen de sleutels (rood in security/AC-4)', async () => {
     const uit = await bereken('invoices', ['user']);
-    const origineleTabel = readFileSync(PERMISSIES, 'utf8');
 
-    expect(sorteer(oracleVan(uit.origineel).keys())).toStrictEqual(sorteer(permissieNamen(origineleTabel)));
-    expect(sorteer(oracleVan(uit.origineel).keys())).not.toStrictEqual(sorteer(permissieNamen(uit.permissies)));
+    expect(verschil(oracleVan(uit.origineel).keys(), permissieNamen(uit.permissies))).toStrictEqual(
+      sorteer([...basisVerschil(uit), 'invoices:read', 'invoices:write']),
+    );
   });
 
   test('suitecontract/AC-4: ook voor een naam met een streepje (work-items) zijn de sleutels gelijk', async () => {
@@ -220,7 +231,7 @@ describe('suitecontract/AC-4: de sleutels van de oracle zijn gelijk aan die van 
 
     expect(oracleVan(uit.na).has('work-items:read')).toBe(true);
     expect(oracleVan(uit.na).has('work-items:write')).toBe(true);
-    expect(sorteer(oracleVan(uit.na).keys())).toStrictEqual(sorteer(permissieNamen(uit.permissies)));
+    expect(verschil(oracleVan(uit.na).keys(), permissieNamen(uit.permissies))).toStrictEqual(basisVerschil(uit));
   });
 });
 
