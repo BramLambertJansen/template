@@ -9,6 +9,15 @@ requests.
 
 ### Gewijzigd
 
+- Eigen beschermde paden van een app (spec `app-padtabel`): een app zet eigen rijen in het optionele bestand
+  `.claude/gates.app.json` (`{ "$comment"?, "paden": { … } }`), niet in `.claude/gates.json`. Rolhek, `check-docs`,
+  `scripts/kit/codeowners.mjs` en `feiten.mjs pad` voegen het samen met de padtabel van de template
+  (`samengevoegd` in `rails/hooks/lib/padtabel.mjs`): alleen toevoegen of aanscherpen, per kolom de strengste, een onleesbare
+  rij telt als het strengste. Het bestand is een achtste vloerpad (altijdVragen, besluit-pr); de kop van `.github/CODEOWNERS`
+  noemt het. Wat verandert voor een app: zonder app-bestand niets, behalve dat `.github/CODEOWNERS` na de update een andere
+  kop en een regel voor `.claude/gates.app.json` heeft. Bij een update: bij een conflict in `.github/CODEOWNERS` of
+  `docs:spiegel:codeowners` genereer je het bestand opnieuw met `node scripts/kit/codeowners.mjs --schrijf`; een eigen rij
+  in `.claude/gates.json` verplaats je naar `.claude/gates.app.json` (zie "Een eigen beschermd pad" in `docs/nieuwe-app.md`).
 - Volgorde van migraties en de procedure voor een template-update (spec `template-update`): `check:migrations` weigert een
   toegevoegde migratie waarvan de versie niet later is dan de nieuwste migratie op het afsplitspunt met `origin/main`; geef de
   eigen, nog niet gemergde migratie dan een nieuw tijdstempel. Op `main` zelf vergelijkt de check elke commit achteraf met zijn
