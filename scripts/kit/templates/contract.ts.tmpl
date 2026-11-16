@@ -3,6 +3,7 @@ import { pageSchema } from '#core/shared/cursor.ts';
 import { MAX_ID_LENGTH, MAX_TIMESTAMP_LENGTH } from '#core/shared/limits.ts';
 import { defineListSearch } from '#core/shared/list-search.ts';
 import { __Naam__Id } from '../ids.ts';
+import { __NAAM___PAGE_SIZE } from '../limits.ts';
 import { defineContract } from './kit.ts';
 
 // Resource __naam__ (spec docs/specs/__naam__.md), gemaakt door pnpm new:resource.
@@ -15,10 +16,13 @@ import { defineContract } from './kit.ts';
 // cursorKeys (spec lijstpagina, sleutelbudget): per sortering de maximale lengte van elk sleuteldeel na de sortering, hier
 // (aangemaakt, id). Een nieuwe sortering op een tekstveld noemt de grens uit limits.ts; past de cursor niet in MAX_CURSOR_LENGTH,
 // dan gooit defineListSearch al bij het laden.
+// pageSize (spec suite-volgt-contract): de API accepteert `limit` van 1 t/m __NAAM___PAGE_SIZE, standaard die grens; de
+// securitysuite stuurt `limit: 1` om de cursor te proberen. De webroute kent geen `limit`.
 export const __naamCamel__Search = defineListSearch({
   sorts: ['nieuwste', 'oudste'],
   filters: {},
   cursorKeys: { nieuwste: [MAX_TIMESTAMP_LENGTH, MAX_ID_LENGTH], oudste: [MAX_TIMESTAMP_LENGTH, MAX_ID_LENGTH] },
+  pageSize: __NAAM___PAGE_SIZE,
 });
 
 export const __naamCamel__Item = z

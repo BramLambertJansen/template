@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { assert } from './assert.ts';
 import { encodeCursor, maxCursorLength } from './cursor.ts';
-import { MAX_CURSOR_LENGTH, MAX_SEARCH_LENGTH } from './limits.ts';
+import { MAX_CURSOR_LENGTH, MAX_PAGE_SIZE, MAX_SEARCH_LENGTH } from './limits.ts';
 import { unsafeCast } from './unsafe-cast.ts';
 
 // Gedeeld zoekschema voor lijstpagina's (spec lijstpagina): één definitie, strict voor de API (ongeldig → VALIDATION) en
@@ -15,6 +15,9 @@ export interface ListSearchConfig {
   readonly sorts: Options;
   readonly filters: Readonly<Record<string, Options>>;
   readonly cursorKeys: Readonly<Record<string, KeyLengths>>;
+  // Optioneel (spec suite-volgt-contract): met `pageSize` (geheel getal van 1 t/m MAX_PAGE_SIZE) accepteert de API `limit` van
+  // 1 t/m pageSize, standaard pageSize. Zonder blijft `limit` een onbekend veld (VALIDATION).
+  readonly pageSize?: number;
 }
 
 // Precies één entry per sortering: een ontbrekende of extra sleutel is een typefout.
@@ -31,7 +34,12 @@ type ApiShape<Config extends ListSearchConfig> = {
   readonly q: z.ZodOptional<z.ZodString>;
   readonly sort: z.ZodDefault<EnumOf<Config['sorts']>>;
   readonly cursor: z.ZodOptional<z.ZodString>;
-} & { readonly [Key in keyof Config['filters']]: z.ZodOptional<EnumOf<Config['filters'][Key]>> };
+} & { readonly [Key in keyof Config['filters']]: z.ZodOptional<EnumOf<Config['filters'][Key]>> } & LimitShape<Config>;
+
+// `limit` bestaat alleen in het API-schema van een config met `pageSize`; het webschema krijgt het nooit (niet in de URL).
+type LimitShape<Config extends ListSearchConfig> = Config extends { readonly pageSize: number }
+  ? { readonly limit: z.ZodDefault<z.ZodCoercedNumber> }
+  : unknown;
 
 type FilterValues<Config extends ListSearchConfig> = {
   readonly [Key in keyof Config['filters']]?: Config['filters'][Key][number];
@@ -48,11 +56,13 @@ export interface ListSearch<Config extends ListSearchConfig> {
   readonly web: z.ZodType<ListSearchWeb<Config>>;
   readonly defaultSort: Config['sorts'][number];
   readonly cursorKeys: Config['cursorKeys'];
+  // De paginagrootte uit de config, of `undefined` zonder `pageSize`: handler en tests lezen dezelfde waarde.
+  readonly pageSize: number | undefined;
   // Cursor uit de sorteersleutel; het aantal delen volgt `cursorKeys` (anders AssertionError → INTERNAL_ERROR).
   readonly encodeCursor: (sort: Config['sorts'][number], parts: readonly string[]) => string;
 }
 
-const RESERVED_KEYS = ['q', 'sort', 'cursor'];
+const RESERVED_KEYS = ['q', 'sort', 'cursor', 'limit'];
 
 function withoutUndefined<Values extends Record<string, unknown>>(values: Values): Values {
   return unsafeCast(
@@ -102,6 +112,18 @@ function checkCursorKeys(sorts: Options, cursorKeys: unknown): ReadonlyMap<strin
   return parts;
 }
 
+// Het veld `limit` van het API-schema, of niets zonder `pageSize`. Een ongeldige `pageSize` gooit bij het laden van het contract.
+function limitShape(pageSize: unknown): { limit?: z.ZodDefault<z.ZodCoercedNumber> } {
+  if (pageSize === undefined) return {};
+  if (typeof pageSize !== 'number' || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > MAX_PAGE_SIZE) {
+    const kreeg = typeof pageSize === 'number' ? String(pageSize) : `een ${typeof pageSize}`;
+    throw new Error(
+      `defineListSearch: pageSize moet een geheel getal van 1 t/m MAX_PAGE_SIZE (${String(MAX_PAGE_SIZE)}) zijn, kreeg ${kreeg}`,
+    );
+  }
+  return { limit: z.coerce.number().int().min(1).max(pageSize).default(pageSize) };
+}
+
 export function defineListSearch<const Config extends ListSearchConfig>(
   config: CheckedConfig<Config>,
 ): ListSearch<Config> {
@@ -115,6 +137,7 @@ export function defineListSearch<const Config extends ListSearchConfig>(
     ...Object.fromEntries(filterEntries.map(([key, values]) => [key, z.enum(values).optional()])),
     sort: z.enum(config.sorts).default(defaultSort),
     cursor: z.string().max(MAX_CURSOR_LENGTH).optional(),
+    ...limitShape(config.pageSize),
   };
   const webShape = {
     q: webQuery.optional().catch(undefined),
@@ -135,6 +158,7 @@ export function defineListSearch<const Config extends ListSearchConfig>(
     web: unsafeCast(web, 'het schema is uit de config opgebouwd; de types volgen die config'),
     defaultSort,
     cursorKeys: config.cursorKeys,
+    pageSize: config.pageSize,
     encodeCursor: (sort, parts) => {
       const expected = keyParts.get(sort);
       assert(

@@ -252,6 +252,19 @@ export function foutvormProblemen(antwoord: Antwoord): string[] {
   return problemen;
 }
 
+const codeBody = z.object({ code: z.string() });
+
+// Het oordeel over het antwoord van adminMfa op een admin-GET (spec suite-volgt-contract, ontwerp 5; security/AC-5): een
+// allowlist. Goed is alleen 200, of 404 met code NOT_FOUND (een onbekend sample-id: de handler is bereikt, dus de MFA-controle
+// is gepasseerd). Elk ander antwoord bewijst dat niet, ook 400 VALIDATION en 429 RATE_LIMITED (die komen vóór de MFA-controle).
+export function mfaDoorgangProbleem(antwoord: Antwoord): string | undefined {
+  const gelezen = codeBody.safeParse(antwoord.json);
+  const code = gelezen.success ? gelezen.data.code : undefined;
+  if (antwoord.status === 200) return undefined;
+  if (antwoord.status === 404 && code === 'NOT_FOUND') return undefined;
+  return `adminMfa kreeg ${String(antwoord.status)} ${code ?? '(geen code)'}; goed is alleen 200 of 404 NOT_FOUND (anders is niet bewezen dat de MFA-controle is gepasseerd)`;
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // Actors en verzoeken tegen het echte routeregister (echte Better Auth-sessies, echte database, Mailpit).
 // ---------------------------------------------------------------------------------------------------------------------
@@ -424,20 +437,24 @@ export type SecurityFixtures = ReturnType<typeof createSecurityFixtures>;
 // ---------------------------------------------------------------------------------------------------------------------
 const PROBE_TABEL = 'security_probes';
 
-// De generatorsjabloon, zodat een sjabloonwijziging zichtbaar rood wordt, plus het ene veld uit een vervolgmigratie.
-function probeStatements(): string[] {
+// De statements van de generatorsjabloon (scripts/kit/templates/migratie.sql.tmpl) voor deze tabel, zonder commentaar.
+export function sjabloonStatements(tabel: string): string[] {
   const sjabloon = readFileSync(new URL('../../scripts/kit/templates/migratie.sql.tmpl', import.meta.url), 'utf8');
-  const uitSjabloon = sjabloon
-    .replaceAll('__tabel__', PROBE_TABEL)
-    .replaceAll('__naam__', 'security-probe')
+  return sjabloon
+    .replaceAll('__tabel__', tabel)
+    .replaceAll('__naam__', tabel.replaceAll('_', '-'))
     .split('\n')
     .filter((regel) => !regel.trimStart().startsWith('--'))
     .join('\n')
     .split(';')
     .map((statement) => statement.trim())
     .filter((statement) => statement !== '');
+}
+
+// De generatorsjabloon, zodat een sjabloonwijziging zichtbaar rood wordt, plus het ene veld uit een vervolgmigratie.
+function probeStatements(): string[] {
   return [
-    ...uitSjabloon,
+    ...sjabloonStatements(PROBE_TABEL),
     `alter table public.${PROBE_TABEL} add column label text not null`,
     `create unique index ${PROBE_TABEL}_owner_label_key on public.${PROBE_TABEL} (owner_id, label)`,
     `grant insert (label), update (label) on public.${PROBE_TABEL} to app_authenticated`,
@@ -513,16 +530,33 @@ export interface Probe {
   readonly sluit: () => Promise<void>;
 }
 
-// Opent een terugdraaiende testtransactie en bouwt de probetabel erin op (als app_migrator, zoals een migratie).
-export async function openProbe(): Promise<Probe> {
+export interface ProbeDb {
+  readonly db: TestDb;
+  readonly sluit: () => Promise<void>;
+}
+
+// Opent een terugdraaiende testtransactie en voert de statements erin uit (als app_migrator, zoals een migratie).
+export async function openProbeDb(statements: readonly string[]): Promise<ProbeDb> {
   const pool: pg.Pool = createPool(required('MIGRATOR_DATABASE_URL'));
   const db = await beginTestDb(pool);
   const beheerder = await db.asUser('admin');
   await db.withUser(beheerder.actor, async (tx) => {
     // Terug naar de sessiegebruiker (app_migrator): DDL kan niet als app_authenticated. Alles draait terug.
     await tx.execute(sql.raw('reset role'));
-    for (const statement of probeStatements()) await tx.execute(sql.raw(statement));
+    for (const statement of statements) await tx.execute(sql.raw(statement));
   });
+  return {
+    db,
+    sluit: async () => {
+      await db.rollback();
+      await pool.end();
+    },
+  };
+}
+
+// Opent een terugdraaiende testtransactie en bouwt de probetabel erin op.
+export async function openProbe(): Promise<Probe> {
+  const { db, sluit } = await openProbeDb(probeStatements());
   return {
     db,
     appVoor: (user) =>
@@ -544,9 +578,6 @@ export async function openProbe(): Promise<Probe> {
           }),
         ),
       ),
-    sluit: async () => {
-      await db.rollback();
-      await pool.end();
-    },
+    sluit,
   };
 }

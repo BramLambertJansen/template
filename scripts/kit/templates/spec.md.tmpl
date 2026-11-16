@@ -57,7 +57,7 @@ Beschrijf bij externe aanroepen ook validatie vóór die aanroep en de foutvolgo
 Neem gecombineerde foutgevallen als acceptatiecriteria op volgens "Padparameters en foutvolgorde" in `docs/gouden-pad.md`.
 
 Een rij van een ander bestaat voor de gebruiker niet: `NOT_FOUND`, niet `FORBIDDEN`. De lijst heeft een vaste paginagrootte
-(`__NAAM___PAGE_SIZE`, hooguit `MAX_PAGE_SIZE`) en een cursor.
+(`__NAAM___PAGE_SIZE`, hooguit `MAX_PAGE_SIZE`), accepteert `limit` tot die grens en heeft een cursor.
 
 Zoeken en sorteren (spec lijstpagina): `GET` neemt `/api/__naam__?q=&sort=&cursor=` (`q` zoekt, `sort` is `nieuwste` of `oudste`).
 De cursor is aan de sortering gebonden: een cursor van een andere sortering, een vreemde cursor of een ongeldige `sort` geeft `VALIDATION`; de route decodeert hem met `decodeListCursor`.
