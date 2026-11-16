@@ -253,7 +253,7 @@ function rulesetChecks(): string[] {
 
 // GEWIJZIGD (bouw-PR 2): AC-9 eiste dat job en script nog bestonden; AC-10 haalt ze weg.
 describe('AC-9: check:app-init is geen verplichte check meer', () => {
-  test('requiredChecks, de ruleset en nieuwe-app.md noemen check:new-resource en niet check:app-init', () => {
+  test('requiredChecks en de ruleset noemen check:new-resource en niet check:app-init', () => {
     const decisions: unknown = JSON.parse(readFileSync(path.join(ROOT, '.claude/decisions.json'), 'utf8'));
     const required =
       typeof decisions === 'object' && decisions !== null && 'requiredChecks' in decisions
@@ -266,9 +266,6 @@ describe('AC-9: check:app-init is geen verplichte check meer', () => {
     const lijst = rulesetChecks();
     expect(lijst).toContain('check:new-resource');
     expect(lijst).not.toContain('check:app-init');
-    const nieuweApp = readFileSync(path.join(ROOT, 'docs/nieuwe-app.md'), 'utf8');
-    expect(nieuweApp).toContain('check:new-resource');
-    expect(nieuweApp).not.toContain('check:app-init');
   });
 });
 

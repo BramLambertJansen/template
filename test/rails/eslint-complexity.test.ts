@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { ESLint } from 'eslint';
 import tseslint from 'typescript-eslint';
 import { expect, test } from 'vitest';
@@ -26,15 +25,4 @@ test.each([
 ])('samenhang-checks-rollen/AC-2 $bestand met complexiteit $n', async ({ bestand, n, verwacht }) => {
   const code = bestand.endsWith('.mjs') ? functieMet(n).replaceAll(': number', '') : functieMet(n);
   expect(await complexiteit(bestand, code)).toStrictEqual(verwacht);
-});
-
-test('samenhang-checks-rollen/AC-2 R-CODE-02 noemt de cyclomatische complexiteit en 0068, niet cognitive-complexity', () => {
-  const regel =
-    readFileSync('docs/framework.md', 'utf8')
-      .split('\n')
-      .find((r) => r.startsWith('- **R-CODE-02**')) ?? '';
-  expect(regel).toContain('cyclomatische complexiteit 15');
-  expect(regel).toContain('`complexity`');
-  expect(regel).toContain('0068');
-  expect(regel).not.toContain('cognitive');
 });

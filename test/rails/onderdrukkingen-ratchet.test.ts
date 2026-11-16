@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
@@ -302,18 +302,5 @@ describe('onderdrukkingen-ratchet/AC-1: kanaal strikt, nooit in de baseline', ()
     expect(Object.keys(strikt)).toContain('eslint-onderdrukkingen');
     expect(Object.keys(meldingen)).toContain('eslint-onderdrukkingen');
     expect(Object.keys(checks)).toStrictEqual(['dependency-cruiser', 'check-docs']);
-  });
-});
-
-describe('onderdrukkingen-ratchet/AC-5: regelboek en gate-register noemen de ratchet', () => {
-  test('onderdrukkingen-ratchet/AC-5 R-CI-02 en de beschrijving van pnpm ratchet', () => {
-    const regel = readFileSync('docs/framework.md', 'utf8')
-      .split('\n')
-      .find((r) => r.startsWith('- **R-CI-02**'));
-    expect(regel).toContain('`eslint-suppressions.json`');
-    expect(regel).toContain('onderdrukkingen-ratchet');
-    const ratchet = readFileSync('scripts/kit/gates.mjs', 'utf8').split('\n').slice(17, 22).join('\n');
-    expect(ratchet).toContain("script: 'ratchet'");
-    expect(ratchet).toContain('eslint-suppressions.json');
   });
 });

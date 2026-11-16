@@ -68,10 +68,6 @@ n.v.t. — geen UI. Bestaande meldingen blijven: het rolhek geeft `een test skip
   als voorwaardelijk, ook als de binnenste aanroepen zelf onvoorwaardelijk zijn.
 - **voorwaardelijke-tests/AC-5** — Niet-scriptbestanden (pgTAP) behouden de bestaande heuristiek (`SQL_SKIP`/`SQL_CASES`);
   `voorwaardelijk` is daar 0.
-- **voorwaardelijke-tests/AC-6** — De regel in `docs/operations/review-checklists.md:21` noemt dat `if`, vroege `return`,
-  kortsluiting en `test` als waarde meetellen, en noemt de grenzen uit "Buiten scope" (lussen, netto gelijk aantal,
-  `${…}`/JSX); een `test.extend`-alias (`const t2 = test.extend(…)`; `t2('a')` telt niet als
-  geval, dus omzetten valt al onder `removed`) blijft er als extra uitzondering in staan. `CHANGELOG.md` noemt de wijziging.
 
 ## Randgevallen
 
@@ -92,7 +88,7 @@ n.v.t. — geen UI. Bestaande meldingen blijven: het rolhek geeft `een test skip
 | `for (const test of rows)`, `(it) => it.id`, `export const test = base.extend(…)` | geen voorwaardelijk geval (AC-2) | n.v.t. |
 | `const t = ok ? test : test.skip` (de eerste `test` gevolgd door `:` van de ternary) | `'skip'`: na `?` telt de naam (AC-2) | n.v.t. |
 | `{ name: 'x', run: test }` (object met `:`) | voorwaardelijk via AC-2 (`test` als waarde): liever een vals alarm dan een gemiste uitschakeling | n.v.t. |
-| `test.extend`-alias | ongewijzigd: aanroepen via de alias tellen niet als geval (AC-6) | n.v.t. |
+| `test.extend`-alias | ongewijzigd: aanroepen via de alias tellen niet als geval | n.v.t. |
 
 ## Raakt ook
 
