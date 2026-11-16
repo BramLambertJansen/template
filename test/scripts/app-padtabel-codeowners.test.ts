@@ -43,7 +43,11 @@ describe('app-padtabel/AC-11 codeowners.mjs --schrijf met een app-bestand', () =
 
     expect(uit.status).toBe(0);
     expect(lees(dir)).toBe(verwacht(APP_PAYMENTS));
-    expect(lees(dir).split('\n').some((regel) => /^\/payments\/\s+@bram$/.test(regel))).toBe(true);
+    expect(
+      lees(dir)
+        .split('\n')
+        .some((regel) => /^\/payments\/\s+@bram$/.test(regel)),
+    ).toBe(true);
   });
 
   test('app-padtabel/AC-11: de app-rij staat na de templaterijen en heeft de eigenaar', () => {

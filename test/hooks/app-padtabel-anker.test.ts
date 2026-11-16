@@ -148,11 +148,9 @@ describe('app-padtabel/AC-7 vertrouwdeTekstOptioneel(root, sha, pad)', () => {
     const lees = await laadVertrouwdeTekstOptioneel();
     const { dir, sha } = metApp();
 
-    expect([
-      lees(dir, sha, APP),
-      lees(dir, sha, 'diep/in/map/bestand.txt'),
-      lees(dir, sha, 'script.sh'),
-    ]).toStrictEqual([APP_TEKST, 'diep ë\n', '#!/bin/sh\n']);
+    expect([lees(dir, sha, APP), lees(dir, sha, 'diep/in/map/bestand.txt'), lees(dir, sha, 'script.sh')]).toStrictEqual(
+      [APP_TEKST, 'diep ë\n', '#!/bin/sh\n'],
+    );
   });
 
   test('app-padtabel/AC-7: afwezig in een geverifieerde boom geeft { afwezig: true }', async () => {
