@@ -1,7 +1,7 @@
 // Gebouwd betekent: implementatie gecontroleerd en aangeboden in een PR. Het is geen release of nieuw mandaat.
 import { MARKERING, acIds, builtReference, documentInfo } from './document-state.mjs';
 import { canRecordStatus } from './task-authority.mjs';
-import { templateVan } from './rolhek.mjs';
+import { templateUitGates } from './rolhek.mjs';
 import { isFunctionalUiSpec } from './functional-ui.mjs';
 
 export const GITHUB_ACTIONS_APP_ID = 15368;
@@ -110,10 +110,7 @@ function approvedBefore(document, evidence, authority) {
  */
 function vertrouwdeTemplate(authority) {
   try {
-    /** @type {unknown} */
-    const raw = JSON.parse(authority.trusted('.claude/gates.json') ?? 'null');
-    const found = typeof raw === 'object' && raw !== null ? Object.entries(raw).find(([name]) => name === 'template')?.[1] : undefined;
-    return templateVan(found)?.repository ?? null;
+    return templateUitGates(authority.trusted('.claude/gates.json') ?? 'null')?.repository ?? null;
   } catch {
     return null;
   }

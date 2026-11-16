@@ -91,6 +91,17 @@ export function templateVan(found) {
   return repositorySleutel(found, 'template');
 }
 
+/**
+ * `templateVan` op de tekst van een `.claude/gates.json`: de ene parser voor check-core, app:init en built-evidence. Gooit
+ * bij ongeldige JSON of een verkeerde vorm; ontbrekend geeft `undefined`. @param {string} tekst
+ */
+export function templateUitGates(tekst) {
+  /** @type {unknown} */
+  const ruw = JSON.parse(tekst);
+  const found = typeof ruw === 'object' && ruw !== null ? Object.entries(ruw).find(([naam]) => naam === 'template')?.[1] : undefined;
+  return templateVan(found);
+}
+
 /** @param {unknown} found @param {string} naam */
 function repositorySleutel(found, naam) {
   if (found === undefined) return undefined;

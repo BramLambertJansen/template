@@ -11,7 +11,7 @@
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { templateVan } from '../../rails/hooks/lib/rolhek.mjs';
+import { templateUitGates } from '../../rails/hooks/lib/rolhek.mjs';
 
 /** @typedef {{ pad: string, naam: string }} Zone `naam` staat in de melding over een oudere versie. */
 /** @type {readonly Zone[]} */
@@ -27,13 +27,7 @@ const TEMPLATE_REF = 'refs/guard/template';
  * @param {string} gatesJson
  */
 export function templateUrl(gatesJson) {
-  /** @type {unknown} */
-  const ruw = JSON.parse(gatesJson);
-  const found =
-    typeof ruw === 'object' && ruw !== null
-      ? Object.entries(ruw).find(([naam]) => naam === 'template')?.[1]
-      : undefined;
-  const template = templateVan(found);
+  const template = templateUitGates(gatesJson);
   if (template === undefined) throw new Error('.claude/gates.json: template ontbreekt');
   return `https://github.com/${template.repository}.git`;
 }

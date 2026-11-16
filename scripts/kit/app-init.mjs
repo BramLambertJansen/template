@@ -12,7 +12,7 @@ import { parseArgs } from 'node:util';
 // Node het pad in de fout.
 import { TEMPLATE_VERSION } from '../../src/core/shared/template-version.ts';
 import { CODEOWNERS, codeownersTekst } from './codeowners.mjs';
-import { templateVan } from '../../rails/hooks/lib/rolhek.mjs';
+import { templateUitGates } from '../../rails/hooks/lib/rolhek.mjs';
 
 const TEMPLATE_NAME = 'app-template';
 const TEMPLATE_TITLE = 'App-template';
@@ -31,22 +31,13 @@ const onderhoudRegel = (repository) => `  "onderhoud": { "repository": "${reposi
  * @param {string | null} gates
  */
 function templateRepository(gates) {
-  /** @type {unknown} */
-  let ruw;
-  try {
-    ruw = gates === null ? null : JSON.parse(gates);
-  } catch {
-    throw new AppInitError(`${GATES} is geen geldige JSON`);
-  }
-  const found =
-    typeof ruw === 'object' && ruw !== null
-      ? Object.entries(ruw).find(([naam]) => naam === 'template')?.[1]
-      : undefined;
+  if (gates === null) throw new AppInitError(`${GATES} ontbreekt; template.repository is niet te lezen`);
   /** @type {{ repository: string } | undefined} */
   let template;
   try {
-    template = templateVan(found);
+    template = templateUitGates(gates);
   } catch (error) {
+    if (error instanceof SyntaxError) throw new AppInitError(`${GATES} is geen geldige JSON`);
     throw new AppInitError(error instanceof Error ? error.message : String(error));
   }
   if (template === undefined) throw new AppInitError(`${GATES}: template.repository ontbreekt`);
