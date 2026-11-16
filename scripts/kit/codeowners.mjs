@@ -1,19 +1,28 @@
 // CODEOWNERS uit de padtabel (ADR 0089 punt 2, spec templateregime AC-3): `.github/CODEOWNERS` is gegenereerd uit `paden` in
-// `.claude/gates.json`. GitHub laat het laatste passende patroon winnen, de padtabel de strengste rij; daarom eerst
-// `* @<eigenaar>`, dan elke glob met besluit `agent` zonder eigenaar, dan elke glob met een ander besluit met de eigenaar.
+// `.claude/gates.json`, aangevuld met het optionele app-bestand `.claude/gates.app.json` (spec app-padtabel, `samengevoegd`).
+// GitHub laat het laatste passende patroon winnen, de padtabel de strengste rij; daarom eerst `* @<eigenaar>`, dan elke glob
+// met besluit `agent` zonder eigenaar, dan elke glob met een ander besluit met de eigenaar.
 // Een pad heeft zo precies dan geen eigenaar als de padtabel het besluit `agent` geeft. Het besluit per rij komt uit
 // `rijNiveau` (rails/hooks/lib/padtabel.mjs): een rij met alleen `schrijven` telt als `eigenaar`, een onleesbare als het strengste.
 // check-docs eist dat het bestand gelijk is aan `codeownersTekst` voor de eerste handle uit `goedkeurders`.
 // Gebruik: node scripts/kit/codeowners.mjs [--schrijf]   (zonder optie: de tekst op stdout; --schrijf: naar .github/CODEOWNERS)
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { OUDE_VORM_ZONDER_PADEN, padenVan, rijNiveau } from '../../rails/hooks/lib/padtabel.mjs';
+import {
+  APP_BESTAND,
+  OUDE_VORM_ZONDER_PADEN,
+  appGlobs as globsUitApp,
+  padenVan,
+  rijNiveau,
+  samengevoegd,
+} from '../../rails/hooks/lib/padtabel.mjs';
 
 export const CODEOWNERS = '.github/CODEOWNERS';
 export const HERSTEL = 'node scripts/kit/codeowners.mjs --schrijf';
 
 const KOP = [
-  '# Gegenereerd uit de padtabel `paden` in .claude/gates.json (ADR 0089, scripts/kit/codeowners.mjs); bewerk dit bestand niet.',
+  '# Gegenereerd uit de padtabel `paden` in .claude/gates.json en .claude/gates.app.json (ADR 0089, scripts/kit/codeowners.mjs);',
+  '# bewerk dit bestand niet.',
   '# Het laatste passende patroon wint: eerst alles van de eigenaar, dan de paden met besluit `agent` zonder eigenaar, dan elk',
   '# pad met een ander besluit weer met de eigenaar. De eigenaar is de eerste handle uit `goedkeurders`.',
   `# Bijwerken na een wijziging van de padtabel of de handle: ${HERSTEL}`,
@@ -36,15 +45,14 @@ function afwijkendeVorm(glob) {
 /**
  * Een glob uit de padtabel als CODEOWNERS-patroon: `**\/…` blijft zoals het is (elke diepte), `X/**` wordt de map `/X/`,
  * al het andere krijgt een `/` vooraan (alleen vanaf de root, zoals de padtabel).
- * Gooit bij een vorm die GitHub anders leest (`afwijkendeVorm`).
+ * Gooit bij een vorm die GitHub anders leest (`afwijkendeVorm`), met het bestand waar de glob staat.
  * @param {string} glob
+ * @param {string} bestand
  */
-function patroon(glob) {
+function patroon(glob, bestand) {
   const reden = afwijkendeVorm(glob);
   if (reden !== null)
-    throw new Error(
-      `.claude/gates.json: paden.${glob}: ${reden} leest GitHub anders dan de padtabel; kies een andere glob`,
-    );
+    throw new Error(`${bestand}: paden.${glob}: ${reden} leest GitHub anders dan de padtabel; kies een andere glob`);
   if (glob.startsWith('**/')) return glob;
   return glob.endsWith('/**') ? `/${glob.slice(0, -2)}` : `/${glob}`;
 }
@@ -63,15 +71,16 @@ export function eersteGoedkeurder(gates) {
 
 /**
  * De tekst van `.github/CODEOWNERS` voor een padtabel. Gooit in de oude vorm (zonder `paden`) en zoals `padenVan`.
- * @param {unknown} gates de geparste gates.json
+ * @param {unknown} gates de geparste gates.json, eventueel samengevoegd met het app-bestand (`samengevoegd`)
  * @param {string} eigenaar de handle, zonder `@`
+ * @param {readonly string[]} [appGlobs] globs uit het app-bestand: een fout erin noemt `.claude/gates.app.json`
  * @returns {string}
  */
-export function codeownersTekst(gates, eigenaar) {
+export function codeownersTekst(gates, eigenaar, appGlobs = []) {
   const paden = padenVan(gates);
   if (paden === null) throw new Error(OUDE_VORM_ZONDER_PADEN);
   const rijen = Object.entries(paden).map(([glob, rij]) => ({
-    patroon: patroon(glob),
+    patroon: patroon(glob, appGlobs.includes(glob) ? APP_BESTAND : '.claude/gates.json'),
     besluit: rijNiveau(rij).besluit,
   }));
   const breedte = Math.max(1, ...rijen.map((rij) => rij.patroon.length));
@@ -157,7 +166,10 @@ function main() {
   const gates = JSON.parse(readFileSync(path.join(root, '.claude/gates.json'), 'utf8'));
   const eigenaar = eersteGoedkeurder(gates);
   if (eigenaar === null) throw new Error('.claude/gates.json: goedkeurders is leeg; zonder handle geen CODEOWNERS');
-  const tekst = codeownersTekst(gates, eigenaar);
+  const appPad = path.join(root, APP_BESTAND);
+  /** @type {unknown} */
+  const app = existsSync(appPad) ? JSON.parse(readFileSync(appPad, 'utf8')) : null;
+  const tekst = codeownersTekst(samengevoegd(gates, app), eigenaar, app === null ? [] : globsUitApp(app, gates));
   if (!process.argv.includes('--schrijf')) {
     process.stdout.write(tekst);
     return;

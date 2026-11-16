@@ -12,6 +12,9 @@
 //     (ADR 0089, scripts/kit/codeowners.mjs; sleutel `docs:spiegel:codeowners`), de Edit-regels in `ask` van
 //     .claude/settings.json zijn precies de afgeleide `altijdVragen` (ADR 0045 punt 9). `onderhoud` heeft de vorm { repository }.
 //     `template` is verplicht met dezelfde vorm, en `onderhoud.repository` is gelijk aan `template.repository` (spec template-repo).
+//     Het app-bestand `.claude/gates.app.json` (spec app-padtabel), alleen als het getrackt is: vorm (`$comment` en `paden`),
+//     dezelfde rijregels, geen altijdVragen, geen besluit agent, geen glob uit gates.json en niet in de template zelf
+//     (sleutel `docs:gates-app:<…>`); de spiegels en check 5 draaien op het samengevoegde object (`samengevoegd`).
 //  5. `schrijfrecht` van een rol overlapt niet met de afgeleide gates (WS-02), op de uitzonderingen in SCHRIJFRECHT_VRIJ na.
 //  6. Elk AC-id van een gebouwde spec heeft een testbestand met `<namespace>/AC-n`, of met het AC-id samen met de specnaam
 //     of de namespace (sleutel `docs:ac:<spec>:<AC-n>`).
@@ -29,10 +32,12 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import {
   afgeleid,
+  APP_BESTAND,
   OUDE_VORM_ZONDER_PADEN,
   padenVan,
   rijFouten,
   SCHRIJVEN,
+  samengevoegd,
   VLOER,
 } from '../../rails/hooks/lib/padtabel.mjs';
 import { onderhoudVan, templateVan } from '../../rails/hooks/lib/rolhek.mjs';
@@ -63,15 +68,18 @@ export async function docsViolations(root = '.') {
   const files = trackedFiles(root);
   /** @param {string} file */
   const read = (file) => readFileSync(path.join(root, file), 'utf8');
+  // Spec app-padtabel: alleen een getrackt app-bestand telt.
+  const app = files.includes(APP_BESTAND) ? read(APP_BESTAND) : null;
   return Promise.resolve([
     ...identifierViolations(files, read),
     ...linkViolations(root, files, read),
     ...statusViolations(files, read),
     ...statusvormViolations(files, read),
     ...acViolations(files, read),
-    ...mirrorViolations(files, read),
+    ...mirrorViolations(files, read, app),
     ...(files.includes('.claude/gates.json') ? padenViolations(read('.claude/gates.json')) : []),
-    ...(files.includes('.claude/gates.json') ? schrijfrechtViolations(read('.claude/gates.json')) : []),
+    ...(files.includes('.claude/gates.json') ? appViolations(read('.claude/gates.json'), app) : []),
+    ...(files.includes('.claude/gates.json') ? schrijfrechtViolations(read('.claude/gates.json'), app) : []),
     ...(files.includes('.claude/gates.json') ? werkmapNegeerViolations(files, read('.claude/gates.json')) : []),
     ...(files.includes('.claude/gates.json') ? mergeModusViolations(read('.claude/gates.json')) : []),
     ...paragraafViolations(files, read),
@@ -635,13 +643,13 @@ function acViolations(files, read) {
 /**
  * @param {readonly string[]} files
  * @param {(file: string) => string} read
+ * @param {string | null} app de tekst van het getrackte app-bestand, of null
  * @returns {Violation[]}
  */
-function mirrorViolations(files, read) {
+function mirrorViolations(files, read, app) {
   if (!files.includes('.claude/gates.json')) return [];
-  /** @type {unknown} */
-  const ruw = JSON.parse(read('.claude/gates.json'));
-  const eigenaars = codeownersViolations(ruw, files.includes(CODEOWNERS) ? read(CODEOWNERS) : null);
+  const { ruw, appGlobs } = samen(JSON.parse(read('.claude/gates.json')), app);
+  const eigenaars = codeownersViolations(ruw, files.includes(CODEOWNERS) ? read(CODEOWNERS) : null, appGlobs);
   if (!files.includes(CODEOWNERS) || !files.includes('.claude/settings.json')) return eigenaars;
   const lijsten = lijstenVan(ruw);
   const naam = lijsten?.altijdVragen === undefined ? 'voorReview' : 'altijdVragen';
@@ -655,6 +663,95 @@ function mirrorViolations(files, read) {
 }
 
 const PADEN = '.claude/gates.json: paden.';
+
+/**
+ * De geparste gates.json samengevoegd met het app-bestand (spec app-padtabel) en de globs uit het app-bestand. Is het
+ * app-bestand ongeldig, dan alleen gates.json: die fout meldt `appViolations`.
+ * @param {unknown} gates @param {string | null} appTekst @returns {{ ruw: unknown, appGlobs: string[] }}
+ */
+function samen(gates, appTekst) {
+  if (appTekst === null) return { ruw: gates, appGlobs: [] };
+  try {
+    /** @type {unknown} */
+    const app = JSON.parse(appTekst);
+    const ruw = samengevoegd(gates, app);
+    return { ruw, appGlobs: Object.keys(object(veld(app, 'paden'))) };
+  } catch {
+    return { ruw: gates, appGlobs: [] };
+  }
+}
+
+/** @param {unknown} waarde @returns {waarde is Record<string, unknown>} */
+const isObject = (waarde) => typeof waarde === 'object' && waarde !== null && !Array.isArray(waarde);
+
+/** @param {unknown} waarde @returns {Record<string, unknown>} */
+const object = (waarde) => (isObject(waarde) ? waarde : {});
+
+const APP_MELDING = `${APP_BESTAND}: `;
+const APP_TEMPLATE =
+  'bestaat in de template zelf (onderhoud.repository staat in .claude/gates.json); app-rijen horen in een app';
+
+/**
+ * Het app-bestand (spec app-padtabel, Ontwerp "check-docs, nieuwe regels"): alleen `$comment` en `paden`, `paden` een object,
+ * dezelfde rijregels als gates.json, geen altijdVragen, geen besluit agent, geen glob die gates.json al heeft, en niet in de
+ * template zelf. Sleutel `docs:gates-app:<…>`.
+ * @param {string} gatesTekst @param {string | null} appTekst @returns {Violation[]}
+ */
+function appViolations(gatesTekst, appTekst) {
+  if (appTekst === null) return [];
+  /** @param {string} melding @returns {Violation} */
+  const fout = (melding) => ({ key: `docs:gates-app:${melding}`, message: `${APP_MELDING}${melding}` });
+  /** @type {unknown} */
+  const gates = JSON.parse(gatesTekst);
+  const inTemplate = veld(veld(gates, 'onderhoud'), 'repository') !== undefined ? [fout(APP_TEMPLATE)] : [];
+  /** @type {unknown} */
+  let app;
+  try {
+    app = JSON.parse(appTekst);
+  } catch (error) {
+    return [...inTemplate, fout(`geen geldige JSON (${error instanceof Error ? error.message : String(error)})`)];
+  }
+  const vorm = isObject(app) ? Object.keys(app).filter((sleutel) => sleutel !== '$comment' && sleutel !== 'paden') : [];
+  const paden = veld(app, 'paden');
+  const kop = [...inTemplate, ...vorm.map((sleutel) => fout(`onbekende sleutel ${sleutel}`))];
+  if (!isObject(paden)) return [...kop, fout('paden is geen object')];
+  const template = Object.keys(templatePaden(gates));
+  const sleutels = padenSleutels(appTekst);
+  const dubbel = [...new Set(sleutels.filter((sleutel, index) => sleutels.indexOf(sleutel) !== index))];
+  return [
+    ...kop,
+    ...dubbel.map((glob) => fout(`paden.${glob}: dubbele sleutel`)),
+    ...Object.entries(paden).flatMap(([glob, rij]) =>
+      appRijMeldingen(glob, rij, template.includes(glob)).map((melding) => fout(`paden.${glob}: ${melding}`)),
+    ),
+  ];
+}
+
+/** `paden` van gates.json, of leeg als die onleesbaar is (dat meldt `padenViolations`). @param {unknown} gates */
+function templatePaden(gates) {
+  try {
+    return padenVan(gates) ?? {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Meldingen voor één app-rij: de rijregels van gates.json zonder de samenhangregel, plus wat alleen de template mag.
+ * @param {string} glob @param {unknown} rij @param {boolean} inTemplate @returns {string[]}
+ */
+function appRijMeldingen(glob, rij, inTemplate) {
+  const leesbaar = rijFouten(rij).length === 0;
+  return [
+    ...(glob.startsWith('!') ? ['een glob begint niet met !'] : []),
+    ...rijFouten(rij),
+    ...(leesbaar && veld(rij, 'schrijven') === 'altijdVragen'
+      ? ['altijdVragen kan alleen in de template (vloer en ask-spiegel); gebruik voorReview met besluit-pr']
+      : []),
+    ...(leesbaar && veld(rij, 'besluit') === 'agent' ? ['besluit agent kan alleen in de template'] : []),
+    ...(inTemplate ? ['staat al in .claude/gates.json; scherp aan met een eigen glob'] : []),
+  ];
+}
 
 /**
  * De padtabel (spec padtabel, Werking 6, AC-3, AC-4, AC-9 t/m AC-11): de oude vorm is rood (migratiemelding), beide vormen
@@ -845,11 +942,12 @@ function codeownersRegels(tekst) {
  * templateregime AC-3): regel voor regel, in dezelfde volgorde (het laatste passende patroon wint), uitlijning telt niet.
  * In de oude vorm of met een onleesbare `paden` is er geen afleiding; die fout meldt `padenViolations`. Een ontbrekend
  * bestand en een glob die GitHub anders leest (`codeownersTekst` gooit) zijn ook een melding.
- * @param {unknown} ruw de geparste gates.json
+ * @param {unknown} ruw de geparste gates.json, samengevoegd met het app-bestand
  * @param {string | null} tekst de inhoud van CODEOWNERS, of null als het bestand ontbreekt
+ * @param {readonly string[]} appGlobs de globs uit het app-bestand (een fout erin noemt `.claude/gates.app.json`)
  * @returns {Violation[]}
  */
-function codeownersViolations(ruw, tekst) {
+function codeownersViolations(ruw, tekst, appGlobs) {
   const key = 'docs:spiegel:codeowners';
   try {
     if (padenVan(ruw) === null) return [];
@@ -866,7 +964,7 @@ function codeownersViolations(ruw, tekst) {
   /** @type {string[]} */
   let verwacht;
   try {
-    verwacht = codeownersRegels(codeownersTekst(ruw, eigenaar));
+    verwacht = codeownersRegels(codeownersTekst(ruw, eigenaar, appGlobs));
   } catch (error) {
     return [
       { key, message: `${CODEOWNERS} is niet af te leiden: ${error instanceof Error ? error.message : String(error)}` },
@@ -962,12 +1060,13 @@ const SCHRIJFRECHT_ALLES = new Set(['developer', 'hoofdsessie']);
  * (beginnend met `**\/`, zoals `**\/*.test.*`) tellen niet: die overlappen met elke map, ook `docs/reviews/**`, en een
  * bestaand testbestand bewaakt het rolhek (existingTest). Map-gates (`test/**`, `e2e/**`, `db/tests/**`) tellen wel: daar
  * schrijft alleen de tester (SCHRIJFRECHT_VRIJ).
+ * Op het samengevoegde object (spec app-padtabel): een app-rij telt mee.
  * @param {string} text
+ * @param {string | null} app de tekst van het getrackte app-bestand, of null
  * @returns {Violation[]}
  */
-function schrijfrechtViolations(text) {
-  /** @type {unknown} */
-  const raw = JSON.parse(text);
+function schrijfrechtViolations(text, app) {
+  const raw = samen(JSON.parse(text), app).ruw;
   const entry = (/** @type {string} */ key) =>
     typeof raw === 'object' && raw !== null ? Object.entries(raw).find(([name]) => name === key)?.[1] : undefined;
   const strings = (/** @type {unknown} */ value) => (Array.isArray(value) ? value.map(String) : []);

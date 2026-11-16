@@ -87,6 +87,7 @@
       "Edit(.claude/hooks/**)",
       "Edit(.claude/settings.json)",
       "Edit(.claude/gates.json)",
+      "Edit(.claude/gates.app.json)",
       "Edit(.claude/decisions.json)",
       "Edit(package.json)",
       "Edit(pnpm-lock.yaml)"

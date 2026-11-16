@@ -56,6 +56,8 @@ export const VLOER = [
   '.claude/hooks/**',
   '.claude/settings.json',
   '.claude/gates.json',
+  // GEWIJZIGD (spec app-padtabel, vloer; R-TEST-02): het app-bestand is beschermd zoals gates.json, ook voordat het bestaat.
+  '.claude/gates.app.json',
   '.claude/decisions.json',
   'package.json',
   'pnpm-lock.yaml',

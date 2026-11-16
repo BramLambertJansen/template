@@ -527,6 +527,8 @@ Later in de app heet hetzelfde `pnpm app:init`. Het script (`scripts/kit/app-ini
 als tekst, niet als shellcode. Voeg geen voorbeeldapp, appseeds of appdata aan de template toe; die horen alleen in de app-repo.
 
 Raak `docs/`, `AGENTS.md`, `CLAUDE.md`, `.claude/`, `db/`, `compose.yaml` niet aan. Die komen uit de template en worden via template-updates bijgehouden.
+De enige uitzondering is `.claude/gates.app.json`, het bestand van de app voor eigen beschermde paden; dat maak je pas later,
+zie "Een eigen beschermd pad" onder de naslag.
 
 ```bash
 git add -A
@@ -955,6 +957,34 @@ Voer alleen de gewenste stap uit in een Ubuntu-terminal; dit zijn geen vervolgst
 
 Verwijder geen volumes tenzij je de database kwijt wilt.
 
+## Een eigen beschermd pad
+
+Een app beschermt eigen paden (bijvoorbeeld een betaalmodule) in `.claude/gates.app.json`, niet in `.claude/gates.json`: dat
+bestand is van de template, en een eigen rij daarin geeft bij elke template-update een conflict (spec
+[app-padtabel](template/specs/app-padtabel.md)). Het app-bestand vult de padtabel aan en kan alleen toevoegen of aanscherpen:
+
+```json
+{
+  "$comment": "Eigen beschermde paden van de app (docs/nieuwe-app.md).",
+  "paden": { "payments/**": { "schrijven": "voorReview", "besluit": "besluit-pr" } }
+}
+```
+
+- Het hoogste niveau is `voorReview` met `besluit-pr`: de developer en de andere rollen schrijven er niet, de hoofdsessie
+  vraagt eerst, en werk op het pad is kritiek (de eigenaar keurt de PR goed). `altijdVragen` en besluit `agent` kunnen alleen
+  in de template; een glob die al in `.claude/gates.json` staat, herhaal je niet, scherp aan met een eigen, specifiekere glob.
+  `check-docs` meldt elke afwijking als `docs:gates-app:<…>` (`scripts/kit/check-docs.mjs`, `appViolations`).
+- Het bestand zelf is altijdVragen en besluit-pr (de vloer): de hoofdsessie schrijft het na akkoord van de eigenaar, in een
+  eigen PR. Het rolhek leest het pas als het op `main` staat (`rails/hooks/lib/rolhek-context.mjs`, `configuratie`).
+- Genereer daarna `.github/CODEOWNERS` opnieuw en commit het mee; `node scripts/kit/feiten.mjs pad <pad>` toont het niveau,
+  met een app-bron als `<glob> (app)`.
+
+```bash
+cd ~/code/<slug>
+node scripts/kit/codeowners.mjs --schrijf
+node scripts/kit/feiten.mjs pad payments/x.ts
+```
+
 ## Een template-update binnenhalen
 
 Door de eigenaar, of door de agent tot en met de PR. Dit is de enige procedure voor een template-update; voer de stappen op
@@ -1030,6 +1060,8 @@ Een rode check bij een template-update:
 | `check:snapshot` (in `gate:slow`) | Het gegenereerde schema loopt achter op de migraties | Stap 5 opnieuw en committen; nooit met de hand bewerken |
 | `check:snapshot`: "op volgorde van binnenkomst … ontstaat een ander schema" of "de bouw op volgorde van binnenkomst faalt" | Een toegevoegde migratie (meestal een templatemigratie) is ouder dan een migratie van de app en beide raken hetzelfde object: productie, waar de oudere ná de nieuwere draait, krijgt een ander schema dan een verse database, of de migratie faalt daar | Hernoem of wijzig de genoemde migratie niet; schrijf een nieuwe migratie die het bedoelde eindresultaat vastlegt, daarna stap 5 opnieuw. Is de templatemigratie de oorzaak: meld het als leerpunt aan de template |
 | `check-core` | `src/core/` of `docs/template/` wijkt af van de template, of de update is geen echte merge van `template/main` (squash, rebase, cherry-pick) | `git checkout template/main -- src/core docs/template` en committen; anders de branch opnieuw maken vanaf stap 2 |
+| Conflict in `.github/CODEOWNERS`, of `check-docs`: `docs:spiegel:codeowners` | Het bestand is gegenereerd uit de padtabel van de template plus `.claude/gates.app.json` van de app, en beide kanten veranderden | Neem een van beide versies, genereer opnieuw met `node scripts/kit/codeowners.mjs --schrijf` en commit; nooit met de hand samenvoegen |
+| `check-docs`: `docs:gates-app:<glob>`: "staat al in .claude/gates.json" | De template beschermt nu zelf een glob die ook in `.claude/gates.app.json` staat; bij het lezen geldt per kolom de strengste | Haal de rij uit `.claude/gates.app.json` of maak de glob specifieker, genereer CODEOWNERS opnieuw en commit |
 
 Een templatemigratie die ouder is dan een migratie die de app al heeft toegepast, draait in productie na die nieuwere en op
 een verse database ervoor. `check:migrations` laat haar door als ze ongewijzigd uit de template komt

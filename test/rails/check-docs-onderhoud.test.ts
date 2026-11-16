@@ -174,11 +174,13 @@ test.each([
 
 // ---------- de echte repo ----------
 
+// GEWIJZIGD (spec app-padtabel, vloer; R-TEST-02): `.claude/gates.app.json` is altijdVragen en heeft dus een Edit-regel in `ask`.
 const ECHTE_ALTIJD_VRAGEN = [
   '.github/**',
   '.claude/hooks/**',
   '.claude/settings.json',
   '.claude/gates.json',
+  '.claude/gates.app.json',
   '.claude/decisions.json',
   'package.json',
   'pnpm-lock.yaml',

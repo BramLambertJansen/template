@@ -183,7 +183,14 @@ test('de echte .claude/gates.json: voorReview is precies de lijst uit ADR 0046 p
 
   // GEWIJZIGD (spec padtabel AC-10, ADR 0079, eigenaarakkoord 2026-11-04): de vloer geeft vier `.claude/`-paden een eigen
   // rij; ze vielen al onder `.claude/**`, dus het niveau verandert niet, maar ze staan nu ook in de afgeleide lijst.
-  const VLOERRIJEN = ['.claude/hooks/**', '.claude/settings.json', '.claude/gates.json', '.claude/decisions.json'];
+  // GEWIJZIGD (spec app-padtabel, vloer; R-TEST-02): `.claude/gates.app.json` is de achtste vloerrij en valt ook onder `.claude/**`.
+  const VLOERRIJEN = [
+    '.claude/hooks/**',
+    '.claude/settings.json',
+    '.claude/gates.json',
+    '.claude/gates.app.json',
+    '.claude/decisions.json',
+  ];
   expect(Array.isArray(voorReview) ? voorReview.map(String).sort() : voorReview).toStrictEqual(
     [...VOOR_REVIEW, ...VLOERRIJEN].sort(),
   );
@@ -228,11 +235,13 @@ test.each(['src/api/app.ts', 'src/shared/permissions.ts'])(
 
 // ADR 0045 punt 9 (contract B4): de Edit-regels in `ask` zijn precies `altijdVragen` (niet meer `voorReview`); zonder altijdVragen
 // blijft ask = voorReview (fixtures hierboven). De echte altijdVragen-lijst staat in check-docs-onderhoud.test.ts.
+// GEWIJZIGD (spec app-padtabel, vloer; R-TEST-02): `.claude/gates.app.json` is altijdVragen en heeft dus een Edit-regel in `ask`.
 const ALTIJD_VRAGEN = [
   '.github/**',
   '.claude/hooks/**',
   '.claude/settings.json',
   '.claude/gates.json',
+  '.claude/gates.app.json',
   '.claude/decisions.json',
   'package.json',
   'pnpm-lock.yaml',

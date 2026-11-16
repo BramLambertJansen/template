@@ -1,4 +1,5 @@
-# Gegenereerd uit de padtabel `paden` in .claude/gates.json (ADR 0089, scripts/kit/codeowners.mjs); bewerk dit bestand niet.
+# Gegenereerd uit de padtabel `paden` in .claude/gates.json en .claude/gates.app.json (ADR 0089, scripts/kit/codeowners.mjs);
+# bewerk dit bestand niet.
 # Het laatste passende patroon wint: eerst alles van de eigenaar, dan de paden met besluit `agent` zonder eigenaar, dan elk
 # pad met een ander besluit weer met de eigenaar. De eigenaar is de eerste handle uit `goedkeurders`.
 # Bijwerken na een wijziging van de padtabel of de handle: node scripts/kit/codeowners.mjs --schrijf
@@ -61,6 +62,7 @@
 /.claude/hooks/                  @bramlambertjansen
 /.claude/settings.json           @bramlambertjansen
 /.claude/gates.json              @bramlambertjansen
+/.claude/gates.app.json          @bramlambertjansen
 /.claude/decisions.json          @bramlambertjansen
 /src/api/app.ts                  @bramlambertjansen
 /src/api/login-policy.ts         @bramlambertjansen

@@ -45,22 +45,42 @@ async function hoofdstuk(n) {
 
 if (process.argv[2] === 'hoofdstuk') await hoofdstuk(process.argv[3]);
 
+/** Het geparste app-bestand; ongeldige JSON gooit met de naam van het bestand. @param {string} pad @returns {unknown} */
+function leesApp(pad) {
+  try {
+    return JSON.parse(readFileSync(pad, 'utf8'));
+  } catch (fout) {
+    throw new Error(`${pad}: ${fout instanceof Error ? fout.message : String(fout)}`, { cause: fout });
+  }
+}
+
 /** Drukt het niveau van één pad uit de padtabel af (ADR 0079 punt 7, spec padtabel AC-13) en stopt. @param {string | undefined} rel */
 async function padRegel(rel) {
   if (rel === undefined || rel === '') {
     console.error('Gebruik: node scripts/kit/feiten.mjs pad <pad>');
     process.exit(1);
   }
-  const { padNiveau } = await import('../../rails/hooks/lib/padtabel.mjs');
+  const { APP_BESTAND, appGlobs, padNiveau, samengevoegd } = await import('../../rails/hooks/lib/padtabel.mjs');
   /** @type {ReturnType<typeof padNiveau>} */
   let niveau;
+  /** @type {string[]} */
+  let uitApp = [];
   try {
-    niveau = padNiveau(rel, JSON.parse(readFileSync('.claude/gates.json', 'utf8')));
+    /** @type {unknown} */
+    const gates = JSON.parse(readFileSync('.claude/gates.json', 'utf8'));
+    // Spec app-padtabel: het app-bestand uit de werkmap vult de padtabel aan; een app-bron heet `<glob> (app)`.
+    /** @type {unknown} */
+    const app = existsSync(APP_BESTAND) ? leesApp(APP_BESTAND) : null;
+    uitApp = app === null ? [] : appGlobs(app, gates);
+    niveau = padNiveau(rel, samengevoegd(gates, app));
   } catch (fout) {
-    console.error(`.claude/gates.json: ${fout instanceof Error ? fout.message : String(fout)}`);
+    const tekst = fout instanceof Error ? fout.message : String(fout);
+    console.error(tekst.startsWith(APP_BESTAND) ? tekst : `.claude/gates.json: ${tekst}`);
     process.exit(1);
   }
-  const regel = `${rel}: schrijven ${niveau.schrijven} (${niveau.bronnen.schrijven.join(', ')}), besluit ${niveau.besluit} (${niveau.bronnen.besluit.join(', ')})\n`;
+  /** @param {string[]} globs */
+  const bronnen = (globs) => globs.map((glob) => (uitApp.includes(glob) ? `${glob} (app)` : glob)).join(', ');
+  const regel = `${rel}: schrijven ${niveau.schrijven} (${bronnen(niveau.bronnen.schrijven)}), besluit ${niveau.besluit} (${bronnen(niveau.bronnen.besluit)})\n`;
   await new Promise((klaar) => process.stdout.write(regel, klaar));
   process.exit(0);
 }

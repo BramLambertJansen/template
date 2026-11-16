@@ -86,7 +86,7 @@ n.v.t.: geen API-route, permissie of foutcode.
    geen pad met schrijven ≠ vrij is agent-mergebaar; vervallen met ADR 0089 punt 5, nu `mergeModusViolations` voor alleen
    de modus `merge`). Nieuw: de samenhangregels, dubbele sleutels in de ruwe tekst
    (`JSON.parse` houdt stil de laatste), sleutels die met `!` beginnen, `{}`, en de vloer: `.github/**`, `.claude/hooks/**`,
-   `.claude/settings.json`, `.claude/gates.json`, `.claude/decisions.json`, `package.json` en `pnpm-lock.yaml` hebben elk een
+   `.claude/settings.json`, `.claude/gates.json`, `.claude/gates.app.json` (sinds spec `app-padtabel`), `.claude/decisions.json`, `package.json` en `pnpm-lock.yaml` hebben elk een
    eigen rij met `altijdVragen` en `besluit-pr`. De oude vorm is rood (migratiemelding); de overige regels draaien dan op
    `afgeleid` van de oude vorm. Vervallen: `voorReview` ⊆ gates en `altijdVragen` ⊆ `voorReview`. Blijven:
    `SCHRIJFRECHT_VRIJ` (architect in `docs/adr/**` en `docs/specs/**`, tester in de testpaden) en de uitzondering voor
@@ -140,7 +140,7 @@ n.v.t.: geen API-route, permissie of foutcode.
 | Onleesbare rij, `{}`, dubbele sleutel, oude vorm, beide vormen | zie Werking 4–6 en AC-4, AC-5, AC-9, AC-11 | n.v.t. |
 | Pad in `jsonGates` (`package.json`) | geen gate voor het rolhek (sleutels bewaakt zoals nu); wel voorReview, altijdVragen, kritiek | n.v.t. |
 | Pad zonder passende glob | vrij en eigenaar: geen agent-merge | n.v.t. |
-| App voegt eigen rijen toe | mag, in een besluit-PR; strengste-wint maakt template-rijen niet losser; de vloer geldt ook in de app | n.v.t. |
+| App voegt eigen rijen toe | in `.claude/gates.app.json`, niet in `gates.json` (spec `app-padtabel`): alleen toevoegen of aanscherpen, de vloer geldt ook in de app | n.v.t. |
 | Oude code leest nieuwe `gates.json` of `decisions.json` uit main | oude lezers gooien of vallen op `['**']`: dicht tot rebase | n.v.t. |
 
 ## Raakt ook
