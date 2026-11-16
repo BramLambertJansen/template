@@ -7,9 +7,7 @@ Herzien: 2026-11-07 (#623): alternatief "Projectstore, cache en state opnieuw in
 [0085](0085-worktree-installatie-in-de-sandbox.md): in een worktree installeert de agent `node_modules` frozen, met store,
 cache en state onder de tijdelijke map; punt 4 blijft
 
-Dit is de bedoelde status in een besluitvoorstel. Het besluit geldt pas na merge door de eigenaar op `main`; bouwen
-volgt in een afzonderlijke PR volgens [0046](0046-werkstraat-en-beslisroute.md). Drempel: A3, agentrechten expliciteren
-en gericht verruimen. Uitwerking: [spec](../specs/claude-sandbox-werkstraat.md).
+Drempel: A3, agentrechten expliciteren en gericht verruimen. Uitwerking: [spec](../specs/claude-sandbox-werkstraat.md).
 
 ## Context
 
@@ -32,15 +30,16 @@ dus onvoldoende; de dagelijkse vorm vermijdt upstreamregistratie.
 
 1. `package.json` blijft de enige bron van de exacte pnpm-versie. Mise leidt zijn selectie daar shellvrij uit af;
    de bestaande setup installeert die versie vooraf. Dagelijks werk gebruikt de geïnstalleerde versie rechtstreeks.
-   Een ongeldige pin of verkeerde werkelijke versie stopt; stille terugval geldt niet als succes. Compatibiliteit met
-   de bestaande cloudpin van mise moet vóór oplevering bewezen zijn; dit besluit autoriseert geen mise-upgrade.
+   Een ongeldige pin of verkeerde werkelijke versie stopt; stille terugval geldt niet als succes. Dit besluit
+   autoriseert geen mise-upgrade.
 2. Claude krijgt expliciet `autoAllowBashIfSandboxed: true` en gerichte toestemmingen voor gewone Git- en gh-opdrachten.
    `ask`, `deny`, rolhek, hooks uit `main`, CI en GitHub blijven gelden. Subagents krijgen geen push- of PR-schrijfrecht.
 3. De dagelijkse pushvorm is `git push origin HEAD` vanaf een featurebranch. PR-aanmaak gebruikt expliciet `--head`
    met de werkbranch en `--body-file`. Een push vanaf `main`, main-verwijdering, force, `--all`, `--mirror`,
    hookoverslaan, PR-merge via gh/API en zelfreview blijven verboden. Lokale `git merge origin/main`, fast-forward en
    bestaande veilige taakbranchopruiming blijven toegestaan. Nemen ze een pad mee dat de sandbox afschermt, dan falen
-   ze in de sandbox ([0082](0082-zelfladend-sandbox-en-leeslijst.md)); het herstel staat in spec rolhek-vooraf-krimp. Upstreaminstelling krijgt geen nieuwe automatische toestemming.
+   ze in de sandbox ([0082](0082-zelfladend-sandbox-en-leeslijst.md)). Upstreaminstelling krijgt geen nieuwe automatische
+   toestemming.
 4. Git-metadatawrites in hoofdcheckout en worktree gebruiken uitsluitend Claude's ingebouwde ondersteuning.
    Geen `.git`-allowlist, globale pnpm-opslag of mise-installaties schrijfbaar maken. Alleen als een echte gh-logproef
    cachewrites nodig blijkt te hebben, mag exact `~/.cache/gh` schrijfbaar worden; nooit `~/.config/gh`.
@@ -58,6 +57,4 @@ dus onvoldoende; de dagelijkse vorm vermijdt upstreamregistratie.
 ## Gevolgen
 
 Eenmalige inrichting loopt via de bestaande setup; normale sessies vragen geen nieuwe toolchaininstallatie.
-Een afzonderlijke tester legt regressies vast vóór implementatie. Werkelijke native Claude-proeven vóór en na de
-wijziging bewijzen check, hookcommit, pre-push en PR-aanmaak; bwrap- of configuratietests vervangen die niet.
 Eigenaarreview en merge blijven de acceptatie. Beschermde paden en taakmandaten veranderen niet.
