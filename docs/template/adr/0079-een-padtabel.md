@@ -4,6 +4,7 @@ Status: geaccepteerd
 
 Herzien: 2026-11-12 (#692): door ADR 0089 punt 3, in de template deels: punt 4, "elk ADR is `besluit-pr`" betekent daar eigenaarmerge, geen aparte PR; blijft: de padtabel als enige definitie van kritiek
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 3 en 5, de vorige regel vervalt: punt 3, `CODEOWNERS` wordt afgeleid uit elk pad met een besluit anders dan `agent`, niet uit `schrijven`; punt 4, "elk ADR is `besluit-pr`" wordt: elk ADR heeft de eigenaar als code-eigenaar; `docs/template/**` krijgt besluit `eigenaar`
+Herzien: 2026-11-16 (spec app-padtabel): punt 1 en 3, in een app vult het optionele `.claude/gates.app.json` de tabel aan (alleen toevoegen of aanscherpen, geen `altijdVragen` en geen `agent`, geen glob uit `gates.json`); de lezers voegen samen met strengste-wint; de vloer telt acht paden, met `.claude/gates.app.json`
 
 Wijzigt [0045](0045-railwerk.md) punt 1, 7 en 9 (de lijsten worden kolommen, de terugval bij een ontbrekende lijst
 vervalt), [0046](0046-werkstraat-en-beslisroute.md) punt 27 en 28 (`voorReview` en de bron van CODEOWNERS komen uit de
