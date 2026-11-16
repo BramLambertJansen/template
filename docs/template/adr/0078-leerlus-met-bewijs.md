@@ -4,6 +4,7 @@ Status: geaccepteerd
 
 Herzien: 2026-11-05 (#543): gewijzigd door [0081](0081-leerlus-schrappen-en-vereenvoudigen.md) punt 1, 2, 3 en 8 (trede Schrappen of vereenvoudigen met meting als sluitbewijs, onderbouwing in de issue-check, eigen bak in de voorsortering)
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 5 en 8, punt 1, de job `leerpunt-bewijs` blijft; dat `pnpm pr:merge` de beschrijving leest, vervalt als grens; punt 2, "niet agent-mergebaar" bij `geen test:` wordt een afspraak (de eigenaar merget), geen check meer
+Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 
 Wijzigt [0059](0059-leerlus-van-app-naar-template.md) punt 1, 3, 4 en 7; vult R-SEC-09 aan met één uitzondering voor MCP.
 Drempel: A3 (een nieuwe workflow met schrijfrecht op issues; een uitzondering op "MCP alleen lezend") en A4 (een
@@ -31,10 +32,9 @@ agents sluiten opgeloste leerpunten (akkoord eigenaar 3 november 2026), en "opge
    basis telt niet als bewijs. Bij trede Type is het bewijs een typetest die op de basis niet compileert. Zo is "de check
    begint met een fixture die op de oude code faalt" toetsbaar. De job staat in een eigen workflow onder `pull_request`, niet onder
    `pull_request_target`: code uit de PR draait nooit met het token of de geheimen van de basis. Het script komt van main.
-   `pnpm pr:merge` leest de beschrijving zelf bij het mergen, zodat een later gewijzigd bewijs niet langs de eigenaar glipt.
 2. **Uitzonderingen op het sluitbewijs.** Voor de treden Skill, Padregel en `AGENTS.md`, en voor een integratie- of e2e-test die
-   de job niet kan draaien, mag het bewijs `geen test: <reden>` zijn. Dan is de PR niet agent-mergebaar (ADR 0069): de
-   eigenaar merget en toetst de reden. Een leerpunt dat zonder code achterhaald is, sluit met een comment
+   de job niet kan draaien, mag het bewijs `geen test: <reden>` zijn. Dan merget de eigenaar en toetst hij de reden
+   (afspraak). Een leerpunt dat zonder code achterhaald is, sluit met een comment
    `achterhaald: <reden>` van iemand met schrijfrecht op de repo, niet via een PR.
 3. **Issue-check.** Een workflow op `issues` (opened, edited, labeled, closed, reopened) en `issue_comment` toetst elk issue met label `leerpunt`:
    de koppen en volgorde van `.github/ISSUE_TEMPLATE/leerpunt.yml`, verplichte velden niet leeg, en de keuzelijsten `Soort` en
@@ -71,8 +71,5 @@ agents sluiten opgeloste leerpunten (akkoord eigenaar 3 november 2026), en "opge
 ## Gevolgen
 
 - Een fix voor een leerpunt kost één extra korte CI-job (één testbestand, twee keer). Een PR zonder leerpunt merkt niets.
-- De workflow komt in `.github/workflows/`; de GitHub App heeft geen `workflows`-recht (R-SEC-09), dus de eigenaar zet of
-  keurt dat bestand in de bouw-PR. Het label `leerpunt-onvolledig` en `leerpunt-zonder-bewijs` maakt de eigenaar aan.
+- De GitHub App heeft geen `workflows`-recht (R-SEC-09); de workflows zet of keurt de eigenaar.
 - Bestaande gesloten leerpunten worden niet opnieuw beoordeeld; de check geldt vanaf de bouw.
-- Spec [leerlus](../specs/leerlus.md) krijgt de status `gebouwd` in de bouw-PR; de punten die dit ADR wijzigt, staan daar als
-  verwijzing naar deze spec.

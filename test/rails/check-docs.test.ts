@@ -76,6 +76,7 @@ test('`ask` en `voorReview` lopen uit elkaar (tests en specs staan niet in `ask`
       gates: ['AGENTS.md', 'src/core/**', 'scripts/**', '**/*.test.*', 'docs/specs/**'],
       voorReview: ['AGENTS.md', 'scripts/**'],
       jsonGates: {},
+      template: { repository: 'BramLambertJansen/template' },
     }),
     '.github/CODEOWNERS': `${OWNERS}/scripts/ @eigenaar\n`,
     '.claude/settings.json': JSON.stringify({
@@ -83,6 +84,7 @@ test('`ask` en `voorReview` lopen uit elkaar (tests en specs staan niet in `ask`
     }),
   });
 
+  // GEWIJZIGD (spec template-repo, AC-2): de fixture krijgt `template`, want check-docs eist die sleutel (anders `docs:gates:template`).
   // GEWIJZIGD (spec padtabel AC-11, OV-1 ii): de fixture staat in de oude vorm; check-docs meldt die erbij (ADR 0079 punt 6).
   expect(await keys(root)).toStrictEqual([
     'docs:spiegel:ask:scripts/**',

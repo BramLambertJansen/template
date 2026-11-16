@@ -2,6 +2,8 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-16 (#745): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
+
 Wijzigt [0064](0064-leesbudget-per-laag.md) punt 1 (de drempel staat erbij, "let op" komt alleen uit het verschil met
 de basis) en [0065](0065-grenzen-als-meting.md) punt 2 en 4 (wanneer "let op" komt); de rest van beide blijft gelden.
 
@@ -40,9 +42,8 @@ wanneer er iets verandert, meet wat een agent echt leest, en op het afgesproken 
    zelf (injecties en de stap "Begin met de feiten"), zodat een nieuwe aanroep vanzelf meetelt; voor `nieuwe-feature`
    tellen de padregels van een app-feature mee. Wat met de repo groeit, krijgt een plafond: `specs` toont open specs,
    `adr` de voorgestelde en de tien geaccepteerde met het hoogste nummer, `fase` alles onder "Nu" en vijf onder "Volgende", elk met
-   een telling en `--alle` (voor `adr` dus niet langer alleen voor historie). Een groeitest bewijst het plafond. De streefwaarden van 0064 punt 1 stelt de bouw-PR opnieuw
-   voor op de eerlijke meting; de eigenaarmerge beslist. *Waarom:* de meting onderschatte juist het deel dat groeit; een
-   plafond maakt R-DOC-09 waar in plaats van een wens.
+   een telling en `--alle` (voor `adr` dus niet langer alleen voor historie). Een groeitest bewijst het plafond.
+   *Waarom:* de meting onderschatte juist het deel dat groeit; een plafond maakt R-DOC-09 waar in plaats van een wens.
 5. **Herijken krijgt een trigger.** `check:roadmap` ziet dat een PR een fase sluit (op de basis een open item onder "Nu"
    of "Volgende" met die fase, daarna geen) en eist dan een regel `Herijking fase <n>:` met datum, leespad in KB en trend
    in `docs/roadmap-archief.md`. *Waarom:* proza in de DoD werd overgeslagen (0065); een check maakt het herijken
@@ -61,7 +62,7 @@ wanneer er iets verandert, meet wat een agent echt leest, en op het afgesproken 
 ## Gevolgen
 
 - Een melding betekent weer iets en staat op de PR.
-- Het gemeten leespad voor `nieuwe-feature` stijgt fors (feiten-uitvoer en padregels tellen mee); de bouw-PR stelt
-  nieuwe streefwaarden voor. `lichte-fix` telt geen padregels; dat is een bekende ondertelling.
+- Het gemeten leespad voor `nieuwe-feature` stijgt fors (feiten-uitvoer en padregels tellen mee). `lichte-fix` telt geen
+  padregels; dat is een bekende ondertelling.
 - Wie een gebouwde spec, een oudere ADR of een later roadmap-item zoekt, gebruikt `--alle` of de map.
 - Een PR die de laatste open taak van een fase afvinkt of parkeert, bevat ook de herijking.

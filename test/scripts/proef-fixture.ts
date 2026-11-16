@@ -27,6 +27,8 @@ const FILES: Readonly<Record<string, string>> = {
 };
 // GEWIJZIGD (templateregime, ADR 0089 punt 3): `app:init --owner` zet `goedkeurders` in gates.json en genereert CODEOWNERS uit
 // de padtabel; de template-gates hebben dus `paden` en `goedkeurders` (niet meer de oude vorm met `altijdVragen`).
+// GEWIJZIGD (spec template-repo, AC-9): `app:init` leest `template.repository`; zonder die sleutel stopt het, dus de
+// template-gates hebben hem, op een eigen regel die niet grenst aan de onderhoud-regel.
 export const TEMPLATE_GATES = `${[
   '{',
   '  "onderhoud": { "repository": "BramLambertJansen/template" },',
@@ -34,6 +36,7 @@ export const TEMPLATE_GATES = `${[
   '    "AGENTS.md": { "besluit": "eigenaar" },',
   '    "src/**": { "besluit": "agent" }',
   '  },',
+  '  "template": { "repository": "BramLambertJansen/template" },',
   '  "goedkeurders": ["bramlambertjansen"]',
   '}',
 ].join('\n')}\n`;

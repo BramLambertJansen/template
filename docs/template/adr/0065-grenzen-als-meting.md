@@ -4,6 +4,7 @@ Status: geaccepteerd
 
 Herzien: 2026-11-03 (#469): gewijzigd door [0067](0067-krimp-op-normen.md) punt 6; [0070](0070-meting-die-stuurt.md)
 punt 2 en 4
+Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 
 Herziet [0064](0064-leesbudget-per-laag.md) punt 1 en 3 en [0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md) punt 3.
 Uitwerking: spec [leesbudget](../specs/leesbudget.md).
@@ -28,14 +29,12 @@ template heeft geen releases. Eigenaarbesluit 2026-11-02: alleen `AGENTS.md` en 
 3. **Splitsen alleen op inhoud.** Een eenheid wordt gesplitst als een deel los gelezen kan worden, met de reden in de PR; nooit
    om onder een getal te komen. Groeien door eenheden toe te voegen (§13, §8a, een rule) blijft mogelijk; de ankers §1–§12
    blijven. Eén plek per norm en laagste laag eerst (0064 punt 3) blijven gelden.
-4. **Sturen op wat gelezen wordt en op kwaliteit.** Het leespad per scenario (0064 punt 1, streefdoel nieuwe feature ≤ 25 KB) is
+4. **Sturen op wat gelezen wordt en op kwaliteit.** Het leespad per scenario (0064 punt 1) is
    de maat voor leeskosten. `pnpm meting --trend` meldt "let op" als reviewrondes, CI-rood of Codex-bevindingen over de
    laatste tien gemergde PR's hoger liggen dan over de tien daarvoor; de hoofdsessie noemt dat in `opleveren` en de eigenaar beslist.
 5. **Herijken per roadmap-fase.** Bij het afsluiten van een fase in `docs/roadmap.md` draait de hoofdsessie `pnpm leespad` en
    `pnpm meting --trend` en stelt nieuwe streefwaarden voor in de PR die de fase afsluit.
-6. **Krimp vraagt een inventaris.** Een PR die een bindend document (regelboek, `AGENTS.md`, `CLAUDE.md`, `.claude/rules/*`,
-   `docs/dod.md`) meer dan 20 % laat krimpen, bevat in een bestand in de diff een lijst oude norm → nieuwe R-id of reden van schrappen; de
-   reviewer toetst die lijst (0063 punt 2 met een check).
+6. *(vervallen, zie 0067)*
 
 Ongewijzigd: 0064 punt 2 (lezen per hoofdstuk), 4 (ratchet op bestaande overschrijdingen van `AGENTS.md`), 5 (rolhek), 6
 (teksttests) en 7 (schaalbaarheid).
@@ -50,5 +49,3 @@ Ongewijzigd: 0064 punt 2 (lezen per hoofdstuk), 4 (ratchet op bestaande overschr
 
 - `check-docs` geeft voor hoofdstuk, regelboek, spec en ADR geen overtreding meer maar een melding; alle spec- en ADR-ingangen
   verdwijnen uit de baseline. `pnpm leespad` wordt de plek waar de metingen staan.
-- Krimp boven 20 % zonder inventaris wordt rood in `check-docs` (bouw-PR).
-- Framework §9 (R-DOC-01) en de agentinstructies volgen in de instructie-PR.

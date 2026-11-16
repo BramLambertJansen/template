@@ -154,7 +154,7 @@ commando's, paden, productnamen (Use this template, Settings → Rules → Rules
 
 | Wat | Waarde |
 |---|---|
-| Template | `BramLambertJansen/template` (public), branch `main` |
+| Template | `BramLambertJansen/template` (public), branch `main`. Een fork van de template past `template.repository` in `.claude/gates.json` aan en de allow-regel `Bash(gh issue create --repo <repo> --label leerpunt *)` in `.claude/settings.json` (`test/rails/leerpunt-settings.test.ts` bindt die twee); de opstartcommando's hieronder noemen de repo letterlijk |
 | Owner van de nieuwe repo | het account van `gh api user --jq .login` |
 | Zichtbaarheid | `public` (voorlopig; private vraagt GitHub Pro of Team voor de ruleset en betaalde code scanning voor CodeQL; controle vóór de repo bestaat in Fase 4.1) |
 | Map | `~/code/<slug>` |
@@ -515,11 +515,11 @@ Later in de app heet hetzelfde `pnpm app:init`. Het script (`scripts/kit/app-ini
 | Bestand | Wijziging |
 |---|---|
 | `package.json` | `"name": "app-template"` → `"name": "<slug>"` (rest ongemoeid) |
-| `README.md` | Kop `# App-template` → `# <App-naam>`; eerste alinea → herkomstzin ("Gebouwd op [BramLambertJansen/template](https://github.com/BramLambertJansen/template)."); sectie **Nieuwe app starten** verwijderen (geldt alleen voor de template); de rest blijft |
+| `README.md` | Kop `# App-template` → `# <App-naam>`; eerste alinea → herkomstzin `Gebouwd op [<repo>](https://github.com/<repo>).`, met `<repo>` = `template.repository` uit `.claude/gates.json`; sectie **Nieuwe app starten** verwijderen (geldt alleen voor de template); de rest blijft |
 | `docs/nieuwe-app.md` | Niets — laten staan. Verwijderen geeft bij elke template-update een conflict |
 | `CHANGELOG.md` | Opnieuw geschreven: het bestand is van de app. Kop, `## [Unreleased]` en één regel: `- Gestart vanaf template v<versie> (<sha>).` De versie komt uit `src/core/shared/template-version.ts`; ontbreekt dat bestand, dan stopt het script |
 | `docs/template-changelog.md` | Niets — laten staan. Hier staan de wijzigingen van de template; een template-update werkt het bij |
-| `.claude/gates.json` | De regel `"onderhoud": { … }` verwijderen: de onderhoudsmodus (ADR 0045) hoort bij de template-repo; het script weigert als die regel niet meer te vinden is. Alleen als de owner niet `bramlambertjansen` is (`--owner`): `goedkeurders` wordt `["<login>"]` of `["<org>/<team>"]` |
+| `.claude/gates.json` | De regel `"onderhoud": { "repository": "<template.repository>" },` verwijderen: de onderhoudsmodus (ADR 0045) hoort bij de template-repo; het script weigert als die regel niet meer te vinden is. De regel `"template": { "repository": … }` blijft: daaruit lezen het rolhek (leerpuntdoel), `check-core` en `check:migrations` welke repo de template is (spec template-repo); zonder die sleutel stopt het script. Alleen als de owner niet `bramlambertjansen` is (`--owner`): `goedkeurders` wordt `["<login>"]` of `["<org>/<team>"]` |
 | `.github/CODEOWNERS` | Alleen met `--owner`: opnieuw gegenereerd uit de padtabel voor de handle uit `goedkeurders` (`scripts/kit/codeowners.mjs`); het script weigert zonder padtabel of `goedkeurders`. `check-docs` eist dat bestand en afleiding gelijk blijven |
 
 `app:init` verwerkt geen beschrijving. Voeg daarna de opgegeven korte beschrijving als eigen alinea onder de appnaam in

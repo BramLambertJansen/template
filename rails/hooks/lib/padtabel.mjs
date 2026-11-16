@@ -287,3 +287,40 @@ export function afgeleid(ruw) {
     kritiek: globs((rij) => rij.besluit === 'besluit-pr' || rij.schrijven === 'altijdVragen'),
   };
 }
+
+// De twee repository-sleutels van gates.json (ADR 0045 punt 8, spec template-repo). Hier, zonder imports, zodat app:init en
+// check-core ze in een kopie laden; rolhek.mjs exporteert ze ook.
+
+/** `{ "repository": "<owner>/<repo>" }` of ontbrekend; elke andere vorm gooit. @param {unknown} found */
+export function onderhoudVan(found) {
+  return repositorySleutel(found, 'onderhoud');
+}
+
+/**
+ * Spec template-repo: de identiteit van de template, ook in een app (`onderhoud` is alleen het kenmerk "dit is de template").
+ * Zelfde vorm als `onderhoudVan`. @param {unknown} found
+ */
+export function templateVan(found) {
+  return repositorySleutel(found, 'template');
+}
+
+/**
+ * `templateVan` op de tekst van een `.claude/gates.json`: de ene parser voor check-core, app:init en built-evidence. Gooit
+ * bij ongeldige JSON of een verkeerde vorm; ontbrekend geeft `undefined`. @param {string} tekst
+ */
+export function templateUitGates(tekst) {
+  /** @type {unknown} */
+  const ruw = JSON.parse(tekst);
+  const found = typeof ruw === 'object' && ruw !== null ? Object.entries(ruw).find(([naam]) => naam === 'template')?.[1] : undefined;
+  return templateVan(found);
+}
+
+/** @param {unknown} found @param {string} naam */
+function repositorySleutel(found, naam) {
+  if (found === undefined) return undefined;
+  const entries = typeof found === 'object' && found !== null && !Array.isArray(found) ? Object.entries(found) : [];
+  const repository = entries.length === 1 && entries[0]?.[0] === 'repository' ? entries[0][1] : undefined;
+  if (typeof repository !== 'string' || !/^[\w-]+\/[\w.-]+$/.test(repository))
+    throw new Error(`.claude/gates.json: ${naam} is geen { "repository": "<owner>/<repo>" }`);
+  return { repository };
+}

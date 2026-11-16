@@ -2,8 +2,6 @@
 // geven sinds ADR 0063 punt 5 niets meer; readRegistry leest ze nog, omdat oudere commits van main ze bevatten.
 import { documentInfo, documentKind, validStatus } from './document-state.mjs';
 
-export const TEMPLATE_REPOSITORY = 'BramLambertJansen/template';
-
 /** @typedef {{ file: string, digest: string, repository: string, branch: string, status: string, paths: string[] }} OwnerDecision */
 /** @typedef {{ version: number, requiredChecks: string[], decisions: OwnerDecision[] }} Registry */
 /** @typedef {{ registry: Registry, repository: string, branch: string, trusted: (file: string) => string | null,

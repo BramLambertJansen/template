@@ -33,7 +33,9 @@ function templateInputs(cwd: string): Record<string, string> {
   const local = Object.fromEntries(files.map((file) => [file, readFileSync(path.join(cwd, file), 'utf8')]));
   if (!local['CHANGELOG.md']?.includes('- Gestart vanaf template ')) return local;
   // Na app:init blijft de echte template-invoer in de gekoppelde Git-geschiedenis, ook in CI (fetch-depth: 0).
-  const commits = git(cwd, ['log', 'HEAD', '--full-history', '--format=%H', '--', 'package.json']).split('\n');
+  // GEWIJZIGD (spec template-repo, R-TEST-02): elke commit, niet alleen die package.json wijzigden; anders is de invoer de
+  // template van vóór een latere wijziging aan gates.json (zoals template.repository) en faalt app:init op verouderde invoer.
+  const commits = git(cwd, ['log', 'HEAD', '--format=%H']).split('\n');
   for (const sha of commits) {
     const pkg = git(cwd, ['show', `${sha}:package.json`]);
     if (!pkg.includes('"name": "app-template"')) continue;

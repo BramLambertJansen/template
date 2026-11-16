@@ -3,6 +3,7 @@
 Status: geaccepteerd
 Herzien: 2026-11-03 (#499): gewijzigd door [0076](0076-ci-in-delen.md) punt 1 (één kopie per deel van de check; de suite draait
 nog steeds één keer)
+Herzien: 2026-11-16 (#745): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 
 Wijzigt [0047](0047-generator-new-resource.md) punt 9 ("als eigen job in CI") en in spec app-init-proef OV-4 (overslaan in
 een app), OV-5 (eigen job `check:app-init`) en de stappen en AC's die daarop rusten (lijst in de spec, "Raakt ook"). Drempel: A4. Uitwerking: [spec](../specs/een-proefkopie.md). Aanleiding: bevinding P4 uit
@@ -24,9 +25,9 @@ slaagt. Een veilige lijst omvat bijna de hele repo, en dan levert overslaan bijn
 
 ## Besluit
 
-1. **Eén kopie, één suite.** Eén check maakt één kopie. In de template draait die eerst `app:init` (met commit, zoals in
-   een app na de init-PR), daarna de generator (`new:resource`) en dan één keer de snelle suite. In een app slaat de check
-   `app:init` over en draait hij alleen de generator en de suite, zoals `check:new-resource` nu doet.
+1. **Eén kopie, één suite.** Eén check maakt in CI één kopie per deel ([0076](0076-ci-in-delen.md) punt 3). In de template
+   draait die eerst `app:init` (met commit, zoals in een app na de init-PR), daarna de generator (`new:resource`) en dan
+   zijn deel van de snelle suite; samen draaien de delen de suite één keer. In een app slaat de check `app:init` over.
 2. **De naam `check:new-resource` blijft.** De job en het script houden die naam, want hij is al verplicht in de template
    én in elke app. `check:app-init` verdwijnt uit `requiredChecks`, de ruleset, `ci.yml` en `package.json`. Een verplichte
    check schrappen blokkeert geen andere PR, een nieuwe naam toevoegen wel.
@@ -36,9 +37,7 @@ slaagt. Een veilige lijst omvat bijna de hele repo, en dan levert overslaan bijn
    (minuten).
 5. **Een rode uitslag noemt de stappen.** Bij een rode gate meldt de check welke stappen in de kopie draaiden (`app:init`,
    `new:resource`). Met `--bewaar` blijft de kopie staan voor onderzoek.
-6. **Overgang in twee stappen.** `pr:verify` en `pr:merge` lezen `requiredChecks` van `main`. De eerste bouw-PR schrapt
-   `check:app-init` daarom alleen uit `requiredChecks` en de ruleset, en laat de job zelf nog ongewijzigd draaien. Na die
-   merge en de rulesetronde haalt een tweede PR de job weg. Zo meldt nergens een lege job groen zonder te toetsen.
+6. *(vervallen: uitgevoerd)*
 
 ## Alternatieven
 
@@ -58,7 +57,5 @@ slaagt. Een veilige lijst omvat bijna de hele repo, en dan levert overslaan bijn
 - Een rode uitslag wijst minder precies één stap aan. De melding noemt de stappen en `--bewaar` laat de kopie staan.
 - Dat de generator slaagt in de template zonder `app:init`, toetst niemand meer. Niemand draait `new:resource` in de
   template zelf, en `check:new-resource` in de app blijft dat pad dekken.
-- Tijdens de overgang draaien beide proeven nog één PR lang. Daarna past de eigenaar de ruleset toe
-  (`scripts/github-ruleset.sh`); in een app gebeurt dat bij de template-update die `check:app-init` schrapt.
 - In een app faalt de check nu ook bij een ontbrekende `node_modules` of `.claude/gates.json`, zoals `check:app-init` al
   deed. Een verplichte check slaagt dan niet stil.
