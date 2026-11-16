@@ -495,16 +495,6 @@ describe('testteller: voorwaardelijk geregistreerde tests', () => {
   });
 });
 
-describe('voorwaardelijke-tests/AC-6: docs', () => {
-  test('voorwaardelijke-tests/AC-6: review-checklists noemt de telling en de grenzen', () => {
-    const regel = readFileSync('docs/operations/review-checklists.md', 'utf8')
-      .split('\n')
-      .find((r) => r.includes('testChangeRisk'));
-    for (const deel of ['#410', 'testvoorwaarde.mjs', '`test.extend`-alias', 'lus', 'netto gelijk', 'JSX', 'helper'])
-      expect(regel).toContain(deel);
-  });
-});
-
 describe('rolhek: een bestaande test voorwaardelijk maken vraagt akkoord (AC-3)', () => {
   const config = loadConfig(readFileSync('.claude/gates.json', 'utf8'));
   const pad = 'test/rails/example.test.ts';

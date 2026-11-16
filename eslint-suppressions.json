@@ -363,11 +363,6 @@
       "count": 1
     }
   },
-  "test/scripts/github-ruleset.test.ts": {
-    "rails/afwezigheid": {
-      "count": 1
-    }
-  },
   "test/scripts/guard-workflow.test.ts": {
     "rails/afwezigheid": {
       "count": 5
