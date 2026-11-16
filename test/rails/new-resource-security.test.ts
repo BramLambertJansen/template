@@ -157,7 +157,7 @@ describe('de afdruklijst (security-suite PR 4, optie a)', () => {
     const verwacht = bestandsplan(namen('invoices'), '20000101000000');
     const geparsed = z.object({ declaratie: z.array(z.string()) }).safeParse(verwacht);
 
-    expect(geparsed.data?.declaratie).toStrictEqual([RESOURCES]);
+    expect(geparsed.data?.declaratie).toStrictEqual([RESOURCES, 'test/security/fixtures.ts']);
     expect(verwacht.gates).toStrictEqual(['src/shared/permissions.test.ts', 'src/web/routes.test.tsx']);
   });
 

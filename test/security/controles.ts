@@ -71,7 +71,7 @@ function insertSql(tabel: string, kolommen: Readonly<Record<string, unknown>>): 
 const rijSql = (tabel: string, id: string): SQL =>
   sql`select to_jsonb(t) as rij from ${sql.raw(tabel)} t where t.id = ${id}`;
 
-interface Poging {
+export interface Poging {
   readonly rijen: Record<string, unknown>[];
   readonly aantal: number;
   readonly pg: string | undefined;
@@ -95,16 +95,24 @@ function idUit(poging: Poging): string | undefined {
   return gelezen.success ? gelezen.data.id : undefined;
 }
 
-// B mag niets zien of raken: 0 rijen, of "geen recht" (42501). Een andere fout betekent dat de controle niets bewijst.
-// Update en delete lopen zonder where en returning: die lezen geen kolommen, dus alleen de update- en delete-policy beslissen
-// (een where of returning haalt de select-policy erbij, en die zou een te ruime update- of delete-policy maskeren). B heeft
-// zelf geen rijen, dus elke geraakte rij is van A. Een 42501 bij update telt niet als weigering: B heeft het kolomrecht (dat is
-// vooraf gecontroleerd), dus een 42501 betekent dat de policy de rij van A wel liet matchen en pas de with check weigerde.
-async function bRaaktNiets(
-  spelers: Spelers,
-  tabel: string,
-  doel: { kolom: string; waarde: unknown },
-): Promise<string[]> {
+const okSchema = z.object({ ok: z.boolean() });
+
+// De kolom van de update-proef: uit sample.updateRij als die er is, anders uit sample.update (zelfde patroon als sample.rij naast
+// sample.create), zodat een API-veldnaam die afwijkt van de kolomnaam kan.
+interface UpdateDoel {
+  readonly kolom: string;
+  readonly waarde: unknown;
+  readonly bron: 'sample.update' | 'sample.updateRij';
+}
+
+function updateDoel(regel: ResourceRegel): UpdateDoel | undefined {
+  const bron = regel.sample.updateRij === undefined ? 'sample.update' : 'sample.updateRij';
+  const [kolom, waarde] = Object.entries(regel.sample.updateRij ?? regel.sample.update ?? {})[0] ?? [];
+  return kolom === undefined ? undefined : { kolom, waarde, bron };
+}
+
+// Leeg = de kolom bestaat en B heeft er UPDATE-recht op, dus de update-proef bewijst iets.
+async function kolomProblemen(spelers: Spelers, tabel: string, doel: UpdateDoel): Promise<string[]> {
   const bestaat = await probeer(
     spelers.db,
     spelers.B,
@@ -118,28 +126,36 @@ async function bRaaktNiets(
     spelers.B,
     sql`select has_column_privilege(${tabel}::text, ${doel.kolom}::text, 'UPDATE') as ok`,
   );
-  const ok = z.object({ ok: z.boolean() });
-  const bestaatKolom = ok.safeParse(bestaat.rijen[0]);
-  const mag = ok.safeParse(recht.rijen[0]);
-  const problemen: string[] = [];
-  const magUpdaten = mag.success && mag.data.ok;
+  const bestaatKolom = okSchema.safeParse(bestaat.rijen[0]);
+  const mag = okSchema.safeParse(recht.rijen[0]);
   if (!bestaatKolom.success || !bestaatKolom.data.ok) {
-    problemen.push(
-      `${tabel}: kolom ${doel.kolom} uit sample.update bestaat niet in ${tabel}; gebruik de kolomnaam (test/security/resources.ts)`,
-    );
-  } else if (!magUpdaten) {
-    problemen.push(
-      `${tabel}: B heeft geen UPDATE-recht op '${doel.kolom}': kies een updatebare kolom in sample.update (test/security/resources.ts)`,
-    );
+    return [
+      `${tabel}: kolom ${doel.kolom} uit ${doel.bron} bestaat niet in ${tabel}; gebruik de kolomnaam (test/security/resources.ts)`,
+    ];
   }
-  const nieuw = typeof doel.waarde === 'string' ? `${doel.waarde}-door-b` : doel.waarde;
-  const pogingen = [
-    ['select', sql`select id from ${sql.raw(tabel)}`],
-    ['update', sql`update ${sql.raw(tabel)} set ${sql.identifier(doel.kolom)} = ${nieuw}`],
-    ['delete', sql`delete from ${sql.raw(tabel)}`],
-  ] as const;
+  if (!mag.success || !mag.data.ok) {
+    return [
+      `${tabel}: B heeft geen UPDATE-recht op '${doel.kolom}': kies een updatebare kolom in ${doel.bron} (test/security/resources.ts)`,
+    ];
+  }
+  return [];
+}
+
+// B mag niets zien of raken: 0 rijen, of "geen recht" (42501). Een andere fout betekent dat de controle niets bewijst.
+// Update en delete lopen zonder where en returning: die lezen geen kolommen, dus alleen de update- en delete-policy beslissen
+// (een where of returning haalt de select-policy erbij, en die zou een te ruime update- of delete-policy maskeren). B heeft
+// zelf geen rijen, dus elke geraakte rij is van A. Een 42501 bij update telt niet als weigering: B heeft het kolomrecht (dat is
+// vooraf gecontroleerd), dus een 42501 betekent dat de policy de rij van A wel liet matchen en pas de with check weigerde.
+// Zonder doel (geen UPDATE-recht op de tabel, of geen sample) vervalt alleen de update-proef; select en delete lopen altijd.
+async function bRaaktNiets(spelers: Spelers, tabel: string, doel: UpdateDoel | undefined): Promise<string[]> {
+  const problemen = doel === undefined ? [] : await kolomProblemen(spelers, tabel, doel);
+  const pogingen: [string, SQL][] = [['select', sql`select id from ${sql.raw(tabel)}`]];
+  if (doel !== undefined && problemen.length === 0) {
+    const nieuw = typeof doel.waarde === 'string' ? `${doel.waarde}-door-b` : doel.waarde;
+    pogingen.push(['update', sql`update ${sql.raw(tabel)} set ${sql.identifier(doel.kolom)} = ${nieuw}`]);
+  }
+  pogingen.push(['delete', sql`delete from ${sql.raw(tabel)}`]);
   for (const [actie, statement] of pogingen) {
-    if (actie === 'update' && !magUpdaten) continue;
     const poging = await probeer(spelers.db, spelers.B, statement);
     if (poging.aantal > 0) {
       problemen.push(`${tabel}: B raakt via ${actie} ${String(poging.aantal)} rij(en) van A`);
@@ -150,41 +166,106 @@ async function bRaaktNiets(
   return problemen;
 }
 
-async function eigenTabelProblemen(spelers: Spelers, tabel: string, regel: ResourceRegel): Promise<string[]> {
-  const rij = regel.sample.rij ?? regel.sample.create;
-  const [kolom, waarde] = Object.entries(regel.sample.update ?? {})[0] ?? [];
-  if (kolom === undefined) {
-    return [
-      `${tabel}: sample.update ontbreekt of is leeg: kies een updatebare kolom in sample.update (test/security/resources.ts)`,
-    ];
+export type Updaterecht =
+  | { readonly uitkomst: 'recht' }
+  | { readonly uitkomst: 'geen-recht' }
+  | { readonly uitkomst: 'onbekend'; readonly probleem: string };
+
+// Leest het catalogusantwoord op `select has_any_column_privilege(<tabel>, 'UPDATE') as ok` (spec suite-volgt-contract,
+// ontwerp 4). Fail-closed: een fout, geen (of meer dan één) rij, null of iets anders dan een boolean is `onbekend` met het
+// probleem, nooit `geen-recht`; anders zou een mislukte catalogusvraag de update-proef stil laten vervallen.
+export function updaterechtUit(tabel: string, poging: Poging): Updaterecht {
+  const onbekend = (reden: string): Updaterecht => ({
+    uitkomst: 'onbekend',
+    probleem: `${tabel}: updaterecht niet vast te stellen: ${reden}`,
+  });
+  if (poging.bericht !== undefined || poging.pg !== undefined) {
+    return onbekend(poging.bericht ?? `de catalogusvraag gaf fout ${String(poging.pg)}`);
   }
+  const [rij] = poging.rijen;
+  if (rij === undefined || poging.rijen.length !== 1) {
+    return onbekend(`de catalogusvraag gaf ${String(poging.rijen.length)} rijen, verwacht 1`);
+  }
+  const ok = new Map(Object.entries(rij)).get('ok');
+  if (typeof ok !== 'boolean') {
+    return onbekend(`de catalogusvraag gaf geen boolean (${ok === null ? 'null' : typeof ok})`);
+  }
+  return { uitkomst: ok ? 'recht' : 'geen-recht' };
+}
+
+export interface TabelVerslag {
+  readonly problemen: string[];
+  // Wat de controle bewust oversloeg (geen probleem): de test schrijft het naar de testuitvoer.
+  readonly meldingen: string[];
+}
+
+interface UpdateDeel extends TabelVerslag {
+  readonly doel: UpdateDoel | undefined;
+}
+
+// De drie uitkomsten voor het updaterecht van de app-rol (dezelfde rol als B) op de tabel.
+async function updateDeel(spelers: Spelers, tabel: string, regel: ResourceRegel): Promise<UpdateDeel> {
+  const vraag = sql`select has_any_column_privilege(${tabel}::text, 'UPDATE') as ok`;
+  const recht = updaterechtUit(tabel, await probeer(spelers.db, spelers.B, vraag));
+  if (recht.uitkomst === 'onbekend') return { problemen: [recht.probleem], meldingen: [], doel: undefined };
+  if (recht.uitkomst === 'recht') {
+    const doel = updateDoel(regel);
+    const ontbreekt = `${tabel}: sample.update ontbreekt of is leeg: de app-rol heeft UPDATE-recht, kies een updatebare kolom in sample.update of sample.updateRij (test/security/resources.ts)`;
+    return { problemen: doel === undefined ? [ontbreekt] : [], meldingen: [], doel };
+  }
+  // Geen recht: sample.update is niet nodig. Strenger dan overslaan alleen: een update zonder where moet voor A en voor B op
+  // het ontbrekende recht stuklopen (42501), anders klopt het catalogusantwoord niet met wat de database doet.
+  const problemen: string[] = [];
+  for (const wie of ['A', 'B'] as const) {
+    const poging = await probeer(spelers.db, spelers[wie], sql`update ${sql.raw(tabel)} set id = id`);
+    problemen.push(...verwachtGeenRecht(`${tabel}: ${wie} update zonder UPDATE-recht`, poging));
+  }
+  const melding = `${tabel}: de app-rol heeft geen UPDATE-recht; de update-proef is overgeslagen (select en delete door B lopen wel)`;
+  return { problemen, meldingen: [melding], doel: undefined };
+}
+
+async function eigenTabelVerslag(spelers: Spelers, tabel: string, regel: ResourceRegel): Promise<TabelVerslag> {
+  const rij = regel.sample.rij ?? regel.sample.create;
+  const { problemen, meldingen, doel } = await updateDeel(spelers, tabel, regel);
   const gemaakt = await probeer(spelers.db, spelers.A, insertSql(tabel, rij));
   const id = idUit(gemaakt);
   if (id === undefined) {
-    return [`${tabel}: A kan geen eigen rij maken (${gemaakt.bericht ?? 'geen rij teruggekregen'})`];
+    problemen.push(`${tabel}: A kan geen eigen rij maken (${gemaakt.bericht ?? 'geen rij teruggekregen'})`);
+    return { problemen, meldingen };
   }
   const voor = await probeer(spelers.db, spelers.A, rijSql(tabel, id));
-  if (voor.rijen.length !== 1)
-    return [`${tabel}: A ziet de eigen rij niet terug (select-policy ontbreekt of is te streng)`];
-  const problemen = await bRaaktNiets(spelers, tabel, { kolom, waarde });
+  if (voor.rijen.length !== 1) {
+    problemen.push(`${tabel}: A ziet de eigen rij niet terug (select-policy ontbreekt of is te streng)`);
+    return { problemen, meldingen };
+  }
+  problemen.push(...(await bRaaktNiets(spelers, tabel, doel)));
   const na = await probeer(spelers.db, spelers.A, rijSql(tabel, id));
   if (!isDeepStrictEqual(voor.rijen, na.rijen)) problemen.push(`${tabel}: de rij van A is veranderd door B`);
-  return problemen;
+  return { problemen, meldingen };
 }
 
 // AC-8: voor elke owner-tabel in de catalogus maakt A een rij en raakt B met select, update en delete 0 rijen; de rij van A
-// blijft zoals hij was. Een owner-tabel zonder resources-regel is zelf een probleem (AC-11).
-export async function tabelEigenaarProblemen(spelers: Spelers, resources: Resources): Promise<string[]> {
+// blijft zoals hij was. Een owner-tabel zonder resources-regel is zelf een probleem (AC-11). De update-proef volgt het
+// updaterecht van de app-rol (spec suite-volgt-contract, ontwerp 4): zonder recht vervalt hij, met een melding.
+export async function tabelEigenaarVerslag(spelers: Spelers, resources: Resources): Promise<TabelVerslag> {
   const problemen: string[] = [];
+  const meldingen: string[] = [];
   for (const tabel of await eigenaarTabellen(spelers)) {
     const regel = regelVoor(resources, tabel);
     if (regel === undefined) {
       problemen.push(`${tabel}: owner-tabel zonder regel in resources (test/security/resources.ts)`);
-    } else {
-      problemen.push(...(await eigenTabelProblemen(spelers, tabel, regel)));
+      continue;
     }
+    const verslag = await eigenTabelVerslag(spelers, tabel, regel);
+    problemen.push(...verslag.problemen);
+    meldingen.push(...verslag.meldingen);
   }
-  return problemen;
+  return { problemen, meldingen };
+}
+
+// De problemen van tabelEigenaarVerslag, voor aanroepers die de meldingen niet tonen.
+export async function tabelEigenaarProblemen(spelers: Spelers, resources: Resources): Promise<string[]> {
+  return (await tabelEigenaarVerslag(spelers, resources)).problemen;
 }
 
 function spoofKolommen(spelers: Spelers): [string, Record<string, unknown>][] {
@@ -281,11 +362,14 @@ export function classificatieProblemen(inventaris: Inventaris): string[] {
   return [...ontbreekt, ...verouderd, ...zonderResource, ...zonderRegel, ...zonderTweede];
 }
 
+// Wat de suite van een route leest: alleen het contract (register-route of probe-route).
+export interface ContractRoute {
+  readonly contract: Pick<Contract, 'method' | 'path' | 'input'>;
+}
+
 // Een route zonder strict input laat een onbekend veld (owner_id!) stilletjes door: createApp en defineContract weigeren dat bij
 // opstart, deze controle bewijst het ook voor wat er in het register staat.
-export function strictProblemen(
-  lijst: readonly { readonly contract: Pick<Contract, 'method' | 'path' | 'input'> }[],
-): string[] {
+export function strictProblemen(lijst: readonly ContractRoute[]): string[] {
   return lijst
     .filter(({ contract }) => contract.input.def.catchall?._zod.def.type !== 'never')
     .map(({ contract }) => `route '${contract.method} ${contract.path}': input is niet strict`);
@@ -310,6 +394,9 @@ export interface EigenaarOpzet {
   readonly zend: Zender;
   readonly classificatie: Classificatie;
   readonly resources: Resources;
+  // De routes waarop de zender werkt (echt register: `routes` uit src/api/app.ts; probe-app: de probe-routes). De suite leest er
+  // het contract van de lijstroute uit (spec suite-volgt-contract, ontwerp 3).
+  readonly routes: readonly ContractRoute[];
   readonly gebruikers: { readonly A: string; readonly B: string };
 }
 
@@ -329,6 +416,8 @@ interface Context {
   readonly naam: string;
   readonly regel: ResourceRegel;
   readonly kaart: ReadonlyMap<Actie, string>;
+  // Het veld q van het lijstcontract, of undefined als de lijst niet zoekt. (Dat het contract limit accepteert, staat al vast.)
+  readonly lijstQ: z.core.$ZodType | undefined;
   readonly ids: { readonly A: string[]; readonly B: string[] };
 }
 
@@ -371,6 +460,33 @@ async function maakRij(ctx: Context, wie: Wie, invoer: Readonly<Record<string, u
   ctx.ids[wie].push(gelezen.data.id);
 }
 
+// Een probleem dat de controle van deze resource stopt maar geen afgebroken controle is: de tekst is het hele probleem.
+class ContractProbleem extends Error {}
+
+const isZodType = (waarde: unknown): waarde is z.core.$ZodType =>
+  typeof waarde === 'object' && waarde !== null && '_zod' in waarde;
+
+// Het contract van de lijstroute (spec suite-volgt-contract, ontwerp 3). De beslissing kijkt per veld naar dat ene veld, niet
+// naar het hele schema: een ander verplicht filter mag niet bepalen of de suite limit stuurt. Fail-closed, vóór het eerste
+// verzoek: zonder contract of zonder limit is de resource rood met deze reden, niet met een 400 halverwege.
+function lijstQVan(o: EigenaarOpzet, naam: string, label: string): z.core.$ZodType | undefined {
+  const route = o.routes.find(({ contract }) => `${contract.method} ${contract.path}` === label);
+  if (route === undefined) {
+    throw new ContractProbleem(
+      `${naam}: het contract van de lijstroute '${label}' ontbreekt in de routes van de opzet (EigenaarOpzet.routes)`,
+    );
+  }
+  const velden = new Map<string, unknown>(Object.entries(route.contract.input.shape));
+  const limit = velden.get('limit');
+  if (!isZodType(limit) || !z.safeParse(limit, 1).success) {
+    throw new ContractProbleem(
+      `${naam}: het lijstcontract '${label}' kent geen limit; geef defineListSearch een pageSize (spec suite-volgt-contract)`,
+    );
+  }
+  const q = velden.get('q');
+  return isZodType(q) ? q : undefined;
+}
+
 // Het bereiden van een resource: de routes per actie, en altijd twee verschillende rijen voor A en voor B.
 async function bereid(o: EigenaarOpzet, naam: string): Promise<Context> {
   const regel = Object.entries(o.resources).find(([sleutel]) => sleutel === naam)?.[1];
@@ -382,8 +498,10 @@ async function bereid(o: EigenaarOpzet, naam: string): Promise<Context> {
     if (kaart.has(klasse.actie)) throw new Error(`${naam}: twee routes met actie '${klasse.actie}' (${label})`);
     kaart.set(klasse.actie, label);
   }
-  const ctx: Context = { o, naam, regel, kaart, ids: { A: [], B: [] } };
-  if (labelVan(ctx, 'list') !== regel.lijst) throw new Error(`${naam}: lijst '${regel.lijst}' is niet de list-route`);
+  const lijstLabel = kaart.get('list');
+  if (lijstLabel === undefined) throw new Error(`${naam}: geen route met actie 'list' in de classificatie`);
+  if (lijstLabel !== regel.lijst) throw new Error(`${naam}: lijst '${regel.lijst}' is niet de list-route`);
+  const ctx: Context = { o, naam, regel, kaart, lijstQ: lijstQVan(o, naam, lijstLabel), ids: { A: [], B: [] } };
   for (const wie of ['A', 'B'] as const) {
     await maakRij(ctx, wie, regel.sample.create);
     await maakRij(ctx, wie, regel.sample.createTweede);
@@ -391,7 +509,8 @@ async function bereid(o: EigenaarOpzet, naam: string): Promise<Context> {
   return ctx;
 }
 
-// Alle pagina's van de lijst als deze gebruiker, via de cursor (limit 1 laat de paginering echt werken).
+// Alle pagina's van de lijst als deze gebruiker, via de cursor (limit 1 laat de paginering echt werken; dat het lijstcontract
+// limit accepteert, is in bereid vastgesteld).
 async function lijstItems(ctx: Context, wie: Wie, extra: Readonly<Record<string, unknown>>): Promise<unknown[][]> {
   const paginas: unknown[][] = [];
   const gezien = new Set<string>();
@@ -419,10 +538,22 @@ function eersteTekst(invoer: Readonly<Record<string, unknown>>): string | undefi
   return Object.values(invoer).find((waarde): waarde is string => typeof waarde === 'string');
 }
 
+// De q-variant draait alleen als het lijstcontract een veld q heeft (zonder q is er geen zoekpad om te lekken). Weigert dat
+// veld de zoekterm uit de sample, dan is dat een probleem: de variant zou anders op een 400 afbreken.
+function zoekVariant(ctx: Context): { readonly q?: string; readonly problemen: string[] } {
+  const q = eersteTekst(ctx.regel.sample.create);
+  if (ctx.lijstQ === undefined || q === undefined) return { problemen: [] };
+  if (z.safeParse(ctx.lijstQ, q).success) return { q, problemen: [] };
+  return {
+    problemen: [
+      `${ctx.naam}: het lijstcontract '${ctx.regel.lijst}' weigert in q de zoekterm uit sample.create; de zoekvariant is niet geprobeerd (test/security/resources.ts)`,
+    ],
+  };
+}
+
 // De lijst van B bevat niets van A: gewoon, met q gelijk aan een waarde van A, en over meerdere pagina's.
 async function lijstProblemen(ctx: Context): Promise<string[]> {
-  const q = eersteTekst(ctx.regel.sample.create);
-  const problemen: string[] = [];
+  const { q, problemen } = zoekVariant(ctx);
   const varianten: [string, Record<string, unknown>][] = [['zonder zoekterm', {}]];
   if (q !== undefined) varianten.push(['met q gelijk aan een waarde van A', { q }]);
   for (const [omschrijving, extra] of varianten) {
@@ -501,6 +632,7 @@ async function bewaakt(naam: string, werk: () => Promise<string[]>): Promise<str
   try {
     return await werk();
   } catch (error) {
+    if (error instanceof ContractProbleem) return [error.message];
     return [`${naam}: controle afgebroken: ${foutTekst(error)}`];
   }
 }

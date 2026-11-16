@@ -143,7 +143,8 @@ describe('gegenereerd contract, echt geladen (lijstpagina/AC-8)', () => {
       mkdirSync(path.dirname(path.join(werkmap, pad)), { recursive: true });
       writeFileSync(path.join(werkmap, pad), tekst);
     };
-    for (const pad of ['src/shared/contracts/notities.ts', 'src/shared/ids.ts'])
+    // limits.ts erbij (spec suite-volgt-contract): het gegenereerde contract importeert NOTITIES_PAGE_SIZE voor pageSize.
+    for (const pad of ['src/shared/contracts/notities.ts', 'src/shared/ids.ts', 'src/shared/limits.ts'])
       schrijf(pad, p.bestanden.find((b) => b.pad === pad)?.inhoud ?? '');
     schrijf('src/shared/contracts/kit.ts', readFileSync('src/shared/contracts/kit.ts', 'utf8'));
     // ADR 0046 punt 32: permissions.ts is geen gate-wijziging meer maar een bestand dat het script zelf schrijft.
@@ -169,6 +170,7 @@ describe('gegenereerd contract, echt geladen (lijstpagina/AC-8)', () => {
   test('api: geldige input wordt geaccepteerd', () => {
     expect(search?.api.safeParse({ q: ' kaas ', sort: 'oudste' }).success).toBe(true);
     expect(search?.api.safeParse({}).success).toBe(true);
+    expect(search?.api.safeParse({ limit: 1 }).success).toBe(true);
   });
 
   test.each([

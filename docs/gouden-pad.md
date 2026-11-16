@@ -37,8 +37,11 @@ draait hem; `--dry-run` toont het plan zonder te schrijven, en bestaat een doel 
    - de declaratie voor de securitysuite, als afgedrukte wijziging (`--- test/security/resources.ts`): één regel per route in
      `routeClassificatie` (scope `eigenaar`) en één regel in `resources`, met de samples als `INVULLEN`. `createTweede` is
      verplicht voor de cursorproef: A en B krijgen ieder twee verschillende rijen. `rol` kiest een toegestane testrol
-     (`user` indien toegestaan, anders de opgegeven rol); admin-acteurs krijgen echte MFA-sessies. De generator schrijft
-     dit bestand niet (`scripts/kit/new-resource.mjs`, `declaratieInhoud`).
+     (`user` indien toegestaan, anders de opgegeven rol); admin-acteurs krijgen echte MFA-sessies. `update` is alleen nodig
+     bij een update-route of een update-grant; wijkt de API-veldnaam af van de kolomnaam, dan geeft `updateRij` de kolom. De
+     generator schrijft dit bestand niet (`scripts/kit/new-resource.mjs`, `declaratieInhoud`);
+   - de regels `'<naam>:read'` en `'<naam>:write'` voor `PERMISSIE_ORACLE`, als afgedrukte wijziging
+     (`--- test/security/fixtures.ts`); zonder die regels is security/AC-4 rood (spec `suite-volgt-contract`).
 3. Een nieuwe resource volgt altijd de volledige straat uit framework §8: de aparte tester schrijft eerst de tests
    (pgTAP per policy, integratie, e2e), zet de declaratie in
    `test/security/resources.ts` en vult de samples in (tot dan is `pnpm test:db` rood), de developer voegt de velden toe in
