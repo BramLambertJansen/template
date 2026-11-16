@@ -2,6 +2,8 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-16 (spec template-repo): punt 16, geen vaste template-URL meer; `check-core` haalt `template/main` op van `template.repository` in `.claude/gates.json`; de herkenning van de template in punt 17 blijft `onderhoud.repository`
+
 Herzien: 2026-11-15 (#722): punt 11 aangevuld: de app-zone bevat configuratie en registraties, geen koppeling tussen core-onderdelen; die doet `runServer` in core (spec create-server)
 
 Herzien: 2026-11-15 (#715): door ADR 0092 punt 1 en 2, punt 10 en 11: rollen zijn een uitbreidingspunt (`src/shared/roles.ts`, `defineRoles`); core noemt geen rolnamen meer
@@ -84,7 +86,7 @@ Een app ontstaat met **Use this template**: nieuwe geschiedenis, geen instelling
 
 16. Dependency-cruiser (core → app verboden), CODEOWNERS en `ask` op `src/core/`, en de job `check-core` in `guard.yml`, met
     de scripts van main. Een app-PR die `src/core/` wijzigt, faalt, tenzij het een vertrouwde merge is: de tweede ouder is een
-    voorouder van `template/main` (van de vaste template-URL) of van main (was 0037 punt 2), en core in de merge is gelijk aan
+    voorouder van `template/main` (van `template.repository` in `.claude/gates.json`) of van main (was 0037 punt 2), en core in de merge is gelijk aan
     die ouder (was 0008 punt 2). Alleen commits die de app toevoegt tellen, niet die uit `template/main` (was 0037 punt 1).
 17. Orphan en octopus met core-wijziging falen (was 0037 punt 3). De check faalt dicht; de template moet zonder credentials op
     te halen zijn (was 0037 punt 4). In de template zelf (`onderhoud.repository` in `.claude/gates.json` van main) is hij
