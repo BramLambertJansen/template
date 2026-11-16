@@ -57,6 +57,46 @@ export function vertrouwdeTekst(root, sha, pad) {
   }
 }
 
+/**
+ * Als `vertrouwdeTekst`, maar met afwezigheid (spec app-padtabel): `{ afwezig: true }` alleen als een geverifieerde boom op het
+ * pad de naam niet bevat, de tekst bij een geverifieerde gewone blob; gooit bij een hashfout, een andere modus (symlink,
+ * submodule, tree) of een onleesbare commit of boom. Een vervalst object kan zo geen afwezigheid nabootsen.
+ * @param {string} root @param {string} sha @param {string} pad @returns {string | { afwezig: true }}
+ */
+export function vertrouwdeTekstOptioneel(root, sha, pad) {
+  if (!OID.test(sha)) throw new Error(`${sha} is geen commit-oid`);
+  let oid = /^tree ([0-9a-f]+)\n/.exec(gecontroleerd(root, 'commit', sha).toString())?.[1];
+  if (oid === undefined) throw new Error(`commit ${sha} zonder tree`);
+  const delen = pad.split('/');
+  for (const [index, naam] of delen.entries()) {
+    const gevonden = entry(root, oid, naam);
+    const laatste = index === delen.length - 1;
+    if (gevonden === null) {
+      if (volledigGelezen(root, oid)) return { afwezig: true };
+      throw new Error(`tree ${oid} is onleesbaar`);
+    }
+    if (!laatste && gevonden.modus !== '40000') throw new Error(`${pad}: ${naam} is geen map`);
+    if (laatste && gevonden.modus !== '100644' && gevonden.modus !== '100755')
+      throw new Error(`${pad} is geen gewoon bestand (modus ${gevonden.modus})`);
+    oid = gevonden.oid;
+  }
+  return gecontroleerd(root, 'blob', oid).toString('utf8');
+}
+
+/** Of een gecontroleerde tree tot het einde te ontleden is (een afgebroken entry is geen afwezigheid). @param {string} root @param {string} oid */
+function volledigGelezen(root, oid) {
+  const data = gecontroleerd(root, 'tree', oid);
+  const breedte = oid.length / 2;
+  let i = 0;
+  while (i < data.length) {
+    const spatie = data.indexOf(0x20, i);
+    const nul = data.indexOf(0, spatie);
+    if (spatie < 0 || nul < 0 || nul + 1 + breedte > data.length) return false;
+    i = nul + 1 + breedte;
+  }
+  return true;
+}
+
 /** Of `sha` een commit is die bij zijn oid hoort. @param {string} root @param {string} sha */
 export function vertrouwdeCommit(root, sha) {
   try {

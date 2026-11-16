@@ -9,7 +9,7 @@ import { automaticRunner } from './runner-authority.mjs';
 import { isCoreUiSource, testChangeRisk } from './functional-ui.mjs';
 import { staleBranchStart } from './verse-main.mjs';
 import { zelfladend } from './zelfladend.mjs';
-import { afgeleid, globMatch } from './padtabel.mjs';
+import { afgeleid, globMatch, samengevoegd } from './padtabel.mjs';
 
 /**
  * @typedef {{ gates: string[], testpaden: string[], jsonGates: Record<string, string[]>, gegenereerd: string[],
@@ -35,13 +35,16 @@ import { afgeleid, globMatch } from './padtabel.mjs';
 const SUBAGENT_ROLES = new Set(['architect', 'developer', 'tester', 'reviewer', 'docs']);
 
 /**
- * Leest .claude/gates.json; een ontbrekende of verkeerde sleutel is een fout (de hook faalt dan dicht).
+ * Leest .claude/gates.json; een ontbrekende of verkeerde sleutel is een fout (de hook faalt dan dicht). `appText` is de tekst van
+ * het app-bestand `.claude/gates.app.json` of null (spec app-padtabel); de padtabel wordt dan eerst samengevoegd. Ongeldige JSON
+ * of een app-bestand zonder object-`paden` gooit.
  * @param {string} text
+ * @param {string | null} [appText]
  * @returns {Config}
  */
-export function loadConfig(text) {
+export function loadConfig(text, appText = null) {
   /** @type {unknown} */
-  const raw = JSON.parse(text);
+  const raw = samengevoegd(JSON.parse(text), appText === null ? null : JSON.parse(appText));
   const value = (/** @type {string} */ key) =>
     typeof raw === 'object' && raw !== null ? Object.entries(raw).find(([name]) => name === key)?.[1] : undefined;
   const list = (/** @type {string} */ key) => {

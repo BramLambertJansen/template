@@ -5,6 +5,7 @@ import path from 'node:path';
 import { loadConfig } from './rolhek.mjs';
 import { gitText, readAuthority, repositoryName, trustedBase } from './authority-context.mjs';
 import { anker } from './objecten.mjs';
+import { APP_BESTAND } from './padtabel.mjs';
 import { trustedMerge, trustedRunner } from './runner-authority.mjs';
 
 /**
@@ -32,21 +33,40 @@ function safe(probe) {
 
 /**
  * De configuratie en of die uit het anker komt. Binnen een hook (anker gezet) alleen uit het anker, gecontroleerd gelezen, anders een
- * fout (het rolhek faalt dan dicht); daarbuiten de vertrouwde basis van readAuthority, met terugval op de werkmap.
+ * fout (het rolhek faalt dan dicht); daarbuiten de vertrouwde basis van readAuthority, met terugval op de werkmap. Het app-bestand
+ * `.claude/gates.app.json` (spec app-padtabel) komt uit dezelfde bron als gates.json; afwezig betekent geen app-rijen.
  * @param {string} root
- * @param {{ read: (file: string) => string | null } | null} basis
+ * @param {{ read: (file: string) => string | null, readOptional?: (file: string) => string | { afwezig: true } } | null} basis
  * @param {import('./task-authority.mjs').Authority | null} authority
  */
 function configuratie(root, basis, authority) {
   if (anker() !== null) {
     const text = basis?.read('.claude/gates.json') ?? null;
     if (text === null) throw new Error('geen gecontroleerde .claude/gates.json in het anker (ADR 0045)');
-    return { config: loadConfig(text), vertrouwd: true };
+    if (basis?.readOptional === undefined) throw new Error(`geen gecontroleerde ${APP_BESTAND} in het anker (ADR 0045)`);
+    return { config: loadConfig(text, appTekst(basis.readOptional(APP_BESTAND))), vertrouwd: true };
   }
   const trusted = authority?.trusted('.claude/gates.json') ?? null;
-  return trusted === null
-    ? { config: loadConfig(readFileSync(path.join(root, '.claude/gates.json'), 'utf8')), vertrouwd: false }
-    : { config: loadConfig(trusted), vertrouwd: true };
+  if (trusted === null) {
+    const text = readFileSync(path.join(root, '.claude/gates.json'), 'utf8');
+    return { config: loadConfig(text, werkmapApp(root)), vertrouwd: false };
+  }
+  // Een basisobject zonder readOptional (oudere aanroeper, teststub): buiten een hook telt het app-bestand als afwezig.
+  const app = basis?.readOptional === undefined ? null : appTekst(basis.readOptional(APP_BESTAND));
+  return { config: loadConfig(trusted, app), vertrouwd: true };
+}
+
+/** @param {string | { afwezig: true }} gelezen */
+const appTekst = (gelezen) => (typeof gelezen === 'string' ? gelezen : null);
+
+/** Het app-bestand uit de werkmap: ENOENT is afwezig, elke andere fout gooit. @param {string} root */
+function werkmapApp(root) {
+  try {
+    return readFileSync(path.join(root, APP_BESTAND), 'utf8');
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return null;
+    throw error;
+  }
 }
 
 /**

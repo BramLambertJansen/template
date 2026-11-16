@@ -2,7 +2,7 @@
 import { execFileSync } from 'node:child_process';
 import { lstatSync, readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
-import { anker, vertrouwdeCommit, vertrouwdeTekst } from './objecten.mjs';
+import { anker, vertrouwdeCommit, vertrouwdeTekst, vertrouwdeTekstOptioneel } from './objecten.mjs';
 import { canonicalPath, readRegistry } from './task-authority.mjs';
 
 /** @param {string} root @param {string[]} args */
@@ -66,14 +66,37 @@ function workingText(root, file) {
 /**
  * De vertrouwde basis: binnen een hook het anker van de stub-lader (ADR 0045), gecontroleerd gelezen; daarbuiten `base` of
  * origin/main. Een gezet maar ongeldig anker geeft null (nooit terugval op origin/main, die een agent kan ombuigen).
+ * `readOptional` (spec app-padtabel) onderscheidt afwezig (`{ afwezig: true }`) van onleesbaar (gooit): in een hook gecontroleerd
+ * met `vertrouwdeTekstOptioneel`, daarbuiten met `git cat-file -e`. In het type optioneel: een basisobject van een oudere
+ * aanroeper of een teststub heeft het niet (de lezer beslist dan zelf, zie rolhek-context.mjs `configuratie`).
  * @param {string} root @param {string | undefined} base
- * @returns {{ sha: string, read: (file: string) => string | null } | null}
+ * @returns {{ sha: string, read: (file: string) => string | null, readOptional?: (file: string) => string | { afwezig: true } } | null}
  */
 export function trustedBase(root, base) {
   const vast = base === undefined ? anker() : null;
-  if (vast !== null) return vertrouwdeCommit(root, vast) ? { sha: vast, read: (file) => vertrouwdeTekst(root, vast, file) } : null;
+  if (vast !== null)
+    return vertrouwdeCommit(root, vast)
+      ? {
+          sha: vast,
+          read: (file) => vertrouwdeTekst(root, vast, file),
+          readOptional: (file) => vertrouwdeTekstOptioneel(root, vast, file),
+        }
+      : null;
   const sha = gitText(root, ['rev-parse', '--verify', `${base ?? 'origin/main'}^{commit}`])?.trim() ?? '';
-  return /^[0-9a-f]{40}$/.test(sha) ? { sha, read: (file) => gitText(root, ['show', `${sha}:${file}`]) } : null;
+  if (!/^[0-9a-f]{40}$/.test(sha)) return null;
+  return { sha, read: (file) => gitText(root, ['show', `${sha}:${file}`]), readOptional: (file) => gitOptioneel(root, sha, file) };
+}
+
+/**
+ * Een bestand uit commit `sha` buiten een hook: `{ afwezig: true }` als `git cat-file -e` het niet vindt; anders de blob, en een
+ * fout als het geen blob is of niet te lezen.
+ * @param {string} root @param {string} sha @param {string} file @returns {string | { afwezig: true }}
+ */
+function gitOptioneel(root, sha, file) {
+  if (gitText(root, ['cat-file', '-e', `${sha}:${file}`]) === null) return { afwezig: true };
+  const tekst = gitText(root, ['cat-file', 'blob', `${sha}:${file}`]);
+  if (tekst === null) throw new Error(`${file} in ${sha} is geen leesbaar bestand`);
+  return tekst;
 }
 
 /**
