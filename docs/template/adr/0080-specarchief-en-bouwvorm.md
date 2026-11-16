@@ -5,6 +5,7 @@ Status: geaccepteerd
 Herzien: 2026-11-05 (#542): punt 4 en 7 aangescherpt na de spec-review: de markering alleen op een nieuw AC-id, de digest zonder markering, een rename alleen naar `docs/specs/archief/`; de route via `voorstel` is een bestaand gat
 Herzien: 2026-11-12 (#692): door ADR 0089 punt 2, in de template deels: punt 1, vervalt: het archief verandert niet, een archiefnaam komt niet terug; blijft: verhuizen onder dezelfde naam; punt 3 en 4, vervalt: AC-id's blijven, een spec verdwijnt niet; blijft: één levende spec per mechanisme, inhoud van een goedgekeurde spec wijzigen is een besluit
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 1, 5, 7 en 8, de vorige regel vervalt: punt 1, het specarchief verdwijnt bij de verhuizing en `docs/template/specs/` heeft geen archief; punt 3 en 4, AC-id's die blijven en een spec die niet verdwijnt zijn afspraken, geen guardtoets meer; punt 5, `gebouwd # #<PR>` blijft de vorm (`check:roadmap`), het bouwbewijs is de merge
+Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 5 en 10 (een gebouwde spec krijgt in een besluit-PR nieuwe AC's
 met de markering `(nog niet gebouwd)`; `gebouwd` noemt alleen de PR), [0054](0054-gebouwd-in-de-bouw-pr.md) punt 1 en 5
@@ -29,49 +30,38 @@ SHA weigert de guard elk ander nummer dan dat van de eigen PR.
 
 ## Besluit
 
-1. **Specarchief `docs/specs/archief/`**, als spiegel van het ADR-archief (0053 punt 1, 2, 4 en 5). Een spec die op main
-   `vervallen` is, mag daarheen verhuizen onder dezelfde naam, byte-gelijk, alleen samen met wijzigingen onder `docs/`. Het
-   archief verandert verder niet. Links lossen op zoals in 0053 punt 4; `feiten.mjs specs` en `pnpm leespad` tellen het archief
-   niet. Een naam uit het archief komt niet terug in `docs/specs/`.
-2. **Volgorde** zoals 0053 punt 6: de guard draait uit main, dus eerst de bouw-PR (rails), daarna een verhuis-PR met alleen
-   `git mv` van de drie vervallen specs.
+1. **Specarchief `docs/specs/archief/`** in een app (de template heeft geen archief, 0089 punt 1), als spiegel van het
+   ADR-archief (0053 punt 1, 2, 4 en 5). Een spec die op main `vervallen` is, mag daarheen verhuizen onder dezelfde naam,
+   byte-gelijk; het archief verandert verder niet. Links lossen op zoals in 0053 punt 4.
+2. *(vervallen, zie 0089 punt 1 en 7)*
 3. **Eén levende spec per mechanisme.** Een wijziging aan een bestaand mechanisme werkt de spec van dat mechanisme bij met
    nieuwe AC's onder dezelfde naam en namespace; een nieuwe spec alleen voor een nieuw mechanisme. Vervangt een spec een andere,
-   dan gaat de oude naar `vervallen` en het archief. Een AC-id van een spec met eigenaarstatus verdwijnt nooit.
-4. **Hoe dat door de guard gaat.** Inhoud van een goedgekeurde spec wijzigen blijft een besluit. Een gebouwde spec blijft
-   `gebouwd`: in een besluit-PR is nieuwe inhoud een besluit, en elke nieuwe AC krijgt `(nog niet gebouwd)` (patroon van
-   R-DOC-10), alleen op een id dat nog niet op main staat; de AC-dekking slaat alleen gemarkeerde AC's over. De bouw-PR haalt
-   de markering weg (telt niet als inhoudswijziging) en zet `gebouwd # #<deze PR>`; met een markering kan dat niet. Een spec
-   met een eigenaarstatus op main verlaat `docs/specs/` alleen via `vervallen` naar het archief; verwijderen, een andere naam,
-   of een stap terug waarbij een volledig id `<namespace>/AC-n` wegvalt, is rood. De route via twee PR's (eerst naar
-   `voorstel`, R-WERK-08) is een bestaand gat dat dit besluit niet groter maakt.
-5. **Eén vorm: `gebouwd # #<PR>`.** In de bouw-PR het eigen nummer (0054, 0062). Later het nummer van de gemergde bouw-PR; de
-   guard haalt de head-SHA en de mergecommit bij GitHub en toetst hetzelfde als nu na de merge: mergecommit in main, spec
+   dan gaat de oude naar `vervallen`; in de template wordt zij verwijderd (R-CI-06). Een AC-id van een spec met eigenaarstatus verdwijnt nooit.
+4. **Gebouwde spec.** Inhoud van een goedgekeurde spec wijzigen blijft een besluit. Een gebouwde spec blijft `gebouwd`: nieuwe
+   inhoud is een besluit, en elke nieuwe AC krijgt `(nog niet gebouwd)` (patroon van R-DOC-10), alleen op een id dat nog niet
+   op main staat; de AC-dekking slaat alleen gemarkeerde AC's over. De bouw-PR haalt de markering weg (telt niet als
+   inhoudswijziging) en zet `gebouwd # #<deze PR>`; met een markering kan dat niet.
+5. **Eén vorm: `gebouwd # #<PR>`.** In de bouw-PR het eigen nummer (0054, 0062). Later het nummer van de gemergde bouw-PR;
+   `docs:status` haalt de head-SHA en de mergecommit bij GitHub en toetst hetzelfde als nu na de merge: mergecommit in main, spec
    ongewijzigd goedgekeurd in de mergecommit, verplichte checks groen op de head, een bouwpad, en de status-PR wijzigt alleen
    statusregels en het eigen vinkje. `docs:status` schrijft alleen deze vorm.
 6. **Bestaande SHA-regels** worden in de bouw-PR omgezet: alleen `; gevalideerd: <sha>` gaat weg, het PR-nummer blijft. De
    lezers kennen de oude vorm nog (apps, geschiedenis). `check-docs` weigert de oude vorm in een statusregel. Een gebouwd-regel
    die een ander PR-nummer krijgt, of de SHA verliest terwijl de inhoud verandert, toetst als nieuw `gebouwd` (nu gaat dat als
    `vrij` door, omdat de statusregel buiten de digest valt).
-7. **Niets wordt losser.** Spec-vóór-code, AC-dekking en het bouwbewijs blijven; punt 3, 4 en 6 zijn strenger dan nu.
-8. **Terugval.** Komt een gebouwde spec zonder gemergde bouw-PR met groene checks door de guard, of verliest een spec een AC
+7. **Niets wordt losser.** Spec-vóór-code, AC-dekking en het bouwbewijs blijven.
+8. **Terugval.** Komt een gebouwde spec zonder gemergde bouw-PR met groene checks door `docs:status`, of verliest een spec een AC
    zonder melding, dan gaat de bouw-PR terug. De eigenaar beslist.
 
 ## Alternatieven
 
-- **`docs/template/specs/` als archief.** De naam zegt voor wie, niet in welke fase; in een app klopt hij niet, en levende
-  templatespecs (0063 punt 4) en het archief mengen.
-- **Vervallen specs verwijderen.** Verworpen voor ADR's (0053).
 - **Beide vormen blijven geldig zonder omzetten.** Twee vormen voor altijd; elke lezer en agent moet beide kennen.
 - **De SHA in de tekst houden.** Dubbel met GitHub, en rood na elke latere commit in een open PR.
 - **Elke wijziging een eigen spec.** Vijf specs voor één mechanisme.
 
 ## Gevolgen
 
-- Twee PR's na deze besluit-PR: de bouw-PR en de verhuis-PR. `gebouwd # #537` voor spec `padtabel` kan in een status-PR.
-- Bestaande tests die de geschreven vorm of de oude paden lezen, veranderen; de lijst staat in de spec (OV-1). De merge van
-  deze besluit-PR is het eigenaarakkoord daarvoor (R-TEST-02).
 - In een app wordt `check-docs` na een template-update rood op een eigen SHA-regel; omzetten is één regel per spec.
-- Vervolg, elk met een eigen besluit: de route via `voorstel` dichten (punt 4); de specs van agent-merge en van het rolhek
+- Vervolg, elk met een eigen besluit: de route via `voorstel` dichten (R-WERK-08); de specs van agent-merge en van het rolhek
   samenvoegen (na de rolhek-krimp van 0071); en
   de controle van de SHA-vorm in een open PR weghalen zodra geen lezer haar meer nodig heeft.

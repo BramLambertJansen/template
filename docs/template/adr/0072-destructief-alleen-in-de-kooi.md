@@ -5,9 +5,9 @@ Herzien: 2026-11-03 (#466): punt 2 (de proef schrijft in een alleen-lezen systee
 spec)
 Herzien: 2026-11-10 (#672): gewijzigd door [0088](0088-tests-naar-vermogen.md) punt 2 (een kooitest slaat over waar de kooi
 niet kan starten, nooit in CI) en het gevolg dat `gate:fast` zonder bubblewrap rood is
+Herzien: 2026-11-16 (#745): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 
-Vult [0045](0045-railwerk.md) en [0066](0066-schrijfgrens-op-effect.md) aan; voorwaarde voor bouw-PR 1 van
-[0071](0071-rolhek-vooraf-vaste-lijst.md) (corpus op effect). Drempel: A4 (nieuwe bewaking). Uitwerking:
+Vult [0045](0045-railwerk.md) aan. Drempel: A4 (nieuwe bewaking). Uitwerking:
 [spec](../specs/kooi.md). Aanleiding: het incident van 3 november 2026, leerpunten #461 en #462.
 
 ## Context
@@ -45,13 +45,12 @@ Drie dingen maakten dat mogelijk:
 2. **De kooi valt dicht.** Ontbreekt bubblewrap, of lukt de proef niet, dan draait het commando niet en geeft de kooi een fout
    met de oplossing. De proef draait één keer per proces vóór het eerste commando: schrijven binnen de werkmap moet lukken,
    schrijven in een systeemmap moet falen omdat die alleen-lezen is. Een werkmap die geen echte submap van de tijdelijke map is
-   (de root van de repository, de thuismap, `/`, een link), weigert de kooi. Een test die de kooi nodig heeft, slaat zichzelf
-   nooit over; hij faalt.
+   (de root van de repository, de thuismap, `/`, een link), weigert de kooi. Een kooitest slaat alleen over waar de kooi niet
+   kan starten, nooit in CI ([0088](0088-tests-naar-vermogen.md)).
 3. **Een lintregel houdt shell-uit-data in de kooi.** Buiten `scripts/kit/kooi.mjs` weigert ESLint in code en tests: een
    shell starten met een commandotekst (`bash`, `sh`, `zsh`, `dash` met `-c`, ook via een pad zoals `/bin/sh`), `shell: true`
-   (elke waarde behalve een letterlijke `false`) in een `child_process`-aanroep, en `exec`/`execSync` uit `child_process`. De
-   drie bestaande gevallen met een tekst uit data gaan over naar de kooi; het letterlijke geval in de statusregeltest krijgt
-   een vorm zonder shell. Er komt geen uitzonderingslijst.
+   (elke waarde behalve een letterlijke `false`) in een `child_process`-aanroep, en `exec`/`execSync` uit `child_process`. Er
+   komt geen uitzonderingslijst.
 4. **Een regel voor de sessie zelf.** Wat een sessie buiten de repository ad hoc draait (een prototype in de scratchpad), ziet
    geen lintregel. Daarvoor komt een regel in het regelboek (§11) en één zin in `AGENTS.md`, het enige bestand dat elke
    runtime laadt, ook een cloudsessie zonder hooks: zo'n commando gaat via de kooi (`node scripts/kit/kooi.mjs`); een werkmap
@@ -59,11 +58,8 @@ Drie dingen maakten dat mogelijk:
 5. **Overal dezelfde kooi.** Lokaal is bubblewrap er al (`scripts/bootstrap.sh`, de sandbox van Claude Code). De cloud krijgt
    het via `scripts/cloud-setup.sh`, dat het al installeert. CI installeert het in de job van `gate:fast`, met een
    AppArmor-profiel dat alleen `/usr/bin/bwrap` een user-namespace geeft (Ubuntu 24.04 beperkt die standaard); daar draait de
-   proef van punt 2 mee, zodat een kooi die niet afschermt CI rood maakt. Die workflowwijziging pusht de eigenaar
-   (R-REPO-01). `scripts/doctor.sh` draait dezelfde proef.
-6. **De cloud-bevinding wordt een eigen leerpunt.** Dat projecthooks en sandbox in een cloudsessie ontbraken (#462), raakt het hele
-   rolhek, niet alleen dit incident. Dit besluit lost dat niet op; het zorgt dat het gevaarlijkste gevolg (overgenomen
-   destructieve commando's) ook zonder rolhek en sandbox in een kooi draait.
+   proef van punt 2 mee, zodat een kooi die niet afschermt CI rood maakt. `scripts/doctor.sh` draait dezelfde proef.
+6. *(vervallen: uitgevoerd, leerpunt #462)*
 
 ## Alternatieven
 
@@ -82,12 +78,8 @@ Drie dingen maakten dat mogelijk:
 
 - Een kooi-aanroep kost een extra proces (enkele milliseconden op deze repository), de proef één keer per testproces. Het
   groeit met het aantal uitgevoerde commando's, niet met de repository.
-- Een machine zonder bubblewrap kan geen kooitests draaien; `gate:fast` is daar rood met de installatie-instructie. Lokaal
-  vereist de sandbox van Claude Code bubblewrap al.
-- Of bubblewrap binnen de sandbox van Claude Code (genest) werkt, meet de bouw-PR als eerste stap. Lukt dat niet, dan stopt
-  de bouw en komt er eerst een nieuwe besluit-PR; dit besluit verandert R-TOOL-02 niet.
+- Een machine zonder bubblewrap kan geen kooitests draaien. Lokaal vereist de sandbox van Claude Code bubblewrap al.
 - Een opzettelijke omweg (een shell onder een andere naam, `spawn` met een berekende programmanaam) ziet de lintregel niet. De
   regel vangt het ongeluk, niet de tegenstander; de tegenstander houden sandbox, CI en eigenaarmerge tegen.
 - Een socketbestand buiten `/run`, `/var/run` en de thuismap (bijvoorbeeld in de repository) blijft bereikbaar; de
   template en de lokale stack leggen daar geen sockets neer.
-- De replay van 0071 kan veilig draaien, ook in een cloudsessie als root.

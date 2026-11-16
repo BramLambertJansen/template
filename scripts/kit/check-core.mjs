@@ -2,7 +2,8 @@
 // `docs/template/` niet; updates komen alleen via `git merge template/main`. Draait in guard.yml met de scripts van main.
 // Per commit in de PR (head zonder wat al op main of template/main staat) en per zone (ZONES), elk apart beoordeeld:
 // een gewone commit laat de zone gelijk aan zijn ouder; een merge die de zone verandert, telt alleen als zijn tweede
-// ouder P2 een voorouder is van `template/main` (opgehaald van TEMPLATE_URL) of al op main staat (een `git merge origin/main`
+// ouder P2 een voorouder is van `template/main` (opgehaald van `templateUrl`: `template.repository` in de `.claude/gates.json`
+// van main, spec template-repo) of al op main staat (een `git merge origin/main`
 // in de branch), en de zone in de merge gelijk is aan die in P2 (geen eigen wijziging in de merge zelf).
 // Een commit zonder ouder (orphan) faalt altijd. Elke melding noemt de zone.
 // In de template zelf staat de check uit: daar staat `onderhoud.repository` in de vertrouwde `.claude/gates.json` (ADR 0045;
@@ -10,6 +11,7 @@
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { templateUitGates } from '../../rails/hooks/lib/padtabel.mjs';
 
 /** @typedef {{ pad: string, naam: string }} Zone `naam` staat in de melding over een oudere versie. */
 /** @type {readonly Zone[]} */
@@ -18,8 +20,17 @@ const ZONES = [
   { pad: 'docs/template', naam: 'templatedocumentatie' },
 ];
 const ZONE_PADEN = ZONES.map((zone) => `${zone.pad}/`).join(' en ');
-export const TEMPLATE_URL = 'https://github.com/BramLambertJansen/template.git';
 const TEMPLATE_REF = 'refs/guard/template';
+
+/**
+ * De fetch-URL van de template uit `template.repository` (spec template-repo AC-7); zonder geldige sleutel gooit hij.
+ * @param {string} gatesJson
+ */
+export function templateUrl(gatesJson) {
+  const template = templateUitGates(gatesJson);
+  if (template === undefined) throw new Error('.claude/gates.json: template ontbreekt');
+  return `https://github.com/${template.repository}.git`;
+}
 
 /**
  * @param {string} root
@@ -175,20 +186,38 @@ function meld(tekst) {
   if (summary !== undefined) appendFileSync(summary, `${tekst}\n`);
 }
 
+/** De template-URL, of `null` na een rode melding (spec template-repo AC-7). @param {string} gates */
+function urlOfFout(gates) {
+  try {
+    return templateUrl(gates);
+  } catch {
+    meld('✗ check-core: template.repository ontbreekt of is ongeldig in .claude/gates.json');
+    console.log('::error title=check-core::template.repository ontbreekt of is ongeldig');
+    return null;
+  }
+}
+
+/** @param {string} url */
+function haalTemplate(url) {
+  try {
+    git('.', ['fetch', '--no-tags', '--quiet', url, `+refs/heads/main:${TEMPLATE_REF}`]);
+    return true;
+  } catch {
+    // Faalt dicht: zonder template/main is geen merge te beoordelen. De template moet zonder credentials op te halen zijn.
+    meld(`✗ check-core: ${url} is niet op te halen (privé of onbereikbaar); zonder template/main faalt de check`);
+    console.log(`::error title=check-core::${url} is niet op te halen`);
+    return false;
+  }
+}
+
 function main() {
   const gates = readFileSync(path.join(import.meta.dirname, '../../.claude/gates.json'), 'utf8');
   if (isTemplateRepo(gates, env('REPO'))) {
     meld('check-core: uit in de template zelf (onderhoud.repository, ADR 0040)');
     return;
   }
-  try {
-    git('.', ['fetch', '--no-tags', '--quiet', TEMPLATE_URL, `+refs/heads/main:${TEMPLATE_REF}`]);
-  } catch {
-    // Faalt dicht: zonder template/main is geen merge te beoordelen. De template moet zonder credentials op te halen zijn.
-    meld(
-      `✗ check-core: ${TEMPLATE_URL} is niet op te halen (privé of onbereikbaar); zonder template/main faalt de check`,
-    );
-    console.log(`::error title=check-core::${TEMPLATE_URL} is niet op te halen`);
+  const url = urlOfFout(gates);
+  if (url === null || !haalTemplate(url)) {
     process.exitCode = 1;
     return;
   }

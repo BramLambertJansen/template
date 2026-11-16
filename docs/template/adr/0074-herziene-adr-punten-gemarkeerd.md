@@ -4,6 +4,7 @@ Status: geaccepteerd
 
 Herzien: 2026-11-12 (#692): door ADR 0089 punt 2 en 6, in de template deels: punt 2 en 4, vervalt: de herzieningsregel en de check daarop; blijft in een app: de check voor een wijzigend app-ADR (0100 en hoger)
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 4, 5 en 8, de vorige regel vervalt: punt 2 en 4 vervallen als check (`adrHerzienViolations` hoort niet bij wat in `check-docs` blijft); een herzieningsregel blijft een werkafspraak; de grens "vanaf 0100" vervalt
+Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 2 (een herzieningsregel is voortaan ook verplicht als een later ADR een
 punt wijzigt zonder de tekst te herschrijven); vult [0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md) punt 1 (het
@@ -34,14 +35,9 @@ schrijven als een later ADR het punt wijzigt, en een check die dat afdwingt.
    `Herzien: JJJJ-MM-DD (#NNN): gewijzigd door <link naar B> punt N, M` (zonder puntnummer: wat B wijzigt, in een paar woorden). Een
    bestaande herzieningsregel in A die B noemt, telt ook (zoals de regels die 0063 in acht ADR's zette). De tekst van de
    punten zelf verandert niet; een markering midden in de tekst is niet nodig.
-3. **Geen nieuwe uitzondering.** Dit is een herschrijving volgens R-CI-05 en loopt langs de bestaande guard en het rolhek: de PR
-   van B is door de A4-drempel al een besluit-PR. Er verandert niets aan `check-document-status`, `document-state.mjs` of het
-   rolhek. Een vervangen of vervallen ADR en het archief krijgen geen regel.
-4. **`check-docs` dwingt het af.** De check leest de kop van elk geaccepteerd ADR en eist per genoemd geaccepteerd ADR een
-   herzieningsregel die B noemt, en als B punten noemt, die puntnummers in die regel. Ontbreekt dat, dan is `check-docs` rood met
-   A, B en de ontbrekende punten in de melding, nooit via de baseline. De check heeft een falende fixture.
-5. **Eenmalig bijwerken in deze PR.** Omdat een herzieningsregel alleen in een besluit-PR mag, zet deze PR hem in elk bestaand
-   geval, ook voor dit ADR zelf (0046 punt 2). De bouw-PR voegt alleen de check en de zin in R-CI-05 toe.
+3. **Geen nieuwe uitzondering.** Dit is een herschrijving volgens R-CI-05. Een vervangen of vervallen ADR krijgt geen regel.
+4. *(vervallen, zie 0089 punt 5)*
+5. *(vervallen: uitgevoerd)*
 
 ## Alternatieven
 
@@ -58,6 +54,4 @@ schrijven als een later ADR het punt wijzigt, en een check die dat afdwingt.
 
 - Elke PR met een nieuw ADR dat een ouder ADR wijzigt, raakt ook dat oudere ADR (één herzieningsregel); de reviewer ziet zo in
   de diff welk punt vervalt.
-- De check leest alleen `docs/adr/*.md` buiten het archief; de kosten groeien met het aantal template-ADR's (begrensd op
-  0001–0099) en niet met de geschiedenis (R-DOC-09).
 - Een vrije formulering in een kopregel ("de vaste rolvolgorde") blijft mogelijk; de herzieningsregel zegt dan in woorden wat.

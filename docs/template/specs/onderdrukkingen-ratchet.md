@@ -36,7 +36,6 @@ n.v.t. — geen UI. Een overtreding noemt de lintregel, het aantal op de basis e
 - **onderdrukkingen-ratchet/AC-2** — Een paar dat op de basis ontbreekt of 0 is, valt onder AC-1, ook als de lintregel op de basis nergens onderdrukt was (`--suppress-rule` op een regel uit een preset, of opnieuw onderdrukken na `pnpm lint:prune` tot nul). Enige uitzondering: deze PR voert de lintregel in, dat wil zeggen dat de naam tussen aanhalingstekens (`'x'` voor `rails/x`, anders de volle naam) nu in `eslint.config.js` staat en op de basis niet. Dan geeft `pnpm ratchet` een melding met het aantal in plaats van een overtreding.
 - **onderdrukkingen-ratchet/AC-3** — Zonder merge-base (geen `origin/main` of een ondiepe checkout), of met een ongeldig `eslint-suppressions.json` op de basis, vergelijkt `pnpm ratchet` niet: in CI is dat rood (`GITHUB_ACTIONS=true`, hetzelfde signaal als `zonderBasis` in `scripts/kit/leesbudget.mjs`), lokaal een melding, zonder andere exitcode. Ontbreekt `eslint.config.js` op de basis, dan telt geen lintregel als ingevoerd (AC-2). Een ongeldig bestand in de werkmap (geen JSON, geen object, of een `count` dat geen geheel getal ≥ 0 is) is altijd rood. Ontbreekt het bestand in de werkmap, dan is elk aantal 0; ontbreekt het op de basis, dan is elk paar nieuw (AC-2).
 - **onderdrukkingen-ratchet/AC-4** — `pnpm ratchet` meldt (zonder overtreding) per lintregel de som nu en op de basis, en voor elk bestand dat de werkmap tegenover de basis wijzigt en dat onderdrukkingen heeft: het bestand, de lintregel en het aantal. Zo ziet de agent welke onderdrukkingen in zijn PR opgeruimd kunnen worden (het dalende doel per lintregel staat in `docs/roadmap.md`).
-- **onderdrukkingen-ratchet/AC-5** — R-CI-02 noemt de ratchet op `eslint-suppressions.json` met bron deze spec; de beschrijving van `pnpm ratchet` in `scripts/kit/gates.mjs` noemt hem ook.
 
 ## Randgevallen
 
@@ -64,7 +63,7 @@ Een rode check voor een PR die een bestand met onderdrukkingen raakt zonder ze o
 
 ## Testplan
 
-Tabeltests in `test/rails/onderdrukkingen-ratchet.test.ts` voor de pure functies (AC-1 tot en met AC-4 en elk randgeval) en één test tegen een tijdelijke git-repo met `origin/main` voor de koppeling met git; een docs-test voor AC-5. Elke negatieve test faalt op de huidige code (R-PRINC-04).
+Tabeltests in `test/rails/onderdrukkingen-ratchet.test.ts` voor de pure functies (AC-1 tot en met AC-4 en elk randgeval) en één test tegen een tijdelijke git-repo met `origin/main` voor de koppeling met git. Elke negatieve test faalt op de huidige code (R-PRINC-04).
 
 ## Open vragen
 

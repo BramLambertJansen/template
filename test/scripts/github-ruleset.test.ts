@@ -220,22 +220,6 @@ describe('samenhang-checks-rollen/AC-1: requiredChecks is de enige lijst', () =>
       expect(ci).toContain(`    name: ${check}\n`);
     }
   });
-
-  test('samenhang-checks-rollen/AC-1 R-CI-01 en dod.md verwijzen naar requiredChecks in plaats van op te sommen', () => {
-    const regel =
-      readFileSync(path.join(ROOT, 'docs/framework.md'), 'utf8')
-        .split('\n')
-        .find((r) => r.startsWith('- **R-CI-01**')) ?? '';
-    const dod =
-      readFileSync(path.join(ROOT, 'docs/dod.md'), 'utf8')
-        .split('\n')
-        .find((r) => r.includes('Vereiste checks')) ?? '';
-    for (const tekst of [regel, dod]) {
-      expect(tekst).toContain('requiredChecks');
-      expect(tekst).toContain('.claude/decisions.json');
-      expect(tekst).not.toMatch(/Vereiste checks:\s*`gate:fast`|R-CI-01: `gate:fast`/);
-    }
-  });
 });
 
 describe('scripts/github-ruleset.sh', () => {

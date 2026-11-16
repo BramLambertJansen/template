@@ -11,6 +11,7 @@
 //     de oude vorm is rood. CODEOWNERS is gelijk aan de afleiding uit de padtabel voor de eerste handle uit `goedkeurders`
 //     (ADR 0089, scripts/kit/codeowners.mjs; sleutel `docs:spiegel:codeowners`), de Edit-regels in `ask` van
 //     .claude/settings.json zijn precies de afgeleide `altijdVragen` (ADR 0045 punt 9). `onderhoud` heeft de vorm { repository }.
+//     `template` is verplicht met dezelfde vorm, en `onderhoud.repository` is gelijk aan `template.repository` (spec template-repo).
 //  5. `schrijfrecht` van een rol overlapt niet met de afgeleide gates (WS-02), op de uitzonderingen in SCHRIJFRECHT_VRIJ na.
 //  6. Elk AC-id van een gebouwde spec heeft een testbestand met `<namespace>/AC-n`, of met het AC-id samen met de specnaam
 //     of de namespace (sleutel `docs:ac:<spec>:<AC-n>`).
@@ -34,7 +35,7 @@ import {
   SCHRIJVEN,
   VLOER,
 } from '../../rails/hooks/lib/padtabel.mjs';
-import { onderhoudVan } from '../../rails/hooks/lib/rolhek.mjs';
+import { onderhoudVan, templateVan } from '../../rails/hooks/lib/rolhek.mjs';
 import { acIds } from '../../rails/hooks/lib/document-state.mjs';
 import { ADR_MAPPEN, adrKopViolations, adrNumber, duplicateAdrNumbers, invalidAdrNames } from './adr-numbers.mjs';
 import { CODEOWNERS, codeownersTekst, eersteGoedkeurder, HERSTEL } from './codeowners.mjs';
@@ -649,6 +650,7 @@ function mirrorViolations(files, read) {
     ...eigenaars,
     ...(lijsten === null ? [] : askViolations(new Set(lijsten.altijdVragen ?? lijsten.voorReview ?? []), naam, ask)),
     ...onderhoudViolations(veld(ruw, 'onderhoud')),
+    ...templateViolations(veld(ruw, 'template'), veld(ruw, 'onderhoud')),
   ];
 }
 
@@ -799,6 +801,35 @@ function onderhoudViolations(value) {
   } catch (error) {
     return [{ key: 'docs:gates:onderhoud', message: error instanceof Error ? error.message : String(error) }];
   }
+}
+
+/**
+ * Spec template-repo AC-2: `template` is verplicht en precies `{ "repository": "<owner>/<repo>" }` (dezelfde vormcheck als het
+ * rolhek), en `onderhoud.repository` is, als hij er geldig is, gelijk aan `template.repository`.
+ * @param {unknown} value @param {unknown} onderhoud @returns {Violation[]}
+ */
+function templateViolations(value, onderhoud) {
+  if (value === undefined) return [{ key: 'docs:gates:template', message: '.claude/gates.json: template ontbreekt' }];
+  let template;
+  try {
+    template = templateVan(value);
+  } catch (error) {
+    return [{ key: 'docs:gates:template', message: error instanceof Error ? error.message : String(error) }];
+  }
+  let onderhoudRepo;
+  try {
+    onderhoudRepo = onderhoudVan(onderhoud)?.repository;
+  } catch {
+    // De vorm van onderhoud meldt onderhoudViolations al.
+    return [];
+  }
+  if (template === undefined || onderhoudRepo === undefined || onderhoudRepo === template.repository) return [];
+  return [
+    {
+      key: 'docs:gates:template-onderhoud',
+      message: `.claude/gates.json: onderhoud.repository (${onderhoudRepo}) verschilt van template.repository (${template.repository})`,
+    },
+  ];
 }
 
 /** De regels van een CODEOWNERS-tekst zonder lege regels en zonder uitlijning. @param {string} tekst */

@@ -13,6 +13,19 @@ requests.
   `.kit/baseline.json` en eindigt nu met exit 1 en een verwijzing naar `pnpm ratchet`, de enige gate voor check-docs
   (`scripts/kit/check-docs.mjs`, `test/scripts/check-docs-los.test.ts`). Wat verandert voor een app: niets, tenzij een eigen
   script `check-docs.mjs` direct aanroept; gebruik dan `pnpm ratchet`.
+- De template-repo uit de configuratie (spec `template-repo`): welke repository de template is, staat op één plek,
+  `"template": { "repository": "<owner>/<repo>" }` in `.claude/gates.json`, in de template en in een app (`pnpm app:init` laat
+  die regel staan en haalt alleen de onderhoud-regel met dezelfde repo weg). Daaruit lezen het rolhek (het doel van een
+  leerpunt; de parser `templateVan` staat in `rails/hooks/lib/padtabel.mjs`), `check-core` (de fetch-URL, `scripts/kit/check-core.mjs`
+  `templateUrl`), `check:migrations` (uit `origin/main:.claude/gates.json`), de UI-akkoordtoets in
+  `rails/hooks/lib/built-evidence.mjs` (uit de vertrouwde bron) en `app:init` (herkomstregel in de README). De constanten
+  `TEMPLATE_REPOSITORY` en `TEMPLATE_URL` en de ongebruikte `functionalUiReason` vervallen. `check-docs` eist de sleutel en
+  dat `onderhoud.repository`, als hij er is, gelijk is (`docs:gates:template`, `docs:gates:template-onderhoud`). Een fork past
+  `template.repository` en de leerpunt-allow-regel in `.claude/settings.json` aan. Bij een update: een app van vóór deze versie
+  heeft de sleutel nog niet; voeg eerst in een eigen PR `"template": { "repository": "BramLambertJansen/template" }` toe aan
+  `.claude/gates.json` (op een eigen regel, niet naast de onderhoud-regel), anders zijn het leerpunt (ask), `check-core` en,
+  met een oudere templatemigratie, `check:migrations` rood.
+
 - Securitysuite en generator volgen hetzelfde contract (spec `suite-volgt-contract`, leerpunten #656, #657, #681):
   `defineListSearch` kent een optionele `pageSize` (de API-input krijgt dan `limit` van 1 t/m `pageSize`), en een lijst uit
   `pnpm new:resource` geeft hem mee. De suite stuurt `limit: 1` alleen als het lijstcontract het kent en is anders rood met een

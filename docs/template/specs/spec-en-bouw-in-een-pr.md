@@ -88,7 +88,7 @@ mergescripts tot de bewaking; de onafhankelijke review van de bouw vond dat gat 
 |---|---|---|
 | Spec hernoemd van een document met eigenaarstatus op main | Weigeren zoals nu (`verifyGeenRename`) | n.v.t. |
 | Spec terug naar `voorstel` met code | Mag altijd, zoals nu | n.v.t. |
-| Feature-lane met functionele UI (`scope: functionele-ui`) | Bestaande extra toets blijft (`functionalUiReason`) | n.v.t. |
+| Feature-lane met functionele UI (`scope: functionele-ui`) | Vervallen: `functionalUiReason` had geen aanroeper en is geschrapt (spec `template-repo`, AC-6); de toetsen in het rolhek en `built-evidence.mjs` blijven | n.v.t. |
 | Spec op `gebouwd` zonder SHA en het roadmapvinkje in dezelfde PR | Toegestaan; `check-roadmap` accepteert het PR-nummer | n.v.t. |
 | PR zonder nummer (lokaal, vóór `gh pr create`) | `gebouwd` zonder SHA faalt; eerst de PR openen | n.v.t. |
 

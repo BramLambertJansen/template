@@ -4,20 +4,22 @@
 import path from 'node:path';
 import { gitSubcommand, globTekstRegex, parseCommands, programName, splitCommand, tmpdirLetterlijk, tmpdirWoord, tokenize, writeTargets, zetVariabele } from './shell.mjs';
 import { A4_MELDING, archiefBron, beslisOvergang, builtReference, documentInfo, documentKind, isArchief, isHerschrijving } from './document-state.mjs';
-import { canRecordStatus, TEMPLATE_REPOSITORY } from './task-authority.mjs';
+import { canRecordStatus } from './task-authority.mjs';
 import { automaticRunner } from './runner-authority.mjs';
 import { isCoreUiSource, testChangeRisk } from './functional-ui.mjs';
 import { staleBranchStart } from './verse-main.mjs';
 import { zelfladend } from './zelfladend.mjs';
-import { afgeleid, globMatch } from './padtabel.mjs';
+import { afgeleid, globMatch, onderhoudVan, templateVan } from './padtabel.mjs';
 
 /**
  * @typedef {{ gates: string[], testpaden: string[], jsonGates: Record<string, string[]>, gegenereerd: string[],
  *   migraties: string[], schrijfrecht: Record<string, string[]>, mcpLezen: string[], voorReview?: string[] | undefined,
- *   altijdVragen?: string[] | undefined, kritiek?: string[] | undefined, zelfladend?: string[] | undefined, onderhoud?: { repository: string } | undefined }} Config
+ *   altijdVragen?: string[] | undefined, kritiek?: string[] | undefined, zelfladend?: string[] | undefined, onderhoud?: { repository: string } | undefined,
+ *   template?: { repository: string } | undefined }} Config
  * De lijsten komen uit `afgeleid` (rails/hooks/lib/padtabel.mjs, ADR 0079); alleen in de oude vorm kunnen ze ontbreken:
  * `voorReview` ontbreekt → elke gate telt als voorReview (faalt dicht). `altijdVragen` ontbreekt → in onderhoud blijft elk
  * voorReview-pad een gate (faalt dicht). `onderhoud`: de repository waarin de onderhoudsmodus geldt (ADR 0045 punt 8).
+ * `template`: de repository van de template, ook in een app (spec template-repo); ontbreekt hij, dan geen leerpuntdoel.
  * @typedef {{ root: string, cwd: string, config: Config, read: (rel: string) => string | null,
  *   committed: (rel: string) => boolean | 'zonder-origin', isDir: (rel: string) => boolean, branch: string,
  *   authority?: import('./task-authority.mjs').Authority | null, runnerTrusted?: boolean | (() => boolean),
@@ -72,18 +74,13 @@ export function loadConfig(text) {
     kritiek: lijsten.kritiek,
     zelfladend: optionalList('zelfladend'),
     onderhoud: onderhoudVan(value('onderhoud')),
+    template: templateVan(value('template')),
   };
 }
 
-/** `{ "repository": "<owner>/<repo>" }` of ontbrekend; elke andere vorm gooit. @param {unknown} found */
-export function onderhoudVan(found) {
-  if (found === undefined) return undefined;
-  const entries = typeof found === 'object' && found !== null && !Array.isArray(found) ? Object.entries(found) : [];
-  const repository = entries.length === 1 && entries[0]?.[0] === 'repository' ? entries[0][1] : undefined;
-  if (typeof repository !== 'string' || !/^[\w-]+\/[\w.-]+$/.test(repository))
-    throw new Error('.claude/gates.json: onderhoud is geen { "repository": "<owner>/<repo>" }');
-  return { repository };
-}
+// De parsers van `onderhoud` en `template` wonen in padtabel.mjs (zonder imports), zodat app:init en check-core ze in een
+// kopie zonder de rest van het rolhek laden; ze blijven hier geëxporteerd (spec template-repo: één parser).
+export { onderhoudVan, templateUitGates, templateVan } from './padtabel.mjs';
 
 /**
  * @param {unknown} payload
@@ -493,7 +490,9 @@ function decideByRole({ rel, change, role }, ctx, decision) {
   // ADR 0046 punt 28: buiten voorReview geen prompt, wel een melding; de eigenaar reviewt het in de PR.
   const voorReview = config.voorReview ?? config.gates;
   const melding = ctx.onbekendeRol !== true && (!voorReview.some((glob) => globMatch(glob, rel)) || inOnderhoud(rel, ctx));
-  if (melding && isCoreUiSource(rel) && ctx.authority?.repository === TEMPLATE_REPOSITORY)
+  // Spec template-repo AC-4: exact gelijk aan `template.repository`; ontbrekend telt als ongelijk.
+  const template = config.template?.repository;
+  if (melding && isCoreUiSource(rel) && template !== undefined && ctx.authority?.repository === template)
     decision.context.push(`${rel}: functionele UI (ADR 0056): geen voorafgaand besluit; toepasselijke mini-spec en scope worden in CI en door de eigenaar beoordeeld; beperkte fixes vragen geen nieuwe mini-spec (ADR 0058)`);
   else if (melding && ctx.onderhoud === true && voorReview.some((glob) => globMatch(glob, rel)))
     decision.context.push(`${rel} is een beschermd pad (framework §10, onderhoudsmodus ADR 0045): noem het in de PR (eigenaarreview)`);
@@ -1950,7 +1949,7 @@ function ghAliasReden(args) {
 
 /**
  * Leerlus (ADR 0059, spec leerlus): een subagent schrijft geen issues; de hoofdsessie dient zonder vraag alleen een leerpunt
- * in, met `--repo`/`-R` gelijk aan `onderhoud.repository` en precies één `--label leerpunt`. Elke andere vorm is ask.
+ * in, met `--repo`/`-R` gelijk aan `template.repository` en precies één `--label leerpunt`. Elke andere vorm is ask.
  * @param {readonly string[]} argv
  * @param {{ role: string, ctx: Ctx, setsGhEnv: boolean }} who
  * @param {Decision} decision
@@ -1968,8 +1967,11 @@ function ghIssue(argv, { role, ctx, setsGhEnv }, decision) {
   if (action === '') return;
   if (role !== 'hoofdsessie') decision.deny.push(`subagent: gh issue ${action} doet alleen de hoofdsessie (ADR 0059)`);
   else if (action === 'create') {
-    // In een app heeft `pnpm app:init` de onderhoud-regel verwijderd; leerpunten gaan dan naar de template (ADR 0059).
-    const reden = leerpuntAfwijking(args, ctx.config.onderhoud?.repository ?? TEMPLATE_REPOSITORY, setsGhEnv);
+    // Spec template-repo AC-3: het doel is `template.repository`, in de template en in een app (ADR 0059); geen terugval.
+    const template = ctx.config.template?.repository;
+    const reden = template === undefined
+      ? 'template.repository ontbreekt in .claude/gates.json'
+      : leerpuntAfwijking(args, template, setsGhEnv);
     if (reden !== '') decision.ask.push(`gh issue create buiten de leerpuntvorm: ${reden} (ADR 0059)`);
   }
 }
