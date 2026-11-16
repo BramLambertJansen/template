@@ -25,11 +25,17 @@ requests.
   eigen, nog niet gemergde migratie dan een nieuw tijdstempel. Op `main` zelf vergelijkt de check elke commit achteraf met zijn
   eerste ouder; het herstel is daar een nieuwe migratie. In een app is een oudere migratie die met dezelfde naam en inhoud in
   de template staat uitgezonderd (lokaal `refs/remotes/template/main`; ontbreekt die, dan haalt de check de template zelf op);
-  in de template bestaat de uitzondering niet (`scripts/kit/check-migrations.mjs`). Tot de volgende PR (de tweede bouw in
-  `check:snapshot`) is zo'n oudere templatemigratie zonder bewijs uitgezonderd: niets toont nog aan dat de volgorde voor het
-  schema niet uitmaakt. Bij een update: volg de sectie "Een template-update binnenhalen" in `docs/nieuwe-app.md`, de enige
+  in de template bestaat de uitzondering niet (`scripts/kit/check-migrations.mjs`). Bij een update: volg de sectie "Een template-update binnenhalen" in `docs/nieuwe-app.md`, de enige
   procedure, met per rode check (`check:migrations`, `check:snapshot`, `check-core`) wat te doen; een open branch met een eigen
   migratie die ouder is dan een migratie op `main`, krijgt een nieuw tijdstempel.
+- De volgorde van een oudere templatemigratie wordt nu bewezen (spec `template-update`, AC-7): is een toegevoegde migratie
+  niet later dan de nieuwste bestaande, dan bouwt `check:snapshot` het schema een tweede keer op volgorde van binnenkomst
+  (`scripts/runner.sh gen-volgorde` zet dan alle toegevoegde migraties in de tijdelijke invoermap, nooit in de werkmap, in
+  hun versievolgorde achter de bestaande, zoals productie ze toepast; de namen geeft `scripts/kit/migratie-volgorde.mjs`) en moet die dump gelijk zijn aan de bouw op versievolgorde
+  (`scripts/check-snapshot.sh`). Verschilt het schema of faalt de tweede bouw, dan is de check rood met de namen van de
+  migraties. Zonder zo'n migratie draait de tweede bouw niet. Wat verandert voor een app: `check:snapshot` leest `origin/main`
+  (zoals `check:migrations`) en kan na een template-update rood worden op "volgorde van binnenkomst"; wat dan te doen staat in
+  de tabel bij "Een template-update binnenhalen" in `docs/nieuwe-app.md`.
 - Templateversie en eigen wijzigingenlijst (spec `release-versie`): de template heeft een versie in code, `TEMPLATE_VERSION` in
   `src/core/shared/template-version.ts`, gelijk aan de nieuwste releasekop in dit bestand. De wijzigingen van de template staan
   voortaan hier, in `docs/template-changelog.md`; `CHANGELOG.md` in de hoofdmap is van de app en bevat in de template alleen een
