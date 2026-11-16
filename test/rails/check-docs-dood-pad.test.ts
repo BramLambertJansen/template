@@ -88,6 +88,18 @@ test('een nieuwe AC met "(nog niet gebouwd)" mag een nieuw pad noemen, ook op ee
   expect(await doodPad(tekst)).toStrictEqual([`docs:${SPEC}:dood-pad:scripts/kit/weg.mjs`]);
 });
 
+test('een nieuwe AC mag een nieuw pad noemen in een ingesprongen sub-bullet; het volgende AC-item telt weer', async () => {
+  const tekst = spec('gebouwd', [
+    '## Acceptatiecriteria',
+    '',
+    '- **demo/AC-2** (nog niet gebouwd) — De check meldt:',
+    '  - `scripts/kit/nieuw.mjs` geeft exit 1;',
+    '  - `test/scripts/nieuw.test.ts` bewijst het.',
+    '- **demo/AC-1** — `scripts/kit/weg.mjs` bestaat.',
+  ]);
+  expect(await doodPad(tekst)).toStrictEqual([`docs:${SPEC}:dood-pad:scripts/kit/weg.mjs`]);
+});
+
 test('een markering die niet direct volgt, telt niet', async () => {
   expect(await doodPad(spec('gebouwd', ['`scripts/kit/weg.mjs` is (vervallen).']))).toStrictEqual([
     `docs:${SPEC}:dood-pad:scripts/kit/weg.mjs`,
