@@ -2,6 +2,8 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-16 (#745): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
+
 Wijzigt [0064](0064-leesbudget-per-laag.md) punt 1 (de drempel staat erbij, "let op" komt alleen uit het verschil met
 de basis) en [0065](0065-grenzen-als-meting.md) punt 2 en 4 (wanneer "let op" komt); de rest van beide blijft gelden.
 

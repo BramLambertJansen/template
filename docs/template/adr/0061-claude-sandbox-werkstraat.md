@@ -6,6 +6,7 @@ zelfladend pad meenemen ([0082](0082-zelfladend-sandbox-en-leeslijst.md))
 Herzien: 2026-11-07 (#623): alternatief "Projectstore, cache en state opnieuw inrichten", herzien door
 [0085](0085-worktree-installatie-in-de-sandbox.md): in een worktree installeert de agent `node_modules` frozen, met store,
 cache en state onder de tijdelijke map; punt 4 blijft
+Herzien: 2026-11-16 (#745): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 
 Drempel: A3, agentrechten expliciteren en gericht verruimen. Uitwerking: [spec](../specs/claude-sandbox-werkstraat.md).
 

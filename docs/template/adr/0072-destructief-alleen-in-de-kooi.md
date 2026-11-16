@@ -5,6 +5,7 @@ Herzien: 2026-11-03 (#466): punt 2 (de proef schrijft in een alleen-lezen systee
 spec)
 Herzien: 2026-11-10 (#672): gewijzigd door [0088](0088-tests-naar-vermogen.md) punt 2 (een kooitest slaat over waar de kooi
 niet kan starten, nooit in CI) en het gevolg dat `gate:fast` zonder bubblewrap rood is
+Herzien: 2026-11-16 (#745): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 
 Vult [0045](0045-railwerk.md) aan. Drempel: A4 (nieuwe bewaking). Uitwerking:
 [spec](../specs/kooi.md). Aanleiding: het incident van 3 november 2026, leerpunten #461 en #462.
