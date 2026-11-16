@@ -1,7 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from 'vitest';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
-import { TEMPLATE_REPOSITORY } from '../../rails/hooks/lib/task-authority.mjs';
+import { echteTemplateRepository } from '../rails/template-repo-kit';
+
+// GEWIJZIGD (template-repo, R-TEST-02: de spec noemt dit bestand): de template-repo komt uit `template.repository` in
+// .claude/gates.json (de config die hier geladen wordt) in plaats van uit de constante TEMPLATE_REPOSITORY die vervalt.
 
 const FILE = 'src/core/web/ui/toast.tsx';
 const config = loadConfig(readFileSync('.claude/gates.json', 'utf8'));
@@ -35,7 +38,7 @@ function write(repository: string) {
 }
 
 test('ADR 0056: de bekende developer krijgt in de template de UI-scope als reviewmelding, zonder mandaatrecord', () => {
-  const result = write(TEMPLATE_REPOSITORY);
+  const result = write(echteTemplateRepository());
 
   expect(result.ask).toEqual([]);
   expect(result.deny).toEqual([]);
