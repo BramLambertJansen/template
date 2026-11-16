@@ -2,7 +2,7 @@
 
 Status: geaccepteerd
 
-Herzien: 2026-11-16 (spec template-repo): punt 16, geen vaste template-URL meer; `check-core` haalt `template/main` op van `template.repository` in `.claude/gates.json`; de herkenning van de template in punt 17 blijft `onderhoud.repository`
+Herzien: 2026-11-16 (#747): punt 16, geen vaste template-URL meer; `check-core` haalt `template/main` op van `template.repository` in `.claude/gates.json`; de herkenning van de template in punt 17 blijft `onderhoud.repository`
 
 Herzien: 2026-11-15 (#722): punt 11 aangevuld: de app-zone bevat configuratie en registraties, geen koppeling tussen core-onderdelen; die doet `runServer` in core (spec create-server)
 
