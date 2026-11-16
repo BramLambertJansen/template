@@ -67,7 +67,7 @@ function workingText(root, file) {
  * De vertrouwde basis: binnen een hook het anker van de stub-lader (ADR 0045), gecontroleerd gelezen; daarbuiten `base` of
  * origin/main. Een gezet maar ongeldig anker geeft null (nooit terugval op origin/main, die een agent kan ombuigen).
  * `readOptional` (spec app-padtabel) onderscheidt afwezig (`{ afwezig: true }`) van onleesbaar (gooit): in een hook gecontroleerd
- * met `vertrouwdeTekstOptioneel`, daarbuiten met `git cat-file -e`. In het type optioneel: een basisobject van een oudere
+ * met `vertrouwdeTekstOptioneel`, daarbuiten door de trees op het pad te lezen (`gitOptioneel`). In het type optioneel: een basisobject van een oudere
  * aanroeper of een teststub heeft het niet (de lezer beslist dan zelf, zie rolhek-context.mjs `configuratie`).
  * @param {string} root @param {string | undefined} base
  * @returns {{ sha: string, read: (file: string) => string | null, readOptional?: (file: string) => string | { afwezig: true } } | null}
@@ -87,16 +87,45 @@ export function trustedBase(root, base) {
   return { sha, read: (file) => gitText(root, ['show', `${sha}:${file}`]), readOptional: (file) => gitOptioneel(root, sha, file) };
 }
 
+/** Git zonder vangnet: een fout (ontbrekend of kapot object) gooit. @param {string} root @param {string[]} args */
+function gitStrikt(root, args) {
+  return execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+}
+
 /**
- * Een bestand uit commit `sha` buiten een hook: `{ afwezig: true }` als `git cat-file -e` het niet vindt; anders de blob, en een
- * fout als het geen blob is of niet te lezen.
+ * De rij `naam` in de tree `boom` (`git ls-tree -z`); null als de tree leesbaar is en de naam er niet in staat. Een onleesbare
+ * tree gooit.
+ * @param {string} root @param {string} boom @param {string} naam @returns {{ mode: string, type: string, oid: string } | null}
+ */
+function boomRij(root, boom, naam) {
+  for (const regel of gitStrikt(root, ['ls-tree', '-z', '--full-tree', boom]).split('\0')) {
+    const match = /^(\d{6}) (\w+) ([0-9a-f]+)\t(.*)$/s.exec(regel);
+    if (match?.[4] === naam) return { mode: match[1] ?? '', type: match[2] ?? '', oid: match[3] ?? '' };
+  }
+  return null;
+}
+
+/**
+ * Een bestand uit commit `sha` buiten een hook: `{ afwezig: true }` alleen als een leesbare tree op het pad de naam niet heeft;
+ * elke tree op het pad wordt gelezen (ontbrekend of kapot gooit), en het pad moet eindigen in een gewone blob (100644/100755) die
+ * te lezen is. Een symlink, gitlink, tree of niet-tree onderweg gooit.
  * @param {string} root @param {string} sha @param {string} file @returns {string | { afwezig: true }}
  */
 function gitOptioneel(root, sha, file) {
-  if (gitText(root, ['cat-file', '-e', `${sha}:${file}`]) === null) return { afwezig: true };
-  const tekst = gitText(root, ['cat-file', 'blob', `${sha}:${file}`]);
-  if (tekst === null) throw new Error(`${file} in ${sha} is geen leesbaar bestand`);
-  return tekst;
+  const delen = file.split('/');
+  let boom = gitStrikt(root, ['rev-parse', '--verify', `${sha}^{tree}`]).trim();
+  for (const [index, naam] of delen.entries()) {
+    const rij = boomRij(root, boom, naam);
+    if (rij === null) return { afwezig: true };
+    if (index < delen.length - 1) {
+      if (rij.mode !== '040000') throw new Error(`${file} in ${sha}: ${naam} is geen map (${rij.mode})`);
+      boom = rij.oid;
+      continue;
+    }
+    if (!['100644', '100755'].includes(rij.mode)) throw new Error(`${file} in ${sha} is geen gewoon bestand (${rij.mode})`);
+    return gitStrikt(root, ['cat-file', 'blob', rij.oid]);
+  }
+  throw new Error(`${file} is geen pad`);
 }
 
 /**

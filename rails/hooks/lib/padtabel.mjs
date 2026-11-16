@@ -183,6 +183,13 @@ function appPaden(app) {
 }
 
 /**
+ * Een eigen sleutel, ook voor een glob als `__proto__` (een toewijzing zou dan het prototype zetten en de rij laten vallen).
+ * @param {Record<string, unknown>} doel @param {string} sleutel @param {unknown} waarde
+ */
+const zet = (doel, sleutel, waarde) =>
+  Object.defineProperty(doel, sleutel, { value: waarde, enumerable: true, writable: true, configurable: true });
+
+/**
  * Een niveau als rij; `schrijven` vrij laat de kolom weg (vrij is geen rijwaarde), `besluit` staat er altijd.
  * @param {Niveau} niveau @returns {Record<string, string>}
  */
@@ -215,15 +222,15 @@ export function samengevoegd(ruw, app) {
   for (const [glob, rij] of Object.entries(extra)) {
     const eigen = appRij(rij);
     if (!Object.keys(paden).includes(glob)) {
-      samen[glob] = eigen;
+      zet(samen, glob, eigen);
       continue;
     }
     const template = rijNiveau(veld(paden, glob));
     const toegevoegd = rijNiveau(eigen);
-    samen[glob] = alsRij({
+    zet(samen, glob, alsRij({
       schrijven: SCHRIJVEN[Math.max(rang(SCHRIJVEN, template.schrijven), rang(SCHRIJVEN, toegevoegd.schrijven))] ?? 'altijdVragen',
       besluit: BESLUIT[Math.max(rang(BESLUIT, template.besluit), rang(BESLUIT, toegevoegd.besluit))] ?? 'besluit-pr',
-    });
+    }));
   }
   return { ...(isObject(ruw) ? ruw : {}), paden: samen };
 }
