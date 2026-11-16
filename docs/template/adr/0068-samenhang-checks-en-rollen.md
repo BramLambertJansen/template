@@ -4,6 +4,7 @@ Status: geaccepteerd
 
 Herzien: 2026-11-03 (#469): gewijzigd door [0069](0069-agent-merge-niet-kritiek.md) punt 3
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 2 en 5, punt 1, de ruleset eist precies de checks uit `requiredChecks`; punt 3, de diff-guard verdwijnt in plaats van verplicht te worden
+Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 
 Vult [0045](0045-railwerk.md), [0057](0057-risicogestuurde-werkstraat.md) en [0062](0062-spec-en-bouw-in-een-pr.md) aan; die blijven gelden.
 

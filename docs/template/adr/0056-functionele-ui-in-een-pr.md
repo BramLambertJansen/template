@@ -6,6 +6,7 @@ Herzien: 2026-10-30 (#385): in punt 5 vervalt de zin over het broncodemandaat, d
 [0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md) vervalt.
 Herzien: 2026-11-03 (#469): gewijzigd door [0058](0058-beperkte-fixroute-en-volledige-featurestraat.md) (de
 mini-specplicht, alleen voor de lichte route)
+Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 8–9 en 12–15 voor functionele UI-wijzigingen in de template.
 Drempel: A3 (de bestaande lane-uitsluiting en het voorafgaande broncodemandaat versoepelen) en A4 (0046 wijzigen).

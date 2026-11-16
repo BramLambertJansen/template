@@ -3,6 +3,7 @@
 Status: geaccepteerd
 
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 5 en 8, punt 3, `leerpunt-bewijs` blijft de vorm toetsen; "de PR is niet agent-mergebaar" wordt een afspraak (de eigenaar merget), geen check meer
+Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 
 Wijzigt [0078](0078-leerlus-met-bewijs.md) punt 1, 2, 3 en 8 en [0059](0059-leerlus-van-app-naar-template.md) punt 1, 2 en 4.
 Drempel: A4 (twee geaccepteerde ADR's wijzigen). Uitwerking: [spec leerlus-herzien](../specs/leerlus-herzien.md). Aanleiding:

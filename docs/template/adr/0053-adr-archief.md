@@ -6,6 +6,7 @@ Herzien: 2026-10-30 (#385): de gevolgregel over mandaatrecords in `.claude/decis
 ([0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md)).
 Herzien: 2026-11-12 (#692): door ADR 0089 punt 2, in de template deels: punt 1 en 2, vervalt: het archief wijzigt niet en verdwijnt niet; blijft: verhuizen onder dezelfde naam mag, nummers worden niet hergebruikt
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 1, 5, 6 en 7, de vorige regel vervalt: punt 1, 2, 3, 4 en 5 vervallen; het archief verdwijnt bij de verhuizing, de guard die het bewaakte verdwijnt, en `docs/template/adr/` heeft geen archief (git is de historie); nummers zijn uniek per map; `feiten.mjs adr` toont twee lijsten, app eerst
+Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git; anders dan de regel van #696 zegt, blijven punt 1 tot en met 5 gelden voor het archief in een app
 
 Drempel: A4 (de route uit [0046](0046-werkstraat-en-beslisroute.md) punt 2 en 5 voor ADR's met een eigenaarstatus) en A3 (een
 guard laat een overgang toe die hij nu weigert).

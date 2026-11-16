@@ -2,6 +2,8 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
+
 Vervangt [0065](0065-grenzen-als-meting.md) punt 6; de rest van 0065 blijft gelden.
 
 ## Context
