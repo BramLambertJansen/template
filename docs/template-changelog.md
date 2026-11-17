@@ -7,6 +7,18 @@ requests.
 
 ## [Unreleased]
 
+### Toegevoegd
+
+- Eigen agentinstructies van een app (spec `app-agentregels`, R-DOC-11): wat elke sessie over de app moet weten, staat als
+  feiten in `docs/app.md`, dat `CLAUDE.md` importeert (`@docs/app.md`). In de template is het een vaste stub (`APP_STUB` in
+  `scripts/kit/app-init.mjs`); `pnpm app:init` herschrijft hem met een skelet (`appAgentregels()`). `check-docs` regel 13
+  (`docs:app-md:<…>`) houdt de stub in de template gelijk en eist het bestand waar `CLAUDE.md` het importeert; `pnpm leespad`
+  telt het mee in de scenario's met `CLAUDE.md` en meet het als soort `app`. Wat verandert voor een app: `CLAUDE.md`,
+  `AGENTS.md` en `.claude/` blijven van de template, en een wijziging van `docs/app.md` kan de hoofdsessie zelf mergen
+  (`docs/**`: schrijven vrij, besluit agent). Bij een update: een bestaande app krijgt de stub; schrijf het skelet uit
+  `appAgentregels()` naar `docs/app.md` en vul het (zie "Eigen agentinstructies van de app" in `docs/nieuwe-app.md`). Bij een
+  later conflict op `docs/app.md`: houd de versie van de app.
+
 ### Gewijzigd
 
 - `node scripts/kit/check-docs.mjs` los gedraaid geeft geen stil groen meer (leerpunt #693): het script vergelijkt niet met
