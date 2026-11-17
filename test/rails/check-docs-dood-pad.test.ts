@@ -59,6 +59,12 @@ test('een bestaand pad, ook met regelnummer of regelbereik: geen overtreding', a
   expect(await doodPad(tekst)).toStrictEqual([]);
 });
 
+test('het optionele app-bestand .claude/gates.app.json is geen dood pad, ook als het ontbreekt', async () => {
+  // Het bestaat alleen in een app met eigen padrijen (spec app-padtabel), nooit in de template.
+  const tekst = spec('gebouwd', ['Eigen rijen in `.claude/gates.app.json`; dood is `.claude/weg.json`.']);
+  expect(await doodPad(tekst)).toStrictEqual([`docs:${SPEC}:dood-pad:.claude/weg.json`]);
+});
+
 test('een dood pad met regelnummer: de sleutel noemt het pad zonder regelnummer', async () => {
   expect(await doodPad(spec('gebouwd', ['`scripts/kit/weg.mjs:40`']))).toStrictEqual([
     `docs:${SPEC}:dood-pad:scripts/kit/weg.mjs`,

@@ -32,7 +32,8 @@
 //     `CLAUDE.md` de regel `@docs/app.md` heeft.
 //  14. Een gebouwde spec noemt tussen backticks geen repopad (src/, scripts/, rails/, test/, e2e/, db/, deploy/, .claude/,
 //     .github/, met extensie) dat niet bestaat, tenzij direct gevolgd door `(vervallen)`, `(nieuw)` of `(voorbeeld)`, of
-//     in een nieuwe AC met `(nog niet gebouwd)` achter het id (leerpunt #738, sleutel `docs:<spec>:dood-pad:<pad>`).
+//     in een nieuwe AC met `(nog niet gebouwd)` achter het id (leerpunt #738, sleutel `docs:<spec>:dood-pad:<pad>`);
+//     behalve het optionele app-bestand `.claude/gates.app.json` (spec app-padtabel).
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -629,7 +630,8 @@ function doodPadViolations(file, text, files) {
   const dood = [...text.replace(NIEUWE_AC, '').matchAll(/`([^`\n]+)`( \((?:vervallen|nieuw|voorbeeld)\))?/g)]
     .filter((match) => match[2] === undefined)
     .map((match) => (match[1] ?? '').replace(/:\d+(-\d+)?$/, ''))
-    .filter((pad) => REPOPAD.test(pad) && !bestaand.has(pad));
+    // Het app-bestand is optioneel en bestaat alleen in een app met eigen padrijen (spec app-padtabel).
+    .filter((pad) => REPOPAD.test(pad) && pad !== APP_BESTAND && !bestaand.has(pad));
   return [...new Set(dood)].map((pad) => ({
     key: `docs:${file}:dood-pad:${pad}`,
     message: `${file}: gebouwde spec noemt \`${pad}\`, dat niet bestaat; zet er "(vervallen)", "(nieuw)" of "(voorbeeld)" direct achter (leerpunt #738)`,

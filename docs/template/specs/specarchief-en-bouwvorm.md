@@ -152,7 +152,7 @@ n.v.t.: geen externe dienst; GitHub lezen zoals nu.
 - **OV-1 ✅ besloten** — Deze tests veranderen in de bouw-PR, elk met reden (R-TEST-02); de merge van deze besluit-PR is het
   eigenaarakkoord voor precies deze lijst (781fcd6). Elke afwijking vraagt vooraf apart akkoord.
   - **(i) Pad of tekst, uitkomst gelijk:** `test/docs/agent-merge-docs.test.ts` (vervallen) (leest `docs/specs/agent-merge.md`: wordt
-    het pad dat bestaat, archief of oud); `test/rails/mandate-follow-up-docs.test.ts` (idem `taakmandaat-frameworkwerk.md`,
+    het pad dat bestaat, archief of oud); `test/rails/mandate-follow-up-docs.test.ts` (vervallen) (idem `taakmandaat-frameworkwerk.md`,
     en de letterlijke teksten van `_template.md`, `gates.mjs` en `agent-doorloop.md`);
     `test/rails/check-roadmap.test.ts` en `test/rails/check-roadmap-bewijsvorm.test.ts` (melding zonder SHA);
     `test/rails/gebouwd-na-merge-git.test.ts` AC-1, eerste test van AC-8 en AC-9 (verwachte regel `gebouwd # #<n>`).
