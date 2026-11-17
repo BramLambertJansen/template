@@ -9,7 +9,7 @@ model: sonnet
 ## Doel
 
 Rails voor [ADR 0063](../adr/0063-compacte-kennisbasis-en-lichtere-werkstraat.md) in drie kritieke bouw-PR's met
-eigenaarreview: PR 2, 6a, 6b. Tot de merge bepaalt main de rechten (ADR 0063 punt 9). Hier staan de gevallen van punt 7.
+eigenaarreview: PR 2, 6a, 6b. Tot de merge bepaalt main de rechten (ADR 0046 punt 8). Hier staan de gevallen van punt 7.
 
 ## Rollen en wie wat ziet
 
