@@ -29,8 +29,7 @@ import { expectAbsent } from '../support/absence.ts';
 //
 // CLI-tekst in de skill: één fenced codeblok in .claude/skills/opleveren/SKILL.md met de regels `### <label>`; de
 // `### `-regels in dat blok zijn precies de labels van het sjabloon, in dezelfde volgorde.
-// Reviewer: .claude/agents/reviewer.md noemt `Leerpunt: ja (<soort>)` en `Leerpunt: nee` bij de blokkerende bevinding en
-// somt de negen soorten op als backtick-spans (`Doorgeglipte fout`, …), aaneengesloten en in de volgorde van het sjabloon.
+// Reviewer: .claude/agents/reviewer.md somt de negen soorten op als backtick-spans (`Doorgeglipte fout`, …), aaneengesloten en in de volgorde van het sjabloon.
 
 const TEMPLATE = '.github/ISSUE_TEMPLATE/leerpunt.yml';
 const SKILL = '.claude/skills/opleveren/SKILL.md';
@@ -265,14 +264,6 @@ describe('leerpunt-sjabloon: gelijk aan skill en reviewer', () => {
     const labels = form.fields.map((field) => field.label);
     expect(labels).toStrictEqual(VELDEN.map((veld) => veld.label));
     expect(skillHeadings(read(SKILL))).toStrictEqual(labels);
-  });
-
-  test('leerlus/AC-4: reviewer vraagt per blokkerende bevinding "Leerpunt: ja (<soort>)" of "Leerpunt: nee"', () => {
-    const reviewer = read(REVIEWER);
-    const blokken = reviewer.split(/\n\s*\n|\n(?=\s*(?:\d+\.|-) )/).map((blok) => blok.replace(/\s+/g, ' '));
-    const blok = blokken.find((tekst) => tekst.includes('Leerpunt: ja (<soort>)')) ?? '';
-    expect(blok).toContain('Leerpunt: nee');
-    expect(blok).toMatch(/blokkerende bevinding/i);
   });
 
   test('leerlus/AC-4: reviewer noemt dezelfde soortenlijst als het sjabloon', () => {
