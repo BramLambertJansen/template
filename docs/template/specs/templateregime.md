@@ -106,7 +106,7 @@ Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van pun
   1. `repos/<repo>/rules/branches/main` (alle pagina's, ook regels uit een organisatie-ruleset) en eist minstens één regel van
      type `pull_request` met `parameters.require_code_owner_review` gelijk aan `true`; een regel zonder `parameters` telt als `false`;
   2. per `ruleset_id` van zo'n regel `repos/<repo>/rulesets/<id>` en eist `current_user_can_bypass` gelijk aan `"never"`
-     (minstens één zo'n ruleset is genoeg);
+     (minstens één zo'n ruleset is genoeg; een antwoord zonder dat veld telt als niet te lezen);
   3. `repos/<repo>/codeowners/errors?ref=<sha van main>` en eist een lege lijst `errors`.
   De redenen worden aan de bestaande lijst toegevoegd (geen vroege return); elke reden betekent geen merge (fail-closed):
   "de ruleset op main bewaakt geen review van een code-eigenaar: de eigenaar merget" (1), "wie dit script draait kan de ruleset
