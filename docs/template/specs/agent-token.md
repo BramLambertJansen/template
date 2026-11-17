@@ -15,11 +15,12 @@ in de repo, zonder ververs-proces, timer of credential-helper; de eigenaar maakt
 ## Rollen en wie wat ziet
 
 - **Eigenaar:** draait het script buiten de sandbox, nooit uit een werkmap van de agent, maar uit de versie op `main` van
-  GitHub, in de repo (voor `origin`) of met `--repo <o>/<r>`:
-  `gh api -H 'Accept: application/vnd.github.raw' 'repos/<o>/<r>/contents/scripts/kit/agent-token.mjs?ref=main' | node --input-type=module - <app-id>`.
+  GitHub, altijd met `--repo`:
+  `gh api -H 'Accept: application/vnd.github.raw' 'repos/<o>/<r>/contents/scripts/kit/agent-token.mjs?ref=main' | node --input-type=module - <app-id> --repo <o>/<r>`.
   `gh api` met een expliciet pad leest geen `.git/config` van de werkmap, dus een agent die die config wijzigt, kan geen andere
-  code laten draaien. Daarom importeert het script alleen `node:`-modules en werkt het via stdin (AC-8). Zo kan code die de
-  agent in zijn werkmap schrijft de sleutel niet lezen.
+  code laten draaien. Omdat het script zo via stdin binnenkomt, importeert het alleen `node:`-modules (AC-7, AC-8); zo kan code
+  die de agent in zijn werkmap schrijft de sleutel niet lezen. `--repo` voorkomt dat de agent via `remote.origin.url` een andere
+  repository laat kiezen; de afleiding uit `origin` (AC-3) is alleen een gemak, en de melding noemt altijd de repository (AC-4).
 - **Sleutel:** standaard `~/.ssh/template-agent.pem`. `~/.ssh` staat in `denyRead` van de sandbox en in `permissions.deny`
   (`.claude/settings.json`); dat geldt alleen in Claude Code (R-WERK-23): een sleutel elders kan de agent lezen.
 - **Agent:** leest alleen het tokenbestand (standaard `/tmp/claude-<uid>/agent-token`, modus 600) en geeft het per commando mee
@@ -42,7 +43,7 @@ Geen UI. Uitvoer in het Nederlands, zoals de andere kit-scripts. Gebruik:
   `{"alg":"RS256","typ":"JWT"}`, is `iss` het App-ID als string, `iat` = `nu − 60` en `exp` = `nu + 540` in hele seconden, en
   verifieert de handtekening met de publieke sleutel.
 - **agent-token/AC-2** — Een App-ID dat niet alleen uit cijfers bestaat, een onbekende optie, of een `--repo` die niet aan
-  `^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$` voldoet, geeft exit 2 met een gebruiksregel, zonder de sleutel te lezen of een verzoek te doen.
+  `^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$` voldoet of een segment heeft dat alleen uit punten bestaat (`.`, `..`), geeft exit 2 met een gebruiksregel, zonder de sleutel te lezen of een verzoek te doen.
 - **agent-token/AC-3** — Zonder `--repo` leest het script `remote.origin.url` uit de repo in de huidige map en herkent
   `https://github.com/<o>/<r>[.git]`, `git@github.com:<o>/<r>[.git]` en `ssh://git@github.com/<o>/<r>[.git]`, net als
   `repositoryName` in `rails/hooks/lib/authority-context.mjs`; een test vergelijkt beide op dezelfde tabel van URL's. Een
@@ -53,11 +54,11 @@ Geen UI. Uitvoer in het Nederlands, zoals de andere kit-scripts. Gebruik:
   uitvoerpad, dan exit 1 met een melding die het pad en `--uit` noemt, zonder verzoek. Het schrijft het token eerst naar een nieuw, exclusief aangemaakt tijdelijk bestand met modus 600
   in dezelfde map en hernoemt dat naar het uitvoerpad. Is het uitvoerpad een symlink, dan vervangt de hernoeming de link zelf en
   blijft het doel onaangeroerd; staat er al een bestand met een andere modus, dan heeft het daarna modus 600. Het script drukt
-  alleen het pad, de vervaltijd en de rechten af; het token staat niet in stdout of stderr.
+  alleen de repository (`<o>/<r>`), het pad, de vervaltijd en de rechten af; het token staat niet in stdout of stderr.
 - **agent-token/AC-5** — Antwoordt GitHub met een fout (bijv. 401, 404), faalt het netwerk, is het antwoord geen JSON of ontbreekt
   `token` of `expires_at`, dan stopt het script met exit 1 en een melding met methode, pad en status, bij een netwerkfout "geen
-  verbinding" (zonder antwoordtekst, JWT of stacktrace); er wordt geen uitvoerbestand geschreven of overschreven, en een
-  tijdelijk bestand dat al bestond, wordt verwijderd.
+  verbinding" (zonder antwoordtekst, JWT of stacktrace); er wordt geen uitvoerbestand geschreven of overschreven, en het eigen
+  tijdelijke bestand wordt bij een fout verwijderd.
 - **agent-token/AC-6** — Ontbreekt het sleutelbestand of is het onleesbaar, of heeft het rechten voor groep of anderen
   (modus & 077 ≠ 0), dan stopt het script met exit 1 en een melding die het pad noemt (`--sleutel`, of `chmod 600`), zonder verzoek.
 - **agent-token/AC-7** — Het script heeft geen andere imports dan `node:`-modules; een test leest de bron.

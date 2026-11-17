@@ -7,6 +7,17 @@ requests.
 
 ## [Unreleased]
 
+### Toegevoegd
+
+- Tokenscript voor de GitHub App van de agent (spec `agent-token`, herziet ADR 0089 punt 2): `scripts/kit/agent-token.mjs`
+  maakt met de sleutel van de App (standaard `~/.ssh/template-agent.pem`, modus 600) een installatietoken van hoogstens een uur
+  voor één repository (geef `--repo` altijd mee; zonder leest het script `remote.origin.url`, die de agent kan wijzigen) en schrijft het atomair met modus 600 naar `--uit` (standaard
+  `/tmp/claude-<uid>/agent-token`); token en JWT komen nooit in de uitvoer. Alleen `node:`-imports, zodat de eigenaar het
+  buiten de sandbox uit `main` draait via `gh api … | node --input-type=module - <app-id> --repo <owner>/<repo>`
+  (`test/scripts/agent-token.test.ts`). Wat verandert voor een app: niets vanzelf; wie PR's als een eigen GitHub App wil
+  openen, maakt het token zo met de hand aan en geeft het per commando mee als `GH_TOKEN`; zonder ververs-proces of
+  credential-helper.
+
 ### Gewijzigd
 
 - `node scripts/kit/check-docs.mjs` los gedraaid geeft geen stil groen meer (leerpunt #693): het script vergelijkt niet met

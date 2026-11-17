@@ -631,8 +631,9 @@ Inrichting van de App (ADR 0045 punt 19, ADR 0089 punt 2; de App aanmaken en ins
 - Sleutel buiten de repo in `~/.ssh/template-agent.pem` met modus 600: `~/.ssh` is in de sandbox van Claude Code niet leesbaar.
 - Token van hoogstens een uur, alleen voor deze repo, met `scripts/kit/agent-token.mjs` (spec agent-token). Draai het buiten de
   sandbox, in `~/code/<slug>`, met de versie op `main` van GitHub en nooit uit een werkmap van de agent:
-  `gh api -H 'Accept: application/vnd.github.raw' 'repos/<owner>/<slug>/contents/scripts/kit/agent-token.mjs?ref=main' | node --input-type=module - <app-id>`.
-  Voor een leerpunt naar de template geef je `--repo BramLambertJansen/template` mee. Het token komt in
+  `gh api -H 'Accept: application/vnd.github.raw' 'repos/<owner>/<slug>/contents/scripts/kit/agent-token.mjs?ref=main' | node --input-type=module - <app-id> --repo <owner>/<slug>`.
+  Geef `--repo` altijd mee: zonder leest het script `remote.origin.url`, en die kan de agent wijzigen. Controleer de repository
+  in de melding. Voor een leerpunt naar de template: `--repo BramLambertJansen/template`. Het token komt in
   `/tmp/claude-<uid>/agent-token`; de agent geeft het per commando mee als `GH_TOKEN`. Geen credential-helper.
 - Met de App en het bewijs van de identiteit: de ruleset opnieuw met `--bypass-beheerder`.
 
