@@ -5,6 +5,7 @@ Status: geaccepteerd
 Herzien: 2026-11-03 (#469): gewijzigd door [0067](0067-krimp-op-normen.md) punt 6; [0070](0070-meting-die-stuurt.md)
 punt 2 en 4
 Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
+Herzien: 2026-11-17 (#772): punt 4, de trend telt geen bevindingen van een externe reviewdienst meer (eigenaarbesluit)
 
 Herziet [0064](0064-leesbudget-per-laag.md) punt 1 en 3 en [0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md) punt 3.
 Uitwerking: spec [leesbudget](../specs/leesbudget.md).
