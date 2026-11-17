@@ -104,7 +104,8 @@ const FRAMEWORK =
 
 const SPEC_KOP = (naam: string): string => `---\nstatus: voorstel\nnamespace: ${naam}\n---\n\n`;
 const ADR_KOP = (nr: string): string => `# ${nr} — Demo\n\nStatus: voorgesteld\n\n`;
-const budgetKeys = (v: { key: string }[]) => v.map(({ key }) => key).filter((k) => /:(budget|regels):/.test(k));
+// GEWIJZIGD (R-DOC-01, eigenaarbesluit 2026-11-17): de sleutel van de ADR-grens is `docs:<bestand>:budget`, zonder grootte.
+const budgetKeys = (v: { key: string }[]) => v.map(({ key }) => key).filter((k) => /:(budget|regels)(:|$)/.test(k));
 
 async function docsViolations(dir: string): Promise<{ key: string; message: string }[]> {
   const fn = await functie('scripts/kit/check-docs.mjs', 'docsViolations');
@@ -138,11 +139,19 @@ describe('leesbudget/AC-1: alleen AGENTS.md en CLAUDE.md hebben een harde grens'
   test.each([
     ['docs/framework.md van 60 KB', 'docs/framework.md', tekst(60 * KB)],
     ['een spec van 50 KB', 'docs/specs/groot.md', SPEC_KOP('groot') + tekst(50 * KB)],
-    ['een ADR van 9 KB', 'docs/adr/0070-groot.md', ADR_KOP('0070') + tekst(9 * KB)],
     ['een ADR van 9 KB in archief/', 'docs/adr/archief/0071-groot.md', ADR_KOP('0071') + tekst(9 * KB)],
     ['een hoofdstuk van 20 KB', 'docs/framework.md', VOOR + H('8', tekst(20 * KB)) + H('9', 'NEGEN')],
   ])('leesbudget/AC-1 %s: geen budgetovertreding', async (_naam, bestand, inhoud) => {
     expect(budgetKeys(await docsViolations(repo({ [bestand]: inhoud })))).toStrictEqual([]);
+  });
+
+  // GEWIJZIGD (R-DOC-01, eigenaarbesluit 2026-11-17): een levend ADR heeft een harde grens van 6 KB; dit geval stond in de
+  // tabel hierboven als "geen budgetovertreding".
+  test('leesbudget/AC-1 een ADR van 9 KB: rood met de sleutel zonder grootte', async () => {
+    const inhoud = ADR_KOP('0070') + tekst(9 * KB);
+    expect(budgetKeys(await docsViolations(repo({ 'docs/adr/0070-groot.md': inhoud })))).toStrictEqual([
+      'docs:docs/adr/0070-groot.md:budget',
+    ]);
   });
 
   test.each([
@@ -185,11 +194,14 @@ describe('leesbudget/AC-1: alleen AGENTS.md en CLAUDE.md hebben een harde grens'
     expect((await docsViolations(dir)).filter(({ key }) => key.includes(':paragraaf:'))).toStrictEqual([]);
   });
 
-  test('leesbudget/AC-1 .kit/baseline.json heeft geen budget-ingang meer voor regelboek, spec of ADR', () => {
+  // GEWIJZIGD (R-DOC-01, eigenaarbesluit 2026-11-17): een ADR boven 6 KB heeft wel een ingang; regelboek en spec niet.
+  test('leesbudget/AC-1 .kit/baseline.json heeft geen budget-ingang voor regelboek of spec', () => {
     const baseline: unknown = JSON.parse(readFileSync(path.join(root, '.kit/baseline.json'), 'utf8'));
     const lijst = veld(baseline, 'check-docs');
     const keys = Array.isArray(lijst) ? lijst.map(String) : [];
-    expect(keys.filter((k) => /^docs:(adr:\d{4}|docs\/.+\.md):budget:/.test(k))).toStrictEqual([]);
+    expect(
+      keys.filter((k) => /^docs:docs\/(framework\.md|(template\/)?specs\/.+\.md):budget(:|$)/.test(k)),
+    ).toStrictEqual([]);
   });
 
   test('leesbudget/AC-1 ratchet: een bestaande overschrijding van AGENTS.md in de baseline is groen, groei rood', () => {
@@ -404,9 +416,12 @@ describe('leesbudget/AC-5: groeiproef', { timeout: 60_000 }, () => {
     'docs/x.md': 'Zie framework §13.\n',
   };
 
-  test('leesbudget/AC-5 check-docs: geen budget- of ankerovertreding', async () => {
+  // GEWIJZIGD (R-DOC-01, eigenaarbesluit 2026-11-17): de ADR van 9 KB is nu rood; hoofdstuk, regelboek en spec niet.
+  test('leesbudget/AC-5 check-docs: alleen de ADR geeft een budgetovertreding, geen ankerovertreding', async () => {
     const keys = (await docsViolations(repo(GROEI))).map(({ key }) => key);
-    expect(keys.filter((k) => /:(budget|regels|paragraaf):/.test(k))).toStrictEqual([]);
+    expect(keys.filter((k) => /:(budget|regels|paragraaf)(:|$)/.test(k))).toStrictEqual([
+      'docs:docs/adr/0070-groot.md:budget',
+    ]);
   });
 
   // GEWIJZIGD (meting-stuurt/AC-1): "let op" komt uit het verschil met de basis, dus de groei staat nu tegenover een basis
@@ -436,7 +451,12 @@ describe('leesbudget/AC-5: groeiproef', { timeout: 60_000 }, () => {
     ['AGENTS.md boven 100 regels', 'AGENTS.md', tekst(2000, 101)],
     ['CLAUDE.md boven 50 regels', 'CLAUDE.md', tekst(1000, 51)],
   ])('leesbudget/AC-5 %s: rood', async (_naam, bestand, inhoud) => {
-    expect(budgetKeys(await docsViolations(repo({ ...GROEI, [bestand]: inhoud })))).toHaveLength(1);
+    // GEWIJZIGD (R-DOC-01, eigenaarbesluit 2026-11-17): de ADR van 9 KB in GROEI is zelf rood; die sleutel telt hier niet mee.
+    const keys = budgetKeys(await docsViolations(repo({ ...GROEI, [bestand]: inhoud }))).filter(
+      (key) => key !== 'docs:docs/adr/0070-groot.md:budget',
+    );
+    expect(keys).toHaveLength(1);
+    expect(keys[0]).toContain(`docs:${bestand}:`);
   });
 });
 

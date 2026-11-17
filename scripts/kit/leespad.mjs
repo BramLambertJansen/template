@@ -215,7 +215,9 @@ export function eenheidMeldingen(nu, basis) {
 
 /** @param {ReturnType<typeof metingen>} m */
 function metingTekst(m) {
-  const regels = ['Metingen tegenover hun streefwaarde (ADR 0065; een meting, nooit rood):'];
+  const regels = [
+    'Metingen tegenover hun streefwaarde (ADR 0065; een meting, nooit rood; de harde grens op een ADR staat in check-docs):',
+  ];
   for (const [soort, { streefwaarde, eenheid, aantal, boven, grootste }] of Object.entries(m)) {
     const streef = streefwaarde === null ? 'geen streefwaarde' : `streefwaarde ${maat(streefwaarde, eenheid)}`;
     regels.push(`${soort}: ${String(aantal)}, ${streef}${boven > 0 ? `, ${String(boven)} erboven` : ''}`);

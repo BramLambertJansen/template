@@ -20,7 +20,7 @@ tot inkorten, en bij inkorten verdwenen eerder normen ongemerkt. Daarnaast kost 
 
 ## Besluit
 
-1. **Harde grenzen alleen op `AGENTS.md` en `CLAUDE.md`** (0065 punt 1); de rest is een meting, met streefwaarden in R-DOC-01
+1. **Harde grenzen op `AGENTS.md`, `CLAUDE.md` en een levend ADR** (0065 punt 1); de rest is een meting, met streefwaarden in R-DOC-01
    en 0070. Het leespad per scenario (`pnpm leespad`, van het regelboek telt §8 en zijn letter-subhoofdstukken) is een meting.
 2. **Lezen.** Een agent leest van het regelboek alleen de hoofdstukken die de taak raakt, via
    `node scripts/kit/feiten.mjs hoofdstuk <n>` (met de openingszin van het boek), en een document op aanvraag alleen als de taak het raakt.

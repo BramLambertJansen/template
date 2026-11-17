@@ -101,7 +101,7 @@ function adrsBoven(files, lees) {
 export function docGrensViolations(files, lees) {
   return adrsBoven(files, lees).map(({ file, bytes }) => ({
     key: `docs:${file}:budget`,
-    message: `${file}: ${String(bytes)} bytes, grens ${String(ADRGRENS.grens)}; kort in of splits (R-DOC-01)`,
+    message: `${file}: ${String(bytes)} bytes, grens ${String(ADRGRENS.grens)}; kort in tot wat nog geldt, de oude tekst staat in git (R-DOC-01)`,
   }));
 }
 

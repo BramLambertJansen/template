@@ -24,7 +24,8 @@ template heeft geen releases. Eigenaarbesluit 2026-11-02: alleen `AGENTS.md` en 
    grens: eerst verplaatsen naar een lagere laag (type, check, gouden pad, rules); lukt dat niet zonder verlies, dan ophogen als
    gate-wijziging met reden in de PR en eigenaarakkoord. Vanaf 85 % meldt `check-docs` het, zonder rode check. Ook hard: een
    levend ADR ≤ 6 KB (eigenaarbesluit 2026-11-17, R-DOC-01). Een bestaande overschrijding staat zonder grootte in
-   `.kit/baseline.json` en groeit niet tegenover de merge-base; een nieuw ADR boven de grens is rood.
+   `.kit/baseline.json` en groeit niet tegenover de merge-base; een nieuw ADR boven de grens is rood. Inkorten, niet splitsen
+   (punt 3).
 2. **Al het andere is een meting, nooit rood:** een hoofdstuk van het regelboek, het totaal van het regelboek, een spec,
    rules, skills en operations-docs. `pnpm leespad` toont ze tegenover hun streefwaarde, met "let op" erboven. De
    budget-ingangen voor deze eenheden verdwijnen uit `.kit/baseline.json`.
@@ -49,5 +50,5 @@ Ongewijzigd: 0064 punt 2 (lezen per hoofdstuk), 4 (ratchet op bestaande overschr
 
 ## Gevolgen
 
-- `check-docs` geeft voor hoofdstuk, regelboek, spec en ADR geen overtreding meer maar een melding; alle spec- en ADR-ingangen
-  verdwijnen uit de baseline. `pnpm leespad` wordt de plek waar de metingen staan.
+- `check-docs` geeft voor hoofdstuk, regelboek en spec geen overtreding meer maar een melding; hun ingangen verdwijnen uit de
+  baseline. Een levend ADR heeft sinds 2026-11-17 weer een harde grens (punt 1). `pnpm leespad` wordt de plek waar de metingen staan.

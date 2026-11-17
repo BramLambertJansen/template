@@ -19,7 +19,7 @@ requests.
   `origin/main` is rood (`docs:<bestand>:budget-groei`) en kan niet in de baseline (`docGrensViolations` en
   `docGroeiUitGit` in `scripts/kit/leesbudget.mjs`). Specs: ongewijzigd, 10 KB blijft een meting in `pnpm leespad`. Wat
   verandert voor een app: een app met een eigen ADR boven 6 KB krijgt na de update één keer rood. Bij een update: kort de
-  ADR in of splits hem, of draai `pnpm ratchet:update` (de baseline groeit: eigenaarakkoord).
+  ADR in (niet splitsen om onder de grens te komen), of draai `pnpm ratchet:update` (de baseline groeit: eigenaarakkoord).
 - Eigen beschermde paden van een app (spec `app-padtabel`): een app zet eigen rijen in het optionele bestand
   `.claude/gates.app.json` (`{ "$comment"?, "paden": { … } }`), niet in `.claude/gates.json`. Rolhek, `check-docs`,
   `scripts/kit/codeowners.mjs` en `feiten.mjs pad` voegen het samen met de padtabel van de template

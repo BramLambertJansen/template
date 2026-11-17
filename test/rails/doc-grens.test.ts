@@ -70,8 +70,8 @@ function specMeting(root: string, ...files: string[]) {
   return metingen(files, (file) => readFileSync(path.join(root, file), 'utf8'))['specs'];
 }
 
-describe('doc-grens AC-1: een ADR boven de grens is een overtreding', () => {
-  test.each(ADR_MAPPEN)('doc-grens AC-1 een ADR van 6 KB + 1 byte in %s is rood', async (map) => {
+describe('leesbudget/AC-10 deel 1: een ADR boven de grens is een overtreding', () => {
+  test.each(ADR_MAPPEN)('leesbudget/AC-10 deel 1 een ADR van 6 KB + 1 byte in %s is rood', async (map) => {
     const uit = await budget(repo({ [`${map}/0005-demo.md`]: adr(ADR_GRENS + 1) }));
 
     expect(uit.map(({ key }) => key)).toStrictEqual([`docs:${map}/0005-demo.md:budget`]);
@@ -80,7 +80,7 @@ describe('doc-grens AC-1: een ADR boven de grens is een overtreding', () => {
     expect(uit[0]?.message).toContain(String(ADR_GRENS));
   });
 
-  test('doc-grens AC-1 de sjablonen, het archief en andere documenten tellen niet', async () => {
+  test('leesbudget/AC-10 deel 1 de sjablonen, het archief en andere documenten tellen niet', async () => {
     const groot = 'x'.repeat(3 * SPEC_STREEF);
     const uit = await budget(
       repo({
@@ -99,37 +99,37 @@ describe('doc-grens AC-1: een ADR boven de grens is een overtreding', () => {
     expect(uit).toStrictEqual([]);
   });
 
-  test('doc-grens AC-1 de grens van een ADR geldt niet voor een spec', async () => {
+  test('leesbudget/AC-10 deel 1 de grens van een ADR geldt niet voor een spec', async () => {
     expect(await budget(repo({ 'docs/specs/kaart.md': spec(ADR_GRENS + 1) }))).toStrictEqual([]);
   });
 });
 
-describe('doc-grens AC-2: een bestaande overschrijding van een ADR blijft staan zolang ze niet groeit', () => {
+describe('leesbudget/AC-10 deel 2: een bestaande overschrijding van een ADR blijft staan zolang ze niet groeit', () => {
   const PAD = 'docs/adr/0005-demo.md';
   const SLEUTEL = `docs:${PAD}:budget`;
 
-  test('doc-grens AC-2 de sleutel bevat geen grootte: krimpen boven de grens breekt de baseline niet', async () => {
+  test('leesbudget/AC-10 deel 2 de sleutel bevat geen grootte: krimpen boven de grens breekt de baseline niet', async () => {
     const root = repo({ [PAD]: adr(ADR_GRENS + 4000) }, { [PAD]: adr(ADR_GRENS + 500) });
 
     expect(compare([SLEUTEL], await budget(root))).toStrictEqual({ nieuw: [], opgelost: [] });
     expect(await groei(root)).toStrictEqual([]);
   });
 
-  test('doc-grens AC-2 gelijk blijven is groen', async () => {
+  test('leesbudget/AC-10 deel 2 gelijk blijven is groen', async () => {
     const root = repo({ [PAD]: adr(ADR_GRENS + 4000) });
 
     expect(compare([SLEUTEL], await budget(root))).toStrictEqual({ nieuw: [], opgelost: [] });
     expect(await groei(root)).toStrictEqual([]);
   });
 
-  test('doc-grens AC-2 onder de grens gekrompen: opgelost, tot ratchet:update de sleutel weghaalt', async () => {
+  test('leesbudget/AC-10 deel 2 onder de grens gekrompen: opgelost, tot ratchet:update de sleutel weghaalt', async () => {
     const root = repo({ [PAD]: adr(ADR_GRENS + 4000) }, { [PAD]: adr(ADR_GRENS - 100) });
 
     expect(compare([SLEUTEL], await budget(root))).toStrictEqual({ nieuw: [], opgelost: [SLEUTEL] });
     expect(await groei(root)).toStrictEqual([]);
   });
 
-  test('doc-grens AC-2 één byte groei boven de grens is rood, ook met de sleutel in de baseline', async () => {
+  test('leesbudget/AC-10 deel 2 één byte groei boven de grens is rood, ook met de sleutel in de baseline', async () => {
     const root = repo({ [PAD]: adr(ADR_GRENS + 4000) }, { [PAD]: adr(ADR_GRENS + 4001) });
     const uit = await groei(root);
 
@@ -141,21 +141,21 @@ describe('doc-grens AC-2: een bestaande overschrijding van een ADR blijft staan 
     expect(uit[0]?.message).toContain(String(ADR_GRENS));
   });
 
-  test('doc-grens AC-2 een ADR in docs/template/adr boven de grens die groeit is rood', async () => {
+  test('leesbudget/AC-10 deel 2 een ADR in docs/template/adr boven de grens die groeit is rood', async () => {
     const pad = 'docs/template/adr/0005-demo.md';
     const root = repo({ [pad]: adr(ADR_GRENS + 10) }, { [pad]: adr(ADR_GRENS + 2000) });
 
     expect((await groei(root)).map(({ key }) => key)).toStrictEqual([`docs:${pad}:budget-groei`]);
   });
 
-  test('doc-grens AC-2 groei die al is gecommit telt ook: de vergelijking is met de merge-base', async () => {
+  test('leesbudget/AC-10 deel 2 groei die al is gecommit telt ook: de vergelijking is met de merge-base', async () => {
     const root = repo({ [PAD]: adr(ADR_GRENS + 4000) }, { [PAD]: adr(ADR_GRENS + 5000) });
     git(root, 'commit', '-q', '-m', 'groei');
 
     expect((await groei(root)).map(({ key }) => key)).toStrictEqual([`docs:${PAD}:budget-groei`]);
   });
 
-  test('doc-grens AC-2 nieuw boven de grens of van onder naar boven: alleen de baseline-sleutel, geen groeimelding', async () => {
+  test('leesbudget/AC-10 deel 2 nieuw boven de grens of van onder naar boven: alleen de baseline-sleutel, geen groeimelding', async () => {
     const root = repo(
       { [PAD]: adr(ADR_GRENS - 100) },
       { [PAD]: adr(ADR_GRENS + 100), 'docs/adr/0006-nieuw.md': adr(ADR_GRENS + 100) },
@@ -165,7 +165,7 @@ describe('doc-grens AC-2: een bestaande overschrijding van een ADR blijft staan 
     expect(await groei(root)).toStrictEqual([]);
   });
 
-  test('doc-grens AC-2 zonder origin/main toetst de groeicontrole niets en faalt ze niet', async () => {
+  test('leesbudget/AC-10 deel 2 zonder origin/main toetst de groeicontrole niets en faalt ze niet', async () => {
     const root = repo({ [PAD]: adr(ADR_GRENS + 4000) }, { [PAD]: adr(ADR_GRENS + 5000) });
     git(root, 'update-ref', '-d', 'refs/remotes/origin/main');
 
@@ -174,12 +174,12 @@ describe('doc-grens AC-2: een bestaande overschrijding van een ADR blijft staan 
   });
 });
 
-describe('doc-grens AC-3: op of onder de grens is er niets', () => {
-  test('doc-grens AC-3 een ADR precies op de grens is geen overtreding', async () => {
+describe('leesbudget/AC-10 deel 3: op of onder de grens is er niets', () => {
+  test('leesbudget/AC-10 deel 3 een ADR precies op de grens is geen overtreding', async () => {
     expect(await budget(repo({ 'docs/adr/0005-demo.md': adr(ADR_GRENS) }))).toStrictEqual([]);
   });
 
-  test('doc-grens AC-3 groei onder de grens is vrij', async () => {
+  test('leesbudget/AC-10 deel 3 groei onder de grens is vrij', async () => {
     const pad = 'docs/adr/0005-demo.md';
     const root = repo({ [pad]: adr(2000) }, { [pad]: adr(ADR_GRENS - 1) });
 
@@ -188,45 +188,45 @@ describe('doc-grens AC-3: op of onder de grens is er niets', () => {
   });
 });
 
-describe('doc-grens AC-4: vervallen en vervangen ADR’s tellen niet', () => {
+describe('leesbudget/AC-10 deel 4: vervallen en vervangen ADR’s tellen niet', () => {
   const PAD = 'docs/adr/0005-demo.md';
   const SLEUTEL = `docs:${PAD}:budget`;
 
   test.each(['vervallen', 'vervangen door 0007'])(
-    'doc-grens AC-4 een ADR met status "%s" boven de grens is geen overtreding',
+    'leesbudget/AC-10 deel 4 een ADR met status "%s" boven de grens is geen overtreding',
     async (status) => {
       expect(await budget(repo({ [PAD]: adr(ADR_GRENS + 4000, status) }))).toStrictEqual([]);
     },
   );
 
-  test.each(['voorstel', 'geaccepteerd'])('doc-grens AC-4 een ADR met status %s telt wel', async (status) => {
+  test.each(['voorstel', 'geaccepteerd'])('leesbudget/AC-10 deel 4 een ADR met status %s telt wel', async (status) => {
     const uit = await budget(repo({ [PAD]: adr(ADR_GRENS + 4000, status) }));
 
     expect(uit.map(({ key }) => key)).toStrictEqual([SLEUTEL]);
   });
 
-  test('doc-grens AC-4 een vervallen ADR die groeit is geen groeimelding', async () => {
+  test('leesbudget/AC-10 deel 4 een vervallen ADR die groeit is geen groeimelding', async () => {
     const root = repo({ [PAD]: adr(ADR_GRENS + 4000, 'vervallen') }, { [PAD]: adr(ADR_GRENS + 5000, 'vervallen') });
 
     expect(await groei(root)).toStrictEqual([]);
   });
 
-  test('doc-grens AC-4 een ADR die op de basis vervallen was en weer levend groeit: baseline-sleutel, geen groeimelding', async () => {
+  test('leesbudget/AC-10 deel 4 een ADR die op de basis vervallen was en weer levend groeit: baseline-sleutel, geen groeimelding', async () => {
     const root = repo({ [PAD]: adr(ADR_GRENS + 4000, 'vervallen') }, { [PAD]: adr(ADR_GRENS + 5000) });
 
     expect((await budget(root)).map(({ key }) => key)).toStrictEqual([SLEUTEL]);
     expect(await groei(root)).toStrictEqual([]);
   });
 
-  test('doc-grens AC-4 een ADR die vervalt verdwijnt uit de baseline (opgelost)', async () => {
+  test('leesbudget/AC-10 deel 4 een ADR die vervalt verdwijnt uit de baseline (opgelost)', async () => {
     const root = repo({ [PAD]: adr(ADR_GRENS + 4000) }, { [PAD]: adr(ADR_GRENS + 4000, 'vervallen') });
 
     expect(compare([SLEUTEL], await budget(root)).opgelost).toStrictEqual([SLEUTEL]);
   });
 });
 
-describe('doc-grens AC-5: de baseline van deze repo', () => {
-  test('doc-grens AC-5 elke overschrijding in deze repo staat in .kit/baseline.json en geen is opgelost', async () => {
+describe('leesbudget/AC-10 deel 5: de baseline van deze repo', () => {
+  test('leesbudget/AC-10 deel 5 elke overschrijding in deze repo staat in .kit/baseline.json en geen is opgelost', async () => {
     const parsed: unknown = JSON.parse(readFileSync('.kit/baseline.json', 'utf8'));
     const velden = typeof parsed === 'object' && parsed !== null ? Object.entries(parsed) : [];
     const lijst: unknown = velden.find(([naam]) => naam === 'check-docs')?.[1];
@@ -241,9 +241,9 @@ describe('doc-grens AC-5: de baseline van deze repo', () => {
   });
 });
 
-describe('doc-grens AC-6: een spec is een meting, nooit rood en nooit in de baseline', () => {
+describe('leesbudget/AC-10 deel 6: een spec is een meting, nooit rood en nooit in de baseline', () => {
   test.each(SPEC_MAPPEN)(
-    'doc-grens AC-6 een spec van 10 KB + 1 byte in %s: geen overtreding, geen baseline-ingang, wel gemeten',
+    'leesbudget/AC-10 deel 6 een spec van 10 KB + 1 byte in %s: geen overtreding, geen baseline-ingang, wel gemeten',
     async (map) => {
       const pad = `${map}/kaart.md`;
       const root = repo({ [pad]: spec(SPEC_STREEF + 1) });
@@ -261,7 +261,7 @@ describe('doc-grens AC-6: een spec is een meting, nooit rood en nooit in de base
   );
 
   test.each(SPEC_MAPPEN)(
-    'doc-grens AC-6 een spec in %s die boven 10 KB groeit: geen groeimelding, geen baseline-ingang, wel gemeten',
+    'leesbudget/AC-10 deel 6 een spec in %s die boven 10 KB groeit: geen groeimelding, geen baseline-ingang, wel gemeten',
     async (map) => {
       const pad = `${map}/kaart.md`;
       const root = repo({ [pad]: spec(SPEC_STREEF + 4000) }, { [pad]: spec(SPEC_STREEF + 4001) });
@@ -272,7 +272,7 @@ describe('doc-grens AC-6: een spec is een meting, nooit rood en nooit in de base
     },
   );
 
-  test('doc-grens AC-6 groei van een spec die al is gecommit is geen groeimelding', async () => {
+  test('leesbudget/AC-10 deel 6 groei van een spec die al is gecommit is geen groeimelding', async () => {
     const pad = 'docs/specs/kaart.md';
     const root = repo({ [pad]: spec(SPEC_STREEF + 4000) }, { [pad]: spec(SPEC_STREEF + 5000) });
     git(root, 'commit', '-q', '-m', 'groei');
@@ -281,7 +281,7 @@ describe('doc-grens AC-6: een spec is een meting, nooit rood en nooit in de base
     expect(await budget(root)).toStrictEqual([]);
   });
 
-  test('doc-grens AC-6 een spec nieuw boven 10 KB of van onder naar boven: geen overtreding', async () => {
+  test('leesbudget/AC-10 deel 6 een spec nieuw boven 10 KB of van onder naar boven: geen overtreding', async () => {
     const root = repo(
       { 'docs/specs/kaart.md': spec(SPEC_STREEF - 100) },
       { 'docs/specs/kaart.md': spec(SPEC_STREEF + 100), 'docs/specs/nieuw.md': spec(SPEC_STREEF + 100) },
@@ -291,7 +291,7 @@ describe('doc-grens AC-6: een spec is een meting, nooit rood en nooit in de base
     expect(await groei(root)).toStrictEqual([]);
   });
 
-  test('doc-grens AC-6 zonder origin/main is een spec boven 10 KB ook geen overtreding', async () => {
+  test('leesbudget/AC-10 deel 6 zonder origin/main is een spec boven 10 KB ook geen overtreding', async () => {
     const pad = 'docs/specs/kaart.md';
     const root = repo({ [pad]: spec(SPEC_STREEF + 4000) }, { [pad]: spec(SPEC_STREEF + 5000) });
     git(root, 'update-ref', '-d', 'refs/remotes/origin/main');
@@ -301,7 +301,7 @@ describe('doc-grens AC-6: een spec is een meting, nooit rood en nooit in de base
   });
 
   test.each(['voorstel', 'goedgekeurd', 'gebouwd', 'vervallen'])(
-    'doc-grens AC-6 een spec met status %s boven 10 KB is geen overtreding en telt in de meting',
+    'leesbudget/AC-10 deel 6 een spec met status %s boven 10 KB is geen overtreding en telt in de meting',
     async (status) => {
       const pad = 'docs/specs/kaart.md';
       const root = repo({ [pad]: spec(SPEC_STREEF + 4000, status) });
@@ -311,7 +311,7 @@ describe('doc-grens AC-6: een spec is een meting, nooit rood en nooit in de base
     },
   );
 
-  test('doc-grens AC-6 een oude spec-ingang in de baseline is opgelost: ratchet:update haalt hem weg', async () => {
+  test('leesbudget/AC-10 deel 6 een oude spec-ingang in de baseline is opgelost: ratchet:update haalt hem weg', async () => {
     const pad = 'docs/specs/kaart.md';
     const root = repo({ [pad]: spec(SPEC_STREEF + 4000) });
 

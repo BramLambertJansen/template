@@ -233,7 +233,7 @@ test('B4: de echte repo: de Edit-regels in permissions.ask zijn precies altijdVr
   // Budgetsleutels (AC-9, compacte-kennisbasis-rails) bevatten bestandsnamen en vallen buiten deze zoekregel.
   expect(
     noemt(
-      lijst.filter(({ key }) => !/:(?:budget|regels):/.test(key)),
+      lijst.filter(({ key }) => !/:(?:budget|regels)(?::|$)/.test(key)),
       /onderhoud|altijdVragen/i,
     ),
   ).toStrictEqual([]);
