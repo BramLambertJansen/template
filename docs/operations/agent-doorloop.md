@@ -53,12 +53,12 @@ modus `onbekend`. Nul prompts en een lege modusverdeling bewijzen geen permissie
 eigenaarberichten waren. Een classifierbeslissing in auto mode is geen bewijs van een klik van de eigenaar.
 
 Kerncijfers per PR: `pnpm meting --pr-tabel --branch <naam>` geeft een markdowntabel voor de PR-beschrijving (doorlooptijd,
-reviewrondes, CI-rood, weigeringen als bovengrens, Codex-bevindingen handmatig via `gh api`); `pnpm leespad [--ref <ref>]
+reviewrondes, CI-rood, weigeringen als bovengrens); `pnpm leespad [--ref <ref>]
 [--basis <ref>]` telt de bytes van het verplichte leespad per scenario (meting-kerncijfers/AC-1 t/m AC-4), van
 `docs/framework.md` alleen de tekst vóór de eerste kop plus §8 met 8a, 8b (`node scripts/kit/feiten.mjs hoofdstuk 8`), met
 streefdoel en waarschuwingsdrempel per scenario, de "let op"-meldingen vanaf 85 % van de grens van `AGENTS.md` en `CLAUDE.md`,
 en de metingen van hoofdstukken, regelboek, specs, ADR's, rules, skills en operations-docs tegenover hun streefwaarde (ADR 0065;
-nooit rood). `pnpm meting --trend` vergelijkt CI-rood, Codex-bevindingen en reviewrondes over de laatste tien gemergde PR's met
+nooit rood). `pnpm meting --trend` vergelijkt CI-rood en reviewrondes over de laatste tien gemergde PR's met
 de tien daarvoor (`scripts/kit/meting-trend.mjs`; leesbudget/AC-7).
 
 Wanneer een meting "let op" zegt (ADR 0070, spec `meting-stuurt`):

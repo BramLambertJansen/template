@@ -1,36 +1,28 @@
 // Kwaliteitstrend over de laatste twintig gemergde PR's (ADR 0065 punt 4, leesbudget/AC-7): `pnpm meting --trend`.
 // Per maat het gemiddelde over de nieuwste tien tegenover de tien daarvoor; alleen een echte stap is "let op: <maat> steeg"
 // (`echteStap`, ADR 0070 punt 2, meting-stuurt/AC-2). Maten:
-// CI-rood (`gh run list` per head-branch, conclusion failure), Codex-bevindingen (reviewreacties van CODEX_LOGIN via
-// `gh api .../pulls/<nr>/comments`) en reviewrondes (lokale meetdata; zonder data "onbekend", nooit 0). Een gh-fout geeft
-// "onbekend" voor die PR. De PR-lijst komt via REST (`gh api .../pulls?state=closed`), zodat het ook in cloudsessies werkt.
+// CI-rood (`gh run list` per head-branch, conclusion failure) en reviewrondes (lokale meetdata; zonder data "onbekend",
+// nooit 0). Een gh-fout geeft "onbekend" voor die PR. De PR-lijst komt via REST (`gh api .../pulls?state=closed`), zodat
+// het ook in cloudsessies werkt.
 // Minder dan twintig PR's: "te weinig data". Meet nooit meer dan twintig PR's; geen exitcode.
 import { execFileSync } from 'node:child_process';
 
-/** De login van de Codex-reviewbot op GitHub (vastgelegd met een test). */
-export const CODEX_LOGIN = 'chatgpt-codex-connector[bot]';
 const AANTAL = 20;
 const HELFT = 10;
 
 /** @typedef {number | 'onbekend'} Waarde */
-/** @typedef {{ nummer: number, ciRood: Waarde, codex: Waarde, reviewrondes: Waarde }} Pr */
+/** @typedef {{ nummer: number, ciRood: Waarde, reviewrondes: Waarde }} Pr */
 /** @typedef {{ gh: string, timeout: number }} GhOpties */
 
-/** @type {readonly { sleutel: 'ciRood' | 'codex' | 'reviewrondes', naam: string }[]} */
+/** @type {readonly { sleutel: 'ciRood' | 'reviewrondes', naam: string }[]} */
 const MATEN = [
   { sleutel: 'ciRood', naam: 'CI-rood' },
-  { sleutel: 'codex', naam: 'Codex-bevindingen' },
   { sleutel: 'reviewrondes', naam: 'reviewrondes' },
 ];
 
 /** @param {unknown} x @param {string} naam */
 function veld(x, naam) {
   return typeof x === 'object' && x !== null ? new Map(Object.entries(x)).get(naam) : undefined;
-}
-
-/** Aantal reacties van CODEX_LOGIN. @param {readonly unknown[]} reacties */
-export function telCodex(reacties) {
-  return reacties.filter((r) => veld(veld(r, 'user'), 'login') === CODEX_LOGIN).length;
 }
 
 /** Gemiddelde van de bekende waarden; zonder bekende waarde "onbekend". @param {readonly Waarde[]} waarden @returns {Waarde} */
@@ -96,17 +88,6 @@ function ciRood(opties, branch) {
   return Array.isArray(runs) ? runs.filter((r) => veld(r, 'conclusion') === 'failure').length : 'onbekend';
 }
 
-/** Codex-bevindingen op een PR. @param {GhOpties} opties @param {number} nummer @returns {Waarde} */
-function codex(opties, nummer) {
-  const reacties = gh(opties, [
-    'api',
-    `repos/{owner}/{repo}/pulls/${String(nummer)}/comments?per_page=100`,
-    '--jq',
-    '[.[] | {user: {login: .user.login}}]',
-  ]);
-  return Array.isArray(reacties) ? telCodex(reacties) : 'onbekend';
-}
-
 /**
  * De nieuwste twintig gemergde PR's met hun maten; null als de lijst faalt. Via REST (`gh api`), niet `gh pr list`:
  * dat loopt via GraphQL en wordt in cloudsessies geweigerd. Eén aanroep haalt de honderd laatst bijgewerkte gesloten
@@ -135,12 +116,10 @@ export function prsUitGh(opties, reviewrondes) {
     .filter(({ t }) => typeof t === 'string')
     .sort((a, b) => String(b.t).localeCompare(String(a.t)))
     .slice(0, AANTAL);
-  if (prs.length < AANTAL)
-    return prs.map(({ nummer }) => ({ nummer, ciRood: 'onbekend', codex: 'onbekend', reviewrondes: 'onbekend' }));
+  if (prs.length < AANTAL) return prs.map(({ nummer }) => ({ nummer, ciRood: 'onbekend', reviewrondes: 'onbekend' }));
   return prs.map(({ nummer, branch }) => ({
     nummer,
     ciRood: ciRood(opties, branch),
-    codex: codex(opties, nummer),
     reviewrondes: reviewrondes(branch),
   }));
 }

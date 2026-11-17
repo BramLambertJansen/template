@@ -32,7 +32,7 @@ tot inkorten, en bij inkorten verdwenen eerder normen ongemerkt. Daarnaast kost 
    - Vanaf 85 % van een harde grens waarschuwt `check-docs` zonder rode check; boven 100 % is het rood.
    - Over de grens: eerst verplaatsen; lukt dat niet zonder verlies, dan verhogen als gate-wijziging met reden in de PR en
      eigenaarakkoord. Herijken: 0065 punt 5.
-   - Kwaliteit is de tegenmaat: stijgen Codex-bevindingen, CI-rood of reviewrondes (`pnpm meting --pr-tabel`), dan versoepelen we.
+   - Kwaliteit is de tegenmaat: stijgen CI-rood of reviewrondes (`pnpm meting --pr-tabel`), dan versoepelen we.
 4. **Ratchet alleen op overschrijdingen.** Bestaande overschrijdingen staan in `.kit/baseline.json` en mogen alleen dalen.
 5. **Rolhek: lezen wordt ruimer voor de reviewer, schrijven blijft streng, het oppervlak blijft klein.** Alleen wat de Read-, Grep- en
    Glob-tools niet kunnen komt erbij: `git ls-files`, `gh issue view|list`, `gh run view|list` en `pnpm leespad|meting`, elk met
