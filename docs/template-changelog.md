@@ -9,6 +9,15 @@ requests.
 
 ### Toegevoegd
 
+- Eigen agentinstructies van een app (spec `app-agentregels`, R-DOC-11): wat elke sessie over de app moet weten, staat als
+  feiten in `docs/app.md`, dat `CLAUDE.md` importeert (`@docs/app.md`). In de template is het een vaste stub (`APP_STUB` in
+  `scripts/kit/app-init.mjs`); `pnpm app:init` herschrijft hem met een skelet (`appAgentregels()`). `check-docs` regel 13
+  (`docs:app-md:<…>`) houdt de stub in de template gelijk en eist het bestand waar `CLAUDE.md` het importeert; `pnpm leespad`
+  telt het mee in de scenario's met `CLAUDE.md` en meet het als soort `app`. Wat verandert voor een app: `CLAUDE.md`,
+  `AGENTS.md` en `.claude/` blijven van de template, en een wijziging van `docs/app.md` kan de hoofdsessie zelf mergen
+  (`docs/**`: schrijven vrij, besluit agent). Bij een update: een bestaande app krijgt de stub; schrijf het skelet uit
+  `appAgentregels()` naar `docs/app.md` en vul het (zie "Eigen agentinstructies van de app" in `docs/nieuwe-app.md`). Bij een
+  later conflict op `docs/app.md`: houd de versie van de app.
 - Tokenscript voor de GitHub App van de agent (spec `agent-token`, herziet ADR 0089 punt 2): `scripts/kit/agent-token.mjs`
   maakt met de sleutel van de App (standaard `~/.ssh/template-agent.pem`, modus 600) een installatietoken van hoogstens een uur
   voor één repository (geef `--repo` altijd mee; zonder leest het script `remote.origin.url`, die de agent kan wijzigen) en schrijft het atomair met modus 600 naar `--uit` (standaard

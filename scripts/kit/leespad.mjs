@@ -8,7 +8,9 @@
 // 1 KB groei; een soort als een eenheid nieuw boven de streefwaarde komt of erboven minstens 1 KB (5 regels) groeit.
 // Streefdoel en drempel staan erbij zonder "let op". Nooit een overtreding; exit 1 alleen bij een ongeldige --ref of --basis.
 // Met $GITHUB_STEP_SUMMARY schrijft het de uitvoer ook naar de samenvatting van de CI-job (meting-stuurt/AC-3).
-// Getest in test/rails/meting-kerncijfers-leespad.test.ts, test/rails/leesbudget.test.ts en test/rails/meting-stuurt-leespad.test.ts.
+// `docs/app.md` telt mee in elk scenario met CLAUDE.md, dat het importeert (spec app-agentregels).
+// Getest in test/rails/meting-kerncijfers-leespad.test.ts, test/rails/leesbudget.test.ts, test/rails/meting-stuurt-leespad.test.ts
+// en test/rails/app-agentregels-leespad.test.ts.
 import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -23,13 +25,14 @@ export const SCENARIOS = {
   'nieuwe-feature': [
     'AGENTS.md',
     'CLAUDE.md',
+    'docs/app.md',
     '.claude/agents/architect.md',
     '.claude/skills/spec/SKILL.md',
     'docs/framework.md',
     'docs/gouden-pad.md',
     'docs/dod.md',
   ],
-  'lichte-fix': ['AGENTS.md', 'CLAUDE.md', '.claude/agents/developer.md'],
+  'lichte-fix': ['AGENTS.md', 'CLAUDE.md', 'docs/app.md', '.claude/agents/developer.md'],
   review: ['.claude/agents/reviewer.md', 'docs/dod.md', 'docs/framework.md'],
 };
 
@@ -108,13 +111,17 @@ export function leespad(lees, scenarios) {
 /** @typedef {{ naam: string, waarde: number }} Eenheid */
 /** @typedef {{ streefwaarde: number | null, eenheid: 'bytes' | 'regels', aantal: number, boven: number, grootste: Eenheid[] }} Meting */
 
-/** Streefwaarde, eenheid en welke paden per soort tellen (ADR 0065 punt 2); operations zonder streefwaarde. */
+/**
+ * Streefwaarde, eenheid en welke paden per soort tellen (ADR 0065 punt 2); operations zonder streefwaarde. `app` is
+ * `docs/app.md`, de feiten van de app die CLAUDE.md importeert (spec app-agentregels, R-DOC-01).
+ */
 const SOORTEN = /** @type {const} */ ({
   hoofdstukken: { streefwaarde: 12 * KB, eenheid: 'bytes', pad: null },
   regelboek: { streefwaarde: 40 * KB, eenheid: 'bytes', pad: /^docs\/framework\.md$/ },
   specs: { streefwaarde: 10 * KB, eenheid: 'bytes', pad: /^docs\/(?:template\/)?specs\/[^_/][^/]*\.md$/ },
   adrs: { streefwaarde: 6 * KB, eenheid: 'bytes', pad: /^docs\/(?:template\/)?adr\/\d{4}-[^/]+\.md$/ },
   rules: { streefwaarde: 60, eenheid: 'regels', pad: /^\.claude\/rules\/.+\.md$/ },
+  app: { streefwaarde: 60, eenheid: 'regels', pad: /^docs\/app\.md$/ },
   skills: { streefwaarde: 200, eenheid: 'regels', pad: /^\.claude\/skills\/[^/]+\/SKILL\.md$/ },
   operations: { streefwaarde: null, eenheid: 'bytes', pad: /^docs\/operations\/.+\.md$/ },
 });

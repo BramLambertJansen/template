@@ -11,6 +11,8 @@ const files = [
   'package.json',
   'README.md',
   'CHANGELOG.md',
+  // GEWIJZIGD (spec app-agentregels, R-TEST-02): `app:init` herschrijft de stub `docs/app.md`.
+  'docs/app.md',
   'src/shared/app.ts',
   'src/web/index.html',
   '.github/CODEOWNERS',

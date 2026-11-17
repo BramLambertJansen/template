@@ -2,7 +2,7 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writ
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
-import { AppInitError, planAppInit } from '../../scripts/kit/app-init.mjs';
+import { APP_STUB, AppInitError, planAppInit } from '../../scripts/kit/app-init.mjs';
 import { codeownersTekst } from '../../scripts/kit/codeowners.mjs';
 
 // pnpm app:init (roadmap stuk 6): vaste template-invoer, ook nadat de checkout zelf al een app geworden is.
@@ -12,6 +12,8 @@ const FILES: Readonly<Record<string, string>> = {
   'README.md':
     '# App-template\n\nFundering voor apps.\n\n## Nieuwe app starten\n\nSetup.\n\n## Lokaal draaien\n\nStart.\n',
   'CHANGELOG.md': '# Changelog\n\n## [Unreleased]\n\n- Template.\n\n## [0.1.0]\n\n- Basis.\n',
+  // GEWIJZIGD (spec app-agentregels, R-TEST-02): de template levert `docs/app.md` als stub en `app:init` herschrijft hem.
+  'docs/app.md': APP_STUB,
   'src/shared/app.ts': "export const APP_NAME = 'App-template';\n",
   'src/web/index.html': '<!doctype html><html lang="nl"><head><title>App-template</title></head></html>\n',
   '.github/CODEOWNERS': '/AGENTS.md                @bramlambertjansen\n',
@@ -96,6 +98,7 @@ describe('planAppInit', () => {
       'package.json',
       'README.md',
       'CHANGELOG.md',
+      'docs/app.md',
       'src/shared/app.ts',
       'src/web/index.html',
     ]);

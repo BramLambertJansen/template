@@ -27,6 +27,9 @@
 //     meting in `pnpm leespad`, nooit een overtreding. `docsMeldingen` geeft "let op" vanaf 85 % van een grens;
 //     `docsKrimp` de krimpcheck (AC-6), die de ratchet buiten de baseline houdt.
 //  12. Geen normwoord onder "Hoe (geen norm)" in .claude/rules/*.md (leerpunt #393, sleutel `docs:<bestand>:hoe-norm:<woord>`).
+//  13. `docs/app.md` (spec app-agentregels, sleutel `docs:app-md:<…>`): in de template byte-gelijk aan `APP_STUB` uit
+//     scripts/kit/app-init.mjs (een app herschrijft het bestand, dus de template wijzigt het niet), en overal getrackt als
+//     `CLAUDE.md` de regel `@docs/app.md` heeft.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -43,6 +46,7 @@ import {
 import { onderhoudVan, templateVan } from '../../rails/hooks/lib/rolhek.mjs';
 import { acIds } from '../../rails/hooks/lib/document-state.mjs';
 import { ADR_MAPPEN, adrKopViolations, adrNumber, duplicateAdrNumbers, invalidAdrNames } from './adr-numbers.mjs';
+import { APP_STUB } from './app-init.mjs';
 import { CODEOWNERS, codeownersTekst, eersteGoedkeurder, HERSTEL } from './codeowners.mjs';
 import { grensMeldingen, grensViolations, normenMeldingenUitGit, normenUitGit, zonderBasis } from './leesbudget.mjs';
 
@@ -86,6 +90,7 @@ export async function docsViolations(root = '.') {
     ...(files.includes(REGELBOEK) ? regelboekPadViolations(root, read(REGELBOEK), files) : []),
     ...rIdViolations(files, read),
     ...hoeNormViolations(files, read),
+    ...appMdViolations(files, read),
     ...grensViolations((file) => (files.includes(file) ? read(file) : null)),
   ]);
 }
@@ -321,6 +326,39 @@ function hoeNormViolations(files, read) {
         }));
       }),
     );
+}
+
+const APP_MD = 'docs/app.md';
+const APP_MD_STUB =
+  'wijkt af van de stub; de template wijzigt dit bestand niet (een app herschrijft het, spec app-agentregels)';
+const APP_MD_ONTBREEKT = 'ontbreekt; CLAUDE.md importeert het';
+
+/** Heeft de tekst buiten een codeblok een regel die alleen `@docs/app.md` is (een import van Claude Code)? @param {string} text */
+function importeertAppMd(text) {
+  let hek = '';
+  return text.split('\n').some((line) => {
+    const inCode = hek !== '' || HEK.test(line);
+    if (hek !== '') hek = sluitHek(line, hek) ? '' : hek;
+    else hek = HEK.exec(line)?.[1] ?? '';
+    return !inCode && line.trim() === `@${APP_MD}`;
+  });
+}
+
+/**
+ * Regel 13 (spec app-agentregels): `docs/app.md` is in de template (`onderhoud.repository` in gates.json) byte-gelijk aan
+ * `APP_STUB`; een app herschrijft het bestand met `app:init`, dus een templatewijziging gaf in elke app een conflict. Overal:
+ * importeert `CLAUDE.md` het bestand, dan is het getrackt. Sleutel `docs:app-md:<…>`.
+ * @param {readonly string[]} files @param {(file: string) => string} read @returns {Violation[]}
+ */
+function appMdViolations(files, read) {
+  /** @param {string} melding @returns {Violation} */
+  const fout = (melding) => ({ key: `docs:app-md:${melding}`, message: `${APP_MD}: ${melding}` });
+  if (!files.includes(APP_MD))
+    return files.includes('CLAUDE.md') && importeertAppMd(read('CLAUDE.md')) ? [fout(APP_MD_ONTBREEKT)] : [];
+  const inTemplate =
+    files.includes('.claude/gates.json') &&
+    veld(veld(JSON.parse(read('.claude/gates.json')), 'onderhoud'), 'repository') !== undefined;
+  return inTemplate && read(APP_MD) !== APP_STUB ? [fout(APP_MD_STUB)] : [];
 }
 
 /**

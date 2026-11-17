@@ -519,6 +519,7 @@ Later in de app heet hetzelfde `pnpm app:init`. Het script (`scripts/kit/app-ini
 | `docs/nieuwe-app.md` | Niets — laten staan. Verwijderen geeft bij elke template-update een conflict |
 | `CHANGELOG.md` | Opnieuw geschreven: het bestand is van de app. Kop, `## [Unreleased]` en één regel: `- Gestart vanaf template v<versie> (<sha>).` De versie komt uit `src/core/shared/template-version.ts`; ontbreekt dat bestand, dan stopt het script |
 | `docs/template-changelog.md` | Niets — laten staan. Hier staan de wijzigingen van de template; een template-update werkt het bij |
+| `docs/app.md` | Opnieuw geschreven: het bestand is van de app. De stub van de template wordt het skelet met de kop `# <App-naam>` en de koppen "Wat de app is", "Provider en host", "Rollen", "Begrippen" en "Eigen commando's en valkuilen" (`scripts/kit/app-init.mjs`, `appAgentregels()`); zie "Eigen agentinstructies van de app" onder de naslag |
 | `.claude/gates.json` | De regel `"onderhoud": { "repository": "<template.repository>" },` verwijderen: de onderhoudsmodus (ADR 0045) hoort bij de template-repo; het script weigert als die regel niet meer te vinden is. De regel `"template": { "repository": … }` blijft: daaruit lezen het rolhek (leerpuntdoel), `check-core` en `check:migrations` welke repo de template is (spec template-repo); zonder die sleutel stopt het script. Alleen als de owner niet `bramlambertjansen` is (`--owner`): `goedkeurders` wordt `["<login>"]` of `["<org>/<team>"]` |
 | `.github/CODEOWNERS` | Alleen met `--owner`: opnieuw gegenereerd uit de padtabel voor de handle uit `goedkeurders` (`scripts/kit/codeowners.mjs`); het script weigert zonder padtabel of `goedkeurders`. `check-docs` eist dat bestand en afleiding gelijk blijven |
 
@@ -526,9 +527,14 @@ Later in de app heet hetzelfde `pnpm app:init`. Het script (`scripts/kit/app-ini
 `README.md` toe, met behoud van de herkomstzin. Zet tijdens Fase 6.2 dezelfde beschrijving bij de GitHub-repo. Behandel invoer
 als tekst, niet als shellcode. Voeg geen voorbeeldapp, appseeds of appdata aan de template toe; die horen alleen in de app-repo.
 
+Vul daarna in `docs/app.md` onder "Wat de app is" de regel "Nog in te vullen na de intake" met het doel en de gebruikers uit
+de intake, in één alinea. "Provider en host" blijft "Nog geen app-ADR." tot dat ADR er is; de hoofdsessie vult het in de PR
+van dat ADR. Meer hoort er nu niet in; zie "Eigen agentinstructies van de app" onder de naslag.
+
 Raak `docs/`, `AGENTS.md`, `CLAUDE.md`, `.claude/`, `db/`, `compose.yaml` niet aan. Die komen uit de template en worden via template-updates bijgehouden.
-De enige uitzondering is `.claude/gates.app.json`, het bestand van de app voor eigen beschermde paden; dat maak je pas later,
-zie "Een eigen beschermd pad" onder de naslag.
+Er zijn twee uitzonderingen. `docs/app.md` is van de app: `CLAUDE.md` importeert het en `app:init` heeft het herschreven.
+`.claude/gates.app.json` is het bestand van de app voor eigen beschermde paden; dat maak je pas later, zie "Een eigen
+beschermd pad" onder de naslag.
 
 ```bash
 git add -A
@@ -962,6 +968,25 @@ Voer alleen de gewenste stap uit in een Ubuntu-terminal; dit zijn geen vervolgst
 
 Verwijder geen volumes tenzij je de database kwijt wilt.
 
+## Eigen agentinstructies van de app
+
+`AGENTS.md`, `CLAUDE.md` en `.claude/` zijn van de template; wat elke sessie over deze app moet weten, staat in `docs/app.md`
+(spec [app-agentregels](template/specs/app-agentregels.md), R-DOC-11). `CLAUDE.md` importeert het bestand, dus Claude Code
+laadt het bij elke sessiestart; een runtime die imports niet volgt, leest het zelf.
+
+- Wat erin hoort: feiten van de app onder de vijf koppen van het skelet: wat de app is, provider en host, rollen, begrippen,
+  eigen commando's en valkuilen (wat faalt, en waardoor).
+- Wat er niet in hoort: een regel of een kopie van het regelboek. Een norm van de app staat in een app-ADR in `docs/adr/`;
+  `docs/app.md` verwijst ernaar met het nummer.
+- Bijhouden: in de PR die een van die feiten wijzigt. `node scripts/kit/feiten.mjs pad docs/app.md` toont schrijven vrij en
+  besluit agent: hoofdsessie en developer schrijven het, en een PR die alleen zulke paden raakt, merget de hoofdsessie via `pnpm pr:merge`.
+- Omvang: `pnpm leespad` meet het bestand als soort `app` tegen een streefwaarde in regels (`scripts/kit/leespad.mjs`,
+  `SOORTEN`) en meldt "let op" als het erboven komt; een meting, geen rode check.
+- Een app van vóór dit bestand heeft na de template-update de stub van de template ("Dit is de template zelf"). `app:init`
+  draait daar niet meer: de hoofdsessie schrijft het skelet uit `appAgentregels()` in `scripts/kit/app-init.mjs` en vult het.
+- `check-docs` meldt `docs:app-md:<…>` als `CLAUDE.md` het bestand importeert en het ontbreekt
+  (`scripts/kit/check-docs.mjs`, `appMdViolations`).
+
 ## Een eigen beschermd pad
 
 Een app beschermt eigen paden (bijvoorbeeld een betaalmodule) in `.claude/gates.app.json`, niet in `.claude/gates.json`: dat
@@ -1015,7 +1040,7 @@ volgorde uit in een Ubuntu-terminal, met een schone werkmap (`git status --short
    ```
 
 3. Los conflicten op en rond de merge af met `git commit`. App-specifiek blijft, regels uit de template neem je over;
-   `CHANGELOG.md` is van de app (houd de versie van de app); `src/core/` en `docs/template/` neem je ongewijzigd uit de
+   `CHANGELOG.md` en `docs/app.md` zijn van de app (houd de versie van de app); `src/core/` en `docs/template/` neem je ongewijzigd uit de
    template (`git checkout template/main -- src/core docs/template`). Verwacht: `git status` meldt geen conflicten meer en
    `git log --oneline --graph -3` toont de merge met twee ouders.
 4. Voer per versie de notities "Bij een update" uit stap 1 uit, in eigen commits op deze branch. Verwacht: elke notitie is
@@ -1066,6 +1091,8 @@ Een rode check bij een template-update:
 | `check:snapshot`: "op volgorde van binnenkomst … ontstaat een ander schema" of "de bouw op volgorde van binnenkomst faalt" | Een toegevoegde migratie (meestal een templatemigratie) is ouder dan een migratie van de app en beide raken hetzelfde object: productie, waar de oudere ná de nieuwere draait, krijgt een ander schema dan een verse database, of de migratie faalt daar | Hernoem of wijzig de genoemde migratie niet; schrijf een nieuwe migratie die het bedoelde eindresultaat vastlegt, daarna stap 5 opnieuw. Is de templatemigratie de oorzaak: meld het als leerpunt aan de template |
 | `check-core` | `src/core/` of `docs/template/` wijkt af van de template, of de update is geen echte merge van `template/main` (squash, rebase, cherry-pick) | `git checkout template/main -- src/core docs/template` en committen; anders de branch opnieuw maken vanaf stap 2 |
 | Conflict in `.github/CODEOWNERS`, of `check-docs`: `docs:spiegel:codeowners` | Het bestand is gegenereerd uit de padtabel van de template plus `.claude/gates.app.json` van de app, en beide kanten veranderden | Neem een van beide versies, genereer opnieuw met `node scripts/kit/codeowners.mjs --schrijf` en commit; nooit met de hand samenvoegen |
+| Conflict op `docs/app.md` | De template wijzigde de stub en de app heeft het bestand herschreven | Houd de versie van de app (`git checkout --ours docs/app.md`, `git add docs/app.md`); het bestand is van de app |
+| `check-docs`: `docs:app-md:<…>`: "ontbreekt; CLAUDE.md importeert het" | De update bracht de import in `CLAUDE.md`, maar `docs/app.md` is in de app verwijderd of nooit gecommit | Schrijf het skelet uit `appAgentregels()` (`scripts/kit/app-init.mjs`), vul het en commit; zie "Eigen agentinstructies van de app" |
 | `check-docs`: `docs:gates-app:<glob>`: "staat al in .claude/gates.json" | De template beschermt nu zelf een glob die ook in `.claude/gates.app.json` staat; bij het lezen geldt per kolom de strengste | Haal de rij uit `.claude/gates.app.json` of maak de glob specifieker, genereer CODEOWNERS opnieuw en commit |
 
 Een templatemigratie die ouder is dan een migratie die de app al heeft toegepast, draait in productie na die nieuwere en op
