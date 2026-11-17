@@ -8,7 +8,7 @@ allowed-tools: Bash(node scripts/kit/feiten.mjs *)
 
 Wanneer: nieuwe feature, pagina, interactie, migratie, route of permissie (volledige straat, framework §8); een lichte fix
 krijgt geen spec. Hergebruik een passende bestaande feature-spec; de feiten hieronder tonen alleen open specs, zoek een
-gebouwde op aanvraag met `node scripts/kit/feiten.mjs specs --alle` of in `docs/specs/`. Een ADR is alleen nodig bij de
+gebouwde op aanvraag met `node scripts/kit/feiten.mjs specs --alle` of in `docs/specs/` (template: `docs/template/specs/`). Een ADR is alleen nodig bij de
 bestaande beslisdrempels.
 
 Wie schrijft (ADR 0090): in een app de architect; in de template de hoofdsessie, de architect op verzoek; bij
@@ -25,7 +25,7 @@ Feiten nu:
 Stappen:
 1. Een resource met een eigenaar per rij: `pnpm new:resource <naam>` maakt het skelet `docs/specs/<naam>.md` (alleen de
    hoofdsessie; als architect kopieer je het zelf, zie `docs/gouden-pad.md`). Anders: kopieer `docs/specs/_template.md` naar
-   `docs/specs/<naam>.md`, met `status: goedgekeurd` (`voorstel` alleen voor een bewust geparkeerd voorstel).
+   `docs/specs/<naam>.md` (template: `docs/template/specs/<naam>.md`), met `status: goedgekeurd` (`voorstel` alleen voor een bewust geparkeerd voorstel).
 2. Vul de verplichte koppen in (Doel, Rollen en wie wat ziet, Acceptatiecriteria, Hergebruik en UX, Open vragen) en elke
    andere kop die van toepassing is; een kop die niet van toepassing is laat je weg. Teksten letterlijk; acceptatiecriteria toetsbaar (een test per criterium).
 3. "Kopieer de vorm van": per regel een bestaand pad uit `docs/gouden-pad.md` (accountbeheer) en wat je overneemt.

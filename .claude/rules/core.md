@@ -24,7 +24,7 @@ Hoe (geen norm):
 ## Gebouwd: waar alles staat
 
 `src/core/api/{env.ts,db,http,auth,mail}`, en in `src/core/shared`: `errors.ts` (`defineErrorCodes`), `can.ts` (`definePermissions`,
-MFA-eis voor admin), `limits.ts`, `assert.ts`, `unsafe-cast.ts`, `ids.ts` (`brandedId`), `money.ts` (`Cents`), `cursor.ts`; de API-client;
+MFA-eis voor elke beheerrol), `limits.ts`, `assert.ts`, `unsafe-cast.ts`, `ids.ts` (`brandedId`), `money.ts` (`Cents`), `cursor.ts`; de API-client;
 de dependency-cruiser-regel core → app; `check-core`.
 
 ## Besloten, nog niet gebouwd

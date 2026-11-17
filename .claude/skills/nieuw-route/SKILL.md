@@ -6,7 +6,7 @@ allowed-tools: Bash(node scripts/kit/feiten.mjs *)
 
 # Nieuwe route
 
-Eerst: een spec met `status: goedgekeurd` in `docs/specs/`. Zonder die spec bouw je niets (AGENTS.md).
+Eerst: een spec met `status: goedgekeurd` in `docs/specs/` (template: `docs/template/specs/`). Zonder die spec bouw je niets (AGENTS.md).
 
 Feiten nu:
 
