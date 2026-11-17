@@ -17,6 +17,7 @@ Elke norm is één regel `R-<domein>-<nr>` met herkomst (ADR-nummer of bron).
 - **R-PRINC-09** Zwak nooit check, test, hook, RLS-regel of type af; zou fix dat doen: stop en vraag; strengere check is geen ADR (0046)
 - **R-PRINC-10** Tokenwinst alleen met cijfers; controles, negatieve securitygevallen, onafhankelijke review nemen niet af (0057)
 - **R-PRINC-11** Klaar = uitvoer van bewijzende check; verzin geen commando's, bestanden, uitslagen (AGENTS)
+- **R-PRINC-12** Maakt een regel, ADR of spec het werk aantoonbaar slechter of trager: meld in dezelfde beurt de regel, wat hij kost en een voorstel, en volg hem tot de eigenaar beslist (staat hij de opdracht in de weg: stop en vraag, R-WERK-20); gemeten wrijving in de sessie telt als aanleiding (R-PRINC-08); in een app gaat een voorstel over de template als leerpunt naar de template (R-WERK-13) (fw)
 
 ## 2. Architectuur
 
