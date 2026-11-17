@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd # voorstel van de hoofdsessie; de merge door de eigenaar is het besluit (ADR 0046)
+status: gebouwd # #748
 namespace: app-padtabel
 ---
 
