@@ -7,6 +7,7 @@ Herzien: 2026-11-03 (#469): gewijzigd door [0069](0069-agent-merge-niet-kritiek.
 [0070](0070-meting-die-stuurt.md) punt 1
 Herzien: 2026-11-10 (#668): gewijzigd door [0087](0087-reviewer-zoekt-met-git-grep.md) punt 5 (`git grep` en glob-pathspec voor de reviewer)
 Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
+Herzien: 2026-11-17 (#763): punt 1, ook een levend ADR heeft een harde grens (0065 punt 1)
 
 Herziet [0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md) punt 3 en 7. Uitwerking: specs
 [leesbudget](../specs/leesbudget.md) en [rolhek-lezen](../specs/rolhek-lezen.md).
