@@ -34,7 +34,7 @@ n.v.t. — geen UI. Uitvoer is tekst van `check-docs`, `feiten.mjs`, `pnpm leesp
 
 PR rails:
 
-- **leesbudget/AC-1** — `check-docs` geeft alleen voor `AGENTS.md` (9 KB, 100 regels) en `CLAUDE.md` (50 regels) een overtreding; een bestaande overschrijding staat in de baseline (ratchet). Voor een hoofdstuk van `docs/framework.md` (kop `## <n>.` met `<n>` een nummer, ook §13 en verder, met optionele letter zoals `11a` of `8a`), het totaal van `framework.md` en een spec geeft `check-docs` geen overtreding meer; hun budget-ingangen verdwijnen uit `.kit/baseline.json`. Een levend ADR heeft een harde grens (AC-10). De ankercontrole (regel 8) laat hoofdstukken boven §12 toe; de ankers §1–§12 blijven verplicht.
+- **leesbudget/AC-1** — `check-docs` geeft voor `AGENTS.md` (9 KB, 100 regels), `CLAUDE.md` (50 regels) en een levend ADR (AC-10) een overtreding; een bestaande overschrijding staat in de baseline (ratchet). Voor een hoofdstuk van `docs/framework.md` (kop `## <n>.` met `<n>` een nummer, ook §13 en verder, met optionele letter zoals `11a` of `8a`), het totaal van `framework.md` en een spec geeft `check-docs` geen overtreding meer; hun budget-ingangen verdwijnen uit `.kit/baseline.json`. Een levend ADR heeft een harde grens (AC-10). De ankercontrole (regel 8) laat hoofdstukken boven §12 toe; de ankers §1–§12 blijven verplicht.
 - **leesbudget/AC-2** — Vanaf 85 % van een grens uit AC-1 (drempel `ceil(0,85 × grens)`; de grens zelf is geen overtreding) meldt `check-docs` "let op: <eenheid> op <n> % van de grens; verplaats naar een lagere laag" zonder overtreding en zonder andere exitcode; de melding staat in de uitvoer van `pnpm ratchet` en `pnpm leespad`. `scripts/kit/ratchet.mjs` krijgt daarvoor een kanaal voor meldingen.
 - **leesbudget/AC-3** — `pnpm leespad` telt van `docs/framework.md` hoofdstuk 8 en zijn letter-subhoofdstukken plus de tekst vóór de eerste `## `-kop, toont per scenario het streefdoel (nieuwe-feature ≤ 50 KB) en de waarschuwingsdrempel (88, 34 en 22 KB; herijkt in meting-stuurt, ADR 0070 punt 4), en toont als meting tegenover hun streefwaarde: elk hoofdstuk (12 KB), het totaal van `framework.md` (40 KB), specs (10 KB), ADR's (6 KB), rules (60 regels) en skills (200 regels); per soort het aantal boven de streefwaarde en de vijf grootste, zodat de uitvoer begrensd blijft. Operations-docs staan erbij zonder streefwaarde. Wanneer "let op" verschijnt, volgt [meting-stuurt/AC-1](meting-stuurt.md) (verschil met de basis); nooit een overtreding of andere exitcode.
 - **leesbudget/AC-4** — `node scripts/kit/feiten.mjs hoofdstuk <n>` drukt de tekst vóór de eerste `## `-kop en dat hoofdstuk af, van zijn kop tot de volgende `## `-kop, bij `hoofdstuk 8` ook 8a, 8b enzovoort (gelijk aan wat `pnpm leespad` telt); een onbekend hoofdstuk geeft een foutmelding en exit 1.
@@ -71,7 +71,7 @@ PR instructies:
 
 ## Testplan
 
-Tabeltests in `test/rails/leesbudget.test.ts` voor AC-1 tot en met AC-7 met fixtures (AC-7 met een vaste PR-tabel); docs-tests (structuur) voor AC-8 en AC-9. De rails-PR noemt de huidige omvang per hoofdstuk en de baseline-ingangen die verdwijnen.
+Tabeltests in `test/rails/leesbudget.test.ts` voor AC-1 tot en met AC-7 met fixtures (AC-7 met een vaste PR-tabel); docs-tests (structuur) voor AC-8 en AC-9; AC-10 in `test/rails/doc-grens.test.ts`. De rails-PR noemt de huidige omvang per hoofdstuk en de baseline-ingangen die verdwijnen.
 
 ## Open vragen
 

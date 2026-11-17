@@ -135,7 +135,7 @@ function node(cwd: string, [script = '', ...args]: string[], env: Record<string,
   return { status: r.status, stdout: r.stdout, stderr: r.stderr, uit: `${r.stdout}\n${r.stderr}` };
 }
 
-describe('leesbudget/AC-1: alleen AGENTS.md en CLAUDE.md hebben een harde grens', { timeout: 60_000 }, () => {
+describe('leesbudget/AC-1: AGENTS.md, CLAUDE.md en een levend ADR hebben een harde grens', { timeout: 60_000 }, () => {
   test.each([
     ['docs/framework.md van 60 KB', 'docs/framework.md', tekst(60 * KB)],
     ['een spec van 50 KB', 'docs/specs/groot.md', SPEC_KOP('groot') + tekst(50 * KB)],
