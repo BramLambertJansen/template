@@ -39,9 +39,9 @@ Hoe (geen norm):
 - `app.request_id()` leest `app.request_id`, gezet door `withUser()` (R-DB-03). `app.audit_log`: verwijderen na de termijn via `app.retention_cutoff` (R-DB-17); schrijven via `app.audit`/`app.audit_account_action` en door `app.assign_role` en `app.set_account_blocked`.
 - `audit.ts` levert `createAuditFn` voor `ctx.audit` (R-LAAG-06). `app.session_strength` is `password` of `mfa` (anders weigert `withUser()`); daarbuiten geeft `app.session_strength()` `none`.
 
-## Besloten, nog niet gebouwd
+## Gebouwd: waar alles staat
 
-Gebouwd: `withUser()` met Drizzle-`tx` en foutvertaling; pgTAP-invarianten (`db/tests/invarianten.sql`: RLS
+`withUser()` met Drizzle-`tx` en foutvertaling; pgTAP-invarianten (`db/tests/invarianten.sql`: RLS
 geforceerd, geen TRUNCATE/REFERENCES/TRIGGER, `better_auth` dicht, niets voor PUBLIC) en de functiecatalogus
 (`db/tests/functies.sql`: een nieuwe functie krijgt daar een regel, in dezelfde PR als de migratie); de testkit in
 `testing.ts` (`beginTestDb(pool)`: `asUser(rol)`, `withUser` met een savepoint per aanroep, `rollback()`; de pool verbindt
@@ -49,3 +49,8 @@ als `app_migrator` en wordt alleen in `test/` gemaakt).
 `pnpm db:generate` met `db/schema.snapshot.sql` en `src/api/db/schema.ts` (eigen generator in `scripts/db/`, geen drizzle-kit).
 `pnpm check:secdef` (statisch op de migraties, in `gate:fast`; de functiecatalogus is de runtime-kant in `gate:slow`).
 `pnpm check:snapshot` (snapshot-vergelijking, in `gate:slow`) en `check-policies` (elke policy een pgTAP-assert op naam, in `pnpm test:db`).
+
+## Besloten, nog niet gebouwd
+
+Nog niet: `app_jobs` en `app.mail_outbox` (ST-03) en `app.delete_account` (ST-05). De eisen staan bij die roadmap-items
+(R-DOC-10).
