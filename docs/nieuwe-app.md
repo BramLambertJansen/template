@@ -623,14 +623,19 @@ alleen bij het mergen van een pull request, zodat de eigenaar een eigen PR op ee
 bewezen is dat het token van de eigenaar uit de agentomgeving is (spec templateregime AC-6); zonder de optie is er geen bypass.
 `guard.yml` heeft alleen de job `check-core`; de diff-guard bestaat niet meer (ADR 0089 punt 5).
 
-Geplande inrichting van de App (**nog niet gebouwd**, roadmap ST-01; het besluit is ADR 0045 punt 19):
+Inrichting van de App (ADR 0045 punt 19, ADR 0089 punt 2; de App aanmaken en installeren doet de eigenaar op GitHub):
 
 - Rechten: `contents: write`, `pull_requests: write`, `issues: write` (labels, commentaar), `metadata: read`, `checks: read`,
   `actions: read`. Geen `workflows`, `administration` of `secrets`. De App staat niet in `goedkeurders` (`.claude/gates.json`),
   dus een goedkeuring door de App telt niet.
-- Sleutel buiten de repo (`~/.config/template-agent/app.pem`, modus 600), nooit leesbaar in de sandbox. Een token van één uur
-  via een script zonder dependency (`node:crypto`, JWT RS256) dat als git-credential-helper en als `GH_TOKEN` dient; dat script
-  komt in de App-PR.
+- Sleutel buiten de repo in `~/.ssh/template-agent.pem` met modus 600: `~/.ssh` is in de sandbox van Claude Code niet leesbaar.
+- Token van hoogstens een uur, alleen voor deze repo, met `scripts/kit/agent-token.mjs` (spec agent-token). Draai het buiten de
+  sandbox, in `~/code/<slug>`, met de versie op `main` van GitHub en nooit uit een werkmap van de agent:
+  `bron=$(gh api -H 'Accept: application/vnd.github.raw' 'repos/<owner>/<slug>/contents/scripts/kit/agent-token.mjs?ref=main') && printf '%s\n' "$bron" | node --input-type=module - <app-id> --repo <owner>/<slug>`.
+  Zo draait `node` alleen als het ophalen lukt; staat het script nog niet op `main`, dan meldt `gh` een 404 en gebeurt er niets.
+  Geef `--repo` altijd mee: zonder leest het script `remote.origin.url`, en die kan de agent wijzigen. Controleer de repository
+  in de melding. Voor een leerpunt naar de template: `--repo BramLambertJansen/template`. Het token komt in
+  `/tmp/claude-<uid>/agent-token`; de agent geeft het per commando mee als `GH_TOKEN`. Geen credential-helper.
 - Met de App en het bewijs van de identiteit: de ruleset opnieuw met `--bypass-beheerder`.
 
 Weigert de API iets:
