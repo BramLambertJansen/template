@@ -10,7 +10,7 @@ Herzien: 2026-11-12 (#698): het weghalen uit punt 5 wacht niet op het bewijs van
 
 Herzien: 2026-11-12 (#705): punt 9 en 10: de effecttoets wacht niet op de identiteit en is weg; de identiteitsregels en de bypass wachten wel (ADR 0091 punt 5)
 
-Herzien: 2026-11-17 (#PR): punt 2: een tokenscript zonder ververs-proces staat in de repo (`scripts/kit/agent-token.mjs`, spec [agent-token](../specs/agent-token.md)), omdat een script buiten de repo bij een herstart verdween (leerpunt #754); de eigenaar draait het buiten de sandbox vanaf `main`, nooit uit een werkmap van de agent (eigenaarbesluit 2026-11-17)
+Herzien: 2026-11-17 (#776): punt 2: een tokenscript zonder ververs-proces staat in de repo (`scripts/kit/agent-token.mjs`, spec [agent-token](../specs/agent-token.md)), omdat een script buiten de repo bij een herstart verdween (leerpunt #754); de eigenaar draait het buiten de sandbox vanaf `main`, nooit uit een werkmap van de agent (eigenaarbesluit 2026-11-17)
 
 Wijzigt [0039](0039-stack-provider-neutraal-en-toolchain.md) punt 8, [0040](0040-template-app-en-grens-core-app.md) punt 4, 8,
 16 en 17, [0045](0045-railwerk.md) punt 10, 16, 17, 18, 19, 20, 21, 22 en 24, [0046](0046-werkstraat-en-beslisroute.md) punt
