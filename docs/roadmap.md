@@ -76,7 +76,7 @@ Hooguit drie open items (`check:roadmap`); nummer 1 is bewijs vóór uitbreiding
   met verplichte checknamen ongewijzigd; elke wijziging in `.github/workflows` gaat apart aan de eigenaar (gate-pad) en `guard.yml` alleen via
   besluit-PR; (5) lange regels in `docs/framework.md` en `docs/dod.md` inkorten binnen de grens van de R-DOC-07-krimpcheck; (6) leerpunten uit de ronde, zie #642; (7) verouderde verwijzingen, elk met eigenaarakkoord: (a) testcommentaar dat naar
   `docs/specs/taakmandaat-vervolg.md` wijst (nu taakmandaat-vervolg (verwijderd met het archief); R-TEST-02): `test/hooks/follow-up-kit.ts:7`,
-  `test/hooks/mandate-follow-up-ci.test.ts:19`, `test/rails/check-roadmap-bewijsvorm.test.ts:6`, `test/rails/mandate-follow-up-docs.test.ts:6` en
+  `test/hooks/mandate-follow-up-ci.test.ts:19`, `test/rails/check-roadmap-bewijsvorm.test.ts:6` en
   `test/scripts/runner-host-files.test.ts:7` (de vastgelegde fixture `test/rails/fixtures/padtabel/decisions-30cc352.json` blijft ongewijzigd);
   (b) zes overbodige `.gitkeep`-bestanden in mappen met andere getrackte bestanden, alle in beschermde paden (`.claude/agents`, `.claude/hooks`,
   `.claude/skills`, `.github/workflows`, `scripts`, `src/core/web/ui`); de plaatshouders in `.github/settings`, `deploy`, `designs` en
@@ -205,11 +205,11 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
 - [ ] **ST-01 (P0) — GitHub-bescherming daadwerkelijk activeren** (stuk 6). Een agent kan beschermd werk niet zonder de
   juiste eigenaarreview samenvoegen. Gebouwd: `scripts/github-ruleset.sh` met `test/scripts/github-ruleset.test.ts` (#104), `guard.yml` met alleen de job
   `check-core` (R-CI-07; de diff-guard is weg, ADR 0089 punt 5) en CODEOWNERS (gegenereerd uit de padtabel) en PR-template.
-  Open: organisatie, GitHub App voor de agent, org-ruleset via custom property en Actions-instellingen (code-owner-review met 0 goedkeuringen
+  Open: organisatie, GitHub App voor de agent in een app (de template heeft er een sinds ADR 0089; een app kan hem nog niet reproduceren), org-ruleset via custom property en Actions-instellingen (code-owner-review met 0 goedkeuringen
   zet `scripts/github-ruleset.sh` nu al, en het script weigert bij fouten in `CODEOWNERS`; daarna `--bypass-beheerder`, pas na het bewijs dat het
   token van de eigenaar uit de agentomgeving is; private repo's vragen Pro/Team); `.github/settings/` met `scripts/check-github.mjs` (alleen-lezend, een onleesbare instelling is een fout;
   ook `app_id` van verplichte checks, `enforce_admins`, conversation resolution) en `check-spec-approval`; `docs/operations/rails-checklist.md` met
-  per stuk bewijs; pushen met een kortlevend App-token zonder het eigenaar-token in de agentomgeving, daarna `denyRead` op `~/.config/gh`;
+  per stuk bewijs; pushen met een kortlevend App-token (het script `scripts/kit/agent-token.mjs` is gebouwd, spec agent-token) zonder het eigenaar-token in de agentomgeving, daarna `denyRead` op `~/.config/gh`;
   bij de overstap op de App de review van een code-eigenaar verplicht op exact de head-SHA, niet van de auteur (R-REPO-02, framework §10). Onderscheid de overgang onder het eigenaaraccount van de definitieve App-opzet; de eigenaar
   activeert organisatie, App en instellingen.
   **Afhankelijkheden:** ADR 0039, 0040 en 0045; beschikbaarheid van de vereiste CI-checks.
@@ -217,8 +217,8 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   bot-PR zonder vereiste review niet mergebaar is. Geen actieve bescherming claimen op basis van alleen JSON-bestanden. Voorwaarde voor ADR 0030 PR 2.
   **Eisen uit het regelboek** (R-DOC-10: tot de bouw staan ze hier; de bouw-PR zet ze terug in het regelboek): `.github/settings/main-protection.json` en `scripts/check-github.mjs` volgen de ruleset van R-REPO-02 (was in R-REPO-02).
   aanleiding: `scripts/github-ruleset.sh`
-- [ ] **Versie en build-SHA** (stuk 3f) in `GET /api/health` en onderaan in de app (publieke buildmetadata, geen secrets); vraagt een spec
-  voor de healthcontractwijziging. De versiestrategie zelf hoort bij ST-12 (Geparkeerd).
+- [ ] **Versie en build-SHA onderaan in de app** (stuk 3f; publieke buildmetadata, geen secrets). In `GET /api/health` staan ze al
+  (spec release-versie, #724, #729). De versiestrategie zelf hoort bij ST-12 (Geparkeerd).
   aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (B-11)
 - [ ] **`/.well-known/security.txt` en `LICENSE`** (eigendom, geen open-source-licentie): beide wachten op een waarde van de eigenaar
   (contactadres per app; licentietekst).
@@ -314,7 +314,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
 - [ ] **Krimp van bindende documenten in stappen onder 20 %** (R-DOC-02). `check-docs` vangt krimp boven 20 % en 1 KB per PR tegen
   `git merge-base origin/main HEAD` (`scripts/kit/leesbudget.mjs`); een reeks PR's die elk minder krimpt, valt erdoorheen. Bijvoorbeeld een
   cumulatieve meting over de laatste twintig gemergde PR's naast `pnpm meting --trend`, of een norm-telling (R-id's) in plaats van bytes.
-  aanleiding: `docs/template/specs/leesbudget.md`, randgeval "Krimp in stappen onder 20 %" (bekend gat, ADR 0065 punt 6)
+  aanleiding: `docs/template/specs/leesbudget.md`, randgeval "Krimp in stappen onder 20 %" (bekend gat, ADR 0067 punt 3)
 - [ ] **Regelboek zonder niet-gebouwde onderdelen als check** (R-DOC-10). `check-docs` regel 9 laat achter een niet-bestaand pad
   `(nog niet gebouwd)` toe; daarmee kan een clausule over een niet-gebouwd onderdeel terugkomen. Aanscherping: de markering alleen voor een
   doelmap die een gebouwde check al kent (nu alleen `docs/template/specs/` in R-CI-06), elders rood; plus een melding voor een functie of
@@ -374,10 +374,10 @@ Bewust nog niet, tot de genoemde aanleiding er is (P1). Niets verdwijnt: elk ite
   **Eisen uit het regelboek** (R-DOC-10: tot de bouw staan ze hier; de bouw-PR zet ze terug in het regelboek): core levert poort `FileStorage` met contracttestsuite (was in R-OPSL-01, ADR 0060).
   terug als: een concrete app notificaties of bestanden nodig heeft
 - [ ] **ST-12 (P2) — templateversies en upgradecontrole** (stuk 6 template-versie; ADR 0040). Nu: `docs/template-changelog.md` met "Bij een update"-notities, `TEMPLATE_VERSION` en de versie in `GET /api/health` (spec release-versie) en
-  `scripts/kit/app-init.mjs` die de template-SHA vastlegt; nog geen tags of versieschema. **Werk:** onderscheid releaseversie, opgenomen
+  `scripts/kit/app-init.mjs` die de template-SHA vastlegt; tag `v0.1.0` bestaat, maar er is nog geen afgesproken versieschema en een update volgt nog `template/main`. **Werk:** onderscheid releaseversie, opgenomen
   templatecommit en app-build-SHA; leg herkomst vast bij app-init en update; upgrade-notities bij breaking changes, migraties, instellingen en
   handstappen; een adviserende controle op core/app-grens en ontbrekende stappen die niets automatisch wijzigt en de mergeprocedure niet vervangt.
-  **Afhankelijkheden:** ST-09; eigenaarbesluit over versieschema; spec voor het healthcontract. **Klaar als:** app-init legt de juiste herkomst vast;
+  **Afhankelijkheden:** ST-09; eigenaarbesluit over versieschema. **Klaar als:** app-init legt de juiste herkomst vast;
   een update wijzigt die controleerbaar; een fixture detecteert een ontbrekende upgradevoorwaarde; buildmetadata komt overeen met het gebouwde
   commit; een app kan een template-update reviewen zonder core-code te kopiëren.
   terug als: de eerste template-update (ST-09) gedaan is

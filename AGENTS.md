@@ -4,7 +4,7 @@ Webapp-template, gebouwd door agents binnen afgedwongen kaders. Bindend regelboe
 
 ## Status
 
-Fase 0/1 gebouwd; volgende: proef-app (ST-09). Wat niet in `package.json` of de repo staat, bestaat niet: verzin geen commando's, scripts of bestanden; klaar = uitvoer van de bewijzende check (R-PRINC-11).
+Stand: `node scripts/kit/feiten.mjs fase`. Wat niet in `package.json` of de repo staat, bestaat niet: verzin geen commando's, scripts of bestanden; klaar = uitvoer van de bewijzende check (R-PRINC-11).
 
 ## Stack
 
@@ -20,7 +20,7 @@ Botst een regel met de opdracht: stop en vraag, omzeil of verzwak niets (R-WERK-
 - `src/core` is template: een app wijzigt het niet maar registreert uitbreidingen; core importeert nooit app-code (R-LAAG-01, R-LAAG-02, R-ARCH-01).
 - `src/web`: data alleen via `src/web/lib/api.ts`; geen databasedriver, ORM, provider-SDK of import uit `src/api`, ook geen types (R-LAAG-03). `shared` importeert niets uit `web` of `api` (R-LAAG-04).
 - Databaseverbindingen alleen in `src/core/api/db` en `src/core/api/auth` (R-LAAG-05); `src/core/api/db` exporteert alleen `withUser()`, `pingDatabase()`, `closeDatabase()`, `createAuditFn()` (alleen `app.audit` in de `tx`, geen pool), `readIntegrationSwitch()`, `testing.ts` (R-LAAG-06).
-- `process.env` alleen in `src/core/api/env.ts`, `import.meta.env` alleen in `src/core/web/lib/env.ts`, `MIGRATOR_DATABASE_URL` alleen in `scripts/`; `VITE_` alleen publiek (R-LAAG-08).
+- `process.env` alleen in `src/core/api/env.ts`, `import.meta.env` alleen in `src/core/web/lib/env.ts`, `MIGRATOR_DATABASE_URL` alleen in `scripts/`, `test/`, `e2e/`; `VITE_` alleen publiek (R-LAAG-08).
 
 **API**
 - Route alleen via `defineRoute({ method, path, input, output, permission, handler })` of `definePartnerRoute`, input `.strict()`; nieuwe permissie in `src/shared/permissions.ts` met een test per verboden rol (R-WERK-09, R-CODE-03, R-TEST-03).
@@ -60,8 +60,8 @@ Botst een regel met de opdracht: stop en vraag, omzeil of verzwak niets (R-WERK-
 - Ontbreekt een beslissing: vraag, geen aanname (R-WERK-20). Vraag meteen via de vraagprompt (concreet, korte opties, gebundeld, niet verstopt in uitleg of voortgangstekst); zonder vraagtool: meld dat kort en stel de vraag apart; geen bevestiging voor toegestaan werk (R-WERK-21).
 - Gedrag, API, configuratie of conventies gewijzigd: doc mee in dezelfde PR, kort met `bestand:regel` (R-WERK-15).
 - Nieuwe feature/pagina/interactie, migratie, route of permissie: spec (app: architect; template: hoofdsessie, architect op verzoek van de eigenaar of de hoofdsessie; bij risicowerk stelt de hoofdsessie hem voor aan de eigenaar), na spec-review bouwen in dezelfde PR; passende spec hergebruiken; aparte tester alleen bij risicowerk; kritiek werk: eigenaar keurt de PR goed, in een app eerst besluit-PR (R-WERK-04, R-WERK-05, R-WERK-07).
-- Route licht of volledig, nooit zelfreview: framework §8 (R-WERK-03, R-WERK-04). Volg `docs/dod.md` fasebewust; lever alleen op met geslaagde uitslag van bestaande checks (of eigenaarakkoord), meld wat nog niet bestaat (R-WERK-22).
-- UI-tekst Nederlands; code, commits, branches Engels (R-CODE-10). Roadmap-item, rail of ADR alleen met aanleiding (framework §1), anders vraag de eigenaar (R-PRINC-08).
+- Route: licht alleen voor beperkte fixes binnen bestaand gedrag, anders volledig: framework §8 (R-WERK-03, R-WERK-04). Volg `docs/dod.md` fasebewust; lever alleen op met geslaagde uitslag van bestaande checks (of eigenaarakkoord), meld wat nog niet bestaat (R-WERK-22).
+- UI-tekst Nederlands; code, commits, branches Engels (R-CODE-10). Roadmap-item, rail of ADR alleen met aanleiding, anders vraag de eigenaar (R-PRINC-08). Maakt een regel het werk aantoonbaar slechter of trager: meld regel, kosten en voorstel, en volg hem tot de eigenaar beslist (R-PRINC-12).
 - Begin met taakrelevante feiten (`node scripts/kit/feiten.mjs gates specs fase`; `componenten` alleen bij UI); het regelboek per geraakt hoofdstuk: `feiten.mjs hoofdstuk <n>` (R-WERK-01, R-DOC-05).
 - Runtime-specifieke instructies gelden alleen voor die runtime: hooks in `.claude/` werken alleen in Claude Code, elders zijn CI, de ruleset op GitHub en de eigenaarmerge de grens. Claim nooit een instelling die je niet kunt lezen (R-WERK-23).
 

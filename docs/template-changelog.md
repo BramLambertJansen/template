@@ -7,15 +7,56 @@ requests.
 
 ## [Unreleased]
 
+### Toegevoegd
+
+- Eigen agentinstructies van een app (spec `app-agentregels`, R-DOC-11): wat elke sessie over de app moet weten, staat als
+  feiten in `docs/app.md`, dat `CLAUDE.md` importeert (`@docs/app.md`). In de template is het een vaste stub (`APP_STUB` in
+  `scripts/kit/app-init.mjs`); `pnpm app:init` herschrijft hem met een skelet (`appAgentregels()`). `check-docs` regel 13
+  (`docs:app-md:<…>`) houdt de stub in de template gelijk en eist het bestand waar `CLAUDE.md` het importeert; `pnpm leespad`
+  telt het mee in de scenario's met `CLAUDE.md` en meet het als soort `app`. Wat verandert voor een app: `CLAUDE.md`,
+  `AGENTS.md` en `.claude/` blijven van de template, en een wijziging van `docs/app.md` kan de hoofdsessie zelf mergen
+  (`docs/**`: schrijven vrij, besluit agent). Bij een update: een bestaande app krijgt de stub; schrijf het skelet uit
+  `appAgentregels()` naar `docs/app.md` en vul het (zie "Eigen agentinstructies van de app" in `docs/nieuwe-app.md`). Bij een
+  later conflict op `docs/app.md`: houd de versie van de app.
+- Tokenscript voor de GitHub App van de agent (spec `agent-token`, herziet ADR 0089 punt 2): `scripts/kit/agent-token.mjs`
+  maakt met de sleutel van de App (standaard `~/.ssh/template-agent.pem`, modus 600) een installatietoken van hoogstens een uur
+  voor één repository (geef `--repo` altijd mee; zonder leest het script `remote.origin.url`, die de agent kan wijzigen) en schrijft het atomair met modus 600 naar `--uit` (standaard
+  `/tmp/claude-<uid>/agent-token`); token en JWT komen nooit in de uitvoer. Alleen `node:`-imports, zodat de eigenaar het
+  buiten de sandbox uit `main` draait via `bron=$(gh api …) && printf '%s\n' "$bron" | node --input-type=module - <app-id> --repo <owner>/<repo>` (zie `docs/nieuwe-app.md` 6.2)
+  (`test/scripts/agent-token.test.ts`). Wat verandert voor een app: niets vanzelf; wie PR's als een eigen GitHub App wil
+  openen, maakt het token zo met de hand aan en geeft het per commando mee als `GH_TOKEN`; zonder ververs-proces of
+  credential-helper.
+
 ### Gewijzigd
 
-- `check-docs` regel 13 (leerpunt #738): een gebouwde spec in `docs/specs/` of `docs/template/specs/` noemt tussen backticks
+- `check-docs` regel 14 (leerpunt #738): een gebouwde spec in `docs/specs/` of `docs/template/specs/` noemt tussen backticks
   geen repopad onder `src/`, `scripts/`, `rails/`, `test/`, `e2e/`, `db/`, `deploy/`, `.claude/` of `.github/` (met extensie)
   dat niet bestaat, tenzij er direct `(vervallen)`, `(nieuw)` of `(voorbeeld)` achter staat; een nieuwe AC met
   `(nog niet gebouwd)` achter het id (R-WERK-07) mag een nieuw pad noemen (`scripts/kit/check-docs.mjs`). Bestaande treffers
   staan in `.kit/baseline.json`; een nieuwe is rood in de ratchet. Wat verandert voor een app: wie een bestand schrapt of
   hernoemt dat een gebouwde spec noemt, zet `(vervallen)` erachter in dezelfde PR.
 - `bewijsPlan` uit `scripts/kit/leerpunt.mjs` geeft geen veld `zonderTest` meer (leerpunt #737): niets buiten de tests las het.
+- De meting telt geen bevindingen van een externe reviewdienst meer (spec `agent-merge-niet-kritiek`, OV-1):
+  `pnpm meting --pr-tabel` heeft geen rij en geen JSON-veld `codexBevindingen` meer, in `pnpm meting --trend` ontbreekt de
+  maat `codex` (tekst en `trend.maten`) en de trend roept geen `gh api …/comments` meer aan (`scripts/kit/meting.mjs`,
+  `scripts/kit/meting-trend.mjs`, `test/rails/meting-zonder-externe-review.test.ts`). Wat verandert voor een app: niets,
+  tenzij een eigen script die velden leest.
+- De productieserver zet de beveiligingsheaders van de SPA (CSP, HSTS, nosniff, Referrer-Policy) nu ook op de 404 van een
+  geweigerd pad (verborgen bestand, symlink naar buiten de build); die kreeg ze eerder niet (`src/core/api/http/web.ts`,
+  `src/core/api/http/web-weigering-headers.test.ts`). Wat verandert voor een app: niets, behalve meer headers op die 404.
+- `node scripts/kit/check-docs.mjs` los gedraaid geeft geen stil groen meer (leerpunt #693): het script vergelijkt niet met
+  `.kit/baseline.json` en eindigt nu met exit 1 en een verwijzing naar `pnpm ratchet`, de enige gate voor check-docs
+  (`scripts/kit/check-docs.mjs`, `test/scripts/check-docs-los.test.ts`). Wat verandert voor een app: niets, tenzij een eigen
+  script `check-docs.mjs` direct aanroept; gebruik dan `pnpm ratchet`.
+- Eigen beschermde paden van een app (spec `app-padtabel`): een app zet eigen rijen in het optionele bestand
+  `.claude/gates.app.json` (`{ "$comment"?, "paden": { … } }`), niet in `.claude/gates.json`. Rolhek, `check-docs`,
+  `scripts/kit/codeowners.mjs` en `feiten.mjs pad` voegen het samen met de padtabel van de template
+  (`samengevoegd` in `rails/hooks/lib/padtabel.mjs`): alleen toevoegen of aanscherpen, per kolom de strengste, een onleesbare
+  rij telt als het strengste. Het bestand is een achtste vloerpad (altijdVragen, besluit-pr); de kop van `.github/CODEOWNERS`
+  noemt het. Wat verandert voor een app: zonder app-bestand niets, behalve dat `.github/CODEOWNERS` na de update een andere
+  kop en een regel voor `.claude/gates.app.json` heeft. Bij een update: bij een conflict in `.github/CODEOWNERS` of
+  `docs:spiegel:codeowners` genereer je het bestand opnieuw met `node scripts/kit/codeowners.mjs --schrijf`; een eigen rij
+  in `.claude/gates.json` verplaats je naar `.claude/gates.app.json` (zie "Een eigen beschermd pad" in `docs/nieuwe-app.md`).
 
 - De template-repo uit de configuratie (spec `template-repo`): welke repository de template is, staat op één plek,
   `"template": { "repository": "<owner>/<repo>" }` in `.claude/gates.json`, in de template en in een app (`pnpm app:init` laat

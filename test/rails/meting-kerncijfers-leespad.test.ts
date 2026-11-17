@@ -16,16 +16,18 @@ afterEach(() => {
   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
 });
 
+// GEWIJZIGD (spec app-agentregels, R-TEST-02): `CLAUDE.md` importeert `docs/app.md`, dus het telt mee in beide scenario's.
 const NIEUW = [
   'AGENTS.md',
   'CLAUDE.md',
+  'docs/app.md',
   '.claude/agents/architect.md',
   '.claude/skills/spec/SKILL.md',
   'docs/framework.md',
   'docs/gouden-pad.md',
   'docs/dod.md',
 ];
-const LICHT = ['AGENTS.md', 'CLAUDE.md', '.claude/agents/developer.md'];
+const LICHT = ['AGENTS.md', 'CLAUDE.md', 'docs/app.md', '.claude/agents/developer.md'];
 const REVIEW = ['.claude/agents/reviewer.md', 'docs/dod.md', 'docs/framework.md'];
 
 function isRecord(x: unknown): x is Record<string, unknown> {

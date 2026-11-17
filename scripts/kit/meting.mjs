@@ -32,10 +32,10 @@ const HELP = `Gebruik: pnpm meting [--json] [--sessie <id>] [--branch <naam>] [-
   --sessie <id>    Alleen deze sessie.
   --branch <naam>  Alleen deze branch binnen elke sessie.
   --pr-tabel       Kerncijfers van één branch (--branch) als markdowntabel voor de PR-beschrijving: leespad (zie pnpm leespad),
-                   doorlooptijd, reviewrondes, CI-rood, weigeringen (bovengrens) en Codex-bevindingen (handmatig).
+                   doorlooptijd, reviewrondes, CI-rood en weigeringen (bovengrens).
   --trend          Kwaliteitstrend over de laatste twintig gemergde PR's (één gh api …/pulls?state=closed, REST): "let op:
-                   <maat> steeg" als CI-rood, Codex-bevindingen of reviewrondes (lokale meetdata; zonder data onbekend)
-                   gemiddeld hoger liggen over de laatste tien dan over de tien daarvoor. Minder dan twintig: te weinig data.
+                   <maat> steeg" als CI-rood of reviewrondes (lokale meetdata; zonder data onbekend) gemiddeld hoger
+                   liggen over de laatste tien dan over de tien daarvoor. Minder dan twintig: te weinig data.
   --help           Deze uitleg, zonder meetbestanden te lezen of gh aan te roepen.
 
 Teldefinities (alleen ontvangen en opgeslagen Claude Code-events):
@@ -417,7 +417,6 @@ export function prTabel(dir, branch, env) {
     reviewrondes: reviews.size,
     ciRood: lijst === null ? 'onbekend' : lijst.filter((r) => r.conclusie === 'failure').length,
     weigeringen: sessies.reduce((n, t) => n + t.weigeringen, 0),
-    codexBevindingen: 'handmatig: gh api repos/{owner}/{repo}/pulls/<nr>/comments',
   };
 }
 
@@ -430,7 +429,6 @@ function prTabelTekst(t) {
     ['Reviewrondes', String(t.reviewrondes)],
     ['CI-rood', String(t.ciRood)],
     ['Weigeringen (bovengrens)', String(t.weigeringen)],
-    ['Codex-bevindingen', t.codexBevindingen],
   ];
   const lijnen = ['| Kerncijfer | Waarde |', '|---|---|', ...rijen.map(([naam, waarde]) => `| ${naam} | ${waarde} |`)];
   return `${lijnen.join('\n')}\n`;

@@ -28,7 +28,7 @@ Deze template is bedoeld om webapps met code-agents te bouwen. De documentatie h
 
 ## Afspraken en achtergrond
 
-Het framework bevat de geldende ontwikkelafspraken. Architectuurbesluiten staan in `adr/`; featurespecs staan in `specs/`. Een voorstel beschrijft voorgenomen werk en is nog geen toestemming om te bouwen. De status staat bovenaan elk document.
+Het framework bevat de geldende ontwikkelafspraken. Architectuurbesluiten staan in `template/adr/` (van een app in `adr/`); featurespecs staan in `template/specs/` en `specs/`. Een voorstel beschrijft voorgenomen werk en is nog geen toestemming om te bouwen. De status staat bovenaan elk document.
 
 [Agentdoorloop](operations/agent-doorloop.md) beschrijft hoe de agent bewezen besluiten en bouwstatussen registreert, afgebakend core-werk doet en runner/CI-resultaten verzamelt.
 
@@ -37,6 +37,8 @@ Reviews in `reviews/` leggen bevindingen en de afhandeling daarvan vast. Ze kunn
 ## Werken met agents
 
 [AGENTS.md](../AGENTS.md) bevat instructies voor code-agents. [CLAUDE.md](../CLAUDE.md) en de bestanden onder `.claude/` vullen die aan voor Claude Code. Andere runtimes voeren die hooks niet automatisch uit.
+
+De documentatie heeft twee lagen. De agentlaag is wat een agent leest en volgt: `AGENTS.md`, `CLAUDE.md`, `.claude/rules`, `.claude/skills`, `.claude/agents` en [het framework](framework.md); daarin is het framework het enige bindende regelboek en wint het bij verschil (R-DOC-03). De menslaag is achtergrond, die een agent alleen leest als de taak het raakt (R-DOC-05): [README](../README.md), deze leeswijzer, de besluiten in `template/adr/` en `adr/`, en de reviews in `reviews/`. Een besluit legt het waarom vast; de regel die eruit volgt staat in het framework. Een spec leest wie die feature bouwt of reviewt.
 
 Agentprocedures horen bij de ontwikkelinstructies. Houd ze kort en precies: welke regel geldt, welk commando hoort erbij en wanneer is een stap klaar? De eigenaar beoordeelt wijzigingen en keurt voorstellen goed.
 

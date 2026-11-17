@@ -3,7 +3,7 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, expect, test } from 'vitest';
-import { planAppInit } from '../../scripts/kit/app-init.mjs';
+import { APP_STUB, planAppInit } from '../../scripts/kit/app-init.mjs';
 import { TEMPLATE_VERSION } from '../../src/core/shared/template-version.ts';
 
 // Spec release-versie (docs/template/specs/release-versie.md), AC-4 en AC-5: app:init schrijft CHANGELOG.md van de app
@@ -20,6 +20,8 @@ const FILES: Readonly<Record<string, string>> = {
     '# App-template\n\nFundering voor apps.\n\n## Nieuwe app starten\n\nSetup.\n\n## Lokaal draaien\n\nStart.\n',
   'CHANGELOG.md': '# Changelog\n\nDe wijzigingen van de template staan in docs/template-changelog.md.\n',
   'docs/template-changelog.md': TEMPLATE_CHANGELOG,
+  // GEWIJZIGD (spec app-agentregels, R-TEST-02): de template levert `docs/app.md` als stub en `app:init` herschrijft hem.
+  'docs/app.md': APP_STUB,
   'src/shared/app.ts': "export const APP_NAME = 'App-template';\n",
   'src/web/index.html': '<!doctype html><html lang="nl"><head><title>App-template</title></head></html>\n',
   // GEWIJZIGD (spec template-repo, AC-9): `app:init` leest `template.repository` uit gates.json en stopt zonder.
@@ -101,7 +103,14 @@ test('release-versie/AC-4: de regels van de template verdwijnen uit CHANGELOG.md
 test('release-versie/AC-4: docs/template-changelog.md staat niet in het plan', () => {
   const paden = planAppInit(copy(), options).map((change) => change.pad);
 
-  expect(paden).toStrictEqual(['package.json', 'README.md', 'CHANGELOG.md', 'src/shared/app.ts', 'src/web/index.html']);
+  expect(paden).toStrictEqual([
+    'package.json',
+    'README.md',
+    'CHANGELOG.md',
+    'docs/app.md',
+    'src/shared/app.ts',
+    'src/web/index.html',
+  ]);
   expect(paden).not.toContain('docs/template-changelog.md');
 });
 
@@ -140,7 +149,8 @@ test('release-versie/AC-4: als CLI schrijft app:init de startregel en blijft doc
     `# Changelog\n\n## [Unreleased]\n\n- Gestart vanaf template v${TEMPLATE_VERSION} (${sha}).\n`,
   );
   expect(readFileSync(path.join(dir, 'docs/template-changelog.md'), 'utf8')).toBe(TEMPLATE_CHANGELOG);
-  expect(git(dir, ['status', '--porcelain', '--', 'docs'])).toBe('');
+  // GEWIJZIGD (spec app-agentregels, R-TEST-02): onder `docs/` wijzigt alleen `docs/app.md` (was: niets).
+  expect(git(dir, ['status', '--porcelain', '--', 'docs'])).toBe('M docs/app.md');
   expect(readFileSync(path.join(dir, 'package.json'), 'utf8')).toContain('"name": "urenregistratie"');
 });
 

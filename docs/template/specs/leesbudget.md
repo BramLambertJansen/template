@@ -40,12 +40,11 @@ PR rails:
 - **leesbudget/AC-4** — `node scripts/kit/feiten.mjs hoofdstuk <n>` drukt de tekst vóór de eerste `## `-kop en dat hoofdstuk af, van zijn kop tot de volgende `## `-kop, bij `hoofdstuk 8` ook 8a, 8b enzovoort (gelijk aan wat `pnpm leespad` telt); een onbekend hoofdstuk geeft een foutmelding en exit 1.
 - **leesbudget/AC-5** — Groeiproef: een hoofdstuk van 20 KB, een framework van 60 KB, een nieuw §13, een spec van 50 KB en een ADR van 9 KB geven geen overtreding, wel "let op" in `leespad`; `AGENTS.md` boven 9 KB of 100 regels en `CLAUDE.md` boven 50 regels zijn rood.
 - **leesbudget/AC-6** — Krimp: vervangen door [krimp-op-normen](krimp-op-normen.md) (ADR 0067). De bytedrempel (meer dan 20 % én minstens 1 KB ten opzichte van `git merge-base origin/main HEAD`, per bindend document `docs/framework.md`, `AGENTS.md`, `CLAUDE.md`, `.claude/rules/*`, `docs/dod.md`; verwijderen telt als 100 %, een rename tegen het oude bestand, een nieuw document niet) blijft; de inventaris staat in `docs/normen-vervallen.md` volgens krimp-op-normen/AC-3, en een kop `Normeninventaris` in een ander bestand telt niet meer. Deze overtreding komt nooit in de baseline.
-- **leesbudget/AC-7** — `pnpm meting --trend` leest de laatste twintig gemergde PR's (via REST: één `gh api …/pulls?state=closed`, de twintig nieuwste op `merged_at`) en meldt "let op: <maat> steeg" als het gemiddelde over de laatste tien een echte stap hoger ligt dan over de tien daarvoor (drempel: meting-stuurt/AC-2), per maat: CI-rode runs (`gh run list` per head-branch), Codex-bevindingen (reviewreacties van de Codex-bot via `gh api`; de bouw-PR legt de login vast met een test) en reviewrondes (lokale meetdata; zonder data "onbekend", nooit 0). Minder dan twintig PR's geeft "te weinig data". Geen exitcode; meet nooit meer dan twintig PR's.
+- **leesbudget/AC-7** — `pnpm meting --trend` leest de laatste twintig gemergde PR's (via REST: één `gh api …/pulls?state=closed`, de twintig nieuwste op `merged_at`) en meldt "let op: <maat> steeg" als het gemiddelde over de laatste tien een echte stap hoger ligt dan over de tien daarvoor (drempel: meting-stuurt/AC-2), per maat: CI-rode runs (`gh run list` per head-branch) en reviewrondes (lokale meetdata; zonder data "onbekend", nooit 0). Minder dan twintig PR's geeft "te weinig data". Geen exitcode; meet nooit meer dan twintig PR's.
 
 PR instructies:
 
 - **leesbudget/AC-8** — Framework §9 bevat de regels uit ADR 0065 en ADR 0064 punt 2, 4 en 7 als R-id's (zonder de bewaartermijn van metingen: een roadmap-item), R-DOC-01 noemt streefwaarden in plaats van grenzen, en R-TEST-02 de regel over teksttests; `.claude/rules/*` volgen letterlijk. De skill `opleveren` noemt een "let op" uit AC-7 in de oplevering. De krimpregel (R-DOC-07) volgt sinds ADR 0067 [krimp-op-normen](krimp-op-normen.md).
-- **leesbudget/AC-9** — `AGENTS.md`, `CLAUDE.md`, de agents en de spec-skill verwijzen voor het regelboek naar `feiten.mjs hoofdstuk` in plaats van het hele bestand.
 
 ## Randgevallen
 
@@ -70,7 +69,7 @@ PR instructies:
 
 ## Testplan
 
-Tabeltests in `test/rails/leesbudget.test.ts` voor AC-1 tot en met AC-7 met fixtures (AC-7 met een vaste PR-tabel); docs-tests (structuur) voor AC-8 en AC-9. De rails-PR noemt de huidige omvang per hoofdstuk en de baseline-ingangen die verdwijnen.
+Tabeltests in `test/rails/leesbudget.test.ts` voor AC-1 tot en met AC-7 met fixtures (AC-7 met een vaste PR-tabel); docs-tests (structuur) voor AC-8. De rails-PR noemt de huidige omvang per hoofdstuk en de baseline-ingangen die verdwijnen.
 
 ## Open vragen
 

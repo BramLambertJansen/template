@@ -17,6 +17,7 @@ Herzien: 2026-11-12 (#692): door ADR 0089 punt 1–3, in de template deels: punt
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 2, 5, 8 en 9, de vorige regel vervalt: geen licht regime en geen lane `template`; zodra de GitHub App bewezen is, verdwijnt `check-document-status` en worden punt 2, 5, 10, 12 en 15 afspraken die de eigenaar met zijn goedkeuring op de PR beslist; punt 6, het rolhek houdt het schrijfrecht per rol en verliest zijn A4-logica in een latere stap (ADR 0089 punt 9); punt 31, wie merget volgt `CODEOWNERS` en de ruleset
 Herzien: 2026-11-12 (#703): punt 1, architect in de template op verzoek; punt 18, model per spec vervalt; geen besluit-PR in de template (ADR 0090 punt 1, 4 en 5)
 Herzien: 2026-11-14 (#713): ingekort tot wat nog geldt; een ingehaald punt is één regel met de plek waar het nu staat, de puntnummers zijn ongewijzigd, de oude tekst staat in git
+Herzien: 2026-11-17 (#778): Gevolgen, het rolhek valt dicht bij een storing (R-ROL-09) en blijft een vangnet, geen grens (R-ROL-10); er stond "fail-open"
 
 Vervangt 0025, 0027, 0030 en 0038; neemt de delen van 0029 over die via 0038 punt 8 nog golden. Drempel: A4.
 
@@ -151,5 +152,5 @@ onafhankelijk reviewbewijs. De Claude-hooks zijn runtime-specifiek; CI en GitHub
 ## Gevolgen
 
 - Werkinstructie (commando's, opruimstappen) staat in `docs/operations/agent-doorloop.md` en de skill `opleveren`.
-- Restrisico's: het reviewerakkoord is een sessie-artefact; het rolhek is fail-open; het token van de eigenaar staat nog in de
+- Restrisico's: het reviewerakkoord is een sessie-artefact; het rolhek valt dicht bij een storing maar is een vangnet, geen grens (R-ROL-09, R-ROL-10); het token van de eigenaar staat nog in de
   agentomgeving (0089 punt 2 en 9).

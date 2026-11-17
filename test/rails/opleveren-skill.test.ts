@@ -2,26 +2,15 @@ import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 import { expectAbsent } from '../support/absence.ts';
 
-// ADR 0046 punt 16, 25 en 26: de skill `opleveren`, framework §8 stap 6 en CLAUDE.md.
+// ADR 0046 punt 16, 25 en 26: de skill `opleveren`.
+// GEWIJZIGD (refactorplan stap 3b, R-TEST-02): weg zijn de tests op het frontmatter (dubbel met test/hooks/agents.test.ts),
+// `--json merged`, "modus eigenaar" (getest in test/scripts/pr-merge.test.ts), framework §8 stap 6, de CI-lus in CLAUDE.md
+// en de MCP-uitzondering in de regels. De tests van de leerlus blijven (eigenaarbesluit 2026-11-17).
 const SKILL = '.claude/skills/opleveren/SKILL.md';
 const skill = existsSync(SKILL) ? readFileSync(SKILL, 'utf8') : '';
 const framework = readFileSync('docs/framework.md', 'utf8');
-const claude = readFileSync('CLAUDE.md', 'utf8');
-
-function step6(): string {
-  const start = framework.indexOf('6. **Opleveren**');
-  const end = framework.indexOf('7. **Eigenaar**');
-  return start === -1 || end === -1 ? '' : framework.slice(start, end);
-}
 
 describe('skill opleveren', () => {
-  test('bestaat met frontmatter name en description', () => {
-    expect(existsSync(SKILL)).toBe(true);
-    const front = /^---\n([\s\S]*?)\n---/.exec(skill)?.[1] ?? '';
-    expect(front).toMatch(/^name: opleveren$/m);
-    expect(front).toMatch(/^description: \S.{10,}/m);
-  });
-
   test.each([
     'pnpm pr:verify',
     '--watch',
@@ -37,11 +26,6 @@ describe('skill opleveren', () => {
     expect(skill).toContain(term);
   });
 
-  test('geen --json merged (het veld bestaat niet in gh)', () => {
-    expect(skill.length).toBeGreaterThan(0);
-    expect(skill).not.toMatch(/--json[^\n]*\bmerged\b(?!At)/);
-  });
-
   test.each([
     { name: 'afzwakken', pattern: /afzwak/i },
     { name: 'drie keer dezelfde fout', pattern: /drie keer/i },
@@ -49,32 +33,6 @@ describe('skill opleveren', () => {
     { name: 'gate-pad', pattern: /gate-pad/i },
   ])('stopgrond: $name', ({ pattern }) => {
     expect(skill).toMatch(pattern);
-  });
-
-  test('bij modus eigenaar blijft mergen bij de eigenaar', () => {
-    expect(skill).toMatch(/eigenaar/);
-    expect(skill).toMatch(/merget?[^\n]*eigenaar|eigenaar[^\n]*merget?/i);
-  });
-});
-
-describe('framework §8 stap 6 en CLAUDE.md', () => {
-  test('stap 6 beschrijft de CI-lus tot groen met pr:verify en het opruimen', () => {
-    const text = step6();
-    expect(text).toContain('pnpm pr:verify');
-    expect(text).toMatch(/tot groen/);
-    expect(text).toMatch(/opruimen/i);
-    expect(text).toContain('opleveren');
-  });
-
-  test('CLAUDE.md: CI-lus is uitgezonderd van "na twee mislukte correctiepogingen"', () => {
-    const line = claude.split('\n').find((l) => l.includes('twee mislukte correctiepogingen')) ?? '';
-    const around = claude.slice(claude.indexOf(line), claude.indexOf(line) + 600);
-    expect(around).toMatch(/CI-lus/);
-    expect(around).toMatch(/uitzondering|behalve/i);
-  });
-
-  test('docs/framework.md bevat nergens meer --json merged', () => {
-    expect(framework).not.toMatch(/--json\s+[^\s`]*\bmerged\b(?!At)/);
   });
 });
 
@@ -225,25 +183,6 @@ describe('leerlus-bewijs/AC-8 MCP in de cloud en de sectie Leerpunt', () => {
 });
 
 describe('leerlus-bewijs/AC-8 de MCP-uitzondering in de regels', () => {
-  const regel = (id: string) =>
-    readFileSync('docs/framework.md', 'utf8')
-      .split('\n')
-      .find((r) => r.startsWith(`- **${id}**`)) ?? '';
-
-  test.each(['R-SEC-09', 'R-ROL-12', 'R-WERK-13'])(
-    'leerlus-bewijs/AC-8: %s noemt de uitzondering met ADR 0078',
-    (id) => {
-      expect(regel(id)).toMatch(/leerpunt/);
-      expect(regel(id)).toMatch(/\b0078\b|R-WERK-13/);
-    },
-  );
-
-  test.each(['AGENTS.md', 'CLAUDE.md'])('leerlus-bewijs/AC-8: %s noemt de uitzondering met ADR 0078', (bestand) => {
-    expect(readFileSync(bestand, 'utf8')).toMatch(
-      /MCP alleen read-only[^.\n]*behalve een leerpunt-issue in de cloud \(ADR 0078\)/,
-    );
-  });
-
   test('leerlus-bewijs/AC-8: mcpLezen bevat geen schrijvende issuetool', () => {
     const gates: unknown = JSON.parse(readFileSync('.claude/gates.json', 'utf8'));
     const lezen = typeof gates === 'object' && gates !== null && 'mcpLezen' in gates ? gates.mcpLezen : [];

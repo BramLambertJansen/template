@@ -6,16 +6,17 @@ allowed-tools: Bash(node scripts/kit/feiten.mjs *)
 
 # Nieuwe route
 
-Eerst: een spec met `status: goedgekeurd` in `docs/specs/`. Zonder die spec bouw je niets (AGENTS.md).
+Eerst: een spec met `status: goedgekeurd` in `docs/specs/` (template: `docs/template/specs/`). Zonder die spec bouw je niets (AGENTS.md).
 
 Feiten nu:
 
 !`node scripts/kit/feiten.mjs routes permissies foutcodes`
 
 Een nieuwe resource begint met `pnpm new:resource <naam> --rollen …` (hoofdsessie): contract, permissies en handlers die
-501 geven; de gate-wijzigingen zet de hoofdsessie met Edit. Daarna, of voor een losse route,
+501 geven; de wijzigingen in bestaande tests en in `test/security/resources.ts` en `test/security/fixtures.ts` drukt hij af, de
+hoofdsessie zet die met Edit, met reden in de PR. Daarna, of voor een losse route,
 `docs/gouden-pad.md`, stap 4 t/m 7:
-1. Permissie in `src/shared/permissions.ts` (beschermd pad: akkoord eigenaar), foutcode in `src/shared/errors.ts` met tekst in `src/web/copy/errors.ts`.
+1. Permissie in `src/shared/permissions.ts` (geen gate; de reviewer toetst een nieuwe permissie, met een test per verboden rol, R-TEST-03), foutcode in `src/shared/errors.ts` met tekst in `src/web/copy/errors.ts`.
 2. Contract met zod en `.strict()` in `src/shared/contracts/<resource>.ts`, opgenomen in `src/shared/contracts/index.ts`.
 3. Handler met `defineRoute` in `src/api/routes/<resource>.ts` (voorbeeld: `src/api/routes/accounts.ts`), opgenomen in `src/api/app.ts`. Gebruik `ctx.actor` en `tx`; vang geen Postgres-fouten af.
 4. Integratietests in `test/api/<resource>.int.test.ts`: per verboden rol `FORBIDDEN`, een admin zonder MFA `MFA_REQUIRED`, ongeldige input `VALIDATION`, en elk acceptatiecriterium.

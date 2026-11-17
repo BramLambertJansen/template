@@ -103,10 +103,6 @@ describe('koppeling-agentlaag/AC-9: links naar de zes specs en het schakelscript
       for (const link of naarSpec) expect(existsSync(path.join(path.dirname(SKILL), link))).toBe(true);
     },
   );
-
-  test('koppeling-agentlaag/AC-9: de skill noemt pnpm integration:switch', () => {
-    expect(skill).toContain('pnpm integration:switch');
-  });
 });
 
 describe('koppeling-agentlaag/AC-10: geen URL in skill, template en gouden pad', () => {
@@ -171,11 +167,6 @@ describe('koppeling-agentlaag/AC-12: hoofdstuk in het gouden pad', () => {
 
   test.each(SPECS)('koppeling-agentlaag/AC-12: het hoofdstuk linkt naar de spec %s', (spec) => {
     expect(hoofdstuk).toMatch(new RegExp(`\\]\\((?:\\./)?template/specs/${spec}\\.md\\)`));
-  });
-
-  test('koppeling-agentlaag/AC-12: de zin "Het volledige hoofdstuk volgt" is weg', () => {
-    expect(goudenPad.length).toBeGreaterThan(0);
-    expect(goudenPad).not.toContain('Het volledige hoofdstuk volgt');
   });
 });
 

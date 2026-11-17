@@ -29,8 +29,8 @@ vóór en 32 ms na uitgesteld laden. Dit is een momentopname. `test/scripts/feit
 de bestaande feiten- en toolchaintests bewaken de uitvoer en foutafhandeling.
 
 De Stop-feedback (ook SubagentStop van de developer) kijkt naar de werkmap plus wat de branch sinds `origin/main` heeft
-gecommit (`rails/hooks/lib/werkstraat.mjs:48`); een schone werkmap met rode gecommitte code geeft dus nog feedback.
-Elke rode controle krijgt een eigen deel van de 40 regels (`rails/hooks/lib/werkstraat.mjs:109`).
+gecommit (`changedFiles` in `rails/hooks/lib/werkstraat.mjs`); een schone werkmap met rode gecommitte code geeft dus nog feedback.
+Elke rode controle krijgt een eigen deel van de 40 regels (`feedback` in `rails/hooks/lib/werkstraat.mjs`).
 
 ## SessionStart-context
 
@@ -53,12 +53,12 @@ modus `onbekend`. Nul prompts en een lege modusverdeling bewijzen geen permissie
 eigenaarberichten waren. Een classifierbeslissing in auto mode is geen bewijs van een klik van de eigenaar.
 
 Kerncijfers per PR: `pnpm meting --pr-tabel --branch <naam>` geeft een markdowntabel voor de PR-beschrijving (doorlooptijd,
-reviewrondes, CI-rood, weigeringen als bovengrens, Codex-bevindingen handmatig via `gh api`); `pnpm leespad [--ref <ref>]
+reviewrondes, CI-rood, weigeringen als bovengrens); `pnpm leespad [--ref <ref>]
 [--basis <ref>]` telt de bytes van het verplichte leespad per scenario (meting-kerncijfers/AC-1 t/m AC-4), van
 `docs/framework.md` alleen de tekst vóór de eerste kop plus §8 met 8a, 8b (`node scripts/kit/feiten.mjs hoofdstuk 8`), met
 streefdoel en waarschuwingsdrempel per scenario, de "let op"-meldingen vanaf 85 % van de grens van `AGENTS.md` en `CLAUDE.md`,
 en de metingen van hoofdstukken, regelboek, specs, ADR's, rules, skills en operations-docs tegenover hun streefwaarde (ADR 0065;
-nooit rood). `pnpm meting --trend` vergelijkt CI-rood, Codex-bevindingen en reviewrondes over de laatste tien gemergde PR's met
+nooit rood). `pnpm meting --trend` vergelijkt CI-rood en reviewrondes over de laatste tien gemergde PR's met
 de tien daarvoor (`scripts/kit/meting-trend.mjs`; leesbudget/AC-7).
 
 Wanneer een meting "let op" zegt (ADR 0070, spec `meting-stuurt`):
@@ -332,7 +332,7 @@ en `pr review … --approve` (ook `-a` vooraan een cluster: `-ab`, `-aF`) en een
 `git config alias.x '!…'`) of via `--config-env`, en xargs of find `-exec` met `gh`, `git`, een shell, `eval` of een omhulsel als `env`, `command`, `nice` of `timeout`
 als commandowoord (ook zonder zichtbare `gh` erna; bewust vals positief: `xargs nice prettier` en
 `git ls-files -z | xargs -0 git add`). PR-labels, `@file`/`--input` en `gh alias` weigert `ghForbidden` alleen waar
-`splitCommand` (`rails/hooks/lib/shell.mjs:198`) `gh` als commandowoord ziet; achter een omhulsel met opties
+`splitCommand` (`rails/hooks/lib/shell.mjs`) `gh` als commandowoord ziet; achter een omhulsel met opties
 (`env -i gh …`, `nice -n 1 gh …`, `timeout 9 gh …`, `stdbuf`, `setsid`) geldt dat voor de hoofdsessie niet.
 Lege woorden vóór of tussen groep en actie (`gh "" api …`, `gh '' pr review 1`) slaat het rolhek over zoals gh/cobra
 doet, dus gelden dezelfde regels (`withoutRepo` in `rails/hooks/lib/rolhek.mjs`).
@@ -360,19 +360,19 @@ eigenaar en zet de hook nooit uit en omzeilt hem niet (R-PRINC-09). Bij het derd
 
 De bestaande runner start zijn eigen verse teststack; hiervoor hoeft de eigenaar geen dev-stack te starten.
 Zo draait hij (ADR 0044): `scripts/runner.sh` roept compose aan met vaste argumenten: alleen `compose.yaml`, een eigen
-projectnaam, `--env-file db/test.env` en `--profile test` (`scripts/runner.sh:247`), nooit `.env`, `.env.local` of een
-override. Het anker `x-runner` (`compose.yaml:9`) zet de container op `read_only`, `cap_drop: [ALL]` en
+projectnaam, `--env-file db/test.env` en `--profile test` (de array `COMPOSE` in `scripts/runner.sh`), nooit `.env`, `.env.local` of een
+override. Het anker `x-runner` (`compose.yaml`) zet de container op `read_only`, `cap_drop: [ALL]` en
 `no-new-privileges`, mount de repo read-only met één uitvoermap `.runner-output`, houdt `/tmp` (ook de caches,
-`RUNNER_CACHE_DIR`) in tmpfs en hangt hem alleen aan het interne netwerk `test-net` (`compose.yaml:255`). Vooraf weigert
-`check_host_files` bij afwijkende hostbestanden (`HOST_FILES`, `scripts/runner.sh:39`). `test/isolatie/runner.int.test.ts`
+`RUNNER_CACHE_DIR`) in tmpfs en hangt hem alleen aan het interne netwerk `test-net` (`networks` in `compose.yaml`). Vooraf weigert
+`check_host_files` bij afwijkende hostbestanden (`HOST_FILES` in `scripts/runner.sh`). `test/isolatie/runner.int.test.ts`
 bewijst de isolatie: geen internet, geen route naar de host, `postgres` geweigerd en een read-only repo.
 `pnpm test:db`, `pnpm ui:check` en `pnpm gate:slow` mogen automatisch bij `autoRunner` op main en onveranderde
 hostbestanden. Start ze vanuit de repositoryroot; een package in een submap krijgt geen automatische hosttoestemming.
 Alleen de exacte opdrachten krijgen expliciete toestemming, zonder extra argumenten, environment-
 overrides of samengestelde shellopdracht. Dezelfde vorm bepaalt volgens de documentatie van Claude Code de sandbox: alleen als elk commando in de Bash-aanroep op
-`excludedCommands` past (`.claude/settings.json:135-143`), draait de runner erbuiten; gemeten bleef een aanroep met een pipe
+`excludedCommands` past (`sandbox.excludedCommands` in `.claude/settings.json`), draait de runner erbuiten; gemeten bleef een aanroep met een pipe
 in de sandbox: dan faalt de remote-lezing en noemt de runner de kale vorm, de enige die zeker werkt
-(`scripts/runner.sh:120`; meting in `docs/operations/sandbox-bewijs.md`).
+(`trusted_base` in `scripts/runner.sh`; meting in `docs/operations/sandbox-bewijs.md`).
 
 `pnpm pr:verify` weigert een vuile werkmap, behalve ongetrackte bestanden onder `werkmapNegeer` in `.claude/gates.json`
 (uit `origin/main`, nooit uit de werkmap; `scripts/kit/pr-verify.mjs`, ADR 0045 punt 23). Een getrackte wijziging onder zo'n
@@ -486,8 +486,8 @@ gelden. Na een afgebroken branchwissel volg je "Branchwissels in een sandbox" hi
 onbekende paden aan de uitzonderingen toe om de weigering op te heffen (leerpunt #329).
 
 Een plaatshouder van de sandbox blokkeert de werkmap niet (ADR 0084 punt 2, ADR 0091 punt 2): een ongetrackt pad op
-`SANDBOX_LEEG` (`rails/hooks/lib/sandbox-plaatshouders.mjs:9`) dat leeg is zonder uitvoerbit, of een tekenapparaat 1,3
-(`scripts/kit/pr-verify.mjs:96`); met inhoud, uitvoerbit of gestaged blokkeert het wel. `.env` en `.env.local` staan alleen als
+`SANDBOX_LEEG` (`rails/hooks/lib/sandbox-plaatshouders.mjs`) dat leeg is zonder uitvoerbit, of een tekenapparaat 1,3
+(`isPlaatshouderRegel` in `scripts/kit/pr-verify.mjs`); met inhoud, uitvoerbit of gestaged blokkeert het wel. `.env` en `.env.local` staan alleen als
 volledig pad vanaf de wortel op de lijst; de lijst groeit alleen met eigenaarakkoord. De toets op effect en haar open lijst zijn
 vervallen (ADR 0091): `pr:verify` leest `<git-dir>/rolhek-effect` niet meer; de eigenaar verwijdert die map.
 

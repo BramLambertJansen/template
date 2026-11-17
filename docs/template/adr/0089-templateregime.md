@@ -10,6 +10,8 @@ Herzien: 2026-11-12 (#698): het weghalen uit punt 5 wacht niet op het bewijs van
 
 Herzien: 2026-11-12 (#705): punt 9 en 10: de effecttoets wacht niet op de identiteit en is weg; de identiteitsregels en de bypass wachten wel (ADR 0091 punt 5)
 
+Herzien: 2026-11-17 (#776): punt 2: een tokenscript zonder ververs-proces staat in de repo (`scripts/kit/agent-token.mjs`, spec [agent-token](../specs/agent-token.md)), omdat een script buiten de repo bij een herstart verdween (leerpunt #754); de eigenaar draait het buiten de sandbox vanaf `main`, nooit uit een werkmap van de agent (eigenaarbesluit 2026-11-17)
+
 Wijzigt [0039](0039-stack-provider-neutraal-en-toolchain.md) punt 8, [0040](0040-template-app-en-grens-core-app.md) punt 4, 8,
 16 en 17, [0045](0045-railwerk.md) punt 10, 16, 17, 18, 19, 20, 21, 22 en 24, [0046](0046-werkstraat-en-beslisroute.md) punt
 2, 5, 6, 10, 12, 15 en 31, [0053](0053-adr-archief.md) punt 1, 2, 3, 4 en 5, [0054](0054-gebouwd-in-de-bouw-pr.md) punt 2, 3 en
@@ -41,8 +43,9 @@ agentomgeving is.
 1. **Eigen plek.** Template-ADR's staan in `docs/template/adr/`, template-specs in `docs/template/specs/`, zonder archief: git
    is de historie. `docs/adr/` en `docs/specs/` zijn van de app; in de template staan daar alleen de sjablonen.
 2. **GitHub bewaakt wie beslist.** De agent pusht en opent PR's als GitHub App, met een installatietoken van hoogstens een
-   uur dat de eigenaar aanmaakt met een commando buiten de repo; een tokenscript met een ververs-proces komt er niet, want dat
-   is eigen machinerie die onderhoud vraagt. Het token van de eigenaar staat nog in de agentomgeving: tot dat weg is, blijven
+   uur dat de eigenaar met de hand aanmaakt met `scripts/kit/agent-token.mjs`, gedraaid buiten de sandbox vanaf `main` en nooit
+   uit een werkmap van de agent; een ververs-proces, timer of credential-helper komt er niet, want dat is eigen machinerie die
+   onderhoud vraagt. Het token van de eigenaar staat nog in de agentomgeving: tot dat weg is, blijven
    de identiteitsregels van het rolhek. Rechten van de App: contents, issues en pull requests
    schrijven; actions, checks, statuses en metadata lezen; geen workflows en geen administration. De ruleset eist review van een
    code-eigenaar met nul vereiste goedkeuringen, een nieuwe push trekt een goedkeuring in, en de verplichte checks zijn precies

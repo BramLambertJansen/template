@@ -5,6 +5,7 @@ Status: geaccepteerd
 Herzien: 2026-11-03 (#469): gewijzigd door [0067](0067-krimp-op-normen.md) punt 6; [0070](0070-meting-die-stuurt.md)
 punt 2 en 4
 Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
+Herzien: 2026-11-17 (#772): punt 4, de trend telt geen bevindingen van een externe reviewdienst meer (eigenaarbesluit)
 
 Herziet [0064](0064-leesbudget-per-laag.md) punt 1 en 3 en [0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md) punt 3.
 Uitwerking: spec [leesbudget](../specs/leesbudget.md).
@@ -30,7 +31,7 @@ template heeft geen releases. Eigenaarbesluit 2026-11-02: alleen `AGENTS.md` en 
    om onder een getal te komen. Groeien door eenheden toe te voegen (§13, §8a, een rule) blijft mogelijk; de ankers §1–§12
    blijven. Eén plek per norm en laagste laag eerst (0064 punt 3) blijven gelden.
 4. **Sturen op wat gelezen wordt en op kwaliteit.** Het leespad per scenario (0064 punt 1) is
-   de maat voor leeskosten. `pnpm meting --trend` meldt "let op" als reviewrondes, CI-rood of Codex-bevindingen over de
+   de maat voor leeskosten. `pnpm meting --trend` meldt "let op" als reviewrondes of CI-rood over de
    laatste tien gemergde PR's hoger liggen dan over de tien daarvoor; de hoofdsessie noemt dat in `opleveren` en de eigenaar beslist.
 5. **Herijken per roadmap-fase.** Bij het afsluiten van een fase in `docs/roadmap.md` draait de hoofdsessie `pnpm leespad` en
    `pnpm meting --trend` en stelt nieuwe streefwaarden voor in de PR die de fase afsluit.

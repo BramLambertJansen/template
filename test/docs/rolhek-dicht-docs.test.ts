@@ -3,8 +3,9 @@ import { describe, expect, test } from 'vitest';
 import { MIN_CLAUDE_VERSIE } from '../../rails/hooks/lib/claude-versie.mjs';
 import { expectAbsent } from '../support/absence';
 
-// Spec rolhek-dicht AC-2, AC-5 en AC-6: de timeout van het rolhek blijft 10 s, en de docs die na de bouw onwaar zouden
-// zijn (regelboek, commentaar van de lader, ENVIRONMENT, agent-doorloop) zeggen dat het rolhek dicht valt bij storing.
+// Spec rolhek-dicht AC-2 en AC-5: de timeout van het rolhek blijft 10 s, het commentaar van de lader noemt dicht bij storing
+// en ENVIRONMENT spiegelt de minimale versie. De tests die alleen een formulering in het regelboek of de agent-doorloop
+// pinden zijn weg (refactorplan stap 3b, R-TEST-02).
 const ROLHEK = '.claude/hooks/rolhek.mjs';
 
 function child(value: unknown, key: string): unknown {
@@ -14,15 +15,6 @@ function child(value: unknown, key: string): unknown {
 
 function lijst(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
-}
-
-/** De regel `- **<id>** …` uit het regelboek. */
-function regel(id: string): string {
-  const gevonden = readFileSync('docs/framework.md', 'utf8')
-    .split('\n')
-    .find((r) => r.startsWith(`- **${id}** `));
-  if (gevonden === undefined) throw new Error(`${id} ontbreekt in docs/framework.md`);
-  return gevonden;
 }
 
 /** De sectie onder `## <kop>` tot de volgende kop van niveau 2. */
@@ -48,14 +40,6 @@ describe('rolhek-dicht/AC-2: timeout', () => {
 });
 
 describe('rolhek-dicht/AC-5: docs', () => {
-  test('rolhek-dicht/AC-5: R-ROL-09 noemt onFailure block, Claude Code ≥ 2.1.295 en open bij timeout', () => {
-    const tekst = regel('R-ROL-09');
-
-    expect(tekst).toContain('`onFailure: block`');
-    expect(tekst).toContain('Claude Code ≥ 2.1.295');
-    expect(tekst).toContain('open bij timeout');
-  });
-
   test('rolhek-dicht/AC-5: laden.mjs noemt onFailure "block" bij de timeout en niet meer fail-open', () => {
     const laden = readFileSync('.claude/hooks/laden.mjs', 'utf8');
     const blok = laden.split('/**').find((stuk) => stuk.includes('timeout van 10 s'));
@@ -74,16 +58,5 @@ describe('rolhek-dicht/AC-5: docs', () => {
     expect(MIN_CLAUDE_VERSIE).toBe('2.1.295');
     expect(tekst).toContain(`Claude Code ${MIN_CLAUDE_VERSIE} of nieuwer`);
     expect(tekst).toContain('onFailure');
-  });
-});
-
-describe('rolhek-dicht/AC-6: agent-doorloop', () => {
-  test('rolhek-dicht/AC-6: een alinea beschrijft de blokkade door storing', () => {
-    const alineas = readFileSync('docs/operations/agent-doorloop.md', 'utf8').split(/\n\s*\n/);
-    const alinea = alineas.find((a) => a.includes('onFailure'));
-
-    expect(alinea).toBeDefined();
-    for (const woord of ['onFailure', 'leerpunt', 'R-PRINC-09', 'Read, Grep, Glob', '`git status`'])
-      expect(alinea).toContain(woord);
   });
 });

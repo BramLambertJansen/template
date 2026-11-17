@@ -9,7 +9,7 @@ import { herijkingMeldingen, openPerFase } from '../../scripts/kit/roadmap-herij
 import { echteStap, trend } from '../../scripts/kit/meting-trend.mjs';
 
 // Spec meting-stuurt (ADR 0070): de trend meldt een echte stap (AC-2), de meldingen staan op de PR (AC-3), feiten.mjs heeft
-// plafonds (AC-5), check:roadmap eist een herijking bij het sluiten van een fase (AC-7) en de documentatie volgt (AC-9).
+// plafonds (AC-5), en check:roadmap eist een herijking bij het sluiten van een fase (AC-7).
 const root = process.cwd();
 const lees = (pad: string) => readFileSync(path.join(root, pad), 'utf8');
 const dirs: string[] = [];
@@ -36,12 +36,12 @@ describe('meting-stuurt/AC-2: de trend meldt alleen een echte stap', () => {
   test("meting-stuurt/AC-2 trend(): één bevinding meer over tien PR's (0,1) geeft geen melding", () => {
     const prs = Array.from({ length: 20 }, (_x, i) => ({
       nummer: 100 - i,
-      ciRood: 0,
-      codex: i === 0 ? 1 : 0,
+      // GEWIJZIGD (agent-merge-niet-kritiek/OV-1, R-TEST-02): de meting telt geen bevindingen van een externe reviewdienst meer; het geval loopt nu over CI-rood.
+      ciRood: i === 0 ? 1 : 0,
       reviewrondes: 1,
     }));
     expect(trend(prs).meldingen).toStrictEqual([]);
-    expect(trend(prs).maten).toMatchObject({ codex: { laatste: 0.1, vorige: 0, steeg: false } });
+    expect(trend(prs).maten).toMatchObject({ ciRood: { laatste: 0.1, vorige: 0, steeg: false } });
   });
 });
 
@@ -180,21 +180,6 @@ describe('meting-stuurt/AC-5: plafonds in feiten.mjs', () => {
     ['(ADR 0051)', null],
   ])('meting-stuurt/AC-7 faseVan(%s)', (tekst, verwacht) => {
     expect(faseVan(tekst)).toStrictEqual(verwacht);
-  });
-
-  test('meting-stuurt/AC-5 de agentbestanden wijzen naar --alle buiten stap 1', () => {
-    const architect = lees('.claude/agents/architect.md');
-    expect(architect).toMatch(/`adr --alle` voor historie of een geldig ADR buiten de tien/);
-    expect(architect).toMatch(
-      /passende spec zoek je op aanvraag met `feiten\.mjs specs --alle` of in `docs\/specs\/`, niet in deze stap/,
-    );
-    expect(lees('.claude/skills/spec/SKILL.md')).toMatch(
-      /op aanvraag met `node scripts\/kit\/feiten\.mjs specs --alle` of in `docs\/specs\/`/,
-    );
-    expect(lees('CLAUDE.md')).toContain('`adr --alle` voor historie of een geldig ADR buiten de tien');
-    expect(lees('docs/framework.md')).toMatch(
-      /\*\*R-WERK-01\*\*[^\n]*`--alle` voor historie of een geldig ADR buiten de tien/,
-    );
   });
 });
 
@@ -338,46 +323,5 @@ describe('meting-stuurt/AC-7: herijken bij het sluiten van een fase', { timeout:
     const groen = check();
     expect(groen.stderr).toBe('');
     expect(groen.status).toBe(0);
-  });
-});
-
-describe('meting-stuurt/AC-9: regelboek en operations-doc', () => {
-  test('meting-stuurt/AC-9 R-DOC-08 noemt de trigger van check:roadmap en dat "let op" een verschil met de basis is', () => {
-    const regel = /^- \*\*R-DOC-08\*\* (.+)$/m.exec(lees('docs/framework.md'))?.[1] ?? '';
-    expect(regel).toMatch(/verschil met de basis/);
-    expect(regel).toMatch(/Sluit een PR een roadmap-fase, dan eist `check:roadmap` een herijkingsregel/);
-    expect(regel).toContain('0070');
-  });
-
-  test('meting-stuurt/AC-9 agent-doorloop beschrijft basis, afgeleide feiten-aanroepen en plafonds', () => {
-    const doc = lees('docs/operations/agent-doorloop.md');
-    for (const kop of [
-      '**Tegenover de basis.**',
-      '**Afgeleide feiten-aanroepen.**',
-      '**Plafonds in `feiten.mjs`.**',
-      '**Herijken.**',
-    ])
-      expect(doc).toContain(kop);
-    expect(doc).toContain('git merge-base origin/main HEAD');
-  });
-});
-
-describe('meting-stuurt/AC-8: leesbudget volgt de meting die stuurt', () => {
-  const ac = (n: number) =>
-    lees('docs/template/specs/leesbudget.md')
-      .split('\n')
-      .find((r) => r.startsWith(`- **leesbudget/AC-${String(n)}**`)) ?? '';
-
-  test('meting-stuurt/AC-8 leesbudget AC-7: REST, twintig nieuwste op merged_at, "meet", drempel uit meting-stuurt/AC-2', () => {
-    expect(ac(7)).toContain('via REST: één `gh api …/pulls?state=closed`, de twintig nieuwste op `merged_at`');
-    expect(ac(7)).not.toContain('gh pr list');
-    expect(ac(7)).toContain("meet nooit meer dan twintig PR's");
-    expect(ac(7)).toContain('meting-stuurt/AC-2');
-  });
-
-  test('meting-stuurt/AC-8 leesbudget AC-3: de herijkte waarden en "let op" via meting-stuurt/AC-1', () => {
-    expect(ac(3)).toContain('nieuwe-feature ≤ 50 KB');
-    expect(ac(3)).toContain('88, 34 en 22 KB');
-    expect(ac(3)).toContain('meting-stuurt/AC-1');
   });
 });

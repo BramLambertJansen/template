@@ -1,11 +1,12 @@
 // pnpm app:init <slug> "<App-naam>" [--owner <login>] [--dry-run] (roadmap stuk 6): de hernoemstap uit docs/nieuwe-app.md
 // (fase 5.2) als script, zodat elke nieuwe app hem hetzelfde doet. Eén keer, direct na de koppeling met de template; hij
 // weigert als de app al hernoemd is. Raakt alleen de bestanden uit de tabel in nieuwe-app.md, plus de twee plekken met de
-// app-naam (src/shared/app.ts voor mails, src/web/index.html voor de paginatitel). Met --owner komt de handle op één plek,
+// app-naam (src/shared/app.ts voor mails, src/web/index.html voor de paginatitel) en docs/app.md, de feiten van de app die
+// CLAUDE.md importeert (spec app-agentregels). Met --owner komt de handle op één plek,
 // `goedkeurders` in .claude/gates.json; .github/CODEOWNERS wordt daaruit en uit de padtabel gegenereerd (ADR 0089,
 // scripts/kit/codeowners.mjs), niet met tekstvervanging.
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 // De templateversie waar de app op start (spec release-versie). Ontbreekt het bestand, dan laadt het script niet en noemt
@@ -107,6 +108,35 @@ function appChangelog(sha) {
 }
 
 /**
+ * `docs/app.md` in de template: een vaste stub, het doel van de import in CLAUDE.md (spec app-agentregels). De tekst staat
+ * alleen hier; check-docs regel 13 vergelijkt het bestand ermee.
+ */
+export const APP_STUB =
+  '# Deze repo\n\nDit is de template zelf; er is geen app. In een app beschrijft dit bestand de app: `pnpm app:init` schrijft het skelet.\n';
+
+/**
+ * `docs/app.md` van een app (spec app-agentregels): het skelet dat de hoofdsessie na de intake vult. Feiten, geen regels;
+ * opnieuw geschreven zoals CHANGELOG.md, dus de inhoud van de template doet er niet toe.
+ * @param {string} naam
+ */
+export function appAgentregels(naam) {
+  return [
+    `# ${naam}`,
+    "Feiten van deze app, geen regels (die staan in `docs/framework.md` en de app-ADR's in `docs/adr/`). Elke sessie laadt dit bestand: houd het kort en werk het bij in de PR die een feit wijzigt.",
+    '## Wat de app is',
+    'Nog in te vullen na de intake: doel en gebruikers in één alinea.',
+    '## Provider en host',
+    'Nog geen app-ADR.',
+    '## Rollen',
+    'Zie `src/shared/permissions.ts`.',
+    '## Begrippen',
+    'Nog geen.',
+    "## Eigen commando's en valkuilen",
+    'Nog geen.\n',
+  ].join('\n\n');
+}
+
+/**
  * De eigenaar op één plek: `goedkeurders` in gates.json krijgt de handle, CODEOWNERS is de afleiding uit de padtabel
  * voor die handle. Zonder `goedkeurders` is er geen afleiding: fout.
  * @param {string} gates de tekst van gates.json, na het weghalen van de onderhoud-regel
@@ -170,6 +200,7 @@ export function planAppInit(root, options) {
     },
     { pad: 'README.md', inhoud: renameReadme(read('README.md'), { name: options.name, template }) },
     { pad: 'CHANGELOG.md', inhoud: appChangelog(options.sha) },
+    { pad: 'docs/app.md', inhoud: appAgentregels(options.name) },
     {
       pad: 'src/shared/app.ts',
       inhoud: replaceOnce(
@@ -189,6 +220,12 @@ export function planAppInit(root, options) {
   ];
   plan.push(...gatesWijzigingen({ gates, template }, options.owner));
   return plan;
+}
+
+/** Schrijft een bestand uit het plan; een map die de kopie nog niet heeft (`docs/` voor `docs/app.md`) ontstaat. @param {string} file @param {string} inhoud */
+function schrijf(file, inhoud) {
+  mkdirSync(path.dirname(file), { recursive: true });
+  writeFileSync(file, inhoud);
 }
 
 function main() {
@@ -215,7 +252,7 @@ function main() {
   try {
     const plan = planAppInit(root, { slug, name, sha, owner: values.owner });
     for (const { pad, inhoud } of plan) {
-      if (!values['dry-run']) writeFileSync(path.join(root, pad), inhoud);
+      if (!values['dry-run']) schrijf(path.join(root, pad), inhoud);
       console.info(`${values['dry-run'] ? '(dry-run) ' : ''}✓ ${pad}`);
     }
     if (!values['dry-run'])

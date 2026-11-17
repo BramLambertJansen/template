@@ -36,9 +36,9 @@ Hoe (geen norm):
 - Audit: `defineAuditActions`, sleutel `<onderwerp>.<actie>`, `ctx.audit(actie, doelId, details)`; de regel rolt met de route terug. Invite/reinvite via `app.audit_account_action` (`src/api/routes/accounts.ts`). Details: R-DB-15.
 - Racetest: precies één van de twee requests slaagt.
 
-## Besloten, nog niet gebouwd
+## Gebouwd: waar alles staat
 
-Gebouwd: `withUser()` (Drizzle-`tx`, rol uit `user_roles`, foutvertaling), `createApp` (CSRF, `bodyLimit`, `secureHeaders()`, `onError`,
+`withUser()` (Drizzle-`tx`, rol uit `user_roles`, foutvertaling), `createApp` (CSRF, `bodyLimit`, `secureHeaders()`, `onError`,
 alleen routes uit `defineRoute` of `definePartnerRoute`), `createRouteKit`/`defineRoute`/`definePartnerRoute` in `src/core/api/route`, contracten met `defineContract` in
 `src/shared/contracts/`, `src/api/kit.ts`, Better Auth (`src/core/api/auth`) en het env-schema. Een nieuwe route = eerst het contract
 in `src/shared/contracts/<resource>.ts`, dan de handler in `src/api/routes/<resource>.ts`, dan beide in de lijsten
@@ -46,3 +46,8 @@ in `src/shared/contracts/<resource>.ts`, dan de handler in `src/api/routes/<reso
 `auth`-gateway voor `buildApp`). Tabellen en views voor `tx`: `src/api/db/schema.ts` (gegenereerd, `pnpm db:generate`); queries met `drizzle-orm`
 (`eq`, `desc`, `sql`), nooit een driver (R-LAAG-05). Iets buiten de database (bijv. uitnodigen via Better Auth): via `ctx.services`
 (`src/api/services.ts`), dat core-fouten vertaalt naar foutcodes. Voorbeeld van alles samen: `src/api/routes/accounts.ts`. Request-logging: `createApp({ log })` met `src/core/api/obs/request-log.ts`; een route logt niet zelf. Bouw er niet op vooruit; staat iets niet in `node scripts/kit/feiten.mjs`, vraag het.
+
+## Besloten, nog niet gebouwd
+
+Nog niet: achtergrondtaken (`startJobs`, `runJobsOnce`; ST-03) en de privacyroutes (`GET /api/me/export`,
+`createApp({ privacy })`; ST-05). De eisen staan bij die roadmap-items (R-DOC-10).

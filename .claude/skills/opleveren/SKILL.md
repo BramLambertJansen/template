@@ -1,7 +1,7 @@
 ---
 name: opleveren
 description: Een gereviewde branch opleveren (push, PR, CI-lus tot groen) en na de merge opruimen. Alleen de hoofdsessie, pas na de review.
-allowed-tools: Bash(node scripts/kit/feiten.mjs *), Bash(pnpm pr:verify *), Bash(gh pr view *), Bash(gh run view *), Bash(pnpm meting --trend), Bash(pnpm leespad), Bash(pnpm leespad *)
+allowed-tools: Bash(node scripts/kit/feiten.mjs *), Bash(pnpm pr:verify *), Bash(gh pr view *), Bash(gh run view *), Bash(pnpm meting --trend), Bash(pnpm meting --pr-tabel --branch *), Bash(pnpm leespad), Bash(pnpm leespad *)
 ---
 
 # Opleveren
@@ -36,9 +36,10 @@ Feiten nu:
    Zonder `gh`-auth: stop en meld het. Noemt het roadmap-item het specpad niet tussen backticks (dan kan `--roadmap` het
    niet afvinken), dan komt de roadmapwijziging in de implementatie; een status-PR wijzigt alleen statusregels en
    vinkjes (`docs/operations/agent-doorloop.md`, "PR en statussen afronden").
-8. Draai `pnpm meting --trend` en `pnpm leespad`. Zet elke "let op"-regel (de trend: een echte stap omhoog in reviewrondes,
-   CI-rood of Codex-bevindingen; het leespad: groei tegenover de basis) in de PR-beschrijving en noem hem in de oplevermelding
-   aan de eigenaar; de eigenaar beslist (R-DOC-08, ADR 0070). "onbekend" meld je als onbekend.
+8. Draai `pnpm meting --trend` en `pnpm leespad`. Zet elke "let op"-regel (de trend: een echte stap omhoog in reviewrondes
+   of CI-rood; het leespad: groei tegenover de basis) in de PR-beschrijving en noem hem in de oplevermelding
+   aan de eigenaar; de eigenaar beslist (R-DOC-08, ADR 0070). "onbekend" meld je als onbekend. Zet ook de tabel van
+   `pnpm meting --pr-tabel --branch <branch>` in de PR-beschrijving (R-PRINC-07).
 
 ## Mergen
 

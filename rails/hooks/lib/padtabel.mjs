@@ -1,7 +1,8 @@
 // Padtabel (ADR 0079, spec padtabel): hoe zwaar een pad beschermd is, staat op één plek, `paden` in .claude/gates.json, per
 // glob `schrijven` (gate, voorReview, altijdVragen; ontbrekend = vrij) en `besluit` (agent, eigenaar, besluit-pr; ontbrekend =
 // eigenaar). Per kolom wint de strengste waarde over alle passende globs. Rolhek
-// en check-docs lezen de afgeleide lijsten uit `afgeleid()`. Puur: de aanroeper levert de geparste gates.json.
+// en check-docs lezen de afgeleide lijsten uit `afgeleid()`. Puur: de aanroeper levert de geparste gates.json, eventueel
+// aangevuld met het app-bestand via `samengevoegd()` (spec app-padtabel).
 // De oude vorm (lijsten zonder `paden`) wordt doorgegeven zoals hij staat, met `OUDE_KRITIEK`; beide vormen tegelijk gooit.
 
 /**
@@ -42,7 +43,8 @@ const STANDAARD = { schrijven: 'vrij', besluit: 'eigenaar' };
 /** @type {Niveau} */
 export const STRENGST = { schrijven: 'altijdVragen', besluit: 'besluit-pr' };
 const OUDE_LIJSTEN = ['gates', 'voorReview', 'altijdVragen'];
-// De vloer (spec padtabel, Werking 6): elk van deze paden heeft in elke repo een eigen rij met altijdVragen en besluit-pr.
+// De vloer (spec padtabel, Werking 6; spec app-padtabel voor het app-bestand): elk van deze paden heeft in elke repo een eigen
+// rij met altijdVragen en besluit-pr.
 export const VLOER = [
   '.github/**',
   '.claude/hooks/**',
@@ -51,7 +53,9 @@ export const VLOER = [
   '.claude/decisions.json',
   'package.json',
   'pnpm-lock.yaml',
+  '.claude/gates.app.json',
 ];
+export const APP_BESTAND = '.claude/gates.app.json';
 export const OUDE_VORM_ZONDER_PADEN = '.claude/gates.json: oude vorm zonder paden; zet de lijsten om naar paden (ADR 0079)';
 export const PADEN_NAAST_OUD = '.claude/gates.json: paden naast de oude lijsten';
 
@@ -164,6 +168,81 @@ export function padNiveau(pad, ruw) {
     return globs.length === 0 ? ['standaard'] : globs;
   };
   return { schrijven, besluit, bronnen: { schrijven: bronnen('schrijven', schrijven), besluit: bronnen('besluit', besluit) } };
+}
+
+/**
+ * `paden` uit het geparste app-bestand (spec app-padtabel); gooit als het bestand geen object is of `paden` mist of geen object
+ * is, zodat een lezer dichtvalt in plaats van app-rijen stil te negeren.
+ * @param {unknown} app @returns {Record<string, unknown>}
+ */
+function appPaden(app) {
+  if (!isObject(app)) throw new Error(`${APP_BESTAND}: geen object`);
+  const paden = veld(app, 'paden');
+  if (!isObject(paden)) throw new Error(`${APP_BESTAND}: paden is geen object`);
+  return paden;
+}
+
+/**
+ * Een eigen sleutel, ook voor een glob als `__proto__` (een toewijzing zou dan het prototype zetten en de rij laten vallen).
+ * @param {Record<string, unknown>} doel @param {string} sleutel @param {unknown} waarde
+ */
+const zet = (doel, sleutel, waarde) =>
+  Object.defineProperty(doel, sleutel, { value: waarde, enumerable: true, writable: true, configurable: true });
+
+/**
+ * Een niveau als rij; `schrijven` vrij laat de kolom weg (vrij is geen rijwaarde), `besluit` staat er altijd.
+ * @param {Niveau} niveau @returns {Record<string, string>}
+ */
+const alsRij = ({ schrijven, besluit }) => (schrijven === 'vrij' ? { besluit } : { schrijven, besluit });
+
+/**
+ * Een app-rij zoals hij bij het lezen telt: onleesbaar is het strengste, `agent` telt als `eigenaar` (een app maakt niets
+ * losser); verder de rij zelf.
+ * @param {unknown} rij
+ */
+function appRij(rij) {
+  if (!isObject(rij) || rijFouten(rij).some((fout) => fout !== 'rij zonder kolom')) return { ...STRENGST };
+  return veld(rij, 'besluit') === 'agent' ? { ...rij, besluit: 'eigenaar' } : rij;
+}
+
+/**
+ * De padtabel van de template aangevuld met het app-bestand `.claude/gates.app.json` (spec app-padtabel): `app` is de geparste
+ * app-inhoud of null. Templaterijen blijven op hun plek, daarna de app-globs die de template niet heeft; dezelfde glob krijgt
+ * per kolom de strengste waarde (onleesbaar aan een van beide kanten: `STRENGST`). Alleen `paden` van het app-bestand telt.
+ * Gooit bij een ongeldig app-bestand en bij de oude vorm met een app-bestand.
+ * @param {unknown} ruw @param {unknown} app @returns {unknown}
+ */
+export function samengevoegd(ruw, app) {
+  if (app === null) return ruw;
+  const extra = appPaden(app);
+  const paden = padenVan(ruw);
+  if (paden === null) throw new Error(`${OUDE_VORM_ZONDER_PADEN}; ${APP_BESTAND} vraagt paden`);
+  /** @type {Record<string, unknown>} */
+  const samen = { ...paden };
+  for (const [glob, rij] of Object.entries(extra)) {
+    const eigen = appRij(rij);
+    if (!Object.keys(paden).includes(glob)) {
+      zet(samen, glob, eigen);
+      continue;
+    }
+    const template = rijNiveau(veld(paden, glob));
+    const toegevoegd = rijNiveau(eigen);
+    zet(samen, glob, alsRij({
+      schrijven: SCHRIJVEN[Math.max(rang(SCHRIJVEN, template.schrijven), rang(SCHRIJVEN, toegevoegd.schrijven))] ?? 'altijdVragen',
+      besluit: BESLUIT[Math.max(rang(BESLUIT, template.besluit), rang(BESLUIT, toegevoegd.besluit))] ?? 'besluit-pr',
+    }));
+  }
+  return { ...(isObject(ruw) ? ruw : {}), paden: samen };
+}
+
+/**
+ * De globs uit het app-bestand, voor de herkomst `<glob> (app)` in `feiten.mjs pad`; met `ruw` zonder de globs die de
+ * template al heeft (in een groen repo zijn dat er geen).
+ * @param {unknown} app @param {unknown} [ruw] @returns {string[]}
+ */
+export function appGlobs(app, ruw = null) {
+  const template = ruw === null ? null : padenVan(ruw);
+  return Object.keys(appPaden(app)).filter((glob) => template === null || !Object.keys(template).includes(glob));
 }
 
 /**

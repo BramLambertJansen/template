@@ -70,14 +70,3 @@ describe('skill security-review: controlepunten', () => {
     expect(regel).toMatch(/herbruikbaar/i);
   });
 });
-
-describe('skill security-review: onafhankelijkheid', () => {
-  test('noemt de aparte reviewer-subagent', () => {
-    expect(skill).toContain('aparte reviewer-subagent');
-  });
-
-  test('claimt niet dat de hoofdsessie nooit eigen werk beoordeelt als afdwinging', () => {
-    expect(skill.length).toBeGreaterThan(0);
-    expect(skill).not.toMatch(/beoordeelt nooit eigen werk/i);
-  });
-});

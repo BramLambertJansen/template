@@ -14,6 +14,7 @@ De reviewer bepaalt de klasse(n) van de diff en loopt alleen die lijsten af. Elk
 - Opties per programma: afkortingen, `--optie=waarde` en schrijfopties zoals `git diff --output`, `sort -o`, `find -delete` (#395, #409).
 - Elke schrijfvorm van elk toegelaten programma telt als schrijfdoel; de aanvalstests blijven ongewijzigd groen.
 - Een weigering moet een echte aanval stoppen én een vals-positieve test hebben.
+- Werking en bekende gaten: `node scripts/kit/feiten.mjs hoofdstuk 13`.
 
 ## Tests
 
@@ -36,6 +37,15 @@ De reviewer bepaalt de klasse(n) van de diff en loopt alleen die lijsten af. Elk
 
 - Waar een route een waarde teruggeeft die zij zelf als invoer accepteert (cursor), moet de uitvoer door het eigen invoerschema (#411).
 - Voor RLS, secdef, CSRF en foutuitvoer: skill `security-review`.
+
+## App-logica
+
+Uit de review van 19 oktober 2026 (`docs/reviews/2026-10-19-review-regressions.md`, R2, R3, R5 en R9): fouten in app-logica die doorgleden.
+
+- Transactiegrens: één `withUser`-transactie per request (R-DB-03); een bijwerking buiten de database (mail, tokenopslag, sessies intrekken) volgt na de commit via `ctx.afterCommit` (`docs/gouden-pad.md`) en een fout daarin laat een herstelbare toestand achter.
+- Uniekheid, geld of statusovergang: een racetest waarin precies één van twee gelijktijdige requests slaagt en de audit één regel schrijft (R-TEST-03).
+- Cache: een mutatie invalideert de eigen resource plus wat de spec onder "Raakt ook" noemt (R-WEB-02); uitloggen en een 401 wissen de cache vóór de navigatie.
+- Eigenaarscontrole in elke gewijzigde handler: de actor komt uit `ctx.actor`, niet uit de invoer; toegang tot een resource uit de invoer loopt via RLS (R-DB-04).
 
 ## Docs en instructies
 
