@@ -20,6 +20,11 @@ requests.
 
 ### Gewijzigd
 
+- De meting telt geen bevindingen van een externe reviewdienst meer (spec `agent-merge-niet-kritiek`, OV-1):
+  `pnpm meting --pr-tabel` heeft geen rij en geen JSON-veld `codexBevindingen` meer, in `pnpm meting --trend` ontbreekt de
+  maat `codex` (tekst en `trend.maten`) en de trend roept geen `gh api …/comments` meer aan (`scripts/kit/meting.mjs`,
+  `scripts/kit/meting-trend.mjs`, `test/rails/meting-zonder-externe-review.test.ts`). Wat verandert voor een app: niets,
+  tenzij een eigen script die velden leest.
 - De productieserver zet de beveiligingsheaders van de SPA (CSP, HSTS, nosniff, Referrer-Policy) nu ook op de 404 van een
   geweigerd pad (verborgen bestand, symlink naar buiten de build); die kreeg ze eerder niet (`src/core/api/http/web.ts`,
   `src/core/api/http/web-weigering-headers.test.ts`). Wat verandert voor een app: niets, behalve meer headers op die 404.

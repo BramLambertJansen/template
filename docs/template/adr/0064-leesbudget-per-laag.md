@@ -7,6 +7,7 @@ Herzien: 2026-11-03 (#469): gewijzigd door [0069](0069-agent-merge-niet-kritiek.
 [0070](0070-meting-die-stuurt.md) punt 1
 Herzien: 2026-11-10 (#668): gewijzigd door [0087](0087-reviewer-zoekt-met-git-grep.md) punt 5 (`git grep` en glob-pathspec voor de reviewer)
 Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
+Herzien: 2026-11-17 (#772): punt 3, de meting telt geen bevindingen van een externe reviewdienst meer (eigenaarbesluit)
 
 Herziet [0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md) punt 3 en 7. Uitwerking: specs
 [leesbudget](../specs/leesbudget.md) en [rolhek-lezen](../specs/rolhek-lezen.md).
@@ -32,7 +33,7 @@ tot inkorten, en bij inkorten verdwenen eerder normen ongemerkt. Daarnaast kost 
    - Vanaf 85 % van een harde grens waarschuwt `check-docs` zonder rode check; boven 100 % is het rood.
    - Over de grens: eerst verplaatsen; lukt dat niet zonder verlies, dan verhogen als gate-wijziging met reden in de PR en
      eigenaarakkoord. Herijken: 0065 punt 5.
-   - Kwaliteit is de tegenmaat: stijgen Codex-bevindingen, CI-rood of reviewrondes (`pnpm meting --pr-tabel`), dan versoepelen we.
+   - Kwaliteit is de tegenmaat: stijgen CI-rood of reviewrondes (`pnpm meting --pr-tabel`), dan versoepelen we.
 4. **Ratchet alleen op overschrijdingen.** Bestaande overschrijdingen staan in `.kit/baseline.json` en mogen alleen dalen.
 5. **Rolhek: lezen wordt ruimer voor de reviewer, schrijven blijft streng, het oppervlak blijft klein.** Alleen wat de Read-, Grep- en
    Glob-tools niet kunnen komt erbij: `git ls-files`, `gh issue view|list`, `gh run view|list` en `pnpm leespad|meting`, elk met

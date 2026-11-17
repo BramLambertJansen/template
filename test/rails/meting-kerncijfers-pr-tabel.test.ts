@@ -53,7 +53,8 @@ test('meting-kerncijfers AC-2: de tabel heeft een rij per kerncijfer', () => {
   const uit = tabel(f);
 
   expect(uit).toMatch(/^\|[^\n]*\|\n\|[\s:|-]+\|$/m);
-  for (const naam of [/leespad/i, /doorlooptijd/i, /reviewrondes/i, /CI-rood/i, /weigeringen/i, /Codex/i])
+  // GEWIJZIGD (agent-merge-niet-kritiek/OV-1, R-TEST-02): de meting telt geen bevindingen van een externe reviewdienst meer; die rij is weg.
+  for (const naam of [/leespad/i, /doorlooptijd/i, /reviewrondes/i, /CI-rood/i, /weigeringen/i])
     expect(rij(uit, naam), String(naam)).not.toBe('');
 });
 
@@ -103,12 +104,6 @@ test('meting-kerncijfers AC-2: weigeringen draagt het label bovengrens', () => {
   expect(r).toMatch(/\b1\b/);
 });
 
-test('meting-kerncijfers AC-2: Codex-bevindingen is een handmatige rij', () => {
-  const f = ghStub(fixture(), []);
-  schrijf(f, events);
-  expect(rij(tabel(f), /Codex/i)).toMatch(/handmatig:\s*gh api[^|]*comments/);
-});
-
 test('meting-kerncijfers AC-2: --json bevat dezelfde velden onder prTabel', () => {
   const f = ghStub(fixture(), [run('failure')]);
   schrijf(f, events);
@@ -123,7 +118,6 @@ test('meting-kerncijfers AC-2: --json bevat dezelfde velden onder prTabel', () =
   expect(veld(data, 'prTabel', 'ciRood')).toBe(1);
   expect(veld(data, 'prTabel', 'weigeringen')).toBe(1);
   expect(String(veld(data, 'prTabel', 'leespad'))).toContain('leespad');
-  expect(String(veld(data, 'prTabel', 'codexBevindingen'))).toMatch(/handmatig/);
 });
 
 test('meting-kerncijfers AC-2: --json geeft onbekend (geen 0) bij een gh-fout', () => {

@@ -16,7 +16,7 @@ import { afterEach, describe, expect, test } from 'vitest';
 //   { streefwaarde, eenheid, aantal, boven, grootste: { naam, waarde }[] (max 5, aflopend) }; CLI --json geeft ook
 //   `metingen` en per scenario `drempel` (en `streefdoel` bij nieuwe-feature).
 // - scripts/kit/feiten.mjs: sectie `hoofdstuk <n>`.
-// - scripts/kit/meting-trend.mjs: CODEX_LOGIN, telCodex(reacties), trend(prs); `pnpm meting --trend` (METING_GH).
+// - scripts/kit/meting-trend.mjs: trend(prs); `pnpm meting --trend` (METING_GH).
 const root = process.cwd();
 const KB = 1024;
 const dirs: string[] = [];
@@ -600,7 +600,6 @@ describe(
 type Pr = {
   nummer: number;
   ciRood: number | 'onbekend';
-  codex: number | 'onbekend';
   reviewrondes: number | 'onbekend';
 };
 
@@ -609,7 +608,6 @@ function prs(aantal: number, nieuw: Partial<Pr>, oud: Partial<Pr> = {}): Pr[] {
   return Array.from({ length: aantal }, (_x, i) => ({
     nummer: 500 - i,
     ciRood: 0,
-    codex: 0,
     reviewrondes: 1,
     ...(i < 10 ? nieuw : oud),
   }));
@@ -623,9 +621,9 @@ async function trend(lijst: Pr[]): Promise<{ uit: unknown; meldingen: string[] }
 }
 
 describe("leesbudget/AC-7: meting --trend over twintig gemergde PR's", () => {
+  // GEWIJZIGD (agent-merge-niet-kritiek/OV-1, R-TEST-02): de meting telt geen bevindingen van een externe reviewdienst meer; die rij is weg.
   test.each([
     ['CI-rood', { nieuw: { ciRood: 2 }, oud: { ciRood: 1 }, sleutel: 'ciRood' }],
-    ['Codex-bevindingen', { nieuw: { codex: 3 }, oud: { codex: 0 }, sleutel: 'codex' }],
     ['reviewrondes', { nieuw: { reviewrondes: 3 }, oud: { reviewrondes: 1 }, sleutel: 'reviewrondes' }],
   ])('leesbudget/AC-7 %s hoger over de laatste tien: "let op: <maat> steeg"', async (maat, { nieuw, oud, sleutel }) => {
     const { uit, meldingen } = await trend(prs(20, nieuw, oud));
@@ -636,7 +634,9 @@ describe("leesbudget/AC-7: meting --trend over twintig gemergde PR's", () => {
   });
 
   test('leesbudget/AC-7 gelijk of lager: geen melding', async () => {
-    expect((await trend(prs(20, { ciRood: 1, codex: 1 }, { ciRood: 1, codex: 2 }))).meldingen).toStrictEqual([]);
+    expect(
+      (await trend(prs(20, { ciRood: 1, reviewrondes: 1 }, { ciRood: 1, reviewrondes: 2 }))).meldingen,
+    ).toStrictEqual([]);
   });
 
   test('leesbudget/AC-7 gemiddelden over tien tegenover de tien daarvoor', async () => {
@@ -663,14 +663,6 @@ describe("leesbudget/AC-7: meting --trend over twintig gemergde PR's", () => {
     expect(veld(uit, 'maten', 'reviewrondes', 'laatste')).toBe('onbekend');
     expect(veld(uit, 'maten', 'reviewrondes', 'vorige')).toBe('onbekend');
     expect(meldingen).toStrictEqual([]);
-  });
-
-  test('leesbudget/AC-7 telCodex telt alleen reacties van CODEX_LOGIN', async () => {
-    const login = (await laad('scripts/kit/meting-trend.mjs'))?.['CODEX_LOGIN'];
-    expect(login).toBe('chatgpt-codex-connector[bot]');
-    const tel = await functie('scripts/kit/meting-trend.mjs', 'telCodex');
-    const reacties = [login, 'iemand', login, 'github-actions[bot]'].map((l) => ({ user: { login: l } }));
-    expect(tel(reacties)).toBe(2);
   });
 });
 
@@ -733,9 +725,8 @@ describe('leesbudget/AC-7: pnpm meting --trend als proces', { timeout: 60_000 },
     expect(prList[0]).toContain('--jq');
     expect(prList[0]).toContain('per_page=100');
     expect(prList[0]).not.toContain('--paginate');
-    const comments = r.aanroepen.filter((a) => a.startsWith('api ') && a.includes('/comments'));
-    expect(comments.length).toBeGreaterThan(0);
-    expect(comments.length).toBeLessThanOrEqual(20);
+    // GEWIJZIGD (agent-merge-niet-kritiek/OV-1, R-TEST-02): de meting telt geen bevindingen van een externe reviewdienst meer: de trend vraagt geen reacties per PR meer op.
+    expect(r.aanroepen.filter((a) => a.startsWith('api ') && a.includes('/comments'))).toStrictEqual([]);
     const runList = r.aanroepen.filter((a) => a.startsWith('run list'));
     expect(runList.length).toBeGreaterThan(0);
     expect(runList.length).toBeLessThanOrEqual(20);
