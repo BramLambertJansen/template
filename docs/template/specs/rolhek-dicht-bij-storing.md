@@ -54,10 +54,6 @@ n.v.t. — geen routes.
   `.claude/hooks/laden.mjs` ("timeout … fail-open"), `docs/ENVIRONMENT.md` (minimale versie en waarom). Het regelboek groeit
   netto niet: bytes van `docs/framework.md` vóór en na in de PR. Historische plekken (ADR 0046, spec `agent-merge`) blijven
   zoals ze zijn; deze herziening van 0045 gaat voor.
-- **rolhek-dicht/AC-6** — `docs/operations/agent-doorloop.md` beschrijft een blokkade door storing: de foutregel van Claude
-  Code herkennen (hook error of timeout met `onFailure` `block`), wat nog werkt (Read, Grep, Glob, subagent, de eigenaar
-  vragen) en wat niet (elk Bash-commando, elke MCP-tool, schrijven), melden als leerpunt, de eigenaar vragen, de hook nooit
-  uitzetten of omzeilen (R-PRINC-09).
 
 ## Hergebruik en UX
 

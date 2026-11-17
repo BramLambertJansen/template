@@ -101,14 +101,6 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   `## Leerpunt`. `.github/pull_request_template.md` houdt de bestaande regel en krijgt de regelvorm uit "Hergebruik en UX"
   als extra regel. `.claude/agents/reviewer.md` noemt dat de reviewer zo'n stuk mag melden met plek "Schrappen of vereenvoudigen".
   `AGENTS.md` en `CLAUDE.md` groeien niet.
-- **leerlus-herzien/AC-7** — `docs/operations/leerpunten-voorsorteren.md` noemt ADR 0081 in stap 1 en heeft een bak
-  "Schrappen of vereenvoudigen" (gesorteerd op de gemeten winst uit `Meting:`; een issue met deze plek komt alleen daar, nooit
-  in "Klein"), vraagt per cluster van herhalingen welke oudere regel of check overbodig
-  wordt, toont paren van een schrap-leerpunt en een later leerpunt met `eerder:` ernaar bovenaan, en noemt de drie
-  langzaamste jobs van de workflows op `main` in de laatste zeven dagen tegen de zeven dagen ervoor (mediane duur per job uit
-  GitHub Actions, alleen lezen); bij meer dan 20 procent groei een voorgesteld leerpunt in het verslag. Zijn er tien of meer
-  schrap-leerpunten gesloten, dan noemt het verslag dat aantal en het aantal terugkomers (ADR 0081 punt 6). De uitvoer blijft
-  hooguit 40 regels.
 
 ## Randgevallen
 
@@ -121,7 +113,6 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
 | Meting onbekend vooraf (bijv. tokens in de cloud) | `Meting: onbekend (<reden>) → <verwachting> (<bron>)` is geldig in het issue; het sluitbewijs eist twee getallen en een bron (AC-3) | n.v.t. |
 | Gewone fix voor een Check-leerpunt met `trede Schrappen of vereenvoudigen` | Rood: het issue heeft een andere plek (AC-3) | n.v.t. |
 | Bestaande issues zonder veld `Onderbouwing` | Geen fout: het veld is niet verplicht en alleen bij de nieuwe plek getoetst | n.v.t. |
-| Routine zonder toegang tot Actions-runs | Zegt dat in één zin en slaat de CI-duur over | n.v.t. |
 
 ## Raakt ook
 
@@ -147,9 +138,8 @@ Fase 1. De tester schrijft vóór de bouw, rood op asserties:
 - `test/scripts/leerpunt-check.test.ts` — AC-2 als tabel; AC-5 als regressietest (al groen op de basis).
 - `test/scripts/leerpunt-bewijs.test.ts` — AC-3 en AC-4 met PR-beschrijvingen als tabel.
 - `test/rails/leerpunt-sjabloon.test.ts` — AC-1.
-- `test/rails/opleveren-skill.test.ts` — AC-6 en AC-7 op structuur (R-TEST-02): de plek `Schrappen of vereenvoudigen`, de
-  koppen `### Voorstel voor de plek` en direct daarna `### Onderbouwing` in het CLI-blok, de regelvorm `bewijs meting:`, de bak
-  in de prompt en de verwijzing naar ADR 0081; letterlijk alleen wat een machine leest (koppen, labels, regelvorm). Een
+- `test/rails/opleveren-skill.test.ts` — AC-6 op structuur (R-TEST-02): de plek `Schrappen of vereenvoudigen`, de
+  koppen `### Voorstel voor de plek` en direct daarna `### Onderbouwing` in het CLI-blok, de regelvorm `bewijs meting:`; letterlijk alleen wat een machine leest (koppen, labels, regelvorm). Een
   bestaande zinstest die de bouw raakt (de slotstap), wordt omgezet naar zo'n structuurtest, met reden in de bouw-PR.
 
 Handmatig na de merge: één proefleerpunt met plek "Schrappen of vereenvoudigen" zonder `Terugval:` indienen en zien dat het
