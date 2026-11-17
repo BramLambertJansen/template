@@ -39,10 +39,10 @@ n.v.t. — geen UI.
 
 Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van punt 5; stap 4 = verhuizing.
 
-- **templateregime/AC-1** — Token: er komt geen tokenscript in de repo. De eigenaar maakt een installatietoken van hoogstens
-  een uur aan met een commando buiten de repo, en de agent geeft het per commando mee (`GH_TOKEN` vóór een
+- **templateregime/AC-1** — Token: de eigenaar maakt een installatietoken van hoogstens een uur aan met
+  `scripts/kit/agent-token.mjs` vanaf `main`, buiten de sandbox (spec agent-token, ADR 0089 Herzien 2026-11-17), en de agent geeft het per commando mee (`GH_TOKEN` vóór een
   letterlijk `gh`- of `git push`-commando, gelezen uit een bestand, nooit letterlijk in de opdracht); de sleutel van de App staat op een pad
-  dat de sandbox niet laat lezen. Geen test: er is geen code.
+  dat de sandbox niet laat lezen. Geen test hier: het gedrag van het script toetst spec agent-token.
 - **templateregime/AC-2** — Stap 2, rulesetscript: eist review van een code-eigenaar met nul vereiste goedkeuringen, trekt een
   goedkeuring in bij een nieuwe push, eist geen bijgewerkte branch, en eist precies `requiredChecks` (ook `check-core`,
   `leerpunt-bewijs`, `codeql (javascript-typescript)` en, tot stap 3, `document-status`). Zonder de optie `--bypass-beheerder`

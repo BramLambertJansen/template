@@ -209,7 +209,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   zet `scripts/github-ruleset.sh` nu al, en het script weigert bij fouten in `CODEOWNERS`; daarna `--bypass-beheerder`, pas na het bewijs dat het
   token van de eigenaar uit de agentomgeving is; private repo's vragen Pro/Team); `.github/settings/` met `scripts/check-github.mjs` (alleen-lezend, een onleesbare instelling is een fout;
   ook `app_id` van verplichte checks, `enforce_admins`, conversation resolution) en `check-spec-approval`; `docs/operations/rails-checklist.md` met
-  per stuk bewijs; pushen met een kortlevend App-token zonder het eigenaar-token in de agentomgeving, daarna `denyRead` op `~/.config/gh`;
+  per stuk bewijs; pushen met een kortlevend App-token (het script `scripts/kit/agent-token.mjs` is gebouwd, spec agent-token) zonder het eigenaar-token in de agentomgeving, daarna `denyRead` op `~/.config/gh`;
   bij de overstap op de App de review van een code-eigenaar verplicht op exact de head-SHA, niet van de auteur (R-REPO-02, framework §10). Onderscheid de overgang onder het eigenaaraccount van de definitieve App-opzet; de eigenaar
   activeert organisatie, App en instellingen.
   **Afhankelijkheden:** ADR 0039, 0040 en 0045; beschikbaarheid van de vereiste CI-checks.
