@@ -9,6 +9,9 @@ requests.
 
 ### Gewijzigd
 
+- De productieserver zet de beveiligingsheaders van de SPA (CSP, HSTS, nosniff, Referrer-Policy) nu ook op de 404 van een
+  geweigerd pad (verborgen bestand, symlink naar buiten de build); die kreeg ze eerder niet (`src/core/api/http/web.ts`,
+  `src/core/api/http/web-weigering-headers.test.ts`). Wat verandert voor een app: niets, behalve meer headers op die 404.
 - `node scripts/kit/check-docs.mjs` los gedraaid geeft geen stil groen meer (leerpunt #693): het script vergelijkt niet met
   `.kit/baseline.json` en eindigt nu met exit 1 en een verwijzing naar `pnpm ratchet`, de enige gate voor check-docs
   (`scripts/kit/check-docs.mjs`, `test/scripts/check-docs-los.test.ts`). Wat verandert voor een app: niets, tenzij een eigen
