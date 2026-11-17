@@ -14,7 +14,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { aantalRegels, grensMeldingen, KB } from './leesbudget.mjs';
+import { aantalRegels, ADRGRENS, grensMeldingen, KB } from './leesbudget.mjs';
 import { naarSamenvatting } from './samenvatting.mjs';
 
 const REGELBOEK = 'docs/framework.md';
@@ -108,12 +108,15 @@ export function leespad(lees, scenarios) {
 /** @typedef {{ naam: string, waarde: number }} Eenheid */
 /** @typedef {{ streefwaarde: number | null, eenheid: 'bytes' | 'regels', aantal: number, boven: number, grootste: Eenheid[] }} Meting */
 
-/** Streefwaarde, eenheid en welke paden per soort tellen (ADR 0065 punt 2); operations zonder streefwaarde. */
+/**
+ * Streefwaarde, eenheid en welke paden per soort tellen (ADR 0065 punt 2); operations zonder streefwaarde. ADR's meten hier
+ * alle documenten, ook vervallen; voor een levende ADR is de grens hard in check-docs (`ADRGRENS` in leesbudget.mjs).
+ */
 const SOORTEN = /** @type {const} */ ({
   hoofdstukken: { streefwaarde: 12 * KB, eenheid: 'bytes', pad: null },
   regelboek: { streefwaarde: 40 * KB, eenheid: 'bytes', pad: /^docs\/framework\.md$/ },
   specs: { streefwaarde: 10 * KB, eenheid: 'bytes', pad: /^docs\/(?:template\/)?specs\/[^_/][^/]*\.md$/ },
-  adrs: { streefwaarde: 6 * KB, eenheid: 'bytes', pad: /^docs\/(?:template\/)?adr\/\d{4}-[^/]+\.md$/ },
+  adrs: { streefwaarde: ADRGRENS.grens, eenheid: 'bytes', pad: ADRGRENS.pad },
   rules: { streefwaarde: 60, eenheid: 'regels', pad: /^\.claude\/rules\/.+\.md$/ },
   skills: { streefwaarde: 200, eenheid: 'regels', pad: /^\.claude\/skills\/[^/]+\/SKILL\.md$/ },
   operations: { streefwaarde: null, eenheid: 'bytes', pad: /^docs\/operations\/.+\.md$/ },

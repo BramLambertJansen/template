@@ -2,6 +2,10 @@
 // daarvan, en de krimpcheck op bindende documenten. Gebruikt door check-docs (ratchet) en leespad.
 //  - Grens: `AGENTS.md` <= 9 KB en 100 regels, `CLAUDE.md` <= 50 regels. Sleutels `docs:AGENTS.md:budget:<bytes>` en
 //    `docs:<bestand>:regels:<n>` (met waarde, zodat de ratchet groei en krimp ziet). Gelijk aan de grens is geen overtreding.
+//  - Grens per levende ADR (6 KB), `ADRGRENS`: sleutel `docs:<bestand>:budget` zonder grootte in de baseline (een
+//    bewerking breekt hem niet); groei boven de grens tegenover de merge-base is strikt rood
+//    (`docs:<bestand>:budget-groei`). Vervallen en vervangen ADR's tellen niet. Geen melding vanaf 85 %. Een spec heeft
+//    geen grens: 10 KB is een meting in `pnpm leespad` (eigenaarbesluit 2026-11-17).
 //  - Melding vanaf ceil(0,85 × grens): "let op: … op <n> % van de grens; verplaats naar een lagere laag"; nooit rood.
 //  - Krimp: de controle op normen en bytes van spec krimp-op-normen (`normen.mjs`, ADR 0067); hier alleen de git-kant.
 import { Buffer } from 'node:buffer';
@@ -64,21 +68,61 @@ export function grensMeldingen(lees) {
     );
 }
 
+/**
+ * Grens per levende ADR (R-DOC-01): `docs/adr/` en `docs/template/adr/`, zonder sjablonen en `archief/`. Een vervallen of
+ * vervangen ADR telt niet: hij wordt niet meer gelezen. Ook de bron voor de meting in `pnpm leespad`.
+ */
+export const ADRGRENS = {
+  pad: /^docs\/(?:template\/)?adr\/\d{4}-[^/]+\.md$/,
+  grens: 6 * KB,
+  vervallen: /^Status:\s*(?:vervallen|vervangen door \d{4})\b/m,
+};
+
+/**
+ * De levende ADR's boven de grens.
+ * @param {readonly string[]} files @param {Lezer} lees
+ * @returns {{ file: string, bytes: number }[]}
+ */
+function adrsBoven(files, lees) {
+  return files.flatMap((file) => {
+    const tekst = ADRGRENS.pad.test(file) ? lees(file) : null;
+    if (tekst === null || ADRGRENS.vervallen.test(tekst)) return [];
+    const bytes = Buffer.byteLength(tekst);
+    return bytes > ADRGRENS.grens ? [{ file, bytes }] : [];
+  });
+}
+
+/**
+ * Een levende ADR boven de grens (R-DOC-01). De sleutel `docs:<bestand>:budget` bevat geen grootte: een overschrijding in
+ * de baseline blijft staan tot de ADR onder de grens komt; groei bewaakt `docGroeiUitGit`.
+ * @param {readonly string[]} files @param {Lezer} lees
+ * @returns {Violation[]}
+ */
+export function docGrensViolations(files, lees) {
+  return adrsBoven(files, lees).map(({ file, bytes }) => ({
+    key: `docs:${file}:budget`,
+    message: `${file}: ${String(bytes)} bytes, grens ${String(ADRGRENS.grens)}; kort in of splits (R-DOC-01)`,
+  }));
+}
+
 /** @param {string} root @param {readonly string[]} args */
 function git(root, args) {
   const r = spawnSync('git', args, { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   return r.status === 0 ? r.stdout : null;
 }
 
-/** Bytes per bindend document in `ref`. @param {string} root @param {string} ref */
-function grootteIn(root, ref) {
+/**
+ * Bytes per document in `ref`; standaard de bindende documenten.
+ * @param {string} root @param {string} ref @param {(file: string) => boolean} [telt]
+ */
+function grootteIn(root, ref, telt = bindend) {
   const uit = git(root, ['ls-tree', '-r', '-l', '-z', ref]) ?? '';
   /** @type {Record<string, number>} */
   const grootte = {};
   for (const regel of uit.split('\0')) {
     const [kop = '', file = ''] = regel.split('\t');
     const bytes = Number(kop.trim().split(/\s+/)[3]);
-    if (bindend(file) && Number.isFinite(bytes)) grootte[file] = bytes;
+    if (telt(file) && Number.isFinite(bytes)) grootte[file] = bytes;
   }
   return grootte;
 }
@@ -131,6 +175,29 @@ export function normenUitGit(root) {
     lijst: { oud: toen(root, basis, LIJST), nieuw: nu(root, LIJST) },
     bytes: { oud: grootteIn(root, basis), nieuw },
   });
+}
+
+/**
+ * Een levende ADR die op de merge-base al boven de grens lag, groeit niet (R-DOC-01): gelijk of kleiner is groen, één byte
+ * erbij is rood. Strikt kanaal, nooit in de baseline, zoals de ratchet op `eslint-suppressions.json`. Zonder basis toetst
+ * dit niets (`zonderBasis` meldt dat; in CI rood). Wat op de basis onder de grens lag of vervallen was, is aan de baseline.
+ * @param {string} root @returns {Violation[]}
+ */
+export function docGroeiUitGit(root) {
+  const basis = basisVan(root);
+  if (basis === null) return [];
+  const oud = grootteIn(root, basis, (file) => ADRGRENS.pad.test(file));
+  const getrackt = (git(root, ['ls-files', '-z']) ?? '').split('\0').filter((file) => file !== '');
+  return adrsBoven(getrackt, (file) => nu(root, file))
+    .filter(({ file, bytes }) => {
+      const voor = oud[file];
+      if (voor === undefined || voor <= ADRGRENS.grens || bytes <= voor) return false;
+      return !ADRGRENS.vervallen.test(toen(root, basis, file) ?? '');
+    })
+    .map(({ file, bytes }) => ({
+      key: `docs:${file}:budget-groei`,
+      message: `${file}: groeit van ${String(oud[file] ?? 0)} naar ${String(bytes)} bytes boven de grens ${String(ADRGRENS.grens)}; een ADR boven de grens krimpt alleen (R-DOC-01)`,
+    }));
 }
 
 /** De meldingen van krimp-op-normen/AC-6. @param {string} root @returns {string[]} */

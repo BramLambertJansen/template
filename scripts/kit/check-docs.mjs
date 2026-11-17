@@ -21,11 +21,13 @@
 //  7. Spec-discipline: geen lijstitem met `⚠ open` in "Open vragen" bij goedgekeurd of gebouwd (`:open-vraag`); elk pad in
 //     "Kopieer de vorm van" bestaat bij voorstel of goedgekeurd (`:vorm`).
 //  8. `framework §N` buiten §1–§12, §11a en de `## <n>.`-koppen van het regelboek (niet in de ADR-mappen); 9. backtick-paden in
-//     het regelboek; 10. R-id's in .claude/rules/* en het regelboek; 11. harde grenzen alleen op `AGENTS.md` (9 KB, 100
+//     het regelboek; 10. R-id's in .claude/rules/* en het regelboek; 11. harde grenzen op `AGENTS.md` (9 KB, 100
 //     regels) en `CLAUDE.md` (50 regels), sleutels `docs:AGENTS.md:budget:<bytes>` en `docs:<bestand>:regels:<n>`, zodat
-//     de ratchet groei en krimp ziet (ADR 0065, scripts/kit/leesbudget.mjs). Hoofdstuk, regelboek, spec en ADR zijn een
-//     meting in `pnpm leespad`, nooit een overtreding. `docsMeldingen` geeft "let op" vanaf 85 % van een grens;
-//     `docsKrimp` de krimpcheck (AC-6), die de ratchet buiten de baseline houdt.
+//     de ratchet groei en krimp ziet (ADR 0065, scripts/kit/leesbudget.mjs), en op elke levende ADR (6 KB): sleutel
+//     `docs:<bestand>:budget` zonder grootte, groei boven de grens tegenover de merge-base is `:budget-groei` in
+//     `docsKrimp` (R-DOC-01). Hoofdstuk, regelboek en spec zijn een meting in `pnpm leespad`, nooit een overtreding.
+//     `docsMeldingen` geeft "let op" vanaf 85 % van de grens van `AGENTS.md` en `CLAUDE.md`; `docsKrimp` de krimpcheck
+//     (AC-6) en de groeicheck, die de ratchet buiten de baseline houdt.
 //  12. Geen normwoord onder "Hoe (geen norm)" in .claude/rules/*.md (leerpunt #393, sleutel `docs:<bestand>:hoe-norm:<woord>`).
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
@@ -44,7 +46,15 @@ import { onderhoudVan, templateVan } from '../../rails/hooks/lib/rolhek.mjs';
 import { acIds } from '../../rails/hooks/lib/document-state.mjs';
 import { ADR_MAPPEN, adrKopViolations, adrNumber, duplicateAdrNumbers, invalidAdrNames } from './adr-numbers.mjs';
 import { CODEOWNERS, codeownersTekst, eersteGoedkeurder, HERSTEL } from './codeowners.mjs';
-import { grensMeldingen, grensViolations, normenMeldingenUitGit, normenUitGit, zonderBasis } from './leesbudget.mjs';
+import {
+  docGrensViolations,
+  docGroeiUitGit,
+  grensMeldingen,
+  grensViolations,
+  normenMeldingenUitGit,
+  normenUitGit,
+  zonderBasis,
+} from './leesbudget.mjs';
 
 export { normViolations } from './normen.mjs';
 
@@ -87,6 +97,7 @@ export async function docsViolations(root = '.') {
     ...rIdViolations(files, read),
     ...hoeNormViolations(files, read),
     ...grensViolations((file) => (files.includes(file) ? read(file) : null)),
+    ...docGrensViolations(files, (file) => (existsSync(path.join(root, file)) ? read(file) : null)),
   ]);
 }
 
@@ -102,8 +113,8 @@ export async function docsMeldingen(root = '.') {
 }
 
 /**
- * De krimpcontrole op normen tegenover `git merge-base origin/main HEAD` (spec krimp-op-normen); nooit in de baseline.
- * Zonder basis is ze in CI rood (AC-5).
+ * De krimpcontrole op normen tegenover `git merge-base origin/main HEAD` (spec krimp-op-normen) en de groeicontrole op
+ * ADR's boven hun grens (R-DOC-01); nooit in de baseline. Zonder basis is ze in CI rood (AC-5).
  * @param {string} root
  * @returns {Promise<Violation[]>}
  */
@@ -111,6 +122,7 @@ export async function docsKrimp(root = '.') {
   return Promise.resolve([
     ...zonderBasis(root, process.env['GITHUB_ACTIONS'] === 'true').violations,
     ...normenUitGit(root),
+    ...docGroeiUitGit(root),
   ]);
 }
 

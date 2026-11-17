@@ -22,8 +22,10 @@ template heeft geen releases. Eigenaarbesluit 2026-11-02: alleen `AGENTS.md` en 
 
 1. **Hard en rood alleen wat elke sessie volledig laadt:** `AGENTS.md` ≤ 9 KB en 100 regels, `CLAUDE.md` ≤ 50 regels. Over de
    grens: eerst verplaatsen naar een lagere laag (type, check, gouden pad, rules); lukt dat niet zonder verlies, dan ophogen als
-   gate-wijziging met reden in de PR en eigenaarakkoord. Vanaf 85 % meldt `check-docs` het, zonder rode check.
-2. **Al het andere is een meting, nooit rood:** een hoofdstuk van het regelboek, het totaal van het regelboek, een spec, een ADR,
+   gate-wijziging met reden in de PR en eigenaarakkoord. Vanaf 85 % meldt `check-docs` het, zonder rode check. Ook hard: een
+   levend ADR ≤ 6 KB (eigenaarbesluit 2026-11-17, R-DOC-01). Een bestaande overschrijding staat zonder grootte in
+   `.kit/baseline.json` en groeit niet tegenover de merge-base; een nieuw ADR boven de grens is rood.
+2. **Al het andere is een meting, nooit rood:** een hoofdstuk van het regelboek, het totaal van het regelboek, een spec,
    rules, skills en operations-docs. `pnpm leespad` toont ze tegenover hun streefwaarde, met "let op" erboven. De
    budget-ingangen voor deze eenheden verdwijnen uit `.kit/baseline.json`.
 3. **Splitsen alleen op inhoud.** Een eenheid wordt gesplitst als een deel los gelezen kan worden, met de reden in de PR; nooit

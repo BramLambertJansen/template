@@ -122,6 +122,9 @@ describe('compacte-kennisbasis-rails/AC-9: budgetten in bytes (1 KB = 1024)', ()
     expect(gemeten('docs/specs/groot.md', inhoud, 'specs')).toBe(10 * KB + 1);
   });
 
+  // GEWIJZIGD (R-DOC-01, eigenaarbesluit 2026-11-17): de grens voor een ADR is hard; boven de grens is rood. Een spec blijft
+  // een meting.
+
   test('compacte-kennisbasis-rails/AC-9 een ADR op precies 6 KB (6144 bytes): groen', async () => {
     const kop = adrKop('0070');
     expect(await budgetMeldingen('docs/adr/0070-groot.md', kop + tekst(6 * KB - Buffer.byteLength(kop)))).toStrictEqual(
@@ -129,10 +132,11 @@ describe('compacte-kennisbasis-rails/AC-9: budgetten in bytes (1 KB = 1024)', ()
     );
   });
 
-  test('compacte-kennisbasis-rails/AC-9 een ADR van 6 KB + 1 byte: geen overtreding, wel gemeten (ADR 0065)', async () => {
+  test('compacte-kennisbasis-rails/AC-9 een ADR van 6 KB + 1 byte: rood, en gemeten (R-DOC-01)', async () => {
     const kop = adrKop('0070');
     const inhoud = kop + tekst(6 * KB + 1 - Buffer.byteLength(kop));
-    expect(await budgetMeldingen('docs/adr/0070-groot.md', inhoud)).toStrictEqual([]);
+    const meldingen = await budgetMeldingen('docs/adr/0070-groot.md', inhoud);
+    expect(meldingen.map(({ key }) => key)).toStrictEqual(['docs:docs/adr/0070-groot.md:budget']);
     expect(gemeten('docs/adr/0070-groot.md', inhoud, 'adrs')).toBe(6 * KB + 1);
   });
 });
@@ -214,19 +218,21 @@ describe('compacte-kennisbasis-rails/AC-9: de ratchet is strikt in twee richting
     expect(ratchet(root).status).toBe(1);
   });
 
-  // Sinds ADR 0065 heeft een ADR geen budget-ingang: een verhuizing naar het archief laat de baseline ongemoeid.
-  test('compacte-kennisbasis-rails/AC-9 een ADR boven 6 KB verhuist byte-gelijk naar archief/: groen, geen baseline-ingang', () => {
+  // GEWIJZIGD (R-DOC-01, eigenaarbesluit 2026-11-17): een ADR boven 6 KB heeft een budget-ingang zonder grootte. Verhuist
+  // hij naar het archief (dat telt niet mee), dan is de ingang opgelost en moet hij uit de baseline.
+  test('compacte-kennisbasis-rails/AC-9 een ADR boven 6 KB verhuist byte-gelijk naar archief/: de baseline-ingang is opgelost', () => {
     const groot = adrKop('0050') + tekst(7 * KB);
     const root = repo({ 'docs/adr/0050-groot.md': groot });
     expect(ratchet(root, '--update').status).toBe(0);
-    const baseline = readFileSync(path.join(root, BASELINE), 'utf8');
-    expect(baseline).not.toContain('docs:adr:0050:budget');
+    expect(readFileSync(path.join(root, BASELINE), 'utf8')).toContain('docs:docs/adr/0050-groot.md:budget');
     mkdirSync(path.join(root, 'docs/adr/archief'), { recursive: true });
     execFileSync('git', ['mv', 'docs/adr/0050-groot.md', 'docs/adr/archief/0050-groot.md'], { cwd: root });
     const uitslag = ratchet(root);
-    expect(uitslag.stderr).toBe('');
-    expect(uitslag.status).toBe(0);
-    expect(readFileSync(path.join(root, BASELINE), 'utf8')).toBe(baseline);
+    expect(uitslag.status).toBe(1);
+    expect(uitslag.stderr).toContain('opgelost');
+    expect(ratchet(root, '--update').status).toBe(0);
+    expect(readFileSync(path.join(root, BASELINE), 'utf8')).not.toContain('0050-groot.md:budget');
+    groen(root);
   });
 
   test('compacte-kennisbasis-rails/AC-9 een ADR boven 6 KB alleen in archief/, niet in de baseline: groen (ADR 0065)', () => {

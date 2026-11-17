@@ -1,4 +1,26 @@
 {
   "dependency-cruiser": [],
-  "check-docs": ["docs:ac:kooi:AC-9", "docs:ac:tests-naar-vermogen:AC-10", "docs:ac:tests-naar-vermogen:AC-9"]
+  "check-docs": [
+    "docs:ac:kooi:AC-9",
+    "docs:ac:tests-naar-vermogen:AC-10",
+    "docs:ac:tests-naar-vermogen:AC-9",
+    "docs:docs/template/adr/0040-template-app-en-grens-core-app.md:budget",
+    "docs:docs/template/adr/0043-accounts-uitnodigen-mfa-en-beheer.md:budget",
+    "docs:docs/template/adr/0045-railwerk.md:budget",
+    "docs:docs/template/adr/0046-werkstraat-en-beslisroute.md:budget",
+    "docs:docs/template/adr/0049-readiness-en-productie-image.md:budget",
+    "docs:docs/template/adr/0050-achtergrondtaken-en-mail-outbox.md:budget",
+    "docs:docs/template/adr/0051-audit-log-en-avg.md:budget",
+    "docs:docs/template/adr/0052-accountstatus-en-laatste-login.md:budget",
+    "docs:docs/template/adr/0060-bestandsopslag-als-poort.md:budget",
+    "docs:docs/template/adr/0069-agent-merge-niet-kritiek.md:budget",
+    "docs:docs/template/adr/0072-destructief-alleen-in-de-kooi.md:budget",
+    "docs:docs/template/adr/0075-eenmalige-codes-en-geen-sessietoken-in-json.md:budget",
+    "docs:docs/template/adr/0077-externe-koppelingen-via-poorten.md:budget",
+    "docs:docs/template/adr/0078-leerlus-met-bewijs.md:budget",
+    "docs:docs/template/adr/0081-leerlus-schrappen-en-vereenvoudigen.md:budget",
+    "docs:docs/template/adr/0082-zelfladend-sandbox-en-leeslijst.md:budget",
+    "docs:docs/template/adr/0083-bewaking-met-minder-wrijving.md:budget",
+    "docs:docs/template/adr/0089-templateregime.md:budget"
+  ]
 }
