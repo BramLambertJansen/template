@@ -45,7 +45,7 @@ is, leert agents en de eigenaar om rood te negeren.
 
 ## Gevolgen
 
-- Lokaal groen is geen bewijs, alleen CI. Een agent kan lokaal groen zien terwijl rolhek-, effect- en kooitests niet draaiden;
+- Lokaal groen is geen bewijs, alleen CI. Een agent kan lokaal groen zien terwijl rolhek- en kooitests niet draaiden;
   hij ziet de `⚠ overgeslagen`-regel, en `pnpm pr:verify` tot groen blijft het bewijs (R-WERK-12).
 - Restrisico, aanvaard: lokaal kan een aanroeper de proef laten falen (bijvoorbeeld `PATH` zonder `bwrap`); dan slaan de
   kooitests over. Een machine zonder bubblewrap is lokaal dus niet meer rood, maar meldt het. CI vangt beide.

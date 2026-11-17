@@ -151,5 +151,5 @@ onafhankelijk reviewbewijs. De Claude-hooks zijn runtime-specifiek; CI en GitHub
 ## Gevolgen
 
 - Werkinstructie (commando's, opruimstappen) staat in `docs/operations/agent-doorloop.md` en de skill `opleveren`.
-- Restrisico's: het reviewerakkoord is een sessie-artefact; het rolhek is fail-open; het token van de eigenaar staat nog in de
+- Restrisico's: het reviewerakkoord is een sessie-artefact; het rolhek valt dicht bij een storing maar is een vangnet, geen grens (R-ROL-09, R-ROL-10); het token van de eigenaar staat nog in de
   agentomgeving (0089 punt 2 en 9).
