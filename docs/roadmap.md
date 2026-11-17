@@ -76,7 +76,7 @@ Hooguit drie open items (`check:roadmap`); nummer 1 is bewijs vóór uitbreiding
   met verplichte checknamen ongewijzigd; elke wijziging in `.github/workflows` gaat apart aan de eigenaar (gate-pad) en `guard.yml` alleen via
   besluit-PR; (5) lange regels in `docs/framework.md` en `docs/dod.md` inkorten binnen de grens van de R-DOC-07-krimpcheck; (6) leerpunten uit de ronde, zie #642; (7) verouderde verwijzingen, elk met eigenaarakkoord: (a) testcommentaar dat naar
   `docs/specs/taakmandaat-vervolg.md` wijst (nu taakmandaat-vervolg (verwijderd met het archief); R-TEST-02): `test/hooks/follow-up-kit.ts:7`,
-  `test/hooks/mandate-follow-up-ci.test.ts:19`, `test/rails/check-roadmap-bewijsvorm.test.ts:6`, `test/rails/mandate-follow-up-docs.test.ts:6` en
+  `test/hooks/mandate-follow-up-ci.test.ts:19`, `test/rails/check-roadmap-bewijsvorm.test.ts:6` en
   `test/scripts/runner-host-files.test.ts:7` (de vastgelegde fixture `test/rails/fixtures/padtabel/decisions-30cc352.json` blijft ongewijzigd);
   (b) zes overbodige `.gitkeep`-bestanden in mappen met andere getrackte bestanden, alle in beschermde paden (`.claude/agents`, `.claude/hooks`,
   `.claude/skills`, `.github/workflows`, `scripts`, `src/core/web/ui`); de plaatshouders in `.github/settings`, `deploy`, `designs` en
