@@ -100,6 +100,15 @@ Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van pun
   privé-repo.
 - **templateregime/AC-13** — Stap 3 verwijdert de tests uit "Raakt ook" die alleen verdwenen code toetsen, en uit de gemengde
   tests alleen die gevallen; de lijst met reden staat in de PR (eigenaarakkoord via deze spec, R-TEST-02).
+- **templateregime/AC-14** — Het mergescript van de hoofdsessie (`scripts/kit/pr-merge.mjs`, `beoordeelMerge`) merget alleen als
+  GitHub de grens van ADR 0089 punt 2 echt bewaakt. Het leest via de API `repos/<repo>/rules/branches/main` en eist minstens één
+  regel van type `pull_request` met `parameters.require_code_owner_review` gelijk aan `true`, en `repos/<repo>/codeowners/errors?ref=<sha van main>`
+  met een lege lijst `errors`. Ontbreekt zo'n regel, staat die op `false`, meldt GitHub fouten in `CODEOWNERS`, of is een van
+  beide antwoorden onleesbaar of geen geldige vorm, dan geeft het een eigen reden ("de ruleset op main bewaakt geen review van
+  een code-eigenaar: de eigenaar merget", of "`CODEOWNERS` op main heeft fouten") en merget het niet (fail-closed). Deze toets
+  komt bovenop de bestaande en verandert die niet; de modus `eigenaar` stopt nog steeds als eerste. Reviewbevinding A2
+  (2026-11-17): zonder deze toets merget de hoofdsessie in een app zonder ruleset (privé-repo zonder Pro, of vóór fase 6) ook
+  `src/core`, migraties of hooks.
 
 ## Randgevallen
 
@@ -108,6 +117,8 @@ Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van pun
 | AC-6 niet bewezen | geen bypass; de identiteitsregels van het rolhek blijven | n.v.t. |
 | PR raakt alleen paden met besluit `agent` | de App merget na groene checks | n.v.t. |
 | PR raakt `src/x/CLAUDE.md` of een `.`-bestand | goedkeuring van de eigenaar nodig | n.v.t. |
+| Repo zonder ruleset, of ruleset zonder code-owner-review | het mergescript weigert; de eigenaar merget (AC-14) | n.v.t. |
+| Rules-API of `codeowners/errors` niet leesbaar (rechten, netwerk) | het mergescript weigert, zonder crash (AC-14) | n.v.t. |
 
 ## Raakt ook
 
@@ -142,7 +153,10 @@ De identiteitsregels van het rolhek (ADR 0089 punt 9); de effecttoets is weg met
 
 Tests eerst (R-PRINC-04). AC-2, AC-3, AC-8, AC-9 en AC-10 als unit-tests, eerst rood; AC-6 met sandboxtests. AC-4 en
 AC-5 met proef-PR's (geleverd, herhaald na stap 2). AC-7 en AC-13 in stap 3 met `pnpm ratchet` en `pnpm gate:fast` groen.
-AC-11 in stap 4.
+AC-11 in stap 4. AC-14 als unit-tests met een nep-API in een nieuw testbestand (`test/scripts/merge-ruleset.test.ts`), eerst
+rood; de bestaande tests van het mergescript blijven ongewijzigd groen (hun nep-API krijgt alleen nieuwe antwoorden als dat
+nodig is, met reden in de PR). Raakt ook: `docs/nieuwe-app.md` (fase 6: "Niets controleert daarna nog of de ruleset blijft
+staan" klopt dan niet meer), `docs/template-changelog.md`.
 
 ## Open vragen
 
