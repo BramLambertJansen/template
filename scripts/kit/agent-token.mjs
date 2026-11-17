@@ -1,8 +1,8 @@
 // node scripts/kit/agent-token.mjs <app-id> [--repo <owner>/<repo>] [--sleutel <pad>] [--uit <pad>] (spec agent-token):
 // maakt een installatietoken van hoogstens een uur voor de GitHub App van de agent, alleen voor één repository, en schrijft
 // het atomair naar een bestand met modus 600. De eigenaar draait het buiten de sandbox uit de versie op `main`:
-//   gh api -H 'Accept: application/vnd.github.raw' 'repos/<o>/<r>/contents/scripts/kit/agent-token.mjs?ref=main' \
-//     | node --input-type=module - <app-id>
+//   bron=$(gh api -H 'Accept: application/vnd.github.raw' 'repos/<o>/<r>/contents/scripts/kit/agent-token.mjs?ref=main') \
+//     && printf '%s\n' "$bron" | node --input-type=module - <app-id> --repo <o>/<r>
 // Daarom alleen `node:`-imports en geen pad uit import.meta (AC-7, AC-8). Het token en de JWT komen nooit in de uitvoer.
 import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';

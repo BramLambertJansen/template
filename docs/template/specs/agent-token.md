@@ -16,7 +16,8 @@ in de repo, zonder ververs-proces, timer of credential-helper; de eigenaar maakt
 
 - **Eigenaar:** draait het script buiten de sandbox, nooit uit een werkmap van de agent, maar uit de versie op `main` van
   GitHub, altijd met `--repo`:
-  `gh api -H 'Accept: application/vnd.github.raw' 'repos/<o>/<r>/contents/scripts/kit/agent-token.mjs?ref=main' | node --input-type=module - <app-id> --repo <o>/<r>`.
+  `bron=$(gh api -H 'Accept: application/vnd.github.raw' 'repos/<o>/<r>/contents/scripts/kit/agent-token.mjs?ref=main') && printf '%s\n' "$bron" | node --input-type=module - <app-id> --repo <o>/<r>`
+  (`node` draait alleen als het ophalen lukt; anders krijgt het de foutmelding van GitHub als bron).
   `gh api` met een expliciet pad leest geen `.git/config` van de werkmap, dus een agent die die config wijzigt, kan geen andere
   code laten draaien. Omdat het script zo via stdin binnenkomt, importeert het alleen `node:`-modules (AC-7, AC-8); zo kan code
   die de agent in zijn werkmap schrijft de sleutel niet lezen. `--repo` voorkomt dat de agent via `remote.origin.url` een andere
