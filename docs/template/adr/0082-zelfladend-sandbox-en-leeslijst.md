@@ -5,6 +5,7 @@ Herzien: 2026-11-05 (#566): punt 2, `./.git/commondir` blijft in `denyWrite`; S0
 Herzien: 2026-11-05 (#584): punt 2, een echt `.git/commondir` helpt niet; een agentsessie werkt in een worktree.
 Herzien: 2026-11-05 (#588): punt 2 en 4, gewijzigd door [0083](0083-bewaking-met-minder-wrijving.md): `./.git/commondir` gaat uit `denyWrite`, elke hook valt dicht bij een geplant bestand; de worktree is een keuze.
 Herzien: 2026-11-16 (#745): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
+Herzien: 2026-11-17 (#774): punt 1 vervalt, de lijst in `denyWrite` is nooit gebouwd (eigenaarbesluit)
 
 Wijzigt [0071](0071-rolhek-vooraf-vaste-lijst.md) punt 2 en [0061](0061-claude-sandbox-werkstraat.md) punt 3. Drempel: A3
 (een grens verschuift van tekst naar het besturingssysteem). Aanleiding: leerpunt #500 (PR #494, drie reviewrondes met
@@ -36,11 +37,8 @@ draait dat deels om. Voor `settings.json` en de stubs geldt het falen van git al
 
 ## Besluit
 
-1. **Het besturingssysteem schermt de genoemde paden af.** `denyWrite` noemt expliciet `./.claude/hooks`,
-   `./.claude/settings.json`, `./lefthook.yml`, `./.git/hooks` en `./.git/config`. Voor die paden hangt de grens dan niet
-   meer af van wat Claude Code zelf afschermt. Buiten `.git` komt in `denyWrite` alleen een pad dat git volgt. In een
-   gekoppelde worktree is `.git` een bestand: of de `.git`-paden daar werken, bepaalt een meting. Tot die meting geldt de
-   grens alleen in de hoofdcheckout.
+1. *(vervallen: de lijst in `denyWrite` is nooit gebouwd; de uitvoering hing aan spec rolhek-vooraf-krimp, die met 0091
+   punt 3 verviel. Wat blijft is de toets vooraf van punt 3 en wat Claude Code zelf afschermt, zie Context.)*
 2. *(vervallen, zie 0083)*
 3. **Vooraf een leeslijst, ook voor wat geen pad letterlijk noemt.** Een woord kan naar een zelfladend pad wijzen:
    letterlijk, als glob, als map erboven, of als niet-herleidbare expansie. Een commando met zo'n woord gaat alleen door
@@ -77,10 +75,6 @@ draait dat deels om. Voor `settings.json` en de stubs geldt het falen van git al
 
 ## Gevolgen
 
-- Een Bash-schrijfactie op een afgeschermd pad faalt voor elke rol, ook als het rolhek faalt. De hoofdsessie wijzigt die
-  paden via Edit, op `ask`.
-- `git merge origin/main`, `pull` en `checkout` falen in de sandbox als ze `lefthook.yml` meenemen, zoals nu al bij
-  `settings.json` en de stubs. Dat beperkt 0061 punt 3, spec claude-sandbox-werkstraat AC-6 en de conflictroute van
-  R-WERK-12. Het herstel legt de spec vast.
-- De grens van punt 1 geldt pas na de metingen van de spec, ook die tegen het hernoemen van een bovenliggende map
-  (R-WERK-23).
+- `git merge origin/main`, `pull` en `checkout` falen in de sandbox als ze `.claude/settings.json` of de stubs meenemen:
+  Claude Code schermt die af (zie Context). Dat beperkt 0061 punt 3, spec claude-sandbox-werkstraat AC-6 en de conflictroute
+  van R-WERK-12.

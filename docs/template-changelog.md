@@ -7,6 +7,17 @@ requests.
 
 ## [Unreleased]
 
+### Toegevoegd
+
+- Tokenscript voor de GitHub App van de agent (spec `agent-token`, herziet ADR 0089 punt 2): `scripts/kit/agent-token.mjs`
+  maakt met de sleutel van de App (standaard `~/.ssh/template-agent.pem`, modus 600) een installatietoken van hoogstens een uur
+  voor één repository (geef `--repo` altijd mee; zonder leest het script `remote.origin.url`, die de agent kan wijzigen) en schrijft het atomair met modus 600 naar `--uit` (standaard
+  `/tmp/claude-<uid>/agent-token`); token en JWT komen nooit in de uitvoer. Alleen `node:`-imports, zodat de eigenaar het
+  buiten de sandbox uit `main` draait via `bron=$(gh api …) && printf '%s\n' "$bron" | node --input-type=module - <app-id> --repo <owner>/<repo>` (zie `docs/nieuwe-app.md` 6.2)
+  (`test/scripts/agent-token.test.ts`). Wat verandert voor een app: niets vanzelf; wie PR's als een eigen GitHub App wil
+  openen, maakt het token zo met de hand aan en geeft het per commando mee als `GH_TOKEN`; zonder ververs-proces of
+  credential-helper.
+
 ### Gewijzigd
 
 - De meting telt geen bevindingen van een externe reviewdienst meer (spec `agent-merge-niet-kritiek`, OV-1):
@@ -14,6 +25,9 @@ requests.
   maat `codex` (tekst en `trend.maten`) en de trend roept geen `gh api …/comments` meer aan (`scripts/kit/meting.mjs`,
   `scripts/kit/meting-trend.mjs`, `test/rails/meting-zonder-externe-review.test.ts`). Wat verandert voor een app: niets,
   tenzij een eigen script die velden leest.
+- De productieserver zet de beveiligingsheaders van de SPA (CSP, HSTS, nosniff, Referrer-Policy) nu ook op de 404 van een
+  geweigerd pad (verborgen bestand, symlink naar buiten de build); die kreeg ze eerder niet (`src/core/api/http/web.ts`,
+  `src/core/api/http/web-weigering-headers.test.ts`). Wat verandert voor een app: niets, behalve meer headers op die 404.
 - `node scripts/kit/check-docs.mjs` los gedraaid geeft geen stil groen meer (leerpunt #693): het script vergelijkt niet met
   `.kit/baseline.json` en eindigt nu met exit 1 en een verwijzing naar `pnpm ratchet`, de enige gate voor check-docs
   (`scripts/kit/check-docs.mjs`, `test/scripts/check-docs-los.test.ts`). Wat verandert voor een app: niets, tenzij een eigen
