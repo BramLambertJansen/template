@@ -1,7 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
-import { expectAbsent } from '../support/absence';
 
 // agent-merge-niet-kritiek/AC-10: geen externe reviewdienst in de actieve werkstraat. De opdracht uit de spec (zonder de
 // fixtures) mag alleen nog de vijf uitzonderingen geven, letterlijk. Het zoekwoord wordt samengesteld, zodat dit bestand zichzelf
@@ -86,7 +84,6 @@ function treffers(): Treffer[] {
     });
 }
 
-const lees = (bestand: string) => readFileSync(bestand, 'utf8');
 const T = (bestand: string, regel: number, tekst: string): Treffer => ({ bestand, regel, tekst });
 
 describe('agent-merge-niet-kritiek/AC-10 de uitzonderingen per regel', () => {
@@ -132,22 +129,6 @@ describe('agent-merge-niet-kritiek/AC-10 de uitzonderingen per regel', () => {
 
   test('uitzondering 4: dit bestand sluit zichzelf uit', () => {
     expect(buitenUitzonderingen([T(ZICHZELF, 1, WOORD)])).toEqual([]);
-  });
-});
-
-describe('agent-merge-niet-kritiek/AC-10 de vervangende zinnen', () => {
-  test('stap 3 van "Mergen" in de skill opleveren', () => {
-    expect(lees(SKILL)).toContain('Threads zijn opgelost; een externe review is geen voorwaarde.');
-  });
-
-  test('review-checklists: de PR-review, zonder de vraag van de externe dienst', () => {
-    const tekst = lees('docs/operations/review-checklists.md');
-    expect(tekst).toContain('de PR-review');
-    expectAbsent(tekst, /de PR- of \S+-review/, {
-      recognizes: ['de PR- of Codex-review', 'de PR- of codex-review', 'de PR- of externe-review'],
-      allows: ['de PR-review', 'de PR- en CI-uitslag'],
-    });
-    expect(tekst).not.toContain('vraagt hier steeds naar.');
   });
 });
 

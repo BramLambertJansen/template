@@ -38,7 +38,6 @@ n.v.t. — geen UI. Een overtreding noemt per R-id of document wat ontbreekt of 
 - **krimp-op-normen/AC-4** — `docs/normen-vervallen.md` begint met een uitleg: alles vóór de eerste `## `-kop, zonder lijstregels, codeblokken of HTML-commentaar. Daarna bevat hij alleen koppen `## <pad>`, lijstregels `- <oud> → <doel>` en lege regels; een codeblok (```` ``` ```` of `~~~`), een HTML-commentaar, een ingesprongen regel of andere tekst is een overtreding. Hij krimpt nooit: een regel of kop die op de merge-base stond en nu ontbreekt of anders luidt, is een overtreding. Het pad staat in `.claude/gates.json` in `gates` en `voorReview`, net als `docs/framework.md`, en in `.github/CODEOWNERS`.
 - **krimp-op-normen/AC-5** — Overtredingen uit AC-1 tot en met AC-4 komen nooit in de baseline. In CI is een ontbrekende merge-base of `origin/main` rood; lokaal meldt `check-docs` dan dat de krimpcontrole niet draaide, zonder andere exitcode. Met een actuele `origin/main` zijn lokaal en CI gelijk.
 - **krimp-op-normen/AC-6** — `check-docs` meldt (zonder overtreding) elke R-id waarvan de definitieregel in `docs/framework.md` ten opzichte van de merge-base veranderde; dat is een extra signaal. `docs/operations/review-checklists.md` en `.claude/agents/reviewer.md` vragen, als de diff een definitieregel in `docs/framework.md` wijzigt of `docs/normen-vervallen.md` raakt: is de gewijzigde norm niet uitgehold, staat een verplaatste norm inhoudelijk bij de nieuwe R-id, is de reden van schrappen aanvaardbaar, en mist er geen norm die alleen in de tekst (zonder R-id) stond. Het PR-sjabloon vraagt onder Bewijs welke R-id's vervielen of veranderden. De bytegrenzen van `test/rails/review-checklists.test.ts` blijven gelden.
-- **krimp-op-normen/AC-7** — R-DOC-07 beschrijft AC-1 tot en met AC-5 in plaats van de huidige inventaris en noemt 0067; leesbudget/AC-8 en de randgevallen van leesbudget over krimp verwijzen naar deze spec.
 
 ## Randgevallen
 
@@ -67,7 +66,7 @@ Krimp in stappen onder 20 % bij de documenten van AC-3 (blijft het bestaande roa
 
 ## Testplan
 
-Tabeltests in `test/rails/krimp-op-normen.test.ts` met fixtures voor AC-1 tot en met AC-5, de melding van AC-6 en elk randgeval; docs-tests (structuur) voor de checklist, de reviewer-agent en het PR-sjabloon (AC-6) en voor AC-7. Elke negatieve test faalt op de huidige code (R-PRINC-04).
+Tabeltests in `test/rails/krimp-op-normen.test.ts` met fixtures voor AC-1 tot en met AC-5, de melding van AC-6 en elk randgeval. Elke negatieve test faalt op de huidige code (R-PRINC-04).
 
 ## Open vragen
 
