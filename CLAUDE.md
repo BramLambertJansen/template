@@ -4,13 +4,6 @@ Dit bestand bevat aanvullingen voor Claude Code. De platformneutrale werkstraat 
 
 Wat een gate kan afdwingen, staat hier niet. Groeit dit bestand of `AGENTS.md` over zijn budget (framework §9), dan ontbreekt er een gate.
 
-## Werkstraat (verplicht)
-
-Licht alleen voor beperkte fixes binnen bestaand gedrag; anders volledig, met eigenaarmerge; zelf mergen alleen via `pnpm pr:merge`, zonder pad van een code-eigenaar (ADR 0069, 0089) — framework §8.
-Docs gaan mee in dezelfde PR als de code
-(`check:docs-drift` waarschuwt); een aparte docs-stap na de merge bestaat niet.
-Ook wanneer je een bestaande test mag wijzigen: framework §8.
-
 ## Stoppen en vragen
 
 - Een beslissing ontbreekt, de spec spreekt zichzelf tegen, of een regel staat de opdracht in de weg.
