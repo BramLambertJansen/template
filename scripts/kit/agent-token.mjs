@@ -7,7 +7,18 @@
 import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
 import { createPrivateKey, createSign, randomBytes } from 'node:crypto';
-import { closeSync, fchmodSync, openSync, readFileSync, renameSync, rmSync, statSync, writeSync } from 'node:fs';
+import {
+  closeSync,
+  constants as fsConstants,
+  fchmodSync,
+  fstatSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeSync,
+} from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
@@ -74,20 +85,29 @@ export function repoUitRemote(url) {
  */
 function leesSleutel(pad) {
   const onleesbaar = `sleutel ${pad} ontbreekt of is onleesbaar; geef het pad mee met --sleutel <pad>`;
-  let info;
+  // Eén keer openen en daarna controleren en lezen via dezelfde descriptor: tussen controle en lezen kan het pad dan
+  // niet naar een ander bestand wijzen. O_NONBLOCK voorkomt dat een FIFO op het pad het openen laat hangen.
+  let fd;
   try {
-    info = statSync(pad);
+    fd = openSync(pad, fsConstants.O_RDONLY | fsConstants.O_NONBLOCK);
   } catch {
     throw new AgentTokenError(onleesbaar);
   }
-  if (!info.isFile()) throw new AgentTokenError(onleesbaar);
-  if ((info.mode & 0o077) !== 0) {
-    throw new AgentTokenError(`sleutel ${pad} is leesbaar voor groep of anderen; zet de rechten met chmod 600 ${pad}`);
-  }
   try {
-    return readFileSync(pad, 'utf8');
-  } catch {
-    throw new AgentTokenError(onleesbaar);
+    const info = fstatSync(fd);
+    if (!info.isFile()) throw new AgentTokenError(onleesbaar);
+    if ((info.mode & 0o077) !== 0) {
+      throw new AgentTokenError(
+        `sleutel ${pad} is leesbaar voor groep of anderen; zet de rechten met chmod 600 ${pad}`,
+      );
+    }
+    try {
+      return readFileSync(fd, 'utf8');
+    } catch {
+      throw new AgentTokenError(onleesbaar);
+    }
+  } finally {
+    closeSync(fd);
   }
 }
 

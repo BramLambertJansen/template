@@ -526,8 +526,8 @@ describe('agent-token/AC-4: installatie, token en bestand', () => {
     chmodSync(doel, 0o644);
     symlinkSync(doel, o.uit);
     await maakToken(opties(o), omgeving(nepFetch(goed).fetch));
-    expect(lstatSync(o.uit).isSymbolicLink()).toBe(false);
     expect(readFileSync(o.uit, 'utf8').trim()).toBe(TOKEN);
+    expect(lstatSync(o.uit).isSymbolicLink()).toBe(false);
     expect(modus(o.uit)).toBe(0o600);
     expect(readFileSync(doel, 'utf8')).toBe('ORIGINEEL');
     expect(modus(doel)).toBe(0o644);
