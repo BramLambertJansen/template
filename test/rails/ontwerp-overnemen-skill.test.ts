@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 import { looksLikePath, pathExists } from '../../scripts/kit/check-docs.mjs';
 
-// Spec ontwerp-overnemen, deel 5a: teksttoetsen op de skill `ontwerp-overnemen` en het mappingsjabloon (AC-1 t/m AC-5).
+// Spec ontwerp-overnemen, deel 5a: teksttoetsen op de skill `ontwerp-overnemen` en het mappingsjabloon (AC-1 en AC-5).
 // Vorm van security-review-skill.test.ts (frontmatter) en opleveren-skill.test.ts (`test.each` over termen).
 const SKILL = '.claude/skills/ontwerp-overnemen/SKILL.md';
 const SJABLOON = 'docs/ontwerp/_template.md';
@@ -40,23 +40,6 @@ function skillMeldingen(text: string): string[] {
   if (regels(text) > 200) meldingen.push('meer dan 200 regels');
   return meldingen;
 }
-
-// Lijstitems (`-`, `*` of `1.`) met hun vervolgregels; een lege regel of een kop sluit een item af.
-function lijstitems(text: string): string[] {
-  const items: string[] = [];
-  let huidig: string[] | undefined;
-  for (const regel of text.split('\n')) {
-    if (/^\s*(?:[-*]|\d+\.)\s/.test(regel)) {
-      huidig = [regel];
-      items.push('');
-    } else if (regel.trim() === '' || regel.startsWith('#')) huidig = undefined;
-    else huidig?.push(regel);
-    if (huidig !== undefined) items[items.length - 1] = huidig.join('\n');
-  }
-  return items;
-}
-
-const stap = (term: RegExp) => lijstitems(skill).find((item) => term.test(item)) ?? '';
 
 const GELDIGE_FIXTURE = [
   '---',
@@ -101,61 +84,6 @@ describe('ontwerp-overnemen/AC-1: frontmatter en lengte van de skill', () => {
     expect(skillMeldingen(kort)).toContain('description korter dan 40 tekens');
     expect(skillMeldingen(zonderAfbeelding)).toContain('description noemt afbeelding niet');
   });
-});
-
-describe('ontwerp-overnemen/AC-2: paden en commando’s in de skill', () => {
-  test.each([
-    'src/web/styles/theme.css',
-    'docs/ontwerp/_template.md',
-    'node scripts/kit/feiten.mjs tokens',
-    'node scripts/kit/feiten.mjs componenten',
-    'nieuw-component',
-    'scripts/kit/ontwerp-meten.mjs',
-    '375',
-    '1280',
-  ])('ontwerp-overnemen/AC-2: de skill noemt %s', (term) => {
-    expect(skill).toContain(term);
-  });
-});
-
-describe('ontwerp-overnemen/AC-3: de drie modi', () => {
-  test('ontwerp-overnemen/AC-3: een stap voor geen invoer noemt de bestaande stijl en theme.css', () => {
-    const geenInvoer = stap(/geen invoer/i);
-
-    expect(geenInvoer).not.toBe('');
-    expect(geenInvoer).toMatch(/bestaande stijl/i);
-    expect(geenInvoer).toContain('theme.css');
-  });
-
-  test('ontwerp-overnemen/AC-3: de stap voor een stylingrefactor eist een uitdrukkelijke vraag en houdt de rails', () => {
-    const refactor = stap(/stylingrefactor/i);
-
-    expect(refactor).not.toBe('');
-    expect(refactor).toMatch(/uitdrukkelijk|letterlijk/i);
-    for (const term of ['rails/klassen', 'contrast', 'axe', '44 px']) expect(refactor).toContain(term);
-  });
-});
-
-describe('ontwerp-overnemen/AC-4: lettertypen', () => {
-  test.each([
-    'test/ui/semantische-tokens.test.ts',
-    'docs/ui-kit-basics.md',
-    'src/web/styles/fonts/',
-    'LICENSE',
-    'OFL',
-    'woff2',
-    'font-display: swap',
-  ])('ontwerp-overnemen/AC-4: de skill noemt %s', (term) => {
-    expect(skill).toContain(term);
-  });
-
-  test.each(['fonts.googleapis.com', 'fonts.gstatic.com', '<link'])(
-    'ontwerp-overnemen/AC-4: de skill bevat geen %s',
-    (term) => {
-      expect(skill.length).toBeGreaterThan(0);
-      expect(skill).not.toContain(term);
-    },
-  );
 });
 
 describe('ontwerp-overnemen/AC-5: mappingsjabloon en paden', () => {

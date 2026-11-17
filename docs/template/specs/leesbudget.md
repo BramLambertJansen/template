@@ -45,7 +45,6 @@ PR rails:
 PR instructies:
 
 - **leesbudget/AC-8** — Framework §9 bevat de regels uit ADR 0065 en ADR 0064 punt 2, 4 en 7 als R-id's (zonder de bewaartermijn van metingen: een roadmap-item), R-DOC-01 noemt streefwaarden in plaats van grenzen, en R-TEST-02 de regel over teksttests; `.claude/rules/*` volgen letterlijk. De skill `opleveren` noemt een "let op" uit AC-7 in de oplevering. De krimpregel (R-DOC-07) volgt sinds ADR 0067 [krimp-op-normen](krimp-op-normen.md).
-- **leesbudget/AC-9** — `AGENTS.md`, `CLAUDE.md`, de agents en de spec-skill verwijzen voor het regelboek naar `feiten.mjs hoofdstuk` in plaats van het hele bestand.
 
 ## Randgevallen
 
@@ -70,7 +69,7 @@ PR instructies:
 
 ## Testplan
 
-Tabeltests in `test/rails/leesbudget.test.ts` voor AC-1 tot en met AC-7 met fixtures (AC-7 met een vaste PR-tabel); docs-tests (structuur) voor AC-8 en AC-9. De rails-PR noemt de huidige omvang per hoofdstuk en de baseline-ingangen die verdwijnen.
+Tabeltests in `test/rails/leesbudget.test.ts` voor AC-1 tot en met AC-7 met fixtures (AC-7 met een vaste PR-tabel); docs-tests (structuur) voor AC-8. De rails-PR noemt de huidige omvang per hoofdstuk en de baseline-ingangen die verdwijnen.
 
 ## Open vragen
 

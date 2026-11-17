@@ -265,11 +265,6 @@
       "count": 1
     }
   },
-  "test/rails/mandate-follow-up-docs.test.ts": {
-    "rails/negatieve-tabel": {
-      "count": 2
-    }
-  },
   "test/rails/meting-eventketen.test.ts": {
     "rails/afwezigheid": {
       "count": 1
@@ -308,16 +303,6 @@
       "count": 1
     }
   },
-  "test/rails/opleveren-skill.test.ts": {
-    "rails/afwezigheid": {
-      "count": 2
-    }
-  },
-  "test/rails/reviewer-ux-modus.test.ts": {
-    "rails/afwezigheid": {
-      "count": 1
-    }
-  },
   "test/rails/samenhang-checks-rollen.test.ts": {
     "rails/afwezigheid": {
       "count": 1
@@ -325,7 +310,7 @@
   },
   "test/rails/security-review-skill.test.ts": {
     "rails/afwezigheid": {
-      "count": 2
+      "count": 1
     }
   },
   "test/rails/spec-en-bouw.test.ts": {

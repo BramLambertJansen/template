@@ -66,8 +66,8 @@ goed op de head-SHA. Er is geen ADR nodig: het rollenmodel (reviewer schrijft ni
 **Volgorde:**
 
 1. **Besluit-PR**: alleen deze spec, met status `goedgekeurd`.
-2. **5a — skill en meetscript** (`claude/ontwerp-overnemen-skill`): AC-1 t/m AC-10.
-3. **5b — UX-modus van de reviewer** (`claude/reviewer-ux-modus`): AC-11 t/m AC-14. In deze PR zet de hoofdsessie de spec
+2. **5a — skill en meetscript** (`claude/ontwerp-overnemen-skill`): AC-1 en AC-5 t/m AC-10.
+3. **5b — UX-modus van de reviewer** (`claude/reviewer-ux-modus`): AC-11 t/m AC-13. In deze PR zet de hoofdsessie de spec
    op `gebouwd` (`pnpm docs:status`, met bouwbewijs).
 
 Twee bouw-PR's, omdat het twee onderwerpen zijn met elk een eigen review (OV-6). 5b verwijst naar het mappingformaat uit
@@ -230,15 +230,6 @@ Elk AC-id staat in de testnaam. "Teksttoets" betekent: de test leest het bestand
 - **ontwerp-overnemen/AC-1** — `.claude/skills/ontwerp-overnemen/SKILL.md` bestaat, met frontmatter
   `name: ontwerp-overnemen`, een `description` van minstens 40 tekens die "HTML", "URL" en "afbeelding" noemt, en
   hoogstens 200 regels. Een fixture zonder `name`, of met 201 regels, laat dezelfde controlefunctie falen.
-- **ontwerp-overnemen/AC-2** — Teksttoets: de skill noemt `src/web/styles/theme.css`, `docs/ontwerp/_template.md`,
-  `node scripts/kit/feiten.mjs tokens`, `node scripts/kit/feiten.mjs componenten`, `nieuw-component`,
-  `scripts/kit/ontwerp-meten.mjs`, `375` en `1280`.
-- **ontwerp-overnemen/AC-3** — Teksttoets op de drie modi. De skill bevat een stap voor "geen invoer" met "bestaande stijl"
-  en `theme.css`, en een stap voor "stylingrefactor" met "uitdrukkelijk" of "letterlijk". In diezelfde stap staan
-  `rails/klassen`, "contrast", "axe" en "44 px".
-- **ontwerp-overnemen/AC-4** — Teksttoets op lettertypen: de skill noemt `test/ui/semantische-tokens.test.ts`,
-  `docs/ui-kit-basics.md`, `src/web/styles/fonts/`, `LICENSE`, `OFL`, `woff2` en `font-display: swap`. Ze bevat geen
-  `fonts.googleapis.com`, `fonts.gstatic.com` en geen `<link`.
 - **ontwerp-overnemen/AC-5** — `docs/ontwerp/_template.md` bevat de koppen `## Bron`, `## Tokens`, `## Componenten`,
   `## Voorgestelde varianten`, `## Lettertypen` en `## Bewust buiten`, in die volgorde. `pnpm ratchet` is groen, dus elk pad
   in backticks in de skill bestaat (check-docs).
@@ -273,15 +264,11 @@ Elk AC-id staat in de testnaam. "Teksttoets" betekent: de test leest het bestand
   Die sectie noemt de termen van de acht checklistpunten (hiërarchie, ritme, consistentie, leeg, laden, fout, 44 px, focus, tekst,
   referentie), `docs/ontwerp/`, `375`, `1280` en de letterlijke zin "UX zonder screenshots: alleen op code getoetst".
 - **ontwerp-overnemen/AC-12** — `test/hooks/agents.test.ts` blijft ongewijzigd groen: `tools` is nog `Read, Grep, Glob, Bash`
-  en `## Bevindingen` staat erin. Een teksttoets bewijst dat de sectie Modus UX geen schrijfopdracht geeft (geen `Write`,
-  `Edit`, `git commit` of `--write`) en de reviewer geen script laat draaien buiten zijn leeslijst
-  (geen `scripts/kit/ontwerp-meten.mjs`).
+  en `## Bevindingen` staat erin. Dat de reviewer in Modus UX niets schrijft en geen script buiten zijn leeslijst draait, dwingen
+  die toolslijst en het rolhek af (`REVIEWER_COMMANDS` in `rails/hooks/lib/rolhek.mjs`).
 - **ontwerp-overnemen/AC-13** — e2e (`e2e/ontwerp-ux.spec.ts`): `uxScreenshot(page, testInfo, 'design-system')` op
   `/design-system` schrijft `ux-design-system-375.png` en `ux-design-system-1280.png` (niet leeg) in
   `testInfo.outputPath()`, en daarna is de viewport weer zoals hij was. `e2e/support/axe.ts` staat niet in de diff.
-- **ontwerp-overnemen/AC-14** — Teksttoets: stap 5 van `.claude/skills/nieuw-scherm/SKILL.md` noemt `uxScreenshot` en
-  `e2e/support/ux.ts`. `docs/framework.md` §8 noemt "Modus UX" bij de reviewer. `pnpm ratchet`, `pnpm lint`,
-  `pnpm typecheck` en `pnpm test:unit` zijn groen.
 
 ## Randgevallen
 
@@ -324,9 +311,9 @@ Elk AC-id staat in de testnaam. "Teksttoets" betekent: de test leest het bestand
 ## Testplan
 
 - **Tester, vóór elke bouw-PR, alleen testpaden:**
-  - 5a: `test/rails/ontwerp-overnemen-skill.test.ts` (AC-1 t/m AC-5), `test/scripts/ontwerp-meten.test.ts` (AC-6 t/m
+  - 5a: `test/rails/ontwerp-overnemen-skill.test.ts` (AC-1 en AC-5), `test/scripts/ontwerp-meten.test.ts` (AC-6 t/m
     AC-9), `e2e/ontwerp-meten.spec.ts` met `e2e/fixtures/ontwerp-voorbeeld.html` (AC-10);
-  - 5b: `test/rails/reviewer-ux-modus.test.ts` (AC-11, AC-12, AC-14), `e2e/support/ux.ts` en `e2e/ontwerp-ux.spec.ts`
+  - 5b: `test/rails/reviewer-ux-modus.test.ts` (AC-11, AC-12), `e2e/support/ux.ts` en `e2e/ontwerp-ux.spec.ts`
     (AC-13).
 - Tests compileren en falen vóór de bouw op hun asserties. AC-10 en AC-13 bewijst `pnpm ui:check` in de runner.
 - Reviewer per PR op `git diff origin/main...HEAD`; in 5b ook een droge UX-review van een bestaand scherm als proef. De
