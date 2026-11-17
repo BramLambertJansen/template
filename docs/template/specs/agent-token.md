@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd # voorstel | goedgekeurd | gebouwd | vervallen — architect of hoofdsessie zet de status in het voorstel, de merge door de eigenaar is het besluit (ADR 0046); gebouwd: # #<PR>, de eigen PR met de implementatie (ADR 0062) of daarna de gemergde bouw-PR (pnpm docs:status, ADR 0080)
+status: gebouwd # #776
 namespace: agent-token
 ---
 
