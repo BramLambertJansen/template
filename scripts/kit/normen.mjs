@@ -235,7 +235,7 @@ export function nieuweRegels(voor, na) {
   });
 }
 
-/** Een bindend document (ADR 0065 punt 6, ADR 0067 punt 3). @param {string} file */
+/** Een bindend document (ADR 0067 punt 3). @param {string} file */
 export function bindend(file) {
   return [REGELBOEK, 'AGENTS.md', 'CLAUDE.md', 'docs/dod.md'].includes(file) || file.startsWith('.claude/rules/');
 }
