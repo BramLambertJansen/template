@@ -9,6 +9,10 @@ requests.
 
 ### Gewijzigd
 
+- `node scripts/kit/check-docs.mjs` los gedraaid geeft geen stil groen meer (leerpunt #693): het script vergelijkt niet met
+  `.kit/baseline.json` en eindigt nu met exit 1 en een verwijzing naar `pnpm ratchet`, de enige gate voor check-docs
+  (`scripts/kit/check-docs.mjs`, `test/scripts/check-docs-los.test.ts`). Wat verandert voor een app: niets, tenzij een eigen
+  script `check-docs.mjs` direct aanroept; gebruik dan `pnpm ratchet`.
 - Eigen beschermde paden van een app (spec `app-padtabel`): een app zet eigen rijen in het optionele bestand
   `.claude/gates.app.json` (`{ "$comment"?, "paden": { … } }`), niet in `.claude/gates.json`. Rolhek, `check-docs`,
   `scripts/kit/codeowners.mjs` en `feiten.mjs pad` voegen het samen met de padtabel van de template
