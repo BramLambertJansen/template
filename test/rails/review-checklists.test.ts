@@ -13,6 +13,7 @@ const KOPPEN = [
   'Tekstchecks',
   'Schaal en scripts',
   'API en data',
+  'App-logica',
   'Docs en instructies',
 ];
 
@@ -26,12 +27,14 @@ function secties(text: string): { kop: string; body: string }[] {
 }
 
 describe('review-checklists', () => {
-  test('review-checklists AC-1: het doc bestaat en is hooguit 3500 bytes', () => {
+  // GEWIJZIGD (refactorplan stap 4, eigenaarbesluit 2026-11-17): de klasse App-logica is erbij; de grens gaat van 3500 naar
+  // 4600 bytes. De reviewer leest alleen de klassen van de diff, niet het hele document.
+  test('review-checklists AC-1: het doc bestaat en is hooguit 4600 bytes', () => {
     expect(existsSync(DOC), `${DOC} ontbreekt`).toBe(true);
-    expect(Buffer.byteLength(doc, 'utf8')).toBeLessThanOrEqual(3500);
+    expect(Buffer.byteLength(doc, 'utf8')).toBeLessThanOrEqual(4600);
   });
 
-  test('review-checklists AC-1: precies de zeven ##-koppen in volgorde', () => {
+  test('review-checklists AC-1: precies de acht ##-koppen in volgorde', () => {
     expect(existsSync(DOC), `${DOC} ontbreekt`).toBe(true);
     expect(secties(doc).map((s) => s.kop)).toStrictEqual(KOPPEN);
   });
