@@ -1177,3 +1177,12 @@ export function globsOverlap(left, right) {
   }
   return false;
 }
+
+// Los gedraaid zou dit bestand niets melden en met 0 eindigen, terwijl alleen de ratchet met .kit/baseline.json vergelijkt
+// (leerpunt #693). Daarom geen stil groen: verwijs naar de gate.
+if (import.meta.main) {
+  console.error(
+    '✗ check-docs draait alleen via de ratchet (vergelijking met .kit/baseline.json): gebruik `pnpm ratchet`.',
+  );
+  process.exitCode = 1;
+}
