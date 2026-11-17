@@ -48,10 +48,17 @@ export function createWebApp(api: App, webDir: string): App {
   // Eerst /api: de middleware hieronder (SPA-headers, cache) mag API-responses nooit raken (web.test.ts bewaakt dat).
   app.all('/api', async (c) => api.fetch(c.req.raw));
   app.all('/api/*', async (c) => api.fetch(c.req.raw));
+  // Elke response buiten /api krijgt de headers, ook de 404 van een geweigerd pad; Cache-Control alleen bij een ok-response.
   app.use('*', async (c, next) => {
-    if (!isServable(root, c.req.path)) return c.notFound();
+    const setHeaders = () => {
+      for (const [name, value] of Object.entries(headers)) c.header(name, value);
+    };
+    if (!isServable(root, c.req.path)) {
+      setHeaders();
+      return c.notFound();
+    }
     await next();
-    for (const [name, value] of Object.entries(headers)) c.header(name, value);
+    setHeaders();
     if (c.res.ok) c.header('Cache-Control', c.req.path.startsWith('/assets/') ? IMMUTABLE : REVALIDATE);
   });
   app.get('/assets/*', serveStatic({ root }), (c) => c.notFound());
