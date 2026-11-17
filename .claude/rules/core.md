@@ -21,10 +21,14 @@ Hoe (geen norm):
 - `src/shared` is app-code, dus core importeert er niet uit (R-LAAG-02). Uitbreidingsplekken: permissies, foutcodes, limieten, env, componentvarianten.
 - `roleLabels` staat in `src/web/copy/ui.ts`; TypeScript dwingt seed-account en naam af, de dev-rolwisselaar toont de rol dan vanzelf.
 
-## Besloten, nog niet gebouwd
+## Gebouwd: waar alles staat
 
-Gebouwd: `src/core/api/{env.ts,db,http,auth,mail}`, en in `src/core/shared`: `errors.ts` (`defineErrorCodes`), `can.ts` (`definePermissions`,
+`src/core/api/{env.ts,db,http,auth,mail}`, en in `src/core/shared`: `errors.ts` (`defineErrorCodes`), `can.ts` (`definePermissions`,
 MFA-eis voor admin), `limits.ts`, `assert.ts`, `unsafe-cast.ts`, `ids.ts` (`brandedId`), `money.ts` (`Cents`), `cursor.ts`; de API-client;
 de dependency-cruiser-regel core → app; `check-core`.
-Nog niet: de rest van core (roadmap fase 1).
+
+## Besloten, nog niet gebouwd
+
+Nog niet: achtergrondtaken en mail-outbox (ST-03), het privacymechanisme (ST-05), TOTP-backupcodes en herstel (ST-02); de eisen
+staan bij die roadmap-items (R-DOC-10).
 Bouw een core-onderdeel alleen in het stuk van de roadmap waar het hoort.
