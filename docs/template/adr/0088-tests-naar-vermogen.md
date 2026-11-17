@@ -2,6 +2,8 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-17 (#778): Gevolgen, de effecttests zijn vervallen met ADR 0091
+
 Wijzigt [0072](0072-destructief-alleen-in-de-kooi.md) punt 2 (de laatste zin: een test die de kooi nodig heeft, slaat zichzelf
 nooit over) en het gevolg daar dat `gate:fast` op een machine zonder bubblewrap rood is; herziet het gevolg in
 [0085](0085-worktree-installatie-in-de-sandbox.md) over de ongeveer 382 unit-tests die in de sandbox falen. Drempel: A3 (een
