@@ -1025,8 +1025,10 @@ volgorde uit in een Ubuntu-terminal, met een schone werkmap (`git status --short
 
 3. Los conflicten op en rond de merge af met `git commit`. App-specifiek blijft, regels uit de template neem je over;
    `CHANGELOG.md` en `docs/app.md` zijn van de app (houd de versie van de app); `src/core/` en `docs/template/` neem je ongewijzigd uit de
-   template (`git checkout template/main -- src/core docs/template`). Verwacht: `git status` meldt geen conflicten meer en
-   `git log --oneline --graph -3` toont de merge met twee ouders.
+   template, vóór `git commit` (`git checkout --no-overlay template/main -- src/core docs/template`; `--no-overlay` haalt ook
+   bestanden weg die alleen de app daar had). Zet ze nooit terug in een losse commit na de merge: `check-core` weigert elke
+   commit met één ouder die een van beide zones wijzigt (`scripts/kit/check-core.mjs:128`). Verwacht: `git status` meldt geen
+   conflicten meer en `git log --oneline --graph -3` toont de merge met twee ouders.
 4. Voer per versie de notities "Bij een update" uit stap 1 uit, in eigen commits op deze branch. Verwacht: elke notitie is
    uitgevoerd of aantoonbaar niet van toepassing.
 5. Installeer de dependencies, pas de migraties toe op de lokale database (niet productie), genereer het schema opnieuw en
@@ -1073,7 +1075,7 @@ Een rode check bij een template-update:
 | `check:migrations` op `main` na de merge: "herstel met een nieuwe migratie" | Een migratie kwam op `main` na een nieuwere (een PR die groen was tegen een oudere `main`) | Niet hernoemen; schrijf een nieuwe migratie die het bedoelde eindresultaat vastlegt |
 | `check:snapshot` (in `gate:slow`) | Het gegenereerde schema loopt achter op de migraties | Stap 5 opnieuw en committen; nooit met de hand bewerken |
 | `check:snapshot`: "op volgorde van binnenkomst … ontstaat een ander schema" of "de bouw op volgorde van binnenkomst faalt" | Een toegevoegde migratie (meestal een templatemigratie) is ouder dan een migratie van de app en beide raken hetzelfde object: productie, waar de oudere ná de nieuwere draait, krijgt een ander schema dan een verse database, of de migratie faalt daar | Hernoem of wijzig de genoemde migratie niet; schrijf een nieuwe migratie die het bedoelde eindresultaat vastlegt, daarna stap 5 opnieuw. Is de templatemigratie de oorzaak: meld het als leerpunt aan de template |
-| `check-core` | `src/core/` of `docs/template/` wijkt af van de template, of de update is geen echte merge van `template/main` (squash, rebase, cherry-pick) | `git checkout template/main -- src/core docs/template` en committen; anders de branch opnieuw maken vanaf stap 2 |
+| `check-core` | `src/core/` of `docs/template/` wijkt af van de template, of de update is geen echte merge van `template/main` (squash, rebase, cherry-pick) | Herstel in de merge-commit zelf, niet in een losse commit erna (die is ook rood): is de merge nog niet gecommit, dan `git checkout --no-overlay template/main -- src/core docs/template` en `git commit`; is de merge de laatste commit en is de branch nog niet gepusht, dan hetzelfde gevolgd door `git commit --amend --no-edit`; is de branch al gepusht (`check-core` draait in CI, dus meestal zie je het dan pas) of staan er al commits na de merge, begin dan opnieuw vanaf stap 2 op een branch met een andere naam (bijvoorbeeld met `-2` erachter), open een nieuwe PR en sluit de oude (een amend na de push vraagt een force-push, en die doet geen agent) |
 | Conflict in `.github/CODEOWNERS`, of `check-docs`: `docs:spiegel:codeowners` | Het bestand is gegenereerd uit de padtabel van de template plus `.claude/gates.app.json` van de app, en beide kanten veranderden | Neem een van beide versies, genereer opnieuw met `node scripts/kit/codeowners.mjs --schrijf` en commit; nooit met de hand samenvoegen |
 | Conflict op `docs/app.md` | De template wijzigde de stub en de app heeft het bestand herschreven | Houd de versie van de app (`git checkout --ours docs/app.md`, `git add docs/app.md`); het bestand is van de app |
 | `check-docs`: `docs:app-md:<…>`: "ontbreekt; CLAUDE.md importeert het" | De update bracht de import in `CLAUDE.md`, maar `docs/app.md` is in de app verwijderd of nooit gecommit | Schrijf het skelet uit `appAgentregels()` (`scripts/kit/app-init.mjs`), vul het en commit; zie "Eigen agentinstructies van de app" |
