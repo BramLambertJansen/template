@@ -27,40 +27,29 @@ const PADEN = [
 
 // GEWIJZIGD (agent-merge-niet-kritiek/OV-1, R-TEST-02): uitzondering 1 (de vijf metingbestanden) en 2 (stap 8 van de skill
 // opleveren en de twee metingzinnen in de doorloop) golden "tot de aparte meting-PR". Die PR is gemerged (#772, skill #773):
-// de meting telt geen bevindingen van een externe reviewdienst meer, dus elke regel met het woord in die bestanden is nu
-// een treffer.
-const METING = [
-  'scripts/kit/meting.mjs',
-  'scripts/kit/meting-trend.mjs',
-  'test/rails/leesbudget.test.ts',
-  'test/rails/meting-kerncijfers-pr-tabel.test.ts',
-  'test/rails/meting-stuurt.test.ts',
-];
-const SKILL = '.claude/skills/opleveren/SKILL.md';
-const DOORLOOP = 'docs/operations/agent-doorloop.md';
-// Uitzondering 5: per regel, alleen wat de vervallen sleutel of de bot herkent, meldt of nabouwt: in de twee scripts de
-// regels met de sleutel tussen aanhalingstekens of `agentMerge.<woord>` (herkennen en de reden uit AC-8); in de twee opvolgers
-// van de oude omvang- en steekproeftests de regels met de botnaam, de marker, de sleutel tussen aanhalingstekens of
-// `agentMerge.<woord>`. Elke andere regel in die vier bestanden die het woord noemt, is een treffer.
-const SLEUTEL_REGEL = new RegExp(`['"]${WOORD}['"]|agentMerge\\.${WOORD}`, 'i');
-// In de testbestanden herkent ook de afwezigheidstoets (`expectAbsent(…, /<woord>/i, …)`) de sleutel in de echte gates.json.
-const BOT_REGEL = new RegExp(
-  `chatgpt-${WOORD}-connector|${WOORD}-review-state|expectAbsent\\(.*/${WOORD}/|${SLEUTEL_REGEL.source}`,
-  'i',
-);
-const UITZ5_SCRIPTS = new Set(['scripts/kit/check-docs.mjs']);
-const UITZ5_TESTS = new Set([
-  'test/scripts/pr-merge-omvang-steekproef.test.ts',
-]);
+// elke regel met het woord in die bestanden is een treffer.
 // GEWIJZIGD (templateregime AC-13, ADR 0089 punt 5): uitzondering 3 (de kop in test/rails/adr-herzien.test.ts) is vervallen;
 // dat testbestand is met adr-herzien.mjs verwijderd.
+// Uitzondering 5: per regel, alleen wat de bot nabouwt: in de opvolger van de oude omvang- en steekproeftests de regels met
+// de botnaam of de marker. Elke andere regel in dat bestand die het woord noemt, is een treffer.
+// GEWIJZIGD (eigenaarakkoord 2026-11-18, R-TEST-02): het woord staat niet meer in `scripts/`, dus de uitzondering voor de
+// sleutelregels in scripts/kit/check-docs.mjs en de vormen met de sleutel, `agentMerge.<woord>` en de afwezigheidstoets zijn
+// weg, met hun tests; één test bewijst dat een bestand buiten de uitzonderingen altijd een treffer is.
+const BOT_REGEL = new RegExp(`chatgpt-${WOORD}-connector|${WOORD}-review-state`, 'i');
+const UITZ5_TESTS = new Set(['test/scripts/pr-merge-omvang-steekproef.test.ts']);
+const GEEN_UITZONDERING = [
+  'scripts/kit/meting.mjs',
+  'scripts/kit/check-docs.mjs',
+  'test/rails/leesbudget.test.ts',
+  '.claude/skills/opleveren/SKILL.md',
+  'docs/operations/agent-doorloop.md',
+];
 type Treffer = { bestand: string; regel: number; tekst: string };
 
 /** Alle treffers buiten de uitzonderingen. */
 function buitenUitzonderingen(treffers: Treffer[]): Treffer[] {
   return treffers.filter((t) => {
     if (t.bestand === ZICHZELF) return false;
-    if (UITZ5_SCRIPTS.has(t.bestand)) return !SLEUTEL_REGEL.test(t.tekst);
     if (UITZ5_TESTS.has(t.bestand)) return !BOT_REGEL.test(t.tekst);
     return true;
   });
@@ -85,42 +74,26 @@ function treffers(): Treffer[] {
 const T = (bestand: string, regel: number, tekst: string): Treffer => ({ bestand, regel, tekst });
 
 describe('agent-merge-niet-kritiek/AC-10 de uitzonderingen per regel', () => {
-
-  test('uitzondering 1 is vervallen: de vijf metingbestanden zijn niet meer vrij', () => {
-    const treffers = METING.map((b) => T(b, 1, WOORD));
+  test('een bestand buiten de uitzonderingen is altijd een treffer, ook met een regel die elders vrij is of was', () => {
+    const vroegerVrij = [`CI-rood of ${WOORD}-bevindingen`, `key: 'docs:agentMerge.${WOORD}',`, `'chatgpt-${WOORD}-connector[bot]'`];
+    const treffers = GEEN_UITZONDERING.flatMap((b) => vroegerVrij.map((tekst, i) => T(b, i + 1, tekst)));
     expect(buitenUitzonderingen(treffers)).toEqual(treffers);
   });
 
-  test('uitzondering 2 is vervallen: ook stap 8 van de skill is een treffer', () => {
-    const stap8 = T(SKILL, 40, `CI-rood of ${WOORD}-bevindingen; het leespad: groei`);
-    const stap3 = T(SKILL, 50, `3. ${WOORD} telt als het een afgeronde review liet`);
-    expect(buitenUitzonderingen([stap8, stap3])).toEqual([stap8, stap3]);
-  });
-
-  test('uitzondering 2 is vervallen: ook de metingzinnen in de doorloop zijn een treffer', () => {
-    const pr = T(DOORLOOP, 56, `reviewrondes, CI-rood, weigeringen, ${WOORD}-bevindingen handmatig via gh api`);
-    const trend = T(DOORLOOP, 61, `vergelijkt CI-rood, ${WOORD}-bevindingen en reviewrondes`);
-    const runtime = T(DOORLOOP, 236, `${WOORD} gebruikt zijn eigen runtimebeleid`);
-    expect(buitenUitzonderingen([pr, trend, runtime])).toEqual([pr, trend, runtime]);
-  });
-
-  test('uitzondering 5: sleutelregels in de twee scripts zijn vrij, een andere regel met het woord niet', () => {
-    const herkennen = T('scripts/kit/check-docs.mjs', 117, `Object.keys(blok).includes('${WOORD}')`);
-    const melden = T('scripts/kit/check-docs.mjs', 884, `key: 'docs:agentMerge.${WOORD}',`);
-    const ander = T('scripts/kit/check-docs.mjs', 12, `// ${WOORD} beoordeelt de PR ook nog`);
-    const anderAgent = T('scripts/kit/check-docs.mjs', 20, `const ${WOORD}Wacht = true;`);
-    expect(buitenUitzonderingen([herkennen, melden, ander, anderAgent])).toEqual([ander, anderAgent]);
-  });
-
-  test('uitzondering 5: botwereld- en sleutelregels in de twee testbestanden zijn vrij, een andere regel niet', () => {
+  test('uitzondering 5: de botnaam en de marker in het steekproefbestand zijn vrij, een andere regel niet', () => {
     const steekproef = 'test/scripts/pr-merge-omvang-steekproef.test.ts';
     const bot = T(steekproef, 7, `const BOT = 'chatgpt-${WOORD}-connector[bot]';`);
     const marker = T(steekproef, 8, `const MARKER = '<!-- ${WOORD}-review-state:v1';`);
-    const sleutel = T(steekproef,21, `const SLEUTEL = '${WOORD}';`);
-    const afwezig = T(steekproef,263, `expectAbsent(TEKST, /${WOORD}/i, {`);
-    const ander = T(steekproef,99, `// de ${WOORD} doet ook mee`);
+    const sleutel = T(steekproef, 21, `const SLEUTEL = '${WOORD}';`);
+    const afwezig = T(steekproef, 263, `expectAbsent(TEKST, /${WOORD}/i, {`);
+    const ander = T(steekproef, 99, `// de ${WOORD} doet ook mee`);
     const andereTest = T(steekproef, 98, `test('${WOORD} wacht niet', () => {`);
-    expect(buitenUitzonderingen([bot, marker, sleutel, afwezig, ander, andereTest])).toEqual([ander, andereTest]);
+    expect(buitenUitzonderingen([bot, marker, sleutel, afwezig, ander, andereTest])).toEqual([
+      sleutel,
+      afwezig,
+      ander,
+      andereTest,
+    ]);
   });
 
   test('uitzondering 4: dit bestand sluit zichzelf uit', () => {
