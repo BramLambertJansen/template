@@ -145,7 +145,7 @@ requests.
   `refs/remotes/origin/*` en in de ADR-mappen van elke werkmap uit `git worktree list`, niet-gecommitte bestanden en het
   archief inbegrepen; een werkmap die niet meer bestaat, slaat het over (`gereserveerdeAdrNummers` in
   `scripts/kit/feiten-secties.mjs`, `test/scripts/feiten-per-map.test.ts`). Lokaal en zonder netwerk: het nummer klopt pas na
-  `git fetch origin`, en een niet-gepushte sessie op een andere machine blijft onzichtbaar. Wat verandert voor een app: niets
+  `git fetch --prune origin` (`--prune` geeft het nummer van een gesloten PR vrij), en een niet-gepushte sessie op een andere machine blijft onzichtbaar. Wat verandert voor een app: niets
   in te stellen; haal vóór een nieuw ADR alle branches op.
 
 ### Verwijderd

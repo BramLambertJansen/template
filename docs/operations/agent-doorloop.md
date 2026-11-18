@@ -195,8 +195,8 @@ De ADR-sectie van `feiten.mjs` gebruikt dezelfde nummerherkenning en reserveert 
 Git-geschiedenis van HEAD en origin/main, de tip van elke `refs/remotes/origin/*` (een open PR) en de ADR-mappen van elke
 werkmap uit `git worktree list`, archief en niet-gecommitte bestanden inbegrepen (`gereserveerdeAdrNummers` in
 `scripts/kit/feiten-secties.mjs`). Die nummerreservering voegt geen fictieve documenten toe aan de lijst. Ze werkt lokaal,
-zonder netwerk: draai eerst `git fetch origin` (alle branches); een niet-gepushte sessie op een andere machine blijft
-onzichtbaar. Onleesbare geschiedenis is een fout; haal bij een verse of onvolledige checkout de geschiedenis eerst op.
+zonder netwerk: draai eerst `git fetch --prune origin` (alle branches; `--prune` geeft het nummer van een gesloten PR
+vrij); een niet-gepushte sessie op een andere machine blijft onzichtbaar. Onleesbare geschiedenis is een fout; haal bij een verse of onvolledige checkout de geschiedenis eerst op.
 
 De app-initialisatie heeft naast geïsoleerde fixtures ook een compatibiliteitsproef met de echte templatebestanden
 (`test/scripts/app-init-template.test.ts`). Na initialisatie vindt die proef de oorspronkelijke invoer in de gekoppelde

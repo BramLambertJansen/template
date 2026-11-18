@@ -173,8 +173,8 @@ function adrSectie(lezer, { alle, gereserveerd, volgende }) {
 
 /**
  * `specs`, `adr` en `fase` over een lezer; `specs` en `adr` tonen een lijst per map, app eerst (templateregime/AC-11).
- * `volgende` (het vrije ADR-nummer per map) komt van de aanroeper: uit de Git-geschiedenis van de werkmap, ook als de lezer
- * de basis is.
+ * `volgende` (het vrije ADR-nummer per map) komt van de aanroeper: uit de Git-geschiedenis van de werkmap, de tips van
+ * `refs/remotes/origin/*` en de andere werkmappen (`gereserveerdeAdrNummers`), ook als de lezer de basis is.
  * @param {Lezer} lezer @param {{ alle: boolean, gereserveerd?: Gereserveerd, volgende?: string }} opties
  * @returns {Record<(typeof LEZER_SECTIES)[number], () => unknown>}
  */
