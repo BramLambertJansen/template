@@ -140,6 +140,13 @@ requests.
   punt 1 en 2 (herzien in #696) en ADR 0089 punt 5 die toets lieten vervallen. Het script leest de beschrijving niet meer;
   `leerpuntMergeRedenen` en `REDEN_ZONDER_TEST` in `scripts/kit/leerpunt.mjs` zijn weg. Dat de eigenaar merget bij een leerpunt
   zonder test, blijft een afspraak.
+- Het volgende ADR-nummer van `node scripts/kit/feiten.mjs adr` keek alleen naar de geschiedenis van `HEAD` en `origin/main`,
+  zodat twee sessies of een open PR hetzelfde nummer kozen. Het telt nu per map ook de ADR-bestandsnamen op de tip van elke
+  `refs/remotes/origin/*` en in de ADR-mappen van elke werkmap uit `git worktree list`, niet-gecommitte bestanden en het
+  archief inbegrepen; een werkmap die niet meer bestaat, slaat het over (`gereserveerdeAdrNummers` in
+  `scripts/kit/feiten-secties.mjs`, `test/scripts/feiten-per-map.test.ts`). Lokaal en zonder netwerk: het nummer klopt pas na
+  `git fetch origin`, en een niet-gepushte sessie op een andere machine blijft onzichtbaar. Wat verandert voor een app: niets
+  in te stellen; haal vóór een nieuw ADR alle branches op.
 
 ### Verwijderd
 

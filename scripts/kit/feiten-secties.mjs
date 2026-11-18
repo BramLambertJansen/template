@@ -52,8 +52,68 @@ export const SPEC_MAPPEN = /** @type {const} */ (['docs/specs', 'docs/template/s
 
 /** @typedef {Readonly<Record<string, readonly string[]>>} Gereserveerd nummers per ADR-map (`docs/adr/`, `docs/template/adr/`) */
 
-// Alleen bij de ADR-sectie: nummers uit archief en bekende geschiedenis blijven gereserveerd, zonder fictieve lijstrijen.
-// Altijd uit de Git-geschiedenis van de werkmap, per map (ADR 0089 punt 6): een pad telt in de map waarin het stond.
+/** @typedef {(root: string, args: string[]) => string | null} GitText */
+
+const ONLEESBAAR = 'ADR-geschiedenis niet leesbaar; haal de Git-geschiedenis op';
+
+/** Uitvoer van git, of een fout als git die niet geeft. @param {GitText} gitText @param {string} root @param {string[]} args */
+function gitOfFout(gitText, root, args) {
+  const text = gitText(root, args);
+  if (text === null) throw new Error(ONLEESBAAR);
+  return text;
+}
+
+/** ADR-paden uit de geschiedenis van HEAD en, als die er is, `origin/main`. @param {GitText} gitText @param {string} root */
+function adrPadenUitGeschiedenis(gitText, root) {
+  const refs = gitOfFout(gitText, root, ['for-each-ref', '--format=%(refname)', 'refs/remotes/origin/main']);
+  const main = refs.split('\n').includes('refs/remotes/origin/main') ? ['refs/remotes/origin/main'] : [];
+  const args = ['log', 'HEAD', ...main, '--full-history', '--no-renames', '--format=', '--name-only', '-z'];
+  const history = gitOfFout(gitText, root, [...args, '--', ...ADR_MAPPEN]);
+  return history.split('\0').map((file) => file.replace(/^\n+/, ''));
+}
+
+/**
+ * ADR-paden op de tip van elke `refs/remotes/origin/*`: een open PR-branch reserveert zijn nummer al. Alleen wat
+ * `git fetch origin` het laatst ophaalde; geen netwerk.
+ * @param {GitText} gitText @param {string} root
+ */
+function adrPadenOpRemoteBranches(gitText, root) {
+  const refs = gitOfFout(gitText, root, ['for-each-ref', '--format=%(refname)', 'refs/remotes/origin/']);
+  return refs
+    .split('\n')
+    .filter((ref) => ref !== '')
+    .flatMap((ref) =>
+      gitOfFout(gitText, root, ['ls-tree', '-r', '--name-only', '-z', ref, '--', ...ADR_MAPPEN]).split('\0'),
+    );
+}
+
+/** De namen in een map, of niets als de map ontbreekt of onleesbaar is. @param {string} dir */
+function namenIn(dir) {
+  try {
+    return readdirSync(dir);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * ADR-paden in de ADR-mappen van elke werkmap uit `git worktree list`, ook niet-gecommitte bestanden; een werkmap
+ * waarvan de map niet meer bestaat, levert niets.
+ * @param {GitText} gitText @param {string} root
+ */
+function adrPadenInWerkmappen(gitText, root) {
+  const lijst = gitOfFout(gitText, root, ['worktree', 'list', '--porcelain', '-z']);
+  const werkmappen = lijst
+    .split('\0')
+    .filter((regel) => regel.startsWith('worktree '))
+    .map((regel) => regel.slice('worktree '.length));
+  const mappen = [...ADR_MAPPEN, 'docs/adr/archief'];
+  return werkmappen.flatMap((dir) => mappen.flatMap((map) => namenIn(`${dir}/${map}`).map((naam) => `${map}/${naam}`)));
+}
+
+// Alleen bij de ADR-sectie: nummers die elders al in gebruik zijn, blijven gereserveerd, zonder fictieve lijstrijen. Per
+// map (ADR 0089 punt 6): een pad telt in de map waarin het stond. Bronnen: de geschiedenis van HEAD en `origin/main`, de
+// tip van elke remote branch en de ADR-mappen van elke werkmap (met het archief en niet-gecommitte bestanden).
 /** @returns {Promise<Gereserveerd>} */
 export async function gereserveerdeAdrNummers() {
   const [{ gitText }, { adrMap, adrNumber }] = await Promise.all([
@@ -61,24 +121,11 @@ export async function gereserveerdeAdrNummers() {
     import('./adr-numbers.mjs'),
   ]);
   const root = process.cwd();
-  const refs = gitText(root, ['for-each-ref', '--format=%(refname)', 'refs/remotes/origin/main']);
-  if (refs === null) throw new Error('ADR-geschiedenis niet leesbaar; haal de Git-geschiedenis op');
-  const main = refs.split('\n').includes('refs/remotes/origin/main') ? ['refs/remotes/origin/main'] : [];
-  const history = gitText(root, [
-    'log',
-    'HEAD',
-    ...main,
-    '--full-history',
-    '--no-renames',
-    '--format=',
-    '--name-only',
-    '-z',
-    '--',
-    ...ADR_MAPPEN,
-  ]);
-  if (history === null) throw new Error('ADR-geschiedenis niet leesbaar; haal de Git-geschiedenis op');
-  const archive = markdownFiles(werkmap, 'docs/adr/archief').map((file) => `docs/adr/archief/${file}`);
-  const paths = [...history.split('\0').map((file) => file.replace(/^\n+/, '')), ...archive];
+  const paths = [
+    ...adrPadenUitGeschiedenis(gitText, root),
+    ...adrPadenOpRemoteBranches(gitText, root),
+    ...adrPadenInWerkmappen(gitText, root),
+  ];
   /** @type {Record<string, string[]>} */
   const uit = {};
   for (const file of paths) {
