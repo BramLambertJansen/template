@@ -29,6 +29,14 @@ requests.
 
 ### Gewijzigd
 
+- `check-docs` regel 14 (leerpunt #738): een gebouwde spec in `docs/specs/` of `docs/template/specs/` noemt tussen backticks
+  geen repopad onder `src/`, `scripts/`, `rails/`, `test/`, `e2e/`, `db/`, `deploy/`, `.claude/` of `.github/` (met extensie)
+  dat niet bestaat, tenzij er direct `(vervallen)`, `(nieuw)` of `(voorbeeld)` achter staat; een nieuwe AC met
+  `(nog niet gebouwd)` achter het id (R-WERK-07) mag een nieuw pad noemen, en het optionele app-bestand
+  `.claude/gates.app.json` (spec `app-padtabel`) telt niet als dood pad (`scripts/kit/check-docs.mjs`). Bestaande treffers
+  staan in `.kit/baseline.json`; een nieuwe is rood in de ratchet. Wat verandert voor een app: wie een bestand schrapt of
+  hernoemt dat een gebouwde spec noemt, zet `(vervallen)` erachter in dezelfde PR.
+- `bewijsPlan` uit `scripts/kit/leerpunt.mjs` geeft geen veld `zonderTest` meer (leerpunt #737): niets buiten de tests las het.
 - De meting telt geen bevindingen van een externe reviewdienst meer (spec `agent-merge-niet-kritiek`, OV-1):
   `pnpm meting --pr-tabel` heeft geen rij en geen JSON-veld `codexBevindingen` meer, in `pnpm meting --trend` ontbreekt de
   maat `codex` (tekst en `trend.maten`) en de trend roept geen `gh api …/comments` meer aan (`scripts/kit/meting.mjs`,

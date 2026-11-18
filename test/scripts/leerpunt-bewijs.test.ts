@@ -83,7 +83,6 @@ describe('leerlus-bewijs/AC-1 welke leerpunten de PR sluit', () => {
       leerpunten: [],
       fouten: [],
       runs: [],
-      zonderTest: false,
     });
   });
 
@@ -285,7 +284,6 @@ describe('leerlus-bewijs/AC-4 geen test: <reden>', () => {
     if (fout === null) {
       expect(uitslag.fouten).toEqual([]);
       expect(uitslag.runs).toEqual([]);
-      expect(uitslag.zonderTest).toBe(true);
     } else expect(uitslag.fouten.join('\n')).toMatch(fout);
   });
 });

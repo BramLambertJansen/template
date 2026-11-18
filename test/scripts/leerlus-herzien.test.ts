@@ -127,9 +127,12 @@ describe('leerlus-herzien/AC-3 meting als sluitbewijs', () => {
 });
 
 describe('leerlus-herzien/AC-4 de eigenaar merget', () => {
-  // GEWIJZIGD (ADR 0078 punt 1 en 2, herzien in #696): pr:merge geeft geen merge-reden meer; zonderTest blijft het signaal.
-  test('leerlus-herzien/AC-4: meting geeft zonderTest', () => {
-    expect(plan(SCHRAP).zonderTest).toBe(true);
+  // GEWIJZIGD (ADR 0078 punt 1 en 2, herzien in #696): pr:merge geeft geen merge-reden meer.
+  // GEWIJZIGD (leerpunt #737): zonderTest had geen lezer meer en is geschrapt; een meting blijft geldig bewijs.
+  test('leerlus-herzien/AC-4: een meting is geldig bewijs en bewijsPlan geeft geen zonderTest meer', () => {
+    const uitslag = plan(SCHRAP);
+    expect(uitslag.fouten).toEqual([]);
+    expect(uitslag).not.toHaveProperty('zonderTest');
   });
 });
 
