@@ -25,7 +25,7 @@ zodra deze op main staat.
 | reviewer | toetst bij `geen test: <reden>` of de reden klopt, en meldt dat als bevinding | iets indienen of sluiten (ongewijzigd) |
 | CI-job `leerpunt-bewijs` (eigen workflow `leerpunt-bewijs.yml`, `pull_request`) | draait het bewijsbestand tegen basis en head, zonder token voor de PR-code | iets schrijven; code uit de PR draaien met token of geheimen |
 | workflow `leerpunt-check` | zet of haalt de labels `leerpunt-onvolledig` en `leerpunt-zonder-bewijs` weg, met één comment | sluiten, heropenen, de body bewerken |
-| eigenaar | maakt de twee labels aan, zet het workflowbestand (GitHub App heeft geen `workflows`-recht), merget PR's met `geen test` | — |
+| eigenaar | maakt de twee labels aan, merget een wijziging van het workflowbestand (`.github/**` is een beschermd pad; er is geen GitHub App meer, ADR 0093), merget PR's met `geen test` | — |
 
 ## Datawijzigingen (met grants)
 

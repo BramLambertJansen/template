@@ -25,8 +25,15 @@ function goed(): Wereld {
   return {
     [`repos/${REPO}/branches/main`]: { commit: { sha: MAIN } },
     [`repos/${REPO}/contents/.claude/gates.json?ref=${MAIN}`]: {
-      content: b64({ merge: 'niet-kritiek' }),
+      content: b64({
+        merge: 'niet-kritiek',
+        onderhoud: { repository: REPO },
+        paden: { 'src/**': { besluit: 'agent' } },
+      }),
     },
+    // GEWIJZIGD (agent-samenvoegen AC-3, ADR 0093): het script leest de padtabel en de bestanden van de PR weer; een app-bestand
+    // dat niet bestaat (404) telt als leeg.
+    [`repos/${REPO}/contents/.claude/gates.app.json?ref=${MAIN}`]: new Error('gh: Not Found (HTTP 404)'),
     [`repos/${REPO}/contents/.claude/decisions.json?ref=${MAIN}`]: { content: b64({ requiredChecks: VEREIST }) },
     [`repos/${REPO}/pulls/7`]: {
       state: 'open',
@@ -36,14 +43,10 @@ function goed(): Wereld {
       additions: 10,
       deletions: 2,
     },
+    [`repos/${REPO}/pulls/7/files`]: [{ filename: 'src/web/x.tsx', status: 'modified' }],
     [`repos/${REPO}/commits/${HEAD}/check-runs`]: { check_runs: VEREIST.map((n) => check(n, HEAD)) },
     [`repos/${REPO}/commits/${MAIN}/check-runs`]: { check_runs: [check('gate:fast', MAIN)] },
-    // templateregime/AC-14: de ruleset op main bewaakt de review van een code-eigenaar, zonder bypass, CODEOWNERS zonder fouten.
-    [`repos/${REPO}/rules/branches/main`]: [
-      { type: 'pull_request', ruleset_id: 1, parameters: { require_code_owner_review: true } },
-    ],
-    [`repos/${REPO}/rulesets/1`]: { current_user_can_bypass: 'never' },
-    [`repos/${REPO}/codeowners/errors?ref=${MAIN}`]: { errors: [] },
+    // GEWIJZIGD (agent-samenvoegen AC-4, ADR 0093): de endpoints van de grenscontrole (templateregime AC-14) zijn weg.
   };
 }
 
@@ -51,7 +54,9 @@ function api(wereld: Wereld) {
   return (endpoint: string) => {
     const sleutel = endpoint.replace(/[?&]per_page=100&page=\d+$/, '');
     if (!(sleutel in wereld)) throw new Error(`onbekend endpoint ${sleutel}`);
-    return wereld[sleutel];
+    const antwoord = wereld[sleutel];
+    if (antwoord instanceof Error) throw antwoord;
+    return antwoord;
   };
 }
 

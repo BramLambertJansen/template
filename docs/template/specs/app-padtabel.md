@@ -97,7 +97,7 @@ Geen schermen. De meldingen staan letterlijk in het Ontwerp; daarnaast `feiten.m
 ## Buiten scope
 
 - Andere app-configuratie dan de padtabel (`schrijfrecht`, `testpaden`). `goedkeurders` naar het app-bestand verplaatsen, zodat `app:init` `gates.json` niet meer wijzigt, is een logisch vervolg (voorstel uit een parallelle conceptspec); het vraagt een wijziging van `app:init`, `codeowners.mjs` en de rolhek-lezers van `goedkeurders`.
-- Afdwingen dat `.claude/gates.json` in een app alleen via een template-merge wijzigt (`check-core` als zone): vervolg; nu bewaakt de review van de code-eigenaar dat.
+- Afdwingen dat `.claude/gates.json` in een app alleen via een template-merge wijzigt (`check-core` als zone): vervolg; nu weigert de padtoets van het mergescript zo'n PR en voegt de eigenaar samen (vangnet, ADR 0093).
 - Een app-bestand voor `.claude/settings.json`: Claude Code kent geen gedeeld tweede projectbestand.
 - De padtabel-gelijkwaardigheidstest (padtabel/AC-2) blijft op de template; app-rijen kunnen alleen aanscherpen.
 

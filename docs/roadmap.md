@@ -202,19 +202,19 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   **Klaar als:** HTTP-paden, contracten, foutcodes en teksten ongewijzigd; bestaande contract- en integratietests groen; core importeert geen app-code;
   de browserbundel bevat geen API-code; een template-update in de proef-app conflicteert niet in accountbestanden.
   aanleiding: `docs/reviews/2026-11-06-herbouw.md` (§4.3, besluit eigenaar 2026-11-06)
-- [ ] **ST-01 (P0) — GitHub-bescherming daadwerkelijk activeren** (stuk 6). Een agent kan beschermd werk niet zonder de
-  juiste eigenaarreview samenvoegen. Gebouwd: `scripts/github-ruleset.sh` met `test/scripts/github-ruleset.test.ts` (#104), `guard.yml` met alleen de job
+- [ ] **ST-01 (P0) — GitHub-bescherming daadwerkelijk activeren** (stuk 6). GitHub laat op `main` alleen werk toe via een PR
+  met groene verplichte checks. Gebouwd: `scripts/github-ruleset.sh` met `test/scripts/github-ruleset.test.ts` (#104), `guard.yml` met alleen de job
   `check-core` (R-CI-07; de diff-guard is weg, ADR 0089 punt 5) en CODEOWNERS (gegenereerd uit de padtabel) en PR-template.
-  Open: organisatie, bewijs dat het token van de eigenaar uit de agentomgeving is (templateregime AC-6; de App zelf bestaat in de template sinds ADR 0089 en een app richt hem in volgens `docs/nieuwe-app.md` 6.2 met `scripts/kit/agent-token.mjs`), org-ruleset via custom property en Actions-instellingen (code-owner-review met 0 goedkeuringen
-  zet `scripts/github-ruleset.sh` nu al, en het script weigert bij fouten in `CODEOWNERS`; daarna `--bypass-beheerder`, pas na het bewijs dat het
-  token van de eigenaar uit de agentomgeving is; private repo's vragen Pro/Team); `.github/settings/` met `scripts/check-github.mjs` (alleen-lezend, een onleesbare instelling is een fout;
+  Stand volgens ADR 0093: de agent werkt onder het account van de eigenaar; er komt geen GitHub App, token of machineaccount en geen
+  `denyRead` op `~/.config/gh`; de ruleset eist geen review van een code-eigenaar en heeft geen bypass; wie een PR met een beschermd pad
+  samenvoegt, beslist `pnpm pr:merge` op de padtabel (vangnet, geen grens; spec `docs/template/specs/agent-samenvoegen.md`).
+  Open: organisatie, org-ruleset via custom property en Actions-instellingen (private repo's vragen Pro/Team); `.github/settings/` met `scripts/check-github.mjs` (alleen-lezend, een onleesbare instelling is een fout;
   ook `app_id` van verplichte checks, `enforce_admins`, conversation resolution) en `check-spec-approval`; `docs/operations/rails-checklist.md` met
-  per stuk bewijs; pushen met een kortlevend App-token (het script `scripts/kit/agent-token.mjs` is gebouwd, spec agent-token) zonder het eigenaar-token in de agentomgeving, daarna `denyRead` op `~/.config/gh`;
-  bij de overstap op de App de review van een code-eigenaar verplicht op exact de head-SHA, niet van de auteur (R-REPO-02, framework §10). Onderscheid de overgang onder het eigenaaraccount van de definitieve App-opzet; de eigenaar
-  activeert organisatie, App en instellingen.
-  **Afhankelijkheden:** ADR 0039, 0040 en 0045; beschikbaarheid van de vereiste CI-checks.
+  per stuk bewijs. Een machineaccount met review van een code-eigenaar blijft de weg voor een app met echte gebruikers (eigen app-ADR). De eigenaar
+  activeert organisatie en instellingen.
+  **Afhankelijkheden:** ADR 0039, 0040, 0045 en 0093; beschikbaarheid van de vereiste CI-checks.
   **Klaar als:** negatieve fixtures voor ontbrekende of bypassbare instellingen; bewijs dat een directe push naar main wordt geweigerd en een
-  bot-PR zonder vereiste review niet mergebaar is. Geen actieve bescherming claimen op basis van alleen JSON-bestanden. Voorwaarde voor ADR 0030 PR 2.
+  PR met een rode verplichte check niet mergebaar is. Geen actieve bescherming claimen op basis van alleen JSON-bestanden. Voorwaarde voor ADR 0030 PR 2.
   **Eisen uit het regelboek** (R-DOC-10: tot de bouw staan ze hier; de bouw-PR zet ze terug in het regelboek): `.github/settings/main-protection.json` en `scripts/check-github.mjs` volgen de ruleset van R-REPO-02 (was in R-REPO-02).
   aanleiding: `scripts/github-ruleset.sh`
 - [ ] **Versie en build-SHA onderaan in de app** (stuk 3f; publieke buildmetadata, geen secrets). In `GET /api/health` staan ze al
@@ -265,8 +265,8 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   vaste lijst (redirect, `tee`, `sed -i`, `cp`, `git checkout` …). Een script via `python3`, `node -e` of een heredoc naar zo'n interpreter
   (`python3 - <<EOF`), en ook `patch`, `git apply`, `curl -o`, `tar x` of `prettier --write`, schrijft beschermde paden zonder de
   beslissing (ask, deny of melding) die een Edit op hetzelfde pad krijgt; een redirect (`cat > f <<EOF`) ziet het rolhek wel. Eerst kiezen
-  tussen weigeren en melden; de review van code-eigenaren op GitHub is de grens. De toets op effect die dit voor subagents dekte, is vervallen (ADR 0091):
-  aanvaard risico; op een beschermd pad houdt de review van de code-eigenaar de merge tegen, elders ziet alleen de review van de diff het.
+  tussen weigeren en melden. De toets op effect die dit voor subagents dekte, is vervallen (ADR 0091):
+  aanvaard risico; op een beschermd pad weigert de padtoets van het mergescript en voegt de eigenaar samen (vangnet, ADR 0093), elders ziet alleen de review van de diff het.
   aanleiding: #260 (eigenaarbesluit: als item opnemen; de developer schreef `.claude/**`, `.github/**`, `scripts/**` en `rails/**` via een Python-script, de reviewer zag alleen ADR-nummerwijzigingen)
 - [ ] **Omhulsels met opties en xargs-optiewaarden in het rolhek.** `splitCommand` (`rails/hooks/lib/shell.mjs`) stopt bij de eerste optie van een
   omhulsel en kent `setsid`, `timeout` en `stdbuf` niet, zodat `env -i gh …`, `nice -n 1 gh …` en `timeout 9 gh …` voor de hoofdsessie de regels voor
@@ -282,7 +282,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   awk-uitvoer via opties (`-o`/`--pretty-print=f`, `-d`/`--dump-variables=f`); `git restore <map>` en `git checkout -- <map>` voor een
   lokaal ontbrekende map (de map-regel kijkt naar `isDir`, niet naar getrackte bestanden eronder). Het schrijfdeel van deze gaten (interpreters,
   scripts, globs, links, `git checkout <ref> <pad>`, `git -C`, awk-uitvoer) viel voor subagents onder de toets op effect; die is vervallen (ADR 0091:
-  aanvaard risico, op een beschermd pad de review van de code-eigenaar), dus dit item geldt weer voor elke rol. Omhulsels met opties en xargs-optiewaarden staan in het item hierboven. Per gat kiezen tussen weigeren en melden, met tests.
+  aanvaard risico, op een beschermd pad de padtoets van het mergescript, ADR 0093), dus dit item geldt weer voor elke rol. Omhulsels met opties en xargs-optiewaarden staan in het item hierboven. Per gat kiezen tussen weigeren en melden, met tests.
   aanleiding: `rails/hooks/lib/shell.mjs` (review van PR 6a `fix/rolhek-gaten`; eigenaarbesluit 2026-11-01: de lijst bekende gaten uit R-ROL-10 naar de roadmap)
 - [ ] **Vervolg compacte kennisbasis (V1–V5 en restpunten).** Het regelboek, de instructies, het rolhek, de afschaffing van taakmandaat en
   gate-label en het ADR-archief zijn gebouwd (#385–#404); wat resteert, elk als eigen kleine PR met eigenaarreview:
@@ -455,7 +455,7 @@ Geldende ADR-besluiten staan in `node scripts/kit/feiten.mjs adr`; afgevinkte be
   (achtergrondtaken: runner in het API-proces, eigen rol `app_jobs`, outbox zonder token), ADR 0021 (audit log, aanbevelingen OV-1..7) en ADR 0022
   (AVG, aanbevelingen OV-1..7); gebouwd is audit (#128), rate limiting en readiness. Bron: `docs/reviews/2026-10-12-werkstraat.md`.
 - [ ] Ontwikkelplatform: alleen Ubuntu/WSL2, of ook macOS (sandbox, `scripts/bootstrap.sh`, `scripts/doctor.sh`). Eigenaarbesluit.
-- [ ] ST-01 (GitHub App en bescherming) besluiten: voorwaarde voor ADR 0030 PR 2; zie Volgende.
+- [ ] ST-01 (GitHub-bescherming) besluiten: voorwaarde voor ADR 0030 PR 2; zie Volgende.
 
 ## Gebouwd
 

@@ -421,8 +421,8 @@ Draai na het opruimen beide leesopdrachten opnieuw; ga pas door als ze leeg zijn
 > 3. Typ *klaar*.
 
 Daarna zelf: `gh auth setup-git`. `workflow` is nodig omdat jij (de eigenaar) later template-updates met `.github/workflows/` pusht.
-Let op: tot de agent als eigen GitHub App pusht (6.2, met `scripts/kit/agent-token.mjs`; ADR 0089 punt 2), draait Claude Code als dezelfde
-WSL-gebruiker en gebruikt dus deze login, inclusief `workflow`; ook daarna staat die login nog in de agentomgeving tot templateregime AC-6 bewezen is. De grens is dan de ruleset en jouw review (R-REPO-02, R-ROL-10); jouw review is pas een harde grens na templateregime AC-6. Zeg dat in de overdracht van Fase 10.
+Let op: de agent werkt onder het account van de eigenaar (ADR 0093 punt 1): Claude Code draait als dezelfde
+WSL-gebruiker en gebruikt dus deze login, inclusief `workflow`; er is geen GitHub App en geen apart token. De ruleset (alleen via een PR met groene verplichte checks, R-REPO-02) is een grens tegen een vergissing; een agent met deze login kan hem wijzigen en kan een workflow pushen, dus tegen omzeilen is er alleen het rolhek (aanvaard risico, ADR 0093). Wie een PR met een beschermd pad samenvoegt, bewaken het mergescript en het rolhek: een vangnet, geen grens (R-ROL-10). Zeg dat in de overdracht van Fase 10.
 Zet de git-identiteit volgens *Standaardwaarden* als die ontbreekt.
 
 **Zichtbaarheid private (vóór 4.3).** Een private repo vraagt GitHub Pro of Team voor de ruleset (Fase 6.2) én
@@ -596,16 +596,12 @@ Zet de korte beschrijving uit de intake met `gh repo edit "$R" --description "<k
 `gh repo view "$R" --json description`. Quote de werkelijke waarde veilig; voer geen shellcode uit de beschrijving uit.
 
 **Ruleset op `main` (overdracht).** `scripts/github-ruleset.sh` zet de ruleset `main` volgens framework §10: geen delete of force push,
-PR-plicht met review van een code-eigenaar (`.github/CODEOWNERS`) en 0 vereiste goedkeuringen, opgeloste reviewgesprekken, merge en squash,
+PR-plicht zonder review van een code-eigenaar en met 0 vereiste goedkeuringen, geen bypass, opgeloste reviewgesprekken, merge en squash,
 en als verplichte checks precies `requiredChecks` uit `.claude/decisions.json` (`gate:fast`, `gate:slow`,
 `secrets`, `image`, `check:new-resource`, `check-core`, `leerpunt-bewijs`, `codeql (actions)`, `codeql (javascript-typescript)`, `osv-scanner`, alle van GitHub Actions). Dat is `main-dicht` van de template plus opgeloste gesprekken en `codeql (javascript-typescript)`.
 `check-core` bewaakt in een app de grens rond `src/core` en `docs/template` (ADR 0040, ADR 0089); in de template is die check altijd groen.
 `test/scripts/github-ruleset.test.ts` houdt de ruleset gelijk aan de workflows en deze playbooklijst gelijk aan de rulesetpayload.
 Opnieuw draaien werkt de bestaande ruleset bij.
-Na het zetten vraagt het script bij GitHub de fouten in `CODEOWNERS` op en eindigt met een ✗ als er een is: GitHub slaat een regel
-met een ongeldige eigenaar (bijvoorbeeld een handle zonder schrijfrecht) stil over, en dan is met 0 goedkeuringen elke PR zonder
-review mergebaar. Weigert het script daarop: zet in `goedkeurders` (`.claude/gates.json`) een account met schrijfrecht, draai
-`node scripts/kit/codeowners.mjs --schrijf`, merge dat naar `main` en draai het script opnieuw.
 Het script schrijft naar GitHub met de login van de eigenaar; jij draait het niet.
 
 > 1. Voer in je Ubuntu-terminal dit hele blok uit. Verwacht: de ruleset wordt zonder fouten ingesteld.
@@ -619,38 +615,21 @@ Het script schrijft naar GitHub met de login van de eigenaar; jij draait het nie
 Controleer de werkelijke ruleset en de checknamen. De CI-beschikbaarheidscontrole uit 6.1 blijft van kracht; laat geen
 verplichte checks weg om deze stap groen te krijgen.
 
-Code-owner-review met 0 goedkeuringen (ADR 0089 punt 2): een PR die alleen paden zonder eigenaar in `.github/CODEOWNERS` raakt
-(besluit `agent` in de padtabel), is mergebaar zodra de checks groen zijn; elke andere PR vraagt de goedkeuring van de eigenaar, en
-een nieuwe push trekt die in. GitHub laat je je eigen PR niet goedkeuren: zolang de agent onder het account van de eigenaar pusht,
-blijft zo'n PR geblokkeerd. De agent pusht daarom als GitHub App.
-
-De optie `--bypass-beheerder` (`scripts/github-ruleset.sh <owner>/<slug> --bypass-beheerder`) laat de beheerder de ruleset passeren,
-alleen bij het mergen van een pull request, zodat de eigenaar een eigen PR op een beschermd pad kan mergen. Gebruik haar pas als
-bewezen is dat het token van de eigenaar uit de agentomgeving is (spec templateregime AC-6); zonder de optie is er geen bypass.
+Wie samenvoegt (ADR 0093 punt 2 tot en met 5): de agent werkt onder het account van de eigenaar; er is geen GitHub App, geen
+token en geen bypass, ook niet voor de eigenaar. GitHub maakt geen onderscheid tussen een vrij en een beschermd pad; dat doet
+`pnpm pr:merge` op de padtabel op `main`. Een PR zonder beschermd pad voegt de hoofdsessie samen zodra de verplichte checks groen
+zijn; raakt de PR een beschermd pad (zie "Een eigen beschermd pad"), dan weigert het script en voegt de eigenaar samen met de
+knop op GitHub. Dat is een vangnet, geen grens; de ruleset is een grens tegen een vergissing, niet tegen omzeilen.
+Zonder ruleset (een private repo zonder betaald abonnement) werkt `pnpm pr:merge` hetzelfde: het toetst zelf of de verplichte
+checks groen zijn. Ook dat is een vangnet, geen grens; zeg dat in de overdracht van Fase 10.
 `guard.yml` heeft alleen de job `check-core`; de diff-guard bestaat niet meer (ADR 0089 punt 5).
-
-Inrichting van de App (ADR 0045 punt 19, ADR 0089 punt 2; de App aanmaken en installeren doet de eigenaar op GitHub):
-
-- Rechten: `contents: write`, `pull_requests: write`, `issues: write` (labels, commentaar), `metadata: read`, `checks: read`,
-  `actions: read`. Geen `workflows`, `administration` of `secrets`. De App staat niet in `goedkeurders` (`.claude/gates.json`),
-  dus een goedkeuring door de App telt niet.
-- Sleutel buiten de repo in `~/.ssh/template-agent.pem` met modus 600: `~/.ssh` is in de sandbox van Claude Code niet leesbaar.
-- Token van hoogstens een uur, alleen voor deze repo, met `scripts/kit/agent-token.mjs` (spec agent-token). Draai het buiten de
-  sandbox, in `~/code/<slug>`, met de versie op `main` van GitHub en nooit uit een werkmap van de agent:
-  `bron=$(gh api -H 'Accept: application/vnd.github.raw' 'repos/<owner>/<slug>/contents/scripts/kit/agent-token.mjs?ref=main') && printf '%s\n' "$bron" | node --input-type=module - <app-id> --repo <owner>/<slug>`.
-  Zo draait `node` alleen als het ophalen lukt; staat het script nog niet op `main`, dan meldt `gh` een 404 en gebeurt er niets.
-  Geef `--repo` altijd mee: zonder leest het script `remote.origin.url`, en die kan de agent wijzigen. Controleer de repository
-  in de melding. Voor een leerpunt naar de template: `--repo BramLambertJansen/template`. Het token komt in
-  `/tmp/claude-<uid>/agent-token`; de agent geeft het per commando mee als `GH_TOKEN`. Geen credential-helper.
-- Met de App en het bewijs van de identiteit: de ruleset opnieuw met `--bypass-beheerder`.
 
 Weigert de API iets:
 - ruleset op een private repo zonder Pro/Team → het script meldt het en stopt; meld de keuze aan de eigenaar (Pro, organisatie met Team, of public). Wijzig zelf de zichtbaarheid niet.
 - `sha_pinning_required` onbekend → meld: Settings → Actions → General → **Require actions to be pinned to a full-length commit SHA**.
 
 Controle: `gh api repos/$R/rulesets --jq '.[].name'` toont `main`; `gh repo view $R --json mergeCommitAllowed,squashMergeAllowed,rebaseMergeAllowed`.
-`pnpm pr:merge` weigert als de ruleset geen review van een code-eigenaar eist, wie merget hem kan passeren, of
-`CODEOWNERS` fouten heeft (templateregime AC-14); of de rest van de ruleset blijft staan, controleert niets: `check-github`
+Of de ruleset blijft staan, controleert niets: `pnpm pr:merge` leest hem niet (ADR 0093 punt 5) en `check-github`
 bestaat nog niet (roadmap ST-01).
 
 ## Fase 7 — Toolchain, git-hooks en lokale stack
@@ -916,15 +895,16 @@ en relevante beperkingen. De dagelijkse commando's en de procedure voor een temp
 > en de ruleset op `main` met die checks verplicht, uitsluitend voor zover hierboven werkelijk gecontroleerd.
 > Browser/login/MFA: <uitvoerder en uitslag, of niet uitgevoerd met reden>.
 >
-> **Wat er nog níet is:** <de GitHub App voor de agent (6.2) — dan pusht de agent onder jouw account, met jouw `gh`-login inclusief
-> `workflow`;, of weglaten als de App is ingericht> het bewijs dat jouw token uit de agentomgeving is (templateregime AC-6, roadmap ST-01); `check-github`,
+> **Wat er nog níet is:** een harde grens op wie samenvoegt: de agent werkt onder jouw account, met jouw `gh`-login inclusief
+> `workflow`, en op een beschermd pad houden alleen het mergescript en het rolhek hem tegen (vangnet, ADR 0093);
+> <zonder ruleset: ook de verplichte checks toetst alleen het mergescript;> `check-github`,
 > dat controleert of de ruleset blijft staan (ST-01). Herbruikbare templateverbeteringen horen in de template.
 > Een eventuele ST-09-proef en alle appfunctionaliteit, appspecificaties en appgegevens horen in de **aparte app-repo**;
 > alleen generieke verbeteringen en beknopt bewijs komen terug naar de template.
 >
 > **Template-updates binnenhalen:** zie "Een template-update binnenhalen" hieronder. Altijd **Create a merge commit**, nooit squash.
 >
-> **Later aanzetten:** de bypass voor de beheerder (`scripts/github-ruleset.sh <owner>/<slug> --bypass-beheerder`), zodra de agent via de GitHub App pusht en het token van de eigenaar uit de agentomgeving is.
+> **Later aanzetten:** een machineaccount met review van een code-eigenaar op de kritieke paden, als een merge naar `main` automatisch uitrolt naar echte gebruikers (eigen app-ADR, ADR 0093 Gevolgen).
 > CodeQL: <beschikbaarheid en beide verplichte checks gecontroleerd, of setup nog geblokkeerd bij Fase 6.1>.
 >
 > **Bevindingen:** <notities uit het voortgangsbestand, of "geen">
@@ -1003,12 +983,14 @@ bestand is van de template, en een eigen rij daarin geeft bij elke template-upda
 ```
 
 - Het hoogste niveau is `voorReview` met `besluit-pr`: de developer en de andere rollen schrijven er niet, de hoofdsessie
-  vraagt eerst, en werk op het pad is kritiek (de eigenaar keurt de PR goed). `altijdVragen` en besluit `agent` kunnen alleen
+  vraagt eerst, en werk op het pad is kritiek (de eigenaar voegt de PR samen). Voor het samenvoegen beschermt in een app een
+  rij met `besluit-pr` of met schrijven `voorReview`: `pnpm pr:merge` weigert dan en de eigenaar voegt samen; een rij met
+  alleen `eigenaar` of `gate` doet dat niet (ADR 0093 punt 4, spec agent-samenvoegen AC-2). `altijdVragen` en besluit `agent` kunnen alleen
   in de template; een glob die al in `.claude/gates.json` staat, herhaal je niet, scherp aan met een eigen, specifiekere glob.
   `check-docs` meldt elke afwijking als `docs:gates-app:<…>` (`scripts/kit/check-docs.mjs`, `appViolations`).
 - Het bestand zelf is altijdVragen en besluit-pr (de vloer): de hoofdsessie schrijft het na akkoord van de eigenaar, in een
   eigen PR. Het rolhek leest het pas als het op `main` staat (`rails/hooks/lib/rolhek-context.mjs`, `configuratie`).
-- Genereer daarna `.github/CODEOWNERS` opnieuw en commit het mee; `node scripts/kit/feiten.mjs pad <pad>` toont het niveau,
+- Genereer daarna `.github/CODEOWNERS` opnieuw en commit het mee (een leesbare lijst, geen grens; `check-docs` eist dat hij klopt); `node scripts/kit/feiten.mjs pad <pad>` toont het niveau,
   met een app-bron als `<glob> (app)`.
 
 ```bash
