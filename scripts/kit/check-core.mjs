@@ -1,5 +1,5 @@
 // check-core (ADR 0040 "Afdwingen", ADR 0089, .claude/rules/core.md): een PR in een app wijzigt de zones `src/core/` en
-// `docs/template/` niet; updates komen alleen via `git merge template/main`. Draait in guard.yml met de scripts van main.
+// `docs/template/` niet; updates komen alleen via de merge van een `template-v<x.y.z>`-tag (ADR 0093). Draait in guard.yml met de scripts van main.
 // Per commit in de PR (head zonder wat al op main of template/main staat) en per zone (ZONES), elk apart beoordeeld:
 // een gewone commit laat de zone gelijk aan zijn ouder; een merge die de zone verandert, telt alleen als zijn tweede
 // ouder P2 een voorouder is van `template/main` (opgehaald van `templateUrl`: `template.repository` in de `.claude/gates.json`
