@@ -5,8 +5,8 @@ import path from 'node:path';
 import { expect, test } from 'vitest';
 import { coreFouten } from '../../scripts/kit/check-core.mjs';
 
-// check-core, vermoeden: een template-merge waarin de app voor een zone haar EIGEN versie houdt (de zone blijft gelijk
-// aan de eerste ouder en wijkt af van de template) blijft groen. Elk scenario draait voor beide zones.
+// check-core: een template-merge waarin de app voor een zone haar EIGEN versie houdt (de zone blijft gelijk aan de
+// eerste ouder en wijkt af van de template) is rood. Elk scenario draait voor beide zones.
 // De branch `tmpl` speelt template/main, `main` de main van de app en `werk` de PR-branch.
 const REFS = { base: 'main', head: 'werk', template: 'tmpl' };
 const ZONES = [
