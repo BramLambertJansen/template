@@ -232,6 +232,12 @@ describe('templateregime/AC-7 pnpm pr:merge zonder inhoudstoets', () => {
       [`repos/${REPO}/compare/${MAIN}...${HEAD}`]: { behind_by: 0 },
       [`repos/${REPO}/commits/${HEAD}/check-runs`]: { check_runs: VEREIST.map((naam) => check(naam, HEAD)) },
       [`repos/${REPO}/commits/${MAIN}/check-runs`]: { check_runs: [check('gate:fast', MAIN)] },
+      // templateregime/AC-14: de ruleset op main bewaakt de review van een code-eigenaar, zonder bypass, CODEOWNERS zonder fouten.
+      [`repos/${REPO}/rules/branches/main`]: [
+        { type: 'pull_request', ruleset_id: 1, parameters: { require_code_owner_review: true } },
+      ],
+      [`repos/${REPO}/rulesets/1`]: { current_user_can_bypass: 'never' },
+      [`repos/${REPO}/codeowners/errors?ref=${MAIN}`]: { errors: [] },
       [`repos/${REPO}/issues/7/comments`]: [
         { user: { login: 'BramLambertJansen' }, body: `Review ${HEAD}: geen blokkerende bevindingen` },
       ],

@@ -100,6 +100,20 @@ Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van pun
   privé-repo.
 - **templateregime/AC-13** — Stap 3 verwijdert de tests uit "Raakt ook" die alleen verdwenen code toetsen, en uit de gemengde
   tests alleen die gevallen; de lijst met reden staat in de PR (eigenaarakkoord via deze spec, R-TEST-02).
+- **templateregime/AC-14** — Het mergescript van de hoofdsessie (`scripts/kit/pr-merge.mjs`, `beoordeelMerge`) merget alleen als
+  GitHub de grens van ADR 0089 punt 2 echt bewaakt voor wie het script draait. Na de modustoets (de modus `eigenaar` stopt nog
+  steeds als eerste) leest het via de API, elke aanroep afgevangen:
+  1. `repos/<repo>/rules/branches/main` (alle pagina's, ook regels uit een organisatie-ruleset) en eist minstens één regel van
+     type `pull_request` met `parameters.require_code_owner_review` gelijk aan `true`; een regel zonder `parameters` telt als `false`;
+  2. per `ruleset_id` van zo'n regel `repos/<repo>/rulesets/<id>` en eist `current_user_can_bypass` gelijk aan `"never"`
+     (minstens één zo'n ruleset is genoeg; een antwoord zonder dat veld telt als niet te lezen);
+  3. `repos/<repo>/codeowners/errors?ref=<sha van main>` en eist een lege lijst `errors`.
+  De redenen worden aan de bestaande lijst toegevoegd (geen vroege return); elke reden betekent geen merge (fail-closed):
+  "de ruleset op main bewaakt geen review van een code-eigenaar: de eigenaar merget" (1), "wie dit script draait kan de ruleset
+  passeren: de eigenaar merget" (2), "`CODEOWNERS` op main heeft fouten" (3), en "de ruleset of `CODEOWNERS` op main is niet te
+  lezen: de eigenaar merget" bij een onleesbaar antwoord, een 404 of een ongeldige vorm. Klassieke branch protection zonder ruleset
+  telt niet: de rules-API toont die niet, dus het script weigert (bewust). Reviewbevinding A2 (2026-11-17): zonder deze toets
+  merget de hoofdsessie in een app zonder ruleset (privé-repo zonder Pro, of vóór fase 6) ook `src/core`, migraties of hooks.
 
 ## Randgevallen
 
@@ -108,6 +122,11 @@ Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van pun
 | AC-6 niet bewezen | geen bypass; de identiteitsregels van het rolhek blijven | n.v.t. |
 | PR raakt alleen paden met besluit `agent` | de App merget na groene checks | n.v.t. |
 | PR raakt `src/x/CLAUDE.md` of een `.`-bestand | goedkeuring van de eigenaar nodig | n.v.t. |
+| Repo zonder ruleset, of ruleset zonder code-owner-review | het mergescript weigert; de eigenaar merget (AC-14) | n.v.t. |
+| Rules-API of `codeowners/errors` niet leesbaar (rechten, netwerk) | het mergescript weigert, zonder crash (AC-14) | n.v.t. |
+| Ruleset met `--bypass-beheerder` en het script draait als de beheerder | weigert: `current_user_can_bypass` is niet `never` (AC-14) | n.v.t. |
+| Geen `.github/CODEOWNERS` op main (404) | weigert als onleesbaar (AC-14) | n.v.t. |
+| Alleen klassieke branch protection | weigert; de eigenaar merget (AC-14) | n.v.t. |
 
 ## Raakt ook
 
@@ -142,7 +161,16 @@ De identiteitsregels van het rolhek (ADR 0089 punt 9); de effecttoets is weg met
 
 Tests eerst (R-PRINC-04). AC-2, AC-3, AC-8, AC-9 en AC-10 als unit-tests, eerst rood; AC-6 met sandboxtests. AC-4 en
 AC-5 met proef-PR's (geleverd, herhaald na stap 2). AC-7 en AC-13 in stap 3 met `pnpm ratchet` en `pnpm gate:fast` groen.
-AC-11 in stap 4.
+AC-11 in stap 4. AC-14 als unit-tests met een nep-API in een nieuw testbestand (`test/scripts/merge-ruleset.test.ts`), eerst
+rood, met elk randgeval uit de tabel. De `goed()`-wereld van `test/scripts/pr-merge.test.ts`, `pr-merge-omvang-steekproef.test.ts`,
+`pr-merge-padtabel.test.ts` en `schrap-documentbewaking-templateregime.test.ts` krijgt de antwoorden op `rules/branches/main`
+(een regel `pull_request` met `require_code_owner_review: true` en een `ruleset_id`), `rulesets/<id>`
+(`current_user_can_bypass: "never"`) en `codeowners/errors?ref=<main>` (`{ errors: [] }`); daarbuiten veranderen die tests niet
+(gedragswijziging door deze spec, R-TEST-02, reden in de PR). Raakt ook: `docs/framework.md` R-REPO-01 (de opsomming van
+mergevoorwaarden), ADR 0069 punt 3 (`Herzien:`-regel), de kopcommentaar van `scripts/kit/pr-merge.mjs`, `docs/nieuwe-app.md`
+fase 6 ("`pnpm pr:merge` weigert als de ruleset geen review van een code-eigenaar eist, wie merget hem kan passeren, of
+`CODEOWNERS` fouten heeft (templateregime AC-14); of de rest van de ruleset blijft staan, controleert niets: `check-github`
+bestaat nog niet (roadmap ST-01)"), `docs/template-changelog.md`.
 
 ## Open vragen
 

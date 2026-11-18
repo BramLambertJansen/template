@@ -2,7 +2,9 @@
 // wordt via de REST-API van GitHub gelezen, niet uit de lokale `origin/main`; elke ontbrekende voorwaarde geeft een eigen
 // regel en exit 1 zonder schrijfactie. Pas als alles klopt: squash-merge met de head-SHA als voorwaarde. Geen inhoudstoets:
 // wie een pad goedkeurt, bewaakt de ruleset op main met `.github/CODEOWNERS` (ADR 0089); blijft: de
-// modus `merge` uit `.claude/gates.json` op main, de verplichte checks op de head en een groene main. De beschrijving leest het niet: dat
+// modus `merge` uit `.claude/gates.json` op main, de verplichte checks op de head en een groene main. Dat die ruleset er is,
+// controleert het wel (templateregime AC-14): een regel `pull_request` met `require_code_owner_review`, een ruleset die wie
+// het script draait niet kan passeren, en `CODEOWNERS` op main zonder fouten; onleesbaar telt als nee. De beschrijving leest het niet: dat
 // de eigenaar merget bij `geen test:` of `meting:` in de sectie Leerpunt, is een afspraak (ADR 0078 punt 1 en 2, herzien in #696).
 import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
@@ -116,9 +118,79 @@ export function mainRedenen(ruw, vereist) {
     : [`main is niet groen: ${fout.map((c) => `${c.name} ${c.conclusion ?? c.status}`).join(', ')}`];
 }
 
+export const REDEN_GEEN_REVIEW = 'de ruleset op main bewaakt geen review van een code-eigenaar: de eigenaar merget';
+export const REDEN_BYPASS = 'wie dit script draait kan de ruleset passeren: de eigenaar merget';
+export const REDEN_CODEOWNERS = '`CODEOWNERS` op main heeft fouten';
+export const REDEN_ONLEESBAAR = 'de ruleset of `CODEOWNERS` op main is niet te lezen: de eigenaar merget';
+
+/** Een regel die de review van een code-eigenaar eist; zonder `parameters` telt hij als `false`. @param {unknown} regel */
+const bewaaktReview = (regel) =>
+  veld(regel, 'type') === 'pull_request' && pad(regel, 'parameters', 'require_code_owner_review') === true;
+
+/** `current_user_can_bypass` van een ruleset; `undefined` als het niet te lezen is. @param {Api} api @param {string} repo @param {unknown} id */
+function bypassVan(api, repo, id) {
+  if (typeof id !== 'number' || !Number.isInteger(id)) return undefined;
+  try {
+    const waarde = veld(api(`repos/${repo}/rulesets/${String(id)}`), 'current_user_can_bypass');
+    return typeof waarde === 'string' ? waarde : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** De regels op main die code-owner-review eisen, ook uit een organisatie-ruleset; `null` als ze niet te lezen zijn. @param {Api} api @param {string} repo */
+function reviewRegels(api, repo) {
+  try {
+    return alle(api, `repos/${repo}/rules/branches/main`).filter(bewaaktReview);
+  } catch {
+    return null;
+  }
+}
+
 /**
- * De voorwaarden die na ADR 0089 punt 5 blijven; geen redenen betekent mergen. Een onleesbare of ontbrekende modus op main
- * telt als `eigenaar`: nooit een crash, nooit een merge.
+ * Punt 1 en 2 van templateregime AC-14: een review-regel, en minstens één ruleset daarvan waar de aanroeper niet langs kan.
+ * @param {Api} api @param {string} repo @returns {'ok' | 'geen-review' | 'bypass' | 'onleesbaar'}
+ */
+function rulesetStaat(api, repo) {
+  const regels = reviewRegels(api, repo);
+  if (regels === null) return 'onleesbaar';
+  if (regels.length === 0) return 'geen-review';
+  const bypass = regels.map((regel) => bypassVan(api, repo, veld(regel, 'ruleset_id')));
+  if (bypass.includes('never')) return 'ok';
+  return bypass.includes(undefined) ? 'onleesbaar' : 'bypass';
+}
+
+/** Punt 3: `CODEOWNERS` op de kop van main zonder fouten. @param {Api} api @param {{ repo: string, mainSha: string }} doel @returns {'ok' | 'fouten' | 'onleesbaar'} */
+function codeownersStaat(api, { repo, mainSha }) {
+  try {
+    const fouten = veld(api(`repos/${repo}/codeowners/errors?ref=${mainSha}`), 'errors');
+    if (!Array.isArray(fouten)) return 'onleesbaar';
+    return fouten.length === 0 ? 'ok' : 'fouten';
+  } catch {
+    return 'onleesbaar';
+  }
+}
+
+/**
+ * Bewaakt GitHub de grens van ADR 0089 punt 2 voor wie dit script draait (templateregime AC-14)? Elke aanroep is afgevangen:
+ * een onleesbaar antwoord, een 404 of een ongeldige vorm geeft een reden, nooit een crash. Klassieke branch protection telt
+ * niet: de rules-API toont die niet.
+ * @param {Api} api @param {{ repo: string, mainSha: string }} doel @returns {string[]}
+ */
+export function grensRedenen(api, doel) {
+  const ruleset = rulesetStaat(api, doel.repo);
+  const codeowners = codeownersStaat(api, doel);
+  const redenen = [];
+  if (ruleset === 'geen-review') redenen.push(REDEN_GEEN_REVIEW);
+  if (ruleset === 'bypass') redenen.push(REDEN_BYPASS);
+  if (codeowners === 'fouten') redenen.push(REDEN_CODEOWNERS);
+  if (ruleset === 'onleesbaar' || codeowners === 'onleesbaar') redenen.push(REDEN_ONLEESBAAR);
+  return redenen;
+}
+
+/**
+ * De voorwaarden die na ADR 0089 punt 5 blijven, plus de grens van templateregime AC-14; geen redenen betekent mergen. Een
+ * onleesbare of ontbrekende modus op main telt als `eigenaar`: nooit een crash, nooit een merge.
  * @param {Api} api @param {{ repo: string, nummer: number, head: string }} doel
  * @returns {{ redenen: string[] }}
  */
@@ -138,6 +210,7 @@ export function beoordeelMerge(api, { repo, nummer, head }) {
       names: vereist,
       sha: mainSha,
     }),
+    ...grensRedenen(api, { repo, mainSha }),
   ];
   return { redenen };
 }
