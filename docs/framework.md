@@ -7,7 +7,7 @@ Elke norm is één regel `R-<domein>-<nr>` met herkomst (ADR-nummer of bron).
 ## 1. Principes
 
 - **R-PRINC-01** Maak fout onmogelijk, niet verboden; wat type of gate afdwingt, krijgt geen proza (0046)
-- **R-PRINC-02** Afdwingen boven afspreken: harde grens is CI en GitHub; instructies en hooks sturen alleen (0045)
+- **R-PRINC-02** Afdwingen boven afspreken: de grens is CI en GitHub, tegen een vergissing en niet tegen omzeilen (R-ROL-10); instructies en hooks sturen alleen (0045, 0093)
 - **R-PRINC-03** Eén bron per feit (migraties, zod-contracten, één tokenlaag, één script per check); lokaal gelijk aan productie (0042)
 - **R-PRINC-04** Rail-fix begint met test die op oude code faalt; elke check heeft falende fixtures, ook voor omzeilingen (0045)
 - **R-PRINC-05** Provider-neutraal: geen hostingprovider of database-as-a-service in template; alleen via adapter (0039)

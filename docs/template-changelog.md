@@ -33,6 +33,11 @@ requests.
   code-eigenaar en een eventuele bypass uit de ruleset gaan. In een app is beschermd: besluit `besluit-pr`, schrijven
   `voorReview` of hoger, een migratie, `src/core/**` en `docs/template/**`; tests, specs, de roadmap en gewone app-code voegt
   de hoofdsessie samen bij groene checks. Zonder ruleset toetst het script de checks zelf: een vangnet, geen grens.
+- "Een template-update binnenhalen" in `docs/nieuwe-app.md` (stap 3 en de rij `check-core`) zet `src/core/` en
+  `docs/template/` terug vóór de merge-commit met `git checkout --no-overlay template/main -- src/core docs/template`, of
+  daarna met `git commit --amend` op de merge-commit; de oude herstelstap, een losse commit na de merge, weigert
+  `check-core` zelf (`test/scripts/update-herstel-check-core.test.ts`). Wat verandert voor een app: `check-core` niet; wie
+  bij een update `check-core` rood krijgt, herstelt in de merge-commit, of maakt de branch opnieuw vanaf stap 2.
 - `check-docs` regel 14 (leerpunt #738): een gebouwde spec in `docs/specs/` of `docs/template/specs/` noemt tussen backticks
   geen repopad onder `src/`, `scripts/`, `rails/`, `test/`, `e2e/`, `db/`, `deploy/`, `.claude/` of `.github/` (met extensie)
   dat niet bestaat, tenzij er direct `(vervallen)`, `(nieuw)` of `(voorbeeld)` achter staat; een nieuwe AC met

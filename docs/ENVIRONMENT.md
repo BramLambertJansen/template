@@ -152,6 +152,29 @@ niet kan vervangen. Wie `rails/hooks/` op een branch wijzigt, verandert de lopen
 remote) legt de start van een sessie vast en vraagt netwerk; weigert het rolhek alles met "geen geldig anker", probeer de actie opnieuw (de meethook legt het anker dan meestal vast) of start één sessie
 met netwerk.
 
+Het anker staat per werkmap in `.claude/hooks/.cache/main` (een worktree heeft zijn eigen) en wordt, zolang het geldig is, alleen bij de
+start van een sessie ververst: nieuw, hervat, na `/clear`, na compactie of bij een fork (`bron` in `.claude/hooks/laden.mjs`).
+Tijdens een sessie beweegt het niet mee met `main`. Dat merk je bij `pnpm pr:merge <nummer>`: het rolhek laat het alleen door als `scripts/`, `rails/` en
+de hostbestanden (`package.json`, `.npmrc`, …) in de werkmap gelijk zijn aan de merge-base met het anker (`trustedMerge` in
+`rails/hooks/lib/runner-authority.mjs`). Komt er ná de sessiestart een PR op `main` die een van die paden wijzigt, en staat de
+werkmap op of voorbij die nieuwe `main`, dan weigert het rolhek met "scripts, rails en hostbestanden … gelijk aan het anker
+(ADR 0069)", ook vanaf een schone kopie van `main`. Opnieuw proberen helpt niet. Vergelijk het anker met de remote:
+
+1. In de sessie of een eigen terminal, in de root van de werkmap die de weigering gaf (bij een worktree de worktree zelf, niet
+   de hoofdcheckout): vraag de remote om `main`. Verwacht: één regel met een SHA en `refs/heads/main`.
+2. Zelfde terminal en werkmap: lees het anker. Verwacht: één commit-SHA, zonder regeleinde erachter.
+
+```sh
+git ls-remote origin refs/heads/main
+cat .claude/hooks/.cache/main
+```
+
+Verschillen de twee SHA's, dan loopt het anker achter: start of hervat de sessie met netwerk, zodat de sessiestart het ververst
+(zonder netwerk blijft het oude anker staan, zonder melding). Zijn ze gelijk, kijk dan of de branch zelf een van die paden
+wijzigt (een beschermd pad: de eigenaar voegt samen), of er lokale of genegeerde bestanden of een symlink onder die paden
+staan, of er een `gh`, `git` of `node` in `node_modules/.bin` staat, of `merge` in `.claude/gates.json` in het anker (dus op
+`main`) nog `niet-kritiek` is, en of het commando vanuit de repo-root draait.
+
 ## Branchnaam
 
 Een cloudsessie start op een branch die het platform kiest (`claude/<naam>`). Een overdracht schrijft daarom geen

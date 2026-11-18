@@ -149,8 +149,8 @@ export function beslisOvergang(file, voor, na) {
   const oud = voor === null ? null : documentInfo(file, voor);
   const nieuwInfo = documentInfo(file, na);
   const uit = (/** @type {'vrij' | 'a4' | 'herzien' | 'gebouwd' | 'besluit' | 'geweigerd'} */ uitslag, nieuw = false) => ({ uitslag, nieuw });
-  // Het archief komt alleen via een byte-gelijke verhuizing binnen (het rolhek weigert er elke andere schrijfactie; op GitHub
-  // is de review van een code-eigenaar de grens, R-ROL-10); elke andere wijziging is A4.
+  // Het archief komt alleen via een byte-gelijke verhuizing binnen (het rolhek weigert er elke andere schrijfactie; daarna
+  // weigert de padtoets van het mergescript, een vangnet, R-ROL-10 en ADR 0093); elke andere wijziging is A4.
   if (isArchief(file)) return uit(voor === na ? 'vrij' : 'a4');
   if (voor !== null && isHerschrijving(file, voor, na)) return uit(nieuweHerzieningsregel(voor, na) ? 'herzien' : 'a4');
   if (oud?.kind === 'adr' && oud.status !== 'voorgesteld' &&
