@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd
 namespace: gebouwd-zonder-nummer
 ---
 

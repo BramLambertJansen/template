@@ -85,7 +85,7 @@ Geen accountbeheerpad uit `docs/gouden-pad.md` past (werkstraat, geen UI).
 **PR 6b — mandaat en label weg**
 
 - **compacte-kennisbasis-rails/AC-14** — `docs:decision`, `pr:label-gate`, `gateMarker` en het pad-mandaat bestaan niet meer;
-  `docs:status`, `check-document-status`, `check-roadmap`, de ratchetmelding en `guard.yml` noemen geen mandaat of label;
+  `check-document-status`, `check-roadmap`, de ratchetmelding en `guard.yml` noemen geen mandaat of label;
   `.claude/decisions.json` bevat alleen `requiredChecks` en `decisions: []`.
 - **compacte-kennisbasis-rails/AC-15** — Per rol, pad en modus dezelfde uitslag als vóór de PR zonder record, ook voor een pad
   met een mandaatrecord vóór de PR (de `Taakmandaat:`-allow en -melding verdwijnen):
@@ -98,7 +98,7 @@ Geen accountbeheerpad uit `docs/gouden-pad.md` past (werkstraat, geen UI).
   | tester, reviewer, onbekend | gate | als vóór de PR | als vóór de PR |
 
   Tests, migraties, gegenereerde bestanden en `jsonGates` houden hun eigen uitslag. Ook als nu: deny voor een developer die
-  `goedgekeurd`/`geaccepteerd` schrijft; `gebouwd` via `docs:status`; A4-basis uit main, ook na Bash; de UI-melding;
+  `goedgekeurd`/`geaccepteerd` schrijft; `gebouwd` alleen door hoofdsessie en architect (ADR 0095); A4-basis uit main, ook na Bash; de UI-melding;
   `readRegistry`; `permissions.ts`, `app.ts`, `new:resource` en het gouden pad.
 - **compacte-kennisbasis-rails/AC-16** — De diff-guard hangt niet van een label af: `overgang` als de auteur goedkeurder is,
   anders een APPROVED van een niet-auteur op de head-SHA.

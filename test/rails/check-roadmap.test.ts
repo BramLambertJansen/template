@@ -171,11 +171,12 @@ const matrix: [geval: string, ac: string, verwacht: string[]][] = [
   ['identiek-dubbel', 'randgeval', GEEN],
   ['pr-bestaat-niet', 'randgeval (OV-7: alleen de vorm)', GEEN],
   ['package-json-ongeldig', 'randgeval', ['roadmap:bewijs:5']],
-  ['spec-gebouwd-zonder-bewijs', 'AC-10', ['spec:bewijs:docs/specs/a.md']],
-  // B2 (mandate-follow-up/AC-10, AC-11): vrij commentaar en een roadmap-vinkje vervangen het statusbewijs niet meer.
-  ['spec-gebouwd-bewijs-in-status', 'mandate-follow-up/AC-10', ['spec:bewijs:docs/specs/a.md']],
-  ['spec-gebouwd-met-vinkje-zonder-verwijzing', 'mandate-follow-up/AC-11', ['spec:bewijs:docs/specs/a.md']],
-  ['spec-gebouwd-met-roadmapvinkje', 'mandate-follow-up/AC-11', ['spec:bewijs:docs/specs/a.md']],
+  // GEWIJZIGD (gebouwd-zonder-nummer/AC-1, ADR 0095): de fixture zonder nummer is groen.
+  ['spec-gebouwd-zonder-bewijs', 'gebouwd-zonder-nummer/AC-1', GEEN],
+  // GEWIJZIGD (gebouwd-zonder-nummer/AC-1, ADR 0095): de melding spec:bewijs bestaat niet meer; deze fixtures zijn groen.
+  ['spec-gebouwd-bewijs-in-status', 'gebouwd-zonder-nummer/AC-1', GEEN],
+  ['spec-gebouwd-met-vinkje-zonder-verwijzing', 'gebouwd-zonder-nummer/AC-1', GEEN],
+  ['spec-gebouwd-met-roadmapvinkje', 'gebouwd-zonder-nummer/AC-1', GEEN],
   ['spec-roadmapverwijzing-roadmap-ongewijzigd', 'AC-11', ['spec:roadmap:docs/specs/a.md']],
   [
     'spec-st-verwijzing-roadmap-ongewijzigd',
@@ -187,8 +188,9 @@ const matrix: [geval: string, ac: string, verwacht: string[]][] = [
   ['template', 'AC-12', GEEN],
   ['spec-vervallen', 'randgeval', GEEN],
   ['spec-gebouwd-hernoemd', 'AC-12', GEEN],
-  ['spec-hernoemd-en-gebouwd', 'randgeval', ['spec:bewijs:docs/specs/b.md']],
-  ['spec-nieuw-gebouwd', 'AC-13', ['spec:bewijs:docs/specs/a.md']],
+  // GEWIJZIGD (gebouwd-zonder-nummer/AC-1, ADR 0095): ook hier geen spec:bewijs meer.
+  ['spec-hernoemd-en-gebouwd', 'randgeval', GEEN],
+  ['spec-nieuw-gebouwd', 'AC-13', GEEN],
 ];
 
 describe('roadmapMeldingen: bewijsmatrix', () => {
@@ -217,15 +219,9 @@ describe('roadmapMeldingen: meldteksten (letterlijk uit de spec)', () => {
     ]);
   });
 
-  // GEWIJZIGD (specarchief-en-bouwvorm, ADR 0080 punt 5, OV-1): de melding noemt de ene vorm zonder SHA.
-  test('spec naar gebouwd zonder bewijs', async () => {
-    expect(await meldingenVoor('spec-gebouwd-zonder-bewijs')).toStrictEqual([
-      {
-        key: 'spec:bewijs:docs/specs/a.md',
-        message:
-          'docs/specs/a.md: naar gebouwd zonder bouwbewijs; zet de status met pnpm docs:status (status: gebouwd # #<PR>)',
-      },
-    ]);
+  // GEWIJZIGD (gebouwd-zonder-nummer/AC-1, ADR 0095): `status: gebouwd` is zelf het bewijs; de melding spec:bewijs bestaat niet meer.
+  test('spec naar gebouwd zonder nummer geeft geen melding', async () => {
+    expect(await meldingenVoor('spec-gebouwd-zonder-bewijs')).toStrictEqual([]);
   });
 
   // De spec laat open wat `<verwijzing>` in de tekst wordt (de gevonden tekst, bijv. "roadmap stuk 3f"); daarom alleen de vaste delen.
@@ -313,14 +309,13 @@ describe('roadmapVanRepo (git-laag)', () => {
     expect((await vanRepo(root, 'origin/main')).map((melding) => melding.key)).toStrictEqual([]);
   });
 
-  test('een spec die in een commit naar gebouwd gaat zonder bewijs geeft spec:bewijs', async () => {
+  // GEWIJZIGD (gebouwd-zonder-nummer/AC-1, ADR 0095): `status: gebouwd` zonder nummer geeft geen melding meer.
+  test('een spec die in een commit naar gebouwd gaat zonder nummer geeft geen melding', async () => {
     const root = repo({ 'docs/specs/a.md': spec('goedgekeurd') });
     schrijf(root, 'docs/specs/a.md', spec('gebouwd'));
     commit(root, 'gebouwd');
 
-    expect((await vanRepo(root, 'origin/main')).map((melding) => melding.key)).toStrictEqual([
-      'spec:bewijs:docs/specs/a.md',
-    ]);
+    expect((await vanRepo(root, 'origin/main')).map((melding) => melding.key)).toStrictEqual([]);
   });
 
   test('git mv van een gebouwde spec geeft geen melding (rename-detectie via git)', async () => {

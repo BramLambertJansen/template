@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, test } from 'vitest';
-import { changeStatus, documentInfo } from '../../rails/hooks/lib/document-state.mjs';
+import { documentInfo } from '../../rails/hooks/lib/document-state.mjs';
 import { canRecordStatus, readRegistry } from '../../rails/hooks/lib/task-authority.mjs';
 
 const SPEC = 'docs/specs/framework-task.md';
@@ -133,33 +133,7 @@ describe('documentInfo: inhoud en afgeleide status scheiden', () => {
   });
 });
 
-describe('changeStatus: formatter, geen eigenaartoestemming', () => {
-  // GEWIJZIGD (specarchief-en-bouwvorm/AC-13, ADR 0080 punt 5): `changeStatus` schrijft alleen `gebouwd # #<PR>`; de
-  // weigeringen om een ontbrekende of ongeldige SHA vervallen (eigenaarakkoord: OV-1 van die spec).
-  test('gebouwd legt het PR-nummer vast zonder bodywijziging', () => {
-    const changed = changeStatus(SPEC, APPROVED, { status: 'gebouwd', pr: 42 });
-
-    expect(changed).toBe(PROPOSED.replace('status: voorstel', 'status: gebouwd # #42'));
-    expect(documentInfo(SPEC, changed)?.digest).toBe(DIGEST);
-  });
-
-  test.each([
-    { name: 'ontbrekend bewijs', options: { status: 'gebouwd' } },
-    { name: 'ontbrekende PR', options: { status: 'gebouwd' } },
-    { name: 'PR nul', options: { status: 'gebouwd', pr: 0 } },
-    { name: 'negatieve PR', options: { status: 'gebouwd', pr: -1 } },
-    { name: 'fractionele PR', options: { status: 'gebouwd', pr: 1.5 } },
-  ])('$name wordt geweigerd', ({ options }) => {
-    expect(() => changeStatus(SPEC, APPROVED, options)).toThrow();
-  });
-
-  test('ADR vervangen is toegestaan; gebouwd en specstatussen zijn ongeldig', () => {
-    expect(changeStatus(ADR, ADR_ACCEPTED, { status: 'vervangen door 0028' })).toContain('Status: vervangen door 0028');
-    expect(() => changeStatus(ADR, ADR_ACCEPTED, { status: 'gebouwd', pr: 42 })).toThrow();
-    expect(() => changeStatus(ADR, ADR_ACCEPTED, { status: 'goedgekeurd' })).toThrow();
-    expect(() => changeStatus(SPEC, APPROVED, { status: 'geaccepteerd' })).toThrow();
-  });
-});
+// GEWIJZIGD (spec gebouwd-zonder-nummer, ADR 0095): de gevallen van `changeStatus` zijn weg met `pnpm docs:status`.
 
 // AC-15: readRegistry blijft tolerant en strikt: oude main-commits met records worden nog gelezen (status-git.mjs).
 describe('readRegistry: strikte eigenaarsbesluiten', () => {

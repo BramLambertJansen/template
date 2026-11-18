@@ -1,6 +1,6 @@
 // check:roadmap (spec docs/template/specs/roadmap-vinkjes.md, framework §8 "Docs horen bij de wijziging"): een nieuw of gewijzigd `[x]` in
-// docs/roadmap.md moet naar bewijs verwijzen (PR-nummer, testpad of checknaam), en een spec die naar `gebouwd` gaat heeft de ene
-// bewijsvorm die `pnpm docs:status` schrijft (spec taakmandaat-vervolg, B2). Het vergelijkt met het punt waar de branch van
+// docs/roadmap.md moet naar bewijs verwijzen (PR-nummer, testpad of checknaam), en een spec die naar `status: gebouwd` gaat en een
+// roadmap-id noemt, vraagt een wijziging van docs/roadmap.md in dezelfde PR (ADR 0095: geen PR-nummer in de statusregel). Het vergelijkt met het punt waar de branch van
 // origin/main afsplitste, niet met de kop van main. Is origin/main niet te lezen, dan faalt de check: onleesbaar telt als fout
 // (zoals check:migrations).
 // Heeft de head-roadmap een kop `## Nu`, dan gelden ook de structuurregels van ADR 0046 (`structuurMeldingen`). Sluit de PR
@@ -9,7 +9,6 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { builtReference, documentInfo } from '../../rails/hooks/lib/document-state.mjs';
 import { globMatch } from '../../rails/hooks/lib/rolhek.mjs';
 import { doelPad, looksLikePath, packageScripts, pathExists, SPEC_STATUS } from './check-docs.mjs';
 import { gates } from './gates.mjs';
@@ -146,17 +145,9 @@ function itemMeldingen(item, kader) {
 }
 
 /**
- * Bewijsvorm voor een spec naar gebouwd: `status: gebouwd # #<PR>` (ADR 0080; `pnpm docs:status` toetst het PR-nummer en
- * het bewijs); de oude vorm met `; gevalideerd: <sha>` telt nog,
- * gelezen met `documentInfo` en `builtReference`.
- * @param {string} bestand
- * @param {string} spec
- */
-function heeftBouwbewijs(bestand, spec) {
-  return documentInfo(bestand, spec)?.status === 'gebouwd' && builtReference(spec) !== null;
-}
-
-/**
+ * Een spec naar gebouwd: `status: gebouwd`, zonder PR-nummer (ADR 0095). Wat achter de status staat is commentaar en telt
+ * hier niet; de vorm lezen `documentInfo` en `builtReference` in rails/hooks/lib/document-state.mjs, geen eigen parser hier.
+ * Alleen de roadmap-id-regel blijft: noemt de spec een roadmap-id, dan wijzigt docs/roadmap.md in dezelfde PR.
  * @param {{ basis: Bron, head: Head }} bronnen
  * @returns {Violation[]}
  */
@@ -169,20 +160,14 @@ function specMeldingen({ basis, head }) {
       if (SPEC_STATUS.exec(tekst)?.[1] !== 'gebouwd') return [];
       const oud = basis.lees(head.hernoemd[bestand] ?? bestand);
       if (oud !== null && SPEC_STATUS.exec(oud)?.[1] === 'gebouwd') return [];
-      /** @type {Violation[]} */
-      const meldingen = [];
-      if (!heeftBouwbewijs(bestand, tekst))
-        meldingen.push({
-          key: `spec:bewijs:${bestand}`,
-          message: `${bestand}: naar gebouwd zonder bouwbewijs; zet de status met pnpm docs:status (status: gebouwd # #<PR>)`,
-        });
       const verwijzing = VERWIJZING.exec(tekst)?.[0];
-      if (verwijzing !== undefined && !roadmapGewijzigd)
-        meldingen.push({
+      if (verwijzing === undefined || roadmapGewijzigd) return [];
+      return [
+        {
           key: `spec:roadmap:${bestand}`,
           message: `${bestand}: naar gebouwd en noemt ${verwijzing}, maar ${ROADMAP} wijzigt niet in deze PR`,
-        });
-      return meldingen;
+        },
+      ];
     });
 }
 

@@ -1,15 +1,12 @@
 import { readFileSync } from 'node:fs';
-import { afterEach, describe, expect, test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import { beslisOvergang, documentInfo } from '../../rails/hooks/lib/document-state.mjs';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
-import { PR, SOURCE, commit, draaiDocsStatus, git, maakRepo, opruimen, read, write } from '../hooks/follow-up-kit';
 
 // docs/specs/specarchief-en-bouwvorm.md (ADR 0080), aanvullende gevallen uit de review van de bouw-PR: een weggehaalde
 // markering vraagt nieuw bouwbewijs (AC-7), nieuwe inhoud van een gebouwde spec hoort niet in een PR met code (AC-7), de
 // markering telt alleen voor een spec niet mee in de digest (AC-7), een markering alleen op een spec die op main gebouwd is en
 // niet in de mergecommit (AC-7, AC-10), en het rolhek kijkt naar elk pad onder docs/specs/archief/ (AC-3).
-afterEach(opruimen);
-
 const SPEC = 'docs/specs/demo.md';
 const AC1 = '- **demo/AC-1** — Gegeven iets, dan iets.';
 const AC2 = '- **demo/AC-2** — Gegeven meer, dan meer.';
@@ -35,7 +32,8 @@ function spec(status: string, acs: string[] = [AC1], proza = 'Bestaande kit.'): 
   ].join('\n');
 }
 
-describe('specarchief-en-bouwvorm/AC-7: de markering weghalen vraagt gebouwd # #<deze PR>', () => {
+// GEWIJZIGD (gebouwd-zonder-nummer/AC-9, ADR 0095): de titel noemt `# #<deze PR>` niet meer; de uitkomst (`gebouwd`) blijft.
+describe('specarchief-en-bouwvorm/AC-7: de markering weghalen vraagt nieuw bouwbewijs in de bouw-PR', () => {
   test('specarchief-en-bouwvorm/AC-7 markering weg, verwijzing gelijk: gebouwd (nieuw bouwbewijs)', () => {
     const uitslag = beslisOvergang(
       SPEC,
@@ -54,30 +52,8 @@ describe('specarchief-en-bouwvorm/AC-7: de markering valt alleen bij een spec ui
   });
 });
 
-describe('specarchief-en-bouwvorm/AC-10: geen markering in de mergecommit', () => {
-  test('specarchief-en-bouwvorm/AC-10 docs:status na de merge met een AC (nog niet gebouwd) in de spec: rood', () => {
-    const { root } = maakRepo({ specs: [], mandaat: [], roadmap: [] });
-    git(root, ['switch', '-q', 'main']);
-    const tekst = spec('goedgekeurd', [AC1, AC2_GEMARKEERD], `Raakt \`${SOURCE}\`.`);
-    write(root, SPEC, tekst);
-    commit(root, 'docs(spec): demo (#129)');
-    git(root, ['switch', '-q', '-c', 'feat/demo', 'main']);
-    write(root, SOURCE, 'export const version = 2;\n');
-    const prHead = commit(root, 'feat: demo');
-    git(root, ['switch', '-q', 'main']);
-    git(root, ['merge', '-q', '--squash', 'feat/demo']);
-    const mergeSha = commit(root, `feat: demo (#${String(PR)})`);
-    git(root, ['update-ref', 'refs/remotes/origin/main', mergeSha]);
-    git(root, ['switch', '-q', '-c', 'docs/status-demo', 'main']);
-    const env = { STUB_PR_MERGED: 'true', STUB_MERGE_SHA: mergeSha, STUB_PR_HEAD: prHead, STUB_PR_REF: 'feat/demo' };
-    const uitvoer = draaiDocsStatus(root, [SPEC, 'gebouwd', '--pr', String(PR)], env);
-    expect(uitvoer.stderr).toContain(
-      'Gebouwd na de merge vereist de spec zonder AC (nog niet gebouwd) in de mergecommit',
-    );
-    expect(uitvoer.status).toBe(1);
-    expect(read(root, SPEC)).toBe(tekst);
-  });
-});
+// GEWIJZIGD (spec gebouwd-zonder-nummer, ADR 0095): het geval van specarchief-en-bouwvorm/AC-10 (docs:status na de merge) is
+// weg met het script.
 
 describe('specarchief-en-bouwvorm/AC-3: het rolhek kijkt naar elk pad onder docs/specs/archief/', () => {
   const ROOT = '/repo';

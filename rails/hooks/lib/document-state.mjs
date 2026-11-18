@@ -91,25 +91,6 @@ export function documentInfo(file, text) {
   return { kind, status, digest, canonical };
 }
 
-/**
- * Schrijft de statusregel; `gebouwd` alleen als `gebouwd # #<PR>` (ADR 0080 punt 5).
- * @param {string} file
- * @param {string} text
- * @param {{ status: string, pr?: number }} target
- */
-export function changeStatus(file, text, target) {
-  const info = documentInfo(file, text);
-  if (info === null || !validStatus(info.kind, target.status)) throw new Error('Ongeldig document of status voor dit documenttype');
-  const label = info.kind === 'spec' ? 'status:' : 'Status:';
-  let line = `${label} ${target.status}`;
-  if (target.status === 'gebouwd') {
-    if (!Number.isSafeInteger(target.pr) || (target.pr ?? 0) <= 0) throw new Error('Gebouwd vereist een PR-nummer');
-    line += ` # #${String(target.pr)}`;
-  }
-  const pattern = info.kind === 'spec' ? /^status:[^\r\n]*$/m : /^Status:[^\r\n]*$/m;
-  return text.replace(pattern, () => line);
-}
-
 /** `(JJJJ-MM-DD)` met een datum die in de kalender bestaat. @param {string} deel */
 function bestaandeDatum(deel) {
   const datum = /^\((\d{4})-(\d{2})-(\d{2})\)$/.exec(deel);
@@ -158,7 +139,7 @@ function nieuweHerzieningsregel(voor, na) {
  * - `vrij`: geen eigenaarbesluit (voorstel, of niets wezenlijks gewijzigd);
  * - `a4`: een ADR met een eigenaarstatus wijzigt van inhoud of gaat terug naar voorgesteld, of een gearchiveerd ADR wijzigt;
  * - `herzien`: een geaccepteerd ADR blijft geaccepteerd met andere inhoud en een nieuwe herzieningsregel (in een app alleen in een besluit-PR);
- * - `gebouwd`: alleen met bouwbewijs;
+ * - `gebouwd`: architect en hoofdsessie, in de bouw-PR (ADR 0095);
  * - `besluit`: een eigenaarstatus die de merge van de eigenaar beslist (`nieuw`: een nieuw document of vanuit een voorstel);
  * - `geweigerd`: een andere overgang (bijv. vervallen terug naar goedgekeurd); alleen met een record.
  * @param {string} file @param {string | null} voor @param {string} na
@@ -184,19 +165,18 @@ export function beslisOvergang(file, voor, na) {
 }
 
 /**
- * Een gebouwde spec blijft gebouwd (ADR 0080 punt 4 en 6): dezelfde verwijzing met nieuwe inhoud is een besluit; alleen de SHA
- * weghalen bij gelijke inhoud is vrij; elke andere verwijzing is nieuw bouwbewijs.
+ * Een gebouwde spec blijft gebouwd (ADR 0095 punt 5): het commentaar achter de status telt niet, dus alleen dat wijzigen bij
+ * gelijke inhoud is vrij en nieuwe inhoud is een besluit. Een weggehaalde markering is bouw, en een nieuwe
+ * `; gevalideerd: <sha>` is de oude bewijsvorm, die het rolhek weigert.
  * @param {string} voor @param {string} na @param {boolean} zelfdeInhoud @returns {'vrij' | 'besluit' | 'gebouwd'}
  */
 function gebouwdBlijft(voor, na, zelfdeInhoud) {
-  const oud = builtReference(voor);
-  const nieuw = builtReference(na);
-  // Een weggehaalde markering vraagt nieuw bouwbewijs: `gebouwd # #<deze PR>` (ADR 0080 punt 4).
+  // Vervolgbouw (ADR 0080 punt 4): de bouw-PR haalt de markering weg en laat de statusregel staan.
   const gemarkeerd = acIds(na).gemarkeerd;
   if ([...acIds(voor).gemarkeerd].some((id) => !gemarkeerd.has(id))) return 'gebouwd';
-  if (oud === null || nieuw === null || oud.pr !== nieuw.pr) return 'gebouwd';
-  if (oud.sha === nieuw.sha) return zelfdeInhoud ? 'vrij' : 'besluit';
-  return zelfdeInhoud && nieuw.sha === undefined ? 'vrij' : 'gebouwd';
+  const sha = builtReference(na)?.sha;
+  if (sha !== undefined && sha !== builtReference(voor)?.sha) return 'gebouwd';
+  return zelfdeInhoud ? 'vrij' : 'besluit';
 }
 
 /** ADR geaccepteerd → vervangen/vervallen; spec goedgekeurd/gebouwd → vervallen; inhoud van een goedgekeurde spec. @param {string} van @param {string} naar @param {string} kind */
@@ -207,8 +187,8 @@ function toegestaanZonderRecord(van, naar, kind) {
 }
 
 /**
- * `gebouwd # #<PR>` (ADR 0080 punt 5): in de PR met de implementatie zelf of daarna de gemergde bouw-PR; `pnpm docs:status`
- * toetst het bewijs. De oude vorm `gebouwd # #<PR>; gevalideerd: <sha>` wordt nog gelezen (apps, geschiedenis).
+ * Leest het PR-nummer en de SHA uit de oude vormen `gebouwd # #<PR>` en `gebouwd # #<PR>; gevalideerd: <sha>` (apps,
+ * geschiedenis). De vorm is nu `status: gebouwd` zonder nummer (ADR 0095); daarvoor en voor elk ander commentaar: null.
  * @param {string} text @returns {{ pr: number, sha?: string } | null}
  */
 export function builtReference(text) {

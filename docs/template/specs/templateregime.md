@@ -69,7 +69,7 @@ Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van pun
   ADR 0089 punt 9 beginnen pas na dit AC; stap 3 hangt er niet van af.
 - **templateregime/AC-7** — Stap 3, na AC-4 en AC-5: `.github/workflows/guard.yml` heeft geen jobs `diff-guard`,
   `agent-merge` en `document-status`; `document-status` staat niet meer in `requiredChecks` en de eigenaar werkt de ruleset
-  direct na de merge bij; de scripts uit "Raakt ook" zijn weg; `pnpm pr:merge` verliest de inhoudstoets (dit deel is
+  direct na de merge bij; de scripts uit "Raakt ook" zijn weg, en wat ADR 0095 schrapt; `pnpm pr:merge` verliest de inhoudstoets (dit deel is
   vervallen door ADR 0093 punt 3: de padtoets is terug, spec agent-samenvoegen) en houdt head-SHA, groene checks en de modus `merge` uit `.claude/gates.json` tot ADR 0089 punt 9 (de effecttoets is weg, ADR 0091).
 
   | Onderdeel | Overgenomen door |
@@ -136,8 +136,9 @@ klassieke branch protection) zijn vervallen door ADR 0093; de oude rijen staan i
 - Stap 3 verwijdert: `scripts/kit/check-document-status.mjs`, `lane.mjs`, `diff-guard.mjs`, `agent-merge.mjs`,
   `document-status-lokaal.mjs`, `functional-ui-status.mjs`, `adr-herzien.mjs`, de inhoudstoets in `pr-merge.mjs`, drie jobs in
   `.github/workflows/guard.yml`; past aan: `.claude/decisions.json` (`document-status` weg) en `lefthook.yml`.
-  `rails/hooks/lib/document-state.mjs` houdt wat `check-docs`, `pnpm docs:status` en het rolhek (tot punt 9) gebruiken.
-- Blijven: `scripts/kit/document-status.mjs`, `status-git.mjs`, `github-evidence.mjs`, `rails/hooks/lib/built-evidence.mjs`,
+  `rails/hooks/lib/document-state.mjs` houdt wat `check-docs` en het rolhek (tot punt 9) gebruiken (`pnpm docs:status` is
+  vervallen door ADR 0095).
+- Blijven: `scripts/kit/document-status.mjs` (vervallen door ADR 0095), `status-git.mjs`, `github-evidence.mjs`, `rails/hooks/lib/built-evidence.mjs`,
   `scripts/kit/leerpunt.mjs`, `scripts/kit/leerpunt-bewijs.mjs`.
 - Tests die verdwijnen, alleen verdwijnende code: `test/rails/` `agent-merge`, `agent-merge-bytegrens`, `agent-merge-omvang`,
   `diff-guard`, `diff-guard-bytegrens`, `diff-guard-risico`, `lane`, `lane-security`, `lane-status`, `lane-status-a4`,

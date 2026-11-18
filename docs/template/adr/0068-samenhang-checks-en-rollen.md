@@ -5,6 +5,8 @@ Status: geaccepteerd
 Herzien: 2026-11-03 (#469): gewijzigd door [0069](0069-agent-merge-niet-kritiek.md) punt 3
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 2 en 5, punt 1, de ruleset eist precies de checks uit `requiredChecks`; punt 3, de diff-guard verdwijnt in plaats van verplicht te worden
 Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
+Herzien: 2026-11-18 (#804): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.md) punt 3 en 7, punt 4: de uitzondering
+"een statusregel met geldig bewijs" vervalt; Gevolgen: het `gebouwd`-bewijs van `pnpm docs:status` bestaat niet meer
 
 Vult [0045](0045-railwerk.md), [0057](0057-risicogestuurde-werkstraat.md) en [0062](0062-spec-en-bouw-in-een-pr.md) aan; die blijven gelden.
 
@@ -40,8 +42,8 @@ en een tekst die handhaving claimt die niet bestaat, laat een agent zelf control
 4. **Het rolhek volgt de rolregels voor de developer.** Het weigert de developer een spec onder `docs/specs/` aan te maken,
    te wijzigen, te verwijderen of te hernoemen, en een bestaande test te wijzigen. De weigering verwijst voor een spec naar de architect (R-WERK-07) en voor een test naar
    de hoofdsessie, die hem wijzigt als spec of opdracht het gedrag verandert, of naar de tester als hij fout lijkt
-   (R-TEST-02). Uitzonderingen: een spec terugzetten naar de tekst op main, en een statusregel met geldig bewijs
-   (`pnpm docs:status`, zoals nu). Een status terug naar `voorstel` zetten blijft,
+   (R-TEST-02). Uitzondering: een spec terugzetten naar de tekst op main (`gebouwd` zet de developer niet, 0095 punt 7).
+   Een status terug naar `voorstel` zetten blijft,
    zoals nu, aan architect en hoofdsessie (R-WERK-08). Een nieuwe test toevoegen blijft vrij. Voor de hoofdsessie, de architect en de tester verandert niets;
    R-ROL-01 zegt dat nu ook voor de hoofdsessie (een bestaande test alleen volgens R-TEST-02, met reden in de PR).
    `new-resource` noemt in beide meldingen R-WERK-08.
@@ -61,9 +63,9 @@ en een tekst die handhaving claimt die niet bestaat, laat een agent zelf control
 
 ## Gevolgen
 
-- `pnpm pr:verify` en de ruleset vragen dezelfde checks; `check-core` telt voortaan ook in `pr:verify` en in het
-  `gebouwd`-bewijs van `pnpm docs:status` (dat leest `requiredChecks`). `check-core` draait op elke PR
-  (`pull_request_target`), dus dat bewijs blijft haalbaar.
+- `pnpm pr:verify` en de ruleset vragen dezelfde checks; `check-core` telt voortaan ook in `pr:verify` (dat leest
+  `requiredChecks`; het `gebouwd`-bewijs van `docs:status` is vervallen door 0095). `check-core` draait op elke PR
+  (`pull_request_target`).
 - Een developer die een bestaande test of spec moet wijzigen, stopt en geeft het terug aan de hoofdsessie. Commando's die zulke paden indirect veranderen (`prettier --write`, `vitest -u`, een rebase of pull), laat de developer ook aan de hoofdsessie.
 - `docs/nieuwe-app.md` somt de checks voor een app op; die lijsten blijven, want tests bewaken ze al tegen het rulesetscript.
 - Buiten scope: een check die elke regel "Afgedwongen door" toetst op een bestaand mechanisme; dat wordt een roadmap-item.

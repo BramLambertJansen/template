@@ -7,6 +7,8 @@ Herzien: 2026-11-05 (#541): gewijzigd door [0080](0080-specarchief-en-bouwvorm.m
 `# #<PR>`; bestaande regels met `; gevalideerd: <sha>` worden omgezet
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 2, 5 en 8, punt 2 vervalt met `check-document-status`: `gebouwd` in de bouw-PR is een afspraak; punt 4, de ruleset eist precies `requiredChecks`; punt 3 blijft: het bouwbewijs is de merge
 Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
+Herzien: 2026-11-18 (#804): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.md) punt 1 en 3, `status: gebouwd` zonder
+PR-nummer in de bouw-PR; `pnpm docs:status` en de route achteraf vervallen
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 10, en punt 5 en 6 waar ze `gebouwd` noemen.
 Drempel: A4 (een punt van een geaccepteerd ADR vervangen) en A3 (de guard aanvaardt `gebouwd` zonder eigen checkcontrole).
@@ -21,16 +23,15 @@ gebouwde spec, uit de eigenaarreview "template slanker en sneller".
 
 ## Besluit
 
-1. **De claim staat in de bouw-PR.** Zodra de PR open is, schrijft de hoofdsessie in dezelfde PR `status: gebouwd # #<PR>`
-   (met `--roadmap` ook het vinkje van de eigen taak), vóór het wachten op groen. `pnpm docs:status <spec> gebouwd --pr N` schrijft
-   die vorm zonder op checks te wachten; hij weigert als PR N niet open is op de huidige branch.
+1. **De claim staat in de bouw-PR.** De hoofdsessie of de architect schrijft in dezelfde PR `status: gebouwd`, zonder
+   PR-nummer en vóór het wachten op groen (0095 punt 1).
 2. *(vervallen, zie 0089 punt 5)*
 3. **Het bouwbewijs is de merge.** De ruleset laat een merge alleen toe als elke verplichte check van GitHub Actions groen is op
    de head-SHA, en die head bevat de claim. De gevalideerde SHA staat niet meer in de tekst; GitHub bewaart hem bij PR N
    (`headRefOid`). `gebouwd` op main betekent: PR N is gemerged met groene verplichte checks.
 4. *(vervallen, zie 0089 punt 2)*
-5. **Achteraf blijft mogelijk.** Voor een spec waarvan de bouw-PR al gemerged is, blijft de route met `--pr` (vorm: 0080
-   punt 5). ADR's kennen geen `gebouwd`.
+5. **Achteraf blijft mogelijk.** Vergeet de bouw-PR de status, dan zet een latere PR `status: gebouwd` met de hand; de route
+   met `--pr` is vervallen (0095 punt 3). ADR's kennen geen `gebouwd`.
 
 Vervangt uit 0046: punt 10 (moment en vorm).
 

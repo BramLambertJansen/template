@@ -18,6 +18,8 @@ Herzien: 2026-11-12 (#696): door ADR 0089 punt 2, 5, 8 en 9, de vorige regel ver
 Herzien: 2026-11-12 (#703): punt 1, architect in de template op verzoek; punt 18, model per spec vervalt; geen besluit-PR in de template (ADR 0090 punt 1, 4 en 5)
 Herzien: 2026-11-14 (#713): ingekort tot wat nog geldt; een ingehaald punt is één regel met de plek waar het nu staat, de puntnummers zijn ongewijzigd, de oude tekst staat in git
 Herzien: 2026-11-17 (#778): Gevolgen, het rolhek valt dicht bij een storing (R-ROL-09) en blijft een vangnet, geen grens (R-ROL-10); er stond "fail-open"
+Herzien: 2026-11-18 (#804): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.md) punt 1, 3 en 7, punt 6: de developer
+schrijft geen `gebouwd` meer; punt 10: `status: gebouwd` zonder PR-nummer in de bouw-PR, `pnpm docs:status` vervalt
 
 Vervangt 0025, 0027, 0030 en 0038; neemt de delen van 0029 over die via 0038 punt 8 nog golden. Drempel: A4.
 
@@ -60,7 +62,7 @@ beslist (review van code-eigenaren, ruleset) en zijn de eigen documentbewaking, 
    naar `vervallen`; een spec terug naar `voorstel` (R-WERK-08). Het rolhek toetst dit per rol; `check-document-status` bestaat
    niet meer (0089 punt 5), dus in CI is het een afspraak die de eigenaar met zijn goedkeuring beslist.
 6. **Rolhek.** Alleen architect en hoofdsessie schrijven een eigenaarstatus of wijzigen de inhoud van een goedgekeurde spec;
-   andere rollen niet. De developer houdt alleen `gebouwd` via `docs:status`.
+   andere rollen niet, ook geen `gebouwd` (0095 punt 7).
 7. **Anker.** Commitvolgorde, inhoud na de status en committer doen er niet toe; het anker is de review van de code-eigenaar op
    GitHub, met een eigen identiteit voor de agent (0089 punt 2 en 3).
 
@@ -69,8 +71,8 @@ beslist (review van code-eigenaren, ruleset) en zijn de eigen documentbewaking, 
 8. **Register alleen voor `requiredChecks`.** `.claude/decisions.json` op main houdt de verplichte checks voor `pr:verify`.
    Rechten gelden pas na de merge; een werkversie, prompt, label of commit-auteur vervangt dat niet.
 9. *(vervallen, zie 0063)*
-10. **Gebouwd met bouwbewijs.** Een spec gaat naar `gebouwd` in de PR met de implementatie (0054); of later via `pnpm docs:status` met
-    het nummer van de gemergde bouw-PR, samen met het eigen roadmapvinkje; de statusregel noemt alleen de PR (0080 punt 5). Gebouwd is aangeboden en gecontroleerd, geen merge of release. ADR's kennen geen `gebouwd`.
+10. **Gebouwd met bouwbewijs.** Een spec gaat naar `gebouwd` met `status: gebouwd`, zonder PR-nummer, in de PR met de
+    implementatie, of met de hand in een latere PR (0095 punt 1 en 3). Gebouwd is aangeboden en gecontroleerd, geen merge of release. ADR's kennen geen `gebouwd`.
 11. *(vervallen, zie 0063)* Een label vervangt geen eigenaarreview.
 
 **Mini-spec**

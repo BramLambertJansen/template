@@ -1,5 +1,5 @@
-import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { documentInfo } from '../../rails/hooks/lib/document-state.mjs';
@@ -18,7 +18,6 @@ export const ROADMAP = 'docs/roadmap.md';
 export const PR = 130;
 export const KOP = '# Roadmap\n\n## Stuk\n\n';
 
-const DOCS_STATUS = path.resolve('scripts/kit/document-status.mjs');
 const GATES = readFileSync('.claude/gates.json', 'utf8');
 const directories: string[] = [];
 
@@ -57,10 +56,6 @@ export function commit(root: string, message = 'test: fixture'): string {
 
 export function specBody(name: string, status = 'goedgekeurd'): string {
   return `---\nstatus: ${status}\nnamespace: ${name}\n---\n\n# Spec ${name}\n\n## Hergebruik en UX\n\nBestaande kit.\n`;
-}
-
-export function builtLine(sha: string, pr = PR): string {
-  return `gebouwd # #${String(pr)}; gevalideerd: ${sha}`;
 }
 
 export function roadmapTekst(regels: string[]): string {
@@ -132,101 +127,8 @@ export function maakRepo(opties: Opties): Fixture {
   return { root, base };
 }
 
-export interface Stappen {
-  /** Specs die in de administratiecommit naar `gebouwd` gaan (gevalideerd: de broncommit). */
-  gebouwd: string[];
-  /** Roadmap in de broncommit (vóór de gevalideerde SHA) en/of in de administratiecommit. */
-  bronRoadmap?: string[];
-  adminRoadmap?: string[];
-  /** Extra bewerking in de broncommit (bijvoorbeeld hernoemen of verwijderen van de roadmap). */
-  bron?: (root: string) => void;
-  /** Extra bewerking in de administratiecommit. */
-  admin?: (root: string) => void;
-}
-
-export interface Resultaat {
-  validated: string;
-  head: string;
-}
-
-/** Broncommit (SOURCE + eventueel roadmap) en daarna de administratiecommit (statusregels + eventueel roadmap). */
-export function bouw(fixture: Fixture, stappen: Stappen): Resultaat {
-  const { root } = fixture;
-  write(root, SOURCE, 'export const version = 2;\n');
-  if (stappen.bronRoadmap !== undefined) write(root, ROADMAP, roadmapTekst(stappen.bronRoadmap));
-  stappen.bron?.(root);
-  const validated = commit(root, 'feat: implementatie');
-  if (stappen.gebouwd.length === 0 && stappen.adminRoadmap === undefined && stappen.admin === undefined)
-    return { validated, head: validated };
-  for (const spec of stappen.gebouwd)
-    write(root, spec, read(root, spec).replace('status: goedgekeurd', `status: ${builtLine(validated)}`));
-  if (stappen.adminRoadmap !== undefined) write(root, ROADMAP, roadmapTekst(stappen.adminRoadmap));
-  stappen.admin?.(root);
-  return { validated, head: commit(root, 'docs: administratie') };
-}
-
-/** Een uitvoerbare `gh`-stub: antwoordt op de twee endpoints die github-evidence.mjs leest. */
-export function ghStub(): string {
-  const dir = tempDir('gh-stub-');
-  const script = `#!${process.execPath}
-const endpoint = process.argv[3] ?? '';
-const repo = process.env.STUB_REPO ?? '${REPOSITORY}';
-const pr = /\\/pulls\\/(\\d+)$/.exec(endpoint);
-if (pr !== null) {
-  const merged = process.env.STUB_PR_MERGED === 'true';
-  console.log(JSON.stringify({
-    number: Number(pr[1]),
-    state: process.env.STUB_PR_STATE ?? (merged ? 'closed' : 'open'),
-    merged,
-    merge_commit_sha: process.env.STUB_MERGE_SHA ?? null,
-    base: { ref: process.env.STUB_PR_BASE ?? 'main', repo: { full_name: repo } },
-    head: {
-      repo: { full_name: process.env.STUB_PR_HEAD_REPO ?? repo },
-      ref: process.env.STUB_PR_REF ?? '${BRANCH}',
-      sha: process.env.STUB_PR_HEAD ?? '',
-    },
-  }));
-} else {
-  const sha = /commits\\/([0-9a-f]{40})\\/check-runs/.exec(endpoint)?.[1] ?? '';
-  const names = (process.env.STUB_CHECK_NAMES ?? 'gate:fast').split(',').filter(Boolean);
-  const runs = process.env.STUB_CHECKS === 'geen' ? [] : names.map((name, index) => (
-    { id: index + 1, name, head_sha: sha, status: 'completed', conclusion: 'success', app: { id: 15368 } }
-  ));
-  console.log(JSON.stringify({ check_runs: runs }));
-}
-`;
-  write(dir, 'gh', script);
-  chmodSync(path.join(dir, 'gh'), 0o755);
-  return dir;
-}
-
-export interface Uitvoer {
-  status: number | null;
-  stdout: string;
-  stderr: string;
-}
-
-function env(stub: string, extra: Record<string, string>): Record<string, string> {
-  const schoon = Object.fromEntries(Object.entries(process.env).flatMap(([k, v]) => (v === undefined ? [] : [[k, v]])));
-  delete schoon['PR_NUMBER'];
-  return { ...schoon, PATH: `${stub}:${process.env['PATH'] ?? ''}`, ...extra };
-}
-
-/** `node scripts/kit/document-status.mjs <args>` in de fixture; HEAD is de gevalideerde broncommit. */
-export function draaiDocsStatus(root: string, args: string[], extra: Record<string, string> = {}): Uitvoer {
-  const stub = ghStub();
-  const { status, stdout, stderr } = spawnSync(process.execPath, [DOCS_STATUS, ...args], {
-    cwd: root,
-    encoding: 'utf8',
-    env: env(stub, { STUB_PR_HEAD: git(root, ['rev-parse', 'HEAD']), ...extra }),
-  });
-  return { status, stdout, stderr };
-}
-
-export function maakSymlink(root: string, file: string, doel: string): void {
-  rmSync(path.join(root, file), { force: true });
-  symlinkSync(doel, path.join(root, file));
-}
+// GEWIJZIGD (spec gebouwd-zonder-nummer, ADR 0095): de hulpen voor `pnpm docs:status` (`bouw`, `ghStub`, `draaiDocsStatus`,
+// `maakSymlink`, `builtLine`, `statusOnly`) zijn weg met het script en de tests die ze gebruikten.
 
 // --- modules laden zonder statische import (de nieuwe exports bestaan nog niet; zie check-roadmap.test.ts) ---------
 
@@ -245,7 +147,6 @@ export async function roep(module: string, naam: string, ...args: unknown[]): Pr
   return resultaat;
 }
 
-export const STATUS_GIT = ['../../scripts/kit', 'status-git.mjs'].join('/');
 export const CHECK_ROADMAP = ['../../scripts/kit', 'check-roadmap.mjs'].join('/');
 
 export function testpaden(): string[] {
@@ -254,11 +155,6 @@ export function testpaden(): string[] {
     throw new Error('gates.json zonder testpaden');
   const lijst: unknown[] = json.testpaden;
   return lijst.map(String);
-}
-
-/** `statusOnlyDiff(root, { from, to }, { testpaden })`, met een derde parameter die nog niet bestaat. */
-export async function statusOnly(root: string, from: string, to: string): Promise<unknown> {
-  return roep(STATUS_GIT, 'statusOnlyDiff', root, { from, to }, { testpaden: testpaden() });
 }
 
 /** De sleutels van `roadmapVanRepo(root, 'origin/main')`. */

@@ -1,9 +1,4 @@
 {
-  "rails/hooks/lib/built-evidence.mjs": {
-    "complexity": {
-      "count": 2
-    }
-  },
   "rails/hooks/lib/document-state.mjs": {
     "complexity": {
       "count": 1
@@ -33,16 +28,6 @@
     }
   },
   "scripts/kit/catalogus-graph.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
-  "scripts/kit/document-status.mjs": {
-    "complexity": {
-      "count": 1
-    }
-  },
-  "scripts/kit/roadmap-item.mjs": {
     "complexity": {
       "count": 1
     }
@@ -174,7 +159,7 @@
   },
   "test/hooks/built-evidence.test.ts": {
     "rails/negatieve-tabel": {
-      "count": 6
+      "count": 3
     }
   },
   "test/hooks/code-scanning-evidence.test.ts": {
@@ -183,11 +168,6 @@
     }
   },
   "test/hooks/hooks-van-main.test.ts": {
-    "rails/negatieve-tabel": {
-      "count": 1
-    }
-  },
-  "test/hooks/mandate-follow-up-status.test.ts": {
     "rails/negatieve-tabel": {
       "count": 1
     }
@@ -229,7 +209,7 @@
   },
   "test/hooks/taakmandaat-weg.test.ts": {
     "rails/afwezigheid": {
-      "count": 2
+      "count": 1
     }
   },
   "test/rails/archief-check-docs.test.ts": {
@@ -240,11 +220,6 @@
   "test/rails/gate-label-weg.test.ts": {
     "rails/afwezigheid": {
       "count": 3
-    }
-  },
-  "test/rails/gebouwd-na-merge.test.ts": {
-    "rails/negatieve-tabel": {
-      "count": 4
     }
   },
   "test/rails/leerpunt-sjabloon.test.ts": {

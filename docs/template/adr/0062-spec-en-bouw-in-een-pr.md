@@ -3,7 +3,7 @@
 Status: geaccepteerd
 
 Herzien: 2026-10-30 (#379): punt 4 geldt ook na de merge; voor een gemergde PR vervalt "de PR open is" uit 0046 punt 10 en
-volgt het bouwbewijs uit de mergecommit ([spec](../specs/gebouwd-na-merge.md)).
+volgt het bouwbewijs uit de mergecommit (spec `gebouwd-na-merge` (vervallen)).
 Herzien: 2026-10-30 (#385): in punt 2 vervallen "gate-label" en "of mandaat"
 ([0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md)).
 Herzien: 2026-11-04 (#535): gewijzigd door [0079](0079-een-padtabel.md) punt 2, de kritieke paden komen uit de kolom
@@ -14,6 +14,8 @@ Herzien: 2026-11-12 (#692): door ADR 0089 punt 1 en 3, in de template deels: pun
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 5 en 8, de vorige regel vervalt: geen lane in de template; zodra de GitHub App bewezen is, verdwijnt `check-document-status`; punt 2 en 5 (kritiek werk eerst in een besluit-PR) en de volgorde uit punt 3 worden afspraken die de eigenaar met zijn goedkeuring op de PR beslist; de spec-review blijft
 Herzien: 2026-11-12 (#703): punt 2 en 5, in de template gaat ook kritiek werk in één PR; de besluit-PR blijft een afspraak in een app (ADR 0090 punt 4)
 Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
+Herzien: 2026-11-18 (#804): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.md) punt 1 en 3, punt 4: `status: gebouwd`
+zonder PR-nummer; de toets van `docs:status` na de merge vervalt, en daarmee de eerste regel hierboven
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 5, 10, 12, 14 en 15. Drempel: A3 (de lanetoets in
 `check-document-status` laat meer toe) en A4 (afspraken uit een geaccepteerd ADR). Uitwerking: [spec](../specs/spec-en-bouw-in-een-pr.md).
@@ -47,9 +49,9 @@ toch samen bij de merge.
    reviewer, die ook de keuze "niet kritiek" toetst. De spec staat in de PR in een commit vóór de eerste commit met code of
    tests. De PR-beschrijving opent met wat er besloten wordt en de uitslag van de
    spec-review.
-4. **`gebouwd` in dezelfde PR.** Een spec mag in de PR die haar implementatie bevat direct naar `gebouwd` met alleen het eigen
-   PR-nummer, zonder gevalideerde SHA en zonder statuscommit achteraf. Bouwbewijs is dan de ruleset op main, die de verplichte
-   checks op de gemergde head eist. Staat de implementatie al op main, dan toetst `docs:status` de mergecommit (0080 punt 5).
+4. **`gebouwd` in dezelfde PR.** Een spec mag in de PR die haar implementatie bevat direct naar `status: gebouwd`, zonder
+   PR-nummer en zonder statuscommit achteraf (0095 punt 1). Bouwbewijs is dan de ruleset op main, die de verplichte
+   checks op de gemergde head eist. Staat de implementatie al op main, dan zet een latere PR de regel met de hand (0095 punt 3).
 5. *(vervallen, zie 0089 punt 5 en 0090 punt 4)*
 
 ## Alternatieven
