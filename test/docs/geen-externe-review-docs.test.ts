@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { describe, expect, test } from 'vitest';
 
 // agent-merge-niet-kritiek/AC-10: geen externe reviewdienst in de actieve werkstraat. De opdracht uit de spec (zonder de
-// fixtures) mag alleen nog de vijf uitzonderingen geven, letterlijk. Het zoekwoord wordt samengesteld, zodat dit bestand zichzelf
+// fixtures) mag alleen nog de uitzonderingen 4 en 5 geven, letterlijk. Het zoekwoord wordt samengesteld, zodat dit bestand zichzelf
 // niet vindt; het sluit zichzelf bovendien uit (uitzondering 4). Een treffer in docs/adr/ of docs/specs/ telt niet: die mappen
 // staan niet in de opdracht (historie blijft).
 const WOORD = ['co', 'dex'].join('');
@@ -25,19 +25,19 @@ const PADEN = [
   'docs/dod.md',
 ];
 
-// Uitzondering 1: de meting, tot de aparte meting-PR (OV-1), per bestand.
-const METING = new Set([
+// GEWIJZIGD (agent-merge-niet-kritiek/OV-1, R-TEST-02): uitzondering 1 (de vijf metingbestanden) en 2 (stap 8 van de skill
+// opleveren en de twee metingzinnen in de doorloop) golden "tot de aparte meting-PR". Die PR is gemerged (#772, skill #773):
+// de meting telt geen bevindingen van een externe reviewdienst meer, dus elke regel met het woord in die bestanden is nu
+// een treffer.
+const METING = [
   'scripts/kit/meting.mjs',
   'scripts/kit/meting-trend.mjs',
   'test/rails/leesbudget.test.ts',
   'test/rails/meting-kerncijfers-pr-tabel.test.ts',
   'test/rails/meting-stuurt.test.ts',
-]);
-// Uitzondering 2: per regel. In de skill alleen stap 8; in de doorloop alleen de twee zinnen over de maat in de meting.
+];
 const SKILL = '.claude/skills/opleveren/SKILL.md';
 const DOORLOOP = 'docs/operations/agent-doorloop.md';
-const STAP_8 = new RegExp(`CI-rood of ${WOORD}-bevindingen`, 'i');
-const MAAT = new RegExp(`${WOORD}-bevindingen`, 'i');
 // Uitzondering 5: per regel, alleen wat de vervallen sleutel of de bot herkent, meldt of nabouwt: in de twee scripts de
 // regels met de sleutel tussen aanhalingstekens of `agentMerge.<woord>` (herkennen en de reden uit AC-8); in de twee opvolgers
 // van de oude omvang- en steekproeftests de regels met de botnaam, de marker, de sleutel tussen aanhalingstekens of
@@ -59,11 +59,9 @@ type Treffer = { bestand: string; regel: number; tekst: string };
 /** Alle treffers buiten de uitzonderingen. */
 function buitenUitzonderingen(treffers: Treffer[]): Treffer[] {
   return treffers.filter((t) => {
-    if (t.bestand === ZICHZELF || METING.has(t.bestand)) return false;
+    if (t.bestand === ZICHZELF) return false;
     if (UITZ5_SCRIPTS.has(t.bestand)) return !SLEUTEL_REGEL.test(t.tekst);
     if (UITZ5_TESTS.has(t.bestand)) return !BOT_REGEL.test(t.tekst);
-    if (t.bestand === SKILL) return !STAP_8.test(t.tekst);
-    if (t.bestand === DOORLOOP) return !MAAT.test(t.tekst);
     return true;
   });
 }
@@ -88,24 +86,22 @@ const T = (bestand: string, regel: number, tekst: string): Treffer => ({ bestand
 
 describe('agent-merge-niet-kritiek/AC-10 de uitzonderingen per regel', () => {
 
-  test('uitzondering 1: de vijf metingbestanden zijn vrij, een ander bestand niet', () => {
-    const vrij = [...METING].map((b) => T(b, 1, WOORD));
-    expect(buitenUitzonderingen(vrij)).toEqual([]);
-    const fout = T('scripts/kit/pr-merge.mjs', 1, WOORD);
-    expect(buitenUitzonderingen([fout])).toEqual([fout]);
+  test('uitzondering 1 is vervallen: de vijf metingbestanden zijn niet meer vrij', () => {
+    const treffers = METING.map((b) => T(b, 1, WOORD));
+    expect(buitenUitzonderingen(treffers)).toEqual(treffers);
   });
 
-  test('uitzondering 2: in de skill alleen stap 8, een andere regel in de skill niet', () => {
+  test('uitzondering 2 is vervallen: ook stap 8 van de skill is een treffer', () => {
     const stap8 = T(SKILL, 40, `CI-rood of ${WOORD}-bevindingen; het leespad: groei`);
     const stap3 = T(SKILL, 50, `3. ${WOORD} telt als het een afgeronde review liet`);
-    expect(buitenUitzonderingen([stap8, stap3])).toEqual([stap3]);
+    expect(buitenUitzonderingen([stap8, stap3])).toEqual([stap8, stap3]);
   });
 
-  test('uitzondering 2: in de doorloop alleen de twee metingzinnen, een runtimezin niet', () => {
+  test('uitzondering 2 is vervallen: ook de metingzinnen in de doorloop zijn een treffer', () => {
     const pr = T(DOORLOOP, 56, `reviewrondes, CI-rood, weigeringen, ${WOORD}-bevindingen handmatig via gh api`);
     const trend = T(DOORLOOP, 61, `vergelijkt CI-rood, ${WOORD}-bevindingen en reviewrondes`);
     const runtime = T(DOORLOOP, 236, `${WOORD} gebruikt zijn eigen runtimebeleid`);
-    expect(buitenUitzonderingen([pr, trend, runtime])).toEqual([runtime]);
+    expect(buitenUitzonderingen([pr, trend, runtime])).toEqual([pr, trend, runtime]);
   });
 
   test('uitzondering 5: sleutelregels in de twee scripts zijn vrij, een andere regel met het woord niet', () => {
@@ -133,7 +129,7 @@ describe('agent-merge-niet-kritiek/AC-10 de uitzonderingen per regel', () => {
 });
 
 describe('agent-merge-niet-kritiek/AC-10 geen externe reviewdienst in de actieve werkstraat', () => {
-  test('de git grep uit de spec geeft alleen de vijf uitzonderingen', () => {
+  test('de git grep uit de spec geeft alleen de uitzonderingen 4 en 5', () => {
     const over = buitenUitzonderingen(treffers()).map((t) => `${t.bestand}:${String(t.regel)}`);
     expect(over).toEqual([]);
   });
