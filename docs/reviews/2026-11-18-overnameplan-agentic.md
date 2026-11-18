@@ -16,7 +16,7 @@ Daarna volgden drie analyses:
   vanuit drie invalshoeken: winst, kosten en risico, en of hij bij de principes van de template past.
 - **Opbouw van agents en skills:** onze 5 agents en 9 skills vergeleken met de best gebouwde voorbeelden.
 
-De cijfers bij de leerpunten komen uit de issues en uit `pnpm meting`. Een deel is met de hand geteld (zie §7).
+De cijfers bij de leerpunten komen uit de issues en uit `pnpm meting`. Een deel is met de hand geteld (zie §8).
 
 Gebruikte repo's: `obra/superpowers`, `garrytan/gstack`, `EveryInc/compound-engineering-plugin`, `humanlayer/humanlayer`,
 `Fission-AI/OpenSpec`, `anthropics/claude-plugins-official` (onder meer pr-review-toolkit, feature-dev,
@@ -46,6 +46,8 @@ niet-gequote `: `, wat strikte YAML weigert. `.claude/agents/developer.md` noemt
 
 ## 3. Golf 1: klein en direct (geen ADR-herziening)
 
+Geen ADR-herziening betekent niet: geen beschermd pad. Golf 2 verandert ook `.claude/settings.json` en de reviewvorm; de spec van elke golf noemt de geraakte paden en regels.
+
 | # | Wat | Bron | Winst | Grootte | Leerpunten |
 |---|---|---|---|---|---|
 | 1a | **Defecten en drift in de agents:** YAML-quotes in de descriptions van architect en docs; een frontmatter-parsetest voor alle agents en skills; `tester.md` eerlijk maken over wat de hook wel en niet draait; architect stap 6 en de padlijst in docs vervangen door verwijzingen | trailofbits, gstack (één bron per norm) | Een echt defect weg, minder drift | S | |
@@ -58,7 +60,7 @@ niet-gequote `: `, wat strikte YAML weigert. `.claude/agents/developer.md` noemt
 | # | Wat | Bron | Winst | Grootte | Leerpunten |
 |---|---|---|---|---|---|
 | 2a | **Statuscontract voor alle vijf agents:** het eindbericht begint met `Status: KLAAR / KLAAR_MET_ZORGEN / CONTEXT_NODIG / GEBLOKKEERD` en heeft hooguit 15 regels; het bewijs staat in een rapportbestand. De SubagentStop-hook dwingt dit af, ook voor architect en docs. Herhaalde rolhekweigeringen tonen als één regel | superpowers handling-reports, gstack, security-guidance | De hoofdsessie beslist op één woord, en "klaar maar onzeker" kan niet meer als klaar doorgaan | M | #792, #688 |
-| 2b | **Reviewrapport als schema:** bevindingen in de vorm `B<n> [blokkerend/belangrijk/klein] bestand:regel`, een AC-tabel met oordeel (gedekt / ontbreekt / extra / misverstaan) en de test als bestand:regel, en de koppen `Niet getoetst:` en `Oordeel:`. Een blokkerende bevinding citeert het R-id en zegt of het defect al bestond. Ruisfilter: geen bevinding voor wat al bestond, wat een gate al vangt of smaak. Het rapport van de bouwer geldt als claims. Zustersites zoeken met `git grep` | superpowers task-reviewer, gstack checklist, pr-review-toolkit, EveryInc | Goedkeuren zonder bewijs wordt zichtbaar, minder vals-positieven | M | #683, #596, #603, #650 |
+| 2b | **Reviewrapport als schema:** bevindingen in de vorm `B<n> [blokkerend/belangrijk/klein] bestand:regel`, een AC-tabel met oordeel (gedekt / ontbreekt / extra / misverstaan) en de test als bestand:regel, en de koppen `Niet getoetst:` en `Oordeel:`. Een blokkerende bevinding citeert het R-id en zegt of het defect al bestond. Ruisfilter: geen bevinding voor wat al bestond, wat een gate al vangt of smaak. Het rapport van de bouwer geldt als claims. Zustersites zoeken met `git grep` | superpowers task-reviewer, gstack checklist, pr-review-toolkit, EveryInc | Goedkeuren zonder bewijs wordt zichtbaar, minder vals-positieven | M | #683, #603, #650; PR #596 |
 | 2c | **Security-review in dezelfde vorm,** met een falsificatiepass: lees per bevinding het codepad opnieuw | trailofbits fp-check | Een onvolledige security-review ziet er niet meer schoon uit | S | |
 
 ## 5. Golf 3: groen betekent iets, en de spec is het contract
@@ -78,7 +80,7 @@ De eigenaar wil alle vier als besluit-PR voorgelegd krijgen.
 |---|---|---|---|
 | 4a | **`gebouwd` afleiden uit merge-feiten** (lokale git en trailers, offline), niet met de hand schrijven | ADR 0054, ADR 0080, het statusdeel van ADR 0062, R-WERK-08 | Ongeveer 10% van de commits en de losse status-PR's verdwijnen. ADR 0080 zegt al dat de merge het bewijs is |
 | 4b | **Begrensde fixlus:** kleine bevindingen gaan nooit in de lus. Ronde 2 toetst alleen de fixdiff (opgelost of niet opgelost). Ronde 3 gaat naar een verse developer. Daarna volgt één gebundeld besluit van de eigenaar | De stopregel in CLAUDE.md, framework §8 | #596 liep 8 rondes. De huidige regel maakt geen onderscheid tussen een reviewronde en een mislukte fix |
-| 4c | **Schaduwmodus met een vooraf genoemde drempel:** een nieuwe hook of check logt eerst alleen, en na een vaste periode besluit de eigenaar. Securitycontroles blijven meteen hard | R-PRINC-10, ADR 0071 punt 6, ADR 0091 | Meer dan 22.000 regels gebouwd en daarna verwijderd. Het oude bezwaar, dat niemand het log leest, vervalt door de tijdgrens en het verplichte besluit |
+| 4c | **Schaduwmodus met een vooraf genoemde drempel:** een nieuwe hook of check logt eerst alleen, en na een vaste periode besluit de eigenaar. Securitycontroles blijven meteen hard | ADR 0091 en de vervallen schaduwmodus uit ADR 0071 punt 6; randvoorwaarde R-PRINC-10 (controles nemen niet af) | Meer dan 22.000 regels gebouwd en daarna verwijderd. Het oude bezwaar, dat niemand het log leest, vervalt door de tijdgrens en het verplichte besluit |
 | 4d | **Gedragsbaseline voor tekstwijzigingen:** een PR die een agent of skill aanpast voor een gedragsleerpunt bevat het scenario en een paar runs zonder en met de wijziging | ADR 0059 (de ladder) | Een prozafix is nu een aanname. Een volledig evalharnas (L, met betaalde runs) volgt pas na ST-09 |
 
 Daarna is ST-09 (de proef-app) de meetgrond. Op basis van die cijfers bekijken we vier dingen: detectie van verzwakte tests (eerst
@@ -89,7 +91,7 @@ in schaduwmodus), een stille testreporter, een lokaal frictierapport uit de tran
 
 - **Zekerheidsdrempels die het model zelf rapporteert.** Die zijn slecht gekalibreerd en kunnen echte RLS- of auth-blokkers onderdrukken.
 - **Een verificateur per blokker.** Dat is een extra overdracht, terwijl ADR 0090 overdrachten net schrapte.
-- **Een model per dispatch.** ADR 0090 heeft dat al geschrapt.
+- **Een model per dispatch.** ADR 0090 punt 5 schrapte al het model per spec; per dispatch komt op hetzelfde neer.
 - **Een CI-reviewer.** Die vraagt een secret en is niet-deterministisch. Opnieuw bekijken na 4a.
 - **Skills afleiden uit de git-historie, `docs/solutions`, geheugen per subagent of een plugin-pakket.** Deze omzeilen
   de triage, breken de onafhankelijke review of omzeilen de review van beschermde paden.
