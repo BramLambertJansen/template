@@ -1,10 +1,12 @@
 // Lokale ontwikkelomgeving (framework §11): Docker-check, poortcontrole (API_PORT en WEB_PORT vrij), .env.local uit
 // .env.example als hij ontbreekt, de stack (Postgres + Mailpit) via compose, migraties, daarna Hono (API) en Vite (web)
-// naast elkaar; stopt allebei als er één stopt. De poortcontrole komt vóór de kopie: bij een bezette standaardpoort blijft
-// .env.local weg, zodat `node scripts/kit/nieuwe-app.mjs poorten --env` een andere set kan kiezen (spec nieuwe-app-script).
+// naast elkaar; stopt allebei als er één stopt. De poortcontrole komt vóór de kopie: ontbreekt .env.local, dan moeten alle
+// vijf standaardpoorten vrij zijn (ook Postgres en Mailpit: de stack van een andere app blijft draaien na haar pnpm dev).
+// Is er één bezet, dan blijft .env.local weg, zodat `node scripts/kit/nieuwe-app.mjs poorten --env` een andere set kan
+// kiezen in plaats van de bezette poorten over te nemen (spec nieuwe-app-script).
 import { spawn, spawnSync } from 'node:child_process';
 import { copyFileSync, existsSync, readFileSync } from 'node:fs';
-import { isVrij } from './kit/nieuwe-app.mjs';
+import { STANDAARD_POORTEN, isVrij } from './kit/nieuwe-app.mjs';
 
 const ENV_FILE = '.env.local';
 
@@ -41,6 +43,25 @@ async function eisVrijePoorten() {
 }
 
 /**
+ * Zonder .env.local zou de kopie van .env.example de standaardpoorten van Postgres en Mailpit vastleggen. Is er één bezet
+ * (de stack van een andere app), stop dan vóór de kopie: `poorten --env` neemt een bestaande .env.local over en verschuift
+ * dan niets meer.
+ */
+async function eisVrijeStackPoorten() {
+  for (const [sleutel, nummer] of /** @type {const} */ ([
+    ['PG_PORT', STANDAARD_POORTEN.pg],
+    ['MAIL_UI_PORT', STANDAARD_POORTEN.mailUi],
+    ['SMTP_PORT', STANDAARD_POORTEN.smtp],
+  ])) {
+    if (await isVrij(nummer)) continue;
+    console.error(
+      `✗ poort ${String(nummer)} (${sleutel}) is bezet en .env.local ontbreekt\n  → kies een vrije set met node scripts/kit/nieuwe-app.mjs poorten --env`,
+    );
+    process.exit(1);
+  }
+}
+
+/**
  * @param {string} command
  * @param {string[]} args
  * @param {string} hint
@@ -63,6 +84,7 @@ if (spawnSync('docker', ['info'], { stdio: 'ignore' }).status !== 0) {
 await eisVrijePoorten();
 
 if (!existsSync(ENV_FILE)) {
+  await eisVrijeStackPoorten();
   copyFileSync('.env.example', ENV_FILE);
   console.info(`${ENV_FILE} gemaakt uit .env.example (lokale demo-waarden).`);
 }

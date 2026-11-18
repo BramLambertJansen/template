@@ -726,7 +726,8 @@ Bestond `.env.local` al, dan kiest en schrijft het script niets: het neemt de po
 je de eigenaar om de beperkte poortaanpassing; de agent verandert geen andere waarden. Bij
 `✗ .env.local niet leesbaar of zonder …` (de sandbox maskeert `.env.*`) draai je `poorten` buiten de sandbox, of geef je in
 Fase 8 `--pg <poort>` uit de overdracht van de eigenaar. `pnpm dev` controleert bij de start dat `API_PORT` en `WEB_PORT`
-vrij zijn en maakt een ontbrekend `.env.local` alleen bij vrije standaardpoorten; daarom is deze stap vóór het starten nodig.
+vrij zijn en maakt een ontbrekend `.env.local` alleen als alle vijf standaardpoorten vrij zijn (anders `✗ poort … is bezet
+en .env.local ontbreekt`, zonder kopie); daarom is deze stap vóór het starten nodig.
 
 ### 7.2 Toolchain en git-hooks (overdracht)
 
