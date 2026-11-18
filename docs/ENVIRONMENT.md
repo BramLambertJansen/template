@@ -161,12 +161,12 @@ werkmap op of voorbij die nieuwe `main`, dan weigert het rolhek met "scripts, ra
 (ADR 0069)", ook vanaf een schone kopie van `main`. Opnieuw proberen helpt niet. Vergelijk het anker met de remote:
 
 1. In de sessie of een eigen terminal, in de root van de werkmap die de weigering gaf (bij een worktree de worktree zelf, niet
-   de hoofdcheckout): lees het anker. Verwacht: één commit-SHA.
-2. Zelfde terminal en werkmap: vraag de remote om `main`. Verwacht: één regel met een SHA en `refs/heads/main`.
+   de hoofdcheckout): vraag de remote om `main`. Verwacht: één regel met een SHA en `refs/heads/main`.
+2. Zelfde terminal en werkmap: lees het anker. Verwacht: één commit-SHA, zonder regeleinde erachter.
 
 ```sh
-cat .claude/hooks/.cache/main
 git ls-remote origin refs/heads/main
+cat .claude/hooks/.cache/main
 ```
 
 Verschillen de twee SHA's, dan loopt het anker achter: start of hervat de sessie met netwerk, zodat de sessiestart het ververst
