@@ -1,9 +1,44 @@
-// Lokale ontwikkelomgeving (framework §11): Docker-check, .env.local uit .env.example, de stack (Postgres + Mailpit)
-// via compose, migraties, daarna Hono (API) en Vite (web) naast elkaar; stopt allebei als er één stopt.
+// Lokale ontwikkelomgeving (framework §11): Docker-check, poortcontrole (API_PORT en WEB_PORT vrij), .env.local uit
+// .env.example als hij ontbreekt, de stack (Postgres + Mailpit) via compose, migraties, daarna Hono (API) en Vite (web)
+// naast elkaar; stopt allebei als er één stopt. De poortcontrole komt vóór de kopie: bij een bezette standaardpoort blijft
+// .env.local weg, zodat `node scripts/kit/nieuwe-app.mjs poorten --env` een andere set kan kiezen (spec nieuwe-app-script).
 import { spawn, spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync } from 'node:fs';
+import { copyFileSync, existsSync, readFileSync } from 'node:fs';
+import { isVrij } from './kit/nieuwe-app.mjs';
 
 const ENV_FILE = '.env.local';
+
+/**
+ * Een poortsleutel uit het env-bestand (alleen een regel met cijfers telt, zoals `port()` in scripts/doctor.sh).
+ * @param {string} tekst
+ * @param {string} sleutel
+ * @param {number} terugval
+ */
+function poort(tekst, sleutel, terugval) {
+  const waarden = [...tekst.matchAll(new RegExp(`^${sleutel}=([0-9]+)\\s*$`, 'gm'))].map((m) => Number(m[1]));
+  return waarden.at(-1) ?? terugval;
+}
+
+/** Stopt als API_PORT of WEB_PORT bezet is: vóór compose, zodat niet een halve stack start. */
+async function eisVrijePoorten() {
+  let tekst = '';
+  try {
+    tekst = readFileSync(existsSync(ENV_FILE) ? ENV_FILE : '.env.example', 'utf8');
+  } catch {
+    // niet leesbaar: de standaardpoorten
+  }
+  for (const [sleutel, terugval] of /** @type {const} */ ([
+    ['API_PORT', 8787],
+    ['WEB_PORT', 5173],
+  ])) {
+    const nummer = poort(tekst, sleutel, terugval);
+    if (await isVrij(nummer)) continue;
+    console.error(
+      `✗ poort ${String(nummer)} (${sleutel}) is bezet\n  → stop de andere pnpm dev, of kies poorten met node scripts/kit/nieuwe-app.mjs poorten`,
+    );
+    process.exit(1);
+  }
+}
 
 /**
  * @param {string} command
@@ -24,6 +59,8 @@ if (spawnSync('docker', ['info'], { stdio: 'ignore' }).status !== 0) {
   );
   process.exit(1);
 }
+
+await eisVrijePoorten();
 
 if (!existsSync(ENV_FILE)) {
   copyFileSync('.env.example', ENV_FILE);
