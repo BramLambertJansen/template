@@ -163,7 +163,7 @@ Afgedwongen door: lint (`klassen`, rauwe elementen, axe), `check:catalogus`, `te
 
 ## 8. Werkstraat
 
-Afgedwongen door: rolhek en hooks (`.claude/gates.json`), `check-roadmap`, CI, de ruleset op GitHub en de padtoets van `pnpm pr:merge` (0093); de job `document-status`, de diff-guard en de job `agent-merge` zijn weg (0089 punt 5): spec vóór de bouw, besluit-PR en `gebouwd` in de bouw-PR zijn afspraak (0089 punt 8). Het rolhek is een vangnet, geen grens: de harde grens is CI, de ruleset op GitHub en de eigenaarmerge; buiten een beschermd pad ziet alleen de review van de diff een omzeiling; werking, valse positieven en bekende gaten staan in §13 (R-ROL-09 t/m R-ROL-11).
+Afgedwongen door: rolhek en hooks (`.claude/gates.json`), `check-roadmap`, CI, de ruleset op GitHub en de padtoets van `pnpm pr:merge` (0093); de job `document-status`, de diff-guard en de job `agent-merge` zijn weg (0089 punt 5): spec vóór de bouw, besluit-PR en `gebouwd` in de bouw-PR zijn afspraak (0089 punt 8). Het rolhek is een vangnet, geen grens: CI en de ruleset op GitHub houden een vergissing tegen, omzeilen niet (R-ROL-10, 0093); buiten een beschermd pad ziet alleen de review van de diff een omzeiling; werking, valse positieven en bekende gaten staan in §13 (R-ROL-09 t/m R-ROL-11).
 
 - **R-WERK-01** Elke rol begint met `node scripts/kit/feiten.mjs`, alleen taakrelevante secties (`componenten` alleen bij UI); `specs`, `adr` en `fase` zijn begrensd, `--alle` voor historie of een geldig ADR buiten de tien (0045, 0057, 0070)
 - **R-WERK-02** Twee routes: hoofdsessie kiest en noemt waarom, reviewer toetst keuze; "bug" of kleine diff is geen bewijs; bij twijfel volledig; route geeft geen extra schrijfrechten of vrijstelling (0058)

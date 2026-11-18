@@ -342,8 +342,9 @@ doet, dus gelden dezelfde regels (`withoutRepo` in `rails/hooks/lib/rolhek.mjs`)
 vragen de hoofdsessie expliciet akkoord omdat ze ook beschermde bestanden schrijven; subagents gebruiken gerichte
 formattering. De padcontrole volgt bij cp/mv/ln/install ook `-t` en `--target-directory`.
 `git update-ref --stdin` (ook afgekort) wordt geweigerd omdat de te wijzigen refs niet in de opdracht staan.
-Dit sluit bekende omwegen; scripts in de repo en interpreters (`node -e`) blijven open, voor de hoofdsessie ook `curl -K <bestand>`, net als een kopie of link van gh onder een andere naam, of een zelfgeschreven uitvoerbaar bestand (bijvoorbeeld `cp /usr/bin/gh ./x; ./x …`); deze klasse komt samen met `node_modules/.bin` in een aparte rail-PR. Ook open voor de hoofdsessie: (a) een omhulsel met opties vóór gh (label, `@file`/`--input`, `gh alias`), (b) xargs met een long option of een cluster met waarde (`--arg-file F`, `-0a F`, `-rn 1`), waarvan de optiewaarde als commandowoord wordt gelezen, en (c) `coreutils --coreutils-prog=env`; (a) en (b) staan in `docs/roadmap.md`. De harde grens is GitHub zelf
-(ruleset en eigenaarmerge); sandbox en CI blijven nodig voor niet-geclassificeerde programma's.
+Dit sluit bekende omwegen; scripts in de repo en interpreters (`node -e`) blijven open, voor de hoofdsessie ook `curl -K <bestand>`, net als een kopie of link van gh onder een andere naam, of een zelfgeschreven uitvoerbaar bestand (bijvoorbeeld `cp /usr/bin/gh ./x; ./x …`); deze klasse komt samen met `node_modules/.bin` in een aparte rail-PR. Ook open voor de hoofdsessie: (a) een omhulsel met opties vóór gh (label, `@file`/`--input`, `gh alias`), (b) xargs met een long option of een cluster met waarde (`--arg-file F`, `-0a F`, `-rn 1`), waarvan de optiewaarde als commandowoord wordt gelezen, en (c) `coreutils --coreutils-prog=env`; (a) en (b) staan in `docs/roadmap.md`. Een grens die deze omwegen tegenhoudt, is er
+niet: de agent heeft de login van de eigenaar, dus GitHub houdt alleen een vergissing tegen (ruleset: een PR met groene checks;
+ADR 0093, R-ROL-10). Sandbox en CI blijven nodig voor niet-geclassificeerde programma's.
 
 Een `voorReview`-pad schrijft de developer niet (in onderhoudsmodus buiten `altijdVragen` wel, met melding); een ander
 gate-pad wel, met melding "noem het in de PR" (R-WERK-10).

@@ -79,7 +79,7 @@ zou het zonder klik van de eigenaar op `main` komen.
 - Aanvaard risico: de agent heeft de rechten van de eigenaar, inclusief beheer en `workflow`. Hij kan de ruleset wijzigen of
   verwijderen, en een branch pushen met een workflow die bij die push draait en de repository-secrets leest, nog vóór er een
   PR of padtoets is. De App had die rechten niet, maar de login van de eigenaar stond al in de agentomgeving, dus dit was al
-  zo. Wat het tegenhoudt: het rolhek, de sandbox en de review van de diff. Deploy-secrets blijven buiten bereik via
+  zo. Wat het tegenhoudt: het rolhek en de sandbox; de review van de diff maakt het alleen achteraf zichtbaar. Deploy-secrets blijven buiten bereik via
   beschermde environments (R-SEC-06).
 - Een app waarin een samenvoeging naar `main` automatisch uitrolt naar echte gebruikers, weegt dit opnieuw: daar past een
   machineaccount met de review van een code-eigenaar op de kritieke paden. Dat kan per app, met een eigen app-ADR.
