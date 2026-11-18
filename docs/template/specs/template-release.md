@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd # #801
 namespace: template-release
 ---
 
