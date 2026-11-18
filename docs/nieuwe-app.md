@@ -421,8 +421,8 @@ Draai na het opruimen beide leesopdrachten opnieuw; ga pas door als ze leeg zijn
 > 3. Typ *klaar*.
 
 Daarna zelf: `gh auth setup-git`. `workflow` is nodig omdat jij (de eigenaar) later template-updates met `.github/workflows/` pusht.
-Let op: tot de GitHub App voor de agent bestaat (ADR 0039 punt 8), draait Claude Code als dezelfde WSL-gebruiker en gebruikt dus deze login,
-inclusief `workflow`. De grens is dan de ruleset en jouw review (framework §6, Agentveiligheid). Zeg dat in de overdracht van Fase 10.
+Let op: tot de agent als eigen GitHub App pusht (6.2, met `scripts/kit/agent-token.mjs`; ADR 0089 punt 2), draait Claude Code als dezelfde
+WSL-gebruiker en gebruikt dus deze login, inclusief `workflow`; ook daarna staat die login nog in de agentomgeving tot templateregime AC-6 bewezen is. De grens is dan de ruleset en jouw review (framework §6, Agentveiligheid). Zeg dat in de overdracht van Fase 10.
 Zet de git-identiteit volgens *Standaardwaarden* als die ontbreekt.
 
 **Zichtbaarheid private (vóór 4.3).** Een private repo vraagt GitHub Pro of Team voor de ruleset (Fase 6.2) én
@@ -914,9 +914,9 @@ en relevante beperkingen. De dagelijkse commando's en de procedure voor een temp
 > en de ruleset op `main` met die checks verplicht, uitsluitend voor zover hierboven werkelijk gecontroleerd.
 > Browser/login/MFA: <uitvoerder en uitslag, of niet uitgevoerd met reden>.
 >
-> **Wat er nog níet is:** de GitHub App voor de agent (roadmap ST-01, ADR 0039 punt 8; geplande inrichting in 6.2) — tot dan pusht de agent onder jouw account, met jouw
-> `gh`-login inclusief `workflow`; `check-github`, dat controleert of de
-> ruleset blijft staan (ST-01). Herbruikbare templateverbeteringen horen in de template.
+> **Wat er nog níet is:** <de GitHub App voor de agent als die in 6.2 niet is ingericht — dan pusht de agent onder jouw account, met jouw
+> `gh`-login inclusief `workflow`>; het bewijs dat jouw token uit de agentomgeving is (templateregime AC-6, roadmap ST-01); `check-github`,
+> dat controleert of de ruleset blijft staan (ST-01). Herbruikbare templateverbeteringen horen in de template.
 > Een eventuele ST-09-proef en alle appfunctionaliteit, appspecificaties en appgegevens horen in de **aparte app-repo**;
 > alleen generieke verbeteringen en beknopt bewijs komen terug naar de template.
 >
