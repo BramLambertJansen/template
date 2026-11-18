@@ -224,3 +224,10 @@ export function onderdrukkingMeldingenUitGit(root) {
     ...onderdrukkingMeldingen(stand),
   ];
 }
+
+// Los gedraaid zou dit bestand niets melden en met 0 eindigen; alleen de ratchet roept de check aan (leerpunt #752).
+// Daarom geen stil groen: verwijs naar de gate, zoals check-docs.mjs.
+if (import.meta.main) {
+  console.error('✗ onderdrukkingen draait alleen via de ratchet: gebruik `pnpm ratchet`.');
+  process.exitCode = 1;
+}

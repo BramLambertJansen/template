@@ -20,3 +20,12 @@ export async function dependencyViolations(baseDir) {
     message: comments.get(violation.rule.name) ?? violation.rule.name,
   }));
 }
+
+// Los gedraaid zou dit bestand niets melden en met 0 eindigen, terwijl alleen de ratchet met .kit/baseline.json vergelijkt
+// (leerpunt #752). Daarom geen stil groen: verwijs naar de gate, zoals check-docs.mjs.
+if (import.meta.main) {
+  console.error(
+    '✗ depcruise draait alleen via de ratchet (vergelijking met .kit/baseline.json): gebruik `pnpm ratchet`.',
+  );
+  process.exitCode = 1;
+}

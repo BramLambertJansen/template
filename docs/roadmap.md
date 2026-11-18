@@ -205,7 +205,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
 - [ ] **ST-01 (P0) — GitHub-bescherming daadwerkelijk activeren** (stuk 6). Een agent kan beschermd werk niet zonder de
   juiste eigenaarreview samenvoegen. Gebouwd: `scripts/github-ruleset.sh` met `test/scripts/github-ruleset.test.ts` (#104), `guard.yml` met alleen de job
   `check-core` (R-CI-07; de diff-guard is weg, ADR 0089 punt 5) en CODEOWNERS (gegenereerd uit de padtabel) en PR-template.
-  Open: organisatie, GitHub App voor de agent in een app (de template heeft er een sinds ADR 0089; een app kan hem nog niet reproduceren), org-ruleset via custom property en Actions-instellingen (code-owner-review met 0 goedkeuringen
+  Open: organisatie, bewijs dat het token van de eigenaar uit de agentomgeving is (templateregime AC-6; de App zelf bestaat in de template sinds ADR 0089 en een app richt hem in volgens `docs/nieuwe-app.md` 6.2 met `scripts/kit/agent-token.mjs`), org-ruleset via custom property en Actions-instellingen (code-owner-review met 0 goedkeuringen
   zet `scripts/github-ruleset.sh` nu al, en het script weigert bij fouten in `CODEOWNERS`; daarna `--bypass-beheerder`, pas na het bewijs dat het
   token van de eigenaar uit de agentomgeving is; private repo's vragen Pro/Team); `.github/settings/` met `scripts/check-github.mjs` (alleen-lezend, een onleesbare instelling is een fout;
   ook `app_id` van verplichte checks, `enforce_admins`, conversation resolution) en `check-spec-approval`; `docs/operations/rails-checklist.md` met

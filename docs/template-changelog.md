@@ -42,6 +42,14 @@ requests.
   alleen als die nog niet gezet zijn), zodat bv. `commit.gpgsign=true` een fixture-commit niet meer breekt
   (`test/setup/git-global-config.test.ts`). Een test die een eigen globale config nodig heeft, zet `GIT_CONFIG_GLOBAL` zelf.
   Wat verandert voor een app: niets, tenzij een eigen test op de globale gitconfig of de machine-identiteit leunde.
+- `pnpm pr:merge` controleert dat GitHub de grens van ADR 0089 punt 2 bewaakt (spec `templateregime` AC-14,
+  `beoordeelMerge` in `scripts/kit/pr-merge.mjs`, `test/scripts/merge-ruleset.test.ts`): het merget alleen als
+  `rules/branches/main` een regel `pull_request` met `require_code_owner_review: true` heeft, minstens één ruleset daarvan
+  `current_user_can_bypass: "never"` geeft en `codeowners/errors` op de kop van `main` leeg is; een onleesbaar antwoord, een
+  404 of een ongeldige vorm telt als nee. Wat verandert voor een app: zonder ruleset (privé-repo zonder Pro, of vóór fase 6),
+  met alleen klassieke branch protection, met een bypass voor wie het script draait (`--bypass-beheerder` en het script
+  draait als de beheerder) of zonder geldig `.github/CODEOWNERS` op `main` merget de hoofdsessie niets meer zelf; de eigenaar
+  merget.
 - De meting telt geen bevindingen van een externe reviewdienst meer (spec `agent-merge-niet-kritiek`, OV-1):
   `pnpm meting --pr-tabel` heeft geen rij en geen JSON-veld `codexBevindingen` meer, in `pnpm meting --trend` ontbreekt de
   maat `codex` (tekst en `trend.maten`) en de trend roept geen `gh api …/comments` meer aan (`scripts/kit/meting.mjs`,
@@ -54,6 +62,10 @@ requests.
   `.kit/baseline.json` en eindigt nu met exit 1 en een verwijzing naar `pnpm ratchet`, de enige gate voor check-docs
   (`scripts/kit/check-docs.mjs`, `test/scripts/check-docs-los.test.ts`). Wat verandert voor een app: niets, tenzij een eigen
   script `check-docs.mjs` direct aanroept; gebruik dan `pnpm ratchet`.
+- `node scripts/kit/conflictmarkers.mjs`, `depcruise.mjs` en `onderdrukkingen.mjs` los gedraaid geven evenmin stil groen
+  (leerpunt #752): ze eindigen met exit 1 en een melding met hun naam en een verwijzing naar `pnpm ratchet`; geïmporteerd
+  door de ratchet blijven ze stil met dezelfde exports (`test/scripts/ratchet-modules-los.test.ts`). Wat verandert voor een
+  app: niets, tenzij een eigen script een van deze bestanden direct aanroept; gebruik dan `pnpm ratchet`.
 - Eigen beschermde paden van een app (spec `app-padtabel`): een app zet eigen rijen in het optionele bestand
   `.claude/gates.app.json` (`{ "$comment"?, "paden": { … } }`), niet in `.claude/gates.json`. Rolhek, `check-docs`,
   `scripts/kit/codeowners.mjs` en `feiten.mjs pad` voegen het samen met de padtabel van de template

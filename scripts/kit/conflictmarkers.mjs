@@ -74,3 +74,10 @@ export function conflictMarkerViolations(root) {
     }));
   });
 }
+
+// Los gedraaid zou dit bestand niets melden en met 0 eindigen; alleen de ratchet roept de check aan (leerpunt #752).
+// Daarom geen stil groen: verwijs naar de gate, zoals check-docs.mjs.
+if (import.meta.main) {
+  console.error('✗ conflictmarkers draait alleen via de ratchet (kanaal strikt): gebruik `pnpm ratchet`.');
+  process.exitCode = 1;
+}
