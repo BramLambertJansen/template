@@ -21,7 +21,8 @@ commit op main, die het nummer draagt (`git log --first-parent -S '<regel>' -- <
 1. **Vorm:** `Herzien: JJJJ-MM-DD: wat`. Wijzigt een later ADR het punt, dan noemt de regel dat ADR en de punten
    (`gewijzigd door <link naar B> punt N, M`), zoals 0074 punt 2 al vraagt; dat maakt een regel uniek, ook naast een andere
    regel op dezelfde datum.
-2. **Een PR-nummer mag nog** (`Herzien: JJJJ-MM-DD (#NNN): wat`): bestaande regels blijven geldig en niemand zet ze om.
+2. **Een PR-nummer mag nog** (`Herzien: JJJJ-MM-DD (#NNN): wat`), ook in een nieuwe regel, maar hoeft niet; bestaande
+   regels blijven geldig en niemand zet ze om.
 3. **Bron van de PR** is de git-geschiedenis: de commit op main die de regel toevoegde.
 
 ## Alternatieven

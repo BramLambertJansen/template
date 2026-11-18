@@ -5,7 +5,7 @@ Status: geaccepteerd
 Herzien: 2026-11-12 (#692): door ADR 0089 punt 2 en 6, in de template deels: punt 2 en 4, vervalt: de herzieningsregel en de check daarop; blijft in een app: de check voor een wijzigend app-ADR (0100 en hoger)
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 4, 5 en 8, de vorige regel vervalt: punt 2 en 4 vervallen als check (`adrHerzienViolations` hoort niet bij wat in `check-docs` blijft); een herzieningsregel blijft een werkafspraak; de grens "vanaf 0100" vervalt
 Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
-Herzien: 2026-11-18: gewijzigd door [0097](0097-herzieningsregel-zonder-pr-nummer.md) punt 1 en 2, punt 2: de regel heeft geen PR-nummer meer (`Herzien: JJJJ-MM-DD: wat`); een bestaand nummer mag blijven
+Herzien: 2026-11-18: gewijzigd door [0097](0097-herzieningsregel-zonder-pr-nummer.md) punt 1 en 2: in punt 2 heeft de regel geen PR-nummer meer nodig (`Herzien: JJJJ-MM-DD: wat`); een nummer mag nog
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 2 (een herzieningsregel is voortaan ook verplicht als een later ADR een
 punt wijzigt zonder de tekst te herschrijven); vult [0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md) punt 1 (het
@@ -33,7 +33,7 @@ schrijven als een later ADR het punt wijzigt, en een check die dat afdwingt.
    kop (vóór de eerste `## `-kop) met de bestaande vorm: `Wijzigt`, `Herziet` of `Vervangt`, een link naar A en, waar het om
    punten gaat, de puntnummers. `Vult … aan` wijzigt niets: de tekst van A blijft geldig.
 2. **A krijgt een herzieningsregel die B noemt.** In dezelfde PR als B krijgt A een regel
-   `Herzien: JJJJ-MM-DD: gewijzigd door <link naar B> punt N, M` (0097) (zonder puntnummer: wat B wijzigt, in een paar woorden). Een
+   `Herzien: JJJJ-MM-DD: gewijzigd door <link naar B> punt N, M` (vorm volgens 0097) (zonder puntnummer: wat B wijzigt, in een paar woorden). Een
    bestaande herzieningsregel in A die B noemt, telt ook (zoals de regels die 0063 in acht ADR's zette). De tekst van de
    punten zelf verandert niet; een markering midden in de tekst is niet nodig.
 3. **Geen nieuwe uitzondering.** Dit is een herschrijving volgens R-CI-05. Een vervangen of vervallen ADR krijgt geen regel.
