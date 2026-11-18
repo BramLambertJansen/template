@@ -130,6 +130,13 @@ function templateRepo(gitRoot) {
   return typeof repo === 'string' && /^[\w.-]+\/[\w.-]+$/.test(repo) ? repo : undefined;
 }
 
+/** De sha van HEAD, of null buiten een repo of zonder commit. @param {string | null} gitRoot @returns {string | null} */
+function huidigeHead(gitRoot) {
+  if (gitRoot === null) return null;
+  const head = voer('git', ['rev-parse', 'HEAD'], gitRoot);
+  return head.ok ? head.stdout.trim() : null;
+}
+
 /** @param {Record<string, unknown>} waarden @param {string} naam */
 function tekstOptie(waarden, naam) {
   const waarde = waarden[naam];
@@ -180,12 +187,11 @@ class Verloop {
   /** Schrijft het resultaatbestand en de slotregel; geeft de exitcode. @param {string} bestand @param {string | null} gitRoot */
   sluit(bestand, gitRoot) {
     const fouten = this.stappen.filter((stap) => stap.status === 'fout').length;
-    const head = gitRoot === null ? { ok: false, stdout: '' } : voer('git', ['rev-parse', 'HEAD'], gitRoot);
     const resultaat = {
       schema: 1,
       commando: this.commando,
       tijd: new Date().toISOString(),
-      head: head.ok ? head.stdout.trim() : null,
+      head: huidigeHead(gitRoot),
       dryRun: this.dryRun,
       uitslag: fouten === 0 ? 'ok' : 'fout',
       stappen: this.stappen,
@@ -612,11 +618,18 @@ function beweringen(migraties, apiGebruiker) {
   ];
 }
 
-/** De PG-poort: --pg, anders het resultaat van `poorten`; nooit `.env.local`. @param {Context} ctx */
+/**
+ * De PG-poort: --pg, anders het resultaat van `poorten`; nooit `.env.local`. Het resultaat telt alleen als het vers is:
+ * uitslag ok, geen dry-run en dezelfde head als nu (beide null buiten een repo).
+ * @param {Context} ctx
+ */
 function pgPoort(ctx) {
   const optie = tekstOptie(ctx.waarden, 'pg');
   if (optie !== undefined) return Number(optie);
-  const pg = veld(veld(leesJson(path.join(ctx.map, '.template', 'nieuwe-app-poorten.json')), 'gegevens'), 'pg');
+  const resultaat = leesJson(path.join(ctx.map, '.template', 'nieuwe-app-poorten.json'));
+  if (veld(resultaat, 'uitslag') !== 'ok' || veld(resultaat, 'dryRun') !== false) return undefined;
+  if (veld(resultaat, 'head') !== huidigeHead(ctx.gitRoot)) return undefined;
+  const pg = veld(veld(resultaat, 'gegevens'), 'pg');
   return typeof pg === 'number' && Number.isInteger(pg) ? pg : undefined;
 }
 

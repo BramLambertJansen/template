@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
-import { chmodSync, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, type TestContext } from 'vitest';
 import { ENV_EXAMPLE, ROOT, SCRIPT, laadModule, luister, ruimOp, tijdelijk, vrijePoort } from './nieuwe-app-kit.ts';
 
 // Tests voor de poortcontrole van scripts/dev.mjs (spec nieuwe-app-script, AC-14), geschreven vóór de bouw. De nep-`docker`
@@ -38,6 +38,19 @@ function draai(root: string, log: string) {
     env: { PATH: path.join(root, 'bin'), HOME: root, STUB_LOG: log },
   });
   return { status: r.status, uit: `${r.stdout}\n${r.stderr}`, docker: readFileSync(log, 'utf8') };
+}
+
+/**
+ * Zonder .env.local gebruikt dev.mjs de vijf standaardpoorten; een andere stack op deze machine maakt de uitkomst anders
+ * (een andere poort in de melding of geen stop). Alleen dan slaat de test over, met reden; `uitgezonderd` houdt de test zelf bezet.
+ * Dit is geen vermogen van ADR 0088 (de kooi): de skip wordt gemeld en is in CI rood, waar de poorten vrij zijn.
+ */
+async function slaOverAlsBezet(ctx: TestContext, uitgezonderd: number[]): Promise<void> {
+  for (const poort of Object.values(mod.STANDAARD_POORTEN).filter((p) => !uitgezonderd.includes(p)))
+    ctx.skip(
+      !(await mod.isVrij(poort)),
+      `standaardpoort ${String(poort)} is bezet door een andere stack op deze machine`,
+    );
 }
 
 function envMet(api: number, web: number): string {
@@ -107,8 +120,8 @@ describe('nieuwe-app-script/AC-14: dev.mjs controleert API_PORT en WEB_PORT vó�
   // .env.local uit .env.example kopiëren (standaardpoorten, het gedrag van vandaag); de kopregel zegt dat. Maar hij controleert de
   // standaardpoorten eerst en kopieert pas daarna: bij een bezette standaardpoort blijft .env.local weg, zodat `nieuwe-app.mjs
   // poorten --env` (de herstelregel van de melding) wel een andere set kan kiezen in plaats van de bezette poorten vast te leggen.
-  test('nieuwe-app-script/AC-14 een ontbrekende .env.local wordt uit .env.example gemaakt als de standaardpoorten vrij zijn', async () => {
-    if (!((await mod.isVrij(8787)) && (await mod.isVrij(5173)))) return; // een andere stack op deze machine: zie de volgende test
+  test('nieuwe-app-script/AC-14 een ontbrekende .env.local wordt uit .env.example gemaakt als de standaardpoorten vrij zijn', async (ctx) => {
+    await slaOverAlsBezet(ctx, []);
     const { root, log } = fixture(null);
     const r = draai(root, log);
     expect(readFileSync(path.join(root, '.env.local'), 'utf8')).toBe(ENV_EXAMPLE);
@@ -126,6 +139,28 @@ describe('nieuwe-app-script/AC-14: dev.mjs controleert API_PORT en WEB_PORT vó�
       false,
     );
   });
+
+  // dev.mjs controleert zonder .env.local ook de standaardpoorten van de stack (Postgres, Mailpit): de stack van een andere app
+  // blijft draaien na haar pnpm dev, en een kopie van .env.example zou haar poorten vastleggen.
+  test.for([
+    { sleutel: 'PG_PORT', veld: 'pg' },
+    { sleutel: 'MAIL_UI_PORT', veld: 'mailUi' },
+    { sleutel: 'SMTP_PORT', veld: 'smtp' },
+  ] as const)(
+    'nieuwe-app-script/AC-14 zonder .env.local en met een bezette $sleutel-standaardpoort stopt dev.mjs met melding en herstelregel',
+    async ({ sleutel, veld }, ctx) => {
+      const poort = mod.STANDAARD_POORTEN[veld];
+      await slaOverAlsBezet(ctx, [poort]); // API en WEB (eerste controle) en de andere stackpoorten moeten vrij zijn
+      expect(await luister(poort, '127.0.0.1'), `een listener op ${String(poort)}`).toBe(true);
+      const { root, log } = fixture(null);
+      const r = draai(root, log);
+      expect(r.status, r.uit).toBe(1);
+      expect(r.uit).toContain(`✗ poort ${String(poort)} (${sleutel}) is bezet en .env.local ontbreekt`);
+      expect(r.uit).toContain('poorten --env');
+      expect(r.docker, 'geen docker compose-aanroep').not.toContain('compose');
+      expect(readdirSync(root), 'de bezette poort is niet vastgelegd in .env.local').not.toContain('.env.local');
+    },
+  );
 
   test('nieuwe-app-script/AC-14 dev.mjs importeert de vrij-functie uit nieuwe-app.mjs en heeft geen eigen listener', () => {
     const bron = readFileSync(DEV, 'utf8');

@@ -77,8 +77,9 @@ eigen controle uit het playbook, niet in plaats daarvan.
 4. **`preflight [--slug <slug>] [--zichtbaarheid public|private]`**, alleen lezend. Stappen: `os` (Ubuntu 24.04 of 26.04
    uit `/etc/os-release`; macOS of een andere versie is fout, OV-7), `pad` (werkmap niet onder `/mnt/<letter>`), `systemd`
    (alleen WSL: PID 1 is `systemd`), `tools` (`git gh jq bwrap socat psql` en `~/.local/bin/mise`), `inotify` (≥ 524288),
-   `gh-login` (ingelogd met scope `workflow`), `template` (`is_template` waar voor `template.repository` of
-   `BramLambertJansen/template` buiten een repo), `plan` (alleen bij `private`: `gh api user --jq .plan.name`; `null` is
+   `gh-login` (ingelogd met scope `workflow`), `template` (`is_template` waar voor `template.repository`; buiten een repo de repo uit de
+   raw-URL in `START-NIEUWE-APP.md` naast het script of in `~/setup`, zonder letterlijke repo in het script zodat een fork
+   alleen die twee plekken aanpast; onbekend is een fout), `plan` (alleen bij `private`: `gh api user --jq .plan.name`; `null` is
    fout "onbekend"), `slug` (geldig zoals `app-init.mjs`, `~/code/<slug>` en `<login>/<slug>` bestaan niet; bestaan ze en is
    de `origin` van `~/code/<slug>` gelijk aan `<login>/<slug>`, dan overgeslagen met `hervatting: controleer
    SETUP-PROGRESS.md`), `poorten` (de vijf standaardpoorten vrij volgens de vrij-regel van werking 6; bezet is overgeslagen

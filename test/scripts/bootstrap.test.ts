@@ -163,4 +163,19 @@ describe('nieuwe-app-script/AC-17: bootstrap schrijft zijn uitslag, ook bij een 
       'doctor-machine.json',
     );
   });
+
+  const RUNS: { naam: string; opties: Opties }[] = [
+    { naam: 'een geslaagde run', opties: {} },
+    { naam: 'een falende mise install', opties: { miseFaalt: 'install' } },
+  ];
+  test.each(RUNS)(
+    'nieuwe-app-script/AC-17 het bestand heeft dezelfde vorm als de andere resultaten: gegevens is een leeg object bij $naam',
+    ({ opties }) => {
+      const root = fixture(opties);
+      draai(root, opties);
+      const ruw = z.object({ gegevens: z.record(z.string(), z.unknown()) });
+      const uit = ruw.parse(JSON.parse(readFileSync(path.join(root, '.template/bootstrap.json'), 'utf8')));
+      expect(uit.gegevens).toStrictEqual({});
+    },
+  );
 });

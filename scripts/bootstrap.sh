@@ -41,7 +41,7 @@ write_result() {
   head="$(git rev-parse HEAD 2>/dev/null || true)"
   if [[ "$head" =~ ^[0-9a-f]{40,64}$ ]]; then head="\"$head\""; else head=null; fi
   mkdir -p .template 2>/dev/null || return 0
-  printf '{"schema":1,"commando":"bootstrap","tijd":"%s","head":%s,"dryRun":false,"uitslag":"%s","stappen":[%s]}\n' \
+  printf '{"schema":1,"commando":"bootstrap","tijd":"%s","head":%s,"dryRun":false,"uitslag":"%s","stappen":[%s],"gegevens":{}}\n' \
     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$head" "$uitslag" "$json" >.template/bootstrap.json 2>/dev/null || true
 }
 

@@ -205,4 +205,29 @@ describe('nieuwe-app-script/AC-13: doctor controleert de poortsamenhang en schri
     expect(r.status).not.toBe(0);
     expect(leesUitslag(root, 'doctor-machine.json').uitslag).toBe('fout');
   });
+
+  test.each([
+    {
+      naam: 'doctor-machine.json na een geslaagde run',
+      args: ['--machine'],
+      bestand: 'doctor-machine.json',
+      opties: {},
+    },
+    { naam: 'doctor-full.json na een geslaagde run', args: [], bestand: 'doctor-full.json', opties: { stack: true } },
+    {
+      naam: 'doctor-machine.json na een afbreking',
+      args: ['--machine'],
+      bestand: 'doctor-machine.json',
+      opties: { watches: 'abc' },
+    },
+  ])(
+    'nieuwe-app-script/AC-13 $naam heeft dezelfde vorm als de andere resultaten: gegevens is een leeg object',
+    ({ args, bestand, opties }) => {
+      const root = fixture();
+      draai(root, args, opties);
+      const ruw = z.object({ gegevens: z.record(z.string(), z.unknown()) });
+      const uit = ruw.parse(JSON.parse(readFileSync(path.join(root, '.template', bestand), 'utf8')));
+      expect(uit.gegevens).toStrictEqual({});
+    },
+  );
 });

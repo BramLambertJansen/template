@@ -4,6 +4,7 @@ import { afterEach, describe, expect, test } from 'vitest';
 import {
   MIGRATIES,
   draai,
+  git,
   leesResultaat,
   maakFixture,
   psqlLog,
@@ -26,7 +27,14 @@ const STAPPEN = [
   'rolwissel-lokaal',
 ];
 
-function schrijfPoortenbestand(fx: Fixture, pg: number): void {
+interface Poortenbestand {
+  uitslag?: 'ok' | 'fout';
+  dryRun?: boolean;
+  /** `huidig` (standaard): de HEAD van de fixture-repo, dus vers; `oud`: een andere sha. */
+  head?: 'huidig' | 'oud';
+}
+
+function schrijfPoortenbestand(fx: Fixture, pg: number, opties: Poortenbestand = {}): void {
   const map = path.join(fx.repo, '.template');
   mkdirSync(map, { recursive: true });
   writeFileSync(
@@ -35,9 +43,9 @@ function schrijfPoortenbestand(fx: Fixture, pg: number): void {
       schema: 1,
       commando: 'poorten',
       tijd: new Date().toISOString(),
-      head: null,
-      dryRun: false,
-      uitslag: 'ok',
+      head: opties.head === 'oud' ? '0'.repeat(40) : git(fx.repo, 'rev-parse', 'HEAD'),
+      dryRun: opties.dryRun ?? false,
+      uitslag: opties.uitslag ?? 'ok',
       stappen: [],
       gegevens: { pg, mailUi: pg + 2, smtp: pg + 3, api: 8787, web: 5173, origin: 'http://localhost:5173' },
     }),
@@ -108,6 +116,33 @@ describe('nieuwe-app-script/AC-11: db-bewijs', () => {
     const fx = maakFixture();
     schrijfPoortenbestand(fx, 54332);
     const r = draai(fx, ['db-bewijs']);
+    expect(r.status, r.uit).toBe(0);
+    for (const aanroep of psqlLog(fx)) expect(aanroep.poort).toBe('54332');
+  });
+
+  const ONBETROUWBAAR: { naam: string; opties: Poortenbestand }[] = [
+    { naam: 'uitslag fout', opties: { uitslag: 'fout' } },
+    { naam: 'een dry-run', opties: { dryRun: true } },
+    { naam: 'een andere head dan HEAD', opties: { head: 'oud' } },
+  ];
+  test.each(ONBETROUWBAAR)(
+    'nieuwe-app-script/AC-11 een poortenbestand met $naam telt niet: ✗ PG-poort onbekend, geen psql-aanroep',
+    ({ opties }) => {
+      const fx = maakFixture();
+      schrijfPoortenbestand(fx, 54999, opties);
+      const r = draai(fx, ['db-bewijs']);
+      expect(r.status, r.uit).toBe(1);
+      expect(r.stdout).toContain('✗ PG-poort onbekend');
+      expect(r.stdout).toContain('→ eerst poorten, of geef --pg <poort>');
+      expect(psqlLog(fx), 'de poort uit het onbetrouwbare bestand is niet gebruikt').toStrictEqual([]);
+      expect(leesResultaat(fx.repo, 'db-bewijs').uitslag).toBe('fout');
+    },
+  );
+
+  test('nieuwe-app-script/AC-11 een onbetrouwbaar poortenbestand wijkt voor --pg', () => {
+    const fx = maakFixture();
+    schrijfPoortenbestand(fx, 54999, { uitslag: 'fout' });
+    const r = draai(fx, ['db-bewijs', '--pg', '54332']);
     expect(r.status, r.uit).toBe(0);
     for (const aanroep of psqlLog(fx)) expect(aanroep.poort).toBe('54332');
   });

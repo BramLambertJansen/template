@@ -318,11 +318,6 @@
       "count": 1
     }
   },
-  "test/scripts/app-start-docs.test.ts": {
-    "rails/afwezigheid": {
-      "count": 1
-    }
-  },
   "test/scripts/check-app-init.test.ts": {
     "rails/negatieve-tabel": {
       "count": 1
