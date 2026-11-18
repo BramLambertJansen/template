@@ -17,6 +17,7 @@ vereiste); uitwerking in
 [spec](../specs/agent-merge-niet-kritiek.md) AC-7 tot en met AC-10
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 2, 3 en 5, punt 1, 2 en 3 worden: geen pad van een code-eigenaar geraakt en checks groen; de lijst uit de padtabel wordt `CODEOWNERS`, de job `agent-merge` en de inhoudstoets van `pnpm pr:merge` verdwijnen, de omvanggrens en het reviewcommentaar op de head vervallen als check (de review blijft een werkafspraak)
 Herzien: 2026-11-14 (#713): ingekort tot wat nog geldt na ADR 0089; de puntnummers zijn ongewijzigd, de oude tekst staat in git
+Herzien: 2026-11-18 (#781): punt 3, het script merget alleen als op `main` een ruleset met review van een code-eigenaar actief is die wie het draait niet kan passeren, en `CODEOWNERS` geen fouten heeft; verscherpt (spec templateregime AC-14)
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 30, 31, 33, 34 en 35, de zin "automatische agent-merges vallen af" uit
 [0057](0057-risicogestuurde-werkstraat.md), in [0064](0064-leesbudget-per-laag.md) "zodra de GitHub App er is" (R-DOC-09) en in
@@ -48,10 +49,12 @@ een pad van een code-eigenaar vraagt zijn review.
    als voorwaarde) pas als: de modus `merge` in `.claude/gates.json` op de kop van `main` `"niet-kritiek"` is (ontbreekt of
    onleesbaar: `"eigenaar"`); de PR open is, geen draft, basis `main`, head in dezelfde repository en gelijk aan de lokale `HEAD`;
    elke check uit `requiredChecks` `success` is op de head-SHA; de laatste uitslag van `requiredChecks` op de kop van `main`
-   groen is; en de leerpuntregel van 0078 punt 2 geen reden geeft om te wachten. De inhoudstoets, de omvanggrens, de eis dat de
+   groen is; op `main` een actieve ruleset met review van een code-eigenaar staat die wie het script draait niet kan passeren,
+   en `CODEOWNERS` geen fouten heeft (onleesbaar telt als nee; spec templateregime AC-14); en de leerpuntregel van 0078 punt 2
+   geen reden geeft om te wachten. De inhoudstoets, de omvanggrens, de eis dat de
    PR de kop van `main` bevat en het reviewcommentaar op de head zijn als check vervallen (0089 punt 5 en Gevolgen); de review
    door een verse reviewer vóór de push blijft een werkafspraak. *Waarom:* elke voorwaarde dekt een eigen faalwijze: verkeerde PR
-   of SHA, rode CI, doorbouwen op rode `main`. Aanvaard risico: een PR die achterloopt kan `main` na de merge rood maken; de
+   of SHA, rode CI, doorbouwen op rode `main`, een repo waar GitHub de review van een code-eigenaar niet afdwingt. Aanvaard risico: een PR die achterloopt kan `main` na de merge rood maken; de
    agent volgt na de merge de CI op `main`.
 4. **Alle andere merge-routes blijven dicht, en alleen in Claude Code.** `gh pr merge`, `gh api …/merge`, auto-merge,
    MCP-merge en mergen door een subagent blijven voor elke rol geweigerd (rolhek en deny-regels in `.claude/settings.json`).

@@ -649,7 +649,9 @@ Weigert de API iets:
 - `sha_pinning_required` onbekend → meld: Settings → Actions → General → **Require actions to be pinned to a full-length commit SHA**.
 
 Controle: `gh api repos/$R/rulesets --jq '.[].name'` toont `main`; `gh repo view $R --json mergeCommitAllowed,squashMergeAllowed,rebaseMergeAllowed`.
-Niets controleert daarna nog of de ruleset blijft staan: `check-github` bestaat nog niet (roadmap ST-01).
+`pnpm pr:merge` weigert als de ruleset geen review van een code-eigenaar eist, wie merget hem kan passeren, of
+`CODEOWNERS` fouten heeft (templateregime AC-14); of de rest van de ruleset blijft staan, controleert niets: `check-github`
+bestaat nog niet (roadmap ST-01).
 
 ## Fase 7 — Toolchain, git-hooks en lokale stack
 
