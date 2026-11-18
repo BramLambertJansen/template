@@ -13,6 +13,7 @@ Herzien: 2026-11-12 (#692): door ADR 0089 punt 1 en 2, in de template deels: pun
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 2, 5 en 8, de vorige regel vervalt: geen licht regime; zodra de GitHub App bewezen is, verdwijnen de diff-guard en `check-document-status`, en daarmee punt 16, 17, 18, 19, 20 en 24 vervallen; punt 21, een correctie aan een ADR is een afspraak die de eigenaar met zijn goedkeuring beslist; punt 22, de strikte statusregel vervalt als guardtoets; punt 10 noemt die twee checks niet meer
 Herzien: 2026-11-14 (#714): ingekort tot wat nog geldt na ADR 0089 en 0091; een ingehaald punt is één regel met de plek waar het nu staat, de puntnummers zijn ongewijzigd, de oude tekst staat in git
 Herzien: 2026-11-15 (#728): punt 22 verwijst niet meer naar `statusregelOvertreding`, die functie is weg; de afspraak blijft
+Herzien: 2026-11-18 (#796): gewijzigd door [0093](0093-agent-onder-eigenaaraccount.md) punt 1, punt 19 vervalt: er is geen GitHub App; de agent werkt onder het account van de eigenaar
 
 Vervangt 0011, 0017, 0031,
 0032, 0033 en

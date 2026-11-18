@@ -39,7 +39,7 @@ n.v.t. — geen UI.
 
 Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van punt 5; stap 4 = verhuizing.
 
-- **templateregime/AC-1** — Token: de eigenaar maakt een installatietoken van hoogstens een uur aan met
+- **templateregime/AC-1** — Vervallen door ADR 0093 punt 1 (geen App, geen token). Was: Token: de eigenaar maakt een installatietoken van hoogstens een uur aan met
   `scripts/kit/agent-token.mjs` vanaf `main`, buiten de sandbox (spec agent-token, ADR 0089 Herzien 2026-11-17), en de agent geeft het per commando mee (`GH_TOKEN` vóór een
   letterlijk `gh`- of `git push`-commando, gelezen uit een bestand, nooit letterlijk in de opdracht); de sleutel van de App staat op een pad
   dat de sandbox niet laat lezen. Geen test hier: het gedrag van het script toetst spec agent-token.
@@ -60,14 +60,15 @@ Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van pun
   geblokkeerd na een nieuwe commit van de App. Na stap 2 herhaald met de echte `CODEOWNERS` op `docs/template/adr/`.
 - **templateregime/AC-5** — Proef, geen pad van een code-eigenaar: geleverd op 2026-11-12. PR #694 van de App
   (`docs/proef-app-vrij.md`) was mergebaar zonder review zodra de verplichte checks groen waren. Na stap 2 herhaald.
-- **templateregime/AC-6** — Identiteit, nog niet bewezen: in de agentsessie mislukt lezen van `~/.config/gh/`, levert
+- **templateregime/AC-6** — Vervallen door ADR 0093 punt 1 (de agent werkt onder het account van de eigenaar). Was:
+  Identiteit, nog niet bewezen: in de agentsessie mislukt lezen van `~/.config/gh/`, levert
   `git credential fill` voor github.com niets, ontbreken `GH_TOKEN`, `GITHUB_TOKEN` en `SSH_AUTH_SOCK` in de sessieomgeving, en tonen de auteur van
   push en PR de App. Bewijs: een sandboxtest per punt plus de uitvoer in een PR, bevestigd door de eigenaar. De bypass en
   ADR 0089 punt 9 beginnen pas na dit AC; stap 3 hangt er niet van af.
 - **templateregime/AC-7** — Stap 3, na AC-4 en AC-5: `.github/workflows/guard.yml` heeft geen jobs `diff-guard`,
   `agent-merge` en `document-status`; `document-status` staat niet meer in `requiredChecks` en de eigenaar werkt de ruleset
-  direct na de merge bij; de scripts uit "Raakt ook" zijn weg; `pnpm pr:merge` verliest de inhoudstoets en
-  houdt head-SHA, groene checks en de modus `merge` uit `.claude/gates.json` tot ADR 0089 punt 9 (de effecttoets is weg, ADR 0091).
+  direct na de merge bij; de scripts uit "Raakt ook" zijn weg; `pnpm pr:merge` verliest de inhoudstoets (dit deel is
+  vervallen door ADR 0093 punt 3: de padtoets is terug, spec agent-samenvoegen) en houdt head-SHA, groene checks en de modus `merge` uit `.claude/gates.json` tot ADR 0089 punt 9 (de effecttoets is weg, ADR 0091).
 
   | Onderdeel | Overgenomen door |
   |---|---|
@@ -100,7 +101,8 @@ Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van pun
   privé-repo.
 - **templateregime/AC-13** — Stap 3 verwijdert de tests uit "Raakt ook" die alleen verdwenen code toetsen, en uit de gemengde
   tests alleen die gevallen; de lijst met reden staat in de PR (eigenaarakkoord via deze spec, R-TEST-02).
-- **templateregime/AC-14** — Het mergescript van de hoofdsessie (`scripts/kit/pr-merge.mjs`, `beoordeelMerge`) merget alleen als
+- **templateregime/AC-14** — Vervallen door ADR 0093 punt 5 (de grenscontrole is weg; het mergescript beslist op de
+  padtabel, spec agent-samenvoegen). Was: Het mergescript van de hoofdsessie (`scripts/kit/pr-merge.mjs`, `beoordeelMerge`) merget alleen als
   GitHub de grens van ADR 0089 punt 2 echt bewaakt voor wie het script draait. Na de modustoets (de modus `eigenaar` stopt nog
   steeds als eerste) leest het via de API, elke aanroep afgevangen:
   1. `repos/<repo>/rules/branches/main` (alle pagina's, ook regels uit een organisatie-ruleset) en eist minstens één regel van
@@ -119,14 +121,11 @@ Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van pun
 
 | Situatie | Gedrag | Foutcode |
 |---|---|---|
-| AC-6 niet bewezen | geen bypass; de identiteitsregels van het rolhek blijven | n.v.t. |
-| PR raakt alleen paden met besluit `agent` | de App merget na groene checks | n.v.t. |
-| PR raakt `src/x/CLAUDE.md` of een `.`-bestand | goedkeuring van de eigenaar nodig | n.v.t. |
-| Repo zonder ruleset, of ruleset zonder code-owner-review | het mergescript weigert; de eigenaar merget (AC-14) | n.v.t. |
-| Rules-API of `codeowners/errors` niet leesbaar (rechten, netwerk) | het mergescript weigert, zonder crash (AC-14) | n.v.t. |
-| Ruleset met `--bypass-beheerder` en het script draait als de beheerder | weigert: `current_user_can_bypass` is niet `never` (AC-14) | n.v.t. |
-| Geen `.github/CODEOWNERS` op main (404) | weigert als onleesbaar (AC-14) | n.v.t. |
-| Alleen klassieke branch protection | weigert; de eigenaar merget (AC-14) | n.v.t. |
+| PR raakt alleen paden met besluit `agent` | de hoofdsessie merget na groene checks (spec agent-samenvoegen) | n.v.t. |
+| PR raakt `src/x/CLAUDE.md` of een `.`-bestand | de eigenaar merget (spec agent-samenvoegen AC-1) | n.v.t. |
+
+De randgevallen bij AC-6 en AC-14 (bypass, repo zonder ruleset, onleesbare rules-API, `CODEOWNERS` met fouten of afwezig,
+klassieke branch protection) zijn vervallen door ADR 0093; de oude rijen staan in git.
 
 ## Raakt ook
 

@@ -43,10 +43,10 @@ Feiten nu:
 
 ## Mergen
 
-Een PR die een pad van een code-eigenaar raakt (`.github/CODEOWNERS`) merget de eigenaar na zijn goedkeuring; ander werk
-(ADR 0069, ADR 0089) de hoofdsessie, alleen zo:
+Een PR die een beschermd pad raakt (padtabel; `node scripts/kit/feiten.mjs pad <pad>`) merget de eigenaar met de knop op
+GitHub: open de PR onder zijn account, meld hem en wacht. Ander werk (ADR 0069, ADR 0093) merget de hoofdsessie, alleen zo:
 
-1. De PR raakt geen pad van een code-eigenaar en de verplichte checks zijn groen op de head.
+1. De PR raakt geen beschermd pad en de verplichte checks zijn groen op de head (het script toetst beide).
 2. Een verse reviewer keurde precies de head goed, na elke push opnieuw (afspraak; het script toetst dit niet meer).
 3. Threads zijn opgelost; een externe review is geen voorwaarde.
 4. `pnpm pr:merge <nr>` toetst alles via GitHub en noemt wat ontbreekt. Nooit `gh pr merge`, `gh api …/merge` of een andere route.

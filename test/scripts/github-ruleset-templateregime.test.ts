@@ -108,17 +108,21 @@ function requiredChecks(): string[] {
   return Array.isArray(lijst) ? lijst.map(String) : [];
 }
 
-const BEHEERDER = [{ actor_id: 5, actor_type: 'RepositoryRole', bypass_mode: 'pull_request' }];
-
+// GEWIJZIGD (agent-samenvoegen AC-5, ADR 0093; eigenaarakkoord via die spec, R-TEST-02): `require_code_owner_review` is `false`,
+// `bypass_actors` is altijd leeg, de optie `--bypass-beheerder` bestaat niet meer en de controle op fouten in CODEOWNERS na het
+// zetten van de ruleset vervalt. De overige regels van de payload blijven gelijk.
 describe('templateregime/AC-2 de reviewregels van de ruleset', () => {
-  test('templateregime/AC-2 zonder --bypass-beheerder: code-eigenaar-review, nul goedkeuringen, geen bijgewerkte branch, lege bypass_actors', () => {
+  test('agent-samenvoegen/AC-5 templateregime/AC-2 de ruleset eist geen review van een code-eigenaar: require_code_owner_review false, nul goedkeuringen, geen bijgewerkte branch, lege bypass_actors', () => {
     const { status, payload } = run(['eigenaar/app']);
 
     expect(status).toBe(0);
     expect(regelParameters(payload, 'pull_request')).toMatchObject({
-      require_code_owner_review: true,
+      require_code_owner_review: false,
       required_approving_review_count: 0,
       dismiss_stale_reviews_on_push: true,
+      require_last_push_approval: false,
+      required_review_thread_resolution: true,
+      allowed_merge_methods: ['merge', 'squash'],
     });
     expect(regelParameters(payload, 'required_status_checks')).toMatchObject({
       strict_required_status_checks_policy: false,
@@ -141,60 +145,61 @@ describe('templateregime/AC-2 de reviewregels van de ruleset', () => {
         .map((context) => ({ context, integration_id: GITHUB_ACTIONS })),
     );
     // Samen met de reviewregel, zodat deze test pas groen is als de hele pull_request-regel klopt.
-    expect(veld(regelParameters(payload, 'pull_request'), 'require_code_owner_review')).toBe(true);
+    expect(veld(regelParameters(payload, 'pull_request'), 'require_code_owner_review')).toBe(false);
   });
 });
 
+// GEWIJZIGD (agent-samenvoegen AC-5, ADR 0093): de optie `--bypass-beheerder` bestaat niet meer; de vier gevallen over de bypass
+// van de beheerder zijn omgezet naar wat er nu geldt: exit 2 met de gebruiksregel, en altijd een lege `bypass_actors`.
 describe('templateregime/AC-2 de bypass van de beheerder', () => {
-  test('templateregime/AC-2 met --bypass-beheerder: precies één actor, de beheerdersrol met bypass_mode pull_request', () => {
-    const { status, payload, aanroepen } = run(['eigenaar/app', '--bypass-beheerder']);
+  const GEBRUIK = 'Gebruik: scripts/github-ruleset.sh <owner>/<repo> [--zonder-codeql]';
 
-    expect(status).toBe(0);
-    // De POST is niet de laatste aanroep (daarna volgt codeowners/errors); er is precies één schrijvende aanroep.
-    expect(aanroepen.filter((aanroep) => aanroep.includes('-X '))).toStrictEqual([
-      'gh api -X POST repos/eigenaar/app/rulesets --input -',
-    ]);
-    expect(veld(payload, 'bypass_actors')).toStrictEqual(BEHEERDER);
+  test('agent-samenvoegen/AC-5 templateregime/AC-2 met --bypass-beheerder: exit 2 met de gebruiksregel, zonder de optie, en geen aanroep van gh', () => {
+    const { status, stderr, aanroepen, payload } = run(['eigenaar/app', '--bypass-beheerder']);
+
+    expect(status).toBe(2);
+    expect(stderr).toContain(GEBRUIK);
+    expect(stderr).not.toContain('bypass-beheerder');
+    expect(aanroepen).toStrictEqual([]);
+    expect(payload).toBeNull();
   });
 
-  test('templateregime/AC-2 met --bypass-beheerder blijft de rest van de ruleset gelijk, en staat er nooit een App in', () => {
-    const met = run(['eigenaar/app', '--bypass-beheerder']);
-    const zonder = run(['eigenaar/app']);
+  test('agent-samenvoegen/AC-5 templateregime/AC-2 de payload heeft een lege bypass_actors en er staat nooit een App in, ook bij --zonder-codeql', () => {
+    for (const args of [['eigenaar/app'], ['eigenaar/app', '--zonder-codeql']]) {
+      const { status, payload } = run(args);
 
-    expect(met.status).toBe(0);
-    expect(JSON.stringify(met.payload)).not.toContain('Integration');
-    expect(JSON.stringify(zonder.payload)).not.toContain('Integration');
-    expect(regelParameters(met.payload, 'pull_request')).toMatchObject({
-      require_code_owner_review: true,
-      required_approving_review_count: 0,
-      dismiss_stale_reviews_on_push: true,
-    });
-    expect({ ...(isRecord(met.payload) ? met.payload : {}), bypass_actors: [] }).toStrictEqual(zonder.payload);
-  });
-
-  test('templateregime/AC-2 de bypass werkt ook bij een bestaande ruleset (PUT) en in combinatie met --zonder-codeql, in beide volgordes', () => {
-    const bijwerken = run(['eigenaar/app', '--bypass-beheerder'], 'bestaat');
-    const eerstCodeql = run(['eigenaar/app', '--zonder-codeql', '--bypass-beheerder']);
-    const eerstBypass = run(['eigenaar/app', '--bypass-beheerder', '--zonder-codeql']);
-
-    // De PUT is niet de laatste aanroep (daarna volgt codeowners/errors); er is precies één schrijvende aanroep.
-    expect(bijwerken.aanroepen.filter((aanroep) => aanroep.includes('-X '))).toStrictEqual([
-      'gh api -X PUT repos/eigenaar/app/rulesets/42 --input -',
-    ]);
-    expect(veld(bijwerken.payload, 'bypass_actors')).toStrictEqual(BEHEERDER);
-    for (const uitvoer of [eerstCodeql, eerstBypass]) {
-      expect(uitvoer.status).toBe(0);
-      expect(veld(uitvoer.payload, 'bypass_actors')).toStrictEqual(BEHEERDER);
-      expect(checks(uitvoer.payload).map((check) => check.context)).not.toContain('codeql (actions)');
+      expect(status).toBe(0);
+      expect(veld(payload, 'bypass_actors')).toStrictEqual([]);
+      expect(JSON.stringify(payload)).not.toContain('Integration');
+      expect(JSON.stringify(payload)).not.toContain('RepositoryRole');
     }
   });
 
-  test('templateregime/AC-2 --zonder-codeql zonder de bypass-optie laat bypass_actors leeg en houdt de code-eigenaar-review', () => {
+  test('agent-samenvoegen/AC-5 templateregime/AC-2 --bypass-beheerder geeft ook exit 2 bij een bestaande ruleset en in combinatie met --zonder-codeql, in beide volgordes', () => {
+    const uitvoeren = [
+      run(['eigenaar/app', '--bypass-beheerder'], 'bestaat'),
+      run(['eigenaar/app', '--zonder-codeql', '--bypass-beheerder']),
+      run(['eigenaar/app', '--bypass-beheerder', '--zonder-codeql']),
+    ];
+
+    for (const uitvoer of uitvoeren) {
+      expect(uitvoer.status).toBe(2);
+      expect(uitvoer.stderr).toContain(GEBRUIK);
+      expect(uitvoer.aanroepen).toStrictEqual([]);
+    }
+  });
+
+  test('agent-samenvoegen/AC-5 templateregime/AC-2 --zonder-codeql laat bypass_actors leeg, zet geen code-eigenaar-review en houdt de overige regels', () => {
     const { status, payload } = run(['eigenaar/app', '--zonder-codeql']);
 
     expect(status).toBe(0);
     expect(veld(payload, 'bypass_actors')).toStrictEqual([]);
-    expect(veld(regelParameters(payload, 'pull_request'), 'require_code_owner_review')).toBe(true);
+    expect(veld(regelParameters(payload, 'pull_request'), 'require_code_owner_review')).toBe(false);
+    expect(regelParameters(payload, 'pull_request')).toMatchObject({
+      required_approving_review_count: 0,
+      dismiss_stale_reviews_on_push: true,
+      allowed_merge_methods: ['merge', 'squash'],
+    });
   });
 });
 
@@ -228,43 +233,41 @@ describe('templateregime/AC-2 het script stopt bij een onbruikbare requiredCheck
   });
 });
 
-// Nieuw (templateregime/AC-3, ADR 0089 punt 2): na het zetten van de ruleset vraagt het script de fouten van CODEOWNERS op
-// bij GitHub (endpoint repos/<owner>/<repo>/codeowners/errors). Aangenomen: het script leest de JSON van GitHub zelf
-// (`{"errors":[…]}`); een niet-lege lijst, een mislukte aanroep of onleesbare uitvoer is rood (exit niet 0, melding met
-// CODEOWNERS); een lege lijst slaagt en meldt dat CODEOWNERS zonder fouten is.
-describe('templateregime/AC-3 het script controleert CODEOWNERS bij GitHub', () => {
-  const ENDPOINT = 'gh api repos/eigenaar/app/codeowners/errors';
-  const vraagtCodeowners = (aanroepen: string[]) => aanroepen.some((aanroep) => aanroep.startsWith(ENDPOINT));
+// GEWIJZIGD (agent-samenvoegen AC-5, ADR 0093; eigenaarakkoord via die spec, R-TEST-02): de controle op fouten in CODEOWNERS na
+// het zetten van de ruleset (templateregime AC-3, ADR 0089 punt 3) vervalt. De stub antwoordt nog met fouten, een mislukte
+// aanroep of rommel: het script vraagt `codeowners/errors` niet meer op en eindigt dan ook niet rood.
+describe('templateregime/AC-3 het script controleert CODEOWNERS niet meer bij GitHub', () => {
+  const codeownersAanroepen = (aanroepen: string[]) =>
+    aanroepen.filter((aanroep) => aanroep.includes('/codeowners/errors'));
 
-  test('templateregime/AC-3 een lege errors-lijst: exit 0 en de melding dat CODEOWNERS zonder fouten is, ná het zetten van de ruleset', () => {
+  test('agent-samenvoegen/AC-5 templateregime/AC-3 een lege errors-lijst: exit 0, geen aanroep van codeowners/errors en geen melding over CODEOWNERS', () => {
     const { status, stdout, stderr, aanroepen } = run(['eigenaar/app']);
 
     expect(status).toBe(0);
-    expect(vraagtCodeowners(aanroepen)).toBe(true);
-    const ruleset = aanroepen.findIndex((aanroep) => aanroep.startsWith('gh api -X POST repos/eigenaar/app/rulesets'));
-    expect(ruleset).toBeGreaterThanOrEqual(0);
-    expect(aanroepen.findIndex((aanroep) => aanroep.startsWith(ENDPOINT))).toBeGreaterThan(ruleset);
-    expect(`${stdout}\n${stderr}`).toMatch(/CODEOWNERS.*zonder fouten/);
+    expect(aanroepen.filter((aanroep) => aanroep.includes('-X '))).toStrictEqual([
+      'gh api -X POST repos/eigenaar/app/rulesets --input -',
+    ]);
+    expect(codeownersAanroepen(aanroepen)).toStrictEqual([]);
+    expect(`${stdout}\n${stderr}`).not.toContain('CODEOWNERS');
   });
 
-  test('templateregime/AC-3 errors niet leeg (Unknown owner): exit niet 0 en een melding dat GitHub regels in CODEOWNERS overslaat', () => {
-    const { status, stdout, stderr } = run(['eigenaar/app'], '', { codeowners: 'fouten' });
+  test('agent-samenvoegen/AC-5 templateregime/AC-3 de laatste aanroep is het zetten van de ruleset, bij een bestaande ruleset de PUT', () => {
+    const nieuw = run(['eigenaar/app']);
+    const bijgewerkt = run(['eigenaar/app'], 'bestaat');
 
-    expect(status).not.toBe(0);
-    expect(stderr).toMatch(/CODEOWNERS/);
-    expect(stderr).toMatch(/overslaat/);
-    expect(stdout).not.toContain('zonder fouten');
+    expect(nieuw.aanroepen.at(-1)).toBe('gh api -X POST repos/eigenaar/app/rulesets --input -');
+    expect(bijgewerkt.aanroepen.at(-1)).toBe('gh api -X PUT repos/eigenaar/app/rulesets/42 --input -');
   });
 
   test.each([
+    ['errors niet leeg (Unknown owner)', 'fouten'],
     ['de aanroep zelf mislukt', 'mislukt'],
     ['de uitvoer geen JSON is', 'rommel'],
-  ])('templateregime/AC-3 %s: onleesbaar is rood (exit niet 0, melding met CODEOWNERS)', (_naam, modus) => {
+  ])('agent-samenvoegen/AC-5 templateregime/AC-3 %s: exit 0 en geen aanroep van codeowners/errors', (_naam, modus) => {
     const { status, stdout, stderr, aanroepen } = run(['eigenaar/app'], '', { codeowners: modus });
 
-    expect(vraagtCodeowners(aanroepen)).toBe(true);
-    expect(status).not.toBe(0);
-    expect(stderr).toMatch(/CODEOWNERS/);
-    expect(stdout).not.toContain('zonder fouten');
+    expect(codeownersAanroepen(aanroepen)).toStrictEqual([]);
+    expect(status).toBe(0);
+    expect(`${stdout}\n${stderr}`).not.toContain('CODEOWNERS');
   });
 });

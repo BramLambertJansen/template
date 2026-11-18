@@ -38,14 +38,12 @@ function wereld(gates: unknown): Wereld {
       base: { ref: 'main' },
       head: { sha: HEAD, repo: { full_name: REPO } },
     },
+    // GEWIJZIGD (agent-samenvoegen AC-3 en AC-4, ADR 0093): het script leest de bestanden van de PR en de padtabel weer; een
+    // app-bestand dat niet bestaat (404) telt als leeg. De endpoints van de grenscontrole (templateregime AC-14) zijn weg.
+    [`repos/${REPO}/contents/.claude/gates.app.json?ref=${MAIN}`]: new Error('gh: Not Found (HTTP 404)'),
+    [`repos/${REPO}/pulls/7/files`]: [{ filename: 'src/web/x.tsx', status: 'modified' }],
     [`repos/${REPO}/commits/${HEAD}/check-runs`]: { check_runs: VEREIST.map((n) => check(n, HEAD)) },
     [`repos/${REPO}/commits/${MAIN}/check-runs`]: { check_runs: [check('gate:fast', MAIN)] },
-    // templateregime/AC-14: de ruleset op main bewaakt de review van een code-eigenaar, zonder bypass, CODEOWNERS zonder fouten.
-    [`repos/${REPO}/rules/branches/main`]: [
-      { type: 'pull_request', ruleset_id: 1, parameters: { require_code_owner_review: true } },
-    ],
-    [`repos/${REPO}/rulesets/1`]: { current_user_can_bypass: 'never' },
-    [`repos/${REPO}/codeowners/errors?ref=${MAIN}`]: { errors: [] },
   };
 }
 
@@ -53,7 +51,9 @@ function api(w: Wereld) {
   return (endpoint: string) => {
     const sleutel = endpoint.replace(/[?&]per_page=100&page=\d+$/, '');
     if (!(sleutel in w)) throw new Error(`onbekend endpoint ${sleutel}`);
-    return w[sleutel];
+    const antwoord = w[sleutel];
+    if (antwoord instanceof Error) throw antwoord;
+    return antwoord;
   };
 }
 
@@ -64,9 +64,17 @@ const VORMEN: [string, Record<string, unknown>][] = [
   ['(b) oude vorm van 30cc352', OUD.ruw],
 ];
 
+// GEWIJZIGD (agent-samenvoegen AC-3, ADR 0093; R-TEST-02): het script leest de padtabel weer. In de nieuwe vorm (a) merget een
+// geldige PR nog; in de oude vorm (b) zonder `paden` is de padtabel niet te lezen en weigert het script.
 describe('padtabel/AC-5 pr:merge leest de modus uit main in beide vormen', () => {
-  test.each(VORMEN)('%s: beoordeelMerge merget een geldige PR (padtabel/AC-5)', (_n, ruw) => {
-    expect(redenen(wereld(ruw))).toEqual([]);
+  test('(a) nieuwe vorm: beoordeelMerge merget een geldige PR (padtabel/AC-5)', () => {
+    expect(redenen(wereld(nieuw()))).toEqual([]);
+  });
+
+  test('(b) oude vorm van 30cc352: de padtabel is niet te lezen, beoordeelMerge merget niet (padtabel/AC-5)', () => {
+    expect(redenen(wereld(OUD.ruw))).toEqual([
+      'de bestanden van de PR of de padtabel op main zijn niet te lezen: de eigenaar voegt samen',
+    ]);
   });
 
   test.each(VORMEN)('%s: zonder modus niet-kritiek merget beoordeelMerge niet (padtabel/AC-5)', (_n, ruw) => {

@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #776
+status: vervallen # ADR 0093: geen App en geen token meer; gebouwd in #776
 namespace: agent-token
 ---
 

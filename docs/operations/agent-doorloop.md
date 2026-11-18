@@ -182,6 +182,7 @@ uit met `KIT_MELDING=uit`) en toont de statusregel branch, achterstand, gewijzig
 `docs/roadmap-archief.md` bevat historisch bouwbewijs en is net als de actieve roadmap een beschermd gate-pad.
 CODEOWNERS is gegenereerd uit de besluitkolom van de padtabel in
 `.claude/gates.json` (`node scripts/kit/codeowners.mjs --schrijf`): elk pad met een ander besluit dan `agent` heeft de eigenaar.
+Het is een leesbare lijst, geen grens: de ruleset eist geen review van een code-eigenaar meer (ADR 0093 punt 2 en 7).
 
 ADR-nummers zijn uniek per map (`docs/adr/` van de app, `docs/template/adr/` van de template; ADR 0089 punt 6). Verwijderde nummers blijven gereserveerd via
 de Git-geschiedenis van de vertrouwde basis (afspraak: geen check leest die geschiedenis nog, ADR 0089 punt 5). Heeft main een nummer inmiddels gebruikt, werk de branch dan eerst bij.
@@ -237,8 +238,9 @@ Overdracht bevat alleen doel, toepasselijke spec/contract of verwachte uitkomst 
 open keuzes en echte checkuitslagen. Wie reviewt en wanneer de eigenaar dat overneemt: framework §8 (eisen aan de rollen).
 
 De gerichte feedback volgt ADR 0057. De vertrouwde
-hooklader gebruikt main; een branch activeert geen nieuwe rechten. De App, live ruleset en strikte build-proof uit dat
-ADR zijn afzonderlijk vervolgwerk en worden door deze hookwijziging niet als gebouwd of actief verklaard.
+hooklader gebruikt main; een branch activeert geen nieuwe rechten. De live ruleset en strikte build-proof uit dat
+ADR zijn afzonderlijk vervolgwerk en worden door deze hookwijziging niet als gebouwd of actief verklaard; de GitHub App uit
+dat ADR komt er niet: de agent werkt onder het account van de eigenaar (ADR 0093 punt 1).
 
 `test/hooks/lean-workflow.test.ts` bewaakt de gerichte feedback en het blokkeren op type-, lint- en testfouten,
 en voert de echte pre-push-config in een tijdelijke repository uit met groene en rode gate-uitvoer.
@@ -249,7 +251,7 @@ nu gerichte controles uitvoert; de controle op de git-root uit de payload blijft
 
 Een besluit kost één PR: de merge is het besluit. Architect of hoofdsessie zet de statusregel in het voorstel; commitvolgorde,
 inhoud na de status en committer doen er niet toe (ADR 0046 punt 7). De twee routes hieronder zijn afspraak, getoetst door de
-reviewer; geen check toetst ze nog (ADR 0089 punt 5 en 8). Het besluit is de goedkeuring van de eigenaar op `docs/adr/**` en `docs/specs/**` (`.github/CODEOWNERS`). Een PR met een eigenaarstatus merget altijd de eigenaar. Een PR zonder pad van een code-eigenaar merget de hoofdsessie zelf via `pnpm pr:merge` (ADR 0069, ADR 0089, skill `opleveren`).
+reviewer; geen check toetst ze nog (ADR 0089 punt 5 en 8). De hoofdsessie opent de PR onder het account van de eigenaar; er is geen GitHub App en geen token (ADR 0093 punt 1). Het besluit is de samenvoeging door de eigenaar. Een PR met een beschermd pad voegt de eigenaar samen met de knop op GitHub: `pnpm pr:merge` weigert met `raakt een beschermd pad (…): de eigenaar voegt samen`. Een PR zonder beschermd pad merget de hoofdsessie zelf via `pnpm pr:merge` zodra de verplichte checks groen zijn (ADR 0069, ADR 0093 punt 3, skill `opleveren`). Beschermd is in de template elk pad waarvan het besluit in de padtabel niet `agent` is; in een app een pad met `besluit-pr` of schrijven `voorReview` of hoger, een migratie, `src/core/**` en `docs/template/**` (`beschermdPad` in het mergescript; ADR 0093 punt 4). Dat is een vangnet, geen grens: GitHub houdt een samenvoeging onder het account van de eigenaar niet tegen.
 
 **Functionele UI in de template (ADR 0056/0058):** een lichte fix volgt framework §8, zonder mini-spec.
 Voor overige functionele UI gebruik je de mini-spec met aanvullend `scope: functionele-ui` in de frontmatter.
@@ -257,8 +259,8 @@ Beschrijf het gevraagde gedrag en de acceptatiecriteria en bouw in dezelfde PR; 
 nodig. De scope omvat bestaande componenten in `src/core/web/ui`, vaste teksten in
 `src/core/web/copy`, aansluitende app-UI, UI-tests en gebruiksdocs. Gewijzigde bestaande UI-tests krijgen per bestand een
 reden en vervangend bewijs in de PR. Auth, API/contracten, queries, andere core, dependencies, agentinstructies, gedeelde
-fixtures en testsetup blijven erbuiten; een gemengde PR volgt de strengste route. Een pad van een code-eigenaar
-(`.github/CODEOWNERS`) vraagt diens goedkeuring. Een app-repository krijgt deze core-uitzondering niet.
+fixtures en testsetup blijven erbuiten; een gemengde PR volgt de strengste route. Een beschermd pad
+(padtabel) voegt de eigenaar samen. Een app-repository krijgt deze core-uitzondering niet.
 `pnpm docs:status` werkt ook voor de nieuwe UI-mini-spec: zij staat op HEAD `goedgekeurd` met dezelfde inhoud en op `main` nog
 niet of als `voorstel`, de genoemde PR is open op deze branch in deze repository en de branch wijzigt iets buiten `docs/` en
 `CHANGELOG.md`. Check-runs toetst het commando niet; die eist de ruleset bij de merge.
@@ -277,8 +279,8 @@ niet of als `voorstel`, de genoemde PR is open op deze branch in deze repository
   quoted objectnamen, expressies en andere SQL-vormen zijn kritiek werk (ADR 0062 punt 2, R-WERK-05): in een app eerst een besluit-PR. De vaste
   verwijzing naar `better_auth."user" (id)` blijft toegestaan. Een retentionregistratie heeft precies de volgorde
   NO FORCE → één rij voor de nieuwe tabel → FORCE; losse of herhaalde toggles worden geweigerd. De mini-spec heeft de kop
-  "Datawijzigingen (met grants)". Een geneste `CLAUDE.md` of `AGENTS.md` valt eruit. Een onbekend pad buiten `gates` en buiten `src/`, `docs/` en `db/` (zoals `.vscode/` of `.mcp.json`) valt eruit. CODEOWNERS
-  blijft gelden voor elk pad van een code-eigenaar in de PR. Het bereik volgt ADR 0062.
+  "Datawijzigingen (met grants)". Een geneste `CLAUDE.md` of `AGENTS.md` valt eruit. Een onbekend pad buiten `gates` en buiten `src/`, `docs/` en `db/` (zoals `.vscode/` of `.mcp.json`) valt eruit. De padtoets van het mergescript
+  blijft gelden voor elk beschermd pad in de PR. Het bereik volgt ADR 0062.
 - **Besluit-PR:** een of meer ADR's en specs die een eigenaarstatus krijgen (ook `vervangen door NNNN` of `vervallen`, of nieuwe inhoud van een goedgekeurde spec), zonder `.claude/decisions.json`, code of andere bestanden: alleen documenten in `docs/adr/` en `docs/specs/` die zelf een besluit krijgen, ook geen index of ander document. Bouwen volgt in een volgende PR. In een app is dit de route voor kritiek werk (ADR 0062 punt 2); in de template alleen voor wie een besluit los wil voorleggen (ADR 0090 punt 4).
 - Past de PR in geen van beide, dan is dat een bevinding van de reviewer; een besluitrecord bestaat niet meer (ADR 0063).
 
@@ -491,7 +493,7 @@ Een plaatshouder van de sandbox blokkeert de werkmap niet (ADR 0084 punt 2, ADR 
 volledig pad vanaf de wortel op de lijst; de lijst groeit alleen met eigenaarakkoord. De toets op effect en haar open lijst zijn
 vervallen (ADR 0091): `pr:verify` leest `<git-dir>/rolhek-effect` niet meer; de eigenaar verwijdert die map.
 
-Een agent zet geen PR-label (R-ROL-08). De ruleset vraagt de goedkeuring van een code-eigenaar op de uiteindelijke head-SHA;
+Een agent zet geen PR-label (R-ROL-08). De ruleset eist de verplichte checks op de uiteindelijke head-SHA, geen goedkeuring;
 een label telt niet (R-CI-07).
 
 **Standaard: `gebouwd` in dezelfde PR** (ADR 0062). Bevat de PR de implementatie van de spec, dan zet de agent de
@@ -551,14 +553,14 @@ onafhankelijke reviewer; wat dan per route volstaat, staat in framework §8. De 
 ook een fetch van `origin` met als bestemming `refs/remotes/origin/main`, `git replace` (behalve `--list`), config op
 `include.*`/`includeIf.*` en, voor elke rol en elk programma, `GIT_CONFIG_*`, `GIT_DIR` of `GIT_WORK_TREE` als
 toewijzing, `export` of `declare -x`. `scripts/runner.sh` vergelijkt niet met die lokale ref maar met `git ls-remote origin refs/heads/main`.
-  Een commando buiten de hooks, of een andere runtime, valt daar niet onder; de ruleset op `main` met `.github/CODEOWNERS` is de echte grens
-  (ADR 0089).
+  Een commando buiten de hooks, of een andere runtime, valt daar niet onder; de ruleset op `main` (een PR met groene verplichte checks) is de echte grens
+  (ADR 0093).
 
 ## Gate-PR in de overgang
 
-De diff-guard, de uitslag `overgang` en de job `document-status` bestaan niet meer (ADR 0089 punt 5). Een PR met een pad van
-een code-eigenaar (`.github/CODEOWNERS`) vraagt diens goedkeuring op de head. GitHub laat de auteur zijn eigen PR niet
-goedkeuren: een eigen PR van de eigenaar op zo'n pad merget alleen met de bypass uit R-REPO-02.
+De diff-guard, de uitslag `overgang` en de job `document-status` bestaan niet meer (ADR 0089 punt 5). Een PR met een
+beschermd pad voegt de eigenaar samen op GitHub, zonder goedkeuring en zonder bypass: de ruleset eist alleen de verplichte
+checks (R-REPO-02, ADR 0093).
 
 ## Correctie aan een geaccepteerd ADR
 

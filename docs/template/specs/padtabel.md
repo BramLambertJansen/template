@@ -98,7 +98,8 @@ n.v.t.: geen API-route, permissie of foutcode.
    aangeroepen door `pr:merge` op de `gates.json` van main) lezen via `afgeleid` en geven dezelfde vorm terug als nu, plus
    `kritiek`. `kritiekPad(pad, config)` gebruikt `config.kritiek`, en zonder dat veld de oude regel. Vervallen met ADR 0089
    punt 5: de diff-guard (`leesConfig`), `leesMergeConfig`, `leesAgentMerge`, `agentMergeFouten` en `kritiekPad` zijn geschrapt; `pr:merge`
-   leest alleen nog de modus `merge`. `loadConfig` blijft.
+   leest alleen nog de modus `merge`. `loadConfig` blijft. Sinds ADR 0093 leest `pr:merge` de padtabel van main weer, voor de
+   padtoets (spec agent-samenvoegen AC-3); de oude vorm zonder `paden` telt daar als niet te lezen.
 8. **decisions.json.** `readRegistry` accepteert `{ version, requiredChecks }` en de oude vorm met `decisions`, en geeft
    `decisions: []` als de sleutel ontbreekt. Elke andere sleutel blijft een fout.
 

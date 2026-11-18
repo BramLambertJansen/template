@@ -18,17 +18,21 @@ requests.
   (`docs/**`: schrijven vrij, besluit agent). Bij een update: een bestaande app krijgt de stub; schrijf het skelet uit
   `appAgentregels()` naar `docs/app.md` en vul het (zie "Eigen agentinstructies van de app" in `docs/nieuwe-app.md`). Bij een
   later conflict op `docs/app.md`: houd de versie van de app.
-- Tokenscript voor de GitHub App van de agent (spec `agent-token`, herziet ADR 0089 punt 2): `scripts/kit/agent-token.mjs`
-  maakt met de sleutel van de App (standaard `~/.ssh/template-agent.pem`, modus 600) een installatietoken van hoogstens een uur
-  voor één repository (geef `--repo` altijd mee; zonder leest het script `remote.origin.url`, die de agent kan wijzigen) en schrijft het atomair met modus 600 naar `--uit` (standaard
-  `/tmp/claude-<uid>/agent-token`); token en JWT komen nooit in de uitvoer. Alleen `node:`-imports, zodat de eigenaar het
-  buiten de sandbox uit `main` draait via `bron=$(gh api …) && printf '%s\n' "$bron" | node --input-type=module - <app-id> --repo <owner>/<repo>` (zie `docs/nieuwe-app.md` 6.2)
-  (`test/scripts/agent-token.test.ts`). Wat verandert voor een app: niets vanzelf; wie PR's als een eigen GitHub App wil
-  openen, maakt het token zo met de hand aan en geeft het per commando mee als `GH_TOKEN`; zonder ververs-proces of
-  credential-helper.
 
 ### Gewijzigd
 
+- De agent werkt onder het account van de eigenaar en `pnpm pr:merge` beslist op de padtabel wie samenvoegt (ADR 0093, spec
+  `agent-samenvoegen`). Het mergescript leest de bestanden van de PR en de padtabel op de kop van `main` (met
+  `.claude/gates.app.json` als dat er is) en weigert met `raakt een beschermd pad (…): de eigenaar voegt samen` of, bij een
+  onleesbare lijst of padtabel, `… niet te lezen: de eigenaar voegt samen` (`beschermdPad` en `beoordeelMerge` in
+  `scripts/kit/pr-merge.mjs`, `test/scripts/pr-merge-samenvoegen.test.ts`); de grenscontrole op de ruleset en `CODEOWNERS`
+  (templateregime AC-14, nooit uitgebracht) is weg. `scripts/github-ruleset.sh` zet `require_code_owner_review` op `false` en
+  een lege `bypass_actors`, kent `--bypass-beheerder` niet meer en vraagt geen fouten in `CODEOWNERS` meer op. Het tokenscript
+  voor de GitHub App (`scripts/kit/agent-token.mjs`, spec `agent-token`, nooit uitgebracht) is verwijderd. Wat verandert voor
+  een app: geen GitHub App of token nodig; draai `scripts/github-ruleset.sh <owner>/<repo>` opnieuw, zodat de review van een
+  code-eigenaar en een eventuele bypass uit de ruleset gaan. In een app is beschermd: besluit `besluit-pr`, schrijven
+  `voorReview` of hoger, een migratie, `src/core/**` en `docs/template/**`; tests, specs, de roadmap en gewone app-code voegt
+  de hoofdsessie samen bij groene checks. Zonder ruleset toetst het script de checks zelf: een vangnet, geen grens.
 - `check-docs` regel 14 (leerpunt #738): een gebouwde spec in `docs/specs/` of `docs/template/specs/` noemt tussen backticks
   geen repopad onder `src/`, `scripts/`, `rails/`, `test/`, `e2e/`, `db/`, `deploy/`, `.claude/` of `.github/` (met extensie)
   dat niet bestaat, tenzij er direct `(vervallen)`, `(nieuw)` of `(voorbeeld)` achter staat; een nieuwe AC met
@@ -42,14 +46,6 @@ requests.
   alleen als die nog niet gezet zijn), zodat bv. `commit.gpgsign=true` een fixture-commit niet meer breekt
   (`test/setup/git-global-config.test.ts`). Een test die een eigen globale config nodig heeft, zet `GIT_CONFIG_GLOBAL` zelf.
   Wat verandert voor een app: niets, tenzij een eigen test op de globale gitconfig of de machine-identiteit leunde.
-- `pnpm pr:merge` controleert dat GitHub de grens van ADR 0089 punt 2 bewaakt (spec `templateregime` AC-14,
-  `beoordeelMerge` in `scripts/kit/pr-merge.mjs`, `test/scripts/merge-ruleset.test.ts`): het merget alleen als
-  `rules/branches/main` een regel `pull_request` met `require_code_owner_review: true` heeft, minstens één ruleset daarvan
-  `current_user_can_bypass: "never"` geeft en `codeowners/errors` op de kop van `main` leeg is; een onleesbaar antwoord, een
-  404 of een ongeldige vorm telt als nee. Wat verandert voor een app: zonder ruleset (privé-repo zonder Pro, of vóór fase 6),
-  met alleen klassieke branch protection, met een bypass voor wie het script draait (`--bypass-beheerder` en het script
-  draait als de beheerder) of zonder geldig `.github/CODEOWNERS` op `main` merget de hoofdsessie niets meer zelf; de eigenaar
-  merget.
 - De meting telt geen bevindingen van een externe reviewdienst meer (spec `agent-merge-niet-kritiek`, OV-1):
   `pnpm meting --pr-tabel` heeft geen rij en geen JSON-veld `codexBevindingen` meer, in `pnpm meting --trend` ontbreekt de
   maat `codex` (tekst en `trend.maten`) en de trend roept geen `gh api …/comments` meer aan (`scripts/kit/meting.mjs`,

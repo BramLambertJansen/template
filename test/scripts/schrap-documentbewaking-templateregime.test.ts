@@ -226,18 +226,22 @@ describe('templateregime/AC-7 pnpm pr:merge zonder inhoudstoets', () => {
   function goed(): Wereld {
     return {
       [`repos/${REPO}/branches/main`]: { commit: { sha: MAIN } },
-      [`repos/${REPO}/contents/.claude/gates.json?ref=${MAIN}`]: { content: b64({ merge: 'niet-kritiek' }) },
+      [`repos/${REPO}/contents/.claude/gates.json?ref=${MAIN}`]: {
+        content: b64({
+          merge: 'niet-kritiek',
+          onderhoud: { repository: REPO },
+          paden: { 'src/**': { besluit: 'agent' } },
+        }),
+      },
+      // GEWIJZIGD (agent-samenvoegen AC-3 en AC-4, ADR 0093; R-TEST-02): het script leest de padtabel en de bestanden van de PR
+      // weer; een app-bestand dat niet bestaat (404) telt als leeg. De endpoints van de grenscontrole (AC-14) zijn weg.
+      [`repos/${REPO}/contents/.claude/gates.app.json?ref=${MAIN}`]: new Error('gh: Not Found (HTTP 404)'),
       [`repos/${REPO}/contents/.claude/decisions.json?ref=${MAIN}`]: { content: b64({ requiredChecks: VEREIST }) },
       [`repos/${REPO}/pulls/7`]: { ...PR, additions: 9000, deletions: 9000 },
+      [`repos/${REPO}/pulls/7/files`]: [{ filename: 'src/web/x.tsx', status: 'modified' }],
       [`repos/${REPO}/compare/${MAIN}...${HEAD}`]: { behind_by: 0 },
       [`repos/${REPO}/commits/${HEAD}/check-runs`]: { check_runs: VEREIST.map((naam) => check(naam, HEAD)) },
       [`repos/${REPO}/commits/${MAIN}/check-runs`]: { check_runs: [check('gate:fast', MAIN)] },
-      // templateregime/AC-14: de ruleset op main bewaakt de review van een code-eigenaar, zonder bypass, CODEOWNERS zonder fouten.
-      [`repos/${REPO}/rules/branches/main`]: [
-        { type: 'pull_request', ruleset_id: 1, parameters: { require_code_owner_review: true } },
-      ],
-      [`repos/${REPO}/rulesets/1`]: { current_user_can_bypass: 'never' },
-      [`repos/${REPO}/codeowners/errors?ref=${MAIN}`]: { errors: [] },
       [`repos/${REPO}/issues/7/comments`]: [
         { user: { login: 'BramLambertJansen' }, body: `Review ${HEAD}: geen blokkerende bevindingen` },
       ],
@@ -249,7 +253,9 @@ describe('templateregime/AC-7 pnpm pr:merge zonder inhoudstoets', () => {
       const sleutel = endpoint.replace(/[?&]per_page=100&page=\d+$/, '');
       gelezen.push(sleutel);
       if (!(sleutel in wereld)) throw new Error(`onbekend endpoint ${sleutel}`);
-      return wereld[sleutel];
+      const antwoord = wereld[sleutel];
+      if (antwoord instanceof Error) throw antwoord;
+      return antwoord;
     };
   }
 
@@ -265,24 +271,6 @@ describe('templateregime/AC-7 pnpm pr:merge zonder inhoudstoets', () => {
 
   test('templateregime/AC-7: pr:merge doet geen inhoudstoets: een PR van 18.000 regels zonder agentMerge-blok, bestandslijst of job agent-merge is mergebaar', () => {
     expect(redenen()).toBe('');
-  });
-
-  test('templateregime/AC-7: pr:merge leest geen bestandslijst en geen workflow-run (de inhoudstoets en de job agent-merge zijn weg)', () => {
-    // Ook met het oude blok `agentMerge` op main (een app die nog niet is bijgewerkt) leest het script geen bestanden of runs.
-    const gelezen: string[] = [];
-    const wereld = goed();
-    zet('contents/.claude/gates.json?ref=' + MAIN, {
-      content: b64({
-        merge: 'niet-kritiek',
-        agentMerge: { toegestaan: ['src/**'], kritiek: [], maxRegels: 400, maxBytes: 40000 },
-      }),
-    })(wereld);
-    try {
-      voorwaarden(api(wereld, gelezen), { repo: REPO, nummer: 7, head: HEAD });
-    } catch {
-      // Een onbekend endpoint gooit in de stub; het gaat om wat het script probeerde te lezen.
-    }
-    expect(gelezen.filter((endpoint) => /\/files|actions\/runs|check_suite/.test(endpoint))).toEqual([]);
   });
 
   test('templateregime/AC-7: pr:merge exporteert omvangRedenen en guardRedenen niet meer en leest agent-merge.mjs niet meer', () => {

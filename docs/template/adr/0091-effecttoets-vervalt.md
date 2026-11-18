@@ -2,6 +2,8 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-18 (#796): gewijzigd door [0093](0093-agent-onder-eigenaaraccount.md) punt 2 en 6, punt 5 vervalt: de identiteitsregels van het rolhek blijven en er komt geen bypass; in Context en Gevolgen is de review van een code-eigenaar geen grens meer, het mergescript houdt een beschermd pad tegen (vangnet)
+
 Wijzigt [0066](0066-schrijfgrens-op-effect.md) (vervalt in zijn geheel), [0071](0071-rolhek-vooraf-vaste-lijst.md) punt 3, 4 en
 6, [0083](0083-bewaking-met-minder-wrijving.md) punt 2, [0084](0084-sandbox-afscherming-geen-effect.md) (alleen de
 plaatshouders voor `pr:verify` blijven) en [0089](0089-templateregime.md) punt 9 en 10. Drempel: A3 (een check vervalt).

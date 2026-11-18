@@ -30,17 +30,21 @@ const PULL = {
 function goed(): Wereld {
   return {
     [`repos/${REPO}/branches/main`]: { commit: { sha: MAIN } },
-    [`repos/${REPO}/contents/.claude/gates.json?ref=${MAIN}`]: { content: b64({ merge: 'niet-kritiek' }) },
+    [`repos/${REPO}/contents/.claude/gates.json?ref=${MAIN}`]: {
+      content: b64({
+        merge: 'niet-kritiek',
+        onderhoud: { repository: REPO },
+        paden: { 'src/**': { besluit: 'agent' } },
+      }),
+    },
+    // GEWIJZIGD (agent-samenvoegen AC-3 en AC-4, ADR 0093): het script leest de padtabel en de bestanden van de PR weer; een
+    // app-bestand dat niet bestaat (404) telt als leeg. De endpoints van de grenscontrole (templateregime AC-14) zijn weg.
+    [`repos/${REPO}/contents/.claude/gates.app.json?ref=${MAIN}`]: new Error('gh: Not Found (HTTP 404)'),
     [`repos/${REPO}/contents/.claude/decisions.json?ref=${MAIN}`]: { content: b64({ requiredChecks: VEREIST }) },
     [`repos/${REPO}/pulls/7`]: PULL,
+    [`repos/${REPO}/pulls/7/files`]: [{ filename: 'src/web/x.tsx', status: 'modified' }],
     [`repos/${REPO}/commits/${HEAD}/check-runs`]: { check_runs: VEREIST.map((n) => check(n, HEAD)) },
     [`repos/${REPO}/commits/${MAIN}/check-runs`]: { check_runs: [check('gate:fast', MAIN)] },
-    // templateregime/AC-14: de ruleset op main bewaakt de review van een code-eigenaar, zonder bypass, CODEOWNERS zonder fouten.
-    [`repos/${REPO}/rules/branches/main`]: [
-      { type: 'pull_request', ruleset_id: 1, parameters: { require_code_owner_review: true } },
-    ],
-    [`repos/${REPO}/rulesets/1`]: { current_user_can_bypass: 'never' },
-    [`repos/${REPO}/codeowners/errors?ref=${MAIN}`]: { errors: [] },
   };
 }
 
@@ -49,7 +53,9 @@ function api(wereld: Wereld, gelezen: string[] = []) {
     const sleutel = endpoint.replace(/[?&]per_page=100&page=\d+$/, '');
     gelezen.push(sleutel);
     if (!(sleutel in wereld)) throw new Error(`onbekend endpoint ${sleutel}`);
-    return wereld[sleutel];
+    const antwoord = wereld[sleutel];
+    if (antwoord instanceof Error) throw antwoord;
+    return antwoord;
   };
 }
 
@@ -75,10 +81,12 @@ describe('templateregime/AC-7 pr:merge doet geen inhoudstoets', () => {
     expect(redenen()).toBe('');
   });
 
-  test('de beoordeling leest geen bestandenlijst, compare, workflow-runs of commentaar', () => {
+  // GEWIJZIGD (agent-samenvoegen AC-3, ADR 0093; R-TEST-02): `pulls/7/files` is uit de regex en uit de titel: de padtoets leest
+  // de bestandenlijst weer (de omvang telt het script nog steeds niet).
+  test('de beoordeling leest geen compare, workflow-runs of commentaar', () => {
     const gelezen: string[] = [];
     beoordeelMerge(api(goed(), gelezen), { repo: REPO, nummer: 7, head: HEAD });
-    expect(gelezen.filter((e) => /pulls\/7\/files|compare\/|actions\/runs|issues\/7\/comments/.test(e))).toEqual([]);
+    expect(gelezen.filter((e) => /compare\/|actions\/runs|issues\/7\/comments/.test(e))).toEqual([]);
   });
 });
 

@@ -1,14 +1,16 @@
-// `pnpm pr:merge <nr>` (ADR 0069 punt 3, ADR 0089 punt 5): de enige route waarlangs de hoofdsessie een PR zelf merget. Alles
+// `pnpm pr:merge <nr>` (ADR 0069 punt 3, ADR 0093 punt 3): de enige route waarlangs de hoofdsessie een PR zelf merget. Alles
 // wordt via de REST-API van GitHub gelezen, niet uit de lokale `origin/main`; elke ontbrekende voorwaarde geeft een eigen
-// regel en exit 1 zonder schrijfactie. Pas als alles klopt: squash-merge met de head-SHA als voorwaarde. Geen inhoudstoets:
-// wie een pad goedkeurt, bewaakt de ruleset op main met `.github/CODEOWNERS` (ADR 0089); blijft: de
-// modus `merge` uit `.claude/gates.json` op main, de verplichte checks op de head en een groene main. Dat die ruleset er is,
-// controleert het wel (templateregime AC-14): een regel `pull_request` met `require_code_owner_review`, een ruleset die wie
-// het script draait niet kan passeren, en `CODEOWNERS` op main zonder fouten; onleesbaar telt als nee. De beschrijving leest het niet: dat
+// regel en exit 1 zonder schrijfactie. Pas als alles klopt: squash-merge met de head-SHA als voorwaarde. De voorwaarden: de
+// modus `merge` uit `.claude/gates.json` op main, de PR zelf, de padtoets, de verplichte checks op de head en een groene main.
+// Padtoets (spec agent-samenvoegen): de bestanden van de PR tegen de padtabel op de kop van main, samengevoegd met
+// `.claude/gates.app.json` als dat er is; raakt er één een beschermd pad, of is de lijst of de padtabel niet te lezen, dan
+// voegt de eigenaar samen. GitHub maakt dat onderscheid niet meer (geen review van een code-eigenaar in de ruleset): dit
+// script is daar een vangnet, geen grens, en controleert de ruleset niet. De beschrijving leest het niet: dat
 // de eigenaar merget bij `geen test:` of `meting:` in de sectie Leerpunt, is een afspraak (ADR 0078 punt 1 en 2, herzien in #696).
 import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
 import { gitText, readAuthority } from '../../rails/hooks/lib/authority-context.mjs';
+import { globMatch, onderhoudVan, padNiveau, samengevoegd } from '../../rails/hooks/lib/padtabel.mjs';
 import { parseCheckRun } from './github-evidence.mjs';
 import { checkProgress } from './pr-verify.mjs';
 
@@ -118,79 +120,89 @@ export function mainRedenen(ruw, vereist) {
     : [`main is niet groen: ${fout.map((c) => `${c.name} ${c.conclusion ?? c.status}`).join(', ')}`];
 }
 
-export const REDEN_GEEN_REVIEW = 'de ruleset op main bewaakt geen review van een code-eigenaar: de eigenaar merget';
-export const REDEN_BYPASS = 'wie dit script draait kan de ruleset passeren: de eigenaar merget';
-export const REDEN_CODEOWNERS = '`CODEOWNERS` op main heeft fouten';
-export const REDEN_ONLEESBAAR = 'de ruleset of `CODEOWNERS` op main is niet te lezen: de eigenaar merget';
+const NIET_TE_LEZEN = 'de bestanden van de PR of de padtabel op main zijn niet te lezen: de eigenaar voegt samen';
+// De zones van `check-core`: in een app altijd beschermd (ADR 0093 punt 4).
+const CORE_ZONES = ['src/core/', 'docs/template/'];
+const MAX_GENOEMD = 5;
 
-/** Een regel die de review van een code-eigenaar eist; zonder `parameters` telt hij als `false`. @param {unknown} regel */
-const bewaaktReview = (regel) =>
-  veld(regel, 'type') === 'pull_request' && pad(regel, 'parameters', 'require_code_owner_review') === true;
-
-/** `current_user_can_bypass` van een ruleset; `undefined` als het niet te lezen is. @param {Api} api @param {string} repo @param {unknown} id */
-function bypassVan(api, repo, id) {
-  if (typeof id !== 'number' || !Number.isInteger(id)) return undefined;
-  try {
-    const waarde = veld(api(`repos/${repo}/rulesets/${String(id)}`), 'current_user_can_bypass');
-    return typeof waarde === 'string' ? waarde : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-/** De regels op main die code-owner-review eisen, ook uit een organisatie-ruleset; `null` als ze niet te lezen zijn. @param {Api} api @param {string} repo */
-function reviewRegels(api, repo) {
-  try {
-    return alle(api, `repos/${repo}/rules/branches/main`).filter(bewaaktReview);
-  } catch {
-    return null;
-  }
+/** De globs uit `migraties`; ontbrekend is leeg, een andere vorm gooit. @param {unknown} tabel @returns {string[]} */
+function migraties(tabel) {
+  const lijst = veld(tabel, 'migraties');
+  if (lijst === undefined) return [];
+  if (!Array.isArray(lijst) || !lijst.every((glob) => typeof glob === 'string'))
+    throw new Error('.claude/gates.json: migraties is geen lijst');
+  return lijst;
 }
 
 /**
- * Punt 1 en 2 van templateregime AC-14: een review-regel, en minstens één ruleset daarvan waar de aanroeper niet langs kan.
- * @param {Api} api @param {string} repo @returns {'ok' | 'geen-review' | 'bypass' | 'onleesbaar'}
+ * Is een pad beschermd, zodat de eigenaar samenvoegt (ADR 0093 punt 4, spec agent-samenvoegen AC-1 en AC-2)? In de template
+ * (`onderhoud.repository` is deze repository): elk pad waarvan het besluit niet `agent` is. In een app: besluit `besluit-pr`,
+ * schrijven `voorReview` of hoger, een migratie, of een zone van `check-core`. `tabel` is de ruwe gates-inhoud, al
+ * samengevoegd met het app-bestand; gooit bij een padtabel die niet te lezen is (oude vorm, `paden` geen object).
+ * @param {string} bestand @param {unknown} tabel @param {string} repo @returns {boolean}
  */
-function rulesetStaat(api, repo) {
-  const regels = reviewRegels(api, repo);
-  if (regels === null) return 'onleesbaar';
-  if (regels.length === 0) return 'geen-review';
-  const bypass = regels.map((regel) => bypassVan(api, repo, veld(regel, 'ruleset_id')));
-  if (bypass.includes('never')) return 'ok';
-  return bypass.includes(undefined) ? 'onleesbaar' : 'bypass';
+export function beschermdPad(bestand, tabel, repo) {
+  const niveau = padNiveau(bestand, tabel);
+  const onderhoud = onderhoudVan(veld(tabel, 'onderhoud'));
+  if (onderhoud?.repository.toLowerCase() === repo.toLowerCase()) return niveau.besluit !== 'agent';
+  return (
+    niveau.besluit === 'besluit-pr' ||
+    niveau.schrijven === 'voorReview' ||
+    niveau.schrijven === 'altijdVragen' ||
+    migraties(tabel).some((glob) => globMatch(glob, bestand)) ||
+    CORE_ZONES.some((zone) => bestand.startsWith(zone))
+  );
 }
 
-/** Punt 3: `CODEOWNERS` op de kop van main zonder fouten. @param {Api} api @param {{ repo: string, mainSha: string }} doel @returns {'ok' | 'fouten' | 'onleesbaar'} */
-function codeownersStaat(api, { repo, mainSha }) {
+/**
+ * `.claude/gates.app.json` op een commit van main: `null` als het niet bestaat (404). Elke andere fout en ongeldige JSON
+ * gooien, zodat de padtoets weigert in plaats van app-rijen stil te negeren.
+ * @param {Api} api @param {{ repo: string, sha: string }} doel @returns {unknown}
+ */
+function appBestand(api, { repo, sha }) {
+  let antwoord;
   try {
-    const fouten = veld(api(`repos/${repo}/codeowners/errors?ref=${mainSha}`), 'errors');
-    if (!Array.isArray(fouten)) return 'onleesbaar';
-    return fouten.length === 0 ? 'ok' : 'fouten';
+    antwoord = api(`repos/${repo}/contents/.claude/gates.app.json?ref=${sha}`);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('HTTP 404')) return null;
+    throw error;
+  }
+  return JSON.parse(Buffer.from(tekst(veld(antwoord, 'content')), 'base64').toString('utf8'));
+}
+
+/** De paden van één bestand uit `pulls/<nr>/files`: `filename` en, als het er is, `previous_filename`. @param {unknown} item @returns {string[]} */
+function padenVanBestand(item) {
+  const naam = veld(item, 'filename');
+  const vorige = veld(item, 'previous_filename');
+  if (typeof naam !== 'string' || naam === '') throw new Error('bestand zonder filename');
+  if (vorige === undefined || vorige === null) return [naam];
+  if (typeof vorige !== 'string' || vorige === '') throw new Error('previous_filename is geen tekst');
+  return [naam, vorige];
+}
+
+/**
+ * De padtoets (spec agent-samenvoegen AC-3): de bestanden van de PR, alle pagina's, tegen de padtabel op de kop van main.
+ * Elke aanroep is afgevangen: een onleesbare lijst, meer dan tien pagina's of een onleesbare padtabel geeft een reden, nooit
+ * een crash en nooit een merge.
+ * @param {Api} api @param {{ repo: string, nummer: number, mainSha: string, gates: unknown }} doel @returns {string[]}
+ */
+function padRedenen(api, { repo, nummer, mainSha, gates }) {
+  try {
+    const tabel = samengevoegd(gates, appBestand(api, { repo, sha: mainSha }));
+    const paden = alle(api, `repos/${repo}/pulls/${String(nummer)}/files`).flatMap(padenVanBestand);
+    const geraakt = [...new Set(paden)].filter((bestand) => beschermdPad(bestand, tabel, repo));
+    if (geraakt.length === 0) return [];
+    const meer = geraakt.length - MAX_GENOEMD;
+    const genoemd = geraakt.slice(0, MAX_GENOEMD).join(', ') + (meer > 0 ? `, en ${String(meer)} meer` : '');
+    return [`raakt een beschermd pad (${genoemd}): de eigenaar voegt samen`];
   } catch {
-    return 'onleesbaar';
+    return [NIET_TE_LEZEN];
   }
 }
 
 /**
- * Bewaakt GitHub de grens van ADR 0089 punt 2 voor wie dit script draait (templateregime AC-14)? Elke aanroep is afgevangen:
- * een onleesbaar antwoord, een 404 of een ongeldige vorm geeft een reden, nooit een crash. Klassieke branch protection telt
- * niet: de rules-API toont die niet.
- * @param {Api} api @param {{ repo: string, mainSha: string }} doel @returns {string[]}
- */
-export function grensRedenen(api, doel) {
-  const ruleset = rulesetStaat(api, doel.repo);
-  const codeowners = codeownersStaat(api, doel);
-  const redenen = [];
-  if (ruleset === 'geen-review') redenen.push(REDEN_GEEN_REVIEW);
-  if (ruleset === 'bypass') redenen.push(REDEN_BYPASS);
-  if (codeowners === 'fouten') redenen.push(REDEN_CODEOWNERS);
-  if (ruleset === 'onleesbaar' || codeowners === 'onleesbaar') redenen.push(REDEN_ONLEESBAAR);
-  return redenen;
-}
-
-/**
- * De voorwaarden die na ADR 0089 punt 5 blijven, plus de grens van templateregime AC-14; geen redenen betekent mergen. Een
- * onleesbare of ontbrekende modus op main telt als `eigenaar`: nooit een crash, nooit een merge.
+ * De voorwaarden van ADR 0069 punt 3 en ADR 0093 punt 3: modus, PR, padtoets, checks op de head, groene main; geen redenen
+ * betekent mergen. Een onleesbare of ontbrekende modus op main telt als `eigenaar`: nooit een crash, nooit een merge.
  * @param {Api} api @param {{ repo: string, nummer: number, head: string }} doel
  * @returns {{ redenen: string[] }}
  */
@@ -205,12 +217,12 @@ export function beoordeelMerge(api, { repo, nummer, head }) {
   const pull = api(`repos/${repo}/pulls/${String(nummer)}`);
   const redenen = [
     ...prRedenen(pull, { repo, head }),
+    ...padRedenen(api, { repo, nummer, mainSha, gates }),
     ...checkRedenen(alle(api, `repos/${repo}/commits/${head}/check-runs`, 'check_runs'), { names: vereist, sha: head }),
     ...mainRedenen(alle(api, `repos/${repo}/commits/${mainSha}/check-runs`, 'check_runs'), {
       names: vereist,
       sha: mainSha,
     }),
-    ...grensRedenen(api, { repo, mainSha }),
   ];
   return { redenen };
 }
@@ -234,14 +246,18 @@ export function slotRegels(nummer, head) {
   ];
 }
 
-/** @param {string} endpoint @returns {unknown} */
+/**
+ * Een 404 blijft herkenbaar in de melding (`HTTP 404`, zoals `gh api` het op stderr meldt): alleen daar telt een ontbrekend
+ * `.claude/gates.app.json` als leeg. @param {string} endpoint @returns {unknown}
+ */
 function gh(endpoint) {
   try {
     return JSON.parse(
-      execFileSync('gh', ['api', endpoint], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], env: ZONDER_BIN }),
+      execFileSync('gh', ['api', endpoint], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], env: ZONDER_BIN }),
     );
-  } catch {
-    throw new Error(`GitHub is niet leesbaar: ${endpoint}`);
+  } catch (error) {
+    const nietGevonden = tekst(veld(error, 'stderr')).includes('(HTTP 404)');
+    throw new Error(`GitHub is niet leesbaar: ${endpoint}${nietGevonden ? ' (HTTP 404)' : ''}`, { cause: error });
   }
 }
 
