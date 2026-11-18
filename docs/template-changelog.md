@@ -37,6 +37,11 @@ requests.
   staan in `.kit/baseline.json`; een nieuwe is rood in de ratchet. Wat verandert voor een app: wie een bestand schrapt of
   hernoemt dat een gebouwde spec noemt, zet `(vervallen)` erachter in dezelfde PR.
 - `bewijsPlan` uit `scripts/kit/leerpunt.mjs` geeft geen veld `zonderTest` meer (leerpunt #737): niets buiten de tests las het.
+- Unit-tests met git-fixtures hangen niet meer af van de gitconfig van de machine (leerpunt #755): `test/setup/git-env.ts`
+  zet `GIT_CONFIG_GLOBAL=/dev/null` en `GIT_CONFIG_NOSYSTEM=1` en een vaste testidentiteit (`GIT_AUTHOR_*`/`GIT_COMMITTER_*`,
+  alleen als die nog niet gezet zijn), zodat bv. `commit.gpgsign=true` een fixture-commit niet meer breekt
+  (`test/setup/git-global-config.test.ts`). Een test die een eigen globale config nodig heeft, zet `GIT_CONFIG_GLOBAL` zelf.
+  Wat verandert voor een app: niets, tenzij een eigen test op de globale gitconfig of de machine-identiteit leunde.
 - `pnpm pr:merge` controleert dat GitHub de grens van ADR 0089 punt 2 bewaakt (spec `templateregime` AC-14,
   `beoordeelMerge` in `scripts/kit/pr-merge.mjs`, `test/scripts/merge-ruleset.test.ts`): het merget alleen als
   `rules/branches/main` een regel `pull_request` met `require_code_owner_review: true` heeft, minstens één ruleset daarvan
