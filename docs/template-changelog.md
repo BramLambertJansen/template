@@ -37,6 +37,11 @@ requests.
   staan in `.kit/baseline.json`; een nieuwe is rood in de ratchet. Wat verandert voor een app: wie een bestand schrapt of
   hernoemt dat een gebouwde spec noemt, zet `(vervallen)` erachter in dezelfde PR.
 - `bewijsPlan` uit `scripts/kit/leerpunt.mjs` geeft geen veld `zonderTest` meer (leerpunt #737): niets buiten de tests las het.
+- Unit-tests met git-fixtures hangen niet meer af van de gitconfig van de machine (leerpunt #755): `test/setup/git-env.ts`
+  zet `GIT_CONFIG_GLOBAL=/dev/null` en `GIT_CONFIG_NOSYSTEM=1` en een vaste testidentiteit (`GIT_AUTHOR_*`/`GIT_COMMITTER_*`,
+  alleen als die nog niet gezet zijn), zodat bv. `commit.gpgsign=true` een fixture-commit niet meer breekt
+  (`test/setup/git-global-config.test.ts`). Een test die een eigen globale config nodig heeft, zet `GIT_CONFIG_GLOBAL` zelf.
+  Wat verandert voor een app: niets, tenzij een eigen test op de globale gitconfig of de machine-identiteit leunde.
 - De meting telt geen bevindingen van een externe reviewdienst meer (spec `agent-merge-niet-kritiek`, OV-1):
   `pnpm meting --pr-tabel` heeft geen rij en geen JSON-veld `codexBevindingen` meer, in `pnpm meting --trend` ontbreekt de
   maat `codex` (tekst en `trend.maten`) en de trend roept geen `gh api …/comments` meer aan (`scripts/kit/meting.mjs`,
