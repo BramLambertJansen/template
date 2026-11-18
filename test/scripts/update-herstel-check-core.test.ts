@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
@@ -13,6 +13,7 @@ import { coreFouten } from '../../scripts/kit/check-core.mjs';
 // met de template), de template schuift door. `main` is de base van de PR, `template/main` de template, de branch de PR.
 const REFS = { base: 'main', head: 'chore/template-update', template: 'template/main' };
 const CORE = 'src/core/a.ts';
+const EIGEN = 'src/core/eigen.ts'; // bestaat alleen in de app, niet in de template
 const DOCS = 'docs/template/adr/0001-voorbeeld.md';
 const ZONES = 'src/core docs/template'.split(' ');
 
@@ -62,6 +63,7 @@ function opzet(): string {
   schrijf(app, CORE, 'export const a = "eigen";\n');
   schrijf(app, DOCS, '# Voorbeeld, eigen versie\n');
   schrijf(app, 'src/web/app.ts', 'export const app = 2;\n');
+  schrijf(app, EIGEN, 'export const eigen = 1;\n');
   commit(app, 'app: eigen wijzigingen');
   schrijf(sjabloon, CORE, 'export const a = 2;\n');
   schrijf(sjabloon, 'src/core/b.ts', 'export const b = 1;\n');
@@ -79,9 +81,19 @@ function mergeMetConflict(app: string): void {
   expect(git(app, 'diff', '--name-only', '--diff-filter=U').split('\n').sort()).toStrictEqual([DOCS, CORE]);
 }
 
-/** De herstelstap van stap 3: de zones uit `template/main`. */
+/** De herstelstap van stap 3 (docs/nieuwe-app.md): de zones uit `template/main`; `--no-overlay` haalt ook eigen bestanden weg. */
 function zetZonesTerug(app: string): void {
+  git(app, 'checkout', '--no-overlay', 'template/main', '--', ...ZONES);
+}
+
+/** Dezelfde stap zonder `--no-overlay` (de standaard, overlay-modus): bestanden die alleen de app heeft blijven staan. */
+function zetZonesTerugMetOverlay(app: string): void {
   git(app, 'checkout', 'template/main', '--', ...ZONES);
+}
+
+/** Staat het pad in de werkmap en in de HEAD-commit? */
+function aanwezig(app: string, pad: string): { werkmap: boolean; head: boolean } {
+  return { werkmap: existsSync(path.join(app, pad)), head: gitRuw(app, 'cat-file', '-e', `HEAD:${pad}`).status === 0 };
 }
 
 /** Een merge-commit waarin de app zijn eigen zones behoudt: de toestand waarin de herstelstap nog moet volgen. */
@@ -109,18 +121,44 @@ describe('update-herstel/check-core: zones terugzetten bij een template-update',
 
     expect(ouders(app), 'een echte merge-commit met twee ouders').toHaveLength(2);
     expect(zoneGelijk(app, 'src/core') && zoneGelijk(app, 'docs/template')).toBe(true);
+    expect(aanwezig(app, EIGEN), '--no-overlay haalt het eigen bestand van de app uit de zone').toStrictEqual({
+      werkmap: false,
+      head: false,
+    });
     expect(coreFouten(app, REFS)).toStrictEqual([]);
   });
 
   test('update-herstel/AC-1: terugzetten met git commit --amend op de merge-commit is groen', () => {
     const app = opzet();
     mergeMetEigenZones(app);
+    expect(aanwezig(app, EIGEN).head, 'voor het herstel staat het eigen bestand in de merge-commit').toBe(true);
     zetZonesTerug(app);
     git(app, 'commit', '-q', '--amend', '--no-edit');
 
     expect(ouders(app), 'het amenden laat de merge twee ouders houden').toHaveLength(2);
     expect(zoneGelijk(app, 'src/core') && zoneGelijk(app, 'docs/template')).toBe(true);
+    expect(aanwezig(app, EIGEN)).toStrictEqual({ werkmap: false, head: false });
     expect(coreFouten(app, REFS)).toStrictEqual([]);
+  });
+
+  test('update-herstel/AC-2: zonder --no-overlay blijft het eigen bestand in de zone staan en is check-core rood', () => {
+    const app = opzet();
+    mergeMetConflict(app);
+    zetZonesTerugMetOverlay(app);
+    git(app, 'commit', '-q', '--no-edit');
+
+    expect(ouders(app), 'wel een echte merge-commit met twee ouders').toHaveLength(2);
+    expect(aanwezig(app, EIGEN), 'overlay laat bestanden staan die de template niet kent').toStrictEqual({
+      werkmap: true,
+      head: true,
+    });
+    expect(zoneGelijk(app, 'src/core')).toBe(false);
+    const fouten = coreFouten(app, REFS);
+
+    // Alleen src/core is rood: docs/template had geen eigen bestand en is na het terugzetten gelijk aan de template.
+    expect(zoneGelijk(app, 'docs/template')).toBe(true);
+    expect(fouten).toHaveLength(1);
+    expect(fouten[0]).toMatch(/^[0-9a-f]{12}: de merge wijzigt src\/core\/ zelf \(verschilt van [0-9a-f]{12}\)$/);
   });
 
   test('update-herstel/AC-1: de eigen wijzigingen van de app buiten de zones blijven na het terugzetten staan', () => {
@@ -154,8 +192,12 @@ describe('update-herstel/check-core: zones terugzetten bij een template-update',
 
     const fouten = coreFouten(app, REFS);
 
-    // Alleen src/core: daar voegt de merge b.ts van de template toe aan de eigen versie. docs/template blijft in de merge gelijk
-    // aan de eerste ouder en wordt door check-core niet als "eigen wijziging in de merge" gezien.
+    // Twee verschillende meldingen, op dezelfde merge-commit. src/core: de merge voegt b.ts van de template toe aan de eigen
+    // versie, dus de zone verschilt van beide ouders ("de merge wijzigt src/core/ zelf"). docs/template: de merge laat de zone
+    // gelijk aan de eerste ouder (de eigen versie), dus geen "eigen wijziging in de merge"; check-core meldt hem toch, omdat de
+    // eigen versie ouder is dan de al geïmporteerde templateversie ("kiest een oudere templatedocumentatie").
     expect(fouten.some((fout) => fout.includes('de merge wijzigt src/core/ zelf'))).toBe(true);
+    expect(fouten.some((fout) => fout.includes('kiest een oudere templatedocumentatie (docs/template/)'))).toBe(true);
+    expect(fouten).toHaveLength(2);
   });
 });
