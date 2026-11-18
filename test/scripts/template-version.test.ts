@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test } from 'vitest';
+import { releasesUit } from '../../scripts/kit/template-release.mjs';
 import { TEMPLATE_VERSION } from '../../src/core/shared/template-version.ts';
 
 // Spec release-versie (docs/template/specs/release-versie.md), AC-1 t/m AC-3: de versie in code is gelijk aan de nieuwste
@@ -9,19 +10,10 @@ const ROOT = path.join(import.meta.dirname, '../..');
 const RELEASE = /^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}$/;
 const read = (file: string) => readFileSync(path.join(ROOT, file), 'utf8');
 
-// De nieuwste releaseversie uit de lijst; gooit als de koppen niet de afgesproken vorm hebben.
-function latestRelease(changelog: string): string {
-  const heads = changelog.split('\n').filter((line) => line.startsWith('## '));
-  if (heads[0] !== '## [Unreleased]') throw new Error('de eerste kop is niet "## [Unreleased]"');
-  const releases = heads.slice(1);
-  const first = releases[0];
-  if (first === undefined) throw new Error('geen releasekop onder "## [Unreleased]"');
-  for (const head of releases) {
-    if (!RELEASE.test(head)) throw new Error(`releasekop zonder de vorm "## [x.y.z] - JJJJ-MM-DD": ${head}`);
-  }
-  const version = RELEASE.exec(first)?.[1];
-  if (version === undefined) throw new Error(`geen versie in: ${first}`);
-  return version;
+// De nieuwste releaseversie uit de lijst; gooit als de koppen niet de afgesproken vorm hebben. Eén ontleding, gedeeld
+// met template:release en template:status (spec template-release, AC-2).
+function latestRelease(changelog: string): string | undefined {
+  return releasesUit(changelog)[0]?.versie;
 }
 
 test('release-versie/AC-1: TEMPLATE_VERSION is gelijk aan de nieuwste releasekop in docs/template-changelog.md', () => {

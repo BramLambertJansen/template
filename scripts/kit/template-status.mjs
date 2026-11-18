@@ -1,4 +1,4 @@
-// template:status (spec template-release, ADR 0093 punt 7): de stand van een app of van de template tegenover de
+// template:status (spec template-release, ADR 0094 punt 7): de stand van een app of van de template tegenover de
 // templatereleases. Alleen-lezend en adviserend: geen fetch, geen netwerk, geen schrijfactie in werkmap of .git; het leest de
 // werkmap en lokale refs. Exit 0 als het iets kan melden (ook bij achterstand), 1 als de template-ref of .claude/gates.json
 // niet te lezen is of `onderhoud` een ongeldige vorm heeft.

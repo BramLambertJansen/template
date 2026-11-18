@@ -1,4 +1,4 @@
-// template:release (spec template-release, ADR 0093): voegt de changelogfragmenten in docs/template-changelog.d/ samen tot
+// template:release (spec template-release, ADR 0094): voegt de changelogfragmenten in docs/template-changelog.d/ samen tot
 // een releasesectie direct onder het [Unreleased]-blok van docs/template-changelog.md, zet TEMPLATE_VERSION op de nieuwe
 // versie en verwijdert de verwerkte fragmenten. Alleen in de template (`onderhoud` in .claude/gates.json). Het script
 // commit, pusht en tagt niet: de hoofdsessie maakt de release-PR, de eigenaar tagt de squash-commit als `template-vx.y.z`.
@@ -302,7 +302,7 @@ function toetsVersie(versie, huidig, fragmenten) {
   const [huidigMajor, huidigMinor] = delen(huidig);
   if (metNotitie.length > 0 && major === huidigMajor && minor === huidigMinor)
     throw new Error(
-      `${versie} verhoogt alleen het patchnummer, maar ${metNotitie.join(', ')} heeft een "Bij een update"; verhoog het minornummer (ADR 0093 punt 3)`,
+      `${versie} verhoogt alleen het patchnummer, maar ${metNotitie.join(', ')} heeft een "Bij een update"; verhoog het minornummer (ADR 0094 punt 3)`,
     );
 }
 

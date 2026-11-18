@@ -1022,7 +1022,7 @@ node scripts/kit/feiten.mjs pad payments/x.ts
 Door de eigenaar, of door de agent tot en met de PR. Dit is de enige procedure voor een template-update; voer de stappen op
 volgorde uit in een Ubuntu-terminal, met een schone werkmap (`git status --short` is leeg).
 
-Een update is de merge van een release van de template: een tag `template-v<x.y.z>` (ADR 0093, spec `template-release`).
+Een update is de merge van een release van de template: een tag `template-v<x.y.z>` (ADR 0094, spec `template-release`).
 Vul in de stappen voor `<x.y.z>` de nieuwste release in; tussenliggende releases sla je over in de merge, niet in de notities.
 
 1. Haal de template en haar releasetags op. Verwacht: beide commando's eindigen zonder fout. `--no-tags` met de refspec haalt

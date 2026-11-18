@@ -2,7 +2,7 @@
 
 Status: geaccepteerd
 
-Herzien: 2026-11-18 (#PR): gewijzigd door [0093](0093-templaterelease-als-eenheid-van-een-update.md) punt 1 en 2, in punt 1: na de koppeling merget een app een `template-v`-releasetag in plaats van `template/main`; de koppeling zelf (`ours`-merge van `template/main`) blijft
+Herzien: 2026-11-18 (#PR): gewijzigd door [0094](0094-templaterelease-als-eenheid-van-een-update.md) punt 1 en 2, in punt 1: na de koppeling merget een app een `template-v`-releasetag in plaats van `template/main`; de koppeling zelf (`ours`-merge van `template/main`) blijft
 
 Herzien: 2026-11-16 (#747): punt 16, geen vaste template-URL meer; `check-core` haalt `template/main` op van `template.repository` in `.claude/gates.json`; de herkenning van de template in punt 17 blijft `onderhoud.repository`
 

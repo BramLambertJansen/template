@@ -4,7 +4,7 @@ Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de
 `TEMPLATE_VERSION` in `src/core/shared/template-version.ts` (`test/scripts/template-version.test.ts`). `CHANGELOG.md` in de
 hoofdmap is van de app. Oudere bouwstappen en reviews zijn terug te vinden in Git en de pull requests.
 
-Een release is de eenheid van een update (ADR 0093, spec `template-release`). Een PR schrijft haar wijziging niet hier maar als
+Een release is de eenheid van een update (ADR 0094, spec `template-release`). Een PR schrijft haar wijziging niet hier maar als
 fragment in `docs/template-changelog.d/` (vorm en naam: `docs/template-changelog.d/README.md`); `pnpm template:release <x.y.z>`
 voegt de fragmenten samen tot een releasesectie onder `## [Unreleased]` en zet `TEMPLATE_VERSION`. Na de merge van de
 release-PR tagt de eigenaar de squash-commit op `main` als `template-v<x.y.z>`. Een release-tag verplaatst niet: een fout
@@ -19,7 +19,7 @@ Nog niet uitgebrachte wijzigingen staan als fragment in `docs/template-changelog
 
 ### Toegevoegd
 
-- Templaterelease als eenheid van een update (spec `template-release`, ADR 0093; herziet ADR 0040 punt 1 en ADR 0059 punt 5):
+- Templaterelease als eenheid van een update (spec `template-release`, ADR 0094; herziet ADR 0040 punt 1 en ADR 0059 punt 5):
   een app merget een getagde release `template-v<x.y.z>` in plaats van `template/main` ("Een template-update binnenhalen" in
   `docs/nieuwe-app.md`). `pnpm template:status` (`scripts/kit/template-status.mjs`) leest zonder netwerk en zonder iets te
   schrijven de lokale refs en meldt in een app haar versie, de nieuwste release, elke openstaande release met haar notities,

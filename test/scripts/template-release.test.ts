@@ -312,12 +312,17 @@ describe('template-release/AC-2: pnpm template:release voegt de fragmenten samen
     expect(uit.status, uit.uit).toBe(0);
     expect(git(root, 'rev-list', '--all', '--count')).toBe(commitsVoor);
     expect(git(root, 'tag')).toBe('');
-    expect(git(root, 'status', '--porcelain').split('\n').toSorted()).toStrictEqual([
-      ` D ${FRAGMENTEN}/a.md`,
-      ` D ${FRAGMENTEN}/b.md`,
-      ` D ${FRAGMENTEN}/c.md`,
-      ` M ${CHANGELOG}`,
-      ` M ${VERSIE_BESTAND}`,
+    // `git()` trimt de uitvoer, dus de eerste porcelain-regel verliest zijn voorloopspatie: vergelijk per regel getrimd.
+    const status = git(root, 'status', '--porcelain')
+      .split('\n')
+      .map((regel) => regel.trim())
+      .toSorted();
+    expect(status).toStrictEqual([
+      `D ${FRAGMENTEN}/a.md`,
+      `D ${FRAGMENTEN}/b.md`,
+      `D ${FRAGMENTEN}/c.md`,
+      `M ${CHANGELOG}`,
+      `M ${VERSIE_BESTAND}`,
     ]);
   });
 

@@ -1,7 +1,7 @@
 # Changelogfragmenten
 
 Een template-PR met een wijziging die een gebruiker of app merkt, voegt hier een fragment toe in plaats van een regel in
-`docs/template-changelog.md` (spec `template-release`, ADR 0093). Zo botsen twee open PR's niet op hetzelfde bestand.
+`docs/template-changelog.md` (spec `template-release`, ADR 0094). Zo botsen twee open PR's niet op hetzelfde bestand.
 `pnpm template:release <x.y.z>` voegt de fragmenten samen tot een release en verwijdert ze. Dit bestand is geen fragment.
 
 ## Naam
