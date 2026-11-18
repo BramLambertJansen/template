@@ -27,6 +27,11 @@ function makeDeps(root) {
       timeout: options.timeout,
       maxBuffer: 32 * 1024 * 1024,
     });
+    // Een startfout (bv. ENOENT: pnpm ontbreekt) is geen rode check met lege uitvoer: noem hem (leerpunt #720).
+    if (result.error !== undefined) {
+      const code = 'code' in result.error ? String(result.error.code) : result.error.message;
+      return { code: 1, output: `kon niet starten: ${command} (${code})` };
+    }
     return { code: result.status ?? 1, output: `${result.stdout ?? ''}${result.stderr ?? ''}` };
   };
   return {
