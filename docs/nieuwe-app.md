@@ -422,7 +422,7 @@ Draai na het opruimen beide leesopdrachten opnieuw; ga pas door als ze leeg zijn
 
 Daarna zelf: `gh auth setup-git`. `workflow` is nodig omdat jij (de eigenaar) later template-updates met `.github/workflows/` pusht.
 Let op: de agent werkt onder het account van de eigenaar (ADR 0093 punt 1): Claude Code draait als dezelfde
-WSL-gebruiker en gebruikt dus deze login, inclusief `workflow`; er is geen GitHub App en geen apart token. De harde grens is de ruleset: alleen via een PR met groene verplichte checks (R-REPO-02). Wie een PR met een beschermd pad samenvoegt, bewaken het mergescript en het rolhek: een vangnet, geen grens (R-ROL-10). Zeg dat in de overdracht van Fase 10.
+WSL-gebruiker en gebruikt dus deze login, inclusief `workflow`; er is geen GitHub App en geen apart token. De ruleset (alleen via een PR met groene verplichte checks, R-REPO-02) is een grens tegen een vergissing; een agent met deze login kan hem wijzigen en kan een workflow pushen, dus tegen omzeilen is er alleen het rolhek (aanvaard risico, ADR 0093). Wie een PR met een beschermd pad samenvoegt, bewaken het mergescript en het rolhek: een vangnet, geen grens (R-ROL-10). Zeg dat in de overdracht van Fase 10.
 Zet de git-identiteit volgens *Standaardwaarden* als die ontbreekt.
 
 **Zichtbaarheid private (vóór 4.3).** Een private repo vraagt GitHub Pro of Team voor de ruleset (Fase 6.2) én
@@ -619,7 +619,7 @@ Wie samenvoegt (ADR 0093 punt 2 tot en met 5): de agent werkt onder het account 
 token en geen bypass, ook niet voor de eigenaar. GitHub maakt geen onderscheid tussen een vrij en een beschermd pad; dat doet
 `pnpm pr:merge` op de padtabel op `main`. Een PR zonder beschermd pad voegt de hoofdsessie samen zodra de verplichte checks groen
 zijn; raakt de PR een beschermd pad (zie "Een eigen beschermd pad"), dan weigert het script en voegt de eigenaar samen met de
-knop op GitHub. Dat is een vangnet, geen grens: de harde grens is de ruleset.
+knop op GitHub. Dat is een vangnet, geen grens; de ruleset is een grens tegen een vergissing, niet tegen omzeilen.
 Zonder ruleset (een private repo zonder betaald abonnement) werkt `pnpm pr:merge` hetzelfde: het toetst zelf of de verplichte
 checks groen zijn. Ook dat is een vangnet, geen grens; zeg dat in de overdracht van Fase 10.
 `guard.yml` heeft alleen de job `check-core`; de diff-guard bestaat niet meer (ADR 0089 punt 5).

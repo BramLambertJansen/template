@@ -91,14 +91,18 @@ steekproefregel), bij een reden exit 1 met `Geen merge (ADR 0069):` en per reden
 
 ## Raakt ook
 
-- `docs/template/adr/0093-agent-onder-eigenaaraccount.md` (nieuw); `Herzien:`-regels in ADR 0089, 0069, 0045 en 0091.
+- `docs/template/adr/0093-agent-onder-eigenaaraccount.md` (nieuw); `Herzien:`-regels in ADR 0089, 0069, 0045, 0039 en 0091.
+- Vervolg, niet in deze PR (het rolhek blijft erbuiten): commentaar dat de review van een code-eigenaar nog de grens noemt
+  in `rails/hooks/rolhek.mjs`, `rails/hooks/lib/document-state.mjs`, `.github/workflows/leerpunt-bewijs.yml` en
+  `test/scripts/github-ruleset.test.ts`.
 - `docs/framework.md`: R-REPO-01, R-REPO-02, R-CI-07, R-ROL-10, R-WERK-05, R-DOC-09 en stap 7 van §8; `AGENTS.md` (de regel
   over wie samenvoegt); `.claude/skills/opleveren/SKILL.md` (hoofdsessie met Edit, akkoord eigenaar);
   `docs/operations/agent-doorloop.md`. R-WERK-12 wijzigt niet.
 - `docs/nieuwe-app.md`: 4.1 (de let-op over de App), 6.2 (ruleset zonder review van een code-eigenaar, geen App, geen token),
   fase 10 (wat er nog niet is, en de regel "Later aanzetten" over `--bypass-beheerder`), "Een eigen beschermd pad" (in een app
   beschermt `besluit-pr` of `voorReview`).
-- `docs/template/specs/templateregime.md` (AC-1, AC-6, AC-7, AC-14 en de randgevallen daarbij),
+- `docs/template/specs/templateregime.md` (AC-1, AC-2, AC-6, AC-7, AC-14 en de randgevallen daarbij),
+  `docs/template/specs/app-padtabel.md` en `docs/template/specs/leerlus-bewijs.md` (elk één zin over de code-eigenaar of de App),
   `docs/template/specs/agent-merge-niet-kritiek.md` (de padtoets is terug), `docs/template/specs/agent-token.md` (status),
   `docs/roadmap.md` ST-01, `docs/template-changelog.md`.
 - `scripts/github-ruleset.sh`, `test/scripts/github-ruleset.test.ts`, `test/scripts/github-ruleset-templateregime.test.ts`.

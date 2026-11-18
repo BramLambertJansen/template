@@ -553,8 +553,8 @@ onafhankelijke reviewer; wat dan per route volstaat, staat in framework §8. De 
 ook een fetch van `origin` met als bestemming `refs/remotes/origin/main`, `git replace` (behalve `--list`), config op
 `include.*`/`includeIf.*` en, voor elke rol en elk programma, `GIT_CONFIG_*`, `GIT_DIR` of `GIT_WORK_TREE` als
 toewijzing, `export` of `declare -x`. `scripts/runner.sh` vergelijkt niet met die lokale ref maar met `git ls-remote origin refs/heads/main`.
-  Een commando buiten de hooks, of een andere runtime, valt daar niet onder; de ruleset op `main` (een PR met groene verplichte checks) is de echte grens
-  (ADR 0093).
+  Een commando buiten de hooks, of een andere runtime, valt daar niet onder; daar houdt alleen de ruleset op `main` (een PR met groene verplichte
+  checks) een vergissing tegen; tegen omzeilen is ook die geen grens, omdat de agent de login van de eigenaar heeft (ADR 0093).
 
 ## Gate-PR in de overgang
 

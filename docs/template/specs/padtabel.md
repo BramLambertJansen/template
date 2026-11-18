@@ -116,7 +116,8 @@ n.v.t.: geen API-route, permissie of foutcode.
   Hergebruik en UX.
 - **padtabel/AC-4** — Een onbekende kolom of waarde: check-docs rood en `padNiveau` altijdVragen/besluit-pr voor die glob.
   `{}`: check-docs rood (`rij zonder kolom`) en `padNiveau` vrij/eigenaar voor die glob.
-- **padtabel/AC-5** — Gegeven als `gates.json` van main (a) de nieuwe vorm of (b) de oude vorm van 30cc352: `leesAgentMerge`
+- **padtabel/AC-5** — Sinds ADR 0093 weigert `beoordeelMerge` bij (b), de oude vorm: de padtabel is dan niet te lezen (spec
+  agent-samenvoegen AC-3). Was: Gegeven als `gates.json` van main (a) de nieuwe vorm of (b) de oude vorm van 30cc352: `leesAgentMerge`
   en `agentMergeFouten` geven geen "ontbreekt of is onleesbaar", en `beoordeelMerge` gebruikt `codex`, `maxRegels` en
   `maxBytes` uit het blok. Het padoordeel (de diff-guard-job; `pr:merge` leest alleen de uitslag via `guardRedenen`):
   `agentMerge(pr, oordeel, configTekst)` uit `scripts/kit/diff-guard.mjs` (vervallen) is in (a) en (b) `ja` voor een PR met alleen

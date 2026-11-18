@@ -43,7 +43,9 @@ Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van pun
   `scripts/kit/agent-token.mjs` vanaf `main`, buiten de sandbox (spec agent-token, ADR 0089 Herzien 2026-11-17), en de agent geeft het per commando mee (`GH_TOKEN` vóór een
   letterlijk `gh`- of `git push`-commando, gelezen uit een bestand, nooit letterlijk in de opdracht); de sleutel van de App staat op een pad
   dat de sandbox niet laat lezen. Geen test hier: het gedrag van het script toetst spec agent-token.
-- **templateregime/AC-2** — Stap 2, rulesetscript: eist review van een code-eigenaar met nul vereiste goedkeuringen, trekt een
+- **templateregime/AC-2** — Gewijzigd door ADR 0093 punt 2 (spec agent-samenvoegen AC-5): het script eist geen review van
+  een code-eigenaar meer en de optie `--bypass-beheerder` bestaat niet meer; de tests met dit AC-id toetsen dat. De rest
+  geldt nog. Was: Stap 2, rulesetscript: eist review van een code-eigenaar met nul vereiste goedkeuringen, trekt een
   goedkeuring in bij een nieuwe push, eist geen bijgewerkte branch, en eist precies `requiredChecks` (ook `check-core`,
   `leerpunt-bewijs`, `codeql (javascript-typescript)` en, tot stap 3, `document-status`). Zonder de optie `--bypass-beheerder`
   is `bypass_actors` leeg; de eigenaar gebruikt die optie pas na AC-6. De test is rood bij een ontbrekende of extra check, bij

@@ -4,8 +4,8 @@ Status: geaccepteerd
 
 Wijzigt [0089](0089-templateregime.md) punt 2, 5 (alleen: de inhoudstoets van `pnpm pr:merge` komt terug als padtoets), 9
 en 10 en de Gevolgen over de App en over samenvoegen na punt 9, [0069](0069-agent-merge-niet-kritiek.md) punt 1, 2 en 3 en
-de slotzin van punt 4 en 5 (vervallen niet meer met 0089 punt 9), [0045](0045-railwerk.md) punt 19
-en [0091](0091-effecttoets-vervalt.md) punt 5. Drempel: A3 (een check vervalt: de review van een code-eigenaar in de ruleset
+de slotzin van punt 4 en 5 (vervallen niet meer met 0089 punt 9), [0045](0045-railwerk.md) punt 19,
+[0039](0039-stack-provider-neutraal-en-toolchain.md) punt 8 en [0091](0091-effecttoets-vervalt.md) punt 5. Drempel: A3 (een check vervalt: de review van een code-eigenaar in de ruleset
 en de grenscontrole van het mergescript) en A4. Uitwerking: [spec](../specs/agent-samenvoegen.md). Besluiten van de eigenaar,
 2026-11-18.
 
@@ -74,8 +74,13 @@ zou het zonder klik van de eigenaar op `main` komen.
 
 - Aanvaard risico: op een beschermd pad houdt GitHub een samenvoeging onder het account van de eigenaar niet tegen. Wat de
   agent tegenhoudt, is het mergescript en het rolhek: een vangnet, geen grens. Een agent die het vangnet omzeilt, valt niet
-  automatisch op; de wijziging staat wel in een PR en in de geschiedenis en is terug te draaien. De harde grens die blijft, is
-  de ruleset: alleen via een PR met groene verplichte checks.
+  automatisch op; de wijziging staat wel in een PR en in de geschiedenis en is terug te draaien. Wat blijft, is de ruleset: alleen via
+  een PR met groene verplichte checks. Dat is een grens tegen een vergissing, niet tegen omzeilen.
+- Aanvaard risico: de agent heeft de rechten van de eigenaar, inclusief beheer en `workflow`. Hij kan de ruleset wijzigen of
+  verwijderen, en een branch pushen met een workflow die bij die push draait en de repository-secrets leest, nog vóór er een
+  PR of padtoets is. De App had die rechten niet, maar de login van de eigenaar stond al in de agentomgeving, dus dit was al
+  zo. Wat het tegenhoudt: het rolhek, de sandbox en de review van de diff. Deploy-secrets blijven buiten bereik via
+  beschermde environments (R-SEC-06).
 - Een app waarin een samenvoeging naar `main` automatisch uitrolt naar echte gebruikers, weegt dit opnieuw: daar past een
   machineaccount met de review van een code-eigenaar op de kritieke paden. Dat kan per app, met een eigen app-ADR.
 - De eigenaar doet geen terminalwerk voor dit onderwerp: de hoofdsessie draait het rulesetscript na zijn akkoord in de
