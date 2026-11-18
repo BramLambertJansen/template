@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd # #796
 namespace: agent-samenvoegen
 ---
 
@@ -42,8 +42,8 @@ steekproefregel), bij een reden exit 1 met `Geen merge (ADR 0069):` en per reden
   zonder passende glob beschermd).
 - **agent-samenvoegen/AC-2** — Padtoets, app: gegeven een padtabel zonder `onderhoud` of met een andere repository, dan is een
   pad alleen beschermd als zijn besluit `besluit-pr` is, zijn schrijfniveau `voorReview` of `altijdVragen` is, een glob uit
-  `migraties` past, of het onder `src/core/` of `docs/template/` valt. Vrij: `src/x.test.ts` (voorbeeld), `test/x.test.ts`
-  (voorbeeld), `docs/roadmap.md`, `docs/specs/x.md` (voorbeeld), `src/api/app.ts`, `deploy/x/y.ts` (voorbeeld) en
+  `migraties` past, of het onder `src/core/` of `docs/template/` valt. Vrij: `src/x.test.ts` (voorbeeld),
+  `test/x.test.ts` (voorbeeld), `docs/roadmap.md`, `docs/specs/x.md` (voorbeeld), `src/api/app.ts`, `deploy/x/y.ts` (voorbeeld) en
   `src/web/x.tsx` (voorbeeld). Beschermd: `.github/workflows/x.yml` (voorbeeld), `package.json`, `scripts/x.mjs` (voorbeeld),
   `AGENTS.md`, `eslint.config.js`, `.claude/agents/x.md` (voorbeeld), `docs/adr/0001-x.md` (voorbeeld),
   `db/migrations/1_x.sql` (voorbeeld), `src/core/api/auth/x.ts` (voorbeeld), `src/core/web/x.tsx` (voorbeeld) en
@@ -67,8 +67,8 @@ steekproefregel), bij een reden exit 1 met `Geen merge (ADR 0069):` en per reden
   `bypass_actors`; de optie `--bypass-beheerder` bestaat niet meer (exit 2 met de gebruiksregel); de overige regels en de
   melding voor een privé-repo zonder betaald abonnement zijn ongewijzigd. De controle op fouten in `CODEOWNERS` na het zetten
   vervalt.
-- **agent-samenvoegen/AC-6** — Weg zijn `scripts/kit/agent-token.mjs` (vervallen), `test/scripts/agent-token.test.ts`
-  (vervallen) en `test/scripts/merge-ruleset.test.ts` (vervallen); de tests van AC-3 en AC-4 vervangen die laatste. De spec
+- **agent-samenvoegen/AC-6** — Weg zijn `scripts/kit/agent-token.mjs` (vervallen),
+  `test/scripts/agent-token.test.ts` (vervallen) en `test/scripts/merge-ruleset.test.ts` (vervallen); de tests van AC-3 en AC-4 vervangen die laatste. De spec
   `agent-token` heeft status `vervallen`; in de spec `templateregime` zijn AC-1, AC-6 en AC-14 en het deel van AC-7 over de
   inhoudstoets gemarkeerd als vervallen door ADR 0093. Eigenaarakkoord voor het verwijderen van die tests via deze spec
   (R-TEST-02).
@@ -104,7 +104,7 @@ steekproefregel), bij een reden exit 1 met `Geen merge (ADR 0069):` en per reden
 - `docs/template/specs/templateregime.md` (AC-1, AC-2, AC-6, AC-7, AC-14 en de randgevallen daarbij),
   `docs/template/specs/app-padtabel.md` en `docs/template/specs/leerlus-bewijs.md` (elk één zin over de code-eigenaar of de App),
   `docs/template/specs/agent-merge-niet-kritiek.md` (de padtoets is terug), `docs/template/specs/agent-token.md` (status),
-  `docs/roadmap.md` ST-01, `docs/template-changelog.md`.
+  `docs/roadmap.md` (het item over de GitHub-bescherming), `docs/template-changelog.md`.
 - `scripts/github-ruleset.sh`, `test/scripts/github-ruleset.test.ts`, `test/scripts/github-ruleset-templateregime.test.ts`.
 - Bestaande tests die wijzigen omdat deze spec het gedrag verandert (R-TEST-02): in
   `test/scripts/schrap-documentbewaking-templateregime.test.ts` het geval dat eist dat het mergescript geen `/files` leest
