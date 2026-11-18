@@ -9,7 +9,7 @@ import { afterEach, describe, expect, test } from 'vitest';
 const ROOT = path.join(import.meta.dirname, '../..');
 const SCRIPT = path.join(ROOT, 'scripts/github-ruleset.sh');
 const WORKFLOWS = path.join(ROOT, '.github/workflows');
-// Geen verplichte check tot de GitHub App er is (ADR 0045, guard.yml). `check-core` (ADR 0040 punt 17) is wel verplicht in de
+// `diff-guard` was nooit een verplichte check en er komt geen GitHub App (ADR 0093). `check-core` (ADR 0040 punt 17) is wel verplicht in de
 // app-ruleset. GEWIJZIGD (templateregime AC-7, ADR 0089 punt 5): `document-status` bestaat niet meer als job en staat niet in de ruleset.
 // `agent-merge` (ADR 0069): verplicht zou hij elke kritieke PR ook voor de eigenaar blokkeren.
 // GEWIJZIGD (ADR 0073, bouw-PR 2): de job `check:app-init` bestaat niet meer, dus ook niet in deze lijst.

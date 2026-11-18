@@ -1,8 +1,8 @@
 # Sluitbewijs voor een PR die een leerpunt sluit (ADR 0078 punt 1, spec leerlus-bewijs AC-1 t/m AC-4, AC-7). Eigen workflow
 # met eigen concurrency, zodat `edited` (een bewerkte beschrijving) niet de hele CI herstart. Onder `pull_request`, nooit
 # `pull_request_target`: code uit de PR draait zonder token of geheim. Het script komt van de basis (main, map `kit`); alleen
-# de stap "voorbereiden" heeft een token, alleen-lezend. Een PR die dit bestand wijzigt, draait zijn eigen versie: dat vangt
-# de review van een code-eigenaar (`.github/**` is altijdVragen en besluit-pr, R-REPO-02).
+# de stap "voorbereiden" heeft een token, alleen-lezend. Een PR die dit bestand wijzigt, draait zijn eigen versie: zo'n PR
+# voegt de eigenaar samen (`.github/**` is een beschermd pad: het mergescript weigert, R-REPO-01, ADR 0093).
 name: leerpunt-bewijs
 
 on:
