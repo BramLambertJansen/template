@@ -6,7 +6,7 @@ Herzien: 2026-11-05 (#542): punt 4 en 7 aangescherpt na de spec-review: de marke
 Herzien: 2026-11-12 (#692): door ADR 0089 punt 2, in de template deels: punt 1, vervalt: het archief verandert niet, een archiefnaam komt niet terug; blijft: verhuizen onder dezelfde naam; punt 3 en 4, vervalt: AC-id's blijven, een spec verdwijnt niet; blijft: één levende spec per mechanisme, inhoud van een goedgekeurde spec wijzigen is een besluit
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 1, 5, 7 en 8, de vorige regel vervalt: punt 1, het specarchief verdwijnt bij de verhuizing en `docs/template/specs/` heeft geen archief; punt 3 en 4, AC-id's die blijven en een spec die niet verdwijnt zijn afspraken, geen guardtoets meer; punt 5, `gebouwd # #<PR>` blijft de vorm (`check:roadmap`), het bouwbewijs is de merge
 Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
-Herzien: 2026-11-18 (#804): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.md) punt 1, 3, 4 en 5, punt 4: de bouw-PR
+Herzien: 2026-11-18 (#805): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.md) punt 1, 3, 4 en 5, punt 4: de bouw-PR
 laat de statusregel staan; punt 5: de vorm is `status: gebouwd`, `docs:status` vervalt; punt 6: niemand zet regels om; punt
 7: de bewijstoets van `docs:status` vervalt; punt 8: de terugval via `docs:status` vervalt
 

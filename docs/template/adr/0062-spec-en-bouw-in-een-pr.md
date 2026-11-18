@@ -14,7 +14,7 @@ Herzien: 2026-11-12 (#692): door ADR 0089 punt 1 en 3, in de template deels: pun
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 5 en 8, de vorige regel vervalt: geen lane in de template; zodra de GitHub App bewezen is, verdwijnt `check-document-status`; punt 2 en 5 (kritiek werk eerst in een besluit-PR) en de volgorde uit punt 3 worden afspraken die de eigenaar met zijn goedkeuring op de PR beslist; de spec-review blijft
 Herzien: 2026-11-12 (#703): punt 2 en 5, in de template gaat ook kritiek werk in één PR; de besluit-PR blijft een afspraak in een app (ADR 0090 punt 4)
 Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
-Herzien: 2026-11-18 (#804): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.md) punt 1 en 3, punt 4: `status: gebouwd`
+Herzien: 2026-11-18 (#805): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.md) punt 1 en 3, punt 4: `status: gebouwd`
 zonder PR-nummer; de toets van `docs:status` na de merge vervalt, en daarmee de eerste regel hierboven
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 5, 10, 12, 14 en 15. Drempel: A3 (de lanetoets in

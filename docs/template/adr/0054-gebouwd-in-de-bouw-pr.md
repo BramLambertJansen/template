@@ -7,7 +7,7 @@ Herzien: 2026-11-05 (#541): gewijzigd door [0080](0080-specarchief-en-bouwvorm.m
 `# #<PR>`; bestaande regels met `; gevalideerd: <sha>` worden omgezet
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 2, 5 en 8, punt 2 vervalt met `check-document-status`: `gebouwd` in de bouw-PR is een afspraak; punt 4, de ruleset eist precies `requiredChecks`; punt 3 blijft: het bouwbewijs is de merge
 Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
-Herzien: 2026-11-18 (#804): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.md) punt 1 en 3, `status: gebouwd` zonder
+Herzien: 2026-11-18 (#805): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.md) punt 1 en 3, `status: gebouwd` zonder
 PR-nummer in de bouw-PR; `pnpm docs:status` en de route achteraf vervallen
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 10, en punt 5 en 6 waar ze `gebouwd` noemen.
