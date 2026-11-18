@@ -1,5 +1,5 @@
 ---
-status: voorstel # voorstel | goedgekeurd | gebouwd | vervallen — alleen de eigenaar zet goedgekeurd; gebouwd: # #<PR> (pnpm docs:status)
+status: voorstel # voorstel | goedgekeurd | gebouwd | vervallen — alleen de eigenaar zet goedgekeurd; gebouwd: `status: gebouwd` in de bouw-PR (ADR 0095)
 namespace: outbox
 model: opus
 modelreden: nieuwe security definer-functies en een gewijzigde security definer-view app.accounts (ADR 0046 punt 18), gelijktijdigheid met lease en for update skip locked (punt 18), en de uitnodigingsflow in src/core/api/auth (punt 18)
@@ -346,8 +346,9 @@ SMTP-fout in de log van Better Auth, AC-38, AC-25 aangescherpt) zijn aanpassinge
 eigenaar met de merge; geen eigenaarbesluit, behalve dat de eigenaar vroeg de Codex-reviews op te pakken. Open voor de eigenaar: de
 SMTP-timeouts (OV-12) en het lek bij een e-mailwijziging (OV-13, `better-auth/dist/api/routes/update-user.mjs:484`). Zonder antwoord geldt:
 OV-12 volstaat (geen wijziging aan `createSmtpMailer`); `src/core/api/auth/mailing.ts` en de e-mailwijziging blijven buiten scope, voor een
-eigen spec. Het besluitregister (`.claude/decisions.json`) staat al per bouwbranch klaar; na de merge van deze wijziging kan een agent de
-status per deel administratief op `goedgekeurd` zetten met `pnpm docs:status` (ADR 0027), zonder de inhoud te wijzigen.
+eigen spec. Het besluitregister (`.claude/decisions.json`) staat al per bouwbranch klaar; de status
+`goedgekeurd` zet de architect of hoofdsessie in het voorstel en de merge door de eigenaar is het besluit (ADR 0046);
+`pnpm docs:status` bestaat niet meer (ADR 0095).
 
 - **OV-12 — Markeren na een verlopen lease (agentvoorstel).** Codex-review: duurt een SMTP-aanroep langer dan de lease, dan claimt een andere
   runner de rij (`attempts` + 1), en een markering op alleen `p_id` laat de trage poging de uitkomst van de nieuwere overschrijven. Voorstel:

@@ -138,7 +138,7 @@ klassieke branch protection) zijn vervallen door ADR 0093; de oude rijen staan i
   `.github/workflows/guard.yml`; past aan: `.claude/decisions.json` (`document-status` weg) en `lefthook.yml`.
   `rails/hooks/lib/document-state.mjs` houdt wat `check-docs` en het rolhek (tot punt 9) gebruiken (`pnpm docs:status` is
   vervallen door ADR 0095).
-- Blijven: `scripts/kit/document-status.mjs` (vervallen door ADR 0095), `status-git.mjs`, `github-evidence.mjs`, `rails/hooks/lib/built-evidence.mjs`,
+- Blijven: `scripts/kit/document-status.mjs` (vervallen), door ADR 0095; `status-git.mjs`, `github-evidence.mjs`, `rails/hooks/lib/built-evidence.mjs`,
   `scripts/kit/leerpunt.mjs`, `scripts/kit/leerpunt-bewijs.mjs`.
 - Tests die verdwijnen, alleen verdwijnende code: `test/rails/` `agent-merge`, `agent-merge-bytegrens`, `agent-merge-omvang`,
   `diff-guard`, `diff-guard-bytegrens`, `diff-guard-risico`, `lane`, `lane-security`, `lane-status`, `lane-status-a4`,

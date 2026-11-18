@@ -8,7 +8,7 @@ Herzien: 2026-11-12 (#696): door ADR 0089 punt 1, 5, 7 en 8, de vorige regel ver
 Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 Herzien: 2026-11-18 (#804): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.md) punt 1, 3, 4 en 5, punt 4: de bouw-PR
 laat de statusregel staan; punt 5: de vorm is `status: gebouwd`, `docs:status` vervalt; punt 6: niemand zet regels om; punt
-8: de terugval via `docs:status` vervalt
+7: de bewijstoets van `docs:status` vervalt; punt 8: de terugval via `docs:status` vervalt
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 5 en 10 (een gebouwde spec krijgt in een besluit-PR nieuwe AC's
 met de markering `(nog niet gebouwd)`; `gebouwd` noemt alleen de PR), [0054](0054-gebouwd-in-de-bouw-pr.md) punt 1 en 5
@@ -49,7 +49,8 @@ SHA weigert de guard elk ander nummer dan dat van de eigen PR.
 6. **Bestaande regels** blijven staan; niemand zet ze om (0095 punt 4). `check-docs` weigert de oude vorm met
    `; gevalideerd: <sha>` in een statusregel. Een gebouwde spec blijft gebouwd: het commentaar achter de status telt niet;
    nieuwe inhoud is een besluit, een weggehaalde markering is bouw (0095 punt 5).
-7. **Niets wordt losser.** Spec-vóór-code, AC-dekking en het bouwbewijs blijven.
+7. **Niets wordt losser.** Spec-vóór-code en AC-dekking blijven. De bewijstoets van `docs:status` (gemergde PR, groene
+   checks) is vervallen door 0095; dat aanvaarde risico staat daar.
 8. **Terugval.** Verliest een spec een AC zonder melding, dan gaat de bouw-PR terug. De eigenaar beslist. (De terugval via
    `docs:status` is vervallen door 0095.)
 
