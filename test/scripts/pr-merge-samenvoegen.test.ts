@@ -30,8 +30,9 @@ function alsObject(ruw: unknown): Record<string, unknown> {
 }
 
 const ECHT: unknown = JSON.parse(readFileSync(path.join(ROOT, '.claude/gates.json'), 'utf8'));
-// De padtabel van de template: de echte gates.json, `onderhoud.repository` is REPO.
-const TEMPLATE_TABEL = { ...alsObject(ECHT), merge: 'niet-kritiek' };
+// De padtabel van de template: de echte gates.json met `onderhoud.repository` gelijk aan REPO. Expliciet gezet, want
+// `pnpm app:init` haalt `onderhoud` weg: in een app (en in check:new-resource, dat app:init draait) ontbreekt het in het bestand.
+const TEMPLATE_TABEL = { ...alsObject(ECHT), merge: 'niet-kritiek', onderhoud: { repository: REPO } };
 // Dezelfde tabel zonder `onderhoud`: zo ziet de padtabel van een app eruit.
 const APP_TABEL = Object.fromEntries(Object.entries(TEMPLATE_TABEL).filter(([sleutel]) => sleutel !== 'onderhoud'));
 
