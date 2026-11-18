@@ -8,7 +8,7 @@ namespace: gebouwd-zonder-nummer
 ## Doel
 
 Een spec gaat naar `gebouwd` met de regel `status: gebouwd` in een gewone commit van de bouw-PR, zonder PR-nummer, zonder
-status-PR en zonder `pnpm docs:status`, zodat de checks op een gebouwde spec al in de bouw-PR draaien (ADR 0094).
+status-PR en zonder `pnpm docs:status`, zodat de checks op een gebouwde spec al in de bouw-PR draaien (ADR 0095).
 
 ## Rollen en wie wat ziet
 
@@ -40,15 +40,15 @@ Teksten, letterlijk:
 
 - De weigering in `rails/hooks/lib/rolhek.mjs` bij een statuswijziging zonder besluit uit de vertrouwde basis (nu
   `…; gebouwd via pnpm docs:status`) wordt:
-  `<pad>: deze statusovergang heeft geen geldig besluit uit de vertrouwde basis; status: gebouwd zetten hoofdsessie en architect in de bouw-PR (ADR 0094)`.
+  `<pad>: deze statusovergang heeft geen geldig besluit uit de vertrouwde basis; status: gebouwd zetten hoofdsessie en architect in de bouw-PR (ADR 0095)`.
 - De weigering bij een eigenaarstatus (nu `…(ADR 0046 punt 6); gebouwd via pnpm docs:status`) wordt:
-  `<pad>: een eigenaarstatus of de inhoud van een goedgekeurde spec schrijven alleen architect en hoofdsessie (ADR 0046 punt 6); status: gebouwd zetten hoofdsessie en architect in de bouw-PR (ADR 0094)`.
+  `<pad>: een eigenaarstatus of de inhoud van een goedgekeurde spec schrijven alleen architect en hoofdsessie (ADR 0046 punt 6); status: gebouwd zetten hoofdsessie en architect in de bouw-PR (ADR 0095)`.
 - De weigering `de developer schrijft geen spec; dat doet de architect (R-WERK-07, ADR 0068 punt 4)` blijft ongewijzigd.
 - De melding `spec:bewijs` van `check-roadmap` (`naar gebouwd zonder bouwbewijs; …`) vervalt. De melding
   `naar gebouwd en noemt <id>, maar docs/roadmap.md wijzigt niet in deze PR` blijft ongewijzigd.
 - De melding van de dood-padcheck en de AC-melding van `check-docs` blijven ongewijzigd.
 - De kop van `docs/specs/_template.md` en `docs/specs/_mini.md` noemt na `gebouwd:` alleen nog:
-  `status: gebouwd in de bouw-PR (ADR 0094)`.
+  `status: gebouwd in de bouw-PR (ADR 0095)`.
 
 ## Acceptatiecriteria
 
@@ -101,11 +101,11 @@ Teksten, letterlijk:
 | Spec heeft al `gebouwd # #<n>` | blijft staan, het nummer is commentaar; niemand zet het om (AC-1, AC-3, AC-9) | n.v.t. |
 | De oude vorm `gebouwd # #<n>; gevalideerd: <sha>` | `check-docs` weigert hem zoals nu; het rolhek weigert een nieuwe SHA (AC-9) | n.v.t. |
 | Bouw-PR vergeet de status | een latere PR zet `status: gebouwd` met de hand; AC-dekking, dood-padcheck en roadmap-id-regel toetsen die PR (AC-1, AC-4) | n.v.t. |
-| Status naar `gebouwd` in een PR zonder code | toegestaan; de AC-dekking moet groen zijn en de reviewer toetst of de bouw op `main` staat (aanvaard risico, ADR 0094) | n.v.t. |
-| Merkteken `(nog niet gebouwd)` weg in een PR zonder code | geen check ziet het als er al een test met dat AC-id is; de reviewer toetst het (aanvaard risico, ADR 0094) | n.v.t. |
+| Status naar `gebouwd` in een PR zonder code | toegestaan; de AC-dekking moet groen zijn en de reviewer toetst of de bouw op `main` staat (aanvaard risico, ADR 0095) | n.v.t. |
+| Merkteken `(nog niet gebouwd)` weg in een PR zonder code | geen check ziet het als er al een test met dat AC-id is; de reviewer toetst het (aanvaard risico, ADR 0095) | n.v.t. |
 | Spec noemt een roadmap-id die zij niet bouwt | `check:roadmap` rood bij `gebouwd` (AC-2); haal het id uit de tekst | n.v.t. |
 | Vervallen-AC noemt een ADR dat nog `voorgesteld` is | AC-dekking meldt de AC (AC-5); eerst het ADR accepteren | n.v.t. |
-| ADR 0094 wordt later vervangen | de AC-dekking meldt de vervallen-AC's die naar 0094 wijzen opnieuw (AC-5); de PR die het ADR vervangt, laat ze naar het nieuwe ADR wijzen | n.v.t. |
+| ADR 0095 wordt later vervangen | de AC-dekking meldt de vervallen-AC's die naar 0095 wijzen opnieuw (AC-5); de PR die het ADR vervangt, laat ze naar het nieuwe ADR wijzen | n.v.t. |
 | Merkteken `(nog niet gebouwd)` toegevoegd aan een bestaande AC | telt niet als inhoudswijziging; daarna slaat de AC-dekking die AC over en kan haar test zonder melding verdwijnen. Aanvaard risico; bestond al, AC-9 maakt het niet groter | n.v.t. |
 | PR die `gebouwd` zet, wordt gesloten | de claim komt niet op `main` (ADR 0054, Gevolgen) | n.v.t. |
 
@@ -114,19 +114,19 @@ Teksten, letterlijk:
 **Checks**
 
 - `scripts/kit/check-roadmap.mjs`: `heeftBouwbewijs` en de melding `spec:bewijs` vervallen; de roadmap-id-regel blijft (AC-1,
-  AC-2). Het commentaar bovenaan (r.2-3) en bij de bewijsvorm (r.149-151) noemt `status: gebouwd` en ADR 0094. De omschrijving
+  AC-2). Het commentaar bovenaan (r.2-3) en bij de bewijsvorm (r.149-151) noemt `status: gebouwd` en ADR 0095. De omschrijving
   van `check:roadmap` in `scripts/kit/gates.mjs` noemt `status: gebouwd # #<PR>` niet meer.
 - `scripts/kit/check-docs.mjs`: het merkteken van de dood-padcheck mag na witruimte met hooguit één regeleinde staan (AC-6); de
   AC-dekking slaat een vervallen AC over volgens AC-5; het commentaar bovenaan (regel 6 en 14) volgt.
 
 **Rolhek en document-state**
 
-- `rails/hooks/lib/rolhek.mjs`: de twee meldingen (Hergebruik en UX); het commentaar bij `inPrGebouwd` noemt ADR 0094.
+- `rails/hooks/lib/rolhek.mjs`: de twee meldingen (Hergebruik en UX); het commentaar bij `inPrGebouwd` noemt ADR 0095.
 - `rails/hooks/lib/document-state.mjs`:
   - `changeStatus` en zijn commentaar (r.95) vervallen.
   - `gebouwdBlijft` volgt AC-9: het commentaar achter de status telt niet meer, behalve een nieuwe SHA.
   - Het commentaar bij `beslisOvergang` (r.161, "`gebouwd`: alleen met bouwbewijs") wordt "`gebouwd`: architect en
-    hoofdsessie, in de bouw-PR (ADR 0094)".
+    hoofdsessie, in de bouw-PR (ADR 0095)".
   - Het commentaar bij `gebouwdBlijft` (r.187-188, r.194) en bij `builtReference` (r.210-211) noemt geen `docs:status` en geen
     `# #<deze PR>` meer.
 
@@ -179,7 +179,7 @@ Elk ander bestand uit die zoekopdracht noemt het woord alleen als historie of to
   - `test/rails/specarchief-document-state.test.ts`, `specarchief-en-bouwvorm/AC-12`:
     - "een ander PR-nummer bij gelijke inhoud" wordt `vrij`;
     - "SHA weg en inhoud gewijzigd" wordt `besluit` (AC-9).
-  - `test/hooks/rolhek-beslisroute.test.ts`: titels r.135 en r.163 en het kopcommentaar noemen ADR 0094 in plaats van
+  - `test/hooks/rolhek-beslisroute.test.ts`: titels r.135 en r.163 en het kopcommentaar noemen ADR 0095 in plaats van
     "alleen via pnpm docs:status". De uitkomst (deny) blijft.
   - `test/rails/bouwvorm-review.test.ts`: de titel van `specarchief-en-bouwvorm/AC-7` noemt geen `# #<deze PR>`. De
     uitkomst (`gebouwd`) blijft.
@@ -195,8 +195,8 @@ Elk ander bestand uit die zoekopdracht noemt het woord alleen als historie of to
 - `docs/template/specs/gebouwd-na-merge.md` (vervallen): verwijderd (R-CI-06).
 - `docs/template/specs/specarchief-en-bouwvorm.md`:
   - `specarchief-en-bouwvorm/AC-7` wordt gewijzigd: "Rood" verliest "`gebouwd # #<deze PR>` met een markering", en "Groen"
-    wordt "een bouw-PR haalt de markering weg, voegt de test toe en laat de statusregel staan (ADR 0094)".
-  - `specarchief-en-bouwvorm/AC-9` en `specarchief-en-bouwvorm/AC-10` vervallen door ADR 0094 (AC-5-vorm, met "Was:").
+    wordt "een bouw-PR haalt de markering weg, voegt de test toe en laat de statusregel staan (ADR 0095)".
+  - `specarchief-en-bouwvorm/AC-9` en `specarchief-en-bouwvorm/AC-10` vervallen door ADR 0095 (AC-5-vorm, met "Was:").
   - `specarchief-en-bouwvorm/AC-11` wordt gewijzigd: "check-docs weigert `gebouwd # #N; gevalideerd: <sha>` in een
     statusregel met de melding uit Hergebruik en UX; `gebouwd # #N` zonder SHA geeft geen melding". Het deel over de guard
     vervalt.
@@ -205,18 +205,18 @@ Elk ander bestand uit die zoekopdracht noemt het woord alleen als historie of to
   - `specarchief-en-bouwvorm/AC-13` wordt gewijzigd: "geen spec in `docs/specs/` of `docs/template/specs/` heeft `gevalideerd:`
     in de statusregel"; het deel over `changeStatus` vervalt.
   - De randgevallen en Werking volgen.
-- `docs/template/specs/template-repo.md`: `template-repo/AC-5` vervalt door ADR 0094 (AC-5-vorm). Doel en de regel over
+- `docs/template/specs/template-repo.md`: `template-repo/AC-5` vervalt door ADR 0095 (AC-5-vorm). Doel en de regel over
   `approvedBefore` in de opsomming en de randgevallen noemen `docs:status` en `approvedBefore` niet meer.
 - `docs/template/specs/samenhang-checks-rollen.md`: in `samenhang-checks-rollen/AC-4` vervalt "een statusregel met geldig bewijs
   uit de vertrouwde basis (`pnpm docs:status`, zoals nu)". De developer houdt "Status uit main" en een nieuw testbestand.
 - `docs/template/specs/templateregime.md` (goedgekeurd):
-  - `templateregime/AC-7` krijgt achter "de scripts uit "Raakt ook" zijn weg" de toevoeging "en wat ADR 0094 schrapt".
+  - `templateregime/AC-7` krijgt achter "de scripts uit "Raakt ook" zijn weg" de toevoeging "en wat ADR 0095 schrapt".
   - Raakt ook r.139-140: "`pnpm docs:status`" en "Blijven: `scripts/kit/document-status.mjs` (vervallen)" worden "vervallen
-    door ADR 0094".
+    door ADR 0095".
 - `docs/template/specs/compacte-kennisbasis-rails.md` (goedgekeurd):
   - `compacte-kennisbasis-rails/AC-14` (r.88) noemt `docs:status` niet meer in de opsomming.
   - `compacte-kennisbasis-rails/AC-15` (r.101): "`gebouwd` via `docs:status`" wordt "`gebouwd` alleen door hoofdsessie en
-    architect (ADR 0094)".
+    architect (ADR 0095)".
   - De tabel van `compacte-kennisbasis-rails/AC-15` (r.90-98) blijft.
 
 **Padtabel**
@@ -265,7 +265,7 @@ De hoofdsessie herschrijft deze punten op hun plek, met een `Herzien:`-regel:
 - De PR-nummers in `Herzien:`-regels van ADR's: een apart voorstel daarna.
 - Roadmapvinkjes: de regels van `check-roadmap` voor vinkjes veranderen niet. Een vinkje mag al naar een testpad of checknaam
   verwijzen.
-- `gebouwd` afleiden uit git, en de checks op een gebouwde spec al vanaf `goedgekeurd` (ADR 0094, Alternatieven).
+- `gebouwd` afleiden uit git, en de checks op een gebouwde spec al vanaf `goedgekeurd` (ADR 0095, Alternatieven).
 
 ## Testplan
 
