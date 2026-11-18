@@ -24,8 +24,11 @@ developer. Twee bouwstappen (OV-1):
   `scripts/kit/pr-merge.mjs` (`besluit-pr`, `.claude/gates.json`) raakt bouwstap 1 niet.
 - **Bouwstap 2** (`repo-instellingen`) — kritiek werk (R-WERK-05, bij twijfel kritiek: beveiligingsinstellingen van de
   repo). Eigen PR na bouwstap 1, met spec-review van de wijzigingen in deze spec, aparte tester, en de goedkeuring van de
-  eigenaar op de PR als besluit (R-REPO-02); in de template geen besluit-PR (R-WERK-05). `scripts/kit/pr-merge.mjs` blijft
-  ook dan ongewijzigd: het importeert alleen het bestaande export `grensRedenen` (werking 7).
+  eigenaar op de PR als besluit (R-REPO-02); in de template geen besluit-PR (R-WERK-05). **Te herzien vóór bouwstap 2:**
+  werking 7, AC-10, de `REDEN_`-teksten en het bypass-randgeval gaan uit van `grensRedenen` en de `REDEN_`-constanten uit
+  `scripts/kit/pr-merge.mjs`; die zijn weg sinds ADR 0093 en spec agent-samenvoegen (de ruleset eist geen review van een
+  code-eigenaar meer en er is geen App). Wat `--controleer` dan toetst, is ontwerpwerk van bouwstap 2 of van `check-github`
+  (roadmap ST-01); tot die herziening wordt bouwstap 2 niet gebouwd.
 
 Geen ADR: geen dependency (alleen `node:`-modules), geen contract tussen zones, en de agent krijgt geen recht dat hij nu
 niet heeft (OV-2). `#561` blijft open na de bouw: punt 3 (testsessie) en de restanten vallen buiten deze spec; de PR van
@@ -36,7 +39,7 @@ bouwstap 1 meldt op de issue welke punten af zijn.
 | Wie | Doet | Doet niet |
 |---|---|---|
 | Setup-agent | draait `preflight`, `koppel`, `poorten`, `db-bewijs`, na bouwstap 2 ook `repo-instellingen`; leest de resultaatbestanden | docker via het script (de leesopdrachten voor restanten blijven in het playbook), toolchain installeren, bootstrap, push naar `main`, ruleset zetten, `.env.local` overschrijven |
-| Eigenaar | root-setup, `scripts/bootstrap.sh`, `pnpm dev`, eerste push, `scripts/github-ruleset.sh`, restanten opruimen, de App | — |
+| Eigenaar | root-setup, `scripts/bootstrap.sh`, `pnpm dev`, eerste push, `scripts/github-ruleset.sh`, restanten opruimen | — |
 | Doctor en bootstrap | schrijven hun uitslag naar een resultaatbestand (#561) | iets herstellen |
 
 Het resultaatbestand is bewijs van wat het script zag, geen grens: de agent kan het overschrijven. Het telt naast de
@@ -111,6 +114,7 @@ eigen controle uit het playbook, niet in plaats daarvan.
    ook als `main` op GitHub nog niet de vorm heeft hernoem-commit (één ouder) boven koppel-merge (twee ouders);
    `--controleer` kijkt niet naar die vorm. Schrijft dezelfde instellingen als playbook 6.2 (merge-methoden,
    workflow-rechten alleen lezen, geen PR-goedkeuring door Actions, `sha_pinning_required`, beschrijving als argument).
+   (Te herzien vóór bouwstap 2, zie Route: `grensRedenen` en `REDEN_` bestaan niet meer.)
    `--controleer` schrijft niets en controleert de ruleset op `main` met `grensRedenen(api, { repo, mainSha })` uit
    `scripts/kit/pr-merge.mjs` (templateregime AC-14), met een dynamische `import()` alleen in dit deelcommando, geen tweede
    kopie; `mainSha` uit `gh api repos/<repo>/branches/main`. Elke reden wordt via de geëxporteerde `REDEN_`-constanten
@@ -130,8 +134,10 @@ eigen controle uit het playbook, niet in plaats daarvan.
      `doctor-machine`) de status, ook bij een fout (trap op `EXIT`): de falende stap `fout`, de stappen erna
      `overgeslagen`. Het schrijft met `printf` in shell, zonder Node of `jq` (bij een falende `mise install` is er geen Node).
    - `scripts/dev.mjs` controleert vóór `docker compose` dat `API_PORT` en `WEB_PORT` vrij zijn (vrij-regel van werking
-     6, geïmporteerd uit `nieuwe-app.mjs`). Het leest alleen die twee sleutels uit `.env.local`, met 8787 en 5173 als
-     terugval.
+     6, geïmporteerd uit `nieuwe-app.mjs`). Het leest alleen die twee sleutels uit `.env.local` (ontbreekt dat bestand: uit
+     `.env.example`), met 8787 en 5173 als terugval. Ontbreekt `.env.local`, dan kopieert het `.env.example` alleen als ook
+     `PG_PORT`, `MAIL_UI_PORT` en `SMTP_PORT` uit de standaardpoorten vrij zijn; anders exit 1 met een verwijzing naar
+     `poorten --env`.
 10. **Playbook** (OV-5). `docs/nieuwe-app.md` noemt in 5.1, 7.1 en 8 (na bouwstap 2 ook 6.2) het deelcommando en het
     resultaatbestand in plaats van de commandoblokken. De naslagsecties "Naslag: dagelijks werken", "Eigen agentinstructies
     van de app" en "Een eigen beschermd pad" gaan met dezelfde koppen naar `docs/app-naslag.md`; in het playbook blijft per
@@ -220,7 +226,7 @@ Bouwstap 1: AC-1 t/m AC-8 en AC-11 t/m AC-18. Bouwstap 2: AC-9, AC-10 en de 6.2-
 | Een andere app heeft dezelfde poorten maar draait niet | niet te zien; `pnpm dev` en doctor melden het pas bij de start (AC-14) | n.v.t. |
 | GitHub maakt de repo nog aan (lege clone) | buiten het script; playbook 4.3 blijft (OV-1) | n.v.t. |
 | `gh` zonder netwerk | stap fout met de `gh`-melding als herstelcontext; niets geschreven | n.v.t. |
-| `--controleer` na de ruleset met `--bypass-beheerder` (6.2, met de App) | fout `REDEN_BYPASS` voor de login van de eigenaar; verwacht, de herstelregel zegt dat (bouwstap 2) | n.v.t. |
+| (te herzien vóór bouwstap 2) `--controleer` na de ruleset met `--bypass-beheerder` | fout `REDEN_BYPASS` voor de login van de eigenaar; verwacht, de herstelregel zegt dat (bouwstap 2) | n.v.t. |
 | Testsessie (playbook 9.2) nog open | buiten het script: alleen waarneembaar door de eigenaar | n.v.t. |
 
 ## Raakt ook
@@ -231,15 +237,14 @@ Bouwstap 1: AC-1 t/m AC-8 en AC-11 t/m AC-18. Bouwstap 2: AC-9, AC-10 en de 6.2-
   `.env.example` (OV-6, ook de kopregel), `.gitignore`, `docs/nieuwe-app.md` (werking 10; ook de harde regels "Jij installeert
   geen toolchain" en "`.env.local` alleen maken met `cp` uit `.env.example`"), `START-NIEUWE-APP.md` (stap 6 haalt het
   script op, OV-3), `scripts/kit/leespad.mjs` (soort `playbook`) met `test/rails/leesbudget.test.ts`,
-  `docs/template-changelog.md` (`[Unreleased]`: verhuisde naslag, `API_PORT`/`WEB_PORT` in `.env.example`), `CHANGELOG.md`,
+  `docs/template-changelog.md` (`[Unreleased]`: verhuisde naslag, `API_PORT`/`WEB_PORT` in `.env.example`),
   en de bestaande tests `test/docs/start-nieuwe-app.test.ts`, `test/scripts/app-start-docs.test.ts` en
   `test/scripts/github-ruleset.test.ts` als de checklijst in het playbook verhuist (wijziging met reden in de PR, R-TEST-02).
 - **Niet in bouwstap 1:** de sectie "Een template-update binnenhalen" en de verwijzingen ernaar (`scripts/check-snapshot.sh`,
   `docs/template/specs/template-update.md`, `docs/template-changelog.md`) blijven ongewijzigd (werking 10);
   `scripts/kit/pr-merge.mjs` (`besluit-pr`).
 - **Bouwstap 2** (`repo-instellingen`, kritiek werk): `scripts/kit/nieuwe-app.mjs`, `test/scripts/nieuwe-app.test.ts`,
-  `docs/nieuwe-app.md` 6.2. Importeert het bestaande export `grensRedenen` uit `scripts/kit/pr-merge.mjs` (templateregime
-  AC-14); `pr-merge.mjs` blijft ongewijzigd en `test/scripts/merge-ruleset.test.ts` blijft groen. `scripts/check-github.mjs`
+  `docs/nieuwe-app.md` 6.2. Te herzien vóór de bouw (zie Route): de export `grensRedenen` waar dit op leunde, is weg (ADR 0093). `scripts/check-github.mjs`
   uit roadmap ST-01 bestaat nog niet; wordt het gebouwd, dan hergebruikt het dezelfde controle en vervangt het
   `--controleer`, zodat er één rulesetcontrole is.
 - R-WERK-25 blijft ongewijzigd (OV-2, OV-3): de uitzondering voor Node met vastgezette versie bestaat al voor het
