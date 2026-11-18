@@ -36,6 +36,7 @@ describe('ADR 0096: alleen de pnpm-store in de cache', () => {
         '${{ steps.pnpm-store.outputs.pad }}',
       ]);
       expect(stap).toMatch(/^ {10}key: pnpm-store-\$\{\{ runner\.os \}\}-\$\{\{ hashFiles\('pnpm-lock\.yaml'\) \}\}$/m);
+      expect(stap).toMatch(/^ {10}restore-keys: pnpm-store-\$\{\{ runner\.os \}\}-$/m);
     }
   });
 
