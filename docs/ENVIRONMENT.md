@@ -152,6 +152,17 @@ niet kan vervangen. Wie `rails/hooks/` op een branch wijzigt, verandert de lopen
 remote) legt de start van een sessie vast en vraagt netwerk; weigert het rolhek alles met "geen geldig anker", probeer de actie opnieuw (de meethook legt het anker dan meestal vast) of start één sessie
 met netwerk.
 
+Het anker staat per werkmap in `.claude/hooks/.cache/main` (een worktree heeft zijn eigen) en wordt alleen bij de start van een
+sessie ververst: nieuw, hervat, na `/clear` of na compactie (`bron` in `.claude/hooks/laden.mjs`). Tijdens een sessie beweegt
+het niet mee met `main`. Dat merk je bij `pnpm pr:merge <nummer>`: het rolhek laat het alleen door als `scripts/`, `rails/` en
+de hostbestanden (`package.json`, `.npmrc`, …) in de werkmap gelijk zijn aan de merge-base met het anker (`trustedMerge` in
+`rails/hooks/lib/runner-authority.mjs`). Komt er ná de sessiestart een PR op `main` die een van die paden wijzigt, en staat de
+werkmap op of voorbij die nieuwe `main`, dan weigert het rolhek met "scripts, rails en hostbestanden … gelijk aan het anker
+(ADR 0069)", ook vanaf een schone kopie van `main`. Opnieuw proberen helpt niet. Vergelijk het anker met de remote
+(`git ls-remote origin refs/heads/main`); loopt het achter, start of hervat dan de sessie, zodat de sessiestart het ververst.
+Loopt het anker niet achter, kijk dan of de branch zelf een van die paden wijzigt (een beschermd pad: de eigenaar voegt
+samen), of er lokale of genegeerde bestanden onder die paden staan, en of het commando vanuit de repo-root draait.
+
 ## Branchnaam
 
 Een cloudsessie start op een branch die het platform kiest (`claude/<naam>`). Een overdracht schrijft daarom geen
