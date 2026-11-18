@@ -158,13 +158,22 @@ Tijdens een sessie beweegt het niet mee met `main`. Dat merk je bij `pnpm pr:mer
 de hostbestanden (`package.json`, `.npmrc`, …) in de werkmap gelijk zijn aan de merge-base met het anker (`trustedMerge` in
 `rails/hooks/lib/runner-authority.mjs`). Komt er ná de sessiestart een PR op `main` die een van die paden wijzigt, en staat de
 werkmap op of voorbij die nieuwe `main`, dan weigert het rolhek met "scripts, rails en hostbestanden … gelijk aan het anker
-(ADR 0069)", ook vanaf een schone kopie van `main`. Opnieuw proberen helpt niet. Vergelijk het anker met de remote
-(`git ls-remote origin refs/heads/main`); loopt het achter, start of hervat dan de sessie met netwerk, zodat de sessiestart het ververst
-(zonder netwerk blijft het oude anker staan, zonder melding).
-Loopt het anker niet achter, kijk dan of de branch zelf een van die paden wijzigt (een beschermd pad: de eigenaar voegt
-samen), of er lokale of genegeerde bestanden of een symlink onder die paden staan, of er een `gh`, `git` of `node` in
-`node_modules/.bin` staat, of `merge` in `.claude/gates.json` op `main` nog `niet-kritiek` is, en of het commando vanuit de
-repo-root draait.
+(ADR 0069)", ook vanaf een schone kopie van `main`. Opnieuw proberen helpt niet. Vergelijk het anker met de remote:
+
+1. In de sessie of een eigen terminal, in de root van de werkmap die de weigering gaf (bij een worktree de worktree zelf, niet
+   de hoofdcheckout): lees het anker. Verwacht: één commit-SHA.
+2. Zelfde terminal en werkmap: vraag de remote om `main`. Verwacht: één regel met een SHA en `refs/heads/main`.
+
+```sh
+cat .claude/hooks/.cache/main
+git ls-remote origin refs/heads/main
+```
+
+Verschillen de twee SHA's, dan loopt het anker achter: start of hervat de sessie met netwerk, zodat de sessiestart het ververst
+(zonder netwerk blijft het oude anker staan, zonder melding). Zijn ze gelijk, kijk dan of de branch zelf een van die paden
+wijzigt (een beschermd pad: de eigenaar voegt samen), of er lokale of genegeerde bestanden of een symlink onder die paden
+staan, of er een `gh`, `git` of `node` in `node_modules/.bin` staat, of `merge` in `.claude/gates.json` in het anker (dus op
+`main`) nog `niet-kritiek` is, en of het commando vanuit de repo-root draait.
 
 ## Branchnaam
 
