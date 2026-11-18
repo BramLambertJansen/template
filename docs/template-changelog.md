@@ -29,6 +29,14 @@ requests.
 
 ### Gewijzigd
 
+- `pnpm pr:merge` controleert dat GitHub de grens van ADR 0089 punt 2 bewaakt (spec `templateregime` AC-14,
+  `beoordeelMerge` in `scripts/kit/pr-merge.mjs`, `test/scripts/merge-ruleset.test.ts`): het merget alleen als
+  `rules/branches/main` een regel `pull_request` met `require_code_owner_review: true` heeft, minstens één ruleset daarvan
+  `current_user_can_bypass: "never"` geeft en `codeowners/errors` op de kop van `main` leeg is; een onleesbaar antwoord, een
+  404 of een ongeldige vorm telt als nee. Wat verandert voor een app: zonder ruleset (privé-repo zonder Pro, of vóór fase 6),
+  met alleen klassieke branch protection, met een bypass voor wie het script draait (`--bypass-beheerder` en het script
+  draait als de beheerder) of zonder geldig `.github/CODEOWNERS` op `main` merget de hoofdsessie niets meer zelf; de eigenaar
+  merget.
 - De meting telt geen bevindingen van een externe reviewdienst meer (spec `agent-merge-niet-kritiek`, OV-1):
   `pnpm meting --pr-tabel` heeft geen rij en geen JSON-veld `codexBevindingen` meer, in `pnpm meting --trend` ontbreekt de
   maat `codex` (tekst en `trend.maten`) en de trend roept geen `gh api …/comments` meer aan (`scripts/kit/meting.mjs`,
