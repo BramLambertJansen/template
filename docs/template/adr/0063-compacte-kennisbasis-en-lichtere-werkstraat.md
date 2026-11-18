@@ -10,6 +10,7 @@ Herzien: 2026-11-12 (#696): door ADR 0089 punt 1, 6 en 7, in punt 1 wordt "app-A
 Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 Herzien: 2026-11-18 (#805): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.md) punt 3 en 7, punt 5: `docs:status`
 vervalt en de developer schrijft geen `gebouwd` meer
+Herzien: 2026-11-18 (#804): gewijzigd door [0096](0096-botgesprekken-sluiten.md) punt 4, 5 en 6, punt 6: het rolhek weigert reviews via de API voor elke rol, ook de kale mutatie `resolveReviewThread`, en nu ook een reviewopmerking wijzigen of wissen via REST (`repos/<repo>/pulls/comments/<id>`) en verbergen via `minimizeComment` of `unminimizeComment`, voor de directe `gh`-vorm (een omhulsel bij de hoofdsessie, of een interpreter of eigen script bij elke rol, ziet het niet, R-ROL-10); de enige uitzonderingen zijn antwoorden in een gesprek door de hoofdsessie en het sluiten van een beantwoord en verouderd botgesprek via `pnpm pr:resolve <nr>` door de hoofdsessie, op een PR zonder beschermd pad; verruimt en verscherpt
 
 Herziet in dezelfde PR [0045](0045-railwerk.md), [0046](0046-werkstraat-en-beslisroute.md),
 [0052](0052-accountstatus-en-laatste-login.md), [0053](0053-adr-archief.md), [0056](0056-functionele-ui-in-een-pr.md),

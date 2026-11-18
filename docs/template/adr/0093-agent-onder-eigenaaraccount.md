@@ -2,6 +2,8 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-18 (#804): gewijzigd door [0096](0096-botgesprekken-sluiten.md) punt 4, 5 en 6, punt 6: het rolhek laat de hoofdsessie ook precies `pnpm pr:resolve <nr>` door (onder dezelfde ankertoets), dat op een PR zonder beschermd pad een beantwoord en verouderd botgesprek sluit, en weigert voor elke rol een reviewopmerking wijzigen, wissen of verbergen via `gh api` (de directe vorm; een omhulsel bij de hoofdsessie, of een interpreter of eigen script bij elke rol, ziet het niet, R-ROL-10); de regels tegen samenvoegen, goedkeuren, labels en statussen blijven voor elke rol; verruimt en verscherpt
+
 Wijzigt [0089](0089-templateregime.md) punt 2, 5 (alleen: de inhoudstoets van `pnpm pr:merge` komt terug als padtoets), 9
 en 10 en de Gevolgen over de App en over samenvoegen na punt 9, [0069](0069-agent-merge-niet-kritiek.md) punt 1, 2 en 3 en
 de slotzin van punt 4 en 5 (vervallen niet meer met 0089 punt 9), [0045](0045-railwerk.md) punt 19,
