@@ -386,10 +386,24 @@ function neemOver(v, bestand) {
   v.ok('env-bestaand', `.env.local bestaat; poorten overgenomen (pg ${String(set.pg)}, web ${String(set.web)})`);
 }
 
+/**
+ * `true` alleen als het pad niet bestaat (ENOENT); een onleesbaar of gemaskeerd bestand telt als aanwezig. Een leespoging in
+ * plaats van een aparte bestaanscontrole: tussen controleren en schrijven zit dan geen venster (het schrijven gebruikt `wx`).
+ * @param {string} bestand
+ */
+function ontbreekt(bestand) {
+  try {
+    readFileSync(bestand);
+    return false;
+  } catch (error) {
+    return error instanceof Error && 'code' in error && error.code === 'ENOENT';
+  }
+}
+
 /** @param {Verloop} v @param {Context} ctx */
 async function poorten(v, ctx) {
   const bestand = path.join(ctx.root, '.env.local');
-  if (existsSync(bestand)) {
+  if (!ontbreekt(bestand)) {
     neemOver(v, bestand);
     return;
   }
