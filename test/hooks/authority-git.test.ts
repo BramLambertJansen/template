@@ -11,7 +11,6 @@ import { unchangedHead } from '../../scripts/kit/status-git.mjs';
 const SPEC = 'docs/specs/example.md';
 const SOURCE = 'src/core/web/ui/example.tsx';
 const BODY = '---\nstatus: voorstel\nnamespace: example\n---\n\n# Voorbeeld\n\n## Hergebruik en UX\n\nBestaande kit.\n';
-const SCRIPT = path.resolve('scripts/kit/document-status.mjs');
 const HOOK = path.resolve('rails/hooks/rolhek.mjs');
 const CONFIG = readFileSync('.claude/gates.json', 'utf8');
 const directories: string[] = [];
@@ -65,14 +64,6 @@ function fixture(): { root: string; base: string } {
   return { root, base };
 }
 
-function approve(root: string): string {
-  return execFileSync(process.execPath, [SCRIPT, SPEC, 'goedgekeurd'], {
-    cwd: root,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-}
-
 afterEach(() => {
   for (const root of directories.splice(0)) rmSync(root, { recursive: true, force: true });
 });
@@ -119,16 +110,7 @@ describe('taakmandaat tegen echte git-objecten', () => {
     ).toThrow(/beschermd pad/);
   });
 
-  // AC-15 (compacte-kennisbasis-rails): record geeft niets meer; docs:status schrijft alleen nog gebouwd, dus ook met een
-  // passend record op main wordt goedgekeurd geweigerd en blijft de werkmap schoon.
-  test('de statushelper weigert goedgekeurd ook met een record op main en wijzigt niets', () => {
-    const { root } = fixture();
-    expect(readAuthority({ root })).not.toBeNull();
-    expect(() => approve(root)).toThrow(/besluit-PR/);
-    expect(readFileSync(path.join(root, SPEC), 'utf8')).toBe(BODY);
-    expect(git(root, ['status', '--porcelain'])).toBe('');
-  });
-
+  // GEWIJZIGD (spec gebouwd-zonder-nummer, ADR 0095): het geval "de statushelper weigert goedgekeurd" is weg met `pnpm docs:status`.
   // AC-15: record geeft niets meer; de developer krijgt geen allow en geen Taakmandaat-melding, een onbekende subagent blijft deny.
   test('het rolhek geeft de developer geen allow voor een pad uit het record en weigert een onbekende subagent', () => {
     const { root } = fixture();

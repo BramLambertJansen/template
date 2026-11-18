@@ -148,6 +148,17 @@ requests.
 - `statusregelOvertreding` in `rails/hooks/lib/document-state.mjs` met de test `test/hooks/adr-statusregel.test.ts`: geen hook
   of check riep de functie nog aan sinds de strikte statusregel een afspraak is die de reviewer toetst (ADR 0045 punt 22, ADR
   0089 punt 8). De regel zelf blijft.
+- `pnpm docs:status` en de status-PR (ADR 0095, spec `gebouwd-zonder-nummer`). Een spec gaat naar `gebouwd` met de regel
+  `status: gebouwd`, zonder PR-nummer, in een gewone commit van de bouw-PR; hoofdsessie of architect zet hem, de developer
+  niet (meldingen in `rails/hooks/lib/rolhek.mjs`). Weg zijn `scripts/kit/document-status.mjs`, `scripts/kit/roadmap-item.mjs`,
+  `changeStatus` in `rails/hooks/lib/document-state.mjs`, het bouwbewijs in `rails/hooks/lib/built-evidence.mjs`
+  (`canRecordBuilt`, `builtRefusal`, `openRefusal`) en de statushelpers in `scripts/kit/status-git.mjs`; `checkedCommit` en
+  `unchangedHead` blijven voor `pnpm pr:verify`. `check:roadmap` eist geen PR-nummer meer in de statusregel (de melding
+  `spec:bewijs` is weg); de regel voor een spec die een roadmap-id noemt, blijft. `check-docs` leest het merkteken
+  `(vervallen)`, `(nieuw)` of `(voorbeeld)` ook op de volgende regel, en de AC-dekking slaat een AC over die begint met
+  `Vervallen door ADR <nummer>` als dat ADR in de ADR-map naast de specmap staat en `geaccepteerd` is. Wat verandert voor een
+  app: niets te doen. Bestaande regels `gebouwd # #<n>` blijven geldig (het nummer is commentaar); een eigen script of
+  werkwijze die `pnpm docs:status` aanroept, schrijft voortaan de statusregel met de hand.
 
 ## [0.1.0] - 2026-11-15
 

@@ -8,6 +8,8 @@ Herzien: 2026-11-05 (#541): punt 4 volgt [0080](0080-specarchief-en-bouwvorm.md)
 Herzien: 2026-11-12 (#692): door ADR 0089 punt 2 en 3, in de template deels: punt 5, vervalt: "elke andere statusovergang wordt geweigerd" voor herschrijven, verwijderen en hernoemen van documenten met eigenaarstatus; blijft: nooit terug naar `voorgesteld`, alleen architect en hoofdsessie schrijven een eigenaarstatus
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 1, 6 en 7, in punt 1 wordt "app-ADR 0100+" een app-ADR in `docs/adr/`; punt 4, `docs/template/` krijgt ook de template-ADR's en -specs, zonder archief (`docs/template/adr/`, `docs/template/specs/`); punt 5 en de vorige regel: zodra de GitHub App bewezen is, verdwijnt `check-document-status` en daarmee de guardtoets op statusovergangen, in template en app (ADR 0089 punt 5)
 Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
+Herzien: 2026-11-18 (#805): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.md) punt 3 en 7, punt 5: `docs:status`
+vervalt en de developer schrijft geen `gebouwd` meer
 
 Herziet in dezelfde PR [0045](0045-railwerk.md), [0046](0046-werkstraat-en-beslisroute.md),
 [0052](0052-accountstatus-en-laatste-login.md), [0053](0053-adr-archief.md), [0056](0056-functionele-ui-in-een-pr.md),
@@ -37,10 +39,10 @@ diff-guard in `overgang`. Aanleiding (P1): gemeten wrijving en de eigenaarreview
 4. **`docs/template/`** voor documenten die alleen de template betreffen, ook de template-ADR's en -specs, zonder archief (0089
    punt 1). Blijven staan: `docs/operations/runner-invoer.md`, `roadmap.md` en `roadmap-archief.md`.
 5. **Taakmandaat vervalt:** `docs:decision`, de mandaatrecords en de mandaattakken in de rolhek-lib, `docs:status`
-   en `check-roadmap` (die zelf blijven). `.claude/decisions.json` houdt `requiredChecks` en een leeg
+   (vervallen door 0095) en `check-roadmap` (dat zelf blijft). `.claude/decisions.json` houdt `requiredChecks` en een leeg
    `decisions`. De uitslag per rol, pad en modus blijft gelijk, behalve dat de mandaat-allow en -melding verdwijnen; geen nieuwe
    deny op `src/core`, `src/shared/permissions.ts` of `src/api/app.ts`. Ongewijzigd: alleen architect en hoofdsessie schrijven
-   een eigenaarstatus, de developer `gebouwd` via `docs:status`, de A4-basis uit main, de functionele-UI-melding en het lezen van
+   een eigenaarstatus (ook `gebouwd`, 0095 punt 7), de A4-basis uit main, de functionele-UI-melding en het lezen van
    register en vertrouwde basis uit main.
 6. **Gate-label vervalt:** `pr:label-gate` en `gateMarker`. Een label vervangt geen eigenaarreview. Het rolhek weigert voor elke rol elke labelwijziging op een PR (`gh pr create`,
    `gh pr edit`, elke schrijfwijze) en labels, reviews en statussen via de API. `gh issue` blijft zoals nu (0059 ongewijzigd).

@@ -1,23 +1,17 @@
-import { createHash } from 'node:crypto';
 import { describe, expect, test } from 'vitest';
-import { canRecordBuilt, checkedCommit } from '../../rails/hooks/lib/built-evidence.mjs';
+import { checkedCommit } from '../../rails/hooks/lib/built-evidence.mjs';
 import { parseCheckRun, parsePullRequest } from '../../scripts/kit/github-evidence.mjs';
 
-type BuiltEvidence = Parameters<typeof canRecordBuilt>[1];
-type Authority = Parameters<typeof canRecordBuilt>[2];
-type CheckRun = BuiltEvidence['checks'][number];
-// `mergeSha` en `baseBranch` horen bij de gemergde route (gebouwd-na-merge); de intersectie houdt de helper geldig voor en na de bouw.
-type PullRequest = BuiltEvidence['pr'] & { mergeSha: string | null; baseBranch: string };
+// GEWIJZIGD (spec gebouwd-zonder-nummer, ADR 0095): `canRecordBuilt` en de gevallen daarvan zijn weg met `pnpm docs:status`;
+// de typen komen nu uit de parsers die blijven.
+type CheckRun = ReturnType<typeof parseCheckRun>;
+type PullRequest = ReturnType<typeof parsePullRequest>;
 
 // Autoritatieve feiten als invoer voor pure validators; deze tests vervangen geen GitHub- of applicatiecontrole.
-const SPEC = 'docs/specs/built-evidence.md';
 const REPOSITORY = 'BramLambertJansen/template';
 const BRANCH = 'feat/built-evidence';
 const VALIDATED_SHA = 'a'.repeat(40);
 const CURRENT_SHA = 'b'.repeat(40);
-const APPROVED = '---\nstatus: goedgekeurd\nnamespace: built-evidence\n---\n\n# Taak\n\nAfgebakende implementatie.\n';
-const BUILT = APPROVED.replace('status: goedgekeurd', `status: gebouwd # #123; gevalideerd: ${VALIDATED_SHA}`);
-const DIGEST = createHash('sha256').update(APPROVED.replace('status: goedgekeurd\n', '')).digest('hex');
 const REQUIRED = { names: ['gate:fast', 'gate:slow'], sha: VALIDATED_SHA };
 
 function check(overrides: Partial<CheckRun> = {}): CheckRun {
@@ -46,33 +40,8 @@ function pullRequest(overrides: Partial<PullRequest> = {}): PullRequest {
   };
 }
 
-function evidence(overrides: Partial<BuiltEvidence> = {}): BuiltEvidence {
-  return {
-    pr: pullRequest(),
-    checks: [check(), check({ id: 102, name: 'gate:slow' })],
-    headSha: CURRENT_SHA,
-    ancestor: true,
-    onlyStatuses: true,
-    ...overrides,
-  };
-}
-
-function authority(overrides: Partial<Authority> = {}): Authority {
-  return {
-    registry: {
-      version: 1,
-      requiredChecks: ['gate:fast', 'gate:slow'],
-      decisions: [
-        { file: SPEC, digest: DIGEST, repository: REPOSITORY, branch: BRANCH, status: 'goedgekeurd', paths: [] },
-      ],
-    },
-    repository: REPOSITORY,
-    branch: BRANCH,
-    trusted: (file) => (file === SPEC ? APPROVED : null),
-    working: (file) => (file === SPEC ? BUILT : null),
-    safe: () => true,
-    ...overrides,
-  };
+function evidence(): { checks: CheckRun[] } {
+  return { checks: [check(), check({ id: 102, name: 'gate:slow' })] };
 }
 
 function rawPullRequest(overrides: Record<string, unknown> = {}) {
@@ -172,91 +141,6 @@ describe('checkedCommit: laatste verplichte GitHub Actions-checks op exact de ge
 
   test('een lege lijst verplichte checks kan geen groene validatie opleveren', () => {
     expect(checkedCommit(evidence().checks, { names: [], sha: VALIDATED_SHA })).toBe(false);
-  });
-});
-
-describe('canRecordBuilt: bestaand akkoord, PR en gevalideerde implementatie samen', () => {
-  test('een open PR met uitsluitend statuswijzigingen na de groene implementatiecommit is geldig', () => {
-    expect(CURRENT_SHA).not.toBe(VALIDATED_SHA);
-    expect(canRecordBuilt({ file: SPEC, text: BUILT }, evidence(), authority())).toBe(true);
-  });
-
-  test('ook de groene implementatiecommit zelf kan als PR-head worden aangeboden', () => {
-    const validatedHead = evidence({ headSha: VALIDATED_SHA, pr: pullRequest({ headSha: VALIDATED_SHA }) });
-
-    expect(canRecordBuilt({ file: SPEC, text: BUILT }, validatedHead, authority())).toBe(true);
-  });
-
-  // Gewijzigd door gebouwd-na-merge/AC-8: een gemergde PR gaat nooit via de open route; zonder mergebewijs geen gebouwd.
-  test('gebouwd-na-merge/AC-8: een gemergde gesloten PR is zonder mergebewijs geen open-routebewijs', () => {
-    const merged = evidence({ pr: pullRequest({ state: 'closed', merged: true, mergeSha: 'c'.repeat(40) }) });
-
-    expect(canRecordBuilt({ file: SPEC, text: BUILT }, merged, authority())).toBe(false);
-  });
-
-  test.each([
-    { name: 'gesloten zonder merge', change: { pr: pullRequest({ state: 'closed', merged: false }) } },
-    { name: 'verkeerd PR-nummer', change: { pr: pullRequest({ number: 124 }) } },
-    { name: 'verkeerde PR-repository', change: { pr: pullRequest({ repository: 'owner/app' }) } },
-    { name: 'verkeerde PR-branch', change: { pr: pullRequest({ branch: 'feat/other' }) } },
-    { name: 'PR-head wijkt af van actuele head', change: { pr: pullRequest({ headSha: VALIDATED_SHA }) } },
-    { name: 'actuele head wijkt af van PR-head', change: { headSha: VALIDATED_SHA } },
-    { name: 'gekozen commit is geen voorouder', change: { ancestor: false } },
-    { name: 'implementatie na validatie gewijzigd', change: { onlyStatuses: false } },
-    { name: 'geen checks', change: { checks: [] } },
-    { name: 'verplichte slowcheck ontbreekt', change: { checks: [check()] } },
-    {
-      name: 'alleen groene checks op statuscommit',
-      change: { checks: evidence().checks.map((item) => ({ ...item, headSha: CURRENT_SHA })) },
-    },
-    {
-      name: 'stale groen met latere failure',
-      change: { checks: [...evidence().checks, check({ id: 200, conclusion: 'failure' })] },
-    },
-    { name: 'gelijknamige vervalste app', change: { checks: [check({ appId: 1 }), check({ name: 'gate:slow' })] } },
-    { name: 'malformed actuele head', change: { headSha: 'invalid', pr: pullRequest({ headSha: 'invalid' }) } },
-  ])('$name staat gebouwd niet toe', ({ change }) => {
-    expect(canRecordBuilt({ file: SPEC, text: BUILT }, evidence(change), authority())).toBe(false);
-  });
-
-  test.each([
-    {
-      name: 'geen trusted goedkeuring of registrybesluit',
-      change: {
-        trusted: () => APPROVED.replace('goedgekeurd', 'voorstel'),
-        registry: { ...authority().registry, decisions: [] },
-      },
-    },
-    { name: 'geen trusted document', change: { trusted: () => null } },
-    {
-      name: 'trusted inhoud verschilt',
-      change: { trusted: () => APPROVED.replace('Afgebakende implementatie.', 'Andere implementatie.') },
-    },
-    { name: 'verkeerde repository', change: { repository: 'owner/app' } },
-    { name: 'verkeerde branch', change: { branch: 'feat/other' } },
-    { name: 'onveilig documentpad', change: { safe: () => false } },
-    { name: 'geen verplichte checks', change: { registry: { ...authority().registry, requiredChecks: [] } } },
-  ])('$name levert geen gebouwdrecht', ({ change }) => {
-    expect(canRecordBuilt({ file: SPEC, text: BUILT }, evidence(), authority(change))).toBe(false);
-  });
-
-  test.each([
-    { name: 'goedgekeurd blijft goedgekeurd', text: APPROVED },
-    { name: 'gebouwd zonder referentie', text: APPROVED.replace('goedgekeurd', 'gebouwd') },
-    { name: 'PR nul', text: BUILT.replace('#123', '#0') },
-    { name: 'korte SHA', text: BUILT.replace(VALIDATED_SHA, VALIDATED_SHA.slice(1)) },
-    { name: 'niet-hex SHA', text: BUILT.replace(VALIDATED_SHA, 'g'.repeat(40)) },
-    { name: 'andere gevalideerde SHA', text: BUILT.replace(VALIDATED_SHA, CURRENT_SHA) },
-    { name: 'body veranderd', text: BUILT.replace('Afgebakende implementatie.', 'Uitgebreide implementatie.') },
-  ])('$name geeft geen gebouwd-bewijs', ({ text }) => {
-    expect(canRecordBuilt({ file: SPEC, text }, evidence(), authority())).toBe(false);
-  });
-
-  test('ADR gebouwd is onmogelijk, ook met groene PR-feiten', () => {
-    const file = 'docs/adr/0027-built-evidence.md';
-    const text = `# 0027 — Taak\n\nStatus: gebouwd # #123; gevalideerd: ${VALIDATED_SHA}\n\n## Besluit\n`;
-
-    expect(canRecordBuilt({ file, text }, evidence(), authority())).toBe(false);
   });
 });
 

@@ -1,12 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
-import {
-  beslisOvergang,
-  changeStatus,
-  documentInfo,
-  documentKind,
-  isArchief,
-} from '../../rails/hooks/lib/document-state.mjs';
+import { beslisOvergang, documentInfo, documentKind, isArchief } from '../../rails/hooks/lib/document-state.mjs';
 import { specs } from '../../scripts/kit/feiten-secties.mjs';
 import { metingen } from '../../scripts/kit/leespad.mjs';
 
@@ -116,40 +110,22 @@ describe('specarchief-en-bouwvorm/AC-12: de SHA weghalen uit een gebouwd-regel',
     );
   });
 
-  test('specarchief-en-bouwvorm/AC-12 een ander PR-nummer bij gelijke inhoud: nieuw bouwbewijs (gebouwd)', () => {
+  // GEWIJZIGD (gebouwd-zonder-nummer/AC-9, ADR 0095): het nummer is commentaar; een ander nummer bij gelijke inhoud is vrij.
+  test('specarchief-en-bouwvorm/AC-12 een ander PR-nummer bij gelijke inhoud: vrij', () => {
     expect(beslisOvergang(SPEC, spec(`gebouwd # #130; gevalideerd: ${SHA}`), spec('gebouwd # #131')).uitslag).toBe(
-      'gebouwd',
+      'vrij',
     );
   });
 
-  test('specarchief-en-bouwvorm/AC-12 SHA weg en inhoud gewijzigd: nieuw bouwbewijs (gebouwd)', () => {
+  // GEWIJZIGD (gebouwd-zonder-nummer/AC-9, ADR 0095): nieuwe inhoud zonder weggehaald merkteken is een besluit, geen bouwbewijs.
+  test('specarchief-en-bouwvorm/AC-12 SHA weg en inhoud gewijzigd: besluit', () => {
     const na = spec('gebouwd # #130', ['- **demo/AC-2** — Andere tekst.']);
-    expect(beslisOvergang(SPEC, spec(`gebouwd # #130; gevalideerd: ${SHA}`), na).uitslag).toBe('gebouwd');
+    expect(beslisOvergang(SPEC, spec(`gebouwd # #130; gevalideerd: ${SHA}`), na).uitslag).toBe('besluit');
   });
 });
 
 describe('specarchief-en-bouwvorm/AC-13: één vorm gebouwd # #<PR>', () => {
-  test('specarchief-en-bouwvorm/AC-13 changeStatus schrijft status: gebouwd # #N zonder SHA', () => {
-    // Een fout wordt een waarde: de test faalt op de assertie, niet op een exceptie.
-    const uitkomst = (() => {
-      try {
-        return changeStatus(SPEC, spec('goedgekeurd'), { status: 'gebouwd', pr: 130 });
-      } catch (fout) {
-        return `gooit: ${String(fout)}`;
-      }
-    })();
-    expect(uitkomst).toBe(spec('gebouwd # #130'));
-  });
-
-  test.each([
-    ['zonder N', {}],
-    ['met N = 0', { pr: 0 }],
-    ['met een gebroken N', { pr: 1.5 }],
-    ['met een negatieve N', { pr: -3 }],
-  ])('specarchief-en-bouwvorm/AC-13 changeStatus gooit %s', (_naam, extra) => {
-    expect(() => changeStatus(SPEC, spec('goedgekeurd'), { status: 'gebouwd', ...extra })).toThrow();
-  });
-
+  // GEWIJZIGD (spec gebouwd-zonder-nummer, ADR 0095): de gevallen van `changeStatus` zijn weg met `pnpm docs:status`.
   test('specarchief-en-bouwvorm/AC-13 geen spec in docs/specs/ heeft gevalideerd: in de statusregel', () => {
     const metSha = readdirSync('docs/specs')
       .filter((naam) => naam.endsWith('.md') && !naam.startsWith('_'))

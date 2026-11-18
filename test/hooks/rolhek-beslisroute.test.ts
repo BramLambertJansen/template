@@ -6,7 +6,7 @@ import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 // ADR 0046 punt 6 en 7: de merge van de eigenaar is de acceptatie. In het rolhek mogen alleen hoofdsessie en architect een
 // eigenaarstatus (geaccepteerd, goedgekeurd, vervallen, vervangen door NNNN) schrijven, ook zonder record en ook voor een
 // nieuw bestand, en de inhoud van een goedgekeurde spec wijzigen. Developer, tester en docs blijven geweigerd (de developer
-// houdt alleen `gebouwd` via `pnpm docs:status`). Lokale A4 (eigenaarbesluit 2026-10-22): hoofdsessie en architect mogen de tekst
+// schrijft geen `gebouwd`: dat zetten hoofdsessie en architect in de bouw-PR, ADR 0095). Lokale A4 (eigenaarbesluit 2026-10-22): hoofdsessie en architect mogen de tekst
 // van een geaccepteerd ADR wijzigen en een ADR met een eigenaarstatus verwijderen (de lane en de herzieningsregel controleert CI);
 // andere rollen niet. Voor iedere rol gaat `geaccepteerd` niet terug naar `voorgesteld` en wijzigt een vervallen of vervangen ADR niet.
 // De authority hieronder heeft een lege registry: er is geen record op main.
@@ -28,6 +28,12 @@ const SPEC_VOORSTEL = 'docs/specs/voorstel.md';
 const SPEC_GOEDGEKEURD = 'docs/specs/goedgekeurd.md';
 const SPEC_NIEUW = 'docs/specs/nieuw.md';
 
+// gebouwd-zonder-nummer/AC-8: gebouwde specs op main met een nieuwe AC `(nog niet gebouwd)` (vervolgbouw).
+const SPEC_GEBOUWD_MET_NUMMER = 'docs/specs/gebouwd-met-nummer.md';
+const SPEC_GEBOUWD_ZONDER_NUMMER = 'docs/specs/gebouwd-zonder.md';
+const AC_GEMARKEERD = '- **demo/AC-2** (nog niet gebouwd) — Gegeven meer, dan meer.';
+const AC_KAAL = '- **demo/AC-2** — Gegeven meer, dan meer.';
+
 const ADR_VERVALLEN = 'docs/adr/0096-vervallen.md';
 const ADR_VERVANGEN = 'docs/adr/0095-vervangen.md';
 
@@ -38,6 +44,8 @@ const FILES: Record<string, string> = {
   [ADR_GEACC]: adr('0098', 'geaccepteerd'),
   [SPEC_VOORSTEL]: spec('voorstel'),
   [SPEC_GOEDGEKEURD]: spec('goedgekeurd'),
+  [SPEC_GEBOUWD_MET_NUMMER]: spec('gebouwd # #5', AC_GEMARKEERD),
+  [SPEC_GEBOUWD_ZONDER_NUMMER]: spec('gebouwd', AC_GEMARKEERD),
 };
 
 function authority(): Authority {
@@ -132,7 +140,7 @@ describe('developer, tester en docs: dezelfde schrijfacties blijven geweigerd (p
     },
   );
 
-  test('developer: gebouwd schrijven via Edit blijft geweigerd (alleen via pnpm docs:status)', () => {
+  test('developer: gebouwd schrijven via Edit blijft geweigerd (alleen hoofdsessie en architect, ADR 0095)', () => {
     const gebouwd = `status: gebouwd # #5; gevalideerd: ${'a'.repeat(40)}`;
     expect(run(edit(SPEC_GOEDGEKEURD, ['status: goedgekeurd', gebouwd], 'developer')).deny).not.toHaveLength(0);
   });
@@ -160,7 +168,7 @@ describe('developer, tester en docs: dezelfde schrijfacties blijven geweigerd (p
     }
   });
 
-  test('hoofdsessie: gebouwd met een SHA via Edit blijft geweigerd (alleen via pnpm docs:status)', () => {
+  test('hoofdsessie: gebouwd met een nieuwe SHA via Edit blijft geweigerd (ADR 0095)', () => {
     const gebouwd = `status: gebouwd # #5; gevalideerd: ${'a'.repeat(40)}`;
     expect(run(edit(SPEC_GOEDGEKEURD, ['status: goedgekeurd', gebouwd]))).toMatchObject({ deny: [expect.any(String)] });
   });
@@ -168,6 +176,67 @@ describe('developer, tester en docs: dezelfde schrijfacties blijven geweigerd (p
   test('hoofdsessie en architect: een nieuw ADR met Status: voorgesteld blijft vrij', () => {
     for (const agent of [undefined, 'architect'])
       expect(run(write(ADR_NIEUW, adr('0097', 'voorgesteld'), agent)).deny).toStrictEqual([]);
+  });
+});
+
+// gebouwd-zonder-nummer/AC-7 en AC-8 (ADR 0095): `status: gebouwd` zetten alleen hoofdsessie en architect, in de bouw-PR.
+describe('gebouwd-zonder-nummer/AC-7: status: gebouwd schrijven per rol en per stand van de vertrouwde basis', () => {
+  const GEBOUWD_EDIT: [string, string] = ['status: goedgekeurd', 'status: gebouwd'];
+  const WEIGERING_BESLUIT = `${SPEC_GOEDGEKEURD}: deze statusovergang heeft geen geldig besluit uit de vertrouwde basis; status: gebouwd zetten hoofdsessie en architect in de bouw-PR (ADR 0095)`;
+  const WEIGERING_EIGENAARSTATUS = `${SPEC_GOEDGEKEURD}: een eigenaarstatus of de inhoud van een goedgekeurde spec schrijven alleen architect en hoofdsessie (ADR 0046 punt 6); status: gebouwd zetten hoofdsessie en architect in de bouw-PR (ADR 0095)`;
+
+  test.each([
+    ['hoofdsessie', undefined],
+    ['architect', 'architect'],
+  ])('gebouwd-zonder-nummer/AC-7: %s mag status: gebouwd zetten, met en zonder vertrouwde basis', (_rol, agent) => {
+    for (const met of ['authority', 'zonder'] as const) {
+      const decision = run(edit(SPEC_GOEDGEKEURD, GEBOUWD_EDIT, agent), met);
+      expect([decision.deny, decision.ask]).toStrictEqual([[], []]);
+    }
+  });
+
+  test('gebouwd-zonder-nummer/AC-7: developer met leesbare vertrouwde basis: geweigerd met de melding uit ADR 0095', () => {
+    const decision = run(edit(SPEC_GOEDGEKEURD, GEBOUWD_EDIT, 'developer'));
+    expect(decision.deny).toContain(WEIGERING_BESLUIT);
+  });
+
+  test('gebouwd-zonder-nummer/AC-7: developer zonder leesbare vertrouwde basis: de developer schrijft geen spec', () => {
+    const decision = run(edit(SPEC_GOEDGEKEURD, GEBOUWD_EDIT, 'developer'), 'zonder');
+    expect(decision.deny.join('\n')).toContain(
+      'de developer schrijft geen spec; dat doet de architect (R-WERK-07, ADR 0068 punt 4)',
+    );
+  });
+
+  // Tester en docs lezen geen statusbesluit uit main (`decide` geeft hun geen vertrouwde basis): zij worden geweigerd op hun
+  // schrijfrecht, niet met de statusmelding.
+  test.each(['tester', 'docs'])('gebouwd-zonder-nummer/AC-7: %s: geweigerd, zonder docs:status', (agent) => {
+    const decision = run(edit(SPEC_GOEDGEKEURD, GEBOUWD_EDIT, agent));
+    expect(decision.deny).not.toStrictEqual([]);
+    expect(decision.deny.join('\n')).not.toContain('docs:status');
+  });
+
+  test('gebouwd-zonder-nummer/AC-7: de eigenaarstatus-weigering noemt de bouw-PR en geen docs:status', () => {
+    const decision = run(write(SPEC_GOEDGEKEURD, spec('gebouwd', 'Andere inhoud.'), 'developer'));
+    expect(decision.deny).toContain(WEIGERING_EIGENAARSTATUS);
+    expect(decision.deny.join('\n')).not.toContain('docs:status');
+  });
+});
+
+describe('gebouwd-zonder-nummer/AC-8: vervolgbouw laat de statusregel staan en haalt alleen het merkteken weg', () => {
+  test.each([
+    ['gebouwd # #5', SPEC_GEBOUWD_MET_NUMMER],
+    ['gebouwd', SPEC_GEBOUWD_ZONDER_NUMMER],
+  ])(
+    'gebouwd-zonder-nummer/AC-8: hoofdsessie haalt het merkteken weg bij status: %s: toegestaan',
+    (_status, bestand) => {
+      const decision = run(edit(bestand, [AC_GEMARKEERD, AC_KAAL]));
+      expect([decision.deny, decision.ask]).toStrictEqual([[], []]);
+    },
+  );
+
+  test('gebouwd-zonder-nummer/AC-8: de statusregel ongewijzigd laten betekent ook dat de developer hem niet aanraakt', () => {
+    const decision = run(edit(SPEC_GEBOUWD_ZONDER_NUMMER, ['status: gebouwd', 'status: gebouwd # #9'], 'developer'));
+    expect(decision.deny).not.toHaveLength(0);
   });
 });
 

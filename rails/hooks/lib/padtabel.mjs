@@ -305,7 +305,7 @@ export function templateVan(found) {
 }
 
 /**
- * `templateVan` op de tekst van een `.claude/gates.json`: de ene parser voor check-core, app:init en built-evidence. Gooit
+ * `templateVan` op de tekst van een `.claude/gates.json`: de ene parser voor check-core en app:init. Gooit
  * bij ongeldige JSON of een verkeerde vorm; ontbrekend geeft `undefined`. @param {string} tekst
  */
 export function templateUitGates(tekst) {

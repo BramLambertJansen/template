@@ -46,12 +46,12 @@ describe('templateregime/AC-7 de scripts van de documentbewaking bestaan niet me
   test('templateregime/AC-7: de zeven scripts van de documentbewaking bestaan niet meer in scripts/kit/', () => {
     const bestaand = (namen: readonly string[]): string[] =>
       namen.filter((naam) => existsSync(path.join(ROOT, `scripts/kit/${naam}.mjs`)));
-    // Controle dat de toets bestaande scripts ziet: check-core en document-status blijven.
-    expect(bestaand(['check-core', 'document-status'])).toEqual(['check-core', 'document-status']);
+    // Controle dat de toets bestaande scripts ziet: check-core blijft (document-status vervalt door ADR 0095).
+    expect(bestaand(['check-core'])).toEqual(['check-core']);
     expect(bestaand(VERWIJDERD)).toEqual([]);
   });
 
-  test('templateregime/AC-7: rails/hooks/lib/document-state.mjs blijft, met wat check-docs, docs:status en het rolhek gebruiken', async () => {
+  test('templateregime/AC-7: rails/hooks/lib/document-state.mjs blijft, met wat check-docs en het rolhek gebruiken', async () => {
     expect(existsSync(path.join(ROOT, 'rails/hooks/lib/document-state.mjs'))).toBe(true);
     const module: Record<string, unknown> = await import('../../rails/hooks/lib/document-state.mjs');
     for (const naam of ['documentInfo', 'documentKind', 'beslisOvergang', 'acIds', 'builtReference']) {
@@ -137,13 +137,13 @@ describe('templateregime/AC-7 package.json, lefthook.yml en de rest van scripts/
     expect(gevonden).toEqual([]);
   });
 
-  test('templateregime/AC-7: pnpm docs:status wijst nog naar scripts/kit/document-status.mjs', () => {
+  test('templateregime/AC-7: pnpm docs:status en scripts/kit/document-status.mjs bestaan niet meer (ADR 0095)', () => {
     const ruw: unknown = JSON.parse(lees('package.json'));
     const scripts: unknown = typeof ruw === 'object' && ruw !== null ? Reflect.get(ruw, 'scripts') : undefined;
     const docsStatus: unknown =
       typeof scripts === 'object' && scripts !== null ? Reflect.get(scripts, 'docs:status') : undefined;
-    expect(docsStatus).toBe('node scripts/kit/document-status.mjs');
-    expect(existsSync(path.join(ROOT, 'scripts/kit/document-status.mjs'))).toBe(true);
+    expect(docsStatus).toBeUndefined();
+    expect(existsSync(path.join(ROOT, 'scripts/kit/document-status.mjs'))).toBe(false);
   });
 
   // Een import (`from './x.mjs'`, `import('./x.mjs')`) of een aanroep (`node scripts/kit/x.mjs`, `run: … x.mjs`). Een pad als
@@ -374,7 +374,6 @@ describe('templateregime/AC-13 geen test toetst nog verdwenen code', () => {
       'test/rails/padtabel.test.ts',
       'test/hooks/rolhek.test.ts',
       'test/hooks/built-evidence.test.ts',
-      'test/rails/gebouwd-na-merge.test.ts',
     ];
     expect(weg.filter((bestand) => existsSync(path.join(ROOT, bestand)))).toEqual([]);
     expect(blijft.filter((bestand) => !existsSync(path.join(ROOT, bestand)))).toEqual([]);

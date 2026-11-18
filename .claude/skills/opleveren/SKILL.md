@@ -28,14 +28,10 @@ Feiten nu:
 5. Stop en vraag de eigenaar bij: (a) een fix die een regel, check, hook of test zou afzwakken; (b) dezelfde fout drie keer achter elkaar (voer dan eerst de leerpuntstap uit Opruimen stap 8 uit);
    (c) een oorzaak buiten de code (runner, GitHub-storing); (d) een gate-pad of beschermd pad dat moet wijzigen.
 6. De lus leeft alleen binnen de sessie: geen timer, token of credentialwerk.
-7. Bevat de PR de implementatie van een spec: zet na het openen van de PR in een gewone commit `status: gebouwd # #<nr>` met
-   het eigen PR-nummer, plus het roadmapvinkje met `#<nr>` als de spec een item noemt (ADR 0062); geen wachten op groen.
-   Alleen voor een spec waarvan de implementatie al op main staat: een aparte PR met alleen
-   `pnpm docs:status <spec> gebouwd --pr <nr> --roadmap` (zonder `--roadmap` als geen roadmap-item de spec noemt); het
-   bouwbewijs (gemergde PR, verplichte checks groen op de head) komt van GitHub, zonder SHA in de statusregel (ADR 0080).
-   Zonder `gh`-auth: stop en meld het. Noemt het roadmap-item het specpad niet tussen backticks (dan kan `--roadmap` het
-   niet afvinken), dan komt de roadmapwijziging in de implementatie; een status-PR wijzigt alleen statusregels en
-   vinkjes (`docs/operations/agent-doorloop.md`, "PR en statussen afronden").
+7. Bevat de PR de implementatie van een spec: zet in een gewone commit `status: gebouwd`, zonder PR-nummer, plus het
+   roadmapvinkje met een testpad of checknaam als de spec een item noemt (ADR 0095); dat kan vóór het openen van de PR en
+   wacht niet op groen. De checks op een gebouwde spec (dood pad, roadmap-id, AC-dekking) draaien zo in de bouw-PR zelf. Er
+   is geen aparte status-PR (`docs/operations/agent-doorloop.md`, "PR en statussen afronden").
 8. Draai `pnpm meting --trend` en `pnpm leespad`. Zet elke "let op"-regel (de trend: een echte stap omhoog in reviewrondes
    of CI-rood; het leespad: groei tegenover de basis) in de PR-beschrijving en noem hem in de oplevermelding
    aan de eigenaar; de eigenaar beslist (R-DOC-08, ADR 0070). "onbekend" meld je als onbekend. Zet ook de tabel van

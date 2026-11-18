@@ -9,7 +9,6 @@
     "docs:docs/template/specs/design-system.md:dood-pad:src/web/dev/design-system-page.tsx",
     "docs:docs/template/specs/design-system.md:dood-pad:src/web/routes/design-system.tsx",
     "docs:docs/template/specs/een-proefkopie.md:dood-pad:scripts/kit/check-app-init.mjs",
-    "docs:docs/template/specs/gebouwd-na-merge.md:dood-pad:scripts/kit/check-document-status.mjs",
     "docs:docs/template/specs/geheimen-in-env.md:dood-pad:src/api/env.ts",
     "docs:docs/template/specs/geheimen-in-env.md:dood-pad:src/core/api/env-secret.test.ts",
     "docs:docs/template/specs/klassenrail.md:dood-pad:src/core/web/ui/x.tsx",

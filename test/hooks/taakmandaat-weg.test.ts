@@ -11,7 +11,6 @@ import {
   REPOSITORY,
   S1,
   commit,
-  draaiDocsStatus,
   git,
   opruimen,
   read,
@@ -221,28 +220,7 @@ describe('compacte-kennisbasis-rails/AC-15: een record geeft de developer geen s
   });
 });
 
-describe('compacte-kennisbasis-rails/AC-15: docs:status schrijft alleen nog gebouwd', () => {
-  test.each(['goedgekeurd', 'vervallen'])(
-    'status %s met een passend record: geweigerd met verwijzing naar een besluit-PR, niets geschreven',
-    (doel) => {
-      const { root } = maakRepo({ status: 'voorstel', metRecord: true, recordStatus: doel });
-      const voor = read(root, S1);
-      const uitvoer = draaiDocsStatus(root, [S1, doel]);
-      expect(uitvoer.status).toBe(1);
-      expect(uitvoer.stderr).toMatch(/besluit-PR/i);
-      expect(uitvoer.stderr).not.toMatch(NIET_NEUTRAAL);
-      expect(read(root, S1)).toBe(voor);
-      expect(git(root, ['status', '--porcelain'])).toBe('');
-    },
-  );
-
-  test('status goedgekeurd zonder record: ook geweigerd met verwijzing naar een besluit-PR', () => {
-    const { root } = maakRepo({ status: 'voorstel', metRecord: false });
-    const uitvoer = draaiDocsStatus(root, [S1, 'goedgekeurd']);
-    expect(uitvoer.status).toBe(1);
-    expect(uitvoer.stderr).toMatch(/besluit-PR/i);
-  });
-});
+// GEWIJZIGD (spec gebouwd-zonder-nummer, ADR 0095): de gevallen "docs:status schrijft alleen nog gebouwd" zijn weg met het script.
 
 describe('compacte-kennisbasis-rails/AC-18: een gewijzigde of verwijderde mandaattest vraagt de eigenaar', () => {
   // Proces, geen test van de spec; deze regressietest legt vast dat het rolhek elke subagent blijft weigeren.

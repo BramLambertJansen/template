@@ -13,7 +13,7 @@ Welke repository de template is, staat op één plek in de configuratie (`templa
 
 ## Rollen en wie wat ziet
 
-Geen wijziging: geen route, permissie of scherm. Het raakt wat het rolhek, `check-core`, `check:migrations`, `pnpm docs:status` en `pnpm app:init` als de template-repo zien.
+Geen wijziging: geen route, permissie of scherm. Het raakt wat het rolhek, `check-core`, `check:migrations` en `pnpm app:init` als de template-repo zien (`pnpm docs:status` is vervallen door ADR 0095).
 
 ## Het probleem
 
@@ -33,7 +33,7 @@ De enige waarde in configuratie, `onderhoud.repository`, haalt `app:init` in een
 - **Lezers, elk uit een vertrouwde bron:**
   - Rolhek, doel van een leerpunt (`rolhek.mjs` bij `leerpuntAfwijking`): `ctx.config.template?.repository`. De configuratie komt in een hook uit het anker (`rolhek-context.mjs` `configuratie`). Ontbreekt de sleutel, dan is elk `gh issue create` van de hoofdsessie ask met de reden `template.repository ontbreekt in .claude/gates.json`.
   - Rolhek, de melding bij core-UI (`rolhek.mjs` bij `isCoreUiSource`): `ctx.authority?.repository` gelijk aan `ctx.config.template?.repository`; ontbrekend telt als ongelijk.
-  - `built-evidence.mjs` `approvedBefore`: de waarde uit `authority.trusted('.claude/gates.json')` (anker of `origin/main`, nooit de werkmap, want het beslist over een akkoord); ontbrekend of onleesbaar telt als "niet de template".
+  - *(vervallen door ADR 0095)* `built-evidence.mjs` `approvedBefore`: de waarde uit `authority.trusted('.claude/gates.json')` (anker of `origin/main`, nooit de werkmap, want het beslist over een akkoord); ontbrekend of onleesbaar telt als "niet de template".
   - `functional-ui.mjs` `functionalUiReason` heeft geen aanroeper (geen code, geen test); de functie en haar alleen daar gebruikte helpers `invalidUiPath` en `isUiSource` vervallen, in plaats van een dode functie uit te breiden. `docs/template/specs/spec-en-bouw-in-een-pr.md:91` noemt haar een bestaande extra toets; die regel volgt (het rolhek laat de hoofdsessie die gebouwde spec niet wijzigen, dus de eigenaar of de architect past hem aan; staat in de PR).
   - `check-core.mjs`: eerst `isTemplateRepo` (onderhoud gelijk aan `REPO`: de check staat uit, ook zonder geldige `template`-sleutel); daarna de URL uit de pure functie `templateUrl(gatesJson)` → `https://github.com/<template.repository>.git`, op de `gates.json` die het script al leest (in `guard.yml` de checkout van `BASE_SHA`). Ontbreekt of klopt de sleutel niet, dan is de check rood met `✗ check-core: template.repository ontbreekt of is ongeldig in .claude/gates.json` en de annotatie `::error title=check-core::template.repository ontbreekt of is ongeldig`. `isTemplateRepo` blijft op `onderhoud`.
   - Eén parser: `check-core.mjs`, `check-migrations.mjs`, `check-docs.mjs` en `app-init.mjs` gebruiken `templateVan` uit `padtabel.mjs` (direct of via `rolhek.mjs`).
@@ -64,7 +64,7 @@ Geen schermen. Meldingen letterlijk:
 - **template-repo/AC-2** — check-docs op `.claude/gates.json`: zonder `template` rood (`ontbreekt`); verkeerde vorm rood; `onderhoud.repository` anders dan `template.repository` rood; de echte `gates.json` groen.
 - **template-repo/AC-3** — Rolhek, hoofdsessie, `gh issue create --repo <x> --label leerpunt …`: met `template.repository` = x en zonder `onderhoud` (een app) geen ask; met een andere repo ask; zonder `template` ask met de reden uit Hergebruik en UX.
 - **template-repo/AC-4** — Rolhek, core-UI-melding: gelijk aan de bestaande uitkomst als origin gelijk is aan `template.repository`; een andere origin of een ontbrekende sleutel geeft de melding niet.
-- **template-repo/AC-5** — `approvedBefore` met UI-akkoord: alleen akkoord als `authority.repository` gelijk is aan `template.repository` uit `authority.trusted('.claude/gates.json')`; staat de sleutel alleen in de werkmap (niet in de vertrouwde bron), dan geen akkoord.
+- **template-repo/AC-5** — Vervallen door ADR 0095 (`approvedBefore` verdween met `docs:status`). Was: `approvedBefore` met UI-akkoord: alleen akkoord als `authority.repository` gelijk is aan `template.repository` uit `authority.trusted('.claude/gates.json')`; staat de sleutel alleen in de werkmap (niet in de vertrouwde bron), dan geen akkoord.
 - **template-repo/AC-6** — `functionalUiReason`, `invalidUiPath` en `isUiSource` bestaan niet meer in `rails/hooks/lib/functional-ui.mjs`; de overige exports (`isFunctionalUiSpec`, `isCoreUiSource`, `isUiTest`, `testChangeRisk`) zijn ongewijzigd.
 - **template-repo/AC-7** — `templateUrl(gatesJson)` geeft `https://github.com/<template.repository>.git` en gooit zonder geldige sleutel; check-core haalt de template op van die URL en is zonder geldige sleutel rood met melding en annotatie. In de template (onderhoud gelijk aan `REPO`) blijft hij uit, ook zonder geldige `template`-sleutel.
 - **template-repo/AC-8** — check-migrations, app, oudere toegevoegde migratie, geen lokale template-ref: de URL komt uit `origin/main:.claude/gates.json`, ook als de werkmap een andere `template.repository` heeft; zonder sleutel op `origin/main` rood met de melding. De uitzondering voor de template blijft op `onderhoud` (een app met `template` maar zonder `onderhoud` is geen template).
@@ -80,7 +80,7 @@ Geen schermen. Meldingen letterlijk:
 | App zonder `template` (oude kopie) | leerpunt ask, check-core rood met melding, geen stil verkeerd doel | n.v.t. |
 | Eerste template-update van een app van vóór deze versie | check:migrations leest `origin/main`, waar de sleutel nog ontbreekt: met een oudere templatemigratie is hij rood. Er bestaan nog geen apps (de proef-app volgt); de "Bij een update"-notitie in `docs/template-changelog.md` zegt dat zo'n app de sleutel eerst in een eigen PR toevoegt | n.v.t. |
 | PR wijzigt `template.repository` | `gates.json` is altijdVragen/besluit-pr; check-migrations leest `origin/main`; het rolhek leest het anker | n.v.t. |
-| Hoofdletters in de repo-naam | vergelijkingen zoals nu: check-core en het leerpuntdoel hoofdletterongevoelig, de core-UI-melding en `approvedBefore` exact | n.v.t. |
+| Hoofdletters in de repo-naam | vergelijkingen zoals nu: check-core en het leerpuntdoel hoofdletterongevoelig, de core-UI-melding exact (`approvedBefore` is vervallen door ADR 0095) | n.v.t. |
 
 ## Raakt ook
 

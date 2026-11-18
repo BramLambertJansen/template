@@ -85,8 +85,6 @@
     "scripts/kit/github-evidence.mjs":       { "besluit": "besluit-pr" },
     "scripts/kit/pr-verify.mjs":             { "besluit": "besluit-pr" },
     "scripts/kit/check-roadmap.mjs":         { "besluit": "besluit-pr" },
-    "scripts/kit/roadmap-item.mjs":          { "besluit": "besluit-pr" },
-    "scripts/kit/document-status.mjs":       { "besluit": "besluit-pr" },
     "scripts/kit/gates.mjs":                 { "besluit": "besluit-pr" },
     "scripts/kit/pr-merge.mjs":              { "besluit": "besluit-pr" }
   },

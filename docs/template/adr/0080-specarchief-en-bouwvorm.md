@@ -6,6 +6,9 @@ Herzien: 2026-11-05 (#542): punt 4 en 7 aangescherpt na de spec-review: de marke
 Herzien: 2026-11-12 (#692): door ADR 0089 punt 2, in de template deels: punt 1, vervalt: het archief verandert niet, een archiefnaam komt niet terug; blijft: verhuizen onder dezelfde naam; punt 3 en 4, vervalt: AC-id's blijven, een spec verdwijnt niet; blijft: één levende spec per mechanisme, inhoud van een goedgekeurde spec wijzigen is een besluit
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 1, 5, 7 en 8, de vorige regel vervalt: punt 1, het specarchief verdwijnt bij de verhuizing en `docs/template/specs/` heeft geen archief; punt 3 en 4, AC-id's die blijven en een spec die niet verdwijnt zijn afspraken, geen guardtoets meer; punt 5, `gebouwd # #<PR>` blijft de vorm (`check:roadmap`), het bouwbewijs is de merge
 Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
+Herzien: 2026-11-18 (#805): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.md) punt 1, 3, 4 en 5, punt 4: de bouw-PR
+laat de statusregel staan; punt 5: de vorm is `status: gebouwd`, `docs:status` vervalt; punt 6: niemand zet regels om; punt
+7: de bewijstoets van `docs:status` vervalt; punt 8: de terugval via `docs:status` vervalt
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 5 en 10 (een gebouwde spec krijgt in een besluit-PR nieuwe AC's
 met de markering `(nog niet gebouwd)`; `gebouwd` noemt alleen de PR), [0054](0054-gebouwd-in-de-bouw-pr.md) punt 1 en 5
@@ -40,18 +43,16 @@ SHA weigert de guard elk ander nummer dan dat van de eigen PR.
 4. **Gebouwde spec.** Inhoud van een goedgekeurde spec wijzigen blijft een besluit. Een gebouwde spec blijft `gebouwd`: nieuwe
    inhoud is een besluit, en elke nieuwe AC krijgt `(nog niet gebouwd)` (patroon van R-DOC-10), alleen op een id dat nog niet
    op main staat; de AC-dekking slaat alleen gemarkeerde AC's over. De bouw-PR haalt de markering weg (telt niet als
-   inhoudswijziging) en zet `gebouwd # #<deze PR>`; met een markering kan dat niet.
-5. **Eén vorm: `gebouwd # #<PR>`.** In de bouw-PR het eigen nummer (0054, 0062). Later het nummer van de gemergde bouw-PR;
-   `docs:status` haalt de head-SHA en de mergecommit bij GitHub en toetst hetzelfde als nu na de merge: mergecommit in main, spec
-   ongewijzigd goedgekeurd in de mergecommit, verplichte checks groen op de head, een bouwpad, en de status-PR wijzigt alleen
-   statusregels en het eigen vinkje. `docs:status` schrijft alleen deze vorm.
-6. **Bestaande SHA-regels** worden in de bouw-PR omgezet: alleen `; gevalideerd: <sha>` gaat weg, het PR-nummer blijft. De
-   lezers kennen de oude vorm nog (apps, geschiedenis). `check-docs` weigert de oude vorm in een statusregel. Een gebouwd-regel
-   die een ander PR-nummer krijgt, of de SHA verliest terwijl de inhoud verandert, toetst als nieuw `gebouwd` (nu gaat dat als
-   `vrij` door, omdat de statusregel buiten de digest valt).
-7. **Niets wordt losser.** Spec-vóór-code, AC-dekking en het bouwbewijs blijven.
-8. **Terugval.** Komt een gebouwde spec zonder gemergde bouw-PR met groene checks door `docs:status`, of verliest een spec een AC
-   zonder melding, dan gaat de bouw-PR terug. De eigenaar beslist.
+   inhoudswijziging) en laat de statusregel staan (0095 punt 5).
+5. **Eén vorm: `status: gebouwd`**, zonder PR-nummer, in de bouw-PR of met de hand in een latere PR (0095 punt 1 en 3);
+   een bestaand `# #<PR>` is commentaar.
+6. **Bestaande regels** blijven staan; niemand zet ze om (0095 punt 4). `check-docs` weigert de oude vorm met
+   `; gevalideerd: <sha>` in een statusregel. Een gebouwde spec blijft gebouwd: het commentaar achter de status telt niet;
+   nieuwe inhoud is een besluit, een weggehaalde markering is bouw (0095 punt 5).
+7. **Niets wordt losser.** Spec-vóór-code en AC-dekking blijven. De bewijstoets van `docs:status` (gemergde PR, groene
+   checks) is vervallen door 0095; dat aanvaarde risico staat daar.
+8. **Terugval.** Verliest een spec een AC zonder melding, dan gaat de bouw-PR terug. De eigenaar beslist. (De terugval via
+   `docs:status` is vervallen door 0095.)
 
 ## Alternatieven
 
