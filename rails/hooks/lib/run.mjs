@@ -33,9 +33,10 @@ export function createRun(root) {
     });
     const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
     if (result.error !== undefined) {
-      // De gedeeltelijke uitvoer (leeg bij een startfout) blijft achter de foutregel staan.
+      // De foutregel staat ná de gedeeltelijke uitvoer (leeg bij een startfout): de hook houdt van een rode check alleen de
+      // laatste regels over (lastLines in werkstraat.mjs), dus vooraan zou hij bij veel uitvoer wegvallen.
       const regel = foutregel(result.error, command, options.timeout);
-      return { code: 1, output: output === '' ? regel : `${regel}\n${output}` };
+      return { code: 1, output: output === '' ? regel : `${output.trimEnd()}\n${regel}` };
     }
     return { code: result.status ?? 1, output };
   };

@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { afterAll, describe, expect, test } from 'vitest';
+import { lastLines } from '../../rails/hooks/lib/werkstraat.mjs';
 
 // Vervolg op leerpunt #720 (zie werkstraat-startfout.test.ts): "kon niet starten" hoort alleen bij een proces dat niet
 // startte (ENOENT, EACCES). Een timeout (ETIMEDOUT) of een overschreden maxBuffer (ENOBUFS) betekent dat het proces wel
@@ -99,6 +100,31 @@ describe('werkstraat run: een proces dat wel startte maar is afgebroken', () => 
     expect(result.output).toContain('begin-uitvoer');
     expect(result.output).not.toContain('kon niet starten');
     expect(result.output).not.toContain('afgebroken na');
+  });
+
+  // De hook kort de uitvoer van een rode check in tot de laatste regels (lastLines in lib/werkstraat.mjs). De foutregel
+  // staat daarom achteraan: vooraan zou hij bij veel uitvoer uit de melding vallen (reviewpunt op #798).
+  test.each([
+    {
+      naam: 'een timeout',
+      script: 'for (let i = 0; i < 200; i += 1) console.log("regel " + i); setTimeout(() => {}, 60_000);',
+      timeout: 1500,
+      melding: 'afgebroken na 1500 ms',
+    },
+    {
+      naam: 'te veel uitvoer',
+      script: 'process.stdout.write(("regel\\n").repeat(8 * 1024 * 1024));',
+      timeout: undefined,
+      melding: 'uitvoer te groot',
+    },
+  ])('$naam met veel regels: de foutregel overleeft de inkorting van de hook', async ({ script, timeout, melding }) => {
+    const run = await laadRunCommand();
+
+    const result = run(process.execPath, ['-e', script], timeout);
+
+    expect(result.code).toBe(1);
+    expect(result.output.split('\n').length).toBeGreaterThan(50);
+    expect(lastLines(result.output, 5)).toContain(melding);
   });
 });
 
