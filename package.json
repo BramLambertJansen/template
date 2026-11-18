@@ -38,6 +38,8 @@
     "check:catalogus": "node scripts/kit/catalogus.mjs",
     "check:migrations": "node scripts/kit/check-migrations.mjs",
     "check:docs-drift": "node scripts/kit/check-docs-drift.mjs",
+    "template:release": "node scripts/kit/template-release.mjs",
+    "template:status": "node scripts/kit/template-status.mjs",
     "check:secdef": "node scripts/kit/check-secdef.mjs",
     "check:roadmap": "node scripts/kit/check-roadmap.mjs",
     "check:new-resource": "node scripts/kit/check-new-resource.mjs",
