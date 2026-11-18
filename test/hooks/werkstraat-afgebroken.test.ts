@@ -9,7 +9,7 @@ import { afterAll, describe, expect, test } from 'vitest';
 // liep: dan meldt `run` "afgebroken na <ms> ms: <commando>" respectievelijk "uitvoer te groot: <commando>", mét de
 // gedeeltelijke uitvoer die er was. De code blijft in alle drie de gevallen 1 (rood).
 //
-// Contract voor de developer: de `run` uit makeDeps (rails/hooks/werkstraat.mjs) verhuist ongewijzigd van gedrag naar
+// Contract voor de developer: de `run` uit makeDeps (rails/hooks/werkstraat.mjs) verhuist naar
 // rails/hooks/lib/run.mjs als `createRun(root)`, dat `(command, args, options)` teruggeeft (hooguit drie parameters,
 // R-CODE-02), met options `{ timeout?, env? }` en als resultaat `{ code, output }`; werkstraat.mjs gebruikt hem (het entry-script is niet importeerbaar: het leest stdin en
 // roept process.exit aan). Via het entry-script is een timeout niet te zien: de uitvoer van de 5000 ms-aanroepen
