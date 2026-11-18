@@ -152,16 +152,19 @@ niet kan vervangen. Wie `rails/hooks/` op een branch wijzigt, verandert de lopen
 remote) legt de start van een sessie vast en vraagt netwerk; weigert het rolhek alles met "geen geldig anker", probeer de actie opnieuw (de meethook legt het anker dan meestal vast) of start één sessie
 met netwerk.
 
-Het anker staat per werkmap in `.claude/hooks/.cache/main` (een worktree heeft zijn eigen) en wordt alleen bij de start van een
-sessie ververst: nieuw, hervat, na `/clear` of na compactie (`bron` in `.claude/hooks/laden.mjs`). Tijdens een sessie beweegt
-het niet mee met `main`. Dat merk je bij `pnpm pr:merge <nummer>`: het rolhek laat het alleen door als `scripts/`, `rails/` en
+Het anker staat per werkmap in `.claude/hooks/.cache/main` (een worktree heeft zijn eigen) en wordt, zolang het geldig is, alleen bij de
+start van een sessie ververst: nieuw, hervat, na `/clear`, na compactie of bij een fork (`bron` in `.claude/hooks/laden.mjs`).
+Tijdens een sessie beweegt het niet mee met `main`. Dat merk je bij `pnpm pr:merge <nummer>`: het rolhek laat het alleen door als `scripts/`, `rails/` en
 de hostbestanden (`package.json`, `.npmrc`, …) in de werkmap gelijk zijn aan de merge-base met het anker (`trustedMerge` in
 `rails/hooks/lib/runner-authority.mjs`). Komt er ná de sessiestart een PR op `main` die een van die paden wijzigt, en staat de
 werkmap op of voorbij die nieuwe `main`, dan weigert het rolhek met "scripts, rails en hostbestanden … gelijk aan het anker
 (ADR 0069)", ook vanaf een schone kopie van `main`. Opnieuw proberen helpt niet. Vergelijk het anker met de remote
-(`git ls-remote origin refs/heads/main`); loopt het achter, start of hervat dan de sessie, zodat de sessiestart het ververst.
+(`git ls-remote origin refs/heads/main`); loopt het achter, start of hervat dan de sessie met netwerk, zodat de sessiestart het ververst
+(zonder netwerk blijft het oude anker staan, zonder melding).
 Loopt het anker niet achter, kijk dan of de branch zelf een van die paden wijzigt (een beschermd pad: de eigenaar voegt
-samen), of er lokale of genegeerde bestanden onder die paden staan, en of het commando vanuit de repo-root draait.
+samen), of er lokale of genegeerde bestanden of een symlink onder die paden staan, of er een `gh`, `git` of `node` in
+`node_modules/.bin` staat, of `merge` in `.claude/gates.json` op `main` nog `niet-kritiek` is, en of het commando vanuit de
+repo-root draait.
 
 ## Branchnaam
 
