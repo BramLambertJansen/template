@@ -1,7 +1,7 @@
 // PreToolUse-hook "rolhek" (framework §8, ADR 0045), voor Edit/Write/MultiEdit/NotebookEdit/Bash en mcp__* van elke rol.
 // deny → exit 2 met de reden op stderr (Claude ziet hem); ask → de eigenaar kiest; anders door, eventueel met context.
 // Faalt dicht: een interne fout is exit 2 (een hook die crasht mag niets doorlaten). Wat tekstheuristiek niet vangt, ziet
-// alleen de review van de diff; op een beschermd pad is de review van een code-eigenaar op GitHub de grens (R-ROL-10).
+// alleen de review van de diff; op een beschermd pad weigert de padtoets van het mergescript (vangnet, R-ROL-10, ADR 0093).
 import { readFileSync } from 'node:fs';
 import { decide } from './lib/rolhek.mjs';
 import { rolhekContext } from './lib/rolhek-context.mjs';
