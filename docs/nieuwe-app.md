@@ -105,7 +105,7 @@ Stop als dit allemaal waar is, niet eerder:
 5. De eigenaar heeft `scripts/bootstrap.sh` gedraaid: toolchain uit `mise.toml`, dependencies en git-hooks (pre-commit, commit-msg, pre-push) staan.
 6. De lokale stack draait via `pnpm dev`: Postgres 17 + pgTAP en Mailpit, op poorten die niet botsen met een andere app.
    `scripts/doctor.sh` is groen.
-7. De migraties zijn toegepast als `app_migrator`, en je hebt met `psql` bewezen wat Fase 8 noemt.
+7. De migraties zijn toegepast als `app_migrator`, en `nieuwe-app.mjs db-bewijs` heeft bewezen wat Fase 8 noemt.
 8. De setup heeft het juiste app-venster op `~/code/<slug>` in Ubuntu geopend en laten controleren.
    VS Code, sandbox en deny-regels zijn volgens Fase 9 gecontroleerd en de testsessie is afgesloten.
    De browser-, login- en MFA-controles uit Fase 9 blijven verplicht.
@@ -120,12 +120,14 @@ Stop als dit allemaal waar is, niet eerder:
   Squash gooit de tweede ouder weg; de volgende `git merge template/main` conflicteert dan op elk bestand.
 - **Niets aan de inhoud van de template veranderen** behalve wat Fase 5 noemt. Geen regels "verbeteren", geen bestanden opruimen, geen dependencies toevoegen.
   Zie je iets wat fout lijkt in de template: noteer het voor de overdracht.
-- **`.env.local` alleen maken met `cp` uit `.env.example`** en daarna alleen de poortnummers vervangen en `API_PORT` en `WEB_PORT` toevoegen, zoals Fase 7.1 beschrijft (de code leest ze; `.env.example` noemt ze niet). Geen andere waarden, geen echte geheimen, nooit `.env.example` aanpassen.
+- **`.env.local` alleen maken met `node scripts/kit/nieuwe-app.mjs poorten --env`** (Fase 7.1): een kopie van `.env.example` waarin alleen de poorten en de poorten in de bijbehorende URL's verschillen. Een bestaande `.env.local` overschrijft niemand. Geen andere waarden, geen echte geheimen, nooit `.env.example` aanpassen.
 - **Geen destructieve commando's.** Nooit `docker compose down -v`, `docker system prune`, `rm -rf` buiten mappen die je in deze run zelf hebt gemaakt, `wsl --unregister`.
 - **`wsl --shutdown` alleen in Fase 3.3**, vóór er een stack draait. Draai je zelf in WSL, dan beëindigt het jouw sessie — dan is het een overdracht.
 - **Jij installeert geen toolchain en draait geen checks of tests.** `mise install`, `pnpm install`, `lefthook install` en
   `scripts/doctor.sh` draait de eigenaar via `scripts/bootstrap.sh` (Fase 7.2; framework §8: de toolchain installeert de eigenaar, niet de agent).
-  Uitzondering: het hernoemscript in fase 5.2 (alleen Node, via `mise exec`).
+  Uitzondering: `scripts/kit/nieuwe-app.mjs` (*Het setupscript*) en het hernoemscript `scripts/kit/app-init.mjs` (fase 5.2):
+  alleen Node, alleen de vastgezette versie uit `mise.toml`, via `mise exec`. Vóór de clone is dat
+  `~/.local/bin/mise exec node@<versie> -- node ~/setup/nieuwe-app.mjs …`, nooit `mise exec node --` zonder versie.
 - **Alleen ontbrekende intake vragen.** Vraag appnaam en een korte beschrijving van doel en doelgroep; herhaal geen al gegeven antwoorden.
   Andere instellingen volgen *Standaardwaarden*, tenzij de eigenaar afwijkt. Productdetails komen pas bij de eerste featurespec.
 - **Eén overdracht tegelijk.** Geef terminal of plek, genummerde stappen, het verwachte resultaat en "Typ klaar als dit gelukt is;
@@ -176,6 +178,38 @@ Bepaal één keer en noteer in het voortgangsbestand:
 - **Native Ubuntu**: geen Windows-stappen; root-commando's zoals bij WSL-binnen.
 
 In niet-interactieve shells wordt `~/.bashrc` niet geladen. Roep mise daarom altijd aan als `~/.local/bin/mise exec -- <cmd>` (kort: `mise x --`).
+
+## Het setupscript
+
+`scripts/kit/nieuwe-app.mjs` voert de deterministische stappen uit en meldt per stap `✓`, `·` (overgeslagen) of `✗` met een
+herstelregel (spec [nieuwe-app-script](template/specs/nieuwe-app-script.md)). Deelcommando's: `preflight` (Fase 4.2),
+`koppel` (5.1), `poorten` (7.1) en `db-bewijs` (8); `--dry-run` schrijft niets behalve het resultaatbestand. Exitcode 0: elke
+stap ok of overgeslagen; 1: een fout; 2: verkeerd gebruik. Het script start geen Docker, pakketbeheerder of rootcommando en
+pusht niet.
+
+- **Node-versie.** Vóór de clone staat het script in `~/setup` (START-NIEUWE-APP.md, stap 6) en draai je het alleen met de
+  vastgezette versie uit `mise.toml` van de template op `main`:
+
+  ```bash
+  versie=$(curl -fsSL https://raw.githubusercontent.com/BramLambertJansen/template/main/mise.toml | sed -nE 's/^node = "([^"]+)"/\1/p')
+  cd ~/setup && ~/.local/bin/mise exec "node@$versie" -- node ~/setup/nieuwe-app.mjs preflight --slug <slug> --zichtbaarheid public
+  ```
+
+  Dat is `mise exec node@<versie> --`, nooit `mise exec node --` zonder versie. Na de clone (4.3) gebruik je alleen het
+  exemplaar in de repo, zoals het hernoemscript, en niet meer dat in `~/setup`:
+  `~/.local/bin/mise exec node -- node scripts/kit/nieuwe-app.mjs <deelcommando>`.
+- **Windows-modus.** Dezelfde regel via WSL, nooit vanuit de Windows-werkmap (dan faalt de stap `pad`):
+  `wsl.exe -d <distro> -- bash -lc "cd ~/setup && ~/.local/bin/mise exec node@<versie> -- node ~/setup/nieuwe-app.mjs preflight"`,
+  na de clone met `cd ~/code/<slug>`. Lees een resultaatbestand met `wsl.exe -d <distro> -- bash -lc "cat <pad>"`, niet via `\\wsl$`.
+- **Resultaatbestand.** Elk deelcommando schrijft `.template/nieuwe-app-<deelcommando>.json` aan de git-root (buiten een
+  repo: `~/setup/.template/`), met `uitslag` (`ok` of `fout`), per stap `id`, `status`, `melding` en `herstel`, en `gegevens`.
+  `scripts/bootstrap.sh` en `scripts/doctor.sh` schrijven in dezelfde vorm `.template/bootstrap.json` en
+  `.template/doctor-<full|machine>.json`. `.template/` staat in `.gitignore`.
+- **Versheid.** Een resultaatbestand telt alleen als `head` gelijk is aan jouw `git rev-parse HEAD` direct na de stap (of
+  `null` buiten een repo) en `tijd` na het moment ligt waarop je de stap of de overdracht gaf; noteer dat moment in
+  `SETUP-PROGRESS.md`. Anders telt het als ontbrekend: draai de stap opnieuw of vraag de uitvoer.
+- Het bestand is bewijs van wat het script zag, geen grens: het telt naast je eigen controle uit dit playbook, niet in
+  plaats daarvan.
 
 ## Voortgangsbestand — lees dit eerst, elke keer
 
@@ -456,6 +490,12 @@ gh api repos/BramLambertJansen/template/commits/main --jq .sha
   curl -fsSL https://raw.githubusercontent.com/BramLambertJansen/template/main/docs/nieuwe-app.md | diff -q - ~/setup/nieuwe-app.md
   ```
 
+- Draai daarna `preflight` vanuit `~/setup` (*Het setupscript*, met `--slug <slug>` en `--zichtbaarheid <public|private>`) en
+  lees `~/setup/.template/nieuwe-app-preflight.json`. Het controleert in één keer Ubuntu-versie, werkmap, systemd,
+  gereedschap, inotify, de `gh`-login met scope `workflow`, de template, bij private het plan, de slug en de vijf
+  standaardpoorten. Een `✗` los je op volgens de herstelregel voordat je de repo maakt; `· hervatting: controleer
+  SETUP-PROGRESS.md` betekent dat map en repo al bestaan.
+
 ### 4.3 Repo maken en klonen
 
 ```bash
@@ -476,28 +516,26 @@ Controle: `git log --oneline` toont één commit; `ls` toont `AGENTS.md`, `compo
 
 ### 5.1 Koppelen
 
-"Use this template" maakt een nieuwe geschiedenis zonder band met de template. Leg die band één keer:
+"Use this template" maakt een nieuwe geschiedenis zonder band met de template. Leg die band één keer, met het script
+(*Het setupscript*): eerst `--dry-run`, dan echt.
 
 ```bash
-git remote add template https://github.com/BramLambertJansen/template.git
-git remote set-url --push template DISABLED   # nooit per ongeluk naar de template pushen
-git fetch template
-# Harde voorwaarde: de nieuwe repo en template/main moeten exact dezelfde Git-tree hebben.
-# Als de template sinds 'Use this template' is gewijzigd, zou -s ours dat verschil stilzwijgend verbergen.
-created_tree=$(git rev-parse 'HEAD^{tree}')
-template_tree=$(git rev-parse 'template/main^{tree}')
-if [ "$created_tree" != "$template_tree" ]; then
-  echo 'STOP: broninhoud van de nieuwe repo wijkt af van template/main; koppel nog niet.' >&2
-  echo "App-tree: $created_tree; template-tree: $template_tree" >&2
-  exit 1
-fi
-# Alleen bij overeenkomende tree en een nieuwe, nog niet gekoppelde repo:
-git merge --allow-unrelated-histories -s ours template/main \
-  -m "chore: link to template ($(git rev-parse --short template/main))"
+~/.local/bin/mise trust
+~/.local/bin/mise exec node -- node scripts/kit/nieuwe-app.mjs koppel --dry-run
+~/.local/bin/mise exec node -- node scripts/kit/nieuwe-app.mjs koppel
 ```
 
+`koppel` weigert bij een vuile werkmap, bij meer dan één eigen commit en bij een remote `template` met een andere URL dan
+`template.repository` uit `.claude/gates.json`. Het zet de remote `template` met push-URL `DISABLED` (nooit per ongeluk
+naar de template pushen), haalt `template/main` op en eist dat de tree van `HEAD` exact die van `template/main` is: is de
+template sinds "Use this template" gewijzigd, dan zou `-s ours` dat verschil stilzwijgend verbergen. Pas daarna maakt het de
+merge-commit `chore: link to template (<korte sha>)`. Een tweede run meldt `· al gekoppeld aan template/main (overgeslagen)`.
+
 `-s ours` houdt de inhoud van de app en registreert de template als voorouder. Daarna haalt `git merge template/main` alleen nieuwe template-commits binnen.
-Controle: noteer de gekoppelde volledige `template/main` SHA en beide tree-ID's in het voortgangsbestand. `git log --oneline --graph -5` toont een merge met twee ouders; `git diff HEAD~1 --stat` is leeg. **Bij een treeverschil:** niet mergen, niet de inhoud weggooien en niet heimelijk de templateversie als verwerkt markeren. Leg de mismatch vast en vraag een gerichte herstelbeslissing (bijvoorbeeld gecontroleerd opnieuw genereren als de nieuwe repo nog geen eigen werk bevat).
+Controle: lees `.template/nieuwe-app-koppel.json`: `uitslag` is `ok` en `head` is de nieuwe merge-commit. Noteer
+`gegevens.templateSha` (de volledige `template/main` SHA) en beide tree-ID's in het voortgangsbestand.
+`git log --oneline --graph -5` toont een merge met twee ouders; `git diff HEAD~1 --stat` is leeg. **Bij
+`✗ tree van HEAD wijkt af van template/main; niet gekoppeld`:** niet mergen, niet de inhoud weggooien en niet heimelijk de templateversie als verwerkt markeren. Leg de mismatch vast en vraag een gerichte herstelbeslissing (bijvoorbeeld gecontroleerd opnieuw genereren als de nieuwe repo nog geen eigen werk bevat).
 
 ### 5.2 Hernoemen
 
@@ -643,33 +681,32 @@ pre-commit, commit-msg en pre-push, en is de afdwinging lokaal zwakker dan in de
 ### 7.1 Poorten en `.env.local`
 
 ```bash
-ss -ltnH | awk '{print $4}' | grep -E ':(54322|54324|54325|8787|5173)$' || echo vrij
+~/.local/bin/mise exec node -- node scripts/kit/nieuwe-app.mjs poorten --env --dry-run
+~/.local/bin/mise exec node -- node scripts/kit/nieuwe-app.mjs poorten --env
 ```
 
-Bezet (meestal een andere app): tel 10 op bij **alle vijf** en controleer de nieuwe kandidaten opnieuw. Stop nooit een andere
-app om poorten vrij te maken. API en Vite mogen niet op de oude poorten blijven staan terwijl alleen database en mail verschuiven.
-Leg de vijf gekozen poorten en de bijbehorende publieke app-origin vast in de voortgang. Maak daarna voor een nieuwe app:
-
-```bash
-cp -n .env.example .env.local
-```
-
-Pas uitsluitend de poortvelden en bijbehorende URL-poorten aan; vervang niet blind ieder voorkomen van een getal in het bestand.
-Deze samenhang is verplicht, ook als de API- en webpoort nog niet als aparte variabele in het voorbeeld staan:
+`poorten` kiest de eerste vrije set: de vijf standaardpoorten, of bij een bezette poort (meestal een andere app) +10 bij
+**alle vijf**, tot +90. Stop nooit een andere app om poorten vrij te maken. Met `--env` schrijft het `.env.local` als kopie van
+`.env.example` waarin alleen dit verschilt; protocol, host, gebruikersnaam, wachtwoord en databasepad blijven:
 
 | Instelling in de nieuwe app | Waarde |
 |---|---|
 | `PG_PORT` en de poort in `DATABASE_URL`, `AUTH_DATABASE_URL`, `MIGRATOR_DATABASE_URL` | gekozen PG-poort |
 | `MAIL_UI_PORT` | gekozen Mailpit-UI-poort |
 | `SMTP_PORT` en de poort in `SMTP_URL` | gekozen SMTP-poort |
-| `API_PORT` | gekozen API-poort; voeg de variabele toe als die ontbreekt |
-| `WEB_PORT` | gekozen webpoort; voeg de variabele toe als die ontbreekt |
+| `API_PORT` en `WEB_PORT` | gekozen API- en webpoort |
 | `APP_ORIGIN` en `AUTH_BASE_URL` | beide exact `http://localhost:<web>` |
 
-Behoud protocol, host, gebruikersnaam, wachtwoord en databasepad van de lokale voorbeeld-URL's. Lees of toon geen geheimen
-om poorten te controleren. Bestond `.env.local` al, overschrijf hem niet: bevestig eerst de vastgelegde poorten van die app;
-bij een afwijkende bestaande configuratie vraag je de eigenaar om de beperkte poortaanpassing. De agent verandert geen andere waarden.
-`pnpm dev` maakt een ontbrekend bestand met standaardpoorten; daarom is deze stap vóór het starten nodig.
+Lees `.template/nieuwe-app-poorten.json` en leg de vijf poorten en de origin uit `gegevens` (`pg`, `mailUi`, `smtp`, `api`,
+`web`, `origin`) vast in de voortgang. Lees of toon `.env.local` zelf niet om poorten te controleren.
+
+Bestond `.env.local` al, dan kiest en schrijft het script niets: het neemt de poorten daaruit over
+(`✓ .env.local bestaat; poorten overgenomen …`). Bij `✗ .env.local bestaat met poorten die niet kloppen: <sleutels>` vraag
+je de eigenaar om de beperkte poortaanpassing; de agent verandert geen andere waarden. Bij
+`✗ .env.local niet leesbaar of zonder …` (de sandbox maskeert `.env.*`) draai je `poorten` buiten de sandbox, of geef je in
+Fase 8 `--pg <poort>` uit de overdracht van de eigenaar. `pnpm dev` controleert bij de start dat `API_PORT` en `WEB_PORT`
+vrij zijn en maakt een ontbrekend `.env.local` alleen als alle vijf standaardpoorten vrij zijn (anders `✗ poort … is bezet
+en .env.local ontbreekt`, zonder kopie); daarom is deze stap vóór het starten nodig.
 
 ### 7.2 Toolchain en git-hooks (overdracht)
 
@@ -688,7 +725,9 @@ Deze installatiecontrole vereist de toolchain, sandbox, Docker en git-hooks, maa
 > 2. De machinecontrole moet zonder fouten eindigen. Bij een ✗ of een foutcode: plak de uitvoer hier; ga nog niet verder.
 > 3. Typ *klaar*.
 
-Controle (jij): `test -x .git/hooks/pre-commit && grep -q lefthook .git/hooks/pre-commit && echo hooks-ok` en `ls -d node_modules`.
+Controle (jij): lees `.template/bootstrap.json` (per stap `mise-trust`, `mise-install`, `pnpm-install`, `lefthook`,
+`doctor-machine`; de falende stap is `fout`, de stappen erna `overgeslagen`) en `.template/doctor-machine.json`, volgens de
+versheidsregel van *Het setupscript*. Daarnaast: `test -x .git/hooks/pre-commit && grep -q lefthook .git/hooks/pre-commit && echo hooks-ok` en `ls -d node_modules`.
 
 ### 7.3 Stack starten (overdracht)
 
@@ -712,7 +751,8 @@ De template laat de agent geen Docker gebruiken; de stack is van de eigenaar. `p
 > 3. Typ *klaar*, of plak de laatste regels als het faalt.
 
 De volledige doctor blijft hier verplicht en controleert ook de vier draaiende appdiensten. Gebruik `--machine` of de
-diagnostische `--quick` niet als vervanging voor die eindcontrole. De browser/login/MFA-controle volgt in Fase 9.
+diagnostische `--quick` niet als vervanging voor die eindcontrole. De uitslag staat in `.template/doctor-full.json`
+(`uitslag` `ok`; ook de samenhang van de poorten in `.env.local`). De browser/login/MFA-controle volgt in Fase 9.
 
 ### Controle (jij, zonder docker)
 
@@ -738,16 +778,25 @@ psql "postgres://app_migrator:app_migrator@127.0.0.1:<pg>/app" -Atc "select curr
 Dit gebruikt `scripts/db-migrate.sh` en dbmate uit `mise.toml`; het script roept `mise` aan, dat in jouw niet-interactieve
 shell niet op `PATH` staat. Draai dbmate nooit los of met `pnpm dlx`: het script is het enige pad, met `MIGRATOR_DATABASE_URL` (ADR 0042).
 
-Bewijs met `psql` (`M=postgres://app_migrator:app_migrator@127.0.0.1:<pg>/app`, `A=postgres://api_user:api_user@127.0.0.1:<pg>/app`):
+Bewijs daarna met het script (*Het setupscript*):
 
-| Bewering | Commando | Verwacht |
+```bash
+~/.local/bin/mise exec node -- node scripts/kit/nieuwe-app.mjs db-bewijs
+```
+
+De PG-poort komt uit `.template/nieuwe-app-poorten.json` (7.1) of uit `--pg <poort>`; bij `✗ PG-poort onbekend` draai je
+eerst `poorten` of geef je de poort uit de overdracht. Het script leest `.env.local` nooit; gebruikers en wachtwoorden zijn
+de lokale demowaarden uit `.env.example`. Het bewijst met `psql` zes beweringen, elk een stap in
+`.template/nieuwe-app-db-bewijs.json`:
+
+| Stap | Bewering | Verwacht |
 |---|---|---|
-| Alle migraties toegepast | `psql "$M" -Atc "select count(*) from schema_migrations"` | gelijk aan `ls db/migrations/*.sql \| wc -l` |
-| Schema's bestaan | `psql "$M" -Atc "select string_agg(nspname, ',' order by nspname) from pg_namespace where nspname in ('app','better_auth','tap')"` | `app,better_auth,tap` |
-| Migrator is geen superuser (RLS geldt ook voor hem) | `psql "$M" -Atc "select rolsuper from pg_roles where rolname = current_user"` | `f` |
-| `api_user` ziet zonder rolwissel niets | `psql "$A" -Atc "select app.current_user_id()"` | `ERROR: permission denied for schema app` |
-| Met `SET LOCAL ROLE` wel, zonder gebruiker | `psql "$A" -At -c begin -c "set local role app_authenticated" -c "select coalesce(app.current_user_id(), '<null>')" -c rollback` | `<null>` |
-| Rolwissel blijft niet hangen | `psql "$A" -At -c begin -c "set local role app_authenticated" -c commit -c "select current_user"` | `api_user` |
+| `migraties` | alle migraties toegepast (als `app_migrator`) | aantal in `schema_migrations` gelijk aan `db/migrations/*.sql` |
+| `schemas` | de schema's bestaan | `app,better_auth,tap` |
+| `geen-superuser` | de migrator is geen superuser (RLS geldt ook voor hem) | `rolsuper` is `f` |
+| `api-zonder-rol` | `api_user` ziet zonder rolwissel niets | `permission denied for schema app` |
+| `rol-zonder-gebruiker` | met `SET LOCAL ROLE app_authenticated` wel, zonder gebruiker | `<null>` |
+| `rolwissel-lokaal` | de rolwissel blijft niet hangen na `commit` | `current_user` is `api_user` |
 
 Een afwijking is een bevinding over de template, geen setupfout: niet repareren, noteren voor de overdracht.
 
@@ -928,76 +977,15 @@ spec in de setupsessie. Een antwoord "klaar" op de vorige eigenaarstaak is geen 
 
 ## Naslag: dagelijks werken
 
-Voer alleen de gewenste stap uit in een Ubuntu-terminal; dit zijn geen vervolgstappen van de setup.
-
-1. Start stack, migraties, API en web als die nog niet draaien. Laat deze terminal open tot je wilt stoppen:
-
-   ```bash
-   cd ~/code/<slug> && pnpm dev
-   ```
-
-2. Controleer bij twijfel vanuit een tweede terminal. Verwacht: alles ✓.
-
-   ```bash
-   cd ~/code/<slug> && scripts/doctor.sh
-   ```
-
-3. Stop de containers wanneer je klaar bent:
-
-   ```bash
-   cd ~/code/<slug> && docker compose stop
-   ```
-
-Verwijder geen volumes tenzij je de database kwijt wilt.
+Verhuisd naar [app-naslag.md](app-naslag.md#naslag-dagelijks-werken): starten, controleren en stoppen na de setup.
 
 ## Eigen agentinstructies van de app
 
-`AGENTS.md`, `CLAUDE.md` en `.claude/` zijn van de template; wat elke sessie over deze app moet weten, staat in `docs/app.md`
-(spec [app-agentregels](template/specs/app-agentregels.md), R-DOC-11). `CLAUDE.md` importeert het bestand, dus Claude Code
-laadt het bij elke sessiestart; een runtime die imports niet volgt, leest het zelf.
-
-- Wat erin hoort: feiten van de app onder de vijf koppen van het skelet: wat de app is, provider en host, rollen, begrippen,
-  eigen commando's en valkuilen (wat faalt, en waardoor).
-- Wat er niet in hoort: een regel of een kopie van het regelboek. Een norm van de app staat in een app-ADR in `docs/adr/`;
-  `docs/app.md` verwijst ernaar met het nummer.
-- Bijhouden: in de PR die een van die feiten wijzigt. `node scripts/kit/feiten.mjs pad docs/app.md` toont schrijven vrij en
-  besluit agent: hoofdsessie en developer schrijven het, en een PR die alleen zulke paden raakt, merget de hoofdsessie via `pnpm pr:merge`.
-- Omvang: `pnpm leespad` meet het bestand als soort `app` tegen een streefwaarde in regels (`scripts/kit/leespad.mjs`,
-  `SOORTEN`) en meldt "let op" als het erboven komt; een meting, geen rode check.
-- Een app van vóór dit bestand heeft na de template-update de stub van de template ("Dit is de template zelf"). `app:init`
-  draait daar niet meer: de hoofdsessie schrijft het skelet uit `appAgentregels()` in `scripts/kit/app-init.mjs` en vult het.
-- `check-docs` meldt `docs:app-md:<…>` als `CLAUDE.md` het bestand importeert en het ontbreekt
-  (`scripts/kit/check-docs.mjs`, `appMdViolations`).
+Verhuisd naar [app-naslag.md](app-naslag.md#eigen-agentinstructies-van-de-app): wat in `docs/app.md` hoort en wie het bijhoudt.
 
 ## Een eigen beschermd pad
 
-Een app beschermt eigen paden (bijvoorbeeld een betaalmodule) in `.claude/gates.app.json`, niet in `.claude/gates.json`: dat
-bestand is van de template, en een eigen rij daarin geeft bij elke template-update een conflict (spec
-[app-padtabel](template/specs/app-padtabel.md)). Het app-bestand vult de padtabel aan en kan alleen toevoegen of aanscherpen:
-
-```json
-{
-  "$comment": "Eigen beschermde paden van de app (docs/nieuwe-app.md).",
-  "paden": { "payments/**": { "schrijven": "voorReview", "besluit": "besluit-pr" } }
-}
-```
-
-- Het hoogste niveau is `voorReview` met `besluit-pr`: de developer en de andere rollen schrijven er niet, de hoofdsessie
-  vraagt eerst, en werk op het pad is kritiek (de eigenaar voegt de PR samen). Voor het samenvoegen beschermt in een app een
-  rij met `besluit-pr` of met schrijven `voorReview`: `pnpm pr:merge` weigert dan en de eigenaar voegt samen; een rij met
-  alleen `eigenaar` of `gate` doet dat niet (ADR 0093 punt 4, spec agent-samenvoegen AC-2). `altijdVragen` en besluit `agent` kunnen alleen
-  in de template; een glob die al in `.claude/gates.json` staat, herhaal je niet, scherp aan met een eigen, specifiekere glob.
-  `check-docs` meldt elke afwijking als `docs:gates-app:<…>` (`scripts/kit/check-docs.mjs`, `appViolations`).
-- Het bestand zelf is altijdVragen en besluit-pr (de vloer): de hoofdsessie schrijft het na akkoord van de eigenaar, in een
-  eigen PR. Het rolhek leest het pas als het op `main` staat (`rails/hooks/lib/rolhek-context.mjs`, `configuratie`).
-- Genereer daarna `.github/CODEOWNERS` opnieuw en commit het mee (een leesbare lijst, geen grens; `check-docs` eist dat hij klopt); `node scripts/kit/feiten.mjs pad <pad>` toont het niveau,
-  met een app-bron als `<glob> (app)`.
-
-```bash
-cd ~/code/<slug>
-node scripts/kit/codeowners.mjs --schrijf
-node scripts/kit/feiten.mjs pad payments/x.ts
-```
+Verhuisd naar [app-naslag.md](app-naslag.md#een-eigen-beschermd-pad): eigen paden beschermen in `.claude/gates.app.json`.
 
 ## Een template-update binnenhalen
 
