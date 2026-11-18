@@ -121,7 +121,7 @@ Geen schermen. De meldingen van `check-docs`, de stub en het skelet staan letter
 
 - Een eigen padregel van een app onder `.claude/rules/`: pas bij een app die het nodig heeft.
 - Een wijzer in `AGENTS.md` voor andere runtimes: `AGENTS.md` zit op 93 % van zijn grens en wat erbij komt moet er netto uit (R-DOC-06); geen gebruikte runtime mist het bestand.
-- Een check op normwoorden in `docs/app.md`, of een check die eist dat een app het skelet heeft ingevuld: eerst zien wat een app erin zet (ST-09).
+- Een check op normwoorden in `docs/app.md`, of een check die eist dat een app het skelet heeft ingevuld: eerst zien wat een app erin zet (de proef-app).
 - Templatestatus uit `AGENTS.md` halen: PR #770.
 
 ## Testplan
