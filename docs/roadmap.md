@@ -329,6 +329,26 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   eigenaarbesluit met reden. **Klaar als:** `eslint-suppressions.json` is leeg en `pnpm lint:prune` verandert niets.
   aanleiding: `eslint-suppressions.json` (review 2026-11-03, bevinding P5: 123 onderdrukkingen zonder doel, een dag later 174)
 
+- [ ] **Overnameplan golf 1: agents leveren altijd en goedkoop.** Uit [het overnameplan](reviews/2026-11-18-overnameplan-agentic.md) §3:
+  YAML-quotes en een frontmatter-parsetest voor agents en skills, een skillrouter in de developer, een budget voor toolcalls met
+  skelet eerst, geen geneste Agent-tool voor bouwers, een reviewpakket per range, en weigeringen en tokens per rol in de meting-store.
+  Elk punt een eigen PR. **Klaar als:** nul subagentruns zonder rapport over 10 PR's en minder dan 120k tokens per review.
+  aanleiding: `docs/reviews/2026-11-18-overnameplan-agentic.md` (§3; leerpunten #792, #676, #664)
+- [ ] **Overnameplan golf 2: vaste vorm voor overdracht en review.** [Overnameplan](reviews/2026-11-18-overnameplan-agentic.md) §4:
+  een statuscontract voor alle vijf agents, afgedwongen door de SubagentStop-hook (ook voor architect en docs), het reviewrapport als schema
+  met AC-tabel, `Niet getoetst:` en ruisfilter, en de security-review in dezelfde vorm. **Klaar als:** de hook weigert een eindbericht zonder
+  status, en reviewerStop eist de AC-tabel.
+  aanleiding: `docs/reviews/2026-11-18-overnameplan-agentic.md` (§4; leerpunten #683, #596, #688)
+- [ ] **Overnameplan golf 3: groen betekent iets.** [Overnameplan](reviews/2026-11-18-overnameplan-agentic.md) §5: een bewijsregel per AC
+  met exacte testtitel in check-docs, trigger en uitkomst per nieuwe AC, BASE_ROOD/IN_BRANCH in `pr:verify`, en een melding
+  "0 tests geraakt" in de Stop-hook. **Klaar als:** elk punt heeft een check met falende fixtures.
+  aanleiding: `docs/reviews/2026-11-18-overnameplan-agentic.md` (§5; leerpunten #793, #678, #758)
+- [ ] **Overnameplan golf 4: besluit-PR's die ADR's herzien.** [Overnameplan](reviews/2026-11-18-overnameplan-agentic.md) §6:
+  `gebouwd` afleiden uit merge-feiten (ADR 0054, ADR 0080, ADR 0062, R-WERK-08), een begrensde fixlus (stopregel in CLAUDE.md,
+  framework §8), schaduwmodus met een vooraf genoemde drempel (R-PRINC-10, ADR 0071, ADR 0091) en een gedragsbaseline voor
+  tekstwijzigingen aan agents en skills (ADR 0059). Elk punt eerst als besluit-PR; de bouw volgt na de merge door de eigenaar.
+  aanleiding: `docs/reviews/2026-11-18-overnameplan-agentic.md` (§6; eigenaarvraag 2026-11-18)
+
 ## Geparkeerd
 
 Bewust nog niet, tot de genoemde aanleiding er is (P1). Niets verdwijnt: elk item staat er met zijn scope.
