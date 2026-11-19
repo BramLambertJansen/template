@@ -399,7 +399,7 @@ Ontwerp 7 (#719, C-2), ook risicowerk (securitysuite): tester eerst, developer, 
    - Integratie in `pnpm test:db` (tester): `test/security/actorsoorten.int.test.ts` (AC-17): de enige plek met een echte derde
      rol, gecommit en opgeruimd met `cleanupTestRoles`; namen met voorvoegsel `suitetest_`, zodat ze niet
      botsen met `planner`, `eigenaar` en `toezicht` uit die tests.
-   - `test/security/routes.int.test.ts` en `owner-actors.int.test.ts` draaien ongewijzigd groen in de runner: dat is het bewijs
+   - `test/security/routes.int.test.ts` en `owner-actors.int.test.ts` blijven groen in de runner (`routes.int.test.ts` itereert nu over `ac4Gevallen` en `ac5Gevallen`): dat is het bewijs
      dat de verwachtingen voor `user` en `admin` gelijk blijven, naast de vergelijking met `1113a2a5` in AC-15.
 5. Lokaal: `pnpm exec tsc -b --noEmit`, `pnpm test:unit`, `pnpm ratchet`, `pnpm check:roadmap`, `pnpm format:check`, de
    geheimenscanner. `pnpm test:db` draait alleen in de runner; de branch wijzigt een script dat de host uitvoert, dus het bewijs
