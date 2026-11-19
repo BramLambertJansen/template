@@ -57,7 +57,7 @@ n.v.t. — geen routes.
   andere fout gaat door. De bestaande tests in `test/hooks/meting.test.ts` blijven ongewijzigd en groen: mapgeval via
   "zonder METING_DIR, gewone repo" en "branch uit .git/HEAD", bestandsgeval via "zonder METING_DIR, worktree met gitdir en
   commondir". Dat er geen `statSync` meer is, toetsen de review en CodeQL (AC-5), geen gedragstest.
-- **codeql-bewaking/AC-5** — In de CodeQL-analyse van de bouw-PR zijn #10 en #4 dicht en is er geen nieuwe melding in de
+- **codeql-bewaking/AC-5** — Vervallen door ADR 0100 (procesbewijs is geen acceptatiecriterium). Was: In de CodeQL-analyse van de bouw-PR zijn #10 en #4 dicht en is er geen nieuwe melding in de
   geraakte bestanden (ook niet op `commonDir` in `meting.mjs`, dat `existsSync` vóór `readFileSync` houdt). De bouw-PR
   voegt geen `codeql`-onderdrukking, `eslint-disable` of uitzondering in de CodeQL-config toe. Na de merge meldt de
   hoofdsessie dat #10 en #4 op `main` op `fixed` staan (niet `dismissed`).

@@ -1,12 +1,6 @@
 {
   "dependency-cruiser": [],
   "check-docs": [
-    "docs:ac:codeql-bewaking:AC-5",
-    "docs:ac:create-server:AC-10",
-    "docs:ac:kooi:AC-8",
-    "docs:ac:kooi:AC-9",
-    "docs:ac:tests-naar-vermogen:AC-10",
-    "docs:ac:tests-naar-vermogen:AC-9",
     "docs:docs/template/specs/design-system.md:dood-pad:src/web/dev/dashboard-links.tsx",
     "docs:docs/template/specs/design-system.md:dood-pad:src/web/dev/design-system-page.test.tsx",
     "docs:docs/template/specs/design-system.md:dood-pad:src/web/dev/design-system-page.tsx",
