@@ -235,7 +235,7 @@ export function voorwaarden(api, doel) {
 export const STEEKPROEF = 'Meld deze merge als steekproef (ADR 0069 punt 5).';
 
 /**
- * De slotregels na een geslaagde merge: de melding en de steekproefregel (spec agent-merge-niet-kritiek AC-7). Het script
+ * De slotregels na een geslaagde merge: de melding en de steekproefregel (spec agent-samenvoegen AC-10). Het script
  * telt niet: de eigenaar telt (ADR 0069 punt 5).
  * @param {number} nummer @param {string} head
  */

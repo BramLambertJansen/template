@@ -8,10 +8,9 @@ Herzien: 2026-11-12 (#705): punt 3, 4 en 6: de toets vooraf wordt niet verder ui
 
 Herzien: 2026-11-14 (#714): ingekort tot wat nog geldt na ADR 0091; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 
-Wijzigt [0066](0066-schrijfgrens-op-effect.md) punt 3 ("de toets vooraf blijft"), de buitenscope "de hoofdsessie als dader"
-van spec rolhek-effect (OV-1) en in spec rolhek-lezen AC-2 en AC-5 het `--output`-verbod (voortaan op effect); vult
+Wijzigt in spec rolhek-lezen AC-2 en AC-5 het `--output`-verbod (voortaan op effect); vult
 [0045](0045-railwerk.md) aan. Drempel: A3 (een check vooraf vervalt; de controle verschuift naar achteraf) en A4. Uitwerking:
-[spec](../specs/rolhek-vooraf-krimp.md). De verschuiving naar achteraf is teruggedraaid (0091).
+[spec rolhek-vooraf](../specs/rolhek-vooraf.md). De verschuiving naar achteraf is teruggedraaid (0091).
 
 ## Context
 

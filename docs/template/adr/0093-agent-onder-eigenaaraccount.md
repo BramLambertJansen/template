@@ -38,7 +38,7 @@ zou het zonder klik van de eigenaar op `main` komen.
 
 1. **Eén identiteit.** De agent werkt overal onder het account van de eigenaar: lokaal met diens `gh`-login, in de cloud via
    diens gekoppelde GitHub-account. Er is geen GitHub App, geen installatietoken, geen sleutel en geen machineaccount.
-   `scripts/kit/agent-token.mjs` en de spec `agent-token` vervallen.
+   `scripts/kit/agent-token.mjs` vervalt.
 2. **De ruleset bewaakt wat GitHub onder één account kan bewaken:** alleen via een pull request, geen delete of force push,
    precies `requiredChecks` van Actions, opgeloste gesprekken, alleen merge en squash. De review van een code-eigenaar gaat uit
    de ruleset en er is geen bypass: ook de eigenaar passeert geen rode verplichte check. De optie `--bypass-beheerder`

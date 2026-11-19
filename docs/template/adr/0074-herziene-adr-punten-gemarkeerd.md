@@ -10,7 +10,7 @@ Herzien: 2026-11-18: gewijzigd door [0097](0097-herzieningsregel-zonder-pr-numme
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 2 (een herzieningsregel is voortaan ook verplicht als een later ADR een
 punt wijzigt zonder de tekst te herschrijven); vult [0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md) punt 1 (het
 regelboek is bindend) aan. Drempel: A4 (afspraak over geaccepteerde ADR's) en een nieuwe check in `check-docs`. Uitwerking:
-[spec](../specs/adr-herzien-markering.md). Aanleiding: review van 3 november 2026, bevinding P8b.
+R-CI-05 in `docs/framework.md` (de check verviel met ADR 0089 punt 5). Aanleiding: review van 3 november 2026, bevinding P8b.
 
 ## Context
 

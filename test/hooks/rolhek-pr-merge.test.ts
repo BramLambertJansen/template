@@ -6,7 +6,7 @@ import { afterEach, describe, expect, test } from 'vitest';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 import { MERGE_FILES, trustedMerge } from '../../rails/hooks/lib/runner-authority.mjs';
 
-// ADR 0069 punt 4, spec agent-merge-niet-kritiek AC-4: alleen de hoofdsessie, alleen `pnpm pr:merge <nr>`, en zonder prompt
+// ADR 0069 punt 4, agent-samenvoegen/AC-9: alleen de hoofdsessie, alleen `pnpm pr:merge <nr>`, en zonder prompt
 // alleen met modus `niet-kritiek` in het anker en ongewijzigde scripts, rails en hostbestanden. Andere merge-routes blijven dicht.
 const config = loadConfig(readFileSync('.claude/gates.json', 'utf8'));
 
@@ -42,7 +42,7 @@ function verdict(command: string, opties: { agent?: string; vertrouwd?: boolean;
   return { uitslag: decision.allow === true ? 'allow' : 'context', reden: '' };
 }
 
-describe('agent-merge-niet-kritiek/AC-4 rolhek op pnpm pr:merge', () => {
+describe('agent-samenvoegen/AC-9 rolhek op pnpm pr:merge', () => {
   test.each(['pnpm pr:merge 12', '  pnpm  pr:merge 7 '])('hoofdsessie, vertrouwd: allow (%s)', (command) => {
     expect(verdict(command).uitslag).toBe('allow');
   });
@@ -177,7 +177,7 @@ function fixture(modus = 'niet-kritiek') {
   return { root, basis: { sha, read: (rel: string) => (rel === '.claude/gates.json' ? gates : null) } };
 }
 
-describe('agent-merge-niet-kritiek/AC-4 trustedMerge', () => {
+describe('agent-samenvoegen/AC-9 trustedMerge', () => {
   test('MERGE_FILES dekt de hostbestanden, scripts en rails', () => {
     expect(MERGE_FILES).toEqual(
       expect.arrayContaining(['package.json', '.npmrc', '.pnpmfile.cjs', 'mise.toml', 'scripts', 'rails']),

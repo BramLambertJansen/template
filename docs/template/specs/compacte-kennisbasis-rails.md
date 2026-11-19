@@ -100,14 +100,13 @@ Geen accountbeheerpad uit `docs/gouden-pad.md` past (werkstraat, geen UI).
   Tests, migraties, gegenereerde bestanden en `jsonGates` houden hun eigen uitslag. Ook als nu: deny voor een developer die
   `goedgekeurd`/`geaccepteerd` schrijft; `gebouwd` alleen door hoofdsessie en architect (ADR 0095); A4-basis uit main, ook na Bash; de UI-melding;
   `readRegistry`; `permissions.ts`, `app.ts`, `new:resource` en het gouden pad.
-- **compacte-kennisbasis-rails/AC-16** — De diff-guard hangt niet van een label af: `overgang` als de auteur goedkeurder is,
-  anders een APPROVED van een niet-auteur op de head-SHA.
+- **compacte-kennisbasis-rails/AC-16** — Vervallen door ADR 0089 punt 5 (de diff-guard is weg). Was: De diff-guard hangt
+  niet van een label af: `overgang` als de auteur goedkeurder is, anders een APPROVED van een niet-auteur op de head-SHA.
 - **compacte-kennisbasis-rails/AC-17** — Voor elke rol geweigerd bij `gh pr create` en `gh pr edit`: `-l x`, `--label x`,
   `--label=x`, `--add-label x`, `--add-label=x`, `--remove-label x`, `--remove-label=x`; ook `gh pr review` en labels, reviews
   en statussen via de API. Ongewijzigd: `gh issue create` (leerpuntvorm en de vraag aan de eigenaar uit ADR 0059,
   `test/hooks/rolhek-leerpunt.test.ts`) en leesfilters zoals `gh pr list --label x`.
-- **compacte-kennisbasis-rails/AC-18** — Een gewijzigde of verwijderde mandaattest: het rolhek weigert elke subagent, de
-  diff-guard noemt het pad (`verifyTestwijzigingen` geldt alleen in de feature-lane). Proces, geen test: de PR noemt hem met
+- **compacte-kennisbasis-rails/AC-18** — Een gewijzigde of verwijderde mandaattest: het rolhek weigert elke subagent. Proces, geen test: de PR noemt hem met
   eigenaarakkoord.
 
 ## Randgevallen

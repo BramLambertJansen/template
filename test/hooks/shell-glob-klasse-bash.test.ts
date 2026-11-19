@@ -6,8 +6,8 @@ import { beforeAll, describe, expect, test } from 'vitest';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 import { globKlasseRegex, globTekstRegex } from '../../rails/hooks/lib/shell.mjs';
 
-// Differentieel: `globKlasseRegex` en het echte pad `globTekstRegex` tegen echte bash (leerpunten #618/#622, spec
-// rolhek-vooraf-krimp AC-3, AC-10 (c)); de differentiële test toetst `globTekstRegex`, via `codeRegex`.
+// Differentieel: `globKlasseRegex` en het echte pad `globTekstRegex` tegen echte bash (leerpunten #618/#622,
+// rolhek-vooraf/AC-3, rolhek-vooraf/AC-2 (c)); de differentiële test toetst `globTekstRegex`, via `codeRegex`.
 // Eis: elke bash-treffer is ook een treffer van de code. De code mag strenger zijn (meer treffers), nooit nauwer: een
 // glob die bash laat passen op `.git` en de code niet, is een sluiproute. De code werkt bewust onder vlag `i`.
 

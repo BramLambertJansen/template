@@ -10,11 +10,11 @@ Herzien: 2026-11-12 (#705): punt 2: de effecttoets is weg (ADR 0091 punt 1)
 
 Herzien: 2026-11-14 (#714): ingekort tot wat nog geldt na ADR 0091; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 
-Wijzigt [0082](0082-zelfladend-sandbox-en-leeslijst.md) punt 2 en 4 en [0066](0066-schrijfgrens-op-effect.md) punt 2.
+Wijzigt [0082](0082-zelfladend-sandbox-en-leeslijst.md) punt 2 en 4.
 Drempel: A3 (een grens van het besturingssysteem vervalt en een vangnet wordt smaller) en A4. Aanleiding: melding van de
 eigenaar (5 november 2026) dat git, commit en push, de sandbox en de subagents "lopende band" falen, ook bij het opstarten van
-een nieuwe app; leerpunten #553, #582, #583 en #587. Uitwerking: [spec rolhek-vooraf-krimp](../specs/rolhek-vooraf-krimp.md)
-AC-3 en AC-10, [spec rolhek-effect](../specs/rolhek-effect.md) AC-1 en AC-10.
+een nieuwe app; leerpunten #553, #582, #583 en #587. Uitwerking:
+[spec rolhek-vooraf](../specs/rolhek-vooraf.md) rolhek-vooraf/AC-2 en rolhek-vooraf/AC-3.
 
 ## Context
 

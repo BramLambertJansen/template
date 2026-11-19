@@ -895,7 +895,7 @@ Nog niet uitgebrachte wijzigingen staan als fragment in `docs/template-changelog
 Agent-merge vraagt nu ook `agentMerge.maxBytes` in `.claude/gates.json` (gewijzigde bytes, geheel getal ≥ 1; de template
 gebruikt 40000), naast `maxRegels`. Een app zonder `maxBytes` valt dicht: geen agent-merge, de diff-guard meldt
 "agentMerge ontbreekt of is onleesbaar" en `check-docs` is rood tot de sleutel er staat
-([spec](template/specs/agent-merge-bytegrens.md)).
+(spec agent-merge-bytegrens (vervallen)).
 
 Account-lifecycle vereist de nieuwe migratie vóór de nieuwe API-code. Bestaande accounts krijgen geen verzonnen
 loginhistorie: de lijst toont "Onbekend" tot de volgende volledig geslaagde login. Zie

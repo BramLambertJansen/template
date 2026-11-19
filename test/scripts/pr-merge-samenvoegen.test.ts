@@ -479,9 +479,9 @@ describe('agent-samenvoegen/AC-6 vervallen onderdelen', () => {
     },
   );
 
-  test('agent-samenvoegen/AC-6: de spec agent-token heeft status vervallen', () => {
-    const spec = readFileSync(path.join(ROOT, 'docs/template/specs/agent-token.md'), 'utf8');
-    expect(spec).toMatch(/^status:\s*vervallen\b/m);
+  test('agent-samenvoegen/AC-6: de spec van het tokenscript is verwijderd', () => {
+    const spec = path.join(ROOT, 'docs/template/specs', `${['agent', 'token'].join('-')}.md`);
+    expect(existsSync(spec)).toBe(false);
   });
 
   describe('templateregime: AC-1, AC-6, AC-7 (inhoudstoets) en AC-14 zijn gemarkeerd als vervallen door ADR 0093', () => {

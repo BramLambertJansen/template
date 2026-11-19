@@ -252,7 +252,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   **Eisen uit het regelboek** (R-DOC-10: tot de bouw staan ze hier; de bouw-PR zet ze terug in het regelboek): `check-release-ci` vóór én na de build: commit is kop van `main` met groene CI, productie ook staging; `check-deployment-schema`: productieschema dekt code; beide falen dicht (was in R-REL-02). Met CAPTCHA krijgen `script-src` en `frame-src` het CAPTCHA-domein (was in R-SEC-04).
   aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (B-6: niet geparkeerd besloten)
 - [x] **ADR 0029 stap 7: agent-merge van niet-kritiek werk** (#448; ADR 0069, vervangt ADR 0046 punt 30; onder het account van de eigenaar).
-  Spec: `docs/template/specs/agent-merge-niet-kritiek.md` (de oude spec `agent-merge` is vervallen): oordeel `agent-merge` in de diff-guard,
+  Nu: `docs/template/specs/agent-samenvoegen.md`: oordeel `agent-merge` in de diff-guard,
   job in `guard.yml`, `pnpm pr:merge`, rolhek en `merge: "niet-kritiek"` in `.claude/gates.json`. Herzien (#456, #460, #464):
   Codex-voorwaarde `"indien-aanwezig"` en omvanggrens `agentMerge.maxRegels`, spec agent-merge-zonder-codex (verwijderd met het archief).
   Herzien (#468, #476, #483): een 👀 of lopende Codex-review laat `pr:merge` wachten, spec agent-merge-codex-wachten (verwijderd met het archief).
@@ -263,7 +263,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   Niet in deze klasse gedicht: omhulsels met opties (`sudo -u x gh …`, `env -i gh …`) en omhulsels buiten de lijst (`timeout`, `xargs`);
   expansie (`$GH`, `bash -c`) ziet alleen de review van de diff (R-ROL-10). Ook open, voor de reviewer: `reviewerMay` negeert voorafgaande variabelen
   (`GIT_PAGER=…`, `PATH=…`) en opties als `git diff --output=<bestand>`.
-  aanleiding: `rails/hooks/lib/rolhek.mjs` (spec `agent-merge`, Bekende gaten; vervallen, nu `docs/template/specs/agent-merge-niet-kritiek.md`)
+  aanleiding: `rails/hooks/lib/rolhek.mjs` (Bekende gaten; nu `docs/template/specs/agent-samenvoegen.md`)
 - [x] **Schrijven via een programma buiten `fileTargets` omzeilt het rolhek.** `writeTargets` in `rails/hooks/lib/shell.mjs` kent alleen een
   vaste lijst (redirect, `tee`, `sed -i`, `cp`, `git checkout` …). Een script via `python3`, `node -e` of een heredoc naar zo'n interpreter
   (`python3 - <<EOF`), en ook `patch`, `git apply`, `curl -o`, `tar x` of `prettier --write`, schrijft beschermde paden zonder de
@@ -439,7 +439,7 @@ Bewust nog niet, tot de genoemde aanleiding er is (P1). Niets verdwijnt: elk ite
   - devcontainer of agent-sandbox in Docker; terug als: iemand meewerkt of agents zonder toestemmingsprompts draaien
   aanleiding: `docs/framework.md` §12 (R-FASE-01; één plek per norm, R-DOC-06)
 - [ ] **ADR 0030 PR 2: algemene agent-merge**. Voor niet-kritiek werk vervangen door ADR 0069
-  (`docs/template/specs/agent-merge-niet-kritiek.md`); dit item gaat alleen nog over agent-merge van kritiek werk. Zie `.claude/skills/opleveren/SKILL.md`
+  (`docs/template/specs/agent-samenvoegen.md`); dit item gaat alleen nog over agent-merge van kritiek werk. Zie `.claude/skills/opleveren/SKILL.md`
   en `docs/operations/agent-doorloop.md`.
   terug als: er ≥ 10 feature-PR's zijn zonder gevolgfout, de AC→test-check en het risico-overzicht actief zijn en ST-01 is besloten
 - [ ] **R-CODE-10 consequent: Engelse technische namen, Nederlandse UI** (was #407). Nederlandse identifiers, scriptnamen, configsleutels

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { nummerUit, voorwaarden } from '../../scripts/kit/pr-merge.mjs';
 
-// `pnpm pr:merge` (ADR 0069 punt 3, spec agent-merge-niet-kritiek AC-3): per voorwaarde een nagebootst REST-antwoord dat
+// `pnpm pr:merge` (ADR 0069 punt 3, agent-samenvoegen/AC-8): per voorwaarde een nagebootst REST-antwoord dat
 // de merge tegenhoudt. De wereld `goed` is mergebaar; elke test verandert precies één antwoord.
 // GEWIJZIGD (templateregime AC-7, ADR 0089 punt 5): de inhoudstoets is weg. De rijen over de job agent-merge (6), "achter
 // main" en "review op een oude SHA", en de test over een run zonder pull_requests zijn verwijderd; de wereld heeft geen
@@ -70,7 +70,7 @@ const zet = (sleutel: string, waarde: unknown) => (w: Wereld) => {
   w[`repos/${REPO}/${sleutel}`] = waarde;
 };
 
-describe('agent-merge-niet-kritiek/AC-3 pr:merge', () => {
+describe('agent-samenvoegen/AC-8 pr:merge', () => {
   test('alle voorwaarden vervuld: geen reden', () => {
     expect(redenen()).toBe('');
   });

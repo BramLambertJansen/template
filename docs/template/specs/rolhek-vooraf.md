@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd
 namespace: rolhek-vooraf
 ---
 
@@ -7,8 +7,7 @@ namespace: rolhek-vooraf
 
 ## Doel
 
-De levende toets vooraf van het rolhek op Bash-commando's in één spec, na het verwijderen van spec
-rolhek-vooraf-krimp (vervallen) (ADR 0071, 0082, 0083, 0086, 0091 punt 2 en 3). Het gedrag bestaat al; deze spec verandert
+De levende toets vooraf van het rolhek op Bash-commando's in één spec (ADR 0071, 0082, 0083, 0086, 0091 punt 2 en 3). Het gedrag bestaat al; deze spec verandert
 het niet.
 
 ## Rollen en wie wat ziet
@@ -97,7 +96,7 @@ vervallen-documenten-weg, PR 1). Geen migratie, route, permissie of resource: ni
 
 ## Buiten scope
 
-De leeslijst in schaduw of aan (S2, S3), `denyWrite` en de metingen uit spec rolhek-vooraf-krimp (vervallen): vervallen door
+De leeslijst in schaduw of aan (S2, S3), `denyWrite` en de metingen: vervallen door
 ADR 0082 (Herzien 2026-11-17) en ADR 0091 punt 3.
 
 ## Testplan

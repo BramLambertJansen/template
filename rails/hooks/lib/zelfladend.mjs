@@ -1,4 +1,4 @@
-// Zelfladende paden (ADR 0071 punt 2, spec rolhek-vooraf-krimp AC-3): wat Claude Code, git of pnpm zelf laadt of uitvoert
+// Zelfladende paden (ADR 0071 punt 2, spec rolhek-vooraf AC-3): wat Claude Code, git of pnpm zelf laadt of uitvoert
 // (`.git/**`, de hook-stubs, `.claude/settings.json`, `lefthook.yml`, `.pnpmfile.cjs`). Een schrijfactie daar kan het rolhek
 // zelf uitschakelen; daarom toetst het deze paden vooraf, op elk woord van het commando.
 import path from 'node:path';
@@ -42,7 +42,7 @@ function basis(glob) {
 
 /**
  * Een glob-woord als reguliere expressie per padstuk; `*`, `?` en `[…]` passen niet op een `.` vooraan (bash zonder dotglob).
- * Een klasse volgens bash, ook met POSIX-klassen (AC-3, #618); zonder sluitende `]` is de `[` letterlijk (AC-10 (c), #622).
+ * Een klasse volgens bash, ook met POSIX-klassen (AC-3, #618); zonder sluitende `]` is de `[` letterlijk (spec rolhek-vooraf AC-2 (c), #622).
  * `ruim`: het commando had een `\`, `'` of `"`; een klasse kan dan op elk teken passen (review B3, eigenaarbesluit
  * 7 november 2026, `globTekstRegex`).
  * @param {string} stuk @param {boolean} [ruim]
@@ -355,15 +355,15 @@ function gitBesluit(argv, { ctx, omgelegd, role }, besluit) {
   // `git sparse-checkout` haalt hele mappen uit de werkmap.
   const wist = (subcommand === 'rm' && !rest.some((arg) => /^--cac/.test(arg))) || subcommand === 'mv';
   if (subcommand === 'sparse-checkout' || (wist && rest.some((woord) => !woord.startsWith('-') && kanZelfladendRaken(woord, ctx)))) {
-    weiger(`git ${subcommand} kan zelfladende paden uit de werkmap halen (spec rolhek-vooraf-krimp AC-3)`, role, besluit);
+    weiger(`git ${subcommand} kan zelfladende paden uit de werkmap halen (spec rolhek-vooraf AC-3)`, role, besluit);
     return;
   }
   const git = gitWerkmapZonderPaden(argv, ctx);
   if (git === null) return;
   if (role !== 'hoofdsessie')
-    besluit.deny.push(`subagent: git ${git} schrijft de werkmap, ook zelfladende paden; alleen met expliciete paden buiten de zelfladende lijst (spec rolhek-vooraf-krimp AC-3)`);
+    besluit.deny.push(`subagent: git ${git} schrijft de werkmap, ook zelfladende paden; alleen met expliciete paden buiten de zelfladende lijst (spec rolhek-vooraf AC-3)`);
   else if (argv.slice(2).some((woord) => !woord.startsWith('-') && kanZelfladendRaken(woord, ctx)))
-    besluit.ask.push(`git ${git} met een map boven zelfladende paden of een glob schrijft ze mogelijk terug (spec rolhek-vooraf-krimp AC-3)`);
+    besluit.ask.push(`git ${git} met een map boven zelfladende paden of een glob schrijft ze mogelijk terug (spec rolhek-vooraf AC-3)`);
 }
 
 /**
@@ -379,14 +379,14 @@ export function zelfladend({ argv: ruw, redirects, role, ruim = false }, basisCt
   const { argv } = kaal;
   const { ctx, omgelegd } = gitWerkmap(argv, kaal.ctx);
   if (ctx.cwdOnbekend === true && (redirects.length > 0 || schrijfWoorden(argv).length > 0 || gitWerkmapZonderPaden(argv, ctx) !== null))
-    weiger('na een `cd` naar een map die pas bij het uitvoeren bekend is ($, backtick), ziet het rolhek niet waar paden landen (spec rolhek-vooraf-krimp AC-3)', role, besluit);
+    weiger('na een `cd` naar een map die pas bij het uitvoeren bekend is ($, backtick), ziet het rolhek niet waar paden landen (spec rolhek-vooraf AC-3)', role, besluit);
   for (const rel of doelen([...redirects, ...schrijfWoorden(argv)], ctx)) {
-    const melding = `${rel} is een zelfladend pad (spec rolhek-vooraf-krimp AC-3): Claude Code, git of pnpm laadt het zelf, buiten het rolhek om`;
+    const melding = `${rel} is een zelfladend pad (spec rolhek-vooraf AC-3): Claude Code, git of pnpm laadt het zelf, buiten het rolhek om`;
     // Ook een glob die bash op `.git` laat passen (`.gi[t]`, `.gi[[:alpha:]]`) valt onder `.git/**` (AC-3, #618).
     if (stukRegex(rel.split('/')[0] ?? '', ruim).test('.git')) besluit.deny.push(`${melding}; verboden, voor elke rol (R-ROL-03)`);
     else weiger(melding, role, besluit);
   }
   for (const doel of mapDoelen(argv).filter((kandidaat) => bovenZelfladend(kandidaat, ctx)))
-    weiger(`\`${doel}\` is een map boven zelfladende paden; kopiëren, verplaatsen, uitpakken of wissen daar kan ze vervangen (spec rolhek-vooraf-krimp AC-3)`, role, besluit);
+    weiger(`\`${doel}\` is een map boven zelfladende paden; kopiëren, verplaatsen, uitpakken of wissen daar kan ze vervangen (spec rolhek-vooraf AC-3)`, role, besluit);
   gitBesluit(argv, { ctx, omgelegd, role }, besluit);
 }

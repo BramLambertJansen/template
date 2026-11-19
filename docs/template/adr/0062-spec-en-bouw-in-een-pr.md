@@ -18,7 +18,7 @@ Herzien: 2026-11-18 (#805): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.
 zonder PR-nummer; de toets van `docs:status` na de merge vervalt, en daarmee de eerste regel hierboven
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 5, 10, 12, 14 en 15. Drempel: A3 (de lanetoets in
-`check-document-status` laat meer toe) en A4 (afspraken uit een geaccepteerd ADR). Uitwerking: [spec](../specs/spec-en-bouw-in-een-pr.md).
+`check-document-status` laat meer toe) en A4 (afspraken uit een geaccepteerd ADR). Uitwerking: [spec gebouwd-zonder-nummer](../specs/gebouwd-zonder-nummer.md), gebouwd-zonder-nummer/AC-13 en gebouwd-zonder-nummer/AC-14.
 
 ## Context
 

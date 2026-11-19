@@ -206,12 +206,23 @@ describe('vervallen-documenten-weg/AC-3 verwijderen', () => {
 /** Per verwijderde spec het pad, per namespace de AC-verwijzing, en de ADR-bestandsnaam. */
 const ZOEKPATRONEN = [...SPECS.map((naam) => `specs/${naam}.md`), ...NAMESPACES.map((ns) => `${ns}/AC-`), '0066-schrijfgrens'];
 
-/** `spec <naam>` (naam eventueel tussen backticks, niet gevolgd door letter, cijfer of `-`) met wat erop volgt. */
-function vermeldingen(tekst: string): { naam: string; erna: string }[] {
+/**
+ * `spec <naam>` (naam eventueel tussen backticks, niet gevolgd door letter, cijfer of `-`), met de vraag of de vermelding
+ * historie is: op een regel die met `Herzien:` begint, of op een vervolgregel daarvan (tot de volgende lege regel).
+ */
+function vermeldingen(tekst: string): { naam: string; historie: boolean }[] {
   const patroon = new RegExp(`(?<![A-Za-z0-9])spec\\s+\`?(${SPECS.map(escape).join('|')})\`?(?![A-Za-z0-9-])`, 'gi');
+  const regels = tekst.split('\n');
+  const inHerzien: boolean[] = [];
+  let open = false;
+  for (const regel of regels) {
+    if (regel.trim() === '') open = false;
+    else if (regel.startsWith('Herzien:')) open = true;
+    inHerzien.push(open);
+  }
   return [...tekst.matchAll(patroon)].map((m) => ({
     naam: m[1] ?? '',
-    erna: tekst.slice(m.index + m[0].length),
+    historie: inHerzien[tekst.slice(0, m.index).split('\n').length - 1] ?? false,
   }));
 }
 
@@ -221,7 +232,7 @@ describe('vervallen-documenten-weg/AC-4 verwijzingen', () => {
     expect(treffers(gitGrep(['-F', ...args], ['.', ...UITZONDERINGEN]))).toEqual([]);
   });
 
-  test('vervallen-documenten-weg/AC-4 (b): elke vermelding "spec <naam>" van een verwijderde spec wordt gevolgd door (vervallen)', () => {
+  test('vervallen-documenten-weg/AC-4 (b): een vermelding "spec <naam>" van een verwijderde spec staat alleen in een Herzien:-regel', () => {
     const kandidaten = new Set<string>();
     for (const naam of SPECS) {
       for (const regel of gitGrep(['-l', '-i', '-F', '-e', naam], ['.', ...UITZONDERINGEN])) kandidaten.add(regel);
@@ -229,17 +240,21 @@ describe('vervallen-documenten-weg/AC-4 verwijzingen', () => {
     const fouten: string[] = [];
     for (const bestand of [...kandidaten].sort()) {
       // `-n` is meegegeven aan gitGrep, maar `-l` laat het regelnummer weg: de regel is alleen het pad.
-      const tekst = lees(bestand);
-      for (const { naam, erna } of vermeldingen(tekst)) {
-        if (!/^[ \t]*(?:\r?\n[ \t]*)?\(vervallen\)/.test(erna)) fouten.push(`${bestand}: spec ${naam} zonder (vervallen)`);
+      for (const { naam, historie } of vermeldingen(lees(bestand))) {
+        if (!historie) fouten.push(`${bestand}: spec ${naam} buiten een Herzien:-regel`);
       }
     }
     expect(treffers(fouten)).toEqual([]);
   });
 
   test('vervallen-documenten-weg/AC-4 (b): de vermeldingsregel herkent de vormen uit de spec (zelftest)', () => {
-    expect(vermeldingen('zie spec agent-token (vervallen)')).toEqual([{ naam: 'agent-token', erna: ' (vervallen)' }]);
-    expect(vermeldingen('zie spec `specplicht` en meer')).toHaveLength(1);
+    expect(vermeldingen('zie spec agent-token (vervallen)')).toEqual([{ naam: 'agent-token', historie: false }]);
+    expect(vermeldingen('Herzien: 2026-11-17: zie spec agent-token')).toEqual([{ naam: 'agent-token', historie: true }]);
+    expect(vermeldingen('Herzien: 2026-11-17: zie\nspec agent-token\n\nspec specplicht')).toEqual([
+      { naam: 'agent-token', historie: true },
+      { naam: 'specplicht', historie: false },
+    ]);
+    expect(vermeldingen('Herzien: a\nHerzien: zie spec `specplicht` en meer')).toEqual([{ naam: 'specplicht', historie: true }]);
     expect(vermeldingen('zie Spec Agent-Token')).toHaveLength(1);
     expect(vermeldingen('zie spec agent-token-extra')).toEqual([]);
     expect(vermeldingen('zie spec specplichtig')).toEqual([]);

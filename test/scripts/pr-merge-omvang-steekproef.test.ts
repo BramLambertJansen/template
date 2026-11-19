@@ -90,7 +90,7 @@ describe('templateregime/AC-7 pr:merge doet geen inhoudstoets', () => {
   });
 });
 
-describe('agent-merge-niet-kritiek/AC-7 geen externe-reviewvoorwaarde, steekproefregel na de merge', () => {
+describe('agent-samenvoegen/AC-10 geen externe-reviewvoorwaarde, steekproefregel na de merge', () => {
   const EERSTE = `PR #7 gemerged op ${HEAD}. Meld PR en SHA in de thread en volg de CI op main (ADR 0069 punt 5).`;
   const samenvatting = (stand: Record<string, unknown>) => ({
     user: { login: BOT },

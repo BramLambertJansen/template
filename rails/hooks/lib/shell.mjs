@@ -8,9 +8,9 @@
  * `expanded`: woorden waarin de shell nog uitbreidt (`$` of een backtick buiten enkele aanhalingstekens, ook `$'…'`); hun
  * waarde hier is dus niet wat het programma krijgt.
  * `patterns`: per woord van `words` (zelfde index) de vorm waarin glob-, brace- en tildetekens tussen aanhalingstekens of na
- * een backslash `QUOTED` zijn; bash expandeert die daar niet (spec rolhek-vooraf-krimp AC-10 (b)).
+ * een backslash `QUOTED` zijn; bash expandeert die daar niet (spec rolhek-vooraf AC-2 (b)).
  * `ruim`: het commando (of de substitutie eromheen) bevat een `\`, `'` of `"`; een glob-klasse in een woord of redirect leest
- * dan ruim (`globTekstRegex`; review B3, #622, AC-3, eigenaarbesluit 7 november 2026).
+ * dan ruim (`globTekstRegex`; review B3, #622, spec rolhek-vooraf AC-3, eigenaarbesluit 7 november 2026).
  */
 /** @typedef {{ kind: 'word' | 'op', value: string, expands?: boolean, pattern?: string, raw?: string }} Token */
 /**
@@ -25,7 +25,7 @@ export const QUOTED = '\u0000';
 const SEPARATORS = new Set([';', '&&', '||', '|', '&', '|&', '\n', '(', ')']);
 const OPERATORS = ['&>>', '>>', '>|', '&>', '>&', '<<-', '<<<', '<<', '<&', '&&', '||', '|&', '<', '>', ';', '|', '&', '(', ')', '\n'];
 
-// Allowlist (eigenaarbesluit 6 november 2026, AC-10 (b)): `patterns` neutraliseert alleen wat deze lezer zeker leest, gewone
+// Allowlist (eigenaarbesluit 6 november 2026, spec rolhek-vooraf AC-2 (b)): `patterns` neutraliseert alleen wat deze lezer zeker leest, gewone
 // enkele en dubbele aanhalingstekens. Elke constructie die de quotegrenzen kan verschuiven en die de lezer niet volledig kent,
 // maakt het hele commando onzeker: `#` (commentaar), `${`, `$'` (ANSI-C), `$(`, `((` (arithmetic, review R4-1), backtick, `\`
 // en een newline (heredoc, meerdere regels). Een verkeerde quotegrens zou echte onaangehaalde tekst als aangehaald lezen (reviews B1, R2-B1); dan
@@ -74,8 +74,8 @@ export function parseCommands(script, onzeker = false) {
   return commands;
 }
 
-// `$TMPDIR/`, `"$TMPDIR/` of `"$TMPDIR"/` aan het begin van een woord (spec rolhek-vooraf-krimp OV-6, AC-10 (d)), of een
-// woord dat precies `$TMPDIR`, `${TMPDIR}` of `"$TMPDIR"` is (AC-10 (a), eigenaarbesluit 6 november 2026).
+// `$TMPDIR/`, `"$TMPDIR/` of `"$TMPDIR"/` aan het begin van een woord (spec rolhek-vooraf AC-2 (d)), of een
+// woord dat precies `$TMPDIR`, `${TMPDIR}` of `"$TMPDIR"` is (spec rolhek-vooraf AC-2 (a), eigenaarbesluit 6 november 2026).
 const TMPDIR_VOORAAN = /(?<=^|[ \t\n;&|()<>])(?:"?\$TMPDIR"?\/|(?:\$TMPDIR|\$\{TMPDIR\}|"\$TMPDIR")(?=$|[ \t\n;&|()<>]))/g;
 
 /**
@@ -115,7 +115,7 @@ function klasseTeken(teken) {
 }
 
 // POSIX-klassen als ASCII-inhoud van een reguliere klasse (al geëscaped). `upper` en `lower` staan apart: de aanroepers
-// gebruiken vlag `i`, en `[[:upper:]]` past in bash niet op `l` (spec rolhek-vooraf-krimp AC-3, #618).
+// gebruiken vlag `i`, en `[[:upper:]]` past in bash niet op `l` (spec rolhek-vooraf AC-3, #618).
 /** @type {Readonly<Record<string, string>>} */
 const POSIX_KLASSE = {
   alpha: 'A-Za-z', digit: '0-9', alnum: 'A-Za-z0-9', space: ' \\t\\n\\r\\f\\v', blank: ' \\t',
@@ -139,7 +139,7 @@ const POSIX_HOOFDLETTER = { upper: 'A-Z', lower: 'a-z' };
 
 /**
  * Het atoom bij een afgesloten deel `[:naam:]`, `[=x=]` of `[.x.]` (`soort` is `:`, `=` of `.`). Een meerletterige naam
- * bij `=` of `.` wordt `elk`: bash kent namen als `[.hyphen.]`, en meer treffers is een strenger vangnet (AC-3, #622).
+ * bij `=` of `.` wordt `elk`: bash kent namen als `[.hyphen.]`, en meer treffers is een strenger vangnet (spec rolhek-vooraf AC-3, #622).
  * @param {string} soort @param {string} naam
  * @returns {KlasseAtoom}
  */
@@ -167,7 +167,7 @@ function klasseAtoom(tekst, positie) {
 
 /**
  * Een los atoom als inhoud van de klasse; een atoom uit `\x` zet `escape` (zie `klasseUit`). Met een onbekende POSIX-naam
- * past de hele klasse, ook genegeerd, op elk teken (AC-3, #618).
+ * past de hele klasse, ook genegeerd, op elk teken (spec rolhek-vooraf AC-3, #618).
  * @param {KlasseAtoom} atoom @param {KlasseDelen} delen
  */
 function voegAtoomToe(atoom, delen) {
@@ -186,7 +186,7 @@ function voegAtoomToe(atoom, delen) {
  * (`[a-[:digit:]]` is {a, -, 0-9}): bash leest daar de `[` als eindteken en sluit de klasse eerder, maar dat past alleen op
  * namen met een `]`, en zo past de klasse op meer gewone namen. Een omgekeerd bereik (`z-a`) valt weg: het past in bash
  * op niets, en een reguliere expressie weigert het. Zo is `[z-a]` geen interne fout en past `g[z-ah]` via `h` nog op gh
- * (spec rolhek-vooraf-krimp AC-3 en AC-10 (c), #622). Elk teken staat geëscaped, zodat aan elkaar geplakte stukken nooit
+ * (spec rolhek-vooraf AC-3 en AC-2 (c), #622). Elk teken staat geëscaped, zodat aan elkaar geplakte stukken nooit
  * een nieuw bereik vormen.
  * @param {string} tekst @param {number} positie @param {KlasseDelen} delen
  */
@@ -246,7 +246,7 @@ function geldigeKlasse(delen, negatie) {
  * Een bash-glob-klasse vanaf de `[` op `index` als reguliere expressie (zonder vlag `u`, geschikt voor vlag `i`), of null
  * als er geen sluitende `]` is: dan is de `[` letterlijk (`g[!]`, `[^]h`). Na `[` mag `!` of `^` (negatie) staan; een `]`
  * direct daarna hoort bij de klasse. De inhoud wordt gelezen als atomen (`klasseStuk`): letterlijke tekens, `\x`,
- * `[:naam:]`, `[=x=]` en `[.x.]` (spec rolhek-vooraf-krimp AC-3 en AC-10 (c), leerpunten #618 en #622). Gebruikt door
+ * `[:naam:]`, `[=x=]` en `[.x.]` (spec rolhek-vooraf AC-3 en AC-2 (c), leerpunten #618 en #622). Gebruikt door
  * `globTekstRegex`, en via die functie door `globForGh` (rolhek.mjs) en `stukRegex` (zelfladend.mjs).
  * @param {string} tekst @param {number} index
  * @returns {{ regex: string, eind: number } | null} `eind`: de index van de sluitende `]`
@@ -281,7 +281,7 @@ const RUIM_MAX = 16;
 
 /**
  * Een glob-tekst (een woordwaarde zonder quotes en escapes) als reguliere expressie, met klassen volgens `globKlasseRegex`.
- * `ruim` (review B3, #622, spec rolhek-vooraf-krimp AC-3 en AC-10 (c), eigenaarbesluit 7 november 2026): het commando had een
+ * `ruim` (review B3, #622, spec rolhek-vooraf AC-3 en AC-2 (c), eigenaarbesluit 7 november 2026): het commando had een
  * `\`, `'` of `"`, die de tokenizer al weghaalde; welke `[` een klasse opent en welke `]` haar sluit, is dan niet meer te zien
  * (`.g[\!i]t`, `.gi[a\]t]`, `.gi[t']']`). Dan telt elke `[` met een `]` erna op drie manieren (`ruimeKlasse`): letterlijk,
  * als bash-klasse en als één willekeurig teken tot elke latere `]`. Zo is de regex nooit nauwer dan bash; zonder `[`

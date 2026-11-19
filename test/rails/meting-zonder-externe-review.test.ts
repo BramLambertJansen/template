@@ -7,7 +7,7 @@ import * as trendModule from '../../scripts/kit/meting-trend.mjs';
 import { expectAbsent } from '../support/absence.ts';
 import { branch, cli, fixture, veld, type Fixture } from './meting-semantiek-kit';
 
-// agent-merge-niet-kritiek/OV-1: de meting telt geen bevindingen van een externe reviewdienst meer, niet in `--pr-tabel`
+// agent-samenvoegen/AC-11: de meting telt geen bevindingen van een externe reviewdienst meer, niet in `--pr-tabel`
 // en niet in `--trend`; de overige maten blijven. Het zoekwoord wordt samengesteld, zodat dit bestand zelf geen treffer is
 // voor test/docs/geen-externe-review-docs.test.ts.
 const NAAM = ['co', 'dex'].join('');

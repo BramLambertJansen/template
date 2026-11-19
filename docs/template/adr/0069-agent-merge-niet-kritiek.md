@@ -8,13 +8,13 @@ spec
 Herzien: 2026-11-03 (#468): punt 3 (een 👀 van Codex of een review die nog bezig is, telt als spoor en houdt de merge tegen),
 punt 5 (overgang) en Gevolgen; verscherpt de Codex-voorwaarde; uitwerking in spec
 Herzien: 2026-11-03 (#473): punt 3, bytegrens `agentMerge.maxBytes` naast `maxRegels`; verscherpt de omvanggrens;
-uitwerking in [spec](../specs/agent-merge-bytegrens.md)
+uitwerking in spec agent-merge-bytegrens (vervallen)
 Herzien: 2026-11-04 (#535): gewijzigd door [0079](0079-een-padtabel.md) punt 1, `agentMerge.toegestaan` en
 `agentMerge.kritiek` worden de kolom `besluit` van de padtabel (`agent` of strenger); de uitslag per pad blijft gelijk
 Herzien: 2026-11-05 (#568): punt 3 en 5, Alternatieven, Gevolgen en Meten; versoepelt de Codex-voorwaarde: ze vervalt,
 met `agentMerge.codex`, ook als Codex wél reviewt; elke agent-merge is een steekproef (leerpunt #562: Codex is geen
 vereiste); uitwerking in
-[spec](../specs/agent-merge-niet-kritiek.md) AC-7 tot en met AC-10
+spec agent-merge-niet-kritiek (vervallen); nu [spec agent-samenvoegen](../specs/agent-samenvoegen.md), agent-samenvoegen/AC-10 en agent-samenvoegen/AC-11
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 2, 3 en 5, punt 1, 2 en 3 worden: geen pad van een code-eigenaar geraakt en checks groen; de lijst uit de padtabel wordt `CODEOWNERS`, de job `agent-merge` en de inhoudstoets van `pnpm pr:merge` verdwijnen, de omvanggrens en het reviewcommentaar op de head vervallen als check (de review blijft een werkafspraak)
 Herzien: 2026-11-14 (#713): ingekort tot wat nog geldt na ADR 0089; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 Herzien: 2026-11-18 (#781): punt 3, het script merget alleen als op `main` een ruleset met review van een code-eigenaar actief is die wie het draait niet kan passeren, en `CODEOWNERS` geen fouten heeft; verscherpt (spec templateregime AC-14)
@@ -25,7 +25,7 @@ Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 30, 31, 33, 34 en 35, de 
 [0057](0057-risicogestuurde-werkstraat.md), in [0064](0064-leesbudget-per-laag.md) "zodra de GitHub App er is" (R-DOC-09) en in
 [0068](0068-samenhang-checks-en-rollen.md) punt 3 de eigenaarmerge als grens; vult
 [0062](0062-spec-en-bouw-in-een-pr.md) aan. Drempel: A3 (rechten verruimen). Uitwerking:
-[spec](../specs/agent-merge-niet-kritiek.md) (vervallen; de code noemt er nog acceptatiecriteria uit).
+[spec agent-samenvoegen](../specs/agent-samenvoegen.md), agent-samenvoegen/AC-8 tot en met agent-samenvoegen/AC-11.
 
 ## Context
 

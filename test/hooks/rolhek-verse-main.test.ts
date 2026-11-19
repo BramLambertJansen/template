@@ -206,8 +206,8 @@ describe('verse main: sleutelwoorden vóór het commando', () => {
   });
 });
 
-// Spec rolhek-vooraf-krimp AC-3: de startvorm met --no-track gaat door, en de melding noemt alleen die vorm.
-describe('verse main: de vorm met --no-track', () => {
+// rolhek-vooraf/AC-6: de startvorm met --no-track gaat door, en de melding noemt alleen die vorm.
+describe('rolhek-vooraf/AC-6: verse main: de vorm met --no-track', () => {
   test('toegestaan: switch --no-track -c na fetch origin main', () => {
     const command = 'git fetch origin main && git switch --no-track -c x origin/main';
 
