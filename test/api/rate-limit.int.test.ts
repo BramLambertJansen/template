@@ -115,7 +115,7 @@ describe('rate limit (spec rate-limit)', () => {
     expect(Number(retryAfter)).toBeLessThanOrEqual(60);
   });
 
-  test('AC-2: een geblokkeerde gebruiker blokkeert een andere gebruiker niet', async () => {
+  test('rate-limit/AC-2: een geblokkeerde gebruiker blokkeert een andere gebruiker niet', async () => {
     const [first, second] = await Promise.all([signedIn('user'), signedIn('user')]);
     for (let i = 0; i <= LIMITS.schrijven; i += 1) await first.browser.post('/api/test/rate-limit');
     expect(await outcome(await first.browser.post('/api/test/rate-limit'))).toStrictEqual([429, 'RATE_LIMITED']);
@@ -123,7 +123,7 @@ describe('rate limit (spec rate-limit)', () => {
     expect(await outcome(await second.browser.post('/api/test/rate-limit'))).toStrictEqual([200, 'ok']);
   });
 
-  test('AC-3: na het venster slaagt een verzoek weer en begint de telling op 1', async () => {
+  test('rate-limit/AC-3: na het venster slaagt een verzoek weer en begint de telling op 1', async () => {
     const { browser, userId } = await signedIn('user');
     for (let i = 0; i <= LIMITS.schrijven; i += 1) await browser.post('/api/test/rate-limit');
     expect(await outcome(await browser.post('/api/test/rate-limit'))).toStrictEqual([429, 'RATE_LIMITED']);
@@ -172,7 +172,7 @@ describe('rate limit (spec rate-limit)', () => {
     expect(await outcome(await browser.post('/api/test/rate-limit'))).toStrictEqual([200, 'ok']);
   });
 
-  test('AC-5: een GET draait read only en krijgt RATE_LIMITED na de grens van lezen', async () => {
+  test('rate-limit/AC-5: een GET draait read only en krijgt RATE_LIMITED na de grens van lezen', async () => {
     const { browser } = await signedIn('user');
     for (let i = 0; i < LIMITS.lezen; i += 1) {
       const response = await browser.get('/api/test/read-only');

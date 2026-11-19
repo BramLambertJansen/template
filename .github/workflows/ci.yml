@@ -44,6 +44,15 @@ jobs:
           printf 'abi <abi/4.0>,\ninclude <tunables/global>\nprofile bwrap /usr/bin/bwrap flags=(unconfined) {\n  userns,\n}\n' | sudo tee /etc/apparmor.d/bwrap > /dev/null
           sudo apparmor_parser -r /etc/apparmor.d/bwrap
           node scripts/kit/kooi.mjs --proef
+      # Alleen de pnpm-store (gedownloade pakketten) komt uit de cache van GitHub; pnpm toetst elk pakket aan de
+      # integriteitshash in pnpm-lock.yaml. node_modules, buildoutput en uitslagen gaan nooit in een cache (R-CI-08, ADR 0096).
+      - id: pnpm-store
+        run: echo "pad=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.pad }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
       - run: pnpm install --frozen-lockfile
       - run: pnpm gate:fast --deel "$DEEL"
         env:
@@ -103,6 +112,15 @@ jobs:
         with:
           version: 2026.9.18
           install_args: node pnpm
+      # Alleen de pnpm-store (gedownloade pakketten) komt uit de cache van GitHub; pnpm toetst elk pakket aan de
+      # integriteitshash in pnpm-lock.yaml. node_modules, buildoutput en uitslagen gaan nooit in een cache (R-CI-08, ADR 0096).
+      - id: pnpm-store
+        run: echo "pad=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.pad }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
       - run: pnpm install --frozen-lockfile
       - run: pnpm "$SCRIPT"
         env:
@@ -177,6 +195,15 @@ jobs:
         with:
           version: 2026.9.18
           install_args: node pnpm
+      # Alleen de pnpm-store (gedownloade pakketten) komt uit de cache van GitHub; pnpm toetst elk pakket aan de
+      # integriteitshash in pnpm-lock.yaml. node_modules, buildoutput en uitslagen gaan nooit in een cache (R-CI-08, ADR 0096).
+      - id: pnpm-store
+        run: echo "pad=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.pad }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
       - run: pnpm install --frozen-lockfile
       # De build-SHA (spec release-versie, AC-9): de image krijgt de commit mee en GET /api/health moet precies die tonen.
       # Op een PR de kop van de PR, niet de tijdelijke merge-commit.
@@ -219,6 +246,15 @@ jobs:
           printf 'abi <abi/4.0>,\ninclude <tunables/global>\nprofile bwrap /usr/bin/bwrap flags=(unconfined) {\n  userns,\n}\n' | sudo tee /etc/apparmor.d/bwrap > /dev/null
           sudo apparmor_parser -r /etc/apparmor.d/bwrap
           node scripts/kit/kooi.mjs --proef
+      # Alleen de pnpm-store (gedownloade pakketten) komt uit de cache van GitHub; pnpm toetst elk pakket aan de
+      # integriteitshash in pnpm-lock.yaml. node_modules, buildoutput en uitslagen gaan nooit in een cache (R-CI-08, ADR 0096).
+      - id: pnpm-store
+        run: echo "pad=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.pad }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
       - run: pnpm install --frozen-lockfile
       - run: pnpm check:new-resource --deel "$DEEL"
         env:

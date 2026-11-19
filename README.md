@@ -48,9 +48,9 @@ pnpm dev
 
 Dit start Postgres en Mailpit, past migraties toe en start de API en webapp. Standaard staat de webapp op `http://localhost:5173`, de API op poort 8787 en Mailpit op `http://localhost:54324`.
 
-Poorten staan in `.env.local`. Bij meerdere apps moet je ook de bijbehorende poorten in de database-URL's en `SMTP_URL` aanpassen.
+Poorten staan in `.env.local`. Bij meerdere apps kiest `node scripts/kit/nieuwe-app.mjs poorten --env` een vrije set en schrijft het een ontbrekend `.env.local` met de bijbehorende poorten in de database-URL's, `SMTP_URL` en de origin; `pnpm dev` stopt als `API_PORT` of `WEB_PORT` bezet is.
 
-Start de lokale omgeving niet goed, voer dan `scripts/doctor.sh` uit. Dit controleert de toolchain, sandbox-pakketten, Docker, git-hooks en bereikbaarheid van de lokale stack, met een herstelstap per probleem.
+Start de lokale omgeving niet goed, voer dan `scripts/doctor.sh` uit. Dit controleert de toolchain, sandbox-pakketten, Docker, git-hooks, de samenhang van de poorten in `.env.local` en bereikbaarheid van de lokale stack, met een herstelstap per probleem; de uitslag staat ook in `.template/doctor-full.json`.
 
 ### Lokale accounts
 

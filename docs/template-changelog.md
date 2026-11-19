@@ -9,6 +9,18 @@ requests.
 
 ### Toegevoegd
 
+- Setupscript `scripts/kit/nieuwe-app.mjs` (spec `nieuwe-app-script`, bouwstap 1; leerpunten #561 en #571): de
+  deelcommando's `preflight`, `koppel`, `poorten [--env]` en `db-bewijs` voeren de deterministische stappen van
+  `docs/nieuwe-app.md` uit (4.2, 5.1, 7.1, 8), melden per stap ✓, · of ✗ met herstel en schrijven
+  `.template/nieuwe-app-<deelcommando>.json`. `scripts/doctor.sh` controleert ook de samenhang van de poorten in `.env.local`
+  en schrijft `.template/doctor-<full|machine>.json`; `scripts/bootstrap.sh` schrijft `.template/bootstrap.json`;
+  `pnpm dev` stopt vóór compose als `API_PORT` of `WEB_PORT` bezet is. `.env.example` noemt nu `API_PORT=8787` en
+  `WEB_PORT=5173`. De naslagsecties "Naslag: dagelijks werken", "Eigen agentinstructies van de app" en "Een eigen beschermd
+  pad" staan in `docs/app-naslag.md`; in het playbook blijft per kop een verwijsregel. `pnpm leespad` meet het playbook als
+  soort `playbook` (streefwaarde 35 KB, een meting). `repo-instellingen` volgt in bouwstap 2. Wat verandert voor een app:
+  `.template/` is genegeerd door git; een `.env.local` waarin de poort van een URL niet bij zijn poortsleutel past, maakt
+  `scripts/doctor.sh` rood. Bij een update: niets verplicht; `API_PORT` en `WEB_PORT` mogen in een bestaande `.env.local`
+  ontbreken (dan gelden 8787 en 5173). Bij een conflict op `.env.example` of `.gitignore`: neem de regels van de template over.
 - Eigen agentinstructies van een app (spec `app-agentregels`, R-DOC-11): wat elke sessie over de app moet weten, staat als
   feiten in `docs/app.md`, dat `CLAUDE.md` importeert (`@docs/app.md`). In de template is het een vaste stub (`APP_STUB` in
   `scripts/kit/app-init.mjs`); `pnpm app:init` herschrijft hem met een skelet (`appAgentregels()`). `check-docs` regel 13
@@ -32,6 +44,11 @@ requests.
 
 ### Gewijzigd
 
+- De AC-dekking van `check-docs` (regel 6) is streng: een AC van een gebouwde spec is alleen gedekt door een testbestand met
+  `<specnaam>/AC-n` of `<namespace>/AC-n` (`dekt` in `scripts/kit/check-docs.mjs`). Een los `AC-n` met de specnaam ergens
+  in hetzelfde bestand telt niet meer; dat gaf schijndekking door tests van een andere spec. Besluit eigenaar, 2026-11-19.
+  Wat verandert voor een app: zet bij een update in elke test die een AC toetst het voorvoegsel (`accounts/AC-3` in plaats
+  van `AC-3`); `pnpm check:docs` noemt elke AC zonder zo'n test (`docs:ac:<spec>:<AC-n>`).
 - De herzieningsregel van een herschreven ADR is `Herzien: JJJJ-MM-DD: wat`, zonder PR-nummer (ADR 0097, R-CI-05); een
   nummer `(#NNN)` na de datum mag nog, dus bestaande regels blijven geldig. Het rolhek telt beide vormen als geldige
   herzieningsregel (`HERZIEN` in `rails/hooks/lib/document-state.mjs`, `test/rails/document-state-herzien-zonder-nummer.test.ts`).

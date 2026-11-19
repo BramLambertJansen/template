@@ -72,7 +72,7 @@ n.v.t.: geen API-route, permissie of foutcode.
    script `check:app-init` ongewijzigd draaien. Na die merge past de eigenaar de ruleset toe. Bouw-PR 2 (opruimen)
    verwijdert daarna de job, het script en de CLI van `check-app-init.mjs`. Er draait dus nergens een lege job die groen
    meldt zonder te toetsen.
-8. **Niet:** geen overslaan op grond van de diff of een eerdere uitslag, geen cache, geen `pnpm` in de kopie, geen netwerk,
+8. **Niet:** geen overslaan op grond van de diff of een eerdere uitslag, geen cache van uitslagen (de pnpm-store van de job mag: ADR 0096), geen `pnpm` in de kopie, geen netwerk,
    geen Docker. Opruimen, signalen en git-isolatie blijven zoals in app-init-proef stap 4 en 5.
 
 ## Acceptatiecriteria
