@@ -2,7 +2,7 @@ import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:f
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, expect, test, vi } from 'vitest';
-import { toolchainProbleemIn } from '../../scripts/kit/toolchain.mjs';
+import { PNPM_TIMEOUT_MS, toolchainProbleemIn } from '../../scripts/kit/toolchain.mjs';
 
 // claude-sandbox-werkstraat/AC-2 (fixturedeel): de synchrone preflight controleert de gevonden CLI en exacte pin.
 // Alleen de externe pnpm-CLI is een fixture; geen API/database of private helper wordt vervangen.
@@ -87,4 +87,52 @@ test('ontbrekende packageManager wordt gesloten geweigerd', () => {
   writeFileSync(path.join(root, 'package.json'), '{}\n');
   cli(root, "printf '%s\\n' '11.28.2'");
   expectDiagnosis(root, ['packageManager']);
+});
+
+// fix/toolchain-pnpm-timeout: onder een volle suite (veel parallelle feiten.mjs-processen) duurt `pnpm --version`
+// langer dan de oude 5 s; een trage pnpm is geen ontbrekende pnpm en krijgt een eigen diagnose.
+test('PNPM_TIMEOUT_MS is 20000', () => {
+  expect(PNPM_TIMEOUT_MS).toBe(20000);
+});
+
+test('pnpm trager dan de limiet: eigen timeoutdiagnose met verwachte versie, niet "ontbreekt of start niet"', () => {
+  const root = fixture();
+  // Absoluut pad: PATH bevat in de fixture alleen de nep-pnpm.
+  cli(root, 'exec /bin/sleep 3');
+  const result = toolchainProbleemIn(root, { pnpmTimeoutMs: 1000 });
+  expect(result).not.toBeNull();
+  expect(result).toMatch(/^✗ toolchain ontbreekt:/);
+  expect(result).not.toContain('\n');
+  expect(result).toContain('reageert niet binnen 1 s');
+  expect(result).toContain('11.28.2');
+  expect(result).toContain('scripts/cloud-setup.sh');
+  expect(result).toContain('docs/ENVIRONMENT.md');
+  expect(result).not.toContain('ontbreekt of start niet');
+  // De bootstrap helpt niet tegen een trage pnpm; het herstel wijst naar de pnpm op PATH.
+  expect(result).toContain('pnpm --version');
+  expect(result).not.toContain('scripts/bootstrap.sh');
+});
+
+test('pnpm die 6 s nodig heeft en dan de juiste versie print: met de standaardlimiet door (was fout na 5 s)', () => {
+  const root = fixture();
+  cli(root, "/bin/sleep 6 || exit 1\nprintf '%s\\n' '11.28.2'");
+  expect(toolchainProbleemIn(root)).toBeNull();
+}, 30_000);
+
+test('CLI ontbreekt met korte limiet: nog steeds "ontbreekt of start niet", geen timeoutmelding', () => {
+  const root = fixture();
+  const result = toolchainProbleemIn(root, { pnpmTimeoutMs: 1000 });
+  expect(result).not.toBeNull();
+  expect(result).toContain('ontbreekt of start niet');
+  expect(result).toContain('11.28.2');
+  expect(result).not.toContain('reageert niet binnen');
+});
+
+test('CLI faalt direct met exit 7 en korte limiet: geen timeoutmelding', () => {
+  const root = fixture();
+  cli(root, 'exit 7');
+  // Ruime limiet: de test gaat over de exitcode, niet over de limiet, en mag onder een volle suite niet zelf aflopen.
+  const result = toolchainProbleemIn(root, { pnpmTimeoutMs: 10_000 });
+  expect(result).toContain('ontbreekt of start niet');
+  expect(result).not.toContain('reageert niet binnen');
 });

@@ -116,7 +116,8 @@ Een overdracht aan een cloudsessie begint daarom met een blok **Vereisten** met 
 
 De voorcontrole valideert ook de exacte `packageManager`-pin en vergelijkt die met de werkelijke uitvoer van
 pnpm op `PATH`. Een verkeerde versie met exitcode 0 telt als fout; een waarschuwing over een SQLite-cache gevolgd door
-een andere versie is geen geslaagde versiewissel. Deze controle bewijst geen synchronisatie van dependencies.
+een andere versie is geen geslaagde versiewissel. Reageert pnpm niet binnen 20 s (`PNPM_TIMEOUT_MS`), dan noemt de
+melding dat apart in plaats van een ontbrekende pnpm. Deze controle bewijst geen synchronisatie van dependencies.
 Voor `pnpm run` en `pnpm exec`
 controleert pnpm zelf of de installatie bij de huidige workspace past (`verifyDepsBeforeRun: error` in
 `pnpm-workspace.yaml`). Past een verouderde of gekopieerde installatie niet bij de workspace, dan stopt pnpm met
@@ -211,6 +212,13 @@ branchnaam voor; de PR komt van de opgelegde branch. Is een vaste naam nodig, da
   (`ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY`). Volgende stap: vraag de eigenaar; wis `node_modules` niet zelf en
   voeg geen pnpm-vlag toe. Node en pnpm blijven bij `scripts/bootstrap.sh`; ook een ontbrekende of ongeldige
   `packageManager`-pin wijst daarheen.
+- **`✗ toolchain ontbreekt: pnpm reageert niet binnen 20 s`**, of wisselend falende tests die `feiten.mjs` starten: de
+  voorcontrole wacht hoogstens `PNPM_TIMEOUT_MS` op `pnpm --version` (`scripts/kit/toolchain.mjs`). Traag wordt dat
+  vooral als de pnpm op `PATH` niet de pin is: dan wisselt pnpm bij elke aanroep eerst van versie, en parallelle wissels
+  wachten op elkaar. Controleer met `pnpm --version` in de repo; een melding `Cannot use the pnpm version this project
+  pins` of een andere versie dan `packageManager` betekent dat een globale mise-pin (`~/.config/mise/config.toml`) via
+  `mise activate` vóór de shims op `PATH` staat. Zet die globale pin gelijk aan `packageManager` en start de terminal of
+  editor opnieuw.
 - **`! mise install onvolledig`** gevolgd door `✓ <tool> <versie> via terugval`: verwacht in een cloudsessie (zie Terugval).
 - **`✗ checksum van … klopt niet`**: de download wijkt af van het checksumbestand van de release; er is niets geïnstalleerd.
   Draai het script opnieuw; blijft het, meld het als leerpunt en ga niet zonder controle verder.

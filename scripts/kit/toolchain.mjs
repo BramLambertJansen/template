@@ -28,20 +28,21 @@ const WORKTREE_INSTALL = '`node scripts/kit/worktree-install.mjs`';
 /**
  * Per probleem het herstel (spec claude-sandbox-werkstraat AC-12): één regel, segmenten gescheiden door '; ', elk segment
  * "probleem → herstel". In de hoofdcheckout is elk herstel de bootstrap. In een gekoppelde worktree is een ontbrekende
- * node_modules iets wat de agent zelf herstelt; Node en pnpm blijven bij de eigenaar.
- * @param {{ reden: string, nodeModules?: boolean }[]} problemen
+ * node_modules iets wat de agent zelf herstelt; Node en pnpm blijven bij de eigenaar. Een probleem met eigen `herstel`
+ * (een trage pnpm, waar de bootstrap niet helpt) noemt dat herstel.
+ * @param {Probleem[]} problemen
  * @param {boolean} worktree
  */
 function setupProbleem(problemen, worktree) {
-  const delen = problemen.map(({ reden, nodeModules }) => {
-    const herstel = worktree && nodeModules === true ? WORKTREE_INSTALL : BOOTSTRAP;
-    return `${reden} → draai ${herstel}`;
+  const delen = problemen.map(({ reden, nodeModules, herstel }) => {
+    if (herstel !== undefined) return `${reden} → ${herstel}`;
+    return `${reden} → draai ${worktree && nodeModules === true ? WORKTREE_INSTALL : BOOTSTRAP}`;
   });
   const cloud = worktree ? '' : ', in de cloud `bash scripts/cloud-setup.sh`';
   return `✗ toolchain ontbreekt: ${delen.join('; ')}${cloud}, zie docs/ENVIRONMENT.md`;
 }
 
-/** @typedef {{ reden: string, nodeModules?: boolean }} Probleem */
+/** @typedef {{ reden: string, nodeModules?: boolean, herstel?: string }} Probleem */
 
 /**
  * @param {{ node: string, miseToml: string, nodeModules: boolean }} feiten
@@ -81,19 +82,32 @@ function pnpmPin(root) {
 }
 
 /**
+ * Limiet voor `pnpm --version`. In rust ~2 s; onder een volle testsuite met veel parallelle feiten.mjs-processen liep de
+ * oude limiet van 5 s af en meldde de voorcontrole ten onrechte een ontbrekende pnpm. Een ontbrekende of falende pnpm
+ * faalt nog steeds direct; alleen een hangende pnpm wacht de limiet af.
+ */
+export const PNPM_TIMEOUT_MS = 20_000;
+
+/**
  * @param {string} root
+ * @param {number} timeoutMs
  * @returns {Probleem | null}
  */
-function pnpmProbleem(root) {
+function pnpmProbleem(root, timeoutMs) {
   const verwacht = pnpmPin(root);
   if (verwacht === null) return { reden: 'packageManager moet een exacte pnpm@x.y.z-versie bevatten' };
   const result = spawnSync('pnpm', ['--version'], {
     cwd: root,
     encoding: 'utf8',
-    timeout: 5000,
+    timeout: timeoutMs,
     maxBuffer: 4096,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
+  if (result.error !== undefined && 'code' in result.error && result.error.code === 'ETIMEDOUT')
+    return {
+      reden: `pnpm reageert niet binnen ${timeoutMs / 1000} s (machine druk of pnpm hangt), verwacht ${verwacht}`,
+      herstel: 'controleer of `pnpm --version` de pin geeft (globale mise-pin) of probeer opnieuw',
+    };
   if (result.error !== undefined || result.status !== 0)
     return { reden: `pnpm ontbreekt of start niet, verwacht ${verwacht}` };
   const werkelijk = result.stdout.trim().replace(/\s+/g, ' ').slice(0, 120) || 'onbekend';
@@ -116,8 +130,11 @@ function isWorktree(root) {
   }
 }
 
-/** @param {string} root */
-export function toolchainProbleemIn(root) {
+/**
+ * @param {string} root
+ * @param {{ pnpmTimeoutMs?: number }} [opties] `pnpmTimeoutMs`: alleen voor tests; standaard PNPM_TIMEOUT_MS.
+ */
+export function toolchainProbleemIn(root, { pnpmTimeoutMs = PNPM_TIMEOUT_MS } = {}) {
   const worktree = isWorktree(root);
   const mise = path.join(root, 'mise.toml');
   const problemen = nodeProblemen({
@@ -127,7 +144,7 @@ export function toolchainProbleemIn(root) {
   });
   // pnpm wordt ook gecontroleerd als node_modules ontbreekt: beide staan dan in één regel, elk met eigen herstel.
   // Ook een ontbrekende of ongeldige packageManager-pin staat erbij, met herstel scripts/bootstrap.sh.
-  const pnpm = pnpmProbleem(root);
+  const pnpm = pnpmProbleem(root, pnpmTimeoutMs);
   if (pnpm !== null) problemen.push(pnpm);
   return problemen.length === 0 ? null : setupProbleem(problemen, worktree);
 }
