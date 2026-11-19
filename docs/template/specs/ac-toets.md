@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd
 namespace: ac-toets
 ---
 
@@ -46,23 +46,23 @@ normaliseren: elke reeks witruimte (ook regeleinden en inspringing) wordt één 
   `docs:ac-toets:<bestand>:<regel>:<AC-n>` en een melding die bestand, regel en de vereiste vorm noemt; met een geldig
   testpad, ook met `(nieuw)` erachter, geen melding. Rood blijft het met alleen een plaatshouder (`<testbestand>`), een
   commando (`pnpm test:unit`), een kale map (`test/`) of een pad dat geen testbestand is (`src/x.ts` (voorbeeld)).
-  Toets: `test/rails/ac-toets.test.ts` (nieuw)
+  Toets: `test/rails/ac-toets.test.ts`
 - **ac-toets/AC-2** — Gegeven een AC-item dat in hetzelfde bestand op de merge-base een gelijk genormaliseerd item heeft, dan
   geen melding, ook zonder `Toets:`; dat geldt ook als alleen witruimte, regelafbreking of een merkteken `(vervallen)`,
   `(nieuw)` of `(voorbeeld)` verschilt. Is de tekst verder anders, dan geldt AC-1.
-  Toets: `test/rails/ac-toets.test.ts` (nieuw)
+  Toets: `test/rails/ac-toets.test.ts`
 - **ac-toets/AC-3** — Gegeven een spec die op de merge-base niet bestaat, dan telt elk AC-item als nieuw; herkent git het
   bestand als hernoemd (`git diff -M` tussen merge-base en werkmap), dan wordt vergeleken met het oude bestand en geldt AC-2
-  (besluit eigenaar 2026-11-19). Toets: `test/rails/ac-toets.test.ts` (nieuw)
+  (besluit eigenaar 2026-11-19). Toets: `test/rails/ac-toets.test.ts`
 - **ac-toets/AC-4** — Geen melding voor een AC-item dat vervallen is zoals regel 6 van `check-docs` het telt (`VERVALLEN_AC`
   met een geaccepteerd ADR in de ADR-map naast de specmap), voor een spec met `status: vervallen` en voor bestanden buiten
   `SPEC_BESTAND`; een AC met `Vervallen door ADR 9999` (onbekend) zonder geldige `Toets:` is wel rood.
-  Toets: `test/rails/ac-toets.test.ts` (nieuw)
+  Toets: `test/rails/ac-toets.test.ts`
 - **ac-toets/AC-5** — Zonder merge-base (geen `origin/main` of een ondiepe checkout) toetst de check niets: lokaal één regel
   `let op: geen merge-base met origin/main; ac-toets toetst niets` in de meldingen van de ratchet, in CI (`GITHUB_ACTIONS`)
-  een strikte overtreding `docs:ac-toets:geen-basis`. Toets: `test/rails/ac-toets.test.ts` (nieuw)
+  een strikte overtreding `docs:ac-toets:geen-basis`. Toets: `test/rails/ac-toets.test.ts`
 - **ac-toets/AC-6** — De check staat in `strikt` van `scripts/kit/ratchet.mjs`: een overtreding is altijd rood en
-  `pnpm ratchet:update` neemt haar niet op in `.kit/baseline.json`. Toets: `test/rails/ac-toets.test.ts` (nieuw)
+  `pnpm ratchet:update` neemt haar niet op in `.kit/baseline.json`. Toets: `test/rails/ac-toets.test.ts`
 
 ## Randgevallen
 
@@ -80,9 +80,9 @@ normaliseren: elke reeks witruimte (ook regeleinden en inspringing) wordt één 
 
 ## Raakt ook
 
-`scripts/kit/ac-toets.mjs` (nieuw), `scripts/kit/ratchet.mjs` (strikt, meldingen en kopcommentaar),
+`scripts/kit/ac-toets.mjs`, `scripts/kit/ratchet.mjs` (strikt, meldingen en kopcommentaar),
 `scripts/kit/check-docs.mjs` (exports voor hergebruik), `scripts/kit/gates.mjs` (beschrijving van `pnpm ratchet`),
-`test/rails/ac-toets.test.ts` (nieuw), `test/scripts/ratchet-modules-los.test.ts` (de nieuwe module, leerpunt #752),
+`test/rails/ac-toets.test.ts`, `test/scripts/ratchet-modules-los.test.ts` (de nieuwe module, leerpunt #752),
 `docs/specs/_template.md`, `docs/specs/_mini.md` en `scripts/kit/templates/spec.md.tmpl` (de zin over wat de checks
 toetsen), skill `spec` stap 2 en 6, een changelogfragment. `check:migrations`, `check:secdef`, `test:db`/policies,
 `test/security/resources.ts` en permissietests: n.v.t. (geen database, route of permissie).

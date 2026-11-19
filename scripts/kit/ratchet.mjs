@@ -4,8 +4,11 @@
 // eslint-suppressions.json met `pnpm lint:prune`, waarin geen paar (bestand, lintregel) mag stijgen (strikt,
 // spec onderdrukkingen-ratchet). Twee kanalen naast de baseline (ADR 0065): `meldingen` ("let op",
 // stdout en de samenvatting van de CI-job, nooit een andere exitcode) en `strikt` (altijd rood, komt nooit in de baseline, ook niet met --update).
+// Strikt zijn onder meer de krimpcontrole, de onderdrukkingen-ratchet en `ac-toets` (een nieuwe of gewijzigde AC noemt
+// zijn testbestand achter `Toets:`).
 import { readFileSync, writeFileSync } from 'node:fs';
 import { format, resolveConfig } from 'prettier';
+import { acToetsMeldingen, acToetsUitGit } from './ac-toets.mjs';
 import { docsKrimp, docsMeldingen, docsViolations } from './check-docs.mjs';
 import { pgTapVormViolations } from './check-policies.mjs';
 import { conflictMarkerViolations } from './conflictmarkers.mjs';
@@ -33,12 +36,15 @@ export const strikt = {
   conflictmarkers: () => Promise.resolve(conflictMarkerViolations(process.cwd())),
   // pgTAP-bestanden in de vorm van R-TEST-05 (spec proza-checks).
   'pgtap-vorm': () => Promise.resolve(pgTapVormViolations(process.cwd())),
+  // Een nieuwe of gewijzigde AC noemt zijn testbestand (spec ac-toets).
+  'ac-toets': () => Promise.resolve(acToetsUitGit(process.cwd(), process.env['GITHUB_ACTIONS'] === 'true')),
 };
 
 /** Meldingen zonder overtreding (leesbudget/AC-2). @type {Record<string, () => Promise<string[]>>} */
 export const meldingen = {
   'check-docs': () => docsMeldingen(process.cwd()),
   'eslint-onderdrukkingen': () => Promise.resolve(onderdrukkingMeldingenUitGit(process.cwd())),
+  'ac-toets': () => Promise.resolve(acToetsMeldingen(process.cwd())),
 };
 
 /**

@@ -152,7 +152,7 @@ const REGELBOEK = 'docs/framework.md';
 const ADR_MAP = 'docs/adr/';
 const ARCHIEF = 'docs/adr/archief/';
 // Regel 3, 6 en 7: specs in docs/specs/ en docs/template/specs/ (framework §10); `_template.md` en dergelijke tellen niet.
-const SPEC_BESTAND = /^docs\/(?:template\/)?specs\/[^_/][^/]*\.md$/;
+export const SPEC_BESTAND = /^docs\/(?:template\/)?specs\/[^_/][^/]*\.md$/;
 const SPEC_ARCHIEF = 'docs/specs/archief/';
 
 /** Regelnummer (1-based) van een positie in een tekst. @param {string} text @param {number} index */
@@ -685,7 +685,7 @@ function sjabloonViolations(file, text) {
 }
 
 // Testpaden uit .claude/gates.json (`testpaden`): `*.test.*`, `*.spec.*`, `db/tests/**`, `e2e/**`, `test/**`.
-const TESTBESTAND = /(?:^|\/)[^/]+\.(?:test|spec)\.[^/]+$|^(?:db\/tests|e2e|test)\//;
+export const TESTBESTAND = /(?:^|\/)[^/]+\.(?:test|spec)\.[^/]+$|^(?:db\/tests|e2e|test)\//;
 // Een AC-id als heel woord, met een optioneel voorvoegsel `<naam>/` (groep 1); groep 2 is het id.
 const AC_ID = /(?<![\w/-])(?:([\w.-]+)\/)?(AC-\d+)(?![\w-])/g;
 
@@ -718,7 +718,7 @@ const VERVALLEN_AC = /^- \*\*([a-z0-9][\w.-]*)\/(AC-\d+)\*\* — Vervallen door 
  * @param {readonly string[]} files @param {(file: string) => string} read
  * @returns {Set<string>}
  */
-function vervallenAcs({ file, text, eigen }, files, read) {
+export function vervallenAcs({ file, text, eigen }, files, read) {
   const map = file.startsWith('docs/template/specs/') ? 'docs/template/adr/' : 'docs/adr/';
   const geaccepteerd = (/** @type {string} */ nummer) =>
     files.some(
