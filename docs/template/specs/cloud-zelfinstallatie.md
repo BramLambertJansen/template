@@ -238,7 +238,7 @@ script vóór de sessie draait.
 
 **Stap 1 — meten in die sessie**, uitslag in de PR-beschrijving:
 
-1. M3: `echo "$PATH"` en `command -v -a node`; en na een commit en het einde van een beurt: draaien de pre-commit-hook en
+1. M3: `echo "$PATH"` en `type -a node`; en na een commit en het einde van een beurt: draaien de pre-commit-hook en
    de Stop-hook nog op Node 22 (F13)?
 2. M2: `command -v bwrap`, `touch "$HOME/.local/proef"`, `touch ../proef`, `grep -c ' ro,' /proc/self/mountinfo`.
 3. M1: `ls .git/agent-meting .claude/hooks/.cache` na een paar tool-aanroepen.
