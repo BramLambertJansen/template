@@ -171,7 +171,9 @@ spec blijft `goedgekeurd` tot PR 2 en gaat daar naar `gebouwd`.
     krijgen het doel-id: `rails/hooks/lib/rolhek.mjs` r.191, r.657, r.682, r.879, r.1309, r.1326, r.1333, r.1340-1341
     (was rolhek-vooraf-krimp/AC-10, wordt rolhek-vooraf/AC-2) en r.821 (was rolhek-vooraf-krimp/AC-11, wordt
     rolhek-vooraf/AC-4); `rails/hooks/lib/shell.mjs` r.28
-    en r.78 (wordt rolhek-vooraf/AC-2 (b) en (d)) en r.77 (de verwijzing naar OV-6 van de oude spec vervalt).
+    en r.78 (wordt rolhek-vooraf/AC-2 (b) en (a)) en r.77 (de verwijzing naar OV-6 van de oude spec vervalt); en
+    `rails/hooks/lib/rolhek.mjs` r.599, r.778, `rails/hooks/lib/shell.mjs` r.13, r.142, r.170 (was rolhek-vooraf-krimp/AC-3,
+    blijft rolhek-vooraf/AC-3; alleen de specnaam erbij).
   - Testcommentaar met een pad of oud id: `test/hooks/sandbox-plaatshouders.test.ts:19` (`spec sandbox-plaatshouders`),
     `test/rails/spec-en-bouw.test.ts:17` (`spec gebouwd-zonder-nummer`, ADR 0062), en het overige commentaar uit de
     verhuistabel met het doel-id.
