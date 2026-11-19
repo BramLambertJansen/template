@@ -107,7 +107,7 @@ Lintfixtures in `test/rails/eslint-route.test.ts`; per fixture is de verzameling
 | `plan(` in een `$$`-blok of commentaar | telt niet; alleen een regel die met `select plan(` begint |
 | `set local role` in commentaar, in een `$$`-blok of in `execute '…'` | telt niet; alleen aan het begin van een regel (na witruimte) buiten een `$$`-blok |
 | `$$` in een `--`-commentaar (eigen regel of achter code) | opent of sluit geen blok |
-| dollar-quote met tag (`$x$`), of `--` binnen `$$`-tekst gevolgd door een `$$` op dezelfde regel | bekend gat; plan en `search_path` staan in de praktijk bovenaan |
+| dollar-quote met tag (`$x$`), `--` binnen `$$`-tekst gevolgd door een `$$` op dezelfde regel, of `E'…'` met `\'` | bekend gat; plan en `search_path` staan in de praktijk bovenaan |
 
 ## Raakt ook
 
