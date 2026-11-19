@@ -277,7 +277,10 @@ const TOEGESTAAN_17: readonly Toegestaan17[] = [
   { command: "git ls-files -- 'scripts/kit/pr-*'", geheel: 'allen' },
   { command: 'git log -- scripts/kit/pr-{s}.mjs 2>/dev/null', geheel: 'zonder-reviewer' },
   { command: 'git log -- scripts/kit/pr-{s}.mjs 2>&1', geheel: 'zonder-reviewer' },
-  { command: 'git log -- scripts/kit/pr-{s}.mjs && git status', geheel: 'allen' },
+  { command: 'git log -- scripts/kit/pr-{s}.mjs && git status', geheel: 'zonder-reviewer' },
+  { command: 'git add test/scripts/pr-{s}.test.ts && git commit -m "x"', geheel: 'zonder-reviewer' },
+  // De veilige lus over de werkmappen, zonder kitscriptnaam, blijft toegestaan.
+  { command: 'for d in .claude/worktrees/*/; do git -C "$d" log -1; done', geheel: 'zonder-reviewer' },
   { command: 'git log --oneline -- scripts/kit/pr-{s}.mjs | wc -l' },
   { command: 'git log -- scripts/kit/pr-{s}.mjs | head -n 5' },
   { command: 'git rm --cached test/scripts/pr-{s}.test.ts' },
@@ -385,6 +388,25 @@ const GEWEIGERD_17: readonly Geweigerd17[] = [
   { command: 'for f in scripts/kit/pr-{s}.mjs; do cat "$f"; done | node - 5', basis: CAT },
   { command: `( ${CAT} ) > m.mjs; node m.mjs 5`, basis: CAT },
   { command: `{ ls; ${CAT}; } > m.mjs; node m.mjs 5`, basis: CAT },
+  // Eigenaarbesluit 2026-11-19 (spec AC-17): het hele commando telt. Een ander segment kan de shelltoestand zetten (`exec`,
+  // `hash -p`, `PATH=…`, `alias`), dus start één segment iets of zet het de toestand, dan telt elke vermelding.
+  { command: `exec >m.mjs; ${CAT}; node m.mjs 5`, basis: CAT },
+  { command: `exec 3>m.mjs; ${CAT} >&3; node m.mjs 5`, basis: CAT },
+  { command: `hash -p /usr/bin/node cat; ${CAT} 5`, basis: CAT },
+  { command: `PATH=/tmp/x:$PATH; ${CAT} 5`, basis: CAT },
+  { command: `alias cat=node\n${CAT} 5`, basis: CAT },
+  { command: `shopt -s expand_aliases\nalias cat=node\n${CAT} 5`, basis: CAT },
+  // Een compound (`if`, `case`, `function`, `for`) maakt dat elke vermelding telt; de uitzondering voor de kop van een veilige lus vervalt.
+  { command: `if true; then ${CAT}; fi | node - 5`, basis: CAT },
+  { command: `case x in x) ${CAT};; esac | node - 5`, basis: CAT },
+  { command: `function cat { node "$@"; }; ${CAT} 5`, basis: CAT },
+  { command: 'for f in scripts/kit/pr-*; do wc -l "$f"; done', basis: 'for f in docs/*.md; do wc -l "$f"; done' },
+  { command: 'for f in scripts/kit/pr-{s}.mjs; do wc -l "$f"; done', basis: 'for f in docs/*.md; do wc -l "$f"; done' },
+  // Zonder de lusvariabele in de romp (geen geëxpandeerd woord) bepaalt alleen de kop: ook dan telt de naam.
+  {
+    command: 'for f in scripts/kit/pr-*; do wc -l docs/framework.md; done',
+    basis: 'for f in docs/*.md; do wc -l docs/framework.md; done',
+  },
   { command: "git commit -F - <<'EOF'\ndocs: mention pr:{s}\nEOF", basis: COMMIT },
   { command: 'git add "$X/scripts/kit/pr-{s}.mjs"', basis: 'git add scripts/kit/pr-{s}.mjs' },
 ];
