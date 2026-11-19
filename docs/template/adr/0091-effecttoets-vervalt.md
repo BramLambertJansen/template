@@ -3,6 +3,7 @@
 Status: geaccepteerd
 
 Herzien: 2026-11-18 (#796): gewijzigd door [0093](0093-agent-onder-eigenaaraccount.md) punt 2 en 6, punt 5 vervalt: de identiteitsregels van het rolhek blijven en er komt geen bypass; in Context en Gevolgen is de review van een code-eigenaar geen grens meer, het mergescript houdt een beschermd pad tegen (vangnet)
+Herzien: 2026-11-19: punt 3, gewijzigd door [0099](0099-rolhek-leeslijst-ruimer.md): alleen voor lezen wordt de toets vooraf ruimer (de leeslijst van de reviewer, en de vangnetten op de mergescriptnaam en op `gh` in tekst wijken voor een zeker gelezen lezer); voor schrijven geldt punt 3 onverkort
 
 Wijzigt [0066](0066-schrijfgrens-op-effect.md) (vervalt in zijn geheel), [0071](0071-rolhek-vooraf-vaste-lijst.md) punt 3, 4 en
 6, [0083](0083-bewaking-met-minder-wrijving.md) punt 2, [0084](0084-sandbox-afscherming-geen-effect.md) (alleen de

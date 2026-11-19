@@ -3,10 +3,13 @@
 Status: geaccepteerd
 
 Herziet [0087](0087-reviewer-zoekt-met-git-grep.md) punt 5, [0064](0064-leesbudget-per-laag.md) punt 5 (de zin "pipes en
-`git grep` komen er niet bij") en [0071](0071-rolhek-vooraf-vaste-lijst.md) punt 2 (de zin "De lijst groeit niet met nieuwe
-programma's"), alleen voor lezen; de bijbehorende zin in R-ROL-10 komt uit het vervallen [0066](0066-schrijfgrens-op-effect.md)
-punt 3. Drempel: A3 (het rolhek wordt ruimer) en A4. Eigenaarbesluit 18 november 2026. Aanleiding: leerpunten #736, #753 en
-#757. Uitwerking: [spec rolhek-lezen](../specs/rolhek-lezen.md) AC-11 tot AC-20.
+`git grep` komen er niet bij") en [0091](0091-effecttoets-vervalt.md) punt 3 ("de toets vooraf wordt niet verder
+uitgekleed"), alleen voor lezen; en [0046](0046-werkstraat-en-beslisroute.md) punt 6 voor de inhoud van een vervallen spec.
+De zin in R-ROL-10 die hierdoor een uitzondering krijgt, heeft twee bronnen: "geen nieuwe regel per programma meer" komt uit
+het vervallen [0066](0066-schrijfgrens-op-effect.md) punt 3, "niet verder uitgekleed" uit 0091 punt 3. Drempel: A3 (het
+rolhek wordt ruimer) en A4. Eigenaarbesluit 18 november 2026; de open vragen OV-2 tot OV-6 besloot de eigenaar op
+19 november 2026. Aanleiding: leerpunten #736, #753 en #757. Uitwerking: [spec rolhek-lezen](../specs/rolhek-lezen.md) AC-11
+tot AC-20.
 
 ## Context
 
@@ -21,16 +24,20 @@ weigering met een verkeerde melding: het ging om een vervallen spec, niet om een
 ## Besluit
 
 1. **De reviewer krijgt meer leesvormen, elk met een vaste optielijst en met de gevaarlijke buren uitdrukkelijk dicht.** Het
-   gaat om bestandslezers (`wc`, `head`, `tail`, `sed -n '<a>,<b>p'`, `ls`) die alleen bestanden lezen die git volgt, om pipes
-   tussen lezers zonder redirect, om leesvormen van `git worktree`, `branch`, `tag`, `ls-tree`, `cat-file` en `rev-parse`, om
-   `git -C` naar de repo of een eigen werkmap, en om `gh pr list` en `--search`. Een leesvorm komt erbij met een leerpunt en
-   een tabeltest; dat is geen regel per programma voor schrijven.
+   gaat om bestandslezers (`wc`, `head`, `tail`, `sed -n '<a>,<b>p'`, `ls`) die alleen bestanden lezen die git volgt en
+   waarvan het echte pad in de werkmap ligt, om pipes tussen lezers zonder redirect, om leesvormen van `git worktree`,
+   `branch`, `tag`, `ls-tree`, `cat-file` en `rev-parse`, om `git -C` naar de root van de repo of van een eigen werkmap, en om
+   `gh pr list` en `--search`. Een leesvorm komt erbij met een leerpunt en een tabeltest; dat is geen regel per programma
+   voor schrijven.
 2. **Het vangnet op de mergescriptnaam weigert alleen een segment dat iets kan starten.** Een naam als pad, patroon of
-   berichttekst in een lezer of in `git add|commit|…` telt niet. Een naam in een lezer telt wel als die zijn uitvoer via een pipe
-   doorgeeft aan iets dat start. Bij een substitutie of een onzekere lezing blijft de regel van nu gelden.
-3. **Het subagentvangnet op `gh` in tekst wijkt alleen voor zeker gelezen lezers.** Het vangnet op mergen en goedkeuren (WS-04)
-   blijft voor elke rol.
-4. **Schrijven blijft even streng.** Geen schrijfregel vervalt. Een weigering bij een documentovergang noemt de echte regel.
+   berichttekst in een lezer of in `git add|commit|…` telt niet. Een lezer telt alleen in de vorm die de reviewer mag, voor
+   elke rol dezelfde toets. Een naam telt wel in een segment met een uitvoerredirect, of in een lezer die zijn uitvoer via
+   een pipe doorgeeft aan iets dat start. Bij een substitutie of een onzekere lezing blijft de regel van nu gelden.
+3. **Het subagentvangnet op `gh` in tekst wijkt alleen voor zeker gelezen lezers** die binnen de repo lezen, zodat
+   `~/.config/gh` dicht blijft. Het vangnet op mergen en goedkeuren (WS-04) blijft voor elke rol.
+4. **Schrijven blijft even streng, met één uitzondering.** Geen schrijfregel vervalt. Architect en hoofdsessie mogen de
+   inhoud van een vervallen spec wijzigen (OV-2; de merge door de eigenaar beslist); een vervallen ADR blijft onwijzigbaar
+   (A4). Een weigering bij een documentovergang noemt de echte regel.
 
 ## Alternatieven
 
