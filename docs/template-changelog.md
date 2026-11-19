@@ -18,6 +18,17 @@ requests.
   (`docs/**`: schrijven vrij, besluit agent). Bij een update: een bestaande app krijgt de stub; schrijf het skelet uit
   `appAgentregels()` naar `docs/app.md` en vul het (zie "Eigen agentinstructies van de app" in `docs/nieuwe-app.md`). Bij een
   later conflict op `docs/app.md`: houd de versie van de app.
+- `pnpm pr:resolve <nummer>` (ADR 0098, spec `botgesprekken-sluiten`): de hoofdsessie sluit vóór `pnpm pr:merge` een
+  reviewgesprek dat een bot opende, dat na de laatste botopmerking door een mens met schrijfrecht beantwoord is en dat GitHub
+  als verouderd meldt (`gesprekRedenen` en `sluitGesprekken` in `scripts/kit/pr-resolve.mjs`). Dezelfde modus, padtoets en
+  ankertoets als het mergescript: op een PR met een beschermd pad sluit het niets. Het rolhek laat alleen precies die vorm
+  door, alleen voor de hoofdsessie, en weigert voor elke rol een reviewopmerking wijzigen of wissen via `gh api` en de
+  mutatie `minimizeComment` (`rails/hooks/lib/rolhek.mjs`). Wat verandert voor een app: een vrije PR met een verwerkte en
+  beantwoorde botbevinding komt zonder klik van de eigenaar op `main`; elk ander gesprek sluit de eigenaar. Wat de eigenaar
+  moet doen: niets; `.claude/settings.json` krijgt `Bash(pnpm pr:resolve *)` in `ask` en `pnpm pr:resolve *` in `excludedCommands`, en het rolhek
+  kent het commando pas in een sessie waarvan het anker de merge bevat. Bij een conflict in `.claude/settings.json` of
+  `.github/CODEOWNERS`: neem de versie van de template en genereer `CODEOWNERS` opnieuw (`node scripts/kit/codeowners.mjs
+  --schrijf`).
 
 ### Gewijzigd
 

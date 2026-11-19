@@ -619,7 +619,9 @@ Wie samenvoegt (ADR 0093 punt 2 tot en met 5): de agent werkt onder het account 
 token en geen bypass, ook niet voor de eigenaar. GitHub maakt geen onderscheid tussen een vrij en een beschermd pad; dat doet
 `pnpm pr:merge` op de padtabel op `main`. Een PR zonder beschermd pad voegt de hoofdsessie samen zodra de verplichte checks groen
 zijn; raakt de PR een beschermd pad (zie "Een eigen beschermd pad"), dan weigert het script en voegt de eigenaar samen met de
-knop op GitHub. Dat is een vangnet, geen grens; de ruleset is een grens tegen een vergissing, niet tegen omzeilen.
+knop op GitHub. Een reviewgesprek dat een bot opende, dat beantwoord is en waarvan de regel sindsdien wijzigde, sluit de
+hoofdsessie vóór het samenvoegen met `pnpm pr:resolve <nummer>`; elk ander gesprek sluit de eigenaar (ADR 0098). Dat is een
+vangnet, geen grens; de ruleset is een grens tegen een vergissing, niet tegen omzeilen.
 Zonder ruleset (een private repo zonder betaald abonnement) werkt `pnpm pr:merge` hetzelfde: het toetst zelf of de verplichte
 checks groen zijn. Ook dat is een vangnet, geen grens; zeg dat in de overdracht van Fase 10.
 `guard.yml` heeft alleen de job `check-core`; de diff-guard bestaat niet meer (ADR 0089 punt 5).

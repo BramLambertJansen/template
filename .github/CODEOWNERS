@@ -90,3 +90,4 @@
 /scripts/kit/check-roadmap.mjs   @bramlambertjansen
 /scripts/kit/gates.mjs           @bramlambertjansen
 /scripts/kit/pr-merge.mjs        @bramlambertjansen
+/scripts/kit/pr-resolve.mjs      @bramlambertjansen

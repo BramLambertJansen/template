@@ -44,7 +44,9 @@ GitHub: open de PR onder zijn account, meld hem en wacht. Ander werk (ADR 0069, 
 
 1. De PR raakt geen beschermd pad en de verplichte checks zijn groen op de head (het script toetst beide).
 2. Een verse reviewer keurde precies de head goed, na elke push opnieuw (afspraak; het script toetst dit niet meer).
-3. Threads zijn opgelost; een externe review is geen voorwaarde.
+3. Threads zijn opgelost; een externe review is geen voorwaarde. Een verwerkte botbevinding beantwoord je in het gesprek
+   (`gh api -X POST repos/<repo>/pulls/<nr>/comments/<id>/replies -F body=@<bestand>`); na de push met de fix sluit
+   `pnpm pr:resolve <nr>` elk beantwoord en verouderd botgesprek (ADR 0098). Elk ander open gesprek sluit de eigenaar.
 4. `pnpm pr:merge <nr>` toetst alles via GitHub en noemt wat ontbreekt. Nooit `gh pr merge`, `gh api …/merge` of een andere route.
 5. Meld PR en SHA aan de eigenaar en volg de CI op `main`; rood: revert-PR. Na revert, rode `main` of
    kritieke merge geen `pr:merge` meer (ADR 0069 punt 5).
