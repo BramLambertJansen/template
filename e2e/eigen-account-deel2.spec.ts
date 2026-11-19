@@ -34,7 +34,7 @@ async function requestEmailChange(page: Page, address: string): Promise<void> {
 const REQUESTED = (email: string) =>
   `We hebben een bevestigingslink gestuurd naar ${email}. Daarna volgt een link naar het nieuwe adres.`;
 
-test('AC-6: een andere sessie beëindigen via de dialoog; de eigen sessie heeft het label "Dit apparaat"', async ({
+test('eigen-account/AC-6: een andere sessie beëindigen via de dialoog; de eigen sessie heeft het label "Dit apparaat"', async ({
   browser,
   page,
 }) => {
@@ -65,7 +65,10 @@ test('AC-6: een andere sessie beëindigen via de dialoog; de eigen sessie heeft 
   expect(csp).toStrictEqual([]);
 });
 
-test('AC-6: Annuleren in de dialoog beëindigt niets en geeft de focus terug aan de knop', async ({ browser, page }) => {
+test('eigen-account/AC-6: Annuleren in de dialoog beëindigt niets en geeft de focus terug aan de knop', async ({
+  browser,
+  page,
+}) => {
   const user = await createAccount('user');
   await signIn(page, user);
   const other = await secondDevice(browser, user);
@@ -80,7 +83,10 @@ test('AC-6: Annuleren in de dialoog beëindigt niets en geeft de focus terug aan
   expect((await other.request.get('/api/me')).status()).toBe(200);
 });
 
-test('AC-7: "Alle andere sessies beëindigen" laat alleen "Dit apparaat" over', async ({ browser, page }) => {
+test('eigen-account/AC-7: "Alle andere sessies beëindigen" laat alleen "Dit apparaat" over', async ({
+  browser,
+  page,
+}) => {
   const user = await createAccount('user');
   await signIn(page, user);
   const second = await secondDevice(browser, user);
@@ -103,7 +109,7 @@ test('AC-7: "Alle andere sessies beëindigen" laat alleen "Dit apparaat" over', 
   expect((await page.request.get('/api/me')).status()).toBe(200);
 });
 
-test('AC-8: e-mailadres wijzigen met beide links; inloggen met het nieuwe adres, het oude werkt niet meer', async ({
+test('eigen-account/AC-8: e-mailadres wijzigen met beide links; inloggen met het nieuwe adres, het oude werkt niet meer', async ({
   browser,
   page,
 }) => {
@@ -150,7 +156,7 @@ test('AC-8: e-mailadres wijzigen met beide links; inloggen met het nieuwe adres,
   expect(csp).toStrictEqual([]);
 });
 
-test('AC-9: een bezet adres geeft dezelfde melding; het bezette adres krijgt niets, het oude de neutrale mail', async ({
+test('eigen-account/AC-9: een bezet adres geeft dezelfde melding; het bezette adres krijgt niets, het oude de neutrale mail', async ({
   page,
 }) => {
   const user = await createAccount('user');
@@ -168,7 +174,7 @@ test('AC-9: een bezet adres geeft dezelfde melding; het bezette adres krijgt nie
   expect((await mailSubjects(owner.email)).length).toBe(before);
 });
 
-test('AC-10: een sessie ouder dan 10 minuten: "Log opnieuw in om dit te wijzigen."', async ({ page }) => {
+test('eigen-account/AC-10: een sessie ouder dan 10 minuten: "Log opnieuw in om dit te wijzigen."', async ({ page }) => {
   const user = await createAccount('user');
   await signIn(page, user);
   await page.goto('/account');
@@ -182,7 +188,10 @@ test('AC-10: een sessie ouder dan 10 minuten: "Log opnieuw in om dit te wijzigen
   expect(await mailSubjects(user.email)).not.toContain(MAIL.old);
 });
 
-test('AC-11: anoniem met een geldige link: eerst /login, en er verandert niets', async ({ browser, page }) => {
+test('eigen-account/AC-11: anoniem met een geldige link: eerst /login, en er verandert niets', async ({
+  browser,
+  page,
+}) => {
   const user = await createAccount('user');
   await signIn(page, user);
   await page.goto('/account');
@@ -197,7 +206,7 @@ test('AC-11: anoniem met een geldige link: eerst /login, en er verandert niets',
   expect(await (await page.request.get('/api/me')).json()).toMatchObject({ email: user.email });
 });
 
-test('AC-11: een andere ingelogde gebruiker: "Deze link is verlopen of al gebruikt." en er verandert niets', async ({
+test('eigen-account/AC-11: een andere ingelogde gebruiker: "Deze link is verlopen of al gebruikt." en er verandert niets', async ({
   browser,
   page,
 }) => {

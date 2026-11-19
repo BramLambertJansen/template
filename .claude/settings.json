@@ -81,6 +81,7 @@
       "Bash(pnpm new:resource *)",
       "Bash(pnpm run new:resource *)",
       "Bash(pnpm pr:merge *)",
+      "Bash(pnpm pr:resolve *)",
       "Bash(sed -i *)",
       "Bash(perl -pi *)",
       "Edit(.github/**)",
@@ -135,6 +136,7 @@
     "allowUnsandboxedCommands": false,
     "excludedCommands": [
       "pnpm pr:merge *",
+      "pnpm pr:resolve *",
       "pnpm test:db *",
       "pnpm ui:check *",
       "pnpm gate:slow *",

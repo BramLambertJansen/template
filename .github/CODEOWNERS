@@ -88,7 +88,6 @@
 /scripts/kit/github-evidence.mjs @bramlambertjansen
 /scripts/kit/pr-verify.mjs       @bramlambertjansen
 /scripts/kit/check-roadmap.mjs   @bramlambertjansen
-/scripts/kit/roadmap-item.mjs    @bramlambertjansen
-/scripts/kit/document-status.mjs @bramlambertjansen
 /scripts/kit/gates.mjs           @bramlambertjansen
 /scripts/kit/pr-merge.mjs        @bramlambertjansen
+/scripts/kit/pr-resolve.mjs      @bramlambertjansen

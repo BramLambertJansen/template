@@ -53,7 +53,7 @@ function fixture(name: string, code: string, waar: Rail | readonly [Rail, string
   return { name, file, code, rule };
 }
 
-// AC-1: netwerkmodules.
+// netwerk-en-geheim-rails/AC-1: netwerkmodules.
 const AC1: Fixture[] = [
   fixture("AC-1: import http from 'node:http'", "import http from 'node:http';\nexport const h = http;\n", NETWERK),
   fixture(
@@ -76,7 +76,7 @@ const AC1: Fixture[] = [
   ),
 ];
 
-// AC-2: omzeiling via een andere importvorm of laadweg.
+// netwerk-en-geheim-rails/AC-2: omzeiling via een andere importvorm of laadweg.
 const AC2: Fixture[] = [
   fixture("AC-2: await import('node:https')", "export const m = await import('node:https');\n", NETWERK),
   fixture("AC-2: export * from 'node:net'", "export * from 'node:net';\n", NETWERK),
@@ -125,7 +125,7 @@ const AC2: Fixture[] = [
   fixture("AC-2: import h = require('node:http')", "import h = require('node:http');\nexport const x = h;\n", NETWERK),
 ];
 
-// AC-3: globale netwerk-API.
+// netwerk-en-geheim-rails/AC-3: globale netwerk-API.
 const AC3: Fixture[] = [
   fixture("AC-3: await fetch('https://x')", "export const r = await fetch('https://x');\n", NETWERK),
   fixture('AC-3: const f = fetch', 'export const f = fetch;\n', NETWERK),
@@ -137,7 +137,7 @@ const AC3: Fixture[] = [
   fixture('AC-3: fetch in src/core/shared', "export const r = await fetch('x');\n", [NETWERK, 'src/core/shared/x.ts']),
 ];
 
-// AC-4: het globale object.
+// netwerk-en-geheim-rails/AC-4: het globale object.
 const AC4: Fixture[] = [
   fixture("AC-4: globalThis.fetch('x')", "export const r = globalThis.fetch('x');\n", NETWERK),
   fixture("AC-4: globalThis['fetch']('x')", "export const r = globalThis['fetch']('x');\n", NETWERK),
@@ -165,7 +165,7 @@ const AC4: Fixture[] = [
   ),
 ];
 
-// AC-5: toegestane vormen.
+// netwerk-en-geheim-rails/AC-5: toegestane vormen.
 const AC5: Fixture[] = [
   fixture(
     'AC-5: app.fetch en api.fetch',
@@ -209,7 +209,7 @@ const AC5: Fixture[] = [
   fixture('AC-5: enum-lid fetch', 'export enum E {\n  fetch = 1,\n}\n', null),
 ];
 
-// AC-6: een inline type-import laadt de module onder verbatimModuleSyntax.
+// netwerk-en-geheim-rails/AC-6: een inline type-import laadt de module onder verbatimModuleSyntax.
 const AC6: Fixture[] = [
   fixture(
     "AC-6: import { type AddressInfo } from 'node:net'",
@@ -218,7 +218,7 @@ const AC6: Fixture[] = [
   ),
 ];
 
-// AC-7: toegestane plekken.
+// netwerk-en-geheim-rails/AC-7: toegestane plekken.
 const NETWERK_CODE = "import http from 'node:http';\nexport const h = http;\nexport const r = await fetch('x');\n";
 const AC7: Fixture[] = [
   ...[
@@ -237,7 +237,7 @@ const AC7: Fixture[] = [
   ]),
 ];
 
-// AC-8: een geheime sleutel zonder secret(…).
+// netwerk-en-geheim-rails/AC-8: een geheime sleutel zonder secret(…).
 const AC8: Fixture[] = [
   'PARTNER_TOKEN',
   'HOOK_SECRET',
@@ -259,7 +259,7 @@ const AC8_BASIS: Fixture[] = [
   fixture('AC-8: basis met NOT_A_KEY meldt niets', schema('NOT_A_KEY: z.string()'), [null, ENV]),
 ];
 
-// AC-9: omzeiling van de sleutel.
+// netwerk-en-geheim-rails/AC-9: omzeiling van de sleutel.
 const S_DECL = 'declare const s: (c: unknown) => z.ZodString;\n';
 const AC9: Fixture[] = [
   fixture("AC-9: sleutel als string 'X_SECRET'", schema("'X_SECRET': z.string()"), [GEHEIM, ENV]),
@@ -271,7 +271,7 @@ const AC9: Fixture[] = [
   fixture('AC-9: controle: s(ctx) onder een gewone sleutel meldt niets', schema('PORT: s(ctx)', S_DECL), [null, ENV]),
 ];
 
-// AC-10: een eigen secret.
+// netwerk-en-geheim-rails/AC-10: een eigen secret.
 const ZOD = "import { z } from 'zod';\nexport const zz = z;\n";
 const AC10: Fixture[] = [
   fixture('AC-10: const secret = …', `${ZOD}export const secret = (c: unknown) => z.string();\n`, [GEHEIM, ENV]),
@@ -299,7 +299,7 @@ const AC10: Fixture[] = [
   ),
 ];
 
-// AC-11: imports buiten zod en core-env, en verbreding van het schema.
+// netwerk-en-geheim-rails/AC-11: imports buiten zod en core-env, en verbreding van het schema.
 const VELD = 'B: z.number()';
 const DECLS =
   'declare const a: z.ZodObject;\ndeclare const b: z.ZodObject;\ndeclare const s: z.ZodObject;\n' +
@@ -338,7 +338,7 @@ const AC11: Fixture[] = [
   ),
 ];
 
-// AC-12: toegestane vormen voor rails/geheim.
+// netwerk-en-geheim-rails/AC-12: toegestane vormen voor rails/geheim.
 const GOED_SCHEMA =
   `${ENV_IMPORTS}export const e = readEnv((ctx) => z.object({ PARTNER_API_KEY: secret(ctx, { minBytes: 48 }), ` +
   'PORT: z.number().default(1), TOKEN_TTL: z.number(), tokenTtl: z.number() }));\n';
@@ -379,7 +379,7 @@ test.each([
   expect(await railsIn(file, code)).toStrictEqual(rule === null ? [] : [rule]);
 });
 
-// AC-14: de meldingen noemen de juiste helper en regel.
+// netwerk-en-geheim-rails/AC-14: de meldingen noemen de juiste helper en regel.
 test.each([
   {
     name: 'AC-14: melding van rails/netwerk-api',
@@ -405,7 +405,7 @@ test.each([
   }
 });
 
-// AC-13: de huidige zone geeft geen melding van een van beide rails (regressie; pnpm lint bewijst hetzelfde op de hele repo).
+// netwerk-en-geheim-rails/AC-13: de huidige zone geeft geen melding van een van beide rails (regressie; pnpm lint bewijst hetzelfde op de hele repo).
 test('netwerk-en-geheim-rails/AC-13: huidige zone zonder melding van rails/netwerk-api of rails/geheim', async () => {
   const zone = [
     'src/api/**/*.{ts,tsx}',

@@ -79,7 +79,7 @@ describe('vermogen kooi (AC-1)', () => {
   });
 });
 
-describe('dicht vallen (AC-2)', () => {
+describe('dicht vallen (tests-naar-vermogen/AC-2)', () => {
   test('AC-2: gooit de proef zelf, dan faalt de setup met die fout (geen overslaan)', async () => {
     geenCi();
     const { setup } = await laad();
@@ -105,7 +105,7 @@ describe('dicht vallen (AC-2)', () => {
   });
 });
 
-describe('CI-kenmerk en ontbrekende kooi (AC-6, AC-7)', () => {
+describe('CI-kenmerk en ontbrekende kooi (tests-naar-vermogen/AC-6, tests-naar-vermogen/AC-7)', () => {
   const MELDING_CI = `✗ kooi ontbreekt in CI (${START_NIET.melding}); in CI slaat geen test over (ADR 0088)`;
 
   test.each([

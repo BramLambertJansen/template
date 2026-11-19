@@ -20,7 +20,7 @@ dus eerst deze besluit-PR.
 | Rol | Doet | Mag niet |
 |---|---|---|
 | architect | werkt de levende spec bij met nieuwe AC's | een AC-id weghalen; in het archief schrijven |
-| hoofdsessie | `pnpm docs:status`, `git mv` naar het archief | een SHA in een statusregel |
+| hoofdsessie | `status: gebouwd` in de bouw-PR (ADR 0095), `git mv` naar het archief | een SHA in een statusregel |
 | eigenaar | merget de drie PR's | — |
 
 ## Datawijzigingen (met grants)
@@ -59,8 +59,7 @@ n.v.t.: geen externe dienst; GitHub lezen zoals nu.
     `<spec>: gebouwd # #<n> is niet deze PR en PR #<n> is niet gemerged (ADR 0080)`.
   - check-docs: `<spec>: statusregel met gevalideerd: <sha>; schrijf status: gebouwd # #<PR> (ADR 0080)`;
     `<spec>: de naam staat ook in docs/specs/archief/; een naam komt niet terug (ADR 0080)`.
-  - check-roadmap: `<spec>: naar gebouwd zonder bouwbewijs; zet de status met pnpm docs:status (status: gebouwd # #<PR>)`.
-  - docs:status, open PR: `Gebouwd vereist de juiste geopende PR op deze branch en code buiten docs/`.
+  - check-roadmap en `docs:status`: hun meldingen over het bouwbewijs zijn vervallen door ADR 0095.
 
 ### Werking (bindend)
 
@@ -72,18 +71,16 @@ n.v.t.: geen externe dienst; GitHub lezen zoals nu.
    alleen die over. De digest telt zonder markeringen: alleen weghalen is geen inhoudswijziging. In `check-document-status`
    (tegen de stand op main): een id `<ns>/AC-n` (`ns` = namespace, anders de naam) verdwijnt bij geen overgang. Een verhuizing
    gaat alleen naar `docs/specs/archief/` (`docs/template/specs/` uit `verhuisBron`); een andere rename is rood.
-3. **`docs:status`** schrijft alleen `status: gebouwd # #N`. Open PR N op deze branch, code buiten `docs/`, spec
-   goedgekeurd op main of UI-akkoord; geen check-runs. Gemergd: `mergedRefusal`, head uit GitHub.
-4. **Guard.** Zonder SHA: N is deze PR → eigen route zoals nu; anders → gemergde route, head uit GitHub. Met SHA: zoals nu. Al
-   `gebouwd` op main: alleen `; gevalideerd: <sha>` weghalen bij gelijke digest is `vrij`; elke andere wijziging van de
-   verwijzing geeft in `beslisOvergang` `gebouwd` (nieuw bewijs), ook bij gelijke digest.
+3. *(vervallen door ADR 0095: `docs:status` bestaat niet meer; hoofdsessie of architect zet `status: gebouwd` in de bouw-PR)*
+4. **Guard.** *(vervallen door ADR 0095, behalve:)* al `gebouwd` op main: bij gelijke digest is alleen het commentaar achter
+   de status wijzigen `vrij`, behalve een nieuwe `; gevalideerd: <sha>` (AC-12).
 5. **Omzetten.** De bouw-PR haalt `; gevalideerd: <sha>` weg uit elke statusregel in `docs/specs/` (17 op 781fcd6).
 
 ## Acceptatiecriteria
 
 - **specarchief-en-bouwvorm/AC-1** — `documentKind` geeft `spec` en `isArchief` waar voor `docs/specs/archief/a.md`; niet voor
   `docs/specs/archief/_a.md` of `docs/specs/archief/x/a.md`.
-- **specarchief-en-bouwvorm/AC-2** — Byte-gelijke `git mv` van een op main vervallen spec naar `docs/specs/archief/`, alleen
+- **specarchief-en-bouwvorm/AC-2** — Vervallen door ADR 0089 (punt 1 en 5: template-specs staan zonder archief en `check-document-status` met de archiefroute is weg). Was: Byte-gelijke `git mv` van een op main vervallen spec naar `docs/specs/archief/`, alleen
   met `docs/`-wijzigingen: groen. Rood: andere status op main; inhoud anders; andere naam; terug; nieuw, gewijzigd of
   verwijderd bestand in het archief; een bestand buiten `docs/` ernaast.
 - **specarchief-en-bouwvorm/AC-3** — Het rolhek weigert elke rol elke schrijfactie in `docs/specs/archief/` met de melding
@@ -94,24 +91,26 @@ n.v.t.: geen externe dienst; GitHub lezen zoals nu.
 - **specarchief-en-bouwvorm/AC-6** — `feiten.mjs specs` en `pnpm leespad` tellen geen bestand in het archief, ook niet in
   een geneste map eronder (bewaakt tegen terugval; nu al groen).
 - **specarchief-en-bouwvorm/AC-7** — Besluit-PR: gebouwde spec blijft `gebouwd` met een nieuwe AC `(nog niet gebouwd)`
-  zonder test: groen. Rood: dezelfde AC zonder markering; de markering in een PR met code; `gebouwd # #<deze PR>` met een
-  markering; een markering op een id dat al op main staat; gebouwde spec naar `goedgekeurd`. Groen: een kritieke bouw-PR haalt
-  de markering weg, voegt de test toe en zet `gebouwd # #<deze PR>`.
-- **specarchief-en-bouwvorm/AC-8** — Spec met eigenaarstatus op main, rood: `<ns>/AC-3` weg; naar `voorstel` of `vervallen`
+  zonder test: groen. Rood: dezelfde AC zonder markering; de markering in een PR met code; een markering op een id dat al op
+  main staat; gebouwde spec naar `goedgekeurd`. Groen: een bouw-PR haalt de markering weg, voegt de test toe en laat de
+  statusregel staan (ADR 0095).
+- **specarchief-en-bouwvorm/AC-8** — Vervallen door ADR 0089 (punt 5 en 8: `check-document-status` is weg; dat een AC-id blijft, is een afspraak die de reviewer toetst, R-WERK-07). Was: Spec met eigenaarstatus op main, rood: `<ns>/AC-3` weg; naar `voorstel` of `vervallen`
   zonder `AC-3`; andere namespace; bestand verwijderd; rename binnen `docs/specs/` of naar `docs/template/specs/`. Groen: naar
   `vervallen` met gelijke inhoud; verhuizing (AC-2).
-- **specarchief-en-bouwvorm/AC-9** — `docs:status <spec> gebouwd --pr N`, PR N open op de branch met code: schrijft
+- **specarchief-en-bouwvorm/AC-9** — Vervallen door ADR 0095 (`pnpm docs:status` bestaat niet meer). Was: `docs:status <spec> gebouwd --pr N`, PR N open op de branch met code: schrijft
   `status: gebouwd # #N`, ook als er geen check-runs zijn. Rood en niets geschreven: PR N gesloten of op een andere branch,
   of geen code buiten `docs/` en `CHANGELOG.md`.
-- **specarchief-en-bouwvorm/AC-10** — Kernscenario: spec goedgekeurd op main, PR N met code gemerged (squash en merge),
+- **specarchief-en-bouwvorm/AC-10** — Vervallen door ADR 0095 (de route na de merge en de status-PR bestaan niet meer). Was: Kernscenario: spec goedgekeurd op main, PR N met code gemerged (squash en merge),
   checks groen op de head. `docs:status` schrijft `status: gebouwd # #N`; de guard op de status-PR (ander of geen `PR_NUMBER`)
   is groen. Rood: een check rood; geen bouwpad; spec in de mergecommit anders; een ander bestand; PR N niet gemerged.
-- **specarchief-en-bouwvorm/AC-11** — `gebouwd # #N; gevalideerd: <sha>` in een fixture: de guard toetst zoals nu (groen met
-  bewijs, rood zonder); check-docs geeft er in `docs/specs/` de melding uit Hergebruik en UX voor.
-- **specarchief-en-bouwvorm/AC-12** — Op main `gebouwd # #N; gevalideerd: <sha>`: de PR maakt er `gebouwd # #N` van → groen
-  zonder GitHub-aanroep. Rood: `gebouwd # #M` zonder bewijs voor M; SHA weg en inhoud gewijzigd.
-- **specarchief-en-bouwvorm/AC-13** — `changeStatus` schrijft `status: gebouwd # #N` en gooit zonder geldig N; geen spec in
-  `docs/specs/` heeft `gevalideerd:` in de statusregel.
+- **specarchief-en-bouwvorm/AC-11** — check-docs weigert `gebouwd # #N; gevalideerd: <sha>` in een statusregel met de melding
+  uit Hergebruik en UX; `gebouwd # #N` zonder SHA geeft geen melding (het deel over de guard is vervallen door ADR 0095).
+- **specarchief-en-bouwvorm/AC-12** — Een spec die `gebouwd` blijft (ADR 0095): alleen het commentaar achter de status anders
+  (`; gevalideerd: <sha>` weg, een ander PR-nummer, geen nummer) bij gelijke inhoud: `vrij`; nieuwe inhoud: `besluit`; een
+  weggehaalde markering `(nog niet gebouwd)`: `gebouwd`; een nieuwe `; gevalideerd: <sha>`: `gebouwd`, en het rolhek weigert
+  dat.
+- **specarchief-en-bouwvorm/AC-13** — Geen spec in `docs/specs/` of `docs/template/specs/` heeft `gevalideerd:` in de
+  statusregel (het deel over `changeStatus` is vervallen door ADR 0095).
 
 ## Randgevallen
 
@@ -124,7 +123,7 @@ n.v.t.: geen externe dienst; GitHub lezen zoals nu.
 ## Raakt ook
 
 - Code in `rails/hooks/lib/`: `document-state.mjs`, `built-evidence.mjs`, `rolhek.mjs`, `effect.mjs`; in `scripts/kit/`:
-  `document-status.mjs`, `check-document-status.mjs`, `check-docs.mjs`, `check-roadmap.mjs`, `gates.mjs` (tekst).
+  `document-status.mjs` (vervallen), `check-document-status.mjs`, `check-docs.mjs`, `check-roadmap.mjs`, `gates.mjs` (tekst).
 - `scripts/kit/status-git.mjs` (`mergedEvidence`, als de gemergde route zonder SHA dat vraagt).
 - Spec `compacte-kennisbasis-rails` AC-5: het deel "verhuizing naar `docs/template/specs/`" vervalt (bijwerken in de bouw-PR).
 - Docs: framework R-WERK-07 (levende spec), R-WERK-08 (één vorm; de stap terug naar `voorstel` houdt de AC-id's), R-CI-06
@@ -155,8 +154,8 @@ n.v.t.: geen externe dienst; GitHub lezen zoals nu.
     het pad dat bestaat, archief of oud); `test/rails/mandate-follow-up-docs.test.ts` (vervallen) (idem `taakmandaat-frameworkwerk.md`,
     en de letterlijke teksten van `_template.md`, `gates.mjs` en `agent-doorloop.md`);
     `test/rails/check-roadmap.test.ts` en `test/rails/check-roadmap-bewijsvorm.test.ts` (melding zonder SHA);
-    `test/rails/gebouwd-na-merge-git.test.ts` AC-1, eerste test van AC-8 en AC-9 (verwachte regel `gebouwd # #<n>`).
-  - **(ii) Nieuwe uitkomst:** `test/hooks/authority.test.ts` (`changeStatus` zonder SHA; weigeringen om de SHA vervallen); `test/hooks/mandate-follow-up-status.test.ts` ("schrijft alleen statusregel en vinkje":
+    `test/rails/gebouwd-na-merge-git.test.ts` (vervallen) AC-1, eerste test van AC-8 en AC-9 (verwachte regel `gebouwd # #<n>`).
+  - **(ii) Nieuwe uitkomst:** `test/hooks/authority.test.ts` (`changeStatus` zonder SHA; weigeringen om de SHA vervallen); `test/hooks/mandate-follow-up-status.test.ts` (vervallen) ("schrijft alleen statusregel en vinkje":
     regel zonder SHA, guard met `PR_NUMBER=130`; "de verplichte checks ontbreken": docs:status schrijft nu);
     `test/rails/functional-ui-status.test.ts` ("docs:status en de guard aanvaarden": regel zonder SHA, guard met
     `PR_NUMBER`; "ontbrekend CI-bewijs blijft rood": docs:status schrijft nu, ADR 0054 punt 1);

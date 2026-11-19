@@ -35,6 +35,7 @@ afterAll(async () => {
   await pool.end();
 });
 
+// inloggat-dichten/AC-14: de eenmalige TOTP-claim breekt de dev-login niet.
 test('tien wissels achter elkaar vanaf één IP: elke keer 204 en een sessie met de juiste sterkte', async () => {
   const browser = new Browser(app);
   const seen: string[] = [];

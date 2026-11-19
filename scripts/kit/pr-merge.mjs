@@ -16,7 +16,7 @@ import { checkProgress } from './pr-verify.mjs';
 
 const SHA = /^[0-9a-f]{40}$/;
 // `pnpm run` zet `node_modules/.bin` vooraan in PATH: een daar geplante `gh` mag de GitHub-antwoorden niet leveren.
-const ZONDER_BIN = {
+export const ZONDER_BIN = {
   ...process.env,
   PATH: (process.env['PATH'] ?? '')
     .split(':')
@@ -57,7 +57,7 @@ function alle(api, endpoint, sleutel) {
 }
 
 /** Een bestand op een commit van main, via de contents-API. @param {Api} api @param {{ repo: string, sha: string, bestand: string }} doel */
-function bestandOp(api, { repo, sha, bestand }) {
+export function bestandOp(api, { repo, sha, bestand }) {
   try {
     const inhoud = tekst(veld(api(`repos/${repo}/contents/${bestand}?ref=${sha}`), 'content'));
     return JSON.parse(Buffer.from(inhoud, 'base64').toString('utf8'));
@@ -186,7 +186,7 @@ function padenVanBestand(item) {
  * een crash en nooit een merge.
  * @param {Api} api @param {{ repo: string, nummer: number, mainSha: string, gates: unknown }} doel @returns {string[]}
  */
-function padRedenen(api, { repo, nummer, mainSha, gates }) {
+export function padRedenen(api, { repo, nummer, mainSha, gates }) {
   try {
     const tabel = samengevoegd(gates, appBestand(api, { repo, sha: mainSha }));
     const paden = alle(api, `repos/${repo}/pulls/${String(nummer)}/files`).flatMap(padenVanBestand);
@@ -250,7 +250,7 @@ export function slotRegels(nummer, head) {
  * Een 404 blijft herkenbaar in de melding (`HTTP 404`, zoals `gh api` het op stderr meldt): alleen daar telt een ontbrekend
  * `.claude/gates.app.json` als leeg. @param {string} endpoint @returns {unknown}
  */
-function gh(endpoint) {
+export function gh(endpoint) {
   try {
     return JSON.parse(
       execFileSync('gh', ['api', endpoint], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], env: ZONDER_BIN }),
@@ -261,9 +261,9 @@ function gh(endpoint) {
   }
 }
 
-/** @param {string[]} args */
-export function nummerUit(args) {
-  if (args.length !== 1 || !/^[1-9]\d*$/.test(args[0] ?? '')) throw new Error('Gebruik: pnpm pr:merge <nummer>');
+/** `script`: het pnpm-script in de gebruiksregel (`pnpm pr:resolve` hergebruikt dit, ADR 0098). @param {string[]} args */
+export function nummerUit(args, script = 'pr:merge') {
+  if (args.length !== 1 || !/^[1-9]\d*$/.test(args[0] ?? '')) throw new Error(`Gebruik: pnpm ${script} <nummer>`);
   return Number(args[0]);
 }
 

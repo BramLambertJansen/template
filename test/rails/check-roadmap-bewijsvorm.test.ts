@@ -13,7 +13,6 @@ const SCRIPT = path.join(import.meta.dirname, '../../scripts/kit/check-roadmap.m
 
 const SHA = 'a'.repeat(40);
 const GOEDGEKEURD = '---\nstatus: goedgekeurd\n---\n\n# Spec A\n\nEen spec zonder verwijzing.\n';
-const SPEC_BEWIJS = ['spec:bewijs:docs/specs/a.md'];
 
 function specMet(statusregel: string, extra = ''): string {
   return `---\n${statusregel}\n---\n\n# Spec A\n\nEen spec zonder verwijzing.\n${extra}`;
@@ -83,37 +82,38 @@ const STATUSREGELS: [regel: string, geldig: boolean, bestanden?: string[]][] = [
   [`status: gebouwd # #130; gevalideerd: ${'a'.repeat(39)}`, false],
 ];
 
-describe('mandate-follow-up/AC-10: alleen status: gebouwd # #<PR>; gevalideerd: <40 hex> is bouwbewijs', () => {
-  test.each(STATUSREGELS)('%s', async (regel, geldig, bestanden = []) => {
+// GEWIJZIGD (gebouwd-zonder-nummer/AC-1, ADR 0095): elke statusregel `status: gebouwd` is bouwbewijs, met of zonder commentaar;
+// geen invoer geeft nog spec:bewijs.
+describe('mandate-follow-up/AC-10: elke gebouwd-regel is bewijs, geen invoer geeft spec:bewijs (gebouwd-zonder-nummer/AC-1)', () => {
+  test.each(STATUSREGELS)('%s', async (regel, _geldig, bestanden = []) => {
     const keys = (await meldingen({ basis: GOEDGEKEURD, head: specMet(regel), bestanden })).map((m) => m.key);
-    expect(keys).toStrictEqual(geldig ? [] : SPEC_BEWIJS);
+    expect(keys).toStrictEqual([]);
   });
 
-  // GEWIJZIGD (specarchief-en-bouwvorm, ADR 0080 punt 5, OV-1): de melding noemt de ene vorm zonder SHA.
-  test('de nieuwe meldingstekst noemt het bestand en de exacte vorm', async () => {
+  test('de melding spec:bewijs bestaat niet meer', async () => {
     const resultaat = await meldingen({ basis: GOEDGEKEURD, head: specMet('status: gebouwd') });
-    expect(resultaat.map((m) => m.message)).toStrictEqual([
-      'docs/specs/a.md: naar gebouwd zonder bouwbewijs; zet de status met pnpm docs:status (status: gebouwd # #<PR>)',
-    ]);
+    expect(resultaat.map((m) => m.message)).toStrictEqual([]);
   });
 });
 
 describe('mandate-follow-up/AC-12: dezelfde parser als het rolhek (document-state.mjs)', () => {
+  // GEWIJZIGD (gebouwd-zonder-nummer/AC-1, ADR 0095): builtReference leest nog alleen de oude `# #<PR>`-vorm; check:roadmap
+  // eist die niet meer, dus de uitkomst van check:roadmap hangt niet meer van builtReference af.
   test.each(STATUSREGELS)(
-    'builtReference en "geen spec:bewijs" geven dezelfde uitkomst voor %s',
+    'builtReference blijft de oude vorm lezen en check:roadmap meldt niets voor %s',
     async (regel, geldig, bestanden = []) => {
       const tekst = specMet(regel);
       const reference = await roep(DOCUMENT_STATE_MODULE, 'builtReference', tekst);
       const resultaat = await meldingen({ basis: GOEDGEKEURD, head: tekst, bestanden });
       expect(reference !== null).toBe(geldig);
-      expect(resultaat.length === 0).toBe(reference !== null);
+      expect(resultaat).toStrictEqual([]);
     },
   );
 
-  test('een geldige gebouwd-regel in de frontmatter én een tweede regel die met status: begint: spec:bewijs', async () => {
+  test('een gebouwd-regel in de frontmatter én een tweede regel die met status: begint: geen melding', async () => {
     const tekst = specMet(`status: gebouwd # #130; gevalideerd: ${SHA}`, '\nstatus: voorstel\n');
     const keys = (await meldingen({ basis: GOEDGEKEURD, head: tekst })).map((m) => m.key);
-    expect(keys).toStrictEqual(SPEC_BEWIJS);
+    expect(keys).toStrictEqual([]);
   });
 
   test('check-roadmap.mjs heeft geen eigen statusparser en gebruikt documentInfo en builtReference', () => {

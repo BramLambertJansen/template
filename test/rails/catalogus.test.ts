@@ -4,6 +4,7 @@ import path from 'node:path';
 import { expect, test } from 'vitest';
 import { catalogusFouten, componenten } from '../../scripts/kit/catalogus.mjs';
 
+// design-system/AC-9: pnpm check:catalogus (scripts/kit/catalogus.mjs).
 // De opdracht verandert de rail: broninventarisatie, renderpaden en geen uitzonderingen. De historische tests blijven
 // bewijzen dat de echte repo groen is en dat ontbrekende voorbeelden worden geweigerd; fixtures bevatten nu echte code.
 function repo(barrel: string, page: string): string {

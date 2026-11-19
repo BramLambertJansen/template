@@ -30,6 +30,18 @@ Nog niet uitgebrachte wijzigingen staan als fragment in `docs/template-changelog
   (`scripts/kit/template-release.mjs`) voegt de fragmenten samen tot een release (minor bij een "Bij een update"-notitie,
   anders patch) zonder te committen of te taggen. De sectie `[Unreleased]` blijft leeg
   (`test/scripts/template-changelog-unreleased.test.ts`). Wat verandert voor een app: zie "Bij een update" van deze release.
+- Setupscript `scripts/kit/nieuwe-app.mjs` (spec `nieuwe-app-script`, bouwstap 1; leerpunten #561 en #571): de
+  deelcommando's `preflight`, `koppel`, `poorten [--env]` en `db-bewijs` voeren de deterministische stappen van
+  `docs/nieuwe-app.md` uit (4.2, 5.1, 7.1, 8), melden per stap ✓, · of ✗ met herstel en schrijven
+  `.template/nieuwe-app-<deelcommando>.json`. `scripts/doctor.sh` controleert ook de samenhang van de poorten in `.env.local`
+  en schrijft `.template/doctor-<full|machine>.json`; `scripts/bootstrap.sh` schrijft `.template/bootstrap.json`;
+  `pnpm dev` stopt vóór compose als `API_PORT` of `WEB_PORT` bezet is. `.env.example` noemt nu `API_PORT=8787` en
+  `WEB_PORT=5173`. De naslagsecties "Naslag: dagelijks werken", "Eigen agentinstructies van de app" en "Een eigen beschermd
+  pad" staan in `docs/app-naslag.md`; in het playbook blijft per kop een verwijsregel. `pnpm leespad` meet het playbook als
+  soort `playbook` (streefwaarde 35 KB, een meting). `repo-instellingen` volgt in bouwstap 2. Wat verandert voor een app:
+  `.template/` is genegeerd door git; een `.env.local` waarin de poort van een URL niet bij zijn poortsleutel past, maakt
+  `scripts/doctor.sh` rood. Bij een update: niets verplicht; `API_PORT` en `WEB_PORT` mogen in een bestaande `.env.local`
+  ontbreken (dan gelden 8787 en 5173). Bij een conflict op `.env.example` of `.gitignore`: neem de regels van de template over.
 - Eigen agentinstructies van een app (spec `app-agentregels`, R-DOC-11): wat elke sessie over de app moet weten, staat als
   feiten in `docs/app.md`, dat `CLAUDE.md` importeert (`@docs/app.md`). In de template is het een vaste stub (`APP_STUB` in
   `scripts/kit/app-init.mjs`); `pnpm app:init` herschrijft hem met een skelet (`appAgentregels()`). `check-docs` regel 13
@@ -39,9 +51,29 @@ Nog niet uitgebrachte wijzigingen staan als fragment in `docs/template-changelog
   (`docs/**`: schrijven vrij, besluit agent). Bij een update: een bestaande app krijgt de stub; schrijf het skelet uit
   `appAgentregels()` naar `docs/app.md` en vul het (zie "Eigen agentinstructies van de app" in `docs/nieuwe-app.md`). Bij een
   later conflict op `docs/app.md`: houd de versie van de app.
+- `pnpm pr:resolve <nummer>` (ADR 0098, spec `botgesprekken-sluiten`): de hoofdsessie sluit vóór `pnpm pr:merge` een
+  reviewgesprek dat een bot opende, dat na de laatste botopmerking door een mens met schrijfrecht beantwoord is en dat GitHub
+  als verouderd meldt (`gesprekRedenen` en `sluitGesprekken` in `scripts/kit/pr-resolve.mjs`). Dezelfde modus, padtoets en
+  ankertoets als het mergescript: op een PR met een beschermd pad sluit het niets. Het rolhek laat alleen precies die vorm
+  door, alleen voor de hoofdsessie, en weigert voor elke rol een reviewopmerking wijzigen of wissen via `gh api` en de
+  mutatie `minimizeComment` (`rails/hooks/lib/rolhek.mjs`). Wat verandert voor een app: een vrije PR met een verwerkte en
+  beantwoorde botbevinding komt zonder klik van de eigenaar op `main`; elk ander gesprek sluit de eigenaar. Wat de eigenaar
+  moet doen: niets; `.claude/settings.json` krijgt `Bash(pnpm pr:resolve *)` in `ask` en `pnpm pr:resolve *` in `excludedCommands`, en het rolhek
+  kent het commando pas in een sessie waarvan het anker de merge bevat. Bij een conflict in `.claude/settings.json` of
+  `.github/CODEOWNERS`: neem de versie van de template en genereer `CODEOWNERS` opnieuw (`node scripts/kit/codeowners.mjs
+  --schrijf`).
 
 ### Gewijzigd
 
+- De AC-dekking van `check-docs` (regel 6) is streng: een AC van een gebouwde spec is alleen gedekt door een testbestand met
+  `<specnaam>/AC-n` of `<namespace>/AC-n` (`dekt` in `scripts/kit/check-docs.mjs`). Een los `AC-n` met de specnaam ergens
+  in hetzelfde bestand telt niet meer; dat gaf schijndekking door tests van een andere spec. Besluit eigenaar, 2026-11-19.
+  Wat verandert voor een app: zet bij een update in elke test die een AC toetst het voorvoegsel (`accounts/AC-3` in plaats
+  van `AC-3`); `pnpm check:docs` noemt elke AC zonder zo'n test (`docs:ac:<spec>:<AC-n>`).
+- De herzieningsregel van een herschreven ADR is `Herzien: JJJJ-MM-DD: wat`, zonder PR-nummer (ADR 0097, R-CI-05); een
+  nummer `(#NNN)` na de datum mag nog, dus bestaande regels blijven geldig. Het rolhek telt beide vormen als geldige
+  herzieningsregel (`HERZIEN` in `rails/hooks/lib/document-state.mjs`, `test/rails/document-state-herzien-zonder-nummer.test.ts`).
+  Bij een update: niets om te zetten.
 - De agent werkt onder het account van de eigenaar en `pnpm pr:merge` beslist op de padtabel wie samenvoegt (ADR 0093, spec
   `agent-samenvoegen`). Het mergescript leest de bestanden van de PR en de padtabel op de kop van `main` (met
   `.claude/gates.app.json` als dat er is) en weigert met `raakt een beschermd pad (…): de eigenaar voegt samen` of, bij een
@@ -161,6 +193,13 @@ Nog niet uitgebrachte wijzigingen staan als fragment in `docs/template-changelog
   punt 1 en 2 (herzien in #696) en ADR 0089 punt 5 die toets lieten vervallen. Het script leest de beschrijving niet meer;
   `leerpuntMergeRedenen` en `REDEN_ZONDER_TEST` in `scripts/kit/leerpunt.mjs` zijn weg. Dat de eigenaar merget bij een leerpunt
   zonder test, blijft een afspraak.
+- Het volgende ADR-nummer van `node scripts/kit/feiten.mjs adr` keek alleen naar de geschiedenis van `HEAD` en `origin/main`,
+  zodat twee sessies of een open PR hetzelfde nummer kozen. Het telt nu per map ook de ADR-bestandsnamen op de tip van elke
+  `refs/remotes/origin/*` en in de ADR-mappen van elke werkmap uit `git worktree list`, niet-gecommitte bestanden en het
+  archief inbegrepen; een werkmap die niet meer bestaat, slaat het over (`gereserveerdeAdrNummers` in
+  `scripts/kit/feiten-secties.mjs`, `test/scripts/feiten-per-map.test.ts`). Lokaal en zonder netwerk: het nummer klopt pas na
+  `git fetch --prune origin` (`--prune` geeft het nummer van een gesloten PR vrij), en een niet-gepushte sessie op een andere machine blijft onzichtbaar. Wat verandert voor een app: niets
+  in te stellen; haal vóór een nieuw ADR alle branches op.
 
 ### Verwijderd
 
@@ -169,6 +208,17 @@ Nog niet uitgebrachte wijzigingen staan als fragment in `docs/template-changelog
 - `statusregelOvertreding` in `rails/hooks/lib/document-state.mjs` met de test `test/hooks/adr-statusregel.test.ts`: geen hook
   of check riep de functie nog aan sinds de strikte statusregel een afspraak is die de reviewer toetst (ADR 0045 punt 22, ADR
   0089 punt 8). De regel zelf blijft.
+- `pnpm docs:status` en de status-PR (ADR 0095, spec `gebouwd-zonder-nummer`). Een spec gaat naar `gebouwd` met de regel
+  `status: gebouwd`, zonder PR-nummer, in een gewone commit van de bouw-PR; hoofdsessie of architect zet hem, de developer
+  niet (meldingen in `rails/hooks/lib/rolhek.mjs`). Weg zijn `scripts/kit/document-status.mjs`, `scripts/kit/roadmap-item.mjs`,
+  `changeStatus` in `rails/hooks/lib/document-state.mjs`, het bouwbewijs in `rails/hooks/lib/built-evidence.mjs`
+  (`canRecordBuilt`, `builtRefusal`, `openRefusal`) en de statushelpers in `scripts/kit/status-git.mjs`; `checkedCommit` en
+  `unchangedHead` blijven voor `pnpm pr:verify`. `check:roadmap` eist geen PR-nummer meer in de statusregel (de melding
+  `spec:bewijs` is weg); de regel voor een spec die een roadmap-id noemt, blijft. `check-docs` leest het merkteken
+  `(vervallen)`, `(nieuw)` of `(voorbeeld)` ook op de volgende regel, en de AC-dekking slaat een AC over die begint met
+  `Vervallen door ADR <nummer>` als dat ADR in de ADR-map naast de specmap staat en `geaccepteerd` is. Wat verandert voor een
+  app: niets te doen. Bestaande regels `gebouwd # #<n>` blijven geldig (het nummer is commentaar); een eigen script of
+  werkwijze die `pnpm docs:status` aanroept, schrijft voortaan de statusregel met de hand.
 
 ### Bij een update
 

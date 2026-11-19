@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { rmSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
 import { z } from 'zod';
@@ -307,6 +308,132 @@ describe('templateregime/AC-11 een overgebleven docs/adr/archief/ telt mee voor 
       recognizes: ['- 0049 · Demo · geaccepteerd', '- 0048 · Demo · vervangen door 0050'],
       allows: ['- 0050 · Demo · geaccepteerd'],
     });
+  });
+});
+
+// Het vrije nummer telt ook de ADR-bestandsnamen op de tip van elke `refs/remotes/origin/*` en in de ADR-mappen van elke werkmap uit
+// `git worktree list` (ook niet-gecommitte bestanden), zodat twee sessies of een open PR hetzelfde nummer niet kiezen. Lokaal, zonder
+// netwerk of `gh`; het nummer blijft per map (ADR 0089 punt 6).
+describe('templateregime/AC-11 het volgende ADR-nummer telt remote branches en andere werkmappen mee', () => {
+  const BEIDE = [
+    [APP, TEMPLATE],
+    [TEMPLATE, APP],
+  ] as const;
+
+  /** Een repo met ADR 0010 in beide mappen op main, zodat "ongewijzigd" een echt nummer is (0011). */
+  function metBasis(): string {
+    const { root } = leeg();
+    write(root, 'docs/adr/0010-basis.md', adr('0010', 'geaccepteerd'));
+    write(root, 'docs/template/adr/0010-basis.md', adr('0010', 'geaccepteerd'));
+    const main = commit(root);
+    git(root, ['update-ref', 'refs/remotes/origin/main', main]);
+    return root;
+  }
+
+  /** Zet `refs/remotes/origin/<branch>` op een commit met de gegeven bestanden; main en de werkmap blijven ongemoeid. */
+  function remoteBranch(root: string, branch: string, files: Record<string, string>): void {
+    git(root, ['checkout', '-q', '--detach']);
+    for (const [file, tekst] of Object.entries(files)) write(root, file, tekst);
+    git(root, ['update-ref', `refs/remotes/origin/${branch}`, commit(root, `feat: ${branch}`)]);
+    git(root, ['checkout', '-q', 'main']);
+  }
+
+  /** Een tweede werkmap naast `root` (`git worktree add`, losgekoppelde HEAD op de huidige commit). */
+  function extraWerkmap(root: string): string {
+    const dir = path.join(tempDir('feiten-werkmap-'), 'tweede');
+    git(root, ['worktree', 'add', '-q', '--detach', dir]);
+    return dir;
+  }
+
+  const basis = { [APP]: '0011', [TEMPLATE]: '0011' };
+  const nummerIn = (map: string, nummer: string): string => `${map}${nummer}-voorbeeld.md`;
+
+  test.each(BEIDE)(
+    'templateregime/AC-11 een remote branch met een hoger nummer in %s: het volgende nummer is één hoger, de andere map blijft',
+    (map, andere) => {
+      const root = metBasis();
+      remoteBranch(root, 'feat/x', { [nummerIn(map, '0094')]: adr('0094', 'voorgesteld') });
+
+      expect(volgendeVan(root)).toStrictEqual({ [map]: '0095', [andere]: '0011' });
+    },
+  );
+
+  test.each(BEIDE)(
+    'templateregime/AC-11 een tweede werkmap met een nieuw, niet-gecommit ADR in %s: het volgende nummer is één hoger',
+    (map, andere) => {
+      const root = metBasis();
+      const tweede = extraWerkmap(root);
+      write(tweede, nummerIn(map, '0096'), adr('0096', 'voorgesteld'));
+
+      expect(volgendeVan(root)).toStrictEqual({ [map]: '0097', [andere]: '0011' });
+    },
+  );
+
+  test('templateregime/AC-11 ook vanuit de tweede werkmap telt een niet-gecommit ADR in de eerste werkmap mee', () => {
+    const root = metBasis();
+    const tweede = extraWerkmap(root);
+    write(root, nummerIn(APP, '0093'), adr('0093', 'voorgesteld'));
+
+    expect(volgendeVan(tweede)).toStrictEqual({ [APP]: '0094', [TEMPLATE]: '0011' });
+  });
+
+  test("templateregime/AC-11 een remote branch zonder nieuwe ADR's verandert het volgende nummer niet", () => {
+    const root = metBasis();
+    remoteBranch(root, 'feat/zonder', { 'src/voorbeeld.ts': 'export const x = 1;\n' });
+    remoteBranch(root, 'feat/oud', { 'docs/adr/0005-oud.md': adr('0005', 'geaccepteerd') });
+
+    expect(volgendeVan(root)).toStrictEqual(basis);
+  });
+
+  test('templateregime/AC-11 een nummer in de ene map reserveert niets in de andere, ook niet via branch of werkmap', () => {
+    const root = metBasis();
+    remoteBranch(root, 'feat/app', { [nummerIn(APP, '0094')]: adr('0094', 'voorgesteld') });
+    const tweede = extraWerkmap(root);
+    write(tweede, nummerIn(TEMPLATE, '0050'), adr('0050', 'voorgesteld'));
+
+    expect(volgendeVan(root)).toStrictEqual({ [APP]: '0095', [TEMPLATE]: '0051' });
+  });
+
+  test('templateregime/AC-11 een ongeldige bestandsnaam (geen vier cijfers) op een remote branch of in een werkmap telt niet mee', () => {
+    const root = metBasis();
+    const ongeldig = [
+      '0095_x.md',
+      '00950-x.md',
+      '095-x.md',
+      'README.md',
+      '_sjabloon.md',
+      'x0095-x.md',
+      'sub/0095-x.md',
+    ];
+    remoteBranch(root, 'feat/ongeldig', {
+      ...Object.fromEntries(ongeldig.map((naam) => [`${APP}${naam}`, adr('0095', 'voorgesteld')])),
+      ...Object.fromEntries(ongeldig.map((naam) => [`${TEMPLATE}${naam}`, adr('0095', 'voorgesteld')])),
+    });
+    const tweede = extraWerkmap(root);
+    for (const naam of ongeldig) write(tweede, `${APP}${naam}`, adr('0095', 'voorgesteld'));
+
+    expect(volgendeVan(root)).toStrictEqual(basis);
+  });
+
+  test('templateregime/AC-11 zonder remote branches en zonder extra werkmap is het volgende nummer als voorheen', () => {
+    const root = metBasis();
+    write(root, 'docs/adr/archief/0020-oud.md', adr('0020', 'vervallen'));
+
+    expect(git(root, ['worktree', 'list', '--porcelain']).split('\n\n')).toHaveLength(1);
+    expect(git(root, ['for-each-ref', 'refs/remotes/origin/'])).not.toContain('feat/');
+    expect(volgendeVan(root)).toStrictEqual({ [APP]: '0021', [TEMPLATE]: '0011' });
+  });
+
+  test('templateregime/AC-11 een werkmap die niet meer bestaat laat het script niet crashen en de andere werkmappen tellen mee', () => {
+    const root = metBasis();
+    const weg = extraWerkmap(root);
+    write(weg, nummerIn(APP, '0099'), adr('0099', 'voorgesteld'));
+    const blijft = extraWerkmap(root);
+    write(blijft, nummerIn(TEMPLATE, '0060'), adr('0060', 'voorgesteld'));
+    rmSync(weg, { recursive: true, force: true });
+
+    expect(git(root, ['worktree', 'list', '--porcelain'])).toContain('prunable');
+    expect(volgendeVan(root)).toStrictEqual({ [APP]: '0011', [TEMPLATE]: '0061' });
   });
 });
 

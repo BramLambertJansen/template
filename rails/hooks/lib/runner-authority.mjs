@@ -7,8 +7,8 @@ export const HOST_FILES = ['scripts', 'package.json', 'pnpm-workspace.yaml', '.n
   'compose.yaml', 'compose.*.yaml', 'compose.override.yaml', 'db/test.env', 'db/docker',
   'vitest.config.ts', 'playwright.config.ts', 'vite.config.ts'];
 
-// `pnpm pr:merge` (ADR 0069 punt 4) volgt de scriptregel in package.json en laadt pr-merge.mjs met imports uit scripts/ en
-// rails/: die bestanden plus de hostbestanden moeten gelijk zijn aan het anker.
+// `pnpm pr:merge` (ADR 0069 punt 4) en `pnpm pr:resolve` (ADR 0098) volgen de scriptregel in package.json en laden hun
+// script in scripts/kit/ met imports uit scripts/ en rails/: die bestanden plus de hostbestanden moeten gelijk zijn aan het anker.
 export const MERGE_FILES = [...HOST_FILES, 'rails'];
 const MERGE_BIN = ['gh', 'git', 'node', 'gh.exe', 'git.exe', 'node.exe'];
 
@@ -67,8 +67,8 @@ function mergeMode(text) {
 }
 
 /**
- * `pnpm pr:merge` zonder prompt (ADR 0069 punt 4): modus `niet-kritiek` in het anker en `MERGE_FILES` ongewijzigd. Zonder
- * basis (null) is het antwoord nee.
+ * `pnpm pr:merge` (ADR 0069 punt 4) en `pnpm pr:resolve` (ADR 0098) zonder prompt: modus `niet-kritiek` in het anker en
+ * `MERGE_FILES` ongewijzigd. Zonder basis (null) is het antwoord nee.
  * @param {string} root
  * @param {ReturnType<typeof trustedBase>} [basis]
  */

@@ -18,6 +18,8 @@ mise.local.toml
 blob-report/
 .runner-output/
 .runner-canary.*
+# Resultaatbestanden van nieuwe-app.mjs, doctor en bootstrap (spec nieuwe-app-script).
+.template/
 *.log
 # Fixture-pakketten voor dependency-cruiser (test/rails/depcruise.test.ts).
 !test/rails/fixtures/depcruise/node_modules/

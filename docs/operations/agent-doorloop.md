@@ -191,9 +191,12 @@ Een link naar een ADR of spec wijst naar het letterlijke pad; een archief waarna
 Een vervangingsverwijzing eindigt bij een bestaand ADR, zonder zelfverwijzing of cyclus. Een besluit-PR bevat
 geen `.claude/decisions.json` (ADR 0063).
 
-De ADR-sectie van `feiten.mjs` gebruikt dezelfde nummerherkenning en reserveert nummers uit het werkmaparchief en de
-bekende Git-geschiedenis van HEAD en origin/main. Die nummerreservering voegt geen fictieve documenten toe aan de lijst.
-Onleesbare geschiedenis is een fout; haal bij een verse of onvolledige checkout de geschiedenis eerst op.
+De ADR-sectie van `feiten.mjs` gebruikt dezelfde nummerherkenning en reserveert per map de nummers uit de bekende
+Git-geschiedenis van HEAD en origin/main, de tip van elke `refs/remotes/origin/*` (een open PR) en de ADR-mappen van elke
+werkmap uit `git worktree list`, archief en niet-gecommitte bestanden inbegrepen (`gereserveerdeAdrNummers` in
+`scripts/kit/feiten-secties.mjs`). Die nummerreservering voegt geen fictieve documenten toe aan de lijst. Ze werkt lokaal,
+zonder netwerk: draai eerst `git fetch --prune origin` (alle branches; `--prune` geeft het nummer van een gesloten PR
+vrij); een niet-gepushte sessie op een andere machine blijft onzichtbaar. Onleesbare geschiedenis is een fout; haal bij een verse of onvolledige checkout de geschiedenis eerst op.
 
 De app-initialisatie heeft naast geïsoleerde fixtures ook een compatibiliteitsproef met de echte templatebestanden
 (`test/scripts/app-init-template.test.ts`). Na initialisatie vindt die proef de oorspronkelijke invoer in de gekoppelde
@@ -207,7 +210,7 @@ Hetzelfde patroon kan per Bash-versie op andere namen passen (#626).
 Begin met de taakrelevante secties van `node scripts/kit/feiten.mjs`, bijvoorbeeld `gates specs fase`.
 De hoofdsessie kiest de route: licht alleen voor beperkte fixes binnen bestaand gedrag; anders volledig — framework §8.
 Spec (app: architect; template: hoofdsessie, architect op verzoek van de eigenaar of de hoofdsessie; bij risicowerk stelt de hoofdsessie hem voor aan de eigenaar) of ADR krijgt direct de bedoelde status; de eigenaar merget
-(besluit) of sluit de PR (afwijzen). `pnpm docs:status` zet geen eigenaarstatus, alleen `gebouwd` (ADR 0063).
+(besluit) of sluit de PR (afwijzen). Ook `status: gebouwd` zetten hoofdsessie of architect, in de bouw-PR (ADR 0095).
 
 ### Gerichte feedback en één volledige lokale eindgate
 
@@ -251,7 +254,7 @@ nu gerichte controles uitvoert; de controle op de git-root uit de payload blijft
 
 Een besluit kost één PR: de merge is het besluit. Architect of hoofdsessie zet de statusregel in het voorstel; commitvolgorde,
 inhoud na de status en committer doen er niet toe (ADR 0046 punt 7). De twee routes hieronder zijn afspraak, getoetst door de
-reviewer; geen check toetst ze nog (ADR 0089 punt 5 en 8). De hoofdsessie opent de PR onder het account van de eigenaar; er is geen GitHub App en geen token (ADR 0093 punt 1). Het besluit is de samenvoeging door de eigenaar. Een PR met een beschermd pad voegt de eigenaar samen met de knop op GitHub: `pnpm pr:merge` weigert met `raakt een beschermd pad (…): de eigenaar voegt samen`. Een PR zonder beschermd pad merget de hoofdsessie zelf via `pnpm pr:merge` zodra de verplichte checks groen zijn (ADR 0069, ADR 0093 punt 3, skill `opleveren`). Beschermd is in de template elk pad waarvan het besluit in de padtabel niet `agent` is; in een app een pad met `besluit-pr` of schrijven `voorReview` of hoger, een migratie, `src/core/**` en `docs/template/**` (`beschermdPad` in het mergescript; ADR 0093 punt 4). Dat is een vangnet, geen grens: GitHub houdt een samenvoeging onder het account van de eigenaar niet tegen.
+reviewer; geen check toetst ze nog (ADR 0089 punt 5 en 8). De hoofdsessie opent de PR onder het account van de eigenaar; er is geen GitHub App en geen token (ADR 0093 punt 1). Het besluit is de samenvoeging door de eigenaar. Een PR met een beschermd pad voegt de eigenaar samen met de knop op GitHub: `pnpm pr:merge` weigert met `raakt een beschermd pad (…): de eigenaar voegt samen`. Een PR zonder beschermd pad merget de hoofdsessie zelf via `pnpm pr:merge` zodra de verplichte checks groen zijn (ADR 0069, ADR 0093 punt 3, skill `opleveren`). Een botbevinding die ze verwerkt, beantwoordt ze in het gesprek met `gh api -X POST repos/<repo>/pulls/<nr>/comments/<id>/replies -F body=@<bestand>`; na de push met de fix eerst `pnpm pr:resolve <nr>`, dan `pnpm pr:merge <nr>`. Het sluitscript sluit alleen een botgesprek met een antwoord na de laatste botopmerking dat GitHub als verouderd meldt; elk ander gesprek sluit de eigenaar (ADR 0098). Beschermd is in de template elk pad waarvan het besluit in de padtabel niet `agent` is; in een app een pad met `besluit-pr` of schrijven `voorReview` of hoger, een migratie, `src/core/**` en `docs/template/**` (`beschermdPad` in het mergescript; ADR 0093 punt 4). Dat is een vangnet, geen grens: GitHub houdt een samenvoeging onder het account van de eigenaar niet tegen.
 
 **Functionele UI in de template (ADR 0056/0058):** een lichte fix volgt framework §8, zonder mini-spec.
 Voor overige functionele UI gebruik je de mini-spec met aanvullend `scope: functionele-ui` in de frontmatter.
@@ -261,9 +264,8 @@ nodig. De scope omvat bestaande componenten in `src/core/web/ui`, vaste teksten 
 reden en vervangend bewijs in de PR. Auth, API/contracten, queries, andere core, dependencies, agentinstructies, gedeelde
 fixtures en testsetup blijven erbuiten; een gemengde PR volgt de strengste route. Een beschermd pad
 (padtabel) voegt de eigenaar samen. Een app-repository krijgt deze core-uitzondering niet.
-`pnpm docs:status` werkt ook voor de nieuwe UI-mini-spec: zij staat op HEAD `goedgekeurd` met dezelfde inhoud en op `main` nog
-niet of als `voorstel`, de genoemde PR is open op deze branch in deze repository en de branch wijzigt iets buiten `docs/` en
-`CHANGELOG.md`. Check-runs toetst het commando niet; die eist de ruleset bij de merge.
+Ook de nieuwe UI-mini-spec krijgt `status: gebouwd` in dezelfde PR, van de hoofdsessie of de architect (ADR 0095); geen
+script toetst nog of ze eerst `goedgekeurd` was, dat toetst de reviewer.
 
 - **Spec met bouw (de standaard, ADR 0062):** een of meer specs met een eigenaarstatus (nieuw, volledig of mini, of nieuwe
   inhoud van een goedgekeurde spec) samen met code, tests en docs. Alles mag meewijzigen (ook `CHANGELOG.md`, de roadmap, `scripts/`,
@@ -497,37 +499,29 @@ vervallen (ADR 0091): `pr:verify` leest `<git-dir>/rolhek-effect` niet meer; de 
 Een agent zet geen PR-label (R-ROL-08). De ruleset eist de verplichte checks op de uiteindelijke head-SHA, geen goedkeuring;
 een label telt niet (R-CI-07).
 
-**Standaard: `gebouwd` in dezelfde PR** (ADR 0062). Bevat de PR de implementatie van de spec, dan zet de agent de
-statusregel daar zelf op `status: gebouwd # #<n>`, met n het nummer van deze PR (open de PR dus eerst; daarna een commit
-met de statusregel en, als de spec een roadmap-item noemt, het vinkje met `#<n>` erachter). Geen statuscommit na groen en geen
-SHA: de vorm hoort bij het eigen PR-nummer en code buiten `docs/` en `CHANGELOG.md` (afspraak; `pnpm docs:status` toetst het als het de regel schrijft), en de ruleset eist bij de
-merge de verplichte checks op de head. Een `git merge origin/main` of een fix erna mag gewoon; de checks draaien opnieuw.
-`check-docs` eist voor elk AC-id een getagde test.
+**`gebouwd` in de bouw-PR** (ADR 0095). Bevat de PR de implementatie van de spec, dan zet de hoofdsessie of de architect
+de statusregel op `status: gebouwd`, zonder PR-nummer, in een gewone commit; dat kan vóór het openen van de PR. De developer
+schrijft die regel niet (het rolhek weigert het). Noemt de spec een roadmap-id (`ST-<n>` of "roadmap stuk <n>"), dan eist
+`check:roadmap` een wijziging van `docs/roadmap.md` in dezelfde PR; het vinkje verwijst naar een testpad of checknaam, zodat
+ook daar geen nummer nodig is. Zo draaien de checks op een gebouwde spec al in de bouw-PR: `check-docs` eist voor elk AC-id
+een getagde test en weigert een repopad dat niet bestaat zonder `(vervallen)`, `(nieuw)` of `(voorbeeld)` erachter (het
+merkteken mag op de volgende regel staan). Een `git merge origin/main` of een fix erna mag gewoon; de checks draaien opnieuw.
 
-**Implementatie al gemerged** (spec `docs/template/specs/gebouwd-na-merge.md`, ADR 0080): zet de status in een eigen status-PR vanaf een
-verse branch van main. `docs:status` ziet aan GitHub dat PR n gemerged is en schrijft `gebouwd # #<n>`; de guard haalt de head
-van PR n bij GitHub. Het eist dat PR n naar `main` is gemerged en dat de mergecommit in main zit (via de merge-base van de branch), dat de spec daarin ongewijzigd op `goedgekeurd` stond, dat de verplichte
-checks (uit `.claude/decisions.json` in main vlak vóór de merge) groen waren op de head van PR n, en dat PR n een pad buiten
-`docs/` wijzigde dat de spec tussen backticks noemt. De status-PR wijzigt alleen statusregels en eventueel het eigen
-roadmapvinkje; de guard aanvaardt dat als de latere diff uitsluitend statusregels en het vinkje van de eigen taak wijzigt, en `git merge origin/main` erna mag. Een spec met `scope: functionele-ui` kan deze route alleen als ze op main al `goedgekeurd` is; het UI-akkoord uit de bouw-PR telt hier niet. Faalt het, dan noemt de melding de voorwaarde ("Gebouwd na de merge vereist …").
+**Bouw-PR vergat de status:** een latere PR zet `status: gebouwd` met de hand; dezelfde checks toetsen die PR. Het
+statuscommando, de status-PR met bewijs van GitHub en de route na de merge zijn weg; de reviewer toetst of de bouw op
+`main` staat.
 
-```sh
-pnpm docs:status docs/specs/voorbeeld.md gebouwd --pr 123 --roadmap
-```
-
-Schrijft alleen de statusregel `status: gebouwd # #<n>`, en met `--roadmap` het vinkje van het item dat de spec noemt. Voor een open PR schrijft `docs:status` dezelfde regel zonder check-runs te lezen, als PR n open is op deze branch en code buiten `docs/` heeft; anders: "Gebouwd vereist de juiste geopende PR op deze branch en code buiten docs/".
-`check:roadmap` eist een roadmapwijziging in dezelfde PR zodra de spectekst `ST-<n>` of "roadmap stuk <n>" noemt; noemt het item het specpad niet tussen backticks, dan kan `--roadmap` het niet afvinken en komt de roadmapwijziging in de bouw-PR.
-
-**Oude vorm met SHA** (`gebouwd # #<n>; gevalideerd: <sha>`, ADR 0080 punt 6): de guard toetst haar nog zoals vroeger, maar
-`check-docs` weigert haar in `docs/specs/`. Omzetten is één regel: alleen `; gevalideerd: <sha>` weghalen; bij gelijke inhoud
-is dat zonder GitHub-aanroep groen. ADR's hebben geen gebouwd-status: implementatiebewijs hoort bij hun gekoppelde spec.
+**Bestaande regels `gebouwd # #<n>`** blijven staan: het nummer is commentaar en niemand zet ze om. De oude vorm met SHA
+(`gebouwd # #<n>; gevalideerd: <sha>`) weigert `check-docs`; alleen `; gevalideerd: <sha>` weghalen is vrij, een nieuwe SHA
+weigert het rolhek voor elke rol. ADR's hebben geen gebouwd-status: implementatiebewijs hoort bij hun gekoppelde spec.
 
 **Levende spec** (ADR 0080 punt 3 en 4): een wijziging aan een bestaand mechanisme werkt de spec van dat mechanisme bij. Een
 gebouwde spec blijft in een besluit-PR `gebouwd`; elke nieuwe AC krijgt `- **<ns>/AC-n** (nog niet gebouwd)`, alleen op een id
-dat niet op main staat. De bouw-PR haalt de markering weg en zet `gebouwd # #<deze PR>`. Een AC-id verdwijnt nooit; een
-vervallen spec krijgt `status: vervallen` of wordt verwijderd; er is geen archief meer (ADR 0089 punt 1).
-
-Zonder `gh`-authenticatie kan `docs:status … --pr` PR n niet ophalen. Meld het en laat de eigenaar of een sessie met `gh`-auth het draaien.
+dat niet op main staat. De bouw-PR haalt de markering weg, voegt de test toe en laat de statusregel staan (ADR 0095 punt 5).
+Een AC-id verdwijnt nooit: een AC die vervalt, wordt `- **<ns>/AC-n** — Vervallen door ADR <nummer> … Was: …`, en de
+AC-dekking slaat haar alleen over als dat ADR in de ADR-map naast de specmap staat en `geaccepteerd` is; de reviewer legt
+haar naast dat ADR. Een vervallen spec krijgt `status: vervallen` of wordt verwijderd; er is geen archief meer (ADR 0089
+punt 1).
 
 `vervallen` of `vervangen door NNNN` schrijft de architect of hoofdsessie in een app in een besluit-PR, in de template in elke PR; de merge door de eigenaar beslist.
 
@@ -571,10 +565,12 @@ naar `voorgesteld` of wordt hernoemd: het rolhek (dat vergelijkt met main) weige
 er verandert ([ADR 0045](../template/adr/0045-railwerk.md) punt 21):
 
 1. **Normatief** (wat besloten is): herschrijf het bestaande ADR in een app in een besluit-PR, in de template in elke PR, met een nieuwe herzieningsregel
-   `Herzien: JJJJ-MM-DD (#NNN): wat` (bestaande datum, het PR-nummer, wat er verandert; oude regels blijven staan). Een nieuw ADR
+   `Herzien: JJJJ-MM-DD: wat` (bestaande datum, wat er verandert; oude regels blijven staan). Geen PR-nummer: zo hoeft er na
+   het openen van de PR geen commit meer bij; de PR vind je via de commit op main (`git blame` of `git log --first-parent -S`).
+   Een PR-nummer `(#NNN)` na de datum mag nog, maar hoeft niet ([ADR 0097](../template/adr/0097-herzieningsregel-zonder-pr-nummer.md)). Een nieuw ADR
    alleen voor een onderwerp dat in geen bestaand ADR past; `vervangen door NNNN` op het oude mag in dezelfde PR, zonder record.
    Een oud ADR verwijderen mag in een app in een besluit-PR, in de template in elke PR, nadat een reviewer heeft bevestigd dat de inhoud volledig in het nieuwe staat.
-   Afspraak, getoetst door de reviewer (ADR 0089 punt 8): een nieuwe herzieningsregel noemt deze PR, een verwijderd nummer komt nooit terug, en na een
+   Afspraak, getoetst door de reviewer (ADR 0089 punt 8): een herschreven ADR krijgt een nieuwe herzieningsregel, een verwijderd nummer komt nooit terug, en na een
    verwijdering wijst elke `vervangen door NNNN` nog naar een bestaand ADR; `docs/adr/archief/` telt daarbij mee als doel en
    als verwijzer, en een nummer dat alleen nog in het archief staat blijft bezet.
 2. **Verwijzing naar een later ADR**: een ADR-link achter de statuswaarde, met alleen het nummer als linktekst en het

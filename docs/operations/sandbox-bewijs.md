@@ -1,6 +1,6 @@
 # Sandboxbewijs: `.claude/settings.json`
 
-Handmatige proef van de Claude Code-sandbox uit `.claude/settings.json:130` (roadmap stuk 5). De hoofdsessie draaide de
+Handmatige proef van de Claude Code-sandbox uit `.claude/settings.json:132` (roadmap stuk 5). De hoofdsessie draaide de
 probes zelf, met toestemming van de eigenaar, en legde alleen vast of een actie lukte; geen inhoud. Een test in CI kan dit
 niet: de sandbox bestaat alleen in de agentsessie (`test/rails/sandbox-settings.test.ts` dekt de spiegel, niet de werking).
 
@@ -10,7 +10,7 @@ template-commit `bfa24b3`.
 | Probe (elk een eigen Bash-commando, alleen de uitslag gelogd) | Verwacht | Uitslag |
 | --- | --- | --- |
 | `cat .env >/dev/null` | geweigerd | geweigerd door de sandbox (`Permission denied`) |
-| `head -c 1 .env.example >/dev/null` (`allowRead`, `.claude/settings.json:149`) | toegestaan | toegestaan |
+| `head -c 1 .env.example >/dev/null` (`allowRead`, `.claude/settings.json:151`) | toegestaan | toegestaan |
 | `cat src/probe-secret.txt` (bestond al bij de start van het commando) | geweigerd | geweigerd (`Permission denied`) |
 | `head -c 1 node_modules/better-auth/dist/context/secret-utils.mjs` (2026-10-23, met `Read(./*secret*)`) | toegestaan | geweigerd: `./*secret*` matcht op elke diepte; vervangen door `Read(/*secret*)`, uitslag daarvan open (zie Beperkingen) |
 | `ls ~/.ssh`, `ls ~/.aws` | geweigerd | niet te toetsen: de mappen bestaan op deze machine niet |
@@ -45,7 +45,7 @@ Twee lagen: een eerder, samengesteld commando dat ook `.env` las, weigerde de pe
   er 382 tests in 10 bestanden en weigerde de pre-push-hook elke push van een agent (leerpunt #607). Groen in de sandbox
   bewijst de kooi- en rolhektests niet; dat doet alleen CI (`pnpm pr:verify`).
 - **`~/.ssh` en `~/.aws`** zijn alleen als regel aanwezig; bewijs volgt op een machine waar die mappen bestaan.
-- **`excludedCommands`** (`.claude/settings.json:135-143`: onder meer `pnpm test:db`, `ui:check`, `gate:slow`,
+- **`excludedCommands`** (`.claude/settings.json:137-145`: onder meer `pnpm test:db`, `ui:check`, `gate:slow`,
   `db:generate`, `check:snapshot`) draaien buiten de sandbox, met `ask`; ADR 0044 beschrijft dat gat. Volgens de documentatie van
   Claude Code geldt de uitzondering alleen als elk commando in de Bash-aanroep op de lijst past: `cd`, `&&`, een pipe, een
   omleiding of `$(...)` houdt de hele aanroep in de sandbox. Meting 2026-11-10: kaal `pnpm db:generate` (hoofdsessie) en kaal
@@ -53,5 +53,5 @@ Twee lagen: een eerder, samengesteld commando dat ook `.env` las, weigerde de pe
   (`pnpm check:snapshot | tail -5`) bleef de aanroep in de sandbox; met `cd <wortel> &&` ervoor of `2>&1` erachter draaide
   hij er, anders dan de documentatie zegt, toch buiten. Alleen de kale vorm is dus zeker. In de sandbox faalt de
   remote-lezing van de runner; de melding noemt dan de kale vorm (`scripts/runner.sh:120`, spec `claude-sandbox-werkstraat` AC-13).
-- **Niet getoetst:** `failIfUnavailable` en `allowUnsandboxedCommands: false` (`.claude/settings.json:133`–`:134`).
+- **Niet getoetst:** `failIfUnavailable` en `allowUnsandboxedCommands: false` (`.claude/settings.json:135`–`:136`).
 - De deny- en ask-patronen in `permissions` zijn gemak, geen grens (framework §8); dit verslag bewijst de sandbox.

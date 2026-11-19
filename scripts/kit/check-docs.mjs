@@ -16,8 +16,10 @@
 //     dezelfde rijregels, geen altijdVragen, geen besluit agent, geen glob uit gates.json en niet in de template zelf
 //     (sleutel `docs:gates-app:<…>`); de spiegels en check 5 draaien op het samengevoegde object (`samengevoegd`).
 //  5. `schrijfrecht` van een rol overlapt niet met de afgeleide gates (WS-02), op de uitzonderingen in SCHRIJFRECHT_VRIJ na.
-//  6. Elk AC-id van een gebouwde spec heeft een testbestand met `<namespace>/AC-n`, of met het AC-id samen met de specnaam
-//     of de namespace (sleutel `docs:ac:<spec>:<AC-n>`).
+//  6. Elk AC-id van een gebouwde spec (`status: gebouwd`, met of zonder commentaar erachter; ADR 0095) heeft een testbestand
+//     met `<namespace>/AC-n` of `<specnaam>/AC-n` als heel woord; een los `AC-n` telt niet (sleutel `docs:ac:<spec>:<AC-n>`).
+//     Overgeslagen: een AC met `(nog niet gebouwd)` achter het id, en een AC die direct na het streepje begint met
+//     `Vervallen door ADR <nummer>` als dat ADR in de ADR-map naast de specmap staat en `geaccepteerd` is.
 //  7. Spec-discipline: geen lijstitem met `⚠ open` in "Open vragen" bij goedgekeurd of gebouwd (`:open-vraag`); elk pad in
 //     "Kopieer de vorm van" bestaat bij voorstel of goedgekeurd (`:vorm`).
 //  8. `framework §N` buiten §1–§12, §11a en de `## <n>.`-koppen van het regelboek (niet in de ADR-mappen); 9. backtick-paden in
@@ -31,8 +33,8 @@
 //     scripts/kit/app-init.mjs (een app herschrijft het bestand, dus de template wijzigt het niet), en overal getrackt als
 //     `CLAUDE.md` de regel `@docs/app.md` heeft.
 //  14. Een gebouwde spec noemt tussen backticks geen repopad (src/, scripts/, rails/, test/, e2e/, db/, deploy/, .claude/,
-//     .github/, met extensie) dat niet bestaat, tenzij direct gevolgd door `(vervallen)`, `(nieuw)` of `(voorbeeld)`, of
-//     in een nieuwe AC met `(nog niet gebouwd)` achter het id (leerpunt #738, sleutel `docs:<spec>:dood-pad:<pad>`);
+//     .github/, met extensie) dat niet bestaat, tenzij gevolgd door `(vervallen)`, `(nieuw)` of `(voorbeeld)` na witruimte
+//     met hooguit één regeleinde (ADR 0095), of in een nieuwe AC met `(nog niet gebouwd)` achter het id (leerpunt #738, sleutel `docs:<spec>:dood-pad:<pad>`);
 //     behalve het optionele app-bestand `.claude/gates.app.json` (spec app-padtabel).
 //  15. Elk changelogfragment in docs/template-changelog.d/ (spec template-release AC-1, sleutel
 //     `docs:changelog-fragment:<bestand>`): naam, front matter met één `soort`, minstens één lijstitem en als enige kop
@@ -520,8 +522,8 @@ function adrLinkDoelen(file, doel) {
 }
 
 /**
- * ADR 0080: een statusregel in `docs/specs/` of `docs/template/specs/` heeft de ene vorm `gebouwd # #<PR>` (de oude vorm met SHA leest check-roadmap
- * nog).
+ * ADR 0080 en 0095: een statusregel in `docs/specs/` of `docs/template/specs/` heeft geen `; gevalideerd: <sha>` meer; de vorm is
+ * `status: gebouwd`, en een bestaand `# #<PR>` is commentaar.
  * @param {readonly string[]} files @param {(file: string) => string} read
  * @returns {Violation[]}
  */
@@ -640,17 +642,20 @@ const REPOPAD = /^(?:src|scripts|rails|test|e2e|db|deploy|\.claude|\.github)\/[\
 // Een nieuwe AC in een gebouwde spec (R-WERK-07): het lijstitem met `(nog niet gebouwd)` achter het id, met vervolgregels
 // en ingesprongen sub-bullets; het item eindigt bij een niet-ingesprongen `-` of `#`, of een lege regel.
 const NIEUWE_AC = /^- \*\*[^*\n]*AC-\d+\*\* \(nog niet gebouwd\)[^\n]*(?:\n(?![-#]|[ \t]*$)[^\n]*)*/gm;
+// Een pad tussen backticks met het merkteken erachter: spaties of tabs, of één regeleinde met inspringing (`WIT`), geen lege regel.
+const PAD_MET_MERKTEKEN = new RegExp(`\`([^\`\\n]+)\`(${WIT}\\((?:vervallen|nieuw|voorbeeld)\\))?`, 'g');
 
 /**
- * Regel 14 (leerpunt #738): een gebouwde spec noemt geen repopad dat niet bestaat, tenzij er direct `(vervallen)`,
- * `(nieuw)` of `(voorbeeld)` achter staat of het in een nieuwe AC met `(nog niet gebouwd)` staat (R-WERK-07, R-DOC-10).
+ * Regel 14 (leerpunt #738): een gebouwde spec noemt geen repopad dat niet bestaat, tenzij er `(vervallen)`, `(nieuw)` of
+ * `(voorbeeld)` achter staat, na witruimte met hooguit één regeleinde (ADR 0095), of het in een nieuwe AC met
+ * `(nog niet gebouwd)` staat (R-WERK-07, R-DOC-10).
  * Eén sleutel per pad, zodat de ratchet bestaande treffers in de baseline houdt.
  * @param {string} file @param {string} text @param {readonly string[]} files
  * @returns {Violation[]}
  */
 function doodPadViolations(file, text, files) {
   const bestaand = new Set(files);
-  const dood = [...text.replace(NIEUWE_AC, '').matchAll(/`([^`\n]+)`( \((?:vervallen|nieuw|voorbeeld)\))?/g)]
+  const dood = [...text.replace(NIEUWE_AC, '').matchAll(PAD_MET_MERKTEKEN)]
     .filter((match) => match[2] === undefined)
     .map((match) => (match[1] ?? '').replace(/:\d+(-\d+)?$/, ''))
     // Het app-bestand is optioneel en bestaat alleen in een app met eigen padrijen (spec app-padtabel).
@@ -684,9 +689,12 @@ const TESTBESTAND = /(?:^|\/)[^/]+\.(?:test|spec)\.[^/]+$|^(?:db\/tests|e2e|test
 // Een AC-id als heel woord, met een optioneel voorvoegsel `<naam>/` (groep 1); groep 2 is het id.
 const AC_ID = /(?<![\w/-])(?:([\w.-]+)\/)?(AC-\d+)(?![\w-])/g;
 
-/** Regex die `naam` als heel woord vindt (geen woordteken of `-` ervoor of erna). @param {string} naam */
+/**
+ * Regex die `naam` als heel woord vindt: geen woordteken, `/`, `.` of `-` ervoor (dus niet in `andere/mijn/AC-1` of
+ * `x.mijn/AC-1`), geen woordteken of `-` erna. @param {string} naam
+ */
 function heelWoord(naam) {
-  return new RegExp(`(?<![\\w-])${naam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`);
+  return new RegExp(`(?<![\\w/.-])${naam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`);
 }
 
 /**
@@ -697,8 +705,34 @@ function heelWoord(naam) {
  */
 function dekt(tekst, spec, ac) {
   const namen = [spec.naam, ...(spec.namespace === undefined ? [] : [spec.namespace])];
-  if (namen.some((naam) => heelWoord(`${naam}/${ac}`).test(tekst))) return true;
-  return heelWoord(ac).test(tekst) && namen.some((naam) => heelWoord(naam).test(tekst));
+  return namen.some((naam) => heelWoord(`${naam}/${ac}`).test(tekst));
+}
+
+// Een vervallen AC (ADR 0095 punt 6): `- **<ns>/AC-n** — Vervallen door ADR <nummer> … Was: …`, direct na het streepje.
+const VERVALLEN_AC = /^- \*\*([a-z0-9][\w.-]*)\/(AC-\d+)\*\* — Vervallen door ADR (\d{4})\b/gm;
+
+/**
+ * De eigen AC-id's (`AC-n`) die de AC-dekking overslaat omdat ze vervallen zijn door een ADR dat in de ADR-map naast de specmap
+ * staat (`docs/template/adr/` voor `docs/template/specs/`, anders `docs/adr/`) en `geaccepteerd` is (gebouwd-zonder-nummer/AC-5).
+ * @param {{ file: string, text: string, eigen: ReadonlySet<string | undefined> }} spec
+ * @param {readonly string[]} files @param {(file: string) => string} read
+ * @returns {Set<string>}
+ */
+function vervallenAcs({ file, text, eigen }, files, read) {
+  const map = file.startsWith('docs/template/specs/') ? 'docs/template/adr/' : 'docs/adr/';
+  const geaccepteerd = (/** @type {string} */ nummer) =>
+    files.some(
+      (adr) =>
+        adr.startsWith(`${map}${nummer}-`) &&
+        !adr.slice(map.length).includes('/') &&
+        adr.endsWith('.md') &&
+        ADR_STATUS.exec(read(adr))?.[1] === 'geaccepteerd',
+    );
+  return new Set(
+    [...text.replaceAll('\r\n', '\n').matchAll(VERVALLEN_AC)]
+      .filter(([, naam, , nummer = '']) => eigen.has(naam) && geaccepteerd(nummer))
+      .map(([, , id = '']) => id),
+  );
 }
 
 /**
@@ -722,16 +756,18 @@ function acViolations(files, read) {
     const gemarkeerd = new Set(
       [...acIds(text).gemarkeerd].flatMap((id) => (eigen.has(id.split('/')[0]) ? [id.replace(/^.*\//, '')] : [])),
     );
+    // Een vervallen AC (`Vervallen door ADR <nummer>`, ADR geaccepteerd) heeft geen test meer nodig (ADR 0095 punt 6).
+    const vervallen = vervallenAcs({ file, text, eigen }, files, read);
     const ids = [...text.matchAll(AC_ID)]
       .filter(([, voor]) => voor === undefined || eigen.has(voor))
       .map(([, , id = '']) => id)
-      .filter((id) => !gemarkeerd.has(id));
+      .filter((id) => !gemarkeerd.has(id) && !vervallen.has(id));
     const acs = [...new Set(ids)].sort((a, b) => Number(a.slice(3)) - Number(b.slice(3)));
     return acs
       .filter((ac) => !tests.some((tekst) => dekt(tekst, spec, ac)))
       .map((ac) => ({
         key: `docs:ac:${spec.naam}:${ac}`,
-        message: `${file}: ${ac} heeft geen testbestand met ${spec.namespace ?? spec.naam}/${ac} of met ${ac} en de specnaam of namespace`,
+        message: `${file}: ${ac} heeft geen testbestand met ${spec.namespace ?? spec.naam}/${ac}`,
       }));
   });
 }
@@ -1080,8 +1116,8 @@ function codeownersViolations(ruw, tekst, appGlobs) {
 }
 
 /**
- * `merge` (ADR 0069; blijft tot ADR 0089 punt 9): de modus is `eigenaar` of `niet-kritiek`; `pnpm pr:merge` en het rolhek
- * lezen hem.
+ * `merge` (ADR 0069; blijft tot ADR 0089 punt 9): de modus is `eigenaar` of `niet-kritiek`; `pnpm pr:merge`,
+ * `pnpm pr:resolve` (ADR 0098) en het rolhek lezen hem.
  * @param {string} text
  * @returns {Violation[]}
  */
