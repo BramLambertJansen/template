@@ -205,13 +205,16 @@ function indexModi(root, paden) {
 }
 
 /**
- * Spec rolhek-lezen/AC-15: de roots uit `git worktree list --porcelain`; faalt git, dan alleen `root` (dicht).
+ * Spec rolhek-lezen/AC-15: de roots uit `git worktree list --porcelain`, zonder een werkmap met een `prunable`-regel (de map
+ * is weg; wie hem opnieuw maakt, krijgt geen root); faalt git, dan alleen `root` (dicht).
  * @param {string} root @returns {string[]}
  */
 function werkmapRoots(root) {
   try {
-    const uit = git(root, ['worktree', 'list', '--porcelain']);
-    return [root, ...uit.split('\n').filter((regel) => regel.startsWith('worktree ')).map((regel) => regel.slice('worktree '.length))];
+    const blokken = git(root, ['worktree', 'list', '--porcelain']).split(/\n\s*\n/).map((blok) => blok.split('\n'));
+    const levend = blokken.filter((regels) => !regels.some((regel) => regel === 'prunable' || regel.startsWith('prunable ')));
+    const roots = levend.flatMap((regels) => regels.filter((regel) => regel.startsWith('worktree ')).map((regel) => regel.slice('worktree '.length)));
+    return [root, ...roots];
   } catch {
     return [root];
   }

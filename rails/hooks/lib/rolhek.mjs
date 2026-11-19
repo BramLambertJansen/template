@@ -175,6 +175,8 @@ function leestAlleen(segment) {
   const [woord = '', ...args] = argv;
   if (assignments.length + pathWrappers.length > 0) return false;
   const programma = programName(woord);
+  // Een lezer telt alleen als kaal woord of onder /usr/bin/ of /bin/; `./sed` of `./git` is een ander programma (AC-17).
+  if (![programma, `/usr/bin/${programma}`, `/bin/${programma}`].includes(woord)) return false;
   if (programma === 'sed') return lezerPaden('sed', alsWoorden(args, segment)) !== null;
   if (programma !== 'git') return PR_MERGE_LEZERS.has(programma);
   const { subcommand, rest, config } = gitSubcommand(args);
@@ -219,12 +221,23 @@ function segmentProgramma({ words }) {
   return programName(splitCommand(start === -1 ? [] : words.slice(start)).argv[0] ?? '');
 }
 
+// Een groep of compound: de operator na `)`, `}` of `done` (`|`, `&`, een redirect) hangt niet aan een segment, dus dan telt
+// elke vermelding van de naam, zoals vóór AC-17.
+const COMPOUND_BEGIN = new Set(['{', '}', 'do', 'done', 'fi', 'esac', 'then', 'else']);
+
+/** Heeft het commando een groep (`(`, `)`) of een compound (`{ …; }`, `for`/`if`/`case`)? @param {string} command @param {readonly Command[]} segmenten */
+function heeftGroep(command, segmenten) {
+  if (tokenize(command).some(({ kind, value }) => kind === 'op' && (value === '(' || value === ')'))) return true;
+  return segmenten.some(({ words }) => COMPOUND_BEGIN.has(words[0] ?? ''));
+}
+
 /**
  * Een glob-woord (`pr-mer*.mjs`, `scripts/kit/pr-*`) dat een van de `doelen` (het script of zijn scriptwoord) kan raken.
  * @param {string} woord @param {readonly string[]} doelen
  */
 function globRaakt(woord, doelen) {
-  if (!/[*?[]/.test(woord)) return false;
+  // Een glob met `/` aan het einde (`.claude/worktrees/*/`) breidt alleen uit tot mappen: nooit het script of zijn scriptwoord.
+  if (!/[*?[]/.test(woord) || woord.endsWith('/')) return false;
   try {
     return doelen.some((doel) => path.matchesGlob(doel, woord) || path.matchesGlob(path.basename(doel), path.basename(woord)));
   } catch {
@@ -245,7 +258,8 @@ function startKitScript(command, script) {
   const segmenten = parseCommands(command);
   const raakt = (/** @type {string} */ woord) => script.script.test(woord) || script.bestand.test(woord) || globRaakt(woord, script.doelen);
   const noemt = (/** @type {Command} */ { words, redirects, inputs = [] }) => [...words, ...redirects, ...inputs].some(raakt);
-  if (KIT_ONZEKER.test(command) || segmenten.some((segment) => KIT_UITVOERDERS.has(segmentProgramma(segment))))
+  const onzeker = KIT_ONZEKER.test(command) || heeftGroep(command, segmenten);
+  if (onzeker || segmenten.some((segment) => KIT_UITVOERDERS.has(segmentProgramma(segment))))
     return script.script.test(tekst) || script.bestand.test(tekst) || segmenten.some(noemt);
   // De kop van een veilige `for`-lus (spec rolhek-vooraf AC-2 (e)) start niets: zijn woorden gaan alleen naar programma's in de romp die zelf niets starten.
   const { koppen } = veiligeLussen(segmenten);
@@ -673,8 +687,9 @@ function gitMapMelding(file) {
  * @param {Decision} decision
  */
 function decideBash({ command, role, feiten, tmpdirVrij = tmpdirLetterlijk(command), onzeker = false }, ctx, decision) {
-  decision.deny.push(...rawForbidden(command, { role, onzeker, plek: { cwd: ctx.cwd, feiten } }));
+  decision.deny.push(...rawForbidden(command, { role, onzeker, plek: { cwd: ctx.cwd, root: ctx.root, feiten } }));
   decision.deny.push(...staleBranchStart(command));
+  decision.deny.push(...reviewerOperatoren(command, role));
   // De inhoud van `$(…)` en backticks is zelf een commando; zo vallen ook geneste substituties onder dezelfde regels.
   for (const inner of substitutions(command)) decideBash({ command: inner, role, feiten, tmpdirVrij, onzeker: true }, ctx, decision);
   const setsGhEnv = zetGhOmgeving(parseCommands(command));
@@ -992,7 +1007,7 @@ function rawForbidden(command, { role, onzeker, plek }) {
 
 /**
  * @typedef {{ werkmappen: () => string[], gevolgd: () => Set<string> }} LeesFeiten de memo van `ctx.werkmappen` en `ctx.gevolgd`
- * @typedef {{ cwd: string, feiten: LeesFeiten }} Plek
+ * @typedef {{ cwd: string, root: string, feiten: LeesFeiten }} Plek
  */
 
 /**
@@ -1057,7 +1072,8 @@ function werkmapRoot(pad, { cwd, feiten }) {
  * @param {string} command @param {Plek} plek
  */
 function zekerGelezen(command, plek) {
-  if (ONZEKERE_TEKST.test(command)) return false;
+  // Een werkmap buiten de repo maakt elk "binnen de repo"-pad tot een pad daarbuiten (AC-18, zoals AC-9).
+  if (ONZEKERE_TEKST.test(command) || !werkmapInRepo(plek.cwd, plek.root)) return false;
   return parseCommands(command).every((segment) => {
     if (segment.redirects.length + (segment.inputs ?? []).length > 0 || !leestAlleen(segment)) return false;
     const [woord = '', ...args] = splitCommand(segment.words).argv;
@@ -1226,10 +1242,11 @@ const SAFE_VALUE = /^[A-Za-z0-9_./,:-]+$/;
 /**
  * De waarde van `--search` bij `gh pr list` en `gh issue list` (AC-16): één woord dat spaties, aanhalingstekens en `:` mag
  * bevatten, zonder stuurteken (U+0000 tot U+001F, U+007F) en zonder expansie; gh krijgt het woord direct, zonder tweede shell.
+ * Geen kwalificatie `repo:`, `org:` of `user:` (een andere repository), hoofdletterongevoelig en waar dan ook in de waarde.
  * @param {string} waarde @param {readonly string[]} expanded `Command.expanded`
  */
 function zoekwaarde(waarde, expanded) {
-  return waarde !== '' && !expanded.includes(waarde) && ![...waarde].some((teken) => teken.charCodeAt(0) < 0x20 || teken.charCodeAt(0) === 0x7f);
+  return waarde !== '' && !expanded.includes(waarde) && !/(?:repo|org|user):/i.test(waarde) &&![...waarde].some((teken) => teken.charCodeAt(0) < 0x20 || teken.charCodeAt(0) === 0x7f);
 }
 
 /**
@@ -1298,6 +1315,18 @@ function leeslijstRefusal(kern, { parsed, werkmapInRepo, feiten }) {
   const opties = [...read.flags, ...read.values.map((value) => `${value} <waarde>`)];
   const lijst = opties.length > 0 ? opties.join(', ') : 'geen opties; paden na --';
   return `reviewer: \`${head}\` alleen met: ${lijst}; waarden alleen [A-Za-z0-9_./,:-] (spec rolhek-lezen; framework §8)`;
+}
+
+const REVIEWER_OPS = new Set(['(', ')', '&', '|&']);
+
+/**
+ * AC-12: voor de reviewer geen groepering, achtergrond of `|&`, getoetst op het hele commando, zodat ook een operator direct
+ * na `)` (die aan geen segment hangt) telt.
+ * @param {string} command @param {string} role @returns {string[]}
+ */
+function reviewerOperatoren(command, role) {
+  if (role !== 'reviewer') return [];
+  return tokenize(command).some(({ kind, value }) => kind === 'op' && REVIEWER_OPS.has(value)) ? [VORM_MELDING] : [];
 }
 
 /**
