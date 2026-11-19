@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd
 namespace: rolhek-aanvalscorpus
 ---
 
@@ -114,8 +114,9 @@ als er een toestandzetter voor staat.
 Weigert een structurele dichting een gangbaar commando, dan stopt de bouw en vraagt de hoofdsessie de eigenaar (OV-2). Een
 aanvaarde vals-positief komt in R-ROL-11.
 
-**Nieuwe weigerregel.** Een nieuwe weigerregel krijgt een lid in de union en een basisrij. De reviewer toetst dat via de
-lijst "Rolhek en hooks" in `docs/operations/review-checklists.md`.
+**Nieuwe weigerregel.** Een nieuwe weigerregel krijgt een lid in de union en een basisrij. Dat staat in het kopcommentaar
+van `rails/hooks/lib/rolhek.mjs`, waar een regel ontstaat; `docs/operations/review-checklists.md` heeft geen ruimte meer
+binnen zijn grens van 4600 bytes (`test/rails/review-checklists.test.ts`).
 
 ## Acceptatiecriteria
 
@@ -178,8 +179,8 @@ lijst "Rolhek en hooks" in `docs/operations/review-checklists.md`.
   een regel met reden in de PR.
 - `docs/roadmap.md`, item "Bekende gaten in het rolhek": de vormen op de aanvaard-lijst.
 - `docs/framework.md` R-ROL-11: alleen als een dichting een aanvaarde vals-positief geeft.
-- `docs/operations/review-checklists.md`, lijst "Rolhek en hooks": één regel. "Een nieuwe weigerregel krijgt een lid in de
-  union en een basisrij in `test/hooks/rolhek-aanvalscorpus.ts` (spec rolhek-aanvalscorpus)."
+- Het kopcommentaar van `rails/hooks/lib/rolhek.mjs`: een nieuwe weigerregel krijgt een lid in de union en een basisrij in
+  `test/hooks/rolhek-aanvalscorpus.ts`.
 - Niet geraakt: er komt geen database, route of permissie bij, dus geen `check:migrations`, `check:secdef`, `test:db`,
   policies, `test/security/resources.ts` of permissietests per verboden rol.
 

@@ -348,6 +348,10 @@ als commandowoord (ook zonder zichtbare `gh` erna; bewust vals positief: `xargs 
 `git ls-files -z | xargs -0 git add`). PR-labels, `@file`/`--input` en `gh alias` weigert `ghForbidden` alleen waar
 `splitCommand` (`rails/hooks/lib/shell.mjs`) `gh` als commandowoord ziet; achter een omhulsel met opties
 (`env -i gh …`, `nice -n 1 gh …`, `timeout 9 gh …`, `stdbuf`, `setsid`) geldt dat voor de hoofdsessie niet.
+`splitCommand` pelt ook shell-sleutelwoorden en functiekoppen af (`{`, `!`, `if`/`then`/`elif`/`else`, `while`/`until`/`do`,
+`function NAAM`), zodat de regels per segment `{ b; }`, `if b; then …` en een functielichaam toetsen alsof ze draaien. Een `cd`
+geldt alleen voor de segmenten erna bij `cd x && …` buiten een subshell; anders toetst het rolhek elke mogelijke map
+(`naCd` en `perMap` in `rails/hooks/lib/rolhek.mjs`, spec `rolhek-aanvalscorpus`).
 Lege woorden vóór of tussen groep en actie (`gh "" api …`, `gh '' pr review 1`) slaat het rolhek over zoals gh/cobra
 doet, dus gelden dezelfde regels (`withoutRepo` in `rails/hooks/lib/rolhek.mjs`).
 `pnpm format` en `pnpm run format`

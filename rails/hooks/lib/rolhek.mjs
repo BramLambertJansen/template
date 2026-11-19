@@ -1,6 +1,8 @@
 // Rolhek (framework §8, ADR 0045): beslist per toolgebruik of het mag (allow), de eigenaar moet kiezen (ask) of het
 // verboden is (deny). Puur: alles wat van de schijf of git komt, zit in `ctx`, zodat test/hooks/rolhek.test.ts elke regel
 // met echte payloads kan bewijzen. De stdin/stdout-kant staat in rails/hooks/rolhek.mjs.
+// Een nieuwe weigerregel krijgt een lid in de union en een basisrij in test/hooks/rolhek-aanvalscorpus.ts, zodat elke
+// shellvorm uit het corpus ook tegen die regel draait (spec rolhek-aanvalscorpus).
 import path from 'node:path';
 import { gitSubcommand, globTekstRegex, ONZEKERE_TEKST, parseCommands, programName, splitCommand, tmpdirLetterlijk, tmpdirWoord, tokenize, writeTargets, zetVariabele } from './shell.mjs';
 import { GIT_VORMEN, gitLeesvorm, insideRepo, lezerPaden, pathspecBinnen } from './rolhek-lezers.mjs';
@@ -678,16 +680,17 @@ function decideBash({ command, role, feiten, tmpdirVrij = tmpdirLetterlijk(comma
   for (const inner of substitutions(command)) decideBash({ command: inner, role, feiten, tmpdirVrij, onzeker: true }, ctx, decision);
   const setsGhEnv = zetGhOmgeving(parseCommands(command));
   // `cd .git && …` in hetzelfde commando: de zelfladende toets (spec rolhek-vooraf AC-3) leest de woorden daarna vanuit die map.
-  /** @type {string | null} null: een `cd` naar een map die pas bij het uitvoeren bekend is */
-  let cwdNu = ctx.cwd;
+  const mappen = mapStand(command, ctx.cwd);
   for (const { parsed, variabel } of vangnetSegmenten(command, { tmpdirVrij, onzeker })) {
     const { assignments, argv, pathWrappers } = splitCommand(parsed.words);
     vangnetten({ parsed, argv, variabel }, role, decision);
     forbidden({ assignments, argv, expanded: parsed.expanded ?? [] }, { role, ctx }, decision);
-    zelfladend({ argv, redirects: parsed.redirects, role, ruim: parsed.ruim === true },{ ...ctx, cwd: cwdNu ?? ctx.root, cwdOnbekend: cwdNu === null }, decision);
-    cwdNu = volgendeMap({ argv, expanded: parsed.expanded ?? [] }, cwdNu, ctx.root);
+    perMap(mappen.nu, (cwd, besluit) => zelfladend({ argv, redirects: parsed.redirects, role, ruim: parsed.ruim === true }, { ...ctx, cwd: cwd ?? ctx.root, cwdOnbekend: cwd === null }, besluit), decision);
+    naCd({ parsed, argv }, mappen, ctx.root);
     ghIssue(argv, { role, ctx, setsGhEnv }, decision);
-    if (role === 'reviewer') reviewerBash({ assignments, argv, pathWrappers, parsed }, { cwd: cwdNu, root: ctx.root, feiten }, decision);
+    if (role === 'reviewer')
+      perMap(mappen.nu, (cwd, besluit) => reviewerBash({ assignments, argv, pathWrappers, parsed }, { cwd, root: ctx.root, feiten }, besluit), decision);
+    naScheiding(parsed.scheiding ?? '', mappen);
     const targets = writeTargets(parsed);
     for (const target of targets.writes) bashTarget({ file: target, kind: 'write', role }, ctx, decision);
     for (const target of targets.deletes) bashTarget({ file: target, kind: 'delete', role }, ctx, decision);
@@ -869,6 +872,65 @@ function volgendeMap({ argv, expanded }, cwd, root) {
   // Zonder doel, `~` of `-`: de home-map of de vorige map, pas bij het uitvoeren bekend; net als `$`, backtick of substitutie.
   if (doel === undefined || doel === '-' || doel.startsWith('~') || expanded.includes(doel) || /[$`]/.test(doel)) return null;
   return cwd === null ? null : path.resolve(cwd, doel);
+}
+
+/**
+ * De mogelijke werkmappen per segment (spec rolhek-aanvalscorpus, schijnbare cd). `nu`: de mappen voor het volgende
+ * segment; `alle`: elke map die het commando tot nu toe kan hebben (null: onbekend). `voor`: de scheiding vóór het segment;
+ * `haakjes`: het commando heeft een subshell, functie of case-patroon (`(`, `)`).
+ * @typedef {{ nu: (string | null)[], alle: (string | null)[], voor: string, haakjes: boolean }} MapStand
+ */
+
+/** @param {string} command @param {string} cwd @returns {MapStand} */
+function mapStand(command, cwd) {
+  const haakjes = tokenize(command).some(({ kind, value }) => kind === 'op' && (value === '(' || value === ')'));
+  return { nu: [cwd], alle: [cwd], voor: '', haakjes };
+}
+
+/** @param {readonly (string | null)[]} mappen */
+function uniekeMappen(mappen) {
+  return [...new Set(mappen)];
+}
+
+/**
+ * Na een `cd`/`pushd`. Alleen een zekere cd vervangt de mappen: het volgende segment draait alleen als de cd in dezelfde shell
+ * draaide en slaagde. Zeker is: geen haakjes in het commando (subshell), de cd zelf zonder sleutelwoord, toewijzing of omhulsel
+ * (`! cd x && b` draait b juist als de cd faalt), niet rechts van `||` of in een pipe, en `&&` erna. Anders telt de nieuwe map
+ * erbij en toetst de aanroeper elk segment daarna in elke mogelijke map (`( cd /tmp ); b`, `false && cd /tmp; b`, `cd /tmp & b`).
+ * @param {{ parsed: Command, argv: readonly string[] }} segment @param {MapStand} stand @param {string} root
+ */
+function naCd({ parsed, argv }, stand, root) {
+  if (!['cd', 'pushd'].includes(programName(argv[0] ?? ''))) return;
+  const commando = { argv, expanded: parsed.expanded ?? [] };
+  const nieuw = stand.nu.map((cwd) => volgendeMap(commando, cwd, root));
+  const zeker = !stand.haakjes && argv.length === parsed.words.length && parsed.scheiding === '&&' &&
+    !['||', '|', '|&'].includes(stand.voor);
+  stand.alle = uniekeMappen([...stand.alle, ...nieuw]);
+  stand.nu = uniekeMappen(zeker ? nieuw : [...stand.nu, ...nieuw]);
+}
+
+/**
+ * Na de scheiding van een segment: alleen na `&&` blijven de mappen van een zekere cd staan; na elke andere scheiding kan het
+ * volgende segment in elke map draaien die het commando tot nu toe kon hebben (een cd die faalde, of `cd x && b || c`).
+ * @param {string} scheiding @param {MapStand} stand
+ */
+function naScheiding(scheiding, stand) {
+  if (scheiding !== '&&') stand.nu = [...stand.alle];
+  stand.voor = scheiding;
+}
+
+/**
+ * Een toets per mogelijke werkmap; een melding die in meer mappen valt, komt één keer in het besluit.
+ * @param {readonly (string | null)[]} mappen
+ * @param {(cwd: string | null, besluit: Decision) => void} toets
+ * @param {Decision} decision
+ */
+function perMap(mappen, toets, decision) {
+  /** @type {Decision} */
+  const besluit = { deny: [], ask: [], context: [] };
+  for (const cwd of mappen) toets(cwd, besluit);
+  decision.deny.push(...new Set(besluit.deny));
+  decision.ask.push(...new Set(besluit.ask));
 }
 
 // Opties van env die het volgende woord als waarde nemen (`-u NAAM`, `-C MAP`, `--unset NAAM`, `--chdir MAP`, `--argv0 X`).
