@@ -71,11 +71,13 @@ n.v.t. — geen UI. Letterlijke teksten (`<…>` wordt ingevuld):
   De voorwaarde staat altijd in het testbestand zelf en de teller in `rails/hooks/lib/testteller.mjs` ziet haar als skip
   (`.skip(` met een aanroep op elke ontvanger, en `skipIf`); een skip in een gedeelde helper onder `test/setup/` is verboden
   (ADR 0088, Alternatieven). De reporter (AC-6) telt de overgeslagen tests van alle drie vormen.
-- **tests-naar-vermogen/AC-4** — De voorwaarde `kooi` komt in tien bestanden: `test/hooks/rolhek-padcorpus.test.ts`,
-  `test/hooks/rolhek-effect.test.ts`, `test/hooks/rolhek-effect-hoofdsessie.test.ts`, `test/hooks/rolhek-specarchief-effect.test.ts`,
+- **tests-naar-vermogen/AC-4** — De voorwaarde `kooi` komt in tien bestanden: `test/hooks/rolhek-padcorpus.test.ts` (vervallen),
+  `test/hooks/rolhek-effect.test.ts` (vervallen), `test/hooks/rolhek-effect-hoofdsessie.test.ts` (vervallen),
+  `test/hooks/rolhek-specarchief-effect.test.ts` (vervallen),
   `test/hooks/rolhek-gh-allowlist.test.ts`, `test/docs/start-nieuwe-app.test.ts`, `test/rails/ci-scan.test.ts`,
-  `test/rails/document-status-lokaal-config.test.ts`, `test/scripts/runner-trusted-base.test.ts` en `test/scripts/kooi.test.ts`
-  (ook de kanarietests van kooi/AC-4). In
+  `test/rails/document-status-lokaal-config.test.ts` (vervallen), `test/scripts/runner-trusted-base.test.ts` en
+  `test/scripts/kooi.test.ts` (ook de kanarietests van kooi/AC-4); de vijf vervallen bestanden zijn verwijderd met de
+  effectcheck en de documentguard (ADR 0091, ADR 0089). In
   `test/scripts/cloud-setup.test.ts` en in de kooi/AC-3-test "zonder bubblewrap" krijgt het kindproces `TMPDIR: tmpdir()` mee,
   zonder voorwaarde. Geen assertie, testnaam of aantal testgevallen verandert. De PR noemt per bestand het aantal overgeslagen
   tests in de sandbox naast het aantal dat nu faalt; meer overgeslagen dan faalt heeft een reden per bestand.

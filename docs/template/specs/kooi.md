@@ -71,7 +71,7 @@ proef: `✗ kooi: de proef schreef buiten de werkmap; het commando is niet uitge
   waarde dan een letterlijke `false` in elke aanroep van die vier functies; en `exec` of `execSync` uit `child_process` of
   `node:child_process`, via `import`, `import()` of `require`. De melding noemt `inKooi`. Geen uitzonderingslijst en geen
   onderdrukking (R-CODE-04).
-- **kooi/AC-6** — Bestaande gevallen. `sh()` in `test/hooks/rolhek-effect.test.ts`, het `sh -c`-fragment uit `compose.yaml`
+- **kooi/AC-6** — Bestaande gevallen. `sh()` in `test/hooks/rolhek-effect.test.ts` (vervallen) (verwijderd met de effectcheck, ADR 0091), het `sh -c`-fragment uit `compose.yaml`
   in `test/scripts/runner-trusted-base.test.ts` en het `bash -eu -c`-fragment uit `ci.yml` in `test/rails/ci-scan.test.ts`
   draaien via `inKooi`, met dezelfde verwachtingen. `test/hooks/statusregel.test.ts` zoekt `git` op `PATH` zonder shell. Het
   aantal testgevallen verandert niet.
