@@ -593,7 +593,6 @@ function gitMapMelding(file) {
 function decideBash({ command, role, tmpdirVrij = tmpdirLetterlijk(command), onzeker = false }, ctx, decision) {
   decision.deny.push(...rawForbidden(command, { role, onzeker }));
   decision.deny.push(...staleBranchStart(command));
-  decision.deny.push(...overnemenVervallen(command, { onzeker, al: decision.deny }));
   // De inhoud van `$(…)` en backticks is zelf een commando; zo vallen ook geneste substituties onder dezelfde regels.
   for (const inner of substitutions(command)) decideBash({ command: inner, role, tmpdirVrij, onzeker: true }, ctx, decision);
   const setsGhEnv = zetGhOmgeving(parseCommands(command));
@@ -616,32 +615,6 @@ function decideBash({ command, role, tmpdirVrij = tmpdirLetterlijk(command), onz
     for (const target of targets.trees ?? []) treeTarget({ file: target, kind: 'write', role }, ctx, decision);
     for (const target of targets.deletes) treeTarget({ file: target, kind: 'delete', role }, ctx, decision);
   }
-}
-
-// ADR 0091: het overnamescript is met de effecttoets vervallen, maar `.claude/settings.json` heeft `pnpm rolhek:overnemen *`
-// nog in `excludedCommands` (draait buiten de sandbox). Dicht voor elke rol, in elke vorm (scriptnaam of bestand).
-const OVERNEMEN_NAAM = /rolhek[:-]overnemen/;
-const OVERNEMEN_VERVALLEN =
-  '`pnpm rolhek:overnemen` is vervallen met de effecttoets (ADR 0091); het script bestaat niet meer, voor elke rol verboden';
-// Schrijven alleen hun argumenten uit en starten niets; achter een omhulsel of met een toewijzing telt dat niet.
-const OVERNEMEN_NOEMERS = new Set(['echo', 'printf']);
-
-/**
- * Vangnet op de tekst zonder `\`, `'` en `"` (zoals `startMergescript`): de naam staat in het commando en niet elk segment
- * leest of noemt alleen (`git grep rolhek:overnemen docs`, `echo "pnpm rolhek:overnemen"`). Zo vallen ook omhulsels,
- * `bash -c`, `eval` en een pijp naar een shell eronder; de inhoud van `$(…)` toetst `decideBash` zelf opnieuw.
- * @param {string} command @param {{ onzeker: boolean, al: readonly string[] }} opties `onzeker`: zie `decideBash`; `al`: de
- *   weigeringen tot nu toe, zodat de melding één keer valt (ook als `$(…)` haar opnieuw raakt).
- * @returns {string[]}
- */
-function overnemenVervallen(command, { onzeker, al }) {
-  if (al.includes(OVERNEMEN_VERVALLEN) || !OVERNEMEN_NAAM.test(command.replace(/[\\'"]/g, ''))) return [];
-  const noemt = (/** @type {string[]} */ words) => {
-    const { assignments, argv, pathWrappers } = splitCommand(words);
-    return assignments.length + pathWrappers.length === 0 && OVERNEMEN_NOEMERS.has(argv[0] ?? '');
-  };
-  const start = !parseCommands(command, onzeker).every(({ words }) => leestAlleen(words) || noemt(words));
-  return start ? [OVERNEMEN_VERVALLEN] : [];
 }
 
 /**
