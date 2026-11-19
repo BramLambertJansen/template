@@ -8,6 +8,8 @@ import { vermogen } from '../setup/vermogen.ts';
 const document = readFileSync(new URL('../../START-NIEUWE-APP.md', import.meta.url), 'utf8');
 const firstDocument = 'START-NIEUWE-APP.md';
 const secondDocument = 'nieuwe-app.md';
+// Sinds spec nieuwe-app-script (OV-3) haalt stap 6 ook het setupscript op, na de twee instructies.
+const setupScript = 'nieuwe-app.mjs';
 
 function runBootstrap(failure = '') {
   const step = document.split(/^6\. \*\*Instructies klaarzetten en agent starten\.\*\*/m)[1]?.split(/^7\. /m)[0];
@@ -71,6 +73,7 @@ test('stap 6 start Claude vanuit de setupmap nadat beide instructies zijn opgeha
     'mkdir',
     `curl ${firstDocument}`,
     `curl ${secondDocument}`,
+    `curl ${setupScript}`,
     `claude ${setup}`,
     firstDocument,
     secondDocument,
@@ -82,6 +85,10 @@ test.skipIf(vermogen('kooi').ontbreekt).each([
   { failure: 'mkdir', expected: ['mkdir'] },
   { failure: firstDocument, expected: ['mkdir', `curl ${firstDocument}`] },
   { failure: secondDocument, expected: ['mkdir', `curl ${firstDocument}`, `curl ${secondDocument}`] },
+  {
+    failure: setupScript,
+    expected: ['mkdir', `curl ${firstDocument}`, `curl ${secondDocument}`, `curl ${setupScript}`],
+  },
 ])('stap 6 stopt als $failure mislukt, ook als de setupmap al bestaat', ({ failure, expected }) => {
   const { calls } = runBootstrap(failure);
   expect(calls).toEqual(expected);
