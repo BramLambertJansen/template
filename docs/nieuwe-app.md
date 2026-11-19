@@ -117,7 +117,7 @@ Stop als dit allemaal waar is, niet eerder:
 - **Nooit op `/mnt/c`.** De repo staat op ext4 in `~/code/<slug>`. Via 9p is alles tientallen keren trager en file-watching werkt niet.
 - **Nooit pushen naar `main`.** De twee setup-commits pusht de eigenaar zelf (Fase 6). Daarna gaat alles via PR. Nooit `--force`, nooit `--no-verify`, nooit mergen.
 - **Geen squash bij de template-koppeling.** De `-s ours`-merge en elke latere template-update moeten als echte merge-commit op `main` landen.
-  Squash gooit de tweede ouder weg; de volgende `git merge template/main` conflicteert dan op elk bestand.
+  Squash gooit de tweede ouder weg; de volgende merge van een `template-v`-tag conflicteert dan op elk bestand.
 - **Niets aan de inhoud van de template veranderen** behalve wat Fase 5 noemt. Geen regels "verbeteren", geen bestanden opruimen, geen dependencies toevoegen.
   Zie je iets wat fout lijkt in de template: noteer het voor de overdracht.
 - **`.env.local` alleen maken met `node scripts/kit/nieuwe-app.mjs poorten --env`** (Fase 7.1): een kopie van `.env.example` waarin alleen de poorten en de poorten in de bijbehorende URL's verschillen. Een bestaande `.env.local` overschrijft niemand. Geen andere waarden, geen echte geheimen, nooit `.env.example` aanpassen.
@@ -525,6 +525,8 @@ Controle: `git log --oneline` toont één commit; `ls` toont `AGENTS.md`, `compo
 ~/.local/bin/mise exec node -- node scripts/kit/nieuwe-app.mjs koppel
 ```
 
+`-s ours` houdt de inhoud van de app en registreert de template als voorouder. Daarna haalt de merge van een `template-v<x.y.z>`-tag alleen nieuwe template-commits binnen (zie "Een template-update binnenhalen").
+Controle: noteer de gekoppelde volledige `template/main` SHA en beide tree-ID's in het voortgangsbestand. `git log --oneline --graph -5` toont een merge met twee ouders; `git diff HEAD~1 --stat` is leeg. **Bij een treeverschil:** niet mergen, niet de inhoud weggooien en niet heimelijk de templateversie als verwerkt markeren. Leg de mismatch vast en vraag een gerichte herstelbeslissing (bijvoorbeeld gecontroleerd opnieuw genereren als de nieuwe repo nog geen eigen werk bevat).
 `koppel` weigert bij een vuile werkmap, bij meer dan één eigen commit en bij een remote `template` met een andere URL dan
 `template.repository` uit `.claude/gates.json`. Het zet de remote `template` met push-URL `DISABLED` (nooit per ongeluk
 naar de template pushen), haalt `template/main` op en eist dat de tree van `HEAD` exact die van `template/main` is: is de
@@ -994,34 +996,60 @@ Verhuisd naar [app-naslag.md](app-naslag.md#een-eigen-beschermd-pad): eigen pade
 Door de eigenaar, of door de agent tot en met de PR. Dit is de enige procedure voor een template-update; voer de stappen op
 volgorde uit in een Ubuntu-terminal, met een schone werkmap (`git status --short` is leeg).
 
-1. Haal de template op en lees wat er verandert: in `docs/template-changelog.md` van de template elke versie boven de versie
-   die de app nu heeft (`TEMPLATE_VERSION` in `src/core/shared/template-version.ts`), met de notities "Bij een update".
-   Verwacht: je weet per versie wat je na de merge moet doen.
+Een update is de merge van een release van de template: een tag `template-v<x.y.z>` (ADR 0094, spec `template-release`).
+Vul in de stappen voor `<x.y.z>` de nieuwste release in; tussenliggende releases sla je over in de merge, niet in de notities.
+
+1. Haal de template en haar releasetags op. Verwacht: beide commando's eindigen zonder fout. `--no-tags` met de refspec haalt
+   alleen `template-v*` op, geen `v*`-tags van de template die met tags van de app kunnen botsen. Weigert de tweede fetch een
+   tag ("would clobber existing tag"), dan is in de template een release-tag verplaatst: merge niets en meld het de eigenaar.
 
    ```bash
    cd ~/code/<slug>
-   git fetch template
-   git show template/main:docs/template-changelog.md | less
+   git fetch --no-tags template main
+   git fetch --no-tags template 'refs/tags/template-v*:refs/tags/template-v*'
    ```
 
-2. Maak een branch vanaf `origin/main` en merge de template als echte merge-commit (geen squash, geen rebase). Verwacht:
-   een merge-commit met twee ouders, of een lijst conflicten.
+   Haalde de app eerder zonder `--no-tags` op, dan kan een `v*`-tag van de template lokaal staan: een lokale `v*`-tag die
+   niet in `git ls-remote --tags origin` staat, komt van de template. Verwijder hem lokaal met `git tag -d <tag>` voordat de
+   app zelf tagt of `git push --tags` gebruikt.
+
+2. Lees welke releases openstaan en wat hun notities "Bij een update" zijn. Verwacht: je weet per release wat je na de merge
+   moet doen. Staat de app op `0.2.0` of hoger (`TEMPLATE_VERSION` in `src/core/shared/template-version.ts`), dan met
+   `pnpm template:status` (leest alleen lokale refs, haalt niets op):
+
+   ```bash
+   cd ~/code/<slug> && pnpm template:status
+   ```
+
+   Staat de app lager dan `0.2.0`, dan heeft ze dat commando nog niet (het komt binnen met de merge van `template-v0.2.0` of
+   later). Lees dan in de wijzigingenlijst van de nieuwste tag elke release boven de versie van de app; een app op `0.1.0`
+   die `template/main` al eerder mergede, slaat een notitie over die ze toen al uitvoerde.
 
    ```bash
    cd ~/code/<slug>
-   git fetch origin main && git switch -c chore/template-$(git rev-parse --short template/main) origin/main
-   git merge template/main
+   git show template-v<x.y.z>:docs/template-changelog.md | less
    ```
 
-3. Los conflicten op en rond de merge af met `git commit`. App-specifiek blijft, regels uit de template neem je over;
-   `CHANGELOG.md` en `docs/app.md` zijn van de app (houd de versie van de app); `src/core/` en `docs/template/` neem je ongewijzigd uit de
-   template, vóór `git commit` (`git checkout --no-overlay template/main -- src/core docs/template`; `--no-overlay` haalt ook
-   bestanden weg die alleen de app daar had). Zet ze nooit terug in een losse commit na de merge: `check-core` weigert elke
-   commit met één ouder die een van beide zones wijzigt (`scripts/kit/check-core.mjs:128`). Verwacht: `git status` meldt geen
-   conflicten meer en `git log --oneline --graph -3` toont de merge met twee ouders.
-4. Voer per versie de notities "Bij een update" uit stap 1 uit, in eigen commits op deze branch. Verwacht: elke notitie is
-   uitgevoerd of aantoonbaar niet van toepassing.
-5. Installeer de dependencies, pas de migraties toe op de lokale database (niet productie), genereer het schema opnieuw en
+3. Maak een branch vanaf `origin/main` en merge de tag als echte merge-commit (geen squash, geen rebase). Verwacht: een
+   merge-commit met twee ouders, of een lijst conflicten.
+
+   ```bash
+   cd ~/code/<slug>
+   git fetch origin main && git switch -c chore/template-v<x.y.z> origin/main
+   git merge --no-edit template-v<x.y.z>
+   ```
+
+4. Los conflicten op en rond de merge af met `git commit`. App-specifiek blijft, regels uit de template neem je over;
+   `CHANGELOG.md` en `docs/app.md` zijn van de app (houd de versie van de app); `src/core/` en `docs/template/` neem je
+   ongewijzigd uit de tag, vóór `git commit` (`git checkout --no-overlay template-v<x.y.z> -- src/core docs/template`;
+   `--no-overlay` haalt ook bestanden weg die alleen de app daar had), niet uit `template/main`: staan daar al commits na de
+   tag, dan is core niet gelijk aan de gemergde commit en wordt `check-core` rood. Zet ze nooit terug in een losse commit na
+   de merge: `check-core` weigert elke commit met één ouder die een van beide zones wijzigt
+   (`scripts/kit/check-core.mjs:128`). Verwacht: `git status`
+   meldt geen conflicten meer en `git log --oneline --graph -3` toont de merge met twee ouders.
+5. Voer de notities "Bij een update" uit stap 2 uit, van elke openstaande release en op oplopende versie, in eigen commits op
+   deze branch. Verwacht: elke notitie is uitgevoerd of aantoonbaar niet van toepassing.
+6. Installeer de dependencies, pas de migraties toe op de lokale database (niet productie), genereer het schema opnieuw en
    commit het. Verwacht: `pnpm install` eindigt zonder fout, `pnpm db:migrate` past de nieuwe migraties toe, en na
    `pnpm db:generate` toont `git status --short` hooguit `db/schema.snapshot.sql` en `src/api/db/schema.ts`.
 
@@ -1034,24 +1062,24 @@ volgorde uit in een Ubuntu-terminal, met een schone werkmap (`git status --short
    git diff --cached --quiet || git commit -m "chore: regenerate schema after template update"
    ```
 
-6. Draai de snelle gates. Verwacht: elke gate ✓. Rood: zie de tabel hieronder.
+7. Draai de snelle gates. Verwacht: elke gate ✓. Rood: zie de tabel hieronder.
 
    ```bash
    cd ~/code/<slug> && pnpm gate:fast
    ```
 
-7. Push en open de PR. Zit er een wijziging in `.github/workflows/` in, dan pusht de eigenaar de branch (de agent heeft
+8. Push en open de PR. Zit er een wijziging in `.github/workflows/` in, dan pusht de eigenaar de branch (de agent heeft
    geen `workflows`-recht). Verwacht: een PR waarvan de CI groen wordt (`gate:fast`, `gate:slow`, `check-core` en de overige
    verplichte checks).
 
    ```bash
    cd ~/code/<slug>
    git push -u origin HEAD
-   gh pr create --fill --title "chore: template-update $(git rev-parse --short template/main)"
+   gh pr create --fill --title "chore: template-update template-v<x.y.z>"
    ```
 
-8. De eigenaar merget met **Create a merge commit**, nooit squash. Verwacht: de CI op `main` is groen.
-9. Verandert de update `requiredChecks` in `.claude/decisions.json` (een check erbij of eraf), dan draait de eigenaar na de
+9. De eigenaar merget met **Create a merge commit**, nooit squash. Verwacht: de CI op `main` is groen.
+10. Verandert de update `requiredChecks` in `.claude/decisions.json` (een check erbij of eraf), dan draait de eigenaar na de
    merge `scripts/github-ruleset.sh <owner>/<slug>` opnieuw. Verwacht: de ruleset volgt de nieuwe lijst (ADR 0073).
 
 Een rode check bij een template-update:
@@ -1059,13 +1087,13 @@ Een rode check bij een template-update:
 | Check en melding | Oorzaak | Doe |
 |---|---|---|
 | `check:migrations`: "niet later dan de nieuwste bestaande versie" op een migratie van de app | Een eigen, nog niet gemergde migratie is ouder dan een migratie die al op `main` staat | Geef de eigen migratie een nieuw tijdstempel (hernoem het bestand), `pnpm db:generate`, commit |
-| `check:migrations`: dezelfde melding op een migratie van de template | Je lokale `template/main` loopt achter en kent het bestand nog niet, of het bestand is in de merge gewijzigd of hernoemd; alleen een oudere migratie met dezelfde naam en inhoud als in de template is uitgezonderd | Eerst `git fetch template main` en opnieuw; blijft het rood: `git checkout template/main -- db/migrations/<bestand>`; wijzig een templatemigratie nooit |
-| `check:migrations`: "`refs/remotes/template/main` is niet te lezen" | De template is lokaal niet opgehaald, of in CI niet bereikbaar | `git fetch template main` en opnieuw; in CI haalt de check de template zelf op en moet de template-repo zonder inlog leesbaar zijn |
+| `check:migrations`: dezelfde melding op een migratie van de template | Je lokale `template/main` loopt achter en kent het bestand nog niet, of het bestand is in de merge gewijzigd of hernoemd; alleen een oudere migratie met dezelfde naam en inhoud als in de template is uitgezonderd | Eerst `git fetch --no-tags template main` en opnieuw; blijft het rood: `git checkout template/main -- db/migrations/<bestand>`; wijzig een templatemigratie nooit |
+| `check:migrations`: "`refs/remotes/template/main` is niet te lezen" | De template is lokaal niet opgehaald, of in CI niet bereikbaar | `git fetch --no-tags template main` en opnieuw; in CI haalt de check de template zelf op en moet de template-repo zonder inlog leesbaar zijn |
 | `check:migrations`: "gewijzigd" of "verwijderd" | Een gecommitte migratie is bij het oplossen van conflicten aangepast | Zet haar terug zoals op `origin/main`; een wijziging is een nieuwe migratie |
 | `check:migrations` op `main` na de merge: "herstel met een nieuwe migratie" | Een migratie kwam op `main` na een nieuwere (een PR die groen was tegen een oudere `main`) | Niet hernoemen; schrijf een nieuwe migratie die het bedoelde eindresultaat vastlegt |
-| `check:snapshot` (in `gate:slow`) | Het gegenereerde schema loopt achter op de migraties | Stap 5 opnieuw en committen; nooit met de hand bewerken |
-| `check:snapshot`: "op volgorde van binnenkomst … ontstaat een ander schema" of "de bouw op volgorde van binnenkomst faalt" | Een toegevoegde migratie (meestal een templatemigratie) is ouder dan een migratie van de app en beide raken hetzelfde object: productie, waar de oudere ná de nieuwere draait, krijgt een ander schema dan een verse database, of de migratie faalt daar | Hernoem of wijzig de genoemde migratie niet; schrijf een nieuwe migratie die het bedoelde eindresultaat vastlegt, daarna stap 5 opnieuw. Is de templatemigratie de oorzaak: meld het als leerpunt aan de template |
-| `check-core` | `src/core/` of `docs/template/` wijkt af van de template, of de update is geen echte merge van `template/main` (squash, rebase, cherry-pick) | Herstel in de merge-commit zelf, niet in een losse commit erna (die is ook rood): is de merge nog niet gecommit, dan `git checkout --no-overlay template/main -- src/core docs/template` en `git commit`; is de merge de laatste commit en is de branch nog niet gepusht, dan hetzelfde gevolgd door `git commit --amend --no-edit`; is de branch al gepusht (`check-core` draait in CI, dus meestal zie je het dan pas) of staan er al commits na de merge, begin dan opnieuw vanaf stap 2 op een branch met een andere naam (bijvoorbeeld met `-2` erachter), open een nieuwe PR en sluit de oude (een amend na de push vraagt een force-push, en die doet geen agent) |
+| `check:snapshot` (in `gate:slow`) | Het gegenereerde schema loopt achter op de migraties | Stap 6 opnieuw en committen; nooit met de hand bewerken |
+| `check:snapshot`: "op volgorde van binnenkomst … ontstaat een ander schema" of "de bouw op volgorde van binnenkomst faalt" | Een toegevoegde migratie (meestal een templatemigratie) is ouder dan een migratie van de app en beide raken hetzelfde object: productie, waar de oudere ná de nieuwere draait, krijgt een ander schema dan een verse database, of de migratie faalt daar | Hernoem of wijzig de genoemde migratie niet; schrijf een nieuwe migratie die het bedoelde eindresultaat vastlegt, daarna stap 6 opnieuw. Is de templatemigratie de oorzaak: meld het als leerpunt aan de template |
+| `check-core` | `src/core/` of `docs/template/` wijkt af van de template, of de update is geen echte merge van een `template-v`-tag (squash, rebase, cherry-pick) | Herstel in de merge-commit zelf, niet in een losse commit erna (die is ook rood): is de merge nog niet gecommit, dan `git checkout --no-overlay template-v<x.y.z> -- src/core docs/template` en `git commit`; is de merge de laatste commit en is de branch nog niet gepusht, dan hetzelfde gevolgd door `git commit --amend --no-edit`; is de branch al gepusht (`check-core` draait in CI, dus meestal zie je het dan pas) of staan er al commits na de merge, begin dan opnieuw vanaf stap 3 op een branch met een andere naam (bijvoorbeeld met `-2` erachter), open een nieuwe PR en sluit de oude (een amend na de push vraagt een force-push, en die doet geen agent) |
 | Conflict in `.github/CODEOWNERS`, of `check-docs`: `docs:spiegel:codeowners` | Het bestand is gegenereerd uit de padtabel van de template plus `.claude/gates.app.json` van de app, en beide kanten veranderden | Neem een van beide versies, genereer opnieuw met `node scripts/kit/codeowners.mjs --schrijf` en commit; nooit met de hand samenvoegen |
 | Conflict op `docs/app.md` | De template wijzigde de stub en de app heeft het bestand herschreven | Houd de versie van de app (`git checkout --ours docs/app.md`, `git add docs/app.md`); het bestand is van de app |
 | `check-docs`: `docs:app-md:<…>`: "ontbreekt; CLAUDE.md importeert het" | De update bracht de import in `CLAUDE.md`, maar `docs/app.md` is in de app verwijderd of nooit gecommit | Schrijf het skelet uit `appAgentregels()` (`scripts/kit/app-init.mjs`), vul het en commit; zie "Eigen agentinstructies van de app" |

@@ -36,6 +36,10 @@
 //     .github/, met extensie) dat niet bestaat, tenzij gevolgd door `(vervallen)`, `(nieuw)` of `(voorbeeld)` na witruimte
 //     met hooguit één regeleinde (ADR 0095), of in een nieuwe AC met `(nog niet gebouwd)` achter het id (leerpunt #738, sleutel `docs:<spec>:dood-pad:<pad>`);
 //     behalve het optionele app-bestand `.claude/gates.app.json` (spec app-padtabel).
+//  15. Elk changelogfragment in docs/template-changelog.d/ (spec template-release AC-1, sleutel
+//     `docs:changelog-fragment:<bestand>`): naam, front matter met één `soort`, minstens één lijstitem en als enige kop
+//     `### Bij een update` met een lijstitem eronder (`fragmentFout` in scripts/kit/template-release.mjs). In template en
+//     app; `README.md` in de map is geen fragment.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -55,6 +59,7 @@ import { ADR_MAPPEN, adrKopViolations, adrNumber, duplicateAdrNumbers, invalidAd
 import { APP_STUB } from './app-init.mjs';
 import { CODEOWNERS, codeownersTekst, eersteGoedkeurder, HERSTEL } from './codeowners.mjs';
 import { grensMeldingen, grensViolations, normenMeldingenUitGit, normenUitGit, zonderBasis } from './leesbudget.mjs';
+import { FRAGMENT_MAP, fragmentFout } from './template-release.mjs';
 
 export { normViolations } from './normen.mjs';
 
@@ -97,6 +102,7 @@ export async function docsViolations(root = '.') {
     ...rIdViolations(files, read),
     ...hoeNormViolations(files, read),
     ...appMdViolations(files, read),
+    ...fragmentViolations(files, read),
     ...grensViolations((file) => (files.includes(file) ? read(file) : null)),
   ]);
 }
@@ -123,6 +129,23 @@ export async function docsKrimp(root = '.') {
     ...zonderBasis(root, process.env['GITHUB_ACTIONS'] === 'true').violations,
     ...normenUitGit(root),
   ]);
+}
+
+/**
+ * Regel 15: de vorm van elk changelogfragment; de reden komt uit `fragmentFout`, dezelfde toets als `template:release`.
+ * @param {readonly string[]} files
+ * @param {(file: string) => string} read
+ * @returns {Violation[]}
+ */
+function fragmentViolations(files, read) {
+  const map = `${FRAGMENT_MAP}/`;
+  return files
+    .filter((file) => file.startsWith(map) && file !== `${map}README.md`)
+    .flatMap((file) => {
+      const naam = file.slice(map.length);
+      const fout = fragmentFout(naam, read(file));
+      return fout === null ? [] : [{ key: `docs:changelog-fragment:${naam}`, message: `${file}: ${fout}` }];
+    });
 }
 
 const REGELBOEK = 'docs/framework.md';

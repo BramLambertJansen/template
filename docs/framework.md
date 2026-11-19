@@ -246,7 +246,7 @@ Afgedwongen door: ruleset op `main` met `.github/CODEOWNERS`, `guard.yml` (`chec
 
 ### Template-updates naar een app
 
-`git merge template/main` op branch via PR (R-REPO-04); les van app naar template als issue met label `leerpunt` via leerpuntstap van `opleveren` (R-WERK-13, [ADR 0059](template/adr/0059-leerlus-van-app-naar-template.md)).
+Een `template-v<x.y.z>`-tag mergen op een branch via een PR (R-REPO-04); stand en notities met `pnpm template:status`; les van app naar template als issue met label `leerpunt` via leerpuntstap van `opleveren` (R-WERK-13, [ADR 0059](template/adr/0059-leerlus-van-app-naar-template.md)).
 
 ## 11. Lokaal ontwikkelen
 
