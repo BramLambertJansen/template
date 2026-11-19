@@ -277,7 +277,8 @@ const TOEGESTAAN_17: readonly Toegestaan17[] = [
   { command: "git ls-files -- 'scripts/kit/pr-*'", geheel: 'allen' },
   { command: 'git log -- scripts/kit/pr-{s}.mjs 2>/dev/null', geheel: 'zonder-reviewer' },
   { command: 'git log -- scripts/kit/pr-{s}.mjs 2>&1', geheel: 'zonder-reviewer' },
-  { command: 'git log -- scripts/kit/pr-{s}.mjs && git status', geheel: 'zonder-reviewer' },
+  // Elk segment is een lezer uit leestAlleen; `git status` is dat niet (AC-17, heel commando).
+  { command: 'git log -- scripts/kit/pr-{s}.mjs && git log -1', geheel: 'zonder-reviewer' },
   { command: 'git add test/scripts/pr-{s}.test.ts && git commit -m "x"', geheel: 'zonder-reviewer' },
   // De veilige lus over de werkmappen, zonder kitscriptnaam, blijft toegestaan.
   { command: 'for d in .claude/worktrees/*/; do git -C "$d" log -1; done', geheel: 'zonder-reviewer' },

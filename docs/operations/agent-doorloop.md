@@ -317,9 +317,9 @@ Het rolhek reserveert PR-creatie en elke schrijvende gh-opdracht voor de hoofdse
 leeslijst (`gh pr view/diff/checks`, `gh run view`, REST-GET via `gh api`) en geen GraphQL, ook geen leesquery
 (`docs/framework.md`, rij "PreToolUse rolhek (Bash)"). Zoeken naar die tekst mag een subagent wel, als elk segment een
 lezer is met argumenten binnen de repo (`git grep -n -F -e 'gh pr list' -- docs`; `zekerGelezen` in
-`rails/hooks/lib/rolhek.mjs`, spec rolhek-lezen/AC-18), en de naam van een kitscript weigert het rolhek voor elke rol alleen
-in een segment dat iets kan starten, of dat via `|` uitvoer doorgeeft aan zo'n segment of een uitvoerredirect (`startKitScript`,
-AC-17). Een grove regel op de ruwe tekst, zonder `\`, `'` en `"`,
+`rails/hooks/lib/rolhek.mjs`, spec rolhek-lezen/AC-18), en de naam van een kitscript weigert het rolhek voor elke rol niet
+als elk segment van het commando een lezer of `git add|commit|…` zonder uitvoerredirect is, zonder groep, compound, substitutie
+of heredoc (`startKitScript`, AC-17). Een grove regel op de ruwe tekst, zonder `\`, `'` en `"`,
 weigert voor elke rol mergen en goedkeuren in tekst die gh, `/pulls/`, `api.github.com` of GraphQL noemt, ook verhuld
 (`g\h`, `mer""ge`), ook binnen `$(…)` en backticks; een commandowoord dat niet letterlijk is (`$CMD …`, `$(…)`, een glob of
 `~` vooraan, na `!`, `if`, `while` of een omhulsel als `env`/`nice`/`sudo` moet elk woord van het segment

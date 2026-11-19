@@ -211,15 +211,9 @@ function startNiets(segment) {
   return config.length === 0 && GIT_TEKST.has(subcommand);
 }
 
-// AC-17: met een substitutie, een heredoc (`<<`), `eval` of `source` telt elke vermelding van de naam (de regel van voor AC-17).
+// AC-17: met een substitutie of een heredoc (`<<`) telt elke vermelding van de naam (de regel van voor AC-17). `eval`, `source`
+// en elk ander programma buiten `startNiets` vallen onder de regel voor het hele commando.
 const KIT_ONZEKER = /\$\(|`|<\(|>\(|<</;
-const KIT_UITVOERDERS = new Set(['eval', 'source', '.', 'builtin']);
-
-/** Het programma van een segment na sleutelwoorden (`then`, `do` …), toewijzingen en omhulsels. @param {Command} segment */
-function segmentProgramma({ words }) {
-  const start = words.findIndex((woord) => !KEYWORDS.has(woord));
-  return programName(splitCommand(start === -1 ? [] : words.slice(start)).argv[0] ?? '');
-}
 
 // Een groep of compound: de operator na `)`, `}` of `done` (`|`, `&`, een redirect) hangt niet aan een segment, dus dan telt
 // elke vermelding van de naam, zoals vóór AC-17.
@@ -247,10 +241,11 @@ function globRaakt(woord, doelen) {
 }
 
 /**
- * Start het commando het script op een andere manier dan de exacte vorm (spec rolhek-lezen/AC-17)? Een naam (scriptwoord,
- * bestandsnaam of een glob die er een raakt, ook in een redirectdoel) telt als het segment iets kan starten, of als het via
- * `|` (ook via andere lezers) uitvoer doorgeeft aan een segment dat iets start of een uitvoerredirect heeft. Met een
- * substitutie, heredoc, `eval` of `source` in het commando, of een geëxpandeerd woord in het segment met de naam, telt elke vermelding.
+ * Start het commando het script op een andere manier dan de exacte vorm (spec rolhek-lezen/AC-17)? AC-17 toetst het hele
+ * commando: een vermelding van de naam (scriptwoord, bestandsnaam of een glob die er een raakt, ook in een redirectdoel) telt
+ * niet alleen als élk segment `startNiets` is, er geen groep of compound is, er geen substitutie of heredoc in staat en geen
+ * segment met de naam een geëxpandeerd woord heeft. Zo kan geen ander segment shelltoestand zetten (`exec >f`, `hash -p`,
+ * `PATH=…`, `alias`) die een lezer verandert. Een segment zonder programma, met alleen toewijzingen, is geen `startNiets`.
  * @param {string} command @param {KitScript} script
  */
 function startKitScript(command, script) {
@@ -258,20 +253,9 @@ function startKitScript(command, script) {
   const segmenten = parseCommands(command);
   const raakt = (/** @type {string} */ woord) => script.script.test(woord) || script.bestand.test(woord) || globRaakt(woord, script.doelen);
   const noemt = (/** @type {Command} */ { words, redirects, inputs = [] }) => [...words, ...redirects, ...inputs].some(raakt);
-  const onzeker = KIT_ONZEKER.test(command) || heeftGroep(command, segmenten);
-  if (onzeker || segmenten.some((segment) => KIT_UITVOERDERS.has(segmentProgramma(segment))))
-    return script.script.test(tekst) || script.bestand.test(tekst) || segmenten.some(noemt);
-  // De kop van een veilige `for`-lus (spec rolhek-vooraf AC-2 (e)) start niets: zijn woorden gaan alleen naar programma's in de romp die zelf niets starten.
-  const { koppen } = veiligeLussen(segmenten);
-  const start = segmenten.map((segment, index) => !koppen.has(index) && !startNiets(segment));
-  const startVanaf = (/** @type {number} */ index) => {
-    for (let at = index; at < segmenten.length; at += 1) {
-      if (start[at] === true) return true;
-      if (!['|', '|&'].includes(segmenten[at]?.scheiding ?? '')) return false;
-    }
-    return false;
-  };
-  return segmenten.some((segment, index) => noemt(segment) && ((segment.expanded ?? []).length > 0 || startVanaf(index)));
+  if (!script.script.test(tekst) && !script.bestand.test(tekst) && !segmenten.some(noemt)) return false;
+  if (KIT_ONZEKER.test(command) || heeftGroep(command, segmenten)) return true;
+  return !segmenten.every(startNiets) || segmenten.some((segment) => noemt(segment) && (segment.expanded ?? []).length > 0);
 }
 
 /**
