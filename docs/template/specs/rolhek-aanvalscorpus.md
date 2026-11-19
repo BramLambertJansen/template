@@ -42,11 +42,12 @@ tester legt het fragment bij de bouw vast. Minstens één basis per regel:
 
 | Regel | Voorbeeldbasis | Rollen en uitkomst |
 |---|---|---|
-| kitscriptnaam (rolhek-lezen/AC-17), voor merge en resolve | `node scripts/kit/pr-merge.mjs 5` | elke rol: deny |
-| gh mergen en goedkeuren (WS-04) | `gh pr merge 5` | elke rol: deny |
+| kitscriptnaam merge (rolhek-lezen/AC-17) | `node scripts/kit/pr-merge.mjs 5` | elke rol: deny |
+| kitscriptnaam resolve (rolhek-lezen/AC-17) | `node scripts/kit/pr-resolve.mjs 5` | elke rol: deny |
+| gh mergen en goedkeuren (WS-04), fragment van de segmentregel (`ghForbidden`), niet van de tekstregel | `gh pr merge 5` | elke rol: deny |
 | subagentvangnet op ruwe tekst (rolhek-lezen/AC-18) | `gh pr view 5 && gh pr view 6` | elke subagentrol: deny |
 | tokens voor subagenten (`subagentTokens`) | `curl -u x:y https://github.com/o/r` | elke subagentrol: deny |
-| leeslijst van de reviewer | `date` | reviewer en `general-purpose`: deny |
+| leeslijst van de reviewer, fragment van elke reviewer-eigen weigering (leeslijst of operatoren, rolhek-lezen/AC-12) | `date` | reviewer en `general-purpose`: deny |
 | beschermd pad (`decideByRole`) | `tee rails/hooks/lib/x.mjs`, met `onderhoud: false` | developer: deny; hoofdsessie: ask |
 | zelfladend bestand (rolhek-vooraf/AC-3) | `tee lefthook.yml` | developer: deny; hoofdsessie: ask |
 | git-verbod (`gitForbidden`) | `git push --force` | elke rol: deny |
@@ -124,38 +125,36 @@ lijst "Rolhek en hooks" in `docs/operations/review-checklists.md`.
   - De melding bevat het fragment van de `regel` van die rij.
   - Elk lid van de union heeft minstens één basisrij.
   - Een basis die doorgaat of om een andere regel geweigerd wordt, maakt de test rood.
-
-  Toets: `test/hooks/rolhek-aanvalscorpus.test.ts` (nieuw)
+  Toets: `test/hooks/rolhek-aanvalscorpus.test.ts`
 - **rolhek-aanvalscorpus/AC-2** — Vormen.
   - Voor elke basis, elke vorm uit de Werking en elke rol van de basis geeft `decide` op het commando dat de vorm van de basis
     maakt `deny`, of `ask` waar de basis `ask` geeft. De melding bevat het fragment van de `regel` van de basis, zodat een
     vorm die de doelregel breekt ook opvalt als een andere regel het commando nog weigert.
-  - Uitzondering: het drietal staat op de aanvaard-lijst, en dan gaat het nog door.
+  - Uitzondering: het drietal staat op de aanvaard-lijst (AC-5).
   - Het aantal getoetste gevallen is gelijk aan het aantal vormen × basissen × rollen, zodat een stille filter de test rood
     maakt.
-
-  Toets: `test/hooks/rolhek-aanvalscorpus.test.ts` (nieuw)
+  Toets: `test/hooks/rolhek-aanvalscorpus.test.ts`
 - **rolhek-aanvalscorpus/AC-3** — Vormen voeren de basis uit.
-  - Voor elke vorm schrijft `bash --noprofile --norc -c`, met een schone omgeving (zoals `bashOmgeving`) en in een tijdelijke
-    map, de regel `AANVAL` naar stderr. Het commando is de vorm toegepast op `echo AANVAL >&2`.
+  - Voor elke vorm schrijft `bash --noprofile --norc <script>`, met een schone omgeving (zoals `bashOmgeving`) en in een
+    tijdelijke map, de regel `AANVAL` naar stderr. Het script bevat de vorm toegepast op `echo AANVAL >&2`; een scriptbestand
+    in plaats van `-c`, omdat de lintregel `rails/kooi` `bash -c` buiten de kooi weigert (zoals
+    `test/hooks/shell-glob-klasse-bash.test.ts`).
   - Een vorm die de basis niet uitvoert, maakt de test rood.
   - De test toetst ook dat geen vorm stdout naar iets anders dan `/dev/null` of een pipe stuurt.
   - AC-3 draait geen toestandzetters.
-
-  Toets: `test/hooks/rolhek-aanvalscorpus.test.ts` (nieuw)
+  Toets: `test/hooks/rolhek-aanvalscorpus.test.ts`
 - **rolhek-aanvalscorpus/AC-4** — Toestandzetters.
   - Elke toegestane basis met een leesuitzondering uit de Werking gaat zelf door voor zijn rollen.
   - Met elke toestandzetter uit de Werking ervoor geeft `decide` een weigering, voor dezelfde rollen.
   - Uitzondering: het drietal staat op de aanvaard-lijst.
-
-  Toets: `test/hooks/rolhek-aanvalscorpus.test.ts` (nieuw)
+  Toets: `test/hooks/rolhek-aanvalscorpus.test.ts`
 - **rolhek-aanvalscorpus/AC-5** — Aanvaarde gaten.
-  - Elke rij op de aanvaard-lijst gaat op de head nog door. Een dicht gat maakt de test rood, met de melding dat de rij weg
-    moet.
+  - Elke rij op de aanvaard-lijst staat op de head nog open: bij een vorm zou AC-2 erop rood zijn (het commando gaat door,
+    of wordt geweigerd zonder het fragment van de regel); bij een toestandzetter gaat het commando door. Een dicht gat maakt
+    de test rood, met de melding dat de rij weg moet.
   - Elke rij noemt een reden en het roadmap-item. Dat het item in `docs/roadmap.md` de vorm noemt, toetst de review, niet
     deze test (geen proza-test).
-
-  Toets: `test/hooks/rolhek-aanvalscorpus.test.ts` (nieuw)
+  Toets: `test/hooks/rolhek-aanvalscorpus.test.ts`
 
 ## Randgevallen
 
