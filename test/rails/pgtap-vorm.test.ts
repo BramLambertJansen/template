@@ -78,6 +78,15 @@ const VERWACHT: Record<string, string | null> = {
   'goed-dollar-tag-rol-in-blok.sql': null,
   'goed-dollar-tag-met-losse-dollars.sql': null,
   'goed-escape-string-met-commentaar-dollars.sql': null,
+  // De scanner zelf (stapCode, stapQuote, stapDollar, stapBlok): elke fixture heeft een `set local role` binnen het construct
+  // vóór de plan, dat niet mag tellen; de rest is geldige vorm.
+  'goed-blok-genest-meerregelig.sql': null,
+  'goed-tekst-meerregelig-met-rol.sql': null,
+  'goed-naam-met-dubbele-aanhalingstekens.sql': null,
+  'goed-identifier-met-dollars.sql': null,
+  'goed-identifier-eindigt-op-e.sql': null,
+  'goed-psql-metaregel-met-losse-quote.sql': null,
+  'goed-niet-gesloten-tekst-aan-het-eind.sql': null,
   'search-path-ontbreekt.sql': 'search_path',
   'search-path-anders.sql': 'search_path',
   'search-path-later.sql': 'search_path',
