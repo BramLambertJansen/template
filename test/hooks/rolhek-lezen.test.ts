@@ -134,7 +134,12 @@ describe('rolhek-lezen/AC-1: de leeslijst van de reviewer', () => {
     { name: 'run view -v', command: 'gh run view 1 -v', basis: 'gh run view 1' },
     { name: 'run view --exit-status', command: 'gh run view 1 --exit-status', basis: 'gh run view 1' },
     { name: 'run view --attempt', command: 'gh run view 1 --attempt 2', basis: 'gh run view 1' },
-    { name: 'issue list --search', command: 'gh issue list --search x', basis: 'gh issue list' },
+    // `--search` staat sinds AC-16 in de lijst; een geëxpandeerde waarde blijft dicht.
+    {
+      name: 'issue list --search met geëxpandeerde waarde',
+      command: 'gh issue list --search "$X"',
+      basis: 'gh issue list --search x',
+    },
     { name: 'leespad --ref=…', command: 'pnpm leespad --ref=main', basis: 'pnpm leespad --ref main' },
     { name: 'leespad onbekende vlag', command: 'pnpm leespad --write', basis: 'pnpm leespad' },
     { name: 'meting --branch=…', command: 'pnpm meting --branch=x', basis: 'pnpm meting --branch x' },
@@ -1146,9 +1151,9 @@ describe('rolhek-lezen/AC-16: gh pr list en gh issue list met zoeken', () => {
     { command: 'gh pr list --state open --label "a b"', basis: 'gh pr list --state open --label x' },
     { command: 'gh pr list --state open x', basis: 'gh pr list --state open' },
     { command: 'gh issue list --search "$X"', basis: 'gh issue list --search "x"' },
-    { command: 'gh pr list --state open && gh pr close 5', basis: 'gh pr list --state open && gh pr view 5' },
-    { command: 'gh pr list --state open; gh pr edit 5 --add-label x', basis: 'gh pr list --state open; gh pr view 5' },
-    { command: 'gh pr list --state open; gh pr merge 5', basis: 'gh pr list --state open; gh pr view 5' },
+    { command: 'gh pr list --state open && gh pr close 5', basis: 'gh pr list --state open' },
+    { command: 'gh pr list --state open; gh pr edit 5 --add-label x', basis: 'gh pr list --state open' },
+    { command: 'gh pr list --state open; gh pr merge 5', basis: 'gh pr list --state open' },
     { command: 'gh pr list --search "merge"', basis: 'gh pr list --search "is:merged"' },
   ])('rolhek-lezen/AC-16: $command → deny', ({ command, basis }) => {
     afwijzing(basis, command, { role: REVIEWER });

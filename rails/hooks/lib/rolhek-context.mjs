@@ -1,6 +1,6 @@
 // Context van het rolhek (ADR 0045): configuratie uit het anker, vertrouwde basis, lezen uit de werkmap.
 import { execFileSync } from 'node:child_process';
-import { readFileSync, statSync } from 'node:fs';
+import { readFileSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { loadConfig } from './rolhek.mjs';
 import { gitText, readAuthority, repositoryName, trustedBase } from './authority-context.mjs';
@@ -113,6 +113,8 @@ export function rolhekContext(root, cwd) {
         .split('\0')
         .filter((file) => file !== ''),
     branch: gitBranch(root),
+    gevolgd: (/** @type {readonly string[]} */ paden) => gevolgdeBestanden({ root, cwd }, paden),
+    werkmappen: () => werkmapRoots(root),
     authority,
     runnerTrusted: () => (trusted ??= trustedRunner(root, basis)),
     mergeTrusted: () => (mergeVertrouwd ??= trustedMerge(root, basis)),
@@ -147,6 +149,71 @@ function mergeBase(root, basis) {
     return git(root, ['merge-base', basis, 'HEAD']) || null;
   } catch {
     return null;
+  }
+}
+
+const GEWOON_BESTAND = new Set(['100644', '100755']);
+
+/**
+ * Spec rolhek-lezen/AC-11: de doorgegeven paden (zoals getypt, opgelost tegen `cwd`) die git volgt als gewoon bestand. Een pad
+ * telt alleen als het zelf en zijn `realpath` binnen de root liggen en allebei exact in de index staan met modus 100644 of
+ * 100755: zo blijven een link naar buiten, een map die op schijf een link is, een gevolgde link naar een niet-gevolgd bestand
+ * en een map als pathspec dicht. Eén aanroep `git --literal-pathspecs ls-files -s -z -- <paden>` (`--`: een pad wordt nooit
+ * een optie; geen pathspec-magie; `-z`: geen aanhaling van bijzondere namen). Faalt git, dan telt geen pad (dicht).
+ * @param {{ root: string, cwd: string }} plek @param {readonly string[]} paden
+ * @returns {Set<string>}
+ */
+function gevolgdeBestanden({ root, cwd }, paden) {
+  const binnen = (/** @type {string} */ basis, /** @type {string} */ doel) => {
+    const rel = path.relative(basis, doel);
+    return rel === '' || rel.startsWith('..') || path.isAbsolute(rel) ? null : rel.split(path.sep).join('/');
+  };
+  const kandidaten = paden.flatMap((pad) => {
+    try {
+      const absoluut = path.resolve(cwd, pad);
+      const getypt = binnen(root, absoluut);
+      const echt = binnen(realpathSync(root), realpathSync(absoluut));
+      return getypt === null || echt === null ? [] : [{ pad, getypt, echt }];
+    } catch {
+      return [];
+    }
+  });
+  if (kandidaten.length === 0) return new Set();
+  const modus = indexModi(root, [...new Set(kandidaten.flatMap(({ getypt, echt }) => [getypt, echt]))]);
+  const gewoon = (/** @type {string} */ rel) => GEWOON_BESTAND.has(modus.get(rel) ?? '');
+  return new Set(kandidaten.filter(({ getypt, echt }) => gewoon(getypt) && gewoon(echt)).map(({ pad }) => pad));
+}
+
+/**
+ * De modus per pad uit de index; leeg als git faalt.
+ * @param {string} root @param {readonly string[]} paden repo-relatief
+ * @returns {Map<string, string>}
+ */
+function indexModi(root, paden) {
+  /** @type {Map<string, string>} */
+  const modi = new Map();
+  try {
+    const uit = git(root, ['--literal-pathspecs', 'ls-files', '-s', '-z', '--', ...paden]);
+    for (const regel of uit.split('\0')) {
+      const tab = regel.indexOf('\t');
+      if (tab !== -1) modi.set(regel.slice(tab + 1), regel.split(' ')[0] ?? '');
+    }
+  } catch {
+    modi.clear();
+  }
+  return modi;
+}
+
+/**
+ * Spec rolhek-lezen/AC-15: de roots uit `git worktree list --porcelain`; faalt git, dan alleen `root` (dicht).
+ * @param {string} root @returns {string[]}
+ */
+function werkmapRoots(root) {
+  try {
+    const uit = git(root, ['worktree', 'list', '--porcelain']);
+    return [root, ...uit.split('\n').filter((regel) => regel.startsWith('worktree ')).map((regel) => regel.slice('worktree '.length))];
+  } catch {
+    return [root];
   }
 }
 

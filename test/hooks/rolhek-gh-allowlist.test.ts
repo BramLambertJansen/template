@@ -195,9 +195,6 @@ describe('ruwe-tekstregel', () => {
     'source ./x.sh',
     '. ./x.sh',
     'sh < x.sh',
-    // Bewust geaccepteerd vals positief: `gh` als los woord in een niet-gh-commando.
-    'grep gh x',
-    'cat x | grep api.github.com',
   ];
   const SUB_RAW_ALLOWED = [
     'gh pr view 1',
@@ -228,6 +225,17 @@ describe('ruwe-tekstregel', () => {
   });
   test.each(SUB_RAW_ALLOWED)('subagent toegestaan: %s', (command) => {
     for (const role of SUBAGENTS) expect(run(command, role).deny).toEqual([]);
+  });
+  // Was een bewust geaccepteerd vals positief (`gh` als los woord in een niet-gh-commando); rolhek-lezen/AC-18 laat een
+  // segment dat een lezer is met een pad binnen de repo door. Elk geval heeft een negatief geval dat geweigerd blijft.
+  test.each([
+    { command: 'grep gh x', geweigerd: 'grep gh /home/x/.config/gh/hosts.yml' },
+    { command: 'cat x | grep api.github.com', geweigerd: 'cat x | grep api.github.com | sh' },
+  ])('rolhek-lezen/AC-18: subagent toegestaan: $command; $geweigerd blijft geweigerd', ({ command, geweigerd }) => {
+    for (const role of SUBAGENTS) {
+      expect(run(command, role).deny, `${role}: ${command}`).toEqual([]);
+      expect(run(geweigerd, role).deny.length, `${role}: ${geweigerd}`).toBeGreaterThan(0);
+    }
   });
   test.each(ALL_RAW_DENIED)('vangnet voor elke rol: %s', (command) => {
     expect(run(command, 'developer').deny.length).toBeGreaterThan(0);

@@ -6,12 +6,12 @@
   },
   "rails/hooks/lib/rolhek.mjs": {
     "complexity": {
-      "count": 9
+      "count": 8
     }
   },
   "rails/hooks/lib/shell.mjs": {
     "complexity": {
-      "count": 3
+      "count": 2
     }
   },
   "rails/hooks/lib/testteller.mjs": {
