@@ -92,6 +92,15 @@ Teksten, letterlijk:
 - **gebouwd-zonder-nummer/AC-12** — Gegeven de repo na de bouw, wanneer `check:docs` draait, dan is het groen, terwijl
   `docs/template/specs/gebouwd-na-merge.md` (vervallen) niet bestaat en `specarchief-en-bouwvorm/AC-9`,
   `specarchief-en-bouwvorm/AC-10` en `template-repo/AC-5` de vorm uit AC-5 hebben, zonder test.
+- **gebouwd-zonder-nummer/AC-13** (nog niet gebouwd) — Uit spec spec-en-bouw-in-een-pr (vervallen) AC-8. Gegeven een spec die
+  in de PR naar `status: gebouwd # #<n>` gaat met het roadmapvinkje in dezelfde PR, wanneer `check:roadmap` draait, dan geeft
+  het geen `spec:bewijs`-melding; via Edit mogen hoofdsessie en architect die regel schrijven (vanaf `goedgekeurd` en vanaf
+  `voorstel`), de developer niet. Bewijs nu: `test/rails/spec-en-bouw.test.ts:27`, `test/hooks/rolhek-beslisroute.test.ts:148`
+  en `:163`.
+- **gebouwd-zonder-nummer/AC-14** (nog niet gebouwd) — Uit spec spec-en-bouw-in-een-pr (vervallen) AC-13. De sectie
+  `## Modus spec-review` in `.claude/agents/reviewer.md` geldt bij elke spec in de PR (niet alleen bij migratie, route of
+  permissie) en vraagt een oordeel over "kritiek"; de eerste niet-lege regel van `.github/pull_request_template.md` is
+  `## Spec`. Bewijs nu: `test/rails/spec-en-bouw.test.ts:49`.
 
 ## Randgevallen
 
