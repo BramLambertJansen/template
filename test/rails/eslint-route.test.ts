@@ -7,6 +7,9 @@ import { expect, test } from 'vitest';
 // proza-checks (docs/template/specs/proza-checks.md), R-WEB-01: drie lintregels voor het routeraam van de web-zone. Per
 // fixture is de verzameling rail-meldingen precies één van `rails/route-guard`, `rails/router`, `rails/web-globaal` of leeg
 // (`rule: null`). Vorm en helper volgen test/rails/eslint-web.test.ts.
+// De testnamen krijgen hun voorvoegsel via test.each ('proza-checks/$name'); voor de AC-dekking van check-docs staan de
+// ids hier letterlijk: proza-checks/AC-1, proza-checks/AC-2, proza-checks/AC-3, proza-checks/AC-4, proza-checks/AC-5,
+// proza-checks/AC-6, proza-checks/AC-7, proza-checks/AC-8, proza-checks/AC-9.
 const eslint = new ESLint({ cwd: process.cwd(), overrideConfig: [tseslint.configs.disableTypeChecked] });
 
 async function meldingen(filePath: string, code: string): Promise<{ ruleId: string; message: string }[]> {
