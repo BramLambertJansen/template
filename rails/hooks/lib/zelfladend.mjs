@@ -378,8 +378,14 @@ export function zelfladend({ argv: ruw, redirects, role, ruim = false }, basisCt
   const kaal = zonderOmhulsel(ruw, { ...basisCtx, ruim });
   const { argv } = kaal;
   const { ctx, omgelegd } = gitWerkmap(argv, kaal.ctx);
-  if (ctx.cwdOnbekend === true && (redirects.length > 0 || schrijfWoorden(argv).length > 0 || gitWerkmapZonderPaden(argv, ctx) !== null))
-    weiger('na een `cd` naar een map die pas bij het uitvoeren bekend is ($, backtick), ziet het rolhek niet waar paden landen (spec rolhek-vooraf AC-3)', role, besluit);
+  if (ctx.cwdOnbekend === true && (redirects.length > 0 || schrijfWoorden(argv).length > 0 || gitWerkmapZonderPaden(argv, ctx) !== null)) {
+    const melding = 'na een `cd` naar een map die pas bij het uitvoeren bekend is ($, backtick, of meer dan 32 mogelijke mappen), ziet het rolhek niet waar paden landen (spec rolhek-vooraf AC-3)';
+    // Een doel met een `.git`-onderdeel kan vanuit een onbekende map `.git/**` raken: deny voor elke rol, zoals in een bekende
+    // map (R-ROL-03; spec rolhek-aanvalscorpus, review B5).
+    const gitDoel = [...redirects, ...schrijfWoorden(argv)].some((woord) => woord.split('/').some((stuk) => stukRegex(stuk, ruim).test('.git')));
+    if (gitDoel) besluit.deny.push(`${melding}; een doel met .git is verboden, voor elke rol (R-ROL-03)`);
+    else weiger(melding, role, besluit);
+  }
   for (const rel of doelen([...redirects, ...schrijfWoorden(argv)], ctx)) {
     const melding = `${rel} is een zelfladend pad (spec rolhek-vooraf AC-3): Claude Code, git of pnpm laadt het zelf, buiten het rolhek om`;
     // Ook een glob die bash op `.git` laat passen (`.gi[t]`, `.gi[[:alpha:]]`) valt onder `.git/**` (AC-3, #618).

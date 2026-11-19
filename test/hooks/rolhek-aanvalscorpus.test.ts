@@ -162,10 +162,21 @@ describe('rolhek-aanvalscorpus/AC-2 vormen: een weigering blijft staan, wat er o
   // Elke onzekere cd kan de mogelijke mappen verdubbelen; boven 32 is de map onbekend (`uniekeMappen` in rolhek.mjs).
   test('rolhek-aanvalscorpus/AC-2 boven 32 mogelijke mappen is de map onbekend en weigert de zelfladende toets', () => {
     const cds = (n: number): string => Array.from({ length: n }, (_, i) => `cd m${String(i)}; `).join('');
-    expect(beslis(`${cds(4)}tee x`, 'developer').uitslag).toBe('door');
+    // Vijf cd's: precies 32 mappen, nog bekend; zes: 64, onbekend.
+    expect(beslis(`${cds(5)}tee x`, 'developer').uitslag).toBe('door');
     const zes = beslis(`${cds(6)}tee x`, 'developer');
     expect(zes.uitslag).toBe('deny');
     expect(zes.melding).toContain('ziet het rolhek niet waar paden landen');
+  });
+
+  // Review B5: de onbekende map mag een deny voor `.git/**` niet tot ask verzwakken, ook niet voor de hoofdsessie.
+  test('rolhek-aanvalscorpus/AC-2 een doel met .git vanuit een onbekende map is deny voor elke rol', () => {
+    const cds = Array.from({ length: 6 }, (_, i) => `cd m${String(i)}; `).join('');
+    for (const rol of ['', 'developer'] as const) {
+      expect(beslis(`${cds}tee ../.git/hooks/pre-commit`, rol).uitslag).toBe('deny');
+      expect(beslis(`cd $X; tee ../.git/x`, rol).uitslag).toBe('deny');
+    }
+    expect(beslis(`${cds}tee x`, '').uitslag).toBe('ask');
   });
 });
 
