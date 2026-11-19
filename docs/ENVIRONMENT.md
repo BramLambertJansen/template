@@ -18,7 +18,8 @@ Het veld draait in de map **boven** de clone, als root, vóór Claude Code start
 `scripts/cloud-setup.sh` onder die map (`<repo>/scripts/`, niet in `node_modules`), draait elk gevonden script met een
 regel `→ <pad>` ervoor en eindigt met de exitcode van het eerste script dat faalt. Vindt het niets, dan eindigt het met
 `✗ scripts/cloud-setup.sh niet gevonden onder <map>` en exit 1. Klaar binnen ongeveer vijf minuten betekent dat de omgeving
-wordt gecachet; het script draait dan niet opnieuw tot het veld of de toegestane hosts wijzigen. Niet gemeten: of een
+wordt gecachet; het script draait dan niet opnieuw tot het veld of de toegestane hosts wijzigen. In de eerste sessie na het instellen staan de
+toolchain en `node_modules` er (gemeten op 19 november 2026). Niet gemeten: of een
 sessie uit de cache de `node_modules` van de repo bevat, en of één omgeving haar cache over meerdere repo's deelt (spec
 `cloud-zelfinstallatie`, M6). Deelt ze die wel, dan wordt het één omgeving per repo met hetzelfde bestand.
 
@@ -33,7 +34,7 @@ sessie uit de cache de `node_modules` van de repo bevat, en of één omgeving ha
 | `mise install` | Toolchain uit `mise.toml`. |
 | Terugval per ontbrekende tool (zie Terugval) | De proxy van een cloudsessie weigert de GitHub-API, die `mise install` voor pnpm, dbmate, betterleaks en osv-scanner nodig heeft. |
 | Stoppen als `mise ls --missing` nog iets noemt | Een tool zonder terugval valt meteen op, niet pas bij de eerste check of commit. |
-| Route 1 naar `PATH`: `~/.local/bin/node` en `~/.local/bin/pnpm` als koppeling naar het pad dat `mise which` geeft | De binaire zelf, geen mise-shim (een shim weigert bij een niet-vertrouwde `mise.toml`). `~/.local/bin` stond in één gemeten cloudsessie vóór de voorgeïnstalleerde Node 22 (spec `cloud-zelfinstallatie`, F11; voor de sessie van de eigenaar en voor hooks nog niet gemeten, M3); dit is de enige route die ook hooks en git-hooks kan bereiken, die `node` via `PATH` starten. Een gewoon bestand op die plek blijft staan; een lege of mislukte `mise which` maakt geen koppeling. Beide geven een `!`-regel. |
+| Route 1 naar `PATH`: `~/.local/bin/node` en `~/.local/bin/pnpm` als koppeling naar het pad dat `mise which` geeft | De binaire zelf, geen mise-shim (een shim weigert bij een niet-vertrouwde `mise.toml`). `~/.local/bin` stond in twee gemeten cloudsessies vóór de voorgeïnstalleerde Node 22, waaronder een sessie van de eigenaar (spec `cloud-zelfinstallatie`, F11 en M3; voor hooks nog niet gemeten); dit is de enige route die ook hooks en git-hooks kan bereiken, die `node` via `PATH` starten. Een gewoon bestand op die plek blijft staan; een lege of mislukte `mise which` maakt geen koppeling. Beide geven een `!`-regel. |
 | Route 2: één eigen `export PATH=`-regel in `CLAUDE_ENV_FILE`, als die variabele gezet is | Claude Code zet die regel vóór elk Bash-commando. Idempotent op de eigen regel; andere regels, ook een `export PATH=` van iets anders, blijven staan. Niet te schrijven is een `!`-regel. |
 | Route 3: dezelfde regel in `~/.bashrc` | Voor de Bash-tool. Niet te schrijven (bijvoorbeeld alleen-lezen in de sessie) is een `!`-regel, geen fout. |
 | `pnpm install --frozen-lockfile` | Dependencies exact volgens het lockfile. |
@@ -215,6 +216,9 @@ branchnaam voor; de PR komt van de opgelegde branch. Is een vaste naam nodig, da
   Draai het script opnieuw; blijft het, meld het als leerpunt en ga niet zonder controle verder.
 - **`✗ tools uit mise.toml ontbreken, ook na de terugval`**: een tool zonder terugval; voeg een tak toe aan `terugval` in
   `scripts/cloud-setup.sh`.
+- **Toolchain installeren vanuit de sessie lukt niet**: in de gemeten sessie met actieve sandbox was `~/.local`
+  alleen-lezen (spec `cloud-zelfinstallatie`, M2); `bash scripts/cloud-setup.sh` vanuit de Bash-tool kan de toolchain daar
+  dan niet neerzetten. Stel het veld van de omgeving in (Opzetten) en start een nieuwe sessie.
 - **`✗ mise ophalen van github.com mislukt`** (of een download van de terugval, `pnpm install`): geen netwerk. Controleer dat netwerktoegang
   op Trusted staat. Meldt curl `Failed to connect to localhost port 3128`, dan antwoordt de proxy uit `HTTPS_PROXY` niet.
 - **Proxy in de Bash-tool**: het setup-script draait in een ander proces dan de sandboxed Bash-tool van de sessie. Dat het
@@ -233,9 +237,11 @@ branchnaam voor; de PR komt van de opgelegde branch. Is een vaste naam nodig, da
   meldt, slaagt dan via `mise exec --`.
 - **`! bubblewrap en socat niet geïnstalleerd (apt-get exit <code>); de kooi kan niet starten`**: de sessie werkt, maar
   tests die de kooi nodig hebben slaan lokaal over (`⚠`). Draai het script opnieuw als de pakketbron weer bereikbaar is.
-- **Startmelding over de sandbox**: verwacht in een cloudsessie; de sessie start zonder Bash-sandbox en zonder
-  `bubblewrap`. De melding luidt:
-  `sandbox.failIfUnavailable is set, but this session runs in Anthropic's cloud container, which has no command sandbox […] Commands run without a sandbox`. Dat de sessie geen sandbox claimt, staat onder Minimale Claude Code-versie (`⚠ bewaking niet
+- **Startmelding over de sandbox**: verwacht in een cloudsessie. De melding zegt dat de sessie zonder Bash-sandbox
+  start, maar in een sessie op de omgeving uit Opzetten was de sandbox wel actief: `~/.local` en de map boven de repo
+  waren alleen-lezen voor de Bash-tool (spec `cloud-zelfinstallatie`, M2). Ga uit van `node scripts/kit/feiten.mjs`, niet
+  van de melding. De melding luidt:
+  `sandbox.failIfUnavailable is set, but this session runs in Anthropic's cloud container, which has no command sandbox […] Commands run without a sandbox`. Wanneer een sessie geen sandbox claimt, staat onder Minimale Claude Code-versie (`⚠ bewaking niet
   actief`).
 - **Sandbox uitzetten** is bewust geen standaard: `.claude/settings.json` blijft `sandbox` aan houden. Wie dat toch wil, doet dat per
   omgeving buiten de repo en met eigenaarakkoord (beschermd pad, `docs/framework.md` §10).
