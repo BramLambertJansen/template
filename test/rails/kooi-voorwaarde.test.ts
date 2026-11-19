@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { type AbsenceExamples, expectAbsent } from '../support/absence';
@@ -31,6 +31,50 @@ const VOORWAARDE_VOORBEELDEN: AbsenceExamples = {
   allows: ["ctx.skip(!kooiWerkt, 'geen kooi');", "env: { PATH: '/nergens', TMPDIR: tmpdir() }"],
 };
 
+// Per aanroep van inKooi: de voorwaarde staat in de test zelf (ook op de regel `test.skipIf(…)`), of in een beforeEach van
+// het describe-blok vóór die test. Staat de aanroep in een functie op het hoogste niveau, dan geldt dat voor elke aanroep
+// van die functie. Een tekstbenadering: blokgrenzen leest hij niet, dus een eerder, al gesloten describe telt mee.
+const TEST_START = /^[ \t]*(?:test|it)[.(]/gm;
+const DESCRIBE_START = /^[ \t]*describe[.(]/gm;
+const FUNCTIE_START = /^(?:export )?(?:async )?function (\w+)\(/gm;
+
+function laatsteVoor(tekst: string, patroon: RegExp, positie: number): RegExpExecArray | undefined {
+  let laatste: RegExpExecArray | undefined;
+  for (const match of tekst.matchAll(patroon)) {
+    if (match.index >= positie) break;
+    laatste = match;
+  }
+  return laatste;
+}
+
+function gedektInTest(tekst: string, positie: number): boolean {
+  const start = laatsteVoor(tekst, TEST_START, positie);
+  if (start === undefined) return false;
+  if (VOORWAARDE.test(tekst.slice(start.index, positie))) return true;
+  const blok = laatsteVoor(tekst, DESCRIBE_START, start.index);
+  if (blok === undefined) return false;
+  const kop = tekst.slice(blok.index, start.index);
+  return kop.includes('beforeEach(') && VOORWAARDE.test(kop);
+}
+
+function gedekt(tekst: string, positie: number): boolean {
+  const test = laatsteVoor(tekst, TEST_START, positie);
+  const functie = laatsteVoor(tekst, FUNCTIE_START, positie);
+  if (functie === undefined || (test !== undefined && test.index > functie.index)) return gedektInTest(tekst, positie);
+  const naam = functie[1] ?? '';
+  const aanroepen = [...tekst.matchAll(new RegExp(String.raw`\b${naam}\(`, 'g'))]
+    .map((match) => match.index)
+    .filter((index) => index > functie.index + functie[0].length || index < functie.index);
+  return aanroepen.length > 0 && aanroepen.every((index) => gedektInTest(tekst, index));
+}
+
+/** De regelnummers van elke aanroep van inKooi zonder voorwaarde. */
+function ongedekt(tekst: string): number[] {
+  return [...tekst.matchAll(/\binKooi\(/g)]
+    .filter((match) => !gedekt(tekst, match.index))
+    .map((match) => tekst.slice(0, match.index).split('\n').length);
+}
+
 describe('tests-naar-vermogen/AC-3: de voorwaarde staat in het testbestand zelf', () => {
   test('tests-naar-vermogen/AC-3: het patroon herkent de drie vormen en niets anders', () => {
     const goed = [
@@ -43,11 +87,33 @@ describe('tests-naar-vermogen/AC-3: de voorwaarde staat in het testbestand zelf'
     expect(fout.filter((regel) => VOORWAARDE.test(regel))).toEqual([]);
   });
 
-  test('tests-naar-vermogen/AC-3: elk testbestand dat inKooi aanroept, zet zelf de voorwaarde', () => {
-    const zonder = testbestanden().filter((bestand) => {
-      const tekst = lees(bestand);
-      return tekst.includes('inKooi(') && !VOORWAARDE.test(tekst);
-    });
+  test('tests-naar-vermogen/AC-3: de toets per aanroep vindt een kooitest zonder voorwaarde (R-PRINC-04)', () => {
+    const skip = "ctx.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding);";
+    const goed = [
+      `test('a', (ctx) => {\n  ${skip}\n  inKooi('x', o);\n});`,
+      `describe('d', () => {\n  beforeEach((ctx) => {\n    ${skip}\n  });\n  test('a', () => {\n    inKooi('x', o);\n  });\n});`,
+      `function draai() {\n  return inKooi('x', o);\n}\ntest('a', (ctx) => {\n  ${skip}\n  draai();\n});`,
+      `test.skipIf(vermogen('kooi').ontbreekt).each([1])('a', () => {\n  inKooi('x', o);\n});`,
+    ];
+    const fout = [
+      `test('a', () => {\n  inKooi('x', o);\n});`,
+      `test('a', (ctx) => {\n  ${skip}\n});\ntest('b', () => {\n  inKooi('x', o);\n});`,
+      `function draai() {\n  return inKooi('x', o);\n}\ntest('a', (ctx) => {\n  ${skip}\n  draai();\n});\ntest('b', () => {\n  draai();\n});`,
+      `function draai() {\n  return inKooi('x', o);\n}`,
+    ];
+    expect(goed.map(ongedekt)).toEqual(goed.map(() => []));
+    expect(fout.filter((tekst) => ongedekt(tekst).length === 0)).toEqual([]);
+  });
+
+  test('tests-naar-vermogen/AC-3: elke aanroep van inKooi in een testbestand heeft de voorwaarde in zijn test', () => {
+    const aanroepen = testbestanden().reduce(
+      (som, bestand) => som + [...lees(bestand).matchAll(/\binKooi\(/g)].length,
+      0,
+    );
+    expect(aanroepen, 'aanroepen van inKooi in testbestanden').toBeGreaterThanOrEqual(5);
+    const zonder = testbestanden().flatMap((bestand) =>
+      ongedekt(lees(bestand)).map((regel) => `${bestand}:${String(regel)}`),
+    );
     expect(zonder).toEqual([]);
   });
 
@@ -93,18 +159,6 @@ describe('tests-naar-vermogen/AC-4: de voorwaarde in de kooibestanden en TMPDIR 
 
   test.each(MET_VOORWAARDE)('tests-naar-vermogen/AC-4: %s zet de voorwaarde kooi', (bestand) => {
     expect(lees(bestand)).toMatch(VOORWAARDE);
-  });
-
-  test('tests-naar-vermogen/AC-4: de verwijderde bestanden bestaan niet meer', () => {
-    for (const bestand of [
-      'test/hooks/rolhek-padcorpus.test.ts',
-      'test/hooks/rolhek-effect.test.ts',
-      'test/hooks/rolhek-effect-hoofdsessie.test.ts',
-      'test/hooks/rolhek-specarchief-effect.test.ts',
-      'test/rails/document-status-lokaal-config.test.ts',
-    ]) {
-      expect(existsSync(path.join(ROOT, bestand)), bestand).toBe(false);
-    }
   });
 
   test('tests-naar-vermogen/AC-4: cloud-setup geeft het kindproces TMPDIR mee, zonder voorwaarde', () => {
@@ -164,9 +218,5 @@ describe('kooi/AC-6: bestaande fragmenten draaien via inKooi, zonder shell', () 
       recognizes: ['shell: true', "shell: '/bin/bash'"],
       allows: ['shell: false'],
     });
-  });
-
-  test('kooi/AC-6: rolhek-effect.test.ts is verwijderd met de effectcheck', () => {
-    expect(existsSync(path.join(ROOT, 'test/hooks/rolhek-effect.test.ts'))).toBe(false);
   });
 });

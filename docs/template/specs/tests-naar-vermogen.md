@@ -71,7 +71,7 @@ n.v.t. — geen UI. Letterlijke teksten (`<…>` wordt ingevuld):
   De voorwaarde staat altijd in het testbestand zelf en de teller in `rails/hooks/lib/testteller.mjs` ziet haar als skip
   (`.skip(` met een aanroep op elke ontvanger, en `skipIf`); een skip in een gedeelde helper onder `test/setup/` is verboden
   (ADR 0088, Alternatieven). De reporter (AC-6) telt de overgeslagen tests van alle drie vormen.
-- **tests-naar-vermogen/AC-4** — De voorwaarde `kooi` komt in tien bestanden: `test/hooks/rolhek-padcorpus.test.ts` (vervallen),
+- **tests-naar-vermogen/AC-4** — De voorwaarde `kooi` komt in tien bestanden (vijf daarvan vervallen): `test/hooks/rolhek-padcorpus.test.ts` (vervallen),
   `test/hooks/rolhek-effect.test.ts` (vervallen), `test/hooks/rolhek-effect-hoofdsessie.test.ts` (vervallen),
   `test/hooks/rolhek-specarchief-effect.test.ts` (vervallen),
   `test/hooks/rolhek-gh-allowlist.test.ts`, `test/docs/start-nieuwe-app.test.ts`, `test/rails/ci-scan.test.ts`,
