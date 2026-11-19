@@ -83,6 +83,18 @@ F4 en F14 spreken F5 tegen; zie M2. F13 laat zien dat `~/.bashrc` hooks niet ber
 - **M6** — Bevat een sessie die uit de cache van de omgeving start (D2) de `node_modules` van de repo, of alleen wat
   buiten de clone staat? En deelt één omgeving haar cache over meerdere repo's?
 
+**Uitslag van de metingen (19 november 2026, verse sessie van de eigenaar op de omgeving met `scripts/cloud-omgeving.sh`)**
+
+| # | Uitslag | Meting |
+|---|---|---|
+| M1 | De projecthooks draaien. | `.git/agent-meting/` bevat een meting en `.claude/hooks/.cache/` bevat `main` en een uitgepakte commit; `feiten.mjs` geeft geen `⚠ bewaking niet actief` |
+| M2 | De Bash-sandbox is actief: `~/.local` en de map boven de repo zijn alleen-lezen voor de Bash-tool. F5 beschrijft deze sessies dus niet. | `command -v bwrap` geeft `/usr/bin/bwrap`; `touch "$HOME/.local/proef"` en `touch ../proef` geven `Read-only file system` |
+| M3 | Voor de Bash-tool staat `/root/.local/bin` vóór `/opt/node22/bin`; `node` is v26.11.1 en `pnpm` 11.28.2 via de koppelingen, die naar `…/mise/installs/node/26.11.1/bin/node` en `…/mise/installs/pnpm/11.28.2/pnpm` wijzen. De shims-map staat niet op `PATH`. | `echo "$PATH"`, `type -a node`, `ls -l ~/.local/bin/node ~/.local/bin/pnpm` |
+| M6 | In de eerste sessie na het instellen staat `node_modules` er en geeft `feiten.mjs` geen `✗ toolchain ontbreekt`. | `ls node_modules/.modules.yaml`, `node scripts/kit/feiten.mjs fase` |
+
+Nog niet gemeten: op welke Node hooks en git-hooks draaien (M3, tweede helft), de koude duur (M5), en of een sessie uit de
+cache `node_modules` bevat en of de cache over repo's gedeeld wordt (M6). M4 hoort bij een vervolgspec.
+
 ## Rollen en wie wat ziet
 
 Geen app-gebruikers. De eigenaar ziet op het startscherm of het setup-script slaagde; de sessie ziet de uitslag via
@@ -238,7 +250,7 @@ script vóór de sessie draait.
 
 **Stap 1 — meten in die sessie**, uitslag in de PR-beschrijving:
 
-1. M3: `echo "$PATH"` en `command -v -a node`; en na een commit en het einde van een beurt: draaien de pre-commit-hook en
+1. M3: `echo "$PATH"` en `type -a node`; en na een commit en het einde van een beurt: draaien de pre-commit-hook en
    de Stop-hook nog op Node 22 (F13)?
 2. M2: `command -v bwrap`, `touch "$HOME/.local/proef"`, `touch ../proef`, `grep -c ' ro,' /proc/self/mountinfo`.
 3. M1: `ls .git/agent-meting .claude/hooks/.cache` na een paar tool-aanroepen.
@@ -260,13 +272,14 @@ Elke negatieve test faalt op de huidige code (R-PRINC-04).
 
 - **OV-1** — Komt er daarna een hook die in de cloud zelf installeert (nul handwerk)? Opties: (a) nee, één omgeving per
   account volstaat; (b) ja, alleen bij `startup` in de cloud, met een ADR dat 0085 (afgewezen alternatief) en 0061 herziet;
-  (c) ja, bij elke sessiestart. Aanbeveling: beslis na stap 1. Draaien de hooks niet (M1), dan vervalt de vraag. Draaien ze
-  wel, dan (b): bij `startup` is de werkmap een verse clone en doet de hook wat het omgevingsbestand ook doet; (c) niet, om
-  de reden waarom 0085 het afwees.
+  (c) ja, bij elke sessiestart. Aanbeveling na de metingen: (a). De hooks draaien (M1), dus (b) kan, maar de omgeving
+  levert de toolchain al en (b) vraagt een herziening van twee ADR's; (c) niet, om de reden waarom 0085 het afwees.
 - **OV-2** — Mag een cloudsessie `bash scripts/cloud-setup.sh` draaien zonder het te vragen als `feiten.mjs`
   `✗ toolchain ontbreekt` meldt? Dat wijzigt R-TOOL-01 en claude-sandbox-werkstraat/AC-12 (drempel A3). Aanbeveling: ja,
   alleen met `CLAUDE_CODE_REMOTE=true`, in dezelfde vervolgspec als OV-1: de VM is wegwerpbaar en het script is hetzelfde
-  als wat het omgevingsbestand draait. Tot dat besluit vraagt de sessie het, zoals nu.
+  als wat het omgevingsbestand draait. Aanbeveling na de metingen: de vraag vervalt. In de gemeten sessie is de sandbox
+  actief en `~/.local` alleen-lezen voor de Bash-tool (M2); een sessie kan de toolchain daar niet installeren, met of
+  zonder akkoord. Op 19 november kwam mise eerder die dag wel in `/root/.local/bin` (F3); dat verschil is niet verklaard.
 - **OV-3** — Blijven `bubblewrap` en `socat` in het script nu de sessie zonder start? Aanbeveling: ja, niet-fataal (punt 3):
   de kooi (ADR 0072) heeft bubblewrap nodig en in de cache kost de stap niets.
 - **OV-4** — Komt hier een roadmap-item voor (R-PRINC-08)? Aanbeveling: ja, één item dat naar deze spec wijst; de
