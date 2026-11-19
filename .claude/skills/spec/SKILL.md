@@ -28,8 +28,9 @@ Stappen:
    `docs/specs/<naam>.md` (template: `docs/template/specs/<naam>.md`), met `status: goedgekeurd` (`voorstel` alleen voor een bewust geparkeerd voorstel).
 2. Vul de verplichte koppen in (Doel, Rollen en wie wat ziet, Acceptatiecriteria, Hergebruik en UX, Open vragen) en elke
    andere kop die van toepassing is; een kop die niet van toepassing is laat je weg. Teksten letterlijk; acceptatiecriteria toetsbaar: elk criterium eindigt met `Toets:` en het testbestand dat
-   `<namespace>/AC-n` noemt (`(nieuw)` zolang het niet bestaat). Is het bewijs alleen een CI-uitslag of een stap in de PR,
-   dan is het geen criterium: zet het in het Testplan. Vanaf `gebouwd` faalt `check-docs` op een AC zonder zo'n test.
+   `<namespace>/AC-n` noemt, met `(nieuw)` erachter zolang het niet bestaat; de bouw-PR haalt `(nieuw)` weg. Is het bewijs
+   alleen een CI-uitslag of een stap in de PR, dan is het geen criterium: zet het in het Testplan (mini-spec: de
+   PR-beschrijving). Vanaf `gebouwd` faalt `check-docs` op een AC zonder zo'n test.
 3. "Kopieer de vorm van": per regel een bestaand pad uit `docs/gouden-pad.md` (accountbeheer) en wat je overneemt.
    "Hergebruik en UX": noem de bestaande componenten (`node scripts/kit/feiten.mjs componenten`); een nieuw component alleen met reden.
 4. Routes en foutcodes: hergebruik bestaande codes uit de feiten; een nieuwe code krijgt een tekst. Leg voor iedere

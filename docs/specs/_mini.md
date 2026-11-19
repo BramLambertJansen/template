@@ -39,8 +39,9 @@ Per regel een bestaand pad uit `docs/gouden-pad.md` (accountbeheer) en wat je ov
 
 ## Acceptatiecriteria
 
-Randgevallen zijn ook criteria. Elk criterium eindigt met `Toets:` en het testbestand dat `<namespace>/AC-n` noemt
-(`(nieuw)` zolang het niet bestaat); bewijs dat alleen een CI-uitslag is, is geen criterium.
+Randgevallen zijn ook criteria. Elk criterium eindigt met `Toets:` en het testbestand dat `<namespace>/AC-n` noemt, met
+`(nieuw)` erachter zolang het niet bestaat; de bouw-PR haalt `(nieuw)` weg, dan toetst `check-docs` het pad en de naam. Is
+het bewijs alleen een CI-uitslag of een stap in de PR, dan is het geen criterium maar hoort het in de PR-beschrijving.
 
 - **<namespace>/AC-1** — Gegeven … wanneer … dan … Toets: `test/<pad>.test.ts` (nieuw)
 
