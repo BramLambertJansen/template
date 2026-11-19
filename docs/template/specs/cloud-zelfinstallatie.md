@@ -3,7 +3,7 @@ status: goedgekeurd
 namespace: cloud-zelfinstallatie
 ---
 
-# Cloudsessie installeert zichzelf
+# Cloudomgeving: één setup voor elke repo
 
 ## Doel
 
@@ -68,7 +68,7 @@ F4 en F14 spreken F5 tegen; zie M2. F13 laat zien dat `~/.bashrc` hooks niet ber
 | R7 | `scripts/cloud-setup.sh` voert zelf configuratie uit de werkmap uit: `mise trust` en `mise install` op `mise.toml`, `pnpm install`, lefthook uit `node_modules` en een import van `scripts/kit/toolchain.mjs`. | `scripts/cloud-setup.sh:98`, `:126`, `:130`, `:144`, `:146` |
 | R8 | Zonder geldig anker start `rails/hooks/werkstraat.mjs` niet: de lader weigert met exit 2. De hooks starten `node` via `PATH`. | `.claude/hooks/laden.mjs:284`, `.claude/settings.json:165` |
 
-**Niet gemeten; eerst meten (Testplan, fase 0)**
+**Niet gemeten; eerst meten (Testplan, stap 1; M4 hoort bij de vervolgspec)**
 
 - **M1** — Draaien de projecthooks in een verse cloudsessie die met deze ene repo start? D4 zegt ja, R3 mat nee. De
   startmelding van 19 november ("Sessie gestart op branch …") lijkt op de uitvoer van `werkstraat session-start`, maar dat is
@@ -76,7 +76,7 @@ F4 en F14 spreken F5 tegen; zie M2. F13 laat zien dat `~/.bashrc` hooks niet ber
 - **M2** — Is de Bash-sandbox in zo'n sessie actief (F4) of niet (F5)? En mag een commando uit de Bash-tool schrijven in
   `~/.local`, `~/.cache` en `/usr/local/bin`?
 - **M3** — Staat `~/.local/bin` in een sessie van de eigenaar ook vóór `/opt/node22/bin` op `PATH` (F11 komt uit een
-  andere sessiesoort)?
+  andere sessiesoort)? En krijgen hooks en git-hooks datzelfde `PATH`? F13 zegt alleen dat de shims er niet op staan.
 - **M4** — Krijgt een SessionStart-hook in de cloud een `CLAUDE_ENV_FILE`, en mag hij `~/.bashrc` schrijven?
 - **M5** — Hoe lang duurt het hele script koud in een omgeving met Trusted, inclusief Node van `nodejs.org`? F6 en F7
   samen geven een ondergrens van ruim twee minuten.
@@ -101,18 +101,21 @@ Geen UI. Zichtbare tekst, letterlijk:
 - Route overgeslagen: `! ~/.bashrc niet te schrijven; PATH loopt via <route>` (met `~/.local/bin` of `CLAUDE_ENV_FILE`).
 - Geen route: `✗ node op PATH is <versie>, verwacht <pin>: ~/.local/bin staat niet vóór de systeem-node en CLAUDE_ENV_FILE
   en ~/.bashrc zijn niet te schrijven → zie docs/ENVIRONMENT.md, Problemen`.
+- Alleen route 2 of 3: `! ~/.local/bin staat niet vóór de systeem-node: hooks en git-hooks blijven op <versie>`.
 - Systeempakketten: `! bubblewrap en socat niet geïnstalleerd (apt-get exit <code>); de kooi kan niet starten`.
 - Omgevingsbestand, niets gevonden: `✗ scripts/cloud-setup.sh niet gevonden onder <map>`.
 - Omgevingsbestand, per repo: `→ <map>/scripts/cloud-setup.sh`, daarna de uitvoer van dat script.
 
 ## Ontwerp
 
-**Wat deze spec bouwt.** Twee dingen, beide zonder wijziging aan hooks, permissies of het regelboek.
+**Wat deze spec bouwt.** Vier dingen, alle zonder wijziging aan hooks, permissies of het regelboek.
 
 1. **Eén omgeving voor elke repo uit de template.** `scripts/cloud-omgeving.sh` is de tekst voor het veld "Setup script"
    van een omgeving (D1). Het zoekt `scripts/cloud-setup.sh` onder de map waarin het start (F1) en draait elk gevonden
    script. Er staat geen repo-naam in. De eigenaar laadt het één keer in één omgeving en kiest die omgeving voortaan
-   (D9); elke repo uit de template installeert zich daarna vóór de start, en daarna uit de cache (D2).
+   (D9); elke repo uit de template installeert zich daarna vóór de start. Of dat ook geldt als de omgeving al een
+   cache van een andere repo heeft, is niet gemeten (M6): deelt de omgeving haar cache over repo's, dan wordt het één
+   omgeving per repo met hetzelfde bestand, en blijft alleen het bestand gedeeld.
 2. **Het script stopt niet meer op één route naar `PATH`.** Drie routes, in deze volgorde:
    - koppelingen `~/.local/bin/node` en `~/.local/bin/pnpm` naar het pad dat `mise which` geeft, dus naar de binaire
      zelf en niet naar een mise-shim: een shim weigert in een map met een niet-vertrouwde `mise.toml`, en de hooks starten
@@ -168,7 +171,8 @@ daar niets aan toe; een hook die dat ook bij hervatten doet wel. Dat is de afweg
 - **cloud-zelfinstallatie/AC-4** — Gegeven een start-`PATH` zonder `$HOME/.local/bin`, geen `CLAUDE_ENV_FILE` en een
   `.bashrc` als in AC-1, wanneer het script klaar is met installeren, dan eindigt het met exit 1 en de tekst
   `✗ node op PATH is` met de gevonden versie en de versie van `mise current node`. Met dezelfde opstelling en een schrijfbare `.bashrc` eindigt
-  het met exit 0. Toets: `test/scripts/cloud-zelfinstallatie.test.ts` (nieuw)
+  het met exit 0 en de regel `! ~/.local/bin staat niet vóór de systeem-node: hooks en git-hooks blijven op <versie>`
+  (F13). Toets: `test/scripts/cloud-zelfinstallatie.test.ts` (nieuw)
 - **cloud-zelfinstallatie/AC-5** — Gegeven `apt-get update` of `apt-get install` eindigt met een fout, wanneer het script draait, dan bevat de
   uitvoer `! bubblewrap en socat niet geïnstalleerd (apt-get exit`, draaien de latere stappen en bepalen die de exitcode.
   Faalt op de huidige code. Toets: `test/scripts/cloud-zelfinstallatie.test.ts` (nieuw)
@@ -192,11 +196,12 @@ daar niets aan toe; een hook die dat ook bij hervatten doet wel. Dat is de afweg
 |---|---|
 | Omgeving met één repo | het omgevingsbestand vindt één script |
 | Sessie met meerdere repo's uit de template | elk script draait (AC-6); de koppelingen in `~/.local/bin` wijzen naar de laatste; `mise exec` blijft per repo juist en `feiten.mjs` meldt een verschil in pin |
-| Repo zonder `scripts/cloud-setup.sh` in dezelfde omgeving | exit 1 met de vierde tekst; op 19 november startte de sessie dan toch (F2), de documentatie zegt van niet (D3) |
+| Repo zonder `scripts/cloud-setup.sh` in dezelfde omgeving | exit 1 met de tekst "niets gevonden"; op 19 november startte de sessie dan toch (F2), de documentatie zegt van niet (D3) |
 | Script met de hand in de sessie, `.bashrc` alleen-lezen | AC-1 |
 | `~/.local/bin` niet op `PATH` (M3 valt anders uit) | route 2 of 3; faalt alleen als die er ook niet zijn (AC-4) |
 | Pin in `mise.toml` of `package.json` wijzigt | de volgende run zet de koppelingen om (AC-2); tot dan meldt `feiten.mjs` `✗ toolchain ontbreekt` |
 | Sessie start uit de cache zonder `node_modules` (M6) | `feiten.mjs` meldt het; herstel is `bash scripts/cloud-setup.sh`, 18 s voor `pnpm install` (F7) |
+| Omgeving met een cache van een andere repo (M6) | niet gemeten; zie Ontwerp punt 1 |
 | Lokaal (WSL) | geen wijziging: `scripts/bootstrap.sh` blijft de weg en roept dit script niet aan |
 
 ## Raakt ook
@@ -233,7 +238,8 @@ script vóór de sessie draait.
 
 **Stap 1 — meten in die sessie**, uitslag in de PR-beschrijving:
 
-1. M3: `echo "$PATH"` en `command -v -a node`.
+1. M3: `echo "$PATH"` en `command -v -a node`; en na een commit en het einde van een beurt: draaien de pre-commit-hook en
+   de Stop-hook nog op Node 22 (F13)?
 2. M2: `command -v bwrap`, `touch "$HOME/.local/proef"`, `touch ../proef`, `grep -c ' ro,' /proc/self/mountinfo`.
 3. M1: `ls .git/agent-meting .claude/hooks/.cache` na een paar tool-aanroepen.
 4. M5: de duur van "Setup script" op het startscherm.
@@ -246,6 +252,8 @@ het bestand uit de repo, en één keer `bash scripts/cloud-setup.sh` met de hand
 **Stap 3 — een app.** Een nieuwe app uit de template (`START-NIEUWE-APP.md`) in dezelfde omgeving: zelfde uitslag zonder
 iets in te stellen.
 
+De uitslag van stap 0 en 1 staat in de PR vóór de samenvoeging: M3 en M6 kunnen punt 1 en 2 van het ontwerp wijzigen.
+
 Elke negatieve test faalt op de huidige code (R-PRINC-04).
 
 ## Open vragen
@@ -257,8 +265,8 @@ Elke negatieve test faalt op de huidige code (R-PRINC-04).
   de reden waarom 0085 het afwees.
 - **OV-2** — Mag een cloudsessie `bash scripts/cloud-setup.sh` draaien zonder het te vragen als `feiten.mjs`
   `✗ toolchain ontbreekt` meldt? Dat wijzigt R-TOOL-01 en claude-sandbox-werkstraat/AC-12 (drempel A3). Aanbeveling: ja,
-  alleen met `CLAUDE_CODE_REMOTE=true`, in dezelfde vervolgspec als OV-1: de VM is wegwerpbaar en de eigenaar zei op
-  19 november twee keer ja op dezelfde vraag. Tot dat besluit vraagt de sessie het, zoals nu.
+  alleen met `CLAUDE_CODE_REMOTE=true`, in dezelfde vervolgspec als OV-1: de VM is wegwerpbaar en het script is hetzelfde
+  als wat het omgevingsbestand draait. Tot dat besluit vraagt de sessie het, zoals nu.
 - **OV-3** — Blijven `bubblewrap` en `socat` in het script nu de sessie zonder start? Aanbeveling: ja, niet-fataal (punt 3):
   de kooi (ADR 0072) heeft bubblewrap nodig en in de cache kost de stap niets.
 - **OV-4** — Komt hier een roadmap-item voor (R-PRINC-08)? Aanbeveling: ja, één item dat naar deze spec wijst; de
