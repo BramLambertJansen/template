@@ -1,14 +1,35 @@
 # Wijzigingen van de template
 
 Hier staan wijzigingen die van belang zijn bij het gebruiken of bijwerken van de template. De nieuwste releasekop is gelijk aan
-`TEMPLATE_VERSION` in `src/core/shared/template-version.ts` (`test/scripts/template-version.test.ts`); de eigenaar zet de tag
-na de merge. `CHANGELOG.md` in de hoofdmap is van de app. Oudere bouwstappen en reviews zijn terug te vinden in Git en de pull
-requests.
+`TEMPLATE_VERSION` in `src/core/shared/template-version.ts` (`test/scripts/template-version.test.ts`). `CHANGELOG.md` in de
+hoofdmap is van de app. Oudere bouwstappen en reviews zijn terug te vinden in Git en de pull requests.
+
+Een release is de eenheid van een update (ADR 0094, spec `template-release`). Een PR schrijft haar wijziging niet hier maar als
+fragment in `docs/template-changelog.d/` (vorm en naam: `docs/template-changelog.d/README.md`); `pnpm template:release <x.y.z>`
+voegt de fragmenten samen tot een releasesectie onder `## [Unreleased]` en zet `TEMPLATE_VERSION`. Na de merge van de
+release-PR tagt de eigenaar de squash-commit op `main` als `template-v<x.y.z>`. Een release-tag verplaatst niet: een fout
+herstel je met een nieuwe release. Wat een app bij een update moet doen, staat per release onder `### Bij een update`;
+`pnpm template:status` toont in een app welke releases en notities nog openstaan.
 
 ## [Unreleased]
 
+Nog niet uitgebrachte wijzigingen staan als fragment in `docs/template-changelog.d/`.
+
+## [0.2.0] - 2026-11-18
+
 ### Toegevoegd
 
+- Templaterelease als eenheid van een update (spec `template-release`, ADR 0094; herziet ADR 0040 punt 1 en ADR 0059 punt 5):
+  een app merget een getagde release `template-v<x.y.z>` in plaats van `template/main` ("Een template-update binnenhalen" in
+  `docs/nieuwe-app.md`). `pnpm template:status` (`scripts/kit/template-status.mjs`) leest zonder netwerk en zonder iets te
+  schrijven de lokale refs en meldt in een app haar versie, de nieuwste release, elke openstaande release met haar notities,
+  een release zonder lokale tag en templatecommits buiten een release; in de template de versie, of de tag er is en hoeveel
+  fragmenten wachten. Een template-PR zet haar wijziging als fragment in `docs/template-changelog.d/`; `check-docs` regel 15
+  toetst de vorm (`docs:changelog-fragment:<bestand>`), `check:docs-drift` waarschuwt in de template als een wijziging buiten
+  `docs/` en `test/` geen fragment heeft, en `pnpm template:release <x.y.z> [--datum JJJJ-MM-DD]`
+  (`scripts/kit/template-release.mjs`) voegt de fragmenten samen tot een release (minor bij een "Bij een update"-notitie,
+  anders patch) zonder te committen of te taggen. De sectie `[Unreleased]` blijft leeg
+  (`test/scripts/template-changelog-unreleased.test.ts`). Wat verandert voor een app: zie "Bij een update" van deze release.
 - Setupscript `scripts/kit/nieuwe-app.mjs` (spec `nieuwe-app-script`, bouwstap 1; leerpunten #561 en #571): de
   deelcommando's `preflight`, `koppel`, `poorten [--env]` en `db-bewijs` voeren de deterministische stappen van
   `docs/nieuwe-app.md` uit (4.2, 5.1, 7.1, 8), melden per stap ✓, · of ✗ met herstel en schrijven
@@ -65,11 +86,11 @@ requests.
   code-eigenaar en een eventuele bypass uit de ruleset gaan. In een app is beschermd: besluit `besluit-pr`, schrijven
   `voorReview` of hoger, een migratie, `src/core/**` en `docs/template/**`; tests, specs, de roadmap en gewone app-code voegt
   de hoofdsessie samen bij groene checks. Zonder ruleset toetst het script de checks zelf: een vangnet, geen grens.
-- "Een template-update binnenhalen" in `docs/nieuwe-app.md` (stap 3 en de rij `check-core`) zet `src/core/` en
-  `docs/template/` terug vóór de merge-commit met `git checkout --no-overlay template/main -- src/core docs/template`, of
+- "Een template-update binnenhalen" in `docs/nieuwe-app.md` (stap 4 en de rij `check-core`) zet `src/core/` en
+  `docs/template/` terug vóór de merge-commit met `git checkout --no-overlay template-v<x.y.z> -- src/core docs/template`, of
   daarna met `git commit --amend` op de merge-commit; de oude herstelstap, een losse commit na de merge, weigert
   `check-core` zelf (`test/scripts/update-herstel-check-core.test.ts`). Wat verandert voor een app: `check-core` niet; wie
-  bij een update `check-core` rood krijgt, herstelt in de merge-commit, of maakt de branch opnieuw vanaf stap 2.
+  bij een update `check-core` rood krijgt, herstelt in de merge-commit, of maakt de branch opnieuw vanaf stap 3.
 - `check-docs` regel 14 (leerpunt #738): een gebouwde spec in `docs/specs/` of `docs/template/specs/` noemt tussen backticks
   geen repopad onder `src/`, `scripts/`, `rails/`, `test/`, `e2e/`, `db/`, `deploy/`, `.claude/` of `.github/` (met extensie)
   dat niet bestaat, tenzij er direct `(vervallen)`, `(nieuw)` of `(voorbeeld)` achter staat; een nieuwe AC met
@@ -198,6 +219,36 @@ requests.
   `Vervallen door ADR <nummer>` als dat ADR in de ADR-map naast de specmap staat en `geaccepteerd` is. Wat verandert voor een
   app: niets te doen. Bestaande regels `gebouwd # #<n>` blijven geldig (het nummer is commentaar); een eigen script of
   werkwijze die `pnpm docs:status` aanroept, schrijft voortaan de statusregel met de hand.
+
+### Bij een update
+
+- Templaterelease (spec `template-release`): haal de template voortaan op met `git fetch --no-tags template main` en
+  `git fetch --no-tags template 'refs/tags/template-v*:refs/tags/template-v*'` en merge een `template-v<x.y.z>`-tag in plaats
+  van `template/main`; volg "Een template-update binnenhalen" in `docs/nieuwe-app.md`. Draai `pnpm template:status` (vanaf
+  `0.2.0`) om de openstaande releases en hun notities te zien.
+- Eigen agentinstructies (spec `app-agentregels`): een bestaande app krijgt in `docs/app.md` de stub van de template. Schrijf
+  het skelet uit `appAgentregels()` (`scripts/kit/app-init.mjs`) naar `docs/app.md` en vul het (zie "Eigen agentinstructies
+  van de app" in `docs/nieuwe-app.md`). Bij een later conflict op `docs/app.md`: houd de versie van de app.
+- Eigen beschermde paden (spec `app-padtabel`): bij een conflict in `.github/CODEOWNERS` of een rode
+  `docs:spiegel:codeowners` genereer je het bestand opnieuw met `node scripts/kit/codeowners.mjs --schrijf`. Een eigen rij in
+  `.claude/gates.json` verplaats je naar `.claude/gates.app.json` (zie "Een eigen beschermd pad" in `docs/nieuwe-app.md`).
+- Template-repo uit de configuratie (spec `template-repo`): een app van vóór deze release heeft de sleutel `template` nog
+  niet. Voeg eerst in een eigen PR `"template": { "repository": "BramLambertJansen/template" }` toe aan `.claude/gates.json`
+  (op een eigen regel, niet naast de onderhoud-regel), anders zijn het leerpunt (ask), `check-core` en, met een oudere
+  templatemigratie, `check:migrations` rood.
+- Securitysuite en generator (spec `suite-volgt-contract`): een eigen lijst zonder `limit` met eigenaar-routes krijgt een
+  `pageSize` in `defineListSearch` (of een eigen `limit`) en een handler die `input.limit` gebruikt. Een met de hand
+  toegevoegd `limit` in een app-contract mag blijven; een `sample.update` in `test/security/resources.ts` die alleen bestond
+  om de suite te laten slagen, kan weg samen met het ongebruikte updaterecht.
+- Volgorde van migraties (spec `template-update`): volg "Een template-update binnenhalen" in `docs/nieuwe-app.md`, de enige
+  procedure, met per rode check (`check:migrations`, `check:snapshot`, `check-core`) wat te doen. Een open branch met een
+  eigen migratie die ouder is dan een migratie op `main`, krijgt een nieuw tijdstempel.
+- Eigen wijzigingenlijst (spec `release-versie`): de eerste update na `0.1.0` geeft één keer een conflict op `CHANGELOG.md`
+  in de hoofdmap (de template vervangt het bestand, de app heeft het gewijzigd); houd de versie van de app. Daarna botst het
+  niet meer; `docs/template-changelog.md` komt zonder conflict binnen.
+- `GET /api/health` geeft nu ook `version` en soms `build` (spec `release-versie`): een eigen controle die het antwoord
+  letterlijk met `{"ok":true}` vergelijkt, leest voortaan het veld `ok`. Een app die in `buildApp` (`src/api/app.ts`) haar
+  config uitpakt in plaats van doorgeeft (`...config`), geeft `build` zelf door aan `createApp`.
 
 ## [0.1.0] - 2026-11-15
 

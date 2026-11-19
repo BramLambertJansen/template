@@ -23,8 +23,10 @@ Hooguit drie open items (`check:roadmap`); nummer 1 is bewijs vóór uitbreiding
   **Uitvoeringsopdracht:** begin met [de agentstartinstructie](../START-NIEUWE-APP.md) en vervolg met het generieke [ST-09-protocol](operations/st-09-praktijkproef.md). Appkeuze, scope, appdata en resultaten horen in de aparte app-repo, niet in deze template.
   **Werk:** kies met de eigenaar één kleine echte app met een owner-scoped resource en een adminactie. Start via `docs/nieuwe-app.md`, bouw een
   complete verticale flow en registreer elke handmatige stap, onduidelijke instructie, ontbrekende component en core-aanpassing; houd het
-  app-domein buiten deze template. Neem daarna één echte template-update over (`git merge template/main`) via een PR (ADR 0040).
+  app-domein buiten deze template. Neem daarna één echte template-update over (de merge van een `template-v<x.y.z>`-tag) via een PR (ADR 0040, ADR 0094).
   Wat terugkomt wordt een regel of script in de template; elk leerpunt gaat als `leerpunt`-issue naar de template ([leerlus](template/specs/leerlus.md), ADR 0059).
+  **Gedaan:** de release is de eenheid van een update (tag `template-v<x.y.z>`, versieschema semver `0.x` besloten), met de adviserende
+  `pnpm template:status` en changelogfragmenten (spec `template-release`, ADR 0094; eerste release `0.2.0`).
   **Afhankelijkheden:** bestaande runtime, auth en generator; de eigenaar levert de lokale stack en de appkeuze.
   **Klaar als:** een nieuwe gebruiker en admin doorlopen de flow tegen de echte stack; verboden toegang is getest; de update behoudt app-code
   en instellingen, met conflicten alleen in vooraf als verwacht vastgelegde bestanden; rapport met exacte checks, handwerk en verbeter-PR's
@@ -68,7 +70,8 @@ Hooguit drie open items (`check:roadmap`); nummer 1 is bewijs vóór uitbreiding
   (R-DOC-02 schrijft het voor), de git-testkits (geen kopieën van één helper), de "GEWIJZIGD"-markeringen (sporen van testwijzigingen met reden).
   **Open uit die ronde, voor netheid en vóór de eerste productierelease (eigenaar, 2026-11-09; ook als netheidspunt zonder meetbare winst):** (1) CHANGELOG netjes indelen: nu één `[Unreleased]` van ca. 88 KB; hou
   alles wat een app bij een update moet doen of waar een conflict kan ontstaan, snij eerst een gedateerde release of bouw de
-  changelogfragmenten (ontwerp en eigenaarkeuzes 2026-10-23) en lees daarna per sectie na; (2) `docs/operations/agent-doorloop.md` (55 KB) herindelen:
+  changelogfragmenten (ontwerp en eigenaarkeuzes 2026-10-23) en lees daarna per sectie na (gedaan in de bouw-PR van spec
+  `template-release`: `[Unreleased]` geknipt als release `0.2.0` en de fragmenten gebouwd; het nalezen per sectie blijft open); (2) `docs/operations/agent-doorloop.md` (55 KB) herindelen:
   negen testbestanden, de skills `opleveren` en `spec` en `meting.mjs` pinnen tekst of kopjes, dus alleen met eigenaarakkoord per test
   (R-TEST-02); idem `docs/nieuwe-app.md` (980 regels) en `START-NIEUWE-APP.md`, met bewijs dat de start van een nieuwe app blijft werken; (3) `docs/reviews/` (12 bestanden) een
   bestemming per ST-14-inventaris; (4) dubbele blokken in `.github/workflows` (mise-versie op 11 plekken, bubblewrap op 2, het SHA-controleblok in `guard.yml` drie keer;
@@ -194,7 +197,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   in de demoswitcher, meetpunt van ST-09).
   aanleiding: `docs/reviews/2026-11-06-herbouw.md` (§4.3, besluit eigenaar 2026-11-06)
 - [ ] **ST-17 (P1) — accountbeheer als module van de template** (na ST-16). Nu bezit elke app de routes, contracten en schermen van accountbeheer en
-  eigen account als startcode, zodat elke template-verbetering daaraan bij `git merge template/main` conflicteert.
+  eigen account als startcode, zodat elke template-verbetering daaraan bij een template-update conflicteert.
   **Werk:** één module in core met lagen api, shared en web, door de template onderhouden; de app registreert routes, services, permissies en schermen in
   haar compositie-roots en kiest pad en navigatie. Core krijgt een eigen gegenereerd schema uit de core-migraties en importeert niets uit
   `src/api/db/schema.ts`. Eerst de accountlijst (contract, permissie, query via `tx`, RLS, API-client, scherm), dan de overige flows.
@@ -394,7 +397,7 @@ Bewust nog niet, tot de genoemde aanleiding er is (P1). Niets verdwijnt: elk ite
   **Eisen uit het regelboek** (R-DOC-10: tot de bouw staan ze hier; de bouw-PR zet ze terug in het regelboek): core levert poort `FileStorage` met contracttestsuite (was in R-OPSL-01, ADR 0060).
   terug als: een concrete app notificaties of bestanden nodig heeft
 - [ ] **ST-12 (P2) — templateversies en upgradecontrole** (stuk 6 template-versie; ADR 0040). Nu: `docs/template-changelog.md` met "Bij een update"-notities, `TEMPLATE_VERSION` en de versie in `GET /api/health` (spec release-versie) en
-  `scripts/kit/app-init.mjs` die de template-SHA vastlegt; tag `v0.1.0` bestaat, maar er is nog geen afgesproken versieschema en een update volgt nog `template/main`. **Werk:** onderscheid releaseversie, opgenomen
+  `scripts/kit/app-init.mjs` die de template-SHA vastlegt; het versieschema is semver `0.x` en een update volgt een releasetag `template-v<x.y.z>`, met de adviserende `pnpm template:status` (spec `template-release`, ADR 0094). **Werk:** onderscheid releaseversie, opgenomen
   templatecommit en app-build-SHA; leg herkomst vast bij app-init en update; upgrade-notities bij breaking changes, migraties, instellingen en
   handstappen; een adviserende controle op core/app-grens en ontbrekende stappen die niets automatisch wijzigt en de mergeprocedure niet vervangt.
   **Afhankelijkheden:** ST-09; eigenaarbesluit over versieschema. **Klaar als:** app-init legt de juiste herkomst vast;
