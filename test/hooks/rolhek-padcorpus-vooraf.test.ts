@@ -14,6 +14,7 @@ const ROOT = '/repo';
 function voorafCtx(rij: Rij) {
   const bestanden = rij.bestanden;
   const lijsten = rij.lijsten;
+  const gevolgd = rij.gevolgd;
   return {
     root: ROOT,
     cwd: ROOT,
@@ -22,6 +23,13 @@ function voorafCtx(rij: Rij) {
     committed: (rel: string) => rij.gecommit?.includes(rel) ?? false,
     isDir: (rel: string) => rij.mappen?.includes(rel) ?? false,
     ...(lijsten === undefined ? {} : { files: (rel: string) => [...(lijsten[rel] ?? [])] }),
+    // Zoals de testkit van rolhek-lezen: een Set met de doorgegeven paden die git volgt (de spec noemt de vorm niet).
+    ...(gevolgd === undefined
+      ? {}
+      : {
+          gevolgd: (paden: readonly string[]) =>
+            new Set(paden.filter((pad) => gevolgd.includes(pad.replace(/^\/repo\//, '')))),
+        }),
     branch: rij.branch ?? 'feat/x',
     ...(rij.onderhoud === true ? { onderhoud: true } : {}),
   };

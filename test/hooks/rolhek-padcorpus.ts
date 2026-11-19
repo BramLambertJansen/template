@@ -12,6 +12,8 @@ export interface Rij {
   readonly mappen?: readonly string[];
   readonly gecommit?: readonly string[];
   readonly lijsten?: Readonly<Record<string, readonly string[]>>;
+  /** Paden die git in de index volgt (rolhek-lezen/AC-11): wat `ctx.gevolgd(paden)` als gevolgd meldt. Zonder veld bestaat `ctx.gevolgd` niet. */
+  readonly gevolgd?: readonly string[];
   readonly onderhoud?: true;
   readonly branch?: string;
   readonly uitkomst: Uitkomst;
@@ -3507,4 +3509,67 @@ export const PADCORPUS: readonly Rij[] = [
     onderhoud: true,
     uitkomst: 'melding',
   },
+  ...leesRijen(),
 ];
+
+// rolhek-lezen/AC-11 (ADR 0099): de `sed`- en `ls`-vormen van de reviewer. De reviewer mag `sed -n '<a>p'` en `sed -n '<a>,<b>p'` op een
+// gevolgd bestand en `ls` met een cluster uit `1aAlhdrtSRF` op een pad in de repo; elke andere vorm of elk ander pad is dicht. Elke
+// geweigerde rij heeft een basis die doorgaat (de eerste rij van elk blok). Voor de andere rollen verandert niets: `sed -n '1w x'` en
+// `sed -n '1e touch x'` gaan daar nog door (bekend gat, spec rolhek-lezen OV-5), met een kitscriptnaam erin geweigerd (AC-17).
+// (Een functie in plaats van losse constanten: `PADCORPUS` roept hem aan vóór deze plek is geïnitialiseerd.)
+function leesRijen(): readonly Rij[] {
+  const sedBasis = "sed -n '1,20p' docs/framework.md";
+  const reviewer = (commando: string, uitkomst: Uitkomst, bestanden: Rij['bestanden'] = {}): Rij => ({
+    bron: 'rolhek-lezen/AC-11',
+    commando,
+    rol: 'reviewer',
+    bestanden,
+    gevolgd: ['docs/framework.md'],
+    uitkomst,
+  });
+  const doorgaan = [
+    sedBasis,
+    "sed -n '$p' docs/framework.md",
+    "sed -n '1,$p' docs/framework.md",
+    'ls -la docs',
+    'ls -1aAlhdrtSRF docs',
+    'ls docs',
+  ];
+  const dicht = [
+    'sed -i 1d docs/framework.md',
+    'sed --in-place 1d docs/framework.md',
+    "sed -n '1w x' docs/framework.md",
+    "sed -n '1e touch x' docs/framework.md",
+    "sed -n 's/a/b/p' docs/framework.md",
+    "sed -e '1p' docs/framework.md",
+    "sed -n '/x/p' docs/framework.md",
+    "sed -n '1p' docs/framework.md -i",
+    "sed -n '1p' .env",
+    "sed -n '1p' docs/andere.md",
+    'ls /',
+    'ls ~',
+    'ls ../x',
+    'ls --hyperlink docs',
+    "ls '*.md'",
+    'ls docs/*.md',
+    'ls -lZ docs',
+    'ls docs -a',
+  ];
+  // Hetzelfde commando als de basis, maar `ctx.gevolgd` meldt het pad niet: dicht.
+  const zonderGevolgd: Rij = {
+    ...reviewer(sedBasis, 'deny'),
+    bron: 'rolhek-lezen/AC-11 (pad niet gevolgd)',
+    gevolgd: [],
+  };
+  const anderen = [
+    { commando: "sed -n '1w x' docs/framework.md", uitkomst: 'door' },
+    { commando: "sed -n '1e touch x' docs/framework.md", uitkomst: 'door' },
+    { commando: "sed -n '1e pnpm pr:merge 5' docs/framework.md", uitkomst: 'deny' },
+  ] as const;
+  return [
+    ...doorgaan.map((commando) => reviewer(commando, 'door')),
+    zonderGevolgd,
+    ...dicht.map((commando) => reviewer(commando, 'deny', { x: null })),
+    ...anderen.map(({ commando, uitkomst }): Rij => ({ ...reviewer(commando, uitkomst, { x: null }), rol: '' })),
+  ];
+}
