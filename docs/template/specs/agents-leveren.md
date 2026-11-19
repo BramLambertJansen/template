@@ -119,12 +119,15 @@ Punt 5 ("Regels uit AGENTS.md: …") wordt `5. Nooit pushen, mergen of rebasen; 
   `<rol> <n> · <rol> <n>` in dezelfde volgorde, of `0`) en `Subagents per rol` (waarde `<rol> <runs> runs, <toolcalls> toolcalls · …`
   in dezelfde volgorde als de tekstregel, of `0` zonder runs).
 - JSON: `weigeringenPerRol` (object rol → aantal) en `subagentsPerRol` (object rol → `{ runs, toolcalls, zonderTelling }`)
-  staan per sessie en per branch, naast `weigeringenPerSleutel`, en onder `prTabel`.
-- Zonder telling: een run (`PostToolUse` of `PostToolUseFailure` van `Agent`) zonder `tc`. `toolcalls` is de som van de
+  staan per sessie en per branch, naast `weigeringenPerSleutel`, en onder `prTabel`. Zonder weigeringen of runs is de
+  waarde `{}`.
+- Een run: `PostToolUse` of `PostToolUseFailure` met een sleutel die `agentSleutel` maakt (tool `Agent`, of `Task`, de oudere
+  naam van dezelfde tool); de rol is het deel na `agent `, zonder subagenttype `onbekend`.
+- Zonder telling: een run zonder `tc`. `toolcalls` is de som van de
   aanwezige `tc`; een run zonder `tc` telt niet als nul mee, alleen in `zonderTelling`.
 - In `HELP` komen bij de teldefinities:
   - `weigeringen per rol: dezelfde weigeringen, naar de rol (a) van het geweigerde event; zonder rol: onbekend.`
-  - `subagents per rol: PostToolUse en PostToolUseFailure van Agent, naar het subagenttype; toolcalls uit totalToolUseCount van de tool_response; ontbreekt die (een run op de achtergrond, een fout), dan zonder telling, geen nul.`
+  - `subagents per rol: PostToolUse en PostToolUseFailure van Agent (of Task), naar het subagenttype; toolcalls uit totalToolUseCount van de tool_response; ontbreekt die (een run op de achtergrond, een fout), dan zonder telling, geen nul.`
 
 ## Acceptatiecriteria
 
