@@ -12,6 +12,12 @@ Aanleiding: op de gedeelde 8-GiB-host liep een ESLint-proces van 1,8 GiB naast d
 duurde 486 s met time-outs. Dit is een lokale waarneming, geen vaste looptijd. De CLI-regressies in
 `test/rails/gate-fast-memory.test.ts` bewaken beide planningen en het behoud van alle gates en exitcodes.
 
+`pnpm lint` geeft ESLint een heap van 4096 MB (`package.json:29`): op 19 november 2026 piekte het op 2379 MB en brak het
+op de standaardlimiet van 2144 MB af. Op een host met 8 GiB kan ESLint dus groter worden dan vroeger; de planning bij
+weinig geheugen blijft nodig. De ESLint-aanroepen op losse bestanden hebben die heap niet: de pre-commit-hook
+(`lefthook.yml:11`) en de PostToolUse-, Stop- en tester-hook (`rails/hooks/lib/werkstraat.mjs:103`, `:133`, `:190`). Hun
+geheugengebruik bij veel bestanden is niet gemeten.
+
 Dezelfde geheugengrens begrenst Playwright: één worker onder de grens, anders de helft van de CPU's (minstens één,
 hooguit vier). Op CI stijgt het aantal workers daardoor nooit, maar het kan dalen: een runner met 4 vCPU gaat van vier
 naar twee workers. Dat is bedoeld (elke worker draait een eigen Chromium naast API en Vite). Alle e2e-tests, CSP, axe en time-outs blijven behouden. Aanleiding: de lokale run met acht workers op de gedeelde
