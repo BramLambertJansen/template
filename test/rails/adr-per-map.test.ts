@@ -8,7 +8,8 @@ import { docsViolations } from '../../scripts/kit/check-docs.mjs';
 
 // templateregime/AC-9 (ADR 0089 punt 1, 4 en 6): `check-docs` toetst `docs/adr/`, `docs/specs/`, `docs/template/adr/` en
 // `docs/template/specs/` gelijk: links, statuswoorden, unieke nummers per map, kopnummer gelijk aan bestandsnummer en AC naar
-// test. Een nummer telt per map; de reeks 0001-0099 / 0100+ bestaat niet meer.
+// test. Een nummer telt per map; de reeks 0001-0099 / 0100+ bestaat niet meer. In de twee templatemappen is een vervallen of
+// vervangen document rood (vervallen-documenten-weg/AC-6); in `docs/specs/` en `docs/adr/` blijft elke geldige status groen.
 const ADR_MAPPEN = ['docs/adr', 'docs/template/adr'] as const;
 const SPEC_MAPPEN = ['docs/specs', 'docs/template/specs'] as const;
 const DUBBEL_PREFIX: Record<(typeof ADR_MAPPEN)[number], string> = {
@@ -134,7 +135,7 @@ describe('templateregime/AC-9 statuswoorden', () => {
     expect(await sleutels({ [bestand]: adr('0005', 'bedacht') })).toStrictEqual([`docs:${bestand}:status`]);
   });
 
-  test.each(['voorgesteld', 'geaccepteerd', 'vervangen door 0006', 'vervallen'])(
+  test.each(['voorgesteld', 'geaccepteerd'])(
     'templateregime/AC-9 het statuswoord "%s" in docs/template/adr/ is groen',
     async (status) => {
       expect(await sleutels({ 'docs/template/adr/0005-demo.md': adr('0005', status) })).toStrictEqual([]);
@@ -148,7 +149,7 @@ describe('templateregime/AC-9 statuswoorden', () => {
     expect(keys).toStrictEqual([`docs:${bestand}:status`]);
   });
 
-  test.each(['voorstel', 'goedgekeurd', 'vervallen'])(
+  test.each(['voorstel', 'goedgekeurd'])(
     'templateregime/AC-9 het statuswoord "%s" in docs/template/specs/ is groen',
     async (status) => {
       expect(await sleutels({ 'docs/template/specs/kaart.md': spec(status) })).toStrictEqual([]);
@@ -162,6 +163,73 @@ describe('templateregime/AC-9 statuswoorden', () => {
       'docs:docs/template/specs/kaart.md:hergebruik',
     ]);
   });
+});
+
+// vervallen-documenten-weg/AC-6: in de twee templatemappen staat geen vervallen of vervangen document; in `docs/specs/` en
+// `docs/adr/` (een app) blijft elke geldige status toegestaan. De groene gevallen toetsen alleen dat de sleutel
+// `vervallen-in-template` ontbreekt: een `gebouwd`-fixture zonder test geeft terecht een `docs:ac:`-sleutel (AC-dekking).
+const VERVALLEN_IN_TEMPLATE = 'vervallen-in-template';
+const MELDING = (pad: string): string =>
+  `${pad}: een vervallen of vervangen document staat niet in docs/template/ (R-CI-06); verhuis levende AC's naar een levende spec en verwijder het, git is de historie`;
+
+async function vervallenSleutels(files: Record<string, string>): Promise<string[]> {
+  return (await sleutels(files)).filter((key) => key.endsWith(`:${VERVALLEN_IN_TEMPLATE}`));
+}
+
+describe('vervallen-documenten-weg/AC-6 vervallen of vervangen in docs/template/ is rood', () => {
+  test('vervallen-documenten-weg/AC-6 een template-spec met status vervallen is rood', async () => {
+    const bestand = 'docs/template/specs/kaart.md';
+
+    expect(await sleutels({ [bestand]: spec('vervallen') })).toStrictEqual([
+      `docs:${bestand}:${VERVALLEN_IN_TEMPLATE}`,
+    ]);
+  });
+
+  test.each(['vervallen', 'vervangen door 0006'])(
+    'vervallen-documenten-weg/AC-6 een template-ADR met Status: %s is rood',
+    async (status) => {
+      const bestand = 'docs/template/adr/0005-demo.md';
+
+      expect(await sleutels({ [bestand]: adr('0005', status) })).toStrictEqual([
+        `docs:${bestand}:${VERVALLEN_IN_TEMPLATE}`,
+      ]);
+    },
+  );
+
+  test('vervallen-documenten-weg/AC-6 de melding bevat de letterlijke tekst met het pad', async () => {
+    const bestand = 'docs/template/specs/kaart.md';
+    const violations = await docsViolations(repo({ [bestand]: spec('vervallen') }));
+    const melding = violations.find((violation) => violation.key === `docs:${bestand}:${VERVALLEN_IN_TEMPLATE}`);
+
+    expect(melding?.message).toBe(MELDING(bestand));
+  });
+});
+
+describe('vervallen-documenten-weg/AC-6 toegestane statussen geven geen melding', () => {
+  test.each(['voorstel', 'goedgekeurd', 'gebouwd'])(
+    'vervallen-documenten-weg/AC-6 een template-spec met status %s geeft geen vervallen-in-template',
+    async (status) => {
+      expect(await vervallenSleutels({ 'docs/template/specs/kaart.md': spec(status) })).toStrictEqual([]);
+    },
+  );
+
+  test.each(['voorgesteld', 'geaccepteerd'])(
+    'vervallen-documenten-weg/AC-6 een template-ADR met Status: %s geeft geen vervallen-in-template',
+    async (status) => {
+      expect(await vervallenSleutels({ 'docs/template/adr/0005-demo.md': adr('0005', status) })).toStrictEqual([]);
+    },
+  );
+
+  test('vervallen-documenten-weg/AC-6 een spec met status vervallen in docs/specs/ geeft geen vervallen-in-template', async () => {
+    expect(await vervallenSleutels({ 'docs/specs/kaart.md': spec('vervallen') })).toStrictEqual([]);
+  });
+
+  test.each(['vervallen', 'vervangen door 0006'])(
+    'vervallen-documenten-weg/AC-6 een ADR met Status: %s in docs/adr/ geeft geen vervallen-in-template',
+    async (status) => {
+      expect(await vervallenSleutels({ 'docs/adr/0005-demo.md': adr('0005', status) })).toStrictEqual([]);
+    },
+  );
 });
 
 describe('templateregime/AC-9 links', () => {
