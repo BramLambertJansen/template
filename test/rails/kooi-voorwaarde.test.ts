@@ -33,7 +33,10 @@ const VOORWAARDE_VOORBEELDEN: AbsenceExamples = {
 
 // Per aanroep van inKooi: de voorwaarde staat in de test zelf (ook op de regel `test.skipIf(…)`), of in een beforeEach van
 // het describe-blok vóór die test. Staat de aanroep in een functie op het hoogste niveau, dan geldt dat voor elke aanroep
-// van die functie. Een tekstbenadering: blokgrenzen leest hij niet, dus een eerder, al gesloten describe telt mee.
+// van die functie. De kop van een describe loopt tot zijn eerste test, zodat een skip in een buurtest niet meetelt.
+// Een tekstbenadering met bekende grenzen: blokgrenzen leest hij niet (een eerder, al gesloten describe telt mee), een
+// arrow-functie op het hoogste niveau, een keten van hulpfuncties of een functie als waarde herkent hij niet als helper,
+// en een skip in commentaar telt mee. Geen van die vormen staat nu in de tests; komt er een, dan hoort er een fixture bij.
 const TEST_START = /^[ \t]*(?:test|it)[.(]/gm;
 const DESCRIBE_START = /^[ \t]*describe[.(]/gm;
 const FUNCTIE_START = /^(?:export )?(?:async )?function (\w+)\(/gm;
@@ -53,7 +56,8 @@ function gedektInTest(tekst: string, positie: number): boolean {
   if (VOORWAARDE.test(tekst.slice(start.index, positie))) return true;
   const blok = laatsteVoor(tekst, DESCRIBE_START, start.index);
   if (blok === undefined) return false;
-  const kop = tekst.slice(blok.index, start.index);
+  const eersteTest = [...tekst.matchAll(TEST_START)].find((match) => match.index > blok.index);
+  const kop = tekst.slice(blok.index, eersteTest?.index ?? start.index);
   return kop.includes('beforeEach(') && VOORWAARDE.test(kop);
 }
 
@@ -100,6 +104,7 @@ describe('tests-naar-vermogen/AC-3: de voorwaarde staat in het testbestand zelf'
       `test('a', (ctx) => {\n  ${skip}\n});\ntest('b', () => {\n  inKooi('x', o);\n});`,
       `function draai() {\n  return inKooi('x', o);\n}\ntest('a', (ctx) => {\n  ${skip}\n  draai();\n});\ntest('b', () => {\n  draai();\n});`,
       `function draai() {\n  return inKooi('x', o);\n}`,
+      `describe('d', () => {\n  beforeEach(() => {\n    reset();\n  });\n  test('a', (ctx) => {\n    ${skip}\n  });\n  test('b', () => {\n    inKooi('x', o);\n  });\n});`,
     ];
     expect(goed.map(ongedekt)).toEqual(goed.map(() => []));
     expect(fout.filter((tekst) => ongedekt(tekst).length === 0)).toEqual([]);
