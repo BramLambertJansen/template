@@ -1,4 +1,4 @@
-# 0096 — De hoofdsessie sluit een beantwoord en verouderd botgesprek met een eigen script
+# 0098 — De hoofdsessie sluit een beantwoord en verouderd botgesprek met een eigen script
 
 Status: geaccepteerd
 

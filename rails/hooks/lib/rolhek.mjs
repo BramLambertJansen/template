@@ -127,12 +127,33 @@ function runnerIsTrusted(ctx) {
   return value === true;
 }
 
-const PR_MERGE_EXACT = /^pnpm pr:merge [1-9]\d*$/;
-// Elke andere manier om het mergescript te starten, als vangnet op de tekst zonder `\`, `'` en `"` (zoals bij gh): het
-// scriptwoord `pr:merge` overal, en `pr-merge` naast elk programma dat geen bekend leesprogramma is (`/usr/bin/node …`,
-// `sh -c "…"`, `env node …`). Vals positief (`grep pr:merge package.json`) is bewust geaccepteerd; lezen kan met de leestools.
-const PR_MERGE_SCRIPT = /(?:^|[^\w.-])pr:merge(?=$|[^\w.-])/;
-const PR_MERGE_BESTAND = /pr-merge/;
+/**
+ * De scripts die de hoofdsessie alleen als precies `pnpm <script> <nr>` draait, met het anker als vertrouwde basis:
+ * `pnpm pr:merge` (ADR 0069 punt 4) en `pnpm pr:resolve` (ADR 0098). Per script de exacte vorm en, als vangnet op de tekst
+ * zonder `\`, `'` en `"` (zoals bij gh), elke andere manier om het te starten: het scriptwoord overal, en de bestandsnaam naast
+ * elk programma dat geen bekend leesprogramma is (`/usr/bin/node …`, `sh -c "…"`, `env node …`). Vals positief (`grep
+ * pr:merge package.json`) is bewust geaccepteerd; lezen kan met de leestools.
+ * @typedef {{ exact: RegExp, script: RegExp, bestand: RegExp, doelen: string[], subagent: string, vorm: string, basis: string }} KitScript
+ * @type {KitScript[]}
+ */
+const KIT_SCRIPTS = [
+  kitScript({ naam: 'merge', bron: 'ADR 0069', subagent: 'Mergen via pnpm pr:merge doet alleen de hoofdsessie (ADR 0069)', vorm: 'Het mergescript draait alleen als precies `pnpm pr:merge <nummer>` (ADR 0069)' }),
+  kitScript({ naam: 'resolve', bron: 'ADR 0098', subagent: 'Gesprekken sluiten via pnpm pr:resolve doet alleen de hoofdsessie (ADR 0098)', vorm: 'Het sluitscript draait alleen als precies `pnpm pr:resolve <nummer>` (ADR 0098)' }),
+];
+
+/** @param {{ naam: string, bron: string, subagent: string, vorm: string }} script @returns {KitScript} */
+function kitScript({ naam, bron, subagent, vorm }) {
+  const bestand = `pr-${naam}.mjs`;
+  return {
+    exact: new RegExp(`^pnpm pr:${naam} [1-9]\\d*$`),
+    script: new RegExp(`(?:^|[^\\w.-])pr:${naam}(?=$|[^\\w.-])`),
+    bestand: new RegExp(`pr-${naam}`),
+    doelen: [bestand, `pr:${naam}`, `scripts/kit/${bestand}`, `./scripts/kit/${bestand}`],
+    subagent,
+    vorm,
+    basis: `pnpm pr:${naam} alleen vanuit de repo-root, met modus "niet-kritiek" in het anker en scripts, rails en hostbestanden (package.json, .npmrc, …) gelijk aan het anker (${bron})`,
+  };
+}
 // Alleen programma's die niets starten; `rg --pre`, `less` (LESSOPEN) en een git-alias kunnen dat wel.
 const PR_MERGE_LEZERS = new Set(['cat', 'head', 'tail', 'grep', 'wc', 'ls', 'diff', 'stat']);
 // `ls-files` en `grep` lezen ook alleen (spec rolhek-lezen/AC-8: `git ls-files -- 'docs/**'`); `git grep -O` is voor elke rol dicht (AC-2).
@@ -148,10 +169,12 @@ function leestAlleen(words) {
   return PR_MERGE_GIT.has(subcommand) && config.length === 0;
 }
 
-/** Een glob-woord (`pr-mer*.mjs`, `scripts/kit/pr-*`) dat het mergescript of `pr:merge` kan raken. @param {string} woord */
-function globRaaktMerge(woord) {
+/**
+ * Een glob-woord (`pr-mer*.mjs`, `scripts/kit/pr-*`) dat een van de `doelen` (het script of zijn scriptwoord) kan raken.
+ * @param {string} woord @param {readonly string[]} doelen
+ */
+function globRaakt(woord, doelen) {
   if (!/[*?[]/.test(woord)) return false;
-  const doelen = ['pr-merge.mjs', 'pr:merge', 'scripts/kit/pr-merge.mjs', './scripts/kit/pr-merge.mjs'];
   try {
     return doelen.some((doel) => path.matchesGlob(doel, woord) || path.matchesGlob(path.basename(doel), path.basename(woord)));
   } catch {
@@ -160,35 +183,41 @@ function globRaaktMerge(woord) {
   }
 }
 
-/** @param {string} command */
-function startMergescript(command) {
+/** Start het commando het script op een andere manier dan de exacte vorm? @param {string} command @param {KitScript} script */
+function startKitScript(command, script) {
   const tekst = command.replace(/[\\'"]/g, '');
-  if (PR_MERGE_SCRIPT.test(tekst)) return true;
+  if (script.script.test(tekst)) return true;
   const segmenten = parseCommands(command);
   // De kop van een veilige `for`-lus (AC-10 (e)) start niets: zijn woorden gaan alleen naar programma's in de romp die zelf niets starten.
   const { koppen } = veiligeLussen(segmenten);
   const leest = (/** @type {Command} */ { words }, /** @type {number} */ index) => koppen.has(index) || leestAlleen(words);
-  if (segmenten.some((segment, index) => !leest(segment, index) && segment.words.some(globRaaktMerge))) return true;
-  return PR_MERGE_BESTAND.test(tekst) && !segmenten.every(leest);
+  const raakt = (/** @type {string} */ woord) => globRaakt(woord, script.doelen);
+  if (segmenten.some((segment, index) => !leest(segment, index) && segment.words.some(raakt))) return true;
+  return script.bestand.test(tekst) && !segmenten.every(leest);
 }
 
 /**
- * `pnpm pr:merge <nr>` (ADR 0069 punt 4, spec agent-merge-niet-kritiek AC-4): alleen de hoofdsessie, alleen precies die vorm,
- * en zonder prompt alleen als modus en `MERGE_FILES` uit het anker kloppen; anders een weigering met de reden.
+ * `pnpm pr:merge <nr>` (ADR 0069 punt 4, spec agent-merge-niet-kritiek AC-4) en `pnpm pr:resolve <nr>` (ADR 0098, spec
+ * botgesprekken-sluiten AC-7 en AC-8): alleen de hoofdsessie, alleen precies die vorm, en zonder prompt alleen als modus en
+ * `MERGE_FILES` uit het anker kloppen; anders een weigering met de reden.
  * @param {{ command: string, role: string }} bash @param {Ctx} ctx @param {Decision} decision
  */
 function decidePrMerge({ command, role }, ctx, decision) {
+  for (const script of KIT_SCRIPTS) decideKitScript({ command, role }, { ctx, script }, decision);
+}
+
+/**
+ * @param {{ command: string, role: string }} bash @param {{ ctx: Ctx, script: KitScript }} doel @param {Decision} decision
+ */
+function decideKitScript({ command, role }, { ctx, script }, decision) {
   const tekst = command.trim().replace(/ +/g, ' ');
-  const exact = PR_MERGE_EXACT.test(tekst);
-  if (!exact && !startMergescript(command)) return;
-  if (role !== 'hoofdsessie') decision.deny.push('Mergen via pnpm pr:merge doet alleen de hoofdsessie (ADR 0069)');
-  else if (!exact) decision.deny.push('Het mergescript draait alleen als precies `pnpm pr:merge <nummer>` (ADR 0069)');
+  const exact = script.exact.test(tekst);
+  if (!exact && !startKitScript(command, script)) return;
+  if (role !== 'hoofdsessie') decision.deny.push(script.subagent);
+  else if (!exact) decision.deny.push(script.vorm);
   else if (decision.deny.length + decision.ask.length > 0) return;
   else if (ctx.cwd === ctx.root && mergeIsTrusted(ctx)) decision.allow = true;
-  else
-    decision.deny.push(
-      'pnpm pr:merge alleen vanuit de repo-root, met modus "niet-kritiek" in het anker en scripts, rails en hostbestanden (package.json, .npmrc, …) gelijk aan het anker (ADR 0069)',
-    );
+  else decision.deny.push(script.basis);
 }
 
 /** @param {{ mergeTrusted?: boolean | (() => boolean) }} ctx */
@@ -2056,6 +2085,8 @@ export function ghForbidden(rawArgs, expanded = []) {
   if (zetLabel(rawArgs)) found.push('een PR-label zet alleen de eigenaar, voor elke rol (R-ROL-08)');
   if (api !== null) found.push(...apiUnreadable(api, expanded));
   if (api !== null && apiWritesSelfReview(api)) found.push('gh api: labels, reviews en statussen zet alleen de eigenaar');
+  if (api !== null && apiWritesReviewComment(api))
+    found.push('gh api: een reviewopmerking wijzigen of wissen doet alleen de eigenaar, voor elke rol (ADR 0098)');
   if ((group === 'pr' && prAction === 'merge') || (api !== null && apiMerges(api)))
     found.push('mergen (ook auto-merge) doet alleen de eigenaar, voor elke rol (WS-04)');
   return found;
@@ -2092,8 +2123,18 @@ function apiMerges({ endpoint, args }) {
 
 /** @param {ApiCall} api */
 function apiWritesSelfReview(api) {
-  if (isGraphql(api.endpoint)) return api.args.some((arg) => /mutation[\s\S]*(?:Review|Label|Status|CheckRun)/i.test(arg));
+  // `minimizeComment` (en daarmee `unminimizeComment`): een botbevinding verdwijnt niet ongezien uit beeld (ADR 0098).
+  if (isGraphql(api.endpoint))
+    return api.args.some((arg) => /mutation[\s\S]*(?:Review|Label|Status|CheckRun|minimizeComment)/i.test(arg));
   return apiMutates(api) && SELF_REVIEW_API.test(api.endpoint);
+}
+
+// Eén reviewopmerking (`pulls/comments/<id>`); de antwoordroute `pulls/<nr>/comments/<id>/replies` valt erbuiten (ADR 0098).
+const REVIEW_COMMENT_API = /(?:^|\/)pulls\/+comments\/+[^/?#]+\/*(?:[?#]|$)/i;
+
+/** Een schrijvende `gh api`-aanroep op een reviewopmerking: wijzigen of wissen (ADR 0098, AC-10). @param {ApiCall} api */
+function apiWritesReviewComment(api) {
+  return apiMutates(api) && REVIEW_COMMENT_API.test(api.endpoint);
 }
 
 // In een endpoint is elke `$`, `\` of backtick onleesbaar; in een GraphQL-query alleen expansie (`$(`, `${`, backtick, `\`,

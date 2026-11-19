@@ -19,7 +19,7 @@ Herzien: 2026-11-12 (#696): door ADR 0089 punt 2, 3 en 5, punt 1, 2 en 3 worden:
 Herzien: 2026-11-14 (#713): ingekort tot wat nog geldt na ADR 0089; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 Herzien: 2026-11-18 (#781): punt 3, het script merget alleen als op `main` een ruleset met review van een code-eigenaar actief is die wie het draait niet kan passeren, en `CODEOWNERS` geen fouten heeft; verscherpt (spec templateregime AC-14)
 Herzien: 2026-11-18 (#796): gewijzigd door [0093](0093-agent-onder-eigenaaraccount.md) punt 2, 3 en 5, punt 1, 2 en 3 worden: de PR raakt geen beschermd pad volgens de padtabel op `main` (de padtoets van het script) en de checks zijn groen; de controle op de ruleset en `CODEOWNERS` uit de vorige regel vervalt; punt 4 en 5 vervallen niet meer met ADR 0089 punt 9
-Herzien: 2026-11-18 (#804): aangevuld door [0096](0096-botgesprekken-sluiten.md) punt 4 en 7, punt 4: dezelfde ankertoets laat de hoofdsessie ook `pnpm pr:resolve <nr>` draaien (botgesprekken sluiten, geen merge-route); `pnpm pr:merge` blijft de enige route om samen te voegen
+Herzien: 2026-11-18: aangevuld door [0098](0098-botgesprekken-sluiten.md) punt 4 en 7, punt 4: dezelfde ankertoets laat de hoofdsessie ook `pnpm pr:resolve <nr>` draaien (botgesprekken sluiten, geen merge-route); `pnpm pr:merge` blijft de enige route om samen te voegen
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 30, 31, 33, 34 en 35, de zin "automatische agent-merges vallen af" uit
 [0057](0057-risicogestuurde-werkstraat.md), in [0064](0064-leesbudget-per-laag.md) "zodra de GitHub App er is" (R-DOC-09) en in
