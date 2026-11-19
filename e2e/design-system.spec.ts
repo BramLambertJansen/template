@@ -43,7 +43,7 @@ for (const width of [375, 1280]) {
   test.describe(`design-system op ${String(width)} px`, () => {
     test.use({ viewport: { width, height: 900 } });
 
-    // Spec designsystem-toolbox/AC-6: axe per tabblad, in licht en donker.
+    // Spec designsystem-toolbox/AC-6: axe per tabblad, in licht en donker; ook design-system/AC-5.
     test('axe in licht en donker, zonder CSP-schendingen of horizontaal scrollen', async ({ page }) => {
       const csp = collectCspViolations(page);
       await signInAsAdmin(page);
@@ -168,7 +168,9 @@ test('menu: met het toetsenbord open, Esc sluit, focus terug op de knop', async 
   expect(csp).toStrictEqual([]);
 });
 
-test('AC-3: de kop "Design system" staat in de echte AppShell, met het profielmenu van de admin', async ({ page }) => {
+test('design-system/AC-3: de kop "Design system" staat in de echte AppShell, met het profielmenu van de admin', async ({
+  page,
+}) => {
   await signInAsAdmin(page);
   await page.goto('/design-system');
 
@@ -177,7 +179,7 @@ test('AC-3: de kop "Design system" staat in de echte AppShell, met het profielme
   await expect(page.getByRole('button', { name: 'Profielmenu' })).not.toHaveText('AV');
 });
 
-test('AC-10: de pagina doet geen aanroep naar /api/ buiten /api/me', async ({ page }) => {
+test('design-system/AC-10: de pagina doet geen aanroep naar /api/ buiten /api/me', async ({ page }) => {
   await signInAsAdmin(page);
   const calls: string[] = [];
   page.on('request', (request) => {
@@ -196,7 +198,9 @@ test('AC-10: de pagina doet geen aanroep naar /api/ buiten /api/me', async ({ pa
   expect(calls.filter((pathname) => pathname !== '/api/me')).toStrictEqual([]);
 });
 
-test('AC-2: een user ziet "Je hebt geen toegang tot deze pagina." op /design-system', async ({ page }) => {
+test('design-system/AC-2: een user ziet "Je hebt geen toegang tot deze pagina." op /design-system', async ({
+  page,
+}) => {
   const user = await createAccount('user');
   await page.goto('/login');
   await page.getByLabel('E-mailadres').fill(user.email);
@@ -209,7 +213,7 @@ test('AC-2: een user ziet "Je hebt geen toegang tot deze pagina." op /design-sys
   await expect(page.getByRole('heading', { level: 1, name: 'Design system' })).toHaveCount(0);
 });
 
-test('AC-1: anoniem op /design-system gaat naar /login met redirect', async ({ page }) => {
+test('design-system/AC-1: anoniem op /design-system gaat naar /login met redirect', async ({ page }) => {
   await page.goto('/design-system');
 
   await expect(page).toHaveURL(/\/login\?redirect=/);

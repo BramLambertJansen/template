@@ -5,7 +5,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { afterEach, expect, test } from 'vitest';
 
-// meting-kerncijfers AC-3/AC-4: scripts/kit/leespad.mjs (`pnpm leespad [--json] [--ref <git-ref>]`).
+// meting-kerncijfers/AC-3/AC-4: scripts/kit/leespad.mjs (`pnpm leespad [--json] [--ref <git-ref>]`).
 // Vorm: exporteert SCENARIOS (Record<naam, string[]>) en pure leespad(lees, scenarios) met lees(pad) => string | null
 // (null = bestaat niet); geeft Record<naam, { bytes: number, ontbreekt: string[] }>. De CLI leest uit process.cwd();
 // --json geeft { "scenarios": <hetzelfde> }. main draait alleen als het script direct wordt gestart (niet bij import).
@@ -81,7 +81,7 @@ function cli(cwd: string, args: string[]) {
   return spawnSync(process.execPath, [script, ...args], { cwd, encoding: 'utf8', timeout: 5000 });
 }
 
-test('meting-kerncijfers AC-3: SCENARIOS bevat de drie vaste leespaden', async () => {
+test('meting-kerncijfers/AC-3: SCENARIOS bevat de drie vaste leespaden', async () => {
   const mod = await laad();
   const sc = mod?.['SCENARIOS'];
   expect(veld(sc, 'nieuwe-feature')).toEqual(NIEUW);
@@ -89,7 +89,7 @@ test('meting-kerncijfers AC-3: SCENARIOS bevat de drie vaste leespaden', async (
   expect(veld(sc, 'review')).toEqual(REVIEW);
 });
 
-test('meting-kerncijfers AC-3: leespad(lees, scenarios) somt bytes en meldt ontbrekende bestanden', async () => {
+test('meting-kerncijfers/AC-3: leespad(lees, scenarios) somt bytes en meldt ontbrekende bestanden', async () => {
   const mod = await laad();
   const fn = mod?.['leespad'];
   expect(typeof fn).toBe('function');
@@ -104,7 +104,7 @@ test('meting-kerncijfers AC-3: leespad(lees, scenarios) somt bytes en meldt ontb
   expect(veld(uit, 's3', 'bytes')).toBe(0);
 });
 
-test('meting-kerncijfers AC-3: CLI --json uit de werkmap somt per scenario', () => {
+test('meting-kerncijfers/AC-3: CLI --json uit de werkmap somt per scenario', () => {
   const f = vol();
   const r = cli(repo(f), ['--json']);
 
@@ -116,7 +116,7 @@ test('meting-kerncijfers AC-3: CLI --json uit de werkmap somt per scenario', () 
   expect(veld(data, 'scenarios', 'review', 'ontbreekt')).toEqual([]);
 });
 
-test('meting-kerncijfers AC-3: tekstuitvoer noemt elk scenario met zijn bytes', () => {
+test('meting-kerncijfers/AC-3: tekstuitvoer noemt elk scenario met zijn bytes', () => {
   const f = vol();
   const r = cli(repo(f), []);
   expect(r.status).toBe(0);
@@ -124,7 +124,7 @@ test('meting-kerncijfers AC-3: tekstuitvoer noemt elk scenario met zijn bytes', 
   expect(r.stdout).toContain(String(som(f, REVIEW)));
 });
 
-test('meting-kerncijfers AC-3: een ontbrekend bestand telt 0 en staat in ontbreekt (geen crash)', () => {
+test('meting-kerncijfers/AC-3: een ontbrekend bestand telt 0 en staat in ontbreekt (geen crash)', () => {
   const f = vol();
   const dir = repo(f);
   rmSync(path.join(dir, 'docs/gouden-pad.md'));
@@ -142,7 +142,7 @@ test('meting-kerncijfers AC-3: een ontbrekend bestand telt 0 en staat in ontbree
   expect(veld(data, 'scenarios', 'nieuwe-feature', 'ontbreekt')).toEqual(['docs/gouden-pad.md']);
 });
 
-test('meting-kerncijfers AC-3: --ref leest via git show, niet uit de werkmap', () => {
+test('meting-kerncijfers/AC-3: --ref leest via git show, niet uit de werkmap', () => {
   const f = vol();
   const dir = repo(f);
   commit(dir, 'basis');
@@ -158,7 +158,7 @@ test('meting-kerncijfers AC-3: --ref leest via git show, niet uit de werkmap', (
   expect(veld(data, 'scenarios', 'review', 'ontbreekt')).toEqual([]);
 });
 
-test('meting-kerncijfers AC-3: een bestand dat bij de ref niet bestaat telt 0 en staat in ontbreekt', () => {
+test('meting-kerncijfers/AC-3: een bestand dat bij de ref niet bestaat telt 0 en staat in ontbreekt', () => {
   const f = vol();
   const dir = repo(f);
   commit(dir, 'basis');
@@ -177,7 +177,7 @@ test('meting-kerncijfers AC-3: een bestand dat bij de ref niet bestaat telt 0 en
 });
 
 test.each([[['--ref', 'bestaat-niet-xyz']], [['--ref', '--upload-pack=touch pwn']], [['--ref', '-x']], [['--ref=-x']]])(
-  'meting-kerncijfers AC-3: ongeldige of met - beginnende ref %j geeft foutmelding en exit 1',
+  'meting-kerncijfers/AC-3: ongeldige of met - beginnende ref %j geeft foutmelding en exit 1',
   (args) => {
     const dir = repo(vol());
     commit(dir, 'basis');
@@ -192,7 +192,7 @@ test.each([[['--ref', 'bestaat-niet-xyz']], [['--ref', '--upload-pack=touch pwn'
   },
 );
 
-test('meting-kerncijfers AC-4: package.json heeft het script leespad', () => {
+test('meting-kerncijfers/AC-4: package.json heeft het script leespad', () => {
   const pkg: unknown = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
   expect(veld(pkg, 'scripts', 'leespad')).toBe('node scripts/kit/leespad.mjs');
 });

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { expect, test } from 'vitest';
 import { branch, cli, fixture, geenGh, veld, type Fixture } from './meting-semantiek-kit';
 
-// meting-kerncijfers AC-2: `pnpm meting --pr-tabel [--branch X] [--json]`.
+// meting-kerncijfers/AC-2: `pnpm meting --pr-tabel [--branch X] [--json]`.
 const BRANCH = 'feat/kern';
 
 function schrijf(f: Fixture, regels: Record<string, unknown>[]) {
@@ -46,7 +46,7 @@ function tabel(f: Fixture) {
   return result.stdout;
 }
 
-test('meting-kerncijfers AC-2: de tabel heeft een rij per kerncijfer', () => {
+test('meting-kerncijfers/AC-2: de tabel heeft een rij per kerncijfer', () => {
   const f = ghStub(fixture(), [run('failure'), run('success'), run('failure')]);
   schrijf(f, events);
 
@@ -58,37 +58,37 @@ test('meting-kerncijfers AC-2: de tabel heeft een rij per kerncijfer', () => {
     expect(rij(uit, naam), String(naam)).not.toBe('');
 });
 
-test('meting-kerncijfers AC-2: leespad verwijst naar pnpm leespad', () => {
+test('meting-kerncijfers/AC-2: leespad verwijst naar pnpm leespad', () => {
   const f = ghStub(fixture(), []);
   schrijf(f, events);
   expect(rij(tabel(f), /leespad/i)).toMatch(/pnpm leespad/);
 });
 
-test('meting-kerncijfers AC-2: doorlooptijd is laatste min eerste t, leesbaar', () => {
+test('meting-kerncijfers/AC-2: doorlooptijd is laatste min eerste t, leesbaar', () => {
   const f = ghStub(fixture(), []);
   schrijf(f, events);
   expect(rij(tabel(f), /doorlooptijd/i)).toMatch(/25:30/);
 });
 
-test('meting-kerncijfers AC-2: doorlooptijd is onbekend zonder events van de branch', () => {
+test('meting-kerncijfers/AC-2: doorlooptijd is onbekend zonder events van de branch', () => {
   const f = ghStub(fixture(), []);
   schrijf(f, [{ e: 'Stop', b: 'andere/branch', t: '2026-10-15T10:00:00.000Z' }]);
   expect(rij(tabel(f), /doorlooptijd/i)).toMatch(/onbekend/i);
 });
 
-test('meting-kerncijfers AC-2: reviewrondes telt agent reviewer, ontdubbeld op tool_use_id', () => {
+test('meting-kerncijfers/AC-2: reviewrondes telt agent reviewer, ontdubbeld op tool_use_id', () => {
   const f = ghStub(fixture(), []);
   schrijf(f, events);
   expect(rij(tabel(f), /reviewrondes/i)).toMatch(/\b2\b/);
 });
 
-test('meting-kerncijfers AC-2: CI-rood telt runs met conclusion failure', () => {
+test('meting-kerncijfers/AC-2: CI-rood telt runs met conclusion failure', () => {
   const f = ghStub(fixture(), [run('failure'), run('success'), run('failure'), run('cancelled')]);
   schrijf(f, events);
   expect(rij(tabel(f), /CI-rood/i)).toMatch(/\b2\b/);
 });
 
-test('meting-kerncijfers AC-2: CI-rood is onbekend bij een gh-fout, nooit 0', () => {
+test('meting-kerncijfers/AC-2: CI-rood is onbekend bij een gh-fout, nooit 0', () => {
   const f = ghStub(fixture(), 'fout');
   schrijf(f, events);
   const r = rij(tabel(f), /CI-rood/i);
@@ -96,7 +96,7 @@ test('meting-kerncijfers AC-2: CI-rood is onbekend bij een gh-fout, nooit 0', ()
   expect(r).not.toMatch(/\b0\b/);
 });
 
-test('meting-kerncijfers AC-2: weigeringen draagt het label bovengrens', () => {
+test('meting-kerncijfers/AC-2: weigeringen draagt het label bovengrens', () => {
   const f = ghStub(fixture(), []);
   schrijf(f, events);
   const r = rij(tabel(f), /weigeringen/i);
@@ -104,7 +104,7 @@ test('meting-kerncijfers AC-2: weigeringen draagt het label bovengrens', () => {
   expect(r).toMatch(/\b1\b/);
 });
 
-test('meting-kerncijfers AC-2: --json bevat dezelfde velden onder prTabel', () => {
+test('meting-kerncijfers/AC-2: --json bevat dezelfde velden onder prTabel', () => {
   const f = ghStub(fixture(), [run('failure')]);
   schrijf(f, events);
   branch(f, BRANCH);
@@ -120,14 +120,14 @@ test('meting-kerncijfers AC-2: --json bevat dezelfde velden onder prTabel', () =
   expect(String(veld(data, 'prTabel', 'leespad'))).toContain('leespad');
 });
 
-test('meting-kerncijfers AC-2: --json geeft onbekend (geen 0) bij een gh-fout', () => {
+test('meting-kerncijfers/AC-2: --json geeft onbekend (geen 0) bij een gh-fout', () => {
   const f = ghStub(fixture(), 'fout');
   schrijf(f, events);
   const result = cli(f, ['--pr-tabel', '--json', '--branch', BRANCH]);
   expect(veld(JSON.parse(result.stdout), 'prTabel', 'ciRood')).toBe('onbekend');
 });
 
-test('meting-kerncijfers AC-2: --help noemt --pr-tabel en roept gh niet aan', () => {
+test('meting-kerncijfers/AC-2: --help noemt --pr-tabel en roept gh niet aan', () => {
   const f = fixture();
   const result = cli(f, ['--help', '--pr-tabel']);
   expect(result.status).toBe(0);

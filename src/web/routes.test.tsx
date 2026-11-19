@@ -132,7 +132,7 @@ describe('/design-system (spec design-system)', () => {
     expect(screen.queryByRole('heading', { level: 1, name: 'Design system' })).toBeNull();
   });
 
-  test('AC-4: admin zonder MFA-sessie op /design-system: naar inloggen, zoals bij /admin', async () => {
+  test('design-system/AC-4: admin zonder MFA-sessie op /design-system: naar inloggen, zoals bij /admin', async () => {
     const router = show('/design-system', 'mfa-required');
 
     await waitFor(() => {
@@ -149,7 +149,7 @@ describe('/design-system (spec design-system)', () => {
     expect(screen.getAllByRole('button', { name: 'Profielmenu' })).toHaveLength(1);
   });
 
-  test('AC-8: admin op het dashboard: link "Design system" naar /design-system, geen sidebar-item', async () => {
+  test('design-system/AC-8: admin op het dashboard: link "Design system" naar /design-system, geen sidebar-item', async () => {
     show('/admin', admin);
 
     expect((await screen.findByRole('heading', { level: 1 })).textContent).toBe('Dashboard');
@@ -158,7 +158,7 @@ describe('/design-system (spec design-system)', () => {
     expect(within(nav ?? document.body).queryByRole('link', { name: 'Design system' })).toBeNull();
   });
 
-  test('AC-8: een user ziet nergens een link of sidebar-item "Design system"', async () => {
+  test('design-system/AC-8: een user ziet nergens een link of sidebar-item "Design system"', async () => {
     show('/', user);
 
     expect((await screen.findByRole('heading', { level: 1 })).textContent).toBe('Home');

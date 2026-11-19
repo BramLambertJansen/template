@@ -17,7 +17,7 @@
 //     (sleutel `docs:gates-app:<…>`); de spiegels en check 5 draaien op het samengevoegde object (`samengevoegd`).
 //  5. `schrijfrecht` van een rol overlapt niet met de afgeleide gates (WS-02), op de uitzonderingen in SCHRIJFRECHT_VRIJ na.
 //  6. Elk AC-id van een gebouwde spec (`status: gebouwd`, met of zonder commentaar erachter; ADR 0095) heeft een testbestand
-//     met `<namespace>/AC-n`, of met het AC-id samen met de specnaam of de namespace (sleutel `docs:ac:<spec>:<AC-n>`).
+//     met `<namespace>/AC-n` of `<specnaam>/AC-n` als heel woord; een los `AC-n` telt niet (sleutel `docs:ac:<spec>:<AC-n>`).
 //     Overgeslagen: een AC met `(nog niet gebouwd)` achter het id, en een AC die direct na het streepje begint met
 //     `Vervallen door ADR <nummer>` als dat ADR in de ADR-map naast de specmap staat en `geaccepteerd` is.
 //  7. Spec-discipline: geen lijstitem met `⚠ open` in "Open vragen" bij goedgekeurd of gebouwd (`:open-vraag`); elk pad in
@@ -666,9 +666,12 @@ const TESTBESTAND = /(?:^|\/)[^/]+\.(?:test|spec)\.[^/]+$|^(?:db\/tests|e2e|test
 // Een AC-id als heel woord, met een optioneel voorvoegsel `<naam>/` (groep 1); groep 2 is het id.
 const AC_ID = /(?<![\w/-])(?:([\w.-]+)\/)?(AC-\d+)(?![\w-])/g;
 
-/** Regex die `naam` als heel woord vindt (geen woordteken of `-` ervoor of erna). @param {string} naam */
+/**
+ * Regex die `naam` als heel woord vindt: geen woordteken, `/`, `.` of `-` ervoor (dus niet in `andere/mijn/AC-1` of
+ * `x.mijn/AC-1`), geen woordteken of `-` erna. @param {string} naam
+ */
 function heelWoord(naam) {
-  return new RegExp(`(?<![\\w-])${naam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`);
+  return new RegExp(`(?<![\\w/.-])${naam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`);
 }
 
 /**
@@ -679,8 +682,7 @@ function heelWoord(naam) {
  */
 function dekt(tekst, spec, ac) {
   const namen = [spec.naam, ...(spec.namespace === undefined ? [] : [spec.namespace])];
-  if (namen.some((naam) => heelWoord(`${naam}/${ac}`).test(tekst))) return true;
-  return heelWoord(ac).test(tekst) && namen.some((naam) => heelWoord(naam).test(tekst));
+  return namen.some((naam) => heelWoord(`${naam}/${ac}`).test(tekst));
 }
 
 // Een vervallen AC (ADR 0095 punt 6): `- **<ns>/AC-n** — Vervallen door ADR <nummer> … Was: …`, direct na het streepje.
@@ -742,7 +744,7 @@ function acViolations(files, read) {
       .filter((ac) => !tests.some((tekst) => dekt(tekst, spec, ac)))
       .map((ac) => ({
         key: `docs:ac:${spec.naam}:${ac}`,
-        message: `${file}: ${ac} heeft geen testbestand met ${spec.namespace ?? spec.naam}/${ac} of met ${ac} en de specnaam of namespace`,
+        message: `${file}: ${ac} heeft geen testbestand met ${spec.namespace ?? spec.naam}/${ac}`,
       }));
   });
 }

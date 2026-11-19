@@ -80,7 +80,7 @@ n.v.t.: geen externe dienst; GitHub lezen zoals nu.
 
 - **specarchief-en-bouwvorm/AC-1** — `documentKind` geeft `spec` en `isArchief` waar voor `docs/specs/archief/a.md`; niet voor
   `docs/specs/archief/_a.md` of `docs/specs/archief/x/a.md`.
-- **specarchief-en-bouwvorm/AC-2** — Byte-gelijke `git mv` van een op main vervallen spec naar `docs/specs/archief/`, alleen
+- **specarchief-en-bouwvorm/AC-2** — Vervallen door ADR 0089 (punt 1 en 5: template-specs staan zonder archief en `check-document-status` met de archiefroute is weg). Was: Byte-gelijke `git mv` van een op main vervallen spec naar `docs/specs/archief/`, alleen
   met `docs/`-wijzigingen: groen. Rood: andere status op main; inhoud anders; andere naam; terug; nieuw, gewijzigd of
   verwijderd bestand in het archief; een bestand buiten `docs/` ernaast.
 - **specarchief-en-bouwvorm/AC-3** — Het rolhek weigert elke rol elke schrijfactie in `docs/specs/archief/` met de melding

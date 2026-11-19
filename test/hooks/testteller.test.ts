@@ -451,7 +451,7 @@ describe('testteller: voorwaardelijk geregistreerde tests', () => {
     expect(testChangeRisk(BASIS, na, FILE)).toBeNull();
   });
 
-  test('== telt wel als waarde (AC-2)', () => {
+  test('== telt wel als waarde (voorwaardelijke-tests/AC-2)', () => {
     expect(testChangeRisk(BASIS, lines('const gelijk = test == f;', BASIS), FILE)).toBe('skip');
   });
 
@@ -466,7 +466,7 @@ describe('testteller: voorwaardelijk geregistreerde tests', () => {
     expect(testChangeRisk(voor, suite(`if (isCi) ${LOS_A}`, `if (isCi) ${LOS_B}`), FILE)).toBe('skip');
   });
 
-  test('een nieuw testbestand valt er niet onder (AC-3)', () => {
+  test('een nieuw testbestand valt er niet onder (voorwaardelijke-tests/AC-3)', () => {
     expect(testChangeRisk('', lines('if (process.env.X) {', BASIS, '}'), FILE)).toBeNull();
   });
 
@@ -487,7 +487,7 @@ describe('testteller: voorwaardelijk geregistreerde tests', () => {
     expect(testChangeRisk(BASIS, suite('const t = `if (x) { ${naam} }`;', LOS_A, LOS_B), FILE)).toBeNull();
   });
 
-  test('pgTAP-bestanden houden de oude heuristiek: voorwaardelijk is 0 (AC-5)', () => {
+  test('pgTAP-bestanden houden de oude heuristiek: voorwaardelijk is 0 (voorwaardelijke-tests/AC-5)', () => {
     const sql = "select plan(1);\nselect ok(true, 'a');\n";
     expect(
       testChangeRisk(sql, `do $$ begin if true then perform 1; end if; end $$;\n${sql}`, 'db/test/a.test.sql'),
@@ -495,7 +495,7 @@ describe('testteller: voorwaardelijk geregistreerde tests', () => {
   });
 });
 
-describe('rolhek: een bestaande test voorwaardelijk maken vraagt akkoord (AC-3)', () => {
+describe('rolhek: een bestaande test voorwaardelijk maken vraagt akkoord (voorwaardelijke-tests/AC-3)', () => {
   const config = loadConfig(readFileSync('.claude/gates.json', 'utf8'));
   const pad = 'test/rails/example.test.ts';
   const bestaand = lines("describe('s', () => {", `  ${LOS_A}`, `  ${LOS_B}`, '});');

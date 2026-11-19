@@ -371,7 +371,7 @@ function verdictIn(command: string, cwd: string): Verdict {
 }
 const melding = (command: string) => run(command, REVIEWER).deny.join('\n');
 
-describe('rolhek-lezen/AC-6 en AC-7: git grep voor de reviewer', () => {
+describe('rolhek-lezen/AC-6 en rolhek-lezen/AC-7: git grep voor de reviewer', () => {
   test.each([
     // elke vlag los
     ...['-n', '-i', '-w', '-v', '-l', '-L', '-c', '--count', '-h', '-F', '-E', '-I'].map((v) => `git grep ${v} foo`),

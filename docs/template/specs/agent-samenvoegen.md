@@ -61,7 +61,7 @@ steekproefregel), bij een reden exit 1 met `Geen merge (ADR 0069):` en per reden
 - **agent-samenvoegen/AC-4** — Samenvoegen: zonder reden uit de modus (`merge` is `niet-kritiek`; een andere modus stopt nog
   steeds als eerste), `prRedenen`, de padtoets, `checkRedenen` en `mainRedenen` voegt het script samen met squash en de
   head-SHA als voorwaarde, en drukt het de bestaande slotregels af. Elke reden betekent geen schrijfactie. De grenscontrole
-  van templateregime AC-14 bestaat niet meer: `grensRedenen` en de vier `REDEN_`-teksten zijn weg, en een repository zonder
+  van templateregime/AC-14 bestaat niet meer: `grensRedenen` en de vier `REDEN_`-teksten zijn weg, en een repository zonder
   ruleset, met een bypass of met fouten in `CODEOWNERS` geeft daar geen reden.
 - **agent-samenvoegen/AC-5** — Rulesetscript: de payload heeft `require_code_owner_review` gelijk aan `false` en een lege
   `bypass_actors`; de optie `--bypass-beheerder` bestaat niet meer (exit 2 met de gebruiksregel); de overige regels en de
@@ -69,7 +69,7 @@ steekproefregel), bij een reden exit 1 met `Geen merge (ADR 0069):` en per reden
   vervalt.
 - **agent-samenvoegen/AC-6** — Weg zijn `scripts/kit/agent-token.mjs` (vervallen),
   `test/scripts/agent-token.test.ts` (vervallen) en `test/scripts/merge-ruleset.test.ts` (vervallen); de tests van AC-3 en AC-4 vervangen die laatste. De spec
-  `agent-token` heeft status `vervallen`; in de spec `templateregime` zijn AC-1, AC-6 en AC-14 en het deel van AC-7 over de
+  `agent-token` heeft status `vervallen`; in de spec `templateregime` zijn templateregime/AC-1, -6 en -14 en het deel van templateregime/AC-7 over de
   inhoudstoets gemarkeerd als vervallen door ADR 0093. Eigenaarakkoord voor het verwijderen van die tests via deze spec
   (R-TEST-02).
 - **agent-samenvoegen/AC-7** — Bewijs na de merge, in de eerste PR daarna zonder beschermd pad: de hoofdsessie opent hem onder
@@ -101,7 +101,7 @@ steekproefregel), bij een reden exit 1 met `Geen merge (ADR 0069):` en per reden
 - `docs/nieuwe-app.md`: 4.1 (de let-op over de App), 6.2 (ruleset zonder review van een code-eigenaar, geen App, geen token),
   fase 10 (wat er nog niet is, en de regel "Later aanzetten" over `--bypass-beheerder`), "Een eigen beschermd pad" (in een app
   beschermt `besluit-pr` of `voorReview`).
-- `docs/template/specs/templateregime.md` (AC-1, AC-2, AC-6, AC-7, AC-14 en de randgevallen daarbij),
+- `docs/template/specs/templateregime.md` (templateregime/AC-1, -2, -6, -7, -14 en de randgevallen daarbij),
   `docs/template/specs/app-padtabel.md` en `docs/template/specs/leerlus-bewijs.md` (elk één zin over de code-eigenaar of de App),
   `docs/template/specs/agent-merge-niet-kritiek.md` (de padtoets is terug), `docs/template/specs/agent-token.md` (status),
   `docs/roadmap.md` (het item over de GitHub-bescherming), `docs/template-changelog.md`.
