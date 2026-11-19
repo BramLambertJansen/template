@@ -565,10 +565,12 @@ naar `voorgesteld` of wordt hernoemd: het rolhek (dat vergelijkt met main) weige
 er verandert ([ADR 0045](../template/adr/0045-railwerk.md) punt 21):
 
 1. **Normatief** (wat besloten is): herschrijf het bestaande ADR in een app in een besluit-PR, in de template in elke PR, met een nieuwe herzieningsregel
-   `Herzien: JJJJ-MM-DD (#NNN): wat` (bestaande datum, het PR-nummer, wat er verandert; oude regels blijven staan). Een nieuw ADR
+   `Herzien: JJJJ-MM-DD: wat` (bestaande datum, wat er verandert; oude regels blijven staan). Geen PR-nummer: zo hoeft er na
+   het openen van de PR geen commit meer bij; de PR vind je via de commit op main (`git blame` of `git log --first-parent -S`).
+   Een PR-nummer `(#NNN)` na de datum mag nog, maar hoeft niet ([ADR 0097](../template/adr/0097-herzieningsregel-zonder-pr-nummer.md)). Een nieuw ADR
    alleen voor een onderwerp dat in geen bestaand ADR past; `vervangen door NNNN` op het oude mag in dezelfde PR, zonder record.
    Een oud ADR verwijderen mag in een app in een besluit-PR, in de template in elke PR, nadat een reviewer heeft bevestigd dat de inhoud volledig in het nieuwe staat.
-   Afspraak, getoetst door de reviewer (ADR 0089 punt 8): een nieuwe herzieningsregel noemt deze PR, een verwijderd nummer komt nooit terug, en na een
+   Afspraak, getoetst door de reviewer (ADR 0089 punt 8): een herschreven ADR krijgt een nieuwe herzieningsregel, een verwijderd nummer komt nooit terug, en na een
    verwijdering wijst elke `vervangen door NNNN` nog naar een bestaand ADR; `docs/adr/archief/` telt daarbij mee als doel en
    als verwijzer, en een nummer dat alleen nog in het archief staat blijft bezet.
 2. **Verwijzing naar een later ADR**: een ADR-link achter de statuswaarde, met alleen het nummer als linktekst en het

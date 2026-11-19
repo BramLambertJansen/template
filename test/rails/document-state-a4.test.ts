@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { A4_MELDING, beslisOvergang } from '../../rails/hooks/lib/document-state.mjs';
 
 // A4 in een besluit-PR (ADR 0046 punt 2, eigenaarbesluit 2026-10-22): een geaccepteerd ADR mag worden herschreven als de
-// nieuwe tekst meer geldige herzieningsregels heeft (`Herzien: JJJJ-MM-DD (#NNN): <wat>`); dan is de uitslag `herzien`.
+// nieuwe tekst meer geldige herzieningsregels heeft (`Herzien: JJJJ-MM-DD: <wat>`, een PR-nummer `(#NNN)` mag nog, ADR 0097); dan is de uitslag `herzien`.
 // De uitslag 'herzien' bestaat nog niet in het type, daarom vergelijken de tests de uitslag als tekst.
 const ADR = 'docs/adr/0099-demo.md';
 const SPEC = 'docs/specs/demo.md';
@@ -40,6 +40,13 @@ describe('B1: geaccepteerd naar geaccepteerd met meer geldige herzieningsregels 
     expect(uitkomst(adr('geaccepteerd'), na).uitslag).toBe('herzien');
   });
 
+  // GEWIJZIGD (ADR 0097): een herzieningsregel zonder PR-nummer is nu de voorgeschreven vorm (stond in B2 als a4); een
+  // aanwezig nummer moet nog ≥ 1 zijn (B2, PR-nummer 0).
+  test('B1 een herzieningsregel zonder PR-nummer: herzien', () => {
+    const na = adr('geaccepteerd', 'Iets anders.', ['Herzien: 2026-10-22: tekst.']);
+    expect(uitkomst(adr('geaccepteerd'), na)).toStrictEqual({ uitslag: 'herzien', nieuw: false });
+  });
+
   test('B1 de statusregel met datum en PR achter de waarde verandert niets aan de uitslag: herzien', () => {
     const na = adr('geaccepteerd (2026-10-22), #262', 'Iets anders.', [HERZIEN]);
     expect(uitkomst(adr('geaccepteerd'), na).uitslag).toBe('herzien');
@@ -51,7 +58,6 @@ describe('B2: zonder extra geldige herzieningsregel blijft het a4', () => {
     ['geen herzieningsregel', adr('geaccepteerd', 'Iets anders.')],
     ['onbestaande datum (2026-02-30)', adr('geaccepteerd', 'Iets anders.', ['Herzien: 2026-02-30 (#262): tekst.'])],
     ['onbestaande maand (2026-13-01)', adr('geaccepteerd', 'Iets anders.', ['Herzien: 2026-13-01 (#262): tekst.'])],
-    ['geen PR-nummer', adr('geaccepteerd', 'Iets anders.', ['Herzien: 2026-10-22: tekst.'])],
     ['PR-nummer 0', adr('geaccepteerd', 'Iets anders.', ['Herzien: 2026-10-22 (#0): tekst.'])],
     ['lege omschrijving', adr('geaccepteerd', 'Iets anders.', ['Herzien: 2026-10-22 (#262): '])],
     ['omschrijving ontbreekt', adr('geaccepteerd', 'Iets anders.', ['Herzien: 2026-10-22 (#262):'])],

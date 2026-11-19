@@ -21,6 +21,10 @@ requests.
 
 ### Gewijzigd
 
+- De herzieningsregel van een herschreven ADR is `Herzien: JJJJ-MM-DD: wat`, zonder PR-nummer (ADR 0097, R-CI-05); een
+  nummer `(#NNN)` na de datum mag nog, dus bestaande regels blijven geldig. Het rolhek telt beide vormen als geldige
+  herzieningsregel (`HERZIEN` in `rails/hooks/lib/document-state.mjs`, `test/rails/document-state-herzien-zonder-nummer.test.ts`).
+  Bij een update: niets om te zetten.
 - De agent werkt onder het account van de eigenaar en `pnpm pr:merge` beslist op de padtabel wie samenvoegt (ADR 0093, spec
   `agent-samenvoegen`). Het mergescript leest de bestanden van de PR en de padtabel op de kop van `main` (met
   `.claude/gates.app.json` als dat er is) en weigert met `raakt een beschermd pad (…): de eigenaar voegt samen` of, bij een
