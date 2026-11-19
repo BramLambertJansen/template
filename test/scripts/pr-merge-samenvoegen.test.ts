@@ -8,7 +8,7 @@ import * as prMerge from '../../scripts/kit/pr-merge.mjs';
 // op de padtabel. AC-1 en AC-2 toetsen de pure functie `beschermdPad(pad, tabel, repo)` (`tabel` = de samengevoegde ruwe
 // gates-inhoud, `repo` = `owner/naam`; geeft `true` of `false`); AC-3 en AC-4 toetsen `beoordeelMerge` met een nep-API per
 // endpoint, zoals test/scripts/pr-merge.test.ts. AC-5 staat in test/scripts/github-ruleset-templateregime.test.ts.
-// agent-samenvoegen/AC-7 is bewijs na de merge (uitvoer in de thread en in de PR), geen test.
+// AC-7 is vervallen (procesbewijs, ADR 0100).
 //
 // Afspraken die de bouw volgt (ze volgen uit de spec, maar de spec noemt geen exacte vorm):
 // - een 404 van GitHub is in de nep-API een Error met "HTTP 404" in de melding (zo meldt `gh api` het); elke andere fout op
