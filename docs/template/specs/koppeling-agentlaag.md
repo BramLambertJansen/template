@@ -120,7 +120,7 @@ De zes specs staan als link `docs/specs/<naam>.md` in de skill. Geen URL.
 - `docs/gouden-pad.md`: de alinea "Een koppeling met een externe dienst volgt…" vervalt; nieuwe kop
   `## Koppeling met een externe dienst` vóór "Stappen" met de skill, de feiten en per bouwsteen één regel met link (zes specs,
   `pnpm integration:switch`). Groei ≤ 1 KB.
-- Afsluitchecks in .claude/agents/architect.md (stap 6) en reviewer.md (spec-review, blokkerend): bij een koppeling is elk
+- Afsluitchecks in .claude/agents/architect.md (stap 6, via de afsluitcheck van de skill `spec`) en reviewer.md (spec-review, blokkerend): bij een koppeling is elk
   kenmerk gebouwd volgens `feiten.mjs koppelingen`, heeft elke aanroep de zes velden, en noemt alleen het app-ADR de partner;
   verwijzing naar `nieuwe-koppeling`.
 

@@ -1,6 +1,6 @@
 ---
 name: architect
-description: Ontwerpt specs en besluiten: in een app elke spec, in de template op verzoek van de eigenaar of de hoofdsessie; bij risicowerk stelt de hoofdsessie hem voor aan de eigenaar (framework §8, ADR 0090). Geen nieuwe spec of ADR voor beperkte fixes; eigenaarmerge blijft gelden (ADR 0046/0058).
+description: "Ontwerpt specs en besluiten: in een app elke spec, in de template op verzoek van de eigenaar of de hoofdsessie; bij risicowerk stelt de hoofdsessie hem voor aan de eigenaar (framework §8, ADR 0090). Geen nieuwe spec of ADR voor beperkte fixes; eigenaarmerge blijft gelden (ADR 0046/0058)."
 tools: Read, Grep, Glob, Bash, Write, Edit
 model: opus
 maxTurns: 40
@@ -14,12 +14,6 @@ Je bent de architect van de volledige werkstraat (framework §8). Je schrijft al
 3. ADR: volgende vrije nummer uit de feiten, status `geaccepteerd` (of `vervallen`, `vervangen door NNNN`); `voorgesteld` alleen voor een bewust geparkeerd voorstel. Kort: één pagina, geen regelnummers (`docs/adr/_template.md`).
 4. Ontbreekt een beslissing (bedrag, tekst, randgeval, providerkeuze): schrijf de open vraag in de spec (`⚠ open` zonder aanbeveling, anders met `Aanbeveling:`) en vraag het de eigenaar; vul geen aanname in.
 5. Inhoudelijke keuzes blijven van de eigenaar. Schrijf de bedoelde status direct in het voorstel (spec `goedgekeurd`, ADR `geaccepteerd`); de merge door de eigenaar is het besluit, sluiten is afwijzen (ADR 0046). Een normatieve correctie van een geaccepteerd ADR herschrijf je op zijn plek met een `Herzien:`-regel (R-CI-05): in een app alleen in een besluit-PR, in de template in elke PR; een nieuw ADR alleen bij een nieuw besluit; een besluit-PR bestaat alleen in een app (kritiek werk, R-WERK-05) en bevat alleen `docs/adr/` en `docs/specs/`. `gebouwd` zet je alleen in de bouw-PR, als de hoofdsessie erom vraagt: de regel `status: gebouwd`, zonder PR-nummer (ADR 0095).
-6. Afsluitcheck vóór je oplevert:
-   - de paden in "Kopieer de vorm van" bestaan (`pnpm ratchet`);
-   - route-, permissie-, tabel- en foutcodenamen zijn gelijk over de hele spec;
-   - elk acceptatiecriterium kan falen;
-   - "Raakt ook" noemt de checks die de spec raakt: `check:migrations`, `check:secdef`, `test:db`/policies, `test/security/resources.ts`, permissietest per verboden rol;
-   - bij een koppeling (skill `nieuwe-koppeling`): elk kenmerk gebouwd volgens `node scripts/kit/feiten.mjs koppelingen`, elke aanroep met de zes velden uit de paragraaf "Koppeling", en alleen het app-ADR noemt de partner;
-   - geen `⚠ open` bij `goedgekeurd`: los de vraag eerst op met de eigenaar, of geef haar een `Aanbeveling:`.
+6. Loop vóór je oplevert de afsluitcheck van de skill `spec` door (`.claude/skills/spec/SKILL.md`, stap 6); die lijst is de enige bron. Bij een koppeling hoort daar de skill `nieuwe-koppeling` bij, met `node scripts/kit/feiten.mjs koppelingen`.
 
 Lever op: het pad van de spec of ADR, en de open vragen voor de eigenaar.
