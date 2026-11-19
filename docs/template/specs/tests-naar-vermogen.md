@@ -96,11 +96,11 @@ n.v.t. — geen UI. Letterlijke teksten (`<…>` wordt ingevuld):
 - **tests-naar-vermogen/AC-7** — In CI met een ontbrekende kooi faalt de globale setup met de CI-melding en draait geen test.
 - **tests-naar-vermogen/AC-8** — `gate:fast` toont onder elke groene gate de uitvoerregels die met `⚠` en een spatie beginnen,
   vóór de lijst; een groene gate zonder zulke regels toont niets extra.
-- **tests-naar-vermogen/AC-9** — Op de head van de bouw-PR zijn de CI-jobs `gate:fast (test-1)`, `gate:fast (test-2)`,
+- **tests-naar-vermogen/AC-9** — Vervallen door ADR 0100 (procesbewijs is geen acceptatiecriterium). Was: Op de head van de bouw-PR zijn de CI-jobs `gate:fast (test-1)`, `gate:fast (test-2)`,
   `check:new-resource (test-1)` en `check:new-resource (test-2)` groen met AC-6 actief en 0 overgeslagen tests; dat bewijst ook
   dat `describe.skipIf(!bashAanwezig)` in `test/hooks/shell-glob-klasse-bash.test.ts` en de vier `test.skipIf(IS_ROOT)` in
   `test/hooks/laden-commondir.test.ts` in CI niet overslaan. Lukt dat niet, dan stopt de bouw en vraagt de eigenaar.
-- **tests-naar-vermogen/AC-10** — Docs in de bouw-PR: `docs/operations/testuitvoering.md` (de voorwaarde, de melding, rood in CI),
+- **tests-naar-vermogen/AC-10** — Vervallen door ADR 0100 (procesbewijs is geen acceptatiecriterium). Was: Docs in de bouw-PR: `docs/operations/testuitvoering.md` (de voorwaarde, de melding, rood in CI),
   `docs/operations/agent-doorloop.md` (lokaal groen met `⚠ overgeslagen` is geen bewijs; CI via `pnpm pr:verify`),
   `docs/operations/sandbox-bewijs.md` (geen geneste kooi in de sandbox) en `CHANGELOG.md`. De randgevalregel in
   `docs/template/specs/kooi.md` staat er sinds de besluit-PR met de vormen van AC-3 al; de bouw-PR raakt `kooi.md` niet.

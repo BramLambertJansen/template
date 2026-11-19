@@ -184,7 +184,7 @@ Op stdout, na de toetsen:
   `test/rails/claude-sandbox-werkstraat.test.ts` en `test/rails/excluded-commands.test.ts` slagen. `.claude/gates.json` heeft
   `"scripts/kit/pr-resolve.mjs": { "besluit": "besluit-pr" }` en `.github/CODEOWNERS` is gelijk aan de uitvoer van
   `scripts/kit/codeowners.mjs` (`check-docs`).
-- **botgesprekken-sluiten/AC-12** — Bewijs, geen test; de uitvoer staat in de thread. (a) In de bouw-PR, na de push:
+- **botgesprekken-sluiten/AC-12** — Vervallen door ADR 0100 (procesbewijs is geen acceptatiecriterium). Was: Bewijs, geen test; de uitvoer staat in de thread. (a) In de bouw-PR, na de push:
   `pnpm pr:resolve <nr>` van de hoofdsessie op de bouw-PR stopt met exit 1, `Geen gesprek gesloten (ADR 0098):` en als enige
   reden `raakt een beschermd pad (…)` (de PR raakt `scripts/` en `rails/`), zonder mutatie. Het rolhek draait dan uit het
   anker op `main` en kent de nieuwe regel nog niet: heeft de sessie de gewijzigde `.claude/settings.json` geladen, dan geeft

@@ -79,12 +79,12 @@ proef: `✗ kooi: de proef schreef buiten de werkmap; het commando is niet uitge
   plaats van alleen `bwrap … true`. De job `gate:fast` in `.github/workflows/ci.yml` installeert altijd `bubblewrap` en laadt
   een AppArmor-profiel dat alleen `/usr/bin/bwrap` een user-namespace geeft, vóór `pnpm gate:fast`; de eigenaar pusht die
   workflowwijziging. `docs/ENVIRONMENT.md` noemt bubblewrap als vereiste voor `gate:fast`.
-- **kooi/AC-8** — Regels. Het regelboek krijgt in §11 **R-TOOL-03**: een commando dat buiten zijn werkmap kan verwijderen of
+- **kooi/AC-8** — Vervallen door ADR 0100 (procesbewijs is geen acceptatiecriterium). Was: Regels. Het regelboek krijgt in §11 **R-TOOL-03**: een commando dat buiten zijn werkmap kan verwijderen of
   overschrijven en dat niet letterlijk voor dit moment is geschreven (een corpusrij, een fragment uit een bestand, gegenereerd),
   of een destructief experiment, draait alleen via de kooi (`inKooi` of `node scripts/kit/kooi.mjs`); een werkmap als
   afscherming telt niet; dat geldt ook buiten de repository en in een cloudsessie (0072). `AGENTS.md` krijgt die regel als één
   zin onder Repo en grenzen. `Afgedwongen door:` van §11 noemt de lintregel en de kooitest.
-- **kooi/AC-9** — Volgorde. De bouw-PR meet eerst of de kooi binnen de sandbox van Claude Code (genest) werkt. Lukt dat niet,
+- **kooi/AC-9** — Vervallen door ADR 0100 (procesbewijs is geen acceptatiecriterium). Was: Volgorde. De bouw-PR meet eerst of de kooi binnen de sandbox van Claude Code (genest) werkt. Lukt dat niet,
   dan stopt de bouw en komt er eerst een besluit-PR; R-TOOL-02 verandert niet zonder besluit.
 
 ## Randgevallen

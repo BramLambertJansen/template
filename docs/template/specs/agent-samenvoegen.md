@@ -72,7 +72,7 @@ steekproefregel), bij een reden exit 1 met `Geen merge (ADR 0069):` en per reden
   tokenscript is verwijderd; in de spec `templateregime` zijn templateregime/AC-1, -6 en -14 en het deel van templateregime/AC-7 over de
   inhoudstoets gemarkeerd als vervallen door ADR 0093. Eigenaarakkoord voor het verwijderen van die tests via deze spec
   (R-TEST-02).
-- **agent-samenvoegen/AC-7** — Bewijs na de merge, in de eerste PR daarna zonder beschermd pad: de hoofdsessie opent hem onder
+- **agent-samenvoegen/AC-7** — Vervallen door ADR 0100 (procesbewijs is geen acceptatiecriterium). Was: Bewijs na de merge, in de eerste PR daarna zonder beschermd pad: de hoofdsessie opent hem onder
   het account van de eigenaar en voegt hem bij groene checks samen met `pnpm pr:merge`; de uitvoer staat in de thread. En op
   een PR met een beschermd pad weigert het script met de reden uit AC-3; die uitvoer staat in die PR. Vooraf sluit de
   hoofdsessie proef-PR #795 zonder merge.

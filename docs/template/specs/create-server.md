@@ -53,7 +53,7 @@ De core-test (`src/core/api/server/compose.test.ts`) gebruikt nagebootste `parts
 - **create-server/AC-7**: Zonder `WEB_DIR` is de app die `start()` doorgeeft de API; met `WEB_DIR` (een tijdelijke map) serveert hij een bestand uit die map en blijft `/api/health` de API (via `app.fetch`, zonder poort).
 - **create-server/AC-8**: `start()` roept `parts.startServer` aan met `host` = `API_HOST`, `port` = `API_PORT` en `shutdownTimeoutMs` = `SHUTDOWN_TIMEOUT_MS`; `onStopped()` roept `parts.closeDatabase` en `auth.closePool` beide aan.
 - **create-server/AC-9**: Core importeert niets uit de app (`pnpm ratchet`); `src/core/api/server/compose.ts` importeert `#core/api/db` niet (een test of dependency-cruiser-regel faalt als dat wel gebeurt).
-- **create-server/AC-10**: Alle bestaande tests blijven ongewijzigd groen. Dat de echte onderdelen in `runServer` goed zijn aangesloten, bewijzen `pnpm ui:check` (e2e tegen de echte server, met inloggen, uitnodigen en de dev-login) en de job `image`; dat kan geen unit-test.
+- **create-server/AC-10** — Vervallen door ADR 0100 (procesbewijs is geen acceptatiecriterium). Was: Alle bestaande tests blijven ongewijzigd groen. Dat de echte onderdelen in `runServer` goed zijn aangesloten, bewijzen `pnpm ui:check` (e2e tegen de echte server, met inloggen, uitnodigen en de dev-login) en de job `image`; dat kan geen unit-test.
 - **create-server/AC-11**: Een ESLint-regel (`no-restricted-imports` op de namen `pingDatabase` en `closeDatabase`) weigert een import van die twee buiten `src/core/api/server.ts` en `src/core/api/db/**`; een fixture-test laat zien dat een import elders faalt en dat de toegestane plekken slagen.
 
 ## Raakt ook
