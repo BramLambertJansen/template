@@ -9,7 +9,7 @@ Herzien: 2026-11-09 (#634): punt 3, gewijzigd door [0086](0086-aangehaalde-hered
 Herzien: 2026-11-12 (#705): punt 2: de effecttoets is weg (ADR 0091 punt 1)
 
 Herzien: 2026-11-14 (#714): ingekort tot wat nog geldt na ADR 0091; de puntnummers zijn ongewijzigd, de oude tekst staat in git
-Herzien: 2026-11-19: verwijzingen naar verwijderde documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg).
+Herzien: 2026-11-19: verwijzingen naar verwijderde documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg)
 
 Wijzigt [0082](0082-zelfladend-sandbox-en-leeslijst.md) punt 2 en 4.
 Drempel: A3 (een grens van het besturingssysteem vervalt en een vangnet wordt smaller) en A4. Aanleiding: melding van de

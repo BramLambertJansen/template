@@ -7,7 +7,7 @@ in plaats van schrijfvormen ([0082](0082-zelfladend-sandbox-en-leeslijst.md))
 Herzien: 2026-11-12 (#705): punt 3, 4 en 6: de toets vooraf wordt niet verder uitgekleed, want de toets op effect is weg (ADR 0091 punt 3)
 
 Herzien: 2026-11-14 (#714): ingekort tot wat nog geldt na ADR 0091; de puntnummers zijn ongewijzigd, de oude tekst staat in git
-Herzien: 2026-11-19: verwijzingen naar verwijderde documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg).
+Herzien: 2026-11-19: verwijzingen naar verwijderde documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg)
 
 Wijzigt in spec rolhek-lezen AC-2 en AC-5 het `--output`-verbod (voortaan op effect); vult
 [0045](0045-railwerk.md) aan. Drempel: A3 (een check vooraf vervalt; de controle verschuift naar achteraf) en A4. Uitwerking:

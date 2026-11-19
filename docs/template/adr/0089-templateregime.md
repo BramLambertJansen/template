@@ -13,7 +13,7 @@ Herzien: 2026-11-12 (#705): punt 9 en 10: de effecttoets wacht niet op de identi
 Herzien: 2026-11-17 (#776): punt 2: een tokenscript zonder ververs-proces staat in de repo (`scripts/kit/agent-token.mjs`, spec agent-token (vervallen)), omdat een script buiten de repo bij een herstart verdween (leerpunt #754); de eigenaar draait het buiten de sandbox vanaf `main`, nooit uit een werkmap van de agent (eigenaarbesluit 2026-11-17)
 
 Herzien: 2026-11-18 (#796): gewijzigd door [0093](0093-agent-onder-eigenaaraccount.md) punt 1 tot en met 6: punt 2 vervalt voor de App, het token, de review van een code-eigenaar in de ruleset en de bypass (de agent werkt onder het account van de eigenaar; de ruleset eist een PR en groene checks); punt 5, de inhoudstoets van `pnpm pr:merge` is terug als padtoets; punt 9 en 10, de identiteitsregels van het rolhek blijven; Gevolgen: `pnpm pr:merge` blijft de enige route en de noodschakelaar `merge: eigenaar` blijft, en een app heeft geen App of installatie nodig
-Herzien: 2026-11-19: verwijzingen naar verwijderde documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg).
+Herzien: 2026-11-19: verwijzingen naar verwijderde documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg)
 
 Wijzigt [0039](0039-stack-provider-neutraal-en-toolchain.md) punt 8, [0040](0040-template-app-en-grens-core-app.md) punt 4, 8,
 16 en 17, [0045](0045-railwerk.md) punt 10, 16, 17, 18, 19, 20, 21, 22 en 24, [0046](0046-werkstraat-en-beslisroute.md) punt
