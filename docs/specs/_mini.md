@@ -40,7 +40,7 @@ Per regel een bestaand pad uit `docs/gouden-pad.md` (accountbeheer) en wat je ov
 ## Acceptatiecriteria
 
 Randgevallen zijn ook criteria. Elk criterium eindigt met `Toets:` en het testbestand dat `<namespace>/AC-n` noemt, met
-`(nieuw)` erachter zolang het niet bestaat; de bouw-PR haalt `(nieuw)` weg, dan toetst `check-docs` dat het pad bestaat en dat een test de naam noemt. Is
+`(nieuw)` erachter zolang het niet bestaat; de bouw-PR haalt `(nieuw)` weg, dan toetst `check-docs` dat het pad bestaat en dat een test de naam noemt. Een nieuwe of gewijzigde AC zonder geldige `Toets:` maakt `pnpm ratchet` meteen rood (spec ac-toets). Is
 het bewijs alleen een CI-uitslag of een stap in de PR, dan is het geen criterium maar hoort het in de PR-beschrijving.
 
 - **<namespace>/AC-1** — Gegeven … wanneer … dan … Toets: `test/<pad>.test.ts` (nieuw)

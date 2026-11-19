@@ -30,7 +30,8 @@ Stappen:
    andere kop die van toepassing is; een kop die niet van toepassing is laat je weg. Teksten letterlijk; acceptatiecriteria toetsbaar: elk criterium eindigt met `Toets:` en het testbestand dat
    `<namespace>/AC-n` noemt, met `(nieuw)` erachter zolang het niet bestaat; de bouw-PR haalt `(nieuw)` weg. Is het bewijs
    alleen een CI-uitslag of een stap in de PR, dan is het geen criterium: zet het in het Testplan (mini-spec: de
-   PR-beschrijving). Vanaf `gebouwd` faalt `check-docs` op een AC zonder zo'n test.
+   PR-beschrijving). Vanaf `gebouwd` faalt `check-docs` op een AC zonder zo'n test; een nieuwe of gewijzigde AC zonder geldige `Toets:`
+   maakt `pnpm ratchet` meteen rood (spec ac-toets).
 3. "Kopieer de vorm van": per regel een bestaand pad uit `docs/gouden-pad.md` (accountbeheer) en wat je overneemt.
    "Hergebruik en UX": noem de bestaande componenten (`node scripts/kit/feiten.mjs componenten`); een nieuw component alleen met reden.
 4. Routes en foutcodes: hergebruik bestaande codes uit de feiten; een nieuwe code krijgt een tekst. Leg voor iedere
@@ -42,7 +43,7 @@ Stappen:
    - route-, permissie-, tabel- en foutcodenamen zijn gelijk over de hele spec;
    - elke padparameter heeft een vorm en contractschema; ongeldige invoer bereikt geen externe aanroep;
    - een voor-stap verbergt geen rol- of MFA-fout; gecombineerde fouten hebben een verwachte foutcode en test;
-   - elk acceptatiecriterium kan falen en noemt achter `Toets:` het testbestand dat zijn id noemt;
+   - elk acceptatiecriterium kan falen en noemt achter `Toets:` het testbestand dat zijn id noemt (`pnpm ratchet`, ac-toets);
    - "Raakt ook" noemt de checks die de spec raakt: `check:migrations`, `check:secdef`, `test:db`/policies, `test/security/resources.ts`, permissietest per verboden rol;
    - bij een koppeling (skill `nieuwe-koppeling`): elk kenmerk gebouwd volgens `node scripts/kit/feiten.mjs koppelingen`, elke aanroep met de zes velden uit "Koppeling", alleen het app-ADR noemt de partner;
    - geen `⚠ open` bij `goedgekeurd`: los de vraag eerst op met de eigenaar, of geef haar een `Aanbeveling:`.
