@@ -8,8 +8,8 @@ namespace: agents-leveren
 ## Doel
 
 Elke subagentrun levert een rapport binnen een vast budget, de werkstraat leest geldige frontmatter, de developer laadt de
-juiste skill, de reviewer krijgt zijn invoer in één bestand, en `pnpm meting` toont weigeringen, tokens en toolcalls per rol,
-zodat de doelen uit §8 van het [overnameplan](../../reviews/2026-11-18-overnameplan-agentic.md) meetbaar worden (roadmap
+juiste skill, de reviewer krijgt zijn invoer in één bestand, en `pnpm meting` toont weigeringen, runs en toolcalls per rol
+(tokens per rol volgen in een eigen besluit-PR, OV-2), zodat de doelen uit §8 van het [overnameplan](../../reviews/2026-11-18-overnameplan-agentic.md) meetbaar worden (roadmap
 "Overnameplan golf 1"; leerpunten #792, #676, #664).
 
 ## Rollen en wie wat ziet
@@ -45,10 +45,12 @@ geteld worden (OV-6).
 
 ## Kopieer de vorm van
 
-- `rails/hooks/lib/meting.mjs` — `regel()` en `agentSleutel()`: alleen tellingen en vaste sleutels opslaan. `tok` en `tc`
-  volgen die regel.
-- `scripts/kit/meting.mjs` — `weigeringen()`, `tel()`, `prTabel()` en `prTabelTekst()`. De tellingen per rol komen naast
-  `weigeringenPerSleutel`.
+- `rails/hooks/lib/meting.mjs` — `regel()` en `agentSleutel()`: alleen tellingen en vaste sleutels opslaan. `tc` volgt die
+  regel.
+- `scripts/kit/meting.mjs` — `parse()`, `weigeringen()`, `tel()`, `prTabel()` en `prTabelTekst()`. `parse()` en de typedef
+  `Regel` geven nu ook `a` en `tc` door; `a` is vrije tekst en komt alleen in Maps en `object()`, zoals de andere sleutels;
+  `tc` geldt aan de leeskant alleen als geheel getal ≥ 0 (oude of met de hand gemaakte meetbestanden). De tellingen per rol
+  komen naast `weigeringenPerSleutel`.
 - `test/rails/meting-overzicht.test.ts` — fixtures als `.jsonl` in een tijdelijke `METING_DIR`, getoetst met `toMatchObject`.
 - `test/hooks/agents.test.ts` — frontmatter van alle agents en skills lezen met `readdirSync`; sinds #850 ook `yamlFouten()`.
 - `scripts/kit/leespad.mjs` — `basisVan`: de basis als `git merge-base origin/main HEAD`, git via `execFileSync` zonder shell.
@@ -111,46 +113,53 @@ Punt 5 ("Regels uit AGENTS.md: …") wordt `5. Nooit pushen, mergen of rebasen; 
 
 - Tekstuitvoer per sessie en per branch, onder de regel met `weigeringen`, alleen als er iets te tellen is:
   - `  weigeringen per rol: <rol> <n>, <rol> <n>`, aflopend op aantal en daarna op naam;
-  - `  subagents: <rol> <runs> runs, <tokens> tokens, <toolcalls> toolcalls; <rol> …`, met `(<n> zonder telling)` achter een
-    rol als er zulke runs zijn.
-- In `--pr-tabel` komen twee rijen bij: `Weigeringen per rol` (waarde `<rol> <n> · <rol> <n>`, of `0`) en `Tokens per rol`
-  (waarde `<rol> <tokens> (<runs> runs) · …`, of `onbekend` zonder enige telling).
+  - `  subagents: <rol> <runs> runs, <toolcalls> toolcalls; <rol> …`, aflopend op runs en daarna op naam, met
+    `(<n> zonder telling)` achter een rol als er zulke runs zijn.
+- In `--pr-tabel` komen twee rijen bij, na `Weigeringen (bovengrens)`: `Weigeringen per rol` (waarde
+  `<rol> <n> · <rol> <n>` in dezelfde volgorde, of `0`) en `Subagents per rol` (waarde `<rol> <runs> runs, <toolcalls> toolcalls · …`
+  in dezelfde volgorde als de tekstregel, of `0` zonder runs).
+- JSON: `weigeringenPerRol` (object rol → aantal) en `subagentsPerRol` (object rol → `{ runs, toolcalls, zonderTelling }`)
+  staan per sessie en per branch, naast `weigeringenPerSleutel`, en onder `prTabel`.
+- Zonder telling: een run (`PostToolUse` of `PostToolUseFailure` van `Agent`) zonder `tc`. `toolcalls` is de som van de
+  aanwezige `tc`; een run zonder `tc` telt niet als nul mee, alleen in `zonderTelling`.
 - In `HELP` komen bij de teldefinities:
   - `weigeringen per rol: dezelfde weigeringen, naar de rol (a) van het geweigerde event; zonder rol: onbekend.`
-  - `subagents per rol: PostToolUse en PostToolUseFailure van Agent of Task, naar het subagenttype; tokens en toolcalls uit totalTokens en totalToolUseCount van de tool_response; ontbreekt een telling, dan zonder telling, geen nul.`
+  - `subagents per rol: PostToolUse en PostToolUseFailure van Agent, naar het subagenttype; toolcalls uit totalToolUseCount van de tool_response; ontbreekt die (een run op de achtergrond, een fout), dan zonder telling, geen nul.`
 
 ## Acceptatiecriteria
 
 **PR-1: meting per rol**
 
 - **agents-leveren/AC-1** — Gegeven een `PostToolUse`-payload met `tool_name` `Agent`, `tool_input.subagent_type`
-  `reviewer` en een `tool_response` met `totalTokens: 1234`, `totalToolUseCount: 17` en tekstvelden, wanneer `regel()` hem
-  verwerkt, dan heeft de regel `k: 'agent reviewer'`, `tok: 1234` en `tc: 17`, en geen ander veld uit `tool_response`. Is een
-  telling geen geheel getal ≥ 0, dan ontbreekt dat veld. Een andere tool of een ander event krijgt nooit `tok` of `tc`.
-  Toets: `test/hooks/meting-per-rol.test.ts` (nieuw)
-- **agents-leveren/AC-2** — Gegeven meetbestanden met weigeringen (een `PermissionDenied`, en een `PreToolUse` zonder Post)
-  van de rollen `reviewer` (2), `hoofdsessie` (1) en een regel zonder `a` (1), wanneer `pnpm meting --json` draait, dan is
-  `weigeringenPerRol` van die sessie `{ reviewer: 2, hoofdsessie: 1, onbekend: 1 }`. De tekstuitvoer bevat
+  `reviewer` en een `tool_response` met `totalToolUseCount: 17`, `totalTokens: 1234` en tekstvelden, wanneer `regel()` hem
+  verwerkt, dan heeft de regel `k: 'agent reviewer'` en `tc: 17`, en geen ander veld uit `tool_response` (ook geen tokens).
+  Is `totalToolUseCount` geen geheel getal ≥ 0 of ontbreekt hij (een start op de achtergrond), dan ontbreekt `tc`. Een andere
+  tool of een ander event krijgt nooit `tc`. Toets: `test/hooks/meting-per-rol.test.ts` (nieuw)
+- **agents-leveren/AC-2** — Gegeven meetbestanden met een `PermissionDenied` van `reviewer`, een `PreToolUse` zonder Post van
+  `reviewer`, een `PreToolUse` en een `PermissionDenied` met dezelfde `id` van `hoofdsessie` (samen één weigering) en een
+  `PermissionDenied` zonder `a`, wanneer `pnpm meting --json` draait, dan is `weigeringenPerRol` van die sessie en van die
+  branch `{ reviewer: 2, hoofdsessie: 1, onbekend: 1 }`. De tekstuitvoer bevat
   `  weigeringen per rol: reviewer 2, hoofdsessie 1, onbekend 1`. Zonder weigeringen ontbreekt die regel.
   Toets: `test/rails/meting-per-rol.test.ts` (nieuw)
-- **agents-leveren/AC-3** — Gegeven twee `PostToolUse`-regels van `agent reviewer` (`tok` 100000 en 140000, `tc` 20 en 28),
-  één `PostToolUseFailure` van `agent reviewer` zonder telling en één `PostToolUse` van `agent developer` met `tok` 50000 en
-  `tc` 30, wanneer `pnpm meting --json` draait, dan is `subagentsPerRol`
-  `{ reviewer: { runs: 3, tokens: 240000, toolcalls: 48, zonderTelling: 1 }, developer: { runs: 1, tokens: 50000, toolcalls: 30, zonderTelling: 0 } }`.
-  De tekstuitvoer bevat
-  `  subagents: reviewer 3 runs, 240000 tokens, 48 toolcalls (1 zonder telling); developer 1 runs, 50000 tokens, 30 toolcalls`.
+- **agents-leveren/AC-3** — Gegeven twee `PostToolUse`-regels van `agent reviewer` (`tc` 20 en 28), één
+  `PostToolUseFailure` van `agent reviewer` zonder `tc`, één `PostToolUse` van `agent developer` met `tc` 30 en één
+  `PreToolUse` van `agent developer`, wanneer `pnpm meting --json` draait, dan is `subagentsPerRol` van die sessie en van die
+  branch `{ reviewer: { runs: 3, toolcalls: 48, zonderTelling: 1 }, developer: { runs: 1, toolcalls: 30, zonderTelling: 0 } }`.
+  De tekstuitvoer bevat `  subagents: reviewer 3 runs, 48 toolcalls (1 zonder telling); developer 1 runs, 30 toolcalls`.
   Een `PreToolUse` van een subagent telt niet als run. Toets: `test/rails/meting-per-rol.test.ts` (nieuw)
 - **agents-leveren/AC-4** — Gegeven de meetbestanden uit AC-2 en AC-3 op één branch, wanneer
-  `pnpm meting --pr-tabel --branch <naam>` draait, dan bevat de tabel de rijen `| Weigeringen per rol | reviewer 2 · hoofdsessie 1 · onbekend 1 |`
-  en `| Tokens per rol | reviewer 240000 (3 runs) · developer 50000 (1 runs) |`. Met `--json` heeft `prTabel` de velden
-  `weigeringenPerRol` en `subagentsPerRol`. Zonder enige `tok` is de waarde van de tokenrij `onbekend`.
+  `pnpm meting --pr-tabel --branch <naam>` draait, dan volgen na `| Weigeringen (bovengrens) | … |` de rijen
+  `| Weigeringen per rol | reviewer 2 · hoofdsessie 1 · onbekend 1 |` en
+  `| Subagents per rol | reviewer 3 runs, 48 toolcalls · developer 1 runs, 30 toolcalls |`. Met `--json` heeft `prTabel` de
+  velden `weigeringenPerRol` en `subagentsPerRol`. Zonder weigeringen of runs is de waarde van die rij `0`.
   Toets: `test/rails/meting-per-rol.test.ts` (nieuw)
 
 **PR-2: punt 1a** (gebouwd in #850; de toetsen voor AC-7 en AC-8 komen in PR-3)
 
 - **agents-leveren/AC-5** — Gegeven een frontmatterfixture met een niet-gequote waarde die `: ` of ` #` bevat, een waarde die
   met een YAML-indicator begint of een quote die niet sluit, wanneer `yamlFouten()` hem leest, dan geeft het per regel een
-  melding met `<pad>:<regel>`. Dezelfde waarde tussen dubbele quotes geeft geen melding.
+  melding met `<pad>:<regel>`. Dezelfde waarde tussen dubbele quotes geeft geen melding. PR-3 zet `agents-leveren/AC-5` en
+  `agents-leveren/AC-6` in de testnamen (alleen de naam; R-TEST-02, reden: AC-dekking).
   Toets: `test/hooks/agents.test.ts`
 - **agents-leveren/AC-6** — Gegeven elke `.claude/agents/*.md` en elke `.claude/skills/*/SKILL.md`, wanneer `yamlFouten()`
   erop draait, dan is er geen melding. Vóór #850 was de toets rood op `.claude/agents/architect.md:3` en
@@ -218,9 +227,10 @@ Punt 5 ("Regels uit AGENTS.md: …") wordt `5. Nooit pushen, mergen of rebasen; 
 | Situatie | Gedrag | Foutcode |
 |---|---|---|
 | Oude meetregel zonder `a` | rol `onbekend` (AC-2) | n.v.t. |
-| `tool_response` zonder `totalTokens` (andere Claude Code-versie) | geen `tok`; de run telt als `zonderTelling`, niet als nul (AC-1, AC-3) | n.v.t. |
+| `tool_response` zonder `totalToolUseCount` (een start op de achtergrond, een fout, een andere Claude Code-versie) | geen `tc`; de run telt als `zonderTelling`, niet als nul (AC-1, AC-3). De echte kosten van achtergrondruns volgen pas met de SubagentStop-route (OV-2) | n.v.t. |
+| `totalTokens` in `tool_response` | niet opgeslagen: telt alleen de laatste aanvraag van de subagent, niet de run (OV-2) | n.v.t. |
 | Agent-aanroep zonder geldig `subagent_type` | sleutel `agent`, rol `onbekend` (bestaande `agentSleutel`) | n.v.t. |
-| `tool_response` met prompt- of antwoordtekst | wordt nooit opgeslagen; alleen de twee gehele getallen (AC-1) | n.v.t. |
+| `tool_response` met prompt- of antwoordtekst | wordt nooit opgeslagen; alleen het gehele getal `tc` (AC-1) | n.v.t. |
 | Frontmatter in geldige YAML buiten de subset (bijv. een blokscalar `>`) | geweigerd; de subset is bewust strenger dan YAML (AC-5, OV-1) | n.v.t. |
 | Nieuwe skill zonder rol voor de developer | rood tot hij in de router of in de uitzonderingen staat (AC-9) | n.v.t. |
 | Reviewer heeft na 25 toolcalls nog niet alles gezien | levert het rapport met wat niet getoetst is; de hoofdsessie beslist over een vervolgronde | n.v.t. |
@@ -246,8 +256,17 @@ Punt 5 ("Regels uit AGENTS.md: …") wordt `5. Nooit pushen, mergen of rebasen; 
 | alle | `test/**` | `gate` | — |
 
 Niet geraakt: `.claude/settings.json`, `.claude/hooks/**`, `.claude/skills/**`, `.claude/gates.json`, `package.json` en
-`pnpm-lock.yaml`. Kiest de eigenaar bij OV-1 de `yaml`-dependency of bij OV-2 de SubagentStop-route, dan raakt de PR wel
-`altijdVragen`-paden.
+`pnpm-lock.yaml`. De SubagentStop-route voor tokens (OV-2) raakt `.claude/settings.json` (`altijdVragen`) en is daarom een
+eigen besluit-PR buiten deze spec.
+
+**Bestaande tests die PR-1 wijzigt** (R-TEST-02; reden: deze spec voegt rijen en JSON-velden toe aan `pnpm meting`)
+
+- `test/rails/meting-zonder-externe-review.test.ts`: de tekstuitvoer van `--pr-tabel` krijgt rij 6 en 7
+  (`Weigeringen per rol`, `Subagents per rol`) en `prTabel` in `--json` de velden `weigeringenPerRol` en `subagentsPerRol`;
+  de testnamen "precies de vijf" worden "precies de zeven". De afwezigheid van de externe reviewdienst blijft getoetst.
+- `test/rails/meting-volume.test.ts` (meting-volume AC-3): de verwachte sessie-JSON krijgt `weigeringenPerRol` en
+  `subagentsPerRol`; de bestaande tellingen blijven gelijk.
+- Een test die verder de volledige uitvoer van `pnpm meting` letterlijk pint, krijgt dezelfde toevoeging met deze reden.
 
 **Checks en metingen**
 
@@ -266,8 +285,8 @@ Niet geraakt: `.claude/settings.json`, `.claude/hooks/**`, `.claude/skills/**`, 
 1. De `SubagentStop`-matcher staat op `.claude/settings.json:176`, niet op `:174`; `:174` is de `Stop`-hook. De matcher
    `developer|tester|reviewer` dekt architect en docs inderdaad niet (golf 2).
 2. De meting-store legt de rol al per event vast (`a`, `rails/hooks/lib/meting.mjs:133`). Voor weigeringen per rol is dus
-   alleen een telling in `scripts/kit/meting.mjs` nodig, en die werkt ook op bestaande meetbestanden. Tokens en toolcalls legt
-   de store nergens vast. De meethook staat niet op `SubagentStop`.
+   een telling in `scripts/kit/meting.mjs` nodig (met `a` door `parse()`), en die werkt ook op bestaande meetbestanden.
+   Tokens en toolcalls legt de store nergens vast. De meethook staat niet op `SubagentStop`.
 3. De niet-gequote `description` in `architect.md:3` en `docs.md:3` klopt. De andere drie agents en alle negen skills parsen
    met de regels van AC-5.
 4. `developer.md` heeft geen `disallowedTools` en dus ook `mcp__*`. Tester en docs sluiten `mcp__*` uit, maar hebben de
@@ -283,6 +302,8 @@ Niet geraakt: `.claude/settings.json`, `.claude/hooks/**`, `.claude/skills/**`, 
 
 - Het statuscontract, de SubagentStop-matcher voor architect en docs en het reviewrapport als schema (golf 2).
 - Hookhandhaving van het budget, en een lagere `maxTurns` (OV-7).
+- Tokens per rol: via een `SubagentStop`-hook die het transcript van de subagent optelt, in een eigen besluit-PR
+  (`.claude/settings.json`, OV-2).
 - Tokens van de hoofdsessie. De nulmeting telt die met de hand, zoals in #664.
 - `pnpm meting --trend` per rol.
 - De doelcijfers uit §8 als check: die zijn metingen over tien PR's, geen gedrag (ADR 0100).
@@ -298,10 +319,12 @@ Niet geraakt: `.claude/settings.json`, `.claude/hooks/**`, `.claude/skills/**`, 
 - Nulmeting, in de beschrijving van PR-1 na de bouw: `pnpm meting --trend`, `pnpm meting --pr-tabel` voor de laatste tien
   gemergde branches waarvan meetdata bestaan, weigeringen per rol uit de bestaande meetbestanden, en de handtelling van tokens
   uit #664 (277k van 634k voor de reviewer).
-- Vóór het bouwen van PR-1: de hoofdsessie legt één echte `PostToolUse`-payload van een Agent-aanroep naast AC-1 (veldnamen
-  `totalTokens` en `totalToolUseCount`) en noemt de Claude Code-versie in de PR (OV-2).
+- Payload (OV-2, 2026-11-19): de hooks-documentatie van Claude Code noemt in `tool_response` van de Agent-tool
+  `totalToolUseCount`, `totalTokens`, `totalDurationMs` en `usage`; `totalTokens` en `usage` dekken alleen de laatste
+  aanvraag, en een start op de achtergrond geeft geen totalen. De PR noemt de Claude Code-versie; de echte veldnaam blijkt uit
+  de eerste meetregels na de merge (een run zonder `tc` op de voorgrond is dan een signaal).
 - Na golf 1: de doelen uit §8 van het plan over de volgende tien PR's (0 runs zonder rapport, reviewerweigeringen < 25 %,
-  < 120k tokens per review). Dit is een meting in een PR-beschrijving of leerpunt, geen AC.
+  < 120k tokens per review, zodra de SubagentStop-route uit OV-2 bestaat). Dit is een meting in een PR-beschrijving of leerpunt, geen AC.
 
 ## Open vragen
 
@@ -309,10 +332,11 @@ Niet geraakt: `.claude/settings.json`, `.claude/hooks/**`, `.claude/skills/**`, 
   `test/hooks/agents.test.ts`) — Frontmattertoets: een eigen strikte subset, of de `yaml`-bibliotheek
   als devDependency (drempel A2: ADR, akkoord, `package.json` en `pnpm-lock.yaml`). Aanbeveling: de eigen subset. Die vangt
   het echte defect, vraagt geen dependency en is strenger dan YAML. Dat laatste is voor vijf agents en negen skills geen last.
-- **OV-2 ✅ besloten** (eigenaar 2026-11-19: de aanbeveling) — Bron van tokens en toolcalls: de `tool_response` van `PostToolUse` op de Agent-tool (alleen
-  `rails/hooks/lib/meting.mjs`), of `SubagentStop` met een som uit het transcript (`.claude/settings.json`, `altijdVragen`).
-  Aanbeveling: de `tool_response`, na de payloadcontrole uit het Testplan. Ontbreken de velden in de gepinde versie, dan komt
-  de spec eerst terug bij de eigenaar.
+- **OV-2 ✅ besloten** (eigenaar 2026-11-19: splitsen) — Bron van tokens en toolcalls: de `tool_response` van `PostToolUse`
+  op de Agent-tool (alleen `rails/hooks/lib/meting.mjs`), of `SubagentStop` met een som uit het transcript
+  (`.claude/settings.json`, `altijdVragen`). De payloadcontrole liet zien dat `totalTokens` alleen de laatste aanvraag telt en
+  dat een start op de achtergrond geen totalen heeft. Besluit: PR-1 meet weigeringen, runs en toolcalls per rol uit
+  `PostToolUse`; tokens per rol volgen via `SubagentStop` en het transcript in een eigen besluit-PR.
 - **OV-3 ✅ besloten** (eigenaar 2026-11-19: de aanbeveling) — Geen Agent-tool: alleen voor de bouwers (developer, tester), zoals het plan zegt, of voor alle vijf rollen.
   Aanbeveling: alle vijf. Architect en reviewer hebben hem nu al niet. Alleen de hoofdsessie start subagents, en een geneste
   docs-run is net zo onzichtbaar voor de meting.
