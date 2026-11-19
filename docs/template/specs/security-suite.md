@@ -39,10 +39,11 @@ De suite ziet alleen testgebruikers; ze toont niets aan eindgebruikers.
 
 | Fixture | Betekenis | Hoe gemaakt |
 |---|---|---|
-| `A` | gebruiker met rol `user`, sessiesterkte `password` | `account('user')` uit `test/api/account-harness.ts` (echte uitnodiging, Better Auth, Mailpit) |
-| `B` | tweede gebruiker met rol `user`, ander account | idem |
-| `adminMfa` | `admin`, na TOTP-verificatie (`session_strength = mfa`) | `account('admin')` + `enableTotp()` |
-| `adminZonderMfa` | `admin`, alleen wachtwoord | `account('admin')` |
+| `A` | gebruiker met rol `user` (standaard), sessiesterkte `password`; `A(rol)` voor een andere rol uit het register, met MFA als de rol in `MFA_ROLLEN` staat | `account('user')` uit `test/api/account-harness.ts` (echte uitnodiging, Better Auth, Mailpit) |
+| `B` | tweede gebruiker met dezelfde rol, ander account | idem |
+| `<rol>` | per rol uit `roles.names` buiten `MFA_ROLLEN` (in de template `user`), alleen wachtwoord | `account('<rol>')` |
+| `<rol>Mfa` | per rol uit `MFA_ROLLEN` (in de template `adminMfa`), na TOTP-verificatie (`session_strength = mfa`) | `account('<rol>')` + `enableTotp()` |
+| `<rol>ZonderMfa` | per rol uit `MFA_ROLLEN` (in de template `adminZonderMfa`), alleen wachtwoord | `account('<rol>')` |
 | `zonderRol` | ingelogd, geen rij in `user_roles` | `inviteUser` zonder `app.assign_role` |
 | `verlopen` | twee varianten: absoluut verlopen (`createdAt` > 7 dagen terug) en idle verlopen (`expiresAt` in het verleden) | absoluut: `ageSession()` uit dezelfde harness; idle: nieuwe helper `expireSession(token)` in `test/security/fixtures.ts` die `expiresAt` in het verleden zet. `ageSession()` verschuift alleen `createdAt`/`updatedAt` (`test/api/account-harness.ts:91-95`), terwijl Better Auth de idle-termijn afdwingt via `expiresAt` (`expiresIn`, `src/core/api/auth/options.ts:156-159`); de harness blijft ongewijzigd |
 | `geenSessie` | request zonder cookie | geen cookie |
@@ -161,8 +162,8 @@ Bestanden: `test/security/*.int.test.ts` (draaien in `pnpm test:db`, dus in `gat
 - **security/AC-1** — Gegeven het routeregister, wanneer de suite draait, dan wordt elke route uit `routes` geïtereerd en faalt de suite als het aantal iteraties niet gelijk is aan `routes.length`; een nieuwe `defineRoute` in `src/api/app.ts` doet zonder wijziging in de suite mee.
 - **security/AC-2** — Gegeven geen sessie (geen cookie), wanneer elke route wordt aangeroepen, dan is het antwoord `401 UNAUTHENTICATED` met precies `{ code, requestId }`.
 - **security/AC-3** — Gegeven een sessie die absoluut (> 7 dagen, `ageSession`) of idle (`expiresAt` verstreken, `expireSession`) is verlopen, wanneer elke route wordt aangeroepen, dan is het antwoord `401 UNAUTHENTICATED` en is er niets gewijzigd.
-- **security/AC-4** — Gegeven elke route, wanneer een actor wordt gebruikt die volgens de permissietabel niet is toegestaan (`user` voor een admin-permissie, `zonderRol` voor elke route), dan is het antwoord `403 FORBIDDEN` en is de handler niet uitgevoerd.
-- **security/AC-5** — Gegeven elke route waarvan de permissie aan `admin` is toegekend, wanneer `adminZonderMfa` haar aanroept, dan is het antwoord `403 MFA_REQUIRED`; met `adminMfa` is het antwoord op een admin-route met `GET` `200` of `404 NOT_FOUND` en anders rood met status en code (spec `suite-volgt-contract`, AC-11).
+- **security/AC-4** — Gegeven elke route, wanneer een actor wordt gebruikt die volgens de permissietabel niet is toegestaan (elke soort uit het register voor een permissie die de rol niet heeft, bijvoorbeeld `user` voor een admin-permissie, en `zonderRol` voor elke route; `ac4Gevallen`), dan is het antwoord `403 FORBIDDEN` en is de handler niet uitgevoerd.
+- **security/AC-5** — Gegeven elke route waarvan de permissie aan een beheerrol (een rol uit `MFA_ROLLEN`, in de template `admin`) is toegekend, wanneer `<rol>ZonderMfa` haar aanroept, dan is het antwoord `403 MFA_REQUIRED`; met `<rol>Mfa` is het antwoord op zo'n route met `GET` `200` of `404 NOT_FOUND` en anders rood met status en code (`ac5Gevallen`; spec `suite-volgt-contract`, AC-11 en ontwerp 7).
 - **security/AC-6** — Gegeven elke route met input, wanneer een onbekend veld, een ontbrekend verplicht veld, een verkeerd type per veld, kapotte JSON of een arraybody wordt gestuurd, dan is het antwoord `400 VALIDATION` en is de handler niet uitgevoerd; een body boven `MAX_BODY_BYTES` geeft `413 PAYLOAD_TOO_LARGE`.
 - **security/AC-7** — Gegeven elk foutantwoord uit AC-2 t/m AC-6 en elk databasefoutpad uit de probe-app (23505, 23503, 42501 en een onverwachte uitzondering), dan is de body precies `{ code, requestId }`, is `requestId` gelijk aan de `X-Request-Id`-header, is `code` een publieke code, en bevat het antwoord geen stacktrace, SQL, tabel- of constraintnaam.
 - **security/AC-8** — Gegeven elke owner-tabel in de catalogus (C1), wanneer `A` een rij maakt en `B` onder dezelfde app-rol `select`, `update` en `delete` probeert, dan raakt `B` 0 rijen, en is de rij van `A` ongewijzigd. De kolom voor de update-proef komt uit `sample.updateRij`, anders uit `sample.update`. Heeft de app-rol op geen enkele kolom UPDATE-recht, dan vervalt de update-proef met een melding en geeft een update door `A` en `B` `42501`; een niet vast te stellen recht is rood (spec `suite-volgt-contract`, AC-7 t/m AC-9).
@@ -182,10 +183,10 @@ Bestanden: `test/security/*.int.test.ts` (draaien in `pnpm test:db`, dus in `gat
 | `GET`/`DELETE` | input uit de querystring, niet uit een body; ongeldige query is dezelfde `VALIDATION` | `VALIDATION` |
 | Rate limit raakt de suite | Fixture-gebruikers worden niet voor alle routes hergebruikt; per routefamilie een verse gebruiker of een telbudget onder `RATE_LIMIT_MAX` | `RATE_LIMITED` (429) alleen als de suite zelf fout rekent: dan rood |
 | `duur`-routes (mail) | Alleen weigeringen worden aangeroepen; er gaat geen mail uit | n.v.t. |
-| AC-5 met `adminMfa` | Alleen op routes met `GET` (alleen-lezen transactie); goed is `200` of `404 NOT_FOUND`, elk ander antwoord (ook `400` of `429`, die vóór de MFA-controle komen) is rood; de positieve flow van schrijfroutes is de acceptatietest van de resource | n.v.t. |
+| AC-5 met `<rol>Mfa` (in de template `adminMfa`) | Alleen op routes met `GET` (alleen-lezen transactie); goed is `200` of `404 NOT_FOUND`, elk ander antwoord (ook `400` of `429`, die vóór de MFA-controle komen) is rood; de positieve flow van schrijfroutes is de acceptatietest van de resource | n.v.t. |
 | Sample niet af te leiden uit het zod-schema | Suite rood met aanwijzing; geen stille skip | n.v.t. |
 | Route die buiten `routes` bestaat (Better Auth `/api/auth/*`, `/api/health`, `/api/ready`, `/api/dev/login-as`) | Buiten deze suite: Better Auth heeft eigen tests (`test/auth/`); de publieke uitzonderingen zijn limitatief (framework §3) | n.v.t. |
-| Nieuwe rol (`ROLES`) | De rolmatrix itereert over `ROLES`; de suite dekt de nieuwe rol zonder wijziging | n.v.t. |
+| Nieuwe rol (`roles` uit `src/shared/roles.ts`) | De actorsoorten komen uit `roles.names` (`actorSoorten` in `test/security/fixtures.ts`); met de hand staat de rol in `PERMISSIE_ORACLE` bij `app.use` en bij elke permissie die hij krijgt, en een beheerrol in `MFA_ROLLEN`; `appUseVerschil` en `beheerVerschil` zijn rood met de rolnaam tot dat klopt (spec `suite-volgt-contract`, ontwerp 7) | n.v.t. |
 | Een tabel zonder eigenaar-kolom (`app.rate_limits`, `app.retention`) | Valt niet onder C1; wel onder C2 en C3 en de bestaande invarianten | n.v.t. |
 | Bewuste uitzondering (bijv. `app.audit_log` heeft eigen policies) | Op de uitzonderingenlijst in `db/tests/security.sql` met reden; ontbrekende reden is rood | n.v.t. |
 
