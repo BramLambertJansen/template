@@ -112,6 +112,7 @@ describe('ac-toets: tegen de merge-base', { timeout: 60_000 }, () => {
     const basis = { [SPEC]: spec('- **x/AC-1** — Oud.') };
     const zonder = repo(basis, { [SPEC]: spec('- **x/AC-1** — Oud.\n- **x/AC-2** — Nieuw, Toets: `pnpm test:unit`.') });
     expect(sleutels(zonder)).toEqual([`docs:ac-toets:${SPEC}:11:AC-2`]);
+    expect(acToetsUitGit(zonder, false)[0]?.message).toContain(`${SPEC}:11: AC-2`);
     expect(acToetsUitGit(zonder, false)[0]?.message).toContain('Toets:');
     const met = repo(basis, { [SPEC]: spec(`- **x/AC-1** — Oud.\n- **x/AC-2** — Nieuw. ${GELDIG} (nieuw)`) });
     expect(sleutels(met)).toEqual([]);
@@ -120,6 +121,8 @@ describe('ac-toets: tegen de merge-base', { timeout: 60_000 }, () => {
   test('ac-toets/AC-2: een ongewijzigde AC zonder Toets is groen, ook met andere witruimte of een merkteken', () => {
     const oud = '- **x/AC-1** — Leest `src/a.ts` en schrijft.';
     const herschikt = '- **x/AC-1** — Leest `src/a.ts`\n  (vervallen) en   schrijft.';
+    const voorbeeld = '- **x/AC-1** — Leest `src/a.ts` (voorbeeld) en schrijft.';
+    expect(sleutels(repo({ [SPEC]: spec(oud) }, { [SPEC]: spec(voorbeeld) }))).toEqual([]);
     expect(sleutels(repo({ [SPEC]: spec(oud) }, { [SPEC]: spec(herschikt) }))).toEqual([]);
     const anders = '- **x/AC-1** — Leest `src/a.ts` en verwijdert.';
     expect(sleutels(repo({ [SPEC]: spec(oud) }, { [SPEC]: spec(anders) }))).toEqual([`docs:ac-toets:${SPEC}:10:AC-1`]);
@@ -148,7 +151,7 @@ describe('ac-toets: tegen de merge-base', { timeout: 60_000 }, () => {
     expect(sleutels(repo({}, { [SPEC]: spec(onbekend) }))).toEqual([`docs:ac-toets:${SPEC}:10:AC-1`]);
   });
 
-  test('ac-toets/AC-4: een niet-getrackte spec telt pas na git add', () => {
+  test('ac-toets/AC-1: een niet-getrackte spec telt pas na git add', () => {
     const dir = repo({});
     schrijf(dir, { [SPEC]: spec('- **x/AC-1** — Nieuw.') });
     expect(sleutels(dir)).toEqual([]);

@@ -99,9 +99,13 @@ export function acToetsUitGit(root, inCi) {
     return inCi ? [{ key: 'docs:ac-toets:geen-basis', message: `${GEEN_BASIS} (ac-toets/AC-5)` }] : [];
   const getrackt = (git(root, ['ls-files', '-z']) ?? '').split('\0').filter((file) => file !== '');
   const hernoemd = leesHernoemingen(git(root, ['diff', '-M', '--name-status', '-z', basis]) ?? '');
+  // Alleen specs die tegenover de basis veranderd zijn; een ongewijzigde spec heeft per definitie geen nieuwe AC.
+  const gewijzigd = new Set((git(root, ['diff', '--name-only', '-z', basis]) ?? '').split('\0'));
   const read = (/** @type {string} */ file) => lees(root, file) ?? '';
   return getrackt
-    .filter((file) => SPEC_BESTAND.test(file) && lees(root, file) !== null)
+    .filter(
+      (file) => SPEC_BESTAND.test(file) && (gewijzigd.has(file) || hernoemd.has(file)) && lees(root, file) !== null,
+    )
     .flatMap((file) => {
       const nu = read(file);
       const oudPad = hernoemd.get(file) ?? file;
