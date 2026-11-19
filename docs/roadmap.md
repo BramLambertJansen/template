@@ -284,7 +284,9 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   `git checkout <ref> <pad>` zonder `--`; `git -c core.pager=<cmd>` en andere `-c`-instellingen die een programma starten; `git -C <map>` en `cd x && …` binnen één commando (paden tellen vanaf de cwd van de payload); awk met `-f`, een variabel doel, `system()` of
   `| "cmd"`, afgekorte lange gawk-opties (`--sour=`, `--fi=`, `--incl=`; één helper voor afkortingen van lange opties in `shell.mjs`) en
   awk-uitvoer via opties (`-o`/`--pretty-print=f`, `-d`/`--dump-variables=f`); `git restore <map>` en `git checkout -- <map>` voor een
-  lokaal ontbrekende map (de map-regel kijkt naar `isDir`, niet naar getrackte bestanden eronder). Het schrijfdeel van deze gaten (interpreters,
+  lokaal ontbrekende map (de map-regel kijkt naar `isDir`, niet naar getrackte bestanden eronder); omhulsels en interpreters
+  die de toets per segment niet kent (`timeout 5 b`, `stdbuf -o0 b`, `setsid b`, `eval 'b'`, `bash -c 'b'`, `bash <<<'b'`;
+  de aanvaard-lijst van spec rolhek-aanvalscorpus, AC-5). Het schrijfdeel van deze gaten (interpreters,
   scripts, globs, links, `git checkout <ref> <pad>`, `git -C`, awk-uitvoer) viel voor subagents onder de toets op effect; die is vervallen (ADR 0091:
   aanvaard risico, op een beschermd pad de padtoets van het mergescript, ADR 0093), dus dit item geldt weer voor elke rol. Omhulsels met opties en xargs-optiewaarden staan in het item hierboven. Per gat kiezen tussen weigeren en melden, met tests.
   aanleiding: `rails/hooks/lib/shell.mjs` (review van PR 6a `fix/rolhek-gaten`; eigenaarbesluit 2026-11-01: de lijst bekende gaten uit R-ROL-10 naar de roadmap)

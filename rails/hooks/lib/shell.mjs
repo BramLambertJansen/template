@@ -567,7 +567,16 @@ export function programName(word) {
 }
 
 /**
- * De woorden van het eigenlijke commando: zonder voorafgaande variabelen (`A=1 cmd`) en omhulsels (`env`, `sudo`).
+ * Gereserveerde woorden waarna in hetzelfde segment een commando volgt (spec rolhek-aanvalscorpus, AC-2): `{ b; }`,
+ * `if b`, `then b`, `do b`, `while b`, `! b`. `function NAAM` staat apart (`splitCommand`); bij `f() { b; }` splitst
+ * `parseCommands` al op de haakjes, zodat `{ b` een eigen segment is. Een functielichaam telt alsof het draait (R-ROL-11).
+ */
+const SLEUTELWOORDEN = new Set(['{', '!', 'if', 'then', 'elif', 'else', 'do', 'while', 'until']);
+
+/**
+ * De woorden van het eigenlijke commando: zonder voorafgaande sleutelwoorden (`{`, `if`, `do`, `!`, `function NAAM`),
+ * variabelen (`A=1 cmd`) en omhulsels (`env`, `sudo`). Een sleutelwoord valt ook na een toewijzing of omhulsel weg, waar
+ * bash het niet als sleutelwoord leest: dan weigert het rolhek hooguit meer (R-ROL-11).
  * `pathWrappers`: weggehaalde omhulsels met een pad (`/usr/bin/env`, `./env`); dat kan elk programma zijn.
  * @param {readonly string[]} words
  * @returns {{ assignments: string[], argv: string[], pathWrappers: string[] }}
@@ -580,9 +589,12 @@ export function splitCommand(words) {
   const pathWrappers = [];
   while (index < words.length) {
     const word = words[index] ?? '';
-    if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(word)) assignments.push(word);
+    const sleutelwoord = SLEUTELWOORDEN.has(word) || word === 'function';
+    if (sleutelwoord) index += word === 'function' ? 1 : 0;
+    else if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(word)) assignments.push(word);
     else if (!WRAPPERS.has(programName(word))) break;
     else if (programName(word) !== word) pathWrappers.push(word);
+    // `function NAAM`: ook de naam valt weg; het lichaam (`{ b`) volgt in hetzelfde segment.
     index += 1;
   }
   return { assignments, argv: words.slice(index), pathWrappers };
