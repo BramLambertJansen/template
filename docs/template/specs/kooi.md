@@ -71,7 +71,7 @@ proef: `✗ kooi: de proef schreef buiten de werkmap; het commando is niet uitge
   waarde dan een letterlijke `false` in elke aanroep van die vier functies; en `exec` of `execSync` uit `child_process` of
   `node:child_process`, via `import`, `import()` of `require`. De melding noemt `inKooi`. Geen uitzonderingslijst en geen
   onderdrukking (R-CODE-04).
-- **kooi/AC-6** — Bestaande gevallen. `sh()` in `test/hooks/rolhek-effect.test.ts`, het `sh -c`-fragment uit `compose.yaml`
+- **kooi/AC-6** — Bestaande gevallen. `sh()` in `test/hooks/rolhek-effect.test.ts` (vervallen) (verwijderd met de effectcheck, ADR 0091), het `sh -c`-fragment uit `compose.yaml`
   in `test/scripts/runner-trusted-base.test.ts` en het `bash -eu -c`-fragment uit `ci.yml` in `test/rails/ci-scan.test.ts`
   draaien via `inKooi`, met dezelfde verwachtingen. `test/hooks/statusregel.test.ts` zoekt `git` op `PATH` zonder shell. Het
   aantal testgevallen verandert niet.
@@ -105,7 +105,7 @@ proef: `✗ kooi: de proef schreef buiten de werkmap; het commando is niet uitge
 
 ## Raakt ook
 
-`scripts/kit/kooi.mjs` (nieuw), `eslint.config.js`, `test/rails/eslint.test.ts`, `test/hooks/rolhek-effect.test.ts`,
+`scripts/kit/kooi.mjs` (nieuw), `eslint.config.js`, `test/rails/eslint.test.ts`, `test/hooks/rolhek-effect.test.ts` (vervallen),
 `test/scripts/runner-trusted-base.test.ts`, `test/rails/ci-scan.test.ts`, `test/hooks/statusregel.test.ts`, `scripts/doctor.sh`, `.github/workflows/ci.yml` (eigenaar pusht),
 `docs/ENVIRONMENT.md`, `docs/framework.md` §11, `AGENTS.md`, spec rolhek-vooraf-krimp (AC-2 draait in de kooi).
 
