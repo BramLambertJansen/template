@@ -227,6 +227,8 @@ describe.each(MAPPEN)('rolhek-lezen/AC-19 map $naam ($spec/): de inhoud van een 
   test.each(['tester', 'reviewer', 'docs'])(
     'rolhek-lezen/AC-19 %s heeft geen schrijfrecht op een vervallen spec',
     (rol) => {
+      // Basis: dezelfde Edit door de architect gaat door; alleen de rol verschilt.
+      expect(wijzig(pad, SPEC_VERVALLEN_INHOUD, 'architect').deny).toStrictEqual([]);
       expect(wijzig(pad, SPEC_VERVALLEN_INHOUD, rol).deny).not.toStrictEqual([]);
     },
   );

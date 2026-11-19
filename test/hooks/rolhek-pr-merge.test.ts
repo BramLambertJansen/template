@@ -292,6 +292,9 @@ const TOEGESTAAN_17: readonly Toegestaan17[] = [
   { command: 'git cat-file -s HEAD:scripts/kit/pr-{s}.mjs', geheel: 'zonder-reviewer' },
   { command: 'git ls-tree HEAD scripts/kit/pr-{s}.mjs', geheel: 'zonder-reviewer' },
   { command: 'git rev-parse HEAD:scripts/kit/pr-{s}.mjs', geheel: 'zonder-reviewer' },
+  // Een lezer met een absoluut systeempad blijft een lezer.
+  { command: "/usr/bin/sed -n '1p' scripts/kit/pr-{s}.mjs" },
+  { command: '/bin/cat scripts/kit/pr-{s}.mjs' },
 ];
 
 function toegestaanAfwijking({ command, geheel }: Toegestaan17) {
@@ -373,6 +376,15 @@ const GEWEIGERD_17: readonly Geweigerd17[] = [
   { command: "git grep -n -F -e 'pr:{s}' -- <(echo docs)", basis: GREP },
   { command: `eval true; ${ADD}`, basis: ADD },
   { command: `source ./x.sh; ${LOG}`, basis: LOG },
+  // Een lezer met een relatief pad (`./sed`, `./git`) is een ander programma dan de lezer: de naam telt wel.
+  { command: `./${SED}`, basis: SED },
+  { command: `./${CATFILE}`, basis: CATFILE },
+  // Een scheidingsteken direct na `)` of `}` mag niet verloren gaan: de groep geeft zijn uitvoer wel door of schrijft het bestand.
+  { command: `( ${CAT} ) | node - 5`, basis: CAT },
+  { command: `{ ls; ${CAT}; } | node - 5`, basis: CAT },
+  { command: 'for f in scripts/kit/pr-{s}.mjs; do cat "$f"; done | node - 5', basis: CAT },
+  { command: `( ${CAT} ) > m.mjs; node m.mjs 5`, basis: CAT },
+  { command: `{ ls; ${CAT}; } > m.mjs; node m.mjs 5`, basis: CAT },
   { command: "git commit -F - <<'EOF'\ndocs: mention pr:{s}\nEOF", basis: COMMIT },
   { command: 'git add "$X/scripts/kit/pr-{s}.mjs"', basis: 'git add scripts/kit/pr-{s}.mjs' },
 ];

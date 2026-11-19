@@ -911,6 +911,10 @@ describe('rolhek-lezen/AC-12: pipes en voorwaardelijke reeksen tussen lezers; ge
     { command: 'git log &', basis: 'git log' },
     { command: '( git log )', basis: 'git log' },
     { command: '{ git log; }', basis: 'git log' },
+    // Een scheidingsteken direct na `)` mag de groepering niet verbergen.
+    { command: '( git log; )', basis: 'git log' },
+    { command: '( git log; ) &', basis: 'git log' },
+    { command: '( git log; ) |& head -n 5', basis: 'git log' },
     { command: 'wc -l < .env', basis: 'wc -l docs/framework.md' },
     { command: 'wc -l docs/framework.md < .env', basis: 'wc -l docs/framework.md' },
     { command: 'wc -l <<< x', basis: 'wc -l docs/framework.md' },
@@ -1127,6 +1131,71 @@ describe('rolhek-lezen/AC-15: git -C <werkmap> alleen naar een root uit git work
   });
 });
 
+// De ingang tegen echte git: `rolhekContext(...).werkmappen()` leest `git worktree list --porcelain`.
+describe('rolhek-lezen/AC-15: de hook-ingang meldt de werkmappen van de repository (ctx.werkmappen)', () => {
+  const GIT_ENV = {
+    GIT_AUTHOR_NAME: 't',
+    GIT_AUTHOR_EMAIL: 't@example.com',
+    GIT_COMMITTER_NAME: 't',
+    GIT_COMMITTER_EMAIL: 't@example.com',
+    GIT_CONFIG_GLOBAL: '/dev/null',
+    GIT_CONFIG_SYSTEM: '/dev/null',
+  };
+  const dirs: string[] = [];
+  afterEach(() => {
+    for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+  });
+
+  function git(cwd: string, ...args: string[]) {
+    const result = spawnSync('git', args, { cwd, encoding: 'utf8', env: { ...process.env, ...GIT_ENV } });
+    if (result.status !== 0) throw new Error(`git ${args.join(' ')}: ${result.stderr}`);
+  }
+
+  /** Een repo `repo` met een tweede werkmap `ander` ernaast (beide onder een tijdelijke map, met realpath). */
+  function repoMetWerkmap() {
+    const basis = realpathSync(mkdtempSync(path.join(tmpdir(), 'rolhek-werkmappen-')));
+    dirs.push(basis);
+    const root = path.join(basis, 'repo');
+    const ander = path.join(basis, 'ander');
+    mkdirSync(path.join(root, '.claude'), { recursive: true });
+    writeFileSync(path.join(root, '.claude/gates.json'), readFileSync('.claude/gates.json', 'utf8'));
+    git(root, 'init', '-q', '-b', 'main');
+    git(root, 'add', '--', '.claude/gates.json');
+    git(root, 'commit', '-q', '-m', 'basis');
+    git(root, 'worktree', 'add', '-q', '-b', 'feat/ander', ander);
+    return { basis, root, ander };
+  }
+
+  function werkmappenVan(root: string): unknown {
+    const context = rolhekContext(root, root);
+    const functie: unknown = Reflect.get(context, 'werkmappen');
+    expect(typeof functie, 'rolhekContext levert ctx.werkmappen').toBe('function');
+    return typeof functie === 'function' ? Reflect.apply(functie, context, []) : null;
+  }
+
+  test('rolhek-lezen/AC-15: ctx.werkmappen noemt de root en de tweede werkmap uit git worktree list', () => {
+    const { root, ander } = repoMetWerkmap();
+    const lijst = werkmappenVan(root);
+    expect(lijst).toStrictEqual(expect.arrayContaining([root, ander]));
+  });
+
+  test('rolhek-lezen/AC-15: zonder .git (git faalt) telt alleen de root', () => {
+    const { root } = repoMetWerkmap();
+    expect(werkmappenVan(root)).toStrictEqual(expect.arrayContaining([root]));
+    rmSync(path.join(root, '.git'), { recursive: true });
+    expect(werkmappenVan(root)).toStrictEqual([root]);
+  });
+
+  test('rolhek-lezen/AC-15: een prunable werkmap (map weggehaald) telt niet als root', () => {
+    const { root, ander } = repoMetWerkmap();
+    expect(werkmappenVan(root)).toStrictEqual(expect.arrayContaining([ander]));
+    rmSync(ander, { recursive: true });
+    const lijst = werkmappenVan(root);
+    expect(lijst).toStrictEqual(expect.arrayContaining([root]));
+    expect(lijst).not.toStrictEqual(expect.arrayContaining([ander]));
+  });
+});
+
 describe('rolhek-lezen/AC-16: gh pr list en gh issue list met zoeken', () => {
   test.each([
     'gh pr list',
@@ -1158,6 +1227,24 @@ describe('rolhek-lezen/AC-16: gh pr list en gh issue list met zoeken', () => {
   ])('rolhek-lezen/AC-16: $command → deny', ({ command, basis }) => {
     afwijzing(basis, command, { role: REVIEWER });
   });
+
+  // Eigenaarbesluit: de zoektekst mag geen kwalificatie `repo:`, `org:` of `user:` bevatten (andere repository, ook midden in de
+  // waarde en in hoofdletters); `is:merged` en `in:title` blijven toegestaan.
+  test.each([
+    { command: 'gh pr list --search "repo:ander/x"', basis: 'gh pr list --search "ratchet in:title"' },
+    { command: 'gh pr list --search "org:x"', basis: 'gh pr list --search "ratchet in:title"' },
+    { command: 'gh issue list --search "user:x"', basis: 'gh issue list --search "ratchet in:title"' },
+    { command: 'gh pr list --search "Repo:ander/x"', basis: 'gh pr list --search "ratchet in:title"' },
+    { command: 'gh pr list --search "ORG:x"', basis: 'gh pr list --search "ratchet in:title"' },
+    { command: 'gh issue list --search "User:x"', basis: 'gh issue list --search "ratchet in:title"' },
+    { command: 'gh pr list --search "ratchet repo:a/b"', basis: 'gh pr list --search "ratchet in:title"' },
+    { command: 'gh pr list --search "ratchet is:merged repo:a/b"', basis: 'gh pr list --search "ratchet is:merged"' },
+  ])(
+    'rolhek-lezen/AC-16: de zoektekst met een kwalificatie naar een andere repository: $command → deny',
+    ({ command, basis }) => {
+      afwijzing(basis, command, { role: REVIEWER });
+    },
+  );
 
   // Het vangnet uit WS-04 geldt ook buiten de reviewerlijst: de hoofdsessie mag `gh pr list`, maar geen merge erachter.
   test('rolhek-lezen/AC-16: gh pr list; gh pr merge 5 blijft voor de hoofdsessie geweigerd door het vangnet (WS-04)', () => {
@@ -1211,6 +1298,14 @@ describe('rolhek-lezen/AC-18: git grep naar gh, api.github.com of git credential
       { command: 'git --work-tree=/home/x/.config/gh diff a b', basis: 'git diff a b' },
     ])('rolhek-lezen/AC-18: $command → deny', ({ command, basis }) => {
       afwijzing(basis, command, { role });
+    });
+
+    test('rolhek-lezen/AC-18: een cwd buiten de repo is geweigerd, met dezelfde opdracht in de repo als basis', () => {
+      const command = "git grep -n -F -e 'gh pr list' -- docs";
+      const payload = { tool_name: 'Bash', tool_input: { command }, agent_type: role };
+      const { context } = leesContext();
+      expect(uitslagVan(decide(payload, context))).toBe('allow');
+      expect(uitslagVan(decide(payload, { ...context, cwd: '/elders' }))).toBe('deny');
     });
   });
 
