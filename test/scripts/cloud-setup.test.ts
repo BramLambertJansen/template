@@ -138,6 +138,10 @@ const TOOLS = ['node', 'pnpm', 'dbmate', 'betterleaks', 'osv-scanner'];
 const NA_INSTALL: unknown[] = [
   ...TOOLS.map((tool) => `mise where ${tool}`),
   'mise ls --missing',
+  // Route 1 naar PATH en de pin voor de slotcontrole (spec cloud-zelfinstallatie); deze stub geeft geen pad voor which.
+  'mise which node',
+  'mise which pnpm',
+  'mise current node',
   'mise exec -- pnpm install --frozen-lockfile',
   'mise exec -- pnpm exec lefthook install',
   // Bewijs aan het eind: de voorcontrole van scripts/kit/toolchain.mjs.
