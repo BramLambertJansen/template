@@ -175,6 +175,7 @@ describe('rolhek-aanvalscorpus/AC-2 vormen: een weigering blijft staan, wat er o
     for (const rol of ['', 'developer'] as const) {
       expect(beslis(`${cds}tee ../.git/hooks/pre-commit`, rol).uitslag).toBe('deny');
       expect(beslis(`cd $X; tee ../.git/x`, rol).uitslag).toBe('deny');
+      expect(beslis(`cd $X; cp --target-directory=.git/hooks evil`, rol).uitslag).toBe('deny');
     }
     expect(beslis(`${cds}tee x`, '').uitslag).toBe('ask');
   });

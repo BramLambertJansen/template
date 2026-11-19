@@ -382,7 +382,10 @@ export function zelfladend({ argv: ruw, redirects, role, ruim = false }, basisCt
     const melding = 'na een `cd` naar een map die pas bij het uitvoeren bekend is ($, backtick, of meer dan 32 mogelijke mappen), ziet het rolhek niet waar paden landen (spec rolhek-vooraf AC-3)';
     // Een doel met een `.git`-onderdeel kan vanuit een onbekende map `.git/**` raken: deny voor elke rol, zoals in een bekende
     // map (R-ROL-03; spec rolhek-aanvalscorpus, review B5).
-    const gitDoel = [...redirects, ...schrijfWoorden(argv)].some((woord) => woord.split('/').some((stuk) => stukRegex(stuk, ruim).test('.git')));
+    // Dezelfde splitsing als `doelen` (`--target-directory=.git/hooks`), daarna per padstuk.
+    const gitDoel = [...redirects, ...schrijfWoorden(argv)]
+      .flatMap((woord) => [woord, ...woord.split(SCHEIDING)])
+      .some((deel) => deel.split('/').some((stuk) => stukRegex(stuk, ruim).test('.git')));
     if (gitDoel) besluit.deny.push(`${melding}; een doel met .git is verboden, voor elke rol (R-ROL-03)`);
     else weiger(melding, role, besluit);
   }
