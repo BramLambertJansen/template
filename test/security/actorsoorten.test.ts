@@ -10,7 +10,8 @@ import type { AppRoute, Uitkomst } from './fixtures.ts';
 // suitecontract/AC-13 t/m AC-16 (docs/template/specs/suite-volgt-contract.md, ontwerp 7, leerpunt #719): de actorsoorten van de
 // generieke securitysuite komen uit het rollenregister; de permissie-oracle en `MFA_ROLLEN` blijven met de hand. Alles hier is
 // puur (geen database): een nep-bron met `defineRoles({ planner: { beheer: false }, eigenaar: { beheer: true } })`, een nep-oracle
-// en nep-routes bewijst dat een extra rol de suite niet raakt; het echte register blijft `user` en `admin`.
+// en nep-routes bewijst dat een extra rol de suite niet raakt; in de template blijft het echte register `user` en `admin`
+// (een app mag er rollen aan toevoegen en hoeft deze tests daarvoor niet te wijzigen).
 //
 // Verwachte interface in test/security/fixtures.ts (door de developer te bouwen; hier dynamisch gelezen, zodat dit bestand
 // compileert voordat ze bestaan en dan op een assertie faalt):
@@ -111,8 +112,8 @@ type Paar = z.infer<typeof paarSchema>;
 
 const label = (route: NepRoute): string => `${route.contract.method} ${route.contract.path}`;
 
-// De bron van de template: het echte register, de oracle en MFA_ROLLEN uit fixtures.ts. Een ontbrekende MFA_ROLLEN is een
-// gefaalde assertie, geen ZodError.
+// De live bron van deze repo (template of app): het echte register, de oracle en MFA_ROLLEN uit fixtures.ts. Een ontbrekende
+// MFA_ROLLEN is een gefaalde assertie, geen ZodError.
 function echteBron(): Bron {
   const mfaRollen = z.array(z.string()).safeParse(uitvoer.MFA_ROLLEN);
   expect(mfaRollen.success, 'test/security/fixtures.ts exporteert MFA_ROLLEN').toBe(true);
@@ -156,6 +157,13 @@ const BEVROREN_BRON: Bron = {
   mfaRollen: ['admin'],
 };
 
+// Alleen in de template (de onderhoud-regel in .claude/gates.json; `pnpm app:init` haalt hem weg, dus in een app, ook bij
+// `check:new-resource`, wordt de bewaking overgeslagen): de bevroren kopie blijft gelijk aan de live template-bron.
+const gatesTekst: unknown = JSON.parse(
+  readFileSync(path.join(import.meta.dirname, '../../.claude/gates.json'), 'utf8'),
+);
+const IN_TEMPLATE = typeof gatesTekst === 'object' && gatesTekst !== null && 'onderhoud' in gatesTekst;
+
 const GEEN_SESSIE: Soort = { soort: 'geenSessie', rol: null, mfa: false };
 const ZONDER_ROL: Soort = { soort: 'zonderRol', rol: null, mfa: false };
 
@@ -198,6 +206,15 @@ describe('suitecontract/AC-13: actorSoorten leest de soorten uit het rollenregis
   test('suitecontract/AC-13: de bevroren template-bron laat alleen admin MFA vragen (met de hand, niet uit het register)', () => {
     expect(BEVROREN_BRON.mfaRollen).toStrictEqual(['admin']);
     expect(BEVROREN_BRON.register.names).toStrictEqual(['user', 'admin']);
+  });
+
+  test('suitecontract/AC-13: in de template is de bevroren bron gelijk aan de live bron (oracle, mfaRollen, register)', () => {
+    if (!IN_TEMPLATE) return;
+    const live = echteBron();
+
+    expect(BEVROREN_BRON.oracle).toStrictEqual(live.oracle);
+    expect(BEVROREN_BRON.mfaRollen).toStrictEqual(live.mfaRollen);
+    expect(roles.names).toStrictEqual(['user', 'admin']);
   });
 
   test('suitecontract/AC-13: met de live bron (zonder argument) heeft elke rol uit roles.names minstens één soort', () => {
@@ -487,6 +504,15 @@ describe('suitecontract/AC-15: ac4Gevallen en ac5Gevallen met de bevroren templa
   test('suitecontract/AC-15: ac4Gevallen is voor de bevroren bron gelijk aan (user, routes zonder user in de oracle) en (zonderRol, elke route)', () => {
     expect(echteRoutes.length).toBeGreaterThan(0);
     expect(alsSleutels(gevallen('ac4Gevallen', echteRoutes, BEVROREN_BRON)).sort()).toStrictEqual(oud().ac4);
+  });
+
+  test('suitecontract/AC-15: de standaardbron (zonder argument) heeft zonderRol op elke route en nooit geenSessie', () => {
+    const lijst = gevallen('ac4Gevallen', echteRoutes);
+    const zonderRol = lijst.filter(({ soort }) => soort === 'zonderRol').map(({ route }) => route);
+
+    expect(echteRoutes.length).toBeGreaterThan(0);
+    expect(echteRoutes.filter((route) => !zonderRol.includes(route))).toStrictEqual([]);
+    expect(lijst.filter(({ soort }) => soort === 'geenSessie')).toStrictEqual([]);
   });
 
   test('suitecontract/AC-15: ac5Gevallen is voor de bevroren bron gelijk aan adminZonderMfa op elke admin-route en adminMfa op de GET-routes daarvan', () => {
