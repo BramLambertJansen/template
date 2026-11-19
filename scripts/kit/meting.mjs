@@ -13,10 +13,15 @@ import path from 'node:path';
 import { opslagmap } from '../../rails/hooks/lib/meting.mjs';
 import { prsUitGh, trend, trendTekst } from './meting-trend.mjs';
 
-/** @typedef {{ e: string, s: string, b: string, k: string, tool: string, m: string, id: string | undefined, t: number | undefined, opdracht?: boolean }} Regel */
+/**
+ * @typedef {{ e: string, s: string, b: string, a: string, k: string, tool: string, m: string, id: string | undefined,
+ *   t: number | undefined, tc: number | undefined, opdracht?: boolean }} Regel
+ */
+/** @typedef {{ runs: number, toolcalls: number, zonderTelling: number }} Runs */
 /**
  * @typedef {{ prompts: number, promptsPerSleutel: Map<string, number>, promptsPerModus: Map<string, number>, weigeringen: number,
- *   weigeringenPerSleutel: Map<string, number>, beurten: number, eigenaarberichten: number, pushes: number }} Telling
+ *   weigeringenPerSleutel: Map<string, number>, weigeringenPerRol: Map<string, number>, subagentsPerRol: Map<string, Runs>,
+ *   beurten: number, eigenaarberichten: number, pushes: number }} Telling
  */
 /** @typedef {number | 'onbekend'} Ci */
 /** @typedef {{ van: number, tot: number } | null} Venster */
@@ -32,7 +37,7 @@ const HELP = `Gebruik: pnpm meting [--json] [--sessie <id>] [--branch <naam>] [-
   --sessie <id>    Alleen deze sessie.
   --branch <naam>  Alleen deze branch binnen elke sessie.
   --pr-tabel       Kerncijfers van één branch (--branch) als markdowntabel voor de PR-beschrijving: leespad (zie pnpm leespad),
-                   doorlooptijd, reviewrondes, CI-rood en weigeringen (bovengrens).
+                   doorlooptijd, reviewrondes, CI-rood, weigeringen (bovengrens), weigeringen per rol en subagents per rol.
   --trend          Kwaliteitstrend over de laatste twintig gemergde PR's (één gh api …/pulls?state=closed, REST): "let op:
                    <maat> steeg" als CI-rood of reviewrondes (lokale meetdata; zonder data onbekend) gemiddeld hoger
                    liggen over de laatste tien dan over de tien daarvoor. Minder dan twintig: te weinig data.
@@ -54,6 +59,8 @@ Teldefinities (alleen ontvangen en opgeslagen Claude Code-events):
   Een Read- of Edit-weigering door een deny-regel geeft geen hook-event en telt dus niet mee (Claude Code 2.1.312).
   Een Bash-weigering door een deny-regel telt wel: PreToolUse zonder PostToolUse.
   De hook is fail-open: ontbrekende registraties bewijzen geen nul; andere runtimes leveren niet vanzelf events.
+  weigeringen per rol: dezelfde weigeringen, naar de rol (a) van het geweigerde event; zonder rol: onbekend.
+  subagents per rol: PostToolUse en PostToolUseFailure van Agent (of Task), naar het subagenttype; toolcalls uit totalToolUseCount van de tool_response; ontbreekt die (een run op de achtergrond, een fout), dan zonder telling, geen nul.
   beurten: Stop-events (een bovengrens).
   pushes: PostToolUse voor git push; een proefpush telt niet mee.
   ci-rondes: gh run list per branch, binnen eerste eventtijd tot laatste eventtijd + 60 minuten.
@@ -85,16 +92,19 @@ function parse(lijn, sessie) {
     if (typeof e !== 'string') return null;
     const id = r.get('id');
     const m = r.get('m');
+    const tc = r.get('tc');
     /** @type {Regel} */
     return {
       e,
       s: tekst(r.get('s'), sessie),
       b: tekst(r.get('b'), 'onbekend'),
+      a: tekst(r.get('a'), 'onbekend'),
       k: tekst(r.get('k'), ''),
       tool: tekst(r.get('tool'), ''),
       m: typeof m === 'string' && /^[a-zA-Z]+$/.test(m) ? m : 'onbekend',
       id: typeof id === 'string' ? id : undefined,
       t: tijd(r.get('t')),
+      tc: typeof tc === 'number' && Number.isInteger(tc) && tc >= 0 ? tc : undefined,
     };
   } catch {
     return null;
@@ -153,6 +163,8 @@ function leeg() {
     promptsPerModus: new Map(),
     weigeringen: 0,
     weigeringenPerSleutel: new Map(),
+    weigeringenPerRol: new Map(),
+    subagentsPerRol: new Map(),
     beurten: 0,
     eigenaarberichten: 0,
     pushes: 0,
@@ -179,6 +191,21 @@ function weigeringen(regels) {
   return new Set([...geweigerd, ...zonderPost]);
 }
 
+/**
+ * Een afgeronde subagent-run (Post of PostFailure van Agent/Task) telt bij zijn rol: runs, de som van de aanwezige `tc`,
+ * en een run zonder `tc` als zonderTelling (geen nul). @param {Map<string, Runs>} teller @param {Regel} r
+ */
+function telRun(teller, r) {
+  if ((r.e !== 'PostToolUse' && r.e !== 'PostToolUseFailure') || !subagent(r) || !/^agent( |$)/.test(r.k)) return;
+  const rol = r.k === 'agent' ? 'onbekend' : r.k.slice('agent '.length);
+  const oud = teller.get(rol) ?? { runs: 0, toolcalls: 0, zonderTelling: 0 };
+  teller.set(rol, {
+    runs: oud.runs + 1,
+    toolcalls: oud.toolcalls + (r.tc ?? 0),
+    zonderTelling: oud.zonderTelling + (r.tc === undefined ? 1 : 0),
+  });
+}
+
 /** @param {Telling} t @param {Regel} r @param {boolean} geweigerd */
 function tel(t, r, geweigerd) {
   if (r.e === 'PermissionRequest') {
@@ -189,7 +216,9 @@ function tel(t, r, geweigerd) {
   if (geweigerd) {
     t.weigeringen += 1;
     plus(t.weigeringenPerSleutel, r.k);
+    plus(t.weigeringenPerRol, r.a);
   }
+  telRun(t.subagentsPerRol, r);
   if (r.e === 'Stop') t.beurten += 1;
   if (r.e === 'UserPromptSubmit' && r.opdracht !== true) t.eigenaarberichten += 1;
   if (r.e === 'PostToolUse' && r.k === 'git push') t.pushes += 1;
@@ -324,6 +353,8 @@ function tellingJson(t) {
     promptsPerSleutel: object(t.promptsPerSleutel),
     promptsPerModus: object(t.promptsPerModus),
     weigeringenPerSleutel: object(t.weigeringenPerSleutel),
+    weigeringenPerRol: object(t.weigeringenPerRol),
+    subagentsPerRol: object(t.subagentsPerRol),
   };
 }
 
@@ -339,6 +370,33 @@ function perSleutel(teller) {
   return delen.length === 0 ? '' : ` (${delen.join(', ')})`;
 }
 
+/** Aflopend op aantal, daarna op naam. @template T @param {Map<string, T>} teller @param {(waarde: T) => number} aantal */
+function gesorteerd(teller, aantal) {
+  return [...teller].sort(([ka, a], [kb, b]) => aantal(b) - aantal(a) || (ka < kb ? -1 : ka > kb ? 1 : 0));
+}
+
+/** `<rol> <n>` per rol. @param {Map<string, number>} teller */
+function rolDelen(teller) {
+  return gesorteerd(teller, (n) => n).map(([rol, n]) => `${rol} ${String(n)}`);
+}
+
+/** `<rol> <runs> runs, <toolcalls> toolcalls`, met `(<n> zonder telling)` als `metZonder`. @param {Map<string, Runs>} teller @param {boolean} metZonder */
+function runDelen(teller, metZonder) {
+  return gesorteerd(teller, (w) => w.runs).map(([rol, w]) => {
+    const zonder = metZonder && w.zonderTelling > 0 ? ` (${String(w.zonderTelling)} zonder telling)` : '';
+    return `${rol} ${String(w.runs)} runs, ${String(w.toolcalls)} toolcalls${zonder}`;
+  });
+}
+
+/** De regels per rol onder de weigeringen, alleen als er iets te tellen is. @param {Telling} t @param {string} inspring */
+function rolRegels(t, inspring) {
+  const uit = [];
+  if (t.weigeringenPerRol.size > 0)
+    uit.push(`${inspring}weigeringen per rol: ${rolDelen(t.weigeringenPerRol).join(', ')}`);
+  if (t.subagentsPerRol.size > 0) uit.push(`${inspring}subagents: ${runDelen(t.subagentsPerRol, true).join('; ')}`);
+  return uit;
+}
+
 /** @param {Telling & { ciRondes: Ci }} t */
 function regelTekst(t) {
   const ci = `pushes ${String(t.pushes)} · ci-rondes ${String(t.ciRondes)}`;
@@ -351,6 +409,7 @@ function branchTekst(naam, b) {
     `  branch ${naam}: permissievragen ${String(b.prompts)}${perSleutel(b.promptsPerSleutel)}`,
     `    permissievragen per modus${perSleutel(b.promptsPerModus)}`,
     `    weigeringen ${String(b.weigeringen)}${perSleutel(b.weigeringenPerSleutel)} · ${regelTekst(b)}`,
+    ...rolRegels(b, '    '),
   ];
 }
 
@@ -361,7 +420,8 @@ export function alsTekst(sessies, dir) {
   for (const [sessie, t] of sessies) {
     regels.push(`sessie ${sessie}`, `  permissievragen ${String(t.prompts)}${perSleutel(t.promptsPerSleutel)}`);
     regels.push(`  permissievragen per modus${perSleutel(t.promptsPerModus)}`);
-    regels.push(`  weigeringen ${String(t.weigeringen)}${perSleutel(t.weigeringenPerSleutel)}`, `  ${regelTekst(t)}`);
+    regels.push(`  weigeringen ${String(t.weigeringen)}${perSleutel(t.weigeringenPerSleutel)}`, ...rolRegels(t, '  '));
+    regels.push(`  ${regelTekst(t)}`);
     for (const [naam, b] of t.branches) regels.push(...branchTekst(naam, b));
   }
   return `${regels.join('\n')}\n`;
@@ -397,8 +457,29 @@ function reviewrondesPerBranch(dir) {
   };
 }
 
+/** De tellingen per rol van alle sessies samen. @param {readonly Telling[]} sessies */
+function perRolSamen(sessies) {
+  /** @type {Map<string, number>} */
+  const weigeringenPerRol = new Map();
+  /** @type {Map<string, Runs>} */
+  const subagentsPerRol = new Map();
+  for (const t of sessies) {
+    for (const [rol, n] of t.weigeringenPerRol) weigeringenPerRol.set(rol, (weigeringenPerRol.get(rol) ?? 0) + n);
+    for (const [rol, w] of t.subagentsPerRol) {
+      const oud = subagentsPerRol.get(rol) ?? { runs: 0, toolcalls: 0, zonderTelling: 0 };
+      subagentsPerRol.set(rol, {
+        runs: oud.runs + w.runs,
+        toolcalls: oud.toolcalls + w.toolcalls,
+        zonderTelling: oud.zonderTelling + w.zonderTelling,
+      });
+    }
+  }
+  return { weigeringenPerRol: object(weigeringenPerRol), subagentsPerRol: object(subagentsPerRol) };
+}
+
 /**
- * De kerncijfers van een branch over alle sessies: doorlooptijd (s), reviewrondes, CI-rood, weigeringen (bovengrens).
+ * De kerncijfers van een branch over alle sessies: doorlooptijd (s), reviewrondes, CI-rood, weigeringen (bovengrens) en
+ * de tellingen per rol (spec agents-leveren).
  * @param {string | null} dir
  * @param {string} branch
  * @param {Record<string, string | undefined>} env
@@ -417,6 +498,7 @@ export function prTabel(dir, branch, env) {
     reviewrondes: reviews.size,
     ciRood: lijst === null ? 'onbekend' : lijst.filter((r) => r.conclusie === 'failure').length,
     weigeringen: sessies.reduce((n, t) => n + t.weigeringen, 0),
+    ...perRolSamen(sessies),
   };
 }
 
@@ -429,6 +511,8 @@ function prTabelTekst(t) {
     ['Reviewrondes', String(t.reviewrondes)],
     ['CI-rood', String(t.ciRood)],
     ['Weigeringen (bovengrens)', String(t.weigeringen)],
+    ['Weigeringen per rol', rolDelen(new Map(Object.entries(t.weigeringenPerRol))).join(' · ') || '0'],
+    ['Subagents per rol', runDelen(new Map(Object.entries(t.subagentsPerRol)), false).join(' · ') || '0'],
   ];
   const lijnen = ['| Kerncijfer | Waarde |', '|---|---|', ...rijen.map(([naam, waarde]) => `| ${naam} | ${waarde} |`)];
   return `${lijnen.join('\n')}\n`;

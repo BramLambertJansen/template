@@ -104,6 +104,16 @@ export function sleutel(tool, input, cwd) {
   return veld === undefined ? '' : padSleutel(input[veld], cwd);
 }
 
+/**
+ * Toolcalls van een afgeronde subagent-run: alleen het gehele getal `totalToolUseCount` uit de `tool_response`, nooit
+ * tokens of tekst (spec agents-leveren, OV-2); ontbreekt hij (een start op de achtergrond), dan undefined.
+ * @param {unknown} response
+ */
+function toolcalls(response) {
+  const n = record(response)['totalToolUseCount'];
+  return typeof n === 'number' && Number.isInteger(n) && n >= 0 ? n : undefined;
+}
+
 /** @param {unknown} value */
 function sessieId(value) {
   return typeof value === 'string' && /^[A-Za-z0-9_-]+$/.test(value) ? value : 'onbekend';
@@ -115,8 +125,8 @@ function modus(value) {
 }
 
 /**
- * Eén meetregel `{t,e,s,b,a,m,tool,id,k}` (`m` alleen bij een geldige permission_mode), of null voor een event dat niet
- * gemeten wordt.
+ * Eén meetregel `{t,e,s,b,a,m,tool,id,k,tc}` (`m` alleen bij een geldige permission_mode; `tc` alleen bij een
+ * PostToolUse van Agent of Task met een geldige telling), of null voor een event dat niet gemeten wordt.
  * @param {unknown} payload
  * @param {Date} nu
  */
@@ -137,7 +147,9 @@ export function regel(payload, nu) {
   if (!TOOL_EVENTS.has(e)) return basis;
   const tool = text(p['tool_name']);
   const k = tool === undefined ? '' : sleutel(tool, record(p['tool_input']), cwd);
-  return { ...basis, tool, id: text(p['tool_use_id']), k };
+  const uit = { ...basis, tool, id: text(p['tool_use_id']), k };
+  const tc = e === 'PostToolUse' && (tool === 'Agent' || tool === 'Task') ? toolcalls(p['tool_response']) : undefined;
+  return tc === undefined ? uit : { ...uit, tc };
 }
 
 /**
