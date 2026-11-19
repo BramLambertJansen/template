@@ -22,14 +22,14 @@ select is(
   'rolattributen: de vijf rollen uit db/init bestaan'
 );
 select results_eq(
-  $$select rolname::text, rolcanlogin from pg_catalog.pg_roles
+  $$select rolname::text collate "default", rolcanlogin from pg_catalog.pg_roles
     where rolname in ('app_migrator', 'app_authenticated', 'api_user', 'auth_service', 'app_definer')
     order by rolname::text collate "C"$$,
   $$values ('api_user', true), ('app_authenticated', false), ('app_definer', false), ('app_migrator', true), ('auth_service', true)$$,
   'rolattributen: alleen app_migrator, api_user en auth_service mogen inloggen; app_authenticated en app_definer zijn NOLOGIN'
 );
 select results_eq(
-  $$select rolname::text, rolinherit from pg_catalog.pg_roles
+  $$select rolname::text collate "default", rolinherit from pg_catalog.pg_roles
     where rolname in ('app_authenticated', 'api_user') order by rolname::text collate "C"$$,
   $$values ('api_user', false), ('app_authenticated', false)$$,
   'rolattributen: api_user en app_authenticated zijn NOINHERIT'
