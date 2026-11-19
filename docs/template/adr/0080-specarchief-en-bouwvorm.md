@@ -40,8 +40,9 @@ SHA weigert de guard elk ander nummer dan dat van de eigen PR.
 2. *(vervallen, zie 0089 punt 1 en 7)*
 3. **Eén levende spec per mechanisme.** Een wijziging aan een bestaand mechanisme werkt de spec van dat mechanisme bij met
    nieuwe AC's onder dezelfde naam en namespace; een nieuwe spec alleen voor een nieuw mechanisme. Vervangt een spec een andere,
-   dan gaat de oude naar `vervallen`; in de template wordt zij verwijderd (R-CI-06). Een AC-id van een spec met eigenaarstatus verdwijnt nooit zolang de spec leeft;
-   vervalt een hele template-spec, dan verhuizen eerst haar levende AC's naar een levende spec en verdwijnt daarna het document.
+   dan gaat de oude naar `vervallen`; in de template wordt zij verwijderd (R-CI-06). Een AC-id van een spec met
+   eigenaarstatus verdwijnt nooit zolang de spec leeft; vervalt een hele template-spec, dan verhuizen eerst haar AC's met
+   levende code of tests naar een levende spec en verdwijnt daarna het document (R-WERK-07).
 4. **Gebouwde spec.** Inhoud van een goedgekeurde spec wijzigen blijft een besluit. Een gebouwde spec blijft `gebouwd`: nieuwe
    inhoud is een besluit, en elke nieuwe AC krijgt `(nog niet gebouwd)` (patroon van R-DOC-10), alleen op een id dat nog niet
    op main staat; de AC-dekking slaat alleen gemarkeerde AC's over. De bouw-PR haalt de markering weg (telt niet als
