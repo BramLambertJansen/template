@@ -82,3 +82,57 @@ describe('skills', () => {
     expect(readFileSync(`.claude/skills/${skill}/SKILL.md`, 'utf8')).toContain('!`node scripts/kit/feiten.mjs');
   });
 });
+
+// Overnameplan 1a: Claude Code leest de frontmatter als YAML. Een plain scalar met `: ` of ` #` weigert strikte YAML, en een
+// waarde die met een indicator begint, betekent iets anders. Zonder YAML-dependency: deze regels dekken de vorm die
+// agents en skills gebruiken (één `sleutel: waarde` per regel).
+const INDICATOR = /^[-?:,[\]{}#&*!|>%@`]/;
+
+function yamlFouten(file: string, text: string): string[] {
+  const block = /^---\n([\s\S]*?)\n---\n/.exec(text)?.[1];
+  if (block === undefined) return [`${file}: geen frontmatter`];
+  return block.split('\n').flatMap((line, index) => {
+    const where = `${file}:${String(index + 2)}`;
+    const match = /^([\w-]+):(?: (.*))?$/.exec(line);
+    if (match === null) return [`${where}: geen "sleutel: waarde"`];
+    const value = match[2] ?? '';
+    if (/^".*"$/.test(value) || /^'.*'$/.test(value)) return [];
+    if (value.startsWith('"') || value.startsWith("'")) return [`${where}: quote niet gesloten`];
+    if (value.includes(': ') || value.includes(' #') || value.endsWith(':'))
+      return [`${where}: plain scalar met ': ' of ' #', quote de waarde`];
+    return INDICATOR.test(value) ? [`${where}: begint met een YAML-indicator, quote de waarde`] : [];
+  });
+}
+
+describe('frontmatter is strikte YAML (overnameplan 1a)', () => {
+  const files = [
+    ...readdirSync('.claude/agents')
+      .filter((file) => file.endsWith('.md'))
+      .map((file) => `.claude/agents/${file}`),
+    ...readdirSync('.claude/skills', { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => `.claude/skills/${entry.name}/SKILL.md`),
+  ];
+
+  test.each(files)('%s', (file) => {
+    expect(yamlFouten(file, readFileSync(file, 'utf8'))).toStrictEqual([]);
+  });
+
+  test('de check is rood op een niet-gequote description met ": "', () => {
+    expect(yamlFouten('x.md', '---\nname: x\ndescription: Doet iets: en meer\n---\n')).toStrictEqual([
+      "x.md:3: plain scalar met ': ' of ' #', quote de waarde",
+    ]);
+  });
+
+  test('de check is groen op dezelfde description tussen dubbele quotes', () => {
+    expect(yamlFouten('x.md', '---\nname: x\ndescription: "Doet iets: en meer"\n---\n')).toStrictEqual([]);
+  });
+
+  test('de check is rood op een ongesloten quote, een indicator en " #"', () => {
+    expect(yamlFouten('x.md', '---\na: "open\nb: *alias\nc: tekst #commentaar\n---\n')).toStrictEqual([
+      'x.md:2: quote niet gesloten',
+      'x.md:3: begint met een YAML-indicator, quote de waarde',
+      "x.md:4: plain scalar met ': ' of ' #', quote de waarde",
+    ]);
+  });
+});
