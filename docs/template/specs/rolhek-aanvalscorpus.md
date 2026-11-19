@@ -66,8 +66,9 @@ De rollen zijn `''` (hoofdsessie), `architect`, `developer`, `tester`, `docs`, `
 - functie: `f() { b; }; f` en `function f { b; }; f`;
 - scheiding: `true; b`, `true⏎b`, `true && b`, `false || b`, `! b`, `b &`, `b | cat`, `b || true`;
 - redirect na een groep: `( b ) | cat`, `{ b; } > /dev/null`;
-- schijnbare cd: `( cd /tmp ); b`, `false && cd /tmp; b`, `cd /tmp & b` en `cd /tmp | :; b`. Bash voert `b` uit in de
-  oorspronkelijke map;
+- schijnbare cd: `( cd /tmp ); b`, `false && cd /tmp; b`, `cd /tmp & b`, `cd /tmp | :; b`, `! cd /geen-map && b`,
+  `true || cd /tmp && b` en acht cd's naar ontbrekende mappen vóór `b` (boven 32 mogelijke mappen is de map onbekend).
+  Bash voert `b` uit in de oorspronkelijke map;
 - toewijzing in hetzelfde segment: `X=1 b`;
 - omhulsels die `splitCommand` afpelt: `env b`, `command b`, `nice b`, `nohup b`, `time b`, `exec b`;
 - omhulsels en interpreters die de toets per segment niet kent (eigenaarbesluit 2026-11-19): `timeout 5 b`, `stdbuf -o0 b`,

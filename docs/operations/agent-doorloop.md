@@ -350,8 +350,10 @@ als commandowoord (ook zonder zichtbare `gh` erna; bewust vals positief: `xargs 
 (`env -i gh …`, `nice -n 1 gh …`, `timeout 9 gh …`, `stdbuf`, `setsid`) geldt dat voor de hoofdsessie niet.
 `splitCommand` pelt ook shell-sleutelwoorden en functiekoppen af (`{`, `!`, `if`/`then`/`elif`/`else`, `while`/`until`/`do`,
 `function NAAM`), zodat de regels per segment `{ b; }`, `if b; then …` en een functielichaam toetsen alsof ze draaien. Een `cd`
-geldt alleen voor de segmenten erna bij `cd x && …` buiten een subshell; anders toetst het rolhek elke mogelijke map
-(`naCd` en `perMap` in `rails/hooks/lib/rolhek.mjs`, spec `rolhek-aanvalscorpus`).
+is alleen zeker bij `cd x && …` zonder `(` of `)` in het hele commando, zonder sleutelwoord, toewijzing of omhulsel vóór de
+`cd` en niet na `||` of een pipe; anders toetsen de zelfladende toets en de leestoets van de reviewer elk segment erna in elke
+mogelijke map, boven 32 mappen als onbekende map (`naCd`, `uniekeMappen` en `perMap` in `rails/hooks/lib/rolhek.mjs`, spec
+`rolhek-aanvalscorpus`). Schrijf- en wisdoelen (`bashTarget`) tellen nog vanaf de cwd van de payload (zie de roadmap).
 Lege woorden vóór of tussen groep en actie (`gh "" api …`, `gh '' pr review 1`) slaat het rolhek over zoals gh/cobra
 doet, dus gelden dezelfde regels (`withoutRepo` in `rails/hooks/lib/rolhek.mjs`).
 `pnpm format` en `pnpm run format`

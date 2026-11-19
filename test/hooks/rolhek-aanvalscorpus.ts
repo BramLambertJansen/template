@@ -140,6 +140,9 @@ export const VORMEN: readonly Vorm[] = [
   vorm('false && cd /tmp; b', (b) => `false && cd /tmp; ${b}`),
   vorm('cd /tmp & b', (b) => `cd /tmp & ${b}`),
   vorm('cd /tmp | :; b', (b) => `cd /tmp | :; ${b}`),
+  // een cd achter een sleutelwoord of rechts van `||` is niet zeker, ook met `&&` erna
+  vorm('! cd /geen-map && b', (b) => `! cd /geen-map && ${b}`),
+  vorm('true || cd /tmp && b', (b) => `true || cd /tmp && ${b}`),
   // toewijzing in hetzelfde segment
   vorm('X=1 b', (b) => `X=1 ${b}`),
   // omhulsels die `splitCommand` afpelt

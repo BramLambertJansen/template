@@ -158,6 +158,15 @@ describe('rolhek-aanvalscorpus/AC-2 vormen: een weigering blijft staan, wat er o
     expect(getoetst).toBe(VORMEN.length * rollenPerBasis);
     expect(getoetst).toBeGreaterThan(0);
   });
+
+  // Elke onzekere cd kan de mogelijke mappen verdubbelen; boven 32 is de map onbekend (`uniekeMappen` in rolhek.mjs).
+  test('rolhek-aanvalscorpus/AC-2 boven 32 mogelijke mappen is de map onbekend en weigert de zelfladende toets', () => {
+    const cds = (n: number): string => Array.from({ length: n }, (_, i) => `cd m${String(i)}; `).join('');
+    expect(beslis(`${cds(4)}tee x`, 'developer').uitslag).toBe('door');
+    const zes = beslis(`${cds(6)}tee x`, 'developer');
+    expect(zes.uitslag).toBe('deny');
+    expect(zes.melding).toContain('ziet het rolhek niet waar paden landen');
+  });
 });
 
 // ---------- AC-3: de vormen voeren de basis uit ----------

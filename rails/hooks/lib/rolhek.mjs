@@ -887,9 +887,13 @@ function mapStand(command, cwd) {
   return { nu: [cwd], alle: [cwd], voor: '', haakjes };
 }
 
-/** @param {readonly (string | null)[]} mappen */
+// Boven deze grens is de map onbekend (null, de toets weigert): elke cd met een ander relatief doel kan de lijst verdubbelen.
+const MAX_MAPPEN = 32;
+
+/** @param {readonly (string | null)[]} mappen @returns {(string | null)[]} */
 function uniekeMappen(mappen) {
-  return [...new Set(mappen)];
+  const uniek = [...new Set(mappen)];
+  return uniek.length > MAX_MAPPEN ? [null] : uniek;
 }
 
 /**
@@ -915,7 +919,7 @@ function naCd({ parsed, argv }, stand, root) {
  * @param {string} scheiding @param {MapStand} stand
  */
 function naScheiding(scheiding, stand) {
-  if (scheiding !== '&&') stand.nu = [...stand.alle];
+  if (scheiding !== '&&') stand.nu = uniekeMappen(stand.alle);
   stand.voor = scheiding;
 }
 
@@ -931,6 +935,7 @@ function perMap(mappen, toets, decision) {
   for (const cwd of mappen) toets(cwd, besluit);
   decision.deny.push(...new Set(besluit.deny));
   decision.ask.push(...new Set(besluit.ask));
+  decision.context.push(...new Set(besluit.context));
 }
 
 // Opties van env die het volgende woord als waarde nemen (`-u NAAM`, `-C MAP`, `--unset NAAM`, `--chdir MAP`, `--argv0 X`).
