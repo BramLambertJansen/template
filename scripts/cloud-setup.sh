@@ -1,22 +1,33 @@
 #!/usr/bin/env bash
-# Setup-script van een cloudomgeving van Claude Code (README, Cloud): wat scripts/bootstrap.sh lokaal doet, zonder de
-# machinecontrole (in de VM draait geen lokale stack). Idempotent, zonder geheimen. Netwerk alleen via de standaard-allowlist
-# van de omgeving ("Trusted"): mise van github.com, daarna wat mise install en pnpm install ophalen. mise.run staat niet op
-# die allowlist, daarom de release-binary. Ook de systeempakketten die de Bash-sandbox van Claude Code nodig heeft
-# (bubblewrap, socat): zonder die faalt elke sessie met "Sandbox required but unavailable". Weigert de proxy de GitHub-API
-# (mise install), dan haalt een terugval per tool exact dezelfde versie met controle op checksum. Zie docs/ENVIRONMENT.md.
+# Installatie van de toolchain in een cloudomgeving van Claude Code (README, Cloud): wat scripts/bootstrap.sh lokaal doet,
+# zonder de machinecontrole (in de VM draait geen lokale stack). Het veld "Setup script" van de omgeving bevat niet dit
+# script maar scripts/cloud-omgeving.sh: dat start in de map boven de clone en draait dit script van elke repo eronder, dus
+# één omgeving voor alle repo's uit de template. Met de hand in een sessie: bash scripts/cloud-setup.sh.
+# Idempotent, zonder geheimen. Netwerk alleen via de standaard-allowlist van de omgeving ("Trusted"): mise van github.com,
+# daarna wat mise install en pnpm install ophalen. mise.run staat niet op die allowlist, daarom de release-binary. Weigert
+# de proxy de GitHub-API (mise install), dan haalt een terugval per tool exact dezelfde versie met controle op checksum.
+# Node en pnpm komen op PATH via drie routes, geen ervan op zichzelf fataal: koppelingen in ~/.local/bin (de enige die ook
+# hooks en git-hooks bereikt), een regel in CLAUDE_ENV_FILE en dezelfde regel in ~/.bashrc. bubblewrap en socat (voor de
+# kooi) zijn niet fataal: de sessie start ook zonder. Zie docs/ENVIRONMENT.md.
 set -euo pipefail
+# PATH van vóór de eigen aanpassing: de slotcontrole kijkt welke node hooks en git-hooks daarop vinden.
+PATH_VOOR="$PATH"
 cd "$(dirname "$0")/.."
 
-# Systeempakketten voor de sandbox, alleen als ze ontbreken (idempotent). Zonder root via sudo.
+# Systeempakketten voor de kooi, alleen als ze ontbreken (idempotent). Zonder root via sudo. Niet fataal: de sessie start
+# zonder, en de kooi meldt zelf dat bubblewrap ontbreekt (scripts/kit/kooi.mjs).
 pakketten=()
 command -v bwrap >/dev/null || pakketten+=(bubblewrap)
 command -v socat >/dev/null || pakketten+=(socat)
 if ((${#pakketten[@]} > 0)); then
   as_root=()
   [[ "$(id -u)" -eq 0 ]] || as_root=(sudo)
-  "${as_root[@]}" apt-get update
-  "${as_root[@]}" apt-get install -y "${pakketten[@]}"
+  apt_status=0
+  "${as_root[@]}" apt-get update || apt_status=$?
+  ((apt_status != 0)) || "${as_root[@]}" apt-get install -y "${pakketten[@]}" || apt_status=$?
+  if ((apt_status != 0)); then
+    printf '! bubblewrap en socat niet geïnstalleerd (apt-get exit %s); de kooi kan niet starten\n' "$apt_status" >&2
+  fi
 fi
 
 # Stap die het netwerk nodig heeft: bij een fout een leesbare diagnose in plaats van alleen de fout van het commando (set -e).
@@ -117,12 +128,6 @@ if ! command -v mise >/dev/null; then
   chmod +x "$HOME/.local/bin/mise"
 fi
 
-# Latere shells van de sessie (Bash-tool, hooks) vinden node, pnpm en dbmate via de shims. Enkele aanhalingstekens:
-# $HOME en $PATH worden pas bij het laden van ~/.bashrc ingevuld.
-line='export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"'
-touch "$HOME/.bashrc"
-grep -qxF "$line" "$HOME/.bashrc" || printf '%s\n' "$line" >>"$HOME/.bashrc"
-
 mise trust
 # mise install vraagt voor de aqua-tools (pnpm, dbmate, betterleaks, osv-scanner) de GitHub-API; de proxy van een
 # cloudsessie weigert die voor repo's die niet aan de sessie hangen. Dan vult de terugval hieronder aan; wat dan nog
@@ -141,8 +146,70 @@ if [[ -n "$ontbreekt" ]]; then
   exit 1
 fi
 
+# Route 1: ~/.local/bin/<tool> als koppeling naar de binaire die `mise which` geeft, niet naar een mise-shim (een shim
+# weigert in een map met een niet-vertrouwde mise.toml). In de cloud staat ~/.local/bin vóór de systeem-node op PATH, ook
+# voor hooks en git-hooks, die node via PATH starten. Een koppeling die al goed staat, blijft ongemoeid.
+koppel() {
+  local tool="$1" pad link="$HOME/.local/bin/$1"
+  pad="$(mise which "$tool" 2>/dev/null)" || pad=""
+  if [[ -z "$pad" ]]; then
+    printf '! geen koppeling ~/.local/bin/%s: mise which %s gaf geen pad\n' "$tool" "$tool" >&2
+    return 1
+  fi
+  if [[ -e "$link" && ! -L "$link" ]]; then
+    printf '! geen koppeling ~/.local/bin/%s: daar staat al een bestand\n' "$tool" >&2
+    return 1
+  fi
+  [[ "$(readlink "$link" 2>/dev/null)" != "$pad" ]] || return 0
+  if ! { mkdir -p "$HOME/.local/bin" && ln -sfn "$pad" "$link"; } 2>/dev/null; then
+    printf '! geen koppeling ~/.local/bin/%s: niet te schrijven\n' "$tool" >&2
+    return 1
+  fi
+}
+koppelingen=1
+koppel node || koppelingen=0
+koppel pnpm || koppelingen=0
+pin="$(mise current node 2>/dev/null)" || pin=""
+
+# Route 2 en 3: dezelfde regel in CLAUDE_ENV_FILE (als gezet) en in ~/.bashrc, voor de Bash-tool. ~/.local/bin vóór de
+# shims, zodat de koppeling ook daar wint. Enkele aanhalingstekens: $HOME en $PATH worden pas bij het laden ingevuld.
+REGEL='export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"'
+schrijf_regel() {
+  { grep -qxF "$REGEL" "$1" || printf '%s\n' "$REGEL" >>"$1"; } 2>/dev/null
+}
+env_bestand=0
+if [[ -n "${CLAUDE_ENV_FILE:-}" ]]; then
+  if schrijf_regel "$CLAUDE_ENV_FILE"; then
+    env_bestand=1
+  else
+    printf '! CLAUDE_ENV_FILE (%s) niet te schrijven\n' "$CLAUDE_ENV_FILE" >&2
+  fi
+fi
+bashrc=0
+schrijf_regel "$HOME/.bashrc" && bashrc=1
+
 netwerk "pnpm install (of lockfile ongeldig)" mise exec -- pnpm install --frozen-lockfile
 # lefthook heeft geen postinstall (pnpm-workspace.yaml: allowBuilds); de hooks komen alleen hier.
 mise exec -- pnpm exec lefthook install
 # Bewijs: dezelfde voorcontrole als elke sessie (exacte Node- en pnpm-versie, node_modules), nu meteen bij de setup.
 mise exec -- node --input-type=module -e "$CONTROLE"
+
+# Slotcontrole: welke node vinden hooks en git-hooks op het PATH van vóór dit script? Route 1 werkt alleen als dat de
+# gepinde versie is en beide koppelingen staan. Faalt alleen als ook route 2 en 3 niet geschreven zijn.
+gevonden="$( (PATH="$PATH_VOOR" && node --version) 2>/dev/null)" || gevonden=""
+gevonden="${gevonden:-geen}"
+route1=0
+[[ "$koppelingen" -eq 0 || -z "$pin" || "${gevonden#v}" != "$pin" ]] || route1=1
+if ((bashrc == 0)); then
+  via=""
+  if ((route1)); then via='~/.local/bin'; elif ((env_bestand)); then via=CLAUDE_ENV_FILE; fi
+  [[ -z "$via" ]] || printf '! ~/.bashrc niet te schrijven; PATH loopt via %s\n' "$via" >&2
+fi
+if ((route1 == 0)); then
+  if ((env_bestand == 0 && bashrc == 0)); then
+    printf '✗ node op PATH is %s, verwacht %s: ~/.local/bin staat niet vóór de systeem-node en CLAUDE_ENV_FILE en ~/.bashrc zijn niet te schrijven → zie docs/ENVIRONMENT.md, Problemen\n' \
+      "$gevonden" "${pin:-onbekend}" >&2
+    exit 1
+  fi
+  printf '! ~/.local/bin staat niet vóór de systeem-node: hooks en git-hooks blijven op %s\n' "$gevonden" >&2
+fi

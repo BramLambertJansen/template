@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd
 namespace: cloud-zelfinstallatie
 ---
 
@@ -22,7 +22,7 @@ elkaar om een andere reden. Elke regel hieronder noemt zijn bron; wat niet gemet
 | F1 | Het setup-script van de omgeving, `bash scripts/cloud-setup.sh`, eindigt met `bash: scripts/cloud-setup.sh: No such file or directory`, exit 127: het draait in de map bóven de clone. | startscherm; de sessie bevestigde het na `get environment` |
 | F2 | Na het mislukte setup-script start Claude Code toch ("Started Claude Code"); de sessie heeft dan Node v22.23.5 en geen pnpm 11.28.2. | startscherm, melding van de sessie |
 | F3 | Met de hand gedraaid vanuit de Bash-tool stopt het script op `scripts/cloud-setup.sh:123` (`touch "$HOME/.bashrc"`): `Read-only file system`. mise staat dan al in `/root/.local/bin`; `mise trust`, `mise install` en `pnpm install` zijn niet gedraaid. | melding van de sessie |
-| F4 | `git status` toont in die sessie de ongetrackte paden `.bash_profile`, `.bashrc`, `.claude/commands` en `.claude/launch.json`: de plaatshouders van de Bash-sandbox (ADR 0084). | melding van de sessie, `rails/hooks/lib/sandbox-plaatshouders.mjs` |
+| F4 | `git status` toont in die sessie de ongetrackte paden `.bash_profile`, `.bashrc`, `.claude/commands` en `.claude/launch.json` (voorbeeld): de plaatshouders van de Bash-sandbox (ADR 0084). | melding van de sessie, `rails/hooks/lib/sandbox-plaatshouders.mjs` |
 | F5 | De startmelding zegt tegelijk: `sandbox.failIfUnavailable is set, but this session runs in Anthropic's cloud container, which has no command sandbox […] Commands run without a sandbox`. | startscherm |
 | F13 | In een andere cloudsessie van dezelfde dag, mét geïnstalleerde toolchain, draaien de pre-commit-hook en de Stop-hook op de Node 22 en pnpm uit `/opt/node22`: de mise-shims staan niet op het `PATH` van hooks. De Stop-hook meldt `toolchain ontbreekt: Node v22.23.5`; via `mise exec --` slagen de hooks. | melding van die sessie |
 | F14 | In die sessie kan de Bash-tool niet schrijven in `/root/.local/share/pnpm` (alleen-lezen). | melding van die sessie |
@@ -48,7 +48,7 @@ F4 en F14 spreken F5 tegen; zie M2. F13 laat zien dat `~/.bashrc` hooks niet ber
 | D1 | Het setup-script staat in de omgeving op claude.ai/code, niet in de repo; het draait vóór Claude Code start, als root, alleen in de cloud. Het veld neemt ook de tekst van een bestand tot 64 KB over ("Choose file"). | [cloud-environments, Setup scripts](https://code.claude.com/docs/en/cloud-environments#setup-scripts) |
 | D2 | Klaar binnen ongeveer vijf minuten: de schijf wordt als momentopname hergebruikt en het script draait niet opnieuw, tot het script of de toegestane hosts wijzigen of de cache na ongeveer zeven dagen verloopt. | idem, Environment caching |
 | D3 | De documentatie zegt dat een setup-script met een andere exitcode dan 0 de sessie tegenhoudt. F2 laat het tegendeel zien. | idem, Script requirements |
-| D4 | SessionStart-hooks uit `.claude/settings.json` van de repo draaien in een cloudsessie met één repository, na de start van Claude Code, bij elke sessie (ook hervat). Niet in een sessie met meerdere repositories en niet in een cloud-thread van een Project; die laatste laadt alleen `CLAUDE.md`, `.claude/CLAUDE.md` en `.claude/rules/`. | idem, Setup scripts vs. SessionStart hooks; What carries over |
+| D4 | SessionStart-hooks uit `.claude/settings.json` van de repo draaien in een cloudsessie met één repository, na de start van Claude Code, bij elke sessie (ook hervat). Niet in een sessie met meerdere repositories en niet in een cloud-thread van een Project; die laatste laadt alleen `CLAUDE.md`, `.claude/CLAUDE.md` (voorbeeld) en `.claude/rules/`. | idem, Setup scripts vs. SessionStart hooks; What carries over |
 | D5 | Een SessionStart-hook houdt de sessie nooit tegen; stdout bij exit 0 komt in de context. De hooks van één gebeurtenis draaien parallel. `timeout` is in seconden, standaard 600 voor een `command`-hook. | [hooks, SessionStart](https://code.claude.com/docs/en/hooks) |
 | D6 | Een SessionStart-hook krijgt `CLAUDE_ENV_FILE`; `export`-regels daarin gaan vóór elk later Bash-commando. `CLAUDE_CODE_REMOTE` is `true` in de cloud en lokaal nooit. `CLAUDE_PROJECT_DIR` is de root van het project. | idem; cloud-environments |
 | D7 | Voorgeïnstalleerd: Node 20, 21 en 22 (22 op `PATH`). Netwerk Trusted laat onder meer `nodejs.org`, de npm-registry en GitHub toe; Full laat alles toe. | cloud-environments, Installed tools, Access levels |
@@ -65,7 +65,7 @@ F4 en F14 spreken F5 tegen; zie M2. F13 laat zien dat `~/.bashrc` hooks niet ber
 | R4 | `werkstraat session-start` heeft een timeout van 30 s en draait `scripts/doctor.sh --quick`. | `.claude/settings.json:177`, `rails/hooks/lib/werkstraat.mjs` |
 | R5 | `docs/ENVIRONMENT.md` schrijft als setup-script "precies" `bash scripts/cloud-setup.sh` voor en zegt dat een sessie zonder bubblewrap faalt met `Sandbox required but unavailable`. Beide kloppen niet meer (F1, F5, D8). | `docs/ENVIRONMENT.md:10`, `docs/ENVIRONMENT.md:27`, `docs/ENVIRONMENT.md:211` |
 | R6 | ADR 0085 wees "installeren vanuit een SessionStart-hook buiten de sandbox" af: lifecycle-scripts en pnpm-configuratie komen uit een werkmap die de agent beschrijft, de hook draait ook bij hervatten, en het botst met 0061 ("normale sessies vragen geen nieuwe toolchaininstallatie"). R-TOOL-01 legt de toolchain bij de eigenaar. | `docs/template/adr/0085-worktree-installatie-in-de-sandbox.md:37`, `docs/template/adr/0061-claude-sandbox-werkstraat.md:60`, `docs/framework.md:255` |
-| R7 | `scripts/cloud-setup.sh` voert zelf configuratie uit de werkmap uit: `mise trust` en `mise install` op `mise.toml`, `pnpm install`, lefthook uit `node_modules` en een import van `scripts/kit/toolchain.mjs`. | `scripts/cloud-setup.sh:98`, `:126`, `:130`, `:144`, `:146` |
+| R7 | `scripts/cloud-setup.sh` voert zelf configuratie uit de werkmap uit: `mise trust` en `mise install` op `mise.toml`, `pnpm install`, lefthook uit `node_modules` en een import van `scripts/kit/toolchain.mjs`. | `scripts/cloud-setup.sh:98`, `:126`, `:130`, `:144`, `:146` (vóór de bouw-PR) |
 | R8 | Zonder geldig anker start `rails/hooks/werkstraat.mjs` niet: de lader weigert met exit 2. De hooks starten `node` via `PATH`. | `.claude/hooks/laden.mjs:284`, `.claude/settings.json:165` |
 
 **Niet gemeten; eerst meten (Testplan, stap 1; M4 hoort bij de vervolgspec)**
@@ -157,38 +157,38 @@ daar niets aan toe; een hook die dat ook bij hervatten doet wel. Dat is de afweg
   bestaat, en een start-`PATH` waarop `$HOME/.local/bin` vóór elke andere `node` staat, wanneer `scripts/cloud-setup.sh`
   draait, dan eindigt het met exit 0 en bevat de uitvoer `! ~/.bashrc niet te schrijven; PATH loopt via ~/.local/bin`. De regel
   noemt de eerste route in de volgorde van het ontwerp die wel werkt.
-  Faalt op de huidige code (F3). Toets: `test/scripts/cloud-zelfinstallatie.test.ts` (nieuw)
+  Faalt op de huidige code (F3). Toets: `test/scripts/cloud-zelfinstallatie.test.ts`
 - **cloud-zelfinstallatie/AC-2** — Na een geslaagde run zijn `$HOME/.local/bin/node` en `$HOME/.local/bin/pnpm` symbolische
   koppelingen naar precies het pad dat `mise which node` en `mise which pnpm` geven, en niet naar een pad onder de
   shims-map van mise. Een tweede run laat ze ongemoeid; geeft `mise which` daarna een ander pad, dan wijzen ze na de run
   naar dat pad. Een bestaand gewoon bestand op die plek wordt niet overschreven, en een lege of mislukte `mise which`
   maakt geen koppeling: het script geeft dan een `!`-regel en telt de route als niet geschreven. De test breidt de mise-stub
-  uit met `which`, naar een node-stub die de versie van `mise current node` geeft. Toets: `test/scripts/cloud-zelfinstallatie.test.ts` (nieuw)
+  uit met `which`, naar een node-stub die de versie van `mise current node` geeft. Toets: `test/scripts/cloud-zelfinstallatie.test.ts`
 - **cloud-zelfinstallatie/AC-3** — Gegeven `CLAUDE_ENV_FILE` wijst naar een bestand, wanneer het script slaagt, dan bevat dat
   bestand precies één `export PATH=`-regel met `$HOME/.local/bin` vóór de shims-map, ook na een tweede run, en blijven andere
   regels in dat bestand staan; zonder de variabele maakt het script geen bestand aan. De regel die het script aan `~/.bashrc` toevoegt heeft dezelfde
-  volgorde. Toets: `test/scripts/cloud-zelfinstallatie.test.ts` (nieuw)
+  volgorde. Toets: `test/scripts/cloud-zelfinstallatie.test.ts`
 - **cloud-zelfinstallatie/AC-4** — Gegeven een start-`PATH` zonder `$HOME/.local/bin`, geen `CLAUDE_ENV_FILE` en een
   `.bashrc` als in AC-1, wanneer het script klaar is met installeren, dan eindigt het met exit 1 en de tekst
   `✗ node op PATH is` met de gevonden versie en de versie van `mise current node`. Met dezelfde opstelling en een schrijfbare `.bashrc` eindigt
   het met exit 0 en de regel `! ~/.local/bin staat niet vóór de systeem-node: hooks en git-hooks blijven op <versie>`
-  (F13). Toets: `test/scripts/cloud-zelfinstallatie.test.ts` (nieuw)
+  (F13). Toets: `test/scripts/cloud-zelfinstallatie.test.ts`
 - **cloud-zelfinstallatie/AC-5** — Gegeven `apt-get update` of `apt-get install` eindigt met een fout, wanneer het script draait, dan bevat de
   uitvoer `! bubblewrap en socat niet geïnstalleerd (apt-get exit`, draaien de latere stappen en bepalen die de exitcode.
-  Faalt op de huidige code. Toets: `test/scripts/cloud-zelfinstallatie.test.ts` (nieuw)
+  Faalt op de huidige code. Toets: `test/scripts/cloud-zelfinstallatie.test.ts`
 - **cloud-zelfinstallatie/AC-6** — Gegeven een map met `<a>/scripts/cloud-setup.sh` en `<b>/scripts/cloud-setup.sh`, wanneer
   `scripts/cloud-omgeving.sh` in die map start, dan draait het beide, gesorteerd met `LC_ALL=C`, elk met een regel
   `→ <pad>` ervoor, en is de exitcode die van het eerste script dat faalt, anders 0; een script in `node_modules` of dieper
   dan `<naam>/scripts/` telt niet. Start het in de root van een repo, dan draait het `./scripts/cloud-setup.sh` van die
   repo. Vindt het niets, dan eindigt het met exit 1 en
   `✗ scripts/cloud-setup.sh niet gevonden onder <map>`. Het bestand noemt geen repo-naam en is kleiner dan 64 KB.
-  Faalt op de huidige opzet (F1). Toets: `test/scripts/cloud-omgeving.test.ts` (nieuw)
+  Faalt op de huidige opzet (F1). Toets: `test/scripts/cloud-omgeving.test.ts`
 - **cloud-zelfinstallatie/AC-7** — `docs/ENVIRONMENT.md` noemt onder "Opzetten" het bestand `scripts/cloud-omgeving.sh` als
   inhoud van het veld, één omgeving voor alle repo's uit de template, en nergens meer `bash scripts/cloud-setup.sh` als
   tekst voor dat veld. De tabel "Wat het script doet" noemt de drie routes naar `PATH`. De regel en het probleem over
   `Sandbox required but unavailable` zijn vervangen door de startmelding uit F5, en "Problemen" noemt exit 127 met de
   oorzaak uit F1. `README.md` (Cloud) en de kopcommentaar van `scripts/cloud-setup.sh` zeggen hetzelfde.
-  Toets: `test/docs/cloud-zelfinstallatie.test.ts` (nieuw)
+  Toets: `test/docs/cloud-zelfinstallatie.test.ts`
 
 ## Randgevallen
 
@@ -212,7 +212,7 @@ daar niets aan toe; een hook die dat ook bij hervatten doet wel. Dat is de afweg
   het start-`PATH` (`test/scripts/cloud-setup.test.ts:102`), dus de nieuwe tests krijgen een eigen opstelling.
 - De hooks en git-hooks starten `node` via `PATH` (`.claude/settings.json:165`). Met de koppeling draaien ze in de cloud
   op Node 26 in plaats van 22, zoals CI; dat herstelt F13. Tijdens een herhaalde run met terugval is de koppeling kort
-  kapot (`scripts/cloud-setup.sh:70` wist de doelmap eerst).
+  kapot (`scripts/cloud-setup.sh:81` wist de doelmap eerst).
 - `pnpm ratchet` (check-docs: paden en links), `pnpm test:unit`, `pnpm lint`, `pnpm format:check`.
 - `CHANGELOG.md` en `docs/template-changelog.md`: een app neemt dit over met een template-update en stelt daarna zijn
   omgeving opnieuw in.

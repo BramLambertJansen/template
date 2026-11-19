@@ -1,38 +1,48 @@
 # Omgeving opzetten (cloudsessies)
 
 Dit document legt vast wat een cloudomgeving van Claude Code nodig heeft om met deze repo te werken, en hoe je hem opzet.
-De opzet zelf staat als code in `scripts/cloud-setup.sh`; dit document is de uitleg erbij. Wijzigt het script, werk dan dit
-document bij in dezelfde PR.
+De opzet zelf staat als code in `scripts/cloud-omgeving.sh` (het veld van de omgeving) en `scripts/cloud-setup.sh` (de
+installatie per repo); dit document is de uitleg erbij. Wijzigt een van beide, werk dan dit document bij in dezelfde PR.
 
 ## Opzetten
 
+Eén omgeving voor alle repo's uit de template, één keer per account:
+
 1. Maak op claude.ai/code een omgeving met netwerktoegang **Trusted** (de standaard).
-2. Zet als setup-script precies dit, verder niets (klaar binnen ongeveer vijf minuten betekent dat de omgeving wordt gecachet):
+2. Zet in het veld "Setup script" de inhoud van het bestand `scripts/cloud-omgeving.sh`: plak de tekst, of kies het
+   bestand met "Choose file". Er staat geen repo-naam in.
+3. Kies die omgeving voortaan bij elke sessie, voor deze repo en voor elke app uit de template.
+4. Start elke sessie met één repo, zodat de hooks en permissieregels uit `.claude/settings.json` gelden.
 
-   ```bash
-   bash scripts/cloud-setup.sh
-   ```
-
-3. Start elke sessie met één repo, zodat de hooks en permissieregels uit `.claude/settings.json` gelden.
-
-Een andere omgeving (bijvoorbeeld voor een tweede repo uit deze template) neemt dezelfde instellingen over met dezelfde
-twee stappen: netwerktoegang Trusted en `bash scripts/cloud-setup.sh` als setup-script.
+Het veld draait in de map **boven** de clone, als root, vóór Claude Code start. Daarom zoekt `scripts/cloud-omgeving.sh`
+`scripts/cloud-setup.sh` onder die map (`<repo>/scripts/`, niet in `node_modules`), draait elk gevonden script met een
+regel `→ <pad>` ervoor en eindigt met de exitcode van het eerste script dat faalt. Vindt het niets, dan eindigt het met
+`✗ scripts/cloud-setup.sh niet gevonden onder <map>` en exit 1. Klaar binnen ongeveer vijf minuten betekent dat de omgeving
+wordt gecachet; het script draait dan niet opnieuw tot het veld of de toegestane hosts wijzigen. Niet gemeten: of een
+sessie uit de cache de `node_modules` van de repo bevat, en of één omgeving haar cache over meerdere repo's deelt (spec
+`cloud-zelfinstallatie`, M6). Deelt ze die wel, dan wordt het één omgeving per repo met hetzelfde bestand.
 
 ## Wat het script doet
 
-Het script is idempotent: opnieuw draaien verandert niets als alles er al staat. Het doet, in deze volgorde:
+`scripts/cloud-setup.sh` is idempotent: opnieuw draaien verandert niets als alles er al staat. Het doet, in deze volgorde:
 
 | Stap | Waarom |
 |---|---|
-| `bubblewrap` en `socat` installeren via `apt-get`, alleen als ze ontbreken | De Bash-sandbox van Claude Code (`sandbox` in `.claude/settings.json`) heeft ze nodig. Zonder falen sessies met `Sandbox required but unavailable: bubblewrap and socat not installed`. De kooi (`scripts/kit/kooi.mjs`, ADR 0072) heeft bubblewrap ook nodig: ze draait overgenomen commando's in tests en valt zonder bubblewrap dicht. Kan de kooi niet starten, dan slaat `gate:fast` die tests lokaal over met een `⚠`-regel; in CI is dat rood (ADR 0088, `docs/operations/testuitvoering.md`). |
+| `bubblewrap` en `socat` installeren via `apt-get`, alleen als ze ontbreken; mislukt dat, dan een `!`-regel en verder | De kooi (`scripts/kit/kooi.mjs`, ADR 0072) heeft bubblewrap nodig: ze draait overgenomen commando's in tests en valt zonder bubblewrap dicht. Kan de kooi niet starten, dan slaat `gate:fast` die tests lokaal over met een `⚠`-regel; in CI is dat rood (ADR 0088, `docs/operations/testuitvoering.md`). Een cloudsessie start ook zonder; zie de startmelding onder Problemen. |
 | `mise` ophalen als release-binary van github.com (gepinde versie) | `mise.run` staat niet op de allowlist van netwerktoegang Trusted. |
-| `~/.bashrc` een PATH-regel voor de mise-shims geven | Latere shells (Bash-tool, hooks) vinden `node`, `pnpm` en `dbmate`. |
 | `mise install` | Toolchain uit `mise.toml`. |
 | Terugval per ontbrekende tool (zie Terugval) | De proxy van een cloudsessie weigert de GitHub-API, die `mise install` voor pnpm, dbmate, betterleaks en osv-scanner nodig heeft. |
 | Stoppen als `mise ls --missing` nog iets noemt | Een tool zonder terugval valt meteen op, niet pas bij de eerste check of commit. |
+| Route 1 naar `PATH`: `~/.local/bin/node` en `~/.local/bin/pnpm` als koppeling naar het pad dat `mise which` geeft | De binaire zelf, geen mise-shim (een shim weigert bij een niet-vertrouwde `mise.toml`). `~/.local/bin` stond in één gemeten cloudsessie vóór de voorgeïnstalleerde Node 22 (spec `cloud-zelfinstallatie`, F11; voor de sessie van de eigenaar en voor hooks nog niet gemeten, M3); dit is de enige route die ook hooks en git-hooks kan bereiken, die `node` via `PATH` starten. Een gewoon bestand op die plek blijft staan; een lege of mislukte `mise which` maakt geen koppeling. Beide geven een `!`-regel. |
+| Route 2: één eigen `export PATH=`-regel in `CLAUDE_ENV_FILE`, als die variabele gezet is | Claude Code zet die regel vóór elk Bash-commando. Idempotent op de eigen regel; andere regels, ook een `export PATH=` van iets anders, blijven staan. Niet te schrijven is een `!`-regel. |
+| Route 3: dezelfde regel in `~/.bashrc` | Voor de Bash-tool. Niet te schrijven (bijvoorbeeld alleen-lezen in de sessie) is een `!`-regel, geen fout. |
 | `pnpm install --frozen-lockfile` | Dependencies exact volgens het lockfile. |
 | `pnpm exec lefthook install` | Git-hooks (lefthook heeft geen postinstall). |
 | Voorcontrole uit `scripts/kit/toolchain.mjs` | Bewijst aan het eind van de setup dezelfde exacte Node- en pnpm-versie en `node_modules` die elke sessie eerst controleert. |
+| Slotcontrole op `PATH` | Route 1 telt als het `PATH` van vóór het script de versie van `mise current node` geeft én beide koppelingen (node en pnpm) staan. Telt route 1 niet en is route 2 noch 3 geschreven, dan exit 1. Werkt alleen route 2 of 3, dan exit 0 met een waarschuwing dat hooks en git-hooks op de systeem-node blijven. |
+
+In de `PATH`-regel van route 2 en 3 staat `$HOME/.local/bin` vóór `$HOME/.local/share/mise/shims`, zodat de koppeling ook
+daar wint.
 
 Het script bevat geen geheimen en vraagt er geen. Het draait zonder root via `sudo` als dat nodig is.
 
@@ -41,7 +51,7 @@ Het script bevat geen geheimen en vraagt er geen. Het draait zonder root via `su
 `mise install` haalt node van nodejs.org, maar voor de aqua-tools (pnpm, dbmate, betterleaks, osv-scanner) vraagt het
 eerst de GitHub-API (`api.github.com/repos/<repo>/releases/tags/<versie>`). De proxy van een cloudsessie weigert die API
 voor repo's die niet aan de sessie hangen (403); release-downloads van `github.com`, `nodejs.org` en `registry.npmjs.org`
-gaan wel door. Daarom vult `scripts/cloud-setup.sh:65` (`terugval`) elke tool aan waarvoor `mise where` faalt:
+gaan wel door. Daarom vult `scripts/cloud-setup.sh:76` (`terugval`) elke tool aan waarvoor `mise where` faalt:
 
 | Tool | Bron | Controle op de inhoud |
 |---|---|---|
@@ -184,8 +194,9 @@ branchnaam voor; de PR komt van de opgelegde branch. Is een vaste naam nodig, da
 ## Problemen
 
 - **`✗ toolchain ontbreekt`** (bijvoorbeeld `Node v22…, verwacht 26…` of `node_modules ontbreekt of is onvolledig`): het setup-script is niet
-  gedraaid, mislukt of de omgeving is gecachet van vóór het script. Controleer in claude.ai/code dat het setup-script precies
-  `bash scripts/cloud-setup.sh` is en ververs de omgevingscache. Elk probleem in de melding noemt zijn eigen herstel. In een
+  gedraaid, mislukt of de omgeving is gecachet van vóór het script. Controleer in claude.ai/code dat het veld "Setup script"
+  de inhoud van `scripts/cloud-omgeving.sh` heeft en ververs de omgevingscache; in de sessie zelf herstelt
+  `bash scripts/cloud-setup.sh` het. Elk probleem in de melding noemt zijn eigen herstel. In een
   gekoppelde worktree (`.git` is een bestand) zonder `node_modules` is dat `node scripts/kit/worktree-install.mjs`: frozen
   install met `--package-import-method=copy` en store, cache en state onder `os.tmpdir()`, binnen de sandbox (een
   bestaande, ook lege of halve map `node_modules` wordt afgemaakt). Het draait vanuit de worktree-root en weigert in de
@@ -208,7 +219,23 @@ branchnaam voor; de PR komt van de opgelegde branch. Is een vaste naam nodig, da
   op Trusted staat. Meldt curl `Failed to connect to localhost port 3128`, dan antwoordt de proxy uit `HTTPS_PROXY` niet.
 - **Proxy in de Bash-tool**: het setup-script draait in een ander proces dan de sandboxed Bash-tool van de sessie. Dat het
   script slaagt, bewijst niet dat de Bash-tool het netwerk bereikt; controleer beide (zie Eerst controleren).
-- **`Sandbox required but unavailable`**: de setup is niet gedraaid of de omgeving is gecachet van vóór deze stap. Draai
-  `bash scripts/cloud-setup.sh` opnieuw of ververs de omgevingscache.
+- **`bash: scripts/cloud-setup.sh: No such file or directory`, exit 127** bij "Setup script": het veld bevat
+  `bash scripts/cloud-setup.sh`, maar het script van de omgeving start in de map boven de clone, waar dat pad niet bestaat.
+  Zet in het veld de inhoud van `scripts/cloud-omgeving.sh` (zie Opzetten). Op 19 november 2026 startte de sessie daarna
+  toch, zonder toolchain (Node 22, geen pnpm).
+- **`✗ scripts/cloud-setup.sh niet gevonden onder <map>`**: de gekozen repo heeft geen `scripts/cloud-setup.sh`, of de clone
+  staat dieper dan één map onder de startmap.
+- **`✗ node op PATH is <versie>, verwacht <pin>`**: geen van de drie routes naar `PATH` werkt (zie Wat het script doet):
+  `~/.local/bin` staat niet vóór de systeem-node, `CLAUDE_ENV_FILE` is niet gezet of niet te schrijven en `~/.bashrc` ook
+  niet. Controleer `echo "$PATH"` en `ls -l ~/.local/bin/node`; `mise exec -- <commando>` werkt in de tussentijd wel.
+- **`! ~/.local/bin staat niet vóór de systeem-node: hooks en git-hooks blijven op <versie>`**: de Bash-tool krijgt de
+  gepinde Node via `CLAUDE_ENV_FILE` of `~/.bashrc`, maar hooks en git-hooks niet. Een hook die `✗ toolchain ontbreekt`
+  meldt, slaagt dan via `mise exec --`.
+- **`! bubblewrap en socat niet geïnstalleerd (apt-get exit <code>); de kooi kan niet starten`**: de sessie werkt, maar
+  tests die de kooi nodig hebben slaan lokaal over (`⚠`). Draai het script opnieuw als de pakketbron weer bereikbaar is.
+- **Startmelding over de sandbox**: verwacht in een cloudsessie; de sessie start zonder Bash-sandbox en zonder
+  `bubblewrap`. De melding luidt:
+  `sandbox.failIfUnavailable is set, but this session runs in Anthropic's cloud container, which has no command sandbox […] Commands run without a sandbox`. Dat de sessie geen sandbox claimt, staat onder Minimale Claude Code-versie (`⚠ bewaking niet
+  actief`).
 - **Sandbox uitzetten** is bewust geen standaard: `.claude/settings.json` blijft `sandbox` aan houden. Wie dat toch wil, doet dat per
   omgeving buiten de repo en met eigenaarakkoord (beschermd pad, `docs/framework.md` §10).
