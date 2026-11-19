@@ -82,9 +82,15 @@ const soortenVan = (bron?: Bron): Soort[] => {
   const functie = nodig('actorSoorten', soortenSchema);
   return bron === undefined ? functie() : functie(bron);
 };
+// Een onverwachte fout (zoals de oude verwachteUitkomst die de bron negeert en de nep-permissie niet kent) telt als
+// gefaalde assertie, niet als laadfout: zo bewijst leerpunt-bewijs dat de test op de basis om de goede reden rood is.
 const uitkomst = (soort: string, permissie: string, bron?: Bron): Uitkomst => {
   const functie = nodig('verwachteUitkomst', uitkomstSchema);
-  return bron === undefined ? functie(soort, permissie) : functie(soort, permissie, bron);
+  try {
+    return bron === undefined ? functie(soort, permissie) : functie(soort, permissie, bron);
+  } catch (fout) {
+    return expect.fail(`verwachteUitkomst('${soort}', '${permissie}') gooide: ${String(fout)}`);
+  }
 };
 const beheerrollenMet = (permissie: string, bron?: Bron): string[] => {
   const functie = nodig('beheerrollenMet', beheerrollenSchema);
