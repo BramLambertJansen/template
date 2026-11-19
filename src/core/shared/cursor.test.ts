@@ -45,7 +45,7 @@ describe('cursor per sortering (spec lijstpagina)', () => {
     expect(decodeCursor(cursor, byName)).toStrictEqual(['naam-az', 'ada', 'id-1']);
   });
 
-  test('een cursor van een andere sortering geeft een ZodError (AC-7)', () => {
+  test('een cursor van een andere sortering geeft een ZodError (lijstpagina/AC-7)', () => {
     const cursor = encodeCursor(['nieuwste', '2026-10-09T12:00:00.000Z', 'id-1']);
 
     expect(() => decodeCursor(cursor, byName)).toThrow(z.ZodError);

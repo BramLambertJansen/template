@@ -48,9 +48,9 @@ pnpm dev
 
 Dit start Postgres en Mailpit, past migraties toe en start de API en webapp. Standaard staat de webapp op `http://localhost:5173`, de API op poort 8787 en Mailpit op `http://localhost:54324`.
 
-Poorten staan in `.env.local`. Bij meerdere apps moet je ook de bijbehorende poorten in de database-URL's en `SMTP_URL` aanpassen.
+Poorten staan in `.env.local`. Bij meerdere apps kiest `node scripts/kit/nieuwe-app.mjs poorten --env` een vrije set en schrijft het een ontbrekend `.env.local` met de bijbehorende poorten in de database-URL's, `SMTP_URL` en de origin; `pnpm dev` stopt als `API_PORT` of `WEB_PORT` bezet is.
 
-Start de lokale omgeving niet goed, voer dan `scripts/doctor.sh` uit. Dit controleert de toolchain, sandbox-pakketten, Docker, git-hooks en bereikbaarheid van de lokale stack, met een herstelstap per probleem.
+Start de lokale omgeving niet goed, voer dan `scripts/doctor.sh` uit. Dit controleert de toolchain, sandbox-pakketten, Docker, git-hooks, de samenhang van de poorten in `.env.local` en bereikbaarheid van de lokale stack, met een herstelstap per probleem; de uitslag staat ook in `.template/doctor-full.json`.
 
 ### Lokale accounts
 
@@ -97,6 +97,6 @@ Controleer vóór de installatie de [ondersteunde besturingssystemen](START-NIEU
 
 Start een nieuwe app via [START-NIEUWE-APP.md](START-NIEUWE-APP.md): dat is de enige startroute, met de installatiestappen, het curl-blok en de opdracht voor Claude Code. De uitvoering daarna staat in het [setup-playbook](docs/nieuwe-app.md), dat de agent volgt om de app aan te maken, te hernoemen en aan de templategeschiedenis te koppelen.
 
-De eigenaar moet **Settings → Template repository** inschakelen voordat **Use this template** beschikbaar is. Een nieuwe app krijgt daarna eenmalig een merge-commit die de geschiedenis koppelt. Latere updates gaan met `git merge template/main` op een branch en via een PR. Merge zulke updates met **Create a merge commit**, zodat de koppeling behouden blijft; zie [ADR 0040](docs/template/adr/0040-template-app-en-grens-core-app.md).
+De eigenaar moet **Settings → Template repository** inschakelen voordat **Use this template** beschikbaar is. Een nieuwe app krijgt daarna eenmalig een merge-commit die de geschiedenis koppelt. Latere updates gaan met de merge van een releasetag (`git merge --no-edit template-v<x.y.z>`) op een branch en via een PR; zie "Een template-update binnenhalen" in [`docs/nieuwe-app.md`](docs/nieuwe-app.md). Merge zulke updates met **Create a merge commit**, zodat de koppeling behouden blijft; zie [ADR 0040](docs/template/adr/0040-template-app-en-grens-core-app.md).
 
 App-eigen architectuurbesluiten staan in `docs/adr/`, met een eigen nummering; die van de template staan in `docs/template/adr/`. De keuze voor hosting en een beheerde database volgt bij de eerste release.

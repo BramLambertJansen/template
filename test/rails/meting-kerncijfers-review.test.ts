@@ -3,7 +3,7 @@ import path from 'node:path';
 import { expect, test } from 'vitest';
 import { branch, cli, fixture, veld, type Fixture } from './meting-semantiek-kit';
 
-// meting-kerncijfers AC-2: bevindingen uit de review (zonder branch, subagents versus gewone commando's).
+// meting-kerncijfers/AC-2: bevindingen uit de review (zonder branch, subagents versus gewone commando's).
 const BRANCH = 'feat/kern';
 
 function schrijf(f: Fixture, regels: Record<string, unknown>[]) {
@@ -11,7 +11,7 @@ function schrijf(f: Fixture, regels: Record<string, unknown>[]) {
   writeFileSync(path.join(f.opslag, 'sessie.jsonl'), lijnen.join('\n') + '\n');
 }
 
-test('meting-kerncijfers AC-2: --pr-tabel zonder --branch geeft een foutmelding en exit 1, geen gh-aanroep', () => {
+test('meting-kerncijfers/AC-2: --pr-tabel zonder --branch geeft een foutmelding en exit 1, geen gh-aanroep', () => {
   const f = fixture();
   schrijf(f, [{ e: 'Stop', t: '2026-10-15T10:00:00.000Z' }]);
   for (const args of [['--pr-tabel'], ['--pr-tabel', '--branch'], ['--pr-tabel', '--branch', '']]) {
@@ -22,7 +22,7 @@ test('meting-kerncijfers AC-2: --pr-tabel zonder --branch geeft een foutmelding 
   }
 });
 
-test('meting-kerncijfers AC-2: alleen een Agent- of Task-aanroep is geen weigering, een Bash- of Read-sleutel agent wel', () => {
+test('meting-kerncijfers/AC-2: alleen een Agent- of Task-aanroep is geen weigering, een Bash- of Read-sleutel agent wel', () => {
   const f = fixture();
   branch(f, BRANCH);
   schrijf(f, [

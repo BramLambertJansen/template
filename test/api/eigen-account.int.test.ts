@@ -113,7 +113,7 @@ describe('POST /api/auth/change-password', () => {
   test.each([
     ['zonder revokeOtherSessions', {}],
     ['met revokeOtherSessions false', { revokeOtherSessions: false }],
-  ])('AC-12: %s: 400 VALIDATION; wachtwoord en andere sessies ongewijzigd', async (_, extra) => {
+  ])('eigen-account/AC-12: %s: 400 VALIDATION; wachtwoord en andere sessies ongewijzigd', async (_, extra) => {
     const { browser, email } = await t.account('user');
     const other = await t.signIn(email);
     const response = await browser.post('/api/auth/change-password', {
@@ -127,7 +127,7 @@ describe('POST /api/auth/change-password', () => {
     await expect(t.signIn(email, PASSWORD)).resolves.toBeInstanceOf(Browser);
   });
 
-  test('AC-14: gebruiker met TOTP en een password-sessie: 403 MFA_REQUIRED en niets gewijzigd', async () => {
+  test('eigen-account/AC-14: gebruiker met TOTP en een password-sessie: 403 MFA_REQUIRED en niets gewijzigd', async () => {
     const { browser, email, userId } = await t.account('user');
     await t.enableTotp(browser);
     await t.authDb.query(`update session set session_strength = 'password' where "userId" = $1`, [userId]);
@@ -182,7 +182,7 @@ describe('POST /api/auth/change-password', () => {
   });
 });
 
-describe('dichte paden (AC-13)', () => {
+describe('dichte paden (eigen-account/AC-13)', () => {
   test.each(['/update-session', '/list-sessions', '/revoke-session', '/revoke-sessions', '/revoke-other-sessions'])(
     'POST /api/auth%s met een sessie: 404',
     async (path) => {

@@ -12,8 +12,10 @@ on:
 
 permissions: read-all
 
+# Het event hoort in de groep: anders breekt een push naar main de wekelijkse scan af (of andersom) en draait die week geen
+# volledige scan.
 concurrency:
-  group: osv-${{ github.event.pull_request.number || github.ref }}
+  group: osv-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:

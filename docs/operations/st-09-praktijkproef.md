@@ -110,8 +110,11 @@ reproduceerbare baseline. Een groen label zonder controle van de juiste SHA telt
 
 Kies een daadwerkelijk gevonden herbruikbare tekortkoming. Breng de generieke verbetering met regressiebewijs via een
 afzonderlijke template-PR terug, met de vereiste goedkeuringen, review en checks. Geen appcode, appdata of cosmetische
-dummywijziging om een update af te vinken. Na de merge door de eigenaar neem je de wijziging in een app-branch over via
-`git merge template/main`; behoud de merge-ouder, nooit squashen. De eigenaar merget de app-PR als merge-commit.
+dummywijziging om een update af te vinken. Na de merge door de eigenaar neem je de wijziging in een app-branch over via de
+eerstvolgende releasetag van de template (`git merge --no-edit template-v<x.y.z>`, ADR 0094), niet via `template/main`;
+volg "Een template-update binnenhalen" in `docs/nieuwe-app.md`. Een app op `0.1.0` heeft `pnpm template:status` nog niet en
+leest de notities met `git show template-v<x.y.z>:docs/template-changelog.md` (stap 2 daar). Behoud de merge-ouder, nooit
+squashen. De eigenaar merget de app-PR als merge-commit.
 
 Leg verwachte en feitelijke conflicten, herstelstappen en de nieuwe SHA vast. Draai dezelfde baselinecontroles en gerichte
 regressietests en controleer dat appcode, data-afspraken, instellingen en gebruikers-/adminflows behouden blijven.

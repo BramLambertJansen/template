@@ -2,7 +2,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { expect, test } from 'vitest';
 
-// meting-kerncijfers AC-1: de sleutel van een subagent-aanroep is `agent <type>`; nooit andere inputvelden (prompt).
+// meting-kerncijfers/AC-1: de sleutel van een subagent-aanroep is `agent <type>`; nooit andere inputvelden (prompt).
 const root = process.cwd();
 
 type SleutelFn = (tool: string, input: Record<string, unknown>, cwd: string) => string;
@@ -25,7 +25,7 @@ test.each([
   ['Agent', 'a1', 'agent a1'],
   ['Agent', 'a'.repeat(64), `agent ${'a'.repeat(64)}`],
   ['Agent', 'a'.repeat(65), 'agent'],
-])('meting-kerncijfers AC-1: %s met subagent_type %j geeft %j', async (tool, type, verwacht) => {
+])('meting-kerncijfers/AC-1: %s met subagent_type %j geeft %j', async (tool, type, verwacht) => {
   const sleutel = await laad();
   expect(sleutel(tool, { subagent_type: type }, root)).toBe(verwacht);
 });
@@ -43,12 +43,12 @@ test.each<[string, Record<string, unknown>]>([
   ['newline', { subagent_type: 'reviewer\nrm -rf' }],
   ['underscore', { subagent_type: 'a_b' }],
   ['pad', { subagent_type: '../etc' }],
-])('meting-kerncijfers AC-1: ongeldig type (%s) geeft kale `agent`', async (_naam, input) => {
+])('meting-kerncijfers/AC-1: ongeldig type (%s) geeft kale `agent`', async (_naam, input) => {
   const sleutel = await laad();
   expect(sleutel('Agent', input, root)).toBe('agent');
 });
 
-test('meting-kerncijfers AC-1: prompt en andere velden lekken nooit in de sleutel', async () => {
+test('meting-kerncijfers/AC-1: prompt en andere velden lekken nooit in de sleutel', async () => {
   const sleutel = await laad();
   const geheim = 'GEHEIM-prompt-tekst';
   const input = { subagent_type: 'reviewer', prompt: geheim, description: geheim, command: geheim, file_path: geheim };

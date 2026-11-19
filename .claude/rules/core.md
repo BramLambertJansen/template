@@ -17,7 +17,7 @@ Letterlijk uit `docs/framework.md`; bij verschil wint het regelboek.
 
 Hoe (geen norm):
 
-- Core-updates in een app via `git merge template/main` (R-LAAG-01); `check-core` is een job in `guard.yml` (`scripts/kit/check-core.mjs`) en staat in de template zelf uit. In de template wijzigt core met eigenaarakkoord (R-REPO-03).
+- Core-updates in een app via de merge van een `template-v`-tag (R-LAAG-01); `check-core` is een job in `guard.yml` (`scripts/kit/check-core.mjs`) en staat in de template zelf uit. In de template wijzigt core met eigenaarakkoord (R-REPO-03).
 - `src/shared` is app-code, dus core importeert er niet uit (R-LAAG-02). Uitbreidingsplekken: permissies, foutcodes, limieten, env, componentvarianten.
 - `roleLabels` staat in `src/web/copy/ui.ts`; TypeScript dwingt seed-account en naam af, de dev-rolwisselaar toont de rol dan vanzelf.
 

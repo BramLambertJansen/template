@@ -485,7 +485,7 @@ const fixtures: Fixture[] = [
     code: "declare function ok(n: number): boolean; test.each([1])('r', (n) => { expect(ok(n)).toBe(false); });",
     rule: null,
   })),
-  // kooi (ADR 0072, spec kooi AC-5): een shell met een commandotekst alleen via inKooi.
+  // kooi (ADR 0072, kooi/AC-5): een shell met een commandotekst alleen via inKooi.
   ...[
     "import { spawnSync } from 'node:child_process'; declare const c: string; spawnSync('bash', ['-c', c]);",
     "import { spawnSync } from 'node:child_process'; declare const c: string; spawnSync('/bin/sh', ['-eu', '-c', c]);",

@@ -113,7 +113,8 @@ export function leespad(lees, scenarios) {
 
 /**
  * Streefwaarde, eenheid en welke paden per soort tellen (ADR 0065 punt 2); operations zonder streefwaarde. `app` is
- * `docs/app.md`, de feiten van de app die CLAUDE.md importeert (spec app-agentregels, R-DOC-01).
+ * `docs/app.md`, de feiten van de app die CLAUDE.md importeert (spec app-agentregels, R-DOC-01). `playbook` is het
+ * setup-playbook `docs/nieuwe-app.md` (spec nieuwe-app-script, OV-5).
  */
 const SOORTEN = /** @type {const} */ ({
   hoofdstukken: { streefwaarde: 12 * KB, eenheid: 'bytes', pad: null },
@@ -124,6 +125,7 @@ const SOORTEN = /** @type {const} */ ({
   app: { streefwaarde: 60, eenheid: 'regels', pad: /^docs\/app\.md$/ },
   skills: { streefwaarde: 200, eenheid: 'regels', pad: /^\.claude\/skills\/[^/]+\/SKILL\.md$/ },
   operations: { streefwaarde: null, eenheid: 'bytes', pad: /^docs\/operations\/.+\.md$/ },
+  playbook: { streefwaarde: 35 * KB, eenheid: 'bytes', pad: /^docs\/nieuwe-app\.md$/ },
 });
 
 /**

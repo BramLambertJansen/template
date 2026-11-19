@@ -351,7 +351,7 @@ describe('POST /api/auth/change-email en /api/me/email/bevestigen', () => {
     expect(response.status).toBe(200);
   });
 
-  test('AC-14: gebruiker met TOTP en een password-sessie: 403 MFA_REQUIRED, geen mail', async () => {
+  test('eigen-account/AC-14: gebruiker met TOTP en een password-sessie: 403 MFA_REQUIRED, geen mail', async () => {
     const { browser, email, userId } = await t.account('user');
     await t.enableTotp(browser);
     await t.authDb.query(`update session set session_strength = 'password' where "userId" = $1`, [userId]);
@@ -501,7 +501,7 @@ describe('POST /api/auth/change-email en /api/me/email/bevestigen', () => {
 // Dichte paden en hooks die deel 1 nog niet dekt (AC-13). In deel 1 gaan list-sessions e.d. alleen met POST; Better Auth
 // kent list-sessions als GET, en een methode die niet past geeft sowieso 404. Hier dus ook de echte methode.
 // ---------------------------------------------------------------------------------------------------------------------
-describe('dichte paden (AC-13), echte methode en met sessie', () => {
+describe('dichte paden (eigen-account/AC-13), echte methode en met sessie', () => {
   test('GET /api/auth/list-sessions met een sessie: 404 (geen tokens naar de browser)', async () => {
     const { browser } = await t.account('user');
     const response = await browser.get('/api/auth/list-sessions');

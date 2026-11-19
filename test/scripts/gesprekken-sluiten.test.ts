@@ -22,7 +22,7 @@ function verwachtTabel<B>(tabel: Parameters<typeof expectNegativeTable<B>>[0]): 
 // scripts/kit/pr-resolve.mjs (nog niet aanwezig) sluit beantwoorde en verouderde botgesprekken. AC-1 en AC-2 toetsen de pure
 // functie `gesprekRedenen(gesprek)`, AC-3 tot en met AC-5 `sluitGesprekken({ rest, graphql }, { repo, nummer, head })` met een
 // nep-`rest` en een nep-`graphql`, AC-6 de uitvoer en `nummerUit(args, 'pr:resolve')`. AC-7 tot en met AC-11 staan in
-// test/hooks/rolhek-gesprekken-sluiten.test.ts; AC-12 is bewijs, geen test.
+// test/hooks/rolhek-gesprekken-sluiten.test.ts; botgesprekken-sluiten/AC-12 is bewijs (uitvoer in de thread), geen test.
 //
 // Afspraken die de bouw volgt (ze volgen uit de spec, maar de spec noemt geen exacte vorm):
 // - het script wordt dynamisch geladen (zoals test/rails/codeowners-templateregime.test.ts), zodat dit bestand compileert en
