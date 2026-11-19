@@ -1,6 +1,6 @@
 // Corpus van de padbeslissingen van het rolhek over Bash-commando's (rolhek-vooraf/AC-1, ADR 0071). Elke rij is een
 // bestaand testgeval uit de bron, met de uitkomst die de toets vooraf nu geeft (ook doorlaten). `bestanden` is wat het rolhek vooraf leest
-// (null: bestaat niet); `rolhek-padcorpus.test.ts` toetst elke rij vooraf en speelt hem na in de kooi (AC-2).
+// (null: bestaat niet); `rolhek-padcorpus.test.ts` toetst elke rij vooraf en speelt hem na in de kooi.
 export type Uitkomst = 'deny' | 'ask' | 'melding' | 'door';
 
 export interface Rij {

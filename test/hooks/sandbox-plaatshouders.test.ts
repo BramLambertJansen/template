@@ -178,7 +178,7 @@ describe('sandbox-plaatshouders/AC-3: pr:verify neemt geen set afgeschermde pade
   );
 });
 
-// ---- AC-11 (e): verifyWorktree ---------------------------------------------------------------------------------------------
+// ---- sandbox-plaatshouders/AC-4: verifyWorktree ---------------------------------------------------------------------------------------------
 
 describe('sandbox-plaatshouders/AC-4: verifyWorktree blokkeert niet op een ongetrackt leeg SANDBOX_LEEG-pad', () => {
   test.each([
@@ -309,7 +309,7 @@ describe('sandbox-plaatshouders/AC-4: verifyWorktree blokkeert niet op een onget
   );
 });
 
-// ---- AC-12: .env en .env.local ---------------------------------------------------------------------------------------------
+// ---- sandbox-plaatshouders/AC-5: .env en .env.local ---------------------------------------------------------------------------------------------
 
 describe('sandbox-plaatshouders/AC-5: werkmapcontrole (verifyWorktree)', () => {
   /** Een repository die `.env` niet negeert. */

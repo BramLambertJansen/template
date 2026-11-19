@@ -6,6 +6,7 @@ Herzien: 2026-11-12 (#692): door ADR 0089 punt 2 en 6, in de template deels: pun
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 4, 5 en 8, de vorige regel vervalt: punt 2 en 4 vervallen als check (`adrHerzienViolations` hoort niet bij wat in `check-docs` blijft); een herzieningsregel blijft een werkafspraak; de grens "vanaf 0100" vervalt
 Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 Herzien: 2026-11-18: gewijzigd door [0097](0097-herzieningsregel-zonder-pr-nummer.md) punt 1 en 2: in punt 2 heeft de regel geen PR-nummer meer nodig (`Herzien: JJJJ-MM-DD: wat`); een nummer mag nog
+Herzien: 2026-11-19: verwijzingen naar verwijderde documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg).
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 2 (een herzieningsregel is voortaan ook verplicht als een later ADR een
 punt wijzigt zonder de tekst te herschrijven); vult [0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md) punt 1 (het

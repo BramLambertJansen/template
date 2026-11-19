@@ -4,6 +4,7 @@ Status: geaccepteerd
 
 Herzien: 2026-11-18 (#796): gewijzigd door [0093](0093-agent-onder-eigenaaraccount.md) punt 2 en 6, punt 5 vervalt: de identiteitsregels van het rolhek blijven en er komt geen bypass; in Context en Gevolgen is de review van een code-eigenaar geen grens meer, het mergescript houdt een beschermd pad tegen (vangnet)
 Herzien: 2026-11-19: punt 3, gewijzigd door [0099](0099-rolhek-leeslijst-ruimer.md): voor lezen wordt de toets vooraf ruimer (de leeslijst van de reviewer, en de vangnetten op de mergescriptnaam en op `gh` in tekst wijken voor een zeker gelezen lezer); voor schrijven geldt punt 3, behalve dat architect en hoofdsessie de inhoud van een vervallen spec mogen wijzigen (0099 punt 4, OV-2)
+Herzien: 2026-11-19: verwijzingen naar verwijderde documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg); punt 3: de spec is verwijderd in plaats van naar `vervallen` gezet.
 
 Wijzigt [0071](0071-rolhek-vooraf-vaste-lijst.md) punt 3, 4 en
 6, [0083](0083-bewaking-met-minder-wrijving.md) punt 2, [0084](0084-sandbox-afscherming-geen-effect.md) (alleen de
@@ -13,7 +14,7 @@ Besluit van de eigenaar, 2026-11-12.
 ## Context
 
 Het rolhek toetst een schrijfactie van een subagent twee keer: vooraf op de tekst van het commando, en achteraf op wat er op
-schijf veranderde (de effecttoets, ADR 0066). De toets achteraf weet niet wie iets veranderde, alleen dat het veranderde terwijl
+schijf veranderde (de effecttoets). De toets achteraf weet niet wie iets veranderde, alleen dat het veranderde terwijl
 een subagent draaide. Een branchwissel of verplaatsing door de hoofdsessie, een commando van de eigenaar in een eigen terminal,
 de editor en plaatshouders van de sandbox kwamen daardoor op naam van een subagent. Op 12 november 2026 gaf de toets in één
 sessie ruim 340 meldingen, geen ervan was een overtreding; leerpunten #642 en #674 beschrijven hetzelfde. Elke melding blokkeerde
@@ -30,8 +31,9 @@ Sinds ADR 0089 eist GitHub de review van een code-eigenaar op elk beschermd pad.
    toets op zelfladende paden, de overige Stop-checks, en in `pnpm pr:verify` de controle op een schone werkmap met de
    uitzondering voor plaatshouders van de sandbox.
 3. **De toets vooraf wordt niet verder uitgekleed.** De derde stap van het krimpplan vervalt: zonder toets
-   achteraf is de toets vooraf het enige wat een schrijfactie buiten de rol tegenhoudt vóór de PR. De spec gaat als document naar
-   `vervallen`; wat ervan gebouwd is (de vaste lijst vooraf, het corpus, de zelfladende paden) blijft in code en tests.
+   achteraf is de toets vooraf het enige wat een schrijfactie buiten de rol tegenhoudt vóór de PR. Wat van het krimpplan gebouwd
+   is (de vaste lijst vooraf, het corpus, de zelfladende paden) blijft in code en tests, met de AC's in
+   [spec rolhek-vooraf](../specs/rolhek-vooraf.md).
 4. **Volgorde.** Eerst gaan de logica en de aanroepen weg en blijft het ingangsbestand van de hook als lege huls staan, zodat
    een werkmap met de oude `.claude/settings.json` niet dichtvalt. Daarna haalt de eigenaar de aanroepen uit
    `.claude/settings.json` en verdwijnt de huls. Tot dan weigert het rolhek elk commando dat

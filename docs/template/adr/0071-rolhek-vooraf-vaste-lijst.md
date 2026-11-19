@@ -7,6 +7,7 @@ in plaats van schrijfvormen ([0082](0082-zelfladend-sandbox-en-leeslijst.md))
 Herzien: 2026-11-12 (#705): punt 3, 4 en 6: de toets vooraf wordt niet verder uitgekleed, want de toets op effect is weg (ADR 0091 punt 3)
 
 Herzien: 2026-11-14 (#714): ingekort tot wat nog geldt na ADR 0091; de puntnummers zijn ongewijzigd, de oude tekst staat in git
+Herzien: 2026-11-19: verwijzingen naar verwijderde documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg).
 
 Wijzigt in spec rolhek-lezen AC-2 en AC-5 het `--output`-verbod (voortaan op effect); vult
 [0045](0045-railwerk.md) aan. Drempel: A3 (een check vooraf vervalt; de controle verschuift naar achteraf) en A4. Uitwerking:
@@ -15,7 +16,7 @@ Wijzigt in spec rolhek-lezen AC-2 en AC-5 het `--output`-verbod (voortaan op eff
 ## Context
 
 Toen dit besluit viel, toetste een hook na elk Bash-commando van een subagent wat er echt veranderde (de toets op effect,
-0066), en leidde het rolhek daarnaast vooraf uit de shelltekst af welke paden een commando schrijft. Het plan was de toets
+later vervallen met ADR 0091), en leidde het rolhek daarnaast vooraf uit de shelltekst af welke paden een commando schrijft. Het plan was de toets
 vooraf te krimpen tot wat de toets op effect niet kan zien of niet op tijd ziet. Het grootste deel van het rolhek (gh, git,
 verborgen commandowoorden, de leeslijst van de reviewer) bewaakt acties buiten de werkmap en bleef hoe dan ook.
 

@@ -6,7 +6,7 @@ import { PADCORPUS, type Rij, type Uitkomst } from './rolhek-padcorpus.ts';
 
 // Spec rolhek-vooraf AC-1 (ADR 0071): elke padbeslissing van het rolhek over een Bash-commando staat in één corpus
 // (`rolhek-padcorpus.ts`). Vooraf: de toets (`decide`, PreToolUse) geeft nog steeds de vastgelegde uitkomst. De toets achteraf
-// (AC-2, AC-5) is met de effecttoets vervallen (ADR 0091); de velden `achteraf`, `reden` en `alsVeranderd` van het corpus
+// (uit het vervallen krimpplan) is met de effecttoets vervallen (ADR 0091); de velden `achteraf`, `reden` en `alsVeranderd` van het corpus
 // tellen hier niet mee.
 const config = loadConfig(readFileSync(path.resolve(import.meta.dirname, '../../.claude/gates.json'), 'utf8'));
 const ROOT = '/repo';

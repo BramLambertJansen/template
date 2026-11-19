@@ -76,10 +76,10 @@ gebouwde spec, dus PR 1 is groen zonder test voor AC-6, en een tweede spec zou d
 spec blijft `goedgekeurd` tot PR 2 en gaat daar naar `gebouwd`.
 
 - **PR 1** (geen gedragswijziging): de verhuistabel (tests en commentaar hernoemen), de verwijzingen omzetten (vorm hierboven,
-  ook in ADR 0091 en 0093 alleen `(vervallen)` achter de specnaam), de doelspecs naar gebouwd, de negen specs en ADR 0066
+  ook in de Context van een ADR), een `Herzien:`-regel in elk geraakt geaccepteerd ADR, de doelspecs naar gebouwd, de negen specs en ADR 0066
   verwijderen, en de bestaande tests en specs die daarmee meegaan (hieronder, "In PR 1"). Bewijst AC-1, AC-2, AC-3, AC-4,
   AC-5 en AC-7, met de tests uit het Testplan.
-- **PR 2**: de check (AC-6), de regelboektekst, de `Herzien:`-regels in ADR 0091 en 0095, `A4_MELDING`, en de bestaande
+- **PR 2**: de check (AC-6), de regelboektekst, de `Herzien:`-regel in ADR 0095, `A4_MELDING`, en de bestaande
   tests en specs uit "In PR 2". Bewijst AC-6 en opnieuw AC-7; zet `status: gebouwd` op deze spec.
 
 **Werkstappen zonder AC** (eigenaarbesluit 2026-11-19: tekst, geen gedrag; de review toetst ze letterlijk).
@@ -95,14 +95,14 @@ spec blijft `goedgekeurd` tot PR 2 en gaat daar naar `gebouwd`.
     in die twee mappen".
 - *`A4_MELDING`, PR 2*: in `rails/hooks/lib/document-state.mjs` wordt "een vervallen of vervangen ADR wijzigt niet" "een
   vervallen of vervangen ADR wijzigt in een app niet (in de template verdwijnt het, R-CI-06)"; de rest van de melding blijft.
-- *`Herzien:`-regels, PR 2* (de inhoud wijzigt):
-  - 0091: `Herzien: 2026-11-19: punt 3 en Gevolgen: de specs rolhek-vooraf-krimp en rolhek-effect zijn verwijderd (R-CI-06); wat ervan leeft, staat in de specs rolhek-vooraf en sandbox-plaatshouders`;
-    punt 3, laatste zin, wordt "De spec verdwijnt; wat ervan gebouwd is, staat in [spec rolhek-vooraf](../specs/rolhek-vooraf.md)."
-    en Gevolgen "de spec `rolhek-effect` (vervallen) gaat naar `vervallen`" (de vorm na PR 1) wordt "de spec rolhek-effect
-    (vervallen) is verwijderd; de plaatshouders staan in [spec sandbox-plaatshouders](../specs/sandbox-plaatshouders.md)".
+- *`Herzien:`-regels, PR 1* (eigenaarbesluit 2026-11-19, vervangt OV-3): elk geaccepteerd ADR dat PR 1 raakt (0062, 0069,
+  0071, 0074, 0082, 0083, 0084, 0086, 0089, 0091, 0093, 0099) krijgt `Herzien: 2026-11-19: verwijzingen naar verwijderde
+  documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg)`. In 0091 wordt de laatste zin van punt 3
+  "Wat van het krimpplan gebouwd is (…) blijft in code en tests, met de AC's in [spec rolhek-vooraf](../specs/rolhek-vooraf.md)."
+  en krijgt de regel daarvoor "; punt 3: de spec is verwijderd in plaats van naar `vervallen` gezet".
+- *`Herzien:`-regel, PR 2* (de inhoud wijzigt):
   - 0095: `Herzien: 2026-11-19: punt 6: het AC-id blijft staan zolang de spec leeft; vervalt een hele template-spec, dan verhuizen haar levende AC's naar een levende spec en verdwijnt het document (R-CI-06)`;
     punt 6 krijgt die zin aan het eind.
-  - Een link die alleen platte tekst wordt (PR 1), krijgt geen `Herzien:`-regel (OV-3).
 - *ADR-wijzigingen en het rolhek.* Een andere tekst in een geaccepteerd ADR zonder nieuwe `Herzien:`-regel geeft in
   `beslisOvergang` (`rails/hooks/lib/document-state.mjs`) de uitslag `a4`; het rolhek laat die herschrijving alleen aan
   hoofdsessie en architect (`a4Toegestaan`), een developer krijgt `A4_MELDING`. De bouw toetst dit vooraf met één ADR. Gaat
@@ -210,11 +210,12 @@ spec blijft `goedgekeurd` tot PR 2 en gaat daar naar `gebouwd`.
 - PR 1: `rails/hooks/lib/rolhek.mjs`, `rails/hooks/lib/shell.mjs`, `rails/hooks/lib/zelfladend.mjs`,
   `scripts/kit/pr-merge.mjs` (alleen commentaar en meldingtekst); de testbestanden uit de verhuistabel en AC-4;
   `test/scripts/pr-merge-samenvoegen.test.ts`; nieuw `test/docs/vervallen-documenten-weg.test.ts`; ADR 0062, 0069, 0071,
-  0074, 0082, 0083, 0084, 0086, 0089, 0091, 0093 (platte tekst); de specs uit AC-4, `rolhek-vooraf`,
+  0074, 0082, 0083, 0084, 0086, 0089, 0091, 0093, 0099 (verwijzingen en `Herzien:`); de specs uit AC-4, `rolhek-vooraf`,
+  `rolhek-lezen`,
   `sandbox-plaatshouders`, `agent-samenvoegen`, `gebouwd-zonder-nummer`, `compacte-kennisbasis-rails`; `docs/roadmap.md`,
   `docs/operations/agent-doorloop.md`, `docs/template-changelog.md`.
 - PR 2: `scripts/kit/check-docs.mjs`, `test/rails/adr-per-map.test.ts`, `rails/hooks/lib/document-state.mjs`
-  (`A4_MELDING`), `docs/framework.md`, ADR 0091 en 0095 (`Herzien:`), spec `templateregime`.
+  (`A4_MELDING`), `docs/framework.md`, ADR 0095 (`Herzien:`), spec `templateregime`.
 - `.kit/baseline.json`: geen wijziging (de dood-padregels van `kooi.md` en `tests-naar-vermogen.md` noemen testbestanden,
   geen verwijderd document). Geen migratie, route, permissie of resource: niet `check:migrations`, `check:secdef`,
   `test:db`, `test/security/resources.ts`, geen permissietest per verboden rol.
@@ -245,7 +246,8 @@ Elk AC heeft een test met `vervallen-documenten-weg/AC-n` in de describe- of tes
   in een ander geval de nieuwe sleutel weg of zet de fixture in `docs/adr/`, en noemt elk geval met reden in de PR
   (R-TEST-02, akkoord via deze spec).
 - **OV-3 ✅ besloten** (eigenaar 2026-11-19: de aanbeveling) — `Herzien:`-regel bij een link die alleen platte tekst wordt? Aanbeveling: nee; de inhoud verandert niet, alleen
-  0091 en 0095 krijgen er een (Werking). Laat het rolhek de Edit niet toe, dan stopt de bouw en vraagt de eigenaar (Werking).
+  0091 en 0095 krijgen er een (Werking). Herzien door de eigenaar op 2026-11-19: elk geraakt ADR krijgt in PR 1 een
+  `Herzien:`-regel, en ook een vermelding in de Context gaat naar de opvolger of een omschrijving (Werking). Laat het rolhek de Edit niet toe, dan stopt de bouw en vraagt de eigenaar (Werking).
 - **OV-4 ✅ besloten** (eigenaar 2026-11-19: de aanbeveling) — Een changelogregel voor apps (zij krijgen de verwijdering en de check via een template-update). Aanbeveling: één
   regel, door de hoofdsessie bij opleveren; buiten deze spec.
 - **OV-5 ✅ besloten** (eigenaar 2026-11-19) — Regelboektekst en `Herzien:`-regels zijn werkstappen, geen AC's; de bouw gaat

@@ -42,7 +42,8 @@ Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van pun
 - **templateregime/AC-1** — Vervallen door ADR 0093 punt 1 (geen App, geen token). Was: Token: de eigenaar maakt een installatietoken van hoogstens een uur aan met
   `scripts/kit/agent-token.mjs` vanaf `main`, buiten de sandbox (ADR 0089 Herzien 2026-11-17), en de agent geeft het per commando mee (`GH_TOKEN` vóór een
   letterlijk `gh`- of `git push`-commando, gelezen uit een bestand, nooit letterlijk in de opdracht); de sleutel van de App staat op een pad
-  dat de sandbox niet laat lezen.- **templateregime/AC-2** — Gewijzigd door ADR 0093 punt 2 (spec agent-samenvoegen AC-5): het script eist geen review van
+  dat de sandbox niet laat lezen.
+- **templateregime/AC-2** — Gewijzigd door ADR 0093 punt 2 (spec agent-samenvoegen AC-5): het script eist geen review van
   een code-eigenaar meer en de optie `--bypass-beheerder` bestaat niet meer; de tests met dit AC-id toetsen dat. De rest
   geldt nog. Was: Stap 2, rulesetscript: eist review van een code-eigenaar met nul vereiste goedkeuringen, trekt een
   goedkeuring in bij een nieuwe push, eist geen bijgewerkte branch, en eist precies `requiredChecks` (ook `check-core`,

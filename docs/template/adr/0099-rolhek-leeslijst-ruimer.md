@@ -1,6 +1,7 @@
 # 0099 — De leeslijst van het rolhek wordt ruimer; schrijven blijft even streng, op een vervallen spec na
 
 Status: geaccepteerd
+Herzien: 2026-11-19: verwijzingen naar verwijderde documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg).
 
 Herziet [0087](0087-reviewer-zoekt-met-git-grep.md) punt 5, [0064](0064-leesbudget-per-laag.md) punt 5 (de zin "pipes en
 `git grep` komen er niet bij") en [0091](0091-effecttoets-vervalt.md) punt 3 ("de toets vooraf wordt niet verder
