@@ -21,6 +21,11 @@ requests.
 
 ### Gewijzigd
 
+- De AC-dekking van `check-docs` (regel 6) is streng: een AC van een gebouwde spec is alleen gedekt door een testbestand met
+  `<specnaam>/AC-n` of `<namespace>/AC-n` (`dekt` in `scripts/kit/check-docs.mjs`). Een los `AC-n` met de specnaam ergens
+  in hetzelfde bestand telt niet meer; dat gaf schijndekking door tests van een andere spec. Besluit eigenaar, 2026-11-19.
+  Wat verandert voor een app: zet bij een update in elke test die een AC toetst het voorvoegsel (`accounts/AC-3` in plaats
+  van `AC-3`); `pnpm check:docs` noemt elke AC zonder zo'n test (`docs:ac:<spec>:<AC-n>`).
 - De herzieningsregel van een herschreven ADR is `Herzien: JJJJ-MM-DD: wat`, zonder PR-nummer (ADR 0097, R-CI-05); een
   nummer `(#NNN)` na de datum mag nog, dus bestaande regels blijven geldig. Het rolhek telt beide vormen als geldige
   herzieningsregel (`HERZIEN` in `rails/hooks/lib/document-state.mjs`, `test/rails/document-state-herzien-zonder-nummer.test.ts`).

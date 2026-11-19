@@ -39,7 +39,7 @@ const BASIS = {
   ouder: '/home',
 };
 
-describe('bewakingMelding (AC-1)', () => {
+describe('bewakingMelding (bewaking-zichtbaar/AC-1)', () => {
   test('buiten Claude Code: null, ook als alles ontbreekt', () => {
     expect(
       bewakingMelding({ ...BASIS, inClaudeCode: false, recenteMeting: false, buitenWerkmapSchrijfbaar: true }),
@@ -80,7 +80,7 @@ describe('bewakingMelding (AC-1)', () => {
   });
 });
 
-describe('bewakingMeldingIn (AC-2, AC-3)', () => {
+describe('bewakingMeldingIn (bewaking-zichtbaar/AC-2, bewaking-zichtbaar/AC-3)', () => {
   test('CLAUDECODE niet 1: null zonder iets te lezen', () => {
     expect(bewakingMeldingIn('/bestaat/niet', { CLAUDECODE: undefined, METING_DIR: '/bestaat/niet' }, NU)).toBeNull();
     expect(bewakingMeldingIn('/bestaat/niet', { CLAUDECODE: '0', METING_DIR: '/bestaat/niet' }, NU)).toBeNull();
@@ -200,7 +200,7 @@ describe('bewakingMeldingIn (AC-2, AC-3)', () => {
   });
 });
 
-describe('feiten.mjs (AC-4)', () => {
+describe('feiten.mjs (bewaking-zichtbaar/AC-4)', () => {
   function feiten(args: string[], env: Record<string, string | undefined>) {
     return spawnSync('node', ['scripts/kit/feiten.mjs', ...args], {
       cwd: REPO,
@@ -240,7 +240,7 @@ describe('feiten.mjs (AC-4)', () => {
   });
 });
 
-describe('feiten.mjs fouttak (AC-4)', () => {
+describe('feiten.mjs fouttak (bewaking-zichtbaar/AC-4)', () => {
   test('bewaking.mjs ontbreekt: waarschuwing op stderr, feiten draait door', () => {
     const root = tijdelijk();
     const kit = path.join(root, 'scripts/kit');
@@ -266,7 +266,7 @@ describe('feiten.mjs fouttak (AC-4)', () => {
   });
 });
 
-describe('docs (AC-5)', () => {
+describe('docs (bewaking-zichtbaar/AC-5)', () => {
   // CHANGELOG.md niet: app:init herschrijft hem in een app (check:new-resource).
   test.each(['docs/ENVIRONMENT.md'])('%s noemt de melding van feiten.mjs', (bestand) => {
     expect(readFileSync(path.join(REPO, bestand), 'utf8').includes('⚠ bewaking niet actief in deze sessie')).toBe(true);

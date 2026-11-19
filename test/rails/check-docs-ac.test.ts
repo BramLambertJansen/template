@@ -6,8 +6,9 @@ import { expect, test } from 'vitest';
 import { docsViolations } from '../../scripts/kit/check-docs.mjs';
 
 // check-docs: AC-traceerbaarheid. Elk AC-id van een spec met status `gebouwd` heeft een testbestand (`*.test.*`, `*.spec.*`,
-// `db/tests/**`, `e2e/**`, `test/**`) met `<namespace>/AC-n`, of met het AC-id (als heel woord) samen met de specnaam of de
-// namespace. Sleutel: `docs:ac:<spec>:<AC-n>`. Specnaam `mijn-spec`, namespace `mijn`: bewust verschillend.
+// `db/tests/**`, `e2e/**`, `test/**`) met `<specnaam>/AC-n` of `<namespace>/AC-n` (als heel woord). Een los `AC-n`, ook met de
+// specnaam of namespace in hetzelfde bestand of op dezelfde regel, dekt niet. Sleutel: `docs:ac:<spec>:<AC-n>`. Specnaam
+// `mijn-spec`, namespace `mijn`: bewust verschillend.
 function spec(status: string, name = 'mijn-spec', namespace = 'mijn'): string {
   return [
     '---',
@@ -62,11 +63,21 @@ test.each([
   );
 });
 
+test('gedekt via <specnaam>/AC-n (naast <namespace>/AC-n): geen overtreding', async () => {
+  const files = { [SPEC]: spec('gebouwd'), 'src/a/a.test.ts': "test('mijn-spec/AC-1: doet iets', () => {});\n" };
+
+  expect(await acKeys(files)).toStrictEqual([]);
+});
+
 test.each([
-  ['specnaam', "// mijn-spec\ntest('AC-1: doet iets', () => {});\n"],
-  ['namespace', "// spec mijn\ntest('AC-1: doet iets', () => {});\n"],
-])('gedekt via het AC-id en de %s in hetzelfde bestand: geen overtreding', async (_soort, content) => {
-  expect(await acKeys({ [SPEC]: spec('gebouwd'), 'src/a/a.test.ts': content })).toStrictEqual([]);
+  ['specnaam op een eerdere regel', "// mijn-spec\ntest('AC-1: doet iets', () => {});\n"],
+  ['namespace op een eerdere regel', "// spec mijn\ntest('AC-1: doet iets', () => {});\n"],
+  ['specnaam op dezelfde regel', "test('mijn-spec: AC-1 doet iets', () => {});\n"],
+  ['namespace op dezelfde regel', "test('mijn AC-1 doet iets', () => {});\n"],
+])('een los AC-id met de %s in hetzelfde bestand dekt niet: overtreding', async (_soort, content) => {
+  expect(await acKeys({ [SPEC]: spec('gebouwd'), 'src/a/a.test.ts': content })).toStrictEqual([
+    'docs:ac:mijn-spec:AC-1',
+  ]);
 });
 
 test('het AC-id in een test die een andere spec noemt: overtreding', async () => {
@@ -98,7 +109,7 @@ test.each(['goedgekeurd', 'voorstel', 'vervallen'])(
 
 test.each([
   ['<namespace>/AC-10', "test('mijn/AC-10: iets', () => {});\n"],
-  ['AC-10 met de specnaam', "// mijn-spec\ntest('AC-10: iets', () => {});\n"],
+  ['<specnaam>/AC-10', "test('mijn-spec/AC-10: iets', () => {});\n"],
   ['AC-1 als deel van een woord (XAC-1, AC-1a)', "// mijn-spec\ntest('XAC-1 en AC-1a', () => {});\n"],
 ])('een ander AC-id telt niet als dekking van AC-1: %s', async (_soort, content) => {
   expect(await acKeys({ [SPEC]: spec('gebouwd'), 'src/a/a.test.ts': content })).toStrictEqual([

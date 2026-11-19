@@ -17,7 +17,9 @@ test.beforeEach(async ({ context }) => {
   await context.setExtraHTTPHeaders(clientIpHeaders());
 });
 
-test('AC-1 en AC-2: zoeken en filteren staan in de URL en overleven herladen', async ({ page }) => {
+test('lijstpagina/AC-1 en lijstpagina/AC-2: zoeken en filteren staan in de URL en overleven herladen', async ({
+  page,
+}) => {
   const admin = await createAccount('admin', { totp: true });
   const gezocht = await createAccount('user', { name: 'Zoekbaar Lijstje' });
   await createAccount('user', { name: 'Andere Persoon' });
@@ -37,7 +39,7 @@ test('AC-1 en AC-2: zoeken en filteren staan in de URL en overleven herladen', a
   await expect(table.getByText(gezocht.email)).toBeVisible();
 });
 
-test('AC-4 en AC-5: Terug herstelt het filter; zonder treffers wist "Filters wissen" alles behalve de sortering', async ({
+test('lijstpagina/AC-4 en lijstpagina/AC-5: Terug herstelt het filter; zonder treffers wist "Filters wissen" alles behalve de sortering', async ({
   page,
 }) => {
   const admin = await createAccount('admin', { totp: true });
@@ -57,7 +59,9 @@ test('AC-4 en AC-5: Terug herstelt het filter; zonder treffers wist "Filters wis
   await expect(page.getByLabel('Zoeken')).toBeFocused();
 });
 
-test('AC-6: een ongeldige URL toont de lijst met standaardwaarden, zonder foutmelding', async ({ page }) => {
+test('lijstpagina/AC-6: een ongeldige URL toont de lijst met standaardwaarden, zonder foutmelding', async ({
+  page,
+}) => {
   const admin = await createAccount('admin', { totp: true });
   await signInAsAdmin(page, admin);
   await page.goto('/admin/accounts?sort=onzin&rol=koning');

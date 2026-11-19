@@ -1,4 +1,4 @@
--- one_time_use (ADR 0075, spec inloggat-dichten AC-10, AC-11): RLS, beide policies op naam, de grants per rol en
+-- one_time_use (ADR 0075, spec inloggat-dichten/AC-10, inloggat-dichten/AC-11): RLS, beide policies op naam, de grants per rol en
 -- app.claim_one_time_use (eerste claim, tweede claim, verlopen claim, ongeldige invoer). Alles in één transactie die
 -- terugdraait; pg_catalog.now() staat daarin stil, dus verlopen laten we de sleutel door expires_at als app_migrator (lid
 -- van app_definer) te verschuiven. Dat auth_service de functie echt kan aanroepen, bewijst de integratietest.

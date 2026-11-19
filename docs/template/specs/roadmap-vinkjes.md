@@ -187,7 +187,7 @@ volgt geen melding (hernoemen of bewerken van een gebouwde spec is geen overgang
   staat het bewijs alleen in het volgende item, na een lege regel of na een `**…**`-regel in kolom 0, dan wel.
 - **roadmap/AC-9** — Gegeven een nieuw vervallen item `- [x] ~~…~~ — vervallen: …`, dan is `ADR NNNN` met een bestaand ADR-bestand of een
   PR-nummer bewijs; een niet-bestaand ADR-nummer niet; paden tussen `~~` worden niet op bestaan gecontroleerd.
-- **roadmap/AC-10** (OV-10: spec zonder roadmap-verwijzing) — Gegeven een spec die van `goedgekeurd` naar `gebouwd` gaat, zonder roadmap-verwijzing,
+- **roadmap/AC-10** — Vervallen door ADR 0095 (de eis van een PR-nummer in `check-roadmap` en de melding `spec:bewijs` bestaan niet meer). Was: (OV-10: spec zonder roadmap-verwijzing) Gegeven een spec die van `goedgekeurd` naar `gebouwd` gaat, zonder roadmap-verwijzing,
   zonder nieuw afgevinkt item en zonder bewijs achter de status, dan meldt de check `spec:bewijs:<bestand>`; met
   `status: gebouwd # gebouwd in PR #51` niets.
 - **roadmap/AC-11** — Gegeven een spec die naar `gebouwd` gaat en "roadmap stuk 3f" noemt, terwijl `docs/roadmap.md` niet wijzigt, dan meldt de

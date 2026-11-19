@@ -4,7 +4,7 @@ import { build, type Rolldown } from 'vite';
 import { expect, test } from 'vitest';
 import { bundleBudgetKb } from '../../src/web/bundle-budget.ts';
 
-// Bundelbudget (roadmap stuk 4): de productiebundel groeit niet ongemerkt. Gemeten met gzip, zoals een browser hem ophaalt,
+// Bundelbudget (roadmap stuk 4; design-system/AC-7): de productiebundel groeit niet ongemerkt. Gemeten met gzip, zoals een browser hem ophaalt,
 // en per scherm: de entry plus de chunks van die route (statische closure, elke chunk één keer geteld; routes onder `_app/`
 // laden ook de layout mee). Gecontroleerd worden de entry, het zwaarste gewone scherm, /design-system apart, /login boven de
 // entry (legt de winst van `sideEffects` vast), de grootste chunk en de CSS.

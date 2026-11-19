@@ -117,7 +117,7 @@ function gezien(setup: Opzet): unknown[] {
 const APP_GATES = '{\n  "altijdVragen": []\n}\n';
 
 describe('de volgorde in de ene kopie', () => {
-  test('AC-1 (tekst) en AC-6: init vóór de generator, de suite één keer, precies één kopie, en de slotregel', () => {
+  test('een-proefkopie/AC-1 (tekst) en een-proefkopie/AC-6: init vóór de generator, de suite één keer, precies één kopie, en de slotregel', () => {
     const setup = opzet();
     const result = draai(setup, ['teller'], { vlaggen: ['--bewaar'] });
     expect(result.code, result.alles).toBe(0);
@@ -129,7 +129,7 @@ describe('de volgorde in de ene kopie', () => {
     expect(regels).toEqual([`${NAAM}: time-entries haalt gate:fast na app:init`]);
   });
 
-  test('AC-5: in een app geen app:init, wel de generator en de suite, en de slotregel zonder "na app:init"', () => {
+  test('een-proefkopie/AC-5: in een app geen app:init, wel de generator en de suite, en de slotregel zonder "na app:init"', () => {
     const setup = opzet({ gates: APP_GATES });
     const result = draai(setup, ['teller']);
     expect(result.code, result.alles).toBe(0);
@@ -141,7 +141,7 @@ describe('de volgorde in de ene kopie', () => {
 });
 
 describe('rood, met de stappen in de melding', () => {
-  test('AC-2: een test die alleen in de template slaagt, faalt na app:init en new:resource', () => {
+  test('een-proefkopie/AC-2: een test die alleen in de template slaagt, faalt na app:init en new:resource', () => {
     const setup = opzet();
     const result = draai(setup, ['eist-onderhoud']);
     expect(result.code).not.toBe(0);
@@ -153,12 +153,12 @@ describe('rood, met de stappen in de melding', () => {
     expect(overgebleven(setup.werkmap, PREFIX)).toEqual([]);
   });
 
-  test('AC-2: dezelfde fixture zonder die afhankelijkheid slaagt', () => {
+  test('een-proefkopie/AC-2: dezelfde fixture zonder die afhankelijkheid slaagt', () => {
     const setup = opzet();
     expect(draai(setup, ['ok']).code).toBe(0);
   });
 
-  test('AC-3: gegenereerde code die een gate rood maakt, faalt ook als app:init slaagt', () => {
+  test('een-proefkopie/AC-3: gegenereerde code die een gate rood maakt, faalt ook als app:init slaagt', () => {
     const setup = opzet();
     expect(draai(setup, ['zonder-generator']).code, 'zonder generatorbestand is de gate groen').toBe(0);
     const result = draai(setup, ['zonder-generator'], { modus: 'schrijf' });
@@ -166,7 +166,7 @@ describe('rood, met de stappen in de melding', () => {
     expect(result.alles).toContain(`✗ ${NAAM}: zonder-generator faalt na app:init en new:resource (zie leerpunt #334)`);
   });
 
-  test('AC-3 (app): in een app noemt de melding alleen new:resource', () => {
+  test('een-proefkopie/AC-3 (app): in een app noemt de melding alleen new:resource', () => {
     const setup = opzet({ gates: APP_GATES });
     const result = draai(setup, ['zonder-generator'], { modus: 'schrijf' });
     expect(result.code).not.toBe(0);
@@ -174,7 +174,7 @@ describe('rood, met de stappen in de melding', () => {
     expect(result.alles).not.toContain('leerpunt #334');
   });
 
-  test('AC-4: app:init faalt: de melding, en geen generator en geen gate', () => {
+  test('een-proefkopie/AC-4: app:init faalt: de melding, en geen generator en geen gate', () => {
     const setup = opzet({ readme: '# Iets anders\n\nGeen template.\n' });
     const result = draai(setup, ['teller']);
     expect(result.code).not.toBe(0);
@@ -184,7 +184,7 @@ describe('rood, met de stappen in de melding', () => {
     expect(overgebleven(setup.werkmap, PREFIX)).toEqual([]);
   });
 
-  test('AC-7: de generator faalt: de melding, geen gate; met --bewaar blijft de kopie staan', () => {
+  test('een-proefkopie/AC-7: de generator faalt: de melding, geen gate; met --bewaar blijft de kopie staan', () => {
     const setup = opzet();
     const result = draai(setup, ['teller'], { modus: 'faal', vlaggen: ['--bewaar'] });
     expect(result.code).not.toBe(0);
@@ -196,7 +196,7 @@ describe('rood, met de stappen in de melding', () => {
   });
 });
 
-describe('AC-8: de waarborgen van app-init-proef, met de nieuwe naam en het ene prefix', () => {
+describe('een-proefkopie/AC-8: de waarborgen van app-init-proef, met de nieuwe naam en het ene prefix', () => {
   test('na een geslaagde en een gefaalde run is de kopie weg; de bron is ongewijzigd', () => {
     const setup = opzet();
     const status = git(setup.werkmap.bron, ['status', '--porcelain']);
@@ -252,7 +252,7 @@ function rulesetChecks(): string[] {
 }
 
 // GEWIJZIGD (bouw-PR 2): AC-9 eiste dat job en script nog bestonden; AC-10 haalt ze weg.
-describe('AC-9: check:app-init is geen verplichte check meer', () => {
+describe('een-proefkopie/AC-9: check:app-init is geen verplichte check meer', () => {
   test('requiredChecks en de ruleset noemen check:new-resource en niet check:app-init', () => {
     const decisions: unknown = JSON.parse(readFileSync(path.join(ROOT, '.claude/decisions.json'), 'utf8'));
     const required =
@@ -269,7 +269,7 @@ describe('AC-9: check:app-init is geen verplichte check meer', () => {
   });
 });
 
-describe('AC-10: de job en het script check:app-init bestaan niet meer (bouw-PR 2)', () => {
+describe('een-proefkopie/AC-10: de job en het script check:app-init bestaan niet meer (bouw-PR 2)', () => {
   const ci = readFileSync(path.join(ROOT, '.github/workflows/ci.yml'), 'utf8');
 
   /** De regels van een job (twee spaties ingesprongen sleutel) tot de volgende job. */
