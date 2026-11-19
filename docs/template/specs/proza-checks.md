@@ -104,10 +104,11 @@ Lintfixtures in `test/rails/eslint-route.test.ts`; per fixture is de verzameling
 | alias (`const n = navigator; n['user' + 'Agent']`) | bekend gat; review |
 | store zonder library (module-level `let`, eigen `createStore`) | bekend gat; review |
 | `set role` zonder `local`, `set_config('role', …)` | niet door `pgtap-vorm`; R-CODE-08 en review |
-| `plan(` in een `$$`-blok of commentaar | telt niet; alleen een regel die met `select plan(` begint |
-| `set local role` in commentaar, in een `$$`-blok of in `execute '…'` | telt niet; alleen aan het begin van een regel (na witruimte) buiten een `$$`-blok |
-| `$$` in een `--`-commentaar (eigen regel of achter code) | opent of sluit geen blok |
-| dollar-quote met tag (`$x$`), `--` binnen `$$`-tekst gevolgd door een `$$` op dezelfde regel, of `E'…'` met `\'` | bekend gat; plan en `search_path` staan in de praktijk bovenaan |
+| `plan(` in een dollar-quote (elke tag), tekst of commentaar | telt niet; alleen een regel die in code begint met `select plan(` |
+| `set local role` in commentaar, tekst, een dollar-quote of `execute '…'` | telt niet; alleen aan het begin van een regel (na witruimte) buiten tekst, dollar-quote of commentaar |
+| tokens zoals Postgres ze leest | een kleine scanner volgt `--`, genest `/* */`, `'…'` met `''`, `E'…'` met `\`, `"…"` en `$tag$ … $tag$` over regels heen |
+| meerdere statements op één regel, of een vervolgregel die met `select plan(` begint | bekend gat: alleen het begin van een regel telt |
+| `standard_conforming_strings = off`, psql-variabelen en `\if` | bekend gat: de scanner neemt de standaard aan en evalueert psql niet |
 
 ## Raakt ook
 

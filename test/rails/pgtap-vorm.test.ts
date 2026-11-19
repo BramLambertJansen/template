@@ -72,6 +72,12 @@ const VERWACHT: Record<string, string | null> = {
   'goed-rol-geen-regelbegin.sql': null,
   'goed-dollar-in-commentaar.sql': null,
   'goed-dollar-in-staartcommentaar.sql': null,
+  // Postgres-tokenisatie: `--` binnen een dollar-quote is tekst, een dollar-quote met tag sluit alleen met dezelfde tag,
+  // en `E'…'` kent `\'`.
+  'goed-dollar-eenregelig-met-streepjes.sql': null,
+  'goed-dollar-tag-rol-in-blok.sql': null,
+  'goed-dollar-tag-met-losse-dollars.sql': null,
+  'goed-escape-string-met-commentaar-dollars.sql': null,
   'search-path-ontbreekt.sql': 'search_path',
   'search-path-anders.sql': 'search_path',
   'search-path-later.sql': 'search_path',
@@ -81,6 +87,8 @@ const VERWACHT: Record<string, string | null> = {
   'plan-na-rol.sql': 'plan na set local role',
   'plan-na-definer.sql': 'plan na set local role',
   'rol-tussen-commentaar-dollars.sql': 'plan na set local role',
+  'dollar-sluit-na-streepjes.sql': 'plan na set local role',
+  'rol-na-tagblok-met-losse-dollars.sql': 'plan na set local role',
   'no-plan.sql': 'no_plan',
 };
 
