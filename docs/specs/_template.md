@@ -52,7 +52,11 @@ Per regel een bestaand pad uit `docs/gouden-pad.md` (accountbeheer) en wat je ov
 
 ## Acceptatiecriteria
 
-- **<namespace>/AC-1** — Gegeven … wanneer … dan …
+Elk criterium eindigt met `Toets:` en het testbestand dat `<namespace>/AC-n` noemt, met `(nieuw)` erachter zolang het niet
+bestaat; de bouw-PR haalt `(nieuw)` weg, dan toetst `check-docs` dat het pad bestaat en dat een test de naam noemt. Is het bewijs alleen een CI-uitslag of
+een stap in de PR, dan is het geen criterium maar een regel in het Testplan.
+
+- **<namespace>/AC-1** — Gegeven … wanneer … dan … Toets: `test/<pad>.test.ts` (nieuw)
 
 ## Randgevallen
 
