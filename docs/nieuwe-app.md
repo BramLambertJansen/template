@@ -1087,7 +1087,7 @@ een verse database ervoor. `check:migrations` laat haar door als ze ongewijzigd 
 bouwt het schema ook op volgorde van binnenkomst en vergelijkt de twee dumps (`scripts/check-snapshot.sh`). Rijen die een
 migratie invoegt of bijwerkt, vallen buiten die vergelijking; lees zo'n migratie daarop zelf na.
 
-App-eigen ADR's staan in `docs/adr/` en app-specs in `docs/specs/`, met een eigen nummering; `node scripts/kit/feiten.mjs adr` noemt het volgende vrije nummer. De documenten van de template staan in `docs/template/` en wijzigt een app niet (ADR 0089 punt 1 en 6).
+App-eigen ADR's staan in `docs/adr/` en app-specs in `docs/specs/`, met een eigen nummering; `node scripts/kit/feiten.mjs adr` noemt het volgende vrije nummer, ook gezien open branches op `origin` en de andere werkmappen; draai eerst `git fetch --prune origin`, want een niet-gepushte sessie op een andere machine ziet het niet. De documenten van de template staan in `docs/template/` en wijzigt een app niet (ADR 0089 punt 1 en 6).
 
 ## Fout → oorzaak
 
