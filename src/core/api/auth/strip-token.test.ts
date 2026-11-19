@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { stripTokens } from './strip-token.ts';
 
-// Geen `token` in een JSON-antwoord van /api/auth/* (ADR 0075, spec inloggat-dichten AC-9). De echte endpoints:
+// Geen `token` in een JSON-antwoord van /api/auth/* (ADR 0075, spec inloggat-dichten/AC-9). De echte endpoints:
 // test/auth/eenmalig.int.test.ts (AC-8).
 function json(body: unknown, headers: Record<string, string> = {}): Response {
   const text = JSON.stringify(body);

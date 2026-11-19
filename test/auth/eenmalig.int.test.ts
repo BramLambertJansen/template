@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomInt, randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, test } from 'vitest';
 import { z } from 'zod';
 import { EMAIL_CHANGE_TTL_SECONDS } from '../../src/core/shared/limits.ts';
@@ -11,7 +11,7 @@ import {
   NEW_PASSWORD,
   waitForMail,
 } from '../api/account-harness.ts';
-import { Browser, freshTotp, uniqueEmail } from './harness.ts';
+import { Browser, freshTotp, required, totp, uniqueEmail } from './harness.ts';
 
 // Spec inloggat-dichten (ADR 0075): een TOTP-code en een link van de e-mailwijziging werken één keer, en geen JSON-antwoord van
 // /api/auth/* bevat een sessietoken. Echte database, Better Auth en Mailpit (`pnpm test:db`), niets gemockt.
@@ -62,7 +62,7 @@ async function sessionStrength(browser: Browser): Promise<string | undefined> {
 const verifyTotp = (browser: Browser, code: string) => browser.post('/api/auth/two-factor/verify-totp', { code });
 
 describe('TOTP: een code werkt één keer', () => {
-  test('AC-1: dezelfde code bij een tweede inlogpoging: 401 INVALID_CODE, geen sessiecookie en geen nieuwe sessie', async () => {
+  test('inloggat-dichten/AC-1: dezelfde code bij een tweede inlogpoging: 401 INVALID_CODE, geen sessiecookie en geen nieuwe sessie', async () => {
     const { browser, email, userId } = await t.account('admin');
     const { uri } = await enrol(browser);
     const first = await challenge(email);
@@ -78,7 +78,7 @@ describe('TOTP: een code werkt één keer', () => {
     expect(await sessionCount(userId)).toBe(before);
   });
 
-  test('AC-2: twee pogingen tegelijk met dezelfde code: precies één krijgt een sessie', async () => {
+  test('inloggat-dichten/AC-2: twee pogingen tegelijk met dezelfde code: precies één krijgt een sessie', async () => {
     const { browser, email } = await t.account('admin');
     const { uri } = await enrol(browser);
     const [one, two] = await Promise.all([challenge(email), challenge(email)]);
@@ -91,7 +91,7 @@ describe('TOTP: een code werkt één keer', () => {
     expect(sessions.filter((strength) => strength === 'mfa')).toHaveLength(1);
   });
 
-  test('AC-3: step-up met een code die al voor inloggen is gebruikt: 401 en de sessie blijft password', async () => {
+  test('inloggat-dichten/AC-3: step-up met een code die al voor inloggen is gebruikt: 401 en de sessie blijft password', async () => {
     const { browser, email, userId } = await t.account('user');
     const { uri } = await enrol(browser);
     const other = await challenge(email);
@@ -113,7 +113,7 @@ describe('TOTP: een code werkt één keer', () => {
     expect(rows.map((row) => row.session_strength)).toStrictEqual(['password']);
   });
 
-  test('AC-4: na een gebruikte code werkt de volgende code wel (de claim blokkeert alleen die ene code)', async () => {
+  test('inloggat-dichten/AC-4: na een gebruikte code werkt de volgende code wel (de claim blokkeert alleen die ene code)', async () => {
     const { browser, email } = await t.account('admin');
     const { uri, enrolCode } = await enrol(browser);
     const attempt = await challenge(email);
@@ -121,6 +121,84 @@ describe('TOTP: een code werkt één keer', () => {
     expect((await verifyTotp(attempt, enrolCode)).status).toBe(401);
     expect((await verifyTotp(attempt, freshTotp(uri))).status).toBe(200);
     expect(await sessionStrength(attempt)).toBe('mfa');
+  });
+});
+
+// AC-5: de foutteller (twoFactor.failedVerificationCount, lockout na 10), het pogingenbudget van één challenge (5) en de rate
+// limit (3 per 10 s per IP en pad op /two-factor/*) van Better Auth. Een poging komt standaard van een eigen IP, zodat alleen
+// de test die de rate limit bewijst die raakt.
+function freshIp(): string {
+  return `198.${String(randomInt(1, 255))}.${String(randomInt(1, 255))}.${String(randomInt(1, 255))}`;
+}
+
+function verifyFrom(browser: Browser, code: string, ip = freshIp()): Promise<Response> {
+  return t.callWith(browser, 'POST /api/auth/two-factor/verify-totp', {
+    body: { code },
+    headers: { [required('CLIENT_IP_HEADER')]: ip },
+  });
+}
+
+// Zes cijfers die buiten het venster van de server vallen (±1 stap van 30 s; hier ±3 stappen als marge voor een stapwissel).
+function wrongCodes(uri: string, count: number): string[] {
+  const now = Date.now();
+  const valid = new Set([-3, -2, -1, 0, 1, 2, 3].map((step) => totp(uri, now + step * 30_000)));
+  return Array.from({ length: count + valid.size }, (_, index) => String(100_000 + index * 7919))
+    .filter((code) => !valid.has(code))
+    .slice(0, count);
+}
+
+async function failureState(userId: string): Promise<{ failed: number; locked: boolean }> {
+  const { rows } = await t.authDb.query<{ failed: number | null; lockedUntil: Date | null }>(
+    'select "failedVerificationCount" as failed, "lockedUntil" from "twoFactor" where "userId" = $1',
+    [userId],
+  );
+  const row = rows[0];
+  return { failed: row?.failed ?? 0, locked: (row?.lockedUntil?.getTime() ?? 0) > Date.now() };
+}
+
+const errorCode = z.object({ code: z.string() });
+const outcome = async (response: Response) => [response.status, errorCode.parse(await json(response))];
+
+describe('TOTP: foute codes en de limieten van Better Auth', () => {
+  test('inloggat-dichten/AC-5: een reeks verschillende foute codes telt per code mee en leidt na tien tot de lockout', async () => {
+    const { browser, email, userId } = await t.account('admin');
+    const { uri } = await enrol(browser);
+    const wrong = wrongCodes(uri, 10);
+    // Vijf pogingen per challenge: de tien fouten lopen over twee inlogpogingen.
+    const [first, second] = [await challenge(email), await challenge(email)];
+
+    for (const [index, code] of wrong.entries()) {
+      const response = await verifyFrom(index < 5 ? first : second, code);
+      expect([index, response.status, await failureState(userId)]).toMatchObject([index, 401, { failed: index + 1 }]);
+    }
+
+    expect(await failureState(userId)).toStrictEqual({ failed: 10, locked: true });
+    const locked = await challenge(email);
+    const correct = await verifyFrom(locked, freshTotp(uri));
+    expect(correct.status).toBe(429);
+    expect(await sessionStrength(locked)).toBeUndefined();
+  });
+
+  test('inloggat-dichten/AC-5: dezelfde foute code nog eens telt niet mee voor teller en pogingenbudget, wel voor de rate limit', async () => {
+    const { browser, email, userId } = await t.account('admin');
+    const { uri } = await enrol(browser);
+    const [repeated, ...others] = wrongCodes(uri, 6);
+    const attempt = await challenge(email);
+    const ip = freshIp();
+
+    const same = [];
+    for (let times = 0; times < 3; times += 1) same.push(await verifyFrom(attempt, repeated ?? '', ip));
+
+    expect(await Promise.all(same.map(outcome))).toStrictEqual(Array(3).fill([401, { code: 'INVALID_CODE' }]));
+    expect(await failureState(userId)).toStrictEqual({ failed: 1, locked: false });
+    // De vierde poging van dit IP binnen 10 s stuit op de rate limit: de herhaalde code telde dus mee voor de rate limit.
+    expect((await verifyFrom(attempt, repeated ?? '', ip)).status).toBe(429);
+    // Het budget van vijf pogingen is maar één keer gebruikt voor de herhaalde code: vier verschillende codes passen er nog bij.
+    for (const code of others.slice(0, 4)) expect((await verifyFrom(attempt, code)).status).toBe(401);
+    expect(await failureState(userId)).toStrictEqual({ failed: 5, locked: false });
+    // Het budget is nu echt op: de zesde verschillende code wordt niet meer gecontroleerd en telt niet als fout.
+    expect((await verifyFrom(attempt, others[4] ?? '')).status).toBe(400);
+    expect(await failureState(userId)).toStrictEqual({ failed: 5, locked: false });
   });
 });
 
@@ -173,7 +251,7 @@ function withPayload(token: string, change: (payload: Record<string, unknown>) =
 }
 
 describe('e-maillink: een link werkt één keer', () => {
-  test('AC-6: dezelfde link in een andere spelling van de handtekening: 409 EMAIL_LINK_INVALID en één mail 2', async () => {
+  test('inloggat-dichten/AC-6: dezelfde link in een andere spelling van de handtekening: 409 EMAIL_LINK_INVALID en één mail 2', async () => {
     const { browser, nieuw, token } = await firstLink();
     expect(otherSpelling(token)).not.toBe(token);
     expect((await confirm(browser, token)).status).toBe(200);
@@ -184,7 +262,7 @@ describe('e-maillink: een link werkt één keer', () => {
     expect(await countMails(nieuw, SUBJECT_NEW)).toBe(1);
   });
 
-  test('AC-7: twee bevestigingen tegelijk: één { stap: oud }, de ander 409, en één mail 2', async () => {
+  test('inloggat-dichten/AC-7: twee bevestigingen tegelijk: één { stap: oud }, de ander 409, en één mail 2', async () => {
     const { browser, nieuw, token } = await firstLink();
 
     const responses = await Promise.all([confirm(browser, token), confirm(browser, token)]);
@@ -196,7 +274,7 @@ describe('e-maillink: een link werkt één keer', () => {
     expect(await countMails(nieuw, SUBJECT_NEW)).toBe(1);
   });
 
-  test('AC-12: de link van A in de sessie van B: 409 voor B, en daarna werkt hij voor A nog wel', async () => {
+  test('inloggat-dichten/AC-12: de link van A in de sessie van B: 409 voor B, en daarna werkt hij voor A nog wel', async () => {
     const { browser, userId, nieuw, token } = await firstLink();
     const intruder = await t.account('user');
 
@@ -211,7 +289,7 @@ describe('e-maillink: een link werkt één keer', () => {
   });
 
   // Elke rij wijzigt één voorwaarde van de echte link; daarna bewijst de echte link zelf (de basis) dat hij wel werkt.
-  test('AC-13: een token zonder geldige exp: 409 EMAIL_LINK_INVALID en geen claim; de echte link werkt daarna', async () => {
+  test('inloggat-dichten/AC-13: een token zonder geldige exp: 409 EMAIL_LINK_INVALID en geen claim; de echte link werkt daarna', async () => {
     const { browser, userId, token } = await firstLink();
     const now = Math.floor(Date.now() / 1000);
     const rows: readonly [string, (payload: Record<string, unknown>) => Record<string, unknown>][] = [
@@ -231,7 +309,7 @@ describe('e-maillink: een link werkt één keer', () => {
     expect([real.status, await json(real)]).toStrictEqual([200, { stap: 'oud' }]);
   });
 
-  test('AC-15: een afgekapte link: 409 zonder claim, daarna werkt de volledige link', async () => {
+  test('inloggat-dichten/AC-15: een afgekapte link: 409 zonder claim, daarna werkt de volledige link', async () => {
     const { browser, userId, nieuw, token } = await firstLink();
 
     const truncated = await confirm(browser, token.slice(0, -1));
@@ -265,7 +343,7 @@ async function body(response: Response): Promise<unknown> {
   return JSON.parse(await response.text());
 }
 
-describe('AC-8: geen sessietoken in JSON van /api/auth/*', () => {
+describe('inloggat-dichten/AC-8: geen sessietoken in JSON van /api/auth/*', () => {
   test('inloggen zonder TOTP, get-session en change-password: geen token, en de cookie werkt', async () => {
     const { email } = await t.account('user');
     const browser = new Browser(t.app);

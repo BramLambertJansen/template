@@ -220,7 +220,7 @@ describe('gebouwd-zonder-nummer/AC-4: de AC-dekking geldt voor status: gebouwd z
       const meldingen = await docsViolations(repo({ [TEMPLATE_SPEC]: specTekst(status) }));
       const ac = meldingen.filter(({ key }) => key === AC_KEY);
       expect(ac.map(({ message }) => message)).toStrictEqual([
-        `${TEMPLATE_SPEC}: AC-1 heeft geen testbestand met demo/AC-1 of met AC-1 en de specnaam of namespace`,
+        `${TEMPLATE_SPEC}: AC-1 heeft geen testbestand met demo/AC-1`,
       ]);
     },
   );

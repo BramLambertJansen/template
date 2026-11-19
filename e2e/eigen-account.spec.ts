@@ -11,7 +11,7 @@ test.beforeEach(async ({ context }) => {
   await context.setExtraHTTPHeaders(clientIpHeaders());
 });
 
-test('AC-1 en AC-2: via het profielmenu naar /account; naam wijzigen werkt door in het menu en /api/me', async ({
+test('eigen-account/AC-1 en eigen-account/AC-2: via het profielmenu naar /account; naam wijzigen werkt door in het menu en /api/me', async ({
   page,
 }) => {
   const csp = collectCspViolations(page);
@@ -42,7 +42,7 @@ test('naam leeg: veldfout uit de spec, geen request', async ({ page }) => {
   await expect(page.getByText('Vul een naam in.')).toBeVisible();
 });
 
-test('AC-3: wachtwoord wijzigen beëindigt de andere sessie; alleen het nieuwe wachtwoord werkt', async ({
+test('eigen-account/AC-3: wachtwoord wijzigen beëindigt de andere sessie; alleen het nieuwe wachtwoord werkt', async ({
   browser,
   page,
 }) => {
@@ -65,7 +65,7 @@ test('AC-3: wachtwoord wijzigen beëindigt de andere sessie; alleen het nieuwe w
   expect(csp).toStrictEqual([]);
 });
 
-test('AC-4: een admin met MFA wijzigt zijn wachtwoord en houdt /admin/accounts zonder nieuwe code', async ({
+test('eigen-account/AC-4: een admin met MFA wijzigt zijn wachtwoord en houdt /admin/accounts zonder nieuwe code', async ({
   page,
 }) => {
   const admin = await createAccount('admin', { totp: true });
@@ -82,7 +82,10 @@ test('AC-4: een admin met MFA wijzigt zijn wachtwoord en houdt /admin/accounts z
   expect((await page.request.get('/api/accounts')).status()).toBe(200);
 });
 
-test('AC-5: fout huidig wachtwoord: de spectekst met de focus erop, en niets gewijzigd', async ({ browser, page }) => {
+test('eigen-account/AC-5: fout huidig wachtwoord: de spectekst met de focus erop, en niets gewijzigd', async ({
+  browser,
+  page,
+}) => {
   const user = await createAccount('user');
   await signIn(page, user);
   const other = await secondDevice(browser, user);

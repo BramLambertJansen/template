@@ -1,6 +1,7 @@
 # 0076 — De trage CI-jobs in delen, zonder iets over te slaan
 
 Status: geaccepteerd
+Herzien: 2026-11-18 (#818): gewijzigd door [0096](0096-pnpm-store-in-de-ci-cache.md) punt 1 tot en met 3, in punt 1 vervalt "geen cache": de pnpm-store mag uit een cache, uitslagen en builds nooit
 
 Wijzigt [0073](0073-een-proefkopie-per-pr.md) punt 1 (één kopie per deel van de check in plaats van één kopie per check;
 de suite draait nog steeds één keer). Drempel: A4 (vorm van verplichte checks in `.github/workflows/ci.yml`). Uitwerking:

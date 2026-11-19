@@ -55,7 +55,7 @@ test.beforeEach(async ({ context }) => {
   await context.setExtraHTTPHeaders(clientIpHeaders());
 });
 
-test('AC-1: anoniem naar /login, zonder sidebar of topbar', async ({ page }) => {
+test('accounts/AC-1: anoniem naar /login, zonder sidebar of topbar', async ({ page }) => {
   const csp = collectCspViolations(page);
   await page.goto('/');
 
@@ -67,7 +67,9 @@ test('AC-1: anoniem naar /login, zonder sidebar of topbar', async ({ page }) => 
   expect(csp).toStrictEqual([]);
 });
 
-test('AC-2 en AC-10: een user logt in, ziet Home en logt uit; daarna is de sessie weg', async ({ page }) => {
+test('accounts/AC-2 en accounts/AC-10: een user logt in, ziet Home en logt uit; daarna is de sessie weg', async ({
+  page,
+}) => {
   const csp = collectCspViolations(page);
   const user = await createAccount('user', { name: 'Gert Gebruiker' });
   await page.goto('/login');
@@ -87,7 +89,9 @@ test('AC-2 en AC-10: een user logt in, ziet Home en logt uit; daarna is de sessi
   expect(csp).toStrictEqual([]);
 });
 
-test('AC-3: een admin met TOTP komt na wachtwoord en code op het dashboard met de link Accounts', async ({ page }) => {
+test('accounts/AC-3: een admin met TOTP komt na wachtwoord en code op het dashboard met de link Accounts', async ({
+  page,
+}) => {
   const csp = collectCspViolations(page);
   const admin = await createAccount('admin', { totp: true });
   await page.goto('/login');
@@ -105,7 +109,7 @@ test('AC-3: een admin met TOTP komt na wachtwoord en code op het dashboard met d
   expect(csp).toStrictEqual([]);
 });
 
-test('AC-3: een foute code geeft de spectekst en geen sessie', async ({ page }) => {
+test('accounts/AC-3: een foute code geeft de spectekst en geen sessie', async ({ page }) => {
   const admin = await createAccount('admin', { totp: true });
   await page.goto('/login');
   await signIn(page, admin);

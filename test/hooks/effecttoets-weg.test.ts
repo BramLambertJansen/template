@@ -1,7 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import {
   chmodSync,
-  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -20,15 +19,13 @@ import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 import * as prVerify from '../../scripts/kit/pr-verify.mjs';
 import * as prSamenvoegen from '../../scripts/kit/pr-merge.mjs';
 import { expectAbsent } from '../support/absence';
-import { expectNegativeTable } from '../support/negative-table';
 
 // Besluit van de eigenaar (2026-11-12): de toets ACHTERAF op effect ("rolhek-effect") verdwijnt. Wat blijft: de toets VOORAF
-// (`decide`, PreToolUse), het schrijfrecht per rol en de Stop-checks van de werkstraat. De ingangen `rails/hooks/effect.mjs` en
-// `.claude/hooks/effect.mjs` blijven als lege huls bestaan, want `.claude/settings.json` roept ze nog aan en de lader valt anders
-// dicht. Deze tests komen vóór de code: ze mogen rood zijn tot de effecttoets is weggehaald.
+// (`decide`, PreToolUse), het schrijfrecht per rol en de Stop-checks van de werkstraat.
+// GEWIJZIGD (leerpunt #760, eigenaarakkoord 2026-11-18): `.claude/settings.json` roept de effect-hook niet meer aan, dus de lege
+// huls `rails/hooks/effect.mjs` en de weigering van `pnpm rolhek:overnemen` in het rolhek zijn weg, met hun gevallen hier.
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const lees = (rel: string): string => readFileSync(path.join(ROOT, rel), 'utf8');
-const MIN = 90_000;
 
 const VERWIJDERD = [
   'rails/hooks/lib/effect.mjs',
@@ -37,14 +34,9 @@ const VERWIJDERD = [
   'rails/hooks/lib/effect-meting.mjs',
   'rails/hooks/lib/effect-snapshot.mjs',
   'scripts/kit/rolhek-overnemen.mjs',
-] as const;
-const BLIJFT = [
   'rails/hooks/effect.mjs',
-  '.claude/hooks/effect.mjs',
-  '.claude/hooks/laden.mjs',
-  'rails/hooks/lib/rolhek.mjs',
-  'rails/hooks/werkstraat.mjs',
 ] as const;
+const BLIJFT = ['.claude/hooks/laden.mjs', 'rails/hooks/lib/rolhek.mjs', 'rails/hooks/werkstraat.mjs'] as const;
 
 const GIT_ENV = {
   GIT_AUTHOR_NAME: 't',
@@ -94,14 +86,6 @@ function bestanden(map: string): string[] {
   });
 }
 
-/** Alle namen onder `root` (ook in .git), gesorteerd; `buiten` zijn voorvoegsels die niet meetellen. */
-function namenOnder(root: string, buiten: string[] = []): string[] {
-  return readdirSync(root, { recursive: true })
-    .map((naam) => String(naam).split(path.sep).join('/'))
-    .filter((naam) => !buiten.some((voor) => naam === voor || naam.startsWith(`${voor}/`)))
-    .toSorted();
-}
-
 /** Een repository met een lokale bare `origin`, een gecommitte `.claude/gates.json` en `origin/main` (de basis van `verifyWorktree`). */
 function repoMetOrigin(): string {
   const bare = nieuweDir('bare');
@@ -121,20 +105,14 @@ function repoMetOrigin(): string {
 // ---- 1. de bestanden --------------------------------------------------------------------------------------------------
 
 describe('effecttoets-weg: de bestanden', () => {
-  test('effecttoets-weg: de modules van de toets achteraf en het overnamescript bestaan niet meer', () => {
+  test('effecttoets-weg: de modules van de toets achteraf, het overnamescript en de huls rails/hooks/effect.mjs bestaan niet meer', () => {
     // Controle dat de toets bestaande bestanden ziet: wat blijft, bestaat.
     expect(BLIJFT.filter((rel) => existsSync(path.join(ROOT, rel)))).toStrictEqual([...BLIJFT]);
     expect(VERWIJDERD.filter((rel) => existsSync(path.join(ROOT, rel)))).toStrictEqual([]);
   });
-
-  test('effecttoets-weg: de ingang rails/hooks/effect.mjs en de stub .claude/hooks/effect.mjs blijven als lege huls bestaan', () => {
-    expect(existsSync(path.join(ROOT, 'rails/hooks/effect.mjs'))).toBe(true);
-    expect(existsSync(path.join(ROOT, '.claude/hooks/effect.mjs'))).toBe(true);
-    expect(lees('.claude/hooks/effect.mjs')).toContain("draai('effect'");
-  });
 });
 
-// ---- 2. de lege huls ---------------------------------------------------------------------------------------------------
+// ---- 2. settings.json roept de effect-hook niet aan --------------------------------------------------------------------
 
 /** Alle `command`-teksten onder een JSON-waarde. */
 function commandos(waarde: unknown): string[] {
@@ -154,27 +132,7 @@ function effectEvents(): string[] {
   return [...new Set(events)].toSorted();
 }
 
-// GEWIJZIGD (ADR 0091 punt 4, stap 2): de eigenaar haalde de aanroepen uit .claude/settings.json; de huls blijft voor werkmappen met de oude
-// instellingen, dus de events staan hier vast.
-const EVENTS = ['edit-post', 'post', 'post-failure', 'pre', 'session-end', 'stop', 'subagent-start', 'subagent-stop'];
-
-/** De payload die Claude Code bij dit event stuurt (voor de hoofdsessie of een subagent). */
-function payloadVoor(root: string, event: string, agent: 'hoofd' | 'developer' | 'reviewer'): Record<string, unknown> {
-  const wie = agent === 'hoofd' ? {} : { agent_type: agent, agent_id: `agent-${agent}-S1` };
-  const basis = { cwd: root, session_id: 'S1', ...wie };
-  if (event === 'edit-post')
-    return {
-      ...basis,
-      tool_name: 'Write',
-      tool_input: { file_path: path.join(root, 'src/a.ts'), content: 'veranderd\n' },
-      tool_use_id: 't2',
-    };
-  if (['pre', 'post', 'post-failure'].includes(event))
-    return { ...basis, tool_name: 'Bash', tool_input: { command: 'echo veranderd > src/a.ts' }, tool_use_id: 't1' };
-  return basis;
-}
-
-/** Een git-repository met de echte `gates.json`, zodat de oude hook zijn volle pad zou nemen. */
+/** Een git-repository met de echte `gates.json`, voor `werkstraat session-start` (sectie 5). */
 function hulsRepo(): string {
   const root = nieuweDir('huls');
   git(root, 'init', '-q', '-b', 'main');
@@ -186,118 +144,10 @@ function hulsRepo(): string {
   return root;
 }
 
-describe('effecttoets-weg: de lege huls (rails/hooks/effect.mjs)', () => {
+describe('effecttoets-weg: de effect-hook in settings.json', () => {
   test('effecttoets-weg: settings.json roept de effect-hook nergens meer aan', () => {
     expect(effectEvents()).toStrictEqual([]);
   });
-
-  const gevallen = EVENTS.flatMap((event) =>
-    (['hoofd', 'developer', 'reviewer'] as const).map((agent) => ({ event, agent })),
-  );
-
-  test.each(gevallen)(
-    'effecttoets-weg: effect.mjs $event ($agent): exit 0, geen uitvoer, niets op schijf',
-    ({ event, agent }) => {
-      const root = hulsRepo();
-      // Zonder `.git`: git ruimt daar zelf bestanden op (gezien in CI); dat de map `rolhek-effect` ontbreekt, staat hieronder apart.
-      const voor = namenOnder(root, ['.git']);
-      const result = spawnSync(process.execPath, [path.join(ROOT, 'rails/hooks/effect.mjs'), event], {
-        cwd: root,
-        input: JSON.stringify(payloadVoor(root, event, agent)),
-        encoding: 'utf8',
-        env: procEnv(),
-        timeout: 30_000,
-      });
-      expect({ status: result.status, stdout: result.stdout, stderr: result.stderr }).toStrictEqual({
-        status: 0,
-        stdout: '',
-        stderr: '',
-      });
-      expect(readdirSync(path.join(root, '.git'))).not.toContain('rolhek-effect');
-      expect(namenOnder(root, ['.git'])).toStrictEqual(voor);
-    },
-    MIN,
-  );
-
-  test.each(['subagent-start', 'subagent-stop', 'stop', 'post'])(
-    'effecttoets-weg: effect.mjs %s met lege stdin of kapotte JSON: exit 0, geen uitvoer',
-    (event) => {
-      const root = hulsRepo();
-      for (const input of ['', 'geen json']) {
-        const result = spawnSync(process.execPath, [path.join(ROOT, 'rails/hooks/effect.mjs'), event], {
-          cwd: root,
-          input,
-          encoding: 'utf8',
-          env: procEnv(),
-          timeout: 30_000,
-        });
-        expect({ status: result.status, stdout: result.stdout, stderr: result.stderr }).toStrictEqual({
-          status: 0,
-          stdout: '',
-          stderr: '',
-        });
-      }
-    },
-    MIN,
-  );
-
-  test('effecttoets-weg: een onbekend event is ook een no-op (de huls kijkt niet meer naar de events)', () => {
-    const root = hulsRepo();
-    const result = spawnSync(process.execPath, [path.join(ROOT, 'rails/hooks/effect.mjs'), 'bestaat-niet'], {
-      cwd: root,
-      input: JSON.stringify({ cwd: root }),
-      encoding: 'utf8',
-      env: procEnv(),
-      timeout: 30_000,
-    });
-    expect([result.status, result.stdout, result.stderr]).toStrictEqual([0, '', '']);
-  });
-});
-
-/**
- * Een repository waarin de stubs staan en waarvan het anker (`.claude/hooks/.cache/main`) naar een commit wijst met de échte
- * `rails/hooks/`: de lader pakt daar `effect.mjs` uit en draait hem, zoals `settings.json` dat doet.
- */
-function laderRepo(): string {
-  const root = hulsRepo();
-  mkdirSync(path.join(root, 'rails'), { recursive: true });
-  cpSync(path.join(ROOT, 'rails/hooks'), path.join(root, 'rails/hooks'), {
-    recursive: true,
-    filter: (bron) => !bron.includes('.cache'),
-  });
-  mkdirSync(path.join(root, '.claude/hooks'), { recursive: true });
-  for (const naam of ['laden.mjs', 'effect.mjs'])
-    cpSync(path.join(ROOT, '.claude/hooks', naam), path.join(root, '.claude/hooks', naam));
-  git(root, 'add', '-A');
-  git(root, 'commit', '-qm', 'hooks');
-  mkdirSync(path.join(root, '.claude/hooks/.cache'), { recursive: true });
-  writeFileSync(path.join(root, '.claude/hooks/.cache/main'), `${git(root, 'rev-parse', 'HEAD')}\n`);
-  return root;
-}
-
-describe('effecttoets-weg: de huls via de stub en de lader, zoals settings.json hem aanroept', () => {
-  test.each(EVENTS)(
-    'effecttoets-weg: .claude/hooks/effect.mjs %s: exit 0, geen uitvoer, niets in de git-map',
-    (event) => {
-      const root = laderRepo();
-      const voor = namenOnder(root, ['.claude/hooks/.cache', '.git']);
-      const result = spawnSync(process.execPath, [path.join(root, '.claude/hooks/effect.mjs'), event], {
-        cwd: root,
-        input: JSON.stringify(payloadVoor(root, event, 'developer')),
-        encoding: 'utf8',
-        env: procEnv(),
-        timeout: 60_000,
-      });
-      expect({ status: result.status, stdout: result.stdout, stderr: result.stderr }).toStrictEqual({
-        status: 0,
-        stdout: '',
-        stderr: '',
-      });
-      expect(readdirSync(path.join(root, '.git'))).not.toContain('rolhek-effect');
-      expect(namenOnder(root, ['.claude/hooks/.cache', '.git'])).toStrictEqual(voor);
-    },
-    MIN,
-  );
 });
 
 // ---- 3. geen verwijzingen meer -----------------------------------------------------------------------------------------
@@ -324,7 +174,7 @@ function nergensIn(
 describe('effecttoets-weg: niets importeert of start een verwijderde module', () => {
   test('effecttoets-weg: de scan ziet bestanden uit rails/, scripts/ en .claude/hooks/', () => {
     expect(TEKSTBESTANDEN).toEqual(
-      expect.arrayContaining(['rails/hooks/effect.mjs', 'rails/hooks/werkstraat.mjs', 'scripts/kit/pr-verify.mjs']),
+      expect.arrayContaining(['rails/hooks/lib/rolhek.mjs', 'rails/hooks/werkstraat.mjs', 'scripts/kit/pr-verify.mjs']),
     );
     expect(TEKSTBESTANDEN.filter((rel) => rel.startsWith('.claude/hooks/.cache'))).toStrictEqual([]);
   });
@@ -341,18 +191,12 @@ describe('effecttoets-weg: niets importeert of start een verwijderde module', ()
     });
   });
 
-  // Het rolhek (rolhek.mjs) noemt het vervallen script nog wel: het weigert elk commando dat het start (sectie 7), want
-  // `.claude/settings.json` heeft `pnpm rolhek:overnemen *` nog in `excludedCommands` (buiten de sandbox). Elders mag de naam
-  // niet meer voorkomen: geen import, geen start, geen script.
-  test('effecttoets-weg: buiten rolhek.mjs noemt geen bestand rolhek-overnemen of rolhek:overnemen', () => {
-    nergensIn(
-      /rolhek-overnemen|rolhek:overnemen/,
-      {
-        recognizes: ['node scripts/kit/rolhek-overnemen.mjs', 'pnpm rolhek:overnemen'],
-        allows: ["draai('effect', true);", 'rails/hooks/effect.mjs', 'rolhek-vooraf'],
-      },
-      TEKSTBESTANDEN.filter((rel) => rel !== 'rails/hooks/lib/rolhek.mjs'),
-    );
+  // GEWIJZIGD (leerpunt #760): ook rolhek.mjs noemt het vervallen script niet meer; de weigering is weg.
+  test('effecttoets-weg: geen bestand noemt rolhek-overnemen of rolhek:overnemen', () => {
+    nergensIn(/rolhek-overnemen|rolhek:overnemen/, {
+      recognizes: ['node scripts/kit/rolhek-overnemen.mjs', 'pnpm rolhek:overnemen'],
+      allows: ["draai('effect', true);", 'rails/hooks/effect.mjs', 'rolhek-vooraf'],
+    });
   });
 
   test('effecttoets-weg: geen bestand importeert nog lib/effect.mjs (de opslag en het venster van de toets achteraf)', () => {
@@ -598,11 +442,8 @@ describe('effecttoets-weg: het rolhek vooraf (decide) is voor de kern ongewijzig
   });
 });
 
-// ---- 7. het rolhek weigert het vervallen overnamescript ----------------------------------------------------------------
+// ---- 7. checks per rol ------------------------------------------------------------------------------------------------
 
-// ADR 0091: `rolhek:overnemen` bestaat niet meer, maar `.claude/settings.json` (door een agent niet te wijzigen) heeft
-// `pnpm rolhek:overnemen *` nog in `excludedCommands`: zo'n commando draait BUITEN de sandbox. Tot de eigenaar het patroon
-// weghaalt, weigert het rolhek vooraf elk commando dat het start, voor elke rol inclusief de hoofdsessie (deny, geen ask).
 const ROLLEN = [
   { naam: 'hoofdsessie', agent: undefined },
   { naam: 'developer', agent: 'developer' },
@@ -612,105 +453,16 @@ const ROLLEN = [
   { naam: 'docs', agent: 'docs' },
 ] as const;
 
-const VERVALLEN = /vervallen/;
-/** De meldingen die zeggen dat het script vervallen is. */
-const vervallenMeldingen = (lijst: readonly string[]): string[] => lijst.filter((melding) => VERVALLEN.test(melding));
-const weigertVervallen = (command: string, agent?: string): boolean =>
-  vervallenMeldingen(decide(bash(command, agent), ctx).deny).length > 0;
+// De uitkomst van `decide` per rol voor twee gewone checks. `reviewer` weigert van zichzelf elk commando buiten de leeslijst
+// (framework §8), met één melding.
+const CHECKS = ['pnpm pr:verify 1', 'pnpm ratchet'] as const;
 
-const DIRECT = [
-  'pnpm rolhek:overnemen x',
-  'pnpm rolhek:overnemen --alles',
-  'pnpm rolhek:overnemen',
-  'pnpm run rolhek:overnemen x',
-  'pnpm exec rolhek:overnemen x',
-  'pnpm --silent rolhek:overnemen x',
-  'npx rolhek:overnemen x',
-  'node scripts/kit/rolhek-overnemen.mjs x',
-  'node ./scripts/kit/rolhek-overnemen.mjs x',
-  'node /repo/scripts/kit/rolhek-overnemen.mjs x',
-];
-const OMHULSEL = [
-  'env X=1 pnpm rolhek:overnemen x',
-  'X=1 pnpm rolhek:overnemen x',
-  'timeout 5 pnpm rolhek:overnemen x',
-  'sudo pnpm rolhek:overnemen x',
-  'nohup pnpm rolhek:overnemen x',
-  'nice pnpm rolhek:overnemen x',
-  'time pnpm rolhek:overnemen x',
-  'command pnpm rolhek:overnemen x',
-  'exec pnpm rolhek:overnemen x',
-  'env X=1 node scripts/kit/rolhek-overnemen.mjs x',
-];
-const SAMENGESTELD = [
-  'true && pnpm rolhek:overnemen x',
-  'echo a; pnpm rolhek:overnemen x',
-  'false || pnpm rolhek:overnemen x',
-  'echo a | pnpm rolhek:overnemen x',
-  'cd src && pnpm rolhek:overnemen x',
-  '(pnpm rolhek:overnemen x)',
-  'echo $(pnpm rolhek:overnemen x)',
-  'echo a\npnpm rolhek:overnemen x',
-  'true && node scripts/kit/rolhek-overnemen.mjs x',
-];
-const INDIRECT = [
-  'bash -c "pnpm rolhek:overnemen x"',
-  "sh -c 'pnpm rolhek:overnemen x'",
-  'eval "pnpm rolhek:overnemen x"',
-];
-
-describe.each(ROLLEN)('effecttoets-weg: rolhek:overnemen is voor $naam deny', ({ agent }) => {
-  const gevallen = [
-    ...DIRECT.map((command) => ({ soort: 'direct', command })),
-    ...OMHULSEL.map((command) => ({ soort: 'achter een omhulsel', command })),
-    ...SAMENGESTELD.map((command) => ({ soort: 'samengesteld', command })),
-    ...INDIRECT.map((command) => ({ soort: 'via shell of eval', command })),
-  ];
-
-  test.each(gevallen)('$soort: $command', ({ command }) => {
-    const besluit = decide(bash(command, agent), ctx);
-    // Een deny met de vervallen-melding; geen ask in de plaats ervan (ook niet voor de hoofdsessie).
-    expect(vervallenMeldingen(besluit.deny).length).toBeGreaterThan(0);
-    expect(vervallenMeldingen(besluit.ask)).toStrictEqual([]);
-  });
-
-  test('de melding zegt dat het script vervallen is en noemt ADR 0091', () => {
-    const meldingen = vervallenMeldingen(decide(bash('pnpm rolhek:overnemen x', agent), ctx).deny);
-    expect(meldingen.length).toBeGreaterThan(0);
-    for (const melding of meldingen) {
-      expect(melding).toMatch(/rolhek:overnemen/);
-      expect(melding).toContain('ADR 0091');
-    }
-  });
-});
-
-// Wat NIET om deze reden geweigerd mag worden. De uitkomst is die van `decide` op main (voor de wijziging): de nieuwe regel
-// verandert ze niet. `reviewer` weigert van zichzelf elk commando buiten de leeslijst (framework §8), dus daar blijven
-// `pnpm pr:verify 1`, `pnpm ratchet` en `echo` een deny, met die ene reviewer-melding.
-const ANDERS = [
-  { command: 'pnpm pr:verify 1', reviewerDeny: 1 },
-  { command: 'pnpm ratchet', reviewerDeny: 1 },
-  { command: 'git grep rolhek:overnemen docs', reviewerDeny: 0 },
-  { command: 'echo "pnpm rolhek:overnemen"', reviewerDeny: 1 },
-] as const;
-
-describe.each(ROLLEN)("effecttoets-weg: andere commando's blijven voor $naam zoals op main", ({ naam, agent }) => {
-  test.each(ANDERS)('$command: uitkomst als op main', ({ command, reviewerDeny }) => {
+describe.each(ROLLEN)('effecttoets-weg: een gewone check voor $naam', ({ naam, agent }) => {
+  test.each(CHECKS)('%s: alleen de reviewer krijgt een deny, niemand een ask', (command) => {
     const besluit = decide(bash(command, agent), ctx);
     expect({ deny: besluit.deny.length, ask: besluit.ask.length }).toStrictEqual({
-      deny: naam === 'reviewer' ? reviewerDeny : 0,
+      deny: naam === 'reviewer' ? 1 : 0,
       ask: 0,
-    });
-  });
-
-  test('alleen een commando dat het script start, geeft de vervallen-melding (negatieve tabel)', () => {
-    expectNegativeTable<{ command: string }>({
-      base: { command: 'pnpm rolhek:overnemen x' },
-      check: (invoer) => weigertVervallen(invoer.command, agent),
-      cases: ANDERS.map(({ command }) => ({
-        name: `${command} start het script niet`,
-        change: (basis) => ({ ...basis, command }),
-      })),
     });
   });
 });

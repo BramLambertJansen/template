@@ -140,32 +140,32 @@ async function meldingenVoor(geval: string): Promise<Melding[]> {
 
 const GEEN: string[] = [];
 const matrix: [geval: string, ac: string, verwacht: string[]][] = [
-  ['schoon', 'AC-6', GEEN],
-  ['oud-vinkje-zonder-bewijs', 'AC-6', GEEN],
-  ['alleen-herafgebroken', 'AC-6', GEEN],
-  ['vinkje-zonder-bewijs', 'AC-1', ['roadmap:bewijs:5']],
-  ['vinkje-met-pr', 'AC-2', GEEN],
-  ['vinkje-met-testpad', 'AC-2', GEEN],
-  ['vinkje-met-testmap', 'AC-2', GEEN],
-  ['vinkje-met-checknaam', 'AC-2', GEEN],
-  ['vinkje-testpad-bestaat-niet', 'AC-3', ['roadmap:bewijs:5', 'roadmap:pad:5:db/tests/weg.sql']],
-  ['testpad-alleen-als-achtervoegsel', 'AC-3', ['roadmap:bewijs:5', 'roadmap:pad:5:db/tests/weg.sql']],
-  ['vinkje-onbekend-script', 'AC-4', ['roadmap:bewijs:5']],
-  ['vinkje-geen-check', 'AC-4', ['roadmap:bewijs:5']],
-  ['vinkje-pad-bestaat-niet', 'AC-5', ['roadmap:pad:5:src/api/weg.ts']],
-  ['vinkje-glob-url-kale-naam', 'AC-5', GEEN],
-  ['vinkje-map-met-slash', 'AC-5', GEEN],
-  ['nieuw-item-afgevinkt', 'AC-1', ['roadmap:bewijs:6']],
-  ['vinkje-tekst-gewijzigd', 'AC-7', ['roadmap:bewijs:5']],
-  ['bewijs-op-vervolgregel', 'AC-8', GEEN],
-  ['bewijs-na-lege-regel', 'AC-8', ['roadmap:bewijs:5']],
-  ['bewijs-na-kop-in-kolom-0', 'AC-8', ['roadmap:bewijs:5']],
-  ['st-item', 'AC-8 en AC-16', GEEN],
-  ['anker-is-geen-pr', 'AC-1', ['roadmap:bewijs:5']],
-  ['anker-genummerde-kop', 'AC-17', ['roadmap:bewijs:5']],
-  ['vervallen-met-adr', 'AC-9', GEEN],
-  ['vervallen-adr-bestaat-niet', 'AC-9', ['roadmap:bewijs:5']],
-  ['vervallen-met-pr', 'AC-9', GEEN],
+  ['schoon', 'roadmap/AC-6', GEEN],
+  ['oud-vinkje-zonder-bewijs', 'roadmap/AC-6', GEEN],
+  ['alleen-herafgebroken', 'roadmap/AC-6', GEEN],
+  ['vinkje-zonder-bewijs', 'roadmap/AC-1', ['roadmap:bewijs:5']],
+  ['vinkje-met-pr', 'roadmap/AC-2', GEEN],
+  ['vinkje-met-testpad', 'roadmap/AC-2', GEEN],
+  ['vinkje-met-testmap', 'roadmap/AC-2', GEEN],
+  ['vinkje-met-checknaam', 'roadmap/AC-2', GEEN],
+  ['vinkje-testpad-bestaat-niet', 'roadmap/AC-3', ['roadmap:bewijs:5', 'roadmap:pad:5:db/tests/weg.sql']],
+  ['testpad-alleen-als-achtervoegsel', 'roadmap/AC-3', ['roadmap:bewijs:5', 'roadmap:pad:5:db/tests/weg.sql']],
+  ['vinkje-onbekend-script', 'roadmap/AC-4', ['roadmap:bewijs:5']],
+  ['vinkje-geen-check', 'roadmap/AC-4', ['roadmap:bewijs:5']],
+  ['vinkje-pad-bestaat-niet', 'roadmap/AC-5', ['roadmap:pad:5:src/api/weg.ts']],
+  ['vinkje-glob-url-kale-naam', 'roadmap/AC-5', GEEN],
+  ['vinkje-map-met-slash', 'roadmap/AC-5', GEEN],
+  ['nieuw-item-afgevinkt', 'roadmap/AC-1', ['roadmap:bewijs:6']],
+  ['vinkje-tekst-gewijzigd', 'roadmap/AC-7', ['roadmap:bewijs:5']],
+  ['bewijs-op-vervolgregel', 'roadmap/AC-8', GEEN],
+  ['bewijs-na-lege-regel', 'roadmap/AC-8', ['roadmap:bewijs:5']],
+  ['bewijs-na-kop-in-kolom-0', 'roadmap/AC-8', ['roadmap:bewijs:5']],
+  ['st-item', 'roadmap/AC-8 en roadmap/AC-16', GEEN],
+  ['anker-is-geen-pr', 'roadmap/AC-1', ['roadmap:bewijs:5']],
+  ['anker-genummerde-kop', 'roadmap/AC-17', ['roadmap:bewijs:5']],
+  ['vervallen-met-adr', 'roadmap/AC-9', GEEN],
+  ['vervallen-adr-bestaat-niet', 'roadmap/AC-9', ['roadmap:bewijs:5']],
+  ['vervallen-met-pr', 'roadmap/AC-9', GEEN],
   ['verplaatst', 'randgeval', GEEN],
   ['heropend', 'randgeval', GEEN],
   ['identiek-dubbel', 'randgeval', GEEN],
@@ -177,20 +177,20 @@ const matrix: [geval: string, ac: string, verwacht: string[]][] = [
   ['spec-gebouwd-bewijs-in-status', 'gebouwd-zonder-nummer/AC-1', GEEN],
   ['spec-gebouwd-met-vinkje-zonder-verwijzing', 'gebouwd-zonder-nummer/AC-1', GEEN],
   ['spec-gebouwd-met-roadmapvinkje', 'gebouwd-zonder-nummer/AC-1', GEEN],
-  ['spec-roadmapverwijzing-roadmap-ongewijzigd', 'AC-11', ['spec:roadmap:docs/specs/a.md']],
+  ['spec-roadmapverwijzing-roadmap-ongewijzigd', 'roadmap/AC-11', ['spec:roadmap:docs/specs/a.md']],
   [
     'spec-st-verwijzing-roadmap-ongewijzigd',
-    'AC-11 (ST-<nn>, hoofdletterongevoelig)',
+    'roadmap/AC-11 (ST-<nn>, hoofdletterongevoelig)',
     ['spec:roadmap:docs/specs/a.md'],
   ],
-  ['spec-al-gebouwd', 'AC-12', GEEN],
-  ['spec-nieuw-voorstel', 'AC-12', GEEN],
-  ['template', 'AC-12', GEEN],
+  ['spec-al-gebouwd', 'roadmap/AC-12', GEEN],
+  ['spec-nieuw-voorstel', 'roadmap/AC-12', GEEN],
+  ['template', 'roadmap/AC-12', GEEN],
   ['spec-vervallen', 'randgeval', GEEN],
-  ['spec-gebouwd-hernoemd', 'AC-12', GEEN],
+  ['spec-gebouwd-hernoemd', 'roadmap/AC-12', GEEN],
   // GEWIJZIGD (gebouwd-zonder-nummer/AC-1, ADR 0095): ook hier geen spec:bewijs meer.
   ['spec-hernoemd-en-gebouwd', 'randgeval', GEEN],
-  ['spec-nieuw-gebouwd', 'AC-13', GEEN],
+  ['spec-nieuw-gebouwd', 'roadmap/AC-13', GEEN],
 ];
 
 describe('roadmapMeldingen: bewijsmatrix', () => {
@@ -327,7 +327,7 @@ describe('roadmapVanRepo (git-laag)', () => {
   });
 });
 
-// --- CLI (AC-15): node scripts/kit/check-roadmap.mjs in een tijdelijke repo ---------------------------------------------------
+// --- CLI (roadmap/AC-15): node scripts/kit/check-roadmap.mjs in een tijdelijke repo ---------------------------------------------------
 
 const ZONDER_BEWIJS = 'vinkje zonder bewijs; ';
 const GROEN = '✓ check:roadmap: elk nieuw vinkje en elke gebouwde spec verwijst naar bewijs';
@@ -394,7 +394,7 @@ describe('CLI node scripts/kit/check-roadmap.mjs', () => {
   });
 });
 
-// --- echte repo (AC-16) ------------------------------------------------------------------------------------------------------
+// --- echte repo (roadmap/AC-16) ------------------------------------------------------------------------------------------------------
 
 function echteRoadmap(): string {
   return readFileSync(path.join(REPO, 'docs/roadmap.md'), 'utf8');
@@ -425,7 +425,7 @@ async function echteMeldingen(basis: { lees: (pad: string) => string | null; bes
   );
 }
 
-describe('de echte docs/roadmap.md (AC-16)', () => {
+describe('de echte docs/roadmap.md (roadmap/AC-16)', () => {
   test('basis gelijk aan head: geen enkele melding, ook niet voor de 91+ bestaande vinkjes zonder bewijs', async () => {
     const roadmap = echteRoadmap();
     const basis = {

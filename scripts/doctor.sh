@@ -2,6 +2,8 @@
 # Controleert de machine (framework §11). Zonder vlag ook de stack; --machine controleert alleen installatie en git-hooks.
 # --quick: alleen de status van de lokale stack, voor de SessionStart-hook (nooit Docker, nooit netwerk buiten 127.0.0.1).
 # Exit 1 bij een fout in de volledige of machine-modus; --quick meldt alleen en eindigt altijd met 0.
+# De volledige en de machine-modus schrijven hun uitslag naar .template/doctor-<full|machine>.json (spec nieuwe-app-script,
+# werking 9): bij de start weg, aan het eind geschreven, ook bij een afbreking (trap op EXIT). --quick schrijft en verwijdert niets.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -15,11 +17,53 @@ case "$mode" in
   *) echo 'Gebruik: scripts/doctor.sh [--machine|--quick]' >&2; exit 2 ;;
 esac
 failures=0
+steps=0
+steps_json=""
 
-ok() { printf '✓ %s\n' "$1"; }
+json_escape() {
+  local s="$1"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  s="${s//$'\n'/ }"
+  s="${s//$'\r'/ }"
+  s="${s//$'\t'/ }"
+  printf '%s' "$s"
+}
+
+# Een stap voor het resultaatbestand: record <ok|fout|overgeslagen> <melding> [herstel].
+record() {
+  local herstel=null
+  steps=$((steps + 1))
+  if (($# >= 3)); then herstel="\"$(json_escape "$3")\""; fi
+  steps_json+="${steps_json:+,}{\"id\":\"controle-$steps\",\"status\":\"$1\",\"melding\":\"$(json_escape "$2")\",\"herstel\":$herstel}"
+}
+
+ok() {
+  printf '✓ %s\n' "$1"
+  record ok "$1"
+}
 fail() {
   printf '✗ %s\n  → %s\n' "$1" "$2"
   failures=$((failures + 1))
+  record fout "$1" "$2"
+}
+skip() {
+  printf '· %s\n' "$1"
+  record overgeslagen "$1"
+}
+
+# Schrijft het resultaatbestand met printf (geen Node of jq: die kunnen ontbreken). Uitslag fout bij een exitcode ≠ 0.
+write_result() {
+  local code="$1" head uitslag=ok
+  if ((code != 0)); then uitslag=fout; fi
+  if ((code != 0 && failures == 0)); then
+    record fout "doctor brak af vóór de telling (exitcode $code)" "lees de uitvoer hierboven en draai scripts/doctor.sh opnieuw"
+  fi
+  head="$(git rev-parse HEAD 2>/dev/null || true)"
+  if [[ "$head" =~ ^[0-9a-f]{40,64}$ ]]; then head="\"$head\""; else head=null; fi
+  mkdir -p .template 2>/dev/null || return 0
+  printf '{"schema":1,"commando":"doctor-%s","tijd":"%s","head":%s,"dryRun":false,"uitslag":"%s","stappen":[%s],"gegevens":{}}\n' \
+    "$result_name" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$head" "$uitslag" "$steps_json" >".template/doctor-$result_name.json" 2>/dev/null || true
 }
 
 # Poort uit .env.local (zonder het bestand uit te voeren), anders de standaard uit .env.example.
@@ -44,6 +88,34 @@ if [[ "$mode" == --quick ]]; then
   check_stack
   exit 0
 fi
+
+result_name=full
+if [[ "$mode" == --machine ]]; then result_name=machine; fi
+rm -f ".template/doctor-$result_name.json"
+trap 'write_result $?' EXIT
+
+# Samenhang van de poorten in .env.local (spec nieuwe-app-script, werking 9): de poort in elke URL hoort bij zijn poortsleutel,
+# dezelfde sleutels als `nieuwe-app.mjs poorten`. Alleen sleutelnamen tonen, nooit een waarde. Een URL-sleutel die ontbreekt,
+# kan niet afwijken.
+url_port() { sed -nE "s|^$1=[a-zA-Z][a-zA-Z0-9+.-]*://([^@/]*@)?[^:/?#]*:([0-9]+).*|\2|p" .env.local 2>/dev/null | tail -1 || true; }
+check_env_ports() {
+  local pair key port_key default mismatches=0
+  if [[ ! -f .env.local ]]; then return 0; fi
+  if [[ ! -r .env.local ]]; then
+    skip ".env.local niet leesbaar: poortsamenhang overgeslagen"
+    return 0
+  fi
+  for pair in DATABASE_URL:PG_PORT:54322 AUTH_DATABASE_URL:PG_PORT:54322 MIGRATOR_DATABASE_URL:PG_PORT:54322 \
+    SMTP_URL:SMTP_PORT:54325 APP_ORIGIN:WEB_PORT:5173 AUTH_BASE_URL:WEB_PORT:5173; do
+    IFS=: read -r key port_key default <<<"$pair"
+    if ! grep -q "^$key=" .env.local; then continue; fi
+    if [[ "$(url_port "$key")" != "$(port "$port_key" "$default")" ]]; then
+      fail ".env.local: poort in $key past niet bij $port_key" "node scripts/kit/nieuwe-app.mjs poorten; .env.local alleen met akkoord van de eigenaar aanpassen"
+      mismatches=$((mismatches + 1))
+    fi
+  done
+  if ((mismatches == 0)); then ok ".env.local: de poorten in de URL's passen bij de poortsleutels"; fi
+}
 
 expect_version() {
   local label="$1" expected="$2" actual
@@ -109,7 +181,7 @@ fi
 # grens staat als MIN_CLAUDE_VERSIE in rails/hooks/lib/claude-versie.mjs (test/scripts/doctor-claude-versie.test.ts).
 min_claude=2.1.295
 if ! command -v claude >/dev/null; then
-  printf '· Claude Code niet gevonden: versiecontrole overgeslagen\n'
+  skip "Claude Code niet gevonden: versiecontrole overgeslagen"
 else
   claude_versie="$(claude --version 2>/dev/null | sed -nE '1s/^([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' || true)"
   if [[ -z "$claude_versie" ]]; then
@@ -124,6 +196,8 @@ fi
 if docker info >/dev/null 2>&1; then ok "Docker draait"; else fail "Docker draait niet of je zit niet in de groep docker" "sudo systemctl start docker (docs/nieuwe-app.md)"; fi
 
 if [[ -x .git/hooks/pre-commit ]] && grep -q lefthook .git/hooks/pre-commit; then ok "git-hooks (lefthook) geïnstalleerd"; else fail "git-hooks ontbreken" "pnpm exec lefthook install"; fi
+
+check_env_ports
 
 if [[ "$mode" != --machine ]]; then check_stack; fi
 
