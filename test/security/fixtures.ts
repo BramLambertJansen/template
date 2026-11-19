@@ -8,7 +8,8 @@ import type { AppServices } from '../../src/api/services.ts';
 import { inviteUser } from '../../src/core/api/auth/index.ts';
 import { beginTestDb, createPool, type TestDb, type TestUser } from '../../src/core/api/db/testing.ts';
 import { createApp, type App } from '../../src/core/api/http/create-app.ts';
-import type { Role } from '../../src/shared/roles.ts';
+import type { Roles } from '../../src/core/shared/roles.ts';
+import { roles, type Role } from '../../src/shared/roles.ts';
 import { rateLimitCategory, type Method } from '../../src/core/shared/contract.ts';
 import { MAX_BODY_BYTES, SESSION_ABSOLUTE_SECONDS, type RateLimitCategory } from '../../src/core/shared/limits.ts';
 import { defineContract } from '../../src/shared/contracts/kit.ts';
@@ -40,7 +41,58 @@ export const PERMISSIE_ORACLE = {
   'design-system:read': ['admin'],
 } as const satisfies Record<string, readonly Role[]>;
 
-export type ActorSoort = 'geenSessie' | 'zonderRol' | 'user' | 'adminZonderMfa' | 'adminMfa';
+// Een soort uit actorSoorten(bron): 'geenSessie', 'zonderRol', een rolnaam, of '<rol>Mfa'/'<rol>ZonderMfa' voor een rol uit
+// MFA_ROLLEN. Een string, want het register is breed getypt (spec suite-volgt-contract, ontwerp 7). Deze regel blijft direct
+// na PERMISSIE_ORACLE staan: scripts/kit/new-resource.mjs (oracleInhoud) gebruikt hem als anker.
+export type ActorSoort = string;
+
+// De beheerrollen die MFA vragen, met de hand (eigenaarbesluit OV-7): NIET afgeleid van roles.isBeheer, anders test de suite
+// de implementatie met zichzelf. beheerVerschil() houdt deze lijst gelijk aan de beheervlag van het register.
+export const MFA_ROLLEN = ['admin'] as const satisfies readonly Role[];
+
+// Waar de suite haar verwachting uit leest: het rollenregister, de oracle en de MFA-rollen. Unit-tests geven een nep-bron mee.
+export interface Bron {
+  readonly register: Roles;
+  readonly oracle: Readonly<Record<string, readonly string[]>>;
+  readonly mfaRollen: readonly string[];
+}
+
+const STANDAARD_BRON: Bron = { register: roles, oracle: PERMISSIE_ORACLE, mfaRollen: MFA_ROLLEN };
+
+export interface SoortRegel {
+  readonly soort: ActorSoort;
+  readonly rol: string | null;
+  readonly mfa: boolean;
+}
+
+// De actorsoorten in vaste volgorde: geenSessie, zonderRol, dan per rol uit register.names één soort, of voor een rol uit
+// mfaRollen '<rol>Mfa' en '<rol>ZonderMfa'. Een rolnaam heeft geen hoofdletter, dus geen soortnaam botst met een rol.
+export function actorSoorten(bron: Bron = STANDAARD_BRON): SoortRegel[] {
+  const perRol = bron.register.names.flatMap((rol): SoortRegel[] =>
+    bron.mfaRollen.includes(rol)
+      ? [
+          { soort: `${rol}Mfa`, rol, mfa: true },
+          { soort: `${rol}ZonderMfa`, rol, mfa: false },
+        ]
+      : [{ soort: rol, rol, mfa: false }],
+  );
+  return [{ soort: 'geenSessie', rol: null, mfa: false }, { soort: 'zonderRol', rol: null, mfa: false }, ...perRol];
+}
+
+function soortRegel(soort: ActorSoort, bron: Bron): SoortRegel {
+  const regel = actorSoorten(bron).find((kandidaat) => kandidaat.soort === soort);
+  if (regel === undefined) {
+    throw new Error(`onbekende actorsoort '${soort}' (niet in actorSoorten van het rollenregister)`);
+  }
+  return regel;
+}
+
+function oracleRollen(permissie: string, bron: Bron): readonly string[] {
+  const rollen = new Map(Object.entries(bron.oracle)).get(permissie);
+  if (rollen === undefined)
+    throw new Error(`permissie '${permissie}' staat niet in PERMISSIE_ORACLE (test/security/fixtures.ts)`);
+  return rollen;
+}
 
 export type Uitkomst =
   | { readonly toegestaan: true }
@@ -50,19 +102,63 @@ export type Uitkomst =
       readonly code: 'UNAUTHENTICATED' | 'FORBIDDEN' | 'MFA_REQUIRED';
     };
 
-const OORDEEL_ROLLEN = new Map<string, readonly Role[]>(Object.entries(PERMISSIE_ORACLE));
-
-// Wat een route met deze permissie voor deze actor moet doen, zonder check() aan te roepen.
-export function verwachteUitkomst(soort: ActorSoort, permissie: string): Uitkomst {
-  const rollen = OORDEEL_ROLLEN.get(permissie);
-  if (rollen === undefined)
-    throw new Error(`permissie '${permissie}' staat niet in PERMISSIE_ORACLE (test/security/fixtures.ts)`);
+// Wat een route met deze permissie voor deze actor moet doen, zonder check() aan te roepen; volgt de volgorde van can():
+// FORBIDDEN gaat vóór MFA_REQUIRED.
+export function verwachteUitkomst(soort: ActorSoort, permissie: string, bron: Bron = STANDAARD_BRON): Uitkomst {
+  const rollen = oracleRollen(permissie, bron);
+  const { rol, mfa } = soortRegel(soort, bron);
   if (soort === 'geenSessie') return { toegestaan: false, status: 401, code: 'UNAUTHENTICATED' };
-  if (soort === 'zonderRol') return { toegestaan: false, status: 403, code: 'FORBIDDEN' };
-  const rol: Role = soort === 'user' ? 'user' : 'admin';
-  if (!rollen.includes(rol)) return { toegestaan: false, status: 403, code: 'FORBIDDEN' };
-  if (rol === 'admin' && soort === 'adminZonderMfa') return { toegestaan: false, status: 403, code: 'MFA_REQUIRED' };
+  if (rol === null || !rollen.includes(rol)) return { toegestaan: false, status: 403, code: 'FORBIDDEN' };
+  if (bron.mfaRollen.includes(rol) && !mfa) return { toegestaan: false, status: 403, code: 'MFA_REQUIRED' };
   return { toegestaan: true };
+}
+
+// De rollen uit mfaRollen die de oracle bij deze permissie noemt, in de volgorde van register.names.
+export function beheerrollenMet(permissie: string, bron: Bron = STANDAARD_BRON): string[] {
+  const rollen = oracleRollen(permissie, bron);
+  return bron.register.names.filter((rol) => rollen.includes(rol) && bron.mfaRollen.includes(rol));
+}
+
+interface MinimaleRoute {
+  readonly contract: { readonly method: string; readonly path: string; readonly permission: string };
+}
+
+export interface Geval<R> {
+  readonly soort: ActorSoort;
+  readonly route: R;
+}
+
+// security/AC-4: elk paar (soort, route) waarvoor de oracle 403 FORBIDDEN voorschrijft; geenSessie hoort bij AC-2.
+export function ac4Gevallen<R extends MinimaleRoute>(routes: readonly R[], bron: Bron = STANDAARD_BRON): Geval<R>[] {
+  const soorten = actorSoorten(bron).filter(({ soort }) => soort !== 'geenSessie');
+  return routes.flatMap((route) =>
+    soorten.flatMap(({ soort }) => {
+      const uitkomst = verwachteUitkomst(soort, route.contract.permission, bron);
+      return !uitkomst.toegestaan && uitkomst.code === 'FORBIDDEN' ? [{ soort, route }] : [];
+    }),
+  );
+}
+
+// security/AC-5: per route en per beheerrol bij de permissie '<rol>ZonderMfa' (403 MFA_REQUIRED) en, op een GET, '<rol>Mfa'
+// voor de MFA-doorgang (mfaDoorgangProbleem).
+export function ac5Gevallen<R extends MinimaleRoute>(routes: readonly R[], bron: Bron = STANDAARD_BRON): Geval<R>[] {
+  return routes.flatMap((route) =>
+    beheerrollenMet(route.contract.permission, bron).flatMap((rol) => [
+      { soort: `${rol}ZonderMfa`, route },
+      ...(route.contract.method === 'GET' ? [{ soort: `${rol}Mfa`, route }] : []),
+    ]),
+  );
+}
+
+// De rollen uit het register die niet in oracle['app.use'] staan: core geeft app.use aan elke rol.
+export function appUseVerschil(bron: Bron = STANDAARD_BRON): string[] {
+  const rollen = new Map(Object.entries(bron.oracle)).get('app.use') ?? [];
+  return bron.register.names.filter((rol) => !rollen.includes(rol));
+}
+
+// De rollen waar de beheervlag van het register en mfaRollen verschillen, in de volgorde van register.names.
+export function beheerVerschil(bron: Bron = STANDAARD_BRON): string[] {
+  return bron.register.names.filter((rol) => bron.register.isBeheer(rol) !== bron.mfaRollen.includes(rol));
 }
 
 // Rood als een nieuwe permissie niet in de oracle staat (of andersom): geen permissie valt erbuiten.
@@ -73,10 +169,6 @@ export function oracleSleutelsVerschil(): { readonly alleenInOracle: string[]; r
     alleenInOracle: inOracle.filter((naam) => !inTabel.includes(naam)),
     alleenInTabel: inTabel.filter((naam) => !inOracle.includes(naam)),
   };
-}
-
-export function adminHeeftPermissie(permissie: string): boolean {
-  return OORDEEL_ROLLEN.get(permissie)?.includes('admin') ?? false;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -283,8 +375,6 @@ export interface Verzoek {
   readonly ruw?: string;
 }
 
-type Mintbaar = Exclude<ActorSoort, 'geenSessie'>;
-
 function padMet(route: AppRoute, sample: RouteSample): string {
   const pad = route.contract.path.replace(/:([A-Za-z0-9_]+)/g, (_, naam: string) =>
     encodeURIComponent(sample.params[naam] ?? ''),
@@ -300,9 +390,10 @@ function bodyVan(route: AppRoute, verzoek: Verzoek): string | undefined {
   return heeftBody(route.contract.method) ? JSON.stringify(verzoek.sample.invoer) : undefined;
 }
 
-export function createSecurityFixtures() {
+// De bron bepaalt welke soorten en rollen er zijn; de API zelf (createAccountTestApp) gebruikt altijd het echte register.
+export function createSecurityFixtures(bron: Bron = STANDAARD_BRON) {
   const h = createAccountTestApp();
-  const pools = new Map<Mintbaar, Actor[]>();
+  const pools = new Map<ActorSoort, Actor[]>();
   const alleIds = new Set<string>();
 
   function nieuweActor(soort: ActorSoort, account: { userId: string; email: string; browser: Browser }): Actor {
@@ -318,16 +409,18 @@ export function createSecurityFixtures() {
     return { email, userId, browser: await h.signIn(email) };
   }
 
-  async function maak(soort: Mintbaar): Promise<Actor> {
-    if (soort === 'zonderRol') return nieuweActor(soort, await zonderRolAccount());
-    if (soort === 'user') return nieuweActor(soort, await h.account('user'));
-    const admin = await h.account('admin');
-    if (soort === 'adminMfa') await h.enableTotp(admin.browser);
-    return nieuweActor(soort, admin);
+  // Rol en sessiesterkte komen uit actorSoorten(bron); zonderRol heeft geen rol, '<rol>Mfa' schrijft TOTP in.
+  async function maak(soort: ActorSoort): Promise<Actor> {
+    const { rol, mfa } = soortRegel(soort, bron);
+    if (rol === null) return nieuweActor(soort, await zonderRolAccount());
+    const account = await h.account(rol);
+    if (mfa) await h.enableTotp(account.browser);
+    return nieuweActor(soort, account);
   }
 
   // Een actor van deze soort met nog ruimte onder de rate limit van de categorie; anders een verse (spec: telbudget).
   async function actor(soort: ActorSoort, categorie: RateLimitCategory): Promise<Actor> {
+    soortRegel(soort, bron);
     if (soort === 'geenSessie') {
       return { soort, userId: '', email: '', browser: new Browser(h.app), hits: new Map() };
     }
@@ -368,11 +461,11 @@ export function createSecurityFixtures() {
     await h.authDb.query(`update session set "expiresAt" = now() - interval '1 minute' where token = $1`, [token]);
   }
 
-  let bron: Promise<Actor> | undefined;
+  let verlopenAccount: Promise<Actor> | undefined;
   // Het account waarvan de extra sessies verlopen; zijn eerste sessie blijft geldig (bewijs dat niets is ingetrokken).
   function verlopenBron(): Promise<Actor> {
-    bron ??= h.account('user').then((account) => nieuweActor('user', account));
-    return bron;
+    verlopenAccount ??= h.account('user').then((account) => nieuweActor('user', account));
+    return verlopenAccount;
   }
 
   // Een verse sessie van het bronaccount, absoluut (> 7 dagen) of idle (expiresAt verstreken) verlopen.
@@ -387,12 +480,18 @@ export function createSecurityFixtures() {
   }
 
   const benoemd = new Map<string, Promise<Actor>>();
-  // A en B blijven per rol dezelfde twee accounts; admin-acteurs hebben MFA.
-  function eerste(naam: 'A' | 'B', rol: Role): Promise<Actor> {
+  // A en B blijven per rol dezelfde twee accounts; een rol uit mfaRollen krijgt MFA ('<rol>Mfa'), een andere rol de soort met
+  // de rolnaam. Een rol buiten het register van de bron is een fout, geen stil user-account.
+  function eerste(naam: 'A' | 'B', rol: string): Promise<Actor> {
+    if (!bron.register.names.includes(rol)) {
+      return Promise.reject(
+        new Error(`rol '${rol}' staat niet in het rollenregister (${naam} in test/security/fixtures.ts)`),
+      );
+    }
     const sleutel = `${naam}:${rol}`;
     const bestaand = benoemd.get(sleutel);
     if (bestaand !== undefined) return bestaand;
-    const soort = rol === 'admin' ? 'adminMfa' : 'user';
+    const soort = bron.mfaRollen.includes(rol) ? `${rol}Mfa` : rol;
     const nieuw = naam === 'A' ? actor(soort, 'lezen') : maak(soort);
     benoemd.set(sleutel, nieuw);
     return nieuw;
@@ -424,8 +523,8 @@ export function createSecurityFixtures() {
     verlopenBron,
     verlopenBrowser,
     bijwerkingen,
-    A: (rol: Role = 'user') => eerste('A', rol),
-    B: (rol: Role = 'user') => eerste('B', rol),
+    A: (rol: string = 'user') => eerste('A', rol),
+    B: (rol: string = 'user') => eerste('B', rol),
   };
 }
 

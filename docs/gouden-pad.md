@@ -130,9 +130,11 @@ Toevoegen, in één PR:
    Een naam buiten het register weigert `definePermissions` bij het laden.
 4. **Seed-account en naam**: een regel in `src/api/dev/seed-accounts.ts` en in `roleLabels` (`src/web/copy/ui.ts`); zonder
    is het een typefout. De dev-rolwisselaar, de rolfilter en het uitnodigformulier tonen de rol dan vanzelf.
-5. **Tests**: een test per verboden rol voor elke permissie (`src/shared/permissions.test.ts`), een actorsoort in
-   `test/security/fixtures.ts`, en `pnpm test:db`: `test/auth/roles-register.int.test.ts` faalt zolang code en database
-   verschillen.
+5. **Tests**: een test per verboden rol voor elke permissie (`src/shared/permissions.test.ts`); in
+   `test/security/fixtures.ts` de rol in `PERMISSIE_ORACLE` bij `app.use` en bij elke permissie die hij krijgt, en een
+   beheerrol ook in `MFA_ROLLEN` (de actorsoorten van de securitysuite komen vanzelf uit het register; `appUseVerschil` en
+   `beheerVerschil` in `test/security/routes.int.test.ts` zijn rood met de rolnaam tot dat klopt); en `pnpm test:db`:
+   `test/auth/roles-register.int.test.ts` faalt zolang code en database verschillen.
 
 Weghalen gaat andersom: eerst de dragers een andere rol geven (`app.assign_role`), dan de rol uit de permissies, het
 seed-account, `roleLabels` en `src/shared/roles.ts`, en een migratie met `select app.unregister_role('planner');` (met
