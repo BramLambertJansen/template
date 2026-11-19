@@ -20,6 +20,7 @@ Herzien: 2026-11-14 (#713): ingekort tot wat nog geldt; een ingehaald punt is é
 Herzien: 2026-11-17 (#778): Gevolgen, het rolhek valt dicht bij een storing (R-ROL-09) en blijft een vangnet, geen grens (R-ROL-10); er stond "fail-open"
 Herzien: 2026-11-18 (#805): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.md) punt 1, 3 en 7, punt 6: de developer
 schrijft geen `gebouwd` meer; punt 10: `status: gebouwd` zonder PR-nummer in de bouw-PR, `pnpm docs:status` vervalt
+Herzien: 2026-11-19: punt 6, gewijzigd door [0099](0099-rolhek-leeslijst-ruimer.md): alleen architect en hoofdsessie wijzigen ook de inhoud van een vervallen spec (de status blijft `vervallen`); een vervallen ADR blijft onwijzigbaar (punt 2)
 
 Vervangt 0025, 0027, 0030 en 0038; neemt de delen van 0029 over die via 0038 punt 8 nog golden. Drempel: A4.
 

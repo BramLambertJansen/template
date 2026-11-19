@@ -2,6 +2,8 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-19: punt 5, gewijzigd door [0099](0099-rolhek-leeslijst-ruimer.md): `wc`, `head`, `tail`, `sed -n` en pipes tussen lezers komen er voor de reviewer bij; `grep`, `rg` en `git blame` blijven buiten de lijst
+
 Herziet [0064](0064-leesbudget-per-laag.md) punt 5, alleen voor de reviewer. Drempel: A3 (het rolhek wordt ruimer) en A4.
 Aanleiding: leerpunt #664, eerder #609. Uitwerking: [spec rolhek-lezen](../specs/rolhek-lezen.md) AC-6 tot AC-10.
 
