@@ -7,8 +7,9 @@ namespace: rolhek-vooraf
 
 ## Doel
 
-De levende toets vooraf van het rolhek op Bash-commando's in één spec, na het verwijderen van spec rolhek-vooraf-krimp
-(vervallen) (ADR 0071, 0082, 0083, 0086, 0091 punt 2 en 3). Het gedrag bestaat al; deze spec verandert het niet.
+De levende toets vooraf van het rolhek op Bash-commando's in één spec, na het verwijderen van spec
+rolhek-vooraf-krimp (vervallen) (ADR 0071, 0082, 0083, 0086, 0091 punt 2 en 3). Het gedrag bestaat al; deze spec verandert
+het niet.
 
 ## Rollen en wie wat ziet
 
@@ -35,11 +36,13 @@ Geen UI. De meldingen van `rails/hooks/lib/zelfladend.mjs` blijven letterlijk zo
   `GH_SUBCOMMAND` naast een geëxpandeerd argument en `hiddenCommandWord` in `rails/hooks/lib/rolhek.mjs` toetsen per segment
   van `parseCommands`, alleen woorden die de shell echt expandeert: (a) het gh-subcommando telt alleen in hetzelfde segment
   als het geëxpandeerde argument; na `cd $TMPDIR` is de werkmap onbekend, de hoofdsessie krijgt dan hooguit een `ask` met de
-  melding van AC-3, geen `deny`; (b) een woord tussen aanhalingstekens is geen glob, brace-expansie of POSIX-klasse, in een
-  commando zonder `#`, `${`, `$'`, `$(`, `((`, backtick, `\` of newline; (c) een patroon zonder geldige tekenklasse (`[z-a]`,
-  een `[` zonder sluitende `]`) is letterlijk en geeft geen interne fout; een `]` direct na `[`, `[!` of `[^` hoort bij de
-  klasse; een negatie is hoofdlettergevoelig; (d) een woord dat begint met `$TMPDIR/`, `"$TMPDIR/` of `"$TMPDIR"/` is
-  letterlijk als `TMPDIR` nergens anders in het commando staat; (e) een `for`-lus waarvan elk segment een programma uit
+  melding van AC-3, geen `deny`; een subagent houdt de weigering `subagent: gh, de GitHub-API of git credential alleen als één
+  direct gh-leescommando zonder shell-trucs`; (b) een woord tussen aanhalingstekens is geen glob, brace-expansie of
+  POSIX-klasse, in een commando zonder `#`, `${`, `$'`, `$(`, `((`, backtick, `\` of newline; (c) een patroon zonder geldige
+  tekenklasse (`[z-a]`, een `[` zonder sluitende `]`) is letterlijk en geeft geen interne fout; een `]` direct na `[`, `[!` of
+  `[^` hoort bij de klasse; een negatie is hoofdlettergevoelig; (d) een woord dat begint met `$TMPDIR/`, `"$TMPDIR/` of
+  `"$TMPDIR"/`, of dat precies `$TMPDIR`, `${TMPDIR}` of `"$TMPDIR"` is, is letterlijk als `TMPDIR` nergens anders in het
+  commando staat (`TMPDIR_VOORAAN` in `rails/hooks/lib/shell.mjs`); (e) een `for`-lus waarvan elk segment een programma uit
   `EXPANSION_SAFE` of git met een lezend subcommando start, gaat door. Blijven weigeren: `$G pr merge`, `${x}h`,
   `$(echo gh)`, `g[h]`, `{g,x}h`, `[[:alpha:]]h`, `env -S`. Bewijs nu: `test/hooks/rolhek-gh-allowlist.test.ts:735`, `:1209`,
   `:1222`, `:1246`, `:1264`; `test/hooks/rolhek-zelfladend.test.ts:244`, `:330`.
@@ -89,8 +92,8 @@ Geen UI. De meldingen van `rails/hooks/lib/zelfladend.mjs` blijven letterlijk zo
 
 Niets aan gedrag. De bouw hernoemt describes en testnamen naar deze AC-id's en zet de specverwijzingen in
 `rails/hooks/lib/zelfladend.mjs`, `rails/hooks/lib/shell.mjs` en `rails/hooks/lib/rolhek.mjs` om (spec
-vervallen-documenten-weg). Geen migratie, route, permissie of resource: niet `check:migrations`, `check:secdef`, `test:db`,
-`test/security/resources.ts`.
+vervallen-documenten-weg, PR 1). Geen migratie, route, permissie of resource: niet `check:migrations`, `check:secdef`,
+`test:db`, `test/security/resources.ts`.
 
 ## Buiten scope
 

@@ -88,12 +88,13 @@ steekproefregel), bij een reden exit 1 met `Geen merge (ADR 0069):` en per reden
 - **agent-samenvoegen/AC-9** (nog niet gebouwd) — Uit spec agent-merge-niet-kritiek (vervallen) AC-4. Het rolhek weigert elke
   rol `gh pr merge`, `gh api …/merge` en auto-merge, en geeft alleen de hoofdsessie in de repo-root `allow` voor precies
   `pnpm pr:merge <nr>` (`<nr>` cijfers), als `trustedMerge` waar is: modus `niet-kritiek` in het anker en `MERGE_FILES`
-  (`package.json`, `.npmrc`, `.pnpmfile.cjs`, `mise.toml`, `scripts`, `rails`) lokaal en gecommit gelijk aan het anker, zonder
-  geplante `node_modules/.bin/gh`, `git` of `node`; anders `deny` met de reden. Elke andere vorm (`node scripts/kit/pr-merge.mjs`,
-  `pnpm run pr:merge`, een omhulsel, een glob, een extra argument) en elke subagent: `deny`. Lezen van het script blijft vrij.
-  `.claude/settings.json` houdt `deny` voor `Bash(gh pr merge*)` en `Bash(gh api *merge*)`, `ask` voor
-  `Bash(pnpm pr:merge *)`, `pnpm pr:merge *` in `sandbox.excludedCommands`, en geen `allow`-regel met `pr:merge`. Bewijs nu:
-  `test/hooks/rolhek-pr-merge.test.ts:45` en `:180`.
+  (`HOST_FILES` uit `rails/hooks/lib/runner-authority.mjs` plus `rails`) lokaal en gecommit gelijk aan het anker, zonder
+  geplante `gh`, `git` of `node` (ook `.exe`) in `node_modules/.bin`; anders `deny` met de reden. Elke andere vorm
+  (`node scripts/kit/pr-merge.mjs`, `pnpm run pr:merge`, een omhulsel, een glob, een extra argument) en elke subagent:
+  `deny`. Lezen van het script met `cat`, `head`, `tail`, `grep`, `wc`, `ls`, `diff`, `stat` of git `log`, `show`, `diff`,
+  `blame`, `ls-files`, `grep` blijft vrij. `.claude/settings.json` houdt `deny` voor `Bash(gh pr merge*)` en
+  `Bash(gh api *merge*)`, `ask` voor `Bash(pnpm pr:merge *)`, `pnpm pr:merge *` in `sandbox.excludedCommands`, en geen
+  `allow`-regel met `pr:merge`. Bewijs nu: `test/hooks/rolhek-pr-merge.test.ts:45` en `:180`.
 - **agent-samenvoegen/AC-10** (nog niet gebouwd) — Uit spec agent-merge-niet-kritiek (vervallen) AC-7. Een externe
   reviewdienst is geen voorwaarde: `beoordeelMerge` leest geen reacties, check-suites, reviews, inline-commentaar of
   branch-PR's, en een 👀 of een samenvatting (ook met open punten) van een reviewbot geeft geen reden. `slotRegels(nummer,
