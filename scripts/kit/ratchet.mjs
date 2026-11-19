@@ -7,6 +7,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { format, resolveConfig } from 'prettier';
 import { docsKrimp, docsMeldingen, docsViolations } from './check-docs.mjs';
+import { pgTapVormViolations } from './check-policies.mjs';
 import { conflictMarkerViolations } from './conflictmarkers.mjs';
 import { dependencyViolations } from './depcruise.mjs';
 import { onderdrukkingMeldingenUitGit, onderdrukkingenUitGit } from './onderdrukkingen.mjs';
@@ -30,6 +31,8 @@ export const strikt = {
     Promise.resolve(onderdrukkingenUitGit(process.cwd(), process.env['GITHUB_ACTIONS'] === 'true')),
   // Geen conflictmarker in een getrackt tekstbestand (leerpunt #495).
   conflictmarkers: () => Promise.resolve(conflictMarkerViolations(process.cwd())),
+  // pgTAP-bestanden in de vorm van R-TEST-05 (spec proza-checks).
+  'pgtap-vorm': () => Promise.resolve(pgTapVormViolations(process.cwd())),
 };
 
 /** Meldingen zonder overtreding (leesbudget/AC-2). @type {Record<string, () => Promise<string[]>>} */

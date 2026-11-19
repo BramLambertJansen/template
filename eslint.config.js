@@ -29,6 +29,9 @@ const ruleNames = [
   'netwerk-api',
   'geheim',
   'lijstquery',
+  'route-guard',
+  'router',
+  'web-globaal',
 ];
 const rails = { rules: Object.fromEntries(ruleNames.map((name) => [name, restrictedSyntax])) };
 
@@ -179,7 +182,70 @@ const GEHEIM_SELECTORS = [
   'CallExpression > MemberExpression.callee[property.name=/^(partial|deepPartial|or|and|catch|catchall|passthrough|loose|looseObject|merge|record|union|discriminatedUnion|preprocess)$/]',
 ];
 
+// Routeraam van de web-zone (R-WEB-01, spec proza-checks). Een schermroute zet letterlijk `beforeLoad: guard('<tekst>')`,
+// met guard als `{ guard }` uit '#web/lib/session.ts'; de selectors haken aan op de aanroep createFileRoute(…)(…).
+const FILE_ROUTE = "CallExpression[callee.type='CallExpression'][callee.callee.name='createFileRoute']";
+const GUARD_BEFORE_LOAD =
+  "Property[computed=false][key.name='beforeLoad'][value.type='CallExpression'][value.callee.name='guard'][value.arguments.length=1][value.arguments.0.type='Literal'][value.arguments.0.value=/^/]";
+const SESSIE_GUARD =
+  "ImportDeclaration[importKind!='type'][source.value='#web/lib/session.ts'] > ImportSpecifier[importKind!='type'][imported.name='guard'][local.name='guard']";
+const ROUTE_GUARD_SELECTORS = [
+  `${FILE_ROUTE}:not([arguments.0.type='ObjectExpression'])`,
+  `${FILE_ROUTE} > ObjectExpression.arguments:not(:has(> ${GUARD_BEFORE_LOAD}))`,
+  `Program:not(:has(${SESSIE_GUARD})) ${FILE_ROUTE}`,
+  `Program:has(:matches(FunctionDeclaration[id.name='guard'], VariableDeclarator[id.name='guard'])) ${FILE_ROUTE}`,
+];
+// Alleen bestandsroutes, en de ErrorBoundary van de router blijft aan.
+const CODE_ROUTE = '/^(createRoute|createLazyRoute|createLazyFileRoute)$/';
+const CREATE_ROUTER = "CallExpression:matches([callee.name='createRouter'], [callee.property.name='createRouter'])";
+const ROUTER_SELECTORS = [
+  `${CREATE_ROUTER}:not([arguments.0.type='ObjectExpression'])`,
+  `${CREATE_ROUTER} > ObjectExpression.arguments:not(:has(> Property[key.name='defaultErrorComponent']))`,
+  "Property[key.name=/^(default)?[eE]rrorComponent$/]:matches([value.type='Identifier'][value.name='undefined'], [value.type='Literal'][value.raw=/^(null|false)$/])",
+  `ImportDeclaration[source.value='@tanstack/react-router'] > ImportSpecifier[imported.name=${CODE_ROUTE}]`,
+  `ExportNamedDeclaration[source.value='@tanstack/react-router'] > ExportSpecifier[local.name=${CODE_ROUTE}]`,
+  `MemberExpression[property.name=${CODE_ROUTE}]`,
+];
+// Geen apparaatdetectie of globale store: breakpoints in CSS, UI-state in de URL, serverdata via queries.ts.
+const USER_AGENT = '/^userAgent(Data)?$/';
+const NAVIGATOR =
+  ":matches([name='navigator'], [type='MemberExpression'][object.name='window'][property.name='navigator'])";
+const STORE_LIBRARY =
+  '/^(zustand|jotai|valtio|recoil|mobx|mobx-react-lite|redux|react-redux|@reduxjs[/]toolkit|nanostores|@nanostores[/]react|effector|@tanstack[/]store|@tanstack[/]react-store)($|[/])/';
+const WEB_GLOBAAL_SELECTORS = [
+  "Identifier[name='matchMedia']",
+  "MemberExpression[computed=true] > Literal.property[value='matchMedia']",
+  `MemberExpression:has(> ${NAVIGATOR}.object):matches([property.name=${USER_AGENT}], [property.value=${USER_AGENT}])`,
+  `VariableDeclarator:has(> ${NAVIGATOR}.init) > ObjectPattern > Property[key.name=${USER_AGENT}]`,
+  'Identifier[name=/^(isMobile|useIsMobile)/]',
+  fromModule(STORE_LIBRARY),
+];
+
 const railConfigs = [
+  restrict(
+    'route-guard',
+    ['src/web/routes/**/*.{ts,tsx}'],
+    ['src/web/routes/login.tsx', 'src/web/routes/uitnodiging.tsx'],
+    "Elke schermroute in src/web/routes zet in createFileRoute(…)({ … }) `beforeLoad: guard('<permissie>')`, met guard uit " +
+      "'#web/lib/session.ts' (R-WEB-01, R-UIT-03); uitzondering alleen login.tsx en uitnodiging.tsx.",
+    ROUTE_GUARD_SELECTORS,
+  ),
+  restrict(
+    'router',
+    WEB,
+    TESTS,
+    'Routes alleen als bestandsroute in src/web/routes (geen createRoute, createLazyRoute of createLazyFileRoute); ' +
+      'createRouter zet defaultErrorComponent en een route zet errorComponent niet uit (R-WEB-01).',
+    ROUTER_SELECTORS,
+  ),
+  restrict(
+    'web-globaal',
+    WEB,
+    [],
+    'Geen matchMedia, userAgent, isMobile of store-library in de web-zone: breakpoints in CSS, UI-state in de URL, ' +
+      'serverdata via queries.ts (R-WEB-01).',
+    WEB_GLOBAAL_SELECTORS,
+  ),
   restrict(
     'netwerk-api',
     [

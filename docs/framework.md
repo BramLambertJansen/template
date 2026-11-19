@@ -90,13 +90,13 @@ Afgedwongen door: ESLint (`--max-warnings 0`), dependency-cruiser, `tsc`, gate-r
 - **R-TEST-02** Voeg tests toe; elk AC voor gewijzigd gedrag inhoudelijke test; bestaande test wijzigen alleen als spec of opdracht gedrag verandert, met reden in PR; verwijderen, skippen, verzwakken alleen met akkoord eigenaar; lijkt test fout: leg eigenaar voor, daarna past tester hem aan, niet hoofdsessie; teksttests op docs en instructies toetsen structuur (koppen, R-id's, links, paden), geen hele zinnen, een zinstest wordt bij aanraking omgezet met reden in de PR; bestaande bytegrenzen in tests blijven (fw, 0064)
 - **R-TEST-03** Per permissie en policy negatieve test (een per verboden rol, `FORBIDDEN`), test voor ongeldige input, racetest met twee gelijktijdige requests bij uniekheid of geld (fw)
 - **R-TEST-04** Securitysuite (`test/security/`, `db/tests/security.sql`) draait in `pnpm test:db`; nieuwe resource staat in `test/security/resources.ts` met ingevulde samples (dod, AGENTS)
-- **R-TEST-05** CSRF-wijziging heeft matrix uit ADR 0041 als tests; hooks hebben tabeltests; pgTAP begint met `set search_path = tap, public`, `plan()` vóór `set local role app_authenticated`; screenshot-baselines alleen in gepinde Playwright-image (0041, 0045)
+- **R-TEST-05** CSRF-wijziging heeft matrix uit ADR 0041 als tests; hooks hebben tabeltests; pgTAP begint (na `begin;` en psql-metaregels) met `set search_path = tap, public`, `select plan(n)` vóór de eerste `set local role`, geen `no_plan()` (strikt in `pnpm ratchet`); screenshot-baselines alleen in gepinde Playwright-image (0041, 0045)
 
 ## 5. Vaste patronen
 
 Afgedwongen door: TypeScript, lint (`no-restricted-syntax`, rail `klassen`), `pnpm ui:check`.
 
-- **R-WEB-01** Elke route heeft ErrorBoundary en `beforeLoad`-guard met `can()`; UI-state (filters, tabs, paginering) in URL; geen globale store, `matchMedia`, `userAgent`, `isMobile` (fw)
+- **R-WEB-01** Elke route heeft ErrorBoundary en `beforeLoad`-guard met `can()`; UI-state (filters, tabs, paginering) in URL; geen globale store, `matchMedia`, `userAgent`, `isMobile` (lintregels rails/route-guard, rails/router, rails/web-globaal) (fw)
 - **R-WEB-02** `useQuery`/`useMutation` alleen in `features/<resource>/queries.ts`; mutatie invalideert eigen resource plus "raakt ook"; optimistisch alleen als spec het vraagt (rules)
 - **R-WEB-03** `fetch(` alleen in API-client; inloggen alleen via `src/core/web/lib/auth.ts`; elk niet-GET-request stuurt `Content-Type` (0040, 0041)
 - **R-WEB-04** Formulieren via `<Form>`/`<FormField>` met gedeeld zod-schema, valideren bij verlaten en daarna bij typen, verzendknop uit tijdens verzenden, serverfouten via `setError`; laden, leeg, fout via `<AsyncView>` (fw)
