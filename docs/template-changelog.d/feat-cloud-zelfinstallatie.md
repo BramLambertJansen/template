@@ -2,13 +2,11 @@
 soort: gewijzigd
 ---
 
-- Eén cloudomgeving voor alle repo's uit de template (spec `cloud-zelfinstallatie`): het veld "Setup script" bevat nu de
-  inhoud van `scripts/cloud-omgeving.sh`, dat in de map boven de clone `scripts/cloud-setup.sh` van elke repo zoekt en
-  draait. `bash scripts/cloud-setup.sh` in het veld eindigde daar met exit 127. `scripts/cloud-setup.sh` zet Node en
-  pnpm via drie routes op `PATH` (koppelingen in `~/.local/bin` naar `mise which`, `CLAUDE_ENV_FILE`, `~/.bashrc`), stopt
-  niet meer op een alleen-lezen `~/.bashrc` en gaat door als `apt-get` voor `bubblewrap` en `socat` faalt. Hooks en
-  git-hooks draaien in de cloud daardoor op de gepinde Node in plaats van Node 22. `docs/ENVIRONMENT.md` beschrijft de
-  opzet, de routes en de meldingen.
+- `scripts/cloud-setup.sh` zet Node en pnpm via drie routes op `PATH` (spec `cloud-zelfinstallatie`): koppelingen in
+  `~/.local/bin` naar `mise which`, een regel in `CLAUDE_ENV_FILE` en dezelfde regel in `~/.bashrc`. Een route die niet te
+  schrijven is, geeft een `!`-regel; het script stopt daardoor niet meer op een alleen-lezen `~/.bashrc`, en gaat door als
+  `apt-get` voor `bubblewrap` en `socat` faalt. Hooks en git-hooks draaien in de cloud daardoor op de gepinde Node in
+  plaats van Node 22. `docs/ENVIRONMENT.md` beschrijft de opzet, de routes en de meldingen.
 
 ### Bij een update
 

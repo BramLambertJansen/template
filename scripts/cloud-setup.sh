@@ -208,7 +208,7 @@ fi
 if ((route1 == 0)); then
   if ((env_bestand == 0 && bashrc == 0)); then
     printf '✗ node op PATH is %s, verwacht %s: ~/.local/bin staat niet vóór de systeem-node en CLAUDE_ENV_FILE en ~/.bashrc zijn niet te schrijven → zie docs/ENVIRONMENT.md, Problemen\n' \
-      "$gevonden" "$pin" >&2
+      "$gevonden" "${pin:-onbekend}" >&2
     exit 1
   fi
   printf '! ~/.local/bin staat niet vóór de systeem-node: hooks en git-hooks blijven op %s\n' "$gevonden" >&2

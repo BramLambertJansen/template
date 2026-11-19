@@ -65,7 +65,7 @@ F4 en F14 spreken F5 tegen; zie M2. F13 laat zien dat `~/.bashrc` hooks niet ber
 | R4 | `werkstraat session-start` heeft een timeout van 30 s en draait `scripts/doctor.sh --quick`. | `.claude/settings.json:177`, `rails/hooks/lib/werkstraat.mjs` |
 | R5 | `docs/ENVIRONMENT.md` schrijft als setup-script "precies" `bash scripts/cloud-setup.sh` voor en zegt dat een sessie zonder bubblewrap faalt met `Sandbox required but unavailable`. Beide kloppen niet meer (F1, F5, D8). | `docs/ENVIRONMENT.md:10`, `docs/ENVIRONMENT.md:27`, `docs/ENVIRONMENT.md:211` |
 | R6 | ADR 0085 wees "installeren vanuit een SessionStart-hook buiten de sandbox" af: lifecycle-scripts en pnpm-configuratie komen uit een werkmap die de agent beschrijft, de hook draait ook bij hervatten, en het botst met 0061 ("normale sessies vragen geen nieuwe toolchaininstallatie"). R-TOOL-01 legt de toolchain bij de eigenaar. | `docs/template/adr/0085-worktree-installatie-in-de-sandbox.md:37`, `docs/template/adr/0061-claude-sandbox-werkstraat.md:60`, `docs/framework.md:255` |
-| R7 | `scripts/cloud-setup.sh` voert zelf configuratie uit de werkmap uit: `mise trust` en `mise install` op `mise.toml`, `pnpm install`, lefthook uit `node_modules` en een import van `scripts/kit/toolchain.mjs`. | `scripts/cloud-setup.sh:98`, `:126`, `:130`, `:144`, `:146` |
+| R7 | `scripts/cloud-setup.sh` voert zelf configuratie uit de werkmap uit: `mise trust` en `mise install` op `mise.toml`, `pnpm install`, lefthook uit `node_modules` en een import van `scripts/kit/toolchain.mjs`. | `scripts/cloud-setup.sh:98`, `:126`, `:130`, `:144`, `:146` (vóór de bouw-PR) |
 | R8 | Zonder geldig anker start `rails/hooks/werkstraat.mjs` niet: de lader weigert met exit 2. De hooks starten `node` via `PATH`. | `.claude/hooks/laden.mjs:284`, `.claude/settings.json:165` |
 
 **Niet gemeten; eerst meten (Testplan, stap 1; M4 hoort bij de vervolgspec)**
@@ -212,7 +212,7 @@ daar niets aan toe; een hook die dat ook bij hervatten doet wel. Dat is de afweg
   het start-`PATH` (`test/scripts/cloud-setup.test.ts:102`), dus de nieuwe tests krijgen een eigen opstelling.
 - De hooks en git-hooks starten `node` via `PATH` (`.claude/settings.json:165`). Met de koppeling draaien ze in de cloud
   op Node 26 in plaats van 22, zoals CI; dat herstelt F13. Tijdens een herhaalde run met terugval is de koppeling kort
-  kapot (`scripts/cloud-setup.sh:70` wist de doelmap eerst).
+  kapot (`scripts/cloud-setup.sh:81` wist de doelmap eerst).
 - `pnpm ratchet` (check-docs: paden en links), `pnpm test:unit`, `pnpm lint`, `pnpm format:check`.
 - `CHANGELOG.md` en `docs/template-changelog.md`: een app neemt dit over met een template-update en stelt daarna zijn
   omgeving opnieuw in.

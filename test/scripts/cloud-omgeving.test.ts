@@ -25,8 +25,9 @@ function setupScript(dir: string, naam: string) {
   chmodSync(file, 0o755);
 }
 
+// Met sh, niet bash: niet gemeten is welke shell het veld gebruikt; het bestand moet in beide werken.
 function run(cwd: string, env: Record<string, string> = {}) {
-  const result = spawnSync('bash', [SCRIPT], { cwd, encoding: 'utf8', env: { PATH: process.env.PATH, ...env } });
+  const result = spawnSync('sh', [SCRIPT], { cwd, encoding: 'utf8', env: { PATH: process.env.PATH, ...env } });
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 

@@ -33,13 +33,13 @@ sessie uit de cache de `node_modules` van de repo bevat, en of één omgeving ha
 | `mise install` | Toolchain uit `mise.toml`. |
 | Terugval per ontbrekende tool (zie Terugval) | De proxy van een cloudsessie weigert de GitHub-API, die `mise install` voor pnpm, dbmate, betterleaks en osv-scanner nodig heeft. |
 | Stoppen als `mise ls --missing` nog iets noemt | Een tool zonder terugval valt meteen op, niet pas bij de eerste check of commit. |
-| Route 1 naar `PATH`: `~/.local/bin/node` en `~/.local/bin/pnpm` als koppeling naar het pad dat `mise which` geeft | De binaire zelf, geen mise-shim (een shim weigert bij een niet-vertrouwde `mise.toml`). `~/.local/bin` staat in de cloud vóór de voorgeïnstalleerde Node 22; dit is de enige route die ook hooks en git-hooks bereikt, die `node` via `PATH` starten. Een gewoon bestand op die plek blijft staan; een lege of mislukte `mise which` maakt geen koppeling. Beide geven een `!`-regel. |
-| Route 2: één `export PATH=`-regel in `CLAUDE_ENV_FILE`, als die variabele gezet is | Claude Code zet die regel vóór elk Bash-commando. Idempotent; andere regels blijven staan. |
+| Route 1 naar `PATH`: `~/.local/bin/node` en `~/.local/bin/pnpm` als koppeling naar het pad dat `mise which` geeft | De binaire zelf, geen mise-shim (een shim weigert bij een niet-vertrouwde `mise.toml`). `~/.local/bin` stond in één gemeten cloudsessie vóór de voorgeïnstalleerde Node 22 (spec `cloud-zelfinstallatie`, F11; voor de sessie van de eigenaar en voor hooks nog niet gemeten, M3); dit is de enige route die ook hooks en git-hooks kan bereiken, die `node` via `PATH` starten. Een gewoon bestand op die plek blijft staan; een lege of mislukte `mise which` maakt geen koppeling. Beide geven een `!`-regel. |
+| Route 2: één eigen `export PATH=`-regel in `CLAUDE_ENV_FILE`, als die variabele gezet is | Claude Code zet die regel vóór elk Bash-commando. Idempotent op de eigen regel; andere regels, ook een `export PATH=` van iets anders, blijven staan. Niet te schrijven is een `!`-regel. |
 | Route 3: dezelfde regel in `~/.bashrc` | Voor de Bash-tool. Niet te schrijven (bijvoorbeeld alleen-lezen in de sessie) is een `!`-regel, geen fout. |
 | `pnpm install --frozen-lockfile` | Dependencies exact volgens het lockfile. |
 | `pnpm exec lefthook install` | Git-hooks (lefthook heeft geen postinstall). |
 | Voorcontrole uit `scripts/kit/toolchain.mjs` | Bewijst aan het eind van de setup dezelfde exacte Node- en pnpm-versie en `node_modules` die elke sessie eerst controleert. |
-| Slotcontrole op `PATH` | Met het `PATH` van vóór het script: geeft route 1 daar niet de versie van `mise current node` en is route 2 noch 3 geschreven, dan exit 1. Werkt alleen route 2 of 3, dan exit 0 met een waarschuwing dat hooks en git-hooks op de systeem-node blijven. |
+| Slotcontrole op `PATH` | Route 1 telt als het `PATH` van vóór het script de versie van `mise current node` geeft én beide koppelingen (node en pnpm) staan. Telt route 1 niet en is route 2 noch 3 geschreven, dan exit 1. Werkt alleen route 2 of 3, dan exit 0 met een waarschuwing dat hooks en git-hooks op de systeem-node blijven. |
 
 In de `PATH`-regel van route 2 en 3 staat `$HOME/.local/bin` vóór `$HOME/.local/share/mise/shims`, zodat de koppeling ook
 daar wint.

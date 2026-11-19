@@ -5,6 +5,7 @@ import {
   lstatSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   readlinkSync,
   rmSync,
@@ -219,12 +220,30 @@ describe('scripts/cloud-setup.sh: routes naar PATH (spec cloud-zelfinstallatie)'
 
   test('cloud-zelfinstallatie/AC-3: zonder CLAUDE_ENV_FILE maakt het script geen omgevingsbestand aan', () => {
     const o = opstelling();
-    const envFile = path.join(o.root, 'env');
+    const voor = readdirSync(o.root, { recursive: true }).map(String).sort();
 
-    const { status } = run(o, { env: { NIET_GEBRUIKT: envFile } });
+    const { status } = run(o);
 
+    // Alleen onder home (koppelingen, ~/.bashrc) en het log mag iets bijkomen.
+    const na = readdirSync(o.root, { recursive: true })
+      .map(String)
+      .filter((pad) => !pad.startsWith('home'))
+      .sort();
     expect(status).toBe(0);
-    expect(existsSync(envFile)).toBe(false);
+    expect(na).toStrictEqual(voor.filter((pad) => !pad.startsWith('home')));
+  });
+
+  test('cloud-zelfinstallatie/AC-3: CLAUDE_ENV_FILE niet te schrijven → !-regel, route 3 draagt', () => {
+    const o = opstelling();
+
+    const { status, uitvoer } = run(o, {
+      localBinVoorop: false,
+      env: { CLAUDE_ENV_FILE: path.join(o.root, 'bestaat-niet', 'env') },
+    });
+
+    expect(uitvoer).toMatch(/^! CLAUDE_ENV_FILE .* niet te schrijven$/m);
+    expect(status, uitvoer).toBe(0);
+    expect(uitvoer).toContain('! ~/.local/bin staat niet vóór de systeem-node');
   });
 
   test('cloud-zelfinstallatie/AC-4: geen enkele route → exit 1 na het installeren, met gevonden en verwachte versie', () => {
