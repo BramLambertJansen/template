@@ -306,8 +306,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   **Eisen uit het regelboek** (R-DOC-10: tot de bouw staan ze hier; de bouw-PR zet ze terug in het regelboek): alleen-templatedocs komen in `docs/template/` (was in R-CI-06).
   aanleiding: #404 (laatste PR van het traject; plan en eigenaarbesluiten staan in #385, #394 en #400)
 - [ ] **Geclaimde checks die niet bestaan** (R-DOC-02). Het regelboek eiste ze, maar geen check dwingt ze af: het verschil in aantal
-  `unsafeCast` op de PR ("CI zet het verschil in aantal op de PR", was in R-CODE-04, tot de bouw alleen hier; nu alleen een vinkje in `.github/pull_request_template.md`), en de lintregels op een route zonder
-  `can()`-guard, op store-libraries en op `.isLoading`/`.isError` in `features/` (R-WEB-01, R-WEB-04; het oude framework noemde ze als
+  `unsafeCast` op de PR ("CI zet het verschil in aantal op de PR", was in R-CODE-04, tot de bouw alleen hier; nu alleen een vinkje in `.github/pull_request_template.md`), en de lintregels op `.isLoading`/`.isError` in `features/` (R-WEB-04; het oude framework noemde ze als
   afgedwongen, `eslint.config.js` heeft ze niet). Per check bouwen met falende fixtures, of de regel met eigenaarakkoord als proza laten staan.
   aanleiding: verliescontrole van het regelboek na #385–#404 (eigenaarvraag 2026-11-02; herstel-PR van de normen)
 - [ ] **Bewaartermijn van gemeten data** (ADR 0064 punt 7). De meetbestanden in `<git common dir>/agent-meting/` groeien zonder grens en
