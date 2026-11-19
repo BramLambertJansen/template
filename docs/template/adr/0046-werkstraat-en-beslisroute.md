@@ -21,6 +21,7 @@ Herzien: 2026-11-17 (#778): Gevolgen, het rolhek valt dicht bij een storing (R-R
 Herzien: 2026-11-18 (#805): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.md) punt 1, 3 en 7, punt 6: de developer
 schrijft geen `gebouwd` meer; punt 10: `status: gebouwd` zonder PR-nummer in de bouw-PR, `pnpm docs:status` vervalt
 Herzien: 2026-11-19: punt 6, gewijzigd door [0099](0099-rolhek-leeslijst-ruimer.md): alleen architect en hoofdsessie wijzigen ook de inhoud van een vervallen spec (de status blijft `vervallen`); een vervallen ADR blijft onwijzigbaar (punt 2)
+Herzien: 2026-11-19: punt 2: een vervallen of vervangen ADR wijzigt in een app niet; in de template verdwijnt het en `check-docs` weigert het (R-CI-05, R-CI-06, spec vervallen-documenten-weg)
 
 Vervangt 0025, 0027, 0030 en 0038; neemt de delen van 0029 over die via 0038 punt 8 nog golden. Drempel: A4.
 
@@ -49,8 +50,10 @@ beslist (review van code-eigenaren, ruleset) en zijn de eigen documentbewaking, 
    goedkeuring; inhoud, scope, intrekking en vervanging zijn eigenaarbesluiten. Wie de spec schrijft: 0090 punt 1.
 2. **A4 na 0089 en 0090.** Een geaccepteerd ADR herschrijven of verwijderen mag in de template in elke PR, in een app alleen in
    een besluit-PR, met een herzieningsregel (R-CI-05). Geen ADR gaat terug naar `voorgesteld`; een vervallen of vervangen
-   ADR wijzigt niet; de statusregel houdt zijn strikte vorm. Het rolhek laat alleen architect en hoofdsessie een geaccepteerd
-   ADR herschrijven of verwijderen. Geen check toetst dit nog (0089 punt 5 en 8): de goedkeuring van de eigenaar is het besluit.
+   ADR wijzigt in een app niet, in de template verdwijnt het (R-CI-06, `check-docs`); de statusregel houdt zijn strikte
+   vorm. Het rolhek laat alleen architect en hoofdsessie een geaccepteerd ADR herschrijven of verwijderen. Behalve de
+   weigering van een vervallen of vervangen ADR in de template (`check-docs`, R-CI-06) toetst geen check dit (0089 punt 5
+   en 8): de goedkeuring van de eigenaar is het besluit.
 3. **Korte ADR's** (kern eigenaarbesluit). Richtlijn één pagina: context, besluit, alternatieven, gevolgen; geen regelnummers en
    geen werkinstructie (die horen in `docs/`).
 4. **Drempel** (kern eigenaarbesluit). Een ADR is nodig bij A2 (moeilijk terug te draaien: migratie op bestaande rijen,

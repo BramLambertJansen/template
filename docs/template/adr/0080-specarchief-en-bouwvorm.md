@@ -9,6 +9,7 @@ Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn onge
 Herzien: 2026-11-18 (#805): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.md) punt 1, 3, 4 en 5, punt 4: de bouw-PR
 laat de statusregel staan; punt 5: de vorm is `status: gebouwd`, `docs:status` vervalt; punt 6: niemand zet regels om; punt
 7: de bewijstoets van `docs:status` vervalt; punt 8: de terugval via `docs:status` vervalt
+Herzien: 2026-11-19: punt 3: het AC-id blijft staan zolang de spec leeft; vervalt een hele template-spec, dan verhuizen haar levende AC's naar een levende spec en verdwijnt het document (R-WERK-07, R-CI-06, spec vervallen-documenten-weg)
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 5 en 10 (een gebouwde spec krijgt in een besluit-PR nieuwe AC's
 met de markering `(nog niet gebouwd)`; `gebouwd` noemt alleen de PR), [0054](0054-gebouwd-in-de-bouw-pr.md) punt 1 en 5
@@ -39,7 +40,9 @@ SHA weigert de guard elk ander nummer dan dat van de eigen PR.
 2. *(vervallen, zie 0089 punt 1 en 7)*
 3. **Eén levende spec per mechanisme.** Een wijziging aan een bestaand mechanisme werkt de spec van dat mechanisme bij met
    nieuwe AC's onder dezelfde naam en namespace; een nieuwe spec alleen voor een nieuw mechanisme. Vervangt een spec een andere,
-   dan gaat de oude naar `vervallen`; in de template wordt zij verwijderd (R-CI-06). Een AC-id van een spec met eigenaarstatus verdwijnt nooit.
+   dan gaat de oude naar `vervallen`; in de template wordt zij verwijderd (R-CI-06). Een AC-id van een spec met
+   eigenaarstatus verdwijnt nooit zolang de spec leeft; vervalt een hele template-spec, dan verhuizen eerst haar AC's met
+   levende code of tests naar een levende spec en verdwijnt daarna het document (R-WERK-07).
 4. **Gebouwde spec.** Inhoud van een goedgekeurde spec wijzigen blijft een besluit. Een gebouwde spec blijft `gebouwd`: nieuwe
    inhoud is een besluit, en elke nieuwe AC krijgt `(nog niet gebouwd)` (patroon van R-DOC-10), alleen op een id dat nog niet
    op main staat; de AC-dekking slaat alleen gemarkeerde AC's over. De bouw-PR haalt de markering weg (telt niet als
