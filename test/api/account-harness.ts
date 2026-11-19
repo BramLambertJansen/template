@@ -62,8 +62,9 @@ export function createAccountTestApp(options: TestAppOptions = {}) {
     return browser;
   }
 
-  // Een actief account met rol (uitnodigen, wachtwoord instellen) en een eerste sessie.
-  async function account(role: 'user' | 'admin', name = 'Iemand') {
+  // Een actief account met rol (uitnodigen, wachtwoord instellen) en een eerste sessie. Elke rolnaam: de database weigert een
+  // rol die niet in app.roles staat met 23503 (spec suite-volgt-contract, ontwerp 7).
+  async function account(role: string, name = 'Iemand') {
     const email = uniqueEmail(`eigen-${role}`);
     const { userId } = await inviteUser(setup.auth, { name, email });
     await migrator.query('select app.assign_role($1, $2)', [userId, role]);

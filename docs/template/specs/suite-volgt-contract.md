@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd
 namespace: suitecontract
 ---
 
@@ -12,6 +12,10 @@ databasecatalogus), zodat een resource uit `pnpm new:resource` de suite haalt zo
 generator en suite niet meer uiteen kunnen lopen. Lost leerpunten #656, #657 en #681 op, plus dezelfde drift bij de
 permissie-oracle.
 
+Uitbreiding (#719, reviewbevinding C-2, ontwerp 7): de actorsoorten van de suite volgen het rollenregister
+(`src/shared/roles.ts`, spec `rollenregister`, ADR 0092), zodat een app met een extra rol de generieke suite niet wijzigt. Alleen
+de permissie-oracle en de lijst beheerrollen (`MFA_ROLLEN`) blijven met de hand, onafhankelijk van de implementatie.
+
 ### Uitgangssituatie (main `11ffbd8`, gelezen, niet gedraaid)
 
 | Ticket | Wat er nu gebeurt | Bestand:regel |
@@ -21,6 +25,16 @@ permissie-oracle.
 | #681 | AC-5 roept met `adminMfa` de handler van elke admin-GET aan en eist 200, terwijl de spec alleen weigeringen belooft en voor `adminMfa` alleen "niet `MFA_REQUIRED`". Een onbekend id (404) of een nog niet gebouwde route (501) maakt AC-5 rood. Een gegenereerde resource met `--rollen user,admin` raakt dit meteen. `routeSamples` helpt niet: `routes.int.test.ts` roept `sampleFor` aan, niet `sampleVoor`. | `test/security/routes.int.test.ts:160-171`, `:30`; `docs/template/specs/security-suite.md:110-111`, `:162`, `:182`; `test/security/resources.ts:83-87` |
 | (geen ticket) | `new:resource` voegt `<naam>:read`/`<naam>:write` toe aan `permissions.ts`, maar drukt geen regel voor `PERMISSIE_ORACLE` af: security/AC-4 ("de oracle heeft precies de sleutels van `permissions.names`") wordt rood. | `scripts/kit/new-resource.mjs:269-295`; `test/security/fixtures.ts:33-41`; `test/security/routes.int.test.ts:114-116` |
 
+Uitgangssituatie voor ontwerp 7 (main `1113a2a5`, gelezen, niet gedraaid):
+
+| Ticket | Wat er nu gebeurt | Bestand:regel |
+|---|---|---|
+| #719, C-2 | security/AC-4 eist dat `roles.names` precies `['admin', 'user']` is; een app met een derde rol is rood met "een nieuwe rol vraagt een actorsoort" en moet de suite met de hand aanpassen. | `test/security/routes.int.test.ts:121-123` |
+| #719, C-2 | `ActorSoort` is een vaste lijst; `verwachteUitkomst` beeldt elke soort die niet `user` is af op `admin`, en de MFA-eis hangt aan de naam `admin`, niet aan `beheer`. | `test/security/fixtures.ts:43`, `:53-66`, `:78-80` |
+| #719, C-2 | `maak` maakt van elke soort die niet `zonderRol` of `user` is een `admin`-account; `A`/`B` maken voor elke rol die niet `admin` is een `user`-account, dus `resources.ts` met `rol: 'planner'` test stil met `user`. `account()` neemt alleen `'user' \| 'admin'`. | `test/security/fixtures.ts:321-327`, `:391-399`; `test/api/account-harness.ts:66` |
+| #719, C-2 | AC-4 draait alleen `user` en `zonderRol`; AC-5 alleen routes waarvan de permissie `admin` heeft. Een beheerrol van de app krijgt geen MFA-weigering, een gewone rol geen FORBIDDEN-proef. | `test/security/routes.int.test.ts:127`, `:147-173` |
+| #719 | Het gouden pad noemt "een actorsoort in `test/security/fixtures.ts`" als stap bij een nieuwe rol. | `docs/gouden-pad.md:133-134` |
+
 Geen CI-job haalt generatoruitvoer door de suite: `check:new-resource` draait alleen `gate:fast` en past de declaratie niet toe
 (`scripts/kit/check-new-resource.mjs:5`, `:36-39`). Daarom komt het bewijs uit een probe in generatorvorm (AC-10).
 
@@ -29,6 +43,10 @@ Geen CI-job haalt generatoruitvoer door de suite: `check:new-resource` draait al
 Geen wijziging voor eindgebruikers. De suite gebruikt dezelfde fixtures als spec `security-suite` (A, B, `adminMfa`,
 `adminZonderMfa`, `zonderRol`, verlopen, geen sessie). Een lijst met `pageSize` accepteert `limit` voor elke rol die de
 lijstpermissie heeft; dat geeft niemand meer rijen dan de vaste paginagrootte.
+
+Met ontwerp 7 komen de actorsoorten uit het register: per rol buiten `MFA_ROLLEN` één soort met de rolnaam (`user`), per beheerrol
+`<rol>Mfa` en `<rol>ZonderMfa` (`adminMfa`, `adminZonderMfa`), plus `zonderRol` en `geenSessie`. In de template zijn dat precies
+de vijf soorten van nu.
 
 ## Ontwerp
 
@@ -121,6 +139,62 @@ De bestaande opener (`openEigenaarProbe`), `probeRouteClassificatie`, `EIGENAAR_
 dus de bestaande tests over de eerste probe blijven zoals ze zijn. De tweede probe gaat door dezelfde controlefuncties
 (AC-8 t/m AC-11 van spec `security-suite`).
 
+### 7. Actorsoorten uit het rollenregister (#719, C-2)
+
+De rollen van de actoren komen uit het register (`roles.names`), niet uit de naam `admin`. Wat een rol mag en welke rollen MFA
+vragen, staat met de hand in de suite (geen afleiding uit `permissions.ts`, `check()` of `roles.isBeheer`). Alles in
+`test/security/fixtures.ts`, tenzij anders genoemd.
+
+- **Beheerrollen met de hand.** `MFA_ROLLEN` naast `PERMISSIE_ORACLE` (in `test/security/fixtures.ts`, met
+  `satisfies readonly Role[]`) noemt de beheerrollen; `actorSoorten`, `verwachteUitkomst`, `beheerrollenMet` en `A`/`B` lezen de MFA-eis daaruit.
+  `beheerVerschil(bron)` geeft de rollen waar `register.isBeheer` en `MFA_ROLLEN` verschillen (in de volgorde van
+  `register.names`); een test naast de `appUseVerschil`-test eist `[]`, met in de melding
+  `zet '<rol>' in MFA_ROLLEN als hij beheer heeft, anders niet (test/security/fixtures.ts)`.
+- **Bron.** `bron` is `{ register: Roles, oracle: Readonly<Record<string, readonly string[]>>, mfaRollen: readonly string[] }`,
+  standaard `{ register: roles, oracle: PERMISSIE_ORACLE, mfaRollen: MFA_ROLLEN }`; elke functie hieronder neemt hem als
+  optioneel laatste argument.
+- **Soorten.** Een nieuwe, geëxporteerde, pure functie `actorSoorten(bron)` geeft per soort
+  `{ soort, rol, mfa }`, in deze volgorde: `{ soort: 'geenSessie', rol: null, mfa: false }`,
+  `{ soort: 'zonderRol', rol: null, mfa: false }`, en per naam uit `register.names` (in die volgorde): buiten `mfaRollen` één soort
+  `{ soort: <rol>, rol: <rol>, mfa: false }`; in `mfaRollen` eerst `{ soort: '<rol>Mfa', rol: <rol>, mfa: true }`, dan
+  `{ soort: '<rol>ZonderMfa', rol: <rol>, mfa: false }`. Een rolnaam past op `^[a-z][a-z0-9_]*$`, dus geen soortnaam met een
+  hoofdletter (`geenSessie`, `zonderRol`, `…Mfa`, `…ZonderMfa`) kan met een rolnaam botsen. `geenSessie` heeft geen account.
+- **Type.** `ActorSoort` wordt `string` (het register is breed getypt). Een soort die niet in `actorSoorten(bron)` staat,
+  laat `verwachteUitkomst`, `stuurAls` en `actor` gooien met
+  `onbekende actorsoort '<soort>' (niet in actorSoorten van het rollenregister)`. De regel `export type ActorSoort` blijft direct na
+  `PERMISSIE_ORACLE` staan: `new:resource` gebruikt hem als anker (`scripts/kit/new-resource.mjs`, `oracleInhoud`).
+- **Oordeel.** `verwachteUitkomst(soort, permissie, bron)` volgt `can()`:
+  onbekende permissie gooit (zoals nu); `geenSessie` → `401 UNAUTHENTICATED`; `zonderRol` → `403 FORBIDDEN`; rol niet in
+  `oracle[permissie]` → `403 FORBIDDEN`; rol in `mfaRollen` en de soort heeft geen MFA → `403 MFA_REQUIRED`; anders toegestaan.
+  FORBIDDEN gaat vóór MFA_REQUIRED, zoals in `src/core/shared/can.ts`.
+- **Beheerrollen per permissie.** `adminHeeftPermissie` verdwijnt; in de plaats komt `beheerrollenMet(permissie, bron)`: de
+  rollen uit `oracle[permissie]` die in `mfaRollen` staan, in de volgorde van `register.names`.
+- **Gevallen.** Twee pure, geëxporteerde functies bepalen welke aanroepen de suite doet, zodat ze zonder database te testen zijn.
+  Ze zijn generiek over een minimale route (`R extends { contract: { method, path, permission } }`) en geven die route terug,
+  zodat `routes.int.test.ts` het echte `AppRoute` terugkrijgt:
+  - `ac4Gevallen(routes, bron)`: elk paar (soort, route) met een soort uit `actorSoorten` behalve `geenSessie`, waarvoor
+    `verwachteUitkomst` `403 FORBIDDEN` geeft. Toegestane paren en `MFA_REQUIRED`-paren vallen erbuiten.
+  - `ac5Gevallen(routes, bron)`: per route en per rol uit `beheerrollenMet(route.contract.permission)` het paar
+    (`<rol>ZonderMfa`, route) met verwachting `403 MFA_REQUIRED`, en voor een `GET`-route ook (`<rol>Mfa`, route) voor de
+    MFA-doorgang (`mfaDoorgangProbleem`, ontwerp 5).
+  `test/security/routes.int.test.ts` itereert AC-4 en AC-5 over deze functies; de test van AC-1 telt voor AC-5 de routes met ten
+  minste één beheerrol.
+- **Accounts.** `maak(soort)` leest `{ rol, mfa }` uit `actorSoorten`: `zonderRol` zoals nu, anders `h.account(rol)` en bij
+  `mfa` daarna `h.enableTotp`. `A(rol: string = 'user')`/`B(rol: string = 'user')` kiezen de soort `<rol>Mfa` als de rol in
+  `mfaRollen` staat, anders `<rol>`; een rol buiten het register gooit met de rolnaam. `echteZender`
+  (`test/security/controles.ts:404`) en `ResourceRegel.rol` (`test/security/resources.ts:22`) houden `Role`. `account()` in
+  `test/api/account-harness.ts` neemt elke `string` als rol (de database weigert een onbekende rol met `23503`).
+  `createSecurityFixtures(bron)` krijgt de bron als optioneel argument; de API van de fixtures (`createAccountTestApp`) blijft
+  het echte register gebruiken.
+- **Oracle volledig voor `app.use`.** Core geeft `app.use` aan elke rol (`src/core/shared/can.ts`). Een nieuwe, geëxporteerde
+  `appUseVerschil(bron)` geeft de rollen uit `register.names` die niet in `oracle['app.use']` staan; de vervangende test van
+  `routes.int.test.ts:121-123` eist een lege lijst, met in de melding
+  `voeg '<rol>' toe aan PERMISSIE_ORACLE['app.use'] en aan elke permissie die de rol krijgt (test/security/fixtures.ts)`. Zo
+  faalt een vergeten oracle-regel vóór AC-4 de handler van een `app.use`-route bereikt.
+- **Wat een app nog met de hand doet.** De rol in de oracle bij `app.use` en bij elke permissie die hij krijgt, en een beheerrol
+  in `MFA_ROLLEN`. Het gouden pad (`docs/gouden-pad.md`, "Een rol toevoegen of weghalen", stap 5) zegt dat in plaats van "een
+  actorsoort".
+
 ## Hergebruik en UX
 
 - Bestaande componenten: geen; geen scherm.
@@ -129,7 +203,10 @@ dus de bestaande tests over de eerste probe blijven zoals ze zijn. De tweede pro
 - Focusvolgorde en toetsenbord: n.v.t.
 - Techniek die we hergebruiken: `defineListSearch` en de lijstquery-helpers (`decodeListCursor`, `containsPattern` uit
   `src/core/api/route/list-query.ts`) voor de probe in generatorvorm; de probe-opbouw uit `test/security/fixtures.ts`; de
-  controlefuncties in `test/security/controles.ts`.
+  controlefuncties in `test/security/controles.ts`. Voor ontwerp 7: `defineRoles` en `Roles` uit `src/core/shared/roles.ts`
+  (een nep-register in unit-tests), `account()` en `enableTotp()` uit `test/api/account-harness.ts`, en `migratorPool` en
+  `cleanupTestRoles(pool, ['suitetest_planner', 'suitetest_beheer'])` uit `test/auth/role-register-harness.ts`, in `beforeAll`
+  en `finally`.
 
 ## Acceptatiecriteria
 
@@ -177,6 +254,48 @@ dus de bestaande tests over de eerste probe blijven zoals ze zijn. De tweede pro
 - **suitecontract/AC-12** — Gegeven een samples-map met een regel voor een route, wanneer `sampleVoor(route, samples)` wordt
   aangeroepen, dan geeft het die regel; zonder regel de afgeleide sample. `test/security/routes.int.test.ts` importeert
   `sampleFor` niet en haalt elke sample via `sampleVoor`.
+- **suitecontract/AC-13** — Gegeven het nep-register `defineRoles({ planner: { beheer: false }, eigenaar:
+  { beheer: true } })` met `mfaRollen` `['admin', 'eigenaar']`, wanneer `actorSoorten` die bron leest, dan zijn de soorten
+  precies, in deze volgorde, `geenSessie`,
+  `zonderRol`, `user`, `adminMfa`, `adminZonderMfa`, `planner`, `eigenaarMfa`, `eigenaarZonderMfa`, met `rol` en `mfa` zoals in
+  ontwerp 7. Gegeven de bevroren template-bron (een kopie in de test van het register `user`, `admin` met beheer,
+  `mfaRollen` `['admin']` en de oracle zoals de template ze levert; niet de live `roles` en `MFA_ROLLEN`, zodat een app met
+  een extra rol deze test niet hoeft te wijzigen), dan zijn het precies `geenSessie`, `zonderRol`, `user`, `adminMfa`,
+  `adminZonderMfa`. Met de live bron heeft elke rol uit `roles.names` minstens één soort.
+- **suitecontract/AC-14** — Gegeven dat nep-register en die `mfaRollen` en de nep-oracle
+  `{ 'app.use': ['user', 'admin', 'planner', 'eigenaar'], 'plan:read': ['planner'], 'eigen:beheer': ['eigenaar'] }`, wanneer
+  `verwachteUitkomst` oordeelt, dan is `planner` op `plan:read` toegestaan, `user` op `plan:read` `403 FORBIDDEN`,
+  `eigenaarZonderMfa` op `eigen:beheer` `403 MFA_REQUIRED`, `eigenaarZonderMfa` op `plan:read` `403 FORBIDDEN` (niet
+  `MFA_REQUIRED`), `eigenaarMfa` op `eigen:beheer` toegestaan en `planner` op `app.use` toegestaan; de soort `baasMfa` en een
+  permissie buiten de oracle gooien met de melding uit ontwerp 7 respectievelijk de bestaande melding. Gegeven de bevroren template-bron
+  (AC-13), dan is de uitkomst voor elke permissie en elk van de vijf soorten gelijk aan een tabel die de test met de
+  hand bevat: `geenSessie` overal `401 UNAUTHENTICATED`, `zonderRol` overal `403 FORBIDDEN`, `user` toegestaan op `app.use`,
+  `me:read` en `me:update` en verder `403 FORBIDDEN`, `adminMfa` overal toegestaan, `adminZonderMfa` overal `403 MFA_REQUIRED`.
+- **suitecontract/AC-15** — Gegeven vier nep-routes (`POST` met `app.use`, `GET` met `plan:read`, `GET` en
+  `POST` met `eigen:beheer`) en de nep-bron van AC-14, wanneer `ac4Gevallen` en `ac5Gevallen` draaien, dan bevat, vergeleken als
+  gesorteerde verzamelingen van `(soort, routeLabel)`, `ac4Gevallen` precies deze paren, elk met `403 FORBIDDEN`: `zonderRol` op alle vier; op `plan:read` `user`, `adminMfa`,
+  `adminZonderMfa`, `eigenaarMfa` en `eigenaarZonderMfa`; op beide `eigen:beheer`-routes `user`, `adminMfa`, `adminZonderMfa`
+  en `planner`. `ac5Gevallen` bevat precies: `adminZonderMfa` en `eigenaarZonderMfa` op de `app.use`-route en
+  `eigenaarZonderMfa` op beide `eigen:beheer`-routes, elk met `403 MFA_REQUIRED`, en `eigenaarMfa` op de `GET`-route van
+  `eigen:beheer` voor de MFA-doorgang. `beheerrollenMet('plan:read')` is leeg, `beheerrollenMet('app.use')` is
+  `['admin', 'eigenaar']`. Gegeven de bevroren template-bron (AC-13) en de routes uit `src/api/app.ts` waarvan de permissie in die bevroren oracle
+  staat, dan zijn de paren (ook als gesorteerde
+  verzamelingen) gelijk aan wat `routes.int.test.ts` op `1113a2a5` draait: AC-4 (`user`, elke route waarvan
+  de oracle `user` niet noemt) en (`zonderRol`, elke route); AC-5 `adminZonderMfa` op elke route waarvan de oracle `admin` noemt
+  en `adminMfa` op de `GET`-routes daarvan.
+- **suitecontract/AC-16** — Gegeven het nep-register van AC-13 en een oracle waarin `app.use` `planner` mist,
+  wanneer `appUseVerschil` draait, dan is de uitkomst `['planner']`; met `planner` en `eigenaar` erin `[]`. Met `eigenaar` als
+  beheerrol in het register maar niet in `MFA_ROLLEN` is `beheerVerschil` `['eigenaar']`; met `mfaRollen`
+  `['admin', 'eigenaar', 'planner']` `['planner']`; met `['admin', 'eigenaar']` `[]`. Met de echte bron zijn beide `[]`.
+  `test/security/routes.int.test.ts` bevat `['admin', 'user']` en `['user', 'zonderRol']` niet meer; AC-4 en AC-5 itereren over
+  `ac4Gevallen` en `ac5Gevallen`.
+- **suitecontract/AC-17** — Gegeven de testrollen `suitetest_planner` (geen beheer) en `suitetest_beheer`
+  (beheer), gecommit via `app.register_role`, en een nep-bron met dezelfde vlaggen en `mfaRollen` `['admin',
+  'suitetest_beheer']`, wanneer `createSecurityFixtures(bron)` actoren maakt, dan heeft `actor('suitetest_planner', 'lezen')` een account met rol `suitetest_planner` in `public.user_roles` en
+  een sessie met `session_strength = 'password'`, `A('suitetest_beheer')` en `B('suitetest_beheer')` twee verschillende accounts
+  met rol `suitetest_beheer` en `session_strength = 'mfa'`, en `actor('suitetest_beheerZonderMfa', 'lezen')` rol
+  `suitetest_beheer` met `password`. `A('baas')` gooit met de rolnaam. Na afloop (`cleanupTestRoles` in `finally`) staan de testrollen niet meer in
+  `app.roles`.
 
 ## Randgevallen
 
@@ -191,7 +310,15 @@ dus de bestaande tests over de eerste probe blijven zoals ze zijn. De tweede pro
 | `404 NOT_FOUND` van de router in plaats van de handler | Niet te onderscheiden, maar de suite stuurt alleen paden uit het register | n.v.t. |
 | Gegenereerde admin-GET, handler nog niet gebouwd | `501` is rood voor AC-5, zoals de rest van de suite rood is tot de resource gebouwd is | `NOT_IMPLEMENTED` |
 | `adminMfa` boven zijn telbudget, of een ongeldige sample | `429` of `400` is rood voor AC-5: de MFA-controle is niet bereikt | `RATE_LIMITED`, `VALIDATION` |
-| Tweede beheerrol van een app (vlag `beheer`) | Buiten scope: de oracle kent alleen `admin` als MFA-rol | n.v.t. |
+| Tweede beheerrol van een app (vlag `beheer`) | Ontwerp 7: na de regel in `MFA_ROLLEN` soorten `<rol>Mfa` en `<rol>ZonderMfa`; AC-5 draait voor elke beheerrol die de oracle bij de permissie noemt | `MFA_REQUIRED` |
+| `beheer` in het register en `MFA_ROLLEN` lopen uiteen | `beheerVerschil` is rood met de rolnaam | n.v.t. |
+| Nieuwe rol in het register, niet in de oracle | `appUseVerschil` is rood met de rolnaam; op de andere permissies verwacht AC-4 `FORBIDDEN`, dus geeft `permissions.ts` de rol meer dan de oracle, dan is AC-4 rood | `FORBIDDEN` |
+| Oracle of `MFA_ROLLEN` noemt een rol die niet in het register staat | Typefout (`satisfies … Role[]`), zoals nu bij de oracle | n.v.t. |
+| Rol zonder enige permissie behalve `app.use` | Eén soort; AC-4 verwacht `FORBIDDEN` op elke andere route | `FORBIDDEN` |
+| Beheerrol zonder MFA op een permissie die de rol niet heeft | `FORBIDDEN`, niet `MFA_REQUIRED` (volgorde van `can()`); valt in AC-4, niet in AC-5 | `FORBIDDEN` |
+| `resources.ts` met `rol: '<beheerrol>'` | `A`/`B` met MFA, zoals nu voor `admin` | n.v.t. |
+| `resources.ts` met een rol buiten het register | `A`/`B` gooien met de rolnaam (was: stil een `user`-account) | n.v.t. |
+| Rol in het register, niet in `app.roles` | `account()` faalt met `23503`; dat bewaakt al `test/auth/roles-register.int.test.ts` | n.v.t. |
 
 ## Raakt ook
 
@@ -216,11 +343,43 @@ Risicowerk (securitysuite): tester eerst, developer, reviewer vóór de push (fr
   `sample.updateRij`; daarnaast losse correctie: `ROLES` komt uit `src/shared/roles.ts`), spec `lijstpagina` (`pageSize`),
   `docs/gouden-pad.md` (de afgedrukte oracle-regel), `docs/template-changelog.md` onder `[Unreleased]`.
 
+Ontwerp 7 (#719, C-2), ook risicowerk (securitysuite): tester eerst, developer, reviewer vóór de push.
+
+- `test/security/fixtures.ts`: `actorSoorten`, `ActorSoort` als `string` (de regel `export type ActorSoort` blijft het anker van
+  `new:resource`), `MFA_ROLLEN`, `verwachteUitkomst` met `bron`, `beheerrollenMet` in plaats van `adminHeeftPermissie`,
+  `ac4Gevallen`, `ac5Gevallen`, `appUseVerschil`, `beheerVerschil`, `maak`/`A`/`B` uit de bron, `createSecurityFixtures(bron)`.
+- `test/api/account-harness.ts`: `account()` neemt elke rolnaam (geen ander gedrag voor `user` en `admin`).
+- Geraakt maar ongewijzigd: `test/security/controles.ts` (`echteZender` houdt `rol: Role`) en `test/security/resources.ts`
+  (`ResourceRegel.rol` houdt `Role`).
+- Bestaande tests die de hoofdsessie omzet, met reden in de PR (R-TEST-02):
+  - `test/security/routes.int.test.ts`: de test op `['admin', 'user']` (`:121-123`) wordt de `appUseVerschil`- en
+    `beheerVerschil`-test; AC-4 en AC-5
+    itereren over `ac4Gevallen`/`ac5Gevallen`; de AC-5-testnamen noemen de soort (`%s op %s`) in plaats van vast `adminZonderMfa`
+    en `adminMfa`; AC-1 en AC-7 tellen met `beheerrollenMet`. De verwachtingen voor `user` en `admin` blijven gelijk
+    (suitecontract/AC-15).
+  - `test/rails/new-resource-oracle.test.ts` (suitecontract/AC-4) blijft ongewijzigd groen; alleen als het anker verschuift, met
+    reden in de PR.
+- Geen migratie, geen nieuwe tabel, geen grant: `check:migrations`, `check:secdef` en `test/security/resources.ts` niet geraakt.
+  AC-17 commit testrollen via de bestaande `app.register_role` (als `app_migrator`) en ruimt ze idempotent op met
+  `cleanupTestRoles` (Hergebruik). Geen nieuwe permissie, dus geen permissietest per verboden rol.
+- Docs: spec `security-suite` (de fixturetabel onder "Rollen en wie wat ziet" noemt de soorten uit het register; AC-4 en AC-5
+  zeggen "een beheerrol" in plaats van `admin`; de rij `docs/template/specs/security-suite.md:188` ("de rolmatrix itereert over
+  `ROLES` … zonder wijziging") wordt herschreven: soorten uit `roles.names`, de rol met de hand in `PERMISSIE_ORACLE` en, als
+  beheerrol, in `MFA_ROLLEN`), `docs/gouden-pad.md` ("Een rol toevoegen of weghalen", stap 5: de rol in `PERMISSIE_ORACLE` bij
+  `app.use` en bij elke permissie die hij krijgt, een beheerrol ook in `MFA_ROLLEN`; geen actorsoort meer),
+  `docs/template-changelog.md` onder `[Unreleased]` (door de hoofdsessie).
+
 ## Buiten scope
 
 - `check:new-resource` uitbreiden met `test:db` of het toepassen van de declaratie (CI-wijziging; het bewijs komt uit AC-10).
 - Een generatorvlag voor een resource zonder bewerken; de developer haalt de `PATCH`-route met de hand weg.
-- Een tweede MFA-rol in de oracle (vlag `beheer`).
+- De oracle afleiden uit `permissions.ts` of `check()`, of `MFA_ROLLEN` uit `roles.isBeheer`: ze blijven met de hand, anders
+  test de suite de implementatie met zichzelf.
+- Toestemmingen: de suite roept alleen weigeringen aan. Noemt de oracle een rol toegestaan maar weigert `permissions.ts` die,
+  dan ziet de suite dat niet; voor `user` en `admin` dekt `src/shared/permissions.test.ts` het, voor een app-rol de test per
+  verboden rol.
+- De oracle naar een eigen databestand verhuizen (zie OV-5).
+- Meer dan één rol per account: het register kent één rol per account.
 - De docsgap rond `parseInput` (`{ ...body, ...params }`) uit #656.
 
 ## Testplan
@@ -231,9 +390,21 @@ Risicowerk (securitysuite): tester eerst, developer, reviewer vóór de push (fr
    `test/security/sample-voor.test.ts` (AC-12, samples-map en de vormtoets op `routes.int.test.ts`).
 2. Integratie in `pnpm test:db` (tester): `test/security/suite-contract.int.test.ts` voor AC-5 t/m AC-8 en AC-10, met probe-varianten: een lijst zonder `limit`, een lijst zonder `q`, de eerste probe met en zonder
    update-grant en zonder `sample.update`, en de probe in generatorvorm.
-3. De tester en de developer zetten hun verslag in `test/security/verslag-suite-contract.md` (testpad; de hoofdsessie haalt het
+3. De tester en de developer zetten hun verslag in `test/security/verslag-suite-contract.md` (vervallen) (testpad; de hoofdsessie haalt het
    vóór de PR weg).
-4. Lokaal: `pnpm exec tsc -b --noEmit`, `pnpm test:unit`, `pnpm ratchet`, `pnpm check:roadmap`, `pnpm format:check`, de
+4. Ontwerp 7, zonder derde rol in de template. Het bewijs dat een extra rol de suite niet raakt, komt uit pure functies met een
+   nep-bron (`defineRoles({ planner: { beheer: false }, eigenaar: { beheer: true } })`, nep-oracle, `mfaRollen`) en nep-routes; het
+   echte register blijft `user` en `admin`.
+   - Unit (tester): `test/security/actorsoorten.test.ts` (AC-13 t/m AC-16: `actorSoorten`, `verwachteUitkomst`,
+     `beheerrollenMet`, `ac4Gevallen`, `ac5Gevallen`, `appUseVerschil`, `beheerVerschil`, telkens met nep-bron én echte bron,
+     plus de vormtoets op `routes.int.test.ts`). Een nep-route heeft alleen `contract.method`, `contract.path` en
+     `contract.permission`.
+   - Integratie in `pnpm test:db` (tester): `test/security/actorsoorten.int.test.ts` (AC-17): de enige plek met een echte derde
+     rol, gecommit en opgeruimd met `cleanupTestRoles`; namen met voorvoegsel `suitetest_`, zodat ze niet
+     botsen met `planner`, `eigenaar` en `toezicht` uit die tests.
+   - `test/security/routes.int.test.ts` en `owner-actors.int.test.ts` blijven groen in de runner (`routes.int.test.ts` itereert nu over `ac4Gevallen` en `ac5Gevallen`): dat is het bewijs
+     dat de verwachtingen voor `user` en `admin` gelijk blijven, naast de vergelijking met `1113a2a5` in AC-15.
+5. Lokaal: `pnpm exec tsc -b --noEmit`, `pnpm test:unit`, `pnpm ratchet`, `pnpm check:roadmap`, `pnpm format:check`, de
    geheimenscanner. `pnpm test:db` draait alleen in de runner; de branch wijzigt een script dat de host uitvoert, dus het bewijs
    komt uit de CI van de PR.
 
@@ -246,3 +417,13 @@ Risicowerk (securitysuite): tester eerst, developer, reviewer vóór de push (fr
 - **OV-3 ✅ besloten** — #657: zonder UPDATE-recht de update-proef overslaan met melding, fail-closed catalogusvraag (eigenaar in
   #657), plus de strengere eis `42501` voor A en B (eigenaar, 2026-11-15).
 - **OV-4 ✅ besloten** — Ook de oracle-regel uit de generator en de probe in generatorvorm horen in deze PR (eigenaar, 2026-11-15).
+- **OV-5** — Blijft `PERMISSIE_ORACLE` in `test/security/fixtures.ts`, of verhuist ze naar een eigen databestand
+  (bijvoorbeeld `test/security/oracle.ts` (voorbeeld), zoals `resources.ts`), zodat een app bij een nieuwe rol of resource alleen data wijzigt
+  en een template-update van `fixtures.ts` niet botst met de oracle-regels van de app? Verhuizen raakt ook `new:resource`
+  (`oracleInhoud`), suitecontract/AC-4 en het gouden pad. Aanbeveling: in deze stap laten staan (kleinste stap uit #719) en het
+  verhuizen als apart leerpunt opnemen als een app er echt op botst.
+- **OV-6** — Doet AC-17 een echte derde rol (gecommit in de gedeelde testdatabase), of volstaat het unit-bewijs van AC-13 t/m
+  AC-16? Zonder AC-17 bewijst niets dat `maak`, `A` en `B` het account met de juiste rol en sessiesterkte maken. Aanbeveling:
+  AC-17 houden, met `cleanupTestRoles` uit `test/auth/role-register-harness.ts`.
+- **OV-7 ✅ besloten** — De MFA-eis komt niet uit `roles.isBeheer` maar uit `MFA_ROLLEN` met de hand, bewaakt door
+  `beheerVerschil` (eigenaar, 2026-11-19).

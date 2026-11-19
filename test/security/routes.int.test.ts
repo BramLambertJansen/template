@@ -1,9 +1,12 @@
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { z } from 'zod';
 import { routes } from '../../src/api/app.ts';
-import { roles } from '../../src/shared/roles.ts';
 import {
-  adminHeeftPermissie,
+  ac4Gevallen,
+  ac5Gevallen,
+  appUseVerschil,
+  beheerrollenMet,
+  beheerVerschil,
   createSecurityFixtures,
   foutvormProblemen,
   heeftBody,
@@ -29,8 +32,9 @@ import { sampleVoor } from './resources.ts';
 // src/api/app.ts) krijgt sessie-, rechten-, MFA-, input- en foutvormtests, zonder dat er per route iets te schrijven is.
 // Echte stack: Better Auth-sessies, Postgres met RLS, Mailpit; niets gemockt. Draait via `pnpm test:db`.
 // Alleen weigeringen worden aangeroepen: elk verzoek eindigt vóór de handler (401, 403, 400 of 413). Eén uitzondering
-// (spec suite-volgt-contract, ontwerp 5): AC-5 roept met adminMfa de handler van elke admin-GET aan; goed is alleen 200
-// of 404 NOT_FOUND (mfaDoorgangProbleem). Samples komen via sampleVoor, zodat een regel in routeSamples ook hier geldt.
+// (spec suite-volgt-contract, ontwerp 5): AC-5 roept met '<rol>Mfa' de handler van elke GET van een beheerrol aan; goed is
+// alleen 200 of 404 NOT_FOUND (mfaDoorgangProbleem). Samples komen via sampleVoor, zodat een regel in routeSamples ook hier
+// geldt. De actorsoorten komen uit het rollenregister (ontwerp 7): AC-4 en AC-5 itereren over ac4Gevallen en ac5Gevallen.
 const LANG = 120_000;
 const t = createSecurityFixtures();
 afterAll(async () => {
@@ -118,17 +122,34 @@ describe('security/AC-4: rechten per permissie en rol', { timeout: LANG }, () =>
     expect(oracleSleutelsVerschil()).toStrictEqual({ alleenInOracle: [], alleenInTabel: [] });
   });
 
-  test('security/AC-4: de suite kent elke rol uit ROLES (een nieuwe rol vraagt een actorsoort)', () => {
-    expect([...roles.names].sort()).toStrictEqual(['admin', 'user']);
+  test("security/AC-4: elke rol uit het register staat in PERMISSIE_ORACLE['app.use'] (core geeft app.use aan elke rol)", () => {
+    const ontbreekt = appUseVerschil();
+
+    expect(
+      ontbreekt,
+      ontbreekt
+        .map(
+          (rol) =>
+            `voeg '${rol}' toe aan PERMISSIE_ORACLE['app.use'] en aan elke permissie die de rol krijgt (test/security/fixtures.ts)`,
+        )
+        .join('; '),
+    ).toStrictEqual([]);
   });
 
-  // Alleen de combinaties die de oracle weigert; een toegestane aanroep zou de handler uitvoeren (acceptatietest van de resource).
-  const geweigerd = routes.flatMap((route) =>
-    (['user', 'zonderRol'] as const).flatMap((soort) => {
-      const uitkomst = verwachteUitkomst(soort, route.contract.permission);
-      return uitkomst.toegestaan ? [] : [[soort, routeLabel(route), route] as const];
-    }),
-  );
+  test('security/AC-4: MFA_ROLLEN noemt precies de beheerrollen van het register', () => {
+    const verschil = beheerVerschil();
+
+    expect(
+      verschil,
+      verschil
+        .map((rol) => `zet '${rol}' in MFA_ROLLEN als hij beheer heeft, anders niet (test/security/fixtures.ts)`)
+        .join('; '),
+    ).toStrictEqual([]);
+  });
+
+  // Alleen de combinaties die de oracle met FORBIDDEN weigert; een toegestane aanroep zou de handler uitvoeren (acceptatietest
+  // van de resource), een MFA_REQUIRED-paar hoort bij AC-5.
+  const geweigerd = ac4Gevallen(routes).map(({ soort, route }) => [soort, routeLabel(route), route] as const);
 
   test.each(geweigerd)(
     'security/AC-4: %s op %s geeft 403 FORBIDDEN en de handler is niet uitgevoerd',
@@ -143,30 +164,35 @@ describe('security/AC-4: rechten per permissie en rol', { timeout: LANG }, () =>
   );
 });
 
-describe('security/AC-5: MFA voor admin', { timeout: LANG }, () => {
-  const adminRoutes = routes.filter((route) => adminHeeftPermissie(route.contract.permission));
-  const adminRoutesMetLabel = adminRoutes.map((route) => [routeLabel(route), route] as const);
+describe('security/AC-5: MFA voor beheerrollen', { timeout: LANG }, () => {
+  const gevallen = ac5Gevallen(routes).map(({ soort, route }) => [soort, routeLabel(route), route] as const);
+  const isDoorgang = (soort: string, route: AppRoute): boolean =>
+    verwachteUitkomst(soort, route.contract.permission).toegestaan;
+  const zonderMfa = gevallen.filter(([soort, , route]) => !isDoorgang(soort, route));
 
-  test.each(adminRoutesMetLabel)(
-    'security/AC-5: adminZonderMfa op %s geeft 403 MFA_REQUIRED en de handler is niet uitgevoerd',
-    async (label, route) => {
+  test.each(zonderMfa)(
+    'security/AC-5: %s op %s geeft 403 MFA_REQUIRED en de handler is niet uitgevoerd',
+    async (soort, label, route) => {
       const voor = await t.bijwerkingen();
 
-      const antwoord = await t.stuurAls('adminZonderMfa', route, { sample: sampleVoor(route) });
+      const antwoord = await t.stuurAls(soort, route, { sample: sampleVoor(route) });
 
-      verwachtFout({ ac: 'AC-5', label, antwoord }, weigering('adminZonderMfa', route));
-      expect(weigering('adminZonderMfa', route).code).toBe('MFA_REQUIRED');
+      verwachtFout({ ac: 'AC-5', label, antwoord }, weigering(soort, route));
+      expect(weigering(soort, route).code).toBe('MFA_REQUIRED');
       expect(await t.bijwerkingen(voor.ids)).toStrictEqual(voor);
     },
   );
 
-  // Met MFA alleen op routes zonder bijwerking (GET); de positieve flow van schrijfroutes is de acceptatietest van de resource.
-  const leesRoutes = adminRoutesMetLabel.filter(([, route]) => route.contract.method === 'GET');
+  // Met MFA alleen op routes zonder bijwerking (GET, zo levert ac5Gevallen ze); de positieve flow van schrijfroutes is de
+  // acceptatietest van de resource.
+  const doorgang = gevallen.filter(([soort, , route]) => isDoorgang(soort, route));
 
-  test.each(leesRoutes)(
-    'security/AC-5: adminMfa op %s komt voorbij de MFA-controle (200 of 404 NOT_FOUND)',
-    async (_, route) => {
-      const antwoord = await t.stuurAls('adminMfa', route, { sample: sampleVoor(route) });
+  test.each(doorgang)(
+    'security/AC-5: %s op %s komt voorbij de MFA-controle (200 of 404 NOT_FOUND)',
+    async (soort, _, route) => {
+      expect(route.contract.method).toBe('GET');
+
+      const antwoord = await t.stuurAls(soort, route, { sample: sampleVoor(route) });
 
       expect(mfaDoorgangProbleem(antwoord)).toBeUndefined();
     },
@@ -315,7 +341,7 @@ describe('security/AC-7: foutvorm', { timeout: LANG }, () => {
     expect(aantal('AC-3')).toBeGreaterThanOrEqual(routes.length * 2);
     expect(aantal('AC-4')).toBeGreaterThanOrEqual(routes.length);
     expect(aantal('AC-5')).toBeGreaterThanOrEqual(
-      routes.filter((route) => adminHeeftPermissie(route.contract.permission)).length,
+      routes.filter((route) => beheerrollenMet(route.contract.permission).length > 0).length,
     );
     expect(aantal('AC-6')).toBeGreaterThanOrEqual(routes.length);
   });
@@ -324,8 +350,8 @@ describe('security/AC-7: foutvorm', { timeout: LANG }, () => {
 describe('security/AC-1: het hele routeregister', () => {
   test('security/AC-1: elke route uit routes is geïtereerd door AC-2 t/m AC-6; het aantal iteraties is routes.length', () => {
     const alle = perRoute.map(([label]) => label).sort();
-    const admin = routes
-      .filter((route) => adminHeeftPermissie(route.contract.permission))
+    const beheer = routes
+      .filter((route) => beheerrollenMet(route.contract.permission).length > 0)
       .map(routeLabel)
       .sort();
 
@@ -335,6 +361,6 @@ describe('security/AC-1: het hele routeregister', () => {
       expect([...bezocht[ac]].sort(), ac).toStrictEqual(alle);
       expect(bezocht[ac].size, ac).toBe(routes.length);
     }
-    expect([...bezocht['AC-5']].sort()).toStrictEqual(admin);
+    expect([...bezocht['AC-5']].sort()).toStrictEqual(beheer);
   });
 });
