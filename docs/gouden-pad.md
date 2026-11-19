@@ -127,6 +127,7 @@ Toevoegen, in één PR:
    `pnpm db:generate`. De naam past op `^[a-z][a-z0-9_]*$` en is hooguit 32 tekens (`ROLE_NAME_MAX_LENGTH`).
 2. **Register**: `defineRoles({ planner: { beheer: false } })` in `src/shared/roles.ts`, met dezelfde vlag als de migratie.
 3. **Permissies**: de rol bij elke permissie die hij krijgt in `src/shared/permissions.ts`; `app.use` heeft elke rol vanzelf.
+   Geef een rol die via de webapp inlogt ook `me:read`.
    Een naam buiten het register weigert `definePermissions` bij het laden.
 4. **Seed-account en naam**: een regel in `src/api/dev/seed-accounts.ts` en in `roleLabels` (`src/web/copy/ui.ts`); zonder
    is het een typefout. De dev-rolwisselaar, de rolfilter en het uitnodigformulier tonen de rol dan vanzelf.
