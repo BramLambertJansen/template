@@ -47,9 +47,9 @@ const appModule = z.object({ routes: z.array(z.custom<AppRoute>((waarde) => type
 beforeAll(async () => {
   vi.stubEnv('APP_ORIGIN', 'http://localhost:5173');
   uitvoer = Object.fromEntries(Object.entries(await import('./fixtures.ts')));
-  // Alleen routes waarvan de permissie al in de oracle staat: direct na `pnpm new:resource` zet de hoofdsessie de
-  // oracle-regel nog met de hand (check:new-resource, leerpunt #334). Dat de oracle volledig is, toetst routes.int.test.ts.
-  const oracle = new Map(Object.entries(echteBron().oracle));
+  // Alleen routes waarvan de permissie in de BEVROREN oracle staat: de vergelijking met 1113a2a5 gaat over wat de template
+  // levert, niet over de routes en permissies van een app. Dat de live oracle volledig is, toetst routes.int.test.ts.
+  const oracle = new Map(Object.entries(BEVROREN_BRON.oracle));
   echteRoutes = appModule
     .parse(await import('../../src/api/app.ts'))
     .routes.filter((route) => oracle.has(route.contract.permission));
@@ -139,6 +139,23 @@ const nepBron = (extra: Partial<Bron> = {}): Bron => ({
   ...extra,
 });
 
+// De BEVROREN template-bron: een kopie van wat de template levert (register `user` zonder en `admin` met beheer, MFA voor
+// admin, de oracle uit test/security/fixtures.ts), los van de live configuratie. Een app die een rol toevoegt en
+// PERMISSIE_ORACLE en MFA_ROLLEN bijwerkt, hoeft dus geen test hier te wijzigen. De live bron toetst AC-16.
+const BEVROREN_BRON: Bron = {
+  register: defineRoles({}),
+  oracle: {
+    'app.use': ['user', 'admin'],
+    'me:read': ['user', 'admin'],
+    'me:update': ['user', 'admin'],
+    'accounts:read': ['admin'],
+    'accounts:invite': ['admin'],
+    'accounts:manage': ['admin'],
+    'design-system:read': ['admin'],
+  },
+  mfaRollen: ['admin'],
+};
+
 const GEEN_SESSIE: Soort = { soort: 'geenSessie', rol: null, mfa: false };
 const ZONDER_ROL: Soort = { soort: 'zonderRol', rol: null, mfa: false };
 
@@ -174,13 +191,20 @@ describe('suitecontract/AC-13: actorSoorten leest de soorten uit het rollenregis
     expect(soortenVan(nepBron())).toStrictEqual(NEP_SOORTEN);
   });
 
-  test('suitecontract/AC-13: de bron van de template (roles, MFA_ROLLEN) geeft precies geenSessie, zonderRol, user, adminMfa, adminZonderMfa', () => {
-    expect(soortenVan()).toStrictEqual(ECHTE_SOORTEN);
-    expect(soortenVan(echteBron())).toStrictEqual(ECHTE_SOORTEN);
+  test('suitecontract/AC-13: de bevroren template-bron geeft precies geenSessie, zonderRol, user, adminMfa, adminZonderMfa', () => {
+    expect(soortenVan(BEVROREN_BRON)).toStrictEqual(ECHTE_SOORTEN);
   });
 
-  test('suitecontract/AC-13: MFA_ROLLEN noemt in de template alleen admin (met de hand, niet uit het register)', () => {
-    expect(echteBron().mfaRollen).toStrictEqual(['admin']);
+  test('suitecontract/AC-13: de bevroren template-bron laat alleen admin MFA vragen (met de hand, niet uit het register)', () => {
+    expect(BEVROREN_BRON.mfaRollen).toStrictEqual(['admin']);
+    expect(BEVROREN_BRON.register.names).toStrictEqual(['user', 'admin']);
+  });
+
+  test('suitecontract/AC-13: met de live bron (zonder argument) heeft elke rol uit roles.names minstens één soort', () => {
+    const rollen = soortenVan().flatMap((soort) => (soort.rol === null ? [] : [soort.rol]));
+
+    expect(roles.names.length).toBeGreaterThanOrEqual(2);
+    expect(roles.names.filter((rol) => !rollen.includes(rol))).toStrictEqual([]);
   });
 
   test('suitecontract/AC-13: de MFA-eis volgt mfaRollen, niet de beheervlag: een beheerrol buiten mfaRollen is één gewone soort', () => {
@@ -270,7 +294,7 @@ describe('suitecontract/AC-14: verwachteUitkomst volgt can() met de bron', () =>
   });
 });
 
-describe('suitecontract/AC-14: verwachteUitkomst met de echte bron gelijk aan een tabel met de hand', () => {
+describe('suitecontract/AC-14: verwachteUitkomst met de bevroren template-bron gelijk aan een tabel met de hand', () => {
   // `user` mag alleen deze drie permissies; verder is elke permissie voor admin (met MFA) en weigert ze `user`.
   const USER_MAG = ['app.use', 'me:read', 'me:update'];
 
@@ -283,25 +307,22 @@ describe('suitecontract/AC-14: verwachteUitkomst met de echte bron gelijk aan ee
     throw new Error(`onverwachte soort '${soort}'`);
   }
 
-  test('suitecontract/AC-14: de oracle van de template noemt de permissies waar de tabel op rekent', () => {
-    const permissies = Object.keys(echteBron().oracle);
+  test('suitecontract/AC-14: de bevroren oracle noemt de permissies waar de tabel op rekent', () => {
+    const permissies = Object.keys(BEVROREN_BRON.oracle);
 
     expect(permissies).toEqual(expect.arrayContaining(USER_MAG));
     expect(permissies.length).toBeGreaterThan(USER_MAG.length);
   });
 
-  test('suitecontract/AC-14: voor elke permissie en elk van de vijf soorten is de uitkomst gelijk aan de tabel (standaardbron en expliciete bron)', () => {
-    const permissies = Object.keys(echteBron().oracle);
+  test('suitecontract/AC-14: voor elke permissie en elk van de vijf soorten is de uitkomst gelijk aan de tabel', () => {
+    const permissies = Object.keys(BEVROREN_BRON.oracle);
     const verschillen = ECHTE_SOORTEN.flatMap(({ soort }) =>
       permissies.flatMap((permissie) => {
         const verwacht = handTabel(soort, permissie);
-        const standaard = uitkomst(soort, permissie);
-        const expliciet = uitkomst(soort, permissie, echteBron());
-        return [standaard, expliciet].every((gekregen) => JSON.stringify(gekregen) === JSON.stringify(verwacht))
+        const gekregen = uitkomst(soort, permissie, BEVROREN_BRON);
+        return JSON.stringify(gekregen) === JSON.stringify(verwacht)
           ? []
-          : [
-              `${soort} op ${permissie}: verwacht ${JSON.stringify(verwacht)}, kreeg ${JSON.stringify([standaard, expliciet])}`,
-            ];
+          : [`${soort} op ${permissie}: verwacht ${JSON.stringify(verwacht)}, kreeg ${JSON.stringify(gekregen)}`];
       }),
     );
 
@@ -338,9 +359,8 @@ describe('suitecontract/AC-15: beheerrollenMet', () => {
     expect(beheerrollenMet('eigen:beheer', bron)).toStrictEqual([]);
   });
 
-  test('suitecontract/AC-15: met de echte bron heeft app.use precies admin als beheerrol', () => {
-    expect(beheerrollenMet('app.use')).toStrictEqual(['admin']);
-    expect(beheerrollenMet('app.use', echteBron())).toStrictEqual(['admin']);
+  test('suitecontract/AC-15: met de bevroren template-bron heeft app.use precies admin als beheerrol', () => {
+    expect(beheerrollenMet('app.use', BEVROREN_BRON)).toStrictEqual(['admin']);
   });
 });
 
@@ -434,10 +454,10 @@ describe('suitecontract/AC-15: ac4Gevallen en ac5Gevallen met nep-routes', () =>
   });
 });
 
-describe('suitecontract/AC-15: ac4Gevallen en ac5Gevallen met de echte bron en routes uit src/api/app.ts (gelijk aan 1113a2a5)', () => {
+describe('suitecontract/AC-15: ac4Gevallen en ac5Gevallen met de bevroren template-bron en routes uit src/api/app.ts (gelijk aan 1113a2a5)', () => {
   const routeLabel = (route: NepRoute): string => label(route);
   const oracleRollen = (route: NepRoute): readonly string[] => {
-    const rollen = echteBron().oracle[route.contract.permission];
+    const rollen = BEVROREN_BRON.oracle[route.contract.permission];
     if (rollen === undefined) throw new Error(`permissie '${route.contract.permission}' staat niet in de oracle`);
     return rollen;
   };
@@ -464,16 +484,14 @@ describe('suitecontract/AC-15: ac4Gevallen en ac5Gevallen met de echte bron en r
       return gevonden === undefined ? soort : `${soort} ${routeLabel(gevonden)}`;
     });
 
-  test('suitecontract/AC-15: ac4Gevallen is voor de echte bron gelijk aan (user, routes zonder user in de oracle) en (zonderRol, elke route)', () => {
+  test('suitecontract/AC-15: ac4Gevallen is voor de bevroren bron gelijk aan (user, routes zonder user in de oracle) en (zonderRol, elke route)', () => {
     expect(echteRoutes.length).toBeGreaterThan(0);
-    expect(alsSleutels(gevallen('ac4Gevallen', echteRoutes)).sort()).toStrictEqual(oud().ac4);
-    expect(alsSleutels(gevallen('ac4Gevallen', echteRoutes, echteBron())).sort()).toStrictEqual(oud().ac4);
+    expect(alsSleutels(gevallen('ac4Gevallen', echteRoutes, BEVROREN_BRON)).sort()).toStrictEqual(oud().ac4);
   });
 
-  test('suitecontract/AC-15: ac5Gevallen is voor de echte bron gelijk aan adminZonderMfa op elke admin-route en adminMfa op de GET-routes daarvan', () => {
+  test('suitecontract/AC-15: ac5Gevallen is voor de bevroren bron gelijk aan adminZonderMfa op elke admin-route en adminMfa op de GET-routes daarvan', () => {
     expect(oud().ac5.length).toBeGreaterThan(0);
-    expect(alsSleutels(gevallen('ac5Gevallen', echteRoutes)).sort()).toStrictEqual(oud().ac5);
-    expect(alsSleutels(gevallen('ac5Gevallen', echteRoutes, echteBron())).sort()).toStrictEqual(oud().ac5);
+    expect(alsSleutels(gevallen('ac5Gevallen', echteRoutes, BEVROREN_BRON)).sort()).toStrictEqual(oud().ac5);
   });
 });
 

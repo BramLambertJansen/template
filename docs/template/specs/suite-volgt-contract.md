@@ -258,15 +258,17 @@ vragen, staat met de hand in de suite (geen afleiding uit `permissions.ts`, `che
   { beheer: true } })` met `mfaRollen` `['admin', 'eigenaar']`, wanneer `actorSoorten` die bron leest, dan zijn de soorten
   precies, in deze volgorde, `geenSessie`,
   `zonderRol`, `user`, `adminMfa`, `adminZonderMfa`, `planner`, `eigenaarMfa`, `eigenaarZonderMfa`, met `rol` en `mfa` zoals in
-  ontwerp 7. Gegeven de bron van de template (`roles`, `MFA_ROLLEN`), dan zijn het precies `geenSessie`, `zonderRol`, `user`, `adminMfa`,
-  `adminZonderMfa`.
+  ontwerp 7. Gegeven de bevroren template-bron (een kopie in de test van het register `user`, `admin` met beheer,
+  `mfaRollen` `['admin']` en de oracle zoals de template ze levert; niet de live `roles` en `MFA_ROLLEN`, zodat een app met
+  een extra rol deze test niet hoeft te wijzigen), dan zijn het precies `geenSessie`, `zonderRol`, `user`, `adminMfa`,
+  `adminZonderMfa`. Met de live bron heeft elke rol uit `roles.names` minstens één soort.
 - **suitecontract/AC-14** — Gegeven dat nep-register en die `mfaRollen` en de nep-oracle
   `{ 'app.use': ['user', 'admin', 'planner', 'eigenaar'], 'plan:read': ['planner'], 'eigen:beheer': ['eigenaar'] }`, wanneer
   `verwachteUitkomst` oordeelt, dan is `planner` op `plan:read` toegestaan, `user` op `plan:read` `403 FORBIDDEN`,
   `eigenaarZonderMfa` op `eigen:beheer` `403 MFA_REQUIRED`, `eigenaarZonderMfa` op `plan:read` `403 FORBIDDEN` (niet
   `MFA_REQUIRED`), `eigenaarMfa` op `eigen:beheer` toegestaan en `planner` op `app.use` toegestaan; de soort `baasMfa` en een
-  permissie buiten de oracle gooien met de melding uit ontwerp 7 respectievelijk de bestaande melding. Gegeven de echte bron,
-  dan is de uitkomst voor elke permissie en elk van de vijf soorten gelijk aan een tabel die de test met de
+  permissie buiten de oracle gooien met de melding uit ontwerp 7 respectievelijk de bestaande melding. Gegeven de bevroren template-bron
+  (AC-13), dan is de uitkomst voor elke permissie en elk van de vijf soorten gelijk aan een tabel die de test met de
   hand bevat: `geenSessie` overal `401 UNAUTHENTICATED`, `zonderRol` overal `403 FORBIDDEN`, `user` toegestaan op `app.use`,
   `me:read` en `me:update` en verder `403 FORBIDDEN`, `adminMfa` overal toegestaan, `adminZonderMfa` overal `403 MFA_REQUIRED`.
 - **suitecontract/AC-15** — Gegeven vier nep-routes (`POST` met `app.use`, `GET` met `plan:read`, `GET` en
@@ -276,7 +278,8 @@ vragen, staat met de hand in de suite (geen afleiding uit `permissions.ts`, `che
   en `planner`. `ac5Gevallen` bevat precies: `adminZonderMfa` en `eigenaarZonderMfa` op de `app.use`-route en
   `eigenaarZonderMfa` op beide `eigen:beheer`-routes, elk met `403 MFA_REQUIRED`, en `eigenaarMfa` op de `GET`-route van
   `eigen:beheer` voor de MFA-doorgang. `beheerrollenMet('plan:read')` is leeg, `beheerrollenMet('app.use')` is
-  `['admin', 'eigenaar']`. Gegeven de echte bron en `routes` uit `src/api/app.ts`, dan zijn de paren (ook als gesorteerde
+  `['admin', 'eigenaar']`. Gegeven de bevroren template-bron (AC-13) en de routes uit `src/api/app.ts` waarvan de permissie in die bevroren oracle
+  staat, dan zijn de paren (ook als gesorteerde
   verzamelingen) gelijk aan wat `routes.int.test.ts` op `1113a2a5` draait: AC-4 (`user`, elke route waarvan
   de oracle `user` niet noemt) en (`zonderRol`, elke route); AC-5 `adminZonderMfa` op elke route waarvan de oracle `admin` noemt
   en `adminMfa` op de `GET`-routes daarvan.
