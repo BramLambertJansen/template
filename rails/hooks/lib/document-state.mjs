@@ -182,10 +182,14 @@ function gebouwdBlijft(voor, na, zelfdeInhoud) {
   return zelfdeInhoud ? 'vrij' : 'besluit';
 }
 
-/** ADR geaccepteerd → vervangen/vervallen; spec goedgekeurd/gebouwd → vervallen; inhoud van een goedgekeurde spec. @param {string} van @param {string} naar @param {string} kind */
+/**
+ * ADR geaccepteerd → vervangen/vervallen; spec goedgekeurd/gebouwd → vervallen; inhoud van een goedgekeurde spec, en de inhoud
+ * van een vervallen spec (status blijft `vervallen`; spec rolhek-lezen/AC-19, OV-2). Een vervallen ADR komt hier niet: dat is `a4`.
+ * @param {string} van @param {string} naar @param {string} kind
+ */
 function toegestaanZonderRecord(van, naar, kind) {
   if (kind === 'adr') return van === 'geaccepteerd' && (naar === 'vervallen' || /^vervangen door \d{4}$/.test(naar));
-  if (naar === 'vervallen') return van === 'goedgekeurd' || van === 'gebouwd';
+  if (naar === 'vervallen') return van === 'goedgekeurd' || van === 'gebouwd' || van === 'vervallen';
   return van === 'goedgekeurd' && naar === 'goedgekeurd';
 }
 

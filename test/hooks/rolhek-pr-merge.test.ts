@@ -220,3 +220,249 @@ describe('agent-samenvoegen/AC-9 trustedMerge', () => {
     expect(trustedMerge(gecommit.root, gecommit.basis)).toBe(false);
   });
 });
+
+// rolhek-lezen/AC-17 (ADR 0099): de weigering op de naam van een kitscript geldt voor elke rol alleen voor een segment dat iets
+// kan starten. Een lezer, of `git add|commit|rm|mv|restore|switch|branch|tag` met de naam als pad, patroon of berichttekst, start
+// niets. `{s}` is `merge` of `resolve`, `{g}` het glob-begin (`mer*`, `res*`). Een weigering op de naam herken je aan de vier
+// meldingen van het kitscript; de eigen lijst van de reviewer weigert daarnaast om andere redenen (die tellen hier niet mee).
+interface Rol17 {
+  naam: string;
+  agent: string | undefined;
+}
+
+const ROLLEN_17: readonly Rol17[] = [
+  { naam: 'hoofdsessie', agent: undefined },
+  ...['architect', 'developer', 'tester', 'docs', 'reviewer'].map((agent) => ({ naam: agent, agent })),
+];
+const SCRIPTS_17 = ['merge', 'resolve'] as const;
+const KIT_REDENEN = [
+  'Mergen via pnpm pr:merge doet alleen de hoofdsessie',
+  'Het mergescript draait alleen als precies',
+  'Gesprekken sluiten via pnpm pr:resolve doet alleen de hoofdsessie',
+  'Het sluitscript draait alleen als precies',
+];
+
+const vul = (tekst: string, script: string): string =>
+  tekst.replaceAll('{s}', script).replaceAll('{g}', `${script.slice(0, 3)}*`);
+const metRol = (agent: string | undefined) => (agent === undefined ? {} : { agent });
+
+function weigertOpNaam(command: string, agent: string | undefined): boolean {
+  const uitslag = verdict(command, metRol(agent));
+  return uitslag.uitslag === 'deny' && KIT_REDENEN.some((reden) => uitslag.reden.includes(reden));
+}
+
+/** Per rol en per kitscript de afwijking die `toets` meldt; leeg als alles klopt. */
+function afwijkingen(toets: (rol: Rol17, script: string) => string | null): string[] {
+  return ROLLEN_17.flatMap((rol) =>
+    SCRIPTS_17.flatMap((script) => {
+      const fout = toets(rol, script);
+      return fout === null ? [] : [`${rol.naam} (${script}): ${fout}`];
+    }),
+  );
+}
+
+// `geheel`: ook verder niet geweigerd, voor alle rollen of alle rollen behalve de reviewer (die houdt zijn eigen lijst).
+interface Toegestaan17 {
+  command: string;
+  geheel?: 'allen' | 'zonder-reviewer';
+}
+
+const TOEGESTAAN_17: readonly Toegestaan17[] = [
+  { command: 'git add test/scripts/pr-{s}.test.ts', geheel: 'zonder-reviewer' },
+  { command: "git grep -n -F -e 'pr:{s}' -- docs", geheel: 'allen' },
+  { command: 'git commit -m "docs: mention pr:{s}"', geheel: 'zonder-reviewer' },
+  { command: 'git log -- scripts/kit/pr-{s}.mjs', geheel: 'allen' },
+  { command: "git branch --list 'chore/*'", geheel: 'zonder-reviewer' },
+  { command: "git tag --list 'pr-*'", geheel: 'zonder-reviewer' },
+  { command: "git ls-files -- 'scripts/kit/pr-*'", geheel: 'allen' },
+  { command: 'git log -- scripts/kit/pr-{s}.mjs 2>/dev/null', geheel: 'zonder-reviewer' },
+  { command: 'git log -- scripts/kit/pr-{s}.mjs 2>&1', geheel: 'zonder-reviewer' },
+  // Elk segment is een lezer uit leestAlleen; `git status` is dat niet (AC-17, heel commando).
+  { command: 'git log -- scripts/kit/pr-{s}.mjs && git log -1', geheel: 'zonder-reviewer' },
+  { command: 'git add test/scripts/pr-{s}.test.ts && git commit -m "x"', geheel: 'zonder-reviewer' },
+  // De veilige lus over de werkmappen, zonder kitscriptnaam, blijft toegestaan.
+  { command: 'for d in .claude/worktrees/*/; do git -C "$d" log -1; done', geheel: 'zonder-reviewer' },
+  { command: 'git log --oneline -- scripts/kit/pr-{s}.mjs | wc -l' },
+  { command: 'git log -- scripts/kit/pr-{s}.mjs | head -n 5' },
+  { command: 'git rm --cached test/scripts/pr-{s}.test.ts' },
+  { command: 'git mv test/scripts/pr-{s}.test.ts test/scripts/x.test.ts' },
+  { command: 'git restore -- test/scripts/pr-{s}.test.ts' },
+  // De vorm telt (opties en script), niet de padregel: voor starten doet het pad er niet toe.
+  { command: "sed -n '1,20p' scripts/kit/pr-{s}.mjs", geheel: 'zonder-reviewer' },
+  { command: 'head -n 5 scripts/kit/pr-{s}.mjs', geheel: 'zonder-reviewer' },
+  { command: 'wc -l scripts/kit/pr-{s}.mjs', geheel: 'zonder-reviewer' },
+  { command: 'ls -la scripts/kit/pr-{s}.mjs', geheel: 'zonder-reviewer' },
+  { command: 'git cat-file -p HEAD:scripts/kit/pr-{s}.mjs', geheel: 'zonder-reviewer' },
+  { command: 'git cat-file -s HEAD:scripts/kit/pr-{s}.mjs', geheel: 'zonder-reviewer' },
+  { command: 'git ls-tree HEAD scripts/kit/pr-{s}.mjs', geheel: 'zonder-reviewer' },
+  { command: 'git rev-parse HEAD:scripts/kit/pr-{s}.mjs', geheel: 'zonder-reviewer' },
+  // Een lezer met een absoluut systeempad blijft een lezer.
+  { command: "/usr/bin/sed -n '1p' scripts/kit/pr-{s}.mjs" },
+  { command: '/bin/cat scripts/kit/pr-{s}.mjs' },
+];
+
+function toegestaanAfwijking({ command, geheel }: Toegestaan17) {
+  return (rol: Rol17, script: string): string | null => {
+    const gevuld = vul(command, script);
+    if (weigertOpNaam(gevuld, rol.agent)) return `geweigerd op de kitscriptnaam: ${gevuld}`;
+    const geldt = geheel === 'allen' || (geheel === 'zonder-reviewer' && rol.agent !== 'reviewer');
+    return geldt && verdict(gevuld, metRol(rol.agent)).uitslag === 'deny' ? `geweigerd: ${gevuld}` : null;
+  };
+}
+
+describe('rolhek-lezen/AC-17 een lezer of git add|commit|rm|mv|restore|branch|tag met de naam als pad, patroon of tekst start niets', () => {
+  test.each(TOEGESTAAN_17.map((geval) => [geval.command, geval] as const))(
+    'rolhek-lezen/AC-17 toegestaan voor elke rol, voor merge en resolve: %s',
+    (_command, geval) => {
+      expect(afwijkingen(toegestaanAfwijking(geval))).toStrictEqual([]);
+    },
+  );
+});
+
+// `soort: 'kit'`: de weigering is die op de naam; `'deny'`: de weigering mag ook een andere gate zijn (`--output` schrijft een bestand).
+interface Geweigerd17 {
+  command: string;
+  basis: string;
+  soort?: 'kit' | 'deny';
+}
+
+const CAT = 'cat scripts/kit/pr-{s}.mjs';
+const SED = "sed -n '1p' scripts/kit/pr-{s}.mjs";
+const COMMIT = 'git commit -m "docs: mention pr:{s}"';
+const ADD = 'git add test/scripts/pr-{s}.test.ts';
+const LOG = 'git log -- scripts/kit/pr-{s}.mjs';
+const CATFILE = 'git cat-file -p HEAD:scripts/kit/pr-{s}.mjs';
+const GREP = "git grep -n -F -e 'pr:{s}' -- docs";
+
+const GEWEIGERD_17: readonly Geweigerd17[] = [
+  { command: 'node scripts/kit/pr-{s}.mjs 5', basis: 'node scripts/kit/pr-x.mjs 5' },
+  { command: 'pnpm run pr:{s} 5', basis: 'pnpm run pr:x 5' },
+  { command: 'pnpm pr:{s} 5 && git status', basis: 'pnpm pr:x 5 && git status' },
+  { command: "sh -c 'pnpm pr:{s} 5'", basis: "sh -c 'pnpm pr:x 5'" },
+  { command: 'env node scripts/kit/pr-{s}.mjs', basis: 'env node scripts/kit/pr-x.mjs' },
+  { command: 'git show HEAD:scripts/kit/pr-{s}.mjs | node', basis: 'git show HEAD:scripts/kit/pr-{s}.mjs' },
+  { command: `${CAT} | node`, basis: CAT },
+  { command: `${CAT} > m.mjs; node m.mjs 5`, basis: CAT },
+  { command: `${CAT} | head -n 9999 > m.mjs; node m.mjs 5`, basis: CAT },
+  { command: `${CAT} >&m.mjs; node m.mjs 5`, basis: CAT },
+  { command: `${CAT} 1<>m.mjs; node m.mjs 5`, basis: CAT },
+  {
+    command: 'git log -p --output=m.mjs -- scripts/kit/pr-{s}.mjs',
+    basis: 'git log -p -- scripts/kit/pr-{s}.mjs',
+    soort: 'deny',
+  },
+  {
+    command: 'git log -p --output m.mjs -- scripts/kit/pr-{s}.mjs',
+    basis: 'git log -p -- scripts/kit/pr-{s}.mjs',
+    soort: 'deny',
+  },
+  { command: `${LOG} > m.mjs`, basis: LOG },
+  { command: `${LOG} | tee m.mjs`, basis: LOG },
+  { command: "sed -n '1e pnpm pr:{s} 5' docs/framework.md", basis: SED },
+  { command: 'git cat-file --textconv HEAD:scripts/kit/pr-{s}.mjs', basis: CATFILE },
+  { command: 'git cat-file --filters HEAD:scripts/kit/pr-{s}.mjs', basis: CATFILE },
+  { command: "git ls-files -- 'scripts/kit/pr-{g}' | xargs node", basis: "git ls-files -- 'scripts/kit/pr-{g}'" },
+  // Een segment dat de naam en een vorm buiten AC-11, AC-13 en AC-14 heeft, start iets.
+  { command: "sed -n 's/a/b/p' scripts/kit/pr-{s}.mjs", basis: SED },
+  { command: 'sed -i 1d scripts/kit/pr-{s}.mjs', basis: SED },
+  { command: "sed -n '/x/p' scripts/kit/pr-{s}.mjs", basis: SED },
+  { command: "sed -n '1w x' scripts/kit/pr-{s}.mjs", basis: SED },
+  { command: 'git ls-tree --format=x HEAD scripts/kit/pr-{s}.mjs', basis: 'git ls-tree HEAD scripts/kit/pr-{s}.mjs' },
+  { command: 'git rev-parse --git-path scripts/kit/pr-{s}.mjs', basis: 'git rev-parse HEAD:scripts/kit/pr-{s}.mjs' },
+  // Variabele vóór het commando, pad-wrapper, git `-c`, uitvoerredirect: dan telt de naam wel.
+  { command: `FOO=1 ${ADD}`, basis: ADD },
+  { command: `/usr/bin/env ${ADD}`, basis: ADD },
+  { command: 'git -c core.x=y add test/scripts/pr-{s}.test.ts', basis: ADD },
+  { command: `${GREP} > out.txt`, basis: GREP },
+  // Substitutie, eval, source, heredoc of een geëxpandeerd woord: de regel van nu, elke vermelding telt.
+  { command: 'git commit -m "$(node scripts/kit/pr-{s}.mjs 5)"', basis: COMMIT },
+  { command: 'git commit -m "docs: mention pr:{s} `date`"', basis: COMMIT },
+  { command: "git grep -n -F -e 'pr:{s}' -- <(echo docs)", basis: GREP },
+  { command: `eval true; ${ADD}`, basis: ADD },
+  { command: `source ./x.sh; ${LOG}`, basis: LOG },
+  // Een lezer met een relatief pad (`./sed`, `./git`) is een ander programma dan de lezer: de naam telt wel.
+  { command: `./${SED}`, basis: SED },
+  { command: `./${CATFILE}`, basis: CATFILE },
+  // Een scheidingsteken direct na `)` of `}` mag niet verloren gaan: de groep geeft zijn uitvoer wel door of schrijft het bestand.
+  { command: `( ${CAT} ) | node - 5`, basis: CAT },
+  { command: `{ ls; ${CAT}; } | node - 5`, basis: CAT },
+  { command: 'for f in scripts/kit/pr-{s}.mjs; do cat "$f"; done | node - 5', basis: CAT },
+  { command: `( ${CAT} ) > m.mjs; node m.mjs 5`, basis: CAT },
+  { command: `{ ls; ${CAT}; } > m.mjs; node m.mjs 5`, basis: CAT },
+  // Eigenaarbesluit 2026-11-19 (spec AC-17): het hele commando telt. Een ander segment kan de shelltoestand zetten (`exec`,
+  // `hash -p`, `PATH=…`, `alias`), dus start één segment iets of zet het de toestand, dan telt elke vermelding.
+  { command: `exec >m.mjs; ${CAT}; node m.mjs 5`, basis: CAT },
+  { command: `exec 3>m.mjs; ${CAT} >&3; node m.mjs 5`, basis: CAT },
+  { command: `hash -p /usr/bin/node cat; ${CAT} 5`, basis: CAT },
+  { command: `${CAT} & node m.mjs 5`, basis: CAT },
+  { command: `cat() { node "$@"; }; ${CAT} 5`, basis: CAT },
+  { command: `export X=1; ${CAT}`, basis: CAT },
+  { command: `PATH=/tmp/x:$PATH; ${CAT} 5`, basis: CAT },
+  { command: `alias cat=node\n${CAT} 5`, basis: CAT },
+  { command: `shopt -s expand_aliases\nalias cat=node\n${CAT} 5`, basis: CAT },
+  // Een compound (`if`, `case`, `function`, `for`) maakt dat elke vermelding telt; de uitzondering voor de kop van een veilige lus vervalt.
+  { command: `if true; then ${CAT}; fi | node - 5`, basis: CAT },
+  { command: `case x in x) ${CAT};; esac | node - 5`, basis: CAT },
+  { command: `function cat { node "$@"; }; ${CAT} 5`, basis: CAT },
+  { command: 'for f in scripts/kit/pr-*; do wc -l "$f"; done', basis: 'for f in docs/*.md; do wc -l "$f"; done' },
+  { command: 'for f in scripts/kit/pr-{s}.mjs; do wc -l "$f"; done', basis: 'for f in docs/*.md; do wc -l "$f"; done' },
+  // Zonder de lusvariabele in de romp (geen geëxpandeerd woord) bepaalt alleen de kop: ook dan telt de naam.
+  {
+    command: 'for f in scripts/kit/pr-*; do wc -l docs/framework.md; done',
+    basis: 'for f in docs/*.md; do wc -l docs/framework.md; done',
+  },
+  { command: "git commit -F - <<'EOF'\ndocs: mention pr:{s}\nEOF", basis: COMMIT },
+  { command: 'git add "$X/scripts/kit/pr-{s}.mjs"', basis: 'git add scripts/kit/pr-{s}.mjs' },
+];
+
+function geweigerdAfwijking({ command, basis, soort = 'kit' }: Geweigerd17) {
+  return (rol: Rol17, script: string): string | null => {
+    const basisTekst = vul(basis, script);
+    if (weigertOpNaam(basisTekst, rol.agent)) return `de basis weigert op de kitscriptnaam: ${basisTekst}`;
+    if (rol.agent !== 'reviewer' && verdict(basisTekst, metRol(rol.agent)).uitslag === 'deny')
+      return `de basis is geweigerd: ${basisTekst}`;
+    const tekst = vul(command, script);
+    const geweigerd =
+      soort === 'kit' ? weigertOpNaam(tekst, rol.agent) : verdict(tekst, metRol(rol.agent)).uitslag === 'deny';
+    return geweigerd ? null : `niet geweigerd: ${tekst}`;
+  };
+}
+
+describe('rolhek-lezen/AC-17 een segment dat iets kan starten met de naam van een kitscript blijft geweigerd, voor elke rol', () => {
+  test.each(GEWEIGERD_17.map((geval) => [geval.command, geval] as const))(
+    'rolhek-lezen/AC-17 geweigerd tegen een basis die slaagt, voor merge en resolve: %s',
+    (_command, geval) => {
+      expect(afwijkingen(geweigerdAfwijking(geval))).toStrictEqual([]);
+    },
+  );
+
+  test('rolhek-lezen/AC-17 de exacte vorm pnpm pr:<script> <nr> blijft alleen voor de hoofdsessie toegestaan', () => {
+    expect(
+      afwijkingen((rol, script) => {
+        const uitslag = verdict(`pnpm pr:${script} 12`, metRol(rol.agent)).uitslag;
+        return uitslag === (rol.agent === undefined ? 'allow' : 'deny') ? null : `uitslag ${uitslag}`;
+      }),
+    ).toStrictEqual([]);
+  });
+
+  test.each(SCRIPTS_17)(
+    'rolhek-lezen/AC-17 de reviewer houdt zijn eigen lijst: een redirect blijft geweigerd (%s)',
+    (script) => {
+      const basis = vul(LOG, script);
+      expect(verdict(basis, { agent: 'reviewer' }).uitslag).not.toBe('deny');
+      expect(verdict(`${basis} 2>/dev/null`, { agent: 'reviewer' }).uitslag).toBe('deny');
+    },
+  );
+
+  // AC-18 in de AC-17-lijst van het Testplan: een gh-pad als `-C` of `--work-tree` blijft voor elke subagentrol geweigerd.
+  test.each(['git -C /home/x/.config/gh diff config.yml hosts.yml', 'git --work-tree=/home/x/.config/gh diff a b'])(
+    'rolhek-lezen/AC-17 en rolhek-lezen/AC-18 een subagent leest niet buiten de repo (basis git diff a b): %s',
+    (command) => {
+      const subagents = ROLLEN_17.filter((rol) => rol.agent !== undefined);
+      expect(subagents.filter((rol) => verdict('git diff a b', metRol(rol.agent)).uitslag === 'deny')).toStrictEqual(
+        [],
+      );
+      expect(subagents.filter((rol) => verdict(command, metRol(rol.agent)).uitslag !== 'deny')).toStrictEqual([]);
+    },
+  );
+});

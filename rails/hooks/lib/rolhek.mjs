@@ -2,7 +2,8 @@
 // verboden is (deny). Puur: alles wat van de schijf of git komt, zit in `ctx`, zodat test/hooks/rolhek.test.ts elke regel
 // met echte payloads kan bewijzen. De stdin/stdout-kant staat in rails/hooks/rolhek.mjs.
 import path from 'node:path';
-import { gitSubcommand, globTekstRegex, parseCommands, programName, splitCommand, tmpdirLetterlijk, tmpdirWoord, tokenize, writeTargets, zetVariabele } from './shell.mjs';
+import { gitSubcommand, globTekstRegex, ONZEKERE_TEKST, parseCommands, programName, splitCommand, tmpdirLetterlijk, tmpdirWoord, tokenize, writeTargets, zetVariabele } from './shell.mjs';
+import { GIT_VORMEN, gitLeesvorm, insideRepo, lezerPaden, pathspecBinnen } from './rolhek-lezers.mjs';
 import { A4_MELDING, archiefBron, beslisOvergang, builtReference, documentInfo, documentKind, isArchief, isHerschrijving } from './document-state.mjs';
 import { canRecordStatus } from './task-authority.mjs';
 import { automaticRunner } from './runner-authority.mjs';
@@ -24,8 +25,12 @@ import { afgeleid, globMatch, onderhoudVan, samengevoegd, templateVan } from './
  *   committed: (rel: string) => boolean | 'zonder-origin', isDir: (rel: string) => boolean, branch: string,
  *   authority?: import('./task-authority.mjs').Authority | null, runnerTrusted?: boolean | (() => boolean),
  *   mergeTrusted?: boolean | (() => boolean),
- *   onbekendeRol?: boolean, onderhoud?: boolean, files?: (rel: string) => string[] }} Ctx
+ *   onbekendeRol?: boolean, onderhoud?: boolean, files?: (rel: string) => string[],
+ *   gevolgd?: (paden: readonly string[]) => Set<string>, werkmappen?: () => string[] }} Ctx
  * `files`: bestanden (getrackt en niet-genegeerd) onder een map, repo-relatief; `''` is de hele repo.
+ * `gevolgd`: de doorgegeven paden (zoals getypt, tegen `cwd`) die git volgt als gewoon bestand, ook na `realpath` (spec
+ * rolhek-lezen/AC-11); ontbreekt hij of gooit hij, dan telt geen pad. `werkmappen`: de roots uit `git worktree list
+ * --porcelain` (AC-15); ontbreekt hij of gooit hij, dan telt alleen `root`. Beide roept het rolhek hooguit één keer per beslissing aan.
  * `onderhoud`: de onderhoudsmodus is actief (vertrouwde configuratie en origin is die repository, ADR 0045 punt 8–9).
  * `onbekendeRol`: een subagent zonder bekende rol; telt als reviewer (alleen lezen).
  * `committed`: staat in de merge-base met het anker of met origin/main; 'zonder-origin' = beide onleesbaar en wel in HEAD (terugval).
@@ -104,7 +109,7 @@ export function decide(payload, ctx) {
   if (tool.startsWith('mcp__')) decideMcp({ tool, role }, context, decision);
   else if (tool === 'Bash') {
     const command = field(input, 'command');
-    decideBash({ command, role }, context, decision);
+    decideBash({ command, role, feiten: leesFeiten(command, context) }, context, decision);
     if (command.includes('--sta-wijzigingen-toe')) decision.deny.push('De agent omzeilt de hostcontrole van de runner nooit; gebruik voor gewijzigd railwerk de CI-runner');
     if (ctx.cwd === ctx.root && automaticRunner(command) && decision.ask.length + decision.deny.length === 0 && runnerIsTrusted(ctx))
       decision.allow = true;
@@ -159,14 +164,65 @@ const PR_MERGE_LEZERS = new Set(['cat', 'head', 'tail', 'grep', 'wc', 'ls', 'dif
 // `ls-files` en `grep` lezen ook alleen (spec rolhek-lezen/AC-8: `git ls-files -- 'docs/**'`); `git grep -O` is voor elke rol dicht (AC-2).
 const PR_MERGE_GIT = new Set(['log', 'show', 'diff', 'blame', 'ls-files', 'grep']);
 
-/** Een segment dat alleen leest: een leesprogramma of `git log|show|diff|blame|ls-files|grep` zonder `-c`, zonder omgevingsvariabelen. @param {string[]} words */
-function leestAlleen(words) {
-  const { assignments, argv, pathWrappers } = splitCommand(words);
+/**
+ * Een segment dat alleen leest, voor elke rol (spec rolhek-lezen/AC-17): een leesprogramma, `sed` in de vorm uit AC-11, of
+ * `git log|show|diff|blame|ls-files|grep` en `git worktree|branch|tag|ls-tree|cat-file|rev-parse` in de vorm uit AC-13 en
+ * AC-14 (dezelfde toets als voor de reviewer), zonder `-c`, pad-wrapper of variabele vóór het commando. Het pad telt hier niet.
+ * @param {Command} segment
+ */
+function leestAlleen(segment) {
+  const { assignments, argv, pathWrappers } = splitCommand(segment.words);
   const [woord = '', ...args] = argv;
   if (assignments.length + pathWrappers.length > 0) return false;
-  if (programName(woord) !== 'git') return PR_MERGE_LEZERS.has(programName(woord));
+  const programma = programName(woord);
+  // Een lezer telt alleen als kaal woord of onder /usr/bin/ of /bin/; `./sed` of `./git` is een ander programma (AC-17).
+  if (![programma, `/usr/bin/${programma}`, `/bin/${programma}`].includes(woord)) return false;
+  if (programma === 'sed') return lezerPaden('sed', alsWoorden(args, segment)) !== null;
+  if (programma !== 'git') return PR_MERGE_LEZERS.has(programma);
+  const { subcommand, rest, config } = gitSubcommand(args);
+  if (config.length > 0) return false;
+  return PR_MERGE_GIT.has(subcommand) || (GIT_VORMEN.has(subcommand) && gitLeesvorm(subcommand, alsWoorden(rest, segment)));
+}
+
+// AC-17: git-subcommando's die de naam van een kitscript alleen als pad, patroon of berichttekst krijgen.
+const GIT_TEKST = new Set(['add', 'commit', 'rm', 'mv', 'restore', 'switch', 'branch', 'tag']);
+
+/**
+ * Een uitvoerredirect (elk doel in `Command.redirects` behalve precies `/dev/null`) of een optie die een bestand schrijft
+ * (`--output`, ook als afkorting, zoals `gitWriteOptions`); een kopie van een descriptor (`2>&1`) telt niet (AC-17).
+ * @param {Command} segment
+ */
+function uitvoerRedirect({ words, redirects }) {
+  return redirects.some((doel) => doel !== '/dev/null') || words.some((woord) => abbreviates(woord, '--output', 3));
+}
+
+/**
+ * Het segment start niets (AC-17): geen uitvoerredirect, en een lezer uit `leestAlleen` of `git add|commit|rm|mv|restore|
+ * switch|branch|tag` zonder `-c`, pad-wrapper of variabele vóór het commando.
+ * @param {Command} segment
+ */
+function startNiets(segment) {
+  if (uitvoerRedirect(segment)) return false;
+  if (leestAlleen(segment)) return true;
+  const { assignments, argv, pathWrappers } = splitCommand(segment.words);
+  const [woord = '', ...args] = argv;
+  if (assignments.length + pathWrappers.length > 0 || woord !== 'git') return false;
   const { subcommand, config } = gitSubcommand(args);
-  return PR_MERGE_GIT.has(subcommand) && config.length === 0;
+  return config.length === 0 && GIT_TEKST.has(subcommand);
+}
+
+// AC-17: met een substitutie of een heredoc (`<<`) telt elke vermelding van de naam (de regel van voor AC-17). `eval`, `source`
+// en elk ander programma buiten `startNiets` vallen onder de regel voor het hele commando.
+const KIT_ONZEKER = /\$\(|`|<\(|>\(|<</;
+
+// Een groep of compound: de operator na `)`, `}` of `done` (`|`, `&`, een redirect) hangt niet aan een segment, dus dan telt
+// elke vermelding van de naam, zoals vóór AC-17.
+const COMPOUND_BEGIN = new Set(['{', '}', 'do', 'done', 'fi', 'esac', 'then', 'else']);
+
+/** Heeft het commando een groep (`(`, `)`) of een compound (`{ …; }`, `for`/`if`/`case`)? @param {string} command @param {readonly Command[]} segmenten */
+function heeftGroep(command, segmenten) {
+  if (tokenize(command).some(({ kind, value }) => kind === 'op' && (value === '(' || value === ')'))) return true;
+  return segmenten.some(({ words }) => COMPOUND_BEGIN.has(words[0] ?? ''));
 }
 
 /**
@@ -174,7 +230,8 @@ function leestAlleen(words) {
  * @param {string} woord @param {readonly string[]} doelen
  */
 function globRaakt(woord, doelen) {
-  if (!/[*?[]/.test(woord)) return false;
+  // Een glob met `/` aan het einde (`.claude/worktrees/*/`) breidt alleen uit tot mappen: nooit het script of zijn scriptwoord.
+  if (!/[*?[]/.test(woord) || woord.endsWith('/')) return false;
   try {
     return doelen.some((doel) => path.matchesGlob(doel, woord) || path.matchesGlob(path.basename(doel), path.basename(woord)));
   } catch {
@@ -183,17 +240,22 @@ function globRaakt(woord, doelen) {
   }
 }
 
-/** Start het commando het script op een andere manier dan de exacte vorm? @param {string} command @param {KitScript} script */
+/**
+ * Start het commando het script op een andere manier dan de exacte vorm (spec rolhek-lezen/AC-17)? AC-17 toetst het hele
+ * commando: een vermelding van de naam (scriptwoord, bestandsnaam of een glob die er een raakt, ook in een redirectdoel) telt
+ * niet alleen als élk segment `startNiets` is, er geen groep of compound is, er geen substitutie of heredoc in staat en geen
+ * segment met de naam een geëxpandeerd woord heeft. Zo kan geen ander segment shelltoestand zetten (`exec >f`, `hash -p`,
+ * `PATH=…`, `alias`) die een lezer verandert. Een segment zonder programma, met alleen toewijzingen, is geen `startNiets`.
+ * @param {string} command @param {KitScript} script
+ */
 function startKitScript(command, script) {
   const tekst = command.replace(/[\\'"]/g, '');
-  if (script.script.test(tekst)) return true;
   const segmenten = parseCommands(command);
-  // De kop van een veilige `for`-lus (spec rolhek-vooraf AC-2 (e)) start niets: zijn woorden gaan alleen naar programma's in de romp die zelf niets starten.
-  const { koppen } = veiligeLussen(segmenten);
-  const leest = (/** @type {Command} */ { words }, /** @type {number} */ index) => koppen.has(index) || leestAlleen(words);
-  const raakt = (/** @type {string} */ woord) => globRaakt(woord, script.doelen);
-  if (segmenten.some((segment, index) => !leest(segment, index) && segment.words.some(raakt))) return true;
-  return script.bestand.test(tekst) && !segmenten.every(leest);
+  const raakt = (/** @type {string} */ woord) => script.script.test(woord) || script.bestand.test(woord) || globRaakt(woord, script.doelen);
+  const noemt = (/** @type {Command} */ { words, redirects, inputs = [] }) => [...words, ...redirects, ...inputs].some(raakt);
+  if (!script.script.test(tekst) && !script.bestand.test(tekst) && !segmenten.some(noemt)) return false;
+  if (KIT_ONZEKER.test(command) || heeftGroep(command, segmenten)) return true;
+  return !segmenten.every(startNiets) || segmenten.some((segment) => noemt(segment) && (segment.expanded ?? []).length > 0);
 }
 
 /**
@@ -378,7 +440,7 @@ function decideFile({ rel, change, role }, ctx, decision) {
   // bewijsvorm) blijft voor elke rol geweigerd.
   const inPrGebouwd = overgang?.uitslag === 'gebouwd' && builtReference(change.after ?? '')?.sha === undefined;
   const eigenaarstatus = beslisrol && (a4Toegestaan || inPrGebouwd || ['besluit', 'vrij'].includes(overgang?.uitslag ?? ''));
-  if (!eigenaarstatus && statusZonderBesluit({ rel, change, role }, ctx, decision)) return;
+  if (!eigenaarstatus && statusZonderBesluit({ rel, change, role, overgang, basis }, ctx, decision)) return;
   if (role === 'developer' && developerSpec(rel, change, basis)) {
     decision.deny.push(`${rel}: de developer schrijft geen spec; dat doet de architect (R-WERK-07, ADR 0068 punt 4)`);
     return;
@@ -414,12 +476,19 @@ function adrMetEigenaarstatusWeg(rel, basis, change) {
 
 /**
  * Voor een rol die geen eigenaarstatus schrijft: alleen wat main al heeft, en `goedgekeurd` nooit zelf (ADR 0046 punt 6, ADR 0063).
- * @param {{ rel: string, change: Change, role: string }} target @param {Ctx} ctx @param {Decision} decision
+ * Een spec-overgang die `beslisOvergang` weigert, mag voor geen enkele rol; de melding noemt de overgang (spec rolhek-lezen/AC-19).
+ * @param {{ rel: string, change: Change, role: string, overgang: { uitslag: string } | null, basis: string | null }} target
+ * @param {Ctx} ctx @param {Decision} decision
  * @returns {boolean} true als de beslissing vaststaat
  */
-function statusZonderBesluit({ rel, change, role }, ctx, decision) {
+function statusZonderBesluit({ rel, change, role, overgang, basis }, ctx, decision) {
   if (recordedStatus({ rel, change, role }, ctx, decision)) return true;
   const nextDocument = documentInfo(rel, change.after ?? '');
+  const geweigerd = overgang?.uitslag === 'geweigerd' ? geweigerdeSpecOvergang(rel, basis, nextDocument) : null;
+  if (geweigerd !== null) {
+    decision.deny.push(geweigerd);
+    return true;
+  }
   if (ctx.authority != null && nextDocument !== null && !['voorstel', 'voorgesteld'].includes(nextDocument.status) &&
     !canRecordStatus({ file: rel, text: change.after ?? '' }, ctx.authority)) {
     decision.deny.push(`${rel}: een eigenaarstatus of de inhoud van een goedgekeurde spec schrijven alleen architect en hoofdsessie (ADR 0046 punt 6); status: gebouwd zetten hoofdsessie en architect in de bouw-PR (ADR 0095)`);
@@ -430,6 +499,16 @@ function statusZonderBesluit({ rel, change, role }, ctx, decision) {
     return true;
   }
   return false;
+}
+
+/**
+ * De melding bij een geweigerde spec-overgang (AC-19), of null voor een ADR of een onleesbare kop.
+ * @param {string} rel @param {string | null} basis @param {{ status: string } | null} nieuw
+ */
+function geweigerdeSpecOvergang(rel, basis, nieuw) {
+  const oud = basis === null ? null : documentInfo(rel, basis);
+  if (!inSpecMap(rel) || oud === null || nieuw === null) return null;
+  return `${rel}: de overgang van ${oud.status} naar ${nieuw.status} met deze inhoud mag voor geen enkele rol (ADR 0046 punt 6, R-WERK-08)`;
 }
 
 /**
@@ -584,17 +663,19 @@ function gitMapMelding(file) {
 
 
 /**
- * @param {{ command: string, role: string, tmpdirVrij?: boolean, onzeker?: boolean }} call `tmpdirVrij`: van het buitenste
+ * @param {{ command: string, role: string, feiten: LeesFeiten, tmpdirVrij?: boolean, onzeker?: boolean }} call `tmpdirVrij`: van het buitenste
  *   commando (`tmpdirLetterlijk`), zodat een substitutie een toewijzing erbuiten niet mist. `onzeker`: een substitutie; haar
- *   grenzen zijn niet zeker gelezen, dus geen neutralisatie van aangehaalde tekens (`parseCommands`, R2-B1).
+ *   grenzen zijn niet zeker gelezen, dus geen neutralisatie van aangehaalde tekens (`parseCommands`, R2-B1). `feiten`: van het
+ *   buitenste commando (`leesFeiten`), zodat `ctx.gevolgd` en `ctx.werkmappen` hooguit één keer draaien.
  * @param {Ctx} ctx
  * @param {Decision} decision
  */
-function decideBash({ command, role, tmpdirVrij = tmpdirLetterlijk(command), onzeker = false }, ctx, decision) {
-  decision.deny.push(...rawForbidden(command, { role, onzeker }));
+function decideBash({ command, role, feiten, tmpdirVrij = tmpdirLetterlijk(command), onzeker = false }, ctx, decision) {
+  decision.deny.push(...rawForbidden(command, { role, onzeker, plek: { cwd: ctx.cwd, root: ctx.root, feiten } }));
   decision.deny.push(...staleBranchStart(command));
+  decision.deny.push(...reviewerOperatoren(command, role));
   // De inhoud van `$(…)` en backticks is zelf een commando; zo vallen ook geneste substituties onder dezelfde regels.
-  for (const inner of substitutions(command)) decideBash({ command: inner, role, tmpdirVrij, onzeker: true }, ctx, decision);
+  for (const inner of substitutions(command)) decideBash({ command: inner, role, feiten, tmpdirVrij, onzeker: true }, ctx, decision);
   const setsGhEnv = zetGhOmgeving(parseCommands(command));
   // `cd .git && …` in hetzelfde commando: de zelfladende toets (spec rolhek-vooraf AC-3) leest de woorden daarna vanuit die map.
   /** @type {string | null} null: een `cd` naar een map die pas bij het uitvoeren bekend is */
@@ -606,7 +687,7 @@ function decideBash({ command, role, tmpdirVrij = tmpdirLetterlijk(command), onz
     zelfladend({ argv, redirects: parsed.redirects, role, ruim: parsed.ruim === true },{ ...ctx, cwd: cwdNu ?? ctx.root, cwdOnbekend: cwdNu === null }, decision);
     cwdNu = volgendeMap({ argv, expanded: parsed.expanded ?? [] }, cwdNu, ctx.root);
     ghIssue(argv, { role, ctx, setsGhEnv }, decision);
-    if (role === 'reviewer') reviewerBash({ assignments, argv, pathWrappers, parsed }, { cwd: cwdNu, root: ctx.root }, decision);
+    if (role === 'reviewer') reviewerBash({ assignments, argv, pathWrappers, parsed }, { cwd: cwdNu, root: ctx.root, feiten }, decision);
     const targets = writeTargets(parsed);
     for (const target of targets.writes) bashTarget({ file: target, kind: 'write', role }, ctx, decision);
     for (const target of targets.deletes) bashTarget({ file: target, kind: 'delete', role }, ctx, decision);
@@ -881,13 +962,13 @@ const BRACE_TRICK = /\{[^}]*(?:,|\.\.)[^}]*\}/;
 
 /**
  * Voor elke rol: mergen of goedkeuren in tekst die naar gh, …/pulls/, de GitHub-API of GraphQL wijst, en `pr review` naast gh.
- * Voor een subagent: tekst die gh, de GitHub-API of git credential noemt mag alleen één direct gh-commando zonder shell-trucs zijn; vals positief
- * (`grep gh x`) is bewust geaccepteerd.
+ * Voor een subagent: tekst die gh, de GitHub-API of git credential noemt mag alleen één direct gh-commando zonder shell-trucs zijn,
+ * of een commando dat die tekst zeker alleen leest (`zekerGelezen`, spec rolhek-lezen/AC-18).
  * @param {string} command
- * @param {{ role: string, onzeker: boolean }} opties `onzeker`: zie `decideBash`
+ * @param {{ role: string, onzeker: boolean, plek: Plek }} opties `onzeker`: zie `decideBash`
  * @returns {string[]}
  */
-function rawForbidden(command, { role, onzeker }) {
+function rawForbidden(command, { role, onzeker, plek }) {
   /** @type {string[]} */
   const found = [];
   // Zonder `\`, `'` en `"`: `g\h`, `g""h` en `mer''ge` zijn voor de shell gewoon gh en merge.
@@ -900,12 +981,108 @@ function rawForbidden(command, { role, onzeker }) {
     found.push('gh pr review is voor elke rol verboden, ook achter een omhulsel en zonder --approve (vangnet op de ruwe tekst, AGENTS.md)');
   else if (RAW_PR_MERGE.test(text) || MERGE_MUTATION.test(text) || (RAW_PR_REVIEW.test(text) && RAW_APPROVE.test(text)))
     found.push('`pr merge`, `pr review --approve` of een GraphQL-merge is voor elke rol verboden, ook zonder herkenbaar gh (vangnet op de ruwe tekst, WS-04)');
-  if (role === 'hoofdsessie' || !RAW_SUBAGENT.test(text)) return found;
+  if (role === 'hoofdsessie' || !RAW_SUBAGENT.test(text) || (!onzeker && zekerGelezen(command, plek))) return found;
   const segments = parseCommands(command, onzeker);
   const brace = segments.some(({ words, patterns = words }) => patterns.some((pattern) => BRACE_TRICK.test(pattern)));
   if (segments.length !== 1 || segments[0]?.words[0] !== 'gh' || SHELL_TRICKS.test(command) || brace)
-    found.push('subagent: gh, de GitHub-API of git credential alleen als één direct gh-leescommando zonder shell-trucs');
+    found.push('subagent: gh, de GitHub-API of git credential alleen als één direct gh-leescommando zonder shell-trucs, of als tekst in een lezer met argumenten binnen de repo (spec rolhek-lezen/AC-18)');
   return found;
+}
+
+/**
+ * @typedef {{ werkmappen: () => string[], gevolgd: () => Set<string> }} LeesFeiten de memo van `ctx.werkmappen` en `ctx.gevolgd`
+ * @typedef {{ cwd: string, root: string, feiten: LeesFeiten }} Plek
+ */
+
+/**
+ * Lui en hooguit één keer per beslissing: de roots van de werkmappen (AC-15, met `ctx.root` erbij) en de gevolgde paden van alle
+ * bestandslezers in het commando, in één aanroep van `ctx.gevolgd` (AC-11). Faalt dicht: geen lijst is alleen `ctx.root`,
+ * geen `ctx.gevolgd` of een fout is geen gevolgd pad.
+ * @param {string} command @param {Ctx} ctx @returns {LeesFeiten}
+ */
+function leesFeiten(command, ctx) {
+  /** @type {string[] | undefined} */
+  let roots;
+  /** @type {Set<string> | undefined} */
+  let gevolgd;
+  return {
+    werkmappen: () => (roots ??= werkmappenVan(ctx)),
+    gevolgd: () => (gevolgd ??= gevolgdVan(command, ctx)),
+  };
+}
+
+/** @param {Ctx} ctx */
+function werkmappenVan(ctx) {
+  try {
+    const lijst = ctx.werkmappen?.() ?? [];
+    return [ctx.root, ...(Array.isArray(lijst) ? lijst : [])].map((root) => path.resolve(root));
+  } catch {
+    return [path.resolve(ctx.root)];
+  }
+}
+
+// De bestandslezers waarvan de reviewer alleen gevolgde bestanden leest (AC-11); `ls` toetst alleen `insideRepo`.
+const PAD_LEZERS = new Set(['wc', 'head', 'tail', 'sed']);
+
+/** @param {string} command @param {Ctx} ctx @returns {Set<string>} */
+function gevolgdVan(command, ctx) {
+  const paden = parseCommands(command).flatMap((segment) => {
+    const [woord = '', ...args] = splitCommand(segment.words).argv;
+    return PAD_LEZERS.has(woord) ? (lezerPaden(woord, alsWoorden(args, segment)) ?? []) : [];
+  });
+  if (paden.length === 0 || ctx.gevolgd === undefined) return new Set();
+  try {
+    const uit = ctx.gevolgd([...new Set(paden)]);
+    return uit instanceof Set ? uit : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+/**
+ * `-C <pad>` waarbij `<pad>` letterlijk is en, opgelost tegen `cwd`, precies een root uit `ctx.werkmappen()` (AC-15).
+ * @param {Woord | undefined} pad @param {{ cwd: string | null, feiten: LeesFeiten }} plek
+ */
+function werkmapRoot(pad, { cwd, feiten }) {
+  if (pad === undefined || cwd === null || pad.expands || /[$`]/.test(pad.word) || pad.word.startsWith('~') || pad.word === '') return false;
+  return feiten.werkmappen().includes(path.resolve(cwd, pad.word));
+}
+
+/**
+ * Leest het commando de tekst met gh, de GitHub-API of git credential zeker alleen (AC-18)? Geen `ONZEKERE_TEKST`, en elk segment
+ * een lezer uit `leestAlleen` zonder redirect, met na de programmanaam (bij git: na het subcommando) alleen `--`, een optie
+ * zonder `=` of ingeplakte waarde, of een woord volgens `insideRepo`; de waarde van `-e` bij `git grep` is vrij. Bij git geen
+ * globale optie behalve één `-C <root>`; `--no-index` telt niet als lezer.
+ * @param {string} command @param {Plek} plek
+ */
+function zekerGelezen(command, plek) {
+  // Een werkmap buiten de repo maakt elk "binnen de repo"-pad tot een pad daarbuiten (AC-18, zoals AC-9).
+  if (ONZEKERE_TEKST.test(command) || !werkmapInRepo(plek.cwd, plek.root)) return false;
+  return parseCommands(command).every((segment) => {
+    if (segment.redirects.length + (segment.inputs ?? []).length > 0 || !leestAlleen(segment)) return false;
+    const [woord = '', ...args] = splitCommand(segment.words).argv;
+    if (programName(woord) !== 'git') return args.every(zekerArgument);
+    return gitZeker(alsWoorden(args, segment), plek);
+  });
+}
+
+/** `--`, een optie zonder `=` of ingeplakte waarde, of een los woord (zonder `-` vooraan) volgens `insideRepo`. @param {string} woord */
+function zekerArgument(woord) {
+  if (woord.startsWith('-')) return woord === '--' || /^-[A-Za-z0-9]+$/.test(woord) || /^--[a-z-]+$/.test(woord);
+  return insideRepo(woord);
+}
+
+/** @param {readonly Woord[]} args de woorden na `git` @param {Plek} plek */
+function gitZeker(args, plek) {
+  const { subcommand, rest } = gitSubcommand(args.map(({ word }) => word));
+  const globaal = args.slice(0, args.length - rest.length - 1);
+  const metC = globaal.length === 2 && globaal[0]?.word === '-C' && werkmapRoot(globaal[1], plek);
+  if ((globaal.length > 0 && !metC) || rest.some((woord) => woord.startsWith('--no-i'))) return false;
+  for (let index = 0; index < rest.length; index += 1) {
+    if (subcommand === 'grep' && rest[index] === '-e') index += 1;
+    else if (!zekerArgument(rest[index] ?? '')) return false;
+  }
+  return true;
 }
 
 /**
@@ -1031,11 +1208,13 @@ const REVIEWER_COMMANDS = [
 /**
  * Leescommando's van de reviewer met een vaste optielijst (spec rolhek-lezen/AC-1). `values`: opties die altijd het volgende
  * woord als waarde nemen (pflag), ook als dat met `-` begint; `positional`: hoeveel losse woorden; `paths`: paden na `--`.
+ * `--search` (AC-16) heeft een eigen waarderegel (`zoekwaarde`).
  * @type {Record<string, { flags: string[], values: string[], positional: number, paths?: boolean, count?: boolean }>}
  */
 const REVIEWER_READS = {
   'gh issue view': { flags: ['--comments'], values: ['--json', '--jq'], positional: 1 },
-  'gh issue list': { flags: [], values: ['--label', '--state', '--limit', '--json', '--jq'], positional: 0 },
+  'gh issue list': { flags: [], values: ['--label', '--state', '--limit', '--json', '--jq', '--search', '--author'], positional: 0 },
+  'gh pr list': { flags: [], values: ['--state', '--limit', '--json', '--jq', '--search', '--label', '--base', '--head', '--author'], positional: 0 },
   'gh run view': { flags: ['--log', '--log-failed'], values: ['--json', '--jq', '--job'], positional: 1 },
   'gh run list': { flags: [], values: ['--branch', '--workflow', '--limit', '--json', '--jq'], positional: 0 },
   'pnpm leespad': { flags: ['--json'], values: ['--ref', '--basis'], positional: 0 },
@@ -1043,16 +1222,24 @@ const REVIEWER_READS = {
 };
 // Geen `$`, backtick, `;`, spatie of aanhalingsteken: de shell van pnpm voert niets uit een waarde uit.
 const SAFE_VALUE = /^[A-Za-z0-9_./,:-]+$/;
-// Een positioneel woord mag ook een ref met `~` of `^` zijn (`HEAD~1`, `HEAD^:pad`).
-const SAFE_REF = /^[A-Za-z0-9_./,:~^-]+$/;
 
 /**
- * Een los woord of pad van de reviewer blijft binnen de repository (reviewer-opties/AC-3): niet `/` of `~` vooraan en geen
- * segment `..`, ook niet na `<ref>:`, en geen URL (`gh pr view <url>` leest een andere repo). Anders toont `git diff /dev/null .env` (impliciet --no-index) een bestand buiten de leesregels.
- * @param {string} word
+ * De waarde van `--search` bij `gh pr list` en `gh issue list` (AC-16): één woord dat spaties, aanhalingstekens en `:` mag
+ * bevatten, zonder stuurteken (U+0000 tot U+001F, U+007F) en zonder expansie; gh krijgt het woord direct, zonder tweede shell.
+ * Geen kwalificatie `repo:`, `org:` of `user:` (een andere repository), hoofdletterongevoelig en waar dan ook in de waarde.
+ * @param {string} waarde @param {readonly string[]} expanded `Command.expanded`
  */
-function insideRepo(word) {
-  return SAFE_REF.test(word) && !/^[/~]/.test(word) && !word.includes('://') && !word.split(/[/:]/).includes('..');
+function zoekwaarde(waarde, expanded) {
+  return waarde !== '' && !expanded.includes(waarde) && !/(?:repo|org|user):/i.test(waarde) &&![...waarde].some((teken) => teken.charCodeAt(0) < 0x20 || teken.charCodeAt(0) === 0x7f);
+}
+
+/**
+ * De waarde van een optie uit `values`: `--search` volgens `zoekwaarde`, elke andere volgens `SAFE_VALUE`, `--jq` ook `JQ_PATHS`.
+ * @param {string} optie @param {string | undefined} waarde @param {readonly string[]} expanded
+ */
+function waardeToegestaan(optie, waarde = '', expanded) {
+  if (optie === '--search') return zoekwaarde(waarde, expanded);
+  return SAFE_VALUE.test(waarde) && (optie !== '--jq' || JQ_PATHS.test(waarde));
 }
 // `--jq` alleen met paden (`.title`, `.a.b,.c`): geen jq-functies zoals `env`, die tokens uit de omgeving tonen.
 const JQ_PATHS = /^\.[A-Za-z0-9_.]*(?:,\.[A-Za-z0-9_.]*)*$/;
@@ -1069,30 +1256,95 @@ const GREP_WERKMAP = 'reviewer: `git grep` alleen met de werkmap in de repo; dez
 const GREP_GLOB_PATROON = "reviewer: een patroon met `*`, `?`, `[` of `{` alleen tussen enkele aanhalingstekens (`'a.*b'`), anders breidt bash het uit tot bestandsnamen; het rolhek leest de aanhaling niet zeker bij #, ${, $', $(, ((, backtick, \\ of een newline in het commando (spec rolhek-lezen/AC-7, R-ROL-11)";
 const LS_FILES_MELDING = "reviewer: `git ls-files` alleen zonder opties; paden of een aangehaalde glob (`'*.md'`), los of na -- (spec rolhek-lezen; framework §8)";
 const PAD_MELDING = 'reviewer: een pad of glob blijft binnen de repo: geen `:` (pathspec-magie), `/` of `~` vooraan, geen segment `..` en alleen [A-Za-z0-9_./,:~^-] met de globtekens *, ?, [ en ] (spec rolhek-lezen/AC-8)';
-// rolhek-lezen/AC-8: `insideRepo` met daarbij de globtekens `*`, `?`, `[` en `]`.
-const SAFE_PATHSPEC = /^[A-Za-z0-9_./,:~^*?[\]-]+$/;
+const LEZER_MELDING = "reviewer: `wc` alleen met -l -w -c -m (ook als cluster), `head` met -n <N> of -<N>, `tail` met -n <N>, -n +<N> of -<N>, `sed` alleen als `sed -n '<a>p'` of `sed -n '<a>,<b>p'`, `ls` met een cluster uit 1aAlhdrtSRF; <N> uit [0-9]{1,7}; opties vooraan, daarna alleen paden (één -- mag), geen glob of $ (spec rolhek-lezen/AC-11)";
+const GEVOLGD_MELDING = 'reviewer: `wc`, `head`, `tail` en `sed` lezen alleen bestanden die git volgt, binnen de werkmap (geen .env, link of nieuw bestand); lees een nieuw bestand met de Read-tool (spec rolhek-lezen/AC-11)';
+const GIT_VORM_MELDING = 'reviewer: `git worktree list [--porcelain]`, `git branch` en `git tag` alleen lijsten (een patroon na --list, aangehaald met *), `git ls-tree` met lees-vlaggen, één tree-ish en paden, `git cat-file -s|-t|-e|-p <object>`, `git rev-parse` met lees-vlaggen en refs binnen de repo (spec rolhek-lezen/AC-13 en AC-14)';
+const WERKMAP_MELDING = 'reviewer: `git -C <pad>` alleen precies één keer, letterlijk, naar de root van een werkmap uit `git worktree list`, en daarna geen andere globale optie (spec rolhek-lezen/AC-15)';
+const VORM_MELDING = 'reviewer: geen redirect (ook geen invoer of 2>/dev/null), achtergrond (&), |& of groepering met ( ) (spec rolhek-lezen/AC-12)';
 
-/** @typedef {{ word: string, pattern: string, raw: string, expands: boolean }} Woord een woord met zijn vormen uit `Command` */
+/** @typedef {import('./rolhek-lezers.mjs').Woord} Woord */
 /** @type {Woord} */
 const GEEN_WOORD = { word: '', pattern: '', raw: '', expands: false };
 
 /**
- * Waarom de reviewer dit commando niet mag, of null als het mag (framework §8, spec rolhek-lezen).
+ * Waarom de reviewer dit commando niet mag, of null als het mag (framework §8, spec rolhek-lezen). Eén `git -C <root>` vooraan
+ * (AC-15) valt weg na de toets; de rest toetst dan de leeslijst, en voor `git grep` telt die root als werkmap in de repo (AC-9).
  * @param {readonly string[]} argv
- * @param {{ parsed: Command, werkmapInRepo: boolean }} segment `werkmapInRepo`: de werkmap van het segment ligt in de repo (AC-9)
+ * @param {{ parsed: Command, cwd: string | null, root: string, feiten: LeesFeiten }} segment
  */
-function reviewerRefusal(argv, { parsed, werkmapInRepo }) {
-  const head = argv[0] === 'gh' ? argv.slice(0, 3).join(' ') : argv.slice(0, 2).join(' ');
-  const generic = REVIEWER_ROUTE.replace('<commando>', () => argv.slice(0, 3).join(' '));
-  if (parsed.redirects.length > 0) return generic;
-  if (head === 'git grep') return werkmapInRepo ? grepRefusal(alsWoorden(argv, parsed).slice(2)) : GREP_WERKMAP;
-  if (head === 'git ls-files') return lsFilesRefusal(alsWoorden(argv, parsed).slice(2));
+function reviewerRefusal(argv, { parsed, cwd, root, feiten }) {
+  if (parsed.redirects.length > 0) return REVIEWER_ROUTE.replace('<commando>', () => argv.slice(0, 3).join(' '));
+  if (segmentVormFout(parsed)) return VORM_MELDING;
+  const metC = argv[0] === 'git' && argv[1] === '-C';
+  if (metC && (!werkmapRoot(alsWoorden(argv, parsed)[2], { cwd, feiten }) || (argv[3] ?? '-').startsWith('-'))) return WERKMAP_MELDING;
+  const kern = metC ? ['git', ...argv.slice(3)] : argv;
+  return leeslijstRefusal(kern, { parsed, werkmapInRepo: metC || werkmapInRepo(cwd, root), feiten });
+}
+
+/**
+ * De leeslijst van de reviewer voor een commando zonder `git -C` (AC-1 tot AC-16).
+ * @param {readonly string[]} kern
+ * @param {{ parsed: Command, werkmapInRepo: boolean, feiten: LeesFeiten }} segment `werkmapInRepo`: voor `git grep` (AC-9)
+ */
+function leeslijstRefusal(kern, { parsed, werkmapInRepo, feiten }) {
+  const head = kern[0] === 'gh' ? kern.slice(0, 3).join(' ') : kern.slice(0, 2).join(' ');
+  if (head === 'git grep') return werkmapInRepo ? grepRefusal(alsWoorden(kern, parsed).slice(2)) : GREP_WERKMAP;
+  if (head === 'git ls-files') return lsFilesRefusal(alsWoorden(kern, parsed).slice(2));
+  const lezer = lezerRefusal(kern, { parsed, feiten });
+  if (lezer !== undefined) return lezer;
+  const generic = REVIEWER_ROUTE.replace('<commando>', () => kern.slice(0, 3).join(' '));
   const read = REVIEWER_READS[head] ?? REVIEWER_COMMANDS.find(({ pattern }) => pattern.test(head))?.read;
   if (read === undefined) return generic;
-  if (readArgsAllowed(argv.slice(head.split(' ').length), read)) return null;
+  if (readArgsAllowed(kern.slice(head.split(' ').length), read, parsed.expanded ?? [])) return null;
   const opties = [...read.flags, ...read.values.map((value) => `${value} <waarde>`)];
   const lijst = opties.length > 0 ? opties.join(', ') : 'geen opties; paden na --';
   return `reviewer: \`${head}\` alleen met: ${lijst}; waarden alleen [A-Za-z0-9_./,:-] (spec rolhek-lezen; framework §8)`;
+}
+
+const REVIEWER_OPS = new Set(['(', ')', '&', '|&']);
+
+/**
+ * AC-12: voor de reviewer geen groepering, achtergrond of `|&`, getoetst op het hele commando, zodat ook een operator direct
+ * na `)` (die aan geen segment hangt) telt.
+ * @param {string} command @param {string} role @returns {string[]}
+ */
+function reviewerOperatoren(command, role) {
+  if (role !== 'reviewer') return [];
+  return tokenize(command).some(({ kind, value }) => kind === 'op' && REVIEWER_OPS.has(value)) ? [VORM_MELDING] : [];
+}
+
+/**
+ * AC-12: een invoerredirect, een kopie van een descriptor, achtergrond (`&`), `|&` of groepering met `( … )` (de scheiding
+ * `(` of `)` rond het segment); `{ …; }` weigert de leeslijst al op het woord `{`.
+ * @param {Command} parsed
+ */
+function segmentVormFout({ inputs = [], kopieen = [], scheiding = '' }) {
+  return inputs.length + kopieen.length > 0 || ['&', '|&', '(', ')'].includes(scheiding);
+}
+
+/**
+ * De leesvormen uit AC-11, AC-13 en AC-14; `undefined` als het commando er geen van is.
+ * @param {readonly string[]} kern @param {{ parsed: Command, feiten: LeesFeiten }} bron
+ * @returns {string | null | undefined}
+ */
+function lezerRefusal(kern, bron) {
+  const [woord = '', subcommando = ''] = kern;
+  if (PAD_LEZERS.has(woord) || woord === 'ls') return bestandRefusal(kern, bron);
+  if (woord !== 'git' || !GIT_VORMEN.has(subcommando)) return undefined;
+  return gitLeesvorm(subcommando, alsWoorden(kern.slice(2), bron.parsed)) ? null : GIT_VORM_MELDING;
+}
+
+/**
+ * `wc`, `head`, `tail`, `sed` en `ls` van de reviewer (AC-11): de vorm uit `lezerPaden`, elk pad volgens `insideRepo`, en bij
+ * `wc`, `head`, `tail` en `sed` een bestand dat git volgt (`ctx.gevolgd`, in één aanroep voor het hele commando).
+ * @param {readonly string[]} kern @param {{ parsed: Command, feiten: LeesFeiten }} bron
+ */
+function bestandRefusal(kern, { parsed, feiten }) {
+  const [woord = '', ...args] = kern;
+  const paden = lezerPaden(woord, alsWoorden(args, parsed));
+  if (paden === null) return LEZER_MELDING;
+  if (!paden.every(insideRepo)) return PAD_MELDING;
+  return woord === 'ls' || paden.every((pad) => feiten.gevolgd().has(pad)) ? null : GEVOLGD_MELDING;
 }
 
 /**
@@ -1199,8 +1451,7 @@ function pathspecsRefusal(paden, head) {
  * @param {Woord} pad @param {'git grep' | 'git ls-files'} head
  */
 function pathspecRefusal({ word, pattern, raw }, head) {
-  const binnen = SAFE_PATHSPEC.test(word) && !/^[-/~:]/.test(word) && !word.split(/[/:]/).includes('..');
-  if (!binnen) return PAD_MELDING;
+  if (!pathspecBinnen(word)) return PAD_MELDING;
   if (!/[*?[]/.test(pattern)) return null;
   if (/['"\\]/.test(raw))
     return `reviewer: het rolhek leest niet zeker dat de glob \`${word}\` aangehaald is (#, \${, $', $(, ((, backtick, \\ of een newline in het commando, R-ROL-11); laat de glob weg of zoek in een map (bijv. \`-- docs\`) (spec rolhek-lezen/AC-8)`;
@@ -1221,22 +1472,24 @@ function werkmapInRepo(cwd, root) {
 /**
  * Pad-wrapper, variabele vóór het commando (`X=… cmd`, `env X=… cmd`) of een commando buiten de leeslijst (rolhek-lezen/AC-4).
  * @param {{ assignments: readonly string[], argv: readonly string[], pathWrappers: readonly string[], parsed: Command }} command
- * @param {{ cwd: string | null, root: string }} plek de werkmap van het segment (null: onbekend) en de root van de repo
+ * @param {{ cwd: string | null, root: string, feiten: LeesFeiten }} plek de werkmap van het segment (null: onbekend), de root
+ *   van de repo en de lazy feiten uit `ctx.gevolgd` en `ctx.werkmappen`
  * @param {Decision} decision
  */
-function reviewerBash({ assignments, argv, pathWrappers, parsed }, { cwd, root }, decision) {
+function reviewerBash({ assignments, argv, pathWrappers, parsed }, { cwd, root, feiten }, decision) {
   if (pathWrappers.length > 0) decision.deny.push(`reviewer: een pad-wrapper (\`${pathWrappers[0] ?? ''}\`) is verboden; framework §8`);
   if (assignments.length > 0)
     decision.deny.push(`reviewer: geen variabele vóór het commando (\`${(assignments[0] ?? '').split('=')[0] ?? ''}\`); framework §8`);
-  const refusal = reviewerRefusal(argv, { parsed, werkmapInRepo: werkmapInRepo(cwd, root) });
+  const refusal = reviewerRefusal(argv, { parsed, cwd, root, feiten });
   if (refusal !== null) decision.deny.push(refusal);
 }
 
 /**
  * @param {readonly string[]} args
  * @param {{ flags: string[], values: string[], positional: number, paths?: boolean, count?: boolean }} read
+ * @param {readonly string[]} expanded `Command.expanded`, voor de waarde van `--search` (AC-16)
  */
-function readArgsAllowed(args, read) {
+function readArgsAllowed(args, read, expanded) {
   let positional = 0;
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index] ?? '';
@@ -1244,7 +1497,7 @@ function readArgsAllowed(args, read) {
     if (arg === '--' && read.paths === true) return args.slice(index + 1).every((path) => insideRepo(path) && !path.startsWith('-'));
     if (read.values.includes(arg)) {
       index += 1;
-      if (!SAFE_VALUE.test(args[index] ?? '') || (arg === '--jq' && !JQ_PATHS.test(args[index] ?? ''))) return false;
+      if (!waardeToegestaan(arg, args[index], expanded)) return false;
     } else if (arg.startsWith('-')) {
       // `-<n>` (git log -5) is een aantal, geen optie.
       if (!read.flags.includes(arg) && !(read.count === true && /^-\d+$/.test(arg))) return false;

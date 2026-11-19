@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
+import { A4_MELDING, beslisOvergang } from '../../rails/hooks/lib/document-state.mjs';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 
 // docs/template/specs/templateregime.md AC-10 en AC-11 (ADR 0089 punt 1): het rolhek behandelt `docs/template/specs/` en
@@ -185,3 +186,107 @@ describe('templateregime/AC-11 rolhek: docs/template/adr/ is een ADR-map zoals d
     });
   });
 });
+
+// rolhek-lezen/AC-19 (ADR 0099, OV-2): architect en hoofdsessie wijzigen de inhoud van een vervallen spec (overgang `besluit`);
+// een vervallen ADR blijft voor elke rol onwijzigbaar (`a4`); een geweigerde spec-overgang noemt de overgang, niet de rollen.
+const SPEC_VERVALLEN_INHOUD: [string, string, string] = ['Bestaande kit.', 'Andere kit.', spec('vervallen')];
+const SPEC_GEBOUWD_INHOUD: [string, string, string] = ['Bestaande kit.', 'Andere kit.', spec('gebouwd')];
+const ADR_VERVALLEN_INHOUD: [string, string, string] = ['Het besluit.', 'Een ander besluit.', adr('vervallen')];
+const BESLISROL = ['hoofdsessie', 'architect'] as const;
+const ALLEEN_BESLISROL = 'alleen architect en hoofdsessie';
+const agentVan = (rol: string): string | undefined => (rol === 'hoofdsessie' ? undefined : rol);
+const overgangMelding = (oud: string, nieuw: string): string =>
+  `<pad>: de overgang van ${oud} naar ${nieuw} met deze inhoud mag voor geen enkele rol (ADR 0046 punt 6, R-WERK-08)`;
+
+/** Een Write die een bestaand bestand (`basis` op main en in de werkmap) door `inhoud` vervangt. */
+const herschrijf = (pad: string, [inhoud, basis]: [string, string], rol: string | undefined) =>
+  beslis(
+    { tool_name: 'Write', tool_input: { file_path: `${ROOT}/${pad}`, content: inhoud }, ...als(rol) },
+    { [pad]: basis },
+    pad,
+  );
+
+describe.each(MAPPEN)('rolhek-lezen/AC-19 map $naam ($spec/): de inhoud van een vervallen spec', (map) => {
+  const pad = `${map.spec}/x.md`;
+
+  test.each(BESLISROL)(
+    'rolhek-lezen/AC-19 %s wijzigt de inhoud van een vervallen spec (basis: een voorstel)',
+    (rol) => {
+      const [van, naar] = SPEC_VERVALLEN_INHOUD;
+      expect(wijzig(pad, [van, naar, spec('voorstel')], agentVan(rol)).deny).toStrictEqual([]);
+      expect(wijzig(pad, SPEC_VERVALLEN_INHOUD, agentVan(rol)).deny).toStrictEqual([]);
+    },
+  );
+
+  test('rolhek-lezen/AC-19 de developer is geweigerd voor de inhoud van een vervallen spec, met de melding die architect en hoofdsessie noemt', () => {
+    const [van, naar] = SPEC_VERVALLEN_INHOUD;
+    expect(alleen(wijzig(pad, [van, naar, spec('voorstel')], 'developer').deny)).not.toContain(ALLEEN_BESLISROL);
+    expect(alleen(wijzig(pad, SPEC_VERVALLEN_INHOUD, 'developer').deny)).toContain(ALLEEN_BESLISROL);
+  });
+
+  test.each(['tester', 'reviewer', 'docs'])(
+    'rolhek-lezen/AC-19 %s heeft geen schrijfrecht op een vervallen spec',
+    (rol) => {
+      // Basis: dezelfde Edit door de architect gaat door; alleen de rol verschilt.
+      expect(wijzig(pad, SPEC_VERVALLEN_INHOUD, 'architect').deny).toStrictEqual([]);
+      expect(wijzig(pad, SPEC_VERVALLEN_INHOUD, rol).deny).not.toStrictEqual([]);
+    },
+  );
+
+  test('rolhek-lezen/AC-19 beslisOvergang: de inhoud van een vervallen spec is besluit, ongewijzigd is vrij', () => {
+    const [van, naar, basis] = SPEC_VERVALLEN_INHOUD;
+    expect(beslisOvergang(pad, basis, basis).uitslag).toBe('vrij');
+    expect(beslisOvergang(pad, basis, basis.replace(van, naar)).uitslag).toBe('besluit');
+  });
+
+  test.each(BESLISROL)('rolhek-lezen/AC-19 %s wijzigt de inhoud van een gebouwde spec', (rol) => {
+    expect(wijzig(pad, SPEC_GEBOUWD_INHOUD, agentVan(rol)).deny).toStrictEqual([]);
+  });
+});
+
+describe.each(MAPPEN)('rolhek-lezen/AC-19 map $naam ($adr/): een vervallen ADR blijft onwijzigbaar', (map) => {
+  const pad = `${map.adr}/0001-x.md`;
+  const [van, naar] = ADR_VERVALLEN_INHOUD;
+
+  test.each(perRol)(
+    'rolhek-lezen/AC-19 %s: de inhoud van een vervallen ADR geeft a4 met A4_MELDING (basis: een voorgesteld ADR)',
+    (_n, rol) => {
+      expect(alleen(wijzig(pad, [van, naar, adr('voorgesteld')], rol).deny)).not.toContain(A4_MELDING);
+      expect(wijzig(pad, ADR_VERVALLEN_INHOUD, rol).deny).toContain(`<pad>: ${A4_MELDING}`);
+    },
+  );
+
+  test('rolhek-lezen/AC-19 beslisOvergang: de inhoud van een vervallen ADR is a4, een voorgesteld ADR vrij', () => {
+    const basis = ADR_VERVALLEN_INHOUD[2];
+    expect(beslisOvergang(pad, adr('voorgesteld'), adr('voorgesteld').replace(van, naar)).uitslag).toBe('vrij');
+    expect(beslisOvergang(pad, basis, basis.replace(van, naar)).uitslag).toBe('a4');
+  });
+});
+
+describe.each(MAPPEN)(
+  'rolhek-lezen/AC-19 map $naam ($spec/): een geweigerde spec-overgang noemt de overgang',
+  (map) => {
+    const pad = `${map.spec}/x.md`;
+    const terugGoedgekeurd = spec('goedgekeurd', 'Andere kit.');
+
+    // Alleen de rollen die de statustoets bereiken (hoofdsessie, architect, developer); tester, reviewer en docs krijgen
+    // de eigen melding van hun schrijfrecht of van `approvesSpec` (zie het rapport).
+    test.each(['hoofdsessie', 'architect', 'developer'])(
+      'rolhek-lezen/AC-19 %s: vervallen terug naar goedgekeurd geeft de overgangsmelding, zonder alleen architect en hoofdsessie',
+      (rol) => {
+        const melding = overgangMelding('vervallen', 'goedgekeurd');
+        expect(alleen(herschrijf(pad, [terugGoedgekeurd, spec('voorstel')], agentVan(rol)).deny)).not.toContain(
+          melding,
+        );
+        const deny = herschrijf(pad, [terugGoedgekeurd, spec('vervallen')], agentVan(rol)).deny;
+        expect(deny).toContain(melding);
+        expect(alleen(deny)).not.toContain(ALLEEN_BESLISROL);
+      },
+    );
+
+    test('rolhek-lezen/AC-19 beslisOvergang: vervallen naar goedgekeurd met andere inhoud is geweigerd', () => {
+      expect(beslisOvergang(pad, spec('voorstel'), terugGoedgekeurd).uitslag).toBe('besluit');
+      expect(beslisOvergang(pad, spec('vervallen'), terugGoedgekeurd).uitslag).toBe('geweigerd');
+    });
+  },
+);

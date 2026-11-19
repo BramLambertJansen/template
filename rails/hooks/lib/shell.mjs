@@ -3,7 +3,12 @@
 // volledige shell: wat tekstheuristiek niet vangt (`bash -c`, `node -e`, `$(…)`), vangt de goedkeuring uit CODEOWNERS (ADR 0089, ADR 0091).
 
 /**
- * @typedef {{ words: string[], redirects: string[], expanded?: string[], patterns?: string[], raws?: string[], ruim?: boolean }} Command
+ * @typedef {{ words: string[], redirects: string[], expanded?: string[], patterns?: string[], raws?: string[], ruim?: boolean,
+ *   inputs?: string[], kopieen?: string[], scheiding?: string }} Command
+ * `redirects`: uitvoerdoelen (`>`, `>>`, `>|`, `&>`, `&>>`, `>&<bestand>`, `<>`, ook met een fd-nummer).
+ * `inputs`: invoerdoelen (`<`, `<<<`, `<&`, en de delimiter van een heredoc na `<<`); spec rolhek-lezen/AC-12.
+ * `kopieen`: kopieën van een descriptor (`2>&1`, `>&-`); die schrijven geen bestand.
+ * `scheiding`: de operator na het segment (`;`, `&&`, `||`, `|`, `|&`, `&`, `(`, `)`, newline), leeg aan het einde.
  * `raws`: per woord van `words` (zelfde index) de ruwe tekst zoals in het commando, met quotes en escapes.
  * `expanded`: woorden waarin de shell nog uitbreidt (`$` of een backtick buiten enkele aanhalingstekens, ook `$'…'`); hun
  * waarde hier is dus niet wat het programma krijgt.
@@ -23,7 +28,7 @@
 // Staat in `Command.patterns` voor een aangehaald glob-, brace- of tildeteken: zelf geen glob-teken en geen letter van `gh`.
 export const QUOTED = '\u0000';
 const SEPARATORS = new Set([';', '&&', '||', '|', '&', '|&', '\n', '(', ')']);
-const OPERATORS = ['&>>', '>>', '>|', '&>', '>&', '<<-', '<<<', '<<', '<&', '&&', '||', '|&', '<', '>', ';', '|', '&', '(', ')', '\n'];
+const OPERATORS = ['&>>', '>>', '>|', '&>', '>&', '<<-', '<<<', '<<', '<&', '<>', '&&', '||', '|&', '<', '>', ';', '|', '&', '(', ')', '\n'];
 
 // Allowlist (eigenaarbesluit 6 november 2026, spec rolhek-vooraf AC-2 (b)): `patterns` neutraliseert alleen wat deze lezer zeker leest, gewone
 // enkele en dubbele aanhalingstekens. Elke constructie die de quotegrenzen kan verschuiven en die de lezer niet volledig kent,
@@ -31,7 +36,7 @@ const OPERATORS = ['&>>', '>>', '>|', '&>', '>&', '<<-', '<<<', '<<', '<&', '&&'
 // en een newline (heredoc, meerdere regels). Een verkeerde quotegrens zou echte onaangehaalde tekst als aangehaald lezen (reviews B1, R2-B1); dan
 // neutraliseert `patterns` niets, ook niet in een substitutie daarbinnen (`onzeker` van de aanroeper). Een quote zonder
 // sluitteken hoeft er niet bij: bash voert zo'n commando niet uit.
-const ONZEKERE_TEKST = /[#`\\\n]|\$[{'(]|\(\(/;
+export const ONZEKERE_TEKST = /[#`\\\n]|\$[{'(]|\(\(/;
 // Review B3 (#622, eigenaarbesluit 7 november 2026): de tokenizer haalt escapes en aanhalingen weg vóór de glob-omzetting;
 // met een van deze tekens in het commando is de klassegrens in een woordwaarde niet meer zeker (`Command.ruim`).
 const KLASSE_ONZEKER = /[\\'"]/;
@@ -46,32 +51,56 @@ export function parseCommands(script, onzeker = false) {
   const ruim = onzeker || KLASSE_ONZEKER.test(script);
   /** @type {Command[]} */
   const commands = [];
+  /** @returns {Command} */
+  const leeg = () => ({ words: [],redirects: [], expanded: [], patterns: [], raws: [], ruim, inputs: [], kopieen: [], scheiding: '' });
   /** @type {Command} */
-  let current = { words: [], redirects: [], expanded: [], patterns: [], raws: [], ruim };
-  /** @type {'redirect' | 'dup' | 'skip' | null} */
+  let current = leeg();
+  /** @type {'redirect' | 'dup' | 'invoer' | null} */
   let expect = null;
   for (const token of tokenize(script)) {
     if (token.kind === 'op' && SEPARATORS.has(token.value)) {
-      if (current.words.length > 0 || current.redirects.length > 0) commands.push(current);
-      current = { words: [], redirects: [], expanded: [], patterns: [], raws: [], ruim };
+      if (heeftInhoud(current)) commands.push({ ...current, scheiding: token.value });
+      current = leeg();
       expect = null;
-    } else if (token.kind === 'op') {
-      // `<`, `<<<`, `<<` en kopieën van een descriptor (`>&2`, `2>&1`, `>&-`) schrijven geen bestand; `>&bestand` wel.
-      if (token.value === '>&') expect = 'dup';
-      else expect = token.value.startsWith('<') || token.value.endsWith('&') ? 'skip' : 'redirect';
-    } else {
-      if (expect === 'redirect' || (expect === 'dup' && !/^(?:\d+|-)$/.test(token.value))) current.redirects.push(token.value);
-      else if (expect === null) {
-        current.words.push(token.value);
-        current.patterns?.push(neutraal ? token.value : (token.pattern ?? token.value));
-        current.raws?.push(token.raw ?? token.value);
-      }
-      if (token.expands === true) current.expanded?.push(token.value);
+    } else if (token.kind === 'op') expect = redirectSoort(token.value);
+    else {
+      voegWoordToe(current, { token, expect, neutraal });
       expect = null;
     }
   }
-  if (current.words.length > 0 || current.redirects.length > 0) commands.push(current);
+  if (heeftInhoud(current)) commands.push(current);
   return commands;
+}
+
+/** @param {Command} command */
+function heeftInhoud({ words, redirects, inputs = [], kopieen = [] }) {
+  return words.length + redirects.length + inputs.length + kopieen.length > 0;
+}
+
+/**
+ * Wat het woord na een redirect-operator is: `<>` en elke `>`-vorm schrijven een bestand; `>&` is een kopie van een
+ * descriptor of (met een bestandsnaam) een schrijfdoel; `<`, `<<`, `<<<` en `<&` lezen (spec rolhek-lezen/AC-12 en AC-17).
+ * @param {string} op @returns {'redirect' | 'dup' | 'invoer'}
+ */
+function redirectSoort(op) {
+  if (op === '>&') return 'dup';
+  return op.startsWith('<') && op !== '<>' ? 'invoer' : 'redirect';
+}
+
+/**
+ * @param {Command} current
+ * @param {{ token: Token, expect: 'redirect' | 'dup' | 'invoer' | null, neutraal: boolean }} woord
+ */
+function voegWoordToe(current, { token, expect, neutraal }) {
+  const soort = expect === 'dup' ? (/^(?:\d+|-)$/.test(token.value) ? 'kopie' : 'redirect') : expect;
+  const doelen = { redirect: current.redirects, kopie: current.kopieen, invoer: current.inputs };
+  if (soort !== null) doelen[soort]?.push(token.value);
+  else {
+    current.words.push(token.value);
+    current.patterns?.push(neutraal ? token.value : (token.pattern ?? token.value));
+    current.raws?.push(token.raw ?? token.value);
+  }
+  if (token.expands === true) current.expanded?.push(token.value);
 }
 
 // `$TMPDIR/`, `"$TMPDIR/` of `"$TMPDIR"/` aan het begin van een woord (spec rolhek-vooraf AC-2 (d)), of een
