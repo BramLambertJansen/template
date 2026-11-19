@@ -53,7 +53,7 @@ test('meting-kerncijfers/AC-2: de tabel heeft een rij per kerncijfer', () => {
   const uit = tabel(f);
 
   expect(uit).toMatch(/^\|[^\n]*\|\n\|[\s:|-]+\|$/m);
-  // GEWIJZIGD (agent-merge-niet-kritiek/OV-1, R-TEST-02): de meting telt geen bevindingen van een externe reviewdienst meer; die rij is weg.
+  // GEWIJZIGD (agent-samenvoegen/AC-11, R-TEST-02): de meting telt geen bevindingen van een externe reviewdienst meer; die rij is weg.
   for (const naam of [/leespad/i, /doorlooptijd/i, /reviewrondes/i, /CI-rood/i, /weigeringen/i])
     expect(rij(uit, naam), String(naam)).not.toBe('');
 });

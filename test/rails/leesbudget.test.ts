@@ -621,7 +621,7 @@ async function trend(lijst: Pr[]): Promise<{ uit: unknown; meldingen: string[] }
 }
 
 describe("leesbudget/AC-7: meting --trend over twintig gemergde PR's", () => {
-  // GEWIJZIGD (agent-merge-niet-kritiek/OV-1, R-TEST-02): de meting telt geen bevindingen van een externe reviewdienst meer; die rij is weg.
+  // GEWIJZIGD (agent-samenvoegen/AC-11, R-TEST-02): de meting telt geen bevindingen van een externe reviewdienst meer; die rij is weg.
   test.each([
     ['CI-rood', { nieuw: { ciRood: 2 }, oud: { ciRood: 1 }, sleutel: 'ciRood' }],
     ['reviewrondes', { nieuw: { reviewrondes: 3 }, oud: { reviewrondes: 1 }, sleutel: 'reviewrondes' }],
@@ -725,7 +725,7 @@ describe('leesbudget/AC-7: pnpm meting --trend als proces', { timeout: 60_000 },
     expect(prList[0]).toContain('--jq');
     expect(prList[0]).toContain('per_page=100');
     expect(prList[0]).not.toContain('--paginate');
-    // GEWIJZIGD (agent-merge-niet-kritiek/OV-1, R-TEST-02): de meting telt geen bevindingen van een externe reviewdienst meer: de trend vraagt geen reacties per PR meer op.
+    // GEWIJZIGD (agent-samenvoegen/AC-11, R-TEST-02): de meting telt geen bevindingen van een externe reviewdienst meer: de trend vraagt geen reacties per PR meer op.
     expect(r.aanroepen.filter((a) => a.startsWith('api ') && a.includes('/comments'))).toStrictEqual([]);
     const runList = r.aanroepen.filter((a) => a.startsWith('run list'));
     expect(runList.length).toBeGreaterThan(0);

@@ -9,12 +9,13 @@ Herzien: 2026-11-09 (#634): punt 3, gewijzigd door [0086](0086-aangehaalde-hered
 Herzien: 2026-11-12 (#705): punt 2: de effecttoets is weg (ADR 0091 punt 1)
 
 Herzien: 2026-11-14 (#714): ingekort tot wat nog geldt na ADR 0091; de puntnummers zijn ongewijzigd, de oude tekst staat in git
+Herzien: 2026-11-19: verwijzingen naar verwijderde documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg)
 
-Wijzigt [0082](0082-zelfladend-sandbox-en-leeslijst.md) punt 2 en 4 en [0066](0066-schrijfgrens-op-effect.md) punt 2.
+Wijzigt [0082](0082-zelfladend-sandbox-en-leeslijst.md) punt 2 en 4.
 Drempel: A3 (een grens van het besturingssysteem vervalt en een vangnet wordt smaller) en A4. Aanleiding: melding van de
 eigenaar (5 november 2026) dat git, commit en push, de sandbox en de subagents "lopende band" falen, ook bij het opstarten van
-een nieuwe app; leerpunten #553, #582, #583 en #587. Uitwerking: [spec rolhek-vooraf-krimp](../specs/rolhek-vooraf-krimp.md)
-AC-3 en AC-10, [spec rolhek-effect](../specs/rolhek-effect.md) AC-1 en AC-10.
+een nieuwe app; leerpunten #553, #582, #583 en #587. Uitwerking:
+[spec rolhek-vooraf](../specs/rolhek-vooraf.md) rolhek-vooraf/AC-2 en rolhek-vooraf/AC-3.
 
 ## Context
 
@@ -36,7 +37,7 @@ Drie lagen van de bewaking zijn elk apart verdedigbaar, maar geven samen meer va
   aanroep `core.fsmonitor`, `core.hooksPath` en `hook.*.enabled` uit; de rest van de config niet. Planten vraagt een
   schrijfactie in `.git`: een letterlijk pad weigert het rolhek vooraf voor elke rol, een samengestelde naam (`node -e`)
   ziet het niet.
-- **De nacontrole van de toets op effect (0066 punt 2).** Alles wat na een subagent veranderde, kwam op zijn naam: werk van
+- **De nacontrole van de toets op effect.** Alles wat na een subagent veranderde, kwam op zijn naam: werk van
   de hoofdsessie in een andere worktree, het anker van de stub-lader, een merge van de eigenaar in zijn eigen terminal. Die
   toets is sindsdien helemaal weggehaald (0091).
 - **De vangnetten vooraf.** Vijf van de twintig aanroepen weigerde het rolhek. Eén terecht (een nieuwe branch zonder

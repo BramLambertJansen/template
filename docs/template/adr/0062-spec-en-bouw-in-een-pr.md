@@ -16,9 +16,10 @@ Herzien: 2026-11-12 (#703): punt 2 en 5, in de template gaat ook kritiek werk in
 Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 Herzien: 2026-11-18 (#805): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.md) punt 1 en 3, punt 4: `status: gebouwd`
 zonder PR-nummer; de toets van `docs:status` na de merge vervalt, en daarmee de eerste regel hierboven
+Herzien: 2026-11-19: verwijzingen naar verwijderde documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg)
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 5, 10, 12, 14 en 15. Drempel: A3 (de lanetoets in
-`check-document-status` laat meer toe) en A4 (afspraken uit een geaccepteerd ADR). Uitwerking: [spec](../specs/spec-en-bouw-in-een-pr.md).
+`check-document-status` laat meer toe) en A4 (afspraken uit een geaccepteerd ADR). Uitwerking: [spec gebouwd-zonder-nummer](../specs/gebouwd-zonder-nummer.md), gebouwd-zonder-nummer/AC-13 en gebouwd-zonder-nummer/AC-14.
 
 ## Context
 

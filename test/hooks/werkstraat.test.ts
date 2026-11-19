@@ -242,7 +242,7 @@ test('session-start: branch, wijzigingen en de verwijzing naar de feiten als con
   expect(text).toContain('node scripts/kit/feiten.mjs');
 });
 
-test('session-start op main: noemt de startvorm voor een nieuwe branch vanaf een verse origin/main', () => {
+test('rolhek-vooraf/AC-6: session-start op main: noemt de startvorm voor een nieuwe branch vanaf een verse origin/main', () => {
   const { deps } = fakeDeps({ output: 'main' });
   const text = sessionStart(deps).stdout ?? '';
 

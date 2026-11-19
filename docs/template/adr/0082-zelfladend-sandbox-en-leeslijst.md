@@ -6,11 +6,12 @@ Herzien: 2026-11-05 (#584): punt 2, een echt `.git/commondir` helpt niet; een ag
 Herzien: 2026-11-05 (#588): punt 2 en 4, gewijzigd door [0083](0083-bewaking-met-minder-wrijving.md): `./.git/commondir` gaat uit `denyWrite`, elke hook valt dicht bij een geplant bestand; de worktree is een keuze.
 Herzien: 2026-11-16 (#745): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 Herzien: 2026-11-17 (#774): punt 1 vervalt, de lijst in `denyWrite` is nooit gebouwd (eigenaarbesluit)
+Herzien: 2026-11-19: verwijzingen naar verwijderde documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg)
 
 Wijzigt [0071](0071-rolhek-vooraf-vaste-lijst.md) punt 2 en [0061](0061-claude-sandbox-werkstraat.md) punt 3. Drempel: A3
 (een grens verschuift van tekst naar het besturingssysteem). Aanleiding: leerpunt #500 (PR #494, drie reviewrondes met
-telkens nieuwe omwegen). Uitwerking, metingen en volgorde: [spec rolhek-vooraf-krimp](../specs/rolhek-vooraf-krimp.md) AC-3
-en AC-9.
+telkens nieuwe omwegen). Uitwerking: [spec rolhek-vooraf](../specs/rolhek-vooraf.md)
+rolhek-vooraf/AC-3.
 
 ## Context
 
@@ -37,8 +38,8 @@ draait dat deels om. Voor `settings.json` en de stubs geldt het falen van git al
 
 ## Besluit
 
-1. *(vervallen: de lijst in `denyWrite` is nooit gebouwd; de uitvoering hing aan spec rolhek-vooraf-krimp, die met 0091
-   punt 3 verviel. Wat blijft is de toets vooraf van punt 3 en wat Claude Code zelf afschermt, zie Context.)*
+1. *(vervallen: de lijst in `denyWrite` is nooit gebouwd; de uitvoering verviel met 0091
+   punt 3. Wat blijft is de toets vooraf van punt 3 en wat Claude Code zelf afschermt, zie Context.)*
 2. *(vervallen, zie 0083)*
 3. **Vooraf een leeslijst, ook voor wat geen pad letterlijk noemt.** Een woord kan naar een zelfladend pad wijzen:
    letterlijk, als glob, als map erboven, of als niet-herleidbare expansie. Een commando met zo'n woord gaat alleen door

@@ -145,7 +145,7 @@ describe('developer, tester en docs: dezelfde schrijfacties blijven geweigerd (p
     expect(run(edit(SPEC_GOEDGEKEURD, ['status: goedgekeurd', gebouwd], 'developer')).deny).not.toHaveLength(0);
   });
 
-  test('spec-en-bouw/AC-8 developer: gebouwd # #<PR> zonder SHA via Edit blijft geweigerd (alleen architect en hoofdsessie)', () => {
+  test('gebouwd-zonder-nummer/AC-13 developer: gebouwd # #<PR> zonder SHA via Edit blijft geweigerd (alleen architect en hoofdsessie)', () => {
     expect(
       run(edit(SPEC_GOEDGEKEURD, ['status: goedgekeurd', 'status: gebouwd # #5'], 'developer')).deny,
     ).not.toHaveLength(0);
@@ -160,7 +160,7 @@ describe('developer, tester en docs: dezelfde schrijfacties blijven geweigerd (p
     expect([architect.deny, architect.ask]).toStrictEqual([[], []]);
   });
 
-  test('spec-en-bouw/AC-8 hoofdsessie en architect: gebouwd # #<PR> zonder SHA in de PR zelf mag (ADR 0062 punt 4)', () => {
+  test('gebouwd-zonder-nummer/AC-13 hoofdsessie en architect: gebouwd # #<PR> zonder SHA in de PR zelf mag (ADR 0062 punt 4)', () => {
     for (const agent of [undefined, 'architect']) {
       const goedgekeurd = run(edit(SPEC_GOEDGEKEURD, ['status: goedgekeurd', 'status: gebouwd # #5'], agent));
       const nieuw = run(edit(SPEC_VOORSTEL, ['status: voorstel', 'status: gebouwd # #5'], agent));

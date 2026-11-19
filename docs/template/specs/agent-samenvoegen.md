@@ -68,15 +68,15 @@ steekproefregel), bij een reden exit 1 met `Geen merge (ADR 0069):` en per reden
   melding voor een privé-repo zonder betaald abonnement zijn ongewijzigd. De controle op fouten in `CODEOWNERS` na het zetten
   vervalt.
 - **agent-samenvoegen/AC-6** — Weg zijn `scripts/kit/agent-token.mjs` (vervallen),
-  `test/scripts/agent-token.test.ts` (vervallen) en `test/scripts/merge-ruleset.test.ts` (vervallen); de tests van AC-3 en AC-4 vervangen die laatste. De spec
-  `agent-token` heeft status `vervallen`; in de spec `templateregime` zijn templateregime/AC-1, -6 en -14 en het deel van templateregime/AC-7 over de
+  `test/scripts/agent-token.test.ts` (vervallen) en `test/scripts/merge-ruleset.test.ts` (vervallen); de tests van AC-3 en AC-4 vervangen die laatste. De spec van het
+  tokenscript is verwijderd; in de spec `templateregime` zijn templateregime/AC-1, -6 en -14 en het deel van templateregime/AC-7 over de
   inhoudstoets gemarkeerd als vervallen door ADR 0093. Eigenaarakkoord voor het verwijderen van die tests via deze spec
   (R-TEST-02).
 - **agent-samenvoegen/AC-7** — Vervallen door ADR 0100 (procesbewijs is geen acceptatiecriterium). Was: Bewijs na de merge, in de eerste PR daarna zonder beschermd pad: de hoofdsessie opent hem onder
   het account van de eigenaar en voegt hem bij groene checks samen met `pnpm pr:merge`; de uitvoer staat in de thread. En op
   een PR met een beschermd pad weigert het script met de reden uit AC-3; die uitvoer staat in die PR. Vooraf sluit de
   hoofdsessie proef-PR #795 zonder merge.
-- **agent-samenvoegen/AC-8** (nog niet gebouwd) — Uit spec agent-merge-niet-kritiek (vervallen) AC-3. `pnpm pr:merge <nr>`
+- **agent-samenvoegen/AC-8** — `pnpm pr:merge <nr>`
   (`scripts/kit/pr-merge.mjs`) leest modus en kop van `main` via REST (`GET …/branches/main`,
   `GET …/contents/.claude/gates.json?ref=<sha>`), niet uit de lokale `origin/main`; ontbrekend of onleesbaar telt als
   `"eigenaar"`. `requiredChecks` komt uit `.claude/decisions.json` op dezelfde main-SHA. Een reden, elk met een eigen regel en
@@ -85,7 +85,7 @@ steekproefregel), bij een reden exit 1 met `Geen merge (ADR 0069):` en per reden
   de kop van `main` is niet `success`, loopt nog of ontbreekt. Een ongeldig argument (leeg, `0`, twee nummers, `7;x`, `abc`)
   geeft `Gebruik: pnpm pr:merge <nummer>`. Samenvoegen alleen via `PUT /repos/{repo}/pulls/{nr}/merge` met
   `merge_method=squash` en `sha=<head-SHA>`; alleen REST. Bewijs nu: `test/scripts/pr-merge.test.ts:73`.
-- **agent-samenvoegen/AC-9** (nog niet gebouwd) — Uit spec agent-merge-niet-kritiek (vervallen) AC-4. Het rolhek weigert elke
+- **agent-samenvoegen/AC-9** — Het rolhek weigert elke
   rol `gh pr merge`, `gh api …/merge` en auto-merge, en geeft alleen de hoofdsessie in de repo-root `allow` voor precies
   `pnpm pr:merge <nr>` (`<nr>` cijfers), als `trustedMerge` waar is: modus `niet-kritiek` in het anker en `MERGE_FILES`
   (`HOST_FILES` uit `rails/hooks/lib/runner-authority.mjs` plus `rails`) lokaal en gecommit gelijk aan het anker, zonder
@@ -95,12 +95,12 @@ steekproefregel), bij een reden exit 1 met `Geen merge (ADR 0069):` en per reden
   `blame`, `ls-files`, `grep` blijft vrij. `.claude/settings.json` houdt `deny` voor `Bash(gh pr merge*)` en
   `Bash(gh api *merge*)`, `ask` voor `Bash(pnpm pr:merge *)`, `pnpm pr:merge *` in `sandbox.excludedCommands`, en geen
   `allow`-regel met `pr:merge`. Bewijs nu: `test/hooks/rolhek-pr-merge.test.ts:45` en `:180`.
-- **agent-samenvoegen/AC-10** (nog niet gebouwd) — Uit spec agent-merge-niet-kritiek (vervallen) AC-7. Een externe
+- **agent-samenvoegen/AC-10** — Een externe
   reviewdienst is geen voorwaarde: `beoordeelMerge` leest geen reacties, check-suites, reviews, inline-commentaar of
   branch-PR's, en een 👀 of een samenvatting (ook met open punten) van een reviewbot geeft geen reden. `slotRegels(nummer,
   head)` geeft precies twee regels: de slotregel en `Meld deze merge als steekproef (ADR 0069 punt 5).` (`STEEKPROEF`). Bewijs
   nu: `test/scripts/pr-merge-omvang-steekproef.test.ts:93`.
-- **agent-samenvoegen/AC-11** (nog niet gebouwd) — Uit spec agent-merge-niet-kritiek (vervallen) AC-10. Geen externe
+- **agent-samenvoegen/AC-11** — Geen externe
   reviewdienst in de actieve werkstraat: `git grep --untracked -I -i -n <naam van de dienst>` over `scripts`, `.claude`,
   `README.md`, `docs/operations`, `test`, `src`, `rails`, `db`, `e2e`, `.github`, `package.json`, `AGENTS.md`, `CLAUDE.md`,
   `docs/framework.md` en `docs/dod.md`, zonder `test/rails/fixtures`, geeft alleen de docs-test zelf en in
@@ -133,7 +133,6 @@ steekproefregel), bij een reden exit 1 met `Geen merge (ADR 0069):` en per reden
   beschermt `besluit-pr` of `voorReview`).
 - `docs/template/specs/templateregime.md` (templateregime/AC-1, -2, -6, -7, -14 en de randgevallen daarbij),
   `docs/template/specs/app-padtabel.md` en `docs/template/specs/leerlus-bewijs.md` (elk één zin over de code-eigenaar of de App),
-  `docs/template/specs/agent-merge-niet-kritiek.md` (de padtoets is terug), `docs/template/specs/agent-token.md` (status),
   `docs/roadmap.md` (het item over de GitHub-bescherming), `docs/template-changelog.md`.
 - `scripts/github-ruleset.sh`, `test/scripts/github-ruleset.test.ts`, `test/scripts/github-ruleset-templateregime.test.ts`.
 - Bestaande tests die wijzigen omdat deze spec het gedrag verandert (R-TEST-02): in

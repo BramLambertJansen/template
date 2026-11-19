@@ -2,9 +2,11 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-19: verwijzingen naar verwijderde documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg)
+
 Wijzigt [0083](0083-bewaking-met-minder-wrijving.md) punt 3 (vangnetten per segment) voor één vorm. Drempel: A3 (een
 vangnet wordt smaller) en A4. Aanleiding: leerpunt #619 (PR #616, 7 november 2026), eerder #587. Uitwerking:
-[spec rolhek-vooraf-krimp](../specs/rolhek-vooraf-krimp.md) AC-11.
+[spec rolhek-vooraf](../specs/rolhek-vooraf.md) rolhek-vooraf/AC-4.
 
 ## Context
 

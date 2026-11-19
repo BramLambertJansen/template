@@ -4,9 +4,9 @@ import { describe, expect, test } from 'vitest';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 import { PADCORPUS, type Rij, type Uitkomst } from './rolhek-padcorpus.ts';
 
-// Spec rolhek-vooraf-krimp AC-1 (ADR 0071): elke padbeslissing van het rolhek over een Bash-commando staat in één corpus
+// Spec rolhek-vooraf AC-1 (ADR 0071): elke padbeslissing van het rolhek over een Bash-commando staat in één corpus
 // (`rolhek-padcorpus.ts`). Vooraf: de toets (`decide`, PreToolUse) geeft nog steeds de vastgelegde uitkomst. De toets achteraf
-// (AC-2, AC-5) is met de effecttoets vervallen (ADR 0091); de velden `achteraf`, `reden` en `alsVeranderd` van het corpus
+// (uit het vervallen krimpplan) is met de effecttoets vervallen (ADR 0091); de velden `achteraf`, `reden` en `alsVeranderd` van het corpus
 // tellen hier niet mee.
 const config = loadConfig(readFileSync(path.resolve(import.meta.dirname, '../../.claude/gates.json'), 'utf8'));
 const ROOT = '/repo';
@@ -41,7 +41,7 @@ function vooraf(rij: Rij): Uitkomst {
 
 const naam = (rij: Rij) => `${rij.rol || 'hoofdsessie'}: ${rij.commando.slice(0, 100)} (${rij.bron})`;
 
-describe('rolhek-vooraf-krimp/AC-1: het corpus geeft vooraf de vastgelegde uitkomst', () => {
+describe('rolhek-vooraf/AC-1: het corpus geeft vooraf de vastgelegde uitkomst', () => {
   test.each(PADCORPUS.map((rij) => [naam(rij), rij] as const))('%s', (_naam, rij) => {
     expect(vooraf(rij)).toBe(rij.uitkomst);
   });

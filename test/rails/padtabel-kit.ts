@@ -9,8 +9,8 @@ import { codeownersTekst } from '../../scripts/kit/codeowners.mjs';
 export const REPO = path.join(import.meta.dirname, '../..');
 const FIXTURES = path.join(import.meta.dirname, 'fixtures/padtabel');
 
-// De bevroren stand van 30cc352 heeft in `agentMerge` nog een sleutel die vervallen is en dicht faalt (agent-merge-niet-kritiek
-// AC-8): de fixture wordt gelezen met alleen de huidige sleutels van het blok. Het bronbestand blijft historie en ongewijzigd.
+// De bevroren stand van 30cc352 heeft in `agentMerge` nog een sleutel die vervallen is en dicht faalt (ADR 0089 punt 5):
+// de fixture wordt gelezen met alleen de huidige sleutels van het blok. Het bronbestand blijft historie en ongewijzigd.
 const AGENT_MERGE_SLEUTELS = new Set(['toegestaan', 'kritiek', 'maxRegels', 'maxBytes']);
 function metHuidigeSleutels(tekst: string): string {
   const ruw: unknown = JSON.parse(tekst);

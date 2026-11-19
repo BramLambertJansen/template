@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 import { zelfladendPatroon } from '../../rails/hooks/lib/zelfladend.mjs';
 
-// Spec rolhek-vooraf-krimp AC-3 (ADR 0071 punt 2): wat git, Claude Code of pnpm zelf laadt, toetst het rolhek vooraf op elk
+// Spec rolhek-vooraf AC-3 (ADR 0071 punt 2): wat git, Claude Code of pnpm zelf laadt, toetst het rolhek vooraf op elk
 // woord van het commando. `.git/**` is deny voor elke rol; de andere zelfladende paden deny voor een subagent en ask voor de
 // hoofdsessie.
 const ROOT = '/repo';
@@ -38,7 +38,7 @@ function redenen(command: string, agent?: string): string {
   return [...d.deny, ...d.ask].join('\n');
 }
 
-describe('rolhek-vooraf-krimp/AC-3: de vaste lijst in .claude/gates.json', () => {
+describe('rolhek-vooraf/AC-3: de vaste lijst in .claude/gates.json', () => {
   test('de lijst uit de spec, met .cache als uitzondering', () => {
     expect(config.zelfladend).toStrictEqual([
       '.git/**',
@@ -77,7 +77,7 @@ describe('rolhek-vooraf-krimp/AC-3: de vaste lijst in .claude/gates.json', () =>
   });
 });
 
-describe('rolhek-vooraf-krimp/AC-3: bewijs voor de developer', () => {
+describe('rolhek-vooraf/AC-3: bewijs voor de developer', () => {
   test.each([
     'cp x .git/hooks/pre-commit',
     'tee .git/config',
@@ -210,7 +210,7 @@ describe('rolhek-vooraf-krimp/AC-3: bewijs voor de developer', () => {
   });
 });
 
-describe('rolhek-vooraf-krimp/AC-3: de hoofdsessie', () => {
+describe('rolhek-vooraf/AC-3: de hoofdsessie', () => {
   test('tee .git/config is deny', () => {
     expect(verdict('tee .git/config')).toBe('deny');
   });
@@ -239,9 +239,9 @@ describe('rolhek-vooraf-krimp/AC-3: de hoofdsessie', () => {
   });
 });
 
-// Leerpunten #583 en #587, spec rolhek-vooraf-krimp AC-10 (c): een `]` direct na `[` (of na `[!`/`[^`) hoort bij de klasse, zoals
+// Leerpunten #583 en #587, rolhek-vooraf/AC-2 (c): een `]` direct na `[` (of na `[!`/`[^`) hoort bij de klasse, zoals
 // in bash; een patroon dat geen geldige klasse oplevert is geen glob en geeft geen interne fout.
-describe('rolhek-vooraf-krimp/AC-10 (c): tekenklasse met ] als eerste teken', () => {
+describe('rolhek-vooraf/AC-2 (c): tekenklasse met ] als eerste teken', () => {
   test.each([
     ['lefthook.ym[]l]', 'lefthook.yml'],
     ['lefthook.ym[!]]', 'lefthook.yml'],
@@ -264,9 +264,9 @@ describe('rolhek-vooraf-krimp/AC-10 (c): tekenklasse met ] als eerste teken', ()
   });
 });
 
-// Leerpunt #618, spec rolhek-vooraf-krimp AC-3: een glob die er volgens bash (zonder dotglob) op kan passen, telt als het pad.
+// Leerpunt #618, rolhek-vooraf/AC-3: een glob die er volgens bash (zonder dotglob) op kan passen, telt als het pad.
 // POSIX-klassen (`[:lower:]`), equivalentieklassen (`[=l=]`) en collatietekens (`[.l.]`) horen binnen de klasse.
-describe('rolhek-vooraf-krimp/AC-3: POSIX-klassen in een glob', () => {
+describe('rolhek-vooraf/AC-3: POSIX-klassen in een glob', () => {
   test.each([
     ['lefthook.ym[[:lower:]]', 'lefthook.yml'],
     ['lefthook.ym[[:alpha:]]', 'lefthook.yml'],
@@ -324,10 +324,10 @@ describe('rolhek-vooraf-krimp/AC-3: POSIX-klassen in een glob', () => {
   });
 });
 
-// Leerpunt #618/#622, rolhek-vooraf-krimp AC-10 (c): `a-[:digit:]` in een klasse geeft geen interne fout. Bash leest
+// Leerpunt #618/#622, rolhek-vooraf/AC-2 (c): `a-[:digit:]` in een klasse geeft geen interne fout. Bash leest
 // `[a-[:digit:]]` als {a, -, 0-9}: het koppelteken is dan een letterlijk teken naast het bereik. Dat is strenger dan
 // bash (bash past `lefthook.ym[a-[:digit:]l]` niet op `lefthook.yml`); strenger mag, nooit nauwer.
-describe('rolhek-vooraf-krimp/AC-10 (c): bereik gevolgd door een POSIX-klasse geeft geen interne fout', () => {
+describe('rolhek-vooraf/AC-2 (c): bereik gevolgd door een POSIX-klasse geeft geen interne fout', () => {
   test.each(['foo[a-[:digit:]]', 'foo[a-[:alpha:]]', 'foo[!a-[:punct:]]'])(
     '%s: geen throw in zelfladendPatroon',
     (rel) => {
@@ -354,9 +354,9 @@ describe('rolhek-vooraf-krimp/AC-10 (c): bereik gevolgd door een POSIX-klasse ge
   });
 });
 
-// Leerpunt #618/#622, rolhek-vooraf-krimp AC-3: een equivalentie- of collatieklasse direct na een tekst is in bash een
+// Leerpunt #618/#622, rolhek-vooraf/AC-3: een equivalentie- of collatieklasse direct na een tekst is in bash een
 // letterlijk koppelteken plus die klasse: `[t[=-=]a]` is {t, -, a}. Sluiproute naar `.git` en lefthook.yml.
-describe('rolhek-vooraf-krimp/AC-3: [=-=] en [.-.] in een klasse', () => {
+describe('rolhek-vooraf/AC-3: [=-=] en [.-.] in een klasse', () => {
   test.each([
     ['.gi[t[=-=]a]/packed-refs', '.git/**'],
     ['.gi[t[.-.]a]/packed-refs', '.git/**'],
@@ -374,8 +374,8 @@ describe('rolhek-vooraf-krimp/AC-3: [=-=] en [.-.] in een klasse', () => {
   });
 });
 
-// Leerpunt #618/#622, AC-3: een negatie telt hoofdlettergevoelig (bash): `[!L]` sluit `l` niet uit.
-describe('rolhek-vooraf-krimp/AC-3: negatie met een hoofdletter', () => {
+// Leerpunt #618/#622, rolhek-vooraf/AC-3: een negatie telt hoofdlettergevoelig (bash): `[!L]` sluit `l` niet uit.
+describe('rolhek-vooraf/AC-3: negatie met een hoofdletter', () => {
   test('lefthook.ym[!L] wijst naar lefthook.yml', () => {
     expect(zelfladendPatroon('lefthook.ym[!L]', config.zelfladend ?? [])).toBe('lefthook.yml');
   });
@@ -386,8 +386,8 @@ describe('rolhek-vooraf-krimp/AC-3: negatie met een hoofdletter', () => {
   });
 });
 
-// Leerpunt #618/#622, AC-3: dekking van het .git-gedrag voor een klasse of `?` (regressiebewaking).
-describe('rolhek-vooraf-krimp/AC-3: .git via een klasse of ?', () => {
+// Leerpunt #618/#622, rolhek-vooraf/AC-3: dekking van het .git-gedrag voor een klasse of `?` (regressiebewaking).
+describe('rolhek-vooraf/AC-3: .git via een klasse of ?', () => {
   test.each(['echo x > .gi[t]/config', 'echo x > .g?t/config'])(
     '%s is deny voor de hoofdsessie en de developer',
     (command) => {
@@ -399,7 +399,7 @@ describe('rolhek-vooraf-krimp/AC-3: .git via een klasse of ?', () => {
 
 // Leerpunt #622 (B2): in bash mag een collatiesymbool `[.x.]` een bereik begrenzen (`[a-[.z.]]`, `[[.a.]-z]`); `[=x=]` en
 // `[:naam:]` niet. Bash laat `.gi[a-[.z.]]` en `.gi[[.a.]-z]` dus passen op `.git`: een sluiproute als de code ze mist.
-describe('rolhek-vooraf-krimp/AC-3 (B2): collatiesymbool als bereikbegin of -eind', () => {
+describe('rolhek-vooraf/AC-3 (B2): collatiesymbool als bereikbegin of -eind', () => {
   test.each([
     ['.gi[a-[.z.]]/config', '.git/**'],
     ['.gi[[.a.]-z]/config', '.git/**'],
@@ -420,7 +420,7 @@ describe('rolhek-vooraf-krimp/AC-3 (B2): collatiesymbool als bereikbegin of -ein
 // Leerpunt #622 (B3): de tokenizer haalt escapes en aanhalingen weg vóór de glob-omzetting; bash leest ze als klassetekens.
 // Eigenaarsbesluit: dichtvallen. Een glob-klasse in een woord of redirect van een commando waarvan de ruwe tekst een `\`
 // bevat, past op elk teken.
-describe('AC-3 (B3): escape in een glob-klasse valt dicht', () => {
+describe('rolhek-vooraf/AC-3 (B3): escape in een glob-klasse valt dicht', () => {
   test.each(['echo x > .g[\\!i]t/config', 'echo x > .gi[a\\]t]/config', "echo x > .gi[a'\\'-u]/config"])(
     '%s is deny voor de hoofdsessie en de developer',
     (command) => {
@@ -451,7 +451,7 @@ describe('AC-3 (B3): escape in een glob-klasse valt dicht', () => {
 // de code bouwt geen van beide na. Ze leest zo'n klasse letterlijk, als bash-klasse en als één willekeurig teken tot elke
 // latere `]`, op elke bash-versie: strenger dan bash, nooit nauwer. Het 5.2-gedrag is de reden voor deze gevallen, niet het
 // getoetste model.
-describe('AC-3: een klasse met een benoemd deel valt dicht (reden: bash 5.2 en 5.3 verschillen)', () => {
+describe('rolhek-vooraf/AC-3: een klasse met een benoemd deel valt dicht (reden: bash 5.2 en 5.3 verschillen)', () => {
   test.each([
     ['.gi[[=t=]]x]/config', '.git/**'],
     ['lefthook.y[[=m=]]q]l', 'lefthook.yml'],
@@ -523,7 +523,7 @@ describe('AC-3: een klasse met een benoemd deel valt dicht (reden: bash 5.2 en 5
 // Review leerpunt #622: een misvormd benoemd deel (`[=][x=]`) slokt de laatste `]` op, zodat onze lezer de klasse niet ziet
 // sluiten. Bash 5.2 laat `.gi[t[=][x=]` toch op `.git` passen. Bevat een woord ergens `[=`, `[:` of `[.`, dan wordt elke `[`
 // met een latere `]` in dat woord ruim gelezen.
-describe('AC-3: een misvormd benoemd deel dat de sluitende ] opslokt valt dicht', () => {
+describe('rolhek-vooraf/AC-3: een misvormd benoemd deel dat de sluitende ] opslokt valt dicht', () => {
   test.each([
     ['.gi[t[=][x=]/config', '.git/**'],
     ['.gi[t[:][x:]/config', '.git/**'],

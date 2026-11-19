@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd
 namespace: sandbox-plaatshouders
 ---
 
@@ -7,7 +7,7 @@ namespace: sandbox-plaatshouders
 
 ## Doel
 
-De levende rest van spec rolhek-effect (vervallen) in één spec: een lege plaatshouder die de sandbox neerzet, blokkeert de
+Een lege plaatshouder die de sandbox neerzet, blokkeert de
 werkmapcontrole van `pnpm pr:verify` niet (ADR 0084 punt 2, ADR 0091 punt 2). Het gedrag bestaat al; deze spec verandert het
 niet.
 
@@ -28,8 +28,8 @@ Geen UI. De foutmelding van `verifyWorktree` blijft zoals nu en noemt een plaats
 
 - **sandbox-plaatshouders/AC-1** — `SANDBOX_LEEG` in `rails/hooks/lib/sandbox-plaatshouders.mjs` is precies deze 19 paden,
   volledig vanaf de wortel: `.bash_profile`, `.bashrc`, `.profile`, `.zshrc`, `.zprofile`, `.gitconfig`, `.gitmodules`,
-  `.ripgreprc`, `.mcp.json`, `.idea`, `.claude/commands`, `.claude/launch.json`, `.claude/loop.md`, `.claude/output-styles`,
-  `.claude/routines`, `.claude/scheduled_tasks.json`, `.claude/workflows`, `.env`, `.env.local`. Een pad erbij vraagt
+  `.ripgreprc`, `.mcp.json`, `.idea`, `.claude/commands`, `.claude/launch.json` (voorbeeld), `.claude/loop.md` (voorbeeld), `.claude/output-styles`,
+  `.claude/routines`, `.claude/scheduled_tasks.json` (voorbeeld), `.claude/workflows`, `.env`, `.env.local`. Een pad erbij vraagt
   eigenaarakkoord (ADR 0084 punt 2). Bewijs nu: `test/hooks/sandbox-plaatshouders.test.ts:134`.
 - **sandbox-plaatshouders/AC-2** — `isNulApparaat` is waar voor precies een tekenapparaat met major 1 en minor 3; een ander
   apparaat, major of minor, of rdev 1,3 zonder tekenapparaat is onwaar. Bewijs nu:
@@ -49,7 +49,7 @@ Geen UI. De foutmelding van `verifyWorktree` blijft zoals nu en noemt een plaats
 
 | Situatie | Gedrag | Foutcode |
 |---|---|---|
-| Leeg `.bashrc` naast een nieuw `src/x.ts` | fout noemt alleen `src/x.ts` (AC-4) | n.v.t. |
+| Leeg `.bashrc` naast een nieuw `src/x.ts` (voorbeeld) | fout noemt alleen `src/x.ts` (voorbeeld) (AC-4) | n.v.t. |
 | Leeg `.gitmodules` dat getrackt is | blokkeert (AC-4) | n.v.t. |
 
 ## Raakt ook
@@ -60,7 +60,7 @@ kopcommentaar (r.19) aan (spec vervallen-documenten-weg). Geen migratie, route, 
 
 ## Buiten scope
 
-De effecttoets en de afschermingsherkenning via mountinfo uit spec rolhek-effect (vervallen): weg door ADR 0091.
+De effecttoets en de afschermingsherkenning via mountinfo: weg door ADR 0091.
 
 ## Testplan
 

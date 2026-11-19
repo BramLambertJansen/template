@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { describe, expect, test } from 'vitest';
 
-// agent-merge-niet-kritiek/AC-10: geen externe reviewdienst in de actieve werkstraat. De opdracht uit de spec (zonder de
+// agent-samenvoegen/AC-11: geen externe reviewdienst in de actieve werkstraat. De opdracht uit de spec (zonder de
 // fixtures) mag alleen nog de uitzonderingen 4 en 5 geven, letterlijk. Het zoekwoord wordt samengesteld, zodat dit bestand zichzelf
 // niet vindt; het sluit zichzelf bovendien uit (uitzondering 4). Een treffer in docs/adr/ of docs/specs/ telt niet: die mappen
 // staan niet in de opdracht (historie blijft).
@@ -25,7 +25,7 @@ const PADEN = [
   'docs/dod.md',
 ];
 
-// GEWIJZIGD (agent-merge-niet-kritiek/OV-1, R-TEST-02): uitzondering 1 (de vijf metingbestanden) en 2 (stap 8 van de skill
+// GEWIJZIGD (agent-samenvoegen/AC-11, R-TEST-02): uitzondering 1 (de vijf metingbestanden) en 2 (stap 8 van de skill
 // opleveren en de twee metingzinnen in de doorloop) golden "tot de aparte meting-PR". Die PR is gemerged (#772, skill #773):
 // elke regel met het woord in die bestanden is een treffer.
 // GEWIJZIGD (templateregime AC-13, ADR 0089 punt 5): uitzondering 3 (de kop in test/rails/adr-herzien.test.ts) is vervallen;
@@ -73,7 +73,7 @@ function treffers(): Treffer[] {
 
 const T = (bestand: string, regel: number, tekst: string): Treffer => ({ bestand, regel, tekst });
 
-describe('agent-merge-niet-kritiek/AC-10 de uitzonderingen per regel', () => {
+describe('agent-samenvoegen/AC-11 de uitzonderingen per regel', () => {
   test('een bestand buiten de uitzonderingen is altijd een treffer, ook met een regel die elders vrij is of was', () => {
     const vroegerVrij = [`CI-rood of ${WOORD}-bevindingen`, `key: 'docs:agentMerge.${WOORD}',`, `'chatgpt-${WOORD}-connector[bot]'`];
     const treffers = GEEN_UITZONDERING.flatMap((b) => vroegerVrij.map((tekst, i) => T(b, i + 1, tekst)));
@@ -101,7 +101,7 @@ describe('agent-merge-niet-kritiek/AC-10 de uitzonderingen per regel', () => {
   });
 });
 
-describe('agent-merge-niet-kritiek/AC-10 geen externe reviewdienst in de actieve werkstraat', () => {
+describe('agent-samenvoegen/AC-11 geen externe reviewdienst in de actieve werkstraat', () => {
   test('de git grep uit de spec geeft alleen de uitzonderingen 4 en 5', () => {
     const over = buitenUitzonderingen(treffers()).map((t) => `${t.bestand}:${String(t.regel)}`);
     expect(over).toEqual([]);

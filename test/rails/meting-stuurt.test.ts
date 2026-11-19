@@ -36,7 +36,7 @@ describe('meting-stuurt/AC-2: de trend meldt alleen een echte stap', () => {
   test("meting-stuurt/AC-2 trend(): één bevinding meer over tien PR's (0,1) geeft geen melding", () => {
     const prs = Array.from({ length: 20 }, (_x, i) => ({
       nummer: 100 - i,
-      // GEWIJZIGD (agent-merge-niet-kritiek/OV-1, R-TEST-02): de meting telt geen bevindingen van een externe reviewdienst meer; het geval loopt nu over CI-rood.
+      // GEWIJZIGD (agent-samenvoegen/AC-11, R-TEST-02): de meting telt geen bevindingen van een externe reviewdienst meer; het geval loopt nu over CI-rood.
       ciRood: i === 0 ? 1 : 0,
       reviewrondes: 1,
     }));

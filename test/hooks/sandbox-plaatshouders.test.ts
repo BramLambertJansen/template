@@ -16,7 +16,7 @@ import { isNulApparaat, SANDBOX_LEEG } from '../../rails/hooks/lib/sandbox-plaat
 import { verifyWorktree } from '../../scripts/kit/pr-verify.mjs';
 import { expectNegativeTable } from '../support/negative-table';
 
-// docs/specs/rolhek-effect.md AC-11 (d) en (e), AC-12 (ADR 0084 punt 2, ADR 0091 punt 2): een plaatshouder van de vaste lijst
+// sandbox-plaatshouders/AC-1 tot en met AC-5 (ADR 0084 punt 2, ADR 0091 punt 2): een plaatshouder van de vaste lijst
 // SANDBOX_LEEG die niet in HEAD en niet in de index staat (een leeg gewoon bestand zonder uitvoerbit of een tekenapparaat 1,3)
 // blokkeert `pnpm pr:verify` (`verifyWorktree`) niet. De effecttoets zelf is vervallen; de lijst en `verifyWorktree` blijven.
 //
@@ -131,13 +131,13 @@ const controle = (a: string): void => {
 
 // ---- de lijst en het tekenapparaat -----------------------------------------------------------------------------------------
 
-describe('rolhek-effect/AC-11 (d): de vaste lijst SANDBOX_LEEG', () => {
+describe('sandbox-plaatshouders/AC-1: de vaste lijst SANDBOX_LEEG', () => {
   test('SANDBOX_LEEG staat letterlijk in sandbox-plaatshouders.mjs en bevat precies de 19 paden uit de spec', () => {
     expect([...SANDBOX_LEEG].toSorted()).toStrictEqual(LIJST.toSorted());
   });
 });
 
-describe('rolhek-effect/AC-11 (d): isNulApparaat herkent alleen een tekenapparaat met major 1 en minor 3', () => {
+describe('sandbox-plaatshouders/AC-2: isNulApparaat herkent alleen een tekenapparaat met major 1 en minor 3', () => {
   type Apparaat = { tekenapparaat: boolean; major: number; minor: number };
   const BASIS: Apparaat = { tekenapparaat: true, major: 1, minor: 3 };
   /** De velden van `lstatSync` die `isNulApparaat` gebruikt; `rdev` heeft de Linux-codering major*256+minor. */
@@ -161,7 +161,7 @@ describe('rolhek-effect/AC-11 (d): isNulApparaat herkent alleen een tekenapparaa
   });
 });
 
-describe('rolhek-effect/AC-11 (a): pr:verify neemt geen set afgeschermde paden aan uit een CLI-vlag', () => {
+describe('sandbox-plaatshouders/AC-3: pr:verify neemt geen set afgeschermde paden aan uit een CLI-vlag', () => {
   test(
     'een extra CLI-vlag is een gebruiksfout (argumentsFor kent alleen <nummer> [--watch])',
     () => {
@@ -178,9 +178,9 @@ describe('rolhek-effect/AC-11 (a): pr:verify neemt geen set afgeschermde paden a
   );
 });
 
-// ---- AC-11 (e): verifyWorktree ---------------------------------------------------------------------------------------------
+// ---- sandbox-plaatshouders/AC-4: verifyWorktree ---------------------------------------------------------------------------------------------
 
-describe('rolhek-effect/AC-11 (e): verifyWorktree blokkeert niet op een ongetrackt leeg SANDBOX_LEEG-pad', () => {
+describe('sandbox-plaatshouders/AC-4: verifyWorktree blokkeert niet op een ongetrackt leeg SANDBOX_LEEG-pad', () => {
   test.each([
     ['.bashrc (100644)', '.bashrc', 0o644],
     ['.bashrc (100664)', '.bashrc', 0o664],
@@ -309,9 +309,9 @@ describe('rolhek-effect/AC-11 (e): verifyWorktree blokkeert niet op een ongetrac
   );
 });
 
-// ---- AC-12: .env en .env.local ---------------------------------------------------------------------------------------------
+// ---- sandbox-plaatshouders/AC-5: .env en .env.local ---------------------------------------------------------------------------------------------
 
-describe('rolhek-effect/AC-12: werkmapcontrole (verifyWorktree)', () => {
+describe('sandbox-plaatshouders/AC-5: werkmapcontrole (verifyWorktree)', () => {
   /** Een repository die `.env` niet negeert. */
   function zonderEnvRegels(): string {
     const a = wereld();

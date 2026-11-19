@@ -15,7 +15,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
 
-// ADR 0083 punt 1 (leerpunt #553), spec rolhek-vooraf-krimp AC-3: een geplant `.git/commondir` (in de hoofdcheckout bestaat het
+// ADR 0083 punt 1 (leerpunt #553), rolhek-vooraf/AC-5: een geplant `.git/commondir` (in de hoofdcheckout bestaat het
 // niet, de sandbox maskeert het pad dan met /dev/null) breekt elke git-aanroep. De lader controleert dat vóór zijn eerste
 // git-aanroep: hij hernoemt het pad naar `commondir.geplant-<tijd>`, roept geen git aan en meldt of blokkeert per event.
 // Een nep-`git` vooraan in PATH bewijst "geen git-aanroep": hij schrijft een markerbestand en geeft exit 0.
@@ -160,7 +160,7 @@ function verwachtHernoemd(root: string, uitkomst: Uitkomst, soort: Soort): void 
   }
 }
 
-describe('laden: een geplant .git/commondir wordt hernoemd, zonder git-aanroep', () => {
+describe('rolhek-vooraf/AC-5: laden: een geplant .git/commondir wordt hernoemd, zonder git-aanroep', () => {
   test.each(EVENTS)('gewoon bestand: $naam $args -> $soort', ({ naam, args, soort }) => {
     const root = nieuweRepo();
     plant(root);

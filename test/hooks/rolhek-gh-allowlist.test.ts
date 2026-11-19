@@ -730,9 +730,9 @@ describe('omzeilingen ronde 4: leeg woord vóór de gh-groep', () => {
   });
 });
 
-// rolhek-vooraf-krimp/AC-10 (ADR 0083 punt 3, leerpunten #583 en #587): vangnetten per segment, alleen op woorden die de shell
+// rolhek-vooraf/AC-2 (ADR 0083 punt 3, leerpunten #583 en #587): vangnetten per segment, alleen op woorden die de shell
 // echt expandeert. Elk doorgelaten geval hieronder faalt op de vangnetten die het hele commando of aangehaalde woorden toetsen.
-describe('AC-10: vangnetten per segment', () => {
+describe('rolhek-vooraf/AC-2: vangnetten per segment', () => {
   const ROLES: (string | undefined)[] = [undefined, ...SUBAGENTS];
   const doorgelaten = (command: string, roles: readonly (string | undefined)[] = ROLES) => {
     for (const role of roles) {
@@ -749,7 +749,7 @@ describe('AC-10: vangnetten per segment', () => {
 
   // Eigenaarbesluit: na `cd $TMPDIR` is de werkmap onbekend (TMPDIR_MAP vervalt); een ask uit AC-3 is toegestaan, een deny niet.
   test.each(['cd $TMPDIR && gh issue list --limit 5', 'cd $TMPDIR; gh pr view 1', 'cd "$TMPDIR" && gh pr view 1'])(
-    '(a) hoofdsessie: geen deny, en een ask alleen met de AC-3-melding: %s',
+    'vervallen-documenten-weg/AC-5: (a) hoofdsessie: geen deny, en een ask alleen met de AC-3-melding: %s',
     (command) => {
       const decision = run(command);
       expect(decision.deny).toEqual([]);
@@ -1205,8 +1205,8 @@ describe('AC-10: vangnetten per segment', () => {
   });
 });
 
-// Leerpunten #583 en #587, rolhek-vooraf-krimp AC-10 (c): een `]` direct na `[` is een klasse-teken; geen interne fout.
-describe('AC-10 (c): ] als eerste teken van een klasse geeft geen interne fout', () => {
+// Leerpunten #583 en #587, rolhek-vooraf/AC-2 (c): een `]` direct na `[` is een klasse-teken; geen interne fout.
+describe('rolhek-vooraf/AC-2 (c): ] als eerste teken van een klasse geeft geen interne fout', () => {
   test.each(["echo '[]x(]'", `gh issue list --json number,title --jq '.[] | "\\(.number)\\t\\(.createdAt[:10])"'`])(
     'doorgelaten voor de hoofdsessie, geen throw: %s',
     (command) => {
@@ -1217,9 +1217,9 @@ describe('AC-10 (c): ] als eerste teken van een klasse geeft geen interne fout',
   );
 });
 
-// Leerpunt #622, rolhek-vooraf-krimp AC-10 (c): zonder sluitende `]` is de `[` letterlijk (bash); `[!]` of `[^]` zonder latere `]`
+// Leerpunt #622, rolhek-vooraf/AC-2 (c): zonder sluitende `]` is de `[` letterlijk (bash); `[!]` of `[^]` zonder latere `]`
 // is dus geen klasse en kan niet naar gh wijzen. Een echte klasse die op gh past blijft dicht.
-describe('AC-10 (c): [ zonder sluitende ] is letterlijk', () => {
+describe('rolhek-vooraf/AC-2 (c): [ zonder sluitende ] is letterlijk', () => {
   test.each(['ls g[!]', 'ls g[^]', 'ls g[!', 'ls [!]h', 'ls [^]h'])(
     'geen gh-glob-weigering voor hoofdsessie en developer: %s',
     (command) => {
@@ -1241,9 +1241,9 @@ describe('AC-10 (c): [ zonder sluitende ] is letterlijk', () => {
   );
 });
 
-// Leerpunt #618/#622, rolhek-vooraf-krimp AC-10 (c): een negatie is hoofdlettergevoelig (bash): `[!G]` laat `g` toe, dus
+// Leerpunt #618/#622, rolhek-vooraf/AC-2 (c): een negatie is hoofdlettergevoelig (bash): `[!G]` laat `g` toe, dus
 // `/usr/bin/[!G]h` kan `gh` zijn en blijft dicht voor elke rol.
-describe('AC-10 (c): negatie met een hoofdletter kan naar gh wijzen', () => {
+describe('rolhek-vooraf/AC-2 (c): negatie met een hoofdletter kan naar gh wijzen', () => {
   test.each(['/usr/bin/[!G]h pr merge 1', '/usr/bin/[!G]h pr list', '/usr/bin/[!H]h pr list'])(
     'dicht voor elke rol: %s',
     (command) => {
@@ -1261,7 +1261,7 @@ describe('AC-10 (c): negatie met een hoofdletter kan naar gh wijzen', () => {
 });
 
 // Leerpunt #622 (B3): een escape in een klasse (`[\!g]`) kan bash naar `gh` laten uitvouwen; de tokenizer ziet het niet. Dichtvallen.
-describe('AC-10 (c) (B3): escape in een glob-klasse kan naar gh wijzen', () => {
+describe('rolhek-vooraf/AC-2 (c) (B3): escape in een glob-klasse kan naar gh wijzen', () => {
   test.each(['ionice /usr/bin/[\\!g]h issue create', 'setsid /usr/bin/g[\\!x] pr merge 1'])(
     'dicht voor elke rol: %s',
     (command) => {
@@ -1273,7 +1273,7 @@ describe('AC-10 (c) (B3): escape in een glob-klasse kan naar gh wijzen', () => {
   );
 });
 
-// Leerpunt #619, spec rolhek-vooraf-krimp AC-11 (ADR 0086): de body van een heredoc met aangehaalde delimiter is letterlijk
+// Leerpunt #619, rolhek-vooraf/AC-4 (ADR 0086): de body van een heredoc met aangehaalde delimiter is letterlijk
 // voor de substitutiezoeker; alles wat bash wel uitvoert, blijft dicht. De bashversie staat in de testnaam (#626).
 const BASH_VERSIE = spawnSync('bash', ['--version'], { encoding: 'utf8' }).stdout.split('\n')[0] ?? 'bash onbekend';
 const NIET_LETTERLIJK = 'een commandowoord dat niet letterlijk is';
@@ -1282,7 +1282,7 @@ function geweigerd(command: string, role?: string): boolean {
   return run(command, role).deny.some((melding) => melding.includes(NIET_LETTERLIJK));
 }
 
-describe('rolhek-vooraf-krimp/AC-11: aangehaalde heredoc is geen substitutie', () => {
+describe('rolhek-vooraf/AC-4: aangehaalde heredoc is geen substitutie', () => {
   const DOORGELATEN = [
     "cat > /tmp/x.txt <<'EOF'\nso `g*.md` did not match\nEOF",
     "cat > /tmp/x.txt <<'EOF'\nso `lefthook.ym[]l]` x\nEOF",

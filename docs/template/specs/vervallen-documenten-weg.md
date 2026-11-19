@@ -63,10 +63,11 @@ en met spec-en-bouw/AC-7 en spec-en-bouw/AC-9 tot en met spec-en-bouw/AC-12 (ADR
 adr-herzien-markering, agent-merge-bytegrens, agent-token, document-status-lokaal en specplicht helemaal (hun code is weg:
 ADR 0089 punt 5, ADR 0093, ADR 0095).
 
-**Vorm van een verwijzing naar een verwijderd document.** In docs (ook ADR's): platte tekst `spec <naam> (vervallen)` of
-`ADR 0066 (vervallen)`, geen link en geen pad; volgt er een AC die verhuisd is, dan daarachter `; nu <doel-id>` met een link
-naar de doelspec. In code, commentaar en meldingen: alleen het doel-id (`spec rolhek-vooraf AC-3`). Een verwijzing die alleen
-historie noemt en geen levend AC (ADR-kop "Uitwerking:", een `Herzien:`-regel), krijgt alleen de platte vorm. Een kaal
+**Vorm van een verwijzing naar een verwijderd document** (eigenaarbesluit 2026-11-19, vervangt OV-3). Wijst de verwijzing naar
+iets dat nog geldt, dan noemt ze alleen de opvolger: de doelspec met link en het doel-id, of het ADR-punt dat het gedrag nu
+beschrijft. Geldt er niets meer, dan verdwijnt de verwijzing. In code, commentaar en meldingen: alleen het doel-id
+(`spec rolhek-vooraf AC-3`). Alleen historie houdt de oude naam als platte tekst, zonder link of pad: een bestaande
+`Herzien:`-regel van een ADR, `docs/template-changelog.md`, en deze spec. Een kaal
 AC-nummer na een spec telt in een gebouwde spec als eigen AC van die spec (`check-docs`, AC-dekking); noem in een spec dus
 alleen een nummer dat die spec zelf heeft, of het doel-id.
 
@@ -75,10 +76,10 @@ gebouwde spec, dus PR 1 is groen zonder test voor AC-6, en een tweede spec zou d
 spec blijft `goedgekeurd` tot PR 2 en gaat daar naar `gebouwd`.
 
 - **PR 1** (geen gedragswijziging): de verhuistabel (tests en commentaar hernoemen), de verwijzingen omzetten (vorm hierboven,
-  ook in ADR 0091 en 0093 alleen `(vervallen)` achter de specnaam), de doelspecs naar gebouwd, de negen specs en ADR 0066
+  ook in de Context van een ADR), een `Herzien:`-regel in elk geraakt geaccepteerd ADR, de doelspecs naar gebouwd, de negen specs en ADR 0066
   verwijderen, en de bestaande tests en specs die daarmee meegaan (hieronder, "In PR 1"). Bewijst AC-1, AC-2, AC-3, AC-4,
   AC-5 en AC-7, met de tests uit het Testplan.
-- **PR 2**: de check (AC-6), de regelboektekst, de `Herzien:`-regels in ADR 0091 en 0095, `A4_MELDING`, en de bestaande
+- **PR 2**: de check (AC-6), de regelboektekst, de `Herzien:`-regel in ADR 0095, `A4_MELDING`, en de bestaande
   tests en specs uit "In PR 2". Bewijst AC-6 en opnieuw AC-7; zet `status: gebouwd` op deze spec.
 
 **Werkstappen zonder AC** (eigenaarbesluit 2026-11-19: tekst, geen gedrag; de review toetst ze letterlijk).
@@ -94,14 +95,14 @@ spec blijft `goedgekeurd` tot PR 2 en gaat daar naar `gebouwd`.
     in die twee mappen".
 - *`A4_MELDING`, PR 2*: in `rails/hooks/lib/document-state.mjs` wordt "een vervallen of vervangen ADR wijzigt niet" "een
   vervallen of vervangen ADR wijzigt in een app niet (in de template verdwijnt het, R-CI-06)"; de rest van de melding blijft.
-- *`Herzien:`-regels, PR 2* (de inhoud wijzigt):
-  - 0091: `Herzien: 2026-11-19: punt 3 en Gevolgen: de specs rolhek-vooraf-krimp en rolhek-effect zijn verwijderd (R-CI-06); wat ervan leeft, staat in de specs rolhek-vooraf en sandbox-plaatshouders`;
-    punt 3, laatste zin, wordt "De spec verdwijnt; wat ervan gebouwd is, staat in [spec rolhek-vooraf](../specs/rolhek-vooraf.md)."
-    en Gevolgen "de spec `rolhek-effect` (vervallen) gaat naar `vervallen`" (de vorm na PR 1) wordt "de spec rolhek-effect
-    (vervallen) is verwijderd; de plaatshouders staan in [spec sandbox-plaatshouders](../specs/sandbox-plaatshouders.md)".
+- *`Herzien:`-regels, PR 1* (eigenaarbesluit 2026-11-19, vervangt OV-3): elk geaccepteerd ADR dat PR 1 raakt (0062, 0069,
+  0071, 0074, 0082, 0083, 0084, 0086, 0089, 0091, 0093, 0099) krijgt `Herzien: 2026-11-19: verwijzingen naar verwijderde
+  documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg)`. In 0091 wordt de laatste zin van punt 3
+  "Wat van het krimpplan gebouwd is (…) blijft in code en tests, met de AC's in [spec rolhek-vooraf](../specs/rolhek-vooraf.md)."
+  en krijgt de regel daarvoor "; punt 3: de spec is verwijderd in plaats van naar `vervallen` gezet".
+- *`Herzien:`-regel, PR 2* (de inhoud wijzigt):
   - 0095: `Herzien: 2026-11-19: punt 6: het AC-id blijft staan zolang de spec leeft; vervalt een hele template-spec, dan verhuizen haar levende AC's naar een levende spec en verdwijnt het document (R-CI-06)`;
     punt 6 krijgt die zin aan het eind.
-  - Een link die alleen platte tekst wordt (PR 1), krijgt geen `Herzien:`-regel (OV-3).
 - *ADR-wijzigingen en het rolhek.* Een andere tekst in een geaccepteerd ADR zonder nieuwe `Herzien:`-regel geeft in
   `beslisOvergang` (`rails/hooks/lib/document-state.mjs`) de uitslag `a4`; het rolhek laat die herschrijving alleen aan
   hoofdsessie en architect (`a4Toegestaan`), een developer krijgt `A4_MELDING`. De bouw toetst dit vooraf met één ADR. Gaat
@@ -110,8 +111,9 @@ spec blijft `goedgekeurd` tot PR 2 en gaat daar naar `gebouwd`.
   de link in een bestaande `Herzien:`-regel staat.
 - *Bestaande tests en specs die meegaan* (R-TEST-02, akkoord via de merge van deze spec):
   - In PR 1: `test/scripts/pr-merge-samenvoegen.test.ts:482-485` toetst dat `docs/template/specs/agent-token.md` niet
-    bestaat, met de titel `agent-samenvoegen/AC-6: de spec agent-token (vervallen) is verwijderd`; `agent-samenvoegen/AC-6`
-    zegt "De spec agent-token (vervallen) is verwijderd" in plaats van "heeft status `vervallen`".
+    bestaat, met de titel `agent-samenvoegen/AC-6: de spec van het tokenscript is verwijderd` en een pad dat de grep van AC-4 niet
+    letterlijk ziet; `agent-samenvoegen/AC-6` zegt "De spec van het tokenscript is verwijderd" in plaats van "heeft status
+    `vervallen`".
     `compacte-kennisbasis-rails/AC-16` wordt `Vervallen door ADR 0089 punt 5 (de diff-guard is weg). Was: …`; in
     `compacte-kennisbasis-rails/AC-18` vervalt "de diff-guard noemt het pad (`verifyTestwijzigingen` geldt alleen in de
     feature-lane)". De test bij rolhek-vooraf/AC-2 (hoofdsessie na `cd $TMPDIR`, `test/hooks/rolhek-gh-allowlist.test.ts:752`)
@@ -146,23 +148,20 @@ spec blijft `goedgekeurd` tot PR 2 en gaat daar naar `gebouwd`.
     `-e '<namespace>/AC-'` (adr-herzien, agent-merge-bytegrens, agent-merge-niet-kritiek, agent-token, document-status-lokaal,
     rolhek-effect, rolhek-vooraf-krimp, spec-en-bouw, specplicht) en `-e '0066-schrijfgrens'`, over de hele repo, geeft
     niets. Bestandsnamen van levende ADR's (Randgevallen) vallen er niet onder.
-  - (b) Elke vermelding `spec <naam>` van een van de negen namen (hoofdletterongevoelig, de naam eventueel tussen backticks,
-    niet gevolgd door een letter, cijfer of `-`) wordt gevolgd door witruimte met hooguit één regeleinde en `(vervallen)`.
+  - (b) Een vermelding `spec <naam>` van een van de negen namen (hoofdletterongevoelig, de naam eventueel tussen backticks,
+    niet gevolgd door een letter, cijfer of `-`) staat alleen nog in historie: op een regel die met `Herzien:` begint (ook
+    de vervolgregels van zo'n regel), in `docs/template-changelog.md` of in deze spec.
   - (c) `check-docs` geeft geen sleutel `link` naar een verwijderd bestand (via AC-7).
 
   Per groep, letterlijk naar de vorm uit Werking:
-  - ADR-links: 0062 r.21; 0069 r.11, r.17, r.28 (r.28: `spec agent-merge-niet-kritiek (vervallen); de levende AC's staan in
-    [spec agent-samenvoegen](../specs/agent-samenvoegen.md), agent-samenvoegen/AC-8 tot en met agent-samenvoegen/AC-11`); 0071 r.11, r.14; 0074 r.13; 0082 r.12;
-    0083 r.13, r.16-17; 0084 r.8, r.10; 0086 r.7; 0089 r.13; 0091 r.7.
-  - ADR-tekst zonder link: 0071 r.12, 0082 r.40, 0091 r.31 en r.56, 0093 r.41 krijgen `(vervallen)` achter de specnaam
-    (de inhoud van 0091 volgt in PR 2).
-  - Specs: `agent-samenvoegen.md` r.72 (Werking, "In PR 1") en r.136 (de twee backtick-paden worden `spec
-    agent-merge-niet-kritiek (vervallen)` en `spec agent-token (vervallen)`), `templateregime.md` r.43 en r.45, `kooi.md` r.110, `leerlus.md` r.147,
-    `template-repo.md` r.37 (het pad naar spec-en-bouw-in-een-pr wordt `spec spec-en-bouw-in-een-pr (vervallen), regel 91`)
-    en r.90.
-  - Overige docs: `docs/roadmap.md` r.252, r.263, r.439 (de paden worden `spec agent-merge-niet-kritiek (vervallen)`);
-    `docs/operations/agent-doorloop.md` r.324 (`spec rolhek-vooraf AC-2`); `docs/template-changelog.md` r.842 alleen de link
-    wordt platte tekst.
+  - ADR's: in de kop ("Wijzigt", "Uitwerking:") de opvolger met link en doel-id, of de verwijzing weg (0062, 0069, 0071,
+    0074, 0082, 0083, 0084, 0086, 0091, 0093, 0099); in een bestaande `Herzien:`-regel (0069, 0089) alleen de link naar
+    platte tekst (historie).
+  - Specs: in de doelspecs en in `agent-samenvoegen`, `gebouwd-zonder-nummer`, `templateregime`, `template-repo` en `kooi`
+    de opvolger of niets.
+  - Overige docs: `docs/roadmap.md` (de opvolger `docs/template/specs/agent-samenvoegen.md`),
+    `docs/operations/agent-doorloop.md` (`spec rolhek-vooraf AC-2`); `docs/template-changelog.md` alleen de link naar platte
+    tekst (historie).
   - Code, met het doel-id in de vorm `spec <doelspec> AC-n`: `rails/hooks/lib/rolhek.mjs` r.200 (agent-samenvoegen/AC-9) en
     r.621 (rolhek-vooraf/AC-2); `rails/hooks/lib/shell.mjs` r.11 en r.77 (rolhek-vooraf/AC-2 (b) en (d)), r.118, r.189,
     r.249, r.284 (rolhek-vooraf/AC-3 en rolhek-vooraf/AC-2 (c)); `rails/hooks/lib/zelfladend.mjs` r.1 en de zes meldingen
@@ -179,8 +178,8 @@ spec blijft `goedgekeurd` tot PR 2 en gaat daar naar `gebouwd`.
     verhuistabel met het doel-id.
   - Testcommentaar dat alleen OV-1 noemt (`test/docs/geen-externe-review-docs.test.ts:28`, `test/rails/leesbudget.test.ts:624`,
     `:728`, `test/rails/meting-kerncijfers-pr-tabel.test.ts:56`, `test/rails/meting-stuurt.test.ts:39`,
-    `test/rails/meting-zonder-externe-review.test.ts:10`, `test/rails/padtabel-kit.ts:12`): `spec agent-merge-niet-kritiek
-    (vervallen), OV-1`.
+    `test/rails/meting-zonder-externe-review.test.ts:10`, `test/rails/padtabel-kit.ts:12`): het doel-id
+    `agent-samenvoegen/AC-11` (geen externe reviewdienst), of ADR 0089 punt 5.
 - **vervallen-documenten-weg/AC-5** — Meldingen (PR 1). De test die in de `ask`-melding `AC-3` eist
   (`test/hooks/rolhek-gh-allowlist.test.ts:752-756`) slaagt met ongewijzigde verwachtingen tegen de nieuwe meldingen van
   `zelfladend.mjs`, en `rails/hooks/lib/zelfladend.mjs` bevat precies zes keer `(spec rolhek-vooraf AC-3)`.
@@ -211,11 +210,12 @@ spec blijft `goedgekeurd` tot PR 2 en gaat daar naar `gebouwd`.
 - PR 1: `rails/hooks/lib/rolhek.mjs`, `rails/hooks/lib/shell.mjs`, `rails/hooks/lib/zelfladend.mjs`,
   `scripts/kit/pr-merge.mjs` (alleen commentaar en meldingtekst); de testbestanden uit de verhuistabel en AC-4;
   `test/scripts/pr-merge-samenvoegen.test.ts`; nieuw `test/docs/vervallen-documenten-weg.test.ts`; ADR 0062, 0069, 0071,
-  0074, 0082, 0083, 0084, 0086, 0089, 0091, 0093 (platte tekst); de specs uit AC-4, `rolhek-vooraf`,
+  0074, 0082, 0083, 0084, 0086, 0089, 0091, 0093, 0099 (verwijzingen en `Herzien:`); de specs uit AC-4, `rolhek-vooraf`,
+  `rolhek-lezen`,
   `sandbox-plaatshouders`, `agent-samenvoegen`, `gebouwd-zonder-nummer`, `compacte-kennisbasis-rails`; `docs/roadmap.md`,
   `docs/operations/agent-doorloop.md`, `docs/template-changelog.md`.
 - PR 2: `scripts/kit/check-docs.mjs`, `test/rails/adr-per-map.test.ts`, `rails/hooks/lib/document-state.mjs`
-  (`A4_MELDING`), `docs/framework.md`, ADR 0091 en 0095 (`Herzien:`), spec `templateregime`.
+  (`A4_MELDING`), `docs/framework.md`, ADR 0095 (`Herzien:`), spec `templateregime`.
 - `.kit/baseline.json`: geen wijziging (de dood-padregels van `kooi.md` en `tests-naar-vermogen.md` noemen testbestanden,
   geen verwijderd document). Geen migratie, route, permissie of resource: niet `check:migrations`, `check:secdef`,
   `test:db`, `test/security/resources.ts`, geen permissietest per verboden rol.
@@ -246,7 +246,8 @@ Elk AC heeft een test met `vervallen-documenten-weg/AC-n` in de describe- of tes
   in een ander geval de nieuwe sleutel weg of zet de fixture in `docs/adr/`, en noemt elk geval met reden in de PR
   (R-TEST-02, akkoord via deze spec).
 - **OV-3 ✅ besloten** (eigenaar 2026-11-19: de aanbeveling) — `Herzien:`-regel bij een link die alleen platte tekst wordt? Aanbeveling: nee; de inhoud verandert niet, alleen
-  0091 en 0095 krijgen er een (Werking). Laat het rolhek de Edit niet toe, dan stopt de bouw en vraagt de eigenaar (Werking).
+  0091 en 0095 krijgen er een (Werking). Herzien door de eigenaar op 2026-11-19: elk geraakt ADR krijgt in PR 1 een
+  `Herzien:`-regel, en ook een vermelding in de Context gaat naar de opvolger of een omschrijving (Werking). Laat het rolhek de Edit niet toe, dan stopt de bouw en vraagt de eigenaar (Werking).
 - **OV-4 ✅ besloten** (eigenaar 2026-11-19: de aanbeveling) — Een changelogregel voor apps (zij krijgen de verwijdering en de check via een template-update). Aanbeveling: één
   regel, door de hoofdsessie bij opleveren; buiten deze spec.
 - **OV-5 ✅ besloten** (eigenaar 2026-11-19) — Regelboektekst en `Herzien:`-regels zijn werkstappen, geen AC's; de bouw gaat

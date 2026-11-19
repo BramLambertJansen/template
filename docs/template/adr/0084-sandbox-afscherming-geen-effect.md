@@ -4,10 +4,11 @@ Status: geaccepteerd
 
 Herzien: 2026-11-12 (#705): alleen de plaatshouders voor `pr:verify` blijven; de afscherming voor de effecttoets vervalt (ADR 0091 punt 2)
 Herzien: 2026-11-16 (#745): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
+Herzien: 2026-11-19: verwijzingen naar verwijderde documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg)
 
-Wijzigt [0066](0066-schrijfgrens-op-effect.md) punt 1 en [0083](0083-bewaking-met-minder-wrijving.md) punt 2. Drempel: A3
+Wijzigt [0083](0083-bewaking-met-minder-wrijving.md) punt 2. Drempel: A3
 (een vangnet wordt smaller) en A4. Aanleiding: leerpunt #567 en meting #591 (6 november 2026), eerder #582. Uitwerking:
-[spec rolhek-effect](../specs/rolhek-effect.md) AC-11.
+[spec sandbox-plaatshouders](../specs/sandbox-plaatshouders.md).
 
 ## Context
 

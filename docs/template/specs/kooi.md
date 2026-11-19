@@ -107,7 +107,7 @@ proef: `✗ kooi: de proef schreef buiten de werkmap; het commando is niet uitge
 
 `scripts/kit/kooi.mjs` (nieuw), `eslint.config.js`, `test/rails/eslint.test.ts`, `test/hooks/rolhek-effect.test.ts` (vervallen),
 `test/scripts/runner-trusted-base.test.ts`, `test/rails/ci-scan.test.ts`, `test/hooks/statusregel.test.ts`, `scripts/doctor.sh`, `.github/workflows/ci.yml` (eigenaar pusht),
-`docs/ENVIRONMENT.md`, `docs/framework.md` §11, `AGENTS.md`, spec rolhek-vooraf-krimp (AC-2 draait in de kooi).
+`docs/ENVIRONMENT.md`, `docs/framework.md` §11, `AGENTS.md`, spec rolhek-vooraf (rolhek-vooraf/AC-1: het padcorpus draait in de kooi).
 
 ## Buiten scope
 

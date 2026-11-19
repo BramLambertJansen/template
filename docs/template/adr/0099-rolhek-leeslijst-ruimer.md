@@ -2,11 +2,13 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-19: verwijzingen naar verwijderde documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg)
+
 Herziet [0087](0087-reviewer-zoekt-met-git-grep.md) punt 5, [0064](0064-leesbudget-per-laag.md) punt 5 (de zin "pipes en
 `git grep` komen er niet bij") en [0091](0091-effecttoets-vervalt.md) punt 3 ("de toets vooraf wordt niet verder
 uitgekleed"), voor lezen en voor de inhoud van een vervallen spec (punt 4); en [0046](0046-werkstraat-en-beslisroute.md) punt 6 voor de inhoud van een vervallen spec.
 De zin in R-ROL-10 die hierdoor een uitzondering krijgt, heeft twee bronnen: "geen nieuwe regel per programma meer" komt uit
-het vervallen [0066](0066-schrijfgrens-op-effect.md) punt 3, "niet verder uitgekleed" uit 0091 punt 3. Drempel: A3 (het
+een verwijderd ADR, "niet verder uitgekleed" uit 0091 punt 3. Drempel: A3 (het
 rolhek wordt ruimer) en A4. Eigenaarbesluit 18 november 2026; de open vragen OV-2 tot OV-6 besloot de eigenaar op
 19 november 2026. Aanleiding: leerpunten #736, #753 en #757. Uitwerking: [spec rolhek-lezen](../specs/rolhek-lezen.md) AC-11
 tot AC-20.

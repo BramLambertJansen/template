@@ -188,7 +188,7 @@ function startKitScript(command, script) {
   const tekst = command.replace(/[\\'"]/g, '');
   if (script.script.test(tekst)) return true;
   const segmenten = parseCommands(command);
-  // De kop van een veilige `for`-lus (AC-10 (e)) start niets: zijn woorden gaan alleen naar programma's in de romp die zelf niets starten.
+  // De kop van een veilige `for`-lus (spec rolhek-vooraf AC-2 (e)) start niets: zijn woorden gaan alleen naar programma's in de romp die zelf niets starten.
   const { koppen } = veiligeLussen(segmenten);
   const leest = (/** @type {Command} */ { words }, /** @type {number} */ index) => koppen.has(index) || leestAlleen(words);
   const raakt = (/** @type {string} */ woord) => globRaakt(woord, script.doelen);
@@ -197,7 +197,7 @@ function startKitScript(command, script) {
 }
 
 /**
- * `pnpm pr:merge <nr>` (ADR 0069 punt 4, spec agent-merge-niet-kritiek AC-4) en `pnpm pr:resolve <nr>` (ADR 0098, spec
+ * `pnpm pr:merge <nr>` (ADR 0069 punt 4, spec agent-samenvoegen AC-9) en `pnpm pr:resolve <nr>` (ADR 0098, spec
  * botgesprekken-sluiten AC-7 en AC-8): alleen de hoofdsessie, alleen precies die vorm, en zonder prompt alleen als modus en
  * `MERGE_FILES` uit het anker kloppen; anders een weigering met de reden.
  * @param {{ command: string, role: string }} bash @param {Ctx} ctx @param {Decision} decision
@@ -596,7 +596,7 @@ function decideBash({ command, role, tmpdirVrij = tmpdirLetterlijk(command), onz
   // De inhoud van `$(…)` en backticks is zelf een commando; zo vallen ook geneste substituties onder dezelfde regels.
   for (const inner of substitutions(command)) decideBash({ command: inner, role, tmpdirVrij, onzeker: true }, ctx, decision);
   const setsGhEnv = zetGhOmgeving(parseCommands(command));
-  // `cd .git && …` in hetzelfde commando: de zelfladende toets (AC-3) leest de woorden daarna vanuit die map.
+  // `cd .git && …` in hetzelfde commando: de zelfladende toets (spec rolhek-vooraf AC-3) leest de woorden daarna vanuit die map.
   /** @type {string | null} null: een `cd` naar een map die pas bij het uitvoeren bekend is */
   let cwdNu = ctx.cwd;
   for (const { parsed, variabel } of vangnetSegmenten(command, { tmpdirVrij, onzeker })) {
@@ -618,7 +618,7 @@ function decideBash({ command, role, tmpdirVrij = tmpdirLetterlijk(command), onz
 }
 
 /**
- * De vangnetten vooraf, per segment (spec rolhek-vooraf-krimp AC-10): een commandowoord dat niet letterlijk is, een woord dat
+ * De vangnetten vooraf, per segment (spec rolhek-vooraf AC-2): een commandowoord dat niet letterlijk is, een woord dat
  * naar gh kan wijzen, een variabel woord naast een gh-subcommando of bij een programma buiten `EXPANSION_SAFE`, en `env -S`.
  * `variabel`: de geëxpandeerde woorden die voor deze vangnetten tellen (`vangnetSegmenten`).
  * @param {{ parsed: Command, argv: readonly string[], variabel: readonly string[] }} segment
@@ -654,7 +654,7 @@ function vangnetten({ parsed, argv, variabel }, role, decision) {
 }
 
 /**
- * De segmenten van een commando, met per segment de geëxpandeerde woorden die voor de vangnetten tellen (AC-10). Niet mee
+ * De segmenten van een commando, met per segment de geëxpandeerde woorden die voor de vangnetten tellen (spec rolhek-vooraf AC-2). Niet mee
  * tellen: een woord dat met `$TMPDIR/` begint als `tmpdirVrij` (d), en in de romp van een veilige `for`-lus (e) een woord dat
  * alleen de lusvariabele noemt; daar valt ook `do` vooraan weg, zodat elke toets het echte programma ziet. `parsed.expanded`
  * blijft volledig voor de andere regels.
@@ -679,7 +679,7 @@ function vangnetSegmenten(command, { tmpdirVrij, onzeker }) {
 
 /**
  * `for NAAM in …; do …; done` waarvan elk segment in de romp een programma uit `EXPANSION_SAFE` start of git met een
- * subcommando uit `GIT_LUS_LEZEN` (AC-10 (e)). Strikte allowlist (review ronde 6), anders geldt het normale vangnet:
+ * subcommando uit `GIT_LUS_LEZEN` (spec rolhek-vooraf AC-2 (e)). Strikte allowlist (review ronde 6), anders geldt het normale vangnet:
  * - de lusnaam is `[a-z_][a-z0-9_]*` (geen `PATH`, `D` …);
  * - elke kopwaarde is, op de ruwe tekst, een eenvoudig pad `LUS_WAARDE`: geen witruimte, quote, `$`, `?`, `[` of `{`, en `*`
  *   niet vooraan, dus geen woordsplitsing en geen waarde die met `-` begint (`--output=…` voor git, `-rf` voor rm);
@@ -775,7 +775,7 @@ function alleenLusvariabele(word, naam) {
 
 /**
  * De map na `cd`/`pushd`. Een doel dat pas bij het uitvoeren bekend is (geen doel, `~`, `-`, `$`, backtick, substitutie):
- * null, en de zelfladende toets valt dicht (AC-3). `$(git rev-parse --show-toplevel)` is de root. Ook na `cd $TMPDIR` blijft
+ * null, en de zelfladende toets valt dicht (spec rolhek-vooraf AC-3). `$(git rev-parse --show-toplevel)` is de root. Ook na `cd $TMPDIR` blijft
  * de werkmap onbekend (eigenaarbesluit na de externe review, P1-2): de checkout kan zelf onder TMPDIR liggen, en de hook kent de TMPDIR van
  * de shell niet.
  * @param {{ argv: readonly string[], expanded: readonly string[] }} commando @param {string | null} cwd @param {string} root
@@ -818,7 +818,7 @@ function envSplitsString(words) {
 
 /**
  * De inhoud van elke `$(…)` en elk backtick-paar op het buitenste niveau (geneste vangt de recursie in decideBash).
- * De body van een heredoc met aangehaalde delimiter blijft buiten beeld: bash voert er niets in uit (ADR 0086, AC-11); de
+ * De body van een heredoc met aangehaalde delimiter blijft buiten beeld: bash voert er niets in uit (ADR 0086, spec rolhek-vooraf AC-4); de
  * grens komt van `tokenize`.
  * @param {string} command
  * @returns {string[]}
@@ -876,7 +876,7 @@ const RAW_APPROVE = /--approve|(?:^|\s)-a/;
 const RAW_SUBAGENT = new RegExp(`${GH_WORD.source}|api\\.github\\.com|git\\s+credential`, 'm');
 const SHELL_TRICKS = /\$\(|`|\beval\b|\bsource\b|(?:^|[\s;&|(])\.\s|\|\s*(?:ba|z|da|k)?sh\b|<</;
 // Brace-expansie als shell-truc, alleen in een onaangehaald deel van een woord (`Command.patterns`): een `--jq`-filter of
-// JS-object met komma tussen aanhalingstekens expandeert bash niet (AC-10 (b)).
+// JS-object met komma tussen aanhalingstekens expandeert bash niet (spec rolhek-vooraf AC-2 (b)).
 const BRACE_TRICK = /\{[^}]*(?:,|\.\.)[^}]*\}/;
 
 /**
@@ -1306,7 +1306,7 @@ const SHELL_WORDS = new Set(['{', '}', '[', '[[', ']]', '!']);
 
 /**
  * Letterlijk: geen expansie (`$`, backtick), geen glob (`*`, `?`, `[`, `{`) en geen `~` vooraan; dan weet het rolhek
- * vóór het uitvoeren welk programma draait. `pattern` (`Command.patterns`): aangehaalde glob-tekens tellen niet (AC-10 (b)).
+ * vóór het uitvoeren welk programma draait. `pattern` (`Command.patterns`): aangehaalde glob-tekens tellen niet (spec rolhek-vooraf AC-2 (b)).
  * @param {string} word
  * @param {string} [pattern]
  */
@@ -1323,22 +1323,22 @@ const COMMAND_WRAPPERS = new Set(['time', 'env', 'nice', 'command', 'nohup', 'ex
 // Brace-expansie (`{` met verderop `,` of `..`: `g{h..h}`, `{g,x}h`) en POSIX-klassen (`[[:alpha:]]`, `[[=h=]]`, `[[.h.]]`, ook `[![:digit:]]`)
 // kunnen elke naam opleveren; een vangnet heeft geen expander nodig, dus dicht, ook onaangehaald `echo {a,b}`. Getoetst op
 // `Command.patterns`: tussen aanhalingstekens (`echo '{a,b}'`, een `--jq`-filter, `python3 -c "…{…}…"`) expandeert bash
-// niets en telt het teken niet (AC-10 (b)). `[[` als los woord mag.
+// niets en telt het teken niet (spec rolhek-vooraf AC-2 (b)). `[[` als los woord mag.
 // Programma's die met een geëxpandeerd argument (`$X`, `$(…)`) geen ander commando of GitHub-aanroep kunnen starten.
 // `sed` (`e`) en `awk` (`system()`) kunnen dat wel en staan er daarom niet in.
 const EXPANSION_SAFE = new Set(['echo', 'printf', 'cat', 'ls', 'cp', 'mv', 'rm', 'mkdir', 'rmdir', 'touch', 'grep',
   'head', 'tail', 'wc', 'sort', 'uniq', 'diff', 'cmp', 'test', '[', 'cd', 'basename', 'dirname', 'realpath', 'readlink', 'stat',
   'file', 'du', 'df']);
 // Losse woorden die op een gh-opdracht wijzen, in hetzelfde segment als het variabele woord; bewust vals positief:
-// `echo $HOME run`, maar niet `cd $TMPDIR && gh issue list` (AC-10 (a)).
+// `echo $HOME run`, maar niet `cd $TMPDIR && gh issue list` (spec rolhek-vooraf AC-2 (a)).
 const GH_SUBCOMMAND = /(?:^|[\s;&|(){}<>])(?:pr|api|repo|release|workflow|run|issue|label|secret|merge|review|create)(?=$|[\s;&|(){}<>])/;
 const SHELL_EXPANSION = /\{.*(?:,|\.\.)|\[[^\]]*\[[:=.]/s;
 
 /**
  * Een woord met een glob (`*`, `?`, `[…]`) waarvan de naam `gh` of `gh.exe` kan zijn, op elke positie: zo hangt de regel
  * niet af van een lijst omhulsels (`setsid /usr/bin/g[h] …`). `cat g*.txt` en `ls src/*.ts` matchen niet. `word` is de
- * vorm uit `Command.patterns`: een aangehaald glob-teken telt niet (AC-10 (b)). Een klasse volgens bash: `g[]h]` en
- * `g[[:alpha:]]` passen op gh; zonder sluitende `]` is de `[` letterlijk (`g[!]`, `[^]h`; AC-10 (c), #622). `ruim`
+ * vorm uit `Command.patterns`: een aangehaald glob-teken telt niet (spec rolhek-vooraf AC-2 (b)). Een klasse volgens bash: `g[]h]` en
+ * `g[[:alpha:]]` passen op gh; zonder sluitende `]` is de `[` letterlijk (`g[!]`, `[^]h`; spec rolhek-vooraf AC-2 (c), #622). `ruim`
  * (`Command.ruim`): het commando had een `\`, `'` of `"`; een klasse kan dan op elk teken passen (`/usr/bin/[\!g]h`; review
  * B3, eigenaarbesluit 7 november 2026). Een aangehaalde `[` is in `patterns` al `QUOTED` en opent dus nooit een klasse.
  * @param {string} word @param {boolean} [ruim]
