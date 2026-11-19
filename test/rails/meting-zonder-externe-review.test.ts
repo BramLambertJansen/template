@@ -62,7 +62,8 @@ function prTabel(extra: string[]) {
 }
 
 describe('meting zonder externe review: --pr-tabel', () => {
-  test('de tabel heeft precies de vijf overige kerncijfers en geen rij voor de externe reviewdienst', () => {
+  // GEWIJZIGD (spec agents-leveren, PR-1): de tabel kreeg de rijen per rol (AC-4); daarom zeven in plaats van vijf.
+  test('de tabel heeft precies de zeven overige kerncijfers en geen rij voor de externe reviewdienst', () => {
     const uit = prTabel([]);
     expectAbsent(uit, WOORD, VORMEN);
     expect(uit).toBe(
@@ -74,12 +75,14 @@ describe('meting zonder externe review: --pr-tabel', () => {
         '| Reviewrondes | 2 |',
         '| CI-rood | 1 |',
         '| Weigeringen (bovengrens) | 1 |',
+        '| Weigeringen per rol | hoofdsessie 1 |',
+        '| Subagents per rol | 0 |',
         '',
       ].join('\n'),
     );
   });
 
-  test('--json heeft onder prTabel precies de vijf overige velden', () => {
+  test('--json heeft onder prTabel precies de zeven overige velden', () => {
     const data: unknown = JSON.parse(prTabel(['--json']));
     expect(veld(data, 'prTabel')).toStrictEqual({
       leespad: 'zie pnpm leespad',
@@ -87,6 +90,8 @@ describe('meting zonder externe review: --pr-tabel', () => {
       reviewrondes: 2,
       ciRood: 1,
       weigeringen: 1,
+      weigeringenPerRol: { hoofdsessie: 1 },
+      subagentsPerRol: {},
     });
   });
 
