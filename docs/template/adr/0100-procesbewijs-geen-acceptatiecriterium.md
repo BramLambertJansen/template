@@ -10,8 +10,9 @@ noemt het ADR); het wijzigt geen geaccepteerd ADR. Besluit van de eigenaar, 2026
 `check-docs` regel 6 eist voor elk AC van een gebouwde spec een testbestand dat `<namespace>/AC-n` noemt; sinds #824
 telt alleen die vorm. Acht AC's beschrijven geen gedrag maar bewijs dat in de PR of na de merge geleverd wordt: een groene
 CI-run, een CodeQL-uitslag, docs in de bouw-PR, een volgorde van bouwstappen, uitvoer in de thread. Zes staan daarom in
-`.kit/baseline.json` (leerpunt #828), twee tellen als gedekt omdat de kop van een testbestand hun id noemt met de zin "is
-bewijs, geen test" (#829). Dat laatste is schijndekking: het testbestand toetst ze niet.
+`.kit/baseline.json` (leerpunt #828), twee tellen als gedekt omdat de kopregel van een testbestand hun id noemt met de
+uitleg dat ze bewijs zijn en geen test (botgesprekken-sluiten/AC-12 sinds #829, agent-samenvoegen/AC-7 sinds de bouw van die
+spec). Dat laatste is schijndekking: het testbestand toetst ze niet.
 
 Sinds #834 (leerpunt #793) zegt het spec-sjabloon dat bewijs dat alleen een CI-uitslag of een stap in de PR is, geen
 criterium is maar in het Testplan hoort (mini-spec: de PR-beschrijving).
@@ -36,5 +37,5 @@ criterium is maar in het Testplan hoort (mini-spec: de PR-beschrijving).
 ## Gevolgen
 
 - Zes regels minder in `.kit/baseline.json`; de AC-dekking van de acht specs klopt zonder uitzondering.
-- Nieuwe specs volgen het sjabloon uit #834; een check daarop volgt apart.
+- Nieuwe specs volgen het sjabloon uit #834; of een check dat afdwingt, beslist een eigen PR met spec.
 - Leerpunt #828 houdt geen open AC's meer in de baseline over.
