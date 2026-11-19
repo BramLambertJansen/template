@@ -2,6 +2,8 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-19: punt 6: het AC-id blijft staan zolang de spec leeft; vervalt een hele template-spec, dan verhuizen haar levende AC's naar een levende spec en verdwijnt het document (R-CI-06)
+
 Wijzigt [0054](0054-gebouwd-in-de-bouw-pr.md) punt 1 en 5, [0080](0080-specarchief-en-bouwvorm.md) punt 4, 5, 6 en 8,
 [0062](0062-spec-en-bouw-in-een-pr.md) punt 4, [0046](0046-werkstraat-en-beslisroute.md) punt 6 en 10,
 [0063](0063-compacte-kennisbasis-en-lichtere-werkstraat.md) punt 5 (alleen: "de developer `gebouwd` via `docs:status`") en
@@ -42,7 +44,8 @@ in de bouw-PR al een afspraak, geen guardtoets.
    weggehaald merkteken is bouw, en een nieuwe `; gevalideerd: <sha>` blijft geweigerd.
 6. **Een vervallen AC** krijgt de vorm `**<ns>/AC-n** — Vervallen door ADR <nummer> … Was: …`. De AC-dekking slaat haar
    alleen over als dat ADR in de ADR-map naast de specmap bestaat en `geaccepteerd` is; de reviewer legt elke nieuwe
-   vervallen-AC naast dat ADR. Het AC-id blijft staan (0080 punt 3).
+   vervallen-AC naast dat ADR. Het AC-id blijft staan (0080 punt 3) zolang de spec leeft; vervalt een hele template-spec,
+   dan verhuizen haar levende AC's naar een levende spec en verdwijnt het document (R-CI-06).
 7. **Alleen hoofdsessie en architect zetten `gebouwd`.** De developer had alleen de route via `docs:status`; die verdwijnt
    en komt niet terug als Edit (R-WERK-08).
 

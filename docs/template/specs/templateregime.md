@@ -86,8 +86,10 @@ Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van pun
   `oudereCore`, `commitFout` en meldingen per zone): een app-PR die `docs/template/` buiten een vertrouwde template-merge
   wijzigt, faalt met de zone in de melding.
 - **templateregime/AC-9** — `check-docs` toetst in `docs/adr/`, `docs/specs/`, `docs/template/adr/` en `docs/template/specs/`:
-  links, statuswoorden, unieke nummers per map, kopnummer gelijk aan bestandsnummer, AC→test en de kopcontroles voor specs.
+  links, statuswoorden, unieke nummers per map, kopnummer gelijk aan bestandsnummer, AC→test en de kopcontroles voor specs
+  en in de twee templatemappen geen document met status `vervallen` of `vervangen door NNNN` (spec vervallen-documenten-weg).
   `adrHerzienViolations` en de archiefnaamregel verdwijnen in stap 3; de reeks 0001–0099 / 0100+ staat nergens meer.
+  Toets: `test/rails/adr-per-map.test.ts`
 - **templateregime/AC-10** — Stap 2, rolhek: het schrijfrecht van de architect omvat `docs/template/adr/**` en
   `docs/template/specs/**` (ook in `SCHRIJFRECHT_VRIJ`); `check-docs` is groen op de samenhang met de padtabel. De A4- en
   identiteitsregels van het rolhek blijven tot ADR 0089 punt 9.

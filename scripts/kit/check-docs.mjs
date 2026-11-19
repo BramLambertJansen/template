@@ -40,6 +40,8 @@
 //     `docs:changelog-fragment:<bestand>`): naam, front matter met één `soort`, minstens één lijstitem en als enige kop
 //     `### Bij een update` met een lijstitem eronder (`fragmentFout` in scripts/kit/template-release.mjs). In template en
 //     app; `README.md` in de map is geen fragment.
+//  16. Geen document met status `vervallen` of `vervangen door NNNN` in docs/template/specs/ of docs/template/adr/
+//     (R-CI-06, spec vervallen-documenten-weg AC-6, sleutel `docs:<pad>:vervallen-in-template`); niet in docs/specs/ of docs/adr/.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -89,6 +91,7 @@ export async function docsViolations(root = '.') {
     ...identifierViolations(files, read),
     ...linkViolations(root, files, read),
     ...statusViolations(files, read),
+    ...vervallenInTemplateViolations(files, read),
     ...statusvormViolations(files, read),
     ...acViolations(files, read),
     ...mirrorViolations(files, read, app),
@@ -540,6 +543,30 @@ function statusvormViolations(files, read) {
           },
         ];
   });
+}
+
+const TEMPLATE_ADR_MAP = 'docs/template/adr/';
+const TEMPLATE_SPEC_MAP = 'docs/template/specs/';
+
+/**
+ * Regel 16 (R-CI-06, vervallen-documenten-weg/AC-6): in `docs/template/specs/` en `docs/template/adr/` staat geen document met
+ * status `vervallen` of `vervangen door NNNN`; git is de historie. `docs/specs/` en `docs/adr/` (een app) vallen erbuiten.
+ * @param {readonly string[]} files
+ * @param {(file: string) => string} read
+ * @returns {Violation[]}
+ */
+function vervallenInTemplateViolations(files, read) {
+  const adrs = files.filter((file) => file.startsWith(TEMPLATE_ADR_MAP) && adrNumber(file) !== undefined);
+  const specs = files.filter((file) => file.startsWith(TEMPLATE_SPEC_MAP) && SPEC_BESTAND.test(file));
+  const vervallenAdr = adrs.filter((file) => {
+    const status = ADR_STATUS.exec(read(file))?.[1];
+    return status === 'vervallen' || status?.startsWith('vervangen door ') === true;
+  });
+  const vervallenSpec = specs.filter((file) => SPEC_STATUS.exec(read(file))?.[1] === 'vervallen');
+  return [...vervallenAdr, ...vervallenSpec].map((file) => ({
+    key: `docs:${file}:vervallen-in-template`,
+    message: `${file}: een vervallen of vervangen document staat niet in docs/template/ (R-CI-06); verhuis levende AC's naar een levende spec en verwijder het, git is de historie`,
+  }));
 }
 
 /**

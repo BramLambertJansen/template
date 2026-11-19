@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd
 namespace: vervallen-documenten-weg
 ---
 
@@ -197,7 +197,7 @@ spec blijft `goedgekeurd` tot PR 2 en gaat daar naar `gebouwd`.
 
 | Situatie | Gedrag | Foutcode |
 |---|---|---|
-| Naam als script, testbestand of map, niet als spec (`document-status-lokaal.mjs`, `agent-merge-bytegrens.test.ts`, `test/hooks/rolhek-effect.test.ts`, de map `<git-dir>/rolhek-effect`) | blijft, onder andere: `test/scripts/schrap-documentbewaking-templateregime.test.ts`, `docs/template/specs/templateregime.md` r.137-149, `docs/template/specs/padtabel.md` r.201, `docs/template/specs/kooi.md` r.74 en r.108, `docs/template/specs/tests-naar-vermogen.md` r.75 en r.77, ADR 0072 r.30, `.kit/baseline.json` r.25, r.58, r.59 en r.62, `test/hooks/effecttoets-weg.test.ts`, `docs/operations/agent-doorloop.md` r.497 | n.v.t. |
+| Naam als script, testbestand of map, niet als spec (`document-status-lokaal.mjs`, `agent-merge-bytegrens.test.ts`, `test/hooks/rolhek-effect.test.ts` (vervallen), de map `<git-dir>/rolhek-effect`) | blijft, onder andere: `test/scripts/schrap-documentbewaking-templateregime.test.ts`, `docs/template/specs/templateregime.md` r.137-149, `docs/template/specs/padtabel.md` r.201, `docs/template/specs/kooi.md` r.74 en r.108, `docs/template/specs/tests-naar-vermogen.md` r.75 en r.77, ADR 0072 r.30, `.kit/baseline.json` r.25, r.58, r.59 en r.62, `test/hooks/effecttoets-weg.test.ts`, `docs/operations/agent-doorloop.md` r.497 | n.v.t. |
 | Bestandsnaam van een levend ADR die een specnaam bevat (`0062-spec-en-bouw-in-een-pr.md`, `0069-agent-merge-niet-kritiek.md`) en elke link of elk pad ernaar | blijft: het ADR leeft | n.v.t. |
 | Het woord "specplicht" in ADR 0056, 0057, 0058 | blijft: een begrip, geen verwijzing naar de spec | n.v.t. |
 | `docs/template-changelog.md` | historie: alleen de link r.842 wordt platte tekst; geen nieuwe regel in deze stap | n.v.t. |
