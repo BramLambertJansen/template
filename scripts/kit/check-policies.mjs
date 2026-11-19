@@ -42,8 +42,23 @@ const NO_PLAN = /^select\s+no_plan\s*\(/i;
 const ROL = /^set\s+local\s+role\b/i;
 
 /**
+ * Het code-deel van een regel: alles vóór de eerste `--` die niet in een tekstliteral ('…') staat.
+ * @param {string} regel
+ * @returns {string}
+ */
+function codeDeel(regel) {
+  let inTekst = false;
+  for (let i = 0; i < regel.length; i++) {
+    if (regel[i] === "'") inTekst = !inTekst;
+    else if (!inTekst && regel.startsWith('--', i)) return regel.slice(0, i);
+  }
+  return regel;
+}
+
+/**
  * De regels van een pgTAP-bestand die als statement tellen: zonder lege regels, commentaar, psql-metaregels, `begin;` en
- * zonder de binnenkant van een `$$`-blok (de regel die het blok opent telt wel).
+ * zonder de binnenkant van een `$$`-blok (de regel die het blok opent telt wel). Alleen een `$$` in het code-deel opent
+ * of sluit een blok, niet een in commentaar.
  * @param {string} tekst
  * @returns {string[]}
  */
@@ -53,7 +68,7 @@ function pgTapStatements(tekst) {
   let inBlok = false;
   for (const ruw of tekst.split('\n')) {
     const regel = ruw.trim();
-    const wissel = (regel.split('$$').length - 1) % 2 === 1;
+    const wissel = (codeDeel(regel).split('$$').length - 1) % 2 === 1;
     if (!inBlok && regel !== '' && !regel.startsWith('--') && !regel.startsWith('\\') && !/^begin\s*;/i.test(regel))
       regels.push(regel);
     if (wissel) inBlok = !inBlok;

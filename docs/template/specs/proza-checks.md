@@ -20,7 +20,7 @@ Lintregels en een check voor ontwikkelaars; geen gedrag in de app.
   `TESTS` als bereik en uitsluiting.
 - `test/rails/eslint-web.test.ts` — fixtures als `{ name, file, code, rule }` via `railsIn`.
 - `scripts/kit/conflictmarkers.mjs` — check in het kanaal `strikt` van `scripts/kit/ratchet.mjs`: `Violation[]` met
-  `key` en `message`, los gedraaid exitcode 1 met verwijzing naar `pnpm ratchet`.
+  `key` en `message`; `pgtap-vorm` heeft geen eigen CLI-ingang, de ratchet draait hem.
 - `test/rails/check-secdef.test.ts` — per overtreding een fixture die faalt, plus een goede.
 
 ## Hergebruik en UX
@@ -106,6 +106,8 @@ Lintfixtures in `test/rails/eslint-route.test.ts`; per fixture is de verzameling
 | `set role` zonder `local`, `set_config('role', …)` | niet door `pgtap-vorm`; R-CODE-08 en review |
 | `plan(` in een `$$`-blok of commentaar | telt niet; alleen een regel die met `select plan(` begint |
 | `set local role` in commentaar, in een `$$`-blok of in `execute '…'` | telt niet; alleen aan het begin van een regel (na witruimte) buiten een `$$`-blok |
+| `$$` in een `--`-commentaar (eigen regel of achter code) | opent of sluit geen blok |
+| dollar-quote met tag (`$x$`), of `--` binnen `$$`-tekst gevolgd door een `$$` op dezelfde regel | bekend gat; plan en `search_path` staan in de praktijk bovenaan |
 
 ## Raakt ook
 

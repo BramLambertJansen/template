@@ -70,6 +70,8 @@ const VERWACHT: Record<string, string | null> = {
   'zonder-begin.sql': null,
   'goed-hoofdletters.sql': null,
   'goed-rol-geen-regelbegin.sql': null,
+  'goed-dollar-in-commentaar.sql': null,
+  'goed-dollar-in-staartcommentaar.sql': null,
   'search-path-ontbreekt.sql': 'search_path',
   'search-path-anders.sql': 'search_path',
   'search-path-later.sql': 'search_path',
@@ -78,6 +80,7 @@ const VERWACHT: Record<string, string | null> = {
   'plan-in-blok.sql': 'plan ontbreekt',
   'plan-na-rol.sql': 'plan na set local role',
   'plan-na-definer.sql': 'plan na set local role',
+  'rol-tussen-commentaar-dollars.sql': 'plan na set local role',
   'no-plan.sql': 'no_plan',
 };
 
