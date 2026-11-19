@@ -76,6 +76,36 @@ steekproefregel), bij een reden exit 1 met `Geen merge (ADR 0069):` en per reden
   het account van de eigenaar en voegt hem bij groene checks samen met `pnpm pr:merge`; de uitvoer staat in de thread. En op
   een PR met een beschermd pad weigert het script met de reden uit AC-3; die uitvoer staat in die PR. Vooraf sluit de
   hoofdsessie proef-PR #795 zonder merge.
+- **agent-samenvoegen/AC-8** (nog niet gebouwd) — Uit spec agent-merge-niet-kritiek (vervallen) AC-3. `pnpm pr:merge <nr>`
+  (`scripts/kit/pr-merge.mjs`) leest modus en kop van `main` via REST (`GET …/branches/main`,
+  `GET …/contents/.claude/gates.json?ref=<sha>`), niet uit de lokale `origin/main`; ontbrekend of onleesbaar telt als
+  `"eigenaar"`. `requiredChecks` komt uit `.claude/decisions.json` op dezelfde main-SHA. Een reden, elk met een eigen regel en
+  exit 1 zonder schrijfactie: modus niet `niet-kritiek`; PR dicht, draft, basis niet `main`, een fork, head niet gelijk aan de
+  lokale HEAD; een verplichte check op de head ontbreekt, is niet `success` of komt van een andere app; de laatste uitslag op
+  de kop van `main` is niet `success`, loopt nog of ontbreekt. Een ongeldig argument (leeg, `0`, twee nummers, `7;x`, `abc`)
+  geeft `Gebruik: pnpm pr:merge <nummer>`. Samenvoegen alleen via `PUT /repos/{repo}/pulls/{nr}/merge` met
+  `merge_method=squash` en `sha=<head-SHA>`; alleen REST. Bewijs nu: `test/scripts/pr-merge.test.ts:73`.
+- **agent-samenvoegen/AC-9** (nog niet gebouwd) — Uit spec agent-merge-niet-kritiek (vervallen) AC-4. Het rolhek weigert elke
+  rol `gh pr merge`, `gh api …/merge` en auto-merge, en geeft alleen de hoofdsessie in de repo-root `allow` voor precies
+  `pnpm pr:merge <nr>` (`<nr>` cijfers), als `trustedMerge` waar is: modus `niet-kritiek` in het anker en `MERGE_FILES`
+  (`HOST_FILES` uit `rails/hooks/lib/runner-authority.mjs` plus `rails`) lokaal en gecommit gelijk aan het anker, zonder
+  geplante `gh`, `git` of `node` (ook `.exe`) in `node_modules/.bin`; anders `deny` met de reden. Elke andere vorm
+  (`node scripts/kit/pr-merge.mjs`, `pnpm run pr:merge`, een omhulsel, een glob, een extra argument) en elke subagent:
+  `deny`. Lezen van het script met `cat`, `head`, `tail`, `grep`, `wc`, `ls`, `diff`, `stat` of git `log`, `show`, `diff`,
+  `blame`, `ls-files`, `grep` blijft vrij. `.claude/settings.json` houdt `deny` voor `Bash(gh pr merge*)` en
+  `Bash(gh api *merge*)`, `ask` voor `Bash(pnpm pr:merge *)`, `pnpm pr:merge *` in `sandbox.excludedCommands`, en geen
+  `allow`-regel met `pr:merge`. Bewijs nu: `test/hooks/rolhek-pr-merge.test.ts:45` en `:180`.
+- **agent-samenvoegen/AC-10** (nog niet gebouwd) — Uit spec agent-merge-niet-kritiek (vervallen) AC-7. Een externe
+  reviewdienst is geen voorwaarde: `beoordeelMerge` leest geen reacties, check-suites, reviews, inline-commentaar of
+  branch-PR's, en een 👀 of een samenvatting (ook met open punten) van een reviewbot geeft geen reden. `slotRegels(nummer,
+  head)` geeft precies twee regels: de slotregel en `Meld deze merge als steekproef (ADR 0069 punt 5).` (`STEEKPROEF`). Bewijs
+  nu: `test/scripts/pr-merge-omvang-steekproef.test.ts:93`.
+- **agent-samenvoegen/AC-11** (nog niet gebouwd) — Uit spec agent-merge-niet-kritiek (vervallen) AC-10. Geen externe
+  reviewdienst in de actieve werkstraat: `git grep --untracked -I -i -n <naam van de dienst>` over `scripts`, `.claude`,
+  `README.md`, `docs/operations`, `test`, `src`, `rails`, `db`, `e2e`, `.github`, `package.json`, `AGENTS.md`, `CLAUDE.md`,
+  `docs/framework.md` en `docs/dod.md`, zonder `test/rails/fixtures`, geeft alleen de docs-test zelf en in
+  `test/scripts/pr-merge-omvang-steekproef.test.ts` de regels die de botnaam of de marker nabouwen. Bewijs nu:
+  `test/docs/geen-externe-review-docs.test.ts:76` en `:104`.
 
 ## Randgevallen
 
