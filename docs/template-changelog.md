@@ -44,6 +44,11 @@ requests.
 
 ### Gewijzigd
 
+- Het spec-sjabloon vraagt per acceptatiecriterium het testbestand: elk criterium eindigt met `Toets:` en het bestand dat
+  `<namespace>/AC-n` noemt, met `(nieuw)` zolang het niet bestaat (`docs/specs/_template.md`, `docs/specs/_mini.md`,
+  `scripts/kit/templates/spec.md.tmpl`, skill `spec` stap 2 en 6; leerpunt #793). Bewijs dat alleen een CI-uitslag is, gaat
+  naar het Testplan. Zo valt een AC zonder test al bij de spec-review op, niet pas bij `gebouwd`. Wat verandert voor een app:
+  nieuwe specs krijgen het veld; bestaande specs hoeven niet mee.
 - De AC-dekking van `check-docs` (regel 6) is streng: een AC van een gebouwde spec is alleen gedekt door een testbestand met
   `<specnaam>/AC-n` of `<namespace>/AC-n` (`dekt` in `scripts/kit/check-docs.mjs`). Een los `AC-n` met de specnaam ergens
   in hetzelfde bestand telt niet meer; dat gaf schijndekking door tests van een andere spec. Besluit eigenaar, 2026-11-19.
