@@ -117,13 +117,22 @@ describe('nieuwe-app-script/AC-6: poortkeuze', () => {
     expect(await mod.isVrij(poort)).toBe(false);
   });
 
-  test('nieuwe-app-script/AC-6 de CLI kiest bij een echte listener op 54324 de set +10', async () => {
+  // Met de echte bind: welke set na +0 vrij is, hangt af van de host (een stack op +10 of +20, #856). De test eist dat de CLI
+  // de listener ziet (niet +0) en dezelfde set kiest als de echte poortkeuze in het testproces; +10 precies toetst de
+  // poortkeuze met een geïnjecteerde bind hierboven.
+  test('nieuwe-app-script/AC-6 de CLI ziet een echte listener op 54324 en kiest dezelfde set als de echte poortkeuze', async () => {
+    // Of de listener lukt of 54324 al bezet was (de eigen stack op +0): daarna is hij bezet. Niet eisen dat hij lukt, anders
+    // faalt de test juist in het geval van #856.
     await luister(54324, '127.0.0.1');
+    const verwacht = await mod.kiesPoortenset();
+    expect(verwacht, 'er is een vrije set op de host').not.toBeNull();
+    expect(verwacht?.pg, 'de echte poortkeuze slaat +0 over').not.toBe(54322);
     const fx = maakFixture();
     const r = draai(fx, ['poorten']);
     expect(r.status, r.uit).toBe(0);
     const resultaat = leesResultaat(fx.repo, 'poorten');
-    for (const [naam, waarde] of Object.entries(PLUS_TIEN)) expect(gegeven(resultaat, naam), naam).toBe(waarde);
+    for (const naam of ['pg', 'mailUi', 'smtp', 'api', 'web', 'origin'] as const)
+      expect(gegeven(resultaat, naam), naam).toBe(verwacht?.[naam]);
     expect(readdirSync(fx.repo), 'zonder --env schrijft poorten niets').not.toContain('.env.local');
   });
 
@@ -186,10 +195,9 @@ describe('nieuwe-app-script/AC-7: poorten --env schrijft .env.local uit .env.exa
     }
   });
 
-  test('nieuwe-app-script/AC-7 de CLI schrijft .env.local gelijk aan het orakel voor +10 en laat .env.example staan', async () => {
-    await luister(54324, '127.0.0.1');
+  test('nieuwe-app-script/AC-7 de CLI schrijft .env.local gelijk aan het orakel voor +10 en laat .env.example staan', () => {
     const fx = maakFixture();
-    const r = draai(fx, ['poorten', '--env']);
+    const r = draai(fx, ['poorten', '--env'], { env: { NIEUWE_APP_BEZETTE_POORTEN: '54324' } });
     expect(r.status, r.uit).toBe(0);
     expect(readFileSync(path.join(fx.repo, '.env.local'), 'utf8')).toBe(envLocalVoor(PLUS_TIEN));
     expect(git(fx.repo, 'status', '--porcelain'), '.env.local is genegeerd, .env.example ongewijzigd').toBe('');
@@ -213,11 +221,10 @@ describe('nieuwe-app-script/AC-7: poorten --env schrijft .env.local uit .env.exa
 });
 
 describe('nieuwe-app-script/AC-5: poorten --env --dry-run schrijft niets', () => {
-  test('nieuwe-app-script/AC-5 poorten --env --dry-run maakt .env.local niet en laat HEAD, remotes en refs gelijk', async () => {
-    await luister(54324, '127.0.0.1');
+  test('nieuwe-app-script/AC-5 poorten --env --dry-run maakt .env.local niet en laat HEAD, remotes en refs gelijk', () => {
     const fx = maakFixture();
     const vooraf = [git(fx.repo, 'rev-parse', 'HEAD'), git(fx.repo, 'remote', '-v'), git(fx.repo, 'for-each-ref')];
-    const r = draai(fx, ['poorten', '--env', '--dry-run']);
+    const r = draai(fx, ['poorten', '--env', '--dry-run'], { env: { NIEUWE_APP_BEZETTE_POORTEN: '54324' } });
     expect(r.status, r.uit).toBe(0);
     expect(readdirSync(fx.repo)).not.toContain('.env.local');
     expect([
