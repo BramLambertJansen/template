@@ -94,12 +94,15 @@ test('meting-volume AC-3: gemengde events geven ongewijzigde tellingen per sessi
 
   expect(result.status).toBe(0);
   const data: unknown = JSON.parse(result.stdout);
+  // GEWIJZIGD (spec agents-leveren, PR-1): de tellingen per rol staan naast weigeringenPerSleutel; de rest is gelijk.
   expect(veld(data, 'sessies', 'sessie')).toEqual({
     prompts: 2,
     promptsPerSleutel: { 'git push': 1, Edit: 1 },
     promptsPerModus: { default: 1, plan: 1 },
     weigeringen: 2,
     weigeringenPerSleutel: { 'git push': 1, rm: 1 },
+    weigeringenPerRol: { onbekend: 2 },
+    subagentsPerRol: {},
     beurten: 3,
     eigenaarberichten: 2,
     pushes: 2,
@@ -111,6 +114,8 @@ test('meting-volume AC-3: gemengde events geven ongewijzigde tellingen per sessi
         promptsPerModus: { default: 1 },
         weigeringen: 2,
         weigeringenPerSleutel: { 'git push': 1, rm: 1 },
+        weigeringenPerRol: { onbekend: 2 },
+        subagentsPerRol: {},
         beurten: 1,
         eigenaarberichten: 1,
         pushes: 1,
@@ -122,6 +127,8 @@ test('meting-volume AC-3: gemengde events geven ongewijzigde tellingen per sessi
         promptsPerModus: { plan: 1 },
         weigeringen: 0,
         weigeringenPerSleutel: {},
+        weigeringenPerRol: {},
+        subagentsPerRol: {},
         beurten: 2,
         eigenaarberichten: 1,
         pushes: 1,

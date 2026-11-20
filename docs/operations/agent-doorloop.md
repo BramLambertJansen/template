@@ -59,7 +59,7 @@ modus `onbekend`. Nul prompts en een lege modusverdeling bewijzen geen permissie
 eigenaarberichten waren. Een classifierbeslissing in auto mode is geen bewijs van een klik van de eigenaar.
 
 Kerncijfers per PR: `pnpm meting --pr-tabel --branch <naam>` geeft een markdowntabel voor de PR-beschrijving (doorlooptijd,
-reviewrondes, CI-rood, weigeringen als bovengrens); `pnpm leespad [--ref <ref>]
+reviewrondes, CI-rood, weigeringen als bovengrens, weigeringen en subagents per rol); `pnpm leespad [--ref <ref>]
 [--basis <ref>]` telt de bytes van het verplichte leespad per scenario (meting-kerncijfers/AC-1 t/m AC-4), van
 `docs/framework.md` alleen de tekst vóór de eerste kop plus §8 met 8a, 8b (`node scripts/kit/feiten.mjs hoofdstuk 8`), met
 streefdoel en waarschuwingsdrempel per scenario, de "let op"-meldingen vanaf 85 % van de grens van `AGENTS.md` en `CLAUDE.md`,
@@ -92,6 +92,15 @@ Een `PreToolUse` van de tool `Agent` of `Task` zonder `PostToolUse` (een subagen
 subagent-aanroep telt daardoor alleen via een `PermissionDenied`, dus voor subagents is dit geen bovengrens.
 Vergelijk daarom dezelfde sessie en branch op hetzelfde afgeronde meetmoment en bewaar de momentopname met tijdstip;
 vergelijkingen tijdens en na een aanroep zijn geen gelijke waarnemingen.
+
+Per rol (spec `agents-leveren`, PR-1): `weigeringenPerRol` verdeelt dezelfde weigeringen naar de rol (`a`) van het
+geweigerde event; een oude meetregel zonder `a` telt als `onbekend`. `subagentsPerRol` telt per subagenttype de afgeronde
+runs (`PostToolUse` of `PostToolUseFailure` van `Agent` of `Task`) en hun toolcalls: de som van `tc`, dat de meethook
+alleen uit `totalToolUseCount` van de `tool_response` haalt (`rails/hooks/lib/meting.mjs:112`). Een run zonder `tc` (op
+de achtergrond, een fout) telt als `zonderTelling`, niet als nul (`scripts/kit/meting.mjs:198`). Beide staan in de
+tekstuitvoer (alleen als er iets te tellen is), in `--json` per sessie en per branch en als rijen in `--pr-tabel`
+(`scripts/kit/meting.mjs:461`). Tokens per rol ontbreken nog: `totalTokens` telt alleen de laatste aanvraag van een
+subagent en wordt niet opgeslagen; die meting volgt in een eigen besluit-PR (OV-2).
 
 Alleen ontvangen en opgeslagen events tellen. Een `Read`, `Edit` of `Write` die een deny-regel weigert (zoals `Read(.env.*)`), levert
 in Claude Code geen enkel hook-event op (nagegaan met 2.1.312 voor Read, Edit en Write) en telt dus nooit mee; een Bash-deny zoals `docker ps` wel.
