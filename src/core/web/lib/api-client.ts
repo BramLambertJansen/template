@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import { safeRequestId } from '../../shared/request-id.ts';
 import { unsafeCast } from '../../shared/unsafe-cast.ts';
 
 // Enige plek met fetch (framework §5). Getypt op de route-contracten uit src/shared: de web-code importeert niets uit src/api.
@@ -18,13 +19,22 @@ type ContractFor<C, K> = C extends AnyContract ? (K extends `${C['method']} ${C[
 export class ApiError extends Error {
   readonly code: string;
   readonly status: number;
+  // Alleen een veilige korte id (safeRequestId), anders null; nooit in `message` (spec foutreferentie).
+  readonly requestId: string | null;
 
-  constructor(code: string, status: number) {
+  constructor(code: string, status: number, requestId?: unknown) {
     super(code);
     this.name = 'ApiError';
     this.code = code;
     this.status = status;
+    this.requestId = safeRequestId(requestId);
   }
+}
+
+// De referentie die een gebruiker aan support doorgeeft: alleen bij een serverfout (≥ 500) met geldige requestId (spec
+// foutreferentie, AC-6). Bij 4xx is de foutzin zelf de uitleg.
+export function supportReference(error: unknown): string | null {
+  return error instanceof ApiError && error.status >= 500 ? error.requestId : null;
 }
 
 function fillPath(path: string, input: Record<string, unknown>): { url: string; rest: Record<string, unknown> } {
@@ -36,15 +46,17 @@ function fillPath(path: string, input: Record<string, unknown>): { url: string; 
   return { url: `/api${url}`, rest: Object.fromEntries(Object.entries(input).filter(([name]) => !used.has(name))) };
 }
 
-async function errorCode(response: Response): Promise<string> {
+// Leest de foutbody één keer: `code` (terugval INTERNAL_ERROR) en `requestId` (de constructor valideert hem).
+async function apiError(response: Response): Promise<ApiError> {
+  let body: unknown = null;
   try {
-    const body: unknown = await response.json();
-    return typeof body === 'object' && body !== null && 'code' in body && typeof body.code === 'string'
-      ? body.code
-      : 'INTERNAL_ERROR';
+    body = await response.json();
   } catch {
-    return 'INTERNAL_ERROR';
+    // Geen JSON (bijv. HTML van een proxy): de algemene code, geen requestId.
   }
+  if (typeof body !== 'object' || body === null) return new ApiError('INTERNAL_ERROR', response.status);
+  const code = 'code' in body && typeof body.code === 'string' ? body.code : 'INTERNAL_ERROR';
+  return new ApiError(code, response.status, 'requestId' in body ? body.requestId : undefined);
 }
 
 export function createApiClient<Contracts extends readonly AnyContract[]>() {
@@ -68,7 +80,7 @@ export function createApiClient<Contracts extends readonly AnyContract[]>() {
       headers: { 'content-type': 'application/json' },
       ...(query === '' ? { body: JSON.stringify(rest) } : {}),
     });
-    if (!response.ok) throw new ApiError(await errorCode(response), response.status);
+    if (!response.ok) throw await apiError(response);
     const body: unknown = await response.json();
     return unsafeCast(body, 'de server valideert de output tegen hetzelfde contract (createApp)');
   }
@@ -86,7 +98,7 @@ export function createApiClient<Contracts extends readonly AnyContract[]>() {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ rol }),
     });
-    if (!response.ok) throw new ApiError(await errorCode(response), response.status);
+    if (!response.ok) throw await apiError(response);
   }
 
   return { call, health, devLoginAs };

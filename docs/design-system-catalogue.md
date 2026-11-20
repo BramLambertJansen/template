@@ -13,6 +13,7 @@ een omlijst voorbeeldvlak (`Section` met `description` en `framed`, [section.tsx
 
 De gebruikscontracten voor tabellen, tabs, galerijen en filters staan in [Gegevensweergave en navigatie](ui-data-display.md).
 Het voorbeeld "Stappenformulier" (tabblad Patronen) volgt [Stappenformulier](ui-stappenformulier.md).
+Avatar, Image en StatTile staan in [Avatar, Image en StatTile](ui-weergave-basis.md).
 
 Bij iedere indexrij staat **Toon [component]**. Die knop opent het tabblad van het voorbeeld, scrollt ernaartoe en
 verplaatst de toetsenbordfocus naar de benoemde sectie. De zoekopdracht blijft behouden. Onderdelen zoals CardHeader en
@@ -33,6 +34,8 @@ gedemonstreerd.
 - **Input en Select: disabled en invalid:** blijvend inspecteerbare basisvoorbeelden met labels en gekoppelde fouttekst.
 - **RouteError en NotFound:** generieke fout, verboden toegang en niet gevonden als previews, zonder extra main/h1 of
   echte sessiefout. Bestaande dialoog-, toast-, busy- en validatievoorbeelden blijven beschikbaar.
+- **ErrorReference:** eigen sectie met een fictieve serverfout als RouteError-preview en los: "Referentie: <id>" met
+  **Referentie kopiëren**; zie [Foutreferentie](ui-error-reference.md).
 
 De query- en submituitkomsten zijn lokale voorbeelddata. Ze doen geen API-aanroep en wijzigen geen accounts.
 [queries.ts](../src/web/features/design-system/queries.ts) bevat de lokale queries; Form en de adapters voeren de werkelijke validatie en foutafhandeling uit.

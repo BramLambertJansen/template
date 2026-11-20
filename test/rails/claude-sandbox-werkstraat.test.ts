@@ -56,8 +56,28 @@ test('deny en ask blijven ongewijzigd naast de gerichte nieuwe allows', () => {
   expect(permissions['ask']).toEqual(boundaries['ask']);
 });
 
-test('alleen bestaande runneruitzonderingen, zonder generieke pnpm- of Git-uitsluiting', () => {
+// cloud-pr-route/AC-1: de zeven runneruitzonderingen plus de vier commando's van de cloudroute (ADR 0061, herzien).
+// Gewijzigd door spec cloud-pr-route (R-TEST-02): de grens verandert bewust; de vergelijking met de fixture blijft.
+const RUNNER = [
+  'pnpm pr:merge *',
+  'pnpm pr:resolve *',
+  'pnpm test:db *',
+  'pnpm ui:check *',
+  'pnpm gate:slow *',
+  'pnpm db:generate *',
+  'pnpm check:snapshot *',
+];
+const CLOUDROUTE = ['git commit *', 'git push origin HEAD', 'gh api *', 'pnpm pr:verify *'];
+
+test('runneruitzonderingen en de cloudroute, gelijk aan de vastgelegde grens', () => {
   expect(sandbox['excludedCommands']).toEqual(boundaries['excludedCommands']);
+  expect(boundaries['excludedCommands']).toEqual([...RUNNER, ...CLOUDROUTE]);
+});
+
+// cloud-pr-route/AC-2: regressiebewaker, geen generieke pnpm-, Git- of gh-uitsluiting.
+test('geen generieke pnpm-, Git- of gh-uitsluiting', () => {
+  const generiek = ['git *', 'git push *', 'gh *', 'pnpm *', 'pnpm run *'];
+  expect(strings(sandbox['excludedCommands']).filter((rule) => generiek.includes(rule))).toEqual([]);
 });
 
 test('netwerk en leesgrens blijven gelijk; alleen de bewezen gh-cache kan extra schrijfbaar worden', () => {

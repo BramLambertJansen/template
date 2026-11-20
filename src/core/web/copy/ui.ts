@@ -25,4 +25,10 @@ export const uiTexts = {
   wizardSubmit: 'Versturen',
   wizardStepHeading: (step: number, total: number, title: string) =>
     `Stap ${String(step)} van ${String(total)}: ${title}`,
+  // Spec foutreferentie: de requestId bij een onverwachte serverfout, voor support.
+  errorReference: 'Referentie:',
+  copyErrorReference: 'Referentie kopiëren',
+  errorReferenceCopied: 'Referentie gekopieerd.',
+  offline: 'Je bent offline. Wijzigingen worden niet opgeslagen tot de verbinding terug is.',
+  backOnline: 'Weer online.',
 } as const;

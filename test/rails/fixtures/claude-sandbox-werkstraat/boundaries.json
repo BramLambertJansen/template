@@ -96,7 +96,11 @@
     "pnpm ui:check *",
     "pnpm gate:slow *",
     "pnpm db:generate *",
-    "pnpm check:snapshot *"
+    "pnpm check:snapshot *",
+    "git commit *",
+    "git push origin HEAD",
+    "gh api *",
+    "pnpm pr:verify *"
   ],
   "network": {
     "allowedDomains": ["registry.npmjs.org", "github.com", "api.github.com"]
