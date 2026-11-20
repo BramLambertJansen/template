@@ -10,7 +10,7 @@ import { expectNegativeTable } from '../support/negative-table.ts';
 // De bestaande tests in dat bestand slagen ongewijzigd (AC-9).
 const config = loadConfig(readFileSync('.claude/gates.json', 'utf8'));
 
-// `expectNegativeTable` gooit een gewone Error met de rijen die niet bewaakt worden; hier wordt dat een assertie op die melding,
+// `expectNegativeTable` faalt met de rijen die niet bewaakt worden (sinds leerpunt #875 al als AssertionError); hier wordt dat een assertie op die melding,
 // zodat een rij die nog niet geweigerd wordt als assertie faalt (SubagentStop-hook) en de melding de rijen noemt.
 function verwachtTabel<B>(tabel: Parameters<typeof expectNegativeTable<B>>[0]): void {
   let melding = '';

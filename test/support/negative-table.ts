@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from 'node:util';
+import { assert } from 'vitest';
 
 // Negatieve tabel die eerst zijn basis bewijst (leerpunt #401). Alle rijen van een tabel gaven `false`, maar de gedeelde
 // basis was zelf al onwaar: het weghalen van een bewaakte voorwaarde liet alles groen. Daarom eerst: de basis is waar.
@@ -51,5 +52,6 @@ export function expectNegativeTable<B>(table: NegativeTable<B>): void {
   }
   deepFreeze(table.base);
   const failures = table.cases.map((row) => caseFailure(table, row)).filter((failure) => failure !== null);
-  if (failures.length > 0) throw new Error(`expectNegativeTable:\n- ${failures.join('\n- ')}`);
+  // Een rijfout is een assertie (leerpunt #875): leerpunt-bewijs telt alleen een AssertionError als rood op de basis.
+  if (failures.length > 0) assert.fail(`expectNegativeTable:\n- ${failures.join('\n- ')}`);
 }

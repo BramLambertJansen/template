@@ -60,3 +60,52 @@ describe('expectAbsent', () => {
     }).toThrow(/vindt "x"/);
   });
 });
+
+// Leerpunt #875: `leerpunt-bewijs` telt een gefaalde test alleen als rood als de fout een AssertionError is. De
+// afwezigheidsfout is een inhoudelijke fout; een opzetfout (kapot patroon of voorbeelden) blijft een gewone Error.
+function foutnaam(run: () => void): string {
+  try {
+    run();
+  } catch (error) {
+    return error instanceof Error ? error.name : 'geen Error';
+  }
+  return 'geen fout';
+}
+
+describe('expectAbsent: foutsoort (leerpunt #875)', () => {
+  test('de afwezigheidsfout is een AssertionError en noemt de match', () => {
+    const run = () => {
+      expectAbsent('het taakmandaat geldt', /manda+te?/i, { recognizes: ['mandaat'] });
+    };
+    expect(foutnaam(run)).toBe('AssertionError');
+    expect(run).toThrow(/vindt "mandaat"/);
+  });
+
+  test('een te smal patroon blijft een gewone Error', () => {
+    expect(
+      foutnaam(() => {
+        expectAbsent('schoon', /mandat/i, { recognizes: ['mandaat'] });
+      }),
+    ).toBe('Error');
+  });
+
+  test('een te breed patroon blijft een gewone Error', () => {
+    expect(
+      foutnaam(() => {
+        expectAbsent('schoon', /manda/i, { recognizes: ['mandaat'], allows: ['mandarijn'] });
+      }),
+    ).toBe('Error');
+  });
+
+  test('zonder voorbeelden blijft een gewone Error', () => {
+    const leeg = unsafeCast<{ recognizes: readonly [string] }>(
+      JSON.parse('{"recognizes":[]}'),
+      'test: een lege lijst via JSON omzeilt het tuple-type',
+    );
+    expect(
+      foutnaam(() => {
+        expectAbsent('schoon', /mandaat/i, leeg);
+      }),
+    ).toBe('Error');
+  });
+});
