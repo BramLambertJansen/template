@@ -64,6 +64,7 @@ import { APP_STUB } from './app-init.mjs';
 import { CODEOWNERS, codeownersTekst, eersteGoedkeurder, HERSTEL } from './codeowners.mjs';
 import { grensMeldingen, grensViolations, normenMeldingenUitGit, normenUitGit, zonderBasis } from './leesbudget.mjs';
 import { FRAGMENT_MAP, fragmentFout } from './template-release.mjs';
+import { zonderPromptViolations } from './zonder-prompt.mjs';
 
 export { normViolations } from './normen.mjs';
 
@@ -109,6 +110,7 @@ export async function docsViolations(root = '.') {
     ...appMdViolations(files, read),
     ...fragmentViolations(files, read),
     ...grensViolations((file) => (files.includes(file) ? read(file) : null)),
+    ...zonderPromptViolations(files, read),
   ]);
 }
 

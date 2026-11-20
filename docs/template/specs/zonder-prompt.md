@@ -1,5 +1,5 @@
 ---
-status: voorstel
+status: gebouwd
 namespace: zonder-prompt
 ---
 
@@ -58,23 +58,23 @@ Zonder getrackt `.claude/settings.json` geeft de check niets; onleesbare JSON ge
 
 - **zonder-prompt/AC-1** — Gegeven `docs/framework.md` met "`gh api *` zonder prompt", `gh api *` in `excludedCommands` en niet in
   `allow`, wanneer `check-docs` draait, dan een melding met sleutel `docs:zonder-prompt:docs/framework.md:gh api *` en "staat niet
-  in permissions.allow"; met `Bash(gh api *)` in `allow` geen melding. Toets: `test/rails/check-docs-zonder-prompt.test.ts` (nieuw)
+  in permissions.allow"; met `Bash(gh api *)` in `allow` geen melding. Toets: `test/rails/check-docs-zonder-prompt.test.ts`
 - **zonder-prompt/AC-2** — Gegeven "`git commit`, `git push origin HEAD` en `pnpm pr:verify *` zonder prompt", alle drie in
   `excludedCommands` en gedekt door `allow`, wanneer `check-docs` draait, dan geen melding; met `Bash(pnpm pr:verify *)` ook in
-  `ask` wel, met "staat in permissions.ask". Toets: `test/rails/check-docs-zonder-prompt.test.ts` (nieuw)
+  `ask` wel, met "staat in permissions.ask". Toets: `test/rails/check-docs-zonder-prompt.test.ts`
 - **zonder-prompt/AC-3** — Gegeven "`git status --short` zonder prompt", niet in `excludedCommands` en niet in `allow`, wanneer
-  `check-docs` draait, dan geen melding; met `autoAllowBashIfSandboxed: false` wel. Toets: `test/rails/check-docs-zonder-prompt.test.ts` (nieuw)
+  `check-docs` draait, dan geen melding; met `autoAllowBashIfSandboxed: false` wel. Toets: `test/rails/check-docs-zonder-prompt.test.ts`
 - **zonder-prompt/AC-4** — Gegeven een ADR met status `geaccepteerd` en een claim buiten `allow`, wanneer `check-docs` draait, dan
-  een melding; met status `vervangen door 0001`, in een spec of in een codeblok geen. Toets: `test/rails/check-docs-zonder-prompt.test.ts` (nieuw)
+  een melding; met status `vervangen door 0001`, in een spec of in een codeblok geen. Toets: `test/rails/check-docs-zonder-prompt.test.ts`
 - **zonder-prompt/AC-5** — Gegeven elk van deze zinnen met `gh api *` buiten `allow`, wanneer `check-docs` draait, dan geen melding:
   "`git commit *` en `gh api *` draaien buiten de sandbox, de eerste en `pr:verify` zonder prompt"; "`gh api *` volgens de regels;
   `git commit` zonder prompt"; "Het rolhek staat `gh api *` toe zonder prompt"; "`gh api *` zonder prompttekens"; "`gh api *` draait zonder prompt".
-  Toets: `test/rails/check-docs-zonder-prompt.test.ts` (nieuw)
+  Toets: `test/rails/check-docs-zonder-prompt.test.ts`
 - **zonder-prompt/AC-6** — Gegeven een claim afgebroken over twee regels, wanneer `check-docs` draait, dan noemt de melding de
   regel van "zonder prompt"; onleesbare `.claude/settings.json` geeft sleutel `docs:zonder-prompt:settings`.
-  Toets: `test/rails/check-docs-zonder-prompt.test.ts` (nieuw)
+  Toets: `test/rails/check-docs-zonder-prompt.test.ts`
 - **zonder-prompt/AC-7** — Gegeven de getrackte bestanden van de template zelf, wanneer `zonderPromptViolations` draait, dan geen
-  melding. Toets: `test/rails/check-docs-zonder-prompt.test.ts` (nieuw)
+  melding. Toets: `test/rails/check-docs-zonder-prompt.test.ts`
 
 ## Randgevallen
 
