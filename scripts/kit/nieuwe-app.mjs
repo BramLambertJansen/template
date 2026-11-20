@@ -282,6 +282,23 @@ export async function kiesPoortenset(opties = {}) {
 }
 
 /**
+ * Alleen voor tests: NIEUWE_APP_BEZETTE_POORTEN (komma's, leeg = niets bezet) vervangt de echte bind, zodat de poortkeuze
+ * niet afhangt van wat er op de host draait, zoals de eigen lokale stack (#856). Niet gezet: de echte bind.
+ * @returns {VrijOpties}
+ */
+function testBind() {
+  const lijst = process.env['NIEUWE_APP_BEZETTE_POORTEN'];
+  if (lijst === undefined) return {};
+  const bezet = new Set(
+    lijst
+      .split(',')
+      .filter((deel) => deel.trim() !== '')
+      .map(Number),
+  );
+  return { bind: (poort) => Promise.resolve(!bezet.has(poort)), ipv6: false };
+}
+
+/**
  * De kopie van `.env.example` voor een poortenset: alleen de regels van ENV_SLEUTELS wijzigen; URL's houden protocol,
  * host, gebruiker, wachtwoord en pad.
  * @param {string} voorbeeld @param {Poortenset} poorten
@@ -407,7 +424,7 @@ async function poorten(v, ctx) {
     neemOver(v, bestand);
     return;
   }
-  const set = await kiesPoortenset();
+  const set = await kiesPoortenset(testBind());
   if (set === null) {
     v.fout(
       'keuze',
