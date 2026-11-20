@@ -11,5 +11,5 @@ soort: toegevoegd
 ### Bij een update
 
 - Een eigen test die bij een 5xx-antwoord met `requestId` het exacte aantal knoppen of alerts telt, ziet in `RouteError`,
-  `AsyncView` en `Form` één knop ("Referentie kopiëren") meer; pas het verwachte aantal aan. Verder hoeft een app niets te
-  doen.
+  `AsyncView` en `Form` één knop ("Referentie kopiëren") en een extra `role="status"`-regio (van `CopyButton`) meer; pas
+  het verwachte aantal aan. Verder hoeft een app niets te doen.
