@@ -51,6 +51,7 @@ layout, niet het lichte thema. Printstijlen voor Dialog, DataTable-scrollregio's
 | AC-11 print-klassen op schil, topbar, sidebar, toaster | `src/core/web/ui/app-shell-print.test.tsx` |
 | AC-12, AC-13 licht thema bij afdrukken | `src/core/web/ui/app-shell-print.test.tsx` |
 | AC-14 echte stack: offline, herstel, printlayout op 375/1280 px | `e2e/offline-en-print.spec.ts` |
-| AC-15 barrel en catalogus, bestaande tests ongewijzigd | `pnpm check:catalogus`, `pnpm test` |
+| AC-15 export uit de barrel, voorbeelddoel `example-layout` | `src/web/ui/offline-notice-index.test.ts` |
+| Regressie: netwerkwissel tussen render en koppelen van de listeners | `src/core/web/ui/offline-notice-sync.test.tsx` |
 
 Testdekking is geen geslaagde checkuitslag; die staat in de oplevering.
