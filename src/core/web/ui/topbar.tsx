@@ -1,18 +1,11 @@
 import type { ReactNode } from 'react';
 import { uiTexts } from '../copy/ui.ts';
 import { Button } from './button.tsx';
+import { initials } from './avatar.tsx';
 import { DropdownMenu, type MenuItem } from './dropdown-menu.tsx';
 
-// Initialen voor de profielknop: eerste letter van het eerste en het laatste woord.
-export function initials(name: string): string {
-  const words = name
-    .trim()
-    .split(/\s+/)
-    .filter((word) => word !== '');
-  const first = Array.from(words[0] ?? '')[0] ?? '?';
-  const last = words.length > 1 ? (Array.from(words.at(-1) ?? '')[0] ?? '') : '';
-  return `${first}${last}`.toUpperCase();
-}
+// Initialen voor de profielknop wonen bij Avatar (spec ui-weergave-basis/AC-5); her-export voor bestaande imports.
+export { initials };
 
 interface TopbarProps {
   readonly userName: string;
