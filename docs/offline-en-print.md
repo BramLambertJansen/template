@@ -6,7 +6,8 @@ uitbreiding voegt geen dependency, route, permissie, migratie, token of styleshe
 ## Offline-melding
 
 `OfflineNotice` (`src/core/web/ui/offline-notice.tsx`, via `src/web/ui/index.ts`) leest alleen `navigator.onLine` en de
-events `online` en `offline` van `window`; er gaat geen verzoek naar de server. Er zijn drie staten:
+events `online` en `offline` van `window`; er gaat geen verzoek naar de server. Na het koppelen van de listeners leest hij
+`navigator.onLine` één keer opnieuw, zodat een wisseling vóór het koppelen niet verloren gaat. Er zijn drie staten:
 
 - online: niets gerenderd;
 - offline: waarschuwing "Je bent offline. Wijzigingen worden niet opgeslagen tot de verbinding terug is.", blijft tot herstel

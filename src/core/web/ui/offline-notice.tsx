@@ -21,6 +21,9 @@ function useConnection(): Connection {
     };
     window.addEventListener('offline', handleOffline);
     window.addEventListener('online', handleOnline);
+    // Een wisseling tussen de eerste render en het koppelen hierboven gaf geen event: lees de staat één keer opnieuw.
+    if (navigator.onLine) handleOnline();
+    else handleOffline();
     return () => {
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('online', handleOnline);
