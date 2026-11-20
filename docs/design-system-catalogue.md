@@ -12,6 +12,7 @@ Navigatie en layout en Patronen. Het open tabblad staat in de zoekparameter `vak
 een omlijst voorbeeldvlak (`Section` met `description` en `framed`, [section.tsx](../src/web/ui/section.tsx)).
 
 De gebruikscontracten voor tabellen, tabs, galerijen en filters staan in [Gegevensweergave en navigatie](ui-data-display.md).
+Avatar, Image en StatTile staan in [Avatar, Image en StatTile](ui-weergave-basis.md).
 
 Bij iedere indexrij staat **Toon [component]**. Die knop opent het tabblad van het voorbeeld, scrollt ernaartoe en
 verplaatst de toetsenbordfocus naar de benoemde sectie. De zoekopdracht blijft behouden. Onderdelen zoals CardHeader en

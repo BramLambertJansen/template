@@ -17,6 +17,7 @@ Deze template is bedoeld om webapps met code-agents te bouwen. De documentatie h
 | Een ontwerp of huisstijl overnemen | Skill `ontwerp-overnemen`; mappingdocumenten in [ontwerp/](ontwerp/_template.md) |
 | Tabellen, tabs, galerijen en filters gebruiken | [Gegevensweergave en navigatie](ui-data-display.md) |
 | Een foutreferentie voor support tonen | [Foutreferentie](ui-error-reference.md) |
+| Weten wat de app doet als het netwerk wegvalt of bij afdrukken | [Offline-melding en afdrukken](offline-en-print.md) |
 | De architectuur of regels begrijpen | [Framework](framework.md) |
 | Een PR beoordelen | [Definition of Done](dod.md) |
 | Controles uitvoeren en CI-resultaten verzamelen | [Agentdoorloop met bewijs](operations/agent-doorloop.md#ontwikkelen-en-runnerchecks) |

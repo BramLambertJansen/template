@@ -24,4 +24,6 @@ export const uiTexts = {
   errorReference: 'Referentie:',
   copyErrorReference: 'Referentie kopiëren',
   errorReferenceCopied: 'Referentie gekopieerd.',
+  offline: 'Je bent offline. Wijzigingen worden niet opgeslagen tot de verbinding terug is.',
+  backOnline: 'Weer online.',
 } as const;

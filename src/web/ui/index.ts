@@ -28,6 +28,7 @@ export { EmptyState } from '#core/web/ui/empty-state.tsx';
 export { ListToolbar } from '#core/web/ui/list-toolbar.tsx';
 export { NavLink } from '#core/web/ui/nav-link.tsx';
 export { Notice } from '#core/web/ui/notice.tsx';
+export { OfflineNotice } from '#core/web/ui/offline-notice.tsx';
 export { Toaster, ToastProvider, useToast } from '#core/web/ui/toast.tsx';
 export { PageHeader } from '#core/web/ui/page-header.tsx';
 export { PageTitle } from '#core/web/ui/page-title.tsx';
@@ -60,6 +61,9 @@ export {
 } from '#core/web/ui/data-table.tsx';
 export { Tabs, type TabsProps, type TabItem } from '#core/web/ui/tabs.tsx';
 export { Gallery, type GalleryProps, type GalleryItem } from '#core/web/ui/gallery.tsx';
+export { Avatar, type AvatarProps } from '#core/web/ui/avatar.tsx';
+export { Image, type ImageProps } from '#core/web/ui/image.tsx';
+export { StatTile, type StatTileProps, type StatTileTrend, type StatTileLink } from '#core/web/ui/stat-tile.tsx';
 export type { ListToolbarProps, ListToolbarFilter } from '#core/web/ui/list-toolbar.tsx';
 export { FormErrorSummary, type FormErrorSummaryOptions } from '#core/web/ui/form-error-summary.tsx';
 export { FormChanges } from '#core/web/ui/form-changes.tsx';

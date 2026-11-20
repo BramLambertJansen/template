@@ -58,6 +58,24 @@ const groups: readonly ExampleTarget[] = [
     text: 'Open de preview en bekijk lege en ontbrekende afbeeldingen.',
   },
   {
+    names: ['Avatar'],
+    id: 'example-avatar',
+    vak: 'gegevens',
+    text: 'Initialen in drie maten, een foto en een mislukte foto.',
+  },
+  {
+    names: ['Image'],
+    id: 'example-image',
+    vak: 'gegevens',
+    text: 'Drie beeldverhoudingen, een ontbrekende en een decoratieve afbeelding.',
+  },
+  {
+    names: ['StatTile'],
+    id: 'example-stat-tile',
+    vak: 'gegevens',
+    text: 'Vier KPI-tegels met trend, toelichting en link; versmal het venster voor één kolom.',
+  },
+  {
     names: ['Combobox', 'ComboboxPopup'],
     id: 'example-combobox',
     vak: 'formulieren',
@@ -101,10 +119,10 @@ const groups: readonly ExampleTarget[] = [
     text: 'Open het menu; busy-items staan in het aparte busy-voorbeeld.',
   },
   {
-    names: ['NavLink', 'Sidebar', 'Topbar', 'AppShell', 'ThemeToggle'],
+    names: ['NavLink', 'Sidebar', 'Topbar', 'AppShell', 'ThemeToggle', 'OfflineNotice'],
     id: 'example-layout',
     vak: 'layout',
-    text: 'Bekijk de echte navigatie en topbalk rondom deze pagina; open op mobiel het hoofdmenu.',
+    text: 'Bekijk de echte navigatie en topbalk rondom deze pagina; open op mobiel het hoofdmenu. Zet het netwerk uit (ontwikkelhulpmiddelen, Offline) voor de offlinemelding, of druk af voor de printweergave.',
   },
   {
     names: ['ToastProvider', 'ToastCard', 'Toaster'],
