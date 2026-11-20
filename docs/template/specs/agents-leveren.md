@@ -184,7 +184,8 @@ Punt 5 ("Regels uit AGENTS.md: …") wordt `5. Nooit pushen, mergen of rebasen; 
   `security-review`. Elke skillnaam in die tabel bestaat als map in `.claude/skills/`. Een nieuwe skillmap die niet in de tabel
   en niet in die drie uitzonderingen staat, maakt de toets rood. Toets: `test/hooks/developer-skillrouter.test.ts`
 - **agents-leveren/AC-10** — Gegeven `.claude/agents/developer.md`, wanneer de toets hem leest, dan bevat hij niet
-  `Regels uit AGENTS.md`, `geen casts` of `eslint-disable`, en wel punt 5 zoals in Hergebruik en UX.
+  `Regels uit AGENTS.md`, `geen casts` of `eslint-disable`, en noemt punt 5 `pushen` en `hoofdsessie` (R-TEST-02:
+  structuur, geen hele zin).
   Toets: `test/hooks/developer-skillrouter.test.ts`
 
 **PR-4: punt 1c**

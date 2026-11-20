@@ -61,6 +61,9 @@ describe('agents-leveren/AC-10 geen kopie van AGENTS.md in de developer', () => 
   test('agents-leveren/AC-10 de regels uit AGENTS.md staan er niet meer, punt 5 wel', () => {
     for (const kopie of ['Regels uit AGENTS.md', 'geen casts', 'eslint-disable'])
       expect(developer).not.toContain(kopie);
-    expect(developer).toContain('5. Nooit pushen, mergen of rebasen; dat doet de hoofdsessie.');
+    // R-TEST-02: structuur, geen hele zin. Punt 5 bestaat en gaat over pushen door de hoofdsessie.
+    const punt5 = developer.split('\n').find((regel) => regel.startsWith('5. ')) ?? '';
+    expect(punt5).toMatch(/pushen/);
+    expect(punt5).toMatch(/hoofdsessie/);
   });
 });
