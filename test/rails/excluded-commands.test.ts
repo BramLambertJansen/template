@@ -70,8 +70,13 @@ function dockerScripts(scripts: Record<string, string>, shellDir: string): strin
   return Object.keys(scripts).filter((name) => visit(name, [name]));
 }
 
+// De cloudroute (spec cloud-pr-route, ADR 0061 punt 5): drie uitzonderingen die geen pnpm-script zijn. Precies deze
+// drie; elk ander patroon zonder pnpm-script blijft een melding. Gewijzigd door die spec (R-TEST-02).
+const GEEN_SCRIPT = new Set(['git commit *', 'git push origin HEAD', 'gh api *']);
+
 function problems(config: Config, shellDir: string): string[] {
   const missing = config.excluded.flatMap((pattern) => {
+    if (GEEN_SCRIPT.has(pattern)) return [];
     const name = /^pnpm ([\w:-]+) \*$/.exec(pattern)?.[1];
     return name !== undefined && name in config.scripts
       ? []
@@ -95,6 +100,20 @@ describe('excludedCommands: de checker zelf (fixture)', () => {
       'gate:slow: start Docker maar ontbreekt in permissions.ask',
       'check:snapshot: start Docker maar ontbreekt in excludedCommands',
       'check:snapshot: start Docker maar ontbreekt in permissions.ask',
+    ]);
+  });
+});
+
+describe('excludedCommands: de cloudroute (spec cloud-pr-route)', () => {
+  test('alleen de drie genoemde patronen zonder pnpm-script; een breder patroon blijft een melding', () => {
+    const config: Config = {
+      excluded: ['git commit *', 'git push origin HEAD', 'gh api *', 'git push *', 'gh *'],
+      ask: [],
+      scripts: {},
+    };
+    expect(problems(config, 'scripts')).toStrictEqual([
+      'excludedCommands "git push *": script bestaat niet in package.json',
+      'excludedCommands "gh *": script bestaat niet in package.json',
     ]);
   });
 });

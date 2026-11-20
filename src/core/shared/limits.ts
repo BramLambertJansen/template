@@ -31,6 +31,9 @@ export const MAX_CURSOR_LENGTH = 4096;
 // Branded IDs (`brandedId`) en id-velden in contracten; ook een sleuteldeel van een cursor.
 export const MAX_ID_LENGTH = 200;
 
+// De requestId uit een foutbody die de web-client toont (spec foutreferentie, `safeRequestId`); de server geeft een UUID (36).
+export const MAX_REQUEST_ID_LENGTH = 64;
+
 // Een tijdstip als sleuteldeel van een cursor: de ISO-tekst van een `timestamptz` uit Postgres (`to_json(…) #>> '{}'`). Slechtste geval
 // ~40 tekens (6-cijferig jaar, microseconden, offset met seconden, " BC"); 48 met marge (spec lijstpagina, leerpunt #444).
 export const MAX_TIMESTAMP_LENGTH = 48;

@@ -13,6 +13,7 @@ import type { z } from 'zod';
 import { assert } from '#core/shared/assert.ts';
 import { uiTexts } from '../copy/ui.ts';
 import { Button } from './button.tsx';
+import { ErrorReference } from './error-reference.tsx';
 import { useErrorText } from './error-texts.tsx';
 import { Field } from './field.tsx';
 import { FormErrorSummary, type FormErrorSummaryOptions } from './form-error-summary.tsx';
@@ -48,7 +49,8 @@ interface FormProps<Input extends FieldValues, Output> {
 export function Form<Input extends FieldValues, Output>(props: FormProps<Input, Output>) {
   const { form, onSubmit, submitLabel, fieldForCode, secondaryAction, errorSummary, children } = props;
   const errorText = useErrorText();
-  const [formError, setFormError] = useState<string | null>(null);
+  // De fout zelf blijft bewaard voor de referentie (spec foutreferentie); de tekst komt altijd uit useErrorText.
+  const [formError, setFormError] = useState<{ readonly text: string; readonly error: unknown } | null>(null);
   const alert = useRef<HTMLParagraphElement>(null);
 
   // Na een fout gaat de focus naar de melding (spec accountbeheer, toegankelijkheid).
@@ -63,7 +65,7 @@ export function Form<Input extends FieldValues, Output>(props: FormProps<Input, 
     } catch (error) {
       const code = codeOf(error) ?? '';
       const field = fieldForCode !== undefined && Object.hasOwn(fieldForCode, code) ? fieldForCode[code] : undefined;
-      if (field === undefined) setFormError(errorText(error));
+      if (field === undefined) setFormError({ text: errorText(error), error });
       else form.setError(field, { type: 'server', message: errorText(error) }, { shouldFocus: true });
     }
   });
@@ -78,9 +80,10 @@ export function Form<Input extends FieldValues, Output>(props: FormProps<Input, 
           ref={alert}
           className="rounded-md border border-destructive px-3 py-2 text-sm font-medium text-destructive"
         >
-          {formError}
+          {formError.text}
         </p>
       )}
+      {formError === null ? null : <ErrorReference error={formError.error} />}
       {children}
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         {secondaryAction}

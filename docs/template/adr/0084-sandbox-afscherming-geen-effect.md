@@ -5,6 +5,8 @@ Status: geaccepteerd
 Herzien: 2026-11-12 (#705): alleen de plaatshouders voor `pr:verify` blijven; de afscherming voor de effecttoets vervalt (ADR 0091 punt 2)
 Herzien: 2026-11-16 (#745): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 Herzien: 2026-11-19: verwijzingen naar verwijderde documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg)
+Herzien: 2026-11-20: Alternatieven, `pr:verify` staat nu wel in `sandbox.excludedCommands`, besloten in
+[0061](0061-claude-sandbox-werkstraat.md) punt 5 voor de cloud; het restrisico staat daar (spec cloud-pr-route)
 
 Wijzigt [0083](0083-bewaking-met-minder-wrijving.md) punt 2. Drempel: A3
 (een vangnet wordt smaller) en A4. Aanleiding: leerpunt #567 en meting #591 (6 november 2026), eerder #582. Uitwerking:
@@ -36,7 +38,9 @@ leeg bestand zonder uitvoerbit). In de sandbox kan zo'n pad niet geschreven word
 ## Alternatieven
 
 - **`pr:verify` in `sandbox.excludedCommands`.** Het draait dan code uit de werkmap (`scripts/`, `rails/`) buiten de sandbox;
-  wat een subagent daar wijzigt, draait de hoofdsessie zonder grens (0082 punt 4).
+  wat een subagent daar wijzigt, draait de hoofdsessie zonder grens (0082 punt 4). Later toch gekozen, omdat `gh` in een
+  cloudsessie binnen de sandbox de token-proxy niet bereikt; het restrisico is aanvaard in
+  [0061](0061-claude-sandbox-werkstraat.md) punt 5. Deze ADR (de plaatshouders) blijft gelden.
 - **De lijsten uit `.claude/settings.json`.** De schrijfplaatshouders zijn ingebouwd in Claude Code en staan daar niet.
 - **Eigenaar `nobody` en een mtime van vóór de sessie als kenmerk.** Hangt af van de uid-mapping en de versie; het lege
   bestand heeft juist een verse mtime.
