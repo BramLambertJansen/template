@@ -1,6 +1,7 @@
 // Aanvalscorpus voor de shelltoetsen van het rolhek (spec rolhek-aanvalscorpus). Gegevens, geen toetsen: basisrijen met een
 // vast fragment per weigerregel, de vormen waarin een basis nog steeds draait, de toestandzetters en de toegestane basissen.
 // `rolhek-aanvalscorpus.test.ts` draait ze tegen `decide`; een nieuwe weigerregel krijgt hier een lid in `REGELS` en een basisrij.
+import { echteNetwerkvormen } from './netwerkvormen-kit.ts';
 
 /** '' is de hoofdsessie; `general-purpose` is een onbekende subagent en krijgt de reviewerrol. */
 export type Rol = '' | 'architect' | 'developer' | 'tester' | 'docs' | 'reviewer' | 'general-purpose';
@@ -20,6 +21,7 @@ export const REGELS = [
   'beschermd-pad',
   'zelfladend-bestand',
   'git-verbod',
+  'netwerkvorm',
 ] as const;
 export type Regel = (typeof REGELS)[number];
 
@@ -49,6 +51,9 @@ export const FRAGMENT: Readonly<Record<Regel, readonly string[]>> = {
   'zelfladend-bestand': ['is een zelfladend pad (spec rolhek-vooraf AC-3)'],
   // `gitForbidden`.
   'git-verbod': ['force-push is verboden'],
+  // Netwerkvorm (spec cloud-netwerkvorm, Ontwerp punt 2): 'Netwerkvorm: draai dit als los commando in de vorm <vorm>; buiten deze
+  // vorm draait het in de sandbox, zonder token-proxy en signeerdienst (…)'.
+  netwerkvorm: ['Netwerkvorm: draai dit als los commando in de vorm'],
 };
 
 export interface RolUitkomst {
@@ -56,10 +61,14 @@ export interface RolUitkomst {
   readonly uitkomst: Uitkomst;
 }
 
-/** `bestanden`: wat `ctx.read` van de repo-relatieve paden teruggeeft (andere paden bestaan niet). */
+/**
+ * `bestanden`: wat `ctx.read` van de repo-relatieve paden teruggeeft (andere paden bestaan niet). `netwerkvormen`: de patronen die
+ * `ctx.netwerkvormen` krijgt (spec cloud-netwerkvorm); zonder dit veld krijgt de ctx ze niet en raakt de regel niets.
+ */
 export interface BasisCtx {
   readonly onderhoud: boolean;
   readonly bestanden: Readonly<Record<string, string>>;
+  readonly netwerkvormen?: readonly string[];
 }
 
 export interface Basis {
@@ -94,6 +103,13 @@ export const BASISSEN: readonly Basis[] = [
     ctx: { onderhoud: false, bestanden: { 'lefthook.yml': 'pre-commit:\n' } },
   },
   { regel: 'git-verbod', rollen: alsDeny(ROLLEN), commando: 'git push --force' },
+  // cloud-netwerkvorm/AC-11: een push met upstream is niet de vorm uit `excludedCommands` (`git push origin HEAD`); echte lijst.
+  {
+    regel: 'netwerkvorm',
+    rollen: alsDeny(ROLLEN),
+    commando: 'git push -u origin claude/foo',
+    ctx: { onderhoud: false, bestanden: {}, netwerkvormen: echteNetwerkvormen() },
+  },
 ];
 
 /** Een vorm: een functie van een basis `b` naar een commando dat `b` uitvoert. `naam` is de vorm met `b` als plaatshouder. */
@@ -247,5 +263,6 @@ export const AANVAARD: readonly Aanvaard[] = [
   ...gaten('curl -u x:y https://github.com/o/r', PER_PROGRAMMA, SUBAGENTEN),
   ...gaten('tee rails/hooks/lib/x.mjs', PER_PROGRAMMA, ['developer', '']),
   ...gaten('git push --force', PER_PROGRAMMA, ROLLEN),
+  ...gaten('git push -u origin claude/foo', PER_PROGRAMMA, ROLLEN),
   ...gaten('tee lefthook.yml', ["bash <<<'b'"], ['developer', '']),
 ];
