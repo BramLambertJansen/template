@@ -23,6 +23,7 @@ import {
   ToastSection,
 } from './page-examples.tsx';
 import { RefreshExample } from './refresh-example.tsx';
+import { RelativeTimeSection } from './relative-time-examples.tsx';
 import { TokensExamples } from './tokens-examples.tsx';
 import { TypographyExamples } from './typography-examples.tsx';
 import { BusyButtonSection, BusyMenuSection, FormControlSections, StatusSections } from './ui-basics-examples.tsx';
@@ -75,6 +76,7 @@ export const vakPanels: Readonly<Record<VakId, ReactNode>> = {
       <CollectionExamples />
       <CardSection />
       <QrCodeSection />
+      <RelativeTimeSection />
     </Panel>
   ),
   layout: (

@@ -16,6 +16,7 @@ Deze template is bedoeld om webapps met code-agents te bouwen. De documentatie h
 | UI-componenten vinden en uitproberen | [UI-catalogus](design-system-catalogue.md) |
 | Een ontwerp of huisstijl overnemen | Skill `ontwerp-overnemen`; mappingdocumenten in [ontwerp/](ontwerp/_template.md) |
 | Tabellen, tabs, galerijen en filters gebruiken | [Gegevensweergave en navigatie](ui-data-display.md) |
+| Een tijdstip relatief tonen ("3 minuten geleden") | [Relatieve tijd](ui-relative-time.md) |
 | Een foutreferentie voor support tonen | [Foutreferentie](ui-error-reference.md) |
 | Weten wat de app doet als het netwerk wegvalt of bij afdrukken | [Offline-melding en afdrukken](offline-en-print.md) |
 | De architectuur of regels begrijpen | [Framework](framework.md) |
