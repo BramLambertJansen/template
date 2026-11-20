@@ -127,9 +127,25 @@ function onderbouwingFouten(koppen) {
   return ONDERBOUWING.filter((deel) => !heeft(deel)).map((deel) => `onderbouwing ontbreekt: ${deel}`);
 }
 
-/** @param {string[]} fouten */
-export function commentOnvolledig(fouten) {
-  return [COMMENT_ONVOLLEDIG, '', ...fouten.map((fout) => `- ${fout}`)].join('\n');
+/** @param {string[]} fouten @param {Veld[]} [velden] voor een hint per keuzeveld met een onbekende waarde */
+export function commentOnvolledig(fouten, velden = []) {
+  return [COMMENT_ONVOLLEDIG, '', ...fouten.map((fout) => `- ${fout}`), ...keuzeHints(fouten, velden)].join('\n');
+}
+
+/**
+ * Per keuzeveld met een onbekende waarde één hint met de toegestane opties (leerpunt #759): agents zetten toelichting
+ * achter de waarde of kiezen een plekwaarde als Soort, en de foutregel alleen zei niet wat wel mag.
+ * @param {string[]} fouten @param {Veld[]} velden @returns {string[]}
+ */
+function keuzeHints(fouten, velden) {
+  return velden
+    .filter(
+      (veld) => veld.opties.length > 0 && fouten.some((f) => f.startsWith(`onbekende waarde bij ${veld.label}: `)),
+    )
+    .map(
+      (veld) =>
+        `Kies bij ${veld.label} precies één van: ${veld.opties.map((o) => `\`${o}\``).join(', ')}; zet toelichting onder Bron of Onderbouwing, niet achter de waarde.`,
+    );
 }
 
 const REGEL = /^\s*[-*]\s+#(\d+):\s*trede\s+(.+?);\s*bewijs\s+(.+?)\s*$/;

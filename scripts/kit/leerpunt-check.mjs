@@ -53,14 +53,21 @@ export function teToetsen(g) {
 
 /**
  * De labelstappen voor de toetsen (puur): per soort label aan of uit, met de comment als het label aan gaat.
- * @param {{ fouten: string[] | null, oordeel: string | null, heropend: boolean }} uitslag @returns {Stap[]}
+ * `velden` (het sjabloon) geeft de comment een hint per keuzeveld met een onbekende waarde (leerpunt #759).
+ * @param {{ fouten: string[] | null, oordeel: string | null, heropend: boolean, velden?: import('./leerpunt.mjs').Veld[] }} uitslag
+ * @returns {Stap[]}
  */
-export function stappen({ fouten, oordeel, heropend }) {
+export function stappen({ fouten, oordeel, heropend, velden = [] }) {
   /** @type {Stap[]} */
   const uit = [];
   if (fouten !== null) {
     const aan = fouten.length > 0;
-    uit.push({ label: LABEL_ONVOLLEDIG, aan, comment: aan ? commentOnvolledig(fouten) : null, merk: MERK.onvolledig });
+    uit.push({
+      label: LABEL_ONVOLLEDIG,
+      aan,
+      comment: aan ? commentOnvolledig(fouten, velden) : null,
+      merk: MERK.onvolledig,
+    });
   }
   if (heropend) uit.push({ label: LABEL_ZONDER_BEWIJS, aan: false, comment: null, merk: MERK.bewijs });
   else if (oordeel !== null) {
@@ -162,7 +169,7 @@ async function main() {
   const velden = leesSjabloon(readFileSync(path.join(ROOT, '.github/ISSUE_TEMPLATE/leerpunt.yml'), 'utf8'));
   const fouten = toets.sjabloon ? toetsBody(g.body, velden) : null;
   const oordeel = toets.sluiten ? sluitOordeel(g.nummer, await sluitBron(repo, g.nummer)) : null;
-  for (const stap of stappen({ fouten, oordeel, heropend: toets.heropend })) await voerUit(repo, g, stap);
+  for (const stap of stappen({ fouten, oordeel, heropend: toets.heropend, velden })) await voerUit(repo, g, stap);
 }
 
 if (import.meta.main) await main();
