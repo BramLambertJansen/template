@@ -8,7 +8,8 @@ hebben geen eigen vaste tekst: naam, alt, fallbacktekst, label en link komen als
 
 `<Avatar name="Anna de Vries" src={profiel.foto} />` toont de foto, of de initialen als er geen (of een lege) `src` is.
 Na een laadfout tonen ze de initialen; een andere `src` probeert opnieuw, dezelfde `src` niet
-(`src/core/web/ui/avatar.tsx:38`). `size` is `sm`, `md` (standaard) of `lg`. De initialen komen uit `initials()`
+(`src/core/web/ui/avatar.tsx:38`). Alleen de laatst mislukte `src` wordt onthouden: gaat `src` van A (mislukt) naar een
+werkende B en terug naar A, dan probeert A het niet opnieuw; mislukte B ook, dan wel. Image werkt net zo (`src/core/web/ui/image.tsx:32`). `size` is `sm`, `md` (standaard) of `lg`. De initialen komen uit `initials()`
 (`src/core/web/ui/avatar.tsx:7`), dezelfde functie als de profielknop van Topbar.
 
 Gebruik `decorative` wanneer de naam al als tekst naast de avatar staat: de avatar heeft dan geen toegankelijke naam.
@@ -42,6 +43,6 @@ blijven in `AsyncView` rond het raster. Het raster is layout in de feature, bijv
 | AC-1 t/m AC-5 Avatar, initialen en Topbar | `src/core/web/ui/avatar.test.tsx`; bestaande `topbar-initials.test.ts`, `app-shell.test.tsx` en `e2e/shell.spec.ts` |
 | AC-6 t/m AC-10 Image en ongewijzigde Gallery | `src/core/web/ui/image.test.tsx`; bestaande `gallery.test.tsx` en `e2e/ui-data-display.spec.ts` |
 | AC-11 t/m AC-15 StatTile | `src/core/web/ui/stat-tile.test.tsx` |
-| AC-16 barrel en index | `pnpm check:catalogus` en `e2e/ui-weergave-basis.spec.ts` |
+| AC-16 barrel, index en feiten | `pnpm check:catalogus`, `test/scripts/feiten-weergave-basis.test.ts` en `e2e/ui-weergave-basis.spec.ts` |
 | AC-17 voorbeelden en Toon-knoppen | `e2e/ui-weergave-basis.spec.ts`; bestaande `e2e/design-system-coverage.spec.ts` |
 | AC-18 375/1280 px, axe, fallbacks en raster | `e2e/ui-weergave-basis.spec.ts` |
