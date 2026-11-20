@@ -5,6 +5,9 @@ Status: geaccepteerd
 Herzien: 2026-11-05 (#543): gewijzigd door [0081](0081-leerlus-schrappen-en-vereenvoudigen.md) punt 1, 2, 3 en 8 (trede Schrappen of vereenvoudigen met meting als sluitbewijs, onderbouwing in de issue-check, eigen bak in de voorsortering)
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 5 en 8, punt 1, de job `leerpunt-bewijs` blijft; dat `pnpm pr:merge` de beschrijving leest, vervalt als grens; punt 2, "niet agent-mergebaar" bij `geen test:` wordt een afspraak (de eigenaar merget), geen check meer
 Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
+Herzien: 2026-11-20: punt 4, een tweede uitzondering op "MCP alleen lezend": de hoofdsessie opent in de cloud een PR met
+`mcp__github__create_pull_request`, omdat `gh pr create` daar niet werkt (eigenaar; spec
+[cloud-pr-route](../specs/cloud-pr-route.md))
 
 Wijzigt [0059](0059-leerlus-van-app-naar-template.md) punt 1, 3, 4 en 7; vult R-SEC-09 aan met één uitzondering voor MCP.
 Drempel: A3 (een nieuwe workflow met schrijfrecht op issues; een uitzondering op "MCP alleen lezend") en A4 (een
@@ -44,10 +47,11 @@ agents sluiten opgeloste leerpunten (akkoord eigenaar 3 november 2026), en "opge
    sluit, heropent of bewerkt geen issues.
 4. **Wie indient, en hoe.** Leerpunten komen uit elke sessie, in een app of in de template zelf. De hoofdsessie dient in via
    `gh issue create` (rolhek R-ROL-07 ongewijzigd) of, waar `gh` niet kan schrijven (cloud), via de MCP-tool voor issues, alleen
-   om een issue aan te maken, alleen naar de template-repo en met label `leerpunt`. Dat is de enige uitzondering op "MCP
-   alleen lezend" (R-SEC-09, R-ROL-12); elke andere MCP-schrijfactie blijft verboden. De issue-check uit punt 3 toetst de
+   om een issue aan te maken, alleen naar de template-repo en met label `leerpunt`. Dat is een van twee uitzonderingen op
+   "MCP alleen lezend" (R-SEC-09, R-ROL-12); de andere is een PR van de eigen werkbranch openen in de cloud met
+   `mcp__github__create_pull_request` (spec `cloud-pr-route`). Elke andere MCP-schrijfactie blijft verboden. De issue-check uit punt 3 toetst de
    inhoud van leerpunt-issues, niet wat de tool verder doet: in de cloud draait geen rolhek, dus daar is de beperking een
-   afspraak. In Claude Code blijft het rolhek op de MCP-issuetool vragen (ask); een doorlaat vraagt een eigen besluit met
+   afspraak. In Claude Code blijft het rolhek op beide MCP-tools vragen (ask); een doorlaat vraagt een eigen besluit met
    tabeltest. Subagents dienen niets in (ongewijzigd).
 5. **Wie verwerkt.** De eigenaar triageert en bepaalt de volgorde, ook via de wekelijkse voorsortering. Een agent mag een
    leerpunt oppakken waartoe de eigenaar opdracht gaf, en mag het sluiten met sluitbewijs (punt 1) of als achterhaald (punt 2).

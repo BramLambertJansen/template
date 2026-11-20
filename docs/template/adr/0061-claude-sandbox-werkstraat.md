@@ -7,6 +7,9 @@ Herzien: 2026-11-07 (#623): alternatief "Projectstore, cache en state opnieuw in
 [0085](0085-worktree-installatie-in-de-sandbox.md): in een worktree installeert de agent `node_modules` frozen, met store,
 cache en state onder de tijdelijke map; punt 4 blijft
 Herzien: 2026-11-16 (#745): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
+Herzien: 2026-11-20: punt 5 en Alternatieven, `git commit *`, `git push origin HEAD`, `gh api *` en `pnpm pr:verify *`
+draaien buiten de sandbox, zonder prompt, met een aanvaard restrisico (eigenaar; spec
+[cloud-pr-route](../specs/cloud-pr-route.md))
 
 Drempel: A3, agentrechten expliciteren en gericht verruimen. Uitwerking: [spec](../specs/claude-sandbox-werkstraat.md).
 
@@ -46,16 +49,26 @@ dus onvoldoende; de dagelijkse vorm vermijdt upstreamregistratie.
    cachewrites nodig blijkt te hebben, mag exact `~/.cache/gh` schrijfbaar worden; nooit `~/.config/gh`.
 5. Sandboxplicht, bestaande runneruitzonderingen, netwerkdomeinen, afscherming van geheimen, supplychaininstellingen,
    `verifyDepsBeforeRun` en alle kwaliteitschecks blijven behouden. De wijziging geldt voor Claude Code, niet voor Codex.
+   Daarnaast draaien `git commit *`, `git push origin HEAD`, `gh api *` en `pnpm pr:verify *` buiten de sandbox, lokaal en
+   in de cloud. Reden: in een cloudsessie bereikt de sandbox de signeerdienst en de token-proxy van het platform niet;
+   `gh` gaf 401 en een commit kon niet worden ondertekend (spec `cloud-pr-route`, F1 en F2). De eerste drie staan in
+   `allow`, dus zonder prompt. `deny`, `ask` en het rolhek blijven gelden.
 
 ## Alternatieven
 
 - Globale pnpm-cache of toolchain schrijfbaar maken: vergroot de uitvoerbare inhoud die later buiten de sandbox kan
   worden geladen, terwijl rechtstreeks gebruik van de gepinde versie al slaagt.
 - Projectstore, cache en state opnieuw inrichten: extra installatie- en configuratiewerk zonder aangetoonde noodzaak.
-- pnpm/Git buiten de sandbox uitvoeren of hooks overslaan: strijdig met de bestaande grenzen.
+- Hooks overslaan: strijdig met de bestaande grenzen.
 - Terugkerende handmatige versiecorrecties, pushes en PR-aanmaak: laat de gemeten wrijving bestaan.
 
 ## Gevolgen
 
 Eenmalige inrichting loopt via de bestaande setup; normale sessies vragen geen nieuwe toolchaininstallatie.
 Eigenaarreview en merge blijven de acceptatie. Beschermde paden en taakmandaten veranderen niet.
+
+Restrisico, aanvaard (punt 5): `git commit` start lefthook en `pnpm pr:verify` start `scripts/` uit de werkmap, beide
+buiten de sandbox en zonder vraag vooraf, ook op de machine van de eigenaar. Wat een subagent onder `scripts/` of `rails/`
+wijzigt, draait de hoofdsessie bij de volgende commit onbeschermd. Alleen het rolhek vooraf staat ertussen
+([0082](0082-zelfladend-sandbox-en-leeslijst.md) punt 4); CI, de ruleset op `main` en de eigenaarmerge blijven de grens.
+`gh api` buiten de sandbox geldt ook voor subagents; daar laat het rolhek alleen lezende REST-aanroepen door.

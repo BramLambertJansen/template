@@ -1,6 +1,8 @@
 # 0044 — Tests buiten de sandbox: de runner
 
 Status: geaccepteerd
+Herzien: 2026-11-20: punt 5, de uitzondering op "Overige opdrachten buiten de sandbox houden hun prompt" voor de vier
+commando's uit [0061](0061-claude-sandbox-werkstraat.md) punt 5 (spec [cloud-pr-route](../specs/cloud-pr-route.md))
 
 Vervangt 0009, met de correcties uit 0025 punt 4 en
 0027 punt 6. Drempel: A4. Consolidatie zonder inhoudelijke wijziging
@@ -32,7 +34,8 @@ tests, configs van Vitest, Playwright en Drizzle, `node_modules`, `package.json`
    Docker-commando.
 5. **Vaste runnerchecks zonder prompt** (was 0027 punt 6). `pnpm test:db`, `pnpm ui:check` en `pnpm gate:slow` mogen exact zo
    zonder herhaalde runprompt draaien wanneer main `autoRunner` toestaat en alle hostbestanden ongewijzigd zijn. Overige
-   opdrachten buiten de sandbox houden hun prompt.
+   opdrachten buiten de sandbox houden hun prompt, behalve `git commit`, `git push origin HEAD` en `pnpm pr:verify`
+   ([0061](0061-claude-sandbox-werkstraat.md) punt 5).
 6. **Gewijzigde hostcode in de wegwerp-CI** (was 0027 punt 6). De hoofdsessie wacht met `pnpm pr:verify`, leest de werkelijke
    uitslagen en herstelt rode checks; ontbrekend runnerbewijs gaat niet als routineklus naar de eigenaar.
 7. **Isolatie bewezen** (was 0009). Een test bewijst dat vanuit de runner een verbinding naar internet en naar de host,

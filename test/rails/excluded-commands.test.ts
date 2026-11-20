@@ -70,8 +70,13 @@ function dockerScripts(scripts: Record<string, string>, shellDir: string): strin
   return Object.keys(scripts).filter((name) => visit(name, [name]));
 }
 
+// De cloudroute (spec cloud-pr-route, ADR 0061 punt 5): drie uitzonderingen die geen pnpm-script zijn. Precies deze
+// drie; elk ander patroon zonder pnpm-script blijft een melding. Gewijzigd door die spec (R-TEST-02).
+const GEEN_SCRIPT = new Set(['git commit *', 'git push origin HEAD', 'gh api *']);
+
 function problems(config: Config, shellDir: string): string[] {
   const missing = config.excluded.flatMap((pattern) => {
+    if (GEEN_SCRIPT.has(pattern)) return [];
     const name = /^pnpm ([\w:-]+) \*$/.exec(pattern)?.[1];
     return name !== undefined && name in config.scripts
       ? []
