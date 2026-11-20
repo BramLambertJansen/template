@@ -198,9 +198,12 @@ describe('nieuwe-app-script/AC-7: poorten --env schrijft .env.local uit .env.exa
     expect(JSON.stringify(resultaat), 'geen inhoud van .env.local in het resultaat').not.toContain('local-demo-secret');
   });
 
-  test('nieuwe-app-script/AC-7 zonder bezette poorten is .env.local gelijk aan .env.example (standaardpoorten)', () => {
+  // Hermetisch (#856): NIEUWE_APP_BEZETTE_POORTEN='' meldt niets bezet, ook al draait er iets op de host. De listener op
+  // 54322 speelt de eigen lokale stack na; zonder testvariabele zou de CLI daarom +10 kiezen.
+  test('nieuwe-app-script/AC-7 zonder bezette poorten is .env.local gelijk aan .env.example (standaardpoorten)', async () => {
+    await luister(54322, '127.0.0.1');
     const fx = maakFixture();
-    const r = draai(fx, ['poorten', '--env']);
+    const r = draai(fx, ['poorten', '--env'], { env: { NIEUWE_APP_BEZETTE_POORTEN: '' } });
     expect(r.status, r.uit).toBe(0);
     const lokaal = readFileSync(path.join(fx.repo, '.env.local'), 'utf8');
     const kozen = leesResultaat(fx.repo, 'poorten');

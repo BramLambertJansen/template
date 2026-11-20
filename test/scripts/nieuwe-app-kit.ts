@@ -21,7 +21,8 @@
 //   Ondersteunde testvariabelen (alleen voor tests, zoals DOCTOR_OS_RELEASE in scripts/doctor.sh): NIEUWE_APP_OS_RELEASE
 //   (pad van een os-release-bestand), NIEUWE_APP_PID1_COMM (pad van een bestand met de naam van PID 1), NIEUWE_APP_INOTIFY_WATCHES
 //   (pad van een bestand met fs.inotify.max_user_watches), NIEUWE_APP_WERKMAP (de werkmap voor de stap `pad`, default
-//   process.cwd()). WSL is: WSL_DISTRO_NAME is gezet. De remote-URL van `template` lees je met `git config --get
+//   process.cwd()), NIEUWE_APP_BEZETTE_POORTEN (komma-lijst; gezet, ook leeg, vervangt de echte bind van `poorten`,
+//   #856). WSL is: WSL_DISTRO_NAME is gezet. De remote-URL van `template` lees je met `git config --get
 //   remote.template.url`, niet met `git remote get-url`: dat laatste past `url.<x>.insteadOf` toe, dat de fixtures gebruiken.
 //   `gh` wordt alleen als commando gebruikt (`gh auth status`, `gh api <pad> [--jq <pad>]`, `gh repo view`), `psql` met een
 //   `postgres://`-URL of -h/-p/-U, en psql-uitvoer kan commandotags (BEGIN, SET, ROLLBACK) bevatten zoals de echte psql.
