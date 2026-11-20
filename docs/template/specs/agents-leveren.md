@@ -137,25 +137,25 @@ Punt 5 ("Regels uit AGENTS.md: …") wordt `5. Nooit pushen, mergen of rebasen; 
   `reviewer` en een `tool_response` met `totalToolUseCount: 17`, `totalTokens: 1234` en tekstvelden, wanneer `regel()` hem
   verwerkt, dan heeft de regel `k: 'agent reviewer'` en `tc: 17`, en geen ander veld uit `tool_response` (ook geen tokens).
   Is `totalToolUseCount` geen geheel getal ≥ 0 of ontbreekt hij (een start op de achtergrond), dan ontbreekt `tc`. Een andere
-  tool of een ander event krijgt nooit `tc`. Toets: `test/hooks/meting-per-rol.test.ts` (nieuw)
+  tool of een ander event krijgt nooit `tc`. Toets: `test/hooks/meting-per-rol.test.ts`
 - **agents-leveren/AC-2** — Gegeven meetbestanden met een `PermissionDenied` van `reviewer`, een `PreToolUse` zonder Post van
   `reviewer`, een `PreToolUse` en een `PermissionDenied` met dezelfde `id` van `hoofdsessie` (samen één weigering) en een
   `PermissionDenied` zonder `a`, wanneer `pnpm meting --json` draait, dan is `weigeringenPerRol` van die sessie en van die
   branch `{ reviewer: 2, hoofdsessie: 1, onbekend: 1 }`. De tekstuitvoer bevat
   `  weigeringen per rol: reviewer 2, hoofdsessie 1, onbekend 1`. Zonder weigeringen ontbreekt die regel.
-  Toets: `test/rails/meting-per-rol.test.ts` (nieuw)
+  Toets: `test/rails/meting-per-rol.test.ts`
 - **agents-leveren/AC-3** — Gegeven twee `PostToolUse`-regels van `agent reviewer` (`tc` 20 en 28), één
   `PostToolUseFailure` van `agent reviewer` zonder `tc`, één `PostToolUse` van `agent developer` met `tc` 30 en één
   `PreToolUse` van `agent developer`, wanneer `pnpm meting --json` draait, dan is `subagentsPerRol` van die sessie en van die
   branch `{ reviewer: { runs: 3, toolcalls: 48, zonderTelling: 1 }, developer: { runs: 1, toolcalls: 30, zonderTelling: 0 } }`.
   De tekstuitvoer bevat `  subagents: reviewer 3 runs, 48 toolcalls (1 zonder telling); developer 1 runs, 30 toolcalls`.
-  Een `PreToolUse` van een subagent telt niet als run. Toets: `test/rails/meting-per-rol.test.ts` (nieuw)
+  Een `PreToolUse` van een subagent telt niet als run. Toets: `test/rails/meting-per-rol.test.ts`
 - **agents-leveren/AC-4** — Gegeven de meetbestanden uit AC-2 en AC-3 op één branch, wanneer
   `pnpm meting --pr-tabel --branch <naam>` draait, dan volgen na `| Weigeringen (bovengrens) | … |` de rijen
   `| Weigeringen per rol | reviewer 2 · hoofdsessie 1 · onbekend 1 |` en
   `| Subagents per rol | reviewer 3 runs, 48 toolcalls · developer 1 runs, 30 toolcalls |`. Met `--json` heeft `prTabel` de
   velden `weigeringenPerRol` en `subagentsPerRol`. Zonder weigeringen of runs is de waarde van die rij `0`.
-  Toets: `test/rails/meting-per-rol.test.ts` (nieuw)
+  Toets: `test/rails/meting-per-rol.test.ts`
 
 **PR-2: punt 1a** (gebouwd in #850; de toetsen voor AC-7 en AC-8 komen in PR-3)
 
@@ -170,22 +170,22 @@ Punt 5 ("Regels uit AGENTS.md: …") wordt `5. Nooit pushen, mergen of rebasen; 
 - **agents-leveren/AC-7** — Gegeven `.claude/agents/tester.md`, wanneer `subagentStop` uit `rails/hooks/lib/werkstraat.mjs`
   draait met `agent_type` `tester` en een gestubde `deps` waarvan `changed()` `a.test.ts`, `b.test.tsx`, `c.int.test.ts` en
   `e2e/d.spec.ts` geeft, dan krijgt de vitest-aanroep alleen `a.test.ts` en `b.test.tsx`, en noemt punt 4 van `tester.md`
-  `*.int.test.ts` als niet gedraaid. Toets: `test/hooks/agent-teksten.test.ts` (nieuw)
+  `*.int.test.ts` als niet gedraaid. Toets: `test/hooks/agent-teksten.test.ts`
 - **agents-leveren/AC-8** — Gegeven `.claude/agents/architect.md` en `.claude/agents/docs.md`, wanneer de toets ze leest, dan
   verwijst punt 6 van de architect naar `.claude/skills/spec/SKILL.md`, zonder de opsomming met `check:migrations`. De
   docs-agent noemt `schrijfrecht.docs` en geen van de paden `docs/reviews/`, `docs/operations/` of `CHANGELOG.md`.
   `koppeling-agentlaag/AC-13` blijft groen zonder wijziging van zijn test.
-  Toets: `test/hooks/agent-teksten.test.ts` (nieuw)
+  Toets: `test/hooks/agent-teksten.test.ts`
 
 **PR-3: punt 1b**
 
 - **agents-leveren/AC-9** — Gegeven `.claude/agents/developer.md`, wanneer de toets hem leest, dan staat onder
   `## Welke skill je laadt` een tabelrij voor elke skill in `.claude/skills/` behalve `spec`, `opleveren` en
   `security-review`. Elke skillnaam in die tabel bestaat als map in `.claude/skills/`. Een nieuwe skillmap die niet in de tabel
-  en niet in die drie uitzonderingen staat, maakt de toets rood. Toets: `test/hooks/developer-skillrouter.test.ts` (nieuw)
+  en niet in die drie uitzonderingen staat, maakt de toets rood. Toets: `test/hooks/developer-skillrouter.test.ts`
 - **agents-leveren/AC-10** — Gegeven `.claude/agents/developer.md`, wanneer de toets hem leest, dan bevat hij niet
   `Regels uit AGENTS.md`, `geen casts` of `eslint-disable`, en wel punt 5 zoals in Hergebruik en UX.
-  Toets: `test/hooks/developer-skillrouter.test.ts` (nieuw)
+  Toets: `test/hooks/developer-skillrouter.test.ts`
 
 **PR-4: punt 1c**
 

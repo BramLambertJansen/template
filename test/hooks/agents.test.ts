@@ -104,6 +104,7 @@ function yamlFouten(file: string, text: string): string[] {
   });
 }
 
+// GEWIJZIGD (spec agents-leveren, PR-3): alleen de testnamen kregen hun AC-id (AC-5, AC-6), voor de AC-dekking.
 describe('frontmatter is strikte YAML (overnameplan 1a)', () => {
   const files = [
     ...readdirSync('.claude/agents')
@@ -114,21 +115,21 @@ describe('frontmatter is strikte YAML (overnameplan 1a)', () => {
       .map((entry) => `.claude/skills/${entry.name}/SKILL.md`),
   ];
 
-  test.each(files)('%s', (file) => {
+  test.each(files)('agents-leveren/AC-6 %s', (file) => {
     expect(yamlFouten(file, readFileSync(file, 'utf8'))).toStrictEqual([]);
   });
 
-  test('de check is rood op een niet-gequote description met ": "', () => {
+  test('agents-leveren/AC-5 de check is rood op een niet-gequote description met ": "', () => {
     expect(yamlFouten('x.md', '---\nname: x\ndescription: Doet iets: en meer\n---\n')).toStrictEqual([
       "x.md:3: plain scalar met ': ' of ' #', quote de waarde",
     ]);
   });
 
-  test('de check is groen op dezelfde description tussen dubbele quotes', () => {
+  test('agents-leveren/AC-5 de check is groen op dezelfde description tussen dubbele quotes', () => {
     expect(yamlFouten('x.md', '---\nname: x\ndescription: "Doet iets: en meer"\n---\n')).toStrictEqual([]);
   });
 
-  test('de check is rood op een ongesloten quote, een indicator en " #"', () => {
+  test('agents-leveren/AC-5 de check is rood op een ongesloten quote, een indicator en " #"', () => {
     expect(yamlFouten('x.md', '---\na: "open\nb: *alias\nc: tekst #commentaar\n---\n')).toStrictEqual([
       'x.md:2: quote niet gesloten',
       'x.md:3: begint met een YAML-indicator, quote de waarde',
