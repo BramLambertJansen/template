@@ -100,6 +100,30 @@ test('zonder-prompt/AC-4: ADR telt alleen voorgesteld of geaccepteerd; spec en c
   const blok = { 'docs/framework.md': '```\n`gh api *` zonder prompt\n```\n' };
 
   expect(await found(blok, GH)).toStrictEqual([]);
+  const lang = { 'docs/framework.md': '````\n```\n`gh api *` zonder prompt\n````\n' };
+
+  expect(await found(lang, GH)).toStrictEqual([]);
+});
+
+test('zonder-prompt: codespan met dubbele backticks verbergt de claim erna niet', async () => {
+  const doc = { 'docs/framework.md': 'Gebruik `` ` `` als teken. Dan draait `gh api *` zonder prompt.\n' };
+
+  expect((await found(doc, GH)).length).toBe(1);
+});
+
+test('zonder-prompt: claim met wildcard tegen een smallere deny wordt letterlijk getoetst', async () => {
+  const doc = { 'docs/framework.md': '`gh api *` zonder prompt.\n' };
+
+  expect(await found(doc, { ...GH, allow: ['Bash(gh api *)'], deny: ['Bash(gh api *merge*)'] })).toStrictEqual([]);
+});
+
+test('zonder-prompt: zonder getrackte settings geen melding; zonder sandbox-sleutel telt alles als buiten', async () => {
+  const root = repo({ 'docs/framework.md': '`gh api *` zonder prompt.\n' }, '{}');
+  execFileSync('git', ['rm', '-q', '--cached', '.claude/settings.json'], { cwd: root });
+  const zonder = (await docsViolations(root)).filter((v) => v.key.startsWith('docs:zonder-prompt'));
+
+  expect(zonder).toStrictEqual([]);
+  expect((await found({ 'docs/framework.md': '`git status --short` zonder prompt.\n' }, '{}')).length).toBe(1);
 });
 
 test.each([
@@ -109,6 +133,8 @@ test.each([
   'Via hooks: `gh api *` zonder prompt.',
   '`gh api *` zonder prompttekens.',
   '`gh api *` draait zonder prompt.',
+  'Gebruik `` ` `` als scheiding; met `gh api *` buiten de opsomming: `git commit` zonder prompt.',
+  '`gh api *`\n\nzonder prompt na een witregel.',
   'Code `gh api * zonder prompt` telt niet.',
 ])('zonder-prompt/AC-5: geen claim in "%s"', async (zin) => {
   const opties = { excluded: ['gh api *', 'git commit *'], allow: ['Bash(git commit *)'] };

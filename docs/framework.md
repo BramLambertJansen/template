@@ -250,7 +250,7 @@ Een `template-v<x.y.z>`-tag mergen op een branch via een PR (R-REPO-04); stand e
 
 ## 11. Lokaal ontwikkelen
 
-Afgedwongen door: `scripts/doctor.sh`, `test/rails/excluded-commands.test.ts`, `test/scripts/kooi.test.ts`, lintregel `rails/kooi` (`eslint.config.js`).
+Afgedwongen door: `scripts/doctor.sh`, `test/rails/excluded-commands.test.ts`, `test/scripts/kooi.test.ts`, lintregel `rails/kooi` (`eslint.config.js`), check-docs voor een claim "zonder prompt" (`test/rails/check-docs-zonder-prompt.test.ts`).
 
 - **R-TOOL-01** Ubuntu 24.04 of 26.04 (andere versie: stop en vraag), code op ext4; eigenaar installeert toolchain met `scripts/bootstrap.sh`; Compose alleen `127.0.0.1`; devcontainer nooit met host-socket (0039)
 - **R-TOOL-02** Agent gebruikt `docker` niet; stack is van eigenaar (`pnpm dev`); alleen `pnpm test:db`, `pnpm ui:check`, `pnpm gate:slow`, `pnpm db:generate`, `pnpm check:snapshot` draaien buiten sandbox, elk na goedkeuring (0044), plus `git commit`, `git push origin HEAD` en `pnpm pr:verify` zonder prompt (0061, aanvaard restrisico) en `gh api` volgens de permissieregels; een claim "zonder prompt" op een commando buiten de sandbox klopt met `permissions.allow` (check-docs, spec `zonder-prompt`)

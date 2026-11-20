@@ -64,6 +64,7 @@ import { APP_STUB } from './app-init.mjs';
 import { CODEOWNERS, codeownersTekst, eersteGoedkeurder, HERSTEL } from './codeowners.mjs';
 import { grensMeldingen, grensViolations, normenMeldingenUitGit, normenUitGit, zonderBasis } from './leesbudget.mjs';
 import { FRAGMENT_MAP, fragmentFout } from './template-release.mjs';
+import { CODESPAN, HEK, sluitHek } from './markdown.mjs';
 import { zonderPromptViolations } from './zonder-prompt.mjs';
 
 export { normViolations } from './normen.mjs';
@@ -338,18 +339,6 @@ const NORMWOORD = new RegExp(
 );
 // De kop kaal, als Markdown-kop of vet, met of zonder dubbele punt; tekst erachter hoort bij de sectie.
 const HOE_KOP = /^(?:#{1,6}\s+)?(?:\*\*)?Hoe \(geen norm\)(?:\*\*)?:?(?:\*\*)?(.*)$/;
-// Een codespan sluit met een reeks backticks van dezelfde lengte (CommonMark), ook over regels heen.
-const CODESPAN = /(?<!`)(`+)(?!`)[\s\S]*?(?<!`)\1(?!`)/g;
-const HEK = /^ {0,3}(`{3,}|~{3,})/;
-
-/**
- * Een hek sluit alleen met hetzelfde teken, minstens even lang en zonder tekst erachter (CommonMark).
- * @param {string} line @param {string} open
- */
-function sluitHek(line, open) {
-  const hek = /^ {0,3}(`{3,}|~{3,})\s*$/.exec(line)?.[1] ?? '';
-  return hek[0] === open[0] && hek.length >= open.length;
-}
 
 /**
  * De secties onder "Hoe (geen norm)" tot de volgende Markdown-kop. Regels in een codeblok worden leeg (een

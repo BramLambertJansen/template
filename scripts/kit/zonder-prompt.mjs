@@ -1,6 +1,8 @@
 // Spec zonder-prompt (leerpunt #873): een document dat een commando buiten de sandbox "zonder prompt" noemt, klopt met
 // `permissions.allow`, `ask` en `deny` in .claude/settings.json. Aangeroepen vanuit `docsViolations` (check-docs.mjs).
 
+import { CODESPAN, HEK, sluitHek } from './markdown.mjs';
+
 /** @typedef {{ key: string, message: string }} Violation */
 /** @typedef {{ allow: string[], ask: string[], deny: string[], excluded: string[], autoAllow: boolean }} Regels */
 
@@ -16,12 +18,11 @@ const BEREIK = [
 ];
 const ADR = /^docs\/(?:template\/)?adr\//;
 const ADR_GELDIG = /^Status:\s*(?:voorgesteld|geaccepteerd)\b/m;
-const HEK = /^ {0,3}(`{3,}|~{3,})/;
-const CODESPAN = /`[^`]+`/g;
 const CLAIM = /(?<![\p{L}\p{N}_-])zonder\s+prompt(?![\p{L}\p{N}_-])/giu;
 const HOOKZIN = /(?<![\p{L}\p{N}_-])(?:rolhek|hooks?)(?![\p{L}\p{N}_-])/iu;
 const ZINSGRENS = /;|[.!?](?=\s)|\n[ \t]*\n/g;
-const SCHEIDING = /^(?:[\s,]|\ben\b|\bof\b)*$/;
+// Scheiding binnen een opsomming: komma, "en", "of" en witruimte, maar geen witregel (die eindigt de alinea).
+const SCHEIDING = /^(?:[ \t,]|\n(?![ \t]*\n)|\ben\b|\bof\b)*$/;
 const COMMANDO = /^[a-z]\S*\s+\S/;
 
 /** @param {unknown} waarde @param {string} sleutel @returns {unknown} */
@@ -91,12 +92,12 @@ function zonderBlokken(tekst) {
   return tekst
     .split('\n')
     .map((regel) => {
-      const hek = HEK.exec(regel)?.[1];
-      if (hek !== undefined && (open === null || hek.startsWith(open))) {
-        open = open === null ? (hek[0] ?? '`').repeat(3) : null;
-        return '';
+      if (open === null) {
+        open = HEK.exec(regel)?.[1] ?? null;
+        return open === null ? regel : '';
       }
-      return open === null ? regel : '';
+      if (sluitHek(regel, open)) open = null;
+      return '';
     })
     .join('\n');
 }
