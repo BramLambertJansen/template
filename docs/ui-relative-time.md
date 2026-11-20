@@ -42,4 +42,3 @@ Het voorbeeld staat op `/design-system?vak=gegevens`, sectie "RelativeTime", met
 | AC-7, AC-8, AC-9 (geen `tabIndex`/rol) | `src/core/web/ui/relative-time.test.tsx` |
 | AC-9 (barrel), AC-10 | `src/web/features/design-system/relative-time-examples.test.tsx`; `pnpm check:catalogus` |
 | AC-11 | `e2e/relative-time.spec.ts` |
-| AC-12 | `git diff origin/main -- package.json pnpm-lock.yaml` leeg; volledige testsuite |
