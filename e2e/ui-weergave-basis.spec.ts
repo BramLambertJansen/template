@@ -14,6 +14,13 @@ async function pageOverflow(page: Page): Promise<number> {
   return page.evaluate<number>('document.documentElement.scrollWidth - window.innerWidth');
 }
 
+// Een expressiestring wordt door Playwright niet als functie aangeroepen; daarom de IIFE, zoals de andere e2e-tests meten.
+async function tileOverflow(page: Page, index: number): Promise<number> {
+  return page.evaluate<number>(
+    `(() => { const tile = document.querySelectorAll('#example-stat-tile [role="group"]')[${String(index)}]; return tile.scrollWidth - tile.clientWidth; })()`,
+  );
+}
+
 for (const width of [375, 1280]) {
   test.describe(`Weergave-basis op ${String(width)} px`, () => {
     test.use({ viewport: { width, height: 900 } });
@@ -67,9 +74,7 @@ for (const width of [375, 1280]) {
       const boxes = [];
       for (let i = 0; i < 4; i++) {
         const tile = tiles.nth(i);
-        expect(
-          await tile.evaluate<number, undefined>('(element) => element.scrollWidth - element.clientWidth', undefined),
-        ).toBeLessThanOrEqual(0);
+        expect(await tileOverflow(page, i)).toBeLessThanOrEqual(0);
         boxes.push(await tile.boundingBox());
       }
       const lefts = new Set(boxes.map((box) => Math.round(box?.x ?? -1)));
