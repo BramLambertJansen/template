@@ -141,7 +141,11 @@
       "pnpm ui:check *",
       "pnpm gate:slow *",
       "pnpm db:generate *",
-      "pnpm check:snapshot *"
+      "pnpm check:snapshot *",
+      "git commit *",
+      "git push *",
+      "gh api *",
+      "pnpm pr:verify *"
     ],
     "filesystem": {
       "denyRead": [
