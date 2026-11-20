@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd # keuze eigenaar in de sessie 2026-11-13 (pakket gekozen); merge is het besluit
+status: gebouwd
 namespace: offline-en-print
 sjabloon: mini
 scope: functionele-ui
@@ -39,48 +39,53 @@ Offline-melding (`OfflineNotice`, eenheidstests met nagebootste `navigator.onLin
 
 - **offline-en-print/AC-1** — Gegeven `navigator.onLine` is `true` bij het mounten, dan rendert `OfflineNotice` niets: geen
   element met `role="status"`, geen tekst "Je bent offline." en geen tekst "Weer online.".
+  Toets: `src/core/web/ui/offline-notice.test.tsx`
 - **offline-en-print/AC-2** — Gegeven online, wanneer `window` een `offline`-event krijgt (met `navigator.onLine` `false`), dan
   staat er precies één element met `role="status"` met de tekst "Je bent offline. Wijzigingen worden niet opgeslagen tot de
-  verbinding terug is." en is `document.activeElement` onveranderd.
+  verbinding terug is." en is `document.activeElement` onveranderd. Toets: `src/core/web/ui/offline-notice.test.tsx`
 - **offline-en-print/AC-3** — Gegeven `navigator.onLine` is `false` bij het mounten, dan staat de offline-tekst er direct (zonder
-  event) en verschijnt "Weer online." niet.
+  event) en verschijnt "Weer online." niet. Toets: `src/core/web/ui/offline-notice.test.tsx`
 - **offline-en-print/AC-4** — Gegeven offline, wanneer een `online`-event komt, dan vervangt "Weer online." de offline-tekst in
   hetzelfde soort `role="status"`-element; na 4999 ms staat die tekst er nog, na 5000 ms rendert `OfflineNotice` niets meer.
+  Toets: `src/core/web/ui/offline-notice.test.tsx`
 - **offline-en-print/AC-5** — Gegeven online zonder voorafgaande offline-staat, wanneer een `online`-event komt (ook twee keer
-  achter elkaar), dan verschijnt "Weer online." niet.
+  achter elkaar), dan verschijnt "Weer online." niet. Toets: `src/core/web/ui/offline-notice.test.tsx`
 - **offline-en-print/AC-6** — Gegeven "Weer online." staat er, wanneer binnen 5000 ms een `offline`-event komt, dan staat de
   offline-tekst er direct en staat zij er ook na nog eens 5000 ms (de oude timer verwijdert haar niet). Een volgend
-  `online`-event start een nieuwe periode van 5000 ms.
+  `online`-event start een nieuwe periode van 5000 ms. Toets: `src/core/web/ui/offline-notice.test.tsx`
 - **offline-en-print/AC-7** — Twee `offline`-events achter elkaar geven één element en de offline-tekst één keer.
+  Toets: `src/core/web/ui/offline-notice.test.tsx`
 - **offline-en-print/AC-8** — Na unmount zijn de listeners voor `online` en `offline` verwijderd (spy op
   `removeEventListener` met dezelfde handler) en loopt er geen timer meer (`vi.getTimerCount()` is 0); events daarna geven
-  geen React-waarschuwing.
+  geen React-waarschuwing. Toets: `src/core/web/ui/offline-notice.test.tsx`
 - **offline-en-print/AC-9** — De melding bevat geen knop, link of `tabindex`; de offline-staat heeft de klassen
   `border-warning` en `text-warning`, de herstelstaat `border-success` en `text-success` (gelijk aan Notice `warning` en
-  `success`), en beide de klasse `print:hidden`.
+  `success`), en beide de klasse `print:hidden`. Toets: `src/core/web/ui/offline-notice.test.tsx`
 
 AppShell en printstijlen (componenttests op klassen, e2e op berekende stijl):
 
 - **offline-en-print/AC-10** — Gegeven de AppShell en een `offline`-event, dan staat de melding precies één keer in de DOM,
   na de `header` van de Topbar en vóór `main`; de skip-link "Naar de inhoud" blijft de eerste Tab-stop en de melding is geen
   Tab-stop. Online rendert de AppShell geen extra element met `role="status"`.
+  Toets: `src/core/web/ui/app-shell-print.test.tsx`
 - **offline-en-print/AC-11** — In de AppShell hebben de skip-link, de `aside` met de Sidebar en de melding de klasse
   `print:hidden`; de buitenste container heeft `print:block` en `main` heeft `print:p-0`. Afzonderlijk gerenderd hebben de
   `header` van `Topbar`, de `nav` van `Sidebar` en de buitenste container van `Toaster` de klasse `print:hidden`.
+  Toets: `src/core/web/ui/app-shell-print.test.tsx`
 - **offline-en-print/AC-12** — Gegeven `data-theme="dark"` op `<html>` en de AppShell gemount, wanneer `window` een
   `beforeprint`-event krijgt, dan is `data-theme` `light`; na `afterprint` is het weer `dark`. De localStorage-sleutel `thema`
-  verandert in beide stappen niet.
+  verandert in beide stappen niet. Toets: `src/core/web/ui/app-shell-print.test.tsx`
 - **offline-en-print/AC-13** — Gegeven `data-theme="light"`, dan laten `beforeprint` en `afterprint` `data-theme` op `light`.
   Een `afterprint` zonder voorafgaande `beforeprint` verandert niets. Unmount tussen `beforeprint` en `afterprint` zet het
-  oorspronkelijke thema terug en verwijdert beide listeners.
+  oorspronkelijke thema terug en verwijdert beide listeners. Toets: `src/core/web/ui/app-shell-print.test.tsx`
 - **offline-en-print/AC-14** — E2e tegen de echte stack, ingelogd als admin op een scherm met AppShell (1280 px): na
   `context.setOffline(true)` is de offline-tekst zichtbaar met rol `status`; na `context.setOffline(false)` verschijnt
   "Weer online.". Met `page.emulateMedia({ media: 'print' })` en offline hebben de skip-link, `aside`, de Topbar-`header`, de
   melding en de toastcontainer berekende `display: none`, en is de breedte van `main` gelijk aan de breedte van `body`
   (marge 1 px). Terug naar `media: 'screen'` is de Topbar weer zichtbaar. Op 375 px geldt dezelfde printcontrole.
-- **offline-en-print/AC-15** — `OfflineNotice` staat in `src/web/ui/index.ts`; `pnpm check:catalogus` is groen met
-  `OfflineNotice` in het voorbeelddoel `example-layout`; de bestaande tests (o.a. `app-shell.test.tsx`, `toast.test.tsx`)
-  blijven ongewijzigd groen; geen nieuwe dependency, token of stylesheetwijziging.
+  Toets: `e2e/offline-en-print.spec.ts`
+- **offline-en-print/AC-15** — `OfflineNotice` is te importeren uit `src/web/ui/index.ts` en staat in
+  `example-targets.ts` in het voorbeelddoel `example-layout`. Toets: `src/web/ui/offline-notice-index.test.ts`
 
 ## Hergebruik en UX
 
@@ -125,8 +130,14 @@ Barrel en catalogus:
 Tests (nieuw; bestaande tests niet wijzigen of skippen):
 
 - `src/core/web/ui/offline-notice.test.tsx` (AC-1 t/m AC-9)
+- `src/core/web/ui/offline-notice-sync.test.tsx` (regressie bij AC-3/AC-4: `navigator.onLine` opnieuw lezen na het
+  koppelen van de listeners)
 - `src/core/web/ui/app-shell-print.test.tsx` (AC-10 t/m AC-13)
 - `e2e/offline-en-print.spec.ts` (AC-14)
+- `src/web/ui/offline-notice-index.test.ts` (AC-15)
+
+Buiten de AC's, als bewijs in de PR: `pnpm check:catalogus` groen, bestaande tests (o.a. `app-shell.test.tsx`,
+`toast.test.tsx`) ongewijzigd groen, geen nieuwe dependency, token of stylesheetwijziging.
 
 Gebruiksdoc: `docs/offline-en-print.md` (wat de melding doet, waar je hem zelf plaatst, hoe afdrukken werkt, AC's naar tests).
 
