@@ -37,49 +37,48 @@ Notatie: `﻿` is de BOM, `\r\n` is CRLF, `\n` LF, `\r` CR, `\t` tab. Voorbeeldk
 
 - **csv-export/AC-1** — Gegeven rijen Anna de Vries/Gebruiker en Bert Jansen/Beheerder, wanneer `toCsv(rows, columns)`
   draait, dan is de uitvoer exact `﻿Naam;Rol\r\nAnna de Vries;Gebruiker\r\nBert Jansen;Beheerder`: BOM vooraan,
-  koppen in kolomvolgorde, puntkomma als scheidingsteken, CRLF tussen regels en geen afsluitende CRLF.
+  koppen in kolomvolgorde, puntkomma als scheidingsteken, CRLF tussen regels en geen afsluitende CRLF. Toets: `src/core/web/ui/csv.test.ts`
 - **csv-export/AC-2** — Gegeven een cel met `;`, `"`, `\r` of `\n`, dan staat de cel tussen dubbele aanhalingstekens en is
   elk `"` verdubbeld; regeleinden binnen de cel blijven ongewijzigd. Exact: `a;b` → `"a;b"`, `Zeg "hoi"` →
   `"Zeg ""hoi"""`, `regel1\nregel2` → `"regel1\nregel2"`, `a\r\nb` → `"a\r\nb"`. Een cel zonder die tekens krijgt geen
-  aanhalingstekens (`Anna de Vries` → `Anna de Vries`).
+  aanhalingstekens (`Anna de Vries` → `Anna de Vries`). Toets: `src/core/web/ui/csv.test.ts`
 - **csv-export/AC-3** — Gegeven een cel waarvan het eerste teken `=`, `+`, `-`, `@`, `\t` of `\r` is, dan krijgt die cel
   een apostrof vooraan, vóór het quoten. Exact: `=SOM(A1)` → `'=SOM(A1)`, `+31 6` → `'+31 6`, `-5` → `'-5`, `@x` → `'@x`,
   `\tx` → `'\tx`, `\rx` → `"'\rx"`, `=a;b` → `"'=a;b"`. Alleen het eerste teken telt: ` =1` (spatie eerst), `a=1` en
-  `'x` blijven ongewijzigd; een lege cel blijft leeg. Koppen volgen dezelfde regels als cellen.
+  `'x` blijven ongewijzigd; een lege cel blijft leeg. Koppen volgen dezelfde regels als cellen. Toets: `src/core/web/ui/csv.test.ts`
 - **csv-export/AC-4** — Gegeven nul rijen, dan is de uitvoer exact `﻿` plus de koprij (`﻿Naam;Rol`). Gegeven
-  nul kolommen of een kop die na trimmen leeg is, dan gooit `toCsv` via `assert()`; dubbele koppen zijn toegestaan.
+  nul kolommen of een kop die na trimmen leeg is, dan gooit `toCsv` via `assert()`; dubbele koppen zijn toegestaan. Toets: `src/core/web/ui/csv.test.ts`
 - **csv-export/AC-5** — Gegeven een cel met `é`, `ë`, `€` en een emoji, dan begint de UTF-8-codering (`TextEncoder`) van
   de uitvoer van `toCsv` met de bytes `EF BB BF` en bevat ze die tekens ongewijzigd; er wordt niets vervangen of
-  weggelaten. De bytes van het gedownloade bestand toetst AC-12.
+  weggelaten. De bytes van het gedownloade bestand toetst AC-12. Toets: `src/core/web/ui/csv.test.ts`
 - **csv-export/AC-6** — Gegeven `ExportCsvButton` met rows, columns en `filename="voorbeeldgegevens"`, wanneer de
   gebruiker klikt, dan ontstaat precies één `Blob` met type `text/csv;charset=utf-8` en inhoud gelijk aan
   `toCsv(rows, columns)`, wordt één ankerelement met `download="voorbeeldgegevens.csv"` en de object-URL als `href`
   aangeklikt, staat dat anker daarna niet meer in het document en wordt dezelfde object-URL uiterlijk in de volgende
-  macrotaak met `URL.revokeObjectURL` vrijgegeven.
+  macrotaak met `URL.revokeObjectURL` vrijgegeven. Toets: `src/core/web/ui/export-csv-button.test.tsx`
 - **csv-export/AC-7** — Bestandsnaam: `filename` wordt getrimd; eindigt hij niet op `.csv` (hoofdletterongevoelig), dan
   wordt `.csv` toegevoegd. Exact: `rapport` → `rapport.csv`, ` rapport.csv ` → `rapport.csv`, `Rapport.CSV` →
   `Rapport.CSV`. Een `filename` die na trimmen leeg is, een lege `columns` of een kolom waarvan de `header` na trimmen
   leeg is, gooit via `assert()` tijdens render, zodat die programmeerfouten de ErrorBoundary bereiken; met geldige props
-  kan `toCsv` in de klikhandler niet op die asserts falen.
+  kan `toCsv` in de klikhandler niet op die asserts falen. Toets: `src/core/web/ui/export-csv-button.test.tsx`
 - **csv-export/AC-8** — Gegeven het DataTable-voorbeeld op `/design-system` met twee getoonde rijen, wanneer de gebruiker
   "CSV exporteren" kiest, dan bevat het bestand de koprij plus exact die twee rijen in de getoonde volgorde (filter en
   sortering toegepast), zonder totaalregel, aantalregel of rijen die niet geladen zijn; na "Meer laden" bevat een nieuwe
-  export drie rijen.
+  export drie rijen. Toets: `e2e/csv-export.spec.ts`
 - **csv-export/AC-9** — Na een geslaagde export toont de `role="status"`-regel "CSV-bestand aangemaakt." en is de
   `role="alert"`-regel leeg. Gooit het opbouwen (bijvoorbeeld een `value`-functie) of het downloaden (bijvoorbeeld
   `URL.createObjectURL`), dan toont de alert "Exporteren is niet gelukt. Probeer het opnieuw.", blijft de status leeg,
   wordt geen anker aangeklikt en bereikt de fout geen ErrorBoundary. De uitkomst van een klik vervangt de vorige
   melding: na een fout gevolgd door een geslaagde export is de alert leeg en staat de status er; na een geslaagde export
   gevolgd door een fout is de status leeg en staat de alert er.
-  Eigen `label`, `doneLabel` en `errorLabel` vervangen de drie standaardteksten.
+  Eigen `label`, `doneLabel` en `errorLabel` vervangen de drie standaardteksten. Toets: `src/core/web/ui/export-csv-button.test.tsx`
 - **csv-export/AC-10** — Met `disabled` is de knop native disabled en ontstaat bij klikken geen Blob en geen download.
-  Enter en Spatie op de gefocuste knop starten de export; na de export blijft de focus op de knop.
+  Enter en Spatie op de gefocuste knop starten de export; na de export blijft de focus op de knop. Toets: `src/core/web/ui/export-csv-button.test.tsx`
 - **csv-export/AC-11** — `ExportCsvButton`, `ExportCsvButtonProps`, `toCsv` en `CsvColumn` zijn te importeren uit
-  `src/web/ui/index.ts`; het catalogusvoorbeeld staat binnen `#example-data-table`; `pnpm check:catalogus` en de
-  bestaande index-naar-voorbeeldtest blijven groen zonder uitzondering; geen bestaande test is gewijzigd of overgeslagen.
+  `src/web/ui/index.ts`; het catalogusvoorbeeld staat binnen `#example-data-table`. Toets: `src/web/features/design-system/csv-export-example.test.tsx`
 - **csv-export/AC-12** — Op de echte lokale stack levert de knop in het DataTable-voorbeeld een download met de naam
   `voorbeeldgegevens.csv` waarvan de bytes met `EF BB BF` beginnen en waarvan de eerste regel `Naam;Rol` is; `scanAxe`
-  op 375 en 1280 px meldt geen overtredingen, licht en donker, zonder pagina-overflow.
+  op 375 en 1280 px meldt geen overtredingen, licht en donker, zonder pagina-overflow. Toets: `e2e/csv-export.spec.ts`
 
 ## Hergebruik en UX
 
@@ -137,7 +136,8 @@ Bouw-PR (functionele UI in de template, R-WERK-18), exact deze bestanden:
   `ExportCsvButton`, `ExportCsvButtonProps`), `src/core/web/copy/ui.ts` (drie nieuwe sleutels `exportCsv`,
   `exportCsvDone`, `exportCsvFailed`; bestaande sleutels ongewijzigd);
 - tests (nieuw): `src/core/web/ui/csv.test.ts` (AC-1 t/m AC-5), `src/core/web/ui/export-csv-button.test.tsx` (AC-6,
-  AC-7, AC-9, AC-10), `e2e/csv-export.spec.ts` (AC-8, AC-12);
+  AC-7, AC-9, AC-10), `src/web/features/design-system/csv-export-example.test.tsx` (AC-11), `e2e/csv-export.spec.ts`
+  (AC-8, AC-12);
 - barrel: `src/web/ui/index.ts` (exports van AC-11);
 - catalogus: `src/web/features/design-system/data-display-examples.tsx` (knop in de DataTable-sectie met de getoonde
   rijen) en `src/web/features/design-system/example-targets.ts` (`ExportCsvButton` in de groep `example-data-table`,
@@ -166,7 +166,8 @@ rijlimiet, automatisch getal- of datumformatteren in `toCsv`, en het toevoegen v
   kolommen of lege kop.
 - E2e (`e2e/csv-export.spec.ts`, echte lokale stack): Playwright-download op `/design-system`, naam en bytes, export
   vóór en na "Meer laden", `scanAxe` op 375 en 1280 px.
-- Format, lint, typecheck, ratchet, `check:catalogus` en de bestaande tests ongewijzigd groen.
+- Catalogus (`csv-export-example.test.tsx`): barrel-exports en het voorbeeld binnen `#example-data-table` (AC-11).
+- Procesbewijs (geen AC): format, lint, typecheck, ratchet, `check:catalogus` en de bestaande tests ongewijzigd groen.
 
 ## Open vragen
 
