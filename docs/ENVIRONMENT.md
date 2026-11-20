@@ -8,7 +8,7 @@ installatie per repo); dit document is de uitleg erbij. Wijzigt een van beide, w
 
 Eén omgeving voor alle repo's uit de template, één keer per account:
 
-1. Maak op claude.ai/code een omgeving met netwerktoegang **Trusted** (de standaard; de app toont het als **Limited**).
+1. Maak op claude.ai/code een omgeving met netwerktoegang **Trusted** (de standaard; de app toont vermoedelijk hetzelfde als **Limited**).
 2. Zet in het veld "Setup script" de inhoud van het bestand `scripts/cloud-omgeving.sh`: plak de tekst, of kies het
    bestand met "Choose file". Er staat geen repo-naam in.
 3. Kies die omgeving voortaan bij elke sessie, voor deze repo en voor elke app uit de template.
@@ -206,15 +206,15 @@ draaien vier commando's buiten de sandbox (`sandbox.excludedCommands` in `.claud
 | Stap | Commando | Opmerking |
 |---|---|---|
 | Commit | `git commit -F <bestand>` | buiten de sandbox; lefthook draait mee, nooit `--no-verify` |
-| Push | `git push origin HEAD` | de smalle vorm; `deny` weigert push naar `main` en force |
-| PR openen | `mcp__github__create_pull_request` | `gh pr create` werkt niet in de cloud (GraphQL); het rolhek vraagt de eigenaar één keer per PR (ADR 0078 punt 4, herzien) |
-| Bewijs lezen | `pnpm pr:verify <nummer>`, `gh api repos/{owner}/{repo}/…` | alleen REST; `gh pr …`, `gh run …` en `gh issue …` gebruiken GraphQL en werken niet |
+| Push | `git push origin HEAD` | de smalle vorm; `deny` en het rolhek weigeren push naar `main` en force |
+| PR openen | `mcp__github__create_pull_request` | `gh pr create` werkt niet in de cloud (GraphQL); Claude Code vraagt de eigenaar één keer per PR (gemeten: één prompt, spec `cloud-pr-route` F10; ADR 0078 punt 4, herzien) |
+| Bewijs lezen | `pnpm pr:verify <nummer>`, `gh api repos/{owner}/{repo}/…` | alleen REST; `gh pr …` en `gh issue …` gebruiken GraphQL en werken niet |
 
 Lokaal blijft `gh pr create --head <branch> --body-file <bestand>` de route (zie Dagelijks werken).
 
 Kies bij het starten van de sessie de omgeving uit Opzetten. De omgeving Default heeft geen toolchain:
 `node scripts/kit/feiten.mjs` meldt dan `✗ toolchain ontbreekt` en lefthook draait niet. Netwerktoegang heet in de
-documentatie van Claude Code **Trusted**; de app toont hetzelfde niveau als **Limited**.
+documentatie van Claude Code **Trusted**; de app toont vermoedelijk hetzelfde niveau als **Limited** (niet gemeten).
 
 Nog niet gemeten (spec `cloud-pr-route`, stap 0 van het testplan): een commit mét lefthook buiten de sandbox, de smalle
 pushvorm in de cloud, waarom een PR via `gh api …/pulls` (POST) 401 gaf, en of `gh api` lokaal een prompt geeft.
@@ -280,7 +280,7 @@ pushvorm in de cloud, waarom een PR via `gh api …/pulls` (POST) 401 gaf, en of
 - **`HTTP 401: Bad credentials`** op elke `gh`-aanroep, met `echo "$GH_TOKEN"` gelijk aan `proxy-injected`: `gh` draait
   binnen de Bash-sandbox en bereikt de token-proxy niet. Alleen `gh api` staat buiten de sandbox; gebruik dat (zie
   [Cloud: commit, push, PR en bewijs](#cloud-commit-push-pr-en-bewijs)).
-- **`HTTP 403: GitHub GraphQL is not available from Claude Code sessions; use the REST API`**: `gh pr …`, `gh run …` en
+- **`HTTP 403: GitHub GraphQL is not available from Claude Code sessions; use the REST API`**: `gh pr …` en
   `gh issue …` gebruiken GraphQL, dat de GitHub-proxy weigert. Lees via `gh api` (REST) of `pnpm pr:verify`, open een PR
   met `mcp__github__create_pull_request`.
 - **`environment-runner code-sign` … `connection refused`, dan `fatal: failed to write commit object`**: de commit draaide

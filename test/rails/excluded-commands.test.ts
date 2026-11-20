@@ -104,6 +104,20 @@ describe('excludedCommands: de checker zelf (fixture)', () => {
   });
 });
 
+describe('excludedCommands: de cloudroute (spec cloud-pr-route)', () => {
+  test('alleen de drie genoemde patronen zonder pnpm-script; een breder patroon blijft een melding', () => {
+    const config: Config = {
+      excluded: ['git commit *', 'git push origin HEAD', 'gh api *', 'git push *', 'gh *'],
+      ask: [],
+      scripts: {},
+    };
+    expect(problems(config, 'scripts')).toStrictEqual([
+      'excludedCommands "git push *": script bestaat niet in package.json',
+      'excludedCommands "gh *": script bestaat niet in package.json',
+    ]);
+  });
+});
+
 describe('excludedCommands: .claude/settings.json tegen package.json', () => {
   const config = load('.claude/settings.json', 'package.json');
 

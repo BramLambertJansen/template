@@ -55,7 +55,11 @@ describe('docs van de cloudroute voor commit, push, PR en bewijs (spec cloud-pr-
   });
 
   test('cloud-pr-route/AC-4: de doorloop noemt de MCP-tool als cloudroute voor een PR', () => {
-    expect(doorloop).toContain(`\`${MCP_PR}\``);
+    // De alinea "In een cloudsessie" tot de volgende lege regel.
+    const alinea = doorloop.split('**In een cloudsessie**')[1]?.split(/\n\n/)[0] ?? '';
+
+    expect(alinea).toContain(`\`${MCP_PR}\``);
+    expect(alinea).toMatch(/open de PR daar met/);
   });
 
   test('cloud-pr-route/AC-4: R-SEC-09 en R-ROL-12 noemen een PR aanmaken in de cloud naast het leerpunt-issue', () => {

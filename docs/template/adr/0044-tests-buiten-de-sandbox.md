@@ -1,7 +1,7 @@
 # 0044 — Tests buiten de sandbox: de runner
 
 Status: geaccepteerd
-Herzien: 2026-11-20: punt 5, de uitzondering op "Overige opdrachten buiten de sandbox houden hun prompt" voor de vier
+Herzien: 2026-11-20: punt 5, de uitzondering op "Overige opdrachten buiten de sandbox houden hun prompt" voor drie
 commando's uit [0061](0061-claude-sandbox-werkstraat.md) punt 5 (spec [cloud-pr-route](../specs/cloud-pr-route.md))
 
 Vervangt 0009, met de correcties uit 0025 punt 4 en

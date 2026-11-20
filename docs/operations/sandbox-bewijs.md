@@ -45,8 +45,10 @@ Twee lagen: een eerder, samengesteld commando dat ook `.env` las, weigerde de pe
   er 382 tests in 10 bestanden en weigerde de pre-push-hook elke push van een agent (leerpunt #607). Groen in de sandbox
   bewijst de kooi- en rolhektests niet; dat doet alleen CI (`pnpm pr:verify`).
 - **`~/.ssh` en `~/.aws`** zijn alleen als regel aanwezig; bewijs volgt op een machine waar die mappen bestaan.
-- **`excludedCommands`** (`.claude/settings.json:137-145`: onder meer `pnpm test:db`, `ui:check`, `gate:slow`,
-  `db:generate`, `check:snapshot`) draaien buiten de sandbox, met `ask`; ADR 0044 beschrijft dat gat. Volgens de documentatie van
+- **`excludedCommands`** (`.claude/settings.json:137-149`: onder meer `pnpm test:db`, `ui:check`, `gate:slow`,
+  `db:generate`, `check:snapshot`) draaien buiten de sandbox, met `ask`; ADR 0044 beschrijft dat gat. De cloudroute
+  (`git commit *`, `git push origin HEAD`, `pnpm pr:verify *` zonder prompt, `gh api *` volgens de permissieregels) staat er
+  sinds spec `cloud-pr-route` ook; het restrisico staat in ADR 0061. Volgens de documentatie van
   Claude Code geldt de uitzondering alleen als elk commando in de Bash-aanroep op de lijst past: `cd`, `&&`, een pipe, een
   omleiding of `$(...)` houdt de hele aanroep in de sandbox. Meting 2026-11-10: kaal `pnpm db:generate` (hoofdsessie) en kaal
   `pnpm check:snapshot` en `pnpm db:generate` (developer-subagent) draaiden buiten de sandbox met exit 0; met een pipe erachter

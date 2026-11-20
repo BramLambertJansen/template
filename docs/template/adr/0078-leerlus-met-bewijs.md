@@ -9,7 +9,7 @@ Herzien: 2026-11-20: punt 4, een tweede uitzondering op "MCP alleen lezend": de 
 `mcp__github__create_pull_request`, omdat `gh pr create` daar niet werkt (eigenaar; spec
 [cloud-pr-route](../specs/cloud-pr-route.md))
 
-Wijzigt [0059](0059-leerlus-van-app-naar-template.md) punt 1, 3, 4 en 7; vult R-SEC-09 aan met één uitzondering voor MCP.
+Wijzigt [0059](0059-leerlus-van-app-naar-template.md) punt 1, 3, 4 en 7; vult R-SEC-09 aan met een uitzondering voor MCP (sinds de herziening van 2026-11-20 twee).
 Drempel: A3 (een nieuwe workflow met schrijfrecht op issues; een uitzondering op "MCP alleen lezend") en A4 (een
 geaccepteerd ADR wijzigt). Uitwerking: [spec leerlus-bewijs](../specs/leerlus-bewijs.md). Aanleiding: de herbeoordeling van de
 leerlus van 4 november 2026 (thread "Zelflerend systeem opnieuw beoordelen"), met de keuzes V1, V2, V5 en "openbaar is prima" van

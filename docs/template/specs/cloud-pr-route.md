@@ -124,8 +124,8 @@ Geen UI en geen nieuwe zichtbare tekst.
      ADR 0061 (cloud); het restrisico staat daar.
    - ADR 0078 punt 4 (spec-review B2): naast de issuetool mag de hoofdsessie in de cloud één MCP-schrijfactie meer:
      `mcp__github__create_pull_request`, alleen voor een PR van de eigen werkbranch; in Claude Code blijft het rolhek vragen.
-   - R-TOOL-02: de lijst buiten de sandbox noemt ook `git commit`, `git push origin HEAD`, `gh api` en `pnpm pr:verify`,
-     "zonder prompt (0061)". R-SEC-09 en R-ROL-12: "behalve een leerpunt-issue of een PR aanmaken in de cloud".
+   - R-TOOL-02: de lijst buiten de sandbox noemt ook `git commit`, `git push origin HEAD` en `pnpm pr:verify` "zonder
+     prompt (0061)", en `gh api` "volgens de permissieregels" (OV-5). R-SEC-09 en R-ROL-12: "behalve een leerpunt-issue of een PR aanmaken in de cloud".
      `AGENTS.md` (Repo en grenzen, MCP) volgt dezelfde tekst.
 3. **Een PR openen gaat in de cloud via `mcp__github__create_pull_request`** (F10), in de vorm van de bestaande
    uitzondering voor het leerpunt-issue: het rolhek blijft vragen, de eigenaar keurt goed (OV-2). `gh pr create` werkt
