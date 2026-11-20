@@ -26,6 +26,7 @@ import { TokensExamples } from './tokens-examples.tsx';
 import { TypographyExamples } from './typography-examples.tsx';
 import { BusyButtonSection, BusyMenuSection, FormControlSections, StatusSections } from './ui-basics-examples.tsx';
 import type { VakId } from './vakken.ts';
+import { WizardExample } from './wizard-example.tsx';
 
 // Welke voorbeelden in welk tabblad staan (spec designsystem-toolbox). Alle panelen worden altijd gerenderd (Tabs verbergt
 // ze met `hidden`), zodat check:catalogus elk voorbeeld vanuit DesignSystemPage blijft vinden.
@@ -89,6 +90,7 @@ export const vakPanels: Readonly<Record<VakId, ReactNode>> = {
       <ListToolbarSection />
       <BulkActionsExample />
       <EditableDetailsExample />
+      <WizardExample />
       <RefreshExample />
     </Panel>
   ),

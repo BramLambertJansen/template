@@ -65,3 +65,11 @@ export { FormChanges } from '#core/web/ui/form-changes.tsx';
 export { UnsavedChangesGuard, type UnsavedChangesGuardProps } from '#core/web/ui/unsaved-changes-guard.tsx';
 export { EditableSection, type EditableSectionProps } from '#core/web/ui/editable-section.tsx';
 export { BulkActions, type BulkActionsProps } from '#core/web/ui/bulk-actions.tsx';
+export {
+  Wizard,
+  wizardStep,
+  type WizardProps,
+  type WizardStep,
+  type WizardStepConfig,
+  type WizardStepControls,
+} from '#core/web/ui/wizard.tsx';
