@@ -216,8 +216,12 @@ Kies bij het starten van de sessie de omgeving uit Opzetten. De omgeving Default
 `node scripts/kit/feiten.mjs` meldt dan `✗ toolchain ontbreekt` en lefthook draait niet. Netwerktoegang heet in de
 documentatie van Claude Code **Trusted**; de app toont vermoedelijk hetzelfde niveau als **Limited** (niet gemeten).
 
-Nog niet gemeten (spec `cloud-pr-route`, stap 0 van het testplan): een commit mét lefthook buiten de sandbox, de smalle
-pushvorm in de cloud, waarom een PR via `gh api …/pulls` (POST) 401 gaf, en of `gh api` lokaal een prompt geeft.
+Gemeten op 20 november 2026 in een cloudsessie op deze route, met toolchain (spec `cloud-pr-route`, stap 0): een
+commit en `git push origin HEAD` slagen zonder prompt en zonder fout van de signeerdienst, met de lefthook-hooks aan (bij
+een lege commit slaan de stappen over). `gh api` werkt voor GET, en een POST komt door de authenticatie: een POST naar
+`…/pulls` voor een branch met een open PR gaf `HTTP 422` ("A pull request already exists"), geen 401. Een geslaagde
+schrijfactie via `gh api` is niet gemeten. Waarom een eerdere POST 401 gaf, is niet
+vastgesteld. Of `gh api` lokaal een prompt geeft, is niet gemeten.
 
 ## Problemen
 

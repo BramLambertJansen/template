@@ -353,7 +353,9 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   framework §8), schaduwmodus met een vooraf genoemde drempel (ADR 0091, ADR 0071 punt 6) en een gedragsbaseline voor
   tekstwijzigingen aan agents en skills (ADR 0059). Elk punt eerst als besluit-PR; de bouw volgt na de merge door de eigenaar. **Klaar als:** elk van 4a–4d heeft een gemergde of gesloten besluit-PR.
   aanleiding: `docs/reviews/2026-11-18-overnameplan-agentic.md` (§6; eigenaarvraag 2026-11-18)
-- [ ] **Cloudsessie: committen, pushen, PR en CI-bewijs.** Vier commando's buiten de sandbox, een PR via de MCP-tool in de
+- [x] **Cloudsessie: committen, pushen, PR en CI-bewijs.** Bewijs: `test/rails/claude-sandbox-werkstraat.test.ts`,
+  `test/docs/cloud-pr-route.test.ts`; meetcommit in #868, uitslag in de vervolg-PR (spec, "Uitslag stap 0"); M1 open,
+  afgeleid uit de instellingen. Vier commando's buiten de sandbox, een PR via de MCP-tool in de
   cloud, ADR 0044, 0061, 0078 en 0084 herzien (spec `docs/template/specs/cloud-pr-route.md`). **Klaar als:** de AC's van de
   spec zijn groen en de metingen van stap 0 staan in de PR.
   aanleiding: `docs/template/specs/cloud-pr-route.md` (meting van een cloudsessie, 20 november 2026: 401 op `gh`, commit niet te ondertekenen)
