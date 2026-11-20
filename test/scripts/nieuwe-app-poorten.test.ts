@@ -186,10 +186,9 @@ describe('nieuwe-app-script/AC-7: poorten --env schrijft .env.local uit .env.exa
     }
   });
 
-  test('nieuwe-app-script/AC-7 de CLI schrijft .env.local gelijk aan het orakel voor +10 en laat .env.example staan', async () => {
-    await luister(54324, '127.0.0.1');
+  test('nieuwe-app-script/AC-7 de CLI schrijft .env.local gelijk aan het orakel voor +10 en laat .env.example staan', () => {
     const fx = maakFixture();
-    const r = draai(fx, ['poorten', '--env']);
+    const r = draai(fx, ['poorten', '--env'], { env: { NIEUWE_APP_BEZETTE_POORTEN: '54324' } });
     expect(r.status, r.uit).toBe(0);
     expect(readFileSync(path.join(fx.repo, '.env.local'), 'utf8')).toBe(envLocalVoor(PLUS_TIEN));
     expect(git(fx.repo, 'status', '--porcelain'), '.env.local is genegeerd, .env.example ongewijzigd').toBe('');
@@ -213,11 +212,10 @@ describe('nieuwe-app-script/AC-7: poorten --env schrijft .env.local uit .env.exa
 });
 
 describe('nieuwe-app-script/AC-5: poorten --env --dry-run schrijft niets', () => {
-  test('nieuwe-app-script/AC-5 poorten --env --dry-run maakt .env.local niet en laat HEAD, remotes en refs gelijk', async () => {
-    await luister(54324, '127.0.0.1');
+  test('nieuwe-app-script/AC-5 poorten --env --dry-run maakt .env.local niet en laat HEAD, remotes en refs gelijk', () => {
     const fx = maakFixture();
     const vooraf = [git(fx.repo, 'rev-parse', 'HEAD'), git(fx.repo, 'remote', '-v'), git(fx.repo, 'for-each-ref')];
-    const r = draai(fx, ['poorten', '--env', '--dry-run']);
+    const r = draai(fx, ['poorten', '--env', '--dry-run'], { env: { NIEUWE_APP_BEZETTE_POORTEN: '54324' } });
     expect(r.status, r.uit).toBe(0);
     expect(readdirSync(fx.repo)).not.toContain('.env.local');
     expect([

@@ -4,7 +4,7 @@
 // Exit 0 als elke stap ok of overgeslagen is, 1 bij een fout, 2 bij verkeerd gebruik (dan geen resultaatbestand).
 // Alleen `node:`-modules, zodat het bestand ook los in ~/setup werkt, vóór de clone. Het start nooit een container, een
 // pakketbeheerder of een rootcommando en pusht niet; andere programma's alleen met een argumentlijst, zonder shell.
-// `repo-instellingen` is bouwstap 2 en bestaat hier nog niet. scripts/dev.mjs importeert `isVrij`: één vrij-regel.
+// `repo-instellingen` is bouwstap 2 en bestaat hier nog niet. scripts/dev.mjs importeert `isVrij` en `testBind`: één vrij-regel.
 // Getest in test/scripts/nieuwe-app*.test.ts en test/scripts/dev.test.ts.
 import { execFileSync } from 'node:child_process';
 import {
@@ -283,10 +283,11 @@ export async function kiesPoortenset(opties = {}) {
 
 /**
  * Alleen voor tests: NIEUWE_APP_BEZETTE_POORTEN (komma's, leeg = niets bezet) vervangt de echte bind, zodat de poortkeuze
- * niet afhangt van wat er op de host draait, zoals de eigen lokale stack (#856). Niet gezet: de echte bind.
+ * niet afhangt van wat er op de host draait, zoals de eigen lokale stack (#856). Niet gezet: de echte bind. Ook
+ * scripts/dev.mjs gebruikt hem, zodat zijn poortcontrole in tests niet racet met andere tests die poorten bezetten.
  * @returns {VrijOpties}
  */
-function testBind() {
+export function testBind() {
   const lijst = process.env['NIEUWE_APP_BEZETTE_POORTEN'];
   if (lijst === undefined) return {};
   const bezet = new Set(
