@@ -44,6 +44,10 @@
 //     (R-CI-06, spec vervallen-documenten-weg AC-6, sleutel `docs:<pad>:vervallen-in-template`); niet in docs/specs/ of docs/adr/.
 //  17. Geen gewijzigd changelogfragment dat al op de merge-base met origin/main staat (leerpunt #877, sleutel
 //     `docs:fragment-behoud:<bestand>`); in `docsKrimp`, dus strikt en nooit in de baseline.
+//  18. Een melding, nooit een overtreding (gebouwd-zonder-nummer/AC-15, leerpunt #756): een testregel die tegenover de
+//     merge-base met origin/main is toegevoegd (of in een niet-getrackt testbestand staat) en een AC-id noemt van een spec
+//     die nog `goedgekeurd` is, of van een AC die in een gebouwde spec nog `(nog niet gebouwd)` draagt; één regel per spec
+//     en testbestand in `docsMeldingen` (scripts/kit/vergeten-gebouwd.mjs).
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -120,7 +124,14 @@ export async function docsViolations(root = '.') {
 export async function docsMeldingen(root = '.') {
   const files = trackedFiles(root);
   const grens = grensMeldingen((file) => (files.includes(file) ? readFileSync(path.join(root, file), 'utf8') : null));
-  return Promise.resolve([...grens, ...zonderBasis(root, false).meldingen, ...normenMeldingenUitGit(root)]);
+  // Dynamisch: vergeten-gebouwd.mjs importeert zelf uit dit bestand (regel 18), zo ontstaat geen importcyclus bij het laden.
+  const { vergetenGebouwdMeldingen } = await import('./vergeten-gebouwd.mjs');
+  return [
+    ...grens,
+    ...zonderBasis(root, false).meldingen,
+    ...normenMeldingenUitGit(root),
+    ...vergetenGebouwdMeldingen(root),
+  ];
 }
 
 /**
@@ -751,7 +762,7 @@ const AC_ID = /(?<![\w/-])(?:([\w.-]+)\/)?(AC-\d+)(?![\w-])/g;
  * Regex die `naam` als heel woord vindt: geen woordteken, `/`, `.` of `-` ervoor (dus niet in `andere/mijn/AC-1` of
  * `x.mijn/AC-1`), geen woordteken of `-` erna. @param {string} naam
  */
-function heelWoord(naam) {
+export function heelWoord(naam) {
   return new RegExp(`(?<![\\w/.-])${naam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`);
 }
 
