@@ -8,7 +8,7 @@ installatie per repo); dit document is de uitleg erbij. Wijzigt een van beide, w
 
 Eén omgeving voor alle repo's uit de template, één keer per account:
 
-1. Maak op claude.ai/code een omgeving met netwerktoegang **Trusted** (de standaard).
+1. Maak op claude.ai/code een omgeving met netwerktoegang **Trusted** (de standaard; de app toont vermoedelijk hetzelfde als **Limited**).
 2. Zet in het veld "Setup script" de inhoud van het bestand `scripts/cloud-omgeving.sh`: plak de tekst, of kies het
    bestand met "Choose file". Er staat geen repo-naam in.
 3. Kies die omgeving voortaan bij elke sessie, voor deze repo en voor elke app uit de template.
@@ -141,8 +141,12 @@ De [agentdoorloop](operations/agent-doorloop.md#ontwikkelen-en-runnerchecks) bes
 
 `ask`, `deny`, het rolhek uit main en de verplichte GitHub-checks blijven leidend. Subagents krijgen geen push- of
 PR-schrijfrechten; main-push, force, hookoverslaan, PR-merge en zelfreview blijven geweigerd. De bestaande lokale
-merge van main en veilige taakbranchopruiming blijven beschikbaar. Geen nieuwe runneruitzondering, Git-allowWrite
-of schrijfbare globale pnpm-opslag is nodig.
+merge van main en veilige taakbranchopruiming blijven beschikbaar. Geen Git-allowWrite of schrijfbare globale
+pnpm-opslag is nodig. Naast de zeven runneruitzonderingen draaien `git commit *`, `git push origin HEAD`, `gh api *` en
+`pnpm pr:verify *` buiten de sandbox, lokaal en in de cloud (ADR 0061, herzien; zie
+[Cloud: commit, push, PR en bewijs](#cloud-commit-push-pr-en-bewijs)). Lefthook en `pr:verify` draaien daardoor code uit de
+werkmap zonder sandbox en zonder vraag vooraf; alleen het rolhek vooraf staat ertussen, CI en de eigenaarmerge blijven de
+grens (aanvaard restrisico).
 
 Regressies staan in `test/scripts/mise-pnpm-selection.test.ts`, `test/scripts/toolchain-pnpm-runtime.test.ts`,
 `test/rails/claude-sandbox-werkstraat.test.ts` en `test/hooks/rolhek-sandbox-werkstraat.test.ts`.
@@ -192,6 +196,28 @@ staan, of er een `gh`, `git` of `node` in `node_modules/.bin` staat, of `merge` 
 
 Een cloudsessie start op een branch die het platform kiest (`claude/<naam>`). Een overdracht schrijft daarom geen
 branchnaam voor; de PR komt van de opgelegde branch. Is een vaste naam nodig, dan start de eigenaar de sessie op die branch.
+
+## Cloud: commit, push, PR en bewijs
+
+Gemeten op 20 november 2026 (spec `cloud-pr-route`): binnen de Bash-sandbox bereikt een cloudsessie de token-proxy en de
+signeerdienst van het platform niet. `gh` geeft dan op elke aanroep 401 en het ondertekenen van een commit faalt. Daarom
+draaien vier commando's buiten de sandbox (`sandbox.excludedCommands` in `.claude/settings.json`). De route:
+
+| Stap | Commando | Opmerking |
+|---|---|---|
+| Commit | `git commit -F <bestand>` | buiten de sandbox; lefthook draait mee, nooit `--no-verify` |
+| Push | `git push origin HEAD` | de smalle vorm; `deny` en het rolhek weigeren push naar `main` en force |
+| PR openen | `mcp__github__create_pull_request` | `gh pr create` werkt niet in de cloud (GraphQL); Claude Code vraagt de eigenaar één keer per PR (gemeten: één prompt, spec `cloud-pr-route` F10; ADR 0078 punt 4, herzien) |
+| Bewijs lezen | `pnpm pr:verify <nummer>`, `gh api repos/{owner}/{repo}/…` | alleen REST; `gh pr …` en `gh issue …` gebruiken GraphQL en werken niet |
+
+Lokaal blijft `gh pr create --head <branch> --body-file <bestand>` de route (zie Dagelijks werken).
+
+Kies bij het starten van de sessie de omgeving uit Opzetten. De omgeving Default heeft geen toolchain:
+`node scripts/kit/feiten.mjs` meldt dan `✗ toolchain ontbreekt` en lefthook draait niet. Netwerktoegang heet in de
+documentatie van Claude Code **Trusted**; de app toont vermoedelijk hetzelfde niveau als **Limited** (niet gemeten).
+
+Nog niet gemeten (spec `cloud-pr-route`, stap 0 van het testplan): een commit mét lefthook buiten de sandbox, de smalle
+pushvorm in de cloud, waarom een PR via `gh api …/pulls` (POST) 401 gaf, en of `gh api` lokaal een prompt geeft.
 
 ## Problemen
 
@@ -251,5 +277,14 @@ branchnaam voor; de PR komt van de opgelegde branch. Is een vaste naam nodig, da
   van de melding. De melding luidt:
   `sandbox.failIfUnavailable is set, but this session runs in Anthropic's cloud container, which has no command sandbox […] Commands run without a sandbox`. Wanneer een sessie geen sandbox claimt, staat onder Minimale Claude Code-versie (`⚠ bewaking niet
   actief`).
+- **`HTTP 401: Bad credentials`** op elke `gh`-aanroep, met `echo "$GH_TOKEN"` gelijk aan `proxy-injected`: `gh` draait
+  binnen de Bash-sandbox en bereikt de token-proxy niet. Alleen `gh api` staat buiten de sandbox; gebruik dat (zie
+  [Cloud: commit, push, PR en bewijs](#cloud-commit-push-pr-en-bewijs)).
+- **`HTTP 403: GitHub GraphQL is not available from Claude Code sessions; use the REST API`**: `gh pr …` en
+  `gh issue …` gebruiken GraphQL, dat de GitHub-proxy weigert. Lees via `gh api` (REST) of `pnpm pr:verify`, open een PR
+  met `mcp__github__create_pull_request`.
+- **`environment-runner code-sign` … `connection refused`, dan `fatal: failed to write commit object`**: de commit draaide
+  binnen de sandbox en bereikt de signeerdienst niet. Controleer dat `git commit *` in `sandbox.excludedCommands` staat
+  en dat de sessie op een branch met die regel startte.
 - **Sandbox uitzetten** is bewust geen standaard: `.claude/settings.json` blijft `sandbox` aan houden. Wie dat toch wil, doet dat per
   omgeving buiten de repo en met eigenaarakkoord (beschermd pad, `docs/framework.md` §10).
