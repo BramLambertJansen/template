@@ -90,6 +90,13 @@ bepalen):
 - **Zoeken:** de q-variant draait alleen als het lijstschema een veld `q` heeft. Heeft het `q`, maar weigert `input.shape.q`
   de zoekterm uit de sample (bijv. langer dan `MAX_SEARCH_LENGTH`), dan is dat een probleem met de naam van de resource. Zonder
   `q` is er geen zoekpad om te lekken; de variant vervalt.
+- **Zoekterm vindt de fixture (#813):** een q-variant bewijst alleen iets als de term de rij van A ook echt vindt. De zoekterm
+  is de eerste tekstwaarde van `sample.create` in declaratievolgorde; een lege of alleen-witruimte tekst telt niet als
+  tekstwaarde. Heeft het lijstschema `q` maar `sample.create` geen tekstwaarde, dan is dat een probleem dat `sample.create` en
+  "geen tekstwaarde" noemt, geen stille overslag. Met een geldige term vraagt de suite eerst de lijst van A met dezelfde `q` op
+  (alle pagina's); ontbreekt daarin de rij die A uit `sample.create` maakte, dan is dat een probleem met resource, de term
+  tussen aanhalingstekens en `sample.create`, en de aanwijzing dat het doorzochte veld de eerste tekstwaarde moet zijn. De
+  controle van B met `q` blijft daarnaast ongewijzigd.
 
 ### 4. Updatecontrole op de database (#657)
 
@@ -296,6 +303,14 @@ vragen, staat met de hand in de suite (geen afleiding uit `permissions.ts`, `che
   met rol `suitetest_beheer` en `session_strength = 'mfa'`, en `actor('suitetest_beheerZonderMfa', 'lezen')` rol
   `suitetest_beheer` met `password`. `A('baas')` gooit met de rolnaam. Na afloop (`cleanupTestRoles` in `finally`) staan de testrollen niet meer in
   `app.roles`.
+- **suitecontract/AC-18** (nog niet gebouwd) — Gegeven een lijstcontract met `q` en een `sample.create` zonder tekstwaarde,
+  wanneer de suite de lijst controleert, dan bevat het verslag een probleem dat begint met `<naam>: `, `sample.create` en
+  "geen tekstwaarde" noemt, en geen "controle afgebroken"; een `sample.create` waarvan de enige tekst alleen witruimte is, geeft
+  hetzelfde probleem. Gegeven een lijst met `q` die de zoekterm uit de sample accepteert maar de rij van A daarmee niet vindt,
+  dan bevat het verslag een probleem dat begint met `<naam>: `, `sample.create` noemt en de zoekterm tussen enkele
+  aanhalingstekens bevat, terwijl B de lijst met die `q` nog steeds opvraagt. Gegeven een lijst die de rij van A met de term
+  vindt, dan vraagt A de lijst met die `q` op en is er geen probleem.
+  Toets: `test/security/suite-contract.int.test.ts`
 
 ## Randgevallen
 
@@ -319,6 +334,8 @@ vragen, staat met de hand in de suite (geen afleiding uit `permissions.ts`, `che
 | `resources.ts` met `rol: '<beheerrol>'` | `A`/`B` met MFA, zoals nu voor `admin` | n.v.t. |
 | `resources.ts` met een rol buiten het register | `A`/`B` gooien met de rolnaam (was: stil een `user`-account) | n.v.t. |
 | Rol in het register, niet in `app.roles` | `account()` faalt met `23503`; dat bewaakt al `test/auth/roles-register.int.test.ts` | n.v.t. |
+| Lijst met `q`, `sample.create` zonder (niet-lege) tekstwaarde | Probleem met `sample.create` en "geen tekstwaarde"; de q-variant draait niet (#813) | n.v.t. |
+| Lijst met `q`, eerste tekstwaarde ligt buiten het doorzochte veld | A vindt zijn rij niet: probleem met term en `sample.create`; zet het doorzochte veld vooraan in `sample.create` (#813) | n.v.t. |
 
 ## Raakt ook
 
@@ -330,6 +347,9 @@ Risicowerk (securitysuite): tester eerst, developer, reviewer vóór de push (fr
 - `test/security/**`: `controles.ts` (`EigenaarOpzet.routes`, `updaterechtUit`, `tabelEigenaarVerslag`, lijstcontrole),
   `fixtures.ts` (`mfaDoorgangProbleem`), `resources.ts` (`sample.updateRij`, `sampleVoor` met samples-map, commentaar over
   `sample.update`), `probe-eigenaar.ts` (`opzet` vult `routes`, `openGeneratorProbe`).
+- #813: `test/security/controles.ts` (`zoekVariant`, `lijstProblemen`), het commentaar bij `sample.create` in
+  `test/security/resources.ts` en de INVULLEN-tekst voor `sample.create` in `scripts/kit/new-resource.mjs` (`voorReview`): bij
+  een lijst met `q` is de eerste tekstwaarde de zoekterm en moet die de rij vinden.
 - Bestaande tests die de hoofdsessie omzet, met reden in de PR (R-TEST-02):
   - `test/security/routes.int.test.ts`: AC-5 met `adminMfa` via `mfaDoorgangProbleem` in plaats van `toBe(200)`; `sampleVoor`
     in plaats van `sampleFor`; het kopcommentaar noemt de uitzondering.
