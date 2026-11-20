@@ -28,7 +28,7 @@ test('de regio RouteError en NotFound heeft na opnieuw proberen precies één st
   expect(errors.queryByRole('button', { name: 'Referentie kopiëren' })).toBeNull();
 });
 
-test('de sectie ErrorReference toont een fictieve serverfout met referentie en kopieerknop', async () => {
+test('foutreferentie/AC-17: de sectie ErrorReference toont een fictieve serverfout met referentie en kopieerknop', async () => {
   renderSections();
   const reference = within(await screen.findByRole('region', { name: 'ErrorReference' }));
   expect(reference.getAllByText('3f6c2a9e-1b4d-4c8e-9a7f-2d5e8b1c0a64').length).toBeGreaterThan(0);

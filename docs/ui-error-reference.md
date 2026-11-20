@@ -34,5 +34,4 @@ permissie of migratie.
 | AC-10, AC-11 AsyncView | src/core/web/ui/async-view-reference.test.tsx |
 | AC-12, AC-13, AC-14 Form | src/core/web/ui/form-reference.test.tsx |
 | AC-16 vorm van de server-id | src/core/api/http/request-id-shape.test.ts |
-| AC-17 barrel en catalogus | check:catalogus, ui:check (CI) |
-| AC-18 bestaande tests ongewijzigd | gate:fast |
+| AC-17 barrel en catalogus | src/web/features/design-system/error-reference-example.test.tsx; daarnaast check:catalogus, ui:check (CI) |
