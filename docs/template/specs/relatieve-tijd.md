@@ -162,7 +162,7 @@ exacte datum nodig heeft, krijgt die van het scherm via `format.dateTime` (keuze
 - **relatieve-tijd/AC-10** — Op `/design-system?vak=gegevens` staat de sectie `RelativeTime` met de gebruikszin uit deze spec en
   de negen voorbeeldtermen met hun teksten (`nu`, `3 minuten geleden`, `3 uur geleden`, `gisteren`, `vorige week`, `3 maanden geleden`,
   `3 jaar geleden`, `morgen`, `over 2 weken`); `pnpm check:catalogus` slaagt zonder uitzondering. Toets: `src/web/features/design-system/relative-time-examples.test.tsx`
-- **relatieve-tijd/AC-11** — De catalogussectie heeft geen axe-schendingen (één `scanAxe(page)`) en geen pagina-overflow op 375 en 1280 px, licht en donker. Toets: `e2e/relative-time.spec.ts`
+- **relatieve-tijd/AC-11** — De catalogussectie heeft geen axe-schendingen (een `scanAxe(page)` per breedte en thema) en geen pagina-overflow op 375 en 1280 px, licht en donker. Toets: `e2e/relative-time.spec.ts`
 
 ## Randgevallen
 
