@@ -13,15 +13,24 @@ function ErrorExamples() {
     <div className="flex flex-col gap-4">
       <RouteError
         preview
-        error={exampleReferenceError}
+        error={new Error('Voorbeeld')}
         reset={() => {
           setRetried(true);
         }}
       />
       {retried ? <p role="status">Opnieuw geprobeerd (voorbeeld).</p> : null}
-      <ErrorReference error={exampleReferenceError} />
       <RouteError preview error={new ForbiddenError()} reset={() => undefined} />
       <NotFound preview />
+    </div>
+  );
+}
+
+// Eigen sectie: CopyButton rendert altijd een (lege) status, die hoort niet in de regio "RouteError en NotFound".
+function ErrorReferenceExamples() {
+  return (
+    <div className="flex flex-col gap-4">
+      <RouteError preview error={exampleReferenceError} reset={() => undefined} />
+      <ErrorReference error={exampleReferenceError} />
     </div>
   );
 }
@@ -59,6 +68,14 @@ export function AsyncAndErrorSections() {
         framed
       >
         <ErrorExamples />
+      </Section>
+      <Section
+        id="example-error-reference"
+        title="ErrorReference"
+        description="Een serverfout met referentie die de gebruiker kan kopiëren voor support."
+        framed
+      >
+        <ErrorReferenceExamples />
       </Section>
     </>
   );
