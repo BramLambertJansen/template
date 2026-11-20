@@ -96,7 +96,8 @@ Unit-tests met tijdelijke git-repo's in `test/rails/check-docs-zonder-prompt.tes
 
 ## Open vragen
 
-- **OV-1** — Moet een claim die het rolhek als bron noemt ook getoetst worden? Aanbeveling: nee; het rolhek heeft geen leesbare
-  lijst van commando's zonder prompt.
-- **OV-2** — Alleen commando's buiten de sandbox toetsen, of alles wat niet in `allow` staat? Aanbeveling: alleen buiten de
-  sandbox (spec-review B2): binnen de sandbox draait alles al zonder prompt, en #873 gaat over `excludedCommands`.
+- **OV-1 ✅ besloten** — Een claim die het rolhek als bron noemt, toetst de check niet; het rolhek heeft geen leesbare lijst
+  van commando's zonder prompt (eigenaar, 2026-11-20).
+- **OV-2 ✅ besloten** — Alleen commando's buiten de sandbox moeten in `allow` staan (spec-review B2): binnen de sandbox draait
+  alles al zonder prompt, en #873 gaat over `excludedCommands` (eigenaar, 2026-11-20).
+- **OV-3 ✅ besloten** — `sandbox.enabled` leest de check niet; alleen `autoAllowBashIfSandboxed` telt (eigenaar, 2026-11-20).
