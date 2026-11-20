@@ -218,8 +218,9 @@ documentatie van Claude Code **Trusted**; de app toont vermoedelijk hetzelfde ni
 
 Gemeten op 20 november 2026 in een cloudsessie op deze route, met toolchain (spec `cloud-pr-route`, stap 0): een
 commit en `git push origin HEAD` slagen zonder prompt en zonder fout van de signeerdienst, met de lefthook-hooks aan (bij
-een lege commit slaan de stappen over). `gh api` werkt voor GET en POST: een POST naar `…/pulls` voor een branch met een
-open PR gaf `HTTP 422` ("A pull request already exists"), dus geen 401. Waarom een eerdere POST 401 gaf, is niet
+een lege commit slaan de stappen over). `gh api` werkt voor GET, en een POST komt door de authenticatie: een POST naar
+`…/pulls` voor een branch met een open PR gaf `HTTP 422` ("A pull request already exists"), geen 401. Een geslaagde
+schrijfactie via `gh api` is niet gemeten. Waarom een eerdere POST 401 gaf, is niet
 vastgesteld. Of `gh api` lokaal een prompt geeft, is niet gemeten.
 
 ## Problemen

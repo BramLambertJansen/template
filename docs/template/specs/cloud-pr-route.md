@@ -128,7 +128,7 @@ Geen UI en geen nieuwe zichtbare tekst.
      prompt (0061)", en `gh api` "volgens de permissieregels" (M1, Testplan). R-SEC-09 en R-ROL-12: "behalve een leerpunt-issue of een PR aanmaken in de cloud".
      `AGENTS.md` (Repo en grenzen, MCP) volgt dezelfde tekst.
 3. **Een PR openen gaat in de cloud via `mcp__github__create_pull_request`** (F10), in de vorm van de bestaande
-   uitzondering voor het leerpunt-issue: Claude Code vraagt de eigenaar (in Claude Code via het rolhek), de eigenaar keurt goed (OV-2). `gh pr create` werkt
+   uitzondering voor het leerpunt-issue: de sessie vraagt de eigenaar (in Claude Code via het rolhek), de eigenaar keurt goed (OV-2). `gh pr create` werkt
    daar niet (F5, D1). Verklaart M2 de 401, dan kan de REST-vorm uit F5 de MCP-tool vervangen.
 4. **Lezen gaat via `gh api` en `pnpm pr:verify`** (F8, F11). `mcpLezen` blijft leeg: de MCP-leestools zijn dan niet nodig.
 5. **De documentatie zegt wat er gemeten is.** `docs/ENVIRONMENT.md`: `gh` op GraphQL werkt niet in de cloud, de route
@@ -208,19 +208,21 @@ aanroep, dan beslist de eigenaar na stap 0 over een allow-regel voor `gh api`-le
 Na de proeven van 20 november opruimen: PR #864 sluiten, branch `test/cloud-sandbox` verwijderen.
 
 **Uitslag stap 0** (cloudsessie van de eigenaar, 20 november 2026, branch `feat/cloud-pr-route` op `cb59444a`, de vier
-regels in `excludedCommands`, Node v26.11.1, `node_modules` aanwezig):
+regels in `excludedCommands`, Node v26.11.1, `node_modules` aanwezig). Anders dan het testplan vraagt, kwam de uitslag
+na de samenvoeging: #868 werd samengevoegd op de meetcommit, vóór deze uitslag gepusht was; ze staat in een vervolg-PR.
 
 | # | Uitslag |
 |---|---|
 | 1, M3 | `git commit --allow-empty` slaagt (commit `5b10344`); lefthook draait pre-commit (stappen overgeslagen: geen bestanden) en commit-msg (`conventional-commit` geslaagd); geen fout van `code-sign`. Een commit mét gestagede bestanden is in de cloud niet apart gemeten. |
 | 2 | `git push origin HEAD` slaagt (`cb59444..5b10344`); pre-push draait, `gate-fast` slaat over (geen pushbestanden). |
-| 3, M2 | GET `…/pulls --jq length` geeft `1`. POST `…/pulls` met en zonder `--jq` geeft `HTTP 422` "A pull request already exists": de credentials werken ook voor schrijven. Waarom F9 401 gaf, is niet verklaard. |
-| 4, M4 | `node --version` `v26.11.1`, `node_modules/.modules.yaml` bestaat. M5: de sessie meldt geen omgevingsnaam; de toolchain is er, dus de omgeving draaide het setup-script. |
-| 5, M1 | Niet gemeten. Afgeleid uit de instellingen: `gh api` staat niet in `allow` en draait buiten de sandbox, dus lokaal volgt de gewone permissievraag. |
-| 6 | `feiten.mjs fase` meldt geen `⚠ bewaking niet actief`: projecthooks en rolhek draaiden in deze cloudsessie. Dat spreekt "in de cloud draait geen rolhek" uit ADR 0078 punt 4 tegen voor deze omgeving. |
+| 3, M2 | GET `…/pulls --jq length` geeft `1`. POST `…/pulls` met en zonder `--jq` geeft `HTTP 422` "A pull request already exists": een POST komt door de authenticatie (geen 401). Een geslaagde schrijfactie via `gh api` is niet gemeten. Waarom F9 401 gaf, is niet verklaard. |
+| 4, M4 | `node --version` `v26.11.1`, `node_modules/.modules.yaml` bestaat. M5: de sessie meldt geen omgevingsnaam; de toolchain is er, uit het setup-script of uit de cache van de omgeving (welke van de twee, is niet gemeten). |
+| 5, M1 | Niet gemeten. Afgeleid uit de projectinstellingen: `gh api` staat niet in `allow` en draait buiten de sandbox, dus lokaal volgt de gewone permissievraag (instellingen op gebruikers- of beheerniveau niet meegeteld). |
+| 6 | `feiten.mjs fase` meldt geen `⚠ bewaking niet actief`: de projecthook `meting.mjs` draaide en de sandbox schermde af (aangenomen dat `CLAUDECODE=1` gold; `scripts/kit/bewaking.mjs`). Het rolhek staat in dezelfde `PreToolUse`-configuratie en draaide dus vermoedelijk ook; een weigering door het rolhek is niet gemeten. Dat wijst erop dat "in de cloud draait geen rolhek" uit ADR 0078 punt 4 niet klopt voor deze omgeving. |
 
-Geen van de commando's 8 tot en met 12 gaf een prompt; `gh api` staat niet in `allow`, dus dat komt door de
-permissiemodus van de cloudsessie, niet door `excludedCommands`.
+Commit, push en de drie `gh api`-aanroepen gaven geen prompt. `gh api` staat niet in `allow`; dat er geen prompt kwam,
+ligt dus niet aan `excludedCommands` maar vermoedelijk aan de permissie-instellingen van de cloudsessie (niet
+vastgesteld).
 
 ## Open vragen
 
