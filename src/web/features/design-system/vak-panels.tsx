@@ -4,6 +4,7 @@ import { BulkActionsExample } from './bulk-actions-example.tsx';
 import { CollectionExamples } from './collection-examples.tsx';
 import { ComboboxExamples } from './combobox-examples.tsx';
 import { DataDisplayExamples } from './data-display-examples.tsx';
+import { DisplayBasicsExamples } from './display-basics-examples.tsx';
 import { EditableDetailsExample } from './editable-details-example.tsx';
 import { FormStateExamples } from './form-state-examples.tsx';
 import { BreadcrumbsSection, CopyButtonSection, InputUtilitiesSection } from './input-utilities-examples.tsx';
@@ -71,6 +72,7 @@ export const vakPanels: Readonly<Record<VakId, ReactNode>> = {
     <Panel>
       <TableSection />
       <DataDisplayExamples />
+      <DisplayBasicsExamples />
       <CollectionExamples />
       <CardSection />
       <QrCodeSection />
