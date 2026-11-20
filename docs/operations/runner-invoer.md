@@ -16,7 +16,8 @@ De invoermounts van het profiel `test` in `compose.yaml` zijn lange bind-mounts 
 Docker weigert dan de container te starten omdat de bronmap niet bestaat en niet wordt aangemaakt. De dev-stack (postgres, mailpit) gebruikt die mounts niet en start
 ongewijzigd. `test-pgtap` faalt als `db/tests` geen tests bevat.
 
-Het doel `gen-volgorde` (`pnpm check:snapshot`, spec `template-update` AC-7) is `gen` met één stap extra na het kopiëren:
+Het doel `gen-volgorde` (`pnpm check:snapshot`, spec `template-update` AC-7) is `gen` zonder `gen-schema` (de check
+vergelijkt na die bouw alleen de SQL-dump; leerpunt #812) en met één stap extra na het kopiëren:
 de runner vraagt `scripts/kit/migratie-volgorde.mjs` (hostcode onder `scripts`, met een lege omgeving gestart) om de nieuwe
 namen: is een toegevoegde migratie ouder dan een bestaande, dan krijgen alle toegevoegde migraties in de kopie, nooit in de
 werkmap, een versie na de bestaande, in hun versievolgorde (zo past productie ze toe). Elke regel moet precies
