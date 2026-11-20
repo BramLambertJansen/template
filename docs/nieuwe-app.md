@@ -454,7 +454,7 @@ Draai na het opruimen beide leesopdrachten opnieuw; ga pas door als ze leeg zijn
 > 2. Kopieer de code, druk Enter, plak de code in de browser, klik **Authorize**.
 > 3. Typ *klaar*.
 
-Daarna zelf: `gh auth setup-git`. `workflow` is nodig omdat jij (de eigenaar) later template-updates met `.github/workflows/` pusht.
+Daarna zelf: `gh auth setup-git`. `workflow` is nodig omdat de agent onder deze login later template-updates met `.github/workflows/` pusht.
 Let op: de agent werkt onder het account van de eigenaar (ADR 0093 punt 1): Claude Code draait als dezelfde
 WSL-gebruiker en gebruikt dus deze login, inclusief `workflow`; er is geen GitHub App en geen apart token. De ruleset (alleen via een PR met groene verplichte checks, R-REPO-02) is een grens tegen een vergissing; een agent met deze login kan hem wijzigen en kan een workflow pushen, dus tegen omzeilen is er alleen het rolhek (aanvaard risico, ADR 0093). Wie een PR met een beschermd pad samenvoegt, bewaken het mergescript en het rolhek: een vangnet, geen grens (R-ROL-10). Zeg dat in de overdracht van Fase 10.
 Zet de git-identiteit volgens *Standaardwaarden* als die ontbreekt.
@@ -1068,9 +1068,9 @@ Vul in de stappen voor `<x.y.z>` de nieuwste release in; tussenliggende releases
    cd ~/code/<slug> && pnpm gate:fast
    ```
 
-8. Push en open de PR. Zit er een wijziging in `.github/workflows/` in, dan pusht de eigenaar de branch (de agent heeft
-   geen `workflows`-recht). Verwacht: een PR waarvan de CI groen wordt (`gate:fast`, `gate:slow`, `check-core` en de overige
-   verplichte checks).
+8. Push en open de PR. De agent pusht ook een wijziging in `.github/workflows/`: hij werkt onder jouw `gh`-login met scope
+   `workflow` (ADR 0093). `.github/**` is een beschermd pad, dus zo'n PR voeg jij (de eigenaar) samen.
+   Verwacht: een PR waarvan de CI groen wordt (`gate:fast`, `gate:slow`, `check-core` en de overige verplichte checks).
 
    ```bash
    cd ~/code/<slug>
