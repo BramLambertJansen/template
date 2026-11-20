@@ -539,9 +539,11 @@ ook daar geen nummer nodig is. Zo draaien de checks op een gebouwde spec al in d
 een getagde test en weigert een repopad dat niet bestaat zonder `(vervallen)`, `(nieuw)` of `(voorbeeld)` erachter (het
 merkteken mag op de volgende regel staan). Een `git merge origin/main` of een fix erna mag gewoon; de checks draaien opnieuw.
 
-**Bouw-PR vergat de status:** een latere PR zet `status: gebouwd` met de hand; dezelfde checks toetsen die PR. Het
-statuscommando, de status-PR met bewijs van GitHub en de route na de merge zijn weg; de reviewer toetst of de bouw op
-`main` staat.
+**Bouw-PR vergat de status:** voegt een PR een testregel toe met een AC-id van een spec die nog `goedgekeurd` is, of van een
+AC die nog `(nog niet gebouwd)` draagt, dan meldt `pnpm ratchet` dat als "let op", nooit rood
+(`scripts/kit/vergeten-gebouwd.mjs`, gebouwd-zonder-nummer/AC-15). Een latere PR zet `status: gebouwd` met de hand;
+dezelfde checks toetsen die PR. Het statuscommando, de status-PR met bewijs van GitHub en de route na de merge zijn weg; de
+reviewer toetst of de bouw op `main` staat.
 
 **Bestaande regels `gebouwd # #<n>`** blijven staan: het nummer is commentaar en niemand zet ze om. De oude vorm met SHA
 (`gebouwd # #<n>; gevalideerd: <sha>`) weigert `check-docs`; alleen `; gevalideerd: <sha>` weghalen is vrij, een nieuwe SHA
