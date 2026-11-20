@@ -109,7 +109,7 @@ Geen UI en geen nieuwe zichtbare tekst.
    wordt in stap 0 gemeten. `deny`, `ask`, het rolhek, de hooks uit `main` en de ruleset blijven gelden: een uitgesloten
    commando loopt nog steeds langs de permissieregels.
    **Zonder prompt** (eigenaar, 20 november 2026, spec-review B1): `git commit *`, `git push origin HEAD` en
-   `pnpm pr:verify *` blijven in `allow`; `gh api *` staat niet in `allow` en volgt de gewone permissieregels (M1, OV-5).
+   `pnpm pr:verify *` blijven in `allow`; `gh api *` staat niet in `allow` en volgt de gewone permissieregels (M1, Testplan).
    Restrisico, aanvaard: lefthook (bij `git commit`) en `pr:verify` draaien code uit de werkmap buiten de sandbox, zonder
    vraag vooraf, ook op de machine van de eigenaar. Wat een subagent onder `scripts/` of `rails/` wijzigt, draait de
    hoofdsessie bij de volgende commit onbeschermd. Alleen het rolhek vooraf staat ertussen (R8); CI, de ruleset op `main`
@@ -125,7 +125,7 @@ Geen UI en geen nieuwe zichtbare tekst.
    - ADR 0078 punt 4 (spec-review B2): naast de issuetool mag de hoofdsessie in de cloud één MCP-schrijfactie meer:
      `mcp__github__create_pull_request`, alleen voor een PR van de eigen werkbranch; in Claude Code blijft het rolhek vragen.
    - R-TOOL-02: de lijst buiten de sandbox noemt ook `git commit`, `git push origin HEAD` en `pnpm pr:verify` "zonder
-     prompt (0061)", en `gh api` "volgens de permissieregels" (OV-5). R-SEC-09 en R-ROL-12: "behalve een leerpunt-issue of een PR aanmaken in de cloud".
+     prompt (0061)", en `gh api` "volgens de permissieregels" (M1, Testplan). R-SEC-09 en R-ROL-12: "behalve een leerpunt-issue of een PR aanmaken in de cloud".
      `AGENTS.md` (Repo en grenzen, MCP) volgt dezelfde tekst.
 3. **Een PR openen gaat in de cloud via `mcp__github__create_pull_request`** (F10), in de vorm van de bestaande
    uitzondering voor het leerpunt-issue: het rolhek blijft vragen, de eigenaar keurt goed (OV-2). `gh pr create` werkt
@@ -200,8 +200,8 @@ met de omgeving uit `docs/ENVIRONMENT.md` en met toolchain:
 5. M1, lokaal: `gh api "repos/{owner}/{repo}" --jq .full_name` in een sessie op de laptop; noteer of er een prompt komt.
 
 De uitslag staat in de PR vóór de samenvoeging. Faalt stap 1 (commit met lefthook) of stap 2 (smalle push), dan gaat de
-PR terug naar spec-review en beslist de eigenaar opnieuw over OV-3 of het ontwerp. Over een prompt bij M1 beslist de
-eigenaar onder OV-5.
+PR terug naar spec-review en beslist de eigenaar opnieuw over OV-3 of het ontwerp. Geeft M1 lokaal een prompt per
+aanroep, dan beslist de eigenaar na stap 0 over een allow-regel voor `gh api`-leesaanroepen; tot dan komt er geen.
 
 Na de proeven van 20 november opruimen: PR #864 sluiten, branch `test/cloud-sandbox` verwijderen.
 
@@ -220,5 +220,3 @@ Na de proeven van 20 november opruimen: PR #864 sluiten, branch `test/cloud-sand
   (eigenaar, 20 november 2026). Afgewezen: `ask` voor commit en `pr:verify` (een prompt per commit, lokaal en in de cloud).
 - **B2 ✅ besloten** (spec-review) — De PR-tool komt in een herziening van ADR 0078 punt 4, naast die van ADR 0061
   (eigenaar, 20 november 2026).
-- **OV-5 ⚠ open** — Geeft `gh api` lokaal een prompt per aanroep (M1), komt er dan een allow-regel voor
-  `gh api`-leesaanroepen? Aanbeveling: beslissen na stap 0, op de gemeten uitslag.
