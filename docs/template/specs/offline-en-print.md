@@ -151,7 +151,7 @@ Kan een bestaande test niet ongewijzigd groen blijven, of vraagt de bouw een and
 ## Buiten scope
 
 Echte verbindingscontrole (ping naar de API), wachtrij of opnieuw versturen van mislukte wijzigingen, service worker of
-offline-cache, melding op schermen zonder AppShell, printknop, printkop/-voettekst, paginaeinden per component, printstijlen
+offline-cache, de melding door de template plaatsen op schermen zonder AppShell, printknop, printkop/-voettekst, paginaeinden per component, printstijlen
 voor Dialog, DataTable-scrollregio's of de menusheet, wijzigingen aan tokens of `src/core/web/styles`. Geen roadmap-item
 wordt hiermee afgevinkt.
 
