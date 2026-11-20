@@ -67,21 +67,36 @@ describe('agents-leveren/AC-11 geen geneste Agent-tool en geen MCP voor de rolle
   });
 });
 
+// R-TEST-02: deze toetsen kijken naar structuur (de alinea `Budget:` vóór stap 1, het getal, het skelet, de kop
+// `## Rapport`), niet naar hele zinnen; een herformulering met dezelfde eisen blijft groen.
+/** De alinea vóór stap 1 die met `Budget:` begint. */
+function budgetAlinea(tekst: string): string {
+  return (
+    voorStap1(tekst)
+      .split('\n\n')
+      .find((alinea) => alinea.trim().startsWith('Budget:')) ?? ''
+  );
+}
+
 describe('agents-leveren/AC-12 en AC-13 budget en skelet eerst', () => {
   test('agents-leveren/AC-12 de reviewer rapporteert na hooguit 25 toolcalls, met het skelet eerst', () => {
     const reviewer = lees('reviewer');
-    expect(voorStap1(reviewer)).toContain(
-      'Budget: rapport na hooguit 25 toolcalls, eerst als skelet; is het op, lever en noem wat niet getoetst is.',
-    );
+    const budget = budgetAlinea(reviewer);
+    expect(budget).toMatch(/\b25 toolcalls\b/);
+    expect(budget).toMatch(/skelet/);
     // De afsluiting staat in de eigen sectie `## Rapport` (SubagentStop-hook); een vermelding elders telt niet.
-    const rapport = reviewer.slice(reviewer.indexOf('\n## Rapport\n'));
-    expect(reviewer.indexOf('\n## Rapport\n')).toBeGreaterThan(-1);
-    expect(rapport).toContain('Sluit af onder `## Bevindingen`');
+    const start = reviewer.indexOf('\n## Rapport\n');
+    expect(start).toBeGreaterThan(-1);
+    expect(reviewer.slice(start)).toContain('`## Bevindingen`');
   });
 
   test('agents-leveren/AC-13 de architect schrijft na hooguit 15 toolcalls, eerst als skelet', () => {
-    expect(voorStap1(lees('architect'))).toContain(
-      'Budget: schrijf het spec- of ADR-bestand na hooguit 15 toolcalls, eerst als skelet (frontmatter en de koppen uit het sjabloon), en vul het daarna in. Lees alleen wat de opdracht raakt.',
-    );
+    const budget = budgetAlinea(lees('architect'));
+    expect(budget).toMatch(/\b15 toolcalls\b/);
+    expect(budget).toMatch(/skelet/);
+  });
+
+  test('agents-leveren/AC-12 de toets is rood zonder budgetalinea vóór stap 1', () => {
+    expect(budgetAlinea('---\nname: x\n---\n\nTekst.\n\n1. Stap.\n\nBudget: 25 toolcalls, skelet.\n')).toBe('');
   });
 });

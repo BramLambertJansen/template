@@ -197,13 +197,13 @@ Punt 5 ("Regels uit AGENTS.md: …") wordt `5. Nooit pushen, mergen of rebasen; 
   óf een `tools`-lijst zonder `Agent`, `Task` en zonder iets dat met `mcp__` begint, óf een `disallowedTools`-lijst met zowel
   `Agent` als `mcp__*`. Op de huidige `main` faalt de toets voor developer (geen van beide), tester en docs (geen `Agent`).
   Toets: `test/hooks/agent-budget.test.ts`
-- **agents-leveren/AC-12** — Gegeven `.claude/agents/reviewer.md`, wanneer de toets hem leest, dan staat de budgetzin uit
-  Hergebruik en UX met `25 toolcalls` vóór de eerste genummerde stap, en de eigen sectie `## Rapport` bevat
-  ``Sluit af onder `## Bevindingen` `` (een vermelding elders telt niet).
-  Toets: `test/hooks/agent-budget.test.ts`
-- **agents-leveren/AC-13** — Gegeven `.claude/agents/architect.md`, wanneer de toets hem leest, dan staat de budgetzin uit
-  Hergebruik en UX met `15 toolcalls` en `skelet` vóór de eerste genummerde stap.
-  Toets: `test/hooks/agent-budget.test.ts`
+- **agents-leveren/AC-12** — Gegeven `.claude/agents/reviewer.md`, wanneer de toets hem leest, dan staat vóór de eerste
+  genummerde stap een alinea die met `Budget:` begint en `25 toolcalls` en `skelet` noemt, en de eigen sectie `## Rapport`
+  noemt `## Bevindingen` (een vermelding elders telt niet). De toets kijkt naar die structuur, niet naar de hele zin
+  (R-TEST-02). Toets: `test/hooks/agent-budget.test.ts`
+- **agents-leveren/AC-13** — Gegeven `.claude/agents/architect.md`, wanneer de toets hem leest, dan staat vóór de eerste
+  genummerde stap een alinea die met `Budget:` begint en `15 toolcalls` en `skelet` noemt (R-TEST-02: structuur, geen hele
+  zin). Toets: `test/hooks/agent-budget.test.ts`
 
 **PR-5: punt 1d**
 
