@@ -21,7 +21,7 @@ for (const width of [375, 1280]) {
       await context.setExtraHTTPHeaders(clientIpHeaders());
     });
 
-    test('ui-weergave-basis/AC-16/AC-17: index toont varianten en Toon opent Gegevens tonen met focus', async ({
+    test('ui-weergave-basis/AC-16 en ui-weergave-basis/AC-17: index toont varianten en Toon opent Gegevens tonen met focus', async ({
       page,
     }) => {
       await openCatalogue(page, '/design-system', 'Componentenindex');
