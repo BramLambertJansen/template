@@ -33,6 +33,8 @@ gedemonstreerd.
 - **Input en Select: disabled en invalid:** blijvend inspecteerbare basisvoorbeelden met labels en gekoppelde fouttekst.
 - **RouteError en NotFound:** generieke fout, verboden toegang en niet gevonden als previews, zonder extra main/h1 of
   echte sessiefout. Bestaande dialoog-, toast-, busy- en validatievoorbeelden blijven beschikbaar.
+- **ErrorReference:** eigen sectie met een fictieve serverfout als RouteError-preview en los: "Referentie: <id>" met
+  **Referentie kopiëren**; zie [Foutreferentie](ui-error-reference.md).
 
 De query- en submituitkomsten zijn lokale voorbeelddata. Ze doen geen API-aanroep en wijzigen geen accounts.
 [queries.ts](../src/web/features/design-system/queries.ts) bevat de lokale queries; Form en de adapters voeren de werkelijke validatie en foutafhandeling uit.

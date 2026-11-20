@@ -137,6 +137,12 @@ const groups: readonly ExampleTarget[] = [
     text: 'De foutpreview gebruikt de globale fouttekstenprovider.',
   },
   {
+    names: ['ErrorReference'],
+    id: 'example-error-reference',
+    vak: 'meldingen',
+    text: 'Kopieer de referentie van de fictieve serverfout.',
+  },
+  {
     names: ['AsyncView'],
     id: 'example-async',
     vak: 'meldingen',

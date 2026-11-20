@@ -9,6 +9,7 @@ export { cn } from '#core/web/ui/cn.ts';
 export { ConfirmDialog } from '#core/web/ui/confirm-dialog.tsx';
 export { Dialog } from '#core/web/ui/dialog.tsx';
 export { ErrorTextsProvider, useErrorText } from '#core/web/ui/error-texts.tsx';
+export { ErrorReference, type ErrorReferenceProps } from '#core/web/ui/error-reference.tsx';
 export { DropdownMenu, type MenuItem } from '#core/web/ui/dropdown-menu.tsx';
 export { Field } from '#core/web/ui/field.tsx';
 export { Form, FormField, useZodForm } from '#core/web/ui/form.tsx';

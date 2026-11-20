@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { uiTexts } from '../copy/ui.ts';
 import { ApiError } from '../lib/api-client.ts';
 import { Button } from './button.tsx';
+import { ErrorReference } from './error-reference.tsx';
 import { useErrorText } from './error-texts.tsx';
 
 interface AsyncViewProps<Data> {
@@ -38,6 +39,7 @@ export function AsyncView<Data>({
     return (
       <div role="alert" className="flex flex-col items-start gap-3">
         <p className="text-sm text-destructive">{errorText(query.error)}</p>
+        <ErrorReference error={query.error} />
         <Button variant="outline" onClick={() => void query.refetch()}>
           {uiTexts.retry}
         </Button>
@@ -57,6 +59,7 @@ export function AsyncView<Data>({
               <p>
                 {refresh.staleLabel} {errorText(query.error)}
               </p>
+              <ErrorReference error={query.error} />
               <Button variant="outline" busy={query.isFetching} onClick={() => void query.refetch()}>
                 {uiTexts.retry}
               </Button>
