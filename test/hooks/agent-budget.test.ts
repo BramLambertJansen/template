@@ -84,6 +84,8 @@ describe('agents-leveren/AC-12 en AC-13 budget en skelet eerst', () => {
     const budget = budgetAlinea(reviewer);
     expect(budget).toMatch(/\b25 toolcalls\b/);
     expect(budget).toMatch(/skelet/);
+    // GEWIJZIGD (agents-leveren PR-5, review B1): ook het randgeval "budget op" blijft staan.
+    expect(budget).toMatch(/niet getoetst/);
     // De afsluiting staat in de eigen sectie `## Rapport` (SubagentStop-hook); een vermelding elders telt niet.
     const start = reviewer.indexOf('\n## Rapport\n');
     expect(start).toBeGreaterThan(-1);
@@ -94,6 +96,8 @@ describe('agents-leveren/AC-12 en AC-13 budget en skelet eerst', () => {
     const budget = budgetAlinea(lees('architect'));
     expect(budget).toMatch(/\b15 toolcalls\b/);
     expect(budget).toMatch(/skelet/);
+    // GEWIJZIGD (agents-leveren PR-5, review B3): het skelet volgt het sjabloon.
+    expect(budget).toMatch(/sjabloon/);
   });
 
   test('agents-leveren/AC-12 de toets is rood zonder budgetalinea vóór stap 1', () => {

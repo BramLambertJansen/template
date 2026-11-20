@@ -259,4 +259,12 @@ describe('reviewpakket', () => {
 
     expect(uit.status).toBe(0);
   });
+
+  // R-TEST-02: structuur, geen hele zin. Stap 1 van de reviewer noemt het reviewpakket.
+  test('agents-leveren/AC-18: stap 1 van de reviewer noemt het reviewpakket', () => {
+    const reviewer = readFileSync(path.join(REPO_ROOT, '.claude/agents/reviewer.md'), 'utf8');
+    const stap1 = reviewer.split('\n').find((regel) => regel.startsWith('1. ')) ?? '';
+
+    expect(stap1).toMatch(/reviewpakket/);
+  });
 });
