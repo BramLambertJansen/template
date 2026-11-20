@@ -1074,7 +1074,7 @@ Vul in de stappen voor `<x.y.z>` de nieuwste release in; tussenliggende releases
 
    ```bash
    cd ~/code/<slug>
-   git push -u origin HEAD
+   git push origin HEAD
    gh pr create --fill --title "chore: template-update template-v<x.y.z>"
    ```
 

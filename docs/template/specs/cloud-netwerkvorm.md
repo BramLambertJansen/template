@@ -51,11 +51,15 @@ merge vast.
    rolhek pas na de merge.
 2. **Regel "netwerkvorm".** Per patroon is het **voorvoegsel** de woorden vóór een afsluitende ` *`. Zonder ` *` zijn het de
    eerste twee woorden (`git push` uit `git push origin HEAD`). Een Bash-commando **raakt** een patroon als een segment uit
-   `parseCommands` (ook binnen een groep of compound) het programma en het subcommando van het voorvoegsel heeft. Daarbij:
+   `parseCommands` het programma en het subcommando van het voorvoegsel heeft. Dat segment kan ook binnen een groep of
+   compound staan, of binnen `$(…)` of backticks (via `substitutions`). Dat laatste kijkt niet naar enkele aanhalingstekens.
+   Een bekend vals positief is daarom `echo '$(git push)'` of een `--body` met `` `git push -u` `` erin. De reden wijst dan naar
+   `-F`/`--body-file`, wat AGENTS.md al voorschrijft. Daarbij:
    - tellen toewijzingen, pad-wrappers en het programmapad niet mee (`programName`: `/usr/bin/git` telt als `git`);
    - telt bij `git` het subcommando uit `gitSubcommand` (na `-C`, `-c` en andere git-opties);
    - telt bij `pnpm` het eerste woord dat geen optie of optiewaarde is, na een eventuele `run`. Opties met een waarde zijn
-     `-C`/`--dir`, `-F`/`--filter` en `--workspace` (ook in de vorm `--dir=x`). Een onbekende optie telt zonder waarde.
+     `-C`/`--dir`, `-F`/`--filter`, `--workspace` en de bestaande set `PNPM_OPTIONS_WITH_VALUE` in `rails/hooks/lib/rolhek.mjs`
+     (onder meer `--reporter` en `--loglevel`), ook in de vorm `--dir=x`. Een onbekende optie telt zonder waarde.
      Zo raken `pnpm run test:db`, `pnpm -C x test:db` en `pnpm --filter x test:db` het voorvoegsel `pnpm test:db`.
 
    Een commando dat raakt, moet in zijn **geheel** op een patroon met dat voorvoegsel passen:
@@ -65,7 +69,9 @@ merge vast.
      het programma;
    - de woorden, na de shellontleding (aanhalingstekens weg), zijn letterlijk gelijk aan de patroonwoorden, ook het
      programmawoord (`/usr/bin/git` past niet op `git`). Een afsluitende ` *` staat voor nul of meer verdere woorden, en in die
-     woorden mag parameterexpansie staan (`git commit -F $TMPDIR/msg.txt`, OV-6), want het patroon dekt die tekst letterlijk.
+     woorden mag parameterexpansie staan (`git commit -F $TMPDIR/msg.txt`, OV-6), want het patroon dekt die tekst letterlijk;
+   - elk teken van het commando hoort bij een token of is witruimte. Een commentaar (`# …`) of een afsluitende newline maakt
+     het commando dus niet passend.
 
    De regel draait in `decide` vóór de automatische runner-allow (`automaticRunner`) en vóór `decidePrMerge`. Een `deny` van
    deze regel wint dus van een automatische allow.
@@ -91,7 +97,8 @@ merge vast.
    De skill wijzigt de hoofdsessie met Edit, met akkoord van de eigenaar. De deny-regels voor `git push` naar `main` in
    `.claude/settings.json` dekken deze route niet. Daarom weigert het rolhek voor elke rol een `gh api` met een andere
    methode dan GET of met velden op het endpoint `…/git/refs/heads/main`. Vóór die toets normaliseert het rolhek het endpoint:
-   `%2F`/`%2f` wordt `/`, meerdere `/` worden één, en een query (`?…`) en een afsluitende `/` vallen weg. De reden is
+   `%2F`/`%2f` wordt `/`, meerdere `/` worden één, en een query (`?…`), een fragment (`#…`) en een afsluitende `/` vallen
+   weg. De toets is hoofdletterongevoelig (`refs/heads/MAIN` telt ook). De reden is
    `gh api: main verwijderen of verzetten is verboden, voor elke rol`. Andere branches blijven onder de bestaande gh-regels
    vallen. Een subagent schrijft via `gh api` sowieso niet. De echte grens voor `main` blijft de ruleset op GitHub; deze regel
    is extra bescherming. Andere schrijvende endpoints op `main` (zoals `contents` met `branch=main`) vallen buiten deze spec.

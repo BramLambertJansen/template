@@ -10,6 +10,6 @@ soort: toegevoegd
 
 ### Bij een update
 
-- Het rolhek leest `sandbox.excludedCommands` uit `.claude/settings.json` in het anker; ontbreekt dat bestand daar of is
-  het geen geldige JSON, dan weigert het rolhek elk toolgebruik. Push voortaan met `git push origin HEAD` (niet `git push -u`)
+- Het rolhek leest `sandbox.excludedCommands` uit `.claude/settings.json` in het anker. Ontbreekt dat bestand daar, dan
+  raakt de regel niets; is het geen geldige JSON, dan weigert het rolhek elk toolgebruik. Push voortaan met `git push origin HEAD` (niet `git push -u`)
   en verwijder een remote branch met `gh api -X DELETE repos/{owner}/{repo}/git/refs/heads/<branch>`.

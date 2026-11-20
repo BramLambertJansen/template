@@ -103,7 +103,7 @@ describe('cloud-netwerkvorm/AC-7 rolhekContext leest sandbox.excludedCommands ui
     const { dir, sha } = repoMet({ '.claude/gates.json': GATES_TEKST, [SETTINGS]: '{ dit is geen json\n' });
     vi.stubEnv('RAILS_ANKER', sha);
 
-    expect(() => rolhekContext(dir, dir)).toThrow();
+    expect(() => rolhekContext(dir, dir)).toThrow(SyntaxError);
   });
 
   test('cloud-netwerkvorm/AC-7 een geldig settingsbestand zonder excludedCommands geeft een lege lijst, zonder fout', () => {
