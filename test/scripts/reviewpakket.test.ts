@@ -252,12 +252,15 @@ describe('reviewpakket', () => {
   });
 
   test('agents-leveren/AC-18: .gitignore negeert de map .reviewpakket/', () => {
-    const uit = spawnSync('git', ['check-ignore', '-q', '.reviewpakket/feat-x-1234567.md'], {
+    // -v noemt de regel die het pad negeert: die moet uit de root-.gitignore komen, niet uit de `.reviewpakket/.gitignore`
+    // die het script zelf schrijft (anders is de toets lokaal groen zonder de regel; review B1).
+    const uit = spawnSync('git', ['check-ignore', '-v', '.reviewpakket/feat-x-1234567.md'], {
       cwd: REPO_ROOT,
       encoding: 'utf8',
     });
 
     expect(uit.status).toBe(0);
+    expect(uit.stdout).toMatch(/^\.gitignore:\d+:/);
   });
 
   // R-TEST-02: structuur, geen hele zin. Stap 1 van de reviewer noemt het reviewpakket.

@@ -337,7 +337,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
 - [x] **Overnameplan golf 1: agents leveren altijd en goedkoop.** Uit [het overnameplan](reviews/2026-11-18-overnameplan-agentic.md) §3:
   YAML-quotes en een frontmatter-parsetest voor agents en skills, een skillrouter in de developer, een budget voor toolcalls met
   skelet eerst, geen geneste Agent-tool voor bouwers, een reviewpakket per range, en weigeringen en tokens per rol in de meting-store.
-  Elk punt een eigen PR. **Klaar als:** de parsetest is rood op een niet-gequote description, het reviewpakket bestaat en de meting-store legt weigeringen en tokens per rol vast; de doelcijfers staan in §8 van het plan.
+  Elk punt een eigen PR. **Klaar als:** de parsetest is rood op een niet-gequote description, het reviewpakket bestaat en de meting-store legt weigeringen en tokens per rol vast (tokens: afgesplitst naar het item hieronder, OV-2); de doelcijfers staan in §8 van het plan.
   Gebouwd volgens spec `agents-leveren` in #850 (1a, `test/hooks/agents.test.ts`), #859 (meting per rol,
   `test/rails/meting-per-rol.test.ts`), #861 (1b, `test/hooks/developer-skillrouter.test.ts`), #860 (1c,
   `test/hooks/agent-budget.test.ts`) en de bouw-PR van 1d (`test/scripts/reviewpakket.test.ts`). Tokens per rol zijn door de
