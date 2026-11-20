@@ -111,6 +111,18 @@ function useHeadingFocus(current: number, focusRequested: { current: boolean }) 
   return headings;
 }
 
+// AC-6: een tweede submit van het formulier tijdens "Bezig…" (Enter of een script, langs de uitgeschakelde knop) deelt de
+// lopende belofte in plaats van onSubmit opnieuw aan te roepen; zo zet die tweede ronde `isSubmitting` ook niet te vroeg uit.
+function useSubmitOnce(onSubmit: () => Promise<unknown>) {
+  const pending = useRef<Promise<unknown> | null>(null);
+  return () => {
+    pending.current ??= onSubmit().finally(() => {
+      pending.current = null;
+    });
+    return pending.current;
+  };
+}
+
 export function Wizard({ label, steps, onSubmit, submitLabel = uiTexts.wizardSubmit, headingLevel = 2 }: WizardProps) {
   const ids = steps.map((step) => step.id);
   assert(ids.length > 0, 'Wizard needs at least one step');
@@ -118,6 +130,7 @@ export function Wizard({ label, steps, onSubmit, submitLabel = uiTexts.wizardSub
   const base = useId();
   const { current, last, focusRequested, go } = useActiveStep(steps.length);
   const headings = useHeadingFocus(current, focusRequested);
+  const submitOnce = useSubmitOnce(onSubmit);
   const listId = `${base}-list`;
   const headingId = (id: string) => `${base}-heading-${encodeURIComponent(id)}`;
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
@@ -168,7 +181,7 @@ export function Wizard({ label, steps, onSubmit, submitLabel = uiTexts.wizardSub
               submitLabel: index === last ? submitLabel : uiTexts.wizardNext,
               onSubmit:
                 index === last
-                  ? onSubmit
+                  ? submitOnce
                   : () => {
                       go(index + 1);
                       return Promise.resolve();

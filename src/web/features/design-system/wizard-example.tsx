@@ -117,7 +117,9 @@ function useRegistrationForms() {
   };
 }
 
-export function WizardExample() {
+// `send` staat voor het serververzoek van een echte app; de catalogus slaagt meteen, een test geeft een uitgestelde belofte
+// mee om "Bezig…" en de guard tijdens verzenden te zien (AC-15).
+export function WizardExample({ send = () => Promise.resolve() }: { readonly send?: () => Promise<unknown> }) {
   const registration = useRegistrationForms();
   const [sent, setSent] = useState(false);
   const [round, setRound] = useState(0);
@@ -153,9 +155,9 @@ export function WizardExample() {
           label="Voortgang aanmelding"
           headingLevel={3}
           steps={registration.steps}
-          onSubmit={() => {
+          onSubmit={async () => {
+            await send();
             setSent(true);
-            return Promise.resolve();
           }}
         />
       )}
