@@ -45,9 +45,11 @@ case "$suite" in
   db) services=(test-pgtap runner) ;;
   ui) services=(ui-runner) ;;
   # Uitvoer naar .runner-output/gen; scripts/db-generate.sh zet die op zijn plek.
-  # gen-volgorde (scripts/check-snapshot.sh): dezelfde bouw, met de toegevoegde migraties in de tijdelijke invoermap
-  # hernoemd naar een latere versie (rename_arrival_order hieronder).
-  gen|gen-volgorde) services=(gen-snapshot gen-schema) ;;
+  # gen-volgorde (scripts/check-snapshot.sh): dezelfde SQL-bouw, met de toegevoegde migraties in de tijdelijke invoermap
+  # hernoemd naar een latere versie (rename_arrival_order hieronder). Alleen gen-snapshot: scripts/check-snapshot.sh
+  # vergelijkt na die bouw alleen de SQL-dump; schema.ts controleert de eerste bouw al (leerpunt #812).
+  gen) services=(gen-snapshot gen-schema) ;;
+  gen-volgorde) services=(gen-snapshot) ;;
   *) echo "Gebruik: scripts/runner.sh db|ui|gen|gen-volgorde [--sta-wijzigingen-toe]" >&2; exit 2 ;;
 esac
 
