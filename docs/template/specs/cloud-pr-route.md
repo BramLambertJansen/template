@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd
 namespace: cloud-pr-route
 ---
 
@@ -118,8 +118,8 @@ Geen UI en geen nieuwe zichtbare tekst.
    - ADR 0061: het alternatief "pnpm/Git buiten de sandbox uitvoeren of hooks overslaan" wordt "hooks overslaan"; punt 5
      noemt de vier nieuwe uitzonderingen met de reden: in een cloudsessie bereikt de sandbox de signeerdienst en de
      token-proxy van het platform niet (F1, F2). Gevolgen: het restrisico uit punt 1 van dit ontwerp.
-   - ADR 0044 punt 5: "Overige opdrachten buiten de sandbox houden hun prompt" krijgt de uitzondering voor de vier
-     commando's uit ADR 0061.
+   - ADR 0044 punt 5: "Overige opdrachten buiten de sandbox houden hun prompt" krijgt de uitzondering voor
+     `git commit`, `git push origin HEAD` en `pnpm pr:verify` uit ADR 0061.
    - ADR 0084, Alternatieven: het afgewezen alternatief "`pr:verify` in `sandbox.excludedCommands`" is herzien door
      ADR 0061 (cloud); het restrisico staat daar.
    - ADR 0078 punt 4 (spec-review B2): naast de issuetool mag de hoofdsessie in de cloud één MCP-schrijfactie meer:
@@ -128,7 +128,7 @@ Geen UI en geen nieuwe zichtbare tekst.
      prompt (0061)", en `gh api` "volgens de permissieregels" (M1, Testplan). R-SEC-09 en R-ROL-12: "behalve een leerpunt-issue of een PR aanmaken in de cloud".
      `AGENTS.md` (Repo en grenzen, MCP) volgt dezelfde tekst.
 3. **Een PR openen gaat in de cloud via `mcp__github__create_pull_request`** (F10), in de vorm van de bestaande
-   uitzondering voor het leerpunt-issue: het rolhek blijft vragen, de eigenaar keurt goed (OV-2). `gh pr create` werkt
+   uitzondering voor het leerpunt-issue: Claude Code vraagt de eigenaar (in Claude Code via het rolhek), de eigenaar keurt goed (OV-2). `gh pr create` werkt
    daar niet (F5, D1). Verklaart M2 de 401, dan kan de REST-vorm uit F5 de MCP-tool vervangen.
 4. **Lezen gaat via `gh api` en `pnpm pr:verify`** (F8, F11). `mcpLezen` blijft leeg: de MCP-leestools zijn dan niet nodig.
 5. **De documentatie zegt wat er gemeten is.** `docs/ENVIRONMENT.md`: `gh` op GraphQL werkt niet in de cloud, de route
@@ -198,12 +198,29 @@ met de omgeving uit `docs/ENVIRONMENT.md` en met toolchain:
 3. M2: `gh api repos/{owner}/{repo}/pulls` als losse regel, met en zonder `--jq`; noteer de uitslag.
 4. M4 en M5: `node --version` en `ls node_modules/.modules.yaml`; noteer de gekozen omgeving.
 5. M1, lokaal: `gh api "repos/{owner}/{repo}" --jq .full_name` in een sessie op de laptop; noteer of er een prompt komt.
+6. Rolhek in de cloud: `node scripts/kit/feiten.mjs fase`; noteer of `⚠ bewaking niet actief` verschijnt. ADR 0078
+   punt 4 zegt dat in de cloud geen rolhek draait; ontwerp punt 1 gaat ervan uit dat het daar wel geldt.
 
 De uitslag staat in de PR vóór de samenvoeging. Faalt stap 1 (commit met lefthook) of stap 2 (smalle push), dan gaat de
 PR terug naar spec-review en beslist de eigenaar opnieuw over OV-3 of het ontwerp. Geeft M1 lokaal een prompt per
 aanroep, dan beslist de eigenaar na stap 0 over een allow-regel voor `gh api`-leesaanroepen; tot dan komt er geen.
 
 Na de proeven van 20 november opruimen: PR #864 sluiten, branch `test/cloud-sandbox` verwijderen.
+
+**Uitslag stap 0** (cloudsessie van de eigenaar, 20 november 2026, branch `feat/cloud-pr-route` op `cb59444a`, de vier
+regels in `excludedCommands`, Node v26.11.1, `node_modules` aanwezig):
+
+| # | Uitslag |
+|---|---|
+| 1, M3 | `git commit --allow-empty` slaagt (commit `5b10344`); lefthook draait pre-commit (stappen overgeslagen: geen bestanden) en commit-msg (`conventional-commit` geslaagd); geen fout van `code-sign`. Een commit mét gestagede bestanden is in de cloud niet apart gemeten. |
+| 2 | `git push origin HEAD` slaagt (`cb59444..5b10344`); pre-push draait, `gate-fast` slaat over (geen pushbestanden). |
+| 3, M2 | GET `…/pulls --jq length` geeft `1`. POST `…/pulls` met en zonder `--jq` geeft `HTTP 422` "A pull request already exists": de credentials werken ook voor schrijven. Waarom F9 401 gaf, is niet verklaard. |
+| 4, M4 | `node --version` `v26.11.1`, `node_modules/.modules.yaml` bestaat. M5: de sessie meldt geen omgevingsnaam; de toolchain is er, dus de omgeving draaide het setup-script. |
+| 5, M1 | Niet gemeten. Afgeleid uit de instellingen: `gh api` staat niet in `allow` en draait buiten de sandbox, dus lokaal volgt de gewone permissievraag. |
+| 6 | `feiten.mjs fase` meldt geen `⚠ bewaking niet actief`: projecthooks en rolhek draaiden in deze cloudsessie. Dat spreekt "in de cloud draait geen rolhek" uit ADR 0078 punt 4 tegen voor deze omgeving. |
+
+Geen van de commando's 8 tot en met 12 gaf een prompt; `gh api` staat niet in `allow`, dus dat komt door de
+permissiemodus van de cloudsessie, niet door `excludedCommands`.
 
 ## Open vragen
 
