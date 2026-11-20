@@ -49,6 +49,12 @@ Teksten, letterlijk:
 - De melding van de dood-padcheck en de AC-melding van `check-docs` blijven ongewijzigd.
 - De kop van `docs/specs/_template.md` en `docs/specs/_mini.md` noemt na `gebouwd:` alleen nog:
   `status: gebouwd in de bouw-PR (ADR 0095)`.
+- De melding van AC-15 (a), via `pnpm ratchet` als "let op", nooit rood:
+  `let op: <specpad> staat op goedgekeurd, maar <testpad> voegt <id>/AC-n toe; maakt deze PR de spec af, zet dan status: gebouwd (R-WERK-08, ADR 0095)`.
+- De melding van AC-15 (b):
+  `let op: <specpad> markeert <id>/AC-n nog met (nog niet gebouwd), maar <testpad> voegt die AC toe; maakt deze PR de AC af, haal dan het merkteken weg (R-WERK-08, ADR 0095)`.
+  `<id>` is het voorvoegsel zoals de test het schrijft; bij meer AC's in één testbestand noemt de regel de laagste AC
+  die aan (a) of (b) voldoet.
 
 ## Acceptatiecriteria
 
@@ -101,6 +107,18 @@ Teksten, letterlijk:
   `## Modus spec-review` in `.claude/agents/reviewer.md` geldt bij elke spec in de PR (niet alleen bij migratie, route of
   permissie) en vraagt een oordeel over "kritiek"; de eerste niet-lege regel van `.github/pull_request_template.md` is
   `## Spec`. Bewijs nu: `test/rails/spec-en-bouw.test.ts:49`.
+- **gebouwd-zonder-nummer/AC-15** — Vergeten status, als melding (leerpunt #756). Gegeven een
+  merge-base met `origin/main` en een toegevoegde regel in een testbestand (`TESTBESTAND`) met `<naam>/AC-n` of
+  `<namespace>/AC-n` als heel woord, wanneer `docsMeldingen` draait, dan geeft het per spec en testbestand één regel met
+  de tekst uit Hergebruik en UX als de spec in de werkmap:
+  (a) `status: goedgekeurd` heeft, of (b) `gebouwd` is en die AC nog `(nog niet gebouwd)` draagt.
+  Een toegevoegde regel is een `+`-regel uit `git diff -M <merge-base>` (werkmap, ook ongecommit), of elke regel van een
+  testbestand dat niet getrackt is.
+  Geen melding: de spec heeft in de werkmap `gebouwd` zonder merkteken op die AC, of `voorstel`; het AC-id staat alleen in
+  een ongewijzigde of verwijderde regel; een hernoemd testbestand zonder inhoudswijziging; een AC-id met het voorvoegsel
+  van een spec die niet aan (a) of (b) voldoet; geen merge-base. In alle gevallen van deze AC geven `docsViolations` en
+  `docsKrimp` niets nieuws: de ratchet blijft groen.
+  Toets: `test/rails/vergeten-gebouwd.test.ts` (nieuw)
 
 ## Randgevallen
 
@@ -109,7 +127,10 @@ Teksten, letterlijk:
 | Vervolgbouw: gebouwde spec met een nieuwe AC `(nog niet gebouwd)` | de bouw-PR haalt het merkteken weg en voegt de test toe; de statusregel blijft zoals hij is (AC-8) | n.v.t. |
 | Spec heeft al `gebouwd # #<n>` | blijft staan, het nummer is commentaar; niemand zet het om (AC-1, AC-3, AC-9) | n.v.t. |
 | De oude vorm `gebouwd # #<n>; gevalideerd: <sha>` | `check-docs` weigert hem zoals nu; het rolhek weigert een nieuwe SHA (AC-9) | n.v.t. |
-| Bouw-PR vergeet de status | een latere PR zet `status: gebouwd` met de hand; AC-dekking, dood-padcheck en roadmap-id-regel toetsen die PR (AC-1, AC-4) | n.v.t. |
+| Bouw-PR vergeet de status | de ratchet meldt het als de PR een test met een AC-id van de spec toevoegt (AC-15); anders een latere PR zet `status: gebouwd` met de hand; AC-dekking, dood-padcheck en roadmap-id-regel toetsen die PR (AC-1, AC-4) | n.v.t. |
+| Spec over meer PR's gebouwd | elke deel-PR met een test voor die spec krijgt de melding van AC-15; de hoofdsessie negeert hem tot de laatste. Aanvaard: een melding is nooit rood | n.v.t. |
+| Bouw-PR zonder test met AC-id | AC-15 ziet niets; de reviewer toetst het, zoals nu | n.v.t. |
+| Test voor spec X voegt een kruisverwijzing `y/AC-n` toe, spec y is goedgekeurd | melding voor y (AC-15); aanvaard, nooit rood | n.v.t. |
 | Status naar `gebouwd` in een PR zonder code | toegestaan; de AC-dekking moet groen zijn en de reviewer toetst of de bouw op `main` staat (aanvaard risico, ADR 0095) | n.v.t. |
 | Merkteken `(nog niet gebouwd)` weg in een PR zonder code | geen check ziet het als er al een test met dat AC-id is; de reviewer toetst het (aanvaard risico, ADR 0095) | n.v.t. |
 | Spec noemt een roadmap-id die zij niet bouwt | `check:roadmap` rood bij `gebouwd` (AC-2); haal het id uit de tekst | n.v.t. |
@@ -127,6 +148,13 @@ Teksten, letterlijk:
   van `check:roadmap` in `scripts/kit/gates.mjs` noemt `status: gebouwd # #<PR>` niet meer.
 - `scripts/kit/check-docs.mjs`: het merkteken van de dood-padcheck mag na witruimte met hooguit één regeleinde staan (AC-6); de
   AC-dekking slaat een vervallen AC over volgens AC-5; het commentaar bovenaan (regel 6 en 14) volgt.
+- AC-15: een nieuw `scripts/kit/vergeten-gebouwd.mjs` (nieuw), aangeroepen uit `docsMeldingen` in
+  `scripts/kit/check-docs.mjs`, met regel 18 in het commentaar bovenaan; hergebruik `SPEC_BESTAND`, `SPEC_STATUS`,
+  `TESTBESTAND`, `heelWoord` (export uit `check-docs.mjs`), `acIds(…).gemarkeerd` en de diffvorm van `acToetsUitGit` in
+  `scripts/kit/ac-toets.mjs` (`git diff -M` tegen de merge-base), plus `git ls-files --others --exclude-standard` voor
+  niet-getrackte testbestanden. `docs/dod.md` en `opleveren`-stap 7 blijven ongewijzigd;
+  `docs/operations/agent-doorloop.md` krijgt bij "Bouw-PR vergat de status" één zin over de melding. Changelogfragment:
+  niets te doen voor een app.
 
 **Rolhek en document-state**
 
@@ -286,6 +314,8 @@ De hoofdsessie herschrijft deze punten op hun plek, met een `Herzien:`-regel:
   - de bestandstoetsen (AC-10, AC-11).
 - Rolhek: een rolhektest per rol en per stand van de vertrouwde basis voor AC-7, en de vervolgbouw van AC-8, naast de
   bestaande in `test/hooks/rolhek-beslisroute.test.ts`.
+- AC-15: `test/rails/vergeten-gebouwd.test.ts` (nieuw), met een tijdelijke git-repo per geval: (a) en (b) met melding,
+  en elk geval zonder melding uit de AC; daarnaast dat `docsViolations` en `docsKrimp` niets nieuws geven.
 - Gates: `pnpm check:docs`, `pnpm check:roadmap`, `pnpm ratchet` en `pnpm gate:fast` zijn groen. Deze spec staat in de bouw-PR
   op `status: gebouwd`, dus haar eigen AC-dekking en dood-padcheck draaien in die PR.
 
