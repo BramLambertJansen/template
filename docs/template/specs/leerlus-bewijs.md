@@ -63,7 +63,9 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   ```
 
 - Comment van de workflow bij `leerpunt-onvolledig`, letterlijk de eerste regel: `Dit leerpunt volgt het sjabloon niet:`,
-  daarna per fout één regel (`ontbreekt: <kop>`, `leeg: <kop>`, `onbekende waarde bij <kop>: <waarde>`, `volgorde: <kop>`).
+  daarna per fout één regel (`ontbreekt: <kop>`, `leeg: <kop>`, `onbekende waarde bij <kop>: <waarde>`, `volgorde: <kop>`),
+  en per keuzeveld met een onbekende waarde één regel `Kies bij <kop> precies één van: <opties>; zet toelichting onder Bron
+  of Onderbouwing, niet achter de waarde.` (leerpunt #759).
 - Comment bij `leerpunt-zonder-bewijs`, letterlijk: `Gesloten zonder sluitbewijs (ADR 0078): geen gemergde PR met een sectie Leerpunt voor dit issue en geen comment "achterhaald: <reden>".`
 - De workflow schrijft per issue hooguit één comment per soort; bij een volgende fout werkt hij die comment bij.
 - Focusvolgorde en toetsenbord: n.v.t. — geen eigen UI.
