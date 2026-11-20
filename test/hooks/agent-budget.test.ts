@@ -71,9 +71,12 @@ describe('agents-leveren/AC-12 en AC-13 budget en skelet eerst', () => {
   test('agents-leveren/AC-12 de reviewer rapporteert na hooguit 25 toolcalls, met het skelet eerst', () => {
     const reviewer = lees('reviewer');
     expect(voorStap1(reviewer)).toContain(
-      'Budget: rapporteer na hooguit 25 toolcalls. Zet eerst het skelet van je rapport neer (de koppen, met ## Bevindingen) en vul het daarna in. Is het budget op, lever dan wat je hebt en noem wat je niet hebt getoetst.',
+      'Budget: rapport na hooguit 25 toolcalls, eerst als skelet; is het op, lever en noem wat niet getoetst is.',
     );
-    expect(reviewer).toContain('## Bevindingen');
+    // De afsluiting staat in de eigen sectie `## Rapport` (SubagentStop-hook); een vermelding elders telt niet.
+    const rapport = reviewer.slice(reviewer.indexOf('\n## Rapport\n'));
+    expect(reviewer.indexOf('\n## Rapport\n')).toBeGreaterThan(-1);
+    expect(rapport).toContain('Sluit af onder `## Bevindingen`');
   });
 
   test('agents-leveren/AC-13 de architect schrijft na hooguit 15 toolcalls, eerst als skelet', () => {
