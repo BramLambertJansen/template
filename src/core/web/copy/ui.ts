@@ -1,4 +1,4 @@
-// Vaste teksten van de core-componenten (AsyncView, RouteError, NotFound, Form).
+// Vaste teksten van de core-componenten (AsyncView, RouteError, NotFound, Form, Wizard).
 export const uiTexts = {
   loading: 'Laden…',
   retry: 'Opnieuw proberen',
@@ -20,6 +20,11 @@ export const uiTexts = {
   copy: 'Kopiëren',
   copied: 'Gekopieerd.',
   copyFailed: 'Kopiëren is niet gelukt. Selecteer en kopieer de tekst zelf.',
+  wizardNext: 'Volgende',
+  wizardPrevious: 'Vorige',
+  wizardSubmit: 'Versturen',
+  wizardStepHeading: (step: number, total: number, title: string) =>
+    `Stap ${String(step)} van ${String(total)}: ${title}`,
   // Spec foutreferentie: de requestId bij een onverwachte serverfout, voor support.
   errorReference: 'Referentie:',
   copyErrorReference: 'Referentie kopiëren',

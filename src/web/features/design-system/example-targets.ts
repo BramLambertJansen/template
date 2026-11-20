@@ -34,6 +34,12 @@ const groups: readonly ExampleTarget[] = [
     text: 'Bewerk contactgegevens, verstuur ongeldige invoer, wis wijzigingen of probeer de pagina te verlaten.',
   },
   {
+    names: ['Wizard'],
+    id: 'example-wizard',
+    vak: 'patronen',
+    text: 'Vul drie stappen in; Vorige bewaart je invoer. Dit voorbeeld bewaart niets buiten de browser.',
+  },
+  {
     names: ['BulkActions'],
     id: 'example-bulk-actions',
     vak: 'patronen',

@@ -12,6 +12,7 @@ Navigatie en layout en Patronen. Het open tabblad staat in de zoekparameter `vak
 een omlijst voorbeeldvlak (`Section` met `description` en `framed`, [section.tsx](../src/web/ui/section.tsx)).
 
 De gebruikscontracten voor tabellen, tabs, galerijen en filters staan in [Gegevensweergave en navigatie](ui-data-display.md).
+Het voorbeeld "Stappenformulier" (tabblad Patronen) volgt [Stappenformulier](ui-stappenformulier.md).
 Avatar, Image en StatTile staan in [Avatar, Image en StatTile](ui-weergave-basis.md).
 
 Bij iedere indexrij staat **Toon [component]**. Die knop opent het tabblad van het voorbeeld, scrollt ernaartoe en
