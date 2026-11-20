@@ -93,7 +93,11 @@ Punt 5 ("Regels uit AGENTS.md: …") wordt `5. Nooit pushen, mergen of rebasen; 
 **Punt 1c**
 
 - `.claude/agents/reviewer.md`, direct na de eerste alinea:
-  `Budget: rapporteer na hooguit 25 toolcalls. Zet eerst het skelet van je rapport neer (de koppen, met ## Bevindingen) en vul het daarna in. Is het budget op, lever dan wat je hebt en noem wat je niet hebt getoetst.`
+  `Budget: rapport na hooguit 25 toolcalls, eerst als skelet; is het op, lever en noem wat niet getoetst is.`
+  Kort, omdat `reviewer.md` binnen 3900 bytes blijft (`test/rails/review-checklists.test.ts`, review-checklists AC-3); daarvoor
+  vervallen in `reviewer.md` drie dubbelingen: "eerste review volledig, daarna het verschil" (staat in de werkwijze van
+  `docs/operations/review-checklists.md`), de opsomming `| head`, `| wc` en `git -C` (staat in de leeslijst van het rolhek) en
+  "Geen stijl." in de spec-reviewmodus (stap 3: stijl doet de lint). De afsluiting onder `## Bevindingen` blijft in `## Rapport`.
 - `.claude/agents/architect.md`, direct na de eerste alinea:
   `Budget: schrijf het spec- of ADR-bestand na hooguit 15 toolcalls, eerst als skelet (frontmatter en de koppen uit het sjabloon), en vul het daarna in. Lees alleen wat de opdracht raakt.`
 - Frontmatter van developer, tester en docs: `disallowedTools: Agent, mcp__*`.
@@ -193,13 +197,14 @@ Punt 5 ("Regels uit AGENTS.md: …") wordt `5. Nooit pushen, mergen of rebasen; 
 - **agents-leveren/AC-11** — Gegeven elke `.claude/agents/*.md`, wanneer de toets de frontmatter leest, dan heeft elke rol
   óf een `tools`-lijst zonder `Agent`, `Task` en zonder iets dat met `mcp__` begint, óf een `disallowedTools`-lijst met zowel
   `Agent` als `mcp__*`. Op de huidige `main` faalt de toets voor developer (geen van beide), tester en docs (geen `Agent`).
-  Toets: `test/hooks/agent-budget.test.ts` (nieuw)
-- **agents-leveren/AC-12** — Gegeven `.claude/agents/reviewer.md`, wanneer de toets hem leest, dan staat de budgetzin uit
-  Hergebruik en UX met `25 toolcalls` vóór de eerste genummerde stap. De sectie `## Bevindingen` blijft de afsluiting.
-  Toets: `test/hooks/agent-budget.test.ts` (nieuw)
-- **agents-leveren/AC-13** — Gegeven `.claude/agents/architect.md`, wanneer de toets hem leest, dan staat de budgetzin uit
-  Hergebruik en UX met `15 toolcalls` en `skelet` vóór de eerste genummerde stap.
-  Toets: `test/hooks/agent-budget.test.ts` (nieuw)
+  Toets: `test/hooks/agent-budget.test.ts`
+- **agents-leveren/AC-12** — Gegeven `.claude/agents/reviewer.md`, wanneer de toets hem leest, dan staat vóór de eerste
+  genummerde stap een alinea die met `Budget:` begint en `25 toolcalls` en `skelet` noemt, en de eigen sectie `## Rapport`
+  noemt `## Bevindingen` (een vermelding elders telt niet). De toets kijkt naar die structuur, niet naar de hele zin
+  (R-TEST-02). Toets: `test/hooks/agent-budget.test.ts`
+- **agents-leveren/AC-13** — Gegeven `.claude/agents/architect.md`, wanneer de toets hem leest, dan staat vóór de eerste
+  genummerde stap een alinea die met `Budget:` begint en `15 toolcalls` en `skelet` noemt (R-TEST-02: structuur, geen hele
+  zin). Toets: `test/hooks/agent-budget.test.ts`
 
 **PR-5: punt 1d**
 

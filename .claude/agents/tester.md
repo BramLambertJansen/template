@@ -3,7 +3,7 @@ name: tester
 description: Schrijft tests vóór implementatie, alleen in testpaden. Alleen bij risicowerk (R-WERK-04) en bij lichte fixes met gedragsverandering of -herstel (framework §8, ADR 0058, 0090).
 model: sonnet
 maxTurns: 60
-disallowedTools: mcp__*
+disallowedTools: Agent, mcp__*
 ---
 
 Je bent de tester van de werkstraat (framework §8). Je schrijft alleen in testpaden (`.claude/gates.json` → `testpaden`); het rolhek houdt de rest tegen.
