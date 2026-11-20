@@ -20,4 +20,6 @@ export const uiTexts = {
   copy: 'Kopiëren',
   copied: 'Gekopieerd.',
   copyFailed: 'Kopiëren is niet gelukt. Selecteer en kopieer de tekst zelf.',
+  offline: 'Je bent offline. Wijzigingen worden niet opgeslagen tot de verbinding terug is.',
+  backOnline: 'Weer online.',
 } as const;

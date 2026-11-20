@@ -4,6 +4,7 @@ import { uiTexts } from '../copy/ui.ts';
 import { Button } from './button.tsx';
 import { Dialog } from './dialog.tsx';
 import type { MenuItem } from './dropdown-menu.tsx';
+import { OfflineNotice } from './offline-notice.tsx';
 import { Sidebar, type NavItem } from './sidebar.tsx';
 import { Toaster } from './toast.tsx';
 import { Topbar } from './topbar.tsx';
@@ -89,11 +90,40 @@ function useFocusOnRouteChange(routeKey: string | undefined) {
   return mainRef;
 }
 
+// Afdrukken in lichte kleuren: bij beforeprint tijdelijk data-theme="light", bij afterprint (of unmount tijdens het afdrukken)
+// het vorige thema terug. Zonder setTheme: de bewaarde keuze in localStorage blijft (spec offline-en-print, OV-1).
+function usePrintInLightTheme() {
+  useEffect(() => {
+    const root = document.documentElement;
+    let saved: { readonly theme: string | null } | null = null;
+    const handleBeforePrint = () => {
+      if (saved !== null) return;
+      saved = { theme: root.getAttribute('data-theme') };
+      root.setAttribute('data-theme', 'light');
+    };
+    const handleAfterPrint = () => {
+      if (saved === null) return;
+      if (saved.theme === null) root.removeAttribute('data-theme');
+      else root.setAttribute('data-theme', saved.theme);
+      saved = null;
+    };
+    window.addEventListener('beforeprint', handleBeforePrint);
+    window.addEventListener('afterprint', handleAfterPrint);
+    return () => {
+      handleAfterPrint();
+      window.removeEventListener('beforeprint', handleBeforePrint);
+      window.removeEventListener('afterprint', handleAfterPrint);
+    };
+  }, []);
+}
+
 // Layout voor ingelogde schermen: sidebar links (vanaf md), topbar met profielmenu, inhoud. Op smalle schermen opent de
 // menuknop dezelfde navigatie in een sheet die vanaf links over het scherm schuift. Breakpoints in CSS, geen matchMedia (framework §7).
+// Bij afdrukken verdwijnen skip-link, sidebar, topbalk, offline-melding en toasts en krijgt main de volle breedte.
 export function AppShell({ nav, userName, menuItems, topbarActions, routeKey, children }: AppShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const mainRef = useFocusOnRouteChange(routeKey);
+  usePrintInLightTheme();
   const menuButton = (
     <Button
       variant="ghost"
@@ -109,7 +139,7 @@ export function AppShell({ nav, userName, menuItems, topbarActions, routeKey, ch
   );
 
   return (
-    <div className="min-h-dvh md:grid md:grid-cols-[16rem_1fr]">
+    <div className="min-h-dvh md:grid md:grid-cols-[16rem_1fr] print:block">
       {/* Eerste Tab-stop (WCAG 2.4.1): langs sidebar en topbalk direct naar de inhoud. Alleen zichtbaar met focus. */}
       {/* Zonder fragment in de URL of extra history-stap: de klik zet zelf de focus op main. */}
       <a
@@ -118,16 +148,26 @@ export function AppShell({ nav, userName, menuItems, topbarActions, routeKey, ch
           event.preventDefault();
           mainRef.current?.focus();
         }}
-        className="sr-only rounded-md bg-background text-sm text-foreground focus:not-sr-only focus:fixed focus:start-2 focus:top-2 focus:z-toast focus:inline-flex focus:min-h-control focus:items-center focus:px-3 focus:ring-2 focus:ring-ring"
+        className="sr-only rounded-md bg-background text-sm text-foreground focus:not-sr-only focus:fixed focus:start-2 focus:top-2 focus:z-toast focus:inline-flex focus:min-h-control focus:items-center focus:px-3 focus:ring-2 focus:ring-ring print:hidden"
       >
         {uiTexts.skipToContent}
       </a>
-      <aside className="hidden border-e bg-sidebar md:block">
+      <aside className="hidden border-e bg-sidebar md:block print:hidden">
         <Sidebar items={nav} />
       </aside>
       <div className="flex min-w-0 flex-col">
         <Topbar userName={userName} menuItems={menuItems} start={menuButton} actions={topbarActions} />
-        <main ref={mainRef} id={MAIN_ID} tabIndex={-1} className="min-w-0 flex-1 p-4 focus:outline-none md:p-6">
+        {/* In de flow, niet fixed of sticky: de melding schuift de inhoud omlaag en dekt niets af. Leeg (online) neemt de
+            wrapper geen ruimte in. */}
+        <div className="px-4 pt-4 empty:hidden md:px-6 print:hidden">
+          <OfflineNotice />
+        </div>
+        <main
+          ref={mainRef}
+          id={MAIN_ID}
+          tabIndex={-1}
+          className="min-w-0 flex-1 p-4 focus:outline-none md:p-6 print:p-0"
+        >
           {children}
         </main>
       </div>
