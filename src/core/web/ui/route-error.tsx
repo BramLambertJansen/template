@@ -3,6 +3,7 @@ import { uiTexts } from '../copy/ui.ts';
 import { useDocumentTitle } from '../lib/document-title.ts';
 import { ForbiddenError } from '../lib/guard.ts';
 import { Button } from './button.tsx';
+import { ErrorReference } from './error-reference.tsx';
 import { PageTitle } from './page-title.tsx';
 import { useErrorText } from './error-texts.tsx';
 
@@ -30,6 +31,7 @@ export function RouteError({ error, reset, preview = false }: ErrorComponentProp
       <p role="alert" className="text-destructive">
         {errorText(error)}
       </p>
+      <ErrorReference error={error} />
       {/* invalidate laadt de loaders opnieuw en wist de fout; reset() alleen zou de oude fout weer tonen. */}
       <Button
         variant="outline"

@@ -20,4 +20,8 @@ export const uiTexts = {
   copy: 'Kopiëren',
   copied: 'Gekopieerd.',
   copyFailed: 'Kopiëren is niet gelukt. Selecteer en kopieer de tekst zelf.',
+  // Spec foutreferentie: de requestId bij een onverwachte serverfout, voor support.
+  errorReference: 'Referentie:',
+  copyErrorReference: 'Referentie kopiëren',
+  errorReferenceCopied: 'Referentie gekopieerd.',
 } as const;

@@ -113,10 +113,10 @@ const groups: readonly ExampleTarget[] = [
     text: 'Toon een toast. Provider en interne ToastCard werken via deze compositie.',
   },
   {
-    names: ['ErrorTextsProvider', 'RouteError', 'NotFound'],
+    names: ['ErrorTextsProvider', 'RouteError', 'NotFound', 'ErrorReference'],
     id: 'example-errors',
     vak: 'meldingen',
-    text: 'De foutpreview gebruikt de globale fouttekstenprovider.',
+    text: 'De foutpreview gebruikt de globale fouttekstenprovider; kopieer de referentie van de serverfout.',
   },
   {
     names: ['AsyncView'],

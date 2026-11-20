@@ -31,7 +31,9 @@ gedemonstreerd.
   Velden uitschakelen demonstreert disabled invoervelden en beide formulieradapters.
 - **Input en Select: disabled en invalid:** blijvend inspecteerbare basisvoorbeelden met labels en gekoppelde fouttekst.
 - **RouteError en NotFound:** generieke fout, verboden toegang en niet gevonden als previews, zonder extra main/h1 of
-  echte sessiefout. Bestaande dialoog-, toast-, busy- en validatievoorbeelden blijven beschikbaar.
+  echte sessiefout. De generieke fout is een fictieve serverfout met referentie.
+- **ErrorReference:** "Referentie: <id>" met **Referentie kopiëren** bij een serverfout; zie
+  [Foutreferentie](ui-error-reference.md). Bestaande dialoog-, toast-, busy- en validatievoorbeelden blijven beschikbaar.
 
 De query- en submituitkomsten zijn lokale voorbeelddata. Ze doen geen API-aanroep en wijzigen geen accounts.
 [queries.ts](../src/web/features/design-system/queries.ts) bevat de lokale queries; Form en de adapters voeren de werkelijke validatie en foutafhandeling uit.
