@@ -63,7 +63,7 @@ for (const width of [375, 1280]) {
       const tiles = page.locator('#example-stat-tile').getByRole('group');
       await expect(tiles).toHaveCount(4);
       // Exact via textContent: toContainText normaliseert witruimte en mist dan een gewone spatie i.p.v. U+00A0.
-      expect(await tiles.nth(1).locator('p').nth(1).textContent()).toBe('€ 12.345,67');
+      expect(await tiles.nth(1).locator('p').nth(1).textContent()).toBe('€\u00a012.345,67');
       const boxes = [];
       for (let i = 0; i < 4; i++) {
         const tile = tiles.nth(i);
