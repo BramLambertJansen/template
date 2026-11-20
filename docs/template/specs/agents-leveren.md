@@ -192,13 +192,13 @@ Punt 5 ("Regels uit AGENTS.md: …") wordt `5. Nooit pushen, mergen of rebasen; 
 - **agents-leveren/AC-11** — Gegeven elke `.claude/agents/*.md`, wanneer de toets de frontmatter leest, dan heeft elke rol
   óf een `tools`-lijst zonder `Agent`, `Task` en zonder iets dat met `mcp__` begint, óf een `disallowedTools`-lijst met zowel
   `Agent` als `mcp__*`. Op de huidige `main` faalt de toets voor developer (geen van beide), tester en docs (geen `Agent`).
-  Toets: `test/hooks/agent-budget.test.ts` (nieuw)
+  Toets: `test/hooks/agent-budget.test.ts`
 - **agents-leveren/AC-12** — Gegeven `.claude/agents/reviewer.md`, wanneer de toets hem leest, dan staat de budgetzin uit
   Hergebruik en UX met `25 toolcalls` vóór de eerste genummerde stap. De sectie `## Bevindingen` blijft de afsluiting.
-  Toets: `test/hooks/agent-budget.test.ts` (nieuw)
+  Toets: `test/hooks/agent-budget.test.ts`
 - **agents-leveren/AC-13** — Gegeven `.claude/agents/architect.md`, wanneer de toets hem leest, dan staat de budgetzin uit
   Hergebruik en UX met `15 toolcalls` en `skelet` vóór de eerste genummerde stap.
-  Toets: `test/hooks/agent-budget.test.ts` (nieuw)
+  Toets: `test/hooks/agent-budget.test.ts`
 
 **PR-5: punt 1d**
 
