@@ -27,6 +27,7 @@ export { EmptyState } from '#core/web/ui/empty-state.tsx';
 export { ListToolbar } from '#core/web/ui/list-toolbar.tsx';
 export { NavLink } from '#core/web/ui/nav-link.tsx';
 export { Notice } from '#core/web/ui/notice.tsx';
+export { OfflineNotice } from '#core/web/ui/offline-notice.tsx';
 export { Toaster, ToastProvider, useToast } from '#core/web/ui/toast.tsx';
 export { PageHeader } from '#core/web/ui/page-header.tsx';
 export { PageTitle } from '#core/web/ui/page-title.tsx';

@@ -6,7 +6,7 @@
 // kiezen in plaats van de bezette poorten over te nemen (spec nieuwe-app-script).
 import { spawn, spawnSync } from 'node:child_process';
 import { copyFileSync, existsSync, readFileSync } from 'node:fs';
-import { STANDAARD_POORTEN, isVrij } from './kit/nieuwe-app.mjs';
+import { STANDAARD_POORTEN, isVrij, testBind } from './kit/nieuwe-app.mjs';
 
 const ENV_FILE = '.env.local';
 
@@ -34,7 +34,7 @@ async function eisVrijePoorten() {
     ['WEB_PORT', 5173],
   ])) {
     const nummer = poort(tekst, sleutel, terugval);
-    if (await isVrij(nummer)) continue;
+    if (await isVrij(nummer, testBind())) continue;
     console.error(
       `✗ poort ${String(nummer)} (${sleutel}) is bezet\n  → stop de andere pnpm dev, of kies poorten met node scripts/kit/nieuwe-app.mjs poorten`,
     );
@@ -53,7 +53,7 @@ async function eisVrijeStackPoorten() {
     ['MAIL_UI_PORT', STANDAARD_POORTEN.mailUi],
     ['SMTP_PORT', STANDAARD_POORTEN.smtp],
   ])) {
-    if (await isVrij(nummer)) continue;
+    if (await isVrij(nummer, testBind())) continue;
     console.error(
       `✗ poort ${String(nummer)} (${sleutel}) is bezet en .env.local ontbreekt\n  → kies een vrije set met node scripts/kit/nieuwe-app.mjs poorten --env`,
     );
