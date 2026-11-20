@@ -63,7 +63,7 @@ PR 2:
 ## Raakt ook
 
 - Risicowerk (een gate, de volgorde van migraties op bestaande rijen): aparte tester. R-DB-07 verandert, dus de eigenaar keurt goed.
-- PR 1: `scripts/kit/check-migrations.mjs`, `test/rails/check-migrations.test.ts` volgt alleen als een bestaand geval een oudere toegevoegde migratie als groen vastlegt, `.github/workflows/ci.yml` alleen als `gate:fast` de template-URL als omgevingsvariabele nodig heeft (dan pusht de eigenaar de branch), `docs/nieuwe-app.md`, `docs/template-changelog.md`, `docs/framework.md` R-DB-07 met spiegel in `.claude/rules/database.md`, de skill `migratie`.
+- PR 1: `scripts/kit/check-migrations.mjs`, `test/rails/check-migrations.test.ts` volgt alleen als een bestaand geval een oudere toegevoegde migratie als groen vastlegt, `.github/workflows/ci.yml` alleen als `gate:fast` de template-URL als omgevingsvariabele nodig heeft (beschermd pad: de eigenaar voegt de PR samen, ADR 0093), `docs/nieuwe-app.md`, `docs/template-changelog.md`, `docs/framework.md` R-DB-07 met spiegel in `.claude/rules/database.md`, de skill `migratie`.
 - PR 2: `scripts/check-snapshot.sh` en `scripts/runner.sh` (bestanden die de host uitvoert: de runner draait ze pas na de merge of met `--sta-wijzigingen-toe` door de eigenaar).
 
 ## Buiten scope
