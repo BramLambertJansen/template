@@ -170,6 +170,12 @@ const groups: readonly ExampleTarget[] = [
   },
   { names: ['QrCode'], id: 'example-qr', vak: 'gegevens', text: 'QR-code met voorbeelddata.' },
   {
+    names: ['RelativeTime'],
+    id: 'example-relative-time',
+    vak: 'gegevens',
+    text: 'Bekijk tijdstippen in het verleden en de toekomst; de volledige datum staat in de tooltip.',
+  },
+  {
     names: ['Table', 'TableHeader', 'TableBody', 'TableRow', 'TableHead', 'TableCell'],
     id: 'example-table',
     vak: 'gegevens',
