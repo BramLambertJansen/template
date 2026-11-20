@@ -17,6 +17,11 @@ De branchnaam in kleine letters, met elk teken buiten `a-z`, `0-9` en `-` vervan
 Een fragment heeft één soort. Heeft een PR items van meer dan één soort, dan voegt ze per soort een fragment toe met het
 achtervoegsel `-2`, `-3` (`docs-spec-template-release-2.md`).
 
+Staat een fragment met die naam al op `main` (een hergebruikte branchnaam, zoals in een cloudsessie), dan is het nog niet
+uitgebracht: laat het staan en neem het eerstvolgende vrije achtervoegsel. `pnpm ratchet` weigert een gewijzigd fragment
+dat al op de merge-base staat (`docs:fragment-behoud:<bestand>`, leerpunt #877). Moet zo'n fragment bewust anders,
+verwijder het dan en voeg een nieuw fragment toe.
+
 ## Vorm
 
 ```markdown

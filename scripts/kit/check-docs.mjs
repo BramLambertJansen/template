@@ -42,6 +42,8 @@
 //     app; `README.md` in de map is geen fragment.
 //  16. Geen document met status `vervallen` of `vervangen door NNNN` in docs/template/specs/ of docs/template/adr/
 //     (R-CI-06, spec vervallen-documenten-weg AC-6, sleutel `docs:<pad>:vervallen-in-template`); niet in docs/specs/ of docs/adr/.
+//  17. Geen gewijzigd changelogfragment dat al op de merge-base met origin/main staat (leerpunt #877, sleutel
+//     `docs:fragment-behoud:<bestand>`); in `docsKrimp`, dus strikt en nooit in de baseline.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -122,7 +124,8 @@ export async function docsMeldingen(root = '.') {
 }
 
 /**
- * De krimpcontrole op normen tegenover `git merge-base origin/main HEAD` (spec krimp-op-normen); nooit in de baseline.
+ * De krimpcontrole op normen tegenover `git merge-base origin/main HEAD` (spec krimp-op-normen) en het behoud van
+ * changelogfragmenten die al op die basis staan (regel 17, leerpunt #877); nooit in de baseline.
  * Zonder basis is ze in CI rood (AC-5).
  * @param {string} root
  * @returns {Promise<Violation[]>}
@@ -131,7 +134,35 @@ export async function docsKrimp(root = '.') {
   return Promise.resolve([
     ...zonderBasis(root, process.env['GITHUB_ACTIONS'] === 'true').violations,
     ...normenUitGit(root),
+    ...fragmentBehoud(root),
   ]);
+}
+
+/**
+ * Regel 17 (leerpunt #877): een changelogfragment dat al op de merge-base met origin/main staat, is nog niet uitgebracht
+ * en mag niet wijzigen (status M, ook ongecommit in de werkmap). Een PR op een hergebruikte branchnaam overschreef zo stil
+ * het item van een eerdere PR. Verwijderen mag (`template:release`), toevoegen ook; zonder merge-base toetst dit niets.
+ * @param {string} root
+ * @returns {Violation[]}
+ */
+function fragmentBehoud(root) {
+  const git = (/** @type {string[]} */ args) => spawnSync('git', args, { cwd: root, encoding: 'utf8' });
+  const basis = git(['merge-base', 'origin/main', 'HEAD']);
+  if (basis.status !== 0 || basis.stdout.trim() === '') return [];
+  const diff = git(['diff', '--name-status', '--no-renames', '-z', basis.stdout.trim(), '--', `${FRAGMENT_MAP}/`]);
+  const velden = diff.status === 0 ? diff.stdout.split('\0').filter(Boolean) : [];
+  /** @type {Violation[]} */
+  const violations = [];
+  for (let i = 0; i + 1 < velden.length; i += 2) {
+    const [status, pad] = [velden[i], velden[i + 1] ?? ''];
+    const naam = path.posix.basename(pad);
+    if (status !== 'M' || naam === 'README.md') continue;
+    violations.push({
+      key: `docs:fragment-behoud:${naam}`,
+      message: `${pad} staat al op main en is nog niet uitgebracht; zet het terug en voeg een nieuw fragment toe (bv. met achtervoegsel -2)`,
+    });
+  }
+  return violations;
 }
 
 /**
