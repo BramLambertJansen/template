@@ -89,13 +89,14 @@ describe('cloud-netwerkvorm/AC-7 rolhekContext leest sandbox.excludedCommands ui
     expect(netwerkvormen(dir)).toStrictEqual(LIJST);
   });
 
-  test('cloud-netwerkvorm/AC-7 in een hook zonder leesbare .claude/settings.json in het anker gooit rolhekContext', () => {
+  // cloud-netwerkvorm OV-8 (R-TEST-02): was "gooit rolhekContext"; een ontbrekend settingsbestand in het anker geeft nu een lege lijst.
+  test('cloud-netwerkvorm/AC-7 in een hook zonder .claude/settings.json in het anker geeft rolhekContext een lege lijst, zonder fout', () => {
     const { dir, sha } = repoMet({ '.claude/gates.json': GATES_TEKST, 'README.md': 'x\n' });
-    // De werkmap heeft er wel een, maar de hook leest alleen het anker: dicht falen, zoals bij gates.json.
+    // De werkmap heeft er wel een, maar de hook leest alleen het anker: dat heeft er geen, dus leeg.
     write(dir, { [SETTINGS]: settings({ excludedCommands: LIJST }) });
     vi.stubEnv('RAILS_ANKER', sha);
 
-    expect(() => rolhekContext(dir, dir)).toThrow();
+    expect(netwerkvormen(dir)).toStrictEqual([]);
   });
 
   test('cloud-netwerkvorm/AC-7 in een hook met een settingsbestand dat geen geldige JSON is gooit rolhekContext', () => {

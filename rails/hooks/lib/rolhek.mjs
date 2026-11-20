@@ -28,7 +28,9 @@ import { afgeleid, globMatch, onderhoudVan, samengevoegd, templateVan } from './
  *   authority?: import('./task-authority.mjs').Authority | null, runnerTrusted?: boolean | (() => boolean),
  *   mergeTrusted?: boolean | (() => boolean),
  *   onbekendeRol?: boolean, onderhoud?: boolean, files?: (rel: string) => string[],
- *   gevolgd?: (paden: readonly string[]) => Set<string>, werkmappen?: () => string[] }} Ctx
+ *   gevolgd?: (paden: readonly string[]) => Set<string>, werkmappen?: () => string[], netwerkvormen?: readonly string[] }} Ctx
+ * `netwerkvormen`: de patronen uit `sandbox.excludedCommands` (`git push origin HEAD`, `git commit *`) uit de vertrouwde basis
+ * (spec cloud-netwerkvorm); ontbreekt hij, dan raakt de regel netwerkvorm niets.
  * `files`: bestanden (getrackt en niet-genegeerd) onder een map, repo-relatief; `''` is de hele repo.
  * `gevolgd`: de doorgegeven paden (zoals getypt, tegen `cwd`) die git volgt als gewoon bestand, ook na `realpath` (spec
  * rolhek-lezen/AC-11); ontbreekt hij of gooit hij, dan telt geen pad. `werkmappen`: de roots uit `git worktree list
@@ -108,10 +110,15 @@ export function decide(payload, ctx) {
   const context = ['', 'developer', 'architect'].includes(namedRole)
     ? ctx
     : { ...ctx, authority: null, onbekendeRol: !SUBAGENT_ROLES.has(namedRole) };
-  if (tool.startsWith('mcp__')) decideMcp({ tool, role }, context, decision);
-  else if (tool === 'Bash') {
+  if (tool.startsWith('mcp__')) {
+    // Spec cloud-netwerkvorm (Ontwerp punt 3): een MCP-bestandsschrijftool slaat lefthook over, ook als hij in mcpLezen staat.
+    if (MCP_SCHRIJVEN.has(tool)) gate(decision, role, MCP_SCHRIJVEN_REDEN);
+    decideMcp({ tool, role }, context, decision);
+  } else if (tool === 'Bash') {
     const command = field(input, 'command');
     decideBash({ command, role, feiten: leesFeiten(command, context) }, context, decision);
+    // Vóór de automatische runner-allow en decidePrMerge: een deny van de netwerkvorm wint (spec cloud-netwerkvorm, punt 2).
+    decideNetwerkvorm(command, ctx, decision);
     if (command.includes('--sta-wijzigingen-toe')) decision.deny.push('De agent omzeilt de hostcontrole van de runner nooit; gebruik voor gewijzigd railwerk de CI-runner');
     if (ctx.cwd === ctx.root && automaticRunner(command) && decision.ask.length + decision.deny.length === 0 && runnerIsTrusted(ctx))
       decision.allow = true;
@@ -2377,6 +2384,7 @@ export function ghForbidden(rawArgs, expanded = []) {
   if (group === 'pr' && prAction === 'review') found.push('gh pr review: de agent keurt nooit zelf goed (AGENTS.md)');
   if (zetLabel(rawArgs)) found.push('een PR-label zet alleen de eigenaar, voor elke rol (R-ROL-08)');
   if (api !== null) found.push(...apiUnreadable(api, expanded));
+  if (api !== null && apiVerzetMain(api)) found.push('gh api: main verwijderen of verzetten is verboden, voor elke rol');
   if (api !== null && apiWritesSelfReview(api)) found.push('gh api: labels, reviews en statussen zet alleen de eigenaar');
   if (api !== null && apiWritesReviewComment(api))
     found.push('gh api: een reviewopmerking wijzigen of wissen doet alleen de eigenaar, voor elke rol (ADR 0098)');
@@ -2473,6 +2481,19 @@ function isGraphql(endpoint) {
 
 const FIELDS = new Set(['field', 'raw-field', 'input']);
 
+// `…/git/refs/heads/main` aan het einde van een genormaliseerd endpoint (spec cloud-netwerkvorm, Ontwerp punt 5).
+const MAIN_REF = /(?:^|\/)git\/refs\/heads\/main$/i;
+
+/**
+ * Een schrijvende `gh api`-aanroep (niet-GET of met velden) op de ref `main`, na normalisatie: `%2F` wordt `/`, een query of
+ * fragment valt weg, meerdere `/` worden één en een afsluitende `/` valt weg (spec cloud-netwerkvorm/AC-13).
+ * @param {ApiCall} api
+ */
+function apiVerzetMain(api) {
+  const endpoint = api.endpoint.replace(/%2f/gi, '/').replace(/[?#].*$/s, '').replace(/\/{2,}/g, '/').replace(/\/+$/, '');
+  return MAIN_REF.test(endpoint) && apiMutates(api);
+}
+
 /** REST met een andere methode dan GET of met velden/invoer (gh stuurt dan POST). @param {ApiCall} api */
 function apiMutates({ options }) {
   const method = options.filter(({ name }) => name === 'method').at(-1)?.value ?? 'GET';
@@ -2539,4 +2560,142 @@ function shortCluster(options, arg, next) {
     options.push({ name, value: '', word: arg });
   }
   return false;
+}
+
+// ---------- netwerkvorm (spec cloud-netwerkvorm) ----------
+
+// Ontwerp punt 3: de MCP-tools die bestanden naar GitHub schrijven; `create_pull_request` valt erbuiten (ADR 0078 punt 4).
+const MCP_SCHRIJVEN = new Set(['mcp__github__push_files', 'mcp__github__create_or_update_file', 'mcp__github__delete_file']);
+const MCP_SCHRIJVEN_REDEN = 'Push met `git push origin HEAD` als los commando; deze route slaat lefthook over';
+const NETWERK_SANDBOX =
+  'buiten deze vorm draait het in de sandbox, zonder token-proxy en signeerdienst (docs/ENVIRONMENT.md, "Cloud: commit, push, PR en bewijs")';
+// Deze voorvoegsels hebben hun eigen regel (`decideKitScript`).
+const NETWERK_EIGEN_REGEL = new Set(['pnpm pr:merge', 'pnpm pr:resolve']);
+const GH_DELETE_VORM = 'gh api -X DELETE repos/{owner}/{repo}/git/refs/heads/<branch>';
+// Substitutie, procesvervanging of heredoc/herestring: dan past het commando op geen patroon.
+const NETWERK_ONZEKER = /\$\(|`|<\(|>\(|<</;
+// `git push --delete|-d` (ook in een cluster) of een refspec met lege bron (`:x`, `+:x`).
+const PUSH_VERWIJDERT = /^(?:--delete|-[a-zA-Z]*d[a-zA-Z]*|\+?:.+)$/;
+
+/**
+ * @typedef {{ woorden: string[], open: boolean, voorvoegsel: string[] }} Netwerkpatroon `woorden`: het patroon zonder een
+ *   afsluitende ` *`; `open`: die ` *` stond er (nul of meer verdere woorden); `voorvoegsel`: de woorden vóór ` *`, anders de
+ *   eerste twee woorden.
+ * @typedef {{ programma: string, sub: string, rest: readonly string[] }} Netwerkkern
+ */
+
+/** @param {string} patroon @returns {Netwerkpatroon} */
+function leesPatroon(patroon) {
+  const alle = patroon.trim().split(/\s+/);
+  const open = alle.length > 1 && alle.at(-1) === '*';
+  const woorden = open ? alle.slice(0, -1) : alle;
+  return { woorden, open, voorvoegsel: open ? woorden : woorden.slice(0, 2) };
+}
+
+/**
+ * Spec cloud-netwerkvorm (Ontwerp punt 2): een commando dat het voorvoegsel van een patroon uit `ctx.netwerkvormen` raakt
+ * (programma en subcommando in een segment, ook in een groep, compound of substitutie), moet in zijn geheel op een patroon met
+ * dat voorvoegsel passen; anders een deny voor elke rol, met de vorm in de reden.
+ * @param {string} command @param {Ctx} ctx @param {Decision} decision
+ */
+function decideNetwerkvorm(command, ctx, decision) {
+  const patronen = (ctx.netwerkvormen ?? []).map(leesPatroon).filter(({ voorvoegsel }) => !NETWERK_EIGEN_REGEL.has(voorvoegsel.join(' ')));
+  if (patronen.length === 0) return;
+  const kernen = netwerkSegmenten(command).map(netwerkKern);
+  /** @type {Map<string, Netwerkpatroon[]>} */
+  const geraakt = new Map();
+  for (const patroon of patronen) {
+    const sleutel = patroon.voorvoegsel.join(' ');
+    if (kernen.some((kern) => raaktVoorvoegsel(kern, patroon.voorvoegsel))) geraakt.set(sleutel, [...(geraakt.get(sleutel) ?? []), patroon]);
+  }
+  for (const [sleutel, groep] of geraakt) {
+    if (groep.some((patroon) => pastOpPatroon(command, patroon))) continue;
+    const verwijdert = sleutel === 'git push' && kernen.some(({ programma, sub, rest }) =>
+      programma === 'git' && sub === 'push' && rest.some((arg) => PUSH_VERWIJDERT.test(arg)));
+    decision.deny.push(netwerkReden(sleutel, groep, verwijdert));
+  }
+}
+
+/** De segmenten van het commando en, recursief, van elke `$(…)` en backtick-substitutie. @param {string} command @returns {Command[]} */
+function netwerkSegmenten(command) {
+  return [...parseCommands(command), ...substitutions(command).flatMap(netwerkSegmenten)];
+}
+
+/**
+ * Programma (zonder pad, toewijzingen en omhulsels) en subcommando van een segment: bij git uit `gitSubcommand`, bij pnpm het
+ * script (`pnpmScript`), bij gh het eerste commandowoord, anders het eerste woord dat geen optie is.
+ * @param {Command} segment @returns {Netwerkkern}
+ */
+function netwerkKern(segment) {
+  const [woord = '', ...args] = splitCommand(segment.words).argv;
+  const programma = programName(woord);
+  if (programma === 'git') {
+    const { subcommand, rest } = gitSubcommand(args);
+    return { programma, sub: subcommand, rest };
+  }
+  if (programma === 'pnpm') return { programma, sub: pnpmScript(args), rest: [] };
+  if (programma === 'gh') return { programma, sub: ghCommandWords(withoutRepo(args))[0] ?? '', rest: [] };
+  return { programma, sub: args.find((arg) => !arg.startsWith('-')) ?? '', rest: [] };
+}
+
+/** @param {Netwerkkern} kern @param {readonly string[]} voorvoegsel */
+function raaktVoorvoegsel({ programma, sub }, voorvoegsel) {
+  const [naam = '', subcommando] = voorvoegsel;
+  return programma === naam.toLowerCase() && (subcommando === undefined || sub === subcommando);
+}
+
+/**
+ * Het pnpm-script: het eerste woord na de opties (een optie met waarde neemt het volgende woord: `-C`/`--dir`, `-F`/`--filter`,
+ * `--workspace` en de andere van `pnpmCommand`; `--x=y` en een onbekende optie niet) en na een eventuele `run`.
+ * @param {readonly string[]} args @returns {string}
+ */
+function pnpmScript(args) {
+  let index = 0;
+  while ((args[index] ?? '').startsWith('-')) {
+    const optie = args[index] ?? '';
+    index += PNPM_OPTIONS_WITH_VALUE.has(optie) || optie === '--workspace' ? 2 : 1;
+  }
+  const woord = args[index] ?? '';
+  return woord === 'run' || woord === 'run-script' ? pnpmScript(args.slice(index + 1)) : woord;
+}
+
+/**
+ * Past het hele commando op het patroon: alleen woorden (geen operator, redirect, groep, heredoc of commentaar), geen
+ * substitutie, en de woorden na de shellontleding letterlijk gelijk aan het patroon; met ` *` mogen er woorden volgen.
+ * @param {string} command @param {Netwerkpatroon} patroon
+ */
+function pastOpPatroon(command, { woorden, open }) {
+  if (NETWERK_ONZEKER.test(command)) return false;
+  const tokens = tokenize(command);
+  if (tokens.some(({ kind }) => kind !== 'word') || !alleTekstGelezen(command, tokens)) return false;
+  if (open ? tokens.length < woorden.length : tokens.length !== woorden.length) return false;
+  return woorden.every((woord, index) => tokens[index]?.value === woord);
+}
+
+/**
+ * Elk teken van het commando hoort bij een token of is witruimte; zo telt weggelaten tekst (een `#`-commentaar) niet als passend.
+ * @param {string} command @param {readonly import('./shell.mjs').Token[]} tokens
+ */
+function alleTekstGelezen(command, tokens) {
+  let positie = 0;
+  for (const { raw, value } of tokens) {
+    const tekst = raw ?? value;
+    const index = command.indexOf(tekst, positie);
+    if (index === -1 || command.slice(positie, index).trim() !== '') return false;
+    positie = index + tekst.length;
+  }
+  return command.slice(positie).trim() === '';
+}
+
+/**
+ * De weigertekst (Ontwerp punt 2): de patronen met dit voorvoegsel, ` *` als ` …`; bij `git commit` de vorm uit
+ * docs/ENVIRONMENT.md, en bij een verwijderpush ook de gh api-vorm (Ontwerp punt 5).
+ * @param {string} sleutel @param {readonly Netwerkpatroon[]} groep @param {boolean} verwijdert
+ */
+function netwerkReden(sleutel, groep, verwijdert) {
+  const vorm = sleutel === 'git commit'
+    ? 'git commit -F <bestand>'
+    : groep.map(({ woorden, open }) => `${woorden.join(' ')}${open ? ' …' : ''}`).join(' of ');
+  const reden = `Netwerkvorm: draai dit als los commando in de vorm ${vorm}; ${NETWERK_SANDBOX}`;
+  return verwijdert ? `${reden}; een remote branch verwijder je met ${GH_DELETE_VORM}` : reden;
 }

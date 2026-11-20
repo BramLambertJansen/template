@@ -321,8 +321,11 @@ push en PR-aanmaak horen bij de hoofdsessie. De bestaande veilige branchopruimin
 `pnpm pr:verify` draaien buiten de sandbox, lokaal en in de cloud. `gh pr create` werkt in de cloud niet (de GitHub-proxy
 weigert GraphQL); open de PR daar met `mcp__github__create_pull_request`, met de werkbranch als `head` en `main` als `base`. Claude
 Code vraagt de eigenaar één keer per PR (gemeten, F10 van de spec); keurt die niet goed, meld dat en probeer geen andere route. Lees het bewijs met
-`pnpm pr:verify <nummer>` of `gh api` (REST). De volledige route en de foutmeldingen staan in
-[ENVIRONMENT](../ENVIRONMENT.md#cloud-commit-push-pr-en-bewijs).
+`pnpm pr:verify <nummer>` of `gh api` (REST). Een andere vorm (een pipe, redirect of `&&` erachter, `git push -u`,
+`pnpm run test:db`) weigert het rolhek met de juiste vorm in de reden (spec `cloud-netwerkvorm`,
+`rails/hooks/lib/rolhek.mjs:2601`). De MCP-schrijftools (`push_files`, `create_or_update_file`, `delete_file`) slaan
+lefthook over en geven een vraag aan de eigenaar; push met `git push origin HEAD`. De volledige route en de foutmeldingen
+staan in [ENVIRONMENT](../ENVIRONMENT.md#cloud-commit-push-pr-en-bewijs).
 
 De expliciete sandbox-auto-allow en gerichte commandotoestemmingen vervangen geen inhoudelijke toestemming,
 broncodebeperkingen, checks of eigenaarmerge. Een lokale of beheerde Claude-instelling kan strenger zijn dan de

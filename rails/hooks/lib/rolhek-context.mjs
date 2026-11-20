@@ -56,17 +56,54 @@ function configuratie(root, basis, authority) {
   return { config: loadConfig(trusted, app), vertrouwd: true };
 }
 
+const SETTINGS = '.claude/settings.json';
+
+/**
+ * Spec cloud-netwerkvorm (Ontwerp punt 1, AC-7): de patronen uit `sandbox.excludedCommands`, uit dezelfde bron als gates.json.
+ * Binnen een hook alleen uit het anker: ontbreekt het bestand daar, dan een lege lijst (OV-8); onleesbaar of geen geldige JSON
+ * gooit (het rolhek faalt dicht). Daarbuiten de vertrouwde basis met terugval op de werkmap; ontbreekt het bestand daar, dan geen
+ * patronen. Zonder `excludedCommands` een lege lijst.
+ * @param {string} root
+ * @param {{ read: (file: string) => string | null, readOptional?: (file: string) => string | { afwezig: true } } | null} basis
+ * @param {import('./task-authority.mjs').Authority | null} authority
+ * @returns {string[]}
+ */
+function netwerkvormen(root, basis, authority) {
+  if (anker() !== null) {
+    if (basis?.readOptional === undefined) throw new Error(`geen gecontroleerde ${SETTINGS} in het anker (spec cloud-netwerkvorm)`);
+    const gelezen = basis.readOptional(SETTINGS);
+    return typeof gelezen === 'string' ? excludedCommands(gelezen) : [];
+  }
+  const text = authority?.trusted(SETTINGS) ?? werkmapTekst(root, SETTINGS);
+  return text === null ? [] : excludedCommands(text);
+}
+
+/** `sandbox.excludedCommands` uit de tekst van een settingsbestand; ongeldige JSON gooit. @param {string} text */
+function excludedCommands(text) {
+  /** @type {unknown} */
+  const raw = JSON.parse(text);
+  const kind = (/** @type {unknown} */ waarde, /** @type {string} */ sleutel) =>
+    typeof waarde === 'object' && waarde !== null ? Object.entries(waarde).find(([naam]) => naam === sleutel)?.[1] : undefined;
+  const lijst = kind(kind(raw, 'sandbox'), 'excludedCommands');
+  return Array.isArray(lijst) ? lijst.filter((regel) => typeof regel === 'string') : [];
+}
+
+/** Een bestand uit de werkmap: ENOENT is afwezig (null), elke andere fout gooit. @param {string} root @param {string} rel */
+function werkmapTekst(root, rel) {
+  try {
+    return readFileSync(path.join(root, rel), 'utf8');
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
 /** @param {string | { afwezig: true }} gelezen */
 const appTekst = (gelezen) => (typeof gelezen === 'string' ? gelezen : null);
 
 /** Het app-bestand uit de werkmap: ENOENT is afwezig, elke andere fout gooit. @param {string} root */
 function werkmapApp(root) {
-  try {
-    return readFileSync(path.join(root, APP_BESTAND), 'utf8');
-  } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return null;
-    throw error;
-  }
+  return werkmapTekst(root, APP_BESTAND);
 }
 
 /**
@@ -97,6 +134,7 @@ export function rolhekContext(root, cwd) {
     root,
     cwd,
     config,
+    netwerkvormen: netwerkvormen(root, basis, authority),
     onderhoud: onderhoudActief(config, vertrouwd, root),
     read: (/** @type {string} */ rel) => {
       try {

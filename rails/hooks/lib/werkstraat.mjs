@@ -9,8 +9,10 @@ import { claudeVersieMelding } from './claude-versie.mjs';
  * @typedef {{ code: number, output: string }} RunResult
  * @typedef {{ timeout?: number, env?: Record<string, string> }} RunOptions
  * @typedef {{ run: (command: string, args: readonly string[], options?: RunOptions) => RunResult, changed: () => string[],
- *   read: (rel: string) => string | null, onthoud?: (sleutel: string) => boolean }} Deps
+ *   read: (rel: string) => string | null, onthoud?: (sleutel: string) => boolean,
+ *   env?: Readonly<Record<string, string | undefined>> }} Deps
  * `onthoud`: true als de sleutel nieuw is (en legt hem vast), false als hij er al was; zonder `onthoud` telt alles als nieuw.
+ * `env`: de omgeving van het hookproces (de aanroeper geeft `process.env`); zonder `env` geen Cloud-regel (spec cloud-netwerkvorm).
  * @typedef {{ exit?: number, stdout?: string, stderr?: string }} HookResult
  */
 
@@ -343,9 +345,14 @@ export function doctorKort(uitvoer) {
   return [...rest, ...uit].filter((regel) => regel !== '').join('\n');
 }
 
+// Spec cloud-netwerkvorm (Ontwerp punt 6): de vormen die in een cloudsessie buiten de sandbox draaien.
+const CLOUD_REGEL =
+  'Cloud: commit `git commit -F <bestand>`, push `git push origin HEAD`, PR via `mcp__github__create_pull_request`, elk als los commando.';
+
 /**
  * SessionStart: de feiten als context (framework §8): branch, achterstand op main, open PR, open wijzigingen, een mislukte
- * e2e-uitslag en de doctor (stack uit in één regel); geen specslijst (die vraagt een agent met `feiten.mjs specs`).
+ * e2e-uitslag en de doctor (stack uit in één regel); geen specslijst (die vraagt een agent met `feiten.mjs specs`). In een
+ * cloudsessie (`CLAUDE_CODE_REMOTE=true` in `deps.env`) ook de Cloud-regel (spec cloud-netwerkvorm/AC-10).
  * @param {Deps} deps
  * @returns {HookResult}
  */
@@ -367,6 +374,7 @@ export function sessionStart(deps) {
       status,
       doctor,
       claude,
+      deps.env?.['CLAUDE_CODE_REMOTE'] === 'true' ? CLOUD_REGEL : '',
       'Vraag alleen taakrelevante feiten: node scripts/kit/feiten.mjs gates specs fase; componenten alleen bij UI (framework §8).',
     ]
       .filter((line) => line !== '')

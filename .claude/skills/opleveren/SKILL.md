@@ -69,7 +69,9 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
 4. Een andere worktree van die branch eerst weghalen: `git worktree remove <pad>` zonder `--force` (git weigert anders de branch te verwijderen).
    De worktree waarin je zelf draait ruimt de runtime of de eigenaar op; heeft stap 3 de branch daar losgemaakt, dan lukt stap 5 gewoon.
 5. `git branch -D <headRefName>` (`-d` faalt na een squash-merge). Alleen die branch, nooit `main`.
-6. Staat de remote branch er nog: `git push origin --delete <headRefName>`. Nooit `main`.
+6. Staat de remote branch er nog: `gh api -X DELETE repos/{owner}/{repo}/git/refs/heads/<headRefName>`, als los commando
+   (spec cloud-netwerkvorm; `git push origin --delete` weigert het rolhek). Nooit `main`; het rolhek weigert dat ook.
+   Lokaal kan deze stap een vraag aan de eigenaar geven.
 7. Eindmelding: wat is opgeruimd (lokale branch, remote branch, worktree) en de nieuwe SHA van `main`.
    Vaste slotregel, ook als het antwoord "niets" is: "Wat moet er in het spec-sjabloon, het gouden pad of een check veranderen
    zodat de volgende feature dit niet opnieuw betaalt?"
