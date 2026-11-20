@@ -23,7 +23,8 @@ export interface ResourceRegel {
   // 'schema.tabel', zoals de catalogus hem geeft (public.invoices).
   readonly tabel: string;
   readonly sample: {
-    // Geldige velden voor de create-route (en, tenzij `rij` er is, de kolommen van een directe insert).
+    // Geldige velden voor de create-route (en, tenzij `rij` er is, de kolommen van een directe insert). Heeft de lijst `q`, dan
+    // is de eerste niet-lege tekstwaarde de zoekterm en moet A daarmee deze rij vinden: zet het doorzochte veld vooraan (#813).
     readonly create: Readonly<Record<string, unknown>>;
     // Een tweede, andere geldige rij: B en A krijgen er twee, zodat paginering via cursor echt meer dan één pagina geeft.
     readonly createTweede: Readonly<Record<string, unknown>>;

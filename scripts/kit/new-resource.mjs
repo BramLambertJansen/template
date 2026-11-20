@@ -359,7 +359,7 @@ function declaratieInhoud(root, n, rollen) {
     `\n    tabel: 'public.${n.tabel}',`,
     `\n    rol: '${rol}',`,
     '\n    sample: {',
-    '\n      create: {\n        // INVULLEN: geldige velden voor de create-route\n      },',
+    '\n      create: {\n        // INVULLEN: geldige velden voor de create-route; het doorzochte veld (q) als eerste tekstwaarde\n      },',
     '\n      createTweede: {\n        // INVULLEN: een tweede, unieke geldige create-input voor paginering\n      },',
     '\n      spoof: {\n        // INVULLEN: een andere, unieke geldige create-input\n      },',
     '\n      // update: alleen nodig bij een update-route of een update-grant op de tabel; anders mag hij weg.',

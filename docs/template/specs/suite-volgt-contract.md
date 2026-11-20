@@ -303,7 +303,7 @@ vragen, staat met de hand in de suite (geen afleiding uit `permissions.ts`, `che
   met rol `suitetest_beheer` en `session_strength = 'mfa'`, en `actor('suitetest_beheerZonderMfa', 'lezen')` rol
   `suitetest_beheer` met `password`. `A('baas')` gooit met de rolnaam. Na afloop (`cleanupTestRoles` in `finally`) staan de testrollen niet meer in
   `app.roles`.
-- **suitecontract/AC-18** (nog niet gebouwd) — Gegeven een lijstcontract met `q` en een `sample.create` zonder tekstwaarde,
+- **suitecontract/AC-18** — Gegeven een lijstcontract met `q` en een `sample.create` zonder tekstwaarde,
   wanneer de suite de lijst controleert, dan bevat het verslag een probleem dat begint met `<naam>: `, `sample.create` en
   "geen tekstwaarde" noemt, en geen "controle afgebroken"; een `sample.create` waarvan de enige tekst alleen witruimte is, geeft
   hetzelfde probleem. Gegeven een lijst met `q` die de zoekterm uit de sample accepteert maar de rij van A daarmee niet vindt,
@@ -349,7 +349,8 @@ Risicowerk (securitysuite): tester eerst, developer, reviewer vóór de push (fr
   `sample.update`), `probe-eigenaar.ts` (`opzet` vult `routes`, `openGeneratorProbe`).
 - #813: `test/security/controles.ts` (`zoekVariant`, `lijstProblemen`), het commentaar bij `sample.create` in
   `test/security/resources.ts` en de INVULLEN-tekst voor `sample.create` in `scripts/kit/new-resource.mjs` (`voorReview`): bij
-  een lijst met `q` is de eerste tekstwaarde de zoekterm en moet die de rij vinden.
+  een lijst met `q` is de eerste tekstwaarde de zoekterm en moet die de rij vinden. Een changelogfragment met "Bij een update"
+  in `docs/template-changelog.d/`, want een app met zo'n lijst merkt het.
 - Bestaande tests die de hoofdsessie omzet, met reden in de PR (R-TEST-02):
   - `test/security/routes.int.test.ts`: AC-5 met `adminMfa` via `mfaDoorgangProbleem` in plaats van `toBe(200)`; `sampleVoor`
     in plaats van `sampleFor`; het kopcommentaar noemt de uitzondering.
