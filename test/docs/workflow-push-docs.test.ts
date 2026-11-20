@@ -3,8 +3,8 @@ import { describe, expect, test } from 'vitest';
 
 // Leerpunt #816: docs/nieuwe-app.md schreef het pushen van een workflowwijziging toe aan de eigenaar, omdat de agent geen
 // workflowrecht zou hebben. ADR 0093 (Gevolgen): de agent werkt onder de gh-login van de eigenaar, inclusief `workflow`;
-// `.github/**` blijft beschermd, dus de eigenaar voegt zo'n PR samen. Positieve asserties: de job leerpunt-bewijs telt
-// alleen een AssertionError als rood op de basis, en expectAbsent gooit een gewone Error.
+// `.github/**` blijft beschermd, dus de eigenaar voegt zo'n PR samen. Positieve asserties op de nieuwe tekst; een
+// gevonden oude tekst via expectAbsent telt sinds leerpunt #875 ook als assertie.
 const nieuweApp = readFileSync(new URL('../../docs/nieuwe-app.md', import.meta.url), 'utf8');
 
 describe('workflowpush in docs/nieuwe-app.md volgt ADR 0093 (leerpunt #816)', () => {
