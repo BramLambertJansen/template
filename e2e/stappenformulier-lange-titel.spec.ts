@@ -21,11 +21,14 @@ test('stappenformulier/AC-17 lange staptitel wrapt zonder overflow op 375 px', a
   const heading = wizard.getByRole('heading', { name: 'Stap 1 van 3: Gegevens' });
   await expect(heading).toBeVisible();
   const title = wizard.getByRole('list', { name: 'Voortgang aanmelding' }).getByText('Gegevens', { exact: true });
-  const before = await title.boundingBox();
-  await title.evaluate(setText, longTitle);
-  await heading.evaluate(setText, `Stap 1 van 3: ${longTitle}`);
-  const after = await title.boundingBox();
-  const head = await heading.boundingBox();
+  // De locators zoeken op tekst en vinden het element na de tekstwijziging niet meer; daarom handles vooraf.
+  const titleHandle = await title.elementHandle();
+  const headingHandle = await heading.elementHandle();
+  const before = await titleHandle.boundingBox();
+  await titleHandle.evaluate(setText, longTitle);
+  await headingHandle.evaluate(setText, `Stap 1 van 3: ${longTitle}`);
+  const after = await titleHandle.boundingBox();
+  const head = await headingHandle.boundingBox();
   expect(before).not.toBeNull();
   expect(after).not.toBeNull();
   expect(head).not.toBeNull();
