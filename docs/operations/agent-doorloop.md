@@ -255,6 +255,12 @@ vraagt nieuw bewijs; geen hergebruik van een oude groene uitslag of generieke ca
 Overdracht bevat alleen doel, toepasselijke spec/contract of verwachte uitkomst uit de opdracht/PR, gewijzigde paden,
 open keuzes en echte checkuitslagen. Wie reviewt en wanneer de eigenaar dat overneemt: framework §8 (eisen aan de rollen).
 
+Vóór elke review draait de hoofdsessie `node scripts/kit/reviewpakket.mjs` en geeft het pad van stdout mee aan de
+reviewer; die leest het pakket met Read in plaats van losse `git log`/`git diff`-aanroepen. Bij een re-review:
+`--sinds <laatst gereviewde sha>`, dan bevat het alleen de fixcommits. Verder `--basis <ref>` (standaard `origin/main`) en
+`--spec <pad>`. Het pakket staat in `.reviewpakket/` (genegeerd); gegenereerde bestanden staan alleen in Stat; een
+niet-gecommitte wijziging staat er niet in en geeft een waarschuwing (`scripts/kit/reviewpakket.mjs:1`, spec `agents-leveren` punt 1d).
+
 De gerichte feedback volgt ADR 0057. De vertrouwde
 hooklader gebruikt main; een branch activeert geen nieuwe rechten. De live ruleset en strikte build-proof uit dat
 ADR zijn afzonderlijk vervolgwerk en worden door deze hookwijziging niet als gebouwd of actief verklaard; de GitHub App uit
@@ -542,9 +548,11 @@ ook daar geen nummer nodig is. Zo draaien de checks op een gebouwde spec al in d
 een getagde test en weigert een repopad dat niet bestaat zonder `(vervallen)`, `(nieuw)` of `(voorbeeld)` erachter (het
 merkteken mag op de volgende regel staan). Een `git merge origin/main` of een fix erna mag gewoon; de checks draaien opnieuw.
 
-**Bouw-PR vergat de status:** een latere PR zet `status: gebouwd` met de hand; dezelfde checks toetsen die PR. Het
-statuscommando, de status-PR met bewijs van GitHub en de route na de merge zijn weg; de reviewer toetst of de bouw op
-`main` staat.
+**Bouw-PR vergat de status:** voegt een PR een testregel toe met een AC-id van een spec die nog `goedgekeurd` is, of van een
+AC die nog `(nog niet gebouwd)` draagt, dan meldt `pnpm ratchet` dat als "let op", nooit rood
+(`scripts/kit/vergeten-gebouwd.mjs`, gebouwd-zonder-nummer/AC-15). Een latere PR zet `status: gebouwd` met de hand;
+dezelfde checks toetsen die PR. Het statuscommando, de status-PR met bewijs van GitHub en de route na de merge zijn weg; de
+reviewer toetst of de bouw op `main` staat.
 
 **Bestaande regels `gebouwd # #<n>`** blijven staan: het nummer is commentaar en niemand zet ze om. De oude vorm met SHA
 (`gebouwd # #<n>; gevalideerd: <sha>`) weigert `check-docs`; alleen `; gevalideerd: <sha>` weghalen is vrij, een nieuwe SHA

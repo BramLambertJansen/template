@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd
 namespace: agents-leveren
 ---
 
@@ -96,8 +96,11 @@ Punt 5 ("Regels uit AGENTS.md: …") wordt `5. Nooit pushen, mergen of rebasen; 
   `Budget: rapport na hooguit 25 toolcalls, eerst als skelet; is het op, lever en noem wat niet getoetst is.`
   Kort, omdat `reviewer.md` binnen 3900 bytes blijft (`test/rails/review-checklists.test.ts`, review-checklists AC-3); daarvoor
   vervallen in `reviewer.md` drie dubbelingen: "eerste review volledig, daarna het verschil" (staat in de werkwijze van
-  `docs/operations/review-checklists.md`), de opsomming `| head`, `| wc` en `git -C` (staat in de leeslijst van het rolhek) en
-  "Geen stijl." in de spec-reviewmodus (stap 3: stijl doet de lint). De afsluiting onder `## Bevindingen` blijft in `## Rapport`.
+  `docs/operations/review-checklists.md`), de opsomming `| head`, `| wc` en `git -C` (het rolhek staat ze toe en noemt ze in
+  zijn weigermeldingen, `LEZER_MELDING` en `WERKMAP_MELDING` in `rails/hooks/lib/rolhek.mjs`) en "Geen stijl." in de
+  spec-reviewmodus. De afsluiting onder `## Bevindingen` blijft in `## Rapport`. PR-5 zet "Geen stijl." terug (in een
+  spec-review gaat het om proza, waar geen lint over gaat) en haalt daarvoor de codeverwijzing naar `uxScreenshot` uit de
+  UX-modus weg (de hoofdsessie geeft de paden van de screenshots mee, spec `ontwerp-overnemen`).
 - `.claude/agents/architect.md`, direct na de eerste alinea:
   `Budget: schrijf het spec- of ADR-bestand na hooguit 15 toolcalls, eerst als skelet (frontmatter en de koppen uit het sjabloon), en vul het daarna in. Lees alleen wat de opdracht raakt.`
 - Frontmatter van developer, tester en docs: `disallowedTools: Agent, mcp__*`.
@@ -111,7 +114,8 @@ Punt 5 ("Regels uit AGENTS.md: …") wordt `5. Nooit pushen, mergen of rebasen; 
   - `reviewpakket: <waarde> is geen voorouder van HEAD; geef de laatst gereviewde commit`
   - `reviewpakket: geen commits in <range>`
   - `reviewpakket: de werkmap heeft niet-gecommitte wijzigingen; die staan niet in het pakket`
-- `.claude/agents/reviewer.md` stap 1 krijgt: `Krijg je een reviewpakket (.reviewpakket/…), lees dat met Read in plaats van git log en git diff.`
+- `.claude/agents/reviewer.md` stap 1: ``bekijk het reviewpakket (anders `git diff origin/main...HEAD`)`` in plaats van
+  ``bekijk `git diff origin/main...HEAD` ``; kort, omdat `reviewer.md` binnen 3900 bytes blijft.
 
 **Meting**
 
@@ -173,7 +177,7 @@ Punt 5 ("Regels uit AGENTS.md: …") wordt `5. Nooit pushen, mergen of rebasen; 
   `.claude/agents/docs.md:3`. Toets: `test/hooks/agents.test.ts`
 - **agents-leveren/AC-7** — Gegeven `.claude/agents/tester.md`, wanneer `subagentStop` uit `rails/hooks/lib/werkstraat.mjs`
   draait met `agent_type` `tester` en een gestubde `deps` waarvan `changed()` `a.test.ts`, `b.test.tsx`, `c.int.test.ts` en
-  `e2e/d.spec.ts` geeft, dan krijgt de vitest-aanroep alleen `a.test.ts` en `b.test.tsx`, en noemt punt 4 van `tester.md`
+  `e2e/d.spec.ts` (voorbeeld) geeft, dan krijgt de vitest-aanroep alleen `a.test.ts` en `b.test.tsx`, en noemt punt 4 van `tester.md`
   `*.int.test.ts` als niet gedraaid. Toets: `test/hooks/agent-teksten.test.ts`
 - **agents-leveren/AC-8** — Gegeven `.claude/agents/architect.md` en `.claude/agents/docs.md`, wanneer de toets ze leest, dan
   verwijst punt 6 van de architect naar `.claude/skills/spec/SKILL.md`, zonder de opsomming met `check:migrations`. De
@@ -188,7 +192,7 @@ Punt 5 ("Regels uit AGENTS.md: …") wordt `5. Nooit pushen, mergen of rebasen; 
   `security-review`. Elke skillnaam in die tabel bestaat als map in `.claude/skills/`. Een nieuwe skillmap die niet in de tabel
   en niet in die drie uitzonderingen staat, maakt de toets rood. Toets: `test/hooks/developer-skillrouter.test.ts`
 - **agents-leveren/AC-10** — Gegeven `.claude/agents/developer.md`, wanneer de toets hem leest, dan bevat hij niet
-  `Regels uit AGENTS.md`, `geen casts` of `eslint-disable`, en noemt punt 5 `pushen` en `hoofdsessie` (R-TEST-02:
+  `Regels uit AGENTS.md`, `geen casts` of `eslint-disable`, en noemt punt 5 `pushen`, `mergen` en `hoofdsessie` (R-TEST-02:
   structuur, geen hele zin).
   Toets: `test/hooks/developer-skillrouter.test.ts`
 
@@ -199,11 +203,11 @@ Punt 5 ("Regels uit AGENTS.md: …") wordt `5. Nooit pushen, mergen of rebasen; 
   `Agent` als `mcp__*`. Op de huidige `main` faalt de toets voor developer (geen van beide), tester en docs (geen `Agent`).
   Toets: `test/hooks/agent-budget.test.ts`
 - **agents-leveren/AC-12** — Gegeven `.claude/agents/reviewer.md`, wanneer de toets hem leest, dan staat vóór de eerste
-  genummerde stap een alinea die met `Budget:` begint en `25 toolcalls` en `skelet` noemt, en de eigen sectie `## Rapport`
+  genummerde stap een alinea die met `Budget:` begint en `25 toolcalls`, `skelet` en `niet getoetst` noemt, en de eigen sectie `## Rapport`
   noemt `## Bevindingen` (een vermelding elders telt niet). De toets kijkt naar die structuur, niet naar de hele zin
   (R-TEST-02). Toets: `test/hooks/agent-budget.test.ts`
 - **agents-leveren/AC-13** — Gegeven `.claude/agents/architect.md`, wanneer de toets hem leest, dan staat vóór de eerste
-  genummerde stap een alinea die met `Budget:` begint en `15 toolcalls` en `skelet` noemt (R-TEST-02: structuur, geen hele
+  genummerde stap een alinea die met `Budget:` begint en `15 toolcalls`, `skelet` en `sjabloon` noemt (R-TEST-02: structuur, geen hele
   zin). Toets: `test/hooks/agent-budget.test.ts`
 
 **PR-5: punt 1d**
@@ -211,25 +215,25 @@ Punt 5 ("Regels uit AGENTS.md: …") wordt `5. Nooit pushen, mergen of rebasen; 
 - **agents-leveren/AC-14** — Gegeven een tijdelijke git-repo met `origin/main` en twee commits op een branch `feat/x`, wanneer
   `node scripts/kit/reviewpakket.mjs` daar draait, dan is de exitcode 0. Stdout is één regel
   `.reviewpakket/feat-x-<sha7>.md`, dat bestand bestaat, en buiten `.reviewpakket/` is niets gewijzigd (`git status --porcelain`
-  is leeg als `.reviewpakket/` genegeerd wordt). Toets: `test/scripts/reviewpakket.test.ts` (nieuw)
+  is leeg als `.reviewpakket/` genegeerd wordt). Toets: `test/scripts/reviewpakket.test.ts`
 - **agents-leveren/AC-15** — Gegeven dezelfde repo, met in de diff een gewijzigde `docs/template/specs/a.md` (voorbeeld), een gewijzigde
   `src/a.ts` (voorbeeld) en een gewijzigde `pnpm-lock.yaml`, wanneer het pakket gemaakt wordt, dan staan de koppen in deze volgorde:
   `# Reviewpakket feat/x @ <sha7>`, de regel `Basis: <sha7 van de merge-base>`, `## Spec`, `## Log`, `## Stat` en `## Diff`.
   Onder `## Spec` staat `docs/template/specs/a.md`, zonder spec in de diff de regel `geen spec in de diff`, met `--spec <pad>`
   dat pad. `## Log` is gelijk aan `git log --oneline <basis>..HEAD` en `## Stat` aan `git diff --stat <basis>..HEAD`. `## Diff`
-  bevat de diff van `src/a.ts` en niet die van `pnpm-lock.yaml`, wel de regel
-  `Weggelaten (gegenereerd, staat in Stat): pnpm-lock.yaml`. Toets: `test/scripts/reviewpakket.test.ts` (nieuw)
+  bevat de diff van `src/a.ts` (voorbeeld) en niet die van `pnpm-lock.yaml`, wel de regel
+  `Weggelaten (gegenereerd, staat in Stat): pnpm-lock.yaml`. Toets: `test/scripts/reviewpakket.test.ts`
 - **agents-leveren/AC-16** — Gegeven dezelfde repo met een derde commit (de fix), wanneer
   `node scripts/kit/reviewpakket.mjs --sinds <sha van commit 2>` draait, dan heet het bestand
   `.reviewpakket/feat-x-<sha7>-fix-<sha7 van commit 2>.md`. De tweede regel is `Fixdiff sinds: <sha7 van commit 2>`, en Log,
-  Stat en Diff bevatten alleen commit 3. Toets: `test/scripts/reviewpakket.test.ts` (nieuw)
+  Stat en Diff bevatten alleen commit 3. Toets: `test/scripts/reviewpakket.test.ts`
 - **agents-leveren/AC-17** — Gegeven dezelfde repo, wanneer het script draait met `--basis '-x'`, met `--basis 'a;b'`, met
   `--sinds <sha die geen voorouder van HEAD is>` of op een branch zonder commits na de basis, dan is de exitcode 1, staat de
   bijbehorende melding uit Hergebruik en UX op stderr en ontstaat er geen bestand. Een niet-gecommitte wijziging geeft de
-  waarschuwing op stderr, exitcode 0 en een pakket zonder die wijziging. Toets: `test/scripts/reviewpakket.test.ts` (nieuw)
+  waarschuwing op stderr, exitcode 0 en een pakket zonder die wijziging. Toets: `test/scripts/reviewpakket.test.ts`
 - **agents-leveren/AC-18** — Gegeven `.gitignore` en `.claude/agents/reviewer.md`, wanneer de toets ze leest, dan negeert
-  `.gitignore` de map `.reviewpakket/` (`git check-ignore` op een bestand daarin slaagt), en staat de zin over het reviewpakket
-  uit Hergebruik en UX in stap 1 van de reviewer. Toets: `test/scripts/reviewpakket.test.ts` (nieuw)
+  `.gitignore` de map `.reviewpakket/` (`git check-ignore` op een bestand daarin slaagt), en noemt stap 1 van de reviewer het
+  `reviewpakket` (R-TEST-02: structuur, geen hele zin). Toets: `test/scripts/reviewpakket.test.ts`
 
 ## Randgevallen
 
