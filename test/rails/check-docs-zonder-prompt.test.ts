@@ -111,6 +111,12 @@ test('zonder-prompt: codespan met dubbele backticks verbergt de claim erna niet'
   expect((await found(doc, GH)).length).toBe(1);
 });
 
+test('zonder-prompt: een commando tussen dubbele backticks telt ook als claim', async () => {
+  const doc = { 'docs/framework.md': 'Dan draait ``gh api *`` zonder prompt.\n' };
+
+  expect((await found(doc, GH)).map((v) => v.key)).toStrictEqual(['docs:zonder-prompt:docs/framework.md:gh api *']);
+});
+
 test('zonder-prompt: claim met wildcard tegen een smallere deny wordt letterlijk getoetst', async () => {
   const doc = { 'docs/framework.md': '`gh api *` zonder prompt.\n' };
 

@@ -134,7 +134,10 @@ function opsomming(tekst, spans, index) {
   for (const span of [...spans].reverse()) {
     if (span.eind > positie) continue;
     if (!SCHEIDING.test(tekst.slice(span.eind, positie))) break;
-    const inhoud = tekst.slice(span.start + 1, span.eind - 1).trim();
+    const inhoud = tekst
+      .slice(span.start, span.eind)
+      .replace(/^`+|`+$/g, '')
+      .trim();
     if (COMMANDO.test(inhoud)) commandos.unshift(inhoud);
     positie = span.start;
   }
