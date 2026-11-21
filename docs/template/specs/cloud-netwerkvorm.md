@@ -230,7 +230,9 @@ Geen UI. Zichtbare tekst staat letterlijk in Ontwerp punt 2, 3 en 6.
    (c) `git commit -F <bestand>` en `git push origin HEAD`, elk los, slagen zonder fout. (d) De startmelding toont de
    Cloud-regel. Dat meet ook of het hookproces `CLAUDE_CODE_REMOTE` ziet. (e) `gh api -X DELETE
    repos/{owner}/{repo}/git/refs/heads/<testbranch>` verwijdert een wegwerpbranch. Gemeten op 20 november 2026 in deze sessie:
-   een GET met `{owner}/{repo}` op `git/refs/heads/<branch>` slaagt door het rolhek. DELETE is niet gemeten.
+   een GET met `{owner}/{repo}` op `git/refs/heads/<branch>` slaagt door het rolhek. DELETE is niet gemeten. Vastgelegd op
+   21 november 2026 in F8 tot en met F12. Voor (e) maakt de eigenaar de wegwerpbranch, want het rolhek weigert de push met
+   een refspec (F12).
 1. Unit: de AC's hierboven, in `pnpm gate:fast`.
 
 ## Open vragen
@@ -241,7 +243,7 @@ Geen UI. Zichtbare tekst staat letterlijk in Ontwerp punt 2, 3 en 6.
   `git commit *` en draait dus buiten de sandbox. Eigenaar, 20 november 2026: niet weigeren. De regel volgt alleen de lijst;
   de startmelding en de docs noemen `-F` als de vorm.
 - **OV-3 ✅ besloten** — Startmelding alleen in de cloud of altijd? Eigenaar, 20 november 2026: alleen in de cloud, herkend aan
-  `CLAUDE_CODE_REMOTE=true` (F7). De meting in het hookproces volgt in stap 0.
+  `CLAUDE_CODE_REMOTE=true` (F7). Het hookproces ziet die variabele ook (F8).
 - **OV-4 ✅ besloten** — MCP-bestandsschrijftools altijd weigeren, of in de hoofdsessie na een vraag? Eigenaar, 20 november 2026:
   in de hoofdsessie na een vraag, voor een subagent weigeren.
 - **OV-5 ✅ besloten** (spec-review B-2) — Geldt de regel overal of alleen in de cloud? Eigenaar, 20 november 2026: overal,
