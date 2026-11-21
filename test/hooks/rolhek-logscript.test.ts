@@ -1,5 +1,8 @@
-import { readFileSync } from 'node:fs';
-import { describe, expect, test } from 'vitest';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { afterEach, describe, expect, test } from 'vitest';
 import { padNiveau, samengevoegd } from '../../rails/hooks/lib/padtabel.mjs';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 import * as runner from '../../rails/hooks/lib/runner-authority.mjs';
@@ -183,5 +186,63 @@ describe('ci-log/AC-9 configuratie', () => {
     const gates: unknown = JSON.parse(readFileSync('.claude/gates.json', 'utf8'));
     expect(padNiveau('scripts/kit/pr-log.mjs', samengevoegd(gates, null)).besluit).toBe('besluit-pr');
     expect(sectie(sectie(gates)['paden'])['scripts/kit/pr-log.mjs']).toStrictEqual({ besluit: 'besluit-pr' });
+  });
+});
+
+// Bouwreview N-1: op een echte git-fixture (anker = main, branch eraf), zoals test/hooks/rolhek-pr-merge.test.ts. Zo staat vast
+// dat de ankertoets van het logscript de modus niet leest (ADR 0102 punt 2) en wel de bestanden en `node_modules/.bin`.
+const ROOTS: string[] = [];
+const GIT_ENV = {
+  GIT_AUTHOR_NAME: 'Log test',
+  GIT_AUTHOR_EMAIL: 'log@example.test',
+  GIT_COMMITTER_NAME: 'Log test',
+  GIT_COMMITTER_EMAIL: 'log@example.test',
+  GIT_CONFIG_GLOBAL: '/dev/null',
+  GIT_CONFIG_SYSTEM: '/dev/null',
+};
+
+afterEach(() => {
+  for (const root of ROOTS.splice(0)) rmSync(root, { recursive: true, force: true });
+});
+
+function git(root: string, args: string[]): string {
+  return execFileSync('git', args, { cwd: root, encoding: 'utf8', env: { ...process.env, ...GIT_ENV } }).trim();
+}
+
+function schrijf(root: string, bestand: string, tekst: string): void {
+  mkdirSync(path.dirname(path.join(root, bestand)), { recursive: true });
+  writeFileSync(path.join(root, bestand), tekst);
+}
+
+function fixture(modus: string) {
+  const root = mkdtempSync(path.join(tmpdir(), 'pr-log-'));
+  ROOTS.push(root);
+  git(root, ['init', '-q', '-b', 'main']);
+  const gates = JSON.stringify({ merge: modus });
+  schrijf(root, '.claude/gates.json', gates);
+  schrijf(root, 'package.json', '{"scripts":{"pr:log":"node scripts/kit/pr-log.mjs"}}\n');
+  schrijf(root, 'scripts/kit/pr-log.mjs', '// fixture; nooit uitvoeren\n');
+  schrijf(root, 'rails/hooks/lib/x.mjs', '// fixture\n');
+  git(root, ['add', '.']);
+  git(root, ['commit', '-q', '-m', 'test: fixture']);
+  const sha = git(root, ['rev-parse', 'HEAD']);
+  git(root, ['switch', '-q', '-c', 'feat/x']);
+  return { root, basis: { sha, read: (rel: string) => (rel === '.claude/gates.json' ? gates : null) } };
+}
+
+describe('ci-log/AC-8 ankertoets op een echte git-fixture', () => {
+  test('ci-log/AC-8: modus eigenaar en ongewijzigd: trustedKitScript ja, trustedMerge nee', () => {
+    const { root, basis } = fixture('eigenaar');
+    expect(runner.trustedKitScript(root, basis)).toBe(true);
+    expect(runner.trustedMerge(root, basis)).toBe(false);
+  });
+
+  test('ci-log/AC-8: een gewijzigd script of een geplante node_modules/.bin/gh: trustedKitScript nee', () => {
+    const gewijzigd = fixture('eigenaar');
+    schrijf(gewijzigd.root, 'scripts/kit/pr-log.mjs', '// gewijzigd\n');
+    expect(runner.trustedKitScript(gewijzigd.root, gewijzigd.basis)).toBe(false);
+    const geplant = fixture('eigenaar');
+    schrijf(geplant.root, 'node_modules/.bin/gh', '#!/bin/sh\n');
+    expect(runner.trustedKitScript(geplant.root, geplant.basis)).toBe(false);
   });
 });

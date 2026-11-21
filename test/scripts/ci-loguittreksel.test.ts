@@ -1,5 +1,14 @@
 import { describe, expect, test } from 'vitest';
-import { argumenten, foutUittreksel, ghArgs, leesPr, rodeJobs, rodeRuns, verslag } from '../../scripts/kit/pr-log.mjs';
+import {
+  argumenten,
+  foutUittreksel,
+  ghArgs,
+  leesPr,
+  maakApi,
+  rodeJobs,
+  rodeRuns,
+  verslag,
+} from '../../scripts/kit/pr-log.mjs';
 
 // Spec ci-log (ADR 0102): de pure delen van `pnpm pr:log <nummer>`, zonder netwerk.
 
@@ -201,5 +210,51 @@ describe('ci-log/AC-6: leesPr met een nep-Api', () => {
     expect(() => leesPr(api, { repository: REPO, nummer: 12 })).toThrow(
       `GitHub is niet leesbaar: repos/${REPO}/pulls/12`,
     );
+  });
+});
+
+describe('ci-log/AC-3: aansluitende vensters', () => {
+  test('ci-log/AC-3: een venster dat direct op het vorige aansluit, wordt één blok', () => {
+    const fouten = [20, 36];
+    expect(foutUittreksel(log(40, fouten))).toStrictEqual(bereik(5, 36, fouten));
+  });
+});
+
+describe('ci-log/AC-6: maakApi en verkeerde vormen', () => {
+  test('ci-log/AC-6: een exec die gooit of geen JSON geeft, wordt de melding met het endpoint', () => {
+    const gooit = maakApi(() => {
+      throw new Error('HTTP 401');
+    });
+    expect(() => gooit.tekst('repos/x/y/actions/jobs/1/logs')).toThrow(
+      'GitHub is niet leesbaar: repos/x/y/actions/jobs/1/logs',
+    );
+    expect(() => maakApi(() => 'geen json').json('repos/x/y/pulls/1')).toThrow(
+      'GitHub is niet leesbaar: repos/x/y/pulls/1',
+    );
+    expect(maakApi(() => '{"a":1}').json('repos/x/y/pulls/1')).toStrictEqual({ a: 1 });
+  });
+
+  test('ci-log/AC-6: runs met een verkeerde vorm geven de melding met het endpoint', () => {
+    const endpoint = `repos/${REPO}/actions/runs?head_sha=${SHA}&per_page=100`;
+    const api = {
+      json: (gevraagd: string): unknown => (gevraagd === endpoint ? { workflow_runs: 'x' } : PR),
+      tekst: (): string => '',
+    };
+    expect(() => leesPr(api, { repository: REPO, nummer: 12 })).toThrow(`GitHub is niet leesbaar: ${endpoint}`);
+  });
+
+  test('ci-log/AC-6: een kop die geen sha is, komt niet in een endpoint', () => {
+    const gevraagd: string[] = [];
+    const api = {
+      json: (endpoint: string): unknown => {
+        gevraagd.push(endpoint);
+        return { ...PR, head: { ...PR.head, sha: 'abc&x=1' } };
+      },
+      tekst: (): string => '',
+    };
+    expect(() => leesPr(api, { repository: REPO, nummer: 12 })).toThrow(
+      `GitHub is niet leesbaar: repos/${REPO}/pulls/12`,
+    );
+    expect(gevraagd).toStrictEqual([`repos/${REPO}/pulls/12`]);
   });
 });

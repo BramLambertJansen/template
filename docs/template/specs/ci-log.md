@@ -39,10 +39,12 @@ script importeert alleen `node:`-modules en bestanden uit `scripts/` en `rails/`
    `Gebruik: pnpm pr:log <nummer>` en exitcode 1.
 2. **GitHub:** elke aanroep is `gh api <endpoint>` (`ghArgs(endpoint)` geeft precies `['api', endpoint]`: geen `-X`, `-f`,
    `-F`, `--method` of `--input`), met `env: ZONDER_BIN`. JSON-antwoorden en de log (tekst) lopen via een `Api`-object
-   (`{ json, tekst }`), zodat de stroom zonder netwerk te testen is.
+   (`{ json, tekst }`), zodat de stroom zonder netwerk te testen is. `maakApi(exec)` bouwt dat object op een `exec`
+   (standaard `gh` via `execFileSync`): elke fout en onleesbare JSON wordt `GitHub is niet leesbaar: <endpoint>`.
 3. **Bron:** basis `origin/main`, repository uit `readAuthority`, de kop uit `parsePullRequest(api.json('repos/<repo>/pulls/<nr>'))`.
    Zonder leesbare basis: `Geen leesbare vertrouwde basis` en exitcode 1. Een PR uit een fork geeft de melding van
-   `parsePullRequest`.
+   `parsePullRequest`. Een kop die geen sha van 40 hextekens is, komt niet in een endpoint: dan
+   `GitHub is niet leesbaar: <endpoint van de PR>`.
 4. **Runs** (`rodeRuns(antwoord)`, puur): uit `repos/<repo>/actions/runs?head_sha=<sha>&per_page=100` de runs met `conclusion`
    `failure` of `timed_out`, plus elke run met `status` anders dan `completed` (die kan al een rode job hebben); en het aantal
    runs dat nog loopt.
@@ -60,7 +62,8 @@ script importeert alleen `node:`-modules en bestanden uit `scripts/` en `rails/`
    - zonder rode job `Geen rode jobs op <sha>.`;
    - lopen er runs: als laatste regel `Nog bezig: <n> run(s)`.
    Exitcode 0, ook met rode jobs (de uitslag geeft `pnpm pr:verify`).
-9. **Fouten:** een onleesbaar antwoord geeft `GitHub is niet leesbaar: <endpoint>` en exitcode 1. Het script schrijft niets
+9. **Fouten:** een onleesbaar antwoord, of een antwoord met een verkeerde vorm, geeft
+   `GitHub is niet leesbaar: <endpoint>` en exitcode 1. Het script schrijft niets
    naar GitHub of de schijf.
 
 ### Het rolhek
@@ -115,7 +118,8 @@ script importeert alleen `node:`-modules en bestanden uit `scripts/` en `rails/`
   letterlijke uitvoer uit "Het script" punt 8. Toets: `test/scripts/ci-loguittreksel.test.ts`
 - **ci-log/AC-6** — Gegeven een nep-`Api` met een PR, een rode en een lopende run met elk een rode job, wanneer `leesPr` draait,
   dan het verslag met beide jobs en `Nog bezig: 1 run(s)`, en elk gevraagd endpoint begint met `repos/<repo>/`; `ghArgs(x)` is
-  precies `['api', x]`; een `Api` die gooit, geeft `GitHub is niet leesbaar: <endpoint>`. Toets:
+  precies `['api', x]`; `maakApi` met een `exec` die gooit of geen JSON geeft, runs met een verkeerde vorm en een kop die
+  geen sha is, geven `GitHub is niet leesbaar: <endpoint>` (de kop: zonder verder endpoint). Toets:
   `test/scripts/ci-loguittreksel.test.ts`
 - **ci-log/AC-7** — Rolhek: `pnpm pr:log 12` als hoofdsessie vanuit de repo-root met `kitTrusted` waar geeft allow, ook met
   `mergeTrusted` onwaar; met `kitTrusted` onwaar of buiten de repo-root deny met de basismelding; elke subagent deny met de

@@ -113,10 +113,12 @@ export function verslag({ nummer, sha, jobs, bezig }) {
 export function leesPr(api, { repository, nummer }) {
   const basis = `repos/${repository}`;
   const sha = parsePullRequest(api.json(`${basis}/pulls/${String(nummer)}`)).headSha;
-  const { runs, bezig } = rodeRuns(api.json(`${basis}/actions/runs?head_sha=${sha}&per_page=100`));
+  if (!/^[0-9a-f]{40}$/.test(sha)) throw new Error(`GitHub is niet leesbaar: ${basis}/pulls/${String(nummer)}`);
+  const runsEndpoint = `${basis}/actions/runs?head_sha=${sha}&per_page=100`;
+  const { runs, bezig } = metEndpoint(runsEndpoint, () => rodeRuns(api.json(runsEndpoint)));
   /** @type {RodeJob[]} */
   const jobs = runs.flatMap((run) =>
-    rodeJobs(api.json(`${basis}/actions/runs/${String(run.id)}/jobs?per_page=100`)).map((job) => ({
+    jobsVan(api, `${basis}/actions/runs/${String(run.id)}/jobs?per_page=100`).map((job) => ({
       run: run.name,
       job: job.name,
       conclusion: job.conclusion,
@@ -126,32 +128,51 @@ export function leesPr(api, { repository, nummer }) {
   return verslag({ nummer, sha, jobs, bezig });
 }
 
-/** @param {string} endpoint @returns {string} */
-function ghTekst(endpoint) {
+/**
+ * Een antwoord met een verkeerde vorm geeft dezelfde melding als een onleesbaar antwoord, met het endpoint (spec punt 9).
+ * @template T @param {string} endpoint @param {() => T} lees @returns {T}
+ */
+function metEndpoint(endpoint, lees) {
   try {
-    return execFileSync('gh', ghArgs(endpoint), {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-      env: ZONDER_BIN,
-      maxBuffer: 64 * 1024 * 1024,
+    return lees();
+  } catch (fout) {
+    const tekst = fout instanceof Error ? fout.message : String(fout);
+    throw new Error(tekst.startsWith('GitHub is niet leesbaar') ? tekst : `GitHub is niet leesbaar: ${endpoint}`, {
+      cause: fout,
     });
-  } catch {
-    throw new Error(`GitHub is niet leesbaar: ${endpoint}`);
   }
 }
 
-/** @type {Api} */
-const GH = {
-  tekst: ghTekst,
-  json: (endpoint) => {
-    const tekst = ghTekst(endpoint);
-    try {
-      return JSON.parse(tekst);
-    } catch {
-      throw new Error(`GitHub is niet leesbaar: ${endpoint}`);
-    }
-  },
-};
+/** @param {Api} api @param {string} endpoint */
+function jobsVan(api, endpoint) {
+  return metEndpoint(endpoint, () => rodeJobs(api.json(endpoint)));
+}
+
+/**
+ * De echte `Api` op een `exec` (standaard `gh` via execFileSync): elke fout of onleesbare JSON wordt
+ * `GitHub is niet leesbaar: <endpoint>`.
+ * @param {(endpoint: string) => string} exec @returns {Api}
+ */
+export function maakApi(exec) {
+  const tekst = (/** @type {string} */ endpoint) => metEndpoint(endpoint, () => exec(endpoint));
+  return {
+    tekst,
+    json: (endpoint) => {
+      const ruw = tekst(endpoint);
+      return metEndpoint(endpoint, () => JSON.parse(ruw));
+    },
+  };
+}
+
+/** @param {string} endpoint @returns {string} */
+function ghExec(endpoint) {
+  return execFileSync('gh', ghArgs(endpoint), {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+    env: ZONDER_BIN,
+    maxBuffer: 64 * 1024 * 1024,
+  });
+}
 
 function main() {
   const root = process.cwd();
@@ -159,7 +180,7 @@ function main() {
   const base = gitText(root, ['rev-parse', 'origin/main'])?.trim();
   const authority = base === undefined ? null : readAuthority({ root, base });
   if (authority === null) throw new Error('Geen leesbare vertrouwde basis');
-  console.log(leesPr(GH, { repository: authority.repository, nummer }));
+  console.log(leesPr(maakApi(ghExec), { repository: authority.repository, nummer }));
 }
 
 if (import.meta.main)
