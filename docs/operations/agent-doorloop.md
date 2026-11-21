@@ -255,6 +255,12 @@ vraagt nieuw bewijs; geen hergebruik van een oude groene uitslag of generieke ca
 Overdracht bevat alleen doel, toepasselijke spec/contract of verwachte uitkomst uit de opdracht/PR, gewijzigde paden,
 open keuzes en echte checkuitslagen. Wie reviewt en wanneer de eigenaar dat overneemt: framework §8 (eisen aan de rollen).
 
+Vóór elke review draait de hoofdsessie `node scripts/kit/reviewpakket.mjs` en geeft het pad van stdout mee aan de
+reviewer; die leest het pakket met Read in plaats van losse `git log`/`git diff`-aanroepen. Bij een re-review:
+`--sinds <laatst gereviewde sha>`, dan bevat het alleen de fixcommits. Verder `--basis <ref>` (standaard `origin/main`) en
+`--spec <pad>`. Het pakket staat in `.reviewpakket/` (genegeerd); gegenereerde bestanden staan alleen in Stat; een
+niet-gecommitte wijziging staat er niet in en geeft een waarschuwing (`scripts/kit/reviewpakket.mjs:1`, spec `agents-leveren` punt 1d).
+
 De gerichte feedback volgt ADR 0057. De vertrouwde
 hooklader gebruikt main; een branch activeert geen nieuwe rechten. De live ruleset en strikte build-proof uit dat
 ADR zijn afzonderlijk vervolgwerk en worden door deze hookwijziging niet als gebouwd of actief verklaard; de GitHub App uit

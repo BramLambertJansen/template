@@ -64,6 +64,8 @@ describe('agents-leveren/AC-10 geen kopie van AGENTS.md in de developer', () => 
     // R-TEST-02: structuur, geen hele zin. Punt 5 bestaat en gaat over pushen door de hoofdsessie.
     const punt5 = developer.split('\n').find((regel) => regel.startsWith('5. ')) ?? '';
     expect(punt5).toMatch(/pushen/);
+    // GEWIJZIGD (agents-leveren PR-5, review B2): ook mergen hoort bij punt 5.
+    expect(punt5).toMatch(/mergen/);
     expect(punt5).toMatch(/hoofdsessie/);
   });
 });
