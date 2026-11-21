@@ -23,7 +23,10 @@ Feiten nu:
    Start pnpm niet of weigert de werkmap ondanks gelijke head-SHA's, volg dan `docs/operations/agent-doorloop.md`,
    "Als pr:verify niet start of de werkmap weigert" (leerpunt #329); dezelfde verificatie blijft vereist.
    Alleen de uitvoer van `pr:verify` die de hoofdsessie zelf draaide telt als bewijs, niet die van een subagent (ADR 0084 punt 5).
-3. Bij rood: `gh run view <run-id> --log-failed`, de oorzaak fixen, committen, pushen en opnieuw wachten. Geen vast aantal rondes.
+3. Bij rood: de rode jobs met `gh api --paginate "repos/{owner}/{repo}/actions/runs/<run-id>/jobs" --jq '.jobs[] | select(.conclusion == "failure") | {id, name}'`
+   en hun log met `gh api "repos/{owner}/{repo}/actions/jobs/<job-id>/logs"`, lokaal en in de cloud (recepten:
+   `node scripts/kit/feiten.mjs recepten`; `gh run view <run-id> --log-failed` werkt alleen buiten de sandbox). Dan de
+   oorzaak fixen, committen, pushen en opnieuw wachten. Geen vast aantal rondes.
 4. Na fixes bekijkt de reviewer alleen het verschil: `git diff <reviewer-sha>..HEAD` (uitzonderingen: `docs/operations/review-checklists.md`, "Werkwijze").
 5. Stop en vraag de eigenaar bij: (a) een fix die een regel, check, hook of test zou afzwakken; (b) dezelfde fout drie keer achter elkaar (voer dan eerst de leerpuntstap uit Opruimen stap 8 uit);
    (c) een oorzaak buiten de code (runner, GitHub-storing); (d) een gate-pad of beschermd pad dat moet wijzigen.
@@ -45,7 +48,7 @@ GitHub: open de PR onder zijn account, meld hem en wacht. Ander werk (ADR 0069, 
 1. De PR raakt geen beschermd pad en de verplichte checks zijn groen op de head (het script toetst beide).
 2. Een verse reviewer keurde precies de head goed, na elke push opnieuw (afspraak; het script toetst dit niet meer).
 3. Threads zijn opgelost; een externe review is geen voorwaarde. Een verwerkte botbevinding beantwoord je in het gesprek
-   (`gh api -X POST repos/<repo>/pulls/<nr>/comments/<id>/replies -F body=@<bestand>`); na de push met de fix sluit
+   (`gh api -X POST "repos/{owner}/{repo}/pulls/<nr>/comments/<id>/replies" -F body=@<bestand>`); na de push met de fix sluit
    `pnpm pr:resolve <nr>` elk beantwoord en verouderd botgesprek (ADR 0098). Elk ander open gesprek sluit de eigenaar.
 4. `pnpm pr:merge <nr>` toetst alles via GitHub en noemt wat ontbreekt. Nooit `gh pr merge`, `gh api …/merge` of een andere route.
 5. Meld PR en SHA aan de eigenaar en volg de CI op `main`; rood: revert-PR. Na revert, rode `main` of
@@ -56,7 +59,10 @@ GitHub: open de PR onder zijn account, meld hem en wacht. Ander werk (ADR 0069, 
 Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
 
 1. Trigger: `gh pr view <nr> --json state,mergedAt,mergeCommit,headRefName,headRefOid` met `state` gelijk aan `MERGED`
-   (het veld `merged` bestaat niet in `gh`). Anders niets opruimen.
+   (het veld `merged` bestaat niet in `gh`). In de cloud (`gh pr` gaat daar via GraphQL): een gebeurtenis `merged` uit
+   `gh api --paginate "repos/{owner}/{repo}/issues/<nr>/events" --jq '.[] | {event, commit_id}'`, met `ref` en `sha` als
+   `headRefName` en `headRefOid` uit `gh api "repos/{owner}/{repo}/pulls/<nr>" --jq '{state, closed_at, draft, ref: .head.ref, sha: .head.sha}'`.
+   Anders niets opruimen.
 2. Stop en meld, forceer niets, als: `git status --porcelain` niet leeg is; de lokale branch niet `headRefName` is; of de lokale branch
    commits heeft die niet in `headRefOid` zitten (ongepusht werk).
 3. Eerst `git fetch origin` en de controle uit `docs/operations/agent-doorloop.md`, "Branchwissels in een sandbox",
@@ -69,7 +75,7 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
 4. Een andere worktree van die branch eerst weghalen: `git worktree remove <pad>` zonder `--force` (git weigert anders de branch te verwijderen).
    De worktree waarin je zelf draait ruimt de runtime of de eigenaar op; heeft stap 3 de branch daar losgemaakt, dan lukt stap 5 gewoon.
 5. `git branch -D <headRefName>` (`-d` faalt na een squash-merge). Alleen die branch, nooit `main`.
-6. Staat de remote branch er nog: `gh api -X DELETE repos/{owner}/{repo}/git/refs/heads/<headRefName>`, als los commando
+6. Staat de remote branch er nog: `gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<headRefName>"`, als los commando
    (spec cloud-netwerkvorm; `git push origin --delete` weigert het rolhek). Nooit `main`; het rolhek weigert dat ook.
    Lokaal kan deze stap een vraag aan de eigenaar geven.
 7. Eindmelding: wat is opgeruimd (lokale branch, remote branch, worktree) en de nieuwe SHA van `main`.
@@ -77,13 +83,13 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
    zodat de volgende feature dit niet opnieuw betaalt?"
 8. Leerpunt (ADR 0059): Loop de signaalmomenten van deze sessie af: slotvraag, derde CI-ronde, eigenaarcorrectie (pnpm meting),
    blokkerende reviewbevinding (Leerpunt: ja), tweede mislukte correctiepoging. Per les: Leerpunt? Generiek: dien het in volgens
-   het sjabloon leerpunt (gh issue create naar onderhoud.repository met --label leerpunt) en toon de tekst. Alleen voor deze app:
+   het sjabloon leerpunt (gh issue create naar template.repository met --label leerpunt) en toon de tekst. Alleen voor deze app:
    een padregel, spec of ADR (`docs/specs/`, `docs/adr/`) in de app, geen issue. Niets: zeg "geen leerpunt".
    Vraag ook (ADR 0081): kostte een stap, check, hook of instructie in deze sessie merkbaar tijd, rondes of tokens zonder iets
    te vangen, of las je code die bij gelijk gedrag veel korter of sneller kan? Dan een leerpunt met plek
    `Schrappen of vereenvoudigen` en een `Onderbouwing` met de regels `Meting:`, `Overname:` en `Terugval:`.
-   De repo is `onderhoud.repository` uit `.claude/gates.json`; precies één `--label leerpunt`, geen andere vorm (anders vraagt het rolhek).
-   In een app heeft `pnpm app:init` die regel verwijderd; de repo is dan de template, BramLambertJansen/template (ADR 0059), net als in het rolhek.
+   De repo is `template.repository` uit `.claude/gates.json`, in de template en in een app, net als in het rolhek (spec
+   template-repo); precies één `--label leerpunt`, geen andere vorm (anders vraagt het rolhek).
    Titel `Leerpunt: <soort>: <één zin>`; body in de volgorde van `.github/ISSUE_TEMPLATE/leerpunt.yml`, zonder appcode, appdata of geheimen:
 
    ```text
@@ -108,7 +114,7 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
    Zet de body in een tijdelijk bestand en geef het mee met `--body-file`: backticks of `$(` in het commando zelf geven een vraag.
    Bestaat het label nog niet, dan meld je dat; het label maakt de eigenaar. Triage en oppakken zijn van de eigenaar.
    Cloud, waar `gh` niet kan schrijven (ADR 0078 punt 4): de MCP-tool voor issues, alleen aanmaken, alleen naar
-   `onderhoud.repository`, met label `leerpunt` en dezelfde titel en body. Geen andere MCP-schrijfactie.
+   `template.repository`, met label `leerpunt` en dezelfde titel en body. Geen andere MCP-schrijfactie.
    Sluit een PR een leerpunt (sluitwoord of koppeling), dan krijgt de beschrijving de sectie `## Leerpunt` met per issue
    `- #<nr>: trede <trede>; bewijs <testpad>`; de job `leerpunt-bewijs` draait die test rood op de basis en groen op de head.
    Alleen bij Skill, Padregel, AGENTS.md of een integratie- of e2e-test: `bewijs geen test: <reden>`, en dan merget de eigenaar.

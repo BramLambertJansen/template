@@ -1,5 +1,5 @@
 // Live feiten (framework §8, ADR 0045): elke rol begint hiermee, niet met wat in proza staat.
-// Gebruik: node scripts/kit/feiten.mjs [gates|adr|specs|migraties|routes|permissies|foutcodes|koppelingen|componenten|tokens|fase] [--alle] [--json]
+// Gebruik: node scripts/kit/feiten.mjs [gates|adr|specs|migraties|routes|permissies|foutcodes|koppelingen|componenten|tokens|fase|recepten] [--alle] [--json]
 //          node scripts/kit/feiten.mjs hoofdstuk <n>: de tekst vóór de eerste `## `-kop van docs/framework.md plus
 //          hoofdstuk <n> (bij 8 ook 8a, 8b…; zoals `pnpm leespad` telt); onbekend: foutmelding en exit 1 (ADR 0065).
 //          node scripts/kit/feiten.mjs pad <pad>: schrijfniveau en besluit uit de padtabel, met de globs die ze leveren (ADR 0079).
@@ -102,6 +102,12 @@ const sections = {
   adr: plain(async () => uitLezer(await gereserveerdeAdrNummers()).adr()),
   specs: plain(() => uitLezer({}).specs()),
   fase: plain(() => uitLezer({}).fase()),
+  // Spec agent-recepten: de receptenkaart voor de eigen runtime; `--alle` toont beide kolommen.
+  recepten: async () => {
+    const { KAART, receptenSectie } = await import('./recepten.mjs');
+    const tekst = existsSync(KAART) ? readFileSync(KAART, 'utf8') : null;
+    return receptenSectie(tekst, { cloud: process.env['CLAUDE_CODE_REMOTE'] === 'true', alle });
+  },
 };
 
 const wanted = args.filter((arg) => !arg.startsWith('--'));

@@ -210,13 +210,14 @@ draaien vier commando's buiten de sandbox (`sandbox.excludedCommands` in `.claud
 | PR openen | `mcp__github__create_pull_request` | `gh pr create` werkt niet in de cloud (GraphQL); Claude Code vraagt de eigenaar één keer per PR (gemeten: één prompt, spec `cloud-pr-route` F10; ADR 0078 punt 4, herzien) |
 | Bewijs lezen | `pnpm pr:verify <nummer>`, `gh api repos/{owner}/{repo}/…` | alleen REST; `gh pr …` en `gh issue …` gebruiken GraphQL en werken niet |
 
-Lokaal blijft `gh pr create --head <branch> --body-file <bestand>` de route (zie Dagelijks werken).
+Lokaal blijft `gh pr create --head <branch> --body-file <bestand>` de route (zie Dagelijks werken). Elke handeling met git,
+gh en CI per runtime staat in de [receptenkaart](operations/recepten.md) (`node scripts/kit/feiten.mjs recepten`).
 
 Het rolhek weigert, lokaal en in de cloud, voor elke rol een commando dat een patroon uit `excludedCommands` raakt maar er
 niet in zijn geheel op past: `git commit -F m 2>&1 | tail`, `git push -u origin <branch>`, `pnpm run test:db`. De reden noemt
 de vorm die wel buiten de sandbox draait (`rails/hooks/lib/rolhek.mjs:2601`, spec `cloud-netwerkvorm`). De lijst komt uit
 `.claude/settings.json` in het anker (`rails/hooks/lib/rolhek-context.mjs:71`); een wijziging werkt in het rolhek pas na de
-merge. Een remote branch verwijder je met `gh api -X DELETE repos/{owner}/{repo}/git/refs/heads/<branch>`; `main` verwijderen
+merge. Een remote branch verwijder je met `gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<branch>"` (endpoint tussen aanhalingstekens, zie de receptenkaart); `main` verwijderen
 of verzetten via `gh api` is voor elke rol verboden (`rails/hooks/lib/rolhek.mjs:2492`). `mcp__github__push_files`,
 `create_or_update_file` en `delete_file` slaan lefthook over: de hoofdsessie krijgt een vraag, een subagent een weigering
 (`rails/hooks/lib/rolhek.mjs:115`). Een cloudsessie (`CLAUDE_CODE_REMOTE=true`) toont de route bij de start in één regel

@@ -17,7 +17,7 @@ export const gates = [
   {
     script: 'ratchet',
     bewaakt:
-      'lagen en zones (dependency-cruiser) en docs (check-docs: paden, links, statussen, spiegeling, claims "zonder prompt" tegen .claude/settings.json) tegen .kit/baseline.json; strikt: geen onderdrukking in eslint-suppressions.json stijgt tegenover de merge-base, geen conflictmarker in een getrackt tekstbestand, geen gewijzigd changelogfragment dat al op de merge-base staat, elk pgTAP-bestand in db/tests in de vorm van R-TEST-05 en elke nieuwe of gewijzigde AC noemt zijn testbestand achter Toets: (ac-toets)',
+      'lagen en zones (dependency-cruiser) en docs (check-docs: paden, links, statussen, spiegeling, claims "zonder prompt" tegen .claude/settings.json, voorgeschreven commando\'s in agentinstructies en docs/operations/recepten.md tegen het rolhek) tegen .kit/baseline.json; strikt: geen onderdrukking in eslint-suppressions.json stijgt tegenover de merge-base, geen conflictmarker in een getrackt tekstbestand, geen gewijzigd changelogfragment dat al op de merge-base staat, elk pgTAP-bestand in db/tests in de vorm van R-TEST-05 en elke nieuwe of gewijzigde AC noemt zijn testbestand achter Toets: (ac-toets)',
     snel: true,
   },
   {

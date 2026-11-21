@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd
 namespace: agent-recepten
 ---
 
@@ -25,7 +25,8 @@ weigert (leerpunten #893, #679 en #807).
   permissiepatroon, codeblokken en codespans uit `scripts/kit/markdown.mjs` en de zinsgrens `ZINSGRENS`.
 - `test/rails/check-docs-zonder-prompt.test.ts` — een tijdelijke git-repo per fixture, gefilterd op de sleutel.
 - `test/hooks/rolhek-netwerkvorm.test.ts` — een ctx voor `decide` zonder schijf, met `netwerkvormen` uit `.claude/settings.json`.
-- `scripts/kit/feiten-secties.mjs` — een sectie in `codeSecties` met `plain` en een plek in `VOLGORDE`.
+- `scripts/kit/feiten.mjs` — een sectie in de sectielijst die `--alle` leest (zoals `specs` en `fase`), met een plek in
+  `VOLGORDE` uit `scripts/kit/feiten-secties.mjs`.
 
 ## Hergebruik en UX
 
@@ -88,7 +89,8 @@ Onder de tabel staat:
 
 Nieuw bestand `scripts/kit/recepten.mjs` met twee exports: `receptRijen(tekst)` leest de tabel (een rij is
 `{ taak, lokaal, cloud }`, met `idem` al vervangen door de waarde van Lokaal) en `receptenSectie(tekst, { cloud, alle })` geeft
-het resultaat van een feitensectie. De sectie `recepten` staat in `codeSecties` en achteraan in `VOLGORDE`; ze leest
+het resultaat van een feitensectie. De sectie `recepten` staat in de sectielijst van `scripts/kit/feiten.mjs` (ze leest
+`--alle`) en achteraan in `VOLGORDE`; ze leest
 `docs/operations/recepten.md` uit de werkmap en `cloud` is `process.env.CLAUDE_CODE_REMOTE === 'true'`.
 
 - Kop: `runtime <lokaal|cloud> (CLAUDE_CODE_REMOTE); bron docs/operations/recepten.md; --alle toont beide kolommen`.
@@ -110,8 +112,8 @@ Nieuw bestand `scripts/kit/recept-rolhek.mjs` met één export `receptRolhekViol
    de melding gebruiken de kandidaat na deze vervanging.
 3. **Uitzonderingen, alleen buiten de kaart:** een codespan in een zin met het hele woord `nooit`, `weigert`, `weigeren`,
    `verboden` of `dicht` (hoofdletterongevoelig). Een zin loopt tot `;`, een zinseinde (`.`, `!` of `?` gevolgd door
-   witruimte), een witregel, een `|` zonder `\` ervoor, of een regeleinde gevolgd door `|` of een lijstmarker (`-`, `*`,
-   `<cijfers>.`), steeds buiten codespans. `niet` en `geen` tellen bewust niet: ze staan te vaak in een gewone instructie
+   witruimte), een witregel, een `|` zonder `\` ervoor, of een regeleinde gevolgd door `|` of een lijstmarker (`-`, `*` of
+   `<cijfers>.`, gevolgd door een spatie), steeds buiten codespans. `niet` en `geen` tellen bewust niet: ze staan te vaak in een gewone instructie
    ("als de branch nog geen upstream heeft"). Ook geen melding voor een kale `pnpm <script>` als `pnpm <script> 1` niet
    geweigerd wordt (een verwijzing naar een kitscript). Een regel in een codeblok heeft geen uitzondering.
 4. **Invullen:** elke plaatshouder `<…>` wordt `1`.
@@ -125,15 +127,17 @@ Nieuw bestand `scripts/kit/recept-rolhek.mjs` met één export `receptRolhekViol
 6. **Endpoint:** een `gh api`-commando waarvan het endpoint `{owner}` of `{repo}` bevat en niet tussen aanhalingstekens staat,
    is een melding, in de kaart en in de agentinstructies (dezelfde uitzonderingen als stap 3).
 
-Meldingen letterlijk, sleutel `docs:recept-rolhek:<bestand>:<commando>` (het commando zoals in het bestand):
+Meldingen letterlijk, sleutel `docs:recept-rolhek:<bestand>:<commando>` (het commando na de vervanging van `\|`, vóór het invullen van plaatshouders):
 
 - `<bestand>:<regel>: \`<commando>\` weigert het rolhek: <eerste deny-reden>`
 - `<bestand>:<regel>: \`<commando>\` staat in permissions.deny van .claude/settings.json`
 - `<bestand>:<regel>: \`<commando>\`: zet een endpoint met {owner} of {repo} tussen aanhalingstekens, anders draait gh api in de sandbox en geeft het 401`
 
 Zonder getrackt `.claude/gates.json` of `.claude/settings.json` geeft de check niets. Onleesbare JSON in een van beide geeft
-één melding met sleutel `docs:recept-rolhek:config` en tekst `<bestand>: geen geldige JSON`; gooit `loadConfig` op geldige
-JSON (een ontbrekende of verkeerde sleutel), dan dezelfde sleutel met tekst `.claude/gates.json: <foutmelding>`.
+één melding met sleutel `docs:recept-rolhek:config` en tekst `<bestand>: geen geldige JSON`. Gooit `loadConfig` op geldige
+JSON (een ontbrekende of verkeerde sleutel), dan geeft deze check niets en crasht hij niet: de vorm van `.claude/gates.json`
+bewaken andere deelchecks (`docs:paden`), en het rolhek faalt dan zelf dicht. Zo blijven de bestaande fixtures van
+`check-docs` met een minimale `gates.json` ongewijzigd.
 
 ### 4. De skill `opleveren` en de verwijzingen
 
@@ -155,33 +159,33 @@ JSON (een ontbrekende of verkeerde sleutel), dan dezelfde sleutel met tekst `.cl
 - **agent-recepten/AC-1** — Gegeven de getrackte bestanden van de template zelf, wanneer `receptRolhekViolations` draait,
   dan geen melding, en `receptRijen` op `docs/operations/recepten.md` geeft minstens de taken "Commit", "Push", "PR openen",
   "Log van een job", "Is de PR gemerged" en "Leerpunt indienen"; de rijen "Is de PR gemerged", "Reviewopmerkingen" en
-  "Open PR's" bevatten `--paginate`. Toets: `test/rails/check-docs-recept-rolhek.test.ts` (nieuw)
-- **agent-recepten/AC-2** — Gegeven `.claude/skills/x/SKILL.md` met de zin "Push met `git push -u origin HEAD`." en
-  `.claude/agents/y.md` met een codeblok met de regel `git push -u origin HEAD`, wanneer `check-docs` draait, dan twee meldingen
+  "Open PR's" bevatten `--paginate`. Toets: `test/rails/check-docs-recept-rolhek.test.ts`
+- **agent-recepten/AC-2** — Gegeven `.claude/skills/x/SKILL.md` (voorbeeld) met de zin "Push met `git push -u origin HEAD`." en
+  `.claude/agents/y.md` (voorbeeld) met een codeblok met de regel `git push -u origin HEAD`, wanneer `check-docs` draait, dan twee meldingen
   met sleutel `docs:recept-rolhek:<bestand>:git push -u origin HEAD` en "weigert het rolhek: Netwerkvorm"; met
-  `git push origin HEAD` geen. Toets: `test/rails/check-docs-recept-rolhek.test.ts` (nieuw)
+  `git push origin HEAD` geen. Toets: `test/rails/check-docs-recept-rolhek.test.ts`
 - **agent-recepten/AC-3** — Gegeven elk van deze teksten in een SKILL.md, wanneer `check-docs` draait, dan geen melding:
   "Nooit `gh pr merge 1`."; "`git push -u origin HEAD` weigert het rolhek."; "Regel `gh api *`."; "Zie `gh pr …`."; "Mergen
   via `pnpm pr:merge`."; en dezelfde verboden vorm in `docs/operations/andere.md`. Wel een melding: een codeblok met de regel
   `gh pr merge 1`; de zin "Push met `git push -u origin HEAD` als de branch nog geen upstream heeft."; een tabel met de rijen
-  `| Push | \`git push -u origin HEAD\` |` en `| Force | nooit |` (de `|` is een zinsgrens). Toets: `test/rails/check-docs-recept-rolhek.test.ts` (nieuw)
+  `| Push | \`git push -u origin HEAD\` |` en `| Force | nooit |` (de `|` is een zinsgrens). Toets: `test/rails/check-docs-recept-rolhek.test.ts`
 - **agent-recepten/AC-4** — Gegeven een kaart met een rij waarvan de cel Cloud "nooit `git push -u origin HEAD`" bevat, wanneer
   `check-docs` draait, dan een melding (de kaart kent geen uitzondering); een cel met
   `gh api "repos/{owner}/{repo}/commits/<sha>/check-runs" --jq .total_count` en `Bash(gh api *check-runs*)` in
-  `permissions.deny` geeft "staat in permissions.deny van .claude/settings.json". Toets: `test/rails/check-docs-recept-rolhek.test.ts` (nieuw)
+  `permissions.deny` geeft "staat in permissions.deny van .claude/settings.json". Toets: `test/rails/check-docs-recept-rolhek.test.ts`
 - **agent-recepten/AC-5** — Gegeven een kaart met `gh api repos/{owner}/{repo}/pulls/<nr>/comments --jq '.[].id'`, wanneer
   `check-docs` draait, dan de melding "zet een endpoint met {owner} of {repo} tussen aanhalingstekens"; met het endpoint tussen
   dubbele of enkele aanhalingstekens geen; dezelfde vorm zonder aanhalingstekens in een SKILL.md geeft dezelfde melding.
-  Toets: `test/rails/check-docs-recept-rolhek.test.ts` (nieuw)
+  Toets: `test/rails/check-docs-recept-rolhek.test.ts`
 - **agent-recepten/AC-6** — Gegeven `pnpm pr:merge <nr>` in een SKILL.md, wanneer `check-docs` draait, dan geen melding
   (plaatshouder `1`, vertrouwde ctx); zonder getrackt `.claude/gates.json` geen melding van deze check; met ongeldige JSON in
   `.claude/settings.json` precies één melding met sleutel `docs:recept-rolhek:config`; met een `.claude/gates.json` zonder
-  `testpaden` ook één, met de foutmelding van `loadConfig`. Toets:
-  `test/rails/check-docs-recept-rolhek.test.ts` (nieuw)
+  `testpaden` geen melding van deze check en geen crash. Toets:
+  `test/rails/check-docs-recept-rolhek.test.ts`
 - **agent-recepten/AC-7** — Gegeven een kaart met `\|` binnen een codespan en `idem` in de kolom Cloud, wanneer
   `receptRijen` draait, dan blijft de codespan één cel met een letterlijke `|` en is `cloud` gelijk aan `lokaal`; `receptenSectie` met `cloud: true`
   geeft per rij `{ taak, commando }` met de cel Cloud, met `cloud: false` de cel Lokaal, met `alle: true` `{ taak, lokaal, cloud }`;
-  zonder tabel de ene regel uit "Hergebruik en UX". Toets: `test/scripts/feiten-recepten.test.ts` (nieuw)
+  zonder tabel de ene regel uit "Hergebruik en UX". Toets: `test/scripts/feiten-recepten.test.ts`
 - **agent-recepten/AC-8** — De skill `opleveren` noemt in de CI-lus `actions/jobs/<job-id>/logs`, in Opruimen
   `issues/<nr>/events`, in de slotstap `template.repository` en niet meer `onderhoud.repository`, en elk `gh api`-endpoint met
   `{owner}` staat tussen aanhalingstekens. Toets: `test/rails/opleveren-skill.test.ts`

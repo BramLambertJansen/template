@@ -89,9 +89,10 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt de bestaande vo
   type voor bijlagen of logs, en de beschrijving en de uitleg van `bron` en `reproductie` sluiten appcode, appdata of geheimen
   uitdrukkelijk uit. Een extra veld (bijvoorbeeld `appnaam` of `logs`) laat de test falen.
 - **leerlus/AC-3** — De skill `opleveren` houdt de bestaande slotregel en heeft direct daarna de slotstap uit "Hergebruik en
-  UX", met `gh issue create`, `--label leerpunt`, `onderhoud.repository` en de uitzondering voor een app-specifieke les
+  UX", met `gh issue create`, `--label leerpunt`, `template.repository` (sinds spec `agent-recepten`, zoals het rolhek) en de uitzondering voor een app-specifieke les
   (padregel, spec of ADR in `docs/specs/` of `docs/adr/`, geen issue). De koppen voor de CLI-tekst in de skill zijn gelijk aan de labels van het
   sjabloon, in dezelfde volgorde; de test vergelijkt beide bestanden. Ook de stopgrond (b) verwijst naar deze stap.
+  Toets: `test/rails/opleveren-skill.test.ts`
 - **leerlus/AC-4** — `.claude/agents/reviewer.md` vraagt per blokkerende bevinding de regel `Leerpunt: ja (<soort>)` of
   `Leerpunt: nee`, met dezelfde soortenlijst als het sjabloon (de test vergelijkt).
 - **leerlus/AC-5** — Rolhek, hoofdsessie: `gh issue create` met `--repo`/`-R` gelijk aan `template.repository`
