@@ -25,6 +25,8 @@ function makeDeps(root) {
       }
     },
     onthoud: (/** @type {string} */ sleutel) => onthoud(run, root, sleutel),
+    // Spec cloud-netwerkvorm/AC-10: de Cloud-regel van session-start leest `CLAUDE_CODE_REMOTE` uit deze omgeving.
+    env: process.env,
   };
 }
 
