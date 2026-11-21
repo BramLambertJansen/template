@@ -25,6 +25,7 @@ van F1 tot en met F4: overdracht van de eigenaar, gemeten rond 16:35 UTC. Bron v
 | F5 | `sandbox.excludedCommands` (`.claude/settings.json:137-148`) bevat `pnpm pr:merge *`, `pnpm pr:resolve *`, `pnpm test:db *`, `pnpm ui:check *`, `pnpm gate:slow *`, `pnpm db:generate *`, `pnpm check:snapshot *`, `git commit *`, `git push origin HEAD`, `gh api *` en `pnpm pr:verify *`. |
 | F6 | `decideMcp` (`rails/hooks/lib/rolhek.mjs:341`) vraagt de hoofdsessie al om akkoord voor elke `mcp__`-tool buiten `mcpLezen`, en weigert hem voor een subagent. `mcpLezen` is `[]`. |
 | F7 | Een Bash-commando in deze cloudsessie ziet `CLAUDE_CODE_REMOTE=true` en `CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE=cloud_default`. |
+| F8 | (d) De startmelding van een nieuwe cloudsessie na de merge toont ``Cloud: commit `git commit -F <bestand>`, push `git push origin HEAD`, PR via `mcp__github__create_pull_request`, elk als los commando.`` Het hookproces ziet dus `CLAUDE_CODE_REMOTE=true`. |
 
 **Niet gemeten:** of een hookproces dezelfde `CLAUDE_CODE_REMOTE` ziet als een Bash-commando. Of Claude Code `pnpm test:db *`
 ook toepast op het kale `pnpm test:db`. Of een redirect zoals `2>&1` achter een verder passend commando de uitzondering
