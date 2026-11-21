@@ -121,7 +121,7 @@ Nieuw bestand `scripts/kit/recept-rolhek.mjs` met één export `receptRolhekViol
 5. **Toets:** `decide` uit `rails/hooks/lib/rolhek.mjs` met payload `{ tool_name: 'Bash', tool_input: { command } }` (de
    hoofdsessie) en een ctx zonder schijf: `root` en `cwd` `/repo`, `config` uit het getrackte `.claude/gates.json`, `read`
    geeft `null`, `committed` en `isDir` geven `false`, `branch` `feat/x`, `netwerkvormen` uit `sandbox.excludedCommands`,
-   `mergeTrusted` en `runnerTrusted` `true`; in een app ook `.claude/gates.app.json` als het getrackt is (tweede argument van
+   `mergeTrusted`, `kitTrusted` (sinds spec `ci-log`) en `runnerTrusted` `true`; in een app ook `.claude/gates.app.json` als het getrackt is (tweede argument van
    `loadConfig`). Een `deny` is een melding; een `ask` niet. Alleen zonder deny van het rolhek: een regel `Bash(<patroon>)` uit
    `permissions.deny` die het ingevulde commando dekt (`dekt` uit `zonder-prompt.mjs`) is een melding. Zo heeft elke
    kandidaat hooguit één melding.

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { argumenten, foutUittreksel, rodeJobs, verslag } from '../../scripts/kit/pr-log.mjs';
+import { argumenten, foutUittreksel, ghArgs, leesPr, rodeJobs, rodeRuns, verslag } from '../../scripts/kit/pr-log.mjs';
 
 // Spec ci-log (ADR 0102): de pure delen van `pnpm pr:log <nummer>`, zonder netwerk.
 
@@ -106,5 +106,100 @@ describe('ci-log/AC-5: verslag', () => {
 
   test('ci-log/AC-5: geen rode jobs', () => {
     expect(verslag({ nummer: 12, sha: 'abc', jobs: [], bezig: 0 })).toBe('PR #12 · abc\nGeen rode jobs op abc.');
+  });
+});
+
+describe('ci-log/AC-2: rodeRuns', () => {
+  test('ci-log/AC-2: rode en lopende runs, en het aantal dat nog loopt', () => {
+    const antwoord = {
+      workflow_runs: [
+        { id: 1, name: 'ci', status: 'completed', conclusion: 'failure' },
+        { id: 2, name: 'codeql', status: 'completed', conclusion: 'success' },
+        { id: 3, name: 'osv', status: 'completed', conclusion: 'cancelled' },
+        { id: 4, name: 'leerpunt', status: 'in_progress', conclusion: null },
+      ],
+    };
+    expect(rodeRuns(antwoord)).toStrictEqual({
+      runs: [
+        { id: 1, name: 'ci' },
+        { id: 4, name: 'leerpunt' },
+      ],
+      bezig: 1,
+    });
+  });
+});
+
+const REPO = 'eigenaar/repo';
+const SHA = 'a'.repeat(40);
+const PR = {
+  number: 12,
+  state: 'open',
+  merged: false,
+  base: { ref: 'main', repo: { full_name: REPO } },
+  head: { ref: 'feat/x', sha: SHA, repo: { full_name: REPO } },
+};
+
+describe('ci-log/AC-6: leesPr met een nep-Api', () => {
+  test('ci-log/AC-6: een rode en een lopende run met elk een rode job; alleen endpoints onder repos/<repo>/', () => {
+    const gevraagd: string[] = [];
+    const antwoorden: Record<string, unknown> = {
+      [`repos/${REPO}/pulls/12`]: PR,
+      [`repos/${REPO}/actions/runs?head_sha=${SHA}&per_page=100`]: {
+        workflow_runs: [
+          { id: 1, name: 'ci', status: 'completed', conclusion: 'failure' },
+          { id: 2, name: 'leerpunt-bewijs', status: 'in_progress', conclusion: null },
+        ],
+      },
+      [`repos/${REPO}/actions/runs/1/jobs?per_page=100`]: {
+        jobs: [{ id: 11, name: 'gate:fast', conclusion: 'failure' }],
+      },
+      [`repos/${REPO}/actions/runs/2/jobs?per_page=100`]: {
+        jobs: [
+          { id: 21, name: 'bewijs', conclusion: 'timed_out' },
+          { id: 22, name: 'nog', conclusion: null },
+        ],
+      },
+    };
+    const api = {
+      json: (endpoint: string): unknown => {
+        gevraagd.push(endpoint);
+        return antwoorden[endpoint];
+      },
+      tekst: (endpoint: string): string => {
+        gevraagd.push(endpoint);
+        return endpoint.endsWith('/11/logs') ? 'x\n##[error]stuk' : 'klaar';
+      },
+    };
+    expect(leesPr(api, { repository: REPO, nummer: 12 })).toBe(
+      [
+        `PR #12 · ${SHA}`,
+        '',
+        '## ci / gate:fast (failure)',
+        'x',
+        '##[error]stuk',
+        '',
+        '## leerpunt-bewijs / bewijs (timed_out)',
+        'klaar',
+        'Nog bezig: 1 run(s)',
+      ].join('\n'),
+    );
+    expect(gevraagd.every((endpoint) => endpoint.startsWith(`repos/${REPO}/`))).toBe(true);
+    expect(gevraagd).toHaveLength(6);
+  });
+
+  test('ci-log/AC-6: ghArgs geeft precies api en het endpoint', () => {
+    expect(ghArgs('repos/x/y/pulls/1')).toStrictEqual(['api', 'repos/x/y/pulls/1']);
+  });
+
+  test('ci-log/AC-6: een Api die gooit, geeft de melding door', () => {
+    const api = {
+      json: (endpoint: string): unknown => {
+        throw new Error(`GitHub is niet leesbaar: ${endpoint}`);
+      },
+      tekst: (): string => '',
+    };
+    expect(() => leesPr(api, { repository: REPO, nummer: 12 })).toThrow(
+      `GitHub is niet leesbaar: repos/${REPO}/pulls/12`,
+    );
   });
 });

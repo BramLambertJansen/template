@@ -23,7 +23,7 @@ Feiten nu:
    Start pnpm niet of weigert de werkmap ondanks gelijke head-SHA's, volg dan `docs/operations/agent-doorloop.md`,
    "Als pr:verify niet start of de werkmap weigert" (leerpunt #329); dezelfde verificatie blijft vereist.
    Alleen de uitvoer van `pr:verify` die de hoofdsessie zelf draaide telt als bewijs, niet die van een subagent (ADR 0084 punt 5).
-3. Bij rood: de rode jobs met `gh api --paginate "repos/{owner}/{repo}/actions/runs/<run-id>/jobs" --jq '.jobs[] | select(.conclusion == "failure") | {id, name}'`
+3. Bij rood: `pnpm pr:log <nr>` toont per rode job de regels rond elke fout (ADR 0102). Werkt dat niet: de rode jobs met `gh api --paginate "repos/{owner}/{repo}/actions/runs/<run-id>/jobs" --jq '.jobs[] | select(.conclusion == "failure") | {id, name}'`
    en hun log met `gh api "repos/{owner}/{repo}/actions/jobs/<job-id>/logs"`, lokaal en in de cloud (recepten:
    `node scripts/kit/feiten.mjs recepten`; `gh run view <run-id> --log-failed` werkt alleen buiten de sandbox). Dan de
    oorzaak fixen, committen, pushen en opnieuw wachten. Geen vast aantal rondes.

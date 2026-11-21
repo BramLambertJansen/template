@@ -140,7 +140,6 @@ describe('ci-log/AC-8 ankertoets in runner-authority.mjs', () => {
     const basis = {
       sha: 'a'.repeat(40),
       read: (bestand: string) => (bestand === '.claude/gates.json' ? JSON.stringify({ merge: 'eigenaar' }) : null),
-      readOptional: () => null,
     };
     expect(runner.trustedMerge('/repo', basis)).toBe(false);
   });

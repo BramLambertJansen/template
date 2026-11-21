@@ -86,6 +86,7 @@ function rolhekReden(regels, commando) {
     branch: 'feat/x',
     netwerkvormen: regels.netwerkvormen,
     mergeTrusted: true,
+    kitTrusted: true,
     runnerTrusted: true,
   };
   return decide({ tool_name: 'Bash', tool_input: { command: commando } }, ctx).deny[0] ?? null;

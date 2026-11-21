@@ -1179,7 +1179,7 @@ function codeownersViolations(ruw, tekst, appGlobs) {
 
 /**
  * `merge` (ADR 0069; blijft tot ADR 0089 punt 9): de modus is `eigenaar` of `niet-kritiek`; `pnpm pr:merge`,
- * `pnpm pr:resolve` (ADR 0098) en het rolhek lezen hem.
+ * `pnpm pr:resolve` (ADR 0098) en het rolhek lezen hem; `pnpm pr:log` (ADR 0102) gebruikt de ankertoets zonder de modus.
  * @param {string} text
  * @returns {Violation[]}
  */

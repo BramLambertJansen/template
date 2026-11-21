@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd
 namespace: ci-log
 ---
 
@@ -99,37 +99,37 @@ script importeert alleen `node:`-modules en bestanden uit `scripts/` en `rails/`
 ## Acceptatiecriteria
 
 - **ci-log/AC-1** — Gegeven de argumenten `[]`, `['0']`, `['12', 'x']`, `['abc']` of `['-1']`, wanneer `argumenten` draait, dan
-  gooit het `Gebruik: pnpm pr:log <nummer>`; `['12']` geeft `12`. Toets: `test/scripts/ci-loguittreksel.test.ts` (nieuw)
+  gooit het `Gebruik: pnpm pr:log <nummer>`; `['12']` geeft `12`. Toets: `test/scripts/ci-loguittreksel.test.ts`
 - **ci-log/AC-2** — Gegeven een jobs-antwoord met de uitslagen `success`, `failure`, `timed_out`, `cancelled` en `null`, wanneer
   `rodeJobs` draait, dan blijven alleen `failure` en `timed_out` over; gegeven runs met `failure`, `success`, `cancelled` en
   één met `status` `in_progress`, wanneer `rodeRuns` draait, dan de rode en de lopende run, en `bezig` 1. Toets:
-  `test/scripts/ci-loguittreksel.test.ts` (nieuw)
+  `test/scripts/ci-loguittreksel.test.ts`
 - **ci-log/AC-3** — Gegeven een log met tijdstempels, een BOM en twee `##[error]`-regels die 5 regels uit elkaar staan, wanneer
   `foutUittreksel` draait, dan één blok zonder tijdstempels en BOM van 15 regels vóór de eerste fout tot en met de tweede; twee
   fouten die 40 regels uit elkaar staan, geven twee blokken met `…` ertussen. Toets: `test/scripts/ci-loguittreksel.test.ts`
-  (nieuw)
+ 
 - **ci-log/AC-4** — Gegeven een log met 30 fouten ver uit elkaar, wanneer `foutUittreksel` draait, dan precies 120 regels en
   daarna `… (<n> regels weggelaten)`, met `<n>` het aantal weggelaten regels van het uittreksel, `…`-regels meegeteld; zonder `##[error]` de laatste 30 regels. Toets:
-  `test/scripts/ci-loguittreksel.test.ts` (nieuw)
+  `test/scripts/ci-loguittreksel.test.ts`
 - **ci-log/AC-5** — Gegeven twee rode jobs en een lopende run, en gegeven geen rode jobs, wanneer `verslag` draait, dan de
-  letterlijke uitvoer uit "Het script" punt 8. Toets: `test/scripts/ci-loguittreksel.test.ts` (nieuw)
+  letterlijke uitvoer uit "Het script" punt 8. Toets: `test/scripts/ci-loguittreksel.test.ts`
 - **ci-log/AC-6** — Gegeven een nep-`Api` met een PR, een rode en een lopende run met elk een rode job, wanneer `leesPr` draait,
   dan het verslag met beide jobs en `Nog bezig: 1 run(s)`, en elk gevraagd endpoint begint met `repos/<repo>/`; `ghArgs(x)` is
   precies `['api', x]`; een `Api` die gooit, geeft `GitHub is niet leesbaar: <endpoint>`. Toets:
-  `test/scripts/ci-loguittreksel.test.ts` (nieuw)
+  `test/scripts/ci-loguittreksel.test.ts`
 - **ci-log/AC-7** — Rolhek: `pnpm pr:log 12` als hoofdsessie vanuit de repo-root met `kitTrusted` waar geeft allow, ook met
   `mergeTrusted` onwaar; met `kitTrusted` onwaar of buiten de repo-root deny met de basismelding; elke subagent deny met de
   subagentmelding; `pnpm pr:log`, `pnpm pr:log 12 --x`, `pnpm pr:log 12 && ls`, `pnpm pr:log 12; ls`,
   `node scripts/kit/pr-log.mjs 12` en `pnpm run pr:log 12` deny met de vormmelding (hoofdsessie); `cat scripts/kit/pr-log.mjs`
   en `git add test/scripts/pr-login.ts` niet; `pnpm pr:merge 12` met `mergeTrusted` onwaar en `kitTrusted` waar blijft deny;
   met `netwerkvormen` `['pnpm pr:log *']` geeft `pnpm pr:log 12 --x` precies één deny, de vormmelding (`NETWERK_EIGEN_REGEL`).
-  Toets: `test/hooks/rolhek-logscript.test.ts` (nieuw)
+  Toets: `test/hooks/rolhek-logscript.test.ts`
 - **ci-log/AC-8** — `trustedKitScript` is nee zonder basis; `trustedMerge` is nee bij een andere modus, ook als
-  `trustedKitScript` ja is. Toets: `test/hooks/rolhek-logscript.test.ts` (nieuw)
+  `trustedKitScript` ja is. Toets: `test/hooks/rolhek-logscript.test.ts`
 - **ci-log/AC-9** — `.claude/settings.json` heeft `Bash(pnpm pr:log *)` in `ask` en niet in `allow`, en `pnpm pr:log *` in
   `excludedCommands`;
   `package.json` heeft het script; `.claude/gates.json` geeft `scripts/kit/pr-log.mjs` besluit `besluit-pr`. Toets:
-  `test/hooks/rolhek-logscript.test.ts` (nieuw)
+  `test/hooks/rolhek-logscript.test.ts`
 
 ## Randgevallen
 

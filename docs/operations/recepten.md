@@ -17,6 +17,7 @@ gelijk aan Lokaal.
 | Op CI wachten | `pnpm pr:verify <nr> --watch` | idem |
 | Runs van een commit | `gh api "repos/{owner}/{repo}/actions/runs?head_sha=<volledige-sha>" --jq '.workflow_runs[] \| {id, name, conclusion}'` | idem |
 | Rode jobs van een run | `gh api --paginate "repos/{owner}/{repo}/actions/runs/<run-id>/jobs" --jq '.jobs[] \| select(.conclusion == "failure") \| {id, name}'` | idem |
+| Samenvatting van de rode jobs (alleen de hoofdsessie) | `pnpm pr:log <nr>` | idem |
 | Log van een job | `gh api "repos/{owner}/{repo}/actions/jobs/<job-id>/logs"` | idem |
 | Status en head van een PR | `gh api "repos/{owner}/{repo}/pulls/<nr>" --jq '{state, closed_at, draft, ref: .head.ref, sha: .head.sha}'` | idem |
 | Is de PR gemerged | `gh api --paginate "repos/{owner}/{repo}/issues/<nr>/events" --jq '.[] \| {event, commit_id}'` | idem |
