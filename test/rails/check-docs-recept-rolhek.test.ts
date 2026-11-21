@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
@@ -46,6 +46,8 @@ const kaart = (cloud: string): string =>
 describe('agent-recepten: de template zelf', () => {
   test('agent-recepten/AC-1: geen melding op de eigen bestanden, en de kaart heeft de kerntaken', async () => {
     expect((await docsViolations(REPO)).filter((v) => v.key.startsWith('docs:recept-rolhek'))).toStrictEqual([]);
+    // Eerst een assertie op de kaart: op de basis (leerpunt-bewijs) faalt de test zo rood, niet op een leesfout.
+    expect(existsSync(path.join(REPO, 'docs/operations/recepten.md'))).toBe(true);
     const { receptRijen } = await import('../../scripts/kit/recepten.mjs');
     const taken = receptRijen(readFileSync(path.join(REPO, 'docs/operations/recepten.md'), 'utf8')).map(
       (rij) => rij.taak,
