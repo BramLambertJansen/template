@@ -10,7 +10,8 @@ import { dekt } from './zonder-prompt.mjs';
 /** @typedef {{ key: string, message: string }} Violation */
 /** @typedef {import('../../rails/hooks/lib/rolhek.mjs').Config} Config */
 /** @typedef {{ config: Config, netwerkvormen: string[], deny: string[] }} Regels */
-/** @typedef {{ commando: string, regel: number, uitzondering: boolean }} Kandidaat */
+/** `span`: uit een codespan buiten de kaart (alleen daar geldt de uitzondering voor een kale `pnpm <script>`). */
+/** @typedef {{ commando: string, regel: number, uitzondering: boolean, span: boolean }} Kandidaat */
 
 const GATES = '.claude/gates.json';
 const APP = '.claude/gates.app.json';
@@ -117,6 +118,7 @@ function reden(regels, commando) {
 function alsCommando(span) {
   const inhoud = span
     .replace(/^`+|`+$/g, '')
+    .replace(/\s+/g, ' ')
     .trim()
     .replace(/\\\|/g, '|');
   return PROGRAMMA.test(inhoud) && !AFGEKORT.test(inhoud) ? inhoud : null;
@@ -136,7 +138,7 @@ function splitsBlokken(ruw) {
     if (sluitHek(regel, open)) open = null;
     else if (!regel.trimEnd().endsWith('\\')) {
       const commando = alsCommando(regel);
-      if (commando !== null) blokregels.push({ commando, regel: index + 1, uitzondering: false });
+      if (commando !== null) blokregels.push({ commando, regel: index + 1, uitzondering: false, span: false });
     }
     return '';
   });
@@ -172,7 +174,7 @@ function instructieKandidaten(ruw) {
     const commando = alsCommando(tekst.slice(span.start, span.eind));
     if (commando === null) return [];
     const regel = tekst.slice(0, span.start).split('\n').length;
-    return [{ commando, regel, uitzondering: AFWIJZING.test(zinRond(tekst, spans, span.start)) }];
+    return [{ commando, regel, uitzondering: AFWIJZING.test(zinRond(tekst, spans, span.start)), span: true }];
   });
   return [...uitSpans, ...blokregels].filter(({ uitzondering }) => !uitzondering);
 }
@@ -182,7 +184,7 @@ function kaartKandidaten(ruw) {
   return kaartRijen(ruw).flatMap(({ lokaal, cloud, regel }) =>
     [...`${lokaal} ${cloud}`.matchAll(CODESPAN)].flatMap((m) => {
       const commando = alsCommando(m[0]);
-      return commando === null ? [] : [{ commando, regel, uitzondering: false }];
+      return commando === null ? [] : [{ commando, regel, uitzondering: false, span: false }];
     }),
   );
 }
@@ -206,8 +208,8 @@ export function receptRolhekViolations(files, read) {
     .filter((file) => file === KAART || INSTRUCTIES.some((re) => re.test(file)))
     .flatMap((file) => {
       const kandidaten = file === KAART ? kaartKandidaten(read(file)) : instructieKandidaten(read(file));
-      return kandidaten.flatMap(({ commando, regel }) => {
-        const waarom = file === KAART || !verwijzing(regels, commando) ? reden(regels, commando) : null;
+      return kandidaten.flatMap(({ commando, regel, span }) => {
+        const waarom = span && verwijzing(regels, commando) ? null : reden(regels, commando);
         return waarom === null
           ? []
           : [

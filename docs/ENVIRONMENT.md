@@ -208,7 +208,7 @@ draaien vier commando's buiten de sandbox (`sandbox.excludedCommands` in `.claud
 | Commit | `git commit -F <bestand>` | buiten de sandbox; lefthook draait mee, nooit `--no-verify` |
 | Push | `git push origin HEAD` | de smalle vorm; `deny` en het rolhek weigeren push naar `main` en force |
 | PR openen | `mcp__github__create_pull_request` | `gh pr create` werkt niet in de cloud (GraphQL); Claude Code vraagt de eigenaar één keer per PR (gemeten: één prompt, spec `cloud-pr-route` F10; ADR 0078 punt 4, herzien) |
-| Bewijs lezen | `pnpm pr:verify <nummer>`, `gh api repos/{owner}/{repo}/…` | alleen REST; `gh pr …` en `gh issue …` gebruiken GraphQL en werken niet |
+| Bewijs lezen | `pnpm pr:verify <nummer>`, `gh api "repos/{owner}/{repo}/…"` (endpoint tussen aanhalingstekens) | alleen REST; `gh pr …` en `gh issue …` gebruiken GraphQL en werken niet |
 
 Lokaal blijft `gh pr create --head <branch> --body-file <bestand>` de route (zie Dagelijks werken). Elke handeling met git,
 gh en CI per runtime staat in de [receptenkaart](operations/recepten.md) (`node scripts/kit/feiten.mjs recepten`).

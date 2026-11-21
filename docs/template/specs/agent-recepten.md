@@ -106,7 +106,8 @@ Nieuw bestand `scripts/kit/recept-rolhek.mjs` met één export `receptRolhekViol
 
 1. **Bestanden:** getrackt `docs/operations/recepten.md` (de kaart), `.claude/skills/**/SKILL.md`, `.claude/agents/*.md`,
    `.claude/rules/*.md`, `AGENTS.md` en `CLAUDE.md` (de agentinstructies).
-2. **Kandidaten:** elke codespan en elke regel in een codeblok tussen hekken, getrimd, met `\|` vervangen door `|`, die begint
+2. **Kandidaten:** elke codespan (witruimte, ook een regeleinde, wordt één spatie, zoals in CommonMark) en elke regel in een
+   codeblok tussen hekken, getrimd, met `\|` vervangen door `|`, die begint
    met `git `, `gh `, `pnpm ` of `node `. Niet: een kandidaat met `*`, `…` of `...` (een patroon of afkorting), en een
    codeblokregel die op `\` eindigt (een afgebroken commando). In de kaart alleen de codespans in de tabelcellen. De sleutel en
    de melding gebruiken de kandidaat na deze vervanging.

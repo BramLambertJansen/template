@@ -60,7 +60,7 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt de bestaande vo
 ## Hergebruik en UX
 
 - Bestaande componenten: n.v.t. — geen app-UI. Hergebruikt: GitHub issue forms, `gh issue create`, `pnpm meting`
-  (tellingen), de slotvraag van `opleveren`, `onderhoud.repository`. Geen nieuwe dependency.
+  (tellingen), de slotvraag van `opleveren`, `template.repository` (sinds spec `agent-recepten`). Geen nieuwe dependency.
 - Staten per scherm: n.v.t. — GitHub toont het formulier; de CLI-uitkomst is aangemaakt (issue-URL), gevraagd of geweigerd.
 - Alle zichtbare tekst letterlijk, voor `.github/ISSUE_TEMPLATE/leerpunt.yml` (issue form, `labels: [leerpunt]`, titel `Leerpunt: `):
   - Naam: `Leerpunt`. Beschrijving: `Een les uit het bouwen van een app die de template kan verbeteren. Alleen in de template-repo; geen appcode, appdata of geheimen.`
@@ -75,7 +75,7 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt de bestaande vo
   - `eerder` (regel, optioneel), label `Eerder`, uitleg: `Bij een terugkerende fout: eerder: #nnn. Anders leeg.`
 - Via de CLI gebruikt de agent dezelfde opbouw als GitHub een ingevuld formulier weergeeft: per veld `### <label>` met de
   waarde eronder, in de volgorde hierboven. Titel: `Leerpunt: <soort>: <één zin>`.
-- Slotstap in `opleveren` (na de bestaande slotregel), letterlijk: `Loop de signaalmomenten van deze sessie af: slotvraag, derde CI-ronde, eigenaarcorrectie (pnpm meting), blokkerende reviewbevinding (Leerpunt: ja), tweede mislukte correctiepoging. Per les: Leerpunt? Generiek: dien het in volgens het sjabloon leerpunt (gh issue create naar onderhoud.repository met --label leerpunt) en toon de tekst. Alleen voor deze app: een padregel, spec of ADR (`docs/specs/`, `docs/adr/`) in de app, geen issue. Niets: zeg "geen leerpunt".`
+- Slotstap in `opleveren` (na de bestaande slotregel), letterlijk: `Loop de signaalmomenten van deze sessie af: slotvraag, derde CI-ronde, eigenaarcorrectie (pnpm meting), blokkerende reviewbevinding (Leerpunt: ja), tweede mislukte correctiepoging. Per les: Leerpunt? Generiek: dien het in volgens het sjabloon leerpunt (gh issue create naar template.repository met --label leerpunt) en toon de tekst. Alleen voor deze app: een padregel, spec of ADR (`docs/specs/`, `docs/adr/`) in de app, geen issue. Niets: zeg "geen leerpunt".`
 - Reviewer, per blokkerende bevinding de regel: `Leerpunt: ja (<soort>)` of `Leerpunt: nee`.
 - Focusvolgorde en toetsenbord: n.v.t. — geen eigen UI.
 

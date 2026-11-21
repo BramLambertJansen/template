@@ -105,8 +105,7 @@ const sections = {
   // Spec agent-recepten: de receptenkaart voor de eigen runtime; `--alle` toont beide kolommen.
   recepten: async () => {
     const { KAART, receptenSectie } = await import('./recepten.mjs');
-    const tekst = existsSync(KAART) ? readFileSync(KAART, 'utf8') : null;
-    return receptenSectie(tekst, { cloud: process.env['CLAUDE_CODE_REMOTE'] === 'true', alle });
+    return receptenSectie(werkmap.lees(KAART), { cloud: process.env['CLAUDE_CODE_REMOTE'] === 'true', alle });
   },
 };
 

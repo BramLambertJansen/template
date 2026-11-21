@@ -79,7 +79,8 @@ describe('agent-recepten: agentinstructies', () => {
     'Regel `gh api *`.',
     'Zie `gh pr …`.',
     'Mergen via `pnpm pr:merge`.',
-  ])('agent-recepten/AC-3: geen melding voor %s', async (zin) => {
+    'Dit is verboden:\n`git push -u origin HEAD`, ook in een branch.',
+  ])('agent-recepten/AC-3: geen melding voor %j', async (zin) => {
     expect(await found({ '.claude/skills/x/SKILL.md': `${zin}\n` })).toStrictEqual([]);
   });
 
@@ -98,6 +99,21 @@ describe('agent-recepten: agentinstructies', () => {
     expect(fout.map((v) => v.key)).toStrictEqual([
       'docs:recept-rolhek:.claude/skills/x/SKILL.md:git push -u origin HEAD',
     ]);
+  });
+
+  test('agent-recepten/AC-2: een codespan over twee regels telt als één commando; een melding per sleutel', async () => {
+    const fout = await found({
+      '.claude/skills/x/SKILL.md': 'Push met `git push -u\norigin HEAD`.\n\nNog eens: `git push -u origin HEAD`.\n',
+    });
+    expect(fout.map((v) => v.key)).toStrictEqual([
+      'docs:recept-rolhek:.claude/skills/x/SKILL.md:git push -u origin HEAD',
+    ]);
+    expect(await found({ '.claude/skills/x/SKILL.md': 'Commit met `git commit\n-F <bestand>`.\n' })).toStrictEqual([]);
+  });
+
+  test('agent-recepten/AC-3: een kale pnpm-verwijzing in een codeblok heeft geen uitzondering', async () => {
+    const fout = await found({ '.claude/skills/x/SKILL.md': '```bash\npnpm pr:merge\n```\n' });
+    expect(fout.map((v) => v.key)).toStrictEqual(['docs:recept-rolhek:.claude/skills/x/SKILL.md:pnpm pr:merge']);
   });
 
   test('agent-recepten/AC-6: plaatshouders worden 1, in een vertrouwde ctx', async () => {
