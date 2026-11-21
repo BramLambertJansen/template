@@ -302,4 +302,5 @@ export const VOLGORDE = [
   'componenten',
   'tokens',
   'fase',
+  'recepten',
 ];

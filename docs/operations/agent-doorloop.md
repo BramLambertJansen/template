@@ -331,7 +331,8 @@ Code vraagt de eigenaar één keer per PR (gemeten, F10 van de spec); keurt die 
 `pnpm run test:db`) weigert het rolhek met de juiste vorm in de reden (spec `cloud-netwerkvorm`,
 `rails/hooks/lib/rolhek.mjs:2601`). De MCP-schrijftools (`push_files`, `create_or_update_file`, `delete_file`) slaan
 lefthook over en geven een vraag aan de eigenaar; push met `git push origin HEAD`. De volledige route en de foutmeldingen
-staan in [ENVIRONMENT](../ENVIRONMENT.md#cloud-commit-push-pr-en-bewijs).
+staan in [ENVIRONMENT](../ENVIRONMENT.md#cloud-commit-push-pr-en-bewijs); de commando's per handeling en runtime in de
+[receptenkaart](recepten.md) (`node scripts/kit/feiten.mjs recepten`).
 
 De expliciete sandbox-auto-allow en gerichte commandotoestemmingen vervangen geen inhoudelijke toestemming,
 broncodebeperkingen, checks of eigenaarmerge. Een lokale of beheerde Claude-instelling kan strenger zijn dan de

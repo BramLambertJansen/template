@@ -70,6 +70,7 @@ import { grensMeldingen, grensViolations, normenMeldingenUitGit, normenUitGit, z
 import { FRAGMENT_MAP, fragmentFout } from './template-release.mjs';
 import { CODESPAN, HEK, sluitHek } from './markdown.mjs';
 import { zonderPromptViolations } from './zonder-prompt.mjs';
+import { receptRolhekViolations } from './recept-rolhek.mjs';
 
 export { normViolations } from './normen.mjs';
 
@@ -116,6 +117,7 @@ export async function docsViolations(root = '.') {
     ...fragmentViolations(files, read),
     ...grensViolations((file) => (files.includes(file) ? read(file) : null)),
     ...zonderPromptViolations(files, read),
+    ...receptRolhekViolations(files, read),
   ]);
 }
 
