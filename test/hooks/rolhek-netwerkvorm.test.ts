@@ -328,3 +328,15 @@ describe('cloud-netwerkvorm/AC-13 gh api: main verwijderen of verzetten is verbo
     },
   );
 });
+
+// Leerpunt #880: `pnpm -s pr:verify …` viel buiten de sandboxuitzondering `pnpm pr:verify *` en gaf alleen "bewijs niet leesbaar".
+describe('cloud-netwerkvorm leerpunt #880 pnpm -s pr:verify', () => {
+  test('cloud-netwerkvorm leerpunt #880 pnpm -s pr:verify 878 --watch: deny met pnpm pr:verify … voor de hoofdsessie', () => {
+    const uitslag = beslis('pnpm -s pr:verify 878 --watch', '');
+    expect(uitslag.deny).toContain(reden('pnpm pr:verify …'));
+  });
+
+  test('cloud-netwerkvorm leerpunt #880 pnpm pr:verify 878 --watch: geen netwerkvorm-melding', () => {
+    expect(zonderNetwerkvorm(beslis('pnpm pr:verify 878 --watch', ''))).toBeNull();
+  });
+});
