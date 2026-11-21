@@ -2,8 +2,20 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
-import { echteNetwerkvormen } from './netwerkvormen-kit.ts';
 import { ROLLEN, type Rol } from './rolhek-aanvalscorpus.ts';
+
+// Bewijstest van leerpunt #880: de job leerpunt-bewijs kopieert alleen dit bestand naar de basis, dus een import van een nieuw
+// hulpbestand (netwerkvormen-kit.ts) zou daar op laden falen in plaats van op een assertie. Daarom staat de lezer hier zelf.
+function kind(waarde: unknown, sleutel: string): unknown {
+  if (typeof waarde !== 'object' || waarde === null) return undefined;
+  return Object.entries(waarde).find(([naam]) => naam === sleutel)?.[1];
+}
+
+function echteNetwerkvormen(): string[] {
+  const tekst = readFileSync(path.resolve(import.meta.dirname, '../../.claude/settings.json'), 'utf8');
+  const lijst = kind(kind(JSON.parse(tekst), 'sandbox'), 'excludedCommands');
+  return Array.isArray(lijst) ? lijst.filter((regel): regel is string => typeof regel === 'string') : [];
+}
 
 // Spec cloud-netwerkvorm (AC-1 t/m AC-6, AC-8, AC-9, AC-12, AC-13): het rolhek weigert een netwerk- of signeergevoelig commando
 // dat niet in de vorm van `sandbox.excludedCommands` staat, voor elke rol, en weigert de MCP-bestandsschrijftools.
