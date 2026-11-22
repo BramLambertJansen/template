@@ -272,7 +272,7 @@ function mainLag(deps) {
   const behind = Number(counts.output.trim().split(/\s+/)[0]);
   const stale = fetched.code === 0 ? '' : 'origin/main ophalen mislukt (stand van de laatste fetch). ';
   if (!Number.isFinite(behind) || behind === 0) return stale.trim();
-  return `${stale}Let op: ${behind} commits achter op origin/main; haal ze binnen voor je bouwt (git merge origin/main, nooit rebase).`;
+  return `${stale}Let op: ${behind} commits achter op origin/main; haal ze binnen voor je bouwt (git merge origin/main, nooit rebase; in de cloud met --no-commit en dan git commit -F, zie docs/operations/recepten.md).`;
 }
 
 const CHECK_GROEN = new Set(['SUCCESS', 'NEUTRAL', 'SKIPPED']);

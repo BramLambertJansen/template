@@ -186,7 +186,8 @@ rolhek niet af (`timeout` wel); een `git -C <map>` die tussen fetch en branch ve
 `git worktree add <pad> <branch>`.
 
 Pre-push waarschuwt (blokkeert niet) als de branch achterloopt op `origin/main`; haal main dan binnen met
-`git merge origin/main` (`scripts/kit/main-achterstand.mjs`); in een agentworktree faalt die merge, zie hierboven. Een commitkop volgt conventional commits
+`git merge origin/main` (`scripts/kit/main-achterstand.mjs`); in een agentworktree faalt die merge, zie hierboven. In de cloud
+met `--no-commit` en dan `git commit -F <bestand>`, zie de [receptenkaart](recepten.md). Een commitkop volgt conventional commits
 (`fix(hooks): …`); de commit-msg-hook weigert een andere vorm (`scripts/kit/commit-msg.mjs`). Bij de start van een sessie op een
 featurebranch staat de open PR met checks en reviewstatus in de context, zodat een hervatte sessie rode checks en
 reviewcommentaar direct ziet. Lokaal geeft Claude Code een melding als het op de eigenaar wacht (WSL2: Windows-melding;

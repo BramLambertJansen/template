@@ -30,7 +30,7 @@ gelijk aan Lokaal.
 | Issues zoeken | `gh api "search/issues?q=repo:{owner}/{repo}+is:issue+<zoekwoord>" --jq '.items[] \| {number, title, state}'` | idem |
 | Leerpunt indienen | `gh issue create --repo <template.repository> --label leerpunt --title <titel> --body-file <bestand>` | MCP `mcp__github__issue_write` (aanmaken, label `leerpunt`, naar `template.repository`) |
 | Remote branch verwijderen | `gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<branch>"` | idem |
-| `main` bijhalen in de PR-branch | `git fetch origin main` en dan `git merge origin/main` | idem |
+| `main` bijhalen in de PR-branch | `git fetch origin main`, dan `git merge --no-commit origin/main` en dan `git commit -F <bestand>` | idem |
 
 ## Waarom deze vormen
 
@@ -48,5 +48,14 @@ gelijk aan Lokaal.
 - Een subagent schrijft niet naar GitHub. De reviewer leest alleen `gh pr view|diff|checks|list|status`,
   `gh run view|list|watch` en `gh issue view|list|status` (`SUBAGENT_GH` en de leeslijst van de reviewer in
   `rails/hooks/lib/rolhek.mjs`); in de cloud werken die niet, dus daar levert de hoofdsessie de PR-gegevens aan.
-- `main` bijhalen faalt in de sandbox als `main` iets onder `.claude/skills` of `.claude/agents` wijzigt (leerpunt #789);
-  volg dan "Branchwissels in een sandbox" in [agent-doorloop](agent-doorloop.md).
+- `main` bijhalen: een kale `git merge origin/main` maakt de commit binnen de sandbox, en in de cloud faalt dan het
+  ondertekenen ("failed to write commit object"; gemeten op 22 november 2026). Met `--no-commit` blijft de merge in de index
+  (met `MERGE_HEAD`) en maakt `git commit -F <bestand>` de commit buiten de sandbox; het bericht begint met `Merge ` of volgt
+  conventional commits (bijvoorbeeld `Merge origin/main into <branch>`), anders weigert de commit-msg-hook. Geen `MERGE_HEAD`
+  (een fast-forward of al bij): dan is er niets te committen. Staat er na een mislukte merge al een `MERGE_HEAD`, dan rondt
+  `git commit -F <bestand>` hem net zo af.
+- De sandbox kan `.claude/skills`, `.claude/agents`, `.claude/hooks`, `.claude/settings.json` en `.claude/settings.local.json`
+  niet schrijven (`docs/ENVIRONMENT.md`, "Grens van de sandbox"; voor `.claude/agents` leerpunt #789). Wijzigt `main` daar iets,
+  dan breekt de merge halverwege af. Kijk dat vóór de merge na met
+  `git diff --name-only HEAD...origin/main -- .claude/skills .claude/agents .claude/hooks .claude/settings.json .claude/settings.local.json`; staat er iets, merge dan niet maar meld het de eigenaar, en volg bij een
+  afgebroken merge "Branchwissels in een sandbox" in [agent-doorloop](agent-doorloop.md).
