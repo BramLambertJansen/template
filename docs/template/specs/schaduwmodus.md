@@ -56,7 +56,7 @@ lokaal geen melding en in CI rood, zoals bij `ac-toets`; staat de naam niet op d
   `<naam>: al een keer aangepast; het besluit is nu hard of verwijderd (ADR 0106 punt 6)`
 - `aangepast` van 0 naar 1 met dezelfde `drempel` (diepe vergelijking):
   `<naam>: aangepast zonder andere drempel; een aanpassing wijzigt de drempel (ADR 0106 punt 6)`
-- `eind` later dan op de basis terwijl `aangepast` gelijk bleef:
+- `eind` later dan op de basis terwijl `aangepast` op 0 bleef (de regels sluiten elkaar uit; per naam hooguit één melding):
   `<naam>: einddatum later dan op de merge-base zonder dat aangepast is opgehoogd; verlengen met dezelfde controle en drempel kan niet (ADR 0106 punt 5)`
 
 `schaduw-termijn`. De datum is `git log -1 --format=%cI` (de eerste tien tekens, dus de datum in de tijdzone van de committer),
@@ -124,8 +124,8 @@ geen nieuwe bibliotheken.
 
 - **schaduwmodus/AC-1** — Gegeven een template met een registerregel zonder `drempel` (en apart een zonder `eind`), wanneer `schaduw-register` draait, dan geeft hij een strikte overtreding `<naam>:veld drempel` (of `eind`). Toets: `test/rails/schaduw-register.test.ts` (nieuw)
 - **schaduwmodus/AC-2** — Gegeven `start` 2026-11-01, wanneer `eind` 2026-11-16 is, dan meldt `schaduw-register` "meer dan 14 dagen na de start", en bij `eind` 2026-11-15 niet. Toets: `test/rails/schaduw-register.test.ts` (nieuw)
-- **schaduwmodus/AC-3** — Gegeven een registerregel met `rids` `["R-AUTH-07"]` (en apart `["R-SEC-06"]`, `["R-ROL-08"]`, `["R-ROL-99"]` en `["R-TEST-02"]`), wanneer `schaduw-register` draait, dan meldt hij "moet altijd meteen hard zijn" voor dat R-id; met `["R-WEB-01"]` niet. Toets: `test/rails/schaduw-register.test.ts` (nieuw)
-- **schaduwmodus/AC-4** — Gegeven `aangepast: 2`, of een `eind` die later ligt dan op de merge-base terwijl `aangepast` gelijk bleef, wanneer `schaduw-register` draait, dan is hij strikt rood met de melding uit deze spec. Toets: `test/rails/schaduw-register.test.ts` (nieuw)
+- **schaduwmodus/AC-3** — Gegeven een registerregel met `rids` `["R-AUTH-07"]` (en apart `["R-SEC-06"]`, `["R-ROL-08"]`, `["R-ROL-99"]`, `["R-TEST-02"]` en `["R-WERK-09"]`), wanneer `schaduw-register` draait, dan meldt hij "moet altijd meteen hard zijn" voor dat R-id; met `["R-WEB-01"]` niet. Toets: `test/rails/schaduw-register.test.ts` (nieuw)
+- **schaduwmodus/AC-4** — Gegeven `aangepast: 2`, wanneer `schaduw-register` draait, dan is hij strikt rood met "veld aangepast ontbreekt of heeft niet de vorm"; gegeven een `eind` die later ligt dan op de merge-base terwijl `aangepast` op 0 bleef, dan precies één overtreding met "verlengen met dezelfde controle en drempel kan niet". Toets: `test/rails/schaduw-register.test.ts` (nieuw)
 - **schaduwmodus/AC-15** — Gegeven op de merge-base `aangepast: 0`, wanneer HEAD `aangepast: 1` heeft met een later `eind` en dezelfde `drempel`, dan meldt `schaduw-register` "aangepast zonder andere drempel", en met een andere `drempel` niet; gegeven op de basis `aangepast: 1`, wanneer HEAD `eind` of `drempel` wijzigt, dan meldt hij "al een keer aangepast". Toets: `test/rails/schaduw-register.test.ts` (nieuw)
 - **schaduwmodus/AC-5** — Gegeven een registerregel met `eind` 2026-12-01 en HEAD met commitdatum 2026-12-02, wanneer `pnpm ratchet` draait, dan meldt `schaduw-termijn` een strikte overtreding en is de exitcode 1, ongeacht de systeemklok. Toets: `test/rails/schaduw-termijn.test.ts` (nieuw)
 - **schaduwmodus/AC-6** — Gegeven `eind` 2026-12-01 en een commitdatum van 2026-11-28, wanneer `pnpm ratchet` draait, dan staat "loopt af op 2026-12-01 (nog 3 dagen)" in de meldingen en is de exitcode 0; bij 2026-11-27 komt er geen melding. Toets: `test/rails/schaduw-termijn.test.ts` (nieuw)
@@ -147,7 +147,7 @@ geen nieuwe bibliotheken.
 | HEAD zonder commit (lege repo) | strikt rood: `schaduw-termijn: geen commitdatum van HEAD` |
 | `spec` wijst naar `docs/specs/` | schemafout: het register geldt alleen in de template |
 | PR-CI met de merge-commit van GitHub als HEAD | de datum is die van die merge-commit en schuift mee met elke run; een rerun na `eind` wordt rood zonder nieuwe commit. "Dezelfde commit, dezelfde uitslag" geldt lokaal en op `main` |
-| regel verwijderd en in een latere PR onder dezelfde naam terug | de check ziet alleen de merge-base en meldt niets; de reviewer toetst het (aanvaard) |
+| regel verwijderd en later onder dezelfde naam terug, of hernoemd met een later `eind` | de check ziet alleen de merge-base en meldt niets; de reviewer toetst het (aanvaard) |
 
 ## Raakt ook
 
