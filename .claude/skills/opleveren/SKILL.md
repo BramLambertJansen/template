@@ -30,7 +30,7 @@ Feiten nu:
    en hun log met `gh api "repos/{owner}/{repo}/actions/jobs/<job-id>/logs"`, lokaal en in de cloud (recepten:
    `node scripts/kit/feiten.mjs recepten`; `gh run view <run-id> --log-failed` werkt alleen buiten de sandbox). Dan de
    oorzaak fixen, committen, pushen en opnieuw wachten. Geen vast aantal rondes.
-4. Na fixes bekijkt de reviewer alleen het verschil: `git diff <reviewer-sha>..HEAD` (uitzonderingen: `docs/operations/review-checklists.md`, "Werkwijze").
+4. Na fixes bekijkt de reviewer alleen het verschil: `git diff <reviewer-sha>..HEAD`, per blokkerende bevinding opgelost of niet (uitzonderingen: `docs/operations/review-checklists.md`, "Werkwijze"). Kleine bevindingen gaan niet in de lus: één lijst `## Kleine bevindingen` in de PR-beschrijving. Is na de fixdiff nog iets niet opgelost, dan krijgt een verse developer alleen de open bevindingen, de spec en de branch; daarna stop je en leg je de eigenaar één gebundeld besluit voor (ADR 0105).
 5. Stop en vraag de eigenaar bij: (a) een fix die een regel, check, hook of test zou afzwakken; (b) dezelfde fout drie keer achter elkaar (voer dan eerst de leerpuntstap uit Opruimen stap 8 uit);
    (c) een oorzaak buiten de code (runner, GitHub-storing); (d) een gate-pad of beschermd pad dat moet wijzigen.
 6. De lus leeft alleen binnen de sessie: geen timer, token of credentialwerk.

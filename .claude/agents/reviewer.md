@@ -36,6 +36,10 @@ Als de diff `src/web/features/`, `src/web/routes/`, `src/web/ui/`, `src/web/styl
 
 Blokkerend bij gebroken regel of spec (44 px, focus, staat, contrast) of afwijking zonder reden; anders belangrijk of klein.
 
+## Modus fixdiff
+
+Krijg je de blokkerende bevindingen van een vorige ronde en `git diff <reviewer-sha>..HEAD`, dan oordeel je per bevinding `opgelost` of `niet opgelost`. Een nieuwe bevinding alleen als de fixdiff zelf een blokkerende fout veroorzaakt; de uitzonderingen voor een volledige deelreview staan in `docs/operations/review-checklists.md`, "Werkwijze" (ADR 0105).
+
 ## Rapport
 
-Sluit af onder `## Bevindingen` (SubagentStop-hook): per bevinding blokkerend of niet, of "Geen blokkerende bevindingen".
+Sluit af onder `## Bevindingen` (SubagentStop-hook): per bevinding `blokkerend` of `klein`, of "Geen blokkerende bevindingen". Blokkerend: breekt een AC, de spec, een R-regel of `docs/dod.md`; ontbrekende of schijnbare test per AC; een doc die door de diff onwaar wordt; elke bevinding over security, auth, autorisatie, RLS of isolatie, rolhek of hooks (nooit klein). Al het andere, ook "belangrijk", is klein; bij twijfel blokkerend (ADR 0105).

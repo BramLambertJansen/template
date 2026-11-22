@@ -6,6 +6,7 @@ De reviewer bepaalt de klasse(n) van de diff en loopt alleen die lijsten af. Elk
 
 - Doe één volledige review met alle klassen van de diff; daarna alleen `git diff <vorige-sha>..HEAD` op de fixes. De hoofdsessie geeft de vorige `## Bevindingen` mee; de delta toetst elke bevinding en loopt ook de lijsten van de klassen die de fixes openen.
 - Raakt een fix een nieuw bestand, een beschermd pad of een rail (`rails/**`, `scripts/kit/**`, `test/rails/**`), dan volgt opnieuw een volledige review van dat deel, evenals als de vorige sha geen voorouder van HEAD is (rebase, merge van main). Lees de aanroepers van een gewijzigde export.
+- Begrensde fixlus (ADR 0105): elke bevinding is `blokkerend` of `klein` (zie `.claude/agents/reviewer.md`, "Rapport"). Kleine bevindingen starten geen fix en geen ronde; de hoofdsessie zet ze als lijst `## Kleine bevindingen` in de PR. Ronde 2 toetst alleen de fixdiff (`opgelost` of `niet opgelost`); een nieuwe bevinding alleen als de fixdiff zelf een blokkerende fout maakt. Ronde 3 gaat naar een verse developer met alleen de open bevindingen, de spec en de branch; is daarna nog iets niet opgelost, dan beslist de eigenaar in één gebundelde vraag.
 - Kritiek werk (R-WERK-05) in een app: spec eerst in een besluit-PR; een statusovergang naast een kritiek pad (padtabel: `besluit-pr`, `altijdVragen`) is daar een bevinding; geen check toetst dit meer (ADR 0089 punt 8).
 
 ## Rolhek en hooks
