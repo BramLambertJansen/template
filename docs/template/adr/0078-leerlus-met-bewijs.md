@@ -10,6 +10,7 @@ Herzien: 2026-11-20: punt 4, een tweede uitzondering op "MCP alleen lezend": de 
 [cloud-pr-route](../specs/cloud-pr-route.md))
 Herzien: 2026-11-22: punt 4, "in de cloud draait geen rolhek" klopte niet: spec cloud-netwerkvorm (F9–F12) toont dat het
 rolhek ook in een cloudsessie weigert; spec cloud-pr-route (uitslag stap 0, rij 6) wees er al op
+Herzien: 2026-11-22: gewijzigd door [0107](0107-gedragsbaseline-voor-tekstwijzigingen.md) punt 5–7, in punt 2: bij Skill, Padregel en AGENTS.md wordt het bewijs "baseline: zonder <a>/3, met 3/3 (<model>)" of "geen baseline: <reden>"; "geen test:" blijft voor een integratie- of e2e-test
 
 Wijzigt [0059](0059-leerlus-van-app-naar-template.md) punt 1, 3, 4 en 7; vult R-SEC-09 aan met een uitzondering voor MCP (sinds de herziening van 2026-11-20 twee).
 Drempel: A3 (een nieuwe workflow met schrijfrecht op issues; een uitzondering op "MCP alleen lezend") en A4 (een
