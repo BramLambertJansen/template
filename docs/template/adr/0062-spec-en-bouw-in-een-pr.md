@@ -17,6 +17,7 @@ Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn onge
 Herzien: 2026-11-18 (#805): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.md) punt 1 en 3, punt 4: `status: gebouwd`
 zonder PR-nummer; de toets van `docs:status` na de merge vervalt, en daarmee de eerste regel hierboven
 Herzien: 2026-11-19: verwijzingen naar verwijderde documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg)
+Herzien: 2026-11-22: gewijzigd door [0104](0104-gebouwd-uit-ac-dekking.md) punt 1, 2 en 7, punt 4: de spec gaat niet meer met de hand naar `gebouwd`; ze is gebouwd zodra elk levend AC een test op `main` heeft; geldt vanaf de bouw-PR
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 5, 10, 12, 14 en 15. Drempel: A3 (de lanetoets in
 `check-document-status` laat meer toe) en A4 (afspraken uit een geaccepteerd ADR). Uitwerking: [spec gebouwd-zonder-nummer](../specs/gebouwd-zonder-nummer.md), gebouwd-zonder-nummer/AC-13 en gebouwd-zonder-nummer/AC-14.
