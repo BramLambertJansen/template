@@ -433,3 +433,41 @@ describe('template-release/AC-3: weigeren met exit 1 en geen enkel bestand gewij
     expect(uit.status, uit.uit).toBe(1);
   });
 });
+
+// --- schaduwmodus/AC-10: een gevuld register weigert de release (ADR 0106 punt 8) -------------------------------------------
+
+const SCHADUW_REGEL = {
+  naam: 'proef',
+  soort: 'hook',
+  spec: 'docs/template/specs/x.md',
+  rids: ['R-WEB-01'],
+  start: '2026-11-20',
+  eind: '2026-12-01',
+  drempel: { hard: 'a', aanpassen: 'b', verwijderen: 'c' },
+  aangepast: 0,
+};
+
+describe('schaduwmodus/AC-10: template:release weigert een gevuld schaduwregister', () => {
+  test('schaduwmodus/AC-10: met een controle in .kit/schaduw.json weigert hij zonder iets te wijzigen; met [] loopt de release door', () => {
+    const root = template();
+    schrijf(root, {
+      '.kit/schaduw.json': `${JSON.stringify([SCHADUW_REGEL, { ...SCHADUW_REGEL, naam: 'tweede' }])}\n`,
+    });
+    const voor = mapInhoud(root);
+
+    const geweigerd = draai(RELEASE_SCRIPT, ['0.3.0', '--datum', '2026-12-01'], { cwd: root });
+
+    expect(geweigerd.uit).toContain(
+      '✗ template:release: .kit/schaduw.json bevat 2 controle(s) (proef, tweede); een app krijgt geen controle in schaduw, neem eerst het besluit (ADR 0106 punt 8)',
+    );
+    expect(geweigerd.status, geweigerd.uit).toBe(1);
+    expect(mapInhoud(root)).toStrictEqual(voor);
+    expect(lees(root, CHANGELOG)).toBe(ORIGINEEL);
+    expect(lees(root, VERSIE_BESTAND)).toBe(versieTekst('0.2.0'));
+
+    schrijf(root, { '.kit/schaduw.json': '[]\n' });
+    const door = draai(RELEASE_SCRIPT, ['0.3.0', '--datum', '2026-12-01'], { cwd: root });
+    expect(door.status, door.uit).toBe(0);
+    expect(lees(root, VERSIE_BESTAND)).toBe(versieTekst('0.3.0'));
+  });
+});
