@@ -22,6 +22,10 @@ uitgebracht: laat het staan en neem het eerstvolgende vrije achtervoegsel. `pnpm
 dat al op de merge-base staat (`docs:fragment-behoud:<bestand>`, leerpunt #877). Moet zo'n fragment bewust anders,
 verwijder het dan en voeg een nieuw fragment toe.
 
+Een uitgebrachte sectie `## [x.y.z]` in `docs/template-changelog.md` wijzigt evenmin: `template:release` neemt alleen
+fragmenten mee, dus een regel daar valt buiten elke release. `pnpm ratchet` weigert een gewijzigde of verdwenen uitgebrachte
+sectie tegenover de merge-base (`docs:changelog-behoud:<versie>`, leerpunt #837); zet de wijziging als fragment hier.
+
 ## Vorm
 
 ```markdown
