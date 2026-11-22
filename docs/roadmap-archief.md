@@ -257,7 +257,8 @@ Ook gebouwd: rate limiting op app-routes (#87, spec `rate-limit`) met een reques
 
 ### Zonder fase (uit Volgende)
 
-Afgevinkte items die onder `## Volgende` van de roadmap stonden, letterlijk overgenomen met hun bewijs.
+Afgevinkte items die onder `## Volgende` van de roadmap stonden, letterlijk overgenomen met hun bewijs, op twee verwijzingen
+"het item hieronder" na: die noemen nu het roadmap-item bij naam.
 
 - [x] **ADR 0029 bouw: feature-lane en mini-spec** (punt 1–3, 7). Lane-herkenning in `check-document-status`, `docs/specs/_mini.md`, het
   frontmatterveld `sjabloon: mini` in `check-docs`, "Besluit en taakscope voorbereiden" in `docs/operations/agent-doorloop.md`; fixtures in `test/rails/`.

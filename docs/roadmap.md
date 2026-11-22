@@ -296,13 +296,13 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   niet elke procent-escape (`branches/main/rename` en GraphQL `deleteRef` vallen erbuiten; de ruleset blijft de grens); (N-3) de
   MCP-regel herkent alleen de servernaam `github`; (N-5) de dubbele melding bij `git push origin main` wordt één melding; (B-3) een
   corpustoets op codeblokken uit `docs/**` en `.claude/skills/**` die vangt dat docs of skills een commandovorm voorschrijven die het
-  rolhek weigert. Plus de meting die na de merge in een nieuwe cloudsessie zou volgen: of het hookproces `CLAUDE_CODE_REMOTE` ziet,
-  en of `gh api -X DELETE …/git/refs/heads/<branch>` een branch echt verwijdert (meting (e) is onvolledig, F12), terwijl de skill
-  `opleveren` die route al voorschrijft. **Klaar als:** N-1, N-3, N-5 en B-3 hebben elk een test of een besluit "aanvaard", en de
+  rolhek weigert. Plus het open deel van de meting na de merge: of `gh api -X DELETE …/git/refs/heads/<branch>` een branch echt
+  verwijdert (meting (e) is onvolledig, F12), terwijl de skill `opleveren` die route al voorschrijft (dat het hookproces
+  `CLAUDE_CODE_REMOTE` ziet, is gemeten: F8). **Klaar als:** N-1, N-3, N-5 en B-3 hebben elk een test of een besluit "aanvaard", en de
   meting staat in de spec.
   aanleiding: `docs/template/specs/cloud-netwerkvorm.md` (#890 "Vervolg, buiten deze PR"; #900, meting (e) onvolledig)
-- [ ] **Sandbox-probe `Read(/*secret*)` uitvoeren.** Sinds 2026-10-23 "nog niet geprobeerd": verankert de sandbox `/*secret*` aan de
-  projectroot of leest hij het absoluut? Leest hij het absoluut, dan is de root onbeschermd en volgt direct een herstel. Aanwijzing
+- [ ] **Sandbox-probes `Read(/*secret*)` en de `.claude`-regels per submap uitvoeren.** Sinds 2026-10-23 "nog niet geprobeerd":
+  verankert de sandbox `/*secret*` aan de projectroot of leest hij het absoluut? Leest hij het absoluut, dan is de root onbeschermd en volgt direct een herstel. Aanwijzing
   (geen meting): de sandboxinstellingen van een cloudsessie op 2026-11-22 tonen `/home/user/template/*secret*` als leesweigering, dus
   verankerd aan de root. **Klaar als:** de probes uit `docs/operations/sandbox-bewijs.md` zijn gedraaid en de uitslag staat daar.
   aanleiding: `docs/operations/sandbox-bewijs.md` (`Read(/*secret*)`, open sinds 2026-10-23)
@@ -449,8 +449,10 @@ Geldende ADR-besluiten staan in `node scripts/kit/feiten.mjs adr`; afgevinkte be
 - [ ] Allow-regel voor `gh api`-leesaanroepen (spec `cloud-pr-route`, M1): het besluit zou na de meting van stap 0 vallen, maar M1 is
   niet gemeten, alleen afgeleid (lokaal volgt `gh api` de gewone permissievraag). Eigenaarbesluit: meten op de laptop en dan kiezen, of
   laten zoals het is.
-- [ ] Zelfinstallatie in de cloud (spec `cloud-zelfinstallatie`, OV-1 t/m OV-4, onbesloten in een gebouwde spec): komt er een hook die
-  in de cloud zelf installeert (aanbeveling: nee), en waar komt het roadmap-item dat OV-4 vraagt. Eigenaarbesluit.
+- [ ] Zelfinstallatie in de cloud (spec `cloud-zelfinstallatie`, OV-1 t/m OV-4, onbesloten in een gebouwde spec): OV-1, komt er
+  een hook die in de cloud zelf installeert (aanbeveling: nee); OV-2, installeren zonder te vragen (aanbeveling na de metingen: de
+  vraag vervalt); OV-3, `bubblewrap` en `socat` blijven niet-fataal in het script (aanbeveling: ja); OV-4 vroeg om een
+  roadmap-item, en dit is dat item. Eigenaarbesluit.
 
 ## Gebouwd
 
