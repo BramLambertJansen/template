@@ -27,7 +27,9 @@ meerdere modellen, is groot (L) en wacht op de meetgrond van ST-09.
 3. **Runs.** Drie runs zonder de wijziging en drie met. De hoofdsessie draait elke run als ad-hoc subagent: verse context,
    alleen lezen (R-ROL-02), hetzelfde model voor alle zes runs. Eerst draaien de runs op de ongewijzigde tekst, daarna wordt
    de tekst gewijzigd, en daarna volgen de runs met. Zo begint ook dit bewijs met een fixture die op het oude faalt.
-   Een run die moet schrijven, draait alleen in de kooi (R-TOOL-03).
+   Een run geeft de tekst die hij toetst (oud of nieuw) letterlijk in zijn opdracht mee, omdat agent- en skilldefinities bij
+   de start van een sessie geladen worden. Alleen gedrag dat in het eindbericht of in de gekozen commando's zichtbaar is, past;
+   gedrag dat schrijven vraagt (tests eerst, commit- of PR-vorm) krijgt `geen baseline: <reden>` (punt 6).
 4. **Geslaagd.** Ten minste één nee bij de runs zonder, en drie keer ja bij de runs met. Geven alle runs zonder al ja, dan
    reproduceert het scenario niet. Dan wijzigt de PR de tekst niet, en de eigenaar beslist over het leerpunt.
 5. **Vastleggen.** De vastlegging staat in de PR-beschrijving, sectie `## Leerpunt`, met deze regel:
@@ -36,7 +38,7 @@ meerdere modellen, is groot (L) en wacht op de meetgrond van ST-09.
    Transcripten gaan niet in de repo en niet in de meetopslag; `pnpm meting` telt de runs al als subagent-aanroepen.
 6. **Kosten.** Alleen runs in de sessie zelf: geen API-sleutel, geen headless runs in CI, geen nieuw secret, geen nieuwe
    workflow of dependency. Hooguit zes runs per leerpunt. Past het scenario daar niet in, of hangt het af van de eigenaar of
-   van schrijfrecht buiten de kooi, dan wordt het bewijs `bewijs geen baseline: <reden>`.
+   van schrijven, dan wordt het bewijs `bewijs geen baseline: <reden>`.
 7. **Toets.** De job `leerpunt-bewijs` toetst alleen de vorm:
    - `baseline:` alleen bij de treden uit punt 1;
    - de tellingen uit punt 4;
@@ -60,6 +62,8 @@ meerdere modellen, is groot (L) en wacht op de meetgrond van ST-09.
 ## Gevolgen
 
 - Een gedragsleerpunt kost zes subagent-runs in de sessie en een blok in de PR. Een PR zonder leerpunt merkt niets.
+- Aanvaard risico: de hoofdsessie schrijft fix, scenario en oordeel zelf; dat is geen onafhankelijk bewijs (R-ROL-05). De
+  eigenaar toetst het bij de merge, zoals bij `geen test:` en `meting:`.
 - `geen test:` blijft voor een integratie- of e2e-test (0078 punt 2). Voor de drie teksttreden wordt het `baseline:` of
   `geen baseline: <reden>`.
 - Bouw-PR (na de merge): spec `gedragsbaseline` met AC's; `scripts/kit/leerpunt.mjs` leest en toetst `baseline:`,
