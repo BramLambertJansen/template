@@ -57,10 +57,10 @@ Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van pun
   `**/package.json` en `**/tsconfig*.json`. De test rekent met "laatste passende patroon wint" over alle getrackte paden plus
   `db/migrations/x.sql`, `docs/template/adr/x.md` en `src/x/CLAUDE.md`, en is rood als een pad een andere eigenaar krijgt dan
   het besluit in de padtabel. Bij de activering meldt GitHub geen fouten in `CODEOWNERS` (bewijs: eigenaar, in de PR).
-- **templateregime/AC-4** — Proef, pad van een code-eigenaar: geleverd op 2026-11-12. PR #695 van de App
+- **templateregime/AC-4** — Vervallen door ADR 0103 (procesbewijs; de App is weg door ADR 0093). Was: Proef, pad van een code-eigenaar: geleverd op 2026-11-12. PR #695 van de App
   (`scripts/proef-app-beschermd.md`) was geblokkeerd met alle checks groen, mergebaar na goedkeuring van de eigenaar, en weer
   geblokkeerd na een nieuwe commit van de App. Na stap 2 herhaald met de echte `CODEOWNERS` op `docs/template/adr/`.
-- **templateregime/AC-5** — Proef, geen pad van een code-eigenaar: geleverd op 2026-11-12. PR #694 van de App
+- **templateregime/AC-5** — Vervallen door ADR 0103 (procesbewijs; de App is weg door ADR 0093). Was: Proef, geen pad van een code-eigenaar: geleverd op 2026-11-12. PR #694 van de App
   (`docs/proef-app-vrij.md`) was mergebaar zonder review zodra de verplichte checks groen waren. Na stap 2 herhaald.
 - **templateregime/AC-6** — Vervallen door ADR 0093 punt 1 (de agent werkt onder het account van de eigenaar). Was:
   Identiteit, nog niet bewezen: in de agentsessie mislukt lezen van `~/.config/gh/`, levert
@@ -96,7 +96,7 @@ Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van pun
 - **templateregime/AC-11** — Stap 4: onder `docs/adr/` staat alleen `_template.md`, onder `docs/specs/` alleen `_template.md` en `_mini.md`; geen
   `archief/`; elk verplaatst document staat onder dezelfde naam in `docs/template/`; `check-docs` is groen; `feiten.mjs adr` en
   `specs` tonen twee lijsten met een kop per map, app eerst.
-- **templateregime/AC-12** — Docs, reviewpunt per plek: `docs/framework.md` (opening, §8 met de kop "Afgedwongen door", §10,
+- **templateregime/AC-12** — Vervallen door ADR 0103 (procesbewijs; App en review van een code-eigenaar weg door ADR 0093 punt 1 en 2). Was: Docs, reviewpunt per plek: `docs/framework.md` (opening, §8 met de kop "Afgedwongen door", §10,
   R-PROV-01, R-WERK-05 tot en met R-WERK-09, R-WERK-12, R-WERK-23, R-WERK-24, R-CI-01, R-CI-04 tot en met R-CI-08, R-REPO-01,
   R-REPO-02 met de bypass, R-REPO-05, R-ROL-10, R-ARCH-07), `AGENTS.md`, `CLAUDE.md`, `docs/operations/agent-doorloop.md`, de
   skill `opleveren`, `.claude/agents/architect.md` en `docs/nieuwe-app.md`. Die laatste en de stap voor template-updates lezen
