@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd # akkoord eigenaar in de sessie; taakuitzondering op voorafgaande merge (2026-10-21)
+status: gebouwd
 namespace: account-lifecycle
 ---
 

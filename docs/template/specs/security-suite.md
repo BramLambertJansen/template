@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd
 namespace: security
 ---
 
@@ -172,7 +172,7 @@ Bestanden: `test/security/*.int.test.ts` (draaien in `pnpm test:db`, dus in `gat
 - **security/AC-11** — Gegeven een route die niet in `routeClassificatie` staat, een `eigenaar`-route zonder `resources`-regel of een owner-tabel zonder `resources`-regel, wanneer de suite draait, dan is ze rood met de naam van het ontbrekende item (fail-closed, nooit overslaan).
 - **security/AC-12** — Gegeven `db/tests/security.sql`, wanneer de catalogus een overtreding van C1, C2 of C3 bevat, dan faalt de test met de naam van tabel of policy; voor elke invariant is bewezen met een probe dat hij een opzettelijke fout vangt en de goede variant doorlaat.
 - **security/AC-13** — Gegeven de probe-resource uit de generatorsjabloon, wanneer ze door de volledige suite gaat, dan is ze groen; met een bewust gebroken variant (policy weg, kolomrecht op `owner_id`, `using (true)`, route zonder strict input) is de suite rood op de bijbehorende AC.
-- **security/AC-14** — Gegeven `pnpm gate:slow`, wanneer de suite draait, dan draait ze tegen de echte lokale stack (Postgres, Better Auth, Mailpit), zonder gemockte API of database, zonder `skip` of `todo`; de enige afwijking is de sessie van de probe-app via de test-gateway van `asUser` (zie "Datawijzigingen"), en valt ze binnen de bestaande runner (ADR 0044).
+- **security/AC-14** — De suite in `test/security/` draait tegen de echte lokale stack (Postgres, Better Auth, Mailpit), zonder gemockte API of database, zonder `skip` of `todo`; de enige afwijking is de sessie van de probe-app via de test-gateway van `asUser` (zie "Datawijzigingen"). Procesdeel vervallen door ADR 0103. Was: "Gegeven `pnpm gate:slow`, wanneer de suite draait, dan …, en valt ze binnen de bestaande runner (ADR 0044)." Toets: `test/rails/security-suite-echt.test.ts`
 - **security/AC-15** — Vervallen door ADR 0103 (procesbewijs is geen acceptatiecriterium). Was: Gegeven de PR, wanneer ze klaar is, dan staan de relevante docs erin bijgewerkt met `bestand:regel` (framework §4 Tests en §8, `docs/gouden-pad.md`, `docs/dod.md` Beveiliging, één regel in `AGENTS.md`, `CHANGELOG.md`).
 
 ## Randgevallen

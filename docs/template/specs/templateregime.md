@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd
+status: gebouwd
 namespace: templateregime
 ---
 
@@ -40,7 +40,7 @@ n.v.t. — geen UI.
 Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van punt 5; stap 4 = verhuizing.
 
 - **templateregime/AC-1** — Vervallen door ADR 0093 punt 1 (geen App, geen token). Was: Token: de eigenaar maakt een installatietoken van hoogstens een uur aan met
-  `scripts/kit/agent-token.mjs` vanaf `main`, buiten de sandbox (ADR 0089 Herzien 2026-11-17), en de agent geeft het per commando mee (`GH_TOKEN` vóór een
+  `scripts/kit/agent-token.mjs` (vervallen) vanaf `main`, buiten de sandbox (ADR 0089 Herzien 2026-11-17), en de agent geeft het per commando mee (`GH_TOKEN` vóór een
   letterlijk `gh`- of `git push`-commando, gelezen uit een bestand, nooit letterlijk in de opdracht); de sleutel van de App staat op een pad
   dat de sandbox niet laat lezen.
 - **templateregime/AC-2** — Gewijzigd door ADR 0093 punt 2 (spec agent-samenvoegen AC-5): het script eist geen review van
@@ -55,10 +55,10 @@ Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van pun
   (nu `/src/`, `/docs/` en `/CHANGELOG.md`), dan elke glob met een besluit anders dan `agent`, met `/` vooraan bij een glob zonder `**/`. De padtabel heeft rijen
   met besluit `eigenaar` voor `docs/template/**`, `**/CLAUDE*.md`, `**/AGENTS*.md`, `**/.*`, `**/.*/**`, `**/*.config.*`,
   `**/package.json` en `**/tsconfig*.json`. De test rekent met "laatste passende patroon wint" over alle getrackte paden plus
-  `db/migrations/x.sql`, `docs/template/adr/x.md` en `src/x/CLAUDE.md`, en is rood als een pad een andere eigenaar krijgt dan
+  `db/migrations/x.sql` (voorbeeld), `docs/template/adr/x.md` en `src/x/CLAUDE.md` (voorbeeld), en is rood als een pad een andere eigenaar krijgt dan
   het besluit in de padtabel. Bij de activering meldt GitHub geen fouten in `CODEOWNERS` (bewijs: eigenaar, in de PR).
 - **templateregime/AC-4** — Vervallen door ADR 0103 (procesbewijs; de App is weg door ADR 0093). Was: Proef, pad van een code-eigenaar: geleverd op 2026-11-12. PR #695 van de App
-  (`scripts/proef-app-beschermd.md`) was geblokkeerd met alle checks groen, mergebaar na goedkeuring van de eigenaar, en weer
+  (`scripts/proef-app-beschermd.md` (vervallen)) was geblokkeerd met alle checks groen, mergebaar na goedkeuring van de eigenaar, en weer
   geblokkeerd na een nieuwe commit van de App. Na stap 2 herhaald met de echte `CODEOWNERS` op `docs/template/adr/`.
 - **templateregime/AC-5** — Vervallen door ADR 0103 (procesbewijs; de App is weg door ADR 0093). Was: Proef, geen pad van een code-eigenaar: geleverd op 2026-11-12. PR #694 van de App
   (`docs/proef-app-vrij.md`) was mergebaar zonder review zodra de verplichte checks groen waren. Na stap 2 herhaald.
@@ -126,7 +126,7 @@ Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van pun
 | Situatie | Gedrag | Foutcode |
 |---|---|---|
 | PR raakt alleen paden met besluit `agent` | de hoofdsessie merget na groene checks (spec agent-samenvoegen) | n.v.t. |
-| PR raakt `src/x/CLAUDE.md` of een `.`-bestand | de eigenaar merget (spec agent-samenvoegen AC-1) | n.v.t. |
+| PR raakt `src/x/CLAUDE.md` (voorbeeld) of een `.`-bestand | de eigenaar merget (spec agent-samenvoegen AC-1) | n.v.t. |
 
 De randgevallen bij AC-6 en AC-14 (bypass, repo zonder ruleset, onleesbare rules-API, `CODEOWNERS` met fouten of afwezig,
 klassieke branch protection) zijn vervallen door ADR 0093; de oude rijen staan in git.
@@ -135,7 +135,7 @@ klassieke branch protection) zijn vervallen door ADR 0093; de oude rijen staan i
 
 - Stap 2: `.claude/gates.json` (rijen), `.github/CODEOWNERS`, `scripts/github-ruleset.sh`, `scripts/kit/check-docs.mjs`,
   `rails/hooks/lib/padtabel.mjs`, `scripts/kit/check-core.mjs`.
-- Stap 3 verwijdert: `scripts/kit/check-document-status.mjs`, `lane.mjs`, `diff-guard.mjs`, `agent-merge.mjs`,
+- Stap 3 verwijdert: `scripts/kit/check-document-status.mjs` (vervallen), `lane.mjs`, `diff-guard.mjs`, `agent-merge.mjs`,
   `document-status-lokaal.mjs`, `functional-ui-status.mjs`, `adr-herzien.mjs`, de inhoudstoets in `pr-merge.mjs`, drie jobs in
   `.github/workflows/guard.yml`; past aan: `.claude/decisions.json` (`document-status` weg) en `lefthook.yml`.
   `rails/hooks/lib/document-state.mjs` houdt wat `check-docs` en het rolhek (tot punt 9) gebruiken (`pnpm docs:status` is
@@ -165,7 +165,7 @@ De identiteitsregels van het rolhek (ADR 0089 punt 9); de effecttoets is weg met
 
 Tests eerst (R-PRINC-04). AC-2, AC-3, AC-8, AC-9 en AC-10 als unit-tests, eerst rood; AC-6 met sandboxtests. AC-4 en
 AC-5 met proef-PR's (geleverd, herhaald na stap 2). AC-7 en AC-13 in stap 3 met `pnpm ratchet` en `pnpm gate:fast` groen.
-AC-11 in stap 4. AC-14 als unit-tests met een nep-API in een nieuw testbestand (`test/scripts/merge-ruleset.test.ts`), eerst
+AC-11 in stap 4. AC-14 als unit-tests met een nep-API in een nieuw testbestand (`test/scripts/merge-ruleset.test.ts` (vervallen)), eerst
 rood, met elk randgeval uit de tabel. De `goed()`-wereld van `test/scripts/pr-merge.test.ts`, `pr-merge-omvang-steekproef.test.ts`,
 `pr-merge-padtabel.test.ts` en `schrap-documentbewaking-templateregime.test.ts` krijgt de antwoorden op `rules/branches/main`
 (een regel `pull_request` met `require_code_owner_review: true` en een `ruleset_id`), `rulesets/<id>`
