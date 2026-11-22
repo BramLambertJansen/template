@@ -295,14 +295,21 @@ export function leesVitest(verslag, pad) {
 /** tsc-codes voor een ontbrekend bestand of een ontbrekende export: geen bewijs (AC-3). */
 export const TYPE_LAADFOUT = /\berror TS(2305|2307|2614|2724|2792|6053)\b/;
 
+/** tsc-codes van een onbruikbare projectconfiguratie (pad bestaat niet, onleesbaar, geen invoer): geen bewijs (#814). */
+const TYPE_CONFIGFOUT = new Set(['5058', '5083', '18003']);
+
 /**
  * Uitslag van een typetest uit de exitstatus en uitvoer van `tsc` (AC-3): 0 is groen; een ontbrekend bestand of een
- * ontbrekende export is een laadfout; elke andere compileerfout is rood.
+ * ontbrekende export is een laadfout; een compiler die niet startte, een uitvoer zonder `error TS`-diagnose of alleen
+ * configuratiefouten ook (leerpunt #814); elke andere compileerfout is rood.
  * @param {number | null} status @param {string} uitvoer @returns {RunUitslag}
  */
 export function typeUitslag(status, uitvoer) {
   if (status === 0) return { status: 'groen', assertieFouten: 0, laadFout: false };
-  if (TYPE_LAADFOUT.test(uitvoer)) return { status: 'laadfout', assertieFouten: 0, laadFout: true };
+  const laadfout = { status: 'laadfout', assertieFouten: 0, laadFout: true };
+  if (status === null || TYPE_LAADFOUT.test(uitvoer)) return laadfout;
+  const codes = [...uitvoer.matchAll(/\berror TS(\d+)\b/g)].map(([, code = '']) => code);
+  if (codes.every((code) => TYPE_CONFIGFOUT.has(code))) return laadfout;
   return { status: 'rood', assertieFouten: 1, laadFout: false };
 }
 
@@ -315,7 +322,8 @@ export function runOordeel(run, { basis, head }) {
   const beide = `basis ${basis.status}, head ${head.status}`;
   if (head.status !== 'groen') return `${run.pad}: faalt op de head (${beide})`;
   if (basis.status === 'groen') return `${run.pad}: slaagt ook op de basis (${beide})`;
-  if (basis.laadFout) return `${run.pad}: faalt op de basis op laden, niet op een assertie (${beide})`;
+  if (basis.laadFout)
+    return `${run.pad}: faalt op de basis op laden, niet op een assertie (${beide}); importeert de bewijstest iets dat nog niet op de basis staat, zet een nieuwe helper dan in het testbestand zelf (spec leerlus-bewijs, leerpunt #892)`;
   return null;
 }
 

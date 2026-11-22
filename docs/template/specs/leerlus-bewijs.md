@@ -126,7 +126,8 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
 |---|---|---|
 | PR sluit twee leerpunten | Twee regels in `## Leerpunt`; elk bewijs apart getoetst | n.v.t. |
 | Eén test bewijst twee leerpunten | Hetzelfde pad op twee regels mag | n.v.t. |
-| Bewijstest heeft een nieuwe helper nodig die op de basis niet bestaat | Laadfout op de basis telt niet: de job is rood met de melding "faalt op laden, niet op een assertie"; de helper hoort in de test zelf of de bouwer kiest een test die de bestaande code aanroept | n.v.t. |
+| Bewijstest heeft een nieuwe helper nodig die op de basis niet bestaat | Laadfout op de basis telt niet: de job is rood met de melding "faalt op laden, niet op een assertie"; de helper hoort in de test zelf of de bouwer kiest een test die de bestaande code aanroept; de melding zegt dat ook (leerpunt #892) | n.v.t. |
+| Typetest: `tsc` start niet, geeft geen `error TS`-diagnose of alleen een configuratiefout (TS5058, TS5083, TS18003) | Laadfout, geen rood bewijs (leerpunt #814, `typeUitslag` in `scripts/kit/leerpunt.mjs`) | n.v.t. |
 | Basis kan het testbestand niet laden door een gewijzigde configuratie | Rood met de uitvoer; de eigenaar kan dan `geen test: <reden>` met eigenaarmerge laten gelden | n.v.t. |
 | Leerpunt gesloten via een commit op main zonder PR | Geen sluitbewijs: label `leerpunt-zonder-bewijs` | n.v.t. |
 | Issue zonder label `leerpunt` | Workflow en job doen niets | n.v.t. |
