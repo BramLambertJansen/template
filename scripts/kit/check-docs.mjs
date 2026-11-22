@@ -48,6 +48,9 @@
 //     merge-base met origin/main is toegevoegd (of in een niet-getrackt testbestand staat) en een AC-id noemt van een spec
 //     die nog `goedgekeurd` is, of van een AC die in een gebouwde spec nog `(nog niet gebouwd)` draagt; één regel per spec
 //     en testbestand in `docsMeldingen` (scripts/kit/vergeten-gebouwd.mjs).
+//  19. Geen gewijzigde of verdwenen uitgebrachte sectie `## [x.y.z]` van docs/template-changelog.md tegenover de merge-base
+//     met origin/main (leerpunt #837, sleutel `docs:changelog-behoud:<versie>`); in `docsKrimp`, dus strikt en nooit in de
+//     baseline. Een nieuwe sectie toevoegen (`template:release`) mag.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -67,7 +70,7 @@ import { ADR_MAPPEN, adrKopViolations, adrNumber, duplicateAdrNumbers, invalidAd
 import { APP_STUB } from './app-init.mjs';
 import { CODEOWNERS, codeownersTekst, eersteGoedkeurder, HERSTEL } from './codeowners.mjs';
 import { grensMeldingen, grensViolations, normenMeldingenUitGit, normenUitGit, zonderBasis } from './leesbudget.mjs';
-import { FRAGMENT_MAP, fragmentFout } from './template-release.mjs';
+import { CHANGELOG, FRAGMENT_MAP, fragmentFout, releaseTeksten } from './template-release.mjs';
 import { CODESPAN, HEK, sluitHek } from './markdown.mjs';
 import { zonderPromptViolations } from './zonder-prompt.mjs';
 import { receptRolhekViolations } from './recept-rolhek.mjs';
@@ -141,7 +144,8 @@ export async function docsMeldingen(root = '.') {
 
 /**
  * De krimpcontrole op normen tegenover `git merge-base origin/main HEAD` (spec krimp-op-normen) en het behoud van
- * changelogfragmenten die al op die basis staan (regel 17, leerpunt #877); nooit in de baseline.
+ * changelogfragmenten die al op die basis staan (regel 17, leerpunt #877) en van de uitgebrachte changelogsecties
+ * (regel 19, leerpunt #837); nooit in de baseline.
  * Zonder basis is ze in CI rood (AC-5).
  * @param {string} root
  * @returns {Promise<Violation[]>}
@@ -151,7 +155,42 @@ export async function docsKrimp(root = '.') {
     ...zonderBasis(root, process.env['GITHUB_ACTIONS'] === 'true').violations,
     ...normenUitGit(root),
     ...fragmentBehoud(root),
+    ...changelogBehoud(root),
   ]);
+}
+
+/**
+ * De merge-base met origin/main, of `null` zonder basis (regel 17 en 19).
+ * @param {string} root
+ * @returns {string | null}
+ */
+function mergeBasis(root) {
+  const basis = spawnSync('git', ['merge-base', 'origin/main', 'HEAD'], { cwd: root, encoding: 'utf8' });
+  const sha = basis.stdout.trim();
+  return basis.status === 0 && sha !== '' ? sha : null;
+}
+
+/**
+ * Regel 19 (leerpunt #837): een uitgebrachte sectie van docs/template-changelog.md die op de merge-base met origin/main
+ * staat, wijzigt niet en verdwijnt niet (ook ongecommit in de werkmap). `template:release` neemt alleen fragmenten mee,
+ * dus een regel in een uitgebrachte sectie viel buiten elke release. Een nieuwe sectie toevoegen mag; zonder merge-base
+ * of zonder het bestand op de basis toetst dit niets.
+ * @param {string} root
+ * @returns {Violation[]}
+ */
+function changelogBehoud(root) {
+  const basis = mergeBasis(root);
+  if (basis === null) return [];
+  const oud = spawnSync('git', ['show', `${basis}:${CHANGELOG}`], { cwd: root, encoding: 'utf8' });
+  if (oud.status !== 0) return [];
+  const pad = path.join(root, CHANGELOG);
+  const nu = releaseTeksten(existsSync(pad) ? readFileSync(pad, 'utf8') : '');
+  return [...releaseTeksten(oud.stdout)]
+    .filter(([versie, sectie]) => nu.get(versie) !== sectie)
+    .map(([versie]) => ({
+      key: `docs:changelog-behoud:${versie}`,
+      message: `${CHANGELOG}: de uitgebrachte sectie [${versie}] is gewijzigd of verdwenen; zet haar terug en zet de wijziging als fragment in ${FRAGMENT_MAP}/`,
+    }));
 }
 
 /**
@@ -162,10 +201,12 @@ export async function docsKrimp(root = '.') {
  * @returns {Violation[]}
  */
 function fragmentBehoud(root) {
-  const git = (/** @type {string[]} */ args) => spawnSync('git', args, { cwd: root, encoding: 'utf8' });
-  const basis = git(['merge-base', 'origin/main', 'HEAD']);
-  if (basis.status !== 0 || basis.stdout.trim() === '') return [];
-  const diff = git(['diff', '--name-status', '--no-renames', '-z', basis.stdout.trim(), '--', `${FRAGMENT_MAP}/`]);
+  const basis = mergeBasis(root);
+  if (basis === null) return [];
+  const diff = spawnSync('git', ['diff', '--name-status', '--no-renames', '-z', basis, '--', `${FRAGMENT_MAP}/`], {
+    cwd: root,
+    encoding: 'utf8',
+  });
   const velden = diff.status === 0 ? diff.stdout.split('\0').filter(Boolean) : [];
   /** @type {Violation[]} */
   const violations = [];

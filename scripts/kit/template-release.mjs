@@ -83,6 +83,23 @@ export function releasesUit(changelog) {
 }
 
 /**
+ * De tekst per uitgebrachte sectie: elke `## [x.y.z]`-kop met haar inhoud tot de volgende `## `-kop, zonder witregels aan
+ * het eind; `## [Unreleased]` telt niet. Gooit niet, anders dan `releasesUit`: check-docs regel 19 vergelijkt hiermee de
+ * werkmap met de merge-base (leerpunt #837).
+ * @param {string} changelog de tekst van docs/template-changelog.md
+ * @returns {Map<string, string>} versie → sectie
+ */
+export function releaseTeksten(changelog) {
+  /** @type {Map<string, string>} */
+  const secties = new Map();
+  for (const deel of changelog.split(/^(?=## )/m)) {
+    const versie = /^## \[(\d+\.\d+\.\d+)\]/.exec(deel)?.[1];
+    if (versie !== undefined) secties.set(versie, deel.trimEnd());
+  }
+  return secties;
+}
+
+/**
  * @param {string} versie `x.y.z`
  * @returns {number[]}
  */
