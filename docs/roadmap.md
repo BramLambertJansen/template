@@ -369,6 +369,13 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   cloud, ADR 0044, 0061, 0078 en 0084 herzien (spec `docs/template/specs/cloud-pr-route.md`). **Klaar als:** de AC's van de
   spec zijn groen en de metingen van stap 0 staan in de PR.
   aanleiding: `docs/template/specs/cloud-pr-route.md` (meting van een cloudsessie, 20 november 2026: 401 op `gh`, commit niet te ondertekenen)
+- [ ] **Nieuwe-app-script bouwstap 2: `repo-instellingen`.** Bouwstap 1 is gebouwd (`scripts/kit/nieuwe-app.mjs`,
+  `test/scripts/nieuwe-app.test.ts`); het subcommando `repo-instellingen` bestaat nog niet. Eerst de spec herzien: werking 7, AC-10,
+  de `REDEN_`-teksten en het bypass-randgeval leunen op `grensRedenen` uit `scripts/kit/pr-merge.mjs`, dat weg is sinds ADR 0093;
+  wat `--controleer` dan toetst, is ontwerpwerk van deze stap of van `check-github` (ST-01). Kritiek werk (R-WERK-05): spec-review
+  van de herziening, aparte tester en goedkeuring van de eigenaar op de PR. **Klaar als:** de herziene AC's van bouwstap 2 zijn groen
+  en `scripts/kit/nieuwe-app.mjs` meldt niet meer dat `repo-instellingen` niet bestaat.
+  aanleiding: `docs/template/specs/nieuwe-app-script.md` (bouwstap 2, "Te herzien vóór bouwstap 2")
 
 ## Geparkeerd
 
@@ -390,9 +397,20 @@ Bewust nog niet, tot de genoemde aanleiding er is (P1). Niets verdwijnt: elk ite
   en destructieve acties getest; generatie haalt gates en build; dry-run toont alle schrijfdoelen, ook de route-tree; een mislukking laat geen
   half gegenereerde resource achter.
   terug als: ST-09 klaar is
+- [ ] **Overnameplan: vervolg op de meting van ST-09.** Uit [het overnameplan](reviews/2026-11-18-overnameplan-agentic.md) §6 (na de
+  tabel): detectie van verzwakte tests (eerst in schaduwmodus), een stille testreporter, een lokaal frictierapport uit de transcripten
+  en eventueel leesrollen zonder Bash (ADR 0087). De cijfers van ST-09 bepalen welke van de vier een eigen item worden.
+  terug als: ST-09 klaar is
+- [ ] **Herbouw: lokale bewaking en regelboek krimpen** ([herbouw](reviews/2026-11-06-herbouw.md) §5, stap 2–4). Stap 1 (een eigen
+  GitHub App) vervalt door ADR 0093 en de effecttoets door ADR 0091. Open: een ADR dat de overige lokale lagen uit §4.1 afbouwt, per
+  lokale controle het harde equivalent en een fixture die de omzeiling vangt, de controles één voor één weg (eigenaarmerge per
+  gate-pad), en regelboek, instructies en ADR's krimpen (§4.2). De open eigenaarvraag of dit vóór ST-09 komt, is hier beantwoord met
+  "erna": ST-09 levert de meetgrond (`pnpm meting`, weigeringen per taak) waartegen de afbouw zich bewijst.
+  terug als: ST-09 klaar is
 - [ ] **ST-07 (P1) — schermpatronen en design-system, rest.** Lijstpatroon (#92, #114) en toasts (#129) zijn gebouwd. **Werk:** leg herbruikbare
   recepten vast voor lijst/detail/formulier, empty/loading/error/forbidden, bevestigen en succes-/foutfeedback; inventariseer ontbrekende
-  componentvarianten uit de proef-app; behoud documenttitel- en focusgedrag bij nieuwe AppShell-mounts. **Afhankelijkheden:** ConfirmDialog;
+  componentvarianten uit de proef-app (kandidaten uit `docs/reviews/2026-10-14-ui-expansion-review.md`, "Andere gaten": progress en
+  skeleton naast `AsyncView`, tooltip alleen als aanvulling en bestandsinvoer); behoud documenttitel- en focusgedrag bij nieuwe AppShell-mounts. **Afhankelijkheden:** ConfirmDialog;
   concrete behoeften uit ST-09. **Klaar als:** patronen in catalogus en voorbeelden; keyboard, focus en aria-live inhoudelijk getest; axe op 375
   en 1280 px zonder uitzonderingen; geen dubbele mutatie bij busy-state; ConfirmDialog documenteert retries na fouten; app-varianten vragen geen
   core-wijziging.
