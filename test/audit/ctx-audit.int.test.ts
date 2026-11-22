@@ -102,7 +102,7 @@ async function rowsOf(requestId: string | null) {
   });
 }
 
-describe('een app registreert een eigen auditactie (AC-30)', () => {
+describe('een app registreert een eigen auditactie (audit/AC-30)', () => {
   test('ctx.audit schrijft een regel met de actor van de sessie en de request_id van de response', async () => {
     const user = await db.asUser('user');
     const response = await post(user, '/notes/archive', { id: 'n-42' });
@@ -134,7 +134,7 @@ describe('een app registreert een eigen auditactie (AC-30)', () => {
   });
 });
 
-describe('een route die faalt laat geen regel achter (AC-29, AC-31)', () => {
+describe('een route die faalt laat geen regel achter (audit/AC-29, audit/AC-31)', () => {
   test('ctx.audit en daarna een fout: 500 INTERNAL_ERROR en geen regel', async () => {
     const user = await db.asUser('user');
     const response = await post(user, '/notes/fail-after', { id: 'n-44' });

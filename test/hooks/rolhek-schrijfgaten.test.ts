@@ -88,7 +88,7 @@ const SCHRIJFT: readonly string[] = [
   'cp -r x test',
 ];
 
-describe('AC-11: verwijderen via find of een map is deny, net als rm op het bestand', () => {
+describe('compacte-kennisbasis-rails/AC-11: verwijderen via find of een map is deny, net als rm op het bestand', () => {
   test.each(VERWIJDERT)('developer: %s', (command) => {
     expect(verdict(command, 'developer')).toBe('deny');
   });
@@ -97,7 +97,7 @@ describe('AC-11: verwijderen via find of een map is deny, net als rm op het best
   });
 });
 
-describe('AC-11: schrijven via find, awk, sort, een redirect of een map is niet vrij', () => {
+describe('compacte-kennisbasis-rails/AC-11: schrijven via find, awk, sort, een redirect of een map is niet vrij', () => {
   test.each(SCHRIJFT)('developer: %s geeft dezelfde uitslag als een directe redirect', (command) => {
     expect(verdict(command, 'developer')).toBe(verdict(SCHRIJF_REFERENTIE, 'developer'));
   });
@@ -106,7 +106,7 @@ describe('AC-11: schrijven via find, awk, sort, een redirect of een map is niet 
   });
 });
 
-describe('AC-11: fd-duplicatie blijft toegestaan', () => {
+describe('compacte-kennisbasis-rails/AC-11: fd-duplicatie blijft toegestaan', () => {
   test.each(['echo x >&2', 'echo x 2>&1', 'echo x >&-', 'pnpm lint 2>&1', 'pnpm lint >&2'])(
     'developer: %s is allow',
     (command) => {
@@ -271,7 +271,7 @@ describe('bewust geaccepteerd', () => {
   });
 });
 
-describe('AC-12: bestaande weigeringen blijven (regressie)', () => {
+describe('compacte-kennisbasis-rails/AC-12: bestaande weigeringen blijven (regressie)', () => {
   test.each(SUBAGENTS)('%s: rm en mv van het testbestand zijn deny', (agent) => {
     for (const command of [`rm -f ${f}`, `mv ${f} /tmp/x`])
       expect([command, verdict(command, agent)]).toStrictEqual([command, 'deny']);

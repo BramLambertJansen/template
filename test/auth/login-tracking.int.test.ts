@@ -26,7 +26,7 @@ async function resetLogin(userId: string): Promise<void> {
 }
 
 describe('account-lifecycle: laatste geslaagde login', () => {
-  test('AC-1/3: uitnodiging heeft geen historie en de beheerder ziet null via het contract', async () => {
+  test('account-lifecycle/AC-1 account-lifecycle/AC-3: uitnodiging heeft geen historie en de beheerder ziet null via het contract', async () => {
     const email = uniqueEmail('login-onbekend');
     const invitation = await inviteUser(setup.auth, { name: 'Zonder Login', email });
     await setup.migrator.query("select app.assign_role($1, 'user')", [invitation.userId]);
@@ -46,7 +46,7 @@ describe('account-lifecycle: laatste geslaagde login', () => {
     expect(await lastLogin(invitation.userId)).toBeNull();
   });
 
-  test('AC-1/2: succesvol wachtwoord registreert een tijdstip; fout wachtwoord en sessie-opvragen doen dat niet', async () => {
+  test('account-lifecycle/AC-1 account-lifecycle/AC-2: succesvol wachtwoord registreert een tijdstip; fout wachtwoord en sessie-opvragen doen dat niet', async () => {
     const target = await setup.account('user', 'Login Met Wachtwoord');
     expect(await lastLogin(target.userId)).toBeInstanceOf(Date);
     await resetLogin(target.userId);
@@ -87,7 +87,7 @@ describe('account-lifecycle: laatste geslaagde login', () => {
     expect(recorded?.getTime()).toBeLessThanOrEqual(Date.now());
   });
 
-  test('AC-2: bij MFA tellen wachtwoord en mislukte code niet; de geslaagde code wel', async () => {
+  test('account-lifecycle/AC-2: bij MFA tellen wachtwoord en mislukte code niet; de geslaagde code wel', async () => {
     const target = await setup.account('user', 'Login Met MFA');
     const uri = await setup.enableTotp(target.browser);
     await resetLogin(target.userId);
@@ -104,7 +104,7 @@ describe('account-lifecycle: laatste geslaagde login', () => {
     expect((await lastLogin(target.userId))?.getTime()).toBeGreaterThanOrEqual(before);
   });
 
-  test('AC-2: een nieuwe beheerder registreert pas een login na voltooide MFA-inschrijving', async () => {
+  test('account-lifecycle/AC-2: een nieuwe beheerder registreert pas een login na voltooide MFA-inschrijving', async () => {
     const admin = await setup.account('admin', 'Login MFA Nog Instellen');
 
     expect(await lastLogin(admin.userId)).toBeNull();
@@ -115,7 +115,7 @@ describe('account-lifecycle: laatste geslaagde login', () => {
     expect((await lastLogin(admin.userId))?.getTime()).toBeGreaterThanOrEqual(before);
   });
 
-  test('AC-2/4/5: een oude MFA-challenge wordt na blokkeren en herstel geweigerd', async () => {
+  test('account-lifecycle/AC-2 account-lifecycle/AC-4 account-lifecycle/AC-5: een oude MFA-challenge wordt na blokkeren en herstel geweigerd', async () => {
     const admin = await setup.account('admin', 'Login Challenge Beheerder');
     await setup.enableTotp(admin.browser);
     const target = await setup.account('user', 'Login Verouderde Challenge');
@@ -147,51 +147,58 @@ describe('account-lifecycle: laatste geslaagde login', () => {
   test.each([
     ['deactivate', 'activate'],
     ['block', 'unblock'],
-  ])('AC-4/10: een gepauzeerde login kan %s en %s niet passeren', async (disable, restore) => {
-    const admin = await setup.account('admin', 'Login Pauze Beheerder');
-    await setup.enableTotp(admin.browser);
-    const target = await setup.account('user', 'Login Pauze Doel');
-    await resetLogin(target.userId);
-    const hooks = setup.auth.options.databaseHooks.session.create;
-    const original = hooks.before;
-    const reached = Promise.withResolvers<undefined>();
-    const resume = Promise.withResolvers<undefined>();
-    const browser = new Browser(setup.app);
-    hooks.before = async (session, context) => {
-      const result = await original(session, context);
-      if (session.userId === target.userId) {
-        reached.resolve(undefined);
-        await resume.promise;
+  ])(
+    'account-lifecycle/AC-4 account-lifecycle/AC-10: een gepauzeerde login kan %s en %s niet passeren',
+    async (disable, restore) => {
+      const admin = await setup.account('admin', 'Login Pauze Beheerder');
+      await setup.enableTotp(admin.browser);
+      const target = await setup.account('user', 'Login Pauze Doel');
+      await resetLogin(target.userId);
+      const hooks = setup.auth.options.databaseHooks.session.create;
+      const original = hooks.before;
+      const reached = Promise.withResolvers<undefined>();
+      const resume = Promise.withResolvers<undefined>();
+      const browser = new Browser(setup.app);
+      hooks.before = async (session, context) => {
+        const result = await original(session, context);
+        if (session.userId === target.userId) {
+          reached.resolve(undefined);
+          await resume.promise;
+        }
+        return result;
+      };
+      const login = browser.post('/api/auth/sign-in/email', { email: target.email, password: PASSWORD });
+      try {
+        await Promise.race([
+          reached.promise,
+          login.then(() => {
+            throw new Error('De login bereikte de ingestelde sessiepauze niet');
+          }),
+        ]);
+        expect((await setup.call(admin.browser, `POST /api/accounts/${target.userId}/${disable}`, {})).status).toBe(
+          200,
+        );
+        expect((await setup.call(admin.browser, `POST /api/accounts/${target.userId}/${restore}`, {})).status).toBe(
+          200,
+        );
+        resume.resolve(undefined);
+        const result = await login;
+
+        expect(result.status).toBeGreaterThanOrEqual(400);
+        expect(result.status).toBeLessThan(500);
+        expect(await lastLogin(target.userId)).toEqual(HISTORICAL);
+        expect(await (await browser.get('/api/auth/get-session')).json()).toBeNull();
+        expect((await browser.get('/api/me')).status).toBe(401);
+      } finally {
+        resume.resolve(undefined);
+        hooks.before = original;
+        await login;
       }
-      return result;
-    };
-    const login = browser.post('/api/auth/sign-in/email', { email: target.email, password: PASSWORD });
-    try {
-      await Promise.race([
-        reached.promise,
-        login.then(() => {
-          throw new Error('De login bereikte de ingestelde sessiepauze niet');
-        }),
-      ]);
-      expect((await setup.call(admin.browser, `POST /api/accounts/${target.userId}/${disable}`, {})).status).toBe(200);
-      expect((await setup.call(admin.browser, `POST /api/accounts/${target.userId}/${restore}`, {})).status).toBe(200);
-      resume.resolve(undefined);
-      const result = await login;
+      expect((await (await setup.signIn(target.email)).get('/api/me')).status).toBe(200);
+    },
+  );
 
-      expect(result.status).toBeGreaterThanOrEqual(400);
-      expect(result.status).toBeLessThan(500);
-      expect(await lastLogin(target.userId)).toEqual(HISTORICAL);
-      expect(await (await browser.get('/api/auth/get-session')).json()).toBeNull();
-      expect((await browser.get('/api/me')).status).toBe(401);
-    } finally {
-      resume.resolve(undefined);
-      hooks.before = original;
-      await login;
-    }
-    expect((await (await setup.signIn(target.email)).get('/api/me')).status).toBe(200);
-  });
-
-  test('AC-2/3: wachtwoordwijziging en uitloggen bewaren de laatste login', async () => {
+  test('account-lifecycle/AC-2 account-lifecycle/AC-3: wachtwoordwijziging en uitloggen bewaren de laatste login', async () => {
     const target = await setup.account('user', 'Login Behouden');
     await resetLogin(target.userId);
     const changed = await target.browser.post('/api/auth/change-password', {
@@ -205,7 +212,7 @@ describe('account-lifecycle: laatste geslaagde login', () => {
     expect(await lastLogin(target.userId)).toEqual(HISTORICAL);
   });
 
-  test('AC-10: de server neemt bij een login nooit een ouder tijdstip over', async () => {
+  test('account-lifecycle/AC-10: de server neemt bij een login nooit een ouder tijdstip over', async () => {
     const target = await setup.account('user', 'Login Monotoon');
     const future = new Date(Date.now() + 60_000);
     await setup.authDb.query('update "user" set last_login_at = $2 where id = $1', [target.userId, future]);
@@ -214,7 +221,7 @@ describe('account-lifecycle: laatste geslaagde login', () => {
     expect(await lastLogin(target.userId)).toEqual(future);
   });
 
-  test('AC-10: profielinvoer kan geen login- of statusvelden wijzigen', async () => {
+  test('account-lifecycle/AC-10: profielinvoer kan geen login- of statusvelden wijzigen', async () => {
     const target = await setup.account('user', 'Login Niet Zelfbewerkbaar');
     const original = await lastLogin(target.userId);
     const response = await setup.call(target.browser, 'PATCH /api/me', {

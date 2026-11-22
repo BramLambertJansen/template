@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd # voorstel | goedgekeurd | gebouwd | vervallen — alleen de eigenaar zet goedgekeurd
+status: gebouwd
 namespace: audit
 model: opus
 modelreden: nieuwe security definer-functies en aanpassing van app.assign_role en app.set_account_blocked (ADR 0046 punt 18), en wijzigingen in src/core (withUser, route kit; punt 18)
@@ -176,17 +176,21 @@ Foutvertaling (bestaand, `src/core/api/errors.ts:67`): 42501 → `FORBIDDEN`; 22
 
 ### Deel B — tabel en schrijvers
 
-- **audit/AC-5** — `app.audit_log` heeft RLS aan en geforceerd, de kolommen en CHECKs uit "Datawijzigingen", en precies de grants en de drie
-  policies uit deel B; de invariant faalt met een opzettelijke extra policy, een extra grant (bijv. `update` aan `app_definer`) en een
-  uitgeschakelde guard-trigger (controle in een teruggedraaide transactie).
+- **audit/AC-5** — Gewijzigd door ADR 0103 punt 3 (de bewaartermijn uit `db/migrations/20261019120000_retention.sql` geeft een vierde
+  policy): `app.audit_log` heeft RLS aan en geforceerd, de kolommen en CHECKs uit "Datawijzigingen", en precies de grants en de vier
+  policies (de drie uit deel B plus `audit_log_definer_delete`); de invariant faalt met een opzettelijke extra policy, een extra grant
+  (bijv. `update` aan `app_definer`) en een uitgeschakelde guard-trigger (controle in een teruggedraaide transactie). Was: "precies de
+  grants en de drie policies uit deel B". Toets: `db/tests/audit_log.sql`
 - **audit/AC-6** — `audit_log_definer_insert: …` — als `app_definer` slaagt een insert; als `app_authenticated` faalt hij met 42501.
 - **audit/AC-7** — `audit_log_select_admin: …` — een admin met MFA ziet alle regels; een admin met sessie `password` ziet 0 regels; een `user`
   ziet 0 regels, ook niet die met hemzelf als actor of doel.
 - **audit/AC-8** — `audit_log_definer_select: …` — als `app_definer` zijn alle regels zichtbaar.
 - **audit/AC-9** — `insert`, `update`, `delete` en `truncate` falen voor `app_authenticated`; `api_user` en `auth_service` hebben geen enkel
   recht op de tabel (`has_table_privilege` false voor alle vier).
-- **audit/AC-10** — `update`, `delete` en `truncate` falen met 42501 als `app_definer` en als `app_migrator` (eigenaar), ook als de
-  `where` 0 rijen raakt.
+- **audit/AC-10** — Gewijzigd door ADR 0103 punt 3 (de bewaartermijn laat `app_definer` regels ouder dan een jaar verwijderen):
+  `update` en `truncate` falen met 42501 als `app_definer` en als `app_migrator` (eigenaar), ook als de `where` 0 rijen raakt; `delete`
+  raakt alleen regels ouder dan de bewaartermijn. Was: "`update`, `delete` en `truncate` falen met 42501 als `app_definer` en als
+  `app_migrator` (eigenaar), ook als de `where` 0 rijen raakt." Toets: `db/tests/audit_log.sql`, `db/tests/retention.sql`
 - **audit/AC-11** — `app.assign_role` door een admin met MFA (rol `user` → `admin`) schrijft precies één regel: `action` `core.role.assign`,
   `actor_id` = de admin, `db_role` = `session_user` van de test, `target_type` `account`, `target_id` = het account, `details`
   `{"role":"admin","previous":"user"}`, `request_id` = de gezette `app.request_id`.
@@ -202,7 +206,8 @@ Foutvertaling (bestaand, `src/core/api/errors.ts:67`): 42501 → `FORBIDDEN`; 22
 - **audit/AC-18** — `app.audit_account_action` weigert een `user` en een admin zonder MFA (42501) en een actie buiten de vier (22023), en
   schrijft voor een admin met MFA `target_type` `account` en `details` `{}`.
 - **audit/AC-19** — Functiecatalogus: `app.audit` en `app.audit_account_action` `client`; `app.audit_log_guard()` en `app.request_id()`
-  `intern`; alle security definer-functies eigenaar `app_definer` met leeg `search_path` (bestaande invariant), `pnpm check:secdef` groen.
+  `intern`; alle security definer-functies eigenaar `app_definer` met leeg `search_path` (bestaande invariant). Procesdeel vervallen
+  door ADR 0103. Was: "`pnpm check:secdef` groen". Toets: `db/tests/functies.sql`
 - **audit/AC-20** — Een actie die faalt ná het schrijven van de regel (in de test: `app.audit` gevolgd door een fout in dezelfde transactie)
   laat na de rollback geen regel achter.
 - **audit/AC-21** — Vervallen door ADR 0103 (procesbewijs is geen acceptatiecriterium). Was: `pnpm check:snapshot` groen met de nieuwe `db/schema.snapshot.sql` en `src/api/db/schema.ts`; `check-policies` vindt
@@ -314,20 +319,19 @@ Bewijsmatrix (tester schrijft rood vóór de developer; bij de migraties één `
 
 | Bewijs | Soort | Plaats | AC |
 |---|---|---|---|
-| requestId van de server in de transactie, ook bij vervalste header | integratie | `src/core/api/db/with-user.int.test.ts` of `src/core/api/http/*.int.test.ts` | AC-1, AC-2 |
+| requestId van de server in de transactie, ook bij vervalste header | integratie | `src/core/api/db/with-user.int.test.ts` (vervallen) of `src/core/api/http/*.int.test.ts` | AC-1, AC-2 |
 | is_local: geen lek naar de volgende transactie op dezelfde verbinding | integratie (lektest, direct en via de pooler) | bestaande datapad-lektest uitbreiden | AC-3 |
 | lege/ontbrekende requestId | unit + type-test | `src/core/api/db/with-user.test.ts` | AC-4 |
-| invariant: RLS, grants, exact drie policies, triggers aan, met opzettelijke fout | pgTAP | `db/tests/invarianten.sql`, `db/tests/audit_log.sql` | AC-5 |
-| per policy een assert op naam (`audit_log_definer_insert: …`, `audit_log_select_admin: …`, `audit_log_definer_select: …`) | pgTAP + `check-policies` | `db/tests/audit_log.sql` | AC-6 t/m AC-8, AC-21 |
-| negatieve test per verboden rol: `app_authenticated` (insert/update/delete/truncate), `api_user` en `auth_service` (privileges), `app_definer` en `app_migrator` (update/delete/truncate) | pgTAP | `db/tests/audit_log.sql` | AC-9, AC-10 |
+| invariant: RLS, grants, exact vier policies (sinds de bewaartermijn, ADR 0103), triggers aan, met opzettelijke fout | pgTAP | `db/tests/invarianten.sql`, `db/tests/audit_log.sql` | AC-5 |
+| per policy een assert op naam (`audit_log_definer_insert: …`, `audit_log_select_admin: …`, `audit_log_definer_select: …`) | pgTAP | `db/tests/audit_log.sql` | AC-6 t/m AC-8 |
+| negatieve test per verboden rol: `app_authenticated` (insert/update/delete/truncate), `api_user` en `auth_service` (privileges), `app_definer` en `app_migrator` (update/truncate; delete alleen na de bewaartermijn) | pgTAP | `db/tests/audit_log.sql`, `db/tests/retention.sql` | AC-9, AC-10 |
 | lezer verboden: `user`, admin zonder MFA | pgTAP | `db/tests/audit_log.sql` | AC-7 |
 | `app.assign_role` schrijft één regel met actor, `db_role`, `request_id`; script zonder actor | pgTAP | `db/tests/audit_log.sql` | AC-11, AC-12 |
 | rollback-met-actie: `LAST_ADMIN` bij assign_role en blokkeren, andere weigeringen, fout ná schrijven | pgTAP | `db/tests/audit_log.sql` | AC-13, AC-15, AC-20 |
 | alleen bij echte wijziging (blokkeren/deblokkeren) | pgTAP | `db/tests/audit_log.sql` | AC-14 |
 | allowlist-falen: `app.audit` (`core.*`, `account`, patroon, omvang, actor null), `app.audit_account_action` (actie buiten de vier, `user`, geen MFA) | pgTAP | `db/tests/audit_log.sql` | AC-16 t/m AC-18 |
-| functiecatalogus en security definer | pgTAP + `pnpm check:secdef` | `db/tests/functies.sql` | AC-19 |
-| snapshot | `pnpm check:snapshot` | — | AC-21 |
-| invite/reinvite/block/unblock schrijven hun regel met de `request_id` van de response; falen laat niets achter | integratie (echte database, testkit) | `src/api/routes/accounts.int.test.ts` | AC-22 t/m AC-25 |
+| functiecatalogus en security definer | pgTAP | `db/tests/functies.sql` | AC-19 |
+| invite/reinvite/block/unblock schrijven hun regel met de `request_id` van de response; falen laat niets achter | integratie (echte database, testkit) | `src/api/routes/accounts.int.test.ts` (vervallen) | AC-22 t/m AC-25 |
 | vervalste `X-Request-Id` komt niet in de regel | integratie | idem | AC-26 |
 | verboden rol per route, geen regel | integratie | idem | AC-27 |
 | `defineAuditActions` weigert `core.*`, `account`, patronen | unit | `src/core/shared/audit.test.ts` | AC-28 |

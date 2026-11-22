@@ -64,7 +64,7 @@ async function invite(admin: Browser, email = uniqueEmail('audit-invite')) {
   return { id: inviteContract.output.parse(await json(response)).id, email, requestId: requestIdOf(response) };
 }
 
-describe('uitnodigen (AC-22, AC-23)', () => {
+describe('uitnodigen (audit/AC-22, audit/AC-23)', () => {
   test('schrijft core.account.invite en core.role.assign met het id uit de response, de actor en de request_id', async () => {
     const admin = await mfaAdmin();
     const invited = await invite(admin.browser);
@@ -99,7 +99,7 @@ describe('uitnodigen (AC-22, AC-23)', () => {
   });
 });
 
-describe('opnieuw uitnodigen (AC-24)', () => {
+describe('opnieuw uitnodigen (audit/AC-24)', () => {
   test('schrijft één core.account.reinvite met het doelaccount en de actor', async () => {
     const admin = await mfaAdmin();
     const invited = await invite(admin.browser);
@@ -136,7 +136,7 @@ describe('opnieuw uitnodigen (AC-24)', () => {
   });
 });
 
-describe('blokkeren en deblokkeren (AC-25)', () => {
+describe('blokkeren en deblokkeren (audit/AC-25)', () => {
   const regel = (action: string, who: { actor: string; target: string; requestId: string }) => ({
     action,
     actor_id: who.actor,
@@ -207,7 +207,7 @@ describe('blokkeren en deblokkeren (AC-25)', () => {
   });
 });
 
-describe('een X-Request-Id van de client (AC-26)', () => {
+describe('een X-Request-Id van de client (audit/AC-26)', () => {
   test('komt in geen enkele auditregel van invite, reinvite, block en unblock', async () => {
     const admin = await mfaAdmin();
     const user = await t.account('user', 'Vervalst');
@@ -234,7 +234,7 @@ describe('een X-Request-Id van de client (AC-26)', () => {
   });
 });
 
-describe('verboden rollen (AC-27): geen regel', () => {
+describe('verboden rollen (audit/AC-27): geen regel', () => {
   const routes = [
     ['invite', () => INVITE, { naam: 'X', email: 'x@example.test', rol: 'user' }],
     ['reinvite', (id: string) => REINVITE(id), {}],

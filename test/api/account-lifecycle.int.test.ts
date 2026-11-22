@@ -83,7 +83,7 @@ describe.each([
 });
 
 describe('account-lifecycle: onafhankelijk beheer', () => {
-  test('AC-4/5: deactiveren weigert login en bestaande auth-sessie; activeren vraagt een nieuwe login', async () => {
+  test('account-lifecycle/AC-4 account-lifecycle/AC-5: deactiveren weigert login en bestaande auth-sessie; activeren vraagt een nieuwe login', async () => {
     const admin = await mfaAdmin();
     const target = await setup.account('user', 'Lifecycle Herstel');
     const cookies = [...target.browser.cookies];
@@ -105,7 +105,7 @@ describe('account-lifecycle: onafhankelijk beheer', () => {
     expect((await signedIn.get('/api/me')).status).toBe(200);
   });
 
-  test('AC-5: een oude cookie wordt ook zonder tussentijdse aanvraag niet opnieuw geldig', async () => {
+  test('account-lifecycle/AC-5: een oude cookie wordt ook zonder tussentijdse aanvraag niet opnieuw geldig', async () => {
     const admin = await mfaAdmin();
     const target = await setup.account('user', 'Lifecycle Oude Cookie');
     await setup.call(admin.browser, deactivate(target.userId), {});
@@ -116,7 +116,7 @@ describe('account-lifecycle: onafhankelijk beheer', () => {
     expect((await target.browser.get('/api/me')).status).toBe(401);
   });
 
-  test('AC-4/5: gevoelige auth-routes weigeren een bestaande cookie tijdens en na de deactivatie', async () => {
+  test('account-lifecycle/AC-4 account-lifecycle/AC-5: gevoelige auth-routes weigeren een bestaande cookie tijdens en na de deactivatie', async () => {
     const admin = await mfaAdmin();
     const target = await setup.account('user', 'Lifecycle Auth Bewaking');
     const cookies = [...target.browser.cookies];
@@ -134,7 +134,7 @@ describe('account-lifecycle: onafhankelijk beheer', () => {
     expect((await (await setup.signIn(target.email)).get('/api/me')).status).toBe(200);
   });
 
-  test('AC-3/6: alle combinaties blijven zichtbaar en beide filters vinden de gezamenlijke toestand', async () => {
+  test('account-lifecycle/AC-3 account-lifecycle/AC-6: alle combinaties blijven zichtbaar en beide filters vinden de gezamenlijke toestand', async () => {
     const admin = await mfaAdmin();
     const target = await setup.account('user', 'Lifecycle Combinaties');
     const original = await accountFromList(admin.browser, target.email);
@@ -172,7 +172,7 @@ describe('account-lifecycle: onafhankelijk beheer', () => {
     expect((await (await setup.signIn(target.email)).get('/api/me')).status).toBe(200);
   });
 
-  test('AC-7: eigen deactivatie en een uitgenodigd account worden geweigerd', async () => {
+  test('account-lifecycle/AC-7: eigen deactivatie en een uitgenodigd account worden geweigerd', async () => {
     const admin = await mfaAdmin();
     const invitation = await inviteUser(setup.auth, { name: 'Lifecycle Uitnodiging', email: uniqueEmail('lifecycle') });
     const own = await setup.call(admin.browser, deactivate(admin.userId), {});
@@ -184,7 +184,7 @@ describe('account-lifecycle: onafhankelijk beheer', () => {
     expect((await admin.browser.get('/api/me')).status).toBe(200);
   });
 
-  test('AC-9: herhaalde acties behouden tijdstip en sessieversie en schrijven één auditregel per overgang', async () => {
+  test('account-lifecycle/AC-9: herhaalde acties behouden tijdstip en sessieversie en schrijven één auditregel per overgang', async () => {
     const admin = await mfaAdmin();
     const target = await setup.account('user', 'Lifecycle Idempotent');
     const first = await setup.call(admin.browser, deactivate(target.userId), {});

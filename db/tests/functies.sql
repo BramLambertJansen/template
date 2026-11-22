@@ -16,7 +16,7 @@ insert into catalogus values
   ('app.set_account_deactivated(text, boolean)', 'client', null),
   ('app.consume_rate_limit(text, integer, integer)', 'client', 'actor uit app.current_user_id(); zonder actor 42501 (spec rate-limit)'),
   ('app.user_roles_keep_one_admin()', 'intern', 'triggerfunctie van public.user_roles'),
-  -- Audit log (spec audit-log, AC-19).
+  -- Audit log (spec audit-log, audit/AC-19).
   ('app.request_id()', 'intern', 'alleen gelezen door security definer-functies van de audit log'),
   ('app.audit_log_guard()', 'intern', 'triggerfunctie van app.audit_log'),
   ('app.audit(text, text, text, jsonb)', 'client', null),

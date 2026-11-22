@@ -31,6 +31,7 @@ Hooguit drie open items (`check:roadmap`); nummer 1 is bewijs vóór uitbreiding
   **Klaar als:** een nieuwe gebruiker en admin doorlopen de flow tegen de echte stack; verboden toegang is getest; de update behoudt app-code
   en instellingen, met conflicten alleen in vooraf als verwacht vastgelegde bestanden; rapport met exacte checks, handwerk en verbeter-PR's
   terug naar de template. Een demo in deze repo alleen telt niet.
+  Voorbereid: de securitysuite die met de proef-app mee gaat lopen (spec `security-suite`, `gebouwd`; bewijs `test/rails/security-suite-echt.test.ts`).
   aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (P1, besluit 1)
   aanleiding: #321 (reproduceerbare nulmeting van leerpunten in het ST-09-protocol)
   aanleiding: #319 (playbooklijst van verplichte checks gelijk aan de rulesetpayload)
@@ -106,7 +107,8 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   **Klaar als:** echte-stack e2e per flow; verboden rol en admin zonder MFA geweigerd; laatste-admin-racetest; herstelcode eenmalig, ook bij
   parallel gebruik; ingetrokken of verlopen links werken niet. Elk deel krijgt afzonderlijk bewijs.
   aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (B-11)
-- [ ] **ST-04 (P0) — audit: vervolg** (ADR 0051, spec audit-log). Gebouwd in #128: migratie, `ctx.audit`, invite/reinvite. Open: `/admin/audit`
+- [ ] **ST-04 (P0) — audit: vervolg** (ADR 0051, spec audit-log). Gebouwd in #128: migratie, `ctx.audit`, invite/reinvite; de spec
+  `audit-log` staat op `gebouwd` sinds de AC-dekking compleet is (ADR 0103, bewijs `db/tests/audit_log.sql`). Open: `/admin/audit`
   (eigen spec) en audit voor de routes revoke en reset-link (met ST-02).
   **Werk:** servergegenereerde request-ID, audit in de transactie, append-only-tabel met vaste grants en policies, getypte strict gevalideerde
   details (geen willekeurige payloads, e-mailadressen of vrije tekst), aparte core-auditwriter voor Better Auth-acties.
@@ -170,6 +172,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
 - [ ] **ST-01 (P0) — GitHub-bescherming daadwerkelijk activeren** (stuk 6). GitHub laat op `main` alleen werk toe via een PR
   met groene verplichte checks. Gebouwd: `scripts/github-ruleset.sh` met `test/scripts/github-ruleset.test.ts` (#104), `guard.yml` met alleen de job
   `check-core` (R-CI-07; de diff-guard is weg, ADR 0089 punt 5) en CODEOWNERS (gegenereerd uit de padtabel) en PR-template.
+  De spec `templateregime` staat op `gebouwd`; haar proeven met de App zijn vervallen door ADR 0103 (bewijs `test/rails/codeowners-templateregime.test.ts`).
   Stand volgens ADR 0093: de agent werkt onder het account van de eigenaar; er komt geen GitHub App, token of machineaccount en geen
   `denyRead` op `~/.config/gh`; de ruleset eist geen review van een code-eigenaar en heeft geen bypass; wie een PR met een beschermd pad
   samenvoegt, beslist `pnpm pr:merge` op de padtabel (vangnet, geen grens; spec `docs/template/specs/agent-samenvoegen.md`).
@@ -461,5 +464,6 @@ Nog open uit een stuk dat verder gebouwd is (3c en 3e):
 
 - [ ] UI-kit: tabel, tabs, galerij en filterbalk (#156, spec `docs/template/specs/ui-data-display.md`); in `check:catalogus` en op `/design-system`.
       De carousel is op 2026-10-15 uit de spec gehaald (spec, "Buiten scope"); de componenten bestaan, de spec staat nog op `goedgekeurd`
-- [ ] Laatste geslaagde login en afzonderlijke deactivatie met herstel, naast blokkeren
-      (spec `accountstatus-en-laatste-login`, ADR 0052)
+- [x] Laatste geslaagde login en afzonderlijke deactivatie met herstel, naast blokkeren
+      (spec `accountstatus-en-laatste-login`, ADR 0052); bewijs `test/api/account-lifecycle.int.test.ts`,
+      `test/auth/login-tracking.int.test.ts` en `e2e/account-lifecycle.spec.ts`

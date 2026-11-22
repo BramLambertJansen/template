@@ -17,7 +17,7 @@ function uitvoer(result: { stdout?: string; stderr?: string }): string {
   return `${result.stdout ?? ''}${result.stderr ?? ''}`;
 }
 
-describe('docs-drift: alleen bij Stop', () => {
+describe('docs-drift: alleen bij Stop (compacte-kennisbasis-rails/AC-13)', () => {
   test('referentie: het Stop-event herinnert aan docs-drift', () => {
     expect(uitvoer(stop({ session_id: 's1', hook_event_name: 'Stop' }, deps()))).toContain('docs-drift');
   });

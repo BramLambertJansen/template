@@ -6,7 +6,7 @@ import { defineAuditActions } from './audit.ts';
 // eigen acties zonder core te wijzigen; een fout in de registratie gooit bij het aanmaken, dus bij het opstarten.
 const details = z.object({ reason: z.string() });
 
-describe('defineAuditActions (uitbreidingsplek, ADR 0040)', () => {
+describe('defineAuditActions (uitbreidingsplek, ADR 0040; audit/AC-28)', () => {
   test('een app registreert acties met een doeltype en een details-schema', () => {
     const actions = defineAuditActions({
       'note.archive': { target: 'note', details },

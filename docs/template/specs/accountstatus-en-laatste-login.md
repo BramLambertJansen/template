@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd # akkoord eigenaar in de sessie; taakuitzondering op voorafgaande merge (2026-10-21)
+status: gebouwd
 namespace: account-lifecycle
 ---
 
@@ -167,5 +167,10 @@ na herstel geweigerd; zowel succesvolle herlogin als CSP-controle blijven vereis
 - De volledige browsercheck is niet groen: 40 geslaagd, 20 mislukt met time-outs, ook de nieuwe lifecycle-test
   tijdens het laden van de accountlijst. Tijdens deze run raakte de lokale swap vrijwel vol. Dit is geen bewijs
   dat de volledige browserflow of toegankelijkheid van deze uitbreiding slaagt; tests en tijdslimieten blijven intact.
-- Definitief bouwbewijs, CI (inclusief CodeQL en OSV) en eigenaarreview ontbreken nog. De spec blijft daarom
-  goedgekeurd, niet gebouwd; het roadmap-item blijft open.
+- Definitief bouwbewijs, CI (inclusief CodeQL en OSV) en eigenaarreview ontbraken toen; de spec bleef goedgekeurd.
+
+## Bouwbewijs (2026-11-22)
+
+De status `gebouwd` komt met de PR die de volledige AC-id's in de tests zet (ADR 0103, Gevolgen): haar CI-run, met
+`gate:slow` (inclusief de browsercheck met `e2e/account-lifecycle.spec.ts`), CodeQL en OSV groen, en de merge door de
+eigenaar zijn het bewijs. Is die run niet groen, dan gaat de status in die PR terug naar `goedgekeurd`.

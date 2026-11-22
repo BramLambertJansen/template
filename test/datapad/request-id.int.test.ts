@@ -34,22 +34,22 @@ describe.each(targets)('app.request_id in withUser, $name', ({ url }) => {
   const seenIn = (name: string, requestId: string) =>
     withUser(actor(name), async (tx) => idOf.parse((await tx.execute(sql.raw(READ_ID))).rows[0]).id, { requestId });
 
-  test('AC-1: het werk ziet de requestId die withUser kreeg', async () => {
+  test('audit/AC-1: het werk ziet de requestId die withUser kreeg', async () => {
     expect(await seenIn('user-rid', 'R-eerste')).toBe('R-eerste');
   });
 
-  test('AC-3: twee opeenvolgende aanroepen op dezelfde verbinding zien elk hun eigen requestId', async () => {
+  test('audit/AC-3: twee opeenvolgende aanroepen op dezelfde verbinding zien elk hun eigen requestId', async () => {
     expect(await seenIn('user-a', 'R1')).toBe('R1');
     expect(await seenIn('user-b', 'R2')).toBe('R2');
   });
 
-  test('AC-3: na de commit is de requestId weg op de verbinding (is_local)', async () => {
+  test('audit/AC-3: na de commit is de requestId weg op de verbinding (is_local)', async () => {
     await seenIn('user-c', 'R-lek');
 
     expect(idOf.parse((await pool.query(READ_ID)).rows[0]).id).toBeNull();
   });
 
-  test('AC-3: na een fout in het werk is de requestId ook weg', async () => {
+  test('audit/AC-3: na een fout in het werk is de requestId ook weg', async () => {
     await expect(
       withUser(
         actor('user-d'),
@@ -64,7 +64,7 @@ describe.each(targets)('app.request_id in withUser, $name', ({ url }) => {
     expect(idOf.parse((await pool.query(READ_ID)).rows[0]).id).toBeNull();
   });
 
-  test('AC-1: ook de rate-limit-transactie en de routetransactie zien de requestId', async () => {
+  test('audit/AC-1: ook de rate-limit-transactie en de routetransactie zien de requestId', async () => {
     const seen = await withUser(
       actor('user-e'),
       async (tx) => idOf.parse((await tx.execute(sql.raw(READ_ID))).rows[0]).id,
@@ -100,7 +100,7 @@ describe('gelijktijdige requests (direct)', () => {
   });
 });
 
-describe('createApp: de requestId is die van de server (AC-2)', () => {
+describe('createApp: de requestId is die van de server (audit/AC-2)', () => {
   const pool = createPool(required('MIGRATOR_DATABASE_URL'));
   afterAll(async () => {
     await pool.end();
