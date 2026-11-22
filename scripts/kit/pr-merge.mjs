@@ -6,7 +6,7 @@
 // `.claude/gates.app.json` als dat er is; raakt er één een beschermd pad, of is de lijst of de padtabel niet te lezen, dan
 // voegt de eigenaar samen. GitHub maakt dat onderscheid niet meer (geen review van een code-eigenaar in de ruleset): dit
 // script is daar een vangnet, geen grens, en controleert de ruleset niet. De beschrijving leest het niet: dat
-// de eigenaar merget bij `geen test:` of `meting:` in de sectie Leerpunt, is een afspraak (ADR 0078 punt 1 en 2, herzien in #696).
+// de eigenaar merget bij `geen test:`, `meting:`, `baseline:` of `geen baseline:` in de sectie Leerpunt, is een afspraak (ADR 0078 punt 1 en 2, herzien in #696).
 import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
 import { gitText, readAuthority } from '../../rails/hooks/lib/authority-context.mjs';

@@ -58,9 +58,13 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   ```text
   ## Leerpunt
 
-  - #<nr>: trede <Type|Check|Gouden pad of generator|Skill|Padregel|AGENTS.md>; bewijs <testpad>
-  - #<nr>: trede <Skill|Padregel|AGENTS.md>; bewijs geen test: <reden>
+  - #<nr>: trede <Type|Check|Gouden pad of generator>; bewijs <testpad>
+  - #<nr>: trede <Type|Check|Gouden pad of generator>; bewijs geen test: <reden met een integratie- of e2e-test>
+  - #<nr>: trede <Skill|Padregel|AGENTS.md>; bewijs baseline: zonder <a>/3, met 3/3 (<model>)
+  - #<nr>: trede <Skill|Padregel|AGENTS.md>; bewijs geen baseline: <reden>
   ```
+
+  De twee laatste vormen en het blok `### Scenario #<nr>` staan in spec [gedragsbaseline](gedragsbaseline.md) (ADR 0107).
 
 - Comment van de workflow bij `leerpunt-onvolledig`, letterlijk de eerste regel: `Dit leerpunt volgt het sjabloon niet:`,
   daarna per fout één regel (`ontbreekt: <kop>`, `leeg: <kop>`, `onbekende waarde bij <kop>: <waarde>`, `volgorde: <kop>`),
@@ -88,15 +92,17 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   (`persist-credentials: false`). Het token staat alleen in de env van die voorbereidende stap. De basisrun installeert uit de lockfile van de basis, de headrun uit die van de head, beide met
   `--ignore-scripts`. Een test leest het workflowbestand en faalt op een token in de env van workflow, job of een bewijsstap, of in `with: token`. Fixtures: een test die ook op de basis slaagt, en een test die op de basis
   alleen op een import faalt, maken de job allebei rood.
-- **leerlus-bewijs/AC-4** — `geen test: <reden>` is alleen geldig bij trede Skill, Padregel of AGENTS.md, of bij een
-  integratie- of e2e-test, met een niet-lege reden; dan slaagt de job en geeft het agent-merge-oordeel (`diff-guard.mjs`,
+- **leerlus-bewijs/AC-4** — Gewijzigd door ADR 0107 (spec gedragsbaseline AC-5): `geen test: <reden>` is alleen geldig bij een
+  integratie- of e2e-test uit de diff, met een niet-lege reden; bij trede Skill, Padregel of AGENTS.md is het bewijs
+  `baseline:` of `geen baseline: <reden>` en is `geen test:` rood. Was: "`geen test: <reden>` is alleen geldig bij trede
+  Skill, Padregel of AGENTS.md, of bij een integratie- of e2e-test, met een niet-lege reden". Verder ongewijzigd: met een niet-lege reden; dan slaagt de job en geeft het agent-merge-oordeel (`diff-guard.mjs`,
   gelezen door `pr-merge.mjs`) `nee` met reden `leerpunt zonder test`. Bij een andere trede of lege reden: rood. De job draait
   ook op `pull_request` type `edited`. Omdat de diff-guard niet op `edited` draait, leest `pr-merge.mjs` de beschrijving zelf op
   het moment van mergen met dezelfde parser van `## Leerpunt` als `leerpunt-bewijs.mjs`, en weigert bij `geen test:`, ook als
   het oordeel eerder `ja` was. Het omgekeerde (later `bewijs <pad>`) houdt het oordeel op `nee` tot de volgende push: veilig. Test: beschrijving na het oordeel
   gewijzigd van `bewijs <pad>` naar `geen test: …` geeft een weigering.
   Vervallen voor de diff-guard en het mergescript door ADR 0089 punt 5 (ADR 0078 Herzien #696): de eigenaar merget volgens
-  afspraak; de job blijft zoals hierboven.
+  afspraak; de job blijft zoals hierboven. Toets: `test/scripts/leerpunt-bewijs.test.ts`
 - **leerlus-bewijs/AC-5** — De workflow `leerpunt-check` op `issues` (opened, edited, labeled, reopened) toetst een issue met label
   `leerpunt` tegen `leerpunt.yml`: elke kop aanwezig en in volgorde, verplichte velden niet leeg (`_No response_` telt als leeg),
   `Soort` en `Voorstel voor de plek` exact een optie. Bij fouten: label `leerpunt-onvolledig` en de comment uit "Hergebruik en UX";

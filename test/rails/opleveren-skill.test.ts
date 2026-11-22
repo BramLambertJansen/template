@@ -169,16 +169,16 @@ describe('leerlus-bewijs/AC-8 MCP in de cloud en de sectie Leerpunt', () => {
     const stap = flat(skill).slice(flat(skill).indexOf('Loop de signaalmomenten'));
     expect(stap).toMatch(/MCP-tool voor issues, alleen aanmaken, alleen naar template\.repository, met label leerpunt/);
     expect(stap).toContain('## Leerpunt');
-    expect(stap).toContain('- #<nr>: trede <trede>; bewijs <testpad>');
+    // GEWIJZIGD (spec gedragsbaseline AC-7, ADR 0107): de regel met een testpad noemt alleen de treden met een test.
+    expect(stap).toContain('- #<nr>: trede <Type|Check|Gouden pad of generator>; bewijs <testpad>');
     expect(stap).toContain('bewijs geen test: <reden>');
   });
 
   test('leerlus-bewijs/AC-8: het PR-sjabloon heeft de sectie ## Leerpunt met de regelvorm', () => {
     const sjabloon = readFileSync('.github/pull_request_template.md', 'utf8');
     expect(sjabloon).toMatch(/^## Leerpunt$/m);
-    expect(sjabloon).toContain(
-      '- #<nr>: trede <Type|Check|Gouden pad of generator|Skill|Padregel|AGENTS.md>; bewijs <testpad>',
-    );
+    // GEWIJZIGD (spec gedragsbaseline AC-7, ADR 0107): Skill, Padregel en AGENTS.md bewijzen met een baseline.
+    expect(sjabloon).toContain('- #<nr>: trede <Type|Check|Gouden pad of generator>; bewijs <testpad>');
   });
 });
 

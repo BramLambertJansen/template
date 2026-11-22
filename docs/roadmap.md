@@ -350,6 +350,8 @@ Bewust nog niet, tot de genoemde aanleiding er is (P1). Niets verdwijnt: elk ite
 - [ ] **Overnameplan: vervolg op de meting van ST-09.** Uit [het overnameplan](reviews/2026-11-18-overnameplan-agentic.md) §6 (na de
   tabel): detectie van verzwakte tests (eerst in schaduwmodus), een stille testreporter, een lokaal frictierapport uit de transcripten
   en eventueel leesrollen zonder Bash (ADR 0087). De cijfers van ST-09 bepalen welke van de vier een eigen item worden.
+  Daar hoort ook een evalharnas met betaalde runs bij, als opvolger van de gedragsbaseline in de sessie (ADR 0107 punt 8,
+  spec `gedragsbaseline`); dat vraagt een eigen ADR.
   terug als: ST-09 klaar is
 - [ ] **Herbouw: lokale bewaking afbouwen waar een hard equivalent bestaat** ([herbouw](reviews/2026-11-06-herbouw.md) §5, stap 2–4).
   Stap 1 (een eigen GitHub App) vervalt door ADR 0093 en de effecttoets door ADR 0091. Daarmee vervalt ook de voorwaarde van de

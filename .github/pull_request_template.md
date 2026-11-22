@@ -26,10 +26,14 @@
 ## Leerpunt
 
 <!-- Alleen als deze PR een issue met label `leerpunt` sluit (ADR 0078); anders weglaten. Per issue één regel:
-- #<nr>: trede <Type|Check|Gouden pad of generator|Skill|Padregel|AGENTS.md>; bewijs <testpad>
+- #<nr>: trede <Type|Check|Gouden pad of generator>; bewijs <testpad>
 Het testpad is een `*.test.ts(x)` (bij Type een `*.test-d.ts`) die deze PR toevoegt of wijzigt; hij faalt op de basis op een
-assertie en slaagt op de head. Bij Skill, Padregel, AGENTS.md of een integratie- of e2e-test (noem die in de reden):
-`bewijs geen test: <reden>`; dan merget de eigenaar. Schrappen of vereenvoudigen (ADR 0081; het issue heeft die plek):
+assertie en slaagt op de head. Bij een integratie- of e2e-test (noem die in de reden): `bewijs geen test: <reden>`; dan
+merget de eigenaar. Bij een teksttrede (ADR 0107; recept: docs/operations/gedragsbaseline.md):
+- #<nr>: trede <Skill|Padregel|AGENTS.md>; bewijs baseline: zonder <a>/3, met 3/3 (<model>)
+- #<nr>: trede <Skill|Padregel|AGENTS.md>; bewijs geen baseline: <reden>
+Bij baseline een blok `### Scenario #<nr>` met Prompt:, Beginstand:, Criterium: en zes runregels; de eigenaar merget.
+Schrappen of vereenvoudigen (ADR 0081; het issue heeft die plek):
 - #<nr>: trede Schrappen of vereenvoudigen; bewijs meting: <voor> → <na> (<bron>)
 Voor en na zijn getallen; de bestaande tests blijven groen; de eigenaar merget. -->
 

@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd # architect of hoofdsessie zet de status in het voorstel, de merge door de eigenaar is het besluit (ADR 0046)
+status: gebouwd
 namespace: gedragsbaseline
 ---
 
@@ -101,7 +101,7 @@ Kritiek werk (`.github/`, skill, regelboek; R-WERK-05): in de template één PR,
 
 - **gedragsbaseline/AC-1** — Gegeven een sectie `## Leerpunt` met `bewijs baseline: zonder 1/3, met 3/3 (opus)` of `` bewijs `geen baseline: schrijfgedrag` ``, wanneer `leesLeerpuntSectie` die leest, dan heeft de regel `baseline` respectievelijk `geenBaseline` gevuld en zijn `pad`, `reden` en `meting` null. Toets: `test/scripts/leerpunt-bewijs.test.ts`
 - **gedragsbaseline/AC-2** — Gegeven trede Skill, Padregel of AGENTS.md met een correcte regel (zonder 0/3, 1/3 of 2/3; met 3/3; model niet leeg), een volledig scenarioblok met tellingen die erbij passen en een gewijzigd pad uit `TEKSTPADEN` in de diff, wanneer `bewijsPlan` draait, dan is `fouten` leeg en `runs` leeg. Toets: `test/scripts/leerpunt-bewijs.test.ts`
-- **gedragsbaseline/AC-3** — Gegeven verder het geval van AC-2, wanneer één ding afwijkt (trede Check; `met 2/3`; `zonder 3/3`; model leeg of een vorm zonder `/3`; een diff met alleen `src/a.ts`), dan bevat `fouten` de bijbehorende melding uit "Hergebruik en UX". Toets: `test/scripts/leerpunt-bewijs.test.ts`
+- **gedragsbaseline/AC-3** — Gegeven verder het geval van AC-2, wanneer één ding afwijkt (trede Check; `met 2/3`; `zonder 3/3`; model leeg of een vorm zonder `/3`; een diff met alleen `src/a.ts` (voorbeeld)), dan bevat `fouten` de bijbehorende melding uit "Hergebruik en UX". Toets: `test/scripts/leerpunt-bewijs.test.ts`
 - **gedragsbaseline/AC-4** — Gegeven verder het geval van AC-2, wanneer het blok `### Scenario #<nr>` ontbreekt of een ander nummer heeft, een label ontbreekt of leeg is, een runregel ontbreekt of dubbel staat, of de ja's niet passen bij de bewijsregel, dan bevat `fouten` de bijbehorende melding; een `###`-blok binnen de sectie beëindigt de regels van `## Leerpunt` niet (dat deel is al waar op de basis: regressie). Toets: `test/scripts/leerpunt-bewijs.test.ts`
 - **gedragsbaseline/AC-5** — Gegeven `bewijs geen baseline: <reden>`, wanneer de trede Skill, Padregel of AGENTS.md is en de reden niet leeg, dan is de regel goed zonder eis aan diff of scenario, en draait er niets; bij trede Type, Check, Gouden pad of generator of Schrappen of vereenvoudigen, of bij een lege reden, is de regel fout. Bij een teksttrede zijn `geen test: <reden>` en een testpad altijd fout, met de melding uit "Hergebruik en UX" (OV-1). Toets: `test/scripts/leerpunt-bewijs.test.ts`
 - **gedragsbaseline/AC-6** — Gegeven een gemergde PR met voor nummer n een regel `bewijs baseline: …` of `bewijs geen baseline: …`, wanneer `sluitOordeel(n, …)` draait, dan is de uitslag `bewijs` (regressietest). Toets: `test/scripts/leerpunt-check.test.ts`

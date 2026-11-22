@@ -119,7 +119,10 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
    Cloud, waar `gh` niet kan schrijven (ADR 0078 punt 4): de MCP-tool voor issues, alleen aanmaken, alleen naar
    `template.repository`, met label `leerpunt` en dezelfde titel en body. Geen andere MCP-schrijfactie.
    Sluit een PR een leerpunt (sluitwoord of koppeling), dan krijgt de beschrijving de sectie `## Leerpunt` met per issue
-   `- #<nr>: trede <trede>; bewijs <testpad>`; de job `leerpunt-bewijs` draait die test rood op de basis en groen op de head.
-   Alleen bij Skill, Padregel, AGENTS.md of een integratie- of e2e-test: `bewijs geen test: <reden>`, en dan merget de eigenaar.
+   `- #<nr>: trede <Type|Check|Gouden pad of generator>; bewijs <testpad>`; de job `leerpunt-bewijs` draait die test rood op
+   de basis en groen op de head. Bij een integratie- of e2e-test: `bewijs geen test: <reden>`, en dan merget de eigenaar.
+   Bij een teksttrede (ADR 0107; recept `docs/operations/gedragsbaseline.md`):
+   `- #<nr>: trede <Skill|Padregel|AGENTS.md>; bewijs baseline: zonder <a>/3, met 3/3 (<model>)` met een blok
+   `### Scenario #<nr>`, of `- #<nr>: trede <Skill|Padregel|AGENTS.md>; bewijs geen baseline: <reden>`; de eigenaar merget.
    Bij `trede Schrappen of vereenvoudigen`: `bewijs meting: <voor> → <na> (<bron>)` met getallen, het issue heeft die plek,
    de bestaande tests blijven groen en de eigenaar merget.
