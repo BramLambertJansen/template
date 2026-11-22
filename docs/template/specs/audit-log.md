@@ -190,7 +190,7 @@ Foutvertaling (bestaand, `src/core/api/errors.ts:67`): 42501 → `FORBIDDEN`; 22
 - **audit/AC-10** — Gewijzigd door ADR 0103 punt 3 (de bewaartermijn laat `app_definer` regels ouder dan een jaar verwijderen):
   `update` en `truncate` falen met 42501 als `app_definer` en als `app_migrator` (eigenaar), ook als de `where` 0 rijen raakt; `delete`
   raakt alleen regels ouder dan de bewaartermijn. Was: "`update`, `delete` en `truncate` falen met 42501 als `app_definer` en als
-  `app_migrator` (eigenaar), ook als de `where` 0 rijen raakt." Toets: `db/tests/audit_log.sql`
+  `app_migrator` (eigenaar), ook als de `where` 0 rijen raakt." Toets: `db/tests/audit_log.sql`, `db/tests/retention.sql`
 - **audit/AC-11** — `app.assign_role` door een admin met MFA (rol `user` → `admin`) schrijft precies één regel: `action` `core.role.assign`,
   `actor_id` = de admin, `db_role` = `session_user` van de test, `target_type` `account`, `target_id` = het account, `details`
   `{"role":"admin","previous":"user"}`, `request_id` = de gezette `app.request_id`.
@@ -322,16 +322,15 @@ Bewijsmatrix (tester schrijft rood vóór de developer; bij de migraties één `
 | requestId van de server in de transactie, ook bij vervalste header | integratie | `src/core/api/db/with-user.int.test.ts` (vervallen) of `src/core/api/http/*.int.test.ts` | AC-1, AC-2 |
 | is_local: geen lek naar de volgende transactie op dezelfde verbinding | integratie (lektest, direct en via de pooler) | bestaande datapad-lektest uitbreiden | AC-3 |
 | lege/ontbrekende requestId | unit + type-test | `src/core/api/db/with-user.test.ts` | AC-4 |
-| invariant: RLS, grants, exact drie policies, triggers aan, met opzettelijke fout | pgTAP | `db/tests/invarianten.sql`, `db/tests/audit_log.sql` | AC-5 |
-| per policy een assert op naam (`audit_log_definer_insert: …`, `audit_log_select_admin: …`, `audit_log_definer_select: …`) | pgTAP + `check-policies` | `db/tests/audit_log.sql` | AC-6 t/m AC-8, AC-21 |
-| negatieve test per verboden rol: `app_authenticated` (insert/update/delete/truncate), `api_user` en `auth_service` (privileges), `app_definer` en `app_migrator` (update/delete/truncate) | pgTAP | `db/tests/audit_log.sql` | AC-9, AC-10 |
+| invariant: RLS, grants, exact vier policies (sinds de bewaartermijn, ADR 0103), triggers aan, met opzettelijke fout | pgTAP | `db/tests/invarianten.sql`, `db/tests/audit_log.sql` | AC-5 |
+| per policy een assert op naam (`audit_log_definer_insert: …`, `audit_log_select_admin: …`, `audit_log_definer_select: …`) | pgTAP | `db/tests/audit_log.sql` | AC-6 t/m AC-8 |
+| negatieve test per verboden rol: `app_authenticated` (insert/update/delete/truncate), `api_user` en `auth_service` (privileges), `app_definer` en `app_migrator` (update/truncate; delete alleen na de bewaartermijn) | pgTAP | `db/tests/audit_log.sql`, `db/tests/retention.sql` | AC-9, AC-10 |
 | lezer verboden: `user`, admin zonder MFA | pgTAP | `db/tests/audit_log.sql` | AC-7 |
 | `app.assign_role` schrijft één regel met actor, `db_role`, `request_id`; script zonder actor | pgTAP | `db/tests/audit_log.sql` | AC-11, AC-12 |
 | rollback-met-actie: `LAST_ADMIN` bij assign_role en blokkeren, andere weigeringen, fout ná schrijven | pgTAP | `db/tests/audit_log.sql` | AC-13, AC-15, AC-20 |
 | alleen bij echte wijziging (blokkeren/deblokkeren) | pgTAP | `db/tests/audit_log.sql` | AC-14 |
 | allowlist-falen: `app.audit` (`core.*`, `account`, patroon, omvang, actor null), `app.audit_account_action` (actie buiten de vier, `user`, geen MFA) | pgTAP | `db/tests/audit_log.sql` | AC-16 t/m AC-18 |
-| functiecatalogus en security definer | pgTAP + `pnpm check:secdef` | `db/tests/functies.sql` | AC-19 |
-| snapshot | `pnpm check:snapshot` | — | AC-21 |
+| functiecatalogus en security definer | pgTAP | `db/tests/functies.sql` | AC-19 |
 | invite/reinvite/block/unblock schrijven hun regel met de `request_id` van de response; falen laat niets achter | integratie (echte database, testkit) | `src/api/routes/accounts.int.test.ts` (vervallen) | AC-22 t/m AC-25 |
 | vervalste `X-Request-Id` komt niet in de regel | integratie | idem | AC-26 |
 | verboden rol per route, geen regel | integratie | idem | AC-27 |

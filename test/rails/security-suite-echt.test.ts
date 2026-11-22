@@ -5,7 +5,7 @@ import { expectAbsent } from '../support/absence.ts';
 
 // security/AC-14 (spec security-suite, ADR 0103 punt 2): de suite in test/security/ draait tegen de echte lokale stack,
 // zonder gemockte API of database en zonder `skip` of `todo`. Dat de suite onder gate:slow draait, is procesbewijs en geen
-// criterium meer. Een spy op console (stille logregels) is geen mock van API of database en blijft toegestaan.
+// criterium meer. Alleen een spy op console (stille logregels) blijft toegestaan: die is geen mock van API of database.
 const MAP = 'test/security';
 
 function bestanden(map: string): string[] {
@@ -16,8 +16,9 @@ function bestanden(map: string): string[] {
   });
 }
 
-const OVERSLAAN = /\b(?:test|it|describe)(?:\.each\([^)]*\))?\.(?:skip|todo|skipIf|runIf)\b|\bx(?:it|test|describe)\(/;
-const MOCK = /\bvi\.(?:mock|doMock|stubGlobal)\(|\bmsw\b|\bnock\(/;
+const OVERSLAAN =
+  /\b\w*(?:test|it|describe|Test)(?:\.(?:concurrent|sequential|each\([^)]*\)))*\.(?:skip|todo|skipIf|runIf)\b|\bx(?:it|test|describe)\(|\{\s*skip:\s*true|\b(?:ctx|context|t)\.skip\(/;
+const MOCK = /\bvi\.(?:mock|doMock|stubGlobal)\(|\bvi\.spyOn\((?!console\b)|\bmsw\b|\bnock\(/;
 
 describe('security/AC-14: de securitysuite is echt', () => {
   const lijst = bestanden(MAP);
@@ -34,15 +35,24 @@ describe('security/AC-14: de securitysuite is echt', () => {
         "describe.skip('x', () => {})",
         "test.skipIf(true)('x', () => {})",
         "test.each([1]).skip('x', () => {})",
+        "test.concurrent.skip('x', () => {})",
+        "dbTest.skip('x', () => {})",
+        "test('x', { skip: true }, () => {})",
+        'ctx.skip()',
         "xit('x', () => {})",
       ],
-      allows: ["test('overslaan als tekst', () => {})", 'const skip = 1;'],
+      allows: ["test('overslaan als tekst', () => {})", 'const skip = 1;', "test('x', { timeout: 5 }, () => {})"],
     });
   });
 
   test.each(lijst)('%s: geen gemockte API of database', (pad) => {
     expectAbsent(readFileSync(pad, 'utf8'), MOCK, {
-      recognizes: ["vi.mock('../../src/core/api/db/index.ts')", "vi.doMock('pg')", "vi.stubGlobal('fetch', f)"],
+      recognizes: [
+        "vi.mock('../../src/core/api/db/index.ts')",
+        "vi.doMock('pg')",
+        "vi.stubGlobal('fetch', f)",
+        "vi.spyOn(db, 'withUser')",
+      ],
       allows: ["vi.spyOn(console, 'error').mockImplementation(() => undefined)"],
     });
   });

@@ -31,8 +31,8 @@ Hooguit drie open items (`check:roadmap`); nummer 1 is bewijs vóór uitbreiding
   **Klaar als:** een nieuwe gebruiker en admin doorlopen de flow tegen de echte stack; verboden toegang is getest; de update behoudt app-code
   en instellingen, met conflicten alleen in vooraf als verwacht vastgelegde bestanden; rapport met exacte checks, handwerk en verbeter-PR's
   terug naar de template. Een demo in deze repo alleen telt niet.
-  aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (P1, besluit 1)
   Voorbereid: de securitysuite die met de proef-app mee gaat lopen (spec `security-suite`, `gebouwd`; bewijs `test/rails/security-suite-echt.test.ts`).
+  aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (P1, besluit 1)
   aanleiding: #321 (reproduceerbare nulmeting van leerpunten in het ST-09-protocol)
   aanleiding: #319 (playbooklijst van verplichte checks gelijk aan de rulesetpayload)
   aanleiding: #338 (controle vóór branchwissels die beschermde sandboxpaden kunnen raken)

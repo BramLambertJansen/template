@@ -79,7 +79,7 @@ describe('ctx.audit: types', () => {
   });
 });
 
-describe('ctx.audit: runtime', () => {
+describe('ctx.audit: runtime (audit/AC-29)', () => {
   test('een geregistreerde actie met geldige details gaat in één statement naar de eigen tx', async () => {
     const { call, execute } = setup();
     const response = await call('ok');

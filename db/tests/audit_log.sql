@@ -375,7 +375,7 @@ select is(
   'app_authenticated en app_definer: geen update, delete, truncate, references of trigger op app.audit_log (audit/AC-9)'
 );
 
--- audit/AC-10: niemand wijzigt of verwijdert, ook de eigenaar niet, ook als de where 0 rijen raakt.
+-- audit/AC-10 (gewijzigd door ADR 0103): niemand wijzigt; verwijderen alleen na de bewaartermijn (jobs/AC-6), ook als de where 0 rijen raakt.
 select results_eq(
   $$select r.rol, p.stmt, left(pg_temp.try_as(r.rol, p.stmt), 5)
     from (values ('app_definer')) r (rol)
