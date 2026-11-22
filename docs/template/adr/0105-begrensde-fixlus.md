@@ -4,16 +4,17 @@ Status: geaccepteerd
 
 Een ADR omdat het een controle lichter maakt (A3): een kleine reviewbevinding hoeft niet meer verwerkt te zijn vóór
 oplevering (R-WERK-11). Het maakt de stopregel concreet voor reviewbevindingen (R-WERK-20, CLAUDE.md "Stoppen en vragen")
-en verandert de werkwijze in `docs/operations/review-checklists.md`. Het wijzigt geen geaccepteerd ADR: ADR 0046 punt 25
-(fixes na de review ziet de reviewer opnieuw) en de CI-lus blijven. Golf 4b van het overnameplan
+en verandert de werkwijze in `docs/operations/review-checklists.md`. Wijzigt [0059](0059-leerlus-van-app-naar-template.md)
+punt 1: wat een "mislukte correctiepoging" is (punt 6). ADR 0046 punt 25 (fixes na de review ziet de reviewer opnieuw) en de
+CI-lus blijven. Drempel: A3 en A4. Golf 4b van het overnameplan
 (`docs/reviews/2026-11-18-overnameplan-agentic.md` §6). Voorstel van de hoofdsessie; de merge door de eigenaar is het besluit.
 
 ## Context
 
 PR #596 liep acht reviewrondes. De stopregel "na twee mislukte correctiepogingen" maakt geen onderscheid tussen een
 reviewronde en een mislukte fix. Elke ronde toetst de hele delta opnieuw, en elke bevinding, ook een kleine, start een nieuwe
-fix en dus een nieuwe ronde. De reviewer noemt een bevinding nu "blokkerend of niet"; alleen de spec-review kent
-blokkerend, belangrijk en klein. Het meetdoel van het plan is hooguit drie reviewrondes per PR (§8). `pnpm meting --pr-tabel`
+fix en dus een nieuwe ronde. De reviewer noemt een bevinding in de codereview nu "blokkerend of niet"; alleen de spec-review
+en de UX-modus kennen blokkerend, belangrijk en klein. Het meetdoel van het plan is hooguit drie reviewrondes per PR (§8). `pnpm meting --pr-tabel`
 telt de rondes al.
 
 ## Besluit
@@ -35,8 +36,8 @@ telt de rondes al.
 6. **Daarna één gebundeld besluit van de eigenaar.** Is na ronde 3 iets niet opgelost, dan stopt de hoofdsessie. Ze legt in
    één vraag (R-WERK-21) per open bevinding voor: de bevinding, beide pogingen in één regel, de opties (eigenaar wijst de fix,
    spec of AC aanpassen, aanvaarden met roadmap-item of leerpunt, PR sluiten) en een aanbeveling. De lijst kleine bevindingen
-   gaat mee. Dit is de "tweede mislukte correctiepoging" van R-WERK-20 en ADR 0059 punt 1: ronde 2 en 3 zijn de pogingen, een
-   reviewronde is geen poging.
+   gaat mee. Dit is de "tweede mislukte correctiepoging" van R-WERK-20 en ADR 0059 punt 1: de fix na ronde 1 en de fix van de
+   verse developer zijn de twee pogingen; een reviewronde is geen poging.
 7. **CI-lus en spec-review.** De CI-lus van `opleveren` blijft zonder vast aantal rondes, met haar eigen stopgronden
    (R-WERK-12). Een CI-fix na de review krijgt een fixdiff-review. Een blokkerende bevinding daarin gaat de lus in op de
    stand waar die staat. Voor de spec-review geldt dezelfde lus; daar fixt de architect of de hoofdsessie.
