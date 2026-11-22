@@ -10,6 +10,7 @@ Herzien: 2026-11-18 (#805): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.
 laat de statusregel staan; punt 5: de vorm is `status: gebouwd`, `docs:status` vervalt; punt 6: niemand zet regels om; punt
 7: de bewijstoets van `docs:status` vervalt; punt 8: de terugval via `docs:status` vervalt
 Herzien: 2026-11-19: punt 3: het AC-id blijft staan zolang de spec leeft; vervalt een hele template-spec, dan verhuizen haar levende AC's naar een levende spec en verdwijnt het document (R-WERK-07, R-CI-06, spec vervallen-documenten-weg)
+Herzien: 2026-11-22: gewijzigd door [0104](0104-gebouwd-uit-ac-dekking.md) punt 2, 4, 5 en 7, punt 4: een nieuw AC in een gebouwde spec krijgt geen merkteken, de test is de bouw; punt 5: `gebouwd` heeft geen vorm meer, het wordt afgeleid; punt 6: bestaande regels gelden als `goedgekeurd` en worden in de template omgezet; geldt vanaf de bouw-PR
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 5 en 10 (een gebouwde spec krijgt in een besluit-PR nieuwe AC's
 met de markering `(nog niet gebouwd)`; `gebouwd` noemt alleen de PR), [0054](0054-gebouwd-in-de-bouw-pr.md) punt 1 en 5

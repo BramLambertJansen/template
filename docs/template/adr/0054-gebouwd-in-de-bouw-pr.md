@@ -9,6 +9,7 @@ Herzien: 2026-11-12 (#696): door ADR 0089 punt 2, 5 en 8, punt 2 vervalt met `ch
 Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 Herzien: 2026-11-18 (#805): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.md) punt 1 en 3, `status: gebouwd` zonder
 PR-nummer in de bouw-PR; `pnpm docs:status` en de route achteraf vervallen
+Herzien: 2026-11-22: gewijzigd door [0104](0104-gebouwd-uit-ac-dekking.md) punt 1, 2, 5 en 7, punt 1 en 5: niemand schrijft `status: gebouwd`, ook niet achteraf; punt 3: het bouwbewijs blijft de merge, gelezen als de test per AC op `main`; geldt vanaf de bouw-PR
 
 Wijzigt [0046](0046-werkstraat-en-beslisroute.md) punt 10, en punt 5 en 6 waar ze `gebouwd` noemen.
 Drempel: A4 (een punt van een geaccepteerd ADR vervangen) en A3 (de guard aanvaardt `gebouwd` zonder eigen checkcontrole).
