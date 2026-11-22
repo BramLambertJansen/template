@@ -55,7 +55,7 @@ gelijk aan Lokaal.
   (een fast-forward of al bij): dan is er niets te committen. Staat er na een mislukte merge al een `MERGE_HEAD`, dan rondt
   `git commit -F <bestand>` hem net zo af.
 - De sandbox kan `.claude/skills`, `.claude/agents`, `.claude/hooks`, `.claude/settings.json` en `.claude/settings.local.json`
-  niet schrijven (`docs/ENVIRONMENT.md`, "Grens van de sandbox"; voor `.claude/agents` leerpunt #789). Wijzigt `main` daar iets,
+  niet schrijven (`docs/ENVIRONMENT.md`, "Grens van de sandbox"; `.claude/agents` in de cloud, leerpunten #789 en #895). Wijzigt `main` daar iets,
   dan breekt de merge halverwege af. Kijk dat vóór de merge na met
   `git diff --name-only HEAD...origin/main -- .claude/skills .claude/agents .claude/hooks .claude/settings.json .claude/settings.local.json`; staat er iets, merge dan niet maar meld het de eigenaar, en volg bij een
   afgebroken merge "Branchwissels in een sandbox" in [agent-doorloop](agent-doorloop.md).
