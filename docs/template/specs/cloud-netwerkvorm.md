@@ -14,7 +14,8 @@ De regel geldt lokaal en in de cloud, want `excludedCommands` en de sandbox geld
 ## Aanleiding en gemeten feiten
 
 Aanleiding (framework §1): twee cloudsessies liepen op 20 november 2026 vast op de route uit spec `cloud-pr-route`. Bron
-van F1 tot en met F4: overdracht van de eigenaar, gemeten rond 16:35 UTC. Bron van F5 tot en met F7: deze sessie.
+van F1 tot en met F4: overdracht van de eigenaar, gemeten rond 16:35 UTC. Bron van F5 tot en met F7: deze sessie. Bron van
+F8 tot en met F12: deze sessie, een nieuwe cloudsessie na de merge van PR #890, 21 november 2026 (testplan stap 0).
 
 | # | Feit |
 |---|---|
@@ -25,11 +26,16 @@ van F1 tot en met F4: overdracht van de eigenaar, gemeten rond 16:35 UTC. Bron v
 | F5 | `sandbox.excludedCommands` (`.claude/settings.json:137-148`) bevat `pnpm pr:merge *`, `pnpm pr:resolve *`, `pnpm test:db *`, `pnpm ui:check *`, `pnpm gate:slow *`, `pnpm db:generate *`, `pnpm check:snapshot *`, `git commit *`, `git push origin HEAD`, `gh api *` en `pnpm pr:verify *`. |
 | F6 | `decideMcp` (`rails/hooks/lib/rolhek.mjs:341`) vraagt de hoofdsessie al om akkoord voor elke `mcp__`-tool buiten `mcpLezen`, en weigert hem voor een subagent. `mcpLezen` is `[]`. |
 | F7 | Een Bash-commando in deze cloudsessie ziet `CLAUDE_CODE_REMOTE=true` en `CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE=cloud_default`. |
+| F8 | (d) De startmelding van een nieuwe cloudsessie na de merge toont ``Cloud: commit `git commit -F <bestand>`, push `git push origin HEAD`, PR via `mcp__github__create_pull_request`, elk als los commando.`` Het hookproces ziet dus `CLAUDE_CODE_REMOTE=true`. |
+| F9 | (a) `git commit -F <bestand> 2>&1 \| tail -2` wordt vóór het uitvoeren geweigerd: `rolhek: Netwerkvorm: draai dit als los commando in de vorm git commit -F <bestand>; buiten deze vorm draait het in de sandbox, zonder token-proxy en signeerdienst (docs/ENVIRONMENT.md, "Cloud: commit, push, PR en bewijs")`. `git log --oneline -1` toont daarna geen nieuwe commit. |
+| F10 | (b) `git push -u origin HEAD` wordt geweigerd met dezelfde reden, met de vorm `git push origin HEAD`. |
+| F11 | (c) `git commit -F <bestand>` en `git push origin HEAD`, elk los, slagen. De lefthook-hooks draaien: pre-commit (format, secrets), commit-msg (conventional-commit) en pre-push (`gate:fast` groen, `main-achterstand`). Het commitobject heeft een `gpgsig`-blok (SSH), en de signeerdienst gaf geen fout. |
+| F12 | (e) `git push origin HEAD:refs/heads/meet-wegwerp-2026-11-21` wordt geweigerd met de reden van F10. De wegwerpbranch kwam er daarna niet (`git ls-remote origin 'refs/heads/meet*'` bleef leeg), dus de DELETE is niet uitgevoerd. |
 
-**Niet gemeten:** of een hookproces dezelfde `CLAUDE_CODE_REMOTE` ziet als een Bash-commando. Of Claude Code `pnpm test:db *`
-ook toepast op het kale `pnpm test:db`. Of een redirect zoals `2>&1` achter een verder passend commando de uitzondering
-breekt. Het ontwerp kiest bij die twee laatste punten de veilige kant (punt 2). Stap 0 van het testplan legt de meting na de
-merge vast.
+**Niet gemeten:** of Claude Code `pnpm test:db *` ook toepast op het kale `pnpm test:db`. Of een redirect zoals `2>&1` achter
+een verder passend commando de uitzondering breekt (F9 laat zien dat het rolhek zo'n vorm eerder weigert). Het ontwerp kiest
+bij die twee punten de veilige kant (punt 2). Of `gh api -X DELETE repos/{owner}/{repo}/git/refs/heads/<testbranch>` een
+wegwerpbranch verwijdert, en of Claude Code daarbij een vraag stelt (F12).
 
 ## Rollen en wie wat ziet
 
@@ -224,7 +230,9 @@ Geen UI. Zichtbare tekst staat letterlijk in Ontwerp punt 2, 3 en 6.
    (c) `git commit -F <bestand>` en `git push origin HEAD`, elk los, slagen zonder fout. (d) De startmelding toont de
    Cloud-regel. Dat meet ook of het hookproces `CLAUDE_CODE_REMOTE` ziet. (e) `gh api -X DELETE
    repos/{owner}/{repo}/git/refs/heads/<testbranch>` verwijdert een wegwerpbranch. Gemeten op 20 november 2026 in deze sessie:
-   een GET met `{owner}/{repo}` op `git/refs/heads/<branch>` slaagt door het rolhek. DELETE is niet gemeten.
+   een GET met `{owner}/{repo}` op `git/refs/heads/<branch>` slaagt door het rolhek. DELETE is niet gemeten. Vastgelegd op
+   21 november 2026 in F8 tot en met F12. Voor (e) maakt de eigenaar de wegwerpbranch, want het rolhek weigert de push met
+   een refspec (F12).
 1. Unit: de AC's hierboven, in `pnpm gate:fast`.
 
 ## Open vragen
@@ -235,7 +243,7 @@ Geen UI. Zichtbare tekst staat letterlijk in Ontwerp punt 2, 3 en 6.
   `git commit *` en draait dus buiten de sandbox. Eigenaar, 20 november 2026: niet weigeren. De regel volgt alleen de lijst;
   de startmelding en de docs noemen `-F` als de vorm.
 - **OV-3 ✅ besloten** — Startmelding alleen in de cloud of altijd? Eigenaar, 20 november 2026: alleen in de cloud, herkend aan
-  `CLAUDE_CODE_REMOTE=true` (F7). De meting in het hookproces volgt in stap 0.
+  `CLAUDE_CODE_REMOTE=true` (F7). Het hookproces ziet die variabele ook (F8).
 - **OV-4 ✅ besloten** — MCP-bestandsschrijftools altijd weigeren, of in de hoofdsessie na een vraag? Eigenaar, 20 november 2026:
   in de hoofdsessie na een vraag, voor een subagent weigeren.
 - **OV-5 ✅ besloten** (spec-review B-2) — Geldt de regel overal of alleen in de cloud? Eigenaar, 20 november 2026: overal,
