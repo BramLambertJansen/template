@@ -101,6 +101,13 @@ describe('docs:changelog-behoud: een gewijzigde uitgebrachte sectie is een viola
     expect((await sleutels(root)).sort()).toStrictEqual([`${SLEUTEL}0.0.1`, `${SLEUTEL}0.1.0`]);
   });
 
+  test('een verwijderde changelog in de werkmap: elke uitgebrachte sectie van de basis is verdwenen', async () => {
+    const root = repo({ [BESTAND]: BASIS });
+    rmSync(path.join(root, BESTAND));
+
+    expect((await sleutels(root)).sort()).toStrictEqual([`${SLEUTEL}0.0.1`, `${SLEUTEL}0.1.0`]);
+  });
+
   test('de message noemt het pad, de versie en de uitweg: een fragment in docs/template-changelog.d/', async () => {
     const root = repo({ [BESTAND]: BASIS });
     schrijf(root, BESTAND, BASIS.replace('- eerste feature', '- aangepast'));
@@ -127,6 +134,13 @@ describe('docs:changelog-behoud: geen violation', () => {
     const inleiding = '# Changelog\n\nAlle wijzigingen van de template, aangevuld.\n\n';
     const unreleased = '## [Unreleased]\n\n### Toegevoegd\n\n- nog niet uitgebracht\n- en nog iets\n\n';
     schrijf(root, BESTAND, changelog(inleiding, unreleased, S010, S001));
+
+    expect(await sleutels(root)).toStrictEqual([]);
+  });
+
+  test('extra witregels aan het eind van een sectie tellen niet', async () => {
+    const root = repo({ [BESTAND]: BASIS });
+    schrijf(root, BESTAND, `${BASIS}\n\n`);
 
     expect(await sleutels(root)).toStrictEqual([]);
   });

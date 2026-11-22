@@ -70,7 +70,7 @@ import { ADR_MAPPEN, adrKopViolations, adrNumber, duplicateAdrNumbers, invalidAd
 import { APP_STUB } from './app-init.mjs';
 import { CODEOWNERS, codeownersTekst, eersteGoedkeurder, HERSTEL } from './codeowners.mjs';
 import { grensMeldingen, grensViolations, normenMeldingenUitGit, normenUitGit, zonderBasis } from './leesbudget.mjs';
-import { FRAGMENT_MAP, fragmentFout } from './template-release.mjs';
+import { CHANGELOG, FRAGMENT_MAP, fragmentFout, releaseTeksten } from './template-release.mjs';
 import { CODESPAN, HEK, sluitHek } from './markdown.mjs';
 import { zonderPromptViolations } from './zonder-prompt.mjs';
 import { receptRolhekViolations } from './recept-rolhek.mjs';
@@ -159,22 +159,15 @@ export async function docsKrimp(root = '.') {
   ]);
 }
 
-const CHANGELOG = 'docs/template-changelog.md';
-
 /**
- * De uitgebrachte secties van een changelog: elke `## [x.y.z]`-kop met haar inhoud tot de volgende `## `-kop, zonder
- * witregels aan het eind; `## [Unreleased]` telt niet.
- * @param {string} tekst
- * @returns {Map<string, string>} versie → sectie
+ * De merge-base met origin/main, of `null` zonder basis (regel 17 en 19).
+ * @param {string} root
+ * @returns {string | null}
  */
-function uitgebrachteSecties(tekst) {
-  /** @type {Map<string, string>} */
-  const secties = new Map();
-  for (const deel of tekst.split(/^(?=## )/m)) {
-    const versie = /^## \[(\d+\.\d+\.\d+)\]/.exec(deel)?.[1];
-    if (versie !== undefined) secties.set(versie, deel.trimEnd());
-  }
-  return secties;
+function mergeBasis(root) {
+  const basis = spawnSync('git', ['merge-base', 'origin/main', 'HEAD'], { cwd: root, encoding: 'utf8' });
+  const sha = basis.stdout.trim();
+  return basis.status === 0 && sha !== '' ? sha : null;
 }
 
 /**
@@ -186,14 +179,13 @@ function uitgebrachteSecties(tekst) {
  * @returns {Violation[]}
  */
 function changelogBehoud(root) {
-  const git = (/** @type {string[]} */ args) => spawnSync('git', args, { cwd: root, encoding: 'utf8' });
-  const basis = git(['merge-base', 'origin/main', 'HEAD']);
-  if (basis.status !== 0 || basis.stdout.trim() === '') return [];
-  const oud = git(['show', `${basis.stdout.trim()}:${CHANGELOG}`]);
+  const basis = mergeBasis(root);
+  if (basis === null) return [];
+  const oud = spawnSync('git', ['show', `${basis}:${CHANGELOG}`], { cwd: root, encoding: 'utf8' });
   if (oud.status !== 0) return [];
   const pad = path.join(root, CHANGELOG);
-  const nu = uitgebrachteSecties(existsSync(pad) ? readFileSync(pad, 'utf8') : '');
-  return [...uitgebrachteSecties(oud.stdout)]
+  const nu = releaseTeksten(existsSync(pad) ? readFileSync(pad, 'utf8') : '');
+  return [...releaseTeksten(oud.stdout)]
     .filter(([versie, sectie]) => nu.get(versie) !== sectie)
     .map(([versie]) => ({
       key: `docs:changelog-behoud:${versie}`,
@@ -209,10 +201,12 @@ function changelogBehoud(root) {
  * @returns {Violation[]}
  */
 function fragmentBehoud(root) {
-  const git = (/** @type {string[]} */ args) => spawnSync('git', args, { cwd: root, encoding: 'utf8' });
-  const basis = git(['merge-base', 'origin/main', 'HEAD']);
-  if (basis.status !== 0 || basis.stdout.trim() === '') return [];
-  const diff = git(['diff', '--name-status', '--no-renames', '-z', basis.stdout.trim(), '--', `${FRAGMENT_MAP}/`]);
+  const basis = mergeBasis(root);
+  if (basis === null) return [];
+  const diff = spawnSync('git', ['diff', '--name-status', '--no-renames', '-z', basis, '--', `${FRAGMENT_MAP}/`], {
+    cwd: root,
+    encoding: 'utf8',
+  });
   const velden = diff.status === 0 ? diff.stdout.split('\0').filter(Boolean) : [];
   /** @type {Violation[]} */
   const violations = [];
