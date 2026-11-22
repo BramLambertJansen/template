@@ -323,7 +323,7 @@ export function runOordeel(run, { basis, head }) {
   if (head.status !== 'groen') return `${run.pad}: faalt op de head (${beide})`;
   if (basis.status === 'groen') return `${run.pad}: slaagt ook op de basis (${beide})`;
   if (basis.laadFout)
-    return `${run.pad}: faalt op de basis op laden, niet op een assertie (${beide}); een bewijstest importeert alleen wat al op de basis staat, een nieuwe helper hoort in het testbestand zelf (spec leerlus-bewijs, leerpunt #892)`;
+    return `${run.pad}: faalt op de basis op laden, niet op een assertie (${beide}); importeert de bewijstest iets dat nog niet op de basis staat, zet een nieuwe helper dan in het testbestand zelf (spec leerlus-bewijs, leerpunt #892)`;
   return null;
 }
 
