@@ -7,7 +7,8 @@ het voorstel, bouwt, verzamelt bewijs en zet `gebouwd` zodra het bouwbewijs best
 
 De geheugengrens staat in `scripts/kit/geheugen.mjs`: weinig geheugen is minder dan 6 GiB beschikbaar; op macOS, waar
 libuv alleen vrije pagina's telt, een host met hooguit 8 GiB RAM. `GATE_WEINIG_GEHEUGEN=1` of `0` beslist voor de host. `pnpm gate:fast` meldt het onder de grens: lint en tests wachten dan op elkaar,
-terwijl de overige snelle gates hun bestaande baan houden. Alle controles draaien precies eenmaal, ook na rood.
+terwijl de overige snelle gates hun bestaande baan houden, en Vitest draait met hooguit twee workers in plaats van vier
+(`vitestWorkers`, leerpunt #866). Alle controles draaien precies eenmaal, ook na rood.
 Aanleiding: op de gedeelde 8-GiB-host liep een ESLint-proces van 1,8 GiB naast de tests; de swap was vol en de gate
 duurde 486 s met time-outs. Dit is een lokale waarneming, geen vaste looptijd. De CLI-regressies in
 `test/rails/gate-fast-memory.test.ts` bewaken beide planningen en het behoud van alle gates en exitcodes.
