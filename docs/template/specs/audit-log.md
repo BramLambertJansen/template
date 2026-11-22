@@ -205,7 +205,7 @@ Foutvertaling (bestaand, `src/core/api/errors.ts:67`): 42501 → `FORBIDDEN`; 22
   `intern`; alle security definer-functies eigenaar `app_definer` met leeg `search_path` (bestaande invariant), `pnpm check:secdef` groen.
 - **audit/AC-20** — Een actie die faalt ná het schrijven van de regel (in de test: `app.audit` gevolgd door een fout in dezelfde transactie)
   laat na de rollback geen regel achter.
-- **audit/AC-21** — `pnpm check:snapshot` groen met de nieuwe `db/schema.snapshot.sql` en `src/api/db/schema.ts`; `check-policies` vindt
+- **audit/AC-21** — Vervallen door ADR 0103 (procesbewijs is geen acceptatiecriterium). Was: `pnpm check:snapshot` groen met de nieuwe `db/schema.snapshot.sql` en `src/api/db/schema.ts`; `check-policies` vindt
   voor elke policy een assert op naam.
 
 ### Deel C — routes en `ctx.audit`
