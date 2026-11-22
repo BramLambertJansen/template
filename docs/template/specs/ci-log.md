@@ -16,7 +16,7 @@ zonder de volledige log in de context (ADR 0102, leerpunt #679).
   merge); de skill `opleveren` en de receptenkaart noemen het.
 - **Subagents:** krijgen een weigering van het rolhek; de hoofdsessie levert de uitslag aan.
 - **Tester:** schrijft vóór de bouw de tabeltest van het rolhek (risicowerk, R-WERK-04: een vertrouwensgrens, drempel A3).
-- **Eigenaar:** besluit via ADR 0102 en de merge; draait in de PR de enige proef van het script (zie Testplan).
+- **Eigenaar:** besluit via ADR 0102 en de merge; keurt in de PR de prompt voor de enige proef goed (zie Testplan, OV-3).
 
 ## Kopieer de vorm van
 
@@ -164,16 +164,15 @@ script importeert alleen `node:`-modules en bestanden uit `scripts/` en `rails/`
 
 De namespace heet `ci-log` en niet `pr-log`: het rolhek herkent `pr-log` als bestandsnaam van het script (vals positief op
 een testfilter of branchnaam, zoals #736). Unit-tests zonder netwerk in `test/scripts/ci-loguittreksel.test.ts`; de tabeltest van het rolhek in
-`test/hooks/rolhek-logscript.test.ts`, door de tester vóór de bouw; `pnpm gate:fast` groen. De agent draait `pnpm pr:log` in de
-PR niet: het rolhek uit het anker kent het script dan nog niet, en de werkmap-`settings.json` zet het al buiten de sandbox
-(ADR 0102 "Venster"); de regel in `ask` geeft dan een prompt. De eigenaar draait in de PR-branch één keer `pnpm pr:log <nr>` op
-een PR met een rode job; de agent pas na de merge.
+`test/hooks/rolhek-logscript.test.ts`, door de tester vóór de bouw; `pnpm gate:fast` groen. In de PR kent het
+rolhek uit het anker het script nog niet, en de werkmap-`settings.json` zet het al buiten de sandbox (ADR 0102 "Venster"); de
+regel in `ask` geeft dan een prompt. De agent draait na goedkeuring van de eigenaar één keer `pnpm pr:log <nr>` op een PR met
+een rode job en zet de uitvoer in de PR (OV-3).
 
 ## Open vragen
 
 - **OV-1 ✅ besloten** — Ankertoets zoals `pr:merge` en `pr:resolve` (eigenaar, 2026-11-21).
-- **OV-2** — Moet de ankertoets ook de modus `niet-kritiek` eisen? Aanbeveling: nee; lezen hangt niet af van wie samenvoegt
-  (ADR 0102 Alternatieven).
-- **OV-3** — Wie draait de eerste proef? Aanbeveling: de eigenaar, in de PR-branch; de agent pas na de merge (spec-review
-  B-1). Het alternatief, één run door de agent als aanvaard risico, laat precies de branchcode buiten de sandbox draaien die
-  ADR 0102 uitsluit.
+- **OV-2 ✅ besloten** — De ankertoets eist de modus `niet-kritiek` niet: lezen hangt niet af van wie samenvoegt
+  (eigenaar, 2026-11-21; ADR 0102 Alternatieven).
+- **OV-3 ✅ besloten** — De agent draait in de PR één proef, na een prompt die de eigenaar goedkeurt; aanvaard risico: die ene
+  keer draait de branchcode buiten de sandbox zonder ankertoets (eigenaar, 2026-11-21; ADR 0102 "Venster").

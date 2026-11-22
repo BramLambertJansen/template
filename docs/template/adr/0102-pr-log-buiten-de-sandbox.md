@@ -50,7 +50,7 @@ mag daar al (R-TOOL-02), dus de extra blootstelling is één script dat alleen l
   niet (R-ROL-10).
 - Venster: tot een sessie een anker heeft met deze wijziging, kent het rolhek `pnpm pr:log` niet, terwijl de
   `settings.json` uit de werkmap het al buiten de sandbox zet. De regel in `ask` geeft dan een prompt: die is de grens tot
-  het anker de wijziging heeft. In de bouw-PR draait de agent het script niet; de eigenaar draait er de enige proef (spec,
-  Testplan). Dat geldt voor elk nieuw commando buiten de sandbox: de regel in het
+  het anker de wijziging heeft. In de bouw-PR draait de agent het script één keer, na die prompt (besluit van de eigenaar,
+  2026-11-21; aanvaard risico: die keer draait de branchcode buiten de sandbox zonder ankertoets). Dat geldt voor elk nieuw commando buiten de sandbox: de regel in het
   rolhek komt pas met het anker.
 - R-TOOL-02 noemt het commando; R-DOC-09 is van toepassing: de nieuwe uitzondering krijgt een tabeltest.
