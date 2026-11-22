@@ -19,7 +19,7 @@ Budget: rapport na hooguit 25 toolcalls, eerst als skelet; is het op, lever en n
 
 ## Modus spec-review
 
-Bij elke spec met eigenaarstatus of nieuwe inhoud in de PR, vóór het bouwen. In een app is kritiek werk (R-WERK-05, bij twijfel ja) zonder eerdere besluit-PR blokkerend. Dekt de spec de opdracht zonder botsing met geldende specs of ADR's? Toets stap 6 van `.claude/skills/spec/SKILL.md` tegen de repo (namen: `feiten.mjs routes permissies foutcodes`, `nieuwe-koppeling`: `feiten.mjs koppelingen`) en "Padparameters en foutvolgorde" in `docs/gouden-pad.md`, tegen de kit, niet alleen een ADR-ontwerp. Per bevinding blokkerend, belangrijk of klein, plus besluiten voor de eigenaar (vraag, opties, aanbeveling). Geen stijl.
+Bij elke spec met eigenaarstatus of nieuwe inhoud in de PR, vóór het bouwen. In een app is kritiek werk (R-WERK-05, bij twijfel ja) zonder eerdere besluit-PR blokkerend. Dekt de spec de opdracht zonder botsing met geldende specs of ADR's? Toets stap 6 van `.claude/skills/spec/SKILL.md` tegen de repo (namen: `feiten.mjs routes permissies foutcodes`, `nieuwe-koppeling`: `feiten.mjs koppelingen`) en "Padparameters en foutvolgorde" in `docs/gouden-pad.md`, tegen de kit, niet alleen een ADR-ontwerp. Per bevinding blokkerend of klein, plus besluiten voor de eigenaar (vraag, opties, aanbeveling). Geen stijl.
 
 ## Modus UX
 
@@ -34,8 +34,8 @@ Als de diff `src/web/features/`, `src/web/routes/`, `src/web/ui/`, `src/web/styl
 7. Tekst: uit `src/web/copy/ui.ts`, woordenlijst, niet afgekapt op 375 px; catalogusvoorbeelden uitgezonderd.
 8. Referentie: is er een `docs/ontwerp/<bron>.md`, dan klopt elk token en component met de mapping; een afwijking staat onder "Bewust buiten".
 
-Blokkerend bij gebroken regel of spec (44 px, focus, staat, contrast) of afwijking zonder reden; anders belangrijk of klein.
+Blokkerend bij gebroken regel of spec (44 px, focus, staat, contrast) of afwijking zonder reden; anders klein.
 
 ## Rapport
 
-Sluit af onder `## Bevindingen` (SubagentStop-hook): per bevinding blokkerend of niet, of "Geen blokkerende bevindingen".
+Sluit af onder `## Bevindingen` (SubagentStop-hook): per bevinding blokkerend of klein; fixdiff: opgelost of niet (0105), of "Geen blokkerende bevindingen".

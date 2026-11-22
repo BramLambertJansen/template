@@ -283,11 +283,29 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   met exacte testtitel in check-docs, trigger en uitkomst per nieuwe AC, BASE_ROOD/IN_BRANCH in `pr:verify`, en een melding
   "0 tests geraakt" in de Stop-hook. **Klaar als:** elk punt heeft een check met falende fixtures.
   aanleiding: `docs/reviews/2026-11-18-overnameplan-agentic.md` (§5; leerpunten #793, #678, #758)
-- [ ] **Overnameplan golf 4: besluit-PR's die ADR's herzien.** [Overnameplan](reviews/2026-11-18-overnameplan-agentic.md) §6:
+- [x] **Overnameplan golf 4: besluit-PR's die ADR's herzien.** [Overnameplan](reviews/2026-11-18-overnameplan-agentic.md) §6:
   `gebouwd` afleiden uit merge-feiten (ADR 0054, ADR 0080, ADR 0062, R-WERK-08), een begrensde fixlus (stopregel in CLAUDE.md,
   framework §8), schaduwmodus met een vooraf genoemde drempel (ADR 0091, ADR 0071 punt 6) en een gedragsbaseline voor
   tekstwijzigingen aan agents en skills (ADR 0059). Elk punt eerst als besluit-PR; de bouw volgt na de merge door de eigenaar. **Klaar als:** elk van 4a–4d heeft een gemergde of gesloten besluit-PR.
+  Gemerged: #906 (ADR 0104, 4a), #907 (ADR 0105, 4b), #908 (ADR 0106, 4c) en #909 (ADR 0107, 4d); de bouw staat in de items hieronder.
   aanleiding: `docs/reviews/2026-11-18-overnameplan-agentic.md` (§6; eigenaarvraag 2026-11-18)
+- [ ] **Bouw ADR 0104: `gebouwd` volgt uit de AC-dekking.** Volgens de Gevolgen van het ADR: één gedeelde afleiding voor
+  `check-docs`, `check-roadmap`, `feiten` en het rolhek; regel 6 als ratchet; `vergeten-gebouwd` weg; de omzetting van
+  bestaande `status: gebouwd`; R-WERK-07, R-WERK-08 en R-DOC-10. **Klaar als:** de "Klaar als" van ADR 0104 klopt.
+  aanleiding: `docs/template/adr/0104-gebouwd-uit-ac-dekking.md` (Gevolgen)
+- [ ] **Bouw ADR 0106: schaduwmodus met tijdgrens.** Register `.kit/schaduw.json` met schemacheck, `schaduw-termijn` in
+  `strikt` en `meldingen` (voorvoegsel `schaduw:`), overslag in een app, weigering in `template:release`, meetregel `Schaduw` met `pnpm meting --schaduw` en de norm in het
+  regelboek. **Klaar als:** de falende fixtures uit de Gevolgen van ADR 0106 staan groen.
+  aanleiding: `docs/template/adr/0106-schaduwmodus-met-tijdgrens.md` (Gevolgen)
+- [ ] **Bouw ADR 0107: gedragsbaseline.** Spec `gedragsbaseline`; `scripts/kit/leerpunt.mjs` toetst `baseline:`,
+  `geen baseline:` en het scenarioblok; het PR-sjabloon, de sluitzin in `opleveren`, een recept en R-WERK-13.
+  **Klaar als:** de "Klaar als" van ADR 0107 klopt.
+  aanleiding: `docs/template/adr/0107-gedragsbaseline-voor-tekstwijzigingen.md` (Gevolgen)
+- [ ] **Fixlus afdwingen (ADR 0105, R-DOC-02).** (a) De SubagentStop-hook (`reviewerStop` in `rails/hooks/lib/werkstraat.mjs`)
+  eist per bevinding `blokkerend` of `klein`, en in de modus fixdiff per bevinding `opgelost` of `niet opgelost`; (b)
+  `pnpm meting` meldt "let op" boven drie reviewrondes per branch. **Klaar als:** beide
+  hebben een test met een fixture die op de huidige code faalt.
+  aanleiding: `docs/template/adr/0105-begrensde-fixlus.md` (Gevolgen)
 - [ ] **Nieuwe-app-script bouwstap 2: `repo-instellingen`.** Bouwstap 1 is gebouwd (`scripts/kit/nieuwe-app.mjs`,
   `test/scripts/nieuwe-app.test.ts`); het subcommando `repo-instellingen` bestaat nog niet. Eerst de spec herzien: werking 7, AC-10,
   de `REDEN_`-teksten en het bypass-randgeval leunen op `grensRedenen` uit `scripts/kit/pr-merge.mjs`, dat weg is sinds ADR 0093;
