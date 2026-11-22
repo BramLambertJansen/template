@@ -50,9 +50,12 @@ gelijk aan Lokaal.
   `rails/hooks/lib/rolhek.mjs`); in de cloud werken die niet, dus daar levert de hoofdsessie de PR-gegevens aan.
 - `main` bijhalen: een kale `git merge origin/main` maakt de commit binnen de sandbox, en in de cloud faalt dan het
   ondertekenen ("failed to write commit object"; gemeten op 22 november 2026). Met `--no-commit` blijft de merge in de index
-  en maakt `git commit -F <bestand>` de commit buiten de sandbox. Staat er na een mislukte merge al een `MERGE_HEAD`, dan rondt
+  (met `MERGE_HEAD`) en maakt `git commit -F <bestand>` de commit buiten de sandbox; het bericht begint met `Merge ` of volgt
+  conventional commits (bijvoorbeeld `Merge origin/main into <branch>`), anders weigert de commit-msg-hook. Geen `MERGE_HEAD`
+  (een fast-forward of al bij): dan is er niets te committen. Staat er na een mislukte merge al een `MERGE_HEAD`, dan rondt
   `git commit -F <bestand>` hem net zo af.
-- Wijzigt `main` iets onder `.claude/skills` of `.claude/agents`, dan kan git die bestanden in de sandbox niet schrijven en
-  breekt de merge af (leerpunt #789). Kijk dat vóór de merge na met
-  `git diff --name-only HEAD...origin/main -- .claude/skills .claude/agents`; staat er iets, merge dan niet maar meld het de
-  eigenaar, en volg bij een afgebroken merge "Branchwissels in een sandbox" in [agent-doorloop](agent-doorloop.md).
+- De sandbox kan `.claude/skills`, `.claude/agents`, `.claude/hooks`, `.claude/settings.json` en `.claude/settings.local.json`
+  niet schrijven (`docs/ENVIRONMENT.md`, "Grens van de sandbox"; voor `.claude/agents` leerpunt #789). Wijzigt `main` daar iets,
+  dan breekt de merge halverwege af. Kijk dat vóór de merge na met
+  `git diff --name-only HEAD...origin/main -- .claude/skills .claude/agents .claude/hooks .claude/settings.json .claude/settings.local.json`; staat er iets, merge dan niet maar meld het de eigenaar, en volg bij een
+  afgebroken merge "Branchwissels in een sandbox" in [agent-doorloop](agent-doorloop.md).

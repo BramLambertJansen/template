@@ -18,7 +18,7 @@ Feiten nu:
 
 1. Push de featurebranch en open de PR. Nooit naar `main`, nooit force-push; conflicten via `git merge --no-commit origin/main`
    en dan `git commit -F <bestand>` (de kale merge kan in de cloud niet ondertekenen). Toont
-   `git diff --name-only HEAD...origin/main -- .claude/skills .claude/agents` iets, dan niet mergen maar de eigenaar melden
+   `git diff --name-only HEAD...origin/main -- .claude/skills .claude/agents .claude/hooks .claude/settings.json .claude/settings.local.json` iets, dan niet mergen maar de eigenaar melden
    (leerpunt #789; `docs/operations/recepten.md`).
    De bestaande pre-push-hook draait de volledige `pnpm gate:fast`; start die niet nogmaals alleen voor de overdracht.
    Gerichte feedback is geen volledige groene gate. Iedere PR behoudt alle CI-checks; geen oude uitslag hergebruiken.
