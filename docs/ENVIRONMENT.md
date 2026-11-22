@@ -157,7 +157,8 @@ werkelijke versie, prompts, commit-hooks, featurepush, PR-aanmaak en CI vast, in
 
 De Bash-sandbox (`sandbox` in `.claude/settings.json`) kan niet schrijven naar `.claude/settings.json`,
 `.claude/settings.local.json`, `.claude/hooks/**` en `.claude/skills/**`. Dat is een grens van Claude Code, niet van deze repo,
-en hij geldt lokaal en in de cloud. Een wijziging daar gaat alleen via de Edit-tool in de hoofdsessie, met een prompt die de
+en hij geldt lokaal en in de cloud. In de cloud is ook `.claude/agents/**` alleen-lezen (gemeten op 22 november 2026:
+`EROFS`; leerpunten #789 en #895). Een wijziging daar gaat alleen via de Edit-tool in de hoofdsessie, met een prompt die de
 eigenaar accepteert; het rolhek weigert een developer-subagent op die paden. Een taak die die paden raakt, vraagt dus een
 sessie waarin de eigenaar aanwezig is, of de eigenaar voert de wijziging zelf uit. De sandbox ruimer zetten is een
 eigenaarsbesluit (beschermd pad, `docs/framework.md` §10).

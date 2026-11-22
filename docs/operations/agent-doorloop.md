@@ -437,7 +437,9 @@ de eigenaar niet standaard om veilig uitvoerbare tests alsnog zelf te draaien.
 
 Een schone werkmap bewijst niet dat een branchwissel uitvoerbaar is. De Claude Code-sandbox kan bijvoorbeeld
 `.claude/skills/` niet schrijven ([sandboxgrens](../ENVIRONMENT.md#grens-van-de-sandbox)). Een `git switch` of
-fast-forward kan daarop halverwege afbreken, nadat andere bestanden of de index al veranderd zijn (leerpunt #338).
+fast-forward kan daarop halverwege afbreken, nadat andere bestanden of de index al veranderd zijn (leerpunt #338). Of
+git meldt `unable to unlink old '.claude/agents/…': Read-only file system`, wisselt toch en laat het bestand op de oude
+versie staan; de pre-push-gate wordt dan rood op een test van `main` die de nieuwe tekst eist (leerpunt #895).
 Dit geldt ook bij het starten van een nieuwe branch; controleer de gebruikte runtime en claim geen ongelezen sandboxinstelling.
 
 Haal eerst de bedoelde refs op met `git fetch origin`. Leg vóór iedere afzonderlijke branchwissel of fast-forward
@@ -447,7 +449,7 @@ de huidige commit, branch en werkmap vast. Vergelijk HEAD met de **precieze doel
 git rev-parse HEAD
 git branch --show-current
 git status --porcelain
-git diff --name-only HEAD <doelref> -- .claude/skills .claude/hooks .claude/settings.json .claude/settings.local.json
+git diff --name-only HEAD <doelref> -- .claude/skills .claude/agents .claude/hooks .claude/settings.json .claude/settings.local.json
 ```
 
 Neem ook eventuele andere door de runtime beschermde paden mee. Een wissel naar lokale `main` vergelijkt met `main`;
