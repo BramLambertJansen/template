@@ -9,7 +9,7 @@ import { createWithUser } from './with-user.ts';
 // wordt gepakt (net als een lege userId).
 const actor = { userId: UserId.parse('u1'), sessionStrength: 'mfa' } as const;
 
-describe('withUser: requestId', () => {
+describe('withUser: requestId (audit/AC-4)', () => {
   test('een lege requestId gooit en pakt geen verbinding', async () => {
     const connect = vi.fn();
     const pool = unsafeCast<Pool>({ connect }, 'test: alleen connect wordt aangeraakt, en dat mag niet gebeuren');

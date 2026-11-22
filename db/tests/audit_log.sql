@@ -1,4 +1,4 @@
--- app.audit_log en wie erin schrijft (spec audit-log, deel A en B: AC-5 t/m AC-20; ADR 0051): tabel, CHECKs, grants,
+-- app.audit_log en wie erin schrijft (spec audit-log, deel A en B: audit/AC-5 t/m audit/AC-20; ADR 0051): tabel, CHECKs, grants,
 -- exact vier policies op naam, de guard-triggers (append-only, behalve verwijderen na de termijn), app.request_id(), app.audit, app.audit_account_action en de
 -- regels van app.assign_role en app.set_account_blocked. Alles in één transactie die terugdraait.
 -- Alles wat de nieuwe objecten raakt staat als tekst in een assert of in een hulpfunctie die fouten vangt, zodat een
@@ -66,7 +66,7 @@ insert into better_auth.account (id, "accountId", "providerId", "userId", passwo
   ('alacc-2', 'al-admin2', 'credential', 'al-admin2', 'hash', now(), now()),
   ('alacc-3', 'al-user', 'credential', 'al-user', 'hash', now(), now()),
   ('alacc-4', 'al-victim', 'credential', 'al-victim', 'hash', now(), now());
--- Als script (app_migrator, geen actor, geen requestId): AC-12.
+-- Als script (app_migrator, geen actor, geen requestId): audit/AC-12.
 do $$ begin
   perform app.assign_role('al-admin', 'admin');
   perform app.assign_role('al-admin2', 'admin');
@@ -76,13 +76,13 @@ do $$ begin
   perform app.assign_role('al-invited', 'user');
 end $$;
 
--- AC-5: de tabel, RLS, kolommen, CHECKs, indexen.
+-- audit/AC-5: de tabel, RLS, kolommen, CHECKs, indexen.
 select is(to_regclass('app.audit_log')::text, 'app.audit_log', 'app.audit_log: de tabel bestaat in schema app');
 select results_eq(
   $$select c.relrowsecurity, c.relforcerowsecurity, c.relowner::regrole::text
     from pg_catalog.pg_class c where c.oid = to_regclass('app.audit_log')$$,
   $$values (true, true, 'app_migrator')$$,
-  'app.audit_log: RLS aan en geforceerd, eigenaar app_migrator (AC-5)'
+  'app.audit_log: RLS aan en geforceerd, eigenaar app_migrator (audit/AC-5)'
 );
 select results_eq(
   $$select a.attname::text collate "default", pg_catalog.format_type(a.atttypid, a.atttypmod), a.attnotnull,
@@ -137,14 +137,14 @@ select results_eq(
   $$values ('action hoofdletter', '23514'), ('action met cijfer', '23514'), ('action zonder punt', '23514'),
            ('details een array', '23514'), ('details van 2049 bytes', '23514'), ('target_id met @', '23514'),
            ('target_id met spatie', '23514'), ('target_id van 129 tekens', '23514'), ('target_type hoofdletter', '23514')$$,
-  'app.audit_log: de CHECKs op action, target_type, target_id en details weigeren met 23514 (AC-5)'
+  'app.audit_log: de CHECKs op action, target_type, target_id en details weigeren met 23514 (audit/AC-5)'
 );
 select is(octet_length(pg_temp.details_of_size(2048)::text), 2048, 'voorbereiding: details_of_size(2048) is 2048 bytes in tekstvorm');
 select results_eq(
   $$select left(pg_temp.try_as('app_definer', format($s$insert into app.audit_log (action, details) values ('a.b', %L::jsonb)$s$, pg_temp.details_of_size(2048))), 5),
           left(pg_temp.try_as('app_definer', $s$insert into app.audit_log (action, target_id) values ('a.b', repeat('a', 128))$s$), 5)$$,
   $$values ('00000', '00000')$$,
-  'app.audit_log: details van precies 2048 bytes en target_id van precies 128 tekens slagen (AC-5, AC-16)'
+  'app.audit_log: details van precies 2048 bytes en target_id van precies 128 tekens slagen (audit/AC-5, audit/AC-16)'
 );
 select results_eq(
   $$select coalesce(g.rolname, 'PUBLIC')::text collate "default", a.privilege_type::text
@@ -153,7 +153,7 @@ select results_eq(
     left join pg_catalog.pg_roles g on g.oid = a.grantee
     where c.oid = to_regclass('app.audit_log') and a.grantee <> c.relowner order by 1, 2$$,
   $$values ('app_authenticated', 'SELECT'), ('app_definer', 'DELETE'), ('app_definer', 'SELECT')$$,
-  'app.audit_log: tabelgrants zijn select voor app_authenticated en select en delete voor app_definer (AC-5, jobs/AC-7)'
+  'app.audit_log: tabelgrants zijn select voor app_authenticated en select en delete voor app_definer (audit/AC-5, jobs/AC-7)'
 );
 select results_eq(
   $$select g.rolname::text collate "default", a.privilege_type::text, att.attname::text collate "default"
@@ -233,26 +233,26 @@ select results_eq(
     from pg_catalog.pg_proc p join pg_catalog.pg_language l on l.oid = p.prolang
     where p.oid = to_regprocedure('app.request_id()')$$,
   $$values ('sql', 's', false, 'app_migrator', 'text')$$,
-  'app.request_id: language sql, stable, geen security definer, eigenaar app_migrator (AC-1)'
+  'app.request_id: language sql, stable, geen security definer, eigenaar app_migrator (audit/AC-1)'
 );
 
 -- Deel A: app.request_id() geeft de requestId van de server, een lege waarde als null.
 call pg_temp.act('al-user', 'password', 'R-fn-1');
-select is(pg_temp.query_as('app_definer', 'select app.request_id()'), 'R-fn-1', 'app.request_id: geeft app.request_id uit de transactie (AC-1)');
+select is(pg_temp.query_as('app_definer', 'select app.request_id()'), 'R-fn-1', 'app.request_id: geeft app.request_id uit de transactie (audit/AC-1)');
 call pg_temp.act('al-user', 'password', '');
 select is(pg_temp.query_as('app_definer', 'select app.request_id()'), null, 'app.request_id: een lege waarde is null (script zonder request)');
 
--- AC-12 (script): de setup hierboven draaide als app_migrator zonder actor en zonder requestId.
+-- audit/AC-12 (script): de setup hierboven draaide als app_migrator zonder actor en zonder requestId.
 select is(
   pg_temp.query_as('app_definer', $$select count(*)::text from app.audit_log where action = 'core.role.assign' and target_id = 'al-victim'$$),
   '1',
-  'app.assign_role: een nieuw account met rol schrijft één regel core.role.assign (AC-12)'
+  'app.assign_role: een nieuw account met rol schrijft één regel core.role.assign (audit/AC-12)'
 );
 select is(
   pg_temp.query_as('app_definer', $$select (to_jsonb(a) - 'id' - 'at')::text from app.audit_log a
     where a.action = 'core.role.assign' and a.target_id = 'al-victim'$$)::jsonb,
   '{"actor_id": null, "db_role": "app_migrator", "action": "core.role.assign", "target_type": "account", "target_id": "al-victim", "request_id": null, "details": {"role": "user"}}'::jsonb,
-  'app.assign_role: als app_migrator zonder actor: actor_id null, db_role app_migrator, previous weggelaten bij een nieuw account (AC-12, OV-B3)'
+  'app.assign_role: als app_migrator zonder actor: actor_id null, db_role app_migrator, previous weggelaten bij een nieuw account (audit/AC-12, OV-B3)'
 );
 call pg_temp.act('', 'none', 'req-nochange');
 select is(pg_temp.try_as('app_migrator', $$select app.assign_role('al-user', 'user')$$), '00000', 'voorbereiding: dezelfde rol toekennen is geen fout');
@@ -262,7 +262,7 @@ select is(
   'app.assign_role: een rol gelijk aan de huidige schrijft geen regel (OV-B3)'
 );
 
--- AC-6: audit_log_definer_insert.
+-- audit/AC-6: audit_log_definer_insert.
 select is(
   left(pg_temp.try_as('app_definer', $$insert into app.audit_log (actor_id, action, target_type, target_id) values ('al-user', 'note.archive', 'note', 'n1')$$), 5),
   '00000',
@@ -295,7 +295,7 @@ select is(
   'audit_log_definer_insert: app_definer kiest db_role niet zelf (kolomgrant, OV-B2)'
 );
 
--- AC-7: audit_log_select_admin.
+-- audit/AC-7: audit_log_select_admin.
 call pg_temp.act('al-admin', 'mfa', 'req-7');
 select ok(
   (select case when v ~ '^[0-9]+$' then v::integer > 2 else false end
@@ -332,14 +332,14 @@ select is(
   'audit_log_select_admin: zonder actor 0 regels'
 );
 
--- AC-8: audit_log_definer_select.
+-- audit/AC-8: audit_log_definer_select.
 select ok(
   (select case when v ~ '^[0-9]+$' then v::integer > 2 else false end
    from (select pg_temp.query_as('app_definer', 'select count(*)::text from app.audit_log') as v) s),
   'audit_log_definer_select: app_definer ziet alle regels'
 );
 
--- AC-9: app_authenticated schrijft nooit; api_user en auth_service hebben geen enkel recht.
+-- audit/AC-9: app_authenticated schrijft nooit; api_user en auth_service hebben geen enkel recht.
 call pg_temp.act('al-admin', 'mfa', 'req-9');
 select results_eq(
   $$select p.stmt, left(pg_temp.try_as('app_authenticated', p.stmt), 5)
@@ -351,7 +351,7 @@ select results_eq(
     ) p (stmt) order by 1$$,
   $$values ('delete from app.audit_log', '42501'), ('insert into app.audit_log (action) values (''a.b'')', '42501'),
            ('truncate app.audit_log', '42501'), ('update app.audit_log set action = ''a.b''', '42501')$$,
-  'app_authenticated: insert, update, delete en truncate op app.audit_log falen met 42501, ook als admin met MFA (AC-9)'
+  'app_authenticated: insert, update, delete en truncate op app.audit_log falen met 42501, ook als admin met MFA (audit/AC-9)'
 );
 select is(
   (select count(*)::integer
@@ -362,7 +362,7 @@ select is(
               then coalesce(pg_catalog.has_any_column_privilege(r.rolname, to_regclass('app.audit_log'), p.recht), true)
               else false end),
   0,
-  'api_user en auth_service: geen enkel recht op app.audit_log (AC-9)'
+  'api_user en auth_service: geen enkel recht op app.audit_log (audit/AC-9)'
 );
 select is(
   (select count(*)::integer
@@ -372,10 +372,10 @@ select is(
      and coalesce(pg_catalog.has_table_privilege(r.rolname, to_regclass('app.audit_log'), p.recht), true)
       or (p.recht = 'update' and coalesce(pg_catalog.has_any_column_privilege(r.rolname, to_regclass('app.audit_log'), 'update'), true))),
   0,
-  'app_authenticated en app_definer: geen update, delete, truncate, references of trigger op app.audit_log (AC-9)'
+  'app_authenticated en app_definer: geen update, delete, truncate, references of trigger op app.audit_log (audit/AC-9)'
 );
 
--- AC-10: niemand wijzigt of verwijdert, ook de eigenaar niet, ook als de where 0 rijen raakt.
+-- audit/AC-10: niemand wijzigt of verwijdert, ook de eigenaar niet, ook als de where 0 rijen raakt.
 select results_eq(
   $$select r.rol, p.stmt, left(pg_temp.try_as(r.rol, p.stmt), 5)
     from (values ('app_definer')) r (rol)
@@ -386,7 +386,7 @@ select results_eq(
   $$values ('app_definer', 'delete from app.audit_log', '00000'), ('app_definer', 'delete from app.audit_log where false', '00000'),
            ('app_definer', 'truncate app.audit_log', '42501'), ('app_definer', 'update app.audit_log set action = ''a.b''', '42501'),
            ('app_definer', 'update app.audit_log set action = ''a.b'' where false', '42501')$$,
-  'app_definer: update en truncate op app.audit_log falen met 42501, ook met where false; delete raakt 0 rijen zolang geen regel verlopen is (AC-10, jobs/AC-6)'
+  'app_definer: update en truncate op app.audit_log falen met 42501, ook met where false; delete raakt 0 rijen zolang geen regel verlopen is (audit/AC-10, jobs/AC-6)'
 );
 select results_eq(
   $$select p.stmt, pg_temp.try_as('app_migrator', p.stmt)
@@ -399,10 +399,10 @@ select results_eq(
            ('truncate app.audit_log', '42501|audit log is append-only'),
            ('update app.audit_log set action = ''a.b''', '42501|audit log is append-only'),
            ('update app.audit_log set action = ''a.b'' where false', '42501|audit log is append-only')$$,
-  'app_migrator (eigenaar): update en truncate falen met 42501 door de guard-trigger, ook met where false; delete raakt 0 rijen onder FORCE RLS (AC-10, jobs/AC-6)'
+  'app_migrator (eigenaar): update en truncate falen met 42501 door de guard-trigger, ook met where false; delete raakt 0 rijen onder FORCE RLS (audit/AC-10, jobs/AC-6)'
 );
 
--- AC-11: app.assign_role door een admin met MFA, user -> admin.
+-- audit/AC-11: app.assign_role door een admin met MFA, user -> admin.
 call pg_temp.act('al-admin', 'mfa', 'req-11');
 select is(pg_temp.try_as('app_authenticated', $$select app.assign_role('al-promote', 'admin')$$), '00000', 'voorbereiding: de admin maakt al-promote admin');
 select is(
@@ -411,10 +411,10 @@ select is(
         'action', action, 'target_type', target_type, 'target_id', target_id, 'details', details, 'request_id', request_id)))::text
     from app.audit_log where request_id = 'req-11'$$)::jsonb,
   '{"n": 1, "rows": [{"actor_id": "al-admin", "db_role_is_session_user": true, "action": "core.role.assign", "target_type": "account", "target_id": "al-promote", "details": {"role": "admin", "previous": "user"}, "request_id": "req-11"}]}'::jsonb,
-  'app.assign_role: schrijft precies één regel met actor, db_role, doel, details en request_id (AC-11)'
+  'app.assign_role: schrijft precies één regel met actor, db_role, doel, details en request_id (audit/AC-11)'
 );
 
--- AC-14: blokkeren en deblokkeren schrijven alleen bij een echte wijziging.
+-- audit/AC-14: blokkeren en deblokkeren schrijven alleen bij een echte wijziging.
 call pg_temp.act('al-admin', 'mfa', 'req-14a');
 select is(pg_temp.try_as('app_authenticated', $$select app.set_account_blocked('al-victim', true)$$), '00000', 'voorbereiding: blokkeren');
 select is(
@@ -422,14 +422,14 @@ select is(
       'types', jsonb_agg(target_type), 'targets', jsonb_agg(target_id), 'details', jsonb_agg(details))::text
     from app.audit_log where request_id = 'req-14a'$$)::jsonb,
   '{"n": 1, "actions": ["core.account.block"], "actors": ["al-admin"], "types": ["account"], "targets": ["al-victim"], "details": [{}]}'::jsonb,
-  'app.set_account_blocked: blokkeren schrijft één regel core.account.block met details {} (AC-14)'
+  'app.set_account_blocked: blokkeren schrijft één regel core.account.block met details {} (audit/AC-14)'
 );
 call pg_temp.act('al-admin', 'mfa', 'req-14b');
 select is(pg_temp.try_as('app_authenticated', $$select app.set_account_blocked('al-victim', true)$$), '00000', 'voorbereiding: opnieuw blokkeren is geen fout');
 select is(
   pg_temp.query_as('app_definer', $$select count(*)::text from app.audit_log where request_id = 'req-14b'$$),
   '0',
-  'app.set_account_blocked: opnieuw blokkeren van een geblokkeerd account schrijft geen tweede regel (AC-14)'
+  'app.set_account_blocked: opnieuw blokkeren van een geblokkeerd account schrijft geen tweede regel (audit/AC-14)'
 );
 call pg_temp.act('al-admin', 'mfa', 'req-14c');
 select is(pg_temp.try_as('app_authenticated', $$select app.set_account_blocked('al-victim', false)$$), '00000', 'voorbereiding: deblokkeren');
@@ -437,7 +437,7 @@ select is(
   pg_temp.query_as('app_definer', $$select jsonb_build_object('n', count(*), 'actions', jsonb_agg(action), 'details', jsonb_agg(details))::text
     from app.audit_log where request_id = 'req-14c'$$)::jsonb,
   '{"n": 1, "actions": ["core.account.unblock"], "details": [{}]}'::jsonb,
-  'app.set_account_blocked: deblokkeren schrijft één regel core.account.unblock (AC-14)'
+  'app.set_account_blocked: deblokkeren schrijft één regel core.account.unblock (audit/AC-14)'
 );
 call pg_temp.act('al-admin', 'mfa', 'req-14d');
 select is(pg_temp.try_as('app_authenticated', $$select app.set_account_blocked('al-victim', false)$$), '00000', 'voorbereiding: opnieuw deblokkeren is geen fout');
@@ -445,15 +445,15 @@ select is(pg_temp.try_as('app_authenticated', $$select app.set_account_blocked('
 select is(
   pg_temp.query_as('app_definer', $$select count(*)::text from app.audit_log where request_id = 'req-14d'$$),
   '0',
-  'app.set_account_blocked: deblokkeren van een niet-geblokkeerd account schrijft niets (AC-14)'
+  'app.set_account_blocked: deblokkeren van een niet-geblokkeerd account schrijft niets (audit/AC-14)'
 );
 
--- AC-16: app.audit weigert en slaagt op de grenzen.
+-- audit/AC-16: app.audit weigert en slaagt op de grenzen.
 call pg_temp.act('', 'none', 'req-16');
 select is(
   left(pg_temp.try_as('app_authenticated', $$select app.audit('note.archive', 'note', 'n16', '{}'::jsonb)$$), 5),
   '42501',
-  'app.audit: zonder actor 42501 (AC-16)'
+  'app.audit: zonder actor 42501 (audit/AC-16)'
 );
 call pg_temp.act('al-user', 'password', 'req-16');
 select results_eq(
@@ -470,21 +470,21 @@ select results_eq(
   $$values ('action met core.-voorvoegsel', '22023'), ('details geen object', '23514'), ('details van 2049 bytes', '23514'),
            ('target_id met @', '23514'), ('target_id met spatie', '23514'), ('target_id van 129 tekens', '23514'),
            ('target_type account', '22023')$$,
-  'app.audit: core.-actie en target_type account geven 22023; een ongeldig target_id of details geven 23514 (AC-16)'
+  'app.audit: core.-actie en target_type account geven 22023; een ongeldig target_id of details geven 23514 (audit/AC-16)'
 );
 select results_eq(
   $$select left(pg_temp.try_as('app_authenticated', format($s$select app.audit('note.archive', 'note', 'n16', %L::jsonb)$s$, pg_temp.details_of_size(2048))), 5),
           left(pg_temp.try_as('app_authenticated', $s$select app.audit('note.archive', 'note', repeat('a', 128), '{}'::jsonb)$s$), 5)$$,
   $$values ('00000', '00000')$$,
-  'app.audit: details van precies 2048 bytes en target_id van 128 tekens slagen (AC-16)'
+  'app.audit: details van precies 2048 bytes en target_id van 128 tekens slagen (audit/AC-16)'
 );
 select is(
   pg_temp.query_as('app_definer', $$select count(*)::text from app.audit_log where request_id = 'req-16'$$),
   '2',
-  'app.audit: alleen de twee geldige aanroepen hebben een regel achtergelaten (AC-16)'
+  'app.audit: alleen de twee geldige aanroepen hebben een regel achtergelaten (audit/AC-16)'
 );
 
--- AC-17: de actor is altijd app.current_user_id().
+-- audit/AC-17: de actor is altijd app.current_user_id().
 call pg_temp.act('al-user', 'password', 'req-17');
 select is(
   pg_temp.try_as('app_authenticated', $$select app.audit('note.archive', 'note', 'n17', '{"actor_id": "al-admin"}'::jsonb)$$),
@@ -495,14 +495,14 @@ select is(
   pg_temp.query_as('app_definer', $$select jsonb_build_object('n', count(*), 'actors', jsonb_agg(actor_id), 'requests', jsonb_agg(request_id),
       'types', jsonb_agg(target_type))::text from app.audit_log where request_id = 'req-17'$$)::jsonb,
   '{"n": 1, "actors": ["al-user"], "requests": ["req-17"], "types": ["note"]}'::jsonb,
-  'app.audit: actor_id is de actor van de sessie en request_id komt uit app.request_id(); geen parameter kiest de actor (AC-17)'
+  'app.audit: actor_id is de actor van de sessie en request_id komt uit app.request_id(); geen parameter kiest de actor (audit/AC-17)'
 );
 
--- AC-18: app.audit_account_action.
+-- audit/AC-18: app.audit_account_action.
 call pg_temp.act('al-user', 'mfa', 'req-18');
-select is(left(pg_temp.try_as('app_authenticated', $$select app.audit_account_action('core.account.invite', 'al-victim')$$), 5), '42501', 'app.audit_account_action: een user (ook met MFA) krijgt 42501 (AC-18)');
+select is(left(pg_temp.try_as('app_authenticated', $$select app.audit_account_action('core.account.invite', 'al-victim')$$), 5), '42501', 'app.audit_account_action: een user (ook met MFA) krijgt 42501 (audit/AC-18)');
 call pg_temp.act('al-admin', 'password', 'req-18');
-select is(left(pg_temp.try_as('app_authenticated', $$select app.audit_account_action('core.account.invite', 'al-victim')$$), 5), '42501', 'app.audit_account_action: een admin zonder MFA krijgt 42501 (AC-18)');
+select is(left(pg_temp.try_as('app_authenticated', $$select app.audit_account_action('core.account.invite', 'al-victim')$$), 5), '42501', 'app.audit_account_action: een admin zonder MFA krijgt 42501 (audit/AC-18)');
 call pg_temp.act('al-admin', 'mfa', 'req-18');
 select results_eq(
   $$select r.actie, left(pg_temp.try_as('app_authenticated', format($s$select app.audit_account_action(%L, 'al-victim')$s$, r.actie)), 5)
@@ -510,7 +510,7 @@ select results_eq(
     order by 1$$,
   $$values ('core.account.block', '22023'), ('core.account.delete', '22023'), ('core.account.unblock', '22023'),
            ('core.role.assign', '22023'), ('note.archive', '22023')$$,
-  'app.audit_account_action: een actie buiten invite, reinvite, revoke en reset_link geeft 22023 (AC-18)'
+  'app.audit_account_action: een actie buiten invite, reinvite, revoke en reset_link geeft 22023 (audit/AC-18)'
 );
 select results_eq(
   $$select r.actie, left(pg_temp.try_as('app_authenticated', format($s$select app.audit_account_action(%L, 'al-victim')$s$, r.actie)), 5)
@@ -518,14 +518,14 @@ select results_eq(
     order by 1$$,
   $$values ('core.account.invite', '00000'), ('core.account.reinvite', '00000'), ('core.account.reset_link', '00000'),
            ('core.account.revoke', '00000')$$,
-  'app.audit_account_action: een admin met MFA mag de vier acties vastleggen (AC-18)'
+  'app.audit_account_action: een admin met MFA mag de vier acties vastleggen (audit/AC-18)'
 );
 select is(
   pg_temp.query_as('app_definer', $$select jsonb_build_object('n', count(*), 'types', jsonb_agg(distinct target_type), 'targets', jsonb_agg(distinct target_id),
       'details', jsonb_agg(distinct details), 'actors', jsonb_agg(distinct actor_id), 'requests', jsonb_agg(distinct request_id))::text
     from app.audit_log where request_id = 'req-18'$$)::jsonb,
   '{"n": 4, "types": ["account"], "targets": ["al-victim"], "details": [{}], "actors": ["al-admin"], "requests": ["req-18"]}'::jsonb,
-  'app.audit_account_action: schrijft target_type account, details {} en de actor en request_id van de sessie (AC-18)'
+  'app.audit_account_action: schrijft target_type account, details {} en de actor en request_id van de sessie (audit/AC-18)'
 );
 select is(
   left(pg_temp.try_as('app_authenticated', $$select app.audit_account_action('core.account.invite', 'a@b')$$), 5),
@@ -533,7 +533,7 @@ select is(
   'app.audit_account_action: een ongeldig target_id geeft 23514'
 );
 
--- AC-20: een regel van een actie die daarna faalt, draait mee terug.
+-- audit/AC-20: een regel van een actie die daarna faalt, draait mee terug.
 call pg_temp.act('al-user', 'password', 'req-20a');
 select is(
   left(pg_temp.try_as('app_authenticated', $sql$do $x$ begin
@@ -546,7 +546,7 @@ select is(
 select is(
   pg_temp.query_as('app_definer', $$select count(*)::text from app.audit_log where request_id = 'req-20a'$$),
   '0',
-  'app.audit: na een fout ná het schrijven draait de regel mee terug (AC-20)'
+  'app.audit: na een fout ná het schrijven draait de regel mee terug (audit/AC-20)'
 );
 call pg_temp.act('al-user', 'password', 'req-20b');
 select is(
@@ -560,40 +560,40 @@ select is(
   'controle: zonder fout blijft de regel staan'
 );
 
--- Laatste-admin-regel (AC-13, AC-15). Eerst al-admin2 degraderen: al-admin is dan de enige telbare admin (al-promote is
+-- Laatste-admin-regel (audit/AC-13, audit/AC-15). Eerst al-admin2 degraderen: al-admin is dan de enige telbare admin (al-promote is
 -- admin zonder credential-account).
 call pg_temp.act('al-admin', 'mfa', 'req-13a');
 select is(pg_temp.try_as('app_authenticated', $$select app.assign_role('al-admin2', 'user')$$), '00000', 'voorbereiding: een van twee telbare admins degraderen');
 select is(
   pg_temp.query_as('app_definer', $$select (to_jsonb(a) - 'id' - 'at' - 'db_role')::text from app.audit_log a where a.request_id = 'req-13a'$$)::jsonb,
   '{"actor_id": "al-admin", "action": "core.role.assign", "target_type": "account", "target_id": "al-admin2", "request_id": "req-13a", "details": {"role": "user", "previous": "admin"}}'::jsonb,
-  'app.assign_role: een degradatie schrijft role en previous (AC-11)'
+  'app.assign_role: een degradatie schrijft role en previous (audit/AC-11)'
 );
 call pg_temp.act('al-promote', 'mfa', 'req-13b');
 select is(
   pg_temp.try_as('app_authenticated', $$select app.assign_role('al-admin', 'user')$$),
   'P0001|LAST_ADMIN',
-  'app.assign_role: de enige telbare admin degraderen faalt met LAST_ADMIN (AC-13)'
+  'app.assign_role: de enige telbare admin degraderen faalt met LAST_ADMIN (audit/AC-13)'
 );
 select is(
   pg_temp.query_as('app_definer', $$select count(*)::text from app.audit_log where request_id = 'req-13b'$$),
   '0',
-  'app.assign_role: een mislukte actie laat geen regel achter (AC-13)'
+  'app.assign_role: een mislukte actie laat geen regel achter (audit/AC-13)'
 );
 call pg_temp.act('al-promote', 'mfa', 'req-15');
-select is(pg_temp.try_as('app_authenticated', $$select app.set_account_blocked('al-admin', true)$$), 'P0001|LAST_ADMIN', 'app.set_account_blocked: de enige telbare admin blokkeren faalt met LAST_ADMIN (AC-15)');
+select is(pg_temp.try_as('app_authenticated', $$select app.set_account_blocked('al-admin', true)$$), 'P0001|LAST_ADMIN', 'app.set_account_blocked: de enige telbare admin blokkeren faalt met LAST_ADMIN (audit/AC-15)');
 call pg_temp.act('al-admin', 'mfa', 'req-15');
-select is(pg_temp.try_as('app_authenticated', $$select app.set_account_blocked('al-admin', true)$$), 'P0001|OWN_ACCOUNT', 'app.set_account_blocked: jezelf blokkeren faalt met OWN_ACCOUNT (AC-15)');
-select is(pg_temp.try_as('app_authenticated', $$select app.set_account_blocked('al-invited', true)$$), 'P0001|ACCOUNT_INVITED', 'app.set_account_blocked: een uitgenodigd account blokkeren faalt met ACCOUNT_INVITED (AC-15)');
-select is(pg_temp.try_as('app_authenticated', $$select app.set_account_blocked('al-bestaat-niet', true)$$), 'P0001|NOT_FOUND', 'app.set_account_blocked: een onbekend account blokkeren faalt met NOT_FOUND (AC-15)');
+select is(pg_temp.try_as('app_authenticated', $$select app.set_account_blocked('al-admin', true)$$), 'P0001|OWN_ACCOUNT', 'app.set_account_blocked: jezelf blokkeren faalt met OWN_ACCOUNT (audit/AC-15)');
+select is(pg_temp.try_as('app_authenticated', $$select app.set_account_blocked('al-invited', true)$$), 'P0001|ACCOUNT_INVITED', 'app.set_account_blocked: een uitgenodigd account blokkeren faalt met ACCOUNT_INVITED (audit/AC-15)');
+select is(pg_temp.try_as('app_authenticated', $$select app.set_account_blocked('al-bestaat-niet', true)$$), 'P0001|NOT_FOUND', 'app.set_account_blocked: een onbekend account blokkeren faalt met NOT_FOUND (audit/AC-15)');
 call pg_temp.act('al-user', 'password', 'req-15');
-select is(left(pg_temp.try_as('app_authenticated', $$select app.set_account_blocked('al-victim', true)$$), 5), '42501', 'app.set_account_blocked: een user krijgt 42501 (AC-15)');
+select is(left(pg_temp.try_as('app_authenticated', $$select app.set_account_blocked('al-victim', true)$$), 5), '42501', 'app.set_account_blocked: een user krijgt 42501 (audit/AC-15)');
 call pg_temp.act('al-admin', 'password', 'req-15');
-select is(left(pg_temp.try_as('app_authenticated', $$select app.set_account_blocked('al-victim', true)$$), 5), '42501', 'app.set_account_blocked: een admin zonder MFA krijgt 42501 (AC-15)');
+select is(left(pg_temp.try_as('app_authenticated', $$select app.set_account_blocked('al-victim', true)$$), 5), '42501', 'app.set_account_blocked: een admin zonder MFA krijgt 42501 (audit/AC-15)');
 select is(
   pg_temp.query_as('app_definer', $$select count(*)::text from app.audit_log where request_id = 'req-15'$$),
   '0',
-  'app.set_account_blocked: een mislukte blokkade laat geen regel achter (AC-15)'
+  'app.set_account_blocked: een mislukte blokkade laat geen regel achter (audit/AC-15)'
 );
 
 
