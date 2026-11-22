@@ -8,7 +8,7 @@ Herzien: 2026-11-12 (#705): punt 3, 4 en 6: de toets vooraf wordt niet verder ui
 
 Herzien: 2026-11-14 (#714): ingekort tot wat nog geldt na ADR 0091; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 Herzien: 2026-11-19: verwijzingen naar verwijderde documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg)
-Herzien: 2026-11-22: gewijzigd door [0106](0106-schaduwmodus-met-tijdgrens.md) punt 1 tot en met 7, punt 6: schaduw is weer een vorm voor een nieuwe controle, met register, drempel vooraf, tijdgrens en verplicht besluit; de schaduwmodus en meetreeks van de toets op effect blijven weg
+Herzien: 2026-11-22: gewijzigd door [0106](0106-schaduwmodus-met-tijdgrens.md) punt 1 tot en met 8, punt 6: schaduw is weer een vorm voor een nieuwe controle, met register, drempel vooraf, tijdgrens en verplicht besluit; de schaduwmodus en meetreeks van de toets op effect blijven weg
 
 Wijzigt in spec rolhek-lezen AC-2 en AC-5 het `--output`-verbod (voortaan op effect); vult
 [0045](0045-railwerk.md) aan. Drempel: A3 (een check vooraf vervalt; de controle verschuift naar achteraf) en A4. Uitwerking:

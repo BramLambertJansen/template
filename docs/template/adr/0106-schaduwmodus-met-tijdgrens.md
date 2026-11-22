@@ -26,7 +26,7 @@ exitcode) en `strikt` (altijd rood, nooit in de baseline) (0065). In CI is elke 
    lintregel mag eerst alleen loggen. Dat geldt ook voor het nieuwe deel van een aangescherpte controle; het bestaande deel
    blijft hard. De spec kiest schaduw, het is geen plicht. Een controle die al hard is, gaat nooit terug naar schaduw (R-PRINC-09).
 2. **Altijd meteen hard:** auth en sessies (R-AUTH), permissies en `can()` (R-CODE-03, R-TEST-03), RLS, grants, rollen en
-   `security definer` (R-DB-01, R-DB-05, R-DB-09, R-CODE-08), geheimen en env (R-SEC-05, R-SEC-06, R-LAAG-08), foutlek, CSRF,
+   `security definer` (R-DB-01, R-DB-05, R-DB-09, R-CODE-08), geheimen en env (R-SEC-05, R-LAAG-08), foutlek, CSRF,
    headers en rate limit (R-SEC-01 t/m R-SEC-04, R-SEC-08), dependencies en supply chain (R-SEC-06), het rolhek voor `.git`,
    zelfladende paden, GitHub-schrijfacties, identiteit en tests skippen of verwijderen (0071 punt 1 en 2, R-ROL-03), skippen in
    CI (0088 punt 3), ruleset en vereiste checks (R-CI-01, R-CI-07, R-REPO-02), negatieve securitytests (R-TEST-04), en een
@@ -38,16 +38,21 @@ exitcode) en `strikt` (altijd rood, nooit in de baseline) (0065). In CI is elke 
 4. **Waar treffers landen.** Een hook schrijft een meetregel `Schaduw` met controle en sleutel in de meetopslag, nooit inhoud.
    Een check in CI meldt via het kanaal `meldingen` met het voorvoegsel `schaduw:`; de exitcode verandert niet. Een controle in
    schaduw draait volledig, nooit als skip.
-5. **De tijdgrens dwingt het besluit af.** In het kanaal `strikt` komt `schaduw-termijn`. Die is rood zodra de commitdatum
-   van HEAD na de einddatum ligt en de controle nog in het register staat; drie dagen eerder geeft hij "let op". De commitdatum
-   telt, niet de klok, zodat dezelfde commit dezelfde uitslag geeft. Verlengen kan niet.
+5. **De tijdgrens dwingt het besluit af.** De check `schaduw-termijn` meldt in het kanaal `strikt` (rood) zodra de
+   commitdatum van HEAD na de einddatum ligt en de controle nog in het register staat; drie dagen eerder meldt hij in
+   `meldingen` ("let op", exit 0). De commitdatum telt, niet de klok, zodat dezelfde commit dezelfde uitslag geeft; dat die
+   datum instelbaar is, is aanvaard (R-PRINC-09 verbiedt het omzeilen). Verlengen met dezelfde controle en drempel kan niet.
 6. **Het besluit.** Vóór de einddatum legt de hoofdsessie een PR voor met de tellingen (`pnpm meting --schaduw` en de
    meldingen uit CI), de drempel en één uitkomst: **hard** (de controle blokkeert en verdwijnt uit het register),
-   **aangepast** (één keer een nieuwe periode van hoogstens 14 dagen) of **verwijderd** (code en registerregel weg). De merge
+   **aangepast** (één keer, alleen met een gewijzigde controle of drempel, een nieuwe periode van hoogstens 14 dagen) of
+   **verwijderd** (code en registerregel weg). De merge
    door de eigenaar is het besluit.
 7. **R-PRINC-10 blijft heel.** Een controle in schaduw blokkeert niets en telt dus niet als controle. Haar verwijderen haalt
    niets weg wat blokkeerde. Het regelboek noemt haar pas als ze hard wordt (R-DOC-10); tot dan staat ze in het register en
    in haar spec.
+8. **Alleen in de template.** Het register en `schaduw-termijn` gelden alleen waar `.claude/gates.json` `onderhoud` heeft (de
+   template); in een app slaat de check over. `pnpm template:release` weigert zolang het register een controle bevat, zodat
+   een app nooit een controle in schaduw of een verlopen termijn binnenkrijgt.
 
 ## Alternatieven
 
@@ -60,13 +65,16 @@ exitcode) en `strikt` (altijd rood, nooit in de baseline) (0065). In CI is elke 
 
 ## Gevolgen
 
-- Bouw-PR (volledige route, tests eerst): het register met schemacheck; `schaduw-termijn` in `strikt`; het voorvoegsel
+- Bouw-PR (volledige route, tests eerst): het register met schemacheck; `schaduw-termijn` in `strikt` en `meldingen`, met de
+  overslag in een app en de weigering in `template:release`; het voorvoegsel
   `schaduw:` in `meldingen`; de meetregel `Schaduw` in `rails/hooks/lib/meting.mjs` met `pnpm meting --schaduw`; de norm in het
   regelboek (§4 of een nieuwe R-id onder R-PRINC); `docs/` bijgewerkt.
 - Falende fixtures (R-PRINC-04): een registerregel zonder drempel of einddatum; een einddatum later dan 14 dagen na de start;
   een R-id uit de lijst van punt 2; een tweede aanpassing; HEAD na de einddatum geeft rood, drie dagen ervoor "let op" met
-  exit 0; een schaduwcheck die skipt.
-- Na de einddatum is elke PR rood tot het besluit gemerged is, ook een PR die er niets mee te maken heeft. Dat is de bedoeling.
+  exit 0; een schaduwcheck die skipt; een app met een registerregel blijft groen; een release met een registerregel wordt
+  geweigerd.
+- Na de einddatum is in de template elke PR rood tot het besluit gemerged is, ook een PR die er niets mee te maken heeft, en
+  de CI op `main` ook. Dat is de bedoeling; de besluit-PR wijzigt het register en wordt zelf groen.
 - De meetopslag is lokaal. Treffers van hooks op een andere machine of in de cloud ontbreken; dat risico is aanvaard.
 - Klaar als: de fixtures falen op de code van vóór de bouw-PR en zijn groen erna, en `pnpm ratchet` toont `schaduw-termijn`
   in `strikt`.
