@@ -5,6 +5,7 @@ Status: geaccepteerd
 Herzien: 2026-11-18 (#796): gewijzigd door [0093](0093-agent-onder-eigenaaraccount.md) punt 2 en 6, punt 5 vervalt: de identiteitsregels van het rolhek blijven en er komt geen bypass; in Context en Gevolgen is de review van een code-eigenaar geen grens meer, het mergescript houdt een beschermd pad tegen (vangnet)
 Herzien: 2026-11-19: punt 3, gewijzigd door [0099](0099-rolhek-leeslijst-ruimer.md): voor lezen wordt de toets vooraf ruimer (de leeslijst van de reviewer, en de vangnetten op de mergescriptnaam en op `gh` in tekst wijken voor een zeker gelezen lezer); voor schrijven geldt punt 3, behalve dat architect en hoofdsessie de inhoud van een vervallen spec mogen wijzigen (0099 punt 4, OV-2)
 Herzien: 2026-11-19: verwijzingen naar verwijderde documenten wijzen naar de opvolger of zijn weg (spec vervallen-documenten-weg); punt 3: de spec is verwijderd in plaats van naar `vervallen` gezet
+Herzien: 2026-11-22: gewijzigd door [0106](0106-schaduwmodus-met-tijdgrens.md) punt 3, 5 en 7: het bezwaar onder Alternatieven tegen alleen loggen geldt niet voor een nieuwe controle met een vooraf genoemde drempel, een tijdgrens en een verplicht besluit; punt 1 blijft voor de effecttoets, die niet terugkomt
 
 Wijzigt [0071](0071-rolhek-vooraf-vaste-lijst.md) punt 3, 4 en
 6, [0083](0083-bewaking-met-minder-wrijving.md) punt 2, [0084](0084-sandbox-afscherming-geen-effect.md) (alleen de
