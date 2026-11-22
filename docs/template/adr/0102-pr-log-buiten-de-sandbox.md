@@ -1,6 +1,6 @@
 # 0102 — De hoofdsessie leest de log van een rode CI-job met een eigen script, buiten de sandbox
 
-Status: voorgesteld
+Status: geaccepteerd
 
 Wijzigt [0061](0061-claude-sandbox-werkstraat.md) punt 5 (één commando erbij buiten de sandbox) en
 [0069](0069-agent-merge-niet-kritiek.md) punt 4 (de ankertoets geldt ook voor dit script, zonder de modus). Drempel: A3 (een

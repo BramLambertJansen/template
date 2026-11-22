@@ -71,7 +71,7 @@ Hooguit drie open items (`check:roadmap`); nummer 1 is bewijs vóór uitbreiding
   **Open uit die ronde, voor netheid en vóór de eerste productierelease (eigenaar, 2026-11-09; ook als netheidspunt zonder meetbare winst):** (1) CHANGELOG netjes indelen: nu één `[Unreleased]` van ca. 88 KB; hou
   alles wat een app bij een update moet doen of waar een conflict kan ontstaan, snij eerst een gedateerde release of bouw de
   changelogfragmenten (ontwerp en eigenaarkeuzes 2026-10-23) en lees daarna per sectie na (gedaan in de bouw-PR van spec
-  `template-release`: `[Unreleased]` geknipt als release `0.2.0` en de fragmenten gebouwd; het nalezen per sectie blijft open); (2) `docs/operations/agent-doorloop.md` (55 KB) herindelen:
+  `template-release`: `[Unreleased]` geknipt als release `0.2.0` en de fragmenten gebouwd; het nalezen per sectie blijft open); (2) `docs/operations/agent-doorloop.md` (~60 KB) herindelen:
   negen testbestanden, de skills `opleveren` en `spec` en `meting.mjs` pinnen tekst of kopjes, dus alleen met eigenaarakkoord per test
   (R-TEST-02); idem `docs/nieuwe-app.md` (980 regels) en `START-NIEUWE-APP.md`, met bewijs dat de start van een nieuwe app blijft werken; (3) `docs/reviews/` (12 bestanden) een
   bestemming per ST-14-inventaris; (4) dubbele blokken in `.github/workflows` (mise-versie op 11 plekken, bubblewrap op 2, het SHA-controleblok in `guard.yml` drie keer;
@@ -79,7 +79,7 @@ Hooguit drie open items (`check:roadmap`); nummer 1 is bewijs vóór uitbreiding
   met verplichte checknamen ongewijzigd; elke wijziging in `.github/workflows` gaat apart aan de eigenaar (gate-pad) en `guard.yml` alleen via
   besluit-PR; (5) lange regels in `docs/framework.md` en `docs/dod.md` inkorten binnen de grens van de R-DOC-07-krimpcheck; (6) leerpunten uit de ronde, zie #642; (7) verouderde verwijzingen, elk met eigenaarakkoord: (a) testcommentaar dat naar
   `docs/specs/taakmandaat-vervolg.md` wijst (nu taakmandaat-vervolg (verwijderd met het archief); R-TEST-02): `test/hooks/follow-up-kit.ts:7`,
-  `test/hooks/mandate-follow-up-ci.test.ts:19`, `test/rails/check-roadmap-bewijsvorm.test.ts:6` en
+  `test/rails/check-roadmap-bewijsvorm.test.ts:6`, `test/rails/check-roadmap.test.ts:443` en
   `test/scripts/runner-host-files.test.ts:7` (de vastgelegde fixture `test/rails/fixtures/padtabel/decisions-30cc352.json` blijft ongewijzigd);
   (b) zes overbodige `.gitkeep`-bestanden in mappen met andere getrackte bestanden, alle in beschermde paden (`.claude/agents`, `.claude/hooks`,
   `.claude/skills`, `.github/workflows`, `scripts`, `src/core/web/ui`); de plaatshouders in `.github/settings`, `deploy`, `designs` en
@@ -90,32 +90,6 @@ Hooguit drie open items (`check:roadmap`); nummer 1 is bewijs vóór uitbreiding
 
 Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigenaarbesluit nodig heeft, zegt het item.
 
-- [x] **ADR 0029 bouw: feature-lane en mini-spec** (punt 1–3, 7). Lane-herkenning in `check-document-status`, `docs/specs/_mini.md`, het
-  frontmatterveld `sjabloon: mini` in `check-docs`, "Besluit en taakscope voorbereiden" in `docs/operations/agent-doorloop.md`; fixtures in `test/rails/`.
-  aanleiding: 0029-snellere-beslisroute (verwijderd met het archief) (punt 1–7). Gebouwd in #199: lane.mjs (verwijderd, #700), `_mini.md`, `sjabloon: mini` in `check-docs`, statuscommit-controle (a)–(c).
-- [x] **ADR 0031 PR 2: documentstatus als verplichte check.** `check-document-status` draait als eigen job `document-status`
-  (`.github/workflows/guard.yml`) en staat in `requiredChecks` van `.claude/decisions.json`, zodat `pnpm pr:verify` een rode documentstatus ziet
-  Gebouwd in #203; `gh api`-verificatie door de eigenaar op #202 (`diff-guard` op de head-SHA, app-id 15368). Dat is een fout in een rail (P2), geen meta-werk. Na PR 2 eist `gebouwd` een extra check (ADR 0031, "Gevolg voor gebouwd").
-  aanleiding: `docs/operations/agent-doorloop.md` (besluit 2 van de inventaris)
-- [x] **Vertrouwde basis uit het anker, niet uit de lokale origin/main.** Binnen een hook lezen rolhek, register en runnercheck hun
-  configuratie uit het anker van de stub-lader (`RAILS_ANKER`, `rails/hooks/lib/objecten.mjs`), met hashcontrole van commit, trees en blob;
-  bewijs `test/hooks/vertrouwde-basis-anker.test.ts`. Een omgebogen lokale ref (`movesTrustedBase` laat een fetch met een andere bron door)
-  telt daardoor niet meer voor de hooks (met de nieuwe stub-lader; een sessie met een oude stub leest nog de lokale ref); scripts buiten een hook lezen nog de lokale ref, CI blijft de grens.
-  aanleiding: `rails/hooks/lib/rolhek.mjs` (review van de PR voor ADR 0033 punt 1)
-- [x] **Subagent-stop leest de JSON van vitest niet.** `rails/hooks/lib/werkstraat.mjs` zocht het rapport van `vitest --reporter=json` op stdout;
-  vitest 5 schrijft het naar een bestand, dus de tester-stop meldde "geen uitvoer van vitest". Nu krijgt vitest `--outputFile.json=.vitest/json/tester-run.json`
-  en leest de hook dat bestand, alleen als vitest meldt dat hij het schreef; bewijs `test/hooks/werkstraat.test.ts`.
-  aanleiding: `rails/hooks/lib/werkstraat.mjs` (tester-run in de PR voor ADR 0033 punt 1)
-- [x] **Toast: pauze bij hover en focus, fout blijft staan** (WCAG 2.2.1). Besluit eigenaar 2026-10-18 (in de sessie): succes 5 s, een fout
-  verdwijnt niet vanzelf maar blijft tot de gebruiker hem sluit (of tot het bestaande maximum van drie toasts hem verdringt); de timer pauzeert zolang de muis op een toast staat of de focus erin.
-  Alternatief verworpen: alleen pauze met 8 s voor een fout (een fout kan dan nog wegvallen terwijl iemand hem leest). Bewijs `src/core/web/ui/toast.test.tsx`.
-  aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (besluit 2)
-- [x] **Toast: dubbele aankondiging in NVDA** (`role` binnen een `aria-live`-container). De `aria-live` van de twee containers is weg; de rol
-  (`status`, `alert`) zit alleen op de kaart. Keuze eigenaar 2026-10-18 (in de sessie), verworpen: een vaste live-regio met kaarten zonder rol
-  (betrouwbaarder voorlezen, maar toasts zijn dan niet meer op rol te vinden: ca. 15 e2e-selectors en 5 unit-testbestanden) en een vaste regio met
-  rol (permanent twee lege status/alert-elementen). Bekend gevolg: een `role=status` die met zijn inhoud wordt toegevoegd, lezen sommige
-  schermlezers minder betrouwbaar voor; `role=alert` wel. Bewijs `src/core/web/ui/toast.test.tsx`.
-  aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (besluit 2)
 - [ ] **Focus naar de h1 na een routewissel naar een lazy route** (`/design-system`): in e2e (Vite dev) staat de focus daarna op `body`.
   Geprobeerd: `routeKey` uit `resolvedLocation`, wachten op een (zichtbare) h1 met een MutationObserver, en terugzetten als de focus
   verloren gaat. Vermoeden: pending-weergave of het laden van de chunk duurt langer dan `HEADING_WAIT_MS` (2 s), of het pad naar
@@ -123,7 +97,8 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   aanleiding: `src/core/web/ui/app-shell.test.tsx` (bekende fout, geen capability)
 - [ ] **ST-02 (P0) — accountbeheer en herstel afmaken** (stuk 3e; bestaande accountbeheer-specs). Open: TOTP-backupcodes (zodat een admin
   zonder telefoon niet alleen via `admin:create` terugkomt), een openstaande uitnodiging intrekken (opnieuw versturen bestaat al:
-  `reinviteRoute`) en een admin-resetlink ("wachtwoord vergeten" blijft dicht, ADR 0043). Elk deel eerst een spec.
+  `reinviteRoute`) en een admin-resetlink ("wachtwoord vergeten" blijft dicht, ADR 0043). De spec voor alle drie bestaat al:
+  `docs/template/specs/accountbeheer-uitbreiding.md` (goedgekeurd, ter herziening, zie Besluiten); nog niets ervan is gebouwd.
   Gedaan: eenmalige TOTP-code en e-maillink, geen sessietoken in JSON (spec `inloggat-dichten`, ADR 0075; bewijs `test/auth/eenmalig.int.test.ts`, `db/tests/one_time_use.sql`).
   **Werk:** specificeer herauthenticatie, sessie-intrekking, tokenverval, oude/nieuwe adresbevestiging en herstel zonder rolpromotie;
   koppel audit en mail aan ST-04 en ST-03 en kopieer geen synchroon mailpad als de outbox de geldende route wordt.
@@ -183,19 +158,6 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   zonder login onder één vast prefix met verifier, tijdvenster, groottegrens, rate limit per IP en inbox, en een check die elke route buiten
   `defineRoute` en buiten de lijst van §3 laat falen (uitzondering naast R-UIT-02, §3).
   aanleiding: `docs/template/adr/0077-externe-koppelingen-via-poorten.md` (verzoek van de eigenaar, 3 en 4 november 2026)
-- [x] **ST-16 (P1) — rollen als register van de app** (vóór de proef-app, besluit eigenaar 2026-11-11; gebouwd in #715). Nu staat `ROLES` in
-  `src/core/shared/can.ts` en hangen MFA-eis en laatste-admin-trigger aan de naam `admin`; een nieuwe rol wijzigt core (R-ARCH-03), wat in een app dicht is.
-  **Werk:** de app levert `src/shared/roles.ts` (standaard `user` en `admin`); `definePermissions`, `withUser` en de dev-login typeren de rol uit dat register.
-  MFA-eis en laatste-beheerder hangen aan de vlag `beheer` (besluit eigenaar 2026-11-06), niet aan de naam; een app kan de vlag niet uitzetten voor een rol met
-  accountbeheer. Database: `app.roles (name, beheer)` en een foreign key op `user_roles.role` in plaats van het CHECK, via expand/contract; `app.is_mfa_admin()`,
-  de trigger, de laatste-admin-controle in `app.set_account_blocked` en `app.set_account_deactivated`, en de policies lezen `beheer`; `app.use` geldt voor
-  elke rol uit het register. Seed-accounts komen uit de compositie-root, één per rol, zodat de demoswitcher elke rol toont. Eén rol per account.
-  **Afhankelijkheden:** geen; spec `docs/template/specs/rollenregister.md`, ADR 0092 en bouw in één PR (ADR 0090), met ADR 0043 punt 13, 15 en 16, R-ARCH-03, R-AUTH-03, R-AUTH-07 en R-DB-15 herzien.
-  **Klaar als:** bestaande negatieve tests groen (gewijzigd alleen wat de spec onder "Raakt ook" noemt); een test faalt als register en `app.roles` verschillen; een nieuwe rol zonder `beheer` krijgt
-  alleen expliciete permissies en `app.use`; een beheerrol zonder MFA krijgt `MFA_REQUIRED`; laatste-beheerder-racetest; blokkeren en deactiveren van de
-  laatste beheerder met een beheerrol die niet `admin` heet geeft `LAST_ADMIN`; een core-test voegt rollen toe zonder core-wijziging (in de proef-app: één rol toevoegen en ernaartoe wisselen
-  in de demoswitcher, meetpunt van ST-09).
-  aanleiding: `docs/reviews/2026-11-06-herbouw.md` (§4.3, besluit eigenaar 2026-11-06)
 - [ ] **ST-17 (P1) — accountbeheer als module van de template** (na ST-16). Nu bezit elke app de routes, contracten en schermen van accountbeheer en
   eigen account als startcode, zodat elke template-verbetering daaraan bij een template-update conflicteert.
   **Werk:** één module in core met lagen api, shared en web, door de template onderhouden; de app registreert routes, services, permissies en schermen in
@@ -226,19 +188,8 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
 - [ ] **`/.well-known/security.txt` en `LICENSE`** (eigendom, geen open-source-licentie): beide wachten op een waarde van de eigenaar
   (contactadres per app; licentietekst).
   aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (B-11)
-- [x] **`.claude/settings.json` bewezen** (stuk 5): de sandbox start op Ubuntu/WSL2 (bubblewrap, socat) en de deny-regels zijn getest, ook
-  `.env.example` via `allowRead` en `cat .env`. Bewijs #239 (`docs/operations/sandbox-bewijs.md`), met twee beperkingen: een bestand dat
-  hetzelfde commando aanmaakt is leesbaar, en `~/.ssh`/`~/.aws` bestonden niet op de proefmachine.
-  aanleiding: `.claude/settings.json` (onbewezen sinds stuk 5; `test/rails/sandbox-settings.test.ts` dekt de spiegel, niet de sandbox)
 - [ ] **`gate:fast` definitief** (stuk 4): vastleggen welke checks de definitieve `gate:fast` bevat (nu een groeiende lijst in `scripts/kit/gates.mjs`); `gate:slow` is gebouwd (#38), squawk staat onder Geparkeerd.
   aanleiding: `scripts/kit/gates.mjs`
-- [x] **`check-core`** (stuk 4): een app wijzigt `src/core` niet. Met fixture die bewijst dat hij faalt. Job `check-core` in
-  `.github/workflows/guard.yml` met `scripts/kit/check-core.mjs` (regels uit ADR 0040, in de template uit); bewijs `test/rails/check-core.test.ts`.
-  aanleiding: `.claude/rules/core.md`
-- [x] **`check-core`: geen oudere core via een merge** (ADR 0040, downgrade-gat). Een merge met een oudere vertrouwde commit kan een oudere
-  `src/core` terugbrengen of core verwijderen. Aanscherping: core van head is gelijk aan die van base of van een vertrouwde templatecommit die
-  niet ouder is dan de core op main. Met fixture die de downgrade laat falen. Bewijs: `test/rails/check-core-downgrade.test.ts`.
-  aanleiding: #240 (ADR 0040; eigenaarbesluit: nu aanvaard, aanscherping als vervolg)
 - [ ] **Fout die in een app doorglipt wordt eerst een check of regel in de template** (met fixture), daarna gerepareerd in de app (fase 2; doorlopend, P5).
   aanleiding: `docs/template/adr/0046-werkstraat-en-beslisroute.md` (P5)
 - [ ] **ST-10 (P1) — staging, release en aantoonbaar herstel** (fase 3, per app). Na een provider-ADR (app-ADR: hosting en beheerde Postgres met eigen
@@ -251,26 +202,6 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   dataverlies en hersteltijd. Productiegoedkeuring blijft bij de eigenaar.
   **Eisen uit het regelboek** (R-DOC-10: tot de bouw staan ze hier; de bouw-PR zet ze terug in het regelboek): `check-release-ci` vóór én na de build: commit is kop van `main` met groene CI, productie ook staging; `check-deployment-schema`: productieschema dekt code; beide falen dicht (was in R-REL-02). Met CAPTCHA krijgen `script-src` en `frame-src` het CAPTCHA-domein (was in R-SEC-04).
   aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (B-6: niet geparkeerd besloten)
-- [x] **ADR 0029 stap 7: agent-merge van niet-kritiek werk** (#448; ADR 0069, vervangt ADR 0046 punt 30; onder het account van de eigenaar).
-  Nu: `docs/template/specs/agent-samenvoegen.md`: oordeel `agent-merge` in de diff-guard,
-  job in `guard.yml`, `pnpm pr:merge`, rolhek en `merge: "niet-kritiek"` in `.claude/gates.json`. Herzien (#456, #460, #464):
-  Codex-voorwaarde `"indien-aanwezig"` en omvanggrens `agentMerge.maxRegels`, spec agent-merge-zonder-codex (verwijderd met het archief).
-  Herzien (#468, #476, #483): een 👀 of lopende Codex-review laat `pr:merge` wachten, spec agent-merge-codex-wachten (verwijderd met het archief).
-  aanleiding: `docs/template/adr/0069-agent-merge-niet-kritiek.md`
-- [x] **Volledig pad naar `gh` in het rolhek** (V-13): `/usr/bin/gh pr merge …` viel buiten het rolhek (`program === "gh"`) en de settings-patronen.
-  Weigeringen en schrijfdoelen kijken nu naar de naam zonder pad (`programName` in `rails/hooks/lib/shell.mjs`), ook voor `git`, `rm` en `sed`;
-  bewijs `test/hooks/rolhek-volledig-pad.test.ts`. De `deny`-patronen in `.claude/settings.json` vangen de vorm met pad niet (gemak, geen grens; framework §8).
-  Niet in deze klasse gedicht: omhulsels met opties (`sudo -u x gh …`, `env -i gh …`) en omhulsels buiten de lijst (`timeout`, `xargs`);
-  expansie (`$GH`, `bash -c`) ziet alleen de review van de diff (R-ROL-10). Ook open, voor de reviewer: `reviewerMay` negeert voorafgaande variabelen
-  (`GIT_PAGER=…`, `PATH=…`) en opties als `git diff --output=<bestand>`.
-  aanleiding: `rails/hooks/lib/rolhek.mjs` (Bekende gaten; nu `docs/template/specs/agent-samenvoegen.md`)
-- [x] **Schrijven via een programma buiten `fileTargets` omzeilt het rolhek.** `writeTargets` in `rails/hooks/lib/shell.mjs` kent alleen een
-  vaste lijst (redirect, `tee`, `sed -i`, `cp`, `git checkout` …). Een script via `python3`, `node -e` of een heredoc naar zo'n interpreter
-  (`python3 - <<EOF`), en ook `patch`, `git apply`, `curl -o`, `tar x` of `prettier --write`, schrijft beschermde paden zonder de
-  beslissing (ask, deny of melding) die een Edit op hetzelfde pad krijgt; een redirect (`cat > f <<EOF`) ziet het rolhek wel. Eerst kiezen
-  tussen weigeren en melden. De toets op effect die dit voor subagents dekte, is vervallen (ADR 0091):
-  aanvaard risico; op een beschermd pad weigert de padtoets van het mergescript en voegt de eigenaar samen (vangnet, ADR 0093), elders ziet alleen de review van de diff het.
-  aanleiding: #260 (eigenaarbesluit: als item opnemen; de developer schreef `.claude/**`, `.github/**`, `scripts/**` en `rails/**` via een Python-script, de reviewer zag alleen ADR-nummerwijzigingen)
 - [ ] **Omhulsels met opties en xargs-optiewaarden in het rolhek.** `splitCommand` (`rails/hooks/lib/shell.mjs`) stopt bij de eerste optie van een
   omhulsel en kent `setsid`, `timeout` en `stdbuf` niet, zodat `env -i gh …`, `nice -n 1 gh …` en `timeout 9 gh …` voor de hoofdsessie de regels voor
   het label, `@file`/`--input` en `gh alias` ontlopen; `xargsCall` (`rails/hooks/lib/rolhek.mjs`) leest bij een long option of een cluster met waarde
@@ -299,10 +230,10 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   leespad van een nieuwe feature blijft ≤ 25 KB; nu is het 74 KB met het hele `docs/framework.md` (40 KB), effectief ~46 KB als een agent alleen §8 (~11 KB) leest.
   Verder omlaag kan met `docs/gouden-pad.md` (11 KB) en `docs/dod.md` (7 KB) per onderdeel laden.
   Restpunten: een hint "werk de branch bij" bij `trusted`/`working` in `rails/hooks/lib/werkstraat.mjs`; de RegExp buiten de lus in
-  `scripts/kit/check-roadmap.mjs` (rond regel 105); `docs/operations/agent-doorloop.md` inkorten (nu ~40 KB, doel ≤ 12 KB, overgangs- en
+  `scripts/kit/check-roadmap.mjs` (rond regel 105); `docs/operations/agent-doorloop.md` inkorten (nu ~60 KB, doel ≤ 12 KB, overgangs- en
   correctieprocedures naar `docs/template/`); `check-docs` laten toetsen dat de R-regels in `.claude/rules/*` woordelijk gelijk zijn aan `docs/framework.md`;
-  de fasekeuze voor Fase 0/1 uit `docs/dod.md` halen (bouwfasen van de template); de links in `docs/template/specs/achtergrondtaken.md` en `docs/template/specs/mail-outbox.md` naar het archief
-  zetten (hun budgetvermelding in `.kit/baseline.json` is weg sinds ADR 0065); leerpunten #393, #395, #399, #401, #402, #409, #410 en #411 oppakken.
+  de fasekeuze voor Fase 0/1 uit `docs/dod.md` halen (bouwfasen van de template). Vervallen: de links in `achtergrondtaken` en
+  `mail-outbox` naar het archief (er is geen specarchief meer, ADR 0089 punt 7) en de leerpunten #393–#411 (alle gesloten).
   Voor de eigenaar zelf (beschermde bestanden): `.claude/decisions.json` leegmaken (`decisions: []`), in `.claude/settings.json` de labelregel
   (`--add-label*gate-wijziging*`), de bewerkweigering op `decisions.json` en de verouderde allow voor `chore/mandate-adr-statusregel` weghalen,
   `gateMarker` uit `.claude/gates.json`, en de release-reset bij v1.0 (#384).
@@ -334,15 +265,6 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   eigenaarbesluit met reden. **Klaar als:** `eslint-suppressions.json` is leeg en `pnpm lint:prune` verandert niets.
   aanleiding: `eslint-suppressions.json` (review 2026-11-03, bevinding P5: 123 onderdrukkingen zonder doel, een dag later 174)
 
-- [x] **Overnameplan golf 1: agents leveren altijd en goedkoop.** Uit [het overnameplan](reviews/2026-11-18-overnameplan-agentic.md) §3:
-  YAML-quotes en een frontmatter-parsetest voor agents en skills, een skillrouter in de developer, een budget voor toolcalls met
-  skelet eerst, geen geneste Agent-tool voor bouwers, een reviewpakket per range, en weigeringen en tokens per rol in de meting-store.
-  Elk punt een eigen PR. **Klaar als:** de parsetest is rood op een niet-gequote description, het reviewpakket bestaat en de meting-store legt weigeringen en tokens per rol vast (tokens: afgesplitst naar het item hieronder, OV-2); de doelcijfers staan in §8 van het plan.
-  Gebouwd volgens spec `agents-leveren` in #850 (1a, `test/hooks/agents.test.ts`), #859 (meting per rol,
-  `test/rails/meting-per-rol.test.ts`), #861 (1b, `test/hooks/developer-skillrouter.test.ts`), #860 (1c,
-  `test/hooks/agent-budget.test.ts`) en de bouw-PR van 1d (`test/scripts/reviewpakket.test.ts`). Tokens per rol zijn door de
-  eigenaar afgesplitst (OV-2): zie het item hieronder.
-  aanleiding: `docs/reviews/2026-11-18-overnameplan-agentic.md` (§3; leerpunten #792, #676, #664)
 - [ ] **Tokens per rol in de meting-store.** De Agent-payload van `PostToolUse` telt alleen de laatste aanvraag van een
   subagent (`totalTokens`) en een start op de achtergrond heeft geen totalen. Een `SubagentStop`-hook telt de tokens uit het
   transcript van de subagent op en schrijft ze per rol weg; dat raakt `.claude/settings.json` (`altijdVragen`), dus eerst een
@@ -363,12 +285,44 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   framework §8), schaduwmodus met een vooraf genoemde drempel (ADR 0091, ADR 0071 punt 6) en een gedragsbaseline voor
   tekstwijzigingen aan agents en skills (ADR 0059). Elk punt eerst als besluit-PR; de bouw volgt na de merge door de eigenaar. **Klaar als:** elk van 4a–4d heeft een gemergde of gesloten besluit-PR.
   aanleiding: `docs/reviews/2026-11-18-overnameplan-agentic.md` (§6; eigenaarvraag 2026-11-18)
-- [x] **Cloudsessie: committen, pushen, PR en CI-bewijs.** Bewijs: `test/rails/claude-sandbox-werkstraat.test.ts`,
-  `test/docs/cloud-pr-route.test.ts`; meetcommit in #868, uitslag in de vervolg-PR (spec, "Uitslag stap 0"); M1 open,
-  afgeleid uit de instellingen. Vier commando's buiten de sandbox, een PR via de MCP-tool in de
-  cloud, ADR 0044, 0061, 0078 en 0084 herzien (spec `docs/template/specs/cloud-pr-route.md`). **Klaar als:** de AC's van de
-  spec zijn groen en de metingen van stap 0 staan in de PR.
-  aanleiding: `docs/template/specs/cloud-pr-route.md` (meting van een cloudsessie, 20 november 2026: 401 op `gh`, commit niet te ondertekenen)
+- [ ] **Nieuwe-app-script bouwstap 2: `repo-instellingen`.** Bouwstap 1 is gebouwd (`scripts/kit/nieuwe-app.mjs`,
+  `test/scripts/nieuwe-app.test.ts`); het subcommando `repo-instellingen` bestaat nog niet. Eerst de spec herzien: werking 7, AC-10,
+  de `REDEN_`-teksten en het bypass-randgeval leunen op `grensRedenen` uit `scripts/kit/pr-merge.mjs`, dat weg is sinds ADR 0093;
+  wat `--controleer` dan toetst, is ontwerpwerk van deze stap of van `check-github` (ST-01). Kritiek werk (R-WERK-05): spec-review
+  van de herziening, aparte tester en goedkeuring van de eigenaar op de PR. **Klaar als:** de herziene AC's van bouwstap 2 zijn groen
+  en `scripts/kit/nieuwe-app.mjs` meldt niet meer dat `repo-instellingen` niet bestaat.
+  aanleiding: `docs/template/specs/nieuwe-app-script.md` (bouwstap 2, "Te herzien vóór bouwstap 2")
+- [ ] **Cloud-netwerkvorm: vervolg op de review van de bouw.** Uit #890, niet opgevolgd: (N-1) de main-regel decodeert alleen `%2F`,
+  niet elke procent-escape (`branches/main/rename` en GraphQL `deleteRef` vallen erbuiten; de ruleset blijft de grens); (N-3) de
+  MCP-regel herkent alleen de servernaam `github`; (N-5) de dubbele melding bij `git push origin main` wordt één melding; (B-3) een
+  corpustoets op codeblokken uit `docs/**` en `.claude/skills/**` die vangt dat docs of skills een commandovorm voorschrijven die het
+  rolhek weigert. Plus het open deel van de meting na de merge: of `gh api -X DELETE …/git/refs/heads/<branch>` een branch echt
+  verwijdert (meting (e) is onvolledig, F12), terwijl de skill `opleveren` die route al voorschrijft (dat het hookproces
+  `CLAUDE_CODE_REMOTE` ziet, is gemeten: F8). **Klaar als:** N-1, N-3, N-5 en B-3 hebben elk een test of een besluit "aanvaard", en de
+  meting staat in de spec.
+  aanleiding: `docs/template/specs/cloud-netwerkvorm.md` (#890 "Vervolg, buiten deze PR"; #900, meting (e) onvolledig)
+- [ ] **Sandbox-probes `Read(/*secret*)` en de `.claude`-regels per submap uitvoeren.** Sinds 2026-10-23 "nog niet geprobeerd":
+  verankert de sandbox `/*secret*` aan de projectroot of leest hij het absoluut? Leest hij het absoluut, dan is de root onbeschermd en volgt direct een herstel. Aanwijzing
+  (geen meting): de sandboxinstellingen van een cloudsessie op 2026-11-22 tonen `/home/user/template/*secret*` als leesweigering, dus
+  verankerd aan de root. **Klaar als:** de probes uit `docs/operations/sandbox-bewijs.md` zijn gedraaid en de uitslag staat daar.
+  aanleiding: `docs/operations/sandbox-bewijs.md` (`Read(/*secret*)`, open sinds 2026-10-23)
+- [ ] **Securitysuite toetst de zoek-escape.** Per resource met `q` toetst de suite dat `%` en `_` letterlijk gezocht worden en geen
+  wildcard zijn. Na #656, #657 en #661 zou dit een roadmap-item of leerpunt worden; dat gebeurde niet. AC-17 en AC-18 van de spec
+  dekken het gat tot dan. **Klaar als:** een test in `test/security/` faalt met een zoekterm `%` of `_` die als wildcard werkt.
+  aanleiding: `docs/template/specs/lijstpagina.md` (OV-6, leerpunt #662)
+- [ ] **Pools sluiten bij een mislukte start.** Mislukt het starten van de server, dan blijven de databasepools open; de spec besloot
+  het gedrag gelijk te houden en het sluiten in een eigen PR te doen. **Klaar als:** een test laat zien dat `runServer` bij een
+  mislukte start de pools sluit.
+  aanleiding: `docs/template/specs/create-server.md` (OV-2, besluit eigenaar 2026-11-15: "een eigen PR")
+- [ ] **Kleine restpunten uit reviews.** Elk klein en zonder eigen spec, als beperkte fix: `REVIEW_COMMENT_API`
+  (`rails/hooks/lib/rolhek.mjs`) vangt geen endpoint met dot-segmenten zoals `pulls/./comments/1` (#822); `t.close()` in de
+  `afterAll` van `test/security/actorsoorten.int.test.ts` gooit als `beforeAll` faalde en wordt `t?.close()` (#825);
+  `test/scripts/nieuwe-app-poorten.test.ts` is rood als op de host een stack op +10 draait, op te lossen met
+  `NIEUWE_APP_BEZETTE_POORTEN` (#862); ongeveer twintig testbestanden bouwen nog een eigen `GIT_ENV` (#785); de markeringen
+  `(vervallen)`, `(nieuw)` en `(voorbeeld)` die `scripts/kit/ac-toets.mjs` kent, staan niet in R-WERK-07 of R-DOC-10 (#742,
+  beschermd: eigenaarakkoord); `docs/operations/agent-doorloop.md` belooft een leerpunt over de schrijfbare `.git` in een worktree en
+  meldt dat een merge in een worktree nog niet gemeten is. **Klaar als:** elk punt is gedaan of met reden geschrapt.
+  aanleiding: #822, #825, #862, #785 en #742 (reviewopmerkingen "later" of "niet in deze PR")
 
 ## Geparkeerd
 
@@ -390,9 +344,24 @@ Bewust nog niet, tot de genoemde aanleiding er is (P1). Niets verdwijnt: elk ite
   en destructieve acties getest; generatie haalt gates en build; dry-run toont alle schrijfdoelen, ook de route-tree; een mislukking laat geen
   half gegenereerde resource achter.
   terug als: ST-09 klaar is
+- [ ] **Overnameplan: vervolg op de meting van ST-09.** Uit [het overnameplan](reviews/2026-11-18-overnameplan-agentic.md) §6 (na de
+  tabel): detectie van verzwakte tests (eerst in schaduwmodus), een stille testreporter, een lokaal frictierapport uit de transcripten
+  en eventueel leesrollen zonder Bash (ADR 0087). De cijfers van ST-09 bepalen welke van de vier een eigen item worden.
+  terug als: ST-09 klaar is
+- [ ] **Herbouw: lokale bewaking afbouwen waar een hard equivalent bestaat** ([herbouw](reviews/2026-11-06-herbouw.md) §5, stap 2–4).
+  Stap 1 (een eigen GitHub App) vervalt door ADR 0093 en de effecttoets door ADR 0091. Daarmee vervalt ook de voorwaarde van de
+  afbouw: de agent werkt blijvend onder het eigenaaraccount en het rolhek blijft (ADR 0093 punt 6), dus rolhekregels zonder hard
+  equivalent (mergen of reviewen als eigenaar, tests verwijderen) blijven lokaal. Open: een ADR dat alleen de lokale controles uit
+  §4.1 afbouwt die wel een hard equivalent hebben, per controle dat equivalent en een fixture die de omzeiling vangt, en de controles
+  één voor één weg (eigenaarmerge per gate-pad). Het krimpen van regelboek en instructies (§4.2) loopt via "Vervolg compacte
+  kennisbasis" en "Krimp van bindende documenten" hierboven; hier blijft alleen de ADR-set terugbrengen. Volgorde gekozen door de
+  hoofdsessie op mandaat van de eigenaar ("doe wat goed is"): na ST-09, omdat die de meetgrond levert (`pnpm meting`, weigeringen per
+  taak); de review adviseerde ervóór, zodat ST-09 de template meet en niet de bewaking, maar dat advies leunde op stap 1.
+  terug als: ST-09 klaar is
 - [ ] **ST-07 (P1) — schermpatronen en design-system, rest.** Lijstpatroon (#92, #114) en toasts (#129) zijn gebouwd. **Werk:** leg herbruikbare
   recepten vast voor lijst/detail/formulier, empty/loading/error/forbidden, bevestigen en succes-/foutfeedback; inventariseer ontbrekende
-  componentvarianten uit de proef-app; behoud documenttitel- en focusgedrag bij nieuwe AppShell-mounts. **Afhankelijkheden:** ConfirmDialog;
+  componentvarianten uit de proef-app (kandidaten uit `docs/reviews/2026-10-14-ui-expansion-review.md`, "Andere gaten": progress en
+  skeleton naast `AsyncView`, tooltip alleen als aanvulling en bestandsinvoer); behoud documenttitel- en focusgedrag bij nieuwe AppShell-mounts. **Afhankelijkheden:** ConfirmDialog;
   concrete behoeften uit ST-09. **Klaar als:** patronen in catalogus en voorbeelden; keyboard, focus en aria-live inhoudelijk getest; axe op 375
   en 1280 px zonder uitzonderingen; geen dubbele mutatie bij busy-state; ConfirmDialog documenteert retries na fouten; app-varianten vragen geen
   core-wijziging.
@@ -477,12 +446,20 @@ Geldende ADR-besluiten staan in `node scripts/kit/feiten.mjs adr`; afgevinkte be
   (AVG, aanbevelingen OV-1..7); gebouwd is audit (#128), rate limiting en readiness. Bron: `docs/reviews/2026-10-12-werkstraat.md`.
 - [ ] Ontwikkelplatform: alleen Ubuntu/WSL2, of ook macOS (sandbox, `scripts/bootstrap.sh`, `scripts/doctor.sh`). Eigenaarbesluit.
 - [ ] ST-01 (GitHub-bescherming) besluiten: voorwaarde voor ADR 0030 PR 2; zie Volgende.
+- [ ] Allow-regel voor `gh api`-leesaanroepen (spec `cloud-pr-route`, M1): het besluit zou na de meting van stap 0 vallen, maar M1 is
+  niet gemeten, alleen afgeleid (lokaal volgt `gh api` de gewone permissievraag). Eigenaarbesluit: meten op de laptop en dan kiezen, of
+  laten zoals het is.
+- [ ] Zelfinstallatie in de cloud (spec `cloud-zelfinstallatie`, OV-1 t/m OV-4, onbesloten in een gebouwde spec): OV-1, komt er
+  een hook die in de cloud zelf installeert (aanbeveling: nee); OV-2, installeren zonder te vragen (aanbeveling na de metingen: de
+  vraag vervalt); OV-3, `bubblewrap` en `socat` blijven niet-fataal in het script (aanbeveling: ja); OV-4 vroeg om een
+  roadmap-item, en dit is dat item. Eigenaarbesluit.
 
 ## Gebouwd
 
 Afgevinkte items per fase en stuk, met hun bewijs en de **Klaar als**-criteria: [roadmap-archief.md](roadmap-archief.md).
 Nog open uit een stuk dat verder gebouwd is (3c en 3e):
 
-- [ ] UI-kit: tabel, tabs, galerij, filterbalk en carousel (#156, spec `docs/template/specs/ui-data-display.md`); in `check:catalogus` en op `/design-system`
+- [ ] UI-kit: tabel, tabs, galerij en filterbalk (#156, spec `docs/template/specs/ui-data-display.md`); in `check:catalogus` en op `/design-system`.
+      De carousel is op 2026-10-15 uit de spec gehaald (spec, "Buiten scope"); de componenten bestaan, de spec staat nog op `goedgekeurd`
 - [ ] Laatste geslaagde login en afzonderlijke deactivatie met herstel, naast blokkeren
       (spec `accountstatus-en-laatste-login`, ADR 0052)
