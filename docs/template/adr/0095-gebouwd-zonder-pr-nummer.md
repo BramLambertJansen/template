@@ -3,6 +3,7 @@
 Status: geaccepteerd
 
 Herzien: 2026-11-19: punt 6: het AC-id blijft staan zolang de spec leeft; vervalt een hele template-spec, dan verhuizen haar levende AC's naar een levende spec en verdwijnt het document (R-CI-06)
+Herzien: 2026-11-22: gewijzigd door [0104](0104-gebouwd-uit-ac-dekking.md) punt 1 tot en met 7, punt 1, 3 en 7: geen `status: gebouwd` meer, door niemand; punt 2: de checks gaan af op de afgeleide stand tegenover de merge-base; punt 4: bestaande regels gelden als `goedgekeurd` en worden in de template omgezet; punt 5: het merkteken vervalt; geldt vanaf de bouw-PR
 
 Wijzigt [0054](0054-gebouwd-in-de-bouw-pr.md) punt 1 en 5, [0080](0080-specarchief-en-bouwvorm.md) punt 4, 5, 6 en 8,
 [0062](0062-spec-en-bouw-in-een-pr.md) punt 4, [0046](0046-werkstraat-en-beslisroute.md) punt 6 en 10,
