@@ -96,7 +96,7 @@ Stap 2 = bouw van ADR 0089 punt 2 en 3 met activering; stap 3 = weghalen van pun
 - **templateregime/AC-11** — Stap 4: onder `docs/adr/` staat alleen `_template.md`, onder `docs/specs/` alleen `_template.md` en `_mini.md`; geen
   `archief/`; elk verplaatst document staat onder dezelfde naam in `docs/template/`; `check-docs` is groen; `feiten.mjs adr` en
   `specs` tonen twee lijsten met een kop per map, app eerst.
-- **templateregime/AC-12** — Vervallen door ADR 0103 (procesbewijs; App en `goedkeurders` zijn weg door ADR 0093). Was: Docs, reviewpunt per plek: `docs/framework.md` (opening, §8 met de kop "Afgedwongen door", §10,
+- **templateregime/AC-12** — Vervallen door ADR 0103 (procesbewijs; App en review van een code-eigenaar weg door ADR 0093 punt 1 en 2). Was: Docs, reviewpunt per plek: `docs/framework.md` (opening, §8 met de kop "Afgedwongen door", §10,
   R-PROV-01, R-WERK-05 tot en met R-WERK-09, R-WERK-12, R-WERK-23, R-WERK-24, R-CI-01, R-CI-04 tot en met R-CI-08, R-REPO-01,
   R-REPO-02 met de bypass, R-REPO-05, R-ROL-10, R-ARCH-07), `AGENTS.md`, `CLAUDE.md`, `docs/operations/agent-doorloop.md`, de
   skill `opleveren`, `.claude/agents/architect.md` en `docs/nieuwe-app.md`. Die laatste en de stap voor template-updates lezen
