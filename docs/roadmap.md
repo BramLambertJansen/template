@@ -401,11 +401,15 @@ Bewust nog niet, tot de genoemde aanleiding er is (P1). Niets verdwijnt: elk ite
   tabel): detectie van verzwakte tests (eerst in schaduwmodus), een stille testreporter, een lokaal frictierapport uit de transcripten
   en eventueel leesrollen zonder Bash (ADR 0087). De cijfers van ST-09 bepalen welke van de vier een eigen item worden.
   terug als: ST-09 klaar is
-- [ ] **Herbouw: lokale bewaking en regelboek krimpen** ([herbouw](reviews/2026-11-06-herbouw.md) §5, stap 2–4). Stap 1 (een eigen
-  GitHub App) vervalt door ADR 0093 en de effecttoets door ADR 0091. Open: een ADR dat de overige lokale lagen uit §4.1 afbouwt, per
-  lokale controle het harde equivalent en een fixture die de omzeiling vangt, de controles één voor één weg (eigenaarmerge per
-  gate-pad), en regelboek, instructies en ADR's krimpen (§4.2). De open eigenaarvraag of dit vóór ST-09 komt, is hier beantwoord met
-  "erna": ST-09 levert de meetgrond (`pnpm meting`, weigeringen per taak) waartegen de afbouw zich bewijst.
+- [ ] **Herbouw: lokale bewaking afbouwen waar een hard equivalent bestaat** ([herbouw](reviews/2026-11-06-herbouw.md) §5, stap 2–4).
+  Stap 1 (een eigen GitHub App) vervalt door ADR 0093 en de effecttoets door ADR 0091. Daarmee vervalt ook de voorwaarde van de
+  afbouw: de agent werkt blijvend onder het eigenaaraccount en het rolhek blijft (ADR 0093 punt 6), dus rolhekregels zonder hard
+  equivalent (mergen of reviewen als eigenaar, tests verwijderen) blijven lokaal. Open: een ADR dat alleen de lokale controles uit
+  §4.1 afbouwt die wel een hard equivalent hebben, per controle dat equivalent en een fixture die de omzeiling vangt, en de controles
+  één voor één weg (eigenaarmerge per gate-pad). Het krimpen van regelboek en instructies (§4.2) loopt via "Vervolg compacte
+  kennisbasis" en "Krimp van bindende documenten" hierboven; hier blijft alleen de ADR-set terugbrengen. Volgorde gekozen door de
+  hoofdsessie op mandaat van de eigenaar ("doe wat goed is"): na ST-09, omdat die de meetgrond levert (`pnpm meting`, weigeringen per
+  taak); de review adviseerde ervóór, zodat ST-09 de template meet en niet de bewaking, maar dat advies leunde op stap 1.
   terug als: ST-09 klaar is
 - [ ] **ST-07 (P1) — schermpatronen en design-system, rest.** Lijstpatroon (#92, #114) en toasts (#129) zijn gebouwd. **Werk:** leg herbruikbare
   recepten vast voor lijst/detail/formulier, empty/loading/error/forbidden, bevestigen en succes-/foutfeedback; inventariseer ontbrekende
