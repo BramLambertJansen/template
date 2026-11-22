@@ -10,6 +10,7 @@ Herzien: 2026-11-12 (#696): door ADR 0089 punt 6, in punt 2 wordt "ADR (vanaf 01
 Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn ongewijzigd, de oude tekst staat in git
 Herzien: 2026-11-18 (#801): gewijzigd door [0094](0094-templaterelease-als-eenheid-van-een-update.md) punt 1, in punt 5: verspreiden via de merge van de volgende `template-v`-releasetag, niet via `git merge template/main`
 Herzien: 2026-11-22: gewijzigd door [0107](0107-gedragsbaseline-voor-tekstwijzigingen.md) punt 1–4, in punt 4: een les die op Skill, Padregel of AGENTS.md landt, bewijst het gedrag met een baseline van drie runs zonder en drie met de wijziging
+Herzien: 2026-11-22: gewijzigd door [0105](0105-begrensde-fixlus.md) punt 6, in punt 1: een "mislukte correctiepoging" is een fix na een blokkerende reviewbevinding (de fix na ronde 1 en die van de verse developer), geen reviewronde
 
 Drempel: A3 (de agent krijgt een nieuw schrijfrecht buiten de eigen repo: een issue aanmaken in de template-repo).
 Eigenaarbesluit 2026-10-27; de merge door de eigenaar maakt het geldend. Uitwerking: [spec leerlus](../specs/leerlus.md).
