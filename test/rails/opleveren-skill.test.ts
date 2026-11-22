@@ -217,3 +217,14 @@ describe('agent-recepten/AC-8: opleveren in de cloud', () => {
     expect(kaal).toStrictEqual([]);
   });
 });
+
+// Leerpunt #789 (beperkte fix): main bijhalen met --no-commit en een losse commit, want de kale merge kan in de cloud niet
+// ondertekenen; bij een wijziging onder .claude/skills of .claude/agents stopt de agent.
+describe('opleveren: main bijhalen in de cloud', () => {
+  test('stap 1 noemt git merge --no-commit origin/main, git commit -F en de controle op .claude/skills en .claude/agents', () => {
+    const stap = flat(section(skill, /^## CI-lus/m, /^## /m));
+    expect(stap).toContain('git merge --no-commit origin/main');
+    expect(stap).toContain('git commit -F <bestand>');
+    expect(stap).toContain('git diff --name-only HEAD...origin/main -- .claude/skills .claude/agents');
+  });
+});

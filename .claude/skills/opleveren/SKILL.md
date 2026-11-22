@@ -16,7 +16,10 @@ Feiten nu:
 
 ## CI-lus tot groen
 
-1. Push de featurebranch en open de PR. Nooit naar `main`, nooit force-push; conflicten via `git merge origin/main`.
+1. Push de featurebranch en open de PR. Nooit naar `main`, nooit force-push; conflicten via `git merge --no-commit origin/main`
+   en dan `git commit -F <bestand>` (de kale merge kan in de cloud niet ondertekenen). Toont
+   `git diff --name-only HEAD...origin/main -- .claude/skills .claude/agents` iets, dan niet mergen maar de eigenaar melden
+   (leerpunt #789; `docs/operations/recepten.md`).
    De bestaande pre-push-hook draait de volledige `pnpm gate:fast`; start die niet nogmaals alleen voor de overdracht.
    Gerichte feedback is geen volledige groene gate. Iedere PR behoudt alle CI-checks; geen oude uitslag hergebruiken.
 2. Wacht met `pnpm pr:verify <nr> --watch` (geen kale `gh pr checks --watch`: die toetst SHA, branch en herkomst van de check niet).
