@@ -26,7 +26,7 @@ import { afgeleid, globMatch, onderhoudVan, samengevoegd, templateVan } from './
  * @typedef {{ root: string, cwd: string, config: Config, read: (rel: string) => string | null,
  *   committed: (rel: string) => boolean | 'zonder-origin', isDir: (rel: string) => boolean, branch: string,
  *   authority?: import('./task-authority.mjs').Authority | null, runnerTrusted?: boolean | (() => boolean),
- *   mergeTrusted?: boolean | (() => boolean),
+ *   mergeTrusted?: boolean | (() => boolean), kitTrusted?: boolean | (() => boolean),
  *   onbekendeRol?: boolean, onderhoud?: boolean, files?: (rel: string) => string[],
  *   gevolgd?: (paden: readonly string[]) => Set<string>, werkmappen?: () => string[], netwerkvormen?: readonly string[] }} Ctx
  * `netwerkvormen`: de patronen uit `sandbox.excludedCommands` (`git push origin HEAD`, `git commit *`) uit de vertrouwde basis
@@ -147,25 +147,33 @@ function runnerIsTrusted(ctx) {
  * zonder `\`, `'` en `"` (zoals bij gh), elke andere manier om het te starten: het scriptwoord overal, en de bestandsnaam naast
  * elk programma dat geen bekend leesprogramma is (`/usr/bin/node …`, `sh -c "…"`, `env node …`). Vals positief (`grep
  * pr:merge package.json`) is bewust geaccepteerd; lezen kan met de leestools.
- * @typedef {{ exact: RegExp, script: RegExp, bestand: RegExp, doelen: string[], subagent: string, vorm: string, basis: string }} KitScript
+ * @typedef {{ exact: RegExp, script: RegExp, bestand: RegExp, doelen: string[], subagent: string, vorm: string, basis: string,
+ *   vertrouwd: 'merge' | 'kit' }} KitScript
  * @type {KitScript[]}
  */
 const KIT_SCRIPTS = [
   kitScript({ naam: 'merge', bron: 'ADR 0069', subagent: 'Mergen via pnpm pr:merge doet alleen de hoofdsessie (ADR 0069)', vorm: 'Het mergescript draait alleen als precies `pnpm pr:merge <nummer>` (ADR 0069)' }),
   kitScript({ naam: 'resolve', bron: 'ADR 0098', subagent: 'Gesprekken sluiten via pnpm pr:resolve doet alleen de hoofdsessie (ADR 0098)', vorm: 'Het sluitscript draait alleen als precies `pnpm pr:resolve <nummer>` (ADR 0098)' }),
+  // ADR 0102: alleen lezen, dus de ankertoets zonder de modus; de bestandsnaam alleen als hele naam (`pr-login` raakt niet).
+  kitScript({ naam: 'log', bron: 'ADR 0102', subagent: 'De CI-log via pnpm pr:log leest alleen de hoofdsessie (ADR 0102)', vorm: 'Het logscript draait alleen als precies `pnpm pr:log <nummer>` (ADR 0102)', vertrouwd: 'kit' }),
 ];
 
-/** @param {{ naam: string, bron: string, subagent: string, vorm: string }} script @returns {KitScript} */
-function kitScript({ naam, bron, subagent, vorm }) {
+/**
+ * @param {{ naam: string, bron: string, subagent: string, vorm: string, vertrouwd?: 'merge' | 'kit' }} script
+ * @returns {KitScript}
+ */
+function kitScript({ naam, bron, subagent, vorm, vertrouwd = 'merge' }) {
   const bestand = `pr-${naam}.mjs`;
+  const modus = vertrouwd === 'merge' ? 'met modus "niet-kritiek" in het anker en ' : 'met ';
   return {
     exact: new RegExp(`^pnpm pr:${naam} [1-9]\\d*$`),
     script: new RegExp(`(?:^|[^\\w.-])pr:${naam}(?=$|[^\\w.-])`),
-    bestand: new RegExp(`pr-${naam}`),
+    bestand: new RegExp(vertrouwd === 'merge' ? `pr-${naam}` : `pr-${naam}(?![\\w-])`),
     doelen: [bestand, `pr:${naam}`, `scripts/kit/${bestand}`, `./scripts/kit/${bestand}`],
     subagent,
     vorm,
-    basis: `pnpm pr:${naam} alleen vanuit de repo-root, met modus "niet-kritiek" in het anker en scripts, rails en hostbestanden (package.json, .npmrc, …) gelijk aan het anker (${bron})`,
+    basis: `pnpm pr:${naam} alleen vanuit de repo-root, ${modus}scripts, rails en hostbestanden (package.json, .npmrc, …) gelijk aan het anker (${bron})`,
+    vertrouwd,
   };
 }
 // Alleen programma's die niets starten; `rg --pre`, `less` (LESSOPEN) en een git-alias kunnen dat wel.
@@ -287,13 +295,19 @@ function decideKitScript({ command, role }, { ctx, script }, decision) {
   if (role !== 'hoofdsessie') decision.deny.push(script.subagent);
   else if (!exact) decision.deny.push(script.vorm);
   else if (decision.deny.length + decision.ask.length > 0) return;
-  else if (ctx.cwd === ctx.root && mergeIsTrusted(ctx)) decision.allow = true;
+  else if (ctx.cwd === ctx.root && (script.vertrouwd === 'kit' ? kitIsTrusted(ctx) : mergeIsTrusted(ctx))) decision.allow = true;
   else decision.deny.push(script.basis);
 }
 
 /** @param {{ mergeTrusted?: boolean | (() => boolean) }} ctx */
 function mergeIsTrusted(ctx) {
   const value = typeof ctx.mergeTrusted === 'function' ? ctx.mergeTrusted() : ctx.mergeTrusted;
+  return value === true;
+}
+
+/** Alleen `true` telt (fail-closed), zoals `mergeIsTrusted` (ADR 0102). @param {{ kitTrusted?: boolean | (() => boolean) }} ctx */
+function kitIsTrusted(ctx) {
+  const value = typeof ctx.kitTrusted === 'function' ? ctx.kitTrusted() : ctx.kitTrusted;
   return value === true;
 }
 
@@ -2570,7 +2584,7 @@ const MCP_SCHRIJVEN_REDEN = 'Push met `git push origin HEAD` als los commando; d
 const NETWERK_SANDBOX =
   'buiten deze vorm draait het in de sandbox, zonder token-proxy en signeerdienst (docs/ENVIRONMENT.md, "Cloud: commit, push, PR en bewijs")';
 // Deze voorvoegsels hebben hun eigen regel (`decideKitScript`).
-const NETWERK_EIGEN_REGEL = new Set(['pnpm pr:merge', 'pnpm pr:resolve']);
+const NETWERK_EIGEN_REGEL = new Set(['pnpm pr:merge', 'pnpm pr:resolve', 'pnpm pr:log']);
 const GH_DELETE_VORM = 'gh api -X DELETE repos/{owner}/{repo}/git/refs/heads/<branch>';
 // Substitutie, procesvervanging of heredoc/herestring: dan past het commando op geen patroon.
 const NETWERK_ONZEKER = /\$\(|`|<\(|>\(|<</;

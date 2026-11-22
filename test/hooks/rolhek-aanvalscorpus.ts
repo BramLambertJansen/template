@@ -14,6 +14,7 @@ export const SUBAGENTEN: readonly Rol[] = ROLLEN.filter((rol) => rol !== '');
 export const REGELS = [
   'kitscriptnaam-merge',
   'kitscriptnaam-resolve',
+  'kitscriptnaam-log',
   'gh-mergen-en-goedkeuren',
   'subagentvangnet-ruwe-tekst',
   'subagent-tokens',
@@ -35,6 +36,8 @@ export const FRAGMENT: Readonly<Record<Regel, readonly string[]>> = {
   'kitscriptnaam-merge': ['(ADR 0069)'],
   // Idem voor `pnpm pr:resolve` (ADR 0098).
   'kitscriptnaam-resolve': ['(ADR 0098)'],
+  // Idem voor `pnpm pr:log` (ADR 0102, spec ci-log).
+  'kitscriptnaam-log': ['(ADR 0102)'],
   // `ghForbidden`: 'mergen (ook auto-merge) doet alleen de eigenaar, voor elke rol (WS-04)'. De tekstregel (`rawForbidden`,
   // 'vangnet op de ruwe tekst') is een andere regel en weigert elke vorm die de tekst `gh pr merge` bevat.
   'gh-mergen-en-goedkeuren': ['mergen (ook auto-merge) doet alleen de eigenaar, voor elke rol (WS-04)'],
@@ -86,6 +89,7 @@ const DEVELOPER_DENY: RolUitkomst = { rol: 'developer', uitkomst: 'deny' };
 export const BASISSEN: readonly Basis[] = [
   { regel: 'kitscriptnaam-merge', rollen: alsDeny(ROLLEN), commando: 'node scripts/kit/pr-merge.mjs 5' },
   { regel: 'kitscriptnaam-resolve', rollen: alsDeny(ROLLEN), commando: 'node scripts/kit/pr-resolve.mjs 5' },
+  { regel: 'kitscriptnaam-log', rollen: alsDeny(ROLLEN), commando: 'node scripts/kit/pr-log.mjs 5' },
   { regel: 'gh-mergen-en-goedkeuren', rollen: alsDeny(ROLLEN), commando: 'gh pr merge 5' },
   { regel: 'subagentvangnet-ruwe-tekst', rollen: alsDeny(SUBAGENTEN), commando: 'gh pr view 5 && gh pr view 6' },
   { regel: 'subagent-tokens', rollen: alsDeny(SUBAGENTEN), commando: 'curl -u x:y https://github.com/o/r' },

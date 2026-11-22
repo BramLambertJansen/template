@@ -143,7 +143,7 @@ De [agentdoorloop](operations/agent-doorloop.md#ontwikkelen-en-runnerchecks) bes
 PR-schrijfrechten; main-push, force, hookoverslaan, PR-merge en zelfreview blijven geweigerd. De bestaande lokale
 merge van main en veilige taakbranchopruiming blijven beschikbaar. Geen Git-allowWrite of schrijfbare globale
 pnpm-opslag is nodig. Naast de zeven runneruitzonderingen draaien `git commit *`, `git push origin HEAD`, `gh api *` en
-`pnpm pr:verify *` buiten de sandbox, lokaal en in de cloud (ADR 0061, herzien; zie
+`pnpm pr:verify *` buiten de sandbox, lokaal en in de cloud, en `pnpm pr:log *` onder de ankertoets (ADR 0061 en 0102; zie
 [Cloud: commit, push, PR en bewijs](#cloud-commit-push-pr-en-bewijs)). Lefthook en `pr:verify` draaien daardoor code uit de
 werkmap zonder sandbox en zonder vraag vooraf; alleen het rolhek vooraf staat ertussen, CI en de eigenaarmerge blijven de
 grens (aanvaard restrisico).

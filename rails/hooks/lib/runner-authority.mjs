@@ -7,8 +7,9 @@ export const HOST_FILES = ['scripts', 'package.json', 'pnpm-workspace.yaml', '.n
   'compose.yaml', 'compose.*.yaml', 'compose.override.yaml', 'db/test.env', 'db/docker',
   'vitest.config.ts', 'playwright.config.ts', 'vite.config.ts'];
 
-// `pnpm pr:merge` (ADR 0069 punt 4) en `pnpm pr:resolve` (ADR 0098) volgen de scriptregel in package.json en laden hun
-// script in scripts/kit/ met imports uit scripts/ en rails/: die bestanden plus de hostbestanden moeten gelijk zijn aan het anker.
+// `pnpm pr:merge` (ADR 0069 punt 4), `pnpm pr:resolve` (ADR 0098) en `pnpm pr:log` (ADR 0102) volgen de scriptregel in
+// package.json en laden hun script in scripts/kit/ met imports uit scripts/ en rails/: die bestanden plus de hostbestanden
+// moeten gelijk zijn aan het anker.
 export const MERGE_FILES = [...HOST_FILES, 'rails'];
 const MERGE_BIN = ['gh', 'git', 'node', 'gh.exe', 'git.exe', 'node.exe'];
 
@@ -67,14 +68,24 @@ function mergeMode(text) {
 }
 
 /**
- * `pnpm pr:merge` (ADR 0069 punt 4) en `pnpm pr:resolve` (ADR 0098) zonder prompt: modus `niet-kritiek` in het anker en
- * `MERGE_FILES` ongewijzigd. Zonder basis (null) is het antwoord nee.
+ * Een kitscript onder de ankertoets zonder prompt (ADR 0069 punt 4, zonder de modus; `pnpm pr:log`, ADR 0102): geen gh, git
+ * of node in `node_modules/.bin` en `MERGE_FILES` ongewijzigd. Zonder basis (null) is het antwoord nee.
+ * @param {string} root
+ * @param {ReturnType<typeof trustedBase>} [basis]
+ */
+export function trustedKitScript(root, basis = trustedBase(root, undefined)) {
+  if (basis === null) return false;
+  // `pnpm run` zet `node_modules/.bin` vooraan in PATH; daar hoort geen gh, git of node (ADR 0069 punt 4).
+  if (MERGE_BIN.some((naam) => existsSync(path.join(root, 'node_modules', '.bin', naam)))) return false;
+  return unchangedFrom(root, basis.sha, MERGE_FILES);
+}
+
+/**
+ * `pnpm pr:merge` (ADR 0069 punt 4) en `pnpm pr:resolve` (ADR 0098) zonder prompt: modus `niet-kritiek` in het anker en de
+ * toets van `trustedKitScript`. Zonder basis (null) is het antwoord nee.
  * @param {string} root
  * @param {ReturnType<typeof trustedBase>} [basis]
  */
 export function trustedMerge(root, basis = trustedBase(root, undefined)) {
-  if (basis === null || !mergeMode(basis.read('.claude/gates.json') ?? '')) return false;
-  // `pnpm run` zet `node_modules/.bin` vooraan in PATH; daar hoort geen gh, git of node (ADR 0069 punt 4).
-  if (MERGE_BIN.some((naam) => existsSync(path.join(root, 'node_modules', '.bin', naam)))) return false;
-  return unchangedFrom(root, basis.sha, MERGE_FILES);
+  return basis !== null && mergeMode(basis.read('.claude/gates.json') ?? '') && trustedKitScript(root, basis);
 }

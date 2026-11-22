@@ -10,6 +10,8 @@ Herzien: 2026-11-16 (#745): ingekort tot wat nog geldt; de puntnummers zijn onge
 Herzien: 2026-11-20: punt 5 en Alternatieven, `git commit *`, `git push origin HEAD`, `gh api *` en `pnpm pr:verify *`
 draaien buiten de sandbox, de eerste twee en `pr:verify` zonder prompt, met een aanvaard restrisico (eigenaar; spec
 [cloud-pr-route](../specs/cloud-pr-route.md))
+Herzien: 2026-11-21: gewijzigd door [0102](0102-pr-log-buiten-de-sandbox.md) punt 2, punt 5: ook `pnpm pr:log *` draait buiten
+de sandbox, in `ask`, en het rolhek geeft alleen precies `pnpm pr:log <nr>` onder de ankertoets vrij
 
 Drempel: A3, agentrechten expliciteren en gericht verruimen. Uitwerking: [spec](../specs/claude-sandbox-werkstraat.md).
 

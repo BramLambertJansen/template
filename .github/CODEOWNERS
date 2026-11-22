@@ -91,3 +91,4 @@
 /scripts/kit/gates.mjs           @bramlambertjansen
 /scripts/kit/pr-merge.mjs        @bramlambertjansen
 /scripts/kit/pr-resolve.mjs      @bramlambertjansen
+/scripts/kit/pr-log.mjs          @bramlambertjansen

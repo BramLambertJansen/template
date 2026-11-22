@@ -6,7 +6,7 @@ import { loadConfig } from './rolhek.mjs';
 import { gitText, readAuthority, repositoryName, trustedBase } from './authority-context.mjs';
 import { anker } from './objecten.mjs';
 import { APP_BESTAND } from './padtabel.mjs';
-import { trustedMerge, trustedRunner } from './runner-authority.mjs';
+import { trustedKitScript, trustedMerge, trustedRunner } from './runner-authority.mjs';
 
 /**
  * @param {string} root
@@ -127,6 +127,8 @@ export function rolhekContext(root, cwd) {
   let trusted;
   /** @type {boolean | undefined} */
   let mergeVertrouwd;
+  /** @type {boolean | undefined} */
+  let kitVertrouwd;
   const authority = readAuthority({ root });
   const basis = trustedBase(root, undefined);
   const { config, vertrouwd } = configuratie(root, basis, authority);
@@ -156,6 +158,7 @@ export function rolhekContext(root, cwd) {
     authority,
     runnerTrusted: () => (trusted ??= trustedRunner(root, basis)),
     mergeTrusted: () => (mergeVertrouwd ??= trustedMerge(root, basis)),
+    kitTrusted: () => (kitVertrouwd ??= trustedKitScript(root, basis)),
   };
 }
 

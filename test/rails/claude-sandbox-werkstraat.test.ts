@@ -58,9 +58,11 @@ test('deny en ask blijven ongewijzigd naast de gerichte nieuwe allows', () => {
 
 // cloud-pr-route/AC-1: de zeven runneruitzonderingen plus de vier commando's van de cloudroute (ADR 0061, herzien).
 // Gewijzigd door spec cloud-pr-route (R-TEST-02): de grens verandert bewust; de vergelijking met de fixture blijft.
+// GEWIJZIGD (spec ci-log, ADR 0102 punt 2, R-TEST-02): `pnpm pr:log *` komt erbij, onder dezelfde ankertoets.
 const RUNNER = [
   'pnpm pr:merge *',
   'pnpm pr:resolve *',
+  'pnpm pr:log *',
   'pnpm test:db *',
   'pnpm ui:check *',
   'pnpm gate:slow *',
