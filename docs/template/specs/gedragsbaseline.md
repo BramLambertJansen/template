@@ -44,10 +44,12 @@ Kritiek werk (`.github/`, skill, regelboek; R-WERK-05): in de template één PR,
   (allebei `string | null` in `Regel`; `pad` is dan null). Vorm van `baseline`:
   `BASELINE = /^zonder\s+([0-3])\/3,\s*met\s+([0-3])\/3\s*\(\s*(\S[^()]*?)\s*\)$/`.
 - Scenarioblok, binnen `## Leerpunt` onder de regels. De kop is `^###\s+Scenario\s+#(\d+)\s*$`; het blok loopt tot de volgende
-  regel die past op `^#{1,3}\s`. Per regel worden eerst de voorvoegsels `- `, `* ` en `1. ` en de `**` weggehaald.
+  regel die past op `^#{1,3}\s`. Per regel worden eerst de voorvoegsels `- `, `* ` en een genummerd `\d+\. ` en de `**`
+  weggehaald, zoals `onderbouwingFouten` doet.
   - Labelregels `Prompt:`, `Beginstand:` en `Criterium:`. De waarde is de rest van de regel plus de volgende regels tot het
     volgende label of de eerste runregel; na trim mag die niet leeg zijn.
-  - Runregel: `^(zonder|met)\s+([1-3]):\s*(ja|nee)\s*[—–-]\s*\S.*$`, precies één voor elk van zonder 1–3 en met 1–3.
+  - Runregel: `^(zonder|met)\s+([1-3]):\s*(ja|nee)\s*[—–-]\s*\S.*$` (hoofdletterongevoelig), precies één voor elk van
+    zonder 1–3 en met 1–3.
   ```text
   ### Scenario #<nr>
   - Prompt: <letterlijke opdracht>
@@ -73,8 +75,8 @@ Kritiek werk (`.github/`, skill, regelboek; R-WERK-05): in de template één PR,
   - `#<nr>: scenario heeft niet precies één runregel voor zonder 1-3 en met 1-3`
   - `#<nr>: runregels geven zonder <x>/3, met <y>/3; de bewijsregel zegt zonder <a>/3, met <b>/3`
   - `#<nr>: bij trede <t> is het bewijs "baseline: …" of "geen baseline: <reden>", geen testpad`
-  - Voor `geen test:` bij een teksttrede blijft de bestaande melding staan: `"geen test" mag bij trede <t> alleen met een
-    integratie- of e2e-test uit de diff in de reden`.
+  - `#<nr>: bij trede <t> is het bewijs "baseline: …" of "geen baseline: <reden>", geen "geen test:"` (besluit eigenaar
+    2026-11-22, OV-1)
 - Volgorde van de toets, met hooguit één fout per leerpunt: eerst onbekende trede, dan de trede (`baseline:` of
   `geen baseline:` bij een andere trede), dan de vorm, dan `met`, dan `zonder`, dan de diff (in `regelFout`). Daarna het
   scenarioblok, in `bewijsPlan` uit `body`: eerst de kop, dan de labels, dan de runregels, dan de tellingen.
@@ -100,10 +102,10 @@ Kritiek werk (`.github/`, skill, regelboek; R-WERK-05): in de template één PR,
 - **gedragsbaseline/AC-1** — Gegeven een sectie `## Leerpunt` met `bewijs baseline: zonder 1/3, met 3/3 (opus)` of `` bewijs `geen baseline: schrijfgedrag` ``, wanneer `leesLeerpuntSectie` die leest, dan heeft de regel `baseline` respectievelijk `geenBaseline` gevuld en zijn `pad`, `reden` en `meting` null. Toets: `test/scripts/leerpunt-bewijs.test.ts`
 - **gedragsbaseline/AC-2** — Gegeven trede Skill, Padregel of AGENTS.md met een correcte regel (zonder 0/3, 1/3 of 2/3; met 3/3; model niet leeg), een volledig scenarioblok met tellingen die erbij passen en een gewijzigd pad uit `TEKSTPADEN` in de diff, wanneer `bewijsPlan` draait, dan is `fouten` leeg en `runs` leeg. Toets: `test/scripts/leerpunt-bewijs.test.ts`
 - **gedragsbaseline/AC-3** — Gegeven verder het geval van AC-2, wanneer één ding afwijkt (trede Check; `met 2/3`; `zonder 3/3`; model leeg of een vorm zonder `/3`; een diff met alleen `src/a.ts`), dan bevat `fouten` de bijbehorende melding uit "Hergebruik en UX". Toets: `test/scripts/leerpunt-bewijs.test.ts`
-- **gedragsbaseline/AC-4** — Gegeven verder het geval van AC-2, wanneer het blok `### Scenario #<nr>` ontbreekt of een ander nummer heeft, een label ontbreekt of leeg is, een runregel ontbreekt of dubbel staat, of de ja's niet passen bij de bewijsregel, dan bevat `fouten` de bijbehorende melding; een `###`-blok binnen de sectie beëindigt de regels van `## Leerpunt` niet. Toets: `test/scripts/leerpunt-bewijs.test.ts`
-- **gedragsbaseline/AC-5** — Gegeven `bewijs geen baseline: <reden>`, wanneer de trede Skill, Padregel of AGENTS.md is en de reden niet leeg, dan is de regel goed zonder eis aan diff of scenario, en draait er niets; bij trede Type, Check, Gouden pad of generator of Schrappen of vereenvoudigen, of bij een lege reden, is de regel fout. Bij een teksttrede is `geen test: <reden>` alleen goed met een integratie- of e2e-test uit de diff in de reden, en een testpad is fout. Toets: `test/scripts/leerpunt-bewijs.test.ts`
+- **gedragsbaseline/AC-4** — Gegeven verder het geval van AC-2, wanneer het blok `### Scenario #<nr>` ontbreekt of een ander nummer heeft, een label ontbreekt of leeg is, een runregel ontbreekt of dubbel staat, of de ja's niet passen bij de bewijsregel, dan bevat `fouten` de bijbehorende melding; een `###`-blok binnen de sectie beëindigt de regels van `## Leerpunt` niet (dat deel is al waar op de basis: regressie). Toets: `test/scripts/leerpunt-bewijs.test.ts`
+- **gedragsbaseline/AC-5** — Gegeven `bewijs geen baseline: <reden>`, wanneer de trede Skill, Padregel of AGENTS.md is en de reden niet leeg, dan is de regel goed zonder eis aan diff of scenario, en draait er niets; bij trede Type, Check, Gouden pad of generator of Schrappen of vereenvoudigen, of bij een lege reden, is de regel fout. Bij een teksttrede zijn `geen test: <reden>` en een testpad altijd fout, met de melding uit "Hergebruik en UX" (OV-1). Toets: `test/scripts/leerpunt-bewijs.test.ts`
 - **gedragsbaseline/AC-6** — Gegeven een gemergde PR met voor nummer n een regel `bewijs baseline: …` of `bewijs geen baseline: …`, wanneer `sluitOordeel(n, …)` draait, dan is de uitslag `bewijs` (regressietest). Toets: `test/scripts/leerpunt-check.test.ts`
-- **gedragsbaseline/AC-7** — Gegeven de gebouwde tekst, wanneer de structuur gelezen wordt, dan staan beide regelvormen uit "Hergebruik en UX" en de kop `### Scenario #<nr>` in `.github/pull_request_template.md` en in stap 8 van `opleveren`, verwijst stap 8 naar `docs/operations/gedragsbaseline.md`, bevat dat recept de opdrachttekst met `<<<` en `>>>`, en noemt R-WERK-13 `baseline:` en `0107`. Toets: `test/rails/gedragsbaseline.test.ts` (nieuw)
+- **gedragsbaseline/AC-7** — Gegeven de gebouwde tekst, wanneer de structuur gelezen wordt, dan staan beide regelvormen uit "Hergebruik en UX" en de kop `### Scenario #<nr>` in `.github/pull_request_template.md` en in stap 8 van `opleveren`, verwijst stap 8 naar `docs/operations/gedragsbaseline.md`, bevat dat recept de opdrachttekst met `<<<` en `>>>`, en noemt R-WERK-13 `baseline:` en `0107`; in het sjabloon en in stap 8 staat `geen test` niet meer bij Skill, Padregel of AGENTS.md, en de regel met `bewijs <testpad>` noemt alleen Type, Check en Gouden pad of generator. Toets: `test/rails/gedragsbaseline.test.ts` (nieuw)
 
 ## Randgevallen
 
@@ -129,7 +131,14 @@ Kritiek werk (`.github/`, skill, regelboek; R-WERK-05): in de template één PR,
 - Tests (gate): `test/scripts/leerpunt-bewijs.test.ts`. Drie rijen van leerlus-bewijs/AC-4 (`geen test` bij Skill, Padregel en
   AGENTS.md is goed) worden fout volgens ADR 0107, Gevolgen. Dat is een wijziging onder R-TEST-02, met de reden in de PR en
   een `GEWIJZIGD`-commentaar. Verder `test/scripts/leerpunt-check.test.ts` en `test/rails/gedragsbaseline.test.ts` (nieuw).
-  `test/rails/leerlus-herzien.test.ts` blijft groen: de bestaande regels in het PR-sjabloon blijven staan.
+  `test/rails/leerlus-herzien.test.ts` (leerlus-herzien/AC-6) eist nu de regel `bewijs <testpad>` met de trede
+  `<Type|Check|Gouden pad of generator|Skill|Padregel|AGENTS.md>`; de trede wordt `<Type|Check|Gouden pad of generator>`,
+  ook een wijziging onder R-TEST-02 met reden in de PR.
+- Tekst die door de bouw onwaar wordt en mee verandert: de sectie Leerpunt van `.github/pull_request_template.md` en stap 8
+  van `opleveren` ("Bij Skill, Padregel, AGENTS.md …: `bewijs geen test: <reden>`"); in spec `leerlus-bewijs` de regelvorm
+  met `geen test:` bij de drie treden en leerlus-bewijs/AC-4, dat de bouw-PR markeert als `Gewijzigd door ADR 0107 … Was:`;
+  het commentaar in `scripts/kit/pr-merge.mjs` (r. 9: de eigenaar merget bij `geen test:` of `meting:`) noemt ook
+  `baseline:` en `geen baseline:`.
 - Geen migratie, route, permissie of resource: `check:migrations`, `check:secdef`, `test:db` en `test/security/resources.ts`
   worden niet geraakt.
 
@@ -147,8 +156,10 @@ eigenaar ziet het blok en de groene job.
 
 ## Open vragen
 
-- **OV-1** — Weigert de job een testpad bij een teksttrede? ADR 0107 punt 1 noemt de baseline als bewijs; punt 7 noemt deze
-  weigering niet. Aanbeveling: weigeren (AC-5). Een structuurtest op tekst bewijst geen gedrag.
+- **OV-1** — Weigert de job bij een teksttrede een testpad of `geen test:`? ✅ Besloten door de eigenaar (2026-11-22): ja,
+  alleen `baseline:` of `geen baseline: <reden>` (ADR 0107 Besluit 1 en Gevolgen). AC-5.
+- **OV-1b** — Eist `geen baseline: <reden>` een tekstpad in de diff? ✅ Besloten door de eigenaar (2026-11-22): nee, alleen
+  een niet-lege reden; zo kan ook een PR die alleen tekst verwijdert sluiten (randgeval "alleen een regelbestand weg").
 - **OV-2** — Toetst de job ook de zes runregels en of hun tellingen passen bij de bewijsregel? Punt 5 schrijft per run één
   regel voor; punt 7 noemt alleen "de drie regels niet leeg". Aanbeveling: wel toetsen (AC-4). Het blijft een vormtoets en
   vangt tikfouten in de tellingen.
