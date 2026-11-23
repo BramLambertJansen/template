@@ -179,7 +179,7 @@ aantal resterende herstelcodes tonen (`/view-backup-codes` is alleen server-side
 
 ## Open vragen voor de eigenaar
 
-Alle zeven besloten volgens de aanbeveling (eigenaar, 23 november 2026); OV-1, OV-5, OV-6 en OV-7 zijn met het blokkeren al gebouwd.
+Alle zeven besloten volgens de aanbeveling (eigenaar, 23 november 2026); OV-1, OV-5, OV-6, OV-7 en het blokkeerdeel van OV-2 (`accounts:manage`) zijn al gebouwd.
 
 - **OV-1** — Waar staat "geblokkeerd"? Aanbeveling: `better_auth."user".blocked_at`, geschreven door een functie van `app_definer` (atomair met de
   laatste-admin-regel), gelezen door Better Auth bij elke sessie. Vraagt een grant buiten ADR 0043 en schrijven in `better_auth` (ADR 0041), dus een
