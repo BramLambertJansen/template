@@ -71,8 +71,9 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
 3. Eerst `git fetch origin` en de controle uit `docs/operations/agent-doorloop.md`, "Branchwissels in een sandbox",
    vóór iedere afzonderlijke wissel of fast-forward. Raakt de stap een door de runtime beschermd bestand (zoals onder
    `.claude/skills/`), probeer de wissel niet: een aparte schone worktree als dat is toegestaan, anders de eigenaar.
-   Daarna `git switch main` (of `git switch --detach origin/main` als `main` elders is uitgecheckt) en
-   `git merge --ff-only origin/main`, met de controle opnieuw vóór de fast-forward. Geen rebase: `main` wordt squash-gemerged.
+   Daarna `git switch --detach origin/main`, met de controle tegen `origin/main`: een achterlopende lokale `main` kan
+   oude beschermde bestanden bevatten die de sandbox niet terugzet. Lokale `main` bijwerken is geen opruimstap; dat doet de
+   eigenaar buiten de sandbox met `git switch main` en `git merge --ff-only origin/main`. Geen rebase: `main` wordt squash-gemerged.
    Faalt een wissel of `--ff-only`, stop dan; lees HEAD, branch, werkmap en index volgens die procedure vóór herstel of
    een commit. Nooit `reset --hard`; meld wat nog niet is opgeruimd.
 4. Een andere worktree van die branch eerst weghalen: `git worktree remove <pad>` zonder `--force` (git weigert anders de branch te verwijderen).
