@@ -25,7 +25,7 @@ Een JSON-lijst, met per controle precies deze velden (een onbekend veld is een f
 |---|---|
 | `naam` | `^[a-z][a-z0-9-]{0,63}$`, uniek; voor een check ook de sleutel `schaduw:<naam>` in de ratchet |
 | `soort` | `hook`, `check` of `lintregel`; een `check` en een `lintregel` hebben een uitvoerder `<naam>` in de map `schaduw` van de ratchet, voor een `hook` dwingt niets af dat hij draait (reviewpunt) |
-| `spec` | bestaand pad onder `docs/template/specs/`, al genormaliseerd (geen `..`, `.` of dubbele `/`; B-8) |
+| `spec` | bestaand bestand op `.md` onder `docs/template/specs/`, al genormaliseerd: geen padsegment `.` of `..`, geen `//` en geen `/` aan het eind (toets: `path.posix.normalize(spec) === spec`; B-8) |
 | `rids` | niet-lege lijst van `^R-[A-Z]+-\d{2}$`; geen R-id uit `ALTIJD_HARD` |
 | `start`, `eind` | `JJJJ-MM-DD`, `start ≤ eind ≤ start + 14 dagen` |
 | `drempel` | `{ "hard": string, "aanpassen": string, "verwijderen": string }`, elk niet leeg |
@@ -56,7 +56,7 @@ lokaal geen melding en in CI rood, zoals bij `ac-toets`; staat de naam niet op d
   `<naam>: al een keer aangepast; het besluit is nu hard of verwijderd (ADR 0106 punt 6)`
 - `aangepast` van 0 naar 1 met dezelfde `drempel` (diepe vergelijking):
   `<naam>: aangepast zonder andere drempel; een aanpassing wijzigt de drempel (ADR 0106 punt 6)`
-- `drempel` anders dan op de basis terwijl `aangepast` op 0 bleef (B-7):
+- `drempel` anders dan op de basis (diepe vergelijking, zoals hierboven) terwijl `aangepast` op 0 bleef (B-7):
   `<naam>: drempel anders dan op de merge-base zonder dat aangepast is opgehoogd; een aanpassing hoogt aangepast op (ADR 0106 punt 6)`
 - `eind` later dan op de basis terwijl `aangepast` op 0 bleef en `drempel` gelijk is (de regels sluiten elkaar uit; per naam
   hooguit één melding):
@@ -87,7 +87,7 @@ De groene regel van `pnpm ratchet` noemt voortaan ook de strikte modules:
 `template:release` weigert in `brengUit`, direct na `isTemplate` en vóór de eerste schrijfactie. `brengUit` gooit de tekst zonder
 voorvoegsel (dat zet de hoofdroutine al), dus op stderr staat
 `✗ template:release: .kit/schaduw.json bevat <n> controle(s) (<namen>); een app krijgt geen controle in schaduw, neem eerst het besluit (ADR 0106 punt 8)`.
-Is het register geen JSON-lijst, dan weigert hij ook (B-9):
+Is het register geen geldige JSON of geen lijst, dan weigert hij ook (B-9):
 `✗ template:release: .kit/schaduw.json is geen JSON-lijst; herstel het register vóór de release (ADR 0106 punt 8)`.
 
 ## Meetregel en overzicht
@@ -144,9 +144,9 @@ geen nieuwe bibliotheken.
 - **schaduwmodus/AC-13** — Gegeven de repo na de bouw, wanneer je `strikt` uit de ratchet importeert, dan bevat het `schaduw-register` en `schaduw-termijn`, en is `.kit/schaduw.json` `[]`; een groene `pnpm ratchet` eindigt met een regel die na `strikt:` ook `schaduw-termijn` noemt. Toets: `test/rails/schaduw-termijn.test.ts` (nieuw)
 - **schaduwmodus/AC-14** — Gegeven `scripts/kit/schaduw.mjs` los gedraaid, wanneer het eindigt, dan is de exitcode 1 en noemt stderr `pnpm ratchet` en `schaduw`. Toets: `test/scripts/ratchet-modules-los.test.ts`
 - **schaduwmodus/AC-16** — Gegeven op de merge-base en op HEAD `aangepast: 0`, wanneer HEAD een andere `drempel` heeft, dan geeft `schaduw-register` precies één overtreding met "drempel anders dan op de merge-base zonder dat aangepast is opgehoogd", ook als `eind` daarbij later ligt; met dezelfde `drempel` en hetzelfde `eind` niets. Toets: `test/rails/schaduw-register.test.ts`
-- **schaduwmodus/AC-17** — Gegeven een registerregel met `spec` `docs/template/specs/../adr/0106-schaduwmodus-met-tijdgrens.md` (een bestaand bestand buiten de map), wanneer `schaduw-register` draait, dan meldt hij `spec <pad> bestaat niet`; met `docs/template/specs/x.md` niet. Toets: `test/rails/schaduw-register.test.ts`
-- **schaduwmodus/AC-18** — Gegeven een template met `.kit/schaduw.json` `{}`, wanneer `brengUit` draait, dan gooit hij "is geen JSON-lijst" en blijven CHANGELOG, TEMPLATE_VERSION en de fragmenten ongewijzigd. Toets: `test/scripts/template-release.test.ts`
-- **schaduwmodus/AC-19** — Gegeven twee registerregels met dezelfde naam `a` (eind binnen 3 dagen) en een uitvoerder `a` die `{ treffers: ["x"] }` teruggeeft, wanneer de ratchet draait, dan staat `schaduw-termijn: a loopt af` precies één keer en `schaduw: a: x` precies één keer in de meldingen. Toets: `test/rails/schaduw-termijn.test.ts`
+- **schaduwmodus/AC-17** — Gegeven een tijdelijke repo met de bestanden `docs/template/specs/x.md`, `docs/template/adr/0106-schaduwmodus-met-tijdgrens.md` en de map `docs/template/specs/sub`, wanneer `schaduw-register` draait met `spec` `docs/template/specs/../adr/0106-schaduwmodus-met-tijdgrens.md`, `docs/template/specs/./x.md`, `docs/template/specs//x.md` of `docs/template/specs/sub`, dan meldt hij telkens `spec <pad> bestaat niet`; met `docs/template/specs/x.md` niet. Toets: `test/rails/schaduw-register.test.ts`
+- **schaduwmodus/AC-18** — Gegeven een template met `.kit/schaduw.json` `{}` (en apart de ongeldige JSON `{`), wanneer `brengUit` draait, dan gooit hij "is geen JSON-lijst" en blijven CHANGELOG, TEMPLATE_VERSION en de fragmenten ongewijzigd. Toets: `test/scripts/template-release.test.ts`
+- **schaduwmodus/AC-19** — Gegeven twee registerregels met dezelfde naam `a`, de eerste met `eind` binnen 3 dagen na de commitdatum en de tweede met een verlopen `eind`, en een uitvoerder `a` die `{ treffers: ["x"] }` teruggeeft, wanneer de ratchet draait, dan staat `schaduw-termijn: a loopt af op <eind van de eerste>` precies één keer en `schaduw: a: x` precies één keer in de meldingen, geeft `schaduw-termijn` geen "liep af"-overtreding, en meldt `schaduw-register` wel `a: staat twee keer in het register`. Toets: `test/rails/schaduw-termijn.test.ts`
 - **schaduwmodus/AC-20** — Gegeven de rol reviewer, wanneer hij `pnpm meting --schaduw` (ook met `--json` of `--branch <naam>`) draait, dan laat het rolhek het door. Toets: `test/hooks/rolhek-lezen.test.ts`
 
 ## Randgevallen
@@ -192,7 +192,7 @@ AC-14 breidt `test/scripts/ratchet-modules-los.test.ts` uit met `schaduw` (geen 
 
 ## Vervolg na de bouw (#918, kleine bevindingen; eigenaar 2026-11-23: "pak de laatste openstaande dingetjes op")
 
-- **B-7** — Ook met `aangepast: 0` mag de drempel niet ongemerkt veranderen: een andere drempel hoogt `aangepast` op (AC-16).
+- **B-7** — Ook met `aangepast: 0` mag de drempel niet ongemerkt veranderen: een andere drempel hoogt `aangepast` op (AC-16). Ook een tikfout herstellen kost dus de ene aanpassing; dat volgt uit ADR 0106 punt 3 (drempel vooraf).
 - **B-8** — `spec` moet al genormaliseerd zijn; `..` kan de mapcontrole niet omzeilen (AC-17).
 - **B-9** — `template:release` weigert ook een register dat geen JSON-lijst is (AC-18).
 - **B-10** — Een dubbele naam geeft geen dubbele meldingen; de eerste regel telt (AC-19).
