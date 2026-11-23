@@ -392,6 +392,12 @@ export function bewijsPlan({ gesloten, body, diff }) {
     else if (regel.pad !== null && !runs.some((run) => run.pad === regel.pad))
       runs.push({ pad: regel.pad, soort: soortBewijs(regel.pad) ?? 'unit' });
   }
+  // Leerpunt #717: een regel voor een issue dat de PR niet sluit, draait geen proef en sluit het issue niet bij de merge.
+  const sluit = new Set(gesloten.map(({ nummer }) => nummer));
+  for (const { nummer } of regels.filter((r) => !sluit.has(r.nummer)))
+    fouten.push(
+      `#${String(nummer)}: staat in ## Leerpunt, maar de PR sluit het niet; voeg "Closes #${String(nummer)}" toe aan de beschrijving`,
+    );
   return { leerpunten, fouten, runs };
 }
 
