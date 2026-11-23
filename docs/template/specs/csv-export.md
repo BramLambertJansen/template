@@ -73,7 +73,7 @@ Notatie: `﻿` is de BOM, `\r\n` is CRLF, `\n` LF, `\r` CR, `\t` tab. Voorbeeldk
   gevolgd door een fout is de status leeg en staat de alert er.
   Eigen `label`, `doneLabel` en `errorLabel` vervangen de drie standaardteksten. Toets: `src/core/web/ui/export-csv-button.test.tsx`
 - **csv-export/AC-10** — Met `disabled` is de knop native disabled en ontstaat bij klikken geen Blob en geen download.
-  Enter en Spatie op de gefocuste knop starten de export; na de export blijft de focus op de knop. Toets: `src/core/web/ui/export-csv-button.test.tsx`
+  Enter en Spatie op de gefocuste knop starten de export; na de export blijft de focus op de knop. Toets: `src/core/web/ui/export-csv-button.test.tsx` en `e2e/csv-export.spec.ts` (Enter en Spatie, die jsdom niet native activeert)
 - **csv-export/AC-11** — `ExportCsvButton`, `ExportCsvButtonProps`, `toCsv` en `CsvColumn` zijn te importeren uit
   `src/web/ui/index.ts`; het catalogusvoorbeeld staat binnen `#example-data-table`. Toets: `src/web/features/design-system/csv-export-example.test.tsx`
 - **csv-export/AC-12** — Op de echte lokale stack levert de knop in het DataTable-voorbeeld een download met de naam
@@ -135,9 +135,9 @@ Bouw-PR (functionele UI in de template, R-WERK-18), exact deze bestanden:
 - bron: `src/core/web/ui/csv.ts` (nieuw: `CsvColumn`, `toCsv`), `src/core/web/ui/export-csv-button.tsx` (nieuw:
   `ExportCsvButton`, `ExportCsvButtonProps`), `src/core/web/copy/ui.ts` (drie nieuwe sleutels `exportCsv`,
   `exportCsvDone`, `exportCsvFailed`; bestaande sleutels ongewijzigd);
-- tests (nieuw): `src/core/web/ui/csv.test.ts` (AC-1 t/m AC-5), `src/core/web/ui/export-csv-button.test.tsx` (AC-6,
-  AC-7, AC-9, AC-10), `src/web/features/design-system/csv-export-example.test.tsx` (AC-11), `e2e/csv-export.spec.ts`
-  (AC-8, AC-12);
+- tests (nieuw): `src/core/web/ui/csv.test.ts` en `src/core/web/ui/csv-security.test.ts` (AC-1 t/m AC-5, de laatste van een aparte tester),
+  `src/core/web/ui/export-csv-button.test.tsx` (AC-6, AC-7, AC-9, AC-10), `src/web/features/design-system/csv-export-example.test.tsx` (AC-11), `e2e/csv-export.spec.ts`
+  (AC-8, AC-10 voor Enter en Spatie, AC-12);
 - barrel: `src/web/ui/index.ts` (exports van AC-11);
 - catalogus: `src/web/features/design-system/data-display-examples.tsx` (knop in de DataTable-sectie met de getoonde
   rijen) en `src/web/features/design-system/example-targets.ts` (`ExportCsvButton` in de groep `example-data-table`,
@@ -181,4 +181,5 @@ rijlimiet, automatisch getal- of datumformatteren in `toCsv`, en het toevoegen v
 - **OV-4 ✅ besloten** — Alleen meegegeven/geladen rijen, geen fictieve totalen; volledig in de browser, in
   `src/core/web/ui`, voorbeeld bij de DataTable-voorbeelden (opdracht eigenaar 2026-11-13).
 - **OV-5 ✅ besloten** — Rolverdeling: het neutraliseren van formule-injectie is security, dus risicowerk (R-WERK-04);
-  een aparte tester schrijft de tests vóór de developer.
+  een aparte tester schrijft de tests vóór de developer. Uitvoering: de developer schreef de eerste tests zelf; een aparte
+  tester toetste ze achteraf aan de spec en voegde `csv-security.test.ts` toe (besluit eigenaar, 2026-11-23).
