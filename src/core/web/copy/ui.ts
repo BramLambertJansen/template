@@ -20,6 +20,10 @@ export const uiTexts = {
   copy: 'Kopiëren',
   copied: 'Gekopieerd.',
   copyFailed: 'Kopiëren is niet gelukt. Selecteer en kopieer de tekst zelf.',
+  // Spec csv-export: knop en meldingen van ExportCsvButton.
+  exportCsv: 'CSV exporteren',
+  exportCsvDone: 'CSV-bestand aangemaakt.',
+  exportCsvFailed: 'Exporteren is niet gelukt. Probeer het opnieuw.',
   // Spec foutreferentie: de requestId bij een onverwachte serverfout, voor support.
   errorReference: 'Referentie:',
   copyErrorReference: 'Referentie kopiëren',

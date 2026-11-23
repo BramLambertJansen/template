@@ -3,11 +3,13 @@ import {
   Button,
   Checkbox,
   DataTable,
+  ExportCsvButton,
   Gallery,
   Input,
   ListToolbar,
   Section,
   Tabs,
+  type CsvColumn,
   type DataTableColumn,
   type DataTableSort,
 } from '#web/ui/index.ts';
@@ -25,6 +27,10 @@ const rows = [
 const columns: readonly DataTableColumn<(typeof rows)[number]>[] = [
   { id: 'name', header: 'Naam', cell: (row) => row.name, sortable: true },
   { id: 'role', header: 'Rol', cell: (row) => row.roleLabel, sortable: true },
+];
+const csvColumns: readonly CsvColumn<(typeof rows)[number]>[] = [
+  { header: 'Naam', value: (row) => row.name },
+  { header: 'Rol', value: (row) => row.roleLabel },
 ];
 const media = [
   { id: 'landscape', src: '/gallery-landscape.svg', alt: 'Groene bergen met een gele zon', caption: 'Landschap' },
@@ -121,6 +127,12 @@ function DataTableExample() {
           de gallery.
         </p>
         <ExampleToolbar model={model} />
+        <ExportCsvButton
+          rows={ordered.slice(0, limit)}
+          columns={csvColumns}
+          filename="voorbeeldgegevens"
+          disabled={busy}
+        />
         <Checkbox
           label="Tabel bezig"
           checked={busy}
