@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
-import { opMain } from '../../rails/hooks/lib/rolhek-context.mjs';
+import * as context from '../../rails/hooks/lib/rolhek-context.mjs';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 
 // Leerpunt #887: een testbestand is pas "bestaand" als het op origin/main staat (ctx.bestaand), niet zodra het op schijf staat.
@@ -160,6 +160,19 @@ describe('opMain tegen echte git', () => {
     writeFileSync(path.join(root, rel), "test('a', () => {});\n");
     git(root, 'add', '--', rel);
     git(root, 'commit', '-q', '-m', rel);
+  }
+
+  // De export is nieuw: eerst toetsen dat hij er is, zodat de basis op een assertie faalt en niet op laden (leerpunt #892).
+  function opMain(root: string, basis: string | null): (rel: string) => unknown {
+    expect(context).toHaveProperty('opMain');
+    const functie: unknown = Reflect.get(context, 'opMain');
+    if (typeof functie !== 'function') throw new Error('opMain is geen functie');
+    const toets: unknown = Reflect.apply(functie, undefined, [root, basis]);
+    if (typeof toets !== 'function') throw new Error('opMain geeft geen functie');
+    return (rel) => {
+      const uitkomst: unknown = Reflect.apply(toets, undefined, [rel]);
+      return uitkomst;
+    };
   }
 
   /** main met test/a.test.ts (desgewenst ook als origin/main), daarna branch feat met test/b.test.ts. */
