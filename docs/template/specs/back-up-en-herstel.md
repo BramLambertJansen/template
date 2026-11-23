@@ -10,8 +10,8 @@ Kan pas `goedgekeurd` worden na de merge van dat ADR.
 
 | Deel | Inhoud | Wacht op | AC's |
 |---|---|---|---|
-| **A — back-up, alarm, hersteltest, herstel** | rol `app_backup`, `deploy/backup.json`, drie commando's, runbook, sjabloon herstelblad | ADR 0108 | AC-1 t/m AC-13 |
-| **B — release** | export vóór elke release, poort op de hersteltest | A, en de release-workflow van ST-10 | AC-14 t/m AC-16 |
+| **A — back-up, alarm, oefening, herstel** | rol `app_backup`, migratie `app.after_restore`, `deploy/backup.env`, image `backup`, opruimworkflow, runbook, sjabloon herstelblad | ADR 0108 | AC-1 t/m AC-15 |
+| **B — release** | export vóór elke release, poort op markeerbestand en herstelblad | A, en de release-workflow van ST-10 | AC-16 t/m AC-18 |
 
 ## Doel
 
@@ -23,180 +23,233 @@ hersteld.
 
 | Wie | Mag |
 |---|---|
-| `app_backup` (databaserol) | alles lezen, inclusief `better_auth`; niets schrijven |
-| back-uptaak | exporteren, versleutelen met de publieke sleutel, toevoegen aan de map; niet lezen wat er al staat, niet wissen |
-| opruimer (tweede identiteit bij de map) | oude exports wissen volgens de regels |
-| hersteltest | de privésleutel; draait waar de productiedata al mag zijn |
+| `app_backup` (databaserol) | alles lezen, inclusief `better_auth`; geen enkel schrijfrecht |
+| back-uptaak op de host | exporteren, versleutelen met de publieke sleutel, toevoegen aan de map; niet wissen, niets lezen wat er staat |
+| opruimtaak (elders, standaard een geplande workflow) | opsommen en oude exports wissen; kent geen databasegeheim en geen privésleutel |
+| oefening | de privésleutel; draait waar de productiedata al mag zijn |
+| `app_migrator` | terugzetten en `app.after_restore` uitvoeren |
 | houders van het herstelblad (twee mensen, in het app-ADR) | privésleutel, toegang tot de map, `AUTH_SECRET` en de andere productiegeheimen |
 | elke rol in de app | niets; de app kent back-ups niet |
 
 ## Datawijzigingen (met grants)
 
-Geen migratie. Een rol in `db/init/01-roles.sql` en in het runbook voor beheerde databases (R-DB-01):
+**Rol**, in `db/init/01-roles.sql` en in het runbook voor beheerde databases (R-DB-01):
 
 ```sql
 create role app_backup login bypassrls;
 grant pg_read_all_data to app_backup;
-alter role app_backup set default_transaction_read_only = on;
 alter role app_backup set statement_timeout = '30min';
 grant connect on database app to app_backup;
 ```
 
-Nergens eigenaar van, geen lid van een andere app-rol. `db/tests/rolattributen.sql` verandert zo: geen rol heeft
-`superuser`; `BYPASSRLS` heeft alleen `app_backup`; `app_backup` kan niets schrijven of aanmaken en geen functie van klasse
-`client`, `auth` of `job` uitvoeren.
+Nergens eigenaar van, geen lid van een andere rol dan `pg_read_all_data`. `db/tests/rolattributen.sql` verandert zo: van de
+vijf rollen van de template plus `app_backup` heeft alleen `app_backup` `BYPASSRLS`, geen heeft `superuser`; `app_backup`
+heeft volgens `has_table_privilege`, `has_schema_privilege` en `has_function_privilege` geen `insert`, `update`, `delete`,
+`truncate`, `create` of `execute` op een functie van klasse `client` of `auth`; en ook na `set transaction read write`
+faalt een insert met 42501.
 
-## Instellen: `deploy/backup.json`
+**Migratie** (deel A): `app.after_restore(p_backup_at timestamptz)` → `void`, `security definer`, eigenaar `app_definer`,
+`set search_path = ''`, klasse `intern`, `execute` alleen aan `app_migrator`. In één aanroep: alle rijen uit
+`better_auth.session` weg, `session_version` van elke rij in `better_auth."user"` plus één, alle rijen uit
+`better_auth.verification` weg, en één regel in `app.audit_log` met actie `core.restore`, `target_type` `database` en in
+`details` alleen `{ "backup_at": … }`. `app_definer` krijgt daarvoor `delete` op `better_auth.session` en
+`better_auth.verification` (kolom-allowlist in `db/tests/invarianten.sql` bijwerken, R-DB-14). `core.restore` komt in de
+lijst van core-acties. Regel in `db/tests/functies.sql`; geen nieuwe tabel.
 
-Eén bestand per app, in git, gevalideerd door een zod-schema in `scripts/`. Geen geheimen.
+## Routes en foutcodes
 
-```json
-{
-  "folder": "verenigingsdrive:Back-ups/ABAS",
-  "publicKey": "age1…",
-  "schedule": { "backup": "0 3 * * *", "drill": "0 4 * * 0" },
-  "keepDays": 30,
-  "drillRunsOn": "host"
-}
+Geen route. De scripts eindigen met een vaste code op de foutuitvoer en exitcode 1:
+
+| Code | Wanneer |
+|---|---|
+| `CONFIG_INVALID` | `deploy/backup.env` mist een sleutel of heeft een ongeldige waarde |
+| `VERSION_MISMATCH` | `pg_dump` heeft een andere major dan de server |
+| `ALREADY_RUNNING` | een andere run houdt het lock-bestand langer dan 10 minuten vast |
+| `UPLOAD_FAILED` | na drie pogingen niet in de map, of de grootte klopt niet |
+| `RESTORE_FAILED` | `pg_restore` of de migratie faalt |
+| `CHECK_FAILED:<code>` | een pgTAP-bestand of herstelcontrole faalt; `<code>` is die van de controle |
+| `AUTH_SECRET_MISMATCH` | `AUTH_SECRET` ontsleutelt geen TOTP-geheim |
+| `TARGET_IS_LIVE` | `herstel naar` wijst naar de database van de draaiende app |
+| `NO_RECENT_DRILL` | geen markeerbestand van een geslaagde oefening in de laatste acht dagen |
+| `NO_RECOVERY_SHEET` | `BACKUP_RECOVERY_SHEET_CONFIRMED` ontbreekt |
+
+## Instellen: `deploy/backup.env`
+
+Eén bestand per app, in git, geen geheimen. Gewone `SLEUTEL=waarde`-regels, zodat de shellscripts het zonder extra tool
+lezen. Een zod-schema in `scripts/` valideert het in `gate:fast`; de scripts toetsen bij de start alleen of elke sleutel er is.
+
+```sh
+BACKUP_FOLDER=verenigingsdrive:Back-ups/ABAS
+BACKUP_PUBLIC_KEY=age1…
+BACKUP_KEEP_DAYS=30
+BACKUP_DRILL_RUNS_ON=host
+BACKUP_RECOVERY_SHEET_CONFIRMED=2026-12-01
 ```
 
-- `folder` is een rclone-adres: een gedeelde Drive, SharePoint, een Storage Box of S3-achtige opslag. Het app-ADR legt de
-  keuze vast en hoe de schrijver alleen kan toevoegen.
-- `publicKey` mag in git; de privésleutel nooit.
-- `keepDays` is minstens 7. Er blijven altijd minstens zeven exports staan (`MIN_BACKUP_KEEP` in `src/core/shared/limits.ts`).
-- `drillRunsOn` is `host` of `github`; `github` alleen als het app-ADR aanvaardt dat ledendata daar terechtkomt.
+- `BACKUP_FOLDER` is een rclone-adres: een gedeelde Drive, SharePoint, een Storage Box of S3-achtige opslag. Het app-ADR legt
+  de keuze vast en hoe de schrijver alleen kan toevoegen.
+- `BACKUP_KEEP_DAYS` is minstens 7. Er blijven altijd minstens zeven exports staan.
+- `BACKUP_DRILL_RUNS_ON` is `host` of `github`; `github` alleen als het app-ADR aanvaardt dat ledendata daar terechtkomt.
+- `BACKUP_RECOVERY_SHEET_CONFIRMED` zet de eigenaar via een PR, op de dag dat het herstelblad compleet is bij twee mensen.
 
-Geheimen bij de taak: `BACKUP_DATABASE_URL` (als `app_backup`), de rclone-configuratie van de schrijver, die van de
-opruimer, `BACKUP_HEARTBEAT_URL` en `BACKUP_DRILL_HEARTBEAT_URL`. De hersteltest krijgt daarnaast de privésleutel en
-`AUTH_SECRET`.
+Geheimen op de host: `BACKUP_DATABASE_URL` (als `app_backup`), de rclone-configuratie van de schrijver, `SMTP_URL`, het
+afzender- en ontvangeradres van de foutmail, `BACKUP_HEARTBEAT_URL` en `BACKUP_DRILL_HEARTBEAT_URL`. Bij de oefening
+daarnaast de privésleutel en `AUTH_SECRET`. Bij de opruimtaak alleen de rclone-configuratie van de opruimer.
 
-## Commando's
+## Image en uitvoeren
 
-Alle drie draaien in de image `backup` (`db/backup/Dockerfile`): Postgres-client gelijk aan `db/docker/Dockerfile`, plus
-`age` en `rclone`, op versie en checksum gepind. Op een host als service in `compose.yaml` onder profiel `backup`.
+`db/backup/Dockerfile` bouwt op `db/docker/Dockerfile` (Postgres 17 met pgTAP en de clienttools, gelijke versie) en voegt
+`age`, `rclone` en `curl` toe, op versie en checksum gepind. De scripts zijn POSIX-shell in `db/backup/`. Op een host staat
+de image als service in `compose.yaml` onder profiel `backup`; de planner van de host (cron of een systemd-timer, runbook)
+start `backup run` en `herstel oefening`. De opruimtaak draait als geplande workflow `.github/workflows/backup-prune.yml` met
+alleen het geheim van de opruimer, of op een andere plek die het app-ADR noemt.
 
-**`pnpm backup run [--release]`**
+**`backup run [--release]`**
 
-1. Valideer `deploy/backup.json`; versie van `pg_dump` gelijk aan die van de server. Anders stoppen.
-2. `pg_dump --format=custom --exclude-schema=tap` als `app_backup`, direct door `age` met de publieke sleutel, naar een
-   tijdelijk bestand. Er komt nooit een onversleutelde export op schijf.
-3. Uploaden als `<app>-<UTC-tijd>[-release].dump.age`; een naam wordt nooit hergebruikt.
-4. De grootte op de bestemming vergelijken met die van het tijdelijke bestand; tijdelijk bestand weg.
-5. Opruimen (zie hieronder), met de identiteit van de opruimer.
+1. Lees `deploy/backup.env`; ontbreekt iets, `CONFIG_INVALID`. Pak het lock-bestand, anders na 10 minuten `ALREADY_RUNNING`.
+2. Major van `pg_dump` gelijk aan die van de server, anders `VERSION_MISMATCH`.
+3. `pg_dump --format=custom --exclude-schema=tap --lock-wait-timeout=5min` als `app_backup`, direct door `age` met de
+   publieke sleutel, naar een tijdelijk bestand. Er komt nooit een onversleutelde export op schijf.
+4. Uploaden als `<app>-<UTC-tijd>[-release].dump.age`, hooguit drie pogingen; een naam wordt nooit hergebruikt. De grootte
+   op de bestemming moet gelijk zijn, anders `UPLOAD_FAILED`. Tijdelijk bestand weg.
+5. Is de export kleiner dan de helft van de mediaan van de vorige zeven (de schrijver mag opsommen), dan een waarschuwingsmail.
+   De run slaagt wel.
 6. Melden bij `BACKUP_HEARTBEAT_URL`.
 
 Bij een fout in elke stap: tijdelijk bestand weg, foutmail, geen melding.
 
-**Opruimen**: wist exports ouder dan `keepDays`, behalve de nieuwste zeven, en wist niets als de nieuwste ouder is dan 26
-uur (dan een mail). Release-exports volgen dezelfde regel.
+**Opruimen** (opruimtaak, dagelijks): wist exports ouder dan `BACKUP_KEEP_DAYS`, behalve de nieuwste zeven, en wist niets
+als de nieuwste ouder is dan 26 uur (dan een mail). Markeerbestanden: de nieuwste tien blijven.
 
-**`pnpm herstel oefening`** (wekelijks)
+**`herstel oefening`** (wekelijks)
 
-1. Nieuwste export ophalen en ontsleutelen.
-2. Lege Postgres van dezelfde versie in een wegwerpcontainer; `db/init/` toepassen; `pg_restore --exit-on-error`.
-3. `dbmate up` naar de migraties van de huidige code.
+1. Nieuwste export ophalen en ontsleutelen naar een tijdelijke map met rechten `0700`.
+2. Een lege Postgres starten in dezelfde container (eigen datamap in de tijdelijke map, alleen op een unix-socket),
+   `db/init/` toepassen. Dat mag hier: de database is wegwerp en niet bereikbaar.
+3. `pg_restore --exit-on-error` als `app_migrator`, dan `dbmate up` naar de migraties van de huidige code (meegeleverd in de
+   image bij de build).
 4. `db/tests/rolattributen.sql`, `invarianten.sql` en `security.sql`: de beveiliging is na herstel gelijk.
-5. De herstelcontroles van de app: SQL-bestanden in `db/restore-checks/*.sql`, elk met één rij `ok boolean` en een vaste code.
-   De template levert er één: elke gebruiker met een rol heeft een rij in `user_roles`.
-6. Met `AUTH_SECRET` één TOTP-geheim ontsleutelen; mislukt dat, dan `AUTH_SECRET_MISMATCH`.
-7. Container en bestanden weg; melden bij `BACKUP_DRILL_HEARTBEAT_URL`.
+5. De herstelcontroles van de app: SQL-bestanden in `db/restore-checks/*.sql`, elk met één rij `ok boolean` en een vaste
+   `code`. De template levert er één: elke gebruiker met een rol heeft een rij in `user_roles`.
+6. Met `AUTH_SECRET` één TOTP-geheim ontsleutelen (Better Auth `symmetricDecrypt`, als klein script dat bij de build in de
+   image komt); mislukt dat, `AUTH_SECRET_MISMATCH`.
+7. Postgres stoppen, tijdelijke map weg. Een markeerbestand `drill-ok-<UTC-datum>.txt` met alleen de naam van de geteste
+   export in de map zetten, en melden bij `BACKUP_DRILL_HEARTBEAT_URL`.
 
-**`pnpm herstel naar <doel-url> [<bestand>]`** (alleen via het runbook)
+**`herstel naar <doel-url> [<bestand>]`** (alleen via het runbook)
 
-1. Weigert als `<doel-url>` de database van de draaiende app is.
-2. Toont welke export, van wanneer, en wat er sindsdien verloren gaat; bevestigen met de naam van de app.
-3. Stap 1 t/m 6 van de oefening, naar `<doel-url>`.
-4. Nazorg in één transactie: alle sessies weg, `session_version` van elke gebruiker omhoog, alle open `verification`-rijen
-   weg, een auditregel `core.restore` met de exportdatum.
-5. Toont als volgende stap: start de app met `JOBS_ENABLED=false` tot de outbox is nagekeken.
+1. Weigert met `TARGET_IS_LIVE` als `<doel-url>` dezelfde host en database is als `BACKUP_DATABASE_URL`.
+2. Eis: de doel-database is nieuw en leeg, en de rollen bestaan al (runbook "Nieuwe server", R-DB-01). Het script past
+   `db/init/` niet toe en installeert geen pgTAP.
+3. Toont welke export, van wanneer, en wat er sindsdien verloren gaat; bevestigen met de naam van de app.
+4. Ophalen, ontsleutelen, `pg_restore --exit-on-error` als `app_migrator`, `dbmate up`.
+5. De herstelcontroles uit `db/restore-checks/` (alleen-lezen SQL) en de proef op `AUTH_SECRET`.
+6. `select app.after_restore('<exportdatum>')` als `app_migrator`.
+7. Toont de volgende stappen uit het runbook: achtergrondtaken uit laten (zodra die bestaan), uitnodigingen opnieuw
+   versturen, verwijderverzoeken sinds de exportdatum nalopen, en pas dan overschakelen.
 
-Overschakelen naar de nieuwe database is een aparte stap in het runbook. Eén rij terughalen gaat door terugzetten naast
-productie en overnemen via een gereviewde migratie of definer-functie (R-DB-08).
+Eén rij terughalen gaat door terugzetten naast productie en overnemen via een gereviewde migratie of definer-functie
+(R-DB-08).
 
-## Instellen van de map, eenmalig
+## De map instellen, eenmalig
 
-Het runbook beschrijft per soort map hoe je de schrijver alleen laat toevoegen. Bij een gedeelde Google Drive: de schrijver
-is Bijdrager (kan uploaden, niet wissen), de opruimer is Inhoudsbeheerder. Bij elke andere soort: het app-ADR noemt hoe, en
-bij het instellen probeert de beheerder één keer met de inloggegevens van de schrijver een proefbestand te wissen. Dat moet
-mislukken, of het bestand moet nog 7 dagen terug te halen zijn.
+Het runbook beschrijft per soort map hoe de schrijver alleen kan toevoegen. Bij een gedeelde Google Drive: de schrijver is
+Bijdrager (kan uploaden, niet wissen), de opruimer is Inhoudsbeheerder. Bij elke andere soort noemt het app-ADR hoe, en bij
+het instellen probeert de beheerder één keer met de inloggegevens van de schrijver een proefbestand te wissen. Dat moet
+mislukken.
 
 ## Kopieer de vorm van
 
 - `db/init/01-roles.sql` — rollen met hun instellingen, buiten de migraties.
 - `db/tests/rolattributen.sql` — de toets op rolattributen die één benoemde uitzondering krijgt.
-- `db/docker/Dockerfile` — een op versie en digest gepinde image.
+- `db/migrations/20261021120000_account_lifecycle.sql` — definer-functie die `session_version` verhoogt en een auditregel schrijft.
+- `db/tests/functies.sql` — de functiecatalogus voor `app.after_restore`.
+- `db/docker/Dockerfile` — een op versie en digest gepinde image; de image `backup` bouwt erop voort.
 - `compose.yaml` — een service onder een eigen profiel.
-- `scripts/runner.sh` — een script dat in een container draait en alleen codes logt.
 - `docs/operations/eerste-admin.md` — een runbook dat een ander dan de bouwer kan volgen.
-- `src/core/api/mail/smtp.ts` — mail versturen voor de foutmelding.
 
 ## Hergebruik en UX
 
 Geen scherm. Teksten voor mensen staan in de mails en het runbook.
 
-- "Back-up van {app} mislukt": "De back-up van {tijd} is mislukt bij stap {stap} ({code}). De laatste geslaagde is van
-  {laatste}. Volg docs/operations/back-up-en-herstel.md, sectie 'Back-up mislukt'."
-- "Hersteltest van {app} mislukt": stap, code en de sectie "Hersteltest mislukt".
+- "Back-up van {app} mislukt": "De back-up van {tijd} is mislukt ({code}). De laatste geslaagde is van {laatste}. Volg
+  docs/operations/back-up-en-herstel.md, sectie 'Back-up mislukt'."
+- "Back-up van {app} veel kleiner dan normaal": "De export van {tijd} is {grootte}, normaal rond {mediaan}. Controleer of er
+  data is verdwenen."
+- "Hersteltest van {app} mislukt": code en de sectie "Hersteltest mislukt".
 - "Back-ups van {app} niet opgeruimd": "De nieuwste back-up is van {laatste}; er is niets gewist."
 
 ## Acceptatiecriteria
 
 **Deel A**
 
-- **backup/AC-1** — Gegeven elke rol behalve `app_backup`, dan heeft hij geen `BYPASSRLS` en geen `superuser`; `app_backup`
-  heeft `BYPASSRLS` maar faalt bij elke `insert`, `update`, `delete`, `truncate` en `create` en bij elke functie van klasse
-  `client`, `auth` of `job`. Toets: `db/tests/rolattributen.sql`
+- **backup/AC-1** — Gegeven de vijf rollen van de template en `app_backup`, dan heeft alleen `app_backup` `BYPASSRLS` en
+  geen van hen `superuser`; `app_backup` heeft volgens de rechtenfuncties geen schrijf-, aanmaak- of uitvoerrecht uit de
+  spec, en ook na `set transaction read write` faalt een insert in elke tabel van `public` en `app` met 42501. Toets: `db/tests/rolattributen.sql`
 - **backup/AC-2** — Gegeven rijen in elke tabel van `public`, `app` en `better_auth`, dan bevat een export als `app_backup`
   elke rij; als `app_migrator` faalt hij met een fout over row security en komt er geen bestand. Toets: `test/backup/export.int.test.ts` (nieuw)
-- **backup/AC-3** — Gegeven een andere versie van `pg_dump` dan de server, dan stopt de run vóór het exporteren met
+- **backup/AC-3** — Gegeven een `pg_dump` met een andere major dan de server, dan stopt `backup run` vóór het exporteren met
   `VERSION_MISMATCH`. Toets: `test/backup/run.int.test.ts` (nieuw)
 - **backup/AC-4** — Gegeven een geslaagde run, dan staat er één nieuw bestand in de map, is het alleen met de privésleutel te
   lezen, staat er geen onversleuteld bestand op schijf en krijgt `BACKUP_HEARTBEAT_URL` één aanvraag. Toets: `test/backup/run.int.test.ts` (nieuw)
-- **backup/AC-5** — Gegeven een run die faalt bij uploaden, dan is het tijdelijke bestand weg, is de exitcode ≠ 0, gaat er
-  een foutmail uit en geen melding. Toets: `test/backup/run.int.test.ts` (nieuw)
-- **backup/AC-6** — Gegeven `deploy/backup.json` met een onbekende sleutel, `keepDays` onder 7 of iets dat op een privésleutel
-  lijkt, dan weigert de validatie met de naam van het veld. Toets: `test/backup/config.test.ts` (nieuw)
-- **backup/AC-7** — Gegeven 40 dagelijkse exports en `keepDays` 30, dan wist opruimen de tien oudste; gegeven dat de nieuwste
-  ouder is dan 26 uur, of minder dan zeven exports, dan wist het niets. Toets: `test/backup/opruimen.test.ts` (nieuw)
-- **backup/AC-8** — Gegeven een geslaagde export, dan slaagt `pnpm herstel oefening`: terugzetten, migreren, de drie
-  pgTAP-bestanden en de herstelcontroles groen, en `BACKUP_DRILL_HEARTBEAT_URL` krijgt één aanvraag. Toets: `test/backup/oefening.int.test.ts` (nieuw)
-- **backup/AC-9** — Gegeven een export van een oudere migratiestand, dan zet de oefening hem terug en migreert hij hem zonder
+- **backup/AC-5** — Gegeven een map die drie keer weigert, dan eindigt de run met `UPLOAD_FAILED`, is het tijdelijke bestand
+  weg, gaat er een foutmail uit en geen melding. Toets: `test/backup/run.int.test.ts` (nieuw)
+- **backup/AC-6** — Gegeven een export kleiner dan de helft van de mediaan van de vorige zeven, dan slaagt de run en gaat er
+  één waarschuwingsmail uit. Toets: `test/backup/run.int.test.ts` (nieuw)
+- **backup/AC-7** — Gegeven `deploy/backup.env` met een ontbrekende sleutel, een onbekende sleutel, `BACKUP_KEEP_DAYS` onder 7
+  of een waarde die op een privésleutel lijkt (`AGE-SECRET-KEY-`), dan faalt de validatie in `gate:fast` met de naam van de
+  sleutel. Toets: `test/backup/config.test.ts` (nieuw)
+- **backup/AC-8** — Gegeven 40 dagelijkse exports en `BACKUP_KEEP_DAYS` 30, dan wist opruimen de tien oudste; gegeven dat de
+  nieuwste ouder is dan 26 uur, of minder dan zeven exports, dan wist het niets. Toets: `test/backup/opruimen.int.test.ts` (nieuw)
+- **backup/AC-9** — Gegeven de inloggegevens van de schrijver op een map die het runbook voorschrijft, dan faalt een
+  wis-poging, en kent de host geen inloggegevens van de opruimer. Toets: `test/backup/opruimen.int.test.ts` (nieuw)
+- **backup/AC-10** — Gegeven een geslaagde export, dan slaagt `herstel oefening` met terugzetten als `app_migrator`: migreren,
+  de drie pgTAP-bestanden en de herstelcontroles groen, een markeerbestand in de map en één aanvraag naar
+  `BACKUP_DRILL_HEARTBEAT_URL`. Toets: `test/backup/oefening.int.test.ts` (nieuw)
+- **backup/AC-11** — Gegeven een export van een oudere migratiestand, dan zet de oefening hem terug en migreert hij hem zonder
   fout. Toets: `test/backup/oefening.int.test.ts` (nieuw)
-- **backup/AC-10** — Gegeven een herstelcontrole met `ok = false`, een beschadigd bestand of een verkeerde `AUTH_SECRET`, dan
-  faalt de oefening met de code ervan en meldt ze niets bij de dodemansknop. Toets: `test/backup/oefening.int.test.ts` (nieuw)
-- **backup/AC-11** — Gegeven `pnpm herstel naar` met als doel de database van de draaiende app, dan weigert het commando vóór
-  het iets leest of schrijft. Toets: `test/backup/herstel.int.test.ts` (nieuw)
-- **backup/AC-12** — Gegeven een sessie en een uitnodigingslink in de export, wanneer het herstel klaar is, dan werkt die
-  sessie niet, geeft die link `INVITATION_INVALID` en staat er een auditregel `core.restore`. Toets: `test/backup/herstel.int.test.ts` (nieuw)
-- **backup/AC-13** — Gegeven het runbook en het sjabloon herstelblad, dan hebben ze de secties "Map instellen", "Back-up
-  mislukt", "Hersteltest mislukt", "Volledig herstel", "Eén rij terughalen", "Nieuwe server" en "Sleutel of geheim kwijt"
-  (structuurtest). Toets: `test/docs/back-up-runbook.test.ts` (nieuw)
+- **backup/AC-12** — Gegeven een herstelcontrole met `ok = false`, een beschadigd bestand of een verkeerde `AUTH_SECRET`, dan
+  faalt de oefening met `CHECK_FAILED:<code>`, `RESTORE_FAILED` of `AUTH_SECRET_MISMATCH`, zonder markeerbestand en zonder
+  melding. Toets: `test/backup/oefening.int.test.ts` (nieuw)
+- **backup/AC-13** — Gegeven `herstel naar` met als doel de database van `BACKUP_DATABASE_URL`, dan eindigt het met
+  `TARGET_IS_LIVE` vóór het iets leest of schrijft; gegeven een doel met bestaande rollen, dan past het `db/init/` niet toe
+  en installeert het geen pgTAP. Toets: `test/backup/herstel.int.test.ts` (nieuw)
+- **backup/AC-14** — Gegeven een sessie en een uitnodigingslink in de export, wanneer `app.after_restore` gedraaid heeft, dan
+  werkt die sessie niet, geeft die link `INVITATION_INVALID`, is `session_version` van elke gebruiker met één verhoogd en
+  staat er één auditregel `core.restore`; alleen `app_migrator` kan de functie uitvoeren. Toets: `db/tests/after_restore.sql` (nieuw)
+- **backup/AC-15** — Gegeven het runbook en het sjabloon herstelblad, dan hebben ze de secties "Map instellen", "Planner
+  instellen", "Back-up mislukt", "Hersteltest mislukt", "Nieuwe server", "Volledig herstel", "Eén rij terughalen" en
+  "Sleutel of geheim kwijt" (structuurtest). Toets: `test/docs/back-up-runbook.test.ts` (nieuw)
 
 **Deel B**
 
-- **backup/AC-14** — Gegeven een release, dan draait `pnpm backup run --release` als eerste stap, vóór `dbmate up` en vóór de
+- **backup/AC-16** — Gegeven een release, dan draait `backup run --release` als eerste stap, vóór `dbmate up` en vóór de
   nieuwe code live gaat; faalt die, dan gaat er niets live. Toets: `test/backup/release.int.test.ts` (nieuw)
-- **backup/AC-15** — Gegeven geen geslaagde hersteltest in de laatste acht dagen, dan weigert de poort met `NO_RECENT_DRILL`. Toets: `test/backup/poort.test.ts` (nieuw)
-- **backup/AC-16** — Gegeven een app-ADR zonder bevestigd herstelblad, dan weigert de poort met `NO_RECOVERY_SHEET`. Toets: `test/backup/poort.test.ts` (nieuw)
+- **backup/AC-17** — Gegeven geen markeerbestand `drill-ok-*` van de laatste acht dagen in de map, dan weigert de poort met
+  `NO_RECENT_DRILL`. Toets: `test/backup/poort.int.test.ts` (nieuw)
+- **backup/AC-18** — Gegeven `deploy/backup.env` zonder `BACKUP_RECOVERY_SHEET_CONFIRMED`, dan weigert de poort met
+  `NO_RECOVERY_SHEET`. Toets: `test/backup/poort.int.test.ts` (nieuw)
 
 ## Randgevallen
 
 | Situatie | Gedrag |
 |---|---|
-| Schijf vol of map tijdelijk onbereikbaar | run faalt na drie pogingen, foutmail; opruimen stopt vanzelf na 26 uur |
-| Twee runs tegelijk | de tweede wacht op een lock-bestand en stopt na 10 minuten met `ALREADY_RUNNING` |
-| Lange lock tijdens de export | `pg_dump --lock-wait-timeout=5min`, daarna faalt de run |
-| Privésleutel kwijt | oude exports zijn onbruikbaar; nieuw sleutelpaar, `publicKey` via PR, herstelblad bijwerken |
-| Een lid vroeg na de export om verwijdering | runbook-stap na herstel: verwijderverzoeken sinds de exportdatum opnieuw uitvoeren |
+| Opruimtaak valt uit (ook: GitHub zet de workflow na 60 dagen stil) | de map groeit; de opruimtaak meldt zich bij een eigen dodemansknop als het app-ADR dat kiest |
+| Privésleutel kwijt | oude exports zijn onbruikbaar; nieuw sleutelpaar, `BACKUP_PUBLIC_KEY` via PR, herstelblad bijwerken |
+| Herstel op een beheerde database zonder `pg_read_all_data` of `BYPASSRLS` | het app-ADR noemt de rol die de export maakt; de oefening bewijst dat hij werkt |
+| Lopende uitnodigingen na herstel | ongeldig; runbook: opnieuw uitnodigen |
+| Een lid vroeg na de export om verwijdering | runbook: verwijderverzoeken sinds de exportdatum nalopen, voor zover nog bekend; bij een ramp aanvaard risico (ADR 0108) |
 
 ## Raakt ook
 
-- `db/init/01-roles.sql` en `db/tests/rolattributen.sql` (bestaande test, nieuw gedrag: de tester past hem aan, de PR noemt
-  het, R-TEST-02).
-- `docs/framework.md`: R-DB-01, §3, R-PROV-06, R-SEC-06.
-- `compose.yaml`, en `.github/workflows` alleen bij een GitHub-uitvoerder: gate-paden, eigenaarakkoord.
+- `db/init/01-roles.sql`, `db/tests/rolattributen.sql` en `db/tests/invarianten.sql` (bestaande tests, nieuw gedrag: de
+  tester past ze aan, de PR noemt het, R-TEST-02).
+- `check:migrations`, `check:secdef`, `test:db` en `db/tests/functies.sql` voor `app.after_restore`; de lijst van core-acties
+  voor `core.restore`.
+- `docs/framework.md`: R-DB-01, R-DB-14, §3, R-PROV-06, R-SEC-06. ADR 0039 wijzigt op het punt van ADR 0108.
+- `compose.yaml` en `.github/workflows/backup-prune.yml`: gate-paden, eigenaarakkoord.
 - `docs/nieuwe-app.md` noemt de productiepoort; `docs/operations/back-up-en-herstel.md` is nieuw.
-- Spec [achtergrondtaken](achtergrondtaken.md): `JOBS_ENABLED` als schakelaar bij de start.
+- Spec [achtergrondtaken](achtergrondtaken.md): een schakelaar waarmee taken bij de start uit blijven, voor na een herstel.
 
 ## Buiten scope
 
@@ -206,7 +259,8 @@ Geen scherm. Teksten voor mensen staan in de mails en het runbook.
 
 ## Testplan
 
-- Integratietests tegen de echte stack met een lokale map als bestemming en een nep-dodemansknop.
+- Integratietests tegen de echte stack met een lokale map als bestemming (één met en één zonder wisrecht), een
+  nep-dodemansknop en Mailpit voor de mails.
 - Bij oplevering van deel A: één volledig herstel volgens het runbook door iemand anders dan de bouwer, met de gemeten tijd
   in de PR. Daarna jaarlijks als advies in het runbook.
 - `pnpm gate:fast`, `pnpm gate:slow` en `pnpm ratchet` groen; uitslag in de PR.
@@ -215,9 +269,13 @@ Geen scherm. Teksten voor mensen staan in de mails en het runbook.
 
 Een vraag zonder aanbeveling (de eigenaar kiest) blokkeert `goedgekeurd`; een vraag met aanbeveling mag blijven staan. `check-docs` telt elke regel in deze sectie met het waarschuwingsteken en "open" (ook met U+FE0F of hoofdletter, ook zonder opsommingsteken).
 
-- **OV-1** — Versleutelen met `age` (publieke sleutel, de server kan niet lezen) of met `gpg` en een wachtwoord (vaak al
-  aanwezig). Aanbeveling: `age`; één klein programma, en een gekaapte server kan de oude back-ups dan niet lezen.
+- **OV-1** — Versleutelen met `age` (publieke sleutel, de host kan niet lezen) of met `gpg` en een wachtwoord. Aanbeveling:
+  `age`; één klein programma, en een gekaapte host kan de oude back-ups dan niet lezen.
 - **OV-2** — Standaard bewaartermijn. Aanbeveling: 30 dagen, altijd minstens zeven exports.
-- **OV-3** — Waar de hersteltest standaard draait. Aanbeveling: op de host; GitHub alleen als er geen host is en het app-ADR
-  het aanvaardt.
-- **OV-4** — Welke dodemansknop. Aanbeveling: de template noemt geen dienst; elke URL die een gemiste melding alarmeert werkt.
+- **OV-3** — Waar de oefening standaard draait. Aanbeveling: op de host; GitHub alleen als er geen host is en het app-ADR het
+  aanvaardt.
+- **OV-4** — Waar het opruimen standaard draait. Aanbeveling: een geplande workflow met alleen het geheim van de opruimer;
+  valt die stil, dan groeit de map alleen.
+- **OV-5** — Welke dodemansknop. Aanbeveling: de template noemt geen dienst; elke URL die een gemiste melding alarmeert werkt.
+- **OV-6** — Verwijderverzoeken na een ramp. Aanbeveling: het risico aanvaarden in de template; een app met gevoelige
+  ledendata kiest in haar ADR een klein logboek buiten de database.
