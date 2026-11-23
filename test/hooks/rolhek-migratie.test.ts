@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
 
-// WS-04 punt 5: een migratie is "gecommit" als hij in de merge-base met origin/main staat (zoals check:migrations),
-// niet zodra hij in HEAD staat. Echte tijdelijke repo's met een bare remote, door het echte hook-script beoordeeld.
+// WS-04 punt 5: een migratie is "gecommit" als hij op de tip van origin/main of het anker staat (#927; check:migrations
+// gebruikt de merge-base), niet zodra hij in HEAD staat. GEWIJZIGD (#927, R-TEST-02): alleen deze tekst en de titels. Echte tijdelijke repo's met een bare remote, door het echte hook-script beoordeeld.
 const hook = path.join(process.cwd(), 'rails/hooks/rolhek.mjs');
 const gates = path.join(process.cwd(), '.claude/gates.json');
 const MIGRATION = 'db/migrations/20261012000000_x.sql';
@@ -67,7 +67,7 @@ afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
-describe('rolhek: gecommitte migratie = staat in de merge-base met origin/main', () => {
+describe('rolhek: gecommitte migratie = staat op de tip van origin/main', () => {
   test('alleen op de branch gecommit: Edit door de developer is toegestaan', () => {
     const dir = makeRepo(true);
     git(dir, 'checkout', '-q', '-b', 'feat/x');
@@ -92,7 +92,7 @@ describe('rolhek: gecommitte migratie = staat in de merge-base met origin/main',
     expect(result.output).toContain('gecommitte migratie');
   });
 
-  test('zonder origin/main: terugval op HEAD (deny) met de melding git fetch origin', () => {
+  test('zonder origin/main en anker: een bestaande migratie wordt geweigerd met de melding git fetch origin', () => {
     const dir = makeRepo(false);
     commitMigration(dir);
 
