@@ -293,13 +293,14 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   `check-docs`, `check-roadmap`, `feiten` en het rolhek; regel 6 als ratchet; `vergeten-gebouwd` weg; de omzetting van
   bestaande `status: gebouwd`; R-WERK-07, R-WERK-08 en R-DOC-10. **Klaar als:** de "Klaar als" van ADR 0104 klopt.
   aanleiding: `docs/template/adr/0104-gebouwd-uit-ac-dekking.md` (Gevolgen)
-- [ ] **Bouw ADR 0106: schaduwmodus met tijdgrens.** Register `.kit/schaduw.json` met schemacheck, `schaduw-termijn` in
+- [x] **Bouw ADR 0106: schaduwmodus met tijdgrens.** Register `.kit/schaduw.json` met schemacheck, `schaduw-termijn` in
   `strikt` en `meldingen` (voorvoegsel `schaduw:`), overslag in een app, weigering in `template:release`, meetregel `Schaduw` met `pnpm meting --schaduw` en de norm in het
   regelboek. **Klaar als:** de falende fixtures uit de Gevolgen van ADR 0106 staan groen.
+  Bewijs: `test/rails/schaduw-register.test.ts`, `test/rails/schaduw-termijn.test.ts`, checks `schaduw-register` en `schaduw-termijn`.
   aanleiding: `docs/template/adr/0106-schaduwmodus-met-tijdgrens.md` (Gevolgen)
-- [ ] **Bouw ADR 0107: gedragsbaseline.** Spec `gedragsbaseline`; `scripts/kit/leerpunt.mjs` toetst `baseline:`,
+- [x] **Bouw ADR 0107: gedragsbaseline.** Spec `gedragsbaseline`; `scripts/kit/leerpunt.mjs` toetst `baseline:`,
   `geen baseline:` en het scenarioblok; het PR-sjabloon, de sluitzin in `opleveren`, een recept en R-WERK-13.
-  **Klaar als:** de "Klaar als" van ADR 0107 klopt.
+  **Klaar als:** de "Klaar als" van ADR 0107 klopt. Gemerged: #914.
   aanleiding: `docs/template/adr/0107-gedragsbaseline-voor-tekstwijzigingen.md` (Gevolgen)
 - [ ] **Fixlus afdwingen (ADR 0105, R-DOC-02).** (a) De SubagentStop-hook (`reviewerStop` in `rails/hooks/lib/werkstraat.mjs`)
   eist per bevinding `blokkerend` of `klein`, en in de modus fixdiff per bevinding `opgelost` of `niet opgelost`; (b)

@@ -19,6 +19,13 @@ describe.each(['conflictmarkers', 'depcruise', 'onderdrukkingen', 'ac-toets', 's
   });
 });
 
+test('schaduwmodus/AC-14: schaduw.mjs los gedraaid geeft exit 1 en noemt pnpm ratchet en schaduw', () => {
+  const result = spawnSync(process.execPath, ['scripts/kit/schaduw.mjs'], { cwd: root, encoding: 'utf8' });
+  expect(result.status).toBe(1);
+  expect(result.stderr).toContain('pnpm ratchet');
+  expect(result.stderr).toContain('schaduw');
+});
+
 // De exports blijven gelijk en importeren geeft geen melding of exitcode (de ratchet importeert ze).
 describe('importeren door de ratchet', () => {
   test.each([

@@ -124,6 +124,34 @@ function modus(value) {
   return typeof value === 'string' && /^[a-zA-Z]+$/.test(value) ? value : undefined;
 }
 
+/** De velden `{t,e,s,b,a}` die elke meetregel heeft. @param {Record<string, unknown>} p @param {string} e @param {Date} nu */
+function basisVelden(p, e, nu) {
+  return {
+    t: nu.toISOString(),
+    e,
+    s: sessieId(p['session_id']),
+    b: branch(repoRoot(payloadCwd(p))),
+    a: text(p['agent_type']) ?? 'hoofdsessie',
+  };
+}
+
+/**
+ * Een treffer van een controle in schaduw (spec schaduwmodus, ADR 0106): `{t,e:"Schaduw",s,b,a,c,k}`, met `c` de naam van
+ * de controle en `k` de sleutel van de toolcall uit dezelfde payload, nooit inhoud. Null bij een ongeldige controle of een
+ * payload die zelf `Schaduw` heet (EVENTS blijft voor hookpayloads).
+ * @param {unknown} payload
+ * @param {unknown} controle
+ * @param {Date} nu
+ */
+export function schaduwRegel(payload, controle, nu) {
+  if (typeof controle !== 'string' || !/^[a-z][a-z0-9-]{0,63}$/.test(controle)) return null;
+  const p = record(payload);
+  if (p['hook_event_name'] === 'Schaduw') return null;
+  const tool = text(p['tool_name']);
+  const k = tool === undefined ? '' : sleutel(tool, record(p['tool_input']), payloadCwd(payload));
+  return { ...basisVelden(p, 'Schaduw', nu), c: controle, k };
+}
+
 /**
  * Eén meetregel `{t,e,s,b,a,m,tool,id,k,tc}` (`m` alleen bij een geldige permission_mode; `tc` alleen bij een
  * PostToolUse van Agent of Task met een geldige telling), of null voor een event dat niet gemeten wordt.
@@ -135,13 +163,7 @@ export function regel(payload, nu) {
   const e = text(p['hook_event_name']);
   if (e === undefined || !EVENTS.has(e)) return null;
   const cwd = payloadCwd(payload);
-  const basis = {
-    t: nu.toISOString(),
-    e,
-    s: sessieId(p['session_id']),
-    b: branch(repoRoot(cwd)),
-    a: text(p['agent_type']) ?? 'hoofdsessie',
-  };
+  const basis = basisVelden(p, e, nu);
   const m = modus(p['permission_mode']);
   if (m !== undefined) Object.assign(basis, { m });
   if (!TOOL_EVENTS.has(e)) return basis;

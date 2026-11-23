@@ -4,8 +4,11 @@
 // eslint-suppressions.json met `pnpm lint:prune`, waarin geen paar (bestand, lintregel) mag stijgen (strikt,
 // spec onderdrukkingen-ratchet). Twee kanalen naast de baseline (ADR 0065): `meldingen` ("let op",
 // stdout en de samenvatting van de CI-job, nooit een andere exitcode) en `strikt` (altijd rood, komt nooit in de baseline, ook niet met --update).
-// Strikt zijn onder meer de krimpcontrole, de onderdrukkingen-ratchet en `ac-toets` (een nieuwe of gewijzigde AC noemt
-// zijn testbestand achter `Toets:`).
+// Strikt zijn onder meer de krimpcontrole, de onderdrukkingen-ratchet, `ac-toets` (een nieuwe of gewijzigde AC noemt
+// zijn testbestand achter `Toets:`) en de schaduwmodus (ADR 0106, scripts/kit/schaduw.mjs): `schaduw-register` (het schema
+// van .kit/schaduw.json) en `schaduw-termijn` (einddatum tegen de commitdatum van HEAD, uitvoerders). Een controle in
+// schaduw heeft een uitvoerder in de map `schaduw` hieronder; die draait één keer per run en meldt zijn treffers in
+// `meldingen` als `schaduw: <naam>: <treffer>`. De groene regel noemt ook de strikte modules.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { format, resolveConfig } from 'prettier';
 import { acToetsMeldingen, acToetsUitGit } from './ac-toets.mjs';
@@ -15,10 +18,18 @@ import { conflictMarkerViolations } from './conflictmarkers.mjs';
 import { dependencyViolations } from './depcruise.mjs';
 import { onderdrukkingMeldingenUitGit, onderdrukkingenUitGit } from './onderdrukkingen.mjs';
 import { naarSamenvatting } from './samenvatting.mjs';
+import { registerViolations, termijnMeldingen, termijnViolations, trefferMeldingen } from './schaduw.mjs';
 
 const BASELINE = '.kit/baseline.json';
 
 /** @typedef {{ key: string, message: string }} Violation */
+
+/**
+ * Uitvoerders van controles in schaduw (spec schaduwmodus): sleutel = `naam` in .kit/schaduw.json. Leeg zolang het register
+ * leeg is; een uitvoerder geeft precies `{ treffers: string[] }`, al het andere is een skip en strikt rood.
+ * @type {Record<string, () => Promise<{ treffers: string[] }>>}
+ */
+export const schaduw = {};
 
 /** @type {Record<string, () => Promise<Violation[]>>} */
 export const checks = {
@@ -38,6 +49,11 @@ export const strikt = {
   'pgtap-vorm': () => Promise.resolve(pgTapVormViolations(process.cwd())),
   // Een nieuwe of gewijzigde AC noemt zijn testbestand (spec ac-toets).
   'ac-toets': () => Promise.resolve(acToetsUitGit(process.cwd(), process.env['GITHUB_ACTIONS'] === 'true')),
+  // Het schaduwregister heeft de vorm uit de spec en wordt niet verlengd (spec schaduwmodus).
+  'schaduw-register': () =>
+    Promise.resolve(registerViolations(process.cwd(), { ci: process.env['GITHUB_ACTIONS'] === 'true' })),
+  // Geen controle in schaduw na haar einddatum of zonder volledige uitvoerder (spec schaduwmodus).
+  'schaduw-termijn': () => termijnViolations(process.cwd(), schaduw),
 };
 
 /** Meldingen zonder overtreding (leesbudget/AC-2). @type {Record<string, () => Promise<string[]>>} */
@@ -45,6 +61,8 @@ export const meldingen = {
   'check-docs': () => docsMeldingen(process.cwd()),
   'eslint-onderdrukkingen': () => Promise.resolve(onderdrukkingMeldingenUitGit(process.cwd())),
   'ac-toets': () => Promise.resolve(acToetsMeldingen(process.cwd())),
+  'schaduw-termijn': () => termijnMeldingen(process.cwd()),
+  schaduw: () => trefferMeldingen(process.cwd(), schaduw),
 };
 
 /**
@@ -119,7 +137,10 @@ async function check() {
     failed ||= nieuw.length > 0 || opgelost.length > 0;
   }
   if (failed) process.exitCode = 1;
-  else console.info(`✓ ratchet: geen nieuwe of opgeloste overtredingen (${Object.keys(checks).join(', ')})`);
+  else
+    console.info(
+      `✓ ratchet: geen nieuwe of opgeloste overtredingen (${Object.keys(checks).join(', ')}); strikt: ${Object.keys(strikt).join(', ')}`,
+    );
 }
 
 if (import.meta.main) await (process.argv.includes('--update') ? update() : check());

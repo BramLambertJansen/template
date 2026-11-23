@@ -1,5 +1,5 @@
 ---
-status: goedgekeurd # voorstel | goedgekeurd | gebouwd | vervallen — architect of hoofdsessie zet de status in het voorstel, de merge door de eigenaar is het besluit (ADR 0046); gebouwd: `status: gebouwd` in de bouw-PR (ADR 0095)
+status: gebouwd # voorstel | goedgekeurd | gebouwd | vervallen — architect of hoofdsessie zet de status in het voorstel, de merge door de eigenaar is het besluit (ADR 0046); gebouwd: `status: gebouwd` in de bouw-PR (ADR 0095)
 namespace: schaduwmodus
 ---
 
@@ -143,7 +143,8 @@ geen nieuwe bibliotheken.
 | Situatie | Gedrag |
 |---|---|
 | `eind` is de commitdatum zelf | melding "nog 0 dagen", exit 0 |
-| `.claude/gates.json` onleesbaar | de check gooit (net als `isTemplate`), dus geen stil groen |
+| `.claude/gates.json` onleesbaar of ongeldig | de check gooit (net als `isTemplate`), dus geen stil groen |
+| `.claude/gates.json` ontbreekt | telt als app en slaat over, net als `check-docs` |
 | HEAD zonder commit (lege repo) | strikt rood: `schaduw-termijn: geen commitdatum van HEAD` |
 | `spec` wijst naar `docs/specs/` | schemafout: het register geldt alleen in de template |
 | PR-CI met de merge-commit van GitHub als HEAD | de datum is die van die merge-commit en schuift mee met elke run; een rerun na `eind` wordt rood zonder nieuwe commit. "Dezelfde commit, dezelfde uitslag" geldt lokaal en op `main` |
