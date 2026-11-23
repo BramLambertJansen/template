@@ -6,7 +6,7 @@ import { loadConfig } from './rolhek.mjs';
 import { gitText, readAuthority, repositoryName, trustedBase } from './authority-context.mjs';
 import { anker } from './objecten.mjs';
 import { APP_BESTAND } from './padtabel.mjs';
-import { trustedKitScript, trustedMerge, trustedRunner } from './runner-authority.mjs';
+import { ankerVerouderd, trustedKitScript, trustedMerge, trustedRunner } from './runner-authority.mjs';
 
 /**
  * @param {string} root
@@ -161,6 +161,8 @@ export function rolhekContext(root, cwd) {
     runnerTrusted: () => (trusted ??= trustedRunner(root, basis)),
     mergeTrusted: () => (mergeVertrouwd ??= trustedMerge(root, basis)),
     kitTrusted: () => (kitVertrouwd ??= trustedKitScript(root, basis)),
+    // Leerpunt #888: alleen voor de melding bij een weigering van de ankertoets.
+    ankerVerouderd: (/** @type {'merge' | 'kit'} */ modus) => ankerVerouderd(root, basis, modus),
   };
 }
 

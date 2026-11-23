@@ -28,6 +28,7 @@ import { afgeleid, globMatch, onderhoudVan, samengevoegd, templateVan } from './
  *   isDir: (rel: string) => boolean, branch: string,
  *   authority?: import('./task-authority.mjs').Authority | null, runnerTrusted?: boolean | (() => boolean),
  *   mergeTrusted?: boolean | (() => boolean), kitTrusted?: boolean | (() => boolean),
+ *   ankerVerouderd?: boolean | ((modus: 'merge' | 'kit') => boolean),
  *   onbekendeRol?: boolean, onderhoud?: boolean, files?: (rel: string) => string[],
  *   gevolgd?: (paden: readonly string[]) => Set<string>, werkmappen?: () => string[], netwerkvormen?: readonly string[] }} Ctx
  * `netwerkvormen`: de patronen uit `sandbox.excludedCommands` (`git push origin HEAD`, `git commit *`) uit de vertrouwde basis
@@ -299,7 +300,24 @@ function decideKitScript({ command, role }, { ctx, script }, decision) {
   else if (!exact) decision.deny.push(script.vorm);
   else if (decision.deny.length + decision.ask.length > 0) return;
   else if (ctx.cwd === ctx.root && (script.vertrouwd === 'kit' ? kitIsTrusted(ctx) : mergeIsTrusted(ctx))) decision.allow = true;
-  else decision.deny.push(script.basis);
+  else {
+    const achter = ctx.cwd === ctx.root && ankerLooptAchter(ctx, script.vertrouwd);
+    decision.deny.push(achter ? `${script.basis}. ${ANKER_ACHTER}` : script.basis);
+  }
+}
+
+// Leerpunt #888: alleen een uitleg bij de weigering, geen uitzondering.
+const ANKER_ACHTER = 'Hier wijkt alleen het anker af: het anker loopt achter op origin/main, want main kreeg na de ' +
+  'sessiestart een merge die scripts of rails wijzigt. Een nieuwe sessie, /clear of /compact zet het anker opnieuw; ' +
+  'anders doet de eigenaar het zelf';
+
+/**
+ * Alleen `true` telt.
+ * @param {{ ankerVerouderd?: boolean | ((modus: 'merge' | 'kit') => boolean) }} ctx @param {'merge' | 'kit'} modus
+ */
+function ankerLooptAchter(ctx, modus) {
+  const value = typeof ctx.ankerVerouderd === 'function' ? ctx.ankerVerouderd(modus) : ctx.ankerVerouderd;
+  return value === true;
 }
 
 /** @param {{ mergeTrusted?: boolean | (() => boolean) }} ctx */

@@ -74,10 +74,30 @@ function mergeMode(text) {
  * @param {ReturnType<typeof trustedBase>} [basis]
  */
 export function trustedKitScript(root, basis = trustedBase(root, undefined)) {
-  if (basis === null) return false;
-  // `pnpm run` zet `node_modules/.bin` vooraan in PATH; daar hoort geen gh, git of node (ADR 0069 punt 4).
-  if (MERGE_BIN.some((naam) => existsSync(path.join(root, 'node_modules', '.bin', naam)))) return false;
+  if (basis === null || eigenBinary(root)) return false;
   return unchangedFrom(root, basis.sha, MERGE_FILES);
+}
+
+/** `pnpm run` zet `node_modules/.bin` vooraan in PATH; daar hoort geen gh, git of node (ADR 0069 punt 4). @param {string} root */
+function eigenBinary(root) {
+  return MERGE_BIN.some((naam) => existsSync(path.join(root, 'node_modules', '.bin', naam)));
+}
+
+/**
+ * Leerpunt #888: weigert de ankertoets alleen omdat het anker achterloopt? Waar: geen eigen gh, git of node in
+ * `node_modules/.bin`, bij `merge` de modus `niet-kritiek` in het anker, `MERGE_FILES` wijken af van de merge-base met het
+ * anker maar zijn gelijk aan die met origin/main, en origin/main is een andere commit dan het anker. Alleen voor de melding;
+ * het geeft nooit iets vrij.
+ * @param {string} root
+ * @param {{ sha: string, read?: (rel: string) => string | null } | null} basis
+ * @param {'merge' | 'kit'} [modus]
+ */
+export function ankerVerouderd(root, basis, modus = 'kit') {
+  if (basis === null || eigenBinary(root)) return false;
+  if (modus === 'merge' && !mergeMode(basis.read?.('.claude/gates.json') ?? '')) return false;
+  const origin = gitText(root, ['rev-parse', '--verify', '--quiet', 'origin/main^{commit}'])?.trim();
+  if (origin === undefined || !/^[0-9a-f]{40}$/.test(origin) || origin === basis.sha) return false;
+  return !unchangedFrom(root, basis.sha, MERGE_FILES) && unchangedFrom(root, origin, MERGE_FILES);
 }
 
 /**
