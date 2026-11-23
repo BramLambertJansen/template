@@ -102,7 +102,8 @@
     "git commit *",
     "git push origin HEAD",
     "gh api *",
-    "pnpm pr:verify *"
+    "pnpm pr:verify *",
+    "pnpm meting *"
   ],
   "network": {
     "allowedDomains": ["registry.npmjs.org", "github.com", "api.github.com"]

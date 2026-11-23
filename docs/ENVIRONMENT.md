@@ -146,7 +146,8 @@ pnpm-opslag is nodig. Naast de zeven runneruitzonderingen draaien `git commit *`
 `pnpm pr:verify *` en `pnpm meting *` buiten de sandbox, lokaal en in de cloud, en `pnpm pr:log *` onder de ankertoets (ADR 0061 en 0102; zie
 [Cloud: commit, push, PR en bewijs](#cloud-commit-push-pr-en-bewijs)). Lefthook en `pr:verify` draaien daardoor code uit de
 werkmap zonder sandbox en zonder vraag vooraf; alleen het rolhek vooraf staat ertussen, CI en de eigenaarmerge blijven de
-grens (aanvaard restrisico).
+grens (aanvaard restrisico). Dat geldt ook voor `pnpm meting`, dat alleen leest en `gh` start; `METING_GH` kiest welk
+programma (`scripts/kit/meting.mjs:306`).
 
 Regressies staan in `test/scripts/mise-pnpm-selection.test.ts`, `test/scripts/toolchain-pnpm-runtime.test.ts`,
 `test/rails/claude-sandbox-werkstraat.test.ts` en `test/hooks/rolhek-sandbox-werkstraat.test.ts`.

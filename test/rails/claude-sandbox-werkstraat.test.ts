@@ -69,7 +69,8 @@ const RUNNER = [
   'pnpm db:generate *',
   'pnpm check:snapshot *',
 ];
-const CLOUDROUTE = ['git commit *', 'git push origin HEAD', 'gh api *', 'pnpm pr:verify *'];
+// GEWIJZIGD (leerpunt #899, besluit eigenaar, R-TEST-02): `pnpm meting *` komt erbij, zodat de trend `gh` bereikt.
+const CLOUDROUTE = ['git commit *', 'git push origin HEAD', 'gh api *', 'pnpm pr:verify *', 'pnpm meting *'];
 
 test('runneruitzonderingen en de cloudroute, gelijk aan de vastgelegde grens', () => {
   expect(sandbox['excludedCommands']).toEqual(boundaries['excludedCommands']);
