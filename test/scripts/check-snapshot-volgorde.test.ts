@@ -3,6 +3,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync 
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, expect, test } from 'vitest';
+import { expectAbsent } from '../support/absence.ts';
 
 // template-update PR 2, AC-7, niveau 2 (docs/template/specs/template-update.md): scripts/check-snapshot.sh draait de tweede bouw
 // (`runner.sh gen-volgorde`) alleen als het hulpscript migraties noemt die ouder zijn dan een bestaande, en vergelijkt dan de
@@ -220,3 +221,38 @@ test.each([
     expect(result.stdout).not.toContain('✓ check:snapshot');
   },
 );
+
+// Leerpunt #810: faalt de bouw op volgorde van binnenkomst, dan bereikt dbmate geen latere migratie; het advies "nieuwe
+// migratie" helpt dan niet. Bij twee complete, verschillende schema's blijft dat advies wel.
+test('leerpunt #810: faalt de bouw, dan wijst de melding naar de eerste fout en houdt de update tegen', () => {
+  const dir = fixture({ hernoemingen: REGELS });
+
+  const result = run(dir, 'gen-volgorde');
+
+  expect(result.status).not.toBe(0);
+  expect(result.stderr).toMatch(/eerste fout/);
+  expect(result.stderr).toMatch(/houd de update tegen/);
+  expect(result.stderr).toMatch(/nieuwer tijdstempel/);
+});
+
+test('leerpunt #810: faalt de bouw, dan adviseert de melding geen nieuwe migratie achteraan', () => {
+  const dir = fixture({ hernoemingen: REGELS });
+
+  const result = run(dir, 'gen-volgorde');
+
+  expect(result.status).not.toBe(0);
+  expectAbsent(result.stderr, /nieuwe migratie/i, {
+    recognizes: ['leg het vast in een nieuwe migratie', 'Een Nieuwe Migratie'],
+    allows: ['de eerste fout van de runner', 'houd de update tegen', 'een latere migratie bereikt dbmate niet'],
+  });
+});
+
+test('leerpunt #810: verschillen de schema’s, dan blijft het advies van een nieuwe migratie', () => {
+  const dir = fixture({ hernoemingen: REGELS, volgorde: dump({ kleur: 'blauw' }) });
+
+  const result = run(dir);
+
+  expect(result.status).not.toBe(0);
+  expect(result.stderr).toMatch(/ander schema/);
+  expect(result.stderr).toMatch(/nieuwe migratie/);
+});
