@@ -103,8 +103,9 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt de bestaande vo
   juiste label.
 - **leerlus/AC-7** — Rolhek, elke subagent: `gh issue edit|close|reopen|delete|transfer|lock|unlock|pin|unpin|comment|develop`
   geeft deny, en `gh api` met een schrijvende methode naar `…/issues…` blijft deny (bestaande regel, nu ook in de tabeltest);
-  `gh issue view|list|status` blijven toegestaan. Gewijzigd door ADR 0101 (spec leerlus-bewijs AC-11): voor de hoofdsessie zijn `comment`, `edit` en `close` buiten de leerpuntvorm en de andere
-  schrijfacties nu ask. Was: "Voor de hoofdsessie verandert de uitslag van deze opdrachten niet."
+  `gh issue view|list|status` blijven toegestaan. Gewijzigd door ADR 0101 (spec leerlus-bewijs AC-11): voor de
+  hoofdsessie zijn `comment`, `edit` en `close` buiten de leerpuntvorm en de andere schrijfacties nu ask. Was: "Voor de
+  hoofdsessie verandert de uitslag van deze opdrachten niet." Toets: `test/hooks/rolhek-leerpunt.test.ts`
 - **leerlus/AC-8** — `.claude/settings.json` staat de exacte vorm `gh issue create --repo <onderhoud.repository> --label leerpunt …`
   toe (geen permissieprompt); elke andere `gh issue create` valt niet onder een allow-regel. Een test leest de regel en
   vergelijkt de repo met `onderhoud.repository`.

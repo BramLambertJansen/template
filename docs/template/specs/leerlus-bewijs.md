@@ -118,11 +118,12 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   `contents: read`, `pull-requests: read` en `issues: read`. Een test leest beide bestanden en faalt bij elk ander recht, bij
   elke aanroep die sluit, heropent of de body bewerkt, en bij elke `${{ github.event.* }}` in een `run:`-regel (issuebody en
   PR-beschrijving alleen via `env` of een bestand).
-- **leerlus-bewijs/AC-8** — De skill `opleveren` stap 8 noemt de MCP-schrijfweg voor de cloud (alleen aanmaken, alleen
-  template-repo, label `leerpunt`, dezelfde body) en de sectie `## Leerpunt`; `.github/pull_request_template.md` heeft de
+- **leerlus-bewijs/AC-8** — De skill `opleveren` stap 8 noemt de MCP-schrijfweg voor de cloud (aanmaken met label
+  `leerpunt` en dezelfde body, alleen template-repo; sinds ADR 0101 ook bijwerken, sluiten als duplicaat en labels volgens
+  AC-14; was "alleen aanmaken") en de sectie `## Leerpunt`; `.github/pull_request_template.md` heeft de
   sectie `## Leerpunt` met de regelvorm. `docs/framework.md` R-SEC-09, R-ROL-12 en R-WERK-13, `AGENTS.md` (regel over externe
   diensten) en `CLAUDE.md` ("MCP alleen read-only") noemen de uitzondering met ADR 0078. Het rolhek blijft op de MCP-issuetool
-  vragen (ask); `mcpLezen` in `.claude/gates.json` verandert niet.
+  vragen (ask); `mcpLezen` in `.claude/gates.json` verandert niet. Toets: `test/rails/opleveren-skill.test.ts`
 - **leerlus-bewijs/AC-9** — De voorsortering staat als prompt in `docs/operations/leerpunten-voorsorteren.md`, zonder
   verwijzing naar een uitbreidingsstop, en noemt de labels `leerpunt-onvolledig` en `leerpunt-zonder-bewijs` als eigen bak.
 - **leerlus-bewijs/AC-10** — Spec `leerlus.md` krijgt `status: gebouwd # #312`; het ST-09-protocol telt "opgepakt" als
@@ -159,11 +160,13 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   `test/scripts/leerpunt-duplicaat.test.ts` (nieuw)
 - **leerlus-bewijs/AC-14** — De skill `opleveren` stap 8 noemt vóór het indienen de zoektocht naar geraakte open leerpunten
   (`gh issue list … --label leerpunt --state open --search`) en per geraakt leerpunt de drie uitkomsten `opgelost` (via
-  `Closes #<nr>` en `## Leerpunt`), `deels` en `zelfde les opnieuw`, met de slotregel "geen open leerpunt geraakt"; de
+  `Closes #<nr>` en `## Leerpunt`, al in de PR), `deels` en `zelfde les opnieuw`, met de slotregel "geen open leerpunt geraakt"; de
   doelcheck vóór elke schrijfactie (`gh issue view <nr> … --json labels`); de drie gh-vormen in de vorm uit AC-12; bij een
   duplicaat eerst `gh issue comment` met `duplicaat van #<nr>` en daarna `gh issue close --duplicate-of`; en in de cloud de
-  MCP-issuetool voor dezelfde acties plus labels, nooit `leerpunt`, `leerpunt-onvolledig` of `leerpunt-zonder-bewijs`. Toets:
-  `test/rails/leerpunt-bijwerken-docs.test.ts` (nieuw)
+  MCP-issuetool voor dezelfde acties plus labels, nooit `leerpunt`, `leerpunt-onvolledig` of `leerpunt-zonder-bewijs`. Omdat
+  stap 8 na de merge draait, noemt ook CI-lus stap 1 de zoektocht vóór het openen van de PR, met `Closes #<nr>` en
+  `## Leerpunt` voor een opgelost leerpunt (ADR 0101 punt 6, Herzien). Toets: `test/rails/leerpunt-bijwerken-docs.test.ts`
+  (nieuw)
 - **leerlus-bewijs/AC-15** — `docs/framework.md` R-WERK-13, R-ROL-07, R-ROL-12 en R-SEC-09 en `AGENTS.md` (regel over externe
   diensten) noemen bijwerken en sluiten als duplicaat met ADR 0101; `docs/nieuwe-app.md` noemt de drie nieuwe allow-regels
   bij de fork. Een test zoekt in elk bestand de verwijzing naar 0101. Toets: `test/rails/leerpunt-bijwerken-docs.test.ts`

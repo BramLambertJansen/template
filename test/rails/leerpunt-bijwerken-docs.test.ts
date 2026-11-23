@@ -50,6 +50,18 @@ describe('leerlus-bewijs/AC-14 opleveren stap 8: afstemmen, bijwerken en sluiten
     },
   );
 
+  // Stap 8 draait na de merge; een opgelost leerpunt moet dus al in de PR staan (ADR 0101 punt 6, Herzien).
+  test('leerlus-bewijs/AC-14: CI-lus stap 1 noemt de zoektocht vóór het openen van de PR met Closes en ## Leerpunt', () => {
+    const start = SKILL.search(/^## CI-lus tot groen/m);
+    const eind = SKILL.search(/^2\. Wacht met/m);
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(eind).toBeGreaterThan(start);
+    const stap1 = SKILL.slice(start, eind);
+    expect(stap1).toMatch(/vóór het openen van de PR/i);
+    expect(stap1).toContain('Closes #<nr>');
+    expect(stap1).toContain('## Leerpunt');
+  });
+
   test('leerlus-bewijs/AC-14: de slotregel is "geen open leerpunt geraakt"', () => {
     expect(stap).toContain('geen open leerpunt geraakt');
   });

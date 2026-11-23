@@ -20,6 +20,9 @@ Feiten nu:
    en dan `git commit -F <bestand>` (de kale merge kan in de cloud niet ondertekenen). Toont
    `git diff --name-only HEAD...origin/main -- .claude/skills .claude/agents .claude/hooks .claude/settings.json .claude/settings.local.json` iets, dan niet mergen maar de eigenaar melden
    (leerpunt #789; `docs/operations/recepten.md`).
+   Vóór het openen van de PR (ADR 0101 punt 6): zoek de open leerpunten die het werk raakt (zie stap 8 van Opruimen); lost
+   de PR er een op, dan krijgt de beschrijving `Closes #<nr>` en de sectie `## Leerpunt` met bewijs, zodat GitHub het bij de
+   merge sluit.
    De bestaande pre-push-hook draait de volledige `pnpm gate:fast`; start die niet nogmaals alleen voor de overdracht.
    Gerichte feedback is geen volledige groene gate. Iedere PR behoudt alle CI-checks; geen oude uitslag hergebruiken.
 2. Wacht met `pnpm pr:verify <nr> --watch` (geen kale `gh pr checks --watch`: die toetst SHA, branch en herkomst van de check niet).
@@ -90,8 +93,9 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
    een padregel, spec of ADR (`docs/specs/`, `docs/adr/`) in de app, geen issue. Niets: zeg "geen leerpunt".
    Vóór het indienen eerst afstemmen (ADR 0101 punt 6): zoek de open leerpunten die het werk raakt, met trefwoorden uit
    de geraakte paden en regels: `gh issue list --repo <repo> --label leerpunt --state open --search <trefwoord>`, niet de hele
-   lijst. Per geraakt leerpunt één uitkomst: `opgelost` (de PR krijgt `Closes #<nr>` en `## Leerpunt` met bewijs; zonder
-   bewijs alleen een comment), `deels` (comment `deels: <wat gedaan is>; open: <wat nog moet>` met de PR, zo nodig de body
+   lijst. Dezelfde zoektocht hoort al vóór het openen van de PR (CI-lus stap 1). Per geraakt leerpunt één uitkomst: `opgelost`
+   (al afgehandeld in de PR met `Closes #<nr>` en `## Leerpunt`; GitHub sloot het bij de merge; zonder bewijs alleen een
+   comment), `deels` (comment `deels: <wat gedaan is>; open: <wat nog moet>` met de PR, zo nodig de body
    ingekort tot het resterende) of `zelfde les opnieuw` (comment met de nieuwe reproductie, geen nieuw issue). Slotregel per
    leerpunt de uitkomst, of "geen open leerpunt geraakt".
    Bijwerken en sluiten (ADR 0101): vóór elke schrijfactie de doelcheck `gh issue view <nr> --repo <repo> --json labels,state,url`;

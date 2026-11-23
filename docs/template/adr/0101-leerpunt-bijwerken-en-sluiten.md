@@ -6,7 +6,8 @@ Herzien: 2026-11-23: bij de bouw (eigenaar, 23 november 2026). Punt 2: sluiten a
 `opgelost door #<pr>`" vervalt, want spec leerlus-bewijs AC-1 maakt de job al rood als `## Leerpunt` een issue noemt dat de
 PR niet sluit, dus een opgelost leerpunt sluit GitHub zelf via `Closes #<nr>`. Punt 3 (bewijs zonder sluitwoord) vervalt
 daarmee. Punt 1 en 5: lokaal geen labels; R-ROL-08 weigert `gh issue edit` met een label-optie voor elke rol en blijft
-ongewijzigd; labels alleen via de MCP-issuetool in de cloud, na de doelcheck
+ongewijzigd; labels alleen via de MCP-issuetool in de cloud, na de doelcheck. Punt 6: de zoektocht en de uitkomst
+`opgelost` horen vóór het openen van de PR (CI-lus stap 1 van `opleveren`), want stap 8 draait na de merge
 
 Wijzigt [0078](0078-leerlus-met-bewijs.md) punt 4 en 5 en [0059](0059-leerlus-van-app-naar-template.md) voor zover dat alleen
 `gh issue create` toestaat; vult R-WERK-13, R-ROL-07, R-ROL-12 en R-SEC-09 aan. Drempel: A3 (een uitzondering op "MCP alleen
@@ -48,11 +49,11 @@ openstaat.
    want het rolhek geeft zelf geen allow. In de cloud mag de hoofdsessie de MCP-issuetool voor dezelfde acties gebruiken,
    plus labels zetten volgens punt 1; de doelcheck uit punt 4 is daar de enige inhoudelijke rem, en het rolhek vraagt per
    MCP-schrijfactie. Subagents schrijven geen issues (ongewijzigd).
-6. **Afstemmen in de leerpuntstap.** Vóór een nieuw leerpunt zoekt de hoofdsessie in `opleveren` stap 8 de open leerpunten
-   die het werk van de sessie raakt: `gh issue list --repo <repo> --label leerpunt --state open --search <trefwoord>`, met
+6. **Afstemmen.** Vóór het openen van de PR (`opleveren` CI-lus stap 1) en opnieuw vóór een nieuw leerpunt (stap 8, na de
+   merge) zoekt de hoofdsessie de open leerpunten die het werk van de sessie raakt: `gh issue list --repo <repo> --label leerpunt --state open --search <trefwoord>`, met
    trefwoorden uit de geraakte paden en regels, niet de hele lijst (R-DOC-09). Per geraakt leerpunt:
-   - **opgelost**: de PR krijgt `Closes #<nr>` en de sectie `## Leerpunt` met bewijs (0078 punt 1); zonder bewijs alleen een
-     comment;
+   - **opgelost**: vóór het openen krijgt de PR `Closes #<nr>` en de sectie `## Leerpunt` met bewijs (0078 punt 1); zonder
+     bewijs alleen een comment;
    - **deels opgelost**: een comment `deels: <wat gedaan is>; open: <wat nog moet>` met de PR, en zo nodig de body bijgewerkt
      zodat hij alleen het resterende beschrijft;
    - **zelfde les opnieuw**: een comment met de nieuwe reproductie op het bestaande leerpunt in plaats van een nieuw issue.
