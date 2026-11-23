@@ -127,33 +127,47 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   verwijzing naar een uitbreidingsstop, en noemt de labels `leerpunt-onvolledig` en `leerpunt-zonder-bewijs` als eigen bak.
 - **leerlus-bewijs/AC-10** — Spec `leerlus.md` krijgt `status: gebouwd # #312`; het ST-09-protocol telt "opgepakt" als
   gesloten met sluitbewijs of achterhaald (ADR 0078 punt 6).
-- **leerlus-bewijs/AC-11** — Bijwerken en sluiten (ADR 0101 punt 5). Het rolhek laat van de hoofdsessie zonder vraag door:
-  `gh issue comment <nr>` met alleen `--body-file`/`-F`; `gh issue edit <nr>` met alleen `--title`/`-t` en
-  `--body-file`/`-F` (minstens één); `gh issue close <nr>` met alleen `--duplicate-of <nr>`. In alle drie staat
-  `--repo`/`-R` precies één keer, gelijk aan `template.repository` (hoofdletterongevoelig), en precies één nummer als
-  positioneel argument. Ask bij: een andere of ontbrekende repo, `GH_REPO`/`GH_HOST` in het commando, commandosubstitutie,
-  `--body`/`-b`, `--editor`/`-e`, `--web`/`-w`, `--reason`/`-r`, `--comment`/`-c` bij close, `--edit-last`, `--delete-last`,
-  `--body-file -` (stdin), een `--duplicate-of` dat geen getal is, een ontbrekend of tweede nummer, of elke andere optie; ontbreekt `template.repository`, dan ask. `reopen`, `delete`,
-  `transfer`, `lock`, `unlock`, `pin`, `unpin` en `develop` zijn voor de hoofdsessie ask. Een label-optie bij `edit` blijft
-  voor elke rol deny (R-ROL-08, ongewijzigd). Een subagent blijft deny op elke schrijvende `gh issue` (R-ROL-07,
-  ongewijzigd). Tabeltest per vorm.
+- **leerlus-bewijs/AC-11** — Bijwerken en sluiten in het rolhek (ADR 0101 punt 5). Geldige vormen van de hoofdsessie, waarop
+  het rolhek geen ask en geen deny geeft: `gh issue comment <nr>` met alleen `--body-file`/`-F <pad>`; `gh issue edit <nr>`
+  met alleen `--title`/`-t` en `--body-file`/`-F` (minstens één); `gh issue close <nr>` met alleen `--duplicate-of <getal>`.
+  In alle drie staat `--repo`/`-R` precies één keer, gelijk aan `template.repository` (hoofdletterongevoelig), en precies
+  één positioneel getal als nummer. De toets loopt over alle ruwe woorden na `gh`, ook vóór `issue`; ook `--opt=waarde` en
+  geclusterde korte vormen (`-Ff.md`, `-tTitel`) tellen. Ask bij: een andere of ontbrekende repo, `GH_REPO`/`GH_HOST` in het
+  commando, commandosubstitutie, `--body`/`-b`, `--editor`/`-e`, `--web`/`-w`, `--reason`/`-r`, `--comment`/`-c`,
+  `--edit-last`, `--delete-last`, `--create-if-none`, `--body-file -` (stdin), een URL als nummer of als waarde van
+  `--duplicate-of` (gh volgt dan de repo uit de URL), `--`, een ontbrekend of tweede nummer, of elke andere optie; ontbreekt
+  `template.repository`, dan ask. `reopen`, `delete`, `transfer`, `lock`, `unlock`, `pin`, `unpin` en `develop` zijn voor de
+  hoofdsessie ask. Een label-optie bij `edit` blijft voor elke rol deny (R-ROL-08, ongewijzigd). Een subagent blijft deny op
+  elke schrijvende `gh issue` (R-ROL-07, ongewijzigd). Het rolhek geeft zelf geen allow: zonder prompt gaat alleen de vorm
+  uit AC-12. Wijzigt leerlus/AC-7 voor de hoofdsessie (zie Raakt ook). Tabeltest per vorm. Toets:
+  `test/hooks/rolhek-leerpunt-bijwerken.test.ts` (nieuw)
 - **leerlus-bewijs/AC-12** — `.claude/settings.json` heeft onder `permissions.allow` precies deze drie regels naast de
   bestaande voor `gh issue create`: `Bash(gh issue comment --repo <template.repository> *)`,
   `Bash(gh issue edit --repo <template.repository> *)` en `Bash(gh issue close --repo <template.repository> *)`, met de repo
-  uit `.claude/gates.json`. Een test leest beide bestanden en faalt bij een andere repo of een ontbrekende regel.
-- **leerlus-bewijs/AC-13** — Sluiten als duplicaat telt als bewijs (ADR 0101 punt 2). Bij `closed` met reden duplicate en een
-  comment die begint met `duplicaat van #<nr>`, van een auteur met `author_association` OWNER, MEMBER of COLLABORATOR, waarbij
-  `#<nr>` een ander issue met label `leerpunt` is, zet de workflow geen `leerpunt-zonder-bewijs` en haalt hij het weg als het
-  er al stond (ook op `issue_comment` na het sluiten). Telt niet: een andere sluitreden, een comment van een andere auteur,
-  een verwijzing naar zichzelf, of een `#<nr>` zonder label `leerpunt`; dan blijft het label zoals in AC-6. Tabeltest.
+  uit `.claude/gates.json`. De te gebruiken vorm is dus `gh issue <actie> --repo <repo> <nr> …`; met `-R`, een andere repo of
+  zonder repo dekt geen allow-regel het commando. Een test leest beide bestanden en faalt bij een andere repo, een ontbrekende
+  regel, of een regel die `-R`, een andere repo of een commando zonder repo dekt. Toets:
+  `test/rails/leerpunt-bijwerken-settings.test.ts` (nieuw)
+- **leerlus-bewijs/AC-13** — Sluiten als duplicaat telt als bewijs (ADR 0101 punt 2). De sluitreden komt uit de payload
+  (`issue.state_reason`, ook bij `issue_comment`). Bij reden `duplicate` en een comment die begint met `duplicaat van #<nr>`,
+  van een auteur met `author_association` OWNER, MEMBER of COLLABORATOR, waarbij `#<nr>` een ander issue (geen PR) met label
+  `leerpunt` is, geldt de sluiting als bewijs, net als een geldige `achterhaald:`: de workflow zet geen
+  `leerpunt-zonder-bewijs` en haalt het weg als het er al stond (ook op `issue_comment` na het sluiten). Het doel komt uit
+  REST `repos/<repo>/issues/<nr>` (labels en het veld `pull_request`); een fout 404 telt als "bestaat niet". Telt niet: een
+  andere sluitreden, een comment van een andere auteur, een verwijzing naar zichzelf, een doel zonder label `leerpunt`, een
+  doel dat een PR is of niet bestaat; dan blijft het label zoals in AC-6, zonder dat de job crasht. Tabeltest. Toets:
+  `test/scripts/leerpunt-duplicaat.test.ts` (nieuw)
 - **leerlus-bewijs/AC-14** — De skill `opleveren` stap 8 noemt vóór het indienen de zoektocht naar geraakte open leerpunten
-  (`gh issue list … --label leerpunt --state open --search`) en per geraakt leerpunt de drie uitkomsten `opgelost`, `deels`
-  en `zelfde les opnieuw`, met de slotregel "geen open leerpunt geraakt"; de doelcheck vóór elke schrijfactie (`gh issue
-  view <nr> … --json labels`); de drie gh-vormen uit AC-11; en in de cloud de MCP-issuetool voor dezelfde acties plus labels,
-  nooit `leerpunt`, `leerpunt-onvolledig` of `leerpunt-zonder-bewijs`.
+  (`gh issue list … --label leerpunt --state open --search`) en per geraakt leerpunt de drie uitkomsten `opgelost` (via
+  `Closes #<nr>` en `## Leerpunt`), `deels` en `zelfde les opnieuw`, met de slotregel "geen open leerpunt geraakt"; de
+  doelcheck vóór elke schrijfactie (`gh issue view <nr> … --json labels`); de drie gh-vormen in de vorm uit AC-12; bij een
+  duplicaat eerst `gh issue comment` met `duplicaat van #<nr>` en daarna `gh issue close --duplicate-of`; en in de cloud de
+  MCP-issuetool voor dezelfde acties plus labels, nooit `leerpunt`, `leerpunt-onvolledig` of `leerpunt-zonder-bewijs`. Toets:
+  `test/rails/leerpunt-bijwerken-docs.test.ts` (nieuw)
 - **leerlus-bewijs/AC-15** — `docs/framework.md` R-WERK-13, R-ROL-07, R-ROL-12 en R-SEC-09 en `AGENTS.md` (regel over externe
   diensten) noemen bijwerken en sluiten als duplicaat met ADR 0101; `docs/nieuwe-app.md` noemt de drie nieuwe allow-regels
-  bij de fork. Een test zoekt in elk bestand de verwijzing naar 0101.
+  bij de fork. Een test zoekt in elk bestand de verwijzing naar 0101. Toets: `test/rails/leerpunt-bijwerken-docs.test.ts`
+  (nieuw)
 
 ## Randgevallen
 
@@ -174,6 +188,8 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
 | `gh issue edit <nr>` met een nummer dat een PR is | Rolhek ziet het verschil niet; de doelcheck (ADR 0101 punt 4) is de rem; labels blijven deny | n.v.t. |
 | Duplicaat verwijst naar een gesloten leerpunt | Telt; het doel moet een leerpunt zijn, open of dicht | n.v.t. |
 | Duplicaat-comment vóór het sluiten geplaatst | Telt; de check leest alle comments bij `closed` | n.v.t. |
+| Duplicaat-comment verwijst naar een PR of een niet-bestaand nummer | Telt niet; label zoals AC-6, de job blijft groen | n.v.t. |
+| Duplicaat gesloten via MCP in de cloud | Telt alleen als de comment-auteur OWNER, MEMBER of COLLABORATOR is; na de merge één proef (ADR 0101) | n.v.t. |
 
 ## Raakt ook
 
@@ -185,7 +201,10 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   `test/scripts/github-ruleset.test.ts`: `leerpunt-bewijs` erbij, en de job van `leerpunt.yml` (op `issues`, geen PR-check) als
   uitzondering op "elke workflowjob staat in requiredChecks"; dat wijzigt een bestaande test, met reden in de bouw-PR.
 - AC-11 tot en met AC-15 (ADR 0101): `rails/hooks/lib/rolhek.mjs`, `.claude/settings.json`, `scripts/kit/leerpunt-check.mjs`,
-  `.claude/skills/opleveren/SKILL.md`, `docs/framework.md`, `AGENTS.md`, `docs/nieuwe-app.md`.
+  `.claude/skills/opleveren/SKILL.md`, `docs/framework.md`, `AGENTS.md`, `docs/nieuwe-app.md`. AC-11 wijzigt het gedrag
+  dat `docs/template/specs/leerlus.md` AC-7 en `test/hooks/rolhek-leerpunt.test.ts` (de rij "voor de hoofdsessie verandert
+  niets" bij comment, edit, close en de andere schrijfacties) vastleggen: die bestaande test wijzigt mee, met reden in de PR
+  (R-TEST-02), en leerlus/AC-7 verwijst naar AC-11.
 - Verplichte check: `leerpunt-bewijs` in de ruleset (`scripts/github-ruleset.sh`) en `requiredChecks` in `.claude/decisions.json`.
 - Na de merge: de routine "Leerpunten voorsorteren" verwijst naar het bestand uit AC-9.
 
@@ -206,10 +225,10 @@ Fase 1. De tester schrijft vóór de bouw, rood op asserties:
 
 ADR 0101, risicowerk (rolhek): de tester schrijft vóór de bouw, rood op asserties, in nieuwe bestanden:
 
-- `test/hooks/rolhek-leerpunt-bijwerken.test.ts` — AC-11, tabel per vorm, rol en reden.
-- `test/rails/leerpunt-bijwerken-settings.test.ts` — AC-12.
-- `test/scripts/leerpunt-duplicaat.test.ts` — AC-13, tabel met issues, comments en sluitredenen.
-- `test/rails/leerpunt-bijwerken-docs.test.ts` — AC-14 en AC-15.
+- `test/hooks/rolhek-leerpunt-bijwerken.test.ts` (nieuw) — AC-11, tabel per vorm, rol en reden.
+- `test/rails/leerpunt-bijwerken-settings.test.ts` (nieuw) — AC-12, met negatieve rijen.
+- `test/scripts/leerpunt-duplicaat.test.ts` (nieuw) — AC-13, tabel met issues, comments, sluitredenen en doelen.
+- `test/rails/leerpunt-bijwerken-docs.test.ts` (nieuw) — AC-14 en AC-15.
 
 Handmatig na de merge: één proefleerpunt met een lege kop indienen en zien dat het label en de comment komen; daarna sluiten
 als achterhaald.

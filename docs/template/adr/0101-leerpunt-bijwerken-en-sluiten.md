@@ -44,8 +44,10 @@ openstaat.
    <nr>` met tekst alleen via `--body-file`/`-F`; `gh issue edit <nr>` met alleen `--title`/`-t` en `--body-file`/`-F`;
    `gh issue close <nr>` met alleen `--duplicate-of <nr>`. Elke andere vorm van comment, edit of close is ask; een
    label-optie bij `edit` blijft voor elke rol geweigerd (R-ROL-08). `.claude/settings.json` krijgt voor de drie vormen een
-   allow-regel. In de cloud mag de hoofdsessie de MCP-issuetool voor dezelfde acties gebruiken, plus labels zetten volgens
-   punt 1; de doelcheck uit punt 4 is daar de enige rem. Subagents schrijven geen issues (ongewijzigd).
+   allow-regel in de vorm `gh issue <actie> --repo <repo> <nr> …`; een andere geldige vorm krijgt de gewone permissieprompt,
+   want het rolhek geeft zelf geen allow. In de cloud mag de hoofdsessie de MCP-issuetool voor dezelfde acties gebruiken,
+   plus labels zetten volgens punt 1; de doelcheck uit punt 4 is daar de enige inhoudelijke rem, en het rolhek vraagt per
+   MCP-schrijfactie. Subagents schrijven geen issues (ongewijzigd).
 6. **Afstemmen in de leerpuntstap.** Vóór een nieuw leerpunt zoekt de hoofdsessie in `opleveren` stap 8 de open leerpunten
    die het werk van de sessie raakt: `gh issue list --repo <repo> --label leerpunt --state open --search <trefwoord>`, met
    trefwoorden uit de geraakte paden en regels, niet de hele lijst (R-DOC-09). Per geraakt leerpunt:
@@ -76,5 +78,9 @@ openstaat.
   `leerpunt-zonder-bewijs` bij elk duplicaat.
 - `opleveren` stap 8 krijgt de doelcheck, de duplicaatregel en de afstemming uit punt 6.
 - Minder dubbele leerpunten (nu `eerder: #nnn` achteraf); per oplevering één tot enkele gerichte zoekopdrachten extra.
+- Restrisico: `--body-file <pad>` kan elk leesbaar bestand in een openbaar issue zetten, net als bij `gh issue create`; de
+  Bash-sandbox weigert `.env*`, elders is het een afspraak (eigenaar, 23 november 2026).
+- Open: komt een duplicaat-comment uit de cloud-MCP onder een andere identiteit dan OWNER, MEMBER of COLLABORATOR, dan telt
+  die sluiting niet; na de merge volgt één proef (eigenaar, 23 november 2026).
 - Restrisico: in de cloud kan een agent via MCP een PR labelen of het verkeerde issue bewerken; de issue-check zet
   `leerpunt-zonder-bewijs` bij sluiten zonder bewijs, en de eigenaar kan heropenen.
