@@ -32,15 +32,16 @@ function spec(status: string, acs: string[] = [AC1], proza = 'Bestaande kit.'): 
   ].join('\n');
 }
 
-// GEWIJZIGD (gebouwd-zonder-nummer/AC-9, ADR 0095): de titel noemt `# #<deze PR>` niet meer; de uitkomst (`gebouwd`) blijft.
-describe('specarchief-en-bouwvorm/AC-7: de markering weghalen vraagt nieuw bouwbewijs in de bouw-PR', () => {
-  test('specarchief-en-bouwvorm/AC-7 markering weg, verwijzing gelijk: gebouwd (nieuw bouwbewijs)', () => {
+// GEWIJZIGD (gebouwd-zonder-nummer/AC-20, ADR 0104): `beslisOvergang` kent geen uitslag `gebouwd` meer; de markering weghalen
+// is geen bouwbewijs maar een vrije wijziging (de markering telt niet mee in de digest).
+describe('specarchief-en-bouwvorm/AC-7: de markering weghalen geeft geen nieuw bouwbewijs meer', () => {
+  test('specarchief-en-bouwvorm/AC-7 markering weg, verwijzing gelijk: vrij (geen bouwbewijs meer)', () => {
     const uitslag = beslisOvergang(
       SPEC,
       spec('gebouwd # #120', [AC1, AC2_GEMARKEERD]),
       spec('gebouwd # #120', [AC1, AC2]),
     );
-    expect(uitslag.uitslag).toBe('gebouwd');
+    expect(uitslag.uitslag).toBe('vrij');
   });
 });
 
