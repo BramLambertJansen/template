@@ -40,8 +40,8 @@ describe('leerlus-herzien/AC-6 signaal en vorm', () => {
     const regelvorm = `trede ${PLEK}; bewijs meting: <voor> → <na> (<bron>)`;
     expect(stap).toContain(`bewijs meting: <voor> → <na> (<bron>)`);
     expect(prSjabloon).toContain(`- #<nr>: ${regelvorm}`);
-    expect(prSjabloon).toContain(
-      '- #<nr>: trede <Type|Check|Gouden pad of generator|Skill|Padregel|AGENTS.md>; bewijs <testpad>',
-    );
+    // GEWIJZIGD (spec gedragsbaseline, ADR 0107): Skill, Padregel en AGENTS.md bewijzen met `baseline:` of `geen baseline:`
+    // en niet meer met een testpad; de trede bij `bewijs <testpad>` is nu `<Type|Check|Gouden pad of generator>`.
+    expect(prSjabloon).toContain('- #<nr>: trede <Type|Check|Gouden pad of generator>; bewijs <testpad>');
   });
 });

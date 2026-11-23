@@ -87,8 +87,17 @@ const plan = (regel: string, plek = PLEK_SCHRAPPEN) =>
 
 describe('leerlus-herzien/AC-3 meting als sluitbewijs', () => {
   test('leerlus-herzien/AC-3: de parser leest meting:', () => {
+    // GEWIJZIGD (spec gedragsbaseline AC-1, ADR 0107): een regel heeft ook `baseline` en `geenBaseline`, null bij meting:.
     expect(leesLeerpuntSectie(sectie(SCHRAP))).toEqual([
-      { nummer: 9, trede: PLEK_SCHRAPPEN, pad: null, reden: null, meting: '90 s → 30 s (CI-duur job x)' },
+      {
+        nummer: 9,
+        trede: PLEK_SCHRAPPEN,
+        pad: null,
+        reden: null,
+        meting: '90 s → 30 s (CI-duur job x)',
+        baseline: null,
+        geenBaseline: null,
+      },
     ]);
   });
 

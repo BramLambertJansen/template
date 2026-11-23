@@ -3,7 +3,7 @@
 // de workflows draaien dit vanaf main zonder install, net als de guard (alleen `node:`- en relatieve imports).
 
 /** @typedef {{ label: string, verplicht: boolean, opties: string[] }} Veld */
-/** @typedef {{ nummer: number, trede: string, pad: string | null, reden: string | null, meting: string | null }} Regel */
+/** @typedef {{ nummer: number, trede: string, pad: string | null, reden: string | null, meting: string | null, baseline: string | null, geenBaseline: string | null }} Regel */
 /** @typedef {{ status: string, assertieFouten: number, laadFout: boolean }} RunUitslag */
 
 export const LADDER = ['Type', 'Check', 'Gouden pad of generator', 'Skill', 'Padregel', 'AGENTS.md'];
@@ -14,8 +14,11 @@ export const PLEKKEN = [PLEK_SCHRAPPEN, ...LADDER];
 export const ONDERBOUWING = ['Meting', 'Overname', 'Terugval'];
 const KOP_PLEK = 'Voorstel voor de plek';
 const KOP_ONDERBOUWING = 'Onderbouwing';
-/** Treden waarbij `geen test: <reden>` mag (ADR 0078 punt 2). */
-export const ZONDER_TEST = ['Skill', 'Padregel', 'AGENTS.md'];
+/** Teksttreden: het bewijs is `baseline: …` of `geen baseline: <reden>` (ADR 0107, spec gedragsbaseline). */
+export const TEKSTTREDEN = ['Skill', 'Padregel', 'AGENTS.md'];
+/** Paden waarvan een baseline er minstens één in de diff vraagt (ADR 0107 punt 1): mappen en exacte bestanden. */
+export const TEKSTPADEN = ['.claude/agents/', '.claude/skills/', '.claude/rules/'];
+const TEKSTBESTANDEN = ['AGENTS.md', 'CLAUDE.md'];
 export const GEEN_ANTWOORD = '_No response_';
 export const SCHRIJFRECHT = ['OWNER', 'MEMBER', 'COLLABORATOR'];
 export const COMMENT_ONVOLLEDIG = 'Dit leerpunt volgt het sjabloon niet:';
@@ -166,14 +169,23 @@ export function leesLeerpuntSectie(body) {
     const m = REGEL.exec(regel);
     if (m === null) continue;
     const bewijs = (m[3] ?? '').replace(/^`|`$/g, '');
-    const geenTest = /^geen test:\s*(.*)$/.exec(bewijs);
-    const meting = /^meting:\s*(.*)$/.exec(bewijs);
+    const vorm = (/** @type {RegExp} */ re) => {
+      const v = re.exec(bewijs);
+      return v === null ? null : (v[1] ?? '').trim();
+    };
+    const reden = vorm(/^geen test:\s*(.*)$/);
+    const meting = vorm(/^meting:\s*(.*)$/);
+    const baseline = vorm(/^baseline:\s*(.*)$/);
+    const geenBaseline = vorm(/^geen baseline:\s*(.*)$/);
+    const zonderPad = [reden, meting, baseline, geenBaseline].some((waarde) => waarde !== null);
     uit.push({
       nummer: Number(m[1]),
       trede: (m[2] ?? '').trim(),
-      pad: geenTest === null && meting === null ? bewijs : null,
-      reden: geenTest === null ? null : (geenTest[1] ?? '').trim(),
-      meting: meting === null ? null : (meting[1] ?? '').trim(),
+      pad: zonderPad ? null : bewijs,
+      reden,
+      meting,
+      baseline,
+      geenBaseline,
     });
   }
   return uit;
@@ -188,21 +200,31 @@ export function soortBewijs(pad) {
 }
 
 /**
- * Toets één regel tegen trede, diff en soort bewijs (AC-2, AC-4). `geen test: <reden>` mag bij Skill, Padregel en AGENTS.md,
- * of bij elke trede als de reden een integratie- of e2e-test noemt die de PR toevoegt of wijzigt. Geeft een fout of null.
+ * Toets één regel tegen trede, diff en soort bewijs (AC-2, AC-4). `geen test: <reden>` mag bij elke trede behalve de
+ * teksttreden als de reden een integratie- of e2e-test noemt die de PR toevoegt of wijzigt; bij Skill, Padregel en
+ * AGENTS.md is het bewijs `baseline:` of `geen baseline:` (spec gedragsbaseline AC-5). Geeft een fout of null.
  * @param {Regel} regel @param {Set<string>} diff
  */
 export function regelFout(regel, diff) {
   const naam = `#${String(regel.nummer)}`;
   if (!PLEKKEN.includes(regel.trede)) return `${naam}: onbekende trede "${regel.trede}"`;
+  if (regel.baseline !== null || regel.geenBaseline !== null) return baselineFout(regel, diff, naam);
   if (regel.trede === PLEK_SCHRAPPEN || regel.meting !== null) return metingFout(regel, naam);
+  return testFout(regel, diff, naam);
+}
+
+/** @param {Regel} regel @param {Set<string>} diff @param {string} naam */
+function testFout(regel, diff, naam) {
+  const tekst = TEKSTTREDEN.includes(regel.trede);
+  const alleen = `${naam}: bij trede ${regel.trede} is het bewijs "baseline: …" of "geen baseline: <reden>"`;
   if (regel.reden !== null) {
     if (regel.reden === '') return `${naam}: "geen test" zonder reden`;
-    if (ZONDER_TEST.includes(regel.trede)) return null;
+    if (tekst) return `${alleen}, geen "geen test:"`;
     const integratie = regel.reden.split(/[\s`,;()]+/).filter((woord) => soortBewijs(woord) === 'integratie');
     if (integratie.some((pad) => diff.has(pad))) return null;
     return `${naam}: "geen test" mag bij trede ${regel.trede} alleen met een integratie- of e2e-test uit de diff in de reden`;
   }
+  if (tekst) return `${alleen}, geen testpad`;
   const pad = regel.pad ?? '';
   const soort = soortBewijs(pad);
   if (soort === null || soort === 'integratie')
@@ -210,6 +232,120 @@ export function regelFout(regel, diff) {
   if (soort === 'type' && regel.trede !== 'Type') return `${naam}: een typetest hoort bij trede Type`;
   if (!diff.has(pad)) return `${naam}: ${pad} staat niet als toegevoegd of gewijzigd in de diff`;
   return null;
+}
+
+/** `zonder <a>/3, met <b>/3 (<model>)` (spec gedragsbaseline): de tellingen toetst `baselineFout` apart. */
+const BASELINE = /^zonder\s+([0-3])\/3,\s*met\s+([0-3])\/3\s*\(\s*(\S[^()]*?)\s*\)$/;
+
+/** @param {string} pad */
+function isTekstpad(pad) {
+  return TEKSTBESTANDEN.includes(pad) || TEKSTPADEN.some((map) => pad.startsWith(map));
+}
+
+/**
+ * Toets `baseline:` en `geen baseline:` (spec gedragsbaseline AC-3, AC-5): eerst de trede, dan de reden of de vorm, dan
+ * `met`, dan `zonder`, dan de diff. `geen baseline:` vraagt alleen een reden (besluit eigenaar 2026-11-22, OV-1b).
+ * @param {Regel} regel @param {Set<string>} diff @param {string} naam
+ */
+function baselineFout(regel, diff, naam) {
+  const soort = regel.baseline !== null ? 'baseline:' : 'geen baseline:';
+  if (!TEKSTTREDEN.includes(regel.trede))
+    return `${naam}: "${soort}" hoort alleen bij trede Skill, Padregel of AGENTS.md`;
+  if (regel.geenBaseline !== null) return regel.geenBaseline === '' ? `${naam}: "geen baseline" zonder reden` : null;
+  const m = BASELINE.exec(regel.baseline ?? '');
+  if (m === null)
+    return `${naam}: baseline "${regel.baseline ?? ''}" heeft niet de vorm zonder <a>/3, met 3/3 (<model>)`;
+  if (m[2] !== '3') return `${naam}: met ${m[2] ?? ''}/3: alle drie runs met de wijziging moeten ja geven`;
+  if (m[1] === '3')
+    return `${naam}: zonder 3/3: het scenario reproduceert niet; wijzig de tekst niet, de eigenaar beslist over het leerpunt`;
+  if (![...diff].some(isTekstpad))
+    return `${naam}: geen pad onder .claude/agents/, .claude/skills/, .claude/rules/, AGENTS.md of CLAUDE.md toegevoegd of gewijzigd in de diff`;
+  return null;
+}
+
+const SCENARIO_LABELS = ['Prompt', 'Beginstand', 'Criterium'];
+const RUNREGEL = /^(zonder|met)\s+([1-3]):\s*(ja|nee)\s*[—–-]\s*\S.*$/i;
+
+/** Een regel zonder opsommingsteken, nummer of `**` (zoals `onderbouwingFouten`). @param {string} regel */
+function kaal(regel) {
+  return regel
+    .replace(/^\s*(?:[-*]|\d+\.)\s+/, '')
+    .replaceAll('**', '')
+    .trim();
+}
+
+/**
+ * De regels van het blok `### Scenario #<nr>` binnen `## Leerpunt`, tot de volgende kop van niveau 1 tot en met 3, of null.
+ * @param {string} body @param {number} nummer @returns {string[] | null}
+ */
+function scenarioBlok(body, nummer) {
+  const regels = body.replaceAll('\r\n', '\n').split('\n');
+  const start = regels.findIndex((regel) => /^##\s+Leerpunt\s*$/.test(regel));
+  if (start === -1) return null;
+  const sectie = regels.slice(start + 1);
+  const eind = sectie.findIndex((regel) => /^#{1,2}\s/.test(regel));
+  const binnen = eind === -1 ? sectie : sectie.slice(0, eind);
+  const kop = binnen.findIndex((regel) => {
+    const m = /^###\s+Scenario\s+#(\d+)\s*$/.exec(regel);
+    return m !== null && Number(m[1]) === nummer;
+  });
+  if (kop === -1) return null;
+  const rest = binnen.slice(kop + 1);
+  const volgende = rest.findIndex((regel) => /^#{1,3}\s/.test(regel));
+  return (volgende === -1 ? rest : rest.slice(0, volgende)).map(kaal);
+}
+
+/** De labels zonder waarde: een waarde loopt door tot het volgende label of de eerste runregel. @param {string[]} blok */
+function legeLabels(blok) {
+  /** @type {Map<string, string>} */
+  const waarden = new Map();
+  let huidig = '';
+  for (const regel of blok) {
+    const label = /^(Prompt|Beginstand|Criterium):\s*(.*)$/.exec(regel);
+    if (label !== null) {
+      huidig = label[1] ?? '';
+      waarden.set(huidig, label[2] ?? '');
+    } else if (/^(zonder|met)\s+\d/i.test(regel)) huidig = '';
+    else if (huidig !== '') waarden.set(huidig, `${waarden.get(huidig) ?? ''} ${regel}`);
+  }
+  return SCENARIO_LABELS.filter((label) => (waarden.get(label) ?? '').trim() === '');
+}
+
+/**
+ * Het aantal ja per soort uit precies één runregel per `zonder 1-3` en `met 1-3`, of null als dat niet klopt.
+ * @param {string[]} blok @returns {{ zonder: number, met: number } | null}
+ */
+function runTellingen(blok) {
+  const kandidaten = blok.filter((regel) => /^(zonder|met)\s+\d/i.test(regel));
+  const runs = kandidaten.map((regel) => RUNREGEL.exec(regel));
+  if (kandidaten.length !== 6 || runs.some((m) => m === null)) return null;
+  const sleutels = new Set(runs.map((m) => `${(m?.[1] ?? '').toLowerCase()} ${m?.[2] ?? ''}`));
+  if (sleutels.size !== 6) return null;
+  const ja = (/** @type {string} */ soort) =>
+    runs.filter((m) => (m?.[1] ?? '').toLowerCase() === soort && (m?.[3] ?? '').toLowerCase() === 'ja').length;
+  return { zonder: ja('zonder'), met: ja('met') };
+}
+
+/**
+ * Toets het scenarioblok bij een `baseline:`-regel (spec gedragsbaseline AC-4): eerst de kop, dan de labels (één fout per
+ * label), dan de runregels, dan de tellingen tegen de bewijsregel.
+ * @param {string} body @param {Regel} regel @returns {string[]}
+ */
+export function scenarioFout(body, regel) {
+  const naam = `#${String(regel.nummer)}`;
+  const blok = scenarioBlok(body, regel.nummer);
+  if (blok === null) return [`${naam}: geen blok "### Scenario ${naam}" in de sectie ## Leerpunt`];
+  const leeg = legeLabels(blok);
+  if (leeg.length > 0) return leeg.map((label) => `${naam}: scenario zonder ${label}`);
+  const tel = runTellingen(blok);
+  if (tel === null) return [`${naam}: scenario heeft niet precies één runregel voor zonder 1-3 en met 1-3`];
+  const m = BASELINE.exec(regel.baseline ?? '');
+  const a = Number(m?.[1] ?? '0');
+  const b = Number(m?.[2] ?? '0');
+  if (tel.zonder === a && tel.met === b) return [];
+  return [
+    `${naam}: runregels geven zonder ${String(tel.zonder)}/3, met ${String(tel.met)}/3; de bewijsregel zegt zonder ${String(a)}/3, met ${String(b)}/3`,
+  ];
 }
 
 /** `<voor> → <na> (<bron>)`: voor en na beginnen met een cijfer, de bron is niet leeg (spec leerlus-herzien AC-3). */
@@ -252,6 +388,7 @@ export function bewijsPlan({ gesloten, body, diff }) {
         ? `#${String(nummer)}: het issue heeft een andere plek dan ${PLEK_SCHRAPPEN}`
         : null);
     if (fout !== null) fouten.push(fout);
+    else if (regel.baseline !== null) fouten.push(...scenarioFout(body, regel));
     else if (regel.pad !== null && !runs.some((run) => run.pad === regel.pad))
       runs.push({ pad: regel.pad, soort: soortBewijs(regel.pad) ?? 'unit' });
   }
