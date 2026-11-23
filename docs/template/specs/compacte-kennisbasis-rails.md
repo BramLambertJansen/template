@@ -1,5 +1,5 @@
 ---
-status: gebouwd
+status: goedgekeurd
 namespace: compacte-kennisbasis-rails
 model: sonnet
 ---

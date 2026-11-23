@@ -1,6 +1,6 @@
 // check:roadmap (spec docs/template/specs/roadmap-vinkjes.md, framework §8 "Docs horen bij de wijziging"): een nieuw of gewijzigd `[x]` in
-// docs/roadmap.md moet naar bewijs verwijzen (PR-nummer, testpad of checknaam), en een spec die naar `status: gebouwd` gaat en een
-// roadmap-id noemt, vraagt een wijziging van docs/roadmap.md in dezelfde PR (ADR 0095: geen PR-nummer in de statusregel). Het vergelijkt met het punt waar de branch van
+// docs/roadmap.md moet naar bewijs verwijzen (PR-nummer, testpad of checknaam), en een spec die in de PR volledig gebouwd wordt
+// (de AC-dekking, ADR 0104) en een roadmap-id noemt, vraagt een wijziging van docs/roadmap.md in dezelfde PR. Het vergelijkt met het punt waar de branch van
 // origin/main afsplitste, niet met de kop van main. Is origin/main niet te lezen, dan faalt de check: onleesbaar telt als fout
 // (zoals check:migrations).
 // Heeft de head-roadmap een kop `## Nu`, dan gelden ook de structuurregels van ADR 0046 (`structuurMeldingen`). Sluit de PR
@@ -9,14 +9,18 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { acDekking } from '../../rails/hooks/lib/ac-dekking.mjs';
 import { globMatch } from '../../rails/hooks/lib/rolhek.mjs';
-import { doelPad, looksLikePath, packageScripts, pathExists, SPEC_STATUS } from './check-docs.mjs';
+import { boomOpBasis, boomWerkmap, hernoemingen } from './ac-dekking.mjs';
+import { doelPad, looksLikePath, packageScripts, pathExists } from './check-docs.mjs';
 import { gates } from './gates.mjs';
 import { herijkingMeldingen } from './roadmap-herijking.mjs';
 
 /** @typedef {{ key: string, message: string }} Violation */
 /** @typedef {{ lees: (pad: string) => string | null, bestanden: readonly string[] }} Bron */
 /** @typedef {Bron & { hernoemd: Readonly<Record<string, string>> }} Head */
+/** @typedef {import('../../rails/hooks/lib/ac-dekking.mjs').Dekking} Dekking */
+/** @typedef {{ basis: ReadonlyMap<string, Dekking>, head: ReadonlyMap<string, Dekking> }} Dekkingen */
 /** @typedef {{ regel: number, aangevinkt: boolean, vervallen: boolean, tekst: string }} Item */
 /** @typedef {{ scripts: Readonly<Record<string, unknown>>, testpaden: readonly string[], bestanden: readonly string[], register: ReadonlySet<string> }} Kader */
 
@@ -145,27 +149,25 @@ function itemMeldingen(item, kader) {
 }
 
 /**
- * Een spec naar gebouwd: `status: gebouwd`, zonder PR-nummer (ADR 0095). Wat achter de status staat is commentaar en telt
- * hier niet; de vorm lezen `documentInfo` en `builtReference` in rails/hooks/lib/document-state.mjs, geen eigen parser hier.
- * Alleen de roadmap-id-regel blijft: noemt de spec een roadmap-id, dan wijzigt docs/roadmap.md in dezelfde PR.
- * @param {{ basis: Bron, head: Head }} bronnen
+ * Een spec die in deze PR volledig gebouwd wordt (ADR 0104, gebouwd-zonder-nummer/AC-24): stand `gebouwd` in de head en op
+ * de merge-base `niet`, `deels` of afwezig (een hernoemde spec onder haar oude naam, `head.hernoemd`). Noemt ze een
+ * roadmap-id, dan wijzigt docs/roadmap.md in dezelfde PR. De stand komt uit `acDekking` (rails/hooks/lib/ac-dekking.mjs).
+ * @param {{ basis: Bron, head: Head, dekking: Dekkingen }} bronnen
  * @returns {Violation[]}
  */
-function specMeldingen({ basis, head }) {
+function specMeldingen({ basis, head, dekking }) {
   const roadmapGewijzigd = basis.lees(ROADMAP) !== head.lees(ROADMAP);
   return head.bestanden
     .filter((bestand) => SPEC_PAD.test(bestand))
     .flatMap((bestand) => {
-      const tekst = head.lees(bestand) ?? '';
-      if (SPEC_STATUS.exec(tekst)?.[1] !== 'gebouwd') return [];
-      const oud = basis.lees(head.hernoemd[bestand] ?? bestand);
-      if (oud !== null && SPEC_STATUS.exec(oud)?.[1] === 'gebouwd') return [];
-      const verwijzing = VERWIJZING.exec(tekst)?.[0];
+      if (dekking.head.get(bestand)?.stand !== 'gebouwd') return [];
+      if (dekking.basis.get(head.hernoemd[bestand] ?? bestand)?.stand === 'gebouwd') return [];
+      const verwijzing = VERWIJZING.exec(head.lees(bestand) ?? '')?.[0];
       if (verwijzing === undefined || roadmapGewijzigd) return [];
       return [
         {
           key: `spec:roadmap:${bestand}`,
-          message: `${bestand}: naar gebouwd en noemt ${verwijzing}, maar ${ROADMAP} wijzigt niet in deze PR`,
+          message: `${bestand}: wordt in deze PR volledig gebouwd en noemt ${verwijzing}, maar ${ROADMAP} wijzigt niet in deze PR`,
         },
       ];
     });
@@ -296,12 +298,14 @@ function structuurMeldingen({ basis, head }) {
 }
 
 /**
- * Pure kern: geen git, geen fs.
- * @param {{ basis: Bron, head: Head, scripts: Readonly<Record<string, unknown>>, testpaden: readonly string[] }} invoer
+ * Pure kern: geen git, geen fs. `dekking` is de AC-dekking op de merge-base en in de head (derde bron, ADR 0104); zonder
+ * die bron rekent de kern hem uit de twee bronnen zelf uit (een Bron is ook een Boom).
+ * @param {{ basis: Bron, head: Head, dekking?: Dekkingen, scripts: Readonly<Record<string, unknown>>, testpaden: readonly string[] }} invoer
  * @returns {Violation[]}
  */
-export function roadmapMeldingen({ basis, head, scripts, testpaden }) {
+export function roadmapMeldingen({ basis, head, dekking, scripts, testpaden }) {
   const kader = { scripts, testpaden, bestanden: head.bestanden, register: new Set(gates.map((gate) => gate.script)) };
+  const dekkingen = dekking ?? { basis: acDekking(basis), head: acDekking(head) };
   const eerder = new Set(
     leesItems(basis.lees(ROADMAP))
       .filter((item) => item.aangevinkt)
@@ -310,7 +314,7 @@ export function roadmapMeldingen({ basis, head, scripts, testpaden }) {
   const nieuw = leesItems(head.lees(ROADMAP)).filter((item) => item.aangevinkt && !eerder.has(item.tekst));
   return [
     ...nieuw.flatMap((item) => itemMeldingen(item, kader)),
-    ...specMeldingen({ basis, head }),
+    ...specMeldingen({ basis, head, dekking: dekkingen }),
     ...structuurMeldingen({ basis, head }),
     ...herijkingMeldingen({
       basisRoadmap: basis.lees(ROADMAP),
@@ -327,26 +331,6 @@ export function roadmapMeldingen({ basis, head, scripts, testpaden }) {
  */
 function git(root, args) {
   return execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-}
-
-/**
- * `git diff -M --name-status -z`: records `R<score>`, oud pad, nieuw pad; de rest heeft één pad.
- * @param {string} root
- * @param {string} afsplitsing
- * @returns {Record<string, string>} nieuw pad naar oud pad
- */
-function hernoemingen(root, afsplitsing) {
-  const velden = git(root, ['diff', '-M', '--name-status', '-z', afsplitsing]).split('\0');
-  /** @type {Record<string, string>} */
-  const hernoemd = {};
-  for (let i = 0; i < velden.length;) {
-    const status = velden[i] ?? '';
-    if (status.startsWith('R') || status.startsWith('C')) {
-      if (status.startsWith('R')) hernoemd[velden[i + 2] ?? ''] = velden[i + 1] ?? '';
-      i += 3;
-    } else i += 2;
-  }
-  return hernoemd;
 }
 
 /**
@@ -406,9 +390,12 @@ export function roadmapVanRepo(root = '.', base = BASE) {
     Array.isArray(gatesJson.testpaden)
       ? gatesJson.testpaden.map(String)
       : [];
+  // De dekking uit één `git cat-file --batch` op de basis en de werkmap, niet per bestand via `git show` (ADR 0104).
+  const dekking = { basis: acDekking(boomOpBasis(root, afsplitsing)), head: acDekking(boomWerkmap(root)) };
   return roadmapMeldingen({
     basis,
     head,
+    dekking,
     scripts: leesScripts(head.lees('package.json')),
     testpaden,
   });

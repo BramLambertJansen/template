@@ -6,7 +6,8 @@
 import path from 'node:path';
 import { gitSubcommand, globTekstRegex, ONZEKERE_TEKST, parseCommands, programName, splitCommand, tmpdirLetterlijk, tmpdirWoord, tokenize, writeTargets, zetVariabele } from './shell.mjs';
 import { GIT_VORMEN, gitLeesvorm, insideRepo, lezerPaden, pathspecBinnen } from './rolhek-lezers.mjs';
-import { A4_MELDING, archiefBron, beslisOvergang, builtReference, documentInfo, documentKind, isArchief, isHerschrijving } from './document-state.mjs';
+import { gebouwdRegel } from './ac-dekking.mjs';
+import { A4_MELDING, archiefBron, beslisOvergang, documentInfo, documentKind, isArchief, isHerschrijving } from './document-state.mjs';
 import { canRecordStatus } from './task-authority.mjs';
 import { automaticRunner } from './runner-authority.mjs';
 import { isCoreUiSource, testChangeRisk } from './functional-ui.mjs';
@@ -480,11 +481,14 @@ function decideFile({ rel, change, role }, ctx, decision) {
     decision.deny.push(`${rel}: ${A4_MELDING}`);
     return;
   }
+  // ADR 0104: gebouwd volgt uit de AC-dekking op main; een gebouwd-regel die niet letterlijk in de basis staat, weigert het
+  // rolhek elke rol, vóór elk besluit en vóór "status uit main" (gebouwd-zonder-nummer/AC-20).
+  if (nieuweGebouwdRegel(rel, change, basis)) {
+    decision.deny.push(`${rel}: status: gebouwd schrijft niemand meer; gebouwd volgt uit de AC-dekking op main (ADR 0104)`);
+    return;
+  }
   // ADR 0046 punt 6: architect en hoofdsessie schrijven de eigenaarstatus in het voorstel; de merge van de eigenaar beslist.
-  // ADR 0095: ook `status: gebouwd` in de bouw-PR, zonder PR-nummer; alleen een nieuwe `; gevalideerd: <sha>` (de oude
-  // bewijsvorm) blijft voor elke rol geweigerd.
-  const inPrGebouwd = overgang?.uitslag === 'gebouwd' && builtReference(change.after ?? '')?.sha === undefined;
-  const eigenaarstatus = beslisrol && (a4Toegestaan || inPrGebouwd || ['besluit', 'vrij'].includes(overgang?.uitslag ?? ''));
+  const eigenaarstatus = beslisrol && (a4Toegestaan || ['besluit', 'vrij'].includes(overgang?.uitslag ?? ''));
   if (!eigenaarstatus && statusZonderBesluit({ rel, change, role, overgang, basis }, ctx, decision)) return;
   if (role === 'developer' && developerSpec(rel, change, basis)) {
     decision.deny.push(`${rel}: de developer schrijft geen spec; dat doet de architect (R-WERK-07, ADR 0068 punt 4)`);
@@ -496,6 +500,16 @@ function decideFile({ rel, change, role }, ctx, decision) {
     existingTest({ rel, change, role }, ctx, decision);
   }
   decideByRole({ rel, change, role }, ctx, decision);
+}
+
+/**
+ * Een statusregel die met `status: gebouwd` begint en niet letterlijk zo in de basis staat, ook in een nieuw bestand (ADR 0104).
+ * @param {string} rel @param {Change} change @param {string | null} basis
+ */
+function nieuweGebouwdRegel(rel, change, basis) {
+  if (!inSpecMap(rel) || change.after === null) return false;
+  const regel = gebouwdRegel(change.after);
+  return regel !== null && regel !== gebouwdRegel(basis ?? '');
 }
 
 /** De specmap van de app of van de template (ADR 0089 punt 1): beide krijgen dezelfde behandeling. @param {string} rel */
@@ -540,7 +554,7 @@ function statusZonderBesluit({ rel, change, role, overgang, basis }, ctx, decisi
   }
   if (ctx.authority != null && nextDocument !== null && !['voorstel', 'voorgesteld'].includes(nextDocument.status) &&
     !canRecordStatus({ file: rel, text: change.after ?? '' }, ctx.authority)) {
-    decision.deny.push(`${rel}: een eigenaarstatus of de inhoud van een goedgekeurde spec schrijven alleen architect en hoofdsessie (ADR 0046 punt 6); status: gebouwd zetten hoofdsessie en architect in de bouw-PR (ADR 0095)`);
+    decision.deny.push(`${rel}: een eigenaarstatus of de inhoud van een goedgekeurde spec schrijven alleen architect en hoofdsessie (ADR 0046 punt 6)`);
     return true;
   }
   if (!['hoofdsessie', 'architect'].includes(role) && approvesSpec(rel, change, ctx)) {
@@ -573,7 +587,7 @@ function recordedStatus({ rel, change, role }, ctx, decision) {
   const next = documentInfo(rel, change.after);
   if (old === null || next === null || before === change.after || old.digest !== next.digest) return false;
   if (!['hoofdsessie', 'developer', 'architect'].includes(role) || !canRecordStatus({ file: rel, text: change.after }, ctx.authority)) {
-    decision.deny.push(`${rel}: deze statusovergang heeft geen geldig besluit uit de vertrouwde basis; status: gebouwd zetten hoofdsessie en architect in de bouw-PR (ADR 0095)`);
+    decision.deny.push(`${rel}: deze statusovergang heeft geen geldig besluit uit de vertrouwde basis`);
   } else decision.context.push(`Status uit main: ${rel}: dezelfde status en inhoud als op main`);
   return true;
 }

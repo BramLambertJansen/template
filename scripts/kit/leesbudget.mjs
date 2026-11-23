@@ -83,8 +83,8 @@ function grootteIn(root, ref) {
   return grootte;
 }
 
-/** De merge-base met `origin/main`, of null. @param {string} root */
-function basisVan(root) {
+/** De merge-base met `origin/main`, of null (ook voor de AC-dekking, scripts/kit/ac-dekking.mjs). @param {string} root */
+export function basisVan(root) {
   const basis = git(root, ['merge-base', 'refs/remotes/origin/main', 'HEAD'])?.trim();
   return basis === undefined || basis === '' ? null : basis;
 }
@@ -98,14 +98,15 @@ function nu(root, file) {
 const toen = (root, basis, file) => git(root, ['show', `${basis}:${file}`]);
 
 /**
- * Zonder basis (geen `origin/main` of een ondiepe checkout) toetst de krimpcontrole niets: in CI is dat rood, lokaal een
- * melding (krimp-op-normen/AC-5).
+ * Zonder basis (geen `origin/main` of een ondiepe checkout) toetsen de krimpcontrole en de AC-dekking tegenover main
+ * niets: in CI is dat rood, lokaal een melding (krimp-op-normen/AC-5, gebouwd-zonder-nummer/AC-26).
  * @param {string} root @param {boolean} inCi
  * @returns {{ meldingen: string[], violations: Violation[] }}
  */
 export function zonderBasis(root, inCi) {
   if (basisVan(root) !== null) return { meldingen: [], violations: [] };
-  const tekst = 'geen merge-base met origin/main; de krimpcontrole (krimp-op-normen) toetst niets';
+  const tekst =
+    'geen merge-base met origin/main; de krimpcontrole (krimp-op-normen) en de AC-dekking tegenover main (ADR 0104) toetsen niets';
   return inCi
     ? { meldingen: [], violations: [{ key: 'docs:normen:geen-basis', message: `${tekst} (ADR 0067)` }] }
     : { meldingen: [`let op: ${tekst}`], violations: [] };

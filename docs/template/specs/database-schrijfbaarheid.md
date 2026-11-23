@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #381
+status: goedgekeurd # #381
 namespace: database-checks
 ---
 

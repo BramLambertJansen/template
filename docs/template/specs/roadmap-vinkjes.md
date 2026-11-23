@@ -1,5 +1,5 @@
 ---
-status: gebouwd # test/rails/check-roadmap.test.ts | voorstel | goedgekeurd | gebouwd | vervallen — alleen de eigenaar zet goedgekeurd
+status: goedgekeurd # test/rails/check-roadmap.test.ts | voorstel | goedgekeurd | gebouwd | vervallen — alleen de eigenaar zet goedgekeurd
 namespace: roadmap
 ---
 

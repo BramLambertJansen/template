@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #722
+status: goedgekeurd # #722
 namespace: create-server
 ---
 

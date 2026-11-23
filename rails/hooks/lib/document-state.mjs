@@ -50,12 +50,16 @@ export function validStatus(kind, status) {
     kind === 'adr' && (ADR_STATES.has(status) || /^vervangen door \d{4}$/.test(status));
 }
 
-/** @param {string} kind @param {string} line */
+/**
+ * Een oude `status: gebouwd` (met elk commentaar) is de eigenaarstatus `goedgekeurd`; gebouwd volgt uit de AC-dekking
+ * (ADR 0104, gebouwd-zonder-nummer/AC-17; `eigenaarStatus` in ./ac-dekking.mjs leest hetzelfde).
+ * @param {string} kind @param {string} line
+ */
 function statusValue(kind, line) {
   const value = (kind === 'spec'
     ? /^status: (voorstel|goedgekeurd|gebouwd|vervallen)(?:\s+#.*)?$/
     : /^Status: (voorgesteld|geaccepteerd|vervallen|vervangen door \d{4})(?:\s+(?:#|—|\().*)?$/).exec(line)?.[1];
-  return value ?? null;
+  return value === 'gebouwd' ? 'goedgekeurd' : (value ?? null);
 }
 
 /** @param {string[]} lines @param {number} statusIndex */
@@ -142,16 +146,18 @@ function nieuweHerzieningsregel(voor, na) {
  * - `vrij`: geen eigenaarbesluit (voorstel, of niets wezenlijks gewijzigd);
  * - `a4`: een ADR met een eigenaarstatus wijzigt van inhoud of gaat terug naar voorgesteld, of een gearchiveerd ADR wijzigt;
  * - `herzien`: een geaccepteerd ADR blijft geaccepteerd met andere inhoud en een nieuwe herzieningsregel (in een app alleen in een besluit-PR);
- * - `gebouwd`: architect en hoofdsessie, in de bouw-PR (ADR 0095);
  * - `besluit`: een eigenaarstatus die de merge van de eigenaar beslist (`nieuw`: een nieuw document of vanuit een voorstel);
  * - `geweigerd`: een andere overgang (bijv. vervallen terug naar goedgekeurd); alleen met een record.
+ * Een oude `status: gebouwd` leest `documentInfo` als `goedgekeurd`, dus er is geen uitslag `gebouwd` meer (ADR 0104); een
+ * nieuwe gebouwd-regel weigert het rolhek vóór deze overgang (`gebouwdRegel` in ./ac-dekking.mjs). Het resultaattype noemt
+ * `gebouwd` nog, zodat een aanroeper die erop toetst blijft compileren; geen pad geeft het (gebouwd-zonder-nummer/AC-20).
  * @param {string} file @param {string | null} voor @param {string} na
  * @returns {{ uitslag: 'vrij' | 'a4' | 'herzien' | 'gebouwd' | 'besluit' | 'geweigerd', nieuw: boolean }}
  */
 export function beslisOvergang(file, voor, na) {
   const oud = voor === null ? null : documentInfo(file, voor);
   const nieuwInfo = documentInfo(file, na);
-  const uit = (/** @type {'vrij' | 'a4' | 'herzien' | 'gebouwd' | 'besluit' | 'geweigerd'} */ uitslag, nieuw = false) => ({ uitslag, nieuw });
+  const uit = (/** @type {'vrij' | 'a4' | 'herzien' | 'besluit' | 'geweigerd'} */ uitslag, nieuw = false) => ({ uitslag, nieuw });
   // Het archief komt alleen via een byte-gelijke verhuizing binnen (het rolhek weigert er elke andere schrijfactie; daarna
   // weigert de padtoets van het mergescript, een vangnet, R-ROL-10 en ADR 0093); elke andere wijziging is A4.
   if (isArchief(file)) return uit(voor === na ? 'vrij' : 'a4');
@@ -160,42 +166,25 @@ export function beslisOvergang(file, voor, na) {
     (nieuwInfo === null || oud.digest !== nieuwInfo.digest || nieuwInfo.status === 'voorgesteld'))
     return uit('a4');
   if (nieuwInfo === null || (voor !== null && oud === null)) return uit('geweigerd');
-  if (oud?.status === 'gebouwd' && nieuwInfo.status === 'gebouwd') return uit(gebouwdBlijft(voor ?? '', na, oud.digest === nieuwInfo.digest));
   if (VOORSTEL.has(nieuwInfo.status) || (oud?.status === nieuwInfo.status && oud.digest === nieuwInfo.digest)) return uit('vrij');
-  if (nieuwInfo.status === 'gebouwd') return uit('gebouwd');
   if (oud === null || VOORSTEL.has(oud.status)) return uit('besluit', true);
   return toegestaanZonderRecord(oud.status, nieuwInfo.status, nieuwInfo.kind) ? uit('besluit') : uit('geweigerd');
 }
 
 /**
- * Een gebouwde spec blijft gebouwd (ADR 0095 punt 5): het commentaar achter de status telt niet, dus alleen dat wijzigen bij
- * gelijke inhoud is vrij en nieuwe inhoud is een besluit. Een weggehaalde markering is bouw, en een nieuwe
- * `; gevalideerd: <sha>` is de oude bewijsvorm, die het rolhek weigert.
- * @param {string} voor @param {string} na @param {boolean} zelfdeInhoud @returns {'vrij' | 'besluit' | 'gebouwd'}
- */
-function gebouwdBlijft(voor, na, zelfdeInhoud) {
-  // Vervolgbouw (ADR 0080 punt 4): de bouw-PR haalt de markering weg en laat de statusregel staan.
-  const gemarkeerd = acIds(na).gemarkeerd;
-  if ([...acIds(voor).gemarkeerd].some((id) => !gemarkeerd.has(id))) return 'gebouwd';
-  const sha = builtReference(na)?.sha;
-  if (sha !== undefined && sha !== builtReference(voor)?.sha) return 'gebouwd';
-  return zelfdeInhoud ? 'vrij' : 'besluit';
-}
-
-/**
- * ADR geaccepteerd → vervangen/vervallen; spec goedgekeurd/gebouwd → vervallen; inhoud van een goedgekeurde spec, en de inhoud
+ * ADR geaccepteerd → vervangen/vervallen; spec goedgekeurd → vervallen; inhoud van een goedgekeurde spec, en de inhoud
  * van een vervallen spec (status blijft `vervallen`; spec rolhek-lezen/AC-19, OV-2). Een vervallen ADR komt hier niet: dat is `a4`.
  * @param {string} van @param {string} naar @param {string} kind
  */
 function toegestaanZonderRecord(van, naar, kind) {
   if (kind === 'adr') return van === 'geaccepteerd' && (naar === 'vervallen' || /^vervangen door \d{4}$/.test(naar));
-  if (naar === 'vervallen') return van === 'goedgekeurd' || van === 'gebouwd' || van === 'vervallen';
+  if (naar === 'vervallen') return van === 'goedgekeurd' || van === 'vervallen';
   return van === 'goedgekeurd' && naar === 'goedgekeurd';
 }
 
 /**
  * Leest het PR-nummer en de SHA uit de oude vormen `gebouwd # #<PR>` en `gebouwd # #<PR>; gevalideerd: <sha>` (apps,
- * geschiedenis). De vorm is nu `status: gebouwd` zonder nummer (ADR 0095); daarvoor en voor elk ander commentaar: null.
+ * geschiedenis; ADR 0104 leest ze als `goedgekeurd`); voor elk ander commentaar: null.
  * @param {string} text @returns {{ pr: number, sha?: string } | null}
  */
 export function builtReference(text) {

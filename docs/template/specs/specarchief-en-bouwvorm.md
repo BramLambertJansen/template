@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #544
+status: goedgekeurd # #544
 namespace: specarchief-en-bouwvorm
 model: opus
 modelreden: wijzigt de guard over besluiten en bouwbewijs, het rolhek en `docs:status` (ADR 0046 punt 18)
@@ -67,8 +67,7 @@ n.v.t.: geen externe dienst; GitHub lezen zoals nu.
    spec (AC-1 t/m AC-3). Links: vanuit het archief alsof in `docs/specs/`; een doel `docs/specs/<naam>.md` lost vanuit
    `docs/adr/**` en `docs/specs/**` ook op naar het archief; elders het letterlijke pad.
 2. **Levende spec** (AC-7, AC-8). `beslisOvergang`: `gebouwd` → `gebouwd`, zelfde verwijzing, andere digest is `besluit`.
-   Een nieuwe AC: `- **<ns>/AC-n** (nog niet gebouwd)`, alleen op een id dat niet op main staat; regel 6 van `check-docs` slaat
-   alleen die over. De digest telt zonder markeringen: alleen weghalen is geen inhoudswijziging. In `check-document-status`
+   Een nieuwe AC krijgt alleen een nieuw id, zonder merkteken; tot haar test er is, is de spec `deels` (ADR 0104). De digest telt zonder markeringen: alleen weghalen is geen inhoudswijziging. In `check-document-status`
    (tegen de stand op main): een id `<ns>/AC-n` (`ns` = namespace, anders de naam) verdwijnt bij geen overgang. Een verhuizing
    gaat alleen naar `docs/specs/archief/` (`docs/template/specs/` uit `verhuisBron`); een andere rename is rood.
 3. *(vervallen door ADR 0095: `docs:status` bestaat niet meer; hoofdsessie of architect zet `status: gebouwd` in de bouw-PR)*

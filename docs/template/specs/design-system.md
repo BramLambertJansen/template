@@ -1,5 +1,5 @@
 ---
-status: gebouwd # gebouwd in PR #51
+status: goedgekeurd # gebouwd in PR #51
 namespace: design-system
 ---
 

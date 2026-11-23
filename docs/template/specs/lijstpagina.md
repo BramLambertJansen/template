@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #671
+status: goedgekeurd # #671
 namespace: lijstpagina
 ---
 

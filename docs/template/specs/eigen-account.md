@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #484
+status: goedgekeurd # #484
 namespace: eigen-account
 ---
 

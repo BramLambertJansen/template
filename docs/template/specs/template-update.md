@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #732
+status: goedgekeurd # #732
 namespace: template-update
 ---
 

@@ -1,15 +1,28 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { documentKind } from '../../rails/hooks/lib/document-state.mjs';
-import { docsViolations } from '../../scripts/kit/check-docs.mjs';
+import { docsKrimp, docsViolations } from '../../scripts/kit/check-docs.mjs';
 
 // templateregime/AC-9 (ADR 0089 punt 1, 4 en 6): `check-docs` toetst `docs/adr/`, `docs/specs/`, `docs/template/adr/` en
 // `docs/template/specs/` gelijk: links, statuswoorden, unieke nummers per map, kopnummer gelijk aan bestandsnummer en AC naar
 // test. Een nummer telt per map; de reeks 0001-0099 / 0100+ bestaat niet meer. In de twee templatemappen is een vervallen of
 // vervangen document rood (vervallen-documenten-weg/AC-6); in `docs/specs/` en `docs/adr/` blijft elke geldige status groen.
+const dirs: string[] = [];
+beforeEach(() => {
+  vi.stubEnv('GITHUB_ACTIONS', 'false');
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
+  for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+});
+
+function git(cwd: string, ...args: string[]) {
+  execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], { cwd });
+}
+
 const ADR_MAPPEN = ['docs/adr', 'docs/template/adr'] as const;
 const SPEC_MAPPEN = ['docs/specs', 'docs/template/specs'] as const;
 const DUBBEL_PREFIX: Record<(typeof ADR_MAPPEN)[number], string> = {
@@ -275,13 +288,34 @@ describe('templateregime/AC-9 links', () => {
 describe('templateregime/AC-9 AC naar test voor gebouwde template-specs', () => {
   const SPEC = 'docs/template/specs/kaart.md';
 
-  test('templateregime/AC-9 een gebouwde template-spec met een AC zonder test is rood', async () => {
-    expect(await sleutels({ [SPEC]: spec('gebouwd') })).toStrictEqual(['docs:ac:kaart:AC-1']);
+  // ADR 0104: regel 6 is een ratchet tegenover de merge-base (`docsKrimp`): een AC die op main gebouwd was en geen test meer
+  // heeft, is rood. Basis: origin/main met de spec en een dekkende test; de werkmap verandert de test.
+  const BASIS_TEST = 'test/rails/kaart.test.ts';
+
+  async function krimpSleutels(head: Record<string, string | null>): Promise<string[]> {
+    const root = repo({ [SPEC]: spec('goedgekeurd'), [BASIS_TEST]: "test('kaart/AC-1 doet iets', () => {});\n" });
+    dirs.push(root);
+    git(root, 'commit', '-qm', 'basis');
+    git(root, 'update-ref', 'refs/remotes/origin/main', 'HEAD');
+    const wijziging: Record<string, string | null> = { [BASIS_TEST]: null, ...head };
+    for (const [file, inhoud] of Object.entries(wijziging)) {
+      if (inhoud === null) rmSync(path.join(root, file), { force: true });
+      else {
+        mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
+        writeFileSync(path.join(root, file), inhoud);
+      }
+    }
+    git(root, 'add', '-A');
+    return (await docsKrimp(root)).map((violation) => violation.key).filter((key) => key.startsWith('docs:ac:'));
+  }
+
+  test('templateregime/AC-9 een template-spec die gebouwd was en haar test verliest, is rood', async () => {
+    expect(await krimpSleutels({})).toStrictEqual(['docs:ac:kaart:AC-1']);
   });
 
   test('templateregime/AC-9 een test met <namespace>/AC-n dekt het AC van een gebouwde template-spec', async () => {
     const keys = await sleutels({
-      [SPEC]: spec('gebouwd'),
+      [SPEC]: spec('goedgekeurd'),
       'test/rails/kaart.test.ts': "test('kaart/AC-1 doet iets', () => {});\n",
     });
 
@@ -289,12 +323,10 @@ describe('templateregime/AC-9 AC naar test voor gebouwde template-specs', () => 
   });
 
   test('templateregime/AC-9 een test buiten de testpaden dekt het AC niet', async () => {
-    const keys = await sleutels({ [SPEC]: spec('gebouwd'), 'src/kaart.ts': '// kaart/AC-1\n' });
-
-    expect(keys).toStrictEqual(['docs:ac:kaart:AC-1']);
+    expect(await krimpSleutels({ 'src/kaart.ts': '// kaart/AC-1\n' })).toStrictEqual(['docs:ac:kaart:AC-1']);
   });
 
-  test('templateregime/AC-9 een goedgekeurde template-spec zonder test wordt niet op AC getoetst', async () => {
+  test('templateregime/AC-9 een goedgekeurde template-spec zonder test (nooit gebouwd) is geen verlies', async () => {
     expect(await sleutels({ [SPEC]: spec('goedgekeurd') })).toStrictEqual([]);
   });
 });

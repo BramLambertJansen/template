@@ -1,9 +1,9 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { describe, expect, test } from 'vitest';
-import { docsViolations } from '../../scripts/kit/check-docs.mjs';
+import { describe, expect, test, vi } from 'vitest';
+import { docsKrimp, docsViolations } from '../../scripts/kit/check-docs.mjs';
 
 // compacte-kennisbasis-rails PR 2 (docs/specs/compacte-kennisbasis-rails.md, ADR 0063 punt 1 t/m 4, ADR 0053 punt 3 en 4):
 // `check-docs` (docsViolations) op echte, tijdelijke git-repositories. Gemeten wordt wat een wijziging TOEVOEGT aan de
@@ -169,19 +169,34 @@ describe('compacte-kennisbasis-rails/AC-5: een spec onder docs/template/specs/ v
     ].join('\n');
   const SPEC = 'docs/template/specs/mijn-spec.md';
 
-  test('compacte-kennisbasis-rails/AC-5 een gebouwde spec zonder test voor AC-1: docs:ac:mijn-spec:AC-1', async () => {
-    const keys = (await meldingen({ [SPEC]: spec('gebouwd') })).map(({ key }) => key);
-    expect(keys).toContain('docs:ac:mijn-spec:AC-1');
+  // ADR 0104: regel 6 is een ratchet tegenover de merge-base (`docsKrimp`); een goedgekeurde spec waarvan de test verdwijnt, is rood.
+  test('compacte-kennisbasis-rails/AC-5 een gebouwde spec die haar test voor AC-1 verliest: docs:ac:mijn-spec:AC-1', async () => {
+    const test = 'test/rails/mijn.test.ts';
+    const root = repo({ [SPEC]: spec('goedgekeurd'), [test]: "test('mijn/AC-1: iets', () => {});\n" });
+    execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', 'basis'], { cwd: root });
+    execFileSync('git', ['update-ref', 'refs/remotes/origin/main', 'HEAD'], { cwd: root });
+    rmSync(path.join(root, test));
+    execFileSync('git', ['add', '-A'], { cwd: root });
+    vi.stubEnv('GITHUB_ACTIONS', 'false');
+    try {
+      const keys = (await docsKrimp(root)).map(({ key }) => key);
+      expect(keys).toContain('docs:ac:mijn-spec:AC-1');
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   test('compacte-kennisbasis-rails/AC-5 met een test die mijn/AC-1 noemt: geen overtreding', async () => {
     const keys = (
-      await meldingen({ [SPEC]: spec('gebouwd'), 'test/rails/mijn.test.ts': "test('mijn/AC-1: iets', () => {});\n" })
+      await meldingen({
+        [SPEC]: spec('goedgekeurd'),
+        'test/rails/mijn.test.ts': "test('mijn/AC-1: iets', () => {});\n",
+      })
     ).map(({ key }) => key);
     expect(keys.filter((key) => key.startsWith('docs:ac:'))).toStrictEqual([]);
   });
 
-  test('compacte-kennisbasis-rails/AC-5 een niet-gebouwde spec heeft geen AC-plicht', async () => {
+  test('compacte-kennisbasis-rails/AC-5 een goedgekeurde spec zonder test (nooit gebouwd) heeft geen AC-plicht', async () => {
     const keys = (await meldingen({ [SPEC]: spec('goedgekeurd') })).map(({ key }) => key);
     expect(keys.filter((key) => key.startsWith('docs:ac:'))).toStrictEqual([]);
   });

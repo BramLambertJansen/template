@@ -1,5 +1,6 @@
 ---
-status: gebouwd
+status: goedgekeurd
+namespace: a
 ---
 
 # Spec A
@@ -7,3 +8,5 @@ status: gebouwd
 Bewerkt.
 
 Een spec zonder verwijzing.
+
+- **a/AC-1** — Gegeven iets, dan dit.

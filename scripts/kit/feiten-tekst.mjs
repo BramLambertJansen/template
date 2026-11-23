@@ -47,9 +47,12 @@ export function adrOverzicht(list, alle, gereserveerd = []) {
   };
 }
 
+/** Een spec die nog bouw vraagt: `voorstel`, `goedgekeurd` of `deels <n>/<m>` (ADR 0104). @param {string} status */
+const isOpen = (status) => SPEC_OPEN.includes(status) || status.startsWith('deels ');
+
 /**
- * Standaard alleen specs op `voorstel` en `goedgekeurd`, plus één regel met het aantal per andere status; `alle` toont de
- * volledige lijst (meting-stuurt/AC-5).
+ * Standaard alleen specs op `voorstel`, `goedgekeurd` en deels gebouwd, plus één regel met het aantal per andere status (de
+ * stand `gebouwd` en `vervallen`); `alle` toont de volledige lijst (meting-stuurt/AC-5, gebouwd-zonder-nummer/AC-25).
  * @param {readonly Spec[]} list
  * @param {boolean} alle
  * @param {string} [map] de map van deze lijst, voor de telregel
@@ -58,12 +61,30 @@ export function specsOverzicht(list, alle, map = 'docs/specs/') {
   if (alle) return list;
   /** @type {Map<string, number>} */
   const anders = new Map();
-  for (const { status } of list) if (!SPEC_OPEN.includes(status)) anders.set(status, (anders.get(status) ?? 0) + 1);
+  for (const { status } of list) if (!isOpen(status)) anders.set(status, (anders.get(status) ?? 0) + 1);
   const telling = [...anders].map(([status, aantal]) => `${String(aantal)} ${status}`).join(', ');
   return {
-    lijst: list.filter(({ status }) => SPEC_OPEN.includes(status)),
+    lijst: list.filter(({ status }) => isOpen(status)),
     overig: `${telling === '' ? 'geen andere' : telling} (feiten specs --alle of ${map})`,
   };
+}
+
+/**
+ * De tekstvorm van de sectie `specs`: per spec alleen naam en statuskolom; `stand`, `gebouwd` en `levend` staan alleen in
+ * `--json` (gebouwd-zonder-nummer/AC-25), zodat de tekst niet met de AC-dekking groeit.
+ * @param {unknown} sectie de uitvoer van `lezerSecties(…).specs()`
+ * @returns {unknown}
+ */
+export function specsTekst(sectie) {
+  /** @param {unknown} rij */
+  const kort = (rij) =>
+    typeof rij === 'object' && rij !== null && 'spec' in rij && 'status' in rij
+      ? { spec: rij.spec, status: rij.status }
+      : rij;
+  if (typeof sectie !== 'object' || sectie === null) return sectie;
+  return Object.fromEntries(
+    Object.entries(sectie).map(([sleutel, waarde]) => [sleutel, Array.isArray(waarde) ? waarde.map(kort) : waarde]),
+  );
 }
 
 /**
