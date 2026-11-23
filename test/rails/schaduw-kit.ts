@@ -95,7 +95,12 @@ export function ruimOp(): void {
 }
 
 // De echte padtabel van de template: check-docs in de tijdelijke repo eist de vloer, goedkeurders en CODEOWNERS.
-export const GATES_TEMPLATE = readFileSync(path.join(ROOT, '.claude/gates.json'), 'utf8');
+// `onderhoud` altijd erbij: na `app:init` (check:new-resource) ontbreekt het in de echte padtabel.
+const GATES_ECHT: unknown = JSON.parse(readFileSync(path.join(ROOT, '.claude/gates.json'), 'utf8'));
+export const GATES_TEMPLATE = JSON.stringify({
+  onderhoud: { repository: 'BramLambertJansen/template' },
+  ...(typeof GATES_ECHT === 'object' && GATES_ECHT !== null ? GATES_ECHT : {}),
+});
 export const GATES_APP = JSON.stringify({ paden: {}, template: { repository: 'acme/sjabloon' } });
 
 export function git(cwd: string, datum: string | undefined, ...args: string[]): void {

@@ -92,7 +92,7 @@ test('schaduwmodus/AC-12: pnpm meting zonder vlag geeft dezelfde tellingen als z
     const metRegels = meting(opslag(true), werk, ...args);
     const zonderRegels = meting(opslag(false), werk, ...args);
     expect(metRegels.status, metRegels.stderr).toBe(0);
-    expect(metRegels.stdout).toBe(zonderRegels.stdout.replaceAll('/meting-schaduw-', '/meting-schaduw-'));
+    expect(metRegels.stdout).toBe(zonderRegels.stdout);
   }
 });
 
