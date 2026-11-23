@@ -146,6 +146,8 @@ export function rolhekContext(root, cwd) {
       }
     },
     committed: committedIn(root, basis?.sha ?? null),
+    // Leerpunt #887: een testbestand is pas bestaand als het in de merge-base met het anker of origin/main staat.
+    bestaand: committedIn(root, basis?.sha ?? null),
     isDir: (/** @type {string} */ rel) => safe(() => statSync(path.join(root, rel)).isDirectory()),
     // Een map als doel (rm -r, find -delete, cp -r): wat eronder staat, getrackt of nieuw en niet genegeerd (R-ROL-08).
     files: (/** @type {string} */ rel) =>
