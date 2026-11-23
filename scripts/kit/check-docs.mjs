@@ -22,7 +22,8 @@
 //     afleiding in rails/hooks/lib/ac-dekking.mjs), is het in de werkmap nog (sleutel `docs:ac:<spec>:<AC-n>`), tenzij de AC
 //     de vervallen-vorm heeft (`Vervallen door ADR <nummer>`, ADR geaccepteerd) of de spec verdwijnt of `vervallen` wordt.
 //     Daarnaast geen nieuwe statusregel `status: gebouwd` (`docs:<spec>:status-gebouwd`, AC-19) en geen nieuw merkteken
-//     `(nog niet gebouwd)` op een AC (`docs:<spec>:merkteken:<AC-n>`, AC-21). In `docsKrimp`: strikt, nooit in de baseline.
+//     `(nog niet gebouwd)` op een AC (`docs:<spec>:merkteken:<AC-n>`, AC-21). Is de boom op de merge-base onleesbaar, dan
+//     alleen `docs:ac:basis-onleesbaar` (AC-29). In `docsKrimp`: strikt, nooit in de baseline.
 //  7. Spec-discipline: geen lijstitem met `⚠ open` in "Open vragen" bij goedgekeurd (`:open-vraag`); elk pad in
 //     "Kopieer de vorm van" bestaat bij voorstel, en bij goedgekeurd zolang de spec niet volledig gebouwd is (`:vorm`, AC-23).
 //  8. `framework §N` buiten §1–§12, §11a en de `## <n>.`-koppen van het regelboek (niet in de ADR-mappen); 9. backtick-paden in
@@ -182,14 +183,16 @@ export async function docsKrimp(root = '.') {
 
 /**
  * Regel 6 tegenover de merge-base met origin/main (ADR 0104): AC-verlies (AC-18), een nieuwe `status: gebouwd` (AC-19) en
- * een nieuw merkteken (AC-21). Zonder merge-base toetst dit niets; de melding daarvan geeft `zonderBasis` (AC-26).
+ * een nieuw merkteken (AC-21). Zonder merge-base toetst dit niets; de melding daarvan geeft `zonderBasis` (AC-26). Een
+ * onleesbare boom op de merge-base geeft alleen `docs:ac:basis-onleesbaar` (AC-29).
  * @param {string} root
  * @returns {Violation[]}
  */
 function dekkingKrimp(root) {
   const stand = dekkingTegenBasis(root);
-  const { basis, bomen } = stand;
-  if (basis === null || bomen.basis === null) return [];
+  const { sha, basis, bomen } = stand;
+  if (sha === null || basis === null || bomen.basis === null) return [];
+  if (bomen.basis.onleesbaar) return [basisOnleesbaar(sha)];
   const oudBoom = bomen.basis;
   const specs = [...stand.nu.keys()].map((file) => {
     const oudPad = stand.hernoemd[file] ?? file;
@@ -199,6 +202,17 @@ function dekkingKrimp(root) {
     ...acVerlies({ basis, nu: stand.nu, hernoemd: stand.hernoemd }, bomen.nu),
     ...specs.flatMap((spec) => [...statusGebouwdViolations(spec), ...merktekenViolations(spec)]),
   ];
+}
+
+/**
+ * AC-29: een merge-base waarvan de boom niet te lezen is, is rood; een lege basis zou stil groen geven.
+ * @param {string} sha @returns {Violation}
+ */
+function basisOnleesbaar(sha) {
+  return {
+    key: 'docs:ac:basis-onleesbaar',
+    message: `ac-dekking: de boom op de merge-base ${sha} is niet te lezen (git ls-tree of git cat-file faalt); de AC-dekking tegenover main toetst niets, haal origin/main opnieuw op (ADR 0104)`,
+  };
 }
 
 /**
