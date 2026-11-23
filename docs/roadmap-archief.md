@@ -24,6 +24,12 @@ Afgevinkte items uit [de roadmap](roadmap.md), per fase en stuk met hun bewijs e
 - [x] CI-lus tot groen en opleveren — ADR 0030 (PR 1: skill `opleveren`, #149); PR 2 staat onder Geparkeerd
 - [x] Duidelijker diff-guard en `pnpm pr:verify` tijdens de overgang — ADR 0031 (PR 1 #154, PR 3 #155); PR 2 staat onder Volgende
 - [x] Volledige UI-catalogus als bron voor agents en `/design-system` — ADR 0028 (`test/rails/catalogus-coverage.test.ts`)
+- [x] Herziening van ADR 0018–0022 en 0024 en de specs onder mandaat: bevestigd zoals besloten (eigenaar, 2026-11-23). De ADR's waren al
+      samengevoegd in ADR 0043, 0049, 0050 en 0051 ("zelfde besluiten, compact"); de specs `accountbeheer-uitbreiding`, `eigen-account`,
+      `rate-limit` en `lijstpagina` dragen de bevestiging, de open vragen van `accountbeheer-uitbreiding` volgens de aanbeveling.
+- [x] Ontwikkelplatform: alleen Ubuntu/WSL2 (eigenaar, 2026-11-23)
+- [x] Geen allow-regel voor `gh api`-leesaanroepen, zonder meting (eigenaar, 2026-11-23) — spec `cloud-pr-route`, M1
+- [x] Zelfinstallatie in de cloud: OV-1 t/m OV-4 volgens de aanbeveling (eigenaar, 2026-11-23) — spec `cloud-zelfinstallatie`
 
 ## Gebouwd
 

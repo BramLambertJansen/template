@@ -270,6 +270,9 @@ Elke negatieve test faalt op de huidige code (R-PRINC-04).
 
 ## Open vragen
 
+OV-1 t/m OV-4 besloten volgens de aanbeveling (eigenaar, 23 november 2026): geen hook die in de cloud zelf installeert, de vraag
+van OV-2 vervalt, `bubblewrap` en `socat` blijven niet-fataal, en het roadmap-item onder Besluiten is daarmee afgehandeld.
+
 - **OV-1** — Komt er daarna een hook die in de cloud zelf installeert (nul handwerk)? Opties: (a) nee, één omgeving per
   account volstaat; (b) ja, alleen bij `startup` in de cloud, met een ADR dat 0085 (afgewezen alternatief) en 0061 herziet;
   (c) ja, bij elke sessiestart. Aanbeveling na de metingen: (a). De hooks draaien (M1), dus (b) kan, maar de omgeving

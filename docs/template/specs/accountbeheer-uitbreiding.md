@@ -1,12 +1,12 @@
 ---
-status: goedgekeurd # door de agent onder mandaat van de eigenaar (2026-10-11), open vragen volgens de aanbeveling; ter herziening
+status: goedgekeurd # door de agent onder mandaat van de eigenaar (2026-10-11), open vragen volgens de aanbeveling; bevestigd door de eigenaar (2026-11-23)
 namespace: accounts
 ---
 
 # Accountbeheer, uitbreiding: blokkeren, uitnodiging intrekken, resetlink en herstelcodes
 
 > Goedgekeurd door de agent onder mandaat van de eigenaar (2026-10-11). Elke open vraag is besloten volgens de aanbeveling
-> erbij; zie `docs/reviews/2026-10-11-keuzes-agent.md`. De eigenaar kan dit herzien.
+> erbij; zie `docs/reviews/2026-10-11-keuzes-agent.md`. De eigenaar heeft dit bevestigd (2026-11-23).
 
 Geen kop weglaten; "n.v.t. — reden" mag. Ontbreekt een antwoord, dan vraagt de agent het.
 
@@ -178,6 +178,8 @@ aantal resterende herstelcodes tonen (`/view-backup-codes` is alleen server-side
   `ConfirmDialog`), herstelcodes tonen, `/account` sectie Herstelcodes, `/nieuw-wachtwoord` en het herstelcodescherm bij inloggen.
 
 ## Open vragen voor de eigenaar
+
+Alle zeven besloten volgens de aanbeveling (eigenaar, 23 november 2026); OV-1, OV-5, OV-6, OV-7 en het blokkeerdeel van OV-2 (`accounts:manage`) zijn al gebouwd.
 
 - **OV-1** — Waar staat "geblokkeerd"? Aanbeveling: `better_auth."user".blocked_at`, geschreven door een functie van `app_definer` (atomair met de
   laatste-admin-regel), gelezen door Better Auth bij elke sessie. Vraagt een grant buiten ADR 0043 en schrijven in `better_auth` (ADR 0041), dus een

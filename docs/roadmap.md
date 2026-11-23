@@ -99,7 +99,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
 - [ ] **ST-02 (P0) — accountbeheer en herstel afmaken** (stuk 3e; bestaande accountbeheer-specs). Open: TOTP-backupcodes (zodat een admin
   zonder telefoon niet alleen via `admin:create` terugkomt), een openstaande uitnodiging intrekken (opnieuw versturen bestaat al:
   `reinviteRoute`) en een admin-resetlink ("wachtwoord vergeten" blijft dicht, ADR 0043). De spec voor alle drie bestaat al:
-  `docs/template/specs/accountbeheer-uitbreiding.md` (goedgekeurd, ter herziening, zie Besluiten); nog niets ervan is gebouwd.
+  `docs/template/specs/accountbeheer-uitbreiding.md` (goedgekeurd, door de eigenaar bevestigd 2026-11-23); nog niets ervan is gebouwd.
   Gedaan: eenmalige TOTP-code en e-maillink, geen sessietoken in JSON (spec `inloggat-dichten`, ADR 0075; bewijs `test/auth/eenmalig.int.test.ts`, `db/tests/one_time_use.sql`).
   **Werk:** specificeer herauthenticatie, sessie-intrekking, tokenverval, oude/nieuwe adresbevestiging en herstel zonder rolpromotie;
   koppel audit en mail aan ST-04 en ST-03 en kopieer geen synchroon mailpad als de outbox de geldende route wordt.
@@ -116,7 +116,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   een vervalste client-request-ID wordt niet gebruikt.
   aanleiding: #128
 - [ ] **ST-03 (P0) — achtergrondtaken: runner, opruimen en mail-outbox** (stuk 7; [ADR 0050](template/adr/0050-achtergrondtaken-en-mail-outbox.md): runner in het API-proces,
-  eigen rol `app_jobs`, outbox zonder token; ADR 0020 staat onder Besluiten ter herziening). Opruimen van verlopen sessies, uitnodigingen en
+  eigen rol `app_jobs`, outbox zonder token; besluiten van ADR 0020 door de eigenaar bevestigd). Opruimen van verlopen sessies, uitnodigingen en
   rate-limit-rijen, en mail via een outbox, elk met een integratietest.
   **Werk:** volg de sectie Bouwvolgorde van ADR 0020 letterlijk (audit, bewaarcatalogus, jobrol, runner, outbox). Verbindingen blijven in de
   bestaande db/auth-laag en worden aan de runner geïnjecteerd. Batches, locks, leases, begrensde retries, definitieve foutstatus en herstel na een
@@ -128,7 +128,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   (geen exactly-once-claim).
   **Eisen uit het regelboek** (R-DOC-10: tot de bouw staan ze hier; de bouw-PR zet ze terug in het regelboek): `startJobs()` draait taken op interval vanuit `src/api/server.ts`, batch = één transactie met advisory lock; nul-schalende host: adapter roept `runJobsOnce()`; HTTP-cronpad alleen met hostgeheim, als §3-uitzondering (was R-JOB-01). `withJob()` gebruikt een eigen pool als rol `app_jobs` (`JOBS_DATABASE_URL`, execute alleen klasse `job`, niets op `better_auth`) (was in R-JOB-02). `app.mail_outbox`: RLS geforceerd, geen link of token in payload, foutcode zonder adressen; erin alleen via `app.enqueue_mail` (security definer, definer per mailsoort); at-least-once met lease, link pas bij verzenden (was R-JOB-03). `GET /api/ready` pingt niet als `app_jobs` (OV-C4, besloten 2026-11-11); vóór `startServer` één verbinding als `app_jobs`, faalt die dan stopt het proces (was in R-DEPLOY-01).
   aanleiding: `docs/template/adr/0050-achtergrondtaken-en-mail-outbox.md`
-- [ ] **ST-05 (P0) — AVG: privacymechanisme, export en verwijderen** ([ADR 0051](template/adr/0051-audit-log-en-avg.md), ter herziening). Mechanisme in core, inhoud per app.
+- [ ] **ST-05 (P0) — AVG: privacymechanisme, export en verwijderen** ([ADR 0051](template/adr/0051-audit-log-en-avg.md)). Mechanisme in core, inhoud per app.
   **Werk:** bewaarcatalogus, FK-invarianten, eigen export, admin-verwijdering en app-registratie van exporters en erasers, in de volgorde van
   ADR 0020. Accountverwijdering en audit blijven in één transactie (geen tweede verbinding op dezelfde laatste-admin-lock). Exporters filteren
   expliciet op eigenaar, ook als RLS gedeelde data toelaat. Valideer bewaartermijnen en retention-kolommen; catalogusregistratie ook in de
@@ -464,19 +464,7 @@ Bewust nog niet, tot de genoemde aanleiding er is (P1). Niets verdwijnt: elk ite
 Een ADR met status `voorgesteld` is geen besluit; afvinken gebeurt pas als de eigenaar hem accepteert.
 Geldende ADR-besluiten staan in `node scripts/kit/feiten.mjs adr`; afgevinkte besluititems, ook eigenaarbesluiten zonder ADR, staan in [het archief](roadmap-archief.md).
 
-- [ ] **Herziening van ADR 0018–0022 en 0024 en de specs onder mandaat** (`accountbeheer-uitbreiding`, `eigen-account`, `rate-limit`, `lijstpagina`):
-  geaccepteerd door de agent onder mandaat, "ter herziening" door de eigenaar. Open eigenaarbesluit; de agent beslist niet. Dit omvat ook ADR 0020
-  (achtergrondtaken: runner in het API-proces, eigen rol `app_jobs`, outbox zonder token), ADR 0021 (audit log, aanbevelingen OV-1..7) en ADR 0022
-  (AVG, aanbevelingen OV-1..7); gebouwd is audit (#128), rate limiting en readiness. Bron: `docs/reviews/2026-10-12-werkstraat.md`.
-- [ ] Ontwikkelplatform: alleen Ubuntu/WSL2, of ook macOS (sandbox, `scripts/bootstrap.sh`, `scripts/doctor.sh`). Eigenaarbesluit.
 - [ ] ST-01 (GitHub-bescherming) besluiten: voorwaarde voor ADR 0030 PR 2; zie Volgende.
-- [ ] Allow-regel voor `gh api`-leesaanroepen (spec `cloud-pr-route`, M1): het besluit zou na de meting van stap 0 vallen, maar M1 is
-  niet gemeten, alleen afgeleid (lokaal volgt `gh api` de gewone permissievraag). Eigenaarbesluit: meten op de laptop en dan kiezen, of
-  laten zoals het is.
-- [ ] Zelfinstallatie in de cloud (spec `cloud-zelfinstallatie`, OV-1 t/m OV-4, onbesloten in een gebouwde spec): OV-1, komt er
-  een hook die in de cloud zelf installeert (aanbeveling: nee); OV-2, installeren zonder te vragen (aanbeveling na de metingen: de
-  vraag vervalt); OV-3, `bubblewrap` en `socat` blijven niet-fataal in het script (aanbeveling: ja); OV-4 vroeg om een
-  roadmap-item, en dit is dat item. Eigenaarbesluit.
 
 ## Gebouwd
 
