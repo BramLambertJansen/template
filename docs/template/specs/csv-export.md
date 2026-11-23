@@ -1,5 +1,5 @@
 ---
-status: gebouwd
+status: goedgekeurd
 namespace: csv-export
 sjabloon: mini
 scope: functionele-ui
