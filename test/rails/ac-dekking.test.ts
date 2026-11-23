@@ -469,7 +469,7 @@ describe('AC-22: regel 14 toetst elke spec met minstens één gebouwd AC, behalv
   });
 
   test('gebouwd-zonder-nummer/AC-22: het item van een niet-gebouwd AC eindigt bij een lege regel of een regel met - of #', async () => {
-    const volgendItem = [ac('demo', 2, 'Zonder test.'), ac('demo', 3, `Met \`${DOOD}\`.`)];
+    const volgendItem = [ac('demo', 2, 'Zonder test.'), `- Los punt met \`${DOOD}\`.`];
     const metKop = [ac('demo', 2, 'Zonder test.'), `# Kop met \`${DOOD}\``];
     expect(await doodPaden(tweeAcs(volgendItem))).toStrictEqual([DOOD_KEY]);
     expect(await doodPaden(tweeAcs(metKop))).toStrictEqual([DOOD_KEY]);
