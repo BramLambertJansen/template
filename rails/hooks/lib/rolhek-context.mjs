@@ -160,7 +160,7 @@ export function rolhekContext(root, cwd) {
     mergeTrusted: () => (mergeVertrouwd ??= trustedMerge(root, basis)),
     kitTrusted: () => (kitVertrouwd ??= trustedKitScript(root, basis)),
     // Leerpunt #888: alleen voor de melding bij een weigering van de ankertoets.
-    ankerVerouderd: () => ankerVerouderd(root, basis),
+    ankerVerouderd: (/** @type {'merge' | 'kit'} */ modus) => ankerVerouderd(root, basis, modus),
   };
 }
 

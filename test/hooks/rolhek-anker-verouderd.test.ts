@@ -19,12 +19,18 @@ interface Opties {
   kitTrusted?: boolean;
   mergeTrusted?: boolean;
   ankerVerouderd?: boolean | (() => boolean);
+  cwd?: string;
+}
+
+interface Basis {
+  sha: string;
+  read?: (rel: string) => string | null;
 }
 
 function beslis(command: string, opties: Opties = {}) {
   const ctx = {
     root: '/repo',
-    cwd: '/repo',
+    cwd: opties.cwd ?? '/repo',
     config,
     read: () => null,
     committed: () => false,
@@ -86,6 +92,17 @@ describe('anker-verouderd: de melding van het rolhek', () => {
     expect(decision.deny.join('; ')).toContain('Gesprekken sluiten via pnpm pr:resolve doet alleen de hoofdsessie');
     expect(decision.deny.join('; ')).not.toContain(HINT);
   });
+
+  test('review K1: buiten de repo-root geen hint, want dan is de cwd de reden', () => {
+    const decision = beslis(RESOLVE, {
+      kitTrusted: false,
+      mergeTrusted: false,
+      ankerVerouderd: true,
+      cwd: '/repo/sub',
+    });
+    expect(decision.deny.length).toBeGreaterThan(0);
+    expect(decision.deny.join('; ')).not.toContain(HINT);
+  });
 });
 
 describe('anker-verouderd: ankerVerouderd(root, basis) tegen echte git', () => {
@@ -137,12 +154,34 @@ describe('anker-verouderd: ankerVerouderd(root, basis) tegen echte git', () => {
     git(root, 'update-ref', 'refs/remotes/origin/main', sha);
   }
 
-  function verouderd(root: string, basis: { sha: string } | null): unknown {
+  function verouderd(root: string, basis: Basis | null, modus?: 'merge' | 'kit'): unknown {
     expect(authority).toHaveProperty('ankerVerouderd');
     const functie: unknown = Reflect.get(authority, 'ankerVerouderd');
     expect(typeof functie, 'ankerVerouderd is een functie').toBe('function');
-    return typeof functie === 'function' ? Reflect.apply(functie, authority, [root, basis]) : null;
+    const args = modus === undefined ? [root, basis] : [root, basis, modus];
+    return typeof functie === 'function' ? Reflect.apply(functie, authority, args) : null;
   }
+
+  /** Anker A, origin/main B die scripts wijzigt, HEAD B, schone werkmap: het hoofdgeval van #888. */
+  function achterlopend() {
+    const { root, a } = repoMetA();
+    origin(root, commit(root, 'scripts/x.mjs', { tekst: 'b\n', bericht: 'B' }));
+    return { root, a };
+  }
+
+  test('review K2: een eigen git in node_modules/.bin: false (een nieuw anker helpt dan niet)', () => {
+    const { root, a } = achterlopend();
+    schrijf(root, 'node_modules/.bin/git', '#!/bin/sh\n');
+    expect(verouderd(root, { sha: a })).toBe(false);
+  });
+
+  test('review K3: merge zonder modus niet-kritiek in het anker: false; met de modus: true', () => {
+    const { root, a } = achterlopend();
+    const zonder = { sha: a, read: () => JSON.stringify({ merge: 'uit' }) };
+    const met = { sha: a, read: () => JSON.stringify({ merge: 'niet-kritiek' }) };
+    expect(verouderd(root, zonder, 'merge')).toBe(false);
+    expect(verouderd(root, met, 'merge')).toBe(true);
+  });
 
   test('anker A, origin/main B (wijzigt scripts), HEAD B, schone werkmap: true', () => {
     const { root, a } = repoMetA();
