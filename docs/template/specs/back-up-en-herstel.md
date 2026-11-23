@@ -96,7 +96,9 @@ BACKUP_RECOVERY_SHEET_CONFIRMED=2026-12-01
 
 Geheimen op de host: `BACKUP_DATABASE_URL` (als `app_backup`), de rclone-configuratie van de schrijver, `SMTP_URL`, het
 afzender- en ontvangeradres van de foutmail, `BACKUP_HEARTBEAT_URL` en `BACKUP_DRILL_HEARTBEAT_URL`. Bij de oefening
-daarnaast de privésleutel. Bij de opruimtaak alleen de rclone-configuratie van de opruimer.
+daarnaast de privésleutel. Bij de opruimtaak alleen de rclone-configuratie van de opruimer. Draait de release niet op de
+host, dan krijgt de release-workflow alleen de rclone-configuratie van een identiteit die de map mag lezen (AC-17); het
+app-ADR noemt welke.
 
 ## Image en uitvoeren
 
@@ -109,7 +111,7 @@ alleen het geheim van de opruimer, of op een andere plek die het app-ADR noemt.
 
 **`backup run [--release]`**
 
-1. Lees `deploy/backup.env`; ontbreekt iets, `CONFIG_INVALID`. Pak het lock-bestand, anders na 10 minuten `ALREADY_RUNNING`.
+1. Lees `deploy/backup.env`; ontbreekt een verplichte sleutel, `CONFIG_INVALID`. Pak het lock-bestand, anders na 10 minuten `ALREADY_RUNNING`.
 2. Major van `pg_dump` gelijk aan die van de server, anders `VERSION_MISMATCH`.
 3. `pg_dump --format=custom --exclude-schema=tap --lock-wait-timeout=5min` als `app_backup`, direct door `age` met de
    publieke sleutel, naar een tijdelijk bestand. Er komt nooit een onversleutelde export op schijf.

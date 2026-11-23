@@ -2,8 +2,8 @@
 
 Status: voorgesteld
 
-Drempel: A2 (een nieuwe databaserol, een definer-functie en drie kleine tools in een aparte image: `age`, `rclone` en
-`curl`; `dbmate` gebruikt de template al), A3 (één rol krijgt `BYPASSRLS`; `db/tests/rolattributen.sql` verbiedt dat nu voor de vijf rollen van de template en
+Drempel: A2 (een nieuwe databaserol, een definer-functie en vier kleine tools in een aparte image: `age`, `rclone`,
+`curl` en `dbmate`, waarvan de template `dbmate` al gebruikt), A3 (één rol krijgt `BYPASSRLS`; `db/tests/rolattributen.sql` verbiedt dat nu voor de vijf rollen van de template en
 krijgt één benoemde uitzondering) en A4 (wijzigt [0039](0039-stack-provider-neutraal-en-toolchain.md) op één punt: de
 template levert voortaan een back-upstap en een runbook voor herstel, waar 0039 alle runbooks per app liet). Aanleiding:
 verzoek van de eigenaar (2026-11-23), app-behoefte: de eerste app met geld (ABAS) gaat naar productie op goedkope hosting
