@@ -233,3 +233,20 @@ describe('schaduw-termijn: de repo na de bouw', { timeout: 60_000 }, () => {
     );
   });
 });
+
+describe('schaduw-termijn: een dubbele naam in het register (B-10)', { timeout: 60_000 }, () => {
+  test('schaduwmodus/AC-19: alleen de eerste regel met die naam telt voor termijn, meldingen en uitvoerder', async () => {
+    const { registerViolations, termijnMeldingen, termijnViolations, trefferMeldingen } = await laad();
+    const eerste = controle({ naam: 'a', soort: 'check', start: '2026-11-01', eind: '2026-11-07' });
+    const tweede = controle({ naam: 'a', soort: 'check', start: '2026-10-20', eind: '2026-10-30' });
+    const dir = maakRepo({ register: [eerste, tweede], datum: '2026-11-05T12:00:00Z' });
+    const uitvoerders: Uitvoerders = { a: uitvoerder({ treffers: ['x'] }) };
+
+    expect(await termijnMeldingen(dir, uitvoerders)).toEqual([
+      'a loopt af op 2026-11-07 (nog 2 dagen); leg vóór die datum het besluit voor',
+    ]);
+    expect(await trefferMeldingen(dir, uitvoerders)).toEqual(['a: x']);
+    expect(await termijnViolations(dir, uitvoerders)).toEqual([]);
+    expect(tekst(await registerViolations(dir, { ci: false }))).toContain('a: staat twee keer in het register');
+  });
+});

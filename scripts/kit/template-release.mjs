@@ -327,15 +327,24 @@ function toetsVersie(versie, huidig, fragmenten) {
 
 /**
  * Een app krijgt geen controle in schaduw (spec schaduwmodus, ADR 0106 punt 8): gooit als `.kit/schaduw.json` een of meer
- * regels bevat. Een ontbrekend register of `[]` laat de release door; de vorm toetst `pnpm ratchet` (schaduw-register).
+ * regels bevat, of als het geen JSON-lijst is (B-9). Een ontbrekend register of `[]` laat de release door; de vorm van de
+ * regels toetst `pnpm ratchet` (schaduw-register).
  * @param {string} root
  */
 function weigerSchaduw(root) {
   const bestand = path.join(root, SCHADUW_REGISTER);
   if (!existsSync(bestand)) return;
+  const geenLijst = `${SCHADUW_REGISTER} is geen JSON-lijst; herstel het register vóór de release (ADR 0106 punt 8)`;
+  const tekst = readFileSync(bestand, 'utf8');
   /** @type {unknown} */
-  const regels = JSON.parse(readFileSync(bestand, 'utf8'));
-  if (!Array.isArray(regels) || regels.length === 0) return;
+  let regels;
+  try {
+    regels = JSON.parse(tekst);
+  } catch {
+    throw new Error(geenLijst);
+  }
+  if (!Array.isArray(regels)) throw new Error(geenLijst);
+  if (regels.length === 0) return;
   const namen = regels.map((regel, index) => {
     const naam = typeof regel === 'object' && regel !== null ? Reflect.get(regel, 'naam') : undefined;
     return typeof naam === 'string' ? naam : `#${String(index)}`;

@@ -120,6 +120,9 @@ export interface Opzet {
   datum?: string;
   /** Geen origin/main-ref: dan is er geen merge-base. */
   zonderOrigin?: boolean;
+  /** Extra bestanden (pad naar inhoud) en lege mappen in de tijdelijke repo. */
+  extraBestanden?: Record<string, string>;
+  extraMappen?: string[];
 }
 
 function registerTekst(register: Regel[] | string | null): string | null {
@@ -149,6 +152,8 @@ export function maakRepo(opzet: Opzet = {}): string {
     '.github/CODEOWNERS': readFileSync(path.join(ROOT, '.github/CODEOWNERS'), 'utf8'),
     [SPEC]: '---\nstatus: voorstel\nnamespace: x\n---\n\n# X\n',
   };
+  Object.assign(bestanden, opzet.extraBestanden ?? {});
+  for (const map of opzet.extraMappen ?? []) mkdirSync(path.join(dir, map), { recursive: true });
   for (const [pad, inhoud] of Object.entries(bestanden)) {
     mkdirSync(path.dirname(path.join(dir, pad)), { recursive: true });
     writeFileSync(path.join(dir, pad), inhoud);

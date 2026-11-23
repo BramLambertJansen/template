@@ -6,7 +6,7 @@
 // onleesbare of ongeldige gates.json laat de check gooien (`isTemplate`). Een repo zonder gates.json heeft geen `onderhoud`
 // en geldt als app, zoals in check-docs (`files.includes('.claude/gates.json')`).
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { isTemplate } from './template-release.mjs';
 
@@ -170,11 +170,21 @@ function termijnFouten(regel, naam) {
   return [];
 }
 
+/**
+ * Een bestaand `.md`-bestand onder de specmap, al genormaliseerd zodat `..` de mapcontrole niet omzeilt (B-8).
+ * @param {string} root @param {string} spec
+ */
+function geldigeSpec(root, spec) {
+  if (path.posix.normalize(spec) !== spec || !spec.startsWith(SPEC_MAP) || !spec.endsWith('.md')) return false;
+  const bestand = path.join(root, spec);
+  return existsSync(bestand) && statSync(bestand).isFile();
+}
+
 /** @param {string} root @param {Regel} regel @param {string} naam @returns {Violation[]} */
 function inhoudFouten(root, regel, naam) {
   const spec = regel['spec'];
   const specFout =
-    typeof spec === 'string' && spec !== '' && (!spec.startsWith(SPEC_MAP) || !existsSync(path.join(root, spec)))
+    typeof spec === 'string' && spec !== '' && !geldigeSpec(root, spec)
       ? [fout(naam, 'spec', `spec ${spec} bestaat niet`)]
       : [];
   const rids = Array.isArray(regel['rids']) ? regel['rids'] : [];
@@ -221,24 +231,29 @@ function zelfdeDrempel(a, b) {
 }
 
 /**
- * De drie merge-base-regels (ADR 0106 punten 5 en 6); ze sluiten elkaar uit, dus hooguit één reden.
+ * De vier merge-base-regels (ADR 0106 punten 5 en 6, B-7); ze sluiten elkaar uit, dus hooguit één reden.
  * @param {Regel} nu @param {Regel} toen @returns {string | null}
  */
 function basisReden(nu, toen) {
   const [aangepast, eerder] = [nu['aangepast'], toen['aangepast']];
+  const drempelGelijk = zelfdeDrempel(nu['drempel'], toen['drempel']);
   if (eerder === 1) {
-    const anders =
-      nu['start'] !== toen['start'] || nu['eind'] !== toen['eind'] || !zelfdeDrempel(nu['drempel'], toen['drempel']);
+    const anders = nu['start'] !== toen['start'] || nu['eind'] !== toen['eind'] || !drempelGelijk;
     return anders || aangepast !== 1 ? 'al aangepast' : null;
   }
   if (eerder !== 0) return null;
-  if (aangepast === 1) return zelfdeDrempel(nu['drempel'], toen['drempel']) ? 'zelfde drempel' : null;
+  if (aangepast === 1) return drempelGelijk ? 'zelfde drempel' : null;
+  if (!drempelGelijk) return 'drempel zonder aanpassing';
   return String(nu['eind']) > String(toen['eind']) ? 'verlengd' : null;
 }
 
 const BASIS_MELDING = new Map([
   ['al aangepast', 'al een keer aangepast; het besluit is nu hard of verwijderd (ADR 0106 punt 6)'],
   ['zelfde drempel', 'aangepast zonder andere drempel; een aanpassing wijzigt de drempel (ADR 0106 punt 6)'],
+  [
+    'drempel zonder aanpassing',
+    'drempel anders dan op de merge-base zonder dat aangepast is opgehoogd; een aanpassing hoogt aangepast op (ADR 0106 punt 6)',
+  ],
   [
     'verlengd',
     'einddatum later dan op de merge-base zonder dat aangepast is opgehoogd; verlengen met dezelfde controle en drempel kan niet (ADR 0106 punt 5)',
@@ -312,11 +327,19 @@ function draai(uitvoerders, naam) {
   return uitkomst;
 }
 
-/** De registerregels met een geldige naam, voor de termijn en de uitvoerders. @param {string} root */
+/**
+ * De registerregels met een geldige naam, voor de termijn, de meldingen en de uitvoerders; bij een dubbele naam alleen de
+ * eerste (B-10; `schaduw-register` meldt de dubbele naam).
+ * @param {string} root @returns {Regel[]}
+ */
 function regelsMetNaam(root) {
-  return leesRegister(root)
-    .regels.filter((regel) => isRegel(regel) && VORM['naam']?.(regel['naam']) === true)
-    .map((regel) => (isRegel(regel) ? regel : {}));
+  /** @type {Map<string, Regel>} */
+  const perNaam = new Map();
+  for (const regel of leesRegister(root).regels) {
+    const naam = isRegel(regel) ? regel['naam'] : undefined;
+    if (isRegel(regel) && typeof naam === 'string' && NAAM.test(naam) && !perNaam.has(naam)) perNaam.set(naam, regel);
+  }
+  return [...perNaam.values()];
 }
 
 /** De datum van de committer van HEAD als dagnummer, of null. @param {string} root */

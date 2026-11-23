@@ -471,3 +471,26 @@ describe('schaduwmodus/AC-10: template:release weigert een gevuld schaduwregiste
     expect(lees(root, VERSIE_BESTAND)).toBe(versieTekst('0.3.0'));
   });
 });
+
+// --- schaduwmodus/AC-18: een register dat geen JSON-lijst is weigert de release (B-9) --------------------------------------
+
+describe('schaduwmodus/AC-18: template:release weigert een register dat geen JSON-lijst is', () => {
+  test.each([
+    ['een object', '{}\n'],
+    ['ongeldige JSON', '{'],
+  ])('schaduwmodus/AC-18: met %s in .kit/schaduw.json weigert hij en blijft alles ongewijzigd', (_naam, inhoud) => {
+    const root = template();
+    schrijf(root, { '.kit/schaduw.json': inhoud });
+    const voor = mapInhoud(root);
+
+    const geweigerd = draai(RELEASE_SCRIPT, ['0.3.0', '--datum', '2026-12-01'], { cwd: root });
+
+    expect(geweigerd.uit).toContain(
+      '✗ template:release: .kit/schaduw.json is geen JSON-lijst; herstel het register vóór de release (ADR 0106 punt 8)',
+    );
+    expect(geweigerd.status, geweigerd.uit).toBe(1);
+    expect(mapInhoud(root)).toStrictEqual(voor);
+    expect(lees(root, CHANGELOG)).toBe(ORIGINEEL);
+    expect(lees(root, VERSIE_BESTAND)).toBe(versieTekst('0.2.0'));
+  });
+});

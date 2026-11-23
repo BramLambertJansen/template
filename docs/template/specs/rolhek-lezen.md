@@ -47,7 +47,7 @@ n.v.t. — geen UI. De weigermelding noemt de regel en de toegestane opties.
   - `gh issue list`: met waarde `--label --state --limit --json --jq`;
   - `gh run view <id>`: vlaggen `--log --log-failed`, met waarde `--json --jq --job`;
   - `gh run list`: met waarde `--branch --workflow --limit --json --jq`;
-  - `pnpm leespad`: vlag `--json`, met waarde `--ref`; `pnpm meting`: vlaggen `--json --pr-tabel --trend --help` (`--trend` sinds ADR 0065), met waarde `--branch --sessie`.
+  - `pnpm leespad`: vlag `--json`, met waarde `--ref`; `pnpm meting`: vlaggen `--json --pr-tabel --trend --schaduw --help` (`--trend` sinds ADR 0065, `--schaduw` sinds spec schaduwmodus B-11), met waarde `--branch --sessie`. Toets: `test/hooks/rolhek-lezen.test.ts`
 
   `gh ... --web`, `-R`/`--repo` en `gh api` blijven geweigerd. Zoeken en tellen doet de Grep-tool; ontbreekt die, dan `git grep` en `git ls-files '<glob>'` (AC-6 tot AC-10, ADR 0087), en meld in het rapport wat niet na te zoeken was (#609). `git blame`, `wc` en pipes komen er niet bij. Tabeltests bevatten `--comments --web` en `--log --web`.
 - **rolhek-lezen/AC-2** — Voor elke rol wordt geweigerd: `--output`, `--output=…` en elke afkorting ervan bij `git diff|log|show`, en `-O`, `-O<commando>`, `--open-files-in-pager` en elke afkorting of cluster ervan (`--open-files`, `-iO`, `-nOvim`) bij `git grep` (nieuwe weigering; ze stonden niet in de schrijfdoelen). Daarmee is leerpunt #409 gesloten.
