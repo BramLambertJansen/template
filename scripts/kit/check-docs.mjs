@@ -165,7 +165,7 @@ export async function docsKrimp(root = '.') {
  * @returns {string | null}
  */
 function mergeBasis(root) {
-  const basis = spawnSync('git', ['merge-base', 'origin/main', 'HEAD'], { cwd: root, encoding: 'utf8' });
+  const basis = spawnSync('git', ['merge-base', 'refs/remotes/origin/main', 'HEAD'], { cwd: root, encoding: 'utf8' });
   const sha = basis.stdout.trim();
   return basis.status === 0 && sha !== '' ? sha : null;
 }

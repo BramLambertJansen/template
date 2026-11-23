@@ -82,7 +82,7 @@ function gegenereerdeLijst(root) {
 /** @param {string} root @param {Record<string, string>} opties */
 function bereik(root, opties) {
   const head = commitVan(root, 'HEAD');
-  const basisRef = opties['basis'] ?? 'origin/main';
+  const basisRef = opties['basis'] ?? 'refs/remotes/origin/main';
   const basisCommit = commitVan(root, basisRef);
   const basis = git(root, ['merge-base', basisCommit, head]).trim();
   const sindsRef = opties['sinds'];

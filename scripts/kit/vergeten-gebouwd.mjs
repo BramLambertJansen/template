@@ -107,7 +107,7 @@ export function meldingenVoor(specs, perTest) {
  * @param {string} root @returns {string[]}
  */
 export function vergetenGebouwdMeldingen(root) {
-  const basis = git(root, ['merge-base', 'origin/main', 'HEAD'])?.trim() ?? '';
+  const basis = git(root, ['merge-base', 'refs/remotes/origin/main', 'HEAD'])?.trim() ?? '';
   if (basis === '') return [];
   // Vaste prefixen: `diff.mnemonicPrefix` of `diff.noprefix` in de gitconfig van de gebruiker veranderen de `+++`-kop.
   const prefix = ['--src-prefix=a/', '--dst-prefix=b/'];

@@ -85,7 +85,7 @@ function grootteIn(root, ref) {
 
 /** De merge-base met `origin/main`, of null. @param {string} root */
 function basisVan(root) {
-  const basis = git(root, ['merge-base', 'origin/main', 'HEAD'])?.trim();
+  const basis = git(root, ['merge-base', 'refs/remotes/origin/main', 'HEAD'])?.trim();
   return basis === undefined || basis === '' ? null : basis;
 }
 

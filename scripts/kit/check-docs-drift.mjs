@@ -9,7 +9,7 @@ import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { FRAGMENT_MAP, isTemplate } from './template-release.mjs';
 
-const BASE = 'origin/main';
+const BASE = 'refs/remotes/origin/main';
 const GEGENEREERD = new Set(['src/web/routeTree.gen.ts', 'src/api/db/schema.ts']);
 const TEST = /\.(test|spec)\.[cm]?[jt]sx?$/;
 
@@ -74,7 +74,7 @@ export function driftVanRepo(root = '.', base = BASE) {
     const afsplitsing = git(['merge-base', base, 'HEAD']).trim();
     return driftWaarschuwing(git(['diff', '--name-only', '-z', afsplitsing]).split('\0').filter(Boolean), { template });
   } catch {
-    return `${base} is niet te lezen; docs-drift niet gecontroleerd (git fetch origin main of fetch-depth: 0)`;
+    return `${base.replace(/^refs\/remotes\//, '')} is niet te lezen; docs-drift niet gecontroleerd (git fetch origin main of fetch-depth: 0)`;
   }
 }
 
