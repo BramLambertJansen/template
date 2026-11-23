@@ -85,7 +85,7 @@ const DUPLICAAT = /^\s*duplicaat van #(\d+)\b/i;
 
 /**
  * Is de REST-body van `repos/<repo>/issues/<nr>` een leerpunt: een issue (geen `pull_request`) met het label `leerpunt`?
- * `null` (een 404) bestaat niet.
+ * `null` (een 404, of een 410 voor een verwijderd issue) bestaat niet.
  * @param {unknown} doel
  */
 export function isLeerpuntDoel(doel) {
@@ -112,7 +112,7 @@ export function duplicaatDoelen(nummer, comments) {
 /**
  * Het sluitoordeel met duplicaat (AC-13): bewijs en achterhaald gaan voor (`sluitOordeel`, AC-6); daarna telt een sluiting
  * met reden `duplicate` en een geldige duplicaatcomment naar een ander leerpunt. `haalDoel` geeft de REST-body van het doel,
- * of `null` bij een 404.
+ * of `null` bij een 404 of 410.
  * @param {number} nummer
  * @param {{ prs: { merged: boolean, body: string }[], comments: { body: string, association: string }[], reden: string }} bron
  * @param {(doel: number) => Promise<unknown>} haalDoel
@@ -140,7 +140,17 @@ function env(naam) {
 }
 
 /**
- * Een 404 is `null` bij DELETE (label al weg) en bij `magOntbreken` (een doel dat niet bestaat, AC-13); elke andere fout gooit.
+ * Telt dit antwoord als "bestaat niet" in plaats van als fout? Bij DELETE een 404 (label al weg); bij `magOntbreken` een 404
+ * of een 410, die GitHub geeft voor een verwijderd issue (een doel dat niet bestaat, AC-13). Elke andere fout gooit.
+ * @param {number} status @param {{ method?: string, magOntbreken?: boolean }} opties
+ */
+export function teltAlsOntbrekend(status, opties) {
+  if (opties.method === 'DELETE') return status === 404;
+  return opties.magOntbreken === true && (status === 404 || status === 410);
+}
+
+/**
+ * REST of GraphQL naar GitHub; `null` bij 204 en bij een ontbrekend doel (`teltAlsOntbrekend`).
  * @param {string} pad @param {{ method?: string, body?: unknown, magOntbreken?: boolean }} [opties] @returns {Promise<unknown>}
  */
 async function api(pad, opties = {}) {
@@ -149,10 +159,9 @@ async function api(pad, opties = {}) {
     headers: { authorization: `Bearer ${env('GITHUB_TOKEN')}`, accept: 'application/vnd.github+json' },
     ...(opties.body === undefined ? {} : { body: JSON.stringify(opties.body) }),
   });
-  const ontbreektMag = opties.method === 'DELETE' || opties.magOntbreken === true;
-  if (!antwoord.ok && !(ontbreektMag && antwoord.status === 404))
-    throw new Error(`${pad}: HTTP ${String(antwoord.status)}`);
-  return antwoord.status === 204 || antwoord.status === 404 ? null : antwoord.json();
+  const ontbreekt = !antwoord.ok && teltAlsOntbrekend(antwoord.status, opties);
+  if (!antwoord.ok && !ontbreekt) throw new Error(`${pad}: HTTP ${String(antwoord.status)}`);
+  return antwoord.status === 204 || ontbreekt ? null : antwoord.json();
 }
 
 /** Alle comments van een issue, pagina voor pagina (hooguit 3000). @param {string} issue @returns {Promise<unknown[]>} */
@@ -192,7 +201,7 @@ async function sluitBron(repo, nummer) {
   return { prs, comments };
 }
 
-/** De doelopvraag voor `beoordeelSluiting`: REST `repos/<repo>/issues/<nr>`, `null` bij 404. @param {string} repo */
+/** De doelopvraag voor `beoordeelSluiting`: REST `repos/<repo>/issues/<nr>`, `null` bij 404 of 410. @param {string} repo */
 function haalIssue(repo) {
   return (/** @type {number} */ doel) => api(`repos/${repo}/issues/${String(doel)}`, { magOntbreken: true });
 }
