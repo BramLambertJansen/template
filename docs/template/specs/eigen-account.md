@@ -1,12 +1,12 @@
 ---
-status: gebouwd # #484
+status: goedgekeurd # #484
 namespace: eigen-account
 ---
 
 # Eigen account: naam, wachtwoord, sessies en e-mailadres
 
 > Goedgekeurd door de agent onder mandaat van de eigenaar (2026-10-11). Elke open vraag is besloten volgens de aanbeveling
-> erbij; zie `docs/reviews/2026-10-11-keuzes-agent.md`. De eigenaar kan dit herzien.
+> erbij; zie `docs/reviews/2026-10-11-keuzes-agent.md`. De eigenaar heeft dit bevestigd (2026-11-23).
 
 Geen kop weglaten; "n.v.t. — reden" mag. Ontbreekt een antwoord, dan vraagt de agent het.
 

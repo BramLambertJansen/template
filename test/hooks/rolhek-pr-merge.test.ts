@@ -35,6 +35,8 @@ function verdict(command: string, opties: { agent?: string; vertrouwd?: boolean;
       isDir: () => false,
       branch: 'feat/x',
       mergeTrusted: opties.vertrouwd ?? true,
+      // GEWIJZIGD (spec ci-log, ADR 0102): het logscript gebruikt de ankertoets zonder modus (`kitTrusted`).
+      kitTrusted: opties.vertrouwd ?? true,
     },
   );
   if (decision.deny.length > 0) return { uitslag: 'deny', reden: decision.deny.join('; ') };
@@ -234,12 +236,15 @@ const ROLLEN_17: readonly Rol17[] = [
   { naam: 'hoofdsessie', agent: undefined },
   ...['architect', 'developer', 'tester', 'docs', 'reviewer'].map((agent) => ({ naam: agent, agent })),
 ];
-const SCRIPTS_17 = ['merge', 'resolve'] as const;
+// GEWIJZIGD (spec ci-log, ADR 0102, R-TEST-02): het logscript valt onder dezelfde naamregel.
+const SCRIPTS_17 = ['merge', 'resolve', 'log'] as const;
 const KIT_REDENEN = [
   'Mergen via pnpm pr:merge doet alleen de hoofdsessie',
   'Het mergescript draait alleen als precies',
   'Gesprekken sluiten via pnpm pr:resolve doet alleen de hoofdsessie',
   'Het sluitscript draait alleen als precies',
+  'De CI-log via pnpm pr:log leest alleen de hoofdsessie',
+  'Het logscript draait alleen als precies',
 ];
 
 const vul = (tekst: string, script: string): string =>

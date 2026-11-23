@@ -1,5 +1,6 @@
 ---
-status: gebouwd # #51; gevalideerd: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+status: goedgekeurd
+namespace: a
 ---
 
 # Spec A
@@ -7,3 +8,5 @@ status: gebouwd # #51; gevalideerd: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 Uitwerking van st-04.
 
 Een spec zonder verwijzing.
+
+- **a/AC-1** — Gegeven iets, dan dit.

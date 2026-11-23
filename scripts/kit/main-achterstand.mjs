@@ -11,7 +11,7 @@ import { pathToFileURL } from 'node:url';
  */
 export function achterstandMelding(achter) {
   if (!Number.isFinite(achter) || achter <= 0) return null;
-  return `pre-push: ${String(achter)} ${achter === 1 ? 'commit' : 'commits'} achter op origin/main; haal ze binnen met \`git merge origin/main\` (nooit rebase) en draai de checks opnieuw`;
+  return `pre-push: ${String(achter)} ${achter === 1 ? 'commit' : 'commits'} achter op origin/main; haal ze binnen met \`git merge origin/main\` (nooit rebase; in de cloud met \`--no-commit\` en dan \`git commit -F\`, zie docs/operations/recepten.md) en draai de checks opnieuw`;
 }
 
 /**
@@ -24,7 +24,7 @@ export function achterstand(run) {
     timeout: 10_000,
     env: { GIT_TERMINAL_PROMPT: '0' },
   });
-  const telling = run(['rev-list', '--count', 'HEAD..origin/main']);
+  const telling = run(['rev-list', '--count', 'HEAD..refs/remotes/origin/main']);
   return telling.code === 0 ? achterstandMelding(Number(telling.output.trim())) : null;
 }
 

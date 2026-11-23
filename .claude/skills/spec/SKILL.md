@@ -30,7 +30,7 @@ Stappen:
    andere kop die van toepassing is; een kop die niet van toepassing is laat je weg. Teksten letterlijk; acceptatiecriteria toetsbaar: elk criterium eindigt met `Toets:` en het testbestand dat
    `<namespace>/AC-n` noemt, met `(nieuw)` erachter zolang het niet bestaat; de bouw-PR haalt `(nieuw)` weg. Is het bewijs
    alleen een CI-uitslag of een stap in de PR, dan is het geen criterium: zet het in het Testplan (mini-spec: de
-   PR-beschrijving). Vanaf `gebouwd` faalt `check-docs` op een AC zonder zo'n test; een nieuwe of gewijzigde AC zonder geldige `Toets:`
+   PR-beschrijving). Een AC zonder zo'n test is niet gebouwd en een gebouwd AC dat zijn test verliest, maakt `pnpm ratchet` rood (ADR 0104); een nieuwe of gewijzigde AC zonder geldige `Toets:`
    maakt `pnpm ratchet` meteen rood (spec ac-toets).
 3. "Kopieer de vorm van": per regel een bestaand pad uit `docs/gouden-pad.md` (accountbeheer) en wat je overneemt.
    "Hergebruik en UX": noem de bestaande componenten (`node scripts/kit/feiten.mjs componenten`); een nieuw component alleen met reden.

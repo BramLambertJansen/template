@@ -7,7 +7,7 @@ import { afterAll, describe, expect, test } from 'vitest';
 import * as prMerge from '../../scripts/kit/pr-merge.mjs';
 import { expectNegativeTable } from '../support/negative-table.ts';
 
-// `expectNegativeTable` gooit een gewone Error met de rijen die niet bewaakt worden; hier wordt dat een assertie op die melding.
+// `expectNegativeTable` faalt met de rijen die niet bewaakt worden (sinds leerpunt #875 al als AssertionError); hier wordt dat een assertie op die melding.
 function verwachtTabel<B>(tabel: Parameters<typeof expectNegativeTable<B>>[0]): void {
   let melding = '';
   try {

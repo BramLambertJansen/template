@@ -78,6 +78,7 @@
     "Bash(pnpm run new:resource *)",
     "Bash(pnpm pr:merge *)",
     "Bash(pnpm pr:resolve *)",
+    "Bash(pnpm pr:log *)",
     "Bash(sed -i *)",
     "Bash(perl -pi *)",
     "Edit(.github/**)",
@@ -92,6 +93,7 @@
   "excludedCommands": [
     "pnpm pr:merge *",
     "pnpm pr:resolve *",
+    "pnpm pr:log *",
     "pnpm test:db *",
     "pnpm ui:check *",
     "pnpm gate:slow *",
@@ -100,7 +102,8 @@
     "git commit *",
     "git push origin HEAD",
     "gh api *",
-    "pnpm pr:verify *"
+    "pnpm pr:verify *",
+    "pnpm meting *"
   ],
   "network": {
     "allowedDomains": ["registry.npmjs.org", "github.com", "api.github.com"]

@@ -148,6 +148,51 @@ describe('leerlus-bewijs/AC-6 sluiten met bewijs', () => {
       { prs: [{ merged: true, body: '## Leerpunt\n\n- #8: trede Check; bewijs test/a.test.ts' }], comments: [] },
       'zonder-bewijs',
     ],
+    [
+      'gedragsbaseline/AC-6: PR met baseline: regel',
+      {
+        prs: [{ merged: true, body: '## Leerpunt\n\n- #9: trede Skill; bewijs baseline: zonder 1/3, met 3/3 (opus)' }],
+        comments: [],
+      },
+      'bewijs',
+    ],
+    [
+      'gedragsbaseline/AC-6: PR met geen baseline: regel',
+      {
+        prs: [{ merged: true, body: '## Leerpunt\n\n- #9: trede AGENTS.md; bewijs `geen baseline: schrijfgedrag`' }],
+        comments: [],
+      },
+      'bewijs',
+    ],
+    [
+      'gedragsbaseline/AC-6: baseline: met scenarioblok in de sectie',
+      {
+        prs: [
+          {
+            merged: true,
+            body: '## Leerpunt\n\n- #9: trede Padregel; bewijs baseline: zonder 0/3, met 3/3 (opus)\n\n### Scenario #9\n- Prompt: x',
+          },
+        ],
+        comments: [],
+      },
+      'bewijs',
+    ],
+    [
+      'gedragsbaseline/AC-6: oude PR met geen test: bij Skill blijft bewijs',
+      {
+        prs: [{ merged: true, body: '## Leerpunt\n\n- #9: trede Skill; bewijs geen test: alleen tekst' }],
+        comments: [],
+      },
+      'bewijs',
+    ],
+    [
+      'gedragsbaseline/AC-6: baseline: voor een ander nummer',
+      {
+        prs: [{ merged: true, body: '## Leerpunt\n\n- #8: trede Skill; bewijs baseline: zonder 1/3, met 3/3 (opus)' }],
+        comments: [],
+      },
+      'zonder-bewijs',
+    ],
     ['geen PR (commit op main)', { prs: [], comments: [] }, 'zonder-bewijs'],
     ['achterhaald van de eigenaar', { prs: [], comments: [ACHTERHAALD] }, 'achterhaald'],
     [

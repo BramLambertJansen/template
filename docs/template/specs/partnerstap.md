@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #536
+status: goedgekeurd # #536
 namespace: partnerstap
 ---
 

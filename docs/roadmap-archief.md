@@ -24,6 +24,12 @@ Afgevinkte items uit [de roadmap](roadmap.md), per fase en stuk met hun bewijs e
 - [x] CI-lus tot groen en opleveren — ADR 0030 (PR 1: skill `opleveren`, #149); PR 2 staat onder Geparkeerd
 - [x] Duidelijker diff-guard en `pnpm pr:verify` tijdens de overgang — ADR 0031 (PR 1 #154, PR 3 #155); PR 2 staat onder Volgende
 - [x] Volledige UI-catalogus als bron voor agents en `/design-system` — ADR 0028 (`test/rails/catalogus-coverage.test.ts`)
+- [x] Herziening van ADR 0018–0022 en 0024 en de specs onder mandaat: bevestigd zoals besloten (eigenaar, 2026-11-23). De ADR's waren al
+      samengevoegd in ADR 0043, 0049, 0050 en 0051 ("zelfde besluiten, compact"); de specs `accountbeheer-uitbreiding`, `eigen-account`,
+      `rate-limit` en `lijstpagina` dragen de bevestiging, de open vragen van `accountbeheer-uitbreiding` volgens de aanbeveling.
+- [x] Ontwikkelplatform: alleen Ubuntu/WSL2 (eigenaar, 2026-11-23)
+- [x] Geen allow-regel voor `gh api`-leesaanroepen, zonder meting (eigenaar, 2026-11-23) — spec `cloud-pr-route`, M1
+- [x] Zelfinstallatie in de cloud: OV-1 t/m OV-4 volgens de aanbeveling (eigenaar, 2026-11-23) — spec `cloud-zelfinstallatie`
 
 ## Gebouwd
 
@@ -254,3 +260,94 @@ de bewaker houdt een afgezwakt check-script tegen; `check-github` groen; elke ro
 Ook gebouwd: rate limiting op app-routes (#87, spec `rate-limit`) met een requestId die de server zelf kiest (#83).
 
 - [x] Audit log van admin-acties in core: migratie, `ctx.audit` en uitnodigen/opnieuw versturen in één transactie met de actie (ADR 0051, #128)
+
+### Zonder fase (uit Volgende)
+
+Afgevinkte items die onder `## Volgende` van de roadmap stonden, letterlijk overgenomen met hun bewijs, op twee verwijzingen
+"het item hieronder" na: die noemen nu het roadmap-item bij naam.
+
+- [x] **ADR 0029 bouw: feature-lane en mini-spec** (punt 1–3, 7). Lane-herkenning in `check-document-status`, `docs/specs/_mini.md`, het
+  frontmatterveld `sjabloon: mini` in `check-docs`, "Besluit en taakscope voorbereiden" in `docs/operations/agent-doorloop.md`; fixtures in `test/rails/`.
+  aanleiding: 0029-snellere-beslisroute (verwijderd met het archief) (punt 1–7). Gebouwd in #199: lane.mjs (verwijderd, #700), `_mini.md`, `sjabloon: mini` in `check-docs`, statuscommit-controle (a)–(c).
+- [x] **ADR 0031 PR 2: documentstatus als verplichte check.** `check-document-status` draait als eigen job `document-status`
+  (`.github/workflows/guard.yml`) en staat in `requiredChecks` van `.claude/decisions.json`, zodat `pnpm pr:verify` een rode documentstatus ziet
+  Gebouwd in #203; `gh api`-verificatie door de eigenaar op #202 (`diff-guard` op de head-SHA, app-id 15368). Dat is een fout in een rail (P2), geen meta-werk. Na PR 2 eist `gebouwd` een extra check (ADR 0031, "Gevolg voor gebouwd").
+  aanleiding: `docs/operations/agent-doorloop.md` (besluit 2 van de inventaris)
+- [x] **Vertrouwde basis uit het anker, niet uit de lokale origin/main.** Binnen een hook lezen rolhek, register en runnercheck hun
+  configuratie uit het anker van de stub-lader (`RAILS_ANKER`, `rails/hooks/lib/objecten.mjs`), met hashcontrole van commit, trees en blob;
+  bewijs `test/hooks/vertrouwde-basis-anker.test.ts`. Een omgebogen lokale ref (`movesTrustedBase` laat een fetch met een andere bron door)
+  telt daardoor niet meer voor de hooks (met de nieuwe stub-lader; een sessie met een oude stub leest nog de lokale ref); scripts buiten een hook lezen nog de lokale ref, CI blijft de grens.
+  aanleiding: `rails/hooks/lib/rolhek.mjs` (review van de PR voor ADR 0033 punt 1)
+- [x] **Subagent-stop leest de JSON van vitest niet.** `rails/hooks/lib/werkstraat.mjs` zocht het rapport van `vitest --reporter=json` op stdout;
+  vitest 5 schrijft het naar een bestand, dus de tester-stop meldde "geen uitvoer van vitest". Nu krijgt vitest `--outputFile.json=.vitest/json/tester-run.json`
+  en leest de hook dat bestand, alleen als vitest meldt dat hij het schreef; bewijs `test/hooks/werkstraat.test.ts`.
+  aanleiding: `rails/hooks/lib/werkstraat.mjs` (tester-run in de PR voor ADR 0033 punt 1)
+- [x] **Toast: pauze bij hover en focus, fout blijft staan** (WCAG 2.2.1). Besluit eigenaar 2026-10-18 (in de sessie): succes 5 s, een fout
+  verdwijnt niet vanzelf maar blijft tot de gebruiker hem sluit (of tot het bestaande maximum van drie toasts hem verdringt); de timer pauzeert zolang de muis op een toast staat of de focus erin.
+  Alternatief verworpen: alleen pauze met 8 s voor een fout (een fout kan dan nog wegvallen terwijl iemand hem leest). Bewijs `src/core/web/ui/toast.test.tsx`.
+  aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (besluit 2)
+- [x] **Toast: dubbele aankondiging in NVDA** (`role` binnen een `aria-live`-container). De `aria-live` van de twee containers is weg; de rol
+  (`status`, `alert`) zit alleen op de kaart. Keuze eigenaar 2026-10-18 (in de sessie), verworpen: een vaste live-regio met kaarten zonder rol
+  (betrouwbaarder voorlezen, maar toasts zijn dan niet meer op rol te vinden: ca. 15 e2e-selectors en 5 unit-testbestanden) en een vaste regio met
+  rol (permanent twee lege status/alert-elementen). Bekend gevolg: een `role=status` die met zijn inhoud wordt toegevoegd, lezen sommige
+  schermlezers minder betrouwbaar voor; `role=alert` wel. Bewijs `src/core/web/ui/toast.test.tsx`.
+  aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (besluit 2)
+- [x] **ST-16 (P1) — rollen als register van de app** (vóór de proef-app, besluit eigenaar 2026-11-11; gebouwd in #715). Nu staat `ROLES` in
+  `src/core/shared/can.ts` en hangen MFA-eis en laatste-admin-trigger aan de naam `admin`; een nieuwe rol wijzigt core (R-ARCH-03), wat in een app dicht is.
+  **Werk:** de app levert `src/shared/roles.ts` (standaard `user` en `admin`); `definePermissions`, `withUser` en de dev-login typeren de rol uit dat register.
+  MFA-eis en laatste-beheerder hangen aan de vlag `beheer` (besluit eigenaar 2026-11-06), niet aan de naam; een app kan de vlag niet uitzetten voor een rol met
+  accountbeheer. Database: `app.roles (name, beheer)` en een foreign key op `user_roles.role` in plaats van het CHECK, via expand/contract; `app.is_mfa_admin()`,
+  de trigger, de laatste-admin-controle in `app.set_account_blocked` en `app.set_account_deactivated`, en de policies lezen `beheer`; `app.use` geldt voor
+  elke rol uit het register. Seed-accounts komen uit de compositie-root, één per rol, zodat de demoswitcher elke rol toont. Eén rol per account.
+  **Afhankelijkheden:** geen; spec `docs/template/specs/rollenregister.md`, ADR 0092 en bouw in één PR (ADR 0090), met ADR 0043 punt 13, 15 en 16, R-ARCH-03, R-AUTH-03, R-AUTH-07 en R-DB-15 herzien.
+  **Klaar als:** bestaande negatieve tests groen (gewijzigd alleen wat de spec onder "Raakt ook" noemt); een test faalt als register en `app.roles` verschillen; een nieuwe rol zonder `beheer` krijgt
+  alleen expliciete permissies en `app.use`; een beheerrol zonder MFA krijgt `MFA_REQUIRED`; laatste-beheerder-racetest; blokkeren en deactiveren van de
+  laatste beheerder met een beheerrol die niet `admin` heet geeft `LAST_ADMIN`; een core-test voegt rollen toe zonder core-wijziging (in de proef-app: één rol toevoegen en ernaartoe wisselen
+  in de demoswitcher, meetpunt van ST-09).
+  aanleiding: `docs/reviews/2026-11-06-herbouw.md` (§4.3, besluit eigenaar 2026-11-06)
+- [x] **`.claude/settings.json` bewezen** (stuk 5): de sandbox start op Ubuntu/WSL2 (bubblewrap, socat) en de deny-regels zijn getest, ook
+  `.env.example` via `allowRead` en `cat .env`. Bewijs #239 (`docs/operations/sandbox-bewijs.md`), met twee beperkingen: een bestand dat
+  hetzelfde commando aanmaakt is leesbaar, en `~/.ssh`/`~/.aws` bestonden niet op de proefmachine.
+  aanleiding: `.claude/settings.json` (onbewezen sinds stuk 5; `test/rails/sandbox-settings.test.ts` dekt de spiegel, niet de sandbox)
+- [x] **`check-core`** (stuk 4): een app wijzigt `src/core` niet. Met fixture die bewijst dat hij faalt. Job `check-core` in
+  `.github/workflows/guard.yml` met `scripts/kit/check-core.mjs` (regels uit ADR 0040, in de template uit); bewijs `test/rails/check-core.test.ts`.
+  aanleiding: `.claude/rules/core.md`
+- [x] **`check-core`: geen oudere core via een merge** (ADR 0040, downgrade-gat). Een merge met een oudere vertrouwde commit kan een oudere
+  `src/core` terugbrengen of core verwijderen. Aanscherping: core van head is gelijk aan die van base of van een vertrouwde templatecommit die
+  niet ouder is dan de core op main. Met fixture die de downgrade laat falen. Bewijs: `test/rails/check-core-downgrade.test.ts`.
+  aanleiding: #240 (ADR 0040; eigenaarbesluit: nu aanvaard, aanscherping als vervolg)
+- [x] **ADR 0029 stap 7: agent-merge van niet-kritiek werk** (#448; ADR 0069, vervangt ADR 0046 punt 30; onder het account van de eigenaar).
+  Nu: `docs/template/specs/agent-samenvoegen.md`: oordeel `agent-merge` in de diff-guard,
+  job in `guard.yml`, `pnpm pr:merge`, rolhek en `merge: "niet-kritiek"` in `.claude/gates.json`. Herzien (#456, #460, #464):
+  Codex-voorwaarde `"indien-aanwezig"` en omvanggrens `agentMerge.maxRegels`, spec agent-merge-zonder-codex (verwijderd met het archief).
+  Herzien (#468, #476, #483): een 👀 of lopende Codex-review laat `pr:merge` wachten, spec agent-merge-codex-wachten (verwijderd met het archief).
+  aanleiding: `docs/template/adr/0069-agent-merge-niet-kritiek.md`
+- [x] **Volledig pad naar `gh` in het rolhek** (V-13): `/usr/bin/gh pr merge …` viel buiten het rolhek (`program === "gh"`) en de settings-patronen.
+  Weigeringen en schrijfdoelen kijken nu naar de naam zonder pad (`programName` in `rails/hooks/lib/shell.mjs`), ook voor `git`, `rm` en `sed`;
+  bewijs `test/hooks/rolhek-volledig-pad.test.ts`. De `deny`-patronen in `.claude/settings.json` vangen de vorm met pad niet (gemak, geen grens; framework §8).
+  Niet in deze klasse gedicht: omhulsels met opties (`sudo -u x gh …`, `env -i gh …`) en omhulsels buiten de lijst (`timeout`, `xargs`);
+  expansie (`$GH`, `bash -c`) ziet alleen de review van de diff (R-ROL-10). Ook open, voor de reviewer: `reviewerMay` negeert voorafgaande variabelen
+  (`GIT_PAGER=…`, `PATH=…`) en opties als `git diff --output=<bestand>`.
+  aanleiding: `rails/hooks/lib/rolhek.mjs` (Bekende gaten; nu `docs/template/specs/agent-samenvoegen.md`)
+- [x] **Schrijven via een programma buiten `fileTargets` omzeilt het rolhek.** `writeTargets` in `rails/hooks/lib/shell.mjs` kent alleen een
+  vaste lijst (redirect, `tee`, `sed -i`, `cp`, `git checkout` …). Een script via `python3`, `node -e` of een heredoc naar zo'n interpreter
+  (`python3 - <<EOF`), en ook `patch`, `git apply`, `curl -o`, `tar x` of `prettier --write`, schrijft beschermde paden zonder de
+  beslissing (ask, deny of melding) die een Edit op hetzelfde pad krijgt; een redirect (`cat > f <<EOF`) ziet het rolhek wel. Eerst kiezen
+  tussen weigeren en melden. De toets op effect die dit voor subagents dekte, is vervallen (ADR 0091):
+  aanvaard risico; op een beschermd pad weigert de padtoets van het mergescript en voegt de eigenaar samen (vangnet, ADR 0093), elders ziet alleen de review van de diff het.
+  aanleiding: #260 (eigenaarbesluit: als item opnemen; de developer schreef `.claude/**`, `.github/**`, `scripts/**` en `rails/**` via een Python-script, de reviewer zag alleen ADR-nummerwijzigingen)
+- [x] **Overnameplan golf 1: agents leveren altijd en goedkoop.** Uit [het overnameplan](reviews/2026-11-18-overnameplan-agentic.md) §3:
+  YAML-quotes en een frontmatter-parsetest voor agents en skills, een skillrouter in de developer, een budget voor toolcalls met
+  skelet eerst, geen geneste Agent-tool voor bouwers, een reviewpakket per range, en weigeringen en tokens per rol in de meting-store.
+  Elk punt een eigen PR. **Klaar als:** de parsetest is rood op een niet-gequote description, het reviewpakket bestaat en de meting-store legt weigeringen en tokens per rol vast (tokens: afgesplitst naar het roadmap-item "Tokens per rol in de meting-store", OV-2); de doelcijfers staan in §8 van het plan.
+  Gebouwd volgens spec `agents-leveren` in #850 (1a, `test/hooks/agents.test.ts`), #859 (meting per rol,
+  `test/rails/meting-per-rol.test.ts`), #861 (1b, `test/hooks/developer-skillrouter.test.ts`), #860 (1c,
+  `test/hooks/agent-budget.test.ts`) en de bouw-PR van 1d (`test/scripts/reviewpakket.test.ts`). Tokens per rol zijn door de
+  eigenaar afgesplitst (OV-2): zie het roadmap-item "Tokens per rol in de meting-store".
+  aanleiding: `docs/reviews/2026-11-18-overnameplan-agentic.md` (§3; leerpunten #792, #676, #664)
+- [x] **Cloudsessie: committen, pushen, PR en CI-bewijs.** Bewijs: `test/rails/claude-sandbox-werkstraat.test.ts`,
+  `test/docs/cloud-pr-route.test.ts`; meetcommit in #868, uitslag in de vervolg-PR (spec, "Uitslag stap 0"); M1 open,
+  afgeleid uit de instellingen. Vier commando's buiten de sandbox, een PR via de MCP-tool in de
+  cloud, ADR 0044, 0061, 0078 en 0084 herzien (spec `docs/template/specs/cloud-pr-route.md`). **Klaar als:** de AC's van de
+  spec zijn groen en de metingen van stap 0 staan in de PR.
+  aanleiding: `docs/template/specs/cloud-pr-route.md` (meting van een cloudsessie, 20 november 2026: 401 op `gh`, commit niet te ondertekenen)

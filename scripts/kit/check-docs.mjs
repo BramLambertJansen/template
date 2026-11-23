@@ -3,7 +3,8 @@
 //  1. Elk pad en elk `pnpm <script>` tussen backticks in AGENTS.md, CLAUDE.md en .claude/**/*.md bestaat
 //     (een kale naam of relatief pad telt als een bestand in git erop eindigt; `/route` is een URL, geen pad).
 //  2. Relatieve links in docs/**/*.md en README.md wijzen naar een bestaand bestand.
-//  3. ADR- en spec-statussen komen uit de vaste woordenlijst; een goedgekeurde of gebouwde spec heeft "Hergebruik en UX".
+//  3. ADR- en spec-statussen komen uit de vaste woordenlijst; een goedgekeurde spec (ook een oude `status: gebouwd`, die als
+//     `goedgekeurd` telt, ADR 0104) heeft "Hergebruik en UX".
 //     Een ADR-nummer is uniek per map en staat in de kop (`:adr-kop`). Regel 2, 3, 6 en 7 gelden gelijk in docs/adr/,
 //     docs/specs/, docs/template/adr/ en docs/template/specs/ (ADR 0089 punt 4 en 6, templateregime/AC-9).
 //  4. De padtabel `paden` in .claude/gates.json (ADR 0079, spec padtabel Werking 6): samenhang (altijdVragen ⇒ besluit-pr,
@@ -16,12 +17,15 @@
 //     dezelfde rijregels, geen altijdVragen, geen besluit agent, geen glob uit gates.json en niet in de template zelf
 //     (sleutel `docs:gates-app:<…>`); de spiegels en check 5 draaien op het samengevoegde object (`samengevoegd`).
 //  5. `schrijfrecht` van een rol overlapt niet met de afgeleide gates (WS-02), op de uitzonderingen in SCHRIJFRECHT_VRIJ na.
-//  6. Elk AC-id van een gebouwde spec (`status: gebouwd`, met of zonder commentaar erachter; ADR 0095) heeft een testbestand
-//     met `<namespace>/AC-n` of `<specnaam>/AC-n` als heel woord; een los `AC-n` telt niet (sleutel `docs:ac:<spec>:<AC-n>`).
-//     Overgeslagen: een AC met `(nog niet gebouwd)` achter het id, en een AC die direct na het streepje begint met
-//     `Vervallen door ADR <nummer>` als dat ADR in de ADR-map naast de specmap staat en `geaccepteerd` is.
-//  7. Spec-discipline: geen lijstitem met `⚠ open` in "Open vragen" bij goedgekeurd of gebouwd (`:open-vraag`); elk pad in
-//     "Kopieer de vorm van" bestaat bij voorstel of goedgekeurd (`:vorm`).
+//  6. Een ratchet tegenover de merge-base met origin/main (ADR 0104, gebouwd-zonder-nummer/AC-18): een AC die daar in een
+//     `goedgekeurde` spec gebouwd was (een testbestand noemt `<namespace>/AC-n` of `<specnaam>/AC-n` als heel woord, de
+//     afleiding in rails/hooks/lib/ac-dekking.mjs), is het in de werkmap nog (sleutel `docs:ac:<spec>:<AC-n>`), tenzij de AC
+//     de vervallen-vorm heeft (`Vervallen door ADR <nummer>`, ADR geaccepteerd) of de spec verdwijnt of `vervallen` wordt.
+//     Daarnaast geen nieuwe statusregel `status: gebouwd` (`docs:<spec>:status-gebouwd`, AC-19) en geen nieuw merkteken
+//     `(nog niet gebouwd)` op een AC (`docs:<spec>:merkteken:<AC-n>`, AC-21). Is de boom op de merge-base onleesbaar, dan
+//     alleen `docs:ac:basis-onleesbaar` (AC-29). In `docsKrimp`: strikt, nooit in de baseline.
+//  7. Spec-discipline: geen lijstitem met `⚠ open` in "Open vragen" bij goedgekeurd (`:open-vraag`); elk pad in
+//     "Kopieer de vorm van" bestaat bij voorstel, en bij goedgekeurd zolang de spec niet volledig gebouwd is (`:vorm`, AC-23).
 //  8. `framework §N` buiten §1–§12, §11a en de `## <n>.`-koppen van het regelboek (niet in de ADR-mappen); 9. backtick-paden in
 //     het regelboek; 10. R-id's in .claude/rules/* en het regelboek; 11. harde grenzen alleen op `AGENTS.md` (9 KB, 100
 //     regels) en `CLAUDE.md` (50 regels), sleutels `docs:AGENTS.md:budget:<bytes>` en `docs:<bestand>:regels:<n>`, zodat
@@ -32,16 +36,22 @@
 //  13. `docs/app.md` (spec app-agentregels, sleutel `docs:app-md:<…>`): in de template byte-gelijk aan `APP_STUB` uit
 //     scripts/kit/app-init.mjs (een app herschrijft het bestand, dus de template wijzigt het niet), en overal getrackt als
 //     `CLAUDE.md` de regel `@docs/app.md` heeft.
-//  14. Een gebouwde spec noemt tussen backticks geen repopad (src/, scripts/, rails/, test/, e2e/, db/, deploy/, .claude/,
-//     .github/, met extensie) dat niet bestaat, tenzij gevolgd door `(vervallen)`, `(nieuw)` of `(voorbeeld)` na witruimte
-//     met hooguit één regeleinde (ADR 0095), of in een nieuwe AC met `(nog niet gebouwd)` achter het id (leerpunt #738, sleutel `docs:<spec>:dood-pad:<pad>`);
-//     behalve het optionele app-bestand `.claude/gates.app.json` (spec app-padtabel).
+//  14. Een spec met minstens één gebouwd AC (stand `gebouwd` of `deels`, ADR 0104) noemt tussen backticks geen repopad (src/,
+//     scripts/, rails/, test/, e2e/, db/, deploy/, .claude/, .github/, met extensie) dat niet bestaat, tenzij gevolgd door
+//     `(vervallen)`, `(nieuw)` of `(voorbeeld)` na witruimte met hooguit één regeleinde (ADR 0095), of in het lijstitem van een
+//     niet-gebouwd AC (gebouwd-zonder-nummer/AC-22, leerpunt #738, sleutel `docs:<spec>:dood-pad:<pad>`); behalve het
+//     optionele app-bestand `.claude/gates.app.json` (spec app-padtabel). "Kopieer de vorm van" toetst regel 7 zolang die geldt.
 //  15. Elk changelogfragment in docs/template-changelog.d/ (spec template-release AC-1, sleutel
 //     `docs:changelog-fragment:<bestand>`): naam, front matter met één `soort`, minstens één lijstitem en als enige kop
 //     `### Bij een update` met een lijstitem eronder (`fragmentFout` in scripts/kit/template-release.mjs). In template en
 //     app; `README.md` in de map is geen fragment.
 //  16. Geen document met status `vervallen` of `vervangen door NNNN` in docs/template/specs/ of docs/template/adr/
 //     (R-CI-06, spec vervallen-documenten-weg AC-6, sleutel `docs:<pad>:vervallen-in-template`); niet in docs/specs/ of docs/adr/.
+//  17. Geen gewijzigd changelogfragment dat al op de merge-base met origin/main staat (leerpunt #877, sleutel
+//     `docs:fragment-behoud:<bestand>`); in `docsKrimp`, dus strikt en nooit in de baseline.
+//  19. Geen gewijzigde of verdwenen uitgebrachte sectie `## [x.y.z]` van docs/template-changelog.md tegenover de merge-base
+//     met origin/main (leerpunt #837, sleutel `docs:changelog-behoud:<versie>`); in `docsKrimp`, dus strikt en nooit in de
+//     baseline. Een nieuwe sectie toevoegen (`template:release`) mag.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -57,17 +67,46 @@ import {
 } from '../../rails/hooks/lib/padtabel.mjs';
 import { onderhoudVan, templateVan } from '../../rails/hooks/lib/rolhek.mjs';
 import { acIds } from '../../rails/hooks/lib/document-state.mjs';
+import {
+  acDekking,
+  ADR_STATUS,
+  eigenaarStatus,
+  gebouwdRegel,
+  SPEC_BESTAND,
+  specNamen,
+} from '../../rails/hooks/lib/ac-dekking.mjs';
+import { boomWerkmap, dekkingTegenBasis } from './ac-dekking.mjs';
 import { ADR_MAPPEN, adrKopViolations, adrNumber, duplicateAdrNumbers, invalidAdrNames } from './adr-numbers.mjs';
 import { APP_STUB } from './app-init.mjs';
 import { CODEOWNERS, codeownersTekst, eersteGoedkeurder, HERSTEL } from './codeowners.mjs';
-import { grensMeldingen, grensViolations, normenMeldingenUitGit, normenUitGit, zonderBasis } from './leesbudget.mjs';
-import { FRAGMENT_MAP, fragmentFout } from './template-release.mjs';
+import {
+  basisVan,
+  grensMeldingen,
+  grensViolations,
+  normenMeldingenUitGit,
+  normenUitGit,
+  zonderBasis,
+} from './leesbudget.mjs';
+import { CHANGELOG, FRAGMENT_MAP, fragmentFout, releaseTeksten } from './template-release.mjs';
+import { CODESPAN, HEK, sluitHek } from './markdown.mjs';
+import { zonderPromptViolations } from './zonder-prompt.mjs';
+import { receptRolhekViolations } from './recept-rolhek.mjs';
 
 export { normViolations } from './normen.mjs';
+// Verhuisd naar de pure AC-dekking (ADR 0104); hier opnieuw geëxporteerd voor ac-toets en andere importeurs.
+export {
+  AC_ID,
+  ADR_STATUS,
+  dekt,
+  heelWoord,
+  SPEC_BESTAND,
+  TESTBESTAND,
+  vervallenAcs,
+} from '../../rails/hooks/lib/ac-dekking.mjs';
 
 /** @typedef {{ key: string, message: string }} Violation */
+/** @typedef {import('../../rails/hooks/lib/ac-dekking.mjs').Dekking} Dekking */
 
-const ADR_STATUS = /^Status:\s*(voorgesteld|geaccepteerd|vervangen door \d{4}|vervallen)\b/m;
 export const SPEC_STATUS = /^status:\s*(voorstel|goedgekeurd|gebouwd|vervallen)\b/m;
 // Pakketbeheer-commando's van pnpm zelf, geen scripts uit package.json.
 const PNPM_COMMANDS = new Set(['add', 'install', 'i', 'update', 'up', 'remove', 'rm', 'exec', 'dlx', 'run', 'why']);
@@ -87,13 +126,14 @@ export async function docsViolations(root = '.') {
   const read = (file) => readFileSync(path.join(root, file), 'utf8');
   // Spec app-padtabel: alleen een getrackt app-bestand telt.
   const app = files.includes(APP_BESTAND) ? read(APP_BESTAND) : null;
+  // Regel 7 en 14 lezen de stand uit de boom alleen (ADR 0104), dus ook in een ondiepe kloon gelijk (AC-26).
+  const dekking = acDekking(boomWerkmap(root));
   return Promise.resolve([
     ...identifierViolations(files, read),
     ...linkViolations(root, files, read),
-    ...statusViolations(files, read),
+    ...statusViolations(files, read, dekking),
     ...vervallenInTemplateViolations(files, read),
     ...statusvormViolations(files, read),
-    ...acViolations(files, read),
     ...mirrorViolations(files, read, app),
     ...(files.includes('.claude/gates.json') ? padenViolations(read('.claude/gates.json')) : []),
     ...(files.includes('.claude/gates.json') ? appViolations(read('.claude/gates.json'), app) : []),
@@ -107,6 +147,8 @@ export async function docsViolations(root = '.') {
     ...appMdViolations(files, read),
     ...fragmentViolations(files, read),
     ...grensViolations((file) => (files.includes(file) ? read(file) : null)),
+    ...zonderPromptViolations(files, read),
+    ...receptRolhekViolations(files, read),
   ]);
 }
 
@@ -122,7 +164,9 @@ export async function docsMeldingen(root = '.') {
 }
 
 /**
- * De krimpcontrole op normen tegenover `git merge-base origin/main HEAD` (spec krimp-op-normen); nooit in de baseline.
+ * De krimpcontrole op normen tegenover `git merge-base origin/main HEAD` (spec krimp-op-normen) en het behoud van
+ * changelogfragmenten die al op die basis staan (regel 17, leerpunt #877) en van de uitgebrachte changelogsecties
+ * (regel 19, leerpunt #837) en de AC-dekking (regel 6, ADR 0104); nooit in de baseline.
  * Zonder basis is ze in CI rood (AC-5).
  * @param {string} root
  * @returns {Promise<Violation[]>}
@@ -131,7 +175,152 @@ export async function docsKrimp(root = '.') {
   return Promise.resolve([
     ...zonderBasis(root, process.env['GITHUB_ACTIONS'] === 'true').violations,
     ...normenUitGit(root),
+    ...fragmentBehoud(root),
+    ...changelogBehoud(root),
+    ...dekkingKrimp(root),
   ]);
+}
+
+/**
+ * Regel 6 tegenover de merge-base met origin/main (ADR 0104): AC-verlies (AC-18), een nieuwe `status: gebouwd` (AC-19) en
+ * een nieuw merkteken (AC-21). Zonder merge-base toetst dit niets; de melding daarvan geeft `zonderBasis` (AC-26). Een
+ * onleesbare boom op de merge-base geeft alleen `docs:ac:basis-onleesbaar` (AC-29).
+ * @param {string} root
+ * @returns {Violation[]}
+ */
+function dekkingKrimp(root) {
+  const stand = dekkingTegenBasis(root);
+  const { sha, basis, bomen } = stand;
+  if (sha === null || basis === null || bomen.basis === null) return [];
+  if (bomen.basis.onleesbaar) return [basisOnleesbaar(sha)];
+  const oudBoom = bomen.basis;
+  const specs = [...stand.nu.keys()].map((file) => {
+    const oudPad = stand.hernoemd[file] ?? file;
+    return { file, text: bomen.nu.lees(file) ?? '', oud: oudBoom.lees(oudPad) };
+  });
+  return [
+    ...acVerlies({ basis, nu: stand.nu, hernoemd: stand.hernoemd }, bomen.nu),
+    ...specs.flatMap((spec) => [...statusGebouwdViolations(spec), ...merktekenViolations(spec)]),
+  ];
+}
+
+/**
+ * AC-29: een merge-base waarvan de boom niet te lezen is, is rood; een lege basis zou stil groen geven.
+ * @param {string} sha @returns {Violation}
+ */
+function basisOnleesbaar(sha) {
+  return {
+    key: 'docs:ac:basis-onleesbaar',
+    message: `ac-dekking: de boom op de merge-base ${sha} is niet te lezen (git ls-tree of git cat-file faalt); de AC-dekking tegenover main toetst niets, haal origin/main opnieuw op (ADR 0104)`,
+  };
+}
+
+/**
+ * AC-19: een statusregel die met `status: gebouwd` begint en niet letterlijk zo op de merge-base stond.
+ * @param {{ file: string, text: string, oud: string | null }} spec
+ * @returns {Violation[]}
+ */
+function statusGebouwdViolations({ file, text, oud }) {
+  const regel = gebouwdRegel(text);
+  if (regel === null || (oud !== null && gebouwdRegel(oud) === regel)) return [];
+  return [
+    {
+      key: `docs:${file}:status-gebouwd`,
+      message: `${file}: status: gebouwd schrijft niemand meer; gebouwd volgt uit de AC-dekking, de statusregel draagt alleen voorstel, goedgekeurd of vervallen (ADR 0104)`,
+    },
+  ];
+}
+
+/**
+ * AC-21: een AC-regel met `(nog niet gebouwd)` die zo niet op de merge-base stond.
+ * @param {{ file: string, text: string, oud: string | null }} spec
+ * @returns {Violation[]}
+ */
+function merktekenViolations({ file, text, oud }) {
+  const eerder = oud === null ? new Set() : acIds(oud).gemarkeerd;
+  return [...acIds(text).gemarkeerd]
+    .filter((id) => !eerder.has(id))
+    .map((id) => id.replace(/^.*\//, ''))
+    .map((ac) => ({
+      key: `docs:${file}:merkteken:${ac}`,
+      message: `${file}: ${ac} krijgt "(nog niet gebouwd)"; dat merkteken vervalt, een AC zonder test is vanzelf niet gebouwd (ADR 0104)`,
+    }));
+}
+
+/**
+ * AC-18: een AC die op de merge-base in een `goedgekeurde` spec gebouwd was, is het in de werkmap nog, of heeft daar de
+ * vervallen-vorm. Een spec die verdwijnt of `vervallen` wordt, laat haar tests los (OV-8). Een hernoemde spec (`hernoemd`:
+ * nieuw pad naar oud pad) vergelijkt met haar oude naam; de sleutel draagt de nieuwe naam.
+ * @param {{ basis: ReadonlyMap<string, Dekking>, nu: ReadonlyMap<string, Dekking>, hernoemd: Readonly<Record<string, string>> }} stand
+ * @param {import('../../rails/hooks/lib/ac-dekking.mjs').Boom} nuBoom
+ * @returns {Violation[]}
+ */
+function acVerlies({ basis, nu, hernoemd }, nuBoom) {
+  const nieuwPad = new Map(Object.entries(hernoemd).map(([nieuw, oud]) => [oud, nieuw]));
+  return [...basis].flatMap(([oudPad, oud]) => {
+    const file = nieuwPad.get(oudPad) ?? oudPad;
+    const nieuw = nu.get(file);
+    if (oud.eigenaar !== 'goedgekeurd' || nieuw === undefined || nieuw.eigenaar === 'vervallen') return [];
+    const { naam, namespace } = specNamen(file, nuBoom.lees(file) ?? '');
+    return oud.gebouwd
+      .filter((ac) => !nieuw.gebouwd.includes(ac) && !nieuw.vervallen.includes(ac))
+      .map((ac) => ({
+        key: `docs:ac:${naam}:${ac}`,
+        message: `${file}: ${ac} was gebouwd op main, maar geen testbestand noemt ${namespace ?? naam}/${ac} meer; herstel de test of laat de AC vervallen (Vervallen door ADR <nummer>; ADR 0104)`,
+      }));
+  });
+}
+
+/**
+ * Regel 19 (leerpunt #837): een uitgebrachte sectie van docs/template-changelog.md die op de merge-base met origin/main
+ * staat, wijzigt niet en verdwijnt niet (ook ongecommit in de werkmap). `template:release` neemt alleen fragmenten mee,
+ * dus een regel in een uitgebrachte sectie viel buiten elke release. Een nieuwe sectie toevoegen mag; zonder merge-base
+ * of zonder het bestand op de basis toetst dit niets.
+ * @param {string} root
+ * @returns {Violation[]}
+ */
+function changelogBehoud(root) {
+  const basis = basisVan(root);
+  if (basis === null) return [];
+  const oud = spawnSync('git', ['show', `${basis}:${CHANGELOG}`], { cwd: root, encoding: 'utf8' });
+  if (oud.status !== 0) return [];
+  const pad = path.join(root, CHANGELOG);
+  const nu = releaseTeksten(existsSync(pad) ? readFileSync(pad, 'utf8') : '');
+  return [...releaseTeksten(oud.stdout)]
+    .filter(([versie, sectie]) => nu.get(versie) !== sectie)
+    .map(([versie]) => ({
+      key: `docs:changelog-behoud:${versie}`,
+      message: `${CHANGELOG}: de uitgebrachte sectie [${versie}] is gewijzigd of verdwenen; zet haar terug en zet de wijziging als fragment in ${FRAGMENT_MAP}/`,
+    }));
+}
+
+/**
+ * Regel 17 (leerpunt #877): een changelogfragment dat al op de merge-base met origin/main staat, is nog niet uitgebracht
+ * en mag niet wijzigen (status M, ook ongecommit in de werkmap). Een PR op een hergebruikte branchnaam overschreef zo stil
+ * het item van een eerdere PR. Verwijderen mag (`template:release`), toevoegen ook; zonder merge-base toetst dit niets.
+ * @param {string} root
+ * @returns {Violation[]}
+ */
+function fragmentBehoud(root) {
+  const basis = basisVan(root);
+  if (basis === null) return [];
+  const diff = spawnSync('git', ['diff', '--name-status', '--no-renames', '-z', basis, '--', `${FRAGMENT_MAP}/`], {
+    cwd: root,
+    encoding: 'utf8',
+  });
+  const velden = diff.status === 0 ? diff.stdout.split('\0').filter(Boolean) : [];
+  /** @type {Violation[]} */
+  const violations = [];
+  for (let i = 0; i + 1 < velden.length; i += 2) {
+    const [status, pad] = [velden[i], velden[i + 1] ?? ''];
+    const naam = path.posix.basename(pad);
+    if (status !== 'M' || naam === 'README.md') continue;
+    violations.push({
+      key: `docs:fragment-behoud:${naam}`,
+      message: `${pad} staat al op main en is nog niet uitgebracht; zet het terug en voeg een nieuw fragment toe (bv. met achtervoegsel -2)`,
+    });
+  }
+  return violations;
 }
 
 /**
@@ -154,8 +343,6 @@ function fragmentViolations(files, read) {
 const REGELBOEK = 'docs/framework.md';
 const ADR_MAP = 'docs/adr/';
 const ARCHIEF = 'docs/adr/archief/';
-// Regel 3, 6 en 7: specs in docs/specs/ en docs/template/specs/ (framework §10); `_template.md` en dergelijke tellen niet.
-export const SPEC_BESTAND = /^docs\/(?:template\/)?specs\/[^_/][^/]*\.md$/;
 const SPEC_ARCHIEF = 'docs/specs/archief/';
 
 /** Regelnummer (1-based) van een positie in een tekst. @param {string} text @param {number} index */
@@ -305,18 +492,6 @@ const NORMWOORD = new RegExp(
 );
 // De kop kaal, als Markdown-kop of vet, met of zonder dubbele punt; tekst erachter hoort bij de sectie.
 const HOE_KOP = /^(?:#{1,6}\s+)?(?:\*\*)?Hoe \(geen norm\)(?:\*\*)?:?(?:\*\*)?(.*)$/;
-// Een codespan sluit met een reeks backticks van dezelfde lengte (CommonMark), ook over regels heen.
-const CODESPAN = /(?<!`)(`+)(?!`)[\s\S]*?(?<!`)\1(?!`)/g;
-const HEK = /^ {0,3}(`{3,}|~{3,})/;
-
-/**
- * Een hek sluit alleen met hetzelfde teken, minstens even lang en zonder tekst erachter (CommonMark).
- * @param {string} line @param {string} open
- */
-function sluitHek(line, open) {
-  const hek = /^ {0,3}(`{3,}|~{3,})\s*$/.exec(line)?.[1] ?? '';
-  return hek[0] === open[0] && hek.length >= open.length;
-}
 
 /**
  * De secties onder "Hoe (geen norm)" tot de volgende Markdown-kop. Regels in een codeblok worden leeg (een
@@ -572,9 +747,10 @@ function vervallenInTemplateViolations(files, read) {
 /**
  * @param {readonly string[]} files
  * @param {(file: string) => string} read
+ * @param {ReadonlyMap<string, Dekking>} dekking de AC-dekking van de werkmap
  * @returns {Violation[]}
  */
-function statusViolations(files, read) {
+function statusViolations(files, read, dekking) {
   const adrs = files.filter((file) => adrNumber(file) !== undefined);
   const specs = files.filter((file) => SPEC_BESTAND.test(file));
   return [
@@ -587,33 +763,43 @@ function statusViolations(files, read) {
         key: `docs:${file}:status`,
         message: `${file}: status niet uit voorgesteld | geaccepteerd | vervangen door NNNN | vervallen`,
       })),
-    ...specs.flatMap((file) => {
-      const text = read(file);
-      const status = SPEC_STATUS.exec(text)?.[1];
-      if (status === undefined)
-        return [
-          {
-            key: `docs:${file}:status`,
-            message: `${file}: status niet uit voorstel | goedgekeurd | gebouwd | vervallen`,
-          },
-        ];
-      return [
-        ...specVormViolations(file, text, status),
-        ...disciplineViolations({ file, text, status }, files),
-        ...(status === 'gebouwd' ? doodPadViolations(file, text, files) : []),
-      ];
-    }),
+    ...specs.flatMap((file) => specViolations({ file, text: read(file) }, files, dekking.get(file))),
   ];
 }
 
 /**
- * Hergebruik en UX bij goedgekeurd of gebouwd; zonder die sectie wordt het sjabloon niet getoetst.
+ * Regel 3, 7 en 14 voor één spec. De eigenaarstatus leest een oude `status: gebouwd` als `goedgekeurd`; de stand komt uit
+ * de AC-dekking van de boom (ADR 0104).
+ * @param {{ file: string, text: string }} spec @param {readonly string[]} files @param {Dekking | undefined} dekking
+ * @returns {Violation[]}
+ */
+function specViolations({ file, text }, files, dekking) {
+  const status = eigenaarStatus(text);
+  if (status === undefined)
+    return [
+      {
+        key: `docs:${file}:status`,
+        message: `${file}: status niet uit voorstel | goedgekeurd | gebouwd | vervallen`,
+      },
+    ];
+  const stand = dekking?.stand ?? 'niet';
+  // Regel 7 (`:vorm`) bij voorstel en bij goedgekeurd zolang de spec niet volledig gebouwd is (AC-23).
+  const vormGeldt = status === 'voorstel' || (status === 'goedgekeurd' && stand !== 'gebouwd');
+  return [
+    ...specVormViolations(file, text, status),
+    ...(stand === 'niet' ? [] : doodPadViolations({ file, text, vormGeldt }, files, dekking?.gebouwd ?? [])),
+    ...disciplineViolations({ file, text, status, vormGeldt }, files),
+  ];
+}
+
+/**
+ * Hergebruik en UX bij goedgekeurd (ook een oude `status: gebouwd`); zonder die sectie wordt het sjabloon niet getoetst.
  * @param {string} file @param {string} text @param {string} status
  * @returns {Violation[]}
  */
 function specVormViolations(file, text, status) {
   const reuse = /^## Hergebruik en UX\n+(?!##)\S/m.test(text);
-  if ((status === 'goedgekeurd' || status === 'gebouwd') && !reuse)
+  if (status === 'goedgekeurd' && !reuse)
     return [
       {
         key: `docs:${file}:hergebruik`,
@@ -634,12 +820,12 @@ function sectie(text, kop) {
 }
 
 /**
- * Spec-discipline: `⚠ open` (een vraag zonder aanbeveling) blokkeert goedgekeurd en gebouwd; elk pad in
- * "Kopieer de vorm van" bestaat zolang er nog gebouwd moet worden (voorstel, goedgekeurd).
- * @param {{ file: string, text: string, status: string }} spec @param {readonly string[]} files
+ * Spec-discipline: `⚠ open` (een vraag zonder aanbeveling) blokkeert goedgekeurd; elk pad in "Kopieer de vorm van"
+ * bestaat zolang er nog gebouwd moet worden (`vormGeldt`: voorstel, of goedgekeurd met stand niet of deels; AC-23).
+ * @param {{ file: string, text: string, status: string, vormGeldt: boolean }} spec @param {readonly string[]} files
  * @returns {Violation[]}
  */
-function disciplineViolations({ file, text, status }, files) {
+function disciplineViolations({ file, text, status, vormGeldt }, files) {
   const open = sectie(text, 'Open vragen') ?? '';
   const vorm = sectie(text, 'Kopieer de vorm van') ?? '';
   const ontbrekend = [...vorm.matchAll(/`([^`\n]+)`/g)]
@@ -649,10 +835,10 @@ function disciplineViolations({ file, text, status }, files) {
     );
   return [
     // Ook `⚠️` (met U+FE0F), hoofdletters en een regel zonder opsommingsteken tellen als open vraag.
-    ...((status === 'goedgekeurd' || status === 'gebouwd') && /⚠️?\s*open\b/i.test(open)
+    ...(status === 'goedgekeurd' && /⚠️?\s*open\b/i.test(open)
       ? [{ key: `docs:${file}:open-vraag`, message: `${file}: ${status}, maar "Open vragen" bevat nog "⚠ open"` }]
       : []),
-    ...((status === 'voorstel' || status === 'goedgekeurd') && ontbrekend.length > 0
+    ...(vormGeldt && ontbrekend.length > 0
       ? [
           {
             key: `docs:${file}:vorm`,
@@ -666,23 +852,38 @@ function disciplineViolations({ file, text, status }, files) {
 // Regel 14: een volledig repopad onder een codemap, met extensie en zonder glob of placeholder; een regelnummer telt niet mee.
 const REPOPAD = /^(?:src|scripts|rails|test|e2e|db|deploy|\.claude|\.github)\/[\w.\-/]*\.[a-z]+$/;
 
-// Een nieuwe AC in een gebouwde spec (R-WERK-07): het lijstitem met `(nog niet gebouwd)` achter het id, met vervolgregels
-// en ingesprongen sub-bullets; het item eindigt bij een niet-ingesprongen `-` of `#`, of een lege regel.
-const NIEUWE_AC = /^- \*\*[^*\n]*AC-\d+\*\* \(nog niet gebouwd\)[^\n]*(?:\n(?![-#]|[ \t]*$)[^\n]*)*/gm;
+// Het lijstitem van een AC (`- **<voorvoegsel>/AC-n**`), met vervolgregels en ingesprongen sub-bullets; het item eindigt bij
+// een niet-ingesprongen `-` of `#`, of een lege regel.
+const AC_ITEM = /^- \*\*([a-z0-9][\w.-]*)\/(AC-\d+)\*\*[^\n]*(?:\n(?![-#]|[ \t]*$)[^\n]*)*/gm;
 // Een pad tussen backticks met het merkteken erachter: spaties of tabs, of één regeleinde met inspringing (`WIT`), geen lege regel.
 const PAD_MET_MERKTEKEN = new RegExp(`\`([^\`\\n]+)\`(${WIT}\\((?:vervallen|nieuw|voorbeeld)\\))?`, 'g');
 
 /**
- * Regel 14 (leerpunt #738): een gebouwde spec noemt geen repopad dat niet bestaat, tenzij er `(vervallen)`, `(nieuw)` of
- * `(voorbeeld)` achter staat, na witruimte met hooguit één regeleinde (ADR 0095), of het in een nieuwe AC met
- * `(nog niet gebouwd)` staat (R-WERK-07, R-DOC-10).
+ * De tekst die regel 14 toetst: zonder het lijstitem van een eigen AC dat niet gebouwd is (AC-22), en zonder "Kopieer de
+ * vorm van" zolang regel 7 die sectie toetst (geen dubbele melding).
+ * @param {{ file: string, text: string, vormGeldt: boolean }} spec @param {readonly string[]} gebouwd
+ */
+function doodPadTekst({ file, text, vormGeldt }, gebouwd) {
+  const { eigen } = specNamen(file, text);
+  const zonderItems = text
+    .replaceAll('\r\n', '\n')
+    .replace(AC_ITEM, (item, voor, ac) => (eigen.has(voor) && !gebouwd.includes(ac) ? '' : item));
+  const vorm = vormGeldt ? sectie(zonderItems, 'Kopieer de vorm van') : undefined;
+  return vorm === undefined ? zonderItems : zonderItems.replace(vorm, '\n');
+}
+
+/**
+ * Regel 14 (leerpunt #738, ADR 0104): een spec met minstens één gebouwd AC noemt geen repopad dat niet bestaat, tenzij er
+ * `(vervallen)`, `(nieuw)` of `(voorbeeld)` achter staat, na witruimte met hooguit één regeleinde (ADR 0095), of het in het
+ * lijstitem van een niet-gebouwd AC staat (gebouwd-zonder-nummer/AC-22, R-DOC-10).
  * Eén sleutel per pad, zodat de ratchet bestaande treffers in de baseline houdt.
- * @param {string} file @param {string} text @param {readonly string[]} files
+ * @param {{ file: string, text: string, vormGeldt: boolean }} spec @param {readonly string[]} files
+ * @param {readonly string[]} gebouwd de gebouwde eigen AC's (`AC-n`)
  * @returns {Violation[]}
  */
-function doodPadViolations(file, text, files) {
+function doodPadViolations({ file, text, vormGeldt }, files, gebouwd) {
   const bestaand = new Set(files);
-  const dood = [...text.replace(NIEUWE_AC, '').matchAll(PAD_MET_MERKTEKEN)]
+  const dood = [...doodPadTekst({ file, text, vormGeldt }, gebouwd).matchAll(PAD_MET_MERKTEKEN)]
     .filter((match) => match[2] === undefined)
     .map((match) => (match[1] ?? '').replace(/:\d+(-\d+)?$/, ''))
     // Het app-bestand is optioneel en bestaat alleen in een app met eigen padrijen (spec app-padtabel).
@@ -709,94 +910,6 @@ function sjabloonViolations(file, text) {
   return ontbreekt.length === 0
     ? []
     : [{ key, message: `${file}: mini-spec mist de koppen ${ontbreekt.map((kop) => `"${kop}"`).join(', ')}` }];
-}
-
-// Testpaden uit .claude/gates.json (`testpaden`): `*.test.*`, `*.spec.*`, `db/tests/**`, `e2e/**`, `test/**`.
-export const TESTBESTAND = /(?:^|\/)[^/]+\.(?:test|spec)\.[^/]+$|^(?:db\/tests|e2e|test)\//;
-// Een AC-id als heel woord, met een optioneel voorvoegsel `<naam>/` (groep 1); groep 2 is het id.
-const AC_ID = /(?<![\w/-])(?:([\w.-]+)\/)?(AC-\d+)(?![\w-])/g;
-
-/**
- * Regex die `naam` als heel woord vindt: geen woordteken, `/`, `.` of `-` ervoor (dus niet in `andere/mijn/AC-1` of
- * `x.mijn/AC-1`), geen woordteken of `-` erna. @param {string} naam
- */
-function heelWoord(naam) {
-  return new RegExp(`(?<![\\w/.-])${naam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`);
-}
-
-/**
- * Is `ac` van deze spec gedekt door de tekst van één testbestand?
- * @param {string} tekst
- * @param {{ naam: string, namespace: string | undefined }} spec
- * @param {string} ac
- */
-function dekt(tekst, spec, ac) {
-  const namen = [spec.naam, ...(spec.namespace === undefined ? [] : [spec.namespace])];
-  return namen.some((naam) => heelWoord(`${naam}/${ac}`).test(tekst));
-}
-
-// Een vervallen AC (ADR 0095 punt 6): `- **<ns>/AC-n** — Vervallen door ADR <nummer> … Was: …`, direct na het streepje.
-const VERVALLEN_AC = /^- \*\*([a-z0-9][\w.-]*)\/(AC-\d+)\*\* — Vervallen door ADR (\d{4})\b/gm;
-
-/**
- * De eigen AC-id's (`AC-n`) die de AC-dekking overslaat omdat ze vervallen zijn door een ADR dat in de ADR-map naast de specmap
- * staat (`docs/template/adr/` voor `docs/template/specs/`, anders `docs/adr/`) en `geaccepteerd` is (gebouwd-zonder-nummer/AC-5).
- * @param {{ file: string, text: string, eigen: ReadonlySet<string | undefined> }} spec
- * @param {readonly string[]} files @param {(file: string) => string} read
- * @returns {Set<string>}
- */
-export function vervallenAcs({ file, text, eigen }, files, read) {
-  const map = file.startsWith('docs/template/specs/') ? 'docs/template/adr/' : 'docs/adr/';
-  const geaccepteerd = (/** @type {string} */ nummer) =>
-    files.some(
-      (adr) =>
-        adr.startsWith(`${map}${nummer}-`) &&
-        !adr.slice(map.length).includes('/') &&
-        adr.endsWith('.md') &&
-        ADR_STATUS.exec(read(adr))?.[1] === 'geaccepteerd',
-    );
-  return new Set(
-    [...text.replaceAll('\r\n', '\n').matchAll(VERVALLEN_AC)]
-      .filter(([, naam, , nummer = '']) => eigen.has(naam) && geaccepteerd(nummer))
-      .map(([, , id = '']) => id),
-  );
-}
-
-/**
- * Regel 6: AC-traceerbaarheid van gebouwde specs naar testbestanden.
- * @param {readonly string[]} files
- * @param {(file: string) => string} read
- * @returns {Violation[]}
- */
-function acViolations(files, read) {
-  const gebouwd = files
-    .filter((file) => SPEC_BESTAND.test(file))
-    .map((file) => ({ file, text: read(file) }))
-    .filter(({ text }) => SPEC_STATUS.exec(text)?.[1] === 'gebouwd');
-  if (gebouwd.length === 0) return [];
-  const tests = files.filter((file) => TESTBESTAND.test(file)).map(read);
-  return gebouwd.flatMap(({ file, text }) => {
-    const spec = { naam: path.basename(file, '.md'), namespace: /^namespace:\s*(\S+)\s*$/m.exec(text)?.[1] };
-    const eigen = new Set([spec.naam, spec.namespace]);
-    // Een AC met het voorvoegsel van een andere spec (`accounts/AC-42`) is een kruisverwijzing, geen eigen AC.
-    // Een AC met de markering `(nog niet gebouwd)` wacht nog op zijn bouw-PR (ADR 0080 punt 4).
-    const gemarkeerd = new Set(
-      [...acIds(text).gemarkeerd].flatMap((id) => (eigen.has(id.split('/')[0]) ? [id.replace(/^.*\//, '')] : [])),
-    );
-    // Een vervallen AC (`Vervallen door ADR <nummer>`, ADR geaccepteerd) heeft geen test meer nodig (ADR 0095 punt 6).
-    const vervallen = vervallenAcs({ file, text, eigen }, files, read);
-    const ids = [...text.matchAll(AC_ID)]
-      .filter(([, voor]) => voor === undefined || eigen.has(voor))
-      .map(([, , id = '']) => id)
-      .filter((id) => !gemarkeerd.has(id) && !vervallen.has(id));
-    const acs = [...new Set(ids)].sort((a, b) => Number(a.slice(3)) - Number(b.slice(3)));
-    return acs
-      .filter((ac) => !tests.some((tekst) => dekt(tekst, spec, ac)))
-      .map((ac) => ({
-        key: `docs:ac:${spec.naam}:${ac}`,
-        message: `${file}: ${ac} heeft geen testbestand met ${spec.namespace ?? spec.naam}/${ac}`,
-      }));
-  });
 }
 
 /**
@@ -1144,7 +1257,7 @@ function codeownersViolations(ruw, tekst, appGlobs) {
 
 /**
  * `merge` (ADR 0069; blijft tot ADR 0089 punt 9): de modus is `eigenaar` of `niet-kritiek`; `pnpm pr:merge`,
- * `pnpm pr:resolve` (ADR 0098) en het rolhek lezen hem.
+ * `pnpm pr:resolve` (ADR 0098) en het rolhek lezen hem; `pnpm pr:log` (ADR 0102) gebruikt de ankertoets zonder de modus.
  * @param {string} text
  * @returns {Violation[]}
  */

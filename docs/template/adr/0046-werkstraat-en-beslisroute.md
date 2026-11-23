@@ -22,6 +22,8 @@ Herzien: 2026-11-18 (#805): gewijzigd door [0095](0095-gebouwd-zonder-pr-nummer.
 schrijft geen `gebouwd` meer; punt 10: `status: gebouwd` zonder PR-nummer in de bouw-PR, `pnpm docs:status` vervalt
 Herzien: 2026-11-19: punt 6, gewijzigd door [0099](0099-rolhek-leeslijst-ruimer.md): alleen architect en hoofdsessie wijzigen ook de inhoud van een vervallen spec (de status blijft `vervallen`); een vervallen ADR blijft onwijzigbaar (punt 2)
 Herzien: 2026-11-19: punt 2: een vervallen of vervangen ADR wijzigt in een app niet; in de template verdwijnt het en `check-docs` weigert het (R-CI-05, R-CI-06, spec vervallen-documenten-weg)
+Herzien: 2026-11-22: gewijzigd door [0104](0104-gebouwd-uit-ac-dekking.md) punt 2, 5 en 7, punt 5 en 6: `gebouwd` is geen status meer die iemand schrijft; punt 10: een spec is gebouwd zodra elk levend AC een test op `main` heeft; geldt vanaf de bouw-PR
+Herzien: 2026-11-23 (#927): punt 20, het rolhek kijkt in de tip van `origin/main` of het anker, niet in de merge-base met HEAD, want een agent kan HEAD verzetten; `check:migrations` in CI blijft de merge-base gebruiken
 
 Vervangt 0025, 0027, 0030 en 0038; neemt de delen van 0029 over die via 0038 punt 8 nog golden. Drempel: A4.
 

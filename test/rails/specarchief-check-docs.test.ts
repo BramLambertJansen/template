@@ -2,15 +2,18 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, test } from 'vitest';
-import { docsViolations } from '../../scripts/kit/check-docs.mjs';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { docsKrimp, docsViolations } from '../../scripts/kit/check-docs.mjs';
 
 // docs/specs/specarchief-en-bouwvorm.md (ADR 0080): `check-docs` (docsViolations) op echte, tijdelijke git-repositories.
-// Links vanuit en naar het specarchief (AC-4), een naam in beide mappen (AC-5), de AC-dekking van regel 6 met de markering
-// `(nog niet gebouwd)` (AC-7) en de oude statusvorm met SHA (AC-11). Vorm van archief-spec-links en archief-check-docs.
+// Links vanuit en naar het specarchief (AC-4), een naam in beide mappen (AC-5), het AC-verlies van regel 6 (AC-7, ADR 0104) en de oude statusvorm met SHA (AC-11). Vorm van archief-spec-links en archief-check-docs.
 const mappen: string[] = [];
 
+beforeEach(() => {
+  vi.stubEnv('GITHUB_ACTIONS', 'false');
+});
 afterEach(() => {
+  vi.unstubAllEnvs();
   for (const map of mappen.splice(0)) rmSync(map, { recursive: true, force: true });
 });
 
@@ -95,25 +98,42 @@ describe('specarchief-en-bouwvorm/AC-5: een naam uit het archief komt niet terug
   });
 });
 
-describe('specarchief-en-bouwvorm/AC-7: regel 6 slaat alleen een gemarkeerde AC over', () => {
+// ADR 0104: het merkteken `(nog niet gebouwd)` vervalt; een AC zonder test is vanzelf niet gebouwd. Regel 6 is een ratchet
+// tegenover de merge-base: alleen het verlies van een AC die op main gebouwd was, is rood. Een nieuwe AC zonder test is dat
+// niet, ook niet zonder markering.
+describe('specarchief-en-bouwvorm/AC-7: regel 6 telt alleen het verlies van een gebouwde AC', () => {
   const TEST = { 'test/demo.test.ts': "test('demo/AC-1 werkt', () => {});\n" };
-  const acs = (tweede: string): string[] => [
+  const SPEC = 'docs/specs/demo.md';
+  const acs = [
     '## Acceptatiecriteria',
     '',
     '- **demo/AC-1** — Gegeven iets, dan iets.',
-    `- **demo/AC-2**${tweede} — Gegeven meer, dan meer.`,
+    '- **demo/AC-2** — Gegeven meer, dan meer.',
   ];
-  const dekking = async (tweede: string): Promise<string[]> =>
-    (await meldingen({ ...TEST, 'docs/specs/demo.md': spec('gebouwd # #120', 'demo', acs(tweede)) })).filter(
-      (message) => message.startsWith('docs/specs/demo.md: AC-'),
-    );
 
-  test('specarchief-en-bouwvorm/AC-7 een gebouwde spec met een nieuwe AC (nog niet gebouwd) zonder test: groen', async () => {
-    expect(await dekking(' (nog niet gebouwd)')).toStrictEqual([]);
+  /** Basis (origin/main): spec met AC-1 en AC-2 en een test voor AC-1; head: `head` (null verwijdert). */
+  const verlies = async (head: Record<string, string | null>): Promise<string[]> => {
+    const root = repo({ ...TEST, [SPEC]: spec('goedgekeurd', 'demo', acs) });
+    execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', 'basis'], { cwd: root });
+    execFileSync('git', ['update-ref', 'refs/remotes/origin/main', 'HEAD'], { cwd: root });
+    for (const [file, inhoud] of Object.entries(head)) {
+      if (inhoud === null) rmSync(path.join(root, file), { force: true });
+      else writeFileSync(path.join(root, file), inhoud);
+    }
+    execFileSync('git', ['add', '-A'], { cwd: root });
+    return (await docsKrimp(root))
+      .map(({ message }) => message)
+      .filter((message) => message.startsWith(`${SPEC}: AC-`));
+  };
+
+  test('specarchief-en-bouwvorm/AC-7 een AC zonder test die nooit gebouwd was (AC-2), zonder markering: groen', async () => {
+    expect(await verlies({})).toStrictEqual([]);
   });
 
-  test('specarchief-en-bouwvorm/AC-7 dezelfde AC zonder markering en zonder test: rood', async () => {
-    expect(await dekking('')).toHaveLength(1);
+  test('specarchief-en-bouwvorm/AC-7 de gebouwde AC-1 verliest zijn test: rood, de ongebouwde AC-2 niet', async () => {
+    const lijst = await verlies({ 'test/demo.test.ts': null });
+    expect(lijst).toHaveLength(1);
+    expect(lijst[0]).toMatch(/^docs\/specs\/demo\.md: AC-1 was gebouwd op main/);
   });
 });
 

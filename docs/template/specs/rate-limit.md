@@ -1,12 +1,12 @@
 ---
-status: gebouwd # door de agent onder mandaat van de eigenaar (2026-10-11), open vragen volgens de aanbeveling; ter herziening
+status: goedgekeurd # door de agent onder mandaat van de eigenaar (2026-10-11), open vragen volgens de aanbeveling; bevestigd door de eigenaar (2026-11-23)
 namespace: rate-limit
 ---
 
 # Rate limit voor app-routes in `defineRoute`
 
 > Goedgekeurd door de agent onder mandaat van de eigenaar (2026-10-11). Elke open vraag is besloten volgens de aanbeveling
-> erbij; zie `docs/reviews/2026-10-11-keuzes-agent.md`. De eigenaar kan dit herzien.
+> erbij; zie `docs/reviews/2026-10-11-keuzes-agent.md`. De eigenaar heeft dit bevestigd (2026-11-23).
 
 Geen kop weglaten; "n.v.t. — reden" mag. Ontbreekt een antwoord, dan vraagt de agent het.
 

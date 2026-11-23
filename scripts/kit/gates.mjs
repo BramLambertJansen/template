@@ -17,7 +17,7 @@ export const gates = [
   {
     script: 'ratchet',
     bewaakt:
-      'lagen en zones (dependency-cruiser) en docs (check-docs: paden, links, statussen, spiegeling) tegen .kit/baseline.json; strikt: geen onderdrukking in eslint-suppressions.json stijgt tegenover de merge-base, geen conflictmarker in een getrackt tekstbestand, elk pgTAP-bestand in db/tests in de vorm van R-TEST-05 en elke nieuwe of gewijzigde AC noemt zijn testbestand achter Toets: (ac-toets)',
+      'lagen en zones (dependency-cruiser) en docs (check-docs: paden, links, statussen, spiegeling, claims "zonder prompt" tegen .claude/settings.json, voorgeschreven commando\'s in agentinstructies en docs/operations/recepten.md tegen het rolhek) tegen .kit/baseline.json; strikt: geen onderdrukking in eslint-suppressions.json stijgt tegenover de merge-base, geen conflictmarker in een getrackt tekstbestand, geen gewijzigd changelogfragment dat al op de merge-base staat, elk pgTAP-bestand in db/tests in de vorm van R-TEST-05, elke nieuwe of gewijzigde AC noemt zijn testbestand achter Toets: (ac-toets) en .kit/schaduw.json heeft de vorm uit ADR 0106 zonder verlopen einddatum of skippende uitvoerder (schaduw-register, schaduw-termijn); meldingen (nooit rood): onder meer "loopt af" en treffers van controles in schaduw (schaduw-termijn, schaduw)',
     snel: true,
   },
   {
@@ -41,7 +41,7 @@ export const gates = [
   {
     script: 'check:roadmap',
     bewaakt:
-      'een nieuw of gewijzigd [x] in docs/roadmap.md verwijst naar bewijs (testpad, checknaam of PR-nummer) en een spec die naar gebouwd gaat en een roadmap-id noemt wijzigt docs/roadmap.md in dezelfde PR, t.o.v. origin/main (framework §8); heeft docs/roadmap.md een kop ## Nu, dan gelden ook de structuurregels: vereiste koppen, hooguit 3 open items onder Nu, terug als: bij geparkeerd, geen gedateerd statusproza en aanleiding: bij een nieuw open item (ADR 0046)',
+      'een nieuw of gewijzigd [x] in docs/roadmap.md verwijst naar bewijs (testpad, checknaam of PR-nummer) en een spec die in de PR volledig gebouwd wordt (AC-dekking, ADR 0104) en een roadmap-id noemt wijzigt docs/roadmap.md in dezelfde PR, t.o.v. origin/main (framework §8); heeft docs/roadmap.md een kop ## Nu, dan gelden ook de structuurregels: vereiste koppen, hooguit 3 open items onder Nu, terug als: bij geparkeerd, geen gedateerd statusproza en aanleiding: bij een nieuw open item (ADR 0046)',
     snel: true,
   },
   { script: 'test:unit', bewaakt: 'unit-tests en de fixtures van de rails (test/rails)', snel: true },

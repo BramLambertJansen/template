@@ -57,6 +57,7 @@
     "pr:verify": "node scripts/kit/pr-verify.mjs",
     "pr:merge": "node scripts/kit/pr-merge.mjs",
     "pr:resolve": "node scripts/kit/pr-resolve.mjs",
+    "pr:log": "node scripts/kit/pr-log.mjs",
     "app:init": "node scripts/kit/app-init.mjs",
     "gate:fast": "node scripts/kit/gate-fast.mjs",
     "check:snapshot": "scripts/check-snapshot.sh",
@@ -86,7 +87,7 @@
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
     "@eslint/js": "10.0.1",
-    "@playwright/test": "1.63.0",
+    "@playwright/test": "1.65.1",
     "@tailwindcss/vite": "4.3.3",
     "@tanstack/router-plugin": "1.168.47",
     "@testing-library/dom": "10.4.2",

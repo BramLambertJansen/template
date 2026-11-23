@@ -319,11 +319,29 @@ describe('meting-stuurt/AC-6: het leespad groeit niet met de repo', { timeout: 6
     (_x, i) => `- [ ] **Extra roadmap-item ${String(i)}** (fase 2). Aanleiding: #1.`,
   ).join('\n');
 
-  /** De werkmap plus 200 specs (100 gebouwd, 100 vervallen), 50 geaccepteerde ADR's en 50 items onder Volgende. */
+  // ADR 0104: gebouwd volgt uit de AC-dekking, dus de lezer heeft een boom met een testbestand dat het AC van elke gebouwde
+  // extra spec noemt (een lezer zonder boom geeft elke spec lege `gebouwd`, en dan toont de lijst ze als goedgekeurd).
+  const EXTRA_TEST = 'test/extra.test.ts';
+  const extraTest = EXTRA_SPECS.slice(0, 100)
+    .map((naam) => `test('${naam.slice(0, -3)}/AC-1: iets', () => {});\n`)
+    .join('');
+  const boom = () => {
+    const echt = werkmap.boom?.() ?? { bestanden: [], lees: () => null };
+    return {
+      bestanden: [...echt.bestanden, EXTRA_TEST],
+      lees: (pad: string) => (pad === EXTRA_TEST ? extraTest : echt.lees(pad)),
+    };
+  };
+
+  /** De werkmap plus 200 specs (100 gebouwd door dekking, 100 vervallen), 50 geaccepteerde ADR's en 50 items onder Volgende. */
   const gegroeid = {
+    boom,
     lees: (pad: string) => {
-      const spec = /^docs\/specs\/extra-(\d+)\.md$/.exec(pad);
-      if (spec !== null) return `---\nstatus: ${Number(spec[1]) < 100 ? 'gebouwd' : 'vervallen'}\n---\n`;
+      const spec = /^docs\/specs\/(extra-(\d+))\.md$/.exec(pad);
+      if (spec !== null)
+        return Number(spec[2]) < 100
+          ? `---\nstatus: goedgekeurd\n---\n\n- **${spec[1] ?? ''}/AC-1** — Gegeven iets, dan dit.\n`
+          : '---\nstatus: vervallen\n---\n';
       const adr = /^docs\/adr\/(\d{4})-extra-besluit\.md$/.exec(pad);
       if (adr !== null) return `# ${adr[1] ?? ''} — Extra besluit\n\nStatus: geaccepteerd\n`;
       const tekst = werkmap.lees(pad);

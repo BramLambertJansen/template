@@ -9,7 +9,7 @@ Wat een gate kan afdwingen, staat hier niet. Groeit dit bestand of `AGENTS.md` o
 
 - Een beslissing ontbreekt, de spec spreekt zichzelf tegen, of een regel staat de opdracht in de weg.
 - Een check faalt en de fix zou een regel, check, hook of test afzwakken.
-- Na twee mislukte correctiepogingen: stop, vat samen wat je probeerde, vraag om richting. Uitzondering: de CI-lus van de skill `opleveren` (R-WERK-12) loopt door tot groen; daar gelden alleen de stopgronden uit die skill.
+- Na twee mislukte correctiepogingen (bij reviewbevindingen telt een fix als poging, een reviewronde niet, ADR 0105): stop, vat samen wat je probeerde, vraag om richting in één gebundeld besluit. Kleine reviewbevindingen gaan niet in de lus. Uitzondering: de CI-lus van de skill `opleveren` (R-WERK-12) loopt door tot groen; daar gelden alleen de stopgronden uit die skill.
 
 ## Sandbox en rolhek
 

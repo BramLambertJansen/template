@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #545
+status: goedgekeurd # #545
 namespace: leerlus-herzien
 ---
 

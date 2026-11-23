@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #349
+status: goedgekeurd # #349
 namespace: klassenrail
 sjabloon: mini
 ---

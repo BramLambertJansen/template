@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #439
+status: goedgekeurd # #439
 namespace: krimp-op-normen
 ---
 

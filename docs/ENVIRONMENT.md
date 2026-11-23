@@ -142,11 +142,12 @@ De [agentdoorloop](operations/agent-doorloop.md#ontwikkelen-en-runnerchecks) bes
 `ask`, `deny`, het rolhek uit main en de verplichte GitHub-checks blijven leidend. Subagents krijgen geen push- of
 PR-schrijfrechten; main-push, force, hookoverslaan, PR-merge en zelfreview blijven geweigerd. De bestaande lokale
 merge van main en veilige taakbranchopruiming blijven beschikbaar. Geen Git-allowWrite of schrijfbare globale
-pnpm-opslag is nodig. Naast de zeven runneruitzonderingen draaien `git commit *`, `git push origin HEAD`, `gh api *` en
-`pnpm pr:verify *` buiten de sandbox, lokaal en in de cloud (ADR 0061, herzien; zie
+pnpm-opslag is nodig. Naast de zeven runneruitzonderingen draaien `git commit *`, `git push origin HEAD`, `gh api *`,
+`pnpm pr:verify *` en `pnpm meting *` buiten de sandbox, lokaal en in de cloud, en `pnpm pr:log *` onder de ankertoets (ADR 0061 en 0102; zie
 [Cloud: commit, push, PR en bewijs](#cloud-commit-push-pr-en-bewijs)). Lefthook en `pr:verify` draaien daardoor code uit de
 werkmap zonder sandbox en zonder vraag vooraf; alleen het rolhek vooraf staat ertussen, CI en de eigenaarmerge blijven de
-grens (aanvaard restrisico).
+grens (aanvaard restrisico). Dat geldt ook voor `pnpm meting`, dat alleen leest en `gh` start; `METING_GH` kiest welk
+programma (`scripts/kit/meting.mjs:306`).
 
 Regressies staan in `test/scripts/mise-pnpm-selection.test.ts`, `test/scripts/toolchain-pnpm-runtime.test.ts`,
 `test/rails/claude-sandbox-werkstraat.test.ts` en `test/hooks/rolhek-sandbox-werkstraat.test.ts`.
@@ -157,7 +158,8 @@ werkelijke versie, prompts, commit-hooks, featurepush, PR-aanmaak en CI vast, in
 
 De Bash-sandbox (`sandbox` in `.claude/settings.json`) kan niet schrijven naar `.claude/settings.json`,
 `.claude/settings.local.json`, `.claude/hooks/**` en `.claude/skills/**`. Dat is een grens van Claude Code, niet van deze repo,
-en hij geldt lokaal en in de cloud. Een wijziging daar gaat alleen via de Edit-tool in de hoofdsessie, met een prompt die de
+en hij geldt lokaal en in de cloud. In de cloud is ook `.claude/agents/**` alleen-lezen (gemeten op 22 november 2026:
+`EROFS`; leerpunten #789 en #895). Een wijziging daar gaat alleen via de Edit-tool in de hoofdsessie, met een prompt die de
 eigenaar accepteert; het rolhek weigert een developer-subagent op die paden. Een taak die die paden raakt, vraagt dus een
 sessie waarin de eigenaar aanwezig is, of de eigenaar voert de wijziging zelf uit. De sandbox ruimer zetten is een
 eigenaarsbesluit (beschermd pad, `docs/framework.md` §10).
@@ -175,7 +177,9 @@ Tijdens een sessie beweegt het niet mee met `main`. Dat merk je bij `pnpm pr:mer
 de hostbestanden (`package.json`, `.npmrc`, …) in de werkmap gelijk zijn aan de merge-base met het anker (`trustedMerge` in
 `rails/hooks/lib/runner-authority.mjs`). Komt er ná de sessiestart een PR op `main` die een van die paden wijzigt, en staat de
 werkmap op of voorbij die nieuwe `main`, dan weigert het rolhek met "scripts, rails en hostbestanden … gelijk aan het anker
-(ADR 0069)", ook vanaf een schone kopie van `main`. Opnieuw proberen helpt niet. Vergelijk het anker met de remote:
+(ADR 0069)", ook vanaf een schone kopie van `main`. Is de werkmap gelijk aan `origin/main` en loopt alleen het anker achter,
+dan zegt de weigering dat ("het anker loopt achter op origin/main", leerpunt #888); een nieuwe sessie, `/clear` of `/compact`
+zet het anker opnieuw. Opnieuw proberen helpt niet. Vergelijk het anker met de remote:
 
 1. In de sessie of een eigen terminal, in de root van de werkmap die de weigering gaf (bij een worktree de worktree zelf, niet
    de hoofdcheckout): vraag de remote om `main`. Verwacht: één regel met een SHA en `refs/heads/main`.
@@ -201,16 +205,29 @@ branchnaam voor; de PR komt van de opgelegde branch. Is een vaste naam nodig, da
 
 Gemeten op 20 november 2026 (spec `cloud-pr-route`): binnen de Bash-sandbox bereikt een cloudsessie de token-proxy en de
 signeerdienst van het platform niet. `gh` geeft dan op elke aanroep 401 en het ondertekenen van een commit faalt. Daarom
-draaien vier commando's buiten de sandbox (`sandbox.excludedCommands` in `.claude/settings.json`). De route:
+draaien vier commando's buiten de sandbox (`sandbox.excludedCommands` in `.claude/settings.json`), plus `pnpm meting *`: de
+trend van `pnpm meting --trend` haalt PR's en CI-runs met `gh` op en was in de sandbox altijd "onbekend" (leerpunt #899). Ook
+voor `pnpm meting` geldt de netwerkvorm: alleen als los commando, niet in een pipe of keten. De route:
 
 | Stap | Commando | Opmerking |
 |---|---|---|
 | Commit | `git commit -F <bestand>` | buiten de sandbox; lefthook draait mee, nooit `--no-verify` |
 | Push | `git push origin HEAD` | de smalle vorm; `deny` en het rolhek weigeren push naar `main` en force |
 | PR openen | `mcp__github__create_pull_request` | `gh pr create` werkt niet in de cloud (GraphQL); Claude Code vraagt de eigenaar één keer per PR (gemeten: één prompt, spec `cloud-pr-route` F10; ADR 0078 punt 4, herzien) |
-| Bewijs lezen | `pnpm pr:verify <nummer>`, `gh api repos/{owner}/{repo}/…` | alleen REST; `gh pr …` en `gh issue …` gebruiken GraphQL en werken niet |
+| Bewijs lezen | `pnpm pr:verify <nummer>`, `gh api "repos/{owner}/{repo}/…"` (endpoint tussen aanhalingstekens) | alleen REST; `gh pr …` en `gh issue …` gebruiken GraphQL en werken niet |
 
-Lokaal blijft `gh pr create --head <branch> --body-file <bestand>` de route (zie Dagelijks werken).
+Lokaal blijft `gh pr create --head <branch> --body-file <bestand>` de route (zie Dagelijks werken). Elke handeling met git,
+gh en CI per runtime staat in de [receptenkaart](operations/recepten.md) (`node scripts/kit/feiten.mjs recepten`).
+
+Het rolhek weigert, lokaal en in de cloud, voor elke rol een commando dat een patroon uit `excludedCommands` raakt maar er
+niet in zijn geheel op past: `git commit -F m 2>&1 | tail`, `git push -u origin <branch>`, `pnpm run test:db`. De reden noemt
+de vorm die wel buiten de sandbox draait (`rails/hooks/lib/rolhek.mjs:2601`, spec `cloud-netwerkvorm`). De lijst komt uit
+`.claude/settings.json` in het anker (`rails/hooks/lib/rolhek-context.mjs:71`); een wijziging werkt in het rolhek pas na de
+merge. Een remote branch verwijder je met `gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<branch>"` (endpoint tussen aanhalingstekens, zie de receptenkaart); `main` verwijderen
+of verzetten via `gh api` is voor elke rol verboden (`rails/hooks/lib/rolhek.mjs:2492`). `mcp__github__push_files`,
+`create_or_update_file` en `delete_file` slaan lefthook over: de hoofdsessie krijgt een vraag, een subagent een weigering
+(`rails/hooks/lib/rolhek.mjs:115`). Een cloudsessie (`CLAUDE_CODE_REMOTE=true`) toont de route bij de start in één regel
+(`rails/hooks/lib/werkstraat.mjs:349`).
 
 Kies bij het starten van de sessie de omgeving uit Opzetten. De omgeving Default heeft geen toolchain:
 `node scripts/kit/feiten.mjs` meldt dan `✗ toolchain ontbreekt` en lefthook draait niet. Netwerktoegang heet in de

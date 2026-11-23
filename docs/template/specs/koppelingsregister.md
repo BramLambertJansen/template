@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #531
+status: goedgekeurd # #531
 namespace: koppelingsregister
 model: opus
 modelreden: nieuwe tabel en security definer-functies, een export erbij in src/core/api/db (ADR 0062 punt 2)

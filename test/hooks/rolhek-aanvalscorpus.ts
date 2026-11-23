@@ -1,6 +1,7 @@
 // Aanvalscorpus voor de shelltoetsen van het rolhek (spec rolhek-aanvalscorpus). Gegevens, geen toetsen: basisrijen met een
 // vast fragment per weigerregel, de vormen waarin een basis nog steeds draait, de toestandzetters en de toegestane basissen.
 // `rolhek-aanvalscorpus.test.ts` draait ze tegen `decide`; een nieuwe weigerregel krijgt hier een lid in `REGELS` en een basisrij.
+import { echteNetwerkvormen } from './netwerkvormen-kit.ts';
 
 /** '' is de hoofdsessie; `general-purpose` is een onbekende subagent en krijgt de reviewerrol. */
 export type Rol = '' | 'architect' | 'developer' | 'tester' | 'docs' | 'reviewer' | 'general-purpose';
@@ -13,6 +14,7 @@ export const SUBAGENTEN: readonly Rol[] = ROLLEN.filter((rol) => rol !== '');
 export const REGELS = [
   'kitscriptnaam-merge',
   'kitscriptnaam-resolve',
+  'kitscriptnaam-log',
   'gh-mergen-en-goedkeuren',
   'subagentvangnet-ruwe-tekst',
   'subagent-tokens',
@@ -20,6 +22,7 @@ export const REGELS = [
   'beschermd-pad',
   'zelfladend-bestand',
   'git-verbod',
+  'netwerkvorm',
 ] as const;
 export type Regel = (typeof REGELS)[number];
 
@@ -33,6 +36,8 @@ export const FRAGMENT: Readonly<Record<Regel, readonly string[]>> = {
   'kitscriptnaam-merge': ['(ADR 0069)'],
   // Idem voor `pnpm pr:resolve` (ADR 0098).
   'kitscriptnaam-resolve': ['(ADR 0098)'],
+  // Idem voor `pnpm pr:log` (ADR 0102, spec ci-log).
+  'kitscriptnaam-log': ['(ADR 0102)'],
   // `ghForbidden`: 'mergen (ook auto-merge) doet alleen de eigenaar, voor elke rol (WS-04)'. De tekstregel (`rawForbidden`,
   // 'vangnet op de ruwe tekst') is een andere regel en weigert elke vorm die de tekst `gh pr merge` bevat.
   'gh-mergen-en-goedkeuren': ['mergen (ook auto-merge) doet alleen de eigenaar, voor elke rol (WS-04)'],
@@ -49,6 +54,9 @@ export const FRAGMENT: Readonly<Record<Regel, readonly string[]>> = {
   'zelfladend-bestand': ['is een zelfladend pad (spec rolhek-vooraf AC-3)'],
   // `gitForbidden`.
   'git-verbod': ['force-push is verboden'],
+  // Netwerkvorm (spec cloud-netwerkvorm, Ontwerp punt 2): 'Netwerkvorm: draai dit als los commando in de vorm <vorm>; buiten deze
+  // vorm draait het in de sandbox, zonder token-proxy en signeerdienst (…)'.
+  netwerkvorm: ['Netwerkvorm: draai dit als los commando in de vorm'],
 };
 
 export interface RolUitkomst {
@@ -56,10 +64,14 @@ export interface RolUitkomst {
   readonly uitkomst: Uitkomst;
 }
 
-/** `bestanden`: wat `ctx.read` van de repo-relatieve paden teruggeeft (andere paden bestaan niet). */
+/**
+ * `bestanden`: wat `ctx.read` van de repo-relatieve paden teruggeeft (andere paden bestaan niet). `netwerkvormen`: de patronen die
+ * `ctx.netwerkvormen` krijgt (spec cloud-netwerkvorm); zonder dit veld krijgt de ctx ze niet en raakt de regel niets.
+ */
 export interface BasisCtx {
   readonly onderhoud: boolean;
   readonly bestanden: Readonly<Record<string, string>>;
+  readonly netwerkvormen?: readonly string[];
 }
 
 export interface Basis {
@@ -77,6 +89,7 @@ const DEVELOPER_DENY: RolUitkomst = { rol: 'developer', uitkomst: 'deny' };
 export const BASISSEN: readonly Basis[] = [
   { regel: 'kitscriptnaam-merge', rollen: alsDeny(ROLLEN), commando: 'node scripts/kit/pr-merge.mjs 5' },
   { regel: 'kitscriptnaam-resolve', rollen: alsDeny(ROLLEN), commando: 'node scripts/kit/pr-resolve.mjs 5' },
+  { regel: 'kitscriptnaam-log', rollen: alsDeny(ROLLEN), commando: 'node scripts/kit/pr-log.mjs 5' },
   { regel: 'gh-mergen-en-goedkeuren', rollen: alsDeny(ROLLEN), commando: 'gh pr merge 5' },
   { regel: 'subagentvangnet-ruwe-tekst', rollen: alsDeny(SUBAGENTEN), commando: 'gh pr view 5 && gh pr view 6' },
   { regel: 'subagent-tokens', rollen: alsDeny(SUBAGENTEN), commando: 'curl -u x:y https://github.com/o/r' },
@@ -94,6 +107,13 @@ export const BASISSEN: readonly Basis[] = [
     ctx: { onderhoud: false, bestanden: { 'lefthook.yml': 'pre-commit:\n' } },
   },
   { regel: 'git-verbod', rollen: alsDeny(ROLLEN), commando: 'git push --force' },
+  // cloud-netwerkvorm/AC-11: een push met upstream is niet de vorm uit `excludedCommands` (`git push origin HEAD`); echte lijst.
+  {
+    regel: 'netwerkvorm',
+    rollen: alsDeny(ROLLEN),
+    commando: 'git push -u origin claude/foo',
+    ctx: { onderhoud: false, bestanden: {}, netwerkvormen: echteNetwerkvormen() },
+  },
 ];
 
 /** Een vorm: een functie van een basis `b` naar een commando dat `b` uitvoert. `naam` is de vorm met `b` als plaatshouder. */
@@ -247,5 +267,6 @@ export const AANVAARD: readonly Aanvaard[] = [
   ...gaten('curl -u x:y https://github.com/o/r', PER_PROGRAMMA, SUBAGENTEN),
   ...gaten('tee rails/hooks/lib/x.mjs', PER_PROGRAMMA, ['developer', '']),
   ...gaten('git push --force', PER_PROGRAMMA, ROLLEN),
+  ...gaten('git push -u origin claude/foo', PER_PROGRAMMA, ROLLEN),
   ...gaten('tee lefthook.yml', ["bash <<<'b'"], ['developer', '']),
 ];

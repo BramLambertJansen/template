@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #428
+status: goedgekeurd # #428
 namespace: reviewer-opties
 ---
 

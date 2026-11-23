@@ -55,6 +55,8 @@ function beslis(commando: string, rol: Rol, ctx: BasisCtx = GEEN_CTX): Beslissin
       isDir: () => false,
       branch: 'feat/x',
       ...(ctx.onderhoud ? { onderhoud: true } : {}),
+      // cloud-netwerkvorm/AC-11: alleen de basisrij van de regel netwerkvorm geeft de patronen mee.
+      ...(ctx.netwerkvormen === undefined ? {} : { netwerkvormen: [...ctx.netwerkvormen] }),
     },
   );
   const melding = [...d.deny, ...d.ask].join('\n');

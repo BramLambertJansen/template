@@ -6,7 +6,8 @@
 import path from 'node:path';
 import { gitSubcommand, globTekstRegex, ONZEKERE_TEKST, parseCommands, programName, splitCommand, tmpdirLetterlijk, tmpdirWoord, tokenize, writeTargets, zetVariabele } from './shell.mjs';
 import { GIT_VORMEN, gitLeesvorm, insideRepo, lezerPaden, pathspecBinnen } from './rolhek-lezers.mjs';
-import { A4_MELDING, archiefBron, beslisOvergang, builtReference, documentInfo, documentKind, isArchief, isHerschrijving } from './document-state.mjs';
+import { gebouwdRegel } from './ac-dekking.mjs';
+import { A4_MELDING, archiefBron, beslisOvergang, documentInfo, documentKind, isArchief, isHerschrijving } from './document-state.mjs';
 import { canRecordStatus } from './task-authority.mjs';
 import { automaticRunner } from './runner-authority.mjs';
 import { isCoreUiSource, testChangeRisk } from './functional-ui.mjs';
@@ -24,18 +25,25 @@ import { afgeleid, globMatch, onderhoudVan, samengevoegd, templateVan } from './
  * voorReview-pad een gate (faalt dicht). `onderhoud`: de repository waarin de onderhoudsmodus geldt (ADR 0045 punt 8).
  * `template`: de repository van de template, ook in een app (spec template-repo); ontbreekt hij, dan geen leerpuntdoel.
  * @typedef {{ root: string, cwd: string, config: Config, read: (rel: string) => string | null,
- *   committed: (rel: string) => boolean | 'zonder-origin', isDir: (rel: string) => boolean, branch: string,
+ *   committed: (rel: string) => boolean | 'zonder-origin', bestaand?: (rel: string) => boolean | 'zonder-origin',
+ *   isDir: (rel: string) => boolean, branch: string,
  *   authority?: import('./task-authority.mjs').Authority | null, runnerTrusted?: boolean | (() => boolean),
- *   mergeTrusted?: boolean | (() => boolean),
+ *   mergeTrusted?: boolean | (() => boolean), kitTrusted?: boolean | (() => boolean),
+ *   ankerVerouderd?: boolean | ((modus: 'merge' | 'kit') => boolean),
  *   onbekendeRol?: boolean, onderhoud?: boolean, files?: (rel: string) => string[],
- *   gevolgd?: (paden: readonly string[]) => Set<string>, werkmappen?: () => string[] }} Ctx
+ *   gevolgd?: (paden: readonly string[]) => Set<string>, werkmappen?: () => string[], netwerkvormen?: readonly string[] }} Ctx
+ * `netwerkvormen`: de patronen uit `sandbox.excludedCommands` (`git push origin HEAD`, `git commit *`) uit de vertrouwde basis
+ * (spec cloud-netwerkvorm); ontbreekt hij, dan raakt de regel netwerkvorm niets.
  * `files`: bestanden (getrackt en niet-genegeerd) onder een map, repo-relatief; `''` is de hele repo.
  * `gevolgd`: de doorgegeven paden (zoals getypt, tegen `cwd`) die git volgt als gewoon bestand, ook na `realpath` (spec
  * rolhek-lezen/AC-11); ontbreekt hij of gooit hij, dan telt geen pad. `werkmappen`: de roots uit `git worktree list
  * --porcelain` (AC-15); ontbreekt hij of gooit hij, dan telt alleen `root`. Beide roept het rolhek hooguit één keer per beslissing aan.
  * `onderhoud`: de onderhoudsmodus is actief (vertrouwde configuratie en origin is die repository, ADR 0045 punt 8–9).
  * `onbekendeRol`: een subagent zonder bekende rol; telt als reviewer (alleen lezen).
- * `committed`: staat in de merge-base met het anker of met origin/main; 'zonder-origin' = beide onleesbaar en wel in HEAD (terugval).
+ * `committed`: staat in de tip van het anker of van origin/main, los van HEAD (leerpunt #927); 'zonder-origin' = beide
+ * onleesbaar en het bestand staat op schijf of in HEAD (faalt dicht).
+ * `bestaand`: staat in de tip van het anker of van origin/main, los van HEAD (leerpunt #887): alleen dan is een testbestand
+ * een bestaande test; 'zonder-origin' = beide onleesbaar. Ontbreekt hij, dan telt elk testbestand op schijf als bestaand.
  * @typedef {{ deny: string[], ask: string[], context: string[], allow?: boolean }} Decision
  * @typedef {{ kind: 'write' | 'delete', after: string | null }} Change
  * @typedef {import('./shell.mjs').Command} Command
@@ -108,10 +116,15 @@ export function decide(payload, ctx) {
   const context = ['', 'developer', 'architect'].includes(namedRole)
     ? ctx
     : { ...ctx, authority: null, onbekendeRol: !SUBAGENT_ROLES.has(namedRole) };
-  if (tool.startsWith('mcp__')) decideMcp({ tool, role }, context, decision);
-  else if (tool === 'Bash') {
+  if (tool.startsWith('mcp__')) {
+    // Spec cloud-netwerkvorm (Ontwerp punt 3): een MCP-bestandsschrijftool slaat lefthook over, ook als hij in mcpLezen staat.
+    if (MCP_SCHRIJVEN.has(tool)) gate(decision, role, MCP_SCHRIJVEN_REDEN);
+    decideMcp({ tool, role }, context, decision);
+  } else if (tool === 'Bash') {
     const command = field(input, 'command');
     decideBash({ command, role, feiten: leesFeiten(command, context) }, context, decision);
+    // Vóór de automatische runner-allow en decidePrMerge: een deny van de netwerkvorm wint (spec cloud-netwerkvorm, punt 2).
+    decideNetwerkvorm(command, ctx, decision);
     if (command.includes('--sta-wijzigingen-toe')) decision.deny.push('De agent omzeilt de hostcontrole van de runner nooit; gebruik voor gewijzigd railwerk de CI-runner');
     if (ctx.cwd === ctx.root && automaticRunner(command) && decision.ask.length + decision.deny.length === 0 && runnerIsTrusted(ctx))
       decision.allow = true;
@@ -140,25 +153,33 @@ function runnerIsTrusted(ctx) {
  * zonder `\`, `'` en `"` (zoals bij gh), elke andere manier om het te starten: het scriptwoord overal, en de bestandsnaam naast
  * elk programma dat geen bekend leesprogramma is (`/usr/bin/node …`, `sh -c "…"`, `env node …`). Vals positief (`grep
  * pr:merge package.json`) is bewust geaccepteerd; lezen kan met de leestools.
- * @typedef {{ exact: RegExp, script: RegExp, bestand: RegExp, doelen: string[], subagent: string, vorm: string, basis: string }} KitScript
+ * @typedef {{ exact: RegExp, script: RegExp, bestand: RegExp, doelen: string[], subagent: string, vorm: string, basis: string,
+ *   vertrouwd: 'merge' | 'kit' }} KitScript
  * @type {KitScript[]}
  */
 const KIT_SCRIPTS = [
   kitScript({ naam: 'merge', bron: 'ADR 0069', subagent: 'Mergen via pnpm pr:merge doet alleen de hoofdsessie (ADR 0069)', vorm: 'Het mergescript draait alleen als precies `pnpm pr:merge <nummer>` (ADR 0069)' }),
   kitScript({ naam: 'resolve', bron: 'ADR 0098', subagent: 'Gesprekken sluiten via pnpm pr:resolve doet alleen de hoofdsessie (ADR 0098)', vorm: 'Het sluitscript draait alleen als precies `pnpm pr:resolve <nummer>` (ADR 0098)' }),
+  // ADR 0102: alleen lezen, dus de ankertoets zonder de modus; de bestandsnaam alleen als hele naam (`pr-login` raakt niet).
+  kitScript({ naam: 'log', bron: 'ADR 0102', subagent: 'De CI-log via pnpm pr:log leest alleen de hoofdsessie (ADR 0102)', vorm: 'Het logscript draait alleen als precies `pnpm pr:log <nummer>` (ADR 0102)', vertrouwd: 'kit' }),
 ];
 
-/** @param {{ naam: string, bron: string, subagent: string, vorm: string }} script @returns {KitScript} */
-function kitScript({ naam, bron, subagent, vorm }) {
+/**
+ * @param {{ naam: string, bron: string, subagent: string, vorm: string, vertrouwd?: 'merge' | 'kit' }} script
+ * @returns {KitScript}
+ */
+function kitScript({ naam, bron, subagent, vorm, vertrouwd = 'merge' }) {
   const bestand = `pr-${naam}.mjs`;
+  const modus = vertrouwd === 'merge' ? 'met modus "niet-kritiek" in het anker en ' : 'met ';
   return {
     exact: new RegExp(`^pnpm pr:${naam} [1-9]\\d*$`),
     script: new RegExp(`(?:^|[^\\w.-])pr:${naam}(?=$|[^\\w.-])`),
-    bestand: new RegExp(`pr-${naam}`),
+    bestand: new RegExp(vertrouwd === 'merge' ? `pr-${naam}` : `pr-${naam}(?![\\w-])`),
     doelen: [bestand, `pr:${naam}`, `scripts/kit/${bestand}`, `./scripts/kit/${bestand}`],
     subagent,
     vorm,
-    basis: `pnpm pr:${naam} alleen vanuit de repo-root, met modus "niet-kritiek" in het anker en scripts, rails en hostbestanden (package.json, .npmrc, …) gelijk aan het anker (${bron})`,
+    basis: `pnpm pr:${naam} alleen vanuit de repo-root, ${modus}scripts, rails en hostbestanden (package.json, .npmrc, …) gelijk aan het anker (${bron})`,
+    vertrouwd,
   };
 }
 // Alleen programma's die niets starten; `rg --pre`, `less` (LESSOPEN) en een git-alias kunnen dat wel.
@@ -280,13 +301,36 @@ function decideKitScript({ command, role }, { ctx, script }, decision) {
   if (role !== 'hoofdsessie') decision.deny.push(script.subagent);
   else if (!exact) decision.deny.push(script.vorm);
   else if (decision.deny.length + decision.ask.length > 0) return;
-  else if (ctx.cwd === ctx.root && mergeIsTrusted(ctx)) decision.allow = true;
-  else decision.deny.push(script.basis);
+  else if (ctx.cwd === ctx.root && (script.vertrouwd === 'kit' ? kitIsTrusted(ctx) : mergeIsTrusted(ctx))) decision.allow = true;
+  else {
+    const achter = ctx.cwd === ctx.root && ankerLooptAchter(ctx, script.vertrouwd);
+    decision.deny.push(achter ? `${script.basis}. ${ANKER_ACHTER}` : script.basis);
+  }
+}
+
+// Leerpunt #888: alleen een uitleg bij de weigering, geen uitzondering.
+const ANKER_ACHTER = 'Hier wijkt alleen het anker af: het anker loopt achter op origin/main, want main kreeg na de ' +
+  'sessiestart een merge die scripts of rails wijzigt. Een nieuwe sessie, /clear of /compact zet het anker opnieuw; ' +
+  'anders doet de eigenaar het zelf';
+
+/**
+ * Alleen `true` telt.
+ * @param {{ ankerVerouderd?: boolean | ((modus: 'merge' | 'kit') => boolean) }} ctx @param {'merge' | 'kit'} modus
+ */
+function ankerLooptAchter(ctx, modus) {
+  const value = typeof ctx.ankerVerouderd === 'function' ? ctx.ankerVerouderd(modus) : ctx.ankerVerouderd;
+  return value === true;
 }
 
 /** @param {{ mergeTrusted?: boolean | (() => boolean) }} ctx */
 function mergeIsTrusted(ctx) {
   const value = typeof ctx.mergeTrusted === 'function' ? ctx.mergeTrusted() : ctx.mergeTrusted;
+  return value === true;
+}
+
+/** Alleen `true` telt (fail-closed), zoals `mergeIsTrusted` (ADR 0102). @param {{ kitTrusted?: boolean | (() => boolean) }} ctx */
+function kitIsTrusted(ctx) {
+  const value = typeof ctx.kitTrusted === 'function' ? ctx.kitTrusted() : ctx.kitTrusted;
   return value === true;
 }
 
@@ -416,7 +460,7 @@ function decideFile({ rel, change, role }, ctx, decision) {
   }
   const committed = matches(config.migraties) ? ctx.committed(rel) : false;
   if (committed !== false) {
-    const hint = committed === 'zonder-origin' ? ' (origin/main onleesbaar, daarom vergeleken met HEAD: draai git fetch origin)' : '';
+    const hint = committed === 'zonder-origin' ? ' (origin/main en het anker onleesbaar, daarom telt elke bestaande migratie als gecommit: draai git fetch origin)' : '';
     decision.deny.push(`${rel} is een gecommitte migratie: wijzig hem nooit, maak een nieuwe (AGENTS.md)${hint}`);
     return;
   }
@@ -437,18 +481,35 @@ function decideFile({ rel, change, role }, ctx, decision) {
     decision.deny.push(`${rel}: ${A4_MELDING}`);
     return;
   }
+  // ADR 0104: gebouwd volgt uit de AC-dekking op main; een gebouwd-regel die niet letterlijk in de basis staat, weigert het
+  // rolhek elke rol, vóór elk besluit en vóór "status uit main" (gebouwd-zonder-nummer/AC-20).
+  if (nieuweGebouwdRegel(rel, change, basis)) {
+    decision.deny.push(`${rel}: status: gebouwd schrijft niemand meer; gebouwd volgt uit de AC-dekking op main (ADR 0104)`);
+    return;
+  }
   // ADR 0046 punt 6: architect en hoofdsessie schrijven de eigenaarstatus in het voorstel; de merge van de eigenaar beslist.
-  // ADR 0095: ook `status: gebouwd` in de bouw-PR, zonder PR-nummer; alleen een nieuwe `; gevalideerd: <sha>` (de oude
-  // bewijsvorm) blijft voor elke rol geweigerd.
-  const inPrGebouwd = overgang?.uitslag === 'gebouwd' && builtReference(change.after ?? '')?.sha === undefined;
-  const eigenaarstatus = beslisrol && (a4Toegestaan || inPrGebouwd || ['besluit', 'vrij'].includes(overgang?.uitslag ?? ''));
+  const eigenaarstatus = beslisrol && (a4Toegestaan || ['besluit', 'vrij'].includes(overgang?.uitslag ?? ''));
   if (!eigenaarstatus && statusZonderBesluit({ rel, change, role, overgang, basis }, ctx, decision)) return;
   if (role === 'developer' && developerSpec(rel, change, basis)) {
     decision.deny.push(`${rel}: de developer schrijft geen spec; dat doet de architect (R-WERK-07, ADR 0068 punt 4)`);
     return;
   }
-  if (matches(config.testpaden) && ctx.read(rel) !== null) existingTest({ rel, change, role }, ctx, decision);
+  // Leerpunt #887: bestaand is wat op de tip van origin/main of het anker staat; een nieuw testbestand op de branch niet.
+  // 'zonder-origin' (beide onleesbaar) en een ctx zonder `bestaand` tellen als bestaand: faalt dicht.
+  if (matches(config.testpaden) && ctx.read(rel) !== null && (ctx.bestaand?.(rel) ?? true) !== false) {
+    existingTest({ rel, change, role }, ctx, decision);
+  }
   decideByRole({ rel, change, role }, ctx, decision);
+}
+
+/**
+ * Een statusregel die met `status: gebouwd` begint en niet letterlijk zo in de basis staat, ook in een nieuw bestand (ADR 0104).
+ * @param {string} rel @param {Change} change @param {string | null} basis
+ */
+function nieuweGebouwdRegel(rel, change, basis) {
+  if (!inSpecMap(rel) || change.after === null) return false;
+  const regel = gebouwdRegel(change.after);
+  return regel !== null && regel !== gebouwdRegel(basis ?? '');
 }
 
 /** De specmap van de app of van de template (ADR 0089 punt 1): beide krijgen dezelfde behandeling. @param {string} rel */
@@ -493,7 +554,7 @@ function statusZonderBesluit({ rel, change, role, overgang, basis }, ctx, decisi
   }
   if (ctx.authority != null && nextDocument !== null && !['voorstel', 'voorgesteld'].includes(nextDocument.status) &&
     !canRecordStatus({ file: rel, text: change.after ?? '' }, ctx.authority)) {
-    decision.deny.push(`${rel}: een eigenaarstatus of de inhoud van een goedgekeurde spec schrijven alleen architect en hoofdsessie (ADR 0046 punt 6); status: gebouwd zetten hoofdsessie en architect in de bouw-PR (ADR 0095)`);
+    decision.deny.push(`${rel}: een eigenaarstatus of de inhoud van een goedgekeurde spec schrijven alleen architect en hoofdsessie (ADR 0046 punt 6)`);
     return true;
   }
   if (!['hoofdsessie', 'architect'].includes(role) && approvesSpec(rel, change, ctx)) {
@@ -526,7 +587,7 @@ function recordedStatus({ rel, change, role }, ctx, decision) {
   const next = documentInfo(rel, change.after);
   if (old === null || next === null || before === change.after || old.digest !== next.digest) return false;
   if (!['hoofdsessie', 'developer', 'architect'].includes(role) || !canRecordStatus({ file: rel, text: change.after }, ctx.authority)) {
-    decision.deny.push(`${rel}: deze statusovergang heeft geen geldig besluit uit de vertrouwde basis; status: gebouwd zetten hoofdsessie en architect in de bouw-PR (ADR 0095)`);
+    decision.deny.push(`${rel}: deze statusovergang heeft geen geldig besluit uit de vertrouwde basis`);
   } else decision.context.push(`Status uit main: ${rel}: dezelfde status en inhoud als op main`);
   return true;
 }
@@ -1285,7 +1346,7 @@ const REVIEWER_READS = {
   'gh run view': { flags: ['--log', '--log-failed'], values: ['--json', '--jq', '--job'], positional: 1 },
   'gh run list': { flags: [], values: ['--branch', '--workflow', '--limit', '--json', '--jq'], positional: 0 },
   'pnpm leespad': { flags: ['--json'], values: ['--ref', '--basis'], positional: 0 },
-  'pnpm meting': { flags: ['--json', '--pr-tabel', '--trend', '--help'], values: ['--branch', '--sessie'], positional: 0 },
+  'pnpm meting': { flags: ['--json', '--pr-tabel', '--trend', '--schaduw', '--help'], values: ['--branch', '--sessie'], positional: 0 },
 };
 // Geen `$`, backtick, `;`, spatie of aanhalingsteken: de shell van pnpm voert niets uit een waarde uit.
 const SAFE_VALUE = /^[A-Za-z0-9_./,:-]+$/;
@@ -2377,6 +2438,7 @@ export function ghForbidden(rawArgs, expanded = []) {
   if (group === 'pr' && prAction === 'review') found.push('gh pr review: de agent keurt nooit zelf goed (AGENTS.md)');
   if (zetLabel(rawArgs)) found.push('een PR-label zet alleen de eigenaar, voor elke rol (R-ROL-08)');
   if (api !== null) found.push(...apiUnreadable(api, expanded));
+  if (api !== null && apiVerzetMain(api)) found.push('gh api: main verwijderen of verzetten is verboden, voor elke rol');
   if (api !== null && apiWritesSelfReview(api)) found.push('gh api: labels, reviews en statussen zet alleen de eigenaar');
   if (api !== null && apiWritesReviewComment(api))
     found.push('gh api: een reviewopmerking wijzigen of wissen doet alleen de eigenaar, voor elke rol (ADR 0098)');
@@ -2473,6 +2535,19 @@ function isGraphql(endpoint) {
 
 const FIELDS = new Set(['field', 'raw-field', 'input']);
 
+// `…/git/refs/heads/main` aan het einde van een genormaliseerd endpoint (spec cloud-netwerkvorm, Ontwerp punt 5).
+const MAIN_REF = /(?:^|\/)git\/refs\/heads\/main$/i;
+
+/**
+ * Een schrijvende `gh api`-aanroep (niet-GET of met velden) op de ref `main`, na normalisatie: `%2F` wordt `/`, een query of
+ * fragment valt weg, meerdere `/` worden één en een afsluitende `/` valt weg (spec cloud-netwerkvorm/AC-13).
+ * @param {ApiCall} api
+ */
+function apiVerzetMain(api) {
+  const endpoint = api.endpoint.replace(/%2f/gi, '/').replace(/[?#].*$/s, '').replace(/\/{2,}/g, '/').replace(/\/+$/, '');
+  return MAIN_REF.test(endpoint) && apiMutates(api);
+}
+
 /** REST met een andere methode dan GET of met velden/invoer (gh stuurt dan POST). @param {ApiCall} api */
 function apiMutates({ options }) {
   const method = options.filter(({ name }) => name === 'method').at(-1)?.value ?? 'GET';
@@ -2539,4 +2614,142 @@ function shortCluster(options, arg, next) {
     options.push({ name, value: '', word: arg });
   }
   return false;
+}
+
+// ---------- netwerkvorm (spec cloud-netwerkvorm) ----------
+
+// Ontwerp punt 3: de MCP-tools die bestanden naar GitHub schrijven; `create_pull_request` valt erbuiten (ADR 0078 punt 4).
+const MCP_SCHRIJVEN = new Set(['mcp__github__push_files', 'mcp__github__create_or_update_file', 'mcp__github__delete_file']);
+const MCP_SCHRIJVEN_REDEN = 'Push met `git push origin HEAD` als los commando; deze route slaat lefthook over';
+const NETWERK_SANDBOX =
+  'buiten deze vorm draait het in de sandbox, zonder token-proxy en signeerdienst (docs/ENVIRONMENT.md, "Cloud: commit, push, PR en bewijs")';
+// Deze voorvoegsels hebben hun eigen regel (`decideKitScript`).
+const NETWERK_EIGEN_REGEL = new Set(['pnpm pr:merge', 'pnpm pr:resolve', 'pnpm pr:log']);
+const GH_DELETE_VORM = 'gh api -X DELETE repos/{owner}/{repo}/git/refs/heads/<branch>';
+// Substitutie, procesvervanging of heredoc/herestring: dan past het commando op geen patroon.
+const NETWERK_ONZEKER = /\$\(|`|<\(|>\(|<</;
+// `git push --delete|-d` (ook in een cluster) of een refspec met lege bron (`:x`, `+:x`).
+const PUSH_VERWIJDERT = /^(?:--delete|-[a-zA-Z]*d[a-zA-Z]*|\+?:.+)$/;
+
+/**
+ * @typedef {{ woorden: string[], open: boolean, voorvoegsel: string[] }} Netwerkpatroon `woorden`: het patroon zonder een
+ *   afsluitende ` *`; `open`: die ` *` stond er (nul of meer verdere woorden); `voorvoegsel`: de woorden vóór ` *`, anders de
+ *   eerste twee woorden.
+ * @typedef {{ programma: string, sub: string, rest: readonly string[] }} Netwerkkern
+ */
+
+/** @param {string} patroon @returns {Netwerkpatroon} */
+function leesPatroon(patroon) {
+  const alle = patroon.trim().split(/\s+/);
+  const open = alle.length > 1 && alle.at(-1) === '*';
+  const woorden = open ? alle.slice(0, -1) : alle;
+  return { woorden, open, voorvoegsel: open ? woorden : woorden.slice(0, 2) };
+}
+
+/**
+ * Spec cloud-netwerkvorm (Ontwerp punt 2): een commando dat het voorvoegsel van een patroon uit `ctx.netwerkvormen` raakt
+ * (programma en subcommando in een segment, ook in een groep, compound of substitutie), moet in zijn geheel op een patroon met
+ * dat voorvoegsel passen; anders een deny voor elke rol, met de vorm in de reden.
+ * @param {string} command @param {Ctx} ctx @param {Decision} decision
+ */
+function decideNetwerkvorm(command, ctx, decision) {
+  const patronen = (ctx.netwerkvormen ?? []).map(leesPatroon).filter(({ voorvoegsel }) => !NETWERK_EIGEN_REGEL.has(voorvoegsel.join(' ')));
+  if (patronen.length === 0) return;
+  const kernen = netwerkSegmenten(command).map(netwerkKern);
+  /** @type {Map<string, Netwerkpatroon[]>} */
+  const geraakt = new Map();
+  for (const patroon of patronen) {
+    const sleutel = patroon.voorvoegsel.join(' ');
+    if (kernen.some((kern) => raaktVoorvoegsel(kern, patroon.voorvoegsel))) geraakt.set(sleutel, [...(geraakt.get(sleutel) ?? []), patroon]);
+  }
+  for (const [sleutel, groep] of geraakt) {
+    if (groep.some((patroon) => pastOpPatroon(command, patroon))) continue;
+    const verwijdert = sleutel === 'git push' && kernen.some(({ programma, sub, rest }) =>
+      programma === 'git' && sub === 'push' && rest.some((arg) => PUSH_VERWIJDERT.test(arg)));
+    decision.deny.push(netwerkReden(sleutel, groep, verwijdert));
+  }
+}
+
+/** De segmenten van het commando en, recursief, van elke `$(…)` en backtick-substitutie. @param {string} command @returns {Command[]} */
+function netwerkSegmenten(command) {
+  return [...parseCommands(command), ...substitutions(command).flatMap(netwerkSegmenten)];
+}
+
+/**
+ * Programma (zonder pad, toewijzingen en omhulsels) en subcommando van een segment: bij git uit `gitSubcommand`, bij pnpm het
+ * script (`pnpmScript`), bij gh het eerste commandowoord, anders het eerste woord dat geen optie is.
+ * @param {Command} segment @returns {Netwerkkern}
+ */
+function netwerkKern(segment) {
+  const [woord = '', ...args] = splitCommand(segment.words).argv;
+  const programma = programName(woord);
+  if (programma === 'git') {
+    const { subcommand, rest } = gitSubcommand(args);
+    return { programma, sub: subcommand, rest };
+  }
+  if (programma === 'pnpm') return { programma, sub: pnpmScript(args), rest: [] };
+  if (programma === 'gh') return { programma, sub: ghCommandWords(withoutRepo(args))[0] ?? '', rest: [] };
+  return { programma, sub: args.find((arg) => !arg.startsWith('-')) ?? '', rest: [] };
+}
+
+/** @param {Netwerkkern} kern @param {readonly string[]} voorvoegsel */
+function raaktVoorvoegsel({ programma, sub }, voorvoegsel) {
+  const [naam = '', subcommando] = voorvoegsel;
+  return programma === naam.toLowerCase() && (subcommando === undefined || sub === subcommando);
+}
+
+/**
+ * Het pnpm-script: het eerste woord na de opties (een optie met waarde neemt het volgende woord: `-C`/`--dir`, `-F`/`--filter`,
+ * `--workspace` en de andere van `pnpmCommand`; `--x=y` en een onbekende optie niet) en na een eventuele `run`.
+ * @param {readonly string[]} args @returns {string}
+ */
+function pnpmScript(args) {
+  let index = 0;
+  while ((args[index] ?? '').startsWith('-')) {
+    const optie = args[index] ?? '';
+    index += PNPM_OPTIONS_WITH_VALUE.has(optie) || optie === '--workspace' ? 2 : 1;
+  }
+  const woord = args[index] ?? '';
+  return woord === 'run' || woord === 'run-script' ? pnpmScript(args.slice(index + 1)) : woord;
+}
+
+/**
+ * Past het hele commando op het patroon: alleen woorden (geen operator, redirect, groep, heredoc of commentaar), geen
+ * substitutie, en de woorden na de shellontleding letterlijk gelijk aan het patroon; met ` *` mogen er woorden volgen.
+ * @param {string} command @param {Netwerkpatroon} patroon
+ */
+function pastOpPatroon(command, { woorden, open }) {
+  if (NETWERK_ONZEKER.test(command)) return false;
+  const tokens = tokenize(command);
+  if (tokens.some(({ kind }) => kind !== 'word') || !alleTekstGelezen(command, tokens)) return false;
+  if (open ? tokens.length < woorden.length : tokens.length !== woorden.length) return false;
+  return woorden.every((woord, index) => tokens[index]?.value === woord);
+}
+
+/**
+ * Elk teken van het commando hoort bij een token of is witruimte; zo telt weggelaten tekst (een `#`-commentaar) niet als passend.
+ * @param {string} command @param {readonly import('./shell.mjs').Token[]} tokens
+ */
+function alleTekstGelezen(command, tokens) {
+  let positie = 0;
+  for (const { raw, value } of tokens) {
+    const tekst = raw ?? value;
+    const index = command.indexOf(tekst, positie);
+    if (index === -1 || command.slice(positie, index).trim() !== '') return false;
+    positie = index + tekst.length;
+  }
+  return command.slice(positie).trim() === '';
+}
+
+/**
+ * De weigertekst (Ontwerp punt 2): de patronen met dit voorvoegsel, ` *` als ` …`; bij `git commit` de vorm uit
+ * docs/ENVIRONMENT.md, en bij een verwijderpush ook de gh api-vorm (Ontwerp punt 5).
+ * @param {string} sleutel @param {readonly Netwerkpatroon[]} groep @param {boolean} verwijdert
+ */
+function netwerkReden(sleutel, groep, verwijdert) {
+  const vorm = sleutel === 'git commit'
+    ? 'git commit -F <bestand>'
+    : groep.map(({ woorden, open }) => `${woorden.join(' ')}${open ? ' …' : ''}`).join(' of ');
+  const reden = `Netwerkvorm: draai dit als los commando in de vorm ${vorm}; ${NETWERK_SANDBOX}`;
+  return verwijdert ? `${reden}; een remote branch verwijder je met ${GH_DELETE_VORM}` : reden;
 }

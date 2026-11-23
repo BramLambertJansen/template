@@ -87,7 +87,8 @@
     "scripts/kit/check-roadmap.mjs":         { "besluit": "besluit-pr" },
     "scripts/kit/gates.mjs":                 { "besluit": "besluit-pr" },
     "scripts/kit/pr-merge.mjs":              { "besluit": "besluit-pr" },
-    "scripts/kit/pr-resolve.mjs":            { "besluit": "besluit-pr" }
+    "scripts/kit/pr-resolve.mjs":            { "besluit": "besluit-pr" },
+    "scripts/kit/pr-log.mjs":                { "besluit": "besluit-pr" }
   },
   "onderhoud": { "repository": "BramLambertJansen/template" },
   "merge": "niet-kritiek",

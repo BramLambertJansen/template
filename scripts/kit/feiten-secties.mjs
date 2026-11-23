@@ -3,6 +3,8 @@
 // (gates, migraties, routes, permissies, foutcodes, koppelingen, componenten, tokens) lezen altijd de werkmap; TypeScript en
 // de catalogus laden pas bij hun eigen sectie (test/scripts/feiten-lazy.test.ts).
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { dekkingVanSpec } from '../../rails/hooks/lib/ac-dekking.mjs';
+import { boomWerkmap } from './ac-dekking.mjs';
 import { gates } from './gates.mjs';
 import {
   adrOverzicht,
@@ -15,7 +17,12 @@ import {
   tokensTekst,
 } from './feiten-tekst.mjs';
 
-/** @typedef {{ lees: (pad: string) => string | null, lijst: (map: string) => readonly string[] }} Lezer */
+/** @typedef {import('../../rails/hooks/lib/ac-dekking.mjs').Boom} Boom */
+/** @typedef {import('../../rails/hooks/lib/ac-dekking.mjs').Dekking} Dekking */
+/**
+ * `boom` (optioneel, lui): de testbestanden, specs en ADR's voor de AC-dekking; alleen de sectie `specs` vraagt hem op.
+ * @typedef {{ lees: (pad: string) => string | null, lijst: (map: string) => readonly string[], boom?: () => Boom }} Lezer
+ */
 /** @typedef {{ json: unknown, kop?: string, inhoud: unknown }} Result */
 
 const CATALOGUS = '/design-system';
@@ -34,6 +41,7 @@ function readOrNull(pad) {
 export const werkmap = {
   lees: readOrNull,
   lijst: (map) => (existsSync(map) ? readdirSync(map) : []),
+  boom: () => boomWerkmap('.'),
 };
 
 /** ADR- of specbestanden van een map, gesorteerd. @param {Lezer} lezer @param {string} dir */
@@ -147,12 +155,48 @@ export function adrs(lezer, map = 'docs/adr') {
   });
 }
 
-/** De specs van één map. @param {Lezer} lezer @param {string} [map] */
+const LEGE_BOOM = { bestanden: [], lees: () => null };
+
+/**
+ * De statuskolom (gebouwd-zonder-nummer/AC-25): `gebouwd`, `deels <n>/<m>` of de eigenaarstatus.
+ * @param {Dekking} dekking @param {string} ruw de status zoals hij in de spec staat
+ */
+function statusKolom({ stand, eigenaar, gebouwd, levend }, ruw) {
+  if (stand === 'gebouwd') return 'gebouwd';
+  if (stand === 'deels') return `deels ${String(gebouwd.length)}/${String(levend.length)}`;
+  return eigenaar ?? ruw;
+}
+
+/**
+ * De specs van één map met hun afgeleide stand (ADR 0104): `{ spec, status, stand, gebouwd, levend }`, `gebouwd` en `levend`
+ * als aantallen. De boom komt uit `lezer.boom` (lui); een lezer zonder boom geeft elke spec lege `gebouwd`.
+ * @param {Lezer} lezer @param {string} [map]
+ */
 export function specs(lezer, map = 'docs/specs') {
-  return markdownFiles(lezer, map).map((file) => {
-    const status = /^status:\s*(\S+)/m.exec(lezer.lees(`${map}/${file}`) ?? '')?.[1] ?? 'onbekend';
-    return { spec: file, status };
+  const namen = markdownFiles(lezer, map);
+  const boom = namen.length === 0 ? LEGE_BOOM : (lezer.boom?.() ?? LEGE_BOOM);
+  return namen.map((file) => {
+    const pad = `${map}/${file}`;
+    const text = lezer.lees(pad) ?? '';
+    const ruw = /^status:\s*(\S+)/m.exec(text)?.[1] ?? 'onbekend';
+    const dekking = dekkingVanSpec({ file: pad, text }, boom);
+    return {
+      spec: file,
+      status: statusKolom(dekking, ruw),
+      stand: dekking.stand,
+      gebouwd: dekking.gebouwd.length,
+      levend: dekking.levend.length,
+    };
   });
+}
+
+/** Een lezer die zijn boom één keer opvraagt, ook over meerdere specmappen. @param {Lezer} lezer @returns {Lezer} */
+function eenBoom(lezer) {
+  const { boom } = lezer;
+  if (boom === undefined) return lezer;
+  /** @type {Boom | undefined} */
+  let cache;
+  return { ...lezer, boom: () => (cache ??= boom()) };
 }
 
 /**
@@ -179,12 +223,16 @@ function adrSectie(lezer, { alle, gereserveerd, volgende }) {
  * @returns {Record<(typeof LEZER_SECTIES)[number], () => unknown>}
  */
 export function lezerSecties(lezer, { alle, gereserveerd = {}, volgende }) {
-  const alleSpecs = () => SPEC_MAPPEN.flatMap((dir) => specs(lezer, dir));
+  // De AC-dekking alleen in de sectie `specs` (ADR 0104): `fase` leest de specs zonder boom.
+  const zonderBoom = { lees: lezer.lees, lijst: lezer.lijst };
+  const alleSpecs = () => SPEC_MAPPEN.flatMap((dir) => specs(zonderBoom, dir));
   return {
-    specs: () =>
-      perMap(
-        SPEC_MAPPEN.map((dir) => ({ map: `${dir}/`, overzicht: specsOverzicht(specs(lezer, dir), alle, `${dir}/`) })),
-      ),
+    specs: () => {
+      const metBoom = eenBoom(lezer);
+      return perMap(
+        SPEC_MAPPEN.map((dir) => ({ map: `${dir}/`, overzicht: specsOverzicht(specs(metBoom, dir), alle, `${dir}/`) })),
+      );
+    },
     adr: () => adrSectie(lezer, { alle, gereserveerd, volgende }),
     fase: () =>
       faseOverzicht({
@@ -302,4 +350,5 @@ export const VOLGORDE = [
   'componenten',
   'tokens',
   'fase',
+  'recepten',
 ];

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 import { decide, globMatch, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
+import { echteNetwerkvormen } from './netwerkvormen-kit.ts';
 
 // Rolhek (framework §8, ADR 0045): per regel een echte payload met de verwachte beslissing, ook bekende omzeilingen.
 // De schijf is nagebootst: FILES zijn bestaande bestanden, COMMITTED staat in HEAD.
@@ -28,6 +29,19 @@ function ctx(branch = 'feat/x') {
 }
 
 type Verdict = 'allow' | 'ask' | 'deny' | 'context';
+
+// cloud-netwerkvorm (OV-5, R-TEST-02): een pushvorm buiten `git push origin HEAD` is geweigerd, want `excludedCommands` geldt ook
+// lokaal. De tests hieronder die een pushvorm toetsen, krijgen daarom de echte patronen in hun ctx (`ctx.netwerkvormen`).
+const NETWERKVORMEN = echteNetwerkvormen();
+
+function verdictMetNetwerkvormen(payload: unknown, branch?: string): Verdict {
+  // Een variabele, geen letterlijke: het veld `netwerkvormen` komt pas bij de bouw in het type `Ctx`.
+  const metPatronen = { ...ctx(branch), netwerkvormen: [...NETWERKVORMEN] };
+  const decision = decide(payload, metPatronen);
+  if (decision.deny.length > 0) return 'deny';
+  if (decision.ask.length > 0) return 'ask';
+  return decision.context.length > 0 ? 'context' : 'allow';
+}
 
 function verdict(payload: unknown, branch?: string): Verdict {
   const decision = decide(payload, ctx(branch));
@@ -211,18 +225,26 @@ describe('Bash: altijd verboden', () => {
     expect(verdict(bash(command))).toBe('deny');
   });
 
-  test('push zonder refspec: verboden op main, toegestaan op een feature-branch', () => {
-    expect([verdict(bash('git push'), 'main'), verdict(bash('git push'), 'feat/x')]).toStrictEqual(['deny', 'allow']);
+  // cloud-netwerkvorm (OV-5): `git push` zonder refspec is niet de vorm `git push origin HEAD`; was ['deny', 'allow'].
+  test('push zonder refspec: verboden op main, en op een feature-branch (netwerkvorm)', () => {
+    expect([
+      verdictMetNetwerkvormen(bash('git push'), 'main'),
+      verdictMetNetwerkvormen(bash('git push'), 'feat/x'),
+    ]).toStrictEqual(['deny', 'deny']);
   });
 
   test.each([
     { name: 'commit -m met "-n" in de tekst', command: 'git commit -m "fix -n bug"' },
     { name: 'core.hooksPath lezen', command: 'git config --get core.hooksPath' },
     { name: 'gh api lezen', command: 'gh api repos/o/r/pulls/1/reviews' },
-    { name: 'push naar een feature-branch', command: 'git push -u origin feat/main-menu' },
     { name: 'gh pr view', command: 'gh pr view 12 --json labels' },
   ])('mag: $name', ({ command }) => {
     expect(verdict(bash(command))).toBe('allow');
+  });
+
+  // cloud-netwerkvorm (OV-5): was 'mag: push naar een feature-branch'; `git push -u origin …` is niet `git push origin HEAD`.
+  test('push naar een feature-branch met upstream: deny (netwerkvorm)', () => {
+    expect(verdictMetNetwerkvormen(bash('git push -u origin feat/main-menu'))).toBe('deny');
   });
 });
 
@@ -378,8 +400,10 @@ describe('WS-04: merge en force-push voor elke rol verboden', () => {
     expect(verdict(bash(command, 'developer'))).toBe('deny');
   });
 
-  test('regressie hoofdsessie mag: --follow-tags is geen force', () => {
-    expect(verdict(bash('git push --follow-tags origin feat'))).toBe('allow');
+  // cloud-netwerkvorm (OV-5): --follow-tags is nog steeds geen force (de force-regel weigert niet), maar de vorm is niet
+  // `git push origin HEAD`; was 'allow'.
+  test('regressie hoofdsessie: --follow-tags is geen force, maar buiten de netwerkvorm: deny', () => {
+    expect(verdictMetNetwerkvormen(bash('git push --follow-tags origin feat'))).toBe('deny');
   });
 
   // Regressie: samengestelde vormen die de parser al ziet; moeten deny blijven.
@@ -395,13 +419,19 @@ describe('WS-04: merge en force-push voor elke rol verboden', () => {
 
   // Regressie: slaagt ook op de oude code; deze vormen moeten voor de hoofdsessie door blijven.
   test.each([
-    { name: 'git push origin HEAD:feat', command: 'git push origin HEAD:feat' },
-    { name: 'git push -u origin feat', command: 'git push -u origin feat' },
     { name: 'gh pr create', command: 'gh pr create --title x --body y' },
     { name: 'gh pr view', command: 'gh pr view 1' },
     { name: 'gh pr checks', command: 'gh pr checks 1' },
     { name: 'gh api GET op een pull', command: 'gh api repos/o/r/pulls/1' },
   ])('regressie hoofdsessie mag: $name', ({ command }) => {
     expect(verdict(bash(command))).toBe('allow');
+  });
+
+  // cloud-netwerkvorm (OV-5): waren 'regressie hoofdsessie mag'; deze pushvormen passen niet op `git push origin HEAD`.
+  test.each([
+    { name: 'git push origin HEAD:feat', command: 'git push origin HEAD:feat' },
+    { name: 'git push -u origin feat', command: 'git push -u origin feat' },
+  ])('regressie hoofdsessie: $name → deny (netwerkvorm)', ({ command }) => {
+    expect(verdictMetNetwerkvormen(bash(command))).toBe('deny');
   });
 });

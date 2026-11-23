@@ -3,6 +3,8 @@
 // bewijst niets. Daarom eerst: elk voorbeeld in `recognizes` matcht (te smal faalt), geen voorbeeld in `allows` matcht
 // (te breed faalt). Pas daarna de afwezigheid. De rail `rails/afwezigheid` (eslint.config.js) laat alleen deze route toe.
 
+import { assert } from 'vitest';
+
 export interface AbsenceExamples {
   /** Elke vorm die in de gecontroleerde bron kan staan, per taalvariant ("mandaat" én "mandate"). */
   readonly recognizes: readonly [string, ...string[]];
@@ -26,10 +28,10 @@ export function expectAbsent(text: string, pattern: RegExp, examples: AbsenceExa
       throw new Error(`expectAbsent: ${String(pattern)} raakt het toegestane "${example}"; het patroon is te breed`);
     }
   }
+  // De afwezigheid zelf is een assertie (leerpunt #875): leerpunt-bewijs telt alleen een AssertionError als rood op de
+  // basis. De opzetfouten hierboven blijven een gewone Error; dan is de test zelf kapot.
   const found = plain.exec(text);
   if (found !== null) {
-    throw new Error(
-      `expectAbsent: ${String(pattern)} vindt "${found[0]}" op positie ${String(found.index)} in de tekst`,
-    );
+    assert.fail(`expectAbsent: ${String(pattern)} vindt "${found[0]}" op positie ${String(found.index)} in de tekst`);
   }
 }

@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #145
+status: goedgekeurd # #145
 namespace: ui-kit-basics
 ---
 

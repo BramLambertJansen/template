@@ -42,7 +42,7 @@ const flat = (text: string): string => text.replace(/`/g, '').replace(/\s+/g, ' 
 const SLOTREGEL =
   'Wat moet er in het spec-sjabloon, het gouden pad of een check veranderen zodat de volgende feature dit niet opnieuw betaalt?';
 const SLOTSTAP =
-  'Loop de signaalmomenten van deze sessie af: slotvraag, derde CI-ronde, eigenaarcorrectie (pnpm meting), blokkerende reviewbevinding (Leerpunt: ja), tweede mislukte correctiepoging. Per les: Leerpunt? Generiek: dien het in volgens het sjabloon leerpunt (gh issue create naar onderhoud.repository met --label leerpunt) en toon de tekst. Alleen voor deze app: een padregel, spec of ADR (docs/specs/, docs/adr/) in de app, geen issue. Niets: zeg "geen leerpunt".';
+  'Loop de signaalmomenten van deze sessie af: slotvraag, derde CI-ronde, eigenaarcorrectie (pnpm meting), blokkerende reviewbevinding (Leerpunt: ja), tweede mislukte correctiepoging. Per les: Leerpunt? Generiek: dien het in volgens het sjabloon leerpunt (gh issue create naar template.repository met --label leerpunt) en toon de tekst. Alleen voor deze app: een padregel, spec of ADR (docs/specs/, docs/adr/) in de app, geen issue. Niets: zeg "geen leerpunt".';
 const ADR_0059 = 'template/adr/0059-leerlus-van-app-naar-template.md';
 const PROTOCOL = 'docs/operations/st-09-praktijkproef.md';
 const protocol = existsSync(PROTOCOL) ? readFileSync(PROTOCOL, 'utf8') : '';
@@ -77,11 +77,12 @@ describe('leerlus: slotstap in opleveren', () => {
   });
 
   // GEWIJZIGD (templateregime AC-9, ADR 0089 punt 6): de slotstap en spec leerlus noemen de mappen van de app in plaats van de reeks vanaf 0100.
-  test('leerlus/AC-3: de slotstap noemt gh issue create, --label leerpunt, onderhoud.repository en de app-uitzondering', () => {
+  // GEWIJZIGD (spec agent-recepten AC-8, leerpunt #807): het leerpuntdoel is template.repository, zoals in het rolhek.
+  test('leerlus/AC-3: de slotstap noemt gh issue create, --label leerpunt, template.repository en de app-uitzondering', () => {
     const stap = flat(skill).slice(flat(skill).indexOf('Loop de signaalmomenten'));
     expect(stap).toContain('gh issue create');
     expect(stap).toContain('--label leerpunt');
-    expect(stap).toContain('onderhoud.repository');
+    expect(stap).toContain('template.repository');
     expect(stap).toMatch(
       /Alleen voor deze app: een padregel, spec of ADR \(docs\/specs\/, docs\/adr\/\) in de app, geen issue\./,
     );
@@ -163,22 +164,21 @@ describe('leerlus: framework en ST-09-protocol', () => {
 });
 
 describe('leerlus-bewijs/AC-8 MCP in de cloud en de sectie Leerpunt', () => {
+  // GEWIJZIGD (spec agent-recepten AC-8, leerpunt #807): de MCP-schrijfweg gaat naar template.repository.
   test('leerlus-bewijs/AC-8: de slotstap noemt de MCP-schrijfweg en de sectie ## Leerpunt', () => {
     const stap = flat(skill).slice(flat(skill).indexOf('Loop de signaalmomenten'));
-    expect(stap).toMatch(
-      /MCP-tool voor issues, alleen aanmaken, alleen naar onderhoud\.repository, met label leerpunt/,
-    );
+    expect(stap).toMatch(/MCP-tool voor issues, alleen aanmaken, alleen naar template\.repository, met label leerpunt/);
     expect(stap).toContain('## Leerpunt');
-    expect(stap).toContain('- #<nr>: trede <trede>; bewijs <testpad>');
+    // GEWIJZIGD (spec gedragsbaseline AC-7, ADR 0107): de regel met een testpad noemt alleen de treden met een test.
+    expect(stap).toContain('- #<nr>: trede <Type|Check|Gouden pad of generator>; bewijs <testpad>');
     expect(stap).toContain('bewijs geen test: <reden>');
   });
 
   test('leerlus-bewijs/AC-8: het PR-sjabloon heeft de sectie ## Leerpunt met de regelvorm', () => {
     const sjabloon = readFileSync('.github/pull_request_template.md', 'utf8');
     expect(sjabloon).toMatch(/^## Leerpunt$/m);
-    expect(sjabloon).toContain(
-      '- #<nr>: trede <Type|Check|Gouden pad of generator|Skill|Padregel|AGENTS.md>; bewijs <testpad>',
-    );
+    // GEWIJZIGD (spec gedragsbaseline AC-7, ADR 0107): Skill, Padregel en AGENTS.md bewijzen met een baseline.
+    expect(sjabloon).toContain('- #<nr>: trede <Type|Check|Gouden pad of generator>; bewijs <testpad>');
   });
 });
 
@@ -190,5 +190,43 @@ describe('leerlus-bewijs/AC-8 de MCP-uitzondering in de regels', () => {
       recognizes: ['mcp__github__issue_write', 'mcp__github__create_issue'],
       allows: ['mcp__github__issue_read'],
     });
+  });
+});
+
+// Spec agent-recepten (leerpunten #679 en #807): de skill werkt in de cloud en volgt het leerpuntdoel van het rolhek.
+describe('agent-recepten/AC-8: opleveren in de cloud', () => {
+  test('agent-recepten/AC-8: de CI-lus noemt de log van een job via gh api', () => {
+    expect(flat(section(skill, /^## CI-lus/m, /^## /m))).toContain('actions/jobs/<job-id>/logs');
+  });
+
+  test('agent-recepten/AC-8: Opruimen noemt de gebeurtenissen van de PR', () => {
+    expect(flat(section(skill, /^## Opruimen/m, /^## /m))).toContain('issues/<nr>/events');
+  });
+
+  test('agent-recepten/AC-8: de slotstap noemt template.repository en niet meer onderhoud.repository', () => {
+    const stap = flat(skill).slice(flat(skill).indexOf('Loop de signaalmomenten'));
+    expect(stap).toContain('template.repository');
+    expectAbsent(skill, /onderhoud\.repository/, {
+      recognizes: ['naar onderhoud.repository met'],
+      allows: ['naar template.repository met'],
+    });
+  });
+
+  test('agent-recepten/AC-8: elk gh api-endpoint met {owner} staat tussen aanhalingstekens', () => {
+    const kaal = [...skill.matchAll(/gh api(?: -X \w+| --paginate)* ([^\s"'`]*\{owner\}[^\s`]*)/g)].map((m) => m[1]);
+    expect(kaal).toStrictEqual([]);
+  });
+});
+
+// Leerpunt #789 (beperkte fix): main bijhalen met --no-commit en een losse commit, want de kale merge kan in de cloud niet
+// ondertekenen; bij een wijziging onder .claude/skills of .claude/agents stopt de agent.
+describe('opleveren: main bijhalen in de cloud', () => {
+  test('stap 1 noemt git merge --no-commit origin/main, git commit -F en de controle op de paden die de sandbox afschermt', () => {
+    const stap = flat(section(skill, /^## CI-lus/m, /^## /m));
+    expect(stap).toContain('git merge --no-commit origin/main');
+    expect(stap).toContain('git commit -F <bestand>');
+    expect(stap).toContain(
+      'git diff --name-only HEAD...origin/main -- .claude/skills .claude/agents .claude/hooks .claude/settings.json .claude/settings.local.json',
+    );
   });
 });

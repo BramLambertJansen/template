@@ -26,6 +26,7 @@ const ruleNames = [
   'afwezigheid',
   'negatieve-tabel',
   'kooi',
+  'korte-ref',
   'netwerk-api',
   'geheim',
   'lijstquery',
@@ -62,6 +63,10 @@ const ONWAAR = [
   "CallExpression[callee.property.name='toBeTruthy'][callee.object.property.name='not']",
 ].join(', ');
 const ELEMENTS = '/^(button|input|select|textarea|dialog|a)$/';
+// Een tekst die begint met origin/main als ref (ook `^{…}`, `:pad`, `~n`, `...` en `X..origin/main`). esquery: `[/]` voor `/`.
+const KORTE_REF_PATROON = '/^(\\S*[.][.][.]?|\\S*[=^])?origin[/]main($|[~^:@]|[.][.])/';
+const KORTE_REF = `Literal[value=${KORTE_REF_PATROON}]`;
+const KORTE_REF_TEMPLATE = `TemplateElement[value.cooked=${KORTE_REF_PATROON}]`;
 const IMPORTS = ['ImportDeclaration', 'ExportNamedDeclaration', 'ExportAllDeclaration', 'ImportExpression'].join(', ');
 
 function fromModule(sourceRegex) {
@@ -281,6 +286,17 @@ const railConfigs = [
     ['scripts/kit/kooi.mjs'],
     'Een shell met een commandotekst alleen via inKooi uit scripts/kit/kooi.mjs (ADR 0072, R-TOOL-03); child_process alleen met benoemde imports, zonder exec/execSync.',
     KOOI_SELECTORS,
+  ),
+  // Korte ref (leerpunt #934): `origin/main` als git-argument lost eerst `refs/heads/origin/main` op, dus een lokale
+  // branch met die naam schaduwt de vertrouwde ref (#927, #932). Een tekst die met de ref begint telt; een melding die
+  // origin/main noemt niet. verse-main.mjs herkent de commandotekst van de agent zelf, geen git-argument.
+  restrict(
+    'korte-ref',
+    ['rails/**/*.mjs', 'scripts/kit/**/*.mjs'],
+    ['rails/hooks/lib/verse-main.mjs'],
+    'Lees origin/main als git-argument met de volle naam refs/remotes/origin/main: de korte naam kan een lokale branch ' +
+      'refs/heads/origin/main schaduwen (leerpunt #934).',
+    [KORTE_REF, KORTE_REF_TEMPLATE],
   ),
   restrict(
     'query-hooks',

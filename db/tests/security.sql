@@ -1,4 +1,4 @@
--- Securityinvarianten C1 t/m C3 (spec security-suite, AC-12): gelden voor elke tabel en policy in de catalogus, ook toekomstige.
+-- Securityinvarianten C1 t/m C3 (spec security-suite, security/AC-12): gelden voor elke tabel en policy in de catalogus, ook toekomstige.
 -- Naast db/tests/invarianten.sql (die ongewijzigd blijft): hier de breder gedetecteerde owner-tabellen (C1), het predicaat van
 -- de policies (C2) en een allowlist van grants per tabel en recht (C3). Elke invariant is een query die de overtredingen met de
 -- naam van tabel of policy teruggeeft; de test eist dat die leeg is en bewijst daarna met opzettelijke fouten dat de query ze

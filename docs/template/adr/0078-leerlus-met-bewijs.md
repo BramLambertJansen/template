@@ -8,6 +8,9 @@ Herzien: 2026-11-16 (#744): ingekort tot wat nog geldt; de puntnummers zijn onge
 Herzien: 2026-11-20: punt 4, een tweede uitzondering op "MCP alleen lezend": de hoofdsessie opent in de cloud een PR met
 `mcp__github__create_pull_request`, omdat `gh pr create` daar niet werkt (eigenaar; spec
 [cloud-pr-route](../specs/cloud-pr-route.md))
+Herzien: 2026-11-22: punt 4, "in de cloud draait geen rolhek" klopte niet: spec cloud-netwerkvorm (F9–F12) toont dat het
+rolhek ook in een cloudsessie weigert; spec cloud-pr-route (uitslag stap 0, rij 6) wees er al op
+Herzien: 2026-11-22: gewijzigd door [0107](0107-gedragsbaseline-voor-tekstwijzigingen.md) punt 5–7, in punt 2: bij Skill, Padregel en AGENTS.md wordt het bewijs "baseline: zonder <a>/3, met 3/3 (<model>)" of "geen baseline: <reden>"; "geen test:" blijft voor een integratie- of e2e-test
 
 Wijzigt [0059](0059-leerlus-van-app-naar-template.md) punt 1, 3, 4 en 7; vult R-SEC-09 aan met een uitzondering voor MCP (sinds de herziening van 2026-11-20 twee).
 Drempel: A3 (een nieuwe workflow met schrijfrecht op issues; een uitzondering op "MCP alleen lezend") en A4 (een
@@ -50,9 +53,9 @@ agents sluiten opgeloste leerpunten (akkoord eigenaar 3 november 2026), en "opge
    om een issue aan te maken, alleen naar de template-repo en met label `leerpunt`. Dat is een van twee uitzonderingen op
    "MCP alleen lezend" (R-SEC-09, R-ROL-12); de andere is een PR van de eigen werkbranch openen in de cloud met
    `mcp__github__create_pull_request` (spec `cloud-pr-route`). Elke andere MCP-schrijfactie blijft verboden. De issue-check uit punt 3 toetst de
-   inhoud van leerpunt-issues, niet wat de tool verder doet: in de cloud draait geen rolhek, dus daar is de beperking een
-   afspraak. In Claude Code blijft het rolhek op beide MCP-tools vragen (ask); een doorlaat vraagt een eigen besluit met
-   tabeltest. Subagents dienen niets in (ongewijzigd).
+   inhoud van leerpunt-issues, niet wat de tool verder doet. In Claude Code vraagt het rolhek op beide MCP-tools (ask);
+   het rolhek draait ook in een cloudsessie (spec cloud-netwerkvorm, F9–F12), al is de MCP-regel daar niet apart gemeten. Een
+   doorlaat vraagt een eigen besluit met tabeltest. Subagents dienen niets in (ongewijzigd).
 5. **Wie verwerkt.** De eigenaar triageert en bepaalt de volgorde, ook via de wekelijkse voorsortering. Een agent mag een
    leerpunt oppakken waartoe de eigenaar opdracht gaf, en mag het sluiten met sluitbewijs (punt 1) of als achterhaald (punt 2).
    Een roadmap-item met `aanleiding: #nnn` is alleen nodig voor werk dat de roadmap toch al vraagt; het is niet langer de maat

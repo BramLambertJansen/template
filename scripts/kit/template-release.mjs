@@ -2,7 +2,8 @@
 // een releasesectie direct onder het [Unreleased]-blok van docs/template-changelog.md, zet TEMPLATE_VERSION op de nieuwe
 // versie en verwijdert de verwerkte fragmenten. Alleen in de template (`onderhoud` in .claude/gates.json). Het script
 // commit, pusht en tagt niet: de hoofdsessie maakt de release-PR, de eigenaar tagt de squash-commit als `template-vx.y.z`.
-// Gebruik: `pnpm template:release <x.y.z> [--datum JJJJ-MM-DD]`. Bij een fout: exit 1 en geen bestand gewijzigd.
+// Gebruik: `pnpm template:release <x.y.z> [--datum JJJJ-MM-DD]`. Bij een fout: exit 1 en geen bestand gewijzigd. Een gevuld
+// `.kit/schaduw.json` weigert de release (spec schaduwmodus, ADR 0106 punt 8).
 //
 // Dit bestand is ook de ene ontleding van releasekoppen (`releasesUit`) en van fragmenten (`fragmentFout`, `leesFragment`)
 // voor check-docs, check:docs-drift en template:status. Importeren doet niets; de CLI draait alleen als het script zelf
@@ -16,6 +17,7 @@ export const FRAGMENT_MAP = 'docs/template-changelog.d';
 export const VERSIE_BESTAND = 'src/core/shared/template-version.ts';
 export const UPDATE_KOP = '### Bij een update';
 const GATES = '.claude/gates.json';
+const SCHADUW_REGISTER = '.kit/schaduw.json';
 const LEESMIJ = 'README.md';
 const FRAGMENT_NAAM = /^[a-z0-9][a-z0-9-]*\.md$/;
 const RELEASEKOP = /^## \[(\d+\.\d+\.\d+)\] - (\d{4}-\d{2}-\d{2})$/;
@@ -80,6 +82,23 @@ export function releasesUit(changelog) {
       throw new Error(`releasekop zonder de vorm "## [x.y.z] - JJJJ-MM-DD": ${regel}`);
     return { versie, datum, notities: notitiesVan(regels.slice(index + 1, releases[nummer + 1]?.index)) };
   });
+}
+
+/**
+ * De tekst per uitgebrachte sectie: elke `## [x.y.z]`-kop met haar inhoud tot de volgende `## `-kop, zonder witregels aan
+ * het eind; `## [Unreleased]` telt niet. Gooit niet, anders dan `releasesUit`: check-docs regel 19 vergelijkt hiermee de
+ * werkmap met de merge-base (leerpunt #837).
+ * @param {string} changelog de tekst van docs/template-changelog.md
+ * @returns {Map<string, string>} versie → sectie
+ */
+export function releaseTeksten(changelog) {
+  /** @type {Map<string, string>} */
+  const secties = new Map();
+  for (const deel of changelog.split(/^(?=## )/m)) {
+    const versie = /^## \[(\d+\.\d+\.\d+)\]/.exec(deel)?.[1];
+    if (versie !== undefined) secties.set(versie, deel.trimEnd());
+  }
+  return secties;
 }
 
 /**
@@ -307,6 +326,35 @@ function toetsVersie(versie, huidig, fragmenten) {
 }
 
 /**
+ * Een app krijgt geen controle in schaduw (spec schaduwmodus, ADR 0106 punt 8): gooit als `.kit/schaduw.json` een of meer
+ * regels bevat, of als het geen JSON-lijst is (B-9). Een ontbrekend register of `[]` laat de release door; de vorm van de
+ * regels toetst `pnpm ratchet` (schaduw-register).
+ * @param {string} root
+ */
+function weigerSchaduw(root) {
+  const bestand = path.join(root, SCHADUW_REGISTER);
+  if (!existsSync(bestand)) return;
+  const geenLijst = `${SCHADUW_REGISTER} is geen JSON-lijst; herstel het register vóór de release (ADR 0106 punt 8)`;
+  const tekst = readFileSync(bestand, 'utf8');
+  /** @type {unknown} */
+  let regels;
+  try {
+    regels = JSON.parse(tekst);
+  } catch {
+    throw new Error(geenLijst);
+  }
+  if (!Array.isArray(regels)) throw new Error(geenLijst);
+  if (regels.length === 0) return;
+  const namen = regels.map((regel, index) => {
+    const naam = typeof regel === 'object' && regel !== null ? Reflect.get(regel, 'naam') : undefined;
+    return typeof naam === 'string' ? naam : `#${String(index)}`;
+  });
+  throw new Error(
+    `${SCHADUW_REGISTER} bevat ${String(regels.length)} controle(s) (${namen.join(', ')}); een app krijgt geen controle in schaduw, neem eerst het besluit (ADR 0106 punt 8)`,
+  );
+}
+
+/**
  * Stelt de release samen en schrijft pas als alles klopt: de wijzigingenlijst, TEMPLATE_VERSION en het weghalen van de fragmenten.
  * @param {string} root
  * @param {readonly string[]} argv
@@ -315,6 +363,7 @@ function toetsVersie(versie, huidig, fragmenten) {
 export function brengUit(root, argv) {
   const { versie, datum } = argumenten(argv);
   if (!isTemplate(root)) throw new Error(`alleen in de template: ${GATES} heeft geen onderhoud (dit is een app)`);
+  weigerSchaduw(root);
   const versieTekst = readFileSync(path.join(root, VERSIE_BESTAND), 'utf8');
   const fragmenten = leesFragmenten(root);
   toetsVersie(versie, versieUit(versieTekst), fragmenten);

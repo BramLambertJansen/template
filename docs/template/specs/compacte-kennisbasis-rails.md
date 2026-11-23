@@ -39,7 +39,7 @@ Geen accountbeheerpad uit `docs/gouden-pad.md` past (werkstraat, geen UI).
 
 **PR 2 — archief, verwijzingen, budget**
 
-- **compacte-kennisbasis-rails/AC-1** — `document-status` is groen bij een byte-gelijke `git mv` van een vervangen of vervallen
+- **compacte-kennisbasis-rails/AC-1** — Vervallen door ADR 0089 punt 5 en 7 (`check-document-status` en het ADR-archief zijn weg). Was: `document-status` is groen bij een byte-gelijke `git mv` van een vervangen of vervallen
   ADR naar `docs/adr/archief/`; rood bij een gewijzigde byte, een `geaccepteerd` ADR, een andere rename, een terugverhuizing of
   een nieuw bestand in `archief/` (`verifyAdrWeg`, `verifyGeenRename`, `verifyDocument`, `beslisOvergang`).
 - **compacte-kennisbasis-rails/AC-2** — Elke wijziging of verwijdering in `archief/` geeft `a4`, ook in het rolhek (`documentKind`).
@@ -79,8 +79,9 @@ Geen accountbeheerpad uit `docs/gouden-pad.md` past (werkstraat, geen UI).
   aanvaltests blijven ongewijzigd groen. (Een vrijstelling voor leescommando's is geschrapt; agents lezen met Read, Grep en
   Glob, regel in `AGENTS.md` via PR 4.)
 
-- **compacte-kennisbasis-rails/AC-13** — `werkstraat.mjs` geeft de docs-drift-herinnering alleen bij Stop; `EVENTS` in
-  `rails/hooks/lib/meting.mjs` verandert niet in PR 6a en 6b (eigenaarbesluit 2026-11-01).
+- **compacte-kennisbasis-rails/AC-13** — `werkstraat.mjs` geeft de docs-drift-herinnering alleen bij Stop. Procesdeel vervallen
+  door ADR 0103. Was: "`EVENTS` in `rails/hooks/lib/meting.mjs` verandert niet in PR 6a en 6b (eigenaarbesluit 2026-11-01)".
+  Toets: `test/hooks/werkstraat-drift-events.test.ts`
 
 **PR 6b — mandaat en label weg**
 

@@ -9,8 +9,10 @@ import { claudeVersieMelding } from './claude-versie.mjs';
  * @typedef {{ code: number, output: string }} RunResult
  * @typedef {{ timeout?: number, env?: Record<string, string> }} RunOptions
  * @typedef {{ run: (command: string, args: readonly string[], options?: RunOptions) => RunResult, changed: () => string[],
- *   read: (rel: string) => string | null, onthoud?: (sleutel: string) => boolean }} Deps
+ *   read: (rel: string) => string | null, onthoud?: (sleutel: string) => boolean,
+ *   env?: Readonly<Record<string, string | undefined>> }} Deps
  * `onthoud`: true als de sleutel nieuw is (en legt hem vast), false als hij er al was; zonder `onthoud` telt alles als nieuw.
+ * `env`: de omgeving van het hookproces (de aanroeper geeft `process.env`); zonder `env` geen Cloud-regel (spec cloud-netwerkvorm).
  * @typedef {{ exit?: number, stdout?: string, stderr?: string }} HookResult
  */
 
@@ -58,7 +60,8 @@ export function changedFiles(run, exists) {
   // Geen geciteerde paden: quotePath uit voor status (niet-ASCII letterlijk), -z voor diff (ook spaties en aanhalingstekens).
   const status = run('git', ['-c', 'core.quotePath=false', 'status', '--porcelain', '--untracked-files=all']);
   const local = changedFromStatus(status.output);
-  const base = run('git', ['merge-base', 'origin/main', 'HEAD']);
+  // Volle naam: een lokale branch `origin/main` mag de set gecontroleerde bestanden niet verkleinen (leerpunt #932).
+  const base = run('git', ['merge-base', 'refs/remotes/origin/main', 'HEAD']);
   if (base.code !== 0) return local;
   const diff = run('git', ['diff', '-z', '--name-only', '--diff-filter=d', `${base.output.trim()}...HEAD`]);
   const committed = diff.code === 0 ? diff.output.split('\0').filter((line) => line !== '') : [];
@@ -265,12 +268,12 @@ function mainLag(deps) {
     timeout: 5000,
     env: { GIT_TERMINAL_PROMPT: '0' },
   });
-  const counts = deps.run('git', ['rev-list', '--left-right', '--count', 'origin/main...HEAD']);
+  const counts = deps.run('git', ['rev-list', '--left-right', '--count', 'refs/remotes/origin/main...HEAD']);
   if (counts.code !== 0) return '';
   const behind = Number(counts.output.trim().split(/\s+/)[0]);
   const stale = fetched.code === 0 ? '' : 'origin/main ophalen mislukt (stand van de laatste fetch). ';
   if (!Number.isFinite(behind) || behind === 0) return stale.trim();
-  return `${stale}Let op: ${behind} commits achter op origin/main; haal ze binnen voor je bouwt (git merge origin/main, nooit rebase).`;
+  return `${stale}Let op: ${behind} commits achter op origin/main; haal ze binnen voor je bouwt (git merge origin/main, nooit rebase; in de cloud met --no-commit en dan git commit -F, zie docs/operations/recepten.md).`;
 }
 
 const CHECK_GROEN = new Set(['SUCCESS', 'NEUTRAL', 'SKIPPED']);
@@ -343,9 +346,14 @@ export function doctorKort(uitvoer) {
   return [...rest, ...uit].filter((regel) => regel !== '').join('\n');
 }
 
+// Spec cloud-netwerkvorm (Ontwerp punt 6): de vormen die in een cloudsessie buiten de sandbox draaien.
+const CLOUD_REGEL =
+  'Cloud: commit `git commit -F <bestand>`, push `git push origin HEAD`, PR via `mcp__github__create_pull_request`, elk als los commando.';
+
 /**
  * SessionStart: de feiten als context (framework §8): branch, achterstand op main, open PR, open wijzigingen, een mislukte
- * e2e-uitslag en de doctor (stack uit in één regel); geen specslijst (die vraagt een agent met `feiten.mjs specs`).
+ * e2e-uitslag en de doctor (stack uit in één regel); geen specslijst (die vraagt een agent met `feiten.mjs specs`). In een
+ * cloudsessie (`CLAUDE_CODE_REMOTE=true` in `deps.env`) ook de Cloud-regel (spec cloud-netwerkvorm/AC-10).
  * @param {Deps} deps
  * @returns {HookResult}
  */
@@ -367,6 +375,7 @@ export function sessionStart(deps) {
       status,
       doctor,
       claude,
+      deps.env?.['CLAUDE_CODE_REMOTE'] === 'true' ? CLOUD_REGEL : '',
       'Vraag alleen taakrelevante feiten: node scripts/kit/feiten.mjs gates specs fase; componenten alleen bij UI (framework §8).',
     ]
       .filter((line) => line !== '')

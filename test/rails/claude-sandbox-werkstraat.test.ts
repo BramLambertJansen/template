@@ -58,16 +58,19 @@ test('deny en ask blijven ongewijzigd naast de gerichte nieuwe allows', () => {
 
 // cloud-pr-route/AC-1: de zeven runneruitzonderingen plus de vier commando's van de cloudroute (ADR 0061, herzien).
 // Gewijzigd door spec cloud-pr-route (R-TEST-02): de grens verandert bewust; de vergelijking met de fixture blijft.
+// GEWIJZIGD (spec ci-log, ADR 0102 punt 2, R-TEST-02): `pnpm pr:log *` komt erbij, onder dezelfde ankertoets.
 const RUNNER = [
   'pnpm pr:merge *',
   'pnpm pr:resolve *',
+  'pnpm pr:log *',
   'pnpm test:db *',
   'pnpm ui:check *',
   'pnpm gate:slow *',
   'pnpm db:generate *',
   'pnpm check:snapshot *',
 ];
-const CLOUDROUTE = ['git commit *', 'git push origin HEAD', 'gh api *', 'pnpm pr:verify *'];
+// GEWIJZIGD (leerpunt #899, besluit eigenaar, R-TEST-02): `pnpm meting *` komt erbij, zodat de trend `gh` bereikt.
+const CLOUDROUTE = ['git commit *', 'git push origin HEAD', 'gh api *', 'pnpm pr:verify *', 'pnpm meting *'];
 
 test('runneruitzonderingen en de cloudroute, gelijk aan de vastgelegde grens', () => {
   expect(sandbox['excludedCommands']).toEqual(boundaries['excludedCommands']);

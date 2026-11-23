@@ -1,5 +1,5 @@
 ---
-status: gebouwd
+status: goedgekeurd
 namespace: cloud-pr-route
 ---
 
@@ -239,3 +239,5 @@ vastgesteld).
   (eigenaar, 20 november 2026). Afgewezen: `ask` voor commit en `pr:verify` (een prompt per commit, lokaal en in de cloud).
 - **B2 ✅ besloten** (spec-review) — De PR-tool komt in een herziening van ADR 0078 punt 4, naast die van ADR 0061
   (eigenaar, 20 november 2026).
+- **M1 ✅ besloten** — Geen allow-regel voor `gh api`-leesaanroepen; `gh api` blijft de gewone permissievraag volgen, zonder
+  meting op de laptop (eigenaar, 23 november 2026, volgens aanbeveling). Herzien als de vraag wrijving geeft.

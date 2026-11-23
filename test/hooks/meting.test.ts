@@ -2,7 +2,9 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { expect, test } from 'vitest';
+import { unsafeCast } from '../../src/core/shared/unsafe-cast.ts';
 
 // Het echte entry-script (rails/hooks/meting.mjs) via stdin; observeert alleen (ADR 0046).
 const root = process.cwd();
@@ -400,4 +402,81 @@ test('m wordt ook gelogd bij een PermissionRequest en bij UserPromptSubmit', () 
     });
 
   expect(regels(dir)).toMatchObject([{ m: 'auto' }, { m: 'auto' }]);
+});
+
+// --- schaduwmodus/AC-11: schaduwRegel (spec docs/template/specs/schaduwmodus.md) ---------------------------------------
+
+type SchaduwRegel = (payload: unknown, controle: unknown, nu: Date) => Record<string, unknown> | null;
+
+async function laadSchaduwRegel(): Promise<SchaduwRegel> {
+  const mod: unknown = await import(pathToFileURL(path.join(root, 'rails/hooks/lib/meting.mjs')).href);
+  const fn: unknown = typeof mod === 'object' && mod !== null ? Reflect.get(mod, 'schaduwRegel') : undefined;
+  expect(typeof fn, 'rails/hooks/lib/meting.mjs exporteert schaduwRegel niet (spec schaduwmodus)').toBe('function');
+  return (payload, controle, nu) => {
+    const uit: unknown = Reflect.apply(
+      unsafeCast<(...args: unknown[]) => unknown>(fn, 'gecontroleerd hierboven'),
+      undefined,
+      [payload, controle, nu],
+    );
+    return isRecord(uit) ? uit : null;
+  };
+}
+
+const NU = new Date('2026-11-22T10:00:00.000Z');
+
+test('schaduwmodus/AC-11: schaduwRegel geeft e Schaduw, c en alleen het commandoprefix als k', async () => {
+  const schaduwRegel = await laadSchaduwRegel();
+  const cwd = repo('ref: refs/heads/feat-x\n');
+  const payload = {
+    hook_event_name: 'PostToolUse',
+    session_id: SESSIE,
+    cwd,
+    tool_name: 'Bash',
+    tool_input: { command: 'git push --force origin geheim-token-123' },
+  };
+
+  const uit = schaduwRegel(payload, 'proef', NU);
+
+  expect(uit).toEqual({
+    t: NU.toISOString(),
+    e: 'Schaduw',
+    s: SESSIE,
+    b: 'feat-x',
+    a: 'hoofdsessie',
+    c: 'proef',
+    k: 'git push',
+  });
+  expect(JSON.stringify(uit)).not.toContain('geheim');
+});
+
+test.each(['', 'Hoofdletter', '1begint-met-cijfer', 'spatie erin', 'a'.repeat(65), 42, null, undefined])(
+  'schaduwmodus/AC-11: een ongeldige controle %j geeft null',
+  async (controle) => {
+    const schaduwRegel = await laadSchaduwRegel();
+    const payload = {
+      hook_event_name: 'PostToolUse',
+      session_id: SESSIE,
+      cwd: repo(null),
+      tool_name: 'Bash',
+      tool_input: { command: 'ls' },
+    };
+    expect(schaduwRegel(payload, controle, NU)).toBeNull();
+  },
+);
+
+test('schaduwmodus/AC-11: een payload met hook_event_name Schaduw geeft null, ook bij regel()', async () => {
+  const schaduwRegel = await laadSchaduwRegel();
+  const payload = {
+    hook_event_name: 'Schaduw',
+    session_id: SESSIE,
+    cwd: repo(null),
+    tool_name: 'Bash',
+    tool_input: { command: 'ls' },
+  };
+  expect(schaduwRegel(payload, 'proef', NU)).toBeNull();
+  const lib = unsafeCast<{ regel: (p: unknown, n: Date) => unknown }>(
+    await import(pathToFileURL(path.join(root, 'rails/hooks/lib/meting.mjs')).href),
+    'dynamische import van de bestaande export regel',
+  );
+  expect(lib.regel(payload, NU)).toBeNull();
 });

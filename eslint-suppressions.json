@@ -154,7 +154,7 @@
   },
   "test/hooks/authority.test.ts": {
     "rails/negatieve-tabel": {
-      "count": 3
+      "count": 2
     }
   },
   "test/hooks/built-evidence.test.ts": {

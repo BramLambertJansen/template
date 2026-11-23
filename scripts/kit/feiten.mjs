@@ -1,5 +1,5 @@
 // Live feiten (framework §8, ADR 0045): elke rol begint hiermee, niet met wat in proza staat.
-// Gebruik: node scripts/kit/feiten.mjs [gates|adr|specs|migraties|routes|permissies|foutcodes|koppelingen|componenten|tokens|fase] [--alle] [--json]
+// Gebruik: node scripts/kit/feiten.mjs [gates|adr|specs|migraties|routes|permissies|foutcodes|koppelingen|componenten|tokens|fase|recepten] [--alle] [--json]
 //          node scripts/kit/feiten.mjs hoofdstuk <n>: de tekst vóór de eerste `## `-kop van docs/framework.md plus
 //          hoofdstuk <n> (bij 8 ook 8a, 8b…; zoals `pnpm leespad` telt); onbekend: foutmelding en exit 1 (ADR 0065).
 //          node scripts/kit/feiten.mjs pad <pad>: schrijfniveau en besluit uit de padtabel, met de globs die ze leveren (ADR 0079).
@@ -87,7 +87,7 @@ async function padRegel(rel) {
 
 if (process.argv[2] === 'pad') await padRegel(process.argv[3]);
 
-const { toText } = await import('./feiten-tekst.mjs');
+const { specsTekst, toText } = await import('./feiten-tekst.mjs');
 const { codeSecties, gereserveerdeAdrNummers, lezerSecties, plain, VOLGORDE, werkmap } =
   await import('./feiten-secties.mjs');
 
@@ -100,8 +100,17 @@ const uitLezer = (/** @type {import('./feiten-secties.mjs').Gereserveerd} */ ger
 const sections = {
   ...codeSecties,
   adr: plain(async () => uitLezer(await gereserveerdeAdrNummers()).adr()),
-  specs: plain(() => uitLezer({}).specs()),
+  // `--json` geeft per spec { spec, status, stand, gebouwd, levend }; de tekst alleen naam en status (ADR 0104, AC-25).
+  specs: () => {
+    const json = uitLezer({}).specs();
+    return { json, inhoud: specsTekst(json) };
+  },
   fase: plain(() => uitLezer({}).fase()),
+  // Spec agent-recepten: de receptenkaart voor de eigen runtime; `--alle` toont beide kolommen.
+  recepten: async () => {
+    const { KAART, receptenSectie } = await import('./recepten.mjs');
+    return receptenSectie(werkmap.lees(KAART), { cloud: process.env['CLAUDE_CODE_REMOTE'] === 'true', alle });
+  },
 };
 
 const wanted = args.filter((arg) => !arg.startsWith('--'));

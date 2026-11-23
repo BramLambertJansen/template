@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #538
+status: goedgekeurd # #538
 namespace: leerlus-bewijs
 ---
 
@@ -58,12 +58,18 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   ```text
   ## Leerpunt
 
-  - #<nr>: trede <Type|Check|Gouden pad of generator|Skill|Padregel|AGENTS.md>; bewijs <testpad>
-  - #<nr>: trede <Skill|Padregel|AGENTS.md>; bewijs geen test: <reden>
+  - #<nr>: trede <Type|Check|Gouden pad of generator>; bewijs <testpad>
+  - #<nr>: trede <Type|Check|Gouden pad of generator>; bewijs geen test: <reden met een integratie- of e2e-test>
+  - #<nr>: trede <Skill|Padregel|AGENTS.md>; bewijs baseline: zonder <a>/3, met 3/3 (<model>)
+  - #<nr>: trede <Skill|Padregel|AGENTS.md>; bewijs geen baseline: <reden>
   ```
 
+  De twee laatste vormen en het blok `### Scenario #<nr>` staan in spec [gedragsbaseline](gedragsbaseline.md) (ADR 0107).
+
 - Comment van de workflow bij `leerpunt-onvolledig`, letterlijk de eerste regel: `Dit leerpunt volgt het sjabloon niet:`,
-  daarna per fout één regel (`ontbreekt: <kop>`, `leeg: <kop>`, `onbekende waarde bij <kop>: <waarde>`, `volgorde: <kop>`).
+  daarna per fout één regel (`ontbreekt: <kop>`, `leeg: <kop>`, `onbekende waarde bij <kop>: <waarde>`, `volgorde: <kop>`),
+  en per keuzeveld met een onbekende waarde één regel `Kies bij <kop> precies één van: <opties>; zet toelichting onder Bron
+  of Onderbouwing, niet achter de waarde.` (leerpunt #759).
 - Comment bij `leerpunt-zonder-bewijs`, letterlijk: `Gesloten zonder sluitbewijs (ADR 0078): geen gemergde PR met een sectie Leerpunt voor dit issue en geen comment "achterhaald: <reden>".`
 - De workflow schrijft per issue hooguit één comment per soort; bij een volgende fout werkt hij die comment bij.
 - Focusvolgorde en toetsenbord: n.v.t. — geen eigen UI.
@@ -73,7 +79,9 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
 - **leerlus-bewijs/AC-1** — Welke issues een PR sluit, komt uit GitHub zelf (GraphQL `closingIssuesReferences`), dus elk
   sluitwoord dat GitHub kent (close, closes, closed, fix, fixes, fixed, resolve, resolves, resolved, met of zonder dubbele
   punt) en een handmatige koppeling tellen. Een PR die zo een issue met label `leerpunt` sluit, zonder regel `- #n:` in de sectie `## Leerpunt`, maakt de job `leerpunt-bewijs` rood met de melding welk nummer
-  ontbreekt. Een PR zonder zo'n verwijzing laat de job slagen zonder iets te draaien.
+  ontbreekt. Een PR zonder zo'n verwijzing en zonder regel in `## Leerpunt` laat de job slagen zonder iets te draaien; een
+  regel voor een issue dat de PR niet sluit, maakt de job rood met de uitweg `Closes #<nr>` (leerpunt #717). Toets:
+  `test/scripts/leerpunt-koppeling.test.ts`
 - **leerlus-bewijs/AC-2** — Bij `bewijs <testpad>`: het pad moet in de diff van de PR staan als toegevoegd of gewijzigd
   `*.test.ts(x)`-bestand buiten `*.int.test.ts` en `e2e/`, of bij trede Type als `*.test-d.ts`. Anders rood.
 - **leerlus-bewijs/AC-3** — Het bewijsbestand draait in een tijdelijke kopie van de basis (merge-base) met alleen dat bestand
@@ -86,15 +94,17 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   (`persist-credentials: false`). Het token staat alleen in de env van die voorbereidende stap. De basisrun installeert uit de lockfile van de basis, de headrun uit die van de head, beide met
   `--ignore-scripts`. Een test leest het workflowbestand en faalt op een token in de env van workflow, job of een bewijsstap, of in `with: token`. Fixtures: een test die ook op de basis slaagt, en een test die op de basis
   alleen op een import faalt, maken de job allebei rood.
-- **leerlus-bewijs/AC-4** — `geen test: <reden>` is alleen geldig bij trede Skill, Padregel of AGENTS.md, of bij een
-  integratie- of e2e-test, met een niet-lege reden; dan slaagt de job en geeft het agent-merge-oordeel (`diff-guard.mjs`,
+- **leerlus-bewijs/AC-4** — Gewijzigd door ADR 0107 (spec gedragsbaseline AC-5): `geen test: <reden>` is alleen geldig bij een
+  integratie- of e2e-test uit de diff, met een niet-lege reden; bij trede Skill, Padregel of AGENTS.md is het bewijs
+  `baseline:` of `geen baseline: <reden>` en is `geen test:` rood. Was: "`geen test: <reden>` is alleen geldig bij trede
+  Skill, Padregel of AGENTS.md, of bij een integratie- of e2e-test, met een niet-lege reden". Verder ongewijzigd: met een niet-lege reden; dan slaagt de job en geeft het agent-merge-oordeel (`diff-guard.mjs`,
   gelezen door `pr-merge.mjs`) `nee` met reden `leerpunt zonder test`. Bij een andere trede of lege reden: rood. De job draait
   ook op `pull_request` type `edited`. Omdat de diff-guard niet op `edited` draait, leest `pr-merge.mjs` de beschrijving zelf op
   het moment van mergen met dezelfde parser van `## Leerpunt` als `leerpunt-bewijs.mjs`, en weigert bij `geen test:`, ook als
   het oordeel eerder `ja` was. Het omgekeerde (later `bewijs <pad>`) houdt het oordeel op `nee` tot de volgende push: veilig. Test: beschrijving na het oordeel
   gewijzigd van `bewijs <pad>` naar `geen test: …` geeft een weigering.
   Vervallen voor de diff-guard en het mergescript door ADR 0089 punt 5 (ADR 0078 Herzien #696): de eigenaar merget volgens
-  afspraak; de job blijft zoals hierboven.
+  afspraak; de job blijft zoals hierboven. Toets: `test/scripts/leerpunt-bewijs.test.ts`
 - **leerlus-bewijs/AC-5** — De workflow `leerpunt-check` op `issues` (opened, edited, labeled, reopened) toetst een issue met label
   `leerpunt` tegen `leerpunt.yml`: elke kop aanwezig en in volgorde, verplichte velden niet leeg (`_No response_` telt als leeg),
   `Soort` en `Voorstel voor de plek` exact een optie. Bij fouten: label `leerpunt-onvolledig` en de comment uit "Hergebruik en UX";
@@ -123,8 +133,10 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
 | Situatie | Gedrag | Foutcode |
 |---|---|---|
 | PR sluit twee leerpunten | Twee regels in `## Leerpunt`; elk bewijs apart getoetst | n.v.t. |
+| Regel in `## Leerpunt` voor een issue dat de PR niet sluit (geen sluitwoord of koppeling) | De job is rood met het nummer en de uitweg `Closes #<nr>`; zonder die fout draaide geen proef en bleef het issue open (leerpunt #717, `bewijsPlan` in `scripts/kit/leerpunt.mjs`) | n.v.t. |
 | Eén test bewijst twee leerpunten | Hetzelfde pad op twee regels mag | n.v.t. |
-| Bewijstest heeft een nieuwe helper nodig die op de basis niet bestaat | Laadfout op de basis telt niet: de job is rood met de melding "faalt op laden, niet op een assertie"; de helper hoort in de test zelf of de bouwer kiest een test die de bestaande code aanroept | n.v.t. |
+| Bewijstest heeft een nieuwe helper nodig die op de basis niet bestaat | Laadfout op de basis telt niet: de job is rood met de melding "faalt op laden, niet op een assertie"; de helper hoort in de test zelf of de bouwer kiest een test die de bestaande code aanroept; de melding zegt dat ook (leerpunt #892) | n.v.t. |
+| Typetest: `tsc` start niet, geeft geen `error TS`-diagnose of alleen een configuratiefout (TS5058, TS5083, TS18003) | Laadfout, geen rood bewijs (leerpunt #814, `typeUitslag` in `scripts/kit/leerpunt.mjs`) | n.v.t. |
 | Basis kan het testbestand niet laden door een gewijzigde configuratie | Rood met de uitvoer; de eigenaar kan dan `geen test: <reden>` met eigenaarmerge laten gelden | n.v.t. |
 | Leerpunt gesloten via een commit op main zonder PR | Geen sluitbewijs: label `leerpunt-zonder-bewijs` | n.v.t. |
 | Issue zonder label `leerpunt` | Workflow en job doen niets | n.v.t. |

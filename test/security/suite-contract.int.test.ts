@@ -323,6 +323,133 @@ describe('suitecontract/AC-6: de q-variant draait alleen als het lijstcontract q
 });
 
 // ---------------------------------------------------------------------------------------------------------------------
+// AC-18 (#813): de zoekterm is de eerste tekstwaarde van sample.create en moet de rij van A vinden.
+// ---------------------------------------------------------------------------------------------------------------------
+const NAAM = 'security_probes';
+const ZOEKTERM = 'beveiligingstest-a';
+
+interface WieVerzoek {
+  readonly wie: 'A' | 'B';
+  readonly invoer: Record<string, unknown>;
+}
+
+interface WieUitkomst {
+  readonly problemen: string[];
+  readonly verzoeken: WieVerzoek[];
+}
+
+// Zoals `opnemend`, maar legt ook vast wie het lijstverzoek deed (de bestaande helper blijft ongewijzigd).
+function opnemendMetWie<O extends EigenaarOpzet>(opzet: O): { readonly opzet: O; readonly verzoeken: WieVerzoek[] } {
+  const verzoeken: WieVerzoek[] = [];
+  const zend: Zender = (wie, aanroep) => {
+    if (aanroep.method === 'GET' && aanroep.pad === LIJST_PAD) verzoeken.push({ wie, invoer: { ...aanroep.invoer } });
+    return opzet.zend(wie, aanroep);
+  };
+  return { opzet: { ...opzet, zend }, verzoeken };
+}
+
+async function lijstUitkomstMetWie(routes: Routes, sample: ResourceRegel['sample']): Promise<WieUitkomst> {
+  return metProbe([], async (ep) => {
+    const opgenomen = opnemendMetWie({ ...metRoutes(ep.opzet(routes), routes), resources: metSample(sample) });
+    return { problemen: await eigenaarApiProblemen(opgenomen.opzet), verzoeken: opgenomen.verzoeken };
+  });
+}
+
+// De basissample, met een andere create en createTweede (update en spoof blijven zoals ze zijn).
+function sampleMetCreate(eerste: Record<string, unknown>, tweede: Record<string, unknown>): ResourceRegel['sample'] {
+  return { ...basisRegel().sample, create: eerste, createTweede: tweede };
+}
+
+// Een create-route zonder tekstveld: alleen een getal; het label van de rij maakt de route zelf.
+const createZonderTekst = defineRoute(
+  defineContract({
+    method: 'POST',
+    path: LIJST_PAD,
+    input: z.object({ aantal: z.number().int() }).strict(),
+    output: rijSchema,
+    permission: 'app.use',
+  }),
+  async ({ tx, input }) => {
+    const label = `rij-${String(input.aantal)}`;
+    const rijen = await rijenVan(
+      tx,
+      sql`insert into public.security_probes (label) values (${label}) returning id::text as id, label`,
+    );
+    return rijSchema.parse(rijen[0]);
+  },
+);
+
+// Een lijst met q die de term accepteert, maar op het id zoekt in plaats van op het label: de rij van A wordt niet gevonden.
+const lijstQZoektOpId = defineRoute(
+  lijstContract(z.object({ q: zoekterm, cursor: cursorVeld, limit: limietVeld }).strict()),
+  async ({ tx, input }) => {
+    const na =
+      input.cursor === undefined ? sql`` : sql`and p.id > ${decodeCursor(input.cursor, cursorSleutel).id}::uuid`;
+    const zoek = input.q === undefined ? sql`` : sql`and position(lower(${input.q}) in p.id::text) > 0`;
+    const rijen = await rijenVan(tx, sql`${SELECTEER} where true ${na} ${zoek} order by p.id limit ${input.limit + 1}`);
+    const items = rijen.slice(0, input.limit).map((rij) => rijSchema.parse(rij));
+    const laatste = items.at(-1);
+    const nextCursor = rijen.length > input.limit && laatste !== undefined ? encodeCursor({ id: laatste.id }) : null;
+    return { items, nextCursor };
+  },
+);
+
+const isGeenTekstwaarde = (probleem: string): boolean =>
+  probleem.startsWith(`${NAAM}: `) && probleem.includes('sample.create') && probleem.includes('geen tekstwaarde');
+
+describe('suitecontract/AC-18: de zoekterm vindt de rij van A (#813)', { timeout: LANG }, () => {
+  test('suitecontract/AC-18: een lijst met q en een sample.create zonder tekstwaarde geeft een probleem over sample.create, geen afgebroken controle', async () => {
+    const sample = sampleMetCreate({ aantal: 1 }, { aantal: 2 });
+    const routes: Routes = [createZonderTekst, EIGENAAR_ROUTES[1], lees, wijzig, verwijder];
+    const uitkomst = await lijstUitkomstMetWie(routes, sample);
+
+    expect(uitkomst.problemen.filter(isGeenTekstwaarde).length).toBeGreaterThan(0);
+    expect(uitkomst.problemen.some((probleem) => probleem.includes(AFGEBROKEN))).toBe(false);
+    expect(
+      stuurtGeen(
+        uitkomst.verzoeken.map(({ invoer }) => invoer),
+        'q',
+      ),
+    ).toBe(true);
+  });
+
+  test('suitecontract/AC-18: een sample.create waarvan de enige tekst alleen witruimte is geeft hetzelfde probleem', async () => {
+    const sample = sampleMetCreate({ label: '   ' }, { label: '  ' });
+    const uitkomst = await lijstUitkomstMetWie(metLijst(EIGENAAR_ROUTES[1]), sample);
+
+    expect(uitkomst.problemen.filter(isGeenTekstwaarde).length).toBeGreaterThan(0);
+    expect(uitkomst.problemen.some((probleem) => probleem.includes(AFGEBROKEN))).toBe(false);
+    expect(
+      stuurtGeen(
+        uitkomst.verzoeken.map(({ invoer }) => invoer),
+        'q',
+      ),
+    ).toBe(true);
+  });
+
+  test('suitecontract/AC-18: een lijst die de term accepteert maar de rij van A niet vindt geeft een probleem met sample.create en de term tussen enkele aanhalingstekens', async () => {
+    const uitkomst = await lijstUitkomstMetWie(metLijst(lijstQZoektOpId), basisRegel().sample);
+    const eigen = uitkomst.problemen.filter(
+      (probleem) =>
+        probleem.startsWith(`${NAAM}: `) &&
+        probleem.includes('sample.create') &&
+        probleem.includes(`'${ZOEKTERM}'`) &&
+        !probleem.includes(AFGEBROKEN),
+    );
+
+    expect(eigen.length).toBeGreaterThan(0);
+    expect(uitkomst.verzoeken.some(({ wie, invoer }) => wie === 'B' && invoer.q === ZOEKTERM)).toBe(true);
+  });
+
+  test('suitecontract/AC-18: een lijst die de rij van A met de term vindt: A vraagt de lijst met q op en er is geen probleem', async () => {
+    const uitkomst = await lijstUitkomstMetWie(metLijst(EIGENAAR_ROUTES[1]), basisRegel().sample);
+
+    expect(uitkomst.problemen).toStrictEqual([]);
+    expect(uitkomst.verzoeken.some(({ wie, invoer }) => wie === 'A' && invoer.q === ZOEKTERM)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------------
 // AC-7: de tabel heeft UPDATE-recht (de eerste probe): kolom uit sample.updateRij of sample.update.
 // ---------------------------------------------------------------------------------------------------------------------
 describe('suitecontract/AC-7: een owner-tabel met UPDATE-recht', { timeout: LANG }, () => {

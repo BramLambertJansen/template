@@ -1,12 +1,12 @@
 // Context van het rolhek (ADR 0045): configuratie uit het anker, vertrouwde basis, lezen uit de werkmap.
 import { execFileSync } from 'node:child_process';
-import { readFileSync, realpathSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { loadConfig } from './rolhek.mjs';
 import { gitText, readAuthority, repositoryName, trustedBase } from './authority-context.mjs';
 import { anker } from './objecten.mjs';
 import { APP_BESTAND } from './padtabel.mjs';
-import { trustedMerge, trustedRunner } from './runner-authority.mjs';
+import { ankerVerouderd, trustedKitScript, trustedMerge, trustedRunner } from './runner-authority.mjs';
 
 /**
  * @param {string} root
@@ -56,17 +56,54 @@ function configuratie(root, basis, authority) {
   return { config: loadConfig(trusted, app), vertrouwd: true };
 }
 
+const SETTINGS = '.claude/settings.json';
+
+/**
+ * Spec cloud-netwerkvorm (Ontwerp punt 1, AC-7): de patronen uit `sandbox.excludedCommands`, uit dezelfde bron als gates.json.
+ * Binnen een hook alleen uit het anker: ontbreekt het bestand daar, dan een lege lijst (OV-8); onleesbaar of geen geldige JSON
+ * gooit (het rolhek faalt dicht). Daarbuiten de vertrouwde basis met terugval op de werkmap; ontbreekt het bestand daar, dan geen
+ * patronen. Zonder `excludedCommands` een lege lijst.
+ * @param {string} root
+ * @param {{ read: (file: string) => string | null, readOptional?: (file: string) => string | { afwezig: true } } | null} basis
+ * @param {import('./task-authority.mjs').Authority | null} authority
+ * @returns {string[]}
+ */
+function netwerkvormen(root, basis, authority) {
+  if (anker() !== null) {
+    if (basis?.readOptional === undefined) throw new Error(`geen gecontroleerde ${SETTINGS} in het anker (spec cloud-netwerkvorm)`);
+    const gelezen = basis.readOptional(SETTINGS);
+    return typeof gelezen === 'string' ? excludedCommands(gelezen) : [];
+  }
+  const text = authority?.trusted(SETTINGS) ?? werkmapTekst(root, SETTINGS);
+  return text === null ? [] : excludedCommands(text);
+}
+
+/** `sandbox.excludedCommands` uit de tekst van een settingsbestand; ongeldige JSON gooit. @param {string} text */
+function excludedCommands(text) {
+  /** @type {unknown} */
+  const raw = JSON.parse(text);
+  const kind = (/** @type {unknown} */ waarde, /** @type {string} */ sleutel) =>
+    typeof waarde === 'object' && waarde !== null ? Object.entries(waarde).find(([naam]) => naam === sleutel)?.[1] : undefined;
+  const lijst = kind(kind(raw, 'sandbox'), 'excludedCommands');
+  return Array.isArray(lijst) ? lijst.filter((regel) => typeof regel === 'string') : [];
+}
+
+/** Een bestand uit de werkmap: ENOENT is afwezig (null), elke andere fout gooit. @param {string} root @param {string} rel */
+function werkmapTekst(root, rel) {
+  try {
+    return readFileSync(path.join(root, rel), 'utf8');
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
 /** @param {string | { afwezig: true }} gelezen */
 const appTekst = (gelezen) => (typeof gelezen === 'string' ? gelezen : null);
 
 /** Het app-bestand uit de werkmap: ENOENT is afwezig, elke andere fout gooit. @param {string} root */
 function werkmapApp(root) {
-  try {
-    return readFileSync(path.join(root, APP_BESTAND), 'utf8');
-  } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return null;
-    throw error;
-  }
+  return werkmapTekst(root, APP_BESTAND);
 }
 
 /**
@@ -90,6 +127,8 @@ export function rolhekContext(root, cwd) {
   let trusted;
   /** @type {boolean | undefined} */
   let mergeVertrouwd;
+  /** @type {boolean | undefined} */
+  let kitVertrouwd;
   const authority = readAuthority({ root });
   const basis = trustedBase(root, undefined);
   const { config, vertrouwd } = configuratie(root, basis, authority);
@@ -97,6 +136,7 @@ export function rolhekContext(root, cwd) {
     root,
     cwd,
     config,
+    netwerkvormen: netwerkvormen(root, basis, authority),
     onderhoud: onderhoudActief(config, vertrouwd, root),
     read: (/** @type {string} */ rel) => {
       try {
@@ -105,7 +145,9 @@ export function rolhekContext(root, cwd) {
         return null;
       }
     },
-    committed: committedIn(root, basis?.sha ?? null),
+    committed: migratieGecommit(root, basis?.sha ?? null),
+    // Leerpunt #887: een testbestand is pas bestaand als het op het anker of op origin/main staat.
+    bestaand: opMain(root, basis?.sha ?? null),
     isDir: (/** @type {string} */ rel) => safe(() => statSync(path.join(root, rel)).isDirectory()),
     // Een map als doel (rm -r, find -delete, cp -r): wat eronder staat, getrackt of nieuw en niet genegeerd (R-ROL-08).
     files: (/** @type {string} */ rel) =>
@@ -118,38 +160,57 @@ export function rolhekContext(root, cwd) {
     authority,
     runnerTrusted: () => (trusted ??= trustedRunner(root, basis)),
     mergeTrusted: () => (mergeVertrouwd ??= trustedMerge(root, basis)),
+    kitTrusted: () => (kitVertrouwd ??= trustedKitScript(root, basis)),
+    // Leerpunt #888: alleen voor de melding bij een weigering van de ankertoets.
+    ankerVerouderd: (/** @type {'merge' | 'kit'} */ modus) => ankerVerouderd(root, basis, modus),
   };
 }
 
 /**
- * Een migratie is gecommit als hij in de merge-base met het anker of met origin/main staat (de strengste van beide), zoals
- * check:migrations kijkt (WS-04 punt 5). Zijn beide onleesbaar, dan terugval op HEAD en 'zonder-origin' ("git fetch origin").
+ * Een migratie is gecommit als hij in de tip van het anker of van origin/main staat (leerpunt #927), net als `opMain`: HEAD
+ * telt niet mee, want een agent kan HEAD verzetten (`checkout --orphan`, `reset --soft`). Zijn beide onleesbaar, dan
+ * 'zonder-origin' ("git fetch origin") voor een migratie op schijf of in HEAD, zodat het dicht faalt; een nieuwe migratie
+ * die nog nergens staat, blijft schrijfbaar.
  * @param {string} root
  * @param {string | null} basis
  * @returns {(rel: string) => boolean | 'zonder-origin'}
  */
-function committedIn(root, basis) {
-  /** @type {string[] | undefined} */
-  let bases;
-  const exists = (/** @type {string} */ tree, /** @type {string} */ rel) =>
-    safe(() => git(root, ['cat-file', '-e', `${tree}:${rel}`]) === '');
+export function migratieGecommit(root, basis) {
+  const opTip = opMain(root, basis);
   return (rel) => {
-    bases ??= [basis, 'origin/main'].flatMap((ref) => {
-      const sha = ref === null ? null : mergeBase(root, ref);
-      return sha === null ? [] : [sha];
-    });
-    if (bases.length > 0) return bases.some((tree) => exists(tree, rel));
-    return exists('HEAD', rel) ? 'zonder-origin' : false;
+    const uitslag = opTip(rel);
+    if (uitslag !== 'zonder-origin') return uitslag;
+    const ergens = existsSync(path.join(root, rel)) || safe(() => git(root, ['cat-file', '-e', `HEAD:${rel}`]) === '');
+    return ergens ? 'zonder-origin' : false;
   };
 }
 
-/** @param {string} root @param {string} basis */
-function mergeBase(root, basis) {
-  try {
-    return git(root, ['merge-base', basis, 'HEAD']) || null;
-  } catch {
-    return null;
-  }
+/**
+ * Leerpunt #887: staat het pad in de tip van het anker of van origin/main? HEAD telt niet mee, want een agent kan HEAD
+ * verzetten (`checkout --orphan`, `reset --soft`). Is geen van beide leesbaar, dan 'zonder-origin': de aanroeper telt dat
+ * als bestaand (faalt dicht).
+ * @param {string} root
+ * @param {string | null} basis
+ * @returns {(rel: string) => boolean | 'zonder-origin'}
+ */
+export function opMain(root, basis) {
+  /** @type {string[] | undefined} */
+  let tips;
+  const exists = (/** @type {string} */ tree, /** @type {string} */ rel) =>
+    safe(() => git(root, ['cat-file', '-e', `${tree}:${rel}`]) === '');
+  return (rel) => {
+    // De volle naam: een korte `origin/main` kan een lokale branch `refs/heads/origin/main` schaduwen (review #927).
+    tips ??= [basis, 'refs/remotes/origin/main'].flatMap((ref) => {
+      if (ref === null) return [];
+      try {
+        const sha = git(root, ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]);
+        return /^[0-9a-f]{40}$/.test(sha) ? [sha] : [];
+      } catch {
+        return [];
+      }
+    });
+    return tips.length === 0 ? 'zonder-origin' : tips.some((tip) => exists(tip, rel));
+  };
 }
 
 const GEWOON_BESTAND = new Set(['100644', '100755']);

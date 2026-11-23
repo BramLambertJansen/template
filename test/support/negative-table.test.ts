@@ -87,3 +87,49 @@ describe('expectNegativeTable', () => {
     }).toThrow(/rij/);
   });
 });
+
+// Leerpunt #875: `leerpunt-bewijs` telt een gefaalde test alleen als rood als de fout een AssertionError is. De rijfouten
+// zijn inhoudelijk; een lege tabel of onware basis is een opzetfout en blijft een gewone Error.
+function foutnaam(run: () => void): string {
+  try {
+    run();
+  } catch (error) {
+    return error instanceof Error ? error.name : 'geen Error';
+  }
+  return 'geen fout';
+}
+
+describe('expectNegativeTable: foutsoort (leerpunt #875)', () => {
+  test('een rij die nog waar geeft is een AssertionError en noemt de rij', () => {
+    const zonderVeilig = (t: Toegang) => t.rol === 'eigenaar' && t.status === 'goedgekeurd';
+    const run = () => {
+      expectNegativeTable({ base: BASIS, check: zonderVeilig, cases: RIJEN });
+    };
+    expect(foutnaam(run)).toBe('AssertionError');
+    expect(run).toThrow(/"onveilig pad"/);
+  });
+
+  test('een rij die niets verandert is een AssertionError', () => {
+    expect(
+      foutnaam(() => {
+        expectNegativeTable({ base: { ...BASIS }, check: goed, cases: [{ name: 'leeg', change: (b) => b }] });
+      }),
+    ).toBe('AssertionError');
+  });
+
+  test('een onware basis blijft een gewone Error', () => {
+    expect(
+      foutnaam(() => {
+        expectNegativeTable({ base: { ...BASIS, status: 'vervallen' }, check: goed, cases: RIJEN });
+      }),
+    ).toBe('Error');
+  });
+
+  test('een lege tabel blijft een gewone Error', () => {
+    expect(
+      foutnaam(() => {
+        expectNegativeTable({ base: BASIS, check: goed, cases: [] });
+      }),
+    ).toBe('Error');
+  });
+});

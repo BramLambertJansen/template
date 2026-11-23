@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #474
+status: goedgekeurd # #474
 namespace: kooi
 ---
 

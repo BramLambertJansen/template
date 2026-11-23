@@ -534,15 +534,24 @@ async function lijstItems(ctx: Context, wie: Wie, extra: Readonly<Record<string,
 
 const idsUit = (paginas: readonly unknown[][]): string[] => paginas.flat().map((item) => idSchema.parse(item).id);
 
+// De zoekterm: de eerste tekstwaarde van sample.create in declaratievolgorde; lege of alleen-witruimte tekst telt niet (#813).
 function eersteTekst(invoer: Readonly<Record<string, unknown>>): string | undefined {
-  return Object.values(invoer).find((waarde): waarde is string => typeof waarde === 'string');
+  return Object.values(invoer).find((waarde): waarde is string => typeof waarde === 'string' && waarde.trim() !== '');
 }
 
-// De q-variant draait alleen als het lijstcontract een veld q heeft (zonder q is er geen zoekpad om te lekken). Weigert dat
-// veld de zoekterm uit de sample, dan is dat een probleem: de variant zou anders op een 400 afbreken.
+// De q-variant draait alleen als het lijstcontract een veld q heeft (zonder q is er geen zoekpad om te lekken). Geen
+// tekstwaarde in de sample of een veld dat de zoekterm weigert is een probleem: de variant zou anders stil wegvallen of op een
+// 400 afbreken.
 function zoekVariant(ctx: Context): { readonly q?: string; readonly problemen: string[] } {
+  if (ctx.lijstQ === undefined) return { problemen: [] };
   const q = eersteTekst(ctx.regel.sample.create);
-  if (ctx.lijstQ === undefined || q === undefined) return { problemen: [] };
+  if (q === undefined) {
+    return {
+      problemen: [
+        `${ctx.naam}: het lijstcontract '${ctx.regel.lijst}' kent q, maar sample.create heeft geen tekstwaarde; de zoekvariant is niet geprobeerd (test/security/resources.ts)`,
+      ],
+    };
+  }
   if (z.safeParse(ctx.lijstQ, q).success) return { q, problemen: [] };
   return {
     problemen: [
@@ -551,11 +560,24 @@ function zoekVariant(ctx: Context): { readonly q?: string; readonly problemen: s
   };
 }
 
+// De q-variant bewijst alleen iets als A met dezelfde term zijn rij uit sample.create (de eerste rij van A) terugvindt (#813).
+async function zoektermProblemen(ctx: Context, q: string): Promise<string[]> {
+  const [eigen] = ctx.ids.A;
+  if (eigen === undefined) throw new Error(`${ctx.naam}: A heeft geen rij`);
+  if (idsUit(await lijstItems(ctx, 'A', { q })).includes(eigen)) return [];
+  return [
+    `${ctx.naam}: de lijst van A met q '${q}' vindt de rij uit sample.create niet, dus de zoekvariant bewijst niets; zet het doorzochte veld als eerste tekstwaarde in sample.create (test/security/resources.ts)`,
+  ];
+}
+
 // De lijst van B bevat niets van A: gewoon, met q gelijk aan een waarde van A, en over meerdere pagina's.
 async function lijstProblemen(ctx: Context): Promise<string[]> {
   const { q, problemen } = zoekVariant(ctx);
   const varianten: [string, Record<string, unknown>][] = [['zonder zoekterm', {}]];
-  if (q !== undefined) varianten.push(['met q gelijk aan een waarde van A', { q }]);
+  if (q !== undefined) {
+    problemen.push(...(await zoektermProblemen(ctx, q)));
+    varianten.push(['met q gelijk aan een waarde van A', { q }]);
+  }
   for (const [omschrijving, extra] of varianten) {
     const paginas = await lijstItems(ctx, 'B', extra);
     const ids = idsUit(paginas);

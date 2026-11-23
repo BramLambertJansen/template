@@ -1,13 +1,14 @@
 # Agentdoorloop met bewijs
 
 De eigenaar beslist inhoudelijk met zijn merge ([ADR 0046](../template/adr/0046-werkstraat-en-beslisroute.md)). De agent schrijft de bedoelde status in
-het voorstel, bouwt, verzamelt bewijs en zet `gebouwd` zodra het bouwbewijs bestaat ([ADR 0046](../template/adr/0046-werkstraat-en-beslisroute.md) punt 10).
+het voorstel, bouwt en verzamelt bewijs; `gebouwd` volgt uit de AC-dekking op `main` ([ADR 0104](../template/adr/0104-gebouwd-uit-ac-dekking.md)).
 
 ## Lokale belasting
 
 De geheugengrens staat in `scripts/kit/geheugen.mjs`: weinig geheugen is minder dan 6 GiB beschikbaar; op macOS, waar
 libuv alleen vrije pagina's telt, een host met hooguit 8 GiB RAM. `GATE_WEINIG_GEHEUGEN=1` of `0` beslist voor de host. `pnpm gate:fast` meldt het onder de grens: lint en tests wachten dan op elkaar,
-terwijl de overige snelle gates hun bestaande baan houden. Alle controles draaien precies eenmaal, ook na rood.
+terwijl de overige snelle gates hun bestaande baan houden, en Vitest draait met hooguit twee workers in plaats van vier
+(`vitestWorkers`, leerpunt #866). Alle controles draaien precies eenmaal, ook na rood.
 Aanleiding: op de gedeelde 8-GiB-host liep een ESLint-proces van 1,8 GiB naast de tests; de swap was vol en de gate
 duurde 486 s met time-outs. Dit is een lokale waarneming, geen vaste looptijd. De CLI-regressies in
 `test/rails/gate-fast-memory.test.ts` bewaken beide planningen en het behoud van alle gates en exitcodes.
@@ -66,6 +67,12 @@ streefdoel en waarschuwingsdrempel per scenario, de "let op"-meldingen vanaf 85 
 en de metingen van hoofdstukken, regelboek, specs, ADR's, rules, skills en operations-docs tegenover hun streefwaarde (ADR 0065;
 nooit rood). `pnpm meting --trend` vergelijkt CI-rood en reviewrondes over de laatste tien gemergde PR's met
 de tien daarvoor (`scripts/kit/meting-trend.mjs`; leesbudget/AC-7).
+
+Controles in schaduw (R-PRINC-13, ADR 0106): `pnpm meting --schaduw [--branch <naam>] [--json]` geeft per regel van
+`.kit/schaduw.json` de treffers (meetregels `Schaduw`, `schaduwRegel` in `rails/hooks/lib/meting.mjs`), sleutels, sessies en
+de einddatum (`scripts/kit/meting-schaduw.mjs`); de andere tellingen negeren die regels. `pnpm ratchet` meldt treffers van
+een uitvoerder als `schaduw: <naam>: <treffer>` en drie dagen vóór `eind` `schaduw-termijn: <naam> loopt af op …`; na `eind`
+(commitdatum van HEAD) is `schaduw-termijn` strikt rood tot het besluit gemerged is (`scripts/kit/schaduw.mjs`).
 
 Wanneer een meting "let op" zegt (ADR 0070, spec `meting-stuurt`):
 
@@ -186,7 +193,8 @@ rolhek niet af (`timeout` wel); een `git -C <map>` die tussen fetch en branch ve
 `git worktree add <pad> <branch>`.
 
 Pre-push waarschuwt (blokkeert niet) als de branch achterloopt op `origin/main`; haal main dan binnen met
-`git merge origin/main` (`scripts/kit/main-achterstand.mjs`); in een agentworktree faalt die merge, zie hierboven. Een commitkop volgt conventional commits
+`git merge origin/main` (`scripts/kit/main-achterstand.mjs`); in een agentworktree faalt die merge, zie hierboven. In de cloud
+met `--no-commit` en dan `git commit -F <bestand>`, zie de [receptenkaart](recepten.md). Een commitkop volgt conventional commits
 (`fix(hooks): …`); de commit-msg-hook weigert een andere vorm (`scripts/kit/commit-msg.mjs`). Bij de start van een sessie op een
 featurebranch staat de open PR met checks en reviewstatus in de context, zodat een hervatte sessie rode checks en
 reviewcommentaar direct ziet. Lokaal geeft Claude Code een melding als het op de eigenaar wacht (WSL2: Windows-melding;
@@ -225,7 +233,7 @@ Hetzelfde patroon kan per Bash-versie op andere namen passen (#626).
 Begin met de taakrelevante secties van `node scripts/kit/feiten.mjs`, bijvoorbeeld `gates specs fase`.
 De hoofdsessie kiest de route: licht alleen voor beperkte fixes binnen bestaand gedrag; anders volledig — framework §8.
 Spec (app: architect; template: hoofdsessie, architect op verzoek van de eigenaar of de hoofdsessie; bij risicowerk stelt de hoofdsessie hem voor aan de eigenaar) of ADR krijgt direct de bedoelde status; de eigenaar merget
-(besluit) of sluit de PR (afwijzen). Ook `status: gebouwd` zetten hoofdsessie of architect, in de bouw-PR (ADR 0095).
+(besluit) of sluit de PR (afwijzen). `gebouwd` schrijft niemand: het volgt uit de AC-dekking (ADR 0104).
 
 ### Gerichte feedback en één volledige lokale eindgate
 
@@ -255,6 +263,12 @@ vraagt nieuw bewijs; geen hergebruik van een oude groene uitslag of generieke ca
 Overdracht bevat alleen doel, toepasselijke spec/contract of verwachte uitkomst uit de opdracht/PR, gewijzigde paden,
 open keuzes en echte checkuitslagen. Wie reviewt en wanneer de eigenaar dat overneemt: framework §8 (eisen aan de rollen).
 
+Vóór elke review draait de hoofdsessie `node scripts/kit/reviewpakket.mjs` en geeft het pad van stdout mee aan de
+reviewer; die leest het pakket met Read in plaats van losse `git log`/`git diff`-aanroepen. Bij een re-review:
+`--sinds <laatst gereviewde sha>`, dan bevat het alleen de fixcommits. Verder `--basis <ref>` (standaard `origin/main`) en
+`--spec <pad>`. Het pakket staat in `.reviewpakket/` (genegeerd); gegenereerde bestanden staan alleen in Stat; een
+niet-gecommitte wijziging staat er niet in en geeft een waarschuwing (`scripts/kit/reviewpakket.mjs:1`, spec `agents-leveren` punt 1d).
+
 De gerichte feedback volgt ADR 0057. De vertrouwde
 hooklader gebruikt main; een branch activeert geen nieuwe rechten. De live ruleset en strikte build-proof uit dat
 ADR zijn afzonderlijk vervolgwerk en worden door deze hookwijziging niet als gebouwd of actief verklaard; de GitHub App uit
@@ -279,8 +293,8 @@ nodig. De scope omvat bestaande componenten in `src/core/web/ui`, vaste teksten 
 reden en vervangend bewijs in de PR. Auth, API/contracten, queries, andere core, dependencies, agentinstructies, gedeelde
 fixtures en testsetup blijven erbuiten; een gemengde PR volgt de strengste route. Een beschermd pad
 (padtabel) voegt de eigenaar samen. Een app-repository krijgt deze core-uitzondering niet.
-Ook de nieuwe UI-mini-spec krijgt `status: gebouwd` in dezelfde PR, van de hoofdsessie of de architect (ADR 0095); geen
-script toetst nog of ze eerst `goedgekeurd` was, dat toetst de reviewer.
+Ook de nieuwe UI-mini-spec is gebouwd zodra de tests in dezelfde PR haar AC-id's noemen (ADR 0104); dat ze `goedgekeurd`
+is, toetst de reviewer.
 
 - **Spec met bouw (de standaard, ADR 0062):** een of meer specs met een eigenaarstatus (nieuw, volledig of mini, of nieuwe
   inhoud van een goedgekeurde spec) samen met code, tests en docs. Alles mag meewijzigen (ook `CHANGELOG.md`, de roadmap, `scripts/`,
@@ -321,8 +335,12 @@ push en PR-aanmaak horen bij de hoofdsessie. De bestaande veilige branchopruimin
 `pnpm pr:verify` draaien buiten de sandbox, lokaal en in de cloud. `gh pr create` werkt in de cloud niet (de GitHub-proxy
 weigert GraphQL); open de PR daar met `mcp__github__create_pull_request`, met de werkbranch als `head` en `main` als `base`. Claude
 Code vraagt de eigenaar één keer per PR (gemeten, F10 van de spec); keurt die niet goed, meld dat en probeer geen andere route. Lees het bewijs met
-`pnpm pr:verify <nummer>` of `gh api` (REST). De volledige route en de foutmeldingen staan in
-[ENVIRONMENT](../ENVIRONMENT.md#cloud-commit-push-pr-en-bewijs).
+`pnpm pr:verify <nummer>` of `gh api` (REST). Een andere vorm (een pipe, redirect of `&&` erachter, `git push -u`,
+`pnpm run test:db`) weigert het rolhek met de juiste vorm in de reden (spec `cloud-netwerkvorm`,
+`rails/hooks/lib/rolhek.mjs:2601`). De MCP-schrijftools (`push_files`, `create_or_update_file`, `delete_file`) slaan
+lefthook over en geven een vraag aan de eigenaar; push met `git push origin HEAD`. De volledige route en de foutmeldingen
+staan in [ENVIRONMENT](../ENVIRONMENT.md#cloud-commit-push-pr-en-bewijs); de commando's per handeling en runtime in de
+[receptenkaart](recepten.md) (`node scripts/kit/feiten.mjs recepten`).
 
 De expliciete sandbox-auto-allow en gerichte commandotoestemmingen vervangen geen inhoudelijke toestemming,
 broncodebeperkingen, checks of eigenaarmerge. Een lokale of beheerde Claude-instelling kan strenger zijn dan de
@@ -426,7 +444,9 @@ de eigenaar niet standaard om veilig uitvoerbare tests alsnog zelf te draaien.
 
 Een schone werkmap bewijst niet dat een branchwissel uitvoerbaar is. De Claude Code-sandbox kan bijvoorbeeld
 `.claude/skills/` niet schrijven ([sandboxgrens](../ENVIRONMENT.md#grens-van-de-sandbox)). Een `git switch` of
-fast-forward kan daarop halverwege afbreken, nadat andere bestanden of de index al veranderd zijn (leerpunt #338).
+fast-forward kan daarop halverwege afbreken, nadat andere bestanden of de index al veranderd zijn (leerpunt #338). Of
+git meldt `unable to unlink old '.claude/agents/…': Read-only file system`, wisselt toch en laat het bestand op de oude
+versie staan; de pre-push-gate wordt dan rood op een test van `main` die de nieuwe tekst eist (leerpunt #895).
 Dit geldt ook bij het starten van een nieuwe branch; controleer de gebruikte runtime en claim geen ongelezen sandboxinstelling.
 
 Haal eerst de bedoelde refs op met `git fetch origin`. Leg vóór iedere afzonderlijke branchwissel of fast-forward
@@ -436,7 +456,7 @@ de huidige commit, branch en werkmap vast. Vergelijk HEAD met de **precieze doel
 git rev-parse HEAD
 git branch --show-current
 git status --porcelain
-git diff --name-only HEAD <doelref> -- .claude/skills .claude/hooks .claude/settings.json .claude/settings.local.json
+git diff --name-only HEAD <doelref> -- .claude/skills .claude/agents .claude/hooks .claude/settings.json .claude/settings.local.json
 ```
 
 Neem ook eventuele andere door de runtime beschermde paden mee. Een wissel naar lokale `main` vergelijkt met `main`;
@@ -531,25 +551,24 @@ vervallen (ADR 0091): `pr:verify` leest `<git-dir>/rolhek-effect` niet meer; de 
 Een agent zet geen PR-label (R-ROL-08). De ruleset eist de verplichte checks op de uiteindelijke head-SHA, geen goedkeuring;
 een label telt niet (R-CI-07).
 
-**`gebouwd` in de bouw-PR** (ADR 0095). Bevat de PR de implementatie van de spec, dan zet de hoofdsessie of de architect
-de statusregel op `status: gebouwd`, zonder PR-nummer, in een gewone commit; dat kan vóór het openen van de PR. De developer
-schrijft die regel niet (het rolhek weigert het). Noemt de spec een roadmap-id (`ST-<n>` of "roadmap stuk <n>"), dan eist
-`check:roadmap` een wijziging van `docs/roadmap.md` in dezelfde PR; het vinkje verwijst naar een testpad of checknaam, zodat
-ook daar geen nummer nodig is. Zo draaien de checks op een gebouwde spec al in de bouw-PR: `check-docs` eist voor elk AC-id
-een getagde test en weigert een repopad dat niet bestaat zonder `(vervallen)`, `(nieuw)` of `(voorbeeld)` erachter (het
-merkteken mag op de volgende regel staan). Een `git merge origin/main` of een fix erna mag gewoon; de checks draaien opnieuw.
+**`gebouwd` volgt uit de AC-dekking** (ADR 0104). Een AC is gebouwd als een testbestand zijn volledige id
+(`<namespace>/AC-n`) als heel woord noemt; een `goedgekeurde` spec is gebouwd als elk levend eigen AC dat is, anders
+`deels <n>/<m>` (`node scripts/kit/feiten.mjs specs`, `rails/hooks/lib/ac-dekking.mjs`). Niemand schrijft een statusregel
+`gebouwd` of het merkteken `(nog niet gebouwd)` achter een AC: het rolhek weigert een nieuwe gebouwd-regel elke rol, en
+`pnpm ratchet` weigert een nieuwe gebouwd-regel, een nieuw merkteken en een AC dat op de merge-base met `origin/main` gebouwd
+was en in de werkmap geen test meer heeft (strikt kanaal, nooit in de baseline). Noemt de spec een roadmap-id (`ST-<n>` of
+"roadmap stuk <n>"), dan eist `check:roadmap` in de PR die haar volledig bouwt een wijziging van `docs/roadmap.md`; het vinkje
+verwijst naar een testpad of checknaam. Bij een spec met een gebouwd AC weigert `check-docs` een repopad dat niet bestaat
+zonder `(vervallen)`, `(nieuw)` of `(voorbeeld)` erachter (het merkteken mag op de volgende regel staan), behalve binnen het
+lijstitem van een nog niet gebouwd AC. Zonder merge-base (ondiepe kloon) toetsen alleen de boomregels, met één "let op".
 
-**Bouw-PR vergat de status:** een latere PR zet `status: gebouwd` met de hand; dezelfde checks toetsen die PR. Het
-statuscommando, de status-PR met bewijs van GitHub en de route na de merge zijn weg; de reviewer toetst of de bouw op
-`main` staat.
-
-**Bestaande regels `gebouwd # #<n>`** blijven staan: het nummer is commentaar en niemand zet ze om. De oude vorm met SHA
-(`gebouwd # #<n>; gevalideerd: <sha>`) weigert `check-docs`; alleen `; gevalideerd: <sha>` weghalen is vrij, een nieuwe SHA
-weigert het rolhek voor elke rol. ADR's hebben geen gebouwd-status: implementatiebewijs hoort bij hun gekoppelde spec.
+**Bestaande regels `gebouwd`** (ook `gebouwd # #<n>`) lezen alle checks als `goedgekeurd`; ongewijzigd laten mag, naar
+`goedgekeurd` zetten mag (hoofdsessie of architect). De oude vorm met SHA (`gebouwd # #<n>; gevalideerd: <sha>`) weigert
+`check-docs`. ADR's hebben geen gebouwd-status: implementatiebewijs hoort bij hun gekoppelde spec.
 
 **Levende spec** (ADR 0080 punt 3 en 4): een wijziging aan een bestaand mechanisme werkt de spec van dat mechanisme bij. Een
-gebouwde spec blijft in een besluit-PR `gebouwd`; elke nieuwe AC krijgt `- **<ns>/AC-n** (nog niet gebouwd)`, alleen op een id
-dat niet op main staat. De bouw-PR haalt de markering weg, voegt de test toe en laat de statusregel staan (ADR 0095 punt 5).
+nieuwe AC in een gebouwde spec krijgt alleen een nieuw id, zonder merkteken; tot haar test er is, is de spec `deels`
+(ADR 0104).
 Een AC-id verdwijnt nooit: een AC die vervalt, wordt `- **<ns>/AC-n** — Vervallen door ADR <nummer> … Was: …`, en de
 AC-dekking slaat haar alleen over als dat ADR in de ADR-map naast de specmap staat en `geaccepteerd` is; de reviewer legt
 haar naast dat ADR. Een vervallen spec krijgt `status: vervallen` of wordt verwijderd; er is geen archief meer (ADR 0089

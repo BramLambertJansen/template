@@ -97,7 +97,7 @@ services:
         condition: service_healthy
 
   mailpit:
-    image: axllent/mailpit:v1.31.4
+    image: axllent/mailpit:v1.31.4@sha256:b68349e3a014b90c5610bfb26b2ae36f3892d7b8cf25ee140c6c71c98d2fcf48
     ports:
       - "127.0.0.1:${MAIL_UI_PORT:-54324}:8025"
       - "127.0.0.1:${SMTP_PORT:-54325}:1025"
@@ -246,7 +246,7 @@ services:
   ui-runner:
     <<: *runner
     # Exact de versie van @playwright/test (framework §11); screenshot-baselines alleen in dit image.
-    image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+    image: mcr.microsoft.com/playwright:v1.65.1-noble@sha256:1507cbfc550a63a6b7396791ca4f00df17beb56342d2447b3f106c306f525579
     shm_size: 1gb
     command: ["node", "node_modules/@playwright/test/cli.js", "test"]
 
