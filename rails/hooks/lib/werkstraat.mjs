@@ -60,7 +60,8 @@ export function changedFiles(run, exists) {
   // Geen geciteerde paden: quotePath uit voor status (niet-ASCII letterlijk), -z voor diff (ook spaties en aanhalingstekens).
   const status = run('git', ['-c', 'core.quotePath=false', 'status', '--porcelain', '--untracked-files=all']);
   const local = changedFromStatus(status.output);
-  const base = run('git', ['merge-base', 'origin/main', 'HEAD']);
+  // Volle naam: een lokale branch `origin/main` mag de set gecontroleerde bestanden niet verkleinen (leerpunt #932).
+  const base = run('git', ['merge-base', 'refs/remotes/origin/main', 'HEAD']);
   if (base.code !== 0) return local;
   const diff = run('git', ['diff', '-z', '--name-only', '--diff-filter=d', `${base.output.trim()}...HEAD`]);
   const committed = diff.code === 0 ? diff.output.split('\0').filter((line) => line !== '') : [];
@@ -267,7 +268,7 @@ function mainLag(deps) {
     timeout: 5000,
     env: { GIT_TERMINAL_PROMPT: '0' },
   });
-  const counts = deps.run('git', ['rev-list', '--left-right', '--count', 'origin/main...HEAD']);
+  const counts = deps.run('git', ['rev-list', '--left-right', '--count', 'refs/remotes/origin/main...HEAD']);
   if (counts.code !== 0) return '';
   const behind = Number(counts.output.trim().split(/\s+/)[0]);
   const stale = fetched.code === 0 ? '' : 'origin/main ophalen mislukt (stand van de laatste fetch). ';
