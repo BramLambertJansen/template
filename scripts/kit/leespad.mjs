@@ -353,7 +353,12 @@ async function lezing(cwd, ref, bestanden) {
       .filter((p) => p.startsWith(`${map}/`))
       .map((p) => p.slice(map.length + 1))
       .filter((naam) => !naam.includes('/'));
-  return { lees, lezer: { lees: (pad) => lees(pad)?.toString() ?? null, lijst } };
+  // De boom voor de AC-dekking van `feiten specs` (ADR 0104): testbestanden, specs en ADR's in één `git cat-file --batch`.
+  const { boomOpBasis } = await import('./ac-dekking.mjs');
+  return {
+    lees,
+    lezer: { lees: (pad) => lees(pad)?.toString() ?? null, lijst, boom: () => boomOpBasis(cwd, ref) },
+  };
 }
 
 /**

@@ -50,12 +50,16 @@ export function validStatus(kind, status) {
     kind === 'adr' && (ADR_STATES.has(status) || /^vervangen door \d{4}$/.test(status));
 }
 
-/** @param {string} kind @param {string} line */
+/**
+ * Een oude `status: gebouwd` (met elk commentaar) is de eigenaarstatus `goedgekeurd`; gebouwd volgt uit de AC-dekking
+ * (ADR 0104, gebouwd-zonder-nummer/AC-17; `eigenaarStatus` in ./ac-dekking.mjs leest hetzelfde).
+ * @param {string} kind @param {string} line
+ */
 function statusValue(kind, line) {
   const value = (kind === 'spec'
     ? /^status: (voorstel|goedgekeurd|gebouwd|vervallen)(?:\s+#.*)?$/
     : /^Status: (voorgesteld|geaccepteerd|vervallen|vervangen door \d{4})(?:\s+(?:#|—|\().*)?$/).exec(line)?.[1];
-  return value ?? null;
+  return value === 'gebouwd' ? 'goedgekeurd' : (value ?? null);
 }
 
 /** @param {string[]} lines @param {number} statusIndex */
