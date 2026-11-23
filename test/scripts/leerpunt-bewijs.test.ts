@@ -88,8 +88,10 @@ describe('leerlus-bewijs/AC-1 welke leerpunten de PR sluit', () => {
 
   test('leerlus-bewijs/AC-1: leerpunt zonder regel in de sectie: rood met het nummer', () => {
     expect(plan('Fixes #9').fouten).toEqual(['#9: geen regel "- #9: …" in de sectie ## Leerpunt']);
+    // Sinds leerpunt #717 meldt de regel voor #8, dat de PR niet sluit, ook een eigen fout.
     expect(plan(sectie('- #8: trede Check; bewijs test/a.test.ts'), ['test/a.test.ts']).fouten).toEqual([
       '#9: geen regel "- #9: …" in de sectie ## Leerpunt',
+      '#8: staat in ## Leerpunt, maar de PR sluit het niet; voeg "Closes #8" toe aan de beschrijving',
     ]);
   });
 
