@@ -146,8 +146,8 @@ export function rolhekContext(root, cwd) {
       }
     },
     committed: committedIn(root, basis?.sha ?? null),
-    // Leerpunt #887: een testbestand is pas bestaand als het in de merge-base met het anker of origin/main staat.
-    bestaand: committedIn(root, basis?.sha ?? null),
+    // Leerpunt #887: een testbestand is pas bestaand als het op het anker of op origin/main staat.
+    bestaand: opMain(root, basis?.sha ?? null),
     isDir: (/** @type {string} */ rel) => safe(() => statSync(path.join(root, rel)).isDirectory()),
     // Een map als doel (rm -r, find -delete, cp -r): wat eronder staat, getrackt of nieuw en niet genegeerd (R-ROL-08).
     files: (/** @type {string} */ rel) =>
@@ -183,6 +183,33 @@ function committedIn(root, basis) {
     });
     if (bases.length > 0) return bases.some((tree) => exists(tree, rel));
     return exists('HEAD', rel) ? 'zonder-origin' : false;
+  };
+}
+
+/**
+ * Leerpunt #887: staat het pad in de tip van het anker of van origin/main? HEAD telt niet mee, want een agent kan HEAD
+ * verzetten (`checkout --orphan`, `reset --soft`). Is geen van beide leesbaar, dan 'zonder-origin': de aanroeper telt dat
+ * als bestaand (faalt dicht).
+ * @param {string} root
+ * @param {string | null} basis
+ * @returns {(rel: string) => boolean | 'zonder-origin'}
+ */
+export function opMain(root, basis) {
+  /** @type {string[] | undefined} */
+  let tips;
+  const exists = (/** @type {string} */ tree, /** @type {string} */ rel) =>
+    safe(() => git(root, ['cat-file', '-e', `${tree}:${rel}`]) === '');
+  return (rel) => {
+    tips ??= [basis, 'origin/main'].flatMap((ref) => {
+      if (ref === null) return [];
+      try {
+        const sha = git(root, ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]);
+        return /^[0-9a-f]{40}$/.test(sha) ? [sha] : [];
+      } catch {
+        return [];
+      }
+    });
+    return tips.length === 0 ? 'zonder-origin' : tips.some((tip) => exists(tip, rel));
   };
 }
 

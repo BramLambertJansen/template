@@ -39,8 +39,8 @@ import { afgeleid, globMatch, onderhoudVan, samengevoegd, templateVan } from './
  * `onderhoud`: de onderhoudsmodus is actief (vertrouwde configuratie en origin is die repository, ADR 0045 punt 8–9).
  * `onbekendeRol`: een subagent zonder bekende rol; telt als reviewer (alleen lezen).
  * `committed`: staat in de merge-base met het anker of met origin/main; 'zonder-origin' = beide onleesbaar en wel in HEAD (terugval).
- * `bestaand`: dezelfde toets voor testbestanden (leerpunt #887): alleen wat daar staat, is een bestaande test; ontbreekt hij,
- * dan telt elk testbestand op schijf als bestaand.
+ * `bestaand`: staat in de tip van het anker of van origin/main, los van HEAD (leerpunt #887): alleen dan is een testbestand
+ * een bestaande test; 'zonder-origin' = beide onleesbaar. Ontbreekt hij, dan telt elk testbestand op schijf als bestaand.
  * @typedef {{ deny: string[], ask: string[], context: string[], allow?: boolean }} Decision
  * @typedef {{ kind: 'write' | 'delete', after: string | null }} Change
  * @typedef {import('./shell.mjs').Command} Command
@@ -471,7 +471,7 @@ function decideFile({ rel, change, role }, ctx, decision) {
     decision.deny.push(`${rel}: de developer schrijft geen spec; dat doet de architect (R-WERK-07, ADR 0068 punt 4)`);
     return;
   }
-  // Leerpunt #887: bestaand is wat op origin/main of het anker staat (merge-base); een nieuw testbestand op de branch niet.
+  // Leerpunt #887: bestaand is wat op de tip van origin/main of het anker staat; een nieuw testbestand op de branch niet.
   // 'zonder-origin' (beide onleesbaar) en een ctx zonder `bestaand` tellen als bestaand: faalt dicht.
   if (matches(config.testpaden) && ctx.read(rel) !== null && (ctx.bestaand?.(rel) ?? true) !== false) {
     existingTest({ rel, change, role }, ctx, decision);
