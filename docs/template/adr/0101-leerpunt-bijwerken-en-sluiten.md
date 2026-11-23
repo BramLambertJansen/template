@@ -38,6 +38,16 @@ wacht op de eigenaar om een veld aan te vullen, en een opgelost leerpunt sluit a
    `--duplicate-of`. Elke andere vorm blijft ask. In de cloud mag de hoofdsessie de MCP-issuetool voor dezelfde acties
    gebruiken; daar draait geen rolhek, dus daar is punt 1 tot 3 een afspraak. Subagents schrijven geen issues (ongewijzigd).
 
+5. **Afstemmen in de leerpuntstap.** Vóór een nieuw leerpunt zoekt de hoofdsessie in `opleveren` stap 8 de open leerpunten
+   die het werk van de sessie raakt: `gh issue list --repo <repo> --label leerpunt --state open --search <trefwoord>`, met
+   trefwoorden uit de geraakte paden en regels, niet de hele lijst (R-DOC-09). Per geraakt leerpunt:
+   - **opgelost**: de PR krijgt de sectie `## Leerpunt` met bewijs (0078 punt 1), of na de merge sluit de hoofdsessie het
+     volgens punt 2; zonder bewijs geen sluiten, alleen een comment;
+   - **deels opgelost**: een comment `deels: <wat gedaan is>; open: <wat nog moet>` met de PR, en zo nodig de body bijgewerkt
+     zodat hij alleen het resterende beschrijft;
+   - **zelfde les opnieuw**: een comment met de nieuwe reproductie op het bestaande leerpunt in plaats van een nieuw issue.
+   De slotregel van stap 8 noemt per geraakt leerpunt welke van de drie het werd, of "geen open leerpunt geraakt".
+
 ## Alternatieven
 
 - **Alleen comments.** Afgewezen door de eigenaar: duplicaten en onvolledige leerpunten blijven dan bij de eigenaar liggen.
@@ -52,6 +62,7 @@ wacht op de eigenaar om een veld aan te vullen, en een opgelost leerpunt sluit a
   `template.repository`. Een fork past ze mee aan (`docs/nieuwe-app.md`).
 - `scripts/kit/leerpunt-check.mjs` erkent `duplicaat van #<nr>` en `opgelost door #<pr>`; zonder die erkenning zet hij
   `leerpunt-zonder-bewijs` bij elk duplicaat en bij elke sluiting na een PR zonder sluitwoord.
-- `opleveren` stap 8 krijgt de doelcheck, het sluiten na merge en de duplicaatregel.
+- `opleveren` stap 8 krijgt de doelcheck, het sluiten na merge, de duplicaatregel en de afstemming uit punt 5.
+- Minder dubbele leerpunten (nu `eerder: #nnn` achteraf); per oplevering één tot enkele gerichte zoekopdrachten extra.
 - Restrisico: in de cloud kan een agent een PR labelen of het verkeerde issue sluiten; de issue-check zet
   `leerpunt-zonder-bewijs` bij sluiten zonder bewijs, en de eigenaar kan heropenen.
