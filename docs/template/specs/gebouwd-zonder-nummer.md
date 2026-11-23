@@ -75,8 +75,8 @@ de roadmap-id-regel en de dood-padcheck.
 
 ```js
 export function boomWerkmap(root)          // git ls-files + inhoud van schijf, zoals trackedFiles in check-docs
-export function boomOpBasis(root, sha)     // git ls-tree -r op sha; testbestanden, specs en ADR's in één `git cat-file --batch`
-export function dekkingTegenBasis(root)    // → { basis: Map | null, nu: Map, hernoemd } ; basis null zonder merge-base
+export function boomOpBasis(root, sha)     // git ls-tree -r op sha; testbestanden, specs en ADR's in één `git cat-file --batch`; onleesbaar: true als dat faalt (AC-29)
+export function dekkingTegenBasis(root)    // → { sha, basis: Map | null, nu: Map, hernoemd, bomen } ; sha en basis null zonder merge-base
 ```
 
 `boomOpBasis` leest in diezelfde `cat-file --batch` ook `docs/template/adr/*.md` en `docs/adr/*.md`, zodat `vervallenAcs`
@@ -118,6 +118,9 @@ Teksten, letterlijk (`<id>` is `namespace` of anders de bestandsnaam zonder `.md
   `<specpad>: <AC-n> krijgt "(nog niet gebouwd)"; dat merkteken vervalt, een AC zonder test is vanzelf niet gebouwd (ADR 0104)`.
 - `check-roadmap`, sleutel `spec:roadmap:<specpad>` (blijft):
   `<specpad>: wordt in deze PR volledig gebouwd en noemt <roadmap-id>, maar docs/roadmap.md wijzigt niet in deze PR`.
+- Merge-base gevonden, maar de boom daar onleesbaar (`git ls-tree` of `git cat-file --batch` faalt), sleutel
+  `docs:ac:basis-onleesbaar`, strikt (AC-29):
+  `ac-dekking: de boom op de merge-base <sha> is niet te lezen (git ls-tree of git cat-file faalt); de AC-dekking tegenover main toetst niets, haal origin/main opnieuw op (ADR 0104)`.
 - Zonder merge-base: geen nieuwe melding. De bestaande melding van `zonderBasis` in `scripts/kit/leesbudget.mjs` (de enige
   "let op" zonder basis in `docsMeldingen`, nooit rood) noemt de AC-dekking erbij en wordt:
   `let op: geen merge-base met origin/main; de krimpcontrole (krimp-op-normen) en de AC-dekking tegenover main (ADR 0104) toetsen niets`.
@@ -258,6 +261,11 @@ Teksten, letterlijk (`<id>` is `namespace` of anders de bestandsnaam zonder `.md
   `docs/specs/_template.md`, `docs/specs/_mini.md` en `scripts/kit/templates/spec.md.tmpl`, dan vindt hij niets; in
   `docs/framework.md` staat hij alleen in R-WERK-08, als de oude vorm die als `goedgekeurd` telt.
   Toets: `test/rails/gebouwd-zonder-nummer.test.ts`
+- **gebouwd-zonder-nummer/AC-29** — Gegeven een werkmap met een merge-base met `origin/main` waarvan de boom niet te lezen
+  is (`git ls-tree` of `git cat-file --batch` eindigt met een fout, of `cat-file` meldt een object als ontbrekend), wanneer `pnpm ratchet`
+  draait, dan is er precies één strikte overtreding `docs:ac:basis-onleesbaar` met de tekst uit Hergebruik en UX, en geen
+  AC-verlies, `status-gebouwd` of merkteken op grond van een lege basis. Een leesbare basis zonder testbestanden, specs of
+  ADR's geeft die overtreding niet. Toets: `test/rails/ac-dekking-basis.test.ts`
 
 ## Randgevallen
 
@@ -279,6 +287,7 @@ Teksten, letterlijk (`<id>` is `namespace` of anders de bestandsnaam zonder `.md
 | Deels gebouwde spec noemt een pad dat nog komt, buiten een AC-item | dood-padmelding; zet `(nieuw)` erachter (aanvaard risico, ADR 0104) | n.v.t. |
 | Spec op `voorstel` heeft al tests met haar AC-ids | stand `niet`; `goedgekeurd` maken is een eigenaarstatus, daarna volgt de stand (AC-16) | n.v.t. |
 | Geen merge-base (sandbox, CI met `fetch-depth: 1`) | alleen de boomregels toetsen; één "let op" (AC-26). In CI is `docs:normen:geen-basis` al rood, dus een PR in CI heeft altijd een basis | n.v.t. |
+| Merge-base bestaat, boom daar onleesbaar (ontbrekend object, git-fout) | rood: `docs:ac:basis-onleesbaar` (AC-29); geen stil groen met een lege basis | n.v.t. |
 | Kruisverwijzing `andere-spec/AC-n` in een test | telt voor die andere spec als gebouwd als die het AC definieert (AC-16); geen eigen AC van deze spec | n.v.t. |
 
 ## Raakt ook
@@ -380,7 +389,7 @@ Teksten, letterlijk (`<id>` is `namespace` of anders de bestandsnaam zonder `.md
   AC-22, AC-23 en AC-25 (via `specs(lezer, map)` met een lezer in het geheugen). Daarnaast een importtoets: de
   importspecificaties van `rails/hooks/lib/ac-dekking.mjs` (nieuw) bevatten geen `node:fs`, `node:child_process` of `scripts/kit`.
 - Tegenover de merge-base: `test/rails/ac-dekking-basis.test.ts` (nieuw), een tijdelijke git-repo met `origin/main` per
-  geval: AC-18, AC-19, AC-21 en AC-26; per geval ook dat `.kit/baseline.json` na `ratchet:update` geen nieuwe sleutel heeft.
+  geval: AC-18, AC-19, AC-21, AC-26 en AC-29; per geval ook dat `.kit/baseline.json` na `ratchet:update` geen nieuwe sleutel heeft.
 - `check-roadmap`: `test/rails/check-roadmap-dekking.test.ts` (nieuw), met `roadmapMeldingen` en bronnen in het geheugen: AC-24.
 - Rolhek: `test/hooks/rolhek-gebouwd-afgeleid.test.ts` (nieuw), per rol en per stand van de vertrouwde basis: AC-20.
 - Bestandstoetsen: `test/rails/gebouwd-zonder-nummer.test.ts`: AC-27 en AC-28; AC-10 tot en met AC-12 en AC-14 blijven.

@@ -400,3 +400,91 @@ describe('AC-26: zonder merge-base met origin/main toetsen alleen de boomregels'
     expect(await sleutels(met)).toStrictEqual(await sleutels(zonder));
   });
 });
+
+// --- AC-29 -----------------------------------------------------------------------------------------------------------------
+
+const ONLEESBAAR_SLEUTEL = 'docs:ac:basis-onleesbaar';
+const onleesbaarMelding = (sha: string) =>
+  `ac-dekking: de boom op de merge-base ${sha} is niet te lezen (git ls-tree of git cat-file faalt); de AC-dekking tegenover main toetst niets, haal origin/main opnieuw op (ADR 0104)`;
+
+function gitUit(cwd: string, ...args: string[]): string {
+  const r = spawnSync('git', args, { cwd, encoding: 'utf8' });
+  expect(r.status, r.stderr).toBe(0);
+  return r.stdout.trim();
+}
+
+/** Verwijdert het losse object achter `rev` (bijv. `HEAD:test/x.test.ts` of `HEAD:test`); de basiscommit blijft bestaan. */
+function verwijderObject(dir: string, rev: string) {
+  const id = gitUit(dir, 'rev-parse', rev);
+  rmSync(path.join(dir, '.git', 'objects', id.slice(0, 2), id.slice(2)), { force: true });
+}
+
+const isBasisSleutel = (sleutel: string) => isAcSleutel(sleutel) || isStatusSleutel(sleutel) || isMerkSleutel(sleutel);
+
+describe('AC-29: een merge-base met een onleesbare boom is rood, geen stil groen met een lege basis (strikt kanaal)', () => {
+  // Basis én head hebben een oude gebouwd-regel en een merkteken: een lege basis zou status-gebouwd en merkteken-overtredingen
+  // en (bij een testbestand zonder basis) AC-verlies geven.
+  const BASIS = {
+    [SPEC]: spec('gebouwd # #5', [ac(1), acMerk(2)]),
+    [TEST]: testTekst('xn/AC-1'),
+  };
+
+  async function onleesbaar(rev: string) {
+    const r = await repo({ basis: BASIS });
+    // Controle: voor het wegnemen van het object is de stand groen.
+    await groen(r, isBasisSleutel);
+    const sha = gitUit(r.dir, 'rev-parse', 'refs/remotes/origin/main');
+    expect(gitUit(r.dir, 'merge-base', 'HEAD', 'refs/remotes/origin/main')).toBe(sha);
+    verwijderObject(r.dir, rev);
+    return { r, sha };
+  }
+
+  test('gebouwd-zonder-nummer/AC-29: een ontbrekend blob (git cat-file faalt): precies één docs:ac:basis-onleesbaar met de tekst uit de spec', async () => {
+    const { r, sha } = await onleesbaar(`HEAD:${TEST}`);
+    await rood(r, ONLEESBAAR_SLEUTEL, onleesbaarMelding(sha));
+    expect((await krimpSleutels(r)).filter(isBasisSleutel)).toStrictEqual([ONLEESBAAR_SLEUTEL]);
+  });
+
+  test('gebouwd-zonder-nummer/AC-29: een ontbrekend tree-object (git ls-tree faalt): precies één docs:ac:basis-onleesbaar met de tekst uit de spec', async () => {
+    const { r, sha } = await onleesbaar('HEAD:test');
+    await rood(r, ONLEESBAAR_SLEUTEL, onleesbaarMelding(sha));
+    expect((await krimpSleutels(r)).filter(isBasisSleutel)).toStrictEqual([ONLEESBAAR_SLEUTEL]);
+  });
+
+  test('gebouwd-zonder-nummer/AC-29: een ontbrekend blob geeft geen AC-verlies, status-gebouwd of merkteken uit een lege basis', async () => {
+    const { r } = await onleesbaar(`HEAD:${SPEC}`);
+    const sleutels = await krimpSleutels(r);
+    expect(sleutels.filter((s) => isAcSleutel(s) && s !== ONLEESBAAR_SLEUTEL)).toStrictEqual([]);
+    expect(sleutels.filter(isStatusSleutel)).toStrictEqual([]);
+    expect(sleutels.filter(isMerkSleutel)).toStrictEqual([]);
+    expect(sleutels.filter((s) => s === ONLEESBAAR_SLEUTEL)).toHaveLength(1);
+  });
+
+  test("gebouwd-zonder-nummer/AC-29: groen: een leesbare basis zonder testbestanden, specs of ADR's geeft docs:ac:basis-onleesbaar niet", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'ac-dekking-basis-'));
+    dirs.push(dir);
+    schrijf(dir, { 'package.json': JSON.stringify({ scripts: {} }), 'README.md': '# Leeg\n' });
+    git(dir, 'init', '-q');
+    git(dir, 'add', '-A');
+    git(dir, 'commit', '-qm', 'basis');
+    git(dir, 'update-ref', 'refs/remotes/origin/main', 'HEAD');
+    const r: Repo = { dir, voor: { violations: [], krimp: [] } };
+    expect(await krimpSleutels(r)).not.toContain(ONLEESBAAR_SLEUTEL);
+    expect(sleutelsVan(await docsViolations(dir))).not.toContain(ONLEESBAAR_SLEUTEL);
+  });
+
+  test("gebouwd-zonder-nummer/AC-29: groen: een leesbare basis met tests, specs en ADR's geeft docs:ac:basis-onleesbaar niet", async () => {
+    const r = await repo({ basis: BASIS });
+    expect(await krimpSleutels(r)).not.toContain(ONLEESBAAR_SLEUTEL);
+  });
+
+  // Aangenomen contract: boomOpBasis gooit niet, maar zet `onleesbaar: true` op de teruggegeven boom (anders false).
+  test('gebouwd-zonder-nummer/AC-29: boomOpBasis meldt een onleesbare boom met onleesbaar: true, een leesbare met false', async () => {
+    const { boomOpBasis } = await import('../../scripts/kit/ac-dekking.mjs');
+    const leesbaar = await repo({ basis: BASIS });
+    const sha = gitUit(leesbaar.dir, 'rev-parse', 'refs/remotes/origin/main');
+    expect(boomOpBasis(leesbaar.dir, sha)).toMatchObject({ onleesbaar: false });
+    const { r, sha: kapot } = await onleesbaar(`HEAD:${TEST}`);
+    expect(boomOpBasis(r.dir, kapot)).toMatchObject({ onleesbaar: true });
+  });
+});
