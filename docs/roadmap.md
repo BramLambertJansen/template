@@ -207,13 +207,17 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (B-6: niet geparkeerd besloten)
 - [ ] **ST-10a (P1) — back-up en herstel als vaste bouwsteen** ([ADR 0108](template/adr/0108-back-up-en-herstel.md),
   spec `back-up-en-herstel`, beide voorgesteld). Het deel "back-up en herstel" van ST-10, los te bouwen vóór een provider-ADR.
-  **Werk:** deel A (rol `app_backup`, `app.after_restore`, `deploy/backup.env`, image `backup` zonder Node, opruimtaak
-  elders, nachtelijke export, dodemansknop, wekelijkse oefening, herstel naar een nieuwe database, runbook en herstelblad),
+  **Werk:** deel A (rol `app_backup`, nazorg-SQL na herstel, `deploy/backup.env`, image en service in `deploy/backup/`
+  zonder Node, opruimtaak in een beschermde environment, nachtelijke export, dodemansknop, wekelijkse oefening, herstel naar
+  een nieuwe database, runbook en herstelblad),
   daarna deel B (export vóór elke release, poort op een recente oefening en een bevestigd herstelblad).
   **Afhankelijkheden:** merge van ADR 0108; deel B wacht op de release-workflow van ST-10; de schakelaar voor
   achtergrondtaken na herstel komt met ST-03.
   **Klaar als:** de AC's van de spec hebben een test; één volledig herstel volgens het runbook door iemand anders dan de
   bouwer, met de gemeten tijd in de PR.
+  **Eisen uit het regelboek** (R-DOC-10: tot de bouw staan ze hier; de bouw-PR zet ze terug in het regelboek): R-DB-01 krijgt
+  de rol `app_backup` (`LOGIN`, `BYPASSRLS`, lid van `pg_read_all_data`, geen schrijfrecht); §3 krijgt die rol als enige
+  uitzondering op "geen rol heeft `BYPASSRLS`"; R-SEC-06: back-upgeheimen in GitHub alleen in de environment `backup`.
   aanleiding: `docs/template/adr/0108-back-up-en-herstel.md` (verzoek van de eigenaar, 2026-11-23; eerste app met geld)
 - [ ] **Omhulsels met opties en xargs-optiewaarden in het rolhek.** `splitCommand` (`rails/hooks/lib/shell.mjs`) stopt bij de eerste optie van een
   omhulsel en kent `setsid`, `timeout` en `stdbuf` niet, zodat `env -i gh …`, `nice -n 1 gh …` en `timeout 9 gh …` voor de hoofdsessie de regels voor
