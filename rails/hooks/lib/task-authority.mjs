@@ -1,5 +1,6 @@
 // De caller leest het register uit main. Een status in de werkmap is geen toestemming (ADR 0046). Records in `decisions`
 // geven sinds ADR 0063 punt 5 niets meer; readRegistry leest ze nog, omdat oudere commits van main ze bevatten.
+import { gebouwdRegel } from './ac-dekking.mjs';
 import { documentInfo, documentKind, validStatus } from './document-state.mjs';
 
 /** @typedef {{ file: string, digest: string, repository: string, branch: string, status: string, paths: string[] }} OwnerDecision */
@@ -77,11 +78,17 @@ export function readRegistry(text) {
   return { version: 1, requiredChecks, decisions };
 }
 
-/** @param {{ file: string, text: string }} target @param {Authority} authority */
+/**
+ * Een oude `status: gebouwd` leest als `goedgekeurd`; vastlegbaar is hij alleen letterlijk zoals in de vertrouwde basis, dus
+ * `gebouwd` naar `goedgekeurd` is geen "status uit main" (ADR 0104, gebouwd-zonder-nummer/AC-20).
+ * @param {{ file: string, text: string }} target @param {Authority} authority
+ */
 export function canRecordStatus(target, authority) {
   const info = documentInfo(target.file, target.text);
-  if (info === null || info.status === 'gebouwd' || !authority.safe(target.file)) return false;
-  const trusted = documentInfo(target.file, authority.trusted(target.file) ?? '');
+  if (info === null || !authority.safe(target.file)) return false;
+  const basis = authority.trusted(target.file) ?? '';
+  if (info.kind === 'spec' && gebouwdRegel(target.text) !== gebouwdRegel(basis)) return false;
+  const trusted = documentInfo(target.file, basis);
   return trusted !== null && !['voorstel', 'voorgesteld'].includes(trusted.status) && trusted.digest === info.digest &&
     trusted.status === info.status;
 }
