@@ -27,6 +27,7 @@ import { afgeleid, globMatch, onderhoudVan, samengevoegd, templateVan } from './
  *   committed: (rel: string) => boolean | 'zonder-origin', isDir: (rel: string) => boolean, branch: string,
  *   authority?: import('./task-authority.mjs').Authority | null, runnerTrusted?: boolean | (() => boolean),
  *   mergeTrusted?: boolean | (() => boolean), kitTrusted?: boolean | (() => boolean),
+ *   ankerVerouderd?: boolean | (() => boolean),
  *   onbekendeRol?: boolean, onderhoud?: boolean, files?: (rel: string) => string[],
  *   gevolgd?: (paden: readonly string[]) => Set<string>, werkmappen?: () => string[], netwerkvormen?: readonly string[] }} Ctx
  * `netwerkvormen`: de patronen uit `sandbox.excludedCommands` (`git push origin HEAD`, `git commit *`) uit de vertrouwde basis
@@ -296,7 +297,18 @@ function decideKitScript({ command, role }, { ctx, script }, decision) {
   else if (!exact) decision.deny.push(script.vorm);
   else if (decision.deny.length + decision.ask.length > 0) return;
   else if (ctx.cwd === ctx.root && (script.vertrouwd === 'kit' ? kitIsTrusted(ctx) : mergeIsTrusted(ctx))) decision.allow = true;
-  else decision.deny.push(script.basis);
+  else decision.deny.push(ankerLooptAchter(ctx) ? `${script.basis}. ${ANKER_ACHTER}` : script.basis);
+}
+
+// Leerpunt #888: alleen een uitleg bij de weigering, geen uitzondering.
+const ANKER_ACHTER = 'Hier wijkt alleen het anker af: het anker loopt achter op origin/main, want main kreeg na de ' +
+  'sessiestart een merge die scripts of rails wijzigt. Een nieuwe sessie of /clear zet het anker opnieuw; anders sluit de ' +
+  'eigenaar het zelf';
+
+/** Alleen `true` telt. @param {{ ankerVerouderd?: boolean | (() => boolean) }} ctx */
+function ankerLooptAchter(ctx) {
+  const value = typeof ctx.ankerVerouderd === 'function' ? ctx.ankerVerouderd() : ctx.ankerVerouderd;
+  return value === true;
 }
 
 /** @param {{ mergeTrusted?: boolean | (() => boolean) }} ctx */

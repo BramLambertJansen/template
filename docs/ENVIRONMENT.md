@@ -176,7 +176,9 @@ Tijdens een sessie beweegt het niet mee met `main`. Dat merk je bij `pnpm pr:mer
 de hostbestanden (`package.json`, `.npmrc`, …) in de werkmap gelijk zijn aan de merge-base met het anker (`trustedMerge` in
 `rails/hooks/lib/runner-authority.mjs`). Komt er ná de sessiestart een PR op `main` die een van die paden wijzigt, en staat de
 werkmap op of voorbij die nieuwe `main`, dan weigert het rolhek met "scripts, rails en hostbestanden … gelijk aan het anker
-(ADR 0069)", ook vanaf een schone kopie van `main`. Opnieuw proberen helpt niet. Vergelijk het anker met de remote:
+(ADR 0069)", ook vanaf een schone kopie van `main`. Is de werkmap gelijk aan `origin/main` en loopt alleen het anker achter,
+dan zegt de weigering dat ("het anker loopt achter op origin/main", leerpunt #888); een nieuwe sessie of `/clear` zet het
+anker opnieuw. Opnieuw proberen helpt niet. Vergelijk het anker met de remote:
 
 1. In de sessie of een eigen terminal, in de root van de werkmap die de weigering gaf (bij een worktree de worktree zelf, niet
    de hoofdcheckout): vraag de remote om `main`. Verwacht: één regel met een SHA en `refs/heads/main`.

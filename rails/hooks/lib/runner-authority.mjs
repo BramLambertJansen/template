@@ -81,6 +81,20 @@ export function trustedKitScript(root, basis = trustedBase(root, undefined)) {
 }
 
 /**
+ * Leerpunt #888: weigert de ankertoets alleen omdat het anker achterloopt? Waar: `MERGE_FILES` wijken af van de merge-base
+ * met het anker, maar zijn gelijk aan die met origin/main, en origin/main is een andere commit dan het anker. Alleen voor
+ * de melding; het geeft nooit iets vrij.
+ * @param {string} root
+ * @param {{ sha: string } | null} basis
+ */
+export function ankerVerouderd(root, basis) {
+  if (basis === null) return false;
+  const origin = gitText(root, ['rev-parse', '--verify', '--quiet', 'origin/main^{commit}'])?.trim();
+  if (origin === undefined || !/^[0-9a-f]{40}$/.test(origin) || origin === basis.sha) return false;
+  return !unchangedFrom(root, basis.sha, MERGE_FILES) && unchangedFrom(root, origin, MERGE_FILES);
+}
+
+/**
  * `pnpm pr:merge` (ADR 0069 punt 4) en `pnpm pr:resolve` (ADR 0098) zonder prompt: modus `niet-kritiek` in het anker en de
  * toets van `trustedKitScript`. Zonder basis (null) is het antwoord nee.
  * @param {string} root
