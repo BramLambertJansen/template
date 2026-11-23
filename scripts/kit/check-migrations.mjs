@@ -14,7 +14,7 @@ import path from 'node:path';
 import { templateUrl } from './check-core.mjs';
 
 export const DIR = 'db/migrations';
-export const BASE = 'origin/main';
+export const BASE = 'refs/remotes/origin/main';
 export const NAAM = /^(\d{14})_[a-z0-9_]+\.sql$/;
 const TEMPLATE_REF = 'refs/remotes/template/main';
 const OPGEHAALDE_REF = 'refs/check-migrations/template';
@@ -189,7 +189,7 @@ export function vergelijkingspunt(root, base) {
 
 /** @param {string} base */
 export function baseOnleesbaar(base) {
-  return `${base} is niet te lezen; haal hem op (git fetch origin main) of gebruik in CI fetch-depth: 0`;
+  return `${base.replace(/^refs\/remotes\//, '')} is niet te lezen; haal hem op (git fetch origin main) of gebruik in CI fetch-depth: 0`;
 }
 
 /**
@@ -238,7 +238,7 @@ function main() {
   if (templateOntbreekt) {
     const url = vertrouwdeTemplateUrl();
     if (url === undefined) {
-      fouten = [...fouten, `template.repository ontbreekt of is ongeldig in ${BASE}:.claude/gates.json`];
+      fouten = [...fouten, `template.repository ontbreekt of is ongeldig in origin/main:.claude/gates.json`];
     } else {
       try {
         git('.', ['fetch', '--no-tags', '--quiet', url, `+refs/heads/main:${OPGEHAALDE_REF}`]);
@@ -253,7 +253,7 @@ function main() {
     process.exit(1);
   }
   console.info(
-    `✓ check:migrations: geen gewijzigde of verwijderde migraties ten opzichte van ${BASE}, versies uniek, nieuwe migraties later dan de bestaande`,
+    `✓ check:migrations: geen gewijzigde of verwijderde migraties ten opzichte van origin/main, versies uniek, nieuwe migraties later dan de bestaande`,
   );
 }
 

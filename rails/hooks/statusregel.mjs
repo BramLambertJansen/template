@@ -62,7 +62,7 @@ async function main() {
   const cwdVeld = veld(payload, 'cwd');
   const cwd = typeof cwdVeld === 'string' ? cwdVeld : process.cwd();
   const root = git(cwd, ['rev-parse', '--show-toplevel']) ?? cwd;
-  const achter = Number(git(root, ['rev-list', '--count', 'HEAD..origin/main']) ?? Number.NaN);
+  const achter = Number(git(root, ['rev-list', '--count', 'HEAD..refs/remotes/origin/main']) ?? Number.NaN);
   const status = git(root, ['status', '--porcelain', '--untracked-files=all']) ?? '';
   const stack = poorten(leesEnvLocal(root));
   const open = await Promise.all(stack.map(({ poort }) => luistert(poort)));

@@ -24,7 +24,7 @@ import { herijkingMeldingen } from './roadmap-herijking.mjs';
 /** @typedef {{ regel: number, aangevinkt: boolean, vervallen: boolean, tekst: string }} Item */
 /** @typedef {{ scripts: Readonly<Record<string, unknown>>, testpaden: readonly string[], bestanden: readonly string[], register: ReadonlySet<string> }} Kader */
 
-const BASE = 'origin/main';
+const BASE = 'refs/remotes/origin/main';
 const ROADMAP = 'docs/roadmap.md';
 const ARCHIEF = 'docs/roadmap-archief.md';
 const SPEC_PAD = /^docs\/(?:template\/)?specs\/[^_/][^/]*\.md$/;
@@ -360,7 +360,7 @@ export function roadmapVanRepo(root = '.', base = BASE) {
     return [
       {
         key: 'roadmap:basis',
-        message: `${base} is niet te lezen; roadmap-vinkjes niet gecontroleerd (git fetch origin main of fetch-depth: 0)`,
+        message: `${base.replace(/^refs\/remotes\//, '')} is niet te lezen; roadmap-vinkjes niet gecontroleerd (git fetch origin main of fetch-depth: 0)`,
       },
     ];
   }

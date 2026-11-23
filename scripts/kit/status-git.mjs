@@ -6,6 +6,6 @@ export function unchangedHead(root, expected) {
   return (
     gitText(root, ['rev-parse', 'HEAD'])?.trim() === expected.head &&
     gitText(root, ['branch', '--show-current'])?.trim() === expected.branch &&
-    gitText(root, ['rev-parse', 'origin/main'])?.trim() === expected.base
+    gitText(root, ['rev-parse', 'refs/remotes/origin/main'])?.trim() === expected.base
   );
 }
