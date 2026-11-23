@@ -82,8 +82,9 @@ export function dekkingTegenBasis(root)    // → { basis: Map | null, nu: Map, 
 `boomOpBasis` leest in diezelfde `cat-file --batch` ook `docs/template/adr/*.md` en `docs/adr/*.md`, zodat `vervallenAcs`
 op de basis dezelfde ADR-map ziet als in de werkmap.
 
-De merge-base komt uit één bestaande functie (`basisVan` in `scripts/kit/leesbudget.mjs` of `mergeBasis` in
-`scripts/kit/check-docs.mjs`; de bouw houdt er één over). `hernoemd` volgt `git diff -M --name-status <basis>` en dient
+De merge-base komt uit `basisVan` in `scripts/kit/leesbudget.mjs`; `scripts/kit/ac-dekking.mjs` (nieuw) gebruikt die, en `mergeBasis` in
+`scripts/kit/check-docs.mjs` gaat erin op. De eigen varianten in `scripts/kit/ac-toets.mjs` en `scripts/kit/schaduw.mjs` blijven
+(buiten scope). `hernoemd` volgt `git diff -M --name-status <basis>` en dient
 alleen voor specs: een spec die op de basis onder een andere naam stond, wordt met de dekking van die oude naam vergeleken.
 Een hernoemd testbestand heeft `hernoemd` niet nodig; dat valt al onder "een testbestand noemt het id". `<spec>` in de
 sleutel `docs:ac:<spec>:<AC-n>` is de bestandsnaam zonder `.md` van de spec in de werkmap (zoals `spec.naam` in
@@ -208,12 +209,12 @@ Teksten, letterlijk (`<id>` is `namespace` of anders de bestandsnaam zonder `.md
 - **gebouwd-zonder-nummer/AC-20** — Gegeven een spec in de vertrouwde basis, wanneer hoofdsessie, architect of developer via
   Edit of Write een statusregel schrijft die met `status: gebouwd` begint en niet letterlijk zo in de vertrouwde basis
   staat, ook bij een nieuw bestand, dan weigert het rolhek met de rolhektekst uit Hergebruik en UX, ook als de vertrouwde
-  basis een besluit voor die spec heeft of de nieuwe tekst gelijk is aan main. Toegestaan voor hoofdsessie en architect:
+  basis een besluit voor die spec heeft of alleen de statusregel verschilt (de weg "status uit main"). Toegestaan voor hoofdsessie en architect:
   `status: gebouwd` (met elk commentaar) naar `status: goedgekeurd` bij verder gelijke inhoud, en een wijziging elders in
   een spec met een ongewijzigde oude `gebouwd`-regel volgens de regels voor `goedgekeurd`. De developer krijgt
-  `status: gebouwd` naar `status: goedgekeurd` geweigerd met de bestaande tekst
-  `<pad>: de developer schrijft geen spec; dat doet de architect (R-WERK-07, ADR 0068 punt 4)`; `canRecordStatus` geeft
-  daarvoor `false`. `beslisOvergang` geeft nooit meer de uitslag `gebouwd`.
+  `status: gebouwd` naar `status: goedgekeurd` geweigerd door `recordedStatus` met de ingekorte tekst
+  `<pad>: deze statusovergang heeft geen geldig besluit uit de vertrouwde basis`, omdat `canRecordStatus` daarvoor `false`
+  geeft. `beslisOvergang` geeft nooit meer de uitslag `gebouwd`.
   Toets: `test/hooks/rolhek-gebouwd-afgeleid.test.ts` (nieuw)
 - **gebouwd-zonder-nummer/AC-21** — Gegeven een AC-regel `- **<ns>/AC-n** (nog niet gebouwd)` die zo niet op de merge-base
   stond (nieuwe AC met merkteken, of merkteken op een bestaande AC gezet), wanneer `pnpm ratchet` draait, dan is de uitslag
@@ -324,9 +325,10 @@ Teksten, letterlijk (`<id>` is `namespace` of anders de bestandsnaam zonder `.md
 - `rails/hooks/lib/rolhek.mjs`: `inPrGebouwd` vervalt; de weigering van AC-20 komt vóór `statusZonderBesluit` en
   `recordedStatus`; de twee ingekorte teksten uit Hergebruik en UX.
 - `canRecordStatus` in `rails/hooks/lib/task-authority.mjs` wijzigt van gedrag: de tak `info.status === 'gebouwd'` vervalt
-  (`documentInfo` geeft die status niet meer), en in plaats daarvan geeft hij `false` als de letterlijke statusregel van
-  de nieuwe tekst verschilt van die in de vertrouwde basis. Zo telt `gebouwd` naar `goedgekeurd` niet als "status uit
-  main" en valt de developer op `developerSpec` (AC-20); een ongewijzigde oude `gebouwd`-regel bij gelijke inhoud blijft
+  (`documentInfo` geeft die status niet meer), en in plaats daarvan geeft hij `false` als `gebouwdRegel(nieuw) !== gebouwdRegel(vertrouwd)`
+  (alleen dat geval; een commentaarwijziging als `goedgekeurd # #12` naar `goedgekeurd` en de `Status:`-regel van een ADR
+  blijven zoals nu). Zo telt `gebouwd` naar `goedgekeurd` niet als "status uit main" en weigert `recordedStatus` het voor
+  de developer (AC-20); een ongewijzigde oude `gebouwd`-regel bij gelijke inhoud blijft
   vastlegbaar zoals nu een `goedgekeurde`.
 
 **Tests die wijzigen** (eigenaarakkoord per R-TEST-02: besluit OV-7)
