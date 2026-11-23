@@ -79,7 +79,7 @@ describe('rolhek-lezen/AC-1: de leeslijst van de reviewer', () => {
     'pnpm leespad --json',
     'pnpm leespad --ref origin/main',
     'pnpm leespad --json --ref origin/main',
-    // pnpm meting: vlaggen --json --pr-tabel --trend --help, met waarde --branch --sessie
+    // pnpm meting: vlaggen --json --pr-tabel --trend --schaduw --help, met waarde --branch --sessie
     'pnpm meting',
     'pnpm meting --json',
     'pnpm meting --pr-tabel',
@@ -87,9 +87,22 @@ describe('rolhek-lezen/AC-1: de leeslijst van de reviewer', () => {
     'pnpm meting --help',
     'pnpm meting --branch feat/x',
     'pnpm meting --sessie abc-123',
+    // schaduwmodus/AC-20: --schaduw sinds spec schaduwmodus B-11
+    'pnpm meting --schaduw',
+    'pnpm meting --schaduw --json',
+    'pnpm meting --schaduw --branch feat/x',
     'pnpm meting --json --branch claude/rolhek-lezen --sessie s_01:x',
   ])('toegestaan: %s', (command) => {
     expect(verdict(command, REVIEWER)).toBe('allow');
+  });
+
+  test('schaduwmodus/AC-20: de reviewer mag pnpm meting --schaduw draaien, ook met --json of --branch <naam>', () => {
+    for (const command of [
+      'pnpm meting --schaduw',
+      'pnpm meting --schaduw --json',
+      'pnpm meting --schaduw --branch feat/x',
+    ])
+      expect(verdict(command, REVIEWER), command).toBe('allow');
   });
 
   // Elk geval heeft een basis uit de tabel hierboven die zonder de afwijking slaagt.
@@ -292,7 +305,10 @@ describe('rolhek-lezen/AC-3: weigermelding en ongewijzigde leescommando’s', ()
     { command: 'gh run view 1 --web', opties: ['--log', '--log-failed', '--json', '--jq', '--job'] },
     { command: 'gh run list --web', opties: ['--branch', '--workflow', '--limit', '--json', '--jq'] },
     { command: 'pnpm leespad --write', opties: ['--json', '--ref'] },
-    { command: 'pnpm meting --write', opties: ['--json', '--pr-tabel', '--trend', '--help', '--branch', '--sessie'] },
+    {
+      command: 'pnpm meting --write',
+      opties: ['--json', '--pr-tabel', '--trend', '--schaduw', '--help', '--branch', '--sessie'],
+    },
   ])('$command: de weigering noemt de toegestane opties', ({ command, opties }) => {
     const melding = run(command, REVIEWER).deny.join('\n');
     for (const optie of opties) expect(melding).toContain(optie);

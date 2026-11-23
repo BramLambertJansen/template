@@ -201,3 +201,50 @@ describe('schaduw-register: aangepast en verlengen', { timeout: 60_000 }, () => 
     expect(await register({ basis: [regel], register: [regel] })).toEqual([]);
   });
 });
+
+describe('schaduw-register: een andere drempel zonder aangepast (B-7)', { timeout: 60_000 }, () => {
+  const ANDERE_DREMPEL =
+    'drempel anders dan op de merge-base zonder dat aangepast is opgehoogd; een aanpassing hoogt aangepast op (ADR 0106 punt 6)';
+  const anders = { ...DREMPEL, aanpassen: 'minder dan 3 treffers' };
+
+  test('schaduwmodus/AC-16: een andere drempel met aangepast 0 geeft precies één overtreding', async () => {
+    const violations = await register({ basis: [controle()], register: [controle({ drempel: anders })] });
+    expect(violations).toHaveLength(1);
+    expect(violations[0]?.message).toContain(ANDERE_DREMPEL);
+  });
+
+  test('schaduwmodus/AC-16: een andere drempel met een later eind geeft nog steeds precies één overtreding', async () => {
+    const violations = await register({
+      basis: [controle({ eind: '2026-11-10' })],
+      register: [controle({ eind: '2026-11-12', drempel: anders })],
+    });
+    expect(violations).toHaveLength(1);
+    expect(violations[0]?.message).toContain(ANDERE_DREMPEL);
+    expect(tekst(violations)).not.toContain('einddatum later dan op de merge-base');
+  });
+
+  test('schaduwmodus/AC-16: dezelfde drempel en hetzelfde eind met aangepast 0 geeft niets', async () => {
+    expect(await register({ basis: [controle()], register: [controle()] })).toEqual([]);
+  });
+});
+
+describe('schaduw-register: de spec moet genormaliseerd zijn (B-8)', { timeout: 60_000 }, () => {
+  const extra = {
+    extraBestanden: { 'docs/template/adr/0106-schaduwmodus-met-tijdgrens.md': '# ADR 0106\n' },
+    extraMappen: ['docs/template/specs/sub'],
+  };
+
+  test.each([
+    'docs/template/specs/../adr/0106-schaduwmodus-met-tijdgrens.md',
+    'docs/template/specs/./x.md',
+    'docs/template/specs//x.md',
+    'docs/template/specs/sub',
+  ])('schaduwmodus/AC-17: spec %s meldt dat het bestand niet bestaat', async (spec) => {
+    const violations = await register({ ...extra, register: [controle({ spec })] });
+    expect(tekst(violations)).toContain(`proef: spec ${spec} bestaat niet`);
+  });
+
+  test('schaduwmodus/AC-17: de genormaliseerde spec docs/template/specs/x.md is groen', async () => {
+    expect(await register({ ...extra, register: [controle({ spec: 'docs/template/specs/x.md' })] })).toEqual([]);
+  });
+});
