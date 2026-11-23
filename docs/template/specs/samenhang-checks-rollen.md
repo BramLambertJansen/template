@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #443
+status: goedgekeurd # #443
 namespace: samenhang-checks-rollen
 ---
 

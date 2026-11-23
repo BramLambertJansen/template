@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #353
+status: goedgekeurd # #353
 namespace: semantische-tokens
 ---
 

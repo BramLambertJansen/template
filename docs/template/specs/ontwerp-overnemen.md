@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #358
+status: goedgekeurd # #358
 namespace: ontwerp-overnemen
 ---
 

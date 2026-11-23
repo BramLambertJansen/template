@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #796
+status: goedgekeurd # #796
 namespace: agent-samenvoegen
 ---
 

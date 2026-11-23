@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #347
+status: goedgekeurd # #347
 namespace: typografie-en-layout
 sjabloon: mini
 scope: functionele-ui

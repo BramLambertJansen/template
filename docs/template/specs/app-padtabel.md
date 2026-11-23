@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #748
+status: goedgekeurd # #748
 namespace: app-padtabel
 ---
 

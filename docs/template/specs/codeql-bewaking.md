@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #663
+status: goedgekeurd # #663
 namespace: codeql-bewaking
 sjabloon: mini
 ---

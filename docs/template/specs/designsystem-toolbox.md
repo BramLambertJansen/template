@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #507
+status: goedgekeurd # #507
 namespace: designsystem-toolbox
 sjabloon: mini
 scope: functionele-ui

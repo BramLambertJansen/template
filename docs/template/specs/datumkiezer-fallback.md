@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #296
+status: goedgekeurd # #296
 namespace: datumkiezer-fallback
 sjabloon: mini
 scope: functionele-ui

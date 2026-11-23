@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #538
+status: goedgekeurd # #538
 namespace: leerlus-bewijs
 ---
 

@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #667
+status: goedgekeurd # #667
 namespace: claude-sandbox-werkstraat
 model: sonnet
 ---

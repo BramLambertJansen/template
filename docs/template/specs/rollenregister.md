@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #715
+status: goedgekeurd # #715
 namespace: rollenregister
 ---
 

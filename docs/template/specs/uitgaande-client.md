@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #515
+status: goedgekeurd # #515
 namespace: uitgaande-client
 ---
 

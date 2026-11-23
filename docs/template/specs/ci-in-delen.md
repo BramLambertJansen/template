@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #503
+status: goedgekeurd # #503
 namespace: ci-in-delen
 ---
 
