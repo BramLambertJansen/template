@@ -69,12 +69,12 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
 2. Stop en meld, forceer niets, als: `git status --porcelain` niet leeg is; de lokale branch niet `headRefName` is; of de lokale branch
    commits heeft die niet in `headRefOid` zitten (ongepusht werk).
 3. Eerst `git fetch origin` en de controle uit `docs/operations/agent-doorloop.md`, "Branchwissels in een sandbox",
-   vóór iedere afzonderlijke wissel of fast-forward. Raakt de stap een door de runtime beschermd bestand (zoals onder
+   vóór de wissel. Raakt de stap een door de runtime beschermd bestand (zoals onder
    `.claude/skills/`), probeer de wissel niet: een aparte schone worktree als dat is toegestaan, anders de eigenaar.
    Daarna `git switch --detach origin/main`, met de controle tegen die doelref: een achterlopende lokale `main` kan
    oude beschermde bestanden bevatten die de sandbox niet terugzet. Lokale `main` bijwerken is geen opruimstap; dat doet de
    eigenaar buiten de sandbox met `git switch main` en `git merge --ff-only origin/main`. Geen rebase: `main` wordt squash-gemerged.
-   Faalt een wissel of `--ff-only`, stop dan; lees HEAD, branch, werkmap en index volgens die procedure vóór herstel of
+   Faalt de wissel, stop dan; lees HEAD, branch, werkmap en index volgens die procedure vóór herstel of
    een commit. Nooit `reset --hard`; meld wat nog niet is opgeruimd.
 4. Een andere worktree van die branch eerst weghalen: `git worktree remove <pad>` zonder `--force` (git weigert anders de branch te verwijderen).
    De worktree waarin je zelf draait ruimt de runtime of de eigenaar op; heeft stap 3 de branch daar losgemaakt, dan lukt stap 5 gewoon.
@@ -82,7 +82,7 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
 6. Staat de remote branch er nog: `gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<headRefName>"`, als los commando
    (spec cloud-netwerkvorm; `git push origin --delete` weigert het rolhek). Nooit `main`; het rolhek weigert dat ook.
    Lokaal kan deze stap een vraag aan de eigenaar geven.
-7. Eindmelding: wat is opgeruimd (lokale branch, remote branch, worktree) en de nieuwe SHA van `main`.
+7. Eindmelding: wat is opgeruimd (lokale branch, remote branch, worktree) en de SHA van HEAD na stap 3.
    Vaste slotregel, ook als het antwoord "niets" is: "Wat moet er in het spec-sjabloon, het gouden pad of een check veranderen
    zodat de volgende feature dit niet opnieuw betaalt?"
 8. Leerpunt (ADR 0059): Loop de signaalmomenten van deze sessie af: slotvraag, derde CI-ronde, eigenaarcorrectie (pnpm meting),
