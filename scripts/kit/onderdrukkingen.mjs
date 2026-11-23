@@ -180,7 +180,7 @@ const lees = (root, file) => (existsSync(path.join(root, file)) ? readFileSync(p
  * @param {string} root
  */
 function uitGit(root) {
-  const basis = git(root, ['merge-base', 'origin/main', 'HEAD'])?.trim() ?? '';
+  const basis = git(root, ['merge-base', 'refs/remotes/origin/main', 'HEAD'])?.trim() ?? '';
   const nu = lees(root, BESTAND);
   const configNu = lees(root, CONFIG) ?? '';
   if (basis === '')

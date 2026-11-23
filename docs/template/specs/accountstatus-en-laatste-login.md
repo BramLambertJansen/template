@@ -1,5 +1,5 @@
 ---
-status: gebouwd
+status: goedgekeurd
 namespace: account-lifecycle
 ---
 

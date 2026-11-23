@@ -1,5 +1,5 @@
 ---
-status: gebouwd
+status: goedgekeurd
 namespace: offline-en-print
 sjabloon: mini
 scope: functionele-ui

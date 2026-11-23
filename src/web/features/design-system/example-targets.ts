@@ -46,10 +46,10 @@ const groups: readonly ExampleTarget[] = [
     text: 'Selecteer rijen, verwerk ze en kies Afronden; mislukte rijen blijven geselecteerd.',
   },
   {
-    names: ['DataTable', 'DataTableHeading'],
+    names: ['DataTable', 'DataTableHeading', 'ExportCsvButton'],
     id: 'example-data-table',
     vak: 'gegevens',
-    text: 'Zoek, filter, sorteer, selecteer en laad lokale rijen.',
+    text: 'Zoek, filter, sorteer, selecteer en laad lokale rijen; exporteer de getoonde rijen als CSV.',
   },
   {
     names: ['Tabs'],

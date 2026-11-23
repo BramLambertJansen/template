@@ -1,5 +1,5 @@
 ---
-status: gebouwd
+status: goedgekeurd
 namespace: stappenformulier
 sjabloon: mini
 scope: functionele-ui

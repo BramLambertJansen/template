@@ -158,8 +158,9 @@ function baselineSleutels(): string[] {
 }
 
 describe('vervallen-documenten-weg/AC-2 status', () => {
-  test.each(['rolhek-vooraf', 'sandbox-plaatshouders'])('vervallen-documenten-weg/AC-2: %s heeft status gebouwd', (naam) => {
-    expect(statusVan(naam)).toMatch(/^gebouwd\b/);
+  // GEWIJZIGD (gebouwd-zonder-nummer/AC-27, ADR 0104): alle `status: gebouwd` zijn omgezet naar `goedgekeurd`; "gebouwd" volgt uit de AC-dekking.
+  test.each(['rolhek-vooraf', 'sandbox-plaatshouders'])('vervallen-documenten-weg/AC-2: %s heeft status goedgekeurd', (naam) => {
+    expect(statusVan(naam)).toMatch(/^goedgekeurd\b/);
   });
 
   test.each(['agent-samenvoegen', 'gebouwd-zonder-nummer'])(

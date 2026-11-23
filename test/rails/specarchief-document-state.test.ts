@@ -72,7 +72,8 @@ describe('specarchief-en-bouwvorm/AC-6: feiten en leespad tellen het archief nie
   const lezer = { lees: (pad: string) => BESTANDEN[pad] ?? null, lijst: (map: string) => MAPPEN[map] ?? [] };
 
   test('specarchief-en-bouwvorm/AC-6 feiten.mjs specs noemt alleen docs/specs/a.md', () => {
-    expect(specs(lezer)).toStrictEqual([{ spec: 'a.md', status: 'goedgekeurd' }]);
+    // GEWIJZIGD (gebouwd-zonder-nummer/AC-16, ADR 0104): `feiten specs` toont ook de afgeleide stand en de AC-tellingen.
+    expect(specs(lezer)).toStrictEqual([{ spec: 'a.md', status: 'goedgekeurd', stand: 'niet', gebouwd: 0, levend: 1 }]);
   });
 
   test('specarchief-en-bouwvorm/AC-6 pnpm leespad telt één spec, ook met een geneste map in het archief', () => {
@@ -93,13 +94,15 @@ describe('specarchief-en-bouwvorm/AC-7: een levende spec en de markering (nog ni
     expect(uitslag.uitslag).toBe('besluit');
   });
 
-  test('specarchief-en-bouwvorm/AC-7 markering weg met gebouwd # #<deze PR>: nieuw bouwbewijs (gebouwd)', () => {
+  // GEWIJZIGD (gebouwd-zonder-nummer/AC-20, ADR 0104): `beslisOvergang` kent geen uitslag `gebouwd` meer; markering weg met
+  // een ander PR-nummer in de statusregel (commentaar) en gelijke inhoud is een vrije wijziging.
+  test('specarchief-en-bouwvorm/AC-7 markering weg met gebouwd # #<deze PR>: vrij (geen bouwbewijs meer)', () => {
     const uitslag = beslisOvergang(
       SPEC,
       spec('gebouwd # #120', [NIEUW_GEMARKEERD]),
       spec('gebouwd # #130', [NIEUW_KAAL]),
     );
-    expect(uitslag.uitslag).toBe('gebouwd');
+    expect(uitslag.uitslag).toBe('vrij');
   });
 });
 

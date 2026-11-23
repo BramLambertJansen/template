@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #747
+status: goedgekeurd # #747
 namespace: template-repo
 ---
 

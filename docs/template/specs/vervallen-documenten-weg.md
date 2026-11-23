@@ -1,5 +1,5 @@
 ---
-status: gebouwd
+status: goedgekeurd
 namespace: vervallen-documenten-weg
 ---
 
@@ -80,7 +80,7 @@ spec blijft `goedgekeurd` tot PR 2 en gaat daar naar `gebouwd`.
   verwijderen, en de bestaande tests en specs die daarmee meegaan (hieronder, "In PR 1"). Bewijst AC-1, AC-2, AC-3, AC-4,
   AC-5 en AC-7, met de tests uit het Testplan.
 - **PR 2**: de check (AC-6), de regelboektekst, de `Herzien:`-regel in ADR 0095, `A4_MELDING`, en de bestaande
-  tests en specs uit "In PR 2". Bewijst AC-6 en opnieuw AC-7; zet `status: gebouwd` op deze spec.
+  tests en specs uit "In PR 2". Bewijst AC-6 en opnieuw AC-7 (de statusregel van toen; sinds ADR 0104 volgt gebouwd uit de AC-dekking).
 
 **Werkstappen zonder AC** (eigenaarbesluit 2026-11-19: tekst, geen gedrag; de review toetst ze letterlijk).
 

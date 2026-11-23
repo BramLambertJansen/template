@@ -177,7 +177,7 @@ function ghExec(endpoint) {
 function main() {
   const root = process.cwd();
   const nummer = argumenten(process.argv.slice(2));
-  const base = gitText(root, ['rev-parse', 'origin/main'])?.trim();
+  const base = gitText(root, ['rev-parse', 'refs/remotes/origin/main'])?.trim();
   const authority = base === undefined ? null : readAuthority({ root, base });
   if (authority === null) throw new Error('Geen leesbare vertrouwde basis');
   console.log(leesPr(maakApi(ghExec), { repository: authority.repository, nummer }));

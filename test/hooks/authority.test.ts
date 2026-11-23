@@ -91,8 +91,14 @@ describe('documentInfo: inhoud en afgeleide status scheiden', () => {
     expect(info?.digest).not.toBe(DIGEST);
   });
 
-  test.each(['voorstel', 'goedgekeurd', 'gebouwd', 'vervallen'])('specstatus %s is geldig', (status) => {
-    expect(documentInfo(SPEC, PROPOSED.replace('status: voorstel', `status: ${status}`))?.status).toBe(status);
+  // GEWIJZIGD (gebouwd-zonder-nummer/AC-17, ADR 0104): een oude `status: gebouwd` leest als `goedgekeurd`.
+  test.each([
+    ['voorstel', 'voorstel'],
+    ['goedgekeurd', 'goedgekeurd'],
+    ['gebouwd', 'goedgekeurd'],
+    ['vervallen', 'vervallen'],
+  ])('specstatus %s is geldig', (status, gelezen) => {
+    expect(documentInfo(SPEC, PROPOSED.replace('status: voorstel', `status: ${status}`))?.status).toBe(gelezen);
   });
 
   test.each(['voorgesteld', 'geaccepteerd', 'vervangen door 0028', 'vervallen'])(
@@ -309,7 +315,16 @@ describe('canRecordStatus: alleen inhoudelijk bewezen administratie', () => {
     expect(canRecordStatus({ file: ADR, text: ADR_ACCEPTED }, { ...accepted, registry: registry([]) })).toBe(false);
   });
 
-  test.each([PROPOSED, APPROVED, BUILT])('gebouwd wordt nooit door statusadministratie toegestaan', (trusted) => {
-    expect(canRecordStatus({ file: SPEC, text: BUILT }, authority({ trusted: () => trusted }))).toBe(false);
-  });
+  // GEWIJZIGD (gebouwd-zonder-nummer/AC-20, ADR 0104): een nieuwe `gebouwd`-regel wordt nooit vastgelegd; staat dezelfde
+  // letterlijke regel al in de vertrouwde basis, dan verandert de administratie niets aan `gebouwd`.
+  test.each([
+    [PROPOSED, false],
+    [APPROVED, false],
+    [BUILT, true],
+  ])(
+    'een gebouwd-regel die afwijkt van de vertrouwde basis wordt niet door statusadministratie toegestaan',
+    (trusted, verwacht) => {
+      expect(canRecordStatus({ file: SPEC, text: BUILT }, authority({ trusted: () => trusted }))).toBe(verwacht);
+    },
+  );
 });

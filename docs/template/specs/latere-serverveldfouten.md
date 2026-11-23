@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #297
+status: goedgekeurd # #297
 namespace: latere-serverveldfouten
 sjabloon: mini
 scope: functionele-ui

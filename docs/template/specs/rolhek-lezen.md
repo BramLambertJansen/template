@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #687
+status: goedgekeurd # #687
 namespace: rolhek-lezen
 ---
 

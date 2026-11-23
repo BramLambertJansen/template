@@ -6,7 +6,8 @@
 import path from 'node:path';
 import { gitSubcommand, globTekstRegex, ONZEKERE_TEKST, parseCommands, programName, splitCommand, tmpdirLetterlijk, tmpdirWoord, tokenize, writeTargets, zetVariabele } from './shell.mjs';
 import { GIT_VORMEN, gitLeesvorm, insideRepo, lezerPaden, pathspecBinnen } from './rolhek-lezers.mjs';
-import { A4_MELDING, archiefBron, beslisOvergang, builtReference, documentInfo, documentKind, isArchief, isHerschrijving } from './document-state.mjs';
+import { gebouwdRegel } from './ac-dekking.mjs';
+import { A4_MELDING, archiefBron, beslisOvergang, documentInfo, documentKind, isArchief, isHerschrijving } from './document-state.mjs';
 import { canRecordStatus } from './task-authority.mjs';
 import { automaticRunner } from './runner-authority.mjs';
 import { isCoreUiSource, testChangeRisk } from './functional-ui.mjs';
@@ -24,9 +25,11 @@ import { afgeleid, globMatch, onderhoudVan, samengevoegd, templateVan } from './
  * voorReview-pad een gate (faalt dicht). `onderhoud`: de repository waarin de onderhoudsmodus geldt (ADR 0045 punt 8).
  * `template`: de repository van de template, ook in een app (spec template-repo); ontbreekt hij, dan geen leerpuntdoel.
  * @typedef {{ root: string, cwd: string, config: Config, read: (rel: string) => string | null,
- *   committed: (rel: string) => boolean | 'zonder-origin', isDir: (rel: string) => boolean, branch: string,
+ *   committed: (rel: string) => boolean | 'zonder-origin', bestaand?: (rel: string) => boolean | 'zonder-origin',
+ *   isDir: (rel: string) => boolean, branch: string,
  *   authority?: import('./task-authority.mjs').Authority | null, runnerTrusted?: boolean | (() => boolean),
  *   mergeTrusted?: boolean | (() => boolean), kitTrusted?: boolean | (() => boolean),
+ *   ankerVerouderd?: boolean | ((modus: 'merge' | 'kit') => boolean),
  *   onbekendeRol?: boolean, onderhoud?: boolean, files?: (rel: string) => string[],
  *   gevolgd?: (paden: readonly string[]) => Set<string>, werkmappen?: () => string[], netwerkvormen?: readonly string[] }} Ctx
  * `netwerkvormen`: de patronen uit `sandbox.excludedCommands` (`git push origin HEAD`, `git commit *`) uit de vertrouwde basis
@@ -37,7 +40,10 @@ import { afgeleid, globMatch, onderhoudVan, samengevoegd, templateVan } from './
  * --porcelain` (AC-15); ontbreekt hij of gooit hij, dan telt alleen `root`. Beide roept het rolhek hooguit één keer per beslissing aan.
  * `onderhoud`: de onderhoudsmodus is actief (vertrouwde configuratie en origin is die repository, ADR 0045 punt 8–9).
  * `onbekendeRol`: een subagent zonder bekende rol; telt als reviewer (alleen lezen).
- * `committed`: staat in de merge-base met het anker of met origin/main; 'zonder-origin' = beide onleesbaar en wel in HEAD (terugval).
+ * `committed`: staat in de tip van het anker of van origin/main, los van HEAD (leerpunt #927); 'zonder-origin' = beide
+ * onleesbaar en het bestand staat op schijf of in HEAD (faalt dicht).
+ * `bestaand`: staat in de tip van het anker of van origin/main, los van HEAD (leerpunt #887): alleen dan is een testbestand
+ * een bestaande test; 'zonder-origin' = beide onleesbaar. Ontbreekt hij, dan telt elk testbestand op schijf als bestaand.
  * @typedef {{ deny: string[], ask: string[], context: string[], allow?: boolean }} Decision
  * @typedef {{ kind: 'write' | 'delete', after: string | null }} Change
  * @typedef {import('./shell.mjs').Command} Command
@@ -296,7 +302,24 @@ function decideKitScript({ command, role }, { ctx, script }, decision) {
   else if (!exact) decision.deny.push(script.vorm);
   else if (decision.deny.length + decision.ask.length > 0) return;
   else if (ctx.cwd === ctx.root && (script.vertrouwd === 'kit' ? kitIsTrusted(ctx) : mergeIsTrusted(ctx))) decision.allow = true;
-  else decision.deny.push(script.basis);
+  else {
+    const achter = ctx.cwd === ctx.root && ankerLooptAchter(ctx, script.vertrouwd);
+    decision.deny.push(achter ? `${script.basis}. ${ANKER_ACHTER}` : script.basis);
+  }
+}
+
+// Leerpunt #888: alleen een uitleg bij de weigering, geen uitzondering.
+const ANKER_ACHTER = 'Hier wijkt alleen het anker af: het anker loopt achter op origin/main, want main kreeg na de ' +
+  'sessiestart een merge die scripts of rails wijzigt. Een nieuwe sessie, /clear of /compact zet het anker opnieuw; ' +
+  'anders doet de eigenaar het zelf';
+
+/**
+ * Alleen `true` telt.
+ * @param {{ ankerVerouderd?: boolean | ((modus: 'merge' | 'kit') => boolean) }} ctx @param {'merge' | 'kit'} modus
+ */
+function ankerLooptAchter(ctx, modus) {
+  const value = typeof ctx.ankerVerouderd === 'function' ? ctx.ankerVerouderd(modus) : ctx.ankerVerouderd;
+  return value === true;
 }
 
 /** @param {{ mergeTrusted?: boolean | (() => boolean) }} ctx */
@@ -437,7 +460,7 @@ function decideFile({ rel, change, role }, ctx, decision) {
   }
   const committed = matches(config.migraties) ? ctx.committed(rel) : false;
   if (committed !== false) {
-    const hint = committed === 'zonder-origin' ? ' (origin/main onleesbaar, daarom vergeleken met HEAD: draai git fetch origin)' : '';
+    const hint = committed === 'zonder-origin' ? ' (origin/main en het anker onleesbaar, daarom telt elke bestaande migratie als gecommit: draai git fetch origin)' : '';
     decision.deny.push(`${rel} is een gecommitte migratie: wijzig hem nooit, maak een nieuwe (AGENTS.md)${hint}`);
     return;
   }
@@ -458,18 +481,35 @@ function decideFile({ rel, change, role }, ctx, decision) {
     decision.deny.push(`${rel}: ${A4_MELDING}`);
     return;
   }
+  // ADR 0104: gebouwd volgt uit de AC-dekking op main; een gebouwd-regel die niet letterlijk in de basis staat, weigert het
+  // rolhek elke rol, vóór elk besluit en vóór "status uit main" (gebouwd-zonder-nummer/AC-20).
+  if (nieuweGebouwdRegel(rel, change, basis)) {
+    decision.deny.push(`${rel}: status: gebouwd schrijft niemand meer; gebouwd volgt uit de AC-dekking op main (ADR 0104)`);
+    return;
+  }
   // ADR 0046 punt 6: architect en hoofdsessie schrijven de eigenaarstatus in het voorstel; de merge van de eigenaar beslist.
-  // ADR 0095: ook `status: gebouwd` in de bouw-PR, zonder PR-nummer; alleen een nieuwe `; gevalideerd: <sha>` (de oude
-  // bewijsvorm) blijft voor elke rol geweigerd.
-  const inPrGebouwd = overgang?.uitslag === 'gebouwd' && builtReference(change.after ?? '')?.sha === undefined;
-  const eigenaarstatus = beslisrol && (a4Toegestaan || inPrGebouwd || ['besluit', 'vrij'].includes(overgang?.uitslag ?? ''));
+  const eigenaarstatus = beslisrol && (a4Toegestaan || ['besluit', 'vrij'].includes(overgang?.uitslag ?? ''));
   if (!eigenaarstatus && statusZonderBesluit({ rel, change, role, overgang, basis }, ctx, decision)) return;
   if (role === 'developer' && developerSpec(rel, change, basis)) {
     decision.deny.push(`${rel}: de developer schrijft geen spec; dat doet de architect (R-WERK-07, ADR 0068 punt 4)`);
     return;
   }
-  if (matches(config.testpaden) && ctx.read(rel) !== null) existingTest({ rel, change, role }, ctx, decision);
+  // Leerpunt #887: bestaand is wat op de tip van origin/main of het anker staat; een nieuw testbestand op de branch niet.
+  // 'zonder-origin' (beide onleesbaar) en een ctx zonder `bestaand` tellen als bestaand: faalt dicht.
+  if (matches(config.testpaden) && ctx.read(rel) !== null && (ctx.bestaand?.(rel) ?? true) !== false) {
+    existingTest({ rel, change, role }, ctx, decision);
+  }
   decideByRole({ rel, change, role }, ctx, decision);
+}
+
+/**
+ * Een statusregel die met `status: gebouwd` begint en niet letterlijk zo in de basis staat, ook in een nieuw bestand (ADR 0104).
+ * @param {string} rel @param {Change} change @param {string | null} basis
+ */
+function nieuweGebouwdRegel(rel, change, basis) {
+  if (!inSpecMap(rel) || change.after === null) return false;
+  const regel = gebouwdRegel(change.after);
+  return regel !== null && regel !== gebouwdRegel(basis ?? '');
 }
 
 /** De specmap van de app of van de template (ADR 0089 punt 1): beide krijgen dezelfde behandeling. @param {string} rel */
@@ -514,7 +554,7 @@ function statusZonderBesluit({ rel, change, role, overgang, basis }, ctx, decisi
   }
   if (ctx.authority != null && nextDocument !== null && !['voorstel', 'voorgesteld'].includes(nextDocument.status) &&
     !canRecordStatus({ file: rel, text: change.after ?? '' }, ctx.authority)) {
-    decision.deny.push(`${rel}: een eigenaarstatus of de inhoud van een goedgekeurde spec schrijven alleen architect en hoofdsessie (ADR 0046 punt 6); status: gebouwd zetten hoofdsessie en architect in de bouw-PR (ADR 0095)`);
+    decision.deny.push(`${rel}: een eigenaarstatus of de inhoud van een goedgekeurde spec schrijven alleen architect en hoofdsessie (ADR 0046 punt 6)`);
     return true;
   }
   if (!['hoofdsessie', 'architect'].includes(role) && approvesSpec(rel, change, ctx)) {
@@ -547,7 +587,7 @@ function recordedStatus({ rel, change, role }, ctx, decision) {
   const next = documentInfo(rel, change.after);
   if (old === null || next === null || before === change.after || old.digest !== next.digest) return false;
   if (!['hoofdsessie', 'developer', 'architect'].includes(role) || !canRecordStatus({ file: rel, text: change.after }, ctx.authority)) {
-    decision.deny.push(`${rel}: deze statusovergang heeft geen geldig besluit uit de vertrouwde basis; status: gebouwd zetten hoofdsessie en architect in de bouw-PR (ADR 0095)`);
+    decision.deny.push(`${rel}: deze statusovergang heeft geen geldig besluit uit de vertrouwde basis`);
   } else decision.context.push(`Status uit main: ${rel}: dezelfde status en inhoud als op main`);
   return true;
 }

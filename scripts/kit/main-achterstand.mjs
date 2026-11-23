@@ -24,7 +24,7 @@ export function achterstand(run) {
     timeout: 10_000,
     env: { GIT_TERMINAL_PROMPT: '0' },
   });
-  const telling = run(['rev-list', '--count', 'HEAD..origin/main']);
+  const telling = run(['rev-list', '--count', 'HEAD..refs/remotes/origin/main']);
   return telling.code === 0 ? achterstandMelding(Number(telling.output.trim())) : null;
 }
 

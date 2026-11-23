@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #519
+status: goedgekeurd # #519
 namespace: geheimen-in-env
 ---
 

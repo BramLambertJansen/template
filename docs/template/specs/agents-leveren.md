@@ -1,5 +1,5 @@
 ---
-status: gebouwd
+status: goedgekeurd
 namespace: agents-leveren
 ---
 
@@ -29,7 +29,7 @@ juiste skill, de reviewer krijgt zijn invoer in één bestand, en `pnpm meting` 
 ## Volgorde
 
 Eén spec, vijf PR's, elk met één onderwerp (R-REPO-05). De spec gaat mee in PR-1 (ADR 0062). Een volgende PR haalt `(nieuw)`
-weg bij de AC's die hij bouwt. PR-5 zet `status: gebouwd` (ADR 0095). Punt 1a is vóór deze spec gebouwd en gemerged in #850
+weg bij de AC's die hij bouwt. PR-5 zette `status: gebouwd` (ADR 0095; sinds ADR 0104 volgt gebouwd uit de AC-dekking). Punt 1a is vóór deze spec gebouwd en gemerged in #850
 (eigenaar 2026-11-19); de AC's van PR-2 beschrijven wat daar staat, de toetsen voor AC-7 en AC-8 komen in PR-3.
 
 | PR | Punt | AC's |

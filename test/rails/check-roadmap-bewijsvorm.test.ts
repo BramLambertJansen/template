@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { exportVan, roep, testpaden } from '../hooks/follow-up-kit';
+import { expectAbsent } from '../support/absence';
 
 // B2 (docs/specs/taakmandaat-vervolg.md, mandate-follow-up/AC-10 t/m AC-13 en AC-22): `check:roadmap` leest voor een spec die naar
 // `gebouwd` gaat alleen `status: gebouwd # #<PR>; gevalideerd: <40 hex>`, met dezelfde code als het rolhek
@@ -116,10 +117,17 @@ describe('mandate-follow-up/AC-12: dezelfde parser als het rolhek (document-stat
     expect(keys).toStrictEqual([]);
   });
 
-  test('check-roadmap.mjs heeft geen eigen statusparser en gebruikt documentInfo en builtReference', () => {
+  // GEWIJZIGD (ADR 0104, gebouwd-zonder-nummer/AC-24): check-roadmap leest de stand uit de gedeelde AC-dekking
+  // (`acDekking`, rails/hooks/lib/ac-dekking.mjs) en niet meer uit `documentInfo` of `builtReference`.
+  test('check-roadmap.mjs heeft geen eigen statusparser en gebruikt acDekking', () => {
     const bron = readFileSync(SCRIPT, 'utf8');
-    expect(bron).toContain('documentInfo');
-    expect(bron).toContain('builtReference');
+    expect(bron).toContain('acDekking');
+    expect(bron).not.toContain('documentInfo');
+    expect(bron).not.toContain('builtReference');
+    expectAbsent(bron, /\bstatus:/, {
+      recognizes: ['status: gebouwd', 'const STATUS = /^status:\\s*(voorstel)/m'],
+      allows: ['// de status van de spec', 'eigenaarStatus'],
+    });
     expect(bron).not.toContain('statusBewijs');
     expect(bron).not.toContain('roadmapBewijs');
   });

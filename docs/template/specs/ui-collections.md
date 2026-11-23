@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #150
+status: goedgekeurd # #150
 namespace: ui-collections
 ---
 

@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #526
+status: goedgekeurd # #526
 namespace: bewaking-zichtbaar
 ---
 

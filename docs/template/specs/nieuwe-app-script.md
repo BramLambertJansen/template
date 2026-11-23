@@ -244,7 +244,7 @@ Bouwstap 1: AC-1 t/m AC-8 en AC-11 t/m AC-18. Bouwstap 2: AC-9, AC-10 en de 6.2-
   `docs/template/specs/template-update.md`, `docs/template-changelog.md`) blijven ongewijzigd (werking 10);
   `scripts/kit/pr-merge.mjs` (`besluit-pr`).
 - **Bouwstap 2** (`repo-instellingen`, kritiek werk): `scripts/kit/nieuwe-app.mjs`, `test/scripts/nieuwe-app.test.ts`,
-  `docs/nieuwe-app.md` 6.2. Te herzien vóór de bouw (zie Route): de export `grensRedenen` waar dit op leunde, is weg (ADR 0093). `scripts/check-github.mjs`
+  `docs/nieuwe-app.md` 6.2. Te herzien vóór de bouw (zie Route): de export `grensRedenen` waar dit op leunde, is weg (ADR 0093). `scripts/check-github.mjs` (nieuw)
   uit roadmap ST-01 bestaat nog niet; wordt het gebouwd, dan hergebruikt het dezelfde controle en vervangt het
   `--controleer`, zodat er één rulesetcontrole is.
 - R-WERK-25 blijft ongewijzigd (OV-2, OV-3): de uitzondering voor Node met vastgezette versie bestaat al voor het

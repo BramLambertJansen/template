@@ -1,5 +1,5 @@
 ---
-status: gebouwd
+status: goedgekeurd
 namespace: ac-toets
 ---
 
@@ -71,8 +71,8 @@ normaliseren: elke reeks witruimte (ook regeleinden en inspringing) wordt één 
 | Bestaande gebouwde spec, AC ongewijzigd | geen melding (AC-2) | n.v.t. |
 | Bestaande AC krijgt alleen `(vervallen)` achter een pad | geen melding (AC-2) | n.v.t. |
 | AC wordt `Vervallen door ADR …` met geaccepteerd ADR | geen melding (AC-4) | n.v.t. |
-| Nieuwe AC `(nog niet gebouwd)` in een gebouwde spec | nieuw: `Toets:` nodig (AC-1) | n.v.t. |
-| De bouw-PR haalt `(nog niet gebouwd)` weg | tekst gewijzigd (geen merkteken): `Toets:` nodig (AC-1) | n.v.t. |
+| Nieuwe AC in een gebouwde spec (zonder merkteken, ADR 0104) | nieuw: `Toets:` nodig (AC-1) | n.v.t. |
+| Een oude AC verliest alleen `(nog niet gebouwd)` | tekst gewijzigd (geen merkteken): `Toets:` nodig (AC-1) | n.v.t. |
 | `Toets:` zonder backticks, met een leeg pad of een plaatshouder | telt niet (AC-1) | n.v.t. |
 | Spec hernoemd zonder inhoudelijke wijziging | geen melding (AC-3) | n.v.t. |
 | Zelfde AC-id twee keer in een spec | elk item apart getoetst; de regel in de sleutel onderscheidt ze | n.v.t. |

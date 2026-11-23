@@ -142,11 +142,12 @@ De [agentdoorloop](operations/agent-doorloop.md#ontwikkelen-en-runnerchecks) bes
 `ask`, `deny`, het rolhek uit main en de verplichte GitHub-checks blijven leidend. Subagents krijgen geen push- of
 PR-schrijfrechten; main-push, force, hookoverslaan, PR-merge en zelfreview blijven geweigerd. De bestaande lokale
 merge van main en veilige taakbranchopruiming blijven beschikbaar. Geen Git-allowWrite of schrijfbare globale
-pnpm-opslag is nodig. Naast de zeven runneruitzonderingen draaien `git commit *`, `git push origin HEAD`, `gh api *` en
-`pnpm pr:verify *` buiten de sandbox, lokaal en in de cloud, en `pnpm pr:log *` onder de ankertoets (ADR 0061 en 0102; zie
+pnpm-opslag is nodig. Naast de zeven runneruitzonderingen draaien `git commit *`, `git push origin HEAD`, `gh api *`,
+`pnpm pr:verify *` en `pnpm meting *` buiten de sandbox, lokaal en in de cloud, en `pnpm pr:log *` onder de ankertoets (ADR 0061 en 0102; zie
 [Cloud: commit, push, PR en bewijs](#cloud-commit-push-pr-en-bewijs)). Lefthook en `pr:verify` draaien daardoor code uit de
 werkmap zonder sandbox en zonder vraag vooraf; alleen het rolhek vooraf staat ertussen, CI en de eigenaarmerge blijven de
-grens (aanvaard restrisico).
+grens (aanvaard restrisico). Dat geldt ook voor `pnpm meting`, dat alleen leest en `gh` start; `METING_GH` kiest welk
+programma (`scripts/kit/meting.mjs:306`).
 
 Regressies staan in `test/scripts/mise-pnpm-selection.test.ts`, `test/scripts/toolchain-pnpm-runtime.test.ts`,
 `test/rails/claude-sandbox-werkstraat.test.ts` en `test/hooks/rolhek-sandbox-werkstraat.test.ts`.
@@ -176,7 +177,9 @@ Tijdens een sessie beweegt het niet mee met `main`. Dat merk je bij `pnpm pr:mer
 de hostbestanden (`package.json`, `.npmrc`, …) in de werkmap gelijk zijn aan de merge-base met het anker (`trustedMerge` in
 `rails/hooks/lib/runner-authority.mjs`). Komt er ná de sessiestart een PR op `main` die een van die paden wijzigt, en staat de
 werkmap op of voorbij die nieuwe `main`, dan weigert het rolhek met "scripts, rails en hostbestanden … gelijk aan het anker
-(ADR 0069)", ook vanaf een schone kopie van `main`. Opnieuw proberen helpt niet. Vergelijk het anker met de remote:
+(ADR 0069)", ook vanaf een schone kopie van `main`. Is de werkmap gelijk aan `origin/main` en loopt alleen het anker achter,
+dan zegt de weigering dat ("het anker loopt achter op origin/main", leerpunt #888); een nieuwe sessie, `/clear` of `/compact`
+zet het anker opnieuw. Opnieuw proberen helpt niet. Vergelijk het anker met de remote:
 
 1. In de sessie of een eigen terminal, in de root van de werkmap die de weigering gaf (bij een worktree de worktree zelf, niet
    de hoofdcheckout): vraag de remote om `main`. Verwacht: één regel met een SHA en `refs/heads/main`.
@@ -202,7 +205,9 @@ branchnaam voor; de PR komt van de opgelegde branch. Is een vaste naam nodig, da
 
 Gemeten op 20 november 2026 (spec `cloud-pr-route`): binnen de Bash-sandbox bereikt een cloudsessie de token-proxy en de
 signeerdienst van het platform niet. `gh` geeft dan op elke aanroep 401 en het ondertekenen van een commit faalt. Daarom
-draaien vier commando's buiten de sandbox (`sandbox.excludedCommands` in `.claude/settings.json`). De route:
+draaien vier commando's buiten de sandbox (`sandbox.excludedCommands` in `.claude/settings.json`), plus `pnpm meting *`: de
+trend van `pnpm meting --trend` haalt PR's en CI-runs met `gh` op en was in de sandbox altijd "onbekend" (leerpunt #899). Ook
+voor `pnpm meting` geldt de netwerkvorm: alleen als los commando, niet in een pipe of keten. De route:
 
 | Stap | Commando | Opmerking |
 |---|---|---|

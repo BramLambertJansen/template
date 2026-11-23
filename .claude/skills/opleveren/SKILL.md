@@ -38,10 +38,10 @@ Feiten nu:
 5. Stop en vraag de eigenaar bij: (a) een fix die een regel, check, hook of test zou afzwakken; (b) dezelfde fout drie keer achter elkaar (voer dan eerst de leerpuntstap uit Opruimen stap 8 uit);
    (c) een oorzaak buiten de code (runner, GitHub-storing); (d) een gate-pad of beschermd pad dat moet wijzigen.
 6. De lus leeft alleen binnen de sessie: geen timer, token of credentialwerk.
-7. Bevat de PR de implementatie van een spec: zet in een gewone commit `status: gebouwd`, zonder PR-nummer, plus het
-   roadmapvinkje met een testpad of checknaam als de spec een item noemt (ADR 0095); dat kan vóór het openen van de PR en
-   wacht niet op groen. De checks op een gebouwde spec (dood pad, roadmap-id, AC-dekking) draaien zo in de bouw-PR zelf. Er
-   is geen aparte status-PR (`docs/operations/agent-doorloop.md`, "PR en statussen afronden").
+7. Bevat de PR de implementatie van een spec: `gebouwd` volgt uit de AC-dekking (de tests noemen de AC-id's), niemand
+   schrijft een statusregel (ADR 0104). Bouwt de PR de spec volledig en noemt die een roadmap-item, zet dan het
+   roadmapvinkje met een testpad of checknaam in een gewone commit; dat kan vóór het openen van de PR en wacht niet op
+   groen. Er is geen aparte status-PR (`docs/operations/agent-doorloop.md`, "PR en statussen afronden").
 8. Draai `pnpm meting --trend` en `pnpm leespad`. Zet elke "let op"-regel (de trend: een echte stap omhoog in reviewrondes
    of CI-rood; het leespad: groei tegenover de basis) in de PR-beschrijving en noem hem in de oplevermelding
    aan de eigenaar; de eigenaar beslist (R-DOC-08, ADR 0070). "onbekend" meld je als onbekend. Zet ook de tabel van
@@ -73,11 +73,12 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
 2. Stop en meld, forceer niets, als: `git status --porcelain` niet leeg is; de lokale branch niet `headRefName` is; of de lokale branch
    commits heeft die niet in `headRefOid` zitten (ongepusht werk).
 3. Eerst `git fetch origin` en de controle uit `docs/operations/agent-doorloop.md`, "Branchwissels in een sandbox",
-   vóór iedere afzonderlijke wissel of fast-forward. Raakt de stap een door de runtime beschermd bestand (zoals onder
+   vóór de wissel. Raakt de stap een door de runtime beschermd bestand (zoals onder
    `.claude/skills/`), probeer de wissel niet: een aparte schone worktree als dat is toegestaan, anders de eigenaar.
-   Daarna `git switch main` (of `git switch --detach origin/main` als `main` elders is uitgecheckt) en
-   `git merge --ff-only origin/main`, met de controle opnieuw vóór de fast-forward. Geen rebase: `main` wordt squash-gemerged.
-   Faalt een wissel of `--ff-only`, stop dan; lees HEAD, branch, werkmap en index volgens die procedure vóór herstel of
+   Daarna `git switch --detach origin/main`, met de controle tegen die doelref: een achterlopende lokale `main` kan
+   oude beschermde bestanden bevatten die de sandbox niet terugzet. Lokale `main` bijwerken is geen opruimstap; dat doet de
+   eigenaar buiten de sandbox met `git switch main` en `git merge --ff-only origin/main`. Geen rebase: `main` wordt squash-gemerged.
+   Faalt de wissel, stop dan; lees HEAD, branch, werkmap en index volgens die procedure vóór herstel of
    een commit. Nooit `reset --hard`; meld wat nog niet is opgeruimd.
 4. Een andere worktree van die branch eerst weghalen: `git worktree remove <pad>` zonder `--force` (git weigert anders de branch te verwijderen).
    De worktree waarin je zelf draait ruimt de runtime of de eigenaar op; heeft stap 3 de branch daar losgemaakt, dan lukt stap 5 gewoon.
@@ -85,7 +86,7 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
 6. Staat de remote branch er nog: `gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<headRefName>"`, als los commando
    (spec cloud-netwerkvorm; `git push origin --delete` weigert het rolhek). Nooit `main`; het rolhek weigert dat ook.
    Lokaal kan deze stap een vraag aan de eigenaar geven.
-7. Eindmelding: wat is opgeruimd (lokale branch, remote branch, worktree) en de nieuwe SHA van `main`.
+7. Eindmelding: wat is opgeruimd (lokale branch, remote branch, worktree) en de SHA van HEAD na stap 3.
    Vaste slotregel, ook als het antwoord "niets" is: "Wat moet er in het spec-sjabloon, het gouden pad of een check veranderen
    zodat de volgende feature dit niet opnieuw betaalt?"
 8. Leerpunt (ADR 0059): Loop de signaalmomenten van deze sessie af: slotvraag, derde CI-ronde, eigenaarcorrectie (pnpm meting),

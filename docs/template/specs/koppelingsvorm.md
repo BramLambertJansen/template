@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #539
+status: goedgekeurd # #539
 namespace: koppelingsvorm
 ---
 

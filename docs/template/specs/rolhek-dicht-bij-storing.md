@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #478
+status: goedgekeurd # #478
 namespace: rolhek-dicht
 sjabloon: mini
 ---

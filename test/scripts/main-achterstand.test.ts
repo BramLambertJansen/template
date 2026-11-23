@@ -8,7 +8,8 @@ import { achterstand, achterstandMelding } from '../../scripts/kit/main-achterst
 // Ontwikkelgemak 5: pre-push waarschuwt (nooit blokkeren) als de branch achterloopt op origin/main.
 
 const FETCH = ['fetch', '--quiet', '--no-tags', 'origin', '+refs/heads/main:refs/remotes/origin/main'];
-const REV_LIST = ['rev-list', '--count', 'HEAD..origin/main'];
+// De volle refnaam (leerpunt #934): de korte `origin/main` kan een lokale branch schaduwen.
+const REV_LIST = ['rev-list', '--count', 'HEAD..refs/remotes/origin/main'];
 
 interface Opties {
   readonly timeout?: number;

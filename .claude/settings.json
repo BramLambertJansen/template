@@ -150,7 +150,8 @@
       "git commit *",
       "git push origin HEAD",
       "gh api *",
-      "pnpm pr:verify *"
+      "pnpm pr:verify *",
+      "pnpm meting *"
     ],
     "filesystem": {
       "denyRead": [

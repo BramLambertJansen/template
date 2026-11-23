@@ -322,7 +322,7 @@ function graphql(query, variabelen) {
 function main() {
   const root = process.cwd();
   const nummer = nummerUit(process.argv.slice(2), 'pr:resolve');
-  const base = gitText(root, ['rev-parse', 'origin/main'])?.trim();
+  const base = gitText(root, ['rev-parse', 'refs/remotes/origin/main'])?.trim();
   const authority = base === undefined ? null : readAuthority({ root, base });
   const head = gitText(root, ['rev-parse', 'HEAD'])?.trim() ?? '';
   if (authority === null) throw new Error('Geen leesbare vertrouwde basis');
