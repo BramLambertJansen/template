@@ -16,6 +16,7 @@ import * as documentState from '../../rails/hooks/lib/document-state.mjs';
 import { beslisOvergang, documentInfo } from '../../rails/hooks/lib/document-state.mjs';
 import { docsViolations } from '../../scripts/kit/check-docs.mjs';
 import { lezerSecties } from '../../scripts/kit/feiten-secties.mjs';
+import { expectAbsent } from '../support/absence.ts';
 
 // docs/template/specs/gebouwd-zonder-nummer.md (ADR 0095): `status: gebouwd` zonder PR-nummer in de bouw-PR; `pnpm docs:status`
 // en de bewijstoets vervallen. Fixtures als inline tekst per AC; de rolhekgevallen (AC-7, AC-8) staan naast de bestaande in
@@ -497,5 +498,77 @@ describe('gebouwd-zonder-nummer/AC-12: check:docs is groen zonder de spec gebouw
       const [naam = '', nummer = ''] = ac.split('/');
       expect(meldingen).not.toContain(`docs:ac:${naam}:${nummer}`);
     }
+  });
+});
+
+// --- AC-27 en AC-28: de bouw van ADR 0104 (de statusregel en het merkteken zijn weg) ----------------------------------------------
+
+/** De aaneengesloten `//`-regels aan het begin van een bronbestand. */
+function kopcommentaar(pad: string): string {
+  const regels = lees(pad).split('\n');
+  const eerste = regels.findIndex((regel) => !regel.startsWith('//'));
+  return regels.slice(0, eerste === -1 ? regels.length : eerste).join('\n');
+}
+
+describe('gebouwd-zonder-nummer/AC-27: de melding vergeten-gebouwd, regel 18 en alle gebouwd-regels en merktekens in de template zijn weg', () => {
+  test('gebouwd-zonder-nummer/AC-27: scripts/kit/vergeten-gebouwd.mjs en test/rails/vergeten-gebouwd.test.ts bestaan niet', () => {
+    expect(existsSync(path.join(REPO, 'scripts/kit/vergeten-gebouwd.mjs'))).toBe(false);
+    expect(existsSync(path.join(REPO, 'test/rails/vergeten-gebouwd.test.ts'))).toBe(false);
+  });
+
+  test('gebouwd-zonder-nummer/AC-27: het kopcommentaar van scripts/kit/check-docs.mjs noemt geen regel 18 en geen vergeten-gebouwd', () => {
+    const kop = kopcommentaar('scripts/kit/check-docs.mjs');
+    expect(kop.length, 'het kopcommentaar is gelezen').toBeGreaterThan(500);
+    expectAbsent(kop, /^\/\/\s+18\.\s/m, {
+      recognizes: ['//  18. Een melding, nooit een overtreding', '// 18. Een melding'],
+    });
+    expect(kop).not.toContain('vergeten-gebouwd');
+  });
+
+  test('gebouwd-zonder-nummer/AC-27: geen bestand in docs/template/specs/ heeft een statusregel die met status: gebouwd begint', () => {
+    const bestanden = bestandenOnder('docs/template/specs').filter((bestand) => bestand.endsWith('.md'));
+    expect(bestanden.length, 'de specmap is gelezen').toBeGreaterThan(50);
+    const gebouwd = bestanden.filter((bestand) => /^status: gebouwd/m.test(lees(bestand)));
+    expect(gebouwd).toStrictEqual([]);
+  });
+
+  test('gebouwd-zonder-nummer/AC-27: geen AC-regel in docs/template/specs/ heeft het merkteken (acIds(…).gemarkeerd is leeg)', () => {
+    const bestanden = bestandenOnder('docs/template/specs').filter((bestand) => bestand.endsWith('.md'));
+    expect(bestanden.length, 'de specmap is gelezen').toBeGreaterThan(50);
+    const gemarkeerd = bestanden.flatMap((bestand) => [...documentState.acIds(lees(bestand)).gemarkeerd]);
+    expect(gemarkeerd).toStrictEqual([]);
+  });
+});
+
+describe('gebouwd-zonder-nummer/AC-28: de instructies schrijven status: gebouwd niet meer voor', () => {
+  const GEEN = [
+    'AGENTS.md',
+    'docs/dod.md',
+    'docs/operations/agent-doorloop.md',
+    '.claude/agents',
+    '.claude/skills',
+    'docs/specs/_template.md',
+    'docs/specs/_mini.md',
+    'scripts/kit/templates/spec.md.tmpl',
+  ];
+
+  test('gebouwd-zonder-nummer/AC-28: in AGENTS.md, docs/dod.md, agent-doorloop, de agents, de skills en de spec-sjablonen staat de tekst status: gebouwd niet', () => {
+    const bestanden = GEEN.flatMap(bestandenOnder);
+    expect(bestanden.length, 'de bestanden zijn gelezen').toBeGreaterThan(10);
+    const treffers = bestanden.filter((bestand) => lees(bestand).includes('status: gebouwd'));
+    expect(treffers).toStrictEqual([]);
+  });
+
+  test('gebouwd-zonder-nummer/AC-28: in docs/framework.md staat status: gebouwd alleen in R-WERK-08, als de oude vorm die als goedgekeurd telt', () => {
+    const regels = lees('docs/framework.md')
+      .split('\n')
+      .filter((regel) => regel.includes('status: gebouwd'));
+    expect(regels.length, 'R-WERK-08 noemt de oude vorm').toBe(1);
+    expect(regels[0]).toMatch(/^- \*\*R-WERK-08\*\*/);
+    const regel = regels[0] ?? '';
+    const vanaf = regel.slice(regel.indexOf('status: gebouwd'));
+    expect(vanaf.slice(0, 160), 'R-WERK-08 zegt dat de oude vorm als goedgekeurd telt').toMatch(/goedgekeurd/);
+    // Het oude voorschrift is weg: niemand zet gebouwd nog in een bouw-PR.
+    expect(regel).not.toContain('in een gewone commit van de bouw-PR');
   });
 });
