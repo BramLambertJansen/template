@@ -53,7 +53,8 @@ openstaat.
    merge) zoekt de hoofdsessie de open leerpunten die het werk van de sessie raakt: `gh issue list --repo <repo> --label leerpunt --state open --search <trefwoord>`, met
    trefwoorden uit de geraakte paden en regels, niet de hele lijst (R-DOC-09). Per geraakt leerpunt:
    - **opgelost**: vóór het openen krijgt de PR `Closes #<nr>` en de sectie `## Leerpunt` met bewijs (0078 punt 1); zonder
-     bewijs alleen een comment;
+     bewijs alleen een comment. Alleen in de template: in een app wijst `#<nr>` naar een app-issue, dus daar geen
+     sluitwoord; een workaround in de app is **deels opgelost**;
    - **deels opgelost**: een comment `deels: <wat gedaan is>; open: <wat nog moet>` met de PR, en zo nodig de body bijgewerkt
      zodat hij alleen het resterende beschrijft;
    - **zelfde les opnieuw**: een comment met de nieuwe reproductie op het bestaande leerpunt in plaats van een nieuw issue.

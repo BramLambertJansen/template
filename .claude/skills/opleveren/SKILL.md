@@ -22,7 +22,8 @@ Feiten nu:
    (leerpunt #789; `docs/operations/recepten.md`).
    Vóór het openen van de PR (ADR 0101 punt 6): zoek de open leerpunten die het werk raakt (zie stap 8 van Opruimen); lost
    de PR er een op, dan krijgt de beschrijving `Closes #<nr>` en de sectie `## Leerpunt` met bewijs, zodat GitHub het bij de
-   merge sluit.
+   merge sluit. Alleen in de template zelf: in een app wijst `#<nr>` naar een issue van de app, dus daar nooit een
+   sluitwoord; een app-PR lost een templateleerpunt niet op, de uitkomst is `deels` of een comment (stap 8).
    De bestaande pre-push-hook draait de volledige `pnpm gate:fast`; start die niet nogmaals alleen voor de overdracht.
    Gerichte feedback is geen volledige groene gate. Iedere PR behoudt alle CI-checks; geen oude uitslag hergebruiken.
 2. Wacht met `pnpm pr:verify <nr> --watch` (geen kale `gh pr checks --watch`: die toetst SHA, branch en herkomst van de check niet).
@@ -95,7 +96,7 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
    de geraakte paden en regels: `gh issue list --repo <repo> --label leerpunt --state open --search <trefwoord>`, niet de hele
    lijst. Dezelfde zoektocht hoort al vóór het openen van de PR (CI-lus stap 1). Per geraakt leerpunt één uitkomst: `opgelost`
    (al afgehandeld in de PR met `Closes #<nr>` en `## Leerpunt`; GitHub sloot het bij de merge; zonder bewijs alleen een
-   comment), `deels` (comment `deels: <wat gedaan is>; open: <wat nog moet>` met de PR, zo nodig de body
+   comment; alleen in de template, in een app is een workaround `deels`), `deels` (comment `deels: <wat gedaan is>; open: <wat nog moet>` met de PR, zo nodig de body
    ingekort tot het resterende) of `zelfde les opnieuw` (comment met de nieuwe reproductie, geen nieuw issue). Slotregel per
    leerpunt de uitkomst, of "geen open leerpunt geraakt".
    Bijwerken en sluiten (ADR 0101): vóór elke schrijfactie de doelcheck `gh issue view <nr> --repo <repo> --json labels,state,url`;
