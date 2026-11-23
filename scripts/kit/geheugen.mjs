@@ -1,5 +1,6 @@
 // Eén geheugengrens voor lokale belasting: gate:fast (scripts/kit/gate-fast.mjs) laat lint en tests dan na elkaar draaien,
-// Playwright (playwright.config.ts) dan met één worker. Alleen de planning verandert, nooit welke check draait.
+// Playwright (playwright.config.ts) dan met één worker en Vitest (vitest.config.ts) met hooguit twee. Alleen de planning
+// verandert, nooit welke check draait.
 import os from 'node:os';
 
 const GIB = 1024 ** 3;
@@ -19,4 +20,14 @@ export function weinigGeheugen({
   if (override === '1') return true;
   if (override === '0') return false;
   return platform === 'darwin' ? totaal <= 8 * GIB : beschikbaar < 6 * GIB;
+}
+
+/**
+ * Het aantal Vitest-workers: hooguit vier, bij weinig geheugen hooguit twee, minstens één. Met vier workers liepen web-tests
+ * bij minder dan 6 GiB vrij af op hun limiet van 5 s terwijl ze los in 1,4 s slaagden (leerpunt #866).
+ * @param {{ beperkt: boolean, cpus: number }} opties
+ * @returns {number}
+ */
+export function vitestWorkers({ beperkt, cpus }) {
+  return Math.max(1, Math.min(beperkt ? 2 : 4, cpus));
 }
