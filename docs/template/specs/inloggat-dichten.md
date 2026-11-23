@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #479
+status: goedgekeurd # #479
 namespace: inloggat-dichten
 model: opus
 ---

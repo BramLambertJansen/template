@@ -106,7 +106,7 @@ export function werkmapCode() {
 export async function feitenBytes({ secties, alle }, lezer, code) {
   if (secties.length === 0) return { bytes: 0 };
   try {
-    const [{ toText }, { lezerSecties, LEZER_SECTIES }] = await Promise.all([
+    const [{ specsTekst, toText }, { lezerSecties, LEZER_SECTIES }] = await Promise.all([
       import('./feiten-tekst.mjs'),
       import('./feiten-secties.mjs'),
     ]);
@@ -115,7 +115,9 @@ export async function feitenBytes({ secties, alle }, lezer, code) {
     const delen = await Promise.all(
       secties.map(async (naam) => {
         const eigen = /** @type {Record<string, () => unknown>} */ (uitLezer)[naam];
-        if (LEZER_SECTIES.some((s) => s === naam) && eigen !== undefined) return { naam, inhoud: eigen() };
+        // De tekstvorm van `specs` toont alleen naam en status, zoals feiten.mjs hem afdrukt (ADR 0104).
+        if (LEZER_SECTIES.some((s) => s === naam) && eigen !== undefined)
+          return { naam, inhoud: naam === 'specs' ? specsTekst(eigen()) : eigen() };
         return { naam, .../** @type {{ kop?: string, inhoud: unknown }} */ (await code.sectie(naam)) };
       }),
     );

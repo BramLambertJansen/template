@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #724
+status: goedgekeurd # #724
 namespace: release-versie
 ---
 

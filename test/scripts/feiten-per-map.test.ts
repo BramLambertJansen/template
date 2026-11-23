@@ -19,8 +19,14 @@ const APP_SPECS = 'docs/specs/';
 const TEMPLATE_SPECS = 'docs/template/specs/';
 
 const adr = (nummer: string, status: string, titel = 'Demo'): string => `# ${nummer} — ${titel}\n\nStatus: ${status}\n`;
-const spec = (status: string): string =>
-  `---\nstatus: ${status}\nnamespace: demo\n---\n\n# Demo\n\n## Hergebruik en UX\n\nKit.\n`;
+// `acs`: de AC-nummers van de spec (namespace demo); het AC is gebouwd als een testbestand `demo/AC-n` noemt (ADR 0104).
+const spec = (status: string, acs: number[] = []): string =>
+  `---\nstatus: ${status}\nnamespace: demo\n---\n\n# Demo\n\n## Hergebruik en UX\n\nKit.\n${
+    acs.length === 0
+      ? ''
+      : `\n## Acceptatiecriteria\n\n${acs.map((n) => `- **demo/AC-${String(n)}** — Gegeven iets, dan dit.\n`).join('')}`
+  }`;
+const dekt = (...acs: number[]): string => acs.map((n) => `test('demo/AC-${String(n)}: iets', () => {});\n`).join('');
 
 /** Een repo met één commit, die ook `origin/main` is; de docs-mappen vullen de tests zelf. */
 function leeg(): { root: string; base: string } {
@@ -153,11 +159,14 @@ describe('templateregime/AC-11 feiten specs: twee lijsten met een kop per map, a
     expect(perMap.get(TEMPLATE_SPECS)).toStrictEqual(['- echt.md · goedgekeurd']);
   });
 
-  test('templateregime/AC-11 de telregel telt per map de specs met een andere status dan voorstel en goedgekeurd', () => {
+  // ADR 0104: `gebouwd` volgt uit de AC-dekking (een testbestand noemt `demo/AC-n`), niet uit de statusregel; de telregel telt
+  // de afgeleide status. Een oude `status: gebouwd` zonder dekking leest als `goedgekeurd` en staat dus in de lijst.
+  test('templateregime/AC-11 de telregel telt per map de specs met een andere afgeleide status dan voorstel, goedgekeurd en deels', () => {
     const { root } = leeg();
-    write(root, 'docs/specs/oud.md', spec('gebouwd'));
-    write(root, 'docs/template/specs/a.md', spec('gebouwd'));
-    write(root, 'docs/template/specs/b.md', spec('gebouwd'));
+    write(root, 'test/demo.test.ts', dekt(1));
+    write(root, 'docs/specs/oud.md', spec('goedgekeurd', [1]));
+    write(root, 'docs/template/specs/a.md', spec('goedgekeurd', [1]));
+    write(root, 'docs/template/specs/b.md', spec('goedgekeurd', [1]));
     write(root, 'docs/template/specs/c.md', spec('vervallen'));
     commit(root);
 
@@ -169,9 +178,30 @@ describe('templateregime/AC-11 feiten specs: twee lijsten met een kop per map, a
     );
   });
 
+  test('templateregime/AC-11 een deels gebouwde spec staat als deels n/m in de lijst, ook met een oude status: gebouwd', () => {
+    const { root } = leeg();
+    write(root, 'test/demo.test.ts', dekt(1));
+    write(root, 'docs/template/specs/deels.md', spec('goedgekeurd', [1, 2]));
+    write(root, 'docs/template/specs/oud.md', spec('gebouwd', [1, 2]));
+    commit(root);
+
+    const perMap = lijsten(uitvoer(root, 'specs'));
+
+    expect(perMap.get(TEMPLATE_SPECS)).toStrictEqual(['- deels.md · deels 1/2', '- oud.md · deels 1/2']);
+  });
+
+  test('templateregime/AC-11 een oude status: gebouwd zonder enige dekking leest als goedgekeurd', () => {
+    const { root } = leeg();
+    write(root, 'docs/template/specs/oud.md', spec('gebouwd', [1]));
+    commit(root);
+
+    expect(lijsten(uitvoer(root, 'specs')).get(TEMPLATE_SPECS)).toStrictEqual(['- oud.md · goedgekeurd']);
+  });
+
   test('templateregime/AC-11 --alle toont per map alle specs, ook gebouwde', () => {
     const { root } = leeg();
-    write(root, 'docs/specs/oud.md', spec('gebouwd'));
+    write(root, 'test/demo.test.ts', dekt(1));
+    write(root, 'docs/specs/oud.md', spec('goedgekeurd', [1]));
     write(root, 'docs/template/specs/nieuw.md', spec('vervallen'));
     commit(root);
 
@@ -510,7 +540,13 @@ describe('templateregime/AC-11 feiten in de echte repo', () => {
 
 describe('templateregime/AC-11 feiten --json', () => {
   const adrRij = z.strictObject({ nummer: z.string(), titel: z.string(), status: z.string() });
-  const specRij = z.strictObject({ spec: z.string(), status: z.string() });
+  const specRij = z.strictObject({
+    spec: z.string(),
+    status: z.string(),
+    stand: z.string(),
+    gebouwd: z.number(),
+    levend: z.number(),
+  });
   const adrJson = z.strictObject({
     adr: z.strictObject({
       [APP]: z.array(adrRij),
@@ -539,8 +575,9 @@ describe('templateregime/AC-11 feiten --json', () => {
     const { root } = leeg();
     write(root, 'docs/adr/0001-app.md', adr('0001', 'geaccepteerd', 'App'));
     write(root, 'docs/template/adr/0002-template.md', adr('0002', 'vervallen', 'Template'));
-    write(root, 'docs/specs/app.md', spec('goedgekeurd'));
-    write(root, 'docs/template/specs/template.md', spec('gebouwd'));
+    write(root, 'test/demo.test.ts', dekt(1));
+    write(root, 'docs/specs/app.md', spec('goedgekeurd', [1, 2]));
+    write(root, 'docs/template/specs/template.md', spec('goedgekeurd', [1]));
     commit(root);
     return root;
   }
@@ -563,7 +600,9 @@ describe('templateregime/AC-11 feiten --json', () => {
   test('templateregime/AC-11 specs --json: een lijst en een telregel per map', () => {
     const json = specsJson.parse(JSON.parse(uitvoer(fixture(), 'specs', '--json')));
 
-    expect(json.specs[APP_SPECS]).toStrictEqual([{ spec: 'app.md', status: 'goedgekeurd' }]);
+    expect(json.specs[APP_SPECS]).toStrictEqual([
+      { spec: 'app.md', status: 'deels 1/2', stand: 'deels', gebouwd: 1, levend: 2 },
+    ]);
     expect(json.specs[TEMPLATE_SPECS]).toStrictEqual([]);
     expect(json.specs[`overig ${TEMPLATE_SPECS}`]).toBe(`1 gebouwd (feiten specs --alle of ${TEMPLATE_SPECS})`);
   });
@@ -571,6 +610,8 @@ describe('templateregime/AC-11 feiten --json', () => {
   test('templateregime/AC-11 specs --alle --json: alle specs per map, zonder telregels', () => {
     const json = specsAlleJson.parse(JSON.parse(uitvoer(fixture(), 'specs', '--alle', '--json')));
 
-    expect(json.specs[TEMPLATE_SPECS]).toStrictEqual([{ spec: 'template.md', status: 'gebouwd' }]);
+    expect(json.specs[TEMPLATE_SPECS]).toStrictEqual([
+      { spec: 'template.md', status: 'gebouwd', stand: 'gebouwd', gebouwd: 1, levend: 1 },
+    ]);
   });
 });

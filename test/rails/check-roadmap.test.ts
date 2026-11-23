@@ -228,7 +228,7 @@ describe('roadmapMeldingen: meldteksten (letterlijk uit de spec)', () => {
   test('spec noemt een roadmap-item maar de roadmap wijzigt niet', async () => {
     const [melding] = await meldingenVoor('spec-roadmapverwijzing-roadmap-ongewijzigd');
     expect(melding?.message).toMatch(
-      /^docs\/specs\/a\.md: naar gebouwd en noemt .+, maar docs\/roadmap\.md wijzigt niet in deze PR$/,
+      /^docs\/specs\/a\.md: wordt in deze PR volledig gebouwd en noemt .+, maar docs\/roadmap\.md wijzigt niet in deze PR$/,
     );
   });
 });

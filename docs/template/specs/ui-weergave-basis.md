@@ -1,5 +1,5 @@
 ---
-status: gebouwd
+status: goedgekeurd
 namespace: ui-weergave-basis
 sjabloon: mini
 scope: functionele-ui

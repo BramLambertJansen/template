@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #690
+status: goedgekeurd # #690
 namespace: tests-naar-vermogen
 model: sonnet
 ---

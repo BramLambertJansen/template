@@ -6,7 +6,7 @@ import { expect, test } from 'vitest';
 import { docsViolations } from '../../scripts/kit/check-docs.mjs';
 
 // Spec-discipline: een open vraag mag niet in een goedgekeurde of gebouwde spec staan (`:open-vraag`),
-// en een voorgeschreven vorm-pad moet bestaan zolang de spec voorstel of goedgekeurd is (`:vorm`).
+// en een voorgeschreven vorm-pad moet bestaan zolang de spec niet volledig gebouwd is (`:vorm`, ADR 0104).
 const SPEC = 'docs/specs/demo.md';
 const OPEN = '- **OV-1 ⚠ open** — Welke limiet? A; B.';
 const BESLOTEN = '- **OV-2 ✅ besloten** — Limiet is 10.';
@@ -112,9 +112,33 @@ test('meerdere ontbrekende vorm-paden geven hooguit één overtreding', async ()
   expect(await vorm({ [SPEC]: tekst })).toStrictEqual([`docs:${SPEC}:vorm`]);
 });
 
-test.each(['gebouwd', 'vervallen'])('een ontbrekend vorm-pad bij status %s: geen overtreding', async (status) => {
-  const tekst = spec({ status, vorm: ['- `src/api/routes/bestaat-niet.ts`'] });
+test('een ontbrekend vorm-pad bij status vervallen: geen overtreding', async () => {
+  const tekst = spec({ status: 'vervallen', vorm: ['- `src/api/routes/bestaat-niet.ts`'] });
   expect(await vorm({ [SPEC]: tekst })).toStrictEqual([]);
+});
+
+// ADR 0104: `:vorm` geldt tot de spec volledig gebouwd is (elk levend eigen AC genoemd door een testbestand).
+const VORM_WEG = ['- `src/api/routes/bestaat-niet.ts`'];
+const eenAc = '- **demo/AC-1** — Gegeven iets, dan dit.';
+const tweeAcs = `${eenAc}\n- **demo/AC-2** — Gegeven iets anders, dan dat.`;
+
+test('een ontbrekend vorm-pad bij een goedgekeurde spec waarvan elk AC gebouwd is: geen overtreding', async () => {
+  const tekst = spec({ status: 'goedgekeurd', vorm: VORM_WEG, acceptatie: tweeAcs });
+  const tests = "test('demo/AC-1: a', () => {});\ntest('demo/AC-2: b', () => {});\n";
+  expect(await vorm({ [SPEC]: tekst, 'test/demo.test.ts': tests })).toStrictEqual([]);
+});
+
+test('een oude status: gebouwd leest als goedgekeurd: volledig gebouwd geen overtreding, zonder test wel', async () => {
+  const tekst = spec({ status: 'gebouwd', vorm: VORM_WEG, acceptatie: eenAc });
+  expect(await vorm({ [SPEC]: tekst, 'test/demo.test.ts': "test('demo/AC-1: a', () => {});\n" })).toStrictEqual([]);
+  expect(await vorm({ [SPEC]: tekst })).toStrictEqual([`docs:${SPEC}:vorm`]);
+});
+
+test('een ontbrekend vorm-pad bij een deels gebouwde spec (1 van 2 AC): overtreding', async () => {
+  const tekst = spec({ status: 'goedgekeurd', vorm: VORM_WEG, acceptatie: tweeAcs });
+  expect(await vorm({ [SPEC]: tekst, 'test/demo.test.ts': "test('demo/AC-1: a', () => {});\n" })).toStrictEqual([
+    `docs:${SPEC}:vorm`,
+  ]);
 });
 
 test('een bestaand vorm-pad: geen overtreding', async () => {

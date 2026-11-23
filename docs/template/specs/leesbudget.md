@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #452
+status: goedgekeurd # #452
 namespace: leesbudget
 ---
 

@@ -289,9 +289,11 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   tekstwijzigingen aan agents en skills (ADR 0059). Elk punt eerst als besluit-PR; de bouw volgt na de merge door de eigenaar. **Klaar als:** elk van 4a–4d heeft een gemergde of gesloten besluit-PR.
   Gemerged: #906 (ADR 0104, 4a), #907 (ADR 0105, 4b), #908 (ADR 0106, 4c) en #909 (ADR 0107, 4d); de bouw staat in de items hieronder.
   aanleiding: `docs/reviews/2026-11-18-overnameplan-agentic.md` (§6; eigenaarvraag 2026-11-18)
-- [ ] **Bouw ADR 0104: `gebouwd` volgt uit de AC-dekking.** Volgens de Gevolgen van het ADR: één gedeelde afleiding voor
+- [x] **Bouw ADR 0104: `gebouwd` volgt uit de AC-dekking.** Volgens de Gevolgen van het ADR: één gedeelde afleiding voor
   `check-docs`, `check-roadmap`, `feiten` en het rolhek; regel 6 als ratchet; `vergeten-gebouwd` weg; de omzetting van
   bestaande `status: gebouwd`; R-WERK-07, R-WERK-08 en R-DOC-10. **Klaar als:** de "Klaar als" van ADR 0104 klopt.
+  Bewijs: `test/rails/ac-dekking.test.ts`, `test/rails/ac-dekking-basis.test.ts`, `test/rails/check-roadmap-dekking.test.ts`,
+  `test/hooks/rolhek-gebouwd-afgeleid.test.ts`.
   aanleiding: `docs/template/adr/0104-gebouwd-uit-ac-dekking.md` (Gevolgen)
 - [x] **Bouw ADR 0106: schaduwmodus met tijdgrens.** Register `.kit/schaduw.json` met schemacheck, `schaduw-termijn` in
   `strikt` en `meldingen` (voorvoegsel `schaduw:`), overslag in een app, weigering in `template:release`, meetregel `Schaduw` met `pnpm meting --schaduw` en de norm in het

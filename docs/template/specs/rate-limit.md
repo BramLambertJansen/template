@@ -1,5 +1,5 @@
 ---
-status: gebouwd # door de agent onder mandaat van de eigenaar (2026-10-11), open vragen volgens de aanbeveling; bevestigd door de eigenaar (2026-11-23)
+status: goedgekeurd # door de agent onder mandaat van de eigenaar (2026-10-11), open vragen volgens de aanbeveling; bevestigd door de eigenaar (2026-11-23)
 namespace: rate-limit
 ---
 

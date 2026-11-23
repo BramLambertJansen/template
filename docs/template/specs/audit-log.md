@@ -1,5 +1,5 @@
 ---
-status: gebouwd
+status: goedgekeurd
 namespace: audit
 model: opus
 modelreden: nieuwe security definer-functies en aanpassing van app.assign_role en app.set_account_blocked (ADR 0046 punt 18), en wijzigingen in src/core (withUser, route kit; punt 18)

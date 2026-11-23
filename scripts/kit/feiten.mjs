@@ -87,7 +87,7 @@ async function padRegel(rel) {
 
 if (process.argv[2] === 'pad') await padRegel(process.argv[3]);
 
-const { toText } = await import('./feiten-tekst.mjs');
+const { specsTekst, toText } = await import('./feiten-tekst.mjs');
 const { codeSecties, gereserveerdeAdrNummers, lezerSecties, plain, VOLGORDE, werkmap } =
   await import('./feiten-secties.mjs');
 
@@ -100,7 +100,11 @@ const uitLezer = (/** @type {import('./feiten-secties.mjs').Gereserveerd} */ ger
 const sections = {
   ...codeSecties,
   adr: plain(async () => uitLezer(await gereserveerdeAdrNummers()).adr()),
-  specs: plain(() => uitLezer({}).specs()),
+  // `--json` geeft per spec { spec, status, stand, gebouwd, levend }; de tekst alleen naam en status (ADR 0104, AC-25).
+  specs: () => {
+    const json = uitLezer({}).specs();
+    return { json, inhoud: specsTekst(json) };
+  },
   fase: plain(() => uitLezer({}).fase()),
   // Spec agent-recepten: de receptenkaart voor de eigen runtime; `--alle` toont beide kolommen.
   recepten: async () => {

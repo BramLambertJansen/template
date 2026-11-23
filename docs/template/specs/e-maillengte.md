@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #513
+status: goedgekeurd # #513
 namespace: e-maillengte
 sjabloon: mini
 model: opus

@@ -12,10 +12,11 @@ import {
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, test } from 'vitest';
+import { dekkingVanSpec } from '../../rails/hooks/lib/ac-dekking.mjs';
 import * as documentState from '../../rails/hooks/lib/document-state.mjs';
-import { beslisOvergang, documentInfo } from '../../rails/hooks/lib/document-state.mjs';
+import { beslisOvergang } from '../../rails/hooks/lib/document-state.mjs';
 import { docsViolations } from '../../scripts/kit/check-docs.mjs';
-import { lezerSecties } from '../../scripts/kit/feiten-secties.mjs';
+import { expectAbsent } from '../support/absence.ts';
 
 // docs/template/specs/gebouwd-zonder-nummer.md (ADR 0095): `status: gebouwd` zonder PR-nummer in de bouw-PR; `pnpm docs:status`
 // en de bewijstoets vervallen. Fixtures als inline tekst per AC; de rolhekgevallen (AC-7, AC-8) staan naast de bestaande in
@@ -23,7 +24,6 @@ import { lezerSecties } from '../../scripts/kit/feiten-secties.mjs';
 const REPO = path.resolve(import.meta.dirname, '../..');
 const ROADMAP_MODULE = ['../../scripts/kit', 'check-roadmap.mjs'].join('/');
 const SHA = 'a'.repeat(40);
-const ANDERE_SHA = 'b'.repeat(40);
 
 const tijdelijk: string[] = [];
 afterAll(() => {
@@ -128,8 +128,6 @@ async function roadmapMeldingen(basis: Record<string, string>, head: Record<stri
 }
 
 const SPEC_PAD = 'docs/specs/a.md';
-const KOP = '# Roadmap\n\n## Stuk\n\n';
-const OUD_ITEM = '- [x] Oud werk (#5)\n';
 
 function eenvoudigeSpec(status: string, verwijzing = ''): string {
   return `---\nstatus: ${status}\n---\n\n# Spec A\n\nEen spec zonder verwijzing. ${verwijzing}\n`;
@@ -152,104 +150,31 @@ describe('gebouwd-zonder-nummer/AC-1: een spec naar gebouwd zonder roadmap-id is
   });
 });
 
-describe('gebouwd-zonder-nummer/AC-2: een spec die een roadmap-id noemt vraagt een wijziging van docs/roadmap.md', () => {
-  const MET_ID = eenvoudigeSpec('gebouwd', 'Bouwt ST-14.');
-  const BASIS = { [SPEC_PAD]: eenvoudigeSpec('goedgekeurd', 'Bouwt ST-14.'), 'docs/roadmap.md': `${KOP}${OUD_ITEM}` };
+// AC-2, AC-3 en AC-4 vervielen door ADR 0104 (gebouwd volgt uit de AC-dekking); hun gedrag toetsen AC-24, AC-17 en AC-16 in
+// test/rails/check-roadmap-dekking.test.ts en test/rails/ac-dekking.test.ts. Geschrapt met akkoord van de eigenaar (OV-7).
 
-  test('gebouwd-zonder-nummer/AC-2: docs/roadmap.md wijzigt niet: rood met de bestaande melding', async () => {
-    const meldingen = await roadmapMeldingen(BASIS, { [SPEC_PAD]: MET_ID, 'docs/roadmap.md': `${KOP}${OUD_ITEM}` });
-    expect(meldingen.map(({ key }) => key)).toStrictEqual([`spec:roadmap:${SPEC_PAD}`]);
-    expect(meldingen[0]?.message).toBe(
-      `${SPEC_PAD}: naar gebouwd en noemt ST-14, maar docs/roadmap.md wijzigt niet in deze PR`,
-    );
-  });
-
-  test('gebouwd-zonder-nummer/AC-2: docs/roadmap.md wijzigt wel: groen', async () => {
-    const meldingen = await roadmapMeldingen(BASIS, {
-      [SPEC_PAD]: MET_ID,
-      'docs/roadmap.md': `${KOP}${OUD_ITEM}- [x] ST-14 klaar (#130)\n`,
-    });
-    expect(meldingen).toStrictEqual([]);
-  });
-
-  test('gebouwd-zonder-nummer/AC-2: ook met een nummer in de statusregel blijft de roadmap-id-regel gelden', async () => {
-    const meldingen = await roadmapMeldingen(BASIS, {
-      [SPEC_PAD]: eenvoudigeSpec('gebouwd # #12', 'Bouwt ST-14.'),
-      'docs/roadmap.md': `${KOP}${OUD_ITEM}`,
-    });
-    expect(meldingen.map(({ key }) => key)).toStrictEqual([`spec:roadmap:${SPEC_PAD}`]);
-  });
-});
-
-// --- AC-3: documentInfo en feiten ----------------------------------------------------------------------------------------------
-
-describe('gebouwd-zonder-nummer/AC-3: een spec met status: gebouwd zonder nummer is gebouwd', () => {
-  test.each(['gebouwd', 'gebouwd # #12', 'gebouwd # gebouwd in PR #51'])(
-    'gebouwd-zonder-nummer/AC-3: documentInfo leest status: %s als gebouwd',
-    (status) => {
-      expect(documentInfo(APP_SPEC, specTekst(status))?.status).toBe('gebouwd');
-    },
-  );
-
-  test('gebouwd-zonder-nummer/AC-3: feiten specs telt haar onder gebouwd en toont haar niet in de standaardlijst', () => {
-    const bestanden: Record<string, string> = {
-      'docs/specs/open.md': specTekst('goedgekeurd'),
-      'docs/specs/zonder.md': specTekst('gebouwd'),
-      'docs/specs/met.md': specTekst('gebouwd # #12'),
-    };
-    const lezer = {
-      lees: (pad: string) => bestanden[pad] ?? null,
-      lijst: (map: string) => (map === 'docs/specs' ? ['open.md', 'zonder.md', 'met.md'] : []),
-    };
-    const uit: unknown = lezerSecties(lezer, { alle: false }).specs();
-    expect(uit).toMatchObject({
-      'docs/specs/': [{ spec: 'open.md', status: 'goedgekeurd' }],
-      'overig docs/specs/': '2 gebouwd (feiten specs --alle of docs/specs/)',
-    });
-  });
-});
-
-// --- AC-4 en AC-5: de AC-dekking van check:docs ---------------------------------------------------------------------------------
-
-const AC_KEY = 'docs:ac:demo:AC-1';
-
-describe('gebouwd-zonder-nummer/AC-4: de AC-dekking geldt voor status: gebouwd zonder nummer', () => {
-  test.each(['gebouwd', 'gebouwd # #12'])(
-    'gebouwd-zonder-nummer/AC-4: status: %s met een AC zonder testbestand: rood met de bestaande melding',
-    async (status) => {
-      const meldingen = await docsViolations(repo({ [TEMPLATE_SPEC]: specTekst(status) }));
-      const ac = meldingen.filter(({ key }) => key === AC_KEY);
-      expect(ac.map(({ message }) => message)).toStrictEqual([
-        `${TEMPLATE_SPEC}: AC-1 heeft geen testbestand met demo/AC-1`,
-      ]);
-    },
-  );
-
-  test('gebouwd-zonder-nummer/AC-4: met een test die het AC-id noemt: groen', async () => {
-    const files = {
-      [TEMPLATE_SPEC]: specTekst('gebouwd'),
-      'test/demo.test.ts': "test('demo/AC-1: iets', () => {});\n",
-    };
-    expect(await sleutels(files, 'docs:ac:')).toStrictEqual([]);
-  });
-});
+// --- AC-5: welke AC's levend zijn ------------------------------------------------------------------------------------------------
 
 const ADR_INHOUD = (status: string): string => `# 0095 — Demo\n\nStatus: ${status}\n\n## Besluit\n\nIets.\n`;
 const VERVALLEN_AC = '- **demo/AC-2** — Vervallen door ADR 0095 (reden). Was: Gegeven meer, dan meer.';
 
-function metTest(files: Record<string, string>): Record<string, string> {
-  return { 'test/demo.test.ts': "test('demo/AC-1: iets', () => {});\n", ...files };
+/** `levend` van de spec in `spec`; de AC-dekking komt uit `dekkingVanSpec` (ADR 0104), niet meer uit een melding van check:docs. */
+function levend(spec: string, regels: string[], adrs: Record<string, string>): string[] {
+  const text = specTekst('goedgekeurd', regels);
+  const files: Record<string, string> = { [spec]: text, ...adrs };
+  const boom = { bestanden: Object.keys(files), lees: (pad: string) => files[pad] ?? null };
+  return dekkingVanSpec({ file: spec, text }, boom).levend;
 }
 
+// GEWIJZIGD (ADR 0104, AC-16): een AC zonder test is geen overtreding meer; de vervallen-vorm (AC-5) bepaalt wat levend is.
 describe('gebouwd-zonder-nummer/AC-5: een vervallen AC slaat de AC-dekking over als het ADR bestaat en geaccepteerd is', () => {
   test.each([
     ['de template', TEMPLATE_SPEC, 'docs/template/adr/0095-demo.md'],
     ['een app', APP_SPEC, 'docs/adr/0095-demo.md'],
   ])(
-    'gebouwd-zonder-nummer/AC-5: %s: ADR in de map naast de specmap, geaccepteerd: geen melding',
-    async (_naam, spec, adr) => {
-      const files = metTest({ [spec]: specTekst('gebouwd', [VERVALLEN_AC]), [adr]: ADR_INHOUD('geaccepteerd') });
-      expect(await sleutels(files, 'docs:ac:')).toStrictEqual([]);
+    'gebouwd-zonder-nummer/AC-5: %s: ADR in de map naast de specmap, geaccepteerd: de AC is niet levend',
+    (_naam, spec, adr) => {
+      expect(levend(spec, [VERVALLEN_AC], { [adr]: ADR_INHOUD('geaccepteerd') })).toStrictEqual(['AC-1']);
     },
   );
 
@@ -263,17 +188,13 @@ describe('gebouwd-zonder-nummer/AC-5: een vervallen AC slaat de AC-dekking over 
       'een ADR in de verkeerde map (app-map voor een templatespec)',
       { 'docs/adr/0095-demo.md': ADR_INHOUD('geaccepteerd') },
     ],
-  ])('gebouwd-zonder-nummer/AC-5: %s: de AC wordt gemeld', async (_naam, adrs) => {
-    const files = metTest({ [TEMPLATE_SPEC]: specTekst('gebouwd', [VERVALLEN_AC]), ...adrs });
-    expect(await sleutels(files, 'docs:ac:')).toStrictEqual(['docs:ac:demo:AC-2']);
+  ])('gebouwd-zonder-nummer/AC-5: %s: de AC blijft levend', (_naam, adrs) => {
+    expect(levend(TEMPLATE_SPEC, [VERVALLEN_AC], adrs)).toStrictEqual(['AC-1', 'AC-2']);
   });
 
-  test('gebouwd-zonder-nummer/AC-5: een app-spec met een ADR in de template-map wordt gemeld', async () => {
-    const files = metTest({
-      [APP_SPEC]: specTekst('gebouwd', [VERVALLEN_AC]),
-      'docs/template/adr/0095-demo.md': ADR_INHOUD('geaccepteerd'),
-    });
-    expect(await sleutels(files, 'docs:ac:')).toStrictEqual(['docs:ac:demo:AC-2']);
+  test('gebouwd-zonder-nummer/AC-5: een app-spec met een ADR in de template-map: de AC blijft levend', () => {
+    const adrs = { 'docs/template/adr/0095-demo.md': ADR_INHOUD('geaccepteerd') };
+    expect(levend(APP_SPEC, [VERVALLEN_AC], adrs)).toStrictEqual(['AC-1', 'AC-2']);
   });
 
   test.each([
@@ -281,13 +202,10 @@ describe('gebouwd-zonder-nummer/AC-5: een vervallen AC slaat de AC-dekking over 
     ['achter een voorafgaand woord', '- **demo/AC-2** — Nu vervallen: Vervallen door ADR 0095 (reden).'],
     ['op een vervolgregel', '- **demo/AC-2** — Gegeven meer, dan meer.\n  Vervallen door ADR 0095 (reden).'],
   ])(
-    'gebouwd-zonder-nummer/AC-5: "Vervallen door ADR" %s (niet direct na het streepje): gemeld',
-    async (_naam, regel) => {
-      const files = metTest({
-        [TEMPLATE_SPEC]: specTekst('gebouwd', [regel]),
-        'docs/template/adr/0095-demo.md': ADR_INHOUD('geaccepteerd'),
-      });
-      expect(await sleutels(files, 'docs:ac:')).toStrictEqual(['docs:ac:demo:AC-2']);
+    'gebouwd-zonder-nummer/AC-5: "Vervallen door ADR" %s (niet direct na het streepje): de AC blijft levend',
+    (_naam, regel) => {
+      const adrs = { 'docs/template/adr/0095-demo.md': ADR_INHOUD('geaccepteerd') };
+      expect(levend(TEMPLATE_SPEC, [regel], adrs)).toStrictEqual(['AC-1', 'AC-2']);
     },
   );
 });
@@ -296,8 +214,15 @@ describe('gebouwd-zonder-nummer/AC-5: een vervallen AC slaat de AC-dekking over 
 
 describe('gebouwd-zonder-nummer/AC-6: het merkteken van een dood pad mag na witruimte met hooguit één regeleinde staan', () => {
   const DOOD = `docs:${TEMPLATE_SPEC}:dood-pad:scripts/kit/weg.mjs`;
+  // De spec moet een gebouwd AC hebben (een test die demo/AC-1 noemt), anders toetst de dood-padcheck haar niet (ADR 0104).
   const doodPad = (regels: string[]) =>
-    sleutels({ [TEMPLATE_SPEC]: specTekst('gebouwd', ['', ...regels]) }, ':dood-pad:');
+    sleutels(
+      {
+        [TEMPLATE_SPEC]: specTekst('goedgekeurd', ['', ...regels]),
+        'test/demo.test.ts': "test('demo/AC-1: iets', () => {});\n",
+      },
+      ':dood-pad:',
+    );
 
   test.each(['(vervallen)', '(nieuw)', '(voorbeeld)'])(
     'gebouwd-zonder-nummer/AC-6: %s op de volgende regel: geen melding',
@@ -351,8 +276,6 @@ describe('gebouwd-zonder-nummer/AC-8: vervolgbouw met een onveranderde statusreg
 // --- AC-9: beslisOvergang ---------------------------------------------------------------------------------------------------------
 
 describe('gebouwd-zonder-nummer/AC-9: beslisOvergang voor een spec die gebouwd blijft', () => {
-  const MARKERING = '- **demo/AC-2** (nog niet gebouwd) — Gegeven meer, dan meer.';
-  const KAAL = '- **demo/AC-2** — Gegeven meer, dan meer.';
   const NIEUW = '- **demo/AC-3** — Gegeven nieuw, dan nieuw.';
   const uitslag = (voor: string, na: string) => beslisOvergang(APP_SPEC, voor, na).uitslag;
 
@@ -382,20 +305,7 @@ describe('gebouwd-zonder-nummer/AC-9: beslisOvergang voor een spec die gebouwd b
     expect(uitslag(specTekst('gebouwd # #130'), specTekst('gebouwd # #131', [NIEUW]))).toBe('besluit');
   });
 
-  test.each(['gebouwd', 'gebouwd # #130'])(
-    'gebouwd-zonder-nummer/AC-9: een merkteken (nog niet gebouwd) weggehaald bij status %s: gebouwd',
-    (status) => {
-      expect(uitslag(specTekst(status, [MARKERING]), specTekst(status, [KAAL]))).toBe('gebouwd');
-    },
-  );
-
-  test.each([
-    ['van niets naar een SHA', 'gebouwd # #130', `gebouwd # #130; gevalideerd: ${SHA}`],
-    ['van zonder nummer naar een SHA', 'gebouwd', `gebouwd # #130; gevalideerd: ${SHA}`],
-    ['een andere SHA', `gebouwd # #130; gevalideerd: ${SHA}`, `gebouwd # #130; gevalideerd: ${ANDERE_SHA}`],
-  ])('gebouwd-zonder-nummer/AC-9: een nieuwe ; gevalideerd: <sha> (%s): gebouwd', (_naam, voor, na) => {
-    expect(uitslag(specTekst(voor), specTekst(na))).toBe('gebouwd');
-  });
+  // De uitslag `gebouwd` (merkteken weg, nieuwe SHA) verviel door ADR 0104 (AC-20); geschrapt met akkoord van de eigenaar (OV-7).
 });
 
 // --- AC-10 en AC-11: de repo na de bouw -------------------------------------------------------------------------------------------
@@ -497,5 +407,77 @@ describe('gebouwd-zonder-nummer/AC-12: check:docs is groen zonder de spec gebouw
       const [naam = '', nummer = ''] = ac.split('/');
       expect(meldingen).not.toContain(`docs:ac:${naam}:${nummer}`);
     }
+  });
+});
+
+// --- AC-27 en AC-28: de bouw van ADR 0104 (de statusregel en het merkteken zijn weg) ----------------------------------------------
+
+/** De aaneengesloten `//`-regels aan het begin van een bronbestand. */
+function kopcommentaar(pad: string): string {
+  const regels = lees(pad).split('\n');
+  const eerste = regels.findIndex((regel) => !regel.startsWith('//'));
+  return regels.slice(0, eerste === -1 ? regels.length : eerste).join('\n');
+}
+
+describe('gebouwd-zonder-nummer/AC-27: de melding vergeten-gebouwd, regel 18 en alle gebouwd-regels en merktekens in de template zijn weg', () => {
+  test('gebouwd-zonder-nummer/AC-27: scripts/kit/vergeten-gebouwd.mjs en test/rails/vergeten-gebouwd.test.ts bestaan niet', () => {
+    expect(existsSync(path.join(REPO, 'scripts/kit/vergeten-gebouwd.mjs'))).toBe(false);
+    expect(existsSync(path.join(REPO, 'test/rails/vergeten-gebouwd.test.ts'))).toBe(false);
+  });
+
+  test('gebouwd-zonder-nummer/AC-27: het kopcommentaar van scripts/kit/check-docs.mjs noemt geen regel 18 en geen vergeten-gebouwd', () => {
+    const kop = kopcommentaar('scripts/kit/check-docs.mjs');
+    expect(kop.length, 'het kopcommentaar is gelezen').toBeGreaterThan(500);
+    expectAbsent(kop, /^\/\/\s+18\.\s/m, {
+      recognizes: ['//  18. Een melding, nooit een overtreding', '// 18. Een melding'],
+    });
+    expect(kop).not.toContain('vergeten-gebouwd');
+  });
+
+  test('gebouwd-zonder-nummer/AC-27: geen bestand in docs/template/specs/ heeft een statusregel die met status: gebouwd begint', () => {
+    const bestanden = bestandenOnder('docs/template/specs').filter((bestand) => bestand.endsWith('.md'));
+    expect(bestanden.length, 'de specmap is gelezen').toBeGreaterThan(50);
+    const gebouwd = bestanden.filter((bestand) => /^status: gebouwd/m.test(lees(bestand)));
+    expect(gebouwd).toStrictEqual([]);
+  });
+
+  test('gebouwd-zonder-nummer/AC-27: geen AC-regel in docs/template/specs/ heeft het merkteken (acIds(…).gemarkeerd is leeg)', () => {
+    const bestanden = bestandenOnder('docs/template/specs').filter((bestand) => bestand.endsWith('.md'));
+    expect(bestanden.length, 'de specmap is gelezen').toBeGreaterThan(50);
+    const gemarkeerd = bestanden.flatMap((bestand) => [...documentState.acIds(lees(bestand)).gemarkeerd]);
+    expect(gemarkeerd).toStrictEqual([]);
+  });
+});
+
+describe('gebouwd-zonder-nummer/AC-28: de instructies schrijven status: gebouwd niet meer voor', () => {
+  const GEEN = [
+    'AGENTS.md',
+    'docs/dod.md',
+    'docs/operations/agent-doorloop.md',
+    '.claude/agents',
+    '.claude/skills',
+    'docs/specs/_template.md',
+    'docs/specs/_mini.md',
+    'scripts/kit/templates/spec.md.tmpl',
+  ];
+
+  test('gebouwd-zonder-nummer/AC-28: in AGENTS.md, docs/dod.md, agent-doorloop, de agents, de skills en de spec-sjablonen staat de tekst status: gebouwd niet', () => {
+    const bestanden = GEEN.flatMap(bestandenOnder);
+    expect(bestanden.length, 'de bestanden zijn gelezen').toBeGreaterThan(10);
+    const treffers = bestanden.filter((bestand) => lees(bestand).includes('status: gebouwd'));
+    expect(treffers).toStrictEqual([]);
+  });
+
+  test('gebouwd-zonder-nummer/AC-28: in docs/framework.md staat status: gebouwd alleen in R-WERK-08, als de oude vorm die als goedgekeurd telt', () => {
+    const regels = lees('docs/framework.md')
+      .split('\n')
+      .filter((regel) => regel.includes('status: gebouwd'));
+    expect(regels.length, 'R-WERK-08 noemt de oude vorm').toBe(1);
+    expect(regels[0]).toMatch(/^- \*\*R-WERK-08\*\*/);
+    const regel = regels[0] ?? '';
+    const vanaf = regel.slice(regel.indexOf('status: gebouwd'));
+    expect(vanaf.slice(0, 160), 'R-WERK-08 zegt dat de oude vorm als goedgekeurd telt').toMatch(/goedgekeurd/);
+    // Het oude voorschrift is weg: niemand zet gebouwd nog in een bouw-PR.
+    expect(regel).not.toContain('in een gewone commit van de bouw-PR');
   });
 });

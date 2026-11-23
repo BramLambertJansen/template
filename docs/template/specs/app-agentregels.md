@@ -1,5 +1,5 @@
 ---
-status: gebouwd # #771
+status: goedgekeurd # #771
 namespace: app-agentregels
 ---
 
