@@ -1,5 +1,7 @@
 // Overzicht van de meethook (ADR 0046 punt 36): `pnpm meting [--json] [--sessie <id>] [--branch <naam>] [--trend] [--help]`.
 // `--trend` (ADR 0065 punt 4): de kwaliteitstrend over twintig gemergde PR's, zie scripts/kit/meting-trend.mjs.
+// `--schaduw` (ADR 0106): treffers per controle in schaduw, zie scripts/kit/meting-schaduw.mjs; meetregels `Schaduw` tellen
+// in geen enkele andere telling mee.
 // Leest `<opslagmap>/*.jsonl` (rails/hooks/lib/meting.mjs: METING_DIR of `<git common dir>/agent-meting`) en telt per
 // sessie en per branch: prompts (permissievragen; zo heten ze ook in de tekstuitvoer) per pad of commandoprefix en per modus (`m`, ontbrekend → onbekend), weigeringen, beurten, eigenaarberichten na de
 // opdracht (een bovengrens), pushes (geslaagde `git push`) en CI-rondes via `gh run list` (METING_GH, METING_GH_TIMEOUT_MS):
@@ -10,7 +12,8 @@
 import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { opslagmap } from '../../rails/hooks/lib/meting.mjs';
+import { opslagmap, repoRoot } from '../../rails/hooks/lib/meting.mjs';
+import { schaduwOverzicht, schaduwTekst } from './meting-schaduw.mjs';
 import { prsUitGh, trend, trendTekst } from './meting-trend.mjs';
 
 /**
@@ -31,13 +34,16 @@ const UUR = 60 * 60 * 1000;
 /** Een subagent-aanroep: alleen de tool Agent of Task, niet een commando of pad dat `agent` heet. @param {Regel} r */
 const subagent = (r) => r.tool === 'Agent' || r.tool === 'Task';
 
-const HELP = `Gebruik: pnpm meting [--json] [--sessie <id>] [--branch <naam>] [--pr-tabel] [--trend] [--help]
+const HELP = `Gebruik: pnpm meting [--json] [--sessie <id>] [--branch <naam>] [--pr-tabel] [--schaduw] [--trend] [--help]
 
   --json           Dezelfde tellingen als JSON.
   --sessie <id>    Alleen deze sessie.
   --branch <naam>  Alleen deze branch binnen elke sessie.
   --pr-tabel       Kerncijfers van één branch (--branch) als markdowntabel voor de PR-beschrijving: leespad (zie pnpm leespad),
                    doorlooptijd, reviewrondes, CI-rood, weigeringen (bovengrens), weigeringen per rol en subagents per rol.
+  --schaduw        Per controle in .kit/schaduw.json (ADR 0106): "schaduw <naam>: <n> treffers, <m> sleutels, <s> sessies,
+                   eind <eind>", ook bij 0; een controle in de opslag zonder registerregel krijgt "(niet in register)".
+                   Met --branch alleen die branch, met --json als JSON. Meetregels Schaduw tellen nergens anders mee.
   --trend          Kwaliteitstrend over de laatste twintig gemergde PR's (één gh api …/pulls?state=closed, REST): "let op:
                    <maat> steeg" als CI-rood of reviewrondes (lokale meetdata; zonder data onbekend) gemiddeld hoger
                    liggen over de laatste tien dan over de tien daarvoor. Minder dan twintig: te weinig data.
@@ -89,7 +95,8 @@ function parse(lijn, sessie) {
     if (typeof waarde !== 'object' || waarde === null || Array.isArray(waarde)) return null;
     const r = new Map(Object.entries(waarde));
     const e = r.get('e');
-    if (typeof e !== 'string') return null;
+    // Een treffer van een controle in schaduw is geen hook-event: alleen --schaduw telt hem (spec schaduwmodus).
+    if (typeof e !== 'string' || e === 'Schaduw') return null;
     const id = r.get('id');
     const m = r.get('m');
     const tc = r.get('tc');
@@ -528,9 +535,16 @@ function opties(args) {
   return {
     json: args.includes('--json'),
     prTabel: args.includes('--pr-tabel'),
+    schaduw: args.includes('--schaduw'),
     sessie: waarde('--sessie'),
     branch: waarde('--branch'),
   };
+}
+
+/** `--schaduw`: de treffers per controle in schaduw (spec schaduwmodus). @param {string | null} dir @param {ReturnType<typeof opties>} args */
+function schaduw(dir, args) {
+  const rijen = schaduwOverzicht(dir, repoRoot(process.cwd()) ?? process.cwd(), args.branch);
+  process.stdout.write(args.json ? `${JSON.stringify({ schaduw: rijen }, null, 2)}\n` : schaduwTekst(rijen));
 }
 
 /** @param {readonly string[]} argv */
@@ -545,6 +559,10 @@ function main(argv) {
     const prs = prsUitGh(ghOpties(process.env), reviewrondesPerBranch(dir));
     const t = prs === null ? null : trend(prs);
     process.stdout.write(args.json ? `${JSON.stringify({ trend: t }, null, 2)}\n` : trendTekst(t));
+    return;
+  }
+  if (args.schaduw) {
+    schaduw(dir, args);
     return;
   }
   if (args.prTabel) {

@@ -67,6 +67,12 @@ en de metingen van hoofdstukken, regelboek, specs, ADR's, rules, skills en opera
 nooit rood). `pnpm meting --trend` vergelijkt CI-rood en reviewrondes over de laatste tien gemergde PR's met
 de tien daarvoor (`scripts/kit/meting-trend.mjs`; leesbudget/AC-7).
 
+Controles in schaduw (R-PRINC-13, ADR 0106): `pnpm meting --schaduw [--branch <naam>] [--json]` geeft per regel van
+`.kit/schaduw.json` de treffers (meetregels `Schaduw`, `schaduwRegel` in `rails/hooks/lib/meting.mjs`), sleutels, sessies en
+de einddatum (`scripts/kit/meting-schaduw.mjs`); de andere tellingen negeren die regels. `pnpm ratchet` meldt treffers van
+een uitvoerder als `schaduw: <naam>: <treffer>` en drie dagen vóór `eind` `schaduw-termijn: <naam> loopt af op …`; na `eind`
+(commitdatum van HEAD) is `schaduw-termijn` strikt rood tot het besluit gemerged is (`scripts/kit/schaduw.mjs`).
+
 Wanneer een meting "let op" zegt (ADR 0070, spec `meting-stuurt`):
 
 - **Tegenover de basis.** `pnpm leespad` meet ook de basis, standaard `git merge-base origin/main HEAD`

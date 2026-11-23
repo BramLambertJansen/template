@@ -2,7 +2,8 @@
 // een releasesectie direct onder het [Unreleased]-blok van docs/template-changelog.md, zet TEMPLATE_VERSION op de nieuwe
 // versie en verwijdert de verwerkte fragmenten. Alleen in de template (`onderhoud` in .claude/gates.json). Het script
 // commit, pusht en tagt niet: de hoofdsessie maakt de release-PR, de eigenaar tagt de squash-commit als `template-vx.y.z`.
-// Gebruik: `pnpm template:release <x.y.z> [--datum JJJJ-MM-DD]`. Bij een fout: exit 1 en geen bestand gewijzigd.
+// Gebruik: `pnpm template:release <x.y.z> [--datum JJJJ-MM-DD]`. Bij een fout: exit 1 en geen bestand gewijzigd. Een gevuld
+// `.kit/schaduw.json` weigert de release (spec schaduwmodus, ADR 0106 punt 8).
 //
 // Dit bestand is ook de ene ontleding van releasekoppen (`releasesUit`) en van fragmenten (`fragmentFout`, `leesFragment`)
 // voor check-docs, check:docs-drift en template:status. Importeren doet niets; de CLI draait alleen als het script zelf
@@ -16,6 +17,7 @@ export const FRAGMENT_MAP = 'docs/template-changelog.d';
 export const VERSIE_BESTAND = 'src/core/shared/template-version.ts';
 export const UPDATE_KOP = '### Bij een update';
 const GATES = '.claude/gates.json';
+const SCHADUW_REGISTER = '.kit/schaduw.json';
 const LEESMIJ = 'README.md';
 const FRAGMENT_NAAM = /^[a-z0-9][a-z0-9-]*\.md$/;
 const RELEASEKOP = /^## \[(\d+\.\d+\.\d+)\] - (\d{4}-\d{2}-\d{2})$/;
@@ -324,6 +326,26 @@ function toetsVersie(versie, huidig, fragmenten) {
 }
 
 /**
+ * Een app krijgt geen controle in schaduw (spec schaduwmodus, ADR 0106 punt 8): gooit als `.kit/schaduw.json` een of meer
+ * regels bevat. Een ontbrekend register of `[]` laat de release door; de vorm toetst `pnpm ratchet` (schaduw-register).
+ * @param {string} root
+ */
+function weigerSchaduw(root) {
+  const bestand = path.join(root, SCHADUW_REGISTER);
+  if (!existsSync(bestand)) return;
+  /** @type {unknown} */
+  const regels = JSON.parse(readFileSync(bestand, 'utf8'));
+  if (!Array.isArray(regels) || regels.length === 0) return;
+  const namen = regels.map((regel, index) => {
+    const naam = typeof regel === 'object' && regel !== null ? Reflect.get(regel, 'naam') : undefined;
+    return typeof naam === 'string' ? naam : `#${String(index)}`;
+  });
+  throw new Error(
+    `${SCHADUW_REGISTER} bevat ${String(regels.length)} controle(s) (${namen.join(', ')}); een app krijgt geen controle in schaduw, neem eerst het besluit (ADR 0106 punt 8)`,
+  );
+}
+
+/**
  * Stelt de release samen en schrijft pas als alles klopt: de wijzigingenlijst, TEMPLATE_VERSION en het weghalen van de fragmenten.
  * @param {string} root
  * @param {readonly string[]} argv
@@ -332,6 +354,7 @@ function toetsVersie(versie, huidig, fragmenten) {
 export function brengUit(root, argv) {
   const { versie, datum } = argumenten(argv);
   if (!isTemplate(root)) throw new Error(`alleen in de template: ${GATES} heeft geen onderhoud (dit is een app)`);
+  weigerSchaduw(root);
   const versieTekst = readFileSync(path.join(root, VERSIE_BESTAND), 'utf8');
   const fragmenten = leesFragmenten(root);
   toetsVersie(versie, versieUit(versieTekst), fragmenten);
