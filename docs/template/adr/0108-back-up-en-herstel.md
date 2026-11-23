@@ -3,7 +3,7 @@
 Status: voorgesteld
 
 Drempel: A2 (een nieuwe databaserol, een definer-functie en drie kleine tools in een aparte image: `age`, `rclone` en
-`curl`), A3 (één rol krijgt `BYPASSRLS`; `db/tests/rolattributen.sql` verbiedt dat nu voor de vijf rollen van de template en
+`curl`; `dbmate` gebruikt de template al), A3 (één rol krijgt `BYPASSRLS`; `db/tests/rolattributen.sql` verbiedt dat nu voor de vijf rollen van de template en
 krijgt één benoemde uitzondering) en A4 (wijzigt [0039](0039-stack-provider-neutraal-en-toolchain.md) op één punt: de
 template levert voortaan een back-upstap en een runbook voor herstel, waar 0039 alle runbooks per app liet). Aanleiding:
 verzoek van de eigenaar (2026-11-23), app-behoefte: de eerste app met geld (ABAS) gaat naar productie op goedkope hosting
@@ -37,15 +37,17 @@ sleutel is kwijt. Daar richt dit besluit zich op; zeldzamere risico's laat het b
 2. **Instellen in git, uitvoeren buiten de app.** Map, sleutel, bewaartermijn en schema staan in `deploy/backup.env` en
    wijzigen via een PR; CI valideert het bestand. Geheimen staan bij de uitvoerder. De taak draait los van het API-proces.
    De app kan back-ups niet uitzetten, omleiden of terugzetten.
-3. **Een kleine image zonder Node.** Shellscripts met de Postgres-tools van `db/docker/Dockerfile`, plus `age`, `rclone` en
-   `curl` (voor de dodemansknop en de foutmail via SMTP). Geen Node, geen `node_modules` naast de databasegeheimen.
+3. **Een kleine image zonder Node.** Shellscripts met de Postgres-tools van `db/docker/Dockerfile`, plus `age`, `rclone`,
+   `curl` (voor de dodemansknop en de foutmail via SMTP) en `dbmate` (om naar de huidige code te migreren), elk een los
+   programma. Geen Node, geen `node_modules` naast de databasegeheimen.
 4. **Een eigen rol `app_backup`.** `LOGIN`, lid van `pg_read_all_data`, `BYPASSRLS`, nergens eigenaar of lid van. Hij heeft
    geen enkel schrijfrecht; dat rust op de rechten, niet op een instelling die de rol zelf kan uitzetten. Alleen deze rol mag
    naast de vijf rollen van de template `BYPASSRLS` hebben; de rolattributentest noemt hem bij naam. In `db/init/` en het
    runbook, nooit in een migratie (R-DB-01).
 5. **De host kan zijn eigen back-ups niet lezen of wissen.** Versleutelen gebeurt met een publieke sleutel; de privésleutel
    staat alleen op het herstelblad en waar de hersteltest draait. De host heeft in de map alleen een schrijver die mag
-   toevoegen, niet wissen (bij een gedeelde Drive: Bijdrager). Opruimen draait op een andere plek met een eigen identiteit
+   toevoegen; wissen of overschrijven mislukt, of is terug te halen (bij een gedeelde Drive: Bijdrager, die niet kan wissen;
+   een overschreven bestand houdt zijn oude versie). Exports krijgen altijd een nieuwe naam. Opruimen draait op een andere plek met een eigen identiteit
    (standaard een geplande workflow die alleen dat geheim kent). Valt het opruimen uit, dan groeit de map alleen: dat is
    veilig, en het alarm van punt 7 meldt het.
 6. **Terugzetten als `app_migrator`, nooit eroverheen.** Op een echte doel-database bestaan de rollen al (runbook, R-DB-01);
@@ -56,8 +58,10 @@ sleutel is kwijt. Daar richt dit besluit zich op; zeldzamere risico's laat het b
    dan 26 uur uit, dan alarmeert die dienst. Een mislukte run mailt zelf. Een export die veel kleiner is dan de vorige
    zeven, mailt ook: een leeggehaalde database wordt anders trouw geback-upt.
 8. **Vangnet 2, wekelijks echt terugzetten.** De nieuwste export in een lege Postgres van dezelfde versie, als
-   `app_migrator`, gemigreerd naar de huidige code, met de pgTAP-suite van de template, de herstelcontroles van de app (bij
-   geld: saldo gelijk aan de som van de boekingen) en een proef op `AUTH_SECRET`. Een geslaagde oefening meldt zich bij een
+   `app_migrator`, gemigreerd naar de huidige code, met de pgTAP-suite van de template en de herstelcontroles van de app
+   (bij geld: saldo gelijk aan de som van de boekingen). Of `AUTH_SECRET` klopt, toetst geen automaat: dat vraagt de
+   cryptografie van Better Auth en dus Node. Bij een echt herstel logt een beheerder met zijn tweede factor in vóór het
+   overschakelen, en het herstelblad vraagt het geheim expliciet. Een geslaagde oefening meldt zich bij een
    eigen dodemansknop en zet een klein markeerbestand zonder persoonsgegevens in de map.
 9. **Vangnet 3, een herstelblad bij twee mensen**, buiten git en buiten de host: waar de back-ups staan en hoe je erbij komt,
    de privésleutel, `AUTH_SECRET` en de andere productiegeheimen.
@@ -75,8 +79,9 @@ sleutel is kwijt. Daar richt dit besluit zich op; zeldzamere risico's laat het b
 - **Twee bestemmingen verplicht.** Beschermt tegen het verlies van één opslagdienst. Kan per app-ADR, maar is geen eis.
 - **Opruimen op de host zelf.** Eenvoudiger, maar dan kan wie de host kaapt alle back-ups wissen; alleen de prullenbak van de
   opslag beschermt dan nog.
-- **Een runtime (Node) in de image.** Hergebruikt de scripts van de template, maar zet een volledige runtime en
-  dependencies naast de databasegeheimen.
+- **Een runtime (Node) in de image.** Hergebruikt de scripts van de template en kan `AUTH_SECRET` automatisch toetsen, maar
+  zet een volledige runtime en dependencies naast de databasegeheimen. Een eigen programma alleen voor die proef is ook
+  een extra afhankelijkheid; het inloggen bij een echt herstel bewijst hetzelfde.
 - **Beheerde database met terugspoelen naar elk moment.** Minder risico, kost geld, en de template kiest geen provider.
 - **Instellen via een beheerpagina in de app.** Wie het beheeraccount heeft, heeft dan de back-ups.
 

@@ -198,7 +198,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
 - [ ] **ST-10 (P1) — staging, release en aantoonbaar herstel** (fase 3, per app). Na een provider-ADR (app-ADR: hosting en beheerde Postgres met eigen
   rollen) een adapter in `deploy/<host>/`, gescheiden omgevingen, lektest via de pooler, rollen per omgeving via runbook, `check-deployment-schema` (faalt dicht, weigert preview
   tegen productie), `check-release-ci` vóór én na de build, beschermde production-approval, release-workflows en smoketest na deploy; headers/CSP op
-  de host, CAPTCHA, PWA-manifest. Runbooks in `docs/operations/` (platform, back-up en herstel met acceptatietabel); beschrijf code-rollback,
+  de host, CAPTCHA, PWA-manifest. Runbooks in `docs/operations/` (platform; back-up en herstel volgen uit ST-10a en wachten niet op het providerbesluit); beschrijf code-rollback,
   vooruitmigratie en verwijderde gegevens in back-ups. De eigenaar kiest beschikbaarheidsdoelen, RPO/RTO, regio en bewaartermijnen. **Afhankelijkheden:**
   providerbesluit, ST-01, ST-08, privacyregister. **Klaar als:** preview tegen productie faalt; vereiste CI en staging horen bij exact het
   releasecommit; de smoketest bewijst login, lezen en gesloten browser-datatoegang; een back-up is in een aparte omgeving teruggezet met gemeten
