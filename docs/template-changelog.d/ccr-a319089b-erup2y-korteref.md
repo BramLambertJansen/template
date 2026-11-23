@@ -1,5 +1,5 @@
 ---
-soort: nieuw
+soort: toegevoegd
 ---
 
 - De lintregel `rails/korte-ref` weigert in `rails/` en `scripts/kit/` de korte naam `origin/main` als git-argument
