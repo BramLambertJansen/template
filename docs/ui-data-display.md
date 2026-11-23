@@ -31,6 +31,25 @@ De bestaande benoemde Table-regio scrolt intern op mobiel en blijft met het toet
 
 De exacte props en hun samenhang staan in [DataTableProps](../src/core/web/ui/data-table.tsx).
 
+## CSV-export
+
+Spec [csv-export](template/specs/csv-export.md). `ExportCsvButton` downloadt de rijen die je meegeeft als CSV-bestand,
+volledig in de browser: geen route, permissie of dependency. Voorbeeld: de DataTable-sectie op `/design-system`.
+
+- API: `rows`, `columns` (`CsvColumn<Row>`: `header` en `value(row)`), `filename` (getrimd, `.csv` erbij als het
+  ontbreekt), optioneel `label`, `doneLabel`, `errorLabel` en `disabled`. `toCsv(rows, columns)` geeft dezelfde tekst
+  zonder download (`src/core/web/ui/csv.ts`).
+- Excel-formaat: UTF-8 met BOM, puntkomma als scheidingsteken en CRLF tussen regels, zodat Nederlandse Excel het bestand
+  direct goed opent. Een cel met `;`, `"` of een regeleinde komt tussen aanhalingstekens.
+- Formule-neutralisatie: een cel of kop die begint met `=`, `+`, `-`, `@`, tab of CR krijgt een apostrof vooraan, zodat
+  Excel hem niet als formule uitvoert. Een negatief getal wordt daardoor tekst.
+- Alleen geladen rijen: de knop exporteert precies de meegegeven `rows`, in die volgorde. Bij "Meer laden" of een cursor
+  bevat een export van een deels geladen lijst alleen de geladen rijen; er komt geen totaal- of aantalregel bij.
+- Formatteren: `value` geeft altijd een string. Formatteer getallen, bedragen en datums zelf via
+  `src/core/web/lib/format.ts`, zodat het Nederlandse formaat in het bestand staat.
+- Zet `disabled` zolang de lijst laadt. Lege `filename`, lege `columns` of een lege kop gooit tijdens render
+  (ErrorBoundary); een fout bij het opbouwen of downloaden toont de foutregel onder de knop.
+
 ## Tabs
 
 Tabs ontvangt label en items met id/label/content/disabled. Gebruik value/onValueChange voor controlled gedrag of

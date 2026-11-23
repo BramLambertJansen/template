@@ -25,6 +25,10 @@ export const uiTexts = {
   wizardSubmit: 'Versturen',
   wizardStepHeading: (step: number, total: number, title: string) =>
     `Stap ${String(step)} van ${String(total)}: ${title}`,
+  // Spec csv-export: knop en meldingen van ExportCsvButton.
+  exportCsv: 'CSV exporteren',
+  exportCsvDone: 'CSV-bestand aangemaakt.',
+  exportCsvFailed: 'Exporteren is niet gelukt. Probeer het opnieuw.',
   // Spec foutreferentie: de requestId bij een onverwachte serverfout, voor support.
   errorReference: 'Referentie:',
   copyErrorReference: 'Referentie kopiëren',
