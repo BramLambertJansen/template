@@ -91,6 +91,12 @@ describe('migratieGecommit tegen echte git: tip van anker en origin/main, nooit 
     expect(migratieGecommit(root, null)(MAIN_MIGRATIE)).toBe(true);
   });
 
+  test('review #927: een lokale branch origin/main schaduwt de remote-tracking ref niet', () => {
+    const { root, voor } = repo(true);
+    git(root, 'update-ref', 'refs/heads/origin/main', voor);
+    expect(migratieGecommit(root, null)(MAIN_MIGRATIE)).toBe(true);
+  });
+
   test('zonder origin telt het anker: de migratie van main is gecommit, een branch-migratie niet', () => {
     const { root, main } = repo(false);
     git(root, 'switch', '-q', '-c', 'feat');

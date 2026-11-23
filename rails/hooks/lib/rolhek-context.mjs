@@ -199,7 +199,8 @@ export function opMain(root, basis) {
   const exists = (/** @type {string} */ tree, /** @type {string} */ rel) =>
     safe(() => git(root, ['cat-file', '-e', `${tree}:${rel}`]) === '');
   return (rel) => {
-    tips ??= [basis, 'origin/main'].flatMap((ref) => {
+    // De volle naam: een korte `origin/main` kan een lokale branch `refs/heads/origin/main` schaduwen (review #927).
+    tips ??= [basis, 'refs/remotes/origin/main'].flatMap((ref) => {
       if (ref === null) return [];
       try {
         const sha = git(root, ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]);
