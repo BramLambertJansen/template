@@ -20,6 +20,10 @@ Feiten nu:
    en dan `git commit -F <bestand>` (de kale merge kan in de cloud niet ondertekenen). Toont
    `git diff --name-only HEAD...origin/main -- .claude/skills .claude/agents .claude/hooks .claude/settings.json .claude/settings.local.json` iets, dan niet mergen maar de eigenaar melden
    (leerpunt #789; `docs/operations/recepten.md`).
+   Vóór het openen van de PR (ADR 0101 punt 6): zoek de open leerpunten die het werk raakt (zie stap 8 van Opruimen); lost
+   de PR er een op, dan krijgt de beschrijving `Closes #<nr>` en de sectie `## Leerpunt` met bewijs, zodat GitHub het bij de
+   merge sluit. Alleen in de template zelf: in een app wijst `#<nr>` naar een issue van de app, dus daar nooit een
+   sluitwoord; een app-PR lost een templateleerpunt niet op, de uitkomst is `deels` of een comment (stap 8).
    De bestaande pre-push-hook draait de volledige `pnpm gate:fast`; start die niet nogmaals alleen voor de overdracht.
    Gerichte feedback is geen volledige groene gate. Iedere PR behoudt alle CI-checks; geen oude uitslag hergebruiken.
 2. Wacht met `pnpm pr:verify <nr> --watch` (geen kale `gh pr checks --watch`: die toetst SHA, branch en herkomst van de check niet).
@@ -89,6 +93,19 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
    blokkerende reviewbevinding (Leerpunt: ja), tweede mislukte correctiepoging. Per les: Leerpunt? Generiek: dien het in volgens
    het sjabloon leerpunt (gh issue create naar template.repository met --label leerpunt) en toon de tekst. Alleen voor deze app:
    een padregel, spec of ADR (`docs/specs/`, `docs/adr/`) in de app, geen issue. Niets: zeg "geen leerpunt".
+   Vóór het indienen eerst afstemmen (ADR 0101 punt 6): zoek de open leerpunten die het werk raakt, met trefwoorden uit
+   de geraakte paden en regels: `gh issue list --repo <repo> --label leerpunt --state open --search <trefwoord>`, niet de hele
+   lijst. Dezelfde zoektocht hoort al vóór het openen van de PR (CI-lus stap 1). Per geraakt leerpunt één uitkomst: `opgelost`
+   (al afgehandeld in de PR met `Closes #<nr>` en `## Leerpunt`; GitHub sloot het bij de merge; zonder bewijs alleen een
+   comment; alleen in de template, in een app is een workaround `deels`), `deels` (comment `deels: <wat gedaan is>; open: <wat nog moet>` met de PR, zo nodig de body
+   ingekort tot het resterende) of `zelfde les opnieuw` (comment met de nieuwe reproductie, geen nieuw issue). Slotregel per
+   leerpunt de uitkomst, of "geen open leerpunt geraakt".
+   Bijwerken en sluiten (ADR 0101): vóór elke schrijfactie de doelcheck `gh issue view <nr> --repo <repo> --json labels,state,url`;
+   geen label `leerpunt`, dan stop (issues en PR's delen nummers). Alleen deze vormen, met `--repo` direct na de actie (anders
+   een vraag): `gh issue comment --repo <repo> <nr> --body-file <bestand>`, `gh issue edit --repo <repo> <nr> --title <titel>
+   --body-file <bestand>` (titel of body) en, bij een duplicaat, eerst `gh issue comment` met `duplicaat van #<nr>` en daarna
+   `gh issue close --repo <repo> <nr> --duplicate-of <nr>`. Geen labels via gh (R-ROL-08). Ander sluiten (achterhaald, not
+   planned) en heropenen doet de eigenaar.
    Vraag ook (ADR 0081): kostte een stap, check, hook of instructie in deze sessie merkbaar tijd, rondes of tokens zonder iets
    te vangen, of las je code die bij gelijk gedrag veel korter of sneller kan? Dan een leerpunt met plek
    `Schrappen of vereenvoudigen` en een `Onderbouwing` met de regels `Meting:`, `Overname:` en `Terugval:`.
@@ -117,8 +134,10 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
 
    Zet de body in een tijdelijk bestand en geef het mee met `--body-file`: backticks of `$(` in het commando zelf geven een vraag.
    Bestaat het label nog niet, dan meld je dat; het label maakt de eigenaar. Triage en oppakken zijn van de eigenaar.
-   Cloud, waar `gh` niet kan schrijven (ADR 0078 punt 4): de MCP-tool voor issues, alleen aanmaken, alleen naar
-   `template.repository`, met label `leerpunt` en dezelfde titel en body. Geen andere MCP-schrijfactie.
+   Cloud, waar `gh` niet kan schrijven (ADR 0078 punt 4, ADR 0101 punt 5): de MCP-tool voor issues (aanmaken, comment, bijwerken),
+   alleen naar `template.repository`: aanmaken met label `leerpunt` en dezelfde titel en body, en na de doelcheck dezelfde
+   acties als hierboven (comment, titel en body, sluiten als duplicaat) plus labels zetten of weghalen, nooit `leerpunt`,
+   `leerpunt-onvolledig` of `leerpunt-zonder-bewijs`. Geen andere MCP-schrijfactie.
    Sluit een PR een leerpunt (sluitwoord of koppeling), dan krijgt de beschrijving de sectie `## Leerpunt` met per issue
    `- #<nr>: trede <Type|Check|Gouden pad of generator>; bewijs <testpad>`; de job `leerpunt-bewijs` draait die test rood op
    de basis en groen op de head. Bij een integratie- of e2e-test: `bewijs geen test: <reden>`, en dan merget de eigenaar.

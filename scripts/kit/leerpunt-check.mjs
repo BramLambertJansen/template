@@ -1,4 +1,4 @@
-// Issue-check voor leerpunten (ADR 0078 punt 3, spec leerlus-bewijs AC-5 en AC-6). Draait in de workflow `leerpunt` op
+// Issue-check voor leerpunten (ADR 0078 punt 3, spec leerlus-bewijs AC-5, AC-6 en AC-13). Draait in de workflow `leerpunt` op
 // `issues` en `issue_comment`, vanaf de default branch, met alleen `issues: write` en `pull-requests: read`. Zet of haalt de
 // labels `leerpunt-onvolledig` en `leerpunt-zonder-bewijs` weg met één comment per soort; sluit, heropent of bewerkt niets.
 // Alleen in de template-repo (`onderhoud.repository` in .claude/gates.json). Alleen `node:`- en relatieve imports.
@@ -10,6 +10,7 @@ import {
   graphqlData,
   leesSjabloon,
   lijst,
+  SCHRIJFRECHT,
   sluitOordeel,
   toetsBody,
   veld,
@@ -21,7 +22,7 @@ export const LABEL_ZONDER_BEWIJS = 'leerpunt-zonder-bewijs';
 const BOT = 'github-actions[bot]';
 const MERK = { onvolledig: '<!-- leerpunt-check:onvolledig -->', bewijs: '<!-- leerpunt-check:zonder-bewijs -->' };
 
-/** @typedef {{ naam: string, actie: string, nummer: number, open: boolean, body: string, labels: string[] }} Gebeurtenis */
+/** @typedef {{ naam: string, actie: string, nummer: number, open: boolean, body: string, labels: string[], reden: string }} Gebeurtenis */
 /** @typedef {{ label: string, aan: boolean, comment: string | null, merk: string }} Stap */
 
 /** @param {unknown} event @param {string} naam @returns {Gebeurtenis} */
@@ -34,6 +35,8 @@ export function leesGebeurtenis(event, naam) {
     open: veld(issue, 'state') === 'open',
     body: String(veld(issue, 'body') ?? ''),
     labels: lijst(veld(issue, 'labels')).map((label) => String(veld(label, 'name'))),
+    // De sluitreden (`completed`, `not_planned`, `duplicate`), ook bij `issue_comment` (spec leerlus-bewijs AC-13).
+    reden: String(veld(issue, 'state_reason') ?? ''),
   };
 }
 
@@ -77,6 +80,52 @@ export function stappen({ fouten, oordeel, heropend, velden = [] }) {
   return uit;
 }
 
+// Spec leerlus-bewijs AC-13 (ADR 0101 punt 2): een comment die begint met `duplicaat van #<nr>`.
+const DUPLICAAT = /^\s*duplicaat van #(\d+)\b/i;
+
+/**
+ * Is de REST-body van `repos/<repo>/issues/<nr>` een leerpunt: een issue (geen `pull_request`) met het label `leerpunt`?
+ * `null` (een 404, of een 410 voor een verwijderd issue) bestaat niet.
+ * @param {unknown} doel
+ */
+export function isLeerpuntDoel(doel) {
+  if (doel === null || doel === undefined) return false;
+  const pr = veld(doel, 'pull_request');
+  if (pr !== undefined && pr !== null) return false;
+  return lijst(veld(doel, 'labels')).some((label) => veld(label, 'name') === 'leerpunt');
+}
+
+/**
+ * De doelnummers van geldige duplicaatcomments, in volgorde en zonder herhaling: van een auteur met schrijfrecht en niet
+ * het issue zelf.
+ * @param {number} nummer
+ * @param {{ body: string, association: string }[]} comments
+ */
+export function duplicaatDoelen(nummer, comments) {
+  const doelen = comments
+    .filter(({ association }) => SCHRIJFRECHT.includes(association))
+    .map(({ body }) => Number(DUPLICAAT.exec(body)?.[1] ?? Number.NaN))
+    .filter((doel) => Number.isInteger(doel) && doel !== nummer);
+  return [...new Set(doelen)];
+}
+
+/**
+ * Het sluitoordeel met duplicaat (AC-13): bewijs en achterhaald gaan voor (`sluitOordeel`, AC-6); daarna telt een sluiting
+ * met reden `duplicate` en een geldige duplicaatcomment naar een ander leerpunt. `haalDoel` geeft de REST-body van het doel,
+ * of `null` bij een 404 of 410.
+ * @param {number} nummer
+ * @param {{ prs: { merged: boolean, body: string }[], comments: { body: string, association: string }[], reden: string }} bron
+ * @param {(doel: number) => Promise<unknown>} haalDoel
+ * @returns {Promise<'bewijs' | 'achterhaald' | 'duplicaat' | 'zonder-bewijs'>}
+ */
+export async function beoordeelSluiting(nummer, bron, haalDoel) {
+  const oordeel = sluitOordeel(nummer, bron);
+  if (oordeel !== 'zonder-bewijs' || bron.reden !== 'duplicate') return oordeel;
+  for (const doel of duplicaatDoelen(nummer, bron.comments))
+    if (isLeerpuntDoel(await haalDoel(doel))) return 'duplicaat';
+  return 'zonder-bewijs';
+}
+
 /** @param {string} tekst @returns {string | null} */
 export function onderhoudRepo(tekst) {
   const repo = veld(veld(JSON.parse(tekst), 'onderhoud'), 'repository');
@@ -90,16 +139,29 @@ function env(naam) {
   return waarde;
 }
 
-/** @param {string} pad @param {{ method?: string, body?: unknown }} [opties] @returns {Promise<unknown>} */
+/**
+ * Telt dit antwoord als "bestaat niet" in plaats van als fout? Bij DELETE een 404 (label al weg); bij `magOntbreken` een 404
+ * of een 410, die GitHub geeft voor een verwijderd issue (een doel dat niet bestaat, AC-13). Elke andere fout gooit.
+ * @param {number} status @param {{ method?: string, magOntbreken?: boolean }} opties
+ */
+export function teltAlsOntbrekend(status, opties) {
+  if (opties.method === 'DELETE') return status === 404;
+  return opties.magOntbreken === true && (status === 404 || status === 410);
+}
+
+/**
+ * REST of GraphQL naar GitHub; `null` bij 204 en bij een ontbrekend doel (`teltAlsOntbrekend`).
+ * @param {string} pad @param {{ method?: string, body?: unknown, magOntbreken?: boolean }} [opties] @returns {Promise<unknown>}
+ */
 async function api(pad, opties = {}) {
   const antwoord = await globalThis.fetch(`https://api.github.com/${pad}`, {
     method: opties.method ?? 'GET',
     headers: { authorization: `Bearer ${env('GITHUB_TOKEN')}`, accept: 'application/vnd.github+json' },
     ...(opties.body === undefined ? {} : { body: JSON.stringify(opties.body) }),
   });
-  if (!antwoord.ok && !(opties.method === 'DELETE' && antwoord.status === 404))
-    throw new Error(`${pad}: HTTP ${String(antwoord.status)}`);
-  return antwoord.status === 204 || antwoord.status === 404 ? null : antwoord.json();
+  const ontbreekt = !antwoord.ok && teltAlsOntbrekend(antwoord.status, opties);
+  if (!antwoord.ok && !ontbreekt) throw new Error(`${pad}: HTTP ${String(antwoord.status)}`);
+  return antwoord.status === 204 || ontbreekt ? null : antwoord.json();
 }
 
 /** Alle comments van een issue, pagina voor pagina (hooguit 3000). @param {string} issue @returns {Promise<unknown[]>} */
@@ -139,6 +201,11 @@ async function sluitBron(repo, nummer) {
   return { prs, comments };
 }
 
+/** De doelopvraag voor `beoordeelSluiting`: REST `repos/<repo>/issues/<nr>`, `null` bij 404 of 410. @param {string} repo */
+function haalIssue(repo) {
+  return (/** @type {number} */ doel) => api(`repos/${repo}/issues/${String(doel)}`, { magOntbreken: true });
+}
+
 /** @param {string} repo @param {Gebeurtenis} g @param {Stap} stap */
 async function voerUit(repo, g, stap) {
   const issue = `repos/${repo}/issues/${String(g.nummer)}`;
@@ -168,7 +235,9 @@ async function main() {
   const toets = teToetsen(g);
   const velden = leesSjabloon(readFileSync(path.join(ROOT, '.github/ISSUE_TEMPLATE/leerpunt.yml'), 'utf8'));
   const fouten = toets.sjabloon ? toetsBody(g.body, velden) : null;
-  const oordeel = toets.sluiten ? sluitOordeel(g.nummer, await sluitBron(repo, g.nummer)) : null;
+  const oordeel = toets.sluiten
+    ? await beoordeelSluiting(g.nummer, { ...(await sluitBron(repo, g.nummer)), reden: g.reden }, haalIssue(repo))
+    : null;
   for (const stap of stappen({ fouten, oordeel, heropend: toets.heropend, velden })) await voerUit(repo, g, stap);
 }
 
