@@ -154,10 +154,10 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   van een auteur met `author_association` OWNER, MEMBER of COLLABORATOR, waarbij `#<nr>` een ander issue (geen PR) met label
   `leerpunt` is, geldt de sluiting als bewijs, net als een geldige `achterhaald:`: de workflow zet geen
   `leerpunt-zonder-bewijs` en haalt het weg als het er al stond (ook op `issue_comment` na het sluiten). Het doel komt uit
-  REST `repos/<repo>/issues/<nr>` (labels en het veld `pull_request`); een fout 404 telt als "bestaat niet". Telt niet: een
+  REST `repos/<repo>/issues/<nr>` (labels en het veld `pull_request`); een fout 404, of 410 voor een verwijderd issue, telt als "bestaat niet". Telt niet: een
   andere sluitreden, een comment van een andere auteur, een verwijzing naar zichzelf, een doel zonder label `leerpunt`, een
   doel dat een PR is of niet bestaat; dan blijft het label zoals in AC-6, zonder dat de job crasht. Tabeltest. Toets:
-  `test/scripts/leerpunt-duplicaat.test.ts` (nieuw)
+  `test/scripts/leerpunt-duplicaat.test.ts` (nieuw), `test/scripts/leerpunt-doel-ontbreekt.test.ts` (nieuw)
 - **leerlus-bewijs/AC-14** — De skill `opleveren` stap 8 noemt vóór het indienen de zoektocht naar geraakte open leerpunten
   (`gh issue list … --label leerpunt --state open --search`) en per geraakt leerpunt de drie uitkomsten `opgelost` (via
   `Closes #<nr>` en `## Leerpunt`, al in de PR), `deels` en `zelfde les opnieuw`, met de slotregel "geen open leerpunt geraakt"; de
@@ -165,7 +165,8 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   duplicaat eerst `gh issue comment` met `duplicaat van #<nr>` en daarna `gh issue close --duplicate-of`; en in de cloud de
   MCP-issuetool voor dezelfde acties plus labels, nooit `leerpunt`, `leerpunt-onvolledig` of `leerpunt-zonder-bewijs`. Omdat
   stap 8 na de merge draait, noemt ook CI-lus stap 1 de zoektocht vóór het openen van de PR, met `Closes #<nr>` en
-  `## Leerpunt` voor een opgelost leerpunt (ADR 0101 punt 6, Herzien). Toets: `test/rails/leerpunt-bijwerken-docs.test.ts`
+  `## Leerpunt` voor een opgelost leerpunt, alleen in de template: in een app nooit een sluitwoord (`#<nr>` wijst daar
+  naar een app-issue), de uitkomst is `deels` of een comment (ADR 0101 punt 6, Herzien). Toets: `test/rails/leerpunt-bijwerken-docs.test.ts`
   (nieuw)
 - **leerlus-bewijs/AC-15** — `docs/framework.md` R-WERK-13, R-ROL-07, R-ROL-12 en R-SEC-09 en `AGENTS.md` (regel over externe
   diensten) noemen bijwerken en sluiten als duplicaat met ADR 0101; `docs/nieuwe-app.md` noemt de drie nieuwe allow-regels
