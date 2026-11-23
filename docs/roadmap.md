@@ -198,13 +198,29 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
 - [ ] **ST-10 (P1) — staging, release en aantoonbaar herstel** (fase 3, per app). Na een provider-ADR (app-ADR: hosting en beheerde Postgres met eigen
   rollen) een adapter in `deploy/<host>/`, gescheiden omgevingen, lektest via de pooler, rollen per omgeving via runbook, `check-deployment-schema` (faalt dicht, weigert preview
   tegen productie), `check-release-ci` vóór én na de build, beschermde production-approval, release-workflows en smoketest na deploy; headers/CSP op
-  de host, CAPTCHA, PWA-manifest. Runbooks in `docs/operations/` (platform, back-up en herstel met acceptatietabel); beschrijf code-rollback,
+  de host, CAPTCHA, PWA-manifest. Runbooks in `docs/operations/` (platform; back-up en herstel volgen uit ST-10a en wachten niet op het providerbesluit); beschrijf code-rollback,
   vooruitmigratie en verwijderde gegevens in back-ups. De eigenaar kiest beschikbaarheidsdoelen, RPO/RTO, regio en bewaartermijnen. **Afhankelijkheden:**
   providerbesluit, ST-01, ST-08, privacyregister. **Klaar als:** preview tegen productie faalt; vereiste CI en staging horen bij exact het
   releasecommit; de smoketest bewijst login, lezen en gesloten browser-datatoegang; een back-up is in een aparte omgeving teruggezet met gemeten
   dataverlies en hersteltijd. Productiegoedkeuring blijft bij de eigenaar.
   **Eisen uit het regelboek** (R-DOC-10: tot de bouw staan ze hier; de bouw-PR zet ze terug in het regelboek): `check-release-ci` vóór én na de build: commit is kop van `main` met groene CI, productie ook staging; `check-deployment-schema`: productieschema dekt code; beide falen dicht (was in R-REL-02). Met CAPTCHA krijgen `script-src` en `frame-src` het CAPTCHA-domein (was in R-SEC-04).
   aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (B-6: niet geparkeerd besloten)
+- [ ] **ST-10a (P1) — back-up en herstel als vaste bouwsteen** ([ADR 0108](template/adr/0108-back-up-en-herstel.md),
+  spec `back-up-en-herstel`, beide voorgesteld). Het deel "back-up en herstel" van ST-10, los te bouwen vóór een provider-ADR.
+  **Werk:** deel A (rol `app_backup`, nazorg-SQL na herstel, `deploy/backup.env`, image en service in `deploy/backup/`
+  zonder Node, opruimtaak in een beschermde environment, nachtelijke export, dodemansknop, wekelijkse oefening, herstel naar
+  een nieuwe database, runbook en herstelblad),
+  daarna deel B (export vóór elke release, poort op een recente oefening en een bevestigd herstelblad).
+  **Afhankelijkheden:** merge van ADR 0108; deel B wacht op de release-workflow van ST-10; de schakelaar voor
+  achtergrondtaken na herstel komt met ST-03.
+  **Klaar als:** de AC's van de spec hebben een test; één volledig herstel volgens het runbook door iemand anders dan de
+  bouwer, met de gemeten tijd in de PR.
+  **Eisen uit het regelboek** (R-DOC-10: tot de bouw staan ze hier; de bouw-PR zet ze terug in het regelboek): R-DB-01 krijgt
+  de rol `app_backup` (`LOGIN`, `BYPASSRLS`, lid van `pg_read_all_data`, geen schrijfrecht) en als enige rol met `BYPASSRLS`;
+  R-DB-13 een uitzondering voor de nazorg-SQL na herstel (als `app_migrator`); R-ARCH-05 en R-ARCH-10 de mappen
+  `db/backup/`, `db/restore-checks/` en `deploy/backup/` en het bestand `deploy/backup.env`; R-PROV-06 de back-up als vaste
+  template-stap; R-SEC-06: back-upgeheimen in GitHub alleen in de environment `backup`.
+  aanleiding: `docs/template/adr/0108-back-up-en-herstel.md` (verzoek van de eigenaar, 2026-11-23; eerste app met geld)
 - [ ] **Omhulsels met opties en xargs-optiewaarden in het rolhek.** `splitCommand` (`rails/hooks/lib/shell.mjs`) stopt bij de eerste optie van een
   omhulsel en kent `setsid`, `timeout` en `stdbuf` niet, zodat `env -i gh …`, `nice -n 1 gh …` en `timeout 9 gh …` voor de hoofdsessie de regels voor
   het label, `@file`/`--input` en `gh alias` ontlopen; `xargsCall` (`rails/hooks/lib/rolhek.mjs`) leest bij een long option of een cluster met waarde
