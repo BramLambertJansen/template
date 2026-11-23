@@ -45,7 +45,7 @@ grant connect on database app to app_backup;
 Nergens eigenaar van, geen lid van een andere rol dan `pg_read_all_data`. `db/tests/rolattributen.sql` krijgt erbij: van
 de vijf rollen van de template plus `app_backup` heeft alleen `app_backup` `BYPASSRLS` en geen van hen `superuser`;
 `pg_read_all_data` heeft precies één lid (`app_backup`) en `pg_write_all_data` geen; `app_backup` heeft een
-`statement_timeout` (R-DB-02); volgens `has_table_privilege`, `has_schema_privilege` en `has_function_privilege` heeft
+`statement_timeout` (R-DB-02; `pg_dump` zet die zelf op 0, dus de export begrenst hij niet); volgens `has_table_privilege`, `has_schema_privilege` en `has_function_privilege` heeft
 `app_backup` geen `insert`, `update`, `delete`, `truncate`, `create` of `execute` op een functie van klasse `client` of
 `auth`; en ook na `set transaction read write` faalt een insert met 42501.
 
@@ -105,34 +105,43 @@ De planning staat niet in dit bestand maar in de planner van de host (cron of ee
 
 `db/backup/Dockerfile` bouwt op `db/docker/Dockerfile` (Postgres 17 met pgTAP en de clienttools, gelijke versie) en voegt
 `age`, `rclone`, `curl` en `dbmate` toe, elk op versie en checksum gepind (`dbmate` op dezelfde versie als in `compose.yaml`).
-De migraties, de herstelcontroles en `after-restore.sql` komen bij de build in de image. De scripts zijn POSIX-shell in
-`db/backup/`. De productieservice staat in `deploy/backup/compose.yaml`; de `compose.yaml` van de lokale stack krijgt alleen
+De herstelcontroles en `after-restore.sql` komen bij de build in de image; de migraties niet (R-DEPLOY-03): de service
+mount `db/migrations/` en `db/restore-checks/` alleen-lezen uit de checkout van de huidige release. De scripts zijn bash
+met `set -euo pipefail` in `db/backup/`. De productieservice staat in `deploy/backup/compose.yaml`; de `compose.yaml` van de lokale stack krijgt alleen
 een testvariant onder profiel `test`. De opruimtaak draait als `.github/workflows/backup-prune.yml` in de environment
 `backup`, die alleen vanaf `main` start.
 
 **`backup run [--release]`**
 
-1. Lees `deploy/backup.env`; ontbreekt een verplichte sleutel, `CONFIG_INVALID`. Pak het lock met `flock` (vrij zodra het
-   proces stopt), anders na 10 minuten `ALREADY_RUNNING`.
+1. Lees `deploy/backup.env`; ontbreekt een verplichte sleutel, `CONFIG_INVALID`. Pak het lock met `flock` op een bestand in
+   een volume van de host (vrij zodra het proces stopt; elke container ziet hetzelfde bestand), anders na 10 minuten
+   `ALREADY_RUNNING`.
 2. Major van `pg_dump` gelijk aan die van de server, anders `VERSION_MISMATCH`.
 3. `pg_dump --format=custom --exclude-schema=tap --exclude-extension=pgtap --lock-wait-timeout=5min` als `app_backup`,
    direct door `age` met de publieke sleutel, naar een tijdelijk bestand. Er komt nooit een onversleutelde export op schijf.
+   Met `pipefail` maakt een `pg_dump` die halverwege stopt de hele stap mislukt, ook als `age` netjes eindigt.
 4. Uploaden als `<app>-<UTC-tijd>[-release].dump.age`, hooguit drie pogingen; een naam wordt nooit hergebruikt. Daarna
    vergelijkt `rclone` grootte en, waar de opslag een hash kent, de hash; wijkt iets af, `UPLOAD_FAILED`. Tijdelijk bestand weg.
-5. Is de export kleiner dan de helft van de mediaan van de vorige zeven, dan een waarschuwingsmail. De run slaagt wel.
+5. Is de export kleiner dan de helft van de mediaan van de vorige zeven gewone exports (zonder `-release`), dan een
+   waarschuwingsmail. De run slaagt wel.
 6. Melden bij `BACKUP_HEARTBEAT_URL`.
 
 Bij een fout in elke stap: tijdelijk bestand weg, foutmail, geen melding.
 
-**Opruimen** (opruimtaak, dagelijks): wist exports ouder dan `BACKUP_KEEP_DAYS`, behalve de nieuwste zeven, en wist niets
-als de nieuwste ouder is dan 26 uur (dan een mail). Markeerbestanden: de nieuwste tien blijven.
+**Opruimen** (opruimtaak, dagelijks): wist exports waarvan de tijd in de naam meer dan `BACKUP_KEEP_DAYS` × 24 uur vóór het
+opruimen ligt, behalve de nieuwste zeven gewone exports, en wist niets als de nieuwste ouder is dan 26 uur. Release-exports
+volgen dezelfde termijn maar tellen niet mee voor de zeven. Markeerbestanden: de nieuwste tien blijven. Een fout of een
+overslag laat de workflow falen, zodat GitHub de eigenaar mailt; de opruimtaak heeft geen SMTP.
 
 **`herstel oefening`** (wekelijks, op de host)
 
 1. Nieuwste export ophalen en ontsleutelen naar een tijdelijke map met rechten `0700`.
 2. Een lege Postgres starten in dezelfde container (eigen datamap in de tijdelijke map, alleen op een unix-socket),
    `db/init/` toepassen. Dat mag hier: de database is wegwerp en niet bereikbaar.
-3. `pg_restore --exit-on-error` als `app_migrator`, dan `dbmate up` naar de migraties van de huidige code.
+3. Terugzetten als `app_migrator` met `db/backup/restore.sh`: `pg_restore -l` naar een lijst, de ACL-regels van de schema's
+   direct na het aanmaken van die schema's zetten, en `pg_restore -L <lijst> --exit-on-error`. Zo heeft `app_definer` zijn
+   rechten op `app` voordat een object aan hem wordt overgedragen. Dan `dbmate up` naar de gemounte migraties. Daarna
+   controleert het script dat elke `security definer`-functie en de view `app.accounts` eigenaar `app_definer` hebben.
 4. `db/tests/invarianten.sql` en `security.sql`: policies, grants en invarianten in de herstelde database zijn gelijk. Rollen
    zelf zitten niet in een export; die toetst de oefening niet.
 5. De herstelcontroles van de app: SQL-bestanden in `db/restore-checks/*.sql`, elk met één rij `ok boolean` en een vaste
@@ -148,11 +157,12 @@ als de nieuwste ouder is dan 26 uur (dan een mail). Markeerbestanden: de nieuwst
    geen pgTAP. Heeft het doel al een schema `app` of een tabel `public.schema_migrations`, dan `TARGET_NOT_EMPTY`, vóór het
    iets schrijft. Zo kan het nooit over de draaiende database heen, hoe die ook genoemd wordt.
 2. Toont welke export, van wanneer, en wat er sindsdien verloren gaat; bevestigen met de naam van de app.
-3. Ophalen, ontsleutelen, `pg_restore --exit-on-error` als `app_migrator`, `dbmate up`.
+3. Ophalen, ontsleutelen, terugzetten met `db/backup/restore.sh` zoals in de oefening, `dbmate up`.
 4. De herstelcontroles uit `db/restore-checks/` (alleen-lezen SQL).
 5. `db/backup/after-restore.sql` als `app_migrator`, in één transactie: alle rijen uit `better_auth.session` en
    `better_auth.verification` weg, `session_version` van elke rij in `better_auth."user"` plus één, en één regel in
-   `app.audit_log` met actie `core.restore`, `target_type` `database` en in `details` alleen `{ "backup_at": … }`.
+   `app.audit_log` met actie `core.restore`, `target_type` `backup` en als `target_id` de bestandsnaam van de export (die
+   bevat de tijd); `details` blijft leeg (R-DB-15).
 6. Toont de volgende stappen uit het runbook: de app tijdelijk tegen de nieuwe database starten en als beheerder met de
    tweede factor inloggen (dat bewijst `AUTH_SECRET`); pas overschakelen als de oude app minstens een uur geen links meer
    uitgeeft (getekende links voor een e-mailwijziging verlopen na `EMAIL_CHANGE_TTL_SECONDS`; ze staan niet in de database
@@ -206,24 +216,27 @@ Geen scherm. Teksten voor mensen staan in de mails en het runbook.
 - **backup/AC-4** — Gegeven een geslaagde run, dan staat er één nieuw bestand in de map, is het alleen met de privésleutel te
   lezen, staat er geen onversleuteld bestand op schijf en krijgt `BACKUP_HEARTBEAT_URL` één aanvraag. Toets: `test/backup/run.int.test.ts` (nieuw)
 - **backup/AC-5** — Gegeven een map die drie keer weigert, of een geüpload bestand met een andere grootte of hash, dan eindigt
-  de run met `UPLOAD_FAILED`, is het tijdelijke bestand weg, gaat er een foutmail uit en geen melding. Toets: `test/backup/run.int.test.ts` (nieuw)
+  de run met `UPLOAD_FAILED`; gegeven een `pg_dump` die na een deel van de data stopt, dan eindigt de run met een fout en
+  komt er geen upload. In beide gevallen is het tijdelijke bestand weg, gaat er een foutmail uit en geen melding. Toets: `test/backup/run.int.test.ts` (nieuw)
 - **backup/AC-6** — Gegeven een export kleiner dan de helft van de mediaan van de vorige zeven, dan slaagt de run en gaat er
   één waarschuwingsmail uit. Toets: `test/backup/run.int.test.ts` (nieuw)
 - **backup/AC-7** — Gegeven `deploy/backup.env` met een ontbrekende verplichte sleutel, een onbekende sleutel,
   `BACKUP_KEEP_DAYS` onder 7 of een waarde die op een privésleutel lijkt (`AGE-SECRET-KEY-`), dan faalt de validatie in
   `gate:fast` met de naam van de sleutel en eindigt `backup run` met `CONFIG_INVALID`; zonder
   `BACKUP_RECOVERY_SHEET_CONFIRMED` slaagt de validatie en loopt `backup run`. Toets: `test/backup/config.test.ts` (nieuw)
-- **backup/AC-8** — Gegeven een run die het lock vasthoudt, dan wacht een tweede run en eindigt na 10 minuten met
-  `ALREADY_RUNNING`; wordt de eerste gedood, dan krijgt de volgende het lock meteen. Toets: `test/backup/run.int.test.ts` (nieuw)
-- **backup/AC-9** — Gegeven 40 dagelijkse exports en `BACKUP_KEEP_DAYS` 30, dan wist opruimen de tien oudste; gegeven dat de
+- **backup/AC-8** — Gegeven een run die het lock vasthoudt, dan wacht een tweede run in een andere container en eindigt na
+  10 minuten met `ALREADY_RUNNING`; wordt de eerste gedood, dan krijgt de volgende het lock meteen. Toets: `test/backup/run.int.test.ts` (nieuw)
+- **backup/AC-9** — Gegeven 40 dagelijkse exports, één per 24 uur met de nieuwste 1 uur oud, en `BACKUP_KEEP_DAYS` 30, dan
+  wist opruimen precies de tien die meer dan 720 uur oud zijn; gegeven dat de
   nieuwste ouder is dan 26 uur, of minder dan zeven exports, dan wist het niets. Toets: `test/backup/opruimen.int.test.ts` (nieuw)
 - **backup/AC-10** — Gegeven de inloggegevens van de schrijver op een map zonder wisrecht, dan faalt een wis-poging en
-  eindigt de run niet met een fout. Toets: `test/backup/opruimen.int.test.ts` (nieuw)
+  slaagt `backup run` toch (hij hoeft niets te wissen). Toets: `test/backup/opruimen.int.test.ts` (nieuw)
 - **backup/AC-11** — Gegeven `.github/workflows/backup-prune.yml` en elke andere workflow die een `BACKUP_`-geheim leest, dan
   heeft elke job daarin `environment: backup`; een fixture zonder environment laat de check falen. Toets: `test/rails/backup-workflows.test.ts` (nieuw)
 - **backup/AC-12** — Gegeven een geslaagde export, dan slaagt `herstel oefening` met terugzetten als `app_migrator`, zonder
   `AUTH_SECRET` in zijn omgeving: migreren, de twee pgTAP-bestanden en de herstelcontroles groen, een markeerbestand in de
-  map en één aanvraag naar `BACKUP_DRILL_HEARTBEAT_URL`. Toets: `test/backup/oefening.int.test.ts` (nieuw)
+  map en één aanvraag naar `BACKUP_DRILL_HEARTBEAT_URL`. Dit draait op een export van een echte template-database met alle
+  migraties, en daarna heeft elke `security definer`-functie en de view `app.accounts` eigenaar `app_definer`. Toets: `test/backup/oefening.int.test.ts` (nieuw)
 - **backup/AC-13** — Gegeven een export van een oudere migratiestand, dan zet de oefening hem terug en migreert hij hem zonder
   fout. Toets: `test/backup/oefening.int.test.ts` (nieuw)
 - **backup/AC-14** — Gegeven een herstelcontrole met `ok = false` of een beschadigd bestand, dan faalt de oefening met
@@ -231,7 +244,8 @@ Geen scherm. Teksten voor mensen staan in de mails en het runbook.
 - **backup/AC-15** — Gegeven een doel met een schema `app` of een tabel `public.schema_migrations`, dan eindigt
   `herstel naar` met `TARGET_NOT_EMPTY` vóór het iets schrijft; gegeven een leeg doel met bestaande rollen, dan past het
   `db/init/` niet toe, installeert het geen pgTAP, bestaan na afloop de sessie- en verification-rijen uit de export niet
-  meer, is `session_version` van elke gebruiker met één verhoogd en staat er één auditregel `core.restore`. Toets: `test/backup/herstel.int.test.ts` (nieuw)
+  meer, is `session_version` van elke gebruiker met één verhoogd en staat er één auditregel `core.restore` met de
+  bestandsnaam als `target_id` en lege `details`. Toets: `test/backup/herstel.int.test.ts` (nieuw)
 - **backup/AC-16** — Gegeven het runbook en het sjabloon herstelblad, dan hebben ze de secties "Map instellen", "Planner
   instellen", "Back-up mislukt", "Hersteltest mislukt", "Nieuwe server", "Volledig herstel", "Eén rij terughalen" en
   "Sleutel of geheim kwijt", en vraagt het herstelblad om de vergelijking van `age-keygen -y` met `BACKUP_PUBLIC_KEY`
@@ -263,7 +277,9 @@ Geen scherm. Teksten voor mensen staan in de mails en het runbook.
 
 - `db/init/01-roles.sql` en `db/tests/rolattributen.sql` (bestaande test, nieuw gedrag: de tester past hem aan, de PR noemt
   het, R-TEST-02).
-- `docs/framework.md`: R-DB-01, §3, R-PROV-06, R-SEC-06. ADR 0039 wijzigt op het punt van ADR 0108.
+- `docs/framework.md`: R-DB-01 (de rol, en de enige met `BYPASSRLS`), R-DB-13 (uitzondering voor de nazorg-SQL), R-ARCH-05 en
+  R-ARCH-10 (nieuwe mappen), R-PROV-06, R-SEC-06. R-DEPLOY-03 en R-DB-15 blijven waar. ADR 0039 en 0043 wijzigen op de
+  punten van ADR 0108.
 - `compose.yaml` (testvariant), `deploy/backup/`, `.github/workflows/backup-prune.yml` en de GitHub-environment `backup`:
   gate-paden en een instelling die de eigenaar zet.
 - `test:db`; `gate:fast` krijgt de validatie van `deploy/backup.env` en de check op workflows (AC-11).
@@ -299,3 +315,6 @@ Een vraag zonder aanbeveling (de eigenaar kiest) blokkeert `goedgekeurd`; een vr
 - **OV-7** — Welke dodemansknop. Aanbeveling: de template noemt geen dienst; elke URL die een gemiste melding alarmeert werkt.
 - **OV-8** — Verwijderverzoeken na een ramp. Aanbeveling: het risico aanvaarden in de template; een app met gevoelige
   ledendata kiest in haar ADR een klein logboek buiten de database.
+- **OV-9 ✅ besloten** — De migraties komen bij het draaien uit de checkout van de release, niet uit de image (eigenaar, 2026-11-23).
+- **OV-10 ✅ besloten** — Na deze fixronde geen nieuwe reviewronde op papier; de bouw-PR bewijst het terugzetten als
+  `app_migrator` op een echte template-database (AC-12) (eigenaar, 2026-11-23).

@@ -5,12 +5,14 @@ Status: voorgesteld
 Drempel: A2 (een nieuwe databaserol en vier kleine tools in een aparte image: `age`, `rclone`, `curl` en `dbmate`, waarvan
 de template `dbmate` al gebruikt), A3 (één rol krijgt `BYPASSRLS`; `db/tests/rolattributen.sql` verbiedt dat nu voor de vijf
 rollen van de template en krijgt één benoemde uitzondering) en A4 (wijzigt [0039](0039-stack-provider-neutraal-en-toolchain.md)
-op één punt: de template levert voortaan een back-upstap en een runbook voor herstel, waar 0039 alle runbooks per app liet).
+op één punt: de template levert voortaan een back-upstap en een runbook voor herstel, waar 0039 alle runbooks per app liet;
+en [0043](0043-accounts-uitnodigen-mfa-en-beheer.md) via R-DB-13: na een herstel schrijft één SQL-stap als `app_migrator`
+rechtstreeks in `better_auth`).
 Aanleiding: verzoek van de eigenaar (2026-11-23), app-behoefte: de eerste app met geld (ABAS) gaat naar productie op
 goedkope hosting zonder back-ups van een provider. Werkt roadmap-item ST-10 uit voor het deel "back-up en herstel"
 (ST-10a). Uitwerking: spec [back-up-en-herstel](../specs/back-up-en-herstel.md). Keuzes van de eigenaar na de spec-review
 (2026-11-23): oefening op de server, Drive of SharePoint als standaardmap met benoemd risico, nazorg als SQL-stap, een server
-met planner verplicht voor productie.
+met planner verplicht voor productie, en de migraties komen bij het draaien uit de code van de release, niet uit de image.
 
 ## Context
 
@@ -41,9 +43,12 @@ sleutel is kwijt. Daar richt dit besluit zich op; zeldzamere risico's laat het b
    uitvoerder. De taak draait los van het API-proces. De app kan back-ups niet uitzetten, omleiden of terugzetten.
 3. **Productie vraagt een server met een planner.** Daar draaien de back-up en de oefening. Een app op hosting zonder
    planner kiest in haar eigen ADR hoe ze dit oplost; de template levert daar geen variant voor.
-4. **Een kleine image zonder Node.** Shellscripts met de Postgres-tools van `db/docker/Dockerfile`, plus `age`, `rclone`,
+4. **Een kleine image zonder Node.** Bash-scripts met de Postgres-tools van `db/docker/Dockerfile`, plus `age`, `rclone`,
    `curl` (voor de dodemansknop en de foutmail via SMTP) en `dbmate` (om naar de huidige code te migreren), elk een los
-   programma. De productieservice staat in `deploy/backup/`, niet in de `compose.yaml` van de lokale stack.
+   programma. De migraties zitten niet in de image (R-DEPLOY-03): de taak leest ze bij het draaien, alleen-lezen, uit de
+   checkout van de huidige release. Elke stap van een pipe telt mee voor de uitkomst (`set -o pipefail`): een export die
+   halverwege afbreekt, is een mislukte export. De productieservice staat in `deploy/backup/`, niet in de `compose.yaml`
+   van de lokale stack.
 5. **Een eigen rol `app_backup`.** `LOGIN`, lid van `pg_read_all_data`, `BYPASSRLS`, nergens eigenaar of lid van. Hij heeft
    geen enkel schrijfrecht; dat rust op de rechten, niet op een instelling die de rol zelf kan uitzetten. Alleen deze rol mag
    naast de vijf rollen van de template `BYPASSRLS` hebben, en hij is het enige lid van `pg_read_all_data`. In `db/init/`
@@ -62,9 +67,12 @@ sleutel is kwijt. Daar richt dit besluit zich op; zeldzamere risico's laat het b
 8. **Terugzetten als `app_migrator`, nooit eroverheen.** Op een echte doel-database bestaan de rollen al (runbook,
    R-DB-01); `pg_restore` draait als `app_migrator`, naar een nieuwe, lege database. De nazorg is een SQL-stap die ook als
    `app_migrator` draait (eigenaar van de tabellen): alle sessies en open links weg, `session_version` van elke gebruiker
-   omhoog, en een auditregel. Geen nieuwe rechten en geen wijziging van R-DB-14. Getekende links voor een
-   e-mailwijziging staan niet in de database; die verlopen na een uur, en daarom wordt pas overgeschakeld als de oude app
-   minstens een uur geen links meer uitgeeft. De oefening zet ook als `app_migrator` terug.
+   omhoog, en een auditregel met alleen ID's (R-DB-15). Geen nieuwe rechten en geen wijziging van R-DB-14; wel een
+   uitzondering op R-DB-13 voor alleen deze stap. Getekende links voor een e-mailwijziging staan niet in de database; die
+   verlopen na `EMAIL_CHANGE_TTL_SECONDS`, en daarom wordt pas overgeschakeld als de oude app minstens zo lang geen links
+   meer uitgeeft. Een niet-superuser kan een dump met objecten van `app_definer` alleen terugzetten als de rechten op de
+   schema's vóór de eigenaarswissels staan; het herstelscript legt die volgorde vast, en de bouw bewijst het met een echte
+   template-database. De oefening zet ook als `app_migrator` terug.
 9. **Vangnet 1, alarm.** Na elke geslaagde back-up meldt het script zich bij een "dodemansknop"-URL; blijft die melding meer
    dan 26 uur uit, dan alarmeert die dienst. Een mislukte run mailt zelf. Een export die veel kleiner is dan de vorige
    zeven, mailt ook: een leeggehaalde database wordt anders trouw geback-upt.
@@ -119,5 +127,6 @@ sleutel is kwijt. Daar richt dit besluit zich op; zeldzamere risico's laat het b
 - Bewust niet gedekt: het gelijktijdig verlies van de host en de opslagdienst. Een app die dat wel nodig heeft, voegt per ADR
   een tweede bestemming toe.
 - Groeit een database naar gigabytes, dan herzien we dit besluit.
-- Herzien bij de bouw: R-DB-01 (een rol erbij; met de spec achtergrondtaken komt daar ook `app_jobs` bij), framework §3 (de
-  rol als uitzondering), R-PROV-06 en R-SEC-06.
+- Herzien bij de bouw: R-DB-01 (een rol erbij, en de enige met `BYPASSRLS`; met de spec achtergrondtaken komt daar ook
+  `app_jobs` bij), R-DB-13 (de nazorg-SQL als uitzondering), R-ARCH-05 en R-ARCH-10 (de mappen `db/backup/`,
+  `db/restore-checks/` en `deploy/backup/`, en `deploy/backup.env`), R-PROV-06 en R-SEC-06.
