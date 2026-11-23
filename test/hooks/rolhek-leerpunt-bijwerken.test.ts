@@ -1,0 +1,215 @@
+import { readFileSync } from 'node:fs';
+import { describe, expect, test } from 'vitest';
+import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
+import { echteGates, gatesMet, templateRepositoryVan } from '../rails/template-repo-kit';
+
+// Spec leerlus-bewijs AC-11, ADR 0101 punt 5: de hoofdsessie mag `gh issue comment|edit|close` op de template-repo zonder
+// vraag van het rolhek, in drie exacte vormen met `--repo`/`-R` precies één keer gelijk aan `template.repository`. Elke andere
+// vorm is ask; een label-optie bij edit is deny voor elke rol; een subagent blijft deny. Het rolhek geeft zelf geen allow.
+// Vorm als test/hooks/rolhek-leerpunt.test.ts (dat bestand wijzigt de hoofdsessie, niet de tester).
+const ROOT = '/repo';
+const config = loadConfig(readFileSync('.claude/gates.json', 'utf8'));
+const REPO = String(templateRepositoryVan(echteGates()));
+
+function ctx(cfg = config) {
+  return {
+    root: ROOT,
+    cwd: ROOT,
+    config: cfg,
+    read: () => null,
+    committed: () => false,
+    isDir: () => false,
+    branch: 'feat/x',
+  };
+}
+
+type Verdict = 'allow' | 'ask' | 'deny' | 'context';
+
+function verdict(payload: unknown, cfg = config): Verdict {
+  const decision = decide(payload, ctx(cfg));
+  if (decision.deny.length > 0) return 'deny';
+  if (decision.ask.length > 0) return 'ask';
+  return decision.context.length > 0 ? 'context' : 'allow';
+}
+
+const bash = (command: string, agent?: string) => ({
+  tool_name: 'Bash',
+  tool_input: { command },
+  ...(agent === undefined ? {} : { agent_type: agent }),
+});
+
+const SUBAGENTS = ['developer', 'tester', 'reviewer', 'architect', 'docs', 'Explore'];
+
+test('leerlus-bewijs/AC-11: gates.json heeft een template.repository (<owner>/<repo>)', () => {
+  expect(REPO).toMatch(/^[\w.-]+\/[\w.-]+$/);
+});
+
+describe('hoofdsessie: geldige vormen → geen ask en geen deny', () => {
+  test.each([
+    { naam: 'comment --repo, --body-file', command: `gh issue comment --repo ${REPO} 5 --body-file f.md` },
+    { naam: 'comment nummer vóór --repo, -F', command: `gh issue comment 5 --repo ${REPO} -F f.md` },
+    { naam: 'comment -R', command: `gh issue comment -R ${REPO} 5 -F f.md` },
+    { naam: 'comment --repo=<repo> en --body-file=', command: `gh issue comment --repo=${REPO} 5 --body-file=f.md` },
+    { naam: 'comment repo in hoofdletters', command: `gh issue comment --repo ${REPO.toUpperCase()} 5 -F f.md` },
+    { naam: 'comment geclusterd -Ff.md', command: `gh issue comment --repo ${REPO} 5 -Ff.md` },
+    { naam: 'comment -R<repo> geclusterd', command: `gh issue comment -R${REPO} 5 -F f.md` },
+    { naam: 'comment opties vóór issue (--repo)', command: `gh --repo ${REPO} issue comment 5 -F f.md` },
+    { naam: 'comment opties vóór issue (-R)', command: `gh -R ${REPO} issue comment 5 -F f.md` },
+    { naam: 'comment opties tussen issue en actie', command: `gh issue -R ${REPO} comment 5 -F f.md` },
+    { naam: 'edit alleen --title', command: `gh issue edit --repo ${REPO} 5 --title "Nieuwe titel"` },
+    { naam: 'edit alleen --body-file', command: `gh issue edit --repo ${REPO} 5 --body-file f.md` },
+    { naam: 'edit -t en -F', command: `gh issue edit --repo ${REPO} 5 -t Titel -F f.md` },
+    { naam: 'edit geclusterd -tTitel', command: `gh issue edit --repo ${REPO} 5 -tTitel` },
+    { naam: 'edit --title=… --body-file=…', command: `gh issue edit -R ${REPO} 5 --title=Titel --body-file=f.md` },
+    { naam: 'edit repo in hoofdletters', command: `gh issue edit --repo ${REPO.toUpperCase()} 5 -F f.md` },
+    { naam: 'edit opties vóór issue', command: `gh -R ${REPO} issue edit 5 -F f.md` },
+    { naam: 'close --duplicate-of', command: `gh issue close --repo ${REPO} 5 --duplicate-of 3` },
+    { naam: 'close nummer vóór --repo', command: `gh issue close 5 --repo ${REPO} --duplicate-of 3` },
+    { naam: 'close --duplicate-of=3', command: `gh issue close -R ${REPO} 5 --duplicate-of=3` },
+    { naam: 'close repo in hoofdletters', command: `gh issue close --repo ${REPO.toUpperCase()} 5 --duplicate-of 3` },
+    { naam: 'close opties vóór issue', command: `gh --repo ${REPO} issue close 5 --duplicate-of 3` },
+  ])('leerlus-bewijs/AC-11: $naam', ({ command }) => {
+    expect(decide(bash(command), ctx())).toMatchObject({ deny: [], ask: [] });
+  });
+});
+
+describe('hoofdsessie: elke andere vorm → ask met een reden', () => {
+  const C = `gh issue comment --repo ${REPO} 5`;
+  const E = `gh issue edit --repo ${REPO} 5`;
+  const X = `gh issue close --repo ${REPO} 5`;
+  test.each([
+    { naam: 'comment: andere repo', command: 'gh issue comment --repo iemand/anders 5 -F f.md' },
+    { naam: 'comment: geen repo', command: 'gh issue comment 5 -F f.md' },
+    { naam: 'comment: repo als URL', command: `gh issue comment --repo https://github.com/${REPO} 5 -F f.md` },
+    { naam: 'comment: repo twee keer', command: `gh issue comment --repo ${REPO} -R ${REPO} 5 -F f.md` },
+    { naam: 'edit: andere repo', command: 'gh issue edit --repo iemand/anders 5 -F f.md' },
+    { naam: 'edit: geen repo', command: 'gh issue edit 5 -F f.md' },
+    { naam: 'close: andere repo', command: 'gh issue close --repo iemand/anders 5 --duplicate-of 3' },
+    { naam: 'close: geen repo', command: 'gh issue close 5 --duplicate-of 3' },
+    { naam: 'GH_REPO= in het commando', command: `GH_REPO=iemand/anders ${C} -F f.md` },
+    { naam: 'GH_HOST= in het commando', command: `GH_HOST=example.com ${C} -F f.md` },
+    { naam: 'export GH_REPO', command: `export GH_REPO=iemand/anders && ${C} -F f.md` },
+    { naam: 'comment: --body', command: `${C} --body "tekst"` },
+    { naam: 'comment: -b', command: `${C} -b tekst` },
+    { naam: 'comment: --body naast --body-file', command: `${C} -F f.md --body tekst` },
+    { naam: 'comment: --editor', command: `${C} --editor` },
+    { naam: 'comment: -e', command: `${C} -e` },
+    { naam: 'comment: --web', command: `${C} --web` },
+    { naam: 'comment: -w', command: `${C} -w` },
+    { naam: 'comment: --edit-last', command: `${C} --edit-last -F f.md` },
+    { naam: 'comment: --delete-last', command: `${C} --delete-last` },
+    { naam: 'comment: --create-if-none', command: `${C} --edit-last --create-if-none -F f.md` },
+    { naam: 'comment: zonder tekstbron', command: C },
+    { naam: 'comment: --body-file - (stdin)', command: `${C} --body-file -` },
+    { naam: 'comment: -F - (stdin)', command: `${C} -F -` },
+    { naam: 'edit: --body', command: `${E} --body tekst` },
+    { naam: 'edit: -b', command: `${E} -b tekst` },
+    { naam: 'edit: --editor', command: `${E} -e` },
+    { naam: 'edit: --web', command: `${E} --web` },
+    { naam: 'edit: --body-file - (stdin)', command: `${E} --body-file -` },
+    { naam: 'edit: zonder --title of --body-file', command: E },
+    { naam: 'edit: onbekende optie', command: `${E} -F f.md --milestone v1` },
+    { naam: 'close: zonder --duplicate-of', command: X },
+    { naam: 'close: --reason', command: `${X} --reason "not planned"` },
+    { naam: 'close: -r', command: `${X} -r completed` },
+    { naam: 'close: --comment', command: `${X} --comment x --duplicate-of 3` },
+    { naam: 'close: -c', command: `${X} -c x --duplicate-of 3` },
+    { naam: 'close: --duplicate-of met URL', command: `${X} --duplicate-of https://github.com/iemand/anders/issues/3` },
+    { naam: 'close: --duplicate-of met niet-getal', command: `${X} --duplicate-of abc` },
+    { naam: 'close: --duplicate-of met #nummer', command: `${X} --duplicate-of '#3'` },
+    { naam: 'close: --duplicate-of zonder waarde', command: `${X} --duplicate-of` },
+    {
+      naam: 'nummer als URL (comment)',
+      command: `gh issue comment --repo ${REPO} https://github.com/iemand/anders/issues/5 -F f.md`,
+    },
+    {
+      naam: 'nummer als URL (edit)',
+      command: `gh issue edit --repo ${REPO} https://github.com/iemand/anders/issues/5 -F f.md`,
+    },
+    {
+      naam: 'nummer als URL (close)',
+      command: `gh issue close --repo ${REPO} https://github.com/iemand/anders/issues/5 --duplicate-of 3`,
+    },
+    { naam: '-- (einde van de opties)', command: `${C} -F f.md -- 6` },
+    { naam: 'geen nummer (comment)', command: `gh issue comment --repo ${REPO} -F f.md` },
+    { naam: 'geen nummer (edit)', command: `gh issue edit --repo ${REPO} -F f.md` },
+    { naam: 'geen nummer (close)', command: `gh issue close --repo ${REPO} --duplicate-of 3` },
+    { naam: 'twee nummers (comment)', command: `${C} 6 -F f.md` },
+    { naam: 'twee nummers (close)', command: `${X} 6 --duplicate-of 3` },
+    { naam: 'onbekende optie (comment)', command: `${C} -F f.md --foo` },
+    { naam: 'onbekende korte optie (close)', command: `${X} --duplicate-of 3 -z` },
+  ])('leerlus-bewijs/AC-11: $naam', ({ command }) => {
+    expect(verdict(bash(command))).toBe('ask');
+    expect(decide(bash(command), ctx()).ask.join(' ').trim().length).toBeGreaterThan(10);
+  });
+
+  // De spec noemt commandosubstitutie onder "ask"; het rolhek weigert een variabel commandowoord naast een gh-subcommando nu
+  // al met deny (eigenaarkeuze 2026-10-27, test/hooks/rolhek-leerpunt.test.ts). Beide zijn "geen vrije doorgang": de test
+  // eist alleen dat de geldige vorm met substitutie nooit geen-ask-geen-deny wordt.
+  test.each([
+    { naam: '$( ) in de waarde', command: `${C} --body-file "$(mktemp)"` },
+    { naam: 'backticks in de waarde', command: `${C} --body-file \`mktemp\`` },
+  ])('leerlus-bewijs/AC-11: commandosubstitutie, $naam → ask of deny, nooit allow', ({ command }) => {
+    expect(['ask', 'deny']).toContain(verdict(bash(command)));
+  });
+
+  test('leerlus-bewijs/AC-11: ontbreekt template.repository, dan is zelfs de juiste vorm ask', () => {
+    const zonderRepo = loadConfig(gatesMet({ template: undefined }));
+    expect(
+      [
+        `gh issue comment --repo ${REPO} 5 -F f.md`,
+        `gh issue edit --repo ${REPO} 5 -F f.md`,
+        `gh issue close --repo ${REPO} 5 --duplicate-of 3`,
+      ].map((command) => verdict(bash(command), zonderRepo)),
+    ).toStrictEqual(['ask', 'ask', 'ask']);
+  });
+
+  test('leerlus-bewijs/AC-11: template.repository bepaalt het doel, ook voor bijwerken', () => {
+    const fork = loadConfig(gatesMet({ template: { repository: 'iemand/fork' } }));
+    expect(verdict(bash('gh issue comment --repo iemand/fork 5 -F f.md'), fork)).not.toBe('ask');
+    expect(verdict(bash(`gh issue comment --repo ${REPO} 5 -F f.md`), fork)).toBe('ask');
+  });
+});
+
+describe('hoofdsessie: andere schrijfacties op een issue → ask', () => {
+  test.each(['reopen', 'delete', 'transfer', 'lock', 'unlock', 'pin', 'unpin', 'develop'])(
+    'leerlus-bewijs/AC-11: gh issue %s → ask, ook met de juiste repo en een nummer',
+    (actie) => {
+      expect(verdict(bash(`gh issue ${actie} --repo ${REPO} 5`))).toBe('ask');
+      expect(verdict(bash(`gh issue ${actie} 5`))).toBe('ask');
+    },
+  );
+});
+
+describe('label-optie bij edit → deny voor elke rol', () => {
+  const LABELS = [
+    `gh issue edit --repo ${REPO} 5 --add-label leerpunt`,
+    `gh issue edit --repo ${REPO} 5 --remove-label leerpunt`,
+    `gh issue edit --repo ${REPO} 5 --remove-label leerpunt-onvolledig -F f.md`,
+    `gh issue edit --repo ${REPO} 5 --title Titel --add-label x`,
+    `gh issue edit --repo ${REPO} 5 --add-label=x -F f.md`,
+  ];
+
+  test.each(LABELS)('leerlus-bewijs/AC-11: hoofdsessie, %s', (command) => {
+    expect(verdict(bash(command))).toBe('deny');
+  });
+
+  test.each(SUBAGENTS)('leerlus-bewijs/AC-11: %s, label-optie bij edit', (agent) => {
+    expect(LABELS.map((command) => verdict(bash(command, agent)))).toStrictEqual(LABELS.map(() => 'deny'));
+  });
+});
+
+describe('subagent: schrijvende gh issue blijft deny', () => {
+  const GELDIG = [
+    `gh issue comment --repo ${REPO} 5 -F f.md`,
+    `gh issue comment -R ${REPO} 5 --body-file f.md`,
+    `gh issue edit --repo ${REPO} 5 --title Titel`,
+    `gh issue edit --repo ${REPO} 5 -F f.md`,
+    `gh issue close --repo ${REPO} 5 --duplicate-of 3`,
+    `gh -R ${REPO} issue close 5 --duplicate-of 3`,
+  ];
+
+  test.each(SUBAGENTS)('leerlus-bewijs/AC-11: %s → deny op de drie geldige vormen', (agent) => {
+    expect(GELDIG.map((command) => verdict(bash(command, agent)))).toStrictEqual(GELDIG.map(() => 'deny'));
+  });
+});

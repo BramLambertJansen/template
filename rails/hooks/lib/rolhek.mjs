@@ -2295,7 +2295,9 @@ function ghAliasReden(args) {
 
 /**
  * Leerlus (ADR 0059, spec leerlus): een subagent schrijft geen issues; de hoofdsessie dient zonder vraag alleen een leerpunt
- * in, met `--repo`/`-R` gelijk aan `template.repository` en precies één `--label leerpunt`. Elke andere vorm is ask.
+ * in, met `--repo`/`-R` gelijk aan `template.repository` en precies één `--label leerpunt`. Bijwerken en sluiten (ADR 0101,
+ * spec leerlus-bewijs AC-11) alleen in de vormen van `bijwerkAfwijking`. Elke andere schrijfactie is ask; het rolhek geeft
+ * zelf geen allow.
  * @param {readonly string[]} argv
  * @param {{ role: string, ctx: Ctx, setsGhEnv: boolean }} who
  * @param {Decision} decision
@@ -2311,15 +2313,115 @@ function ghIssue(argv, { role, ctx, setsGhEnv }, decision) {
   if (alias !== '') decision.deny.push(alias);
   const action = program === 'gh' ? ghIssueAction(args) : '';
   if (action === '') return;
-  if (role !== 'hoofdsessie') decision.deny.push(`subagent: gh issue ${action} doet alleen de hoofdsessie (ADR 0059)`);
-  else if (action === 'create') {
-    // Spec template-repo AC-3: het doel is `template.repository`, in de template en in een app (ADR 0059); geen terugval.
-    const template = ctx.config.template?.repository;
-    const reden = template === undefined
-      ? 'template.repository ontbreekt in .claude/gates.json'
-      : leerpuntAfwijking(args, template, setsGhEnv);
-    if (reden !== '') decision.ask.push(`gh issue create buiten de leerpuntvorm: ${reden} (ADR 0059)`);
+  if (role !== 'hoofdsessie') {
+    decision.deny.push(`subagent: gh issue ${action} doet alleen de hoofdsessie (ADR 0059)`);
+    return;
   }
+  // Spec template-repo AC-3: het doel is `template.repository`, in de template en in een app (ADR 0059); geen terugval.
+  const repository = ctx.config.template?.repository;
+  const reden = repository === undefined
+    ? 'template.repository ontbreekt in .claude/gates.json'
+    : action === 'create'
+      ? leerpuntAfwijking(args, repository, setsGhEnv)
+      : bijwerkAfwijking(action, args, { repository, setsGhEnv });
+  const adr = action === 'create' ? 'ADR 0059' : 'ADR 0101';
+  if (reden !== '') decision.ask.push(`gh issue ${action} buiten de leerpuntvorm: ${reden} (${adr})`);
+}
+
+// Spec leerlus-bewijs AC-11 (ADR 0101 punt 5): per actie de opties naast `--repo`, als lange naam; korte vormen via GH_KORT.
+const BIJWERK_OPTIES = new Map([
+  ['comment', new Set(['--body-file'])],
+  ['edit', new Set(['--title', '--body-file'])],
+  ['close', new Set(['--duplicate-of'])],
+]);
+const GH_KORT = new Map([['-R', '--repo'], ['-F', '--body-file'], ['-t', '--title']]);
+const GETAL = /^\d+$/;
+
+/**
+ * Lege string als het commando precies een bijwerkvorm uit ADR 0101 punt 5 heeft, anders de reden. De toets loopt over alle
+ * ruwe woorden na `gh`, ook vóór `issue`; `ghCommandWords` volstaat niet, want die kent de vlaggen zonder waarde niet.
+ * @param {string} action
+ * @param {readonly string[]} args
+ * @param {{ repository: string, setsGhEnv: boolean }} doel
+ */
+function bijwerkAfwijking(action, args, { repository, setsGhEnv }) {
+  const toegestaan = BIJWERK_OPTIES.get(action);
+  if (toegestaan === undefined) return `alleen comment, edit en close hebben een leerpuntvorm; ${action} vraagt toestemming`;
+  if (setsGhEnv) return 'GH_REPO of GH_HOST verlegt het doel';
+  if (args.some((arg) => /\$\(|`/.test(arg))) return 'commandosubstitutie in het commando; zet de tekst in --body-file';
+  const { opties, woorden, fout } = leesGhArgs(args);
+  if (fout !== '') return fout;
+  const vreemd = opties.find(({ naam }) => naam !== '--repo' && !toegestaan.has(naam));
+  if (vreemd !== undefined) return `optie ${vreemd.naam} hoort niet bij de vorm (alleen ${[...toegestaan].join(', ')} en --repo)`;
+  const repos = optieWaarden(opties, '--repo');
+  if (repos.length !== 1 || (repos[0] ?? '').toLowerCase() !== repository.toLowerCase())
+    return `--repo moet precies één keer ${repository} zijn`;
+  const [groep, actie, nummer = '', ...meer] = woorden;
+  if (groep !== 'issue' || actie !== action || !GETAL.test(nummer) || meer.length > 0)
+    return 'precies één issuenummer als getal (geen URL, geen tweede nummer)';
+  return bijwerkOptieAfwijking(action, opties);
+}
+
+/**
+ * Opties en positionele woorden zoals gh ze leest: `--naam waarde`, `--naam=waarde`, `-X waarde`, `-Xwaarde` en `-X=waarde`.
+ * Elke optie krijgt een waarde; een onbekende optie maakt de vorm toch al ongeldig. `--` is zelf een afwijking.
+ * @param {readonly string[]} args
+ */
+function leesGhArgs(args) {
+  /** @type {{ naam: string, waarde: string | undefined }[]} */
+  const opties = [];
+  /** @type {string[]} */
+  const woorden = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index] ?? '';
+    if (arg === '--') return { opties, woorden, fout: '`--` (einde van de opties) hoort niet bij de vorm' };
+    if (!arg.startsWith('-') || arg === '-') {
+      woorden.push(arg);
+      continue;
+    }
+    const { naam, waarde } = splitsGhOptie(arg);
+    if (waarde === undefined) index += 1;
+    opties.push({ naam, waarde: waarde ?? args[index] });
+  }
+  return { opties, woorden, fout: '' };
+}
+
+/** @param {string} arg */
+function splitsGhOptie(arg) {
+  if (arg.startsWith('--')) {
+    const teken = arg.indexOf('=');
+    return teken < 0 ? { naam: arg, waarde: undefined } : { naam: arg.slice(0, teken), waarde: arg.slice(teken + 1) };
+  }
+  const kort = arg.slice(0, 2);
+  return { naam: GH_KORT.get(kort) ?? kort, waarde: arg.length > 2 ? arg.slice(2).replace(/^=/, '') : undefined };
+}
+
+/**
+ * @param {readonly { naam: string, waarde: string | undefined }[]} opties
+ * @param {string} naam
+ */
+function optieWaarden(opties, naam) {
+  return opties.filter((optie) => optie.naam === naam).map(({ waarde }) => waarde);
+}
+
+/**
+ * Aantallen en waarden per actie: comment precies één `--body-file`; edit hooguit één `--title` en één `--body-file`, samen
+ * minstens één; close precies één `--duplicate-of <getal>`. `--body-file -` leest stdin en telt niet.
+ * @param {string} action
+ * @param {readonly { naam: string, waarde: string | undefined }[]} opties
+ */
+function bijwerkOptieAfwijking(action, opties) {
+  const bestanden = optieWaarden(opties, '--body-file');
+  const titels = optieWaarden(opties, '--title');
+  if (bestanden.some((pad) => pad === undefined || pad === '' || pad === '-')) return '--body-file met een pad, geen stdin (-)';
+  if (titels.some((titel) => titel === undefined || titel === '')) return '--title zonder waarde';
+  if (action === 'comment' && bestanden.length !== 1) return 'comment met precies één --body-file';
+  if (action === 'edit' && (bestanden.length > 1 || titels.length > 1 || bestanden.length + titels.length === 0))
+    return 'edit met --title en/of --body-file, elk hooguit één keer';
+  const duplicaat = optieWaarden(opties, '--duplicate-of');
+  if (action === 'close' && (duplicaat.length !== 1 || !GETAL.test(duplicaat[0] ?? '')))
+    return 'close alleen met precies één --duplicate-of <getal> (geen URL)';
+  return '';
 }
 
 /**

@@ -147,9 +147,14 @@ describe('subagent: schrijvende gh issue- en gh api-opdrachten', () => {
   );
 });
 
-describe('hoofdsessie: andere gh issue-opdrachten veranderen niet', () => {
-  // Uitslag vóór deze spec (gemeten op main na #310): allow, de permissievraag van Claude Code blijft de grens.
-  test.each([...SCHRIJVENDE_COMMANDOS, 'gh api -X POST repos/o/r/issues/1/comments -f body=x', 'gh issue view 1'])(
+describe('hoofdsessie: andere gh issue-opdrachten', () => {
+  // Gewijzigd door ADR 0101 (leerlus-bewijs/AC-11): een schrijvende gh issue buiten de leerpuntvormen, hier zonder
+  // --repo, is voor de hoofdsessie ask; vóór ADR 0101 was dat allow. gh api en lezen veranderen niet.
+  test.each(SCHRIJVENDE_COMMANDOS)('leerlus/AC-7: hoofdsessie %s → ask (ADR 0101)', (command) => {
+    expect(verdict(bash(command))).toBe('ask');
+  });
+
+  test.each(['gh api -X POST repos/o/r/issues/1/comments -f body=x', 'gh issue view 1'])(
     'leerlus/AC-7: hoofdsessie %s → geen nieuwe deny of ask',
     (command) => {
       expect(verdict(bash(command))).toBe('allow');

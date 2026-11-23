@@ -82,7 +82,9 @@ describe('compacte-kennisbasis-rails/AC-17: labels op een PR zet geen enkele rol
 
   test('compacte-kennisbasis-rails/AC-17 hoofdsessie: leesfilters en edits zonder label houden hun uitslag (allow)', () => {
     expect(verdict('gh issue list --label bug')).toBe('allow');
-    expect(verdict('gh issue edit 1 --title t')).toBe('allow');
+    // GEWIJZIGD (ADR 0101, leerlus-bewijs/AC-11): een gh issue edit zonder --repo is voor de hoofdsessie nu ask; de
+    // bedoeling (een edit zonder label wordt niet geweigerd) toetst deze regel daarom in de geldige vorm met de template-repo.
+    expect(verdict('gh issue edit --repo BramLambertJansen/template 1 --title t')).toBe('allow');
     expect(verdict('gh pr edit 1 --title t')).toBe('allow');
   });
 

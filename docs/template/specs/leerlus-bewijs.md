@@ -204,7 +204,9 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   `.claude/skills/opleveren/SKILL.md`, `docs/framework.md`, `AGENTS.md`, `docs/nieuwe-app.md`. AC-11 wijzigt het gedrag
   dat `docs/template/specs/leerlus.md` AC-7 en `test/hooks/rolhek-leerpunt.test.ts` (de rij "voor de hoofdsessie verandert
   niets" bij comment, edit, close en de andere schrijfacties) vastleggen: die bestaande test wijzigt mee, met reden in de PR
-  (R-TEST-02), en leerlus/AC-7 verwijst naar AC-11.
+  (R-TEST-02), en leerlus/AC-7 verwijst naar AC-11. Om dezelfde reden wijzigen `test/hooks/rolhek-label.test.ts` (een edit
+  zonder label toetst nu met `--repo`) en `test/rails/opleveren-skill.test.ts` (leerlus-bewijs/AC-8: de MCP-tool doet meer dan
+  alleen aanmaken).
 - Verplichte check: `leerpunt-bewijs` in de ruleset (`scripts/github-ruleset.sh`) en `requiredChecks` in `.claude/decisions.json`.
 - Na de merge: de routine "Leerpunten voorsorteren" verwijst naar het bestand uit AC-9.
 

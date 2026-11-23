@@ -156,7 +156,7 @@ commando's, paden, productnamen (Use this template, Settings → Rules → Rules
 
 | Wat | Waarde |
 |---|---|
-| Template | `BramLambertJansen/template` (public), branch `main`. Een fork van de template past `template.repository` in `.claude/gates.json` aan en de allow-regel `Bash(gh issue create --repo <repo> --label leerpunt *)` in `.claude/settings.json` (`test/rails/leerpunt-settings.test.ts` bindt die twee); de opstartcommando's hieronder noemen de repo letterlijk |
+| Template | `BramLambertJansen/template` (public), branch `main`. Een fork van de template past `template.repository` in `.claude/gates.json` aan en de allow-regels `Bash(gh issue create --repo <repo> --label leerpunt *)`, `Bash(gh issue comment --repo <repo> *)`, `Bash(gh issue edit --repo <repo> *)` en `Bash(gh issue close --repo <repo> *)` in `.claude/settings.json` (ADR 0101; `test/rails/leerpunt-settings.test.ts` en `test/rails/leerpunt-bijwerken-settings.test.ts` binden ze); de opstartcommando's hieronder noemen de repo letterlijk |
 | Owner van de nieuwe repo | het account van `gh api user --jq .login` |
 | Zichtbaarheid | `public` (voorlopig; private vraagt GitHub Pro of Team voor de ruleset en betaalde code scanning voor CodeQL; controle vóór de repo bestaat in Fase 4.1) |
 | Map | `~/code/<slug>` |

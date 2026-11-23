@@ -167,7 +167,11 @@ describe('leerlus-bewijs/AC-8 MCP in de cloud en de sectie Leerpunt', () => {
   // GEWIJZIGD (spec agent-recepten AC-8, leerpunt #807): de MCP-schrijfweg gaat naar template.repository.
   test('leerlus-bewijs/AC-8: de slotstap noemt de MCP-schrijfweg en de sectie ## Leerpunt', () => {
     const stap = flat(skill).slice(flat(skill).indexOf('Loop de signaalmomenten'));
-    expect(stap).toMatch(/MCP-tool voor issues, alleen aanmaken, alleen naar template\.repository, met label leerpunt/);
+    // GEWIJZIGD (ADR 0101, leerlus-bewijs/AC-14): de MCP-tool mag een leerpunt ook bijwerken en sluiten als duplicaat;
+    // was "alleen aanmaken". Het doel blijft alleen template.repository en aanmaken blijft met label leerpunt.
+    expect(stap).toMatch(
+      /MCP-tool voor issues \(aanmaken, comment, bijwerken\), alleen naar template\.repository: aanmaken met label leerpunt/,
+    );
     expect(stap).toContain('## Leerpunt');
     // GEWIJZIGD (spec gedragsbaseline AC-7, ADR 0107): de regel met een testpad noemt alleen de treden met een test.
     expect(stap).toContain('- #<nr>: trede <Type|Check|Gouden pad of generator>; bewijs <testpad>');

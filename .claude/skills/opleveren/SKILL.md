@@ -88,6 +88,18 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
    blokkerende reviewbevinding (Leerpunt: ja), tweede mislukte correctiepoging. Per les: Leerpunt? Generiek: dien het in volgens
    het sjabloon leerpunt (gh issue create naar template.repository met --label leerpunt) en toon de tekst. Alleen voor deze app:
    een padregel, spec of ADR (`docs/specs/`, `docs/adr/`) in de app, geen issue. Niets: zeg "geen leerpunt".
+   Vóór het indienen eerst afstemmen (ADR 0101 punt 6): zoek de open leerpunten die het werk raakt, met trefwoorden uit
+   de geraakte paden en regels: `gh issue list --repo <repo> --label leerpunt --state open --search <trefwoord>`, niet de hele
+   lijst. Per geraakt leerpunt één uitkomst: `opgelost` (de PR krijgt `Closes #<nr>` en `## Leerpunt` met bewijs; zonder
+   bewijs alleen een comment), `deels` (comment `deels: <wat gedaan is>; open: <wat nog moet>` met de PR, zo nodig de body
+   ingekort tot het resterende) of `zelfde les opnieuw` (comment met de nieuwe reproductie, geen nieuw issue). Slotregel per
+   leerpunt de uitkomst, of "geen open leerpunt geraakt".
+   Bijwerken en sluiten (ADR 0101): vóór elke schrijfactie de doelcheck `gh issue view <nr> --repo <repo> --json labels,state,url`;
+   geen label `leerpunt`, dan stop (issues en PR's delen nummers). Alleen deze vormen, met `--repo` direct na de actie (anders
+   een vraag): `gh issue comment --repo <repo> <nr> --body-file <bestand>`, `gh issue edit --repo <repo> <nr> --title <titel>
+   --body-file <bestand>` (titel of body) en, bij een duplicaat, eerst `gh issue comment` met `duplicaat van #<nr>` en daarna
+   `gh issue close --repo <repo> <nr> --duplicate-of <nr>`. Geen labels via gh (R-ROL-08). Ander sluiten (achterhaald, not
+   planned) en heropenen doet de eigenaar.
    Vraag ook (ADR 0081): kostte een stap, check, hook of instructie in deze sessie merkbaar tijd, rondes of tokens zonder iets
    te vangen, of las je code die bij gelijk gedrag veel korter of sneller kan? Dan een leerpunt met plek
    `Schrappen of vereenvoudigen` en een `Onderbouwing` met de regels `Meting:`, `Overname:` en `Terugval:`.
@@ -116,8 +128,10 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
 
    Zet de body in een tijdelijk bestand en geef het mee met `--body-file`: backticks of `$(` in het commando zelf geven een vraag.
    Bestaat het label nog niet, dan meld je dat; het label maakt de eigenaar. Triage en oppakken zijn van de eigenaar.
-   Cloud, waar `gh` niet kan schrijven (ADR 0078 punt 4): de MCP-tool voor issues, alleen aanmaken, alleen naar
-   `template.repository`, met label `leerpunt` en dezelfde titel en body. Geen andere MCP-schrijfactie.
+   Cloud, waar `gh` niet kan schrijven (ADR 0078 punt 4, ADR 0101 punt 5): de MCP-tool voor issues (aanmaken, comment, bijwerken),
+   alleen naar `template.repository`: aanmaken met label `leerpunt` en dezelfde titel en body, en na de doelcheck dezelfde
+   acties als hierboven (comment, titel en body, sluiten als duplicaat) plus labels zetten of weghalen, nooit `leerpunt`,
+   `leerpunt-onvolledig` of `leerpunt-zonder-bewijs`. Geen andere MCP-schrijfactie.
    Sluit een PR een leerpunt (sluitwoord of koppeling), dan krijgt de beschrijving de sectie `## Leerpunt` met per issue
    `- #<nr>: trede <Type|Check|Gouden pad of generator>; bewijs <testpad>`; de job `leerpunt-bewijs` draait die test rood op
    de basis en groen op de head. Bij een integratie- of e2e-test: `bewijs geen test: <reden>`, en dan merget de eigenaar.
