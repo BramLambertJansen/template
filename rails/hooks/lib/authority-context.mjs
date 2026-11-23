@@ -82,7 +82,8 @@ export function trustedBase(root, base) {
           readOptional: (file) => vertrouwdeTekstOptioneel(root, vast, file),
         }
       : null;
-  const sha = gitText(root, ['rev-parse', '--verify', `${base ?? 'origin/main'}^{commit}`])?.trim() ?? '';
+  // De volle naam: een korte `origin/main` kan een lokale branch `refs/heads/origin/main` schaduwen (leerpunt #932).
+  const sha = gitText(root, ['rev-parse', '--verify', `${base ?? 'refs/remotes/origin/main'}^{commit}`])?.trim() ?? '';
   if (!/^[0-9a-f]{40}$/.test(sha)) return null;
   return { sha, read: (file) => gitText(root, ['show', `${sha}:${file}`]), readOptional: (file) => gitOptioneel(root, sha, file) };
 }

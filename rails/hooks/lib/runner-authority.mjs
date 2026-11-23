@@ -95,7 +95,7 @@ function eigenBinary(root) {
 export function ankerVerouderd(root, basis, modus = 'kit') {
   if (basis === null || eigenBinary(root)) return false;
   if (modus === 'merge' && !mergeMode(basis.read?.('.claude/gates.json') ?? '')) return false;
-  const origin = gitText(root, ['rev-parse', '--verify', '--quiet', 'origin/main^{commit}'])?.trim();
+  const origin = gitText(root, ['rev-parse', '--verify', '--quiet', 'refs/remotes/origin/main^{commit}'])?.trim();
   if (origin === undefined || !/^[0-9a-f]{40}$/.test(origin) || origin === basis.sha) return false;
   return !unchangedFrom(root, basis.sha, MERGE_FILES) && unchangedFrom(root, origin, MERGE_FILES);
 }
