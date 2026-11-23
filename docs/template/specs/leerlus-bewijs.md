@@ -79,7 +79,9 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
 - **leerlus-bewijs/AC-1** — Welke issues een PR sluit, komt uit GitHub zelf (GraphQL `closingIssuesReferences`), dus elk
   sluitwoord dat GitHub kent (close, closes, closed, fix, fixes, fixed, resolve, resolves, resolved, met of zonder dubbele
   punt) en een handmatige koppeling tellen. Een PR die zo een issue met label `leerpunt` sluit, zonder regel `- #n:` in de sectie `## Leerpunt`, maakt de job `leerpunt-bewijs` rood met de melding welk nummer
-  ontbreekt. Een PR zonder zo'n verwijzing laat de job slagen zonder iets te draaien.
+  ontbreekt. Een PR zonder zo'n verwijzing en zonder regel in `## Leerpunt` laat de job slagen zonder iets te draaien; een
+  regel voor een issue dat de PR niet sluit, maakt de job rood met de uitweg `Closes #<nr>` (leerpunt #717). Toets:
+  `test/scripts/leerpunt-koppeling.test.ts`
 - **leerlus-bewijs/AC-2** — Bij `bewijs <testpad>`: het pad moet in de diff van de PR staan als toegevoegd of gewijzigd
   `*.test.ts(x)`-bestand buiten `*.int.test.ts` en `e2e/`, of bij trede Type als `*.test-d.ts`. Anders rood.
 - **leerlus-bewijs/AC-3** — Het bewijsbestand draait in een tijdelijke kopie van de basis (merge-base) met alleen dat bestand
