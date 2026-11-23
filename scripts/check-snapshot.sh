@@ -37,7 +37,8 @@ if [[ -n "$hernoemingen" ]]; then
   cp .runner-output/gen/schema.snapshot.stabiel.sql .runner-output/volgorde/versievolgorde.sql
   rm -rf .runner-output/gen
   if ! scripts/runner.sh gen-volgorde "$@" || [[ ! -f .runner-output/gen/schema.snapshot.sql ]]; then
-    echo "✗ check:snapshot: de bouw op volgorde van binnenkomst faalt (eerst de bestaande migraties, daarna $namen) → in productie, waar de bestaande migraties al zijn toegepast, faalt een van deze migraties; $herstel." >&2
+    # Een latere migratie bereikt dbmate niet: het stopt bij de falende migratie, ook in productie (leerpunt #810).
+    echo "✗ check:snapshot: de bouw op volgorde van binnenkomst faalt (eerst de bestaande migraties, daarna $namen) → in productie, waar de bestaande migraties al zijn toegepast, faalt een van deze migraties. De eerste fout van de runner of dbmate hierboven is het vertrekpunt; een latere migratie bereikt dbmate niet, dus houd de update tegen tot die oorzaak een uitvoerbaar herstel heeft (docs/nieuwe-app.md, \"Een template-update binnenhalen\")." >&2
     exit 1
   fi
   grep -v -E "$ONSTABIEL" .runner-output/gen/schema.snapshot.sql > .runner-output/volgorde/binnenkomst.sql
