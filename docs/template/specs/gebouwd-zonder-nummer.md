@@ -1,5 +1,5 @@
 ---
-status: gebouwd
+status: goedgekeurd
 namespace: gebouwd-zonder-nummer
 ---
 
@@ -35,7 +35,7 @@ door ADR 0104 vervalt, staat hieronder in de vervallen-vorm. AC-16 en verder zij
 - `scripts/kit/ac-toets.mjs` — de diffvorm tegenover de merge-base en de melding zonder basis.
 - `scripts/kit/feiten-secties.mjs` — `specs(lezer, map)` en `uitLezer`.
 - `rails/hooks/lib/document-state.mjs` — `acIds`, `documentInfo`, `MARKERING`.
-- `test/rails/check-docs-dood-pad.test.ts` en `test/rails/vergeten-gebouwd.test.ts` — fixtures in een tijdelijke git-repo per
+- `test/rails/check-docs-dood-pad.test.ts` en `test/rails/vergeten-gebouwd.test.ts` (vervallen) — fixtures in een tijdelijke git-repo per
   geval.
 
 ## Hergebruik en UX
@@ -313,7 +313,7 @@ Teksten, letterlijk (`<id>` is `namespace` of anders de bestandsnaam zonder `.md
 - `scripts/kit/leespad.mjs`: de ref-lezer in `lezing` levert `boom` via `boomOpBasis`.
 - `scripts/kit/leesbudget.mjs`: de tekst van `zonderBasis` noemt de AC-dekking (AC-26).
 - `scripts/kit/ac-toets.mjs`: alleen de imports, als die verhuizen.
-- Schrappen: `scripts/kit/vergeten-gebouwd.mjs` en `test/rails/vergeten-gebouwd.test.ts` (ADR 0104 punt 6; het ADR is het
+- Schrappen: `scripts/kit/vergeten-gebouwd.mjs` (vervallen) en `test/rails/vergeten-gebouwd.test.ts` (vervallen) (ADR 0104 punt 6; het ADR is het
   eigenaarakkoord voor deze test, R-TEST-02).
 
 **Rolhek en document-state**
