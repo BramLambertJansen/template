@@ -1,6 +1,6 @@
 // Context van het rolhek (ADR 0045): configuratie uit het anker, vertrouwde basis, lezen uit de werkmap.
 import { execFileSync } from 'node:child_process';
-import { readFileSync, realpathSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { loadConfig } from './rolhek.mjs';
 import { gitText, readAuthority, repositoryName, trustedBase } from './authority-context.mjs';
@@ -145,7 +145,7 @@ export function rolhekContext(root, cwd) {
         return null;
       }
     },
-    committed: committedIn(root, basis?.sha ?? null),
+    committed: migratieGecommit(root, basis?.sha ?? null),
     // Leerpunt #887: een testbestand is pas bestaand als het op het anker of op origin/main staat.
     bestaand: opMain(root, basis?.sha ?? null),
     isDir: (/** @type {string} */ rel) => safe(() => statSync(path.join(root, rel)).isDirectory()),
@@ -167,24 +167,21 @@ export function rolhekContext(root, cwd) {
 }
 
 /**
- * Een migratie is gecommit als hij in de merge-base met het anker of met origin/main staat (de strengste van beide), zoals
- * check:migrations kijkt (WS-04 punt 5). Zijn beide onleesbaar, dan terugval op HEAD en 'zonder-origin' ("git fetch origin").
+ * Een migratie is gecommit als hij in de tip van het anker of van origin/main staat (leerpunt #927), net als `opMain`: HEAD
+ * telt niet mee, want een agent kan HEAD verzetten (`checkout --orphan`, `reset --soft`). Zijn beide onleesbaar, dan
+ * 'zonder-origin' ("git fetch origin") voor een migratie op schijf of in HEAD, zodat het dicht faalt; een nieuwe migratie
+ * die nog nergens staat, blijft schrijfbaar.
  * @param {string} root
  * @param {string | null} basis
  * @returns {(rel: string) => boolean | 'zonder-origin'}
  */
-function committedIn(root, basis) {
-  /** @type {string[] | undefined} */
-  let bases;
-  const exists = (/** @type {string} */ tree, /** @type {string} */ rel) =>
-    safe(() => git(root, ['cat-file', '-e', `${tree}:${rel}`]) === '');
+export function migratieGecommit(root, basis) {
+  const opTip = opMain(root, basis);
   return (rel) => {
-    bases ??= [basis, 'origin/main'].flatMap((ref) => {
-      const sha = ref === null ? null : mergeBase(root, ref);
-      return sha === null ? [] : [sha];
-    });
-    if (bases.length > 0) return bases.some((tree) => exists(tree, rel));
-    return exists('HEAD', rel) ? 'zonder-origin' : false;
+    const uitslag = opTip(rel);
+    if (uitslag !== 'zonder-origin') return uitslag;
+    const ergens = existsSync(path.join(root, rel)) || safe(() => git(root, ['cat-file', '-e', `HEAD:${rel}`]) === '');
+    return ergens ? 'zonder-origin' : false;
   };
 }
 
@@ -213,15 +210,6 @@ export function opMain(root, basis) {
     });
     return tips.length === 0 ? 'zonder-origin' : tips.some((tip) => exists(tip, rel));
   };
-}
-
-/** @param {string} root @param {string} basis */
-function mergeBase(root, basis) {
-  try {
-    return git(root, ['merge-base', basis, 'HEAD']) || null;
-  } catch {
-    return null;
-  }
 }
 
 const GEWOON_BESTAND = new Set(['100644', '100755']);

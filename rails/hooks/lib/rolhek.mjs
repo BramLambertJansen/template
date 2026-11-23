@@ -39,7 +39,8 @@ import { afgeleid, globMatch, onderhoudVan, samengevoegd, templateVan } from './
  * --porcelain` (AC-15); ontbreekt hij of gooit hij, dan telt alleen `root`. Beide roept het rolhek hooguit één keer per beslissing aan.
  * `onderhoud`: de onderhoudsmodus is actief (vertrouwde configuratie en origin is die repository, ADR 0045 punt 8–9).
  * `onbekendeRol`: een subagent zonder bekende rol; telt als reviewer (alleen lezen).
- * `committed`: staat in de merge-base met het anker of met origin/main; 'zonder-origin' = beide onleesbaar en wel in HEAD (terugval).
+ * `committed`: staat in de tip van het anker of van origin/main, los van HEAD (leerpunt #927); 'zonder-origin' = beide
+ * onleesbaar en het bestand staat op schijf of in HEAD (faalt dicht).
  * `bestaand`: staat in de tip van het anker of van origin/main, los van HEAD (leerpunt #887): alleen dan is een testbestand
  * een bestaande test; 'zonder-origin' = beide onleesbaar. Ontbreekt hij, dan telt elk testbestand op schijf als bestaand.
  * @typedef {{ deny: string[], ask: string[], context: string[], allow?: boolean }} Decision
@@ -458,7 +459,7 @@ function decideFile({ rel, change, role }, ctx, decision) {
   }
   const committed = matches(config.migraties) ? ctx.committed(rel) : false;
   if (committed !== false) {
-    const hint = committed === 'zonder-origin' ? ' (origin/main onleesbaar, daarom vergeleken met HEAD: draai git fetch origin)' : '';
+    const hint = committed === 'zonder-origin' ? ' (origin/main en het anker onleesbaar, daarom telt elke bestaande migratie als gecommit: draai git fetch origin)' : '';
     decision.deny.push(`${rel} is een gecommitte migratie: wijzig hem nooit, maak een nieuwe (AGENTS.md)${hint}`);
     return;
   }
