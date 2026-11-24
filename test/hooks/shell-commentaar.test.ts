@@ -56,6 +56,19 @@ describe('rolhek-herstel/AC-4: commentaar begint aan het begin van een woord', (
     const uitslagen = VORMEN.map(({ naam, tekst }) => ({ naam, uitslag: verdict(tekst, agent) }));
     expect(uitslagen).toEqual(VORMEN.map(({ naam }) => ({ naam, uitslag: 'deny' })));
   });
+
+  // Review B3 na de bouw: een `}` tussen aanhalingstekens sluit `${…}` niet; anders lijkt de rest een heredoc met aangehaalde
+  // delimiter, slaat `substitutions()` de body over en blijft de `$(rm …)` die bash uitvoert buiten de toets.
+  const B3 = `echo \${x:-"}"" <<'E'\n$(${LOS})\nE\n"}`;
+  test('rolhek-herstel/AC-4: een substitutie achter een valse heredoc in ${…}: hoofdsessie vraagt', () => {
+    expect(verdict(B3)).toBe('ask');
+  });
+  test.each(['developer', 'tester', 'docs'])(
+    'rolhek-herstel/AC-4: een substitutie achter een valse heredoc in ${…}: %s weigert',
+    (agent) => {
+      expect(verdict(B3, agent)).toBe('deny');
+    },
+  );
 });
 
 describe('rolhek-herstel/AC-4: een # in een woord of rekenkundige context is geen commentaar', () => {

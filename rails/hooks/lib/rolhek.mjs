@@ -4,7 +4,7 @@
 // Een nieuwe weigerregel krijgt een lid in de union en een basisrij in test/hooks/rolhek-aanvalscorpus.ts, zodat elke
 // shellvorm uit het corpus ook tegen die regel draait (spec rolhek-aanvalscorpus).
 import path from 'node:path';
-import { gitSubcommand, globTekstRegex, ONZEKERE_TEKST, parseCommands, programName, splitCommand, tmpdirLetterlijk, tmpdirWoord, tokenize, writeTargets, zetVariabele } from './shell.mjs';
+import { gitSubcommand, globTekstRegex, heredocsBeide, ONZEKERE_TEKST, parseCommands, programName, splitCommand, tmpdirLetterlijk, tmpdirWoord, tokenize, tokensBeide, writeTargets, zetVariabele } from './shell.mjs';
 import { GIT_VORMEN, gitLeesvorm, insideRepo, lezerPaden, pathspecBinnen } from './rolhek-lezers.mjs';
 import { gebouwdRegel } from './ac-dekking.mjs';
 import { A4_MELDING, archiefBron, beslisOvergang, documentInfo, documentKind, isArchief, isHerschrijving } from './document-state.mjs';
@@ -244,7 +244,7 @@ const COMPOUND_BEGIN = new Set(['{', '}', 'do', 'done', 'fi', 'esac', 'then', 'e
 
 /** Heeft het commando een groep (`(`, `)`) of een compound (`{ …; }`, `for`/`if`/`case`)? @param {string} command @param {readonly Command[]} segmenten */
 function heeftGroep(command, segmenten) {
-  if (tokenize(command).some(({ kind, value }) => kind === 'op' && (value === '(' || value === ')'))) return true;
+  if (tokensBeide(command).some(({ kind, value }) => kind === 'op' && (value === '(' || value === ')'))) return true;
   return segmenten.some(({ words }) => COMPOUND_BEGIN.has(words[0] ?? ''));
 }
 
@@ -954,7 +954,7 @@ function volgendeMap({ argv, expanded }, cwd, root) {
 
 /** @param {string} command @param {string} cwd @returns {MapStand} */
 function mapStand(command, cwd) {
-  const haakjes = tokenize(command).some(({ kind, value }) => kind === 'op' && (value === '(' || value === ')'));
+  const haakjes = tokensBeide(command).some(({ kind, value }) => kind === 'op' && (value === '(' || value === ')'));
   return { nu: [cwd], alle: [cwd], voor: '', haakjes };
 }
 
@@ -1043,16 +1043,17 @@ function envSplitsString(words) {
  * @returns {string[]}
  */
 function substitutions(command) {
-  /** @type {import('./shell.mjs').HeredocBody[]} */
-  const bodies = [];
-  tokenize(command, bodies);
-  const letterlijk = bodies.filter((body) => body.letterlijk);
+  // Spec rolhek-herstel/AC-4 (review B3): een body valt alleen buiten beeld als hij in beide lezingen letterlijk is.
+  const [nieuw, oud] = heredocsBeide(command).map((bodies) => bodies.filter((body) => body.letterlijk));
+  /** @param {import('./shell.mjs').HeredocBody[]} lijst @param {number} index */
+  const binnen = (lijst = [], index) => lijst.find(({ start, end }) => index >= start && index < end);
   /** @type {string[]} */
   const found = [];
   for (let index = 0; index < command.length; index += 1) {
-    const body = letterlijk.find(({ start, end }) => index >= start && index < end);
-    if (body !== undefined) {
-      index = body.end - 1;
+    const body = binnen(nieuw, index);
+    const bodyOud = binnen(oud, index);
+    if (body !== undefined && bodyOud !== undefined) {
+      index = Math.min(body.end, bodyOud.end) - 1;
       continue;
     }
     const close = command.startsWith('$(', index) ? matchingParen(command, index + 2)
@@ -1549,7 +1550,7 @@ const REVIEWER_OPS = new Set(['(', ')', '&', '|&']);
  */
 function reviewerOperatoren(command, role) {
   if (role !== 'reviewer') return [];
-  return tokenize(command).some(({ kind, value }) => kind === 'op' && REVIEWER_OPS.has(value)) ? [VORM_MELDING] : [];
+  return tokensBeide(command).some(({ kind, value }) => kind === 'op' && REVIEWER_OPS.has(value)) ? [VORM_MELDING] : [];
 }
 
 /**
@@ -2933,10 +2934,12 @@ function pnpmScript(args) {
  */
 function pastOpPatroon(command, { woorden, open }) {
   if (NETWERK_ONZEKER.test(command)) return false;
-  const tokens = tokenize(command);
-  if (tokens.some(({ kind }) => kind !== 'word') || !alleTekstGelezen(command, tokens)) return false;
-  if (open ? tokens.length < woorden.length : tokens.length !== woorden.length) return false;
-  return woorden.every((woord, index) => tokens[index]?.value === woord);
+  // Beide lezingen van spec rolhek-herstel/AC-4 moeten passen (review N1).
+  return [tokenize(command), tokenize(command, [], true)].every((tokens) => {
+    if (tokens.some(({ kind }) => kind !== 'word') || !alleTekstGelezen(command, tokens)) return false;
+    if (open ? tokens.length < woorden.length : tokens.length !== woorden.length) return false;
+    return woorden.every((woord, index) => tokens[index]?.value === woord);
+  });
 }
 
 /**

@@ -67,13 +67,39 @@ export function parseCommands(script, onzeker = false) {
 }
 
 /**
+ * De tokens van beide lezingen achter elkaar (spec rolhek-herstel/AC-4), voor een aanroeper die alleen vraagt of er ergens
+ * een token van een soort staat (`.some`): zo ziet hij nooit minder dan met de lezer van vóór die spec (review N1).
+ * @param {string} script
+ * @returns {Token[]}
+ */
+export function tokensBeide(script) {
+  return VERSCHIL.test(script) ? [...tokenize(script), ...tokenize(script, [], true)] : tokenize(script);
+}
+
+/**
+ * De bodybereiken van de heredocs per lezing: `[nieuw, oud]`; zonder verschilteken is de oude lezing gelijk.
+ * @param {string} script
+ * @returns {[HeredocBody[], HeredocBody[]]}
+ */
+export function heredocsBeide(script) {
+  /** @type {HeredocBody[]} */
+  const nieuw = [];
+  tokenize(script, nieuw);
+  if (!VERSCHIL.test(script)) return [nieuw, nieuw];
+  /** @type {HeredocBody[]} */
+  const oud = [];
+  tokenize(script, oud, true);
+  return [nieuw, oud];
+}
+
+/**
  * De segmenten zonder herhaling: twee lezingen geven vaak hetzelfde segment (zelfde woorden, redirects en invoer).
  * @param {Command[]} segmenten
  */
 function uniek(segmenten) {
   const gezien = new Set();
-  return segmenten.filter(({ words, redirects, inputs = [], kopieen = [] }) => {
-    const sleutel = JSON.stringify([words, redirects, inputs, kopieen]);
+  return segmenten.filter(({ words, redirects, inputs = [], kopieen = [], patterns = [], scheiding }) => {
+    const sleutel = JSON.stringify([words, redirects, inputs, kopieen, patterns, scheiding]);
     if (gezien.has(sleutel)) return false;
     gezien.add(sleutel);
     return true;
@@ -158,7 +184,7 @@ const TMPDIR_VOORAAN = /(?<=^|[ \t\n;&|()<>])(?:"?\$TMPDIR"?\/|(?:\$TMPDIR|\$\{T
 export function tmpdirLetterlijk(script) {
   const genoemd = script.match(/TMPDIR/g)?.length ?? 0;
   if (genoemd === 0 || genoemd !== (script.match(TMPDIR_VOORAAN)?.length ?? 0)) return false;
-  const woorden = tokenize(script).filter((token) => token.kind === 'word').map((token) => token.value);
+  const woorden = tokensBeide(script).filter((token) => token.kind === 'word').map((token) => token.value);
   if (woorden.some((woord) => woord.includes('TMPDIR') && !tmpdirWoord(woord))) return false;
   return !parseCommands(script).some(({ words }) => zetVariabele(splitCommand(words).argv));
 }
@@ -612,9 +638,13 @@ function findPaar(script, from, sluit) {
   const open = script[from - 1];
   let depth = 1;
   for (let index = from; index < script.length; index += 1) {
-    if (script[index] === '\\') index += 1;
-    else if (script[index] === open) depth += 1;
-    else if (script[index] === sluit && (depth -= 1) === 0) return index;
+    const char = script[index];
+    // Zoals `parse_matched_pair` in bash: aanhalingstekens, `$(…)` en backticks sluiten de groep niet (review B2, B3).
+    if (char === '\\') index += 1;
+    else if (char === "'" || char === '"' || char === '`') index = findClose(script, index + 1, char);
+    else if (char === '$' && script[index + 1] === '(') index = findParen(script, index + 2);
+    else if (char === open) depth += 1;
+    else if (char === sluit && (depth -= 1) === 0) return index;
   }
   return script.length;
 }
