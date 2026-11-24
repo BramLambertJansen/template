@@ -78,6 +78,27 @@ describe('rolhek-herstel/AC-4: commentaar begint aan het begin van een woord', (
 
   // Review B3 na de bouw: een `}` tussen aanhalingstekens sluit `${…}` niet; anders lijkt de rest een heredoc met aangehaalde
   // delimiter, slaat `substitutions()` de body over en blijft de `$(rm …)` die bash uitvoert buiten de toets.
+  // Codex-review P1: twee gelijke segmenten binnen één lezing (`cd .. && cd ..`) blijven allebei staan; anders volgt de
+  // werkmap één `cd` te weinig en valt een schrijfdoel op een zelfladend pad buiten de toets.
+  test('rolhek-herstel/AC-4: een herhaald commando in één lezing blijft staan (cd .. && cd .. met commentaar)', () => {
+    const ctx = {
+      root: '/repo',
+      cwd: '/repo/src/web',
+      config,
+      read: () => null,
+      committed: () => false,
+      isDir: () => true,
+      branch: 'feat/x',
+      mergeTrusted: true,
+      kitTrusted: true,
+    };
+    const command = 'cd .. && cd .. && printf x > lefthook.yml # commentaar';
+    expect(
+      decide({ tool_name: 'Bash', tool_input: { command }, agent_type: 'developer' }, ctx).deny.length,
+    ).toBeGreaterThan(0);
+    expect(parseCommands(command).filter(({ words }) => words.join(' ') === 'cd ..').length).toBeGreaterThanOrEqual(2);
+  });
+
   const B3 = `echo \${x:-"}"" <<'E'\n$(${LOS})\nE\n"}`;
   test('rolhek-herstel/AC-4: een substitutie achter een valse heredoc in ${…}: hoofdsessie vraagt', () => {
     expect(verdict(B3)).toBe('ask');

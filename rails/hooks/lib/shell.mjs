@@ -57,13 +57,15 @@ export function parseCommands(script, onzeker = false) {
   // (`#` alleen na witruimte, geen woordgroepen) komt erbij, zodat een fout in die nieuwe toestanden nooit minder laat zien
   // dan voorheen (review B1, B2).
   if (!VERSCHIL.test(script)) return segmenten;
-  const lezingen = uniek([...segmenten, ...parseLezing(script, { onzeker: true, oud: true })]);
+  const lezingen = [segmenten, parseLezing(script, { onzeker: true, oud: true })];
   // Met `#` binnen `$(…)` kan bash de substitutie anders sluiten dan `findParen` (een commentaar slikt de `)`), en binnen
   // backticks voert bash de inhoud als commando uit (differentieel tegen bash, AC-5): dan ook de lezing met de inhoud als
   // subshell. `$((` is rekenen: daarin is `#` geen commentaar.
-  if (!script.includes('#') || (!SUBSTITUTIE.test(script) && !script.includes('`'))) return lezingen;
-  const subshell = script.replace(new RegExp(SUBSTITUTIE.source, 'g'), ' (').replace(/`([^`]*)`?/g, ' ($1) ');
-  return uniek([...lezingen, ...parseLezing(subshell, { onzeker: true, oud: false })]);
+  if (script.includes('#') && (SUBSTITUTIE.test(script) || script.includes('`'))) {
+    const subshell = script.replace(new RegExp(SUBSTITUTIE.source, 'g'), ' (').replace(/`([^`]*)`?/g, ' ($1) ');
+    lezingen.push(parseLezing(subshell, { onzeker: true, oud: false }));
+  }
+  return uniekeLezingen(lezingen).flat();
 }
 
 /**
@@ -93,15 +95,19 @@ export function heredocsBeide(script) {
 }
 
 /**
- * De segmenten zonder herhaling: twee lezingen geven vaak hetzelfde segment (zelfde woorden, redirects en invoer).
- * @param {Command[]} segmenten
+ * De lezingen zonder herhaling: een lezing die in haar geheel gelijk is aan een eerdere, valt weg. Binnen een lezing blijft elk
+ * segment staan, ook een herhaald (`cd .. && cd ..`): de werkmapstand volgt de segmenten in volgorde (Codex-review P1). Elke
+ * lezing eindigt met een lege scheiding, dus de volgende begint in elke map die het commando tot dan toe kon hebben.
+ * @param {Command[][]} lezingen
  */
-function uniek(segmenten) {
+function uniekeLezingen(lezingen) {
+  /** @param {Command} segment */
+  const sleutel = ({ words, redirects, inputs = [], kopieen = [], patterns = [], scheiding }) => [words, redirects, inputs, kopieen, patterns, scheiding];
   const gezien = new Set();
-  return segmenten.filter(({ words, redirects, inputs = [], kopieen = [], patterns = [], scheiding }) => {
-    const sleutel = JSON.stringify([words, redirects, inputs, kopieen, patterns, scheiding]);
-    if (gezien.has(sleutel)) return false;
-    gezien.add(sleutel);
+  return lezingen.filter((lezing) => {
+    const tekst = JSON.stringify(lezing.map(sleutel));
+    if (gezien.has(tekst)) return false;
+    gezien.add(tekst);
     return true;
   });
 }
