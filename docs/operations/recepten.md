@@ -31,6 +31,8 @@ gelijk aan Lokaal.
 | Leerpunt indienen | `gh issue create --repo <template.repository> --label leerpunt --title <titel> --body-file <bestand>` | MCP `mcp__github__issue_write` (aanmaken, label `leerpunt`, naar `template.repository`) |
 | Remote branch verwijderen | `gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<branch>"` | idem |
 | `main` bijhalen in de PR-branch | `git fetch origin main`, dan `git merge --no-commit origin/main` en dan `git commit -F <bestand>` | idem |
+| Nieuw werk na een merge op dezelfde branch | n.v.t. (lokaal begint nieuw werk op een nieuwe branch, zie `docs/operations/agent-doorloop.md`) | `git fetch origin main`, dan `git merge --ff-only origin/main`; weigert dat (squash-merge), dan de rij "`main` bijhalen" |
+| CI-bewijs als de werkmap niet naar de PR-head kan | n.v.t. (lokaal kan de werkmap altijd mee) | `pnpm pr:verify <nr> --zonder-werkmap` |
 
 ## Waarom deze vormen
 

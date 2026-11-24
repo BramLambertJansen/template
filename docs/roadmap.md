@@ -256,6 +256,9 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   (`--arg-file F`, `-0a F`, `-rn 1`) de optiewaarde als commandowoord. Opties van omhulsels overslaan en die xargs-vormen lezen, met tests per vorm;
   `coreutils --coreutils-prog=env` hoort bij dezelfde klasse, net als een gh-vlag tussen `pr` en `review` (`gh pr -b x review 1 --comment`): `ghForbidden` leest groep en actie positioneel in plaats van via `ghCommandWords`.
   aanleiding: `rails/hooks/lib/rolhek.mjs` (delta-review ronde 2 van fix/rolhek-gh-allowlist)
+- [ ] **Rolhek weigert een toewijzing `CLAUDE_CODE_REMOTE=`.** `worktree-install` en `pr:verify --zonder-werkmap` gedragen
+  zich anders in de cloud en herkennen die aan deze variabele; een agent kan hem lokaal zelf zetten. Net als bij `CI=` een
+  weigering in het rolhek (kritiek, eigen PR); aanleiding: spec cloud-werkmap-herstel, OV-4.
 - [ ] **Bekende gaten in het rolhek (R-ROL-10: vangnet, geen grens).** Het rolhek ziet niet: scripts in de repo, `node -e` en andere
   interpreters; voor de hoofdsessie `curl -K`, een kopie van `gh` onder een andere naam en `node_modules/.bin`; `find -exec`/`-execdir`/`-ok`; `sed -n` met het `w`- of
   `e`-commando voor elke rol behalve de reviewer (spec rolhek-lezen, OV-5);

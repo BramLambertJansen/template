@@ -3,6 +3,9 @@
 Status: geaccepteerd
 Herzien: 2026-11-10 (#672): gewijzigd door [0088](0088-tests-naar-vermogen.md): het gevolg over de unit-tests die in de sandbox
 falen (ze slaan over met een melding; CI blijft het bewijs)
+Herzien: 2026-11-24 (leerpunt #944): punt 1, in een cloudsessie (`CLAUDE_CODE_REMOTE=true`) installeert de agent ook in de
+hoofdcheckout, met `--config.confirm-modules-purge=false`; lokaal blijft de hoofdcheckout bij de eigenaar. Het gevolg over
+Stop-hooks op een `node_modules` die de agent kan beschrijven geldt daar dus ook ([spec cloud-werkmap-herstel](../specs/cloud-werkmap-herstel.md))
 
 Herziet de afweging in [0061](0061-claude-sandbox-werkstraat.md) (alternatief "Projectstore, cache en state opnieuw
 inrichten"); de globale pnpm-opslag blijft onschrijfbaar. Drempel: A3 (een commando wordt automatisch toegestaan) en A4.

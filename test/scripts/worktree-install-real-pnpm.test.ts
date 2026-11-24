@@ -63,11 +63,11 @@ function miseMappen(): Record<string, string> {
   };
 }
 
-// Omgeving van de aanroeper zonder npm_config_/pnpm_config_/NODE_OPTIONS (zoals het script) en zonder CI (dat zou
+// Omgeving van de aanroeper zonder npm_config_/pnpm_config_/NODE_OPTIONS (zoals het script), zonder CLAUDE_CODE_REMOTE (cloud-werkmap-herstel: die variabele zet de install in cloudmodus) en zonder CI (dat zou
 // --frozen-lockfile impliciet maken). Daarna: onbereikbare registry en geen update-notifier, zodat niets het netwerk raakt.
 function basisEnv(): Record<string, string> {
   const schoon = Object.entries(process.env).flatMap(([k, v]): [string, string][] =>
-    v === undefined || /^((npm|pnpm)_config_|NODE_OPTIONS$|CI$)/i.test(k) ? [] : [[k, v]],
+    v === undefined || /^((npm|pnpm)_config_|NODE_OPTIONS$|CI$|CLAUDE_CODE_REMOTE$)/i.test(k) ? [] : [[k, v]],
   );
   return {
     ...Object.fromEntries(schoon),

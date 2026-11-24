@@ -148,7 +148,10 @@ seconden). Dat script installeert frozen met `--package-import-method=copy` en s
 hoofdcheckout, bij een symlink als `node_modules` en als een van `package.json`, `pnpm-lock.yaml`,
 `pnpm-workspace.yaml`, `.npmrc`, `.pnpmfile.cjs` of `.pnpmfile.mjs` afwijkt van HEAD (gewijzigd, verwijderd of
 untracked; vergeleken op inhoud met HEAD, ook bij `--assume-unchanged` of `--skip-worktree`; commit eerst of vraag de
-eigenaar; ADR 0085, spec `claude-sandbox-werkstraat` AC-10). Die weigering is geen beveiligingsgrens: CI en de
+eigenaar; ADR 0085, spec `claude-sandbox-werkstraat` AC-10). In een cloudsessie werkt het ook in de hoofdcheckout, met
+`--config.confirm-modules-purge=false`: loopt `node_modules` daar achter op de lockfile, draai het script zelf in plaats
+van de eigenaar te vragen, want die heeft in de cloud geen terminal (spec cloud-werkmap-herstel). Na een merge bijwerken
+op de vaste cloudbranch: zie de receptenkaart (`git merge --ff-only origin/main`). Die weigering is geen beveiligingsgrens: CI en de
 eigenaarmerge zijn de grens. Open aandachtspunt (niet gemeten): hoort een bestaande `node_modules` bij een andere store
 (andere `TMPDIR` bij een eerdere run, of eerder een handmatige `pnpm install`), dan kan pnpm zonder TTY afbreken met een
 fout over het verwijderen van de modules-map (`ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY`); vraag dan de eigenaar, wis
@@ -492,6 +495,11 @@ zelf draaide, niet die van een subagent (ADR 0084 punt 5); dat is een procesrege
 afdwingt (R-ROL-05).
 
 ### Als pr:verify niet start of de werkmap weigert
+
+In de cloud kan de werkmap soms niet naar de PR-head, bijvoorbeeld na "Update branch" door de eigenaar als die stap
+`.claude/skills` raakt. Weigert de gewone `pr:verify` daarom, dan telt `pnpm pr:verify <nr> --zonder-werkmap` als
+opleverbewijs, alleen als de hoofdsessie het zelf draaide en de PR dat vermeldt. Het toetst de checks op de head-SHA van de
+PR, die bij de start vastligt, en niet de lokale werkmap; lokaal weigert de vlag (spec cloud-werkmap-herstel).
 
 Geeft de pnpm-versiecontrole een SQLite-waarschuwing en daarna een andere versie dan `packageManager` in `package.json`?
 

@@ -44,12 +44,39 @@ export function checkProgress(checks, required) {
   };
 }
 
-/** @param {string[]} args */
-function argumentsFor(args) {
-  const [number, flag] = args;
-  if (!/^[1-9]\d*$/.test(number ?? '') || args.length > 2 || (flag !== undefined && flag !== '--watch'))
-    throw new Error('Gebruik: pnpm pr:verify <nummer> [--watch]');
-  return { number: Number(number), watch: flag === '--watch' };
+const VLAGGEN = ['--watch', '--zonder-werkmap'];
+
+/**
+ * Het nummer eerst, daarna `--watch` en `--zonder-werkmap` elk hooguit één keer, in elke volgorde. `--zonder-werkmap`
+ * alleen in een cloudsessie (spec cloud-werkmap-herstel AC-6).
+ * @param {string[]} args
+ * @param {boolean} cloud cloudsessie
+ * @returns {{ number: number, watch: boolean, zonderWerkmap: boolean }}
+ */
+export function argumentsFor(args, cloud) {
+  const [number, ...flags] = args;
+  if (
+    !/^[1-9]\d*$/.test(number ?? '') ||
+    args.length > 3 ||
+    flags.some((flag) => !VLAGGEN.includes(flag)) ||
+    new Set(flags).size !== flags.length
+  )
+    throw new Error('Gebruik: pnpm pr:verify <nummer> [--watch] [--zonder-werkmap]');
+  const zonderWerkmap = flags.includes('--zonder-werkmap');
+  if (zonderWerkmap && !cloud)
+    throw new Error('--zonder-werkmap werkt alleen in een cloudsessie (CLAUDE_CODE_REMOTE=true)');
+  return { number: Number(number), watch: flags.includes('--watch'), zonderWerkmap };
+}
+
+/**
+ * Klopt de PR met de gecontroleerde commit: open, `pr.branch === branch` en `pr.headSha === head`, met `head` zoals bij
+ * de start vastgelegd (spec cloud-werkmap-herstel AC-7).
+ * @param {{ state: string, branch: string, headSha: string }} pr
+ * @param {{ branch: string, head: string }} verwacht
+ * @returns {boolean}
+ */
+export function prHeadKlopt(pr, { branch, head }) {
+  return pr.state === 'open' && pr.branch === branch && pr.headSha === head;
 }
 
 /** @param {string} pad @param {readonly string[]} negeer */
@@ -129,28 +156,65 @@ function verifyHead(context) {
   verifyWorktree(context);
 }
 
+/**
+ * Leest de checks tot ze slagen of falen; `bewaak` loopt vóór en na elke ronde.
+ * @param {{ repository: string, required: { names: string[], sha: string }, kop: string, watch: boolean, bewaak: () => void }} ronde
+ */
+async function volgChecks({ repository, required, kop, watch, bewaak }) {
+  const deadline = Date.now() + 30 * 60 * 1000;
+  while (true) {
+    bewaak();
+    const progress = checkProgress(checkRuns(repository, required.sha), required);
+    bewaak();
+    console.log(`${kop}\n${progress.lines.join('\n')}`);
+    if (progress.state === 'success') return;
+    if (progress.state === 'failure') throw new Error('CI is rood; herstel de oorzaak en controleer de nieuwe commit');
+    if (!watch || Date.now() >= deadline) throw new Error('CI ontbreekt of loopt nog; geen geslaagde oplevering');
+    await setTimeout(10000);
+  }
+}
+
+/**
+ * `--zonder-werkmap` (spec cloud-werkmap-herstel): de head-SHA komt één keer van de PR en staat daarna vast; werkmap en
+ * lokale HEAD worden niet getoetst.
+ * @param {{ authority: import('../../rails/hooks/lib/task-authority.mjs').Authority, number: number, watch: boolean }} doel
+ */
+async function verifyZonderWerkmap({ authority, number, watch }) {
+  const verwacht = { branch: authority.branch, head: pullRequest(authority.repository, number).headSha };
+  const bewaak = () => {
+    if (!prHeadKlopt(pullRequest(authority.repository, number), verwacht))
+      throw new Error('PR, branch of head wijkt af van de gecontroleerde commit; bewijs opnieuw ophalen');
+  };
+  await volgChecks({
+    repository: authority.repository,
+    required: { names: authority.registry.requiredChecks, sha: verwacht.head },
+    kop: `PR #${String(number)} · ${verwacht.head} (alleen CI-bewijs op de PR-head; werkmap niet getoetst)`,
+    watch,
+    bewaak,
+  });
+}
+
 async function main() {
   const root = process.cwd();
-  const target = argumentsFor(process.argv.slice(2));
+  const target = argumentsFor(process.argv.slice(2), process.env['CLAUDE_CODE_REMOTE'] === 'true');
   const base = gitText(root, ['rev-parse', 'refs/remotes/origin/main'])?.trim();
   const authority = base === undefined ? null : readAuthority({ root, base });
+  if (target.zonderWerkmap) {
+    if (authority === null) throw new Error('Geen leesbare vertrouwde basis of HEAD');
+    await verifyZonderWerkmap({ authority, number: target.number, watch: target.watch });
+    return;
+  }
   const head = gitText(root, ['rev-parse', 'HEAD'])?.trim();
   if (authority === null || head === undefined || base === undefined)
     throw new Error('Geen leesbare vertrouwde basis of HEAD');
   const context = { root, head, base, authority, number: target.number };
-  const required = { names: authority.registry.requiredChecks, sha: head };
-  const deadline = Date.now() + 30 * 60 * 1000;
-  while (true) {
-    verifyHead(context);
-    const progress = checkProgress(checkRuns(authority.repository, head), required);
-    verifyHead(context);
-    console.log(`PR #${String(target.number)} · ${head}\n${progress.lines.join('\n')}`);
-    if (progress.state === 'success') return;
-    if (progress.state === 'failure') throw new Error('CI is rood; herstel de oorzaak en controleer de nieuwe commit');
-    if (!target.watch || Date.now() >= deadline)
-      throw new Error('CI ontbreekt of loopt nog; geen geslaagde oplevering');
-    await setTimeout(10000);
-  }
+  await volgChecks({
+    repository: authority.repository,
+    required: { names: authority.registry.requiredChecks, sha: head },
+    kop: `PR #${String(target.number)} · ${head}`,
+    watch: target.watch,
+    bewaak: () => verifyHead(context),
+  });
 }
 
 if (import.meta.main)

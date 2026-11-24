@@ -69,26 +69,26 @@ Teksten letterlijk:
 - **cloud-werkmap-herstel/AC-1**: Gegeven de hoofdcheckout (geen gekoppelde worktree) met `cloud: true`, `node_modules` als
   map of afwezig en een lege `gewijzigd`. Wanneer `worktreeInstallBesluit` beslist, dan is de uitkomst `installeren`. Met
   `cloud: false` of zonder `cloud` geeft dezelfde invoer de bestaande hoofdcheckout-weigering.
-  Toets: `test/scripts/cloud-werkmap-herstel.test.ts` (nieuw)
+  Toets: `test/scripts/cloud-werkmap-herstel.test.ts`
 - **cloud-werkmap-herstel/AC-2**: Gegeven de hoofdcheckout met `cloud: true`, wanneer `node_modules` een symlink is of
   `gewijzigd` niet leeg is, dan weigert `worktreeInstallBesluit` met dezelfde melding als in een worktree.
-  Toets: `test/scripts/cloud-werkmap-herstel.test.ts` (nieuw)
+  Toets: `test/scripts/cloud-werkmap-herstel.test.ts`
 - **cloud-werkmap-herstel/AC-3**: Gegeven `cloud: true`, wanneer `worktreeInstallCommando` het commando bouwt, dan staat
   `--config.confirm-modules-purge=false` als laatste argument. Zonder `cloud` zijn de argumenten gelijk aan nu.
-  Toets: `test/scripts/cloud-werkmap-herstel.test.ts` (nieuw)
+  Toets: `test/scripts/cloud-werkmap-herstel.test.ts`
 - **cloud-werkmap-herstel/AC-4**: Gegeven een git-fixture als hoofdcheckout waarin `package.json` afwijkt van HEAD. Wanneer
   `worktreeInstallFeiten(root, true)` de feiten leest, dan noemt `gewijzigd` `package.json`. `worktreeInstallFeiten(root)`
-  geeft daar een lege lijst. Toets: `test/scripts/cloud-werkmap-herstel.test.ts` (nieuw)
+  geeft daar een lege lijst. Toets: `test/scripts/cloud-werkmap-herstel.test.ts`
 - **cloud-werkmap-herstel/AC-5**: Gegeven het script als subproces in een hoofdcheckout-fixture met een nep-pnpm. Wanneer
   `CLAUDE_CODE_REMOTE=true` in de omgeving staat, dan roept het script pnpm aan met de vlag uit AC-3. Zonder die variabele
-  weigert het en roept het pnpm niet aan. Toets: `test/scripts/cloud-werkmap-herstel.test.ts` (nieuw)
+  weigert het en roept het pnpm niet aan. Toets: `test/scripts/cloud-werkmap-herstel.test.ts`
 - **cloud-werkmap-herstel/AC-6**: Gegeven `argumentsFor`. Het nummer staat altijd eerst; daarna komen `--watch` en
   `--zonder-werkmap` elk hooguit één keer, in elke volgorde. Een andere vlag, een dubbele vlag, een nummer na een vlag of
   meer dan drie argumenten geeft de gebruiksmelding. `--zonder-werkmap` met `cloud: false` geeft de cloudmelding.
-  Toets: `test/scripts/cloud-werkmap-herstel.test.ts` (nieuw)
+  Toets: `test/scripts/cloud-werkmap-herstel.test.ts`
 - **cloud-werkmap-herstel/AC-7**: Gegeven `prHeadKlopt`. Het resultaat is alleen `true` als de PR open is, de branch gelijk is
   en de head-SHA gelijk is aan de SHA die bij de start is vastgelegd. Zo geeft een PR waarvan de head tussen twee lezingen
-  verandert `false`. Toets: `test/scripts/cloud-werkmap-herstel.test.ts` (nieuw)
+  verandert `false`. Toets: `test/scripts/cloud-werkmap-herstel.test.ts`
 
 ## Randgevallen
 

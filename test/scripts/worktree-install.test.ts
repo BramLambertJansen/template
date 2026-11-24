@@ -182,7 +182,7 @@ function alleenGit(): string {
 const SCRIPT = 'scripts/kit/worktree-install.mjs';
 // Variabelen die de tests zelf bepalen: nooit lekken uit de omgeving van de testrunner.
 const EIGEN_ENV =
-  /^(XDG_|MISE_|npm_config_|pnpm_config_|GIT_(DIR|WORK_TREE|INDEX_FILE|OBJECT_DIRECTORY)$|NODE_OPTIONS$)/i;
+  /^(XDG_|MISE_|npm_config_|pnpm_config_|CLAUDE_CODE_REMOTE$|GIT_(DIR|WORK_TREE|INDEX_FILE|OBJECT_DIRECTORY)$|NODE_OPTIONS$)/i;
 
 interface Opties {
   env?: Record<string, string>;
