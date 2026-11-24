@@ -187,6 +187,8 @@ describe('dependency-achterstand: API-laag', () => {
         code: 2,
         tekst: `${naam} ontbreekt`,
       });
+      const zonder = Object.fromEntries(Object.entries(ENV).filter(([k]) => k !== naam));
+      expect(await draai({ env: zonder, fetch, nu: NU })).toStrictEqual({ code: 2, tekst: `${naam} ontbreekt` });
       expect(log).toStrictEqual([]);
     },
   );

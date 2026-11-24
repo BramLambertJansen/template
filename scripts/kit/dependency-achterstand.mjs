@@ -175,8 +175,8 @@ export async function draai({ env, fetch, nu }) {
       .map(leesIssue);
     return rapport(beoordeel({ prs, issues, repo, nu }));
   } catch (fout) {
-    if (fout instanceof ApiFout) return { code: 2, tekst: fout.message };
-    throw fout;
+    // Elke fout is exitcode 2, ook een onverwachte: nooit groen en nooit verward met bevindingen (AC-7).
+    return { code: 2, tekst: fout instanceof Error ? fout.message : String(fout) };
   }
 }
 

@@ -27,7 +27,7 @@ describe('dependency-achterstand/AC-8 workflow', () => {
   test('dependency-achterstand/AC-8: checkout zonder credentials; token alleen in de scriptstap', () => {
     const checkout = stappen(WORKFLOW).find((s) => s.includes('actions/checkout@')) ?? '';
     expect(checkout).toContain('persist-credentials: false');
-    const metToken = stappen(WORKFLOW).filter((s) => /TOKEN|secrets\./.test(s));
+    const metToken = stappen(WORKFLOW).filter((s) => /token|secrets\./i.test(s));
     expect(metToken).toHaveLength(1);
     expect(metToken[0]).toContain('run: node scripts/kit/dependency-achterstand.mjs');
     expectAbsent(WORKFLOW, /^( {4})?env:/m, { recognizes: ['env:', '    env:'], allows: ['        env:'] });

@@ -81,7 +81,7 @@ Grens: 7 met label `security`, anders 60 met label `major`, anders 14. Exitcodes
   `test/scripts/dependency-achterstand.test.ts`
 - **dependency-achterstand/AC-8** — De workflow draait alleen op `schedule` (dinsdag 06:23 UTC, na de Renovate-run van
   maandagochtend) en `workflow_dispatch`, niet op PR of push; heeft `permissions: read-all` en geen rechten per job; checkout
-  met `persist-credentials: false`; het token alleen in de stap die het script draait; het script doet alleen `GET`. Toets:
+  met `persist-credentials: false`; het token staat expliciet alleen in de stap die het script draait; het script doet alleen `GET`. Toets:
   `test/rails/dependency-achterstand-workflow.test.ts`
 
 ## Randgevallen
