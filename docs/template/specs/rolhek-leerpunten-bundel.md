@@ -189,8 +189,9 @@ PR 1, aanscherpen (#955, #736):
     - `git add test/scripts/pr-merge.test.ts`, `git add scripts/kit/pr-merge.mjs`,
       `git grep -n "pr:merge" -- docs/template/specs/templateregime.md` en `git branch --list 'chore/*'` gaan door;
     - `gh pr create --title "fix(merge): x" --body-file f.md` gaat door;
-    - `gh pr merge 1`, `gh api -X PUT repos/o/r/pulls/1/merge` en `git merge main` blijven geweigerd, zonder de
-      #736-tekst.
+    - `gh pr merge 1` en `gh api -X PUT repos/o/r/pulls/1/merge` blijven geweigerd, zonder de #736-tekst. (`git merge
+      main` is voor de hoofdsessie een melding, geen weigering: de hoofdsessie merget `origin/main` in de CI-lus; bij de
+      bouw gemeten, daarom geen rij hier.)
   Toets: `test/hooks/rolhek-merge-woord.test.ts` (nieuw)
 
 PR 2, meldingen zonder verruiming (#962, #960, #958):

@@ -139,3 +139,49 @@ describe('rolhek-herstel/AC-4: een # in een woord of rekenkundige context is gee
     },
   );
 });
+
+// Spec rolhek-leerpunten/AC-4 (leerpunt #955), alleen regressie: groen op `main`. De rijen `((true) ); #<<E⏎rm -rf .claude/hooks⏎E`
+// en `echo ${x:-"}"}; rm -rf .claude/hooks` staan al hierboven (rolhek-herstel/AC-4). Twee rijen komen erbij, met een `verdict`
+// die de werkmap (`cwd`) aanneemt.
+describe('rolhek-leerpunten/AC-4: regressie, de lezer behoudt wat de lezer van main zag', () => {
+  function verdictIn(command: string, agent: string, cwd: string) {
+    const decision = decide(
+      { tool_name: 'Bash', tool_input: { command }, agent_type: agent },
+      {
+        root: '/repo',
+        cwd,
+        config,
+        read: () => null,
+        committed: () => false,
+        isDir: () => true,
+        branch: 'feat/x',
+      },
+    );
+    if (decision.deny.length > 0) return 'deny';
+    if (decision.ask.length > 0) return 'ask';
+    return decision.allow === true ? 'allow' : 'context';
+  }
+
+  const VALSE_HEREDOC = `echo \${x:-"}"" <<'E'\n$(${LOS})\nE\n"}`;
+  test('rolhek-leerpunten/AC-4: een substitutie achter een valse heredoc in ${…}: de hoofdsessie vraagt', () => {
+    expect(verdictIn(VALSE_HEREDOC, '', '/repo')).toBe('ask');
+  });
+
+  test.each(['developer', 'tester', 'docs'])(
+    'rolhek-leerpunten/AC-4: een substitutie achter een valse heredoc in ${…}: %s weigert',
+    (agent) => {
+      expect(verdictIn(VALSE_HEREDOC, agent, '/repo')).toBe('deny');
+    },
+  );
+
+  const CD_CD = 'cd .. && cd .. && printf x > lefthook.yml';
+  test.each(['', 'developer', 'tester'])(
+    'rolhek-leerpunten/AC-4: cd .. && cd .. met # c in /repo/a/b geeft dezelfde uitslag als zonder # c (rol %j)',
+    (agent) => {
+      const zonder = verdictIn(CD_CD, agent, '/repo/a/b');
+      // Het schrijfdoel is /repo/lefthook.yml, een zelfladend pad: zonder werkmapvolg viel het doel op /repo/a/b en ging het door.
+      expect(zonder).toBe(agent === '' ? 'ask' : 'deny');
+      expect(verdictIn(`${CD_CD} # c`, agent, '/repo/a/b')).toBe(zonder);
+    },
+  );
+});

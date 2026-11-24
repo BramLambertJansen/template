@@ -1099,6 +1099,18 @@ const SHELL_TRICKS = /\$\(|`|\beval\b|\bsource\b|(?:^|[\s;&|(])\.\s|\|\s*(?:ba|z
 // JS-object met komma tussen aanhalingstekens expandeert bash niet (spec rolhek-vooraf AC-2 (b)).
 const BRACE_TRICK = /\{[^}]*(?:,|\.\.)[^}]*\}/;
 
+// Leerpunt #736: het woord merge in de branchnaam van `gh pr create --head` raakt het vangnet op de ruwe tekst. De weigering
+// blijft (R-ROL-11); de aanwijzing wijst de route (spec rolhek-leerpunten/AC-5).
+const MERGE_IN_HEAD = '; het woord merge in een branchnaam telt hier mee (R-ROL-11): kies een branchnaam zonder dat woord (spec rolhek-leerpunten/AC-5)';
+
+/**
+ * Staat `merge` in de waarde van `--head`/`-H` van `gh pr create` (ook `pr new`)? Op de tekst zonder aanhalingstekens.
+ * @param {string} text
+ */
+function headMetMerge(text) {
+  return /\bpr\s+(?:\S+\s+)*?(?:create|new)\b/.test(text) && /(?:^|\s)(?:--head(?:=|\s+)|-H\s*)\S*merge/i.test(text);
+}
+
 /**
  * Voor elke rol: mergen of goedkeuren in tekst die naar gh, …/pulls/, de GitHub-API of GraphQL wijst, en `pr review` naast gh.
  * Voor een subagent: tekst die gh, de GitHub-API of git credential noemt mag alleen één direct gh-commando zonder shell-trucs zijn,
@@ -1115,7 +1127,7 @@ function rawForbidden(command, { role, onzeker, plek }) {
   if (RAW_GITHUB.test(text) &&
     (RAW_MERGE.test(text) || MERGE_MUTATION.test(text) || (/\breview\b/.test(text) && RAW_APPROVE.test(text)) ||
       (/\/reviews\b/.test(text) && /APPROVE/.test(text))))
-    found.push('mergen of goedkeuren via gh of …/pulls/ is voor elke rol verboden (vangnet op de ruwe tekst, WS-04)');
+    found.push(`mergen of goedkeuren via gh of …/pulls/ is voor elke rol verboden (vangnet op de ruwe tekst, WS-04)${headMetMerge(text) ? MERGE_IN_HEAD : ''}`);
   else if (GH_WORD.test(text) && RAW_PR_REVIEW.test(text))
     found.push('gh pr review is voor elke rol verboden, ook achter een omhulsel en zonder --approve (vangnet op de ruwe tekst, AGENTS.md)');
   else if (RAW_PR_MERGE.test(text) || MERGE_MUTATION.test(text) || (RAW_PR_REVIEW.test(text) && RAW_APPROVE.test(text)))
