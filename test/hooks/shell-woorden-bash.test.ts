@@ -111,7 +111,7 @@ describe('rolhek-herstel/AC-5: het corpus', () => {
     expect(namen.size).toBe(RIJEN.length);
     for (const rij of COMMENTAAR_RIJEN)
       expect({ rij: rij.naam, erin: namen.has(`commentaar: ${rij.naam}`) }).toEqual({ rij: rij.naam, erin: true });
-    expect(COMMENTAAR_RIJEN.length).toBe(9);
+    expect(COMMENTAAR_RIJEN.length).toBe(12);
     for (const basis of BASISSEN)
       expect({ regel: basis.regel, erin: namen.has(`basis: ${basis.regel}`) }).toEqual({
         regel: basis.regel,
@@ -140,7 +140,7 @@ describe('rolhek-herstel/AC-6: de aanvaard-lijst', () => {
   });
 
   test('rolhek-herstel/AC-6: de zes vormen en de varianten uit AC-4 zijn verplicht, elke rij ervan staat in VERPLICHT', () => {
-    expect(COMMENTAAR_RIJEN.length).toBe(9);
+    expect(COMMENTAAR_RIJEN.length).toBe(12);
     expect(COMMENTAAR_RIJEN.filter((rij) => !VERPLICHT.has(`commentaar: ${rij.naam}`))).toEqual([]);
   });
 

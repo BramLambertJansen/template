@@ -1374,7 +1374,8 @@ const SAFE_VALUE = /^[A-Za-z0-9_./,:-]+$/;
 /**
  * De waarde van `--search` bij `gh pr list` en `gh issue list` (AC-16): één woord dat spaties, aanhalingstekens en `:` mag
  * bevatten, zonder stuurteken (U+0000 tot U+001F, U+007F) en zonder expansie; gh krijgt het woord direct, zonder tweede shell.
- * Geen kwalificatie `repo:`, `org:` of `user:` (een andere repository), hoofdletterongevoelig en waar dan ook in de waarde.
+ * Geen kwalificatie `repo:`, `org:` of `user:` (een andere repository) en geen losse `OR`, `AND` of `NOT`, hoofdletterongevoelig;
+ * de woorden komen uit een splitsing op witruimte en haakjes (`zoekScopeFout`, spec rolhek-herstel/AC-1).
  * @param {string} waarde @param {readonly string[]} expanded `Command.expanded`
  */
 function zoekwaarde(waarde, expanded) {
@@ -1470,7 +1471,7 @@ function leeslijstRefusal(kern, { parsed, werkmapInRepo, feiten }) {
 const API_N = '[0-9]{1,12}';
 const API_SHA = '[0-9a-f]{7,40}';
 const API_QUERY = '[A-Za-z0-9_.,:=&+-]+';
-// De rest van een zoekopdracht: zonder `&` en `=` (geen tweede `q` of `advanced_search`) en zonder losse operator (API_OPERATOR).
+// De rest van een zoekopdracht: zonder `&` en `=` (geen tweede `q` of `advanced_search`); `zoekScopeFout` toetst de woorden.
 // Haakjes mogen (rolhek-herstel/AC-1): `zoekScopeFout` splitst er ook op, zodat `x+OR(is:private)` een losse OR blijft.
 const API_ZOEK_REST = '[A-Za-z0-9_.,:+()-]+';
 const API_PADEN = [

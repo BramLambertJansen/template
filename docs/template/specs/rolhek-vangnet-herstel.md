@@ -41,7 +41,7 @@ een PR-titel of -body is volgens R-ROL-11 een bewuste valse melding (R-ROL-10 la
 ## Hergebruik en UX
 
 - Bestaande componenten: geen UI. Hergebruik `parseCommands`, `tokenize` en `ONZEKERE_TEKST` uit `rails/hooks/lib/shell.mjs`,
-  `API_OPERATOR`, `zoekwaarde`, `apiEndpointToegestaan` en `existingTest` uit `rails/hooks/lib/rolhek.mjs`, `inKooi` uit
+  `zoekwaarde`, `apiEndpointToegestaan` en `existingTest` uit `rails/hooks/lib/rolhek.mjs`, `inKooi` uit
   `scripts/kit/kooi.mjs` en de corpusrijen uit `test/hooks/rolhek-aanvalscorpus.ts`.
 - Alle zichtbare tekst letterlijk (weigermeldingen):
   - zoekregel (aanvulling op de bestaande melding van `--search` en `API_MELDING`): `zonder losse OR, AND of NOT en zonder
@@ -74,12 +74,16 @@ een PR-titel of -body is volgens R-ROL-11 een bewuste valse melding (R-ROL-10 la
   route. Toets: `test/hooks/rolhek-testakkoord-melding.test.ts`
 - **rolhek-herstel/AC-4** — `tokenize` in `rails/hooks/lib/shell.mjs` begint een commentaar met `#` aan het begin van een
   woord, ook direct na een operator (`;`, `&`, `&&`, `|`, `||`, `|&`, `;;`, `;&`, `;;&`, `(`, `)` en elke redirectvorm). `#`
-  binnen een woord, binnen `${…}`, binnen backticks, binnen `((…))`, `$((…))` en `$[…]` begint geen commentaar. Voor `#`
-  aan het begin van een woord binnen `$(…)` of `[[ … ]]` leest `parseCommands` beide lezingen (commentaar tot het
-  regeleinde, en geen commentaar) en geeft de vereniging van de segmenten. Voor elk van de zes vormen uit het Doel en voor de
-  varianten `${x/;#/}; rm -rf .claude/hooks`, `echo $(true #) <<E⏎rm -rf .claude/hooks⏎E⏎)` en
-  `[[ -n x #⏎]] && rm -rf .claude/hooks` geeft `parseCommands` een segment met `rm` als eerste woord (`[[ -n x #]] <<E…`
-  is in bash een syntaxfout en voert niets uit; gemeten met bash 5.2). Ook geeft `decide` voor de hoofdsessie een vraag en voor een
+  binnen een woord, binnen `${…}`, binnen backticks, binnen `((…))`, `$((…))` en `$[…]` begint geen commentaar; binnen
+  `[[ … ]]` wel, zoals in bash. Zodra het script een teken bevat waar deze lezing en de lezer van vóór deze spec kunnen
+  verschillen (`#`, backtick, `${`, `$[`, `((`), geeft `parseCommands` de vereniging van de segmenten van beide lezingen,
+  zonder dubbele segmenten; met `#` plus `$(…)` of backticks komt de lezing met de inhoud als subshell erbij (`#` binnen
+  `$(…)` kan in bash de `)` opslokken). Zo ziet de lezer nooit minder dan vóór deze spec (review B1 en B2 na de bouw). Voor
+  elk van de zes vormen uit het Doel en voor de varianten `${x/;#/}; rm -rf .claude/hooks`,
+  `echo $(true #) <<E⏎rm -rf .claude/hooks⏎E⏎)`, `[[ -n x #⏎]] && rm -rf .claude/hooks`,
+  `((true) ); #<<E⏎rm -rf .claude/hooks⏎E`, `echo ${x:-"}"}; rm -rf .claude/hooks` en
+  `echo ${x:-'}'}; rm -rf .claude/hooks` geeft `parseCommands` een segment met `rm` als eerste woord (`[[ -n x #]] <<E…` is
+  in bash een syntaxfout en voert niets uit; gemeten met bash 5.2). Ook geeft `decide` voor de hoofdsessie een vraag en voor een
   subagent een weigering, net als voor het losse `rm -rf .claude/hooks`. Toets: `test/hooks/shell-commentaar.test.ts`
 - **rolhek-herstel/AC-5** — Een differentiële test draait elke rij van een vast corpus in echte bash, via de kooi
   (`inKooi`, R-TOOL-03). Binnen de kooi start `env -i PATH=<lege map> BASH_ENV=<prelude> bash --restricted --noprofile

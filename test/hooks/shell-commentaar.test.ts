@@ -59,14 +59,16 @@ describe('rolhek-herstel/AC-4: commentaar begint aan het begin van een woord', (
 });
 
 describe('rolhek-herstel/AC-4: een # in een woord of rekenkundige context is geen commentaar', () => {
-  test('rolhek-herstel/AC-4: echo a#b is één segment met echo a#b', () => {
+  // GEWIJZIGD (review B1/B2 na de bouw): parseCommands geeft de vereniging met de oude lezing, dus naast het segment van de
+  // nieuwe lezing kan een tweede staan; de eis blijft dat `#` hier geen commentaar is.
+  test('rolhek-herstel/AC-4: echo a#b geeft het segment echo a#b, en niets anders', () => {
     const segmenten = parseCommands('echo a#b').map(({ words }) => words.join(' '));
     expect(segmenten).toEqual(['echo a#b']);
   });
 
-  test('rolhek-herstel/AC-4: echo $((1 #2)) is één segment met echo $((1 #2))', () => {
+  test('rolhek-herstel/AC-4: echo $((1 #2)) geeft het segment echo $((1 #2))', () => {
     const segmenten = parseCommands('echo $((1 #2))').map(({ words }) => words.join(' '));
-    expect(segmenten).toEqual(['echo $((1 #2))']);
+    expect(segmenten).toContain('echo $((1 #2))');
   });
 
   // Tegen een te gulzige lezer: als `#` in een woord of in `$((…))` een commentaar begon, verdween het rm erachter.

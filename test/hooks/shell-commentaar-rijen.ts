@@ -17,4 +17,8 @@ export const COMMENTAAR_RIJEN: readonly CommentaarRij[] = [
   { naam: 'echo ${x/;#/}', tekst: `echo \${x/;#/}; ${LOS}` },
   { naam: 'echo $(true #) <<E', tekst: `echo $(true #) <<E\n${LOS}\nE\n)` },
   { naam: '[[ -n x #⏎]] && rm', tekst: `[[ -n x #\n]] && ${LOS}` },
+  // Reviewbevindingen B1 en B2 na de bouw: een nieuwe lexertoestand mag geen commando verbergen dat de oude lezer zag.
+  { naam: '((true) ); #<<E', tekst: `((true) ); #<<E\n${LOS}\nE` },
+  { naam: 'echo ${x:-"}"}', tekst: `echo \${x:-"}"}; ${LOS}` },
+  { naam: "echo ${x:-'}'}", tekst: `echo \${x:-'}'}; ${LOS}` },
 ];
