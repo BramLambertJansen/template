@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { rolhekContext } from '../../rails/hooks/lib/rolhek-context.mjs';
+import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 import { nieuw } from '../rails/padtabel-kit';
 
 // Spec cloud-netwerkvorm/AC-7: `rolhekContext` leest `sandbox.excludedCommands` uit de vertrouwde basis, zoals `gates.json`.
@@ -124,5 +125,164 @@ describe('cloud-netwerkvorm/AC-7 rolhekContext leest sandbox.excludedCommands ui
     write(dir, { [SETTINGS]: settings({ excludedCommands: LIJST }) });
 
     expect(netwerkvormen(dir)).toStrictEqual(LIJST);
+  });
+});
+
+// Spec rolhek-leerpunten/AC-6: `ctx.lokaleNetwerkvormen` komt uit `CLAUDE_PROJECT_DIR` (de projectmap van de sessie), los van het
+// anker en de werkmap; `decide` noemt bij een netwerkvorm-weigering de ontbrekende patronen van de geraakte groep.
+const LOKAAL = '.claude/settings.local.json';
+const ANKER_LIJST = ['git commit *', 'git push origin HEAD'];
+const TEKST6 = 'je lokale .claude/settings.json en settings.local.json missen in sandbox.excludedCommands:';
+const STAART6 = 'dus ook deze vorm draait in de sandbox; de eigenaar werkt de hoofdcheckout bij naar main';
+const VERWIJZING6 = '(docs/ENVIRONMENT.md, "Grens van de sandbox") (spec rolhek-leerpunten/AC-6)';
+const aanhangsel6 = (patronen: string): string => `; ${TEKST6} ${patronen}, ${STAART6} ${VERWIJZING6}`;
+const COMMIT_COMMANDO = "printf 'x' > msg.txt && git commit -F msg.txt";
+
+/** Een aparte projectmap (niet de repo) met settings.json en optioneel settings.local.json. */
+function projectMet(files: Record<string, string>): string {
+  const dir = realpathSync(mkdtempSync(path.join(tmpdir(), 'netwerkvorm-project-')));
+  dirs.push(dir);
+  write(dir, files);
+  return dir;
+}
+
+/** `lokaleNetwerkvormen` uit de ctx; `unknown` omdat het type het veld pas na de bouw kent. */
+function lokaal(dir: string): unknown {
+  const ctx: object = rolhekContext(dir, dir);
+  return Object.entries(ctx).find(([naam]) => naam === 'lokaleNetwerkvormen')?.[1];
+}
+
+const gatesConfig = loadConfig(GATES_TEKST);
+
+/** `decide` voor de hoofdsessie met het anker en (optioneel) de lokale lijst; de ctx is een ruimer type dan `Ctx`. */
+function beslisHoofdsessie(command: string, lokaleLijst?: readonly string[]) {
+  const ctx = {
+    root: '/repo',
+    cwd: '/repo',
+    config: gatesConfig,
+    read: () => null,
+    committed: () => false,
+    isDir: () => false,
+    branch: 'feat/x',
+    mergeTrusted: true,
+    kitTrusted: true,
+    netwerkvormen: [...ANKER_LIJST],
+    ...(lokaleLijst === undefined ? {} : { lokaleNetwerkvormen: [...lokaleLijst] }),
+  };
+  const besluit = decide({ tool_name: 'Bash', tool_input: { command } }, ctx);
+  return { deny: besluit.deny.join('\n') };
+}
+
+describe('rolhek-leerpunten/AC-6 rolhekContext leest de lokale lijst uit CLAUDE_PROJECT_DIR', () => {
+  beforeEach(() => {
+    Reflect.deleteProperty(process.env, 'CLAUDE_PROJECT_DIR');
+  });
+
+  test('rolhek-leerpunten/AC-6 zonder CLAUDE_PROJECT_DIR (of leeg) is lokaleNetwerkvormen undefined', () => {
+    const { dir } = repoMet({ '.claude/gates.json': GATES_TEKST, [SETTINGS]: settings({ excludedCommands: LIJST }) });
+    expect(lokaal(dir)).toBeUndefined();
+    vi.stubEnv('CLAUDE_PROJECT_DIR', '');
+    expect(lokaal(dir)).toBeUndefined();
+  });
+
+  test('rolhek-leerpunten/AC-6 met CLAUDE_PROJECT_DIR: de vereniging van settings.json en settings.local.json, zonder dubbelen', () => {
+    const { dir } = repoMet({
+      '.claude/gates.json': GATES_TEKST,
+      [SETTINGS]: settings({ excludedCommands: ['curl *'] }),
+    });
+    const projectDir = projectMet({
+      [SETTINGS]: settings({ excludedCommands: ['git commit *', 'git push origin HEAD'] }),
+      [LOKAAL]: settings({ excludedCommands: ['git push origin HEAD', 'gh api *'] }),
+    });
+    vi.stubEnv('CLAUDE_PROJECT_DIR', projectDir);
+
+    const lijst = lokaal(dir);
+    expect(Array.isArray(lijst)).toBe(true);
+    expect(lijst).toHaveLength(3);
+    expect(lijst).toEqual(expect.arrayContaining(['gh api *', 'git commit *', 'git push origin HEAD']));
+  });
+
+  test('rolhek-leerpunten/AC-6 een ontbrekend settings.local.json of ongeldige JSON draagt niets bij en gooit niet', () => {
+    const { dir } = repoMet({ '.claude/gates.json': GATES_TEKST, [SETTINGS]: settings({ excludedCommands: LIJST }) });
+    vi.stubEnv('CLAUDE_PROJECT_DIR', projectMet({ [SETTINGS]: settings({ excludedCommands: ['git commit *'] }) }));
+    expect(lokaal(dir)).toStrictEqual(['git commit *']);
+
+    vi.stubEnv(
+      'CLAUDE_PROJECT_DIR',
+      projectMet({ [SETTINGS]: settings({ excludedCommands: ['git commit *'] }), [LOKAAL]: '{ dit is geen json\n' }),
+    );
+    expect(lokaal(dir)).toStrictEqual(['git commit *']);
+
+    vi.stubEnv('CLAUDE_PROJECT_DIR', projectMet({ [SETTINGS]: '{ kapot\n', [LOKAAL]: '[[' }));
+    expect(lokaal(dir)).toStrictEqual([]);
+  });
+
+  test('rolhek-leerpunten/AC-6 de lokale lijst is los van het anker en de werkmap', () => {
+    const { dir, sha } = repoMet({
+      '.claude/gates.json': GATES_TEKST,
+      [SETTINGS]: settings({ excludedCommands: LIJST }),
+    });
+    vi.stubEnv('RAILS_ANKER', sha);
+    vi.stubEnv('CLAUDE_PROJECT_DIR', projectMet({ [SETTINGS]: settings({ excludedCommands: ['alleen lokaal *'] }) }));
+
+    expect(lokaal(dir)).toStrictEqual(['alleen lokaal *']);
+    expect(netwerkvormen(dir)).toStrictEqual(LIJST);
+  });
+});
+
+describe('rolhek-leerpunten/AC-6 decide noemt de ontbrekende patronen van de geraakte groep', () => {
+  beforeEach(() => {
+    Reflect.deleteProperty(process.env, 'CLAUDE_PROJECT_DIR');
+  });
+
+  test('rolhek-leerpunten/AC-6 ticketrij: lokaal mist git commit *, dan staat de tekst met git commit * achter de weigering', () => {
+    const uitslag = beslisHoofdsessie(COMMIT_COMMANDO, ['git push origin HEAD']);
+    expect(uitslag.deny).toContain('Netwerkvorm:');
+    expect(uitslag.deny).toContain(aanhangsel6('git commit *'));
+  });
+
+  test('rolhek-leerpunten/AC-6 een lege lokale lijst noemt alleen de patronen van de geraakte groep (git commit *)', () => {
+    const uitslag = beslisHoofdsessie(COMMIT_COMMANDO, []);
+    expect(uitslag.deny).toContain(aanhangsel6('git commit *'));
+  });
+
+  test('rolhek-leerpunten/AC-6 end-to-end: ctx uit rolhekContext met een projectmap zonder git commit *', () => {
+    const { dir } = repoMet({
+      '.claude/gates.json': GATES_TEKST,
+      [SETTINGS]: settings({ excludedCommands: ANKER_LIJST }),
+    });
+    vi.stubEnv(
+      'CLAUDE_PROJECT_DIR',
+      projectMet({ [SETTINGS]: settings({ excludedCommands: ['git push origin HEAD'] }) }),
+    );
+
+    const ctx = { ...rolhekContext(dir, dir), mergeTrusted: true, kitTrusted: true };
+    const besluit = decide({ tool_name: 'Bash', tool_input: { command: COMMIT_COMMANDO } }, ctx);
+    expect(besluit.deny.join('\n')).toContain(aanhangsel6('git commit *'));
+  });
+
+  test('rolhek-leerpunten/AC-6 regressie: staat de groep in de lokale lijst, dan geen tekst en nog steeds een weigering', () => {
+    const uitslag = beslisHoofdsessie(COMMIT_COMMANDO, ['git commit *', 'git push origin HEAD']);
+    expect(uitslag.deny).toContain('Netwerkvorm:');
+    expect(uitslag.deny).not.toContain(TEKST6);
+  });
+
+  test('rolhek-leerpunten/AC-6 regressie: zonder lokaleNetwerkvormen geen tekst en nog steeds een weigering', () => {
+    const uitslag = beslisHoofdsessie(COMMIT_COMMANDO);
+    expect(uitslag.deny).toContain('Netwerkvorm:');
+    expect(uitslag.deny).not.toContain(TEKST6);
+  });
+
+  test('rolhek-leerpunten/AC-6 regressie: settings.json heeft het patroon en settings.local.json ontbreekt, dan geen tekst', () => {
+    const { dir } = repoMet({
+      '.claude/gates.json': GATES_TEKST,
+      [SETTINGS]: settings({ excludedCommands: ANKER_LIJST }),
+    });
+    vi.stubEnv('CLAUDE_PROJECT_DIR', projectMet({ [SETTINGS]: settings({ excludedCommands: ANKER_LIJST }) }));
+
+    const ctx = { ...rolhekContext(dir, dir), mergeTrusted: true, kitTrusted: true };
+    const besluit = decide({ tool_name: 'Bash', tool_input: { command: COMMIT_COMMANDO } }, ctx);
+    expect(besluit.deny.join('\n')).toContain('Netwerkvorm:');
+    expect(besluit.deny.join('\n')).not.toContain(TEKST6);
   });
 });

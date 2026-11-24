@@ -6,6 +6,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { payloadCwd, projectRoot } from './lib/root.mjs';
+import { rolhekContext } from './lib/rolhek-context.mjs';
 import { createRun } from './lib/run.mjs';
 import { changedFiles, postEdit, sessionStart, stop, subagentStop } from './lib/werkstraat.mjs';
 
@@ -27,7 +28,25 @@ function makeDeps(root) {
     onthoud: (/** @type {string} */ sleutel) => onthoud(run, root, sleutel),
     // Spec cloud-netwerkvorm/AC-10: de Cloud-regel van session-start leest `CLAUDE_CODE_REMOTE` uit deze omgeving.
     env: process.env,
+    // Spec rolhek-leerpunten/AC-7: alleen session-start leest dit, dus pas bij gebruik.
+    get netwerkvormen() {
+      return netwerkvormen(root);
+    },
   };
+}
+
+/**
+ * De patronen uit het anker (zoals het rolhek ze leest) en uit de settings in `CLAUDE_PROJECT_DIR`. Fail-open: lukt het lezen
+ * van het anker niet, dan geen vergelijking en geen melding.
+ * @param {string} root
+ */
+function netwerkvormen(root) {
+  try {
+    const ctx = rolhekContext(root, root);
+    return { anker: ctx.netwerkvormen, lokaal: ctx.lokaleNetwerkvormen };
+  } catch {
+    return undefined;
+  }
 }
 
 /**

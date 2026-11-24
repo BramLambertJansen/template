@@ -231,7 +231,7 @@ PR 2, meldingen zonder verruiming (#962, #960, #958):
     (`git merge doet de hoofdsessie`). Gemeten rijen: `git cherry-pick abc1234`, `git apply p.patch` en `git merge feat/y`.
   - Regressie:
     - tester, reviewer en de hoofdsessie krijgen bij dezelfde commando's de tekst niet;
-    - `git checkout abc1234 -- src/a.ts test/a.test.ts` gaat door, met `bestaand` `false` voor `test/a.test.ts`;
+    - `git checkout abc1234 -- src/a.ts test/a.test.ts` gaat door, met `bestaand` `false` voor `test/a.test.ts` (voorbeeld);
     - tegenrij: `git checkout abc1234 -- test/bestaand.test.ts` met `bestaand` `true` blijft geweigerd, met "is een
       bestaande test";
     - `git checkout abc1234 -- .claude/settings.json` en `git checkout abc1234 -- lefthook.yml` (zelfladend) blijven
@@ -240,7 +240,7 @@ PR 2, meldingen zonder verruiming (#962, #960, #958):
   Toets: `test/hooks/rolhek-developer.test.ts`
 - **rolhek-leerpunten/AC-10**
   - Nieuw gedrag: geeft `bestaand` `'zonder-origin'`, dan blijft de weigering van een Edit door de developer op
-    `test/x/nieuw.test.ts`, met de #960-fetchtekst erachter.
+    `test/x/nieuw.test.ts` (voorbeeld), met de #960-fetchtekst erachter.
   - Regressie:
     - met `bestaand` `false` (het bestand staat op schijf, is ongetrackt en staat niet op de tip van het anker of van
       `origin/main`) komt er geen "is een bestaande test";

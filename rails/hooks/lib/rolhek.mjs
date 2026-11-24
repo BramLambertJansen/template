@@ -31,9 +31,12 @@ import { afgeleid, globMatch, onderhoudVan, samengevoegd, templateVan } from './
  *   mergeTrusted?: boolean | (() => boolean), kitTrusted?: boolean | (() => boolean),
  *   ankerVerouderd?: boolean | ((modus: 'merge' | 'kit') => boolean),
  *   onbekendeRol?: boolean, onderhoud?: boolean, files?: (rel: string) => string[],
- *   gevolgd?: (paden: readonly string[]) => Set<string>, werkmappen?: () => string[], netwerkvormen?: readonly string[] }} Ctx
+ *   gevolgd?: (paden: readonly string[]) => Set<string>, werkmappen?: () => string[], netwerkvormen?: readonly string[],
+ *   lokaleNetwerkvormen?: readonly string[] | undefined }} Ctx
  * `netwerkvormen`: de patronen uit `sandbox.excludedCommands` (`git push origin HEAD`, `git commit *`) uit de vertrouwde basis
  * (spec cloud-netwerkvorm); ontbreekt hij, dan raakt de regel netwerkvorm niets.
+ * `lokaleNetwerkvormen`: dezelfde lijst uit de settings in `CLAUDE_PROJECT_DIR` (spec rolhek-leerpunten/AC-6); alleen voor de
+ * meldingstekst bij een weigering, nooit voor de uitslag. Ontbreekt hij, dan geen tekst.
  * `files`: bestanden (getrackt en niet-genegeerd) onder een map, repo-relatief; `''` is de hele repo.
  * `gevolgd`: de doorgegeven paden (zoals getypt, tegen `cwd`) die git volgt als gewoon bestand, ook na `realpath` (spec
  * rolhek-lezen/AC-11); ontbreekt hij of gooit hij, dan telt geen pad. `werkmappen`: de roots uit `git worktree list
@@ -129,6 +132,7 @@ export function decide(payload, ctx) {
     if (ctx.cwd === ctx.root && automaticRunner(command) && decision.ask.length + decision.deny.length === 0 && runnerIsTrusted(ctx))
       decision.allow = true;
     decidePrMerge({ command, role }, ctx, decision);
+    overnameRoute({ command, role }, decision);
   }
   else if (['Edit', 'Write', 'MultiEdit', 'NotebookEdit'].includes(tool)) {
     decideEdit({ tool, input, role }, context, decision);
@@ -136,6 +140,23 @@ export function decide(payload, ctx) {
       decision.allow = true;
   }
   return decision;
+}
+
+// Spec rolhek-leerpunten/AC-9 (#960): de route voor de developer na een weigering van deze git-subcommando's.
+const OVERNAME_SUBS = new Set(['cherry-pick', 'apply', 'format-patch', 'merge']);
+const OVERNAME_ROUTE =
+  'overnemen uit een commit kan met git checkout <sha> -- <paden> (expliciete paden), anders doet de hoofdsessie het (spec rolhek-leerpunten/AC-9)';
+
+/**
+ * Alleen extra tekst, nooit een andere uitslag: bij een weigering voor de developer van een commando met een git-segment
+ * `cherry-pick`, `apply`, `format-patch` of `merge` (ook in een substitutie) komt de route één keer achter de laatste weigering.
+ * @param {{ command: string, role: string }} target @param {Decision} decision
+ */
+function overnameRoute({ command, role }, decision) {
+  const laatste = decision.deny.length - 1;
+  if (role !== 'developer' || laatste < 0) return;
+  const raakt = netwerkSegmenten(command).map(netwerkKern).some(({ programma, sub }) => programma === 'git' && OVERNAME_SUBS.has(sub));
+  if (raakt) decision.deny[laatste] = `${decision.deny[laatste] ?? ''}; ${OVERNAME_ROUTE}`;
 }
 
 /**
@@ -615,6 +636,9 @@ const LOCKED_HELPERS = ['test/rails/fixtures/**', 'test/setup/**'];
 const TESTAKKOORD =
   '; noemt een gemergede spec het akkoord (Raakt ook), dan doet de hoofdsessie deze wijziging: zij krijgt de vraag aan de eigenaar (spec rolhek-herstel/AC-3)';
 
+const ZONDER_ORIGIN_TEST =
+  '; (origin/main en het anker onleesbaar, daarom telt elk testbestand als bestaand: draai git fetch origin) (spec rolhek-leerpunten/AC-10)';
+
 /** @param {string} reden @param {string} role */
 function testakkoord(reden, role) {
   return role === 'hoofdsessie' ? reden : `${reden}${TESTAKKOORD}`;
@@ -628,6 +652,8 @@ function testakkoord(reden, role) {
  * @param {Decision} decision
  */
 function existingTest({ rel, change, role }, ctx, decision) {
+  // Spec rolhek-leerpunten/AC-10 (#960): bij 'zonder-origin' telt elk testbestand als bestaand; de tekst zegt waarom.
+  const fetch = ctx.bestaand?.(rel) === 'zonder-origin' ? ZONDER_ORIGIN_TEST : '';
   const before = ctx.read(rel) ?? '';
   const risk = change.after === null ? null : testChangeRisk(before, change.after, rel);
   const helper = !TEST_FILES.some((glob) => globMatch(glob, rel));
@@ -635,7 +661,7 @@ function existingTest({ rel, change, role }, ctx, decision) {
   if (LOCKED_HELPERS.some((glob) => globMatch(glob, rel))) {
     gate(decision, role, `${rel} is een fixture of setup: wijzigen of verwijderen alleen met akkoord van de eigenaar (WS-02)`);
   } else if (change.kind === 'delete') {
-    gate(decision, role, testakkoord(`${rel} is een bestaande test: verwijderen alleen met akkoord van de eigenaar (AGENTS.md)`, role));
+    gate(decision, role, testakkoord(`${rel} is een bestaande test: verwijderen alleen met akkoord van de eigenaar (AGENTS.md)${fetch}`, role));
   } else if (risk === 'skip') {
     gate(decision, role, testakkoord(`${rel}: een test skippen alleen met akkoord van de eigenaar (AGENTS.md)`, role));
   } else if (risk === 'removed') {
@@ -643,9 +669,9 @@ function existingTest({ rel, change, role }, ctx, decision) {
   } else if (helper) {
     decision.context.push(`${rel}: hulpbestand gewijzigd: noem het met reden in de PR (AGENTS.md, framework §8).`);
   } else if (role === 'developer') {
-    decision.deny.push(`${rel} is een bestaande test: de developer wijzigt hem niet; de hoofdsessie doet dat als spec of opdracht het gedrag verandert, de tester na akkoord van de eigenaar als hij fout lijkt (R-TEST-02, ADR 0068 punt 4)`);
+    decision.deny.push(`${rel} is een bestaande test: de developer wijzigt hem niet; de hoofdsessie doet dat als spec of opdracht het gedrag verandert, de tester na akkoord van de eigenaar als hij fout lijkt (R-TEST-02, ADR 0068 punt 4)${fetch}`);
   } else {
-    decision.context.push(`${rel} is een bestaande test: noem de wijziging met reden in de PR (AGENTS.md, framework §8).`);
+    decision.context.push(`${rel} is een bestaande test: noem de wijziging met reden in de PR (AGENTS.md, framework §8)${fetch}.`);
   }
 }
 
@@ -2881,9 +2907,9 @@ const NETWERK_ONZEKER = /\$\(|`|<\(|>\(|<</;
 const PUSH_VERWIJDERT = /^(?:--delete|-[a-zA-Z]*d[a-zA-Z]*|\+?:.+)$/;
 
 /**
- * @typedef {{ woorden: string[], open: boolean, voorvoegsel: string[] }} Netwerkpatroon `woorden`: het patroon zonder een
- *   afsluitende ` *`; `open`: die ` *` stond er (nul of meer verdere woorden); `voorvoegsel`: de woorden vóór ` *`, anders de
- *   eerste twee woorden.
+ * @typedef {{ tekst: string, woorden: string[], open: boolean, voorvoegsel: string[] }} Netwerkpatroon `tekst`: het patroon
+ *   zoals in de settings; `woorden`: het patroon zonder een afsluitende ` *`; `open`: die ` *` stond er (nul of meer verdere
+ *   woorden); `voorvoegsel`: de woorden vóór ` *`, anders de eerste twee woorden.
  * @typedef {{ programma: string, sub: string, rest: readonly string[] }} Netwerkkern
  */
 
@@ -2892,7 +2918,7 @@ function leesPatroon(patroon) {
   const alle = patroon.trim().split(/\s+/);
   const open = alle.length > 1 && alle.at(-1) === '*';
   const woorden = open ? alle.slice(0, -1) : alle;
-  return { woorden, open, voorvoegsel: open ? woorden : woorden.slice(0, 2) };
+  return { tekst: patroon, woorden, open, voorvoegsel: open ? woorden : woorden.slice(0, 2) };
 }
 
 /**
@@ -2915,8 +2941,24 @@ function decideNetwerkvorm(command, ctx, decision) {
     if (groep.some((patroon) => pastOpPatroon(command, patroon))) continue;
     const verwijdert = sleutel === 'git push' && kernen.some(({ programma, sub, rest }) =>
       programma === 'git' && sub === 'push' && rest.some((arg) => PUSH_VERWIJDERT.test(arg)));
-    decision.deny.push(netwerkReden(sleutel, groep, verwijdert));
+    const lokaal = ctx.lokaleNetwerkvormen;
+    const ontbreekt = lokaal === undefined ? [] : groep.map(({ tekst }) => tekst).filter((tekst) => !lokaal.includes(tekst));
+    const drift = ontbreekt.length === 0 ? '' : `; ${netwerkDrift(ontbreekt)}`;
+    const deels = kernen.length > 1 ? `; ${NETWERK_DEELS}` : '';
+    decision.deny.push(`${netwerkReden(sleutel, groep, verwijdert)}${drift}${deels}`);
   }
+}
+
+// Spec rolhek-leerpunten/AC-8: een weigering stopt het hele commando, ook de delen die geen netwerkvorm zijn.
+const NETWERK_DEELS =
+  'niets van dit commando is uitgevoerd, ook de andere delen niet: draai elk deel als eigen aanroep (spec rolhek-leerpunten/AC-8)';
+
+/**
+ * Spec rolhek-leerpunten/AC-6 (#962): de lokale settings missen patronen van de geraakte groep, dus ook de geëiste vorm draait
+ * in de sandbox. @param {readonly string[]} ontbreekt
+ */
+function netwerkDrift(ontbreekt) {
+  return `je lokale .claude/settings.json en settings.local.json missen in sandbox.excludedCommands: ${ontbreekt.join(', ')}, dus ook deze vorm draait in de sandbox; de eigenaar werkt de hoofdcheckout bij naar main (docs/ENVIRONMENT.md, "Grens van de sandbox") (spec rolhek-leerpunten/AC-6)`;
 }
 
 /** De segmenten van het commando en, recursief, van elke `$(…)` en backtick-substitutie. @param {string} command @returns {Command[]} */

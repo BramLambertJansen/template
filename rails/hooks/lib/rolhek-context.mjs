@@ -78,6 +78,25 @@ function netwerkvormen(root, basis, authority) {
   return text === null ? [] : excludedCommands(text);
 }
 
+/**
+ * Spec rolhek-leerpunten/AC-6: de lokale lijst, de vereniging van `sandbox.excludedCommands` uit `.claude/settings.json` en
+ * `.claude/settings.local.json` in `projectDir` (`CLAUDE_PROJECT_DIR`: de sandbox laadt de settings uit precies die map). Een
+ * ontbrekend of onleesbaar bestand, of ongeldige JSON, draagt niets bij. Zonder `projectDir` (geen Claude Code-sessie) `undefined`.
+ * @param {string | undefined} projectDir
+ * @returns {string[] | undefined}
+ */
+export function lokaleNetwerkvormen(projectDir) {
+  if (projectDir === undefined || projectDir === '') return undefined;
+  const lijst = ['.claude/settings.json', '.claude/settings.local.json'].flatMap((rel) => {
+    try {
+      return excludedCommands(readFileSync(path.join(projectDir, rel), 'utf8'));
+    } catch {
+      return [];
+    }
+  });
+  return [...new Set(lijst)];
+}
+
 /** `sandbox.excludedCommands` uit de tekst van een settingsbestand; ongeldige JSON gooit. @param {string} text */
 function excludedCommands(text) {
   /** @type {unknown} */
@@ -137,6 +156,8 @@ export function rolhekContext(root, cwd) {
     cwd,
     config,
     netwerkvormen: netwerkvormen(root, basis, authority),
+    // Spec rolhek-leerpunten/AC-6: alleen voor de meldingstekst; de uitslag komt uit het anker (`netwerkvormen`).
+    lokaleNetwerkvormen: lokaleNetwerkvormen(process.env['CLAUDE_PROJECT_DIR']),
     onderhoud: onderhoudActief(config, vertrouwd, root),
     read: (/** @type {string} */ rel) => {
       try {

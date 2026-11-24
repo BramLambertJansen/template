@@ -38,6 +38,22 @@ describe('agents-leveren/AC-7 tester punt 4 zegt wat de SubagentStop-hook draait
   });
 });
 
+// Bewijsbestand van leerpunt #958 (spec rolhek-leerpunten/AC-11 en AC-12): structuurtoets op het R-id en de functienaam, niet op de zin.
+const heeftRegel = (tekst: string, delen: readonly string[]): boolean =>
+  tekst.split('\n').some((regel) => delen.every((deel) => regel.includes(deel)));
+
+describe('rolhek-leerpunten/AC-11 developer.md: tests en implementatie gaan samen in één commit', () => {
+  test('rolhek-leerpunten/AC-11 een regel noemt rolhek-leerpunten/AC-11 en één commit', () => {
+    expect(heeftRegel(lees('developer'), ['rolhek-leerpunten/AC-11', 'één commit'])).toBe(true);
+  });
+});
+
+describe('rolhek-leerpunten/AC-12 developer.md en tester.md: een corpusrij draait alleen via inKooi', () => {
+  test.each(['developer', 'tester'])('rolhek-leerpunten/AC-12 %s.md heeft een regel met R-TOOL-03 en inKooi', (rol) => {
+    expect(heeftRegel(lees(rol), ['R-TOOL-03', 'inKooi'])).toBe(true);
+  });
+});
+
 describe('agents-leveren/AC-8 architect en docs verwijzen naar één bron', () => {
   test('agents-leveren/AC-8 punt 6 van de architect verwijst naar de afsluitcheck van de skill spec, zonder eigen lijst', () => {
     const architect = lees('architect');

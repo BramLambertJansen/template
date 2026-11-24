@@ -119,3 +119,89 @@ describe('samenhang-checks-rollen/AC-4: de developer wijzigt geen bestaande test
     expect(besluit.deny).toStrictEqual([]);
   });
 });
+
+// Bewijsbestand van leerpunt #960 (spec rolhek-leerpunten/AC-9): de weigering van cherry-pick, apply, format-patch of merge
+// wijst de developer de route `git checkout <sha> -- <paden>`. De ctx is een ruimer type dan `Ctx` (geen nieuwe velden nodig).
+const OVERNAME =
+  'overnemen uit een commit kan met git checkout <sha> -- <paden> (expliciete paden), anders doet de hoofdsessie het (spec rolhek-leerpunten/AC-9)';
+const OVERNAME_AANHANGSEL = `; ${OVERNAME}`;
+
+function bash(command: string, agent: string | undefined, bestaand: boolean = false) {
+  const ctxBash = {
+    root: ROOT,
+    cwd: ROOT,
+    config,
+    read: (rel: string) => (rel.endsWith('.test.ts') ? 'x' : null),
+    committed: () => false,
+    bestaand: (rel: string) => bestaand && rel === 'test/bestaand.test.ts',
+    isDir: () => false,
+    branch: 'feat/x',
+    mergeTrusted: true,
+    kitTrusted: true,
+    netwerkvormen: ['git commit *', 'git push origin HEAD'],
+  };
+  const besluit = decide({ tool_name: 'Bash', tool_input: { command }, ...as(agent) }, ctxBash);
+  return { deny: besluit.deny, ask: besluit.ask, context: besluit.context };
+}
+
+const alles = (b: ReturnType<typeof bash>): string => [...b.deny, ...b.ask, ...b.context].join('\n');
+const keren = (tekst: string, deel: string): number => tekst.split(deel).length - 1;
+
+const OVERNAME_COMMANDOS = [
+  'git cherry-pick abc1234',
+  'git apply p.patch',
+  'git merge feat/y',
+  'git format-patch -o x -1 abc1234',
+];
+
+describe('rolhek-leerpunten/AC-9 de developer krijgt de overnameroute bij elke weigering van cherry-pick, apply, format-patch en merge', () => {
+  test.each(OVERNAME_COMMANDOS)(
+    'rolhek-leerpunten/AC-9 developer: %s eindigt een weigering met de overnametekst, één keer',
+    (command) => {
+      const uitslag = bash(command, 'developer');
+      expect(uitslag.deny.length).toBeGreaterThan(0);
+      expect(uitslag.deny.some((reden) => reden.includes(OVERNAME_AANHANGSEL))).toBe(true);
+      expect(keren(uitslag.deny.join('\n'), OVERNAME)).toBe(1);
+    },
+  );
+
+  test.each(OVERNAME_COMMANDOS)(
+    'rolhek-leerpunten/AC-9 regressie: de overnametekst staat nergens voor tester, reviewer en hoofdsessie: %s',
+    (command) => {
+      for (const agent of ['tester', 'reviewer', undefined]) {
+        expect(alles(bash(command, agent))).not.toContain('overnemen uit een commit kan');
+      }
+    },
+  );
+
+  test('rolhek-leerpunten/AC-9 regressie: de weigeringen van de developer blijven (cherry-pick en merge)', () => {
+    expect(bash('git cherry-pick abc1234', 'developer').deny.join('\n')).toContain(
+      'git cherry-pick schrijft de werkmap',
+    );
+    expect(bash('git merge feat/y', 'developer').deny.join('\n')).toContain('git merge doet de hoofdsessie');
+  });
+
+  test('rolhek-leerpunten/AC-9 regressie: git format-patch -1 abc1234 gaat door voor de developer', () => {
+    const uitslag = bash('git format-patch -1 abc1234', 'developer');
+    expect([uitslag.deny, uitslag.ask]).toStrictEqual([[], []]);
+  });
+
+  test('rolhek-leerpunten/AC-9 regressie: git checkout <sha> -- expliciete paden gaat door voor de developer', () => {
+    const uitslag = bash('git checkout abc1234 -- src/a.ts test/a.test.ts', 'developer');
+    expect([uitslag.deny, uitslag.ask]).toStrictEqual([[], []]);
+  });
+
+  test('rolhek-leerpunten/AC-9 regressie: tegenrij, een bestaande test blijft geweigerd bij git checkout <sha> --', () => {
+    const uitslag = bash('git checkout abc1234 -- test/bestaand.test.ts', 'developer', true);
+    expect(uitslag.deny.join('\n')).toContain('is een bestaande test');
+    expect(uitslag.deny.join('\n')).not.toContain('overnemen uit een commit kan');
+  });
+
+  test.each(['.claude/settings.json', 'lefthook.yml'])(
+    'rolhek-leerpunten/AC-9 regressie: git checkout <sha> -- %s (zelfladend) blijft geweigerd',
+    (pad) => {
+      const uitslag = bash(`git checkout abc1234 -- ${pad}`, 'developer');
+      expect(uitslag.deny.length).toBeGreaterThan(0);
+    },
+  );
+});

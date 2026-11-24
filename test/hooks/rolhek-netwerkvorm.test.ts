@@ -342,6 +342,35 @@ describe('cloud-netwerkvorm/AC-13 gh api: main verwijderen of verzetten is verbo
   );
 });
 
+// ---------- rolhek-leerpunten/AC-8 ----------
+
+const NIETS_UITGEVOERD =
+  '; niets van dit commando is uitgevoerd, ook de andere delen niet: draai elk deel als eigen aanroep (spec rolhek-leerpunten/AC-8)';
+
+describe('rolhek-leerpunten/AC-8 een geweigerde netwerkvorm in een commando met meer segmenten meldt dat niets is uitgevoerd', () => {
+  test.each([
+    "printf 'x' > msg.txt && git add a.ts && git commit -F msg.txt",
+    'echo $(git commit -F msg.txt)',
+    'echo ok && git push -u origin claude/foo',
+  ])('rolhek-leerpunten/AC-8 de weigering bevat de tekst voor de hoofdsessie: %s', (command) => {
+    const uitslag = beslis(command, '');
+    expect(uitslag.deny).toContain('Netwerkvorm:');
+    expect(uitslag.deny).toContain(NIETS_UITGEVOERD);
+  });
+
+  test('rolhek-leerpunten/AC-8 regressie: een los MISE_STATE_DIR=… git commit -F msg.txt blijft geweigerd, zonder die tekst', () => {
+    const uitslag = beslis('MISE_STATE_DIR=/tmp/x git commit -F msg.txt', '');
+    expect(uitslag.deny).toContain('Netwerkvorm:');
+    expect(uitslag.deny).not.toContain('niets van dit commando is uitgevoerd');
+  });
+
+  test('rolhek-leerpunten/AC-8 regressie: een commando met één segment geeft de tekst niet', () => {
+    const uitslag = beslis('git push -u origin claude/foo', '');
+    expect(uitslag.deny).toContain('Netwerkvorm:');
+    expect(uitslag.deny).not.toContain('niets van dit commando is uitgevoerd');
+  });
+});
+
 // Leerpunt #880: `pnpm -s pr:verify …` viel buiten de sandboxuitzondering `pnpm pr:verify *` en gaf alleen "bewijs niet leesbaar".
 describe('cloud-netwerkvorm leerpunt #880 pnpm -s pr:verify', () => {
   test('cloud-netwerkvorm leerpunt #880 pnpm -s pr:verify 878 --watch: deny met pnpm pr:verify … voor de hoofdsessie', () => {
