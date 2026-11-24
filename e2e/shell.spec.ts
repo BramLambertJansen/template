@@ -42,8 +42,10 @@ test('titel per scherm, skip-link en focus na navigeren', async ({ page }) => {
   await page.getByRole('navigation', { name: 'Hoofdmenu' }).getByRole('link', { name: 'Dashboard' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeFocused();
 
-  // Een lazy route (/design-system): titel klopt; de focus op de h1 is daar nog een open punt (roadmap 3f).
+  // Een lazy route (/design-system, eigen chunk): ook daar gaat de focus naar de h1 zodra het scherm er staat.
   await main.getByRole('link', { name: 'Design system' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Design system' })).toBeVisible();
+  const designSystemHeading = page.getByRole('heading', { level: 1, name: 'Design system' });
+  await expect(designSystemHeading).toBeVisible();
+  await expect(designSystemHeading).toBeFocused();
   await expect(page).toHaveTitle(/^Design system · /);
 });
