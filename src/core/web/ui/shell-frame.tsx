@@ -192,7 +192,7 @@ export function ShellFrame({ header, nav, aside, className, routeKey, children }
             ref={mainRef}
             id={MAIN_ID}
             tabIndex={-1}
-            className="mx-auto w-full max-w-shell-content min-w-0 flex-1 p-shell-content focus:outline-none md:p-shell-content-wide print:max-w-none print:p-0"
+            className="mx-auto w-full max-w-shell-main min-w-0 flex-1 p-shell-content focus:outline-none md:p-shell-content-wide print:max-w-none print:p-0"
           >
             {children}
           </main>

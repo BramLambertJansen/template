@@ -110,7 +110,9 @@
   --spacing-shell-topbar: var(--shell-topbar-height);
   --spacing-shell-content: var(--shell-content-padding);
   --spacing-shell-nav: var(--shell-nav-gap);
-  --container-shell-content: var(--shell-content-max);
+  /* Niet --container-shell-content: max-w-* kiest bij een gelijke naam eerst --spacing-*, dan zou main de breedte van de
+     marge krijgen. */
+  --container-shell-main: var(--shell-content-max);
 
   --transition-duration-fast: var(--motion-fast);
   --transition-duration-normal: var(--motion-normal);
