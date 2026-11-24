@@ -974,3 +974,64 @@ export function gitSubcommand(args) {
   }
   return { subcommand: args[index] ?? '', rest: args.slice(index + 1), config };
 }
+
+/** @typedef {'deny' | 'ask' | 'context' | 'allow'} Uitslag */
+
+/** @type {Readonly<Record<Uitslag, number>>} */
+const RANG = { deny: 3, ask: 2, context: 1, allow: 0 };
+
+/**
+ * Differentiële bewaking van het rolhek (spec rolhek-leerpunten/AC-1, AC-3): elke sleutel waar de nieuwe uitslag minder
+ * streng is dan de oude (deny > ask > context > allow), of ontbreekt. Een sleutel die alleen in `nieuw` staat, telt niet.
+ * @param {ReadonlyMap<string, Uitslag>} oud
+ * @param {ReadonlyMap<string, Uitslag>} nieuw
+ * @returns {{ sleutel: string, oud: Uitslag, nieuw: Uitslag | undefined }[]}
+ */
+export function vergelijkUitslagen(oud, nieuw) {
+  /** @type {{ sleutel: string, oud: Uitslag, nieuw: Uitslag | undefined }[]} */
+  const bevindingen = [];
+  for (const [sleutel, vroeger] of oud) {
+    const nu = nieuw.get(sleutel);
+    if (nu === undefined || RANG[nu] < RANG[vroeger]) bevindingen.push({ sleutel, oud: vroeger, nieuw: nu });
+  }
+  return bevindingen;
+}
+
+/**
+ * Per woord het hoogste aantal keer dat het voorkomt in één lezing.
+ * @param {readonly (readonly string[])[]} lezingen
+ */
+function maximaPerWoord(lezingen) {
+  /** @type {Map<string, number>} */
+  const maxima = new Map();
+  for (const lezing of lezingen) {
+    /** @type {Map<string, number>} */
+    const tellen = new Map();
+    // Ook een leeg eerste woord telt: een segment met alleen een redirect (`> lefthook.yml`) is een segment.
+    for (const woord of lezing) tellen.set(woord, (tellen.get(woord) ?? 0) + 1);
+    for (const [woord, aantal] of tellen) maxima.set(woord, Math.max(maxima.get(woord) ?? 0, aantal));
+  }
+  return maxima;
+}
+
+/**
+ * Differentiële bewaking van de lezer (spec rolhek-leerpunten/AC-2, AC-3): per sleutel elk eerste woord dat de nieuwe
+ * lezingen minder vaak zien dan de oude, als maximum over de lezingen. Ontbreekt de sleutel in `nieuw`, dan is elk woord
+ * een bevinding met `nieuw: undefined`.
+ * @param {ReadonlyMap<string, readonly (readonly string[])[]>} oud
+ * @param {ReadonlyMap<string, readonly (readonly string[])[]>} nieuw
+ * @returns {{ sleutel: string, woord: string, oud: number, nieuw: number | undefined }[]}
+ */
+export function vergelijkWoorden(oud, nieuw) {
+  /** @type {{ sleutel: string, woord: string, oud: number, nieuw: number | undefined }[]} */
+  const bevindingen = [];
+  for (const [sleutel, lezingen] of oud) {
+    const nu = nieuw.get(sleutel);
+    const nuMaxima = nu === undefined ? undefined : maximaPerWoord(nu);
+    for (const [woord, aantal] of maximaPerWoord(lezingen)) {
+      const nieuwAantal = nuMaxima === undefined ? undefined : (nuMaxima.get(woord) ?? 0);
+      if (nieuwAantal === undefined || nieuwAantal < aantal) bevindingen.push({ sleutel, woord, oud: aantal, nieuw: nieuwAantal });
+    }
+  }
+  return bevindingen;
+}
