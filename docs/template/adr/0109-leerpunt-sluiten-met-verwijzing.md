@@ -6,7 +6,7 @@ Wijzigt [0101](0101-leerpunt-bijwerken-en-sluiten.md) punt 2, 4 en 5 en [0078](0
 R-WERK-13, R-ROL-12 en R-SEC-09 aan. Drempel: A3 (een verruiming van het rolhek en van de MCP-uitzondering) en A4 (een
 geaccepteerd ADR wijzigt). Aanleiding: keuze van de eigenaar, 2026-11-24, variant "met verwijzing". Concreet: #830 was
 opgelost door ADR 0100 en #834, maar bleef open, want de hoofdsessie mag alleen als duplicaat sluiten; het precedent staat
-als comment op #830. Uitwerking: spec [leerlus-bewijs](../specs/leerlus-bewijs.md) AC-16 tot en met AC-20.
+als comment op #830. Uitwerking: spec [leerlus-bewijs](../specs/leerlus-bewijs.md) AC-16 tot en met AC-21.
 
 ## Context
 
@@ -19,9 +19,9 @@ eigenaar ze ziet, en de voorsortering telt ze als werk. Het alternatief "complet
 ## Besluit
 
 1. **Sluiten als opgelost.** De hoofdsessie mag een leerpunt sluiten met de reden *completed*, alleen nadat ze een comment
-   plaatste die begint met `opgelost: ` en het bewijs noemt dat al op `main` staat: een gemergde PR (`#<nr>`), een commit-SHA
-   op `main`, of een geaccepteerd ADR op `main` (`ADR <nnnn>`). Zonder zo'n verwijzing sluit ze niet, maar laat ze een comment
-   achter (0101 punt 6, `deels`).
+   plaatste die begint met `opgelost: ` en het bewijs noemt dat al op `main` staat, als lijst van één of meer verwijzingen:
+   een naar `main` gemergde PR (`#<nr>`), een commit-SHA op `main`, of een geaccepteerd ADR op `main` (`ADR <nnnn>`). Elke
+   verwijzing moet geldig zijn; is er één ongeldig, dan sluit ze niet, maar laat ze een comment achter (0101 punt 6, `deels`).
 2. **Volgorde.** Doelcheck (`gh issue view <nr> --repo <repo> --json labels,state,url`, label `leerpunt`, 0101 punt 4),
    daarna de comment `opgelost: <verwijzing>`, daarna sluiten.
 3. **Kanalen.** Lokaal laat het rolhek naast de drie vormen uit 0101 punt 5 ook `gh issue close <nr> --reason completed`
