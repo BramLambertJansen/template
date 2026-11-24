@@ -11,7 +11,7 @@ import { exported } from '../rails/template-repo-kit';
 //     de verwijzingen in volgorde: `#834` → { pr, '834' }, 7 tot 40 kleine hex → { commit, <sha> }, `ADR 0100` → { adr, '0100' }.
 //     Elke andere vorm, een lege lijst of een leeg element (`#1,,#2`, `#1,`) maakt de hele comment ongeldig (`null`).
 //   beoordeelOpgelost(nummer, bron, haalPr): Promise<'opgelost' | 'zonder-bewijs'>
-//     bron   = { reden, comments, standaardBranch } (comments als bij `beoordeelSluiting`: { body, association })
+//     bron   = { reden, comments, standaardBranch, accounts } (comments als bij `beoordeelSluiting`: { body, association, id })
 //     haalPr(prnummer) = Promise van de REST-body van `repos/<repo>/pulls/<prnummer>` (`merged`, `base.ref`), of `null` bij
 //              404/410 (het nummer is een issue of bestaat niet). Geen netwerk in de test.
 //     'opgelost' alleen bij reden `completed` en minstens één comment van OWNER/MEMBER/COLLABORATOR waarvan ALLE verwijzingen
@@ -40,10 +40,26 @@ function prs(tabel: Record<number, unknown>) {
   return { haalPr, aangevraagd };
 }
 
-type Bron = { reden?: string; standaardBranch?: string; comments: { body: string; association: string }[] };
+// GEWIJZIGD (leerlus-bewijs/AC-22, ADR 0101 Herzien 2026-11-24): een opgelost-comment telt alleen van een id uit
+// leerpunt.accounts, niet meer op author_association; comments krijgen een id en de bron krijgt de lijst.
+const ID_PRIVE = 282014853;
+const ID_WERK = 194213038;
+const ACCOUNTS = [
+  { id: ID_PRIVE, login: 'BramLambertJansen' },
+  { id: ID_WERK, login: 'Jan-Bramsen' },
+];
+type Bron = { reden?: string; standaardBranch?: string; comments: { body: string; association: string; id: number }[] };
 const oordeel = (bron: Bron, tabel: Record<number, unknown> = {}) =>
-  beoordeelOpgelost(NR, { reden: 'completed', standaardBranch: 'main', ...bron }, prs(tabel).haalPr);
-const comment = (body: string, association = OWNER) => ({ body, association });
+  beoordeelOpgelost(
+    NR,
+    { reden: 'completed', standaardBranch: 'main', accounts: ACCOUNTS, ...bron },
+    prs(tabel).haalPr,
+  );
+const comment = (body: string, association = OWNER, id = association === OWNER ? ID_PRIVE : 1) => ({
+  body,
+  association,
+  id,
+});
 
 describe('leerlus-bewijs/AC-20 de opgelost-comment: vorm van de lijst', () => {
   test.each([
@@ -102,8 +118,8 @@ describe('leerlus-bewijs/AC-20 telt als bewijs', () => {
     ['alleen een ADR: geen opvraag nodig', [comment('opgelost: ADR 0100')], {}],
     ['PR en ADR, beide geldig', [comment('opgelost: ADR 0100, #834')], { 834: PR_OK }],
     ["twee gemergde PR's en een commit", [comment('opgelost: #1, #2, abc1234')], { 1: PR_OK, 2: PR_OK }],
-    ['MEMBER', [comment('opgelost: #834', 'MEMBER')], { 834: PR_OK }],
-    ['COLLABORATOR', [comment('opgelost: #834', 'COLLABORATOR')], { 834: PR_OK }],
+    ['werkaccount uit de lijst (MEMBER)', [comment('opgelost: #834', 'MEMBER', ID_WERK)], { 834: PR_OK }],
+    ['werkaccount uit de lijst (COLLABORATOR)', [comment('opgelost: #834', 'COLLABORATOR', ID_WERK)], { 834: PR_OK }],
     ['hoofdletterongevoelig met witruimte vooraan', [comment('  OPGELOST: #834')], { 834: PR_OK }],
     [
       'een ongeldige comment ervoor, een geldige erna',
@@ -130,7 +146,12 @@ describe('leerlus-bewijs/AC-20 telt als bewijs', () => {
     const { haalPr, aangevraagd } = prs({ 1: PR_OK, 2: PR_OK });
     await beoordeelOpgelost(
       NR,
-      { reden: 'completed', standaardBranch: 'main', comments: [comment('opgelost: #1, ADR 0100, abc1234, #2')] },
+      {
+        reden: 'completed',
+        standaardBranch: 'main',
+        accounts: ACCOUNTS,
+        comments: [comment('opgelost: #1, ADR 0100, abc1234, #2')],
+      },
       haalPr,
     );
     expect([...aangevraagd].sort()).toStrictEqual([1, 2]);
@@ -174,7 +195,7 @@ describe('leerlus-bewijs/AC-20 telt niet: label zoals AC-6, de job crasht niet',
       const { haalPr, aangevraagd } = prs({ 834: PR_OK });
       const uitkomst = await beoordeelOpgelost(
         NR,
-        { reden, standaardBranch: 'main', comments: [comment('opgelost: #834')] },
+        { reden, standaardBranch: 'main', accounts: ACCOUNTS, comments: [comment('opgelost: #834')] },
         haalPr,
       );
       expect(uitkomst).toBe('zonder-bewijs');
@@ -197,7 +218,7 @@ describe('leerlus-bewijs/AC-20 label aan of uit; AC-6 en AC-13 ongewijzigd', () 
   });
 
   test('leerlus-bewijs/AC-6: beoordeelSluiting kent de opgelost-tak niet: completed met een opgelost-comment blijft zonder-bewijs', async () => {
-    const bron = { prs: [], reden: 'completed', comments: [comment('opgelost: ADR 0100')] };
+    const bron = { prs: [], reden: 'completed', accounts: ACCOUNTS, comments: [comment('opgelost: ADR 0100')] };
     await expect(beoordeelSluiting(NR, bron, () => Promise.resolve(null))).resolves.toBe('zonder-bewijs');
   });
 
@@ -205,17 +226,21 @@ describe('leerlus-bewijs/AC-20 label aan of uit; AC-6 en AC-13 ongewijzigd', () 
     const regel = { merged: true, body: `## Leerpunt\n\n- #${String(NR)}: trede Check; bewijs test/a.test.ts` };
     const nietsOpvragen = () => Promise.resolve(null);
     await expect(
-      beoordeelSluiting(NR, { prs: [regel], reden: 'completed', comments: [] }, nietsOpvragen),
+      beoordeelSluiting(NR, { prs: [regel], reden: 'completed', accounts: ACCOUNTS, comments: [] }, nietsOpvragen),
     ).resolves.toBe('bewijs');
     const achterhaald = comment('achterhaald: opgelost door #520');
     await expect(
-      beoordeelSluiting(NR, { prs: [], reden: 'completed', comments: [achterhaald] }, nietsOpvragen),
+      beoordeelSluiting(
+        NR,
+        { prs: [], reden: 'completed', accounts: ACCOUNTS, comments: [achterhaald] },
+        nietsOpvragen,
+      ),
     ).resolves.toBe('achterhaald');
   });
 
   test('leerlus-bewijs/AC-13: een duplicaatsluiting blijft duplicaat', async () => {
     const doel = { number: 7, labels: [{ name: 'leerpunt' }] };
-    const bron = { prs: [], reden: 'duplicate', comments: [comment('duplicaat van #7')] };
+    const bron = { prs: [], reden: 'duplicate', accounts: ACCOUNTS, comments: [comment('duplicaat van #7')] };
     await expect(beoordeelSluiting(NR, bron, () => Promise.resolve(doel))).resolves.toBe('duplicaat');
   });
 });

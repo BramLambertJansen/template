@@ -138,7 +138,10 @@ describe('leerlus-bewijs/AC-5 en AC-6 welke gebeurtenis wat toetst', () => {
 
 describe('leerlus-bewijs/AC-6 sluiten met bewijs', () => {
   const PR_BEWIJS = { merged: true, body: '## Leerpunt\n\n- #9: trede Check; bewijs test/a.test.ts' };
-  const ACHTERHAALD = { body: 'achterhaald: opgelost door #520', association: 'OWNER' };
+  // GEWIJZIGD (leerlus-bewijs/AC-22, ADR 0101 Herzien 2026-11-24): een achterhaald-comment telt alleen van een id uit
+  // leerpunt.accounts, niet meer op author_association; de rijen krijgen daarom een id en de lijst.
+  const ACCOUNTS = [{ id: 282014853, login: 'BramLambertJansen' }];
+  const ACHTERHAALD = { body: 'achterhaald: opgelost door #520', association: 'OWNER', id: 282014853 };
 
   test.each([
     ['gemergde PR met regel', { prs: [PR_BEWIJS], comments: [] }, 'bewijs'],
@@ -196,18 +199,18 @@ describe('leerlus-bewijs/AC-6 sluiten met bewijs', () => {
     ['geen PR (commit op main)', { prs: [], comments: [] }, 'zonder-bewijs'],
     ['achterhaald van de eigenaar', { prs: [], comments: [ACHTERHAALD] }, 'achterhaald'],
     [
-      'achterhaald van een collaborator',
-      { prs: [], comments: [{ ...ACHTERHAALD, association: 'COLLABORATOR' }] },
-      'achterhaald',
+      'achterhaald van een collaborator buiten de lijst',
+      { prs: [], comments: [{ ...ACHTERHAALD, association: 'COLLABORATOR', id: 1 }] },
+      'zonder-bewijs',
     ],
     [
       'achterhaald van een ander',
-      { prs: [], comments: [{ ...ACHTERHAALD, association: 'CONTRIBUTOR' }] },
+      { prs: [], comments: [{ ...ACHTERHAALD, association: 'CONTRIBUTOR', id: 2 }] },
       'zonder-bewijs',
     ],
     ['achterhaald zonder reden', { prs: [], comments: [{ ...ACHTERHAALD, body: 'achterhaald:' }] }, 'zonder-bewijs'],
   ])('leerlus-bewijs/AC-6: %s', (_naam, bron, oordeel) => {
-    expect(sluitOordeel(9, bron)).toBe(oordeel);
+    expect(sluitOordeel(9, { ...bron, accounts: ACCOUNTS })).toBe(oordeel);
   });
 
   test('leerlus-bewijs/AC-6: zonder bewijs label aan met comment; met bewijs, achterhaald of heropend label uit', () => {

@@ -1,4 +1,4 @@
-// Issue-check voor leerpunten (ADR 0078 punt 3, spec leerlus-bewijs AC-5, AC-6, AC-13 en AC-20). Draait in de workflow `leerpunt` op
+// Issue-check voor leerpunten (ADR 0078 punt 3, spec leerlus-bewijs AC-5, AC-6, AC-13, AC-20 en AC-22). Draait in de workflow `leerpunt` op
 // `issues` en `issue_comment`, vanaf de default branch, met alleen `issues: write` en `pull-requests: read`. Zet of haalt de
 // labels `leerpunt-onvolledig` en `leerpunt-zonder-bewijs` weg met één comment per soort; sluit, heropent of bewerkt niets.
 // Alleen in de template-repo (`onderhoud.repository` in .claude/gates.json). Alleen `node:`- en relatieve imports.
@@ -7,12 +7,13 @@ import path from 'node:path';
 import {
   COMMENT_ZONDER_BEWIJS,
   commentOnvolledig,
+  eigenaarIds,
   graphqlData,
   leesSjabloon,
   lijst,
-  SCHRIJFRECHT,
   sluitOordeel,
   toetsBody,
+  vanEigenaar,
   veld,
 } from './leerpunt.mjs';
 
@@ -96,14 +97,16 @@ export function isLeerpuntDoel(doel) {
 }
 
 /**
- * De doelnummers van geldige duplicaatcomments, in volgorde en zonder herhaling: van een auteur met schrijfrecht en niet
- * het issue zelf.
+ * De doelnummers van geldige duplicaatcomments, in volgorde en zonder herhaling: van een eigenaaraccount uit `accounts`
+ * (AC-22) en niet het issue zelf.
  * @param {number} nummer
- * @param {{ body: string, association: string }[]} comments
+ * @param {import('./leerpunt.mjs').Comment[]} comments
+ * @param {unknown} accounts `leerpunt.accounts` uit .claude/gates.json, ongevalideerd
  */
-export function duplicaatDoelen(nummer, comments) {
+export function duplicaatDoelen(nummer, comments, accounts) {
+  const ids = eigenaarIds(accounts);
   const doelen = comments
-    .filter(({ association }) => SCHRIJFRECHT.includes(association))
+    .filter((c) => vanEigenaar(ids, c))
     .map(({ body }) => Number(DUPLICAAT.exec(body)?.[1] ?? Number.NaN))
     .filter((doel) => Number.isInteger(doel) && doel !== nummer);
   return [...new Set(doelen)];
@@ -114,14 +117,14 @@ export function duplicaatDoelen(nummer, comments) {
  * met reden `duplicate` en een geldige duplicaatcomment naar een ander leerpunt. `haalDoel` geeft de REST-body van het doel,
  * of `null` bij een 404 of 410.
  * @param {number} nummer
- * @param {{ prs: { merged: boolean, body: string }[], comments: { body: string, association: string }[], reden: string }} bron
+ * @param {{ prs: { merged: boolean, body: string }[], comments: import('./leerpunt.mjs').Comment[], reden: string, accounts?: unknown }} bron
  * @param {(doel: number) => Promise<unknown>} haalDoel
  * @returns {Promise<'bewijs' | 'achterhaald' | 'duplicaat' | 'zonder-bewijs'>}
  */
 export async function beoordeelSluiting(nummer, bron, haalDoel) {
   const oordeel = sluitOordeel(nummer, bron);
   if (oordeel !== 'zonder-bewijs' || bron.reden !== 'duplicate') return oordeel;
-  for (const doel of duplicaatDoelen(nummer, bron.comments))
+  for (const doel of duplicaatDoelen(nummer, bron.comments, bron.accounts))
     if (isLeerpuntDoel(await haalDoel(doel))) return 'duplicaat';
   return 'zonder-bewijs';
 }
@@ -163,18 +166,20 @@ export function leesOpgelost(body) {
 }
 
 /**
- * Bewijs via een sluiting als opgelost (AC-20): reden `completed` en minstens één `opgelost:`-comment met schrijfrecht
- * waarvan elke PR gemerged is in de standaardbranch. `haalPr` geeft de REST-body van de PR, of `null` bij 404 of 410.
+ * Bewijs via een sluiting als opgelost (AC-20): reden `completed` en minstens één `opgelost:`-comment van een
+ * eigenaaraccount uit `accounts` (AC-22) waarvan elke PR gemerged is in de standaardbranch. `haalPr` geeft de REST-body van
+ * de PR, of `null` bij 404 of 410.
  * Het issuenummer staat in de signatuur voor dezelfde vorm als `beoordeelSluiting`; de opgelost-tak gebruikt het niet.
  * @param {number} _nummer
- * @param {{ reden: string, comments: { body: string, association: string }[], standaardBranch: string }} bron
+ * @param {{ reden: string, comments: import('./leerpunt.mjs').Comment[], standaardBranch: string, accounts?: unknown }} bron
  * @param {(pr: number) => Promise<unknown>} haalPr
  * @returns {Promise<'opgelost' | 'zonder-bewijs'>}
  */
 export async function beoordeelOpgelost(_nummer, bron, haalPr) {
   if (bron.reden !== 'completed') return 'zonder-bewijs';
-  for (const { body, association } of bron.comments) {
-    const verwijzingen = SCHRIJFRECHT.includes(association) ? leesOpgelost(body) : null;
+  const ids = eigenaarIds(bron.accounts);
+  for (const comment of bron.comments) {
+    const verwijzingen = vanEigenaar(ids, comment) ? leesOpgelost(comment.body) : null;
     if (verwijzingen !== null && (await allePrsGemerged(verwijzingen, bron.standaardBranch, haalPr))) return 'opgelost';
   }
   return 'zonder-bewijs';
@@ -196,6 +201,11 @@ async function allePrsGemerged(verwijzingen, branch, haalPr) {
 export function onderhoudRepo(tekst) {
   const repo = veld(veld(JSON.parse(tekst), 'onderhoud'), 'repository');
   return typeof repo === 'string' ? repo : null;
+}
+
+/** `leerpunt.accounts` uit de tekst van .claude/gates.json, ongevalideerd (AC-22; de pure functies toetsen hem). @param {string} tekst */
+function leerpuntAccounts(tekst) {
+  return veld(veld(JSON.parse(tekst), 'leerpunt'), 'accounts');
 }
 
 /** @param {string} naam */
@@ -263,6 +273,8 @@ async function sluitBron(repo, nummer) {
   const comments = (await alleComments(`repos/${repo}/issues/${String(nummer)}`)).map((c) => ({
     body: String(veld(c, 'body') ?? ''),
     association: String(veld(c, 'author_association') ?? ''),
+    // AC-22: het vaste GitHub-id beslist, niet de login of de association.
+    id: veld(veld(c, 'user'), 'id'),
   }));
   return { prs, comments };
 }
@@ -279,10 +291,10 @@ function haalPr(repo) {
 
 /**
  * Het oordeel bij een sluiting: eerst `beoordeelSluiting` (bewijs, achterhaald, duplicaat), daarna de opgelost-tak (AC-20).
- * @param {string} repo @param {Gebeurtenis} g
+ * @param {string} repo @param {Gebeurtenis} g @param {unknown} accounts `leerpunt.accounts` uit .claude/gates.json (AC-22)
  */
-async function sluitOordeelVoor(repo, g) {
-  const bron = { ...(await sluitBron(repo, g.nummer)), reden: g.reden };
+async function sluitOordeelVoor(repo, g, accounts) {
+  const bron = { ...(await sluitBron(repo, g.nummer)), reden: g.reden, accounts };
   const oordeel = await beoordeelSluiting(g.nummer, bron, haalIssue(repo));
   if (oordeel !== 'zonder-bewijs' || g.reden !== 'completed') return oordeel;
   const standaardBranch = String(veld(await api(`repos/${repo}`), 'default_branch') ?? '');
@@ -312,13 +324,14 @@ async function voerUit(repo, g, stap) {
 
 async function main() {
   const repo = env('GITHUB_REPOSITORY');
-  const onderhoud = onderhoudRepo(readFileSync(path.join(ROOT, '.claude/gates.json'), 'utf8'));
+  const gates = readFileSync(path.join(ROOT, '.claude/gates.json'), 'utf8');
+  const onderhoud = onderhoudRepo(gates);
   if (onderhoud === null || onderhoud.toLowerCase() !== repo.toLowerCase()) return;
   const g = leesGebeurtenis(JSON.parse(readFileSync(env('GITHUB_EVENT_PATH'), 'utf8')), env('GITHUB_EVENT_NAME'));
   const toets = teToetsen(g);
   const velden = leesSjabloon(readFileSync(path.join(ROOT, '.github/ISSUE_TEMPLATE/leerpunt.yml'), 'utf8'));
   const fouten = toets.sjabloon ? toetsBody(g.body, velden) : null;
-  const oordeel = toets.sluiten ? await sluitOordeelVoor(repo, g) : null;
+  const oordeel = toets.sluiten ? await sluitOordeelVoor(repo, g, leerpuntAccounts(gates)) : null;
   for (const stap of stappen({ fouten, oordeel, heropend: toets.heropend, velden })) await voerUit(repo, g, stap);
 }
 
