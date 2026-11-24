@@ -364,6 +364,8 @@ test('app-thema/AC-16: de kiezer toont Standaard, Strak en Zacht; de voorbeelden
   await expect(select.getByRole('option')).toHaveText(['Standaard', 'Strak', 'Zacht']);
   await expect(primaryButton(page)).toHaveCSS('border-radius', '6px');
 
+  // Met de focus op de kiezer: een themawissel verplaatst de focus niet.
+  await select.focus();
   await select.selectOption({ label: 'Strak' });
   await expect(primaryButton(page)).toHaveCSS('border-radius', '0px');
   await select.selectOption({ label: 'Zacht' });

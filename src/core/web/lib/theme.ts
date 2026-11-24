@@ -28,11 +28,6 @@ export { defineThemes, type ThemeDefinition, type ThemeRegister } from './theme-
 // Eigen sleutel van het register (geen geërfde zoals `constructor`).
 const known = (themes: ThemeRegister, name: string) => Object.hasOwn(themes, name);
 
-export function currentAppTheme(themes: ThemeRegister, root: HTMLElement = document.documentElement): string | null {
-  const name = root.dataset['appTheme'] ?? null;
-  return name !== null && known(themes, name) ? name : null;
-}
-
 function store(name: string | null): void {
   try {
     if (name === null) localStorage.removeItem(APP_THEME_KEY);

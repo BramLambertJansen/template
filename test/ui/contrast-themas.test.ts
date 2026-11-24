@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { themes } from '../../src/web/styles/themes.ts';
 import { readSrc, themeBlocks, type ThemeBlocks } from './app-themes.ts';
 import { contrast } from './oklch-contrast.ts';
 import { resolveTokens, TOKEN_FILES, type Mode } from './token-resolve.ts';
@@ -61,8 +62,9 @@ function contrastProblems(css: string): string[] {
 }
 
 describe('app-thema/AC-12: contrast per thema', () => {
-  test("app-thema/AC-12: de test rekent de meegeleverde thema's door en kent de paren", () => {
-    expect([...themeBlocks(THEME).keys()]).toStrictEqual(['strak', 'zacht']);
+  // Geen vaste themanamen (een app haalt de voorbeelden weg of vervangt ze); de faalgevallen gebruiken een eigen thema `x`.
+  test('app-thema/AC-12: de test rekent elk thema uit het register door en kent de paren', () => {
+    expect([...themeBlocks(THEME).keys()].sort()).toStrictEqual(Object.keys(themes).sort());
     expect(textPairs(themed({ licht: new Map(), donker: new Map() }, 'licht'))).toEqual(
       expect.arrayContaining([
         ['--foreground', '--background'],
@@ -79,15 +81,15 @@ describe('app-thema/AC-12: contrast per thema', () => {
   });
 
   test('app-thema/AC-12: een thema dat één paar breekt, faalt met thema, modus en paar', () => {
-    const broken = [THEME, "[data-app-theme='zacht'][data-theme='dark'] { --background: var(--p-zinc-400); }"];
-    const problems = contrastProblems(broken.join('\n'));
-    expect(problems).toContain('thema zacht (donker): --foreground op --background < 4,5:1');
-    expect(problems.every((problem) => problem.startsWith('thema zacht (donker):'))).toBe(true);
+    const broken = "[data-app-theme='x'][data-theme='dark'] { --background: var(--p-zinc-400); }";
+    const problems = contrastProblems(broken);
+    expect(problems).toContain('thema x (donker): --foreground op --background < 4,5:1');
+    expect(problems.every((problem) => problem.startsWith('thema x (donker):'))).toBe(true);
   });
 
   test('app-thema/AC-12: een componentpaar dat in één modus van een thema breekt, faalt alleen daar', () => {
     // zinc-300 op de lichte --control-bg breekt; op de donkere haalt het 4,5:1 wel.
-    const broken = [THEME, "[data-app-theme='strak'] { --control-fg: var(--p-zinc-300); }"].join('\n');
-    expect(contrastProblems(broken)).toStrictEqual(['thema strak (licht): --control-fg op --control-bg < 4,5:1']);
+    const broken = "[data-app-theme='x'] { --control-fg: var(--p-zinc-300); }";
+    expect(contrastProblems(broken)).toStrictEqual(['thema x (licht): --control-fg op --control-bg < 4,5:1']);
   });
 });

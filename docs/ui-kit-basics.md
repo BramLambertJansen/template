@@ -153,9 +153,11 @@ eigen as: elk thema werkt in beide.
   Componenttokens rekenen binnen de scope opnieuw met de semantische tokens van dat thema; semantische tokens die het
   scopethema niet zet, erven van het document. Een componentoverride van het documentthema geldt niet binnen een scope met
   een ander thema: daar gelden de standaard uit `components.css` en de overrides van het scopethema. Meldingen
-  (`ToastProvider`) staan buiten elke scope en volgen het documentthema.
+  (`ToastProvider`) staan buiten elke scope en volgen het documentthema; het menu van `DropdownMenu` ook, omdat het via een
+  portal in `<body>` staat (`src/core/web/ui/dropdown-menu.tsx:28`). Een `Dialog` blijft in de scope (native `<dialog>`).
 - Meegeleverd: `strak` (hoekig, geen schaduw) en `zacht` (ronder, zachtere schaduw, getinte achtergrond). Een app haalt ze
-  weg of vervangt ze. Elk kleurpaar haalt het contrast in elk thema, licht en donker (`test/ui/contrast-themas.test.ts`).
+  weg of vervangt ze; de unit-tests eisen geen namen, de e2e AC-14 en AC-16 in `e2e/app-thema.spec.ts` rekenen wel met
+  deze twee en gaan dan mee. Elk kleurpaar haalt het contrast in elk thema, licht en donker (`test/ui/contrast-themas.test.ts`).
 - Op `/design-system` staat boven de tabbladen een kiezer "Thema" die de voorbeelden in een `ThemeScope` toont (niet
   bewaard; `<html>` verandert niet). Zonder thema's in het register is er geen kiezer.
 
