@@ -1415,6 +1415,7 @@ function reviewerRefusal(argv, { parsed, cwd, root, feiten }) {
  * @param {{ parsed: Command, werkmapInRepo: boolean, feiten: LeesFeiten }} segment `werkmapInRepo`: voor `git grep` (AC-9)
  */
 function leeslijstRefusal(kern, { parsed, werkmapInRepo, feiten }) {
+  if (kern[0] === 'gh' && kern[1] === 'api') return apiLeesRefusal(alsWoorden(kern.slice(2), parsed));
   const head = kern[0] === 'gh' ? kern.slice(0, 3).join(' ') : kern.slice(0, 2).join(' ');
   if (head === 'git grep') return werkmapInRepo ? grepRefusal(alsWoorden(kern, parsed).slice(2)) : GREP_WERKMAP;
   if (head === 'git ls-files') return lsFilesRefusal(alsWoorden(kern, parsed).slice(2));
@@ -1427,6 +1428,79 @@ function leeslijstRefusal(kern, { parsed, werkmapInRepo, feiten }) {
   const opties = [...read.flags, ...read.values.map((value) => `${value} <waarde>`)];
   const lijst = opties.length > 0 ? opties.join(', ') : 'geen opties; paden na --';
   return `reviewer: \`${head}\` alleen met: ${lijst}; waarden alleen [A-Za-z0-9_./,:-] (spec rolhek-lezen; framework §8)`;
+}
+
+// rolhek-lezen/AC-21: de endpoints van `gh api` voor de reviewer, met `{owner}` en `{repo}` letterlijk (gh vult de
+// basisrepository in). `<n>` uit [0-9]{1,12}, `<sha>` uit [0-9a-f]{7,40}, een query `?<q>` met <q> uit API_QUERY.
+const API_N = '[0-9]{1,12}';
+const API_SHA = '[0-9a-f]{7,40}';
+const API_QUERY = '[A-Za-z0-9_.,:=&+-]+';
+// De rest van een zoekopdracht: zonder `&` en `=` (geen tweede `q` of `advanced_search`) en zonder losse operator (API_OPERATOR).
+const API_ZOEK_REST = '[A-Za-z0-9_.,:+-]+';
+const API_OPERATOR = /(?:^|\+)(?:or|and|not)(?:\+|$)/i;
+const API_PADEN = [
+  `pulls(?:/${API_N}(?:/(?:comments|files|commits))?)?`,
+  `issues/${API_N}(?:/(?:comments|events))?`,
+  `actions/runs(?:/${API_N}(?:/jobs)?)?`,
+  `actions/jobs/${API_N}(?:/logs)?`,
+  `commits/${API_SHA}(?:/status)?`,
+];
+const API_ENDPOINT = new RegExp(`^repos/\\{owner\\}/\\{repo\\}/(?:${API_PADEN.join('|')})(?:\\?${API_QUERY})?$`);
+// Zoeken alleen in de eigen repository: `repo:` hoofdletterongevoelig, en de rest zonder `repo:`, `org:`, `user:` of operator (AC-16).
+const API_ZOEKEN = new RegExp(`^search/issues\\?q=[Rr][Ee][Pp][Oo]:\\{owner\\}/\\{repo\\}\\+(${API_ZOEK_REST})$`);
+// jq-namen die de omgeving, andere invoer of een module tonen, als los woord (ook `.env`, een geaccepteerd vals-positief).
+const JQ_VERBODEN = /(?<![A-Za-z0-9_$])(?:env|\$env|inputs?|input_filename|\$__loc__|import|include)(?![A-Za-z0-9_])/i;
+const API_MELDING =
+  'reviewer: `gh api` alleen met precies één endpoint, in zijn geheel tussen aanhalingstekens: "repos/{owner}/{repo}/<pad>" ' +
+  '(<pad>: pulls, pulls/<n>, pulls/<n>/comments|files|commits, issues/<n>, issues/<n>/comments|events, actions/runs, ' +
+  'actions/runs/<n>, actions/runs/<n>/jobs, actions/jobs/<n>, actions/jobs/<n>/logs, commits/<sha>, commits/<sha>/status; ' +
+  'met een query ?<q> uit [A-Za-z0-9_.,:=&+-]) of "search/issues?q=repo:{owner}/{repo}+<rest>" (<rest> uit [A-Za-z0-9_.,:+-], zonder OR, AND of NOT); opties alleen --paginate ' +
+  'en --jq <filter>, elk als los woord; het filter zonder stuurteken, expansie, onaangehaald *, ?, [ of { en zonder env, ' +
+  '$ENV, input, inputs, input_filename, $__loc__, import of include (spec rolhek-lezen/AC-21)';
+
+/**
+ * `gh api` van de reviewer (rolhek-lezen/AC-21): GET op één endpoint uit de vaste lijst, met alleen `--paginate` en
+ * `--jq <filter>`, elk als los woord en in willekeurige volgorde.
+ * @param {readonly Woord[]} woorden de woorden na `gh api`
+ */
+function apiLeesRefusal(woorden) {
+  /** @type {Woord[]} */
+  const endpoints = [];
+  for (let index = 0; index < woorden.length; index += 1) {
+    const woord = woorden[index] ?? GEEN_WOORD;
+    if (woord.word === '--jq') {
+      const filter = woorden[index + 1];
+      if (filter === undefined || !jqFilterToegestaan(filter)) return API_MELDING;
+      index += 1;
+    } else if (woord.word !== '--paginate') {
+      if (woord.word.startsWith('-')) return API_MELDING;
+      endpoints.push(woord);
+    }
+  }
+  const [endpoint] = endpoints;
+  return endpoints.length === 1 && endpoint !== undefined && apiEndpointToegestaan(endpoint) ? null : API_MELDING;
+}
+
+/**
+ * Het endpoint (AC-21): in zijn geheel tussen enkele of dubbele aanhalingstekens zonder `\`, niet geëxpandeerd en uit de lijst.
+ * @param {Woord} woord
+ */
+function apiEndpointToegestaan({ word, raw, expands }) {
+  const aangehaald = [`'${word}'`, `"${word}"`].includes(raw) && !raw.includes('\\');
+  if (!aangehaald || expands) return false;
+  if (API_ENDPOINT.test(word)) return true;
+  const rest = API_ZOEKEN.exec(word)?.[1];
+  return rest !== undefined && !/(?:repo|org|user):/i.test(rest) && !API_OPERATOR.test(rest);
+}
+
+/**
+ * Het filter van `--jq` (AC-21): geen stuurteken, geen expansie, geen onaangehaald glob- of brace-teken en geen naam uit
+ * `JQ_VERBODEN`; verder volledige jq.
+ * @param {Woord} woord
+ */
+function jqFilterToegestaan({ word, pattern, expands }) {
+  const stuurteken = [...word].some((teken) => teken.charCodeAt(0) < 0x20 || teken.charCodeAt(0) === 0x7f);
+  return !stuurteken && !expands && !/[*?[{]/.test(pattern) && !JQ_VERBODEN.test(word);
 }
 
 const REVIEWER_OPS = new Set(['(', ')', '&', '|&']);
@@ -2625,7 +2699,7 @@ const NETWERK_SANDBOX =
   'buiten deze vorm draait het in de sandbox, zonder token-proxy en signeerdienst (docs/ENVIRONMENT.md, "Cloud: commit, push, PR en bewijs")';
 // Deze voorvoegsels hebben hun eigen regel (`decideKitScript`).
 const NETWERK_EIGEN_REGEL = new Set(['pnpm pr:merge', 'pnpm pr:resolve', 'pnpm pr:log']);
-const GH_DELETE_VORM = 'gh api -X DELETE repos/{owner}/{repo}/git/refs/heads/<branch>';
+const GH_DELETE_VORM = 'gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<branch>"';
 // Substitutie, procesvervanging of heredoc/herestring: dan past het commando op geen patroon.
 const NETWERK_ONZEKER = /\$\(|`|<\(|>\(|<</;
 // `git push --delete|-d` (ook in een cluster) of een refspec met lege bron (`:x`, `+:x`).

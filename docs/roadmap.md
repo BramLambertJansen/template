@@ -214,6 +214,8 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
 - [ ] **Bekende gaten in het rolhek (R-ROL-10: vangnet, geen grens).** Het rolhek ziet niet: scripts in de repo, `node -e` en andere
   interpreters; voor de hoofdsessie `curl -K`, een kopie van `gh` onder een andere naam en `node_modules/.bin`; `find -exec`/`-execdir`/`-ok`; `sed -n` met het `w`- of
   `e`-commando voor elke rol behalve de reviewer (spec rolhek-lezen, OV-5);
+  `SHELL_TRICKS` leest geen aanhalingstekens en weigert voor elke subagent een aangehaald jq-filter met ` . `
+  (`select(. != null)` bij `gh api`, spec rolhek-lezen/AC-21, vals-positief);
   globs in paden (`rm src/api/routes/*.test.ts`, `sed -i … docs/adr/archief/0*.md`); symlinks en hardlinks (`ln -s test t && rm -rf t/`, `cp -l`);
   `git checkout <ref> <pad>` zonder `--`; `git -c core.pager=<cmd>` en andere `-c`-instellingen die een programma starten; `git -C <map>` en `cd x && …` binnen één commando (paden tellen vanaf de cwd van de payload); awk met `-f`, een variabel doel, `system()` of
   `| "cmd"`, afgekorte lange gawk-opties (`--sour=`, `--fi=`, `--incl=`; één helper voor afkortingen van lange opties in `shell.mjs`) en

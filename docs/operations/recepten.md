@@ -45,9 +45,10 @@ gelijk aan Lokaal.
 - Een log van een job kan tientallen kilobytes zijn; lees het opgeslagen bestand met de Read-tool en zoek op `##[error]`.
 - `gh pr …` en `gh issue …` werken in de cloud niet (GraphQL); `gh run view` werkt binnen de sandbox niet (leerpunt #679). De
   kaart gebruikt daarom `gh api`, dat lokaal en in de cloud buiten de sandbox draait (`sandbox.excludedCommands`).
-- Een subagent schrijft niet naar GitHub. De reviewer leest alleen `gh pr view|diff|checks|list|status`,
-  `gh run view|list|watch` en `gh issue view|list|status` (`SUBAGENT_GH` en de leeslijst van de reviewer in
-  `rails/hooks/lib/rolhek.mjs`); in de cloud werken die niet, dus daar levert de hoofdsessie de PR-gegevens aan.
+- Een subagent schrijft niet naar GitHub. Andere subagents lezen met `SUBAGENT_GH` en `gh api` (GET); de reviewer heeft een
+  eigen leeslijst (`rails/hooks/lib/rolhek.mjs`), in de cloud met de `gh api`-leesrecepten van deze kaart: endpoint tussen
+  aanhalingstekens, alleen `--paginate` en `--jq <filter>` (spec rolhek-lezen/AC-21). Niet `pulls/<nr>/reviews` en
+  `check-runs`: die weigert `permissions.deny`.
 - `main` bijhalen: een kale `git merge origin/main` maakt de commit binnen de sandbox, en in de cloud faalt dan het
   ondertekenen ("failed to write commit object"; gemeten op 22 november 2026). Met `--no-commit` blijft de merge in de index
   (met `MERGE_HEAD`) en maakt `git commit -F <bestand>` de commit buiten de sandbox; het bericht begint met `Merge ` of volgt
