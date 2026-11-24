@@ -95,6 +95,45 @@ describe.each(BESTAAND)('bestaand testbestand $naam: developer blijft vergrendel
   });
 });
 
+// Spec rolhek-leerpunten/AC-10 (#960): bij `bestaand` 'zonder-origin' wijst de weigering naar `git fetch origin`.
+describe('rolhek-leerpunten/AC-10 de weigering zonder origin noemt git fetch origin', () => {
+  const FETCHTEKST =
+    '; (origin/main en het anker onleesbaar, daarom telt elk testbestand als bestaand: draai git fetch origin) (spec rolhek-leerpunten/AC-10)';
+  const NIEUW_PAD = `${ROOT}/test/x/nieuw.test.ts`;
+  const editNieuw = {
+    tool_name: 'Edit',
+    tool_input: { file_path: NIEUW_PAD, old_string: 'a', new_string: 'b' },
+    agent_type: 'developer',
+  };
+  const beslisNieuw = (bestaand: Committed) =>
+    decide(editNieuw, {
+      root: ROOT,
+      cwd: ROOT,
+      config,
+      read: () => 'a',
+      committed: () => false,
+      bestaand: () => bestaand,
+      isDir: () => false,
+      branch: 'feat/x',
+    });
+
+  test('rolhek-leerpunten/AC-10 zonder-origin: deny met "is een bestaande test" en de fetchtekst erachter', () => {
+    const deny = beslisNieuw('zonder-origin').deny.join('\n');
+    expect(deny).toContain('is een bestaande test');
+    expect(deny).toContain(FETCHTEKST);
+  });
+
+  test('rolhek-leerpunten/AC-10 regressie: bestaand false geeft geen "is een bestaande test"', () => {
+    expect(bestaandeTest(beslisNieuw(false))).toEqual([]);
+  });
+
+  test('rolhek-leerpunten/AC-10 regressie: bestaand true blijft een deny, zonder de fetchtekst', () => {
+    const deny = beslisNieuw(true).deny.join('\n');
+    expect(deny).toContain('is een bestaande test');
+    expect(deny).not.toContain('git fetch origin');
+  });
+});
+
 describe('ctx zonder bestaand en fixtures', () => {
   test('een ctx zonder `bestaand` houdt elk testbestand op schijf vergrendeld (faalt dicht)', () => {
     const d = decide(edit('developer'), {

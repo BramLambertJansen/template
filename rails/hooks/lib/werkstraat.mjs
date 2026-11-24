@@ -10,7 +10,10 @@ import { claudeVersieMelding } from './claude-versie.mjs';
  * @typedef {{ timeout?: number, env?: Record<string, string> }} RunOptions
  * @typedef {{ run: (command: string, args: readonly string[], options?: RunOptions) => RunResult, changed: () => string[],
  *   read: (rel: string) => string | null, onthoud?: (sleutel: string) => boolean,
- *   env?: Readonly<Record<string, string | undefined>> }} Deps
+ *   env?: Readonly<Record<string, string | undefined>>,
+ *   netwerkvormen?: { anker: readonly string[], lokaal: readonly string[] | undefined } | undefined }} Deps
+ * `netwerkvormen`: `sandbox.excludedCommands` uit het anker en uit de settings in `CLAUDE_PROJECT_DIR` (`lokaal`, `undefined`
+ * zonder die map); session-start meldt de patronen die lokaal ontbreken (spec rolhek-leerpunten/AC-7).
  * `onthoud`: true als de sleutel nieuw is (en legt hem vast), false als hij er al was; zonder `onthoud` telt alles als nieuw.
  * `env`: de omgeving van het hookproces (de aanroeper geeft `process.env`); zonder `env` geen Cloud-regel (spec cloud-netwerkvorm).
  * @typedef {{ exit?: number, stdout?: string, stderr?: string }} HookResult
@@ -351,6 +354,19 @@ const CLOUD_REGEL =
   'Cloud: commit `git commit -F <bestand>`, push `git push origin HEAD`, PR via `mcp__github__create_pull_request`, elk als los commando.';
 
 /**
+ * Spec rolhek-leerpunten/AC-7 (#962): de ankerpatronen die in de lokale settings ontbreken, in ankervolgorde; zonder lokale
+ * lijst (geen `CLAUDE_PROJECT_DIR`) of zonder verschil geen melding.
+ * @param {Deps['netwerkvormen']} netwerkvormen
+ */
+function netwerkDrift(netwerkvormen) {
+  const lokaal = netwerkvormen?.lokaal;
+  if (netwerkvormen === undefined || lokaal === undefined) return '';
+  const ontbreekt = netwerkvormen.anker.filter((patroon) => !lokaal.includes(patroon));
+  if (ontbreekt.length === 0) return '';
+  return `De lokale .claude/settings.json wijkt af van main in sandbox.excludedCommands (ontbreekt: ${ontbreekt.join(', ')}); commit en push in de vorm die het rolhek eist draaien dan in de sandbox. Eigenaar: werk de hoofdcheckout bij naar main (spec rolhek-leerpunten/AC-7).`;
+}
+
+/**
  * SessionStart: de feiten als context (framework §8): branch, achterstand op main, open PR, open wijzigingen, een mislukte
  * e2e-uitslag en de doctor (stack uit in één regel); geen specslijst (die vraagt een agent met `feiten.mjs specs`). In een
  * cloudsessie (`CLAUDE_CODE_REMOTE=true` in `deps.env`) ook de Cloud-regel (spec cloud-netwerkvorm/AC-10).
@@ -376,6 +392,7 @@ export function sessionStart(deps) {
       doctor,
       claude,
       deps.env?.['CLAUDE_CODE_REMOTE'] === 'true' ? CLOUD_REGEL : '',
+      netwerkDrift(deps.netwerkvormen),
       'Vraag alleen taakrelevante feiten: node scripts/kit/feiten.mjs gates specs fase; componenten alleen bij UI (framework §8).',
     ]
       .filter((line) => line !== '')
