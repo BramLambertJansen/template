@@ -4,7 +4,7 @@
 // Een nieuwe weigerregel krijgt een lid in de union en een basisrij in test/hooks/rolhek-aanvalscorpus.ts, zodat elke
 // shellvorm uit het corpus ook tegen die regel draait (spec rolhek-aanvalscorpus).
 import path from 'node:path';
-import { gitSubcommand, globTekstRegex, ONZEKERE_TEKST, parseCommands, programName, splitCommand, tmpdirLetterlijk, tmpdirWoord, tokenize, writeTargets, zetVariabele } from './shell.mjs';
+import { gitSubcommand, globTekstRegex, heredocsBeide, ONZEKERE_TEKST, parseCommands, programName, splitCommand, tmpdirLetterlijk, tmpdirWoord, tokenize, tokensBeide, writeTargets, zetVariabele } from './shell.mjs';
 import { GIT_VORMEN, gitLeesvorm, insideRepo, lezerPaden, pathspecBinnen } from './rolhek-lezers.mjs';
 import { gebouwdRegel } from './ac-dekking.mjs';
 import { A4_MELDING, archiefBron, beslisOvergang, documentInfo, documentKind, isArchief, isHerschrijving } from './document-state.mjs';
@@ -244,7 +244,7 @@ const COMPOUND_BEGIN = new Set(['{', '}', 'do', 'done', 'fi', 'esac', 'then', 'e
 
 /** Heeft het commando een groep (`(`, `)`) of een compound (`{ …; }`, `for`/`if`/`case`)? @param {string} command @param {readonly Command[]} segmenten */
 function heeftGroep(command, segmenten) {
-  if (tokenize(command).some(({ kind, value }) => kind === 'op' && (value === '(' || value === ')'))) return true;
+  if (tokensBeide(command).some(({ kind, value }) => kind === 'op' && (value === '(' || value === ')'))) return true;
   return segmenten.some(({ words }) => COMPOUND_BEGIN.has(words[0] ?? ''));
 }
 
@@ -610,6 +610,16 @@ const TEST_FILES = ['**/*.test.*', '**/*.spec.*', 'db/tests/**'];
 // bestand daaronder dat als testbestand heet.
 const LOCKED_HELPERS = ['test/rails/fixtures/**', 'test/setup/**'];
 
+// Spec rolhek-herstel/AC-3 (leerpunt #688): het rolhek leest het testakkoord in een gemergede spec niet; een subagent
+// krijgt de route via de hoofdsessie, die de vraag aan de eigenaar krijgt.
+const TESTAKKOORD =
+  '; noemt een gemergede spec het akkoord (Raakt ook), dan doet de hoofdsessie deze wijziging: zij krijgt de vraag aan de eigenaar (spec rolhek-herstel/AC-3)';
+
+/** @param {string} reden @param {string} role */
+function testakkoord(reden, role) {
+  return role === 'hoofdsessie' ? reden : `${reden}${TESTAKKOORD}`;
+}
+
 /**
  * Bestaande test of hulpbestand: verwijderen, skippen of gevallen weghalen vraagt akkoord van de eigenaar, net als een
  * fixture of setup wijzigen; een andere wijziging meldt het rolhek.
@@ -625,11 +635,11 @@ function existingTest({ rel, change, role }, ctx, decision) {
   if (LOCKED_HELPERS.some((glob) => globMatch(glob, rel))) {
     gate(decision, role, `${rel} is een fixture of setup: wijzigen of verwijderen alleen met akkoord van de eigenaar (WS-02)`);
   } else if (change.kind === 'delete') {
-    gate(decision, role, `${rel} is een bestaande test: verwijderen alleen met akkoord van de eigenaar (AGENTS.md)`);
+    gate(decision, role, testakkoord(`${rel} is een bestaande test: verwijderen alleen met akkoord van de eigenaar (AGENTS.md)`, role));
   } else if (risk === 'skip') {
-    gate(decision, role, `${rel}: een test skippen alleen met akkoord van de eigenaar (AGENTS.md)`);
+    gate(decision, role, testakkoord(`${rel}: een test skippen alleen met akkoord van de eigenaar (AGENTS.md)`, role));
   } else if (risk === 'removed') {
-    gate(decision, role, `${rel}: testgevallen weghalen alleen met akkoord van de eigenaar (AGENTS.md)`);
+    gate(decision, role, testakkoord(`${rel}: testgevallen weghalen alleen met akkoord van de eigenaar (AGENTS.md)`, role));
   } else if (helper) {
     decision.context.push(`${rel}: hulpbestand gewijzigd: noem het met reden in de PR (AGENTS.md, framework §8).`);
   } else if (role === 'developer') {
@@ -944,7 +954,7 @@ function volgendeMap({ argv, expanded }, cwd, root) {
 
 /** @param {string} command @param {string} cwd @returns {MapStand} */
 function mapStand(command, cwd) {
-  const haakjes = tokenize(command).some(({ kind, value }) => kind === 'op' && (value === '(' || value === ')'));
+  const haakjes = tokensBeide(command).some(({ kind, value }) => kind === 'op' && (value === '(' || value === ')'));
   return { nu: [cwd], alle: [cwd], voor: '', haakjes };
 }
 
@@ -1033,16 +1043,17 @@ function envSplitsString(words) {
  * @returns {string[]}
  */
 function substitutions(command) {
-  /** @type {import('./shell.mjs').HeredocBody[]} */
-  const bodies = [];
-  tokenize(command, bodies);
-  const letterlijk = bodies.filter((body) => body.letterlijk);
+  // Spec rolhek-herstel/AC-4 (review B3): een body valt alleen buiten beeld als hij in beide lezingen letterlijk is.
+  const [nieuw, oud] = heredocsBeide(command).map((bodies) => bodies.filter((body) => body.letterlijk));
+  /** @param {import('./shell.mjs').HeredocBody[]} lijst @param {number} index */
+  const binnen = (lijst = [], index) => lijst.find(({ start, end }) => index >= start && index < end);
   /** @type {string[]} */
   const found = [];
   for (let index = 0; index < command.length; index += 1) {
-    const body = letterlijk.find(({ start, end }) => index >= start && index < end);
-    if (body !== undefined) {
-      index = body.end - 1;
+    const body = binnen(nieuw, index);
+    const bodyOud = binnen(oud, index);
+    if (body !== undefined && bodyOud !== undefined) {
+      index = Math.min(body.end, bodyOud.end) - 1;
       continue;
     }
     const close = command.startsWith('$(', index) ? matchingParen(command, index + 2)
@@ -1348,17 +1359,42 @@ const REVIEWER_READS = {
   'pnpm leespad': { flags: ['--json'], values: ['--ref', '--basis'], positional: 0 },
   'pnpm meting': { flags: ['--json', '--pr-tabel', '--trend', '--schaduw', '--help'], values: ['--branch', '--sessie'], positional: 0 },
 };
+
+/**
+ * De zoekvormen van de reviewer (spec rolhek-herstel/AC-2): de kop van elke lezer met `--search` en `search/issues` voor
+ * `gh api`. De test haalt elke vorm langs dezelfde aanvallentabel.
+ * @type {readonly string[]}
+ */
+export const ZOEKVORMEN = [
+  ...Object.entries(REVIEWER_READS).flatMap(([kop, { values }]) => (values.includes('--search') ? [kop] : [])),
+  'search/issues',
+];
 // Geen `$`, backtick, `;`, spatie of aanhalingsteken: de shell van pnpm voert niets uit een waarde uit.
 const SAFE_VALUE = /^[A-Za-z0-9_./,:-]+$/;
 
 /**
  * De waarde van `--search` bij `gh pr list` en `gh issue list` (AC-16): één woord dat spaties, aanhalingstekens en `:` mag
  * bevatten, zonder stuurteken (U+0000 tot U+001F, U+007F) en zonder expansie; gh krijgt het woord direct, zonder tweede shell.
- * Geen kwalificatie `repo:`, `org:` of `user:` (een andere repository), hoofdletterongevoelig en waar dan ook in de waarde.
+ * Geen kwalificatie `repo:`, `org:` of `user:` (een andere repository) en geen losse `OR`, `AND` of `NOT`, hoofdletterongevoelig;
+ * de woorden komen uit een splitsing op witruimte en haakjes (`zoekScopeFout`, spec rolhek-herstel/AC-1).
  * @param {string} waarde @param {readonly string[]} expanded `Command.expanded`
  */
 function zoekwaarde(waarde, expanded) {
-  return waarde !== '' && !expanded.includes(waarde) && !/(?:repo|org|user):/i.test(waarde) &&![...waarde].some((teken) => teken.charCodeAt(0) < 0x20 || teken.charCodeAt(0) === 0x7f);
+  const stuurteken = [...waarde].some((teken) => teken.charCodeAt(0) < 0x20 || teken.charCodeAt(0) === 0x7f);
+  return waarde !== '' && !expanded.includes(waarde) && !stuurteken && !zoekScopeFout(waarde.split(/[\s()]+/));
+}
+
+// Spec rolhek-herstel/AC-1: de aanvulling op elke weigering van een zoekvorm van de reviewer.
+const ZOEKREGEL = 'zonder losse OR, AND of NOT en zonder repo:, org: of user: (spec rolhek-herstel/AC-1)';
+
+/**
+ * De gedeelde scopetoets van elke zoekvorm van de reviewer (spec rolhek-herstel/AC-1): waar als een woord,
+ * hoofdletterongevoelig, precies `OR`, `AND` of `NOT` is (verruimt de zoekopdracht buiten `repo:`), of `repo:`, `org:` of
+ * `user:` bevat (een andere repository). De aanroeper splitst: `--search` op witruimte en haakjes, `gh api` op `+` en haakjes.
+ * @param {readonly string[]} woorden
+ */
+export function zoekScopeFout(woorden) {
+  return woorden.some((woord) => /^(?:or|and|not)$/i.test(woord) || /(?:repo|org|user):/i.test(woord));
 }
 
 /**
@@ -1427,7 +1463,8 @@ function leeslijstRefusal(kern, { parsed, werkmapInRepo, feiten }) {
   if (readArgsAllowed(kern.slice(head.split(' ').length), read, parsed.expanded ?? [])) return null;
   const opties = [...read.flags, ...read.values.map((value) => `${value} <waarde>`)];
   const lijst = opties.length > 0 ? opties.join(', ') : 'geen opties; paden na --';
-  return `reviewer: \`${head}\` alleen met: ${lijst}; waarden alleen [A-Za-z0-9_./,:-] (spec rolhek-lezen; framework §8)`;
+  const zoek = read.values.includes('--search') ? `; --search ${ZOEKREGEL}` : '';
+  return `reviewer: \`${head}\` alleen met: ${lijst}; waarden alleen [A-Za-z0-9_./,:-] (spec rolhek-lezen; framework §8)${zoek}`;
 }
 
 // rolhek-lezen/AC-21: de endpoints van `gh api` voor de reviewer, met `{owner}` en `{repo}` letterlijk (gh vult de
@@ -1435,9 +1472,9 @@ function leeslijstRefusal(kern, { parsed, werkmapInRepo, feiten }) {
 const API_N = '[0-9]{1,12}';
 const API_SHA = '[0-9a-f]{7,40}';
 const API_QUERY = '[A-Za-z0-9_.,:=&+-]+';
-// De rest van een zoekopdracht: zonder `&` en `=` (geen tweede `q` of `advanced_search`) en zonder losse operator (API_OPERATOR).
-const API_ZOEK_REST = '[A-Za-z0-9_.,:+-]+';
-const API_OPERATOR = /(?:^|\+)(?:or|and|not)(?:\+|$)/i;
+// De rest van een zoekopdracht: zonder `&` en `=` (geen tweede `q` of `advanced_search`); `zoekScopeFout` toetst de woorden.
+// Haakjes mogen (rolhek-herstel/AC-1): `zoekScopeFout` splitst er ook op, zodat `x+OR(is:private)` een losse OR blijft.
+const API_ZOEK_REST = '[A-Za-z0-9_.,:+()-]+';
 const API_PADEN = [
   `pulls(?:/${API_N}(?:/(?:comments|files|commits))?)?`,
   `issues/${API_N}(?:/(?:comments|events))?`,
@@ -1454,7 +1491,8 @@ const API_MELDING =
   'reviewer: `gh api` alleen met precies één endpoint, in zijn geheel tussen aanhalingstekens: "repos/{owner}/{repo}/<pad>" ' +
   '(<pad>: pulls, pulls/<n>, pulls/<n>/comments|files|commits, issues/<n>, issues/<n>/comments|events, actions/runs, ' +
   'actions/runs/<n>, actions/runs/<n>/jobs, actions/jobs/<n>, actions/jobs/<n>/logs, commits/<sha>, commits/<sha>/status; ' +
-  'met een query ?<q> uit [A-Za-z0-9_.,:=&+-]) of "search/issues?q=repo:{owner}/{repo}+<rest>" (<rest> uit [A-Za-z0-9_.,:+-], zonder OR, AND of NOT); opties alleen --paginate ' +
+  'met een query ?<q> uit [A-Za-z0-9_.,:=&+-]) of "search/issues?q=repo:{owner}/{repo}+<rest>" (<rest> uit [A-Za-z0-9_.,:+()-], ' +
+  `${ZOEKREGEL}); opties alleen --paginate ` +
   'en --jq <filter>, elk als los woord; het filter zonder stuurteken, expansie, onaangehaald *, ?, [ of { en zonder env, ' +
   '$ENV, input, inputs, input_filename, $__loc__, import of include (spec rolhek-lezen/AC-21)';
 
@@ -1490,7 +1528,7 @@ function apiEndpointToegestaan({ word, raw, expands }) {
   if (!aangehaald || expands) return false;
   if (API_ENDPOINT.test(word)) return true;
   const rest = API_ZOEKEN.exec(word)?.[1];
-  return rest !== undefined && !/(?:repo|org|user):/i.test(rest) && !API_OPERATOR.test(rest);
+  return rest !== undefined && !zoekScopeFout(rest.split(/[+()]+/));
 }
 
 /**
@@ -1512,7 +1550,7 @@ const REVIEWER_OPS = new Set(['(', ')', '&', '|&']);
  */
 function reviewerOperatoren(command, role) {
   if (role !== 'reviewer') return [];
-  return tokenize(command).some(({ kind, value }) => kind === 'op' && REVIEWER_OPS.has(value)) ? [VORM_MELDING] : [];
+  return tokensBeide(command).some(({ kind, value }) => kind === 'op' && REVIEWER_OPS.has(value)) ? [VORM_MELDING] : [];
 }
 
 /**
@@ -2907,10 +2945,12 @@ function pnpmScript(args) {
  */
 function pastOpPatroon(command, { woorden, open }) {
   if (NETWERK_ONZEKER.test(command)) return false;
-  const tokens = tokenize(command);
-  if (tokens.some(({ kind }) => kind !== 'word') || !alleTekstGelezen(command, tokens)) return false;
-  if (open ? tokens.length < woorden.length : tokens.length !== woorden.length) return false;
-  return woorden.every((woord, index) => tokens[index]?.value === woord);
+  // Beide lezingen van spec rolhek-herstel/AC-4 moeten passen (review N1).
+  return [tokenize(command), tokenize(command, [], true)].every((tokens) => {
+    if (tokens.some(({ kind }) => kind !== 'word') || !alleTekstGelezen(command, tokens)) return false;
+    if (open ? tokens.length < woorden.length : tokens.length !== woorden.length) return false;
+    return woorden.every((woord, index) => tokens[index]?.value === woord);
+  });
 }
 
 /**

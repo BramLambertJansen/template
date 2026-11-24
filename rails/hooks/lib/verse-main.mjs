@@ -30,13 +30,13 @@ const FETCH_NO_UPDATE = /^--(?:dr|refm|pref|negotiate-o)/;
  * @param {string} command
  * @returns {Segment[]}
  */
-function segments(command) {
+function segments(command, oud = false) {
   /** @type {Segment[]} */
   const found = [];
   /** @type {Segment} */
   let current = { words: [], before: null };
   let skipNext = false;
-  for (const token of tokenize(command)) {
+  for (const token of tokenize(command, [], oud)) {
     if (token.kind === 'op' && SEPARATORS.has(token.value)) {
       // `&&` gevolgd door een regeleinde of `(` blijft `&&`: er staat nog geen commando tussen.
       const continues = current.words.length === 0 && current.before !== null && ['\n', '('].includes(token.value);
@@ -152,7 +152,12 @@ function withoutTimeout(words) {
  * @returns {string[]}
  */
 export function staleBranchStart(command) {
-  const parts = segments(command);
+  // Beide lezingen van spec rolhek-herstel/AC-4: een weigering in een van beide telt (review N1).
+  return [...new Set([...staleIn(segments(command)), ...staleIn(segments(command, true))])];
+}
+
+/** @param {Segment[]} parts @returns {string[]} */
+function staleIn(parts) {
   /** @type {string[]} */
   const found = [];
   let fetched = false;
