@@ -27,6 +27,12 @@ export const gates = [
     snel: true,
   },
   {
+    script: 'check:schillen',
+    bewaakt:
+      'elke schil op ShellFrame heeft een shellContract-suite, elke layoutroute rendert een geregistreerde schil en ShellFrame staat alleen in een schil in src/core/web/ui of src/web/ui (spec schillen, deel B)',
+    snel: true,
+  },
+  {
     script: 'check:migrations',
     bewaakt:
       'geen gecommitte migratie gewijzigd of verwijderd t.o.v. origin/main, namen en versies uniek (framework §10)',

@@ -1,7 +1,7 @@
 import { createMemoryHistory, createRootRoute, createRouter, RouterContextProvider } from '@tanstack/react-router';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { StrictMode, createElement, type ComponentType, type ReactNode } from 'react';
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { unsafeCast } from '../../shared/unsafe-cast.ts';
 import { uiTexts } from '../copy/ui.ts';
 import { CenteredCard } from './centered-card.tsx';
@@ -68,11 +68,28 @@ function hiddenInPrint(element: Element, root: Element): boolean {
   return false;
 }
 
-export function shellContract<Props extends ContractShellProps>(
+// Eén geval van de contracttest: naam en een run die bij een schending gooit. De aanroeper ruimt na elk geval op
+// (cleanup, vi.restoreAllMocks); shellContract doet dat in afterEach.
+export interface ShellContractCase {
+  readonly naam: string;
+  readonly run: () => Promise<void>;
+}
+
+// Intern: een geval mag synchroon zijn; shellContractCases maakt er een Promise van.
+interface Geval {
+  readonly naam: string;
+  readonly run: () => void | Promise<void>;
+}
+
+type ShellFactory = (routeKey: string, title: string) => ReactNode;
+
+// De gevallen van de contracttest los (spec schillen, AC-10): zo toetst een test dat een kapotte schil de suite laat falen.
+// shellContract registreert precies deze gevallen als tests.
+export function shellContractCases<Props extends ContractShellProps>(
   Schil: ComponentType<Props>,
   opties: ShellContractOptions<Props>,
-): void {
-  const shell = (routeKey: string, title: string) =>
+): readonly ShellContractCase[] {
+  const shell: ShellFactory = (routeKey, title) =>
     createElement(
       Schil,
       unsafeCast<Props>(
@@ -80,84 +97,111 @@ export function shellContract<Props extends ContractShellProps>(
         'props zonder children en routeKey plus die twee vormen samen de props van de schil',
       ),
     );
-
-  describe(`shellContract: ${Schil.displayName ?? Schil.name}`, () => {
-    beforeEach(() => {
+  // Elk geval met een eigen router, ook buiten shellContract.
+  return [...structureCases(shell), ...focusCases(shell)].map((geval) => ({
+    naam: geval.naam,
+    run: async () => {
       router = testRouter();
-    });
+      await geval.run();
+    },
+  }));
+}
+
+export function shellContract<Props extends ContractShellProps>(
+  Schil: ComponentType<Props>,
+  opties: ShellContractOptions<Props>,
+): void {
+  describe(`shellContract: ${Schil.displayName ?? Schil.name}`, () => {
     afterEach(() => {
       cleanup();
       vi.restoreAllMocks();
     });
-    structureTests(shell);
-    focusTests(shell);
+    for (const geval of shellContractCases(Schil, opties)) test(geval.naam, geval.run);
   });
 }
 
-type ShellFactory = (routeKey: string, title: string) => ReactNode;
-
-function structureTests(shell: ShellFactory) {
-  test('precies één main; de skip-link is de eerste Tab-stop en zet de focus op main', () => {
-    const { container } = render(wrap(shell('/', 'Home'), {}));
-    expect(screen.getAllByRole('main')).toHaveLength(1);
-    const first = container.querySelector('a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
-    expect(first?.textContent).toBe(uiTexts.skipToContent);
-    if (!(first instanceof HTMLElement)) throw new Error('geen focusbaar element');
-    fireEvent.click(first);
-    expect(document.activeElement).toBe(screen.getByRole('main'));
-  });
-
-  test('OfflineNotice staat er precies één keer', () => {
-    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
-    render(wrap(shell('/', 'Home'), {}));
-    act(() => {
-      window.dispatchEvent(new Event('offline'));
-    });
-    expect(screen.getAllByText(uiTexts.offline)).toHaveLength(1);
-  });
-
-  test('de schil rendert geen meldingen: geen [data-toaster] binnen de schil', () => {
-    const { container } = render(wrap(shell('/', 'Home'), {}));
-    expect(shellRoot(container).querySelector('[data-toaster]')).toBeNull();
-    expect(container.querySelectorAll('[data-toaster]')).toHaveLength(1);
-  });
-
-  test('bij afdrukken zijn skip-link, navigatie en balk verborgen', () => {
-    const { container } = render(wrap(shell('/', 'Home'), {}));
-    const root = shellRoot(container);
-    const parts = [
-      screen.getByRole('link', { name: uiTexts.skipToContent }),
-      ...root.querySelectorAll('header, nav, aside'),
-    ];
-    expect(root.querySelector('header')).not.toBeNull();
-    expect(parts.filter((part) => !hiddenInPrint(part, root)).map((part) => part.outerHTML)).toStrictEqual([]);
-  });
+function structureCases(shell: ShellFactory): Geval[] {
+  return [
+    {
+      naam: 'precies één main; de skip-link is de eerste Tab-stop en zet de focus op main',
+      run: () => {
+        const { container } = render(wrap(shell('/', 'Home'), {}));
+        expect(screen.getAllByRole('main')).toHaveLength(1);
+        const first = container.querySelector('a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        expect(first?.textContent).toBe(uiTexts.skipToContent);
+        if (!(first instanceof HTMLElement)) throw new Error('geen focusbaar element');
+        fireEvent.click(first);
+        expect(document.activeElement).toBe(screen.getByRole('main'));
+      },
+    },
+    {
+      naam: 'OfflineNotice staat er precies één keer',
+      run: () => {
+        vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+        render(wrap(shell('/', 'Home'), {}));
+        act(() => {
+          window.dispatchEvent(new Event('offline'));
+        });
+        expect(screen.getAllByText(uiTexts.offline)).toHaveLength(1);
+      },
+    },
+    {
+      naam: 'de schil rendert geen meldingen: geen [data-toaster] binnen de schil',
+      run: () => {
+        const { container } = render(wrap(shell('/', 'Home'), {}));
+        expect(shellRoot(container).querySelector('[data-toaster]')).toBeNull();
+        expect(container.querySelectorAll('[data-toaster]')).toHaveLength(1);
+      },
+    },
+    {
+      naam: 'bij afdrukken zijn skip-link, navigatie en balk verborgen',
+      run: () => {
+        const { container } = render(wrap(shell('/', 'Home'), {}));
+        const root = shellRoot(container);
+        const parts = [
+          screen.getByRole('link', { name: uiTexts.skipToContent }),
+          ...root.querySelectorAll('header, nav, aside'),
+        ];
+        expect(root.querySelector('header')).not.toBeNull();
+        expect(parts.filter((part) => !hiddenInPrint(part, root)).map((part) => part.outerHTML)).toStrictEqual([]);
+      },
+    },
+  ];
 }
 
-function focusTests(shell: ShellFactory) {
-  test('na een wissel van routeKey staat de focus op de h1; bij het eerste scherm niet (zonder provider)', async () => {
-    const { rerender } = render(wrap(shell('/', 'Home'), {}));
-    await nextFrame();
-    expect(document.activeElement).toBe(document.body);
-    rerender(wrap(shell('/b', 'Later'), {}));
-    await nextFrame();
-    expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1, name: 'Later' }));
-  });
-
-  test('eerste weergave onder StrictMode met ShellSessionProvider: de focus blijft op body', async () => {
-    render(wrap(shell('/', 'Home'), { session: true, strict: true }));
-    await nextFrame();
-    await nextFrame();
-    expect(document.activeElement).toBe(document.body);
-  });
-
-  test('mount nadat het document al een scherm toonde (StrictMode): de focus staat op de h1', async () => {
-    const setup = { session: true, strict: true };
-    const { rerender } = render(wrap(<CenteredCard title="Inloggen">formulier</CenteredCard>, setup));
-    await nextFrame();
-    rerender(wrap(shell('/', 'Dashboard'), setup));
-    await nextFrame();
-    await nextFrame();
-    expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1, name: 'Dashboard' }));
-  });
+function focusCases(shell: ShellFactory): Geval[] {
+  return [
+    {
+      naam: 'na een wissel van routeKey staat de focus op de h1; bij het eerste scherm niet (zonder provider)',
+      run: async () => {
+        const { rerender } = render(wrap(shell('/', 'Home'), {}));
+        await nextFrame();
+        expect(document.activeElement).toBe(document.body);
+        rerender(wrap(shell('/b', 'Later'), {}));
+        await nextFrame();
+        expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1, name: 'Later' }));
+      },
+    },
+    {
+      naam: 'eerste weergave onder StrictMode met ShellSessionProvider: de focus blijft op body',
+      run: async () => {
+        render(wrap(shell('/', 'Home'), { session: true, strict: true }));
+        await nextFrame();
+        await nextFrame();
+        expect(document.activeElement).toBe(document.body);
+      },
+    },
+    {
+      naam: 'mount nadat het document al een scherm toonde (StrictMode): de focus staat op de h1',
+      run: async () => {
+        const setup = { session: true, strict: true };
+        const { rerender } = render(wrap(<CenteredCard title="Inloggen">formulier</CenteredCard>, setup));
+        await nextFrame();
+        rerender(wrap(shell('/', 'Dashboard'), setup));
+        await nextFrame();
+        await nextFrame();
+        expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1, name: 'Dashboard' }));
+      },
+    },
+  ];
 }
