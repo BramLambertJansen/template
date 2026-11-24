@@ -60,8 +60,9 @@ een PR-titel of -body is volgens R-ROL-11 een bewuste valse melding (R-ROL-10 la
   `gh issue list --search "a and b"` en `gh issue list --search "NOT x"`. Door gaan: `gh issue list --search "leerpunt
   rolhek"`, `gh pr list --search "fix ordening"`, `gh issue list --search "operator"` en `gh issue list --search "Notitie"`.
   Toets: `test/hooks/rolhek-zoekwaarde.test.ts` (nieuw)
-- **rolhek-herstel/AC-2** — `rails/hooks/lib/rolhek.mjs` exporteert `ZOEKVORMEN`: de zoekvormen van de reviewer, afgeleid
-  uit `REVIEWER_READS` (elke lezer met `--search`) plus de `gh api`-vorm `search/issues?q=repo:{owner}/{repo}+<rest>`. Eén
+- **rolhek-herstel/AC-2** — `rails/hooks/lib/rolhek.mjs` exporteert `ZOEKVORMEN`: een lijst teksten met de zoekvormen van
+  de reviewer, afgeleid uit `REVIEWER_READS` (de kop van elke lezer met `--search`, nu `gh issue list` en `gh pr list`) plus
+  `search/issues` voor de `gh api`-vorm `search/issues?q=repo:{owner}/{repo}+<rest>`. Eén
   tabel met aanvallen draait tegen elke vorm uit `ZOEKVORMEN`: losse `OR`, `AND` en `NOT` in elke hoofdlettervorm, ook
   direct naast een haakje, en een tweede `repo:`, `org:` of `user:`; voor `gh api` ook een tweede `q` via `&` en `=`. Elke
   aanval wordt in elke vorm geweigerd, en de test is rood als `ZOEKVORMEN` een vorm bevat zonder rij in de tabel. Toets:
@@ -77,7 +78,8 @@ een PR-titel of -body is volgens R-ROL-11 een bewuste valse melding (R-ROL-10 la
   aan het begin van een woord binnen `$(…)` of `[[ … ]]` leest `parseCommands` beide lezingen (commentaar tot het
   regeleinde, en geen commentaar) en geeft de vereniging van de segmenten. Voor elk van de zes vormen uit het Doel en voor de
   varianten `${x/;#/}; rm -rf .claude/hooks`, `echo $(true #) <<E⏎rm -rf .claude/hooks⏎E⏎)` en
-  `[[ -n x #]] <<E⏎rm -rf .claude/hooks⏎E⏎` geeft `parseCommands` een segment met `rm` als eerste woord. Ook geeft `decide` voor de hoofdsessie een vraag en voor een
+  `[[ -n x #⏎]] && rm -rf .claude/hooks` geeft `parseCommands` een segment met `rm` als eerste woord (`[[ -n x #]] <<E…`
+  is in bash een syntaxfout en voert niets uit; gemeten met bash 5.2). Ook geeft `decide` voor de hoofdsessie een vraag en voor een
   subagent een weigering, net als voor het losse `rm -rf .claude/hooks`. Toets: `test/hooks/shell-commentaar.test.ts` (nieuw)
 - **rolhek-herstel/AC-5** — Een differentiële test draait elke rij van een vast corpus in echte bash, via de kooi
   (`inKooi`, R-TOOL-03). Binnen de kooi start `env -i PATH=<lege map> BASH_ENV=<prelude> bash --restricted --noprofile
@@ -85,7 +87,9 @@ een PR-titel of -body is volgens R-ROL-11 een bewuste valse melding (R-ROL-10 la
   alleen in de omgeving van die binnenste aanroep (in restricted mode is `PATH` daarna alleen-lezen). Restricted mode laat
   een commandonaam met `/` niets uitvoeren en weigert een redirect naar een bestand. De prelude zet `enable -n` voor elke
   builtin behalve `builtin`, `enable`, `trap`, `set`, `shopt`, `return` en `printf`. Een `command_not_found_handle` met een
-  recursiebeveiliging drukt zijn argumenten met NUL gescheiden af; dat is de bron voor elke commandonaam zonder `/`. Een
+  recursiebeveiliging schrijft de commandonaam (`$1`), gevolgd door NUL, naar bestandsdescriptor 3, die de buitenste
+  shell opent (`3>` naar een bestand in de werkmap): binnen `$(…)` of backticks vangt de aanroeper stdout op. Dat is de
+  bron voor elke commandonaam zonder `/`. Een
   DEBUG-trap (`set -T`) vult aan met alleen de namen met `/`: het eerste woord van `$BASH_COMMAND` na het afpellen van
   toewijzingen vooraan. Elke rij draait vier keer: met handlerstatus 0 en 1, en met `-O extglob` en `+O extglob`. De
   waargenomen commandonamen zijn de vereniging van die vier runs. Per rij moet elke waargenomen naam ook het eerste woord
