@@ -38,7 +38,8 @@ afschermt, is geen reden om over te slaan: die test faalt. Een project zonder de
 
 - **Melding lokaal:** precies één regel na de run, `⚠ overgeslagen: <n> tests, want de kooi kan hier niet starten (<reden>);
   ze draaien in CI, waar overslaan rood is (ADR 0088)` (`test/setup/skip-reporter.ts:44`). `gate:fast` toont regels die met
-  `⚠ ` beginnen ook onder een groene gate (`scripts/kit/gate-fast.mjs:76`).
+  `⚠ ` beginnen ook onder een groene gate (`scripts/kit/gate-fast.mjs:77`). Is `test:unit` rood, dan eindigt de uitvoer
+  met `Falende tests:` en één regel per falende test, hooguit 20 (`scripts/kit/gate-fast.mjs:144`, leerpunt #957).
 - **Rood in CI** (`GITHUB_ACTIONS` of `CI` met een niet-lege waarde anders dan `false` of `0`, `test/setup/vermogen.ts:17`):
   kan de kooi niet starten, dan faalt de setup en draait geen test (`test/setup/vermogen.ts:29`); elke overgeslagen of
   todo-test in `unit` en `web` geeft `✗ overgeslagen in CI: <bestand> > <naam>; in CI slaat geen test over (ADR 0088)` en een
