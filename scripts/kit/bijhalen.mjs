@@ -13,6 +13,7 @@ import {
   lstatSync,
   mkdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   rmdirSync,
   statSync,
@@ -150,6 +151,15 @@ function omgevingZonderGit() {
 
 const MAX_BUFFER = 512 * 1024 * 1024;
 
+/** Eerste niet-lege regel van een foutuitvoer, zonder vervolguitleg. @param {string} tekst @returns {string} */
+const eersteRegel = (tekst) =>
+  (
+    tekst
+      .split('\n')
+      .map((regel) => regel.trim())
+      .find((regel) => regel !== '') ?? ''
+  ).replace(/\s+/g, ' ');
+
 /**
  * Voert git uit zonder GIT_*-variabelen van de aanroeper (GIT_DIR, GIT_INDEX_FILE …). Een niet-nul status buiten
  * `toegestaan` is een fout met een korte melding, zonder stacktrace.
@@ -161,8 +171,7 @@ const MAX_BUFFER = 512 * 1024 * 1024;
 function git(root, args, toegestaan = []) {
   const r = spawnSync('git', args, { cwd: root, encoding: 'utf8', env: omgevingZonderGit(), maxBuffer: MAX_BUFFER });
   if (r.error !== undefined || r.status === null || (r.status !== 0 && !toegestaan.includes(r.status))) {
-    const tekst = (r.error?.message ?? r.stderr).trim().replace(/\s+/g, ' ');
-    throw new Error(`git ${args[0] ?? ''} faalt: ${tekst}`);
+    throw new Error(`git ${args[0] ?? ''} faalt: ${eersteRegel(r.error?.message ?? r.stderr)}`);
   }
   return { status: r.status, stdout: r.stdout, stderr: r.stderr };
 }
@@ -264,13 +273,43 @@ function metPad(pad, actie) {
   }
 }
 
-/** @param {string} root @returns {WerkmapIo} */
+/**
+ * Is een bestaande map tussen de root en het pad een symlink? Dan zou schrijven of verwijderen buiten de werkmap kunnen
+ * belanden (R-TOOL-03).
+ * @param {string} root @param {string} pad @returns {boolean}
+ */
+function heeftSymlinkVoorouder(root, pad) {
+  let map = root;
+  for (const deel of pad.split('/').slice(0, -1)) {
+    map = path.join(map, deel);
+    try {
+      if (lstatSync(map).isSymbolicLink()) return true;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+/** @param {string} root @param {string} pad */
+function eisGeenSymlinkVoorouder(root, pad) {
+  if (heeftSymlinkVoorouder(root, pad)) throw new Error('een map op het pad is een symlink');
+}
+
+/** De echte werkmap; schrijven en verwijderen volgen nooit een symlink in een voorouder. @param {string} root @returns {WerkmapIo} */
 function werkmapIo(root) {
   return {
     lees: (pad) => metPad(pad, () => leesBestand(path.join(root, pad))),
     schrijf: (pad, inhoud, uitvoerbaar) =>
-      metPad(pad, () => schrijfBestand(path.join(root, pad), { inhoud, uitvoerbaar })),
-    verwijder: (pad) => metPad(pad, () => verwijderBestand(root, pad)),
+      metPad(pad, () => {
+        eisGeenSymlinkVoorouder(root, pad);
+        schrijfBestand(path.join(root, pad), { inhoud, uitvoerbaar });
+      }),
+    verwijder: (pad) =>
+      metPad(pad, () => {
+        eisGeenSymlinkVoorouder(root, pad);
+        verwijderBestand(root, pad);
+      }),
   };
 }
 
@@ -301,6 +340,12 @@ function controleerGewoon(root, gewoon) {
     throw lijstMelding(
       '✗ bijhalen geweigerd: symlink of submodule op een gewijzigd pad:',
       bijzonder.map((w) => w.pad),
+    );
+  const viaSymlink = gewoon.filter((w) => heeftSymlinkVoorouder(root, w.pad));
+  if (viaSymlink.length > 0)
+    throw lijstMelding(
+      '✗ bijhalen geweigerd: een map op het pad is een symlink:',
+      viaSymlink.map((w) => w.pad),
     );
   const ongetrackt = gewoon.filter((w) => w.oudModus === GEEN && bestaat(path.join(root, w.pad)));
   if (ongetrackt.length > 0)
@@ -359,37 +404,96 @@ function voerUit(root, plan) {
     plan.sha,
     plan.wijzigingen.filter((w) => isBeschermd.has(w.pad)),
   );
-  const oudeIndex = git(root, ['write-tree']).stdout.trim();
   const io = werkmapIo(root);
-  /** @type {WerkmapStap[]} */
-  let herstel;
+  const voor = { bestanden: stappen.map((stap) => huidigeStap(io, stap.pad)), index: leesIndex(root) };
   try {
-    herstel = pasWerkmapToe(stappen, io);
+    pasWerkmapToe(stappen, io);
   } catch (fout) {
-    throw new Melding([`✗ bijhalen: schrijven faalt (${reden(fout)}); alles is teruggezet`]);
+    throw herstelMelding(`schrijven faalt (${reden(fout)})`, nietHersteld(voor.bestanden, io));
   }
   try {
     git(root, ['read-tree', plan.boom]);
     plan.refs();
   } catch (fout) {
-    herstelAlles(root, { plan, herstel, io, oudeIndex });
-    throw new Melding([`✗ bijhalen: ${reden(fout)}; alles is teruggezet`]);
+    throw herstelMelding(reden(fout), herstelAlles(plan, voor, io));
   }
-  git(root, ['update-index', '-q', '--refresh'], [1]);
+  try {
+    git(root, ['update-index', '-q', '--refresh'], [1]);
+  } catch {
+    // Alleen statinformatie; de stappen zijn geslaagd (K1).
+  }
   return blok;
 }
 
+/** @param {WerkmapIo} io @param {string} pad @returns {WerkmapStap} */
+function huidigeStap(io, pad) {
+  const staat = io.lees(pad);
+  return { pad, inhoud: staat?.inhoud ?? null, uitvoerbaar: staat?.uitvoerbaar ?? false };
+}
+
+/** Paden die niet (meer) op hun oude toestand staan. @param {readonly WerkmapStap[]} voor @param {WerkmapIo} io @returns {string[]} */
+function nietHersteld(voor, io) {
+  return voor
+    .filter((oud) => {
+      try {
+        const nu = huidigeStap(io, oud.pad);
+        if (oud.inhoud === null || nu.inhoud === null) return oud.inhoud !== nu.inhoud;
+        return !oud.inhoud.equals(nu.inhoud) || oud.uitvoerbaar !== nu.uitvoerbaar;
+      } catch {
+        return true;
+      }
+    })
+    .map((oud) => oud.pad);
+}
+
+/** @param {string} root @returns {{ vol: string, inhoud: Buffer | null }} */
+function leesIndex(root) {
+  const vol = gitPad(root, 'index');
+  return { vol, inhoud: bestaat(vol) ? readFileSync(vol) : null };
+}
+
+/** Zet het indexbestand byte voor byte terug als het veranderd is. @param {{ vol: string, inhoud: Buffer | null }} index */
+function herstelIndex({ vol, inhoud }) {
+  const nu = bestaat(vol) ? readFileSync(vol) : null;
+  if (inhoud === null || nu === null ? inhoud === nu : inhoud.equals(nu)) return;
+  if (inhoud === null) {
+    rmSync(vol, { force: true });
+    return;
+  }
+  const tijdelijk = `${vol}.bijhalen-herstel`;
+  writeFileSync(tijdelijk, inhoud);
+  renameSync(tijdelijk, vol);
+}
+
 /**
- * @param {string} root
- * @param {{ plan: Plan, herstel: WerkmapStap[], io: WerkmapIo, oudeIndex: string }} staat
+ * Zet refs, werkmap en index terug na een fout in stap 3 of 4; geeft wat niet terug kon.
+ * @param {Plan} plan
+ * @param {{ bestanden: WerkmapStap[], index: { vol: string, inhoud: Buffer | null } }} voor
+ * @param {WerkmapIo} io
+ * @returns {string[]}
  */
-function herstelAlles(root, { plan, herstel, io, oudeIndex }) {
+function herstelAlles(plan, voor, io) {
+  /** @type {string[]} */
+  const mislukt = [];
   try {
     plan.herstelRefs();
-  } finally {
-    herstelStil(herstel, io);
-    git(root, ['read-tree', oudeIndex]);
+  } catch (fout) {
+    mislukt.push(`refs (${reden(fout)})`);
   }
+  herstelStil(voor.bestanden, io);
+  mislukt.push(...nietHersteld(voor.bestanden, io));
+  try {
+    herstelIndex(voor.index);
+  } catch (fout) {
+    mislukt.push(`index (${reden(fout)})`);
+  }
+  return mislukt;
+}
+
+/** @param {string} tekst @param {string[]} mislukt @returns {Melding} */
+function herstelMelding(tekst, mislukt) {
+  if (mislukt.length === 0) return new Melding([`✗ bijhalen: ${tekst}; alles is teruggezet`]);
+  return lijstMelding(`✗ bijhalen: ${tekst}; niet teruggezet:`, mislukt);
 }
 
 /**
@@ -434,14 +538,24 @@ function mergeBoom(root, head, doel) {
 function mergeRefs(root, doel, branch) {
   const mergeHead = gitPad(root, 'MERGE_HEAD');
   const mergeMsg = gitPad(root, 'MERGE_MSG');
+  const geraakt = { head: false, msg: false };
+  /** @type {Buffer | null} */
+  let oudMsg = null;
   return {
     refs: () => {
-      writeFileSync(mergeHead, `${doel}\n`);
-      writeFileSync(mergeMsg, `Merge remote-tracking branch 'origin/main' into ${branch}\n`);
+      if (bestaat(mergeMsg) && !lstatSync(mergeMsg).isFile()) throw new Error('MERGE_MSG: geen gewoon bestand');
+      oudMsg = bestaat(mergeMsg) ? readFileSync(mergeMsg) : null;
+      // `wx`: een MERGE_HEAD die er al was (ook een symlink) wordt nooit overschreven.
+      metPad('MERGE_HEAD', () => writeFileSync(mergeHead, `${doel}\n`, { flag: 'wx' }));
+      geraakt.head = true;
+      geraakt.msg = true;
+      metPad('MERGE_MSG', () => writeFileSync(mergeMsg, `Merge remote-tracking branch 'origin/main' into ${branch}\n`));
     },
     herstelRefs: () => {
-      rmSync(mergeHead, { force: true });
-      rmSync(mergeMsg, { force: true });
+      if (geraakt.head) rmSync(mergeHead, { force: true });
+      if (!geraakt.msg) return;
+      if (oudMsg === null) rmSync(mergeMsg, { force: true });
+      else writeFileSync(mergeMsg, oudMsg);
     },
   };
 }
@@ -502,14 +616,20 @@ function terugRefs(root) {
   };
 }
 
+/** @param {string} uit @returns {string[]} */
+const nulPaden = (uit) => uit.split('\0').filter((pad) => pad !== '');
+
 /** @param {string} root @returns {string[]} */
 function standTerug(root) {
   if (!existsSync(gitPad(root, 'MERGE_HEAD'))) throw geweigerd('er loopt geen merge; niets terug te zetten');
   const head = git(root, ['rev-parse', 'HEAD']).stdout.trim();
-  const afwijkend = git(root, ['diff', '--name-only', '-z'])
-    .stdout.split('\0')
-    .filter((pad) => pad !== '');
-  const { schrijven } = verdeelPaden(afwijkend, (pad) => schrijfbaar(root, pad));
+  // Eigen werk na `main`: de werkmap wijkt af van de index, of de index van de boom die `main` erin zette.
+  const boom = mergeBoom(root, head, git(root, ['rev-parse', 'MERGE_HEAD']).stdout.trim());
+  const afwijkend = new Set([
+    ...nulPaden(git(root, ['diff', '--name-only', '-z']).stdout),
+    ...nulPaden(git(root, ['diff-index', '--cached', '--name-only', '-z', boom]).stdout),
+  ]);
+  const { schrijven } = verdeelPaden([...afwijkend], (pad) => schrijfbaar(root, pad));
   if (schrijven.length > 0)
     throw lijstMelding(
       '✗ bijhalen geweigerd: deze bestanden zijn na bijhalen gewijzigd; commit, herstel of bewaar ze eerst:',

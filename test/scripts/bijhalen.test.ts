@@ -5,6 +5,8 @@ import {
   lstatSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
+  readlinkSync,
   readFileSync,
   rmSync,
   statSync,
@@ -347,6 +349,14 @@ function draai(fix: Fix, ...args: string[]): Uitvoer {
 function leesBestand(pad: string): string | null {
   try {
     return `${(lstatSync(pad).mode & 0o777).toString(8)}:${readFileSync(pad).toString('hex')}`;
+  } catch {
+    return null;
+  }
+}
+
+function readlinkOrNull(pad: string): string | null {
+  try {
+    return readlinkSync(pad);
   } catch {
     return null;
   }
@@ -743,5 +753,91 @@ describe('bijhalen: modus, symlinks en tmp-submap (git-fixture)', () => {
     expect(existsSync(oudStale)).toBe(false);
     expect(existsSync(oudSkill)).toBe(false);
     expect(leesTekst(tmpPad(fix, fix.origin, SKILL))).toBe('skill nieuw\n');
+  });
+});
+
+describe('bijhalen: extra dekking uit de bouwreview (git-fixture)', () => {
+  const SYMLINK_MELDING = '✗ bijhalen geweigerd: een map op het pad is een symlink:';
+  const TERUGGEZET = /✗ bijhalen: .+; alles is teruggezet/;
+
+  test('bijhalen/AC-11: een na main gestagede eigen wijziging: terug weigert met dat pad en verandert niets', () => {
+    const { fix } = naMain();
+    schrijfBestand(fix.dir, 'docs/d.md', 'gestaged eigen werk\n');
+    gitUit(fix.dir, 'add', 'docs/d.md');
+
+    const uit = weigert(fix, ['terug'], MELDING.gewijzigd);
+
+    expect(regelsNa(uit, MELDING.gewijzigd)).toStrictEqual(['docs/d.md']);
+    expect(existsSync(path.join(fix.dir, '.git/MERGE_HEAD'))).toBe(true);
+  });
+
+  test.each(STANDEN)(
+    'bijhalen/AC-13: $naam met een ongetrackte symlink als map op het pad: geweigerd, buiten de werkmap staat niets',
+    ({ args, eigen }) => {
+      const fix = fixScen(eigen, BEWERKING);
+      const buiten = tmp('bh-buiten-');
+      symlinkSync(buiten, path.join(fix.dir, 'docs/nieuw'));
+
+      const uit = weigert(fix, args, SYMLINK_MELDING);
+
+      expect(uit).toContain('docs/nieuw');
+      expect(readdirSync(buiten)).toStrictEqual([]);
+    },
+  );
+
+  // Faalt een stap na de werkmapbestanden, dan staat alles terug en meldt het script "alles is teruggezet".
+  function teruggezet(fix: Fix, args: string[]): string {
+    const voor = opname(fix);
+    const r = draai(fix, ...args);
+    expect(r.status, r.uit).toBe(1);
+    expect(r.uit).toMatch(TERUGGEZET);
+    expect(r.uit).not.toContain('at ');
+    expect(opname(fix)).toStrictEqual(voor);
+    return r.uit;
+  }
+
+  test.each(STANDEN)(
+    'bijhalen/AC-14: $naam met .git/index.lock (stap 3 faalt): alles teruggezet',
+    ({ args, eigen }) => {
+      const fix = fixScen(eigen, BEWERKING);
+      writeFileSync(path.join(fix.dir, '.git/index.lock'), '');
+
+      teruggezet(fix, args);
+
+      expect(leesTekst(path.join(fix.dir, 'docs/a.md'))).toBe('a oud\n');
+    },
+  );
+
+  test('bijhalen/AC-14: volg met .git/refs/heads/feat.lock (stap 4 faalt): werkmap en index teruggezet', () => {
+    const fix = fixScen(null, BEWERKING);
+    writeFileSync(path.join(fix.dir, '.git/refs/heads/feat.lock'), '');
+
+    teruggezet(fix, ['volg', 'origin/main']);
+
+    expect(gitUit(fix.dir, 'rev-parse', 'refs/heads/feat')).toBe(fix.base);
+    expect(leesTekst(path.join(fix.dir, 'docs/a.md'))).toBe('a oud\n');
+  });
+
+  test('bijhalen/AC-14: main waarvan MERGE_HEAD niet te schrijven is (stap 4 faalt): werkmap en index teruggezet', () => {
+    const fix = fixScen(EIGEN, BEWERKING);
+    symlinkSync('/nonexistent/map/MERGE_HEAD', path.join(fix.dir, '.git/MERGE_HEAD'));
+
+    teruggezet(fix, ['main']);
+
+    expect(leesBestand(path.join(fix.dir, '.git/MERGE_HEAD'))).toBeNull();
+    expect(readlinkOrNull(path.join(fix.dir, '.git/MERGE_HEAD'))).toBe('/nonexistent/map/MERGE_HEAD');
+    expect(leesTekst(path.join(fix.dir, 'docs/a.md'))).toBe('a oud\n');
+  });
+
+  test('bijhalen/AC-14: een schrijffout op scriptniveau (map is een genegeerd bestand): melding schrijven faalt, alles gelijk', () => {
+    const fix = fixScen(EIGEN, BEWERKING);
+    writeFileSync(path.join(fix.dir, '.git/info/exclude'), 'docs/nieuw\n');
+    writeFileSync(path.join(fix.dir, 'docs/nieuw'), 'geen map\n');
+
+    const uit = teruggezet(fix, ['main']);
+
+    expect(uit).toContain('schrijven faalt');
+    expect(leesTekst(path.join(fix.dir, 'docs/nieuw'))).toBe('geen map\n');
+    expect(leesTekst(path.join(fix.dir, 'docs/a.md'))).toBe('a oud\n');
   });
 });

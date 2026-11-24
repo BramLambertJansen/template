@@ -79,7 +79,7 @@ schrijfbaar pad weigert het script vooraf; dat is zeldzaam en blijft handwerk.
 **Signaturen** (definitief):
 
 - `isSandboxBeschermd(pad)` geeft `boolean`. Een prefix onder `.claude/skills/`, `.claude/agents/` of `.claude/hooks/`, of
-  exact `.claude/settings.json` of `.claude/settings.local.json`. Dat is dezelfde lijst als in de opleveren-skill. Lokaal is
+  exact `.claude/settings.json` of `.claude/settings.local.json` (voorbeeld). Dat is dezelfde lijst als in de opleveren-skill. Lokaal is
   `.claude/agents/` wel schrijfbaar (`docs/ENVIRONMENT.md`), maar valt hij voor de eenvoud toch onder de lijst.
 - `verdeelPaden(paden, schrijfbaar)` geeft `{ schrijven, beschermd }`. `schrijfbaar` is een functie van pad naar boolean.
   Beschermd is wat `isSandboxBeschermd` of `!schrijfbaar` zegt. De volgorde van de invoer blijft behouden.
@@ -104,10 +104,13 @@ schrijfbaar pad weigert het script vooraf; dat is zeldzaam en blijft handwerk.
 - `✗ bijhalen geweigerd: deze bestanden zijn na bijhalen gewijzigd; commit, herstel of bewaar ze eerst:`, daarna één pad
   per regel (stand `terug`).
 - `✗ bijhalen geweigerd: symlink of submodule op een gewijzigd pad:`, daarna één pad per regel.
+- `✗ bijhalen geweigerd: een map op het pad is een symlink:`, daarna één pad per regel.
 - `✗ bijhalen: conflict in <n> bestand(en); er is niets veranderd:`, daarna één pad per regel.
 - `✗ bijhalen: git merge-tree faalt: <reden>; er is niets veranderd`
 - `✗ bijhalen: schrijven faalt (<pad>: <reden>); alles is teruggezet`
 - `✗ bijhalen: <reden>; alles is teruggezet` (een fout bij de index of een ref, stap 3 of 4)
+- `✗ bijhalen: <reden>; niet teruggezet:`, daarna per regel een pad, `index (<reden>)` of `refs (<reden>)` (het terugzetten
+  zelf faalde). De index zet het script terug uit de bytes van vóór stap 2, alleen als git na een geslaagde stap 3 faalde.
 - `✓ niets bij te halen`
 - `✓ merge staat in de index (MERGE_HEAD <sha>); werk de beschermde bestanden bij en rond af met git commit -F <bestand>`
 - `✓ <branch> staat op <sha>`
@@ -119,7 +122,7 @@ schrijfbaar pad weigert het script vooraf; dat is zeldzaam en blijft handwerk.
 ## Acceptatiecriteria
 
 - **bijhalen/AC-1**: Gegeven `isSandboxBeschermd` en `verdeelPaden`:
-  - Paden onder de drie prefixen en de twee exacte namen zijn beschermd. `.claude/rules/x.md`, `.claude/settings.jsonc`,
+  - Paden onder de drie prefixen en de twee exacte namen zijn beschermd. `.claude/rules/x.md` (voorbeeld), `.claude/settings.jsonc` (voorbeeld),
     `.claude/skillsx/a` en `docs/a.md` zijn dat niet.
   - `verdeelPaden` zet een pad waarvoor `schrijfbaar` `false` geeft bij `beschermd`, ook buiten de lijst.
   - `verdeelPaden` behoudt de volgorde van de invoer. Toets: `test/scripts/bijhalen.test.ts`
@@ -131,13 +134,13 @@ schrijfbaar pad weigert het script vooraf; dat is zeldzaam en blijft handwerk.
   alle paden weer op hun oude inhoud of afwezigheid, en komt de fout door. Zonder fout staan alle stappen toegepast.
   Toets: `test/scripts/bijhalen.test.ts`
 - **bijhalen/AC-4**: Gegeven een git-fixture met een schone branch. `origin/main` wijzigt zonder conflict `docs/a.md`,
-  verwijdert `docs/b.md`, voegt `docs/nieuw/c.md` toe en wijzigt `.claude/skills/s/SKILL.md`. Wanneer `bijhalen.mjs main`
+  verwijdert `docs/b.md`, voegt `docs/nieuw/c.md` toe en wijzigt `.claude/skills/s/SKILL.md` (voorbeeld). Wanneer `bijhalen.mjs main`
   draait, dan:
   - is de exitcode 0 en staat HEAD op dezelfde commit;
   - is `MERGE_HEAD` gelijk aan `origin/main`;
   - is de index gelijk aan de boom van `git merge-tree --write-tree HEAD origin/main`;
   - hebben `docs/a.md`, `docs/b.md` en `docs/nieuw/c.md` in de werkmap de nieuwe toestand;
-  - heeft `.claude/skills/s/SKILL.md` in de werkmap nog de oude inhoud;
+  - heeft `.claude/skills/s/SKILL.md` (voorbeeld) in de werkmap nog de oude inhoud;
   - noemt het blok precies dat ene pad, en heeft het tmp-bestand de nieuwe inhoud. Toets: `test/scripts/bijhalen.test.ts`
 - **bijhalen/AC-5**: Gegeven de toestand na AC-4 waarin de test het beschermde bestand gelijk heeft gemaakt aan het
   tmp-bestand (in de fixture zonder ondertekening). Wanneer `git commit -F <bestand>` draait, dan heeft de nieuwe commit
@@ -175,11 +178,26 @@ schrijfbaar pad weigert het script vooraf; dat is zeldzaam en blijft handwerk.
   - noemt het blok het beschermde bestand met de HEAD-inhoud als tmp-bestand;
   - zonder lopende merge weigert `terug` en verandert het niets;
   - is na `main` een schrijfbaar pad in de werkmap gewijzigd (afwijkend van de index), dan weigert `terug` met de melding
-    die dat pad noemt, en zijn dat bestand, de index en `MERGE_HEAD` ongewijzigd. Toets: `test/scripts/bijhalen.test.ts`
+    die dat pad noemt, en zijn dat bestand, de index en `MERGE_HEAD` ongewijzigd;
+  - heeft de agent na `main` een eigen wijziging gestaged (de index wijkt op een schrijfbaar pad af van de boom van
+    `git merge-tree --write-tree HEAD MERGE_HEAD`), dan weigert `terug` met dezelfde melding en is er niets veranderd.
+    Toets: `test/scripts/bijhalen.test.ts`
 - **bijhalen/AC-12**: Gegeven een doel dat bij een gewoon bestand alleen de modus verandert (`100644` naar `100755`). Dan
   heeft dat bestand na `main` of `volg` de uitvoerbit en wijkt de werkmap niet af van de index. Een symlink op een
   gewijzigd schrijfbaar pad geeft de symlinkmelding en verandert niets. De tmp-submap van een eerdere run met een andere
   doelcommit raakt het script niet; die van dezelfde doelcommit maakt het eerst leeg.
+  Toets: `test/scripts/bijhalen.test.ts`
+- **bijhalen/AC-13**: Gegeven een ongetrackte symlink in de werkmap (`docs/nieuw -> <map buiten de werkmap>`) en een doel dat
+  `docs/nieuw/c.md` toevoegt. Wanneer `main` of `volg` draait, dan weigert het script met
+  `✗ bijhalen geweigerd: een map op het pad is een symlink:` en het pad. Er staat niets in de map buiten de werkmap en er is
+  niets veranderd. Geen schrijfactie of verwijdering volgt een symlink in een voorouder (R-TOOL-03).
+  Toets: `test/scripts/bijhalen.test.ts`
+- **bijhalen/AC-14**: Gegeven een fixture waarin stap 3 faalt (`.git/index.lock` bestaat) of stap 4 faalt
+  (`.git/refs/heads/<branch>.lock` bestaat bij `volg`, of `MERGE_HEAD` kan niet geschreven worden bij `main`). Dan is de
+  exitcode 1 met `✗ bijhalen: <reden>; alles is teruggezet`, en zijn de werkmap, de index, HEAD en `MERGE_HEAD` byte voor
+  byte gelijk aan daarvoor. Een `main` die op scriptniveau faalt bij het schrijven van een werkmapbestand, geeft de melding
+  `schrijven faalt` en laat ook alles gelijk. Faalt het terugzetten zelf, dan noemt de melding wat niet is teruggezet in
+  plaats van een ruwe fout. Een falende `update-index --refresh` na geslaagde stappen telt niet als fout.
   Toets: `test/scripts/bijhalen.test.ts`
 
 ## Randgevallen
