@@ -82,11 +82,11 @@ en het tokenoverzicht staan op `/design-system` achter `guard('design-system:rea
   alleen als paar (`--<component>-bg` met `--<component>-fg`); de contrasttest rekent elk paar door.
 - **Vindbaar**: `node scripts/kit/feiten.mjs tokens` toont per token de laag, het component en de standaard; het tabblad Tokens
   op `/design-system` krijgt een sectie "Componenttokens" met dezelfde lijst en de berekende waarde. De JSON-vorm krijgt die
-  velden erbij; bestaande velden (`licht`, `donker`, `bron`) blijven, en `test/ui/tokens-catalogus.test.ts` gaat mee.
+  velden erbij; bestaande velden (`licht`, `donker`, `bron`) blijven, en `test/ui/componenttokens-catalogus.test.ts` en `test/scripts/feiten-tokens.test.ts` gaan mee.
 - **Nulmeting**: vóór deel A neemt de bouwer van `main` op: (1) elke tokendeclaratie uit
   `src/core/web/styles/primitives.css`, `semantic.css` en `components.css` met haar opgeloste waarde (licht en donker), in
   `test/ui/fixtures/tokens-voor-app-thema.json`; (2) de berekende stijl van elk component in de eerste set, in
-  `e2e/fixtures/app-thema-baseline.json` (375 en 1280 px, licht en donker, zonder app-thema en met de stijlvariant uit
+  `e2e/fixtures/app-thema-baseline.json` (nieuw) (375 en 1280 px, licht en donker, zonder app-thema en met de stijlvariant uit
   AC-18). AC-1, AC-18 en AC-19 vergelijken daartegen.
 - **Stijlvarianten in e2e**: een test die andere tokenwaarden nodig heeft (AC-2, AC-5b, AC-18), zet die niet in
   `theme.css` maar laadt een fixturebestand uit `e2e/fixtures/app-thema/` als extra stylesheet van dezelfde origin: hij
@@ -108,7 +108,7 @@ en het tokenoverzicht staan op `/design-system` achter `guard('design-system:rea
 
 **Deel C — thema's**
 
-- **Register**: `src/web/styles/themes.ts` exporteert `themes = defineThemes({ … })` (`defineThemes` uit
+- **Register**: `src/web/styles/themes.ts` (nieuw) exporteert `themes = defineThemes({ … })` (`defineThemes` uit
   `src/core/web/lib/theme.ts`). Elke sleutel is een themanaam (kebab-case); de waarde heeft `label` (Nederlands, voor een
   kiezer). `defineThemes` staat in core en krijgt het register als argument; `src/web/main.tsx` geeft het door aan
   `applyStoredTheme` en `setAppTheme` (R-LAAG-02), zodat core het register van de app niet importeert.
@@ -148,7 +148,7 @@ en het tokenoverzicht staan op `/design-system` achter `guard('design-system:rea
 **Deel A**
 
 - **app-thema/AC-1** — Gegeven geen gekozen app-thema en geen stijlvariant, dan is de berekende stijl van elk component in de eerste
-  set gelijk aan de nulmeting in `e2e/fixtures/app-thema-baseline.json` (radius, schaduw, gewicht, padding, randdikte en
+  set gelijk aan de nulmeting in `e2e/fixtures/app-thema-baseline.json` (nieuw) (radius, schaduw, gewicht, padding, randdikte en
   kleuren op 375 en 1280 px, licht en donker). Toets: `e2e/app-thema.spec.ts` (nieuw)
 - **app-thema/AC-2** — Gegeven een stijlvariant met `--button-radius`, dan heeft elke `Button`-variant die radius en verandert geen
   ander component; gegeven een stijlvariant met `--control-radius`, dan hebben `Input`, `Select`, `Textarea`, `Combobox`, `DateInput` en
@@ -165,7 +165,7 @@ en het tokenoverzicht staan op `/design-system` achter `guard('design-system:rea
   `--density-control`. Toets: `e2e/app-thema.spec.ts` (nieuw)
 - **app-thema/AC-6** — Gegeven `theme.css` met een primitief token (`--p-*`) als doel van een toewijzing, dan faalt de test. Toets: `test/ui/componenttokens.test.ts` (nieuw)
 - **app-thema/AC-7** — Gegeven `node scripts/kit/feiten.mjs tokens --json`, dan heeft elk componenttoken `laag`, `component` en
-  `standaard`, en staat elk token in de sectie "Componenttokens" op `/design-system`. Toets: `test/ui/tokens-catalogus.test.ts`
+  `standaard`, en staat elk token in de sectie "Componenttokens" op `/design-system`. Toets: `test/ui/componenttokens-catalogus.test.ts`
 - **app-thema/AC-18** — Gegeven een stijlvariant die alleen bestaande semantische tokens op `:root` zet (`--radius`,
   `--primary`, `--density-control`, `--font-family-sans`), zoals een app nu in `theme.css` doet, dan is de berekende stijl
   gelijk aan de nulmeting met diezelfde variant. Toets: `e2e/app-thema.spec.ts` (nieuw)
@@ -223,7 +223,7 @@ en het tokenoverzicht staan op `/design-system` achter `guard('design-system:rea
   omdat deze spec het getoetste gedrag uitbreidt; de tester doet het en de PR noemt het (R-TEST-02).
 - `src/core/web/styles/index.css` (`@theme inline` voor de nieuwe klassen, `@utility` voor randdikte en hoofdletterstand),
   `src/core/web/lib/theme.ts` (`defineThemes`, `setAppTheme`), `src/web/main.tsx` (register doorgeven),
-  `src/web/styles/themes.ts` en `src/web/styles/theme.css` (de twee voorbeeldthema's), `scripts/kit/feiten.mjs`
+  `src/web/styles/themes.ts` (nieuw) en `src/web/styles/theme.css` (de twee voorbeeldthema's), `scripts/kit/feiten.mjs`
   (sectie tokens), `eslint.config.js` en `rails/` (nieuwe regel; gate-paden, eigenaarakkoord).
 - `docs/framework.md` (beschermd pad): de wijziging van R-UI-01 gaat langs de eigenaar.
 - `docs/design-system-catalogue.md`, `docs/ui-kit-basics.md` en de skill `ontwerp-overnemen` (de tabel "Tokens" in

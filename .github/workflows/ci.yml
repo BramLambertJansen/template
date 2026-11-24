@@ -20,7 +20,7 @@ jobs:
   # test:unit. Samen precies snelleGates() (test/rails/ci-in-delen.test.ts); de job gate:fast hieronder is de verplichte check.
   gate-fast-part:
     name: gate:fast (${{ matrix.deel }})
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -72,7 +72,7 @@ jobs:
     name: gate:fast
     needs: gate-fast-part
     if: always()
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       - run: |
@@ -89,7 +89,7 @@ jobs:
   # suite toch al opnieuw op); de job gate:slow hieronder houdt de naam van de verplichte check.
   gate-slow-part:
     name: gate:slow (${{ matrix.deel }})
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -142,7 +142,7 @@ jobs:
     name: gate:slow
     needs: gate-slow-part
     if: always()
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       - run: |
@@ -157,7 +157,7 @@ jobs:
   # Op een PR de commits van die PR, anders alle gefetchte refs. Altijd met scripts/kit/betterleaks.toml; inline allows tellen niet.
   secrets:
     name: secrets
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -185,7 +185,7 @@ jobs:
   # of onverwachte console.error. node_modules alleen voor @playwright/test, dat in dat image draait.
   image:
     name: image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -221,7 +221,7 @@ jobs:
   # Dezelfde drie delen in de kopie (ADR 0076 punt 3): elk deel maakt een eigen kopie met app:init en generator.
   new-resource-part:
     name: check:new-resource (${{ matrix.deel }})
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -265,7 +265,7 @@ jobs:
     name: check:new-resource
     needs: new-resource-part
     if: always()
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       - run: |

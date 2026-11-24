@@ -1,0 +1,5 @@
+/* Stijlvariant voor e2e (spec app-thema/AC-2): alleen de radius van Button. */
+:root,
+[data-app-theme] {
+  --button-radius: 20px;
+}
