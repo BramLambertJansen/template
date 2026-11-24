@@ -1,6 +1,7 @@
 import { createMemoryHistory, createRootRoute, createRouter, RouterContextProvider } from '@tanstack/react-router';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, test } from 'vitest';
+import { SidebarShell } from './sidebar-shell.tsx';
 import type { NavItem } from './sidebar.tsx';
 import { TOPBAR_INLINE_ITEMS, TopbarShell } from './topbar-shell.tsx';
 
@@ -88,6 +89,24 @@ describe('schillen/AC-3: TopbarShell met meer dan TOPBAR_INLINE_ITEMS items', ()
 });
 
 describe('schillen/AC-7: schil zonder nav-items', () => {
+  test('schillen/AC-7: SidebarShell zonder items: geen nav, geen menuknop en geen sheet', () => {
+    const router = createRouter({
+      routeTree: createRootRoute(),
+      history: createMemoryHistory({ initialEntries: ['/'] }),
+    });
+    const { container } = render(
+      <RouterContextProvider router={router}>
+        <SidebarShell nav={[]} userName="Ada Admin" menuItems={[]} routeKey="/">
+          <h1>Inhoud</h1>
+        </SidebarShell>
+      </RouterContextProvider>,
+    );
+    expect(container.querySelector('nav')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Menu openen' })).toBeNull();
+    expect(container.querySelector('dialog')).toBeNull();
+    expect(screen.getAllByRole('main')).toHaveLength(1);
+  });
+
   test('schillen/AC-7: geen nav, geen menuknop en geen sheet', () => {
     const { container } = show([]);
     expect(container.querySelector('nav')).toBeNull();
@@ -96,9 +115,9 @@ describe('schillen/AC-7: schil zonder nav-items', () => {
     expect(screen.getAllByRole('main')).toHaveLength(1);
   });
 
-  test('schillen/AC-7: met items staan menuknop en sheet er wel (de knop verbergt CSS vanaf 56rem balkbreedte)', () => {
+  test('schillen/AC-7: met items staan menuknop en sheet er wel (de knop verbergt CSS vanaf 48rem balkbreedte)', () => {
     const { container } = show(NINE);
-    expect(screen.getByRole('button', { name: 'Menu openen' }).className).toContain('@4xl:hidden');
+    expect(screen.getByRole('button', { name: 'Menu openen' }).className).toContain('@3xl:hidden');
     expect(container.querySelector('dialog')).not.toBeNull();
   });
 });

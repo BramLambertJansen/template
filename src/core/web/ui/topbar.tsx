@@ -10,9 +10,9 @@ export { initials };
 interface TopbarProps {
   readonly userName: string;
   readonly menuItems: readonly MenuItem[];
-  // Links in de balk, bijv. de menuknop op smalle schermen (AppShell).
+  // Links in de balk, bijv. de menuknop op smalle schermen (SidebarShell, TopbarShell).
   readonly start?: ReactNode;
-  // Rechts, vóór het profielmenu: bijv. de themaschakelaar (AppShell).
+  // Rechts, vóór het profielmenu: bijv. de themaschakelaar (SidebarShell, TopbarShell).
   readonly actions?: ReactNode;
 }
 

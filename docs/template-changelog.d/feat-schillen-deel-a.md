@@ -12,5 +12,5 @@ soort: toegevoegd
 
 ### Bij een update
 
-- Zet `<ShellSessionProvider>` uit `#web/ui` om de `RouterProvider` in `src/web/main.tsx`, zoals in de template; zonder
+- Zet `<ShellSessionProvider>` (uit `#core/web/ui/shell-frame.tsx`) om de `RouterProvider` in `src/web/main.tsx`, zoals in de template; zonder
   provider gaat de focus alleen bij een routewissel binnen één schil naar de `h1`.

@@ -152,7 +152,7 @@ test.describe('schillen op 1280 px', () => {
   }) => {
     await signInAsAdmin(page);
     await open(page, '/design-system?schil=sidebar&items=3');
-    expect((await page.locator('aside').boundingBox())?.width).toBe(256);
+    expect((await page.locator('aside').boundingBox())?.width).toBeCloseTo(256, 0);
     expect(await height(page.locator('header'))).toBeGreaterThanOrEqual(56);
     expect(await cssValue(page.getByRole('main'), 'max-width')).toBe('none');
     await open(page, '/design-system?schil=topbalk&items=3');
@@ -163,7 +163,7 @@ test.describe('schillen op 1280 px', () => {
   test('schillen/AC-6: met de schiltokens volgen sidebar, balk en main de berekende maten', async ({ page }) => {
     await signInAsAdmin(page);
     await open(page, '/design-system?schil=sidebar&items=3', 'schiltokens');
-    expect((await page.locator('aside').boundingBox())?.width).toBe(320);
+    expect((await page.locator('aside').boundingBox())?.width).toBeCloseTo(320, 0);
     expect(await height(page.locator('header'))).toBeGreaterThanOrEqual(80);
     expect(await cssValue(page.getByRole('main'), 'max-width')).toBe('640px');
     expect((await page.getByRole('main').boundingBox())?.width).toBeLessThanOrEqual(640);

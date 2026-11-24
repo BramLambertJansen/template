@@ -5,7 +5,6 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { Button } from './button.tsx';
 import { SidebarShell } from './sidebar-shell.tsx';
 import * as toastModule from './toast.tsx';
-import { ToastProvider, useToast } from './toast.tsx';
 import { TopbarShell } from './topbar-shell.tsx';
 
 // Toast (roadmap "Toasts standaard in de basiskit"): context zonder globale store, success beleefd (status), error direct (alert),
@@ -14,6 +13,8 @@ import { TopbarShell } from './topbar-shell.tsx';
 beforeEach(() => {
   vi.useFakeTimers();
 });
+const { ToastProvider, useToast } = toastModule;
+
 afterEach(() => {
   cleanup();
   vi.useRealTimers();

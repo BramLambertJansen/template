@@ -17,10 +17,13 @@ const nav: NavItem<string>[] = [
 ];
 const props = { nav, userName: 'Ada Admin', menuItems: [] };
 
-// schillen/AC-5: de contracttest slaagt op beide schillen (ook zonder nav-items: dan geen nav, menuknop of sheet).
-shellContract(SidebarShell, { props });
-shellContract(TopbarShell, { props });
-shellContract(TopbarShell, { props: { ...props, nav: [] } });
+// De contracttest slaagt op beide schillen, ook zonder nav-items (dan geen nav, menuknop of sheet).
+describe('schillen/AC-5: shellContract op beide schillen', () => {
+  shellContract(SidebarShell, { props });
+  shellContract(TopbarShell, { props });
+  shellContract(SidebarShell, { props: { ...props, nav: [] } });
+  shellContract(TopbarShell, { props: { ...props, nav: [] } });
+});
 
 // schillen/AC-16: focus bij de mount van een schil, met ShellSessionProvider onder StrictMode.
 afterEach(cleanup);

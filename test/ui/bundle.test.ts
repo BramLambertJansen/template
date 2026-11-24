@@ -55,8 +55,10 @@ describe('productiebundel', () => {
 
   // TopbarShell zit in de startbundel (AppLayout kan hem op /design-system renderen, spec schillen); de catalogus blijft lazy.
   test('schillen/AC-17: de entry-chunk bevat de catalogus niet en past binnen het entrybudget', async () => {
-    const entries = (await productionChunks()).filter((chunk) => chunk.isEntry);
+    const chunks = await productionChunks();
+    const entries = chunks.filter((chunk) => chunk.isEntry);
     expect(entries.length).toBeGreaterThan(0);
+    expect(chunks.some((chunk) => !chunk.isEntry && chunk.code.includes('Dialoog openen'))).toBe(true);
     for (const entry of entries) expect(entry.code).not.toContain('Dialoog openen');
     const entryKb = entries.reduce((sum, entry) => sum + gzipSync(entry.code).length, 0) / 1024;
     expect(entryKb).toBeLessThanOrEqual(bundleBudgetKb.entry);
