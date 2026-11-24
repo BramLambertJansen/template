@@ -144,6 +144,14 @@ describe('rolhek-herstel/AC-6: de aanvaard-lijst', () => {
     expect(COMMENTAAR_RIJEN.filter((rij) => !VERPLICHT.has(`commentaar: ${rij.naam}`))).toEqual([]);
   });
 
+  // `shell-commentaar.test.ts` heeft een eigen kopie van de rijen (leerpunt-bewijs: geen import die op de basis ontbreekt);
+  // elke rij hier staat daar letterlijk als naam, zodat de lezertest en de bashtest dezelfde rijen toetsen.
+  test('rolhek-herstel/AC-6: de lezertest van AC-4 heeft dezelfde rijen', () => {
+    const lezertest = readFileSync('test/hooks/shell-commentaar.test.ts', 'utf8');
+    const ontbreekt = COMMENTAAR_RIJEN.filter((rij) => !lezertest.includes(rij.naam));
+    expect(ontbreekt.map((rij) => rij.naam)).toEqual([]);
+  });
+
   test('rolhek-herstel/AC-6: een reden korter dan drie woorden, een verplichte rij en een onbekende rij op de lijst zijn fouten', () => {
     const rijen: readonly Rij[] = [
       { naam: 'a', tekst: 'a', bashZiet: ['a'] },

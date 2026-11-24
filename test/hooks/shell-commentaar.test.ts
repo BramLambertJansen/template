@@ -2,7 +2,26 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
 import { parseCommands } from '../../rails/hooks/lib/shell.mjs';
-import { COMMENTAAR_RIJEN, LOS } from './shell-commentaar-rijen.ts';
+
+// GEWIJZIGD (job leerpunt-bewijs, leerpunt #892): de rijen staan hier zelf in plaats van in een import uit
+// `shell-commentaar-rijen.ts`. Die import bestaat op de basis niet, en dan faalt deze bewijstest daar op laden in plaats van
+// op een assertie. `shell-woorden-bash.test.ts` gebruikt het gedeelde bestand en toetst dat beide lijsten gelijk zijn.
+const LOS = 'rm -rf .claude/hooks';
+const COMMENTAAR_RIJEN: readonly { readonly naam: string; readonly tekst: string }[] = [
+  { naam: 'cat;#<<EOF', tekst: `cat;#<<EOF\n${LOS}\nEOF` },
+  { naam: 'true&&#<<E', tekst: `true&&#<<E\n${LOS}\nE` },
+  { naam: '(#<<E', tekst: `(#<<E\n${LOS}\nE\n)` },
+  { naam: 'echo ${x/ #/}', tekst: `echo \${x/ #/}; ${LOS}` },
+  { naam: 'echo `true #`', tekst: `echo \`true #\`; ${LOS}` },
+  { naam: '(( #))', tekst: `(( #)); ${LOS}` },
+  { naam: 'echo ${x/;#/}', tekst: `echo \${x/;#/}; ${LOS}` },
+  { naam: 'echo $(true #) <<E', tekst: `echo $(true #) <<E\n${LOS}\nE\n)` },
+  { naam: '[[ -n x #⏎]] && rm', tekst: `[[ -n x #\n]] && ${LOS}` },
+  // Reviewbevindingen B1 en B2 na de bouw: een nieuwe lexertoestand mag geen commando verbergen dat de oude lezer zag.
+  { naam: '((true) ); #<<E', tekst: `((true) ); #<<E\n${LOS}\nE` },
+  { naam: 'echo ${x:-"}"}', tekst: `echo \${x:-"}"}; ${LOS}` },
+  { naam: "echo ${x:-'}'}", tekst: `echo \${x:-'}'}; ${LOS}` },
+];
 
 // Spec rolhek-herstel/AC-4 (leerpunten #603 en #617): `tokenize` begint een commentaar met `#` aan het begin van een woord,
 // ook direct na een operator, en niet binnen een woord, `${…}`, backticks, `((…))`, `$((…))` of `$[…]`. Wat bash uitvoert,
