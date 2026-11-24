@@ -37,7 +37,7 @@ function rule(output: string, className: string): string | undefined {
 }
 
 function rootDeclarations(source: string): Map<string, string> {
-  const blocks = [...source.matchAll(/:root\s*\{([^}]*)\}/g)].map((match) => match[1] ?? '').join('\n');
+  const blocks = [...source.matchAll(/:root\b[^{]*\{([^}]*)\}/g)].map((match) => match[1] ?? '').join('\n');
   return new Map([...blocks.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map((m) => [m[1] ?? '', (m[2] ?? '').trim()]));
 }
 

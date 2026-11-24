@@ -4,7 +4,10 @@ import { cn } from './cn.ts';
 export function Card({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
-      className={cn('flex flex-col gap-6 rounded-lg border bg-card py-6 text-card-foreground shadow-sm', className)}
+      className={cn(
+        'flex flex-col gap-6 rounded-card border-card-width bg-card py-card-y text-card-foreground shadow-card',
+        className,
+      )}
       {...props}
     />
   );

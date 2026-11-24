@@ -1,9 +1,62 @@
-/* Laag 3: component (framework §7). Maten die elk recept deelt: 44 px aanraakdoel en één focusring. */
-:root {
+/* Laag 3: component (framework §7). Maten die elk recept deelt (44 px aanraakdoel en één focusring) en de componenttokens
+   van de eerste set (spec app-thema, deel A): --<component>-<eigenschap>, hooguit zes per component
+   (test/ui/componenttokens.test.ts). Een app overschrijft ze in src/web/styles/theme.css op dezelfde selector.
+   Waarom `:root, [data-app-theme]`: een custom property met var() wordt uitgerekend op het element waar hij staat en erft
+   daarna als vaste waarde; zo rekent --control-bg binnen een ThemeScope met de --background van dat thema. */
+:root,
+[data-app-theme] {
   /* Een app kan --density-control groter zetten, nooit kleiner dan het aanraakdoel van 44 px (framework §7). */
   --control-h: max(var(--density-control), 2.75rem);
-  --focus-ring-width: 2px;
+  /* Breedte van de focusring met ondergrens 2 px. De recepten tekenen de ring nog met ring-2 en lezen dit token niet;
+     test/ui/contrast-componenttokens.test.ts bewaakt dat het nooit onder 2 px komt. */
+  --focus-ring-width: max(var(--density-focus-ring), 2px);
   --focus-ring-offset: 2px;
+
+  --button-radius: calc(var(--radius) - 2px);
+  --button-font-weight: var(--weight-medium);
+  --button-padding-x: calc(var(--density-space) * 4);
+  /* Alleen varianten met een rand (outline) gebruiken hem. */
+  --button-border-width: 1px;
+  /* Zolang de knop focus heeft, vervangt de focusring (ring-2) de schaduw: een app-schaduw is dan even weg. */
+  --button-shadow: none;
+  --button-text-transform: none;
+
+  --control-radius: calc(var(--radius) - 2px);
+  --control-border-width: 1px;
+  --control-bg: var(--background);
+  --control-fg: var(--foreground);
+  --control-padding-x: calc(var(--density-space) * 3);
+
+  --card-radius: var(--radius);
+  --card-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+  --card-border-width: 1px;
+  --card-padding-y: calc(var(--density-space) * 6);
+
+  --dialog-radius: var(--radius);
+  --dialog-shadow: 0 10px 15px -3px oklch(0 0 0 / 0.1), 0 4px 6px -4px oklch(0 0 0 / 0.1);
+  --dialog-max-width: 32rem;
+
+  --table-header-bg: var(--muted);
+  --table-header-fg: var(--muted-foreground);
+  --table-row-border: 1px;
+  --table-cell-padding-y: calc(var(--density-space) * 2);
+
+  --badge-radius: calc(var(--radius) - 2px);
+  --badge-font-weight: var(--weight-medium);
+
+  /* Een rand onder het gekozen tabblad; standaard 0 (de achtergrond markeert de keuze). */
+  --tabs-indicator-width: 0px;
+  --tabs-radius: calc(var(--radius) - 2px);
+
+  --notice-radius: calc(var(--radius) - 2px);
+  --notice-border-width: 1px;
+
+  --toast-radius: calc(var(--radius) - 2px);
+  --toast-shadow: 0 4px 6px -1px oklch(0 0 0 / 0.1), 0 2px 4px -2px oklch(0 0 0 / 0.1);
+}
+
+/* Vaste waarden zonder afgeleide: lagen en de QR-code hangen niet af van een thema. */
+:root {
   /* Lagen (z-sticky … z-toast), strikt oplopend; <dialog> staat in de top layer en heeft geen z-index nodig. */
   --layer-sticky: 10;
   --layer-dropdown: 20;

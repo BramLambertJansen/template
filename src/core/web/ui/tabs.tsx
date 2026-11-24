@@ -106,7 +106,10 @@ export function Tabs(props: TabsProps) {
               aria-selected={state.visible === item.id}
               aria-controls={state.panel(item.id)}
               tabIndex={state.focusId === item.id ? 0 : -1}
-              className={cn('shrink-0', state.visible === item.id && 'bg-accent text-accent-foreground')}
+              className={cn(
+                'shrink-0 rounded-tabs',
+                state.visible === item.id && 'border-tabs-indicator border-b-primary bg-accent text-accent-foreground',
+              )}
               onFocus={() => {
                 state.setRoving(item.id);
               }}

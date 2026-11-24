@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { AsyncAndErrorSections, CenteredCardSection } from './additional-examples.tsx';
 import { BulkActionsExample } from './bulk-actions-example.tsx';
 import { CollectionExamples } from './collection-examples.tsx';
+import { ComponentTokensExamples } from './component-tokens-examples.tsx';
 import { ComboboxExamples } from './combobox-examples.tsx';
 import { DataDisplayExamples } from './data-display-examples.tsx';
 import { DisplayBasicsExamples } from './display-basics-examples.tsx';
@@ -40,6 +41,7 @@ export const vakPanels: Readonly<Record<VakId, ReactNode>> = {
   basis: (
     <Panel>
       <TokensExamples />
+      <ComponentTokensExamples />
     </Panel>
   ),
   acties: (

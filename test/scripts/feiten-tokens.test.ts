@@ -16,7 +16,7 @@ const COMPONENTS = 'src/core/web/styles/components.css';
 const INDEX = 'src/core/web/styles/index.css';
 const THEME = 'src/web/styles/theme.css';
 const GROUPS = ['kleur', 'typografie', 'dichtheid', 'lagen', 'beweging'] as const;
-type Group = (typeof GROUPS)[number] | 'onbekend';
+type Group = (typeof GROUPS)[number] | 'onbekend' | 'componenten';
 
 const escape = (value: string) => value.replace(/[\\^$.*+?()[\]{}|/-]/g, '\\$&');
 // Het token zelf, niet een verwijzing ernaar (`var(--x)`) of een langere naam (`--primary-foreground`).
@@ -139,7 +139,7 @@ function tokenLines(stdout: string): { group: string | undefined; line: string }
   let group: string | undefined;
   return (end === -1 ? rest : rest.slice(0, end)).flatMap((line) => {
     const header = line.replace(/[#:\-\s]/g, '').toLowerCase();
-    if ([...GROUPS, 'onbekend'].includes(header)) {
+    if ([...GROUPS, 'onbekend', 'componenten'].includes(header)) {
       group = header;
       return [];
     }
@@ -226,6 +226,16 @@ describe('semantische-tokens/AC-18', () => {
     }
   });
 
+  test('app-thema/AC-7: de tekstvorm toont per componenttoken laag en component', () => {
+    const result = feiten(ROOT, 'tokens');
+    expect(result.status, result.stderr).toBe(0);
+    const entry = textEntry(result.stdout, '--button-radius');
+    expect(entry.group).toBe('componenten');
+    expect(entry.line).toContain('laag component');
+    expect(entry.line).toContain('component button');
+    expect(textEntry(result.stdout, '--control-h').line).toContain('component control');
+  });
+
   test('semantische-tokens/AC-18: een onbekende sectie noemt tokens in "Kies uit"', () => {
     const result = feiten(ROOT, 'onbestaand');
     expect(result.status).toBe(2);
@@ -243,10 +253,11 @@ describe('semantische-tokens/AC-19', () => {
   const APP_PRIMARY = 'oklch(0.42 0.123 200)';
   const APP_DENSITY = '3.25rem';
   const APP_RADIUS = '0.75rem';
+  const APP_BUTTON_RADIUS = '0px';
   mkdirSync(path.dirname(path.join(fixture, THEME)), { recursive: true });
   writeFileSync(
     path.join(fixture, THEME),
-    `/* fixture */\n:root {\n  --primary: ${APP_PRIMARY};\n  --density-control: ${APP_DENSITY};\n  --radius: ${APP_RADIUS};\n  --primairy: oklch(0.5 0.1 10);\n}\n`,
+    `/* fixture */\n:root {\n  --primary: ${APP_PRIMARY};\n  --density-control: ${APP_DENSITY};\n  --radius: ${APP_RADIUS};\n  --primairy: oklch(0.5 0.1 10);\n}\n:root,\n[data-app-theme] {\n  --button-radius: ${APP_BUTTON_RADIUS};\n}\n`,
   );
 
   test('semantische-tokens/AC-19: de app-waarde uit theme.css staat bij --primary en --density-control', () => {
@@ -276,6 +287,18 @@ describe('semantische-tokens/AC-19', () => {
     expect(result.status, result.stderr).toBe(0);
     expect(textEntry(result.stdout, '--primairy').group).toBe('onbekend');
     expect(jsonEntry(tokensJson(fixture), '--primairy').group).toBe('onbekend');
+  });
+
+  // Spec app-thema (deel A): een app-override van een componenttoken op `:root, [data-app-theme]` is geen tikfout.
+  test('app-thema/AC-7: een componenttoken uit theme.css staat met de app-waarde onder componenten, niet onder onbekend', () => {
+    const result = feiten(fixture, 'tokens');
+    expect(result.status, result.stderr).toBe(0);
+    const line = textEntry(result.stdout, '--button-radius');
+    expect(line.group).toBe('componenten');
+    expect(line.line).toContain(`app ${APP_BUTTON_RADIUS}`);
+    const entry = jsonEntry(tokensJson(fixture), '--button-radius');
+    expect(entry.group).toBe('componenten');
+    expect(entry.entry).toContain(APP_BUTTON_RADIUS);
   });
 
   test('semantische-tokens/AC-19: tokens importeert geen tailwindcss, typescript of catalogus.mjs', () => {

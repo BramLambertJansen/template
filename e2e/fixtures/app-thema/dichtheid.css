@@ -1,0 +1,5 @@
+/* Stijlvariant voor e2e (spec app-thema/AC-5b): dichtheid onder de ondergrens; Button blijft 44 px, de focusring 2 px. */
+:root {
+  --density-control: 2rem;
+  --density-focus-ring: 1px;
+}

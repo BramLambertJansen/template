@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 
 // Melding op de pagina: status (bijv. "Uitnodiging verstuurd naar …"), succes, waarschuwing of fout. role volgt de
 // soort: alleen een fout onderbreekt de schermlezer (alert); de rest is een beleefde status. OfflineNotice deelt het recept.
-export const noticeVariants = cva('rounded-md border px-3 py-2 text-sm', {
+export const noticeVariants = cva('rounded-notice border-notice px-3 py-2 text-sm', {
   variants: {
     tone: {
       info: 'border-border bg-muted text-foreground',
