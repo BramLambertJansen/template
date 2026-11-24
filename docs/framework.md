@@ -48,7 +48,7 @@ Afgedwongen door: dependency-cruiser, lint, smoketest op provider-data-API.
 - **R-PROV-01** Template levert Postgres 17 + pgTAP, dbmate, `db/init/`, Mailpit; hosting, beheerde Postgres, SMTP, fouttracking kiest eigenaar per app-ADR (hosting-ADR bij eerste release); Supabase en Vercel zijn voorkeur van eigenaar, niet template (0039, 0040)
 - **R-PROV-02** Geen provider-functies of -schema's (`auth.uid()`, Data API, `storage.*`, `realtime.*`); provider-data-API voor browser uit, smoketest bewijst dat (0039)
 - **R-PROV-03** Geen provider-SDK in `src/web`; in `src/api` alleen in `deploy/<host>/` of door ADR toegestane adapter (0039)
-- **R-PROV-04** Major van Node, pnpm of TypeScript vraagt ADR; geen Corepack; `package.json` enige bron pnpm-versie; Renovate blokkeert TypeScript 7; Postgres 18 pas als alle beoogde providers het bieden (0039, 0042, 0061)
+- **R-PROV-04** Major van Node, pnpm of TypeScript vraagt ADR; geen Corepack; `package.json` enige bron pnpm-versie; Renovate verbergt geen major maar opent hem als eigen PR met label `major` (CI test hem, mergen pas na ADR); Postgres 18 pas als alle beoogde providers het bieden (0039, 0042, 0061)
 - **R-PROV-05** Beheerde database: eigen rollen toegestaan; herhaal pooler-lektest tegen provider; Postgres-versie gelijk aan lokaal (0042)
 - **R-PROV-06** Externe auth-provider alleen per ADR; release-workflows, smoketest, runbooks, jobs-trigger horen bij app-ADR (0039, 0041, 0050)
 - **R-OPSL-01** Geen provider-SDK of productieopslag in template; provider per app-ADR (0060)
