@@ -149,10 +149,16 @@ hoofdcheckout, bij een symlink als `node_modules` en als een van `package.json`,
 `pnpm-workspace.yaml`, `.npmrc`, `.pnpmfile.cjs` of `.pnpmfile.mjs` afwijkt van HEAD (gewijzigd, verwijderd of
 untracked; vergeleken op inhoud met HEAD, ook bij `--assume-unchanged` of `--skip-worktree`; commit eerst of vraag de
 eigenaar; ADR 0085, spec `claude-sandbox-werkstraat` AC-10). Die weigering is geen beveiligingsgrens: CI en de
-eigenaarmerge zijn de grens. Open aandachtspunt (niet gemeten): hoort een bestaande `node_modules` bij een andere store
-(andere `TMPDIR` bij een eerdere run, of eerder een handmatige `pnpm install`), dan kan pnpm zonder TTY afbreken met een
-fout over het verwijderen van de modules-map (`ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY`); vraag dan de eigenaar, wis
-`node_modules` niet zelf en voeg geen pnpm-vlag toe. De melding van `feiten.mjs` noemt het zelf (AC-12). Om dezelfde reden als bij `--no-track` geeft
+eigenaarmerge zijn de grens. Open aandachtspunt buiten de cloud (niet gemeten): hoort een bestaande `node_modules` bij een
+andere store (andere `TMPDIR` bij een eerdere run, of eerder een handmatige `pnpm install`), dan kan pnpm zonder TTY
+afbreken met een fout over het verwijderen van de modules-map (`ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY`); vraag dan de
+eigenaar, wis `node_modules` niet zelf en voeg geen pnpm-vlag toe. De melding van `feiten.mjs` noemt het zelf (AC-12). In
+een cloudsessie werkt het script ook in de hoofdcheckout en geeft het zelf `--config.confirm-modules-purge=false` mee:
+loopt `node_modules` daar achter op de lockfile, draai het script zelf in plaats van de eigenaar te vragen, want die heeft
+in de cloud geen terminal (spec cloud-werkmap-herstel). Tijdens een lopende merge (`MERGE_HEAD`) telt daar ook de versie
+uit `MERGE_HEAD`: zo kan de agent na het binnenhalen van een nieuwe lockfile eerst installeren en dan de merge committen
+(AC-9). Na een merge bijwerken op de vaste cloudbranch: zie de
+receptenkaart (`git merge --ff-only origin/main`). Om dezelfde reden als bij `--no-track` geeft
 `git branch -D` daar de melding `could not lock config file`; de branch is wel verwijderd (`-m` is niet gemeten).
 
 Vóór de eerste commit in een nieuwe worktree vertrouwt de eigenaar de `mise.toml` van die worktree (leerpunt #682). Zonder
@@ -492,6 +498,11 @@ zelf draaide, niet die van een subagent (ADR 0084 punt 5); dat is een procesrege
 afdwingt (R-ROL-05).
 
 ### Als pr:verify niet start of de werkmap weigert
+
+In de cloud kan de werkmap soms niet naar de PR-head, bijvoorbeeld na "Update branch" door de eigenaar als die stap
+`.claude/skills` raakt. Weigert de gewone `pr:verify` daarom, dan telt `pnpm pr:verify <nr> --zonder-werkmap` als
+opleverbewijs, alleen als de hoofdsessie het zelf draaide en de PR dat vermeldt. Het toetst de checks op de head-SHA van de
+PR, die bij de start vastligt, en niet de lokale werkmap; lokaal weigert de vlag (spec cloud-werkmap-herstel).
 
 Geeft de pnpm-versiecontrole een SQLite-waarschuwing en daarna een andere versie dan `packageManager` in `package.json`?
 

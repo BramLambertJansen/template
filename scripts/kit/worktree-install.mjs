@@ -1,7 +1,10 @@
 // Installeert de dependencies in een gekoppelde worktree (ADR 0085, spec claude-sandbox-werkstraat AC-10):
 // `pnpm install --frozen-lockfile` met store (`--store-dir`) en cache (`--cache-dir`) als vlag en state (XDG_STATE_HOME)
-// onder os.tmpdir(), zodat het binnen de Claude Code-sandbox slaagt zonder globale pnpm-map. Weigert in de hoofdcheckout, bij een symlink als node_modules en bij wijzigingen ten
-// opzichte van HEAD in de beheerde bestanden. Een bestaande map node_modules (ook leeg of half) wordt gewoon afgemaakt:
+// onder os.tmpdir(), zodat het binnen de Claude Code-sandbox slaagt zonder globale pnpm-map. Weigert in de hoofdcheckout,
+// bij een symlink als node_modules en bij wijzigingen ten opzichte van HEAD in de beheerde bestanden. In een cloudsessie
+// (CLAUDE_CODE_REMOTE=true; ADR 0085 herzien, spec cloud-werkmap-herstel) gelden in de hoofdcheckout dezelfde regels als in
+// een worktree, en gaat `--config.confirm-modules-purge=false` mee zodat pnpm een bestaande node_modules zonder TTY-vraag
+// vervangt. Een bestaande map node_modules (ook leeg of half) wordt gewoon afgemaakt:
 // een frozen install is idempotent. Zonder dependencies, zodat het op een kale Node draait (zoals toolchain.mjs).
 import { lstatSync, mkdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -12,7 +15,7 @@ import path from 'node:path';
 const BEHEERD = ['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', '.npmrc', '.pnpmfile.cjs', '.pnpmfile.mjs'];
 
 /**
- * @typedef {{ worktree: boolean, nodeModules: 'afwezig' | 'map' | 'symlink', gewijzigd: string[] }} InstallFeiten
+ * @typedef {{ worktree: boolean, nodeModules: 'afwezig' | 'map' | 'symlink', gewijzigd: string[], cloud?: boolean }} InstallFeiten
  * @typedef {{ actie: 'installeren' } | { actie: 'weigeren', melding: string }} InstallBesluit
  */
 
@@ -29,8 +32,8 @@ function weiger(reden) {
  * @param {InstallFeiten} feiten
  * @returns {InstallBesluit}
  */
-export function worktreeInstallBesluit({ worktree, nodeModules, gewijzigd }) {
-  if (!worktree)
+export function worktreeInstallBesluit({ worktree, nodeModules, gewijzigd, cloud = false }) {
+  if (!worktree && !cloud)
     return weiger('dit is de hoofdcheckout; die richt de eigenaar in met scripts/bootstrap.sh (docs/ENVIRONMENT.md)');
   if (nodeModules === 'symlink')
     return weiger('node_modules is een symlink; verwijder de symlink en draai het script opnieuw');
@@ -47,10 +50,13 @@ export function worktreeInstallBesluit({ worktree, nodeModules, gewijzigd }) {
  * `v11/metadata/…` in; `--state-dir` geeft `Unknown option`. Daarom gaan store en cache als vlag mee, want een CLI-vlag
  * gaat voor op een globale pnpm-config en een XDG-variabele niet. State heeft geen vlag en loopt via XDG_STATE_HOME
  * onder `tmp`, naast XDG_CACHE_HOME en XDG_DATA_HOME.
+ * In een cloudsessie komt `--config.confirm-modules-purge=false` als laatste argument erbij: zonder TTY breekt pnpm
+ * anders af als het een bestaande node_modules wil vervangen (spec cloud-werkmap-herstel AC-3).
  * @param {string} tmp
+ * @param {boolean} [cloud] cloudsessie
  * @returns {{ command: 'pnpm', args: string[], env: Record<string, string> }}
  */
-export function worktreeInstallCommando(tmp) {
+export function worktreeInstallCommando(tmp, cloud = false) {
   return {
     command: 'pnpm',
     args: [
@@ -59,6 +65,7 @@ export function worktreeInstallCommando(tmp) {
       '--package-import-method=copy',
       `--store-dir=${path.join(tmp, 'store')}`,
       `--cache-dir=${path.join(tmp, 'cache')}`,
+      ...(cloud ? ['--config.confirm-modules-purge=false'] : []),
     ],
     env: {
       XDG_DATA_HOME: path.join(tmp, 'data'),
@@ -109,40 +116,60 @@ function werkmapHash(root, naam) {
 }
 
 /**
- * Hash van het bestand in HEAD: null als het daar niet in staat (status 1 met -q).
+ * Hash van het bestand in een commit (`HEAD` of `MERGE_HEAD`): null als het daar niet in staat (status 1 met -q).
  * @param {string} root
+ * @param {string} ref
  * @param {string} naam
  * @returns {string | null}
  */
-function headHash(root, naam) {
-  const r = git(root, ['rev-parse', '--verify', '-q', `HEAD:${naam}`], [1]);
+function refHash(root, ref, naam) {
+  const r = git(root, ['rev-parse', '--verify', '-q', `${ref}:${naam}`], [1]);
   return r.status === 0 ? r.stdout : null;
+}
+
+/**
+ * Loopt er een merge (`MERGE_HEAD` bestaat)?
+ * @param {string} root
+ * @returns {boolean}
+ */
+function lopendeMerge(root) {
+  return git(root, ['rev-parse', '--verify', '-q', 'MERGE_HEAD'], [1]).status === 0;
 }
 
 /**
  * Beheerde bestanden die in de werkmap afwijken van HEAD, op inhoud: gewijzigd, verwijderd of untracked (ook genegeerd,
  * pnpm leest ze toch). De index telt niet mee, dus `--assume-unchanged` en `--skip-worktree` verbergen niets, en een
- * gestagede wijziging die in de werkmap is teruggezet telt niet.
+ * gestagede wijziging die in de werkmap is teruggezet telt niet. In de cloud tijdens een lopende merge telt een bestand
+ * dat op inhoud gelijk is aan `MERGE_HEAD` niet als gewijzigd, ook als het untracked is (spec cloud-werkmap-herstel AC-9).
  * @param {string} root
+ * @param {boolean} cloud
  * @returns {string[]}
  */
-function gewijzigdeBestanden(root) {
+function gewijzigdeBestanden(root, cloud) {
   // Ook als gezondheidscontrole van de repository: faalt bij een kapotte index.
   const untracked = git(root, ['ls-files', '--others', '--', ...BEHEERD]).stdout.split('\n');
-  return BEHEERD.filter((naam) => untracked.includes(naam) || werkmapHash(root, naam) !== headHash(root, naam));
+  const merge = cloud && lopendeMerge(root);
+  return BEHEERD.filter((naam) => {
+    const hash = werkmapHash(root, naam);
+    if (merge && hash === refHash(root, 'MERGE_HEAD', naam)) return false;
+    return untracked.includes(naam) || hash !== refHash(root, 'HEAD', naam);
+  });
 }
 
 /**
- * De feiten uit het echte bestandssysteem en git. Buiten een gekoppelde worktree (`.git` is geen bestand) wordt git niet
- * aangeroepen: de weigering is dan altijd de hoofdcheckout-weigering, hoe de git-staat ook is.
+ * De feiten uit het echte bestandssysteem en git. Buiten een gekoppelde worktree (`.git` is geen bestand) en buiten de
+ * cloud wordt git niet aangeroepen: de weigering is dan altijd de hoofdcheckout-weigering, hoe de git-staat ook is. In de
+ * cloud worden de beheerde bestanden ook in de hoofdcheckout getoetst, en telt tijdens een lopende merge een bestand dat
+ * gelijk is aan `MERGE_HEAD` niet als gewijzigd (spec cloud-werkmap-herstel AC-9); buiten de cloud alleen HEAD.
  * @param {string} root
+ * @param {boolean} [cloud] cloudsessie
  * @returns {InstallFeiten}
  */
-export function worktreeInstallFeiten(root) {
+export function worktreeInstallFeiten(root, cloud = false) {
   const nm = lstatOfNull(path.join(root, 'node_modules'));
   const nodeModules = nm === null ? 'afwezig' : nm.isSymbolicLink() ? 'symlink' : 'map';
   const worktree = lstatOfNull(path.join(root, '.git'))?.isFile() === true;
-  return { worktree, nodeModules, gewijzigd: worktree ? gewijzigdeBestanden(root) : [] };
+  return { worktree, nodeModules, gewijzigd: worktree || cloud ? gewijzigdeBestanden(root, cloud) : [] };
 }
 
 /**
@@ -209,9 +236,9 @@ function pnpmOmgeving(extra) {
   return { ...omgevingZonder(/^((npm|pnpm)_config_|NODE_OPTIONS$)/i), ...miseMappen(), ...extra };
 }
 
-/** @returns {number} */
-function installeer() {
-  const { command, args, env } = worktreeInstallCommando(veiligeBasismap());
+/** @param {boolean} cloud @returns {number} */
+function installeer(cloud) {
+  const { command, args, env } = worktreeInstallCommando(veiligeBasismap(), cloud);
   const r = spawnSync(command, args, { cwd: process.cwd(), stdio: 'inherit', env: pnpmOmgeving(env) });
   if (r.error !== undefined) {
     console.error(`✗ worktree-install: pnpm ontbreekt of start niet (${r.error.message}); zie scripts/bootstrap.sh`);
@@ -227,13 +254,14 @@ function uitvoeren() {
     console.error('✗ worktree-install geweigerd: hier staat geen .git; draai het vanuit de worktree-root');
     return 1;
   }
+  const cloud = process.env['CLAUDE_CODE_REMOTE'] === 'true';
   try {
-    const besluit = worktreeInstallBesluit(worktreeInstallFeiten(process.cwd()));
+    const besluit = worktreeInstallBesluit({ ...worktreeInstallFeiten(process.cwd(), cloud), cloud });
     if (besluit.actie === 'weigeren') {
       console.error(besluit.melding);
       return 1;
     }
-    return installeer();
+    return installeer(cloud);
   } catch (fout) {
     console.error(`✗ worktree-install: ${fout instanceof Error ? fout.message : String(fout)}`);
     return 1;

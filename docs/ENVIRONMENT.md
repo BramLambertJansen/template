@@ -257,7 +257,9 @@ vastgesteld. Of `gh api` lokaal een prompt geeft, is niet gemeten.
   gemeten): hoort een bestaande `node_modules` bij een andere store (andere `TMPDIR` bij een eerdere run, of eerder een
   handmatige `pnpm install`), dan kan pnpm zonder TTY afbreken met een fout over het verwijderen van de modules-map
   (`ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY`). Volgende stap: vraag de eigenaar; wis `node_modules` niet zelf en
-  voeg geen pnpm-vlag toe. Node en pnpm blijven bij `scripts/bootstrap.sh`; ook een ontbrekende of ongeldige
+  voeg geen pnpm-vlag toe. In een cloudsessie (`CLAUDE_CODE_REMOTE=true`) draait het script ook in de hoofdcheckout en geeft
+  het zelf `--config.confirm-modules-purge=false` mee: daar herstelt de agent een achterlopende `node_modules` met
+  `node scripts/kit/worktree-install.mjs`, want de eigenaar heeft er geen terminal (spec cloud-werkmap-herstel). Node en pnpm blijven bij `scripts/bootstrap.sh`; ook een ontbrekende of ongeldige
   `packageManager`-pin wijst daarheen.
 - **`✗ toolchain ontbreekt: pnpm reageert niet binnen 20 s`**, of wisselend falende tests die `feiten.mjs` starten: de
   voorcontrole wacht hoogstens `PNPM_TIMEOUT_MS` op `pnpm --version` (`scripts/kit/toolchain.mjs`). Traag wordt dat
