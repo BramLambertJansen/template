@@ -52,6 +52,10 @@
 //  19. Geen gewijzigde of verdwenen uitgebrachte sectie `## [x.y.z]` van docs/template-changelog.md tegenover de merge-base
 //     met origin/main (leerpunt #837, sleutel `docs:changelog-behoud:<versie>`); in `docsKrimp`, dus strikt en nooit in de
 //     baseline. Een nieuwe sectie toevoegen (`template:release`) mag.
+//  20. Een nieuwe regel `GEWIJZIGD (… <ns>/AC-n …)` in een testbestand tegenover de merge-base met origin/main, terwijl het
+//      AC daar al gebouwd was en zijn lijstitem in de spec gelijk is aan dat op de basis: de AC-tekst volgt de test niet (leerpunt #940,
+//      R-WERK-15, sleutel `docs:ac-tekst:<spec>:<AC-n>`, scripts/kit/ac-tekst.mjs). Klopt de tekst nog, dan staat
+//      `AC-tekst klopt` in het commentaar. In `docsKrimp`, dus strikt en nooit in de baseline.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -76,6 +80,7 @@ import {
   specNamen,
 } from '../../rails/hooks/lib/ac-dekking.mjs';
 import { boomWerkmap, dekkingTegenBasis } from './ac-dekking.mjs';
+import { acTekstViolations } from './ac-tekst.mjs';
 import { ADR_MAPPEN, adrKopViolations, adrNumber, duplicateAdrNumbers, invalidAdrNames } from './adr-numbers.mjs';
 import { APP_STUB } from './app-init.mjs';
 import { CODEOWNERS, codeownersTekst, eersteGoedkeurder, HERSTEL } from './codeowners.mjs';
@@ -166,7 +171,8 @@ export async function docsMeldingen(root = '.') {
 /**
  * De krimpcontrole op normen tegenover `git merge-base origin/main HEAD` (spec krimp-op-normen) en het behoud van
  * changelogfragmenten die al op die basis staan (regel 17, leerpunt #877) en van de uitgebrachte changelogsecties
- * (regel 19, leerpunt #837) en de AC-dekking (regel 6, ADR 0104); nooit in de baseline.
+ * (regel 19, leerpunt #837), de AC-dekking (regel 6, ADR 0104) en de AC-tekst na een testwijziging (regel 20, leerpunt
+ * #940); nooit in de baseline.
  * Zonder basis is ze in CI rood (AC-5).
  * @param {string} root
  * @returns {Promise<Violation[]>}
@@ -201,6 +207,7 @@ function dekkingKrimp(root) {
   return [
     ...acVerlies({ basis, nu: stand.nu, hernoemd: stand.hernoemd }, bomen.nu),
     ...specs.flatMap((spec) => [...statusGebouwdViolations(spec), ...merktekenViolations(spec)]),
+    ...acTekstViolations({ basis: oudBoom, nu: bomen.nu, hernoemd: stand.hernoemd }),
   ];
 }
 
