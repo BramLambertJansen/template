@@ -111,9 +111,11 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   zonder fouten: label weg. Tabeltest per fout met echte bodies, ook #424, #487, #500 en #504 als vorm.
 - **leerlus-bewijs/AC-6** — Bij `closed` op een leerpunt: zonder gemergde PR die het issue sluit (GraphQL
   `closedByPullRequestsReferences`) en een sectie `## Leerpunt` met dat nummer heeft, en zonder comment die begint met
-  `achterhaald:` van een auteur met `author_association` OWNER, MEMBER of COLLABORATOR, zet de workflow
+  `achterhaald:` van een eigenaaraccount (AC-22), zet de workflow
   `leerpunt-zonder-bewijs` met de comment. Bij `reopened`, of bij een geldige `achterhaald:`-comment na het sluiten
-  (`issue_comment`), haalt hij het label weg. Een `achterhaald:` van een andere auteur telt niet.
+  (`issue_comment`), haalt hij het label weg. Een `achterhaald:` van een andere auteur telt niet. Gewijzigd door ADR 0101
+  (Herzien 2026-11-24): was "van een auteur met `author_association` OWNER, MEMBER of COLLABORATOR". Toets:
+  `test/scripts/leerpunt-eigenaar.test.ts` (nieuw)
 - **leerlus-bewijs/AC-7** — De workflow heeft `permissions: issues: write` en verder niets; de job `leerpunt-bewijs` heeft
   `contents: read`, `pull-requests: read` en `issues: read`. Een test leest beide bestanden en faalt bij elk ander recht, bij
   elke aanroep die sluit, heropent of de body bewerkt, en bij elke `${{ github.event.* }}` in een `run:`-regel (issuebody en
@@ -153,7 +155,7 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   `test/rails/leerpunt-bijwerken-settings.test.ts` (nieuw)
 - **leerlus-bewijs/AC-13** — Sluiten als duplicaat telt als bewijs (ADR 0101 punt 2). De sluitreden komt uit de payload
   (`issue.state_reason`, ook bij `issue_comment`). Bij reden `duplicate` en een comment die begint met `duplicaat van #<nr>`,
-  van een auteur met `author_association` OWNER, MEMBER of COLLABORATOR, waarbij `#<nr>` een ander issue (geen PR) met label
+  van een eigenaaraccount (AC-22; was: `author_association` OWNER, MEMBER of COLLABORATOR), waarbij `#<nr>` een ander issue (geen PR) met label
   `leerpunt` is, geldt de sluiting als bewijs, net als een geldige `achterhaald:`: de workflow zet geen
   `leerpunt-zonder-bewijs` en haalt het weg als het er al stond (ook op `issue_comment` na het sluiten). Het doel komt uit
   REST `repos/<repo>/issues/<nr>` (labels en het veld `pull_request`); een fout 404, of 410 voor een verwijderd issue, telt als "bestaat niet". Telt niet: een
@@ -210,7 +212,7 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
 - **leerlus-bewijs/AC-20** — Issue-check (ADR 0109 Gevolgen, OV-5). Een eigen tak in `scripts/kit/leerpunt-check.mjs`, die
   alleen draait bij `issue.state_reason` `completed` en na `sluitOordeel`; AC-6 en AC-13 blijven ongewijzigd. De tak leest
   de huidige comments en zoekt een comment die past op `opgelost:` hoofdletterongevoelig met witruimte vooraan toegestaan
-  (zoals `DUPLICAAT`), van een auteur met `author_association` OWNER, MEMBER of COLLABORATOR. Na `opgelost:` volgt een door
+  (zoals `DUPLICAAT`), van een eigenaaraccount (AC-22; was: `author_association` OWNER, MEMBER of COLLABORATOR). Na `opgelost:` volgt een door
   komma's gescheiden lijst van één of meer verwijzingen, elk precies één van: `#<cijfers>` (PR), 7 tot 40 kleine
   hexadecimale tekens (commit), `ADR <4 cijfers>` (ADR); elke andere vorm is ongeldig. Witruimte rond een komma en aan het
   einde mag; andere tekst na de lijst (`opgelost: #834 (fix rolhek)`) maakt de comment ongeldig. De sluiting geldt als bewijs, net als
@@ -224,6 +226,14 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   leerpunten letterlijk "een leerpunt-issue (aanmaken, bijwerken, sluiten)"; "sluiten als duplicaat" komt in `AGENTS.md` niet
   meer voor, en de verwijzing naar ADR 0101 blijft. Een test leest `AGENTS.md` en faalt op de oude tekst of als de nieuwe
   ontbreekt. Toets: `test/rails/leerpunt-bijwerken-docs.test.ts`
+- **leerlus-bewijs/AC-22** — Alleen eigenaaraccounts (ADR 0101, Herzien 2026-11-24; eigenaar, 24 november 2026).
+  `.claude/gates.json` heeft `onderhoud.accounts`: de GitHub-logins van de eigenaar, in de template
+  `["BramLambertJansen", "Jan-Bramsen"]`. Een comment `achterhaald:` (AC-6), `duplicaat van #<nr>` (AC-13) of `opgelost:`
+  (AC-20) telt alleen als `user.login` van de comment, hoofdletterongevoelig, in die lijst staat; `author_association` beslist
+  niet meer (een COLLABORATOR, MEMBER of OWNER buiten de lijst telt niet). Ontbreekt de lijst, is hij leeg of geen lijst van
+  strings, dan telt geen enkele comment (fail closed): het label blijft zoals in AC-6, zonder dat de job crasht. Tabeltest per
+  soort comment met een login in de lijst, een andere login met COLLABORATOR, hoofdletterverschil en een ontbrekende of lege
+  lijst. Toets: `test/scripts/leerpunt-eigenaar.test.ts` (nieuw)
 
 ## Randgevallen
 
