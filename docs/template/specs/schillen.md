@@ -1,5 +1,5 @@
 ---
-status: voorstel # voorstel | goedgekeurd | vervallen — architect of hoofdsessie zet de status in het voorstel, de merge door de eigenaar is het besluit (ADR 0046); gebouwd volgt uit de AC-dekking (ADR 0104)
+status: goedgekeurd # voorstel | goedgekeurd | vervallen — architect of hoofdsessie zet de status in het voorstel, de merge door de eigenaar is het besluit (ADR 0046); gebouwd volgt uit de AC-dekking (ADR 0104)
 namespace: schillen
 ---
 
@@ -49,7 +49,10 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
   reageert.
 - **Mechanisme**: `ShellSessionProvider` (core, `src/core/web/ui/shell-frame.tsx`; in `src/web/main.tsx` om de router)
   houdt een ref "er is al een scherm getoond". Niet de provider zet die, maar het eerste scherm zelf: `ShellFrame` en
-  `CenteredCard` roepen `useMarkScreenShown()` aan. Zo telt pas de commit van het eerste echte scherm als eerste weergave,
+  `CenteredCard` roepen `useMarkScreenShown()` aan. `ShellFrame` geeft een context "binnen een frame" door; binnen een frame,
+  bij `CenteredCard preview` en zonder provider doet `useMarkScreenShown` niets. Zo kan een `CenteredCard` in een schil
+  (zoals `src/web/features/account/email-confirm-page.tsx` onder `/_app`) de ref niet zetten voordat het frame hem leest:
+  effecten van kinderen lopen vóór die van de ouder. Zo telt pas de commit van het eerste echte scherm als eerste weergave,
   ook als dat later komt dan de provider (de guard laadt de sessie async en `AppLayout` rendert `null` zolang die ontbreekt,
   `src/web/features/layout/app-layout.tsx`). Het frame leest de ref bij zijn eerste effect-run en legt de beslissing
   ("focus" of "niet") vast in een eigen ref, en zet daarna de gedeelde ref. Elke effect-run voert die vastgelegde
@@ -228,7 +231,8 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
   dan staat de toast na de wissel nog in beeld en is er precies één `[data-toaster]`; `Toaster` is geen export van
   `src/core/web/ui/toast.tsx` of `src/web/ui/index.ts` meer. Toets: `src/core/web/ui/toast.test.tsx`
 - **schillen/AC-16** — Gegeven `ShellSessionProvider` onder `StrictMode`: mount de schil in een latere commit dan de
-  provider (zoals na een async guard), dan blijft de focus op `body`; gegeven een `CenteredCard` en daarna een schil, of een
+  provider (zoals na een async guard), ook met een `CenteredCard` als kind in dezelfde commit, dan blijft de focus op
+  `body`; gegeven een `CenteredCard` en daarna een schil, of een
   schil die een andere vervangt, dan staat de focus op de `h1`; zonder provider alleen bij een wissel van `routeKey`. Toets: `src/core/web/ui/shell-contract.test.tsx` (nieuw)
 
 **Deel B**
@@ -262,7 +266,7 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
 | Schermen zonder schil (`/login`, `/uitnodiging`) | ongewijzigd: `CenteredCard`, geen frame; meldingen verschijnen er nu ook, via `ToastProvider` |
 | Melding vlak voor een schilwissel | blijft staan: `ToastProvider` rendert de meldingen boven alle schillen (AC-15) |
 | Inloggen en dan de app | focus op de `h1` van het eerste scherm in de app (AC-16) |
-| Eerste scherm na laden, ook onder `StrictMode` | de schil verplaatst de focus niet (AC-16) |
+| Eerste scherm na laden, ook onder `StrictMode` en met een `CenteredCard` in de schil | de schil verplaatst de focus niet (AC-16) |
 | Melding binnen een deel met een eigen `ThemeScope` | volgt het thema van het document, niet dat van het deel |
 | Wissel naar een andere layoutroute | focus op de `h1` van het nieuwe scherm (AC-16) |
 
