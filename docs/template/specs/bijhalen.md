@@ -85,7 +85,9 @@ schrijfbaar pad weigert het script vooraf; dat is zeldzaam en blijft handwerk.
   Beschermd is wat `isSandboxBeschermd` of `!schrijfbaar` zegt. De volgorde van de invoer blijft behouden.
 - `bijhalenArgumenten(args)` geeft `{ stand: 'main' } | { stand: 'volg', ref } | { stand: 'terug' }`.
 - `pasWerkmapToe(stappen, io)`: `stappen` is een lijst van `{ pad, inhoud: Buffer | null, uitvoerbaar: boolean }`, waarbij
-  `null` verwijderen betekent. `io` heeft `lees` (geeft `{ inhoud, uitvoerbaar } | null`), `schrijf` en `verwijder`. Faalt een stap, dan zet de functie de eerdere stappen terug en gooit
+  `null` verwijderen betekent. `io` heeft `lees` (geeft `{ inhoud, uitvoerbaar } | null`), `schrijf(pad, inhoud, uitvoerbaar)`
+  en `verwijder(pad)`. Bij succes geeft de functie de herstelstappen terug (nieuwste eerst), waarmee het script de werkmap
+  terugzet als stap 3 of 4 faalt. Faalt een stap, dan zet de functie de eerdere stappen terug en gooit
   ze de oorspronkelijke fout door.
 
 **Teksten** (letterlijk):
@@ -105,6 +107,7 @@ schrijfbaar pad weigert het script vooraf; dat is zeldzaam en blijft handwerk.
 - `✗ bijhalen: conflict in <n> bestand(en); er is niets veranderd:`, daarna één pad per regel.
 - `✗ bijhalen: git merge-tree faalt: <reden>; er is niets veranderd`
 - `✗ bijhalen: schrijven faalt (<pad>: <reden>); alles is teruggezet`
+- `✗ bijhalen: <reden>; alles is teruggezet` (een fout bij de index of een ref, stap 3 of 4)
 - `✓ niets bij te halen`
 - `✓ merge staat in de index (MERGE_HEAD <sha>); werk de beschermde bestanden bij en rond af met git commit -F <bestand>`
 - `✓ <branch> staat op <sha>`
@@ -119,14 +122,14 @@ schrijfbaar pad weigert het script vooraf; dat is zeldzaam en blijft handwerk.
   - Paden onder de drie prefixen en de twee exacte namen zijn beschermd. `.claude/rules/x.md`, `.claude/settings.jsonc`,
     `.claude/skillsx/a` en `docs/a.md` zijn dat niet.
   - `verdeelPaden` zet een pad waarvoor `schrijfbaar` `false` geeft bij `beschermd`, ook buiten de lijst.
-  - `verdeelPaden` behoudt de volgorde van de invoer. Toets: `test/scripts/bijhalen.test.ts` (nieuw)
+  - `verdeelPaden` behoudt de volgorde van de invoer. Toets: `test/scripts/bijhalen.test.ts`
 - **bijhalen/AC-2**: Gegeven `bijhalenArgumenten`:
   - `['main']`, `['terug']` en `['volg', 'origin/x']` zijn geldig.
   - Lege invoer, een onbekende stand, `volg` zonder ref, een ref die met `-` begint en een extra argument geven de
-    gebruiksmelding. Toets: `test/scripts/bijhalen.test.ts` (nieuw)
+    gebruiksmelding. Toets: `test/scripts/bijhalen.test.ts`
 - **bijhalen/AC-3**: Gegeven `pasWerkmapToe` met een `io` waarvan `schrijf` bij de tweede stap faalt. Dan staan na afloop
   alle paden weer op hun oude inhoud of afwezigheid, en komt de fout door. Zonder fout staan alle stappen toegepast.
-  Toets: `test/scripts/bijhalen.test.ts` (nieuw)
+  Toets: `test/scripts/bijhalen.test.ts`
 - **bijhalen/AC-4**: Gegeven een git-fixture met een schone branch. `origin/main` wijzigt zonder conflict `docs/a.md`,
   verwijdert `docs/b.md`, voegt `docs/nieuw/c.md` toe en wijzigt `.claude/skills/s/SKILL.md`. Wanneer `bijhalen.mjs main`
   draait, dan:
@@ -135,35 +138,35 @@ schrijfbaar pad weigert het script vooraf; dat is zeldzaam en blijft handwerk.
   - is de index gelijk aan de boom van `git merge-tree --write-tree HEAD origin/main`;
   - hebben `docs/a.md`, `docs/b.md` en `docs/nieuw/c.md` in de werkmap de nieuwe toestand;
   - heeft `.claude/skills/s/SKILL.md` in de werkmap nog de oude inhoud;
-  - noemt het blok precies dat ene pad, en heeft het tmp-bestand de nieuwe inhoud. Toets: `test/scripts/bijhalen.test.ts` (nieuw)
+  - noemt het blok precies dat ene pad, en heeft het tmp-bestand de nieuwe inhoud. Toets: `test/scripts/bijhalen.test.ts`
 - **bijhalen/AC-5**: Gegeven de toestand na AC-4 waarin de test het beschermde bestand gelijk heeft gemaakt aan het
   tmp-bestand (in de fixture zonder ondertekening). Wanneer `git commit -F <bestand>` draait, dan heeft de nieuwe commit
   twee ouders, de oude HEAD en `origin/main`, en als boom de index uit AC-4. Daarna is `git status --porcelain` zonder
-  getrackte wijzigingen. Toets: `test/scripts/bijhalen.test.ts` (nieuw)
+  getrackte wijzigingen. Toets: `test/scripts/bijhalen.test.ts`
 - **bijhalen/AC-6**: Gegeven een `origin/main` die een conflict met de branch geeft. Wanneer `bijhalen.mjs main` draait,
   dan:
   - is de exitcode 1 en noemt de conflictmelding het pad;
   - zijn HEAD, de index en de werkmap byte voor byte gelijk aan daarvoor;
   - is er geen `MERGE_HEAD`;
   - bij een fout van `merge-tree` (bijvoorbeeld een andere historie zonder gemeenschappelijke voorouder) volgt de
-    foutmelding en niet de conflictmelding. Toets: `test/scripts/bijhalen.test.ts` (nieuw)
+    foutmelding en niet de conflictmelding. Toets: `test/scripts/bijhalen.test.ts`
 - **bijhalen/AC-7**: Gegeven een vuile werkmap, een gestagede wijziging, een lopende merge, een losse HEAD of een `<ref>` die
   geen commit is. Wanneer `main` of `volg` draait, dan is de exitcode 1 met de bijbehorende melding en is er niets
   veranderd. Een ongetrackt bestand op een pad dat het doel niet raakt, telt niet als vuil.
-  Toets: `test/scripts/bijhalen.test.ts` (nieuw)
+  Toets: `test/scripts/bijhalen.test.ts`
 - **bijhalen/AC-8**: Gegeven een ongetrackt bestand op een pad dat het doel toevoegt. Wanneer `main` of `volg` draait, dan
   is de exitcode 1 met de melding over ongetrackte bestanden. Daarna zijn dat bestand, de index en HEAD byte voor byte
-  gelijk aan daarvoor. Toets: `test/scripts/bijhalen.test.ts` (nieuw)
+  gelijk aan daarvoor. Toets: `test/scripts/bijhalen.test.ts`
 - **bijhalen/AC-9**: Gegeven een `<ref>` die een opvolger is van HEAD. De ref wijzigt een beschermd en een gewoon bestand,
   verwijdert een gewoon bestand en voegt een bestand toe in een nieuwe map. Wanneer `bijhalen.mjs volg <ref>` draait, dan:
   - staat de branch op `<ref>` en is de index gelijk aan de boom van `<ref>`;
   - hebben de gewone paden de nieuwe toestand;
   - heeft het beschermde bestand de oude inhoud en staat het in het blok;
   - een `<ref>` gelijk aan HEAD geeft `✓ niets bij te halen` en verandert niets;
-  - een ref die geen opvolger is, geeft de fast-forwardmelding en verandert niets. Toets: `test/scripts/bijhalen.test.ts` (nieuw)
+  - een ref die geen opvolger is, geeft de fast-forwardmelding en verandert niets. Toets: `test/scripts/bijhalen.test.ts`
 - **bijhalen/AC-10**: Gegeven een HEAD die een voorouder is van `origin/main`. Dan weigert `main` met de verwijzing naar
   `volg origin/main` en verandert het niets. Is `origin/main` een voorouder van HEAD, dan geeft `main` `✓ niets bij te halen`
-  met exitcode 0 en zonder `MERGE_HEAD`. Toets: `test/scripts/bijhalen.test.ts` (nieuw)
+  met exitcode 0 en zonder `MERGE_HEAD`. Toets: `test/scripts/bijhalen.test.ts`
 - **bijhalen/AC-11**: Gegeven de toestand na AC-4, waarin het beschermde bestand al met de hand naar de nieuwe inhoud is
   gezet. Wanneer `bijhalen.mjs terug` draait, dan:
   - is de exitcode 0;
@@ -172,12 +175,12 @@ schrijfbaar pad weigert het script vooraf; dat is zeldzaam en blijft handwerk.
   - noemt het blok het beschermde bestand met de HEAD-inhoud als tmp-bestand;
   - zonder lopende merge weigert `terug` en verandert het niets;
   - is na `main` een schrijfbaar pad in de werkmap gewijzigd (afwijkend van de index), dan weigert `terug` met de melding
-    die dat pad noemt, en zijn dat bestand, de index en `MERGE_HEAD` ongewijzigd. Toets: `test/scripts/bijhalen.test.ts` (nieuw)
+    die dat pad noemt, en zijn dat bestand, de index en `MERGE_HEAD` ongewijzigd. Toets: `test/scripts/bijhalen.test.ts`
 - **bijhalen/AC-12**: Gegeven een doel dat bij een gewoon bestand alleen de modus verandert (`100644` naar `100755`). Dan
   heeft dat bestand na `main` of `volg` de uitvoerbit en wijkt de werkmap niet af van de index. Een symlink op een
   gewijzigd schrijfbaar pad geeft de symlinkmelding en verandert niets. De tmp-submap van een eerdere run met een andere
   doelcommit raakt het script niet; die van dezelfde doelcommit maakt het eerst leeg.
-  Toets: `test/scripts/bijhalen.test.ts` (nieuw)
+  Toets: `test/scripts/bijhalen.test.ts`
 
 ## Randgevallen
 

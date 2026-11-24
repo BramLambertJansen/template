@@ -470,7 +470,12 @@ een daaropvolgende fast-forward vergelijkt opnieuw met `origin/main`. Alleen de 
 volstaat niet: lokale `main` kan nog oude skillbestanden bevatten. De bestaande voorwaarden voor een schone werkmap
 en het opruimen na een merge blijven gelden.
 
-Moet de stap een door de sandbox beschermd bestand wijzigen, probeer de wissel dan niet. Begin verder werk in een
+Moet de stap een door de sandbox beschermd bestand wijzigen, probeer de wissel dan niet met git zelf. Gaat het om `main`
+bijhalen of de eigen branch vooruitzetten, gebruik dan `node scripts/kit/bijhalen.mjs main` of `volg <ref>` (spec bijhalen).
+Het script schrijft alleen de schrijfbare bestanden en noemt de beschermde. Werk die bij met Edit (eigenaarakkoord) vóór
+`git commit -F`: anders faalt de pre-commit-hook op `Read-only file system`. Geen `git add -u`, `-A`, `.` of `commit -a` zolang
+`git diff --quiet -- <paden>` faalt of een verwijderd beschermd pad nog bestaat. Afbreken vóór de commit: `bijhalen.mjs
+terug`, niet `git merge --abort`. Voor een andere wissel: begin verder werk in een
 aparte schone worktree vanaf de bedoelde doelref als de runtime dat toestaat, of laat de eigenaar de wissel uitvoeren.
 Een nieuwe worktree herstelt de oude niet; meld welke branch of werkmap nog niet is opgeruimd. Verruim de sandbox niet.
 
