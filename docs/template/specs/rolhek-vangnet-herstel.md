@@ -59,19 +59,19 @@ een PR-titel of -body is volgens R-ROL-11 een bewuste valse melding (R-ROL-10 la
   reviewer worden geweigerd: `gh pr list --search "x OR is:private"`, `gh pr list --search "x OR(is:private)"`,
   `gh issue list --search "a and b"` en `gh issue list --search "NOT x"`. Door gaan: `gh issue list --search "leerpunt
   rolhek"`, `gh pr list --search "fix ordening"`, `gh issue list --search "operator"` en `gh issue list --search "Notitie"`.
-  Toets: `test/hooks/rolhek-zoekwaarde.test.ts` (nieuw)
+  Toets: `test/hooks/rolhek-zoekwaarde.test.ts`
 - **rolhek-herstel/AC-2** — `rails/hooks/lib/rolhek.mjs` exporteert `ZOEKVORMEN`: een lijst teksten met de zoekvormen van
   de reviewer, afgeleid uit `REVIEWER_READS` (de kop van elke lezer met `--search`, nu `gh issue list` en `gh pr list`) plus
   `search/issues` voor de `gh api`-vorm `search/issues?q=repo:{owner}/{repo}+<rest>`. Eén
   tabel met aanvallen draait tegen elke vorm uit `ZOEKVORMEN`: losse `OR`, `AND` en `NOT` in elke hoofdlettervorm, ook
   direct naast een haakje, en een tweede `repo:`, `org:` of `user:`; voor `gh api` ook een tweede `q` via `&` en `=`. Elke
   aanval wordt in elke vorm geweigerd, en de test is rood als `ZOEKVORMEN` een vorm bevat zonder rij in de tabel. Toets:
-  `test/hooks/rolhek-zoekwaarde.test.ts` (nieuw)
+  `test/hooks/rolhek-zoekwaarde.test.ts`
 - **rolhek-herstel/AC-3** — Een subagent die een bestaand testbestand verwijdert (`change.kind` `delete`) of erin een test
   skipt of gevallen weghaalt (`testChangeRisk` `skip` of `removed`), krijgt in `existingTest` een weigering die eindigt met
   de testakkoordtekst uit "Hergebruik en UX". De hoofdsessie krijgt voor dezelfde wijziging de vraag zonder die aanvulling.
   Een fixture of setup (`LOCKED_HELPERS`) houdt de bestaande melding. Punt 5 van `.claude/agents/tester.md` noemt dezelfde
-  route. Toets: `test/hooks/rolhek-testakkoord-melding.test.ts` (nieuw)
+  route. Toets: `test/hooks/rolhek-testakkoord-melding.test.ts`
 - **rolhek-herstel/AC-4** — `tokenize` in `rails/hooks/lib/shell.mjs` begint een commentaar met `#` aan het begin van een
   woord, ook direct na een operator (`;`, `&`, `&&`, `|`, `||`, `|&`, `;;`, `;&`, `;;&`, `(`, `)` en elke redirectvorm). `#`
   binnen een woord, binnen `${…}`, binnen backticks, binnen `((…))`, `$((…))` en `$[…]` begint geen commentaar. Voor `#`
@@ -80,7 +80,7 @@ een PR-titel of -body is volgens R-ROL-11 een bewuste valse melding (R-ROL-10 la
   varianten `${x/;#/}; rm -rf .claude/hooks`, `echo $(true #) <<E⏎rm -rf .claude/hooks⏎E⏎)` en
   `[[ -n x #⏎]] && rm -rf .claude/hooks` geeft `parseCommands` een segment met `rm` als eerste woord (`[[ -n x #]] <<E…`
   is in bash een syntaxfout en voert niets uit; gemeten met bash 5.2). Ook geeft `decide` voor de hoofdsessie een vraag en voor een
-  subagent een weigering, net als voor het losse `rm -rf .claude/hooks`. Toets: `test/hooks/shell-commentaar.test.ts` (nieuw)
+  subagent een weigering, net als voor het losse `rm -rf .claude/hooks`. Toets: `test/hooks/shell-commentaar.test.ts`
 - **rolhek-herstel/AC-5** — Een differentiële test draait elke rij van een vast corpus in echte bash, via de kooi
   (`inKooi`, R-TOOL-03). Binnen de kooi start `env -i PATH=<lege map> BASH_ENV=<prelude> bash --restricted --noprofile
   --norc -O extglob|+O extglob <rijbestand>`; het rijbestand en de prelude staan als data in de werkmap, en `PATH` staat
@@ -99,11 +99,11 @@ een PR-titel of -body is volgens R-ROL-11 een bewuste valse melding (R-ROL-10 la
   geweigerde redirect of vroege afbraak vals groen zijn. Het corpus bevat minstens de zes vormen en de
   varianten uit AC-4 en elke basisrij uit `test/hooks/rolhek-aanvalscorpus.ts`. Bash ouder dan versie 5 of geen kooi: de
   test slaat over met de melding van `vermogen('kooi')` of de bashversie. In CI is de kooi er (`.github/workflows/ci.yml`,
-  `kooi.mjs --proef`). Toets: `test/hooks/shell-woorden-bash.test.ts` (nieuw)
+  `kooi.mjs --proef`). Toets: `test/hooks/shell-woorden-bash.test.ts`
 - **rolhek-herstel/AC-6** — Een rij die bash anders telt dan de lezer en die de bouw niet oplost, staat op een aanvaard-lijst
   in het testbestand, met per rij een reden van minstens drie woorden. De zes vormen en de varianten uit AC-4 staan er niet
   op; de test is rood als een van hen erop staat, en ook als een rij op de lijst groen wordt (de lijst krimpt mee). Toets:
-  `test/hooks/shell-woorden-bash.test.ts` (nieuw)
+  `test/hooks/shell-woorden-bash.test.ts`
 
 ## Randgevallen
 

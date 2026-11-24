@@ -610,6 +610,16 @@ const TEST_FILES = ['**/*.test.*', '**/*.spec.*', 'db/tests/**'];
 // bestand daaronder dat als testbestand heet.
 const LOCKED_HELPERS = ['test/rails/fixtures/**', 'test/setup/**'];
 
+// Spec rolhek-herstel/AC-3 (leerpunt #688): het rolhek leest het testakkoord in een gemergede spec niet; een subagent
+// krijgt de route via de hoofdsessie, die de vraag aan de eigenaar krijgt.
+const TESTAKKOORD =
+  '; noemt een gemergede spec het akkoord (Raakt ook), dan doet de hoofdsessie deze wijziging: zij krijgt de vraag aan de eigenaar (spec rolhek-herstel/AC-3)';
+
+/** @param {string} reden @param {string} role */
+function testakkoord(reden, role) {
+  return role === 'hoofdsessie' ? reden : `${reden}${TESTAKKOORD}`;
+}
+
 /**
  * Bestaande test of hulpbestand: verwijderen, skippen of gevallen weghalen vraagt akkoord van de eigenaar, net als een
  * fixture of setup wijzigen; een andere wijziging meldt het rolhek.
@@ -625,11 +635,11 @@ function existingTest({ rel, change, role }, ctx, decision) {
   if (LOCKED_HELPERS.some((glob) => globMatch(glob, rel))) {
     gate(decision, role, `${rel} is een fixture of setup: wijzigen of verwijderen alleen met akkoord van de eigenaar (WS-02)`);
   } else if (change.kind === 'delete') {
-    gate(decision, role, `${rel} is een bestaande test: verwijderen alleen met akkoord van de eigenaar (AGENTS.md)`);
+    gate(decision, role, testakkoord(`${rel} is een bestaande test: verwijderen alleen met akkoord van de eigenaar (AGENTS.md)`, role));
   } else if (risk === 'skip') {
-    gate(decision, role, `${rel}: een test skippen alleen met akkoord van de eigenaar (AGENTS.md)`);
+    gate(decision, role, testakkoord(`${rel}: een test skippen alleen met akkoord van de eigenaar (AGENTS.md)`, role));
   } else if (risk === 'removed') {
-    gate(decision, role, `${rel}: testgevallen weghalen alleen met akkoord van de eigenaar (AGENTS.md)`);
+    gate(decision, role, testakkoord(`${rel}: testgevallen weghalen alleen met akkoord van de eigenaar (AGENTS.md)`, role));
   } else if (helper) {
     decision.context.push(`${rel}: hulpbestand gewijzigd: noem het met reden in de PR (AGENTS.md, framework §8).`);
   } else if (role === 'developer') {
@@ -1348,6 +1358,16 @@ const REVIEWER_READS = {
   'pnpm leespad': { flags: ['--json'], values: ['--ref', '--basis'], positional: 0 },
   'pnpm meting': { flags: ['--json', '--pr-tabel', '--trend', '--schaduw', '--help'], values: ['--branch', '--sessie'], positional: 0 },
 };
+
+/**
+ * De zoekvormen van de reviewer (spec rolhek-herstel/AC-2): de kop van elke lezer met `--search` en `search/issues` voor
+ * `gh api`. De test haalt elke vorm langs dezelfde aanvallentabel.
+ * @type {readonly string[]}
+ */
+export const ZOEKVORMEN = [
+  ...Object.entries(REVIEWER_READS).flatMap(([kop, { values }]) => (values.includes('--search') ? [kop] : [])),
+  'search/issues',
+];
 // Geen `$`, backtick, `;`, spatie of aanhalingsteken: de shell van pnpm voert niets uit een waarde uit.
 const SAFE_VALUE = /^[A-Za-z0-9_./,:-]+$/;
 
@@ -1358,7 +1378,21 @@ const SAFE_VALUE = /^[A-Za-z0-9_./,:-]+$/;
  * @param {string} waarde @param {readonly string[]} expanded `Command.expanded`
  */
 function zoekwaarde(waarde, expanded) {
-  return waarde !== '' && !expanded.includes(waarde) && !/(?:repo|org|user):/i.test(waarde) &&![...waarde].some((teken) => teken.charCodeAt(0) < 0x20 || teken.charCodeAt(0) === 0x7f);
+  const stuurteken = [...waarde].some((teken) => teken.charCodeAt(0) < 0x20 || teken.charCodeAt(0) === 0x7f);
+  return waarde !== '' && !expanded.includes(waarde) && !stuurteken && !zoekScopeFout(waarde.split(/[\s()]+/));
+}
+
+// Spec rolhek-herstel/AC-1: de aanvulling op elke weigering van een zoekvorm van de reviewer.
+const ZOEKREGEL = 'zonder losse OR, AND of NOT en zonder repo:, org: of user: (spec rolhek-herstel/AC-1)';
+
+/**
+ * De gedeelde scopetoets van elke zoekvorm van de reviewer (spec rolhek-herstel/AC-1): waar als een woord,
+ * hoofdletterongevoelig, precies `OR`, `AND` of `NOT` is (verruimt de zoekopdracht buiten `repo:`), of `repo:`, `org:` of
+ * `user:` bevat (een andere repository). De aanroeper splitst: `--search` op witruimte en haakjes, `gh api` op `+` en haakjes.
+ * @param {readonly string[]} woorden
+ */
+export function zoekScopeFout(woorden) {
+  return woorden.some((woord) => /^(?:or|and|not)$/i.test(woord) || /(?:repo|org|user):/i.test(woord));
 }
 
 /**
@@ -1427,7 +1461,8 @@ function leeslijstRefusal(kern, { parsed, werkmapInRepo, feiten }) {
   if (readArgsAllowed(kern.slice(head.split(' ').length), read, parsed.expanded ?? [])) return null;
   const opties = [...read.flags, ...read.values.map((value) => `${value} <waarde>`)];
   const lijst = opties.length > 0 ? opties.join(', ') : 'geen opties; paden na --';
-  return `reviewer: \`${head}\` alleen met: ${lijst}; waarden alleen [A-Za-z0-9_./,:-] (spec rolhek-lezen; framework §8)`;
+  const zoek = read.values.includes('--search') ? `; --search ${ZOEKREGEL}` : '';
+  return `reviewer: \`${head}\` alleen met: ${lijst}; waarden alleen [A-Za-z0-9_./,:-] (spec rolhek-lezen; framework §8)${zoek}`;
 }
 
 // rolhek-lezen/AC-21: de endpoints van `gh api` voor de reviewer, met `{owner}` en `{repo}` letterlijk (gh vult de
@@ -1436,8 +1471,8 @@ const API_N = '[0-9]{1,12}';
 const API_SHA = '[0-9a-f]{7,40}';
 const API_QUERY = '[A-Za-z0-9_.,:=&+-]+';
 // De rest van een zoekopdracht: zonder `&` en `=` (geen tweede `q` of `advanced_search`) en zonder losse operator (API_OPERATOR).
-const API_ZOEK_REST = '[A-Za-z0-9_.,:+-]+';
-const API_OPERATOR = /(?:^|\+)(?:or|and|not)(?:\+|$)/i;
+// Haakjes mogen (rolhek-herstel/AC-1): `zoekScopeFout` splitst er ook op, zodat `x+OR(is:private)` een losse OR blijft.
+const API_ZOEK_REST = '[A-Za-z0-9_.,:+()-]+';
 const API_PADEN = [
   `pulls(?:/${API_N}(?:/(?:comments|files|commits))?)?`,
   `issues/${API_N}(?:/(?:comments|events))?`,
@@ -1454,7 +1489,8 @@ const API_MELDING =
   'reviewer: `gh api` alleen met precies één endpoint, in zijn geheel tussen aanhalingstekens: "repos/{owner}/{repo}/<pad>" ' +
   '(<pad>: pulls, pulls/<n>, pulls/<n>/comments|files|commits, issues/<n>, issues/<n>/comments|events, actions/runs, ' +
   'actions/runs/<n>, actions/runs/<n>/jobs, actions/jobs/<n>, actions/jobs/<n>/logs, commits/<sha>, commits/<sha>/status; ' +
-  'met een query ?<q> uit [A-Za-z0-9_.,:=&+-]) of "search/issues?q=repo:{owner}/{repo}+<rest>" (<rest> uit [A-Za-z0-9_.,:+-], zonder OR, AND of NOT); opties alleen --paginate ' +
+  'met een query ?<q> uit [A-Za-z0-9_.,:=&+-]) of "search/issues?q=repo:{owner}/{repo}+<rest>" (<rest> uit [A-Za-z0-9_.,:+()-], ' +
+  `${ZOEKREGEL}); opties alleen --paginate ` +
   'en --jq <filter>, elk als los woord; het filter zonder stuurteken, expansie, onaangehaald *, ?, [ of { en zonder env, ' +
   '$ENV, input, inputs, input_filename, $__loc__, import of include (spec rolhek-lezen/AC-21)';
 
@@ -1490,7 +1526,7 @@ function apiEndpointToegestaan({ word, raw, expands }) {
   if (!aangehaald || expands) return false;
   if (API_ENDPOINT.test(word)) return true;
   const rest = API_ZOEKEN.exec(word)?.[1];
-  return rest !== undefined && !/(?:repo|org|user):/i.test(rest) && !API_OPERATOR.test(rest);
+  return rest !== undefined && !zoekScopeFout(rest.split(/[+()]+/));
 }
 
 /**

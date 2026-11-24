@@ -40,6 +40,8 @@ export const ONZEKERE_TEKST = /[#`\\\n]|\$[{'(]|\(\(/;
 // Review B3 (#622, eigenaarbesluit 7 november 2026): de tokenizer haalt escapes en aanhalingen weg vóór de glob-omzetting;
 // met een van deze tekens in het commando is de klassegrens in een woordwaarde niet meer zeker (`Command.ruim`).
 const KLASSE_ONZEKER = /[\\'"]/;
+// Een commandosubstitutie `$(`, geen rekenkundige `$((`.
+const SUBSTITUTIE = /\$\((?!\()/;
 
 /**
  * @param {string} script
@@ -47,6 +49,21 @@ const KLASSE_ONZEKER = /[\\'"]/;
  * @returns {Command[]}
  */
 export function parseCommands(script, onzeker = false) {
+  const segmenten = parseLezing(script, onzeker);
+  // Spec rolhek-herstel/AC-4: met `#` binnen `$(…)` kan bash de substitutie anders sluiten dan `findParen` (een commentaar
+  // slikt de `)`). Dan ook de lezing waarin `$(` een subshell opent, en de vereniging van de segmenten: liever te veel.
+  // `$((` is rekenen: daarin is `#` geen commentaar.
+  if (!SUBSTITUTIE.test(script) || !script.includes('#')) return segmenten;
+  return [...segmenten, ...parseLezing(script.replace(new RegExp(SUBSTITUTIE.source, 'g'), ' ('), true)];
+}
+
+/**
+ * Eén lezing van `script` (zie `parseCommands`).
+ * @param {string} script
+ * @param {boolean} onzeker
+ * @returns {Command[]}
+ */
+function parseLezing(script, onzeker) {
   const neutraal = onzeker || ONZEKERE_TEKST.test(script);
   const ruim = onzeker || KLASSE_ONZEKER.test(script);
   /** @type {Command[]} */
@@ -399,6 +416,8 @@ export function tokenize(script, bodies = []) {
   /** @type {Heredoc[]} */
   const heredocs = [];
   let index = 0;
+  // Binnen een rekenkundig commando `(( … ))` is `#` geen commentaar (spec rolhek-herstel/AC-4).
+  let reken = false;
   while (index < script.length) {
     const char = script[index] ?? '';
     if (char === ' ' || char === '\t') {
@@ -406,9 +425,13 @@ export function tokenize(script, bodies = []) {
     } else if (char === '\\' && script[index + 1] === '\n') {
       // Een voortzetting tussen woorden is geen (leeg) woord; zo blijft `argv[0]` het echte commandowoord (review R4-2).
       index += 2;
-    } else if (char === '#' && (index === 0 || /[ \t\n]/.test(script[index - 1] ?? ''))) {
+    } else if (char === '#' && !reken) {
+      // Hier begint altijd een nieuw woord (na witruimte of een operator; `a#b` leest `readWord` in zijn geheel), en dan is
+      // `#` voor bash een commentaar tot het regeleinde, ook direct na `;`, `&&`, `(` of een redirect (leerpunt #617, AC-4).
       while (index < script.length && script[index] !== '\n') index += 1;
     } else {
+      if (script.startsWith('((', index)) reken = true;
+      else if (reken && script.startsWith('))', index)) reken = false;
       index = nextToken(script, index, { tokens, heredocs, bodies });
     }
   }
@@ -522,7 +545,33 @@ function wordPart(script, index, char) {
     const close = findParen(script, index + 2);
     return { text: script.slice(index, close + 1), end: close + 1 };
   }
+  // `${…}`, `$[…]` en backticks horen met hun inhoud bij het woord: bash breekt daarbinnen niet op witruimte of een
+  // metateken, en `#` daarin is geen commentaar (leerpunt #617, spec rolhek-herstel/AC-4).
+  const paar = char === '$' ? { '{': '}', '[': ']' }[script[index + 1] ?? ''] : undefined;
+  if (paar !== undefined) {
+    const close = findPaar(script, index + 2, paar);
+    return { text: script.slice(index, close + 1), end: close + 1 };
+  }
+  if (char === '`') {
+    const close = findClose(script, index + 1, '`');
+    return { text: script.slice(index, close + 1), end: close + 1 };
+  }
   return { text: char, end: index + 1 };
+}
+
+/**
+ * De sluiter van `${` of `$[` (de opener staat vlak vóór `from`), met nesting van dezelfde opener.
+ * @param {string} script @param {number} from @param {string} sluit
+ */
+function findPaar(script, from, sluit) {
+  const open = script[from - 1];
+  let depth = 1;
+  for (let index = from; index < script.length; index += 1) {
+    if (script[index] === '\\') index += 1;
+    else if (script[index] === open) depth += 1;
+    else if (script[index] === sluit && (depth -= 1) === 0) return index;
+  }
+  return script.length;
 }
 
 /**
