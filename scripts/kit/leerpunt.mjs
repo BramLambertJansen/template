@@ -20,7 +20,6 @@ export const TEKSTTREDEN = ['Skill', 'Padregel', 'AGENTS.md'];
 export const TEKSTPADEN = ['.claude/agents/', '.claude/skills/', '.claude/rules/'];
 const TEKSTBESTANDEN = ['AGENTS.md', 'CLAUDE.md'];
 export const GEEN_ANTWOORD = '_No response_';
-export const SCHRIJFRECHT = ['OWNER', 'MEMBER', 'COLLABORATOR'];
 export const COMMENT_ONVOLLEDIG = 'Dit leerpunt volgt het sjabloon niet:';
 export const COMMENT_ZONDER_BEWIJS =
   'Gesloten zonder sluitbewijs (ADR 0078): geen gemergde PR met een sectie Leerpunt voor dit issue en geen comment "achterhaald: <reden>".';
@@ -470,21 +469,60 @@ export function runOordeel(run, { basis, head }) {
   return null;
 }
 
+/** @typedef {{ body: string, association: string, id?: unknown }} Comment */
+
+/**
+ * Het GitHub-id van één element van `leerpunt.accounts` (spec leerlus-bewijs AC-22), of null als het element niet precies
+ * `{ id: <positief geheel getal>, login: <tekst> }` is.
+ * @param {unknown} element @returns {number | null}
+ */
+function accountId(element) {
+  if (typeof element !== 'object' || element === null || Array.isArray(element)) return null;
+  if (Object.keys(element).sort().join(',') !== 'id,login') return null;
+  const id = veld(element, 'id');
+  if (typeof veld(element, 'login') !== 'string' || typeof id !== 'number') return null;
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+/**
+ * De eigenaar-ids uit `leerpunt.accounts` van .claude/gates.json (AC-22), of null als de lijst ontbreekt, leeg is of één
+ * ongeldig element heeft. Gedeeld door de issue-check (fail closed) en `check-docs` (vormregel).
+ * @param {unknown} accounts @returns {Set<number> | null}
+ */
+export function eigenaarIds(accounts) {
+  if (!Array.isArray(accounts) || accounts.length === 0) return null;
+  /** @type {Set<number>} */
+  const ids = new Set();
+  for (const element of accounts) {
+    const id = accountId(element);
+    if (id === null) return null;
+    ids.add(id);
+  }
+  return ids;
+}
+
+/**
+ * Telt deze comment als die van een eigenaaraccount (AC-22)? Alleen `id` (`user.id`) beslist; `association` niet.
+ * @param {Set<number> | null} ids uit `eigenaarIds` @param {Comment} comment
+ */
+export function vanEigenaar(ids, comment) {
+  return ids !== null && typeof comment.id === 'number' && ids.has(comment.id);
+}
+
 /**
  * Het sluitoordeel (AC-6): gemergde PR die het issue sluit met een regel voor dit nummer in `## Leerpunt`, of een comment
- * `achterhaald: <reden>` van een auteur met schrijfrecht.
+ * `achterhaald: <reden>` van een eigenaaraccount uit `accounts` (AC-22).
  * @param {number} nummer
- * @param {{ prs: { merged: boolean, body: string }[], comments: { body: string, association: string }[] }} bron
+ * @param {{ prs: { merged: boolean, body: string }[], comments: Comment[], accounts?: unknown }} bron
  * @returns {'bewijs' | 'achterhaald' | 'zonder-bewijs'}
  */
-export function sluitOordeel(nummer, { prs, comments }) {
+export function sluitOordeel(nummer, { prs, comments, accounts }) {
   const metBewijs = prs.some(
     ({ merged, body }) => merged && leesLeerpuntSectie(body).some((regel) => regel.nummer === nummer),
   );
   if (metBewijs) return 'bewijs';
-  const achterhaald = comments.some(
-    ({ body, association }) => /^\s*achterhaald:\s*\S/i.test(body) && SCHRIJFRECHT.includes(association),
-  );
+  const ids = eigenaarIds(accounts);
+  const achterhaald = comments.some((c) => /^\s*achterhaald:\s*\S/i.test(c.body) && vanEigenaar(ids, c));
   return achterhaald ? 'achterhaald' : 'zonder-bewijs';
 }
 

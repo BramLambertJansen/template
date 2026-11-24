@@ -56,6 +56,8 @@
 //      AC daar al gebouwd was en zijn lijstitem in de spec gelijk is aan dat op de basis: de AC-tekst volgt de test niet (leerpunt #940,
 //      R-WERK-15, sleutel `docs:ac-tekst:<spec>:<AC-n>`, scripts/kit/ac-tekst.mjs). Klopt de tekst nog, dan staat
 //      `AC-tekst klopt` in het commentaar. In `docsKrimp`, dus strikt en nooit in de baseline.
+//  21. Bestaat `leerpunt` in .claude/gates.json, dan is `leerpunt.accounts` een niet-lege lijst van precies
+//      `{ id: <positief geheel getal>, login: <tekst> }` (spec leerlus-bewijs AC-22, sleutel `docs:gates:leerpunt-accounts`).
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -94,6 +96,7 @@ import {
 } from './leesbudget.mjs';
 import { CHANGELOG, FRAGMENT_MAP, fragmentFout, releaseTeksten } from './template-release.mjs';
 import { CODESPAN, HEK, sluitHek } from './markdown.mjs';
+import { eigenaarIds } from './leerpunt.mjs';
 import { zonderPromptViolations } from './zonder-prompt.mjs';
 import { receptRolhekViolations } from './recept-rolhek.mjs';
 
@@ -145,6 +148,7 @@ export async function docsViolations(root = '.') {
     ...(files.includes('.claude/gates.json') ? schrijfrechtViolations(read('.claude/gates.json'), app) : []),
     ...(files.includes('.claude/gates.json') ? werkmapNegeerViolations(files, read('.claude/gates.json')) : []),
     ...(files.includes('.claude/gates.json') ? mergeModusViolations(read('.claude/gates.json')) : []),
+    ...(files.includes('.claude/gates.json') ? leerpuntAccountsViolations(read('.claude/gates.json')) : []),
     ...paragraafViolations(files, read),
     ...(files.includes(REGELBOEK) ? regelboekPadViolations(root, read(REGELBOEK), files) : []),
     ...rIdViolations(files, read),
@@ -1204,6 +1208,24 @@ function templateViolations(value, onderhoud) {
     {
       key: 'docs:gates:template-onderhoud',
       message: `.claude/gates.json: onderhoud.repository (${onderhoudRepo}) verschilt van template.repository (${template.repository})`,
+    },
+  ];
+}
+
+/**
+ * Spec leerlus-bewijs AC-22: bestaat `leerpunt` in .claude/gates.json, dan is `leerpunt.accounts` een niet-lege lijst van
+ * precies `{ "id": <positief geheel getal>, "login": "<naam>" }`; dezelfde regel als de issue-check (`eigenaarIds`).
+ * @param {string} tekst @returns {Violation[]}
+ */
+function leerpuntAccountsViolations(tekst) {
+  const ruw = JSON.parse(tekst);
+  if (veld(ruw, 'leerpunt') === undefined) return [];
+  if (eigenaarIds(veld(veld(ruw, 'leerpunt'), 'accounts')) !== null) return [];
+  return [
+    {
+      key: 'docs:gates:leerpunt-accounts',
+      message:
+        '.claude/gates.json: leerpunt.accounts is geen niet-lege lijst van { "id": <positief geheel getal>, "login": "<naam>" } (spec leerlus-bewijs AC-22)',
     },
   ];
 }
