@@ -89,6 +89,13 @@ Teksten letterlijk:
 - **cloud-werkmap-herstel/AC-7**: Gegeven `prHeadKlopt`. Het resultaat is alleen `true` als de PR open is, de branch gelijk is
   en de head-SHA gelijk is aan de SHA die bij de start is vastgelegd. Zo geeft een PR waarvan de head tussen twee lezingen
   verandert `false`. Toets: `test/scripts/cloud-werkmap-herstel.test.ts`
+- **cloud-werkmap-herstel/AC-8**: Gegeven `pr:verify` als subproces met een `gh`-stub op `PATH`, in de vorm van
+  `test/scripts/pr-verify-diagnostics.test.ts`. (a) Met `CLAUDE_CODE_REMOTE=true` en `--zonder-werkmap`: geeft de stub bij
+  een latere lezing van de PR een andere head-SHA, dan eindigt het script met de afwijkingsmelding en exit 1, nooit met
+  groen. (b) Met `--zonder-werkmap` en een vuile werkmap begint de uitvoer met de kopregel "werkmap niet getoetst". (c)
+  Zonder `CLAUDE_CODE_REMOTE` geeft `--zonder-werkmap` de cloudmelding en exit 1. (d) Geeft de PR een head-SHA zonder
+  geldige vorm, dan eindigt het script met `Geen vertrouwde verplichte checks of geldige commit` en exit 1.
+  Toets: `test/scripts/cloud-werkmap-herstel-cli.test.ts`
 
 ## Randgevallen
 
@@ -97,7 +104,7 @@ Teksten letterlijk:
 | Cloud, bestaande `node_modules` van een andere store | install verwijdert en vult de map zonder TTY-vraag (AC-3) |
 | Cloud, gekoppelde worktree | ongewijzigd, plus de vlag uit AC-3 |
 | `--zonder-werkmap`: de head-SHA staat vast bij de start | vóór en na elke checkronde (ook met `--watch`) `prHeadKlopt`; bij `false` de afwijkingsmelding |
-| `--zonder-werkmap` met een head-SHA zonder geldige vorm | bestaande fout `Geen vertrouwde verplichte checks of geldige commit` |
+| `--zonder-werkmap` met een head-SHA zonder geldige vorm | `verifyZonderWerkmap` toetst de vorm vóór de eerste checkronde: bestaande fout `Geen vertrouwde verplichte checks of geldige commit` (AC-8) |
 | Lokaal `CLAUDE_CODE_REMOTE=true` gezet | het script gedraagt zich als in de cloud. Dit is een procesgrens die geen check afdwingt (R-ROL-05, eigenaarbesluit 24 november 2026); een rolhek-weigering op die toewijzing staat als roadmap-item |
 
 ## Raakt ook
@@ -118,9 +125,10 @@ Teksten letterlijk:
   `pnpm ratchet` toetst die rijen tegen het rolhek (`docs:recept-rolhek`).
 - `docs/roadmap.md`: een open item voor een rolhek-weigering op een toewijzing `CLAUDE_CODE_REMOTE=`.
 - Bestaande tests:
-  - `test/scripts/worktree-install.test.ts` voegt `CLAUDE_CODE_REMOTE` toe aan `EIGEN_ENV`. Reden: in een cloudsessie lekt
-    de variabele anders naar de subprocestests, en die falen dan (R-TEST-02).
-  - `test/scripts/worktree-install-real-pnpm.test.ts`, `test/rails/claude-sandbox-werkstraat.test.ts`,
+  - `test/scripts/worktree-install.test.ts` voegt `CLAUDE_CODE_REMOTE` toe aan `EIGEN_ENV`, en
+    `test/scripts/worktree-install-real-pnpm.test.ts` haalt hem uit `basisEnv`. Reden: in een cloudsessie lekt de variabele
+    anders naar de subprocestests, die dan het cloudpad toetsen in plaats van het lokale (R-TEST-02).
+  - `test/rails/claude-sandbox-werkstraat.test.ts`,
     `test/scripts/pr-verify-werkmap.test.ts`, `test/scripts/pr-verify-diagnostics.test.ts` en `test/hooks/pr-evidence.test.ts`
     blijven ongewijzigd groen.
 - Kritiek werk: `pr:verify` staat in de padtabel en is opleverbewijs. De eigenaar keurt de PR goed.

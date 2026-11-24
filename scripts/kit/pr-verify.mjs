@@ -181,6 +181,7 @@ async function volgChecks({ repository, required, kop, watch, bewaak }) {
  */
 async function verifyZonderWerkmap({ authority, number, watch }) {
   const verwacht = { branch: authority.branch, head: pullRequest(authority.repository, number).headSha };
+  if (!/^[0-9a-f]{40}$/.test(verwacht.head)) throw new Error('Geen vertrouwde verplichte checks of geldige commit');
   const bewaak = () => {
     if (!prHeadKlopt(pullRequest(authority.repository, number), verwacht))
       throw new Error('PR, branch of head wijkt af van de gecontroleerde commit; bewijs opnieuw ophalen');

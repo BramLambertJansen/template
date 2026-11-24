@@ -148,14 +148,15 @@ seconden). Dat script installeert frozen met `--package-import-method=copy` en s
 hoofdcheckout, bij een symlink als `node_modules` en als een van `package.json`, `pnpm-lock.yaml`,
 `pnpm-workspace.yaml`, `.npmrc`, `.pnpmfile.cjs` of `.pnpmfile.mjs` afwijkt van HEAD (gewijzigd, verwijderd of
 untracked; vergeleken op inhoud met HEAD, ook bij `--assume-unchanged` of `--skip-worktree`; commit eerst of vraag de
-eigenaar; ADR 0085, spec `claude-sandbox-werkstraat` AC-10). In een cloudsessie werkt het ook in de hoofdcheckout, met
-`--config.confirm-modules-purge=false`: loopt `node_modules` daar achter op de lockfile, draai het script zelf in plaats
-van de eigenaar te vragen, want die heeft in de cloud geen terminal (spec cloud-werkmap-herstel). Na een merge bijwerken
-op de vaste cloudbranch: zie de receptenkaart (`git merge --ff-only origin/main`). Die weigering is geen beveiligingsgrens: CI en de
-eigenaarmerge zijn de grens. Open aandachtspunt (niet gemeten): hoort een bestaande `node_modules` bij een andere store
-(andere `TMPDIR` bij een eerdere run, of eerder een handmatige `pnpm install`), dan kan pnpm zonder TTY afbreken met een
-fout over het verwijderen van de modules-map (`ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY`); vraag dan de eigenaar, wis
-`node_modules` niet zelf en voeg geen pnpm-vlag toe. De melding van `feiten.mjs` noemt het zelf (AC-12). Om dezelfde reden als bij `--no-track` geeft
+eigenaar; ADR 0085, spec `claude-sandbox-werkstraat` AC-10). Die weigering is geen beveiligingsgrens: CI en de
+eigenaarmerge zijn de grens. Open aandachtspunt buiten de cloud (niet gemeten): hoort een bestaande `node_modules` bij een
+andere store (andere `TMPDIR` bij een eerdere run, of eerder een handmatige `pnpm install`), dan kan pnpm zonder TTY
+afbreken met een fout over het verwijderen van de modules-map (`ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY`); vraag dan de
+eigenaar, wis `node_modules` niet zelf en voeg geen pnpm-vlag toe. De melding van `feiten.mjs` noemt het zelf (AC-12). In
+een cloudsessie werkt het script ook in de hoofdcheckout en geeft het zelf `--config.confirm-modules-purge=false` mee:
+loopt `node_modules` daar achter op de lockfile, draai het script zelf in plaats van de eigenaar te vragen, want die heeft
+in de cloud geen terminal (spec cloud-werkmap-herstel). Na een merge bijwerken op de vaste cloudbranch: zie de
+receptenkaart (`git merge --ff-only origin/main`). Om dezelfde reden als bij `--no-track` geeft
 `git branch -D` daar de melding `could not lock config file`; de branch is wel verwijderd (`-m` is niet gemeten).
 
 Vóór de eerste commit in een nieuwe worktree vertrouwt de eigenaar de `mise.toml` van die worktree (leerpunt #682). Zonder

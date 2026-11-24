@@ -50,9 +50,9 @@ export function worktreeInstallBesluit({ worktree, nodeModules, gewijzigd, cloud
  * `v11/metadata/…` in; `--state-dir` geeft `Unknown option`. Daarom gaan store en cache als vlag mee, want een CLI-vlag
  * gaat voor op een globale pnpm-config en een XDG-variabele niet. State heeft geen vlag en loopt via XDG_STATE_HOME
  * onder `tmp`, naast XDG_CACHE_HOME en XDG_DATA_HOME.
- * @param {string} tmp
  * In een cloudsessie komt `--config.confirm-modules-purge=false` als laatste argument erbij: zonder TTY breekt pnpm
  * anders af als het een bestaande node_modules wil vervangen (spec cloud-werkmap-herstel AC-3).
+ * @param {string} tmp
  * @param {boolean} [cloud] cloudsessie
  * @returns {{ command: 'pnpm', args: string[], env: Record<string, string> }}
  */
