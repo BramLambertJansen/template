@@ -258,7 +258,8 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   aanleiding: `rails/hooks/lib/rolhek.mjs` (delta-review ronde 2 van fix/rolhek-gh-allowlist)
 - [ ] **Rolhek weigert een toewijzing `CLAUDE_CODE_REMOTE=`.** `worktree-install` en `pr:verify --zonder-werkmap` gedragen
   zich anders in de cloud en herkennen die aan deze variabele; een agent kan hem lokaal zelf zetten. Net als bij `CI=` een
-  weigering in het rolhek (kritiek, eigen PR); aanleiding: spec cloud-werkmap-herstel, OV-4.
+  weigering in het rolhek (kritiek, eigen PR).
+  aanleiding: `docs/template/specs/cloud-werkmap-herstel.md` (OV-4, #944)
 - [ ] **Bekende gaten in het rolhek (R-ROL-10: vangnet, geen grens).** Het rolhek ziet niet: scripts in de repo, `node -e` en andere
   interpreters; voor de hoofdsessie `curl -K`, een kopie van `gh` onder een andere naam en `node_modules/.bin`; `find -exec`/`-execdir`/`-ok`; `sed -n` met het `w`- of
   `e`-commando voor elke rol behalve de reviewer (spec rolhek-lezen, OV-5);
