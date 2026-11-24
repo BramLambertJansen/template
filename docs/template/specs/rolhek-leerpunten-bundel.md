@@ -75,8 +75,8 @@ Code-sessie: dan komt er geen tekst en geen melding (R-WERK-23).
 
 ## Kopieer de vorm van
 
-- `test/hooks/shell-glob-klasse-bash.test.ts`: alleen de versievergelijking. Een onleesbare `origin/main` maakt de
-  differentiële test rood en slaat hem niet over (OV-7).
+- `test/hooks/shell-glob-klasse-bash.test.ts`: alleen de versievergelijking. Een onleesbare main-ref van de remote
+  maakt de differentiële test rood en slaat hem niet over (OV-7).
 - `test/hooks/rolhek-pr-merge.test.ts`: `verdict()` rond `decide` met een vaste context per rol
 - `test/hooks/rolhek-padcorpus-vooraf.test.ts`: `voorafCtx(rij)` voor de ctx van een padcorpusrij
 - `test/hooks/rolhek-testakkoord-melding.test.ts`: een Edit-payload op een bestaande test met `bestaand` in de context
@@ -128,7 +128,6 @@ PR 1, aanscherpen (#955, #736):
     - het veld `commando` van `PADCORPUS` uit `test/hooks/rolhek-padcorpus.ts`;
     - de vier #955-rijen uit AC-4, elk één keer en met hun `cwd` uit AC-4 (`/repo/a/b` voor de rij met
       `cd .. && cd ..`).
-
     `VORMEN` doet niet mee, want de omhulsels vervangen die. `AANVAARD` doet ook niet mee: een rij daarin is een
     basis uit `BASISSEN` in een vorm uit `VORMEN`.
   - Omhulsels, zeven per rij: `X`, `X # c`, `true && X`, `(X)`, `echo $(X)`, `cat <<E⏎$(X)⏎E` en `: <<'E'⏎E⏎X`.
@@ -140,11 +139,9 @@ PR 1, aanscherpen (#955, #736):
     - Een `PADCORPUS`-rij krijgt de ctx uit `voorafCtx(rij)`. `na` en `tmp` vallen weg.
     - Elke andere rij krijgt de vaste ctx uit de meettabel, met `netwerkvormen`.
   - Afbeelding van een uitslag: weigering (`deny`) > vraag (`ask`) > melding (`context`) > door (`allow` of geen uitslag).
-
   Per rij, omhulsel en rol vergelijkt `vergelijkUitslagen` (AC-3) de oude en de nieuwe uitslag. Elke bevinding maakt de
   test rood en noemt de rij, het omhulsel en de rol. Is `origin/main` onleesbaar, dan faalt een `expect` met de
   boodschap `draai git fetch origin`, geen throw (OV-7).
-
   De ingang `substitutions` (intern in `rolhek.mjs`) dekt AC-1 via `decide`. De omhulsels `echo $(X)` en
   `cat <<E⏎$(X)⏎E` zetten X alleen binnen een substitutie, dus een gemist segment blijkt als een zwakkere uitslag. Een
   export ervan zou op `main` ontbreken, en dan valt er op die ingang niets te vergelijken. Toets:
@@ -166,7 +163,6 @@ PR 1, aanscherpen (#955, #736):
     een lijst eerste woorden. Het resultaat is een lijst `{ sleutel, woord, oud, nieuw }` voor elk woord waar het
     maximum aantal over de nieuwe lezingen kleiner is dan dat over de oude lezingen. Een sleutel die in `nieuw`
     ontbreekt, geeft per woord een bevinding met `nieuw: undefined`.
-
   Gevallen:
   1. Een decide-wrapper die voor één rol `deny` omzet in `ask` geeft voor `vergelijkUitslagen` een bevinding met de
      rij, het omhulsel en die rol in de sleutel.
@@ -174,7 +170,6 @@ PR 1, aanscherpen (#955, #736):
   3. Een lezer die niets na `#` ziet, geeft voor `vergelijkWoorden` een bevinding.
   4. Een sleutel die in `nieuw` ontbreekt, geeft bij elke vergelijker een bevinding met `nieuw: undefined`.
   5. De huidige `decide` en lezer als `oud` en als `nieuw` geven bij beide vergelijkers geen bevinding.
-
   Elke test begint met `expect(typeof ns.vergelijkUitslagen).toBe('function')` of
   `expect(typeof ns.vergelijkWoorden).toBe('function')`, dus op `main` is hij rood op een assertie. Toets:
   `test/hooks/shell-lezer-vergelijker.test.ts` (nieuw)
@@ -185,7 +180,6 @@ PR 1, aanscherpen (#955, #736):
   - `echo ${x:-"}"" <<'E'⏎$(rm -rf .claude/hooks)⏎E⏎"}`: `decide` geeft de hoofdsessie een vraag en een subagent een
     weigering;
   - `cd .. && cd .. && printf x > lefthook.yml # c` met `cwd` `/repo/a/b`: dezelfde uitslag als zonder `# c`.
-
   Ze komen niet in `test/hooks/shell-commentaar-rijen.ts`, want `test/hooks/shell-woorden-bash.test.ts` pint daar de
   lengte. Toets: `test/hooks/shell-commentaar.test.ts`
 - **rolhek-leerpunten/AC-5** — Ctx: de vaste ctx uit de meettabel, met `netwerkvormen`.
@@ -197,7 +191,6 @@ PR 1, aanscherpen (#955, #736):
     - `gh pr create --title "fix(merge): x" --body-file f.md` gaat door;
     - `gh pr merge 1`, `gh api -X PUT repos/o/r/pulls/1/merge` en `git merge main` blijven geweigerd, zonder de
       #736-tekst.
-
   Toets: `test/hooks/rolhek-merge-woord.test.ts` (nieuw)
 
 PR 2, meldingen zonder verruiming (#962, #960, #958):
@@ -215,7 +208,6 @@ PR 2, meldingen zonder verruiming (#962, #960, #958):
     - zonder `CLAUDE_PROJECT_DIR` is `ctx.lokaleNetwerkvormen` `undefined` en komt er geen tekst. Met
       `CLAUDE_PROJECT_DIR` is het altijd een array, eventueel leeg;
     - de uitslag blijft in alle gevallen een weigering.
-
   Toets: `test/hooks/rolhek-netwerkvorm-context.test.ts`
 - **rolhek-leerpunten/AC-7**
   - Nieuw gedrag: `sessionStart(deps)` in `rails/hooks/lib/werkstraat.mjs` krijgt een nieuwe dep
@@ -225,14 +217,12 @@ PR 2, meldingen zonder verruiming (#962, #960, #958):
   - Ticketrij: de sessie start met `cwd` in een worktree, terwijl de settings in `CLAUDE_PROJECT_DIR` een patroon van
     het anker missen. De melding verschijnt.
   - Regressie: bij een volledige lokale lijst, of zonder `CLAUDE_PROJECT_DIR`, komt er geen melding.
-
   Toets: `test/hooks/werkstraat-netwerkvorm-drift.test.ts` (nieuw)
 - **rolhek-leerpunten/AC-8**
   - Nieuw gedrag: wordt een netwerkvorm geweigerd in een commando met meer dan één segment (zoals
     `printf 'x' > msg.txt && git add a.ts && git commit -F msg.txt`), dan bevat de weigering "niets van dit commando
     is uitgevoerd".
   - Regressie: een los `MISE_STATE_DIR=… git commit -F msg.txt` blijft geweigerd, zonder die tekst.
-
   Toets: `test/hooks/rolhek-netwerkvorm.test.ts`
 - **rolhek-leerpunten/AC-9**
   - Nieuw gedrag: elke weigering van `git cherry-pick`, `git apply`, `git format-patch` of `git merge` voor de
@@ -246,7 +236,6 @@ PR 2, meldingen zonder verruiming (#962, #960, #958):
     - `git checkout abc1234 -- .claude/settings.json` en `git checkout abc1234 -- lefthook.yml` (zelfladend) blijven
       geweigerd;
     - `git format-patch -1 abc1234` gaat door.
-
   Toets: `test/hooks/rolhek-developer.test.ts`
 - **rolhek-leerpunten/AC-10**
   - Nieuw gedrag: geeft `bestaand` `'zonder-origin'`, dan blijft de weigering van een Edit door de developer op
@@ -255,7 +244,6 @@ PR 2, meldingen zonder verruiming (#962, #960, #958):
     - met `bestaand` `false` (het bestand staat op schijf, is ongetrackt en staat niet op de tip van het anker of van
       `origin/main`) komt er geen "is een bestaande test";
     - met `bestaand` `true` blijft de weigering, zonder de fetchtekst.
-
   Toets: `test/hooks/rolhek-nieuwe-test.test.ts`
 - **rolhek-leerpunten/AC-11** — Nieuw gedrag. `.claude/agents/developer.md` zegt dat tests en implementatie samen in één
   commit gaan: eerst tests schrijven is een volgorde van werken, geen volgorde van commits. Het bestand noemt daarbij
