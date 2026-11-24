@@ -14,6 +14,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { rolhekContext } from '../../rails/hooks/lib/rolhek-context.mjs';
 import { decide, loadConfig } from '../../rails/hooks/lib/rolhek.mjs';
+import { receptRijen } from '../../scripts/kit/recepten.mjs';
 
 // docs/specs/rolhek-lezen.md: de reviewer leest met een kleine lijst commando's en opties (AC-1, AC-3, AC-4); `git diff
 // --output` en `git grep -O` zijn voor elke rol dicht (AC-2); de andere rollen veranderen verder niet (AC-5).
@@ -1372,5 +1373,193 @@ describe('rolhek-lezen/AC-20: de andere rollen houden de leesvormen en schrijven
     const basis = 'git diff origin/main -- docs/template/specs/x.md';
     expect(verdictLees(basis, 'tester')).not.toBe('deny');
     expect(verdictLees('git checkout origin/main -- docs/template/specs/x.md', 'tester')).toBe('deny');
+  });
+});
+
+// rolhek-lezen/AC-21: de reviewer leest PR- en CI-gegevens met `gh api` (GET, vaste lijst endpoints van de eigen repository,
+// alleen `--paginate` en `--jq <filter>`). Het endpoint staat in zijn geheel tussen aanhalingstekens (zonder gaf `gh api` in
+// de cloud HTTP 401). De leesrecepten komen uit docs/operations/recepten.md via scripts/kit/recepten.mjs, niet overgetypt.
+describe('rolhek-lezen/AC-21: gh api met GET op een vaste lijst endpoints voor de reviewer', () => {
+  const REPO = 'repos/{owner}/{repo}';
+  const SHA = 'a1b2c3d4e5f60718293a4b5c6d7e8f9012345678';
+  const BASIS = `gh api "${REPO}/pulls/5"`;
+  const PADEN = [
+    'pulls',
+    'pulls/5',
+    'pulls/5/comments',
+    'pulls/5/files',
+    'pulls/5/commits',
+    'issues/5',
+    'issues/5/comments',
+    'issues/5/events',
+    'actions/runs',
+    'actions/runs/5',
+    'actions/runs/5/jobs',
+    'actions/jobs/5',
+    'actions/jobs/5/logs',
+    `commits/${SHA}`,
+    `commits/${SHA}/status`,
+    'commits/abc1234',
+    'commits/abc1234/status',
+    'pulls/123456789012',
+  ];
+  const QUERIES = ['?state=open', `?head_sha=${SHA}`, '?per_page=100&page=2', '?a=b,c:d_e.f+g-h'];
+  const FILTERS = ['.state', '.[] | {id, body}', '.jobs[] | select(.conclusion == "failure") | {id, name}'];
+
+  // Elk endpoint, enkel en dubbel aangehaald, kaal en met een query.
+  const endpoints = PADEN.flatMap((pad) => [pad, ...QUERIES.map((q) => `${pad}${q}`)]).flatMap((pad) => [
+    `"${REPO}/${pad}"`,
+    `'${REPO}/${pad}'`,
+  ]);
+  const zoeken = [
+    '"search/issues?q=repo:{owner}/{repo}+is:issue+ratchet"',
+    "'search/issues?q=repo:{owner}/{repo}+is:issue+ratchet'",
+    '"search/issues?q=repo:{owner}/{repo}+is:open+label:leerpunt+ratchet-x"',
+    '"search/issues?q=REPO:{owner}/{repo}+ratchet"',
+  ];
+
+  // De leesrecepten van de kaart met de plaatshouders ingevuld; alleen `gh api` zonder -X, -F of -f.
+  const recepten = receptRijen(readFileSync('docs/operations/recepten.md', 'utf8'))
+    .flatMap(({ lokaal, cloud }) => [lokaal, cloud])
+    .flatMap((cel) => [...cel.matchAll(/`([^`]+)`/g)].map((m) => m[1] ?? ''))
+    .filter((commando) => commando.startsWith('gh api ') && !/\s-[XFf]\s/.test(commando))
+    .map((commando) =>
+      commando
+        .replace(/<nr>/g, '5')
+        .replace(/<(?:run-id|job-id)>/g, '123')
+        .replace(/<volledige-sha>/g, SHA)
+        .replace(/<zoekwoord>/g, 'ratchet'),
+    );
+
+  const positief: string[] = [
+    ...[...endpoints, ...zoeken].map((e) => `gh api ${e}`),
+    ...endpoints
+      .slice(0, 6)
+      .flatMap((e) => [
+        `gh api --paginate ${e}`,
+        `gh api ${e} --paginate`,
+        `gh api --jq .state ${e}`,
+        `gh api ${e} --jq .state`,
+        `gh api --paginate --jq .state ${e}`,
+        `gh api ${e} --jq .state --paginate`,
+        `gh api --jq .state --paginate ${e}`,
+      ]),
+    ...FILTERS.flatMap((f) => [`gh api "${REPO}/pulls/5" --jq '${f}'`, `gh api --jq '${f}' "${REPO}/pulls/5"`]),
+    `gh api ${zoeken[0] ?? ''} --jq '.items[] | {number, title, state}'`,
+    ...recepten,
+  ];
+
+  test('rolhek-lezen/AC-21: de recepten uit de kaart zijn gevonden (geen stil lege lijst)', () => {
+    expect(recepten.length, recepten.join('\n')).toBeGreaterThanOrEqual(9);
+    expect(recepten.filter((r) => /<[a-z-]+>/.test(r.replace(/'[^']*'/g, '')))).toStrictEqual([]);
+  });
+
+  test('rolhek-lezen/AC-21: de reviewer mag elke positieve vorm', () => {
+    const geweigerd = positief.filter((command) => verdict(command, REVIEWER) !== 'allow');
+    expect(geweigerd).toStrictEqual([]);
+  });
+
+  test('rolhek-lezen/AC-21: een onbekende subagent krijgt dezelfde positieve vormen', () => {
+    const geweigerd = positief.filter((command) => verdict(command, 'ad-hoc-lezer') !== 'allow');
+    expect(geweigerd).toStrictEqual([]);
+  });
+
+  const AFWIJZINGEN: { name: string; command: string }[] = [
+    // endpoint
+    { name: 'onaangehaald', command: `gh api ${REPO}/pulls/5` },
+    { name: 'gemengde aanhalingstekens', command: `gh api "${REPO}/pulls/5'` },
+    { name: 'andere repository', command: 'gh api "repos/ander/x/pulls/5"' },
+    { name: 'slash vooraan', command: `gh api "/${REPO}/pulls/5"` },
+    { name: 'met host', command: `gh api "https://api.github.com/${REPO}/pulls/5"` },
+    { name: 'segment ..', command: `gh api "${REPO}/pulls/5/../../x"` },
+    { name: 'procentteken', command: `gh api "${REPO}/pulls/%35"` },
+    { name: 'actions/secrets', command: `gh api "${REPO}/actions/secrets"` },
+    { name: 'git/refs', command: `gh api "${REPO}/git/refs/heads/x"` },
+    { name: 'graphql', command: 'gh api graphql' },
+    { name: 'user', command: 'gh api "user"' },
+    { name: 'geëxpandeerd endpoint', command: `gh api "${REPO}/pulls/$X"` },
+    { name: 'pulls/<n>/reviews', command: `gh api "${REPO}/pulls/5/reviews"` },
+    { name: 'commits/<sha>/check-runs', command: `gh api "${REPO}/commits/${SHA}/check-runs"` },
+    { name: '<n> met 13 cijfers', command: `gh api "${REPO}/pulls/1234567890123"` },
+    { name: '<n> niet numeriek', command: `gh api "${REPO}/pulls/abc"` },
+    { name: '<sha> te kort', command: `gh api "${REPO}/commits/abc123"` },
+    { name: '<sha> te lang', command: `gh api "${REPO}/commits/${SHA}0"` },
+    { name: '<sha> hoofdletters', command: `gh api "${REPO}/commits/ABCDEF1"` },
+    { name: 'onbekend pad onder pulls', command: `gh api "${REPO}/pulls/5/requested_reviewers"` },
+    { name: 'query met spatie', command: `gh api "${REPO}/pulls?a=b c"` },
+    { name: 'query met ;', command: `gh api "${REPO}/pulls?a=b;c"` },
+    { name: 'search zonder repo:', command: 'gh api "search/issues?q=is:issue"' },
+    { name: 'search met tweede repo:', command: 'gh api "search/issues?q=repo:{owner}/{repo}+repo:ander/x"' },
+    { name: 'search met org:', command: 'gh api "search/issues?q=repo:{owner}/{repo}+org:ander"' },
+    { name: 'search met user:', command: 'gh api "search/issues?q=repo:{owner}/{repo}+USER:ander"' },
+    { name: 'search andere repo', command: 'gh api "search/issues?q=repo:ander/x+ratchet"' },
+    { name: 'search met tweede q', command: 'gh api "search/issues?q=repo:{owner}/{repo}+x&q=is:private"' },
+    {
+      name: 'search met advanced_search',
+      command: 'gh api "search/issues?q=repo:{owner}/{repo}+x&advanced_search=true"',
+    },
+    { name: 'search met OR', command: 'gh api "search/issues?q=repo:{owner}/{repo}+x+OR+is:private"' },
+    { name: 'search met not', command: 'gh api "search/issues?q=repo:{owner}/{repo}+not+x"' },
+    { name: 'deels aangehaald endpoint', command: "gh api 'repos/{owner}/{repo}'/pulls/5" },
+    { name: 'aaneengeplakt aangehaald endpoint', command: 'gh api "repos/{owner}/{repo}/pulls/"\'5\'' },
+    { name: 'tab in het filter', command: 'gh api "repos/{owner}/{repo}/pulls/5" --jq \'.a\t.b\'' },
+    { name: 'search/code', command: 'gh api "search/code?q=repo:{owner}/{repo}+x"' },
+    { name: 'twee endpoints', command: `gh api "${REPO}/pulls/5" "${REPO}/pulls/6"` },
+    { name: 'geen endpoint', command: 'gh api --paginate' },
+    // opties
+    { name: '-X GET', command: `gh api -X GET "${REPO}/pulls/5"` },
+    { name: '--method GET', command: `gh api --method GET "${REPO}/pulls/5"` },
+    { name: '-X POST', command: `gh api -X POST "${REPO}/pulls/5/comments"` },
+    { name: '-f', command: `gh api -f a=b "${REPO}/pulls/5"` },
+    { name: '-F', command: `gh api -F a=b "${REPO}/pulls/5"` },
+    { name: '--input', command: `gh api --input f "${REPO}/pulls/5"` },
+    { name: '-H', command: `gh api -H 'Accept: x' "${REPO}/pulls/5"` },
+    { name: '--hostname', command: `gh api --hostname x "${REPO}/pulls/5"` },
+    { name: '-i', command: `gh api -i "${REPO}/pulls/5"` },
+    { name: '--template', command: `gh api --template x "${REPO}/pulls/5"` },
+    { name: '-q', command: `gh api -q .x "${REPO}/pulls/5"` },
+    { name: '--jq=', command: `gh api --jq=.x "${REPO}/pulls/5"` },
+    { name: 'cluster', command: `gh api -pq .x "${REPO}/pulls/5"` },
+    { name: '--paginate=', command: `gh api --paginate=true "${REPO}/pulls/5"` },
+    { name: '--jq zonder waarde', command: `gh api "${REPO}/pulls/5" --jq` },
+    // filter
+    { name: '--jq env', command: `gh api --jq env "${REPO}/pulls/5"` },
+    { name: '--jq $ENV', command: `gh api --jq '$ENV.GH_TOKEN' "${REPO}/pulls/5"` },
+    { name: '--jq .env', command: `gh api "${REPO}/pulls/5" --jq '.env'` },
+    { name: '--jq input', command: `gh api --jq 'input' "${REPO}/pulls/5"` },
+    { name: '--jq inputs', command: `gh api --jq '[inputs]' "${REPO}/pulls/5"` },
+    { name: '--jq input_filename', command: `gh api --jq 'input_filename' "${REPO}/pulls/5"` },
+    { name: '--jq $__loc__', command: `gh api --jq '$__loc__' "${REPO}/pulls/5"` },
+    { name: '--jq import', command: `gh api --jq 'import "x" as y; .' "${REPO}/pulls/5"` },
+    { name: '--jq include', command: `gh api --jq 'include "x"; .' "${REPO}/pulls/5"` },
+    { name: '--jq IMPORT hoofdletters', command: `gh api --jq 'IMPORT "x" as y; .' "${REPO}/pulls/5"` },
+    { name: '--jq geëxpandeerd', command: `gh api --jq "$X" "${REPO}/pulls/5"` },
+    { name: '--jq onaangehaald *', command: `gh api --jq .a* "${REPO}/pulls/5"` },
+    { name: '--jq onaangehaald ?', command: `gh api --jq .a? "${REPO}/pulls/5"` },
+    { name: '--jq onaangehaald [', command: `gh api --jq .[] "${REPO}/pulls/5"` },
+    { name: '--jq onaangehaald {', command: `gh api --jq {id} "${REPO}/pulls/5"` },
+    { name: '--jq twee woorden', command: `gh api --jq .a .b "${REPO}/pulls/5"` },
+  ];
+
+  test.each(AFWIJZINGEN)('rolhek-lezen/AC-21: $name → deny', ({ command }) => {
+    expect(verdict(BASIS, REVIEWER), `basis: ${BASIS}`).toBe('allow');
+    expect(verdict(command, REVIEWER), command).toBe('deny');
+    expect(verdict(command, 'ad-hoc-lezer'), `onbekende subagent: ${command}`).toBe('deny');
+  });
+
+  test('rolhek-lezen/AC-21: een geweigerde vorm noemt de aangehaalde endpointvorm en --paginate en --jq', () => {
+    const melding = run(`gh api ${REPO}/pulls/5`, REVIEWER).deny.join('\n');
+    expect(melding).toMatch(/["']repos\/\{owner\}\/\{repo\}\//);
+    expect(melding).toContain('--paginate');
+    expect(melding).toContain('--jq');
+  });
+
+  // De uitslag per rol op main (bepaald door de vormen vóór de wijziging te draaien): AC-21 verandert niets voor hen.
+  const ZONDER_REVIEWER = [undefined, 'architect', 'developer', 'tester', 'docs'] as const;
+
+  test.each(ZONDER_REVIEWER)('rolhek-lezen/AC-21: %s krijgt dezelfde uitslag als op main', (role) => {
+    // Gemeten op main: hoofdsessie, architect, developer, tester en docs krijgen elke positieve vorm toegestaan (`allow`).
+    const afwijkend = positief.filter((command) => verdict(command, role) !== 'allow');
+    expect(afwijkend).toStrictEqual([]);
   });
 });

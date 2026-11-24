@@ -75,7 +75,8 @@ function rolFouten(rollen: readonly Rol[], toets: (rol: Rol) => string | null): 
 const SANDBOX_TEKST =
   'buiten deze vorm draait het in de sandbox, zonder token-proxy en signeerdienst (docs/ENVIRONMENT.md, "Cloud: commit, push, PR en bewijs")';
 const reden = (vorm: string): string => `Netwerkvorm: draai dit als los commando in de vorm ${vorm}; ${SANDBOX_TEKST}`;
-const GH_DELETE = 'gh api -X DELETE repos/{owner}/{repo}/git/refs/heads/<branch>';
+// Gewijzigde verwachting (R-TEST-02): cloud-netwerkvorm/AC-3 zet het endpoint tussen aanhalingstekens, anders geeft gh api in de cloud HTTP 401.
+const GH_DELETE = 'gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<branch>"';
 const MAIN_REDEN = 'gh api: main verwijderen of verzetten is verboden, voor elke rol';
 
 /** Geen weigering of vraag van de regel netwerkvorm. */

@@ -88,7 +88,7 @@ wegwerpbranch verwijdert, en of Claude Code daarbij een vraag stelt (F12).
    Een ` *` toont de reden als ` …`. Is het voorvoegsel `git commit`, dan staat er `git commit -F <bestand>`, de vorm uit
    `docs/ENVIRONMENT.md`. Het rolhek kiest die tekst zelf, niet uit de lijst. Heeft een `git push` een verwijderoptie
    (`--delete`, `-d` of een refspec met lege bron, `:x` of `+:x`), dan noemt de reden ook
-   `gh api -X DELETE repos/{owner}/{repo}/git/refs/heads/<branch>` (punt 5).
+   `gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<branch>"` (punt 5).
    `pnpm pr:merge` en `pnpm pr:resolve` houden hun eigen regel (`decideKitScript`): voor die voorvoegsels voegt deze regel
    niets toe.
 3. **Geen omweg.** `mcp__github__push_files`, `mcp__github__create_or_update_file` en `mcp__github__delete_file` geven voor de
@@ -98,7 +98,7 @@ wegwerpbranch verwijdert, en of Claude Code daarbij een vraag stelt (F12).
 4. **Push met upstream.** `git push -u origin HEAD` komt niet in `excludedCommands` (OV-1). Punt 2 weigert die vorm met
    `git push origin HEAD` in de reden.
 5. **Remote branch opruimen.** Stap 6 van de skill opleveren (`.claude/skills/opleveren/SKILL.md`) wordt
-   `gh api -X DELETE repos/{owner}/{repo}/git/refs/heads/<headRefName>`, in plaats van `git push origin --delete` (OV-7).
+   `gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<headRefName>"`, in plaats van `git push origin --delete` (OV-7).
    `gh api *` staat al in `excludedCommands`. `excludedCommands`, `boundaries.json`, R-TOOL-02 en ADR 0061 blijven gelijk.
    De skill wijzigt de hoofdsessie met Edit, met akkoord van de eigenaar. De deny-regels voor `git push` naar `main` in
    `.claude/settings.json` dekken deze route niet. Daarom weigert het rolhek voor elke rol een `gh api` met een andere
@@ -141,7 +141,8 @@ Geen UI. Zichtbare tekst staat letterlijk in Ontwerp punt 2, 3 en 6.
   `git -C /x push origin HEAD`, `/usr/bin/git push origin HEAD`, `GIT_TRACE=1 git push origin HEAD` en
   `git push origin HEAD --force` krijgen voor elke rol een `deny` die `git push origin HEAD` noemt. Dat geldt ook buiten de
   cloud (OV-5). `git push origin --delete feat/x` en `git push origin :feat/x` krijgen een `deny` die ook
-  `gh api -X DELETE repos/{owner}/{repo}/git/refs/heads/<branch>` noemt. Toets: `test/hooks/rolhek-netwerkvorm.test.ts`
+  `gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<branch>"` noemt, met het endpoint tussen aanhalingstekens
+  (zonder gaf `gh api` in de cloud `HTTP 401`, leerpunt #898, `docs/operations/recepten.md`). Toets: `test/hooks/rolhek-netwerkvorm.test.ts`
 - **cloud-netwerkvorm/AC-4** — `gh api repos/o/r | jq .x` krijgt een `deny` die `gh api …` noemt; `gh api repos/o/r` krijgt
   geen weigering van deze regel. Toets: `test/hooks/rolhek-netwerkvorm.test.ts`
 - **cloud-netwerkvorm/AC-5** — `git log --oneline`, `git status`, `pnpm test:unit` en `echo "git push" > notes.txt` krijgen
@@ -198,7 +199,7 @@ Geen UI. Zichtbare tekst staat letterlijk in Ontwerp punt 2, 3 en 6.
 - **Kritiek werk:** `rails/hooks/**` staat op `besluit-pr` (`.claude/gates.json`). Daarom schrijft een aparte tester de
   AC-tests, bouwt de developer, volgt een aparte review, en keurt de eigenaar de PR goed en merget hem (R-WERK-05, R-WERK-07).
 - `test/hooks/rolhek-aanvalscorpus.ts`: nieuw lid in `REGELS`.
-- `.claude/skills/opleveren/SKILL.md` stap 6 (rond r.72): `gh api -X DELETE repos/{owner}/{repo}/git/refs/heads/<headRefName>`
+- `.claude/skills/opleveren/SKILL.md` stap 6 (rond r.72): `gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<headRefName>"`
   (OV-7). De hoofdsessie wijzigt dit met Edit, met akkoord van de eigenaar; de Bash-sandbox kan `.claude/skills/` niet schrijven.
 - Niet geraakt: `.claude/settings.json`, `boundaries.json`, R-TOOL-02 (`docs/framework.md`) en ADR 0061. De lijst van
   uitzonderingen blijft gelijk.

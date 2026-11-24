@@ -79,9 +79,8 @@ Onder de tabel staat:
 - Een log van een job kan tientallen kilobytes zijn; lees het opgeslagen bestand met de Read-tool en zoek op `##[error]`.
 - `gh pr …` en `gh issue …` werken in de cloud niet (GraphQL); `gh run view` werkt binnen de sandbox niet (#679). De kaart
   gebruikt daarom `gh api`, dat lokaal en in de cloud buiten de sandbox draait.
-- Een subagent schrijft niet naar GitHub. De reviewer leest alleen `gh pr view|diff|checks|list|status`,
-  `gh run view|list|watch` en `gh issue view|list|status` (`rails/hooks/lib/rolhek.mjs`, `SUBAGENT_GH` en de leeslijst van de
-  reviewer); in de cloud werken die niet, dus daar levert de hoofdsessie de PR-gegevens aan.
+- Een subagent schrijft niet naar GitHub. Andere subagents lezen met `SUBAGENT_GH` en `gh api` (GET), de reviewer met zijn
+  eigen leeslijst (`rails/hooks/lib/rolhek.mjs`); in de cloud werken de `gh pr`-, `gh run`- en `gh issue`-vormen niet. Sinds rolhek-lezen/AC-21 leest de reviewer daar met de `gh api`-leesrecepten.
 - `main` bijhalen faalt in de sandbox als `main` iets onder `.claude/skills` of `.claude/agents` wijzigt (#789); volg dan
   "Branchwissels in een sandbox" in `docs/operations/agent-doorloop.md`.
 
@@ -243,7 +242,7 @@ sectie `## Leerpunt`: `test/rails/check-docs-recept-rolhek.test.ts` (rood op de 
 - **OV-3** — #807 wijzigt AC-3 van de gebouwde spec `leerlus`. Aanbeveling: in deze PR, met de eigenaarmerge als besluit
   (ADR 0080 punt 4), omdat de skill het rolhek moet volgen (`template.repository`, spec `template-repo`).
 - **OV-4** — De reviewer kan in de cloud geen PR-gegevens lezen: zijn `gh pr`-vormen gaan via GraphQL en `gh api` staat niet op
-  zijn leeslijst. Aanbeveling: buiten deze PR; nieuw leerpunt met de meting.
+  zijn leeslijst. Aanbeveling: buiten deze PR; nieuw leerpunt met de meting. Opgevolgd: leerpunt #898, rolhek-lezen/AC-21.
 - **OV-5** — De weigering van het rolhek voor `git push origin --delete` noemt `gh api -X DELETE repos/{owner}/{repo}/…` zonder
   aanhalingstekens (`GH_DELETE_VORM` in `rails/hooks/lib/rolhek.mjs`). Aanbeveling: buiten deze PR (rails); meenemen in het
-  leerpunt van OV-4.
+  leerpunt van OV-4. Opgevolgd: cloud-netwerkvorm/AC-3 (#898).
