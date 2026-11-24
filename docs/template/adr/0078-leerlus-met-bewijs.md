@@ -12,6 +12,7 @@ Herzien: 2026-11-22: punt 4, "in de cloud draait geen rolhek" klopte niet: spec 
 rolhek ook in een cloudsessie weigert; spec cloud-pr-route (uitslag stap 0, rij 6) wees er al op
 Herzien: 2026-11-22: gewijzigd door [0107](0107-gedragsbaseline-voor-tekstwijzigingen.md) punt 5–7, in punt 2: bij Skill, Padregel en AGENTS.md wordt het bewijs "baseline: zonder <a>/3, met 3/3 (<model>)" of "geen baseline: <reden>"; "geen test:" blijft voor een integratie- of e2e-test
 Herzien: 2026-11-23: gewijzigd door [0101](0101-leerpunt-bijwerken-en-sluiten.md) punt 1, 2, 5 en 6, in punt 4 en 5: de hoofdsessie mag een leerpunt ook bijwerken (comment, titel, body; labels alleen via MCP in de cloud) en sluiten als duplicaat met `duplicaat van #<nr>`, die de issue-check als bewijs erkent
+Herzien: 2026-11-24: gewijzigd door [0109](0109-leerpunt-sluiten-met-verwijzing.md), in punt 3 en 5: de hoofdsessie mag een leerpunt ook sluiten als completed met een comment `opgelost: <verwijzing>` naar bewijs op main
 
 Wijzigt [0059](0059-leerlus-van-app-naar-template.md) punt 1, 3, 4 en 7; vult R-SEC-09 aan met een uitzondering voor MCP (sinds de herziening van 2026-11-20 twee).
 Drempel: A3 (een nieuwe workflow met schrijfrecht op issues; een uitzondering op "MCP alleen lezend") en A4 (een

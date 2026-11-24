@@ -2446,9 +2446,9 @@ function ghIssue(argv, { role, ctx, setsGhEnv }, decision) {
 const BIJWERK_OPTIES = new Map([
   ['comment', new Set(['--body-file'])],
   ['edit', new Set(['--title', '--body-file'])],
-  ['close', new Set(['--duplicate-of'])],
+  ['close', new Set(['--duplicate-of', '--reason'])],
 ]);
-const GH_KORT = new Map([['-R', '--repo'], ['-F', '--body-file'], ['-t', '--title']]);
+const GH_KORT = new Map([['-R', '--repo'], ['-F', '--body-file'], ['-t', '--title'], ['-r', '--reason']]);
 const GETAL = /^\d+$/;
 
 /**
@@ -2520,7 +2520,8 @@ function optieWaarden(opties, naam) {
 
 /**
  * Aantallen en waarden per actie: comment precies één `--body-file`; edit hooguit één `--title` en één `--body-file`, samen
- * minstens één; close precies één `--duplicate-of <getal>`. `--body-file -` leest stdin en telt niet.
+ * minstens één; close precies één `--duplicate-of <getal>` of precies één `--reason completed` (ADR 0109), nooit beide.
+ * `--body-file -` leest stdin en telt niet.
  * @param {string} action
  * @param {readonly { naam: string, waarde: string | undefined }[]} opties
  */
@@ -2532,10 +2533,20 @@ function bijwerkOptieAfwijking(action, opties) {
   if (action === 'comment' && bestanden.length !== 1) return 'comment met precies één --body-file';
   if (action === 'edit' && (bestanden.length > 1 || titels.length > 1 || bestanden.length + titels.length === 0))
     return 'edit met --title en/of --body-file, elk hooguit één keer';
+  return action === 'close' ? sluitAfwijking(opties) : '';
+}
+
+/**
+ * Sluiten als duplicaat (ADR 0101) of als opgelost (ADR 0109, spec leerlus-bewijs AC-16): precies één van beide vormen.
+ * @param {readonly { naam: string, waarde: string | undefined }[]} opties
+ */
+function sluitAfwijking(opties) {
   const duplicaat = optieWaarden(opties, '--duplicate-of');
-  if (action === 'close' && (duplicaat.length !== 1 || !GETAL.test(duplicaat[0] ?? '')))
-    return 'close alleen met precies één --duplicate-of <getal> (geen URL)';
-  return '';
+  const redenen = optieWaarden(opties, '--reason');
+  const alsDuplicaat = duplicaat.length === 1 && GETAL.test(duplicaat[0] ?? '') && redenen.length === 0;
+  const alsOpgelost = redenen.length === 1 && redenen[0] === 'completed' && duplicaat.length === 0;
+  if (alsDuplicaat || alsOpgelost) return '';
+  return 'close alleen met precies één --duplicate-of <getal> (geen URL) of precies één --reason completed, niet beide';
 }
 
 /**

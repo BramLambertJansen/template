@@ -111,7 +111,9 @@ describe('hoofdsessie: elke andere vorm → ask met een reden', () => {
     { naam: 'edit: onbekende optie', command: `${E} -F f.md --milestone v1` },
     { naam: 'close: zonder --duplicate-of', command: X },
     { naam: 'close: --reason', command: `${X} --reason "not planned"` },
-    { naam: 'close: -r', command: `${X} -r completed` },
+    // GEWIJZIGD (leerlus-bewijs/AC-16, ADR 0109): de rij `close: -r` (`-r completed`) was ask; `--reason completed` in alle
+    // schrijfwijzen is nu een geldige vorm (zie "sluiten als opgelost" onderaan). Een andere waarde bij -r blijft ask.
+    { naam: 'close: -r met andere waarde', command: `${X} -r wontfix` },
     { naam: 'close: --comment', command: `${X} --comment x --duplicate-of 3` },
     { naam: 'close: -c', command: `${X} -c x --duplicate-of 3` },
     { naam: 'close: --duplicate-of met URL', command: `${X} --duplicate-of https://github.com/iemand/anders/issues/3` },
@@ -211,5 +213,118 @@ describe('subagent: schrijvende gh issue blijft deny', () => {
 
   test.each(SUBAGENTS)('leerlus-bewijs/AC-11: %s → deny op de drie geldige vormen', (agent) => {
     expect(GELDIG.map((command) => verdict(bash(command, agent)))).toStrictEqual(GELDIG.map(() => 'deny'));
+  });
+});
+
+// Spec leerlus-bewijs AC-16, ADR 0109 punt 3: sluiten als opgelost. Dezelfde eisen als AC-11, met `--reason completed` in
+// plaats van `--duplicate-of`; `-r` telt als `--reason` (GH_KORT).
+describe('leerlus-bewijs/AC-16 sluiten als opgelost: geldige vormen → geen ask en geen deny', () => {
+  test.each([
+    { naam: '--reason completed', command: `gh issue close --repo ${REPO} 5 --reason completed` },
+    { naam: '--reason=completed', command: `gh issue close --repo ${REPO} 5 --reason=completed` },
+    { naam: '-r completed', command: `gh issue close --repo ${REPO} 5 -r completed` },
+    { naam: '-rcompleted', command: `gh issue close --repo ${REPO} 5 -rcompleted` },
+    { naam: '-r=completed', command: `gh issue close --repo ${REPO} 5 -r=completed` },
+    { naam: 'nummer vóór --repo', command: `gh issue close 5 --repo ${REPO} --reason completed` },
+    { naam: '-R', command: `gh issue close -R ${REPO} 5 --reason completed` },
+    { naam: '--repo=<repo>', command: `gh issue close --repo=${REPO} 5 --reason completed` },
+    { naam: 'repo in hoofdletters', command: `gh issue close --repo ${REPO.toUpperCase()} 5 --reason completed` },
+    { naam: 'opties vóór issue', command: `gh --repo ${REPO} issue close 5 --reason completed` },
+    { naam: 'opties tussen issue en actie', command: `gh issue -R ${REPO} close 5 --reason completed` },
+  ])('leerlus-bewijs/AC-16: $naam', ({ command }) => {
+    expect(decide(bash(command), ctx())).toMatchObject({ deny: [], ask: [] });
+  });
+});
+
+describe('leerlus-bewijs/AC-16 sluiten als opgelost: elke afwijking → ask met een reden', () => {
+  const X = `gh issue close --repo ${REPO} 5`;
+  test.each([
+    { naam: '--reason "not planned"', command: `${X} --reason "not planned"` },
+    { naam: '--reason not_planned', command: `${X} --reason not_planned` },
+    { naam: '--reason Completed (hoofdletter)', command: `${X} --reason Completed` },
+    { naam: '--reason leeg', command: `${X} --reason ""` },
+    { naam: '--reason zonder waarde', command: `${X} --reason` },
+    { naam: '-r not_planned', command: `${X} -r not_planned` },
+    { naam: '--reason twee keer', command: `${X} --reason completed --reason completed` },
+    { naam: '--reason en -r', command: `${X} --reason completed -r completed` },
+    { naam: '--reason samen met --duplicate-of', command: `${X} --reason completed --duplicate-of 3` },
+    { naam: '--comment naast --reason completed', command: `${X} --reason completed --comment klaar` },
+    { naam: '-c naast --reason completed', command: `${X} --reason completed -c klaar` },
+    {
+      naam: 'URL als nummer',
+      command: `gh issue close --repo ${REPO} https://github.com/iemand/anders/issues/5 --reason completed`,
+    },
+    { naam: 'tweede nummer', command: `${X} 6 --reason completed` },
+    { naam: 'geen nummer', command: `gh issue close --repo ${REPO} --reason completed` },
+    { naam: 'andere repo', command: 'gh issue close --repo iemand/anders 5 --reason completed' },
+    { naam: 'geen repo', command: 'gh issue close 5 --reason completed' },
+    { naam: 'repo twee keer', command: `${X} -R ${REPO} --reason completed` },
+    { naam: 'GH_REPO= in het commando', command: `GH_REPO=iemand/anders ${X} --reason completed` },
+    { naam: 'GH_HOST= in het commando', command: `GH_HOST=example.com ${X} --reason completed` },
+    { naam: 'andere optie erbij', command: `${X} --reason completed --foo` },
+    { naam: 'onbekende korte optie', command: `${X} --reason completed -z` },
+    { naam: '-- (einde van de opties)', command: `${X} --reason completed -- 6` },
+    { naam: 'zonder --reason en zonder --duplicate-of', command: X },
+    { naam: 'reopen blijft ask', command: `gh issue reopen --repo ${REPO} 5` },
+  ])('leerlus-bewijs/AC-16: $naam', ({ command }) => {
+    expect(verdict(bash(command))).toBe('ask');
+    expect(decide(bash(command), ctx()).ask.join(' ').trim().length).toBeGreaterThan(10);
+  });
+
+  test.each([
+    { naam: '$( ) in de waarde', command: `${X} --reason "$(echo completed)"` },
+    { naam: 'backticks in de waarde', command: `${X} --reason \`echo completed\`` },
+  ])('leerlus-bewijs/AC-16: commandosubstitutie, $naam → ask of deny, nooit allow', ({ command }) => {
+    expect(['ask', 'deny']).toContain(verdict(bash(command)));
+  });
+
+  test('leerlus-bewijs/AC-16: ontbreekt template.repository, dan is zelfs --reason completed ask', () => {
+    const zonderRepo = loadConfig(gatesMet({ template: undefined }));
+    expect(verdict(bash(`gh issue close --repo ${REPO} 5 --reason completed`), zonderRepo)).toBe('ask');
+  });
+
+  test('leerlus-bewijs/AC-16: template.repository bepaalt het doel ook voor --reason completed', () => {
+    const fork = loadConfig(gatesMet({ template: { repository: 'iemand/fork' } }));
+    expect(verdict(bash('gh issue close --repo iemand/fork 5 --reason completed'), fork)).not.toBe('ask');
+    expect(verdict(bash(`gh issue close --repo ${REPO} 5 --reason completed`), fork)).toBe('ask');
+  });
+
+  test.each(SUBAGENTS)('leerlus-bewijs/AC-16: %s → deny op elke vorm van sluiten als opgelost', (agent) => {
+    const vormen = [
+      `gh issue close --repo ${REPO} 5 --reason completed`,
+      `gh issue close -R ${REPO} 5 -r completed`,
+      `gh -R ${REPO} issue close 5 --reason=completed`,
+    ];
+    expect(vormen.map((command) => verdict(bash(command, agent)))).toStrictEqual(vormen.map(() => 'deny'));
+  });
+});
+
+// Spec leerlus-bewijs AC-17, ADR 0109 punt 3: in de cloud blijft het rolhek op de MCP-issuetool vragen (hoofdsessie) of
+// weigeren (subagent); `mcpLezen` verandert niet. Deze rijen zijn een regressievergrendeling en nu al groen.
+describe('leerlus-bewijs/AC-17 cloud: MCP-issuetool blijft ask voor de hoofdsessie en deny voor een subagent', () => {
+  const mcp = (tool: string, input: unknown, agent?: string) => ({
+    tool_name: tool,
+    tool_input: input,
+    ...(agent === undefined ? {} : { agent_type: agent }),
+  });
+  const SCHRIJF: [string, unknown][] = [
+    ['mcp__github__issue_write', { method: 'update', issue_number: 5, state: 'closed', state_reason: 'completed' }],
+    ['mcp__github__issue_write', { method: 'update', issue_number: 5, state: 'closed', state_reason: 'duplicate' }],
+    ['mcp__github__issue_write', { method: 'update', issue_number: 5, state: 'closed', state_reason: 'not_planned' }],
+    ['mcp__github__issue_write', { method: 'update', issue_number: 5, state: 'open' }],
+    ['mcp__github__add_issue_comment', { issue_number: 5, body: 'opgelost: #834' }],
+  ];
+
+  test.each(SCHRIJF)('leerlus-bewijs/AC-17: hoofdsessie, %s → ask', (tool, input) => {
+    expect(verdict(mcp(tool, input))).toBe('ask');
+  });
+
+  test.each(SUBAGENTS)('leerlus-bewijs/AC-17: %s → deny op de MCP-issuetool', (agent) => {
+    expect(SCHRIJF.map(([tool, input]) => verdict(mcp(tool, input, agent)))).toStrictEqual(SCHRIJF.map(() => 'deny'));
+  });
+
+  test('leerlus-bewijs/AC-17: mcpLezen bevat de MCP-schrijftools voor issues niet', () => {
+    expect(config.mcpLezen).not.toContain('mcp__github__issue_write');
+    expect(config.mcpLezen).not.toContain('mcp__github__add_issue_comment');
   });
 });

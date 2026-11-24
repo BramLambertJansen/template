@@ -104,8 +104,12 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
    geen label `leerpunt`, dan stop (issues en PR's delen nummers). Alleen deze vormen, met `--repo` direct na de actie (anders
    een vraag): `gh issue comment --repo <repo> <nr> --body-file <bestand>`, `gh issue edit --repo <repo> <nr> --title <titel>
    --body-file <bestand>` (titel of body) en, bij een duplicaat, eerst `gh issue comment` met `duplicaat van #<nr>` en daarna
-   `gh issue close --repo <repo> <nr> --duplicate-of <nr>`. Geen labels via gh (R-ROL-08). Ander sluiten (achterhaald, not
-   planned) en heropenen doet de eigenaar.
+   `gh issue close --repo <repo> <nr> --duplicate-of <nr>`. Uitkomst `opgelost op main` (ADR 0109): staat de oplossing al op
+   `main` zonder `Closes #<nr>`, dan na de doelcheck eerst `gh issue comment --repo <repo> <nr> --body-file <bestand>` met
+   `opgelost: <verwijzingen>`, een door komma's gescheiden lijst van `#<nr>` (PR gemerged naar main), commit-SHA op main of
+   `ADR <nnnn>` (geaccepteerd), en daarna `gh issue close --repo <repo> <nr> --reason completed`.
+   Elke verwijzing moet geldig zijn; is er één ongeldig of nog niet op main, dan niet sluiten maar `deels`.
+   Geen labels via gh (R-ROL-08). Sluiten als not planned, achterhaald verklaren en heropenen doet de eigenaar.
    Vraag ook (ADR 0081): kostte een stap, check, hook of instructie in deze sessie merkbaar tijd, rondes of tokens zonder iets
    te vangen, of las je code die bij gelijk gedrag veel korter of sneller kan? Dan een leerpunt met plek
    `Schrappen of vereenvoudigen` en een `Onderbouwing` met de regels `Meting:`, `Overname:` en `Terugval:`.
@@ -136,8 +140,10 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
    Bestaat het label nog niet, dan meld je dat; het label maakt de eigenaar. Triage en oppakken zijn van de eigenaar.
    Cloud, waar `gh` niet kan schrijven (ADR 0078 punt 4, ADR 0101 punt 5): de MCP-tool voor issues (aanmaken, comment, bijwerken),
    alleen naar `template.repository`: aanmaken met label `leerpunt` en dezelfde titel en body, en na de doelcheck dezelfde
-   acties als hierboven (comment, titel en body, sluiten als duplicaat) plus labels zetten of weghalen, nooit `leerpunt`,
-   `leerpunt-onvolledig` of `leerpunt-zonder-bewijs`. Geen andere MCP-schrijfactie.
+   acties als hierboven (comment, titel en body, sluiten met `state_reason` `completed` na de opgelost-comment of `duplicate`)
+   plus labels zetten of weghalen, nooit `leerpunt`, `leerpunt-onvolledig` of `leerpunt-zonder-bewijs`; nooit `not_planned`
+   en nooit heropenen. Geen andere MCP-schrijfactie. Elke MCP-schrijfactie is een toestemmingsprompt voor de eigenaar:
+   zonder meekijker staat deze route stil.
    Sluit een PR een leerpunt (sluitwoord of koppeling), dan krijgt de beschrijving de sectie `## Leerpunt` met per issue
    `- #<nr>: trede <Type|Check|Gouden pad of generator>; bewijs <testpad>`; de job `leerpunt-bewijs` draait die test rood op
    de basis en groen op de head. Bij een integratie- of e2e-test: `bewijs geen test: <reden>`, en dan merget de eigenaar.

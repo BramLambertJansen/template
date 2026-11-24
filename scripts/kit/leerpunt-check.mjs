@@ -1,4 +1,4 @@
-// Issue-check voor leerpunten (ADR 0078 punt 3, spec leerlus-bewijs AC-5, AC-6 en AC-13). Draait in de workflow `leerpunt` op
+// Issue-check voor leerpunten (ADR 0078 punt 3, spec leerlus-bewijs AC-5, AC-6, AC-13 en AC-20). Draait in de workflow `leerpunt` op
 // `issues` en `issue_comment`, vanaf de default branch, met alleen `issues: write` en `pull-requests: read`. Zet of haalt de
 // labels `leerpunt-onvolledig` en `leerpunt-zonder-bewijs` weg met één comment per soort; sluit, heropent of bewerkt niets.
 // Alleen in de template-repo (`onderhoud.repository` in .claude/gates.json). Alleen `node:`- en relatieve imports.
@@ -126,6 +126,72 @@ export async function beoordeelSluiting(nummer, bron, haalDoel) {
   return 'zonder-bewijs';
 }
 
+// Spec leerlus-bewijs AC-20 (ADR 0109): `opgelost: <lijst>` met PR (`#834`), commit (7 tot 40 kleine hex) of `ADR 0100`.
+const OPGELOST = /^\s*opgelost:(.*)$/is;
+const VERWIJZINGEN = /** @type {const} */ ([
+  ['pr', /^#(\d+)$/],
+  ['commit', /^([0-9a-f]{7,40})$/],
+  ['adr', /^ADR (\d{4})$/],
+]);
+
+/** @typedef {{ soort: 'pr' | 'commit' | 'adr', waarde: string }} Verwijzing */
+
+/** @param {string} element @returns {Verwijzing | null} */
+function leesVerwijzing(element) {
+  for (const [soort, vorm] of VERWIJZINGEN) {
+    const waarde = vorm.exec(element)?.[1];
+    if (waarde !== undefined) return { soort, waarde };
+  }
+  return null;
+}
+
+/**
+ * De verwijzingen van een `opgelost:`-comment in volgorde (puur), of `null` als de comment niet precies die vorm heeft.
+ * @param {string} body @returns {Verwijzing[] | null}
+ */
+export function leesOpgelost(body) {
+  const rest = OPGELOST.exec(body)?.[1];
+  if (rest === undefined || rest.trim() === '') return null;
+  /** @type {Verwijzing[]} */
+  const uit = [];
+  for (const element of rest.split(',')) {
+    const verwijzing = leesVerwijzing(element.trim());
+    if (verwijzing === null) return null;
+    uit.push(verwijzing);
+  }
+  return uit;
+}
+
+/**
+ * Bewijs via een sluiting als opgelost (AC-20): reden `completed` en minstens één `opgelost:`-comment met schrijfrecht
+ * waarvan elke PR gemerged is in de standaardbranch. `haalPr` geeft de REST-body van de PR, of `null` bij 404 of 410.
+ * Het issuenummer staat in de signatuur voor dezelfde vorm als `beoordeelSluiting`; de opgelost-tak gebruikt het niet.
+ * @param {number} _nummer
+ * @param {{ reden: string, comments: { body: string, association: string }[], standaardBranch: string }} bron
+ * @param {(pr: number) => Promise<unknown>} haalPr
+ * @returns {Promise<'opgelost' | 'zonder-bewijs'>}
+ */
+export async function beoordeelOpgelost(_nummer, bron, haalPr) {
+  if (bron.reden !== 'completed') return 'zonder-bewijs';
+  for (const { body, association } of bron.comments) {
+    const verwijzingen = SCHRIJFRECHT.includes(association) ? leesOpgelost(body) : null;
+    if (verwijzingen !== null && (await allePrsGemerged(verwijzingen, bron.standaardBranch, haalPr))) return 'opgelost';
+  }
+  return 'zonder-bewijs';
+}
+
+/**
+ * @param {Verwijzing[]} verwijzingen @param {string} branch @param {(pr: number) => Promise<unknown>} haalPr
+ */
+async function allePrsGemerged(verwijzingen, branch, haalPr) {
+  for (const { soort, waarde } of verwijzingen) {
+    if (soort !== 'pr') continue;
+    const pr = await haalPr(Number(waarde));
+    if (veld(pr, 'merged') !== true || veld(veld(pr, 'base'), 'ref') !== branch) return false;
+  }
+  return true;
+}
+
 /** @param {string} tekst @returns {string | null} */
 export function onderhoudRepo(tekst) {
   const repo = veld(veld(JSON.parse(tekst), 'onderhoud'), 'repository');
@@ -206,6 +272,23 @@ function haalIssue(repo) {
   return (/** @type {number} */ doel) => api(`repos/${repo}/issues/${String(doel)}`, { magOntbreken: true });
 }
 
+/** De PR-opvraag voor `beoordeelOpgelost`: REST `repos/<repo>/pulls/<nr>`, `null` bij 404 of 410. @param {string} repo */
+function haalPr(repo) {
+  return (/** @type {number} */ pr) => api(`repos/${repo}/pulls/${String(pr)}`, { magOntbreken: true });
+}
+
+/**
+ * Het oordeel bij een sluiting: eerst `beoordeelSluiting` (bewijs, achterhaald, duplicaat), daarna de opgelost-tak (AC-20).
+ * @param {string} repo @param {Gebeurtenis} g
+ */
+async function sluitOordeelVoor(repo, g) {
+  const bron = { ...(await sluitBron(repo, g.nummer)), reden: g.reden };
+  const oordeel = await beoordeelSluiting(g.nummer, bron, haalIssue(repo));
+  if (oordeel !== 'zonder-bewijs' || g.reden !== 'completed') return oordeel;
+  const standaardBranch = String(veld(await api(`repos/${repo}`), 'default_branch') ?? '');
+  return beoordeelOpgelost(g.nummer, { ...bron, standaardBranch }, haalPr(repo));
+}
+
 /** @param {string} repo @param {Gebeurtenis} g @param {Stap} stap */
 async function voerUit(repo, g, stap) {
   const issue = `repos/${repo}/issues/${String(g.nummer)}`;
@@ -235,9 +318,7 @@ async function main() {
   const toets = teToetsen(g);
   const velden = leesSjabloon(readFileSync(path.join(ROOT, '.github/ISSUE_TEMPLATE/leerpunt.yml'), 'utf8'));
   const fouten = toets.sjabloon ? toetsBody(g.body, velden) : null;
-  const oordeel = toets.sluiten
-    ? await beoordeelSluiting(g.nummer, { ...(await sluitBron(repo, g.nummer)), reden: g.reden }, haalIssue(repo))
-    : null;
+  const oordeel = toets.sluiten ? await sluitOordeelVoor(repo, g) : null;
   for (const stap of stappen({ fouten, oordeel, heropend: toets.heropend, velden })) await voerUit(repo, g, stap);
 }
 
