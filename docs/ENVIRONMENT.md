@@ -246,7 +246,7 @@ merge. Een remote branch verwijder je met `gh api -X DELETE "repos/{owner}/{repo
 of verzetten via `gh api` is voor elke rol verboden (`rails/hooks/lib/rolhek.mjs:2492`). `mcp__github__push_files`,
 `create_or_update_file` en `delete_file` slaan lefthook over: de hoofdsessie krijgt een vraag, een subagent een weigering
 (`rails/hooks/lib/rolhek.mjs:115`). Een cloudsessie (`CLAUDE_CODE_REMOTE=true`) toont de route bij de start in één regel
-(`rails/hooks/lib/werkstraat.mjs:349`).
+(`rails/hooks/lib/werkstraat.mjs:363`).
 
 Kies bij het starten van de sessie de omgeving uit Opzetten. De omgeving Default heeft geen toolchain:
 `node scripts/kit/feiten.mjs` meldt dan `✗ toolchain ontbreekt` en lefthook draait niet. Netwerktoegang heet in de

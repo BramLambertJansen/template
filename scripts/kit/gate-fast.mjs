@@ -4,11 +4,13 @@
 // elkaar, 71 s alles tegelijk (CPU-druk), 61 s in drie banen. Elke gate is een eigen `pnpm <script>` met dezelfde
 // exitcode als los; de uitvoer wordt gebufferd: eerst die van de rode gates, dan de lijst, beide in registervolgorde. Anders dan de oude &&-keten
 // stopt een rode gate de andere niet, zodat één ronde alle fouten laat zien.
+// Is test:unit rood, dan sluit een blok `Falende tests:` af met de namen uit de FAIL-regels, zodat een staart volstaat (leerpunt #957).
 // In CI draait de suite in drie delen naast elkaar (`--deel`, ADR 0076, spec ci-in-delen): `checks` (alles behalve
 // test:unit) en `test-1`/`test-2` (elk de helft van test:unit via `vitest --shard`). Zonder `--deel` draait alles.
 import { Buffer } from 'node:buffer';
 import { spawn } from 'node:child_process';
 import { performance } from 'node:perf_hooks';
+import { stripVTControlCharacters } from 'node:util';
 import { gates } from './gates.mjs';
 import { weinigGeheugen } from './geheugen.mjs';
 
@@ -126,7 +128,31 @@ function rapporteer(uitslagen, naam, write) {
   for (const { script, code, seconds } of uitslagen)
     write(`${code === 0 ? '✓' : '✗'} ${script} (${seconds.toFixed(1)} s)\n`);
   write(rood.length === 0 ? `✓ ${naam} groen\n` : `✗ ${naam} rood: ${rood.map(({ script }) => script).join(', ')}\n`);
+  const tests = falendeTests(rood.find(({ script }) => script === 'test:unit')?.output ?? '');
+  if (tests.length > 0) write(`Falende tests:\n${tests.join('\n')}\n`);
   return rood.length === 0 ? 0 : 1;
+}
+
+/** Hoeveel falende tests het slotblok hooguit noemt. */
+const MAX_FALENDE_TESTS = 20;
+
+/**
+ * De falende tests uit de vitest-uitvoer van test:unit (leerpunt #957): elke `FAIL`-regel zonder `FAIL`, projectmarkering en
+ * voorloopwitruimte, ontdubbeld, in volgorde, hooguit MAX_FALENDE_TESTS en dan `… en <n> meer`.
+ * @param {string} output
+ * @returns {string[]}
+ */
+function falendeTests(output) {
+  /** @type {Set<string>} */
+  const namen = new Set();
+  // Zonder ANSI-kleurcodes: vitest kleurt zijn uitvoer als de omgeving dat toestaat (bijv. FORCE_COLOR in CI).
+  for (const regel of stripVTControlCharacters(output).split(/\r?\n/)) {
+    const naam = /^\s*FAIL\s+(?:\|[^|]*\|\s*)?(.+?)\s*$/.exec(regel)?.[1];
+    if (naam !== undefined) namen.add(naam);
+  }
+  const lijst = [...namen];
+  if (lijst.length <= MAX_FALENDE_TESTS) return lijst;
+  return [...lijst.slice(0, MAX_FALENDE_TESTS), `… en ${String(lijst.length - MAX_FALENDE_TESTS)} meer`];
 }
 
 /** @param {(script: string) => Promise<Uitslag>} run */
