@@ -91,10 +91,10 @@ Hooguit drie open items (`check:roadmap`); nummer 1 is bewijs vóór uitbreiding
 
 Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigenaarbesluit nodig heeft, zegt het item.
 
-- [ ] **Focus naar de h1 na een routewissel naar een lazy route** (`/design-system`): in e2e (Vite dev) staat de focus daarna op `body`.
-  Geprobeerd: `routeKey` uit `resolvedLocation`, wachten op een (zichtbare) h1 met een MutationObserver, en terugzetten als de focus
-  verloren gaat. Vermoeden: pending-weergave of het laden van de chunk duurt langer dan `HEADING_WAIT_MS` (2 s), of het pad naar
-  `resolvedLocation` loopt anders. Eerst reproduceren met een trace (`pnpm ui:check`), dan pas repareren (stuk 3f).
+- [x] **Focus naar de h1 na een routewissel naar een lazy route** (`/design-system`). De huidige `AppShell` (`routeKey` uit
+  `resolvedLocation`, wachten op een zichtbare h1 met een MutationObserver, terugzetten als de focus verloren gaat) zet de focus op de h1;
+  de e2e controleert het nu (bewijs `e2e/shell.spec.ts`, stuk 3f). De oorzaak van de eerdere `body`-focus is niet gevonden;
+  wordt de controle flaky, dan gaat dit item weer open.
   aanleiding: `src/core/web/ui/app-shell.test.tsx` (bekende fout, geen capability)
 - [ ] **ST-02 (P0) — accountbeheer en herstel afmaken** (stuk 3e; bestaande accountbeheer-specs). Open: TOTP-backupcodes (zodat een admin
   zonder telefoon niet alleen via `admin:create` terugkomt), een openstaande uitnodiging intrekken (opnieuw versturen bestaat al:
