@@ -1,0 +1,9 @@
+/* Stijlvariant voor e2e (spec app-thema, AC-18 en de nulmeting): zet alleen bestaande semantische tokens op :root,
+   zoals een app nu in src/web/styles/theme.css doet. --primary haalt 6,8:1 tegen --primary-foreground (wit, licht).
+   e2e/app-thema.spec.ts serveert dit bestand met page.route en laadt het met page.addStyleTag({ url }). */
+:root {
+  --radius: 0.75rem;
+  --primary: oklch(0.45 0.13 155);
+  --density-control: 3rem;
+  --font-family-sans: Georgia, 'Times New Roman', serif;
+}

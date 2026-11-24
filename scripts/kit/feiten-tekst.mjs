@@ -269,10 +269,28 @@ export function toText(sections) {
 // theme.css.
 
 /** @typedef {{ selector: string, naam: string, waarde: string, regel: number }} Declaratie */
-/** @typedef {{ token: string, klassen: string[], licht: string, donker?: string, app?: string, bron: string }} TokenItem */
+/** @typedef {{ token: string, klassen: string[], licht: string, donker?: string, app?: string, bron: string, laag?: string, component?: string, standaard?: string }} TokenItem */
 
 const TOKEN_GROEPEN = ['kleur', 'typografie', 'dichtheid', 'lagen', 'beweging'];
 const DARK = "[data-theme='dark']";
+
+// Componenttokens (spec app-thema, deel A): de vaste lijst componentnamen; `focus-ring`, `layer` en `qr` zijn basisgroepen.
+const COMPONENTEN = ['button', 'control', 'card', 'dialog', 'table', 'badge', 'tabs', 'notice', 'toast', 'shell'];
+const BASISGROEPEN = ['focus-ring', 'layer', 'qr'];
+// Een componenttoken van de eerste set krijgt zijn eigen klassen; `--control-h` blijft naar `--density-control` wijzen.
+const EIGEN_KLASSE = new RegExp(`^--(${COMPONENTEN.join('|')})-`);
+
+/** @param {string} token */
+function componentVan(token) {
+  return (
+    [...COMPONENTEN, ...BASISGROEPEN]
+      .filter((naam) => token.startsWith(`--${naam}-`))
+      .sort((a, b) => b.length - a.length)[0] ?? '(onbekend)'
+  );
+}
+
+/** @param {string} selector */
+const isRootBlok = (selector) => selector === ':root' || selector === '[data-app-theme]';
 
 // Volgorde telt: de langste namespace eerst (`--font-weight-` vóór `--font-`).
 /** @type {readonly { prefix: RegExp, groep: string, klassen: (naam: string) => string[] }[]} */
@@ -337,7 +355,8 @@ function themaKoppelingen(theme, components) {
     const doel = /^var\((--[\w-]+)\)$/.exec(waarde)?.[1];
     if (ns === undefined || ns.match === null || doel === undefined) continue;
     const via = components.find((decl) => decl.naam === doel);
-    const token = via === undefined ? doel : (/var\((--[\w-]+)\)/.exec(via.waarde)?.[1] ?? doel);
+    const volg = via !== undefined && (doel === '--control-h' || !EIGEN_KLASSE.test(doel));
+    const token = volg ? (/var\((--[\w-]+)\)/.exec(via.waarde)?.[1] ?? doel) : doel;
     const klassen = [...(koppeling.get(token)?.klassen ?? []), ...ns.space.klassen(ns.match[1] ?? '')];
     koppeling.set(token, { groep: ns.space.groep, klassen: [...new Set(klassen)] });
   }
@@ -360,7 +379,8 @@ function waardeVan(decls, token, selector) {
  * @param {string} pad
  */
 function appWaarde(app, token, pad) {
-  const licht = waardeVan(app, token, ':root');
+  // Licht staat op `:root` of op `:root, [data-app-theme]` (componenttokens, spec app-thema).
+  const licht = app.find((decl) => decl.naam === token && isRootBlok(decl.selector));
   const donker = waardeVan(app, token, DARK);
   const delen = [
     ...(licht === undefined ? [] : [`${licht.waarde} (${pad}:${String(licht.regel)})`]),
@@ -406,7 +426,23 @@ export function tokenOverzicht(css, paden) {
       });
     }
   }
-  const bekend = new Set(semantic.map((decl) => decl.naam));
+  groepen['componenten'] = components
+    .filter((decl) => isRootBlok(decl.selector) && !decl.naam.startsWith('--layer-'))
+    .map((decl) => {
+      const eigen = appWaarde(app, decl.naam, paden.theme);
+      return {
+        token: decl.naam,
+        laag: 'component',
+        component: componentVan(decl.naam),
+        standaard: decl.waarde,
+        klassen: koppeling.get(decl.naam)?.klassen ?? [],
+        licht: decl.waarde,
+        ...(eigen === undefined ? {} : { app: eigen }),
+        bron: `${paden.components}:${String(decl.regel)}`,
+      };
+    });
+  // Een override van een componenttoken in theme.css is geen tikfout.
+  const bekend = new Set([...semantic, ...components].map((decl) => decl.naam));
   groepen['onbekend'] = app
     .filter((decl) => !bekend.has(decl.naam))
     .map((decl) => ({
@@ -426,9 +462,11 @@ export function tokensTekst(groepen) {
   return Object.fromEntries(
     Object.entries(groepen).map(([groep, items]) => [
       groep,
-      items.map(({ token, klassen, licht, donker, app, bron }) =>
+      items.map(({ token, klassen, licht, donker, app, bron, laag, component }) =>
         [
           token,
+          ...(laag === undefined ? [] : [`laag ${laag}`]),
+          ...(component === undefined ? [] : [`component ${component}`]),
           `klasse ${klassen.length === 0 ? '(geen)' : klassen.join(', ')}`,
           `standaard ${licht}`,
           ...(donker === undefined ? [] : [`donker ${donker}`]),

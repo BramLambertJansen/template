@@ -28,7 +28,7 @@ interface DialogProps {
 
 // Openen en sluiten via CSS-overgangen; bij prefers-reduced-motion zijn ze ingekort (styles/index.css).
 const variantClasses = {
-  modal: 'm-auto w-[calc(100%-2rem)] max-w-lg rounded-lg border bg-popover text-popover-foreground',
+  modal: 'm-auto w-[calc(100%-2rem)] max-w-dialog rounded-dialog border bg-popover text-popover-foreground',
   sheet:
     'my-0 ms-0 me-auto h-dvh max-h-none w-72 max-w-[calc(100%-3rem)] border-e bg-sidebar text-sidebar-foreground ' +
     'transition-[translate,overlay,display] transition-discrete duration-normal ease-out ' +
@@ -109,7 +109,7 @@ export function Dialog({
       onClick={(event) => {
         if (dismissible && sheet && event.target === event.currentTarget) onOpenChange(false);
       }}
-      className={cn('p-0 shadow-lg', variantClasses[variant])}
+      className={cn('p-0 shadow-dialog', variantClasses[variant])}
     >
       {/* Een modal begint elke keer leeg (formulieren); een sheet blijft staan, zodat hij ook dicht kan schuiven. */}
       {open || sheet ? (

@@ -92,7 +92,7 @@ tikfout; een override van een token zonder groep, zoals `--radius`: `overig`). Z
   variant voor.
 - Dichtheid: `--density-space` is de basis van alle afstanden en maten (`p-4`, `gap-2`, `w-*`, `size-*`: 4 × de basis bij
   `p-4`); `--density-control` is de hoogte van bediening en moet een lengte zijn (`rem` of `px`), anders vervalt de
-  ondergrens. `--control-h` (`src/core/web/styles/components.css:4`) houdt die op minstens 44 px.
+  ondergrens. `--control-h` (`src/core/web/styles/components.css:9`) houdt die op minstens 44 px.
 - Eigen lettertype: zet het woff2-bestand met zijn licentiebestand (`LICENSE*` of `OFL*`) in `src/web/styles/fonts/`,
   declareer `@font-face` in `theme.css` met een relatieve `url()` en `font-display: swap`, en zet de familie vóór de
   systeemstack in `--font-family-sans`. Alleen lettertypen waarvan de licentie zelf hosten toestaat (bijvoorbeeld OFL 1.1
@@ -102,13 +102,39 @@ tikfout; een override van een token zonder groep, zoals `--radius`: `overig`). Z
   `bg-*`, `text-*` en `border-*`. Ze werken als tekst op `--background`/`--card` én als vlak met de voorgrond; een eigen
   waarde moet in licht en donker 4,5:1 halen (`test/ui/contrast-status.test.ts`). `StatusBadge` en `Notice` hebben de
   tonen `success` en `warning`; `Notice` geeft daarbij `role="status"`, alleen `error` is `role="alert"`.
-- Lagen: `z-sticky` < `z-dropdown` < `z-overlay` < `z-modal` < `z-toast` (`--layer-*`, `src/core/web/styles/components.css:8-12`).
+- Lagen: `z-sticky` < `z-dropdown` < `z-overlay` < `z-modal` < `z-toast` (`--layer-*`, `src/core/web/styles/components.css:62-66`).
   Een `<dialog>` staat in de top layer en heeft geen z-index nodig; de skiplink gebruikt `focus:z-toast`.
 - Beweging: `duration-fast` (150 ms, ook de standaard van `transition-*`), `duration-normal` (200 ms), `ease-standard` en
   `ease-out` (`--motion-*`, `src/core/web/styles/semantic.css:58-61`); `ease-in` en `ease-in-out` bestaan niet. Bij
   `prefers-reduced-motion` kort de globale regel in `src/core/web/styles/index.css` elke overgang in tot 0,01 ms, ook
   als een app langere duren zet. Kale getallen (`z-50`, `duration-200`) horen niet in de kit
   (`test/ui/semantische-tokens-3b.test.ts`, AC-15).
+
+### Componenttokens
+
+Spec: [app-thema](template/specs/app-thema.md), deel A. Vorm en kleur van de eerste set (Button, de invoervelden, Card,
+Dialog, Table, StatusBadge, Tabs, Notice, Toast) komen uit tokens `--<component>-<eigenschap>` in
+`src/core/web/styles/components.css:6-57`, hooguit zes per component; de standaard verwijst naar een semantisch token of is
+een letterlijke waarde (schaduw, randdikte `1px`), zodat de uitstraling zonder override gelijk blijft. Klassen: via
+`@theme inline` waar Tailwind een namespace heeft (`rounded-button`, `shadow-card`, `font-badge`, `px-button-x`,
+`max-w-dialog`, `src/core/web/styles/index.css:90-109`), anders `@utility` (`border-button`, `case-button`,
+`bg-control`/`text-control`, `border-card-width` omdat `border-card` de kaartkleur is; `index.css:151-202`).
+`cn()` kent die klassen (`src/core/web/ui/cn.ts`), zodat `px-0` of `rounded-tabs` erna wint.
+
+- Een app overschrijft een componenttoken in `theme.css` op `:root, [data-app-theme]`, niet alleen `:root`: een token met
+  `var()` wordt uitgerekend op het element waar hij staat, en zo rekent hij ook binnen een thema op een deelboom mee.
+- Ondergrenzen: `--control-h` blijft `max(var(--density-control), 2.75rem)`; de focusring krijgt het invoertoken
+  `--density-focus-ring` (`semantic.css:57`) met `--focus-ring-width: max(var(--density-focus-ring), 2px)`. Een
+  kleurtoken van een component bestaat als paar `--<component>-bg`/`-fg` en haalt 4,5:1
+  (`test/ui/contrast-componenttokens.test.ts`).
+- `--button-shadow` staat standaard op `none`. Zolang een knop focus heeft, vervangt de focusring de schaduw; een
+  app-schaduw is dan even weg, de focusring nooit (`@utility shadow-button` in `src/core/web/styles/index.css`).
+- De lijst met standaard en berekende waarde staat in de sectie "Componenttokens" (tabblad Basis) op `/design-system`
+  (`src/web/features/design-system/component-tokens.ts`).
+
+Bewijs: `test/ui/componenttokens.test.ts` (grens van zes, brontest per recept, geen `--p-*` als doel, nulmeting van de
+tokens), `test/ui/contrast-componenttokens.test.ts`, `test/ui/componenttokens-catalogus.test.ts` en
+`e2e/app-thema.spec.ts` (berekende stijl tegen de nulmeting `e2e/fixtures/app-thema-baseline.json`).
 
 Een ontwerp overnemen (HTML-bestand, URL, afbeelding of niets): de skill `ontwerp-overnemen`
 (`.claude/skills/ontwerp-overnemen/SKILL.md`, spec [ontwerp-overnemen](template/specs/ontwerp-overnemen.md)). Zonder referentie

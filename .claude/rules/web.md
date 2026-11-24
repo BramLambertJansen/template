@@ -10,7 +10,7 @@ Letterlijk uit `docs/framework.md`; bij verschil wint het regelboek.
 
 - **R-UI-02** shadcn-basiskit in `src/core/web/ui`; app-componenten en varianten in `src/web/ui`, enige importbron voor `features/`; varianten in één CVA-recept, afleiden niet forken; basiscomponent voor elke app via PR in template (0040)
 - **R-UI-03** Zoek eerst met `node scripts/kit/feiten.mjs componenten`; breid recept uit; past niets: stop en stel variant voor (AGENTS, rules)
-- **R-UI-01** Tokens in drie lagen: primitief (nooit direct), semantisch (enige app-laag, `src/web/styles/theme.css`), component; lijst via `node scripts/kit/feiten.mjs tokens` (0040)
+- **R-UI-01** Tokens in drie lagen: primitief (nooit direct), semantisch en component (beide app-laag in `src/web/styles/theme.css`; hooguit zes componenttokens per component, op `:root, [data-app-theme]`); lijst via `node scripts/kit/feiten.mjs tokens` (0040, spec app-thema)
 - **R-WEB-01** Elke route heeft ErrorBoundary en `beforeLoad`-guard met `can()`; UI-state (filters, tabs, paginering) in URL; geen globale store, `matchMedia`, `userAgent`, `isMobile` (lintregels rails/route-guard, rails/router, rails/web-globaal) (fw)
 - **R-UIT-03** Schermroute heeft `can()`-guard; uitzondering `/login`, `/uitnodiging`; spec vóór route: uitzondering `GET /api/health`, `GET /api/ready` (0049)
 - **R-WEB-03** `fetch(` alleen in API-client; inloggen alleen via `src/core/web/lib/auth.ts`; elk niet-GET-request stuurt `Content-Type` (0040, 0041)
