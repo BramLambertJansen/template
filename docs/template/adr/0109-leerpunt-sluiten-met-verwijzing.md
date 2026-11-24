@@ -3,7 +3,7 @@
 Status: voorgesteld
 
 Wijzigt [0101](0101-leerpunt-bijwerken-en-sluiten.md) punt 2, 4 en 5 en [0078](0078-leerlus-met-bewijs.md) punt 3 en 5; vult
-R-WERK-13, R-ROL-12 en R-SEC-09 aan. Drempel: A3 (een verruiming van het rolhek en van de MCP-uitzondering) en A4 (een
+R-WERK-13, R-ROL-07, R-ROL-12 en R-SEC-09 aan. Drempel: A3 (een verruiming van het rolhek en van de MCP-uitzondering) en A4 (een
 geaccepteerd ADR wijzigt). Aanleiding: keuze van de eigenaar, 2026-11-24, variant "met verwijzing". Concreet: #830 was
 opgelost door ADR 0100 en #834, maar bleef open, want de hoofdsessie mag alleen als duplicaat sluiten; het precedent staat
 als comment op #830. Uitwerking: spec [leerlus-bewijs](../specs/leerlus-bewijs.md) AC-16 tot en met AC-21.
@@ -45,7 +45,7 @@ werk doen: een PR die een leerpunt sluit, heeft nog steeds een test nodig die op
 ## Gevolgen
 
 - Rolhek (`rails/hooks/lib/rolhek.mjs`) en tabeltest: de vorm `--reason completed` naast `--duplicate-of`.
-- De skill `opleveren` stap 8, `docs/framework.md` R-WERK-13, R-ROL-12 en R-SEC-09 en `AGENTS.md` noemen de nieuwe vorm.
+- De skill `opleveren` stap 8, `docs/framework.md` R-WERK-13, R-ROL-07, R-ROL-12 en R-SEC-09 en `AGENTS.md` noemen de nieuwe vorm.
 - `scripts/kit/leerpunt-check.mjs` erkent een geldige `opgelost:`-comment als bewijs, anders zou hij `leerpunt-zonder-bewijs`
   zetten bij elke sluiting volgens dit besluit (eigenaar, 2026-11-24).
 - `AGENTS.md`: in de MCP-uitzondering wordt "sluiten als duplicaat" "sluiten" (eigenaar, 2026-11-24).

@@ -109,7 +109,7 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
    `opgelost: <verwijzingen>`, een door komma's gescheiden lijst van `#<nr>` (PR gemerged naar main), commit-SHA op main of
    `ADR <nnnn>` (geaccepteerd), en daarna `gh issue close --repo <repo> <nr> --reason completed`.
    Elke verwijzing moet geldig zijn; is er één ongeldig of nog niet op main, dan niet sluiten maar `deels`.
-   Geen labels via gh (R-ROL-08). Sluiten als not planned (achterhaald) en heropenen doet de eigenaar.
+   Geen labels via gh (R-ROL-08). Sluiten als not planned, achterhaald verklaren en heropenen doet de eigenaar.
    Vraag ook (ADR 0081): kostte een stap, check, hook of instructie in deze sessie merkbaar tijd, rondes of tokens zonder iets
    te vangen, of las je code die bij gelijk gedrag veel korter of sneller kan? Dan een leerpunt met plek
    `Schrappen of vereenvoudigen` en een `Onderbouwing` met de regels `Meting:`, `Overname:` en `Terugval:`.
