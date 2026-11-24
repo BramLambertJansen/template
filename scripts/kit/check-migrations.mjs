@@ -180,9 +180,10 @@ function volgorde(root, { bestaand, opMain, templateRef }) {
 export function vergelijkingspunt(root, base) {
   const afsplitsing = gitOf(root, ['merge-base', base, 'HEAD']);
   if (afsplitsing === undefined) return undefined;
-  // Op main zelf (HEAD is de base): wat de laatste commit toevoegde, moet later zijn dan wat zijn eerste ouder al had.
-  const opMain =
-    gitOf(root, ['rev-parse', '--verify', '--quiet', `${base}^{commit}`]) === gitOf(root, ['rev-parse', 'HEAD']);
+  // Op main zelf (HEAD zit al in de base): wat de laatste commit toevoegde, moet later zijn dan wat zijn eerste ouder al had.
+  // Niet alleen HEAD gelijk aan de base: bij een herhaalde run van een oudere main-push staat de opgehaalde base al verder,
+  // en dan zou de afsplitsing HEAD zelf zijn en niets als toegevoegd tellen (leerpunt #809).
+  const opMain = afsplitsing === gitOf(root, ['rev-parse', 'HEAD']);
   const bestaand = opMain ? gitOf(root, ['rev-parse', '--verify', '--quiet', 'HEAD^1^{commit}']) : afsplitsing;
   return { afsplitsing, bestaand, opMain };
 }
