@@ -21,7 +21,7 @@ concurrency:
 jobs:
   analyze:
     name: codeql (${{ matrix.language }})
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 20
     # Permissies op jobniveau vervangen read-all helemaal; actions: read is nodig in private repo's.
     permissions:
