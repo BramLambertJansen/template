@@ -1,0 +1,7 @@
+/* Stijlvariant voor e2e (spec schillen/AC-6): de schiltokens met andere waarden dan de standaard. */
+:root,
+[data-app-theme] {
+  --shell-sidebar-width: 20rem;
+  --shell-topbar-height: 5rem;
+  --shell-content-max: 40rem;
+}

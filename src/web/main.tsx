@@ -6,13 +6,14 @@ import { createRoot } from 'react-dom/client';
 import { createQueryClient } from '#core/web/lib/query.ts';
 import { applyStoredTheme } from '#core/web/lib/theme.ts';
 import { ErrorTextsProvider } from '#core/web/ui/error-texts.tsx';
+import { ShellSessionProvider } from '#core/web/ui/shell-frame.tsx';
 import { ToastProvider } from '#core/web/ui/toast.tsx';
 import { errorTexts } from '#web/copy/errors.ts';
 import { createAppRouter } from '#web/lib/router.ts';
 import { expireSession } from '#web/lib/session.ts';
 import './styles/app.css';
 
-// Compositie-root van de frontend (ADR 0040): query-client, router, foutteksten.
+// Compositie-root van de frontend (ADR 0040): query-client, router, foutteksten, meldingen (ToastProvider rendert ze).
 const queryClient = createQueryClient({
   // 401 uit een query of mutatie → inloggen met de terugweg (framework §5). Alleen als er in dit tabblad een sessie was:
   // dan is hij verlopen (spec: "Je sessie is verlopen."); bij een eerste bezoek stuurt de guard al door.
@@ -34,7 +35,10 @@ createRoot(root).render(
     <ErrorTextsProvider texts={errorTexts}>
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
-          <RouterProvider router={router} />
+          {/* Onthoudt of er al een scherm is getoond: een schil die later mount, zet de focus op de h1 (spec schillen). */}
+          <ShellSessionProvider>
+            <RouterProvider router={router} />
+          </ShellSessionProvider>
         </ToastProvider>
       </QueryClientProvider>
     </ErrorTextsProvider>

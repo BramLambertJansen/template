@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { StrictMode, useEffect, useRef, useState } from 'react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { Toaster, ToastProvider, useToast } from './toast.tsx';
+import { ToastProvider, useToast } from './toast.tsx';
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -70,7 +70,6 @@ function setup({
   const content = (
     <ToastProvider>
       <Fixture initialSuccess={initialSuccess} initialError={initialError} />
-      <Toaster />
     </ToastProvider>
   );
   render(strict ? <StrictMode>{content}</StrictMode> : content);

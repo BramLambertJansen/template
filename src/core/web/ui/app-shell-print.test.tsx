@@ -2,7 +2,7 @@ import { act, cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { AppShell } from './app-shell.tsx';
 import { Sidebar } from './sidebar.tsx';
-import { Toaster, ToastProvider } from './toast.tsx';
+import { ToastProvider } from './toast.tsx';
 import { Topbar } from './topbar.tsx';
 
 // AppShell met offline-melding en printstijlen (spec offline-en-print, AC-10 t/m AC-13).
@@ -83,11 +83,7 @@ test('offline-en-print/AC-11: print-klassen op schil, sidebar, topbar en toaster
   expect(sidebar.container.querySelector('nav')?.classList.contains('print:hidden')).toBe(true);
   cleanup();
 
-  const toaster = render(
-    <ToastProvider>
-      <Toaster />
-    </ToastProvider>,
-  );
+  const toaster = render(<ToastProvider>{null}</ToastProvider>);
   expect(toaster.container.firstElementChild?.classList.contains('print:hidden')).toBe(true);
 });
 

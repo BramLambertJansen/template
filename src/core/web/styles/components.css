@@ -53,6 +53,16 @@
 
   --toast-radius: calc(var(--radius) - 2px);
   --toast-shadow: 0 4px 6px -1px oklch(0 0 0 / 0.1), 0 2px 4px -2px oklch(0 0 0 / 0.1);
+
+  /* Schillen (spec schillen): maten van SidebarShell, TopbarShell en ShellFrame. De standaard is de indeling van vóór de
+     tokens; --shell-content-max none = geen maximale breedte voor main. Vanaf md is de inhoudsmarge anderhalf keer
+     --shell-content-padding. */
+  --shell-sidebar-width: 16rem;
+  --shell-topbar-height: 3.5rem;
+  --shell-content-max: none;
+  --shell-content-padding: calc(var(--density-space) * 4);
+  --shell-nav-gap: calc(var(--density-space) * 1);
+  --shell-border-width: 1px;
 }
 
 /* Vaste waarden zonder afgeleide: lagen en de QR-code hangen niet af van een thema. */

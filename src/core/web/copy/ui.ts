@@ -7,6 +7,9 @@ export const uiTexts = {
   forbiddenTitle: 'Geen toegang',
   empty: 'Er is nog niets om te tonen.',
   mainMenu: 'Hoofdmenu',
+  // Spec schillen: de horizontale navigatie in TopbarShell en het menu met de items die er niet in passen.
+  mainNavigation: 'Hoofdnavigatie',
+  more: 'Meer',
   openMenu: 'Menu openen',
   profileMenu: 'Profielmenu',
   close: 'Sluiten',

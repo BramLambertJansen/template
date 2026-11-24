@@ -403,8 +403,8 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
 
 Bewust nog niet, tot de genoemde aanleiding er is (P1). Niets verdwijnt: elk item staat er met zijn scope.
 
-- [ ] **Toasts: overige opvolging.** Bereikbaar onder een open modale `Dialog` (inert: niet voorgelezen, sluitknop onbereikbaar) en een `Toaster`
-  voor `CenteredCard`-schermen (`/login`, `/uitnodiging`); toonklassen in een CVA-recept in plaats van gekopieerd uit `Notice`, zodat de
+- [ ] **Toasts: overige opvolging.** Bereikbaar onder een open modale `Dialog` (inert: niet voorgelezen, sluitknop onbereikbaar); de meldingen op
+  `CenteredCard`-schermen zijn er sinds de spec schillen (`ToastProvider` rendert ze); toonklassen in een CVA-recept in plaats van gekopieerd uit `Notice`, zodat de
   contrasttest ze dekt; bestaande `Notice`-meldingen na een mutatie omzetten (`name-section.tsx`, `sessions-section.tsx`, `row-actions.tsx`) met
   bijgewerkte tests, waarna `.claude/rules/web.md` en `docs/gouden-pad.md` Toast noemen (beschermd pad: akkoord eigenaar).
   terug als: de proef-app toasts gebruikt

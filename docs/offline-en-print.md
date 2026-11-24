@@ -1,6 +1,6 @@
 # Offline-melding en afdrukken
 
-Hoort bij [de spec](template/specs/offline-en-print.md). Elke app met de AppShell krijgt beide zonder eigen code; deze
+Hoort bij [de spec](template/specs/offline-en-print.md). Elke app met een schil (`SidebarShell`, `TopbarShell` of een eigen schil op `ShellFrame`, spec schillen) krijgt beide zonder eigen code; deze
 uitbreiding voegt geen dependency, route, permissie, migratie, token of stylesheet toe.
 
 ## Offline-melding
@@ -19,9 +19,9 @@ De melding heeft `role="status"` (beleefd voorgelezen), is geen Tab-stop en verp
 recept van Notice (`noticeVariants` in `src/core/web/ui/notice.tsx`, tonen `warning` en `success`); de teksten staan in
 `uiTexts` (`src/core/web/copy/ui.ts`).
 
-De AppShell rendert de melding al één keer, tussen de topbalk en `main`, in de normale flow: hij schuift de inhoud omlaag en
-dekt niets af. Plaats `OfflineNotice` daarom niet zelf binnen de AppShell (dan staat hij er twee keer). Op een scherm zonder
-AppShell (`/login`, `/uitnodiging`, CenteredCard) toont de template geen melding; wil de app hem daar, dan zet hij
+Het frame onder elke schil (`ShellFrame` in `src/core/web/ui/shell-frame.tsx`) rendert de melding al één keer, tussen de
+topbalk en `main`, in de normale flow: hij schuift de inhoud omlaag en dekt niets af. Plaats `OfflineNotice` daarom niet zelf
+binnen een schil (dan staat hij er twee keer). Op een scherm zonder schil (`/login`, `/uitnodiging`, CenteredCard) toont de template geen melding; wil de app hem daar, dan zet hij
 `<OfflineNotice />` zelf in dat scherm.
 
 `navigator.onLine` zegt alleen of het apparaat een netwerk heeft, niet of de API bereikbaar is. Mislukte verzoeken blijven
@@ -32,11 +32,12 @@ gewoon via de foutafhandeling van de API-client lopen; er is geen wachtrij of op
 Afdrukken gaat met Ctrl+P / Cmd+P of het browsermenu; er is geen printknop. Bij afdrukken (`print:`-varianten in
 `src/core/web/ui`, niet in `features/`, R-UI-04):
 
-- verdwijnen de skip-link, de sidebar (`aside` in `app-shell.tsx` en de `nav` in `sidebar.tsx`), de topbalk (`topbar.tsx`),
+- verdwijnen de skip-link, de sidebar (`aside` in `sidebar-shell.tsx` en de `nav` in `sidebar.tsx`), de topbalk (`topbar.tsx`),
   de offline-melding en de toasts (`toast.tsx`);
-- wordt de buitenste grid van de AppShell `block` en verliest `main` zijn padding: de inhoud krijgt de volle paginabreedte;
-- drukt de app af in het lichte thema: de AppShell zet bij `beforeprint` `data-theme` tijdelijk op `light` en bij
-  `afterprint` het vorige thema terug (`usePrintInLightTheme` in `src/core/web/ui/app-shell.tsx`). De bewaarde themakeuze
+- wordt de buitenste container van de schil `block` en verliest `main` zijn padding en maximale breedte: de inhoud krijgt de
+  volle paginabreedte;
+- drukt de app af in het lichte thema: het frame zet bij `beforeprint` `data-theme` tijdelijk op `light` en bij
+  `afterprint` het vorige thema terug (`usePrintInLightTheme` in `src/core/web/ui/shell-frame.tsx`). De bewaarde themakeuze
   (`thema` in localStorage) verandert niet.
 
 Een printvoorbeeld via `page.emulateMedia({ media: 'print' })` in Playwright vuurt geen `beforeprint`: daar zie je de

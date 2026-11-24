@@ -6,7 +6,8 @@ Voor overige functionele UI-wijzigingen aan bestaande componenten in de template
 `scope: functionele-ui`, samen met code, tests en gebruiksdocumentatie in één PR (ADR 0056). De mini-spec verkort het
 document, niet de rollen: architect, tester en onafhankelijke review blijven zoals framework §8 ze vraagt. De
 [agentdoorloop](operations/agent-doorloop.md#routes-en-mini-spec-adr-0046) beschrijft scope en bouwbewijs.
-De bestaande toast-API is `useToast().success/error`, met `ToastProvider` in `src/web/main.tsx` en `Toaster` in AppShell.
+De bestaande toast-API is `useToast().success/error`, met `ToastProvider` in `src/web/main.tsx`; de provider rendert de meldingen zelf, één keer voor de hele app, ook op
+`/login` en `/uitnodiging` en over een schilwissel heen (spec schillen). Een eigen `<Toaster />` bestaat niet meer.
 Een succesmelding verdwijnt na vijf seconden actieve tijd, ook als een scherm haar vanuit een mount-effect aanmaakt.
 Hover en focus pauzeren de aftellers; een nieuwe melding herstart bestaande aftellers niet. Foutmeldingen blijven tot
 sluiten of verdringing door het bestaande maximum. Regressies: `src/core/web/ui/toast-effect-timers.test.tsx`.

@@ -1,6 +1,8 @@
 import path from 'node:path';
+import { gzipSync } from 'node:zlib';
 import { build, type Rolldown } from 'vite';
 import { describe, expect, test } from 'vitest';
+import { bundleBudgetKb } from '../../src/web/bundle-budget.ts';
 
 // Wat alleen in dev bestaat (src/web/dev: de rolwisselaar), zit niet in de productiebundel
 // (framework §6; devOnlyModules in vite.config.ts). Bouwt in het geheugen, schrijft niets.
@@ -49,5 +51,14 @@ describe('productiebundel', () => {
     expect(withCatalogue.length).toBeGreaterThan(0);
     expect(withCatalogue.filter((chunk) => chunk.isEntry)).toStrictEqual([]);
     expect(chunks.some((chunk) => chunk.isEntry)).toBe(true);
+  }, 30_000);
+
+  // TopbarShell zit in de startbundel (AppLayout kan hem op /design-system renderen, spec schillen); de catalogus blijft lazy.
+  test('schillen/AC-17: de entry-chunk bevat de catalogus niet en past binnen het entrybudget', async () => {
+    const entries = (await productionChunks()).filter((chunk) => chunk.isEntry);
+    expect(entries.length).toBeGreaterThan(0);
+    for (const entry of entries) expect(entry.code).not.toContain('Dialoog openen');
+    const entryKb = entries.reduce((sum, entry) => sum + gzipSync(entry.code).length, 0) / 1024;
+    expect(entryKb).toBeLessThanOrEqual(bundleBudgetKb.entry);
   }, 30_000);
 });

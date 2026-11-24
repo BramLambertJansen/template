@@ -43,6 +43,12 @@ export const COMPONENT_TOKENS = [
     component: 'toast',
     standaard: '0 4px 6px -1px oklch(0 0 0 / 0.1), 0 2px 4px -2px oklch(0 0 0 / 0.1)',
   },
+  { token: '--shell-sidebar-width', component: 'shell', standaard: '16rem' },
+  { token: '--shell-topbar-height', component: 'shell', standaard: '3.5rem' },
+  { token: '--shell-content-max', component: 'shell', standaard: 'none' },
+  { token: '--shell-content-padding', component: 'shell', standaard: 'calc(var(--density-space) * 4)' },
+  { token: '--shell-nav-gap', component: 'shell', standaard: 'calc(var(--density-space) * 1)' },
+  { token: '--shell-border-width', component: 'shell', standaard: '1px' },
   { token: '--qr-dark', component: 'qr', standaard: 'var(--p-black)' },
   { token: '--qr-light', component: 'qr', standaard: 'var(--p-white)' },
 ] as const;

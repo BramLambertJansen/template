@@ -4,7 +4,9 @@ import { uiTexts } from '../copy/ui.ts';
 import { Button } from './button.tsx';
 
 // Toast: korte terugkoppeling na een actie ("gelukt" of "fout"). Context zonder globale store: ToastProvider staat in de
-// app-root, de AppShell rendert de Toaster. Succes is een beleefde statusmelding (role=status, polite), een fout wordt
+// app-root en rendert de meldingen zelf, één keer voor de hele app en na zijn kinderen, zodat een melding een schilwissel
+// overleeft (spec schillen). Toaster is intern: een eigen <Toaster /> zou dubbele meldingen geven. De lijst heeft
+// data-toaster voor tests, geen rol of aria-live (zie hieronder). Meldingen volgen het thema van het document. Succes is een beleefde statusmelding (role=status, polite), een fout wordt
 // direct voorgelezen (role=alert, assertive). De rol zit op de kaart en er is geen aria-live-container omheen: een role binnen
 // een aria-live-regio laat NVDA de melding dubbel aankondigen. Timing (WCAG 2.2.1): een succes verdwijnt na 5 s en pauzeert
 // zolang de muis erboven staat of de focus erin; een fout verdwijnt niet vanzelf maar blijft tot de gebruiker hem sluit (of tot
@@ -35,7 +37,7 @@ const MAX_TOASTS = 3;
 const SUCCESS_MS = 5000;
 
 const ToastApiContext = createContext<ToastApi | null>(null);
-// Zonder provider is de lijst leeg, zodat een AppShell in een test of storybook-achtige opzet niet breekt; alleen useToast gooit.
+// Zonder provider is de lijst leeg; alleen useToast gooit.
 const ToastStateContext = createContext<ToastState>({
   toasts: [],
   dismiss: () => undefined,
@@ -178,7 +180,10 @@ export function ToastProvider({ children }: { readonly children: ReactNode }) {
 
   return (
     <ToastApiContext.Provider value={api}>
-      <ToastStateContext.Provider value={state}>{children}</ToastStateContext.Provider>
+      <ToastStateContext.Provider value={state}>
+        {children}
+        <Toaster />
+      </ToastStateContext.Provider>
     </ToastApiContext.Provider>
   );
 }
@@ -228,12 +233,15 @@ function ToastCard({ toast }: { readonly toast: ToastItem }) {
   );
 }
 
-export function Toaster() {
+function Toaster() {
   const { toasts } = useContext(ToastStateContext);
   const successes = toasts.filter((toast) => toast.tone === 'success');
   const errors = toasts.filter((toast) => toast.tone === 'error');
   return (
-    <div className="pointer-events-none fixed inset-x-4 bottom-4 z-toast flex flex-col items-end gap-2 sm:start-auto sm:w-96 print:hidden">
+    <div
+      data-toaster=""
+      className="pointer-events-none fixed inset-x-4 bottom-4 z-toast flex flex-col items-end gap-2 sm:start-auto sm:w-96 print:hidden"
+    >
       <div className="flex w-full flex-col gap-2">
         {successes.map((toast) => (
           <ToastCard key={toast.id} toast={toast} />

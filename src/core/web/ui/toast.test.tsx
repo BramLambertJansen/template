@@ -1,6 +1,12 @@
+import { createMemoryHistory, createRootRoute, createRouter, RouterContextProvider } from '@tanstack/react-router';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { Toaster, ToastProvider, useToast } from './toast.tsx';
+import { Button } from './button.tsx';
+import { SidebarShell } from './sidebar-shell.tsx';
+import * as toastModule from './toast.tsx';
+import { ToastProvider, useToast } from './toast.tsx';
+import { TopbarShell } from './topbar-shell.tsx';
 
 // Toast (roadmap "Toasts standaard in de basiskit"): context zonder globale store, success beleefd (status), error direct (alert),
 // sluitknop 'Sluiten', succes verdwijnt na 5 s, een fout blijft tot de gebruiker sluit (WCAG 2.2.1), de timer pauzeert bij hover en
@@ -42,7 +48,6 @@ function setup() {
   return render(
     <ToastProvider>
       <Trigger />
-      <Toaster />
     </ToastProvider>,
   );
 }
@@ -295,7 +300,6 @@ test('maximaal 3 toasts tegelijk: de oudste valt weg', () => {
   render(
     <ToastProvider>
       <Burst />
-      <Toaster />
     </ToastProvider>,
   );
   fire('burst');
@@ -304,4 +308,67 @@ test('maximaal 3 toasts tegelijk: de oudste valt weg', () => {
   expect(screen.getByText('drie')).toBeTruthy();
   expect(screen.getByText('vier')).toBeTruthy();
   expect(screen.getAllByRole('button', { name: 'Sluiten' })).toHaveLength(3);
+});
+
+// Eén meldingenplek (spec schillen): ToastProvider rendert de meldingen, niet de schil; een melding overleeft een schilwissel.
+const shellNav = [{ label: 'Home', href: '/', permission: 'app.use' }];
+
+function ShellSwitcher() {
+  const [topbar, setTopbar] = useState(false);
+  const toast = useToast();
+  const content = (
+    <>
+      <h1>Scherm</h1>
+      <Button
+        onClick={() => {
+          toast.success('Opgeslagen');
+        }}
+      >
+        Opslaan
+      </Button>
+      <Button
+        onClick={() => {
+          setTopbar(true);
+        }}
+      >
+        Wissel
+      </Button>
+    </>
+  );
+  return topbar ? (
+    <TopbarShell nav={shellNav} userName="Ada Admin" menuItems={[]}>
+      {content}
+    </TopbarShell>
+  ) : (
+    <SidebarShell nav={shellNav} userName="Ada Admin" menuItems={[]}>
+      {content}
+    </SidebarShell>
+  );
+}
+
+test('schillen/AC-15: een toast overleeft de wissel van SidebarShell naar TopbarShell; precies één [data-toaster]', () => {
+  const router = createRouter({
+    routeTree: createRootRoute(),
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  });
+  const { container } = render(
+    <ToastProvider>
+      <RouterContextProvider router={router}>
+        <ShellSwitcher />
+      </RouterContextProvider>
+    </ToastProvider>,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Opslaan' }));
+  expect(screen.getByRole('status').textContent).toContain('Opgeslagen');
+  expect(container.querySelectorAll('[data-toaster]')).toHaveLength(1);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Wissel' }));
+  expect(screen.getByRole('navigation', { name: 'Hoofdnavigatie' })).toBeTruthy();
+  expect(screen.getByRole('status').textContent).toContain('Opgeslagen');
+  expect(container.querySelectorAll('[data-toaster]')).toHaveLength(1);
+});
+
+test('schillen/AC-15: Toaster is geen export van src/core/web/ui/toast.tsx', () => {
+  expect(Object.keys(toastModule)).not.toContain('Toaster');
+  expect(Object.keys(toastModule)).toContain('ToastProvider');
 });

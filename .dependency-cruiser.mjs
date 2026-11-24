@@ -9,8 +9,9 @@ const QUERY_BUILDER = 'node_modules/drizzle-orm/(index|pg-core/index|pg-core)\\.
 const DATABASE =
   '(^|node_modules/)(pg|pg-[^/]+|postgres|drizzle-orm|kysely|@prisma/[^/]+|@supabase/[^/]+|@neondatabase/[^/]+)(/|$)';
 
-// De testmodules in core (spec koppelingsvorm): alleen vanuit tests, en de fabriek mag de nep-partner gebruiken.
-const TESTING = '^src/core/api/(db|outbound|integrations)/testing\\.ts$';
+// De testmodules in core (spec koppelingsvorm, spec schillen): alleen vanuit tests, en de fabriek mag de nep-partner
+// gebruiken.
+const TESTING = '^src/core/(api/(db|outbound|integrations)/testing\\.ts|web/ui/testing\\.tsx)$';
 const TESTING_VAN = `\\.test\\.tsx?$|${TESTING}`;
 
 /** @satisfies {import('dependency-cruiser').IConfiguration} */
@@ -90,7 +91,7 @@ const config = {
     {
       name: 'testing-alleen-in-tests',
       comment:
-        'src/core/api/db/testing.ts (eigen pools, geïnjecteerde transacties), src/core/api/outbound/testing.ts (nep-partner, R-UIT-07) en src/core/api/integrations/testing.ts (contracttestfabriek met vitest en testlezing, spec koppelingsvorm) alleen vanuit testbestanden of uit elkaar. Deze regel houdt vitest en de testlezing uit productiecode; deploy/ valt buiten de cruise.',
+        'src/core/api/db/testing.ts (eigen pools, geïnjecteerde transacties), src/core/api/outbound/testing.ts (nep-partner, R-UIT-07), src/core/api/integrations/testing.ts (contracttestfabriek met vitest en testlezing, spec koppelingsvorm) en src/core/web/ui/testing.tsx (contracttest van een schil met vitest en Testing Library, spec schillen) alleen vanuit testbestanden of uit elkaar. Deze regel houdt vitest en de testlezing uit productiecode; deploy/ valt buiten de cruise.',
       severity: 'error',
       from: { path: '^src/', pathNot: TESTING_VAN },
       to: { path: TESTING },
