@@ -128,7 +128,9 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   verwijzing naar een uitbreidingsstop, en noemt de labels `leerpunt-onvolledig` en `leerpunt-zonder-bewijs` als eigen bak.
 - **leerlus-bewijs/AC-10** — Spec `leerlus.md` krijgt `status: gebouwd # #312`; het ST-09-protocol telt "opgepakt" als
   gesloten met sluitbewijs of achterhaald (ADR 0078 punt 6).
-- **leerlus-bewijs/AC-11** — Bijwerken en sluiten in het rolhek (ADR 0101 punt 5). Geldige vormen van de hoofdsessie, waarop
+- **leerlus-bewijs/AC-11** — Gewijzigd door ADR 0109 (AC-16): `gh issue close <nr>` mag ook met precies één `--reason
+  completed` in plaats van `--duplicate-of`; elke andere waarde van `--reason`/`-r` blijft ask. Verder ongewijzigd:
+  Bijwerken en sluiten in het rolhek (ADR 0101 punt 5). Geldige vormen van de hoofdsessie, waarop
   het rolhek geen ask en geen deny geeft: `gh issue comment <nr>` met alleen `--body-file`/`-F <pad>`; `gh issue edit <nr>`
   met alleen `--title`/`-t` en `--body-file`/`-F` (minstens één); `gh issue close <nr>` met alleen `--duplicate-of <getal>`.
   In alle drie staat `--repo`/`-R` precies één keer, gelijk aan `template.repository` (hoofdletterongevoelig), en precies
@@ -168,10 +170,51 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   `## Leerpunt` voor een opgelost leerpunt, alleen in de template: in een app nooit een sluitwoord (`#<nr>` wijst daar
   naar een app-issue), de uitkomst is `deels` of een comment (ADR 0101 punt 6, Herzien). Toets: `test/rails/leerpunt-bijwerken-docs.test.ts`
   (nieuw)
-- **leerlus-bewijs/AC-15** — `docs/framework.md` R-WERK-13, R-ROL-07, R-ROL-12 en R-SEC-09 en `AGENTS.md` (regel over externe
+- **leerlus-bewijs/AC-15** — Gewijzigd door ADR 0109 (AC-21): in `AGENTS.md` staat "sluiten" in plaats van "sluiten als
+  duplicaat"; de verwijzing naar 0101 blijft. Verder ongewijzigd: `docs/framework.md` R-WERK-13, R-ROL-07, R-ROL-12 en R-SEC-09 en `AGENTS.md` (regel over externe
   diensten) noemen bijwerken en sluiten als duplicaat met ADR 0101; `docs/nieuwe-app.md` noemt de drie nieuwe allow-regels
   bij de fork. Een test zoekt in elk bestand de verwijzing naar 0101. Toets: `test/rails/leerpunt-bijwerken-docs.test.ts`
   (nieuw)
+- **leerlus-bewijs/AC-16** — Sluiten als opgelost in het rolhek (ADR 0109 punt 3). `gh issue close <nr>` met precies één
+  `--reason completed` (ook `--reason=completed`, `-r completed`, `-rcompleted`, `-r=completed`) en verder alleen
+  `--repo`/`-R` is voor de hoofdsessie een geldige vorm (geen ask, geen deny), met dezelfde eisen als AC-11: `--repo`/`-R`
+  precies één keer gelijk aan `template.repository` (hoofdletterongevoelig), precies één positioneel getal, toets over alle
+  ruwe woorden na `gh`, geen `GH_REPO`/`GH_HOST`, geen commandosubstitutie, geen `--`. Ask bij: `--reason` met een andere
+  waarde (`"not planned"`, `not_planned`, `Completed`, leeg), `--reason` twee keer, `--reason` samen met `--duplicate-of`,
+  `--comment`/`-c` (ook naast `--reason completed`), een URL of tweede nummer, een andere of ontbrekende repo, en elke andere
+  optie. `reopen` blijft ask; een subagent blijft deny (R-ROL-07). De bestaande rijen van AC-11 blijven gelden, behalve de
+  rij die `--reason completed` als ask toetste. Toets: `test/hooks/rolhek-leerpunt-bijwerken.test.ts`
+- **leerlus-bewijs/AC-17** — Cloud (ADR 0109 punt 3). Het rolhek blijft op `mcp__github__issue_write` en elke andere
+  MCP-schrijftool voor issues vragen (ask) voor de hoofdsessie en weigeren voor een subagent; `mcpLezen` in
+  `.claude/gates.json` verandert niet. De skill `opleveren` stap 8 noemt dat de hoofdsessie met de MCP-issuetool op een
+  leerpunt de staat `closed` alleen zet met `state_reason` `completed` (na de comment uit AC-18) of `duplicate`, en nooit
+  `not_planned` of heropenen (`state` `open`). Toets: `test/hooks/rolhek-leerpunt-bijwerken.test.ts` (ask en deny),
+  `test/rails/leerpunt-bijwerken-docs.test.ts` (skilltekst)
+- **leerlus-bewijs/AC-18** — Volgorde en tekst (ADR 0109 punt 1 en 2). De skill `opleveren` stap 8 noemt de uitkomst
+  "opgelost op main" met, in deze volgorde: de doelcheck `gh issue view <nr> --repo <repo> --json labels,state,url` (label
+  `leerpunt`, anders stop), dan `gh issue comment --repo <repo> <nr> --body-file <pad>` met een tekst die begint met
+  `opgelost: ` en een verwijzing in één van drie vormen (`#<nr>` van een gemergde PR, een commit-SHA op `main`, `ADR <nnnn>`
+  van een geaccepteerd ADR op `main`), dan `gh issue close --repo <repo> <nr> --reason completed`; zonder zo'n verwijzing
+  geen sluiting maar `deels`. Ze noemt ook dat not planned, achterhaald en heropenen bij de eigenaar blijven.
+  `docs/framework.md` R-ROL-12, R-SEC-09 en R-WERK-13 noemen sluiten als opgelost met verwijzing en ADR 0109. Een test zoekt
+  in de skill de drie commando's in die volgorde en `opgelost: `, en in elke regel de verwijzing naar 0109. Toets:
+  `test/rails/leerpunt-bijwerken-docs.test.ts`
+- **leerlus-bewijs/AC-19** — Settings (ADR 0109 punt 3). De bestaande allow-regel `Bash(gh issue close --repo
+  <template.repository> *)` uit AC-12 dekt de vorm `gh issue close --repo <repo> <nr> --reason completed`; `.claude/settings.json`
+  verandert niet en houdt precies vier `gh issue`-regels. De test krijgt een rij die dat voor deze vorm vastlegt, naast de
+  rij voor `--duplicate-of`. Toets: `test/rails/leerpunt-bijwerken-settings.test.ts`
+- **leerlus-bewijs/AC-20** — Issue-check (ADR 0109 Gevolgen, OV-5). Bij `closed` met `issue.state_reason` `completed` en een
+  comment die begint met `opgelost: `, van een auteur met `author_association` OWNER, MEMBER of COLLABORATOR, met een
+  verwijzing in één van de drie vormen uit AC-18, geldt de sluiting als bewijs, net als een geldige `achterhaald:` (AC-6):
+  de workflow zet geen `leerpunt-zonder-bewijs` en haalt het weg als het er al stond (ook op `issue_comment` na het
+  sluiten). Een `#<nr>` moet via REST `repos/<repo>/pulls/<nr>` een gemergde PR zijn; SHA en `ADR <nnnn>` toetst de check
+  alleen op vorm. Telt niet: een andere sluitreden, een andere auteur, een comment zonder geldige verwijzing, een `#<nr>`
+  dat geen gemergde PR is of niet bestaat (404/410); dan blijft het label zoals in AC-6, zonder dat de job crasht.
+  Tabeltest. Toets: `test/scripts/leerpunt-opgelost.test.ts` (nieuw)
+- **leerlus-bewijs/AC-21** — `AGENTS.md` (ADR 0109, OV-6). In de regel over externe diensten luidt de uitzondering voor
+  leerpunten letterlijk "een leerpunt-issue (aanmaken, bijwerken, sluiten)"; "sluiten als duplicaat" komt in `AGENTS.md` niet
+  meer voor, en de verwijzing naar ADR 0101 blijft. Een test leest `AGENTS.md` en faalt op de oude tekst of als de nieuwe
+  ontbreekt. Toets: `test/rails/leerpunt-bijwerken-docs.test.ts`
 
 ## Randgevallen
 
@@ -194,6 +237,10 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
 | Duplicaat-comment vóór het sluiten geplaatst | Telt; de check leest alle comments bij `closed` | n.v.t. |
 | Duplicaat-comment verwijst naar een PR of een niet-bestaand nummer | Telt niet; label zoals AC-6, de job blijft groen | n.v.t. |
 | Duplicaat gesloten via MCP in de cloud | Telt alleen als de comment-auteur OWNER, MEMBER of COLLABORATOR is; na de merge één proef (ADR 0101) | n.v.t. |
+| Leerpunt opgelost door een ADR of PR op main zonder `Closes #<nr>` (#830: ADR 0100 en #834) | Comment `opgelost: ADR 0100, #834`, daarna `--reason completed` (ADR 0109) | n.v.t. |
+| `opgelost:`-comment zonder verwijzing, of de verwijzing staat nog niet op main | Niet sluiten; comment `deels` (ADR 0101 punt 6); het rolhek ziet de inhoud niet, dit is een afspraak | n.v.t. |
+| `gh issue close <nr> --reason completed` op een nummer dat een PR is | Rolhek ziet het verschil niet; de doelcheck is de rem (ADR 0101 punt 4) | n.v.t. |
+| Gesloten met `opgelost:` maar de reden is `not planned` | Telt niet als bewijs; label zoals AC-6 | n.v.t. |
 
 ## Raakt ook
 
@@ -211,6 +258,13 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   (R-TEST-02), en leerlus/AC-7 verwijst naar AC-11. Om dezelfde reden wijzigen `test/hooks/rolhek-label.test.ts` (een edit
   zonder label toetst nu met `--repo`) en `test/rails/opleveren-skill.test.ts` (leerlus-bewijs/AC-8: de MCP-tool doet meer dan
   alleen aanmaken).
+- AC-16 tot en met AC-21 (ADR 0109): `rails/hooks/lib/rolhek.mjs`, `scripts/kit/leerpunt-check.mjs`,
+  `.claude/skills/opleveren/SKILL.md`, `docs/framework.md`, `AGENTS.md`; `.claude/settings.json` niet (AC-19). AC-21
+  wijzigt de AGENTS.md-toets van AC-15 in `test/rails/leerpunt-bijwerken-docs.test.ts` als die "sluiten als duplicaat"
+  verwacht, met reden in de PR (R-TEST-02). AC-16 wijzigt de rij van
+  AC-11 die `--reason completed` als ask toetst in `test/hooks/rolhek-leerpunt-bijwerken.test.ts`: die rij wijzigt mee, met
+  reden in de PR (R-TEST-02). Wordt `achterhaald:` of duplicaat in `leerpunt-check.mjs` geraakt, dan blijven AC-6 en AC-13
+  ongewijzigd.
 - Verplichte check: `leerpunt-bewijs` in de ruleset (`scripts/github-ruleset.sh`) en `requiredChecks` in `.claude/decisions.json`.
 - Na de merge: de routine "Leerpunten voorsorteren" verwijst naar het bestand uit AC-9.
 
@@ -236,6 +290,13 @@ ADR 0101, risicowerk (rolhek): de tester schrijft vóór de bouw, rood op assert
 - `test/scripts/leerpunt-duplicaat.test.ts` (nieuw) — AC-13, tabel met issues, comments, sluitredenen en doelen.
 - `test/rails/leerpunt-bijwerken-docs.test.ts` (nieuw) — AC-14 en AC-15.
 
+ADR 0109, risicowerk (rolhek): de tester schrijft vóór de bouw, rood op asserties:
+
+- `test/hooks/rolhek-leerpunt-bijwerken.test.ts` uitbreiden — AC-16 en AC-17, tabel per vorm, rol en reden.
+- `test/rails/leerpunt-bijwerken-settings.test.ts` uitbreiden — AC-19.
+- `test/rails/leerpunt-bijwerken-docs.test.ts` uitbreiden — AC-17 (skilltekst), AC-18 en AC-21.
+- `test/scripts/leerpunt-opgelost.test.ts` (nieuw) — AC-20, tabel met sluitredenen, auteurs, verwijzingen en PR-doelen.
+
 Handmatig na de merge: één proefleerpunt met een lege kop indienen en zien dat het label en de comment komen; daarna sluiten
 als achterhaald.
 
@@ -250,3 +311,7 @@ als achterhaald.
   dus de eigenaar en de hoofdsessie via zijn token, met verwijzing naar het bestand of de PR die het leerpunt overbodig maakte;
   de voorsortering toont deze sluitingen.
 - **OV-4** — Mag het rolhek de MCP-issuetool doorlaten? Aanbeveling: nee, ask blijven tot een eigen besluit met tabeltest.
+- **OV-5 ✅ besloten** — De issue-check erkent een sluiting met `opgelost: <verwijzing>` als bewijs, zoals AC-20: een gemergde
+  PR via REST getoetst, SHA en ADR op vorm (eigenaar, 24 november 2026).
+- **OV-6 ✅ besloten** — `AGENTS.md` (regel over externe diensten): "sluiten als duplicaat" wordt "sluiten" (AC-21; eigenaar,
+  24 november 2026).

@@ -8,6 +8,9 @@ PR niet sluit, dus een opgelost leerpunt sluit GitHub zelf via `Closes #<nr>`. P
 daarmee. Punt 1 en 5: lokaal geen labels; R-ROL-08 weigert `gh issue edit` met een label-optie voor elke rol en blijft
 ongewijzigd; labels alleen via de MCP-issuetool in de cloud, na de doelcheck. Punt 6: de zoektocht en de uitkomst
 `opgelost` horen vóór het openen van de PR (CI-lus stap 1 van `opleveren`), want stap 8 draait na de merge
+Herzien: 2026-11-24: gewijzigd door [0109](0109-leerpunt-sluiten-met-verwijzing.md), in punt 2, 4 en 5: de hoofdsessie mag een
+leerpunt ook sluiten als completed, na de doelcheck en een comment `opgelost: <verwijzing>` naar een gemergde PR, een SHA of
+een geaccepteerd ADR op main; lokaal via `gh issue close <nr> --reason completed`, in de cloud via de MCP-issuetool
 
 Wijzigt [0078](0078-leerlus-met-bewijs.md) punt 4 en 5 en [0059](0059-leerlus-van-app-naar-template.md) voor zover dat alleen
 `gh issue create` toestaat; vult R-WERK-13, R-ROL-07, R-ROL-12 en R-SEC-09 aan. Drempel: A3 (een uitzondering op "MCP alleen
