@@ -1,5 +1,5 @@
 ---
-status: voorstel # voorstel | goedgekeurd | vervallen — architect of hoofdsessie zet de status in het voorstel, de merge door de eigenaar is het besluit (ADR 0046); gebouwd volgt uit de AC-dekking (ADR 0104)
+status: goedgekeurd # voorstel | goedgekeurd | vervallen — architect of hoofdsessie zet de status in het voorstel, de merge door de eigenaar is het besluit (ADR 0046); gebouwd volgt uit de AC-dekking (ADR 0104)
 namespace: app-thema
 ---
 
@@ -150,8 +150,8 @@ en het tokenoverzicht staan op `/design-system` achter `guard('design-system:rea
 - **app-thema/AC-1** — Gegeven geen gekozen app-thema en geen stijlvariant, dan is de berekende stijl van elk component in de eerste
   set gelijk aan de nulmeting in `e2e/fixtures/app-thema-baseline.json` (radius, schaduw, gewicht, padding, randdikte en
   kleuren op 375 en 1280 px, licht en donker). Toets: `e2e/app-thema.spec.ts` (nieuw)
-- **app-thema/AC-2** — Gegeven `--button-radius` in `theme.css`, dan heeft elke `Button`-variant die radius en verandert geen
-  ander component; gegeven `--control-radius`, dan hebben `Input`, `Select`, `Textarea`, `Combobox`, `DateInput` en
+- **app-thema/AC-2** — Gegeven een stijlvariant met `--button-radius`, dan heeft elke `Button`-variant die radius en verandert geen
+  ander component; gegeven een stijlvariant met `--control-radius`, dan hebben `Input`, `Select`, `Textarea`, `Combobox`, `DateInput` en
   `PasswordInput` dezelfde radius. Toets: `e2e/app-thema.spec.ts` (nieuw)
 - **app-thema/AC-3** — Gegeven een component met meer dan zes tokens in `components.css`, of een token waarvan het voorvoegsel
   niet in de lijst met componentnamen staat, dan faalt de test en noemt hij het component; de basisgroepen `focus-ring`,
@@ -160,7 +160,7 @@ en het tokenoverzicht staan op `/design-system` achter `guard('design-system:rea
   semantisch token of vaste klasse meer, alleen het componenttoken (brontest op de recepttekst). Toets: `test/ui/componenttokens.test.ts` (nieuw)
 - **app-thema/AC-5** — Gegeven een `theme.css` die een componentkleurpaar onder de contrastgrens zet, dan faalt de
   contrasttest en noemt hij het paar; gegeven `--focus-ring-width` direct onder 2 px, dan faalt dezelfde test. Toets: `test/ui/contrast-componenttokens.test.ts` (nieuw)
-- **app-thema/AC-5b** — Gegeven `--density-control: 2rem` of `--density-focus-ring: 1px` in `theme.css`, dan is de berekende
+- **app-thema/AC-5b** — Gegeven een stijlvariant met `--density-control: 2rem` of `--density-focus-ring: 1px`, dan is de berekende
   hoogte van een `Button` 44 px en de focusring 2 px. `--density-focus-ring` staat in `semantic.css`, naast
   `--density-control`. Toets: `e2e/app-thema.spec.ts` (nieuw)
 - **app-thema/AC-6** — Gegeven `theme.css` met een primitief token (`--p-*`) als doel van een toewijzing, dan faalt de test. Toets: `test/ui/componenttokens.test.ts` (nieuw)
