@@ -165,13 +165,23 @@ sessie waarin de eigenaar aanwezig is, of de eigenaar voert de wijziging zelf ui
 eigenaarsbesluit (beschermd pad, `docs/framework.md` §10).
 
 De sandbox leest `sandbox.excludedCommands` uit de `.claude/settings.json` en `.claude/settings.local.json` van de map waarin
-de sessie startte (`CLAUDE_PROJECT_DIR`), niet uit de worktree. Het rolhek eist de commit- en pushvorm uit de settings van
+de sessie startte (`CLAUDE_PROJECT_DIR`), niet uit de worktree waarin je werkt, tenzij de sessie daar startte. Het rolhek eist de commit- en pushvorm uit de settings van
 `main` (het anker). Loopt die projectmap achter op `main` (een hoofdcheckout met oude settings terwijl je in een worktree
 werkt), dan draait ook de geëiste vorm in de sandbox. Session-start meldt die drift ("wijkt af van main in
 sandbox.excludedCommands"), en een netwerkvorm-weigering noemt de ontbrekende patronen (spec rolhek-leerpunten/AC-6, AC-7;
-`lokaleNetwerkvormen` in `rails/hooks/lib/rolhek-context.mjs`). De oplossing is een eigenaarstap: werk de hoofdcheckout bij
-naar `main` (`git switch main`, dan `git merge --ff-only origin/main`). Zonder `CLAUDE_PROJECT_DIR` (geen Claude Code-sessie)
-komt er geen melding.
+`lokaleNetwerkvormen` in `rails/hooks/lib/rolhek-context.mjs`). Settings op gebruikersniveau (`~/.claude/settings.json`) en
+managed settings leest het rolhek niet; staat het patroon alleen daar, dan is de melding vals. Zonder `CLAUDE_PROJECT_DIR`
+(geen Claude Code-sessie) komt er geen melding. De oplossing is een eigenaarstap: werk de hoofdcheckout bij naar `main`.
+
+1. Eigen terminal, in de hoofdcheckout (de map waarin de sessie startte, zonder openstaande wijzigingen): ga naar `main`
+   en haal hem op. Verwacht: `Switched to branch 'main'` en een fast-forward, of `Already up to date`.
+2. Start daarna een nieuwe sessie. Verwacht: session-start meldt geen "wijkt af van main" meer.
+
+```bash
+git switch main
+git fetch origin main
+git merge --ff-only origin/main
+```
 
 De broncode van de hooks staat daarom in `rails/hooks/`, buiten die grens (ADR 0045 punt 3). In `.claude/hooks/` staan alleen
 stubs die de versie van `main` op de remote draaien, uitgepakt in `.claude/hooks/.cache/`: binnen de grens, zodat Bash die code
