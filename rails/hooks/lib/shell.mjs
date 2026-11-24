@@ -52,9 +52,11 @@ export function parseCommands(script, onzeker = false) {
   const segmenten = parseLezing(script, onzeker);
   // Spec rolhek-herstel/AC-4: met `#` binnen `$(…)` kan bash de substitutie anders sluiten dan `findParen` (een commentaar
   // slikt de `)`). Dan ook de lezing waarin `$(` een subshell opent, en de vereniging van de segmenten: liever te veel.
-  // `$((` is rekenen: daarin is `#` geen commentaar.
-  if (!SUBSTITUTIE.test(script) || !script.includes('#')) return segmenten;
-  return [...segmenten, ...parseLezing(script.replace(new RegExp(SUBSTITUTIE.source, 'g'), ' ('), true)];
+  // `$((` is rekenen: daarin is `#` geen commentaar. Met `#` binnen backticks voert bash de inhoud als commando uit, terwijl
+  // `readWord` hem in het woord houdt (differentieel tegen bash, AC-5): dan ook de lezing met de inhoud als subshell.
+  if (!script.includes('#') || (!SUBSTITUTIE.test(script) && !script.includes('`'))) return segmenten;
+  const subshell = script.replace(new RegExp(SUBSTITUTIE.source, 'g'), ' (').replace(/`([^`]*)`?/g, ' ($1) ');
+  return [...segmenten, ...parseLezing(subshell, true)];
 }
 
 /**
