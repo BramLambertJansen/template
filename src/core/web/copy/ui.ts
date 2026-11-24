@@ -47,4 +47,7 @@ export const uiTexts = {
   componentColumn: 'Component',
   defaultColumn: 'Standaard',
   valueColumn: 'Waarde',
+  // Spec app-thema (deel C): de themakiezer op /design-system.
+  appTheme: 'Thema',
+  defaultAppTheme: 'Standaard',
 } as const;

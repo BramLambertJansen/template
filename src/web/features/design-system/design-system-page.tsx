@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { copy } from '#web/copy/ui.ts';
 import { useListSearch } from '#core/web/lib/list-search.ts';
-import { PageHeader, Tabs, Text } from '#web/ui/index.ts';
+import { themes } from '#web/styles/themes.ts';
+import { PageHeader, Tabs, Text, ThemeScope } from '#web/ui/index.ts';
 import { ComponentIndex } from './component-index.tsx';
 import { showExample, type ExampleTarget } from './example-targets.ts';
+import { ThemePicker } from './theme-picker.tsx';
 import { vakPanels } from './vak-panels.tsx';
 import { vakFrom, vakken } from './vakken.ts';
 
@@ -40,6 +42,8 @@ function useCatalogueNavigation() {
 
 export function DesignSystemPage() {
   const nav = useCatalogueNavigation();
+  // Spec app-thema (AC-16): de voorbeelden in een gekozen thema; alleen deze pagina, niet bewaard.
+  const [previewTheme, setPreviewTheme] = useState<string | null>(null);
   return (
     <div className="flex flex-col gap-10">
       <PageHeader title={copy.designSystem.title} />
@@ -48,12 +52,15 @@ export function DesignSystemPage() {
         voorbeelden in het echte thema. Alles hier is voorbeelddata; niets wijzigt echte gegevens.
       </Text>
       <ComponentIndex search={nav.query} onSearchChange={nav.setQuery} onShow={nav.show} />
-      <Tabs
-        label="Onderdelen per soort"
-        value={nav.vak}
-        onValueChange={nav.setVak}
-        items={vakken.map((vak) => ({ id: vak.id, label: vak.label, content: vakPanels[vak.id] }))}
-      />
+      <ThemePicker themes={themes} value={previewTheme} onChange={setPreviewTheme} />
+      <ThemeScope theme={previewTheme}>
+        <Tabs
+          label="Onderdelen per soort"
+          value={nav.vak}
+          onValueChange={nav.setVak}
+          items={vakken.map((vak) => ({ id: vak.id, label: vak.label, content: vakPanels[vak.id] }))}
+        />
+      </ThemeScope>
     </div>
   );
 }

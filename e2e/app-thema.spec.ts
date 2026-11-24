@@ -334,3 +334,88 @@ for (const width of [375, 1280]) {
     });
   });
 }
+
+// Spec app-thema, deel C: de themakiezer op /design-system (AC-16) en ThemeScope binnen een documentthema (AC-14), met de
+// twee meegeleverde thema's uit src/web/styles/theme.css. Strak: --radius 0 (knop, dialoog en toast 0 px), --primary
+// zinc; zacht: --radius 0.875rem (knop 12 px, dialoog 14 px) en een eigen --background. Standaard: knop en toast 6 px.
+const themeSelect = (page: Page) => page.getByRole('combobox', { name: 'Thema', exact: true });
+const primaryButton = (page: Page) => region(page, 'Button').getByRole('button', { name: 'primary', exact: true });
+
+async function openCatalogue(page: Page, vak: string) {
+  await signIn(page, await createAccount('admin', { totp: true }));
+  await page.goto(`/design-system?vak=${vak}`);
+  await expect(page.getByRole('heading', { level: 1, name: 'Design system' })).toBeVisible();
+  await neutral(page);
+}
+
+async function showToast(page: Page): Promise<Locator> {
+  await vakTabs(page).getByRole('tab', { name: 'Meldingen en status', exact: true }).click();
+  await region(page, 'Toast').getByRole('button', { name: 'Toon succes-toast', exact: true }).click();
+  const toast = page.getByRole('status').filter({ hasText: /^Wijziging opgeslagen\.$/ });
+  await toast.hover();
+  return toast;
+}
+
+test('app-thema/AC-16: de kiezer toont Standaard, Strak en Zacht; de voorbeelden wisselen mee, meldingen en <html> niet', async ({
+  page,
+}) => {
+  await openCatalogue(page, 'acties');
+  const select = themeSelect(page);
+  await expect(select.getByRole('option')).toHaveText(['Standaard', 'Strak', 'Zacht']);
+  await expect(primaryButton(page)).toHaveCSS('border-radius', '6px');
+
+  await select.selectOption({ label: 'Strak' });
+  await expect(primaryButton(page)).toHaveCSS('border-radius', '0px');
+  await select.selectOption({ label: 'Zacht' });
+  await expect(primaryButton(page)).toHaveCSS('border-radius', '12px');
+  await expect(select).toBeFocused();
+  await expect(page.locator('html')).not.toHaveAttribute('data-app-theme');
+
+  // De toast staat buiten de scope (ToastProvider) en volgt het document: de standaardradius.
+  await expect(await showToast(page)).toHaveCSS('border-radius', '6px');
+
+  await select.selectOption({ label: 'Standaard' });
+  await expect(primaryButton(page)).toHaveCSS('border-radius', '6px');
+  await expect(page.locator('html')).not.toHaveAttribute('data-app-theme');
+});
+
+test('app-thema/AC-14: ThemeScope met zacht in een document met strak rekent binnen met zacht en erbuiten met strak', async ({
+  page,
+}) => {
+  // Het documentthema zoals setAppTheme het bewaart; applyStoredTheme zet het bij het laden.
+  await page.addInitScript("window.localStorage.setItem('app-thema', 'strak')");
+  await openCatalogue(page, 'acties');
+  await expect(page.locator('html')).toHaveAttribute('data-app-theme', 'strak');
+  const select = themeSelect(page);
+
+  // Scope gelijk aan het document: de knop krijgt de --primary van strak.
+  await select.selectOption({ label: 'Strak' });
+  const strakPrimary = (await styles(primaryButton(page)))['background-color'];
+  await select.selectOption({ label: 'Zacht' });
+
+  // Binnen: de radius van zacht; zacht zet --primary niet, dus die erft van strak (het document).
+  const inside = await styles(primaryButton(page));
+  expect([inside['border-radius'], inside['background-color']]).toStrictEqual(['12px', strakPrimary]);
+  // Buiten (de kiezer zelf): de controlradius van strak.
+  await expect(select).toHaveCSS('border-radius', '0px');
+
+  // ThemeScope voegt geen box toe.
+  await expect(page.locator("[data-app-theme='zacht']")).toHaveCSS('display', 'contents');
+
+  // Een Dialog die binnen de scope opent, rekent ook met zacht.
+  await region(page, 'Dialog').getByRole('button', { name: 'Dialoog openen', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Account uitnodigen' })).toHaveCSS('border-radius', '14px');
+  await page.keyboard.press('Escape');
+
+  // Zacht zet alleen --background; het afgeleide --control-bg rekent daarmee in de scope, de kiezer buiten niet.
+  await vakTabs(page).getByRole('tab', { name: 'Formulieren', exact: true }).click();
+  const input = region(page, 'Form, Field en Input').getByRole('textbox', { name: 'E-mailadres', exact: true });
+  const tokens = await input.evaluate(readStyles, ['--control-bg', '--background', 'background-color']);
+  const outside = await select.evaluate(readStyles, ['--control-bg', 'background-color']);
+  expect(tokens['--control-bg']).toBe(tokens['--background']);
+  expect(tokens['--control-bg']).not.toBe(outside['--control-bg']);
+  expect(tokens['background-color']).not.toBe(outside['background-color']);
+
+  // De toast volgt het document (strak), niet de scope.
+  await expect(await showToast(page)).toHaveCSS('border-radius', '0px');
+});

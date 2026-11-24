@@ -136,6 +136,32 @@ Bewijs: `test/ui/componenttokens.test.ts` (grens van zes, brontest per recept, g
 tokens), `test/ui/contrast-componenttokens.test.ts`, `test/ui/componenttokens-catalogus.test.ts` en
 `e2e/app-thema.spec.ts` (berekende stijl tegen de nulmeting `e2e/fixtures/app-thema-baseline.json`).
 
+### App-thema's
+
+Spec: [app-thema](template/specs/app-thema.md), deel C. Een app-thema is een blok `[data-app-theme='<naam>']` in
+`src/web/styles/theme.css` (semantische tokens en componenttokens), optioneel met een donker blok
+`[data-app-theme='<naam>'][data-theme='dark'], [data-theme='dark'] [data-app-theme='<naam>']`. Licht/donker blijft een
+eigen as: elk thema werkt in beide.
+
+- Register: `src/web/styles/themes.ts` met `defineThemes({ <naam>: { label } })` (naam in kebab-case,
+  `src/core/web/lib/theme-register.ts`). `src/web/main.tsx` geeft het aan `applyStoredTheme(themes)`; core importeert het
+  register niet. Register en blokken moeten gelijk zijn en een blok zet alleen bestaande tokens (`test/ui/themas.test.ts`).
+- Hele document: `setAppTheme(naam | null, themes)` uit `src/core/web/lib/theme.ts` zet `data-app-theme` op `<html>` en
+  bewaart de keuze onder `app-thema` (los van `thema` voor licht/donker); een onbekende of verwijderde naam valt terug op
+  geen thema. De template levert geen kiezer voor eindgebruikers.
+- Deel van de app: `<ThemeScope theme="…">` (`src/core/web/ui/theme-scope.tsx`), een `div` met `display: contents`.
+  Componenttokens rekenen binnen de scope opnieuw met de semantische tokens van dat thema; semantische tokens die het
+  scopethema niet zet, erven van het document. Een componentoverride van het documentthema geldt niet binnen een scope met
+  een ander thema: daar gelden de standaard uit `components.css` en de overrides van het scopethema. Meldingen
+  (`ToastProvider`) staan buiten elke scope en volgen het documentthema.
+- Meegeleverd: `strak` (hoekig, geen schaduw) en `zacht` (ronder, zachtere schaduw, getinte achtergrond). Een app haalt ze
+  weg of vervangt ze. Elk kleurpaar haalt het contrast in elk thema, licht en donker (`test/ui/contrast-themas.test.ts`).
+- Op `/design-system` staat boven de tabbladen een kiezer "Thema" die de voorbeelden in een `ThemeScope` toont (niet
+  bewaard; `<html>` verandert niet). Zonder thema's in het register is er geen kiezer.
+
+Bewijs: `src/core/web/lib/theme-app.test.ts`, `test/ui/themas.test.ts`, `test/ui/contrast-themas.test.ts` en
+`e2e/app-thema.spec.ts` (AC-14, AC-16).
+
 Een ontwerp overnemen (HTML-bestand, URL, afbeelding of niets): de skill `ontwerp-overnemen`
 (`.claude/skills/ontwerp-overnemen/SKILL.md`, spec [ontwerp-overnemen](template/specs/ontwerp-overnemen.md)). Zonder referentie
 blijft de bestaande stijl de basis; met een referentie meet `node scripts/kit/ontwerp-meten.mjs <bron> --naam <naam>`
