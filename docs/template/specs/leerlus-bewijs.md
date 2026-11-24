@@ -212,7 +212,8 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   de huidige comments en zoekt een comment die past op `opgelost:` hoofdletterongevoelig met witruimte vooraan toegestaan
   (zoals `DUPLICAAT`), van een auteur met `author_association` OWNER, MEMBER of COLLABORATOR. Na `opgelost:` volgt een door
   komma's gescheiden lijst van één of meer verwijzingen, elk precies één van: `#<cijfers>` (PR), 7 tot 40 kleine
-  hexadecimale tekens (commit), `ADR <4 cijfers>` (ADR); elke andere vorm is ongeldig. De sluiting geldt als bewijs, net als
+  hexadecimale tekens (commit), `ADR <4 cijfers>` (ADR); elke andere vorm is ongeldig. Witruimte rond een komma en aan het
+  einde mag; andere tekst na de lijst (`opgelost: #834 (fix rolhek)`) maakt de comment ongeldig. De sluiting geldt als bewijs, net als
   een geldige `achterhaald:` (AC-6), alleen als **alle** verwijzingen geldig zijn: een `#<nr>` via REST
   `repos/<repo>/pulls/<nr>` gemergd (`merged` waar) met als basis de standaardbranch van de repo; commit en ADR toetst de
   check alleen op vorm. Dan zet de workflow geen `leerpunt-zonder-bewijs` en haalt het weg als het er al stond (ook op
