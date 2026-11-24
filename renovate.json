@@ -7,6 +7,8 @@
   "internalChecksFilter": "strict",
   "rangeStrategy": "pin",
   "labels": ["dependencies"],
+  "prConcurrentLimit": 0,
+  "prHourlyLimit": 0,
   "osvVulnerabilityAlerts": true,
   "vulnerabilityAlerts": {
     "description": "Een update voor een bekend lek wacht niet op maandag en niet op de zeven dagen (osv-scanner is dan al rood)",
@@ -23,7 +25,7 @@
       "groupName": "niet-major"
     },
     {
-      "description": "Elke major meteen als eigen PR met label major: CI test hem en de achterstandscheck ziet hem; niets wordt verborgen (R-PROV-04)",
+      "description": "Elke major meteen als eigen PR met label major: CI test hem meteen; niets wordt verborgen (R-PROV-04). Geen PR-limiet: openstaande majors houden nooit een andere update tegen",
       "matchUpdateTypes": ["major"],
       "addLabels": ["major"]
     },
