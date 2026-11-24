@@ -171,6 +171,20 @@ describe('rolhek-leerpunten/AC-3 vergelijkWoorden', () => {
     expect(bevindingen).toContainEqual({ sleutel: [rijen[0], 'X'].join(SCHEIDER), woord: 'rm', oud: 1, nieuw: 0 });
   });
 
+  test('rolhek-leerpunten/AC-3: een lezer die een segment met alleen een redirect weglaat geeft een bevinding met woord ""', () => {
+    expect(typeof ns['vergelijkWoorden']).toBe('function');
+    const rijen = ['> lefthook.yml'];
+    const zonderRedirect: Lezer = (tekst) =>
+      parseCommands(tekst)
+        .filter(({ words }) => words.length > 0)
+        .map(({ words }) => words[0] ?? '');
+    const oud = woorden(eersteWoorden, rijen);
+    expect(oud.get([rijen[0], 'X'].join(SCHEIDER))).toStrictEqual([['']]);
+    expect(vergelijkWoorden(oud, woorden(zonderRedirect, rijen))).toStrictEqual([
+      { sleutel: [rijen[0], 'X'].join(SCHEIDER), woord: '', oud: 1, nieuw: 0 },
+    ]);
+  });
+
   test('rolhek-leerpunten/AC-3: een sleutel die in nieuw ontbreekt geeft per woord een bevinding met nieuw undefined', () => {
     expect(typeof ns['vergelijkWoorden']).toBe('function');
     const sleutel = ['cd .. && rm x', 'X'].join(SCHEIDER);

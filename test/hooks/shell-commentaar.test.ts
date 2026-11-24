@@ -179,7 +179,8 @@ describe('rolhek-leerpunten/AC-4: regressie, de lezer behoudt wat de lezer van m
     'rolhek-leerpunten/AC-4: cd .. && cd .. met # c in /repo/a/b geeft dezelfde uitslag als zonder # c (rol %j)',
     (agent) => {
       const zonder = verdictIn(CD_CD, agent, '/repo/a/b');
-      // Het schrijfdoel is /repo/lefthook.yml, een zelfladend pad: zonder werkmapvolg viel het doel op /repo/a/b en ging het door.
+      // `isDir` is hier overal true: het rolhek volgt een `cd` alleen naar een map die bestaat. Het schrijfdoel is dan
+      // /repo/lefthook.yml, een zelfladend pad; zonder werkmapvolg viel het doel op /repo/a/b en ging het door.
       expect(zonder).toBe(agent === '' ? 'ask' : 'deny');
       expect(verdictIn(`${CD_CD} # c`, agent, '/repo/a/b')).toBe(zonder);
     },

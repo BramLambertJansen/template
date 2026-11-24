@@ -62,8 +62,7 @@ describe('rolhek-leerpunten/AC-5 regressie: wat nu groen is, blijft groen', () =
     expect(uitslag.reden).not.toContain(AANWIJZING);
   });
 
-  // `git merge main` staat in de spec ook onder de geweigerde rijen voor de hoofdsessie, maar geeft nu geen weigering (gemeten:
-  // uitslag `context`); die rij ontbreekt hier tot de spec dat rechtzet.
+  // `git merge main` is voor de hoofdsessie een melding (`context`), geen weigering (spec): daarom geen rij hier.
   test.each(['gh pr merge 1', 'gh api -X PUT repos/o/r/pulls/1/merge'])(
     'rolhek-leerpunten/AC-5: de hoofdsessie blijft geweigerd voor %s, zonder de #736-tekst',
     (command) => {
@@ -76,5 +75,30 @@ describe('rolhek-leerpunten/AC-5 regressie: wat nu groen is, blijft groen', () =
   test('rolhek-leerpunten/AC-5: gh pr create zonder merge in --head krijgt de #736-tekst niet', () => {
     const uitslag = verdict('gh pr create --head chore/iets --title "fix(merge): x" --body-file f.md');
     expect(uitslag.reden).not.toContain(AANWIJZING);
+  });
+
+  // Geweigerd om een andere reden dan het woord in de `--head`-waarde: de aanwijzing hoort er dan niet bij.
+  test.each([
+    'gh pr create --head chore/x --title x --body "please merge"',
+    'gh pr create --head merge-x && gh pr merge 1',
+    'gh pr create --head feat/merge-x --title "merge it"',
+  ])('rolhek-leerpunten/AC-5: geweigerd zonder de #736-tekst: %s', (command) => {
+    const uitslag = verdict(command);
+    expect(uitslag.uitslag).toBe('deny');
+    expect(uitslag.reden).not.toContain(AANWIJZING);
+  });
+});
+
+describe('rolhek-leerpunten/AC-5 nieuw gedrag: ook de andere vormen van --head en gh pr create', () => {
+  test.each([
+    'gh pr create -H chore/iets-uit-merge --title "fix: x" --body-file f.md',
+    'gh pr create -Hchore/iets-uit-merge --title "fix: x" --body-file f.md',
+    'gh pr create --head=chore/iets-uit-merge --title "fix: x" --body-file f.md',
+    'gh pr new --head chore/iets-uit-merge --title "fix: x" --body-file f.md',
+    'gh pr --repo o/r create --head chore/iets-uit-merge --title "fix: x" --body-file f.md',
+  ])('rolhek-leerpunten/AC-5: de weigering krijgt de #736-tekst: %s', (command) => {
+    const uitslag = verdict(command);
+    expect(uitslag.uitslag).toBe('deny');
+    expect(uitslag.reden).toContain(`${WS04}; ${AANWIJZING}`);
   });
 });

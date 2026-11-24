@@ -1007,7 +1007,8 @@ function maximaPerWoord(lezingen) {
   for (const lezing of lezingen) {
     /** @type {Map<string, number>} */
     const tellen = new Map();
-    for (const woord of lezing) if (woord !== '') tellen.set(woord, (tellen.get(woord) ?? 0) + 1);
+    // Ook een leeg eerste woord telt: een segment met alleen een redirect (`> lefthook.yml`) is een segment.
+    for (const woord of lezing) tellen.set(woord, (tellen.get(woord) ?? 0) + 1);
     for (const [woord, aantal] of tellen) maxima.set(woord, Math.max(maxima.get(woord) ?? 0, aantal));
   }
   return maxima;

@@ -54,7 +54,14 @@ function functie(module: unknown, naam: string): unknown {
   return typeof module === 'object' && module !== null ? Reflect.get(module, naam) : undefined;
 }
 
-async function laadOud(): Promise<Lezers | null> {
+interface OudResultaat {
+  readonly lezers: Lezers | null;
+  /** De boodschap van de falende expect: `draai git fetch origin` bij een git-fout, anders de fout van de oude lib. */
+  readonly oorzaak: string;
+}
+
+/** Alleen een falende `git ls-tree` of `git show` betekent een onleesbare `origin/main`. */
+function kopieerOud(): string | null {
   try {
     const bestanden = git(['ls-tree', '-r', '--name-only', 'origin/main', '--', LIB])
       .split('\n')
@@ -67,21 +74,41 @@ async function laadOud(): Promise<Lezers | null> {
       mkdirSync(path.dirname(doel), { recursive: true });
       writeFileSync(doel, git(['show', `origin/main:${bestand}`]));
     }
-    const rolhek: unknown = await import(/* @vite-ignore */ pathToFileURL(path.join(map, 'rolhek.mjs')).href);
-    const shell: unknown = await import(/* @vite-ignore */ pathToFileURL(path.join(map, 'shell.mjs')).href);
-    const [d, p, h] = [functie(rolhek, 'decide'), functie(shell, 'parseCommands'), functie(shell, 'heredocsBeide')];
-    if (typeof d !== 'function' || typeof p !== 'function' || typeof h !== 'function') return null;
-    return {
-      decide: unsafeCast<Decide>(d, 'zelfde signatuur op origin/main'),
-      parseCommands: unsafeCast<ParseCommands>(p, 'zelfde signatuur op origin/main'),
-      heredocsBeide: unsafeCast<HeredocsBeide>(h, 'zelfde signatuur op origin/main'),
-    };
+    return map;
   } catch {
     return null;
   }
 }
 
-const OUD = await laadOud();
+async function laadOud(): Promise<OudResultaat> {
+  const map = kopieerOud();
+  if (map === null) return { lezers: null, oorzaak: 'draai git fetch origin' };
+  try {
+    const rolhek: unknown = await import(/* @vite-ignore */ pathToFileURL(path.join(map, 'rolhek.mjs')).href);
+    const shell: unknown = await import(/* @vite-ignore */ pathToFileURL(path.join(map, 'shell.mjs')).href);
+    const [d, p, h] = [functie(rolhek, 'decide'), functie(shell, 'parseCommands'), functie(shell, 'heredocsBeide')];
+    if (typeof d !== 'function' || typeof p !== 'function' || typeof h !== 'function')
+      return {
+        lezers: null,
+        oorzaak: 'de oude lib (origin/main) exporteert decide, parseCommands of heredocsBeide niet als functie',
+      };
+    return {
+      lezers: {
+        decide: unsafeCast<Decide>(d, 'zelfde signatuur op origin/main'),
+        parseCommands: unsafeCast<ParseCommands>(p, 'zelfde signatuur op origin/main'),
+        heredocsBeide: unsafeCast<HeredocsBeide>(h, 'zelfde signatuur op origin/main'),
+      },
+      oorzaak: '',
+    };
+  } catch (fout) {
+    return {
+      lezers: null,
+      oorzaak: `de oude lib (origin/main) laadt niet: ${fout instanceof Error ? fout.message : String(fout)}`,
+    };
+  }
+}
+
+const { lezers: OUD, oorzaak: OUD_OORZAAK } = await laadOud();
 
 // De nieuwe vergelijkers, als namespace geladen: op `main` bestaan ze niet (spec, Acceptatiecriteria).
 const ns: Record<string, unknown> = await import('../../rails/hooks/lib/shell.mjs');
@@ -167,6 +194,8 @@ function voorafCtx(rij: Rij): Context {
 }
 
 const LOS = 'rm -rf .claude/hooks';
+// De vaste ctx heeft `isDir` false. Alleen de rij met `cd .. && cd ..` (cwd /repo/a/b) krijgt `isDir` true: het rolhek volgt een
+// `cd` alleen naar een map die bestaat, en zonder werkmapvolg meet de rij niets.
 const RIJEN_955: readonly { readonly tekst: string; readonly cwd: string }[] = [
   { tekst: `((true) ); #<<E\n${LOS}\nE`, cwd: ROOT },
   { tekst: `echo \${x:-"}"}; ${LOS}`, cwd: ROOT },
@@ -207,7 +236,11 @@ const GROEPEN: readonly { readonly naam: string; readonly rijen: () => Invoer[] 
   {
     naam: 'de vier #955-rijen',
     rijen: () =>
-      RIJEN_955.map(({ tekst, cwd }, i) => ({ rij: rijNaam('#955', i, tekst), tekst, ctx: vasteCtx(cwd, true) })),
+      RIJEN_955.map(({ tekst, cwd }, i) => ({
+        rij: rijNaam('#955', i, tekst),
+        tekst,
+        ctx: vasteCtx(cwd, cwd !== ROOT),
+      })),
   },
 ];
 
@@ -279,7 +312,7 @@ describe('rolhek-leerpunten/AC-1 de nieuwe lezer ziet op elke ingang minstens wa
   test.each(GROEPEN)(
     'rolhek-leerpunten/AC-1: uitslag per rij, omhulsel en rol niet zwakker dan op origin/main: $naam',
     (groep) => {
-      expect(OUD !== null, 'draai git fetch origin').toBe(true);
+      expect(OUD !== null, OUD_OORZAAK).toBe(true);
       if (OUD === null) return;
       expect(typeof ns['vergelijkUitslagen']).toBe('function');
       const vergelijk = unsafeCast<VergelijkUitslagen>(ns['vergelijkUitslagen'], 'typeof hierboven gecontroleerd');
@@ -298,7 +331,7 @@ describe('rolhek-leerpunten/AC-2 de nieuwe lezer ziet van elk eerste woord minst
   test.each(GROEPEN)(
     'rolhek-leerpunten/AC-2: eerste woorden per rij en omhulsel, maximum over de lezingen: $naam',
     (groep) => {
-      expect(OUD !== null, 'draai git fetch origin').toBe(true);
+      expect(OUD !== null, OUD_OORZAAK).toBe(true);
       if (OUD === null) return;
       expect(typeof ns['vergelijkWoorden']).toBe('function');
       const vergelijk = unsafeCast<VergelijkWoorden>(ns['vergelijkWoorden'], 'typeof hierboven gecontroleerd');

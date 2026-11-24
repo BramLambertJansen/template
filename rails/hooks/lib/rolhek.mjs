@@ -1103,12 +1103,26 @@ const BRACE_TRICK = /\{[^}]*(?:,|\.\.)[^}]*\}/;
 // blijft (R-ROL-11); de aanwijzing wijst de route (spec rolhek-leerpunten/AC-5).
 const MERGE_IN_HEAD = '; het woord merge in een branchnaam telt hier mee (R-ROL-11): kies een branchnaam zonder dat woord (spec rolhek-leerpunten/AC-5)';
 
+// De waarde van `--head`/`-H` (ook `--head=x` en `-Hx`); hoofdlettergevoelig, net als cobra en `RAW_MERGE`.
+const HEAD_WAARDE = /((?:^|\s)(?:--head=|--head\s+|-H\s*))\S+/g;
+
 /**
- * Staat `merge` in de waarde van `--head`/`-H` van `gh pr create` (ook `pr new`)? Op de tekst zonder aanhalingstekens.
- * @param {string} text
+ * Het vangnet op de ruwe tekst (WS-04): mergen of goedkeuren in tekst die naar gh, …/pulls/, de GitHub-API of GraphQL wijst.
+ * @param {string} text tekst zonder aanhalingstekens
  */
-function headMetMerge(text) {
-  return /\bpr\s+(?:\S+\s+)*?(?:create|new)\b/.test(text) && /(?:^|\s)(?:--head(?:=|\s+)|-H\s*)\S*merge/i.test(text);
+function rawMergeOfApprove(text) {
+  return RAW_GITHUB.test(text) &&
+    (RAW_MERGE.test(text) || MERGE_MUTATION.test(text) || (/\breview\b/.test(text) && RAW_APPROVE.test(text)) ||
+      (/\/reviews\b/.test(text) && /APPROVE/.test(text)));
+}
+
+/**
+ * Raakt de WS-04-weigering alleen door `merge` in de waarde van `--head`/`-H` van `gh pr create` (ook `pr new`)? Dan
+ * verdwijnt de weigering zodra die waarde weg is; anders zou de aanwijzing de verkeerde kant op sturen.
+ * @param {string} text tekst zonder aanhalingstekens
+ */
+function alleenHeadMetMerge(text) {
+  return /\bpr\s+(?:\S+\s+)*?(?:create|new)\b/.test(text) && !rawMergeOfApprove(text.replace(HEAD_WAARDE, '$1x'));
 }
 
 /**
@@ -1124,10 +1138,8 @@ function rawForbidden(command, { role, onzeker, plek }) {
   const found = [];
   // Zonder `\`, `'` en `"`: `g\h`, `g""h` en `mer''ge` zijn voor de shell gewoon gh en merge.
   const text = command.replace(/[\\'"]/g, '');
-  if (RAW_GITHUB.test(text) &&
-    (RAW_MERGE.test(text) || MERGE_MUTATION.test(text) || (/\breview\b/.test(text) && RAW_APPROVE.test(text)) ||
-      (/\/reviews\b/.test(text) && /APPROVE/.test(text))))
-    found.push(`mergen of goedkeuren via gh of …/pulls/ is voor elke rol verboden (vangnet op de ruwe tekst, WS-04)${headMetMerge(text) ? MERGE_IN_HEAD : ''}`);
+  if (rawMergeOfApprove(text))
+    found.push(`mergen of goedkeuren via gh of …/pulls/ is voor elke rol verboden (vangnet op de ruwe tekst, WS-04)${alleenHeadMetMerge(text) ? MERGE_IN_HEAD : ''}`);
   else if (GH_WORD.test(text) && RAW_PR_REVIEW.test(text))
     found.push('gh pr review is voor elke rol verboden, ook achter een omhulsel en zonder --approve (vangnet op de ruwe tekst, AGENTS.md)');
   else if (RAW_PR_MERGE.test(text) || MERGE_MUTATION.test(text) || (RAW_PR_REVIEW.test(text) && RAW_APPROVE.test(text)))

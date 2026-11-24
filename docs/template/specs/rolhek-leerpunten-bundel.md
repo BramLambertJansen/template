@@ -52,7 +52,7 @@ Is die projectmap een hoofdcheckout met een `.claude/settings.json` van vóór #
 sandbox niet uitzondert. Of de worktree de nieuwe settings heeft, maakt daarbij niet uit.
 
 Bron voor de lokale settings (AC-6, AC-7): `CLAUDE_PROJECT_DIR`. De lokale lijst is de vereniging van
-`sandbox.excludedCommands` uit `.claude/settings.json` en `.claude/settings.local.json` in die map. Reden: Claude Code
+`sandbox.excludedCommands` uit `.claude/settings.json` en het lokale, ongetrackte `settings.local.json` in die map. Reden: Claude Code
 laadt de sandboxinstellingen uit precies die map. De ouder van `git rev-parse --git-common-dir` (de hoofd-worktree)
 wijst verkeerd zodra een sessie in een worktree zelf start. Zonder `CLAUDE_PROJECT_DIR` draait er geen Claude
 Code-sessie: dan komt er geen tekst en geen melding (R-WERK-23).
@@ -304,7 +304,7 @@ PR 2, meldingen zonder verruiming (#962, #960, #958):
       bewijsbestand: op de basis zou die een TypeError geven, en die telt als laadfout.
     - #736: `test/hooks/rolhek-merge-woord.test.ts`, rood via de nieuwe tekst uit AC-5.
   - PR 2:
-    - #962: `test/hooks/werkstraat-netwerkvorm-drift.test.ts` (AC-7);
+    - #962: `test/hooks/werkstraat-netwerkvorm-drift.test.ts` (nieuw), AC-7;
     - #960: `test/hooks/rolhek-developer.test.ts` (AC-9);
     - #958: `test/hooks/agent-teksten.test.ts` (AC-12).
   - #688: de hoofdsessie sluit hem als opgelost (`gh issue close --reason completed`). Eerst plaatst ze een comment
