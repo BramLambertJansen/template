@@ -45,8 +45,8 @@ function useConnection(): Connection {
 }
 
 // Niet-blokkerende melding dat het netwerk weg is en, kort, dat het terug is. Beleefd voorgelezen via role="status", geen
-// Tab-stop, verplaatst de focus niet; verdwijnt bij afdrukken. De AppShell rendert hem al; plaats hem zelf alleen op een
-// scherm zonder AppShell (docs/offline-en-print.md).
+// Tab-stop, verplaatst de focus niet; verdwijnt bij afdrukken. Elke schil rendert hem al (ShellFrame); plaats hem zelf alleen op een
+// scherm zonder schil (docs/offline-en-print.md).
 export function OfflineNotice() {
   const connection = useConnection();
   if (connection === 'online') return null;

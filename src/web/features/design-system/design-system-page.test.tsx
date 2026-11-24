@@ -2,10 +2,10 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createRootRoute, createRouter, createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { afterEach, expect, test } from 'vitest';
-import { Toaster, ToastProvider } from '#core/web/ui/toast.tsx';
+import { ToastProvider } from '#core/web/ui/toast.tsx';
 import { DesignSystemPage } from './design-system-page.tsx';
 
-// Catalogus: de sectie Toast toont de kit-toasts met twee knoppen. In de app staat de Toaster in de AppShell; hier renderen we hem zelf.
+// Catalogus: de sectie Toast toont de kit-toasts met twee knoppen. ToastProvider rendert de meldingen zelf (spec schillen).
 afterEach(cleanup);
 
 // Spec designsystem-toolbox: de sectie Toast staat in het tabblad Meldingen en status.
@@ -20,7 +20,6 @@ function setup() {
       <QueryClientProvider client={new QueryClient()}>
         <RouterProvider router={router} />
       </QueryClientProvider>
-      <Toaster />
     </ToastProvider>,
   );
 }

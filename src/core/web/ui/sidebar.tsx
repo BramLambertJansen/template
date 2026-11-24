@@ -22,7 +22,7 @@ export function visibleNavItems<Permission extends string>(
 
 export function Sidebar({ items }: { readonly items: readonly NavItem<string>[] }) {
   return (
-    <nav aria-label={uiTexts.mainMenu} className="flex flex-col gap-1 p-3 print:hidden">
+    <nav aria-label={uiTexts.mainMenu} className="flex flex-col gap-shell-nav p-3 print:hidden">
       {items.map(({ label, href, icon: Icon }) => (
         <NavLink key={href} href={href}>
           {Icon === undefined ? null : <Icon aria-hidden="true" />}

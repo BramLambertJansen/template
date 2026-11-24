@@ -180,7 +180,7 @@ describe('semantische-tokens 3b: geen kale lagen of duren in de kit', () => {
       'src/core/web/ui/combobox.tsx': ['z-dropdown'],
       'src/core/web/ui/dropdown-menu.tsx': ['z-dropdown'],
       'src/core/web/ui/toast.tsx': ['z-toast'],
-      'src/core/web/ui/app-shell.tsx': ['focus:z-toast'],
+      'src/core/web/ui/shell-frame.tsx': ['focus:z-toast'],
       'src/core/web/ui/dialog.tsx': ['duration-normal', 'backdrop:duration-normal'],
       'src/web/dev/role-switcher.tsx': ['z-overlay', 'z-modal', 'duration-normal'],
     };

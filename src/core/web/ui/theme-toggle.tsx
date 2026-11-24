@@ -4,7 +4,7 @@ import { uiTexts } from '../copy/ui.ts';
 import { currentTheme, setTheme } from '../lib/theme.ts';
 import { Button } from './button.tsx';
 
-// Schakelaar tussen licht en donker thema (in de topbalk via AppShell, en op /design-system). Een toggle-knop: de naam
+// Schakelaar tussen licht en donker thema (in de topbalk via de schil, en op /design-system). Een toggle-knop: de naam
 // blijft "Donker thema", aria-pressed zegt of het aan staat; het icoon toont wat je krijgt bij klikken.
 export function ThemeToggle() {
   const [dark, setDark] = useState(() => currentTheme() === 'dark');

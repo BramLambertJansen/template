@@ -1,6 +1,9 @@
 // De enige importbron voor features/ (framework §7): her-exporteert de basiskit uit core. Eigen componenten en afgeleide
 // varianten van de app komen hier ook (afleiden uit de basis en variantkaart van core, niet forken).
 export { AppShell } from '#core/web/ui/app-shell.tsx';
+export { SidebarShell } from '#core/web/ui/sidebar-shell.tsx';
+export { TopbarShell, TOPBAR_INLINE_ITEMS } from '#core/web/ui/topbar-shell.tsx';
+export { ShellFrame, ShellSessionProvider, useMarkScreenShown, type ShellProps } from '#core/web/ui/shell-frame.tsx';
 export { AsyncView } from '#core/web/ui/async-view.tsx';
 export { Button, buttonBase, buttonVariantMap, buttonVariants, type ButtonProps } from '#core/web/ui/button.tsx';
 export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '#core/web/ui/card.tsx';
@@ -32,7 +35,7 @@ export { ListToolbar } from '#core/web/ui/list-toolbar.tsx';
 export { NavLink } from '#core/web/ui/nav-link.tsx';
 export { Notice } from '#core/web/ui/notice.tsx';
 export { OfflineNotice } from '#core/web/ui/offline-notice.tsx';
-export { Toaster, ToastProvider, useToast } from '#core/web/ui/toast.tsx';
+export { ToastProvider, useToast } from '#core/web/ui/toast.tsx';
 export { PageHeader } from '#core/web/ui/page-header.tsx';
 export { PageTitle } from '#core/web/ui/page-title.tsx';
 export { NotFound, RouteError } from '#core/web/ui/route-error.tsx';

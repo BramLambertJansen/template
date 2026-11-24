@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { PageTitle } from './page-title.tsx';
 
-// Titel van een scherm binnen de AppShell (de enige h1), met acties rechts; op smalle schermen eronder.
+// Titel van een scherm binnen een schil (de enige h1), met acties rechts; op smalle schermen eronder.
 interface PageHeaderProps {
   readonly title: string;
   readonly actions?: ReactNode;

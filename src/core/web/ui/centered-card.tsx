@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Card, CardContent, CardDescription, CardHeader } from './card.tsx';
 import { PageTitle } from './page-title.tsx';
+import { useMarkScreenShown } from './shell-frame.tsx';
 
 interface CenteredCardProps {
   readonly title: string;
@@ -9,8 +10,10 @@ interface CenteredCardProps {
   readonly preview?: boolean;
 }
 
-// Voor schermen zonder app-layout: inloggen, verificatiecode, uitnodiging (spec accountbeheer).
+// Voor schermen zonder app-layout: inloggen, verificatiecode, uitnodiging (spec accountbeheer). Markeert dat er een scherm
+// is getoond, zodat de schil na inloggen de focus naar de h1 zet (spec schillen); als preview of binnen een schil niet.
 export function CenteredCard({ title, description, children, preview = false }: CenteredCardProps) {
+  useMarkScreenShown(!preview);
   const Container = preview ? 'div' : 'main';
   return (
     <Container

@@ -51,6 +51,27 @@ export const copy = {
   dashboard: { title: 'Dashboard', accounts: 'Accounts', designSystem: 'Design system' },
   // Spec design-system: de paginatitel; de voorbeeldteksten staan bij de catalogus.
   designSystem: { title: 'Design system' },
+  // Spec schillen: de schilwissel op /design-system (vak Schillen) en de voorbeeldnavigatie in de gekozen schil.
+  schillen: {
+    schilLabel: 'Schil',
+    sidebar: 'Sidebar',
+    topbalk: 'Topbalk',
+    itemsLabel: 'Aantal navigatie-items',
+    items3: '3 items',
+    items9: '9 items',
+    gewoneNavigatie: 'Gewone navigatie',
+    voorbeeld: {
+      schillen: 'Schillen',
+      basis: 'Basis',
+      acties: 'Acties',
+      formulieren: 'Formulieren',
+      meldingen: 'Meldingen en status',
+      tabellen: 'Tabellen',
+      kaarten: 'Kaarten',
+      layout: 'Navigatie en layout',
+      patronen: 'Patronen',
+    },
+  },
   accounts: {
     title: 'Accounts',
     name: 'Naam',

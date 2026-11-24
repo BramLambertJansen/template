@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, expect, test, vi } from 'vitest';
 import { AppShell } from './app-shell.tsx';
 import { PageHeader } from './page-header.tsx';
+import { SidebarShell } from './sidebar-shell.tsx';
 import { ToastProvider, useToast } from './toast.tsx';
 
 // Schil toegankelijk (roadmap 3f): skip-link als eerste Tab-stop, paginatitel per scherm, focus naar de h1 na een routewissel.
@@ -140,7 +141,7 @@ test('een voorbeeld-PageHeader met documentTitle={false} laat de paginatitel sta
   expect(document.title).toBe('Design system');
 });
 
-// Toasts: de schil rendert de Toaster zelf; een toast die binnen de schil via useToast wordt aangeroepen is zichtbaar.
+// Toasts: ToastProvider rendert de meldingen (spec schillen); een toast die binnen de schil via useToast wordt aangeroepen is zichtbaar.
 function ToastButton() {
   const toast = useToast();
   return (
@@ -166,4 +167,10 @@ test('een toast die binnen de schil via useToast wordt aangeroepen is zichtbaar'
   expect(screen.queryByRole('status')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Opslaan' }));
   expect(screen.getByRole('status').textContent).toContain('Wijziging opgeslagen');
+});
+
+// Spec schillen (OV-3): AppShell blijft als export bestaan en is hetzelfde component als SidebarShell; de tests hierboven
+// toetsen daarmee de SidebarShell.
+test('schillen/AC-1: de export AppShell is hetzelfde component als SidebarShell', () => {
+  expect(AppShell).toBe(SidebarShell);
 });

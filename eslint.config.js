@@ -238,7 +238,9 @@ const railConfigs = [
   restrict(
     'router',
     WEB,
-    TESTS,
+    // testing.tsx: de contracttest van een schil (spec schillen) bouwt een router in het geheugen; alleen vanuit tests
+    // (dependency-cruiser: testing-alleen-in-tests).
+    [...TESTS, 'src/core/web/ui/testing.tsx'],
     'Routes alleen als bestandsroute in src/web/routes (geen createRoute, createLazyRoute of createLazyFileRoute); ' +
       'createRouter zet defaultErrorComponent en een route zet errorComponent niet uit (R-WEB-01).',
     ROUTER_SELECTORS,

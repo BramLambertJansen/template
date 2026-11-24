@@ -6,6 +6,7 @@ export const vakken = [
   { id: 'meldingen', label: 'Meldingen en status' },
   { id: 'gegevens', label: 'Gegevens tonen' },
   { id: 'layout', label: 'Navigatie en layout' },
+  { id: 'schillen', label: 'Schillen' },
   { id: 'patronen', label: 'Patronen' },
 ] as const;
 

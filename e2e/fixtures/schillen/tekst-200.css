@@ -1,0 +1,5 @@
+/* Stijlvariant voor e2e (spec schillen/AC-8): tekst op 200 %; de container query van TopbarShell (drempel in rem)
+   toont dan de menuknop in plaats van de items. */
+html {
+  font-size: 200%;
+}

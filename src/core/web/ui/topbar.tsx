@@ -10,16 +10,16 @@ export { initials };
 interface TopbarProps {
   readonly userName: string;
   readonly menuItems: readonly MenuItem[];
-  // Links in de balk, bijv. de menuknop op smalle schermen (AppShell).
+  // Links in de balk, bijv. de menuknop op smalle schermen (SidebarShell, TopbarShell).
   readonly start?: ReactNode;
-  // Rechts, vóór het profielmenu: bijv. de themaschakelaar (AppShell).
+  // Rechts, vóór het profielmenu: bijv. de themaschakelaar (SidebarShell, TopbarShell).
   readonly actions?: ReactNode;
 }
 
 // Profielmenu rechts (spec accountbeheer: knop met initialen, toegankelijke naam "Profielmenu").
 export function Topbar({ userName, menuItems, start, actions }: TopbarProps) {
   return (
-    <header className="flex min-h-14 items-center gap-2 border-b bg-background px-3 print:hidden">
+    <header className="flex min-h-shell-topbar items-center gap-2 border-shell-b bg-background px-3 print:hidden">
       {start}
       <div className="ms-auto flex items-center gap-1">
         {actions}

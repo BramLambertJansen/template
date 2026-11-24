@@ -107,6 +107,12 @@
   --spacing-card-y: var(--card-padding-y);
   --spacing-table-cell-y: var(--table-cell-padding-y);
   --container-dialog: var(--dialog-max-width);
+  --spacing-shell-topbar: var(--shell-topbar-height);
+  --spacing-shell-content: var(--shell-content-padding);
+  --spacing-shell-nav: var(--shell-nav-gap);
+  /* Niet --container-shell-content: max-w-* kiest bij een gelijke naam eerst --spacing-*, dan zou main de breedte van de
+     marge krijgen. */
+  --container-shell-main: var(--shell-content-max);
 
   --transition-duration-fast: var(--motion-fast);
   --transition-duration-normal: var(--motion-normal);
@@ -199,4 +205,26 @@
 
 @utility border-notice {
   border-width: var(--notice-border-width);
+}
+
+/* Schiltokens zonder Tailwind-namespace (spec schillen): de kolombreedte van de sidebar, de randen van balk en sidebar en
+   de bredere inhoudsmarge vanaf md (anderhalf keer --shell-content-padding, gelijk aan de marge van vóór de tokens). */
+@utility grid-cols-shell-sidebar {
+  grid-template-columns: var(--shell-sidebar-width) 1fr;
+}
+
+@utility border-shell-b {
+  border-bottom-width: var(--shell-border-width);
+}
+
+@utility border-shell-e {
+  border-inline-end-width: var(--shell-border-width);
+}
+
+@utility p-shell-content-wide {
+  padding: calc(var(--shell-content-padding) * 1.5);
+}
+
+@utility px-shell-content-wide {
+  padding-inline: calc(var(--shell-content-padding) * 1.5);
 }

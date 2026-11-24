@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createRootRoute, createRouter, createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
-import { Toaster, ToastProvider } from '#core/web/ui/toast.tsx';
+import { ToastProvider } from '#core/web/ui/toast.tsx';
 import { components } from '#web/ui/component-metadata.ts';
 import { DesignSystemPage } from './design-system-page.tsx';
 import { exampleTarget } from './example-targets.ts';
@@ -27,7 +27,6 @@ function setup(entry: string) {
       <QueryClientProvider client={new QueryClient()}>
         <RouterProvider router={router} />
       </QueryClientProvider>
-      <Toaster />
     </ToastProvider>,
   );
   return router;
@@ -40,6 +39,7 @@ const TABS = [
   'Meldingen en status',
   'Gegevens tonen',
   'Navigatie en layout',
+  'Schillen',
   'Patronen',
 ];
 

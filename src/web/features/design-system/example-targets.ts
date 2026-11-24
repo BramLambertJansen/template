@@ -125,10 +125,16 @@ const groups: readonly ExampleTarget[] = [
     text: 'Open het menu; busy-items staan in het aparte busy-voorbeeld.',
   },
   {
-    names: ['NavLink', 'Sidebar', 'Topbar', 'AppShell', 'ThemeToggle', 'OfflineNotice'],
+    names: ['NavLink', 'Sidebar', 'Topbar', 'AppShell', 'ThemeToggle', 'OfflineNotice', 'ShellSessionProvider'],
     id: 'example-layout',
     vak: 'layout',
     text: 'Bekijk de echte navigatie en topbalk rondom deze pagina; open op mobiel het hoofdmenu. Zet het netwerk uit (ontwikkelhulpmiddelen, Offline) voor de offlinemelding, of druk af voor de printweergave.',
+  },
+  {
+    names: ['SidebarShell', 'TopbarShell', 'TopbarNav', 'ShellFrame'],
+    id: 'example-schillen',
+    vak: 'schillen',
+    text: 'Kies Sidebar of Topbalk en 3 of 9 items: de hele pagina wisselt van schil. Gewone navigatie zet hem terug.',
   },
   {
     names: ['ToastProvider', 'ToastCard', 'Toaster'],

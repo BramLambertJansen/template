@@ -1,7 +1,7 @@
 import { useDocumentTitle } from '../lib/document-title.ts';
 import { cn } from './cn.ts';
 
-// De enige h1 van een scherm (PageHeader, CenteredCard, RouteError): zet ook de paginatitel. tabIndex -1 zodat de AppShell
+// De enige h1 van een scherm (PageHeader, CenteredCard, RouteError): zet ook de paginatitel. tabIndex -1 zodat de schil
 // na een routewissel de focus hierheen kan zetten (WCAG 2.4.3). Bewuste uitzondering op "focusring nooit uit": de h1 is niet
 // interactief en niet met Tab bereikbaar; de focus staat er alleen zodat een schermlezer de nieuwe titel voorleest.
 interface PageTitleProps {

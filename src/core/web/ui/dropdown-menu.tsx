@@ -11,6 +11,8 @@ export interface MenuItem {
   readonly disabled?: boolean;
   readonly busy?: boolean;
   readonly busyLabel?: string;
+  // De huidige pagina (navigatie in een menu, zoals "Meer" in TopbarShell): aria-current="page" en de actieve stijl.
+  readonly current?: boolean;
 }
 
 interface DropdownMenuProps {
@@ -35,6 +37,7 @@ export function DropdownMenu({ trigger, items, align = 'end' }: DropdownMenuProp
               disabled={item.disabled ?? false}
               aria-disabled={item.busy || item.disabled || undefined}
               aria-busy={item.busy || undefined}
+              aria-current={item.current === true ? 'page' : undefined}
               onSelect={(event) => {
                 if (item.busy || item.disabled) event.preventDefault();
                 else item.onSelect();
@@ -42,6 +45,7 @@ export function DropdownMenu({ trigger, items, align = 'end' }: DropdownMenuProp
               className={cn(
                 'flex min-h-control cursor-default items-center rounded-sm px-3 text-sm outline-none select-none',
                 'data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground',
+                'aria-[current=page]:font-semibold',
                 'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 aria-busy:cursor-wait',
               )}
             >

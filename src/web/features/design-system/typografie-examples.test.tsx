@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from '@tanstack/react-router';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, expect, test } from 'vitest';
-import { Toaster, ToastProvider } from '#core/web/ui/toast.tsx';
+import { ToastProvider } from '#core/web/ui/toast.tsx';
 import { DesignSystemPage } from './design-system-page.tsx';
 import { exampleTarget } from './example-targets.ts';
 
@@ -19,7 +19,6 @@ function setup() {
       <QueryClientProvider client={new QueryClient()}>
         <RouterProvider router={router} />
       </QueryClientProvider>
-      <Toaster />
     </ToastProvider>,
   );
 }

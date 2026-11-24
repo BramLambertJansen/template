@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from '@tanstack/react-router';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, expect, test } from 'vitest';
-import { Toaster, ToastProvider } from '#core/web/ui/toast.tsx';
+import { ToastProvider } from '#core/web/ui/toast.tsx';
 import { DesignSystemPage } from './design-system-page.tsx';
 
 // semantische-tokens/AC-20 (3c): de sectie "Tokens" op /design-system. CSS is in vitest leeg (ook met ?raw), dus de
@@ -33,7 +33,6 @@ function setup() {
       <QueryClientProvider client={new QueryClient()}>
         <RouterProvider router={router} />
       </QueryClientProvider>
-      <Toaster />
     </ToastProvider>,
   );
 }

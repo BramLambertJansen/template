@@ -156,7 +156,7 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
   `src/web/lib/nav.ts`; de template houdt daar één lijst (`navItems`). De template levert zelf geen tweede layoutroute,
   schil, navigatielijst of permissie in de app: hij maakt het mogelijk, bewijst het met een fixture in een testpad, en
   beschrijft hoe een app het bouwt.
-- **Fixture "twee schillen"**: `src/web/features/layout/twee-schillen.test.tsx`, in de app-laag zodat ze dezelfde bouwstenen
+- **Fixture "twee schillen"**: `src/web/features/layout/twee-schillen.test.tsx` (nieuw), in de app-laag zodat ze dezelfde bouwstenen
   gebruikt als het recept (`guard`, `visibleNavItems`, `navItems` uit `#web/lib/nav` voor de eerste schil). De navigatielijst
   van de tweede schil staat in de test zelf. Ze bouwt twee layoutroutes in code met `createRootRoute` en `createRoute` in een
   geheugenrouter (vorm: `src/web/features/design-system/account-links.test.tsx`), dus `routeTree`, de catalogus en
@@ -242,7 +242,7 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
 - **schillen/AC-11** — Gegeven een component met `ShellFrame` zonder test met `shellContract`, een suite op een andere schil,
   of een layoutroute met een rauwe `main`, dan faalt `pnpm check:schillen`, noemt hij het bestand en verwijst hij naar de
   sectie "Een tweede schil" in het gouden pad; gegeven de bestaande kindroutes onder `/_app`, dan slaagt hij. Toets: `test/rails/check-schillen.test.ts` (nieuw)
-- **schillen/AC-12** — Gegeven de fixture `src/web/features/layout/twee-schillen.test.tsx` met twee layoutroutes in een
+- **schillen/AC-12** — Gegeven de fixture `src/web/features/layout/twee-schillen.test.tsx` (nieuw) met twee layoutroutes in een
   geheugenrouter, elk met een eigen schil, navigatielijst en `ThemeScope` met een fixturethema, wanneer de test van de ene
   naar de andere route navigeert, dan wisselen de schil en `data-app-theme` op de wrapper, staat de focus op de `h1` en staat
   er steeds precies één `main`, één `OfflineNotice` en één `[data-toaster]`; en een rol zonder `accounts:read` wordt door de guard van de tweede route geweigerd en ziet
