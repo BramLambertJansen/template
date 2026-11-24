@@ -16,7 +16,15 @@ const beoordeelSluiting = (...args: unknown[]) => Promise.resolve(exported(check
 
 const NR = 9;
 const LEERPUNT = { number: 7, labels: [{ name: 'leerpunt' }, { name: 'leerpunt-onvolledig' }] };
-const OWNER = { body: 'duplicaat van #7', association: 'OWNER' };
+// GEWIJZIGD (leerlus-bewijs/AC-22, ADR 0101 Herzien 2026-11-24): een duplicaat-comment telt alleen van een id uit
+// leerpunt.accounts, niet meer op author_association; comments krijgen een id en de bron krijgt de lijst.
+const ID_PRIVE = 282014853;
+const ID_WERK = 194213038;
+const ACCOUNTS = [
+  { id: ID_PRIVE, login: 'BramLambertJansen' },
+  { id: ID_WERK, login: 'Jan-Bramsen' },
+];
+const OWNER = { body: 'duplicaat van #7', association: 'OWNER', id: ID_PRIVE };
 
 /** Een doelopvraag zonder netwerk: nummer → REST-body of null (404); onbekend nummer is een 404. */
 function doelen(tabel: Record<number, unknown>) {
@@ -31,7 +39,7 @@ function doelen(tabel: Record<number, unknown>) {
 const oordeel = async (
   bron: { reden?: string; comments: unknown[]; prs?: unknown[] },
   tabel: Record<number, unknown>,
-) => beoordeelSluiting(NR, { prs: [], reden: 'duplicate', ...bron }, doelen(tabel).haalDoel);
+) => beoordeelSluiting(NR, { prs: [], reden: 'duplicate', accounts: ACCOUNTS, ...bron }, doelen(tabel).haalDoel);
 
 describe('leerlus-bewijs/AC-13 de sluitreden komt uit de payload', () => {
   test.each([
@@ -65,11 +73,19 @@ describe('leerlus-bewijs/AC-13 de sluitreden komt uit de payload', () => {
 describe('leerlus-bewijs/AC-13 duplicaat telt als bewijs', () => {
   test.each([
     ['owner, doel is een leerpunt', { comments: [OWNER] }, { 7: LEERPUNT }],
-    ['member', { comments: [{ body: 'duplicaat van #7', association: 'MEMBER' }] }, { 7: LEERPUNT }],
-    ['collaborator', { comments: [{ body: 'duplicaat van #7', association: 'COLLABORATOR' }] }, { 7: LEERPUNT }],
+    [
+      'werkaccount uit de lijst (MEMBER)',
+      { comments: [{ body: 'duplicaat van #7', association: 'MEMBER', id: ID_WERK }] },
+      { 7: LEERPUNT },
+    ],
+    [
+      'werkaccount uit de lijst (COLLABORATOR)',
+      { comments: [{ body: 'duplicaat van #7', association: 'COLLABORATOR', id: ID_WERK }] },
+      { 7: LEERPUNT },
+    ],
     [
       'tekst na de verwijzing',
-      { comments: [{ body: 'duplicaat van #7: zelfde reproductie', association: 'OWNER' }] },
+      { comments: [{ body: 'duplicaat van #7: zelfde reproductie', association: 'OWNER', id: ID_PRIVE }] },
       { 7: LEERPUNT },
     ],
     [
@@ -80,15 +96,15 @@ describe('leerlus-bewijs/AC-13 duplicaat telt als bewijs', () => {
     ['doel met alleen het label leerpunt', { comments: [OWNER] }, { 7: { number: 7, labels: [{ name: 'leerpunt' }] } }],
     [
       'comment vóór het sluiten geplaatst: alle comments tellen, ook de eerste',
-      { comments: [OWNER, { body: 'klaar, sluit maar', association: 'OWNER' }] },
+      { comments: [OWNER, { body: 'klaar, sluit maar', association: 'OWNER', id: ID_PRIVE }] },
       { 7: LEERPUNT },
     ],
     [
       'een ongeldige comment ervoor, een geldige erna',
       {
         comments: [
-          { body: 'duplicaat van #7', association: 'NONE' },
-          { body: 'duplicaat van #8', association: 'OWNER' },
+          { body: 'duplicaat van #7', association: 'NONE', id: 1 },
+          { body: 'duplicaat van #8', association: 'OWNER', id: ID_PRIVE },
           OWNER,
         ],
       },
@@ -100,14 +116,14 @@ describe('leerlus-bewijs/AC-13 duplicaat telt als bewijs', () => {
 
   test('leerlus-bewijs/AC-13: het doel wordt opgevraagd met het nummer uit de comment', async () => {
     const { haalDoel, aangevraagd } = doelen({ 7: LEERPUNT });
-    await beoordeelSluiting(NR, { prs: [], reden: 'duplicate', comments: [OWNER] }, haalDoel);
+    await beoordeelSluiting(NR, { prs: [], reden: 'duplicate', comments: [OWNER], accounts: ACCOUNTS }, haalDoel);
     expect(aangevraagd).toContain(7);
   });
 
   test('leerlus-bewijs/AC-13: een gemergde PR met regel of een achterhaald-comment gaat voor een duplicaat', async () => {
     const pr = { merged: true, body: `## Leerpunt\n\n- #${String(NR)}: trede Check; bewijs test/a.test.ts` };
     expect(await oordeel({ prs: [pr], comments: [] }, {})).toBe('bewijs');
-    const achterhaald = { body: 'achterhaald: opgelost door #520', association: 'OWNER' };
+    const achterhaald = { body: 'achterhaald: opgelost door #520', association: 'OWNER', id: ID_PRIVE };
     expect(await oordeel({ comments: [achterhaald] }, {})).toBe('achterhaald');
   });
 });
@@ -119,17 +135,17 @@ describe('leerlus-bewijs/AC-13 telt niet: label zoals AC-6, de job crasht niet',
     ['geen sluitreden', { reden: '', comments: [OWNER] }, { 7: LEERPUNT }],
     [
       'comment van een andere auteur (CONTRIBUTOR)',
-      { comments: [{ body: 'duplicaat van #7', association: 'CONTRIBUTOR' }] },
+      { comments: [{ body: 'duplicaat van #7', association: 'CONTRIBUTOR', id: 2 }] },
       { 7: LEERPUNT },
     ],
     [
       'comment van een auteur zonder band (NONE)',
-      { comments: [{ body: 'duplicaat van #7', association: 'NONE' }] },
+      { comments: [{ body: 'duplicaat van #7', association: 'NONE', id: 1 }] },
       { 7: LEERPUNT },
     ],
     [
       'verwijzing naar zichzelf',
-      { comments: [{ body: `duplicaat van #${String(NR)}`, association: 'OWNER' }] },
+      { comments: [{ body: `duplicaat van #${String(NR)}`, association: 'OWNER', id: ID_PRIVE }] },
       { [NR]: LEERPUNT },
     ],
     [
@@ -146,12 +162,12 @@ describe('leerlus-bewijs/AC-13 telt niet: label zoals AC-6, de job crasht niet',
     ['doel bestaat niet (404)', { comments: [OWNER] }, {}],
     [
       'comment begint niet met duplicaat van',
-      { comments: [{ body: 'zie ook: duplicaat van #7', association: 'OWNER' }] },
+      { comments: [{ body: 'zie ook: duplicaat van #7', association: 'OWNER', id: ID_PRIVE }] },
       { 7: LEERPUNT },
     ],
     [
       'duplicaat van zonder #nummer',
-      { comments: [{ body: 'duplicaat van 7', association: 'OWNER' }] },
+      { comments: [{ body: 'duplicaat van 7', association: 'OWNER', id: ID_PRIVE }] },
       { 7: LEERPUNT },
     ],
     ['geen comments', { comments: [] }, { 7: LEERPUNT }],

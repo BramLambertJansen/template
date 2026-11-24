@@ -95,6 +95,12 @@
   "testpaden": ["**/*.test.*", "**/*.spec.*", "e2e/**", "db/tests/**", "test/**"],
   "jsonGates": { "package.json": ["scripts"] },
   "template": { "repository": "BramLambertJansen/template" },
+  "leerpunt": {
+    "accounts": [
+      { "id": 282014853, "login": "BramLambertJansen" },
+      { "id": 194213038, "login": "Jan-Bramsen" }
+    ]
+  },
   "zelfladend": [".git/**", ".claude/hooks/**", "!.claude/hooks/.cache/**", ".claude/settings.json", "lefthook.yml", ".pnpmfile.cjs"],
   "gegenereerd": ["src/web/routeTree.gen.ts", "src/api/db/schema.ts", "db/schema.snapshot.sql"],
   "migraties": ["db/migrations/**"],
