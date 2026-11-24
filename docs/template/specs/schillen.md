@@ -71,10 +71,11 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
   van het document, ook binnen een deel met een eigen `ThemeScope` (eigenaar, 2026-11-24).
 - **`SidebarShell`**: de huidige `AppShell`, gebouwd op het frame, zelfde props en hetzelfde gedrag. `AppShell` blijft als
   export bestaan en verwijst ernaar, zodat bestaande apps niets hoeven te wijzigen.
-- **`TopbarShell`** (nieuw): geen sidebar. Vanaf `md` staat de navigatie horizontaal in de topbalk, links de items, rechts
-  `topbarActions` en het profielmenu. Past het aantal items niet (meer dan `TOPBAR_INLINE_ITEMS`, OV-1), dan staan de eerste
-  items in de balk en de rest in een menu "Meer". Onder `md` toont de balk de menuknop met dezelfde sheet als de
-  `SidebarShell`. Props gelijk aan `SidebarShell` (`nav`, `userName`, `menuItems`, `topbarActions`, `routeKey`, `children`).
+- **`TopbarShell`** (nieuw): geen sidebar. Vanaf `md`, zodra de balk minstens 48rem breed is, staat de navigatie
+  horizontaal in de topbalk, links de items, rechts `topbarActions` en het profielmenu. Past het aantal items niet (meer
+  dan `TOPBAR_INLINE_ITEMS`, OV-1), dan staan de eerste items in de balk en de rest in een menu "Meer". Onder `md`, of
+  zolang de balk smaller is dan 48rem, toont de balk de menuknop met dezelfde sheet als de `SidebarShell`. Props gelijk
+  aan `SidebarShell` (`nav`, `userName`, `menuItems`, `topbarActions`, `routeKey`, `children`).
 - **Breakpoints in CSS**, geen `matchMedia` of breedtemeting in script (R-WEB-01); het aantal items in de balk is daarom een
   vast getal en geen gemeten breedte. Daarnaast heeft de balk een container query met een drempel in `rem`: is de balk
   smaller dan die drempel, dan toont hij de menuknop in plaats van de items. Een drempel in `rem` schaalt mee met de
