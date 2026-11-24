@@ -15,7 +15,7 @@ Herzien: 2026-11-24: het open punt over de cloud-auteur is getoetst (proef #941,
 is aangemeld als het GitHub-account dat aan Claude gekoppeld is (`get_me`), en de duplicaat-comment kwam van dat account met
 `author_association` COLLABORATOR; de sluiting telde als duplicaatsluiting en `leerpunt-check` zette geen
 `leerpunt-zonder-bewijs`. Besluit van de eigenaar (24 november 2026): niet elke auteur met schrijfrecht telt, alleen de
-accounts van de eigenaar in `onderhoud.accounts` van `.claude/gates.json` (BramLambertJansen, privé; Jan-Bramsen, werk);
+accounts van de eigenaar in `leerpunt.accounts` van `.claude/gates.json`, op vast GitHub-id (BramLambertJansen 282014853, privé; Jan-Bramsen 194213038, werk);
 dat geldt voor `achterhaald:`, `duplicaat van #<nr>` en `opgelost:` (spec leerlus-bewijs AC-22)
 
 Wijzigt [0078](0078-leerlus-met-bewijs.md) punt 4 en 5 en [0059](0059-leerlus-van-app-naar-template.md) voor zover dat alleen
@@ -92,7 +92,7 @@ openstaat.
 - Restrisico: `--body-file <pad>` kan elk leesbaar bestand in een openbaar issue zetten, net als bij `gh issue create`; de
   Bash-sandbox weigert `.env*`, elders is het een afspraak (eigenaar, 23 november 2026).
 - Getoetst (proef #941, 24 november 2026): een duplicaat-comment uit de cloud-MCP komt van het gekoppelde GitHub-account als
-  COLLABORATOR en telt, omdat dat account in `onderhoud.accounts` staat. Een ander account telt niet, ook niet met
+  COLLABORATOR en telt, omdat het id van dat account in `leerpunt.accounts` staat. Een ander account telt niet, ook niet met
   schrijfrecht.
 - Restrisico: in de cloud kan een agent via MCP een PR labelen of het verkeerde issue bewerken; de issue-check zet
   `leerpunt-zonder-bewijs` bij sluiten zonder bewijs, en de eigenaar kan heropenen.

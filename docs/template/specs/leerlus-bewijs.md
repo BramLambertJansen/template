@@ -115,7 +115,7 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   `leerpunt-zonder-bewijs` met de comment. Bij `reopened`, of bij een geldige `achterhaald:`-comment na het sluiten
   (`issue_comment`), haalt hij het label weg. Een `achterhaald:` van een andere auteur telt niet. Gewijzigd door ADR 0101
   (Herzien 2026-11-24): was "van een auteur met `author_association` OWNER, MEMBER of COLLABORATOR". Toets:
-  `test/scripts/leerpunt-eigenaar.test.ts` (nieuw)
+  `test/scripts/leerpunt-check.test.ts`, `test/scripts/leerpunt-eigenaar.test.ts` (nieuw)
 - **leerlus-bewijs/AC-7** — De workflow heeft `permissions: issues: write` en verder niets; de job `leerpunt-bewijs` heeft
   `contents: read`, `pull-requests: read` en `issues: read`. Een test leest beide bestanden en faalt bij elk ander recht, bij
   elke aanroep die sluit, heropent of de body bewerkt, en bij elke `${{ github.event.* }}` in een `run:`-regel (issuebody en
@@ -210,7 +210,7 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   verandert niet en houdt precies vier `gh issue`-regels. De test krijgt een rij die dat voor deze vorm vastlegt, naast de
   rij voor `--duplicate-of`. Toets: `test/rails/leerpunt-bijwerken-settings.test.ts`
 - **leerlus-bewijs/AC-20** — Issue-check (ADR 0109 Gevolgen, OV-5). Een eigen tak in `scripts/kit/leerpunt-check.mjs`, die
-  alleen draait bij `issue.state_reason` `completed` en na `sluitOordeel`; AC-6 en AC-13 blijven ongewijzigd. De tak leest
+  alleen draait bij `issue.state_reason` `completed` en na `sluitOordeel`; AC-6 en AC-13 blijven ongewijzigd, op het auteurfilter na (AC-22). De tak leest
   de huidige comments en zoekt een comment die past op `opgelost:` hoofdletterongevoelig met witruimte vooraan toegestaan
   (zoals `DUPLICAAT`), van een eigenaaraccount (AC-22; was: `author_association` OWNER, MEMBER of COLLABORATOR). Na `opgelost:` volgt een door
   komma's gescheiden lijst van één of meer verwijzingen, elk precies één van: `#<cijfers>` (PR), 7 tot 40 kleine
@@ -227,13 +227,19 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   meer voor, en de verwijzing naar ADR 0101 blijft. Een test leest `AGENTS.md` en faalt op de oude tekst of als de nieuwe
   ontbreekt. Toets: `test/rails/leerpunt-bijwerken-docs.test.ts`
 - **leerlus-bewijs/AC-22** — Alleen eigenaaraccounts (ADR 0101, Herzien 2026-11-24; eigenaar, 24 november 2026).
-  `.claude/gates.json` heeft `onderhoud.accounts`: de GitHub-logins van de eigenaar, in de template
-  `["BramLambertJansen", "Jan-Bramsen"]`. Een comment `achterhaald:` (AC-6), `duplicaat van #<nr>` (AC-13) of `opgelost:`
-  (AC-20) telt alleen als `user.login` van de comment, hoofdletterongevoelig, in die lijst staat; `author_association` beslist
-  niet meer (een COLLABORATOR, MEMBER of OWNER buiten de lijst telt niet). Ontbreekt de lijst, is hij leeg of geen lijst van
-  strings, dan telt geen enkele comment (fail closed): het label blijft zoals in AC-6, zonder dat de job crasht. Tabeltest per
-  soort comment met een login in de lijst, een andere login met COLLABORATOR, hoofdletterverschil en een ontbrekende of lege
-  lijst. Toets: `test/scripts/leerpunt-eigenaar.test.ts` (nieuw)
+  `.claude/gates.json` heeft een eigen sleutel op het hoogste niveau, `leerpunt.accounts`: een lijst van
+  `{ "id": <getal>, "login": "<naam>" }`, in de template `[{ "id": 282014853, "login": "BramLambertJansen" },
+  { "id": 194213038, "login": "Jan-Bramsen" }]`. Het vaste GitHub-id beslist; de login is alleen leeshulp (een login kan
+  hernoemd en opnieuw geclaimd worden). `onderhoud` houdt precies één sleutel. Een comment `achterhaald:` (AC-6),
+  `duplicaat van #<nr>` (AC-13) of `opgelost:` (AC-20) telt alleen als `user.id` van de comment in die lijst staat;
+  `author_association` beslist niet meer (een COLLABORATOR, MEMBER of OWNER buiten de lijst telt niet, ook niet met een
+  login uit de lijst maar een ander id). `sluitBron` neemt `user.id` mee; alleen `main()` leest de lijst uit
+  `.claude/gates.json`, naast `onderhoudRepo`, en geeft hem als veld van de bron door aan de pure functies. Ontbreekt de lijst,
+  is hij leeg of is een element geen object met een positief geheel getal als `id`, dan telt geen enkele comment (fail
+  closed): het label blijft zoals in AC-6, zonder dat de job crasht. `check-docs` toetst de vorm van `leerpunt.accounts` als
+  hij bestaat; `pnpm app:init` laat de sleutel staan (in een app draait de check niet). Tabeltest per soort comment met een id
+  in de lijst, een ander id met COLLABORATOR, een login uit de lijst met een ander id, een ontbrekend `user.id`, en een
+  ontbrekende, lege of ongeldige lijst. Toets: `test/scripts/leerpunt-eigenaar.test.ts` (nieuw)
 
 ## Randgevallen
 
@@ -267,6 +273,11 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
 
 ## Raakt ook
 
+- AC-22 (eigenaaraccounts): `.claude/gates.json` (sleutel `leerpunt.accounts`), `scripts/kit/leerpunt-check.mjs`,
+  `scripts/kit/leerpunt.mjs` (`sluitOordeel`), `scripts/kit/check-docs.mjs` (vorm van de sleutel). Bestaande tests die mee
+  veranderen omdat de auteur nu op id telt in plaats van op `author_association` (R-TEST-02, reden in de PR):
+  `test/scripts/leerpunt-check.test.ts`, `test/scripts/leerpunt-duplicaat.test.ts`, `test/scripts/leerpunt-opgelost.test.ts`;
+  een rij waarin een COLLABORATOR telde, draait om of krijgt een id uit de lijst.
 - Nieuw: `scripts/kit/leerpunt-bewijs.mjs`, `scripts/kit/leerpunt-check.mjs` (gedeelde sjabloonlezer), job in
   eigen workflow `leerpunt-bewijs.yml`, workflow `.github/workflows/leerpunt.yml`, `docs/operations/leerpunten-voorsorteren.md`.
 - Gewijzigd: `.claude/skills/opleveren/SKILL.md`, `.github/pull_request_template.md`, `docs/framework.md` (R-SEC-09, R-ROL-12,
