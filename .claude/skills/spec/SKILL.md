@@ -45,8 +45,8 @@ Stappen:
    - een voor-stap verbergt geen rol- of MFA-fout; gecombineerde fouten hebben een verwachte foutcode en test;
    - elk acceptatiecriterium kan falen en noemt achter `Toets:` het testbestand dat zijn id noemt (`pnpm ratchet`, ac-toets);
    - "Raakt ook" noemt de checks die de spec raakt: `check:migrations`, `check:secdef`, `test:db`/policies, `test/security/resources.ts`, permissietest per verboden rol;
-   - een nieuwe module krijgt vóór de tests een stub met de definitieve signaturen: een test faalt op een assertie, niet op een import- of typefout (`.claude/agents/tester.md` punt 4; leerpunt #677);
-   - verruimt de spec een weigering van het rolhek: toets haar tegen R-ROL-10 (niet verder uitkleden, behalve leesvormen) en de geaccepteerde valse positieven in R-ROL-11, en noem een botsing in de vraag aan de eigenaar; elke terugval noemt een mechanisme dat het gedrag echt verandert, geen vlag die al aanstaat (leerpunt #956);
+   - een nieuwe module krijgt vóór de tests een stub met de definitieve signaturen, die de developer na de spec-review neerzet: een test faalt op een assertie, niet op een import- of typefout (`.claude/agents/tester.md` punt 4; leerpunt #677);
+   - verruimt de spec een weigering van het rolhek: toets haar tegen R-ROL-10 (niet verder uitkleden, behalve leesvormen) en de geaccepteerde valse positieven in R-ROL-11, en noem een botsing in de vraag aan de eigenaar; elke terugval in zo'n verruiming noemt een mechanisme dat het gedrag echt verandert, geen vlag die al aanstaat (leerpunt #956);
    - bij een koppeling (skill `nieuwe-koppeling`): elk kenmerk gebouwd volgens `node scripts/kit/feiten.mjs koppelingen`, elke aanroep met de zes velden uit "Koppeling", alleen het app-ADR noemt de partner;
    - geen `⚠ open` bij `goedgekeurd`: los de vraag eerst op met de eigenaar, of geef haar een `Aanbeveling:`.
 7. Laat de reviewer elke spec in spec-modus toetsen (`.claude/agents/reviewer.md`), vóór het bouwen; hij toetst ook of het werk kritiek is.
