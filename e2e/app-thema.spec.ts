@@ -376,6 +376,8 @@ test('app-thema/AC-16: de kiezer toont Standaard, Strak en Zacht; de voorbeelden
   // De toast staat buiten de scope (ToastProvider) en volgt het document: de standaardradius.
   await expect(await showToast(page)).toHaveCSS('border-radius', '6px');
 
+  // Terug naar Acties: showToast opende het tabblad Meldingen en status, waar Button verborgen is.
+  await vakTabs(page).getByRole('tab', { name: 'Acties', exact: true }).click();
   await select.selectOption({ label: 'Standaard' });
   await expect(primaryButton(page)).toHaveCSS('border-radius', '6px');
   await expect(page.locator('html')).not.toHaveAttribute('data-app-theme');
