@@ -66,6 +66,13 @@ describe('gate-fast falende tests (leerpunt #957)', () => {
     expect(tekst).not.toContain('meer');
   });
 
+  test('leerpunt #957: gekleurde (ANSI) FAIL-regels geven schone namen in het blok', async () => {
+    const gekleurd = '\u001b[31m FAIL \u001b[39m \u001b[2m|unit|\u001b[22m test/a.test.ts > groep > naam';
+    const { regels } = await draai({ 'test:unit': `${gekleurd}\n` });
+
+    expect(regels.slice(-2)).toStrictEqual(['Falende tests:', 'test/a.test.ts > groep > naam']);
+  });
+
   test('leerpunt #957: een rode test:unit zonder FAIL-regels krijgt geen blok', async () => {
     const { code, tekst } = await draai({ 'test:unit': 'Error: vitest crashte\n' });
 

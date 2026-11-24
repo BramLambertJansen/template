@@ -16,7 +16,7 @@ duurde 486 s met time-outs. Dit is een lokale waarneming, geen vaste looptijd. D
 `pnpm lint` geeft ESLint een heap van 4096 MB (`package.json:29`): op 19 november 2026 piekte het op 2379 MB en brak het
 op de standaardlimiet van 2144 MB af. Op een host met 8 GiB kan ESLint dus groter worden dan vroeger; de planning bij
 weinig geheugen blijft nodig. De ESLint-aanroepen op losse bestanden hebben die heap niet: de pre-commit-hook
-(`lefthook.yml:11`) en de PostToolUse-, Stop- en tester-hook (`rails/hooks/lib/werkstraat.mjs:103`, `:135`, `:192`). Hun
+(`lefthook.yml:11`) en de PostToolUse-, Stop- en tester-hook (`rails/hooks/lib/werkstraat.mjs:111`, `:141`, `:198`). Hun
 geheugengebruik bij veel bestanden is niet gemeten.
 
 Dezelfde geheugengrens begrenst Playwright: één worker onder de grens, anders de helft van de CPU's (minstens één,

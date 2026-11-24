@@ -10,6 +10,7 @@
 import { Buffer } from 'node:buffer';
 import { spawn } from 'node:child_process';
 import { performance } from 'node:perf_hooks';
+import { stripVTControlCharacters } from 'node:util';
 import { gates } from './gates.mjs';
 import { weinigGeheugen } from './geheugen.mjs';
 
@@ -144,7 +145,8 @@ const MAX_FALENDE_TESTS = 20;
 function falendeTests(output) {
   /** @type {Set<string>} */
   const namen = new Set();
-  for (const regel of output.split(/\r?\n/)) {
+  // Zonder ANSI-kleurcodes: vitest kleurt zijn uitvoer als de omgeving dat toestaat (bijv. FORCE_COLOR in CI).
+  for (const regel of stripVTControlCharacters(output).split(/\r?\n/)) {
     const naam = /^\s*FAIL\s+(?:\|[^|]*\|\s*)?(.+?)\s*$/.exec(regel)?.[1];
     if (naam !== undefined) namen.add(naam);
   }

@@ -203,8 +203,10 @@ function testerStop(deps) {
   const wrong = nonAssertionFailures(vitestReport(run.output, deps));
   if (wrong.length === 0) return {};
   // leerpunt #817: zonder leesbaar rapport zegt alleen de procesuitvoer waarom (time-out, crash, volle schijf).
-  const proces = wrong.every((regel) => GEEN_RAPPORT.has(regel)) ? `\n${lastLines(run.output)}` : '';
-  return block(`Tester: een nieuwe test faalt niet op een assertie (compileert hij, bestaat de import?):\n${lastLines(wrong.join('\n'))}${proces}`);
+  // De twee delen delen de 40 regels, zoals feedback() dat doet.
+  const half = Math.floor(MAX_LINES / 2);
+  const proces = wrong.every((regel) => GEEN_RAPPORT.has(regel)) ? `\n${lastLines(run.output, half)}` : '';
+  return block(`Tester: een nieuwe test faalt niet op een assertie (compileert hij, bestaat de import?):\n${lastLines(wrong.join('\n'), half)}${proces}`);
 }
 
 /** De meldingen van nonAssertionFailures als er geen leesbaar vitest-rapport is. */
