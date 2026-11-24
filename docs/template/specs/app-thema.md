@@ -165,7 +165,7 @@ en het tokenoverzicht staan op `/design-system` achter `guard('design-system:rea
   `--density-control`. Toets: `e2e/app-thema.spec.ts` (nieuw)
 - **app-thema/AC-6** — Gegeven `theme.css` met een primitief token (`--p-*`) als doel van een toewijzing, dan faalt de test. Toets: `test/ui/componenttokens.test.ts` (nieuw)
 - **app-thema/AC-7** — Gegeven `node scripts/kit/feiten.mjs tokens --json`, dan heeft elk componenttoken `laag`, `component` en
-  `standaard`, en staat elk token in de sectie "Componenttokens" op `/design-system`. Toets: `test/ui/tokens-catalogus.test.ts`
+  `standaard`, en staat elk token in de sectie "Componenttokens" op `/design-system`. Toets: `test/ui/componenttokens-catalogus.test.ts`
 - **app-thema/AC-18** — Gegeven een stijlvariant die alleen bestaande semantische tokens op `:root` zet (`--radius`,
   `--primary`, `--density-control`, `--font-family-sans`), zoals een app nu in `theme.css` doet, dan is de berekende stijl
   gelijk aan de nulmeting met diezelfde variant. Toets: `e2e/app-thema.spec.ts` (nieuw)

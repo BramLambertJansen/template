@@ -87,6 +87,27 @@
   --z-index-modal: var(--layer-modal);
   --z-index-toast: var(--layer-toast);
 
+  /* Componenttokens (components.css, spec app-thema) waar Tailwind een namespace heeft; randdikte, hoofdletterstand,
+     de schaduw van Button en de kleurparen staan als @utility onderaan. */
+  --radius-button: var(--button-radius);
+  --radius-control: var(--control-radius);
+  --radius-card: var(--card-radius);
+  --radius-dialog: var(--dialog-radius);
+  --radius-badge: var(--badge-radius);
+  --radius-tabs: var(--tabs-radius);
+  --radius-notice: var(--notice-radius);
+  --radius-toast: var(--toast-radius);
+  --shadow-card: var(--card-shadow);
+  --shadow-dialog: var(--dialog-shadow);
+  --shadow-toast: var(--toast-shadow);
+  --font-weight-button: var(--button-font-weight);
+  --font-weight-badge: var(--badge-font-weight);
+  --spacing-button-x: var(--button-padding-x);
+  --spacing-control-x: var(--control-padding-x);
+  --spacing-card-y: var(--card-padding-y);
+  --spacing-table-cell-y: var(--table-cell-padding-y);
+  --container-dialog: var(--dialog-max-width);
+
   --transition-duration-fast: var(--motion-fast);
   --transition-duration-normal: var(--motion-normal);
   --ease-standard: var(--motion-ease-standard);
@@ -125,4 +146,56 @@
       transition-duration: 0.01ms !important;
     }
   }
+}
+
+/* Componenttokens zonder Tailwind-namespace (spec app-thema, eigenaar 2026-11-24): randdikte, hoofdletterstand, de
+   schaduw van Button (standaard `none`; via de shadow-namespace bleef ook de focusring weg) en de kleurparen van een
+   component (een --color-* in @theme zou ze als semantisch token tellen). `border-card` is al de kaartkleur, daarom
+   `border-card-width`. */
+@utility border-button {
+  border-width: var(--button-border-width);
+}
+
+@utility shadow-button {
+  box-shadow: var(--button-shadow);
+}
+
+@utility case-button {
+  text-transform: var(--button-text-transform);
+}
+
+@utility border-control {
+  border-width: var(--control-border-width);
+}
+
+@utility bg-control {
+  background-color: var(--control-bg);
+}
+
+@utility text-control {
+  color: var(--control-fg);
+}
+
+@utility border-card-width {
+  border-width: var(--card-border-width);
+}
+
+@utility bg-table-header {
+  background-color: var(--table-header-bg);
+}
+
+@utility text-table-header {
+  color: var(--table-header-fg);
+}
+
+@utility border-table-row {
+  border-bottom-width: var(--table-row-border);
+}
+
+@utility border-tabs-indicator {
+  border-bottom-width: var(--tabs-indicator-width);
+}
+
+@utility border-notice {
+  border-width: var(--notice-border-width);
 }

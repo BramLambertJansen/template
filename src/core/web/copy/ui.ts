@@ -35,4 +35,13 @@ export const uiTexts = {
   errorReferenceCopied: 'Referentie gekopieerd.',
   offline: 'Je bent offline. Wijzigingen worden niet opgeslagen tot de verbinding terug is.',
   backOnline: 'Weer online.',
+  // Spec app-thema: de sectie met componenttokens op /design-system.
+  componentTokens: 'Componenttokens',
+  componentTokensIntro:
+    'Vorm en kleur per component; een app overschrijft ze in src/web/styles/theme.css op :root, [data-app-theme].',
+  componentTokensTable: 'Lijst van componenttokens',
+  tokenColumn: 'Token',
+  componentColumn: 'Component',
+  defaultColumn: 'Standaard',
+  valueColumn: 'Waarde',
 } as const;

@@ -18,7 +18,7 @@ export function Table({ className, label, ...props }: ComponentProps<'table'> & 
 }
 
 export function TableHeader({ className, ...props }: ComponentProps<'thead'>) {
-  return <thead className={cn('bg-muted [&_tr]:border-b', className)} {...props} />;
+  return <thead className={cn('bg-table-header [&_tr]:border-table-row', className)} {...props} />;
 }
 
 export function TableBody({ className, ...props }: ComponentProps<'tbody'>) {
@@ -26,19 +26,19 @@ export function TableBody({ className, ...props }: ComponentProps<'tbody'>) {
 }
 
 export function TableRow({ className, ...props }: ComponentProps<'tr'>) {
-  return <tr className={cn('border-b', className)} {...props} />;
+  return <tr className={cn('border-table-row', className)} {...props} />;
 }
 
 export function TableHead({ className, ...props }: ComponentProps<'th'>) {
   return (
     <th
       scope="col"
-      className={cn('h-11 px-3 text-left align-middle font-medium whitespace-nowrap text-muted-foreground', className)}
+      className={cn('h-11 px-3 text-left align-middle font-medium whitespace-nowrap text-table-header', className)}
       {...props}
     />
   );
 }
 
 export function TableCell({ className, ...props }: ComponentProps<'td'>) {
-  return <td className={cn('px-3 py-2 align-middle whitespace-nowrap', className)} {...props} />;
+  return <td className={cn('px-3 py-table-cell-y align-middle whitespace-nowrap', className)} {...props} />;
 }

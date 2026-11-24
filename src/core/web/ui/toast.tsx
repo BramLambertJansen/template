@@ -209,8 +209,8 @@ function ToastCard({ toast }: { readonly toast: ToastItem }) {
       }}
       className={
         isError
-          ? 'pointer-events-auto flex items-start gap-2 rounded-md border border-destructive bg-background px-3 py-2 text-sm font-medium text-destructive shadow-md'
-          : 'pointer-events-auto flex items-start gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground shadow-md'
+          ? 'pointer-events-auto flex items-start gap-2 rounded-toast border border-destructive bg-background px-3 py-2 text-sm font-medium text-destructive shadow-toast'
+          : 'pointer-events-auto flex items-start gap-2 rounded-toast border border-border bg-background px-3 py-2 text-sm text-foreground shadow-toast'
       }
     >
       <span className="min-w-0 flex-1 self-center break-words">{toast.message}</span>

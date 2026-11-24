@@ -32,6 +32,15 @@ test('semantische-tokens/AC-12: error blijft role="alert" en zonder tone blijven
 
   render(<Notice>Uitnodiging verstuurd.</Notice>);
   expect([...screen.getByRole('status').classList].sort()).toStrictEqual(
-    ['rounded-md', 'border', 'px-3', 'py-2', 'text-sm', 'border-border', 'bg-muted', 'text-foreground'].sort(),
+    [
+      'rounded-notice',
+      'border-notice',
+      'px-3',
+      'py-2',
+      'text-sm',
+      'border-border',
+      'bg-muted',
+      'text-foreground',
+    ].sort(),
   );
 });

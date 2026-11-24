@@ -53,6 +53,8 @@
   /* Dichtheid: hoogte van bediening (nooit onder 44 px, zie --control-h) en de basis van alle afstanden (p-4, gap-2). */
   --density-control: 2.75rem;
   --density-space: 0.25rem;
+  /* Breedte van de focusring (nooit onder 2 px, zie --focus-ring-width in components.css). */
+  --density-focus-ring: 2px;
 
   /* Beweging (duration-*, ease-*, standaard van transition-*). Bij prefers-reduced-motion kort index.css alles in. */
   --motion-fast: 150ms;

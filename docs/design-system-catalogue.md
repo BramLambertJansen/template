@@ -11,6 +11,10 @@ Navigatie en layout en Patronen. Het open tabblad staat in de zoekparameter `vak
 `/design-system?vak=formulieren`); een onbekende waarde opent Basis. Elk voorbeeld heeft een titel, één gebruikszin en
 een omlijst voorbeeldvlak (`Section` met `description` en `framed`, [section.tsx](../src/web/ui/section.tsx)).
 
+Het tabblad Basis toont de tokens: de sectie "Tokens" (kleur, typografie, dichtheid, lagen, beweging) en de sectie
+"Componenttokens" met per token component, standaard en de berekende waarde in het huidige thema
+([componenttokens](ui-kit-basics.md#componenttokens), `src/web/features/design-system/component-tokens.ts`).
+
 De gebruikscontracten voor tabellen, tabs, galerijen en filters staan in [Gegevensweergave en navigatie](ui-data-display.md).
 Het voorbeeld "Stappenformulier" (tabblad Patronen) volgt [Stappenformulier](ui-stappenformulier.md).
 Avatar, Image en StatTile staan in [Avatar, Image en StatTile](ui-weergave-basis.md).

@@ -6,7 +6,7 @@ import { signIn } from './support/eigen-account.ts';
 
 // Spec app-thema, deel A: de berekende stijl van elk component in de eerste set, op 375 en 1280 px, licht en donker,
 // zonder stijlvariant (AC-1) en met de stijlvariant fixtures/app-thema/semantisch.css (AC-18), tegen de nulmeting van
-// main in fixtures/app-thema-baseline.json.
+// main in fixtures/app-thema-baseline.json. AC-2 en AC-5b meten met hun eigen stijlvariant uit fixtures/app-thema/.
 // Opnamemodus: ontbreekt de baseline, dan faalt elke test en logt hij zijn deel van de meting op één regel tussen
 // APP_THEMA_BASELINE_BEGIN en APP_THEMA_BASELINE_END, in de vorm van het bestand ({ "<breedte>": { "<variant>": … } });
 // de vier regels samengevoegd (diep) vormen app-thema-baseline.json.
@@ -14,8 +14,9 @@ import { signIn } from './support/eigen-account.ts';
 // met page.route op dezelfde origin en laadt het met page.addStyleTag({ url }) (spec, "Stijlvarianten in e2e").
 
 const BASELINE_FILE = path.join(import.meta.dirname, 'fixtures/app-thema-baseline.json');
-const VARIANT_URL = '/__e2e__/app-thema/semantisch.css';
-const VARIANT_FILE = path.join(import.meta.dirname, 'fixtures/app-thema/semantisch.css');
+const VARIANT_DIR = path.join(import.meta.dirname, 'fixtures/app-thema');
+const VARIANT_PATH = '/__e2e__/app-thema/';
+const variantUrl = (name: string) => `${VARIANT_PATH}${name}.css`;
 
 const PROPS = [
   'border-radius',
@@ -33,7 +34,8 @@ const PROPS = [
   'color',
 ] as const;
 
-type Variant = 'standaard' | 'semantisch';
+// standaard = geen stijlvariant; de andere namen zijn een bestand in fixtures/app-thema/.
+type Variant = 'standaard' | 'semantisch' | 'button-radius' | 'control-radius' | 'dichtheid';
 type Mode = 'licht' | 'donker';
 type Styles = Record<string, string>;
 type Measurement = Record<Mode, Record<string, Styles>>;
@@ -146,13 +148,28 @@ async function measureAll(page: Page, targets: readonly Target[], into: Record<s
   for (const target of targets) into[target.name] = await styles(target.locate(page), target.extra);
 }
 
+// Serveert elk bestand uit fixtures/app-thema/ op dezelfde origin (CSP style-src 'self').
+async function serveVariants(page: Page) {
+  await page.route(`**${VARIANT_PATH}*.css`, async (route) => {
+    const name = /([\w-]+)\.css$/.exec(new URL(route.request().url()).pathname)?.[1] ?? '';
+    await route.fulfill({ path: path.join(VARIANT_DIR, `${name}.css`), contentType: 'text/css' });
+  });
+}
+
+// Geen hover en geen focus op een gemeten element: de muis naar de hoek, de focus terug naar het document.
+async function neutral(page: Page) {
+  await page.mouse.move(0, 0);
+  await page.evaluate('document.activeElement && document.activeElement.blur && document.activeElement.blur()');
+}
+
 // Opent een tabblad van de catalogus via de URL (geen hover op een tab) en laadt de stijlvariant opnieuw.
 async function openVak({ page, variant, mode }: Run, vak: string) {
   await page.goto(`/design-system?vak=${vak}`);
   await expect(page.getByRole('heading', { level: 1, name: 'Design system' })).toBeVisible();
   await expect(vakTabs(page).getByRole('tab', { selected: true })).toBeVisible();
-  if (variant === 'semantisch') await page.addStyleTag({ url: VARIANT_URL });
+  if (variant !== 'standaard') await page.addStyleTag({ url: variantUrl(variant) });
   if (mode === 'donker') await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await neutral(page);
 }
 
 async function measureDialogAndToast(run: Run, into: Record<string, Styles>) {
@@ -160,12 +177,13 @@ async function measureDialogAndToast(run: Run, into: Record<string, Styles>) {
   await region(page, 'Dialog').getByRole('button', { name: 'Dialoog openen', exact: true }).click();
   into['dialog'] = await styles(page.getByRole('dialog', { name: 'Account uitnodigen' }), ['max-width']);
   await page.keyboard.press('Escape');
+  await neutral(page);
 
   await openVak(run, 'meldingen');
   await measureAll(page, [...NOTICES, ...BADGES], into);
   await region(page, 'Toast').getByRole('button', { name: 'Toon succes-toast', exact: true }).click();
   const toast = page.getByRole('status').filter({ hasText: /^Wijziging opgeslagen\.$/ });
-  // Vasthouden met de muis: een toast verdwijnt anders vanzelf.
+  // Vasthouden met de muis: een toast verdwijnt anders vanzelf. Daarom als laatste gemeten; de toast heeft geen hoverstijl.
   await toast.hover();
   into['toast'] = await styles(toast, ['max-width']);
 }
@@ -183,8 +201,7 @@ async function measureMode(run: Run): Promise<Record<string, Styles>> {
 }
 
 async function measure(page: Page, variant: Variant): Promise<Measurement> {
-  if (variant === 'semantisch')
-    await page.route(`**${VARIANT_URL}`, (route) => route.fulfill({ path: VARIANT_FILE, contentType: 'text/css' }));
+  await serveVariants(page);
   await signIn(page, await createAccount('admin', { totp: true }));
   const licht = await measureMode({ page, variant, mode: 'licht' });
   await page.getByRole('button', { name: 'Donker thema' }).click();
@@ -204,6 +221,56 @@ function expectBaseline(width: number, variant: Variant, measurement: Measuremen
     );
   }
   expect(measurement).toStrictEqual(pick(pick(baseline, String(width)), variant));
+}
+
+// AC-2: de baseline zonder variant, met de radius van elke Button-variant vervangen; de rest moet gelijk blijven.
+function entriesOf(value: unknown): [string, unknown][] {
+  return typeof value === 'object' && value !== null ? Object.entries(value) : [];
+}
+
+function withButtonRadius(standaard: unknown, radius: string): Record<string, Record<string, unknown>> {
+  const replace = (name: string, value: unknown) =>
+    name.startsWith('button-') ? Object.fromEntries([...entriesOf(value), ['border-radius', radius]]) : value;
+  return Object.fromEntries(
+    entriesOf(standaard).map(([mode, components]) => [
+      mode,
+      Object.fromEntries(entriesOf(components).map(([name, value]) => [name, replace(name, value)])),
+    ]),
+  );
+}
+
+// Draait in de browser: de soort invoerveld (tag, type of combobox-rol), zonder DOM-types (zie readStyles).
+function controlKind(element: unknown): string {
+  if (typeof element !== 'object' || element === null) return '';
+  const getAttribute: unknown = Reflect.get(element, 'getAttribute');
+  if (typeof getAttribute !== 'function') return '';
+  const attribute = (name: string) => String(Reflect.apply(getAttribute, element, [name]) ?? '');
+  const tag = String(Reflect.get(element, 'tagName')).toLowerCase();
+  if (attribute('role') === 'combobox') return 'combobox';
+  return tag === 'input' ? `input:${attribute('type')}` : tag;
+}
+
+const CONTROLS = 'input[type=text], input[type=email], input[type=password], input[type=date], select, textarea';
+
+async function controlRadii(page: Page): Promise<Record<string, string[]>> {
+  const controls = page.getByRole('tabpanel').locator(CONTROLS).filter({ visible: true });
+  const result: Record<string, string[]> = {};
+  for (const control of await controls.all()) {
+    const kind = await control.evaluate(controlKind);
+    const radius = (await styles(control))['border-radius'] ?? '';
+    result[kind] = [...new Set([...(result[kind] ?? []), radius])];
+  }
+  return result;
+}
+
+// Breedte van de focusring: de grootste spreiding min die van de ring-offset (Tailwind: offset + ring-breedte).
+function ringWidth(boxShadow: string): number {
+  const spreads = boxShadow
+    .split(/,(?![^(]*\))/)
+    .map((shadow) => [...shadow.matchAll(/(-?[\d.]+)px/g)].map((match) => Number(match[1]))[3] ?? 0)
+    .filter((spread) => spread > 0)
+    .sort((a, b) => b - a);
+  return (spreads[0] ?? 0) - (spreads[1] ?? 0);
 }
 
 test.beforeEach(async ({ context }) => {
@@ -226,6 +293,44 @@ for (const width of [375, 1280]) {
     }) => {
       test.setTimeout(120_000);
       expectBaseline(width, 'semantisch', await measure(page, 'semantisch'));
+    });
+
+    test('app-thema/AC-2: --button-radius geeft elke Button-variant die radius en verandert geen ander component', async ({
+      page,
+    }) => {
+      test.setTimeout(120_000);
+      const expected = withButtonRadius(pick(pick(readBaseline(), String(width)), 'standaard'), '20px');
+      expect(await measure(page, 'button-radius')).toStrictEqual(expected);
+    });
+
+    test('app-thema/AC-2: --control-radius geeft Input, Select, Textarea, Combobox, DateInput en PasswordInput dezelfde radius', async ({
+      page,
+    }) => {
+      await serveVariants(page);
+      await signIn(page, await createAccount('admin', { totp: true }));
+      await openVak({ page, variant: 'control-radius', mode: 'licht' }, 'formulieren');
+      const radii = await controlRadii(page);
+      expect(Object.keys(radii)).toEqual(
+        expect.arrayContaining(['input:email', 'select', 'textarea', 'combobox', 'input:date', 'input:password']),
+      );
+      expect(Object.values(radii).flat()).toStrictEqual(Object.values(radii).map(() => '14px'));
+    });
+
+    test('app-thema/AC-5b: met --density-control 2rem en --density-focus-ring 1px is Button 44 px hoog en de focusring 2 px', async ({
+      page,
+    }) => {
+      await serveVariants(page);
+      await signIn(page, await createAccount('admin', { totp: true }));
+      await openVak({ page, variant: 'dichtheid', mode: 'licht' }, 'acties');
+      const button = region(page, 'Button').getByRole('button', { name: 'primary', exact: true });
+      await expect(button).toHaveCSS('height', '44px');
+      await expect(button).toHaveCSS('min-height', '44px');
+      // Met het toetsenbord erop, zodat :focus-visible geldt.
+      await button.focus();
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Tab');
+      await expect(button).toBeFocused();
+      expect(ringWidth((await styles(button))['box-shadow'] ?? '')).toBe(2);
     });
   });
 }
