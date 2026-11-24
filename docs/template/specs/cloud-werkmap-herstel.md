@@ -96,6 +96,13 @@ Teksten letterlijk:
   Zonder `CLAUDE_CODE_REMOTE` geeft `--zonder-werkmap` de cloudmelding en exit 1. (d) Geeft de PR een head-SHA zonder
   geldige vorm, dan eindigt het script met `Geen vertrouwde verplichte checks of geldige commit` en exit 1.
   Toets: `test/scripts/cloud-werkmap-herstel-cli.test.ts`
+- **cloud-werkmap-herstel/AC-9**: Gegeven een git-fixture als hoofdcheckout met een lopende merge (`MERGE_HEAD` bestaat), waarin
+  `package.json` en `pnpm-lock.yaml` in de werkmap gelijk zijn aan de versie in `MERGE_HEAD` maar afwijken van HEAD. Wanneer
+  `worktreeInstallFeiten(root, true)` de feiten leest, dan is `gewijzigd` leeg. Wijkt een beheerd bestand af van zowel HEAD
+  als `MERGE_HEAD`, dan staat het in `gewijzigd`. Zonder `cloud` en buiten een merge verandert niets. Aanleiding: na het
+  binnenhalen van `main` met een nieuwe lockfile faalde de merge-commit op verouderde dependencies, terwijl het script
+  weigerde zolang de merge niet gecommit was (gemeten in deze cloudsessie, 24 november 2026).
+  Toets: `test/scripts/cloud-werkmap-herstel.test.ts`
 
 ## Randgevallen
 

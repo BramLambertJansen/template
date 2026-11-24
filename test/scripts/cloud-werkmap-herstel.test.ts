@@ -295,6 +295,44 @@ describe('cloud-werkmap-herstel: worktreeInstallFeiten (git-fixture)', () => {
   });
 });
 
+describe('cloud-werkmap-herstel: worktreeInstallFeiten tijdens een lopende merge (git-fixture)', () => {
+  const MERGE_PKG = '{"name":"x","packageManager":"pnpm@11.0.0","dependencies":{"a":"1"}}\n';
+  const MERGE_LOCK = "lockfileVersion: '9.0'\n# nieuwe lockfile uit main\n";
+
+  // Hoofdcheckout met een niet-gecommitte merge: package.json en pnpm-lock.yaml staan op de versie van MERGE_HEAD.
+  function metLopendeMerge(): string {
+    const main = hoofdcheckout();
+    gitUit(main, 'switch', '-q', '-c', 'zijtak');
+    writeFileSync(path.join(main, 'package.json'), MERGE_PKG);
+    writeFileSync(path.join(main, 'pnpm-lock.yaml'), MERGE_LOCK);
+    gitUit(main, 'commit', '-q', '-am', 'zijtak');
+    gitUit(main, 'switch', '-q', 'main');
+    gitUit(main, 'merge', '--no-commit', '--no-ff', 'zijtak');
+    expect(gitUit(main, 'rev-parse', '-q', '--verify', 'MERGE_HEAD')).toMatch(/^[0-9a-f]{40}$/);
+    return main;
+  }
+
+  test('cloud-werkmap-herstel/AC-9: werkmap gelijk aan MERGE_HEAD maar anders dan HEAD: gewijzigd is leeg', () => {
+    const main = metLopendeMerge();
+
+    expect(feiten(main, true).gewijzigd).toStrictEqual([]);
+  });
+
+  test('cloud-werkmap-herstel/AC-9: beheerd bestand dat van HEAD en MERGE_HEAD afwijkt: staat in gewijzigd', () => {
+    const main = metLopendeMerge();
+    writeFileSync(path.join(main, 'package.json'), `${MERGE_PKG}# lokaal\n`);
+
+    expect(feiten(main, true).gewijzigd).toStrictEqual(['package.json']);
+  });
+
+  test('cloud-werkmap-herstel/AC-9: dezelfde merge zonder cloud: gewijzigd is leeg', () => {
+    const main = metLopendeMerge();
+
+    expect(feiten(main).gewijzigd).toStrictEqual([]);
+    expect(feiten(main, false).gewijzigd).toStrictEqual([]);
+  });
+});
+
 describe('cloud-werkmap-herstel: node scripts/kit/worktree-install.mjs (nep-pnpm)', () => {
   test('cloud-werkmap-herstel/AC-5: CLAUDE_CODE_REMOTE=true in de hoofdcheckout: pnpm install met de purge-vlag als laatste argument', () => {
     const main = hoofdcheckout();

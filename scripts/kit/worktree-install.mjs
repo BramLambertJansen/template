@@ -116,33 +116,51 @@ function werkmapHash(root, naam) {
 }
 
 /**
- * Hash van het bestand in HEAD: null als het daar niet in staat (status 1 met -q).
+ * Hash van het bestand in een commit (`HEAD` of `MERGE_HEAD`): null als het daar niet in staat (status 1 met -q).
  * @param {string} root
+ * @param {string} ref
  * @param {string} naam
  * @returns {string | null}
  */
-function headHash(root, naam) {
-  const r = git(root, ['rev-parse', '--verify', '-q', `HEAD:${naam}`], [1]);
+function refHash(root, ref, naam) {
+  const r = git(root, ['rev-parse', '--verify', '-q', `${ref}:${naam}`], [1]);
   return r.status === 0 ? r.stdout : null;
+}
+
+/**
+ * Loopt er een merge (`MERGE_HEAD` bestaat)?
+ * @param {string} root
+ * @returns {boolean}
+ */
+function lopendeMerge(root) {
+  return git(root, ['rev-parse', '--verify', '-q', 'MERGE_HEAD'], [1]).status === 0;
 }
 
 /**
  * Beheerde bestanden die in de werkmap afwijken van HEAD, op inhoud: gewijzigd, verwijderd of untracked (ook genegeerd,
  * pnpm leest ze toch). De index telt niet mee, dus `--assume-unchanged` en `--skip-worktree` verbergen niets, en een
- * gestagede wijziging die in de werkmap is teruggezet telt niet.
+ * gestagede wijziging die in de werkmap is teruggezet telt niet. In de cloud tijdens een lopende merge telt een bestand
+ * dat op inhoud gelijk is aan `MERGE_HEAD` niet als gewijzigd, ook als het untracked is (spec cloud-werkmap-herstel AC-9).
  * @param {string} root
+ * @param {boolean} cloud
  * @returns {string[]}
  */
-function gewijzigdeBestanden(root) {
+function gewijzigdeBestanden(root, cloud) {
   // Ook als gezondheidscontrole van de repository: faalt bij een kapotte index.
   const untracked = git(root, ['ls-files', '--others', '--', ...BEHEERD]).stdout.split('\n');
-  return BEHEERD.filter((naam) => untracked.includes(naam) || werkmapHash(root, naam) !== headHash(root, naam));
+  const merge = cloud && lopendeMerge(root);
+  return BEHEERD.filter((naam) => {
+    const hash = werkmapHash(root, naam);
+    if (merge && hash === refHash(root, 'MERGE_HEAD', naam)) return false;
+    return untracked.includes(naam) || hash !== refHash(root, 'HEAD', naam);
+  });
 }
 
 /**
  * De feiten uit het echte bestandssysteem en git. Buiten een gekoppelde worktree (`.git` is geen bestand) en buiten de
  * cloud wordt git niet aangeroepen: de weigering is dan altijd de hoofdcheckout-weigering, hoe de git-staat ook is. In de
- * cloud worden de beheerde bestanden ook in de hoofdcheckout getoetst.
+ * cloud worden de beheerde bestanden ook in de hoofdcheckout getoetst, en telt tijdens een lopende merge een bestand dat
+ * gelijk is aan `MERGE_HEAD` niet als gewijzigd (spec cloud-werkmap-herstel AC-9); buiten de cloud alleen HEAD.
  * @param {string} root
  * @param {boolean} [cloud] cloudsessie
  * @returns {InstallFeiten}
@@ -151,7 +169,7 @@ export function worktreeInstallFeiten(root, cloud = false) {
   const nm = lstatOfNull(path.join(root, 'node_modules'));
   const nodeModules = nm === null ? 'afwezig' : nm.isSymbolicLink() ? 'symlink' : 'map';
   const worktree = lstatOfNull(path.join(root, '.git'))?.isFile() === true;
-  return { worktree, nodeModules, gewijzigd: worktree || cloud ? gewijzigdeBestanden(root) : [] };
+  return { worktree, nodeModules, gewijzigd: worktree || cloud ? gewijzigdeBestanden(root, cloud) : [] };
 }
 
 /**
