@@ -30,11 +30,11 @@
       "addLabels": ["major"]
     },
     {
-      "description": "Majors van de toolchain en de database mergen pas na een ADR (R-PROV-04, ADR 0039)",
+      "description": "Majors van de toolchain gaan via de majorchecklist, van de database pas als alle beoogde providers hem bieden (R-PROV-04, ADR 0111)",
       "matchUpdateTypes": ["major"],
       "matchPackageNames": ["node", "@types/node", "pnpm", "typescript", "postgres"],
       "prBodyNotes": [
-        "> [!IMPORTANT]\n> Major van de toolchain of de database: CI test hem nu al, maar mergen pas na een ADR (R-PROV-04). Een bewust overgeslagen versie: sluit de PR met de reden."
+        "> [!IMPORTANT]\n> Major van de toolchain (Node, pnpm, TypeScript): CI test hem nu al; samenvoegen pas met de ingevulde majorchecklist uit het PR-sjabloon, en een ADR als werkwijze, configuratie of code verandert (R-PROV-04, ADR 0111). Postgres: pas als alle beoogde providers hem bieden. Een bewust overgeslagen versie: sluit de PR met de reden."
       ]
     },
     {
@@ -43,7 +43,7 @@
       "rangeStrategy": "replace"
     },
     {
-      "description": "TypeScript houdt zijn ~-bereik (ADR 0039); binnen het bereik schuift alleen de lockfile mee",
+      "description": "TypeScript houdt zijn ~-bereik, binnen de peerDependencies van typescript-eslint (R-PROV-04, ADR 0111); binnen het bereik schuift alleen de lockfile mee",
       "matchPackageNames": ["typescript"],
       "rangeStrategy": "update-lockfile"
     },

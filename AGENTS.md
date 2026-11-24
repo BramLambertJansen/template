@@ -9,7 +9,7 @@ Stand: `node scripts/kit/feiten.mjs fase`. Wat niet in `package.json` of de repo
 ## Stack
 
 - `src/web`: Vite + React SPA. `src/api`: Hono, ingang `src/api/server.ts` (:8787); host-adapters alleen in `deploy/<host>/` (R-ARCH-05). `src/core/api/auth`: Better Auth, sessie-cookie (R-AUTH-01, R-AUTH-02).
-- `db/`: dbmate, pgTAP, `schema.snapshot.sql` (gegenereerd), rollen in `db/init/` (R-DB-01). Node 26, pnpm 11, TypeScript 6.0 (R-PROV-04). Provider per app-ADR (R-PRINC-05, R-PROV-01). Lokaal: `compose.yaml` (Postgres 17 + pgTAP, Mailpit).
+- `db/`: dbmate, pgTAP, `schema.snapshot.sql` (gegenereerd), rollen in `db/init/` (R-DB-01). Versies: `mise.toml`, `package.json` (R-PROV-04). Provider per app-ADR (R-PRINC-05, R-PROV-01). Lokaal: `compose.yaml` (Postgres 17 + pgTAP, Mailpit).
 - `src/core/shared`: `can()`, basisfoutcodes en -limieten, branded IDs, `Cents`, cursor, `assert()`, `unsafeCast()`. `src/shared`: zod-schema's, `permissions.ts`, eigen foutcodes, `limits.ts`, IDs van de app.
 
 ## Regels

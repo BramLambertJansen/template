@@ -23,6 +23,17 @@
 - Gewijzigde bestaande tests, met reden:
 - R-id's die vervielen of waarvan de tekst veranderde (`docs/normen-vervallen.md`), of "geen":
 
+## Majorchecklist
+
+<!-- Alleen bij een major van Node, pnpm of TypeScript (R-PROV-04, ADR 0111); anders weglaten. Een ADR alleen als
+werkwijze, configuratie of code verandert. -->
+
+1. Changelog gelezen; per breaking change één regel wat die voor ons betekent:
+2. CI groen plus `gate:slow` (bewijs):
+3. `scripts/cloud-setup.sh` in een verse cloudsessie en `pnpm app:init` in een proefkopie:
+4. Versie overal gelijk (`mise.toml`, `package.json`, Dockerfile, compose):
+5. Terugdraaien in één zin:
+
 ## Leerpunt
 
 <!-- Alleen als deze PR een issue met label `leerpunt` sluit (ADR 0078); anders weglaten. Per issue één regel:
