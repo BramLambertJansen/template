@@ -69,13 +69,14 @@ Grens: 7 met label `security`, anders 60 met label `major`, anders 14. Exitcodes
   Toets: `test/scripts/dependency-achterstand.test.ts` (nieuw)
 - **dependency-achterstand/AC-5** — Gegeven het Renovate-issue `Dependency Dashboard` met een kop `## Errored`,
   `## Rate-Limited`, `## Pending Approval` of `## Repository Problems` (hoofdletters vrij), wanneer de check draait, dan meldt
-  hij per kop een bevinding met het aantal regels `- [ ]` eronder; koppen als `## Awaiting Schedule`, `## Open` en
+  hij per kop een bevinding met het aantal lijstregels (beginnend met `-`, ook `- [ ]` en `- WARN: …`) eronder; koppen als `## Awaiting Schedule`, `## Open` en
   `## PR Edited (Blocked)` tellen niet. Toets: `test/scripts/dependency-achterstand.test.ts` (nieuw)
 - **dependency-achterstand/AC-6** — Gegeven alleen update-PR's binnen hun grens, PR's van een andere branch of uit een fork
   met head-branch `renovate/x` (ongeacht leeftijd) en geen Renovate-bevinding, wanneer de check draait, dan eindigt hij met
   exitcode 0 en de groene regel met het aantal update-PR's. Toets: `test/scripts/dependency-achterstand.test.ts` (nieuw)
 - **dependency-achterstand/AC-7** — Gegeven een antwoord dat niet 2xx is, een `fetch` die gooit, een antwoord dat geen
-  geldige JSON-lijst is, een ontbrekende `GITHUB_TOKEN` of `GITHUB_REPOSITORY`, of een elfde volle pagina, wanneer de check
+  geldige JSON-lijst is, een ontbrekende `GITHUB_TOKEN` of `GITHUB_REPOSITORY`, of een tiende pagina met precies 100
+  elementen (meer dan 10 pagina's, zoals `alleComments` in `scripts/kit/leerpunt-check.mjs`), wanneer de check
   draait, dan eindigt hij met exitcode 2 en de foutregel; hij wordt nooit groen zonder gelezen data. Toets:
   `test/scripts/dependency-achterstand.test.ts` (nieuw)
 - **dependency-achterstand/AC-8** — De workflow draait alleen op `schedule` (dinsdag 06:23 UTC, na de Renovate-run van
