@@ -231,6 +231,12 @@ const groups: readonly ExampleTarget[] = [
     text: 'Elke kleur, tekstmaat, gewicht en het monolettertype; dichtheid, lagen en beweging als klasse en token.',
   },
   { names: ['Section'], id: 'example-layout', vak: 'layout', text: 'De benoemde voorbeeldblokken gebruiken Section.' },
+  {
+    names: ['ThemeScope'],
+    id: 'example-componenttokens',
+    vak: 'basis',
+    text: 'Kies boven de tabbladen een thema: alle voorbeelden staan dan in een ThemeScope met dat thema.',
+  },
 ];
 
 export function exampleTarget(name: string): ExampleTarget | undefined {

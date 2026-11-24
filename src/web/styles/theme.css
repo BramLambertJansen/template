@@ -1,5 +1,40 @@
 /* De semantische laag van deze app (framework §7, ADR 0040): overschrijf hier de standaard uit
-   src/core/web/styles/semantic.css, bijvoorbeeld --primary of --radius. Alleen semantische tokens; de contrasttest
-   leest ook dit bestand. */
+   src/core/web/styles/semantic.css, bijvoorbeeld --primary of --radius. Componenttokens (components.css) overschrijf je op
+   `:root, [data-app-theme]`, zodat ze ook binnen een ThemeScope meerekenen. De contrasttest leest ook dit bestand. */
 :root {
+}
+
+/* App-thema's (spec app-thema, deel C): elk thema is een blok [data-app-theme='<naam>'] plus optioneel een donker blok, en
+   staat in het register src/web/styles/themes.ts (test/ui/themas.test.ts). Het hele document krijgt een thema met
+   setAppTheme, een deel van de app met <ThemeScope theme="…">. De template levert twee voorbeelden; een app haalt ze weg
+   of vervangt ze. test/ui/contrast-themas.test.ts rekent elk thema door, licht en donker. */
+
+/* Strak: hoekig, geen schaduw, een monochrome primaire kleur. */
+[data-app-theme='strak'] {
+  --radius: 0rem;
+  --primary: var(--p-zinc-900);
+  --primary-foreground: var(--p-white);
+  --card-shadow: none;
+  --dialog-shadow: none;
+  --toast-shadow: none;
+}
+
+[data-app-theme='strak'][data-theme='dark'],
+[data-theme='dark'] [data-app-theme='strak'] {
+  --primary: var(--p-zinc-50);
+  --primary-foreground: var(--p-zinc-950);
+}
+
+/* Zacht: ronder, een zachtere schaduw en een getinte achtergrond (invoervelden rekenen mee via --control-bg). */
+[data-app-theme='zacht'] {
+  --radius: 0.875rem;
+  --background: var(--p-zinc-50);
+  --card-shadow: 0 4px 16px -4px oklch(0 0 0 / 0.08);
+  --dialog-shadow: 0 16px 40px -12px oklch(0 0 0 / 0.15);
+  --toast-shadow: 0 8px 24px -8px oklch(0 0 0 / 0.12);
+}
+
+[data-app-theme='zacht'][data-theme='dark'],
+[data-theme='dark'] [data-app-theme='zacht'] {
+  --background: var(--p-zinc-900);
 }

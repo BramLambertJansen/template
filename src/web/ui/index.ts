@@ -51,6 +51,7 @@ export { Select, type SelectOption } from '#core/web/ui/select.tsx';
 export { Sidebar, visibleNavItems, type NavItem } from '#core/web/ui/sidebar.tsx';
 export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '#core/web/ui/table.tsx';
 export { ThemeToggle } from '#core/web/ui/theme-toggle.tsx';
+export { ThemeScope } from '#core/web/ui/theme-scope.tsx';
 export { Topbar } from '#core/web/ui/topbar.tsx';
 export { Combobox, type ComboboxProps, type ComboboxOption, type ComboboxClearProps } from '#core/web/ui/combobox.tsx';
 export { FormComboboxField, type FormComboboxFieldProps } from '#core/web/ui/form-combobox-field.tsx';

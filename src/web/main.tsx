@@ -11,6 +11,7 @@ import { ToastProvider } from '#core/web/ui/toast.tsx';
 import { errorTexts } from '#web/copy/errors.ts';
 import { createAppRouter } from '#web/lib/router.ts';
 import { expireSession } from '#web/lib/session.ts';
+import { themes } from './styles/themes.ts';
 import './styles/app.css';
 
 // Compositie-root van de frontend (ADR 0040): query-client, router, foutteksten, meldingen (ToastProvider rendert ze).
@@ -24,8 +25,8 @@ const queryClient = createQueryClient({
 });
 const router = createAppRouter(queryClient);
 
-// Het bewaarde thema vóór de eerste render, zodat er geen licht scherm flitst.
-applyStoredTheme();
+// Het bewaarde thema (licht/donker en het app-thema uit het register) vóór de eerste render, zodat er geen licht scherm flitst.
+applyStoredTheme(themes);
 
 const root = document.getElementById('root');
 if (root === null) throw new Error('Element #root ontbreekt in index.html');

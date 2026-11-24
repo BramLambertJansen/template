@@ -15,6 +15,11 @@ Het tabblad Basis toont de tokens: de sectie "Tokens" (kleur, typografie, dichth
 "Componenttokens" met per token component, standaard en de berekende waarde in het huidige thema
 ([componenttokens](ui-kit-basics.md#componenttokens), `src/web/features/design-system/component-tokens.ts`).
 
+Boven de tabbladen staat de kiezer "Thema" ("Standaard" plus elk thema uit `src/web/styles/themes.ts`): de voorbeelden
+staan dan in een `ThemeScope` met dat thema; meldingen en `<html>` volgen het thema van het document en de keuze wordt niet
+bewaard ([app-thema's](ui-kit-basics.md#app-themas), `src/web/features/design-system/theme-picker.tsx`). Zonder thema's in
+het register is er geen kiezer. De kolom "Waarde" van "Componenttokens" toont de waarde op `<html>`, niet die in de scope.
+
 De gebruikscontracten voor tabellen, tabs, galerijen en filters staan in [Gegevensweergave en navigatie](ui-data-display.md).
 Het voorbeeld "Stappenformulier" (tabblad Patronen) volgt [Stappenformulier](ui-stappenformulier.md).
 Avatar, Image en StatTile staan in [Avatar, Image en StatTile](ui-weergave-basis.md).
