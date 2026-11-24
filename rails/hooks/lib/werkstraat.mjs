@@ -104,7 +104,9 @@ export function postEdit(payload, { root, deps }) {
   if (MIGRATIE.test(rel)) return context('PostToolUse', `${rel}: ${MIGRATIE_HINT}`);
   if (!FORMATTABLE.test(file)) return {};
   if (rel.startsWith('node_modules/') || rel.startsWith('.runner-output/')) return {};
-  deps.run('pnpm', ['exec', 'prettier', '--write', '--ignore-unknown', '--log-level', 'warn', rel]);
+  const prettier = deps.run('pnpm', ['exec', 'prettier', '--write', '--ignore-unknown', '--log-level', 'warn', rel]);
+  // leerpunt #817: een Prettier-fout (bijv. een syntaxfout) meldt zich, ook in een bestand dat ESLint niet ziet.
+  if (prettier.code !== 0) return { exit: 2, stderr: `Prettier in ${rel}:\n${lastLines(prettier.output)}` };
   if (!LINTABLE.test(rel)) return {};
   const lint = deps.run('pnpm', ['exec', 'eslint', '--max-warnings', '0', '--no-warn-ignored', rel]);
   return lint.code === 0 ? {} : { exit: 2, stderr: `ESLint in ${rel}:\n${lastLines(lint.output)}` };
@@ -199,8 +201,14 @@ function testerStop(deps) {
   if (tests.length === 0) return {};
   const run = deps.run('pnpm', ['exec', 'vitest', 'run', '--reporter=json', `--outputFile.json=${TESTER_REPORT}`, ...tests]);
   const wrong = nonAssertionFailures(vitestReport(run.output, deps));
-  return wrong.length === 0 ? {} : block(`Tester: een nieuwe test faalt niet op een assertie (compileert hij, bestaat de import?):\n${lastLines(wrong.join('\n'))}`);
+  if (wrong.length === 0) return {};
+  // leerpunt #817: zonder leesbaar rapport zegt alleen de procesuitvoer waarom (time-out, crash, volle schijf).
+  const proces = wrong.every((regel) => GEEN_RAPPORT.has(regel)) ? `\n${lastLines(run.output)}` : '';
+  return block(`Tester: een nieuwe test faalt niet op een assertie (compileert hij, bestaat de import?):\n${lastLines(wrong.join('\n'))}${proces}`);
 }
+
+/** De meldingen van nonAssertionFailures als er geen leesbaar vitest-rapport is. */
+const GEEN_RAPPORT = new Set(['geen uitvoer van vitest', 'onleesbare uitvoer van vitest']);
 
 /** Vast uitvoerbestand voor het JSON-rapport: vitest 5 schrijft het daarheen en meldt op stdout alleen waar. */
 const TESTER_REPORT = '.vitest/json/tester-run.json';
