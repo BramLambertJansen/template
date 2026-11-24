@@ -23,41 +23,32 @@
       "groupName": "niet-major"
     },
     {
-      "description": "Majors los en pas na goedkeuring in het dependency dashboard",
+      "description": "Elke major meteen als eigen PR met label major: CI test hem en de achterstandscheck ziet hem; niets wordt verborgen (R-PROV-04)",
       "matchUpdateTypes": ["major"],
-      "dependencyDashboardApproval": true
+      "addLabels": ["major"]
     },
     {
-      "description": "TypeScript 7 vraagt een ADR (ADR 0039)",
-      "matchPackageNames": ["typescript"],
-      "allowedVersions": "<7"
+      "description": "Majors van de toolchain en de database mergen pas na een ADR (R-PROV-04, ADR 0039)",
+      "matchUpdateTypes": ["major"],
+      "matchPackageNames": ["node", "@types/node", "pnpm", "typescript", "postgres"],
+      "prBodyNotes": [
+        "> [!IMPORTANT]\n> Major van de toolchain of de database: CI test hem nu al, maar mergen pas na een ADR (R-PROV-04). Een bewust overgeslagen versie: sluit de PR met de reden."
+      ]
     },
     {
-      "description": "engines in package.json is een bewust bereik (>=26.11 <27, scripts/kit/toolchain.mjs); de exacte Node-pin staat in mise.toml",
+      "description": "engines in package.json is een bewust bereik (>=26.11 <27, scripts/kit/toolchain.mjs): niet pinnen, alleen verbreden als een nieuwe versie erbuiten valt; de exacte Node-pin staat in mise.toml",
       "matchDepTypes": ["engines"],
-      "enabled": false
+      "rangeStrategy": "replace"
     },
     {
-      "description": "TypeScript houdt zijn ~-bereik binnen 6.0 (ADR 0039); alleen de lockfile schuift mee",
+      "description": "TypeScript houdt zijn ~-bereik (ADR 0039); binnen het bereik schuift alleen de lockfile mee",
       "matchPackageNames": ["typescript"],
       "rangeStrategy": "update-lockfile"
     },
     {
-      "description": "lefthook 2.2.2 mist de trusted-publisher-herkomst van eerdere versies; pnpm weigert hem (ERR_PNPM_TRUST_DOWNGRADE). Los van de groep, zodat zo'n weigering niet alle niet-majors blokkeert",
+      "description": "lefthook in een eigen PR: 2.2.2 mist de trusted-publisher-herkomst van eerdere versies en pnpm weigert hem (ERR_PNPM_TRUST_DOWNGRADE). Zo blokkeert een geweigerde release niet alle niet-majors, en blijft hij zichtbaar als rode PR",
       "matchPackageNames": ["lefthook"],
-      "allowedVersions": "!/^2\\.2\\.2$/",
       "groupName": null
-    },
-    {
-      "description": "Node-major en @types/node volgen engines in package.json (ADR 0039)",
-      "matchPackageNames": ["node", "@types/node"],
-      "allowedVersions": "<27"
-    },
-    {
-      "description": "Postgres-major gelijk aan de beheerde database van de app (framework §1.4)",
-      "matchDatasources": ["docker"],
-      "matchPackageNames": ["postgres"],
-      "allowedVersions": "<18"
     },
     {
       "description": "@playwright/test en het Playwright-image altijd samen (compose.yaml, framework §11)",
