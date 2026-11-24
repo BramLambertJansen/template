@@ -2,7 +2,10 @@ import { spawnSync } from 'node:child_process';
 import {
   chmodSync,
   existsSync,
-  lstatSync,
+  closeSync,
+  constants,
+  fstatSync,
+  openSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -26,7 +29,8 @@ import { afterEach, describe, expect, test } from 'vitest';
 const REPO = path.join(import.meta.dirname, '../..');
 const SCRIPT = path.join(REPO, 'scripts/kit/bijhalen.mjs');
 const MODULE = '../../scripts/kit/bijhalen.mjs';
-const mod: unknown = await import(MODULE);
+// Een ontbrekende module wordt null, zodat elke test op een assertie faalt en niet op het laden.
+const mod: unknown = await import(MODULE).catch((): unknown => null);
 
 const GEBRUIK = 'Gebruik: node scripts/kit/bijhalen.mjs main | volg <ref> | terug';
 const SKILL = '.claude/skills/s/SKILL.md';
@@ -347,10 +351,15 @@ function draai(fix: Fix, ...args: string[]): Uitvoer {
 }
 
 function leesBestand(pad: string): string | null {
+  let fd: number | null = null;
   try {
-    return `${(lstatSync(pad).mode & 0o777).toString(8)}:${readFileSync(pad).toString('hex')}`;
+    // Eén open met O_NOFOLLOW; modus en inhoud komen van dezelfde fd (geen lstat-dan-lees).
+    fd = openSync(pad, constants.O_RDONLY | constants.O_NOFOLLOW);
+    return `${(fstatSync(fd).mode & 0o777).toString(8)}:${readFileSync(fd).toString('hex')}`;
   } catch {
     return null;
+  } finally {
+    if (fd !== null) closeSync(fd);
   }
 }
 

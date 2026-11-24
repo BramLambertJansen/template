@@ -4,19 +4,23 @@
 // vooraf niet schrijfbaar blijkt; de nieuwe inhoud daarvan komt onder os.tmpdir()/bijhalen/<sha>/ en de agent neemt die
 // over met Edit. Volgorde: controles, schrijfbare bestanden, index, refs; faalt een stap, dan zet het script alles terug.
 // Het script haalt niets op (de agent doet eerst `git fetch`). Zonder dependencies, zodat het op een kale Node draait.
+import { Buffer } from 'node:buffer';
 import { spawnSync } from 'node:child_process';
 import {
   accessSync,
   chmodSync,
+  closeSync,
   constants,
   existsSync,
+  fchmodSync,
+  fstatSync,
   lstatSync,
   mkdirSync,
+  openSync,
   readFileSync,
   renameSync,
   rmSync,
   rmdirSync,
-  statSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -226,12 +230,51 @@ function bestaat(vol) {
   }
 }
 
-/** @param {string} vol @param {{ inhoud: Buffer, uitvoerbaar: boolean }} staat */
-function schrijfBestand(vol, { inhoud, uitvoerbaar }) {
+/**
+ * Schrijft een werkmapbestand via één fd: openen zonder een symlink te volgen, schrijven en de modus zetten op dezelfde
+ * fd, zodat er tussen controle en gebruik geen pad opnieuw wordt opgezocht.
+ * @param {string} vol @param {{ inhoud: Buffer, uitvoerbaar: boolean }} staat
+ */
+function schrijfWerkmapBestand(vol, { inhoud, uitvoerbaar }) {
   mkdirSync(path.dirname(vol), { recursive: true });
-  writeFileSync(vol, inhoud);
-  const modus = statSync(vol).mode & 0o777;
-  chmodSync(vol, uitvoerbaar ? modus | ((modus & 0o444) >> 2) : modus & ~0o111);
+  const fd = openSync(vol, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW, 0o666);
+  try {
+    writeFileSync(fd, inhoud);
+    const modus = fstatSync(fd).mode & 0o777;
+    fchmodSync(fd, uitvoerbaar ? modus | ((modus & 0o444) >> 2) : modus & ~0o111);
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/**
+ * De basismap `<os.tmpdir()>/bijhalen`: een echte map (geen symlink) van deze gebruiker, alleen voor de eigenaar
+ * (zoals veiligeBasismap() in worktree-install.mjs). Een eigen map met te ruime rechten wordt eerst dichtgezet.
+ * @returns {string}
+ */
+function veiligeTmpBasis() {
+  const basis = path.join(tmpdir(), 'bijhalen');
+  mkdirSync(basis, { recursive: true, mode: 0o700 });
+  const uid = process.getuid?.();
+  const ruim = () => {
+    const stat = lstatSync(basis);
+    if (!stat.isDirectory()) throw new Error(`${basis} is geen gewone map`);
+    if (uid !== undefined && stat.uid !== uid) throw new Error(`${basis} is van een andere gebruiker`);
+    return (stat.mode & 0o077) !== 0;
+  };
+  if (ruim()) chmodSync(basis, 0o700);
+  if (ruim()) throw new Error(`${basis} is toegankelijk voor anderen (verwacht mode 0700)`);
+  return basis;
+}
+
+/**
+ * Schrijft een nieuw tmp-bestand onder de veilige basismap: `wx` (nooit een bestaand bestand of symlink) en mode 0600,
+ * of 0700 als de inhoud uitvoerbaar is.
+ * @param {string} vol @param {{ inhoud: Buffer, uitvoerbaar: boolean }} staat
+ */
+function schrijfTmpBestand(vol, { inhoud, uitvoerbaar }) {
+  mkdirSync(path.dirname(vol), { recursive: true, mode: 0o700 });
+  writeFileSync(vol, inhoud, { flag: 'wx', mode: uitvoerbaar ? 0o700 : 0o600 });
 }
 
 /** Verwijdert een bestand en daarna de lege mappen erboven, tot de root (zoals git). @param {string} root @param {string} pad */
@@ -249,17 +292,38 @@ function verwijderBestand(root, pad) {
   }
 }
 
-/** @param {string} vol @returns {{ inhoud: Buffer, uitvoerbaar: boolean } | null} */
-function leesBestand(vol) {
+/**
+ * Leest een bestand via één fd zonder een symlink te volgen (ELOOP is een fout). Afwezig (ENOENT, ENOTDIR) geeft null.
+ * @param {string} vol @returns {{ inhoud: Buffer, modus: number, gewoon: boolean } | null}
+ */
+function leesZonderSymlink(vol) {
+  let fd;
   try {
-    const modus = lstatSync(vol).mode;
-    return { inhoud: readFileSync(vol), uitvoerbaar: (modus & 0o100) !== 0 };
+    fd = openSync(vol, constants.O_RDONLY | constants.O_NOFOLLOW);
   } catch (fout) {
     const code = foutcode(fout);
     if (code === 'ENOENT' || code === 'ENOTDIR') return null;
     throw fout;
   }
+  try {
+    const stat = fstatSync(fd);
+    if (!stat.isFile()) return { inhoud: Buffer.alloc(0), modus: stat.mode, gewoon: false };
+    return { inhoud: readFileSync(fd), modus: stat.mode, gewoon: true };
+  } finally {
+    closeSync(fd);
+  }
 }
+
+/** @param {string} vol @returns {{ inhoud: Buffer, uitvoerbaar: boolean } | null} */
+function leesBestand(vol) {
+  const staat = leesZonderSymlink(vol);
+  if (staat === null) return null;
+  if (!staat.gewoon) throw new Error('geen gewoon bestand');
+  return { inhoud: staat.inhoud, uitvoerbaar: (staat.modus & 0o100) !== 0 };
+}
+
+/** Inhoud van een gewoon bestand, of null als het ontbreekt. @param {string} vol @returns {Buffer | null} */
+const inhoudOfNull = (vol) => leesBestand(vol)?.inhoud ?? null;
 
 /**
  * @template T
@@ -303,7 +367,7 @@ function werkmapIo(root) {
     schrijf: (pad, inhoud, uitvoerbaar) =>
       metPad(pad, () => {
         eisGeenSymlinkVoorouder(root, pad);
-        schrijfBestand(path.join(root, pad), { inhoud, uitvoerbaar });
+        schrijfWerkmapBestand(path.join(root, pad), { inhoud, uitvoerbaar });
       }),
     verwijder: (pad) =>
       metPad(pad, () => {
@@ -364,13 +428,13 @@ const shellPad = (pad) => (/^[\w./@+-]+$/.test(pad) ? pad : `'${pad.replaceAll("
  * @param {string} root @param {string} sha @param {readonly Wijziging[]} beschermd @returns {string[]}
  */
 function bewaarBeschermd(root, sha, beschermd) {
-  const basis = path.join(tmpdir(), 'bijhalen', sha);
+  const basis = path.join(veiligeTmpBasis(), sha);
   rmSync(basis, { recursive: true, force: true });
   if (beschermd.length === 0) return [];
   const regels = beschermd.map((w) => {
     if (w.nieuwModus === GEEN) return `${w.pad} verwijderen (eigenaar)`;
     const doel = path.join(basis, w.pad);
-    schrijfBestand(doel, { inhoud: gitBlob(root, w.nieuwSha), uitvoerbaar: w.nieuwModus === '100755' });
+    schrijfTmpBestand(doel, { inhoud: gitBlob(root, w.nieuwSha), uitvoerbaar: w.nieuwModus === '100755' });
     return `${w.pad} ← ${doel}`;
   });
   const paden = beschermd.map((w) => shellPad(w.pad)).join(' ');
@@ -449,19 +513,20 @@ function nietHersteld(voor, io) {
 /** @param {string} root @returns {{ vol: string, inhoud: Buffer | null }} */
 function leesIndex(root) {
   const vol = gitPad(root, 'index');
-  return { vol, inhoud: bestaat(vol) ? readFileSync(vol) : null };
+  return { vol, inhoud: inhoudOfNull(vol) };
 }
 
 /** Zet het indexbestand byte voor byte terug als het veranderd is. @param {{ vol: string, inhoud: Buffer | null }} index */
 function herstelIndex({ vol, inhoud }) {
-  const nu = bestaat(vol) ? readFileSync(vol) : null;
+  const nu = inhoudOfNull(vol);
   if (inhoud === null || nu === null ? inhoud === nu : inhoud.equals(nu)) return;
   if (inhoud === null) {
     rmSync(vol, { force: true });
     return;
   }
   const tijdelijk = `${vol}.bijhalen-herstel`;
-  writeFileSync(tijdelijk, inhoud);
+  rmSync(tijdelijk, { force: true });
+  writeFileSync(tijdelijk, inhoud, { flag: 'wx' });
   renameSync(tijdelijk, vol);
 }
 
@@ -543,19 +608,20 @@ function mergeRefs(root, doel, branch) {
   let oudMsg = null;
   return {
     refs: () => {
-      if (bestaat(mergeMsg) && !lstatSync(mergeMsg).isFile()) throw new Error('MERGE_MSG: geen gewoon bestand');
-      oudMsg = bestaat(mergeMsg) ? readFileSync(mergeMsg) : null;
+      // Eén fd zonder symlink te volgen; een symlink of iets anders dan een gewoon bestand is een fout.
+      oudMsg = metPad('MERGE_MSG', () => inhoudOfNull(mergeMsg));
       // `wx`: een MERGE_HEAD die er al was (ook een symlink) wordt nooit overschreven.
       metPad('MERGE_HEAD', () => writeFileSync(mergeHead, `${doel}\n`, { flag: 'wx' }));
       geraakt.head = true;
       geraakt.msg = true;
-      metPad('MERGE_MSG', () => writeFileSync(mergeMsg, `Merge remote-tracking branch 'origin/main' into ${branch}\n`));
+      const bericht = Buffer.from(`Merge remote-tracking branch 'origin/main' into ${branch}\n`);
+      metPad('MERGE_MSG', () => schrijfWerkmapBestand(mergeMsg, { inhoud: bericht, uitvoerbaar: false }));
     },
     herstelRefs: () => {
       if (geraakt.head) rmSync(mergeHead, { force: true });
       if (!geraakt.msg) return;
       if (oudMsg === null) rmSync(mergeMsg, { force: true });
-      else writeFileSync(mergeMsg, oudMsg);
+      else schrijfWerkmapBestand(mergeMsg, { inhoud: oudMsg, uitvoerbaar: false });
     },
   };
 }
@@ -604,14 +670,15 @@ function standVolg(root, ref) {
 function terugRefs(root) {
   const bewaard = ['MERGE_HEAD', 'MERGE_MSG', 'MERGE_MODE'].map((naam) => {
     const vol = gitPad(root, naam);
-    return { vol, inhoud: existsSync(vol) ? readFileSync(vol) : null };
+    return { vol, inhoud: metPad(naam, () => inhoudOfNull(vol)) };
   });
   return {
     refs: () => {
       for (const { vol } of bewaard) rmSync(vol, { force: true });
     },
     herstelRefs: () => {
-      for (const { vol, inhoud } of bewaard) if (inhoud !== null) writeFileSync(vol, inhoud);
+      // De bestanden zijn net verwijderd; `wx` volgt nooit een symlink die er intussen is neergezet.
+      for (const { vol, inhoud } of bewaard) if (inhoud !== null) writeFileSync(vol, inhoud, { flag: 'wx' });
     },
   };
 }
