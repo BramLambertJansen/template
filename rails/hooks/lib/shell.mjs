@@ -40,6 +40,10 @@ export const ONZEKERE_TEKST = /[#`\\\n]|\$[{'(]|\(\(/;
 // Review B3 (#622, eigenaarbesluit 7 november 2026): de tokenizer haalt escapes en aanhalingen weg vóór de glob-omzetting;
 // met een van deze tekens in het commando is de klassegrens in een woordwaarde niet meer zeker (`Command.ruim`).
 const KLASSE_ONZEKER = /[\\'"]/;
+// Een commandosubstitutie `$(`, geen rekenkundige `$((`.
+const SUBSTITUTIE = /\$\((?!\()/;
+// Tekens waar de lezing van spec rolhek-herstel en de oude lezing kunnen verschillen (`parseCommands`).
+const VERSCHIL = /[#`]|\$[{[]|\(\(/;
 
 /**
  * @param {string} script
@@ -47,6 +51,74 @@ const KLASSE_ONZEKER = /[\\'"]/;
  * @returns {Command[]}
  */
 export function parseCommands(script, onzeker = false) {
+  const segmenten = parseLezing(script, { onzeker, oud: false });
+  // Spec rolhek-herstel/AC-4: waar de lezingen kunnen verschillen, de vereniging van de segmenten (liever te veel). De
+  // commentaargrens en de woordgroepen van `${…}`, `$[…]`, backticks en `((…))` volgen bash zo goed mogelijk; de oude lezing
+  // (`#` alleen na witruimte, geen woordgroepen) komt erbij, zodat een fout in die nieuwe toestanden nooit minder laat zien
+  // dan voorheen (review B1, B2).
+  if (!VERSCHIL.test(script)) return segmenten;
+  const lezingen = [segmenten, parseLezing(script, { onzeker: true, oud: true })];
+  // Met `#` binnen `$(…)` kan bash de substitutie anders sluiten dan `findParen` (een commentaar slikt de `)`), en binnen
+  // backticks voert bash de inhoud als commando uit (differentieel tegen bash, AC-5): dan ook de lezing met de inhoud als
+  // subshell. `$((` is rekenen: daarin is `#` geen commentaar.
+  if (script.includes('#') && (SUBSTITUTIE.test(script) || script.includes('`'))) {
+    const subshell = script.replace(new RegExp(SUBSTITUTIE.source, 'g'), ' (').replace(/`([^`]*)`?/g, ' ($1) ');
+    lezingen.push(parseLezing(subshell, { onzeker: true, oud: false }));
+  }
+  return uniekeLezingen(lezingen).flat();
+}
+
+/**
+ * De tokens van beide lezingen achter elkaar (spec rolhek-herstel/AC-4), voor een aanroeper die alleen vraagt of er ergens
+ * een token van een soort staat (`.some`): zo ziet hij nooit minder dan met de lezer van vóór die spec (review N1).
+ * @param {string} script
+ * @returns {Token[]}
+ */
+export function tokensBeide(script) {
+  return VERSCHIL.test(script) ? [...tokenize(script), ...tokenize(script, [], true)] : tokenize(script);
+}
+
+/**
+ * De bodybereiken van de heredocs per lezing: `[nieuw, oud]`; zonder verschilteken is de oude lezing gelijk.
+ * @param {string} script
+ * @returns {[HeredocBody[], HeredocBody[]]}
+ */
+export function heredocsBeide(script) {
+  /** @type {HeredocBody[]} */
+  const nieuw = [];
+  tokenize(script, nieuw);
+  if (!VERSCHIL.test(script)) return [nieuw, nieuw];
+  /** @type {HeredocBody[]} */
+  const oud = [];
+  tokenize(script, oud, true);
+  return [nieuw, oud];
+}
+
+/**
+ * De lezingen zonder herhaling: een lezing die in haar geheel gelijk is aan een eerdere, valt weg. Binnen een lezing blijft elk
+ * segment staan, ook een herhaald (`cd .. && cd ..`): de werkmapstand volgt de segmenten in volgorde (PR-review P1). Elke
+ * lezing eindigt met een lege scheiding, dus de volgende begint in elke map die het commando tot dan toe kon hebben.
+ * @param {Command[][]} lezingen
+ */
+function uniekeLezingen(lezingen) {
+  /** @param {Command} segment */
+  const sleutel = ({ words, redirects, inputs = [], kopieen = [], patterns = [], scheiding }) => [words, redirects, inputs, kopieen, patterns, scheiding];
+  const gezien = new Set();
+  return lezingen.filter((lezing) => {
+    const tekst = JSON.stringify(lezing.map(sleutel));
+    if (gezien.has(tekst)) return false;
+    gezien.add(tekst);
+    return true;
+  });
+}
+
+/**
+ * Eén lezing van `script` (zie `parseCommands`).
+ * @param {string} script
+ * @param {{ onzeker: boolean, oud: boolean }} opties `oud`: de lezer van vóór spec rolhek-herstel (zie `tokenize`)
+ * @returns {Command[]}
+ */
+function parseLezing(script, { onzeker, oud }) {
   const neutraal = onzeker || ONZEKERE_TEKST.test(script);
   const ruim = onzeker || KLASSE_ONZEKER.test(script);
   /** @type {Command[]} */
@@ -57,7 +129,7 @@ export function parseCommands(script, onzeker = false) {
   let current = leeg();
   /** @type {'redirect' | 'dup' | 'invoer' | null} */
   let expect = null;
-  for (const token of tokenize(script)) {
+  for (const token of tokenize(script, [], oud)) {
     if (token.kind === 'op' && SEPARATORS.has(token.value)) {
       if (heeftInhoud(current)) commands.push({ ...current, scheiding: token.value });
       current = leeg();
@@ -118,7 +190,7 @@ const TMPDIR_VOORAAN = /(?<=^|[ \t\n;&|()<>])(?:"?\$TMPDIR"?\/|(?:\$TMPDIR|\$\{T
 export function tmpdirLetterlijk(script) {
   const genoemd = script.match(/TMPDIR/g)?.length ?? 0;
   if (genoemd === 0 || genoemd !== (script.match(TMPDIR_VOORAAN)?.length ?? 0)) return false;
-  const woorden = tokenize(script).filter((token) => token.kind === 'word').map((token) => token.value);
+  const woorden = tokensBeide(script).filter((token) => token.kind === 'word').map((token) => token.value);
   if (woorden.some((woord) => woord.includes('TMPDIR') && !tmpdirWoord(woord))) return false;
   return !parseCommands(script).some(({ words }) => zetVariabele(splitCommand(words).argv));
 }
@@ -391,14 +463,18 @@ export function tmpdirWoord(word) {
 /**
  * @param {string} script
  * @param {HeredocBody[]} [bodies] ontvangt de bodybereiken van de heredocs die de lezer overslaat (ADR 0086)
+ * @param {boolean} [oud] de lezer van vóór spec rolhek-herstel: `#` alleen na witruimte, geen woordgroepen voor `${…}`,
+ *   `$[…]` en backticks; `parseCommands` neemt hem mee in de vereniging (review B1, B2)
  * @returns {Token[]}
  */
-export function tokenize(script, bodies = []) {
+export function tokenize(script, bodies = [], oud = false) {
   /** @type {Token[]} */
   const tokens = [];
   /** @type {Heredoc[]} */
   const heredocs = [];
   let index = 0;
+  // Binnen een rekenkundig commando `(( … ))` is `#` geen commentaar (spec rolhek-herstel/AC-4).
+  let reken = false;
   while (index < script.length) {
     const char = script[index] ?? '';
     if (char === ' ' || char === '\t') {
@@ -406,13 +482,35 @@ export function tokenize(script, bodies = []) {
     } else if (char === '\\' && script[index + 1] === '\n') {
       // Een voortzetting tussen woorden is geen (leeg) woord; zo blijft `argv[0]` het echte commandowoord (review R4-2).
       index += 2;
-    } else if (char === '#' && (index === 0 || /[ \t\n]/.test(script[index - 1] ?? ''))) {
+    } else if (commentaarBegint(script, index, { oud, reken })) {
       while (index < script.length && script[index] !== '\n') index += 1;
     } else {
-      index = nextToken(script, index, { tokens, heredocs, bodies });
+      reken = rekenNa(script, index, { oud, reken });
+      index = nextToken(script, index, { tokens, heredocs, bodies, oud });
     }
   }
   return tokens;
+}
+
+/**
+ * Of op `index` (het begin van een token) een commentaar begint. Nieuwe lezing: elke `#` hier begint een nieuw woord (na
+ * witruimte of een operator; `a#b` leest `readWord` in zijn geheel), en is dan voor bash een commentaar tot het regeleinde,
+ * ook direct na `;`, `&&`, `(` of een redirect (leerpunt #617, spec rolhek-herstel/AC-4), behalve binnen `(( … ))`. Oude
+ * lezing: alleen na witruimte.
+ * @param {string} script @param {number} index @param {{ oud: boolean, reken: boolean }} toestand
+ */
+function commentaarBegint(script, index, { oud, reken }) {
+  if (script[index] !== '#') return false;
+  return oud ? index === 0 || /[ \t\n]/.test(script[index - 1] ?? '') : !reken;
+}
+
+/**
+ * Of de lezer na het token op `index` binnen een rekenkundig commando `(( … ))` staat (alleen de nieuwe lezing).
+ * @param {string} script @param {number} index @param {{ oud: boolean, reken: boolean }} toestand
+ */
+function rekenNa(script, index, { oud, reken }) {
+  if (!oud && script.startsWith('((', index)) return true;
+  return reken && !script.startsWith('))', index);
 }
 
 // Een aangehaalde delimiter: aanhalingstekens of backslash, en geen `$` of backtick. `$'…'` valt dicht: de lezer decodeert
@@ -425,13 +523,13 @@ const REKEN_CONTEXT = /\(\(|\[\[|\$\[/;
  * Leest het token op `index`, voegt het toe en geeft de positie erna. Na een regeleinde slaat hij openstaande heredocs over.
  * @param {string} script
  * @param {number} index
- * @param {{ tokens: Token[], heredocs: Heredoc[], bodies: HeredocBody[] }} state
+ * @param {{ tokens: Token[], heredocs: Heredoc[], bodies: HeredocBody[], oud: boolean }} state
  */
-function nextToken(script, index, { tokens, heredocs, bodies }) {
+function nextToken(script, index, { tokens, heredocs, bodies, oud }) {
   const descriptor = /^\d+(?=[<>])/.exec(script.slice(index))?.[0] ?? '';
   const op = OPERATORS.find((candidate) => script.startsWith(candidate, index + descriptor.length));
   if (op === undefined) {
-    const word = readWord(script, index);
+    const word = readWord(script, index, oud);
     const previous = tokens.at(-1);
     const raw = script.slice(index, word.end);
     if (previous?.kind === 'op' && (previous.value === '<<' || previous.value === '<<-'))
@@ -482,8 +580,9 @@ function skipHeredocBodies(script, from, { heredocs, bodies }) {
  * aangehaalde glob-, brace- en tildetekens als `QUOTED`; `parseCommands` gebruikt die vorm alleen zonder `ONZEKERE_TEKST`.
  * @param {string} script
  * @param {number} start
+ * @param {boolean} oud zie `tokenize`
  */
-function readWord(script, start) {
+function readWord(script, start, oud) {
   let value = '';
   let pattern = '';
   let expands = false;
@@ -492,7 +591,7 @@ function readWord(script, start) {
     const char = script[index] ?? '';
     // Bash scheidt woorden alleen op spatie, tab, newline en metatekens; andere witruimte (`\r`, `\v`, U+00A0, U+2028) hoort bij het woord (#604).
     if (/[ \t\n;&|<>()]/.test(char)) break;
-    const part = wordPart(script, index, char);
+    const part = wordPart(script, index, { char, oud });
     // Buiten enkele aanhalingstekens breidt de shell `$` en backticks uit; binnen dubbele ook, tenzij geëscaped.
     if (char === '$' || char === '`' || (char === '"' && /[$`]/.test(script.slice(index + 1, part.end - 1).replace(/\\./g, ''))))
       expands = true;
@@ -506,10 +605,10 @@ function readWord(script, start) {
 /**
  * @param {string} script
  * @param {number} index
- * @param {string} char
+ * @param {{ char: string, oud: boolean }} teken het teken op `index`; `oud`: zie `tokenize`
  * @returns {{ text: string, end: number }}
  */
-function wordPart(script, index, char) {
+function wordPart(script, index, { char, oud }) {
   // `\` + regeleinde is een voortzetting: bash haalt beide weg en plakt de regels aaneen (`g\⏎[h]` is `g[h]`).
   if (char === '\\' && script[index + 1] === '\n') return { text: '', end: index + 2 };
   if (char === '\\') return { text: script[index + 1] ?? '', end: index + 2 };
@@ -522,7 +621,38 @@ function wordPart(script, index, char) {
     const close = findParen(script, index + 2);
     return { text: script.slice(index, close + 1), end: close + 1 };
   }
+  // `${…}`, `$[…]` en backticks horen met hun inhoud bij het woord: bash breekt daarbinnen niet op witruimte of een
+  // metateken, en `#` daarin is geen commentaar (leerpunt #617, spec rolhek-herstel/AC-4).
+  if (oud) return { text: char, end: index + 1 };
+  const paar = char === '$' ? { '{': '}', '[': ']' }[script[index + 1] ?? ''] : undefined;
+  if (paar !== undefined) {
+    const close = findPaar(script, index + 2, paar);
+    return { text: script.slice(index, close + 1), end: close + 1 };
+  }
+  if (char === '`') {
+    const close = findClose(script, index + 1, '`');
+    return { text: script.slice(index, close + 1), end: close + 1 };
+  }
   return { text: char, end: index + 1 };
+}
+
+/**
+ * De sluiter van `${` of `$[` (de opener staat vlak vóór `from`), met nesting van dezelfde opener.
+ * @param {string} script @param {number} from @param {string} sluit
+ */
+function findPaar(script, from, sluit) {
+  const open = script[from - 1];
+  let depth = 1;
+  for (let index = from; index < script.length; index += 1) {
+    const char = script[index];
+    // Zoals `parse_matched_pair` in bash: aanhalingstekens, `$(…)` en backticks sluiten de groep niet (review B2, B3).
+    if (char === '\\') index += 1;
+    else if (char === "'" || char === '"' || char === '`') index = findClose(script, index + 1, char);
+    else if (char === '$' && script[index + 1] === '(') index = findParen(script, index + 2);
+    else if (char === open) depth += 1;
+    else if (char === sluit && (depth -= 1) === 0) return index;
+  }
+  return script.length;
 }
 
 /**
