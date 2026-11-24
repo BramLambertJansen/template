@@ -120,10 +120,12 @@ een andere versie is geen geslaagde versiewissel. Reageert pnpm niet binnen 20 s
 melding dat apart in plaats van een ontbrekende pnpm. Deze controle bewijst geen synchronisatie van dependencies.
 Voor `pnpm run` en `pnpm exec`
 controleert pnpm zelf of de installatie bij de huidige workspace past (`verifyDepsBeforeRun: error` in
-`pnpm-workspace.yaml`). Past een verouderde of gekopieerde installatie niet bij de workspace, dan stopt pnpm met
+`pnpm-workspace.yaml`). Past een verouderde installatie niet bij de workspace, dan stopt pnpm met
 `ERR_PNPM_VERIFY_DEPS_BEFORE_RUN` vóór het werkcommando, zonder dependencies automatisch bij te werken. Herstel de installatie expliciet met `pnpm install --frozen-lockfile`
 volgens de setup. De regressieproef in `test/scripts/dependency-readiness.test.ts` draait de gepinde pnpm met lokale
-fixtures en controleert ook dat een weigering installatiebestanden ongemoeid laat.
+fixtures en controleert ook dat een weigering installatiebestanden ongemoeid laat. Sinds pnpm 12 weigert pnpm een
+gekopieerde projectmap met een passende installatie niet meer: die valideert het opnieuw op inhoud en draait zonder te
+installeren.
 
 ## Dagelijks werken binnen de Claude Code-sandbox
 
