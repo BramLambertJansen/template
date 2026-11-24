@@ -14,7 +14,8 @@ const WORKFLOWS = path.join(ROOT, '.github/workflows');
 // `agent-merge` (ADR 0069): verplicht zou hij elke kritieke PR ook voor de eigenaar blokkeren.
 // GEWIJZIGD (ADR 0073, bouw-PR 2): de job `check:app-init` bestaat niet meer, dus ook niet in deze lijst.
 // leerpunt-check (leerpunt.yml, ADR 0078 punt 3) draait op issues, niet op een PR: nooit een verplichte check.
-const NIET_VERPLICHT = ['diff-guard', 'agent-merge', 'leerpunt-check'];
+// GEWIJZIGD (spec dependency-achterstand): dependency-achterstand draait wekelijks op main, niet op een PR: nooit verplicht.
+const NIET_VERPLICHT = ['diff-guard', 'agent-merge', 'leerpunt-check', 'dependency-achterstand'];
 // De matrixdelen van een verplichte check met een samenvattende job zijn bewust geen verplichte check; de samenvattende job
 // is dat wel. GEWIJZIGD (ADR 0076, ci-in-delen/AC-8): niet meer alleen gate:slow, ook gate:fast en check:new-resource.
 // Exact deze namen: een andere nieuwe matrixnaam blijft letterlijk staan en laat de test falen.

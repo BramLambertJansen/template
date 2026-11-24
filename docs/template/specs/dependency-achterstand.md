@@ -57,32 +57,32 @@ Grens: 7 met label `security`, anders 60 met label `major`, anders 14. Exitcodes
 
 - **dependency-achterstand/AC-1** — Gegeven een update-PR zonder label `security` of `major` van 15 dagen en een tweede van
   14 dagen, wanneer de check draait, dan meldt hij alleen de eerste als `niet-major` met grens 14 en eindigt hij met
-  exitcode 1. Toets: `test/scripts/dependency-achterstand.test.ts` (nieuw)
+  exitcode 1. Toets: `test/scripts/dependency-achterstand.test.ts`
 - **dependency-achterstand/AC-2** — Gegeven een update-PR met label `security` van 8 dagen, wanneer de check draait, dan
   meldt hij hem als `beveiliging` met grens 7; ook als de PR daarnaast label `major` heeft. Toets:
-  `test/scripts/dependency-achterstand.test.ts` (nieuw)
+  `test/scripts/dependency-achterstand.test.ts`
 - **dependency-achterstand/AC-3** — Gegeven een update-PR met label `major` van 61 dagen en een tweede van 60 dagen, wanneer
   de check draait, dan meldt hij alleen de eerste als `major` met grens 60. Toets:
-  `test/scripts/dependency-achterstand.test.ts` (nieuw)
+  `test/scripts/dependency-achterstand.test.ts`
 - **dependency-achterstand/AC-4** — Gegeven een open Renovate-issue met een titel die met `Action Required` begint, wanneer de
   check draait, dan meldt hij een Renovate-fout en eindigt met exitcode 1; hetzelfde issue van een andere auteur telt niet.
-  Toets: `test/scripts/dependency-achterstand.test.ts` (nieuw)
+  Toets: `test/scripts/dependency-achterstand.test.ts`
 - **dependency-achterstand/AC-5** — Gegeven het Renovate-issue `Dependency Dashboard` met een kop `## Errored`,
   `## Rate-Limited`, `## Pending Approval` of `## Repository Problems` (hoofdletters vrij), wanneer de check draait, dan meldt
   hij per kop een bevinding met het aantal lijstregels (beginnend met `-`, ook `- [ ]` en `- WARN: …`) eronder; koppen als `## Awaiting Schedule`, `## Open` en
-  `## PR Edited (Blocked)` tellen niet. Toets: `test/scripts/dependency-achterstand.test.ts` (nieuw)
+  `## PR Edited (Blocked)` tellen niet. Toets: `test/scripts/dependency-achterstand.test.ts`
 - **dependency-achterstand/AC-6** — Gegeven alleen update-PR's binnen hun grens, PR's van een andere branch of uit een fork
   met head-branch `renovate/x` (ongeacht leeftijd) en geen Renovate-bevinding, wanneer de check draait, dan eindigt hij met
-  exitcode 0 en de groene regel met het aantal update-PR's. Toets: `test/scripts/dependency-achterstand.test.ts` (nieuw)
+  exitcode 0 en de groene regel met het aantal update-PR's. Toets: `test/scripts/dependency-achterstand.test.ts`
 - **dependency-achterstand/AC-7** — Gegeven een antwoord dat niet 2xx is, een `fetch` die gooit, een antwoord dat geen
   geldige JSON-lijst is, een ontbrekende `GITHUB_TOKEN` of `GITHUB_REPOSITORY`, of een tiende pagina met precies 100
   elementen (meer dan 10 pagina's, zoals `alleComments` in `scripts/kit/leerpunt-check.mjs`), wanneer de check
   draait, dan eindigt hij met exitcode 2 en de foutregel; hij wordt nooit groen zonder gelezen data. Toets:
-  `test/scripts/dependency-achterstand.test.ts` (nieuw)
+  `test/scripts/dependency-achterstand.test.ts`
 - **dependency-achterstand/AC-8** — De workflow draait alleen op `schedule` (dinsdag 06:23 UTC, na de Renovate-run van
   maandagochtend) en `workflow_dispatch`, niet op PR of push; heeft `permissions: read-all` en geen rechten per job; checkout
   met `persist-credentials: false`; het token alleen in de stap die het script draait; het script doet alleen `GET`. Toets:
-  `test/rails/dependency-achterstand-workflow.test.ts` (nieuw)
+  `test/rails/dependency-achterstand-workflow.test.ts`
 
 ## Randgevallen
 
