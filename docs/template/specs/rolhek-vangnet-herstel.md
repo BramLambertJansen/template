@@ -73,22 +73,26 @@ een PR-titel of -body is volgens R-ROL-11 een bewuste valse melding (R-ROL-10 la
   route. Toets: `test/hooks/rolhek-testakkoord-melding.test.ts` (nieuw)
 - **rolhek-herstel/AC-4** — `tokenize` in `rails/hooks/lib/shell.mjs` begint een commentaar met `#` aan het begin van een
   woord, ook direct na een operator (`;`, `&`, `&&`, `|`, `||`, `|&`, `;;`, `;&`, `;;&`, `(`, `)` en elke redirectvorm). `#`
-  binnen een woord, binnen `${…}`, binnen backticks, binnen `((…))`, `$((…))` en `$[…]` begint geen commentaar. Binnen
-  `$(…)` en `[[ … ]]` volgt de lezer bash zoals de differentiële test (AC-5) het vastlegt. Kan de lezer de grens niet zeker
-  bepalen, dan telt het commando als `ONZEKERE_TEKST` en ziet de lezer liever te veel dan te weinig. Voor elk van de zes
-  vormen uit het Doel en voor de varianten `${x/;#/}; rm -rf .claude/hooks` en `echo $(true #) <<E⏎rm -rf .claude/hooks⏎E⏎)`
-  geeft `parseCommands` een segment met `rm` als eerste woord. Ook geeft `decide` voor de hoofdsessie een vraag en voor een
+  binnen een woord, binnen `${…}`, binnen backticks, binnen `((…))`, `$((…))` en `$[…]` begint geen commentaar. Voor `#`
+  aan het begin van een woord binnen `$(…)` of `[[ … ]]` leest `parseCommands` beide lezingen (commentaar tot het
+  regeleinde, en geen commentaar) en geeft de vereniging van de segmenten. Voor elk van de zes vormen uit het Doel en voor de
+  varianten `${x/;#/}; rm -rf .claude/hooks`, `echo $(true #) <<E⏎rm -rf .claude/hooks⏎E⏎)` en
+  `[[ -n x #]] <<E⏎rm -rf .claude/hooks⏎E⏎` geeft `parseCommands` een segment met `rm` als eerste woord. Ook geeft `decide` voor de hoofdsessie een vraag en voor een
   subagent een weigering, net als voor het losse `rm -rf .claude/hooks`. Toets: `test/hooks/shell-commentaar.test.ts` (nieuw)
 - **rolhek-herstel/AC-5** — Een differentiële test draait elke rij van een vast corpus in echte bash, via de kooi
-  (`inKooi`, R-TOOL-03), met `bash --restricted` (een commandonaam met `/` voert niets uit, een redirect naar een bestand
-  wordt geweigerd), een lege map als `PATH` en `enable -n` voor elke builtin behalve `builtin`, `enable`, `trap`, `set`,
-  `shopt`, `return` en `printf`. Een `command_not_found_handle` met een recursiebeveiliging drukt zijn argumenten met NUL
-  gescheiden af, en een DEBUG-trap (`set -T`) legt het eerste woord van `$BASH_COMMAND` vast, ook bij een commandonaam met
-  `/` of een functie. Elke rij draait vier keer: met handlerstatus 0 en 1, en zonder en met `shopt -s extglob`. De
+  (`inKooi`, R-TOOL-03). Binnen de kooi start `env -i PATH=<lege map> BASH_ENV=<prelude> bash --restricted --noprofile
+  --norc -O extglob|+O extglob <rijbestand>`; het rijbestand en de prelude staan als data in de werkmap, en `PATH` staat
+  alleen in de omgeving van die binnenste aanroep (in restricted mode is `PATH` daarna alleen-lezen). Restricted mode laat
+  een commandonaam met `/` niets uitvoeren en weigert een redirect naar een bestand. De prelude zet `enable -n` voor elke
+  builtin behalve `builtin`, `enable`, `trap`, `set`, `shopt`, `return` en `printf`. Een `command_not_found_handle` met een
+  recursiebeveiliging drukt zijn argumenten met NUL gescheiden af; dat is de bron voor elke commandonaam zonder `/`. Een
+  DEBUG-trap (`set -T`) vult aan met alleen de namen met `/`: het eerste woord van `$BASH_COMMAND` na het afpellen van
+  toewijzingen vooraan. Elke rij draait vier keer: met handlerstatus 0 en 1, en met `-O extglob` en `+O extglob`. De
   waargenomen commandonamen zijn de vereniging van die vier runs. Per rij moet elke waargenomen naam ook het eerste woord
   van een segment van `parseCommands` zijn. Een rij waar de lezer een naam mist, is rood; de lezer mag meer zien dan bash.
-  Elke rij heeft een veld `bashZiet` (bijv. `['rm']`), en de test is rood als bash een naam uit `bashZiet` niet waarneemt:
-  dan zou een rij door een syntaxfout of vroege afbraak vals groen zijn. Het corpus bevat minstens de zes vormen en de
+  Elke rij heeft een niet-leeg veld `bashZiet` (bijv. `['rm']`; bij een aanvalsrij de gevaarlijke naam). De test is rood bij
+  een lege `bashZiet`, en ook als bash een naam uit `bashZiet` niet waarneemt: dan zou een rij door een syntaxfout, een
+  geweigerde redirect of vroege afbraak vals groen zijn. Het corpus bevat minstens de zes vormen en de
   varianten uit AC-4 en elke basisrij uit `test/hooks/rolhek-aanvalscorpus.ts`. Bash ouder dan versie 5 of geen kooi: de
   test slaat over met de melding van `vermogen('kooi')` of de bashversie. In CI is de kooi er (`.github/workflows/ci.yml`,
   `kooi.mjs --proef`). Toets: `test/hooks/shell-woorden-bash.test.ts` (nieuw)
@@ -107,6 +111,8 @@ een PR-titel of -body is volgens R-ROL-11 een bewuste valse melding (R-ROL-10 la
 | `echo a#b` | Geen commentaar: `#` staat binnen een woord, zoals in bash (AC-4) |
 | `echo $((1 #2))` | Geen commentaar (AC-4) |
 | Bash zonder kooi (lokaal, cloudsessie) | De differentiële test slaat over; AC-4 draait zonder bash en dekt de vormen |
+| Rij met `{ …; } > f` | Restricted mode weigert de redirect en de groep draait niet: `bashZiet` maakt de rij rood; zo'n rij gebruikt `<` of staat op de aanvaard-lijst (AC-6) |
+| Rij die de waarneming uitzet (`trap - DEBUG`, `set -n`, `unset -f command_not_found_handle`) | `bashZiet` maakt de rij rood; het vaste corpus bevat zulke rijen niet |
 
 ## Raakt ook
 
