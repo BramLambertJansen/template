@@ -155,7 +155,9 @@ afbreken met een fout over het verwijderen van de modules-map (`ERR_PNPM_ABORTED
 eigenaar, wis `node_modules` niet zelf en voeg geen pnpm-vlag toe. De melding van `feiten.mjs` noemt het zelf (AC-12). In
 een cloudsessie werkt het script ook in de hoofdcheckout en geeft het zelf `--config.confirm-modules-purge=false` mee:
 loopt `node_modules` daar achter op de lockfile, draai het script zelf in plaats van de eigenaar te vragen, want die heeft
-in de cloud geen terminal (spec cloud-werkmap-herstel). Na een merge bijwerken op de vaste cloudbranch: zie de
+in de cloud geen terminal (spec cloud-werkmap-herstel). Tijdens een lopende merge (`MERGE_HEAD`) telt daar ook de versie
+uit `MERGE_HEAD`: zo kan de agent na het binnenhalen van een nieuwe lockfile eerst installeren en dan de merge committen
+(AC-9). Na een merge bijwerken op de vaste cloudbranch: zie de
 receptenkaart (`git merge --ff-only origin/main`). Om dezelfde reden als bij `--no-track` geeft
 `git branch -D` daar de melding `could not lock config file`; de branch is wel verwijderd (`-m` is niet gemeten).
 

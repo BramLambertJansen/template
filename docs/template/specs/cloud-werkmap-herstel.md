@@ -112,6 +112,8 @@ Teksten letterlijk:
 | Cloud, gekoppelde worktree | ongewijzigd, plus de vlag uit AC-3 |
 | `--zonder-werkmap`: de head-SHA staat vast bij de start | vóór en na elke checkronde (ook met `--watch`) `prHeadKlopt`; bij `false` de afwijkingsmelding |
 | `--zonder-werkmap` met een head-SHA zonder geldige vorm | `verifyZonderWerkmap` toetst de vorm vóór de eerste checkronde: bestaande fout `Geen vertrouwde verplichte checks of geldige commit` (AC-8) |
+| Cloud, lopende merge: een beheerd bestand ontbreekt in de werkmap en in `MERGE_HEAD`, maar staat in HEAD | telt niet als gewijzigd: de werkmap is gelijk aan de verwijdering uit de merge (AC-9) |
+| Lopende merge buiten de cloud (ook in een gekoppelde worktree) | `MERGE_HEAD` telt niet; alleen HEAD, zoals voorheen (AC-9) |
 | Lokaal `CLAUDE_CODE_REMOTE=true` gezet | het script gedraagt zich als in de cloud. Dit is een procesgrens die geen check afdwingt (R-ROL-05, eigenaarbesluit 24 november 2026); een rolhek-weigering op die toewijzing staat als roadmap-item |
 
 ## Raakt ook

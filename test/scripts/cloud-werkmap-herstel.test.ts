@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import {
   chmodSync,
   copyFileSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -299,16 +300,27 @@ describe('cloud-werkmap-herstel: worktreeInstallFeiten tijdens een lopende merge
   const MERGE_PKG = '{"name":"x","packageManager":"pnpm@11.0.0","dependencies":{"a":"1"}}\n';
   const MERGE_LOCK = "lockfileVersion: '9.0'\n# nieuwe lockfile uit main\n";
 
-  // Hoofdcheckout met een niet-gecommitte merge: package.json en pnpm-lock.yaml staan op de versie van MERGE_HEAD.
+  // Niet-gecommitte merge in `dir`: package.json en pnpm-lock.yaml staan op de versie van MERGE_HEAD.
+  function startMerge(dir: string, basisBranch: string, wijzig: () => void): void {
+    gitUit(dir, 'switch', '-q', '-c', 'zijtak');
+    wijzig();
+    gitUit(dir, 'add', '-A');
+    gitUit(dir, 'commit', '-q', '-m', 'zijtak');
+    gitUit(dir, 'switch', '-q', basisBranch);
+    gitUit(dir, 'merge', '--no-commit', '--no-ff', 'zijtak');
+    expect(gitUit(dir, 'rev-parse', '-q', '--verify', 'MERGE_HEAD')).toMatch(/^[0-9a-f]{40}$/);
+  }
+
+  function schrijfMergeVersies(dir: string): void {
+    writeFileSync(path.join(dir, 'package.json'), MERGE_PKG);
+    writeFileSync(path.join(dir, 'pnpm-lock.yaml'), MERGE_LOCK);
+  }
+
   function metLopendeMerge(): string {
     const main = hoofdcheckout();
-    gitUit(main, 'switch', '-q', '-c', 'zijtak');
-    writeFileSync(path.join(main, 'package.json'), MERGE_PKG);
-    writeFileSync(path.join(main, 'pnpm-lock.yaml'), MERGE_LOCK);
-    gitUit(main, 'commit', '-q', '-am', 'zijtak');
-    gitUit(main, 'switch', '-q', 'main');
-    gitUit(main, 'merge', '--no-commit', '--no-ff', 'zijtak');
-    expect(gitUit(main, 'rev-parse', '-q', '--verify', 'MERGE_HEAD')).toMatch(/^[0-9a-f]{40}$/);
+    startMerge(main, 'main', () => {
+      schrijfMergeVersies(main);
+    });
     return main;
   }
 
@@ -330,6 +342,27 @@ describe('cloud-werkmap-herstel: worktreeInstallFeiten tijdens een lopende merge
 
     expect(feiten(main).gewijzigd).toStrictEqual([]);
     expect(feiten(main, false).gewijzigd).toStrictEqual([]);
+  });
+
+  test('cloud-werkmap-herstel/AC-9: gekoppelde worktree met lopende merge: MERGE_HEAD telt buiten de cloud niet', () => {
+    const main = hoofdcheckout();
+    const wt = path.join(tmp('cwh-wt-'), 'wt');
+    gitUit(main, 'worktree', 'add', '-q', '-b', 'feat', wt);
+    startMerge(wt, 'feat', () => {
+      schrijfMergeVersies(wt);
+    });
+
+    expect(feiten(wt).worktree).toBe(true);
+    expect(feiten(wt).gewijzigd).toStrictEqual(['package.json', 'pnpm-lock.yaml']);
+    expect(feiten(wt, false).gewijzigd).toStrictEqual(['package.json', 'pnpm-lock.yaml']);
+  });
+
+  test('cloud-werkmap-herstel/AC-9: .npmrc in HEAD, verwijderd in MERGE_HEAD en tijdens de merge afwezig: niet in gewijzigd', () => {
+    const main = hoofdcheckout();
+    startMerge(main, 'main', () => gitUit(main, 'rm', '-q', '.npmrc'));
+
+    expect(existsSync(path.join(main, '.npmrc'))).toBe(false);
+    expect(feiten(main, true).gewijzigd).toStrictEqual([]);
   });
 });
 
