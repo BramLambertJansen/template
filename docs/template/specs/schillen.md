@@ -160,8 +160,8 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
   gebruikt als het recept (`guard`, `visibleNavItems`, `navItems` uit `#web/lib/nav` voor de eerste schil). De navigatielijst
   van de tweede schil staat in de test zelf. Ze bouwt twee layoutroutes in code met `createRootRoute` en `createRoute` in een
   geheugenrouter (vorm: `src/web/features/design-system/account-links.test.tsx`), dus `routeTree`, de catalogus en
-  `check:schillen` zien haar niet. De tweede route gebruikt een bestaande permissie (`accounts:read`), en de thema's komen
-  uit een testfixture zoals in de spec app-thema; het themaregister van de template blijft leeg.
+  `check:schillen` zien haar niet. De tweede route gebruikt een bestaande permissie (`accounts:read`), en de thema's zijn
+  de twee voorbeeldthema's die de template volgens de spec app-thema meelevert (`strak` en `zacht`).
 - **Recept "Een tweede schil"** (nieuwe sectie in `docs/gouden-pad.md`): een app die vanuit de template start, kan zonder
   uitzoekwerk aansluiten. De sectie noemt in volgorde:
   1. de keuze: `SidebarShell`, `TopbarShell` of een eigen schil op `ShellFrame` in `src/web/ui/` (dan eerst akkoord van de
