@@ -33,17 +33,14 @@ function declarations(body: string): [string, string][] {
   ]);
 }
 
-// De ruwe declaraties per modus; een latere declaratie wint, zoals in de cascade bij gelijke specificiteit.
+// De ruwe declaraties per modus, in bronvolgorde: `:root` en `[data-theme='dark']` hebben dezelfde specificiteit, dus
+// in de cascade wint de latere regel. Een `:root`-override in theme.css (na semantic.css) geldt daardoor ook in donker.
 export function declaredTokens(css: string, mode: Mode): Map<string, string> {
   const result = new Map<string, string>();
-  const parsed = rules(css);
-  const apply = (selector: string) => {
-    for (const rule of parsed)
-      if (rule.selectors.includes(selector))
-        for (const [name, value] of declarations(rule.body)) result.set(name, value);
-  };
-  apply(':root');
-  if (mode === 'donker') apply(DARK);
+  for (const rule of rules(css)) {
+    const applies = rule.selectors.includes(':root') || (mode === 'donker' && rule.selectors.includes(DARK));
+    if (applies) for (const [name, value] of declarations(rule.body)) result.set(name, value);
+  }
   return result;
 }
 
