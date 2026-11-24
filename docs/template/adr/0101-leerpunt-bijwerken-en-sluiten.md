@@ -11,6 +11,9 @@ ongewijzigd; labels alleen via de MCP-issuetool in de cloud, na de doelcheck. Pu
 Herzien: 2026-11-24: gewijzigd door [0109](0109-leerpunt-sluiten-met-verwijzing.md), in punt 2, 4 en 5: de hoofdsessie mag een
 leerpunt ook sluiten als completed, na de doelcheck en een comment `opgelost: <verwijzing>` naar een gemergde PR, een SHA of
 een geaccepteerd ADR op main; lokaal via `gh issue close <nr> --reason completed`, in de cloud via de MCP-issuetool
+Herzien: 2026-11-24: het open punt over de cloud-auteur is getoetst (proef #941, als duplicaat van #940): de MCP-issuetool in
+de cloud schrijft onder het GitHub-account dat aan Claude gekoppeld is, met `author_association` COLLABORATOR; de sluiting
+telde als bewijs en `leerpunt-check` zette geen `leerpunt-zonder-bewijs`. Dat geldt zolang dat account collaborator is
 
 Wijzigt [0078](0078-leerlus-met-bewijs.md) punt 4 en 5 en [0059](0059-leerlus-van-app-naar-template.md) voor zover dat alleen
 `gh issue create` toestaat; vult R-WERK-13, R-ROL-07, R-ROL-12 en R-SEC-09 aan. Drempel: A3 (een uitzondering op "MCP alleen
@@ -85,7 +88,7 @@ openstaat.
 - Minder dubbele leerpunten (nu `eerder: #nnn` achteraf); per oplevering één tot enkele gerichte zoekopdrachten extra.
 - Restrisico: `--body-file <pad>` kan elk leesbaar bestand in een openbaar issue zetten, net als bij `gh issue create`; de
   Bash-sandbox weigert `.env*`, elders is het een afspraak (eigenaar, 23 november 2026).
-- Open: komt een duplicaat-comment uit de cloud-MCP onder een andere identiteit dan OWNER, MEMBER of COLLABORATOR, dan telt
-  die sluiting niet; na de merge volgt één proef (eigenaar, 23 november 2026).
+- Getoetst (proef #941, 24 november 2026): een duplicaat-comment uit de cloud-MCP komt van het gekoppelde GitHub-account als
+  COLLABORATOR en telt. Verliest dat account zijn collaboratorrecht, dan telt een sluiting uit de cloud niet meer.
 - Restrisico: in de cloud kan een agent via MCP een PR labelen of het verkeerde issue bewerken; de issue-check zet
   `leerpunt-zonder-bewijs` bij sluiten zonder bewijs, en de eigenaar kan heropenen.
