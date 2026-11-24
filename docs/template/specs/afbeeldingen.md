@@ -67,7 +67,7 @@ De functie `app.check_linked_image()` komt in een core-migratie in deel B, met e
 
 Geen nieuwe route en geen nieuwe foutcode. Een resourceroute van de app neemt de weergave-URL op in haar eigen antwoord:
 `ctx.services.files.viewOf(file)` geeft `{ url, expiresAt } | null` voor een rij uit `public.files` die de query (onder RLS)
-heeft gelezen. Een URL maken is synchroon lokaal ondertekenen (ADR 0060 punt 7), dus een lijst met afbeeldingen kost geen
+heeft gelezen. Een URL maken is synchroon lokaal ondertekenen (ADR 0060 punt 2), dus een lijst met afbeeldingen kost geen
 aanroep naar de opslag en geen voor-stap. Zonder adapter geeft `viewOf` `null`; de resourceroute zelf blijft werken.
 
 **Poort** (`src/core/api/storage/`): `defineFileStorage` krijgt een vijfde methode

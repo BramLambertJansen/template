@@ -13,7 +13,8 @@ Stand nu: één schil, `AppShell` in `src/core/web/ui/app-shell.tsx` (sidebar me
 `src/web/features/layout/app-layout.tsx` vult. Een app die een andere indeling wil, kan alleen core wijzigen (verboden,
 R-ARCH-07) of de schil overslaan en daarmee skip-link, focus na navigatie, offline-melding, toasts en printstijl opnieuw bouwen.
 
-Functionele UI in core (R-WERK-18): spec, code, tests en gebruiksdocs in één PR per deel.
+Deel A is functionele UI in core (R-WERK-18): spec, code, tests en gebruiksdocs in één PR. Deel B voegt een check aan
+`gate:fast` toe en raakt de skill `nieuw-scherm`: beschermde paden, risicowerk met een aparte tester (R-WERK-04).
 
 | Deel | Inhoud | AC's |
 |---|---|---|

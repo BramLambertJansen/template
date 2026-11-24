@@ -230,7 +230,8 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
 - [ ] **ST-19 (P1) — afbeeldingen tonen bij een resource** (spec `afbeeldingen`, voorgesteld; uitbreiding op spec `bestandsopslag`).
   **Werk:** eerst een besluit-PR die ADR 0060 punt 2 en R-OPSL-02 herziet (weergave-URL voor een vaste lijst rastertypen); dan
   deel A (`createViewUrl` op de poort, `img-src` in de CSP, veld `view`) en deel B (koppelpatroon bestand bij een rij, check, gouden pad).
-  **Afhankelijkheden:** besluit-PR; bestandsopslag deel A en B gebouwd (ST-11); productie pas na bestandsopslag deel C (R-OPSL-04).
+  **Afhankelijkheden:** besluit-PR; het storage-deel van ST-11 eerst uit Geparkeerd en bestandsopslag deel A en B gebouwd;
+  productie pas na bestandsopslag deel C (R-OPSL-04).
   **Klaar als:** de AC's van de spec hebben een test.
   aanleiding: `docs/template/specs/afbeeldingen.md` (verzoek van de eigenaar, 2026-11-23; afbeelding bij een artikel)
 - [ ] **ST-20 (P1) — wachtwoord vergeten, per app in te schakelen** (spec `wachtwoordherstel`, voorgesteld; standaard uit).
@@ -242,8 +243,11 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
 - [ ] **ST-21 (P1) — appstyling: thema, schillen en stijlladder** (specs `app-thema`, `schillen` en `stijlladder`, voorgesteld;
   besluiten van de eigenaar 2026-11-15). **Werk:** app-thema deel A–C (componenttokens, rail op de kit, thema's per app), schillen
   deel A–B (`ShellFrame`, sidebar- en topbalkschil, eigen schillen met contracttest), stijlladder (treden, register en `check:stijl`).
-  Stijlladder raakt agentinstructies, een skill en een gate: beschermde paden met eigenaarakkoord. Overlapt met ST-07: breid
-  daar uit, bouw geen tweede mechanisme. **Afhankelijkheden:** app-thema A vóór schillen A; stijlladder na beide.
+  Beschermde paden met eigenaarakkoord in alle drie: app-thema B (lintregel in `eslint.config.js`, `.claude/rules/web.md`, skill
+  `ontwerp-overnemen`), schillen B (nieuwe check in `scripts/kit/gates.mjs`, skill `nieuw-scherm`) en stijlladder
+  (agentinstructies, skill, gate). Delen met een rail of check zijn risicowerk met een aparte tester, niet R-WERK-18.
+  Raakt het geparkeerde ST-07 alleen bij het titel- en focusgedrag van `AppShell`, dat voor `ShellFrame` gaat gelden.
+  **Afhankelijkheden:** app-thema A vóór schillen A; stijlladder na beide.
   **Klaar als:** de AC's van de drie specs hebben een test; een app krijgt een eigen uitstraling zonder `src/core` te wijzigen.
   aanleiding: `docs/template/specs/app-thema.md` (verzoek van de eigenaar, 2026-11-23; appstyling voor een eerste echte app)
 - [ ] **Omhulsels met opties en xargs-optiewaarden in het rolhek.** `splitCommand` (`rails/hooks/lib/shell.mjs`) stopt bij de eerste optie van een

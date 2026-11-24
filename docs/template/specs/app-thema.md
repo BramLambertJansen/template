@@ -23,7 +23,7 @@ Bouwen in drie delen, elk een eigen PR:
 | Deel | Inhoud | AC's |
 |---|---|---|
 | **A — componenttokens** | tokens per recept in `src/core/web/styles/components.css`, recepten erop omgezet, grens van zes per component, contrasttest via de tokens, vindbaar in de feiten en op `/design-system` | AC-1 t/m AC-7 |
-| **B — rail op de kit** | profiel `kit` van de lintrail `rails/klassen` voor `src/core/web/ui` en `src/web/ui` | AC-8 t/m AC-10 |
+| **B — rail op de kit** | profiel `kit` van de lintregel `klassen` in `eslint.config.js` voor `src/core/web/ui` en `src/web/ui` | AC-8 t/m AC-10 |
 | **C — thema's** | themaregister, `[data-app-theme]`, `ThemeScope`, contrast per thema, themakiezer op `/design-system` | AC-11 t/m AC-17 |
 
 ## Doel
@@ -60,7 +60,7 @@ en het tokenoverzicht staan op `/design-system` achter `guard('design-system:rea
 
 **Deel B — rail op de kit**
 
-- De lintrail `rails/klassen` krijgt een tweede profiel `kit` voor `src/core/web/ui` en `src/web/ui`. Verboden: arbitrary values
+- De lintregel `klassen` in `eslint.config.js` krijgt een tweede profiel `kit` voor `src/core/web/ui` en `src/web/ui`. Verboden: arbitrary values
   (`w-[…]`, `grid-cols-[…]`, ook met een `var()` erin), hex- en `oklch`-kleuren, `style` met een vaste waarde, en `!`.
   Toegestaan: elke token-klasse uit `@theme`, layout-klassen, `dark:` niet (dark loopt via tokens).
 - Een maat die nu arbitrary is, wordt een token en een klasse via `@theme` (bijvoorbeeld `--shell-sidebar-width` →
