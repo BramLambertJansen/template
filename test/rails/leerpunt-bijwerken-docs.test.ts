@@ -131,7 +131,9 @@ describe('leerlus-bewijs/AC-15 framework, AGENTS.md en nieuwe-app verwijzen naar
     const regel = regelMet(agents, 'Externe diensten via hun CLI');
     expect(regel.length).toBeGreaterThan(0);
     expect(regel).toContain('0101');
-    expect(regel).toMatch(/duplicaat/i);
+    // GEWIJZIGD (leerlus-bewijs/AC-21, ADR 0109): was `/duplicaat/i`; AGENTS.md zegt nu "sluiten" in plaats van "sluiten als
+    // duplicaat" (de eigenaar, 2026-11-24). De verwijzing naar 0101 en "bijwerken" blijven.
+    expect(regel).toContain('(aanmaken, bijwerken, sluiten)');
     expect(regel).toMatch(/bijwerk/i);
   });
 
@@ -151,5 +153,91 @@ describe('leerlus-bewijs/AC-15 framework, AGENTS.md en nieuwe-app verwijzen naar
     expect(regel).toContain('Bash(gh issue comment --repo <repo> *)');
     expect(regel).toContain('Bash(gh issue edit --repo <repo> *)');
     expect(regel).toContain('Bash(gh issue close --repo <repo> *)');
+  });
+});
+
+// Spec leerlus-bewijs AC-17 (skilltekst), AC-18 en AC-21, ADR 0109.
+describe('leerlus-bewijs/AC-17 opleveren stap 8: de MCP-route in de cloud', () => {
+  test('leerlus-bewijs/AC-17: noemt state_reason completed (na de comment) of duplicate, en nooit not_planned of heropenen', () => {
+    expect(stap).toContain('state_reason');
+    expect(stap).toMatch(/state_reason[^\n]*`completed`|`completed`[^\n]*state_reason/);
+    expect(stap).toMatch(/state_reason[^\n]*`duplicate`|`duplicate`[^\n]*state_reason/);
+    const na = stap.split(/nooit/i).slice(1);
+    expect(na.some((deel) => deel.slice(0, 200).includes('not_planned'))).toBe(true);
+    expect(na.some((deel) => /heropen|`open`/i.test(deel.slice(0, 250)))).toBe(true);
+  });
+
+  test('leerlus-bewijs/AC-17: elke MCP-schrijfactie is een toestemmingsprompt; zonder meekijker staat de route stil', () => {
+    expect(stap).toMatch(/toestemmingsprompt/i);
+    expect(stap).toMatch(/stil/i);
+  });
+});
+
+describe('leerlus-bewijs/AC-18 opleveren stap 8: opgelost op main, met verwijzing', () => {
+  test('leerlus-bewijs/AC-18: noemt de uitkomst "opgelost op main" en ADR 0109', () => {
+    expect(stap).toContain('opgelost op main');
+    expect(stap).toContain('0109');
+  });
+
+  test("leerlus-bewijs/AC-18: de drie commando's staan in volgorde: gh issue view, gh issue comment met `opgelost: `, gh issue close --reason completed", () => {
+    const tekst = eerste('opgelost: ');
+    expect(tekst, 'de comment `opgelost: ` ontbreekt in stap 8').toBeGreaterThanOrEqual(0);
+    const sluit = stap.search(/gh issue close --repo <repo> <nr> --reason completed/);
+    expect(sluit, 'gh issue close --repo <repo> <nr> --reason completed ontbreekt').toBeGreaterThanOrEqual(0);
+    const view = stap.search(/gh issue view <nr> --repo <repo> --json labels,state,url/);
+    expect(view).toBeGreaterThanOrEqual(0);
+    const comment = stap.slice(0, tekst).lastIndexOf('gh issue comment --repo <repo> <nr> --body-file');
+    expect(
+      comment,
+      'gh issue comment --repo <repo> <nr> --body-file staat niet vóór `opgelost: `',
+    ).toBeGreaterThanOrEqual(0);
+    expect(view).toBeLessThan(comment);
+    expect(comment).toBeLessThan(sluit);
+    expect(tekst).toBeLessThan(sluit);
+  });
+
+  test.each(['#<nr>', 'ADR <nnnn>', 'commit-SHA', 'komma'])(
+    'leerlus-bewijs/AC-18: noemt de verwijzingsvormen (%s)',
+    (fragment) => {
+      expect(stap).toContain(fragment);
+    },
+  );
+
+  test('leerlus-bewijs/AC-18: elke verwijzing moet geldig zijn; anders geen sluiting maar deels', () => {
+    expect(stap).toMatch(/elke verwijzing[^\n]*geldig|geldig[^\n]*elke verwijzing/i);
+    expect(stap).toMatch(/ongeldig[\s\S]{0,200}deels|deels[\s\S]{0,200}ongeldig/i);
+  });
+
+  test('leerlus-bewijs/AC-18: not planned, achterhaald en heropenen blijven bij de eigenaar', () => {
+    expect(stap).toMatch(/not\s+planned/);
+    expect(stap).toMatch(/achterhaald/);
+    expect(stap).toMatch(/heropen/);
+    expect(stap).toMatch(/eigenaar/);
+  });
+
+  test.each(['R-ROL-12', 'R-SEC-09', 'R-WERK-13'])(
+    'leerlus-bewijs/AC-18: framework %s noemt sluiten als opgelost met verwijzing en ADR 0109',
+    (id) => {
+      const regel = regelMet(framework, `**${id}**`);
+      expect(regel.length).toBeGreaterThan(0);
+      expect(regel).toContain('0109');
+      expect(regel).toMatch(/opgelost/i);
+      expect(regel).toMatch(/verwijzing/i);
+    },
+  );
+});
+
+describe('leerlus-bewijs/AC-21 AGENTS.md: sluiten in plaats van sluiten als duplicaat', () => {
+  test('leerlus-bewijs/AC-21: de regel over externe diensten noemt "een leerpunt-issue (aanmaken, bijwerken, sluiten)"', () => {
+    const regel = regelMet(agents, 'Externe diensten via hun CLI');
+    expect(regel).toContain('een leerpunt-issue (aanmaken, bijwerken, sluiten)');
+    expect(regel).toContain('0101');
+  });
+
+  test('leerlus-bewijs/AC-21: "sluiten als duplicaat" komt in AGENTS.md niet meer voor', () => {
+    expectAbsent(agents, /sluiten als duplicaat/i, {
+      recognizes: ['sluiten als duplicaat', 'Sluiten als duplicaat'],
+      allows: ['sluiten', 'sluiten) of een PR'],
+    });
   });
 });

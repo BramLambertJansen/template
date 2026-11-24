@@ -85,3 +85,23 @@ describe('settings: allow-regels voor leerpunten bijwerken en sluiten', () => {
     expect(allow.filter((rule) => /^Bash\(gh( issue)?( \*|:\*)\)$/.test(rule))).toStrictEqual([]);
   });
 });
+
+// Spec leerlus-bewijs AC-19, ADR 0109 punt 3: `.claude/settings.json` verandert niet; de bestaande regel voor gh issue close
+// dekt ook `--reason completed`, naast `--duplicate-of`. Regressievergrendeling, nu al groen.
+describe('settings: sluiten als opgelost (AC-19)', () => {
+  test.each([
+    { naam: '--reason completed', command: `gh issue close --repo ${REPO} 5 --reason completed` },
+    { naam: '--duplicate-of', command: `gh issue close --repo ${REPO} 5 --duplicate-of 3` },
+  ])('leerlus-bewijs/AC-19: close $naam valt onder precies de ene close-regel', ({ command }) => {
+    expect(coveredBy(command)).toStrictEqual([regel('close')]);
+  });
+
+  test('leerlus-bewijs/AC-19: close --reason completed met -R of zonder repo valt onder geen enkele allow-regel', () => {
+    expect(coveredBy(`gh issue close -R ${REPO} 5 --reason completed`)).toStrictEqual([]);
+    expect(coveredBy('gh issue close 5 --reason completed')).toStrictEqual([]);
+  });
+
+  test('leerlus-bewijs/AC-19: precies vier gh issue-regels (create, comment, edit, close)', () => {
+    expect(allow.filter((rule) => rule.includes('gh issue '))).toHaveLength(4);
+  });
+});
