@@ -239,7 +239,8 @@ n.v.t. voor `docs/gouden-pad.md` (geen resource); railwerk volgt bestaande vorme
   closed): het label blijft zoals in AC-6, zonder dat de job crasht. `check-docs` toetst de vorm van `leerpunt.accounts` als
   hij bestaat; `pnpm app:init` laat de sleutel staan (in een app draait de check niet). Tabeltest per soort comment met een id
   in de lijst, een ander id met COLLABORATOR, een login uit de lijst met een ander id, een ontbrekend `user.id`, en een
-  ontbrekende, lege of ongeldige lijst. Toets: `test/scripts/leerpunt-eigenaar.test.ts` (nieuw)
+  ontbrekende, lege of ongeldige lijst, plus rijen voor de vormregel van `check-docs` (geldige lijst groen; geen lijst,
+  element zonder geheel getal als `id` of met een andere sleutel rood). Toets: `test/scripts/leerpunt-eigenaar.test.ts` (nieuw)
 
 ## Randgevallen
 
