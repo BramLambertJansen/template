@@ -18,8 +18,9 @@ Feiten nu:
 
 1. Push de featurebranch en open de PR. Nooit naar `main`, nooit force-push; conflicten via `git merge --no-commit origin/main`
    en dan `git commit -F <bestand>` (de kale merge kan in de cloud niet ondertekenen). Toont
-   `git diff --name-only HEAD...origin/main -- .claude/skills .claude/agents .claude/hooks .claude/settings.json .claude/settings.local.json` iets, dan niet mergen maar de eigenaar melden
-   (leerpunt #789; `docs/operations/recepten.md`).
+   `git diff --name-only HEAD...origin/main -- .claude/skills .claude/agents .claude/hooks .claude/settings.json .claude/settings.local.json` iets, dan
+   `node scripts/kit/bijhalen.mjs main`, de genoemde beschermde paden bijwerken met Edit (eigenaarakkoord), `git diff --quiet -- <paden>`
+   en pas dan `git commit -F <bestand>`; geen `add -u`/`-A`/`.`/`commit -a` daarvoor (spec bijhalen, leerpunt #789; `docs/operations/recepten.md`).
    Vóór het openen van de PR (ADR 0101 punt 6): zoek de open leerpunten die het werk raakt (zie stap 8 van Opruimen); lost
    de PR er een op, dan krijgt de beschrijving `Closes #<nr>` en de sectie `## Leerpunt` met bewijs, zodat GitHub het bij de
    merge sluit. Alleen in de template zelf: in een app wijst `#<nr>` naar een issue van de app, dus daar nooit een
