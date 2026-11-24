@@ -52,8 +52,9 @@ haalt niets op.
   `git diff --quiet -- <paden>` en rondt hij af met `git commit -F <bestand>`.
 - **`volg <ref>`** zet de huidige branch met een fast-forward op `<ref>`, bijvoorbeeld `origin/<branch>` na "Update branch"
   of `origin/main` na een merge. Daarna werkt de agent de beschermde bestanden bij met Edit.
-- **`terug`** breekt een lopende merge af die `main` begon. Daarna zet de agent de genoemde beschermde bestanden met Edit
-  terug.
+- **`terug`** breekt een lopende merge af die `main` begon. Het zet alleen de paden terug die verschillen tussen HEAD en de
+  index, en weigert als een schrijfbaar pad in de werkmap afwijkt van de index (eigen werk van de agent na `main`). Daarna
+  zet de agent de genoemde beschermde bestanden met Edit terug.
 
 **Volgorde (`main` en `volg`).** Een stap begint pas als de vorige gelukt is.
 
@@ -67,7 +68,13 @@ Faalt stap 3 of 4, dan zet het script de werkmap en de index terug naar de toest
 **Wat beschermd is.** Een pad is beschermd als het onder de vaste lijst valt (vangnet), of als het vooraf niet schrijfbaar
 blijkt. Dat toetst `schrijfbaar(root, pad)`: `fs.accessSync(…, W_OK)` op het pad zelf, of anders op de diepste bestaande
 voorouder. Op een alleen-lezen bestandssysteem geeft dat `EROFS`, ook als root. Voor elk beschermd pad met nieuwe inhoud
-schrijft het script die inhoud naar `<os.tmpdir()>/bijhalen/<pad>`, zodat de agent haar met Read en Edit kan overnemen.
+schrijft het script die inhoud naar `<os.tmpdir()>/bijhalen/<sha>/<pad>`, met `<sha>` de doelcommit (bij `terug` HEAD).
+Die submap maakt het script eerst leeg, zodat geen inhoud van een eerdere run of andere werkmap blijft staan. De agent
+neemt de inhoud over met Read en Edit.
+
+**Modus en symlinks.** Een stap draagt ook de bestandsmodus. Bij `100755` zet het script de uitvoerbit en bij `100644`
+haalt het hem weg, ook als alleen de modus verandert. Een symlink (`120000`) of submodule (`160000`) op een gewijzigd
+schrijfbaar pad weigert het script vooraf; dat is zeldzaam en blijft handwerk.
 
 **Signaturen** (definitief):
 
@@ -77,8 +84,8 @@ schrijft het script die inhoud naar `<os.tmpdir()>/bijhalen/<pad>`, zodat de age
 - `verdeelPaden(paden, schrijfbaar)` geeft `{ schrijven, beschermd }`. `schrijfbaar` is een functie van pad naar boolean.
   Beschermd is wat `isSandboxBeschermd` of `!schrijfbaar` zegt. De volgorde van de invoer blijft behouden.
 - `bijhalenArgumenten(args)` geeft `{ stand: 'main' } | { stand: 'volg', ref } | { stand: 'terug' }`.
-- `pasWerkmapToe(stappen, io)`: `stappen` is een lijst van `{ pad, inhoud: Buffer | null }`, waarbij `null` verwijderen
-  betekent. `io` heeft `lees`, `schrijf` en `verwijder`. Faalt een stap, dan zet de functie de eerdere stappen terug en gooit
+- `pasWerkmapToe(stappen, io)`: `stappen` is een lijst van `{ pad, inhoud: Buffer | null, uitvoerbaar: boolean }`, waarbij
+  `null` verwijderen betekent. `io` heeft `lees` (geeft `{ inhoud, uitvoerbaar } | null`), `schrijf` en `verwijder`. Faalt een stap, dan zet de functie de eerdere stappen terug en gooit
   ze de oorspronkelijke fout door.
 
 **Teksten** (letterlijk):
@@ -92,6 +99,9 @@ schrijft het script die inhoud naar `<os.tmpdir()>/bijhalen/<pad>`, zodat de age
 - `✗ bijhalen geweigerd: HEAD loopt alleen achter op origin/main; gebruik bijhalen.mjs volg origin/main`
 - `✗ bijhalen geweigerd: ongetrackte bestanden zouden overschreven worden:`, daarna één pad per regel.
 - `✗ bijhalen geweigerd: er loopt geen merge; niets terug te zetten`
+- `✗ bijhalen geweigerd: deze bestanden zijn na bijhalen gewijzigd; commit, herstel of bewaar ze eerst:`, daarna één pad
+  per regel (stand `terug`).
+- `✗ bijhalen geweigerd: symlink of submodule op een gewijzigd pad:`, daarna één pad per regel.
 - `✗ bijhalen: conflict in <n> bestand(en); er is niets veranderd:`, daarna één pad per regel.
 - `✗ bijhalen: git merge-tree faalt: <reden>; er is niets veranderd`
 - `✗ bijhalen: schrijven faalt (<pad>: <reden>); alles is teruggezet`
@@ -100,8 +110,8 @@ schrijft het script die inhoud naar `<os.tmpdir()>/bijhalen/<pad>`, zodat de age
 - `✓ <branch> staat op <sha>`
 - `✓ merge afgebroken; index en schrijfbare bestanden staan weer op HEAD`
 - Na de drie succesmeldingen, alleen als er beschermde paden zijn:
-  `Beschermd, bijwerken met Edit (eigenaarakkoord); daarna moet git diff --quiet -- <paden> slagen:`. Daarna per regel
-  `<pad> ← <tmp-pad>` (nieuwe inhoud) of `<pad> verwijderen (eigenaar)`.
+  `Beschermd, bijwerken met Edit (eigenaarakkoord); daarna moet git diff --quiet -- <paden> slagen en mag geen verwijderd
+  pad nog bestaan:`. Daarna per regel `<pad> ← <tmp-pad>` (nieuwe inhoud) of `<pad> verwijderen (eigenaar)`.
 
 ## Acceptatiecriteria
 
@@ -160,14 +170,21 @@ schrijft het script die inhoud naar `<os.tmpdir()>/bijhalen/<pad>`, zodat de age
   - is de index gelijk aan HEAD en hebben de gewone paden de toestand van HEAD;
   - bestaan `MERGE_HEAD` en `MERGE_MSG` niet meer en staat HEAD op dezelfde commit;
   - noemt het blok het beschermde bestand met de HEAD-inhoud als tmp-bestand;
-  - zonder lopende merge weigert `terug` en verandert het niets. Toets: `test/scripts/bijhalen.test.ts` (nieuw)
+  - zonder lopende merge weigert `terug` en verandert het niets;
+  - is na `main` een schrijfbaar pad in de werkmap gewijzigd (afwijkend van de index), dan weigert `terug` met de melding
+    die dat pad noemt, en zijn dat bestand, de index en `MERGE_HEAD` ongewijzigd. Toets: `test/scripts/bijhalen.test.ts` (nieuw)
+- **bijhalen/AC-12**: Gegeven een doel dat bij een gewoon bestand alleen de modus verandert (`100644` naar `100755`). Dan
+  heeft dat bestand na `main` of `volg` de uitvoerbit en wijkt de werkmap niet af van de index. Een symlink op een
+  gewijzigd schrijfbaar pad geeft de symlinkmelding en verandert niets. De tmp-submap van een eerdere run met een andere
+  doelcommit raakt het script niet; die van dezelfde doelcommit maakt het eerst leeg.
+  Toets: `test/scripts/bijhalen.test.ts` (nieuw)
 
 ## Randgevallen
 
 | Situatie | Gedrag |
 |---|---|
 | Beschermd bestand nieuw in het doel | in het blok met tmp-pad; de agent maakt het met Write of Edit (eigenaarakkoord) |
-| Beschermd bestand verwijderd in het doel | in het blok als `verwijderen (eigenaar)`; het blijft ongetrackt in de werkmap tot de eigenaar het weghaalt, en blokkeert de commit niet |
+| Beschermd bestand verwijderd in het doel | in het blok als `verwijderen (eigenaar)`; het blijft ongetrackt in de werkmap tot de eigenaar het weghaalt. Het blokkeert de commit niet, maar `git diff --quiet` ziet het niet: tot het weg is geldt het verbod op `-A` en `.` (een latere `git add -A` zou de verwijdering terugdraaien), en `pr:verify` weigert erop |
 | Pad met spaties of niet-ASCII | git met `-z` en scheiding op NUL |
 | Commit-msg-hook | het bericht begint met `Merge ` (bestaande regel uit de receptenkaart) |
 | Pre-commit-hook met een verouderd beschermd bestand | faalt (gemeten). Daarom eerst Edit en `git diff --quiet -- <paden>`, en pas daarna `git commit -F` |
@@ -179,7 +196,8 @@ schrijft het script die inhoud naar `<os.tmpdir()>/bijhalen/<pad>`, zodat de age
 
 - `.claude/skills/opleveren/SKILL.md` stap 1. Toont de diff iets onder de beschermde paden, dan gebruikt de agent
   `bijhalen.mjs main`, werkt hij de beschermde paden bij met Edit en rondt hij af met `git commit -F`, in plaats van de
-  eigenaar te melden. Geen `-a`/`-u`/`-A`/`.` tot `git diff --quiet -- <paden>` slaagt. Dit is een beschermd pad: Edit in de
+  eigenaar te melden. Geen `-a`/`-u`/`-A`/`.` tot `git diff --quiet -- <paden>` slaagt en geen verwijderd beschermd pad
+  meer bestaat. Dit is een beschermd pad: Edit in de
   hoofdsessie met akkoord van de eigenaar.
 - `docs/operations/recepten.md`: de rijen "`main` bijhalen" en "Nieuw werk na een merge" noemen het script en de stappen
   voor het geval met beschermde paden. `pnpm ratchet` toetst ze tegen het rolhek (`docs:recept-rolhek`).
@@ -201,7 +219,8 @@ schrijft het script die inhoud naar `<os.tmpdir()>/bijhalen/<pad>`, zodat de age
   fixture).
 - In de fixture zijn de beschermde paden wel schrijfbaar. De tests toetsen dus dat het script ze niet aanraakt.
 - Na de bouw gebruikt de hoofdsessie het script één keer zelf in deze cloudsessie als `main` dan een beschermd pad raakt.
-  Lukt dat, dan gaat het als bewijs in de PR. Zo niet, dan meldt de PR dat.
+  Lukt dat, dan gaat het als bewijs in de PR. Zo niet, dan meldt de PR expliciet dat de stappen Edit, `git diff --quiet` en
+  `git commit -F` met de echte lefthook niet doorlopen zijn; alleen de hookmeting onder Aanleiding staat dan vast.
 
 ## Open vragen
 
