@@ -96,7 +96,7 @@ export function heredocsBeide(script) {
 
 /**
  * De lezingen zonder herhaling: een lezing die in haar geheel gelijk is aan een eerdere, valt weg. Binnen een lezing blijft elk
- * segment staan, ook een herhaald (`cd .. && cd ..`): de werkmapstand volgt de segmenten in volgorde (Codex-review P1). Elke
+ * segment staan, ook een herhaald (`cd .. && cd ..`): de werkmapstand volgt de segmenten in volgorde (PR-review P1). Elke
  * lezing eindigt met een lege scheiding, dus de volgende begint in elke map die het commando tot dan toe kon hebben.
  * @param {Command[][]} lezingen
  */

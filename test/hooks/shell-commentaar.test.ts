@@ -78,7 +78,7 @@ describe('rolhek-herstel/AC-4: commentaar begint aan het begin van een woord', (
 
   // Review B3 na de bouw: een `}` tussen aanhalingstekens sluit `${…}` niet; anders lijkt de rest een heredoc met aangehaalde
   // delimiter, slaat `substitutions()` de body over en blijft de `$(rm …)` die bash uitvoert buiten de toets.
-  // Codex-review P1: twee gelijke segmenten binnen één lezing (`cd .. && cd ..`) blijven allebei staan; anders volgt de
+  // PR-review P1: twee gelijke segmenten binnen één lezing (`cd .. && cd ..`) blijven allebei staan; anders volgt de
   // werkmap één `cd` te weinig en valt een schrijfdoel op een zelfladend pad buiten de toets.
   test('rolhek-herstel/AC-4: een herhaald commando in één lezing blijft staan (cd .. && cd .. met commentaar)', () => {
     const ctx = {
