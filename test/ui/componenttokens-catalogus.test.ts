@@ -7,8 +7,7 @@ import { declaredTokens } from './token-resolve.ts';
 
 // app-thema/AC-7: elk componenttoken uit components.css (behalve --layer-*, die staan bij Lagen in de sectie Tokens) staat
 // in de sectie "Componenttokens" op /design-system met component en standaard, en `feiten.mjs tokens --json` geeft het
-// `laag`, `component` en `standaard`. De spec noemt test/ui/tokens-catalogus.test.ts als toets; dat bestand is een
-// bestaande test, deze tests staan daarom (nog) hier.
+// `laag`, `component` en `standaard` (de toets van AC-7 in de spec).
 const root = path.join(import.meta.dirname, '../..');
 const read = (file: string) => readFileSync(path.join(root, file), 'utf8');
 

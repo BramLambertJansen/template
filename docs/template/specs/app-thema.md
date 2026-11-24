@@ -82,7 +82,7 @@ en het tokenoverzicht staan op `/design-system` achter `guard('design-system:rea
   alleen als paar (`--<component>-bg` met `--<component>-fg`); de contrasttest rekent elk paar door.
 - **Vindbaar**: `node scripts/kit/feiten.mjs tokens` toont per token de laag, het component en de standaard; het tabblad Tokens
   op `/design-system` krijgt een sectie "Componenttokens" met dezelfde lijst en de berekende waarde. De JSON-vorm krijgt die
-  velden erbij; bestaande velden (`licht`, `donker`, `bron`) blijven, en `test/ui/tokens-catalogus.test.ts` gaat mee.
+  velden erbij; bestaande velden (`licht`, `donker`, `bron`) blijven, en `test/ui/componenttokens-catalogus.test.ts` en `test/scripts/feiten-tokens.test.ts` gaan mee.
 - **Nulmeting**: vóór deel A neemt de bouwer van `main` op: (1) elke tokendeclaratie uit
   `src/core/web/styles/primitives.css`, `semantic.css` en `components.css` met haar opgeloste waarde (licht en donker), in
   `test/ui/fixtures/tokens-voor-app-thema.json`; (2) de berekende stijl van elk component in de eerste set, in

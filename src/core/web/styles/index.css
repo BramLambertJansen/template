@@ -149,9 +149,10 @@
 }
 
 /* Componenttokens zonder Tailwind-namespace (spec app-thema, eigenaar 2026-11-24): randdikte, hoofdletterstand, de
-   schaduw van Button (standaard `none`; via de shadow-namespace bleef ook de focusring weg) en de kleurparen van een
-   component (een --color-* in @theme zou ze als semantisch token tellen). `border-card` is al de kaartkleur, daarom
-   `border-card-width`. */
+   schaduw van Button en de kleurparen van een component (een --color-* in @theme zou ze als semantisch token tellen).
+   `border-card` is al de kaartkleur, daarom `border-card-width`. shadow-button zet box-shadow direct (niet
+   via --tw-shadow): zo kan geen enkele waarde van --button-shadow, ook `none`, de focusring ongeldig maken; bij focus
+   vervangt de ring de schaduw. */
 @utility border-button {
   border-width: var(--button-border-width);
 }

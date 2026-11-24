@@ -1,5 +1,5 @@
 // Spec app-thema (AC-7): elk componenttoken uit src/core/web/styles/components.css met component en standaard; de
-// sectie Componenttokens toont er de berekende waarde bij. test/ui/tokens-catalogus.test.ts eist dat deze lijst precies de
+// sectie Componenttokens toont er de berekende waarde bij. test/ui/componenttokens-catalogus.test.ts eist dat deze lijst precies de
 // declaraties van components.css volgt (behalve --layer-*, die staan bij Lagen in de sectie Tokens).
 export const COMPONENT_TOKENS = [
   { token: '--control-h', component: 'control', standaard: 'max(var(--density-control), 2.75rem)' },

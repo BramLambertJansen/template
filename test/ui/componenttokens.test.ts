@@ -153,6 +153,10 @@ const RECIPES: readonly Recipe[] = [
   },
   { file: 'select.tsx', required: ['inputBase'], forbidden: CONTROL_FORBIDDEN },
   { file: 'textarea.tsx', required: ['inputBase'], forbidden: CONTROL_FORBIDDEN },
+  // Deze velden renderen <Input> (en daarmee inputBase); hun overige klassen horen bij de optielijst of de knop ernaast.
+  { file: 'combobox.tsx', required: ['<Input'], forbidden: [] },
+  { file: 'date-input.tsx', required: ['<Input'], forbidden: [] },
+  { file: 'password-input.tsx', required: ['<Input'], forbidden: [] },
   {
     file: 'card.tsx',
     required: ['rounded-card', 'shadow-card', 'border-card-width', 'py-card-y'],

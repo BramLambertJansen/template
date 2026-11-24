@@ -7,7 +7,8 @@
 [data-app-theme] {
   /* Een app kan --density-control groter zetten, nooit kleiner dan het aanraakdoel van 44 px (framework §7). */
   --control-h: max(var(--density-control), 2.75rem);
-  /* Een app kan --density-focus-ring breder zetten, nooit smaller dan 2 px. */
+  /* Breedte van de focusring met ondergrens 2 px. De recepten tekenen de ring nog met ring-2 en lezen dit token niet;
+     test/ui/contrast-componenttokens.test.ts bewaakt dat het nooit onder 2 px komt. */
   --focus-ring-width: max(var(--density-focus-ring), 2px);
   --focus-ring-offset: 2px;
 
@@ -16,6 +17,7 @@
   --button-padding-x: calc(var(--density-space) * 4);
   /* Alleen varianten met een rand (outline) gebruiken hem. */
   --button-border-width: 1px;
+  /* Zolang de knop focus heeft, vervangt de focusring (ring-2) de schaduw: een app-schaduw is dan even weg. */
   --button-shadow: none;
   --button-text-transform: none;
 
