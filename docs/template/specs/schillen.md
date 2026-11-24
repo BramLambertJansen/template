@@ -214,7 +214,7 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
   56 px hoog en heeft `main` geen maximale breedte. Toets: `e2e/schillen.spec.ts` (nieuw)
 - **schillen/AC-7** — Gegeven een schil zonder `nav`-items, dan staat er geen `nav`, geen menuknop en geen lege sheet. Toets: `src/core/web/ui/topbar-shell.test.tsx` (nieuw)
 - **schillen/AC-8** — Gegeven beide schillen op 375 en 1280 px, licht en donker, dan is er geen horizontale scroll, vindt axe
-  niets, en is elk item in de balk minstens 44 px hoog; op 1280 px met `html { font-size: 200% }` (via `page.addStyleTag`)
+  niets, en is elk item in de balk minstens 44 px hoog; op 1280 px met `html { font-size: 200% }` (als fixture-stylesheet van dezelfde origin, zoals in de spec app-thema)
   toont `TopbarShell` met negen items de menuknop en is er geen horizontale scroll. Toets: `e2e/schillen.spec.ts` (nieuw)
 - **schillen/AC-9** — Gegeven `/design-system?schil=topbalk&items=9`, dan staat de pagina in `TopbarShell` met negen
   voorbeelditems, precies één `main` en één skip-link, en vindt axe niets; gegeven `?schil=sidebar&items=3`, dan in

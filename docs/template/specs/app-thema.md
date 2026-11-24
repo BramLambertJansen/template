@@ -65,7 +65,7 @@ en het tokenoverzicht staan op `/design-system` achter `guard('design-system:rea
   (`--radius-button` → `rounded-button`, `--shadow-card` → `shadow-card`, `--font-weight-button`, `--spacing-button-x`,
   `--container-dialog`). Voor randdikte en hoofdletterstand bestaat geen namespace; daarvoor definieert core eigen klassen
   met `@utility` in `src/core/web/styles/` (zoals `border-button`, `border-control`, `case-button`) (eigenaar,
-  2026-11-24). Geen `[…]`- of `(…)`-waarde in de kit, ook niet tijdelijk.
+  2026-11-24). Geen nieuwe `[…]`- of `(…)`-waarde in de kit; bestaande staan in de baseline van deel B tot ze weg zijn.
 - **Hooguit zes tokens per component** (test). Past de wens niet in zes, dan is het een variant (de [stijlladder](stijlladder.md)).
 - **Gedeelde tokens voor invoer**: `Input`, `Select`, `Textarea`, `Combobox`, `DateInput` en `PasswordInput` delen één set
   `--control-*` (naast het bestaande `--control-h`), zodat velden onderling gelijk blijven.
@@ -83,9 +83,15 @@ en het tokenoverzicht staan op `/design-system` achter `guard('design-system:rea
 - **Vindbaar**: `node scripts/kit/feiten.mjs tokens` toont per token de laag, het component en de standaard; het tabblad Tokens
   op `/design-system` krijgt een sectie "Componenttokens" met dezelfde lijst en de berekende waarde. De JSON-vorm krijgt die
   velden erbij; bestaande velden (`licht`, `donker`, `bron`) blijven, en `test/ui/tokens-catalogus.test.ts` gaat mee.
-- **Nulmeting**: vóór deel A neemt de bouwer de berekende stijl van elk component in de eerste set op van `main`, in
-  `e2e/fixtures/app-thema-baseline.json` (375 en 1280 px, licht en donker, met een lege `theme.css` en met de
-  voorbeeld-`theme.css` uit AC-18). AC-1 en AC-18 vergelijken daartegen.
+- **Nulmeting**: vóór deel A neemt de bouwer van `main` op: (1) elke tokendeclaratie uit
+  `src/core/web/styles/primitives.css`, `semantic.css` en `components.css` met haar opgeloste waarde (licht en donker), in
+  `test/ui/fixtures/tokens-voor-app-thema.json`; (2) de berekende stijl van elk component in de eerste set, in
+  `e2e/fixtures/app-thema-baseline.json` (375 en 1280 px, licht en donker, zonder app-thema en met de stijlvariant uit
+  AC-18). AC-1, AC-18 en AC-19 vergelijken daartegen.
+- **Stijlvarianten in e2e**: een test die andere tokenwaarden nodig heeft (AC-2, AC-5b, AC-18), zet die niet in
+  `theme.css` maar laadt een fixturebestand uit `e2e/fixtures/app-thema/` als extra stylesheet van dezelfde origin: hij
+  serveert het met `page.route` en voegt het toe met `page.addStyleTag({ url })`. Geen inline-stijl, dus de CSP
+  (`style-src 'self'`) blijft gelden; de nulmeting op `main` gebruikt dezelfde manier.
 
 **Deel B — rail op de kit**
 
@@ -141,7 +147,7 @@ en het tokenoverzicht staan op `/design-system` achter `guard('design-system:rea
 
 **Deel A**
 
-- **app-thema/AC-1** — Gegeven een lege `src/web/styles/theme.css`, dan is de berekende stijl van elk component in de eerste
+- **app-thema/AC-1** — Gegeven geen gekozen app-thema en geen stijlvariant, dan is de berekende stijl van elk component in de eerste
   set gelijk aan de nulmeting in `e2e/fixtures/app-thema-baseline.json` (radius, schaduw, gewicht, padding, randdikte en
   kleuren op 375 en 1280 px, licht en donker). Toets: `e2e/app-thema.spec.ts` (nieuw)
 - **app-thema/AC-2** — Gegeven `--button-radius` in `theme.css`, dan heeft elke `Button`-variant die radius en verandert geen
@@ -155,15 +161,18 @@ en het tokenoverzicht staan op `/design-system` achter `guard('design-system:rea
 - **app-thema/AC-5** — Gegeven een `theme.css` die een componentkleurpaar onder de contrastgrens zet, dan faalt de
   contrasttest en noemt hij het paar; gegeven `--focus-ring-width` direct onder 2 px, dan faalt dezelfde test. Toets: `test/ui/contrast-componenttokens.test.ts` (nieuw)
 - **app-thema/AC-5b** — Gegeven `--density-control: 2rem` of `--density-focus-ring: 1px` in `theme.css`, dan is de berekende
-  hoogte van een `Button` 44 px en de focusring 2 px. Toets: `e2e/app-thema.spec.ts` (nieuw)
+  hoogte van een `Button` 44 px en de focusring 2 px. `--density-focus-ring` staat in `semantic.css`, naast
+  `--density-control`. Toets: `e2e/app-thema.spec.ts` (nieuw)
 - **app-thema/AC-6** — Gegeven `theme.css` met een primitief token (`--p-*`) als doel van een toewijzing, dan faalt de test. Toets: `test/ui/componenttokens.test.ts` (nieuw)
 - **app-thema/AC-7** — Gegeven `node scripts/kit/feiten.mjs tokens --json`, dan heeft elk componenttoken `laag`, `component` en
   `standaard`, en staat elk token in de sectie "Componenttokens" op `/design-system`. Toets: `test/ui/tokens-catalogus.test.ts`
-- **app-thema/AC-18** — Gegeven een `theme.css` die alleen bestaande semantische tokens zet (`--radius`, `--primary`,
-  `--density-control`, `--font-family-sans`), dan is de berekende stijl gelijk aan de nulmeting met diezelfde `theme.css`. Toets: `e2e/app-thema.spec.ts` (nieuw)
-- **app-thema/AC-19** — Gegeven de tokenlijst van `node scripts/kit/feiten.mjs tokens --json` op `main` vóór deel A
-  (vastgelegd in `test/ui/fixtures/tokens-voor-app-thema.json`), dan bestaat elk token na de bouw nog met dezelfde naam en
-  standaardwaarde. Toets: `test/ui/componenttokens.test.ts` (nieuw)
+- **app-thema/AC-18** — Gegeven een stijlvariant die alleen bestaande semantische tokens op `:root` zet (`--radius`,
+  `--primary`, `--density-control`, `--font-family-sans`), zoals een app nu in `theme.css` doet, dan is de berekende stijl
+  gelijk aan de nulmeting met diezelfde variant. Toets: `e2e/app-thema.spec.ts` (nieuw)
+- **app-thema/AC-19** — Gegeven de tokendeclaraties uit de nulmeting (`test/ui/fixtures/tokens-voor-app-thema.json`, alle
+  drie de lagen, ook `--control-h`, `--focus-ring-*` en `--qr-*`), dan bestaat elk token na de bouw nog met dezelfde naam
+  en dezelfde opgeloste waarde, licht en donker; de tekst van de declaratie mag veranderen (zoals
+  `--focus-ring-width: max(var(--density-focus-ring), 2px)`, opgelost nog steeds `2px`). Toets: `test/ui/componenttokens.test.ts` (nieuw)
 
 **Deel B**
 
@@ -187,7 +196,7 @@ en het tokenoverzicht staan op `/design-system` achter `guard('design-system:rea
 - **app-thema/AC-14** — Gegeven `ThemeScope` met `zacht` binnen een document met `strak`, dan rekenen componenten erbinnen
   met de tokens van `zacht` en erbuiten met die van `strak`, ook een `Dialog` die binnen de scope geopend wordt; een
   scopethema dat alleen een semantisch token zet (`--background`, `--radius`), verandert ook de afgeleide componenttokens
-  in de scope; `ThemeScope` voegt geen box toe aan de layout. Toets: `e2e/app-thema.spec.ts` (nieuw)
+  in de scope; tokens die het scopethema niet zelf zet, erven van het document; `ThemeScope` voegt geen box toe aan de layout. Toets: `e2e/app-thema.spec.ts` (nieuw)
 - **app-thema/AC-15** — Gegeven licht en donker, dan werkt de bestaande `ThemeToggle` ongewijzigd in elk thema en blijft de
   sleutel `thema` los van `app-thema`. Toets: `src/core/web/lib/theme-app.test.ts` (nieuw)
 - **app-thema/AC-16** — Gegeven `/design-system` met de twee meegeleverde thema's, dan toont de kiezer "Standaard", "Strak"
@@ -222,6 +231,8 @@ en het tokenoverzicht staan op `/design-system` achter `guard('design-system:rea
 - `pnpm check:catalogus`, `pnpm ui:check`, het bundelbudget (`src/web/bundle-budget.ts`): `themes.ts` en de twee themablokken
   tellen mee in de startbundel.
 - De spec [schillen](schillen.md): de fixture "twee schillen" kan de meegeleverde thema's gebruiken.
+- `docs/template-changelog.md`: de voorbeeldthema's staan in `src/web/styles/theme.css` en `themes.ts`, de app-zone; een app
+  die `theme.css` al aanpaste, krijgt bij de template-merge een conflict en kiest zelf of ze de voorbeelden houdt.
 
 ## Buiten scope
 
