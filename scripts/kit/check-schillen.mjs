@@ -240,7 +240,9 @@ function fileRoute(/** @type {ts.SourceFile} */ sf) {
  */
 function rendertSchil(ctx, ref, depth = 0) {
   const { register } = ctx;
-  if (VASTE_SCHILLEN.has(ref.name) || register.refs.has(key(ref))) return true;
+  // Een vaste schil telt alleen uit core, zodat een lokale functie met dezelfde naam niet meetelt.
+  if (VASTE_SCHILLEN.has(ref.name) && ref.file.startsWith('src/core/web/ui/')) return true;
+  if (register.refs.has(key(ref))) return true;
   const sf = ctx.bron(ref.file);
   const node = sf === null || depth > 1 ? undefined : componenten(sf).get(ref.name);
   if (node === undefined) return false;

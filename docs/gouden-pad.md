@@ -152,7 +152,9 @@ Geeft de permissietabel accountbeheer aan een rol zonder `beheer`, dan weigert d
 Een deel van de app met een eigen indeling (bijvoorbeeld een portaal naast het beheer) krijgt een eigen layoutroute met
 een eigen schil (spec [schillen](template/specs/schillen.md), deel B). Skip-link, focus, offlinemelding en afdrukken komen
 uit `ShellFrame`; meldingen uit `ToastProvider`. Compleet voorbeeld met twee layoutroutes, guard, navigatie per schil en
-`ThemeScope`: `src/web/features/layout/twee-schillen.test.tsx`. `pnpm check:schillen` (in `gate:fast`) bewaakt stap 2 en 3.
+`ThemeScope`: `src/web/features/layout/twee-schillen.test.tsx`. `pnpm check:schillen` (in `gate:fast`) bewaakt stap 2 en 3 en dat `ShellFrame` alleen in een schil staat. Hij leest
+statisch: een layoutroute met een inline component (`component: () => …`) of een schil die meer dan één laag onder het
+layoutcomponent zit, ziet hij niet en meldt hij als fout; geef de route het layoutcomponent zelf.
 
 1. **Kies de schil**: `SidebarShell` of `TopbarShell` (vorm: `src/core/web/ui/sidebar-shell.tsx`,
    `src/core/web/ui/topbar-shell.tsx`), of een eigen schil op `ShellFrame` in `src/web/ui/<naam>-shell.tsx`. Een eigen schil

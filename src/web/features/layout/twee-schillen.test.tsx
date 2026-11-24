@@ -202,7 +202,8 @@ describe('schillen/AC-12: twee layoutroutes met elk een eigen schil', () => {
   test('schillen/AC-12: een rol zonder accounts:read ziet in de eerste schil geen link naar het portaal', async () => {
     await open('user');
     expect(screen.queryByRole('link', { name: 'Portaal' })).toBeNull();
-    expect(screen.getAllByRole('link', { name: 'Home' }).length).toBeGreaterThan(0);
+    // De eerste schil staat er wel; geen vaste itemnaam uit de app-zone (leerpunt #983).
+    expect(document.querySelector('aside')).not.toBeNull();
   });
 
   test('schillen/AC-12: de guard van de tweede route weigert die rol: geen portaalscherm, wel de weigering', async () => {
