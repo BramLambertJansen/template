@@ -221,6 +221,31 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   `db/backup/`, `db/restore-checks/` en `deploy/backup/` en het bestand `deploy/backup.env`; R-PROV-06 de back-up als vaste
   template-stap; R-SEC-06: back-upgeheimen in GitHub alleen in de environment `backup`.
   aanleiding: `docs/template/adr/0108-back-up-en-herstel.md` (verzoek van de eigenaar, 2026-11-23; eerste app met geld)
+- [ ] **ST-18 (P1) — idempotente mutaties als bouwsteen** (spec `idempotente-mutaties`, voorgesteld; R-CODE-11, ADR 0045 punt 28).
+  **Werk:** deel A (bonnetabel `app.request_receipts`, contractoptie `idempotent` in de route kit, sleutel in de API-client,
+  `useRequestKey`, dekkingstest, gouden pad), daarna deel B (tombstone na de termijn). Route kit is core en gate-pad: risicowerk
+  met een aparte tester. **Afhankelijkheden:** spec goedgekeurd; deel B wacht op de runner van ST-03.
+  **Klaar als:** de AC's van de spec hebben een test; elke geld- of voorraadroute van een app gebruikt de bouwsteen (dekkingstest).
+  aanleiding: `docs/template/specs/idempotente-mutaties.md` (verzoek van de eigenaar, 2026-11-23; app met saldo's en verkoop)
+- [ ] **ST-19 (P1) — afbeeldingen tonen bij een resource** (spec `afbeeldingen`, voorgesteld; uitbreiding op spec `bestandsopslag`).
+  **Werk:** eerst een besluit-PR die ADR 0060 punt 2 en R-OPSL-02 herziet (weergave-URL voor een vaste lijst rastertypen); dan
+  deel A (`createViewUrl` op de poort, `img-src` in de CSP, veld `view`) en deel B (koppelpatroon bestand bij een rij, check, gouden pad).
+  **Afhankelijkheden:** besluit-PR; bestandsopslag deel A en B gebouwd (ST-11); productie pas na bestandsopslag deel C (R-OPSL-04).
+  **Klaar als:** de AC's van de spec hebben een test.
+  aanleiding: `docs/template/specs/afbeeldingen.md` (verzoek van de eigenaar, 2026-11-23; afbeelding bij een artikel)
+- [ ] **ST-20 (P1) — wachtwoord vergeten, per app in te schakelen** (spec `wachtwoordherstel`, voorgesteld; standaard uit).
+  **Werk:** eerst een besluit-PR die ADR 0043 punt 3, R-AUTH-04 en R-UIT-03 herziet; dan het pad, twee schermen en de mail.
+  Auth in core: risicowerk met een aparte tester. **Afhankelijkheden:** besluit-PR; mail-outbox van ST-03 (OV-2); buiten
+  `local` en `test` pas met de CAPTCHA van ST-10 (OV-3).
+  **Klaar als:** de AC's van de spec hebben een test; de bestaande auth-integratietests blijven ongewijzigd groen.
+  aanleiding: `docs/template/specs/wachtwoordherstel.md` (verzoek van de eigenaar, 2026-11-23; app met veel gewone gebruikers)
+- [ ] **ST-21 (P1) — appstyling: thema, schillen en stijlladder** (specs `app-thema`, `schillen` en `stijlladder`, voorgesteld;
+  besluiten van de eigenaar 2026-11-15). **Werk:** app-thema deel A–C (componenttokens, rail op de kit, thema's per app), schillen
+  deel A–B (`ShellFrame`, sidebar- en topbalkschil, eigen schillen met contracttest), stijlladder (treden, register en `check:stijl`).
+  Stijlladder raakt agentinstructies, een skill en een gate: beschermde paden met eigenaarakkoord. Overlapt met ST-07: breid
+  daar uit, bouw geen tweede mechanisme. **Afhankelijkheden:** app-thema A vóór schillen A; stijlladder na beide.
+  **Klaar als:** de AC's van de drie specs hebben een test; een app krijgt een eigen uitstraling zonder `src/core` te wijzigen.
+  aanleiding: `docs/template/specs/app-thema.md` (verzoek van de eigenaar, 2026-11-23; appstyling voor een eerste echte app)
 - [ ] **Omhulsels met opties en xargs-optiewaarden in het rolhek.** `splitCommand` (`rails/hooks/lib/shell.mjs`) stopt bij de eerste optie van een
   omhulsel en kent `setsid`, `timeout` en `stdbuf` niet, zodat `env -i gh …`, `nice -n 1 gh …` en `timeout 9 gh …` voor de hoofdsessie de regels voor
   het label, `@file`/`--input` en `gh alias` ontlopen; `xargsCall` (`rails/hooks/lib/rolhek.mjs`) leest bij een long option of een cluster met waarde
