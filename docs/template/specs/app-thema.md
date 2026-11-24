@@ -152,7 +152,7 @@ en het tokenoverzicht staan op `/design-system` achter `guard('design-system:rea
 
 | Situatie | Gedrag |
 |---|---|
-| `Toaster` en de offline-melding staan in de schil, buiten een `ThemeScope` in de inhoud | ze volgen het thema van het document of van de scope om de schil |
+| `Toaster` (één voor de hele app, in `ToastProvider`) en de offline-melding (in de schil) staan buiten een `ThemeScope` in de inhoud | de `Toaster` volgt altijd het thema van het document (spec [schillen](schillen.md), eigenaar 2026-11-24); de offline-melding volgt het document of de scope om de schil |
 | Afdrukken | het lichte thema, zoals nu; het app-thema blijft staan |
 | Een thema zet een token dat niet bestaat | de test van AC-11 faalt op het onbekende token |
 | `localStorage` ontbreekt of weigert | het thema geldt tot herladen, zoals bij licht en donker |
