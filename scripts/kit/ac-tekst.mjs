@@ -11,8 +11,8 @@ import { dekkingVanSpec, SPEC_BESTAND, specNamen, TESTBESTAND } from '../../rail
 
 export const VRIJSTELLING = 'AC-tekst klopt';
 const ID = /(?<![\w/.-])([\w.-]+)\/(AC-\d+)(?![\w-])/g;
-// Een vervolgregel van hetzelfde commentaar: `//`, `*` of `#` na inspringing, zonder nieuwe GEWIJZIGD-markering.
-const VERVOLG = /^\s*(?:\/\/|\*|#)/;
+// Een vervolgregel van hetzelfde commentaar: `//`, `*`, `#` of `--` (pgTAP) na inspringing, zonder nieuwe GEWIJZIGD-markering.
+const VERVOLG = /^\s*(?:\/\/|\*|#|--)/;
 
 /** De regels met `GEWIJZIGD`, elk met de vervolgregels van hetzelfde commentaar. @param {string} tekst */
 function markeringen(tekst) {
@@ -51,13 +51,14 @@ export function acItem(tekst, id) {
 
 /**
  * De spec in de boom met deze naam of namespace als voorvoegsel, of undefined. @param {Boom} boom @param {string} voor
- * @returns {{ file: string, naam: string } | undefined}
+ * `namen` zijn de voorvoegsels waaronder het lijstitem van een eigen AC kan staan (naam en namespace).
+ * @returns {{ file: string, naam: string, namen: string[] } | undefined}
  */
 function specVan(boom, voor) {
   for (const file of boom.bestanden) {
     if (!SPEC_BESTAND.test(file)) continue;
-    const { naam, eigen } = specNamen(file, boom.lees(file) ?? '');
-    if (eigen.has(voor)) return { file, naam };
+    const { naam, namespace, eigen } = specNamen(file, boom.lees(file) ?? '');
+    if (eigen.has(voor)) return { file, naam, namen: [naam, ...(namespace === undefined ? [] : [namespace])] };
   }
   return undefined;
 }
@@ -84,15 +85,18 @@ export function acTekstViolations({ basis, nu, hernoemd }) {
     if (spec === undefined) return [];
     const oudPad = hernoemd[spec.file] ?? spec.file;
     const oudeTekst = basis.lees(oudPad) ?? '';
-    const item = acItem(nu.lees(spec.file) ?? '', id);
-    const vorig = acItem(oudeTekst, id);
+    // Het lijstitem kan onder de naam of de namespace staan, net als de dekking beide telt.
+    const zoek = (/** @type {string} */ tekst) =>
+      spec.namen.map((naam) => acItem(tekst, `${naam}/${ac}`)).find((gevonden) => gevonden !== null) ?? null;
+    const item = zoek(nu.lees(spec.file) ?? '');
+    const vorig = zoek(oudeTekst);
     if (item === null || vorig === null || item !== vorig) return [];
     // Alleen een AC dat op main al gebouwd was: bij de bouw noemt een GEWIJZIGD-regel het AC als reden, en klopt de tekst al.
     if (!dekkingVanSpec({ file: oudPad, text: oudeTekst }, basis).gebouwd.includes(ac)) return [];
     return [
       {
         key: `docs:ac-tekst:${spec.naam}:${ac}`,
-        message: `${spec.file}: ${test} kreeg een nieuwe GEWIJZIGD-regel voor ${id}, maar de AC-tekst is gelijk aan die op main; werk de AC bij of zet "${VRIJSTELLING}" in het commentaar als de tekst nog waar is (R-WERK-15, leerpunt #940)`,
+        message: `${spec.file}: ${test} kreeg een nieuwe GEWIJZIGD-regel voor ${id}, maar de AC-tekst is gelijk aan die op main; is de tekst nog waar (de regel noemt het AC als reden, of alleen een testnaam veranderde), zet dan "${VRIJSTELLING}" in het commentaar, anders werk de AC bij (R-WERK-15, leerpunt #940)`,
       },
     ];
   });

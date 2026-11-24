@@ -89,6 +89,18 @@ describe('check-docs regel 20: AC-tekst na een testwijziging (leerpunt #940)', (
     expect(acTekstViolations({ basis: ongebouwd, nu, hernoemd: {} })).toEqual([]);
   });
 
+  test('CRLF-regeleinden en een pgTAP-commentaar met de vrijstelling op de vervolgregel', () => {
+    const crlf = testTekst('// GEWIJZIGD (xn/AC-1): ook bijwerken.').replaceAll('\n', '\r\n');
+    expect(sleutels(boom({ [SPEC]: spec('Alleen aanmaken.'), [TEST]: crlf }))).toEqual(['docs:ac-tekst:x:AC-1']);
+    const pgtap = testTekst('-- GEWIJZIGD (xn/AC-1): alleen de opzet', `-- ${VRIJSTELLING}.`);
+    expect(sleutels(boom({ [SPEC]: spec('Alleen aanmaken.'), [TEST]: pgtap }))).toEqual([]);
+  });
+
+  test('de regel noemt de specnaam terwijl het lijstitem onder de namespace staat: toch een overtreding', () => {
+    const nu = boom({ [SPEC]: spec('Alleen aanmaken.'), [TEST]: testTekst('// GEWIJZIGD (x/AC-1): ook bijwerken.') });
+    expect(sleutels(nu)).toEqual(['docs:ac-tekst:x:AC-1']);
+  });
+
   test('een hernoemde spec vergelijkt met haar oude pad; de sleutel draagt de nieuwe naam', () => {
     const nieuw = 'docs/template/specs/y.md';
     const nu = boom({ [nieuw]: spec('Alleen aanmaken.'), [TEST]: testTekst('// GEWIJZIGD (xn/AC-1): ook bijwerken.') });
