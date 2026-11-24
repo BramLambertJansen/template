@@ -13,13 +13,15 @@ Stand nu: één schil, `AppShell` in `src/core/web/ui/app-shell.tsx` (sidebar me
 `src/web/features/layout/app-layout.tsx` vult. Een app die een andere indeling wil, kan alleen core wijzigen (verboden,
 R-ARCH-07) of de schil overslaan en daarmee skip-link, focus na navigatie, offline-melding, toasts en printstijl opnieuw bouwen.
 
-Deel A is functionele UI in core (R-WERK-18): spec, code, tests en gebruiksdocs in één PR. Deel B voegt een check aan
-`gate:fast` toe en raakt de skill `nieuw-scherm`: beschermde paden, risicowerk met een aparte tester (R-WERK-04).
+Deel A is functionele UI in core (R-WERK-18): spec, code, tests en gebruiksdocs in één PR. Deel A raakt daarnaast twee
+gate-paden voor de contracttest (`.dependency-cruiser.mjs`, `eslint.config.js`); dat akkoord geeft de eigenaar met deze spec.
+Deel B voegt een check aan `gate:fast` toe en raakt de skill `nieuw-scherm`: beschermde paden, risicowerk met een aparte
+tester (R-WERK-04).
 
 | Deel | Inhoud | AC's |
 |---|---|---|
-| **A — frame en twee schillen** | `ShellFrame` met de vaste garanties, `SidebarShell` (de huidige schil op het frame) en `TopbarShell`, schiltokens, voorbeelden op `/design-system` | AC-1 t/m AC-9, AC-15, AC-16 |
-| **B — eigen schillen en meerdere per app** | de geëxporteerde contracttest, de check die elke schil eraan koppelt, het patroon voor een tweede layoutroute, sectie in het gouden pad | AC-10 t/m AC-14 |
+| **A — frame en twee schillen** | `ShellFrame` met de vaste garanties, `SidebarShell` (de huidige schil op het frame) en `TopbarShell`, schiltokens, de contracttest, één meldingenplek, voorbeelden op `/design-system` | AC-1 t/m AC-9, AC-15 t/m AC-19 |
+| **B — eigen schillen en meerdere per app** | de check die elke schil aan de contracttest koppelt, het patroon voor een tweede layoutroute, sectie in het gouden pad | AC-10 t/m AC-14 |
 
 ## Doel
 
@@ -40,17 +42,25 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
   routewissel (`routeKey`), `OfflineNotice` precies één keer boven `main`, het lichte thema bij afdrukken en de
   `print:`-regels. Het frame heeft benoemde plekken: `header`, `nav`, `aside` (optioneel), `children`. Het frame bepaalt geen
   indeling: dat doet de schil met layout-klassen.
-- **Focus bij een schilwissel**: mount het frame ná de eerste documentweergave (zoals bij een wissel naar een andere
-  layoutroute), dan zet het de focus op de `h1`, net als bij een wissel van `routeKey`. Bij het eerste scherm na laden blijft
-  de focus waar de browser hem zet. Mechanisme: `ToastProvider` krijgt een zusje in dezelfde provider-laag,
-  `ShellSessionProvider` (core, in `src/web/main.tsx` naast `ToastProvider`), met een ref "er heeft al een frame gemount".
-  Het frame leest en zet die ref; geen router-staat in core-UI en geen modulevariabele. Zonder provider gedraagt het frame
-  zich als nu (alleen focus bij een wissel van `routeKey`). Nu gaat die focus verloren, omdat
-  `useFocusOnRouteChange` in `src/core/web/ui/app-shell.tsx` alleen op een wijziging binnen één mount reageert.
-- **Eén meldingenplek** (eigenaar, 2026-11-24): `ToastProvider` rendert de `Toaster` zelf, één keer voor de hele app, zodat
-  een melding een schilwissel overleeft. Frame en schillen renderen geen `Toaster` meer; bestaande apps hoeven niets te
-  wijzigen, want `ToastProvider` staat al in `src/web/main.tsx`. Meldingen volgen daardoor altijd het thema van het
-  document, ook binnen een deel met een eigen `ThemeScope` (eigenaar, 2026-11-24).
+- **Focus bij een schilwissel**: één regel. Het frame zet bij zijn mount de focus op de `h1`, behalve bij de eerste
+  weergave van het document; daarnaast, zoals nu, bij elke wissel van `routeKey`. Zo krijgt ook "inloggen → app" en
+  "portaal → beheer" de focus op de `h1`, en blijft hij bij het laden van de pagina waar de browser hem zet. Nu gaat die
+  focus verloren, omdat `useFocusOnRouteChange` in `src/core/web/ui/app-shell.tsx` alleen op een wijziging binnen één mount
+  reageert.
+- **Mechanisme**: `ShellSessionProvider` (core, `src/core/web/ui/shell-frame.tsx`; in `src/web/main.tsx` om de router) houdt
+  een ref "document is weergegeven", die hij in zijn eigen effect zet. Effecten van kinderen lopen vóór die van de provider,
+  dus bij de eerste weergave ziet het frame `false`. Het frame beslist bij zijn eerste effect-run en legt die beslissing
+  vast in een eigen ref; de extra effect-run van `StrictMode` (`src/web/main.tsx`) leest die ref en verplaatst de focus dus
+  niet opnieuw. Geen router-staat in core-UI, geen modulevariabele. Zonder provider gedraagt het frame zich als nu: alleen
+  focus bij een wissel van `routeKey`.
+- **Eén meldingenplek** (eigenaar, 2026-11-24): `ToastProvider` rendert de meldingen zelf, één keer voor de hele app, na
+  zijn kinderen, zodat een melding een schilwissel overleeft. `Toaster` is daarna intern: geen export meer uit
+  `src/core/web/ui/toast.tsx` en `src/web/ui/index.ts`. Een app die hem toch importeert, faalt bij de typecheck in plaats
+  van stil dubbele meldingen te tonen. De acht tests die nu `<ToastProvider>` plus `<Toaster />` renderen, laten die tweede
+  regel vallen (reden in de PR, R-TEST-02): `src/core/web/ui/toast.test.tsx`, `src/core/web/ui/toast-effect-timers.test.tsx`,
+  `src/core/web/ui/app-shell-print.test.tsx` en vijf tests in `src/web/features/design-system/`. Het toastvoorbeeld op
+  `/design-system` blijft. Gevolg: ook `/login` en `/uitnodiging` tonen nu meldingen. Meldingen volgen altijd het thema
+  van het document, ook binnen een deel met een eigen `ThemeScope` (eigenaar, 2026-11-24).
 - **`SidebarShell`**: de huidige `AppShell`, gebouwd op het frame, zelfde props en hetzelfde gedrag. `AppShell` blijft als
   export bestaan en verwijst ernaar, zodat bestaande apps niets hoeven te wijzigen.
 - **`TopbarShell`** (nieuw): geen sidebar. Vanaf `md` staat de navigatie horizontaal in de topbalk, links de items, rechts
@@ -58,7 +68,9 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
   items in de balk en de rest in een menu "Meer". Onder `md` toont de balk de menuknop met dezelfde sheet als de
   `SidebarShell`. Props gelijk aan `SidebarShell` (`nav`, `userName`, `menuItems`, `topbarActions`, `routeKey`, `children`).
 - **Breakpoints in CSS**, geen `matchMedia` of breedtemeting in script (R-WEB-01); het aantal items in de balk is daarom een
-  vast getal en geen gemeten breedte.
+  vast getal en geen gemeten breedte. Daarnaast heeft de balk een container query met een drempel in `rem`: is de balk
+  smaller dan die drempel, dan toont hij de menuknop in plaats van de items. Een drempel in `rem` schaalt mee met de
+  tekstgrootte, zodat de balk bij 200 % tekst niet overloopt.
 - **Schiltokens** (componenttokens via het mechanisme van de spec app-thema deel A, hooguit zes): `--shell-sidebar-width`, `--shell-topbar-height`,
   `--shell-content-max`, `--shell-content-padding`, `--shell-nav-gap`, `--shell-border-width`. De vaste maat
   `md:grid-cols-[16rem_1fr]` verdwijnt. Standaardwaarden gelijk aan nu: `--shell-sidebar-width: 16rem`,
@@ -66,7 +78,7 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
 - **Inhoudsbreedte**: `main` krijgt `--shell-content-max` als maximale breedte, gecentreerd; de standaard is geen maximum, zodat
   de huidige schermen niet veranderen.
 - **Bestaande componenten**: `Sidebar`, `Topbar`, `NavLink`, `DropdownMenu` (voor "Meer" en het profielmenu), `Dialog` in
-  de vorm `sheet`, `OfflineNotice`, `Toaster`, `Avatar`. Nieuw: `ShellFrame` en `TopbarShell` (reden: de garanties en de tweede
+  de vorm `sheet`, `OfflineNotice`, `Avatar`. Nieuw: `ShellFrame` en `TopbarShell` (reden: de garanties en de tweede
   indeling bestaan nog nergens).
 - **Voorbeelden** (eigenaar, 2026-11-24: echt wisselen): een schil binnen een schil kan niet (twee `main`, twee skip-links,
   axe faalt). Daarom toont `/design-system` geen verkleinde schillen, maar wisselt de hele pagina van schil. Het tabblad
@@ -75,13 +87,32 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
   naar de standaard. `AppLayout` rendert op `/design-system` met `schil=topbalk` de `TopbarShell` in plaats van
   `SidebarShell`, alleen als de actor `design-system:read` heeft; elders, of zonder dat recht, negeert hij de parameter.
   De voorbeeldnavigatie staat in `src/web/features/layout/schil-voorbeeld.ts` (niet in `features/design-system`, zodat de
-  catalogus lazy blijft), met teksten in `src/web/copy/ui.ts`; elk item wijst naar een vak van `/design-system` en het
-  eerste item is "Terug naar de gewone navigatie" (zonder `schil`). `SidebarShell` en `ShellFrame` zijn zo ook bereikbaar
-  via `AppLayout` (R-UI-07).
+  catalogus lazy blijft), met teksten in `src/web/copy/ui.ts`. Elk item wijst naar een vak en houdt de keuze vast
+  (`/design-system?schil=topbalk&items=9&vak=formulieren`); de vak-ids staan er letterlijk, en een test vergelijkt ze met
+  `src/web/features/design-system/vakken.ts`, zodat de layout niet uit de catalogus importeert. In `topbarActions` staat
+  de link "Gewone navigatie" (naar `/design-system` zonder `schil`), niet als navigatie-item. Dit is voorbeelddata
+  (R-WEB-08) en geen tweede schil van de app: een gevolg van het besluit "echt wisselen". `SidebarShell` en `ShellFrame`
+  zijn zo ook bereikbaar via `AppLayout` (R-UI-07).
+- **`NavLink` met zoekparameters**: heeft `href` een query, dan is de link actief als het pad gelijk is en elke parameter uit
+  `href` dezelfde waarde in de URL heeft; zonder query blijft het gedrag zoals nu (pad of subpad). Zo is in de
+  voorbeeldnavigatie precies het gekozen vak actief, ook als het in "Meer" staat.
 - **Staten**: een schil heeft geen laden, leeg of fout van zichzelf; zonder `nav`-items toont hij geen lege balk of sheet maar
   laat de navigatie weg.
-- **Alle zichtbare tekst letterlijk** (`src/core/web/copy/ui.ts`): menu "Meer"; toegankelijke naam van de horizontale navigatie
-  "Hoofdnavigatie"; tabblad "Schillen"; de bestaande teksten van skip-link en menuknop blijven.
+- **Alle zichtbare tekst letterlijk**: in `src/core/web/copy/ui.ts` menu "Meer" en de toegankelijke naam van de
+  horizontale navigatie "Hoofdnavigatie"; in `src/web/features/design-system/vakken.ts` het vak "Schillen"; in
+  `src/web/copy/ui.ts` de keuzes "Sidebar", "Topbalk", "3 items", "9 items", de link "Gewone navigatie" en de namen van
+  de voorbeelditems. De bestaande teksten van skip-link en menuknop blijven.
+- **Contracttest** (in deel A, omdat AC-5 en AC-16 hem gebruiken): core levert `shellContract(Schil, opties)` voor Vitest
+  (zoals `fileStorageContract` in de spec bestandsopslag) in `src/core/web/ui/testing.tsx`, volgens de bestaande conventie
+  `<map>/testing.ts`. Het eerste argument is het schilcomponent als identifier, zodat `check:schillen` statisch ziet welke
+  schil een suite toetst; `opties` geeft de props en of er een `ShellSessionProvider` met een eerder weergegeven document
+  omheen staat. Het bestand importeert Vitest en Testing Library en exporteert geen componenten (fixtures staan in
+  `*.test.tsx`), dus de catalogus vraagt er niets voor. Het staat niet in de barrel; de regel `testing-alleen-in-tests` in
+  `.dependency-cruiser.mjs` en de bijbehorende lijst in `eslint.config.js` krijgen dit pad erbij, zodat alleen testbestanden
+  het importeren. Hij eist: één `main`; de skip-link is de eerste Tab-stop en verplaatst de focus naar `main`; na een wissel
+  van `routeKey`, en bij een mount nadat het document al is weergegeven, staat de focus op de `h1`; bij de eerste weergave
+  verplaatst de schil de focus niet, ook niet onder `StrictMode`; `OfflineNotice` staat er precies één keer; de schil
+  rendert geen meldingen; bij `print` zijn navigatie en balk verborgen.
 - **Focusvolgorde en toetsenbord**: skip-link → navigatie (in `TopbarShell`: items van links naar rechts, dan "Meer") →
   `topbarActions` → profielmenu → `main`. "Meer" is een gewone `DropdownMenu` (pijltjes, Escape, focus terug op de knop). Het
   actieve item heeft `aria-current="page"`, ook als het in "Meer" staat; dan heeft de knop "Meer" de actieve stijl.
@@ -92,15 +123,6 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
   navigatie voor een vast opgesteld apparaat, of een schil met een tabbalk onderaan). De app vult de plekken en kiest de
   indeling met layout-klassen en schiltokens; de garanties komen uit het frame. Een eigen schil is de vijfde trede van de
   [stijlladder](stijlladder.md) en vraagt dus een akkoord van de eigenaar.
-- **Contracttest**: core levert `shellContract(Schil, opties)` voor Vitest (zoals `fileStorageContract` in de spec
-  bestandsopslag) in `src/core/web/ui/shell-contract.testing.tsx`. Het eerste argument is het schilcomponent als identifier,
-  zodat `check:schillen` statisch ziet welke schil een suite toetst; `opties` geeft de props en of er een
-  `ShellSessionProvider` met een eerdere mount omheen staat. Het bestand importeert Vitest en Testing Library, exporteert
-  geen componenten (fixtures staan in `*.test.tsx`), staat niet in de barrel en wordt alleen uit testbestanden
-  geïmporteerd; de catalogusscan sluit `**/*.testing.*` uit. Hij eist: één `main`; de skip-link is de eerste Tab-stop
-  en verplaatst de focus naar `main`; na een wissel van `routeKey` en na een mount ná de eerste documentweergave staat de
-  focus op de `h1`; `OfflineNotice` staat er precies één keer; de schil rendert zelf geen `Toaster`; bij `print` zijn
-  navigatie en balk verborgen.
 - **Begrippen voor de check**: een *layoutroute* is een routebestand in `src/web/routes/` waarvan het route-id precies één
   segment heeft dat met `_` begint (`/_app`, `/_portaal`); kindroutes zoals `/_app/account` en de root-route (`__root.tsx`)
   zijn geen layoutroute. Geneste layouts zonder pad (`/_app/_stap`) vallen bewust buiten de check: ze horen binnen de schil
@@ -108,8 +130,8 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
   *geregistreerde schil* is `SidebarShell`, `TopbarShell`, de export `AppShell`, of een component in `src/web/ui/` dat
   `ShellFrame` rendert en waarop een test `shellContract` draait.
 - **Check**: `pnpm check:schillen` (in `gate:fast`) faalt als:
-  1. een component in `src/core/web/ui/` of `src/web/ui/` `ShellFrame` rendert zonder een test die `shellContract` op dat
-     component draait;
+  1. een component in een niet-testbestand in `src/core/web/ui/` of `src/web/ui/` `ShellFrame` rendert zonder een test die
+     `shellContract` op dat component draait;
   2. het component van een layoutroute, of het layoutcomponent dat het rendert, geen geregistreerde schil rendert;
   3. `ShellFrame` wordt gerenderd buiten `src/core/web/ui/`, `src/web/ui/` en testbestanden.
   Elke melding noemt het bestand en verwijst naar de sectie "Een tweede schil" in het gouden pad. Falende fixtures: een schil
@@ -136,7 +158,8 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
      eigenaar, trede vijf van de stijlladder);
   2. bij een eigen schil: een test met `shellContract(MijnSchil, …)`;
   3. de layoutroute in `src/web/routes/` met een id van één segment dat met `_` begint en een `guard()` in `beforeLoad`
-     (bewaakt door regel 2 van `check:schillen`; de fixture bouwt routes in code en bewijst deze stap niet);
+     (de guard bewaakt de lintregel `route-guard`, R-WEB-01; dat de route een geregistreerde schil rendert, bewaakt regel 2
+     van `check:schillen`; de fixture bouwt routes in code en bewijst deze stap niet);
   4. de permissie in `src/shared/permissions.ts` met een test per verboden rol (R-TEST-03), of een bestaande permissie;
   5. het layoutcomponent in `src/web/features/layout/` dat de schil vult, met desgewenst een `ThemeScope`;
   6. een eigen navigatielijst als export in `src/web/lib/nav.ts`, gefilterd met `visibleNavItems`;
@@ -180,16 +203,25 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
   56 px hoog en heeft `main` geen maximale breedte. Toets: `e2e/schillen.spec.ts` (nieuw)
 - **schillen/AC-7** — Gegeven een schil zonder `nav`-items, dan staat er geen `nav`, geen menuknop en geen lege sheet. Toets: `src/core/web/ui/topbar-shell.test.tsx` (nieuw)
 - **schillen/AC-8** — Gegeven beide schillen op 375 en 1280 px, licht en donker, dan is er geen horizontale scroll, vindt axe
-  niets, en is elk item in de balk minstens 44 px hoog; op 1280 px met 200 % tekstzoom toont `TopbarShell` met negen items de
-  menuknop in plaats van overlopende items. Toets: `e2e/schillen.spec.ts` (nieuw)
+  niets, en is elk item in de balk minstens 44 px hoog; op 1280 px met `html { font-size: 200% }` (via `page.addStyleTag`)
+  toont `TopbarShell` met negen items de menuknop en is er geen horizontale scroll. Toets: `e2e/schillen.spec.ts` (nieuw)
 - **schillen/AC-9** — Gegeven `/design-system?schil=topbalk&items=9`, dan staat de pagina in `TopbarShell` met negen
   voorbeelditems, precies één `main` en één skip-link, en vindt axe niets; gegeven `?schil=sidebar&items=3`, dan in
-  `SidebarShell` met drie; op een andere route of voor een rol zonder `design-system:read` verandert `schil` niets; de
-  entry-chunk bevat de catalogus niet; en `pnpm check:catalogus` slaagt. Toets: `e2e/schillen.spec.ts` (nieuw)
-- **schillen/AC-15** — Gegeven een toast die verschijnt vlak voor een wissel naar een andere layoutroute, dan staat hij na
-  de wissel nog in beeld; er is in de hele app precies één `Toaster`. Toets: `src/core/web/ui/toast.test.tsx`
-- **schillen/AC-16** — Gegeven een schil die mount ná de eerste documentweergave, dan staat de focus op de `h1`; bij het
-  eerste scherm na laden verplaatst de schil de focus niet. Toets: `src/core/web/ui/shell-contract.test.tsx` (nieuw)
+  `SidebarShell` met drie; op een andere route of voor een rol zonder `design-system:read` verandert `schil` niets; na een
+  klik op een voorbeelditem blijven `schil` en `items` staan en heeft precies dat item `aria-current="page"`. Toets: `e2e/schillen.spec.ts` (nieuw)
+- **schillen/AC-17** — Gegeven de productiebuild, dan bevat de entry-chunk de catalogus van `/design-system` niet en past de
+  bundel binnen `src/web/bundle-budget.ts`. Toets: `test/ui/bundle.test.ts`
+- **schillen/AC-18** — Gegeven een `NavLink` met `href` `/design-system?vak=formulieren`, dan is hij actief bij
+  `/design-system?vak=formulieren&schil=topbalk` en niet bij `/design-system?vak=basis`; zonder query in `href` is het gedrag
+  gelijk aan nu. Toets: `src/core/web/ui/nav-link.test.tsx` (nieuw)
+- **schillen/AC-19** — Gegeven de vak-ids in `src/web/features/layout/schil-voorbeeld.ts`, dan bestaat elk als vak in
+  `src/web/features/design-system/vakken.ts`. Toets: `src/web/features/layout/schil-voorbeeld.test.ts` (nieuw)
+- **schillen/AC-15** — Gegeven `ToastProvider` met een kind dat na een toast wisselt van `SidebarShell` naar `TopbarShell`,
+  dan staat de toast na de wissel nog in beeld en is er precies één meldingenlijst; `Toaster` is geen export van
+  `src/core/web/ui/toast.tsx` of `src/web/ui/index.ts` meer. Toets: `src/core/web/ui/toast.test.tsx`
+- **schillen/AC-16** — Gegeven `ShellSessionProvider` onder `StrictMode`, dan verplaatst een schil bij de eerste weergave de
+  focus niet; gegeven een scherm zonder schil (zoals `/login`) en daarna een schil, of een schil die een andere vervangt,
+  dan staat de focus op de `h1`; zonder provider alleen bij een wissel van `routeKey`. Toets: `src/core/web/ui/shell-contract.test.tsx` (nieuw)
 
 **Deel B**
 
@@ -201,7 +233,7 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
 - **schillen/AC-12** — Gegeven de fixture `src/web/features/layout/twee-schillen.test.tsx` met twee layoutroutes in een
   geheugenrouter, elk met een eigen schil, navigatielijst en `ThemeScope` met een fixturethema, wanneer de test van de ene
   naar de andere route navigeert, dan wisselen de schil en `data-app-theme` op de wrapper, staat de focus op de `h1` en staat
-  er steeds precies één `main`, één `OfflineNotice` en één `Toaster`; en een rol zonder `accounts:read` wordt door de guard van de tweede route geweigerd en ziet
+  er steeds precies één `main`, één `OfflineNotice` en één meldingenlijst; en een rol zonder `accounts:read` wordt door de guard van de tweede route geweigerd en ziet
   in de eerste schil geen link ernaartoe. De template-app krijgt geen tweede route of permissie. Toets: `src/web/features/layout/twee-schillen.test.tsx` (nieuw)
 - **schillen/AC-13** — Gegeven de sectie "Een tweede schil" in `docs/gouden-pad.md`, dan noemt die `ShellFrame`,
   `shellContract`, `src/shared/permissions.ts`, `src/web/features/layout/`, `src/web/lib/nav.ts`, `e2e/shell.spec.ts` en de
@@ -216,11 +248,13 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
 | Situatie | Gedrag |
 |---|---|
 | Lange itemnaam in de topbalk | breekt niet af en verdringt geen acties: de naam kort af met een ellips, de volledige naam blijft de toegankelijke naam |
-| Tekst op 200 % zoom op 1280 px | de balk gedraagt zich als onder `md` zodra de items niet meer passen (container query op de balk) |
+| Tekst op 200 % op 1280 px | de container query (drempel in `rem`) toont de menuknop zodra de items niet meer passen (AC-8) |
 | Een schil binnen een schil | de contracttest faalt op twee `main`-elementen |
 | Afdrukken vanuit `TopbarShell` | balk en navigatie verborgen, inhoud op volle breedte, licht thema |
 | Schermen zonder schil (`/login`, `/uitnodiging`) | ongewijzigd: `CenteredCard`, geen frame; meldingen verschijnen er nu ook, via `ToastProvider` |
-| Melding vlak voor een schilwissel | blijft staan: er is één `Toaster` boven alle schillen |
+| Melding vlak voor een schilwissel | blijft staan: `ToastProvider` rendert de meldingen boven alle schillen (AC-15) |
+| Inloggen en dan de app | focus op de `h1` van het eerste scherm in de app (AC-16) |
+| Eerste scherm na laden, ook onder `StrictMode` | de schil verplaatst de focus niet (AC-16) |
 | Melding binnen een deel met een eigen `ThemeScope` | volgt het thema van het document, niet dat van het deel |
 | Wissel naar een andere layoutroute | focus op de `h1` van het nieuwe scherm (AC-16) |
 
@@ -232,14 +266,19 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
 - `src/web/bundle-budget.ts`: `TopbarShell` zit in de startbundel, omdat `AppLayout` hem voor het catalogusvoorbeeld kan
   renderen (keuze eigenaar: echt wisselen); de toename moet binnen het bestaande budget passen.
 - `src/web/features/layout/app-layout.tsx` (keuze van de schil op `/design-system`), `src/web/routes/_app/design-system.tsx`
-  (zoekparameters `schil` en `items`), `src/core/web/ui/toast.tsx` (`ToastProvider` rendert de `Toaster`),
-  `src/web/main.tsx` (`ShellSessionProvider`), `docs/gouden-pad.md` regel 9 (plaats van de `Toaster`),
-  `test/ui/bundle.test.ts` (catalogus blijft buiten de entry-chunk).
-- `scripts/kit/catalogus-source.ts` (uitsluiting `**/*.testing.*`; gate-pad, eigenaarakkoord).
+  (zoekparameters `schil` en `items`), `src/web/features/design-system/vakken.ts` (vak "Schillen"),
+  `src/core/web/ui/nav-link.tsx` (actief met zoekparameters), `src/web/main.tsx` (`ShellSessionProvider`),
+  `test/ui/bundle.test.ts` (AC-17).
+- Meldingen: `src/core/web/ui/toast.tsx` (provider rendert de meldingen, `Toaster` intern, commentaar bovenin),
+  `src/web/ui/index.ts` (export weg), de acht tests met `<Toaster />` (reden in de PR), `docs/gouden-pad.md` regel 9,
+  `.claude/rules/web.md` ("plaatsing van `Toaster`"), `docs/template-changelog.md` (nieuwe regel: "`Toaster` is geen export
+  meer; verwijder een eigen `<Toaster />`"), `docs/roadmap.md` (toastitem noemt de AppShell).
+- `.dependency-cruiser.mjs` en `eslint.config.js`: `src/core/web/ui/testing.tsx` bij de testing-regels (gate-paden,
+  eigenaarakkoord met deze spec).
 - De spec [app-thema](app-thema.md), randgeval over de `Toaster`: meldingen volgen het documentthema; wordt in deze PR
-  aangepast.
+  aangepast (al gedaan).
 - `package.json` (script `check:schillen`), `src/web/ui/index.ts` (export van `ShellFrame`, `SidebarShell`, `TopbarShell`),
-  `src/core/web/copy/ui.ts` (teksten "Meer", "Hoofdnavigatie", "Schillen").
+  `src/core/web/copy/ui.ts` (teksten "Meer", "Hoofdnavigatie"), `src/web/copy/ui.ts` (keuzes en voorbeelditems).
 - De skill `nieuw-scherm` noemt de keuze van de layoutroute en verwijst naar het recept (beschermd pad; `.claude/skills/` is
   niet schrijfbaar vanuit de Bash-sandbox: Edit in de hoofdsessie met akkoord van de eigenaar).
 - Volgorde: deel A na app-thema deel A (het mechanisme voor componenttokens); deel B na app-thema deel C, omdat AC-12
@@ -254,8 +293,9 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
 
 ## Testplan
 
-- Deel A: de bestaande tests van `AppShell` ongewijzigd groen; de focus bij een mount; de
-  ene `Toaster`; eenheidstests voor `TopbarShell`; de contracttest op beide; e2e.
+- Deel A: de bestaande tests van `AppShell` ongewijzigd groen; de acht toasttests zonder eigen `<Toaster />` groen; de
+  focus bij een mount, ook onder `StrictMode`; `NavLink` met zoekparameters; eenheidstests voor `TopbarShell`; de
+  contracttest op beide; de bundeltest; e2e met de tekstvergroting.
 - Deel B: falende en groene fixtures voor de check (R-PRINC-04); de fixture "twee schillen" als componenttest in een
   geheugenrouter, zodat de template-app geen tweede route of permissie meedraagt; de railstest op het recept.
 - `pnpm gate:fast`, `pnpm ui:check`, `pnpm check:catalogus` en `pnpm ratchet` groen; uitslag in de PR.
