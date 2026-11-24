@@ -6,6 +6,7 @@ Herzien: 2026-11-03 (#469): gewijzigd door [0057](0057-risicogestuurde-werkstraa
 Herzien: 2026-11-12 (#696): door ADR 0089 punt 2 en 10, in punt 8 is de GitHub App de identiteit waarmee de agent pusht en PR's opent; het installatietoken is kortlevend en de sleutel van de App staat buiten het bereik van de agent
 Herzien: 2026-11-18 (#796): gewijzigd door [0093](0093-agent-onder-eigenaaraccount.md) punt 1, punt 8 vervalt: er is geen GitHub App of bot-account; de agent werkt onder het account van de eigenaar, met diens rechten
 Herzien: 2026-11-24: punt 7, Renovate blokkeert TypeScript 7 niet meer maar opent hem, zoals elke major, als eigen PR met label `major`; CI test hem meteen, mergen blijft pas na een ADR. Een verborgen major viel niemand op (eigenaarbesluit, aanleiding #967)
+Herzien: 2026-11-24: punt 6, pnpm 12 in plaats van 11, gewijzigd door [0110](0110-pnpm-12.md)
 
 Vervangt 0001, 0002 en
 0005. Drempel: A4. Consolidatie zonder inhoudelijke wijziging (eigenaarbesluit 2026-10-21,
@@ -31,7 +32,7 @@ dus de toolchain ligt vast en de regels zijn kort en stellig.
    `deploy/<host>/` (`docs/framework.md` §3). Supabase en Vercel zijn de standaardvoorkeur van de eigenaar, niet van de
    template.
 5. **Node 26** (was 0005), exact gepind in `mise.toml`. Geen Corepack.
-6. **pnpm 11** (was 0005), alleen via `packageManager` in `package.json`; supply-chaininstellingen in `pnpm-workspace.yaml`.
+6. **pnpm 12** (was 0005; 12 sinds [0110](0110-pnpm-12.md)), alleen via `packageManager` in `package.json`; supply-chaininstellingen in `pnpm-workspace.yaml`.
 7. **TypeScript 6.0** (was 0005). Naar 7 pas met een ADR, niet zolang typescript-eslint het niet ondersteunt; Renovate opent
    de major wel als PR, zodat CI laat zien wat er breekt.
 8. **Bot-identiteit: een GitHub App** (was 0005) in plaats van een fijnmazig token van een bot-account: kortlevende tokens,
