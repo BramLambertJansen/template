@@ -33,6 +33,22 @@
       "allowedVersions": "<7"
     },
     {
+      "description": "engines in package.json is een bewust bereik (>=26.11 <27, scripts/kit/toolchain.mjs); de exacte Node-pin staat in mise.toml",
+      "matchDepTypes": ["engines"],
+      "enabled": false
+    },
+    {
+      "description": "TypeScript houdt zijn ~-bereik binnen 6.0 (ADR 0039); alleen de lockfile schuift mee",
+      "matchPackageNames": ["typescript"],
+      "rangeStrategy": "update-lockfile"
+    },
+    {
+      "description": "lefthook 2.2.2 mist de trusted-publisher-herkomst van eerdere versies; pnpm weigert hem (ERR_PNPM_TRUST_DOWNGRADE). Los van de groep, zodat zo'n weigering niet alle niet-majors blokkeert",
+      "matchPackageNames": ["lefthook"],
+      "allowedVersions": "!/^2\\.2\\.2$/",
+      "groupName": null
+    },
+    {
       "description": "Node-major en @types/node volgen engines in package.json (ADR 0039)",
       "matchPackageNames": ["node", "@types/node"],
       "allowedVersions": "<27"
