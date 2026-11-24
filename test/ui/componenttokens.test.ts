@@ -54,7 +54,7 @@ describe('de oplosser zelf', () => {
     expect(resolveTokens(css, 'donker')['--a']).toBe('blue');
   });
 
-  // Codex-review op #959: een :root-override van de app (na semantic.css) wint ook in donker, zoals in de browser.
+  // Een :root-override van de app (na semantic.css) wint ook in donker, zoals in de browser.
   test('een latere :root-regel wint van een eerdere donkere regel (bronvolgorde, gelijke specificiteit)', () => {
     const css = ":root { --bg: black; } [data-theme='dark'] { --bg: navy; } :root { --bg: white; }";
     expect(resolveTokens(css, 'licht')['--bg']).toBe('white');
