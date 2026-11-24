@@ -82,8 +82,25 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
   suite op een andere schil, een layoutroute met een rauwe `main`.
 - **Meerdere schillen in één app**: elke schil hoort bij een eigen layoutroute (`src/web/routes/_app.tsx` is de bestaande; een
   tweede is bijvoorbeeld `_portaal.tsx`), met een eigen layoutcomponent in `src/web/features/layout/`, een eigen guard en
-  desgewenst een `ThemeScope`. De navigatie per schil is een eigen lijst in `src/web/lib/nav.ts`. Het gouden pad krijgt de
-  sectie "Een tweede schil".
+  desgewenst een `ThemeScope`. De navigatie per schil is een eigen lijst in `src/web/lib/nav.ts`. De template levert zelf
+  geen tweede layoutroute en geen tweede schil in de app: hij maakt het mogelijk, bewijst dat het werkt met een fixture in
+  een testpad, en beschrijft hoe een app het bouwt.
+- **Recept "Een tweede schil"** (nieuwe sectie in `docs/gouden-pad.md`): een app die vanuit de template start, kan zonder
+  uitzoekwerk aansluiten. De sectie noemt in volgorde:
+  1. de keuze: `SidebarShell`, `TopbarShell` of een eigen schil op `ShellFrame` in `src/web/ui/` (dan eerst akkoord van de
+     eigenaar, trede vijf van de stijlladder);
+  2. bij een eigen schil: een test die `shellContract` op die schil draait;
+  3. de layoutroute in `src/web/routes/` met een pad dat met `/_` begint en een `can()`-guard;
+  4. de permissie in `src/shared/permissions.ts` met een test per verboden rol (R-TEST-03);
+  5. het layoutcomponent in `src/web/features/layout/` dat de schil vult, met desgewenst een `ThemeScope`;
+  6. de navigatielijst in `src/web/lib/nav.ts`, gefilterd met `visibleNavItems`;
+  7. e2e met axe voor de nieuwe route op 375 en 1280 px; `ui:check` neemt de layoutroute vanzelf mee.
+  Bij elke stap staat het bestand uit de template waarvan de app de vorm kopieert, en de fixture uit AC-12 als compleet
+  voorbeeld. Het recept blijft kloppen doordat `check-docs` elk genoemd pad tegen de repo toetst en `check:schillen` en
+  `shellContract` dezelfde eisen afdwingen die het recept noemt.
+- **Vindbaar op het moment dat het nodig is**: de foutmelding van `check:schillen` verwijst naar de sectie in het gouden pad,
+  en de skill `nieuw-scherm` vraagt bij een nieuw scherm in welke layoutroute het hoort en verwijst voor een nieuwe
+  layoutroute naar dezelfde sectie.
 - **`ui:check`** draait voor elke layoutroute op 375 en 1280 px: geen horizontale scroll, axe schoon.
 
 ## Kopieer de vorm van
@@ -123,12 +140,16 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
 - **schillen/AC-10** — Gegeven een eigen schil op `ShellFrame` in een fixture, dan slaagt `shellContract`; een fixture die de
   skip-link weglaat, een tweede `main` rendert of `OfflineNotice` zelf nog eens plaatst, laat de suite falen. Toets: `src/core/web/ui/shell-contract.test.tsx` (nieuw)
 - **schillen/AC-11** — Gegeven een component met `ShellFrame` zonder test met `shellContract`, of een layoutroute zonder
-  geregistreerde schil, dan faalt `pnpm check:schillen` en noemt hij het bestand; drie falende fixtures bewijzen het. Toets: `test/rails/check-schillen.test.ts` (nieuw)
-- **schillen/AC-12** — Gegeven een app met twee layoutroutes, elk met een eigen schil, navigatielijst en `ThemeScope`, wanneer
-  de gebruiker van de ene naar de andere navigeert, dan wisselen schil en thema, staat de focus op de `h1` en staat er
-  steeds precies één `main`, één `OfflineNotice` en één `Toaster`. Toets: `e2e/schillen.spec.ts` (nieuw)
-- **schillen/AC-13** — Gegeven een rol zonder de permissie van de tweede layoutroute, dan weigert de guard van die route zoals
-  elke andere schermroute en toont de eerste schil geen link ernaartoe. Toets: `e2e/schillen.spec.ts` (nieuw)
+  geregistreerde schil, dan faalt `pnpm check:schillen`, noemt hij het bestand en verwijst hij naar de sectie "Een tweede
+  schil" in het gouden pad; drie falende fixtures bewijzen het. Toets: `test/rails/check-schillen.test.ts` (nieuw)
+- **schillen/AC-12** — Gegeven een fixture in een testpad met twee layoutroutes (geheugenrouter in Vitest), elk met een eigen
+  schil, navigatielijst en `ThemeScope`, gebouwd volgens het recept, wanneer de test van de ene naar de andere route
+  navigeert, dan wisselen schil en thema, staat de focus op de `h1` en staat er steeds precies één `main`, één
+  `OfflineNotice` en één `Toaster`. De template-app krijgt hiervoor geen tweede route. Toets: `src/core/web/ui/shell-switch.test.tsx` (nieuw)
+- **schillen/AC-13** — Gegeven de sectie "Een tweede schil" in `docs/gouden-pad.md`, dan noemt die `ShellFrame`,
+  `shellContract`, `src/shared/permissions.ts`, `src/web/features/layout/`, `src/web/lib/nav.ts` en de fixture uit AC-12,
+  verwijst de skill `nieuw-scherm` ernaar, en faalt de test als een van die verwijzingen ontbreekt; dat elk genoemd pad
+  bestaat, toetst de doc-check in `pnpm ratchet`. Toets: `test/rails/check-schillen.test.ts` (nieuw)
 - **schillen/AC-14** — Gegeven een feature of route die `ShellFrame` rechtstreeks importeert, dan weigert de lint: het frame is
   alleen bereikbaar vanuit `src/core/web/ui` en `src/web/ui`. Toets: `test/rails/check-schillen.test.ts` (nieuw)
 
@@ -160,7 +181,8 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
 ## Testplan
 
 - Deel A: de bestaande tests van `AppShell` ongewijzigd groen; eenheidstests voor `TopbarShell`; de contracttest op beide; e2e.
-- Deel B: falende fixtures voor de check (R-PRINC-04); e2e met een tweede layoutroute in een testfixture van de app-laag.
+- Deel B: falende fixtures voor de check (R-PRINC-04); een componenttest met twee layoutroutes in een geheugenrouter, als
+  fixture in een testpad, zodat de template-app geen tweede route of permissie meedraagt.
 - `pnpm gate:fast`, `pnpm ui:check`, `pnpm check:catalogus` en `pnpm ratchet` groen; uitslag in de PR.
 
 ## Open vragen
