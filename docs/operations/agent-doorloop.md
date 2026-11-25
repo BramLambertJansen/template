@@ -275,6 +275,12 @@ reviewer; die leest het pakket met Read in plaats van losse `git log`/`git diff`
 `--spec <pad>`. Het pakket staat in `.reviewpakket/` (genegeerd); gegenereerde bestanden staan alleen in Stat; een
 niet-gecommitte wijziging staat er niet in en geeft een waarschuwing (`scripts/kit/reviewpakket.mjs:1`, spec `agents-leveren` punt 1d).
 
+Raakt de diff `db/`, `test/security/` of `e2e/`, dan geeft de hoofdsessie de reviewer de runneruitvoer of het CI-bewijs
+op de head mee (`pnpm test:db` voor `db/` en `test/security/`, `pnpm ui:check` voor `e2e/`; CI-bewijs via `pnpm pr:verify`).
+De reviewer zet per check `Runnerbewijs: <check> groen op <sha van HEAD>` in zijn rapport, of anders "goedgekeurd onder
+voorbehoud van runnerchecks" met de checks in een codeblok: het terminalblok voor de eigenaar. De SubagentStop-hook
+(alleen Claude Code, `rails/hooks/lib/werkstraat.mjs`) toetst de vorm en de sha, niet de uitslag (#683, spec ci-bewijs).
+
 De gerichte feedback volgt ADR 0057. De vertrouwde
 hooklader gebruikt main; een branch activeert geen nieuwe rechten. De live ruleset en strikte build-proof uit dat
 ADR zijn afzonderlijk vervolgwerk en worden door deze hookwijziging niet als gebouwd of actief verklaard; de GitHub App uit

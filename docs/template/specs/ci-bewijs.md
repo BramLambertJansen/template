@@ -77,7 +77,8 @@ Geen UI. Wijzigingen:
    `CI is rood; herstel de oorzaak en controleer de nieuwe commit (fouten per rode job: pnpm pr:log <nummer>)`.
    `volgChecks` krijgt het PR-nummer en gooit die melding bij rood.
 5. **Docs:**
-   - `docs/operations/review-checklists.md`, onder "Werkwijze": de regel van AC-1.
+   - `docs/operations/agent-doorloop.md`, bij het reviewpakket: welk runnerbewijs de hoofdsessie meegeeft en wat de hook
+     toetst. Niet in `docs/operations/review-checklists.md`: dat doc zit op zijn grens van 4600 bytes.
    - `docs/template/specs/ci-log.md`, punt 7: een verwijzing naar ci-bewijs/AC-5 en AC-6.
    - `docs/operations/recepten.md`: geen wijziging, want de rij `pnpm pr:log <nr>` staat er al.
    - Een changelogfragment.
@@ -144,7 +145,8 @@ en lees je met `Reflect.get`, zoals in `test/hooks/meting.test.ts`; de test begi
 - ANSI-kleurcodes uit het hele uittreksel halen.
 - Runnerbewijs eisen bij andere paden, zoals `src/web/`, `src/api/` of `*.int.test.ts`. #683 noemt alleen `db/`,
   `test/security/` en `e2e/`; een bredere set is een nieuw leerpunt.
-- `.claude/agents/reviewer.md`: de hook geeft de route, en de reviewer leest de checklist bij elke review.
+- `.claude/agents/reviewer.md` en `docs/operations/review-checklists.md` (beide op hun bytegrens): de melding van de hook
+  geeft de reviewer de route.
 
 ## Testplan
 
