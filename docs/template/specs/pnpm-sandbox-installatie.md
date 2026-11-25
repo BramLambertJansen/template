@@ -49,7 +49,7 @@ Alleen ontwikkelomgeving en CI; geen app-rollen. De eigenaar ziet het resultaat 
   Zonder `streng` blijft het gedrag precies zoals nu. CLI: `--streng` vóór `--werkmap`.
 - **Installatiemodule.** Nieuw: `scripts/kit/pnpm-installeer.mjs`, zonder dependencies. De pure kern
   `pnpmInstallCommando(basis, { modus, cloud })` geeft `{ command: 'pnpm', args, env }`:
-  - `modus: 'werkmap'`: argumenten `install --frozen-lockfile --package-import-method=copy --store-dir <basis>/store --cache-dir <basis>/cache`,
+  - `modus: 'werkmap'`: argumenten `install --frozen-lockfile --package-import-method=copy --store-dir=<basis>/store --cache-dir=<basis>/cache`,
     omgeving `XDG_DATA_HOME=<basis>/data`, `XDG_CACHE_HOME=<basis>/xdg-cache`, `XDG_STATE_HOME=<basis>/xdg-state`,
     `XDG_RUNTIME_DIR=<basis>/xdg-run`. Dat zijn precies de waarden van `worktreeInstallCommando` (`worktree-install.mjs:63-79`).
   - `modus: 'setup'` (hoofdcheckout en cloudcontainer): argumenten `install --frozen-lockfile`, omgeving alleen
