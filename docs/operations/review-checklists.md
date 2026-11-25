@@ -6,6 +6,7 @@ De reviewer bepaalt de klasse(n) van de diff en loopt alleen die lijsten af. Elk
 
 - Doe één volledige review met alle klassen van de diff; daarna alleen `git diff <vorige-sha>..HEAD` op de fixes (0105). De hoofdsessie geeft de vorige `## Bevindingen` mee; de delta toetst elke bevinding en loopt ook de lijsten van de klassen die de fixes openen.
 - Raakt een fix een nieuw bestand, een beschermd pad of een rail (`rails/**`, `scripts/kit/**`, `test/rails/**`), dan volgt opnieuw een volledige review van dat deel, evenals als de vorige sha geen voorouder van HEAD is (rebase, merge van main). Lees de aanroepers van een gewijzigde export.
+- Raakt de diff `db/`, `test/security/` of `e2e/`, dan staat per check een regel `Runnerbewijs: <check> groen op <sha van HEAD>` in het rapport (`pnpm test:db` voor `db/` en `test/security/`, `pnpm ui:check` voor `e2e/`; uitvoer of CI-bewijs van de hoofdsessie, bv. `pnpm pr:verify`), anders "goedgekeurd onder voorbehoud van runnerchecks" met de checks in een codeblok. De SubagentStop-hook (alleen Claude Code) toetst de vorm en de sha, niet de uitslag (#683, spec ci-bewijs).
 - Kritiek werk (R-WERK-05) in een app: spec eerst in een besluit-PR; een statusovergang naast een kritiek pad (padtabel: `besluit-pr`, `altijdVragen`) is daar een bevinding; geen check toetst dit meer (ADR 0089 punt 8).
 
 ## Rolhek en hooks

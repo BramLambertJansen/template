@@ -89,18 +89,18 @@ en lees je met `Reflect.get`, zoals in `test/hooks/meting.test.ts`; de test begi
 `expect(typeof <export>).toBe('function')`.
 
 - **ci-bewijs/AC-1** — Gegeven een reviewer-rapport met `## Bevindingen` en `Geen blokkerende bevindingen`, en een
-  diff met `db/migrations/x.sql`, wanneer `subagentStop` draait, dan blokkeert het met de reden uit "Hergebruik en UX"
-  punt 1 en `Gevraagd: pnpm test:db`. Met `e2e/a.spec.ts` erbij eindigt de reden op `Gevraagd: pnpm test:db, pnpm ui:check`.
-  Met alleen `test/security/resources.ts` is het `Gevraagd: pnpm test:db`. Toets: `test/hooks/werkstraat-runnerbewijs.test.ts` (nieuw)
+  diff met `db/migrations/x.sql` (voorbeeld), wanneer `subagentStop` draait, dan blokkeert het met de reden uit "Hergebruik en UX"
+  punt 1 en `Gevraagd: pnpm test:db`. Met `e2e/a.spec.ts` (voorbeeld) erbij eindigt de reden op `Gevraagd: pnpm test:db, pnpm ui:check`.
+  Met alleen `test/security/resources.ts` is het `Gevraagd: pnpm test:db`. Toets: `test/hooks/werkstraat-runnerbewijs.test.ts`
 - **ci-bewijs/AC-2** — Gegeven dezelfde diff met `db/` en HEAD `abcdef1234…`, wanneer het rapport
   `Runnerbewijs: pnpm test:db groen op abcdef1` bevat, dan `{}`. Met een andere sha, een sha van 6 tekens, of een
   falende `git rev-parse`, blokkeert het. Met `db/` en `e2e/` en alleen een bewijsregel voor `pnpm test:db` blokkeert
-  het ook. De bewijsregel als opsommingspunt (`- Runnerbewijs: …`) telt; midden in een zin niet. Toets: `test/hooks/werkstraat-runnerbewijs.test.ts` (nieuw)
+  het ook. De bewijsregel als opsommingspunt (`- Runnerbewijs: …`) telt; midden in een zin niet. Toets: `test/hooks/werkstraat-runnerbewijs.test.ts`
 - **ci-bewijs/AC-3** — Gegeven een diff met `db/` en `e2e/`, wanneer het rapport `goedgekeurd onder voorbehoud van
   runnerchecks` en een codeblok met `pnpm test:db` en `pnpm ui:check` bevat, dan `{}`. Ontbreekt `pnpm ui:check` in
-  het codeblok (ook als het erbuiten staat), dan blokkeert het. Gegeven alleen `src/a.ts`, dan `{}` met alleen de kop,
+  het codeblok (ook als het erbuiten staat), dan blokkeert het. Gegeven alleen `src/a.ts` (voorbeeld), dan `{}` met alleen de kop,
   zonder `git rev-parse HEAD` via `deps.run`. Toets:
-  `test/hooks/werkstraat-runnerbewijs.test.ts` (nieuw)
+  `test/hooks/werkstraat-runnerbewijs.test.ts`
 - **ci-bewijs/AC-4** — Gegeven het `run`-blok van de job `secrets`, wanneer het draait met `EVENT` `push`,
   `merge_group` of `workflow_dispatch`, dan krijgt betterleaks `--log-opts HEAD`. Elke regel met `betterleaks git` in de job
   heeft `--log-opts`. Toets: `test/rails/ci-scan.test.ts`
@@ -114,7 +114,7 @@ en lees je met `Reflect.get`, zoals in `test/hooks/meting.test.ts`; de test begi
   `test/scripts/ci-loguittreksel.test.ts`
 - **ci-bewijs/AC-7** — `roodMelding(12)` geeft letterlijk
   `CI is rood; herstel de oorzaak en controleer de nieuwe commit (fouten per rode job: pnpm pr:log 12)`. Toets:
-  `test/scripts/pr-verify-rood.test.ts` (nieuw)
+  `test/scripts/pr-verify-rood.test.ts`
 
 ## Randgevallen
 
