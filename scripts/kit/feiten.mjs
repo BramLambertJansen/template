@@ -21,13 +21,6 @@ if (process.env['CLAUDECODE'] === '1')
     console.error(`⚠ bewaking niet te controleren: ${fout instanceof Error ? fout.message : String(fout)}`);
   }
 
-// Eerst de toolchain: catalogus.mjs laadt typescript, dus zonder node_modules anders een stacktrace (docs/ENVIRONMENT.md).
-const probleem = toolchainProbleemIn(fileURLToPath(new URL('../..', import.meta.url)));
-if (probleem !== null) {
-  console.error(probleem);
-  process.exit(1);
-}
-
 /** Drukt een hoofdstuk van het regelboek af (leesbudget/AC-4) en stopt. @param {string | undefined} n */
 async function hoofdstuk(n) {
   const { hoofdstukTekst } = await import('./leespad.mjs');
@@ -86,6 +79,16 @@ async function padRegel(rel) {
 }
 
 if (process.argv[2] === 'pad') await padRegel(process.argv[3]);
+
+// `hoofdstuk` en `pad` hierboven laden geen dependencies en werken dus ook met een kapotte toolchain: het regelboek en de
+// padtabel blijven leesbaar terwijl de agent het herstel uitzoekt. Ook de Node-versiecontrole vervalt voor hen; ze
+// gebruiken alleen ingebouwde modules. De secties hieronder laden typescript (catalogus.mjs),
+// dus zonder node_modules anders een stacktrace (docs/ENVIRONMENT.md).
+const probleem = toolchainProbleemIn(fileURLToPath(new URL('../..', import.meta.url)));
+if (probleem !== null) {
+  console.error(probleem);
+  process.exit(1);
+}
 
 const { specsTekst, toText } = await import('./feiten-tekst.mjs');
 const { codeSecties, gereserveerdeAdrNummers, lezerSecties, plain, VOLGORDE, werkmap } =

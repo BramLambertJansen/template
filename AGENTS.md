@@ -4,7 +4,7 @@ Webapp-template, gebouwd door agents binnen afgedwongen kaders. Bindend regelboe
 
 ## Status
 
-Stand: `node scripts/kit/feiten.mjs fase`. Wat niet in `package.json` of de repo staat, bestaat niet: verzin geen commando's, scripts of bestanden; klaar = uitvoer van de bewijzende check (R-PRINC-11).
+Wat niet in `package.json` of de repo staat, bestaat niet: verzin geen commando's, scripts of bestanden; klaar = uitvoer van de bewijzende check (R-PRINC-11).
 
 ## Stack
 
