@@ -1,7 +1,8 @@
 // Gedeelde lader voor de hook-stubs (ADR 0045 punt 3): draait `rails/hooks/<naam>.mjs` zoals die op main van de remote staat,
 // nooit de versie uit de werkmap, de branch of een omgebogen lokale `origin/main`. Anker en cache staan in `.claude/hooks/.cache/`,
 // een map die de sandbox van Claude Code niet laat beschrijven: `main` (de commit-SHA van de remote, ververst bij de start van een
-// sessie) en per tree-oid de uitgepakte versie, vóór elke run gecontroleerd tegen de blob-hashes. Rolhek en werkstraat falen dicht.
+// sessie) en per tree-oid de uitgepakte versie, vóór elke run gecontroleerd tegen de blob-hashes. Rolhek en werkstraat falen dicht,
+// ook bij een crash van het script (behalve werkstraat session-start, dat bewust doorlaat).
 // Vóór de eerste git-aanroep zet de lader een geplant `.git/commondir` in een hoofdcheckout weg (ADR 0083 punt 1): git zou anders
 // config en hooks van elders volgen. Dat hernoemen is de enige, bewuste uitzondering op "de hook zet niets terug".
 // Na `werkstraat session-start` ruimt de lader oude uitgepakte versies in de eigen cache op (`ruimOp`), nooit vóór of tijdens deze hook.
@@ -311,6 +312,9 @@ function geplantCommondir(naam) {
   return true;
 }
 
+// Events waarin werkstraat een poort is: daar laat een crash (exit 1) in Claude Code anders door (leerpunt #995).
+const POORTEN = new Set(['post-edit', 'stop', 'subagent-stop']);
+
 /** @param {string} naam @param {boolean} dicht @param {string} reden */
 function weiger(naam, dicht, reden) {
   process.stderr.write(`hook ${naam} (ADR 0045): ${reden}${dicht ? '; de hook faalt dicht' : ''}\n`);
@@ -319,7 +323,7 @@ function weiger(naam, dicht, reden) {
 
 /**
  * Draait `rails/hooks/<naam>.mjs` van main met dezelfde args, stdin, env en cwd, en geeft uitvoer en exitcode door. Het rolhek
- * kent alleen 0 en 2: elke andere exitcode van het script (ook een crash) wordt daar 2.
+ * en de werkstraat-poorten (`POORTEN`) kennen alleen 0 en 2: elke andere exitcode van het script (ook een crash) wordt daar 2.
  * @param {string} naam
  * @param {boolean} dicht true: een fout van de lader is exit 2 (rolhek, werkstraat); false: exit 0 (meting)
  */
@@ -344,8 +348,11 @@ export function draai(naam, dicht) {
     env: { ...process.env, RAILS_ANKER: anker },
   });
   if (result.status === null) return weiger(naam, dicht, `rails/hooks/${naam}.mjs stopte zonder exitcode`);
-  if (naam === 'rolhek' && result.status !== 0 && result.status !== 2)
-    return weiger(naam, true, `rails/hooks/rolhek.mjs gaf exitcode ${String(result.status)}`);
+  // Rolhek en de werkstraat-poorten geven alleen 0 of 2. Elke andere code is een crash, zoals een laadfout vóór de eigen try
+  // van het script (exit 1), en Claude Code zou die doorlaten. session-start laat een fout bewust door (werkstraat.mjs).
+  const poort = naam === 'rolhek' || (naam === 'werkstraat' && POORTEN.has(process.argv[2] ?? ''));
+  if (poort && result.status !== 0 && result.status !== 2)
+    return weiger(naam, true, `rails/hooks/${naam}.mjs gaf exitcode ${String(result.status)}`);
   process.exitCode = result.status;
   // Pas na de hook: zijn uitvoer en exitcode staan dan vast.
   if (sessieStart) ruimOp(path.basename(map), Date.now());

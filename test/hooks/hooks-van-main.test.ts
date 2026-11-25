@@ -279,6 +279,45 @@ describe('punt 1/E: exitcodes van het script', () => {
       expect([zeven.status, nul.status]).toStrictEqual([7, 0]);
     },
   );
+
+  // Leerpunt #995: in een poort-event laat Claude Code een crash (exit 1) door; de lader maakt er exit 2 van.
+  test.each(['post-edit', 'stop', 'subagent-stop'])(
+    'E: werkstraat %s met exitcode 7 of een crash wordt exit 2; 0 en 2 blijven, uitvoer blijft doorgegeven',
+    (event) => {
+      const repo = makeAnchored(hookFiles('main-versie'));
+      const args = [event];
+
+      const zeven = run(repo, 'werkstraat', { args, env: { HOOK_EXIT: '7' } });
+      const crash = run(repo, 'werkstraat', { args, env: { HOOK_CRASH: '1' } });
+      const nul = run(repo, 'werkstraat', { args, env: { HOOK_EXIT: '0' } });
+      const twee = run(repo, 'werkstraat', { args, env: { HOOK_EXIT: '2' } });
+
+      expect([zeven.status, crash.status, nul.status, twee.status]).toStrictEqual([2, 2, 0, 2]);
+      expect(zeven.stdout).toContain('"marker":"main-versie"');
+      expect(zeven.stderr).toContain('rails/hooks/werkstraat.mjs gaf exitcode 7; de hook faalt dicht');
+      expect(crash.stderr).toContain('crash-van-main');
+    },
+  );
+
+  test('E: werkstraat stop met een laadfout (ontbrekende import, exit 1) wordt exit 2 met de melding van de lader', () => {
+    const repo = makeAnchored({
+      ...hookFiles('main-versie'),
+      'rails/hooks/werkstraat.mjs': "import './lib/ontbreekt.mjs';\n",
+    });
+
+    const stop = run(repo, 'werkstraat', { args: ['stop'] });
+
+    expect(stop.status).toBe(2);
+    expect(stop.stderr).toContain('rails/hooks/werkstraat.mjs gaf exitcode 1; de hook faalt dicht');
+  });
+
+  test('E: werkstraat session-start geeft een andere exitcode ongewijzigd door (laat bewust door)', () => {
+    const repo = makeAnchored(hookFiles('main-versie'));
+
+    const zeven = run(repo, 'werkstraat', { args: ['session-start'], env: { HOOK_EXIT: '7' } });
+
+    expect(zeven.status).toBe(7);
+  });
 });
 
 describe('punt 2: lokale wijzigingen hebben geen effect', () => {
