@@ -6,6 +6,9 @@ falen (ze slaan over met een melding; CI blijft het bewijs)
 Herzien: 2026-11-24 (leerpunt #944): punt 1, in een cloudsessie (`CLAUDE_CODE_REMOTE=true`) installeert de agent ook in de
 hoofdcheckout, met `--config.confirm-modules-purge=false`; lokaal blijft de hoofdcheckout bij de eigenaar. Het gevolg over
 Stop-hooks op een `node_modules` die de agent kan beschrijven geldt daar dus ook ([spec cloud-werkmap-herstel](../specs/cloud-werkmap-herstel.md))
+Herzien: 2026-11-25: alternatief "Installeren vanuit een SessionStart-hook buiten de sandbox", in de cloud alleen bij
+`startup` gekozen door [0112](0112-cloud-toolchain-herstel-bij-startup.md) punt 1–4: de hookcode komt van het anker, eigen
+timeout, en installeren alleen als de installatie-invoer gelijk is aan `main`; lokaal en bij hervatten blijft het afgewezen
 
 Herziet de afweging in [0061](0061-claude-sandbox-werkstraat.md) (alternatief "Projectstore, cache en state opnieuw
 inrichten"); de globale pnpm-opslag blijft onschrijfbaar. Drempel: A3 (een commando wordt automatisch toegestaan) en A4.

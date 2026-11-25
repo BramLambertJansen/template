@@ -10,6 +10,9 @@ Herzien: 2026-11-16 (#745): ingekort tot wat nog geldt; de puntnummers zijn onge
 Herzien: 2026-11-20: punt 5 en Alternatieven, `git commit *`, `git push origin HEAD`, `gh api *` en `pnpm pr:verify *`
 draaien buiten de sandbox, de eerste twee en `pr:verify` zonder prompt, met een aanvaard restrisico (eigenaar; spec
 [cloud-pr-route](../specs/cloud-pr-route.md))
+Herzien: 2026-11-25: Gevolgen, "normale sessies vragen geen nieuwe toolchaininstallatie" geldt in een nieuwe cloudsessie
+(`startup`) niet als de omgevingscache van vóór een pin-bump is: dan installeert een hook zonder vraag, alleen als de
+installatie-invoer gelijk is aan `main` ([0112](0112-cloud-toolchain-herstel-bij-startup.md) punt 1 en 4)
 Herzien: 2026-11-21: gewijzigd door [0102](0102-pr-log-buiten-de-sandbox.md) punt 2, punt 5: ook `pnpm pr:log *` draait buiten
 de sandbox, in `ask`, en het rolhek geeft alleen precies `pnpm pr:log <nr>` onder de ankertoets vrij
 Herzien: 2026-11-23 (#899): punt 5, ook `pnpm meting *` draait buiten de sandbox, zodat `pnpm meting --trend` in de cloud
