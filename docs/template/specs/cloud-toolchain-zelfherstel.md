@@ -30,12 +30,21 @@ Feiten F1–F14, D1–D9, R1–R8 en M1–M6 staan in die spec en gelden hier oo
 
 Gevolg: elke Renovate-bump van Node of pnpm laat cloudsessies vastlopen tot de eigenaar het veld wijzigt.
 
-**Niet gemeten; eerst meten (Testplan, stap 1)**
+**Gemeten op 25 november 2026 (Testplan, stap 1)**, met een tijdelijke SessionStart-hook (matcher `startup`, 60 s slaap)
+op een meetbranch die niet is samengevoegd, in een nieuwe cloudsessie op de omgeving "template":
 
-- **M4** (uit cloud-zelfinstallatie) — Krijgt een SessionStart-hook in de cloud `CLAUDE_ENV_FILE`? Het script valt zonder
-  terug op route 1 (`~/.local/bin`), die in de cloud ook hooks bereikt (M3); de uitslag verandert het ontwerp niet.
-- **M5** (idem) — De koude duur van het hele script, inclusief Node van `nodejs.org`.
-- **M7** — Wacht de eerste beurt van een cloudsessie op een SessionStart-hook die minuten duurt? Stopgrond: zie Testplan.
+| Id | Uitkomst | Bron |
+|---|---|---|
+| M7 | De eerste beurt wacht op de hook: de hook liep van 14:49:32.286Z tot 14:50:32.291Z, het eerste commando van de agent volgde om 14:50:37.238Z, en de stdout van de hook (`M7-probe klaar om 14:50:32Z`) stond in de startcontext. De stopgrond vervalt. | `~/m7.log`, `date -u`, startcontext |
+| M4 | De hook krijgt `CLAUDE_ENV_FILE` (`/root/.claude/session-env/<sessie>/sessionstart-hook-1.sh`). | `~/m7.log` |
+| M9 | In de hook is `CLAUDE_CODE_REMOTE=true`, `source` is `startup`, de hook draait als root (`~` is `/root`) met `cwd` gelijk aan de clone (`/home/user/template`). | `~/m7.log` |
+
+Een cloudsessie start op een eigen `claude/…`-branch van de gekozen basisbranch; een meting vraagt dus die basisbranch bij de
+start (de eerste poging zonder gaf een sessie zonder de hook).
+
+**Niet gemeten**
+
+- **M5** (uit cloud-zelfinstallatie) — De koude duur van het hele script, inclusief Node van `nodejs.org` (Testplan, stap 3c).
 
 ## Rollen en wie wat ziet
 
@@ -281,7 +290,7 @@ Zichtbare tekst, letterlijk (één regel, `<…>` ingevuld):
 
 ## Testplan
 
-**Stap 1 — meten, vóór de bouw** (uitslag in de PR): M7 met een tijdelijke SessionStart-hook (matcher `startup`) die de
+**Stap 1 — meten, vóór de bouw** (gedaan op 25 november 2026; uitslag hierboven, M7 en M4 positief): M7 met een tijdelijke SessionStart-hook (matcher `startup`) die de
 tijd, `source` en `CLAUDE_ENV_FILE` (M4) naar een bestand schrijft en 60 s slaapt, in een nieuwe cloudsessie; noteer of de
 eerste beurt wacht. **Stopgrond:** wacht de beurt niet, dan gaat de bouw niet verder en beslist de eigenaar opnieuw over
 OV-2 (synchroon) en de timeout.
