@@ -83,13 +83,13 @@ Alleen ontwikkelomgeving en CI; geen app-rollen. De eigenaar ziet het resultaat 
   een `pnpm-lock.yaml`, wanneer `pnpm-installeer.mjs --modus werkmap` vanuit die projectmap het project in de strenge kooi installeert (timeout 120 s), dan is de
   status 0 en bestaat `node_modules/.modules.yaml`. De test zoekt buiten de kooi de echte pnpm-binary (`mise which pnpm`, anders
   `which pnpm` na realpath), zet die map vooraan in `PATH` en is rood, niet overgeslagen, als `pnpm --version` afwijkt van de pin.
-  Toets: `test/scripts/pnpm-installeer.test.ts` (nieuw)
+  Toets: `test/scripts/pnpm-installeer.test.ts`
 - **pnpm-sandbox/AC-3** — Gegeven hetzelfde project in de strenge kooi, wanneer `pnpm install` start met de omgeving van
   `modus: 'werkmap'` maar zonder `XDG_RUNTIME_DIR`, dan is de status niet 0. Dat bewijst dat de kooi het gedrag uit ADR 0110
   naspeelt. Herstelt een latere pnpm de terugval naar `/tmp`, dan vervalt deze AC via de besluitroute; AC-1 blijft het bewijs voor de kooi.
-  Toets: `test/scripts/pnpm-installeer.test.ts` (nieuw)
+  Toets: `test/scripts/pnpm-installeer.test.ts`
 - **pnpm-sandbox/AC-4** — `pnpmInstallCommando` geeft voor `werkmap`, `setup` en elk van beide met `cloud: true` precies de
-  argumenten en omgeving uit "Hergebruik en UX". Toets: `test/scripts/pnpm-installeer.test.ts` (nieuw)
+  argumenten en omgeving uit "Hergebruik en UX". Toets: `test/scripts/pnpm-installeer.test.ts`
 - **pnpm-sandbox/AC-5** — In `scripts/` start alleen `scripts/kit/pnpm-installeer.mjs` een pnpm-installatie, en
   `scripts/kit/worktree-install.mjs` importeert `installeer` uit die module. Als aanroep telt:
   - in een `.sh`-bestand: na het weghalen van commentaar (`#` tot regeleinde, buiten aanhalingstekens) en van tekst tussen
@@ -99,12 +99,12 @@ Alleen ontwikkelomgeving en CI; geen app-rollen. De eigenaar ziet het resultaat 
   Herkend: `mise exec -- pnpm install --frozen-lockfile`, `cd x && pnpm install` en `command: 'pnpm', args: ['install']`.
   Toegestaan: `# pnpm install`, `printf '✗ pnpm install mislukt'`, `'pnpm install --frozen-lockfile'` (stapnaam in
   `scripts/bootstrap.sh`) en `fail "draai eerst pnpm install"` (`scripts/check-image.sh`). De test draait de regel ook op de
-  huidige `scripts/` en verwacht als enige treffer `scripts/kit/pnpm-installeer.mjs`. Toets: `test/scripts/pnpm-installeer.test.ts` (nieuw)
+  huidige `scripts/` en verwacht als enige treffer `scripts/kit/pnpm-installeer.mjs`. Toets: `test/scripts/pnpm-installeer.test.ts`
 - **pnpm-sandbox/AC-6** — Gegeven een pnpm-stub op `PATH` die `ERR_PNPM_STORE_DIR_OPEN_OPERATION_LOCK` schrijft en met 1 stopt,
   wanneer de CLI draait, dan is de exitcode 1 en staat de melding "zie de pnpm-fout hierboven" op stderr, zonder "waarschijnlijk geen
-  netwerk". Met `ERR_PNPM_FETCH_404` staat er "waarschijnlijk geen netwerk", en met `--cloud` ook de tweede regel over Trusted en de proxy. Toets: `test/scripts/pnpm-installeer.test.ts` (nieuw)
+  netwerk". Met `ERR_PNPM_FETCH_404` staat er "waarschijnlijk geen netwerk", en met `--cloud` ook de tweede regel over Trusted en de proxy. Toets: `test/scripts/pnpm-installeer.test.ts`
 - **pnpm-sandbox/AC-7** — Gegeven een `TMPDIR` onder een map die niet te schrijven is (bijvoorbeeld `/proc/nee`), wanneer de
-  CLI start met `--modus werkmap` en ook met `--modus setup`, dan is de exitcode telkens 1 met de basismapmelding en is pnpm niet gestart. Toets: `test/scripts/pnpm-installeer.test.ts` (nieuw)
+  CLI start met `--modus werkmap` en ook met `--modus setup`, dan is de exitcode telkens 1 met de basismapmelding en is pnpm niet gestart. Toets: `test/scripts/pnpm-installeer.test.ts`
 
 ## Randgevallen
 
@@ -122,7 +122,7 @@ Alleen ontwikkelomgeving en CI; geen app-rollen. De eigenaar ziet het resultaat 
 
 - Risicowerk (installatiepad van dependencies, kooi als grens; R-WERK-04): de tester schrijft de tests na de spec-review.
 - De bestaande afschermtests van kooi/AC-4 in `test/scripts/kooi.test.ts` draaien ook met `streng: true`.
-- Beschermd, `voorReview`, eigenaarreview: `scripts/kit/kooi.mjs`, `scripts/kit/worktree-install.mjs`, `scripts/kit/pnpm-installeer.mjs` (nieuw),
+- Beschermd, `voorReview`, eigenaarreview: `scripts/kit/kooi.mjs`, `scripts/kit/worktree-install.mjs`, `scripts/kit/pnpm-installeer.mjs`,
   `scripts/cloud-setup.sh`, `scripts/bootstrap.sh`.
 - Bestaande tests die veranderen (reden: het installatiepad en de melding verhuizen naar de module):
   `test/scripts/worktree-install.test.ts` (import van de kern), `test/docs/cloud-zelfinstallatie.test.ts` (de ADR 0110-test uit #997

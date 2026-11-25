@@ -35,6 +35,11 @@ n.v.t. — geen UI. Melding zonder bubblewrap: `✗ kooi: bubblewrap ontbreekt; 
 het (scripts/bootstrap.sh lokaal, scripts/cloud-setup.sh in de cloud), zie docs/ENVIRONMENT.md`. Melding bij een mislukte
 proef: `✗ kooi: de proef schreef buiten de werkmap; het commando is niet uitgevoerd`.
 
+Optie `streng` (spec `pnpm-sandbox-installatie`, AC-1): `inKooi(commando, { werkmap, streng: true })`, CLI
+`--streng --werkmap <map> -- <commando>`. De lege mappen (`/tmp`, `/run`, `/var/run`, thuismap, `$XDG_RUNTIME_DIR`) worden na
+de binds van toolchain en werkmap ook `--remount-ro`; de werkmap is de enige schrijfbare plek en `TMPDIR` is `<werkmap>/tmp`.
+Zo toetst `gate:fast` een installatie die buiten de werkmap wil schrijven. Zonder `streng` verandert niets.
+
 ## Acceptatiecriteria
 
 - **kooi/AC-1** — `scripts/kit/kooi.mjs` exporteert `inKooi(commando, { werkmap, env, timeout })` en is als CLI te starten:
