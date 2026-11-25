@@ -11,7 +11,7 @@ bijhouden", PR 2). Voorstel van de hoofdsessie; de merge door de eigenaar is het
 
 ADR 0039 legde de majors vast als tekst: "Node 26", "pnpm 11", "TypeScript 6.0". Daardoor vroeg elke major een ADR, ook als
 alleen het versienummer veranderde. En elke versie stond op drie plekken: `mise.toml` of `package.json`, ADR 0039 en
-`AGENTS.md`. Die liepen uit elkaar. Bij pnpm 12 (ADR 0110) bleek wat een major echt vraagt: de changelog lezen, de volle CI
+`AGENTS.md`. Die liepen uit elkaar. Bij pnpm 12 (ADR 0110, PR #984) bleek wat een major echt vraagt: de changelog lezen, de volle CI
 plus `gate:slow`, de cloud-setup en `app:init`, de versie overal gelijk, en weten hoe je terugdraait. Dat is een vaste lijst.
 Een ADR voegt pas iets toe als er een keuze is: andere werkwijze, configuratie of code.
 
@@ -26,17 +26,15 @@ Een ADR voegt pas iets toe als er een keuze is: andere werkwijze, configuratie o
    | TypeScript | Nieuwste versie binnen de `peerDependencies` van de gepinde typescript-eslint. |
 
 2. **Een major gaat via de majorchecklist** in de PR-beschrijving. De checklist staat op één plek:
-   `.github/pull_request_template.md`, sectie "Majorchecklist". De punten zijn:
-   - de changelog gelezen, met per breaking change één regel over wat die voor ons betekent;
-   - CI groen plus `gate:slow`;
-   - `scripts/cloud-setup.sh` in een verse cloudsessie en `pnpm app:init` in een proefkopie;
-   - de versie overal gelijk;
-   - in één zin hoe je terugdraait.
+   `.github/pull_request_template.md`, sectie "Majorchecklist".
 3. **Een ADR alleen als werkwijze, configuratie of code verandert**, niet voor alleen het versienummer.
-4. **De versie staat alleen in de bron:** Node in `mise.toml`, pnpm in `packageManager` van `package.json`, TypeScript in
-   `package.json`. ADR 0039 punten 5–7 en `AGENTS.md` noemen geen versie meer, maar verwijzen naar die bestanden.
+4. **De bron van de versie** is `mise.toml` (Node) en `package.json` (pnpm in `packageManager`, TypeScript). Regels en
+   ADR's noemen geen versie: ADR 0039 punten 5–7 en `AGENTS.md` verwijzen naar die bestanden. Afgeleide pins (de
+   Node-images in de Dockerfile en `compose.yaml`) blijven gelijk aan de bron; checklistpunt 4 en
+   `test/scripts/dockerfile.test.ts` bewaken dat.
 5. Ongewijzigd: geen Corepack, `package.json` is de enige bron voor de pnpm-versie, Renovate verbergt geen major maar opent
-   hem als eigen PR met label `major`, en Postgres 18 pas als alle beoogde providers het bieden.
+   hem als eigen PR met label `major`, en Postgres 18 pas als alle beoogde providers het bieden. Een Postgres-major valt
+   niet onder de checklist en vraagt nog een ADR ([0042](0042-database-en-datapad.md)).
 
 ## Alternatieven
 

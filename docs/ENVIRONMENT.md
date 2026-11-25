@@ -111,7 +111,7 @@ Een sessie controleert dit eerst en stopt bij een fout, voordat ze iets verkent:
 | Branch | `git branch --show-current` | zie Branchnaam |
 | Projecthooks en Bash-sandbox actief | `node scripts/kit/feiten.mjs` geeft geen `⚠ bewaking niet actief in deze sessie` | geen stop: werk door zonder op rolhek of sandbox te leunen, zie de alinea over #462 hierboven |
 
-Zonder Node 26 en dependencies draait geen enkele check die bewijs levert (`pnpm gate:fast`, `pnpm pr:verify`, `pnpm meting`).
+Zonder de Node uit `mise.toml` en dependencies draait geen enkele check die bewijs levert (`pnpm gate:fast`, `pnpm pr:verify`, `pnpm meting`).
 Een overdracht aan een cloudsessie begint daarom met een blok **Vereisten** met deze drie punten.
 
 De voorcontrole valideert ook de exacte `packageManager`-pin en vergelijkt die met de werkelijke uitvoer van
