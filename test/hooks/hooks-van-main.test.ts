@@ -516,7 +516,9 @@ describe('opruimen: werkstraat session-start wist oude versies uit de cache', ()
     ]);
   });
 
-  test('een map die niet te wissen is, verandert de uitkomst van de hook niet', () => {
+  // GEWIJZIGD (eigenaarakkoord 2026-11-25): chmod maakt een map niet onwisbaar voor root, en de cloudcontainer draait als
+  // root (uid 0), dus daar kan deze opzet niet slagen. In CI (geen root) toetst hij het gedrag gewoon.
+  test.skipIf(process.getuid?.() === 0)('een map die niet te wissen is, verandert de uitkomst van de hook niet', () => {
     const { repo, oud } = metOudeVersie();
     const vast = path.join(oud, 'lib');
     chmodSync(vast, 0o500);
