@@ -70,8 +70,8 @@ function toolchainMappen(home) {
  * De argumenten van bubblewrap, in de volgorde van AC-1: eerst alles alleen-lezen, dan de lege mappen, dan de toolchain, als
  * laatste de werkmap. Met `streng` (spec pnpm-sandbox-installatie) worden de lege mappen daarna ook alleen-lezen
  * (`--remount-ro`, als laatste: de binds van toolchain en werkmap hebben de tmpfs nog schrijfbaar nodig voor hun
- * koppelpunt). Bubblewrap maakt alleen dat ene koppelpunt alleen-lezen, niet de binds eronder, dus de werkmap blijft de
- * enige schrijfbare plek.
+ * koppelpunt). Bubblewrap maakt alleen dat ene koppelpunt alleen-lezen, niet de binds eronder, dus de werkmap blijft
+ * schrijfbaar; daarbuiten alleen het vluchtige /dev.
  * @param {string} werkmap
  * @param {{ streng?: boolean }} [opties]
  * @returns {string[]}

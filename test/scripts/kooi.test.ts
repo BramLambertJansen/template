@@ -130,8 +130,8 @@ describe('kooi/AC-1: het commando draait in de werkmap', () => {
   });
 });
 
-// pnpm-sandbox/AC-1: `streng` maakt /tmp, /run, /var/run, de thuismap en XDG_RUNTIME_DIR leeg én alleen-lezen; de werkmap is de
-// enige schrijfbare plek en TMPDIR is <werkmap>/tmp. XDG_RUNTIME_DIR leest `bwrapArgs` uit de omgeving van het proces zelf.
+// pnpm-sandbox/AC-1: `streng` maakt /tmp, /run, /var/run, de thuismap en XDG_RUNTIME_DIR leeg én alleen-lezen; schrijfbaar
+// blijven alleen de werkmap en het vluchtige /dev, en TMPDIR is <werkmap>/tmp. XDG_RUNTIME_DIR leest `bwrapArgs` uit de omgeving van het proces zelf.
 describe('pnpm-sandbox/AC-1: inKooi met streng', () => {
   const sockets: Server[] = [];
   beforeEach((ctx) => {
@@ -175,7 +175,7 @@ describe('pnpm-sandbox/AC-1: inKooi met streng', () => {
 
   test('pnpm-sandbox/AC-1: een unix-socket in een eigen map buiten de werkmap, als XDG_RUNTIME_DIR gezet, is niet bereikbaar', async () => {
     const werkmap = map(tmpdir(), 'kooi-werk-');
-    const runtime = map(tmpdir(), 'kooi-runtime-');
+    const runtime = map('/var/tmp', 'kooi-runtime-');
     const pad = path.join(runtime, 's');
     const server = createServer((c) => c.end('verbonden'));
     sockets.push(server);
