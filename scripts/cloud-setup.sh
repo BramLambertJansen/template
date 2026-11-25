@@ -188,6 +188,11 @@ fi
 bashrc=0
 schrijf_regel "$HOME/.bashrc" && bashrc=1
 
+# pnpm 12 neemt bij install een store-vergrendeling in $XDG_RUNTIME_DIR en valt zonder die variabele hard terug op /tmp
+# (ADR 0110, pnpm#16390); in de sandbox van een sessie is /tmp niet schrijfbaar. Een eigen, bestaande map (mktemp -d: onder
+# TMPDIR, 0700) werkt binnen en buiten de sandbox, net als in scripts/kit/worktree-install.mjs.
+XDG_RUNTIME_DIR="$(mktemp -d)"
+export XDG_RUNTIME_DIR
 netwerk "pnpm install (of lockfile ongeldig)" mise exec -- pnpm install --frozen-lockfile
 # lefthook heeft geen postinstall (pnpm-workspace.yaml: allowBuilds); de hooks komen alleen hier.
 mise exec -- pnpm exec lefthook install
