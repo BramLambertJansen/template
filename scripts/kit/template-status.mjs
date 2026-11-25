@@ -4,7 +4,8 @@
 // niet te lezen is of `onderhoud` een ongeldige vorm heeft.
 //  - In een app: TEMPLATE_VERSION uit de werkmap, de releases uit refs/remotes/template/main:docs/template-changelog.md en
 //    de lokale tags refs/tags/template-v*. Tags `v*` leest het niet (die kunnen van de app zelf zijn).
-//  - In de template: TEMPLATE_VERSION, of de tag lokaal bestaat en hoeveel fragmenten op een release wachten.
+//  - In de template: TEMPLATE_VERSION, of de tag lokaal bestaat en hoeveel fragmenten op een release wachten, en een
+//    verwijsregel naar de toolchaincheck (spec toolchain-bewaking AC-11; die check haalt op, dit script niet).
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -22,6 +23,8 @@ import {
 
 const TEMPLATE_REF = 'refs/remotes/template/main';
 const TAG = 'template-v';
+/** Verwijsregel (spec toolchain-bewaking AC-11): de actuele stand staat in het issue van de workflow `toolchain`. */
+const TOOLCHAIN = 'Toolchain: pnpm check:toolchain (wekelijks in de workflow toolchain)';
 const REF_ONLEESBAAR = `${TEMPLATE_REF} is niet te lezen; haal de template op met git fetch --no-tags template main`;
 
 /** @typedef {import('./template-release.mjs').Release} Release */
@@ -147,6 +150,7 @@ function templateStatus(root, versie) {
       ? `Tag: ${tag} (lokaal aanwezig)`
       : `Tag: ${tag} ontbreekt lokaal; de eigenaar tagt de squash-commit van de release-PR op main.`,
     `Wachtend op een release: ${String(fragmenten.length)} fragmenten, waarvan ${String(metNotitie)} met "Bij een update".`,
+    TOOLCHAIN,
   ];
 }
 

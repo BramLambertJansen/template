@@ -14,8 +14,9 @@
 //     Template: `TEMPLATE_VERSION`, de lokale tag, de fragmenten in `docs/template-changelog.d/` (zonder README.md).
 //     Exit 0 als het iets kan melden, 1 bij een onleesbare template-ref of gates.json of een ongeldige vorm van `onderhoud`.
 import { spawnSync } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { afterEach, describe, expect, test } from 'vitest';
+import { expectAbsent } from '../support/absence.ts';
 import {
   FRAGMENTEN,
   ONREIKBAAR,
@@ -370,6 +371,22 @@ function templateRepo(fragmenten: Record<string, string>): string {
 }
 
 const TWEE = { 'een.md': fragment('toegevoegd', true), 'twee.md': fragment('opgelost', false) };
+const TOOLCHAIN = 'Toolchain: pnpm check:toolchain (wekelijks in de workflow toolchain)';
+
+describe('toolchain-bewaking/AC-11: template:status verwijst naar de toolchaincheck', () => {
+  test('toolchain-bewaking/AC-11: in de template de verwijsregel als laatste regel, exit 0, zonder iets op te halen', () => {
+    const root = templateRepo(TWEE);
+
+    const uit = status(root);
+
+    expect(uit.status, uit.uit).toBe(0);
+    expect(regels(uit).at(-1)).toBe(TOOLCHAIN);
+    expectAbsent(readFileSync(STATUS_SCRIPT, 'utf8'), /\bfetch\(|https?:\/\/|check-toolchain/, {
+      recognizes: ['fetch(url)', 'https://nodejs.org', "import './check-toolchain.mjs'"],
+      allows: ['pnpm check:toolchain'],
+    });
+  });
+});
 
 describe('template-release/AC-9: template:status in de template', () => {
   test('template-release/AC-9: versie, tag aanwezig en twee fragmenten waarvan één met een notitie, exit 0', () => {
@@ -383,6 +400,8 @@ describe('template-release/AC-9: template:status in de template', () => {
       'Templateversie: 0.3.0',
       'Tag: template-v0.3.0 (lokaal aanwezig)',
       'Wachtend op een release: 2 fragmenten, waarvan 1 met "Bij een update".',
+      // GEWIJZIGD (spec toolchain-bewaking AC-11): de verwijsregel naar de toolchaincheck volgt in de template.
+      TOOLCHAIN,
     ]);
   });
 
@@ -398,6 +417,8 @@ describe('template-release/AC-9: template:status in de template', () => {
       'Templateversie: 0.3.0',
       'Tag: template-v0.3.0 ontbreekt lokaal; de eigenaar tagt de squash-commit van de release-PR op main.',
       'Wachtend op een release: 2 fragmenten, waarvan 1 met "Bij een update".',
+      // GEWIJZIGD (spec toolchain-bewaking AC-11): de verwijsregel naar de toolchaincheck volgt in de template.
+      TOOLCHAIN,
     ]);
   });
 

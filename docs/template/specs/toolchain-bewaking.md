@@ -149,7 +149,7 @@ Bij een fout volgt één van deze regels:
     eindigt met exitcode 1.
   - **Grensgeval:** bij een pin op 26.13.0 en `nu` = 2026-11-25 komt er geen melding (8 dagen). Met `nu` = 2026-12-02
     komt die er wel (15 dagen).
-  - Toets: `test/scripts/check-toolchain.test.ts` (nieuw)
+  - Toets: `test/scripts/check-toolchain.test.ts`
 - **toolchain-bewaking/AC-2**
   - **Gegeven:**
     - een pin op pnpm 12.21.0;
@@ -157,26 +157,26 @@ Bij een fout volgt één van deze regels:
     - `nu` = 2026-11-25.
   - **Dan:** de check meldt `achterstand: pnpm 12.21.0, toegestaan 12.25.0, achter sinds 2026-11-08 (17 dagen)`. De klok
     gaat dus niet terug door nieuwere releases, en 13.0.0 telt nooit als opvolger.
-  - Toets: `test/scripts/check-toolchain.test.ts` (nieuw)
+  - Toets: `test/scripts/check-toolchain.test.ts`
 - **toolchain-bewaking/AC-3**
   - **Gegeven:**
     - een TypeScript-pin op 6.0.3;
     - de gepinde typescript-eslint met peer `>=4.8.4 <6.1.0`;
     - typescript 6.0.5 (oud genoeg) en 6.1.0.
   - **Dan:** de nieuwste opvolger is 6.0.5, niet 6.1.0, want 6.1.0 valt buiten de peer.
-  - Toets: `test/scripts/check-toolchain.test.ts` (nieuw)
+  - Toets: `test/scripts/check-toolchain.test.ts`
 - **toolchain-bewaking/AC-4**
   - **Gegeven:**
     - een pin op Node 26;
     - de releases 27.2.0 (`lts: false`), 28.0.0 (`lts: false`) en 28.1.0 (`lts: "Neon"`).
   - **Dan:** de check meldt `volgende major klaar: Node 28 (LTS Neon)`.
   - **Zonder melding:** als alleen 27.x en 28.0.0 bestaan, allemaal zonder LTS.
-  - Toets: `test/scripts/check-toolchain.test.ts` (nieuw)
+  - Toets: `test/scripts/check-toolchain.test.ts`
 - **toolchain-bewaking/AC-5**
   - **Gegeven:** pnpm `dist-tags.latest` 13.0.0 en een pin op 12.
   - **Dan:** de check meldt `volgende major klaar: pnpm 13 (latest is 13.0.0)`.
   - **Zonder melding:** als `latest` op 12.x staat.
-  - Toets: `test/scripts/check-toolchain.test.ts` (nieuw)
+  - Toets: `test/scripts/check-toolchain.test.ts`
 - **toolchain-bewaking/AC-6**
   - **Gegeven:**
     - een TypeScript-pin op 6;
@@ -185,11 +185,11 @@ Bij een fout volgt één van deze regels:
   - **Dan:** de check meldt
     `volgende major klaar: TypeScript 7 (typescript-eslint 8.80.0 staat typescript >=4.8.4 <7.1.0 toe)`.
   - **Zonder melding:** als de peer `<6.1.0` is, of als er geen stabiele 7.x is.
-  - Toets: `test/scripts/check-toolchain.test.ts` (nieuw)
+  - Toets: `test/scripts/check-toolchain.test.ts`
 - **toolchain-bewaking/AC-7**
   - **Alleen meldingen over de volgende major:** de check eindigt met exitcode 0 en de bijbehorende afsluitregel.
   - **Geen enkele melding:** de check eindigt met exitcode 0 en de groene regel.
-  - Toets: `test/scripts/check-toolchain.test.ts` (nieuw)
+  - Toets: `test/scripts/check-toolchain.test.ts`
 - **toolchain-bewaking/AC-8**
   - **Gegeven** één van deze gevallen:
     - een antwoord dat niet 2xx is;
@@ -200,7 +200,7 @@ Bij een fout volgt één van deze regels:
   - **Dan:** de check eindigt met exitcode 2 en de foutregel, ook met `--issue`. Bij `--issue` schrijft hij dan niets.
   - Hij wordt nooit groen zonder gelezen data.
   - Met `--json` geeft hij `{ "fout": … }`.
-  - Toets: `test/scripts/check-toolchain.test.ts` (nieuw)
+  - Toets: `test/scripts/check-toolchain.test.ts`
 - **toolchain-bewaking/AC-9**
   - **Gegeven:** `--issue` met `GITHUB_TOKEN` en `GITHUB_REPOSITORY`. De check leest de open issues van
     `github-actions[bot]` met de vaste titel, met hooguit 10 pagina's van 100.
@@ -220,7 +220,7 @@ Bij een fout volgt één van deze regels:
     - 2 als een `GET`, `POST` of `PATCH` niet 2xx is;
     - zonder `GITHUB_TOKEN` of `GITHUB_REPOSITORY` volgt `<NAAM> ontbreekt`.
   - Zonder `--issue` doet de check alleen `GET` op de bronnen en raakt hij de GitHub-API niet.
-  - Toets: `test/scripts/check-toolchain.test.ts` (nieuw)
+  - Toets: `test/scripts/check-toolchain.test.ts`
 - **toolchain-bewaking/AC-10** — De workflow `.github/workflows/toolchain.yml`:
   - draait alleen op `schedule` met cron `41 6 * * 2` en op `workflow_dispatch`, niet op een PR of push;
   - heeft `concurrency` met de groep `toolchain` en `cancel-in-progress: false`;
@@ -229,7 +229,7 @@ Bij een fout volgt één van deze regels:
   - doet de checkout met `persist-credentials: false`;
   - zet `GITHUB_TOKEN` alleen in de stap die het script draait;
   - draait `node scripts/kit/check-toolchain.mjs --issue`, zonder voorwaarde op de repo.
-  - Toets: `test/rails/toolchain-workflow.test.ts` (nieuw)
+  - Toets: `test/rails/toolchain-workflow.test.ts`
 - **toolchain-bewaking/AC-11**
   - **Gegeven:** de template, **wanneer** `pnpm template:status` draait.
   - **Dan:** de uitvoer bevat de regel `Toolchain: pnpm check:toolchain (wekelijks in de workflow toolchain)`, en het
