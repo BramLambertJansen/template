@@ -70,4 +70,15 @@ describe('docs van de cloudomgeving (spec cloud-zelfinstallatie)', () => {
     expect(kop).toContain('scripts/cloud-omgeving.sh');
     expect(kop).toContain('~/.local/bin');
   });
+
+  // ADR 0110: pnpm 12 legt zijn store-vergrendeling zonder XDG_RUNTIME_DIR in /tmp, dat de sandbox niet mag schrijven.
+  test('ADR 0110: cloud-setup.sh zet een eigen XDG_RUNTIME_DIR vóór pnpm install', () => {
+    const install = setup.indexOf('pnpm install --frozen-lockfile');
+    const runtime = setup.search(/^export XDG_RUNTIME_DIR$/m);
+
+    expect(install).toBeGreaterThan(-1);
+    expect(setup).toMatch(/^XDG_RUNTIME_DIR="\$\(mktemp -d\)"$/m);
+    expect(runtime).toBeGreaterThan(-1);
+    expect(runtime).toBeLessThan(install);
+  });
 });

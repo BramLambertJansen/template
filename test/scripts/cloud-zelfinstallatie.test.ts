@@ -77,8 +77,13 @@ function opstelling({ metSandbox = true }: { metSandbox?: boolean } = {}): Opste
     stub(path.join(o.installs, versie), 'node', 'echo v9.9.9');
     stub(path.join(o.installs, versie), 'pnpm', 'echo 9.9.9');
   }
-  for (const tool of ['bash', 'uname', 'id', 'mkdir', 'grep', 'dirname', 'rm', 'ln', 'readlink'])
-    symlinkSync(execFileSync('which', [tool], { encoding: 'utf8' }).trim(), path.join(o.bin, tool));
+  for (const tool of ['bash', 'uname', 'id', 'mkdir', 'grep', 'dirname', 'rm', 'ln', 'readlink', 'mktemp'])
+    // Uit de systeemmappen, niet uit de PATH van de aanroeper: een agentomgeving kan daar een omhulsel vooraan zetten
+    // (zoals een rm-bewaking) dat buiten die omgeving niet werkt.
+    symlinkSync(
+      execFileSync('which', [tool], { encoding: 'utf8', env: { PATH: '/usr/bin:/bin' } }).trim(),
+      path.join(o.bin, tool),
+    );
   return o;
 }
 

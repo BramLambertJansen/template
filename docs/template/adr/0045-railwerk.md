@@ -14,6 +14,7 @@ Herzien: 2026-11-12 (#696): door ADR 0089 punt 2, 5 en 8, de vorige regel verval
 Herzien: 2026-11-14 (#714): ingekort tot wat nog geldt na ADR 0089 en 0091; een ingehaald punt is één regel met de plek waar het nu staat, de puntnummers zijn ongewijzigd, de oude tekst staat in git
 Herzien: 2026-11-15 (#728): punt 22 verwijst niet meer naar `statusregelOvertreding`, die functie is weg; de afspraak blijft
 Herzien: 2026-11-18 (#796): gewijzigd door [0093](0093-agent-onder-eigenaaraccount.md) punt 1, punt 19 vervalt: er is geen GitHub App; de agent werkt onder het account van de eigenaar
+Herzien: 2026-11-25 (#996): punt 3, ook de werkstraat in `post-edit`, `stop` en `subagent-stop` maakt van een crash (exit 1, bijvoorbeeld een laadfout) een 2; eerder liet Claude Code die poort dan door (eigenaarbesluit, leerpunt #995)
 
 Vervangt 0011, 0017, 0031,
 0032, 0033 en
@@ -45,10 +46,12 @@ tot stand komt (merge is acceptatie, drempel, taakmandaat, CI-lus, merge- en for
    `.claude/hooks/` bevat alleen stubs die de versie van `main` uitpakken en starten. Het anker is de SHA van `main` op de
    remote, niet de lokale `origin/main`. De lader controleert zelf de hashes van commit, trees en bestanden; een vervalst object
    geeft een dichte hook, geen andere code. Het rolhek gebruikt geen netwerk. Rolhek en werkstraat falen dicht (exit 2) als het
-   anker of de hook op `main` ontbreekt, en het rolhek maakt van elke andere exitcode dan 0 of 2 een 2. Het rolhek valt ook
+   anker of de hook op `main` ontbreekt. Het rolhek, en de werkstraat in `post-edit`, `stop` en `subagent-stop`, maken van elke
+   andere exitcode dan 0 of 2 een 2 (herzien 2026-11-25). Het rolhek valt ook
    dicht als de stub niet start, crasht, zijn timeout haalt of ongeldige uitvoer geeft: `onFailure: "block"` op het
    hook-object van zijn PreToolUse-entry (Claude Code 2.1.295 of nieuwer; de versiecontrole is besloten, nog niet gebouwd,
-   spec AC-3). De werkstraat-hook valt dicht bij een fout in de lader en via zijn eigen catch-all, maar open
+   spec AC-3). De werkstraat-hook valt dicht bij een fout in de lader, via zijn eigen catch-all en bij een crash van het
+   script in die drie events; `session-start` laat een fout bewust door. Hij valt open
    bij een timeout of kill: Claude Code kent `onFailure` niet op Stop en SubagentStop. Meethook, melding en statusregel falen altijd open. *Waarom (herzien 2026-11-03):* een vangnet dat bij
    elke storing openstaat, vangt juist dan niets; de harde grens blijft CI, de ruleset en de eigenaarmerge (R-PRINC-02,
    R-ROL-10). Een hookwijziging werkt pas na de merge, in de volgende
