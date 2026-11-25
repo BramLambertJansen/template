@@ -151,7 +151,7 @@ Afgedwongen door: `check-secdef`, `check-policies`, pgTAP-invarianten en functie
 
 ## 7. Design system
 
-Afgedwongen door: lint (`klassen`, rauwe elementen, axe), `check:catalogus`, `test/ui/contrast.test.ts`, woordenlijsttest op `src/web/copy`.
+Afgedwongen door: lint (`klassen`, rauwe elementen, axe), `check:catalogus`, `check:schillen`, `test/ui/contrast.test.ts`, woordenlijsttest op `src/web/copy`.
 
 - **R-UI-01** Tokens in drie lagen: primitief (nooit direct), semantisch en component (beide app-laag in `src/web/styles/theme.css`; hooguit zes componenttokens per component, op `:root, [data-app-theme]`); lijst via `node scripts/kit/feiten.mjs tokens` (0040, spec app-thema)
 - **R-UI-02** shadcn-basiskit in `src/core/web/ui`; app-componenten en varianten in `src/web/ui`, enige importbron voor `features/`; varianten in één CVA-recept, afleiden niet forken; basiscomponent voor elke app via PR in template; een schil (`SidebarShell`, `TopbarShell`) staat op `ShellFrame` (0040, spec schillen)

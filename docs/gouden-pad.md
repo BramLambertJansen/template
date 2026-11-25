@@ -147,6 +147,35 @@ Loopt het uiteen, dan faalt het dicht: een rol alleen in de code is niet toe te 
 database is `FORBIDDEN` op elke route, en accountbeheer blijft achter `app.is_mfa_admin()` (de vlag in de database).
 Geeft de permissietabel accountbeheer aan een rol zonder `beheer`, dan weigert de database (`FORBIDDEN`).
 
+## Een tweede schil
+
+Een deel van de app met een eigen indeling (bijvoorbeeld een portaal naast het beheer) krijgt een eigen layoutroute met
+een eigen schil (spec [schillen](template/specs/schillen.md), deel B). Skip-link, focus, offlinemelding en afdrukken komen
+uit `ShellFrame`; meldingen uit `ToastProvider`. Compleet voorbeeld met twee layoutroutes, guard, navigatie per schil en
+`ThemeScope`: `src/web/features/layout/twee-schillen.test.tsx`. `pnpm check:schillen` (in `gate:fast`) bewaakt stap 2 en 3 en dat `ShellFrame` alleen in een schil staat. Hij leest
+statisch: een layoutroute met een inline component (`component: () => …`) of een schil die meer dan één laag onder het
+layoutcomponent zit, ziet hij niet en meldt hij als fout; geef de route het layoutcomponent zelf.
+
+1. **Kies de schil**: `SidebarShell` of `TopbarShell` (vorm: `src/core/web/ui/sidebar-shell.tsx`,
+   `src/core/web/ui/topbar-shell.tsx`), of een eigen schil op `ShellFrame` in `src/web/ui/<naam>-shell.tsx`. Een eigen schil
+   is trede vijf van de stijlladder: eerst akkoord van de eigenaar. Render `ShellFrame` nergens anders dan in een schil in
+   `src/core/web/ui/` of `src/web/ui/`.
+2. **Bij een eigen schil een contracttest**: `shellContract(MijnSchil, { props })` uit `#core/web/ui/testing.tsx` in een
+   testbestand naast de schil (vorm: `src/core/web/ui/shell-contract.test.tsx`). Zonder die suite faalt `check:schillen`.
+3. **De layoutroute** in `src/web/routes/_<naam>.tsx`: een id van één segment dat met `_` begint, `beforeLoad: guard(…)` en
+   als `component` het layoutcomponent (vorm: `src/web/routes/_app.tsx`). De guard bewaakt de lintregel `route-guard`; dat
+   het component een geregistreerde schil rendert, bewaakt `check:schillen`. Schermen van dat deel zijn kindroutes in
+   `src/web/routes/_<naam>/`.
+4. **De permissie**: een bestaande, of een nieuwe in `src/shared/permissions.ts` met een test per verboden rol
+   (`src/shared/permissions.test.ts`, R-TEST-03).
+5. **Het layoutcomponent** in `src/web/features/layout/` dat de schil vult met navigatie, gebruikersnaam en profielmenu,
+   desgewenst binnen een `ThemeScope` met een thema uit `src/web/styles/themes.ts` (vorm:
+   `src/web/features/layout/app-layout.tsx`).
+6. **Een eigen navigatielijst** als export in `src/web/lib/nav.ts` (naast `navItems`), in het layoutcomponent gefilterd met
+   `visibleNavItems`. Een link naar het andere deel staat alleen in de lijst als de permissie van dat deel erbij staat.
+7. **E2E** met `scanAxe` op 375 en 1280 px in `e2e/<naam>.spec.ts` (vorm: `e2e/shell.spec.ts`). `ui:check` draait de spec
+   mee, maar ontdekt een nieuwe layoutroute niet zelf.
+
 ## Stappen
 
 1. **Spec** met status `goedgekeurd`: `docs/template/specs/accountbeheer.md` (routes, foutcodes, teksten, ACs, testplan).

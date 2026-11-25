@@ -162,7 +162,7 @@ voorbeelden op `/design-system` staan achter `guard('design-system:read')`.
   van de tweede schil staat in de test zelf. Ze bouwt twee layoutroutes in code met `createRootRoute` en `createRoute` in een
   geheugenrouter (vorm: `src/web/features/design-system/account-links.test.tsx`), dus `routeTree`, de catalogus en
   `check:schillen` zien haar niet. De tweede route gebruikt een bestaande permissie (`accounts:read`), en de thema's zijn
-  de twee voorbeeldthema's die de template volgens de spec app-thema meelevert (`strak` en `zacht`).
+  twee fixturethema's uit de test zelf, niet de voorbeeldthema's van de app (een app mag die weghalen, leerpunt #983).
 - **Recept "Een tweede schil"** (nieuwe sectie in `docs/gouden-pad.md`): een app die vanuit de template start, kan zonder
   uitzoekwerk aansluiten. De sectie noemt in volgorde:
   1. de keuze: `SidebarShell`, `TopbarShell` of een eigen schil op `ShellFrame` in `src/web/ui/` (dan eerst akkoord van de

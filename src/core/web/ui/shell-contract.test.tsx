@@ -1,13 +1,14 @@
 import { createMemoryHistory, createRootRoute, createRouter, RouterContextProvider } from '@tanstack/react-router';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { StrictMode, type ReactNode } from 'react';
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { CenteredCard } from './centered-card.tsx';
 import { PageHeader } from './page-header.tsx';
-import { ShellSessionProvider } from './shell-frame.tsx';
+import { ShellFrame, ShellSessionProvider } from './shell-frame.tsx';
 import { SidebarShell } from './sidebar-shell.tsx';
 import type { NavItem } from './sidebar.tsx';
-import { shellContract } from './testing.tsx';
+import { OfflineNotice } from './offline-notice.tsx';
+import { shellContract, shellContractCases } from './testing.tsx';
 import { TopbarShell } from './topbar-shell.tsx';
 
 const nav: NavItem<string>[] = [
@@ -119,5 +120,111 @@ describe('schillen/AC-16: focus bij de mount van een schil', () => {
     );
     await settle();
     expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1, name: 'Accounts' }));
+  });
+});
+
+// schillen/AC-10: een eigen schil op ShellFrame slaagt; een schil zonder skip-link, met een tweede main of met een eigen
+// OfflineNotice faalt op het bijbehorende geval van de contracttest.
+interface FixtureProps {
+  readonly label: string;
+  readonly routeKey?: string | undefined;
+  readonly children: ReactNode;
+}
+
+const fixtureHeader = (label: string, extra?: ReactNode) => (
+  <header className="print:hidden">
+    <span>{label}</span>
+    {extra}
+  </header>
+);
+
+function EigenSchil({ label, routeKey, children }: FixtureProps) {
+  return (
+    <ShellFrame className="flex flex-col" routeKey={routeKey} header={fixtureHeader(label)} nav={null}>
+      {children}
+    </ShellFrame>
+  );
+}
+
+function SchilZonderSkipLink({ label, children }: FixtureProps) {
+  return (
+    <div>
+      {fixtureHeader(label)}
+      <main tabIndex={-1}>{children}</main>
+    </div>
+  );
+}
+
+function SchilMetTweedeMain({ label, routeKey, children }: FixtureProps) {
+  return (
+    <ShellFrame className="flex flex-col" routeKey={routeKey} header={fixtureHeader(label)} nav={null}>
+      <main>{children}</main>
+    </ShellFrame>
+  );
+}
+
+function SchilMetEigenOfflineNotice({ label, routeKey, children }: FixtureProps) {
+  return (
+    <ShellFrame
+      className="flex flex-col"
+      routeKey={routeKey}
+      header={fixtureHeader(label, <OfflineNotice />)}
+      nav={null}
+    >
+      {children}
+    </ShellFrame>
+  );
+}
+
+const fixtureProps = { props: { label: 'Eigen schil' } };
+
+// Voert elk geval uit en geeft de namen van de gevallen die falen.
+async function failingCases(cases: ReturnType<typeof shellContractCases>): Promise<string[]> {
+  const failed: string[] = [];
+  for (const geval of cases) {
+    try {
+      await geval.run();
+    } catch {
+      failed.push(geval.naam);
+    } finally {
+      cleanup();
+      vi.restoreAllMocks();
+    }
+  }
+  return failed;
+}
+
+async function expectCaseToFail(cases: ReturnType<typeof shellContractCases>, fragment: string) {
+  const geval = cases.find((candidate) => candidate.naam.includes(fragment));
+  expect(geval, `geval met "${fragment}" ontbreekt`).toBeDefined();
+  await expect(geval?.run()).rejects.toThrow();
+  cleanup();
+  vi.restoreAllMocks();
+}
+
+describe('schillen/AC-10: shellContract op een eigen schil', () => {
+  // De suite zelf registreert de gevallen als tests: een schil op ShellFrame slaagt op alle.
+  shellContract(EigenSchil, fixtureProps);
+
+  test('schillen/AC-10: shellContractCases geeft structuur- en focusgevallen en een eigen schil slaagt op alle', async () => {
+    const cases = shellContractCases(EigenSchil, fixtureProps);
+    expect(cases.length).toBeGreaterThanOrEqual(7);
+    expect(cases.map((geval) => geval.naam)).toContain('OfflineNotice staat er precies één keer');
+    expect(await failingCases(cases)).toStrictEqual([]);
+  });
+
+  test('schillen/AC-10: een schil zonder skip-link laat het skip-linkgeval falen', async () => {
+    const cases = shellContractCases(SchilZonderSkipLink, fixtureProps);
+    await expectCaseToFail(cases, 'de skip-link is de eerste Tab-stop');
+  });
+
+  test('schillen/AC-10: een schil met een tweede main laat het main-geval falen', async () => {
+    const cases = shellContractCases(SchilMetTweedeMain, fixtureProps);
+    await expectCaseToFail(cases, 'precies één main');
+  });
+
+  test('schillen/AC-10: een schil met een eigen OfflineNotice laat het OfflineNotice-geval falen', async () => {
+    const cases = shellContractCases(SchilMetEigenOfflineNotice, fixtureProps);
+    await expectCaseToFail(cases, 'OfflineNotice staat er precies één keer');
   });
 });
