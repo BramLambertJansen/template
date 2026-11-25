@@ -193,6 +193,7 @@ schrijf_regel "$HOME/.bashrc" && bashrc=1
 # TMPDIR, 0700) werkt binnen en buiten de sandbox, net als in scripts/kit/worktree-install.mjs.
 XDG_RUNTIME_DIR="$(mktemp -d)"
 export XDG_RUNTIME_DIR
+trap 'rm -rf "$XDG_RUNTIME_DIR"' EXIT
 netwerk "pnpm install (of lockfile ongeldig)" mise exec -- pnpm install --frozen-lockfile
 # lefthook heeft geen postinstall (pnpm-workspace.yaml: allowBuilds); de hooks komen alleen hier.
 mise exec -- pnpm exec lefthook install
