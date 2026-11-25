@@ -4,7 +4,7 @@
 // een nieuwe pnpm die buiten de werkmap schrijft in gate:fast opvalt. Zonder dependencies, zodat het op een kale Node draait.
 import { spawn } from 'node:child_process';
 import { lstatSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir, userInfo } from 'node:os';
+import { constants, tmpdir, userInfo } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -185,43 +185,92 @@ export function foutmelding(status, uitvoer, cloud) {
 }
 
 /**
- * De stdio voor pnpm: met een terminal erft pnpm hem (voortgangsbalk), anders lopen stdout en stderr via de module
- * (pnpm-sandbox/AC-8). Stub: nog altijd via de module.
+ * De stdio voor pnpm: met een terminal erft pnpm hem (voortgangsbalk en kleur), anders lopen stdout en stderr via de module,
+ * die ze doorstuurt en de staart bewaart om de fout in te delen (pnpm-sandbox/AC-8).
  * @param {boolean} terminal
  * @returns {['inherit', 'inherit' | 'pipe', 'inherit' | 'pipe']}
  */
 export function stdioVoor(terminal) {
-  return terminal ? ['inherit', 'pipe', 'pipe'] : ['inherit', 'pipe', 'pipe'];
+  return terminal ? ['inherit', 'inherit', 'inherit'] : ['inherit', 'pipe', 'pipe'];
+}
+
+/** Signalen die de module tijdens de run vangt en aan pnpm doorgeeft (spec pnpm-sandbox-installatie, "Signalen"). */
+/** @type {NodeJS.Signals[]} */
+const DOORGEGEVEN = ['SIGINT', 'SIGTERM', 'SIGHUP'];
+
+/**
+ * Vangt SIGINT, SIGTERM en SIGHUP zolang pnpm draait en stuurt ze door naar `kind`; `stop()` haalt de handlers weg en
+ * geeft het eerst gevangen signaal terug (of null).
+ * @param {import('node:child_process').ChildProcess} kind
+ * @returns {{ stop: () => NodeJS.Signals | null }}
+ */
+function stuurSignalenDoor(kind) {
+  /** @type {NodeJS.Signals | null} */
+  let gevangen = null;
+  /** @param {NodeJS.Signals} sig */
+  const handler = (sig) => {
+    gevangen ??= sig;
+    kind.kill(sig);
+  };
+  for (const sig of DOORGEGEVEN) process.on(sig, handler);
+  return {
+    stop: () => {
+      for (const sig of DOORGEGEVEN) process.off(sig, handler);
+      return gevangen;
+    },
+  };
 }
 
 /**
- * Start pnpm in `process.cwd()`, stuurt stdout en stderr meteen door en bewaart van beide de staart.
+ * @typedef {{ status: number, uitvoer: string } | { signaal: NodeJS.Signals } | { fout: Error }} PnpmUitslag
+ */
+
+/**
+ * Start pnpm in `process.cwd()`. Zonder terminal stuurt de module stdout en stderr meteen door en bewaart van beide de staart;
+ * met een terminal erft pnpm hem en blijft de staart leeg. Stopt pnpm door een signaal, of ving de module er een, dan is
+ * de uitslag dat signaal.
  * @param {InstallCommando} commando
- * @returns {Promise<{ status: number, uitvoer: string } | { fout: Error }>}
+ * @returns {Promise<PnpmUitslag>}
  */
 function draaiPnpm({ command, args, env }) {
   return new Promise((klaar) => {
     const kind = spawn(command, args, {
       cwd: process.cwd(),
-      stdio: ['inherit', 'pipe', 'pipe'],
+      stdio: stdioVoor(process.stdout.isTTY === true),
       env: pnpmOmgeving(env),
     });
+    const signalen = stuurSignalenDoor(kind);
     let staart = '';
     /** @param {NodeJS.WriteStream} doel @returns {(stuk: Buffer) => void} */
     const door = (doel) => (stuk) => {
       doel.write(stuk);
       staart = (staart + stuk.toString('utf8')).slice(-STAART);
     };
-    kind.stdout.on('data', door(process.stdout));
-    kind.stderr.on('data', door(process.stderr));
-    kind.on('error', (fout) => klaar({ fout }));
-    kind.on('close', (status) => klaar({ status: status ?? 1, uitvoer: staart }));
+    kind.stdout?.on('data', door(process.stdout));
+    kind.stderr?.on('data', door(process.stderr));
+    kind.on('error', (fout) => {
+      signalen.stop();
+      klaar({ fout });
+    });
+    kind.on('close', (status, sig) => {
+      const signaal = signalen.stop() ?? sig;
+      klaar(signaal === null ? { status: status ?? 1, uitvoer: staart } : { signaal });
+    });
   });
 }
 
 /**
+ * De exitcode voor een signaal: 128 plus het signaalnummer (spec pnpm-sandbox-installatie, "Meldingen").
+ * @param {NodeJS.Signals} signaal
+ * @returns {number}
+ */
+export function signaalExitcode(signaal) {
+  return 128 + (constants.signals[signaal] ?? 0);
+}
+
+/**
  * Installeert met pnpm in `process.cwd()` en geeft de exitcode van pnpm terug; 1 als de basismap niet aan te maken is of
- * pnpm niet start (dan is pnpm niet gestart). De enige plek die pnpm voor een installatie start (pnpm-sandbox/AC-5).
+ * pnpm niet start (dan is pnpm niet gestart); 128 plus het signaalnummer als pnpm of de module een signaal kreeg. De enige plek die pnpm voor een installatie start (pnpm-sandbox/AC-5).
  * @param {InstallOpties} opties
  * @returns {Promise<number>}
  */
@@ -247,6 +296,10 @@ export async function installeer({ modus, cloud = false }) {
     if ('fout' in r) {
       console.error(`✗ pnpm-installeer: pnpm ontbreekt of start niet (${r.fout.message}); zie scripts/bootstrap.sh`);
       return 1;
+    }
+    if ('signaal' in r) {
+      console.error(`✗ pnpm install gestopt door ${r.signaal}`);
+      return signaalExitcode(r.signaal);
     }
     if (r.status !== 0) for (const regel of foutmelding(r.status, r.uitvoer, cloud)) console.error(regel);
     return r.status;
