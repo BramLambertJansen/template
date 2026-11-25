@@ -95,7 +95,6 @@ Alleen ontwikkelomgeving en CI; geen app-rollen. De eigenaar ziet het resultaat 
     aanhalingstekens, een commandowoord `pnpm` met als volgend woord `install`. Een commandowoord is het eerste woord aan het
     begin van de regel, na `;`, `&&`, `||`, `|`, `then`, `do` of na `mise exec --`;
   - in een `.mjs`- of `.ts`-bestand: de tekst `'pnpm'` of `"pnpm"` met binnen 200 tekens `'install'` of `"install"`.
-
   Herkend: `mise exec -- pnpm install --frozen-lockfile`, `cd x && pnpm install` en `command: 'pnpm', args: ['install']`.
   Toegestaan: `# pnpm install`, `printf '✗ pnpm install mislukt'`, `'pnpm install --frozen-lockfile'` (stapnaam in
   `scripts/bootstrap.sh`) en `fail "draai eerst pnpm install"` (`scripts/check-image.sh`). De test draait de regel ook op de
