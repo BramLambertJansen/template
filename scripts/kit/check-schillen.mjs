@@ -37,6 +37,15 @@ function bestanden(/** @type {string} */ root, /** @type {string} */ dir) {
   return uit;
 }
 
+/** De inhoud van een bestand, of null als het er niet is of geen bestand is: lezen en de fout opvangen, niet eerst kijken. */
+function leesOfNull(/** @type {string} */ abs) {
+  try {
+    return readFileSync(abs, 'utf8');
+  } catch {
+    return null;
+  }
+}
+
 function bronnen(/** @type {string} */ root) {
   /** @type {Map<string, ts.SourceFile>} */
   const cache = new Map();
@@ -44,10 +53,10 @@ function bronnen(/** @type {string} */ root) {
   return (rel) => {
     const hit = cache.get(rel);
     if (hit !== undefined) return hit;
-    const abs = path.join(root, rel);
-    if (!existsSync(abs) || !statSync(abs).isFile()) return null;
+    const tekst = leesOfNull(path.join(root, rel));
+    if (tekst === null) return null;
     const kind = rel.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
-    const sf = ts.createSourceFile(rel, readFileSync(abs, 'utf8'), ts.ScriptTarget.Latest, true, kind);
+    const sf = ts.createSourceFile(rel, tekst, ts.ScriptTarget.Latest, true, kind);
     cache.set(rel, sf);
     return sf;
   };
@@ -342,8 +351,7 @@ function sectie(/** @type {string} */ tekst) {
 
 /** @param {string} [root] @returns {string[]} */
 export function receptFouten(root = '.') {
-  const lees = (/** @type {string} */ rel) =>
-    existsSync(path.join(root, rel)) ? readFileSync(path.join(root, rel), 'utf8') : '';
+  const lees = (/** @type {string} */ rel) => leesOfNull(path.join(root, rel)) ?? '';
   const tekst = sectie(lees('docs/gouden-pad.md'));
   /** @type {string[]} */
   const fouten = [];
