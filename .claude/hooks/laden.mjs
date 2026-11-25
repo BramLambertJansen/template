@@ -4,9 +4,10 @@
 // sessie) en per tree-oid de uitgepakte versie, vóór elke run gecontroleerd tegen de blob-hashes. Rolhek en werkstraat falen dicht.
 // Vóór de eerste git-aanroep zet de lader een geplant `.git/commondir` in een hoofdcheckout weg (ADR 0083 punt 1): git zou anders
 // config en hooks van elders volgen. Dat hernoemen is de enige, bewuste uitzondering op "de hook zet niets terug".
+// Na `werkstraat session-start` ruimt de lader oude uitgepakte versies in de eigen cache op (`ruimOp`), nooit vóór of tijdens deze hook.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { lstatSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { lstatSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -168,11 +169,28 @@ function schrijf(lijst, doel, boom) {
   writeFileSync(path.join(doel, COMPLEET), boom);
 }
 
+/**
+ * Zet de mtime van een hergebruikte versie op nu, zodat `ruimOp` "langer dan een dag niet gebruikt" meet en niet "lang
+ * geleden uitgepakt". Een fout slikt hij in: dan telt alleen het moment van uitpakken.
+ * @param {string} map
+ */
+function markeerGebruik(map) {
+  try {
+    const nu = new Date();
+    utimesSync(map, nu, nu);
+  } catch {
+    // Niet te markeren: de versie draait gewoon.
+  }
+}
+
 /** Hergebruikt een intacte cache; anders opnieuw uitpakken, atomisch via een tijdelijke map. @param {string} boom */
 function uitpakken(boom) {
   const lijst = inhoud(boom);
   const doel = path.join(CACHE, boom);
-  if (intact(doel, lijst)) return doel;
+  if (intact(doel, lijst)) {
+    markeerGebruik(doel);
+    return doel;
+  }
   rmSync(doel, { recursive: true, force: true });
   const tijdelijk = `${doel}.tmp-${String(process.pid)}-${String(Date.now())}`;
   try {
@@ -184,6 +202,37 @@ function uitpakken(boom) {
   }
   if (!intact(doel, lijst)) throw new Error('de uitgepakte versie klopt niet met main');
   return doel;
+}
+
+const DAG_MS = 24 * 60 * 60 * 1000;
+// Een tree-oid, of een tijdelijke map die `uitpakken` achterliet (`<tree-oid>.tmp-<pid>-<tijd>`).
+const OPRUIMBAAR = /^[0-9a-f]{40}(?:[0-9a-f]{24})?(?:\.tmp-\d+-\d+)?$/;
+
+/**
+ * Ruimt oude uitgepakte versies op: elke echte map direct onder de cache met een opruimbare naam, behalve de huidige, als
+ * hij langer dan een dag niet gebruikt is (`markeerGebruik`). Die marge spaart een versie die een andere sessie nog
+ * gebruikt. Het anker, symlinks en andere namen blijven staan; elke fout wordt ingeslikt en het opruimen komt pas na de
+ * hook, dus uitvoer en exitcode veranderen niet. Wordt toch een versie gewist terwijl een hook hem laadt, dan faalt het
+ * rolhek dicht en pakt de volgende aanroep opnieuw uit.
+ * @param {string} huidig tree-oid van de versie die net draaide @param {number} nu
+ */
+function ruimOp(huidig, nu) {
+  let namen;
+  try {
+    namen = readdirSync(CACHE);
+  } catch {
+    return;
+  }
+  for (const naam of namen) {
+    if (naam === huidig || !OPRUIMBAAR.test(naam)) continue;
+    const pad = path.join(CACHE, naam);
+    try {
+      const info = lstatSync(pad);
+      if (info.isDirectory() && nu - info.mtimeMs > DAG_MS) rmSync(pad, { recursive: true, force: true });
+    } catch {
+      // Niet te wissen (rechten, net weg): laten staan, de volgende sessiestart probeert het opnieuw.
+    }
+  }
 }
 
 function leesStdin() {
@@ -277,10 +326,11 @@ function weiger(naam, dicht, reden) {
 export function draai(naam, dicht) {
   const invoer = leesStdin();
   if (geplantCommondir(naam)) return;
+  const sessieStart = naam === 'werkstraat' && process.argv[2] === 'session-start';
   let map;
   let anker;
   try {
-    const gevonden = bron(naam, naam === 'werkstraat' && process.argv[2] === 'session-start');
+    const gevonden = bron(naam, sessieStart);
     if (gevonden === null) return weiger(naam, dicht, `geen geldig anker met rails/hooks/${naam}.mjs; een nieuwe sessie met netwerk legt het vast`);
     map = uitpakken(gevonden.boom);
     anker = gevonden.sha;
@@ -297,4 +347,6 @@ export function draai(naam, dicht) {
   if (naam === 'rolhek' && result.status !== 0 && result.status !== 2)
     return weiger(naam, true, `rails/hooks/rolhek.mjs gaf exitcode ${String(result.status)}`);
   process.exitCode = result.status;
+  // Pas na de hook: zijn uitvoer en exitcode staan dan vast.
+  if (sessieStart) ruimOp(path.basename(map), Date.now());
 }

@@ -2,7 +2,7 @@
 # die een poort en env-variabelen geeft, kan hem draaien. Migraties draaien niet hier, maar apart met dbmate als app_migrator
 # (framework §6). Bouwen: `docker build -t <app> .`; controleren: scripts/check-image.sh <image> (ook in CI).
 # Basisimage op digest, gelijk aan de runner in compose.yaml; Renovate werkt beide bij.
-ARG NODE_IMAGE=node:26.11.1-bookworm-slim@sha256:86f07bc9c5dce4578cf37e5a418b7bfc7f817cda25cde66e2b66e95ed86c4567
+ARG NODE_IMAGE=node:26.13.0-bookworm-slim@sha256:add5c17c14752c54d2f3d519ec46a3815684d41c33f198bcb09fb998f7dcbf68
 
 FROM ${NODE_IMAGE} AS pnpm
 WORKDIR /app

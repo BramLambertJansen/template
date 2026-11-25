@@ -1,5 +1,5 @@
 [tools]
-node = "26.11.1"
+node = "26.13.0"
 # Selecteer de exacte projectpin vooraf; geen pnpm-versiewissel met globale cachewrites tijdens dagelijks werk (ADR 0061).
 pnpm = '''{{ read_file(path='package.json') | split(pat='"packageManager"') | last | split(pat='"') | nth(n=1) | split(pat='@') | last }}'''
 # Migraties (ADR 0042); alleen via scripts/db-migrate.sh.

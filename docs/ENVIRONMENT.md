@@ -194,6 +194,9 @@ met netwerk.
 
 Het anker staat per werkmap in `.claude/hooks/.cache/main` (een worktree heeft zijn eigen) en wordt, zolang het geldig is, alleen bij de
 start van een sessie ververst: nieuw, hervat, na `/clear`, na compactie of bij een fork (`bron` in `.claude/hooks/laden.mjs`).
+Na die sessiestart wist de lader uitgepakte versies die niet bij het anker horen en langer dan een dag niet gebruikt zijn
+(`ruimOp` en `markeerGebruik` in `.claude/hooks/laden.mjs`); het anker, symlinks en andere namen blijven staan, en uitvoer en
+exitcode van de hook veranderen niet.
 Tijdens een sessie beweegt het niet mee met `main`. Dat merk je bij `pnpm pr:merge <nummer>` en `pnpm pr:resolve <nummer>`
 (ADR 0098; daar eindigt de weigering op "(ADR 0098)"): het rolhek laat ze alleen door als `scripts/`, `rails/` en
 de hostbestanden (`package.json`, `.npmrc`, …) in de werkmap gelijk zijn aan de merge-base met het anker (`trustedMerge` in
