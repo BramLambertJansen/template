@@ -120,10 +120,12 @@ een andere versie is geen geslaagde versiewissel. Reageert pnpm niet binnen 20 s
 melding dat apart in plaats van een ontbrekende pnpm. Deze controle bewijst geen synchronisatie van dependencies.
 Voor `pnpm run` en `pnpm exec`
 controleert pnpm zelf of de installatie bij de huidige workspace past (`verifyDepsBeforeRun: error` in
-`pnpm-workspace.yaml`). Past een verouderde of gekopieerde installatie niet bij de workspace, dan stopt pnpm met
+`pnpm-workspace.yaml`). Past een verouderde installatie niet bij de workspace, dan stopt pnpm met
 `ERR_PNPM_VERIFY_DEPS_BEFORE_RUN` vóór het werkcommando, zonder dependencies automatisch bij te werken. Herstel de installatie expliciet met `pnpm install --frozen-lockfile`
 volgens de setup. De regressieproef in `test/scripts/dependency-readiness.test.ts` draait de gepinde pnpm met lokale
-fixtures en controleert ook dat een weigering installatiebestanden ongemoeid laat.
+fixtures en controleert ook dat een weigering installatiebestanden ongemoeid laat. Sinds pnpm 12 weigert pnpm een
+gekopieerde projectmap met een passende installatie niet meer: die valideert het opnieuw op inhoud en draait zonder te
+installeren.
 
 ## Dagelijks werken binnen de Claude Code-sandbox
 
@@ -266,7 +268,8 @@ vastgesteld. Of `gh api` lokaal een prompt geeft, is niet gemeten.
   de inhoud van `scripts/cloud-omgeving.sh` heeft en ververs de omgevingscache; in de sessie zelf herstelt
   `bash scripts/cloud-setup.sh` het. Elk probleem in de melding noemt zijn eigen herstel. In een
   gekoppelde worktree (`.git` is een bestand) zonder `node_modules` is dat `node scripts/kit/worktree-install.mjs`: frozen
-  install met `--package-import-method=copy` en store, cache en state onder `os.tmpdir()`, binnen de sandbox (een
+  install met `--package-import-method=copy` en store, cache, state en `XDG_RUNTIME_DIR` onder `os.tmpdir()`, binnen de
+  sandbox (pnpm 12 legt zijn store-vergrendeling anders hard in `/tmp`, dat de sandbox niet mag schrijven; een
   bestaande, ook lege of halve map `node_modules` wordt afgemaakt). Het draait vanuit de worktree-root en weigert in de
   hoofdcheckout, als `node_modules` een symlink is en als een van `package.json`, `pnpm-lock.yaml`,
   `pnpm-workspace.yaml`, `.npmrc`, `.pnpmfile.cjs` of `.pnpmfile.mjs` afwijkt van HEAD (gewijzigd, verwijderd of

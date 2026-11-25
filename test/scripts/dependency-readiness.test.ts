@@ -32,7 +32,16 @@ function pnpm(dir: string, args: string[]) {
       ([key]) => !/^(ci|(?:npm|pnpm)_config_(?:verify_deps_before_run|confirm_modules_purge))$/i.test(key),
     ),
   );
-  return spawnSync(process.env['npm_execpath'] ?? 'pnpm', args, { cwd: dir, env, encoding: 'utf8', timeout: 20_000 });
+  // pnpm 12 neemt bij install een store-vergrendeling onder XDG_RUNTIME_DIR, anders hard in /tmp (pnpm#16390), dat de
+  // sandbox niet mag schrijven; de fixture heeft daarom een eigen runtime-map naast het project.
+  const runtime = path.join(path.dirname(dir), 'runtime');
+  mkdirSync(runtime, { recursive: true, mode: 0o700 });
+  return spawnSync(process.env['npm_execpath'] ?? 'pnpm', args, {
+    cwd: dir,
+    env: { ...env, XDG_RUNTIME_DIR: runtime },
+    encoding: 'utf8',
+    timeout: 20_000,
+  });
 }
 
 function manifest(extraDependency = false) {
@@ -40,7 +49,6 @@ function manifest(extraDependency = false) {
     name: 'dependency-readiness-fixture',
     version: '1.0.0',
     private: true,
-    packageManager: manager,
     scripts: { probe: 'node probe.cjs', preinstall: 'node install.cjs' },
     dependencies: { local: 'file:../dependency', ...(extraDependency ? { extra: 'file:../dependency' } : {}) },
   });
@@ -56,11 +64,11 @@ function fixture() {
   writeFileSync(path.join(dependency, 'package.json'), JSON.stringify({ name: 'local', version: '1.0.0' }));
   writeFileSync(path.join(dependency, 'payload.txt'), 'lokale dependency blijft behouden\n');
   writeFileSync(path.join(dir, 'package.json'), manifest());
-  // De CLI is al gepind: geen versiebeheer/downloads in de fixture. De pakketstore blijft lokaal.
-  writeFileSync(
-    path.join(dir, 'pnpm-workspace.yaml'),
-    workspace + '\nstoreDir: ../store\nmanagePackageManagerVersions: false\n',
-  );
+  // Gewijzigd bij pnpm 12: de fixture heeft geen packageManager-pin meer, dus geen versiebeheer of downloads. pnpm 12
+  // haalt ook bij een gelijke pin registrymetadata op (ERR_PNPM_BAD_CONFIG_DEP zonder netwerk), en de oude uitweg
+  // `managePackageManagerVersions: false` is daar een onbekende sleutel en dus een fout (12.21.0). Dat de CLI de pin van
+  // de repo is, toetst de versiecontrole hieronder. De pakketstore blijft lokaal.
+  writeFileSync(path.join(dir, 'pnpm-workspace.yaml'), workspace + '\nstoreDir: ../store\n');
   writeFileSync(path.join(dir, 'install.cjs'), "require('node:fs').writeFileSync('install-ran', 'install');\n");
   writeFileSync(
     path.join(dir, 'probe.cjs'),
@@ -77,7 +85,11 @@ function fixture() {
   return dir;
 }
 
-function snapshot(dir: string) {
+// Gewijzigd bij pnpm 12 (12.21.0): de workspace-state is ook de validatiecache van de controle vóór run/exec. Een
+// geslaagde controle schrijft er tijdstempels (en bij een kopie de nieuwe paden) in; een weigering laat hem bytegelijk.
+const STATE = 'node_modules/.pnpm-workspace-state-v1.json';
+
+function snapshot(dir: string, metState = true) {
   return Object.fromEntries(
     [
       'package.json',
@@ -85,7 +97,7 @@ function snapshot(dir: string) {
       'pnpm-lock.yaml',
       'node_modules/.modules.yaml',
       'node_modules/.pnpm/lock.yaml',
-      'node_modules/.pnpm-workspace-state-v1.json',
+      ...(metState ? [STATE] : []),
       'node_modules/local/package.json',
       'node_modules/local/payload.txt',
     ].map((file) => [file, readFileSync(path.join(dir, file))]),
@@ -117,15 +129,27 @@ function mutate(dir: string, change: string) {
 describe.each(commands)('installatiecontrole vóór pnpm $name', ({ args }) => {
   test('een passende installatie voert het werkcommando uit zonder installatie', () => {
     const dir = fixture();
-    const before = snapshot(dir);
+    const before = snapshot(dir, false);
     const result = pnpm(dir, args);
     expect(result.status, result.stdout + result.stderr).toBe(0);
     expect(readFileSync(path.join(dir, 'probe-ran'), 'utf8')).toBe('probe');
     expect(existsSync(path.join(dir, 'install-ran'))).toBe(false);
-    expect(snapshot(dir)).toEqual(before);
+    expect(snapshot(dir, false)).toEqual(before);
   });
 
-  test.each(['manifest', 'lockfile', 'workspace', 'copy'])(
+  // Gewijzigd bij pnpm 12 (12.21.0): een gekopieerde projectmap met een passende installatie wordt niet meer geweigerd;
+  // pnpm valideert de kopie opnieuw op inhoud en die werkt (relatieve links). Wel draait er dan geen installatie.
+  test('copy: een passende kopie draait het werkcommando zonder installatie en laat de installatie ongemoeid', () => {
+    const dir = mutate(fixture(), 'copy');
+    const before = snapshot(dir, false);
+    const result = pnpm(dir, args);
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    expect(readFileSync(path.join(dir, 'probe-ran'), 'utf8')).toBe('probe');
+    expect(existsSync(path.join(dir, 'install-ran'))).toBe(false);
+    expect(snapshot(dir, false)).toEqual(before);
+  });
+
+  test.each(['manifest', 'lockfile', 'workspace'])(
     '%s: weigert vóór het werkcommando en behoudt de installatie bytegelijk',
     (change) => {
       const dir = mutate(fixture(), change);
