@@ -52,7 +52,8 @@ mise trust
 done_steps=1
 mise install
 done_steps=2
-mise exec -- pnpm install --frozen-lockfile
+# Eén installatiepad voor pnpm (spec pnpm-sandbox-installatie): de module zet de store-vergrendeling (ADR 0110) en de melding.
+mise exec -- node scripts/kit/pnpm-installeer.mjs --modus setup
 done_steps=3
 # lefthook heeft geen postinstall (pnpm-workspace.yaml: allowBuilds); de hooks komen alleen hier.
 mise exec -- pnpm exec lefthook install
