@@ -23,7 +23,7 @@ Kritiek werk (`.github/**`, bewaking; R-WERK-05): spec, code en tests in één P
 
 | Rol | Doet | Mag niet |
 |---|---|---|
-| workflow `dependency-achterstand` (wekelijks en handmatig, op `main`) | leest open PR's en issues via de GitHub-API, wordt rood met een lijst | iets schrijven: geen label, comment, issue of status |
+| workflow `dependency-achterstand` (wekelijks en handmatig, op `main`) | leest open PR's, issues en de check-runs op de head van een update-PR via de GitHub-API, wordt rood met een lijst | iets schrijven: geen label, comment, issue of status |
 | eigenaar | ziet een rode run in Actions; GitHub mailt hem bij een mislukte run als zijn notificatie-instellingen dat toestaan; merget, repareert of sluit de PR met reden | — |
 | hoofdsessie | draait het script lokaal op verzoek (`node scripts/kit/dependency-achterstand.mjs` met `GITHUB_TOKEN` en `GITHUB_REPOSITORY`) | — |
 
@@ -50,7 +50,9 @@ Geen scherm. Uitvoer in de job-log, Nederlands, één regel per bevinding:
 ## Acceptatiecriteria
 
 Bronnen: `GET repos/<repo>/pulls?state=open&per_page=100&page=<p>` en `GET repos/<repo>/issues?state=open&per_page=100&page=<p>`
-(elementen met een veld `pull_request` overgeslagen), per bron hooguit 10 pagina's. Een update-PR is een open PR waarvan de
+(elementen met een veld `pull_request` overgeslagen), per bron hooguit 10 pagina's; per update-PR ook
+`GET repos/<repo>/commits/<head.sha>/check-runs?per_page=100&page=<p>` (de standaardfilter `latest`: per check alleen de
+laatste run; het veld `check_runs`, hooguit 10 pagina's). Een update-PR is een open PR waarvan de
 head-branch met `renovate/` begint en die uit `GITHUB_REPOSITORY` zelf komt (`head.repo.full_name`). Een Renovate-issue heeft
 auteur `renovate[bot]`. Leeftijd: `floor((nu − created_at) / 86 400 000)` in hele dagen, UTC; melden als leeftijd > grens.
 Grens: 7 met label `security`, anders 60 met label `major`, anders 14. Exitcodes: 0 groen, 1 rood (bevindingen), 2 fout.
@@ -83,12 +85,13 @@ Grens: 7 met label `security`, anders 60 met label `major`, anders 14. Exitcodes
   maandagochtend) en `workflow_dispatch`, niet op PR of push; heeft `permissions: read-all` en geen rechten per job; checkout
   met `persist-credentials: false`; het token staat expliciet alleen in de stap die het script draait; het script doet alleen `GET`. Toets:
   `test/rails/dependency-achterstand-workflow.test.ts`
-- **dependency-achterstand/AC-9** — Gegeven een update-PR binnen zijn grens met op de head-commit een check-run met
-  `conclusion` `failure`, `timed_out`, `cancelled` of `action_required` (bron: `GET repos/<repo>/commits/<sha>/check-runs`,
-  hooguit 10 pagina's), wanneer de check draait, dan meldt hij `#<nr> <titel>: CI rood (<checknaam>)` (de eerste rode
-  check op naam) en eindigt hij met exitcode 1; een PR met alleen groene, overgeslagen of lopende checks geeft geen melding.
-  Toegevoegd door spec `toolchain-bewaking` (eigenaarbesluit 2026-11-25). Toets: `test/scripts/dependency-achterstand.test.ts`
-  (nieuw)
+- **dependency-achterstand/AC-9** — Gegeven een update-PR (binnen of buiten zijn grens) met op de head-commit een
+  check-run met `conclusion` `failure`, `timed_out`, `cancelled` of `action_required`, wanneer de check draait, dan meldt
+  hij `#<nr> <titel>: CI rood (<checknaam>)` met de alfabetisch eerste rode check, naast een eventuele leeftijdsmelding
+  (dus twee regels voor een PR die te oud én rood is), en eindigt hij met exitcode 1; een PR met alleen geslaagde,
+  overgeslagen, neutrale of lopende checks geeft geen CI-melding; een niet-2xx antwoord op de check-runs is exitcode 2
+  (AC-7). Toegevoegd door spec `toolchain-bewaking` (eigenaarbesluit 2026-11-25). Toets:
+  `test/scripts/dependency-achterstand.test.ts`
 
 ## Randgevallen
 
