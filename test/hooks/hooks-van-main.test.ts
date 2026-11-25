@@ -62,11 +62,13 @@ function git(cwd: string, ...args: string[]): string {
 /** Een klein hookscript dat zijn omgeving echoot, een helper uit ./lib importeert en met HOOK_EXIT stopt. */
 function scriptSource(version: string): string {
   return [
-    "import { writeFileSync } from 'node:fs';",
+    "import { utimesSync, writeFileSync } from 'node:fs';",
     "import { helper } from './lib/helper.mjs';",
     'const chunks = [];',
     'for await (const chunk of process.stdin) chunks.push(chunk);',
     "if (process.env.RAN_FILE) writeFileSync(process.env.RAN_FILE, '1');",
+    // Maakt de eigen map (de huidige versie) oud ná het markeren en vóór het opruimen door de lader.
+    'if (process.env.HOOK_VEROUDER) { const oud = new Date(Date.now() - 172800000); utimesSync(import.meta.dirname, oud, oud); }',
     "if (process.env.HOOK_CRASH) throw new Error('crash-van-main');",
     'process.stdout.write(JSON.stringify({',
     `  marker: ${JSON.stringify(version)},`,
@@ -424,6 +426,27 @@ describe('opruimen: werkstraat session-start wist oude versies uit de cache', ()
     expect(existsSync(oud)).toBe(true);
   });
 
+  test('de huidige versie blijft staan, ook als zijn map ouder is dan een dag', () => {
+    const { repo, huidig } = metOudeVersie();
+
+    const start = run(repo, 'werkstraat', { args: ['session-start'], env: { HOOK_VEROUDER: '1' } });
+
+    expect(Date.now() - statSync(huidig).mtimeMs).toBeGreaterThan(24 * 60 * 60 * 1000);
+    expect([start.status, existsSync(huidig)]).toStrictEqual([7, true]);
+  });
+
+  test('een versie die een andere sessie in de laatste dag gebruikte, blijft staan, hoe oud het uitpakken ook is', () => {
+    const repo = makeAnchored(hookFiles('main-versie'));
+    const oud = treeMap(repo, remoteSha(repo));
+    utimesSync(oud, OUD, OUD);
+    run(repo, 'rolhek');
+    advanceRemote(repo, hookFiles('main-versie-2'));
+
+    run(repo, 'werkstraat', { args: ['session-start'] });
+
+    expect(existsSync(oud)).toBe(true);
+  });
+
   test('een gewone aanroep ruimt niets op', () => {
     const { repo, oud } = metOudeVersie();
     utimesSync(oud, OUD, OUD);
@@ -464,6 +487,7 @@ describe('opruimen: werkstraat session-start wist oude versies uit de cache', ()
       const start = run(repo, 'werkstraat', { args: ['session-start'] });
 
       expect([start.status, start.stderr, existsSync(vast)]).toStrictEqual([7, 'stderr-van-main', true]);
+      expect(start.stdout).toContain('"marker":"main-versie-2"');
     } finally {
       chmodSync(vast, 0o700);
     }
