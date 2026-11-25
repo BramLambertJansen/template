@@ -14,6 +14,7 @@ import {
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
+import { expectAbsent } from '../support/absence.ts';
 
 // scripts/cloud-setup.sh (README, Cloud): het setup-script van een cloudomgeving, met mise en curl als stubs op PATH.
 // De stubs schrijven hun aanroep naar een log; niets installeert echt en er gaat niets over het netwerk.
@@ -142,7 +143,8 @@ const NA_INSTALL: unknown[] = [
   'mise which node',
   'mise which pnpm',
   'mise current node',
-  'mise exec -- pnpm install --frozen-lockfile',
+  // pnpm-sandbox/AC-5: de installatie loopt via de module, zonder `netwerk` eromheen (de module meldt zelf).
+  'mise exec -- node scripts/kit/pnpm-installeer.mjs --modus setup --cloud',
   'mise exec -- pnpm exec lefthook install',
   // Bewijs aan het eind: de voorcontrole van scripts/kit/toolchain.mjs.
   expect.stringMatching(/^mise exec -- node --input-type=module -e .*scripts\/kit\/toolchain\.mjs/),
@@ -151,7 +153,7 @@ const STAPPEN: unknown[] = ['mise trust', 'mise install', ...NA_INSTALL];
 const arch = process.arch === 'arm64' ? 'arm64' : 'x64';
 
 describe('scripts/cloud-setup.sh', () => {
-  test('met mise en sandbox-pakketten: trust, install, pnpm install --frozen-lockfile en lefthook install, in die volgorde; geen curl', () => {
+  test('met mise en sandbox-pakketten: trust, install, pnpm-installeer (modus setup, cloud) en lefthook install, in die volgorde; geen curl', () => {
     const omgeving = opstelling({ metMise: true });
 
     expect(run(omgeving)).toStrictEqual({ status: 0, aanroepen: STAPPEN });
@@ -268,9 +270,9 @@ describe('scripts/cloud-setup.sh', () => {
 
     expect(status).not.toBe(0);
     expect(stderr).toContain('checksum van betterleaks_9.9.9');
-    expect(aanroepen.filter((regel) => regel.startsWith('mise link') || regel.includes('pnpm install'))).toStrictEqual(
-      [],
-    );
+    expect(
+      aanroepen.filter((regel) => regel.startsWith('mise link') || regel.includes('pnpm-installeer')),
+    ).toStrictEqual([]);
   });
 
   test('terugval: download mislukt → status ≠ 0 en melding met Trusted en docs/ENVIRONMENT.md', () => {
@@ -292,7 +294,7 @@ describe('scripts/cloud-setup.sh', () => {
 
     expect(status).not.toBe(0);
     expect(stderr).toContain('nieuwtool');
-    expect(aanroepen.filter((regel) => regel.includes('pnpm install'))).toStrictEqual([]);
+    expect(aanroepen.filter((regel) => regel.includes('pnpm-installeer'))).toStrictEqual([]);
   });
 
   test('mislukte curl van mise: status ≠ 0, melding met Trusted en docs/ENVIRONMENT.md, daarna geen mise-aanroep', () => {
@@ -306,14 +308,19 @@ describe('scripts/cloud-setup.sh', () => {
     expect(aanroepen.filter((regel) => regel.startsWith('mise'))).toStrictEqual([]);
   });
 
-  test('mislukte pnpm install: status ≠ 0 en melding met Trusted en docs/ENVIRONMENT.md', () => {
+  // pnpm-sandbox/AC-5: de melding (netwerk of niet, met of zonder Trusted) komt uit scripts/kit/pnpm-installeer.mjs en is
+  // getoetst in test/scripts/pnpm-installeer.test.ts (AC-6); het script zelf geeft de status van de module door, zonder eigen melding.
+  test('mislukte pnpm-installeer: status van de module doorgegeven, geen lefthook erna en geen eigen netwerkmelding', () => {
     const omgeving = opstelling({ metMise: true });
 
-    const { status, stderr } = runMetStderr(omgeving, { MISE_FAIL: '--frozen-lockfile' });
+    const { status, stderr, aanroepen } = runMetStderr(omgeving, { MISE_FAIL: '--modus' });
 
-    expect(status).not.toBe(0);
-    expect(stderr).toContain('Trusted');
-    expect(stderr).toContain('docs/ENVIRONMENT.md');
+    expect(status).toBe(3);
+    expect(aanroepen.filter((regel) => regel.includes('lefthook'))).toStrictEqual([]);
+    expectAbsent(stderr, /waarschijnlijk geen netwerk|Trusted/, {
+      recognizes: ['✗ pnpm install mislukt (exit 1): waarschijnlijk geen netwerk', 'staat netwerktoegang op Trusted'],
+      allows: ['✗ pnpm install mislukt (exit 1): zie de pnpm-fout hierboven'],
+    });
   });
 
   test('bevat geen geheimen of tokens en draait geen doctor of docker', () => {
