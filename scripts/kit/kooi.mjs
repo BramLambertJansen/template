@@ -68,10 +68,16 @@ function toolchainMappen(home) {
 
 /**
  * De argumenten van bubblewrap, in de volgorde van AC-1: eerst alles alleen-lezen, dan de lege mappen, dan de toolchain, als
- * laatste de werkmap.
+ * laatste de werkmap. Met `streng` (spec pnpm-sandbox-installatie) worden de lege mappen ook alleen-lezen; nog niet
+ * gebouwd: het gedrag is nu gelijk aan dat zonder `streng`.
  * @param {string} werkmap
+ * @param {{ streng?: boolean }} [opties]
+ * @returns {string[]}
  */
-export function bwrapArgs(werkmap) {
+export function bwrapArgs(werkmap, opties = {}) {
+  if (opties.streng === true) {
+    // Nog niet gebouwd: zelfde argumenten als zonder `streng`.
+  }
   const home = existsSync(homedir()) ? echt(homedir()) : homedir();
   const leeg = ['/tmp', '/run', '/var/run', home];
   const runtime = process.env['XDG_RUNTIME_DIR'];
@@ -94,9 +100,9 @@ function omgeving(werkmap, env) {
   return { PATH: pad, ...env, HOME: werkmap, TMPDIR: '/tmp' };
 }
 
-/** @param {string} werkmap @param {string} commando @param {{ env: Record<string, string>, timeout: number }} opties */
-function draai(werkmap, commando, { env, timeout }) {
-  return spawnSync('bwrap', [...bwrapArgs(werkmap), '--', 'bash', '-c', commando], {
+/** @param {string} werkmap @param {string} commando @param {{ env: Record<string, string>, timeout: number, streng: boolean }} opties */
+function draai(werkmap, commando, { env, timeout, streng }) {
+  return spawnSync('bwrap', [...bwrapArgs(werkmap, { streng }), '--', 'bash', '-c', commando], {
     encoding: 'utf8',
     env: omgeving(werkmap, env),
     timeout,
@@ -186,13 +192,15 @@ export function eisKooi() {
  * Draait `commando` met `bash -c` in de kooi (AC-1). Gooit bij een ongeldige werkmap, een kooi die niet afschermt en bij de
  * timeout (bubblewrap en alle kindprocessen zijn dan gestopt); anders de uitslag, ook bij een status die niet 0 is.
  * @param {string} commando
- * @param {{ werkmap: string, env?: Record<string, string>, timeout?: number }} opties
+ * Met `streng` zijn alleen de werkmap en `<werkmap>/tmp` (TMPDIR) schrijfbaar (spec pnpm-sandbox-installatie; nog niet
+ * gebouwd).
+ * @param {{ werkmap: string, env?: Record<string, string>, timeout?: number, streng?: boolean }} opties
  * @returns {{ status: number | null, stdout: string, stderr: string }}
  */
-export function inKooi(commando, { werkmap, env = {}, timeout = STANDAARD_TIMEOUT }) {
+export function inKooi(commando, { werkmap, env = {}, timeout = STANDAARD_TIMEOUT, streng = false }) {
   const map = controleerWerkmap(werkmap);
   eisKooi();
-  const r = draai(map, commando, { env, timeout });
+  const r = draai(map, commando, { env, timeout, streng });
   if (r.error !== undefined) throw r.error;
   return { status: r.status, stdout: r.stdout, stderr: r.stderr };
 }
