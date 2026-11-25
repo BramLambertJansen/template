@@ -209,7 +209,7 @@ services:
 
   runner:
     <<: *runner
-    image: node:26.11.1-bookworm-slim@sha256:86f07bc9c5dce4578cf37e5a418b7bfc7f817cda25cde66e2b66e95ed86c4567
+    image: node:26.13.0-bookworm-slim@sha256:add5c17c14752c54d2f3d519ec46a3815684d41c33f198bcb09fb998f7dcbf68
     command: ["node", "node_modules/vitest/vitest.mjs", "run", "--project", "int", "--configLoader", "native"]
 
   # pnpm db:generate (scripts/db-generate.sh): snapshot met pg_dump uit het gepinde image, schema.ts uit de catalogus.
@@ -237,7 +237,7 @@ services:
 
   gen-schema:
     <<: *runner
-    image: node:26.11.1-bookworm-slim@sha256:86f07bc9c5dce4578cf37e5a418b7bfc7f817cda25cde66e2b66e95ed86c4567
+    image: node:26.13.0-bookworm-slim@sha256:add5c17c14752c54d2f3d519ec46a3815684d41c33f198bcb09fb998f7dcbf68
     command: ["node", "scripts/db-introspect.mjs"]
     depends_on:
       test-migrate:
