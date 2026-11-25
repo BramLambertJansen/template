@@ -83,6 +83,12 @@ Grens: 7 met label `security`, anders 60 met label `major`, anders 14. Exitcodes
   maandagochtend) en `workflow_dispatch`, niet op PR of push; heeft `permissions: read-all` en geen rechten per job; checkout
   met `persist-credentials: false`; het token staat expliciet alleen in de stap die het script draait; het script doet alleen `GET`. Toets:
   `test/rails/dependency-achterstand-workflow.test.ts`
+- **dependency-achterstand/AC-9** — Gegeven een update-PR binnen zijn grens met op de head-commit een check-run met
+  `conclusion` `failure`, `timed_out`, `cancelled` of `action_required` (bron: `GET repos/<repo>/commits/<sha>/check-runs`,
+  hooguit 10 pagina's), wanneer de check draait, dan meldt hij `#<nr> <titel>: CI rood (<checknaam>)` (de eerste rode
+  check op naam) en eindigt hij met exitcode 1; een PR met alleen groene, overgeslagen of lopende checks geeft geen melding.
+  Toegevoegd door spec `toolchain-bewaking` (eigenaarbesluit 2026-11-25). Toets: `test/scripts/dependency-achterstand.test.ts`
+  (nieuw)
 
 ## Randgevallen
 
@@ -92,7 +98,7 @@ Grens: 7 met label `security`, anders 60 met label `major`, anders 14. Exitcodes
 | Renovate-PR die de eigenaar handmatig bewerkte | telt als update-PR op leeftijd | — |
 | Bewust overgeslagen versie | de eigenaar sluit de PR met reden; gesloten PR's tellen niet | — |
 | Repo zonder Renovate | groen, 0 update-PR's | — |
-| Update-PR met rode CI | telt alleen op leeftijd; rood binnen de grens valt op in de PR zelf | — |
+| Update-PR met rode CI | gemeld als `CI rood`, ook binnen de grens (AC-9; was: alleen op leeftijd) | — |
 
 ## Raakt ook
 
