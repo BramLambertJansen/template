@@ -42,8 +42,9 @@ Alleen ontwikkelomgeving en CI; geen app-rollen. De eigenaar ziet het resultaat 
 - Geen UI. Bestaande scripts: `scripts/kit/worktree-install.mjs`, `scripts/cloud-setup.sh`, `scripts/bootstrap.sh`,
   `scripts/kit/kooi.mjs`.
 - **Kooi.** `inKooi(commando, { werkmap, env, timeout, streng })`. Met `streng: true` worden `/tmp`, `/run`, `/var/run`, de
-  thuismap en `XDG_RUNTIME_DIR` een lege map die alleen-lezen is: `--tmpfs <map>`, dan de bind van de werkmap, dan
-  `--remount-ro <map>`. Zo blijven de thuismap en sockets onder `/run` onzichtbaar (kooi/AC-4 blijft gelden), en faalt elke
+  thuismap en `XDG_RUNTIME_DIR` een lege map die alleen-lezen is. Volgorde van de argumenten: eerst alle `--tmpfs <map>`, dan
+  de toolchain-binds, dan de bind van de werkmap, en als laatste alle `--remount-ro <map>` (geneste mappen zoals `/run` en
+  `/run/user/<uid>` en koppelpunten onder de thuismap hebben de tmpfs nog schrijfbaar nodig). Zo blijven de thuismap en sockets onder `/run` onzichtbaar (kooi/AC-4 blijft gelden), en faalt elke
   schrijfpoging buiten de werkmap. De werkmap is de enige schrijfbare plek en `TMPDIR` is `<werkmap>/tmp` (aangemaakt).
   Zonder `streng` blijft het gedrag precies zoals nu. CLI: `--streng` vóór `--werkmap`.
 - **Installatiemodule.** Nieuw: `scripts/kit/pnpm-installeer.mjs`, zonder dependencies. De pure kern
@@ -55,8 +56,8 @@ Alleen ontwikkelomgeving en CI; geen app-rollen. De eigenaar ziet het resultaat 
     `XDG_RUNTIME_DIR=<basis>/xdg-run`. De gewone store, cache en state blijven (besluit eigenaar, OV-1).
   - `cloud: true` voegt als laatste argument `--config.confirm-modules-purge=false` toe.
 - De module exporteert ook `installeer({ modus, cloud })`, de enige plek die pnpm voor een installatie start. Die functie
-  maakt de basismap en de mappen aan (`xdg-run` met 0700), schoont de omgeving op (verwijdert `npm_config_*` en
-  `NODE_OPTIONS`, zoals nu `pnpmOmgeving`), start pnpm in de huidige map (`process.cwd()`), stuurt de uitvoer door, deelt een
+  maakt de basismap en de mappen aan (`xdg-run` met 0700), schoont de omgeving op (verwijdert `npm_config_*`,
+  `pnpm_config_*` en `NODE_OPTIONS`, zoals nu `pnpmOmgeving`), start pnpm in de huidige map (`process.cwd()`), stuurt de uitvoer door, deelt een
   fout in en geeft de exitcode van pnpm terug. `veiligeBasismap`, `pnpmOmgeving` en `miseMappen` verhuizen van
   `worktree-install.mjs` naar de module; `worktree-install.mjs` importeert de module, nooit andersom. De basismap is
   `veiligeBasismap()` voor `werkmap`, en een nieuwe `mkdtemp` onder `os.tmpdir()` voor `setup`, die na afloop wordt opgeruimd.
@@ -75,8 +76,8 @@ Alleen ontwikkelomgeving en CI; geen app-rollen. De eigenaar ziet het resultaat 
 ## Acceptatiecriteria
 
 - **pnpm-sandbox/AC-1** — Gegeven `inKooi` met `streng: true`, dan faalt `: > /tmp/x`, faalt schrijven in `/run` en in de
-  thuismap, is een bestand dat de test vooraf in de echte thuismap van de aanroeper zet niet leesbaar, is een unix-socket die de
-  test vooraf onder `XDG_RUNTIME_DIR` opent niet bereikbaar, slaagt schrijven in de werkmap, en is `$TMPDIR` gelijk aan
+  thuismap, is een bestand dat de test vooraf in de echte thuismap van de aanroeper zet niet leesbaar, is een unix-socket niet
+  bereikbaar die de test vooraf opent in een eigen tijdelijke map buiten de werkmap, die hij als `XDG_RUNTIME_DIR` zet, slaagt schrijven in de werkmap, en is `$TMPDIR` gelijk aan
   `<werkmap>/tmp`. Zonder `streng` slaagt `: > /tmp/x` zoals nu. Toets: `test/scripts/kooi.test.ts`
 - **pnpm-sandbox/AC-2** — Gegeven een fixtureproject in de werkmap met de `packageManager`-pin van de repo, nul dependencies en
   een `pnpm-lock.yaml`, wanneer `pnpm-installeer.mjs --modus werkmap` vanuit die projectmap het project in de strenge kooi installeert (timeout 120 s), dan is de
@@ -101,7 +102,7 @@ Alleen ontwikkelomgeving en CI; geen app-rollen. De eigenaar ziet het resultaat 
   huidige `scripts/` en verwacht als enige treffer `scripts/kit/pnpm-installeer.mjs`. Toets: `test/scripts/pnpm-installeer.test.ts` (nieuw)
 - **pnpm-sandbox/AC-6** — Gegeven een pnpm-stub op `PATH` die `ERR_PNPM_STORE_DIR_OPEN_OPERATION_LOCK` schrijft en met 1 stopt,
   wanneer de CLI draait, dan is de exitcode 1 en staat de melding "zie de pnpm-fout hierboven" op stderr, zonder "waarschijnlijk geen
-  netwerk". Met `ERR_PNPM_FETCH_404` staat er "waarschijnlijk geen netwerk". Toets: `test/scripts/pnpm-installeer.test.ts` (nieuw)
+  netwerk". Met `ERR_PNPM_FETCH_404` staat er "waarschijnlijk geen netwerk", en met `--cloud` ook de tweede regel over Trusted en de proxy. Toets: `test/scripts/pnpm-installeer.test.ts` (nieuw)
 - **pnpm-sandbox/AC-7** — Gegeven een `TMPDIR` onder een map die niet te schrijven is (bijvoorbeeld `/proc/nee`), wanneer de
   CLI start met `--modus werkmap` en ook met `--modus setup`, dan is de exitcode telkens 1 met de basismapmelding en is pnpm niet gestart. Toets: `test/scripts/pnpm-installeer.test.ts` (nieuw)
 
@@ -114,6 +115,7 @@ Alleen ontwikkelomgeving en CI; geen app-rollen. De eigenaar ziet het resultaat 
 | pnpm op `PATH` wijkt af van de pin | AC-2 is rood met de gevonden en de verwachte versie; in de kooi zou pnpm zonder netwerk een andere versie willen ophalen. |
 | `cloud-setup.sh` bij de containerstart als root, `TMPDIR` leeg | `setup` maakt `mkdtemp` onder `/tmp`, alleen voor de vergrendeling; de store blijft de gewone, dus de sessie gebruikt dezelfde store. |
 | `XDG_RUNTIME_DIR` bestaat al in de omgeving | De CLI overschrijft hem met zijn eigen map, net als `worktree-install.mjs` nu. |
+| Een installatie via `pnpm i`, `pnpm add` of een commando uit een variabele | AC-5 ziet dat niet (restrisico); de importeis in AC-5 dekt de bekende tweede plek, `worktree-install.mjs`. |
 | pnpm ontbreekt op `PATH` | Dezelfde melding als nu in `worktree-install.mjs` (`pnpm ontbreekt of start niet … zie scripts/bootstrap.sh`), exit 1. |
 
 ## Raakt ook
