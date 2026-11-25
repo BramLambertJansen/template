@@ -6,7 +6,7 @@ zoeken op naam of variant, met de zoekparameter `q`. De lijst met alle component
 varianten en een knop Toon) staat dicht en gaat open zodra je zoekt. Bronpad en importnaam staan niet op de pagina; die
 vraag je op met `node scripts/kit/feiten.mjs componenten` ([ADR 0048](template/adr/0048-ui-catalogus.md)).
 
-De zoekparameter `vak` opent het bijbehorende tabblad. Op `/design-system?vak=schillen` vergelijk je bijvoorbeeld
+Onder de index staan de voorbeelden, verdeeld over tabbladen. De zoekparameter `vak` opent het bijbehorende tabblad. Op `/design-system?vak=schillen` vergelijk je bijvoorbeeld
 navigatie in een zijbalk en in de bovenbalk. Wil je zo'n indeling aan je app toevoegen, volg dan [Een tweede schil](gouden-pad.md#een-tweede-schil).
 De tabbladnamen en hun URL-waarden staan in [vakken.ts](../src/web/features/design-system/vakken.ts). Een onbekende waarde opent Basis.
 Elk voorbeeld heeft een titel, één gebruikszin en een omlijst voorbeeldvlak ([Section](../src/web/ui/section.tsx) met `description` en `framed`).

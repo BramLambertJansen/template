@@ -11,8 +11,8 @@ Deze template is bedoeld om webapps met code-agents te bouwen. De documentatie h
 | Een cloudomgeving voor Claude Code inrichten of herstellen | [Cloudomgeving](ENVIRONMENT.md) |
 | Een nieuwe app laten aanmaken | [Startinstructie voor coding agents](../START-NIEUWE-APP.md) → [setup-playbook](nieuwe-app.md); de startinstructie beschrijft de volgorde, het playbook de uitvoering |
 | De template met een echte app beproeven | [ST-09 praktijkproef](operations/st-09-praktijkproef.md): generiek protocol; appkeuze, appdata en resultaten blijven in de aparte app-repo |
-| Een feature bouwen | Hergebruik een passende [app-spec](specs/) of [template-spec](template/specs/). De [werkstraat](framework.md#8-werkstraat) geeft de volgorde van spec-review, tests en implementatie. Het gouden pad geeft [voorbeeldbestanden per laag](gouden-pad.md#stappen). |
-| Een resource met een eigenaar per rij bouwen | De [resourcegenerator](gouden-pad.md#begin-met-pnpm-newresource-naam) maakt bij een ontbrekende spec het skelet en bij een goedgekeurde spec de basiscode. Voor andere nieuwe features is er het [spec-sjabloon](specs/_template.md). |
+| Een feature bouwen | Hergebruik een passende [app-spec](specs/) of [template-spec](template/specs/); past er geen, begin dan met het [spec-sjabloon](specs/_template.md) of de [mini-spec](specs/_mini.md). De [werkstraat](framework.md#8-werkstraat) geeft de volgorde van spec-review, tests en implementatie. Het gouden pad geeft [voorbeeldbestanden per laag](gouden-pad.md#stappen). |
+| Een resource met een eigenaar per rij bouwen | De [resourcegenerator](gouden-pad.md#begin-met-pnpm-newresource-naam) maakt bij een ontbrekende spec het skelet en bij een goedgekeurde spec de basiscode. |
 | Een koppeling met een externe dienst bouwen | Skill `nieuwe-koppeling`; [Gouden pad](gouden-pad.md#koppeling-met-een-externe-dienst) |
 | UI-componenten vinden en uitproberen | [UI-catalogus](design-system-catalogue.md) |
 | Een ontwerp of huisstijl overnemen | Skill `ontwerp-overnemen`; mappingdocumenten in [ontwerp/](ontwerp/_template.md) |
@@ -33,7 +33,7 @@ Deze template is bedoeld om webapps met code-agents te bouwen. De documentatie h
 
 ## Afspraken en achtergrond
 
-Architectuurbesluiten staan in [template/adr/](template/adr/) en voor een app in [adr/](adr/). Een spec met status `voorstel` beschrijft voorgenomen werk. De agentdoorloop beschrijft [de scope van core-UI in de template](operations/agent-doorloop.md#routes-en-mini-spec-adr-0046) en [hoe je goedkeuring en bouwstatus vaststelt](operations/agent-doorloop.md#pr-en-statussen-afronden).
+Architectuurbesluiten staan in [template/adr/](template/adr/) en voor een app in [adr/](adr/). Een besluit of spec met status `voorstel` beschrijft voorgenomen werk en is nog geen toestemming om te bouwen. De agentdoorloop beschrijft [de scope van core-UI in de template](operations/agent-doorloop.md#routes-en-mini-spec-adr-0046) en [hoe je goedkeuring en bouwstatus vaststelt](operations/agent-doorloop.md#pr-en-statussen-afronden).
 
 In [reviews/](reviews/) vind je eerdere bevindingen en hun afhandeling. Verschilt een oude review van de huidige afspraak in het framework, een besluit of een spec, raadpleeg dan de wijzigingsgeschiedenis.
 
@@ -45,6 +45,6 @@ Lees de spec van de feature die je bouwt of reviewt. Raadpleeg de [README](../RE
 
 ## Documentatie onderhouden
 
-Beschrijf de huidige werking in concreet Nederlands. Gepland werk hoort op de roadmap, keuzes met hun reden en gevolgen in besluiten, en wijzigingen voor appbouwers in de changelog.
+Beschrijf de huidige werking in concreet Nederlands: wat een onderdeel doet en wat de lezer moet doen, zonder reclamewoorden of lege formuleringen. Een technische term mag blijven als hij nodig is om de code te begrijpen. Gepland werk hoort op de roadmap, keuzes met hun reden en gevolgen in besluiten, en wijzigingen voor appbouwers in de changelog.
 
-Zet agentprocedures bij de ontwikkelinstructies. Noem de regel, het commando en de verwachte uitkomst. Bewaar voorbeelden, randgevallen, valkuilen, herstelstappen, overdrachtsinformatie en de reden achter beperkingen waar de bouwer ze nodig heeft. Houd ze vindbaar vanuit de leeswijzer of de agentinstructies. Controleer bij inkorten of lessen uit reviews en overleg behouden blijven, ook voor agents die een instructie afzonderlijk laden.
+Zet agentprocedures bij de ontwikkelinstructies. Noem de regel, het commando en de verwachte uitkomst. Bewaar voorbeelden, randgevallen, valkuilen, herstelstappen, overdrachtsinformatie en de reden achter beperkingen waar de bouwer ze nodig heeft. Houd ze vindbaar vanuit de leeswijzer of de agentinstructies. Controleer bij inkorten of lessen uit reviews en overleg behouden blijven, ook voor agents die een instructie afzonderlijk laden. Bij twijfel blijft de informatie staan.
