@@ -14,7 +14,7 @@ import { expectAbsent } from '../support/absence.ts';
 // downloadt. De repo-instellingen uit pnpm-workspace.yaml (strictDepBuilds, minimumReleaseAge, trustPolicy,
 // verifyDepsBeforeRun) vallen buiten deze test.
 // Let op: de assertie dat pnpm zijn cache onder `--cache-dir` schrijft hangt aan een interne pnpm-bestandsnaam
-// (`lockfile-verified.jsonl`, gemeten met pnpm 11.28.5). Is die test rood na een pnpm-bump, controleer dan eerst of die
+// (`lockfile-verified.jsonl`, gemeten met pnpm 11.28.5 en 12.21.0). Is die test rood na een pnpm-bump, controleer dan eerst of die
 // bestandsnaam nog klopt voordat je de implementatie of het script verdenkt.
 const MODULE_PAD = '../../scripts/kit/worktree-install.mjs';
 const mod: unknown = await import(MODULE_PAD);
@@ -88,12 +88,12 @@ function uitvoer(r: SpawnSyncReturns<string>): string {
   return [r.error?.message, r.stdout, r.stderr].filter((deel) => deel !== undefined && deel !== '').join('\n');
 }
 
-// De pin in de fixture is de pnpm die hier echt draait (gemeten in een map zonder package.json): een andere pin laat pnpm
-// van versie wisselen en dus downloaden, en dat mag in deze test niet.
-function runningManager(cwd: string, env: Record<string, string>): string {
+// De fixture heeft geen packageManager-pin: een andere pin laat pnpm van versie wisselen en downloaden, en pnpm 12 haalt
+// ook bij een gelijke pin registrymetadata op om de eigen versie in de lockfile vast te leggen (ERR_PNPM_BAD_CONFIG_DEP
+// zonder netwerk, gemeten met 12.21.0). Wel eerst controleren dat de gevonden pnpm start.
+function pnpmStart(cwd: string, env: Record<string, string>): void {
   const r = pnpm(cwd, ['--version'], env);
   expect(r.status, uitvoer(r)).toBe(0);
-  return ['pnpm', r.stdout.trim()].join('@');
 }
 
 function tmp(prefix: string): string {
@@ -115,13 +115,15 @@ function fixture() {
   // De MISE_*-mappen worden afgeleid vóór HOME wordt vervangen. HOME wijst naar een lege map: lekt pnpm naast XDG_*,
   // --store-dir en --cache-dir toch naar de home, dan zie je dat daar terug.
   const uitvoerEnv = { ...basisEnv(), ...miseMappen(), HOME: home, ...env };
+  // De runtime-map (store-vergrendeling van pnpm 12) maakt het script zelf aan vóór pnpm start; hier dus ook.
+  if (env['XDG_RUNTIME_DIR'] !== undefined) mkdirSync(env['XDG_RUNTIME_DIR'], { recursive: true, mode: 0o700 });
+  pnpmStart(eigen, uitvoerEnv);
   writeFileSync(
     path.join(dir, 'package.json'),
     JSON.stringify({
       name: 'worktree-install-fixture',
       version: '1.0.0',
       private: true,
-      packageManager: runningManager(eigen, uitvoerEnv),
       dependencies: { local: 'file:../dependency' },
     }),
   );
@@ -173,7 +175,7 @@ describe('worktreeInstallCommando tegen de echte pnpm', () => {
 });
 
 describe('contract van echte pnpm (bewaakt dat de test zelf geloofwaardig blijft)', () => {
-  // Gemeten met pnpm 11.28.2 en 11.28.5: `install` weigert --state-dir, maar accepteert --cache-dir (exit 0).
+  // Gemeten met pnpm 11.28.2, 11.28.5 en 12.21.0: `install` accepteert --cache-dir (exit 0), ook al staat het niet in de help.
   test('accepteert --cache-dir als installoptie en schrijft zijn cache daar', { timeout: TEST_TIMEOUT }, () => {
     const { dir, eigen, env } = fixture();
     const cache = path.join(eigen, 'proef-cache');
@@ -189,13 +191,16 @@ describe('contract van echte pnpm (bewaakt dat de test zelf geloofwaardig blijft
     expect(existsSync(path.join(cache, 'lockfile-verified.jsonl'))).toBe(true);
   });
 
-  test('weigert --state-dir als installoptie met `Unknown option` en niet-nul exit', { timeout: TEST_TIMEOUT }, () => {
+  // Gewijzigd bij pnpm 12: --state-dir is daar een geldige installoptie geworden (12.21.0, `pnpm help install`), dus toetst
+  // dit contract nu een echt onbekende optie. pnpm 11 meldde `Unknown option` (exit 1), pnpm 12 `unexpected argument`
+  // (exit 2); de nep-pnpm in worktree-install.test.ts weigert net zo met niet-nul exit.
+  test('weigert een onbekende installoptie met een foutmelding en niet-nul exit', { timeout: TEST_TIMEOUT }, () => {
     const { dir, eigen, env } = fixture();
 
-    const r = pnpm(dir, ['install', '--frozen-lockfile', `--state-dir=${path.join(eigen, 'x')}`], env);
+    const r = pnpm(dir, ['install', '--frozen-lockfile', `--geen-pnpm-optie=${path.join(eigen, 'x')}`], env);
 
     expect(r.error, uitvoer(r)).toBeUndefined();
     expect(r.status, uitvoer(r)).not.toBe(0);
-    expect(r.stderr).toMatch(/Unknown option/);
+    expect(r.stderr).toMatch(/Unknown option|unexpected argument/);
   });
 });

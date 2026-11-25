@@ -7,7 +7,7 @@ ARG NODE_IMAGE=node:26.11.1-bookworm-slim@sha256:86f07bc9c5dce4578cf37e5a418b7bf
 FROM ${NODE_IMAGE} AS pnpm
 WORKDIR /app
 # Dezelfde pnpm als packageManager in package.json (test/scripts/dockerfile.test.ts bewaakt dat, net als Node en de digest).
-RUN npm install --global --no-fund --no-audit pnpm@11.28.2
+RUN npm install --global --no-fund --no-audit pnpm@12.21.0
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 FROM pnpm AS build

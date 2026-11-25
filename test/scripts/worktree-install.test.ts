@@ -9,6 +9,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   symlinkSync,
   writeFileSync,
 } from 'node:fs';
@@ -105,7 +106,8 @@ const ALLEEN_UNTRACKED = ['.npmrc', '.pnpmfile.cjs', '.pnpmfile.mjs'];
 // Eigen keuze: de enige opties die worktreeInstallCommando mag meegeven (de state gaat via XDG_STATE_HOME). Hun geldigheid
 // is gemeten met echte pnpm 11.28.x; alleen `--state-dir` wordt door pnpm geweigerd.
 const PNPM_INSTALL_OPTIES = ['frozen-lockfile', 'package-import-method', 'store-dir', 'cache-dir'];
-const XDG = ['XDG_DATA_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME'];
+// XDG_RUNTIME_DIR: daar neemt pnpm 12 zijn store-vergrendeling, anders hard in /tmp (pnpm#16390, gemeten met 12.21.0).
+const XDG = ['XDG_DATA_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME', 'XDG_RUNTIME_DIR'];
 const dirs: string[] = [];
 
 afterEach(() => {
@@ -155,7 +157,9 @@ function nepPnpm(exit = 0): { bin: string; log: string } {
     `#!${process.execPath}`,
     `const toegestaan = ${JSON.stringify(PNPM_INSTALL_OPTIES)};`,
     'const args = process.argv.slice(2);',
-    `require('node:fs').writeFileSync(${JSON.stringify(log)}, JSON.stringify({ args, env: process.env }));`,
+    "const runtime = process.env.XDG_RUNTIME_DIR ?? '';",
+    "const runtimeBestaat = runtime !== '' && require('node:fs').statSync(runtime, { throwIfNoEntry: false })?.isDirectory() === true;",
+    `require('node:fs').writeFileSync(${JSON.stringify(log)}, JSON.stringify({ args, env: process.env, runtimeBestaat }));`,
     "const onbekend = args.filter((a) => a.startsWith('-')).map((a) => a.replace(/^-+/, '').split('=')[0]).find((n) => !toegestaan.includes(n));",
     "if (onbekend !== undefined) { process.stderr.write('[ERROR] Unknown option: \\'' + onbekend + '\\'\\n'); process.exitCode = 1; }",
     `else process.exitCode = ${String(exit)};`,
@@ -707,6 +711,22 @@ describe('node scripts/kit/worktree-install.mjs: basismap, omgeving en foutpaden
     expect(env['MISE_DATA_DIR']).toBe('/m/data');
     expect(env['MISE_STATE_DIR']).toBe('/m/state');
     for (const naam of XDG) expect(onder(tb, xdg[naam]), naam).toBe(true);
+  });
+
+  // pnpm 12 maakt XDG_RUNTIME_DIR niet zelf aan en valt dan terug op /tmp, dat de sandbox niet mag schrijven.
+  test('XDG_RUNTIME_DIR staat onder tmp en bestaat al als pnpm start (mode 0700)', () => {
+    const { wt } = fixture();
+    const tb = tmp('wti-tmpdir-');
+    const { bin, log } = nepPnpm();
+
+    const r = draai(wt, bin, { tmpdir: tb, env: { XDG_RUNTIME_DIR: '/run/user/elders' } });
+
+    expect(r.status, r.stderr).toBe(0);
+    const raw = veld(JSON.parse(readFileSync(log, 'utf8')));
+    expect(raw['runtimeBestaat']).toBe(true);
+    const runtime = logUit(log).xdg['XDG_RUNTIME_DIR'] ?? '';
+    expect(onder(tb, runtime), runtime).toBe(true);
+    expect(statSync(runtime).mode & 0o777).toBe(0o700);
   });
 
   test('zonder MISE_*: afgeleid van de oorspronkelijke XDG_DATA_HOME en XDG_STATE_HOME', () => {

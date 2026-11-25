@@ -50,11 +50,14 @@ export function worktreeInstallBesluit({ worktree, nodeModules, gewijzigd, cloud
  * `v11/metadata/…` in; `--state-dir` geeft `Unknown option`. Daarom gaan store en cache als vlag mee, want een CLI-vlag
  * gaat voor op een globale pnpm-config en een XDG-variabele niet. State heeft geen vlag en loopt via XDG_STATE_HOME
  * onder `tmp`, naast XDG_CACHE_HOME en XDG_DATA_HOME.
+ * pnpm 12 neemt bij `install` een store-vergrendeling in `$XDG_RUNTIME_DIR/pnpm-store-operation-locks-<uid>`, en zonder
+ * die variabele hard in `/tmp` (pnpm#16390); TMPDIR en `--store-dir` veranderen dat niet, en de Claude Code-sandbox mag
+ * niet in `/tmp` schrijven. Daarom gaat ook XDG_RUNTIME_DIR onder `tmp`; de map moet al bestaan (gemeten met 12.21.0).
  * In een cloudsessie komt `--config.confirm-modules-purge=false` als laatste argument erbij: zonder TTY breekt pnpm
  * anders af als het een bestaande node_modules wil vervangen (spec cloud-werkmap-herstel AC-3).
  * @param {string} tmp
  * @param {boolean} [cloud] cloudsessie
- * @returns {{ command: 'pnpm', args: string[], env: Record<string, string> }}
+ * @returns {{ command: 'pnpm', args: string[], env: { XDG_DATA_HOME: string, XDG_CACHE_HOME: string, XDG_STATE_HOME: string, XDG_RUNTIME_DIR: string } }}
  */
 export function worktreeInstallCommando(tmp, cloud = false) {
   return {
@@ -71,6 +74,7 @@ export function worktreeInstallCommando(tmp, cloud = false) {
       XDG_DATA_HOME: path.join(tmp, 'data'),
       XDG_CACHE_HOME: path.join(tmp, 'xdg-cache'),
       XDG_STATE_HOME: path.join(tmp, 'xdg-state'),
+      XDG_RUNTIME_DIR: path.join(tmp, 'xdg-run'),
     },
   };
 }
@@ -239,6 +243,8 @@ function pnpmOmgeving(extra) {
 /** @param {boolean} cloud @returns {number} */
 function installeer(cloud) {
   const { command, args, env } = worktreeInstallCommando(veiligeBasismap(), cloud);
+  // pnpm maakt XDG_RUNTIME_DIR niet zelf aan en valt dan terug op /tmp; 0700 zoals een echte runtime-map.
+  mkdirSync(env.XDG_RUNTIME_DIR, { recursive: true, mode: 0o700 });
   const r = spawnSync(command, args, { cwd: process.cwd(), stdio: 'inherit', env: pnpmOmgeving(env) });
   if (r.error !== undefined) {
     console.error(`✗ worktree-install: pnpm ontbreekt of start niet (${r.error.message}); zie scripts/bootstrap.sh`);

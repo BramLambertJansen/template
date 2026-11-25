@@ -143,8 +143,8 @@ branchnaam met `-` in plaats van `/`) maakt buiten de sandbox een worktree onder
 git) en zet de sessie erin. Hij haalt niet zelf op (gemeten: `origin/main` liep achter) en maakt een branch
 `worktree-<map>`; daarna, in de worktree, de startvorm hierboven en `node scripts/kit/worktree-install.mjs` (een nieuwe
 worktree heeft geen `node_modules`; zonder toolchain falen `feiten.mjs`, lint en de git-hooks; installeren duurde 12
-seconden). Dat script installeert frozen met `--package-import-method=copy` en store, cache en state onder `os.tmpdir()`
-(een bestaande, ook lege of halve `node_modules`-map wordt afgemaakt), draait vanuit de worktree-root en weigert in de
+seconden). Dat script installeert frozen met `--package-import-method=copy` en store, cache, state en
+`XDG_RUNTIME_DIR` (store-vergrendeling van pnpm 12) onder `os.tmpdir()` (een bestaande, ook lege of halve `node_modules`-map wordt afgemaakt), draait vanuit de worktree-root en weigert in de
 hoofdcheckout, bij een symlink als `node_modules` en als een van `package.json`, `pnpm-lock.yaml`,
 `pnpm-workspace.yaml`, `.npmrc`, `.pnpmfile.cjs` of `.pnpmfile.mjs` afwijkt van HEAD (gewijzigd, verwijderd of
 untracked; vergeleken op inhoud met HEAD, ook bij `--assume-unchanged` of `--skip-worktree`; commit eerst of vraag de
