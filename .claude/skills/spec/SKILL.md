@@ -44,6 +44,7 @@ Stappen:
    - elke padparameter heeft een vorm en contractschema; ongeldige invoer bereikt geen externe aanroep;
    - een voor-stap verbergt geen rol- of MFA-fout; gecombineerde fouten hebben een verwachte foutcode en test;
    - elk acceptatiecriterium kan falen en noemt achter `Toets:` het testbestand dat zijn id noemt (`pnpm ratchet`, ac-toets);
+   - elke bewering over bestaand gedrag waar de spec op leunt (script, kooi, hook, check) noemt `bestand:regel` en is tegen de code gelezen; een tekst- of zoekregel in een AC is vóór de review op de huidige repo gedraaid, en de AC noemt de echte treffers (`bestand:regel`) als herkend of toegestaan voorbeeld (leerpunt #1005);
    - "Raakt ook" noemt de checks die de spec raakt: `check:migrations`, `check:secdef`, `test:db`/policies, `test/security/resources.ts`, permissietest per verboden rol;
    - een nieuwe module krijgt vóór de tests een stub met de definitieve signaturen, die de developer na de spec-review neerzet: een test faalt op een assertie, niet op een import- of typefout (`.claude/agents/tester.md` punt 4; leerpunt #677);
    - verruimt de spec een weigering van het rolhek: toets haar tegen R-ROL-10 (niet verder uitkleden, behalve leesvormen) en de geaccepteerde valse positieven in R-ROL-11, en noem een botsing in de vraag aan de eigenaar; elke terugval in zo'n verruiming noemt een mechanisme dat het gedrag echt verandert, geen vlag die al aanstaat (leerpunt #956);
