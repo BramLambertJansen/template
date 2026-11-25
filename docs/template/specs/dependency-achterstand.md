@@ -13,7 +13,8 @@ Renovate-PR te lang openstaat of rode CI heeft (AC-9), of als Renovate een updat
 **Aanleiding.** PR #967 (alle niet-majors van een week) was rood omdat één pakket (lefthook 2.2.2) door pnpm geweigerd werd;
 29 andere updates wachtten mee en niets waarschuwde. Majors waren deels verborgen (`allowedVersions`). Eigenaarbesluit
 2026-11-24: elke update wordt getest en wie achterloopt, merkt dat. Het Renovate-deel (majors als eigen PR met label `major`,
-geen verborgen versies, geen limiet op het aantal PR's) staat in `renovate.json` en R-PROV-04 (branch
+geen verborgen versies behalve één release die pnpm's `trustPolicy` weigert, zoals lefthook 2.2.2, geen limiet op het
+aantal PR's) staat in `renovate.json` en R-PROV-04 (branch
 `fix/renovate-lockfile-ranges`); deze spec is de bewaking erop en wordt pas na die PR gemerged, want de labels `major` en
 `security` komen daarvandaan.
 
