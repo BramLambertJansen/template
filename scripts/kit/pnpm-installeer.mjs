@@ -185,6 +185,16 @@ export function foutmelding(status, uitvoer, cloud) {
 }
 
 /**
+ * De stdio voor pnpm: met een terminal erft pnpm hem (voortgangsbalk), anders lopen stdout en stderr via de module
+ * (pnpm-sandbox/AC-8). Stub: nog altijd via de module.
+ * @param {boolean} terminal
+ * @returns {['inherit', 'inherit' | 'pipe', 'inherit' | 'pipe']}
+ */
+export function stdioVoor(terminal) {
+  return terminal ? ['inherit', 'pipe', 'pipe'] : ['inherit', 'pipe', 'pipe'];
+}
+
+/**
  * Start pnpm in `process.cwd()`, stuurt stdout en stderr meteen door en bewaart van beide de staart.
  * @param {InstallCommando} commando
  * @returns {Promise<{ status: number, uitvoer: string } | { fout: Error }>}
