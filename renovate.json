@@ -34,7 +34,7 @@
       "matchUpdateTypes": ["major"],
       "matchPackageNames": ["node", "@types/node", "pnpm", "typescript", "postgres"],
       "prBodyNotes": [
-        "> [!IMPORTANT]\n> Major van de toolchain (Node, pnpm, TypeScript): CI test hem nu al; samenvoegen pas met de ingevulde majorchecklist uit het PR-sjabloon, en een ADR als werkwijze, configuratie of code verandert (R-PROV-04, ADR 0111). Postgres: pas als alle beoogde providers hem bieden, en na een ADR. Een bewust overgeslagen versie: sluit de PR met de reden."
+        "> [!IMPORTANT]\n> Major van de toolchain (Node, pnpm, TypeScript): CI test hem nu al; samenvoegen pas met de ingevulde majorchecklist uit het PR-sjabloon, zonder ADR (R-PROV-04, ADR 0111). Postgres: pas als alle beoogde providers hem bieden, en na een ADR. Een bewust overgeslagen versie: sluit de PR met de reden."
       ]
     },
     {

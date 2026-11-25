@@ -7,7 +7,7 @@ Herzien: 2026-11-12 (#696): door ADR 0089 punt 2 en 10, in punt 8 is de GitHub A
 Herzien: 2026-11-18 (#796): gewijzigd door [0093](0093-agent-onder-eigenaaraccount.md) punt 1, punt 8 vervalt: er is geen GitHub App of bot-account; de agent werkt onder het account van de eigenaar, met diens rechten
 Herzien: 2026-11-24: punt 7, Renovate blokkeert TypeScript 7 niet meer maar opent hem, zoals elke major, als eigen PR met label `major`; CI test hem meteen, mergen blijft pas na een ADR. Een verborgen major viel niemand op (eigenaarbesluit, aanleiding #967)
 Herzien: 2026-11-24: punt 6, pnpm 12 in plaats van 11, gewijzigd door [0110](0110-pnpm-12.md)
-Herzien: 2026-11-25: gewijzigd door [0111](0111-majorchecklist-in-plaats-van-adr.md) punt 1–4: punten 5–7 noemen geen versie meer (bron: `mise.toml` en `package.json`) en de gevolgregel vervalt: een major gaat via de majorchecklist, een ADR alleen als werkwijze, configuratie of code verandert
+Herzien: 2026-11-25: gewijzigd door [0111](0111-majorchecklist-in-plaats-van-adr.md) punt 1–4: punten 5–7 noemen geen versie meer (bron: `mise.toml` en `package.json`) en de gevolgregel vervalt: een major gaat via de majorchecklist, zonder ADR
 
 Vervangt 0001, 0002 en
 0005. Drempel: A4. Consolidatie zonder inhoudelijke wijziging (eigenaarbesluit 2026-10-21,

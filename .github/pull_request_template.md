@@ -25,8 +25,7 @@
 
 ## Majorchecklist
 
-<!-- Alleen bij een major van Node, pnpm of TypeScript (R-PROV-04, ADR 0111); anders weglaten. Een ADR alleen als
-werkwijze, configuratie of code verandert. -->
+<!-- Alleen bij een major van Node, pnpm of TypeScript (R-PROV-04, ADR 0111); anders weglaten. Geen ADR nodig. -->
 
 1. Changelog gelezen; per breaking change één regel wat die voor ons betekent:
 2. CI groen plus `gate:slow` (bewijs):

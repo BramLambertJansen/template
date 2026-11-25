@@ -1,4 +1,4 @@
-# 0111 — Een toolchain-major gaat via de majorchecklist; een ADR alleen als er meer verandert dan het versienummer
+# 0111 — Een toolchain-major gaat via de majorchecklist, zonder ADR
 
 Status: voorgesteld
 
@@ -13,7 +13,8 @@ ADR 0039 legde de majors vast als tekst: "Node 26", "pnpm 11", "TypeScript 6.0".
 alleen het versienummer veranderde. En elke versie stond op drie plekken: `mise.toml` of `package.json`, ADR 0039 en
 `AGENTS.md`. Die liepen uit elkaar. Bij pnpm 12 (ADR 0110, PR #984) bleek wat een major echt vraagt: de changelog lezen, de volle CI
 plus `gate:slow`, de cloud-setup en `app:init`, de versie overal gelijk, en weten hoe je terugdraait. Dat is een vaste lijst.
-Een ADR voegt pas iets toe als er een keuze is: andere werkwijze, configuratie of code.
+Wat een major aan code of configuratie vraagt, staat in de PR en de review; een ADR voegt daar niets aan toe (eigenaarbesluit
+25-11-2026).
 
 ## Besluit
 
@@ -27,7 +28,8 @@ Een ADR voegt pas iets toe als er een keuze is: andere werkwijze, configuratie o
 
 2. **Een major gaat via de majorchecklist** in de PR-beschrijving. De checklist staat op één plek:
    `.github/pull_request_template.md`, sectie "Majorchecklist".
-3. **Een ADR alleen als werkwijze, configuratie of code verandert**, niet voor alleen het versienummer.
+3. **Geen ADR voor een toolchain-major**, ook niet als code of configuratie meeverandert; de checklist en de review
+   dekken dat. De algemene ADR-regels van het framework blijven gelden.
 4. **De bron van de versie** is `mise.toml` (Node) en `package.json` (pnpm in `packageManager`, TypeScript). Regels en
    ADR's noemen geen versie: ADR 0039 punten 5–7 en `AGENTS.md` verwijzen naar die bestanden. Afgeleide pins (de
    Node-images in de Dockerfile en `compose.yaml`) blijven gelijk aan de bron; checklistpunt 4 en
