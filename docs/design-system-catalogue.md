@@ -6,10 +6,10 @@ zoeken op naam of variant, met de zoekparameter `q`. De lijst met alle component
 varianten en een knop Toon) staat dicht en gaat open zodra je zoekt. Bronpad en importnaam staan niet op de pagina; die
 vraag je op met `node scripts/kit/feiten.mjs componenten` ([ADR 0048](template/adr/0048-ui-catalogus.md)).
 
-Daaronder staan de voorbeelden in zeven tabbladen: Basis, Acties, Formulieren, Meldingen en status, Gegevens tonen,
-Navigatie en layout en Patronen. Het open tabblad staat in de zoekparameter `vak` (bijvoorbeeld
-`/design-system?vak=formulieren`); een onbekende waarde opent Basis. Elk voorbeeld heeft een titel, één gebruikszin en
-een omlijst voorbeeldvlak (`Section` met `description` en `framed`, [section.tsx](../src/web/ui/section.tsx)).
+De zoekparameter `vak` opent het bijbehorende tabblad. Op `/design-system?vak=schillen` vergelijk je bijvoorbeeld
+navigatie in een zijbalk en in de bovenbalk. Wil je zo'n indeling aan je app toevoegen, volg dan [Een tweede schil](gouden-pad.md#een-tweede-schil).
+De tabbladnamen en hun URL-waarden staan in [vakken.ts](../src/web/features/design-system/vakken.ts). Een onbekende waarde opent Basis.
+Elk voorbeeld heeft een titel, één gebruikszin en een omlijst voorbeeldvlak ([Section](../src/web/ui/section.tsx) met `description` en `framed`).
 
 Het tabblad Basis toont de tokens: de sectie "Tokens" (kleur, typografie, dichtheid, lagen, beweging) en de sectie
 "Componenttokens" met per token component, standaard en de berekende waarde in het huidige thema
@@ -20,9 +20,16 @@ staan dan in een `ThemeScope` met dat thema; meldingen en `<html>` volgen het th
 bewaard ([app-thema's](ui-kit-basics.md#app-themas), `src/web/features/design-system/theme-picker.tsx`). Zonder thema's in
 het register is er geen kiezer. De kolom "Waarde" van "Componenttokens" toont de waarde op `<html>`, niet die in de scope.
 
-De gebruikscontracten voor tabellen, tabs, galerijen en filters staan in [Gegevensweergave en navigatie](ui-data-display.md).
-Het voorbeeld "Stappenformulier" (tabblad Patronen) volgt [Stappenformulier](ui-stappenformulier.md).
-Avatar, Image en StatTile staan in [Avatar, Image en StatTile](ui-weergave-basis.md).
+Bij de voorbeelden horen de volgende gebruiksrecepten.
+
+| Je bouwt | Recept |
+|---|---|
+| Een tabel, tabbladen, galerij of filters | [Gegevensweergave en navigatie](ui-data-display.md) |
+| Een doorzoekbaar keuzeveld, accordion of lijst | [Combobox en collecties](ui-collections.md) |
+| Een datumveld, wachtwoordveld, kruimelpad of kopieerknop | [Invoer en hulpfuncties](ui-input-utilities.md) |
+| Een bewerkbaar detail, een formulier met onbewaarde wijzigingen of een bulkactie | [Formulier- en lijstpatronen](ui-ux-patterns.md) |
+| Een formulier in stappen, zoals op het tabblad Patronen | [Stappenformulier](ui-stappenformulier.md) |
+| Een avatar, afbeelding of kengetal | [Avatar, Image en StatTile](ui-weergave-basis.md) |
 
 Bij iedere indexrij staat **Toon [component]**. Die knop opent het tabblad van het voorbeeld, scrollt ernaartoe en
 verplaatst de toetsenbordfocus naar de benoemde sectie. De zoekopdracht blijft behouden. Onderdelen zoals CardHeader en
