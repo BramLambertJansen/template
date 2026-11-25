@@ -282,7 +282,9 @@ vastgesteld. Of `gh api` lokaal een prompt geeft, is niet gemeten.
   voeg geen pnpm-vlag toe. In een cloudsessie (`CLAUDE_CODE_REMOTE=true`) draait het script ook in de hoofdcheckout en geeft
   het zelf `--config.confirm-modules-purge=false` mee: daar herstelt de agent een achterlopende `node_modules` met
   `node scripts/kit/worktree-install.mjs`, want de eigenaar heeft er geen terminal (spec cloud-werkmap-herstel). Node en pnpm blijven bij `scripts/bootstrap.sh`; ook een ontbrekende of ongeldige
-  `packageManager`-pin wijst daarheen.
+  `packageManager`-pin wijst daarheen; lokaal na een nieuwe pin volstaat `mise install` in een gewone terminal (de sandbox
+  kan mise niet laten installeren). `feiten.mjs hoofdstuk <n>` en `feiten.mjs pad <pad>` slaan de voorcontrole over
+  (`scripts/kit/feiten.mjs:83`), dus regelboek en padtabel blijven leesbaar.
 - **`✗ toolchain ontbreekt: pnpm reageert niet binnen 20 s`**, of wisselend falende tests die `feiten.mjs` starten: de
   voorcontrole wacht hoogstens `PNPM_TIMEOUT_MS` op `pnpm --version` (`scripts/kit/toolchain.mjs`). Traag wordt dat
   vooral als de pnpm op `PATH` niet de pin is: dan wisselt pnpm bij elke aanroep eerst van versie, en parallelle wissels
