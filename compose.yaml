@@ -84,7 +84,7 @@ services:
   # Starten: docker compose --env-file .env.local --profile pooler up -d; verbinden via 127.0.0.1:${POOLER_PORT:-54323}.
   pgbouncer:
     profiles: [pooler]
-    image: edoburu/pgbouncer:v1.26.0-p0@sha256:b17551c776ef7e5769ef80b956d20f85e2fd25dd8912d31d58f782aad495b711
+    image: edoburu/pgbouncer:v1.26.1-p0@sha256:488422e38cff912895d0d65d8963fcd306e6ac589a724398b6eb8e294e94d624
     environment:
       DATABASE_URL: postgres://api_user:api_user@postgres:5432/app
       POOL_MODE: transaction
@@ -97,7 +97,7 @@ services:
         condition: service_healthy
 
   mailpit:
-    image: axllent/mailpit:v1.31.4@sha256:b68349e3a014b90c5610bfb26b2ae36f3892d7b8cf25ee140c6c71c98d2fcf48
+    image: axllent/mailpit:v1.34.0@sha256:23a2ef85bc50853ab3093645d1d64679afd8887e89da5e48a88940c172591a4e
     ports:
       - "127.0.0.1:${MAIL_UI_PORT:-54324}:8025"
       - "127.0.0.1:${SMTP_PORT:-54325}:1025"
@@ -136,7 +136,7 @@ services:
 
   test-pooler:
     profiles: [test]
-    image: edoburu/pgbouncer:v1.26.0-p0@sha256:b17551c776ef7e5769ef80b956d20f85e2fd25dd8912d31d58f782aad495b711
+    image: edoburu/pgbouncer:v1.26.1-p0@sha256:488422e38cff912895d0d65d8963fcd306e6ac589a724398b6eb8e294e94d624
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     networks: [test-net]
@@ -151,7 +151,7 @@ services:
 
   test-mailpit:
     profiles: [test]
-    image: axllent/mailpit:v1.31.4@sha256:b68349e3a014b90c5610bfb26b2ae36f3892d7b8cf25ee140c6c71c98d2fcf48
+    image: axllent/mailpit:v1.34.0@sha256:23a2ef85bc50853ab3093645d1d64679afd8887e89da5e48a88940c172591a4e
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     networks: [test-net]
@@ -209,7 +209,7 @@ services:
 
   runner:
     <<: *runner
-    image: node:26.11.1-bookworm-slim@sha256:86f07bc9c5dce4578cf37e5a418b7bfc7f817cda25cde66e2b66e95ed86c4567
+    image: node:26.13.0-bookworm-slim@sha256:add5c17c14752c54d2f3d519ec46a3815684d41c33f198bcb09fb998f7dcbf68
     command: ["node", "node_modules/vitest/vitest.mjs", "run", "--project", "int", "--configLoader", "native"]
 
   # pnpm db:generate (scripts/db-generate.sh): snapshot met pg_dump uit het gepinde image, schema.ts uit de catalogus.
@@ -237,7 +237,7 @@ services:
 
   gen-schema:
     <<: *runner
-    image: node:26.11.1-bookworm-slim@sha256:86f07bc9c5dce4578cf37e5a418b7bfc7f817cda25cde66e2b66e95ed86c4567
+    image: node:26.13.0-bookworm-slim@sha256:add5c17c14752c54d2f3d519ec46a3815684d41c33f198bcb09fb998f7dcbf68
     command: ["node", "scripts/db-introspect.mjs"]
     depends_on:
       test-migrate:

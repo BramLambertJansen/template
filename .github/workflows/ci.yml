@@ -32,9 +32,9 @@ jobs:
           persist-credentials: false
           # check:migrations vergelijkt met origin/main; een shallow checkout heeft die niet.
           fetch-depth: 0
-      - uses: jdx/mise-action@7a4e45a543138629540c9a1616d08632b893e492 # v5.0.1
+      - uses: jdx/mise-action@236a21c3b91f5db6d4e174b348674a0f0caac06d # v5.2.9
         with:
-          version: 2026.9.18
+          version: 2026.11.9
           install_args: node pnpm
       # De kooi voor overgenomen commando's (ADR 0072, spec kooi AC-7): bubblewrap, en alleen /usr/bin/bwrap krijgt een
       # user-namespace (Ubuntu 24.04 beperkt die via AppArmor); de proef maakt deze job rood als de kooi niet afschermt.
@@ -108,9 +108,9 @@ jobs:
         with:
           fetch-depth: ${{ matrix.script == 'check:snapshot' && '0' || '1' }}
           persist-credentials: false
-      - uses: jdx/mise-action@7a4e45a543138629540c9a1616d08632b893e492 # v5.0.1
+      - uses: jdx/mise-action@236a21c3b91f5db6d4e174b348674a0f0caac06d # v5.2.9
         with:
-          version: 2026.9.18
+          version: 2026.11.9
           install_args: node pnpm
       # Alleen de pnpm-store (gedownloade pakketten) komt uit de cache van GitHub; pnpm toetst elk pakket aan de
       # integriteitshash in pnpm-lock.yaml. node_modules, buildoutput en uitslagen gaan nooit in een cache (R-CI-08, ADR 0096).
@@ -128,7 +128,7 @@ jobs:
           UI_DEEL: ${{ matrix.ui }}
       # Playwright-traces en screenshots bij een rode e2e; de runner schrijft ze naar .runner-output.
       - if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: runner-output-${{ strategy.job-index }}
           path: .runner-output/
@@ -164,9 +164,9 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: jdx/mise-action@7a4e45a543138629540c9a1616d08632b893e492 # v5.0.1
+      - uses: jdx/mise-action@236a21c3b91f5db6d4e174b348674a0f0caac06d # v5.2.9
         with:
-          version: 2026.9.18
+          version: 2026.11.9
           install_args: betterleaks
       # Op een PR alleen de commits van die PR, anders alleen de geschiedenis van HEAD (op main dus main): een melding op
       # een andere branch maakt anders elke open PR of main rood (framework §6, #758). Een geheim in een PR-commit blijft
@@ -192,9 +192,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: jdx/mise-action@7a4e45a543138629540c9a1616d08632b893e492 # v5.0.1
+      - uses: jdx/mise-action@236a21c3b91f5db6d4e174b348674a0f0caac06d # v5.2.9
         with:
-          version: 2026.9.18
+          version: 2026.11.9
           install_args: node pnpm
       # Alleen de pnpm-store (gedownloade pakketten) komt uit de cache van GitHub; pnpm toetst elk pakket aan de
       # integriteitshash in pnpm-lock.yaml. node_modules, buildoutput en uitslagen gaan nooit in een cache (R-CI-08, ADR 0096).
@@ -235,9 +235,9 @@ jobs:
           # De kopie bouwt op de geschiedenis van de checkout; in een app zoekt app-init-template.test.ts daarin de
           # templatestand (leerpunt #363). Een shallow checkout heeft die niet.
           fetch-depth: 0
-      - uses: jdx/mise-action@7a4e45a543138629540c9a1616d08632b893e492 # v5.0.1
+      - uses: jdx/mise-action@236a21c3b91f5db6d4e174b348674a0f0caac06d # v5.2.9
         with:
-          version: 2026.9.18
+          version: 2026.11.9
           install_args: node pnpm
       # De kooi voor overgenomen commando's (ADR 0072, spec kooi AC-7): bubblewrap, en alleen /usr/bin/bwrap krijgt een
       # user-namespace (Ubuntu 24.04 beperkt die via AppArmor); de proef maakt deze job rood als de kooi niet afschermt.
