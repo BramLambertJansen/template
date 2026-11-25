@@ -80,6 +80,8 @@ Bij een fout volgt één van deze regels:
 - `<bestand>: <reden>`
 - `onbekende waarde: <waarde>`
 - `GitHub-API: <pad>: HTTP <status>`
+- `GitHub-API: <pad>: <foutmelding>`
+- `<NAAM> ontbreekt` (alleen met `--issue`, voor `GITHUB_TOKEN` of `GITHUB_REPOSITORY`)
 
 **JSON**
 
@@ -206,7 +208,8 @@ Bij een fout volgt één van deze regels:
   - **Wel meldingen, al een open issue:**
     - Wijken de meldingen af van de body, dan zet hij de nieuwe body (`PATCH`) en daarna de comment over gewijzigde
       meldingen.
-    - Zijn de meldingen gelijk, dan schrijft hij niets.
+    - Zijn de meldingen gelijk, dan schrijft hij niets. Een achterstandsregel bevat het aantal dagen. Zolang er
+      achterstand is, wijkt de body daardoor elke week af, en volgt er bewust elke week een comment als herinnering.
     - Zijn er meerdere open issues, dan gebruikt hij het oudste (laagste nummer).
   - **Geen meldingen, wel een open issue:** de check zet het sluitcomment en sluit het issue (`PATCH` met
     `state: closed`).
