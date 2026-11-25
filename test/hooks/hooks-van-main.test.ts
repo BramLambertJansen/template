@@ -1,6 +1,8 @@
 import { spawnSync } from 'node:child_process';
 import {
+  chmodSync,
   copyFileSync,
+  lutimesSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -10,6 +12,7 @@ import {
   rmSync,
   statSync,
   symlinkSync,
+  utimesSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -59,11 +62,13 @@ function git(cwd: string, ...args: string[]): string {
 /** Een klein hookscript dat zijn omgeving echoot, een helper uit ./lib importeert en met HOOK_EXIT stopt. */
 function scriptSource(version: string): string {
   return [
-    "import { writeFileSync } from 'node:fs';",
+    "import { utimesSync, writeFileSync } from 'node:fs';",
     "import { helper } from './lib/helper.mjs';",
     'const chunks = [];',
     'for await (const chunk of process.stdin) chunks.push(chunk);',
     "if (process.env.RAN_FILE) writeFileSync(process.env.RAN_FILE, '1');",
+    // Maakt de eigen map (de huidige versie) oud ná het markeren en vóór het opruimen door de lader.
+    'if (process.env.HOOK_VEROUDER) { const oud = new Date(Date.now() - 172800000); utimesSync(import.meta.dirname, oud, oud); }',
     "if (process.env.HOOK_CRASH) throw new Error('crash-van-main');",
     'process.stdout.write(JSON.stringify({',
     `  marker: ${JSON.stringify(version)},`,
@@ -381,6 +386,111 @@ describe('punt B: cache naast de stub, op tree-oid van het anker', () => {
 
     expect(result.stdout).toContain('"marker":"main-versie-2"');
     expect(cacheMaps(repo)).toHaveLength(2);
+  });
+});
+
+describe('opruimen: werkstraat session-start wist oude versies uit de cache', () => {
+  const OUD = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+
+  /** Repo met twee uitgepakte versies; de eerste is niet meer de huidige. */
+  function metOudeVersie() {
+    const repo = makeAnchored(hookFiles('main-versie'));
+    const oud = treeMap(repo, remoteSha(repo));
+    advanceRemote(repo, hookFiles('main-versie-2'));
+    anker(repo);
+    return { repo, oud, huidig: treeMap(repo, remoteSha(repo)) };
+  }
+
+  test('een oude versie en een achtergebleven tijdelijke map ouder dan een dag verdwijnen; huidig en anker blijven', () => {
+    const { repo, oud, huidig } = metOudeVersie();
+    const tijdelijk = `${oud}.tmp-1-1`;
+    mkdirSync(tijdelijk);
+    utimesSync(oud, OUD, OUD);
+    utimesSync(tijdelijk, OUD, OUD);
+
+    const start = run(repo, 'werkstraat', { args: ['session-start'] });
+    const daarna = run(repo, 'rolhek');
+
+    expect(start.status).toBe(7);
+    expect([existsSync(oud), existsSync(tijdelijk)]).toStrictEqual([false, false]);
+    expect(cacheMaps(repo)).toStrictEqual([path.basename(huidig)]);
+    expect(readAnchor(repo)).toBe(remoteSha(repo));
+    expect(daarna.stdout).toContain('"marker":"main-versie-2"');
+  });
+
+  test('een oude versie die korter dan een dag geleden veranderde, blijft staan', () => {
+    const { repo, oud } = metOudeVersie();
+
+    run(repo, 'werkstraat', { args: ['session-start'] });
+
+    expect(existsSync(oud)).toBe(true);
+  });
+
+  test('de huidige versie blijft staan, ook als zijn map ouder is dan een dag', () => {
+    const { repo, huidig } = metOudeVersie();
+
+    const start = run(repo, 'werkstraat', { args: ['session-start'], env: { HOOK_VEROUDER: '1' } });
+
+    expect(Date.now() - statSync(huidig).mtimeMs).toBeGreaterThan(24 * 60 * 60 * 1000);
+    expect([start.status, existsSync(huidig)]).toStrictEqual([7, true]);
+  });
+
+  test('een versie die een andere sessie in de laatste dag gebruikte, blijft staan, hoe oud het uitpakken ook is', () => {
+    const repo = makeAnchored(hookFiles('main-versie'));
+    const oud = treeMap(repo, remoteSha(repo));
+    utimesSync(oud, OUD, OUD);
+    run(repo, 'rolhek');
+    advanceRemote(repo, hookFiles('main-versie-2'));
+
+    run(repo, 'werkstraat', { args: ['session-start'] });
+
+    expect(existsSync(oud)).toBe(true);
+  });
+
+  test('een gewone aanroep ruimt niets op', () => {
+    const { repo, oud } = metOudeVersie();
+    utimesSync(oud, OUD, OUD);
+
+    run(repo, 'rolhek');
+    run(repo, 'werkstraat', { args: ['post-edit'] });
+
+    expect(existsSync(oud)).toBe(true);
+  });
+
+  test('een symlink met een oid-naam en een map met een andere naam blijven staan, ook als ze oud zijn', () => {
+    const { repo } = metOudeVersie();
+    const buiten = tmp('hvm-buiten-');
+    writeFileSync(path.join(buiten, 'bewaar.txt'), 'x');
+    const link = path.join(cacheDir(repo), 'a'.repeat(40));
+    symlinkSync(buiten, link);
+    lutimesSync(link, OUD, OUD);
+    const anders = path.join(cacheDir(repo), 'notities');
+    mkdirSync(anders);
+    utimesSync(anders, OUD, OUD);
+
+    run(repo, 'werkstraat', { args: ['session-start'] });
+
+    expect([existsSync(link), existsSync(path.join(buiten, 'bewaar.txt')), existsSync(anders)]).toStrictEqual([
+      true,
+      true,
+      true,
+    ]);
+  });
+
+  test('een map die niet te wissen is, verandert de uitkomst van de hook niet', () => {
+    const { repo, oud } = metOudeVersie();
+    const vast = path.join(oud, 'lib');
+    chmodSync(vast, 0o500);
+    utimesSync(oud, OUD, OUD);
+
+    try {
+      const start = run(repo, 'werkstraat', { args: ['session-start'] });
+
+      expect([start.status, start.stderr, existsSync(vast)]).toStrictEqual([7, 'stderr-van-main', true]);
+      expect(start.stdout).toContain('"marker":"main-versie-2"');
+    } finally {
+      chmodSync(vast, 0o700);
+    }
   });
 });
 
