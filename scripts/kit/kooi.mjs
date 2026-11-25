@@ -70,8 +70,8 @@ function toolchainMappen(home) {
  * De argumenten van bubblewrap, in de volgorde van AC-1: eerst alles alleen-lezen, dan de lege mappen, dan de toolchain, als
  * laatste de werkmap. Met `streng` (spec pnpm-sandbox-installatie) worden de lege mappen daarna ook alleen-lezen
  * (`--remount-ro`, als laatste: de binds van toolchain en werkmap hebben de tmpfs nog schrijfbaar nodig voor hun
- * koppelpunt). Bubblewrap maakt alleen dat ene koppelpunt alleen-lezen, niet de binds eronder, dus de werkmap blijft de
- * enige schrijfbare plek.
+ * koppelpunt). Bubblewrap maakt alleen dat ene koppelpunt alleen-lezen, niet de binds eronder, dus de werkmap blijft
+ * schrijfbaar; daarbuiten alleen het vluchtige /dev.
  * @param {string} werkmap
  * @param {{ streng?: boolean }} [opties]
  * @returns {string[]}
@@ -195,8 +195,8 @@ export function eisKooi() {
  * Draait `commando` met `bash -c` in de kooi (AC-1). Gooit bij een ongeldige werkmap, een kooi die niet afschermt en bij de
  * timeout (bubblewrap en alle kindprocessen zijn dan gestopt); anders de uitslag, ook bij een status die niet 0 is.
  * @param {string} commando
- * Met `streng` zijn /tmp, /run, /var/run, de thuismap en XDG_RUNTIME_DIR leeg en alleen-lezen, en is de werkmap de enige
- * schrijfbare plek, met TMPDIR op `<werkmap>/tmp` (spec pnpm-sandbox-installatie, AC-1).
+ * Met `streng` zijn /tmp, /run, /var/run, de thuismap en XDG_RUNTIME_DIR leeg en alleen-lezen; schrijfbaar blijven
+ * alleen de werkmap en het vluchtige /dev, met TMPDIR op `<werkmap>/tmp` (spec pnpm-sandbox-installatie, AC-1).
  * @param {{ werkmap: string, env?: Record<string, string>, timeout?: number, streng?: boolean }} opties
  * @returns {{ status: number | null, stdout: string, stderr: string }}
  */

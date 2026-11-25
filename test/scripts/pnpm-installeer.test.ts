@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import {
   chmodSync,
   copyFileSync,
@@ -14,7 +14,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
 import { inKooi } from '../../scripts/kit/kooi.mjs';
-import { pnpmInstallCommando } from '../../scripts/kit/pnpm-installeer.mjs';
+import { pnpmInstallCommando, stdioVoor } from '../../scripts/kit/pnpm-installeer.mjs';
 import { vermogen } from '../setup/vermogen.ts';
 import { expectAbsent } from '../support/absence.ts';
 
@@ -26,7 +26,22 @@ const CLI = path.join(REPO, 'scripts/kit/pnpm-installeer.mjs');
 const LOCK_TIMEOUT = 120_000;
 const dirs: string[] = [];
 
+const kinderen: ChildProcess[] = [];
+const stubPidBestanden: string[] = [];
+
 afterEach(() => {
+  for (const kind of kinderen.splice(0)) kind.kill('SIGKILL');
+  // Een rode test mag geen `sleep 60` achterlaten.
+  for (const bestand of stubPidBestanden.splice(0)) {
+    const pid = Number.parseInt(existsSync(bestand) ? readFileSync(bestand, 'utf8').trim() : '', 10);
+    if (Number.isInteger(pid) && pid > 0) {
+      try {
+        process.kill(pid, 'SIGKILL');
+      } catch {
+        // al weg
+      }
+    }
+  }
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
@@ -355,5 +370,116 @@ describe('pnpm-sandbox/AC-2 en AC-3: installeren in de strenge kooi', () => {
       expect(`${r.stdout}${r.stderr}`).toMatch(/ERR_PNPM_STORE_DIR_OPEN_OPERATION_LOCK|Read-only file system|EROFS/);
     },
     LOCK_TIMEOUT + 30_000,
+  );
+});
+
+describe('pnpm-sandbox/AC-8: terminal of module-uitvoer', () => {
+  test('pnpm-sandbox/AC-8: stdioVoor(true) erft alles, stdioVoor(false) laat stdout en stderr via de module lopen', () => {
+    expect(stdioVoor(true)).toStrictEqual(['inherit', 'inherit', 'inherit']);
+    expect(stdioVoor(false)).toStrictEqual(['inherit', 'pipe', 'pipe']);
+  });
+
+  test('pnpm-sandbox/AC-8: de stub ziet een terminal onder script -qec (pseudo-terminal) en zonder script niet', (ctx) => {
+    ctx.skip(
+      spawnSync('which', ['script']).status !== 0,
+      '`script` ontbreekt (which script): pseudo-terminaltest overgeslagen',
+    );
+    const { bin } = pnpmStub('if [ -t 1 ]; then echo TERMINAL; else echo GEEN-TERMINAL; fi');
+    const env = {
+      PATH: `${bin}:${path.dirname(process.execPath)}:/usr/bin:/bin`,
+      HOME: tmp('pnpm-home-'),
+      TMPDIR: tmp('pnpm-tmpdir-'),
+    };
+    const aanroep = `'${process.execPath}' '${CLI}' --modus setup`;
+
+    const metTerminal = spawnSync('script', ['-qec', aanroep, '/dev/null'], {
+      cwd: tmp('pnpm-project-'),
+      encoding: 'utf8',
+      timeout: 30_000,
+      env,
+    });
+    const zonderTerminal = spawnSync(process.execPath, [CLI, '--modus', 'setup'], {
+      cwd: tmp('pnpm-project-'),
+      encoding: 'utf8',
+      timeout: 30_000,
+      env,
+    });
+
+    expect(metTerminal.stdout, metTerminal.stderr).toMatch(/(^|\n|\r)TERMINAL\r?\n/);
+    expect(zonderTerminal.stdout, zonderTerminal.stderr).toContain('GEEN-TERMINAL');
+  });
+});
+
+interface Signaaluitslag {
+  code: number | null;
+  signal: NodeJS.Signals | null;
+  stderr: string;
+  tijd: number;
+  pid: number;
+  tmpdir: string;
+}
+
+const wacht = (ms: number) => new Promise<void>((klaar) => setTimeout(klaar, ms));
+
+async function stuurSignaal(signaal: 'SIGTERM' | 'SIGINT'): Promise<Signaaluitslag> {
+  const pidDir = tmp('pnpm-pid-');
+  const pidBestand = path.join(pidDir, 'pid');
+  stubPidBestanden.push(pidBestand);
+  const { bin } = pnpmStub(`echo $$ > "${pidBestand}"\nexec sleep 60`);
+  const eigenTmp = tmp('pnpm-tmpdir-');
+  const kind = spawn(process.execPath, [CLI, '--modus', 'setup'], {
+    cwd: tmp('pnpm-project-'),
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: { PATH: `${bin}:${path.dirname(process.execPath)}:/usr/bin:/bin`, HOME: tmp('pnpm-home-'), TMPDIR: eigenTmp },
+  });
+  kinderen.push(kind);
+  let stderr = '';
+  kind.stderr.on('data', (stuk: Buffer) => {
+    stderr += stuk.toString('utf8');
+  });
+  kind.stdout.resume();
+  const uitgang = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((klaar) =>
+    kind.on('close', (code, sig) => {
+      klaar({ code, signal: sig });
+    }),
+  );
+  for (let i = 0; i < 100 && !existsSync(pidBestand); i++) await wacht(50);
+  await wacht(100);
+  const pid = Number.parseInt(readFileSync(pidBestand, 'utf8').trim(), 10);
+  const start = Date.now();
+  kind.kill(signaal);
+  const eind = await Promise.race([uitgang, wacht(5000).then(() => ({ code: -1, signal: null }))]);
+  return { ...eind, stderr, tijd: Date.now() - start, pid, tmpdir: eigenTmp };
+}
+
+async function bestaatNiet(pid: number): Promise<boolean> {
+  for (let i = 0; i < 20; i++) {
+    try {
+      process.kill(pid, 0);
+    } catch (fout) {
+      return fout instanceof Error && Reflect.get(fout, 'code') === 'ESRCH';
+    }
+    await wacht(100);
+  }
+  return false;
+}
+
+describe('pnpm-sandbox/AC-9: signalen gaan door naar pnpm en de CLI ruimt op', () => {
+  test.each([
+    ['SIGTERM', 143],
+    ['SIGINT', 130],
+  ] as const)(
+    'pnpm-sandbox/AC-9: %s: exitcode %i, melding, stub weg en geen pnpm-setup-map',
+    async (signaal, exitcode) => {
+      const r = await stuurSignaal(signaal);
+
+      expect(r.signal, r.stderr).toBeNull();
+      expect(r.code, r.stderr).toBe(exitcode);
+      expect(r.tijd).toBeLessThan(5000);
+      expect(r.stderr).toContain(`✗ pnpm install gestopt door ${signaal}`);
+      expect(await bestaatNiet(r.pid), 'stubproces draait nog').toBe(true);
+      expect(readdirSync(r.tmpdir).filter((n) => n.startsWith('pnpm-setup-'))).toStrictEqual([]);
+    },
+    20_000,
   );
 });

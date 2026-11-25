@@ -73,12 +73,19 @@ Alleen ontwikkelomgeving en CI; geen app-rollen. De eigenaar ziet het resultaat 
     tweede regel, ingesprongen met twee spaties: `→ staat netwerktoegang van de omgeving op Trusted (claude.ai/code)? Is de proxy bereikbaar?`
   - anders: `✗ pnpm install mislukt (exit <n>): zie de pnpm-fout hierboven → docs/ENVIRONMENT.md, Problemen.`
   - basismap niet aan te maken: `✗ pnpm-installeer: <map> niet aan te maken (<reden>); controleer TMPDIR`, exit 1.
+  - gestopt door een signaal: `✗ pnpm install gestopt door <SIGNAAL>`, exit 128 plus het signaalnummer.
+- **Terminal.** Is stdout van het proces een terminal, dan krijgt pnpm stdin, stdout en stderr van die terminal
+  (voortgangsbalk en kleur, zoals vóór deze module); de module kan de uitvoer dan niet indelen en meldt bij een fout altijd
+  "zie de pnpm-fout hierboven". Zonder terminal (cloud, CI, tests) loopt de uitvoer via de module, die hem doorstuurt en indeelt.
+- **Signalen.** SIGINT, SIGTERM en SIGHUP aan de module gaan door naar pnpm. De module wacht tot pnpm stopt, ruimt de
+  basismap van `setup` op en stopt met de melding hierboven.
 
 ## Acceptatiecriteria
 
 - **pnpm-sandbox/AC-1** — Gegeven `inKooi` met `streng: true`, dan faalt `: > /tmp/x`, faalt schrijven in `/run` en in de
   thuismap, is een bestand dat de test vooraf in de echte thuismap van de aanroeper zet niet leesbaar, is een unix-socket niet
-  bereikbaar die de test vooraf opent in een eigen tijdelijke map buiten de werkmap, die hij als `XDG_RUNTIME_DIR` zet, slaagt schrijven in de werkmap, en is `$TMPDIR` gelijk aan
+  bereikbaar die de test vooraf opent in een eigen tijdelijke map onder `/var/tmp` (buiten `/tmp`, de thuismap en de werkmap,
+  dus alleen verborgen via de tak voor `XDG_RUNTIME_DIR`), die hij als `XDG_RUNTIME_DIR` zet, slaagt schrijven in de werkmap, en is `$TMPDIR` gelijk aan
   `<werkmap>/tmp`. Zonder `streng` slaagt `: > /tmp/x` zoals nu. Toets: `test/scripts/kooi.test.ts`
 - **pnpm-sandbox/AC-2** — Gegeven een fixtureproject in de werkmap met de `packageManager`-pin van de repo, nul dependencies en
   een `pnpm-lock.yaml`, wanneer `pnpm-installeer.mjs --modus werkmap` vanuit die projectmap het project in de strenge kooi installeert (timeout 120 s), dan is de
@@ -86,7 +93,8 @@ Alleen ontwikkelomgeving en CI; geen app-rollen. De eigenaar ziet het resultaat 
   `which pnpm` na realpath), zet die map vooraan in `PATH` en is rood, niet overgeslagen, als `pnpm --version` afwijkt van de pin.
   Toets: `test/scripts/pnpm-installeer.test.ts`
 - **pnpm-sandbox/AC-3** — Gegeven hetzelfde project in de strenge kooi, wanneer `pnpm install` start met de omgeving van
-  `modus: 'werkmap'` maar zonder `XDG_RUNTIME_DIR`, dan is de status niet 0. Dat bewijst dat de kooi het gedrag uit ADR 0110
+  `modus: 'werkmap'` maar zonder `XDG_RUNTIME_DIR`, dan is de status niet 0 en noemt de uitvoer
+  `ERR_PNPM_STORE_DIR_OPEN_OPERATION_LOCK`, `Read-only file system` of `EROFS`. Dat bewijst dat de kooi het gedrag uit ADR 0110
   naspeelt. Herstelt een latere pnpm de terugval naar `/tmp`, dan vervalt deze AC via de besluitroute; AC-1 blijft het bewijs voor de kooi.
   Toets: `test/scripts/pnpm-installeer.test.ts`
 - **pnpm-sandbox/AC-4** — `pnpmInstallCommando` geeft voor `werkmap`, `setup` en elk van beide met `cloud: true` precies de
@@ -106,6 +114,14 @@ Alleen ontwikkelomgeving en CI; geen app-rollen. De eigenaar ziet het resultaat 
   netwerk". Met `ERR_PNPM_FETCH_404` staat er "waarschijnlijk geen netwerk", en met `--cloud` ook de tweede regel over Trusted en de proxy. Toets: `test/scripts/pnpm-installeer.test.ts`
 - **pnpm-sandbox/AC-7** — Gegeven een `TMPDIR` onder een map die niet te schrijven is (bijvoorbeeld `/proc/nee`), wanneer de
   CLI start met `--modus werkmap` en ook met `--modus setup`, dan is de exitcode telkens 1 met de basismapmelding en is pnpm niet gestart. Toets: `test/scripts/pnpm-installeer.test.ts`
+- **pnpm-sandbox/AC-8** — `stdioVoor(terminal)` geeft `['inherit', 'inherit', 'inherit']` als `terminal` waar is en
+  `['inherit', 'pipe', 'pipe']` anders; `installeer` gebruikt `stdioVoor(process.stdout.isTTY === true)`. Gegeven een
+  pnpm-stub die naar stdout schrijft of zijn stdout een terminal is (`test -t 1`), wanneer de CLI onder `script -qec` draait
+  (een pseudo-terminal), dan meldt de stub een terminal; zonder `script` niet. Toets: `test/scripts/pnpm-installeer.test.ts` (nieuw)
+- **pnpm-sandbox/AC-9** — Gegeven een pnpm-stub die zijn pid wegschrijft en daarna 60 s slaapt, wanneer de CLI met
+  `--modus setup` draait en na de start van de stub SIGTERM krijgt, dan stopt de CLI binnen 5 s met exitcode 143 en
+  `✗ pnpm install gestopt door SIGTERM` op stderr, bestaat het stubproces niet meer en staat er onder `TMPDIR` geen
+  `pnpm-setup-`-map meer. Hetzelfde met SIGINT geeft exitcode 130. Toets: `test/scripts/pnpm-installeer.test.ts` (nieuw)
 
 ## Randgevallen
 
