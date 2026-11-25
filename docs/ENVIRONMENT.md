@@ -312,10 +312,10 @@ vastgesteld. Of `gh api` lokaal een prompt geeft, is niet gemeten.
   `ERR_PNPM_STORE_DIR_OPEN_OPERATION_LOCK` betekent dat pnpm buiten de werkmap wil vergrendelen (ADR 0110); de kooitest
   in `test/scripts/pnpm-installeer.test.ts` hoort dat in `gate:fast` al te vangen. Meld het als leerpunt. In een
   terminal erft pnpm stdout en stderr (voortgangsbalk en kleur); de module ziet de uitvoer dan niet en meldt altijd deze regel
-  (`scripts/kit/pnpm-installeer.mjs:193`).
+  (`scripts/kit/pnpm-installeer.mjs:180`).
 - **`✗ pnpm install gestopt door <SIGNAAL>`**: de installatie kreeg SIGINT, SIGTERM of SIGHUP (bijvoorbeeld Ctrl+C); de
   module gaf het door aan pnpm, wachtte tot pnpm stopte, ruimde de setup-basismap op en stopt met exit 128 plus het
-  signaalnummer (130 voor SIGINT, 143 voor SIGTERM; `scripts/kit/pnpm-installeer.mjs:235`). Draai de installatie opnieuw.
+  signaalnummer (130 voor SIGINT, 143 voor SIGTERM; `scripts/kit/pnpm-installeer.mjs:301`). Draai de installatie opnieuw.
 - **`✗ pnpm-installeer: <map> niet aan te maken (<reden>); controleer TMPDIR`**: de basismap onder `os.tmpdir()` is niet te
   maken, of hij bestaat maar is geen eigen map met mode 0700; pnpm is niet gestart. Zet `TMPDIR` op een schrijfbare map.
 - **Proxy in de Bash-tool**: het setup-script draait in een ander proces dan de sandboxed Bash-tool van de sessie. Dat het
