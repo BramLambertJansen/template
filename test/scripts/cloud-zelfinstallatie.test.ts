@@ -116,7 +116,11 @@ function run(o: Opstelling, { localBinVoorop = true, env = {} }: Run = {}) {
 }
 
 const koppeling = (o: Opstelling, tool: string) => path.join(o.home, '.local/bin', tool);
-const NA_INSTALLEREN = ['mise exec -- pnpm install --frozen-lockfile', 'mise exec -- pnpm exec lefthook install'];
+// pnpm-sandbox/AC-5: de installatie loopt via scripts/kit/pnpm-installeer.mjs (modus setup, cloud).
+const NA_INSTALLEREN = [
+  'mise exec -- node scripts/kit/pnpm-installeer.mjs --modus setup --cloud',
+  'mise exec -- pnpm exec lefthook install',
+];
 
 afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });

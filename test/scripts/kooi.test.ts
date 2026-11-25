@@ -130,7 +130,87 @@ describe('kooi/AC-1: het commando draait in de werkmap', () => {
   });
 });
 
-describe('kooi/AC-4: de kooi schermt af', () => {
+// pnpm-sandbox/AC-1: `streng` maakt /tmp, /run, /var/run, de thuismap en XDG_RUNTIME_DIR leeg én alleen-lezen; de werkmap is de
+// enige schrijfbare plek en TMPDIR is <werkmap>/tmp. XDG_RUNTIME_DIR leest `bwrapArgs` uit de omgeving van het proces zelf.
+describe('pnpm-sandbox/AC-1: inKooi met streng', () => {
+  const sockets: Server[] = [];
+  beforeEach((ctx) => {
+    ctx.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding);
+  });
+  afterAll(() => {
+    for (const s of sockets) s.close();
+  });
+  const poging = (pad: string) => `{ : > ${pad}; } 2>&1 && echo 'GESCHREVEN ${pad}'; true`;
+
+  test('pnpm-sandbox/AC-1: schrijven in /tmp, /run, /var/run en de thuismap faalt op een alleen-lezen bestandssysteem', () => {
+    const werkmap = map(tmpdir(), 'kooi-werk-');
+    const r = inKooi(['/tmp/x', '/run/x', '/var/run/x', '"$KOOI_HOME/x"'].map(poging).join('\n'), {
+      werkmap,
+      env: { KOOI_HOME: homedir() },
+      streng: true,
+    });
+    expect(r.stdout.match(/Read-only file system/g)).toHaveLength(4);
+    expectAbsent(r.stdout, /GESCHREVEN/, {
+      recognizes: ['GESCHREVEN /tmp/x'],
+      allows: [': /tmp/x: Read-only file system'],
+    });
+  });
+
+  test('pnpm-sandbox/AC-1: een bestand dat vooraf in de echte thuismap staat, is niet leesbaar', () => {
+    const werkmap = map(tmpdir(), 'kooi-werk-');
+    const geheim = kanarie(homedir());
+    const r = inKooi(
+      `{ cat '${geheim}' && echo home-gelezen; } 2>/dev/null; test -e '${geheim}' || echo onzichtbaar-home`,
+      {
+        werkmap,
+        streng: true,
+      },
+    );
+    expect(r.stdout).toContain('onzichtbaar-home');
+    expectAbsent(r.stdout, /home-gelezen|kanarie/, {
+      recognizes: ['home-gelezen', INHOUD],
+      allows: ['onzichtbaar-home'],
+    });
+  });
+
+  test('pnpm-sandbox/AC-1: een unix-socket in een eigen map buiten de werkmap, als XDG_RUNTIME_DIR gezet, is niet bereikbaar', async () => {
+    const werkmap = map(tmpdir(), 'kooi-werk-');
+    const runtime = map(tmpdir(), 'kooi-runtime-');
+    const pad = path.join(runtime, 's');
+    const server = createServer((c) => c.end('verbonden'));
+    sockets.push(server);
+    await new Promise<void>((klaar) => server.listen(pad, klaar));
+    const oud = process.env['XDG_RUNTIME_DIR'];
+    process.env['XDG_RUNTIME_DIR'] = runtime;
+    try {
+      const r = inKooi(
+        `node -e "require('net').connect('${pad}').on('data', (d) => console.log(String(d))).on('error', (e) => console.log(e.code))"`,
+        { werkmap, streng: true },
+      );
+      expect(r.stdout.trim()).toBe('ENOENT');
+    } finally {
+      if (oud === undefined) Reflect.deleteProperty(process.env, 'XDG_RUNTIME_DIR');
+      else process.env['XDG_RUNTIME_DIR'] = oud;
+    }
+  });
+
+  test('pnpm-sandbox/AC-1: schrijven in de werkmap slaagt en $TMPDIR is <werkmap>/tmp, aangemaakt en schrijfbaar', () => {
+    const werkmap = map(tmpdir(), 'kooi-werk-');
+    const r = inKooi('printf binnen > a && printf %s "$TMPDIR" && printf x > "$TMPDIR/y"', { werkmap, streng: true });
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toBe(path.join(werkmap, 'tmp'));
+    expect(readFileSync(path.join(werkmap, 'a'), 'utf8')).toBe('binnen');
+    expect(readFileSync(path.join(werkmap, 'tmp', 'y'), 'utf8')).toBe('x');
+  });
+
+  test('pnpm-sandbox/AC-1: zonder streng slaagt `: > /tmp/x` zoals nu', () => {
+    const werkmap = map(tmpdir(), 'kooi-werk-');
+    const r = inKooi(': > /tmp/x && echo geschreven', { werkmap });
+    expect(r.stdout.trim()).toBe('geschreven');
+  });
+});
+
+describe.each([false, true])('kooi/AC-4: de kooi schermt af (streng: %s)', (streng) => {
   const sockets: Server[] = [];
   beforeEach((ctx) => {
     ctx.skip(vermogen('kooi').ontbreekt, vermogen('kooi').melding);
@@ -166,6 +246,7 @@ describe('kooi/AC-4: de kooi schermt af', () => {
     const r = inKooi(`${pogingen.map((p) => `{ ${p}; } 2>&1`).join('; ')}; true`, {
       werkmap,
       env: { KOOI_HOME: homedir() },
+      streng,
     });
     for (const k of kanaries) expect(readFileSync(k, 'utf8')).toBe(INHOUD);
     expect(r.stdout).toContain(`${zichtbaar}: Read-only file system`);
@@ -187,7 +268,7 @@ describe('kooi/AC-4: de kooi schermt af', () => {
         `{ cat '${geheim}' && echo home-gelezen; } 2>/dev/null`,
         'true',
       ].join('; '),
-      { werkmap },
+      { werkmap, streng },
     );
     expect(r.stdout).toContain('CapEff:\t0000000000000000');
     expect(r.stdout).toContain('CapBnd:\t0000000000000000');
@@ -205,7 +286,7 @@ describe('kooi/AC-4: de kooi schermt af', () => {
     await new Promise<void>((klaar) => server.listen(pad, klaar));
     const r = inKooi(
       `node -e "require('net').connect('${pad}').on('data', (d) => console.log(String(d))).on('error', (e) => console.log(e.code))"`,
-      { werkmap },
+      { werkmap, streng },
     );
     expect(r.stdout.trim()).toBe('ENOENT');
   });
@@ -214,7 +295,7 @@ describe('kooi/AC-4: de kooi schermt af', () => {
     const werkmap = map(tmpdir(), 'kooi-werk-');
     const merk = `600.${String(process.pid)}`;
     const start = Date.now();
-    expect(() => inKooi(`sleep ${merk} & sleep ${merk}`, { werkmap, timeout: 1000 })).toThrow();
+    expect(() => inKooi(`sleep ${merk} & sleep ${merk}`, { werkmap, timeout: 1000, streng })).toThrow();
     expect(Date.now() - start).toBeLessThan(10_000);
     // De kernel stopt de processen in de namespace asynchroon nadat bubblewrap is gestopt; wacht daar kort op.
     await expect.poll(() => processenMet(merk), { timeout: 5000 }).toStrictEqual([]);

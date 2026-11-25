@@ -5,11 +5,13 @@
 // (CLAUDE_CODE_REMOTE=true; ADR 0085 herzien, spec cloud-werkmap-herstel) gelden in de hoofdcheckout dezelfde regels als in
 // een worktree, en gaat `--config.confirm-modules-purge=false` mee zodat pnpm een bestaande node_modules zonder TTY-vraag
 // vervangt. Een bestaande map node_modules (ook leeg of half) wordt gewoon afgemaakt:
-// een frozen install is idempotent. Zonder dependencies, zodat het op een kale Node draait (zoals toolchain.mjs).
-import { lstatSync, mkdirSync } from 'node:fs';
+// een frozen install is idempotent. De installatie zelf (basismap, omgeving, pnpm starten, melding) loopt via
+// pnpm-installeer.mjs in modus `werkmap` (spec pnpm-sandbox-installatie). Zonder dependencies, zodat het op een kale Node
+// draait (zoals toolchain.mjs).
+import { lstatSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { tmpdir, userInfo } from 'node:os';
 import path from 'node:path';
+import { installeer, omgevingZonder, pnpmInstallCommando } from './pnpm-installeer.mjs';
 
 // Bestanden die bepalen wat pnpm installeert en uitvoert (lockfile, manifest, workspace, registry- en hook-configuratie).
 const BEHEERD = ['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', '.npmrc', '.pnpmfile.cjs', '.pnpmfile.mjs'];
@@ -45,38 +47,13 @@ export function worktreeInstallBesluit({ worktree, nodeModules, gewijzigd, cloud
 }
 
 /**
- * Het pnpm-commando met alle schrijfbare mappen onder `tmp`. Gemeten met pnpm 11.28.2 en 11.28.5: `pnpm install`
- * accepteert `--cache-dir` (het staat niet in `pnpm help install`) en schrijft daar `lockfile-verified.jsonl` en
- * `v11/metadata/…` in; `--state-dir` geeft `Unknown option`. Daarom gaan store en cache als vlag mee, want een CLI-vlag
- * gaat voor op een globale pnpm-config en een XDG-variabele niet. State heeft geen vlag en loopt via XDG_STATE_HOME
- * onder `tmp`, naast XDG_CACHE_HOME en XDG_DATA_HOME.
- * pnpm 12 neemt bij `install` een store-vergrendeling in `$XDG_RUNTIME_DIR/pnpm-store-operation-locks-<uid>`, en zonder
- * die variabele hard in `/tmp` (pnpm#16390); TMPDIR en `--store-dir` veranderen dat niet, en de Claude Code-sandbox mag
- * niet in `/tmp` schrijven. Daarom gaat ook XDG_RUNTIME_DIR onder `tmp`; de map moet al bestaan (gemeten met 12.21.0).
- * In een cloudsessie komt `--config.confirm-modules-purge=false` als laatste argument erbij: zonder TTY breekt pnpm
- * anders af als het een bestaande node_modules wil vervangen (spec cloud-werkmap-herstel AC-3).
+ * Het pnpm-commando van modus `werkmap` met alle schrijfbare mappen onder `tmp`; een doorgave naar de pure kern in
+ * pnpm-installeer.mjs (spec pnpm-sandbox-installatie), die de metingen achter elke map noemt.
  * @param {string} tmp
  * @param {boolean} [cloud] cloudsessie
- * @returns {{ command: 'pnpm', args: string[], env: { XDG_DATA_HOME: string, XDG_CACHE_HOME: string, XDG_STATE_HOME: string, XDG_RUNTIME_DIR: string } }}
  */
 export function worktreeInstallCommando(tmp, cloud = false) {
-  return {
-    command: 'pnpm',
-    args: [
-      'install',
-      '--frozen-lockfile',
-      '--package-import-method=copy',
-      `--store-dir=${path.join(tmp, 'store')}`,
-      `--cache-dir=${path.join(tmp, 'cache')}`,
-      ...(cloud ? ['--config.confirm-modules-purge=false'] : []),
-    ],
-    env: {
-      XDG_DATA_HOME: path.join(tmp, 'data'),
-      XDG_CACHE_HOME: path.join(tmp, 'xdg-cache'),
-      XDG_STATE_HOME: path.join(tmp, 'xdg-state'),
-      XDG_RUNTIME_DIR: path.join(tmp, 'xdg-run'),
-    },
-  };
+  return pnpmInstallCommando(tmp, { modus: 'werkmap', cloud });
 }
 
 /** @param {string} pad */
@@ -176,85 +153,8 @@ export function worktreeInstallFeiten(root, cloud = false) {
   return { worktree, nodeModules, gewijzigd: worktree || cloud ? gewijzigdeBestanden(root, cloud) : [] };
 }
 
-/**
- * Eigen basismap onder os.tmpdir(), alleen voor deze gebruiker: aangemaakt met mode 0700 en bij hergebruik gecontroleerd
- * (echte map, geen symlink, eigen uid, niet voor anderen toegankelijk), zodat niemand de store kan voorbereiden.
- * @returns {string}
- */
-function veiligeBasismap() {
-  const uid = process.getuid?.();
-  const basis = path.join(tmpdir(), `pnpm-worktree-${uid ?? 'gebruiker'}`);
-  mkdirSync(basis, { recursive: true, mode: 0o700 });
-  const stat = lstatOfNull(basis);
-  if (stat === null || !stat.isDirectory()) throw new Error(`${basis} is geen gewone map`);
-  if (uid !== undefined && stat.uid !== uid) throw new Error(`${basis} is van een andere gebruiker`);
-  if ((stat.mode & 0o077) !== 0) throw new Error(`${basis} is toegankelijk voor anderen (verwacht mode 0700)`);
-  return basis;
-}
-
-/**
- * De omgeving van de aanroeper zonder de variabelen die `uit` noemt.
- * @param {RegExp} uit
- * @returns {Record<string, string>}
- */
-function omgevingZonder(uit) {
-  /** @type {Record<string, string>} */
-  const env = {};
-  for (const [naam, waarde] of Object.entries(process.env))
-    if (waarde !== undefined && !uit.test(naam)) env[naam] = waarde;
-  return env;
-}
-
-/**
- * mise bewaart zijn installaties onder een data- en state-map. XDG_* wijst naar de tijdelijke map, dus houdt mise zijn
- * eigen mappen vast: de waarde van de aanroeper, anders afgeleid van de oorspronkelijke XDG_*-variabele, anders onder $HOME.
- * @returns {Record<string, string>}
- */
-function miseMappen() {
-  const thuis = absoluut('HOME') ?? userInfo().homedir;
-  return {
-    MISE_DATA_DIR:
-      absoluut('MISE_DATA_DIR') ?? path.join(absoluut('XDG_DATA_HOME') ?? path.join(thuis, '.local/share'), 'mise'),
-    MISE_STATE_DIR:
-      absoluut('MISE_STATE_DIR') ?? path.join(absoluut('XDG_STATE_HOME') ?? path.join(thuis, '.local/state'), 'mise'),
-  };
-}
-
-/**
- * Waarde van een omgevingsvariabele van de aanroeper, alleen als die een absoluut pad is; leeg of relatief telt als niet gezet.
- * @param {string} naam
- * @returns {string | undefined}
- */
-function absoluut(naam) {
-  const waarde = process.env[naam];
-  return waarde !== undefined && path.isAbsolute(waarde) ? waarde : undefined;
-}
-
-/**
- * De omgeving voor pnpm zonder NODE_OPTIONS en de variabelen npm_config_ en pnpm_config_ van de aanroeper (die kunnen
- * store, registry of scripts omleiden of code voorladen).
- * @param {Record<string, string>} extra
- * @returns {Record<string, string>}
- */
-function pnpmOmgeving(extra) {
-  return { ...omgevingZonder(/^((npm|pnpm)_config_|NODE_OPTIONS$)/i), ...miseMappen(), ...extra };
-}
-
-/** @param {boolean} cloud @returns {number} */
-function installeer(cloud) {
-  const { command, args, env } = worktreeInstallCommando(veiligeBasismap(), cloud);
-  // pnpm maakt XDG_RUNTIME_DIR niet zelf aan en valt dan terug op /tmp; 0700 zoals een echte runtime-map.
-  mkdirSync(env.XDG_RUNTIME_DIR, { recursive: true, mode: 0o700 });
-  const r = spawnSync(command, args, { cwd: process.cwd(), stdio: 'inherit', env: pnpmOmgeving(env) });
-  if (r.error !== undefined) {
-    console.error(`✗ worktree-install: pnpm ontbreekt of start niet (${r.error.message}); zie scripts/bootstrap.sh`);
-    return 1;
-  }
-  return r.status ?? 1;
-}
-
-/** @returns {number} */
-function uitvoeren() {
+/** @returns {Promise<number>} */
+async function uitvoeren() {
   // De controle loopt op de werkmap-root: in een submap is er geen `.git`, en dan is "hoofdcheckout" een misleidende melding.
   if (lstatOfNull(path.join(process.cwd(), '.git')) === null) {
     console.error('✗ worktree-install geweigerd: hier staat geen .git; draai het vanuit de worktree-root');
@@ -267,11 +167,11 @@ function uitvoeren() {
       console.error(besluit.melding);
       return 1;
     }
-    return installeer(cloud);
+    return await installeer({ modus: 'werkmap', cloud });
   } catch (fout) {
     console.error(`✗ worktree-install: ${fout instanceof Error ? fout.message : String(fout)}`);
     return 1;
   }
 }
 
-if (import.meta.main) process.exitCode = uitvoeren();
+if (import.meta.main) process.exitCode = await uitvoeren();

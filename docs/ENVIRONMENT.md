@@ -37,7 +37,7 @@ sessie uit de cache de `node_modules` van de repo bevat, en of één omgeving ha
 | Route 1 naar `PATH`: `~/.local/bin/node` en `~/.local/bin/pnpm` als koppeling naar het pad dat `mise which` geeft | De binaire zelf, geen mise-shim (een shim weigert bij een niet-vertrouwde `mise.toml`). `~/.local/bin` stond in twee gemeten cloudsessies vóór de voorgeïnstalleerde Node 22, waaronder een sessie van de eigenaar (spec `cloud-zelfinstallatie`, F11 en M3; voor hooks nog niet gemeten); dit is de enige route die ook hooks en git-hooks kan bereiken, die `node` via `PATH` starten. Een gewoon bestand op die plek blijft staan; een lege of mislukte `mise which` maakt geen koppeling. Beide geven een `!`-regel. |
 | Route 2: één eigen `export PATH=`-regel in `CLAUDE_ENV_FILE`, als die variabele gezet is | Claude Code zet die regel vóór elk Bash-commando. Idempotent op de eigen regel; andere regels, ook een `export PATH=` van iets anders, blijven staan. Niet te schrijven is een `!`-regel. |
 | Route 3: dezelfde regel in `~/.bashrc` | Voor de Bash-tool. Niet te schrijven (bijvoorbeeld alleen-lezen in de sessie) is een `!`-regel, geen fout. |
-| `pnpm install --frozen-lockfile`, met een eigen `XDG_RUNTIME_DIR` (`mktemp -d`) | Dependencies exact volgens het lockfile. pnpm 12 legt zijn store-vergrendeling anders in `/tmp`, dat binnen de sandbox van een sessie niet schrijfbaar is (`ERR_PNPM_STORE_DIR_OPEN_OPERATION_LOCK`, ADR 0110). |
+| `node scripts/kit/pnpm-installeer.mjs --modus setup --cloud` | Dependencies exact volgens het lockfile (`pnpm install --frozen-lockfile`), via het ene installatiepad dat ook `bootstrap.sh` en `worktree-install.mjs` gebruiken (spec `pnpm-sandbox-installatie`). De module zet `XDG_RUNTIME_DIR` op een eigen `mkdtemp`-map, want pnpm 12 legt zijn store-vergrendeling anders in `/tmp`, dat binnen de sandbox van een sessie niet schrijfbaar is (`ERR_PNPM_STORE_DIR_OPEN_OPERATION_LOCK`, ADR 0110). De store blijft de gewone. Een fout deelt de module zelf in (`scripts/kit/pnpm-installeer.mjs:178`); zie Problemen. |
 | `pnpm exec lefthook install` | Git-hooks (lefthook heeft geen postinstall). |
 | Voorcontrole uit `scripts/kit/toolchain.mjs` | Bewijst aan het eind van de setup dezelfde exacte Node- en pnpm-versie en `node_modules` die elke sessie eerst controleert. |
 | Slotcontrole op `PATH` | Route 1 telt als het `PATH` van vóór het script de versie van `mise current node` geeft én beide koppelingen (node en pnpm) staan. Telt route 1 niet en is route 2 noch 3 geschreven, dan exit 1. Werkt alleen route 2 of 3, dan exit 0 met een waarschuwing dat hooks en git-hooks op de systeem-node blijven. |
@@ -123,7 +123,7 @@ controleert pnpm zelf of de installatie bij de huidige workspace past (`verifyDe
 `pnpm-workspace.yaml`). Past een verouderde installatie niet bij de workspace, dan stopt pnpm met
 `ERR_PNPM_VERIFY_DEPS_BEFORE_RUN` vóór het werkcommando, zonder dependencies automatisch bij te werken. Herstel de installatie expliciet met `pnpm install --frozen-lockfile`
 volgens de setup; binnen een sandbox zonder schrijfbare `/tmp` met `node scripts/kit/worktree-install.mjs` of
-`bash scripts/cloud-setup.sh`, die `XDG_RUNTIME_DIR` zelf zetten (ADR 0110). De regressieproef in `test/scripts/dependency-readiness.test.ts` draait de gepinde pnpm met lokale
+`bash scripts/cloud-setup.sh`, die via `scripts/kit/pnpm-installeer.mjs` `XDG_RUNTIME_DIR` zelf zetten (ADR 0110). De regressieproef in `test/scripts/dependency-readiness.test.ts` draait de gepinde pnpm met lokale
 fixtures en controleert ook dat een weigering installatiebestanden ongemoeid laat. Sinds pnpm 12 weigert pnpm een
 gekopieerde projectmap met een passende installatie niet meer: die valideert het opnieuw op inhoud en draait zonder te
 installeren.
@@ -303,8 +303,16 @@ vastgesteld. Of `gh api` lokaal een prompt geeft, is niet gemeten.
 - **Toolchain installeren vanuit de sessie lukt niet**: in de gemeten sessie met actieve sandbox was `~/.local`
   alleen-lezen (spec `cloud-zelfinstallatie`, M2); `bash scripts/cloud-setup.sh` vanuit de Bash-tool kan de toolchain daar
   dan niet neerzetten. Stel het veld van de omgeving in (Opzetten) en start een nieuwe sessie.
-- **`✗ mise ophalen van github.com mislukt`** (of een download van de terugval, `pnpm install`): geen netwerk. Controleer dat netwerktoegang
+- **`✗ mise ophalen van github.com mislukt`** (of een download van de terugval): geen netwerk. Controleer dat netwerktoegang
   op Trusted staat. Meldt curl `Failed to connect to localhost port 3128`, dan antwoordt de proxy uit `HTTPS_PROXY` niet.
+- **`✗ pnpm install mislukt (exit <n>): waarschijnlijk geen netwerk`**: de uitvoer van pnpm noemt `ERR_PNPM_FETCH_`,
+  `ECONNREFUSED`, `ETIMEDOUT`, `ENOTFOUND` of `EAI_AGAIN` (`scripts/kit/pnpm-installeer.mjs:12`). In de cloud volgt een
+  regel over Trusted en de proxy; controleer die zoals hierboven. Lokaal: controleer de verbinding en draai opnieuw.
+- **`✗ pnpm install mislukt (exit <n>): zie de pnpm-fout hierboven`**: geen netwerkfout; lees de `ERR_PNPM_…`-regel erboven.
+  `ERR_PNPM_STORE_DIR_OPEN_OPERATION_LOCK` betekent dat pnpm buiten de werkmap wil vergrendelen (ADR 0110); de kooitest
+  in `test/scripts/pnpm-installeer.test.ts` hoort dat in `gate:fast` al te vangen. Meld het als leerpunt.
+- **`✗ pnpm-installeer: <map> niet aan te maken (<reden>); controleer TMPDIR`**: de basismap onder `os.tmpdir()` is niet te
+  maken, of hij bestaat maar is geen eigen map met mode 0700; pnpm is niet gestart. Zet `TMPDIR` op een schrijfbare map.
 - **Proxy in de Bash-tool**: het setup-script draait in een ander proces dan de sandboxed Bash-tool van de sessie. Dat het
   script slaagt, bewijst niet dat de Bash-tool het netwerk bereikt; controleer beide (zie Eerst controleren).
 - **`bash: scripts/cloud-setup.sh: No such file or directory`, exit 127** bij "Setup script": het veld bevat

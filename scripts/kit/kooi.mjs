@@ -2,7 +2,7 @@
 // bestandssysteem alleen-lezen en één schrijfbare werkmap onder de tijdelijke map. De grens ligt in de kernel, niet in een
 // analyse van de commandotekst. Zonder werkende kooi draait niets (dicht vallen, AC-3). Zonder dependencies.
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -68,37 +68,46 @@ function toolchainMappen(home) {
 
 /**
  * De argumenten van bubblewrap, in de volgorde van AC-1: eerst alles alleen-lezen, dan de lege mappen, dan de toolchain, als
- * laatste de werkmap.
+ * laatste de werkmap. Met `streng` (spec pnpm-sandbox-installatie) worden de lege mappen daarna ook alleen-lezen
+ * (`--remount-ro`, als laatste: de binds van toolchain en werkmap hebben de tmpfs nog schrijfbaar nodig voor hun
+ * koppelpunt). Bubblewrap maakt alleen dat ene koppelpunt alleen-lezen, niet de binds eronder, dus de werkmap blijft de
+ * enige schrijfbare plek.
  * @param {string} werkmap
+ * @param {{ streng?: boolean }} [opties]
+ * @returns {string[]}
  */
-export function bwrapArgs(werkmap) {
+export function bwrapArgs(werkmap, opties = {}) {
   const home = existsSync(homedir()) ? echt(homedir()) : homedir();
   const leeg = ['/tmp', '/run', '/var/run', home];
   const runtime = process.env['XDG_RUNTIME_DIR'];
   if (runtime !== undefined && runtime !== '' && existsSync(runtime)) leeg.push(echt(runtime));
+  const lege = [...new Set(leeg.filter((m) => existsSync(m)).map(echt))];
   const args = ['--ro-bind', '/', '/', '--dev', '/dev', '--proc', '/proc'];
   // Een verse /proc is schrijfbaar voor root, ook zonder capabilities: sysctl's zoals kernel.core_pattern toetsen alleen de
   // bestandsrechten. Dezelfde delen die bubblewrap zonder root alleen-lezen maakt, hier ook.
   for (const deel of PROC_ALLEEN_LEZEN) if (existsSync(deel)) args.push('--ro-bind', deel, deel);
-  for (const map of new Set(leeg.filter((m) => existsSync(m)).map(echt))) args.push('--tmpfs', map);
+  for (const map of lege) args.push('--tmpfs', map);
   for (const map of toolchainMappen(home)) args.push('--ro-bind', map, map);
   args.push('--bind', werkmap, werkmap);
+  if (opties.streng === true) for (const map of lege) args.push('--remount-ro', map);
   args.push('--unshare-all', '--cap-drop', 'ALL', '--die-with-parent', '--new-session', '--chdir', werkmap);
   return args;
 }
 
-/** @param {string} werkmap @param {Record<string, string>} env */
-function omgeving(werkmap, env) {
+/** @param {string} werkmap @param {Record<string, string>} env @param {boolean} [streng] */
+function omgeving(werkmap, env, streng = false) {
   // De map van deze `node` vooraan: een mise-shim vindt zijn configuratie in de kooi niet (lege thuismap).
   const pad = `${path.dirname(process.execPath)}:${process.env['PATH'] ?? '/usr/bin:/bin'}`;
-  return { PATH: pad, ...env, HOME: werkmap, TMPDIR: '/tmp' };
+  return { PATH: pad, ...env, HOME: werkmap, TMPDIR: streng ? path.join(werkmap, 'tmp') : '/tmp' };
 }
 
-/** @param {string} werkmap @param {string} commando @param {{ env: Record<string, string>, timeout: number }} opties */
-function draai(werkmap, commando, { env, timeout }) {
-  return spawnSync('bwrap', [...bwrapArgs(werkmap), '--', 'bash', '-c', commando], {
+/** @param {string} werkmap @param {string} commando @param {{ env: Record<string, string>, timeout: number, streng: boolean }} opties */
+function draai(werkmap, commando, { env, timeout, streng }) {
+  // Met `streng` is /tmp alleen-lezen: TMPDIR wordt een map in de werkmap, die er vóór de start moet zijn.
+  if (streng) mkdirSync(path.join(werkmap, 'tmp'), { recursive: true });
+  return spawnSync('bwrap', [...bwrapArgs(werkmap, { streng }), '--', 'bash', '-c', commando], {
     encoding: 'utf8',
-    env: omgeving(werkmap, env),
+    env: omgeving(werkmap, env, streng),
     timeout,
     killSignal: 'SIGKILL',
   });
@@ -186,18 +195,20 @@ export function eisKooi() {
  * Draait `commando` met `bash -c` in de kooi (AC-1). Gooit bij een ongeldige werkmap, een kooi die niet afschermt en bij de
  * timeout (bubblewrap en alle kindprocessen zijn dan gestopt); anders de uitslag, ook bij een status die niet 0 is.
  * @param {string} commando
- * @param {{ werkmap: string, env?: Record<string, string>, timeout?: number }} opties
+ * Met `streng` zijn /tmp, /run, /var/run, de thuismap en XDG_RUNTIME_DIR leeg en alleen-lezen, en is de werkmap de enige
+ * schrijfbare plek, met TMPDIR op `<werkmap>/tmp` (spec pnpm-sandbox-installatie, AC-1).
+ * @param {{ werkmap: string, env?: Record<string, string>, timeout?: number, streng?: boolean }} opties
  * @returns {{ status: number | null, stdout: string, stderr: string }}
  */
-export function inKooi(commando, { werkmap, env = {}, timeout = STANDAARD_TIMEOUT }) {
+export function inKooi(commando, { werkmap, env = {}, timeout = STANDAARD_TIMEOUT, streng = false }) {
   const map = controleerWerkmap(werkmap);
   eisKooi();
-  const r = draai(map, commando, { env, timeout });
+  const r = draai(map, commando, { env, timeout, streng });
   if (r.error !== undefined) throw r.error;
   return { status: r.status, stdout: r.stdout, stderr: r.stderr };
 }
 
-/** CLI: `--proef`, of `--werkmap <map> -- <commando>`. @param {string[]} argv */
+/** CLI: `--proef`, of `[--streng] --werkmap <map> -- <commando>`. @param {string[]} argv */
 function main(argv) {
   try {
     if (argv[0] === '--proef') {
@@ -205,12 +216,14 @@ function main(argv) {
       console.log('✓ kooi: de proef schermt af');
       return 0;
     }
-    const scheiding = argv.indexOf('--');
-    if (argv[0] !== '--werkmap' || argv[1] === undefined || scheiding !== 2 || argv.length < 4) {
-      console.error('gebruik: node scripts/kit/kooi.mjs --proef | --werkmap <map> -- <commando>');
+    const streng = argv[0] === '--streng';
+    const rest = streng ? argv.slice(1) : argv;
+    const scheiding = rest.indexOf('--');
+    if (rest[0] !== '--werkmap' || rest[1] === undefined || scheiding !== 2 || rest.length < 4) {
+      console.error('gebruik: node scripts/kit/kooi.mjs --proef | [--streng] --werkmap <map> -- <commando>');
       return 2;
     }
-    const r = inKooi(argv.slice(3).join(' '), { werkmap: argv[1] });
+    const r = inKooi(rest.slice(3).join(' '), { werkmap: rest[1], streng });
     process.stdout.write(r.stdout);
     process.stderr.write(r.stderr);
     return r.status ?? 1;

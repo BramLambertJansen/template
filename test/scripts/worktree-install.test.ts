@@ -37,6 +37,8 @@ import { expectAbsent } from '../support/absence.ts';
 const REPO = path.join(import.meta.dirname, '../..');
 const MODULE_PAD = '../../scripts/kit/worktree-install.mjs';
 const mod: unknown = await import(MODULE_PAD);
+// pnpm-sandbox: de pure kern (pnpm-argumenten en XDG-mappen) woont in scripts/kit/pnpm-installeer.mjs.
+const installMod: unknown = await import('../../scripts/kit/pnpm-installeer.mjs');
 
 type Besluit = { actie: 'installeren' } | { actie: 'weigeren'; melding: string };
 type Commando = { command: string; args: string[]; env: Record<string, string> };
@@ -51,13 +53,13 @@ function strings(raw: unknown): string[] {
   return Array.isArray(raw) ? raw.filter((s): s is string => typeof s === 'string') : [];
 }
 
-function exportFn(naam: string): (...args: unknown[]) => unknown {
-  const f: unknown = typeof mod === 'object' && mod !== null ? Reflect.get(mod, naam) : undefined;
+function exportFn(naam: string, bron: unknown = mod): (...args: unknown[]) => unknown {
+  const f: unknown = typeof bron === 'object' && bron !== null ? Reflect.get(bron, naam) : undefined;
   // Een assertie (geen throw): een ontbrekende export is een falende test, geen import- of typefout.
   expect(typeof f, `export ${naam}`).toBe('function');
   if (typeof f !== 'function') return () => undefined;
   return (...args) => {
-    const uit: unknown = Reflect.apply(f, mod, args);
+    const uit: unknown = Reflect.apply(f, bron, args);
     return uit;
   };
 }
@@ -69,7 +71,7 @@ function worktreeInstallBesluit(feiten: { worktree: boolean; nodeModules: string
 }
 
 function worktreeInstallCommando(basis: string): Commando {
-  const raw = veld(exportFn('worktreeInstallCommando')(basis));
+  const raw = veld(exportFn('pnpmInstallCommando', installMod)(basis, { modus: 'werkmap' }));
   const env = Object.fromEntries(
     Object.entries(veld(raw['env'])).flatMap(([k, v]) => (typeof v === 'string' ? [[k, v]] : [])),
   );
