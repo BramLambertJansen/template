@@ -351,6 +351,8 @@ describe('pnpm-sandbox/AC-2 en AC-3: installeren in de strenge kooi', () => {
       });
 
       expect(r.status, `${r.stdout}${r.stderr}`).not.toBe(0);
+      // Niet elke fout telt: het moet de vergrendeling buiten de werkmap zijn die de kooi tegenhoudt.
+      expect(`${r.stdout}${r.stderr}`).toMatch(/ERR_PNPM_STORE_DIR_OPEN_OPERATION_LOCK|Read-only file system|EROFS/);
     },
     LOCK_TIMEOUT + 30_000,
   );
