@@ -109,7 +109,7 @@ function gerenderd(/** @type {ts.Node} */ node) {
       ts.isCallExpression(n) &&
       n.arguments[0] !== undefined &&
       ts.isIdentifier(n.arguments[0]) &&
-      /(^|\.)createElement$/.test(n.expression.getText())
+      (n.expression.getText() === 'createElement' || n.expression.getText().endsWith('.createElement'))
     )
       namen.add(n.arguments[0].text);
     ts.forEachChild(n, loop);
@@ -319,6 +319,17 @@ const VERWIJZINGEN = [
 const PAD = /^(src|e2e|test|docs|\.claude)\//;
 const SKILL = '.claude/skills/nieuw-scherm/SKILL.md';
 
+/** Een pad zonder regelachtervoegsel (`pad:12` of `pad:12-20`); zonder regex met terugzoeken. */
+function zonderRegel(/** @type {string} */ tekst) {
+  const dubbelepunt = tekst.lastIndexOf(':');
+  if (dubbelepunt === -1) return tekst;
+  const [van, tot, ...rest] = tekst.slice(dubbelepunt + 1).split('-');
+  const getal = (/** @type {string | undefined} */ deel) =>
+    deel !== undefined && deel !== '' && [...deel].every((teken) => teken >= '0' && teken <= '9');
+  const regel = rest.length === 0 && getal(van) && (tot === undefined || getal(tot));
+  return regel ? tekst.slice(0, dubbelepunt) : tekst;
+}
+
 /** De tekst van de sectie "## Een tweede schil" tot de volgende kop van niveau 2, of null. */
 function sectie(/** @type {string} */ tekst) {
   const regels = tekst.split('\n');
@@ -343,7 +354,7 @@ export function receptFouten(root = '.') {
         fouten.push(`docs/gouden-pad.md, sectie "Een tweede schil": noemt \`${verwijzing}\` niet`);
     }
     for (const [, inhoud] of tekst.matchAll(/`([^`]+)`/g)) {
-      const pad = inhoud?.replace(/:\d+(-\d+)?$/, '') ?? '';
+      const pad = zonderRegel(inhoud ?? '');
       if (!PAD.test(pad) || pad.includes('<')) continue;
       if (!existsSync(path.join(root, pad)))
         fouten.push(`docs/gouden-pad.md, sectie "Een tweede schil": pad \`${pad}\` bestaat niet`);
