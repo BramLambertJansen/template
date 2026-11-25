@@ -1,0 +1,37 @@
+# Bewaking van de toolchain (spec toolchain-bewaking, R-PROV-04): wekelijks, na dependency-achterstand, één issue als Node,
+# pnpm of TypeScript achterloopt op "hoogste binnen de vertrouwde major" of als de volgende major klaar is. Schrijft alleen
+# dat ene issue en zijn comments; geen PR-check (R-CI-01). Een app zet hem uit door dit bestand te verwijderen.
+name: toolchain
+
+on:
+  schedule:
+    - cron: "41 6 * * 2"
+  workflow_dispatch:
+
+permissions: read-all
+
+concurrency:
+  group: toolchain
+  cancel-in-progress: false
+
+jobs:
+  toolchain:
+    name: toolchain
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    # Een jobblok vervangt dat van de workflow: alleen lezen en het ene issue schrijven.
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@7a4e45a543138629540c9a1616d08632b893e492 # v5.0.1
+        with:
+          version: 2026.9.18
+          install_args: node
+      - name: toolchain
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/kit/check-toolchain.mjs --issue

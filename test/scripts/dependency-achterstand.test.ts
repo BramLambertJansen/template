@@ -11,7 +11,11 @@ function pr(nummer: number, dagen: number, opties: { labels?: string[]; branch?:
     number: nummer,
     title: `update ${String(nummer)}`,
     created_at: new Date(NU - dagen * DAG).toISOString(),
-    head: { ref: opties.branch ?? `renovate/pakket-${String(nummer)}`, repo: { full_name: opties.repo ?? REPO } },
+    head: {
+      ref: opties.branch ?? `renovate/pakket-${String(nummer)}`,
+      sha: `sha${String(nummer)}`,
+      repo: { full_name: opties.repo ?? REPO },
+    },
     labels: (opties.labels ?? ['dependencies']).map((name) => ({ name })),
   };
 }
@@ -145,12 +149,15 @@ describe('dependency-achterstand: API-laag', () => {
     const { fetch, log } = nepFetch({
       '/pulls?': { status: 200, body: JSON.stringify([pr(1, 2)]) },
       '/issues?': { status: 200, body: JSON.stringify([{ ...issue(2, 'Action Required: x'), pull_request: {} }]) },
+      // GEWIJZIGD (spec dependency-achterstand AC-9): per update-PR leest de check nu ook de check-runs op de head.
+      '/check-runs?': { status: 200, body: '{"total_count":0,"check_runs":[]}' },
     });
     const uit = await draai({ env: ENV, fetch, nu: NU });
     expect(uit).toStrictEqual({ code: 0, tekst: 'Geen achterstand: 1 open update-PR(’s), alle binnen de grens.' });
     expect(log.map((r) => r.url)).toStrictEqual([
       `https://api.github.com/repos/${REPO}/pulls?state=open&per_page=100&page=1`,
       `https://api.github.com/repos/${REPO}/issues?state=open&per_page=100&page=1`,
+      `https://api.github.com/repos/${REPO}/commits/sha1/check-runs?per_page=100&page=1`,
     ]);
   });
 
@@ -212,5 +219,127 @@ describe('dependency-achterstand: API-laag', () => {
     const { fetch, log } = nepFetch({ '/pulls?': LEEG, '/issues?': LEEG });
     await draai({ env: ENV, fetch, nu: NU });
     expect(log.every((r) => r.method === 'GET')).toBe(true);
+  });
+});
+
+function run(name: string, conclusion: string | null, status = 'completed') {
+  return { name, status, conclusion };
+}
+
+function checkRuns(...runs: unknown[]) {
+  return { status: 200, body: JSON.stringify({ total_count: runs.length, check_runs: runs }) };
+}
+
+describe('dependency-achterstand: rode CI op een update-PR', () => {
+  test.each(['failure', 'timed_out', 'cancelled', 'action_required'])(
+    'dependency-achterstand/AC-9: conclusie %s binnen de grens wordt CI rood, exitcode 1',
+    async (conclusie) => {
+      const { fetch } = nepFetch({
+        '/pulls?': { status: 200, body: JSON.stringify([pr(1, 2)]) },
+        '/issues?': LEEG,
+        '/commits/sha1/check-runs?': checkRuns(run('lint', 'success'), run('test', conclusie)),
+      });
+      expect(await draai({ env: ENV, fetch, nu: NU })).toStrictEqual({
+        code: 1,
+        tekst: [
+          '#1 update 1: CI rood (test)',
+          'Achterstand in dependency-updates: 1 bevinding(en). Merge, repareer of sluit de PR met een reden.',
+        ].join('\n'),
+      });
+    },
+  );
+
+  test('dependency-achterstand/AC-9: te oud én rood geeft twee regels met de alfabetisch eerste rode check', async () => {
+    const { fetch } = nepFetch({
+      '/pulls?': { status: 200, body: JSON.stringify([pr(1, 15)]) },
+      '/issues?': LEEG,
+      '/commits/sha1/check-runs?': checkRuns(
+        run('zod-test', 'failure'),
+        run('gate:fast', 'cancelled'),
+        run('build', 'success'),
+      ),
+    });
+    const uit = await draai({ env: ENV, fetch, nu: NU });
+    expect(uit.code).toBe(1);
+    expect(uit.tekst.split('\n').slice(0, 2)).toStrictEqual([
+      '#1 update 1: 15 dagen open, grens 14 (niet-major)',
+      '#1 update 1: CI rood (gate:fast)',
+    ]);
+  });
+
+  test('dependency-achterstand/AC-9: geslaagde, overgeslagen, neutrale en lopende checks geven geen CI-melding', async () => {
+    const { fetch } = nepFetch({
+      '/pulls?': { status: 200, body: JSON.stringify([pr(1, 2)]) },
+      '/issues?': LEEG,
+      '/commits/sha1/check-runs?': checkRuns(
+        run('a', 'success'),
+        run('b', 'skipped'),
+        run('c', 'neutral'),
+        run('d', null, 'in_progress'),
+        run('e', null, 'queued'),
+      ),
+    });
+    expect(await draai({ env: ENV, fetch, nu: NU })).toStrictEqual({
+      code: 0,
+      tekst: 'Geen achterstand: 1 open update-PR(’s), alle binnen de grens.',
+    });
+  });
+
+  test("dependency-achterstand/AC-9: alleen update-PR's krijgen een check-runs-aanroep, geen fork of andere branch", async () => {
+    const { fetch, log } = nepFetch({
+      '/pulls?': {
+        status: 200,
+        body: JSON.stringify([pr(1, 2), pr(2, 2, { branch: 'feat/x' }), pr(3, 2, { repo: 'vreemde/fork' })]),
+      },
+      '/issues?': LEEG,
+      '/check-runs?': checkRuns(run('test', 'failure')),
+    });
+    const uit = await draai({ env: ENV, fetch, nu: NU });
+    expect(uit.tekst.split('\n')[0]).toBe('#1 update 1: CI rood (test)');
+    expect(log.filter((r) => r.url.includes('/check-runs?')).map((r) => r.url)).toStrictEqual([
+      `https://api.github.com/repos/${REPO}/commits/sha1/check-runs?per_page=100&page=1`,
+    ]);
+  });
+
+  test('dependency-achterstand/AC-9: de pure beoordeling meldt rood naast leeftijd', () => {
+    const uit = beoordeel({
+      prs: [pr(6, 61, { labels: ['major'] })].map(leesPr),
+      issues: [],
+      repo: REPO,
+      nu: NU,
+      checks: { 6: [{ naam: 'osv', conclusie: 'failure' }] },
+    });
+    expect(uit.bevindingen).toStrictEqual([
+      '#6 update 6: 61 dagen open, grens 60 (major)',
+      '#6 update 6: CI rood (osv)',
+    ]);
+  });
+
+  test.each([
+    ['een niet-2xx antwoord', { status: 502, body: '' }, ': HTTP 502'],
+    ['geen check_runs-lijst', { status: 200, body: '{"total_count":0}' }, ': antwoord is geen lijst'],
+  ])('dependency-achterstand/AC-9: %s op de check-runs wordt exitcode 2', async (_naam, antwoord, staart) => {
+    const { fetch } = nepFetch({
+      '/pulls?': { status: 200, body: JSON.stringify([pr(1, 2)]) },
+      '/issues?': LEEG,
+      '/check-runs?': antwoord,
+    });
+    expect(await draai({ env: ENV, fetch, nu: NU })).toStrictEqual({
+      code: 2,
+      tekst: `GitHub-API: repos/${REPO}/commits/sha1/check-runs?per_page=100&page=1${staart}`,
+    });
+  });
+
+  test("dependency-achterstand/AC-9: tien volle pagina's check-runs wordt exitcode 2", async () => {
+    const vol = checkRuns(...Array.from({ length: 100 }, (_x, i) => run(`c${String(i)}`, 'success')));
+    const { fetch } = nepFetch({
+      '/pulls?': { status: 200, body: JSON.stringify([pr(1, 2)]) },
+      '/issues?': LEEG,
+      '/check-runs?': Array.from({ length: 10 }, () => vol),
+    });
+    expect(await draai({ env: ENV, fetch, nu: NU })).toStrictEqual({
+      code: 2,
+      tekst: `GitHub-API: repos/${REPO}/commits/sha1/check-runs: meer dan 10 pagina's`,
+    });
   });
 });

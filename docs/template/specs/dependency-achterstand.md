@@ -8,7 +8,7 @@ namespace: dependency-achterstand
 ## Doel
 
 Een update die blijft hangen, valt uiterlijk een week na zijn grens op: een wekelijkse check op `main` wordt rood als een
-Renovate-PR te lang openstaat, of als Renovate een update niet als PR kan openen of een fout meldt.
+Renovate-PR te lang openstaat of rode CI heeft (AC-9), of als Renovate een update niet als PR kan openen of een fout meldt.
 
 **Aanleiding.** PR #967 (alle niet-majors van een week) was rood omdat één pakket (lefthook 2.2.2) door pnpm geweigerd werd;
 29 andere updates wachtten mee en niets waarschuwde. Majors waren deels verborgen (`allowedVersions`). Eigenaarbesluit
@@ -24,7 +24,7 @@ Kritiek werk (`.github/**`, bewaking; R-WERK-05): spec, code en tests in één P
 
 | Rol | Doet | Mag niet |
 |---|---|---|
-| workflow `dependency-achterstand` (wekelijks en handmatig, op `main`) | leest open PR's en issues via de GitHub-API, wordt rood met een lijst | iets schrijven: geen label, comment, issue of status |
+| workflow `dependency-achterstand` (wekelijks en handmatig, op `main`) | leest open PR's, issues en de check-runs op de head van een update-PR via de GitHub-API, wordt rood met een lijst | iets schrijven: geen label, comment, issue of status |
 | eigenaar | ziet een rode run in Actions; GitHub mailt hem bij een mislukte run als zijn notificatie-instellingen dat toestaan; merget, repareert of sluit de PR met reden | — |
 | hoofdsessie | draait het script lokaal op verzoek (`node scripts/kit/dependency-achterstand.mjs` met `GITHUB_TOKEN` en `GITHUB_REPOSITORY`) | — |
 
@@ -51,7 +51,9 @@ Geen scherm. Uitvoer in de job-log, Nederlands, één regel per bevinding:
 ## Acceptatiecriteria
 
 Bronnen: `GET repos/<repo>/pulls?state=open&per_page=100&page=<p>` en `GET repos/<repo>/issues?state=open&per_page=100&page=<p>`
-(elementen met een veld `pull_request` overgeslagen), per bron hooguit 10 pagina's. Een update-PR is een open PR waarvan de
+(elementen met een veld `pull_request` overgeslagen), per bron hooguit 10 pagina's; per update-PR ook
+`GET repos/<repo>/commits/<head.sha>/check-runs?per_page=100&page=<p>` (de standaardfilter `latest`: per check alleen de
+laatste run; het veld `check_runs`, hooguit 10 pagina's). Een update-PR is een open PR waarvan de
 head-branch met `renovate/` begint en die uit `GITHUB_REPOSITORY` zelf komt (`head.repo.full_name`). Een Renovate-issue heeft
 auteur `renovate[bot]`. Leeftijd: `floor((nu − created_at) / 86 400 000)` in hele dagen, UTC; melden als leeftijd > grens.
 Grens: 7 met label `security`, anders 60 met label `major`, anders 14. Exitcodes: 0 groen, 1 rood (bevindingen), 2 fout.
@@ -84,6 +86,13 @@ Grens: 7 met label `security`, anders 60 met label `major`, anders 14. Exitcodes
   maandagochtend) en `workflow_dispatch`, niet op PR of push; heeft `permissions: read-all` en geen rechten per job; checkout
   met `persist-credentials: false`; het token staat expliciet alleen in de stap die het script draait; het script doet alleen `GET`. Toets:
   `test/rails/dependency-achterstand-workflow.test.ts`
+- **dependency-achterstand/AC-9** — Gegeven een update-PR (binnen of buiten zijn grens) met op de head-commit een
+  check-run met `conclusion` `failure`, `timed_out`, `cancelled` of `action_required`, wanneer de check draait, dan meldt
+  hij `#<nr> <titel>: CI rood (<checknaam>)` met de alfabetisch eerste rode check, naast een eventuele leeftijdsmelding
+  (dus twee regels voor een PR die te oud én rood is), en eindigt hij met exitcode 1; een PR met alleen geslaagde,
+  overgeslagen, neutrale of lopende checks geeft geen CI-melding; een niet-2xx antwoord op de check-runs is exitcode 2
+  (AC-7). Toegevoegd door spec `toolchain-bewaking` (eigenaarbesluit 2026-11-25). Toets:
+  `test/scripts/dependency-achterstand.test.ts`
 
 ## Randgevallen
 
@@ -93,7 +102,7 @@ Grens: 7 met label `security`, anders 60 met label `major`, anders 14. Exitcodes
 | Renovate-PR die de eigenaar handmatig bewerkte | telt als update-PR op leeftijd | — |
 | Bewust overgeslagen versie | de eigenaar sluit de PR met reden; gesloten PR's tellen niet | — |
 | Repo zonder Renovate | groen, 0 update-PR's | — |
-| Update-PR met rode CI | telt alleen op leeftijd; rood binnen de grens valt op in de PR zelf | — |
+| Update-PR met rode CI | gemeld als `CI rood`, ook binnen de grens (AC-9; was: alleen op leeftijd) | — |
 
 ## Raakt ook
 

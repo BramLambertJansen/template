@@ -1,6 +1,7 @@
 // Achterstand in dependency-updates (spec dependency-achterstand): een wekelijkse check op `main` die rood wordt als een
 // Renovate-PR te lang openstaat of Renovate een update niet als PR kan openen of een fout meldt. Leest alleen (`GET`) via de
 // GitHub-API; workflow `.github/workflows/dependency-achterstand.yml`. Alleen `node:`- en relatieve imports, zonder install.
+// Een update-PR met een rode check-run op zijn head telt ook, ongeacht de leeftijd (AC-9).
 // Exitcodes: 0 groen, 1 bevindingen, 2 fout (nooit groen zonder gelezen data, AC-7).
 import { veld } from './leerpunt.mjs';
 
@@ -10,8 +11,11 @@ const MAX_PAGINAS = 10;
 const RENOVATE = 'renovate[bot]';
 /** Dashboardkoppen waaronder een update staat die (nog) geen PR is of niet lukte (AC-5), in kleine letters. */
 const DASHBOARD_KOPPEN = ['errored', 'rate-limited', 'pending approval', 'repository problems'];
+/** Conclusies van een check-run die als rode CI tellen (AC-9); geslaagd, overgeslagen, neutraal of lopend niet. */
+const ROOD = ['failure', 'timed_out', 'cancelled', 'action_required'];
 
-/** @typedef {{ nummer: number, titel: string, branch: string, repo: string, aangemaakt: string, labels: string[] }} Pr */
+/** @typedef {{ nummer: number, titel: string, branch: string, sha: string, repo: string, aangemaakt: string, labels: string[] }} Pr */
+/** @typedef {{ naam: string, conclusie: string }} CheckRun */
 /** @typedef {{ nummer: number, titel: string, auteur: string, body: string }} Issue */
 /** @typedef {{ code: 0 | 1 | 2, tekst: string }} Uitslag */
 
@@ -24,6 +28,7 @@ export function leesPr(pr) {
     nummer: Number(veld(pr, 'number')),
     titel: String(veld(pr, 'title') ?? ''),
     branch: String(veld(head, 'ref') ?? ''),
+    sha: String(veld(head, 'sha') ?? ''),
     repo: String(veld(veld(head, 'repo'), 'full_name') ?? ''),
     aangemaakt: String(veld(pr, 'created_at') ?? ''),
     labels: labelNamen(veld(pr, 'labels')),
@@ -38,6 +43,19 @@ export function leesIssue(issue) {
     auteur: String(veld(veld(issue, 'user'), 'login') ?? ''),
     body: String(veld(issue, 'body') ?? ''),
   };
+}
+
+/** @param {unknown} run @returns {CheckRun} */
+export function leesCheckRun(run) {
+  return { naam: String(veld(run, 'name') ?? ''), conclusie: String(veld(run, 'conclusion') ?? '') };
+}
+
+/** De alfabetisch eerste rode check (AC-9), of `undefined`. @param {CheckRun[]} runs */
+export function rodeCheck(runs) {
+  return runs
+    .filter((run) => ROOD.includes(run.conclusie))
+    .map((run) => run.naam)
+    .toSorted()[0];
 }
 
 /** @param {unknown} labels @returns {string[]} */
@@ -97,18 +115,29 @@ function issueBevindingen(issues) {
 }
 
 /**
- * De beoordeling (puur): bevindingen en het aantal update-PR's.
- * @param {{ prs: Pr[], issues: Issue[], repo: string, nu: number }} invoer
+ * De bevindingen van één update-PR: leeftijd boven de grens, en daarnaast rode CI op de head (AC-9).
+ * @param {Pr} pr @param {CheckRun[]} runs @param {number} nu @returns {string[]}
  */
-export function beoordeel({ prs, issues, repo, nu }) {
+function prBevindingen(pr, runs, nu) {
+  const { soort, dagen } = grens(pr.labels);
+  const oud = leeftijd(pr.aangemaakt, nu);
+  const rood = rodeCheck(runs);
+  return [
+    ...(oud > dagen
+      ? [`#${String(pr.nummer)} ${pr.titel}: ${String(oud)} dagen open, grens ${String(dagen)} (${soort})`]
+      : []),
+    ...(rood === undefined ? [] : [`#${String(pr.nummer)} ${pr.titel}: CI rood (${rood})`]),
+  ];
+}
+
+/**
+ * De beoordeling (puur): bevindingen en het aantal update-PR's. `checks` geeft per PR-nummer de check-runs op de head.
+ * @param {{ prs: Pr[], issues: Issue[], repo: string, nu: number, checks?: Record<number, CheckRun[]> }} invoer
+ */
+export function beoordeel({ prs, issues, repo, nu, checks = {} }) {
   const updates = updatePrs(prs, repo);
-  const prBevindingen = updates.flatMap((pr) => {
-    const { soort, dagen } = grens(pr.labels);
-    const oud = leeftijd(pr.aangemaakt, nu);
-    if (oud <= dagen) return [];
-    return [`#${String(pr.nummer)} ${pr.titel}: ${String(oud)} dagen open, grens ${String(dagen)} (${soort})`];
-  });
-  return { bevindingen: [...prBevindingen, ...issueBevindingen(issues)], aantal: updates.length };
+  const bevindingen = updates.flatMap((pr) => prBevindingen(pr, checks[pr.nummer] ?? [], nu));
+  return { bevindingen: [...bevindingen, ...issueBevindingen(issues)], aantal: updates.length };
 }
 
 /** @param {{ bevindingen: string[], aantal: number }} oordeel @returns {Uitslag} */
@@ -120,16 +149,19 @@ export function rapport({ bevindingen, aantal }) {
 }
 
 /**
- * Alle elementen van een lijst-endpoint, per pagina van 100, hooguit 10 pagina's (AC-7).
- * @param {string} pad @param {{ token: string, fetch: typeof globalThis.fetch }} bron @returns {Promise<unknown[]>}
+ * Alle elementen van een lijst-endpoint, per pagina van 100, hooguit 10 pagina's (AC-7). Met `lijstVeld` staat de lijst in
+ * dat veld van het antwoord (`check_runs`, AC-9).
+ * @param {string} pad @param {{ token: string, fetch: typeof globalThis.fetch }} bron @param {string} [lijstVeld]
+ * @returns {Promise<unknown[]>}
  */
-export async function haalAlles(pad, bron) {
+export async function haalAlles(pad, bron, lijstVeld) {
   /** @type {unknown[]} */
   const alle = [];
   for (let pagina = 1; pagina <= MAX_PAGINAS; pagina++) {
     const deel = await haalPagina(
       `${pad}${pad.includes('?') ? '&' : '?'}per_page=${String(PER_PAGINA)}&page=${String(pagina)}`,
       bron,
+      lijstVeld,
     );
     alle.push(...deel);
     if (deel.length < PER_PAGINA) return alle;
@@ -137,8 +169,11 @@ export async function haalAlles(pad, bron) {
   throw new ApiFout(`GitHub-API: ${pad}: meer dan ${String(MAX_PAGINAS)} pagina's`);
 }
 
-/** @param {string} pad @param {{ token: string, fetch: typeof globalThis.fetch }} bron @returns {Promise<unknown[]>} */
-async function haalPagina(pad, { token, fetch }) {
+/**
+ * @param {string} pad @param {{ token: string, fetch: typeof globalThis.fetch }} bron @param {string} [lijstVeld]
+ * @returns {Promise<unknown[]>}
+ */
+async function haalPagina(pad, { token, fetch }, lijstVeld) {
   /** @type {Response} */
   let antwoord;
   /** @type {unknown} */
@@ -154,8 +189,9 @@ async function haalPagina(pad, { token, fetch }) {
     if (fout instanceof ApiFout) throw fout;
     throw new ApiFout(`GitHub-API: ${pad}: ${fout instanceof Error ? fout.message : String(fout)}`);
   }
-  if (!Array.isArray(data)) throw new ApiFout(`GitHub-API: ${pad}: antwoord is geen lijst`);
-  return data;
+  const lijst = lijstVeld === undefined ? data : veld(data, lijstVeld);
+  if (!Array.isArray(lijst)) throw new ApiFout(`GitHub-API: ${pad}: antwoord is geen lijst`);
+  return lijst;
 }
 
 /**
@@ -173,7 +209,13 @@ export async function draai({ env, fetch, nu }) {
     const issues = (await haalAlles(`repos/${repo}/issues?state=open`, { token, fetch }))
       .filter((issue) => veld(issue, 'pull_request') === undefined)
       .map(leesIssue);
-    return rapport(beoordeel({ prs, issues, repo, nu }));
+    /** @type {Record<number, CheckRun[]>} */
+    const checks = {};
+    for (const pr of updatePrs(prs, repo))
+      checks[pr.nummer] = (
+        await haalAlles(`repos/${repo}/commits/${pr.sha}/check-runs`, { token, fetch }, 'check_runs')
+      ).map(leesCheckRun);
+    return rapport(beoordeel({ prs, issues, repo, nu, checks }));
   } catch (fout) {
     // Elke fout is exitcode 2, ook een onverwachte: nooit groen en nooit verward met bevindingen (AC-7).
     return { code: 2, tekst: fout instanceof Error ? fout.message : String(fout) };
