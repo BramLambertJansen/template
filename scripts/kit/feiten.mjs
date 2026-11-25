@@ -81,7 +81,8 @@ async function padRegel(rel) {
 if (process.argv[2] === 'pad') await padRegel(process.argv[3]);
 
 // `hoofdstuk` en `pad` hierboven laden geen dependencies en werken dus ook met een kapotte toolchain: het regelboek en de
-// padtabel blijven leesbaar terwijl de agent het herstel uitzoekt. De secties hieronder laden typescript (catalogus.mjs),
+// padtabel blijven leesbaar terwijl de agent het herstel uitzoekt. Ook de Node-versiecontrole vervalt voor hen; ze
+// gebruiken alleen ingebouwde modules. De secties hieronder laden typescript (catalogus.mjs),
 // dus zonder node_modules anders een stacktrace (docs/ENVIRONMENT.md).
 const probleem = toolchainProbleemIn(fileURLToPath(new URL('../..', import.meta.url)));
 if (probleem !== null) {
