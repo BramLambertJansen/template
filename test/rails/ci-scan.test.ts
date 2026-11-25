@@ -5,9 +5,9 @@ import { expect, test } from 'vitest';
 import { inKooi } from '../../scripts/kit/kooi.mjs';
 import { vermogen } from '../setup/vermogen.ts';
 
-// De job `secrets` leest op een PR alleen de commits van die PR (`origin/main..HEAD`) en op main alle gefetchte refs.
-// Alle refs scannen op een PR liet één valse melding op één branch elke open PR rood maken (#97, #99); de scan op main houdt
-// de volledige dekking (framework §6). De test draait het `run`-blok uit ci.yml echt, met een betterleaks-stub die zijn
+// De job `secrets` leest op een PR alleen de commits van die PR (`origin/main..HEAD`) en daarbuiten alleen de geschiedenis van HEAD
+// (`--log-opts HEAD`, ci-bewijs/AC-4, besluit eigenaar #758). Alle refs scannen liet één valse melding op één branch elke open PR
+// of main rood maken (#97, #99, #758); op main is HEAD main zelf. De test draait het `run`-blok uit ci.yml echt, met een betterleaks-stub die zijn
 // argumenten teruggeeft: omdraaien of weghalen van een tak laat hem falen.
 const workflow = readFileSync('.github/workflows/ci.yml', 'utf8');
 const job = workflow.slice(workflow.indexOf('\n  secrets:'), workflow.indexOf('\n  image:'));
@@ -50,15 +50,23 @@ test('op een PR alleen de commits van die PR, met eigen config en zonder inline 
 
 // test.each geeft geen testcontext mee: hier de vorm met skipIf (tests-naar-vermogen AC-3, terugval).
 test.skipIf(vermogen('kooi').ontbreekt).each(['push', 'merge_group', 'workflow_dispatch'])(
-  'bij %s alle gefetchte refs, zonder beperking',
+  'ci-bewijs/AC-4: bij %s alleen de geschiedenis van HEAD',
   (event) => {
     const args = scan(event);
 
-    expect(args).not.toContain('--log-opts');
+    expect(args).toContain('--log-opts HEAD');
+    expect(args).not.toContain('--log-opts origin/main');
     expect(args).toContain('-c scripts/kit/betterleaks.toml');
     expect(args).toContain('--ignore-gitleaks-allow');
   },
 );
+
+test('ci-bewijs/AC-4: elke regel met betterleaks git in de job heeft --log-opts', () => {
+  const regels = job.split('\n').filter((regel) => regel.includes('betterleaks git'));
+
+  expect(regels.length).toBeGreaterThanOrEqual(2);
+  expect(regels.filter((regel) => !regel.includes('--log-opts'))).toStrictEqual([]);
+});
 
 test('EVENT komt uit het event van de workflow, niet uit iets anders', () => {
   expect(job).toMatch(/env:\n\s+EVENT: \$\{\{ github\.event_name \}\}/);

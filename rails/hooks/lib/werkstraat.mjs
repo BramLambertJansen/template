@@ -176,7 +176,8 @@ export function docsDrift(files) {
 
 /**
  * SubagentStop per rol: developer → gerichte Stop-feedback, zonder volledige eindgate; tester → lint en
- * typecheck groen, nieuwe tests falen alleen op asserties; reviewer → rapport met de kop "## Bevindingen".
+ * typecheck groen, nieuwe tests falen alleen op asserties; reviewer → rapport met de kop "## Bevindingen", en bij een diff
+ * in `db/`, `test/security/` of `e2e/` runnerbewijs op de sha van HEAD of een voorbehoud (spec ci-bewijs).
  * @param {unknown} payload
  * @param {Deps} deps
  * @returns {HookResult}
@@ -185,7 +186,7 @@ export function subagentStop(payload, deps) {
   const role = get(payload, 'agent_type');
   if (role === 'developer') return feedback(payload, deps, false);
   if (role === 'tester') return testerStop(deps);
-  if (role === 'reviewer') return reviewerStop(payload);
+  if (role === 'reviewer') return reviewerStop(payload, deps);
   return {};
 }
 
@@ -263,11 +264,67 @@ function fileFailures(file) {
     });
 }
 
-/** @param {unknown} payload */
-function reviewerStop(payload) {
+// Spec ci-bewijs, Hergebruik en UX punt 1 (leerpunt #683): runnerpaden, bewijsregel en voorbehoud.
+const RUNNERBEWIJS = /^\s*(?:[-*]\s+)?Runnerbewijs: (pnpm (?:test:db|ui:check)) groen op ([0-9a-f]{7,40})\b/gm;
+const VOORBEHOUD = 'goedgekeurd onder voorbehoud van runnerchecks';
+const FENCE = '```';
+
+/**
+ * De runnerchecks die de diff vraagt, in vaste volgorde: `db/` of `test/security/` → `pnpm test:db`, `e2e/` → `pnpm ui:check`.
+ * @param {readonly string[]} changed
+ * @returns {string[]}
+ */
+function runnerChecks(changed) {
+  const db = changed.some((file) => file.startsWith('db/') || file.startsWith('test/security/'));
+  const e2e = changed.some((file) => file.startsWith('e2e/'));
+  return [...(db ? ['pnpm test:db'] : []), ...(e2e ? ['pnpm ui:check'] : [])];
+}
+
+/** De tekst binnen codeblokken (tussen twee regels die met drie backticks beginnen). @param {string} message */
+function codeblokken(message) {
+  /** @type {string[]} */
+  const binnen = [];
+  let open = false;
+  for (const regel of message.split('\n')) {
+    if (regel.startsWith(FENCE)) open = !open;
+    else if (open) binnen.push(regel);
+  }
+  return binnen.join('\n');
+}
+
+/**
+ * De checks met een bewijsregel op de sha van HEAD; faalt `git rev-parse HEAD`, dan geen enkele.
+ * @param {string} message
+ * @param {Deps} deps
+ * @returns {Set<string>}
+ */
+function bewezen(message, deps) {
+  const head = deps.run('git', ['rev-parse', 'HEAD']);
+  if (head.code !== 0) return new Set();
+  const sha = head.output.trim();
+  return new Set([...message.matchAll(RUNNERBEWIJS)].filter((match) => sha.startsWith(match[2] ?? '-')).map((match) => match[1] ?? ''));
+}
+
+/**
+ * Reviewer: rapport met de kop "## Bevindingen"; raakt de diff een runnerpad, dan ook runnerbewijs per gevraagde check
+ * of het voorbehoud met de checks in een codeblok (spec ci-bewijs/AC-1 t/m AC-3).
+ * @param {unknown} payload
+ * @param {Deps} deps
+ * @returns {HookResult}
+ */
+function reviewerStop(payload, deps) {
   const message = get(payload, 'last_assistant_message');
-  if (typeof message === 'string' && message.includes(REVIEW_HEADING)) return {};
-  return block(`Reviewer: sluit af met het rapport onder de kop "${REVIEW_HEADING}" (per bevinding bestand:regel en het pad van invoer naar fout, of "Geen blokkerende bevindingen").`);
+  if (typeof message !== 'string' || !message.includes(REVIEW_HEADING))
+    return block(`Reviewer: sluit af met het rapport onder de kop "${REVIEW_HEADING}" (per bevinding bestand:regel en het pad van invoer naar fout, of "Geen blokkerende bevindingen").`);
+  const checks = runnerChecks(deps.changed());
+  if (checks.length === 0) return {};
+  const blok = codeblokken(message);
+  if (message.includes(VOORBEHOUD) && checks.every((check) => blok.includes(check))) return {};
+  const bewijs = bewezen(message, deps);
+  if (checks.every((check) => bewijs.has(check))) return {};
+  return block(
+    `Reviewer: de diff raakt db/, test/security/ of e2e/ en het rapport heeft geen runnerbewijs (leerpunt #683). Zet per check een regel "Runnerbewijs: <check> groen op <sha van HEAD>" (uitvoer of CI-bewijs van de hoofdsessie), of schrijf "${VOORBEHOUD}" met de checks in een codeblok: het terminalblok voor de eigenaar. Gevraagd: ${checks.join(', ')}.`,
+  );
 }
 
 /**
