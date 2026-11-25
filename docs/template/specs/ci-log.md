@@ -56,6 +56,7 @@ script importeert alleen `node:`-modules en bestanden uit `scripts/` en `rails/`
    weg. Per regel met `##[error]` een venster van de 15 regels ervóór tot en met die regel; vensters die overlappen of direct
    aansluiten, worden één blok; blokken gescheiden door een regel `…`. Hooguit 120 regels per job, de `…`-regels meegeteld;
    daarboven de eerste 120 en dan `… (<n> regels weggelaten)`. Zonder `##[error]` de laatste 30 regels.
+   Foutmarkeringen van falende tests buiten die regels komen vooraan, gevolgd door `…` (ci-bewijs/AC-5 en AC-6).
 8. **Uitvoer** (`verslag(uitslag)`, puur), letterlijk:
    - eerste regel `PR #<nummer> · <sha>`;
    - per rode job een lege regel, `## <runnaam> / <jobnaam> (<conclusion>)` en het uittreksel;

@@ -1,4 +1,5 @@
-// Spec ci-log (ADR 0102): per rode CI-job van een PR alleen de regels rond elke `##[error]`. Leest alleen; schrijft niets naar
+// Spec ci-log (ADR 0102): per rode CI-job van een PR alleen de regels rond elke `##[error]`, met de foutmarkeringen van
+// falende tests vooraan (spec ci-bewijs). Leest alleen; schrijft niets naar
 // GitHub of de schijf. Draait buiten de sandbox onder de ankertoets van het rolhek (alleen precies `pnpm pr:log <nummer>`).
 // Imports alleen uit `node:`, `scripts/` en `rails/`: die dekt de ankertoets (MERGE_FILES).
 import { execFileSync } from 'node:child_process';
@@ -10,6 +11,11 @@ const VOOR = 15;
 const MAX = 120;
 const STAART = 30;
 const ROOD = new Set(['failure', 'timed_out']);
+// Spec ci-bewijs punt 3: een regel die een falende test noemt (vitest FAIL/×, Playwright ✘ of `1) [chromium] › `, TAP).
+const MARKERING = /^\s*(?:FAIL\s|×\s|✘\s|not ok \d|\d+\) \[[^\]]+\] › )/;
+// ANSI-kleurcodes (`/\x1b\[[0-9;]*m/g`), alleen voor het matchen gestript; de escape als teken, niet als control-regex.
+const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
+const MAX_MARKERINGEN = 20;
 
 /** @typedef {{ id: number, name: string, conclusion: string }} Job */
 /** @typedef {{ id: number, name: string }} Run */
@@ -77,8 +83,23 @@ function vensters(fouten) {
 }
 
 /**
- * Het uittreksel van een log: BOM en tijdstempels weg, per `##[error]` de 15 regels ervóór, blokken gescheiden door `…`,
- * hooguit 120 regels; zonder fout de laatste 30 regels.
+ * De foutmarkeringen (vitest, Playwright, TAP) buiten de getoonde bereiken, in logvolgorde, hooguit 20 (spec ci-bewijs
+ * punt 3). ANSI-codes tellen alleen voor het matchen niet mee; de regel zelf houdt ze.
+ * @param {readonly string[]} regels @param {readonly [number, number][]} bereiken
+ */
+function markeringen(regels, bereiken) {
+  return regels
+    .filter((regel, index) => {
+      if (bereiken.some(([begin, eind]) => index >= begin && index <= eind)) return false;
+      return MARKERING.test(regel.replace(ANSI, ''));
+    })
+    .slice(0, MAX_MARKERINGEN);
+}
+
+/**
+ * Het uittreksel van een log: BOM en tijdstempels weg, per `##[error]` de 15 regels ervóór, blokken gescheiden door `…`;
+ * zonder fout de laatste 30 regels. Foutmarkeringen buiten die regels (hooguit 20) komen vooraan, gevolgd door `…`
+ * (spec ci-bewijs/AC-5, AC-6). Het geheel is hooguit 120 regels plus een telregel.
  * @param {string} log @returns {string[]}
  */
 export function foutUittreksel(log) {
@@ -87,11 +108,14 @@ export function foutUittreksel(log) {
     .split('\n')
     .map((regel) => regel.replace(/^\S+Z /, ''));
   const fouten = regels.flatMap((regel, index) => (regel.includes('##[error]') ? [index] : []));
-  if (fouten.length === 0) return regels.slice(-STAART);
-  const volledig = vensters(fouten).flatMap(([begin, eind], index) => [
+  /** @type {[number, number][]} */
+  const bereiken = fouten.length === 0 ? [[Math.max(0, regels.length - STAART), regels.length - 1]] : vensters(fouten);
+  const uittreksel = bereiken.flatMap(([begin, eind], index) => [
     ...(index === 0 ? [] : ['…']),
     ...regels.slice(begin, eind + 1),
   ]);
+  const voor = markeringen(regels, bereiken);
+  const volledig = voor.length === 0 ? uittreksel : [...voor, '…', ...uittreksel];
   return volledig.length <= MAX
     ? volledig
     : [...volledig.slice(0, MAX), `… (${String(volledig.length - MAX)} regels weggelaten)`];

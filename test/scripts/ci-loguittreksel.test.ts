@@ -258,3 +258,63 @@ describe('ci-log/AC-6: maakApi en verkeerde vormen', () => {
     expect(gevraagd).toStrictEqual([`repos/${REPO}/pulls/12`]);
   });
 });
+
+// Spec ci-bewijs AC-5 en AC-6: foutmarkeringen (vitest, Playwright, TAP) komen vooraan, vóór het bestaande uittreksel.
+const ESC = String.fromCharCode(27);
+const FAIL_ANSI = `${ESC}[31mFAIL${ESC}[39m  test/a.test.ts > x`;
+
+/** Als `log()`, met per index een eigen regel (na de tijdstempel). */
+function logMet(aantal: number, fouten: readonly number[], eigen: Readonly<Record<number, string>>): string {
+  const regels = log(aantal, fouten)
+    .slice(1)
+    .split('\n')
+    .map((regel, i) => {
+      const vervangen = eigen[i];
+      return vervangen === undefined ? regel : `${stempel(i)}${vervangen}`;
+    });
+  return `${String.fromCharCode(0xfeff)}${regels.join('\n')}`;
+}
+const venster = (
+  reeks: readonly [number, number],
+  fouten: readonly number[],
+  eigen: Readonly<Record<number, string>>,
+): string[] => bereik(reeks[0], reeks[1], fouten).map((regel, k) => eigen[reeks[0] + k] ?? regel);
+
+describe('ci-bewijs/AC-5: foutmarkeringen vooraan', () => {
+  test('ci-bewijs/AC-5: een FAIL-regel ver voor de ##[error] komt eerst, zonder tijdstempel en met ANSI-codes', () => {
+    const fouten = [80];
+    const eigen = { 10: FAIL_ANSI };
+
+    expect(foutUittreksel(logMet(100, fouten, eigen))).toStrictEqual([FAIL_ANSI, '…', ...bereik(65, 80, fouten)]);
+  });
+
+  test('ci-bewijs/AC-5: een markering binnen het venster komt niet vooraan', () => {
+    const fouten = [80];
+    const eigen = { 70: FAIL_ANSI };
+
+    expect(foutUittreksel(logMet(100, fouten, eigen))).toStrictEqual(venster([65, 80], fouten, eigen));
+  });
+});
+
+describe('ci-bewijs/AC-6: grens van 20 markeringen en log zonder ##[error]', () => {
+  test('ci-bewijs/AC-6: 30 markeringen geven de eerste 20, …, en het venster', () => {
+    const eigen: Record<number, string> = {};
+    for (let i = 0; i < 30; i++) eigen[10 + i] = `FAIL  test/t${String(i)}.test.ts > x`;
+    const fouten = [200];
+
+    const uit = foutUittreksel(logMet(210, fouten, eigen));
+
+    expect(uit).toStrictEqual([
+      ...Array.from({ length: 20 }, (_, i) => `FAIL  test/t${String(i)}.test.ts > x`),
+      '…',
+      ...bereik(185, 200, fouten),
+    ]);
+  });
+
+  test('ci-bewijs/AC-6: zonder ##[error] komt een markering buiten de laatste 30 vooraan, een erin niet', () => {
+    const eerste = '  1) [chromium] › e2e/a.spec.ts:3:1 › t';
+    const eigen = { 4: eerste, 89: 'not ok 2 - x' };
+
+    expect(foutUittreksel(logMet(100, [], eigen))).toStrictEqual([eerste, '…', ...venster([70, 99], [], eigen)]);
+  });
+});

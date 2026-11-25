@@ -157,10 +157,18 @@ function verifyHead(context) {
 }
 
 /**
- * Leest de checks tot ze slagen of falen; `bewaak` loopt vóór en na elke ronde.
- * @param {{ repository: string, required: { names: string[], sha: string }, kop: string, watch: boolean, bewaak: () => void }} ronde
+ * De melding bij rode CI, met het commando dat de fouten per rode job toont (spec ci-bewijs/AC-7).
+ * @param {number} nummer
  */
-async function volgChecks({ repository, required, kop, watch, bewaak }) {
+export function roodMelding(nummer) {
+  return `CI is rood; herstel de oorzaak en controleer de nieuwe commit (fouten per rode job: pnpm pr:log ${String(nummer)})`;
+}
+
+/**
+ * Leest de checks tot ze slagen of falen; `bewaak` loopt vóór en na elke ronde. Bij rood gooit hij `roodMelding(nummer)`.
+ * @param {{ repository: string, nummer: number, required: { names: string[], sha: string }, kop: string, watch: boolean, bewaak: () => void }} ronde
+ */
+async function volgChecks({ repository, nummer, required, kop, watch, bewaak }) {
   const deadline = Date.now() + 30 * 60 * 1000;
   while (true) {
     bewaak();
@@ -168,7 +176,7 @@ async function volgChecks({ repository, required, kop, watch, bewaak }) {
     bewaak();
     console.log(`${kop}\n${progress.lines.join('\n')}`);
     if (progress.state === 'success') return;
-    if (progress.state === 'failure') throw new Error('CI is rood; herstel de oorzaak en controleer de nieuwe commit');
+    if (progress.state === 'failure') throw new Error(roodMelding(nummer));
     if (!watch || Date.now() >= deadline) throw new Error('CI ontbreekt of loopt nog; geen geslaagde oplevering');
     await setTimeout(10000);
   }
@@ -188,6 +196,7 @@ async function verifyZonderWerkmap({ authority, number, watch }) {
   };
   await volgChecks({
     repository: authority.repository,
+    nummer: number,
     required: { names: authority.registry.requiredChecks, sha: verwacht.head },
     kop: `PR #${String(number)} · ${verwacht.head} (alleen CI-bewijs op de PR-head; werkmap niet getoetst)`,
     watch,
@@ -211,6 +220,7 @@ async function main() {
   const context = { root, head, base, authority, number: target.number };
   await volgChecks({
     repository: authority.repository,
+    nummer: target.number,
     required: { names: authority.registry.requiredChecks, sha: head },
     kop: `PR #${String(target.number)} · ${head}`,
     watch: target.watch,

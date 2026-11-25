@@ -1,6 +1,6 @@
 # gate:fast en gate:slow op elke push naar main en elke PR (framework §10); check:new-resource als eigen job met app:init en generator in één kopie (ADR 0047 punt 9, ADR 0073);
 # gate:fast, check:new-resource en ui:check in delen naast elkaar, elk met een samenvattende job onder de verplichte naam (ADR 0076);
-# image bouwt en controleert de productie-image (ADR 0049); secrets draait Betterleaks (PR: eigen commits, anders alle gefetchte refs). CodeQL in codeql.yml.
+# image bouwt en controleert de productie-image (ADR 0049); secrets draait Betterleaks (PR: eigen commits, anders de geschiedenis van HEAD). CodeQL in codeql.yml.
 # osv-scanner in osv.yml, check-core in guard.yml. Actions op volledige SHA; Renovate werkt ze bij.
 name: ci
 
@@ -154,7 +154,7 @@ jobs:
           RESULT: ${{ needs.gate-slow-part.result }}
 
   # Betterleaks (framework §6): wat lefthook lokaal tegenhoudt, kan via --no-verify of een andere machine toch binnenkomen.
-  # Op een PR de commits van die PR, anders alle gefetchte refs. Altijd met scripts/kit/betterleaks.toml; inline allows tellen niet.
+  # Op een PR de commits van die PR, anders de geschiedenis van HEAD. Altijd met scripts/kit/betterleaks.toml; inline allows tellen niet.
   secrets:
     name: secrets
     runs-on: ubuntu-26.04
@@ -168,13 +168,14 @@ jobs:
         with:
           version: 2026.9.18
           install_args: betterleaks
-      # Op een PR alleen de commits van die PR, anders alle gefetchte refs: een melding op een andere branch maakt anders
-      # elke open PR rood (framework §6). Een geheim in een PR-commit blijft ook na een herstelcommit zichtbaar.
+      # Op een PR alleen de commits van die PR, anders alleen de geschiedenis van HEAD (op main dus main): een melding op
+      # een andere branch maakt anders elke open PR of main rood (framework §6, #758). Een geheim in een PR-commit blijft
+      # ook na een herstelcommit zichtbaar.
       - run: |
           if [ "$EVENT" = "pull_request" ]; then
             betterleaks git -c scripts/kit/betterleaks.toml --log-opts "origin/main..HEAD" --redact --no-banner --ignore-gitleaks-allow
           else
-            betterleaks git -c scripts/kit/betterleaks.toml --redact --no-banner --ignore-gitleaks-allow
+            betterleaks git -c scripts/kit/betterleaks.toml --log-opts "HEAD" --redact --no-banner --ignore-gitleaks-allow
           fi
         env:
           EVENT: ${{ github.event_name }}
