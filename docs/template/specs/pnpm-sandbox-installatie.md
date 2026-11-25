@@ -41,9 +41,11 @@ Alleen ontwikkelomgeving en CI; geen app-rollen. De eigenaar ziet het resultaat 
 
 - Geen UI. Bestaande scripts: `scripts/kit/worktree-install.mjs`, `scripts/cloud-setup.sh`, `scripts/bootstrap.sh`,
   `scripts/kit/kooi.mjs`.
-- **Kooi.** `inKooi(commando, { werkmap, env, timeout, streng })`. Met `streng: true` geldt: `/tmp`, `/run`, `/var/run`, de
-  thuismap en `XDG_RUNTIME_DIR` blijven alleen-lezen (geen tmpfs), de werkmap is de enige schrijfbare plek, en `TMPDIR` is
-  `<werkmap>/tmp` (aangemaakt). Zonder `streng` blijft het gedrag precies zoals nu. CLI: `--streng` vóór `--werkmap`.
+- **Kooi.** `inKooi(commando, { werkmap, env, timeout, streng })`. Met `streng: true` worden `/tmp`, `/run`, `/var/run`, de
+  thuismap en `XDG_RUNTIME_DIR` een lege map die alleen-lezen is: `--tmpfs <map>`, dan de bind van de werkmap, dan
+  `--remount-ro <map>`. Zo blijven de thuismap en sockets onder `/run` onzichtbaar (kooi/AC-4 blijft gelden), en faalt elke
+  schrijfpoging buiten de werkmap. De werkmap is de enige schrijfbare plek en `TMPDIR` is `<werkmap>/tmp` (aangemaakt).
+  Zonder `streng` blijft het gedrag precies zoals nu. CLI: `--streng` vóór `--werkmap`.
 - **Installatiemodule.** Nieuw: `scripts/kit/pnpm-installeer.mjs`, zonder dependencies. De pure kern
   `pnpmInstallCommando(basis, { modus, cloud })` geeft `{ command: 'pnpm', args, env }`:
   - `modus: 'werkmap'`: argumenten `install --frozen-lockfile --package-import-method=copy --store-dir <basis>/store --cache-dir <basis>/cache`,
@@ -52,26 +54,32 @@ Alleen ontwikkelomgeving en CI; geen app-rollen. De eigenaar ziet het resultaat 
   - `modus: 'setup'` (hoofdcheckout en cloudcontainer): argumenten `install --frozen-lockfile`, omgeving alleen
     `XDG_RUNTIME_DIR=<basis>/xdg-run`. De gewone store, cache en state blijven (besluit eigenaar, OV-1).
   - `cloud: true` voegt als laatste argument `--config.confirm-modules-purge=false` toe.
-- CLI `node scripts/kit/pnpm-installeer.mjs --modus werkmap|setup [--cloud]`: maakt de mappen aan (`xdg-run` met 0700), start
-  pnpm, stuurt de uitvoer door en geeft de exitcode van pnpm terug. Bij een exitcode die niet 0 is, volgt één regel op
-  stderr. De basismap is `veiligeBasismap()` (nu in `worktree-install.mjs`) voor `werkmap`, en een nieuwe `mkdtemp` onder `os.tmpdir()`
-  voor `setup`, die na afloop wordt opgeruimd.
-- `worktree-install.mjs` houdt zijn weigeringen en roept de kern aan met `modus: 'werkmap'`. `cloud-setup.sh` roept
-  `mise exec -- node scripts/kit/pnpm-installeer.mjs --modus setup --cloud` aan, `bootstrap.sh`
-  `mise exec -- node scripts/kit/pnpm-installeer.mjs --modus setup`. De `export XDG_RUNTIME_DIR` en `trap` uit #997 vervallen in `cloud-setup.sh`.
-- Meldingen van de CLI, letterlijk:
+- De module exporteert ook `installeer({ modus, cloud })`, de enige plek die pnpm voor een installatie start. Die functie
+  maakt de basismap en de mappen aan (`xdg-run` met 0700), schoont de omgeving op (verwijdert `npm_config_*` en
+  `NODE_OPTIONS`, zoals nu `pnpmOmgeving`), start pnpm in de huidige map (`process.cwd()`), stuurt de uitvoer door, deelt een
+  fout in en geeft de exitcode van pnpm terug. `veiligeBasismap`, `pnpmOmgeving` en `miseMappen` verhuizen van
+  `worktree-install.mjs` naar de module; `worktree-install.mjs` importeert de module, nooit andersom. De basismap is
+  `veiligeBasismap()` voor `werkmap`, en een nieuwe `mkdtemp` onder `os.tmpdir()` voor `setup`, die na afloop wordt opgeruimd.
+- CLI `node scripts/kit/pnpm-installeer.mjs --modus werkmap|setup [--cloud]` roept `installeer` aan.
+- `worktree-install.mjs` houdt zijn weigeringen en roept daarna `installeer({ modus: 'werkmap', cloud })` aan. `cloud-setup.sh`
+  roept `mise exec -- node scripts/kit/pnpm-installeer.mjs --modus setup --cloud` aan, zonder de wrapper `netwerk` eromheen;
+  `bootstrap.sh` roept `mise exec -- node scripts/kit/pnpm-installeer.mjs --modus setup` aan. De `export XDG_RUNTIME_DIR` en
+  `trap` uit #997 vervallen in `cloud-setup.sh`.
+- Meldingen van `installeer`, letterlijk:
   - netwerkfout (uitvoer bevat `ERR_PNPM_FETCH_`, `ECONNREFUSED`, `ETIMEDOUT`, `ENOTFOUND` of `EAI_AGAIN`):
-    `✗ pnpm install mislukt (exit <n>): waarschijnlijk geen netwerk → docs/ENVIRONMENT.md, Problemen.`
+    `✗ pnpm install mislukt (exit <n>): waarschijnlijk geen netwerk → docs/ENVIRONMENT.md, Problemen.`; met `cloud` volgt een
+    tweede regel, ingesprongen met twee spaties: `→ staat netwerktoegang van de omgeving op Trusted (claude.ai/code)? Is de proxy bereikbaar?`
   - anders: `✗ pnpm install mislukt (exit <n>): zie de pnpm-fout hierboven → docs/ENVIRONMENT.md, Problemen.`
   - basismap niet aan te maken: `✗ pnpm-installeer: <map> niet aan te maken (<reden>); controleer TMPDIR`, exit 1.
 
 ## Acceptatiecriteria
 
-- **pnpm-sandbox/AC-1** — Gegeven `inKooi` met `streng: true`, dan faalt `: > /tmp/x`, faalt schrijven in de echte thuismap
-  van de aanroeper en in `/run`, slaagt schrijven in de werkmap, en is `$TMPDIR` gelijk aan `<werkmap>/tmp`. Zonder `streng`
-  slaagt `: > /tmp/x` zoals nu. Toets: `test/scripts/kooi.test.ts`
-- **pnpm-sandbox/AC-2** — Gegeven een fixtureproject met de `packageManager`-pin van de repo, nul dependencies en een
-  `pnpm-lock.yaml`, wanneer `pnpm-installeer.mjs --modus werkmap` het in de strenge kooi installeert (timeout 120 s), dan is de
+- **pnpm-sandbox/AC-1** — Gegeven `inKooi` met `streng: true`, dan faalt `: > /tmp/x`, faalt schrijven in `/run` en in de
+  thuismap, is een bestand dat de test vooraf in de echte thuismap van de aanroeper zet niet leesbaar, is een unix-socket die de
+  test vooraf onder `XDG_RUNTIME_DIR` opent niet bereikbaar, slaagt schrijven in de werkmap, en is `$TMPDIR` gelijk aan
+  `<werkmap>/tmp`. Zonder `streng` slaagt `: > /tmp/x` zoals nu. Toets: `test/scripts/kooi.test.ts`
+- **pnpm-sandbox/AC-2** — Gegeven een fixtureproject in de werkmap met de `packageManager`-pin van de repo, nul dependencies en
+  een `pnpm-lock.yaml`, wanneer `pnpm-installeer.mjs --modus werkmap` vanuit die projectmap het project in de strenge kooi installeert (timeout 120 s), dan is de
   status 0 en bestaat `node_modules/.modules.yaml`. De test zoekt buiten de kooi de echte pnpm-binary (`mise which pnpm`, anders
   `which pnpm` na realpath), zet die map vooraan in `PATH` en is rood, niet overgeslagen, als `pnpm --version` afwijkt van de pin.
   Toets: `test/scripts/pnpm-installeer.test.ts` (nieuw)
@@ -81,17 +89,22 @@ Alleen ontwikkelomgeving en CI; geen app-rollen. De eigenaar ziet het resultaat 
   Toets: `test/scripts/pnpm-installeer.test.ts` (nieuw)
 - **pnpm-sandbox/AC-4** — `pnpmInstallCommando` geeft voor `werkmap`, `setup` en elk van beide met `cloud: true` precies de
   argumenten en omgeving uit "Hergebruik en UX". Toets: `test/scripts/pnpm-installeer.test.ts` (nieuw)
-- **pnpm-sandbox/AC-5** — In `scripts/` start alleen `scripts/kit/pnpm-installeer.mjs` een pnpm-installatie. Als aanroep telt:
-  in een `.sh`-bestand een regel buiten commentaar waarin `pnpm` als commandowoord gevolgd wordt door `install` (ook na
-  `mise exec --`), niet binnen een `printf`- of `echo`-tekst; in een `.mjs`- of `.ts`-bestand de tekst `'pnpm'` of `"pnpm"` met
-  binnen 200 tekens `'install'` of `"install"`. De voorbeelden die de regel herkent zijn `mise exec -- pnpm install --frozen-lockfile`,
-  `pnpm install` en `command: 'pnpm', args: ['install']`. Hij laat toe: `# pnpm install` en `printf '✗ pnpm install mislukt'`.
-  Toets: `test/scripts/pnpm-installeer.test.ts` (nieuw)
+- **pnpm-sandbox/AC-5** — In `scripts/` start alleen `scripts/kit/pnpm-installeer.mjs` een pnpm-installatie, en
+  `scripts/kit/worktree-install.mjs` importeert `installeer` uit die module. Als aanroep telt:
+  - in een `.sh`-bestand: na het weghalen van commentaar (`#` tot regeleinde, buiten aanhalingstekens) en van tekst tussen
+    aanhalingstekens, een commandowoord `pnpm` met als volgend woord `install`. Een commandowoord is het eerste woord aan het
+    begin van de regel, na `;`, `&&`, `||`, `|`, `then`, `do` of na `mise exec --`;
+  - in een `.mjs`- of `.ts`-bestand: de tekst `'pnpm'` of `"pnpm"` met binnen 200 tekens `'install'` of `"install"`.
+
+  Herkend: `mise exec -- pnpm install --frozen-lockfile`, `cd x && pnpm install` en `command: 'pnpm', args: ['install']`.
+  Toegestaan: `# pnpm install`, `printf '✗ pnpm install mislukt'`, `'pnpm install --frozen-lockfile'` (stapnaam in
+  `scripts/bootstrap.sh`) en `fail "draai eerst pnpm install"` (`scripts/check-image.sh`). De test draait de regel ook op de
+  huidige `scripts/` en verwacht als enige treffer `scripts/kit/pnpm-installeer.mjs`. Toets: `test/scripts/pnpm-installeer.test.ts` (nieuw)
 - **pnpm-sandbox/AC-6** — Gegeven een pnpm-stub op `PATH` die `ERR_PNPM_STORE_DIR_OPEN_OPERATION_LOCK` schrijft en met 1 stopt,
   wanneer de CLI draait, dan is de exitcode 1 en staat de melding "zie de pnpm-fout hierboven" op stderr, zonder "waarschijnlijk geen
   netwerk". Met `ERR_PNPM_FETCH_404` staat er "waarschijnlijk geen netwerk". Toets: `test/scripts/pnpm-installeer.test.ts` (nieuw)
-- **pnpm-sandbox/AC-7** — Gegeven een `TMPDIR` die niet bestaat en niet aan te maken is, wanneer de CLI start, dan is de
-  exitcode 1 met de basismapmelding en is pnpm niet gestart. Toets: `test/scripts/pnpm-installeer.test.ts` (nieuw)
+- **pnpm-sandbox/AC-7** — Gegeven een `TMPDIR` onder een map die niet te schrijven is (bijvoorbeeld `/proc/nee`), wanneer de
+  CLI start met `--modus werkmap` en ook met `--modus setup`, dan is de exitcode telkens 1 met de basismapmelding en is pnpm niet gestart. Toets: `test/scripts/pnpm-installeer.test.ts` (nieuw)
 
 ## Randgevallen
 
@@ -107,6 +120,7 @@ Alleen ontwikkelomgeving en CI; geen app-rollen. De eigenaar ziet het resultaat 
 ## Raakt ook
 
 - Risicowerk (installatiepad van dependencies, kooi als grens; R-WERK-04): de tester schrijft de tests na de spec-review.
+- De bestaande afschermtests van kooi/AC-4 in `test/scripts/kooi.test.ts` draaien ook met `streng: true`.
 - Beschermd, `voorReview`, eigenaarreview: `scripts/kit/kooi.mjs`, `scripts/kit/worktree-install.mjs`, `scripts/kit/pnpm-installeer.mjs` (nieuw),
   `scripts/cloud-setup.sh`, `scripts/bootstrap.sh`.
 - Bestaande tests die veranderen (reden: het installatiepad en de melding verhuizen naar de module):
@@ -146,3 +160,6 @@ Alleen ontwikkelomgeving en CI; geen app-rollen. De eigenaar ziet het resultaat 
   (`.github/workflows/ci.yml`).
 - **OV-3 ✅ besloten** — De kooi krijgt een optie `streng` in `inKooi`, geen tweede functie (eigenaar, 2026-11-25).
 - **OV-4 ✅ besloten** — `bootstrap.sh` installeert ook via de module (`modus: 'setup'`), zonder uitzondering in AC-5 (eigenaar, 2026-11-25).
+- **OV-5 ✅ besloten** — In `streng` worden de afgeschermde mappen leeg en alleen-lezen (`--tmpfs` plus `--remount-ro`), niet
+  zichtbaar via `--ro-bind /`. Reden: kooi/AC-4 (thuismap onleesbaar, geen sockets) blijft zo ook in `streng` gelden; het
+  alternatief zou die eis laten vervallen (spec-review N1).
