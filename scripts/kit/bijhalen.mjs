@@ -249,7 +249,7 @@ function schrijfWerkmapBestand(vol, { inhoud, uitvoerbaar }) {
 
 /**
  * De basismap `<os.tmpdir()>/bijhalen`: een echte map (geen symlink) van deze gebruiker, alleen voor de eigenaar
- * (zoals veiligeBasismap() in worktree-install.mjs). Een eigen map met te ruime rechten wordt eerst dichtgezet.
+ * (zoals veiligeBasismap() in pnpm-installeer.mjs). Een eigen map met te ruime rechten wordt eerst dichtgezet.
  * @returns {string}
  */
 function veiligeTmpBasis() {

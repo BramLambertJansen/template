@@ -44,8 +44,9 @@ Alleen ontwikkelomgeving en CI; geen app-rollen. De eigenaar ziet het resultaat 
 - **Kooi.** `inKooi(commando, { werkmap, env, timeout, streng })`. Met `streng: true` worden `/tmp`, `/run`, `/var/run`, de
   thuismap en `XDG_RUNTIME_DIR` een lege map die alleen-lezen is. Volgorde van de argumenten: eerst alle `--tmpfs <map>`, dan
   de toolchain-binds, dan de bind van de werkmap, en als laatste alle `--remount-ro <map>` (geneste mappen zoals `/run` en
-  `/run/user/<uid>` en koppelpunten onder de thuismap hebben de tmpfs nog schrijfbaar nodig). Zo blijven de thuismap en sockets onder `/run` onzichtbaar (kooi/AC-4 blijft gelden), en faalt elke
-  schrijfpoging buiten de werkmap. De werkmap is de enige schrijfbare plek en `TMPDIR` is `<werkmap>/tmp` (aangemaakt).
+  `/run/user/<uid>` en koppelpunten onder de thuismap hebben de tmpfs nog schrijfbaar nodig). Zo blijven de thuismap en sockets onder `/run` onzichtbaar (kooi/AC-4 blijft gelden), en faalt schrijven in
+  die mappen. Buiten de werkmap blijft alleen het vluchtige `/dev` (met `/dev/shm`) schrijfbaar, zoals nu in de kooi;
+  `TMPDIR` is `<werkmap>/tmp` (aangemaakt).
   Zonder `streng` blijft het gedrag precies zoals nu. CLI: `--streng` vóór `--werkmap`.
 - **Installatiemodule.** Nieuw: `scripts/kit/pnpm-installeer.mjs`, zonder dependencies. De pure kern
   `pnpmInstallCommando(basis, { modus, cloud })` geeft `{ command: 'pnpm', args, env }`:
@@ -130,8 +131,8 @@ Alleen ontwikkelomgeving en CI; geen app-rollen. De eigenaar ziet het resultaat 
   verwachting "melding met Trusted" bij elke mislukte install op `:309` en de verwachtingen op `:145`, `:271` en `:295` volgen de nieuwe
   meldingen), `test/scripts/cloud-zelfinstallatie.test.ts` (stub-`PATH`).
 - Docs: `docs/ENVIRONMENT.md` (tabel "Wat het script doet", Problemen), `docs/operations/agent-doorloop.md` (worktree-install),
-  ADR 0110 (gevolg: één pad, getoetst in de strenge kooi), `docs/template/specs/kooi.md` (de optie `streng`), majorchecklist punt 3 in
-  `.github/pull_request_template.md` blijft, met de opmerking dat `gate:fast` het sandboxgedrag toetst.
+  ADR 0110 (gevolg: één pad, getoetst in de strenge kooi), `docs/template/specs/kooi.md` (de optie `streng`). Majorchecklist punt 3 in
+  `.github/pull_request_template.md` blijft ongewijzigd (`.github/` vraagt een besluit-PR); `gate:fast` toetst het sandboxgedrag nu zelf.
 - Geen migratie, route, permissie of `test/security/resources.ts`; geen wijziging in `.github/workflows/`.
 
 ## Buiten scope

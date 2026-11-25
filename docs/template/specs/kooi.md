@@ -37,7 +37,7 @@ proef: `✗ kooi: de proef schreef buiten de werkmap; het commando is niet uitge
 
 Optie `streng` (spec `pnpm-sandbox-installatie`, AC-1): `inKooi(commando, { werkmap, streng: true })`, CLI
 `--streng --werkmap <map> -- <commando>`. De lege mappen (`/tmp`, `/run`, `/var/run`, thuismap, `$XDG_RUNTIME_DIR`) worden na
-de binds van toolchain en werkmap ook `--remount-ro`; de werkmap is de enige schrijfbare plek en `TMPDIR` is `<werkmap>/tmp`.
+de binds van toolchain en werkmap ook `--remount-ro`; daarbuiten blijft alleen het vluchtige `/dev` schrijfbaar, en `TMPDIR` is `<werkmap>/tmp`.
 Zo toetst `gate:fast` een installatie die buiten de werkmap wil schrijven. Zonder `streng` verandert niets.
 
 ## Acceptatiecriteria
