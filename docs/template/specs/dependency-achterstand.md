@@ -8,7 +8,7 @@ namespace: dependency-achterstand
 ## Doel
 
 Een update die blijft hangen, valt uiterlijk een week na zijn grens op: een wekelijkse check op `main` wordt rood als een
-Renovate-PR te lang openstaat, of als Renovate een update niet als PR kan openen of een fout meldt.
+Renovate-PR te lang openstaat of rode CI heeft (AC-9), of als Renovate een update niet als PR kan openen of een fout meldt.
 
 **Aanleiding.** PR #967 (alle niet-majors van een week) was rood omdat één pakket (lefthook 2.2.2) door pnpm geweigerd werd;
 29 andere updates wachtten mee en niets waarschuwde. Majors waren deels verborgen (`allowedVersions`). Eigenaarbesluit

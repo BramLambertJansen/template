@@ -1,6 +1,6 @@
 # Achterstand in dependency-updates (spec dependency-achterstand): wekelijks, na de Renovate-run van maandagochtend, rood als
-# een Renovate-PR te lang openstaat (14 dagen, beveiliging 7, major 60) of Renovate een update niet als PR kan openen of een
-# fout meldt. Leest alleen; geen PR-check, zodat een hangende update geen andere PR rood maakt (R-CI-01).
+# een Renovate-PR te lang openstaat (14 dagen, beveiliging 7, major 60) of rode CI heeft, of Renovate een update niet als PR
+# kan openen of een fout meldt. Leest alleen; geen PR-check, zodat een hangende update geen andere PR rood maakt (R-CI-01).
 name: dependency-achterstand
 
 on:
