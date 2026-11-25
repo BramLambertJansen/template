@@ -77,7 +77,7 @@ function opstelling({ metSandbox = true }: { metSandbox?: boolean } = {}): Opste
     stub(path.join(o.installs, versie), 'node', 'echo v9.9.9');
     stub(path.join(o.installs, versie), 'pnpm', 'echo 9.9.9');
   }
-  for (const tool of ['bash', 'uname', 'id', 'mkdir', 'grep', 'dirname', 'rm', 'ln', 'readlink'])
+  for (const tool of ['bash', 'uname', 'id', 'mkdir', 'grep', 'dirname', 'rm', 'ln', 'readlink', 'mktemp'])
     symlinkSync(execFileSync('which', [tool], { encoding: 'utf8' }).trim(), path.join(o.bin, tool));
   return o;
 }

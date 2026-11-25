@@ -86,7 +86,7 @@ function opstelling({ metMise, metSandbox = true }: { metMise: boolean; metSandb
   // Zonder sandbox-pakketten: PATH krijgt alleen symlinks naar de tools die het script gebruikt, niet /usr/bin zelf.
   const bin = path.join(root, 'bin');
   mkdirSync(bin);
-  for (const tool of ['bash', 'uname', 'mkdir', 'chmod', 'grep', 'touch', 'dirname', 'id', 'rm'])
+  for (const tool of ['bash', 'uname', 'mkdir', 'chmod', 'grep', 'touch', 'dirname', 'id', 'rm', 'mktemp'])
     symlinkSync(execFileSync('which', [tool], { encoding: 'utf8' }).trim(), path.join(bin, tool));
   return { home, stubs, log, systeem: false };
 }
