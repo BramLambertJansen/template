@@ -299,6 +299,18 @@ describe('punt 1/E: exitcodes van het script', () => {
     },
   );
 
+  test('E: werkstraat stop met een laadfout (ontbrekende import, exit 1) wordt exit 2 met de melding van de lader', () => {
+    const repo = makeAnchored({
+      ...hookFiles('main-versie'),
+      'rails/hooks/werkstraat.mjs': "import './lib/ontbreekt.mjs';\n",
+    });
+
+    const stop = run(repo, 'werkstraat', { args: ['stop'] });
+
+    expect(stop.status).toBe(2);
+    expect(stop.stderr).toContain('rails/hooks/werkstraat.mjs gaf exitcode 1; de hook faalt dicht');
+  });
+
   test('E: werkstraat session-start geeft een andere exitcode ongewijzigd door (laat bewust door)', () => {
     const repo = makeAnchored(hookFiles('main-versie'));
 
