@@ -51,6 +51,12 @@
       "groupName": "ci-images"
     },
     {
+      "description": "Groep node: de Node uit mise.toml en het Node-image in de Dockerfile en compose.yaml samen, want test/scripts/dockerfile.test.ts eist dat ze gelijk zijn. Is het image nog geen 7 dagen oud, dan blijft deze PR rood tot het image meekomt",
+      "matchPackageNames": ["node"],
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "groupName": "node"
+    },
+    {
       "description": "Elke major meteen als eigen PR met label major: CI test hem meteen; niets wordt verborgen (R-PROV-04). Geen PR-limiet: openstaande majors houden nooit een andere update tegen",
       "matchUpdateTypes": ["major"],
       "addLabels": ["major"]
