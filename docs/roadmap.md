@@ -538,8 +538,10 @@ Geldende ADR-besluiten staan in `node scripts/kit/feiten.mjs adr`; afgevinkte be
 Afgevinkte items per fase en stuk, met hun bewijs en de **Klaar als**-criteria: [roadmap-archief.md](roadmap-archief.md).
 Nog open uit een stuk dat verder gebouwd is (3c en 3e):
 
-- [ ] UI-kit: tabel, tabs, galerij en filterbalk (#156, spec `docs/template/specs/ui-data-display.md`); in `check:catalogus` en op `/design-system`.
-      De carousel is op 2026-10-15 uit de spec gehaald (spec, "Buiten scope"); de componenten bestaan, de spec staat nog op `goedgekeurd`
+- [x] UI-kit: tabel, tabs, galerij en filterbalk (#156, spec `docs/template/specs/ui-data-display.md`); in `check:catalogus` en op `/design-system`.
+      De carousel is op 2026-10-15 uit de spec gehaald; AC-7 vervalt door ADR 0114. Bewijs `e2e/ui-data-display.spec.ts`,
+      `src/core/web/ui/data-table.test.tsx`, `src/core/web/ui/tabs.test.tsx`, `src/core/web/ui/gallery.test.tsx`,
+      `src/core/web/ui/list-toolbar-filters.test.tsx` en `src/web/ui/data-display-barrel.test.tsx`
 - [x] Laatste geslaagde login en afzonderlijke deactivatie met herstel, naast blokkeren
       (spec `accountstatus-en-laatste-login`, ADR 0052); bewijs `test/api/account-lifecycle.int.test.ts`,
       `test/auth/login-tracking.int.test.ts` en `e2e/account-lifecycle.spec.ts`

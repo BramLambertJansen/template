@@ -15,6 +15,7 @@ function expectSelected(label: string, content: string) {
   expect(screen.getByRole('tabpanel').textContent).toBe(content);
 }
 
+// ui-data-display/AC-4, ui-data-display/AC-8
 test('later geladen tabs kiezen de eerste enabled tab en behouden die bij herschikken', () => {
   const { rerender } = render(<Tabs label="Dossier" items={[]} />);
   expect(screen.queryByRole('tabpanel')).toBeNull();
@@ -24,6 +25,7 @@ test('later geladen tabs kiezen de eerste enabled tab en behouden die bij hersch
   expectSelected('Eerste', 'Eerste inhoud');
 });
 
+// ui-data-display/AC-4, ui-data-display/AC-8
 test('een aanvankelijk volledig disabled verzameling activeert de eerste tab die beschikbaar komt', () => {
   const { rerender } = render(<Tabs label="Dossier" items={items.map((item) => ({ ...item, disabled: true }))} />);
   expect(screen.queryByRole('tabpanel')).toBeNull();
@@ -31,6 +33,7 @@ test('een aanvankelijk volledig disabled verzameling activeert de eerste tab die
   expectSelected('Eerste', 'Eerste inhoud');
 });
 
+// ui-data-display/AC-4, ui-data-display/AC-8
 test('een lege tussenstand verhindert selectieherstel niet wanneer nieuwe tabs verschijnen', () => {
   const { rerender } = render(<Tabs label="Dossier" items={items} />);
   fireEvent.click(screen.getByRole('tab', { name: 'Tweede' }));
@@ -41,6 +44,7 @@ test('een lege tussenstand verhindert selectieherstel niet wanneer nieuwe tabs v
   expectSelected('Eerste', 'Eerste inhoud');
 });
 
+// ui-data-display/AC-4, ui-data-display/AC-8
 test('na tijdelijk alle tabs uitschakelen herstelt selectie zonder focus buiten de tabs te stelen', () => {
   const view = (disabled: boolean) => (
     <>
@@ -59,6 +63,7 @@ test('na tijdelijk alle tabs uitschakelen herstelt selectie zonder focus buiten 
   expect(document.activeElement).toBe(outside);
 });
 
+// ui-data-display/AC-8
 test('een expliciete onbekende defaultValue blijft onbekend na laden en leegmaken', () => {
   const view = (loaded: boolean) => <Tabs label="Dossier" items={loaded ? items : []} defaultValue="missing" />;
   const { rerender } = render(view(false));
@@ -70,6 +75,7 @@ test('een expliciete onbekende defaultValue blijft onbekend na laden en leegmake
   expect(screen.queryByRole('tabpanel')).toBeNull();
 });
 
+// ui-data-display/AC-8
 test('een controlled waarde blijft leidend en laden triggert geen keuzecallback', () => {
   const onValueChange = vi.fn();
   const view = (value: string, loaded: boolean) => (
