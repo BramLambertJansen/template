@@ -464,8 +464,10 @@ beschikbare code scanning voor de verplichte CodeQL-checks (Fase 6.1). Zonder di
 Controleer daarom vóór de repo bestaat:
 
 ```bash
-gh api user --jq .plan.name    # free → geen rulesets op private repo's; pro → ruleset wel, CodeQL nog bevestigen
+gh api user --jq .plan.name
 ```
+
+`free`: geen rulesets op private repo's; `pro`: ruleset wel, CodeQL nog bevestigen.
 
 Zonder scope `user` geeft GitHub het plan niet prijs en toont dit `null`: dat is onbekend, geen `free`. Laat de eigenaar
 het plan dan aflezen op https://github.com/settings/billing. Bij een organisatie als owner geldt het plan van de
@@ -620,6 +622,8 @@ Controle: `git status -sb` toont geen `ahead`; `gh api repos/<owner>/<slug>/comm
 ### 6.2 Repo-instellingen
 
 "Use this template" kopieert geen instellingen of rulesets. Zet de basis nu, vóór er een PR bestaat.
+
+<!-- terminal: eigenaar -->
 
 ```bash
 R=<owner>/<slug>
@@ -1052,6 +1056,8 @@ Vul in de stappen voor `<x.y.z>` de nieuwste release in; tussenliggende releases
 6. Installeer de dependencies, pas de migraties toe op de lokale database (niet productie), genereer het schema opnieuw en
    commit het. Verwacht: `pnpm install` eindigt zonder fout, `pnpm db:migrate` past de nieuwe migraties toe, en na
    `pnpm db:generate` toont `git status --short` hooguit `db/schema.snapshot.sql` en `src/api/db/schema.ts`.
+
+   <!-- terminal: eigenaar -->
 
    ```bash
    cd ~/code/<slug>

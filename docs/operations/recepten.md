@@ -8,6 +8,11 @@ Spec: [agent-recepten](../template/specs/agent-recepten.md). `pnpm ratchet` toet
 Elk commando is één Bash-aanroep: geen pipe, `&&` of redirect erachter. Plaatshouders staan tussen `<` en `>`. `idem` betekent:
 gelijk aan Lokaal.
 
+Ook de codeblokken in `docs/**` en `.claude/skills/**` komen door het rolhek: `test/rails/docs-codeblok-rolhek.test.ts`
+(spec cloud-netwerkvorm/AC-17). Een blok voor de terminal van de eigenaar staat direct onder de regel
+`<!-- terminal: eigenaar -->`; die regel is alleen voor zo'n blok, niet voor een agentcommando. In een skill helpt hij niet:
+`docs:recept-rolhek` toetst de codeblokken van elke `SKILL.md` zonder uitzondering.
+
 | Taak | Lokaal | Cloud |
 |---|---|---|
 | Feiten over de repo | `node scripts/kit/feiten.mjs <sectie>` | idem |

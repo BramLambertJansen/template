@@ -33,6 +33,7 @@ for (const width of [375, 1280]) {
       await context.setExtraHTTPHeaders(clientIpHeaders());
     });
 
+    // ui-data-display/AC-9
     test('ieder indexitem heeft een werkend, focusbaar voorbeeld; zoeken blijft behouden', async ({ page }) => {
       await openCatalogue(page);
       const index = page.getByRole('region', { name: 'Componentenindex' });

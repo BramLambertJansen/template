@@ -89,7 +89,7 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
    Lokaal: dan `gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<headRefName>"`, als los commando
    (spec cloud-netwerkvorm; `git push origin --delete` weigert het rolhek). Nooit `main`; het rolhek weigert dat ook.
    Lokaal kan deze stap een vraag aan de eigenaar geven. In de cloud (`CLAUDE_CODE_REMOTE=true`) geen DELETE: de
-   GitHub-proxy weigert die met 403 en auto mode weigert hem al eerder (spec cloud-netwerkvorm, F13, F14 en OV-9). Daar
+   GitHub-proxy weigert die met 403 en auto mode weigert hem al eerder (spec cloud-netwerkvorm, F13, F14 en OV-13). Daar
    ruimt de repo-instelling `delete_branch_on_merge` de branch bij de merge op; staat hij er toch nog, meld dat in de
    eindmelding, dan verwijdert de eigenaar hem op GitHub.
 7. Eindmelding: wat is opgeruimd (lokale branch, remote branch, worktree), welke remote branch is blijven staan, en de SHA van HEAD na stap 3.
