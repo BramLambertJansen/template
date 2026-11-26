@@ -133,4 +133,10 @@ if (args.includes('--json')) {
   console.info(
     toText(results.map(({ naam, kop, inhoud }) => ({ naam, ...(kop === undefined ? {} : { kop }), inhoud }))),
   );
+  // Leerpunt #966: de dekking van `specs` leest alleen getrackte bestanden; meld wat daardoor niet meetelt.
+  if (names.includes('specs')) {
+    const { ongetracktMelding } = await import('./ac-dekking.mjs');
+    const melding = ongetracktMelding('.');
+    if (melding !== null) console.info(`⚠ ${melding}`);
+  }
 }

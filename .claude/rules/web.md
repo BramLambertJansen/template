@@ -2,6 +2,7 @@
 paths:
   - "src/web/**"
   - "src/core/web/**"
+  - "test/ui/**"
 ---
 
 # Regels voor `src/web` en `src/core/web`
@@ -30,6 +31,8 @@ Hoe (geen norm):
 - `src/core/web` (basiskit, `AsyncView`, `Form`, API- en auth-client, tokens) is van de template; de app importeert via `src/web/ui` (barrel) en `src/web/lib/api.ts`. Een variant leid je af in `src/web/ui` uit de basis en variantkaart van core; voorbeelden op `/design-system`.
 - Route: bestandsroute in `routes/`. Bij 401 van de API naar het inlogscherm. `queries.ts` bevat key-factory, hooks en mutaties.
 - Styling: layout-utilities als gewone string (flex, grid, gap, padding, breedte); kleur, radius, schaduw en typografie uit componenten (`Text`, `Heading`); de rail `klassen` in `eslint.config.js` dwingt het af. In de kit zelf (`src/core/web/ui`, `src/web/ui`) houdt de rail `klassen-kit` (`rails/eslint/klassen-kit.mjs`) arbitrary values, `!`, `dark:` en vaste `style` tegen; een nieuwe maat wordt een token met een klasse in `src/core/web/styles/`. Woordenlijst: "Annuleren", niet "Annuleer". Aanraakdoel en focusring zitten in de recepten (R-UI-06).
+- Een test van de template eist geen inhoud die een app mag vervangen: copy, navigatie-items, voorbeeldthema's. Toets de structuur
+  (rol, aantal, aanwezigheid) of maak een eigen fixture; een app die de voorbeelden weghaalt, krijgt anders een rode gate (leerpunt #983).
 
 ## Gebouwd en nog open
 
