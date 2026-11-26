@@ -128,7 +128,8 @@ Zichtbare tekst, letterlijk (één regel, `<…>` ingevuld):
    - `scripts/cloud-setup.sh` en `scripts/kit/` (het script draait `scripts/kit/pnpm-installeer.mjs` en importeert
      `scripts/kit/toolchain.mjs`);
    - mise (v2026.9.18, `MISE_VERSION` in het script) en de idiomatische versiebestanden: `mise.toml`, `mise.*.toml`,
-     `.mise.toml`, `.mise.*.toml`, `mise/`, `.mise/`, `.config/mise*`, `.tool-versions`, `.nvmrc`, `.node-version`;
+     `.mise.toml`, `.mise.*.toml`, `mise/`, `.mise/`, `.config/mise*`, `.tool-versions`, `.nvmrc`, `.node-version`, en de
+     lockfiles en rc-bestanden `mise*.lock`, `.mise*.lock`, `miserc.toml`, `.miserc.toml`;
    - pnpm: `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.npmrc`, `.pnpmfile.cjs`, `.pnpmfile.mjs`, `patches/`;
    - lefthook (de versie uit `package.json`): `lefthook*`, `.lefthook*`, `.config/lefthook*`. Die patronen dekken elke
      extensie (`.yml`, `.yaml`, `.json`, `.jsonc`, `.toml`), de `-local`-varianten en de scriptmappen `.lefthook/` en
@@ -190,7 +191,8 @@ Zichtbare tekst, letterlijk (één regel, `<…>` ingevuld):
   - mise v2026.9.18 (bron: mise.jdx.dev, Configuration, "mise.toml" en "Idiomatic version files", in die versie):
     `mise.toml`, `mise.local.toml`, `mise.<env>.toml`, `mise.<env>.local.toml`, dezelfde met een punt ervoor,
     `mise/config.toml`, `.mise/config.toml`, `.config/mise.toml`, `.config/mise/config.toml`, `.config/mise/conf.d/*.toml`,
-    `.tool-versions`, `.nvmrc`, `.node-version`;
+    `.tool-versions`, `.nvmrc`, `.node-version`, `mise.lock`, `mise.<env>.lock`, `.mise.lock`, `miserc.toml`,
+    `.miserc.toml`, `.config/miserc.toml`;
   - pnpm: `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.npmrc`, `.pnpmfile.cjs`, `.pnpmfile.mjs`, `patches/`. Een naam die de bouwer in die
     documentatie vindt en die hier ontbreekt, komt in de tabel én in `INVOER`. Toets: `test/hooks/toolchain-herstel.test.ts` (nieuw)
 - **cloud-toolchain-zelfherstel/AC-6** — Gegeven een tijdelijke repo met een anker-commit, een afwijkende pin en elk van:

@@ -101,6 +101,8 @@ function handle(payload) {
 
 /** SessionStart `toolchain-herstel`: async, en elke fout als één regel op stdout met exit 0 (de sessie start altijd). */
 async function toolchainHerstelEntry() {
+  // Buiten de cloud nooit uitvoer, ook niet bij een kapotte payload (spec cloud-toolchain-zelfherstel/AC-1).
+  if (process.env['CLAUDE_CODE_REMOTE'] !== 'true') process.exit(0);
   let tekst;
   try {
     const payload = readPayload();

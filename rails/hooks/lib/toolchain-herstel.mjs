@@ -5,8 +5,8 @@
 // De detectie volgt `toolchainProbleemIn` in scripts/kit/toolchain.mjs; de lader pakt alleen rails/hooks/ uit, dus de
 // regels staan dubbel en AC-3 houdt ze gelijk.
 import { spawn, spawnSync } from 'node:child_process';
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { closeSync, existsSync, lstatSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { clearTimeout, setTimeout } from 'node:timers';
 
@@ -39,6 +39,11 @@ export const INVOER = [
   '.mise/**',
   '.config/mise*',
   '.config/mise*/**',
+  // mise leest ook zijn lockfile en de vroege instellingen uit `.miserc.toml` (beide genoemd in de mise-binary).
+  'mise*.lock',
+  '.mise*.lock',
+  '.miserc.toml',
+  'miserc.toml',
   '.tool-versions',
   '.nvmrc',
   '.node-version',
@@ -155,31 +160,103 @@ function detecteer(deps, home) {
 }
 
 /**
- * Eén git-aanroep van de vergelijking, met `GIT_HARD`; de NUL-gescheiden paden. Een fout van git is een onverwachte fout.
- * @param {HerstelDeps} deps @param {string[]} args
+ * Eén git-aanroep van de vergelijking, met `GIT_HARD`; de uitvoer als tekst. Een fout van git is een onverwachte fout.
+ * @param {HerstelDeps} deps @param {string[]} args @param {{ env?: Record<string, string | undefined>, input?: string }} [extra]
  */
-function gitPaden(deps, args) {
+function git(deps, args, extra = {}) {
   const result = spawnSync('git', [...GIT_HARD, ...args], {
     cwd: deps.root,
-    env: deps.env,
+    env: extra.env ?? deps.env,
     encoding: 'utf8',
+    input: extra.input,
     maxBuffer: 32 * 1024 * 1024,
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: ['pipe', 'pipe', 'pipe'],
   });
   if (result.error !== undefined) throw result.error;
   if (result.status !== 0) throw new Error(`git ${args[0] ?? ''} gaf exit ${String(result.status)}: ${result.stderr.trim()}`);
-  return result.stdout.split('\0').filter((pad) => pad !== '');
+  return result.stdout;
+}
+
+/** @param {string} uitvoer */
+const nulGescheiden = (uitvoer) => uitvoer.split('\0').filter((deel) => deel !== '');
+
+/**
+ * Mode en blob-oid per `INVOER`-pad in de tree van het anker. `git ls-tree` kent geen `:(glob)`, dus via een tijdelijke
+ * index buiten de werkmap: `read-tree` schrijft alleen die index, `ls-files -s` leest hem; de werkboom doet niet mee.
+ * @param {HerstelDeps} deps @param {string} anker
+ * @returns {Map<string, string>} pad → `<mode> <oid>`
+ */
+function verwacht(deps, anker) {
+  const map = mkdtempSync(path.join(tmpdir(), 'toolchain-herstel-'));
+  try {
+    const env = { ...deps.env, GIT_INDEX_FILE: path.join(map, 'index') };
+    git(deps, ['read-tree', anker], { env });
+    const regels = nulGescheiden(git(deps, ['ls-files', '-s', '-z', '--', ...INVOER], { env }));
+    // `<mode> <oid> <stage>\t<pad>`
+    return new Map(
+      regels.map((regel) => {
+        const [kop = '', pad = ''] = regel.split('\t');
+        const [mode = '', oid = ''] = kop.split(' ');
+        return [pad, `${mode} ${oid}`];
+      }),
+    );
+  } finally {
+    rmSync(map, { recursive: true, force: true });
+  }
 }
 
 /**
- * De paden van de installatie-invoer die afwijken van het anker: getrackt (`git diff`) en ongetrackt, ook genegeerd
- * (`ls-files --others` zonder `--exclude-standard`).
+ * Mode van een gewoon bestand in de werkmap (`100755` of `100644`); null als het ontbreekt; `anders` voor een symlink,
+ * een map (ook een geneste git-repo, die `ls-files --others` als map noemt) of een ander type.
+ * @param {string} root @param {string} pad
+ */
+function modeVan(root, pad) {
+  let info;
+  try {
+    info = lstatSync(path.join(root, pad));
+  } catch {
+    return null;
+  }
+  if (!info.isFile() || pad.includes('\n')) return 'anders';
+  return (info.mode & 0o111) === 0 ? '100644' : '100755';
+}
+
+/**
+ * Mode en blob-oid per `INVOER`-pad in de werkmap: getrackt, ongetrackt en genegeerd (`ls-files --cached --others` zonder
+ * `--exclude-standard`), gehasht zonder filters (`hash-object --no-filters`), dus zonder de index of een filter uit de
+ * configuratie van de werkmap te vertrouwen. Een pad dat geen gewoon bestand is, krijgt `anders`.
+ * @param {HerstelDeps} deps @param {Iterable<string>} ookTeZien de paden van het anker (ook als ze in de werkmap ontbreken)
+ * @returns {Map<string, string>}
+ */
+function werkelijk(deps, ookTeZien) {
+  const gevonden = nulGescheiden(git(deps, ['ls-files', '-z', '--cached', '--others', '--', ...INVOER]));
+  /** @type {Map<string, string>} */
+  const uitslag = new Map();
+  /** @type {{ pad: string, mode: string }[]} */
+  const bestanden = [];
+  for (const pad of new Set([...gevonden, ...ookTeZien])) {
+    const mode = modeVan(deps.root, pad.replace(/\/$/, ''));
+    if (mode === 'anders') uitslag.set(pad, 'anders');
+    else if (mode !== null) bestanden.push({ pad, mode });
+  }
+  if (bestanden.length === 0) return uitslag;
+  const invoer = `${bestanden.map(({ pad }) => pad).join('\n')}\n`;
+  const oids = git(deps, ['hash-object', '--no-filters', '--stdin-paths'], { input: invoer }).trim().split('\n');
+  for (const [i, { pad, mode }] of bestanden.entries()) uitslag.set(pad, `${mode} ${oids[i] ?? ''}`);
+  return uitslag;
+}
+
+/**
+ * De `INVOER`-paden waarin de werkmap afwijkt van het anker, op inhoud en mode (spec, ontwerp punt 5; AC-6). Alleen gewone
+ * bestanden (`100644`, `100755`) tellen als gelijk.
  * @param {HerstelDeps} deps @param {string} anker
  */
 function afwijkend(deps, anker) {
-  const gewijzigd = gitPaden(deps, ['diff', '--name-only', '-z', '--no-ext-diff', '--no-textconv', anker, '--', ...INVOER]);
-  const nieuw = gitPaden(deps, ['ls-files', '--others', '-z', '--', ...INVOER]);
-  return [...new Set([...gewijzigd, ...nieuw])].sort();
+  const ank = verwacht(deps, anker);
+  const werk = werkelijk(deps, ank.keys());
+  const gewoon = (/** @type {string | undefined} */ waarde) => /^100(?:644|755) /.test(waarde ?? '');
+  const paden = new Set([...ank.keys(), ...werk.keys()]);
+  return [...paden].filter((pad) => !gewoon(ank.get(pad)) || ank.get(pad) !== werk.get(pad)).sort();
 }
 
 /** Hooguit drie paden, daarna "en <n> meer". @param {string[]} paden */

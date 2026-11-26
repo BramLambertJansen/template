@@ -428,6 +428,12 @@ const TABEL: { naam: string; pad: string; bron: string }[] = [
     '.tool-versions',
     '.nvmrc',
     '.node-version',
+    'mise.lock',
+    'mise.production.lock',
+    '.mise.lock',
+    '.miserc.toml',
+    'miserc.toml',
+    '.config/miserc.toml',
   ].map((naam) => ({ naam, pad: naam, bron: MISE })),
   ...['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', '.npmrc', '.pnpmfile.cjs', '.pnpmfile.mjs'].map(
     (naam) => ({
@@ -616,16 +622,12 @@ describe('cloud-toolchain-zelfherstel/AC-6 invoer wijkt af van het anker', () =>
     await draai(w);
 
     const gitCalls = aanroepen(w).filter((a) => a.naam === 'git');
-    expect(gitCalls.some((a) => a.args.includes('diff'))).toBe(true);
-    expect(gitCalls.some((a) => a.args.includes('ls-files'))).toBe(true);
+    expect(gitCalls.length).toBeGreaterThan(0);
     for (const call of gitCalls) {
       expect(call.args.join(' ')).toContain('-c core.fsmonitor=');
       expect(call.args.join(' ')).toContain('-c diff.external=');
     }
-    for (const call of gitCalls.filter((a) => a.args.includes('diff'))) {
-      expect(call.args).toContain('--no-ext-diff');
-      expect(call.args).toContain('--no-textconv');
-    }
+    expect(gitCalls.filter((a) => a.args.includes('diff'))).toStrictEqual([]);
     expect(existsSync(marker)).toBe(false);
   });
 });

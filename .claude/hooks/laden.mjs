@@ -358,6 +358,41 @@ function weiger(naam, dicht, reden) {
 }
 
 /**
+ * Uitkomst van `werkstraat toolchain-herstel`: het script eindigt altijd met exit 0 en hooguit één regel. Stopte het zonder
+ * exitcode, of met een andere code zonder iets op stdout (een crash vóór zijn eigen try), dan de `!`-regel van `weiger` met
+ * exit 0; anders gaan uitvoer en exitcode door (spec cloud-toolchain-zelfherstel/AC-10).
+ * @param {import('node:child_process').SpawnSyncReturns<Buffer>} result @param {string} naam
+ */
+function naHerstel(result, naam) {
+  const uitvoer = result.stdout.toString();
+  if (result.status === null || (result.status !== 0 && uitvoer === '')) {
+    const hoe = result.status === null ? 'zonder exitcode' : `met exitcode ${String(result.status)}`;
+    return weiger(naam, false, `rails/hooks/${naam}.mjs stopte ${hoe}`);
+  }
+  process.stdout.write(uitvoer);
+  process.exitCode = result.status;
+}
+
+/** Rolhek en de werkstraat-poorten kennen alleen exit 0 en 2. @param {string} naam */
+const isPoort = (naam) => naam === 'rolhek' || (naam === 'werkstraat' && POORTEN.has(process.argv[2] ?? ''));
+
+/**
+ * Het anker en de uitgepakte, gecontroleerde map van de hook; null na `weiger`.
+ * @param {string} naam @param {boolean} dicht @param {boolean} verversen
+ * @returns {{ map: string, anker: string } | null}
+ */
+function laad(naam, dicht, verversen) {
+  try {
+    const gevonden = bron(naam, verversen);
+    if (gevonden !== null) return { map: uitpakken(gevonden.boom), anker: gevonden.sha };
+    weiger(naam, dicht, `geen geldig anker met rails/hooks/${naam}.mjs; een nieuwe sessie met netwerk legt het vast`);
+  } catch (error) {
+    weiger(naam, dicht, error instanceof Error ? error.message : String(error));
+  }
+  return null;
+}
+
+/**
  * Draait `rails/hooks/<naam>.mjs` van main met dezelfde args, stdin, env en cwd, en geeft uitvoer en exitcode door. Het rolhek
  * en de werkstraat-poorten (`POORTEN`) kennen alleen 0 en 2: elke andere exitcode van het script (ook een crash) wordt daar 2.
  * @param {string} naam
@@ -367,29 +402,24 @@ export function draai(naam, dicht) {
   const invoer = leesStdin();
   if (geplantCommondir(naam)) return;
   const sessieStart = naam === 'werkstraat' && process.argv[2] === 'session-start';
-  // toolchain-herstel ververst het anker zoals session-start (op een verse VM is er anders geen), maar ruimt niet op.
-  const verversen = sessieStart || isHerstel(naam);
-  let map;
-  let anker;
-  try {
-    const gevonden = bron(naam, verversen);
-    if (gevonden === null) return weiger(naam, dicht, `geen geldig anker met rails/hooks/${naam}.mjs; een nieuwe sessie met netwerk legt het vast`);
-    map = uitpakken(gevonden.boom);
-    anker = gevonden.sha;
-  } catch (error) {
-    return weiger(naam, dicht, error instanceof Error ? error.message : String(error));
-  }
+  // toolchain-herstel ververst in de cloud het anker zoals session-start (op een verse VM is er anders geen), maar ruimt
+  // niet op; lokaal doet de hook niets en vraagt de lader de remote niet.
+  const herstel = isHerstel(naam);
+  const verversen = sessieStart || (herstel && process.env['CLAUDE_CODE_REMOTE'] === 'true');
+  const geladen = laad(naam, dicht, verversen);
+  if (geladen === null) return;
+  const { map, anker } = geladen;
   const result = spawnSync(process.execPath, [path.join(map, `${naam}.mjs`), ...process.argv.slice(2)], {
     input: invoer,
-    stdio: ['pipe', 'inherit', 'inherit'],
+    stdio: ['pipe', herstel ? 'pipe' : 'inherit', 'inherit'],
     // Het script leest zijn vertrouwde basis (gates, register, runner) uit dit anker, niet uit de lokale origin/main.
     env: { ...process.env, RAILS_ANKER: anker },
   });
+  if (herstel) return naHerstel(result, naam);
   if (result.status === null) return weiger(naam, dicht, `rails/hooks/${naam}.mjs stopte zonder exitcode`);
   // Rolhek en de werkstraat-poorten geven alleen 0 of 2. Elke andere code is een crash, zoals een laadfout vóór de eigen try
   // van het script (exit 1), en Claude Code zou die doorlaten. session-start laat een fout bewust door (werkstraat.mjs).
-  const poort = naam === 'rolhek' || (naam === 'werkstraat' && POORTEN.has(process.argv[2] ?? ''));
-  if (poort && result.status !== 0 && result.status !== 2)
+  if (isPoort(naam) && result.status !== 0 && result.status !== 2)
     return weiger(naam, true, `rails/hooks/${naam}.mjs gaf exitcode ${String(result.status)}`);
   process.exitCode = result.status;
   // Pas na de hook: zijn uitvoer en exitcode staan dan vast.
