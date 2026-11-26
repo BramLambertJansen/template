@@ -385,7 +385,7 @@ describe('nieuwe-app-script/AC-19: controleerRuleset', () => {
     ].map((veld): Geval => ({
       naam: `pull_request.${veld} ontbreekt in een aanwezige regel (geen REGELS)`,
       code: 'RULESET_ONLEESBAAR',
-      bevat: veld,
+      details: [`pull_request.${veld}`],
       bouw: () =>
         met((a) => {
           Reflect.deleteProperty(parameters(a, 'pull_request'), veld);
@@ -394,12 +394,23 @@ describe('nieuwe-app-script/AC-19: controleerRuleset', () => {
     ...['strict_required_status_checks_policy', 'required_status_checks'].map((veld): Geval => ({
       naam: `${veld} ontbreekt in de aanwezige regel required_status_checks (geen CHECKS)`,
       code: 'RULESET_ONLEESBAAR',
-      bevat: veld,
+      details: [`required_status_checks.${veld}`],
       bouw: () =>
         met((a) => {
           Reflect.deleteProperty(parameters(a, 'required_status_checks'), veld);
         }),
     })),
+    {
+      naam: 'een check zonder integration_id (geen CHECKS)',
+      code: 'RULESET_ONLEESBAAR',
+      details: ['required_status_checks.integration_id'],
+      bouw: () =>
+        met((a) => {
+          const eerste = checkLijst(a).find((check) => check['context'] === 'gate:fast');
+          if (eerste === undefined) throw new Error('gate:fast ontbreekt in de payload');
+          Reflect.deleteProperty(eerste, 'integration_id');
+        }),
+    },
   ];
 
   describe.each([

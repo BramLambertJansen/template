@@ -176,11 +176,23 @@ export function endpointsVoor(repo: string, a: Antwoorden, extra: Endpoints = {}
   };
 }
 
-/** `main` op GitHub met `ouders` ouders en `main~1` met `ouders1` ouders (playbook 6.1: de vorm 1 boven 2 is goed). */
+export const EERSTE_OUDER = 'sha-eerste-ouder';
+
+/**
+ * De vorm van `main` op GitHub (spec werking 7): `repos/<repo>/commits/main` met `ouders` ouders, de eerste met sha
+ * `EERSTE_OUDER`, en `repos/<repo>/commits/<EERSTE_OUDER>` met `ouders1` ouders. Goed is 1 en 2. Er is geen `main~1`-endpoint:
+ * een aanroep daarmee geeft 404. Zonder `--jq` geeft de stub het volledige object `{ sha, parents: [{ sha }, …] }`.
+ */
 export function mainVorm(repo: string, ouders: number, ouders1: number): Endpoints {
-  const commit = (n: number): Antwoord =>
-    json({ parents: Array.from({ length: n }, (_x, i) => ({ sha: `sha${String(i)}` })) });
-  return { [`repos/${repo}/commits/main`]: commit(ouders), [`repos/${repo}/commits/main~1`]: commit(ouders1) };
+  const commit = (sha: string, n: number, eerste: string): Antwoord =>
+    json({
+      sha,
+      parents: Array.from({ length: n }, (_x, i) => ({ sha: i === 0 ? eerste : `${eerste}-${String(i)}` })),
+    });
+  return {
+    [`repos/${repo}/commits/main`]: commit('sha-main', ouders, EERSTE_OUDER),
+    [`repos/${repo}/commits/${EERSTE_OUDER}`]: commit(EERSTE_OUDER, ouders1, 'sha-grootouder'),
+  };
 }
 
 export type GhUitvoer = { ok: boolean; stdout: string; stderr: string };
@@ -199,8 +211,11 @@ export function ghFunctie(endpoints: Endpoints, log: string[][] = []): GhFunctie
 
 // De stub op PATH. Logt elke aanroep als JSON-regel met de argumenten in $STUB_DIR/gh.log (zelfde vorm als de stub van
 // nieuwe-app-kit.ts, dus `ghLog` en `schrijvendeGhAanroepen` van die kit werken erop). `gh api <endpoint>` leest
-// $STUB_DIR/endpoints.json; een schrijvende aanroep (`-X PUT|POST|PATCH|DELETE` of `--input`) en `gh repo edit` geven
-// `{}` en exitcode 0. `--jq`/`-q` kent alleen een punt-pad en `| length` (genoeg voor `.parents | length`).
+// $STUB_DIR/endpoints.json (sleutel: het endpoint, zonder leidende slash of query); zonder `--jq` is de uitvoer het volledige
+// antwoord. `--jq`/`-q` kent alleen een punt-pad (`.parents`, `.sha`) en `| length` (`.parents | length`); meer niet.
+// Een schrijvende aanroep (`-X PUT|POST|PATCH|DELETE` of `--input`) en `gh repo edit` geven `{}` en exitcode 0, tenzij de
+// tabel een antwoord heeft onder de sleutel `<METHODE> <endpoint>` (bijvoorbeeld `PUT repos/a/b/actions/permissions`) of
+// `repo edit <repo>`: dan geldt dat antwoord (bij exit ≠ 0 stdout, stderr, exitcode). Een mislukte aanroep staat wel in het log.
 const NODE_STUB = `
 const fs = require('node:fs');
 const dir = process.env.STUB_DIR;
@@ -228,26 +243,35 @@ function jq(waarde, uitdrukking) {
   return typeof w === 'string' ? w : JSON.stringify(w);
 }
 const [commando, ...rest] = args;
+const tabel = JSON.parse(fs.readFileSync(dir + '/endpoints.json', 'utf8'));
+function faalt(antwoord) {
+  if (antwoord.exit === 0) return;
+  // Zoals de echte gh bij een HTTP-fout: de body naar stdout, de melding naar stderr, dan exitcode.
+  if (antwoord.stdout) process.stdout.write(antwoord.stdout + '\\n');
+  if (antwoord.stderr) process.stderr.write(antwoord.stderr + '\\n');
+  process.exit(antwoord.exit);
+}
+if (commando === 'repo' && rest[0] === 'edit') {
+  const gezet = tabel['repo edit ' + (rest[1] ?? '')];
+  if (gezet !== undefined) faalt(gezet);
+  process.exit(0);
+}
 if (commando === 'api') {
   const { vlaggen, los } = opties(rest);
   const methode = String(vlaggen['-X'] ?? vlaggen['--method'] ?? 'GET').toUpperCase();
+  const eindpunt = (los[0] ?? '').replace(/^\\/+/, '').split('?')[0];
   if (['PUT', 'POST', 'PATCH', 'DELETE'].includes(methode) || vlaggen['--input'] !== undefined) {
+    const gezet = tabel[methode + ' ' + eindpunt];
+    if (gezet !== undefined) faalt(gezet);
     process.stdout.write('{}\\n');
     process.exit(0);
   }
-  const eindpunt = (los[0] ?? '').replace(/^\\/+/, '').split('?')[0];
-  const tabel = JSON.parse(fs.readFileSync(dir + '/endpoints.json', 'utf8'));
   const antwoord = tabel[eindpunt];
   if (antwoord === undefined) {
     process.stderr.write('gh: Not Found (HTTP 404)\\n');
     process.exit(1);
   }
-  if (antwoord.exit !== 0) {
-    // Zoals de echte gh api bij een HTTP-fout: de body naar stdout, de melding naar stderr, dan exitcode.
-    if (antwoord.stdout) process.stdout.write(antwoord.stdout + '\\n');
-    if (antwoord.stderr) process.stderr.write(antwoord.stderr + '\\n');
-    process.exit(antwoord.exit);
-  }
+  faalt(antwoord);
   if (antwoord.stderr) process.stderr.write(antwoord.stderr + '\\n');
   const uitdrukking = vlaggen['--jq'] ?? vlaggen['-q'];
   process.stdout.write((uitdrukking === undefined ? antwoord.stdout : jq(JSON.parse(antwoord.stdout), uitdrukking)) + '\\n');

@@ -2,6 +2,7 @@ import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
 import {
+  EERSTE_OUDER,
   RULESET_ID,
   UPGRADE,
   checkLijst,
@@ -51,8 +52,11 @@ interface Opzet {
   wijzig?: (a: Antwoorden) => void;
   extra?: Endpoints;
   origin?: string;
-  /** Het aantal ouders van `main` en van `main~1` op GitHub; goed is 1 boven 2 (hernoem-commit boven koppel-merge). */
-  main?: [number, number];
+  /**
+   * Het aantal ouders van `main` en van de eerste ouder van `main` op GitHub; goed is 1 en 2 (hernoem-commit boven
+   * koppel-merge). `null`: geen endpoint voor `commits/main` (404).
+   */
+  main?: [number, number] | null;
 }
 
 function opzet(opties: Opzet = {}): Fixture {
@@ -62,8 +66,9 @@ function opzet(opties: Opzet = {}): Fixture {
   git(fx.repo, 'remote', 'add', 'origin', opties.origin ?? ORIGIN);
   const antwoorden = goedeAntwoorden();
   opties.wijzig?.(antwoorden);
-  const [ouders, ouders1] = opties.main ?? [1, 2];
-  zetGhStub(fx, endpointsVoor(REPO, antwoorden, { ...mainVorm(REPO, ouders, ouders1), ...opties.extra }));
+  const main = opties.main === undefined ? [1, 2] : opties.main;
+  const vorm = main === null ? {} : mainVorm(REPO, main[0] ?? 1, main[1] ?? 2);
+  zetGhStub(fx, endpointsVoor(REPO, antwoorden, { ...vorm, ...opties.extra }));
   return fx;
 }
 
@@ -113,7 +118,7 @@ describe('nieuwe-app-script/AC-9: repo-instellingen weigert zonder schrijven', (
 
   test.each([
     { naam: 'main heeft twee ouders (geen hernoem-commit)', ouders: 2, ouders1: 2 },
-    { naam: 'main~1 heeft één ouder (geen koppel-merge)', ouders: 1, ouders1: 1 },
+    { naam: 'de eerste ouder van main heeft één ouder (geen koppel-merge)', ouders: 1, ouders1: 1 },
   ])('nieuwe-app-script/AC-9 $naam: exitcode 1 met de tekst en geen schrijvende gh-aanroep', ({ ouders, ouders1 }) => {
     const fx = opzet({ main: [ouders, ouders1] });
     const r = draai(fx, ['repo-instellingen', '--repo', REPO, '--beschrijving', 'x']);
@@ -150,10 +155,23 @@ describe('nieuwe-app-script/AC-9: repo-instellingen weigert zonder schrijven', (
       '--enable-auto-merge=false',
     ])
       expect(edit, `repo edit heeft ${vlag}`).toContain(vlag);
-    const beschrijving = edit.includes('--description') ? edit[edit.indexOf('--description') + 1] : undefined;
-    expect(beschrijving ?? edit.find((arg) => arg.startsWith('--description='))?.slice('--description='.length)).toBe(
-      'x',
+    // GEWIJZIGD (spec herzien, R-TEST-02): de beschrijving gaat als één argument `--description=x` mee, niet als `--description x`.
+    expect(edit, 'repo edit heeft --description=x als één argument').toContain('--description=x');
+    expect(edit).not.toContain('--description');
+    expect(r.stdout).toContain(`✓ --repo ${REPO} is de origin van deze werkmap`);
+    expect(r.stdout).toContain('✓ main op GitHub heeft de hernoem-commit boven de koppel-merge');
+    expect(r.stdout).toContain(
+      '✓ merge-instellingen gezet: merge-commit en squash aan, rebase en auto-merge uit, branch weg na de merge; beschrijving gezet',
     );
+    expect(r.stdout).toContain('✓ workflow-rechten gezet: alleen lezen, geen PR-goedkeuring');
+    expect(r.stdout).toContain('✓ Actions-instellingen gezet: aan, alle acties, op volledige SHA');
+    expect(
+      ghLog(fx).filter((args) => args.some((arg) => arg.includes('main~1'))),
+      'geen aanroep met main~1',
+    ).toStrictEqual([]);
+    const gelezen = ghLog(fx).map(eindpunt);
+    expect(gelezen).toContain(`repos/${REPO}/commits/main`);
+    expect(gelezen).toContain(`repos/${REPO}/commits/${EERSTE_OUDER}`);
 
     const puts = schrijvend.filter((args) => args[0] === 'api');
     expect(puts, 'precies twee schrijvende api-aanroepen').toHaveLength(2);
@@ -182,6 +200,130 @@ describe('nieuwe-app-script/AC-9: repo-instellingen weigert zonder schrijven', (
     const edits = schrijvendeGhAanroepen(fx).filter((args) => args[0] === 'repo' && args[1] === 'edit');
     expect(edits).toHaveLength(1);
     expect(edits[0]?.some((arg) => arg.startsWith('--description'))).toBe(false);
+    expect(r.stdout).toContain(
+      '✓ merge-instellingen gezet: merge-commit en squash aan, rebase en auto-merge uit, branch weg na de merge',
+    );
+    expect(r.stdout).not.toContain('beschrijving gezet');
+  });
+
+  const NIET_GEZET_HERSTEL = 'controleer gh auth status en het netwerk; draai repo-instellingen opnieuw';
+  const SHA_HERSTEL = 'Settings → Actions → General → Require actions to be pinned to a full-length commit SHA';
+  const FOUT_MELDING = 'gh: Resource not accessible by integration (HTTP 403)';
+
+  test.each([
+    {
+      naam: 'repo edit faalt',
+      sleutel: `repo edit ${REPO}`,
+      stap: 'merge-instellingen',
+      melding: 'merge-instellingen niet gezet',
+      schrijvend: 1,
+    },
+    {
+      naam: 'de PUT op actions/permissions/workflow faalt',
+      sleutel: `PUT repos/${REPO}/actions/permissions/workflow`,
+      stap: 'workflow-rechten',
+      melding: 'workflow-rechten niet gezet',
+      schrijvend: 2,
+    },
+    {
+      naam: 'de PUT op actions/permissions faalt',
+      sleutel: `PUT ${ACTIONS_PAD}`,
+      stap: 'actions',
+      melding: 'Actions-instellingen niet gezet',
+      schrijvend: 3,
+    },
+  ])(
+    'nieuwe-app-script/AC-9 $naam: ✗ $melding met de eerste stderr-regel, exitcode 1 en daarna geen schrijvende aanroep',
+    ({ sleutel, stap: stapId, melding, schrijvend }) => {
+      const fx = opzet({ extra: { [sleutel]: faal(`${FOUT_MELDING}\nvolgende regel die er niet bij hoort`) } });
+      const r = draai(fx, ['repo-instellingen', '--repo', REPO]);
+
+      expect(r.status, r.uit).toBe(1);
+      eisRegels(r.stdout, `${melding}: ${FOUT_MELDING}`, NIET_GEZET_HERSTEL);
+      expect(r.uit).not.toContain('volgende regel die er niet bij hoort');
+      expect(schrijvendeGhAanroepen(fx), 'de mislukte aanroep staat in het log, daarna niets meer').toHaveLength(
+        schrijvend,
+      );
+      const resultaat = leesResultaat(fx.repo, 'repo-instellingen');
+      expect(stap(resultaat, stapId).status).toBe('fout');
+      expect(resultaat.uitslag).toBe('fout');
+    },
+  );
+
+  test('nieuwe-app-script/AC-9 een falende PUT op actions/permissions met sha_pinning_required in stderr geeft ✗ sha_pinning_required onbekend', () => {
+    const fx = opzet({
+      extra: { [`PUT ${ACTIONS_PAD}`]: faal('gh: Unexpected field sha_pinning_required (HTTP 422)') },
+    });
+    const r = draai(fx, ['repo-instellingen', '--repo', REPO]);
+
+    expect(r.status, r.uit).toBe(1);
+    eisRegels(r.stdout, 'sha_pinning_required onbekend', SHA_HERSTEL);
+    expect(schrijvendeGhAanroepen(fx)).toHaveLength(3);
+  });
+
+  test('nieuwe-app-script/AC-9 een 404 op commits/main is de vormfout, zonder schrijvende aanroep', () => {
+    const fx = opzet({ main: null });
+    const r = draai(fx, ['repo-instellingen', '--repo', REPO]);
+
+    expect(r.status, r.uit).toBe(1);
+    eisRegels(r.stdout, VORM_MELDING, VORM_HERSTEL);
+    expect(schrijvendeGhAanroepen(fx)).toStrictEqual([]);
+  });
+
+  test('nieuwe-app-script/AC-9 een HTTP 500 op commits/main is "niet te lezen" met de eerste gh-regel, zonder schrijvende aanroep', () => {
+    const fx = opzet({ extra: { [`repos/${REPO}/commits/main`]: faal('gh: Server Error (HTTP 500)\nmeer tekst') } });
+    const r = draai(fx, ['repo-instellingen', '--repo', REPO]);
+
+    expect(r.status, r.uit).toBe(1);
+    eisRegels(r.stdout, 'main op GitHub niet te lezen: gh: Server Error (HTTP 500)', NIET_GEZET_HERSTEL);
+    expect(r.uit).not.toContain('meer tekst');
+    expect(schrijvendeGhAanroepen(fx)).toStrictEqual([]);
+  });
+
+  test('nieuwe-app-script/AC-9 een HTTP 500 op de eerste ouder van main is ook "niet te lezen"', () => {
+    const fx = opzet({ extra: { [`repos/${REPO}/commits/${EERSTE_OUDER}`]: faal('gh: Server Error (HTTP 500)') } });
+    const r = draai(fx, ['repo-instellingen', '--repo', REPO]);
+
+    expect(r.status, r.uit).toBe(1);
+    eisRegels(r.stdout, 'main op GitHub niet te lezen: gh: Server Error (HTTP 500)', NIET_GEZET_HERSTEL);
+    expect(schrijvendeGhAanroepen(fx)).toStrictEqual([]);
+  });
+
+  test('nieuwe-app-script/AC-9 een --beschrijving van 351 tekens geeft exitcode 2, de gebruiksfout en geen gh-aanroep', () => {
+    const fx = opzet();
+    const r = draai(fx, ['repo-instellingen', '--repo', REPO, '--beschrijving', 'x'.repeat(351)]);
+
+    expect(r.status, r.uit).toBe(2);
+    expect(r.uit).toContain('✗ nieuwe-app: --beschrijving is langer dan 350 tekens (351)');
+    expect(r.uit).toContain('Gebruik: node scripts/kit/nieuwe-app.mjs');
+    expect(ghLog(fx)).toStrictEqual([]);
+  });
+
+  test('nieuwe-app-script/AC-9 een --beschrijving van 350 tekens wordt gezet', () => {
+    const fx = opzet();
+    const lang = 'x'.repeat(350);
+    const r = draai(fx, ['repo-instellingen', '--repo', REPO, '--beschrijving', lang]);
+
+    expect(r.status, r.uit).toBe(0);
+    const edit = schrijvendeGhAanroepen(fx).find((args) => args[1] === 'edit') ?? [];
+    expect(edit).toContain(`--description=${lang}`);
+  });
+
+  test.each([
+    { naam: 'zonder --repo', args: ['repo-instellingen'], erachter: '' },
+    {
+      naam: 'met een ongeldige --repo',
+      args: ['repo-instellingen', '--repo', 'geen-slash'],
+      erachter: ' (geen-slash)',
+    },
+  ])('nieuwe-app-script/AC-9 $naam geeft exitcode 2 en de gebruiksfout', ({ args, erachter }) => {
+    const fx = opzet();
+    const r = draai(fx, args);
+
+    expect(r.status, r.uit).toBe(2);
+    expect(r.uit).toContain(`✗ nieuwe-app: --repo <owner>/<slug> ontbreekt of is ongeldig${erachter}`);
+    expect(r.uit).toContain('Gebruik: node scripts/kit/nieuwe-app.mjs');
+    expect(ghLog(fx)).toStrictEqual([]);
   });
 
   test('nieuwe-app-script/AC-9 repo-instellingen bestaat: geen "bestaat nog niet (bouwstap 2)" meer en geen gebruiksfout', () => {
