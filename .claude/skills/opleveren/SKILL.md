@@ -85,10 +85,14 @@ Alleen nadat de PR is gemerged, ook als de eigenaar zelf mergde.
 4. Een andere worktree van die branch eerst weghalen: `git worktree remove <pad>` zonder `--force` (git weigert anders de branch te verwijderen).
    De worktree waarin je zelf draait ruimt de runtime of de eigenaar op; heeft stap 3 de branch daar losgemaakt, dan lukt stap 5 gewoon.
 5. `git branch -D <headRefName>` (`-d` faalt na een squash-merge). Alleen die branch, nooit `main`.
-6. Staat de remote branch er nog: `gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<headRefName>"`, als los commando
+6. Kijk of de remote branch er nog staat: `git ls-remote --heads origin <headRefName>` (een regel: hij staat er nog).
+   Lokaal: dan `gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<headRefName>"`, als los commando
    (spec cloud-netwerkvorm; `git push origin --delete` weigert het rolhek). Nooit `main`; het rolhek weigert dat ook.
-   Lokaal kan deze stap een vraag aan de eigenaar geven.
-7. Eindmelding: wat is opgeruimd (lokale branch, remote branch, worktree) en de SHA van HEAD na stap 3.
+   Lokaal kan deze stap een vraag aan de eigenaar geven. In de cloud (`CLAUDE_CODE_REMOTE=true`) geen DELETE: de
+   GitHub-proxy weigert die met 403 en auto mode weigert hem al eerder (spec cloud-netwerkvorm, F13, F14 en OV-13). Daar
+   ruimt de repo-instelling `delete_branch_on_merge` de branch bij de merge op; staat hij er toch nog, meld dat in de
+   eindmelding, dan verwijdert de eigenaar hem op GitHub.
+7. Eindmelding: wat is opgeruimd (lokale branch, remote branch, worktree), welke remote branch is blijven staan, en de SHA van HEAD na stap 3.
    Vaste slotregel, ook als het antwoord "niets" is: "Wat moet er in het spec-sjabloon, het gouden pad of een check veranderen
    zodat de volgende feature dit niet opnieuw betaalt?"
 8. Leerpunt (ADR 0059): Loop de signaalmomenten van deze sessie af: slotvraag, derde CI-ronde, eigenaarcorrectie (pnpm meting),
