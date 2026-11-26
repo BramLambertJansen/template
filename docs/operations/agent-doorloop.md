@@ -6,7 +6,10 @@ het voorstel, bouwt en verzamelt bewijs; `gebouwd` volgt uit de AC-dekking op `m
 ## Lokale belasting
 
 De geheugengrens staat in `scripts/kit/geheugen.mjs`: weinig geheugen is minder dan 6 GiB beschikbaar; op macOS, waar
-libuv alleen vrije pagina's telt, een host met hooguit 8 GiB RAM. `GATE_WEINIG_GEHEUGEN=1` of `0` beslist voor de host. `pnpm gate:fast` meldt het onder de grens: lint en tests wachten dan op elkaar,
+libuv alleen vrije pagina's telt, een host met hooguit 8 GiB RAM. Ook een CPU-last (loadavg over 1 minuut) van minstens
+het aantal cores geldt als beperkt, en bij krap geheugen én zo'n last draait Vitest met één worker (leerpunt #1000). De
+meting gebeurt één keer bij de start en loopt achter: last die pas daarna ontstaat, verandert de planning niet, dus een
+time-out onder last blijft mogelijk. `GATE_WEINIG_GEHEUGEN=1` of `0` beslist voor de host. `pnpm gate:fast` meldt het onder de grens: lint en tests wachten dan op elkaar,
 terwijl de overige snelle gates hun bestaande baan houden, en Vitest draait met hooguit twee workers in plaats van vier
 (`vitestWorkers`, leerpunt #866). Alle controles draaien precies eenmaal, ook na rood.
 Aanleiding: op de gedeelde 8-GiB-host liep een ESLint-proces van 1,8 GiB naast de tests; de swap was vol en de gate
