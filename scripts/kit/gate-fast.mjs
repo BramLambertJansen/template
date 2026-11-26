@@ -2,9 +2,9 @@
 // test:unit en lint (de twee langste) elk apart, de rest na elkaar in de derde. Bij weinig beschikbaar geheugen delen de
 // zware gates een wachtrij; geen check wordt overgeslagen of anders aangeroepen. Gemeten op 16 cores (2026-10-22): 92 s na
 // elkaar, 71 s alles tegelijk (CPU-druk), 61 s in drie banen. Elke gate is een eigen `pnpm <script>` met dezelfde
-// exitcode als los; de uitvoer wordt gebufferd: eerst die van de rode gates, dan de lijst, beide in registervolgorde. Anders dan de oude &&-keten
+// exitcode als los; de uitvoer wordt gebufferd: bij rood eerst een kop, dan die van de rode gates en de lijst in registervolgorde. Anders dan de oude &&-keten
 // stopt een rode gate de andere niet, zodat één ronde alle fouten laat zien.
-// Is test:unit rood, dan sluit een blok `Falende tests:` af met de namen uit de FAIL-regels, zodat een staart volstaat (leerpunt #957).
+// Is test:unit rood, dan staat een blok `Falende tests:` in de kop en aan het eind, zodat kop of staart volstaat (leerpunt #957, #1000).
 // In CI draait de suite in drie delen naast elkaar (`--deel`, ADR 0076, spec ci-in-delen): `checks` (alles behalve
 // test:unit) en `test-1`/`test-2` (elk de helft van test:unit via `vitest --shard`). Zonder `--deel` draait alles.
 import { Buffer } from 'node:buffer';
@@ -112,9 +112,9 @@ export async function gateFast(keuze, run = draai, write = (text) => process.std
 }
 
 /**
- * Drukt de uitslagen af en geeft de exitcode: eerst de uitvoer van de rode gates, dan de ⚠-regels van de groene, dan de
- * lijst en de samenvatting. Ook een korte rapportage van de staart toont zo welke gates rood zijn en het einde van de
- * laatste fout.
+ * Drukt de uitslagen af en geeft de exitcode: bij rood eerst een kop (samenvatting en falende tests), dan de uitvoer van de
+ * rode gates, de ⚠-regels van de groene, de lijst en de samenvatting. Een afgekapte uitvoer toont zo in de kop, en een
+ * korte staart in het slot, welke gates rood zijn.
  * @param {readonly Uitslag[]} uitslagen
  * @param {string} naam
  * @param {(text: string) => void} write
