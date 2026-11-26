@@ -368,7 +368,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   `test/scripts/nieuwe-app.test.ts`); het subcommando `repo-instellingen` bestaat nog niet. De spec is herzien (OV-8, OV-9):
   `--controleer` toetst ruleset en instellingen met de nieuwe alleen-lezende module `scripts/kit/ruleset-controle.mjs`, niet meer met
   `scripts/kit/pr-merge.mjs`. Kritiek werk (R-WERK-05): spec-review van de herziening, aparte tester en goedkeuring van de eigenaar
-  op de PR. **Klaar als:** AC-9, AC-10 en AC-19 van bouwstap 2 zijn groen en `scripts/kit/nieuwe-app.mjs` meldt niet meer dat
+  op de PR. **Klaar als:** AC-9, AC-10, AC-19 en de bouwstap-2-delen van AC-1, AC-5 en AC-15 zijn groen en `scripts/kit/nieuwe-app.mjs` meldt niet meer dat
   `repo-instellingen` niet bestaat.
   aanleiding: `docs/template/specs/nieuwe-app-script.md` (bouwstap 2, werking 7)
 - [ ] **Cloud-netwerkvorm: vervolg op de review van de bouw.** Uit #890, niet opgevolgd: (N-1) de main-regel decodeert alleen `%2F`,
