@@ -12,6 +12,10 @@ export const errors = defineErrorCodes([
   'ACCOUNT_INVITED',
   'ACCOUNT_BLOCKED',
   'ACCOUNT_DEACTIVATED',
+  // Resetlink van een beheerder: verlopen of al gebruikt (web, stap resetPassword van authErrorCode).
+  'RESET_LINK_INVALID',
+  // Herstelcodes (ADR 0113).
+  'INVALID_BACKUP_CODE',
   // Spec eigen-account.
   'WRONG_PASSWORD',
   'SESSION_NOT_FRESH',

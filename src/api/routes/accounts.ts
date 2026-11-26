@@ -10,10 +10,13 @@ import {
   deactivateContract,
   inviteContract,
   reinviteContract,
+  resetLinkContract,
+  revokeInvitationContract,
   unblockContract,
 } from '#shared/contracts/accounts.ts';
 import { ACCOUNTS_PAGE_SIZE } from '#shared/limits.ts';
 import { roles } from '#shared/roles.ts';
+import { AppError } from '#core/api/errors.ts';
 import { appAccounts } from '../db/schema.ts';
 import { defineRoute } from '../kit.ts';
 
@@ -135,6 +138,46 @@ export const inviteRoute = defineRoute(inviteContract, async ({ input, tx, servi
 export const reinviteRoute = defineRoute(reinviteContract, async ({ input, tx, services, afterCommit }) => {
   await tx.execute(sql`select app.audit_account_action('core.account.reinvite', ${input.id})`);
   await services.invitations.reinvite(input.id, { afterCommit });
+  return null;
+});
+
+// Uitnodiging intrekken (spec accountbeheer-uitbreiding, RLS-vangnet): de service draait als auth_service buiten RLS, dus eerst
+// de rij uit app.accounts in de transactie van de admin met MFA (geen rij: NOT_FOUND). Alleen 'invited' gaat naar de service,
+// die onder slot opnieuw op een credential toetst. De auditregel staat vóór de service, zoals bij reinviteRoute: een fout rolt
+// hem terug. Faalt de route-commit na de service, dan is het account weg zonder regel (bekend gat, ADR 0051, R-DB-15).
+export const revokeInvitationRoute = defineRoute(revokeInvitationContract, async ({ input, tx, services }) => {
+  const [row] = await tx
+    .select({ status: appAccounts.status })
+    .from(appAccounts)
+    .where(sql`${appAccounts.id} = ${input.id}`)
+    .limit(1);
+  if (row === undefined) throw new AppError('NOT_FOUND');
+  if (row.status !== 'invited') throw new AppError('ALREADY_ACTIVE');
+  await tx.execute(sql`select app.audit_account_action('core.account.revoke', ${input.id})`);
+  await services.invitations.revoke(input.id);
+  return null;
+});
+
+// Resetlink sturen (spec accountbeheer-uitbreiding, RLS-vangnet): de service draait als auth_service buiten RLS, dus eerst de rij
+// uit app.accounts in de transactie van de admin met MFA. Alleen 'active' gaat door; de auditregel staat vóór de service, zoals
+// bij reinviteRoute. Tokens weg, aanmaken en mail pas na commit (afterCommit).
+const RESET_REFUSAL = {
+  invited: 'ACCOUNT_INVITED',
+  blocked: 'ACCOUNT_BLOCKED',
+  deactivated: 'ACCOUNT_DEACTIVATED',
+} as const;
+
+export const resetLinkRoute = defineRoute(resetLinkContract, async ({ input, tx, services, afterCommit }) => {
+  const [row] = await tx
+    .select({ status: appAccounts.status })
+    .from(appAccounts)
+    .where(sql`${appAccounts.id} = ${input.id}`)
+    .limit(1);
+  if (row === undefined) throw new AppError('NOT_FOUND');
+  const status = accountRow.shape.status.parse(row.status);
+  if (status !== 'active') throw new AppError(RESET_REFUSAL[status]);
+  await tx.execute(sql`select app.audit_account_action('core.account.reset_link', ${input.id})`);
+  await services.invitations.sendResetLink(input.id, { afterCommit });
   return null;
 });
 

@@ -1,5 +1,5 @@
 import { useSearch } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { z } from 'zod';
 import { ACCOUNT_SORTS, ROLLEN, accountsSearch, STATUSSEN, type accountItem } from '#shared/contracts/accounts.ts';
 import { uniqueById, useListSearch } from '#core/web/lib/list-search.ts';
@@ -23,6 +23,8 @@ import { useMe } from '#web/features/session/queries.ts';
 import { useAccounts } from './queries.ts';
 import type { AccountMessage } from './row-actions.tsx';
 import { AccountRow } from './account-row.tsx';
+import { RevokeInvitationHost } from './revoke-invitation-dialog.tsx';
+import { focusAfterDialog } from './focus-after-dialog.ts';
 
 type Account = z.output<typeof accountItem>;
 type Message = AccountMessage;
@@ -44,16 +46,18 @@ function AccountsTable({
   items,
   busy,
   onMessage,
+  regionRef,
 }: {
   items: readonly Account[];
   busy: boolean;
   onMessage: (message: Message) => void;
+  regionRef: RefObject<HTMLDivElement | null>;
 }) {
   // Zolang de eigen id onbekend is, bieden we geen menu aan: de eigen rij mag nooit even "Blokkeren" tonen.
   const myId = useMe().data?.id;
   return (
     <>
-      <Table label={copy.accounts.title} aria-busy={busy}>
+      <Table regionRef={regionRef} label={copy.accounts.title} aria-busy={busy}>
         <TableHeader>
           <TableRow>
             <TableHead>{copy.accounts.name}</TableHead>
@@ -76,6 +80,47 @@ function AccountsTable({
   );
 }
 
+// Focus na intrekken (spec accountbeheer-uitbreiding, focusvolgorde). De refetch loopt nog als de dialoog dichtgaat; we wachten
+// tot de lijst na het intrekken bijgewerkt is (data of fout, geen placeholder van een vorige filtersleutel). Staat de rij er dan
+// nog (refetch faalde of de rij blijft), dan verplaatsen we niets; is hij weg, dan naar de focusbare region "Accounts"
+// (src/core/web/ui/table.tsx), en is de lijst leeg (AsyncView toont de lege staat zonder tabel) naar de knop "Account
+// uitnodigen". De focus gaat pas in het volgende frame (focusAfterDialog), als de dialoog uit de DOM is en de pagina niet meer
+// inert. Wordt de lijst daarna alsnog leeg terwijl de region de focus had (bijv. een zoekterm die na het intrekken in de URL
+// komt), dan verdwijnt de region onder de focus en zetten we hem op de knop.
+function useFocusAfterRevoke(accounts: ReturnType<typeof useAccounts>) {
+  const region = useRef<HTMLDivElement>(null);
+  const invite = useRef<HTMLButtonElement>(null);
+  const toRegion = useRef(false);
+  const [removed, setRemoved] = useState<{ readonly id: string; readonly since: number } | null>(null);
+  const { data, dataUpdatedAt, errorUpdatedAt, isPlaceholderData } = accounts;
+  const rows = data?.pages.flatMap((page) => page.items);
+  const empty = rows !== undefined && rows.length === 0 && !isPlaceholderData;
+  useEffect(() => {
+    if (removed === null || isPlaceholderData) return;
+    const current = data?.pages.flatMap((page) => page.items) ?? [];
+    if (current.some((account) => account.id === removed.id)) {
+      if (Math.max(dataUpdatedAt, errorUpdatedAt) >= removed.since) setRemoved(null);
+      return;
+    }
+    setRemoved(null);
+    toRegion.current = current.length > 0;
+    focusAfterDialog(current.length === 0 ? invite : region);
+  }, [data, dataUpdatedAt, errorUpdatedAt, isPlaceholderData, removed]);
+  useEffect(() => {
+    if (!empty || !toRegion.current) return;
+    toRegion.current = false;
+    if (document.activeElement === null || document.activeElement === document.body) focusAfterDialog(invite);
+  }, [empty]);
+  return {
+    region,
+    invite,
+    revoked: (id: string) => {
+      toRegion.current = false;
+      setRemoved({ id, since: Date.now() });
+    },
+  };
+}
+
 // Accountlijst (spec accountbeheer): laden, leeg en fout via AsyncView; "Meer laden" met de cursor; uitnodigen in een dialoog.
 export function AccountsPage() {
   const list = useListSearch();
@@ -85,91 +130,105 @@ export function AccountsPage() {
   const filtered = route.q !== undefined || route.rol !== undefined || route.status !== undefined;
   const [inviting, setInviting] = useState(false);
   const [message, setMessage] = useState<Message>(null);
+  const focus = useFocusAfterRevoke(accounts);
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        title={copy.accounts.title}
-        actions={
-          <Button
-            onClick={() => {
-              setMessage(null);
-              setInviting(true);
-            }}
-          >
-            {copy.accounts.invite}
-          </Button>
-        }
-      />
-      {message === null ? null : <Notice tone={message.tone}>{message.text}</Notice>}
-      <ListToolbar
-        searchLabel={copy.accounts.search}
-        searchHint={copy.accounts.searchHint}
-        query={route.q ?? ''}
-        onQueryChange={list.setQuery}
-        filters={[
-          {
-            id: 'rol',
-            label: copy.accounts.role,
-            value: route.rol ?? '',
-            options: roleOptions,
-            onChange: (value) => {
-              list.setFilter('rol', value);
+    <RevokeInvitationHost
+      onRevoked={(account, text) => {
+        setMessage({ tone: 'info', text });
+        focus.revoked(account.id);
+      }}
+    >
+      <div className="flex flex-col gap-6">
+        <PageHeader
+          title={copy.accounts.title}
+          actions={
+            <Button
+              ref={focus.invite}
+              onClick={() => {
+                setMessage(null);
+                setInviting(true);
+              }}
+            >
+              {copy.accounts.invite}
+            </Button>
+          }
+        />
+        {message === null ? null : <Notice tone={message.tone}>{message.text}</Notice>}
+        <ListToolbar
+          searchLabel={copy.accounts.search}
+          searchHint={copy.accounts.searchHint}
+          query={route.q ?? ''}
+          onQueryChange={list.setQuery}
+          filters={[
+            {
+              id: 'rol',
+              label: copy.accounts.role,
+              value: route.rol ?? '',
+              options: roleOptions,
+              onChange: (value) => {
+                list.setFilter('rol', value);
+              },
             },
-          },
-          {
-            id: 'status',
-            label: copy.accounts.status,
-            value: route.status ?? '',
-            options: statusOptions,
-            onChange: (value) => {
-              list.setFilter('status', value);
+            {
+              id: 'status',
+              label: copy.accounts.status,
+              value: route.status ?? '',
+              options: statusOptions,
+              onChange: (value) => {
+                list.setFilter('status', value);
+              },
             },
-          },
-        ]}
-        sortLabel={copy.accounts.sort}
-        sort={route.sort ?? accountsSearch.defaultSort}
-        sortOptions={sortOptions}
-        onSortChange={list.setSort}
-        onClear={list.clear}
-      />
-      <AsyncView
-        query={accounts}
-        isEmpty={(data) => data.pages.every((page) => page.items.length === 0)}
-        emptyText={filtered ? copy.accounts.emptyFiltered : copy.accounts.empty}
-      >
-        {(data) => {
-          const rows = uniqueById(data.pages.flatMap((page) => page.items));
-          return (
-            <div className="flex min-w-0 flex-col gap-4">
-              <Text size="sm" tone="muted" aria-live="polite">
-                {accounts.isPlaceholderData
-                  ? copy.accounts.loading
-                  : copy.accounts.shown(rows.length, accounts.hasNextPage)}
-              </Text>
-              <AccountsTable items={rows} busy={accounts.isPlaceholderData} onMessage={setMessage} />
-              {accounts.hasNextPage ? (
-                <div>
-                  <Button
-                    variant="outline"
-                    disabled={accounts.isFetchingNextPage}
-                    onClick={() => void accounts.fetchNextPage()}
-                  >
-                    {copy.accounts.more}
-                  </Button>
-                </div>
-              ) : null}
-            </div>
-          );
-        }}
-      </AsyncView>
-      <InviteDialog
-        open={inviting}
-        onOpenChange={setInviting}
-        onInvited={(email) => {
-          setMessage({ tone: 'info', text: copy.inviteDialog.sent(email) });
-        }}
-      />
-    </div>
+          ]}
+          sortLabel={copy.accounts.sort}
+          sort={route.sort ?? accountsSearch.defaultSort}
+          sortOptions={sortOptions}
+          onSortChange={list.setSort}
+          onClear={list.clear}
+        />
+        <AsyncView
+          query={accounts}
+          isEmpty={(data) => data.pages.every((page) => page.items.length === 0)}
+          emptyText={filtered ? copy.accounts.emptyFiltered : copy.accounts.empty}
+        >
+          {(data) => {
+            const rows = uniqueById(data.pages.flatMap((page) => page.items));
+            return (
+              <div className="flex min-w-0 flex-col gap-4">
+                <Text size="sm" tone="muted" aria-live="polite">
+                  {accounts.isPlaceholderData
+                    ? copy.accounts.loading
+                    : copy.accounts.shown(rows.length, accounts.hasNextPage)}
+                </Text>
+                <AccountsTable
+                  items={rows}
+                  busy={accounts.isPlaceholderData}
+                  onMessage={setMessage}
+                  regionRef={focus.region}
+                />
+                {accounts.hasNextPage ? (
+                  <div>
+                    <Button
+                      variant="outline"
+                      disabled={accounts.isFetchingNextPage}
+                      onClick={() => void accounts.fetchNextPage()}
+                    >
+                      {copy.accounts.more}
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            );
+          }}
+        </AsyncView>
+        <InviteDialog
+          open={inviting}
+          onOpenChange={setInviting}
+          onInvited={(email) => {
+            setMessage({ tone: 'info', text: copy.inviteDialog.sent(email) });
+          }}
+        />
+      </div>
+    </RevokeInvitationHost>
   );
 }

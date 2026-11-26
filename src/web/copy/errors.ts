@@ -17,6 +17,8 @@ export const errorTexts = {
   ACCOUNT_INVITED: 'Dit account is nog niet actief. Nodig opnieuw uit of trek de uitnodiging in.',
   ACCOUNT_BLOCKED: 'Dit account is geblokkeerd. Deblokkeer het eerst.',
   ACCOUNT_DEACTIVATED: 'E-mailadres of wachtwoord klopt niet.',
+  RESET_LINK_INVALID: 'Deze link is verlopen of al gebruikt. Vraag een beheerder om een nieuwe.',
+  INVALID_BACKUP_CODE: 'Deze herstelcode klopt niet of is al gebruikt.',
   WRONG_PASSWORD: wrongCurrentPasswordText,
   SESSION_NOT_FRESH: 'Log opnieuw in om dit te wijzigen.',
   EMAIL_LINK_INVALID: 'Deze link is verlopen of al gebruikt. Vraag de wijziging opnieuw aan.',

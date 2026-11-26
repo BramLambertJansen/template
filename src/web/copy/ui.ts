@@ -20,6 +20,7 @@ export const copy = {
     visibilityLabel: 'Wachtwoord tonen',
     submit: 'Inloggen',
     passwordSet: 'Je wachtwoord is ingesteld. Log in om verder te gaan.',
+    passwordChanged: 'Je wachtwoord is gewijzigd. Log in om verder te gaan.',
     sessionExpired: 'Je sessie is verlopen. Log opnieuw in.',
   },
   totp: {
@@ -27,6 +28,22 @@ export const copy = {
     explanation: 'Voer de 6-cijferige code uit je authenticator-app in.',
     code: 'Code',
     submit: 'Bevestigen',
+    useBackupCode: 'Gebruik een herstelcode',
+  },
+  // Spec accountbeheer-uitbreiding (ADR 0113): inloggen met een herstelcode in plaats van TOTP.
+  backupCode: {
+    title: 'Herstelcode',
+    explanation: 'Voer een van je herstelcodes in.',
+    code: 'Herstelcode',
+    submit: 'Bevestigen',
+    useTotp: 'Gebruik je authenticator-app',
+  },
+  // De codes zelf, één keer getoond: na inschrijven en na opnieuw maken op /account.
+  backupCodes: {
+    title: 'Herstelcodes',
+    explanation:
+      'Bewaar deze codes op een veilige plek. Elke code werkt één keer, als je je authenticator-app niet bij de hand hebt. Je ziet ze maar één keer.',
+    saved: 'Ik heb ze bewaard',
   },
   totpSetup: {
     title: 'Tweestapsverificatie instellen',
@@ -44,6 +61,8 @@ export const copy = {
     repeat: 'Wachtwoord herhalen',
     help: 'Minstens 12 tekens.',
     submit: 'Wachtwoord instellen',
+    // Spec accountbeheer-uitbreiding: dezelfde pagina via een resetlink (`/uitnodiging?soort=reset`).
+    resetTitle: 'Nieuw wachtwoord instellen',
   },
   nav: { home: 'Home', dashboard: 'Dashboard' },
   menu: { account: 'Mijn account', logout: 'Uitloggen' },
@@ -80,7 +99,7 @@ export const copy = {
     status: 'Status',
     lastLogin: 'Laatst ingelogd',
     unknownLogin: 'Onbekend',
-    // Kop van de kolom met "Opnieuw uitnodigen"; alleen voor schermlezers.
+    // Kop van de kolom met het menu per rij; alleen voor schermlezers.
     actions: 'Acties',
     roleName: roleLabel,
     statuses: {
@@ -110,6 +129,27 @@ export const copy = {
     },
     deactivated: (naam: string) => `${naam} is gedeactiveerd.`,
     activated: (naam: string) => `${naam} is geactiveerd. Een eventuele blokkade blijft gelden.`,
+    // Spec accountbeheer-uitbreiding: uitnodiging intrekken; ALREADY_ACTIVE heeft hier een eigen tekst (de algemene blijft
+    // voor opnieuw uitnodigen).
+    revoke: 'Uitnodiging intrekken',
+    revokeDialog: {
+      title: 'Uitnodiging intrekken?',
+      description: (email: string) => `De link aan ${email} werkt niet meer en het account verdwijnt uit de lijst.`,
+      confirm: 'Intrekken',
+      alreadyActive: 'Dit account is inmiddels actief; de uitnodiging is al gebruikt.',
+    },
+    revoked: (email: string) => `De uitnodiging aan ${email} is ingetrokken.`,
+    // Spec accountbeheer-uitbreiding: resetlink sturen (ConfirmDialog, niet rood); ACCOUNT_DEACTIVATED heeft hier een eigen
+    // tekst (de algemene blijft de inlogfout).
+    resetLink: 'Resetlink sturen',
+    resetLinkDialog: {
+      title: 'Resetlink sturen?',
+      description: (naam: string) =>
+        `${naam} krijgt een mail met een link om een nieuw wachtwoord in te stellen. Het huidige wachtwoord blijft werken tot dan.`,
+      confirm: 'Link sturen',
+      deactivated: 'Dit account is gedeactiveerd. Activeer het eerst.',
+    },
+    resetLinkSent: (email: string) => `Resetlink verstuurd naar ${email}.`,
     invite: 'Account uitnodigen',
     empty: 'Nog geen accounts.',
     more: 'Meer laden',
@@ -156,6 +196,12 @@ export const copy = {
       help: 'Minstens 12 tekens. Je wordt op je andere apparaten uitgelogd.',
       submit: 'Wachtwoord wijzigen',
       changed: 'Je wachtwoord is gewijzigd. Je andere sessies zijn beëindigd.',
+    },
+    backupCodes: {
+      title: 'Herstelcodes',
+      explanation: 'Nieuwe codes maken maakt de oude ongeldig.',
+      current: 'Wachtwoord',
+      submit: 'Nieuwe herstelcodes maken',
     },
     sessions: {
       title: 'Sessies',

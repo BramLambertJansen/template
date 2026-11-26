@@ -7,6 +7,8 @@ import { actorFromMe, homeFor, meQuery } from '#web/lib/session.ts';
 const search = z.object({
   redirect: z.string().optional().catch(undefined),
   ingesteld: z.boolean().optional().catch(undefined),
+  // Na een nieuw wachtwoord via een resetlink (spec accountbeheer-uitbreiding).
+  gewijzigd: z.boolean().optional().catch(undefined),
   sessie: z.literal('verlopen').optional().catch(undefined),
 });
 
@@ -20,7 +22,8 @@ export const Route = createFileRoute('/login')({
 });
 
 function LoginRoute() {
-  const { redirect: target, ingesteld, sessie } = Route.useSearch();
-  const notice = ingesteld === true ? 'ingesteld' : sessie === 'verlopen' ? 'verlopen' : null;
+  const { redirect: target, ingesteld, gewijzigd, sessie } = Route.useSearch();
+  const notice =
+    ingesteld === true ? 'ingesteld' : gewijzigd === true ? 'gewijzigd' : sessie === 'verlopen' ? 'verlopen' : null;
   return <LoginPage notice={notice} redirect={target} />;
 }

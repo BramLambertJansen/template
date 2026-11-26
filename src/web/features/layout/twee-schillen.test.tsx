@@ -86,7 +86,7 @@ function TweedeLayout({ me }: { readonly me: Me }) {
 
 function buildRouter(rol: Rol) {
   const queryClient = createQueryClient();
-  const me = { id: 'x', naam: 'Ada', email: 'ada@example.test', rol };
+  const me = { id: 'x', naam: 'Ada', email: 'ada@example.test', rol, tweestap: false };
   queryClient.setQueryData(meQuery.queryKey, me);
 
   const root = createRootRouteWithContext<RouterContext>()({ component: Outlet });

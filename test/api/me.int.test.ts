@@ -40,7 +40,13 @@ describe('GET /api/me', () => {
     const response = await browser.get('/api/me');
 
     expect(response.status).toBe(200);
-    expect(await body(response)).toStrictEqual({ id: userId, naam: 'Gewone Gebruiker', email, rol: 'user' });
+    expect(await body(response)).toStrictEqual({
+      id: userId,
+      naam: 'Gewone Gebruiker',
+      email,
+      rol: 'user',
+      tweestap: false,
+    });
   });
 
   test('niet ingelogd: 401 UNAUTHENTICATED', async () => {

@@ -31,6 +31,15 @@ export function totpKey(userId: string, code: unknown): string | null {
   return `totp:${sha256(`${userId}:${code}`)}`;
 }
 
+const BACKUP_CODE = /^[A-Za-z0-9]{5}-[A-Za-z0-9]{5}$/;
+
+// De sleutel van een herstelcode van deze gebruiker (ADR 0113), of null als de invoer niet de vorm van een herstelcode van de
+// plugin heeft (dan claimt de hook niet en weigert de plugin zelf). Geen trimmen: de plugin vergelijkt de code letterlijk.
+export function backupCodeKey(userId: string, code: unknown): string | null {
+  if (typeof code !== 'string' || !BACKUP_CODE.test(code)) return null;
+  return `backup-code:${sha256(`${userId}:${code}`)}`;
+}
+
 // Een HS256-handtekening is 32 bytes: in base64url zonder opvulling precies 43 tekens.
 const JWT_SHAPE = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$/;
 

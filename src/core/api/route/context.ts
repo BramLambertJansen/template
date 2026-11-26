@@ -15,6 +15,8 @@ export interface RouteActor {
   readonly sessionStrength: SessionStrength;
   readonly name: string;
   readonly email: string;
+  // TOTP ingesteld (twoFactorEnabled uit de sessie); false als de gateway het niet levert (spec accountbeheer-uitbreiding).
+  readonly twoFactorEnabled: boolean;
 }
 
 // services: wat de app in createApp meegeeft (bijv. uitnodigen via Better Auth); getypt via createRouteKit<…, Services>.

@@ -31,19 +31,21 @@ test('AC-6: na 10 keer "Opnieuw uitnodigen" geeft de 11e de melding, en er staan
   const invited = await createInvitedAccount();
   await signInAsAdmin(page, admin);
   await page.goto('/admin/accounts');
-  const again = page
+  // Spec accountbeheer-uitbreiding: "Opnieuw uitnodigen" is een item in het menu "Acties voor {naam}" van de rij.
+  const actions = page
     .getByRole('row')
     .filter({ hasText: invited.email })
-    .getByRole('button', { name: 'Opnieuw uitnodigen' });
+    .getByRole('button', { name: 'Acties voor Nog Niet Actief' });
 
   const statuses: number[] = [];
   for (let i = 0; i <= DUUR; i += 1) {
+    await actions.click();
     const [response] = await Promise.all([
       page.waitForResponse((r) => r.request().method() === 'POST' && r.url().endsWith('/reinvite')),
-      again.click(),
+      page.getByRole('menuitem', { name: 'Opnieuw uitnodigen', exact: true }).click(),
     ]);
     statuses.push(response.status());
-    await expect(again).toBeEnabled();
+    await expect(actions).toBeEnabled();
   }
 
   expect(statuses).toStrictEqual([...Array.from({ length: DUUR }, () => 200), 429]);

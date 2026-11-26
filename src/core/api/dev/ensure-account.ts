@@ -41,7 +41,9 @@ async function ensureTotp(auth: Auth, userId: string, secret: string): Promise<v
     data: {
       userId,
       secret: await symmetricEncrypt({ key: context.secretConfig, data: secret }),
-      backupCodes: '[]',
+      // Versleuteld zoals de plugin (storeBackupCodes 'encrypted'): platte '[]' laat symmetricDecrypt in verify-backup-code
+      // gooien (500) in plaats van INVALID_BACKUP_CODE.
+      backupCodes: await symmetricEncrypt({ key: context.secretConfig, data: JSON.stringify([]) }),
       verified: true,
     },
   });

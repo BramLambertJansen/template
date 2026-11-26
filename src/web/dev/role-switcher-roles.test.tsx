@@ -27,7 +27,7 @@ afterEach(cleanup);
 
 async function show(current: string) {
   const queryClient = new QueryClient();
-  queryClient.setQueryData(meQuery.queryKey, { id: 'x', naam: 'X', email: 'x@x', rol: current });
+  queryClient.setQueryData(meQuery.queryKey, { id: 'x', naam: 'X', email: 'x@x', rol: current, tweestap: false });
   const root = createRootRoute({ component: DevRoleSwitcher });
   const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ['/'] }) });
   render(

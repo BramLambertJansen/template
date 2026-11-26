@@ -2,6 +2,8 @@
 
 Status: geaccepteerd
 
+Herzien: 2026-11-26: gewijzigd door [0113](0113-herstelcodes-voor-totp.md) punt 3, 5 (herstelcodes: twee backup-code-paden open)
+
 Herzien: 2026-11-15 (#715): door ADR 0092 punt 3, 4 en 5, punt 13, 15 en 16: de dev-login valideert tegen het register, en MFA-eis, blokkeren en de telbare beheerder hangen aan de vlag `beheer` in plaats van de naam `admin`
 
 Herzien: 2026-11-03 (#469): gewijzigd door [0075](0075-eenmalige-codes-en-geen-sessietoken-in-json.md) (drie punten

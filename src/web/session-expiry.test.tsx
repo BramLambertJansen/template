@@ -19,7 +19,13 @@ test('een 401 wist de oude actor en accountdata vóór navigatie naar inloggen',
       navigation = router.navigate({ to: '/login', search: { sessie: 'verlopen', redirect: '/account' } });
     },
   });
-  client.setQueryData(meQuery.queryKey, { id: 'u', naam: 'Review', email: 'review@example.test', rol: 'user' });
+  client.setQueryData(meQuery.queryKey, {
+    id: 'u',
+    naam: 'Review',
+    email: 'review@example.test',
+    rol: 'user',
+    tweestap: false,
+  });
   client.setQueryData(['accounts'], { private: 'previous user' });
   const router = createAppRouter(client, createMemoryHistory({ initialEntries: ['/'] }));
   await router.load();
@@ -50,7 +56,7 @@ test('een 401 bij het herladen van me behoudt de verlopen-sessiemelding in de gu
   });
   client.setQueryData(
     meQuery.queryKey,
-    { id: 'u', naam: 'Review', email: 'review@example.test', rol: 'user' },
+    { id: 'u', naam: 'Review', email: 'review@example.test', rol: 'user', tweestap: false },
     { updatedAt: Date.now() - 60000 },
   );
   const router = createAppRouter(client, createMemoryHistory({ initialEntries: ['/account'] }));

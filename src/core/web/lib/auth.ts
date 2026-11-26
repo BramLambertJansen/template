@@ -11,7 +11,17 @@ interface AuthFailure {
   readonly code?: string | undefined;
 }
 
-type Step = 'signIn' | 'verifyTotp' | 'enableTotp' | 'setPassword' | 'signOut' | 'changePassword' | 'changeEmail';
+type Step =
+  | 'signIn'
+  | 'verifyTotp'
+  | 'verifyBackupCode'
+  | 'enableTotp'
+  | 'generateBackupCodes'
+  | 'setPassword'
+  | 'resetPassword'
+  | 'signOut'
+  | 'changePassword'
+  | 'changeEmail';
 
 // Per stap: welke foutcode een 4xx betekent. Inloggen geeft altijd dezelfde melding (geen onderscheid tussen onbekend
 // e-mailadres en fout wachtwoord); een uitnodigingslink geeft één melding voor verlopen, gebruikt of onbekend.
@@ -21,14 +31,19 @@ export function authErrorCode(step: Step, failure: AuthFailure): string {
   // Geweigerd vóór Better Auth (andere origin, ADR 0041): nooit vermommen als "wachtwoord klopt niet".
   if (failure.code === 'CSRF_REJECTED') return 'CSRF_REJECTED';
   if (step === 'verifyTotp') return failure.code === 'INVALID_TWO_FACTOR_COOKIE' ? 'UNAUTHENTICATED' : 'INVALID_TOTP';
-  if (step === 'setPassword') return failure.code === 'PASSWORD_TOO_SHORT' ? 'VALIDATION' : 'INVITATION_INVALID';
+  // Herstelcode bij inloggen (ADR 0113): zoals TOTP; elke andere fout, ook ACCOUNT_BLOCKED, is "klopt niet of al gebruikt".
+  if (step === 'verifyBackupCode')
+    return failure.code === 'INVALID_TWO_FACTOR_COOKIE' ? 'UNAUTHENTICATED' : 'INVALID_BACKUP_CODE';
+  if (step === 'generateBackupCodes') return changePasswordCode(failure);
+  if (step === 'setPassword' || step === 'resetPassword') return passwordLinkCode(step, failure);
   if (step === 'signIn' || step === 'enableTotp') return 'INVALID_CREDENTIALS';
   if (step === 'changePassword') return changePasswordCode(failure);
   if (step === 'changeEmail') return changeEmailCode(failure);
   return 'INTERNAL_ERROR';
 }
 
-// Spec eigen-account: fout huidig wachtwoord, ongeldig nieuw wachtwoord, MFA-eis van de before-hook, verlopen sessie.
+// Spec eigen-account: fout huidig wachtwoord, ongeldig nieuw wachtwoord, MFA-eis van de before-hook, verlopen sessie. Nieuwe
+// herstelcodes maken (ADR 0113) vraagt hetzelfde: wachtwoord en een mfa-sessie.
 // Een Map, geen object: Betterleaks (generic-password) leest `INVALID_PASSWORD: '…'` als een geheim.
 const CHANGE_PASSWORD_CODES: ReadonlyMap<string, string> = new Map([
   ['INVALID_PASSWORD', 'WRONG_PASSWORD'],
@@ -41,6 +56,15 @@ const CHANGE_PASSWORD_CODES: ReadonlyMap<string, string> = new Map([
 function changePasswordCode(failure: AuthFailure): string {
   if (failure.status === 401) return 'UNAUTHENTICATED';
   return CHANGE_PASSWORD_CODES.get(failure.code ?? '') ?? 'INTERNAL_ERROR';
+}
+
+const PASSWORD_LENGTH_CODES: ReadonlySet<string> = new Set(['PASSWORD_TOO_SHORT', 'PASSWORD_TOO_LONG']);
+
+// Wachtwoord instellen via een link: de uitnodiging (INVITATION_INVALID) of de resetlink van een beheerder (spec
+// accountbeheer-uitbreiding: zelfde aanroep, eigen foutcode RESET_LINK_INVALID).
+function passwordLinkCode(step: 'setPassword' | 'resetPassword', failure: AuthFailure): string {
+  if (step === 'setPassword') return failure.code === 'PASSWORD_TOO_SHORT' ? 'VALIDATION' : 'INVITATION_INVALID';
+  return PASSWORD_LENGTH_CODES.has(failure.code ?? '') ? 'VALIDATION' : 'RESET_LINK_INVALID';
 }
 
 // Spec eigen-account: een sessie ouder dan 10 minuten, de MFA-eis van de before-hook, een ongeldig of gelijk adres, verlopen sessie.
@@ -58,6 +82,13 @@ function changeEmailCode(failure: AuthFailure): string {
 function fail(step: Step, failure: AuthFailure): never {
   throw new ApiError(authErrorCode(step, failure), failure.status);
 }
+
+// Wachtwoord instellen via een link: de uitnodiging of de resetlink van een beheerder (andere foutcode). Een regel per soort, zodat
+// de secret-scan (generic-password) twee stapnamen op één regel niet als wachtwoord leest.
+const stepBySoort: Readonly<Record<'uitnodiging' | 'reset', Step>> = {
+  uitnodiging: 'setPassword',
+  reset: 'resetPassword',
+};
 
 export type SignInResult = 'totp' | 'signed-in';
 
@@ -77,17 +108,34 @@ export function createAuthApi(baseURL: string) {
       const { error } = await getClient().twoFactor.verifyTotp({ code });
       if (error !== null) fail('verifyTotp', error);
     },
+    // Inloggen met een herstelcode in plaats van TOTP (ADR 0113): zonder trustDevice en disableSession (de server weigert die).
+    async verifyBackupCode(code: string): Promise<void> {
+      const { error } = await getClient().twoFactor.verifyBackupCode({ code });
+      if (error !== null) fail('verifyBackupCode', error);
+    },
+    // Nieuwe herstelcodes (ADR 0113 punt 5): wachtwoord en een mfa-sessie; de oude vervallen. De codes gaan alleen terug naar
+    // de aanroeper, die ze in de state van het component houdt.
+    async generateBackupCodes(password: string): Promise<readonly string[]> {
+      const { data, error } = await getClient().twoFactor.generateBackupCodes({ password });
+      if (error !== null) fail('generateBackupCodes', error);
+      return data.backupCodes;
+    },
     // TOTP inschrijven (spec: admin zonder TOTP). Actief pas na verifyTotp met een code uit de app.
-    async enableTotp(password: string): Promise<{ totpURI: string }> {
+    async enableTotp(password: string): Promise<{ totpURI: string; backupCodes: readonly string[] }> {
       const { data, error } = await getClient().twoFactor.enable({ password });
       if (error !== null) fail('enableTotp', error);
       // De server heeft alleen TOTP (geen e-mail-OTP); een ander antwoord is een fout in de configuratie.
       if (data.method !== 'totp') throw new ApiError('INTERNAL_ERROR', 500);
-      return { totpURI: data.totpURI };
+      return { totpURI: data.totpURI, backupCodes: data.backupCodes };
     },
-    async setPassword(token: string, newPassword: string): Promise<void> {
+    // soort 'reset': de resetlink van een beheerder (andere foutcode, RESET_LINK_INVALID); anders de uitnodiging.
+    async setPassword(
+      token: string,
+      newPassword: string,
+      soort: 'uitnodiging' | 'reset' = 'uitnodiging',
+    ): Promise<void> {
       const { error } = await getClient().resetPassword({ token, newPassword });
-      if (error !== null) fail('setPassword', error);
+      if (error !== null) fail(stepBySoort[soort], error);
     },
     // Spec eigen-account: andere sessies intrekken is verplicht (de server weigert anders met VALIDATION).
     async changePassword(currentPassword: string, newPassword: string): Promise<void> {

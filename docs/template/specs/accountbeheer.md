@@ -50,7 +50,7 @@ en er is altijd een weg naar binnen (lokaal seed-accounts en een dev-rol-switche
 | POST | `/api/auth/two-factor/enable`, `/get-totp-uri` (Better Auth) | ingelogd | `INVALID_TOTP` |
 | POST | `/api/auth/reset-password` (Better Auth; uitnodiging accepteren) | publiek (§3), token | `INVITATION_INVALID`, `VALIDATION` |
 | POST | `/api/auth/sign-out` (Better Auth) | ingelogd | — |
-| GET | `/api/me` → `{ id, naam, email, rol }` | `me:read` (`user`, `admin`) | `UNAUTHENTICATED`, `MFA_REQUIRED` |
+| GET | `/api/me` → `{ id, naam, email, rol, tweestap }` (`tweestap` sinds spec accountbeheer-uitbreiding AC-27) | `me:read` (`user`, `admin`) | `UNAUTHENTICATED`, `MFA_REQUIRED` |
 | GET | `/api/accounts?cursor=` → `{ items, nextCursor }` | `accounts:read` | `FORBIDDEN`, `MFA_REQUIRED` |
 | POST | `/api/accounts/invite` `{ naam, email, rol }` | `accounts:invite` | `ALREADY_EXISTS`, `VALIDATION`, `FORBIDDEN`, `MFA_REQUIRED` |
 | POST | `/api/accounts/:id/reinvite` | `accounts:invite` | `NOT_FOUND`, `ALREADY_ACTIVE`, `FORBIDDEN`, `MFA_REQUIRED` |
@@ -86,7 +86,7 @@ en er is altijd een weg naar binnen (lokaal seed-accounts en een dev-rol-switche
 | Topbar | themaschakelaar (toggle, toegankelijke naam "Donker thema"; keuze blijft bewaard in de browser; besluit eigenaar 2026-10-10); profielknop met initialen (toegankelijke naam "Profielmenu"); menu-item "Uitloggen" |
 | Home | titel "Home" (verder leeg) |
 | Dashboard | titel "Dashboard"; link "Accounts"; link "Design system" naar `/design-system`, alleen zichtbaar voor wie `design-system:read` heeft (admin); geen sidebar-item (sinds #51; eerder alleen lokaal, besluit eigenaar 2026-10-10) |
-| Accounts | titel "Accounts"; kolommen "Naam", "E-mailadres", "Rol", "Status"; rollen "Gebruiker", "Beheerder"; status "Actief", "Uitgenodigd"; actie "Opnieuw uitnodigen"; knop "Account uitnodigen"; leeg "Nog geen accounts."; meer "Meer laden" |
+| Accounts | titel "Accounts"; kolommen "Naam", "E-mailadres", "Rol", "Status"; rollen "Gebruiker", "Beheerder"; status "Actief", "Uitgenodigd"; actie "Opnieuw uitnodigen" (sinds spec accountbeheer-uitbreiding een item in het menu "Acties voor {naam}"); knop "Account uitnodigen"; leeg "Nog geen accounts."; meer "Meer laden" |
 | Uitnodigen (dialoog) | titel "Account uitnodigen"; velden "Naam", "E-mailadres", "Rol"; knoppen "Uitnodiging versturen", "Annuleren"; gelukt "Uitnodiging verstuurd naar {email}."; bestaat "Er bestaat al een account met dit e-mailadres." |
 | Dev-switcher (alleen lokaal) | op elk scherm (ook `/login` en ingelogd) een tabje rechts (toegankelijke naam "Rol wisselen (alleen lokaal)"); een klik schuift een paneel in met kop "Lokaal inloggen als", een knop per rol ("Gebruiker", "Beheerder"; de huidige gemarkeerd) en "Sluiten"; Esc sluit. Niet meer op het inlogscherm of in het profielmenu (besluit eigenaar, 2026-10-10) |
 | Algemeen | sessie verlopen: naar `/login` met "Je sessie is verlopen. Log opnieuw in."; geen rechten: "Je hebt geen toegang tot deze pagina."; mail-onderwerp "Uitnodiging voor {appnaam}" |

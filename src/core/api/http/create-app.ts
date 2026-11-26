@@ -148,7 +148,7 @@ function routeHandler<Services>(
             if (!decision.ok) throw new AppError(decision.code);
             const result = await route.handler({
               input: parsed.data,
-              actor: { ...session, role },
+              actor: { ...session, twoFactorEnabled: session.twoFactorEnabled === true, role },
               tx,
               services,
               audit: createAuditFn(tx, route.audit),

@@ -5,6 +5,8 @@ import {
   deactivateContract,
   inviteContract,
   reinviteContract,
+  resetLinkContract,
+  revokeInvitationContract,
   unblockContract,
 } from './accounts.ts';
 import {
@@ -27,6 +29,8 @@ export const contracts = [
   accountsListContract,
   inviteContract,
   reinviteContract,
+  revokeInvitationContract,
+  resetLinkContract,
   blockContract,
   unblockContract,
   deactivateContract,

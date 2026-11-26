@@ -7,6 +7,9 @@ export const MAX_PASSWORD_LENGTH = 128;
 // E-mailadres (RFC 5321); ook de grens van /change-email in de before-hook (spec e-maillengte).
 export const MAX_EMAIL_LENGTH = 254;
 export const INVITATION_TTL_SECONDS = 7 * 24 * 60 * 60;
+// Resetlink van een beheerder voor een actief account (spec accountbeheer-uitbreiding, OV-4): 1 uur; sendResetPassword verkort
+// de tokenrij (Better Auth maakt hem met INVITATION_TTL_SECONDS) vóór de mail.
+export const RESET_LINK_TTL_SECONDS = 60 * 60;
 export const SESSION_IDLE_SECONDS = 12 * 60 * 60;
 export const SESSION_REFRESH_SECONDS = 60 * 60;
 export const SESSION_ABSOLUTE_SECONDS = 7 * 24 * 60 * 60;
