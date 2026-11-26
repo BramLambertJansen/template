@@ -95,26 +95,24 @@ for (const width of [375, 1280]) {
     test('reduced motion: tabelregio scrolt intern, is met het toetsenbord bereikbaar en de pagina loopt niet over', async ({
       page,
     }) => {
-      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
       await openCatalogue(page);
+      // De langste overgang op de pagina in ms; de menusheet van de schil heeft er altijd een (duration-normal).
+      const longestTransition = () =>
+        page.evaluate<number>(
+          "Math.max(0, ...[...document.querySelectorAll('*')].flatMap((element) => getComputedStyle(element)" +
+            ".transitionDuration.split(',').map((duration) => parseFloat(duration) * 1000)))",
+        );
+      expect(await longestTransition()).toBeGreaterThan(1);
+      // Bij reduced motion kort de kit elke overgang in tot onder 1 ms (src/core/web/styles/index.css).
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      expect(await longestTransition()).toBeLessThan(1);
       const section = page.getByRole('region', { name: 'DataTable', exact: true });
       const table = section.getByRole('region', { name: 'Voorbeeldgegevens', exact: true });
       await expect(table).toHaveAttribute('tabindex', '0');
       await table.focus();
       await expect(table).toBeFocused();
       await expect(table).toHaveCSS('overflow-x', 'auto');
-      const gallery = page.getByRole('region', { name: 'Gallery', exact: true });
-      await gallery.getByRole('button', { name: 'Afbeelding bekijken: Landschap', exact: true }).click();
-      const dialog = page.getByRole('dialog', { name: 'Landschap', exact: true });
-      await expect(dialog).toBeVisible();
-      // Bij reduced motion kort de kit elke overgang in tot onder 1 ms (src/core/web/styles/index.css).
-      expect(
-        await page.evaluate<number>(
-          "parseFloat(getComputedStyle(document.querySelector('dialog[open]')).transitionDuration) * 1000",
-        ),
-      ).toBeLessThan(1);
-      await dialog.press('Escape');
-      await expect(dialog).toBeHidden();
       expect(
         await page.evaluate<number>('document.documentElement.scrollWidth - window.innerWidth'),
       ).toBeLessThanOrEqual(0);
