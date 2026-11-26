@@ -45,6 +45,8 @@ export function boomWerkmap(root) {
 /** Telt het pad mee voor de dekking: testbestand, spec of ADR. @param {string} pad */
 const telt = (pad) => TESTBESTAND.test(pad) || SPEC_BESTAND.test(pad) || ADR_BESTAND.test(pad);
 
+const MAX_GENOEMD = 10;
+
 /**
  * Ongetrackte, niet genegeerde bestanden die voor de dekking zouden tellen (leerpunt #966). `boomWerkmap` leest alleen
  * `git ls-files`; zonder deze melding meldt de ratchet of `feiten specs` een vals groen of `deels` tot na `git add`.
@@ -54,7 +56,8 @@ const telt = (pad) => TESTBESTAND.test(pad) || SPEC_BESTAND.test(pad) || ADR_BES
 export function ongetracktMelding(root) {
   const nieuw = paden(root, ['ls-files', '-z', '--others', '--exclude-standard']).filter(telt).sort();
   if (nieuw.length === 0) return null;
-  return `${nieuw.length} ongetrackt, telt niet mee tot git add: ${nieuw.join(', ')}`;
+  const rest = nieuw.length > MAX_GENOEMD ? ` … en ${nieuw.length - MAX_GENOEMD} meer` : '';
+  return `${nieuw.length} bestand(en) ongetrackt; tellen niet mee voor de AC-dekking tot git add: ${nieuw.slice(0, MAX_GENOEMD).join(', ')}${rest}`;
 }
 
 const BATCH_KOP = /^[0-9a-f]+ [a-z]+ \d+$/;

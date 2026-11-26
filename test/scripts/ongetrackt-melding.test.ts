@@ -93,6 +93,35 @@ describe('ongetrackt-melding', () => {
     for (const pad of TELT_NIET) expect(r.stdout).not.toContain(pad);
   });
 
+  test('ratchet: genegeerde bestanden niet, paden met een spatie wel; na tien paden ingekort', async () => {
+    dir = maakRepo(false);
+    schrijf(dir, '.gitignore', 'genegeerd/\n');
+    schrijf(dir, 'genegeerd/x.test.ts', 'x\n');
+    schrijf(dir, 'test/scripts/met spatie.test.ts', 'x\n');
+    for (let i = 0; i < 11; i += 1) schrijf(dir, `test/scripts/n${String(i).padStart(2, '0')}.test.ts`, 'x\n');
+    process.chdir(dir);
+    const run = Object.entries(meldingen).find(([naam]) => naam === 'ongetrackt')?.[1];
+
+    const melding = (await run?.())?.[0] ?? '';
+
+    expect(melding).toContain('12 bestand(en)');
+    expect(melding).toContain('test/scripts/met spatie.test.ts');
+    expect(melding).not.toContain('genegeerd/');
+    expect(melding).toContain('… en 2 meer');
+  });
+
+  test('feiten specs --json: stdout blijft JSON, de melding staat op stderr', () => {
+    dir = maakRepo(true);
+
+    const r = spawnSync('node', [FEITEN, 'specs', '--json'], { cwd: dir, encoding: 'utf8' });
+
+    expect(r.status).toBe(0);
+    expect(() => {
+      JSON.parse(r.stdout);
+    }).not.toThrow();
+    expect(r.stderr).toContain('ongetrackt');
+  });
+
   test('feiten specs: zonder ongetrackte telbestanden geen regel met ongetrackt', () => {
     dir = maakRepo(false);
 
