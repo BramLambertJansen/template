@@ -14,8 +14,8 @@ export function QrCode({ value, label }: { readonly value: string; readonly labe
       shapeRendering="crispEdges"
       className="size-48 rounded-md"
     >
-      <rect width={size} height={size} className="fill-[var(--qr-light)]" />
-      <path d={path} className="fill-[var(--qr-dark)]" />
+      <rect width={size} height={size} className="fill-qr-light" />
+      <path d={path} className="fill-qr-dark" />
     </svg>
   );
 }

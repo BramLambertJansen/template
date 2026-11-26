@@ -16,7 +16,7 @@ Letterlijk uit `docs/framework.md`; bij verschil wint het regelboek.
 - **R-WEB-03** `fetch(` alleen in API-client; inloggen alleen via `src/core/web/lib/auth.ts`; elk niet-GET-request stuurt `Content-Type` (0040, 0041)
 - **R-WEB-02** `useQuery`/`useMutation` alleen in `features/<resource>/queries.ts`; mutatie invalideert eigen resource plus "raakt ook"; optimistisch alleen als spec het vraagt (rules)
 - **R-WEB-04** Formulieren via `<Form>`/`<FormField>` met gedeeld zod-schema, valideren bij verlaten en daarna bij typen, verzendknop uit tijdens verzenden, serverfouten via `setError`; laden, leeg, fout via `<AsyncView>` (fw)
-- **R-UI-04** In `features/` en `routes/` alleen layout-klassen of `Stack`/`Inline`; geen kleuren, arbitrary values, `!`, `dark:`, `style` (AGENTS, rules)
+- **R-UI-04** In `features/` en `routes/` alleen layout-klassen of `Stack`/`Inline`; geen kleuren, arbitrary values, `!`, `dark:`, `style`. In `src/core/web/ui` en `src/web/ui`: geen arbitrary values, hex/oklch, `!`, `dark:` of vaste `style`; maten via token en `@theme`/`@utility` (rails/klassen-kit) (AGENTS, rules, spec app-thema)
 - **R-UI-05** Geen rauwe `<button> <input> <select> <textarea> <dialog> <a>` buiten `src/core/web/ui` en `src/web/ui`; geen hex-kleuren buiten tokens; `outline-none` alleen met `focus-visible:ring-*`; één `scanAxe(page)` zonder uitzonderingen (fw)
 - **R-WEB-05** Alle zichtbare tekst in `src/web/copy`, Nederlands volgens woordenlijst, ook zod-meldingen; `src/web/copy/errors.ts` is `Record<ErrorCode, string>` (basisteksten uit `src/core/web/copy`, app-codes erbij); per-formaatverschil via één gedeelde hook (fw)
 - **R-CODE-07** Bedragen in gehele centen (`Cents`); tijd `timestamptz`/ISO-string; formatteren alleen via `lib/format.ts`; grenzen alleen uit `limits.ts` (CHECK met zelfde waarde krijgt gelijkheidstest) (0040)
@@ -29,7 +29,7 @@ Hoe (geen norm):
 
 - `src/core/web` (basiskit, `AsyncView`, `Form`, API- en auth-client, tokens) is van de template; de app importeert via `src/web/ui` (barrel) en `src/web/lib/api.ts`. Een variant leid je af in `src/web/ui` uit de basis en variantkaart van core; voorbeelden op `/design-system`.
 - Route: bestandsroute in `routes/`. Bij 401 van de API naar het inlogscherm. `queries.ts` bevat key-factory, hooks en mutaties.
-- Styling: layout-utilities als gewone string (flex, grid, gap, padding, breedte); kleur, radius, schaduw en typografie uit componenten (`Text`, `Heading`); de rail `klassen` in `eslint.config.js` dwingt het af. Woordenlijst: "Annuleren", niet "Annuleer". Aanraakdoel en focusring zitten in de recepten (R-UI-06).
+- Styling: layout-utilities als gewone string (flex, grid, gap, padding, breedte); kleur, radius, schaduw en typografie uit componenten (`Text`, `Heading`); de rail `klassen` in `eslint.config.js` dwingt het af. In de kit zelf (`src/core/web/ui`, `src/web/ui`) houdt de rail `klassen-kit` (`rails/eslint/klassen-kit.mjs`) arbitrary values, `!`, `dark:` en vaste `style` tegen; een nieuwe maat wordt een token met een klasse in `src/core/web/styles/`. Woordenlijst: "Annuleren", niet "Annuleer". Aanraakdoel en focusring zitten in de recepten (R-UI-06).
 
 ## Gebouwd en nog open
 

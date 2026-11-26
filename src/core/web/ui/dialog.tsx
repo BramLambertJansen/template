@@ -28,12 +28,12 @@ interface DialogProps {
 
 // Openen en sluiten via CSS-overgangen; bij prefers-reduced-motion zijn ze ingekort (styles/index.css).
 const variantClasses = {
-  modal: 'm-auto w-[calc(100%-2rem)] max-w-dialog rounded-dialog border bg-popover text-popover-foreground',
+  modal: 'm-auto w-dialog-modal max-w-dialog rounded-dialog border bg-popover text-popover-foreground',
   sheet:
-    'my-0 ms-0 me-auto h-dvh max-h-none w-72 max-w-[calc(100%-3rem)] border-e bg-sidebar text-sidebar-foreground ' +
-    'transition-[translate,overlay,display] transition-discrete duration-normal ease-out ' +
+    'my-0 ms-0 me-auto h-dvh max-h-none w-72 max-w-dialog-sheet border-e bg-sidebar text-sidebar-foreground ' +
+    'transition-dialog-sheet transition-discrete duration-normal ease-out ' +
     '-translate-x-full open:translate-x-0 starting:open:-translate-x-full ' +
-    'backdrop:transition-[opacity,overlay,display] backdrop:transition-discrete backdrop:duration-normal ' +
+    'backdrop:transition-dialog-backdrop backdrop:transition-discrete backdrop:duration-normal ' +
     'backdrop:opacity-0 open:backdrop:opacity-100 starting:open:backdrop:opacity-0',
 } as const;
 

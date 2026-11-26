@@ -136,6 +136,19 @@ Bewijs: `test/ui/componenttokens.test.ts` (grens van zes, brontest per recept, g
 tokens), `test/ui/contrast-componenttokens.test.ts`, `test/ui/componenttokens-catalogus.test.ts` en
 `e2e/app-thema.spec.ts` (berekende stijl tegen de nulmeting `e2e/fixtures/app-thema-baseline.json`).
 
+### Rail op de kit
+
+Spec: [app-thema](template/specs/app-thema.md), deel B. In `src/core/web/ui` en `src/web/ui` meldt de lintregel
+`rails/klassen-kit` (`rails/eslint/klassen-kit.mjs`, aangezet in `eslint.config.js`) per klasse in `className`, `cn(…)`,
+`cva(…)` en een constante die daarin gelezen wordt: een arbitrary value (`w-[13rem]`, `bg-[var(--x)]`), de vorm
+`border-(--x)`, een hex- of oklch-kleur, `!` en `dark:`; ook een `style` met een vaste waarde. Arbitrary variants
+(`[&_svg]:size-4`, `data-[state=open]:`) en een `style` met alleen berekende waarden mogen. Een maat die de kit nodig
+heeft, wordt een token met een klasse via `@theme` of `@utility` (zoals `w-dialog-modal` en `fill-qr-dark`,
+`src/core/web/styles/index.css:232-262`); een bestaande overtreding gaat alleen via de ratchet (`eslint-suppressions.json`),
+nooit via een lijst in de regel. Bewust buiten bereik (de spec noemt alleen deze drie dragers): klassen uit een ander
+bestand of een functie, `clsx`/`twMerge` direct, `cn`/`cva` onder een andere naam, props als `xxxClassName` en een `style`
+uit een variabele; de review blijft daar de grens. Bewijs: `test/rails/eslint-klassen-kit.test.ts`.
+
 ### App-thema's
 
 Spec: [app-thema](template/specs/app-thema.md), deel C. Een app-thema is een blok `[data-app-theme='<naam>']` in
