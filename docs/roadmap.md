@@ -106,19 +106,11 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   (AC-19) in die integratietests.
   Gedaan: eenmalige TOTP-code en e-maillink, geen sessietoken in JSON (spec `inloggat-dichten`, ADR 0075; bewijs `test/auth/eenmalig.int.test.ts`, `db/tests/one_time_use.sql`).
   **Werk:** specificeer herauthenticatie, sessie-intrekking, tokenverval, oude/nieuwe adresbevestiging en herstel zonder rolpromotie;
-  koppel audit en mail aan ST-04 en ST-03 en kopieer geen synchroon mailpad als de outbox de geldende route wordt.
+  schrijf audit via het bestaande pad (ST-04, gearchiveerd), koppel mail aan ST-03 en kopieer geen synchroon mailpad als de outbox de geldende route wordt.
   **Afhankelijkheden:** ADR 0043; audit voor admin-acties; relevante stappen uit ADR 0050.
   **Klaar als:** echte-stack e2e per flow; verboden rol en admin zonder MFA geweigerd; laatste-admin-racetest; herstelcode eenmalig, ook bij
   parallel gebruik; ingetrokken of verlopen links werken niet. Elk deel krijgt afzonderlijk bewijs.
   aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (B-11)
-- [ ] **ST-04 (P0) — audit: vervolg** (ADR 0051, spec audit-log). Gebouwd in #128: migratie, `ctx.audit`, invite/reinvite; de spec
-  `audit-log` staat op `gebouwd` sinds de AC-dekking compleet is (ADR 0103, bewijs `db/tests/audit_log.sql`). Open: `/admin/audit`
-  (eigen spec) en audit voor de routes revoke en reset-link (met ST-02).
-  **Werk:** servergegenereerde request-ID, audit in de transactie, append-only-tabel met vaste grants en policies, getypte strict gevalideerde
-  details (geen willekeurige payloads, e-mailadressen of vrije tekst), aparte core-auditwriter voor Better Auth-acties.
-  **Klaar als:** audit wordt met de actie teruggedraaid; verboden schrijver en lezer geweigerd; auditdetails falen buiten de allowlist;
-  een vervalste client-request-ID wordt niet gebruikt.
-  aanleiding: #128
 - [ ] **ST-03 (P0) — achtergrondtaken: runner, opruimen en mail-outbox** (stuk 7; [ADR 0050](template/adr/0050-achtergrondtaken-en-mail-outbox.md): runner in het API-proces,
   eigen rol `app_jobs`, outbox zonder token; besluiten van ADR 0020 door de eigenaar bevestigd). Opruimen van verlopen sessies, uitnodigingen en
   rate-limit-rijen, en mail via een outbox, elk met een integratietest.
@@ -169,6 +161,8 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   **Werk:** één module in core met lagen api, shared en web, door de template onderhouden; de app registreert routes, services, permissies en schermen in
   haar compositie-roots en kiest pad en navigatie. Core krijgt een eigen gegenereerd schema uit de core-migraties en importeert niets uit
   `src/api/db/schema.ts`. Eerst de accountlijst (contract, permissie, query via `tx`, RLS, API-client, scherm), dan de overige flows.
+  Vervolgpunt (uit ST-04): een eventueel `/admin/audit` krijgt pas in deze module een eigen spec, na een wijziging van ADR 0051 punt 7
+  (nu geen scherm in de template); namen en "verwijderd account" hangen af van ST-05.
   **Afhankelijkheden:** ST-16; besluit-PR met ADR (A1: contract tussen zones) dat R-LAAG-01, R-DB-12 met ADR 0042 en R-WEB-05 herziet, daarna spec en bouw.
   **Klaar als:** HTTP-paden, contracten, foutcodes en teksten ongewijzigd; bestaande contract- en integratietests groen; core importeert geen app-code;
   de browserbundel bevat geen API-code; een template-update in de proef-app conflicteert niet in accountbestanden.

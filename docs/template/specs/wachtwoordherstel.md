@@ -194,7 +194,8 @@ naar `/uitnodiging`), met is het herstel.
 - `check:secdef`, `db/tests/functies.sql`, `db/tests/rate_limits.sql`; `e2e/rate-limit.spec.ts` blijft groen.
 - De securitysuite: het pad is anoniem en komt in de lijst van paden zonder login met zijn eigen negatieve gevallen.
 - `docs/operations/eerste-admin.md`: een beheerder die ook zijn tweede factor kwijt is, gebruikt nog steeds het runbook.
-- ST-04: een auditregel voor herstel volgt de aparte core-auditwriter voor Better Auth-acties; tot die er is, geen regel.
+- Audit: een auditregel voor zelfherstel vraagt een eigen writer voor Better Auth-acties zonder admin (`app.audit_account_action`
+  eist `app.is_mfa_admin()`, ADR 0051 punt 2) en een eigen besluit; tot die er is, geen regel. ST-04 (gearchiveerd) dekte alleen admin-acties.
 
 ## Buiten scope
 
