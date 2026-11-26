@@ -47,6 +47,10 @@ anoniem zijn, de eigen `trustDevice`- en sessieregels omzeilen en codes naar de 
   pogingen, TOTP en herstelcode samen) en van Better Auth (3 per 10 s per IP op `/two-factor/*`).
 - Faalt een verzoek na de claim zonder dat de plugin de code verbruikt (bijvoorbeeld de poginglimiet), dan is die geldige
   code tot het einde van de TTL onbruikbaar. Aanvaard: kort, en de andere codes werken.
+- De plugin verbruikt een juiste code vóór de loginregels van 0052 de sessie weigeren. Wordt het account tussen de
+  wachtwoordstap en de code geblokkeerd of gedeactiveerd, of stijgt `session_version`, dan is die code weg zonder sessie,
+  en de web toont "klopt niet of is al gebruikt". Aanvaard (eigenaar, 26 november 2026): hooguit één code per uitdaging,
+  en zo'n account kan op dat moment toch niet inloggen.
 - Nieuwe herstelcodes maken is geen wijziging van de tweestapsverificatie in de zin van R-AUTH-02: het TOTP-geheim blijft
   gelijk, dus andere sessies blijven bestaan.
 - `app.one_time_use` krijgt per geprobeerde herstelcode een rij, zoals bij TOTP (0075).

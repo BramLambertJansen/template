@@ -27,6 +27,22 @@ export const copy = {
     explanation: 'Voer de 6-cijferige code uit je authenticator-app in.',
     code: 'Code',
     submit: 'Bevestigen',
+    useBackupCode: 'Gebruik een herstelcode',
+  },
+  // Spec accountbeheer-uitbreiding (ADR 0113): inloggen met een herstelcode in plaats van TOTP.
+  backupCode: {
+    title: 'Herstelcode',
+    explanation: 'Voer een van je herstelcodes in.',
+    code: 'Herstelcode',
+    submit: 'Bevestigen',
+    useTotp: 'Gebruik je authenticator-app',
+  },
+  // De codes zelf, één keer getoond: na inschrijven en na opnieuw maken op /account.
+  backupCodes: {
+    title: 'Herstelcodes',
+    explanation:
+      'Bewaar deze codes op een veilige plek. Elke code werkt één keer, als je je authenticator-app niet bij de hand hebt. Je ziet ze maar één keer.',
+    saved: 'Ik heb ze bewaard',
   },
   totpSetup: {
     title: 'Tweestapsverificatie instellen',
@@ -156,6 +172,12 @@ export const copy = {
       help: 'Minstens 12 tekens. Je wordt op je andere apparaten uitgelogd.',
       submit: 'Wachtwoord wijzigen',
       changed: 'Je wachtwoord is gewijzigd. Je andere sessies zijn beëindigd.',
+    },
+    backupCodes: {
+      title: 'Herstelcodes',
+      explanation: 'Nieuwe codes maken maakt de oude ongeldig.',
+      current: 'Wachtwoord',
+      submit: 'Nieuwe herstelcodes maken',
     },
     sessions: {
       title: 'Sessies',

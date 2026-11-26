@@ -18,6 +18,27 @@ export const loginInput = z
 
 export const totpInput = z.object({ code: z.string().regex(/^\d{6}$/, 'Vul de 6 cijfers in.') }).strict();
 
+// Herstelcode bij inloggen (ADR 0113): spaties weg, verder letterlijk (de plugin is hoofdlettergevoelig). Een code met een
+// andere vorm weigert de server met INVALID_BACKUP_CODE.
+export const backupCodeInput = z
+  .object({
+    code: z
+      .string()
+      .transform((value) => value.replace(/\s/g, ''))
+      .pipe(z.string().min(1, 'Vul een herstelcode in.')),
+  })
+  .strict();
+
+// Nieuwe herstelcodes maken (ADR 0113 punt 5): alleen het wachtwoord; de server eist daarnaast een mfa-sessie.
+export const generateBackupCodesInput = z
+  .object({
+    huidig: z
+      .string()
+      .min(1, 'Vul je wachtwoord in.')
+      .max(MAX_PASSWORD_LENGTH, `Hooguit ${String(MAX_PASSWORD_LENGTH)} tekens.`),
+  })
+  .strict();
+
 export const newPasswordInput = z
   .object({
     wachtwoord: z

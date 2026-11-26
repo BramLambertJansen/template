@@ -88,7 +88,9 @@ Volgens de aanbeveling bij OV-1 (één nieuwe migratie; beschermde-padwijziginge
   code geeft `INVALID_BACKUP_CODE`, hetzelfde antwoord als een foute. Faalt het verzoek na de claim zonder dat de plugin de code verbruikt
   (bijvoorbeeld de poginglimiet), dan is die geldige code tot het einde van de TTL onbruikbaar (aanvaard).
   Web: `enableTotp` geeft `{ totpURI, backupCodes }`; de codes staan alleen in de state van het component (geen opslag) tot na de eerste juiste
-  TOTP-code; dan het scherm "Herstelcodes"; "Ik heb ze bewaard" roept de bestaande afronding aan (doorgaan naar de app). Op `/account`
+  TOTP-code; dan het scherm "Herstelcodes"; "Ik heb ze bewaard" roept de bestaande afronding aan (doorgaan naar de app). `GET /api/me`
+  krijgt het veld `tweestap` (boolean, uit `twoFactorEnabled` van de sessiegebruiker); de sectie "Herstelcodes" op `/account` staat er
+  alleen bij `tweestap: true`, ongeacht de rol (eigenaar, 26 november 2026). Op `/account`
   vervangt de lijst na "Nieuwe herstelcodes maken" het formulier in de sectie; na "Ik heb ze bewaard" komt het formulier terug. `authErrorCode`
   stap `verifyBackupCode`, zoals `verifyTotp`: `INVALID_TWO_FACTOR_COOKIE` → `UNAUTHENTICATED` (terug naar inloggen), elke andere fout →
   `INVALID_BACKUP_CODE`; stap `generateBackupCodes`: `INVALID_PASSWORD` → `WRONG_PASSWORD`, `MFA_REQUIRED` blijft.
@@ -150,6 +152,9 @@ Volgens de aanbeveling bij OV-1 (één nieuwe migratie; beschermde-padwijziginge
 - **accounts/AC-26** — Gegeven een gebruiker met herstelcodes, wanneer hij met een herstelcode inlogt, dan is `last_login_at` bijgewerkt zoals na
   TOTP; is zijn `session_version` na de wachtwoordstap verhoogd, dan `UNAUTHENTICATED` en geen sessie; is zijn account na de wachtwoordstap
   gedeactiveerd, dan `ACCOUNT_DEACTIVATED` en geen sessie (ADR 0052). Toets: `test/auth/backup-codes.int.test.ts` (nieuw)
+- **accounts/AC-27** — Gegeven een ingelogde gebruiker, wanneer hij `GET /api/me` opvraagt, dan is `tweestap` `true` met TOTP en `false` zonder,
+  ook voor een `user` zonder beheerrol; en `/account` toont de sectie "Herstelcodes" alleen bij `tweestap: true`.
+  Toets: `test/api/me-tweestap.int.test.ts` (nieuw), `src/web/account-herstelcodes.test.tsx` (nieuw)
 
 ## Randgevallen
 
@@ -172,7 +177,7 @@ Volgens de aanbeveling bij OV-1 (één nieuwe migratie; beschermde-padwijziginge
 ## Raakt ook
 
 - `src/shared/permissions.ts`: `accounts:manage` (OV-2); foutcodes `OWN_ACCOUNT`, `ACCOUNT_INVITED`, `ACCOUNT_BLOCKED`, `RESET_LINK_INVALID`,
-  `INVALID_BACKUP_CODE` met teksten; `RESET_LINK_TTL_SECONDS` in `src/core/shared/limits.ts`; contract `accountItem.status` krijgt `geblokkeerd`
+  `INVALID_BACKUP_CODE` met teksten; `RESET_LINK_TTL_SECONDS` in `src/core/shared/limits.ts`; contract `meOutput` krijgt `tweestap` (AC-27); contract `accountItem.status` krijgt `geblokkeerd`
   (raakt spec [lijstpagina](lijstpagina.md), filter "Status").
 - `src/core/api/auth` (options, `auth.ts`: `getSession` controleert `blockedAt`; `invitations.ts`: `revoke`, `sendResetLink`), `src/api/services.ts`
   (vertaling van de nieuwe fouten), mail-layout (resetmail), route `/nieuw-wachtwoord`. `src/core/web/lib/auth.ts`: `authErrorCode` zet bij inloggen

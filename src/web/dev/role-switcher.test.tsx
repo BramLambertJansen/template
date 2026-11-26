@@ -12,7 +12,14 @@ afterEach(cleanup);
 // De dev-rolwisselaar (besluit eigenaar 2026-10-10): tabje rechts, paneel met een knop per rol uit ROLES.
 async function show(current: 'user' | 'admin' | null) {
   const queryClient = new QueryClient();
-  if (current !== null) queryClient.setQueryData(meQuery.queryKey, { id: 'x', naam: 'X', email: 'x@x', rol: current });
+  if (current !== null)
+    queryClient.setQueryData(meQuery.queryKey, {
+      id: 'x',
+      naam: 'X',
+      email: 'x@x',
+      rol: current,
+      tweestap: false,
+    });
   const root = createRootRoute({ component: DevRoleSwitcher });
   const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ['/'] }) });
   render(

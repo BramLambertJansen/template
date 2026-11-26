@@ -25,6 +25,11 @@ export function useChangePassword() {
   });
 }
 
+// Nieuwe herstelcodes (ADR 0113): de codes gaan alleen naar de aanroeper (state van het component), niet in de querycache.
+export function useGenerateBackupCodes() {
+  return useMutation({ mutationFn: (wachtwoord: string) => auth.generateBackupCodes(wachtwoord) });
+}
+
 // Eigen sessies (spec eigen-account): de lijst hangt onder `me`, dus elke mutatie die `me` invalideert ververst hem ook.
 export const sessionsQuery = queryOptions({
   queryKey: [...accountKeys.me, 'sessions'],

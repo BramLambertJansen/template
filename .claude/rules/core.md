@@ -29,6 +29,6 @@ de dependency-cruiser-regel core → app; `check-core`.
 
 ## Besloten, nog niet gebouwd
 
-Nog niet: achtergrondtaken en mail-outbox (ST-03), het privacymechanisme (ST-05), TOTP-backupcodes en herstel (ST-02); de eisen
+Nog niet: achtergrondtaken en mail-outbox (ST-03), het privacymechanisme (ST-05), uitnodiging intrekken en resetlink (ST-02); de eisen
 staan bij die roadmap-items (R-DOC-10).
 Bouw een core-onderdeel alleen in het stuk van de roadmap waar het hoort.

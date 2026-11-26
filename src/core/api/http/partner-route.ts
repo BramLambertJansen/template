@@ -46,7 +46,7 @@ function authorize<Services>(route: Route<Services>, session: SessionInfo, role:
   if (role === null) throw new AppError('FORBIDDEN');
   const decision = route.check({ role, sessionStrength: session.sessionStrength });
   if (!decision.ok) throw new AppError(decision.code);
-  return { ...session, role };
+  return { ...session, twoFactorEnabled: session.twoFactorEnabled === true, role };
 }
 
 // Stap 2: read-only, één telling per verzoek; de verbinding gaat terug naar de pool vóór de aanroep.

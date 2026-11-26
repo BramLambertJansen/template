@@ -106,6 +106,7 @@ describe('testkit met createApp: de hele pipeline tegen de echte database, zonde
       naam: 'Test Admin',
       email: admin.email,
       rol: 'admin',
+      tweestap: false,
     });
   });
 

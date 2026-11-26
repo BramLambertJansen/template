@@ -4,9 +4,10 @@ import { MAX_NAME_LENGTH } from '../limits.ts';
 import { roles } from '../roles.ts';
 import { defineContract } from './kit.ts';
 
-// GET /api/me (spec accountbeheer): wie ben ik, met de rol uit de database.
+// GET /api/me (spec accountbeheer): wie ben ik, met de rol uit de database. `tweestap`: TOTP ingesteld (spec
+// accountbeheer-uitbreiding, AC-27).
 export const meOutput = z
-  .object({ id: z.string(), naam: z.string(), email: z.string(), rol: z.enum(roles.names) })
+  .object({ id: z.string(), naam: z.string(), email: z.string(), rol: z.enum(roles.names), tweestap: z.boolean() })
   .strict();
 
 export const meContract = defineContract({

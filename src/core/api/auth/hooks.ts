@@ -2,8 +2,9 @@ import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/a
 import { z } from 'zod';
 import { MAX_EMAIL_LENGTH, SESSION_FRESH_SECONDS } from '../../shared/limits.ts';
 import type { Mailing } from './mailing.ts';
-import type { AccountLifecycle } from './account-lifecycle.ts';
+import { type AccountLifecycle, SECOND_FACTOR_PATHS } from './account-lifecycle.ts';
 import type { ClaimOnce } from './one-time-use.ts';
+import { claimBackupCode } from './backup-code-claim.ts';
 import { claimTotpCode } from './totp-claim.ts';
 import { dropRejectedSession, SESSION_RECOVERY_PATHS } from './session-guard.ts';
 
@@ -35,8 +36,27 @@ function fail(status: 'BAD_REQUEST' | 'FORBIDDEN' | 'UNAUTHORIZED', code: string
   throw new APIError(status, { code, message });
 }
 
-function isTrustDeviceRequested(body: unknown): boolean {
-  return typeof body === 'object' && body !== null && 'trustDevice' in body && body.trustDevice !== false;
+function isFlagRequested(body: unknown, flag: 'trustDevice' | 'disableSession'): boolean {
+  if (typeof body !== 'object' || body === null || !(flag in body)) return false;
+  return Reflect.get(body, flag) !== false;
+}
+
+// Inloggen met een herstelcode volgt de regels van TOTP (ADR 0113 punt 3): alleen half ingelogd (met een volledige sessie telt
+// de plugin geen pogingen), geen trustDevice en geen disableSession; alle drie VALIDATION.
+async function rejectBackupCodeOptions(ctx: HookContext): Promise<void> {
+  if (ctx.path !== '/two-factor/verify-backup-code') return;
+  if ((await getSessionFromCtx(ctx)) !== null) fail('BAD_REQUEST', 'VALIDATION', 'Alleen tijdens het inloggen');
+  if (isFlagRequested(ctx.body, 'trustDevice') || isFlagRequested(ctx.body, 'disableSession')) {
+    fail('BAD_REQUEST', 'VALIDATION', 'trustDevice en disableSession staan uit (ADR 0113)');
+  }
+}
+
+// Nieuwe herstelcodes vragen een mfa-sessie (ADR 0113 punt 5); Better Auth eist alleen sessie en wachtwoord. Niet via MFA_PATHS:
+// die eisen revokeOtherSessions. Zonder sessie weigert het endpoint zelf.
+async function requireMfaForBackupCodes(ctx: HookContext): Promise<void> {
+  if (ctx.path !== '/two-factor/generate-backup-codes') return;
+  const facts = await currentSession(ctx);
+  if (facts !== null) requireMfaWhenEnabled(facts);
 }
 
 function isRevokeRequested(body: unknown): boolean {
@@ -107,10 +127,13 @@ export function createHooks(mailing: Mailing | null, now: () => number = Date.no
       }
     }
     await lifecycle?.beforeEndpoint(ctx);
-    if (ctx.path === '/two-factor/verify-totp' && isTrustDeviceRequested(ctx.body)) {
+    if (ctx.path === '/two-factor/verify-totp' && isFlagRequested(ctx.body, 'trustDevice')) {
       fail('BAD_REQUEST', 'TRUST_DEVICE_DISABLED', 'trustDevice staat uit (ADR 0043)');
     }
     await claimTotpCode(ctx, claimOnce);
+    await requireMfaForBackupCodes(ctx);
+    await rejectBackupCodeOptions(ctx);
+    await claimBackupCode(ctx, claimOnce);
     if (ctx.path === '/verify-email') {
       // Vangnet naast disabledPaths: zonder sessie maakt Better Auth bij stap 2 zelf een sessie.
       if ((await currentSession(ctx)) === null) fail('UNAUTHORIZED', 'UNAUTHENTICATED', 'Geen sessie');
@@ -134,7 +157,7 @@ export function createHooks(mailing: Mailing | null, now: () => number = Date.no
     if (ctx.path === '/get-session' && (await dropRejectedSession(ctx, now()))) return ctx.json(null);
     if (ctx.path === '/change-password') return afterChangePassword(ctx);
     const session = ctx.context.newSession?.session;
-    if (session !== undefined && ctx.path === '/two-factor/verify-totp') {
+    if (session !== undefined && SECOND_FACTOR_PATHS.has(ctx.path)) {
       await ctx.context.internalAdapter.updateSession(session.token, { sessionStrength: 'mfa' });
     } else if (session !== undefined && ctx.path === '/two-factor/disable') {
       await ctx.context.internalAdapter.updateSession(session.token, { sessionStrength: 'password' });

@@ -49,6 +49,9 @@ export interface SessionInfo {
   readonly sessionStrength: 'password' | 'mfa';
   readonly name: string;
   readonly email: string;
+  // twoFactorEnabled van de gebruiker (spec accountbeheer-uitbreiding, AC-27). Optioneel: een gateway zonder tweede
+  // factor (testkit, stubs) laat het weg en dat telt als false.
+  readonly twoFactorEnabled?: boolean;
 }
 
 export interface SessionLookup {
@@ -96,6 +99,7 @@ export function authGateway(auth: Auth, now: () => number = Date.now): AuthGatew
           sessionStrength: strength,
           name: user.name,
           email: user.email,
+          twoFactorEnabled: user.twoFactorEnabled === true,
         },
         setCookie,
       };

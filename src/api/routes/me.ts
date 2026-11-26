@@ -14,6 +14,7 @@ export const meRoute = defineRoute(meContract, ({ actor }) => ({
   naam: actor.name,
   email: actor.email,
   rol: actor.role,
+  tweestap: actor.twoFactorEnabled,
 }));
 
 // Spec eigen-account: altijd het eigen account (ctx.actor), via Better Auth (better_auth."user" is van auth_service).

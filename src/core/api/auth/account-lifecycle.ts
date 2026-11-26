@@ -17,6 +17,12 @@ interface Verification {
   readonly value: string;
   readonly expiresAt: Date;
 }
+// Tweede inlogstap: TOTP of een herstelcode (ADR 0113 punt 3); beide volgen de loginregels van ADR 0052 en geven een
+// MFA-sessie (hooks.ts). De enige plek voor deze lijst.
+export const SECOND_FACTOR_PATHS: ReadonlySet<string> = new Set([
+  '/two-factor/verify-totp',
+  '/two-factor/verify-backup-code',
+]);
 const loginSnapshot = z.object({ userId: z.string(), sessionVersion: z.number().int().nonnegative() });
 type LoginSnapshot = z.output<typeof loginSnapshot>;
 
@@ -86,7 +92,7 @@ async function bindChallenge(
 }
 
 async function prepareChallenge({ snapshots, settingsOnly, requiresMfa }: LifecycleState, ctx: HookContext) {
-  if (ctx.path !== '/two-factor/verify-totp') return;
+  if (!SECOND_FACTOR_PATHS.has(ctx.path)) return;
   const existing = await getSessionFromCtx(ctx);
   if (existing !== null) {
     const alreadyMfa = 'sessionStrength' in existing.session && existing.session.sessionStrength === 'mfa';
@@ -107,7 +113,7 @@ async function completeLogin(
   ctx: HookContext,
   now: number,
 ) {
-  const login = ctx.path === '/sign-in/email' || ctx.path === '/two-factor/verify-totp';
+  const login = ctx.path === '/sign-in/email' || SECOND_FACTOR_PATHS.has(ctx.path);
   const created = ctx.context.newSession;
   if (!login || created === null || settingsOnly.has(ctx.context)) return;
   try {

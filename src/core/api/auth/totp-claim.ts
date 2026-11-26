@@ -6,16 +6,17 @@ import { type ClaimOnce, totpKey } from './one-time-use.ts';
 // 90 s (venster ±1 stap van 30 s) en onthoudt niet dat hij gebruikt is. Deze before-stap claimt gebruiker plus code vóór de
 // controle, ook bij een foute code: alleen zo wint van twee gelijktijdige verzoeken met dezelfde code precies één.
 
-type HookContext = Parameters<Parameters<typeof createAuthMiddleware>[0]>[0];
+export type HookContext = Parameters<Parameters<typeof createAuthMiddleware>[0]>[0];
 
-function codeFrom(body: unknown): unknown {
+// Het veld `code` uit de body van verify-totp en verify-backup-code (backup-code-claim.ts).
+export function codeFrom(body: unknown): unknown {
   return typeof body === 'object' && body !== null && 'code' in body ? body.code : undefined;
 }
 
 // De gebruiker van deze poging: met een sessie die van de sessie (step-up, TOTP inschakelen), bij inloggen die van de
 // two_factor-challenge (de ondertekende cookie, zoals Better Auth zelf in verifyTwoFactor). Null zonder geldige challenge: dan
 // weigert Better Auth het verzoek zelf.
-async function attemptUserId(ctx: HookContext): Promise<string | null> {
+export async function attemptUserId(ctx: HookContext): Promise<string | null> {
   const session = await getSessionFromCtx(ctx);
   if (session !== null) return session.user.id;
   const identifier = await ctx.getSignedCookie(ctx.context.createAuthCookie('two_factor').name, ctx.context.secret);

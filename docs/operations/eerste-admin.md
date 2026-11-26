@@ -6,7 +6,9 @@ wachtwoord in de code; lokaal zijn er de seed-accounts (README).
 ## Wanneer
 
 - Een nieuwe omgeving (staging, productie) heeft nog geen admin.
-- Een admin is zijn wachtwoord of zijn TOTP-telefoon kwijt en er is geen andere admin die kan helpen.
+- Een admin is zijn wachtwoord of zijn TOTP-telefoon kwijt en er is geen andere admin die kan helpen. Is alleen de telefoon
+  kwijt, dan logt hij eerst in met een herstelcode (inlogscherm: "Gebruik een herstelcode"; ADR 0113) en maakt daarna op
+  `/account` nieuwe codes. `--reset-mfa` is de weg zonder bruikbare codes.
 - Alle admins zijn onbruikbaar geraakt (bijvoorbeeld geblokkeerd via de database, of zonder werkend wachtwoord). De app laat de laatste telbare admin niet blokkeren, degraderen of verwijderen (LAST_ADMIN); `admin:create` haalt een blokkade niet weg, dus deblokkeer zo'n account eerst via de accountlijst of de database (`blocked_at` leegmaken).
 
 ## Voorwaarden
@@ -21,7 +23,7 @@ wachtwoord in de code; lokaal zijn er de seed-accounts (README).
 |---|---|---|
 | Nieuwe admin | `pnpm admin:create --email jij@bedrijf.nl --name "Je Naam"` | Mail openen, wachtwoord instellen (≥ 12 tekens), inloggen, TOTP instellen |
 | Wachtwoord kwijt | `pnpm admin:create --email jij@bedrijf.nl --reset-password` | Nieuwe link in de mail; alle sessies vervallen na het instellen |
-| TOTP-telefoon kwijt | `pnpm admin:create --email jij@bedrijf.nl --reset-mfa` | Inloggen met wachtwoord, TOTP opnieuw instellen |
+| TOTP-telefoon kwijt, geen herstelcode meer | `pnpm admin:create --email jij@bedrijf.nl --reset-mfa` | Inloggen met wachtwoord, TOTP opnieuw instellen |
 | Beide kwijt | `pnpm admin:create --email jij@bedrijf.nl --reset-mfa --reset-password` | Eerst wachtwoord, dan TOTP |
 
 Lokaal leest het commando `.env.local`; in een echte omgeving zet je de variabelen in de shell (niet in een bestand in de repo).

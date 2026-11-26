@@ -4,6 +4,7 @@ import { useMe } from '../session/queries.ts';
 import { EmailSection } from './email-section.tsx';
 import { NameSection } from './name-section.tsx';
 import { PasswordSection } from './password-section.tsx';
+import { BackupCodesSection } from './backup-codes-section.tsx';
 import { useSessions } from './queries.ts';
 import { SessionsSection } from './sessions-section.tsx';
 
@@ -24,6 +25,8 @@ export function AccountPage() {
             <div className="flex flex-col gap-8">
               <NameSection naam={data.naam} />
               <PasswordSection />
+              {/* Sectie Herstelcodes alleen met TOTP, ongeacht de rol (spec accountbeheer-uitbreiding, AC-27). */}
+              {data.tweestap ? <BackupCodesSection /> : null}
               <SessionsSection sessions={sessions} />
               <EmailSection email={data.email} />
             </div>

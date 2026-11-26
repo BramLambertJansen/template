@@ -50,8 +50,7 @@ export const DISABLED_PATHS: readonly string[] = [
   '/request-password-reset',
   '/two-factor/send-otp',
   '/two-factor/verify-otp',
-  '/two-factor/verify-backup-code',
-  '/two-factor/generate-backup-codes',
+  // ADR 0113: verify-backup-code en generate-backup-codes zijn open; de codes lezen blijft dicht.
   '/two-factor/view-backup-codes',
   // Spec eigen-account: naam, sessies en e-mailbevestiging via eigen routes (zod, limits.ts, geen tokens naar de browser).
   '/update-user',

@@ -50,7 +50,7 @@ en er is altijd een weg naar binnen (lokaal seed-accounts en een dev-rol-switche
 | POST | `/api/auth/two-factor/enable`, `/get-totp-uri` (Better Auth) | ingelogd | `INVALID_TOTP` |
 | POST | `/api/auth/reset-password` (Better Auth; uitnodiging accepteren) | publiek (§3), token | `INVITATION_INVALID`, `VALIDATION` |
 | POST | `/api/auth/sign-out` (Better Auth) | ingelogd | — |
-| GET | `/api/me` → `{ id, naam, email, rol }` | `me:read` (`user`, `admin`) | `UNAUTHENTICATED`, `MFA_REQUIRED` |
+| GET | `/api/me` → `{ id, naam, email, rol, tweestap }` (`tweestap` sinds spec accountbeheer-uitbreiding AC-27) | `me:read` (`user`, `admin`) | `UNAUTHENTICATED`, `MFA_REQUIRED` |
 | GET | `/api/accounts?cursor=` → `{ items, nextCursor }` | `accounts:read` | `FORBIDDEN`, `MFA_REQUIRED` |
 | POST | `/api/accounts/invite` `{ naam, email, rol }` | `accounts:invite` | `ALREADY_EXISTS`, `VALIDATION`, `FORBIDDEN`, `MFA_REQUIRED` |
 | POST | `/api/accounts/:id/reinvite` | `accounts:invite` | `NOT_FOUND`, `ALREADY_ACTIVE`, `FORBIDDEN`, `MFA_REQUIRED` |

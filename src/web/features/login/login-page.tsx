@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ApiError } from '#core/web/lib/api-client.ts';
-import { loginInput, totpInput } from '#shared/schemas/auth.ts';
+import { backupCodeInput, loginInput, totpInput } from '#shared/schemas/auth.ts';
 import { copy } from '#web/copy/ui.ts';
 import { auth } from '#web/lib/auth.ts';
 import {
@@ -14,13 +14,19 @@ import {
   QrCode,
   useZodForm,
 } from '#web/ui/index.ts';
+import { BackupCodesList } from '../account/backup-codes-list.tsx';
 import { useFinishLogin } from './queries.ts';
 
 // Inloggen (spec accountbeheer) in stappen binnen één route: wachtwoord → code (admin met TOTP) of instellen (admin zonder
-// TOTP). Wachtwoord en TOTP-sleutel blijven in het geheugen van deze pagina, nooit in de URL of opslag.
+// TOTP). Wachtwoord, TOTP-sleutel en herstelcodes blijven in het geheugen van deze pagina, nooit in de URL of opslag. Herstelcodes
+// (ADR 0113): na de eerste juiste code bij instellen het scherm "Herstelcodes"; bij inloggen kan een herstelcode TOTP vervangen.
 
 type Step =
-  { readonly kind: 'credentials' } | { readonly kind: 'totp' } | { readonly kind: 'setup'; readonly totpURI: string };
+  | { readonly kind: 'credentials' }
+  | { readonly kind: 'totp' }
+  | { readonly kind: 'backupCode' }
+  | { readonly kind: 'setup'; readonly totpURI: string; readonly backupCodes: readonly string[] }
+  | { readonly kind: 'backupCodes'; readonly codes: readonly string[] };
 
 export interface LoginPageProps {
   readonly notice: 'ingesteld' | 'verlopen' | null;
@@ -82,6 +88,32 @@ function CodeForm({
   );
 }
 
+// Inloggen met een herstelcode in plaats van TOTP; dezelfde afronding als na een TOTP-code.
+function BackupCodeForm({ finish, onStep }: { finish: () => Promise<void>; onStep: (step: Step) => void }) {
+  const form = useZodForm(backupCodeInput, { code: '' });
+  const submit = async ({ code }: { code: string }) => {
+    await auth.verifyBackupCode(code);
+    await finish();
+  };
+  return (
+    <div className="flex flex-col gap-4">
+      <Form form={form} onSubmit={submit} submitLabel={copy.backupCode.submit}>
+        <FormField form={form} name="code" label={copy.backupCode.code}>
+          {(field) => <Input {...field} autoComplete="off" autoCapitalize="off" spellCheck={false} autoFocus />}
+        </FormField>
+      </Form>
+      <Button
+        variant="ghost"
+        onClick={() => {
+          onStep({ kind: 'totp' });
+        }}
+      >
+        {copy.backupCode.useTotp}
+      </Button>
+    </div>
+  );
+}
+
 function TotpSetup({ totpURI, finish }: { totpURI: string; finish: () => Promise<void> }) {
   const [showKey, setShowKey] = useState(false);
   const secret = new URL(totpURI).searchParams.get('secret') ?? '';
@@ -116,14 +148,44 @@ export function LoginPage({ notice, redirect }: LoginPageProps) {
   if (step.kind === 'totp') {
     return (
       <CenteredCard title={copy.totp.title} description={copy.totp.explanation}>
-        <CodeForm submitLabel={copy.totp.submit} finish={finish} />
+        <div className="flex flex-col gap-4">
+          <CodeForm submitLabel={copy.totp.submit} finish={finish} />
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setStep({ kind: 'backupCode' });
+            }}
+          >
+            {copy.totp.useBackupCode}
+          </Button>
+        </div>
+      </CenteredCard>
+    );
+  }
+  if (step.kind === 'backupCode') {
+    return (
+      <CenteredCard title={copy.backupCode.title} description={copy.backupCode.explanation}>
+        <BackupCodeForm finish={finish} onStep={setStep} />
       </CenteredCard>
     );
   }
   if (step.kind === 'setup') {
+    const { backupCodes } = step;
+    // Pas na de eerste juiste TOTP-code: dan is TOTP actief en gelden de codes.
+    const showCodes = () => {
+      setStep({ kind: 'backupCodes', codes: backupCodes });
+      return Promise.resolve();
+    };
     return (
       <CenteredCard title={copy.totpSetup.title} description={copy.totpSetup.explanation}>
-        <TotpSetup totpURI={step.totpURI} finish={finish} />
+        <TotpSetup totpURI={step.totpURI} finish={showCodes} />
+      </CenteredCard>
+    );
+  }
+  if (step.kind === 'backupCodes') {
+    return (
+      <CenteredCard title={copy.backupCodes.title} description={copy.backupCodes.explanation}>
+        <BackupCodesList codes={step.codes} onDone={finish} />
       </CenteredCard>
     );
   }
