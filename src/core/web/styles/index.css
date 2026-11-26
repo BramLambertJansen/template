@@ -228,3 +228,35 @@
 @utility px-shell-content-wide {
   padding-inline: calc(var(--shell-content-padding) * 1.5);
 }
+
+/* Maten en overgangen van de kit zelf zonder token (spec app-thema, deel B: geen arbitrary values in de kit, rail
+   klassen-kit). Dezelfde waarden als de arbitrary klassen ervoor. De overgangen volgen de vorm van Tailwind's
+   transition-*: eigenschap plus de standaardduur en -curve, die duration-* en ease-* overschrijven. */
+@utility w-dialog-modal {
+  width: calc(100% - 2rem);
+}
+
+@utility max-w-dialog-sheet {
+  max-width: calc(100% - 3rem);
+}
+
+@utility transition-dialog-sheet {
+  transition-property: translate, overlay, display;
+  transition-timing-function: var(--tw-ease, var(--motion-ease-standard));
+  transition-duration: var(--tw-duration, var(--motion-fast));
+}
+
+@utility transition-dialog-backdrop {
+  transition-property: opacity, overlay, display;
+  transition-timing-function: var(--tw-ease, var(--motion-ease-standard));
+  transition-duration: var(--tw-duration, var(--motion-fast));
+}
+
+/* De QR-code is altijd donker op licht (--qr-*, components.css). */
+@utility fill-qr-light {
+  fill: var(--qr-light);
+}
+
+@utility fill-qr-dark {
+  fill: var(--qr-dark);
+}

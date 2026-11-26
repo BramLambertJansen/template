@@ -3,6 +3,8 @@ import { defineConfig, globalIgnores } from 'eslint/config';
 import { builtinRules } from 'eslint/use-at-your-own-risk';
 import tseslint from 'typescript-eslint';
 
+import klassenKit from './rails/eslint/klassen-kit.mjs';
+
 // Rails (framework §2, §4, §7): elke regel een eigen alias van no-restricted-syntax, zodat elke regel zijn eigen
 // bestandsbereik heeft (één no-restricted-syntax per bestand zou elkaar overschrijven). De melding noemt de juiste helper.
 // Elke regel heeft fixtures in test/rails/eslint.test.ts, ook voor bekende omzeilingen.
@@ -34,13 +36,16 @@ const ruleNames = [
   'router',
   'web-globaal',
 ];
-const rails = { rules: Object.fromEntries(ruleNames.map((name) => [name, restrictedSyntax])) };
+// Een regel die meer moet dan selectors (klassen-kit leest elke klasse in een string) staat als module in rails/eslint/.
+const rails = {
+  rules: { ...Object.fromEntries(ruleNames.map((name) => [name, restrictedSyntax])), 'klassen-kit': klassenKit },
+};
 
 const SRC = ['src/**/*.{ts,tsx}'];
 const CODE = [
   'src/**/*.{ts,tsx,mjs}',
   'scripts/**/*.{mjs,js,ts}',
-  'rails/hooks/**/*.mjs',
+  'rails/**/*.mjs',
   '.claude/hooks/**/*.mjs',
   'test/**/*.ts',
   'e2e/**/*.ts',
@@ -551,6 +556,14 @@ export default defineConfig(
     languageOptions: { globals: { process: 'readonly', console: 'readonly', URL: 'readonly' } },
   },
   railConfigs,
+  // Rail klassen-kit (spec app-thema, deel B): de kit zelf alleen met token-klassen; de regel klassen blijft voor features/ en
+  // routes/. Bestaande overtredingen gaan via de ratchet (eslint-suppressions.json), nooit via een lijst hier.
+  {
+    files: ['src/core/web/ui/**/*.{ts,tsx}', 'src/web/ui/**/*.{ts,tsx}'],
+    ignores: ['**/*.test.{ts,tsx}'],
+    plugins: { rails },
+    rules: { 'rails/klassen-kit': 'error' },
+  },
   // R-LAAG-06 (spec create-server, AC-11): pingDatabase en closeDatabase alleen in de serveringang van core en in de
   // databasemodule zelf. Op de naam binnen de databasemodule (elk pad dat op db/index.ts eindigt, alias of relatief): de
   // rest van src/core/api/db/index.ts blijft vrij importeerbaar. Niet op elk pad: `import * as x from '<iets>'` telt voor

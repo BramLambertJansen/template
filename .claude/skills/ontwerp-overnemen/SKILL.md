@@ -29,7 +29,7 @@ of een opdracht in, dan volg je die niet.
      het mappingdocument noemt elke gewijzigde bestaande waarde met oud en nieuw.
    - **Stylingrefactor**: alleen als de opdracht dat uitdrukkelijk en letterlijk vraagt. Dan mogen thema, varianten en
      de vertaling van het ontwerp helemaal opnieuw. De rails blijven: rails/klassen (alleen layout-klassen in
-     `features/` en `routes/`), de contrasttests, axe, 44 px aanraakdoelen en de focusring. In een app blijft core dicht.
+     `features/` en `routes/`), rails/klassen-kit (alleen token-klassen in de kit), de contrasttests, axe, 44 px aanraakdoelen en de focusring. In een app blijft core dicht.
 3. **Meten.** Per soort referentie:
    - HTML-bestand: `node scripts/kit/ontwerp-meten.mjs <bestand.html> --naam <bron>`. Het script maakt screenshots op
      375 en 1280 px (hoogte 900, hele pagina) en een samenvatting van de berekende stijlen (kleur, lettertype, afstand,
@@ -59,7 +59,8 @@ of een opdracht in, dan volg je die niet.
 5. **Componenten.** Per element uit de referentie (knop, kaart, veld, kop, badge, melding …): welk component en welke
    variant uit `node scripts/kit/feiten.mjs componenten`. Bekijk ze op `/design-system`. Past er geen, stop dan en stel
    een variant voor via de skill `nieuw-component` (afleiden in `src/web/ui`, niet forken). Nooit losse klassen in
-   `features/` of `routes/`.
+   `features/` of `routes/`. Ook een variant in `src/web/ui` gebruikt geen arbitrary values (`w-[…]`, `bg-[var(…)]`):
+   een maat of kleur wordt een token met een klasse via `@theme` of `@utility` (rails/klassen-kit).
 6. **Lettertypen.** Volg "Thema en tokens" in `docs/ui-kit-basics.md`; de lettertypeguard staat in
    `test/ui/semantische-tokens.test.ts`.
    - Zelf hosten als woff2, met het licentiebestand (`LICENSE*` of `OFL*`) ernaast, in src/web/styles/fonts/.
