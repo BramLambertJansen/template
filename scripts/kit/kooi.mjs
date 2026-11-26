@@ -54,7 +54,10 @@ export function controleerWerkmap(werkmap) {
  */
 function toolchainMappen(home) {
   const mappen = new Set();
-  const kandidaten = [path.join(home, '.local', 'share', 'mise'), path.dirname(process.execPath)];
+  // mise-terugval: in de cloud zet scripts/cloud-setup.sh tools daar neer en `mise link` wijst ernaar (docs/ENVIRONMENT.md,
+  // "Voor mise onzichtbaar"); zonder deze bind lossen de links in de strenge kooi naar een lege thuismap op.
+  const share = path.join(home, '.local', 'share');
+  const kandidaten = [path.join(share, 'mise'), path.join(share, 'mise-terugval'), path.dirname(process.execPath)];
   for (const deel of (process.env['PATH'] ?? '').split(':')) if (path.isAbsolute(deel)) kandidaten.push(deel);
   for (const kandidaat of kandidaten) {
     if (!existsSync(kandidaat)) continue;
