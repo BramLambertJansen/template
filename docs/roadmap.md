@@ -145,7 +145,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   contracttestsuite en check; skill `nieuwe-koppeling`, paragraaf "Koppeling" in het spec-template, hoofdstuk in het gouden pad en een sectie in de
   feiten. Na ST-03, elk met eigen besluit-PR: outbox en sync, machineroute en inbox, tokenkluis per gebruiker, beheerschermen.
   Gebouwd: uitgaande client, nep-partner en foutcodes (#515), `secret()` (#519), lintregels `rails/netwerk-api` en `rails/geheim` (#522, #523), register en schakelaar (spec koppelingsregister), partnerstap (spec partnerstap), vaste vorm met contracttest en check (spec koppelingsvorm), agentlaag (spec koppeling-agentlaag).
-  Daarmee is de eerste reeks af; **open** is alleen het deel na ST-03 (outbox en sync, machineroute en inbox, tokenkluis, beheerschermen), dat op ST-03 wacht.
+  Daarmee is de eerste reeks af; **open** is alleen het deel na ST-03 (zie boven).
   **Afhankelijkheden:** ADR 0077; ST-03 voor schrijven, sync, terugbellen en tokens. Elke app-koppeling krijgt daarnaast één handmatige run tegen
   de testomgeving van de partner (ADR 0077 punt 6).
   **Klaar als:** een agent met alleen de skill deelt een fictieve partner in en schrijft een spec waarin elk kenmerk naar een bestaande bouwsteen
@@ -241,8 +241,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   aanleiding: `docs/template/specs/wachtwoordherstel.md` (verzoek van de eigenaar, 2026-11-23; app met veel gewone gebruikers)
 - [ ] **ST-21 (P1) — appstyling: thema, schillen en stijlladder** (specs `app-thema` en `schillen` gebouwd, `stijlladder` voorgesteld;
   besluiten van de eigenaar 2026-11-15). Gebouwd: app-thema deel A–C en schillen deel A–B (bewijs: AC-dekking van beide specs,
-  `pnpm check:schillen`). **Open:** stijlladder (treden, register en `check:stijl`). **Werk (oorspronkelijk):** app-thema deel A–C (componenttokens, rail op de kit, thema's per app), schillen
-  deel A–B (`ShellFrame`, sidebar- en topbalkschil, eigen schillen met contracttest), stijlladder (treden, register en `check:stijl`).
+  `pnpm check:schillen`). **Open:** stijlladder (treden, register en `check:stijl`).
   Beschermde paden met eigenaarakkoord in alle drie: app-thema B (lintregel in `eslint.config.js`, `.claude/rules/web.md`, skill
   `ontwerp-overnemen`), schillen B (nieuwe check in `scripts/kit/gates.mjs`, skill `nieuw-scherm`) en stijlladder
   (agentinstructies, skill, gate). Delen met een rail of check zijn risicowerk met een aparte tester, niet R-WERK-18.
