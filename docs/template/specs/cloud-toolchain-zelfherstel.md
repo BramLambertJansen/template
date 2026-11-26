@@ -317,6 +317,14 @@ een branch gelijk aan `main` geeft de `✓`-regel en `feiten.mjs` geen `✗ tool
 op een vernieuwde cache: geen regel; (c) een omgeving zonder setup-script (Node 22): de duur (M5) en of de hook op Node 22
 draait.
 
+Uitslag op 26 november 2026, na de samenvoeging van #1008, op de omgeving "template":
+
+| Stap | Uitkomst |
+|---|---|
+| 3a | Gemeten. De omgeving had een cache van vóór de bumps. De startcontext gaf `✓ toolchain hersteld in 44 s: Node v26.11.1 → 26.13.0, pnpm 11.28.2 → 12.21.0 (…)`; `node --version` gaf v26.13.0. In het log: `mise install` kreeg een 403 van de GitHub-API voor pnpm, en de terugval haalde pnpm 12.21.0 via npm. `pnpm install` meldde "Lockfile is up to date", daarna `✓ toolchain compleet`. |
+| 3b | Gemeten. Na een wijziging van het veld "Setup script" stond er in een nieuwe sessie geen regel van de hook in de context. `~/.cache/werkstraat/` bestond niet, `feiten.mjs` gaf geen `✗ toolchain ontbreekt` en `~/.local/bin/node` wees naar 26.13.0. |
+| 3c | Niet gemeten (besluit van de eigenaar, 26 november 2026). Dat de hook op Node 22 laadt, toetst AC-4 alleen statisch: de importboom bevat alleen `node:`-modules en modules onder `rails/hooks/`. De koude duur (M5) blijft onbekend. |
+
 ## Open vragen
 
 Alle besloten door de eigenaar op 25 november 2026, na de spec-review.
