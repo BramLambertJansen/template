@@ -159,9 +159,11 @@ een eigen spec met ADR. Wat die spec moet oplossen, is uit de spec-review al bek
 | Een afgebroken run laat `mise`, `pnpm` en `apt-get` doorlopen | een timeout stopt alleen het bovenste proces | `rails/hooks/lib/run.mjs:27` |
 | De timeout van SessionStart is 30 s en het script duurt koud minuten | | R4, F6, F7, M5 |
 
-In de cloud weegt het eerste punt anders dan lokaal: ingang 1 hierboven draait hetzelfde script ook als root, vóór de
-sessie, op de configuratie van de gekozen branch. Een hook die alleen bij `startup` installeert, op een verse clone, voegt
-daar niets aan toe; een hook die dat ook bij hervatten doet wel. Dat is de afweging voor OV-1.
+In de cloud weegt het eerste punt anders dan lokaal, maar niet weg: ingang 1 hierboven draait het script één keer als
+root, op de stand van dat moment, niet per sessie op de gekozen branch. Een hook die bij elke `startup` installeert, voert
+dus wel nieuwe configuratie uit: die van elke branch, ook een die een agent pushte. Herzien op 25 november 2026: de
+[spec cloud-toolchain-zelfherstel](cloud-toolchain-zelfherstel.md) installeert daarom alleen als de invoer van de
+installatie gelijk is aan `main` ([ADR 0112](../adr/0112-cloud-toolchain-herstel-bij-startup.md)).
 
 ## Acceptatiecriteria
 
@@ -232,7 +234,8 @@ daar niets aan toe; een hook die dat ook bij hervatten doet wel. Dat is de afweg
 
 ## Buiten scope
 
-- Installeren via een SessionStart-hook, en een sessie die de setup draait zonder te vragen: zie Ontwerp en OV-1, OV-2.
+- Installeren via een SessionStart-hook: gebouwd in de [spec cloud-toolchain-zelfherstel](cloud-toolchain-zelfherstel.md)
+  (OV-1 herzien). Een sessie die de setup draait zonder te vragen: zie OV-2.
 - Of de sandbox en het rolhek in de cloud afschermen (#462, spec bewaking-zichtbaar). Deze spec maakt de toolchain
   aanwezig; ze claimt geen bewaking.
 - Een Project-thread: daar draait geen hook uit de repo (D4); het omgevingsbestand werkt er wel.
@@ -272,6 +275,8 @@ Elke negatieve test faalt op de huidige code (R-PRINC-04).
 
 OV-1 t/m OV-4 besloten volgens de aanbeveling (eigenaar, 23 november 2026): geen hook die in de cloud zelf installeert, de vraag
 van OV-2 vervalt, `bubblewrap` en `socat` blijven niet-fataal, en het roadmap-item onder Besluiten is daarmee afgehandeld.
+OV-1 herzien (eigenaar, 25 november 2026): optie (b), na het incident met een omgevingscache van vóór een pin-bump; zie
+[spec cloud-toolchain-zelfherstel](cloud-toolchain-zelfherstel.md) en [ADR 0112](../adr/0112-cloud-toolchain-herstel-bij-startup.md).
 
 - **OV-1** — Komt er daarna een hook die in de cloud zelf installeert (nul handwerk)? Opties: (a) nee, één omgeving per
   account volstaat; (b) ja, alleen bij `startup` in de cloud, met een ADR dat 0085 (afgewezen alternatief) en 0061 herziet;
