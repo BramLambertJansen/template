@@ -10,7 +10,8 @@ soort: toegevoegd
 ### Bij een update
 
 - `src/web/features/layout/app-layout.tsx` en `queries.ts` zijn van de app, dus de voet verschijnt niet vanzelf. Neem
-  `useBuildInfo` over uit `src/web/features/layout/queries.ts` van de template en geef `buildInfo={useBuildInfo().data ?? undefined}`
-  aan je schil in `AppLayout`.
+  `useBuildInfo` over uit `src/web/features/layout/queries.ts` van de template, roep het in `AppLayout` aan vóór elke vroege
+  `return` (bijvoorbeeld `if (me.data === undefined) return null;`; anders wisselt het aantal hooks per render en gooit React),
+  en geef `buildInfo={buildInfo}` aan je schil, met `const buildInfo = useBuildInfo().data ?? undefined;`.
 - Heeft de app een eigen schil op `ShellFrame`, geef dan `buildInfo` uit `ShellProps` door aan `ShellFrame`; anders faalt het
   nieuwe geval van haar `shellContract`-suite.
