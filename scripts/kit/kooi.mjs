@@ -49,7 +49,7 @@ export function controleerWerkmap(werkmap) {
 
 /**
  * Mappen van de toolchain onder de thuismap: weer alleen-lezen zichtbaar na de lege thuismap. Alleen de installatiemap van
- * mise, de map van deze `node` en absolute PATH-mappen; een relatieve PATH-map (`.`) zou de hele thuismap terugbrengen.
+ * mise en zijn terugvalmap, de map van deze `node` en absolute PATH-mappen; een relatieve PATH-map (`.`) zou de hele thuismap terugbrengen.
  * @param {string} home
  */
 function toolchainMappen(home) {
