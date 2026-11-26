@@ -382,3 +382,77 @@ describe('cloud-netwerkvorm leerpunt #880 pnpm -s pr:verify', () => {
     expect(zonderNetwerkvorm(beslis('pnpm pr:verify 878 --watch', ''))).toBeNull();
   });
 });
+
+// ---------- AC-14 t/m AC-16 (vervolg op de review van #890: N-1, N-3, N-5) ----------
+
+describe('cloud-netwerkvorm/AC-14 de main-regel decodeert elke procent-escape en kent branches/main/rename', () => {
+  test.each([
+    'gh api -X DELETE repos/o/r/git/refs/heads/%6Dain',
+    'gh api -X DELETE repos/o/r/git/refs%2Fheads%2F%6D%61%69%6E',
+    'gh api -X DELETE repos/o/r/git/refs/heads%252Fmain',
+    'gh api -X PATCH repos/o/r/git/%72efs/heads/MAIN -f sha=abc',
+    'gh api -X POST repos/o/r/branches/main/rename -f new_name=oud',
+    'gh api repos/o/r/branches/%6Dain/rename -f new_name=oud',
+    'gh api -X DELETE repos/o/r%3F/git/refs/heads/main',
+  ])('cloud-netwerkvorm/AC-14 deny met main verwijderen of verzetten voor elke rol: %s', (command) => {
+    const fouten = rolFouten(ROLLEN, (rol) => {
+      const { deny } = beslis(command, rol);
+      return deny.includes(MAIN_REDEN) ? null : `geen deny met de main-reden (deny: ${deny || 'geen'})`;
+    });
+    expect(fouten).toStrictEqual([]);
+  });
+
+  test.each([
+    'gh api -X DELETE repos/o/r/git/refs/heads/%6Dain-oud',
+    'gh api -X POST repos/o/r/branches/feat%2Fx/rename -f new_name=y',
+    'gh api repos/o/r/branches/main/rename',
+  ])('cloud-netwerkvorm/AC-14 geen main-melding voor een andere branch of een GET: %s', (command) => {
+    expect(beslis(command, '').deny).not.toContain('main verwijderen of verzetten');
+  });
+});
+
+describe('cloud-netwerkvorm/AC-15 de MCP-bestandsschrijftools onder elke servernaam', () => {
+  test.each([
+    'mcp__plugin_engineering_github__push_files',
+    'mcp__github-enterprise__create_or_update_file',
+    'mcp__gh__delete_file',
+  ])('cloud-netwerkvorm/AC-15 %s: hoofdsessie ask, subagent deny, met de reden, ook in mcpLezen', (tool) => {
+    const opties = { config: { ...config, mcpLezen: [tool] } };
+    const fouten = rolFouten(ROLLEN, (rol) => {
+      const uitslag = mcp(tool, rol, opties);
+      const tekst = rol === '' ? uitslag.ask : uitslag.deny;
+      return tekst.includes(MCP_REDEN)
+        ? null
+        : `geen weigering met de reden (deny: ${uitslag.deny || 'geen'}, ask: ${uitslag.ask || 'geen'})`;
+    });
+    expect(fouten).toStrictEqual([]);
+  });
+
+  test.each([
+    'mcp__plugin_engineering_github__create_pull_request',
+    'mcp__github__get_file_contents',
+    'mcp__x__push_files_old',
+  ])('cloud-netwerkvorm/AC-15 geen lefthook-melding voor %s', (tool) => {
+    const uitslag = mcp(tool, '', { config: { ...config, mcpLezen: [tool] } });
+    expect(`${uitslag.deny}${uitslag.ask}`).not.toContain('lefthook');
+  });
+});
+
+describe('cloud-netwerkvorm/AC-16 git push naar main geeft één melding', () => {
+  test.each(['git push origin main', 'git push origin HEAD:main', 'git push -u origin main'])(
+    'cloud-netwerkvorm/AC-16 alleen de main-reden, geen netwerkvorm, voor elke rol: %s',
+    (command) => {
+      const fouten = rolFouten(ROLLEN, (rol) => {
+        const { deny } = beslis(command, rol);
+        if (!deny.includes('push naar main is verboden; open een PR'))
+          return `geen main-reden (deny: ${deny || 'geen'})`;
+        return deny.includes('Netwerkvorm:') ? `tweede melding: ${deny}` : null;
+      });
+      expect(fouten).toStrictEqual([]);
+    },
+  );
+
+  test('cloud-netwerkvorm/AC-16 controle: een push naar een andere branch houdt de netwerkvorm-melding', () => {
+    expect(beslis('git push origin claude/foo', '').deny).toContain(reden('git push origin HEAD'));
+  });
+});

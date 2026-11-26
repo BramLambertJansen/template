@@ -371,14 +371,17 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   van de herziening, aparte tester en goedkeuring van de eigenaar op de PR. **Klaar als:** de herziene AC's van bouwstap 2 zijn groen
   en `scripts/kit/nieuwe-app.mjs` meldt niet meer dat `repo-instellingen` niet bestaat.
   aanleiding: `docs/template/specs/nieuwe-app-script.md` (bouwstap 2, "Te herzien vóór bouwstap 2")
-- [ ] **Cloud-netwerkvorm: vervolg op de review van de bouw.** Uit #890, niet opgevolgd: (N-1) de main-regel decodeert alleen `%2F`,
-  niet elke procent-escape (`branches/main/rename` en GraphQL `deleteRef` vallen erbuiten; de ruleset blijft de grens); (N-3) de
+- [x] **Cloud-netwerkvorm: vervolg op de review van de bouw.** Uit #890, niet opgevolgd: (N-1) de main-regel decodeert alleen `%2F`,
+  niet elke procent-escape (het endpoint branches/main/rename en GraphQL `deleteRef` vielen erbuiten; de ruleset blijft de grens); (N-3) de
   MCP-regel herkent alleen de servernaam `github`; (N-5) de dubbele melding bij `git push origin main` wordt één melding; (B-3) een
   corpustoets op codeblokken uit `docs/**` en `.claude/skills/**` die vangt dat docs of skills een commandovorm voorschrijven die het
   rolhek weigert. Plus het open deel van de meting na de merge: of `gh api -X DELETE …/git/refs/heads/<branch>` een branch echt
   verwijdert (meting (e) is onvolledig, F12), terwijl de skill `opleveren` die route al voorschrijft (dat het hookproces
   `CLAUDE_CODE_REMOTE` ziet, is gemeten: F8). **Klaar als:** N-1, N-3, N-5 en B-3 hebben elk een test of een besluit "aanvaard", en de
   meting staat in de spec.
+  Afgerond op 26 november 2026: N-1, N-3 en N-5 gefixt met tests (cloud-netwerkvorm/AC-14 t/m AC-16,
+  `test/hooks/rolhek-netwerkvorm.test.ts`), GraphQL `deleteRef` aanvaard (OV-9); B-3 als corpustoets (AC-17,
+  `test/rails/docs-codeblok-rolhek.test.ts`); meting (e) in F13 en F14 van de spec: in de cloud geeft de DELETE HTTP 403.
   aanleiding: `docs/template/specs/cloud-netwerkvorm.md` (#890 "Vervolg, buiten deze PR"; #900, meting (e) onvolledig)
 - [x] **Cloud: toolchain herstelt zichzelf na een pin-bump** ([spec cloud-toolchain-zelfherstel](template/specs/cloud-toolchain-zelfherstel.md),
   [ADR 0112](template/adr/0112-cloud-toolchain-herstel-bij-startup.md)). Een SessionStart-hook herstelt in een nieuwe
