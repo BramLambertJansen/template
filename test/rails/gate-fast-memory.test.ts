@@ -13,13 +13,14 @@ function run(memoryGiB: number, red = '') {
   const dir = mkdtempSync(path.join(tmpdir(), 'gate-memory-'));
   try {
     const hook = path.join(dir, 'memory.mjs');
-    // Totaal én beschikbaar geheugen vast (scripts/kit/geheugen.mjs), zonder override uit de omgeving.
+    // Totaal en beschikbaar geheugen en CPU-last vast (scripts/kit/geheugen.mjs); GATE_WEINIG_GEHEUGEN is uit env gefilterd.
     writeFileSync(
       hook,
       `import os from 'node:os';
 const bytes = ${String(memoryGiB)} * 1024 ** 3;
 Object.defineProperty(process, 'availableMemory', { value: () => bytes });
-Object.defineProperty(os, 'totalmem', { value: () => bytes });`,
+Object.defineProperty(os, 'totalmem', { value: () => bytes });
+Object.defineProperty(os, 'loadavg', { value: () => [0, 0, 0] });`,
     );
     const stub = path.join(dir, 'pnpm');
     writeFileSync(
@@ -66,6 +67,7 @@ test('weinig geheugen: lint en tests overlappen niet; alle snelle gates draaien 
 }, 30_000);
 
 test('voldoende geheugen: de bestaande parallelle zware banen blijven beschikbaar', () => {
+  // Geheugen en last vast in de hook, geen override: de echte beslissing van weinigGeheugen wordt getoetst.
   const result = run(64);
   expect(result.status).toBe(0);
   expect(result.overlap).toBe(true);

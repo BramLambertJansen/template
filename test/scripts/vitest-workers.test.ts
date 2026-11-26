@@ -31,9 +31,9 @@ test.each([{ beperkt: true }, { beperkt: false }])(
   },
 );
 
-// Laadt vitest.config.ts in een apart proces met vast geheugen (zelfde opzet als test/scripts/browser-worker-budget.test.ts),
+// Laadt vitest.config.ts in een apart proces met vast geheugen en vaste CPU-last (standaard 0) (zelfde opzet als test/scripts/browser-worker-budget.test.ts),
 // zonder override uit de omgeving.
-function maxWorkers(memoryGiB: number) {
+function maxWorkers(memoryGiB: number, last = 0) {
   const dir = mkdtempSync(path.join(tmpdir(), 'vitest-workers-'));
   try {
     const hook = path.join(dir, 'memory.mjs');
@@ -42,7 +42,8 @@ function maxWorkers(memoryGiB: number) {
       `import os from 'node:os';
 const bytes = ${String(memoryGiB)} * 1024 ** 3;
 Object.defineProperty(process, 'availableMemory', { value: () => bytes });
-Object.defineProperty(os, 'totalmem', { value: () => bytes });`,
+Object.defineProperty(os, 'totalmem', { value: () => bytes });
+Object.defineProperty(os, 'loadavg', { value: () => [${String(last)}, 0, 0] });`,
     );
     const script =
       "import config from './vitest.config.ts'; console.log(JSON.stringify({ maxWorkers: config.test?.maxWorkers ?? null }));";
@@ -65,4 +66,8 @@ test('vitest.config.ts: weinig beschikbaar geheugen geeft hooguit twee workers',
 
 test('vitest.config.ts: voldoende geheugen geeft hooguit vier workers, zoals voorheen', () => {
   expect(maxWorkers(64)).toBe(Math.max(1, Math.min(4, availableParallelism())));
+});
+
+test('vitest.config.ts: krap geheugen en hoge last geeft één worker', () => {
+  expect(maxWorkers(1, availableParallelism())).toBe(1);
 });
