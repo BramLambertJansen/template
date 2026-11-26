@@ -135,6 +135,23 @@ describe('cloud-netwerkvorm/AC-17 corpustoets: codeblokken in docs/** en .claude
     ]);
   });
 
+  test('cloud-netwerkvorm/AC-17 markering met tekst ertussen telt niet; een ~~~-blok onder de markering wel', () => {
+    const tekst = [
+      MARKERING,
+      'Uitleg.',
+      '```bash',
+      'git push -u origin HEAD',
+      '```',
+      MARKERING,
+      '~~~bash',
+      'git push -u origin HEAD',
+      '~~~',
+    ].join('\n');
+    expect(meldingen('x.md', tekst).map((melding) => melding.split(' → ')[0])).toStrictEqual([
+      'x.md:4: git push -u origin HEAD',
+    ]);
+  });
+
   test('cloud-netwerkvorm/AC-17 toegestane vormen en afkortingen geven geen melding', () => {
     const tekst = ['```bash', 'git push origin HEAD', 'git commit -F <bestand>', 'gh pr …', 'git push \\', '```'].join(
       '\n',
