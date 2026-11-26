@@ -137,13 +137,14 @@ describe('POST /api/accounts/:id/reset-link: rechten en invoer (spec accounts/AC
     expect(await countMails(target.email, RESET_SUBJECT)).toBe(before);
   });
 
+  // POST leest de body (create-app.ts), dus het extra veld gaat in de body; .strict() weigert het.
   test.each([
-    ['extra veld in de query', 'iets?rol=admin'],
-    ['een id van meer dan 200 tekens', 'x'.repeat(201)],
-  ])('accounts/AC-16: %s: 400 VALIDATION, vóór de handler', async (_case, id) => {
+    ['extra veld in de body', 'iets', { rol: 'admin' }],
+    ['een id van meer dan 200 tekens', 'x'.repeat(201), {}],
+  ])('accounts/AC-16: %s: 400 VALIDATION, vóór de handler', async (_case, id, body) => {
     const admin = await mfaAdmin();
 
-    const response = await requestReset(admin.browser, id);
+    const response = await t.call(admin.browser, RESET(id), body);
 
     expect([response.status, await json(response)]).toMatchObject([400, { code: 'VALIDATION' }]);
   });

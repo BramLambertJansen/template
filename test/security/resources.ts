@@ -56,6 +56,7 @@ export const routeClassificatie: Readonly<Record<string, RouteKlasse>> = {
   'POST /accounts/invite': { scope: 'admin' },
   'POST /accounts/:id/reinvite': { scope: 'admin' },
   'DELETE /accounts/:id/invitation': { scope: 'admin' },
+  'POST /accounts/:id/reset-link': { scope: 'admin' },
   'POST /accounts/:id/block': { scope: 'admin' },
   'POST /accounts/:id/unblock': { scope: 'admin' },
   'POST /accounts/:id/deactivate': { scope: 'admin' },

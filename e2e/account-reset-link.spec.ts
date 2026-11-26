@@ -84,7 +84,8 @@ test('accounts/AC-16: resetlink sturen, nieuw wachtwoord instellen via de mail e
   await target.getByLabel('E-mailadres').fill(user.email);
   await target.getByLabel('Wachtwoord').fill(NEW_PASSWORD);
   await target.getByRole('button', { name: 'Inloggen' }).click();
-  await expect(target.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+  // Een gewone gebruiker landt op "Home" (zoals na een uitnodiging in e2e/accounts.spec.ts), een beheerder op "Dashboard".
+  await expect(target.getByRole('heading', { level: 1, name: 'Home' })).toBeVisible();
   expect(csp).toStrictEqual([]);
 });
 
