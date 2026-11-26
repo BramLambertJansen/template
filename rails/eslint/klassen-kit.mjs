@@ -135,6 +135,18 @@ const regel = {
     const gemeld = new WeakSet();
     /** @type {WeakSet<object>} */
     const gevolgd = new WeakSet();
+    // Elke gelezen naam met zijn verwijzing, één keer per bestand opgebouwd (lineair; per naam alle scopes doorzoeken
+    // was kwadratisch in de bestandsgrootte).
+    /** @type {Map<unknown, import('eslint').Scope.Reference> | null} */
+    let index = null;
+
+    function verwijzingen() {
+      if (index === null) {
+        const scopes = context.sourceCode.scopeManager?.scopes ?? [];
+        index = new Map(scopes.flatMap((scope) => scope.references.map((ref) => [ref.identifier, ref])));
+      }
+      return index;
+    }
 
     /**
      * De beginwaarde van de variabele achter een gelezen naam in dit bestand, of null (parameter, import).
@@ -142,9 +154,7 @@ const regel = {
      * @returns {AstNode | null}
      */
     function waardeVan(naam) {
-      const scopes = context.sourceCode.scopeManager?.scopes ?? [];
-      const verwijzing = scopes.flatMap((scope) => scope.references).find((ref) => Object.is(ref.identifier, naam));
-      const def = /** @type {unknown} */ (verwijzing?.resolved?.defs[0]?.node);
+      const def = /** @type {unknown} */ (verwijzingen().get(naam)?.resolved?.defs[0]?.node);
       return isNode(def) && def.type === 'VariableDeclarator' ? kind(def, 'init') : null;
     }
 
