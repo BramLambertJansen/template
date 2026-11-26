@@ -16,6 +16,7 @@ for (const width of [375, 1280]) {
       await context.setExtraHTTPHeaders(clientIpHeaders());
     });
 
+    // ui-data-display/AC-2, ui-data-display/AC-3, ui-data-display/AC-6, ui-data-display/AC-10
     test('AC-2/3/6: sortering, selectie, meer laden en zoekbare filterchips', async ({ page }) => {
       await openCatalogue(page);
       const section = page.getByRole('region', { name: 'DataTable', exact: true });
@@ -51,7 +52,8 @@ for (const width of [375, 1280]) {
       await expect(section.getByRole('status', { name: 'Rijactie' })).toHaveText('Anna de Vries');
     });
 
-    test('AC-4/5/7/9/10: tabs, preview, focus, axe en CSP', async ({ page }) => {
+    // ui-data-display/AC-4, ui-data-display/AC-5, ui-data-display/AC-9, ui-data-display/AC-10
+    test('AC-4/5/9/10: tabs, preview, focus, axe en CSP', async ({ page }) => {
       const csp = collectCspViolations(page);
       await openCatalogue(page);
       const tabs = page.getByRole('tablist', { name: 'Voorbeeldtabs', exact: true });
@@ -87,6 +89,35 @@ for (const width of [375, 1280]) {
         await page.evaluate<number>('document.documentElement.scrollWidth - window.innerWidth'),
       ).toBeLessThanOrEqual(0);
       expect(csp).toStrictEqual([]);
+    });
+
+    // ui-data-display/AC-10
+    test('reduced motion: tabelregio scrolt intern, is met het toetsenbord bereikbaar en de pagina loopt niet over', async ({
+      page,
+    }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await openCatalogue(page);
+      const section = page.getByRole('region', { name: 'DataTable', exact: true });
+      const table = section.getByRole('region', { name: 'Voorbeeldgegevens', exact: true });
+      await expect(table).toHaveAttribute('tabindex', '0');
+      await table.focus();
+      await expect(table).toBeFocused();
+      await expect(table).toHaveCSS('overflow-x', 'auto');
+      const gallery = page.getByRole('region', { name: 'Gallery', exact: true });
+      await gallery.getByRole('button', { name: 'Afbeelding bekijken: Landschap', exact: true }).click();
+      const dialog = page.getByRole('dialog', { name: 'Landschap', exact: true });
+      await expect(dialog).toBeVisible();
+      // Bij reduced motion kort de kit elke overgang in tot onder 1 ms (src/core/web/styles/index.css).
+      expect(
+        await page.evaluate<number>(
+          "parseFloat(getComputedStyle(document.querySelector('dialog[open]')).transitionDuration) * 1000",
+        ),
+      ).toBeLessThan(1);
+      await dialog.press('Escape');
+      await expect(dialog).toBeHidden();
+      expect(
+        await page.evaluate<number>('document.documentElement.scrollWidth - window.innerWidth'),
+      ).toBeLessThanOrEqual(0);
     });
   });
 }

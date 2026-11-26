@@ -88,22 +88,25 @@ wijzigt. Alleen een nieuwe callback herstart de wachttijd niet en verstuurt geen
 ## Carousel
 
 Vervallen uit deze tranche op verzoek van de eigenaar (2026-10-15): de touchregressie (tik op een dia-actie na een swipe)
-bleef in `gate:slow` falen. Component, voorbeeld en tests zijn verwijderd; een latere tranche kan het opnieuw voorstellen.
+bleef in `gate:slow` falen. Component, voorbeeld en tests zijn verwijderd; AC-7 vervalt door
+[ADR 0114](template/adr/0114-carousel-uit-ui-data-display.md). Een Carousel komt alleen terug met een nieuwe spec.
 
 ## Acceptatiebewijs
 
 | Criterium | Tests |
 | --- | --- |
-| AC-1 exports/types/defaultcompatibiliteit | typecheck, check:catalogus, list-toolbar-filters.test.tsx |
-| AC-2 tabel/sortering/ids | data-table.test.tsx, e2e/ui-data-display.spec.ts |
-| AC-3 selectie/busy/leeg/meer laden | data-table.test.tsx, e2e/ui-data-display.spec.ts |
-| AC-4 tabs/keyboard/staat/focus | tabs.test.tsx, tabs-blur.test.tsx, tabs-empty-recovery.test.tsx, e2e/ui-data-display.spec.ts |
-| AC-5 gallery/fout/preview | gallery.test.tsx, e2e/ui-data-display.spec.ts |
-| AC-6 toolbar/adaptatie/chips/debounce | list-toolbar-filters.test.tsx, bestaande list-toolbar.test.tsx, e2e/ui-data-display.spec.ts |
-| AC-7 carousel/controlled/swipe | vervallen (Carousel uit deze tranche gehaald) |
-| AC-8 structurele wijzigingen/id-fouten | nieuwe componenttests per onderdeel |
-| AC-9 bronindex en voorbeelden | check:catalogus, bestaande e2e/design-system.spec.ts |
-| AC-10 responsive/axe/CSP/thema | e2e/ui-data-display.spec.ts, bestaande design-systemtests |
+| AC-1 exports/types/defaultcompatibiliteit | `src/web/ui/data-display-barrel.test.tsx`, typecheck, check:catalogus |
+| AC-2 tabel/sortering/ids | `src/core/web/ui/data-table.test.tsx`, `e2e/ui-data-display.spec.ts` |
+| AC-3 selectie/busy/leeg/meer laden | `src/core/web/ui/data-table.test.tsx`, `e2e/ui-data-display.spec.ts` |
+| AC-4 tabs/keyboard/staat/focus | `src/core/web/ui/tabs.test.tsx`, `src/core/web/ui/tabs-blur.test.tsx`, `src/core/web/ui/tabs-empty-recovery.test.tsx`, `e2e/ui-data-display.spec.ts` |
+| AC-5 gallery/fout/preview | `src/core/web/ui/gallery.test.tsx`, `e2e/ui-data-display.spec.ts` |
+| AC-6 toolbar/adaptatie/chips/debounce | `src/core/web/ui/list-toolbar-filters.test.tsx`, `e2e/ui-data-display.spec.ts` |
+| AC-7 carousel/controlled/swipe | vervallen door [ADR 0114](template/adr/0114-carousel-uit-ui-data-display.md) |
+| AC-8 structurele wijzigingen/id-fouten | `src/core/web/ui/data-table.test.tsx`, `src/core/web/ui/tabs.test.tsx`, `src/core/web/ui/tabs-empty-recovery.test.tsx`, `src/core/web/ui/gallery.test.tsx`, `src/core/web/ui/list-toolbar-filters.test.tsx` |
+| AC-9 bronindex en voorbeelden | `e2e/design-system-coverage.spec.ts`, `e2e/ui-data-display.spec.ts`, check:catalogus |
+| AC-10 responsive/touch/axe/CSP/thema/reduced motion | `e2e/ui-data-display.spec.ts` |
 
-Testbestanden staan naast corecomponenten; de browserflows gebruiken echte login/API op 375 en 1280 px. Geen bestaande
-test, gate, timeout of runnerinstelling wordt aangepast. De tabel-/filter-/gallerycombinatie heeft uitsluitend lokale data.
+Elk testbestand noemt het criterium als `ui-data-display/AC-n` boven de test die het toetst.
+
+Testbestanden staan naast corecomponenten; de browserflows gebruiken echte login/API op 375 en 1280 px. Bestaande tests
+kregen alleen het AC-commentaar; geen gate, timeout of runnerinstelling wordt aangepast. De tabel-/filter-/gallerycombinatie heeft uitsluitend lokale data.

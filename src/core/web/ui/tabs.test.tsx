@@ -17,6 +17,7 @@ afterAll(() => {
 });
 afterEach(cleanup);
 
+// ui-data-display/AC-4
 test('pijlen verplaatsen focus met wrapping zonder activatie; klikken bewaart gemounte inhoud', () => {
   render(<Tabs label="Dossier" items={items} />);
   const first = screen.getByRole('tab', { name: 'Overzicht' });
@@ -39,6 +40,7 @@ test('pijlen verplaatsen focus met wrapping zonder activatie; klikken bewaart ge
   expect(first.getAttribute('aria-controls')).toBe(screen.getByRole('tabpanel').id);
 });
 
+// ui-data-display/AC-4, ui-data-display/AC-8
 test('controlled onbekende waarde vervangt niets en callbacks veranderen de prop niet', () => {
   const onValueChange = vi.fn();
   render(<Tabs label="Dossier" items={items} value="missing" onValueChange={onValueChange} />);
@@ -49,6 +51,7 @@ test('controlled onbekende waarde vervangt niets en callbacks veranderen de prop
   expect(screen.queryByRole('tabpanel')).toBeNull();
 });
 
+// ui-data-display/AC-4, ui-data-display/AC-8
 test('verwijderde uncontrolled actieve inhoud herstelt focus zonder focus van elders te stelen', () => {
   const { rerender } = render(<Tabs label="Dossier" items={items} />);
   screen.getByLabelText('Bewaard').focus();
@@ -57,6 +60,7 @@ test('verwijderde uncontrolled actieve inhoud herstelt focus zonder focus van el
   expect(screen.getByRole('tab', { name: 'Details' }).getAttribute('aria-selected')).toBe('true');
 });
 
+// ui-data-display/AC-4, ui-data-display/AC-8
 test('instanties hebben unieke relaties; ongeldige ids worden geweigerd', () => {
   const { unmount } = render(
     <>
@@ -71,6 +75,7 @@ test('instanties hebben unieke relaties; ongeldige ids worden geweigerd', () => 
   expect(() => render(<Tabs label="Leeg" items={[{ id: '', label: 'Leeg', content: null }]} />)).toThrow();
 });
 
+// ui-data-display/AC-4, ui-data-display/AC-8
 test('disable van actieve tab herstelt uncontrolled selectie en verwijderde triggerfocus', () => {
   const { rerender } = render(<Tabs label="Dossier" items={items} />);
   const first = screen.getByRole('tab', { name: 'Overzicht' });
@@ -89,6 +94,7 @@ test('disable van actieve tab herstelt uncontrolled selectie en verwijderde trig
   expect(document.activeElement?.getAttribute('role')).not.toBe('tab');
 });
 
+// ui-data-display/AC-8
 test('structurele wijzigingen stelen geen focus buiten de tabs en onbekende default kiest niets', () => {
   const { rerender } = render(
     <>
@@ -110,6 +116,7 @@ test('structurele wijzigingen stelen geen focus buiten de tabs en onbekende defa
   expect(screen.getByRole('tab', { name: 'Overzicht' }).tabIndex).toBe(0);
 });
 
+// ui-data-display/AC-4
 test('controlled wissel vanuit paneelinhoud focust nieuwe actieve tab ondanks eerder roving doel', () => {
   const onValueChange = vi.fn();
   const { rerender } = render(<Tabs label="Dossier" items={items} value="__proto__" onValueChange={onValueChange} />);
@@ -119,6 +126,7 @@ test('controlled wissel vanuit paneelinhoud focust nieuwe actieve tab ondanks ee
   expect(onValueChange).not.toHaveBeenCalled();
 });
 
+// ui-data-display/AC-4
 test('paneel met uitsluitend verborgen of onbereikbare invoer blijft zelf focusbaar', () => {
   const content = (
     <>
