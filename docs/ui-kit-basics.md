@@ -145,7 +145,9 @@ Spec: [app-thema](template/specs/app-thema.md), deel B. In `src/core/web/ui` en 
 (`[&_svg]:size-4`, `data-[state=open]:`) en een `style` met alleen berekende waarden mogen. Een maat die de kit nodig
 heeft, wordt een token met een klasse via `@theme` of `@utility` (zoals `w-dialog-modal` en `fill-qr-dark`,
 `src/core/web/styles/index.css:232-262`); een bestaande overtreding gaat alleen via de ratchet (`eslint-suppressions.json`),
-nooit via een lijst in de regel. Bewijs: `test/rails/eslint-klassen-kit.test.ts`.
+nooit via een lijst in de regel. Bewust buiten bereik (de spec noemt alleen deze drie dragers): klassen uit een ander
+bestand of een functie, `clsx`/`twMerge` direct, `cn`/`cva` onder een andere naam, props als `xxxClassName` en een `style`
+uit een variabele; de review blijft daar de grens. Bewijs: `test/rails/eslint-klassen-kit.test.ts`.
 
 ### App-thema's
 

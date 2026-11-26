@@ -160,6 +160,41 @@ describe('rails/klassen-kit: bereik in de config (AC-8)', () => {
   });
 });
 
+describe('rails/klassen-kit: constanten in dezelfde file (AC-8)', () => {
+  test.each(KIT_PADEN)('app-thema/AC-8: een object-constante gelezen in cn(…) wordt gevolgd (%s)', async (pad) => {
+    const code = "const k = { a: 'w-[13rem]' };\nexport const x = <div className={cn('flex', k[v])} />;";
+
+    expect(await meldingen(pad, code)).toHaveLength(1);
+  });
+
+  test.each(KIT_PADEN)('app-thema/AC-8: een string-constante gelezen in cva(…) wordt gevolgd (%s)', async (pad) => {
+    const code = "const k = 'flex w-[13rem]';\nexport const x = cva(k, { variants: {} });";
+
+    expect(await meldingen(pad, code)).toHaveLength(1);
+  });
+
+  test.each(KIT_PADEN)('app-thema/AC-8: een toegestane constante in een drager meldt niet (%s)', async (pad) => {
+    const basis = "const k = { a: 'flex gap-2 w-[13rem]' };\nexport const x = <div className={cn(k[v])} />;";
+    const goed = "const k = { a: 'flex gap-2' };\nexport const x = <div className={cn(k[v])} />;";
+
+    // Positieve basis: met één verboden token erbij meldt de regel, dus hij draait voor dit pad.
+    expect(await meldingen(pad, basis)).toHaveLength(1);
+    expect(await meldingen(pad, goed)).toStrictEqual([]);
+  });
+
+  test.each(KIT_PADEN)(
+    'app-thema/AC-8: een constante die niet in een drager gelezen wordt meldt niet (%s)',
+    async (pad) => {
+      const basis = "const k = 'w-[13rem]';\nexport const x = <div className={k} />;";
+      const ongelezen = "const k = 'w-[13rem]';\nexport const y = k;";
+
+      // Positieve basis: dezelfde k gelezen in className meldt wel.
+      expect(await meldingen(pad, basis)).toHaveLength(1);
+      expect(await meldingen(pad, ongelezen)).toStrictEqual([]);
+    },
+  );
+});
+
 describe('rails/klassen-kit: de kit zelf (AC-9)', () => {
   function onderdrukkingen(): Record<string, Record<string, { count: number }>> {
     try {

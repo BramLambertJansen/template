@@ -130,8 +130,11 @@ const regel = {
     messages: { verboden: MESSAGE },
   },
   create(context) {
+    // Twee sets: een gevolgde beginwaarde kan zelf een string zijn (`const k = 'w-[13rem]'`), die dan nog gemeld moet worden.
     /** @type {WeakSet<object>} */
-    const gezien = new WeakSet();
+    const gemeld = new WeakSet();
+    /** @type {WeakSet<object>} */
+    const gevolgd = new WeakSet();
 
     /**
      * De beginwaarde van de variabele achter een gelezen naam in dit bestand, of null (parameter, import).
@@ -155,16 +158,17 @@ const regel = {
 
     /** @param {unknown} wortel */
     function controleer(wortel) {
-      const gevonden = { strings: /** @type {AstNode[]} */ ([]), namen: /** @type {AstNode[]} */ ([]) };
+      /** @type {{ strings: AstNode[], namen: AstNode[] }} */
+      const gevonden = { strings: [], namen: [] };
       verzamel(wortel, gevonden);
       for (const waarde of gevonden.namen.map(waardeVan)) {
-        if (waarde !== null && !gezien.has(waarde)) {
-          gezien.add(waarde);
+        if (waarde !== null && !gevolgd.has(waarde)) {
+          gevolgd.add(waarde);
           controleer(waarde);
         }
       }
-      for (const node of gevonden.strings.filter((s) => !gezien.has(s))) {
-        gezien.add(node);
+      for (const node of gevonden.strings.filter((s) => !gemeld.has(s))) {
+        gemeld.add(node);
         meld(node);
       }
     }
