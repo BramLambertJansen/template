@@ -122,14 +122,19 @@ export async function gateFast(keuze, run = draai, write = (text) => process.std
 function rapporteer(uitslagen, naam, write) {
   const rood = uitslagen.filter((uitslag) => uitslag.code !== 0);
   const groen = uitslagen.filter((uitslag) => uitslag.code === 0);
+  const samenvatting = `✗ ${naam} rood: ${rood.map(({ script }) => script).join(', ')}\n`;
+  const tests = falendeTests(rood.find(({ script }) => script === 'test:unit')?.output ?? '');
+  const testblok = tests.length > 0 ? `Falende tests:\n${tests.join('\n')}\n` : '';
+  // Kop bij rood (leerpunt #1000): een uitvoer die halverwege wordt afgekapt (pre-push in de cloud), toont zo toch welke
+  // gates en tests rood zijn. Het slot hieronder blijft voor wie alleen de staart leest.
+  if (rood.length > 0) write(`${samenvatting}${testblok}`);
   for (const { script, output } of rood) write(`── ${script} ──\n${output}${output.endsWith('\n') ? '' : '\n'}`);
   // De ⚠-regels van een rode gate staan al in zijn uitvoer hierboven.
   for (const regel of groen.flatMap(({ output }) => waarschuwingen(output))) write(`${regel}\n`);
   for (const { script, code, seconds } of uitslagen)
     write(`${code === 0 ? '✓' : '✗'} ${script} (${seconds.toFixed(1)} s)\n`);
-  write(rood.length === 0 ? `✓ ${naam} groen\n` : `✗ ${naam} rood: ${rood.map(({ script }) => script).join(', ')}\n`);
-  const tests = falendeTests(rood.find(({ script }) => script === 'test:unit')?.output ?? '');
-  if (tests.length > 0) write(`Falende tests:\n${tests.join('\n')}\n`);
+  write(rood.length === 0 ? `✓ ${naam} groen\n` : samenvatting);
+  write(testblok);
   return rood.length === 0 ? 0 : 1;
 }
 

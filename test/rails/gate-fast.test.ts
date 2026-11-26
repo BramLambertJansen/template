@@ -116,7 +116,7 @@ describe('gate-fast', () => {
 
     const uitvoer = tekst.indexOf(`FOUT-UIT ${rood}`);
     const lijst = tekst.indexOf(`✗ ${rood}`);
-    const samenvatting = tekst.indexOf('✗ gate:fast rood');
+    const samenvatting = tekst.lastIndexOf('✗ gate:fast rood');
     expect(uitvoer).toBeGreaterThanOrEqual(0);
     expect(uitvoer).toBeLessThan(tekst.indexOf(`✓ ${scripts[0] ?? ''}`));
     expect(uitvoer).toBeLessThan(lijst);
@@ -151,7 +151,7 @@ describe('gate-fast', () => {
       expect(uitslag.code).toBe(1);
       expect(uitslag.stdout).toContain(`✗ gate:fast rood: ${rood}`);
       expect(uitslag.stdout.indexOf('STUB-FOUT')).toBeLessThan(uitslag.stdout.indexOf(`✗ ${rood}`));
-      expect(uitslag.stdout.indexOf(`✗ ${rood}`)).toBeLessThan(uitslag.stdout.indexOf('✗ gate:fast rood'));
+      expect(uitslag.stdout.indexOf(`✗ ${rood}`)).toBeLessThan(uitslag.stdout.lastIndexOf('✗ gate:fast rood'));
     } finally {
       await rm(map, { recursive: true, force: true });
     }
