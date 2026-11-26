@@ -18,7 +18,12 @@ Het veld draait in de map **boven** de clone, als root, vóór Claude Code start
 `scripts/cloud-setup.sh` onder die map (`<repo>/scripts/`, niet in `node_modules`), draait elk gevonden script met een
 regel `→ <pad>` ervoor en eindigt met de exitcode van het eerste script dat faalt. Vindt het niets, dan eindigt het met
 `✗ scripts/cloud-setup.sh niet gevonden onder <map>` en exit 1. Klaar binnen ongeveer vijf minuten betekent dat de omgeving
-wordt gecachet; het script draait dan niet opnieuw tot het veld of de toegestane hosts wijzigen. In de eerste sessie na het instellen staan de
+wordt gecachet; het script draait dan niet opnieuw tot het veld of de toegestane hosts wijzigen.
+De cache vervalt niet bij een pin-bump van Node of pnpm in `mise.toml` of `package.json`: dan herstelt de startup-hook
+(`werkstraat toolchain-herstel`, alleen bij `startup` in de cloud) de toolchain bij de start van elke nieuwe sessie,
+als de invoer van de installatie gelijk is aan `main`
+([ADR 0112](template/adr/0112-cloud-toolchain-herstel-bij-startup.md); `rails/hooks/lib/toolchain-herstel.mjs`).
+Blijvend herstel: wijzig het veld (zie Problemen). In de eerste sessie na het instellen staan de
 toolchain en `node_modules` er (gemeten op 19 november 2026). Niet gemeten: of een
 sessie uit de cache de `node_modules` van de repo bevat, en of één omgeving haar cache over meerdere repo's deelt (spec
 `cloud-zelfinstallatie`, M6). Deelt ze die wel, dan wordt het één omgeving per repo met hetzelfde bestand.
@@ -268,9 +273,8 @@ vastgesteld. Of `gh api` lokaal een prompt geeft, is niet gemeten.
 ## Problemen
 
 - **`✗ toolchain ontbreekt`** (bijvoorbeeld `Node v22…, verwacht 26…` of `node_modules ontbreekt of is onvolledig`): het setup-script is niet
-  gedraaid, mislukt of de omgeving is gecachet van vóór het script. Controleer in claude.ai/code dat het veld "Setup script"
-  de inhoud van `scripts/cloud-omgeving.sh` heeft en ververs de omgevingscache; in de sessie zelf herstelt
-  `bash scripts/cloud-setup.sh` het. Elk probleem in de melding noemt zijn eigen herstel. In een
+  gedraaid, mislukt of de omgeving is gecachet van vóór het script of van vóór een pin-bump. In de cloud: zie de kop
+  "`✗ toolchain ontbreekt` in de cloud" onderaan. Elk probleem in de melding noemt zijn eigen herstel. In een
   gekoppelde worktree (`.git` is een bestand) zonder `node_modules` is dat `node scripts/kit/worktree-install.mjs`: frozen
   install met `--package-import-method=copy` en store, cache, state en `XDG_RUNTIME_DIR` onder `os.tmpdir()`, binnen de
   sandbox (pnpm 12 legt zijn store-vergrendeling anders hard in `/tmp`, dat de sandbox niet mag schrijven; een
@@ -351,3 +355,27 @@ vastgesteld. Of `gh api` lokaal een prompt geeft, is niet gemeten.
   en dat de sessie op een branch met die regel startte.
 - **Sandbox uitzetten** is bewust geen standaard: `.claude/settings.json` blijft `sandbox` aan houden. Wie dat toch wil, doet dat per
   omgeving buiten de repo en met eigenaarakkoord (beschermd pad, `docs/framework.md` §10).
+
+### `✗ toolchain ontbreekt` in de cloud
+
+Oorzaak, waarschijnlijk: een omgevingscache van vóór een pin-bump. Het veld "Setup script" draaide één keer, op de stand
+van toen; een hogere pin van Node of pnpm laat de cache niet vervallen (Opzetten). In de cloud noemt `feiten.mjs` die
+oorzaak en één herstelroute (`scripts/kit/toolchain.mjs`, optie `cloud`). Bij `startup` draait de hook
+`werkstraat toolchain-herstel` ([ADR 0112](template/adr/0112-cloud-toolchain-herstel-bij-startup.md)); hij geeft één regel
+in de context van de start, of niets als alles klopt:
+
+- **`✓ toolchain hersteld in <s> s: …`**: `scripts/cloud-setup.sh` draaide; de sessie werkt. Elke nieuwe sessie herhaalt
+  dit tot het veld wijzigt.
+- **`! toolchain niet hersteld: <paden> wijken af van main (…)`**: de branch wijkt af in de invoer van de installatie
+  (`INVOER` in `rails/hooks/lib/toolchain-herstel.mjs`), bijvoorbeeld een Renovate-branch met een pin die nog niet op
+  `main` staat. De hook voert die configuratie niet als root uit. Ook bij een ontbrekende of ongeldige
+  `packageManager` en bij een `pnpm --version` die niet antwoordt, installeert hij niet.
+- **`✗ toolchain niet hersteld (scripts/cloud-setup.sh exit <code>, …)`** of **`✗ toolchain niet hersteld: na <s> s
+  afgebroken`**: het script faalde of liep langer dan 540 s; de uitvoer staat in
+  `~/.cache/werkstraat/toolchain-herstel.log`. Zie de meldingen van het script hierboven.
+- **`! toolchain-herstel niet gestart (ADR 0045)`**: de lader vond geen anker (geen netwerk naar de remote).
+- **`✗ toolchain-herstel faalde: …`**: een fout in de hook zelf; meld het als leerpunt.
+
+Herstel: start een nieuwe sessie op een branch gelijk aan `main`; de hook herstelt dan bij de start. Blijvend: de eigenaar
+wijzigt het veld "Setup script" van de omgeving (bijvoorbeeld een regel commentaar erbij), zodat de cache vervalt en het
+script opnieuw draait. Vanuit de Bash-tool lukt herstel niet (`~/.local` is daar alleen-lezen, zie hierboven).

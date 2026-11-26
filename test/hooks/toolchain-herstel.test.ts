@@ -569,7 +569,7 @@ describe('cloud-toolchain-zelfherstel/AC-6 invoer wijkt af van het anker', () =>
         regel.includes(afwijkendPad) &&
         regel.includes(w.anker.slice(0, 12)) &&
         regel.includes('wijzig het veld "Setup script" van de omgeving') &&
-        !/`|\bbash\b|\bpnpm\b|\bsudo\b/.test(regel) &&
+        !/`|\bbash\b|\bpnpm(?![\w.-])|\bsudo\b/.test(regel) &&
         (uitslag.exit ?? 0) === 0;
       if (!goed) fouten.push(`${naam}: ${regel}`);
     }

@@ -23,6 +23,10 @@ function passend(node, verwacht) {
 }
 
 const BOOTSTRAP = '`scripts/bootstrap.sh`';
+// Spec cloud-toolchain-zelfherstel/AC-11: in de cloud is een afwijkende versie vrijwel altijd een omgevingscache van vóór een
+// pin-bump; één herstelroute in plaats van een route per segment.
+const CLOUD_OORZAAK =
+  '→ in de cloud waarschijnlijk een omgevingscache van vóór een pin-bump: start een nieuwe sessie (de startup-hook herstelt het), of de eigenaar wijzigt het veld "Setup script", zie docs/ENVIRONMENT.md';
 const WORKTREE_INSTALL = '`node scripts/kit/worktree-install.mjs`';
 
 /**
@@ -30,10 +34,13 @@ const WORKTREE_INSTALL = '`node scripts/kit/worktree-install.mjs`';
  * "probleem → herstel". In de hoofdcheckout is elk herstel de bootstrap. In een gekoppelde worktree is een ontbrekende
  * node_modules iets wat de agent zelf herstelt; Node en pnpm blijven bij de eigenaar. Een probleem met eigen `herstel`
  * (een trage pnpm, waar de bootstrap niet helpt) noemt dat herstel.
+ * Met `cloud` en een afwijkende Node- of pnpm-versie (`versie`): alle redenen en één herstelroute, de cloudoorzaak.
  * @param {Probleem[]} problemen
- * @param {boolean} worktree
+ * @param {{ worktree: boolean, cloud: boolean }} plek
  */
-function setupProbleem(problemen, worktree) {
+function setupProbleem(problemen, { worktree, cloud: inCloud }) {
+  if (inCloud && problemen.some((p) => p.versie === true))
+    return `✗ toolchain ontbreekt: ${problemen.map(({ reden }) => reden).join('; ')} ${CLOUD_OORZAAK}`;
   const delen = problemen.map(({ reden, nodeModules, herstel }) => {
     if (herstel !== undefined) return `${reden} → ${herstel}`;
     return `${reden} → draai ${worktree && nodeModules === true ? WORKTREE_INSTALL : BOOTSTRAP}`;
@@ -42,7 +49,7 @@ function setupProbleem(problemen, worktree) {
   return `✗ toolchain ontbreekt: ${delen.join('; ')}${cloud}, zie docs/ENVIRONMENT.md`;
 }
 
-/** @typedef {{ reden: string, nodeModules?: boolean, herstel?: string }} Probleem */
+/** @typedef {{ reden: string, nodeModules?: boolean, herstel?: string, versie?: boolean }} Probleem */
 
 /**
  * @param {{ node: string, miseToml: string, nodeModules: boolean }} feiten
@@ -53,19 +60,22 @@ function nodeProblemen({ node, miseToml, nodeModules }) {
   /** @type {Probleem[]} */
   const problemen = [];
   if (verwacht !== undefined && !passend(node, verwacht))
-    problemen.push({ reden: `Node ${node}, verwacht ${verwacht} of nieuwer binnen dezelfde major (mise.toml)` });
+    problemen.push({
+      reden: `Node ${node}, verwacht ${verwacht} of nieuwer binnen dezelfde major (mise.toml)`,
+      versie: true,
+    });
   if (!nodeModules) problemen.push({ reden: 'node_modules ontbreekt of is onvolledig', nodeModules: true });
   return problemen;
 }
 
 /**
- * @param {{ node: string, miseToml: string, nodeModules: boolean, worktree?: boolean }} feiten
- *   `worktree`: gekoppelde worktree (`.git` is een bestand); weggelaten = hoofdcheckout.
+ * @param {{ node: string, miseToml: string, nodeModules: boolean, worktree?: boolean, cloud?: boolean }} feiten
+ *   `worktree`: gekoppelde worktree (`.git` is een bestand); weggelaten = hoofdcheckout. `cloud`: sessie op claude.ai/code.
  * @returns {string | null}
  */
-export function toolchainProbleem({ node, miseToml, nodeModules, worktree = false }) {
+export function toolchainProbleem({ node, miseToml, nodeModules, worktree = false, cloud = false }) {
   const problemen = nodeProblemen({ node, miseToml, nodeModules });
-  return problemen.length === 0 ? null : setupProbleem(problemen, worktree);
+  return problemen.length === 0 ? null : setupProbleem(problemen, { worktree, cloud });
 }
 
 /** @param {string} root */
@@ -109,9 +119,11 @@ function pnpmProbleem(root, timeoutMs) {
       herstel: 'controleer of `pnpm --version` de pin geeft (globale mise-pin) of probeer opnieuw',
     };
   if (result.error !== undefined || result.status !== 0)
-    return { reden: `pnpm ontbreekt of start niet, verwacht ${verwacht}` };
+    return { reden: `pnpm ontbreekt of start niet, verwacht ${verwacht}`, versie: true };
   const werkelijk = result.stdout.trim().replace(/\s+/g, ' ').slice(0, 120) || 'onbekend';
-  return werkelijk === verwacht ? null : { reden: `pnpm ${werkelijk}, verwacht exact ${verwacht} (packageManager)` };
+  return werkelijk === verwacht
+    ? null
+    : { reden: `pnpm ${werkelijk}, verwacht exact ${verwacht} (packageManager)`, versie: true };
 }
 
 // Snelle aanwezigheidscontrole: deze bestanden bewijzen geen synchronisatie met lockfile of workspace.
@@ -132,9 +144,10 @@ function isWorktree(root) {
 
 /**
  * @param {string} root
- * @param {{ pnpmTimeoutMs?: number }} [opties] `pnpmTimeoutMs`: alleen voor tests; standaard PNPM_TIMEOUT_MS.
+ * @param {{ pnpmTimeoutMs?: number, cloud?: boolean }} [opties] `pnpmTimeoutMs`: alleen voor tests; standaard PNPM_TIMEOUT_MS.
+ *   `cloud`: de ingang geeft hem mee (feiten.mjs uit `CLAUDE_CODE_REMOTE`); kiest de cloudoorzaak.
  */
-export function toolchainProbleemIn(root, { pnpmTimeoutMs = PNPM_TIMEOUT_MS } = {}) {
+export function toolchainProbleemIn(root, { pnpmTimeoutMs = PNPM_TIMEOUT_MS, cloud = false } = {}) {
   const worktree = isWorktree(root);
   const mise = path.join(root, 'mise.toml');
   const problemen = nodeProblemen({
@@ -146,5 +159,5 @@ export function toolchainProbleemIn(root, { pnpmTimeoutMs = PNPM_TIMEOUT_MS } = 
   // Ook een ontbrekende of ongeldige packageManager-pin staat erbij, met herstel scripts/bootstrap.sh.
   const pnpm = pnpmProbleem(root, pnpmTimeoutMs);
   if (pnpm !== null) problemen.push(pnpm);
-  return problemen.length === 0 ? null : setupProbleem(problemen, worktree);
+  return problemen.length === 0 ? null : setupProbleem(problemen, { worktree, cloud });
 }

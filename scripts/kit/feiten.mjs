@@ -84,7 +84,10 @@ if (process.argv[2] === 'pad') await padRegel(process.argv[3]);
 // padtabel blijven leesbaar terwijl de agent het herstel uitzoekt. Ook de Node-versiecontrole vervalt voor hen; ze
 // gebruiken alleen ingebouwde modules. De secties hieronder laden typescript (catalogus.mjs),
 // dus zonder node_modules anders een stacktrace (docs/ENVIRONMENT.md).
-const probleem = toolchainProbleemIn(fileURLToPath(new URL('../..', import.meta.url)));
+// In de cloud noemt de melding de omgevingscache als oorzaak (spec cloud-toolchain-zelfherstel/AC-11).
+const probleem = toolchainProbleemIn(fileURLToPath(new URL('../..', import.meta.url)), {
+  cloud: process.env['CLAUDE_CODE_REMOTE'] === 'true',
+});
 if (probleem !== null) {
   console.error(probleem);
   process.exit(1);

@@ -1,13 +1,15 @@
-// Entry voor de werkstraat-hooks (framework §8): `node rails/hooks/werkstraat.mjs <post-edit|stop|subagent-stop|session-start>`.
+// Entry voor de werkstraat-hooks (framework §8): `node rails/hooks/werkstraat.mjs <post-edit|stop|subagent-stop|session-start|toolchain-herstel>`.
 // De beslissingen staan in lib/werkstraat.mjs (getest in test/hooks/werkstraat.test.ts); hier alleen stdin, commando's en uitvoer.
 // Root: de git-root van `cwd` uit de payload (een worktree), terugval CLAUDE_PROJECT_DIR en dan process.cwd() (lib/root.mjs).
 // Een fout in de hook: bij stop en subagent-stop blokkeert hij met de fout (Claude Code stopt zelf na 8 keer), bij de
-// andere meldt hij hem alleen; die blokkeren nooit iets.
+// andere meldt hij hem alleen; die blokkeren nooit iets. `toolchain-herstel` (ADR 0112) zet elke fout als regel op stdout,
+// zodat hij in de context van de start komt, en eindigt met exit 0 (spec cloud-toolchain-zelfherstel/AC-13).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { payloadCwd, projectRoot } from './lib/root.mjs';
 import { rolhekContext } from './lib/rolhek-context.mjs';
 import { createRun } from './lib/run.mjs';
+import { toolchainHerstel } from './lib/toolchain-herstel.mjs';
 import { changedFiles, postEdit, sessionStart, stop, subagentStop } from './lib/werkstraat.mjs';
 
 const event = process.argv[2] ?? '';
@@ -96,6 +98,23 @@ function handle(payload) {
       throw new Error(`onbekende hook "${event}"`);
   }
 }
+
+/** SessionStart `toolchain-herstel`: async, en elke fout als één regel op stdout met exit 0 (de sessie start altijd). */
+async function toolchainHerstelEntry() {
+  let tekst;
+  try {
+    const payload = readPayload();
+    const root = projectRoot(payloadCwd(payload), process.cwd());
+    tekst = (await toolchainHerstel(payload, { root, env: process.env })).stdout ?? '';
+  } catch (error) {
+    const melding = (error instanceof Error ? error.message : String(error)).replace(/\s+/g, ' ').trim();
+    tekst = `✗ toolchain-herstel faalde: ${melding} (meld dit; de sessie start gewoon)\n`;
+  }
+  await new Promise((klaar) => process.stdout.write(tekst, klaar));
+  process.exit(0);
+}
+
+if (event === 'toolchain-herstel') await toolchainHerstelEntry();
 
 try {
   const result = handle(readPayload());
