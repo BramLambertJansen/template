@@ -16,6 +16,12 @@ async function meldingen(filePath: string, code: string, regel = KIT_REGEL): Pro
   return (result?.messages ?? []).filter((m) => m.ruleId === regel).map((m) => m.message);
 }
 
+// Aantal fatale meldingen (parse- of lintcrash) voor een fixture.
+async function fatalen(filePath: string, code: string): Promise<number> {
+  const [result] = await eslint.lintText(code, { filePath });
+  return (result?.fatalErrorCount ?? 0) + (result?.messages ?? []).filter((m) => m.fatal === true).length;
+}
+
 type Drager = 'className' | 'cn' | 'cva-basis' | 'cva-variant' | 'cva-compound';
 
 // Eén classstring in elk van de drie dragers (className, cn(…), CVA-recept) als code.
@@ -191,6 +197,38 @@ describe('rails/klassen-kit: constanten in dezelfde file (AC-8)', () => {
       // Positieve basis: dezelfde k gelezen in className meldt wel.
       expect(await meldingen(pad, basis)).toHaveLength(1);
       expect(await meldingen(pad, ongelezen)).toStrictEqual([]);
+    },
+  );
+
+  test.each(KIT_PADEN)('app-thema/AC-8: een kring tussen constanten stopt en crasht niet (%s)', async (pad) => {
+    const basis = "const a = b;\nconst b = 'w-[13rem]';\nexport const x = <div className={cn('flex', a)} />;";
+    const kring = "const a = b;\nconst b = a;\nexport const x = <div className={cn('flex', a)} />;";
+
+    // Positieve basis: zonder kring volgt de regel a naar b en meldt precies één keer.
+    expect(await meldingen(pad, basis)).toHaveLength(1);
+    expect(await fatalen(pad, basis)).toBe(0);
+    expect(await meldingen(pad, kring)).toStrictEqual([]);
+    expect(await fatalen(pad, kring)).toBe(0);
+  });
+
+  test.each(KIT_PADEN)('app-thema/AC-8: een zelfverwijzende constante stopt en crasht niet (%s)', async (pad) => {
+    const basis = "const k = [k, 'w-[13rem]'];\nexport const x = cn(k);";
+    const zelf = "const k = [k, 'flex'];\nexport const x = cn(k);";
+
+    // Positieve basis: dezelfde zelfverwijzing met een verboden token meldt wel, dus de regel draait en stopt.
+    expect(await meldingen(pad, basis)).toHaveLength(1);
+    expect(await fatalen(pad, basis)).toBe(0);
+    expect(await meldingen(pad, zelf)).toStrictEqual([]);
+    expect(await fatalen(pad, zelf)).toBe(0);
+  });
+
+  test.each(KIT_PADEN)(
+    'app-thema/AC-8: een constante die op meerdere plekken gelezen wordt meldt één keer (%s)',
+    async (pad) => {
+      const code =
+        "const k = 'w-[13rem]';\nexport const x = <div className={k} />;\nexport const y = cn(k);\nexport const z = cva(k, { variants: {} });";
+
+      expect(await meldingen(pad, code)).toHaveLength(1);
     },
   );
 });
