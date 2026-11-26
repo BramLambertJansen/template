@@ -24,6 +24,7 @@ import { useAccounts } from './queries.ts';
 import type { AccountMessage } from './row-actions.tsx';
 import { AccountRow } from './account-row.tsx';
 import { RevokeInvitationHost } from './revoke-invitation-dialog.tsx';
+import { focusAfterDialog } from './focus-after-dialog.ts';
 
 type Account = z.output<typeof accountItem>;
 type Message = AccountMessage;
@@ -80,28 +81,41 @@ function AccountsTable({
 }
 
 // Focus na intrekken (spec accountbeheer-uitbreiding, focusvolgorde). De refetch loopt nog als de dialoog dichtgaat; we wachten
-// tot de lijst na het intrekken bijgewerkt is (data of fout). Staat de rij er dan nog (refetch faalde of de rij blijft), dan
-// verplaatsen we niets; is hij weg, dan naar de focusbare region "Accounts" (src/core/web/ui/table.tsx), en is de lijst leeg
-// (AsyncView toont de lege staat zonder tabel) naar de knop "Account uitnodigen".
+// tot de lijst na het intrekken bijgewerkt is (data of fout, geen placeholder van een vorige filtersleutel). Staat de rij er dan
+// nog (refetch faalde of de rij blijft), dan verplaatsen we niets; is hij weg, dan naar de focusbare region "Accounts"
+// (src/core/web/ui/table.tsx), en is de lijst leeg (AsyncView toont de lege staat zonder tabel) naar de knop "Account
+// uitnodigen". De focus gaat pas in het volgende frame (focusAfterDialog), als de dialoog uit de DOM is en de pagina niet meer
+// inert. Wordt de lijst daarna alsnog leeg terwijl de region de focus had (bijv. een zoekterm die na het intrekken in de URL
+// komt), dan verdwijnt de region onder de focus en zetten we hem op de knop.
 function useFocusAfterRevoke(accounts: ReturnType<typeof useAccounts>) {
   const region = useRef<HTMLDivElement>(null);
   const invite = useRef<HTMLButtonElement>(null);
+  const toRegion = useRef(false);
   const [removed, setRemoved] = useState<{ readonly id: string; readonly since: number } | null>(null);
-  const { data, dataUpdatedAt, errorUpdatedAt } = accounts;
+  const { data, dataUpdatedAt, errorUpdatedAt, isPlaceholderData } = accounts;
+  const rows = data?.pages.flatMap((page) => page.items);
+  const empty = rows !== undefined && rows.length === 0 && !isPlaceholderData;
   useEffect(() => {
-    if (removed === null) return;
-    const rows = data?.pages.flatMap((page) => page.items) ?? [];
-    if (rows.some((account) => account.id === removed.id)) {
+    if (removed === null || isPlaceholderData) return;
+    const current = data?.pages.flatMap((page) => page.items) ?? [];
+    if (current.some((account) => account.id === removed.id)) {
       if (Math.max(dataUpdatedAt, errorUpdatedAt) >= removed.since) setRemoved(null);
       return;
     }
     setRemoved(null);
-    (rows.length === 0 ? invite.current : region.current)?.focus();
-  }, [data, dataUpdatedAt, errorUpdatedAt, removed]);
+    toRegion.current = current.length > 0;
+    focusAfterDialog(current.length === 0 ? invite : region);
+  }, [data, dataUpdatedAt, errorUpdatedAt, isPlaceholderData, removed]);
+  useEffect(() => {
+    if (!empty || !toRegion.current) return;
+    toRegion.current = false;
+    if (document.activeElement === null || document.activeElement === document.body) focusAfterDialog(invite);
+  }, [empty]);
   return {
     region,
     invite,
     revoked: (id: string) => {
+      toRegion.current = false;
       setRemoved({ id, since: Date.now() });
     },
   };

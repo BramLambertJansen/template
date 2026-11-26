@@ -5,6 +5,7 @@
 import { parseArgs } from 'node:util';
 import pg from 'pg';
 import { invitationMail } from '../src/api/mail/invitation.ts';
+import { APP_NAME } from '../src/shared/app.ts';
 import { createAuth, inviteUser } from '../src/core/api/auth/index.ts';
 import { createSmtpMailer } from '../src/core/api/mail/smtp.ts';
 
@@ -37,6 +38,10 @@ const auth = createAuth({
   secret: required('AUTH_SECRET'),
   databaseUrl: required('AUTH_DATABASE_URL'),
   sendInvitation: (invitation) => sendMail(invitationMail(invitation)),
+  // --reset-password voor een account met wachtwoord stuurt de resetmail (1 uur, spec accountbeheer-uitbreiding); die vraagt
+  // sendMail, anders weigert sendResetPassword (geen terugval op de uitnodiging).
+  sendMail,
+  appName: APP_NAME,
 });
 const context = await auth.$context;
 const migrator = new pg.Pool({ connectionString: required('MIGRATOR_DATABASE_URL'), max: 1 });

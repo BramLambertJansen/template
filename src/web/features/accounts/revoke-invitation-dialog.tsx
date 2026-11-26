@@ -1,10 +1,11 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useRef, useState, type ReactNode, type RefObject } from 'react';
 import type { z } from 'zod';
 import { assert } from '#core/shared/assert.ts';
 import { ApiError } from '#core/web/lib/api-client.ts';
 import type { accountItem } from '#shared/contracts/accounts.ts';
 import { copy } from '#web/copy/ui.ts';
 import { ConfirmDialog, Notice, useErrorText } from '#web/ui/index.ts';
+import { focusAfterDialog } from './focus-after-dialog.ts';
 import { useRevokeInvitation } from './queries.ts';
 
 type Account = z.output<typeof accountItem>;
@@ -56,7 +57,8 @@ export function RevokeInvitationDialog({
   );
 }
 
-type AskRevoke = (account: Account) => void;
+// `opener`: de menuknop van de rij; annuleren (knop, Esc) zet de focus daarop terug.
+type AskRevoke = (account: Account, opener: RefObject<HTMLElement | null>) => void;
 const RevokeHostContext = createContext<AskRevoke | null>(null);
 
 // De rij vraagt de host om de dialoog; de host is verplicht (één pad: de dialoog leeft in RevokeInvitationHost).
@@ -72,7 +74,8 @@ export function useRevokeHost(): AskRevoke {
 // geslaagde intrekking blijft staan (refetch faalde). Na een geslaagde intrekking gaat de dialoog weg zonder sluitanimatie;
 // de focus zet de ouder in onRevoked (met het account). De refetch is dan nog niet klaar: onSettled start hem zonder erop te
 // wachten, dus de ouder wacht zelf op de volgende dataUpdatedAt/errorUpdatedAt (useFocusAfterRevoke). Sluiten door de gebruiker
-// loopt via de dialoog zelf (animatie, focus terug op de opener).
+// sluit de dialoog en zet de focus terug op de menuknop van de rij (focusAfterDialog: de dialoog weet zelf niet wie hem opende,
+// en de native dialoog zou de focus op het weggehaalde menu-item terugzetten). Is die rij intussen weg, dan gebeurt er niets.
 export function RevokeInvitationHost({
   children,
   onRevoked,
@@ -82,7 +85,9 @@ export function RevokeInvitationHost({
 }) {
   const [target, setTarget] = useState<Account | null>(null);
   const [open, setOpen] = useState(false);
-  const ask = (account: Account) => {
+  const opener = useRef<RefObject<HTMLElement | null> | null>(null);
+  const ask: AskRevoke = (account, from) => {
+    opener.current = from;
     setTarget(account);
     setOpen(true);
   };
@@ -96,6 +101,7 @@ export function RevokeInvitationHost({
           open={open}
           onClose={() => {
             setOpen(false);
+            if (opener.current !== null) focusAfterDialog(opener.current);
           }}
           onRevoked={(text) => {
             setTarget(null);

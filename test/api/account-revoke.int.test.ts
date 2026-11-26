@@ -123,11 +123,11 @@ describe('DELETE /api/accounts/:id/invitation: rechten en invoer (spec accounts/
 
   test.each([
     // DELETE negeert de body (create-app.ts), dus het extra veld gaat als query mee; .strict() weigert het.
-    ['extra veld in de query', 'iets?rol=admin'],
-    ['een id van meer dan 200 tekens', 'x'.repeat(201)],
-  ])('accounts/AC-15: %s: 400 VALIDATION, vóór de handler', async (_case, id) => {
+    ['extra veld in de query', `${REVOKE('iets')}?rol=admin`],
+    ['een id van meer dan 200 tekens', REVOKE('x'.repeat(201))],
+  ])('accounts/AC-15: %s: 400 VALIDATION, vóór de handler', async (_case, request) => {
     const admin = await mfaAdmin();
-    const response = await t.call(admin.browser, REVOKE(id));
+    const response = await t.call(admin.browser, request);
 
     expect([response.status, await json(response)]).toMatchObject([400, { code: 'VALIDATION' }]);
   });

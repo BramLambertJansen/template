@@ -71,19 +71,38 @@ export async function reinviteUser(
   const user = await context.internalAdapter.findUserById(userId);
   if (user === null) throw new AccountNotFoundError();
   if ((await context.internalAdapter.findCredentialAccount(userId)) !== null) throw new AccountAlreadyActiveError();
-  const resend = async () => {
-    // Alleen de nieuwste link werkt: oude reset-tokens van deze gebruiker gaan eerst weg.
-    await context.adapter.deleteMany({
-      model: 'verification',
-      where: [
-        { field: 'value', value: userId },
-        { field: 'identifier', operator: 'starts_with', value: 'reset-password:' },
-      ],
-    });
-    await auth.api.requestPasswordReset({ body: { email: user.email } });
-  };
+  const resend = () => replaceResetToken(auth, user);
   if (lifecycle === undefined) await resend();
   else lifecycle.afterCommit(resend);
+}
+
+// Alleen de nieuwste link werkt: oude reset-tokens van deze gebruiker gaan eerst weg, dan een nieuwe via de reset-flow.
+async function replaceResetToken(auth: Auth, user: { readonly id: string; readonly email: string }): Promise<void> {
+  const context = await auth.$context;
+  await context.adapter.deleteMany({
+    model: 'verification',
+    where: [
+      { field: 'value', value: user.id },
+      { field: 'identifier', operator: 'starts_with', value: 'reset-password:' },
+    ],
+  });
+  await auth.api.requestPasswordReset({ body: { email: user.email } });
+}
+
+// Resetlink voor een actief account (spec accountbeheer-uitbreiding, accounts/AC-16): de route toetst eerst de status in
+// app.accounts. Zoals reinviteUser: tokens weg, aanmaken en mail na commit; sendResetPassword (reset-password.ts) kiest de
+// resetmail met de korte TTL omdat het account een credential heeft.
+export async function sendResetLink(
+  auth: Auth,
+  userId: string,
+  lifecycle?: Pick<InvitationLifecycle, 'afterCommit'>,
+): Promise<void> {
+  const context = await auth.$context;
+  const user = await context.internalAdapter.findUserById(userId);
+  if (user === null) throw new AccountNotFoundError();
+  const send = () => replaceResetToken(auth, user);
+  if (lifecycle === undefined) await send();
+  else lifecycle.afterCommit(send);
 }
 
 // Uitnodiging intrekken (spec accountbeheer-uitbreiding, accounts/AC-15): de transactie staat in revoke-invitation.ts. Een

@@ -12,6 +12,7 @@ import {
   revokeInvitation,
   revokeOtherSessions,
   revokeOwnSession,
+  sendResetLink,
   SessionNotFoundError,
   type Auth,
   type OwnSession,
@@ -32,6 +33,8 @@ export interface AppServices {
     readonly reinvite: (userId: string, lifecycle?: Pick<InvitationLifecycle, 'afterCommit'>) => Promise<void>;
     // Intrekken als auth_service in een eigen transactie (spec accountbeheer-uitbreiding); de route toetst eerst app.accounts.
     readonly revoke: (userId: string) => Promise<void>;
+    // Resetlink voor een actief account (spec accountbeheer-uitbreiding); de route toetst eerst de status in app.accounts.
+    readonly sendResetLink: (userId: string, lifecycle?: Pick<InvitationLifecycle, 'afterCommit'>) => Promise<void>;
   };
   // Het eigen account (spec eigen-account); userId komt altijd uit ctx.actor.
   readonly profile: {
@@ -82,6 +85,7 @@ export function createServices(auth: Auth): AppServices {
           throw translate(error);
         }),
       revoke: (userId) => translated(revokeInvitation(auth, userId)),
+      sendResetLink: (userId, lifecycle) => translated(sendResetLink(auth, userId, lifecycle)),
     },
     profile: {
       rename: (userId, name) => renameUser(auth, userId, name),

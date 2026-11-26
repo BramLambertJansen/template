@@ -20,6 +20,7 @@ export const copy = {
     visibilityLabel: 'Wachtwoord tonen',
     submit: 'Inloggen',
     passwordSet: 'Je wachtwoord is ingesteld. Log in om verder te gaan.',
+    passwordChanged: 'Je wachtwoord is gewijzigd. Log in om verder te gaan.',
     sessionExpired: 'Je sessie is verlopen. Log opnieuw in.',
   },
   totp: {
@@ -60,6 +61,8 @@ export const copy = {
     repeat: 'Wachtwoord herhalen',
     help: 'Minstens 12 tekens.',
     submit: 'Wachtwoord instellen',
+    // Spec accountbeheer-uitbreiding: dezelfde pagina via een resetlink (`/uitnodiging?soort=reset`).
+    resetTitle: 'Nieuw wachtwoord instellen',
   },
   nav: { home: 'Home', dashboard: 'Dashboard' },
   menu: { account: 'Mijn account', logout: 'Uitloggen' },
@@ -136,6 +139,17 @@ export const copy = {
       alreadyActive: 'Dit account is inmiddels actief; de uitnodiging is al gebruikt.',
     },
     revoked: (email: string) => `De uitnodiging aan ${email} is ingetrokken.`,
+    // Spec accountbeheer-uitbreiding: resetlink sturen (ConfirmDialog, niet rood); ACCOUNT_DEACTIVATED heeft hier een eigen
+    // tekst (de algemene blijft de inlogfout).
+    resetLink: 'Resetlink sturen',
+    resetLinkDialog: {
+      title: 'Resetlink sturen?',
+      description: (naam: string) =>
+        `${naam} krijgt een mail met een link om een nieuw wachtwoord in te stellen. Het huidige wachtwoord blijft werken tot dan.`,
+      confirm: 'Link sturen',
+      deactivated: 'Dit account is gedeactiveerd. Activeer het eerst.',
+    },
+    resetLinkSent: (email: string) => `Resetlink verstuurd naar ${email}.`,
     invite: 'Account uitnodigen',
     empty: 'Nog geen accounts.',
     more: 'Meer laden',

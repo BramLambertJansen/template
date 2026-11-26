@@ -202,7 +202,8 @@ Volgens de aanbeveling bij OV-1 (één nieuwe migratie; beschermde-padwijziginge
 | Onbekend of al verwijderd account | geweigerd | `NOT_FOUND` |
 | Geblokkeerd of gedeactiveerd account met een open uitnodigings- of resetlink (ook als het tussen de statuscheck en de mail gebeurde) | wachtwoord instellen lukt, inloggen niet | `ACCOUNT_BLOCKED` / `ACCOUNT_DEACTIVATED` |
 | Resetlink ouder dan `RESET_LINK_TTL_SECONDS` of al gebruikt | melding op `/uitnodiging?soort=reset` | `RESET_LINK_INVALID` |
-| Twee resetlinks tegelijk aangevraagd | geen enkele tokenrij verloopt later dan nu + `RESET_LINK_TTL_SECONDS` | — |
+| Twee resetlinks tegelijk aangevraagd | geen enkele tokenrij verloopt later dan nu + `RESET_LINK_TTL_SECONDS`; er komen één of twee mails, en bij twee kunnen beide links werken (zoals bij opnieuw uitnodigen); aanvaard | — |
+| Resetmail kan niet uit (geen `sendMail`, of de tokenrij is al weg) | geen mail (fail-closed); Better Auth vangt de fout en logt hem alleen, dus de route geeft 200 en de UI meldt "verstuurd"; aanvaard, de beheerder ziet het in het log | — |
 | Herstelcode met spaties of kleine letters | spaties weg; hoofdlettergevoelig zoals de plugin | `INVALID_BACKUP_CODE` |
 | Alle herstelcodes op en telefoon kwijt | `pnpm admin:create` (runbook) | — |
 | Te veel pogingen met herstelcodes | plugin: 5 per uitdaging; Better Auth: 3 per 10 s per IP op `/two-factor/*` | `RATE_LIMITED` |

@@ -37,9 +37,10 @@ describe('afzonderlijke accountmaatregelen', () => {
   test('biedt beide maatregelen voor een actief ander account', () => {
     const actions = handlers();
     const items = itemsFor(ACTIVE, false, actions);
-    expect(items.map((item) => item.label)).toStrictEqual(['Blokkeren', 'Deactiveren']);
-    items[0]?.onSelect();
+    // Spec accountbeheer-uitbreiding (accounts/AC-16): "Resetlink sturen" staat vooraan bij een actief ander account.
+    expect(items.map((item) => item.label)).toStrictEqual(['Resetlink sturen', 'Blokkeren', 'Deactiveren']);
     items[1]?.onSelect();
+    items[2]?.onSelect();
     expect(actions.askBlock).toHaveBeenCalledOnce();
     expect(actions.askDeactivate).toHaveBeenCalledOnce();
     expect(actions.unblock).not.toHaveBeenCalled();

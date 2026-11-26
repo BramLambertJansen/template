@@ -55,6 +55,18 @@ export function useRevokeInvitation() {
   });
 }
 
+// Resetlink sturen (spec accountbeheer-uitbreiding): zoals intrekken ook na een fout de werkelijke lijst (de status kan intussen
+// veranderd zijn), zonder op de refetch te wachten.
+export function useSendResetLink() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.call('POST /accounts/:id/reset-link', { id }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+    },
+  });
+}
+
 // Blokkeren en deblokkeren (spec accountbeheer-uitbreiding, ADR 0043): de status komt uit de lijst, dus invalideren.
 export function useBlock() {
   const queryClient = useQueryClient();

@@ -6,6 +6,7 @@ import { createHooks } from './hooks.ts';
 import { createAccountLifecycle, type AccountLifecycle } from './account-lifecycle.ts';
 import { createMailing, type Mailing } from './mailing.ts';
 import { createClaimOnce } from './one-time-use.ts';
+import { createResetSessionBump, createSendResetPassword } from './reset-password.ts';
 import { createInviteeGuard } from './revoke-invitation.ts';
 import {
   EMAIL_CHANGE_TTL_SECONDS,
@@ -42,6 +43,12 @@ const NO_TRUSTED_IP_HEADER = 'x-template-geen-ip-header';
 
 export const AUTH_BASE_PATH = '/api/auth';
 export const INVITATION_PATH = '/uitnodiging';
+
+// Link naar /uitnodiging; een resetlink krijgt `&soort=reset` (spec accountbeheer-uitbreiding: titel en foutcode volgen soort).
+function invitationLink(origin: string, token: string, soort: 'uitnodiging' | 'reset'): string {
+  const base = `${origin}${INVITATION_PATH}?token=${encodeURIComponent(token)}`;
+  return soort === 'reset' ? `${base}&soort=reset` : base;
+}
 
 // Publiek dicht (ADR 0043): 404 in de router; interne aanroepen via auth.api.* blijven werken. disabledPaths vergelijkt
 // letterlijk, dus een pad met een parameter staat apart in DISABLED_PREFIXES (afgevangen in authHandler).
@@ -119,6 +126,24 @@ interface ChangeConfirmation {
   readonly token: string;
 }
 
+// Uitnodigen en de resetlink gebruiken de reset-flow (ADR 0043): de mail gaat naar het scherm in de SPA, niet naar de
+// GET-redirect. Met credential de resetmail (1 uur), anders de uitnodiging (reset-password.ts).
+function emailAndPasswordOptions(config: AuthConfig, database: Pool, mailing: Mailing | null) {
+  return {
+    enabled: true,
+    minPasswordLength: MIN_PASSWORD_LENGTH,
+    maxPasswordLength: MAX_PASSWORD_LENGTH,
+    resetPasswordTokenExpiresIn: INVITATION_TTL_SECONDS,
+    revokeSessionsOnPasswordReset: true,
+    sendResetPassword: createSendResetPassword({
+      database,
+      mailing,
+      linkFor: (token, soort) => invitationLink(config.origin, token, soort),
+      sendInvitation: config.sendInvitation,
+    }),
+  } satisfies BetterAuthOptions['emailAndPassword'];
+}
+
 // database: een pg-pool als auth_service (search_path better_auth, alleen DML op dat schema, ADR 0041).
 export function createAuthOptions(config: AuthConfig, database: Pool) {
   const mailing = createMailing(config);
@@ -131,18 +156,7 @@ export function createAuthOptions(config: AuthConfig, database: Pool) {
     database,
     trustedOrigins: [config.origin],
     disabledPaths: [...DISABLED_PATHS],
-    emailAndPassword: {
-      enabled: true,
-      minPasswordLength: MIN_PASSWORD_LENGTH,
-      maxPasswordLength: MAX_PASSWORD_LENGTH,
-      resetPasswordTokenExpiresIn: INVITATION_TTL_SECONDS,
-      revokeSessionsOnPasswordReset: true,
-      // Uitnodigen gebruikt de reset-flow (ADR 0043): de mail gaat naar het scherm in de SPA, niet naar de GET-redirect.
-      sendResetPassword: async ({ user, token }) => {
-        const url = `${config.origin}${INVITATION_PATH}?token=${encodeURIComponent(token)}`;
-        await config.sendInvitation({ email: user.email, name: user.name, url });
-      },
-    },
+    emailAndPassword: emailAndPasswordOptions(config, database, mailing),
     session: {
       expiresIn: SESSION_IDLE_SECONDS,
       updateAge: SESSION_REFRESH_SECONDS,
@@ -171,7 +185,11 @@ export function createAuthOptions(config: AuthConfig, database: Pool) {
       cookies,
       ipAddress: { ipAddressHeaders: [config.clientIpHeader ?? NO_TRUSTED_IP_HEADER] },
     },
-    hooks: createHooks(mailing, Date.now, { lifecycle, claimOnce: createClaimOnce(database) }),
+    hooks: createHooks(mailing, Date.now, {
+      lifecycle,
+      claimOnce: createClaimOnce(database),
+      resetSessionBump: createResetSessionBump(database),
+    }),
     databaseHooks: createDatabaseHooks(lifecycle, createInviteeGuard(database)),
     plugins: [twoFactor({ issuer: new URL(config.origin).hostname })],
     telemetry: { enabled: false },

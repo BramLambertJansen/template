@@ -22,14 +22,16 @@ wachtwoord in de code; lokaal zijn er de seed-accounts (README).
 | Situatie | Commando | Daarna |
 |---|---|---|
 | Nieuwe admin | `pnpm admin:create --email jij@bedrijf.nl --name "Je Naam"` | Mail openen, wachtwoord instellen (≥ 12 tekens), inloggen, TOTP instellen |
-| Wachtwoord kwijt | `pnpm admin:create --email jij@bedrijf.nl --reset-password` | Nieuwe link in de mail; alle sessies vervallen na het instellen |
+| Wachtwoord kwijt | `pnpm admin:create --email jij@bedrijf.nl --reset-password` | Resetmail "Nieuw wachtwoord instellen" (link 1 uur geldig); alle sessies vervallen na het instellen |
 | TOTP-telefoon kwijt, geen herstelcode meer | `pnpm admin:create --email jij@bedrijf.nl --reset-mfa` | Inloggen met wachtwoord, TOTP opnieuw instellen |
 | Beide kwijt | `pnpm admin:create --email jij@bedrijf.nl --reset-mfa --reset-password` | Eerst wachtwoord, dan TOTP |
 
 Lokaal leest het commando `.env.local`; in een echte omgeving zet je de variabelen in de shell (niet in een bestand in de repo).
 
 `--reset-mfa` trekt alle bestaande sessies direct in. Bij alleen `--reset-password` vervallen de sessies pas nadat
-de beheerder via de gemailde link een nieuw wachtwoord heeft ingesteld.
+de beheerder via de gemailde link een nieuw wachtwoord heeft ingesteld; een inlogpoging die nog met het oude wachtwoord begon,
+vervalt dan ook. Is er nog een andere admin met MFA, dan stuurt die de link sneller via `/admin/accounts` ("Resetlink sturen",
+zelfde mail). Een account dat nog nooit een wachtwoord had (uitgenodigd), krijgt de uitnodiging van 7 dagen.
 
 ## Controle
 

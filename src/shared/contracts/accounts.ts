@@ -123,3 +123,14 @@ export const revokeInvitationContract = defineContract({
   // Zelfde categorie als opnieuw uitnodigen: dezelfde beheerhandeling op een uitnodiging.
   rateLimit: 'duur',
 });
+
+// Resetlink sturen (spec accountbeheer-uitbreiding, accounts/AC-16): alleen een actief account; de mail gaat na commit.
+export const resetLinkContract = defineContract({
+  method: 'POST',
+  path: '/accounts/:id/reset-link',
+  input: accountIdInput,
+  output: z.null(),
+  permission: 'accounts:manage',
+  // Verstuurt mail (spec rate-limit).
+  rateLimit: 'duur',
+});

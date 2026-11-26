@@ -5,6 +5,7 @@ import type { Mailing } from './mailing.ts';
 import { type AccountLifecycle, SECOND_FACTOR_PATHS } from './account-lifecycle.ts';
 import type { ClaimOnce } from './one-time-use.ts';
 import { claimBackupCode } from './backup-code-claim.ts';
+import type { ResetSessionBump } from './reset-password.ts';
 import { claimTotpCode } from './totp-claim.ts';
 import { dropRejectedSession, SESSION_RECOVERY_PATHS } from './session-guard.ts';
 
@@ -115,10 +116,12 @@ async function answerTakenAddress(ctx: HookContext, facts: SessionFacts, mailing
 export interface HookParts {
   readonly lifecycle?: AccountLifecycle | undefined;
   readonly claimOnce: ClaimOnce;
+  // Na een reset van een account met credential: session_version omhoog (spec accountbeheer-uitbreiding, reset-password.ts).
+  readonly resetSessionBump?: ResetSessionBump | undefined;
 }
 
 export function createHooks(mailing: Mailing | null, now: () => number = Date.now, parts: HookParts) {
-  const { lifecycle, claimOnce } = parts;
+  const { lifecycle, claimOnce, resetSessionBump } = parts;
   const before = createAuthMiddleware(async (ctx) => {
     if (ctx.path !== '/get-session' && !SESSION_RECOVERY_PATHS.has(ctx.path)) {
       if (await dropRejectedSession(ctx, now())) {
@@ -134,6 +137,7 @@ export function createHooks(mailing: Mailing | null, now: () => number = Date.no
     await requireMfaForBackupCodes(ctx);
     await rejectBackupCodeOptions(ctx);
     await claimBackupCode(ctx, claimOnce);
+    await resetSessionBump?.before(ctx);
     if (ctx.path === '/verify-email') {
       // Vangnet naast disabledPaths: zonder sessie maakt Better Auth bij stap 2 zelf een sessie.
       if ((await currentSession(ctx)) === null) fail('UNAUTHORIZED', 'UNAUTHENTICATED', 'Geen sessie');
@@ -156,6 +160,7 @@ export function createHooks(mailing: Mailing | null, now: () => number = Date.no
   const after = createAuthMiddleware(async (ctx) => {
     if (ctx.path === '/get-session' && (await dropRejectedSession(ctx, now()))) return ctx.json(null);
     if (ctx.path === '/change-password') return afterChangePassword(ctx);
+    await resetSessionBump?.after(ctx);
     const session = ctx.context.newSession?.session;
     if (session !== undefined && SECOND_FACTOR_PATHS.has(ctx.path)) {
       await ctx.context.internalAdapter.updateSession(session.token, { sessionStrength: 'mfa' });

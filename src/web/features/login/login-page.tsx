@@ -29,7 +29,7 @@ type Step =
   | { readonly kind: 'backupCodes'; readonly codes: readonly string[] };
 
 export interface LoginPageProps {
-  readonly notice: 'ingesteld' | 'verlopen' | null;
+  readonly notice: 'ingesteld' | 'gewijzigd' | 'verlopen' | null;
   readonly redirect: string | undefined;
 }
 
@@ -193,6 +193,7 @@ export function LoginPage({ notice, redirect }: LoginPageProps) {
     <CenteredCard title={copy.login.title}>
       <div className="flex flex-col gap-6">
         {notice === 'ingesteld' ? <Notice>{copy.login.passwordSet}</Notice> : null}
+        {notice === 'gewijzigd' ? <Notice>{copy.login.passwordChanged}</Notice> : null}
         {notice === 'verlopen' ? <Notice>{copy.login.sessionExpired}</Notice> : null}
         <Credentials onStep={setStep} finish={finish} />
       </div>

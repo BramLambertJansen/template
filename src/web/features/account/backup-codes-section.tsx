@@ -19,6 +19,8 @@ export function BackupCodesSection() {
     const created = await generate.mutateAsync(huidig);
     form.reset(empty);
     setCodes(created);
+    // De codes staan nu alleen in deze state: weg uit de MutationCache van React Query.
+    generate.reset();
   };
   const texts = copy.account.backupCodes;
   return (

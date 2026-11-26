@@ -136,6 +136,9 @@ test('AC-4: een admin zonder TOTP moet eerst instellen; tot dan MFA_REQUIRED', a
   const secret = (await page.locator('code').textContent()) ?? '';
   await page.getByLabel('Code', { exact: true }).fill(freshTotpFor(base32Decode(secret)));
   await page.getByRole('button', { name: 'Activeren' }).click();
+  // Sinds spec accountbeheer-uitbreiding accounts/AC-17 toont de inschrijving eerst de herstelcodes.
+  await expect(heading(page)).toHaveText('Herstelcodes');
+  await page.getByRole('button', { name: 'Ik heb ze bewaard' }).click();
 
   await expect(heading(page)).toHaveText('Dashboard');
   expect((await page.request.get('/api/accounts')).status()).toBe(200);

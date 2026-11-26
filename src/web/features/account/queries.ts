@@ -26,8 +26,9 @@ export function useChangePassword() {
 }
 
 // Nieuwe herstelcodes (ADR 0113): de codes gaan alleen naar de aanroeper (state van het component), niet in de querycache.
+// De mutatie bewaart haar resultaat in de MutationCache; de aanroeper reset haar direct, en gcTime 0 ruimt een vergeten rest op.
 export function useGenerateBackupCodes() {
-  return useMutation({ mutationFn: (wachtwoord: string) => auth.generateBackupCodes(wachtwoord) });
+  return useMutation({ mutationFn: (wachtwoord: string) => auth.generateBackupCodes(wachtwoord), gcTime: 0 });
 }
 
 // Eigen sessies (spec eigen-account): de lijst hangt onder `me`, dus elke mutatie die `me` invalideert ververst hem ook.

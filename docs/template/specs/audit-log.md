@@ -140,8 +140,8 @@ Geen nieuwe routes, permissies of foutcodes. Bestaande routes krijgen een auditr
 | POST | `/api/accounts/:id/reinvite` | `accounts:invite` | ongewijzigd | `core.account.reinvite`, vóór de aanroep van de service (deel C) |
 | POST | `/api/accounts/:id/block` | `accounts:manage` | ongewijzigd | `core.account.block`, door de functie (deel B) |
 | POST | `/api/accounts/:id/unblock` | `accounts:manage` | ongewijzigd | `core.account.unblock`, door de functie (deel B) |
-| DELETE | `/api/accounts/:id/invitation` | `accounts:invite` | — | `core.account.revoke`; route bestaat nog niet (OV-C1) |
-| POST | `/api/accounts/:id/reset-link` | `accounts:manage` | — | `core.account.reset_link`; route bestaat nog niet (OV-C1) |
+| DELETE | `/api/accounts/:id/invitation` | `accounts:invite` | — | `core.account.revoke`; gebouwd (spec accountbeheer-uitbreiding, AC-15) |
+| POST | `/api/accounts/:id/reset-link` | `accounts:manage` | — | `core.account.reset_link`; gebouwd (spec accountbeheer-uitbreiding, AC-16) |
 
 Foutvertaling (bestaand, `src/core/api/errors.ts:67`): 42501 → `FORBIDDEN`; 22023 en 23514 worden niet vertaald → `INTERNAL_ERROR`
 (een fout in de servercode, niet in de invoer van de client, en zo komt hij in de serverlog). Een `ZodError` of onbekende actie in
@@ -306,7 +306,7 @@ Foutvertaling (bestaand, `src/core/api/errors.ts:67`): 42501 → `FORBIDDEN`; 22
   arrays). Zonder akkoord: alleen object en omvang, zoals de ADR.
 - **OV-B5 — Meting van "2 KB".** `octet_length(details::text) <= 2048` (bytes van de tekstvorm) of `pg_column_size`. Aanbeveling:
   `octet_length(details::text)`; deterministisch en gelijk aan wat de API meet.
-- **OV-C1 — Intrekken en resetlink.** Die routes bestaan nog niet. (a) Deze spec legt alleen vast dat ze `app.audit_account_action` met
+- **OV-C1 — Intrekken en resetlink.** Die routes bestonden toen nog niet; inmiddels gebouwd (spec accountbeheer-uitbreiding). (a) Deze spec legt alleen vast dat ze `app.audit_account_action` met
   `core.account.revoke`/`core.account.reset_link` vóór de service aanroepen, en de PR die ze bouwt voegt de regel en de tests toe; (b)
   deel C wacht op die routes. Aanbeveling: (a); de allowlist in de functie bevat de vier acties al.
 - **OV-C2 — Aanroep van `app.audit_account_action` vanuit de route.** (a) Rechtstreeks met `tx.execute(sql\`select app.audit_account_action(…)\`)`,

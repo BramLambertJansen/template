@@ -4,6 +4,7 @@ import {
   emailChangedMail,
   verifyNewAddressMail,
 } from '../mail/email-change.ts';
+import { passwordResetMail } from '../mail/password-reset.ts';
 import type { SendMail } from '../mail/smtp.ts';
 
 // Wat een e-mailwijziging verstuurt (spec eigen-account). Aanwezig zodra AuthConfig.sendMail bestaat; zonder staat
@@ -24,6 +25,8 @@ export interface Mailing {
   readonly taken: (user: MailAccount, newEmail: string) => Promise<void>;
   // Melding naar het oude adres nadat het adres gewijzigd is.
   readonly changed: (user: MailAccount, newEmail: string) => Promise<void>;
+  // Resetmail van een beheerder (spec accountbeheer-uitbreiding); url is de volledige link naar /uitnodiging?…&soort=reset.
+  readonly resetPassword: (user: MailAccount, url: string) => Promise<void>;
 }
 
 export interface MailingConfig {
@@ -45,5 +48,6 @@ export function createMailing(config: MailingConfig): Mailing | null {
       sendMail(verifyNewAddressMail({ appName, name: user.name, to: user.email, url: linkFor(token) })),
     taken: (user, newEmail) => sendMail(addressTakenMail({ appName, name: user.name, to: user.email, newEmail })),
     changed: (user, newEmail) => sendMail(emailChangedMail({ appName, name: user.name, to: user.email, newEmail })),
+    resetPassword: (user, url) => sendMail(passwordResetMail({ appName, name: user.name, to: user.email, url })),
   };
 }
