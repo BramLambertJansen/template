@@ -61,6 +61,11 @@ cache niet noemt.
   Hetzelfde geldt voor de git-configuratie in `.git/` tijdens het script zelf: alleen de vergelijking is ertegen
   gehard, niet elke git-aanroep van mise, pnpm of lefthook. `.git/` wordt niet gepusht; bij `startup` komt het uit de
   clone van het platform, vóór de agent iets doet.
+- De vergelijking beschermt alleen tegen afwijkende installatie-invoer buiten `.claude/`. De SessionStart-hooks zelf (de
+  stubs in `.claude/hooks/`, waaronder `laden.mjs`) en de `env` uit `.claude/settings.json` komen uit de werkmap van de
+  gekozen branch en draaien al als root, vóór deze vergelijking. Dat risico bestond al vóór deze ADR (ADR 0045, 0061) en
+  verandert hier niet; de grens daarvoor blijft CI, de ruleset en de eigenaarmerge, en de keuze van de eigenaar op welke
+  branch hij een cloudsessie start.
 - Op een branch met een pin-bump die nog niet op `main` staat, herstelt de hook niet; dan blijft het veld de route.
 - Tot het veld wijzigt, herhaalt elke nieuwe sessie de installatie (ongeveer anderhalve minuut met Node aanwezig).
 - Een hook- of laderwijziging werkt pas na de samenvoeging (0045); de hookcode moet op Node 22 draaien (koude VM).

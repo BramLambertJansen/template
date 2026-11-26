@@ -256,7 +256,61 @@ function afwijkend(deps, anker) {
   const werk = werkelijk(deps, ank.keys());
   const gewoon = (/** @type {string | undefined} */ waarde) => /^100(?:644|755) /.test(waarde ?? '');
   const paden = new Set([...ank.keys(), ...werk.keys()]);
-  return [...paden].filter((pad) => !gewoon(ank.get(pad)) || ank.get(pad) !== werk.get(pad)).sort();
+  const inhoud = [...paden].filter((pad) => !gewoon(ank.get(pad)) || ank.get(pad) !== werk.get(pad));
+  return [...new Set([...inhoud, ...vormAfwijkingen(deps.root, paden)])].sort();
+}
+
+/**
+ * Elk vast voorvoegsel van de `INVOER`-patronen, afgeleid uit `INVOER` zelf: de padcomponenten vóór het eerste glob-teken.
+ * De waarde is true als het voorvoegsel het hele, glob-vrije patroon is (een bestandsnaam), anders hoort het een map te zijn.
+ * @returns {Map<string, boolean>}
+ */
+function vasteVoorvoegsels() {
+  /** @type {Map<string, boolean>} */
+  const uit = new Map();
+  for (const spec of INVOER) {
+    const delen = spec.replace(/^:\(glob\)/, '').split('/');
+    const eersteGlob = delen.findIndex((deel) => /[*?[]/.test(deel));
+    const vast = eersteGlob < 0 ? delen.length : eersteGlob;
+    for (let i = 1; i <= vast; i++) {
+      const pad = delen.slice(0, i).join('/');
+      uit.set(pad, (uit.get(pad) ?? false) || (eersteGlob < 0 && i === vast));
+    }
+  }
+  return uit;
+}
+
+/**
+ * Is `pad` iets anders dan een echte map (een symlink, of een ander type; een gewoon bestand alleen als `magBestand`)?
+ * Een ontbrekend pad is hier geen afwijking: wat het anker eronder heeft, ontbreekt dan in de inhoudsvergelijking.
+ * @param {string} root @param {string} pad @param {boolean} magBestand
+ */
+function geenMap(root, pad, magBestand) {
+  let info;
+  try {
+    info = lstatSync(path.join(root, pad));
+  } catch {
+    return false;
+  }
+  if (info.isDirectory()) return false;
+  return !(magBestand && info.isFile());
+}
+
+/**
+ * De vaste voorvoegsels van `INVOER` en de voorloopcomponenten van elk gevonden of verwacht pad die geen echte map zijn: een
+ * symlink op de plek van `.config`, `mise` of `scripts` laat git en de inhoudsvergelijking anders door (spec, ontwerp punt 5).
+ * @param {string} root @param {Iterable<string>} paden
+ */
+function vormAfwijkingen(root, paden) {
+  const controles = vasteVoorvoegsels();
+  for (const pad of paden) {
+    const delen = pad.replace(/\/$/, '').split('/');
+    for (let i = 1; i < delen.length; i++) {
+      const voor = delen.slice(0, i).join('/');
+      if (!controles.has(voor)) controles.set(voor, false);
+    }
+  }
+  return [...controles].filter(([pad, magBestand]) => geenMap(root, pad, magBestand)).map(([pad]) => pad);
 }
 
 /** Hooguit drie paden, daarna "en <n> meer". @param {string[]} paden */

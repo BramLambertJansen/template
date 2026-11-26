@@ -120,7 +120,9 @@ Zichtbare tekst, letterlijk (één regel, `<…>` ingevuld):
    index, ook `--assume-unchanged` en `--skip-worktree`). De verwachte blob-oids komen uit `git ls-tree -r -z <anker> --
    <INVOER>`; de bestanden in de werkmap uit `git ls-files -z --cached --others -- <INVOER>` (ook genegeerde bestanden,
    zoals een `mise.local.toml`), gehasht met `git hash-object --no-filters --stdin-paths`. Beide verzamelingen moeten
-   gelijk zijn; een symlink, een ander bestandstype of een geneste git-repo onder een `INVOER`-pad geldt als afwijking. De
+   gelijk zijn; een symlink, een ander bestandstype of een geneste git-repo onder een `INVOER`-pad geldt als afwijking, en
+   ook een symlink of niet-map op een vast voorvoegsel van een `INVOER`-patroon (`scripts`, `scripts/kit`, `mise`, `.mise`,
+   `.config`, `.config/mise`, `.lefthook`, `patches`, …) of op een voorloopcomponent van een gevonden pad. De
    hook draait als root op een werkmap die een agent kan beschrijven, dus elke git-aanroep krijgt ook
    `-c core.fsmonitor= -c diff.external=`: geen programma uit de git-configuratie van de werkmap draait mee tijdens de
    vergelijking. `INVOER` is wat `scripts/cloud-setup.sh` werkelijk leest of
@@ -200,7 +202,9 @@ Zichtbare tekst, letterlijk (één regel, `<…>` ingevuld):
   `mise.local.toml`, wanneer de hook draait, dan start hij het script niet en geeft hij precies één regel die begint met
   `! toolchain niet hersteld:` en dat pad noemt, en `wijzig het veld "Setup script" van de omgeving` maar geen
   terminalcommando. Hetzelfde geldt voor een `INVOER`-bestand dat met `--assume-unchanged` of `--skip-worktree` gemarkeerd
-  en daarna gewijzigd is, een `INVOER`-pad dat een symlink is, en een geneste git-repo onder `.mise/` of `.lefthook/`. Een
+  en daarna gewijzigd is, een `INVOER`-pad dat een symlink is, een geneste git-repo onder `.mise/` of `.lefthook/`, een
+  symlink op de plek van een `INVOER`-map (`.config`, `mise`, `.mise`, `.lefthook`, `scripts/kit`, ook naar een map met
+  dezelfde inhoud) en een symlink als voorloopcomponent van een gevonden pad (bijvoorbeeld `scripts`). Een
   gewijzigd bestand buiten `INVOER` (bijvoorbeeld onder `src/`) houdt het herstel niet tegen. Elke git-aanroep van de
   vergelijking bevat `-c core.fsmonitor=` en `-c diff.external=`; een werkmap met `core.fsmonitor`, of met een clean-filter
   (`filter.<naam>.clean` of `.process`) op alle bestanden, naar een script dat een markeerbestand schrijft, laat dat

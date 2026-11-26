@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import {
   chmodSync,
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -713,6 +714,80 @@ describe('cloud-toolchain-zelfherstel/AC-6 vergelijking op inhoud (B1) en genest
 
     expect(fouten).toStrictEqual([]);
   });
+
+  /** Maakt de afwijking in de werkmap en commit hem (het anker blijft de oude commit). */
+  const symlinkGevallen: { naam: string; pad: string; maak: (root: string) => void }[] = [
+    {
+      naam: '.config -> docs/x met mise/config.toml',
+      pad: '.config',
+      maak: (root) => {
+        mkdirSync(path.join(root, 'docs/x/mise'), { recursive: true });
+        writeFileSync(path.join(root, 'docs/x/mise/config.toml'), '[tools]\n');
+        symlinkSync('docs/x', path.join(root, '.config'));
+      },
+    },
+    {
+      naam: 'mise -> docs/y',
+      pad: 'mise',
+      maak: (root) => {
+        mkdirSync(path.join(root, 'docs/y'), { recursive: true });
+        writeFileSync(path.join(root, 'docs/y/config.toml'), '[tools]\n');
+        symlinkSync('docs/y', path.join(root, 'mise'));
+      },
+    },
+    {
+      naam: '.mise -> docs/y',
+      pad: '.mise',
+      maak: (root) => {
+        mkdirSync(path.join(root, 'docs/y'), { recursive: true });
+        writeFileSync(path.join(root, 'docs/y/config.toml'), '[tools]\n');
+        symlinkSync('docs/y', path.join(root, '.mise'));
+      },
+    },
+    {
+      naam: '.lefthook -> docs/z',
+      pad: '.lefthook',
+      maak: (root) => {
+        mkdirSync(path.join(root, 'docs/z'), { recursive: true });
+        writeFileSync(path.join(root, 'docs/z/pre-commit.sh'), '#!/bin/sh\n');
+        symlinkSync('docs/z', path.join(root, '.lefthook'));
+      },
+    },
+    {
+      naam: 'scripts/kit vervangen door een symlink naar een kopie met dezelfde inhoud',
+      pad: 'scripts/kit',
+      maak: (root) => {
+        cpSync(path.join(root, 'scripts/kit'), path.join(root, 'docs/kitkopie'), { recursive: true });
+        rmSync(path.join(root, 'scripts/kit'), { recursive: true });
+        symlinkSync('../docs/kitkopie', path.join(root, 'scripts/kit'));
+      },
+    },
+    {
+      naam: 'scripts zelf is een symlink naar een kopie (voorloopcomponent)',
+      pad: 'scripts',
+      maak: (root) => {
+        cpSync(path.join(root, 'scripts'), path.join(root, 'kopie-scripts'), { recursive: true });
+        rmSync(path.join(root, 'scripts'), { recursive: true });
+        symlinkSync('kopie-scripts', path.join(root, 'scripts'));
+      },
+    },
+  ];
+
+  test('cloud-toolchain-zelfherstel/AC-6 B2 een symlink op de plek van een INVOER-map of voorloopcomponent: afwijking, !-regel met het pad, geen installatie', async () => {
+    const fouten: string[] = [];
+    for (const { naam, pad, maak } of symlinkGevallen) {
+      const w = maakWerkmap();
+      maak(w.root);
+      git(w.root, 'add', '-A');
+      git(w.root, 'commit', '-q', '-m', 'symlink');
+
+      const fout = stopFout(w, await draai(w), pad);
+
+      if (fout !== null) fouten.push(`${naam}: ${fout}`);
+    }
+
+    expect(fouten).toStrictEqual([]);
+  }, 60_000);
 });
 
 describe('cloud-toolchain-zelfherstel/AC-7 herstel', () => {
