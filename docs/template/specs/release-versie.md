@@ -41,7 +41,19 @@ Antwoord: `200 { ok: true, version: string, build?: string }`. Geen invoer, geen
 
 ## Hergebruik en UX
 
-Geen schermen.
+Geen nieuwe schermen. Addendum (eigenaarbesluit 2026-11-26, roadmap stuk 3f): versie en build staan ook onderaan in de app.
+
+- **Voet in het frame.** `ShellFrame` (`src/core/web/ui/shell-frame.tsx`) krijgt de optionele prop `buildInfo`
+  (`{ version: string; build?: string }`) en rendert hem onder `main` als `<footer>` met kleine, gedempte tekst:
+  `Versie <version>`, en als `build` er is ` · build <eerste 7 tekens>`. Zonder `buildInfo` geen voet. Verborgen bij
+  afdrukken. Elke schil geeft `buildInfo` uit `ShellProps` door aan het frame; dus in elke schil, niet op schermen zonder
+  schil (`CenteredCard`: inloggen, verificatiecode). `shellContract` krijgt een geval dat dit eist, dus ook een eigen schil
+  van een app.
+- **Data.** De API-client in core krijgt naast `health()` (die alleen `ok` leest) `buildInfo()`: `GET /api/health`, en bij een
+  2xx-status met een niet-lege tekst `version` het object `{ version, build? }` (een `build` die geen niet-lege tekst is valt
+  weg); bij een status buiten 2xx, een netwerkfout of een andere vorm `null`, nooit een fout. De app haalt het op
+  in `src/web/features/layout/queries.ts` (`useBuildInfo`: één keer per sessie, geen herhaalpoging) en `AppLayout` geeft het
+  aan de schil. Zonder `BUILD_SHA` (lokaal, tests) staat er alleen de versie; antwoordt health niet, dan staat er niets.
 
 ## Acceptatiecriteria
 
@@ -57,6 +69,9 @@ Bestaande tests blijven groen; alleen de onder "Raakt ook" genoemde tests wijzig
 - **release-versie/AC-8**: `composeServer` geeft `build` in `deps` aan `buildApp` als `env.buildSha` gezet is, en laat de sleutel anders weg; `buildApp` van de app geeft hem door aan `createApp` (een test op `src/api/app.ts` met `build: 'abc1234'` ziet hem terug op `/api/health`).
 - **release-versie/AC-9**: `scripts/check-image.sh` met de nagebootste docker en curl: slaagt bij `{"ok":true,"version":"<TEMPLATE_VERSION>"}` zonder `EXPECT_BUILD_SHA`; faalt bij een andere of ontbrekende `version`; faalt als `build` aanwezig is zonder `EXPECT_BUILD_SHA`; met `EXPECT_BUILD_SHA=abc1234` slaagt het alleen bij `"build":"abc1234"`. Dat de echte image met `--build-arg BUILD_SHA=<sha>` die waarde toont, is alleen in CI of bij de eigenaar te bewijzen en hoort bij de vervolg-PR.
 - **release-versie/AC-10**: Een PR die code wijzigt en `docs/template-changelog.md` bijwerkt, geeft geen docs-drift-waarschuwing (`test/rails/check-docs-drift-template-changelog.test.ts`; `check-docs-drift` zelf verandert niet, het telt alles onder `docs/` al als docs).
+- **release-versie/AC-11**: `ShellFrame` met `buildInfo={{ version: '0.2.0', build: '<40 hextekens>' }}` toont in een `contentinfo` de tekst `Versie 0.2.0 · build <eerste 7 tekens>`; met alleen `version` `Versie 0.2.0` zonder het woord build; zonder `buildInfo` is er geen `contentinfo`. De voet staat buiten `main` en is verborgen bij afdrukken. `SidebarShell` en `TopbarShell` geven `buildInfo` door, en `shellContract` laat een schil falen die hem niet doorgeeft. Toets: `src/core/web/ui/shell-contract.test.tsx`. Toets: `src/core/web/ui/shell-build-info.test.tsx`.
+- **release-versie/AC-12**: `buildInfo()` van de API-client geeft bij een 2xx-status met `{ ok, version, build }` het object `{ version, build }`, met `{ ok, version }` alleen `{ version }`, met een `build` die geen tekst is ook alleen `{ version }`, en `null` bij een status buiten 2xx, een netwerkfout, een antwoord dat geen JSON is of een `version` die geen niet-lege tekst is; het gooit nooit. Toets: `src/core/web/lib/api-client-build-info.test.ts`.
+- **release-versie/AC-13**: Tegen de echte stack staat onder een ingelogd scherm in de voet precies `Versie <version>`, met ` · build <eerste 7 tekens>` alleen als `GET /api/health` een `build` geeft (beide uit dat antwoord), en axe vindt in die staat geen overtreding. Toets: `e2e/shell.spec.ts`.
 
 ## Raakt ook
 
@@ -66,11 +81,13 @@ Bestaande tests blijven groen; alleen de onder "Raakt ook" genoemde tests wijzig
 - Niet in deze PR: `.github/workflows/ci.yml`, `.env.example` (de variabele is optioneel), `scripts/kit/check-docs-drift.mjs`, `rails/hooks/**`, `.claude/gates.json` (de rij `CHANGELOG.md` met besluit `agent` blijft voor het bestand van de app; `docs/**` dekt het nieuwe bestand).
 - Docs: R-DEPLOY-01 gesplitst (health `{ ok, version, build? }`, ready `{ ok }`) met spiegels, ADR 0049 punt 1 (health toont versie en build, met het aanvaarde risico) met herzieningsregel, `docs/README.md` (de link "wat een template-update verandert"), `docs/nieuwe-app.md` en `docs/operations/agent-doorloop.md` waar ze `CHANGELOG.md` als plek voor templatewijzigingen noemen, `AGENTS.md`/`CLAUDE.md` alleen als ze het pad noemen.
 - Wijzigingenlijst, "Bij een update": een app houdt bij het conflict haar eigen `CHANGELOG.md`, en geeft `build` door in `buildApp` als ze haar config uitpakt in plaats van doorgeeft.
-- Verwijzingen naar `CHANGELOG.md` in specs met status gebouwd of vervallen blijven staan. Roadmap: het item dat versie en build "onderaan in de app" vraagt, blijft open (alleen de API toont ze nu).
+- Verwijzingen naar `CHANGELOG.md` in specs met status gebouwd of vervallen blijven staan. Roadmap: het item dat versie en build "onderaan in de app" vraagt, bleef in de eerste PR open; het addendum (AC-11 tot AC-13) bouwt het en vinkt het af.
+- Addendum: nieuw `src/web/features/layout/queries.ts`; gewijzigd `src/core/web/lib/api-client.ts`, `src/core/web/ui/shell-frame.tsx`, `sidebar-shell.tsx`, `topbar-shell.tsx`, `testing.tsx` (contractgeval), `src/core/web/copy/ui.ts`, `src/web/features/layout/app-layout.tsx`; docs `docs/gouden-pad.md` (een eigen schil geeft `buildInfo` door). Kritiek werk (`src/core/**`): de eigenaar keurt de PR goed. Bestaande test die volgt, met reden: `src/core/web/ui/shell-contract.test.tsx` (de voorbeeldschil `EigenSchil` geeft `buildInfo` door, anders faalt het nieuwe contractgeval).
+- Addendum, wijzigingenlijst "Bij een update": `AppLayout` en `queries.ts` zijn app-code; een app neemt `useBuildInfo` over en geeft `buildInfo` aan haar schil, en een eigen schil geeft `buildInfo` uit `ShellProps` door aan `ShellFrame` (anders faalt haar `shellContract`).
 
 ## Buiten scope
 
-De build-arg in de CI-job (vervolg-PR van de eigenaar); de update-procedure in `docs/nieuwe-app.md` en de check op migratievolgorde (volgende PR); app-configuratie naast templateconfiguratie; een release-workflow; versie en build in de webapp.
+De build-arg in de CI-job (vervolg-PR van de eigenaar); de update-procedure in `docs/nieuwe-app.md` en de check op migratievolgorde (volgende PR); app-configuratie naast templateconfiguratie; een release-workflow; versie en build op schermen zonder schil (`CenteredCard`).
 
 ## Open vragen
 

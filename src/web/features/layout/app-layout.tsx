@@ -6,6 +6,7 @@ import { navItems } from '#web/lib/nav.ts';
 import { actorFromMe } from '#web/lib/session.ts';
 import { Button, SidebarShell, ThemeToggle, TopbarShell, visibleNavItems, type MenuItem } from '#web/ui/index.ts';
 import { useLogout, useMe } from '../session/queries.ts';
+import { useBuildInfo } from './queries.ts';
 import { schilKeuze, voorbeeldNav } from './schil-voorbeeld.ts';
 
 function useMenuItems(): MenuItem[] {
@@ -48,6 +49,8 @@ function voorbeeldActions(): ReactNode {
 export function AppLayout() {
   const me = useMe();
   const menuItems = useMenuItems();
+  // Versie en build onderaan in de schil (spec release-versie); zonder antwoord geen voet.
+  const buildInfo = useBuildInfo().data ?? undefined;
   // resolvedLocation: pas als het nieuwe scherm gerenderd is (ook na een lazy route of loader), niet bij de start van het laden.
   const location = useRouterState({ select: (state) => state.resolvedLocation ?? state.location });
   if (me.data === undefined) return null;
@@ -62,6 +65,7 @@ export function AppLayout() {
         menuItems={menuItems}
         topbarActions={voorbeeldActions()}
         routeKey={location.pathname}
+        buildInfo={buildInfo}
       >
         <Outlet />
       </TopbarShell>
@@ -74,6 +78,7 @@ export function AppLayout() {
       menuItems={menuItems}
       topbarActions={keuze === null ? <ThemeToggle /> : voorbeeldActions()}
       routeKey={location.pathname}
+      buildInfo={buildInfo}
     >
       <Outlet />
     </SidebarShell>

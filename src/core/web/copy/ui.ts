@@ -17,6 +17,9 @@ export const uiTexts = {
   cancel: 'Annuleren',
   darkTheme: 'Donker thema',
   skipToContent: 'Naar de inhoud',
+  // Spec release-versie: de voet van de schil.
+  buildInfo: (version: string, build: string | undefined) =>
+    build === undefined ? `Versie ${version}` : `Versie ${version} · build ${build}`,
   visibilityToggle: 'Wachtwoord tonen',
   openCalendar: 'Kalender openen',
   breadcrumbs: 'Kruimelpad',

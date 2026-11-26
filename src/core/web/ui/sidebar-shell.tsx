@@ -8,7 +8,7 @@ import { Topbar } from './topbar.tsx';
 // inhoud. Op smalle schermen opent de menuknop dezelfde navigatie in een sheet. Breakpoints in CSS, geen matchMedia
 // (framework §7). Skip-link, focus, offline-melding en afdrukken komen uit ShellFrame; meldingen uit ToastProvider.
 // Zonder nav-items geen nav, menuknop of sheet; de kolom blijft, zodat de indeling gelijk is aan die met items.
-export function SidebarShell({ nav, userName, menuItems, topbarActions, routeKey, children }: ShellProps) {
+export function SidebarShell({ nav, userName, menuItems, topbarActions, routeKey, buildInfo, children }: ShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const hasNav = nav.length > 0;
   const openMenu = () => {
@@ -18,6 +18,7 @@ export function SidebarShell({ nav, userName, menuItems, topbarActions, routeKey
     <ShellFrame
       className="md:grid md:grid-cols-shell-sidebar"
       routeKey={routeKey}
+      buildInfo={buildInfo}
       aside={
         <aside className="hidden border-shell-e bg-sidebar md:block print:hidden">
           {hasNav ? <Sidebar items={nav} /> : null}

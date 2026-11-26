@@ -1,0 +1,16 @@
+---
+soort: toegevoegd
+---
+
+- Versie en build-SHA onderaan in elke schil: `ShellFrame` krijgt de prop `buildInfo` en toont een kleine voet
+  `Versie x.y.z · build abc1234` (zonder `BUILD_SHA` alleen de versie, zonder antwoord niets). Nieuw: `buildInfo()` in de
+  API-client (`src/core/web/lib/api-client.ts`), `buildInfo` in `ShellProps`, een contractgeval in `shellContract`
+  (`src/core/web/ui/testing.tsx`). Spec `release-versie` (addendum, AC-11 tot AC-13).
+
+### Bij een update
+
+- `src/web/features/layout/app-layout.tsx` en `queries.ts` zijn van de app, dus de voet verschijnt niet vanzelf. Neem
+  `useBuildInfo` over uit `src/web/features/layout/queries.ts` van de template en geef `buildInfo={useBuildInfo().data ?? undefined}`
+  aan je schil in `AppLayout`.
+- Heeft de app een eigen schil op `ShellFrame`, geef dan `buildInfo` uit `ShellProps` door aan `ShellFrame`; anders faalt het
+  nieuwe geval van haar `shellContract`-suite.

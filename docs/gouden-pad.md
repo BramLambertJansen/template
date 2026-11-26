@@ -162,6 +162,9 @@ layoutcomponent zit, ziet hij niet en meldt hij als fout; geef de route het layo
    `src/core/web/ui/` of `src/web/ui/`.
 2. **Bij een eigen schil een contracttest**: `shellContract(MijnSchil, { props })` uit `#core/web/ui/testing.tsx` in een
    testbestand naast de schil (vorm: `src/core/web/ui/shell-contract.test.tsx`). Zonder die suite faalt `check:schillen`.
+   Een eigen schil geeft `buildInfo` uit `ShellProps` door aan `ShellFrame` (de voet met versie en build, spec
+   release-versie); de suite eist dat. Het layoutcomponent haalt hem op met `useBuildInfo()` uit
+   `src/web/features/layout/queries.ts` (vorm: `src/web/features/layout/app-layout.tsx`).
 3. **De layoutroute** in `src/web/routes/_<naam>.tsx`: een id van één segment dat met `_` begint, `beforeLoad: guard(…)` en
    als `component` het layoutcomponent (vorm: `src/web/routes/_app.tsx`). De guard bewaakt de lintregel `route-guard`; dat
    het component een geregistreerde schil rendert, bewaakt `check:schillen`. Schermen van dat deel zijn kindroutes in
