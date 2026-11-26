@@ -1,10 +1,11 @@
 // De deterministische setupstappen van docs/nieuwe-app.md als script (spec docs/template/specs/nieuwe-app-script.md):
-// `node scripts/kit/nieuwe-app.mjs <preflight|koppel|poorten|db-bewijs> [opties] [--dry-run]`. Per stap ✓, · of ✗ met herstel,
+// `node scripts/kit/nieuwe-app.mjs <preflight|koppel|poorten|repo-instellingen|db-bewijs> [opties] [--dry-run]`. Per stap ✓, · of ✗ met herstel,
 // en een resultaatbestand `.template/nieuwe-app-<deelcommando>.json` aan de git-root (buiten een repo: ~/setup/.template/).
 // Exit 0 als elke stap ok of overgeslagen is, 1 bij een fout, 2 bij verkeerd gebruik (dan geen resultaatbestand).
 // Alleen `node:`-modules, zodat het bestand ook los in ~/setup werkt, vóór de clone. Het start nooit een container, een
 // pakketbeheerder of een rootcommando en pusht niet; andere programma's alleen met een argumentlijst, zonder shell.
-// `repo-instellingen` is bouwstap 2 en bestaat hier nog niet. scripts/dev.mjs importeert `isVrij` en `testBind`: één vrij-regel.
+// Alleen `repo-instellingen --controleer` laadt een repomodule (scripts/kit/ruleset-controle.mjs, dynamisch, werking 7).
+// scripts/dev.mjs importeert `isVrij` en `testBind`: één vrij-regel.
 // Getest in test/scripts/nieuwe-app*.test.ts en test/scripts/dev.test.ts.
 import { execFileSync } from 'node:child_process';
 import {
@@ -906,6 +907,237 @@ async function preflight(v, ctx) {
   else v.sla('poorten', `standaardpoort bezet (${bezet.join(', ')}): poorten verschuift naar een vrije set`);
 }
 
+// --- repo-instellingen (playbook 6.1-controle en 6.2) ----------------------------------------------------------------------
+
+const REPO = /^[\w.-]+\/[\w.-]+$/;
+/** Grens van GitHub voor de beschrijving van een repo (spec werking 7). */
+const MAX_BESCHRIJVING = 350;
+const HERSTEL_GH = 'controleer gh auth status en het netwerk; draai repo-instellingen opnieuw';
+const HERSTEL_LEZEN = 'controleer gh auth status en draai opnieuw; blijft het, vraag de eigenaar';
+const SHA_PINNING = /** @type {const} */ ([
+  'sha_pinning_required onbekend',
+  'Settings → Actions → General → Require actions to be pinned to a full-length commit SHA',
+]);
+
+/** @param {string} repo */
+function rulesetHerstel(repo) {
+  return `de eigenaar draait scripts/github-ruleset.sh ${repo} opnieuw (docs/nieuwe-app.md, 6.2)`;
+}
+
+/** @param {string} repo */
+function instellingenHerstel(repo) {
+  return `node scripts/kit/nieuwe-app.mjs repo-instellingen --repo ${repo}`;
+}
+
+/**
+ * Melding en herstel per bevindingcode van scripts/kit/ruleset-controle.mjs (spec, Hergebruik en UX).
+ * @typedef {(repo: string, details: string) => readonly [string, string]} Tekst
+ * @type {ReadonlyMap<string, Tekst>}
+ */
+const BEVINDING_TEKST = new Map(
+  /** @type {Array<[string, Tekst]>} */ ([
+    [
+      'RULESETS_NIET_BESCHIKBAAR',
+      (r) => [
+        `GitHub geeft geen rulesets op ${r}: een private repo vraagt GitHub Pro of Team`,
+        `de eigenaar kiest Pro, een organisatie met Team, of public; daarna draait hij scripts/github-ruleset.sh ${r} (docs/nieuwe-app.md, 6.2)`,
+      ],
+    ],
+    [
+      'GEEN_RULESET',
+      (r) => [
+        `geen ruleset main op ${r}`,
+        `de eigenaar draait scripts/github-ruleset.sh ${r} (docs/nieuwe-app.md, 6.2)`,
+      ],
+    ],
+    ['RULESET_NIET_ACTIEF', (r, d) => [`ruleset main is niet actief op de standaardbranch: ${d}`, rulesetHerstel(r)]],
+    ['BYPASS', (r, d) => [`ruleset main heeft een bypass: ${d}`, rulesetHerstel(r)]],
+    ['REGELS', (r, d) => [`regels van ruleset main wijken af: ${d}`, rulesetHerstel(r)]],
+    ['CHECKS', (r, d) => [`verplichte checks op main wijken af van requiredChecks: ${d}`, rulesetHerstel(r)]],
+    ['RULESET_ONLEESBAAR', (_r, d) => [`ruleset main niet te lezen: ${d}`, HERSTEL_LEZEN]],
+    ['MERGE_METHODEN', (r, d) => [`merge-instellingen wijken af: ${d}`, instellingenHerstel(r)]],
+    ['WORKFLOW_RECHTEN', (r, d) => [`workflow-rechten wijken af: ${d}`, instellingenHerstel(r)]],
+    ['ACTIONS', (r, d) => [`Actions-instellingen wijken af: ${d}`, instellingenHerstel(r)]],
+    ['SHA_PINNING_ONBEKEND', () => SHA_PINNING],
+    ['INSTELLINGEN_ONLEESBAAR', (_r, d) => [`repo-instellingen niet te lezen: ${d}`, HERSTEL_LEZEN]],
+  ]),
+);
+
+/**
+ * Per bevinding een stap `fout` (id: de code in kleine letters, `-` voor `_`); zonder bevindingen de eigen ok-stap.
+ * @param {Verloop} v @param {{ code: string, details: string[] }[]} bevindingen
+ * @param {{ repo: string, id: string, ok: string }} stap
+ */
+function meldBevindingen(v, bevindingen, stap) {
+  if (bevindingen.length === 0) v.ok(stap.id, stap.ok);
+  for (const { code, details } of bevindingen) {
+    const tekst = BEVINDING_TEKST.get(code);
+    const [melding, herstel] =
+      tekst === undefined ? [`${code}: ${details.join(', ')}`, HERSTEL_LEZEN] : tekst(stap.repo, details.join(', '));
+    v.fout(code.toLowerCase().replaceAll('_', '-'), melding, herstel);
+  }
+}
+
+/** `requiredChecks` uit `.claude/decisions.json` (ADR 0068 punt 1), of undefined. @param {string} root */
+function leesRequiredChecks(root) {
+  const lijst = veld(leesJson(path.join(root, '.claude/decisions.json')), 'requiredChecks');
+  if (!Array.isArray(lijst) || lijst.length === 0 || !lijst.every((naam) => typeof naam === 'string')) return undefined;
+  return lijst.map(String);
+}
+
+/**
+ * `--controleer`: ruleset en instellingen tegen scripts/github-ruleset.sh en playbook 6.2, alleen lezend (werking 7).
+ * Beide functies draaien altijd.
+ * @param {Verloop} v @param {string} root @param {string} repo
+ */
+async function controleer(v, root, repo) {
+  const requiredChecks = leesRequiredChecks(root);
+  if (requiredChecks === undefined)
+    return v.fout(
+      'required-checks',
+      '.claude/decisions.json: requiredChecks ontbreekt of is leeg',
+      'draai vanuit ~/code/<slug>; blijft het, vraag de eigenaar',
+    );
+  const { controleerRuleset, controleerInstellingen } = await import('./ruleset-controle.mjs');
+  /** @type {(args: string[]) => Uitvoer} */
+  const gh = (args) => voer('gh', args, root);
+  meldBevindingen(v, controleerRuleset(gh, { repo, requiredChecks }), {
+    repo,
+    id: 'ruleset',
+    ok: 'ruleset main gelijk aan scripts/github-ruleset.sh',
+  });
+  meldBevindingen(v, controleerInstellingen(gh, { repo }), {
+    repo,
+    id: 'instellingen',
+    ok: 'repo-instellingen gelijk aan docs/nieuwe-app.md 6.2',
+  });
+  return true;
+}
+
+/**
+ * De ouders van een commit op GitHub (`gh api repos/<repo>/commits/<ref>`, zonder --jq): de sha's, of de eerste regel
+ * van de gh-melding (ook bij onleesbare JSON) met `ontbreekt` waar bij een 404.
+ * @param {Programma} gh @param {string} repo @param {string} ref
+ * @returns {{ ouders: string[] } | { fout: string, ontbreekt?: boolean }}
+ */
+function commitOuders(gh, repo, ref) {
+  const r = gh('api', `repos/${repo}/commits/${ref}`);
+  if (!r.ok) return { fout: eersteRegel(r.stderr), ontbreekt: r.stderr.includes('404') };
+  let ouders;
+  try {
+    ouders = veld(JSON.parse(r.stdout), 'parents');
+  } catch {
+    return { fout: 'geen JSON' };
+  }
+  if (!Array.isArray(ouders)) return { fout: 'geen parents in het antwoord' };
+  const shas = ouders.map((ouder) => veld(ouder, 'sha'));
+  if (!shas.every((sha) => typeof sha === 'string' && /^[\w-]+$/.test(sha))) return { fout: 'geen sha in parents' };
+  return { ouders: shas.map(String) };
+}
+
+/**
+ * `main` op GitHub heeft de vorm hernoem-commit (één ouder) boven koppel-merge (twee ouders), zoals de controle van 6.1:
+ * `commits/main`, daarna `commits/<sha van de eerste ouder>`. Een 404 op `main` is de verkeerde vorm (eerst de push);
+ * elke andere gh-fout op een van beide is onleesbaar (werking 7).
+ * @param {Verloop} v @param {Programma} gh @param {string} repo
+ */
+function mainVorm(v, gh, repo) {
+  const main = commitOuders(gh, repo, 'main');
+  const eerste = 'ouders' in main ? main.ouders[0] : undefined;
+  const vorige = eerste === undefined ? { ouders: [] } : commitOuders(gh, repo, eerste);
+  // Een 404 op `main` zelf valt door naar de vormfout; op de eerste ouder is elke fout onleesbaar.
+  const stuk = 'fout' in main && main.ontbreekt !== true ? main : 'fout' in vorige ? vorige : undefined;
+  if (stuk !== undefined) return v.fout('main-vorm', `main op GitHub niet te lezen: ${stuk.fout}`, HERSTEL_GH);
+  const aantal = (/** @type {typeof main} */ r) => ('ouders' in r ? r.ouders.length : undefined);
+  if (aantal(main) !== 1 || aantal(vorige) !== 2)
+    return v.fout(
+      'main-vorm',
+      'main op GitHub heeft nog niet de hernoem-commit boven de koppel-merge',
+      'eerst de push door de eigenaar (docs/nieuwe-app.md, 6.1)',
+    );
+  return v.ok('main-vorm', 'main op GitHub heeft de hernoem-commit boven de koppel-merge');
+}
+
+/**
+ * Eén schrijvende `gh`-aanroep als stap; met --dry-run alleen gemeld. Bij een fout alleen de eerste stderr-regel.
+ * @param {Verloop} v @param {Programma} gh @param {{ id: string, naam: string, wat: string, args: string[] }} stap
+ */
+function schrijf(v, gh, stap) {
+  if (!v.dryRun) {
+    const r = gh(...stap.args);
+    if (!r.ok && `${r.stdout}\n${r.stderr}`.includes('sha_pinning_required'))
+      return v.fout('sha-pinning-onbekend', SHA_PINNING[0], SHA_PINNING[1]);
+    if (!r.ok) return v.fout(stap.id, `${stap.naam} niet gezet: ${eersteRegel(r.stderr)}`, HERSTEL_GH);
+  }
+  return v.ok(stap.id, `${stap.naam} gezet: ${stap.wat}`, true);
+}
+
+/**
+ * Schrijft precies wat MERGE_METHODEN, WORKFLOW_RECHTEN en ACTIONS toetsen (playbook 6.2); de ruleset zet de eigenaar.
+ * @param {Verloop} v @param {Programma} gh @param {{ repo: string, beschrijving: string | undefined }} doel
+ */
+function schrijfInstellingen(v, gh, doel) {
+  const { repo, beschrijving } = doel;
+  const omschrijving = beschrijving === undefined ? [] : [`--description=${beschrijving}`];
+  const methoden = ['--enable-merge-commit', '--enable-squash-merge', '--enable-rebase-merge=false'];
+  const stappen = [
+    {
+      id: 'merge-instellingen',
+      naam: 'merge-instellingen',
+      wat: `merge-commit en squash aan, rebase en auto-merge uit, branch weg na de merge${beschrijving === undefined ? '' : '; beschrijving gezet'}`,
+      args: [
+        'repo',
+        'edit',
+        repo,
+        ...methoden,
+        '--delete-branch-on-merge',
+        '--enable-auto-merge=false',
+        ...omschrijving,
+      ],
+    },
+    {
+      id: 'workflow-rechten',
+      naam: 'workflow-rechten',
+      wat: 'alleen lezen, geen PR-goedkeuring',
+      args: [
+        ...['api', '-X', 'PUT', `repos/${repo}/actions/permissions/workflow`],
+        ...['-f', 'default_workflow_permissions=read', '-F', 'can_approve_pull_request_reviews=false'],
+      ],
+    },
+    {
+      id: 'actions',
+      naam: 'Actions-instellingen',
+      wat: 'aan, alle acties, op volledige SHA',
+      args: [
+        ...['api', '-X', 'PUT', `repos/${repo}/actions/permissions`],
+        ...['-F', 'enabled=true', '-f', 'allowed_actions=all', '-F', 'sha_pinning_required=true'],
+      ],
+    },
+  ];
+  for (const stap of stappen) if (!schrijf(v, gh, stap)) return false;
+  return true;
+}
+
+/** @param {Verloop} v @param {Context} ctx */
+async function repoInstellingen(v, ctx) {
+  const root = ctx.gitRoot;
+  if (root === null) return v.fout('werkmap', 'geen git-repo', 'draai vanuit ~/code/<slug>');
+  const repo = tekstOptie(ctx.waarden, 'repo') ?? '';
+  const origin = githubRepo(voer('git', ['config', '--get', 'remote.origin.url'], root).stdout);
+  if (origin !== repo.toLowerCase())
+    return v.fout(
+      'origin',
+      `--repo ${repo} is niet de origin van deze werkmap`,
+      `draai vanuit ~/code/${repo.split('/')[1] ?? '<slug>'}`,
+    );
+  v.ok('origin', `--repo ${repo} is de origin van deze werkmap`);
+  if (ctx.waarden['controleer'] === true) return controleer(v, root, repo);
+  /** @type {Programma} */
+  const gh = (...args) => voer('gh', args, root);
+  if (!mainVorm(v, gh, repo)) return false;
+  return schrijfInstellingen(v, gh, { repo, beschrijving: tekstOptie(ctx.waarden, 'beschrijving') });
+}
+
 // --- ingang ------------------------------------------------------------------------------------------------------------------
 
 /**
@@ -917,6 +1149,13 @@ const DEELCOMMANDOS = new Map([
   ['koppel', { opties: {}, voer: koppel }],
   ['poorten', { opties: { env: { type: 'boolean' } }, voer: poorten }],
   ['db-bewijs', { opties: { pg: { type: 'string' } }, voer: dbBewijs }],
+  [
+    'repo-instellingen',
+    {
+      opties: { repo: { type: 'string' }, beschrijving: { type: 'string' }, controleer: { type: 'boolean' } },
+      voer: repoInstellingen,
+    },
+  ],
 ]);
 
 /** @param {string | null} reden @returns {2} */
@@ -946,15 +1185,29 @@ function leesOpties(deelcommando, args) {
   const zichtbaarheid = tekstOptie(waarden, 'zichtbaarheid');
   if (zichtbaarheid !== undefined && zichtbaarheid !== 'public' && zichtbaarheid !== 'private')
     return `--zichtbaarheid ${zichtbaarheid}: kies public of private`;
+  if ('repo' in deelcommando.opties) return repoOptiesFout(waarden) ?? waarden;
   return waarden;
+}
+
+/**
+ * Gebruiksfout bij de opties van repo-instellingen: `--repo` verplicht als `owner/slug`, `--beschrijving` hooguit
+ * MAX_BESCHRIJVING tekens. @param {Record<string, unknown>} waarden @returns {string | undefined}
+ */
+function repoOptiesFout(waarden) {
+  const repo = tekstOptie(waarden, 'repo');
+  if (repo === undefined || !REPO.test(repo))
+    return `--repo <owner>/<slug> ontbreekt of is ongeldig${repo === undefined ? '' : ` (${repo})`}`;
+  const tekens = [...(tekstOptie(waarden, 'beschrijving') ?? '')].length;
+  if (tekens > MAX_BESCHRIJVING)
+    return `--beschrijving is langer dan ${String(MAX_BESCHRIJVING)} tekens (${String(tekens)})`;
+  return undefined;
 }
 
 /** @param {string[]} argv @returns {Promise<number>} de exitcode */
 async function main(argv) {
   const [naam = '', ...rest] = argv;
   const deelcommando = DEELCOMMANDOS.get(naam);
-  if (deelcommando === undefined)
-    return gebruik(naam === 'repo-instellingen' ? 'repo-instellingen bestaat nog niet (bouwstap 2)' : null);
+  if (deelcommando === undefined) return gebruik(null);
   const cwd = process.cwd();
   const top = voer('git', ['rev-parse', '--show-toplevel'], cwd);
   const gitRoot = top.ok && top.stdout.trim() !== '' ? top.stdout.trim() : null;
