@@ -242,8 +242,13 @@ if (commando === 'api') {
     process.stderr.write('gh: Not Found (HTTP 404)\\n');
     process.exit(1);
   }
+  if (antwoord.exit !== 0) {
+    // Zoals de echte gh api bij een HTTP-fout: de body naar stdout, de melding naar stderr, dan exitcode.
+    if (antwoord.stdout) process.stdout.write(antwoord.stdout + '\\n');
+    if (antwoord.stderr) process.stderr.write(antwoord.stderr + '\\n');
+    process.exit(antwoord.exit);
+  }
   if (antwoord.stderr) process.stderr.write(antwoord.stderr + '\\n');
-  if (antwoord.exit !== 0) process.exit(antwoord.exit);
   const uitdrukking = vlaggen['--jq'] ?? vlaggen['-q'];
   process.stdout.write((uitdrukking === undefined ? antwoord.stdout : jq(JSON.parse(antwoord.stdout), uitdrukking)) + '\\n');
   process.exit(0);
