@@ -194,9 +194,13 @@ if (import.meta.main) {
     process.exit(1);
   }
   // Tijdens deze hardening: een ESLint-proces van 1,8 GiB naast de tests op een gedeelde 8-GiB-host vulde ook de swap.
-  // Laat ruimte voor de derde baan en andere processen. Deze grens (scripts/kit/geheugen.mjs) verandert uitsluitend de planning.
+  // Laat ruimte voor de derde baan en andere processen; ook bij hoge CPU-last (leerpunt #1000). Deze grens
+  // (scripts/kit/geheugen.mjs) verandert uitsluitend de planning.
   const beperkt = weinigGeheugen();
-  if (beperkt) console.info('gate:fast: weinig geheugen (scripts/kit/geheugen.mjs); lint en tests draaien na elkaar');
+  if (beperkt)
+    console.info(
+      'gate:fast: weinig geheugen of hoge CPU-last (scripts/kit/geheugen.mjs); lint en tests draaien na elkaar',
+    );
   const args = keuze?.deel?.args ?? {};
   const run = (/** @type {string} */ script) => draai(script, args[script] ?? []);
   const scripts = keuze?.deel?.scripts ?? snelleGates();

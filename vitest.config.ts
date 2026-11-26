@@ -1,7 +1,7 @@
 import { availableParallelism } from 'node:os';
 import { defineConfig } from 'vitest/config';
 import { catalogusIndex } from './scripts/kit/catalogus-index.ts';
-import { vitestWorkers, weinigGeheugen } from './scripts/kit/geheugen.mjs';
+import { krapEnBelast, vitestWorkers, weinigGeheugen } from './scripts/kit/geheugen.mjs';
 
 // unit en web draaien in de sandbox; int alleen via `pnpm test:db` in de runner (framework §4, Tests; ADR 0044).
 // In de runner is de repo read-only: de cache gaat dan naar RUNNER_CACHE_DIR.
@@ -19,8 +19,13 @@ export default defineConfig({
   plugins: [catalogusIndex(import.meta.dirname)],
   ...(runnerCache === undefined ? {} : { cacheDir: runnerCache }),
   test: {
-    // Begrens de gezamenlijke unit-/DOM-belasting, ook op hosts met veel CPU's; bij weinig geheugen hooguit twee (#866).
-    maxWorkers: vitestWorkers({ beperkt: weinigGeheugen(), cpus: availableParallelism() }),
+    // Begrens de gezamenlijke unit-/DOM-belasting, ook op hosts met veel CPU's; bij weinig geheugen of hoge CPU-last hooguit
+    // twee (#866), bij beide samen één (#1000).
+    maxWorkers: vitestWorkers({
+      beperkt: weinigGeheugen(),
+      cpus: availableParallelism(),
+      krapEnBelast: krapEnBelast(),
+    }),
     // Eén keer per run, voor alle projecten samen: test/setup/tmp-root.ts.
     globalSetup: [tmpRoot],
     reporters: ['default', skipReporter],

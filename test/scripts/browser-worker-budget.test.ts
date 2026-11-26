@@ -8,7 +8,7 @@ import { z } from 'zod';
 const root = path.join(import.meta.dirname, '../..');
 const resultSchema = z.object({ workers: z.number().nullable(), forbidOnly: z.boolean(), testDir: z.string() });
 
-// Totaal én beschikbaar geheugen vast (scripts/kit/geheugen.mjs), zonder override uit de omgeving.
+// Totaal én beschikbaar geheugen vast en zonder CPU-last (scripts/kit/geheugen.mjs), zonder override uit de omgeving.
 function workers(memoryGiB: number) {
   const dir = mkdtempSync(path.join(tmpdir(), 'browser-workers-'));
   try {
@@ -18,7 +18,8 @@ function workers(memoryGiB: number) {
       `import os from 'node:os';
 const bytes = ${String(memoryGiB)} * 1024 ** 3;
 Object.defineProperty(process, 'availableMemory', { value: () => bytes });
-Object.defineProperty(os, 'totalmem', { value: () => bytes });`,
+Object.defineProperty(os, 'totalmem', { value: () => bytes });
+Object.defineProperty(os, 'loadavg', { value: () => [0, 0, 0] });`,
     );
     const script =
       "import config from './playwright.config.ts'; console.log(JSON.stringify({ workers: config.workers ?? null, forbidOnly: config.forbidOnly, testDir: config.testDir }));";
