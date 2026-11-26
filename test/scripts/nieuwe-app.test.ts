@@ -1,6 +1,15 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
+import {
+  endpointsVoor,
+  goedeAntwoorden,
+  mainVorm,
+  requiredChecks,
+  ruimGhStubOp,
+  zetGhStub,
+} from './helpers/gh-stub.ts';
 import {
   ROOT,
   SCRIPT,
@@ -22,7 +31,10 @@ import {
 // Tests voor scripts/kit/nieuwe-app.mjs (spec docs/template/specs/nieuwe-app-script.md, bouwstap 1), geschreven vóór de bouw.
 // Hier: AC-1 (geen docker, pnpm, npm, sudo; alleen node:-imports), AC-2 (resultaatbestand en exitcodes) en AC-12 (preflight).
 // koppel staat in nieuwe-app-koppel.test.ts, poorten in nieuwe-app-poorten.test.ts, db-bewijs in nieuwe-app-db-bewijs.test.ts.
-afterEach(ruimOp);
+afterEach(async () => {
+  await ruimOp();
+  ruimGhStubOp();
+});
 
 const GEBRUIK =
   'Gebruik: node scripts/kit/nieuwe-app.mjs <preflight|koppel|poorten|repo-instellingen|db-bewijs> [opties] [--dry-run]';
@@ -39,6 +51,9 @@ describe('nieuwe-app-script/AC-1: geen docker, pnpm, npm of sudo, en alleen node
     ['poorten'],
     ['poorten', '--env'],
     ['db-bewijs', '--pg', '54332'],
+    // Bouwstap 2 (AC-1: elk deelcommando): repo-instellingen, schrijvend en met --controleer.
+    ['repo-instellingen', '--repo', 'a/b'],
+    ['repo-instellingen', '--repo', 'a/b', '--controleer'],
   ];
 
   test.each(DEELCOMMANDOS)(
@@ -52,7 +67,9 @@ describe('nieuwe-app-script/AC-1: geen docker, pnpm, npm of sudo, en alleen node
     },
   );
 
-  test('nieuwe-app-script/AC-1 de statische imports hebben alleen het voorvoegsel node: en er is geen dynamische import()', () => {
+  // GEWIJZIGD (spec nieuwe-app-script, bouwstap 2, R-TEST-02): AC-1 eiste nul dynamische imports en noemde pr-merge.mjs. De herziene
+  // AC-1 (OV-8) laat precies één dynamische import toe: `./ruleset-controle.mjs`, alleen in het pad van `repo-instellingen --controleer`.
+  test('nieuwe-app-script/AC-1 de statische imports hebben alleen het voorvoegsel node: en de enige dynamische import() is ./ruleset-controle.mjs', () => {
     const tekst = bron();
     const statisch = [...tekst.matchAll(/^\s*(?:import|export)\s[^;]*?\sfrom\s+['"]([^'"]+)['"]/gm)].map(
       (m) => m[1] ?? '',
@@ -61,8 +78,30 @@ describe('nieuwe-app-script/AC-1: geen docker, pnpm, npm of sudo, en alleen node
     const imports = [...statisch, ...kaal];
     expect(imports.length, 'het script importeert minstens node:util en node:child_process').toBeGreaterThan(1);
     expect(imports.filter((naam) => !naam.startsWith('node:'))).toStrictEqual([]);
-    // bouwstap 1: geen dynamische import; bouwstap 2 voegt alleen die van pr-merge.mjs toe (repo-instellingen).
-    expect([...tekst.matchAll(/\bimport\s*\(/g)]).toHaveLength(0);
+    const dynamisch = [...tekst.matchAll(/\bimport\s*\(\s*([^)]*?)\s*\)/g)].map((m) => m[1] ?? '');
+    expect(dynamisch.map((arg) => arg.replace(/^['"`]|['"`]$/g, ''))).toStrictEqual(['./ruleset-controle.mjs']);
+  });
+
+  test('nieuwe-app-script/AC-1 ./ruleset-controle.mjs wordt alleen geladen in het pad van repo-instellingen --controleer', () => {
+    const fx = maakFixture({
+      extra: { '.claude/decisions.json': `${JSON.stringify({ version: 1, requiredChecks: requiredChecks() })}\n` },
+    });
+    git(fx.repo, 'remote', 'add', 'origin', 'https://github.com/a/b.git');
+    zetGhStub(fx, endpointsVoor('a/b', goedeAntwoorden(), mainVorm('a/b', 1, 2)));
+    // Een kopie van het script zonder ruleset-controle.mjs ernaast: alleen een pad dat de module laadt, faalt daarop.
+    eisScript();
+    const kopie = path.join(tijdelijk('nieuwe-app-kopie-'), 'nieuwe-app.mjs');
+    copyFileSync(SCRIPT, kopie);
+    const uitvoer = (args: string[]): string => {
+      const r = spawnSync(process.execPath, [kopie, ...args], { cwd: fx.repo, env: fx.env, encoding: 'utf8' });
+      return `${r.stdout}\n${r.stderr}`;
+    };
+
+    for (const args of [['repo-instellingen', '--repo', 'a/b', '--dry-run'], ['poorten'], ['preflight']])
+      expect(uitvoer(args), `${args.join(' ')} laadt de module niet`).not.toContain('ruleset-controle');
+    expect(uitvoer(['repo-instellingen', '--repo', 'a/b', '--controleer']), '--controleer laadt de module').toContain(
+      'ruleset-controle',
+    );
   });
 
   test('nieuwe-app-script/AC-1 het script roept docker, pnpm, npm, sudo en git push niet aan (statische bron)', () => {

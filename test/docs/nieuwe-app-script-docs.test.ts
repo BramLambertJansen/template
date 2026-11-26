@@ -107,6 +107,29 @@ describe('nieuwe-app-script/AC-15: het playbook noemt de deelcommando\'s in plaa
       expect(inhoud, `${kop}: één verwijsregel`).toHaveLength(1);
     }
   });
+
+  // Bouwstap 2 (repo-instellingen, 6.2-zin van AC-15 en werking 10).
+  test('nieuwe-app-script/AC-15 6.2 noemt repo-instellingen, --controleer en het resultaatbestand, niet meer de commandoblokken', () => {
+    const tekst = sectie(playbook, '### 6.2 Repo-instellingen');
+    expect(tekst, '6.2 bestaat').not.toBe('');
+    expect(tekst).toContain('nieuwe-app.mjs repo-instellingen');
+    expect(tekst).toContain('--controleer');
+    expect(tekst).toContain('.template/nieuwe-app-repo-instellingen.json');
+    expect(tekst).not.toContain('gh repo edit "$R" --enable-merge-commit');
+    expect(tekst).not.toContain('gh api -X PUT "repos/$R/actions/permissions');
+  });
+
+  test('nieuwe-app-script/AC-15 6.2 noemt --controleer als controle van ruleset en instellingen', () => {
+    const tekst = sectie(playbook, '### 6.2 Repo-instellingen');
+    expect(tekst).toMatch(/repo-instellingen --repo \S+[^\n]*--controleer/);
+    const i = tekst.indexOf('--controleer');
+    expect(tekst.slice(Math.max(0, i - 400), i + 400), 'de controle noemt de ruleset').toContain('ruleset');
+    expect(tekst).toContain('scripts/github-ruleset.sh');
+  });
+
+  test('nieuwe-app-script/AC-15 de zin "Of de ruleset blijft staan, controleert niets" staat er niet meer', () => {
+    expect(playbook).not.toContain('Of de ruleset blijft staan, controleert niets');
+  });
 });
 
 describe('nieuwe-app-script/AC-16: .env.example en de poorten van het script', () => {

@@ -266,6 +266,16 @@ Ook gebouwd: rate limiting op app-routes (#87, spec `rate-limit`) met een reques
 Afgevinkte items die onder `## Volgende` van de roadmap stonden, letterlijk overgenomen met hun bewijs, op twee verwijzingen
 "het item hieronder" na: die noemen nu het roadmap-item bij naam.
 
+- [x] **ST-04 (P0) — audit: vervolg** (ADR 0051, spec audit-log). Gebouwd in #128: migratie, `ctx.audit`, invite/reinvite; de spec
+  `audit-log` staat op `gebouwd` sinds de AC-dekking compleet is (ADR 0103, bewijs `db/tests/audit_log.sql`). Audit voor de routes
+  revoke en reset-link (met ST-02): bewijs `test/api/account-revoke.int.test.ts` en `test/api/account-reset-link.int.test.ts`
+  (regels `core.account.revoke` en `core.account.reset_link`). Het scherm `/admin/audit` valt erbuiten: ADR 0051 punt 7 houdt het buiten
+  de template; het staat als vervolgpunt bij ST-17.
+  **Werk:** servergegenereerde request-ID, audit in de transactie, append-only-tabel met vaste grants en policies, getypte strict gevalideerde
+  details (geen willekeurige payloads, e-mailadressen of vrije tekst), aparte core-auditwriter voor Better Auth-acties.
+  **Klaar als:** audit wordt met de actie teruggedraaid; verboden schrijver en lezer geweigerd; auditdetails falen buiten de allowlist;
+  een vervalste client-request-ID wordt niet gebruikt.
+  aanleiding: #128
 - [x] **ADR 0029 bouw: feature-lane en mini-spec** (punt 1–3, 7). Lane-herkenning in `check-document-status`, `docs/specs/_mini.md`, het
   frontmatterveld `sjabloon: mini` in `check-docs`, "Besluit en taakscope voorbereiden" in `docs/operations/agent-doorloop.md`; fixtures in `test/rails/`.
   aanleiding: 0029-snellere-beslisroute (verwijderd met het archief) (punt 1–7). Gebouwd in #199: lane.mjs (verwijderd, #700), `_mini.md`, `sjabloon: mini` in `check-docs`, statuscommit-controle (a)–(c).

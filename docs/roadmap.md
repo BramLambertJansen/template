@@ -114,19 +114,11 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   (AC-19) in die integratietests.
   Gedaan: eenmalige TOTP-code en e-maillink, geen sessietoken in JSON (spec `inloggat-dichten`, ADR 0075; bewijs `test/auth/eenmalig.int.test.ts`, `db/tests/one_time_use.sql`).
   **Werk:** specificeer herauthenticatie, sessie-intrekking, tokenverval, oude/nieuwe adresbevestiging en herstel zonder rolpromotie;
-  koppel audit en mail aan ST-04 en ST-03 en kopieer geen synchroon mailpad als de outbox de geldende route wordt.
+  schrijf audit via het bestaande pad (ST-04, gearchiveerd), koppel mail aan ST-03 en kopieer geen synchroon mailpad als de outbox de geldende route wordt.
   **Afhankelijkheden:** ADR 0043; audit voor admin-acties; relevante stappen uit ADR 0050.
   **Klaar als:** echte-stack e2e per flow; verboden rol en admin zonder MFA geweigerd; laatste-admin-racetest; herstelcode eenmalig, ook bij
   parallel gebruik; ingetrokken of verlopen links werken niet. Elk deel krijgt afzonderlijk bewijs.
   aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (B-11)
-- [ ] **ST-04 (P0) — audit: vervolg** (ADR 0051, spec audit-log). Gebouwd in #128: migratie, `ctx.audit`, invite/reinvite; de spec
-  `audit-log` staat op `gebouwd` sinds de AC-dekking compleet is (ADR 0103, bewijs `db/tests/audit_log.sql`). Open: `/admin/audit`
-  (eigen spec) en audit voor de routes revoke en reset-link (met ST-02).
-  **Werk:** servergegenereerde request-ID, audit in de transactie, append-only-tabel met vaste grants en policies, getypte strict gevalideerde
-  details (geen willekeurige payloads, e-mailadressen of vrije tekst), aparte core-auditwriter voor Better Auth-acties.
-  **Klaar als:** audit wordt met de actie teruggedraaid; verboden schrijver en lezer geweigerd; auditdetails falen buiten de allowlist;
-  een vervalste client-request-ID wordt niet gebruikt.
-  aanleiding: #128
 - [ ] **ST-03 (P0) — achtergrondtaken: runner, opruimen en mail-outbox** (stuk 7; [ADR 0050](template/adr/0050-achtergrondtaken-en-mail-outbox.md): runner in het API-proces,
   eigen rol `app_jobs`, outbox zonder token; besluiten van ADR 0020 door de eigenaar bevestigd). Opruimen van verlopen sessies, uitnodigingen en
   rate-limit-rijen, en mail via een outbox, elk met een integratietest.
@@ -161,6 +153,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   contracttestsuite en check; skill `nieuwe-koppeling`, paragraaf "Koppeling" in het spec-template, hoofdstuk in het gouden pad en een sectie in de
   feiten. Na ST-03, elk met eigen besluit-PR: outbox en sync, machineroute en inbox, tokenkluis per gebruiker, beheerschermen.
   Gebouwd: uitgaande client, nep-partner en foutcodes (#515), `secret()` (#519), lintregels `rails/netwerk-api` en `rails/geheim` (#522, #523), register en schakelaar (spec koppelingsregister), partnerstap (spec partnerstap), vaste vorm met contracttest en check (spec koppelingsvorm), agentlaag (spec koppeling-agentlaag).
+  Daarmee is de eerste reeks af; **open** is alleen het deel na ST-03 (zie boven).
   **Afhankelijkheden:** ADR 0077; ST-03 voor schrijven, sync, terugbellen en tokens. Elke app-koppeling krijgt daarnaast één handmatige run tegen
   de testomgeving van de partner (ADR 0077 punt 6).
   **Klaar als:** een agent met alleen de skill deelt een fictieve partner in en schrijft een spec waarin elk kenmerk naar een bestaande bouwsteen
@@ -177,6 +170,8 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   **Werk:** één module in core met lagen api, shared en web, door de template onderhouden; de app registreert routes, services, permissies en schermen in
   haar compositie-roots en kiest pad en navigatie. Core krijgt een eigen gegenereerd schema uit de core-migraties en importeert niets uit
   `src/api/db/schema.ts`. Eerst de accountlijst (contract, permissie, query via `tx`, RLS, API-client, scherm), dan de overige flows.
+  Vervolgpunt (uit ST-04): een eventueel `/admin/audit` krijgt pas in deze module een eigen spec, na een wijziging van ADR 0051 punt 7
+  (nu geen scherm in de template); namen en "verwijderd account" hangen af van ST-05.
   **Afhankelijkheden:** ST-16; besluit-PR met ADR (A1: contract tussen zones) dat R-LAAG-01, R-DB-12 met ADR 0042 en R-WEB-05 herziet, daarna spec en bouw.
   **Klaar als:** HTTP-paden, contracten, foutcodes en teksten ongewijzigd; bestaande contract- en integratietests groen; core importeert geen app-code;
   de browserbundel bevat geen API-code; een template-update in de proef-app conflicteert niet in accountbestanden.
@@ -188,7 +183,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   Stand volgens ADR 0093: de agent werkt onder het account van de eigenaar; er komt geen GitHub App, token of machineaccount en geen
   `denyRead` op `~/.config/gh`; de ruleset eist geen review van een code-eigenaar en heeft geen bypass; wie een PR met een beschermd pad
   samenvoegt, beslist `pnpm pr:merge` op de padtabel (vangnet, geen grens; spec `docs/template/specs/agent-samenvoegen.md`).
-  Open: organisatie, org-ruleset via custom property en Actions-instellingen (private repo's vragen Pro/Team); `.github/settings/` met `scripts/check-github.mjs` (alleen-lezend, een onleesbare instelling is een fout;
+  Open: organisatie, org-ruleset via custom property en Actions-instellingen (private repo's vragen Pro/Team); `.github/settings/` met `scripts/check-github.mjs` (alleen-lezend, een onleesbare instelling is een fout; hergebruikt `scripts/kit/ruleset-controle.mjs` uit nieuwe-app-script bouwstap 2, met eigen teksten;
   ook `app_id` van verplichte checks, `enforce_admins`, conversation resolution) en `check-spec-approval`; `docs/operations/rails-checklist.md` met
   per stuk bewijs. Een machineaccount met review van een code-eigenaar blijft de weg voor een app met echte gebruikers (eigen app-ADR). De eigenaar
   activeert organisatie en instellingen.
@@ -252,9 +247,9 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   `local` en `test` pas met de CAPTCHA van ST-10 (OV-3).
   **Klaar als:** de AC's van de spec hebben een test; de bestaande auth-integratietests blijven ongewijzigd groen.
   aanleiding: `docs/template/specs/wachtwoordherstel.md` (verzoek van de eigenaar, 2026-11-23; app met veel gewone gebruikers)
-- [ ] **ST-21 (P1) — appstyling: thema, schillen en stijlladder** (specs `app-thema`, `schillen` en `stijlladder`, voorgesteld;
-  besluiten van de eigenaar 2026-11-15). **Werk:** app-thema deel A–C (componenttokens, rail op de kit, thema's per app), schillen
-  deel A–B (`ShellFrame`, sidebar- en topbalkschil, eigen schillen met contracttest), stijlladder (treden, register en `check:stijl`).
+- [ ] **ST-21 (P1) — appstyling: thema, schillen en stijlladder** (specs `app-thema` en `schillen` gebouwd, `stijlladder` voorgesteld;
+  besluiten van de eigenaar 2026-11-15). Gebouwd: app-thema deel A–C en schillen deel A–B (bewijs: AC-dekking van beide specs,
+  `pnpm check:schillen`). **Open:** stijlladder (treden, register en `check:stijl`).
   Beschermde paden met eigenaarakkoord in alle drie: app-thema B (lintregel in `eslint.config.js`, `.claude/rules/web.md`, skill
   `ontwerp-overnemen`), schillen B (nieuwe check in `scripts/kit/gates.mjs`, skill `nieuw-scherm`) en stijlladder
   (agentinstructies, skill, gate). Delen met een rail of check zijn risicowerk met een aparte tester, niet R-WERK-18.
@@ -372,13 +367,14 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   `pnpm meting` meldt "let op" boven drie reviewrondes per branch. **Klaar als:** beide
   hebben een test met een fixture die op de huidige code faalt.
   aanleiding: `docs/template/adr/0105-begrensde-fixlus.md` (Gevolgen)
-- [ ] **Nieuwe-app-script bouwstap 2: `repo-instellingen`.** Bouwstap 1 is gebouwd (`scripts/kit/nieuwe-app.mjs`,
-  `test/scripts/nieuwe-app.test.ts`); het subcommando `repo-instellingen` bestaat nog niet. Eerst de spec herzien: werking 7, AC-10,
-  de `REDEN_`-teksten en het bypass-randgeval leunen op `grensRedenen` uit `scripts/kit/pr-merge.mjs`, dat weg is sinds ADR 0093;
-  wat `--controleer` dan toetst, is ontwerpwerk van deze stap of van `check-github` (ST-01). Kritiek werk (R-WERK-05): spec-review
-  van de herziening, aparte tester en goedkeuring van de eigenaar op de PR. **Klaar als:** de herziene AC's van bouwstap 2 zijn groen
-  en `scripts/kit/nieuwe-app.mjs` meldt niet meer dat `repo-instellingen` niet bestaat.
-  aanleiding: `docs/template/specs/nieuwe-app-script.md` (bouwstap 2, "Te herzien vóór bouwstap 2")
+- [x] **Nieuwe-app-script bouwstap 2: `repo-instellingen`.** Bouwstap 1 is gebouwd (`scripts/kit/nieuwe-app.mjs`,
+  `test/scripts/nieuwe-app.test.ts`); bouwstap 2 is gebouwd in #1018 (bewijs `test/scripts/nieuwe-app-repo-instellingen.test.ts`,
+  `test/scripts/ruleset-controle.test.ts`, `test/docs/nieuwe-app-script-docs.test.ts`). De spec is herzien (OV-8, OV-9):
+  `--controleer` toetst ruleset en instellingen met de nieuwe alleen-lezende module `scripts/kit/ruleset-controle.mjs`, niet meer met
+  `scripts/kit/pr-merge.mjs`. Kritiek werk (R-WERK-05): spec-review van de herziening, aparte tester en goedkeuring van de eigenaar
+  op de PR. **Klaar als:** AC-9, AC-10, AC-19 en de bouwstap-2-delen van AC-1, AC-5 en AC-15 zijn groen en `scripts/kit/nieuwe-app.mjs` meldt niet meer dat
+  `repo-instellingen` niet bestaat.
+  aanleiding: `docs/template/specs/nieuwe-app-script.md` (bouwstap 2, werking 7)
 - [x] **Cloud-netwerkvorm: vervolg op de review van de bouw.** Uit #890, niet opgevolgd: (N-1) de main-regel decodeert alleen `%2F`,
   niet elke procent-escape (het endpoint branches/main/rename en GraphQL `deleteRef` vielen erbuiten; de ruleset blijft de grens); (N-3) de
   MCP-regel herkent alleen de servernaam `github`; (N-5) de dubbele melding bij `git push origin main` wordt één melding; (B-3) een

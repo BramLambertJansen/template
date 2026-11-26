@@ -14,7 +14,7 @@ import { afterEach, describe, expect, test } from 'vitest';
 import { expectAbsent } from '../support/absence';
 import { draaiNode, git, maakBron, MODULE, nieuweWerkmap, overgebleven, ROOT } from './proef-fixture';
 
-// scripts/kit/proef-kopie.mjs (docs/specs/app-init-proef.md OV-3, docs/specs/een-proefkopie.md): de kern van
+// scripts/kit/proef-kopie.mjs (docs/template/specs/een-proefkopie.md): de kern van
 // check:new-resource.
 // Contract voor deze tests:
 //   kopie(bron: string, prefix: string): string          synchroon; map direct onder os.tmpdir(), naam begint met prefix;
@@ -51,7 +51,7 @@ function kopieInKind(werkmap: ReturnType<typeof nieuweWerkmap>, prefix: string, 
 }
 
 describe('import', () => {
-  test('exporteert kopie, script en ruimOp en doet bij import niets', () => {
+  test('een-proefkopie/AC-13: exporteert kopie, script en ruimOp en doet bij import niets', () => {
     const werkmap = nieuweWerkmap(dirs);
     const leeg = path.join(werkmap.base, 'leeg');
     mkdirSync(leeg);
@@ -71,7 +71,7 @@ describe('import', () => {
   });
 });
 
-describe('AC-16: gedeeld door beide checks', () => {
+describe('een-proefkopie/AC-13: gedeeld door beide checks', () => {
   const lees = (naam: string) => readFileSync(path.join(ROOT, 'scripts/kit', naam), 'utf8');
 
   // GEWIJZIGD (spec een-proefkopie, ADR 0073): check-new-resource.mjs maakt zelf geen kopie meer, maar roept draaiProef aan.
@@ -133,7 +133,7 @@ describe('kopie', () => {
     expect(git(doel, ['status', '--porcelain'])).toBe('');
   });
 
-  test('AC-17: GIT_DIR en GIT_INDEX_FILE naar de bron: de bron krijgt geen commit en geen gewijzigde index', () => {
+  test('een-proefkopie/AC-8: GIT_DIR en GIT_INDEX_FILE naar de bron: de bron krijgt geen commit en geen gewijzigde index', () => {
     const werkmap = bronMetWijzigingen();
     const gitDir = path.join(werkmap.bron, '.git');
     const indexVoor = readFileSync(path.join(gitDir, 'index'));
@@ -301,7 +301,7 @@ describe('script', () => {
 });
 
 describe('ruimOp', () => {
-  test('AC-17: met prefix new-resource- weigert hij een pad met prefix app-init-proef- en verwijdert hij niets', () => {
+  test('een-proefkopie/AC-8: met prefix new-resource- weigert hij een pad met prefix app-init-proef- en verwijdert hij niets', () => {
     const werkmap = nieuweWerkmap(dirs);
     const pad = path.join(werkmap.tmp, 'app-init-proef-x');
     mkdirSync(pad);

@@ -37,7 +37,8 @@ afterAll(async () => {
 
 const mfa = (id: string) => ({ userId: UserId.parse(id), sessionStrength: 'mfa' }) as const;
 
-// Beide kanten wachten even, zodat de aanroepen elkaar echt overlappen (zoals test/auth/roles.int.test.ts).
+// Beide kanten wachten even, zodat de aanroepen elkaar waarschijnlijk overlappen (zoals test/auth/roles.int.test.ts). AC-10a
+// rekent daar niet op maar houdt de lock vast (whileLockHeld).
 const degrade = (actor: string, target: string) =>
   withUser(mfa(actor), async (tx) => {
     await tx.execute(sql`select pg_sleep(0.05)`);
@@ -91,6 +92,34 @@ async function blockedAmong(ids: string[]): Promise<string[]> {
   return rows.map((row) => row.id);
 }
 
+// Vaste overlap voor AC-10a. assign_role en set_account_blocked controleren de actor (app.is_mfa_admin()) vóór de lock van de
+// laatste-beheerder-regel. Commit de ene kant voordat de andere die controle doet, dan is de verliezer al gedegradeerd of
+// geblokkeerd en krijgt hij FORBIDDEN in plaats van LAST_ADMIN: een wachttijd alleen garandeert de overlap niet (CI-run
+// 45889240479). Daarom houdt een derde verbinding de lock vast tot beide aanroepen hun actorcontrole voorbij zijn en op de lock
+// wachten; daarna beslist de regel binnen de lock, zoals de AC vraagt.
+async function whileLockHeld(
+  start: () => [Promise<unknown>, Promise<unknown>],
+): Promise<[PromiseSettledResult<unknown>, PromiseSettledResult<unknown>]> {
+  const holder = await migrator.connect();
+  // Zonder geslaagde vrijgave gaat de verbinding weg in plaats van terug naar de pool: een lock op sessieniveau mag niet blijven.
+  let unlocked = false;
+  try {
+    await holder.query("select pg_advisory_lock(hashtext('public.user_roles:last_admin'))");
+    const calls = start();
+    // Meteen afhandelen: een aanroep die al vóór de lock faalt, is dan geen onafgehandelde rejection.
+    const settled = Promise.allSettled(calls);
+    try {
+      await waitForLockWaiters(2);
+    } finally {
+      await holder.query("select pg_advisory_unlock(hashtext('public.user_roles:last_admin'))");
+      unlocked = true;
+    }
+    return await settled;
+  } finally {
+    holder.release(!unlocked);
+  }
+}
+
 function expectOneWinner(results: PromiseSettledResult<unknown>[]): void {
   expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
   const losers = results.filter((result) => result.status === 'rejected');
@@ -105,7 +134,7 @@ describe('twee beheerders met verschillende beheerrollen (AC-10a)', () => {
       await registerTestRoles(migrator);
       const [a, b] = await twoBeheerders();
 
-      const results = await Promise.allSettled([degrade(a, b), degrade(b, a)]);
+      const results = await whileLockHeld(() => [degrade(a, b), degrade(b, a)]);
 
       expectOneWinner(results);
       const winner = results[0].status === 'fulfilled' ? a : b;
@@ -121,7 +150,7 @@ describe('twee beheerders met verschillende beheerrollen (AC-10a)', () => {
       await registerTestRoles(migrator);
       const [a, b] = await twoBeheerders();
 
-      const results = await Promise.allSettled([block(a, b), block(b, a)]);
+      const results = await whileLockHeld(() => [block(a, b), block(b, a)]);
 
       expectOneWinner(results);
       const winner = results[0].status === 'fulfilled' ? a : b;
@@ -138,7 +167,7 @@ describe('twee beheerders met verschillende beheerrollen (AC-10a)', () => {
       await registerTestRoles(migrator);
       const [a, b] = await twoBeheerders();
 
-      const results = await Promise.allSettled([degrade(a, b), block(b, a)]);
+      const results = await whileLockHeld(() => [degrade(a, b), block(b, a)]);
 
       expectOneWinner(results);
       const degraded = results[0].status === 'fulfilled';
@@ -177,12 +206,15 @@ describe('register_role tegen blokkeren van de laatste admin (AC-10b)', () => {
   });
 });
 
-// Wacht tot zoveel verbindingen op een advisory lock wachten (de lock van de laatste-beheerder-regel); zo staan T2 en T3 in
-// een vaste volgorde in de wachtrij, zonder te rekenen op tijd. Na de wachttijd gaat de test door: de asserts melden het dan.
+// Wacht tot zoveel verbindingen op een advisory lock wachten (de lock van de laatste-beheerder-regel); zo staan T2 en T3 van
+// AC-10c in een vaste volgorde in de wachtrij en zijn beide aanroepen van AC-10a hun actorcontrole voorbij (whileLockHeld),
+// zonder te rekenen op tijd. Na de wachttijd gaat de test door: de asserts melden het dan. Telt via pg_locks, niet via
+// pg_stat_activity: die toont de wachtstatus van sessies van een andere rol (api_user, de AC-10a-aanroepen) aan app_migrator
+// als NULL. De int-tests draaien serieel (vitest.config.ts), dus andere advisory locks tellen niet mee.
 async function waitForLockWaiters(count: number): Promise<void> {
   for (let attempt = 0; attempt < 100; attempt += 1) {
     const { rows } = await migrator.query<{ n: number }>(
-      "select count(*)::integer as n from pg_stat_activity where wait_event_type = 'Lock' and wait_event = 'advisory'",
+      "select count(*)::integer as n from pg_locks where locktype = 'advisory' and not granted",
     );
     if ((rows[0]?.n ?? 0) >= count) return;
     await new Promise((resolve) => setTimeout(resolve, 50));

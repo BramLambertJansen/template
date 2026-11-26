@@ -1,13 +1,11 @@
-import { spawnSync } from 'node:child_process';
-import { chmodSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
+import { draaiRulesetScript as run, requiredChecks, ruimGhStubOp } from './helpers/gh-stub.ts';
 
 // scripts/github-ruleset.sh (docs/nieuwe-app.md, fase 6.2): de ruleset `main` voor een app-repo, met `gh` als stub.
 // De stub logt elke aanroep en bewaart de payload; er gaat niets naar GitHub.
 const ROOT = path.join(import.meta.dirname, '../..');
-const SCRIPT = path.join(ROOT, 'scripts/github-ruleset.sh');
 const WORKFLOWS = path.join(ROOT, '.github/workflows');
 // `diff-guard` was nooit een verplichte check; de job bestaat niet meer (ADR 0089 punt 5), de vermelding is een restant. `check-core` (ADR 0040 punt 17) is wel verplicht in de
 // app-ruleset. GEWIJZIGD (templateregime AC-7, ADR 0089 punt 5): `document-status` bestaat niet meer als job en staat niet in de ruleset.
@@ -40,47 +38,9 @@ const OPDRACHT = [
 ];
 const CODEQL = ['codeql (actions)', 'codeql (javascript-typescript)'];
 const REGELS = ['deletion', 'non_fast_forward', 'pull_request', 'required_status_checks'];
-const dirs: string[] = [];
-
-type Uitvoer = { status: number | null; stdout: string; stderr: string; aanroepen: string[]; payload: unknown };
-
-// GEWIJZIGD (templateregime, ADR 0089 punt 3): het script vraagt na de ruleset `codeowners/errors` op; de stub antwoordt daarop
-// met een lege lijst, zodat de bestaande gevallen blijven slagen.
-// gh-stub. GH_MODE: leeg (geen ruleset `main`), bestaat (ruleset 42 bestaat), upgrade (private repo zonder Pro/Team).
-const GH = `
-echo "gh $*" >> "$STUB_DIR/log"
-if [[ "$GH_MODE" == upgrade ]]; then
-  echo 'gh: Upgrade to GitHub Pro or make this repository public to enable this feature. (HTTP 403)' >&2
-  exit 1
-fi
-if [[ " $* " == *"/codeowners/errors"* ]]; then echo '{"errors":[]}'; exit 0; fi
-if [[ " $* " == *" --input - "* ]]; then cat > "$STUB_DIR/payload.json"; echo '{"id":42}'; exit 0; fi
-if [[ "$GH_MODE" == bestaat ]]; then echo 42; fi
-`;
-
-function run(args: string[], mode = ''): Uitvoer {
-  const dir = mkdtempSync(path.join(tmpdir(), 'github-ruleset-'));
-  dirs.push(dir);
-  writeFileSync(path.join(dir, 'gh'), `#!/usr/bin/env bash\n${GH}`);
-  chmodSync(path.join(dir, 'gh'), 0o755);
-  writeFileSync(path.join(dir, 'log'), '');
-  const result = spawnSync('bash', [SCRIPT, ...args], {
-    encoding: 'utf8',
-    env: { HOME: dir, PATH: `${dir}:/usr/bin:/bin`, STUB_DIR: dir, GH_MODE: mode },
-  });
-  let payload: unknown;
-  try {
-    payload = JSON.parse(readFileSync(path.join(dir, 'payload.json'), 'utf8'));
-  } catch {
-    payload = null;
-  }
-  const aanroepen = readFileSync(path.join(dir, 'log'), 'utf8').split('\n').filter(Boolean);
-  return { status: result.status, stdout: result.stdout, stderr: result.stderr, aanroepen, payload };
-}
-
-afterEach(() => {
-  for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
-});
+// GEWIJZIGD (spec nieuwe-app-script, bouwstap 2, R-TEST-02): de gh-stub, `run` en `requiredChecks` staan nu in de gedeelde helper
+// test/scripts/helpers/gh-stub.ts (ook voor ruleset-controle.test.ts en nieuwe-app-repo-instellingen.test.ts); gedrag ongewijzigd.
+afterEach(ruimGhStubOp);
 
 // Job-namen zoals ze op een PR verschijnen: `name:` op jobniveau, met de matrix van codeql uitgeschreven.
 function checksUitWorkflows(): string[] {
@@ -172,14 +132,6 @@ describe('checknamen', () => {
     expect(ontbrekend(kapot, checksUitWorkflows())).toStrictEqual(['osv-scanner']);
   });
 });
-
-// ADR 0068 punt 1: `requiredChecks` in .claude/decisions.json is de enige lijst; ruleset en workflows volgen hem.
-function requiredChecks(): string[] {
-  const register: unknown = JSON.parse(readFileSync(path.join(ROOT, '.claude/decisions.json'), 'utf8'));
-  const lijst =
-    typeof register === 'object' && register !== null && 'requiredChecks' in register ? register.requiredChecks : [];
-  return Array.isArray(lijst) ? lijst.map(String) : [];
-}
 
 describe('samenhang-checks-rollen/AC-1: requiredChecks is de enige lijst', () => {
   test('samenhang-checks-rollen/AC-1 requiredChecks bevat check-core', () => {
