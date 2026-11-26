@@ -6,6 +6,7 @@ import { createHooks } from './hooks.ts';
 import { createAccountLifecycle, type AccountLifecycle } from './account-lifecycle.ts';
 import { createMailing, type Mailing } from './mailing.ts';
 import { createClaimOnce } from './one-time-use.ts';
+import { createInviteeGuard } from './revoke-invitation.ts';
 import {
   EMAIL_CHANGE_TTL_SECONDS,
   INVITATION_TTL_SECONDS,
@@ -171,13 +172,16 @@ export function createAuthOptions(config: AuthConfig, database: Pool) {
       ipAddress: { ipAddressHeaders: [config.clientIpHeader ?? NO_TRUSTED_IP_HEADER] },
     },
     hooks: createHooks(mailing, Date.now, { lifecycle, claimOnce: createClaimOnce(database) }),
-    databaseHooks: createDatabaseHooks(lifecycle),
+    databaseHooks: createDatabaseHooks(lifecycle, createInviteeGuard(database)),
     plugins: [twoFactor({ issuer: new URL(config.origin).hostname })],
     telemetry: { enabled: false },
   } satisfies BetterAuthOptions;
 }
 
-function createDatabaseHooks(lifecycle: AccountLifecycle) {
+function createDatabaseHooks(
+  lifecycle: AccountLifecycle,
+  inviteeGuard: (account: { providerId: string; userId: string }) => Promise<void>,
+) {
   return {
     session: { create: { before: lifecycle.beforeSession } },
     verification: {
@@ -194,6 +198,10 @@ function createDatabaseHooks(lifecycle: AccountLifecycle) {
     // instelt. Dat bewijst het e-mailadres (ADR 0043).
     account: {
       create: {
+        // Spec accountbeheer-uitbreiding: een ingetrokken uitnodiging geeft INVALID_TOKEN, geen 23503 (revoke-invitation.ts).
+        before: async (account) => {
+          await inviteeGuard(account);
+        },
         // Buiten een request (seed, admin:create) geeft Better Auth 1.7.7 hier `undefined` mee, ondanks het type `| null`.
         after: async (account, ctx: AccountHookContext | null | undefined) => {
           if (account.providerId !== 'credential' || ctx === null || ctx === undefined) return;

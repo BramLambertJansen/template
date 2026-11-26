@@ -42,6 +42,19 @@ export function useReinvite() {
   });
 }
 
+// Uitnodiging intrekken (spec accountbeheer-uitbreiding): ook na een fout de werkelijke lijst (de service kan al gecommit hebben,
+// of de genodigde accepteerde intussen). Niet wachten op de refetch: die herhaalt een serverfout met backoff, en de dialoog moet
+// na een geslaagde intrekking meteen dicht (de focus volgt in AccountsPage zodra de lijst bijgewerkt is).
+export function useRevokeInvitation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.call('DELETE /accounts/:id/invitation', { id }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+    },
+  });
+}
+
 // Blokkeren en deblokkeren (spec accountbeheer-uitbreiding, ADR 0043): de status komt uit de lijst, dus invalideren.
 export function useBlock() {
   const queryClient = useQueryClient();

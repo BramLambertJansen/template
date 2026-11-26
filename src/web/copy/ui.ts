@@ -96,7 +96,7 @@ export const copy = {
     status: 'Status',
     lastLogin: 'Laatst ingelogd',
     unknownLogin: 'Onbekend',
-    // Kop van de kolom met "Opnieuw uitnodigen"; alleen voor schermlezers.
+    // Kop van de kolom met het menu per rij; alleen voor schermlezers.
     actions: 'Acties',
     roleName: roleLabel,
     statuses: {
@@ -126,6 +126,16 @@ export const copy = {
     },
     deactivated: (naam: string) => `${naam} is gedeactiveerd.`,
     activated: (naam: string) => `${naam} is geactiveerd. Een eventuele blokkade blijft gelden.`,
+    // Spec accountbeheer-uitbreiding: uitnodiging intrekken; ALREADY_ACTIVE heeft hier een eigen tekst (de algemene blijft
+    // voor opnieuw uitnodigen).
+    revoke: 'Uitnodiging intrekken',
+    revokeDialog: {
+      title: 'Uitnodiging intrekken?',
+      description: (email: string) => `De link aan ${email} werkt niet meer en het account verdwijnt uit de lijst.`,
+      confirm: 'Intrekken',
+      alreadyActive: 'Dit account is inmiddels actief; de uitnodiging is al gebruikt.',
+    },
+    revoked: (email: string) => `De uitnodiging aan ${email} is ingetrokken.`,
     invite: 'Account uitnodigen',
     empty: 'Nog geen accounts.',
     more: 'Meer laden',

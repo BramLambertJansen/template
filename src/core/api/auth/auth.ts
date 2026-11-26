@@ -3,6 +3,7 @@ import pg from 'pg';
 import { UserId } from '../../shared/ids.ts';
 import { createMailing } from './mailing.ts';
 import { createClaimOnce } from './one-time-use.ts';
+import { createRevokeInvitation } from './revoke-invitation.ts';
 import { AUTH_BASE_PATH, type AuthConfig, createAuthOptions, DISABLED_PREFIXES } from './options.ts';
 import { sessionRejection } from './session-policy.ts';
 import { stripTokens } from './strip-token.ts';
@@ -37,6 +38,8 @@ export function createAuth(config: CreateAuthConfig) {
     mailing: createMailing(config),
     // Eenmalig gebruik van een e-maillink (ADR 0075); de TOTP-claim zit in de hooks van createAuthOptions.
     claimOnce: createClaimOnce(pool),
+    // Uitnodiging intrekken in één transactie op deze pool (spec accountbeheer-uitbreiding); via revokeInvitation in invitations.ts.
+    revokeInvitation: createRevokeInvitation(pool),
   });
 }
 

@@ -23,7 +23,14 @@ const ACTIVE: Account = {
 afterEach(cleanup);
 
 function handlers() {
-  return { askBlock: vi.fn(), unblock: vi.fn(), askDeactivate: vi.fn(), activate: vi.fn() };
+  return {
+    askBlock: vi.fn(),
+    unblock: vi.fn(),
+    askDeactivate: vi.fn(),
+    activate: vi.fn(),
+    reinvite: vi.fn(),
+    askRevoke: vi.fn(),
+  };
 }
 
 describe('afzonderlijke accountmaatregelen', () => {
@@ -67,9 +74,12 @@ describe('afzonderlijke accountmaatregelen', () => {
     expect(accountStatusText(deactivated)).toBe('Gedeactiveerd');
   });
 
-  test('biedt geen uitschakelacties voor jezelf of een uitnodiging', () => {
+  test('biedt geen uitschakelacties voor jezelf; een uitnodiging biedt opnieuw uitnodigen en intrekken', () => {
     expect(itemsFor(ACTIVE, true, handlers())).toStrictEqual([]);
-    expect(itemsFor({ ...ACTIVE, status: 'uitgenodigd' }, false, handlers())).toStrictEqual([]);
+    expect(itemsFor({ ...ACTIVE, status: 'uitgenodigd' }, false, handlers()).map((item) => item.label)).toStrictEqual([
+      'Opnieuw uitnodigen',
+      'Uitnodiging intrekken',
+    ]);
     expect(accountStatusText(ACTIVE)).toBe('Actief');
     expect(accountStatusText({ ...ACTIVE, status: 'uitgenodigd' })).toBe('Uitgenodigd');
   });

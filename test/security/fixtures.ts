@@ -616,7 +616,7 @@ export const PROBE_ROUTES = [
 
 const notUsed = () => Promise.reject(new Error('niet gebruikt in de probe-app'));
 const unusedServices: AppServices = {
-  invitations: { invite: notUsed, reinvite: notUsed },
+  invitations: { invite: notUsed, reinvite: notUsed, revoke: notUsed },
   profile: { rename: notUsed, confirmEmail: notUsed },
   sessions: { list: notUsed, revoke: notUsed, revokeOthers: notUsed, revokeAll: notUsed },
 };

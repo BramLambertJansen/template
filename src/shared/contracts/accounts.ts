@@ -112,3 +112,14 @@ export const activateContract = defineContract({
   output: z.null(),
   permission: 'accounts:manage',
 });
+
+// Uitnodiging intrekken (spec accountbeheer-uitbreiding, accounts/AC-15): alleen een account met status uitgenodigd.
+export const revokeInvitationContract = defineContract({
+  method: 'DELETE',
+  path: '/accounts/:id/invitation',
+  input: accountIdInput,
+  output: z.null(),
+  permission: 'accounts:invite',
+  // Zelfde categorie als opnieuw uitnodigen: dezelfde beheerhandeling op een uitnodiging.
+  rateLimit: 'duur',
+});

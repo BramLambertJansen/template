@@ -15,6 +15,7 @@ import {
   deactivateRoute,
   inviteRoute,
   reinviteRoute,
+  revokeInvitationRoute,
   unblockRoute,
 } from './routes/accounts.ts';
 import {
@@ -38,6 +39,7 @@ export const routes = [
   accountsListRoute,
   inviteRoute,
   reinviteRoute,
+  revokeInvitationRoute,
   blockRoute,
   unblockRoute,
   deactivateRoute,

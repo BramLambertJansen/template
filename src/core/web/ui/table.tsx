@@ -1,12 +1,20 @@
-import type { ComponentProps } from 'react';
+import type { ComponentProps, Ref } from 'react';
 import { cn } from './cn.ts';
 
 // Tabel (spec accountbeheer). De omhulling scrolt zelf horizontaal, zodat de pagina op 375 px niet breder wordt.
 // relative: anders hangt een absoluut element (sr-only kolomkop) aan de pagina en steekt het buiten beeld.
 // Met het toetsenbord te scrollen (WCAG 2.1.1, axe scrollable-region-focusable): de omhulling is focusbaar en heeft een naam.
-export function Table({ className, label, ...props }: ComponentProps<'table'> & { readonly label: string }) {
+// regionRef: wie de focus naar de tabel wil zetten, zet hem op deze omhulling; alleen die draagt naam en focusring
+// (spec accountbeheer-uitbreiding, focus na intrekken).
+export function Table({
+  className,
+  label,
+  regionRef,
+  ...props
+}: ComponentProps<'table'> & { readonly label: string; readonly regionRef?: Ref<HTMLDivElement> | undefined }) {
   return (
     <div
+      ref={regionRef}
       role="region"
       aria-label={label}
       tabIndex={0}

@@ -85,3 +85,11 @@ export async function reinviteUser(
   if (lifecycle === undefined) await resend();
   else lifecycle.afterCommit(resend);
 }
+
+// Uitnodiging intrekken (spec accountbeheer-uitbreiding, accounts/AC-15): de transactie staat in revoke-invitation.ts. Een
+// account dat inmiddels een wachtwoord heeft, blijft staan (ALREADY_ACTIVE); een onbekend account geeft NOT_FOUND.
+export async function revokeInvitation(auth: Pick<Auth, 'revokeInvitation'>, userId: string): Promise<void> {
+  const outcome = await auth.revokeInvitation(userId);
+  if (outcome === 'not-found') throw new AccountNotFoundError();
+  if (outcome === 'active') throw new AccountAlreadyActiveError();
+}
