@@ -1,5 +1,14 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { createServer, type Server } from 'node:net';
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
@@ -299,5 +308,66 @@ describe.each([false, true])('kooi/AC-4: de kooi schermt af (streng: %s)', (stre
     expect(Date.now() - start).toBeLessThan(10_000);
     // De kernel stopt de processen in de namespace asynchroon nadat bubblewrap is gestopt; wacht daar kort op.
     await expect.poll(() => processenMet(merk), { timeout: 5000 }).toStrictEqual([]);
+  });
+});
+
+// Cloudsessie: `scripts/cloud-setup.sh` (TERUGVAL) installeert tools in `~/.local/share/mise-terugval/<tool>-<versie>` en
+// registreert ze met `mise link` (docs/ENVIRONMENT.md, "Voor mise onzichtbaar"). De installs onder `~/.local/share/mise` zijn dan
+// symlinks naar die map; zonder eigen alleen-lezen bind wijzen ze in de strenge kooi naar een lege plek. `os.homedir()` volgt
+// `HOME`, dus de thuismap is hier te injecteren zonder wijziging van `bwrapArgs`.
+describe('kooi: mise-terugval', () => {
+  const MISE = path.join('.local', 'share', 'mise');
+  const TERUGVAL = path.join('.local', 'share', 'mise-terugval');
+
+  function argsMetHome(home: string): string[] {
+    const oud = process.env['HOME'];
+    process.env['HOME'] = home;
+    try {
+      return bwrapArgs(map(tmpdir(), 'kooi-werk-'), { streng: true });
+    } finally {
+      if (oud === undefined) Reflect.deleteProperty(process.env, 'HOME');
+      else process.env['HOME'] = oud;
+    }
+  }
+
+  function thuis(metTerugval: boolean): { home: string; mise: string; terugval: string } {
+    const home = map(tmpdir(), 'kooi-home-');
+    const mise = path.join(home, MISE, 'installs', 'pnpm');
+    const terugval = path.join(home, TERUGVAL);
+    mkdirSync(mise, { recursive: true });
+    if (metTerugval) mkdirSync(path.join(terugval, 'pnpm-12.21.0'), { recursive: true });
+    return { home, mise: path.join(home, MISE), terugval };
+  }
+
+  function roBinds(args: string[]): string[] {
+    return args.flatMap((a, i) => (a === '--ro-bind' && args[i + 1] === args[i + 2] ? [args[i + 1] ?? ''] : []));
+  }
+
+  test('koppelt ~/.local/share/mise-terugval alleen-lezen terug, na de tmpfs van de thuismap', () => {
+    const { home, mise, terugval } = thuis(true);
+    const args = argsMetHome(home);
+    expect(roBinds(args)).toContain(mise);
+    const bind = args.findIndex((a, i) => a === '--ro-bind' && args[i + 1] === terugval && args[i + 2] === terugval);
+    expect(bind).toBeGreaterThan(args.findIndex((a, i) => a === '--tmpfs' && args[i + 1] === home));
+  });
+
+  test('zonder die map blijven de argumenten ongewijzigd en ontbreekt hij', () => {
+    const { home, mise } = thuis(false);
+    const args = argsMetHome(home);
+    expect(roBinds(args)).toContain(mise);
+    expectAbsent(args.join(' '), /mise-terugval/, {
+      recognizes: ['--ro-bind /h/.local/share/mise-terugval /h/.local/share/mise-terugval'],
+      allows: [`--ro-bind /h/${MISE} /h/${MISE}`],
+    });
+  });
+
+  test('de map wordt nooit schrijfbaar gebonden', () => {
+    const { home, terugval } = thuis(true);
+    const args = argsMetHome(home);
+    expect(roBinds(args)).toContain(terugval);
+    const schrijfbaar = args.filter(
+      (a, i) => ['--bind', '--bind-try'].includes(args[i - 1] ?? '') && a.includes('mise'),
+    );
+    expect(schrijfbaar).toStrictEqual([]);
   });
 });
