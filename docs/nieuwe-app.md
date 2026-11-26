@@ -635,7 +635,8 @@ Controle: `git status -sb` toont geen `ahead`; `gh api repos/<owner>/<slug>/comm
 heeft (hernoem-commit boven koppel-merge). Het zet merge-commit en squash aan (merge-commit is nodig voor template-updates),
 rebase en auto-merge uit, branch weg na de merge, workflows alleen lezen en zonder PR-goedkeuring, en Actions aan met alle
 acties op volledige SHA (`scripts/kit/nieuwe-app.mjs`, `schrijfInstellingen`); met `--beschrijving` ook de korte
-beschrijving uit de intake. De beschrijving gaat als argument mee, niet via een shell. Controle: lees
+beschrijving uit de intake (hooguit 350 tekens). De beschrijving gaat als argument mee, niet via een shell. Faalt een
+stap, dan stopt het script met `✗ … niet gezet: <gh-melding>` en schrijft het niets meer. Controle: lees
 `.template/nieuwe-app-repo-instellingen.json`: `uitslag` is `ok`.
 
 **Ruleset op `main` (overdracht).** `scripts/github-ruleset.sh` zet de ruleset `main` volgens framework §10: geen delete of force push,

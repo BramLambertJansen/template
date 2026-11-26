@@ -206,21 +206,27 @@ function toetsRegels(perType) {
 }
 
 /**
- * De checknamen die ontbreken, extra zijn of een ander `integration_id` hebben.
+ * De checknamen die ontbreken, extra zijn of een ander `integration_id` hebben. Een check zonder `context` of zonder
+ * `integration_id` is onleesbaar (`required_status_checks.<veld>`), geen afwijking.
  * @param {unknown[]} checks @param {readonly string[]} requiredChecks @returns {Toets}
  */
 function toetsCheckNamen(checks, requiredChecks) {
   const toets = leeg();
   if (!checks.every((check) => isObj(check) && typeof check['context'] === 'string')) {
-    toets.ontbreekt.push('required_status_checks.required_status_checks');
+    toets.ontbreekt.push('required_status_checks.context');
     return toets;
   }
   const lijst = checks.filter(isObj);
   const namen = lijst.map((check) => String(check['context']));
   toets.afwijkend.push(...requiredChecks.filter((naam) => !namen.includes(naam)));
   toets.afwijkend.push(...namen.filter((naam) => !requiredChecks.includes(naam)));
+  if (lijst.some((check) => !heeft(check, 'integration_id')))
+    toets.ontbreekt.push('required_status_checks.integration_id');
   const bron = lijst.filter(
-    (check) => check['integration_id'] !== GITHUB_ACTIONS && requiredChecks.includes(String(check['context'])),
+    (check) =>
+      heeft(check, 'integration_id') &&
+      check['integration_id'] !== GITHUB_ACTIONS &&
+      requiredChecks.includes(String(check['context'])),
   );
   toets.afwijkend.push(...bron.map((check) => String(check['context'])));
   return toets;

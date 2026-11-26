@@ -910,6 +910,8 @@ async function preflight(v, ctx) {
 // --- repo-instellingen (playbook 6.1-controle en 6.2) ----------------------------------------------------------------------
 
 const REPO = /^[\w.-]+\/[\w.-]+$/;
+/** Grens van GitHub voor de beschrijving van een repo (spec werking 7). */
+const MAX_BESCHRIJVING = 350;
 const HERSTEL_GH = 'controleer gh auth status en het netwerk; draai repo-instellingen opnieuw';
 const HERSTEL_LEZEN = 'controleer gh auth status en draai opnieuw; blijft het, vraag de eigenaar';
 const SHA_PINNING = /** @type {const} */ ([
@@ -1013,17 +1015,41 @@ async function controleer(v, root, repo) {
 }
 
 /**
- * `main` op GitHub heeft de vorm hernoem-commit (één ouder) boven koppel-merge (twee ouders), zoals de controle van 6.1.
- * Een 404 (nog niet gepusht, of geen `main~1`) telt als de verkeerde vorm; een andere gh-fout als onleesbaar.
+ * De ouders van een commit op GitHub (`gh api repos/<repo>/commits/<ref>`, zonder --jq): de sha's, of de eerste regel
+ * van de gh-melding (ook bij onleesbare JSON) met `ontbreekt` waar bij een 404.
+ * @param {Programma} gh @param {string} repo @param {string} ref
+ * @returns {{ ouders: string[] } | { fout: string, ontbreekt?: boolean }}
+ */
+function commitOuders(gh, repo, ref) {
+  const r = gh('api', `repos/${repo}/commits/${ref}`);
+  if (!r.ok) return { fout: eersteRegel(r.stderr), ontbreekt: r.stderr.includes('404') };
+  let ouders;
+  try {
+    ouders = veld(JSON.parse(r.stdout), 'parents');
+  } catch {
+    return { fout: 'geen JSON' };
+  }
+  if (!Array.isArray(ouders)) return { fout: 'geen parents in het antwoord' };
+  const shas = ouders.map((ouder) => veld(ouder, 'sha'));
+  if (!shas.every((sha) => typeof sha === 'string' && /^[\w-]+$/.test(sha))) return { fout: 'geen sha in parents' };
+  return { ouders: shas.map(String) };
+}
+
+/**
+ * `main` op GitHub heeft de vorm hernoem-commit (één ouder) boven koppel-merge (twee ouders), zoals de controle van 6.1:
+ * `commits/main`, daarna `commits/<sha van de eerste ouder>`. Een 404 op `main` is de verkeerde vorm (eerst de push);
+ * elke andere gh-fout op een van beide is onleesbaar (werking 7).
  * @param {Verloop} v @param {Programma} gh @param {string} repo
  */
 function mainVorm(v, gh, repo) {
-  const vorm = ['main', 'main~1'].map((rev) => gh('api', `repos/${repo}/commits/${rev}`, '--jq', '.parents | length'));
-  const stuk = vorm.find((r) => !r.ok && !r.stderr.includes('404'));
-  if (stuk !== undefined)
-    return v.fout('main-vorm', 'main op GitHub niet te lezen', `${eersteRegel(stuk.stderr)}; ${HERSTEL_GH}`);
-  const [main, vorige] = vorm.map((r) => (r.ok ? r.stdout.trim() : ''));
-  if (main !== '1' || vorige !== '2')
+  const main = commitOuders(gh, repo, 'main');
+  const eerste = 'ouders' in main ? main.ouders[0] : undefined;
+  const vorige = eerste === undefined ? { ouders: [] } : commitOuders(gh, repo, eerste);
+  // Een 404 op `main` zelf valt door naar de vormfout; op de eerste ouder is elke fout onleesbaar.
+  const stuk = 'fout' in main && main.ontbreekt !== true ? main : 'fout' in vorige ? vorige : undefined;
+  if (stuk !== undefined) return v.fout('main-vorm', `main op GitHub niet te lezen: ${stuk.fout}`, HERSTEL_GH);
+  const aantal = (/** @type {typeof main} */ r) => ('ouders' in r ? r.ouders.length : undefined);
+  if (aantal(main) !== 1 || aantal(vorige) !== 2)
     return v.fout(
       'main-vorm',
       'main op GitHub heeft nog niet de hernoem-commit boven de koppel-merge',
@@ -1033,17 +1059,17 @@ function mainVorm(v, gh, repo) {
 }
 
 /**
- * Eén schrijvende `gh`-aanroep als stap; met --dry-run alleen gemeld.
- * @param {Verloop} v @param {Programma} gh @param {{ id: string, melding: string, args: string[] }} stap
+ * Eén schrijvende `gh`-aanroep als stap; met --dry-run alleen gemeld. Bij een fout alleen de eerste stderr-regel.
+ * @param {Verloop} v @param {Programma} gh @param {{ id: string, naam: string, wat: string, args: string[] }} stap
  */
 function schrijf(v, gh, stap) {
   if (!v.dryRun) {
     const r = gh(...stap.args);
     if (!r.ok && `${r.stdout}\n${r.stderr}`.includes('sha_pinning_required'))
       return v.fout('sha-pinning-onbekend', SHA_PINNING[0], SHA_PINNING[1]);
-    if (!r.ok) return v.fout(stap.id, `${stap.melding}: mislukt`, `${eersteRegel(r.stderr)}; ${HERSTEL_GH}`);
+    if (!r.ok) return v.fout(stap.id, `${stap.naam} niet gezet: ${eersteRegel(r.stderr)}`, HERSTEL_GH);
   }
-  return v.ok(stap.id, stap.melding, true);
+  return v.ok(stap.id, `${stap.naam} gezet: ${stap.wat}`, true);
 }
 
 /**
@@ -1052,12 +1078,13 @@ function schrijf(v, gh, stap) {
  */
 function schrijfInstellingen(v, gh, doel) {
   const { repo, beschrijving } = doel;
-  const omschrijving = beschrijving === undefined ? [] : ['--description', beschrijving];
+  const omschrijving = beschrijving === undefined ? [] : [`--description=${beschrijving}`];
   const methoden = ['--enable-merge-commit', '--enable-squash-merge', '--enable-rebase-merge=false'];
   const stappen = [
     {
       id: 'merge-instellingen',
-      melding: `merge-instellingen gezet: merge-commit en squash aan, rebase en auto-merge uit, branch weg na de merge${beschrijving === undefined ? '' : '; beschrijving gezet'}`,
+      naam: 'merge-instellingen',
+      wat: `merge-commit en squash aan, rebase en auto-merge uit, branch weg na de merge${beschrijving === undefined ? '' : '; beschrijving gezet'}`,
       args: [
         'repo',
         'edit',
@@ -1070,7 +1097,8 @@ function schrijfInstellingen(v, gh, doel) {
     },
     {
       id: 'workflow-rechten',
-      melding: 'workflow-rechten gezet: alleen lezen, geen PR-goedkeuring',
+      naam: 'workflow-rechten',
+      wat: 'alleen lezen, geen PR-goedkeuring',
       args: [
         ...['api', '-X', 'PUT', `repos/${repo}/actions/permissions/workflow`],
         ...['-f', 'default_workflow_permissions=read', '-F', 'can_approve_pull_request_reviews=false'],
@@ -1078,7 +1106,8 @@ function schrijfInstellingen(v, gh, doel) {
     },
     {
       id: 'actions',
-      melding: 'Actions-instellingen gezet: aan, alle acties, op volledige SHA',
+      naam: 'Actions-instellingen',
+      wat: 'aan, alle acties, op volledige SHA',
       args: [
         ...['api', '-X', 'PUT', `repos/${repo}/actions/permissions`],
         ...['-F', 'enabled=true', '-f', 'allowed_actions=all', '-F', 'sha_pinning_required=true'],
@@ -1156,10 +1185,22 @@ function leesOpties(deelcommando, args) {
   const zichtbaarheid = tekstOptie(waarden, 'zichtbaarheid');
   if (zichtbaarheid !== undefined && zichtbaarheid !== 'public' && zichtbaarheid !== 'private')
     return `--zichtbaarheid ${zichtbaarheid}: kies public of private`;
-  const repo = tekstOptie(waarden, 'repo');
-  if ('repo' in deelcommando.opties && (repo === undefined || !REPO.test(repo)))
-    return `--repo <owner>/<slug> ontbreekt of is ongeldig${repo === undefined ? '' : ` (${repo})`}`;
+  if ('repo' in deelcommando.opties) return repoOptiesFout(waarden) ?? waarden;
   return waarden;
+}
+
+/**
+ * Gebruiksfout bij de opties van repo-instellingen: `--repo` verplicht als `owner/slug`, `--beschrijving` hooguit
+ * MAX_BESCHRIJVING tekens. @param {Record<string, unknown>} waarden @returns {string | undefined}
+ */
+function repoOptiesFout(waarden) {
+  const repo = tekstOptie(waarden, 'repo');
+  if (repo === undefined || !REPO.test(repo))
+    return `--repo <owner>/<slug> ontbreekt of is ongeldig${repo === undefined ? '' : ` (${repo})`}`;
+  const tekens = [...(tekstOptie(waarden, 'beschrijving') ?? '')].length;
+  if (tekens > MAX_BESCHRIJVING)
+    return `--beschrijving is langer dan ${String(MAX_BESCHRIJVING)} tekens (${String(tekens)})`;
+  return undefined;
 }
 
 /** @param {string[]} argv @returns {Promise<number>} de exitcode */

@@ -364,8 +364,9 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   `pnpm meting` meldt "let op" boven drie reviewrondes per branch. **Klaar als:** beide
   hebben een test met een fixture die op de huidige code faalt.
   aanleiding: `docs/template/adr/0105-begrensde-fixlus.md` (Gevolgen)
-- [ ] **Nieuwe-app-script bouwstap 2: `repo-instellingen`.** Bouwstap 1 is gebouwd (`scripts/kit/nieuwe-app.mjs`,
-  `test/scripts/nieuwe-app.test.ts`); het subcommando `repo-instellingen` bestaat nog niet. De spec is herzien (OV-8, OV-9):
+- [x] **Nieuwe-app-script bouwstap 2: `repo-instellingen`.** Bouwstap 1 is gebouwd (`scripts/kit/nieuwe-app.mjs`,
+  `test/scripts/nieuwe-app.test.ts`); bouwstap 2 is gebouwd in #1018 (bewijs `test/scripts/nieuwe-app-repo-instellingen.test.ts`,
+  `test/scripts/ruleset-controle.test.ts`, `test/docs/nieuwe-app-script-docs.test.ts`). De spec is herzien (OV-8, OV-9):
   `--controleer` toetst ruleset en instellingen met de nieuwe alleen-lezende module `scripts/kit/ruleset-controle.mjs`, niet meer met
   `scripts/kit/pr-merge.mjs`. Kritiek werk (R-WERK-05): spec-review van de herziening, aparte tester en goedkeuring van de eigenaar
   op de PR. **Klaar als:** AC-9, AC-10, AC-19 en de bouwstap-2-delen van AC-1, AC-5 en AC-15 zijn groen en `scripts/kit/nieuwe-app.mjs` meldt niet meer dat
