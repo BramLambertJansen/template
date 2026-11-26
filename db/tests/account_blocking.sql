@@ -1,4 +1,5 @@
--- app.set_account_blocked en wat eraan hangt (spec accountbeheer-uitbreiding AC-11 t/m AC-14 en AC-24, ADR 0043): de regels van
+-- app.set_account_blocked en wat eraan hangt (spec accountbeheer-uitbreiding accounts/AC-11, accounts/AC-12, accounts/AC-13,
+-- accounts/AC-14 en accounts/AC-24, ADR 0043): de regels van
 -- besluit 3 in volgorde, de telbare-admin-definitie van user_roles_keep_one_admin (besluit 4), de status 'blocked' in
 -- app.accounts (besluit 5) en de grants (besluit 2). Alles in één transactie die terugdraait.
 -- Alles wat de nieuwe kolom of functie raakt staat als tekst in een pgTAP-assert (of in een do-blok met een afgevangen

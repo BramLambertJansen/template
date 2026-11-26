@@ -7,8 +7,9 @@ import { accountsListContract } from '../../src/shared/contracts/accounts.ts';
 import { Browser, required } from '../auth/harness.ts';
 import { createAccountTestApp, json, PASSWORD } from './account-harness.ts';
 
-// Account blokkeren en deblokkeren (spec accountbeheer-uitbreiding, ADR 0043): AC-11, AC-12, AC-14, AC-22, AC-23, de
-// permissies per rol en de race van twee admins, tegen de echte database en Better Auth (`pnpm test:db`).
+// Account blokkeren en deblokkeren (spec accountbeheer-uitbreiding, ADR 0043): accounts/AC-11, accounts/AC-12,
+// accounts/AC-14, accounts/AC-22, accounts/AC-23, de permissies per rol en de race van twee admins, tegen de echte
+// database en Better Auth (`pnpm test:db`).
 // De rest (AC-13 en AC-24 op database-niveau) staat in db/tests/account_blocking.sql.
 const t = createAccountTestApp();
 afterAll(async () => {

@@ -99,7 +99,10 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
 - [ ] **ST-02 (P0) — accountbeheer en herstel afmaken** (stuk 3e; bestaande accountbeheer-specs). Open: TOTP-backupcodes (zodat een admin
   zonder telefoon niet alleen via `admin:create` terugkomt), een openstaande uitnodiging intrekken (opnieuw versturen bestaat al:
   `reinviteRoute`) en een admin-resetlink ("wachtwoord vergeten" blijft dicht, ADR 0043). De spec voor alle drie bestaat al:
-  `docs/template/specs/accountbeheer-uitbreiding.md` (goedgekeurd, door de eigenaar bevestigd 2026-11-23); nog niets ervan is gebouwd.
+  `docs/template/specs/accountbeheer-uitbreiding.md` (goedgekeurd, door de eigenaar bevestigd 2026-11-23). Blokkeren en deblokkeren
+  zijn gebouwd (AC-11 t/m AC-14, AC-22 t/m AC-24; bewijs `test/api/account-blocking.int.test.ts`, `db/tests/account_blocking.sql`,
+  `e2e/account-blocking.spec.ts`); AC-19 alleen voor blokkeren en deblokkeren, hoewel de AC-dekking hem als gebouwd telt
+  (leerpunt #827); open zijn uitnodiging intrekken, resetlink en herstelcodes (AC-15 t/m AC-18, AC-20, AC-21, rest AC-19).
   Gedaan: eenmalige TOTP-code en e-maillink, geen sessietoken in JSON (spec `inloggat-dichten`, ADR 0075; bewijs `test/auth/eenmalig.int.test.ts`, `db/tests/one_time_use.sql`).
   **Werk:** specificeer herauthenticatie, sessie-intrekking, tokenverval, oude/nieuwe adresbevestiging en herstel zonder rolpromotie;
   koppel audit en mail aan ST-04 en ST-03 en kopieer geen synchroon mailpad als de outbox de geldende route wordt.

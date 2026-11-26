@@ -2,7 +2,8 @@ import { expect, test, type Page } from '@playwright/test';
 import { clientIpHeaders, createAccount, PASSWORD, freshTotpFor, type TestAccount } from './support/accounts.ts';
 import { collectCspViolations, scanAxe } from './support/axe.ts';
 
-// Account blokkeren en deblokkeren in de UI (spec accountbeheer-uitbreiding, AC-11, AC-12 en AC-14; ADR 0043) tegen de
+// Account blokkeren en deblokkeren in de UI (spec accountbeheer-uitbreiding, accounts/AC-11, accounts/AC-12,
+// accounts/AC-14 en het webdeel van accounts/AC-23; ADR 0043) tegen de
 // echte stack: CSP aan, axe op 375 en 1280 px. De rest van de acceptatiecriteria staat in test/api/account-blocking.int.test.ts.
 
 async function axeAtBothWidths(page: Page): Promise<void> {
