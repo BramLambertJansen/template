@@ -51,7 +51,7 @@ Volgens de aanbeveling bij OV-1 (één nieuwe migratie; beschermde-padwijziginge
 | POST | `/api/accounts/:id/block` → `null` | `accounts:manage` | `NOT_FOUND`, `OWN_ACCOUNT`, `ACCOUNT_INVITED`, `LAST_ADMIN`, `FORBIDDEN`, `MFA_REQUIRED` |
 | POST | `/api/accounts/:id/unblock` → `null` | `accounts:manage` | `NOT_FOUND`, `FORBIDDEN`, `MFA_REQUIRED` |
 | DELETE | `/api/accounts/:id/invitation` → `null` | `accounts:invite` | `NOT_FOUND`, `ALREADY_ACTIVE`, `FORBIDDEN`, `MFA_REQUIRED` |
-| POST | `/api/accounts/:id/reset-link` → `null` | `accounts:manage` | `NOT_FOUND`, `ACCOUNT_INVITED`, `ACCOUNT_BLOCKED`, `FORBIDDEN`, `MFA_REQUIRED` |
+| POST | `/api/accounts/:id/reset-link` → `null` | `accounts:manage`, `rateLimit: 'duur'` (verstuurt mail) | `NOT_FOUND`, `ACCOUNT_INVITED`, `ACCOUNT_BLOCKED`, `ACCOUNT_DEACTIVATED`, `VALIDATION`, `RATE_LIMITED`, `FORBIDDEN`, `MFA_REQUIRED` |
 | POST | `/api/auth/two-factor/generate-backup-codes` `{ password }` (Better Auth) | ingelogd met TOTP, sessie `mfa` | `WRONG_PASSWORD`, `MFA_REQUIRED`, `RATE_LIMITED` |
 | POST | `/api/auth/two-factor/verify-backup-code` `{ code }` (Better Auth) | half ingelogd (geen sessie) | `INVALID_BACKUP_CODE`, `VALIDATION`, `RATE_LIMITED`; van de plugin ook `INVALID_TWO_FACTOR_COOKIE`, `TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE`, `ACCOUNT_TEMPORARILY_LOCKED`, `CONFLICT`; van ADR 0052 `ACCOUNT_DEACTIVATED`, `UNAUTHENTICATED` (web: zie Herstelcodes) |
 | POST | `/api/auth/sign-in/email`, `/two-factor/verify-totp`, `/two-factor/verify-backup-code` (bestaand en nieuw) | — | erbij: `ACCOUNT_BLOCKED` (server; web toont bij inloggen `INVALID_CREDENTIALS`, bij een herstelcode `INVALID_BACKUP_CODE`) |
@@ -74,14 +74,24 @@ Volgens de aanbeveling bij OV-1 (één nieuwe migratie; beschermde-padwijziginge
   `:id` via `accountIdInput` (contract, min 1, max `MAX_ID_LENGTH`), gevalideerd door `defineRoute` vóór de handler; ongeldig → `VALIDATION`.
   Volgorde in de route, zoals `reinviteRoute`: eerst de auditregel `core.account.revoke` in de route-transactie, dan de service. Faalt de
   route-commit na de service, dan is het account weg zonder auditregel (bekend gat, zoals bij uitnodigen; ADR 0051, R-DB-15).
-- **Resetlink** via `ctx.services.invitations.sendResetLink`: oude `reset-password:*`-tokens weg (zoals `reinviteUser`), `auth.api.requestPasswordReset`
-  server-side (`/request-password-reset` blijft dicht, ADR 0043), dan `expiresAt` van de nieuwe tokenrij op nu + `RESET_LINK_TTL_SECONDS` (OV-4).
-  `sendResetPassword` kiest de mail: met credential de resetmail naar `/nieuw-wachtwoord?token=…` (scherm van `/uitnodiging`, andere teksten),
-  zonder de uitnodiging. Bij gebruik trekt `revokeSessionsOnPasswordReset` de sessies in.
+- **Resetlink** via `ctx.services.invitations.sendResetLink`: oude `reset-password:*`-tokens weg (zoals `reinviteUser`), dan
+  `auth.api.requestPasswordReset` server-side (`/request-password-reset` blijft dicht, ADR 0043). Better Auth maakt de rij met 7 dagen en wacht op
+  `sendResetPassword` vóór het antwoord; de TTL zet daarom `sendResetPassword` zelf, vóór de mail. `sendResetPassword` leest op de pool van
+  `auth_service` (de `database`-parameter van `createAuthOptions`, zoals `createInviteeGuard`) of er een credential-account is
+  (`select 1 from better_auth.account where "userId" = $1 and "providerId" = 'credential'`). Zo ja: `update better_auth.verification set
+  "expiresAt" = least("expiresAt", now() + RESET_LINK_TTL_SECONDS) where identifier = 'reset-password:' || token`; geeft dat geen rij, dan geen
+  mail en een fout (fail-closed); daarna de resetmail naar `/uitnodiging?token=…&soort=reset`. Zo nee: de uitnodiging (7 dagen) zoals nu.
+  Resetmail in core naast de mails van e-mailwijziging (`src/core/api/mail/`, via `createMailing` met `appName`); zonder `sendMail` geeft de tak
+  met credential een fout, geen terugval op de uitnodiging. Bij gebruik trekt `revokeSessionsOnPasswordReset` de sessies in, en een after-hook op
+  `/reset-password` voor een account dat al een credential had, hoogt `session_version` op met een update op de pool van `auth_service`
+  (zoals intrekken; Better Auth-rijen vallen onder `src/core/api/auth`, R-LAAG-05; geen migratie) (eigenaar, 26 november 2026), zodat een inlogpoging die met het oude wachtwoord begon (snapshot van ADR 0052) vervalt. Een reset wijzigt alleen het
+  wachtwoord: TOTP en herstelcodes blijven, inloggen vraagt daarna nog steeds de tweede stap.
+  Volgorde in de route zoals `reinviteRoute`: status uit `app.accounts`, auditregel `core.account.reset_link` in de route-transactie, dan
+  `services.invitations.sendResetLink(id, { afterCommit })`: tokens weg, aanmaken en mail na commit. `:id` via `accountIdInput`.
 - **RLS-vangnet:** intrekken en resetlink draaien als `auth_service`, buiten RLS. De route leest eerst in zijn transactie de rij uit `app.accounts`
   (alleen voor een admin met MFA): geen rij → `NOT_FOUND`. Intrekken: `invited` → de service (die met `for update` opnieuw op credential
   toetst); `active`, `blocked`, `deactivated` → `ALREADY_ACTIVE`. Resetlink: `invited` → `ACCOUNT_INVITED`, `blocked` → `ACCOUNT_BLOCKED`,
-  `active` → de service; `deactivated`: open, beslissen bij de bouw van AC-16.
+  `active` → de service; `deactivated` → `ACCOUNT_DEACTIVATED` (eigenaar, 26 november 2026: eerst activeren, dan de link).
 - **Herstelcodes**: `/two-factor/verify-backup-code` en `/two-factor/generate-backup-codes` uit `disabledPaths`; `/view-backup-codes` blijft dicht.
   `/two-factor/enable` geeft al 10 codes terug: het inschrijfscherm toont ze. Hooks (test per regel): before `generate-backup-codes`: een eigen
   regel, niet via `MFA_PATHS` (die eist `revokeOtherSessions`): sessie aanwezig en met TOTP niet `mfa` → `MFA_REQUIRED` (Better Auth eist alleen
@@ -108,20 +118,23 @@ Volgens de aanbeveling bij OV-1 (één nieuwe migratie; beschermde-padwijziginge
 ## Hergebruik en UX
 
 - **Bestaande componenten:** `Table`, `DropdownMenu` (menu "Acties" per rij), `ConfirmDialog` (blokkeren, uitnodiging intrekken, resetlink),
-  `Notice`, `Form`/`FormField`, `Input`, `Button`, `Section`, `CenteredCard`; het scherm `/nieuw-wachtwoord` hergebruikt de uitnodigingspagina.
+  `Notice`, `Form`/`FormField`, `Input`, `Button`, `Section`, `CenteredCard`; het resetscherm is de uitnodigingspagina zelf: `/uitnodiging?token=…&soort=reset` (eigenaar, 26 november 2026: geen nieuwe
+  publieke route, R-UIT-03 blijft ongewijzigd). Het search-schema van `/uitnodiging` krijgt `soort: 'uitnodiging' | 'reset'` (standaard
+  `uitnodiging`); titel, foutcode en melding na gelukt volgen `soort`, ook bij een ontbrekend token. Een token van de ene soort werkt technisch op
+  het andere scherm (hetzelfde Better Auth-token); alleen tekst en foutcode verschillen.
 - **Staten per scherm:** acties: dialoog open, bezig (`busy`, sluiten geblokkeerd), gelukt (dialoog dicht, `Notice` boven de tabel), fout (`Notice` in de dialoog).
   Herstelcodes: tonen eenmalig na maken; bezig; fout per veld. Herstelcode bij inloggen: zoals het TOTP-scherm. Laden/leeg: ongewijzigd. Verouderd: n.v.t.
 - **Alle zichtbare tekst letterlijk:**
 
 | Plek | Tekst |
 |---|---|
-| Accounts | status "Geblokkeerd"; menuknop per rij met toegankelijke naam "Acties voor {naam}"; items: actief "Resetlink sturen", "Blokkeren"; geblokkeerd "Deblokkeren"; uitgenodigd "Opnieuw uitnodigen", "Uitnodiging intrekken" (eigen rij: geen "Blokkeren") |
+| Accounts | status "Geblokkeerd"; menuknop per rij met toegankelijke naam "Acties voor {naam}"; items: actief "Resetlink sturen", "Blokkeren", "Deactiveren" (in die volgorde); geblokkeerd "Deblokkeren"; uitgenodigd "Opnieuw uitnodigen", "Uitnodiging intrekken" (eigen rij: geen "Blokkeren" en geen "Resetlink sturen"; eigen wachtwoord via `/account`; de API staat een resetlink voor het eigen account wel toe, eigenaar 26 november 2026) |
 | Blokkeren (ConfirmDialog) | titel "{naam} blokkeren?"; tekst "{naam} wordt direct overal uitgelogd en kan niet meer inloggen tot je het account deblokkeert."; knoppen "Blokkeren", "Annuleren"; gelukt "{naam} is geblokkeerd." |
 | Deblokkeren (direct, geen dialoog) | gelukt "{naam} is gedeblokkeerd." |
 | Uitnodiging intrekken (ConfirmDialog) | titel "Uitnodiging intrekken?"; tekst "De link aan {email} werkt niet meer en het account verdwijnt uit de lijst."; knoppen "Intrekken", "Annuleren"; gelukt "De uitnodiging aan {email} is ingetrokken."; fout `ALREADY_ACTIVE` in de dialoog "Dit account is inmiddels actief; de uitnodiging is al gebruikt." (eigen tekst, `copy.accounts.revokeDialog`; de algemene tekst blijft voor opnieuw uitnodigen) |
-| Resetlink (ConfirmDialog, niet rood) | titel "Resetlink sturen?"; tekst "{naam} krijgt een mail met een link om een nieuw wachtwoord in te stellen. Het huidige wachtwoord blijft werken tot dan."; knoppen "Link sturen", "Annuleren"; gelukt "Resetlink verstuurd naar {email}." |
+| Resetlink (ConfirmDialog, niet rood) | titel "Resetlink sturen?"; tekst "{naam} krijgt een mail met een link om een nieuw wachtwoord in te stellen. Het huidige wachtwoord blijft werken tot dan."; knoppen "Link sturen", "Annuleren"; gelukt "Resetlink verstuurd naar {email}."; fout `ACCOUNT_DEACTIVATED` in de dialoog "Dit account is gedeactiveerd. Activeer het eerst." (eigen tekst, de algemene blijft de inlogfout) |
 | Resetmail | onderwerp "Nieuw wachtwoord instellen voor {appnaam}"; tekst "Een beheerder heeft een link voor je aangevraagd om een nieuw wachtwoord in te stellen. De link is 1 uur geldig."; knop "Wachtwoord instellen" |
-| `/nieuw-wachtwoord` | titel "Nieuw wachtwoord instellen"; velden en knop zoals `/uitnodiging`; gelukt "Je wachtwoord is gewijzigd. Log in om verder te gaan." |
+| `/uitnodiging?soort=reset` | titel "Nieuw wachtwoord instellen"; velden en knop zoals `/uitnodiging`; na gelukt naar `/login?gewijzigd=true`, en `/login` toont dan in de bestaande `Notice` "Je wachtwoord is gewijzigd. Log in om verder te gaan." |
 | Herstelcodes tonen (na inschrijven of opnieuw maken) | kop "Herstelcodes"; uitleg "Bewaar deze codes op een veilige plek. Elke code werkt één keer, als je je authenticator-app niet bij de hand hebt. Je ziet ze maar één keer."; knop "Ik heb ze bewaard" |
 | Herstelcodes op `/account` | sectiekop "Herstelcodes"; uitleg "Nieuwe codes maken maakt de oude ongeldig."; veld "Wachtwoord"; knop "Nieuwe herstelcodes maken" |
 | TOTP-scherm | link "Gebruik een herstelcode"; titel "Herstelcode"; uitleg "Voer een van je herstelcodes in."; veld "Herstelcode"; knop "Bevestigen"; terug "Gebruik je authenticator-app" |
@@ -142,15 +155,18 @@ Volgens de aanbeveling bij OV-1 (één nieuwe migratie; beschermde-padwijziginge
   `INVITATION_INVALID` en kan hetzelfde adres opnieuw uitgenodigd worden. Toets: `test/api/account-revoke.int.test.ts` (nieuw),
   `e2e/account-revoke.spec.ts` (nieuw), `src/web/features/accounts/account-revoke.test.tsx` (nieuw)
 - **accounts/AC-16** — Gegeven een actieve `user`, wanneer de admin een resetlink stuurt, dan staat de resetmail in Mailpit (een eerdere link werkt
-  niet meer); na het instellen van een nieuw wachtwoord zijn de oude sessies weg en werkt alleen het nieuwe wachtwoord.
+  niet meer); na het instellen van een nieuw wachtwoord zijn de oude sessies weg en werkt alleen het nieuwe wachtwoord; de tokenrij verloopt
+  uiterlijk na `RESET_LINK_TTL_SECONDS`, ook direct nadat de mail binnen is; een inlogpoging die vóór de reset met het oude wachtwoord begon,
+  geeft na de reset geen sessie. Toets: `test/api/account-reset-link.int.test.ts` (nieuw), `e2e/account-reset-link.spec.ts` (nieuw),
+  `src/web/features/accounts/account-reset-link.test.tsx` (nieuw)
 - **accounts/AC-17** — Gegeven een admin die TOTP instelt, wanneer de code klopt, dan ziet hij 10 herstelcodes; met één daarvan (in plaats van TOTP)
   krijgt hij een MFA-sessie, en dezelfde code werkt daarna niet meer (`INVALID_BACKUP_CODE`). Toets: `e2e/backup-codes.spec.ts` (nieuw),
   `test/auth/backup-codes.int.test.ts` (nieuw)
 - **accounts/AC-18** — Gegeven een gebruiker met TOTP op `/account`, wanneer hij met zijn wachtwoord nieuwe herstelcodes maakt, dan werken de oude niet meer.
   Toets: `e2e/backup-codes.spec.ts` (nieuw, met een admin: `/account` heeft nog geen TOTP-inschrijving), `test/auth/backup-codes.int.test.ts` (nieuw)
 - **accounts/AC-19** — Gegeven een `user` of een admin zonder MFA, wanneer hij een van de vier nieuwe accountroutes aanroept, dan `FORBIDDEN` / `MFA_REQUIRED`.
-  Toets: `test/api/account-blocking.int.test.ts` (blokkeren, deblokkeren), `test/api/account-revoke.int.test.ts` (nieuw) (intrekken);
-  de resetlink-route volgt met AC-16, tot dan is AC-19 niet volledig bewezen.
+  Toets: `test/api/account-blocking.int.test.ts` (blokkeren, deblokkeren), `test/api/account-revoke.int.test.ts` (nieuw) (intrekken),
+  `test/api/account-reset-link.int.test.ts` (nieuw) (resetlink)
 - **accounts/AC-20** — Gegeven een half ingelogde gebruiker, wanneer hij een herstelcode stuurt met `trustDevice: true` of `disableSession: true`,
   dan `VALIDATION`, geen sessie en geen trust-device-cookie; met een volledige sessie wordt `verify-backup-code` ook geweigerd.
   Toets: `test/auth/backup-codes.int.test.ts` (nieuw)
@@ -184,8 +200,9 @@ Volgens de aanbeveling bij OV-1 (één nieuwe migratie; beschermde-padwijziginge
 | Opnieuw uitnodigen en intrekken tegelijk | er kan nog een mail met een dode link aankomen; de tokenrij (geen FK) verloopt vanzelf | `INVITATION_INVALID` |
 | Intrekken: service commit, route-commit faalt | account weg zonder auditregel `core.account.revoke`; bekend gat zoals bij uitnodigen (ADR 0051) | `INTERNAL_ERROR` |
 | Onbekend of al verwijderd account | geweigerd | `NOT_FOUND` |
-| Geblokkeerd account met een open uitnodigings- of resetlink | wachtwoord instellen lukt, inloggen niet | `ACCOUNT_BLOCKED` |
-| Resetlink ouder dan `RESET_LINK_TTL_SECONDS` of al gebruikt | melding op `/nieuw-wachtwoord` | `RESET_LINK_INVALID` |
+| Geblokkeerd of gedeactiveerd account met een open uitnodigings- of resetlink (ook als het tussen de statuscheck en de mail gebeurde) | wachtwoord instellen lukt, inloggen niet | `ACCOUNT_BLOCKED` / `ACCOUNT_DEACTIVATED` |
+| Resetlink ouder dan `RESET_LINK_TTL_SECONDS` of al gebruikt | melding op `/uitnodiging?soort=reset` | `RESET_LINK_INVALID` |
+| Twee resetlinks tegelijk aangevraagd | geen enkele tokenrij verloopt later dan nu + `RESET_LINK_TTL_SECONDS` | — |
 | Herstelcode met spaties of kleine letters | spaties weg; hoofdlettergevoelig zoals de plugin | `INVALID_BACKUP_CODE` |
 | Alle herstelcodes op en telefoon kwijt | `pnpm admin:create` (runbook) | — |
 | Te veel pogingen met herstelcodes | plugin: 5 per uitdaging; Better Auth: 3 per 10 s per IP op `/two-factor/*` | `RATE_LIMITED` |
@@ -196,8 +213,11 @@ Volgens de aanbeveling bij OV-1 (één nieuwe migratie; beschermde-padwijziginge
   `INVALID_BACKUP_CODE` met teksten; `RESET_LINK_TTL_SECONDS` in `src/core/shared/limits.ts`; contract `meOutput` krijgt `tweestap` (AC-27); contract `accountItem.status` krijgt `geblokkeerd`
   (raakt spec [lijstpagina](lijstpagina.md), filter "Status").
 - `src/core/api/auth` (options, `auth.ts`: `getSession` controleert `blockedAt`; `invitations.ts`: `revoke`, `sendResetLink`), `src/api/services.ts`
-  (vertaling van de nieuwe fouten), mail-layout (resetmail), route `/nieuw-wachtwoord`. `src/core/web/lib/auth.ts`: `authErrorCode` zet bij inloggen
-  nu elke 4xx om in `INVALID_CREDENTIALS`; dat blijft (OV-5), erbij komen herstelcode en `RESET_LINK_INVALID`. De nieuwe mutaties (`useRevokeInvitation`, later die van de resetlink)
+  (vertaling van de nieuwe fouten), resetmail in `src/core/api/mail/` (snapshot van de layout-test), search-schema van `/uitnodiging` (`soort`) en
+  van `/login` (`gewijzigd`), de after-hook op `/reset-password` die `session_version` ophoogt.
+  `src/core/web/lib/auth.ts`: `authErrorCode` zet bij inloggen nu elke 4xx om in `INVALID_CREDENTIALS`; dat blijft (OV-5), erbij komen herstelcode en
+  de stap `resetPassword` (zelfde aanroep als `setPassword`): `PASSWORD_TOO_SHORT`/`PASSWORD_TOO_LONG` → `VALIDATION`, elke andere 4xx →
+  `RESET_LINK_INVALID`; `setPassword` blijft `INVITATION_INVALID`. De nieuwe mutaties (`useRevokeInvitation`, later die van de resetlink)
   invalideren `accounts` in `onSettled` (zoals `useInvite` en `useBlock`): ook na een fout de werkelijke lijst. De bestaande hooks blijven zoals ze zijn.
   De dialoog van een actie blijft open tot de gebruiker hem sluit, ook als de status van de rij na de refetch verandert (anders verdwijnt de fout).
 - De losse knop "Opnieuw uitnodigen" van een uitgenodigde rij (`src/web/features/accounts/row-actions.tsx`) wordt een item in het menu
@@ -230,7 +250,7 @@ aantal resterende herstelcodes tonen (`/view-backup-codes` is alleen server-side
   resetlink: oude token ongeldig, nieuwe verloopt na de TTL; `/view-backup-codes` 404; `verify-backup-code` geeft `mfa`; AC-25 (twee
   gelijktijdige verzoeken) en AC-26 (loginregels van ADR 0052).
 - **E2E (`pnpm ui:check`, echte stack, CSP aan):** AC-11 t/m AC-18, mails uit Mailpit; axe op 375 en 1280 px voor accounts (met open menu en elke
-  `ConfirmDialog`), herstelcodes tonen, `/account` sectie Herstelcodes, `/nieuw-wachtwoord` en het herstelcodescherm bij inloggen.
+  `ConfirmDialog`), herstelcodes tonen, `/account` sectie Herstelcodes, `/uitnodiging?soort=reset` en het herstelcodescherm bij inloggen.
 
 ## Open vragen voor de eigenaar
 
@@ -241,7 +261,7 @@ Alle zeven besloten volgens de aanbeveling (eigenaar, 23 november 2026); OV-1, O
   ADR. Alternatieven: kolom in `public.user_roles` (Better Auth kan hem niet lezen) of de admin-plugin (ADR 0043 verwierp hem; ADR nodig).
 - **OV-2** — Eén permissie `accounts:manage` voor blokkeren en resetlink, intrekken onder `accounts:invite`? Aanbeveling: ja; aparte permissies pas als een app rollen anders verdeelt.
 - **OV-3** — Herstelcodes ook voor `user` (zodra die TOTP kan instellen) of alleen voor admins? Aanbeveling: voor iedereen met TOTP; het kost niets extra.
-- **OV-4** — Geldigheid resetlink? Aanbeveling: 1 uur (`RESET_LINK_TTL_SECONDS`, `expiresAt` na aanmaken verkort), uitnodiging blijft 7 dagen:
+- **OV-4** — Geldigheid resetlink? Aanbeveling: 1 uur (`RESET_LINK_TTL_SECONDS`, `expiresAt` verkort in `sendResetPassword` vóór de mail), uitnodiging blijft 7 dagen:
   een resetlink geeft een actief account over (gevolg in ADR 0043).
 - **OV-5** — Ziet een geblokkeerd account (na een juist wachtwoord) "Dit account is geblokkeerd." of de gewone inlogfout? Aanbeveling: de gewone
   inlogfout (OWASP). Een eigen melding bevestigt een aanvaller dat het wachtwoord klopt (orakel voor gelekte wachtwoorden); de prijs: de
