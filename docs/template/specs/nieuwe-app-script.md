@@ -144,7 +144,7 @@ eigen controle uit het playbook, niet in plaats daarvan.
        `strict_required_status_checks_policy`.
      - `RULESET_ONLEESBAAR`: een andere `gh`-fout, geen JSON, of een ontbrekend veld (voorrangsregel). Details: het
        endpoint (pad) of de veldnaam.
-   - Instellingscodes, tegen playbook 6.2 (`docs/nieuwe-app.md:627-632`), uit `repos/<repo>`,
+   - Instellingscodes, tegen wat de schrijvende modus hierboven zet (playbook 6.2), uit `repos/<repo>`,
      `repos/<repo>/actions/permissions/workflow` en `repos/<repo>/actions/permissions`; details zijn de afwijkende
      veldnamen:
      - `MERGE_METHODEN`: `allow_merge_commit` en `allow_squash_merge` waar, `allow_rebase_merge` en `allow_auto_merge`
