@@ -27,6 +27,7 @@ const item = { id: '__proto__', src: '/land.svg', alt: 'Bergen', caption: 'Lands
 const base = { label: 'Foto’s', items: [item], unavailableText: 'Niet beschikbaar' };
 const preview = { previewLabel: () => 'Bekijken', closeLabel: 'Sluiten' };
 
+// ui-data-display/AC-5
 test('fout behoudt caption en nieuwe src probeert opnieuw; lege inhoud is configureerbaar', () => {
   const { rerender } = render(<Gallery {...base} />);
   expect(screen.getByRole('list', { name: 'Foto’s' })).toBeTruthy();
@@ -41,6 +42,7 @@ test('fout behoudt caption en nieuwe src probeert opnieuw; lege inhoud is config
   expect(screen.getByText('Lege galerij')).toBeTruthy();
 });
 
+// ui-data-display/AC-5, ui-data-display/AC-8
 test('preview sluit met cancel en herstelt opener; verwijderen focust galerij', () => {
   const { rerender } = render(<Gallery {...base} preview={preview} />);
   const opener = screen.getByRole('button', { name: 'Bekijken' });
@@ -60,6 +62,7 @@ test('preview sluit met cancel en herstelt opener; verwijderen focust galerij', 
   expect(document.activeElement?.getAttribute('aria-label')).toBe('Foto’s');
 });
 
+// ui-data-display/AC-5, ui-data-display/AC-8
 test('decoratieve preview zonder caption heeft een naam en ongeldige ids falen', () => {
   const { unmount } = render(
     <Gallery {...base} items={[{ id: 'decor', src: '/decor.svg', alt: '' }]} preview={preview} />,
