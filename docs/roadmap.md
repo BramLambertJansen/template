@@ -180,7 +180,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   Stand volgens ADR 0093: de agent werkt onder het account van de eigenaar; er komt geen GitHub App, token of machineaccount en geen
   `denyRead` op `~/.config/gh`; de ruleset eist geen review van een code-eigenaar en heeft geen bypass; wie een PR met een beschermd pad
   samenvoegt, beslist `pnpm pr:merge` op de padtabel (vangnet, geen grens; spec `docs/template/specs/agent-samenvoegen.md`).
-  Open: organisatie, org-ruleset via custom property en Actions-instellingen (private repo's vragen Pro/Team); `.github/settings/` met `scripts/check-github.mjs` (alleen-lezend, een onleesbare instelling is een fout;
+  Open: organisatie, org-ruleset via custom property en Actions-instellingen (private repo's vragen Pro/Team); `.github/settings/` met `scripts/check-github.mjs` (alleen-lezend, een onleesbare instelling is een fout; hergebruikt `scripts/kit/ruleset-controle.mjs` uit nieuwe-app-script bouwstap 2, met eigen teksten;
   ook `app_id` van verplichte checks, `enforce_admins`, conversation resolution) en `check-spec-approval`; `docs/operations/rails-checklist.md` met
   per stuk bewijs. Een machineaccount met review van een code-eigenaar blijft de weg voor een app met echte gebruikers (eigen app-ADR). De eigenaar
   activeert organisatie en instellingen.
@@ -365,12 +365,12 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   hebben een test met een fixture die op de huidige code faalt.
   aanleiding: `docs/template/adr/0105-begrensde-fixlus.md` (Gevolgen)
 - [ ] **Nieuwe-app-script bouwstap 2: `repo-instellingen`.** Bouwstap 1 is gebouwd (`scripts/kit/nieuwe-app.mjs`,
-  `test/scripts/nieuwe-app.test.ts`); het subcommando `repo-instellingen` bestaat nog niet. Eerst de spec herzien: werking 7, AC-10,
-  de `REDEN_`-teksten en het bypass-randgeval leunen op `grensRedenen` uit `scripts/kit/pr-merge.mjs`, dat weg is sinds ADR 0093;
-  wat `--controleer` dan toetst, is ontwerpwerk van deze stap of van `check-github` (ST-01). Kritiek werk (R-WERK-05): spec-review
-  van de herziening, aparte tester en goedkeuring van de eigenaar op de PR. **Klaar als:** de herziene AC's van bouwstap 2 zijn groen
-  en `scripts/kit/nieuwe-app.mjs` meldt niet meer dat `repo-instellingen` niet bestaat.
-  aanleiding: `docs/template/specs/nieuwe-app-script.md` (bouwstap 2, "Te herzien vóór bouwstap 2")
+  `test/scripts/nieuwe-app.test.ts`); het subcommando `repo-instellingen` bestaat nog niet. De spec is herzien (OV-8, OV-9):
+  `--controleer` toetst ruleset en instellingen met de nieuwe alleen-lezende module `scripts/kit/ruleset-controle.mjs`, niet meer met
+  `scripts/kit/pr-merge.mjs`. Kritiek werk (R-WERK-05): spec-review van de herziening, aparte tester en goedkeuring van de eigenaar
+  op de PR. **Klaar als:** AC-9, AC-10 en AC-19 van bouwstap 2 zijn groen en `scripts/kit/nieuwe-app.mjs` meldt niet meer dat
+  `repo-instellingen` niet bestaat.
+  aanleiding: `docs/template/specs/nieuwe-app-script.md` (bouwstap 2, werking 7)
 - [ ] **Cloud-netwerkvorm: vervolg op de review van de bouw.** Uit #890, niet opgevolgd: (N-1) de main-regel decodeert alleen `%2F`,
   niet elke procent-escape (`branches/main/rename` en GraphQL `deleteRef` vallen erbuiten; de ruleset blijft de grens); (N-3) de
   MCP-regel herkent alleen de servernaam `github`; (N-5) de dubbele melding bij `git push origin main` wordt één melding; (B-3) een
