@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import type { z } from 'zod';
 import type { accountItem } from '#shared/contracts/accounts.ts';
 import { copy } from '#web/copy/ui.ts';
@@ -44,6 +44,22 @@ export function itemsFor(account: Account, isOwn: boolean, handlers: AccountHand
       ? { label: copy.accounts.activate, onSelect: handlers.activate }
       : { label: copy.accounts.deactivate, onSelect: handlers.askDeactivate },
   ];
+}
+
+// De menuknop is tijdens het verversen van de lijst (zoeken, filteren, na een mutatie) of een lopende actie bezet, niet
+// `disabled`: een uitgeschakelde knop verliest in de browser de focus (focus fixup), en die keert niet terug als hij weer aan
+// gaat. Zo viel de focus na het sluiten van een dialoog soms op body (accounts/AC-16, focusvolgorde). Button `busy` zet
+// aria-disabled en houdt klik, Enter en spatie tegen; Radix opent het menu ook op pointerdown en pijl omlaag: een
+// preventDefault in het eigen handler van het kind slaat die van Radix over (composeEventHandlers).
+function keepMenuShut(blocked: boolean) {
+  return {
+    onPointerDown: (event: PointerEvent<HTMLButtonElement>) => {
+      if (blocked) event.preventDefault();
+    },
+    onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => {
+      if (blocked && event.key === 'ArrowDown') event.preventDefault();
+    },
+  };
 }
 
 export function AccountActions({
@@ -120,7 +136,7 @@ export function AccountActions({
     <>
       <DropdownMenu
         trigger={
-          <Button ref={trigger} variant="outline" disabled={busy || pending}>
+          <Button ref={trigger} variant="outline" busy={busy || pending} {...keepMenuShut(busy || pending)}>
             {copy.accounts.rowActions(account.naam)}
           </Button>
         }
