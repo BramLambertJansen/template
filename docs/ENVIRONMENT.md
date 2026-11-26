@@ -75,6 +75,8 @@ Waarom zo:
 - **Voor mise onzichtbaar.** `mise link` registreert de map (`~/.local/share/mise-terugval/<tool>-<versie>`) als die
   versie, zodat `mise exec`, de shims en de pre-commit-hook (`mise exec -- betterleaks`) werken alsof mise hem installeerde.
   `MISE_EXEC_AUTO_INSTALL=false` geldt alleen tijdens het script.
+  De kooi koppelt die map alleen-lezen terug, net als `~/.local/share/mise` (`scripts/kit/kooi.mjs:60`): anders
+  wijzen de links in de strenge kooi naar een lege thuismap en falen de kooitests bij de pre-push in de cloud.
 - **Alleen waar nodig.** Lokaal en in CI installeert mise alles zelf, met zijn eigen attestatiecontroles; de terugval draait
   alleen voor een tool die na `mise install` ontbreekt, en het script draait alleen in de cloud.
 - **Uitbreidbaar.** Een nieuwe tool in `mise.toml` zonder terugval laat de setup stoppen met de naam van de tool
