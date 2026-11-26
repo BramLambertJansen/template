@@ -111,38 +111,60 @@ eigen controle uit het playbook, niet in plaats daarvan.
 7. **`repo-instellingen --repo <owner>/<slug> [--beschrijving <tekst>] [--controleer]`** (bouwstap 2; playbook
    6.1-controle en 6.2). Weigert als `--repo` niet de `origin` van de werkmap is. Alleen in de schrijvende modus weigert het
    ook als `main` op GitHub nog niet de vorm heeft hernoem-commit (één ouder) boven koppel-merge (twee ouders);
-   `--controleer` kijkt niet naar die vorm. Schrijft dezelfde instellingen als playbook 6.2 (merge-methoden,
-   workflow-rechten alleen lezen, geen PR-goedkeuring door Actions, `sha_pinning_required`, beschrijving als argument).
-   De ruleset zelf zet de eigenaar.
+   `--controleer` kijkt niet naar die vorm. Schrijft precies wat `MERGE_METHODEN`, `WORKFLOW_RECHTEN` en `ACTIONS`
+   hieronder toetsen, zoals playbook 6.2: `gh repo edit <repo> --enable-merge-commit --enable-squash-merge
+   --enable-rebase-merge=false --delete-branch-on-merge --enable-auto-merge=false` (met `--description <tekst>` als
+   `--beschrijving` is gegeven), `default_workflow_permissions` `read` met `can_approve_pull_request_reviews` onwaar, en
+   `enabled` waar, `allowed_actions` `all`, `sha_pinning_required` waar. De ruleset zelf zet de eigenaar.
    **`--controleer`** (OV-8, OV-9) schrijft niets op GitHub en laadt met een dynamische `import()`, alleen in dit pad,
    `scripts/kit/ruleset-controle.mjs` (nieuw). Die module:
    - exporteert `controleerRuleset(gh, { repo, requiredChecks })` en `controleerInstellingen(gh, { repo })`; beide geven
-     een lijst `{ code, details }` terug (leeg = gelijk), met `code` uit de vaste lijst hieronder en `details` alleen
-     veld-, regel- of checknamen, nooit waarden. Ze gooien niet bij een `gh`-fout maar geven de code `…_ONLEESBAAR`.
-   - `gh` is geïnjecteerd: `(args) => { status, stdout, stderr }`; de module roept het alleen aan met `api <endpoint>`,
-     nooit met `-X`, `--method`, `--input`, `-f`, `-F` of `--field`. Statische imports alleen `node:`; geen eigen
-     teksten (`nieuwe-app.mjs` en later `check-github` maken die).
-   - Rulesetcodes, tegen de payload van `scripts/github-ruleset.sh:67` (ADR 0093 punt 2; de Pro-melding op regel 97), uit `repos/<repo>/rulesets` en
-     `repos/<repo>/rulesets/<id>`: `RULESETS_NIET_BESCHIKBAAR` (de lijst faalt met "Upgrade to GitHub Pro"),
-     `GEEN_RULESET` (geen ruleset met naam `main`), `RULESET_NIET_ACTIEF` (`enforcement` niet `active`, `target` niet
-     `branch`, of `conditions.ref_name` niet precies include `~DEFAULT_BRANCH` en exclude leeg), `BYPASS`
-     (`bypass_actors` niet leeg of `current_user_can_bypass` niet `never`), `REGELS` (de regels `deletion`,
-     `non_fast_forward` en `pull_request` ontbreken of wijken af: 0 goedkeuringen, `dismiss_stale_reviews_on_push` waar,
-     `require_code_owner_review` en `require_last_push_approval` onwaar, `required_review_thread_resolution` waar,
-     `allowed_merge_methods` precies merge en squash; of er staat een regeltype naast de vier), `CHECKS`
-     (`required_status_checks` ontbreekt, de namen zijn als verzameling niet precies `requiredChecks`, een
-     `integration_id` is niet 15368, of `strict_required_status_checks_policy` is waar), `RULESET_ONLEESBAAR` (een
-     andere `gh`-fout, geen JSON, of een veld uit deze lijst ontbreekt).
-   - Instellingscodes, tegen playbook 6.2 (`docs/nieuwe-app.md:627-632`), uit `repos/<repo>`, `repos/<repo>/actions/permissions/workflow` en
-     `repos/<repo>/actions/permissions`: `MERGE_METHODEN` (`allow_merge_commit` en `allow_squash_merge` waar,
-     `allow_rebase_merge` en `allow_auto_merge` onwaar, `delete_branch_on_merge` waar), `WORKFLOW_RECHTEN`
-     (`default_workflow_permissions` `read`, `can_approve_pull_request_reviews` onwaar), `ACTIONS` (`enabled` waar,
-     `allowed_actions` `all`, `sha_pinning_required` waar), `SHA_PINNING_ONBEKEND` (`sha_pinning_required` ontbreekt),
-     `INSTELLINGEN_ONLEESBAAR` (een `gh`-fout of geen JSON).
-   `nieuwe-app.mjs` leest `requiredChecks` uit `.claude/decisions.json`, geeft de module een `gh` via `execFileSync` en
-   maakt per bevinding een stap `fout` met als `id` de code in kleine letters met `-` voor `_`, en de tekst uit
-   Hergebruik en UX met `<details>` kommagescheiden. Zonder bevindingen zijn de stappen `ruleset` en `instellingen` ok.
-   Exitcode 0 alleen zonder bevindingen; de beschrijving en de vorm van `main` toetst `--controleer` niet.
+     een lijst `{ code, details }` terug (leeg = gelijk), met `code` uit de vaste lijst hieronder en `details` een lijst
+     namen per code (hieronder), nooit een waarde. Ze gooien niet bij een `gh`-fout. Per code één kleine functie
+     (R-CODE-02).
+   - `gh` is geïnjecteerd met de vorm van de bestaande `voer()` (`scripts/kit/nieuwe-app.mjs:91-99`):
+     `(args) => { ok, stdout, stderr }`. De module roept het alleen aan met `api <endpoint>`, nooit met `-X`, `--method`,
+     `--input`, `-f`, `-F` of `--field`. Statische imports alleen `node:`; geen eigen teksten (`nieuwe-app.mjs` en later
+     `check-github` maken die).
+   - Rulesetcodes, tegen de payload van `scripts/github-ruleset.sh:67` (ADR 0093 punt 2; de Pro-melding op regel 97), uit
+     `repos/<repo>/rulesets` (alleen items met `source_type` `Repository`; org-rulesets tellen hier niet) en
+     `repos/<repo>/rulesets/<id>`:
+     - `RULESETS_NIET_BESCHIKBAAR`: de lijst faalt en "Upgrade to GitHub Pro" staat in stdout of stderr. Details: leeg.
+     - `GEEN_RULESET`: geen ruleset met naam `main`. Details: leeg.
+     - `RULESET_NIET_ACTIEF`: `enforcement` niet `active`, `target` niet `branch`, of `conditions.ref_name` niet precies
+       include `~DEFAULT_BRANCH` en exclude leeg. Details: de afwijkende veldnamen.
+     - `BYPASS`: `bypass_actors` niet leeg of `current_user_can_bypass` niet `never`. Details: die veldnamen.
+     - `REGELS`: een regel `deletion`, `non_fast_forward` of `pull_request` ontbreekt, een regeltype naast de vier, of in
+       `pull_request` wijkt af: `required_approving_review_count` 0, `dismiss_stale_reviews_on_push` waar,
+       `require_code_owner_review` en `require_last_push_approval` onwaar, `required_review_thread_resolution` waar,
+       `allowed_merge_methods` precies merge en squash. Details: regeltype, of `pull_request.<parameter>`.
+     - `CHECKS`: de regel `required_status_checks` ontbreekt, de namen zijn als verzameling niet precies `requiredChecks`,
+       een `integration_id` is niet 15368, of `strict_required_status_checks_policy` is waar. Details: de ontbrekende en
+       extra checknamen, de checknaam met een ander `integration_id`, of `required_status_checks` /
+       `strict_required_status_checks_policy`.
+     - `RULESET_ONLEESBAAR`: een andere `gh`-fout, geen JSON, of een ontbrekend veld (voorrangsregel). Details: het
+       endpoint (pad) of de veldnaam.
+   - Instellingscodes, tegen playbook 6.2 (`docs/nieuwe-app.md:627-632`), uit `repos/<repo>`,
+     `repos/<repo>/actions/permissions/workflow` en `repos/<repo>/actions/permissions`; details zijn de afwijkende
+     veldnamen:
+     - `MERGE_METHODEN`: `allow_merge_commit` en `allow_squash_merge` waar, `allow_rebase_merge` en `allow_auto_merge`
+       onwaar, `delete_branch_on_merge` waar.
+     - `WORKFLOW_RECHTEN`: `default_workflow_permissions` `read`, `can_approve_pull_request_reviews` onwaar.
+     - `ACTIONS`: `enabled` waar, `allowed_actions` `all`, `sha_pinning_required` waar.
+     - `SHA_PINNING_ONBEKEND`: `sha_pinning_required` ontbreekt. Details: leeg.
+     - `INSTELLINGEN_ONLEESBAAR`: een `gh`-fout, geen JSON, of een ontbrekend veld (voorrangsregel). Details: het
+       endpoint (pad) of de veldnaam.
+   - **Voorrangsregel bij ontbrekende velden:** ontbreekt een hele regel (type), dan `REGELS` of `CHECKS`; ontbreekt een
+     veld binnen een aanwezige regel, of een top-level veld (ook `bypass_actors`, `current_user_can_bypass`), dan
+     `RULESET_ONLEESBAAR`; ontbreekt `sha_pinning_required`, dan alleen `SHA_PINNING_ONBEKEND`; ontbreekt een ander
+     instellingsveld, dan `INSTELLINGEN_ONLEESBAAR`. Een endpoint dat faalt of geen JSON geeft, levert alleen zijn
+     `…_ONLEESBAAR` (of `RULESETS_NIET_BESCHIKBAAR`, `GEEN_RULESET`) en geen andere code uit dat antwoord. Velden van
+     GitHub die hier niet genoemd zijn (zoals `required_reviewers`, `do_not_enforce_on_create`), negeert de module.
+   `nieuwe-app.mjs` leest `requiredChecks` uit `.claude/decisions.json` en geeft de module als `gh` de bestaande `voer()`
+   met `gh` als commando (één adapter). Beide functies draaien altijd. Per bevinding een stap `fout` met als `id` de code
+   in kleine letters met `-` voor `_`, en de tekst uit Hergebruik en UX met `<details>` kommagescheiden; een functie
+   zonder bevindingen geeft haar eigen stap ok (`ruleset` of `instellingen`). Exitcode 0 alleen zonder bevindingen; de
+   beschrijving en de vorm van `main` toetst `--controleer` niet.
 8. **`db-bewijs [--pg <poort>]`** (playbook 8). PG-poort uit `--pg`, anders uit `.template/nieuwe-app-poorten.json`, anders
    fout; leest nooit `.env.local`. Gebruikers en wachtwoorden uit `MIGRATOR_DATABASE_URL` en `DATABASE_URL` van
    `.env.example` (lokale demowaarden). De zes beweringen uit de tabel van playbook 8, elk een stap met `id`
@@ -233,7 +255,7 @@ en AC-5 en de 6.2-zin van AC-15.
 - **nieuwe-app-script/AC-6** — Gegeven een bezette poort 54324 (eigen listener in de test, of een geïnjecteerde vrij-functie), wanneer `poorten` zonder `.env.local` kiest, dan zijn alle vijf poorten `basis + 10` en is `origin` `http://localhost:5183`; zijn alle tien sets bezet, dan exitcode 1 met `✗ geen vrije poortenset tussen +0 en +90`. Gegeven een machine met IPv6 en een listener alleen op `[::1]:5173`, dan kiest `poorten` niet +0.
 - **nieuwe-app-script/AC-7** — Gegeven `.env.example` van de template en gekozen poorten +10, wanneer `poorten --env` zonder `.env.local` draait, dan verschilt `.env.local` van `.env.example` alleen in de regels van de sleutels uit werking stap 6, en behouden de URL's protocol, host, gebruiker, wachtwoord en pad.
 - **nieuwe-app-script/AC-8** — Gegeven een bestaande `.env.local` met poorten +10 en bezette standaardpoorten (de eigen stack draait), wanneer `poorten --env` of `poorten` draait, dan is `gegevens.pg` 54332 (en `.template/nieuwe-app-poorten.json` zegt dat ook), is de exitcode 0 en is `.env.local` byte-gelijk. Gegeven een `.env.local` waarin de poort in `DATABASE_URL` niet gelijk is aan `PG_PORT`, dan exitcode 1 met `✗ .env.local bestaat met poorten die niet kloppen: DATABASE_URL`, is het bestand byte-gelijk en bevat de uitvoer geen waarde uit het bestand behalve sleutelnamen en poortnummers.
-- **nieuwe-app-script/AC-9** — (bouwstap 2) Gegeven een `gh`-stub, wanneer `repo-instellingen --repo a/b` draait met een andere `origin`, of met `main` zonder de vorm hernoem-commit boven koppel-merge, dan exitcode 1 met de bijbehorende tekst en geen schrijvende `gh`-aanroep (`-X`, `--method`, `--input`, `-f`, `-F`, `repo edit`) in het stub-log; met `--controleer` en dezelfde `main` niet de vormfout. Toets: `test/scripts/nieuwe-app-repo-instellingen.test.ts`
+- **nieuwe-app-script/AC-9** — (bouwstap 2) Gegeven een `gh`-stub, wanneer `repo-instellingen --repo a/b` draait met een andere `origin`, of met `main` zonder de vorm hernoem-commit boven koppel-merge, dan exitcode 1 met de bijbehorende tekst en geen schrijvende `gh`-aanroep (`-X`, `--method`, `--input`, `-f`, `-F`, `repo edit`) in het stub-log; met `--controleer` en dezelfde `main` niet de vormfout. Gegeven een juiste `origin` en `main`-vorm, zonder `--dry-run` en met `--beschrijving x`, dan staat in het stub-log precies één `repo edit a/b` met `--enable-merge-commit`, `--enable-squash-merge`, `--enable-rebase-merge=false`, `--delete-branch-on-merge`, `--enable-auto-merge=false` en `--description x`, en de twee `-X PUT`-aanroepen op `actions/permissions/workflow` en `actions/permissions` met de velden uit werking 7. Toets: `test/scripts/nieuwe-app-repo-instellingen.test.ts`
 - **nieuwe-app-script/AC-10** — (bouwstap 2) Gegeven een `gh`-stub op `PATH` die per bevindingcode uit werking 7 één afwijking geeft (een rulesetlijst die faalt met "Upgrade to GitHub Pro", geen ruleset `main`, `enforcement` `disabled`, een niet-lege `bypass_actors`, `current_user_can_bypass` `always`, `require_code_owner_review` waar, een checklijst met een naam meer of minder dan `requiredChecks`, een onleesbare rules-API, `allow_rebase_merge` waar, `default_workflow_permissions` `write`, `allowed_actions` `selected`, geen `sha_pinning_required`, een falende `actions/permissions`), wanneer `repo-instellingen --repo a/b --controleer` draait, dan exitcode 1, de `✗`- en `→`-regel van die code uit Hergebruik en UX, een stap `fout` met die code als `id` (kleine letters, `-`) in `.template/nieuwe-app-repo-instellingen.json`, geen tekst met "de eigenaar merget" of `--bypass-beheerder`, en geen schrijvende `gh`-aanroep in het stub-log; met een ruleset gelijk aan de payload van `scripts/github-ruleset.sh` (met `current_user_can_bypass` `never`) en instellingen gelijk aan playbook 6.2 exitcode 0 met de stappen `ruleset` en `instellingen` ok, ook als `main` meer commits heeft dan hernoem-commit en koppel-merge. En `git diff origin/main -- scripts/kit/pr-merge.mjs` is leeg in de PR van bouwstap 2 (bewijs in de PR). Toets: `test/scripts/nieuwe-app-repo-instellingen.test.ts`
 - **nieuwe-app-script/AC-11** — Gegeven een `psql`-stub die per bewering de verwachte uitvoer uit playbook 8 geeft, wanneer `db-bewijs --pg 54332` draait, dan zijn de zes stappen ok en gebruikt elke aanroep poort 54332; geeft de stub bij `geen-superuser` `t`, dan is die stap fout en de exitcode 1. Zonder `--pg` en zonder poortenbestand: `✗ PG-poort onbekend`, en `.env.local` is niet geopend (bestand met modus 000 in de fixture).
 - **nieuwe-app-script/AC-12** — Gegeven fixtures voor `/etc/os-release`, `/proc/1/comm`, de inotify-grens, werkmap, `PATH` en `gh` (via omgevingsvariabelen alleen voor tests, zoals `DOCTOR_OS_RELEASE`), wanneer `preflight` draait, dan is `os` fout bij Ubuntu 22.04 en bij macOS (`✗ besturingssysteem niet ondersteund: …`), `pad` fout onder `/mnt/c`, `systemd` fout in WSL zonder `systemd` als PID 1, `tools` fout zonder `psql` op `PATH` (met `psql` in de melding), `inotify` fout bij 8192, `gh-login` fout zonder scope `workflow`, `template` fout bij `is_template` onwaar, `plan` fout bij `null` met `--zichtbaarheid private`, en `poorten` overgeslagen (exitcode blijft 0) bij een bezette 5173; `slug` is fout als `~/code/<slug>` bestaat met een andere `origin` en overgeslagen met `· hervatting: controleer SETUP-PROGRESS.md (overgeslagen)` als die `origin` `<login>/<slug>` is; met een geldige fixture exitcode 0.
@@ -243,7 +265,7 @@ en AC-5 en de 6.2-zin van AC-15.
 - **nieuwe-app-script/AC-16** — Gegeven `.env.example`, dan staan `API_PORT=8787` en `WEB_PORT=5173` erin (OV-6), noemt de kopregel `node scripts/kit/nieuwe-app.mjs poorten --env` als bron van `.env.local` en van een andere poortset (niet meer "pnpm dev schrijft .env.local"), en houdt `test/scripts/app-start-docs.test.ts` de vijf poorten en de sleutels van werking stap 6 gelijk met het script.
 - **nieuwe-app-script/AC-17** — Gegeven een oud `.template/doctor-machine.json` met `uitslag` `ok` en een nep-`mise` op `PATH` die bij `install` met 1 eindigt, wanneer `scripts/bootstrap.sh` draait, dan is de exitcode ≠ 0, bestaat `.template/doctor-machine.json` daarna niet en zegt `.template/bootstrap.json` `uitslag` `fout`, `mise-trust` `ok`, `mise-install` `fout` met herstel niet null, en `pnpm-install`, `lefthook`, `doctor-machine` `overgeslagen`.
 - **nieuwe-app-script/AC-18** — Gegeven een `.env.local` die leeg is, die `SMTP_PORT` mist, of die niet leesbaar is (modus 000), wanneer `poorten` of `poorten --env` draait, dan exitcode 1 met `✗ .env.local niet leesbaar of zonder …`, heeft het resultaatbestand geen `gegevens.pg`, is `.env.local` byte-gelijk (of onaangeroerd), en zegt een daarna gedraaid `db-bewijs` zonder `--pg` `✗ PG-poort onbekend`.
-- **nieuwe-app-script/AC-19** — (bouwstap 2) Gegeven de payload die `scripts/github-ruleset.sh` met een `gh`-stub schrijft (zoals `test/scripts/github-ruleset.test.ts`), aangevuld met `id` en `current_user_can_bypass` `never` als antwoord van de stub op `repos/<repo>/rulesets/<id>`, wanneer `controleerRuleset` draait met `requiredChecks` uit `.claude/decisions.json`, dan is de lijst leeg; en voor elke rulesetcode uit werking 7 geeft één afwijking precies die code, één keer, met de afwijkende naam in `details`. Gegeven instellingen gelijk aan playbook 6.2, dan geeft `controleerInstellingen` een lege lijst, en per instellingscode één afwijking precies die code. Elke `gh`-aanroep van beide functies begint met `api` en bevat geen `-X`, `--method`, `--input`, `-f`, `-F` of `--field`; een `gh` die faalt of geen JSON geeft, levert de `…_ONLEESBAAR`-code zonder exceptie; de module heeft alleen statische imports met prefix `node:`. Toets: `test/scripts/ruleset-controle.test.ts`
+- **nieuwe-app-script/AC-19** — (bouwstap 2) Gegeven de payload die `scripts/github-ruleset.sh` met een `gh`-stub schrijft (zoals `test/scripts/github-ruleset.test.ts`), aangevuld met `id` en `current_user_can_bypass` `never` als antwoord van de stub op `repos/<repo>/rulesets/<id>`, wanneer `controleerRuleset` draait met `requiredChecks` uit `.claude/decisions.json`, dan is de lijst leeg; en voor elke rulesetcode uit werking 7 geeft één afwijking precies die code, één keer, met de `details` uit werking 7 (leeg bij `RULESETS_NIET_BESCHIKBAAR` en `GEEN_RULESET`, het endpoint of de veldnaam bij `RULESET_ONLEESBAAR`, anders de afwijkende naam), en volgt een ontbrekend veld de voorrangsregel. Een extra ruleset met `source_type` `Organization` en een extra veld `required_reviewers` of `do_not_enforce_on_create` veranderen de uitkomst niet. Gegeven instellingen gelijk aan playbook 6.2, dan geeft `controleerInstellingen` een lege lijst, per instellingscode één afwijking precies die code, en een ontbrekend `sha_pinning_required` alleen `SHA_PINNING_ONBEKEND`. Geen `details` bevat een waarde uit een antwoord. Elke `gh`-aanroep van beide functies begint met `api` en bevat geen `-X`, `--method`, `--input`, `-f`, `-F` of `--field`; een `gh` die faalt of geen JSON geeft, levert de `…_ONLEESBAAR`-code zonder exceptie; de module heeft alleen statische imports met prefix `node:`. Toets: `test/scripts/ruleset-controle.test.ts`
 
 ## Randgevallen
 
@@ -258,7 +280,9 @@ en AC-5 en de 6.2-zin van AC-15.
 | Oude stack van dezelfde slug bezet de poorten (nog geen `.env.local`) | `poorten` verschuift; de restantencontrole (docker) blijft in het playbook bij de eigenaar of de setup-agent zoals nu | n.v.t. |
 | Een andere app heeft dezelfde poorten maar draait niet | niet te zien; `pnpm dev` en doctor melden het pas bij de start (AC-14) | n.v.t. |
 | GitHub maakt de repo nog aan (lege clone) | buiten het script; playbook 4.3 blijft (OV-1) | n.v.t. |
-| `gh` zonder netwerk | stap fout met de `gh`-melding als herstelcontext; niets geschreven | n.v.t. |
+| `gh` zonder netwerk | stap fout met de `gh`-melding als herstelcontext; niets geschreven. Bij `--controleer`: `RULESET_ONLEESBAAR` en `INSTELLINGEN_ONLEESBAAR` met het endpoint, zonder `gh`-melding (werking 7) | n.v.t. |
+| Ruleset gezet met `scripts/github-ruleset.sh --zonder-codeql` | fout `CHECKS` (de codeql-checks ontbreken); verwacht tot de appconfiguratie besloten is | n.v.t. |
+| Alleen een org-ruleset op `main` (geen ruleset van de repo) | `GEEN_RULESET`: `--controleer` telt alleen `source_type` `Repository` (werking 7) | n.v.t. |
 | `--controleer` op een ruleset met een bypass (oude `--bypass-beheerder` of met de hand gezet) | altijd fout `BYPASS`; herstel: de eigenaar draait `scripts/github-ruleset.sh <repo>` opnieuw (ADR 0093 punt 2) | n.v.t. |
 | `--controleer` op een private repo zonder Pro/Team, of zonder ruleset `main` | fout `RULESETS_NIET_BESCHIKBAAR` of `GEEN_RULESET`, exitcode 1; de eigenaar kiest Pro, Team of public (OV-9) | n.v.t. |
 | Ruleset of instellingen niet te lezen (rechten, netwerk, ander antwoord) | fout `…_ONLEESBAAR`, nooit ok (werking 7) | n.v.t. |
@@ -280,11 +304,13 @@ en AC-5 en de 6.2-zin van AC-15.
   `scripts/kit/pr-merge.mjs` (`besluit-pr`).
 - **Bouwstap 2** (`repo-instellingen`, kritiek werk): `scripts/kit/nieuwe-app.mjs`, `scripts/kit/ruleset-controle.mjs`
   (nieuw), `test/scripts/nieuwe-app.test.ts` (AC-1, gewijzigd met reden), `test/scripts/nieuwe-app-repo-instellingen.test.ts`
-  (nieuw), `test/scripts/ruleset-controle.test.ts` (nieuw), `docs/nieuwe-app.md` 6.2 (ook de zin "Of de ruleset blijft
+  (nieuw), `test/scripts/ruleset-controle.test.ts` (nieuw), `test/scripts/helpers/gh-stub.ts` (nieuw) met
+  `test/scripts/github-ruleset.test.ts` (gewijzigd met reden: gedeelde helper), `docs/nieuwe-app.md` 6.2 (ook de zin "Of de ruleset blijft
   staan, controleert niets …") met `test/docs/nieuwe-app-script-docs.test.ts`, en een fragment in
   `docs/template-changelog.d/` (soort `toegevoegd`). Niet: `scripts/kit/pr-merge.mjs`, `scripts/github-ruleset.sh`.
   `scripts/check-github.mjs` (nieuw) uit roadmap ST-01 bestaat nog niet; wordt het gebouwd, dan importeert het
   `scripts/kit/ruleset-controle.mjs` (nieuw) met eigen teksten en deelt het de controle met `--controleer`, dat blijft.
+  Het kan later de verwachting (bijvoorbeeld org-rulesets) als parameter meegeven; in deze bouwstap niet.
 - R-WERK-25 blijft ongewijzigd (OV-2, OV-3): de uitzondering voor Node met vastgezette versie bestaat al voor het
   hernoemscript en krijgt een tweede script.
 - Beschermde paden: `scripts/**` en `.env.example` (`voorReview`, eigenaarakkoord), `docs/nieuwe-app.md` en `test/**` (`gate`).
@@ -308,7 +334,10 @@ en AC-5 en de 6.2-zin van AC-15.
   per endpoint een JSON-fixture geeft en elke aanroep logt): AC-5 (deel `repo-instellingen`), AC-9, AC-10.
   `test/scripts/ruleset-controle.test.ts` (nieuw) (unit, geïnjecteerde `gh`): AC-19; de verwachte ruleset is de payload die
   `scripts/github-ruleset.sh` in de test schrijft, geen kopie, zodat een wijziging van dat script zonder gelijke
-  wijziging van de module rood wordt. Vóór de tests zet de developer `scripts/kit/ruleset-controle.mjs` (nieuw) neer als
+  wijziging van de module rood wordt. De `gh`-stub en het vastleggen van die payload (nu niet geëxporteerd in
+  `test/scripts/github-ruleset.test.ts:50-79`) verhuizen naar één gedeelde helper `test/scripts/helpers/gh-stub.ts`
+  (nieuw), die `github-ruleset.test.ts`, `ruleset-controle.test.ts` en `nieuwe-app-repo-instellingen.test.ts` importeren;
+  geen tweede kopie (wijziging van `github-ruleset.test.ts` met reden in de PR, R-TEST-02). Vóór de tests zet de developer `scripts/kit/ruleset-controle.mjs` (nieuw) neer als
   stub met de definitieve exports en een lege lijst als uitkomst, zodat een test op een assertie faalt.
 - `test/scripts/doctor.test.ts`: AC-13. `test/scripts/dev.test.ts` met nep-`docker`: AC-14.
   `test/scripts/bootstrap.test.ts` met nep-`mise`, `pnpm` en doctor op `PATH` in een fixture-kopie: AC-17.
