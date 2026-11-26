@@ -376,10 +376,12 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   `CLAUDE_CODE_REMOTE` ziet, is gemeten: F8). **Klaar als:** N-1, N-3, N-5 en B-3 hebben elk een test of een besluit "aanvaard", en de
   meting staat in de spec.
   aanleiding: `docs/template/specs/cloud-netwerkvorm.md` (#890 "Vervolg, buiten deze PR"; #900, meting (e) onvolledig)
-- [ ] **Cloud: toolchain herstelt zichzelf na een pin-bump** ([spec cloud-toolchain-zelfherstel](template/specs/cloud-toolchain-zelfherstel.md),
+- [x] **Cloud: toolchain herstelt zichzelf na een pin-bump** ([spec cloud-toolchain-zelfherstel](template/specs/cloud-toolchain-zelfherstel.md),
   [ADR 0112](template/adr/0112-cloud-toolchain-herstel-bij-startup.md)). Een SessionStart-hook herstelt in een nieuwe
   cloudsessie Node, pnpm en `node_modules` als de omgevingscache van vóór een pin-bump is, alleen als de installatie-invoer
   gelijk is aan `main`. **Klaar als:** de AC's van de spec gedekt zijn en stap 3 van het Testplan in de PR staat.
+  Gebouwd in #1008 (bewijs `test/hooks/toolchain-herstel.test.ts`, `test/hooks/laden-parallel.test.ts`); stap 3a en 3b
+  gemeten op 26 november 2026, 3c niet gemeten (besluit van de eigenaar), zie het Testplan van de spec.
   aanleiding: `docs/template/specs/cloud-toolchain-zelfherstel.md` (incident van 25 november 2026: cloudsessies met Node 26.11.1 en pnpm 11.28.2 na de bumps naar 26.13.0 en 12.21.0)
 - [ ] **Sandbox-probes `Read(/*secret*)` en de `.claude`-regels per submap uitvoeren.** Sinds 2026-10-23 "nog niet geprobeerd":
   verankert de sandbox `/*secret*` aan de projectroot of leest hij het absoluut? Leest hij het absoluut, dan is de root onbeschermd en volgt direct een herstel. Aanwijzing
