@@ -2,9 +2,9 @@
 // test:unit en lint (de twee langste) elk apart, de rest na elkaar in de derde. Bij weinig beschikbaar geheugen delen de
 // zware gates een wachtrij; geen check wordt overgeslagen of anders aangeroepen. Gemeten op 16 cores (2026-10-22): 92 s na
 // elkaar, 71 s alles tegelijk (CPU-druk), 61 s in drie banen. Elke gate is een eigen `pnpm <script>` met dezelfde
-// exitcode als los; de uitvoer wordt gebufferd: eerst die van de rode gates, dan de lijst, beide in registervolgorde. Anders dan de oude &&-keten
+// exitcode als los; de uitvoer wordt gebufferd: bij rood eerst een kop, dan die van de rode gates en de lijst in registervolgorde. Anders dan de oude &&-keten
 // stopt een rode gate de andere niet, zodat één ronde alle fouten laat zien.
-// Is test:unit rood, dan sluit een blok `Falende tests:` af met de namen uit de FAIL-regels, zodat een staart volstaat (leerpunt #957).
+// Is test:unit rood, dan staat een blok `Falende tests:` in de kop en aan het eind, zodat kop of staart volstaat (leerpunt #957, #1000).
 // In CI draait de suite in drie delen naast elkaar (`--deel`, ADR 0076, spec ci-in-delen): `checks` (alles behalve
 // test:unit) en `test-1`/`test-2` (elk de helft van test:unit via `vitest --shard`). Zonder `--deel` draait alles.
 import { Buffer } from 'node:buffer';
@@ -112,9 +112,9 @@ export async function gateFast(keuze, run = draai, write = (text) => process.std
 }
 
 /**
- * Drukt de uitslagen af en geeft de exitcode: eerst de uitvoer van de rode gates, dan de ⚠-regels van de groene, dan de
- * lijst en de samenvatting. Ook een korte rapportage van de staart toont zo welke gates rood zijn en het einde van de
- * laatste fout.
+ * Drukt de uitslagen af en geeft de exitcode: bij rood eerst een kop (samenvatting en falende tests), dan de uitvoer van de
+ * rode gates, de ⚠-regels van de groene, de lijst en de samenvatting. Een afgekapte uitvoer toont zo in de kop, en een
+ * korte staart in het slot, welke gates rood zijn.
  * @param {readonly Uitslag[]} uitslagen
  * @param {string} naam
  * @param {(text: string) => void} write
@@ -122,14 +122,19 @@ export async function gateFast(keuze, run = draai, write = (text) => process.std
 function rapporteer(uitslagen, naam, write) {
   const rood = uitslagen.filter((uitslag) => uitslag.code !== 0);
   const groen = uitslagen.filter((uitslag) => uitslag.code === 0);
+  const samenvatting = `✗ ${naam} rood: ${rood.map(({ script }) => script).join(', ')}\n`;
+  const tests = falendeTests(rood.find(({ script }) => script === 'test:unit')?.output ?? '');
+  const testblok = tests.length > 0 ? `Falende tests:\n${tests.join('\n')}\n` : '';
+  // Kop bij rood (leerpunt #1000): een uitvoer die halverwege wordt afgekapt (pre-push in de cloud), toont zo toch welke
+  // gates en tests rood zijn. Het slot hieronder blijft voor wie alleen de staart leest.
+  if (rood.length > 0) write(`${samenvatting}${testblok}`);
   for (const { script, output } of rood) write(`── ${script} ──\n${output}${output.endsWith('\n') ? '' : '\n'}`);
   // De ⚠-regels van een rode gate staan al in zijn uitvoer hierboven.
   for (const regel of groen.flatMap(({ output }) => waarschuwingen(output))) write(`${regel}\n`);
   for (const { script, code, seconds } of uitslagen)
     write(`${code === 0 ? '✓' : '✗'} ${script} (${seconds.toFixed(1)} s)\n`);
-  write(rood.length === 0 ? `✓ ${naam} groen\n` : `✗ ${naam} rood: ${rood.map(({ script }) => script).join(', ')}\n`);
-  const tests = falendeTests(rood.find(({ script }) => script === 'test:unit')?.output ?? '');
-  if (tests.length > 0) write(`Falende tests:\n${tests.join('\n')}\n`);
+  write(rood.length === 0 ? `✓ ${naam} groen\n` : samenvatting);
+  write(testblok);
   return rood.length === 0 ? 0 : 1;
 }
 

@@ -42,7 +42,7 @@ describe('gate-fast falende tests (leerpunt #957)', () => {
     const { tekst } = await draai({ 'test:unit': `${fail('test/a.test.ts > x')}\n`, lint: 'schoon\n' });
 
     expect(tekst.indexOf('Falende tests:')).toBeGreaterThan(tekst.indexOf('✗ gate:fast rood: test:unit'));
-    expect(tekst.indexOf('Falende tests:')).toBeGreaterThan(tekst.indexOf('✓ lint ('));
+    expect(tekst.lastIndexOf('Falende tests:')).toBeGreaterThan(tekst.indexOf('✓ lint ('));
     expect(tekst).toContain('── test:unit ──\n');
     expect(tekst.endsWith('Falende tests:\ntest/a.test.ts > x\n')).toBe(true);
   });
@@ -51,7 +51,7 @@ describe('gate-fast falende tests (leerpunt #957)', () => {
     const uitvoer = Array.from({ length: 25 }, (_, i) => fail(`test/t.test.ts > geval ${String(i)}`)).join('\n');
     const { regels } = await draai({ 'test:unit': uitvoer });
 
-    const blok = regels.slice(regels.indexOf('Falende tests:') + 1);
+    const blok = regels.slice(regels.lastIndexOf('Falende tests:') + 1);
     expect(blok).toHaveLength(21);
     expect(blok[0]).toBe('test/t.test.ts > geval 0');
     expect(blok[19]).toBe('test/t.test.ts > geval 19');

@@ -116,7 +116,7 @@ describe('gate-fast', () => {
 
     const uitvoer = tekst.indexOf(`FOUT-UIT ${rood}`);
     const lijst = tekst.indexOf(`✗ ${rood}`);
-    const samenvatting = tekst.indexOf('✗ gate:fast rood');
+    const samenvatting = tekst.lastIndexOf('✗ gate:fast rood');
     expect(uitvoer).toBeGreaterThanOrEqual(0);
     expect(uitvoer).toBeLessThan(tekst.indexOf(`✓ ${scripts[0] ?? ''}`));
     expect(uitvoer).toBeLessThan(lijst);
@@ -151,9 +151,121 @@ describe('gate-fast', () => {
       expect(uitslag.code).toBe(1);
       expect(uitslag.stdout).toContain(`✗ gate:fast rood: ${rood}`);
       expect(uitslag.stdout.indexOf('STUB-FOUT')).toBeLessThan(uitslag.stdout.indexOf(`✗ ${rood}`));
-      expect(uitslag.stdout.indexOf(`✗ ${rood}`)).toBeLessThan(uitslag.stdout.indexOf('✗ gate:fast rood'));
+      expect(uitslag.stdout.indexOf(`✗ ${rood}`)).toBeLessThan(uitslag.stdout.lastIndexOf('✗ gate:fast rood'));
     } finally {
       await rm(map, { recursive: true, force: true });
     }
+  });
+});
+
+// Leerpunt #1000: in de cloud wordt de uitvoer afgekapt en staat de oorzaak onderaan; daarom een kopblok bovenaan.
+describe('gate-fast kopblok', () => {
+  const FAIL_REGELS = (aantal: number) =>
+    Array.from(
+      { length: aantal },
+      (_, i) => ` FAIL  |unit| src/a${String(i)}.test.ts > suite > test ${String(i)}`,
+    ).join('\n');
+
+  async function rapport(opties: { rood: string[]; fails?: number; naam?: string }) {
+    const run = (script: string): Promise<Uitslag> => {
+      const rood = opties.rood.includes(script);
+      const fails = script === 'test:unit' && rood ? `${FAIL_REGELS(opties.fails ?? 0)}\n` : '';
+      return Promise.resolve({
+        script,
+        code: rood ? 2 : 0,
+        output: rood ? `${fails}FOUT-UIT ${script}\n` : `ok ${script}\n`,
+        seconds: 0,
+      });
+    };
+    let tekst = '';
+    const keuze = opties.naam === undefined ? scripts : { scripts, naam: opties.naam };
+    const code = await gateFast(keuze, run, (t: string) => {
+      tekst += t;
+    });
+    return { code, tekst, regels: tekst.split('\n') };
+  }
+
+  test('de kop met de ✗-regel staat vóór de eerste ── -uitvoer en de samenvattingsregel blijft aan het slot staan', async () => {
+    const { tekst, regels } = await rapport({ rood: ['lint'] });
+    const kop = '✗ gate:fast rood: lint';
+
+    expect(regels[0]).toBe(kop);
+    expect(tekst.indexOf(kop)).toBeLessThan(tekst.indexOf('── '));
+    expect(tekst.lastIndexOf(kop)).toBeGreaterThan(tekst.indexOf('── lint ──'));
+    expect(tekst.trimEnd().endsWith(kop)).toBe(true);
+  });
+
+  test('rode test:unit met FAIL-regels: kop met ✗-regel en Falende tests: vóór de eerste ── , slot ongewijzigd', async () => {
+    const { tekst, regels } = await rapport({ rood: ['test:unit'], fails: 2 });
+    const lijst = ['src/a0.test.ts > suite > test 0', 'src/a1.test.ts > suite > test 1'];
+    const blok = `Falende tests:\n${lijst.join('\n')}\n`;
+
+    expect(regels[0]).toBe('✗ gate:fast rood: test:unit');
+    expect(regels[1]).toBe('Falende tests:');
+    expect(tekst.startsWith(`✗ gate:fast rood: test:unit\n${blok}── test:unit ──\n`)).toBe(true);
+    expect(tekst.endsWith(blok)).toBe(true);
+    expect(tekst.split('Falende tests:')).toHaveLength(3);
+  });
+
+  test('alleen lint rood (geen FAIL-regels): kop met alleen de ✗-regel, geen Falende tests: bovenaan', async () => {
+    const { tekst, regels } = await rapport({ rood: ['lint'] });
+
+    expect(regels[0]).toBe('✗ gate:fast rood: lint');
+    expect(regels[1]).toBe('── lint ──');
+    expect(tekst.split('Falende tests:')).toHaveLength(1);
+  });
+
+  test('rode test:unit zonder FAIL-regels: kop met alleen de ✗-regel', async () => {
+    const { tekst, regels } = await rapport({ rood: ['test:unit'], fails: 0 });
+
+    expect(regels.slice(0, 2)).toStrictEqual(['✗ gate:fast rood: test:unit', '── test:unit ──']);
+    expect(tekst.split('Falende tests:')).toHaveLength(1);
+  });
+
+  test('alles groen: geen kopblok, uitvoer is alleen de ✓-lijst en de groene samenvatting', async () => {
+    const { code, tekst } = await rapport({ rood: [] });
+    const verwacht = `${scripts.map((script) => `✓ ${script} (0.0 s)\n`).join('')}✓ gate:fast groen\n`;
+
+    expect(code).toBe(0);
+    expect(tekst).toBe(verwacht);
+  });
+
+  test('een deelnaam komt letterlijk in de kop en in het slot', async () => {
+    const naam = 'gate:fast (test-1)';
+    const { tekst, regels } = await rapport({ rood: ['test:unit'], fails: 1, naam });
+    const kop = `✗ ${naam} rood: test:unit`;
+
+    expect(regels[0]).toBe(kop);
+    expect(regels[1]).toBe('Falende tests:');
+    expect(tekst.split(kop)).toHaveLength(3);
+  });
+
+  test('de kop kapt de lijst af op 20 en noemt de rest, net als het slot', async () => {
+    const { tekst, regels } = await rapport({ rood: ['test:unit'], fails: 25 });
+    const kop = regels.slice(0, regels.indexOf('── test:unit ──'));
+
+    expect(kop).toHaveLength(1 + 1 + 20 + 1);
+    expect(kop[2]).toBe('src/a0.test.ts > suite > test 0');
+    expect(kop[21]).toBe('src/a19.test.ts > suite > test 19');
+    expect(kop[22]).toBe('… en 5 meer');
+    expect(tekst.trimEnd().endsWith(kop.slice(1).join('\n'))).toBe(true);
+  });
+
+  test('dubbele FAIL-regels staan in de kop één keer', async () => {
+    const run = (script: string): Promise<Uitslag> =>
+      Promise.resolve({
+        script,
+        code: script === 'test:unit' ? 1 : 0,
+        output: script === 'test:unit' ? ' FAIL  a.test.ts > t\n FAIL  a.test.ts > t\n' : 'ok\n',
+        seconds: 0,
+      });
+    let tekst = '';
+    await gateFast(scripts, run, (t: string) => {
+      tekst += t;
+    });
+
+    expect(tekst.startsWith('✗ gate:fast rood: test:unit\nFalende tests:\na.test.ts > t\n── test:unit ──\n')).toBe(
+      true,
+    );
   });
 });
