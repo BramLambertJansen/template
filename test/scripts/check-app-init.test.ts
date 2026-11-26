@@ -43,8 +43,8 @@ const escapeUnsafeJsLiteral = (str: string): string =>
     }
   });
 
-// De app:init-kant van de proefkopie (docs/specs/app-init-proef.md, sinds ADR 0073 onderdeel van check:new-resource,
-// docs/specs/een-proefkopie.md): app:init op een tijdelijke kopie, daarna de snelle suite in die kopie.
+// De app:init-kant van de proefkopie (docs/template/specs/een-proefkopie.md, ADR 0073; de ids zijn die van die spec): app:init op een
+// tijdelijke kopie, daarna de snelle suite in die kopie.
 // Contract van scripts/kit/draai-proef.mjs voor deze tests:
 //   export async function draaiProef(bron: string, scripts: readonly string[],
 //     opties: { bewaar?: boolean, genereer: (root: string) => Promise<void> }): Promise<number>
@@ -120,14 +120,14 @@ function toestand(bron: string) {
 }
 
 describe('de succesregel', () => {
-  test('AC-1 (tekst): een geslaagde run eindigt met exit 0 en de letterlijke slotregel', () => {
+  test('een-proefkopie/AC-1 (tekst): een geslaagde run eindigt met exit 0 en de letterlijke slotregel', () => {
     const setup = opzet(['ok']);
     const result = draai(setup);
     expect(result.code, result.alles).toBe(0);
     expect(laatsteRegel(result.stdout)).toBe(SUCCES);
   });
 
-  test('AC-1 (suite): elk opgegeven script draait, ook een script dat via "pnpm <naam>" een ander aanroept', () => {
+  test('een-proefkopie/AC-1 (suite): elk opgegeven script draait, ook een script dat via "pnpm <naam>" een ander aanroept', () => {
     const setup = opzet(['samen', 'ok']);
     const result = draai(setup);
     expect(result.code, result.alles).toBe(0);
@@ -136,7 +136,7 @@ describe('de succesregel', () => {
 });
 
 describe('een test die alleen in de template slaagt', () => {
-  test('AC-2: leest onderhoud uit .claude/gates.json: exit ≠ 0 met de letterlijke melding', () => {
+  test('een-proefkopie/AC-2: leest onderhoud uit .claude/gates.json: exit ≠ 0 met de letterlijke melding', () => {
     const setup = opzet(['ok', 'eist-onderhoud']);
     const result = draai(setup);
     expect(result.code).not.toBe(0);
@@ -144,18 +144,18 @@ describe('een test die alleen in de template slaagt', () => {
     expect(result.alles).not.toContain(SUCCES);
   });
 
-  test('AC-2: dezelfde fixture zonder die afhankelijkheid slaagt', () => {
+  test('een-proefkopie/AC-2: dezelfde fixture zonder die afhankelijkheid slaagt', () => {
     const setup = opzet(['ok']);
     expect(draai(setup).code).toBe(0);
   });
 
-  test('AC-2: het script slaagt wel in de bron zelf (de template)', () => {
+  test('een-proefkopie/AC-2: het script slaagt wel in de bron zelf (de template)', () => {
     const setup = opzet(['eist-onderhoud']);
     const result = draaiNode(['probe/onderhoud.mjs'], setup.werkmap.bron, {});
     expect(result.code, result.alles).toBe(0);
   });
 
-  test('AC-2: de eerste rode gate stopt de check: de latere draait niet', () => {
+  test('een-proefkopie/AC-2: de eerste rode gate stopt de check: de latere draait niet', () => {
     const werkmap = nieuweWerkmap(dirs);
     const marker = path.join(werkmap.base, 'laatste-gate');
     maakBron(werkmap, {
@@ -175,7 +175,7 @@ describe('een test die alleen in de template slaagt', () => {
     expect(existsSync(marker)).toBe(false);
   });
 
-  test('AC-3: planAppInit zonder guard: exit ≠ 0 in de kopie, maar slaagt in de bron zonder init', () => {
+  test('een-proefkopie/AC-11: planAppInit zonder guard: exit ≠ 0 in de kopie, maar slaagt in de bron zonder init', () => {
     const setup = opzet(['eist-plan']);
     expect(draaiNode(['probe/plan.mjs'], setup.werkmap.bron, {}).code).toBe(0);
     const result = draai(setup);
@@ -185,7 +185,7 @@ describe('een test die alleen in de template slaagt', () => {
 });
 
 describe('de kopie na init', () => {
-  test('AC-4: naam, gates, CODEOWNERS en de twee refs; AC-6: --bewaar laat de map staan en meldt het pad', () => {
+  test('een-proefkopie/AC-12: naam, gates, CODEOWNERS en de twee refs; een-proefkopie/AC-8: --bewaar laat de map staan en meldt het pad', () => {
     const setup = opzet(['ok']);
     const result = draai(setup, { vlaggen: ['--bewaar'] });
     expect(result.code, result.alles).toBe(0);
@@ -206,7 +206,7 @@ describe('de kopie na init', () => {
     }
   });
 
-  test('AC-5: app:init faalt (README zonder de kop): exit ≠ 0, de melding, en geen enkele gate draait', () => {
+  test('een-proefkopie/AC-4: app:init faalt (README zonder de kop): exit ≠ 0, de melding, en geen enkele gate draait', () => {
     const werkmap = nieuweWerkmap(dirs);
     const marker = path.join(werkmap.base, 'gate-gedraaid');
     maakBron(werkmap, {
@@ -232,7 +232,7 @@ describe('opruimen', () => {
   test.each([
     ['geslaagd', ['ok']],
     ['gefaald (rode gate)', ['faal']],
-  ])('AC-6: na een %s run bestaat de tijdelijke map niet meer', (_naam, scripts) => {
+  ])('een-proefkopie/AC-8: na een %s run bestaat de tijdelijke map niet meer', (_naam, scripts) => {
     const setup = opzet(scripts);
     const result = draai(setup);
     if (scripts[0] === 'ok') expect(result.code, result.alles).toBe(0);
@@ -240,7 +240,7 @@ describe('opruimen', () => {
     expect(overgebleven(setup.werkmap, PREFIX)).toEqual([]);
   });
 
-  test('AC-6: de kopie is tijdens de run onder TMPDIR gemaakt (de test ziet dus echt een opruimactie)', () => {
+  test('een-proefkopie/AC-8: de kopie is tijdens de run onder TMPDIR gemaakt (de test ziet dus echt een opruimactie)', () => {
     const setup = opzet(['ok']);
     const result = draai(setup, { vlaggen: ['--bewaar'] });
     const kopie = bewaardPad(result.stdout);
@@ -251,7 +251,7 @@ describe('opruimen', () => {
     ['SIGTERM', 143],
     ['SIGINT', 130],
   ] as const)(
-    'AC-7: %s tijdens een draaiende gate ruimt op en eindigt met exit %i',
+    'een-proefkopie/AC-8: %s tijdens een draaiende gate ruimt op en eindigt met exit %i',
     async (signal, verwacht) => {
       const werkmap = nieuweWerkmap(dirs);
       const marker = path.join(werkmap.base, 'gate-draait');
@@ -302,7 +302,7 @@ describe('opruimen', () => {
     30_000,
   );
 
-  test('AC-18: een bron zonder .claude/gates.json faalt in plaats van stil over te slaan', () => {
+  test('een-proefkopie/AC-8: een bron zonder .claude/gates.json faalt in plaats van stil over te slaan', () => {
     const werkmap = nieuweWerkmap(dirs);
     maakBron(werkmap, {
       gates: null,
@@ -350,7 +350,7 @@ describe('de opruimguard', () => {
       (w: Werkmap) => [w.tmp, 'sub', '..', '..', `${PREFIX}esc`].join('/'),
       (w: Werkmap) => path.join(w.base, `${PREFIX}esc`),
     ],
-  ])('AC-8: weigert een pad %s: er wordt niets verwijderd en het is gemeld', (_naam, maak, bestaat) => {
+  ])('een-proefkopie/AC-8: weigert een pad %s: er wordt niets verwijderd en het is gemeld', (_naam, maak, bestaat) => {
     const werkmap = nieuweWerkmap(dirs);
     const pad = maak(werkmap);
     const doel = slachtoffer(bestaat?.(werkmap) ?? pad);
@@ -361,7 +361,7 @@ describe('de opruimguard', () => {
     expect(existsSync(path.join(doel, 'bestand'))).toBe(true);
   });
 
-  test('AC-8: een eigen tijdelijke map (direct onder TMPDIR, met het prefix) wordt wel verwijderd', () => {
+  test('een-proefkopie/AC-8: een eigen tijdelijke map (direct onder TMPDIR, met het prefix) wordt wel verwijderd', () => {
     const werkmap = nieuweWerkmap(dirs);
     const pad = slachtoffer(path.join(werkmap.tmp, `${PREFIX}ok`));
     const result = ruim(werkmap, pad, PREFIX);
@@ -374,7 +374,7 @@ describe('de bron blijft ongemoeid', () => {
   test.each([
     ['geslaagd', ['ok']],
     ['gefaald', ['faal']],
-  ])('AC-9: na een %s run zijn status, HEAD en node_modules/.bin gelijk', (_naam, scripts) => {
+  ])('een-proefkopie/AC-8: na een %s run zijn status, HEAD en node_modules/.bin gelijk', (_naam, scripts) => {
     const setup = opzet(scripts);
     const voor = toestand(setup.werkmap.bron);
     const result = draai(setup);
@@ -384,7 +384,7 @@ describe('de bron blijft ongemoeid', () => {
     expect(existsSync(path.join(setup.werkmap.bron, 'node_modules'))).toBe(true);
   });
 
-  test('AC-10: GIT_DIR en GIT_INDEX_FILE naar de bron (git-hook): geen commit, index ongewijzigd, run slaagt', () => {
+  test('een-proefkopie/AC-8: GIT_DIR en GIT_INDEX_FILE naar de bron (git-hook): geen commit, index ongewijzigd, run slaagt', () => {
     const setup = opzet(['ok']);
     const gitDir = path.join(setup.werkmap.bron, '.git');
     const indexVoor = readFileSync(path.join(gitDir, 'index'));
@@ -398,7 +398,7 @@ describe('de bron blijft ongemoeid', () => {
 });
 
 describe('geen pnpm, npm of docker', () => {
-  test('AC-11: nep-uitvoerbare bestanden vooraan in PATH worden nooit aangeroepen', () => {
+  test('een-proefkopie/AC-8: nep-uitvoerbare bestanden vooraan in PATH worden nooit aangeroepen', () => {
     const setup = opzet(['samen']);
     const nep = mkdtempSync(path.join(tmpdir(), 'nep-bin-'));
     dirs.push(nep);
@@ -420,7 +420,7 @@ describe('stoppen vóór het kopiëren', () => {
   // GEWIJZIGD (spec een-proefkopie AC-5): een app slaat niet meer over; check:new-resource draait daar de generator en de
   // suite (test/scripts/een-proefkopie.test.ts).
 
-  test('AC-14: zonder node_modules: exit ≠ 0 met de melding en geen tijdelijke map', () => {
+  test('een-proefkopie/AC-8: zonder node_modules: exit ≠ 0 met de melding en geen tijdelijke map', () => {
     const werkmap = nieuweWerkmap(dirs);
     maakBron(werkmap, { nodeModules: false, scripts: SCRIPTS, probes: PROBES });
     const result = draaiNode([schrijfDriver(werkmap), werkmap.bron, JSON.stringify(['ok'])], werkmap.bron, {
@@ -431,7 +431,7 @@ describe('stoppen vóór het kopiëren', () => {
     expect(readdirSync(werkmap.tmp)).toEqual([]);
   });
 
-  test('importeren van de module doet niets: geen uitvoer, geen map, exit 0', () => {
+  test('een-proefkopie/AC-13: importeren van de module doet niets: geen uitvoer, geen map, exit 0', () => {
     const werkmap = nieuweWerkmap(dirs);
     const leeg = path.join(werkmap.base, 'leeg');
     mkdirSync(leeg);
