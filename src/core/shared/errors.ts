@@ -16,6 +16,8 @@ export const coreErrorCodes = [
   'UPSTREAM_INVALID',
   'UPSTREAM_UNAVAILABLE',
   'UPSTREAM_TIMEOUT',
+  // Bestandsopslag (spec bestandsopslag, OV-18): alleen createFileService (src/core/api/storage) gooit hem.
+  'STORAGE_UNAVAILABLE',
 ] as const;
 
 export type CoreErrorCode = (typeof coreErrorCodes)[number];

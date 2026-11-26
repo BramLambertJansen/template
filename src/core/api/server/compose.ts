@@ -1,8 +1,10 @@
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { authGateway, type Auth, type AuthGateway, type CreateAuthConfig, type Invitation } from '../auth/index.ts';
 import type { WithUser } from '../db/types.ts';
 import { createDevLogin, devAuthSteps, type DevLoginConfig } from '../dev/login-as.ts';
 import type { Env } from '../env.ts';
-import type { App, DevLogin } from '../http/create-app.ts';
+import type { App, DevLogin, FilesConfig } from '../http/create-app.ts';
 import { createReadiness, type Readiness } from '../http/readiness.ts';
 import type { RunningServer, ServeOptions } from '../http/serve.ts';
 import { createWebApp } from '../http/web.ts';
@@ -10,6 +12,10 @@ import { unsafeCast } from '../../shared/unsafe-cast.ts';
 import type { Mail, SendMail } from '../mail/smtp.ts';
 import { writeJsonLine, type RequestLog } from '../obs/request-log.ts';
 import { guardWithUser } from '../outbound/index.ts';
+import type { FileLimits } from '../../shared/limits.ts';
+import { createLocalFileStorage } from '../storage/local.ts';
+import type { FileStorage } from '../storage/port.ts';
+import { createFileService } from '../storage/service.ts';
 
 // De koppeling tussen de core-onderdelen van de server (spec create-server, ADR 0040): omgeving, mail, auth, readiness,
 // dev-login, de SPA, starten en stoppen. De app geeft alleen mee wat van haar is (ServerConfig); de onderdelen met een
@@ -33,6 +39,18 @@ export interface ServerAppDeps<Services> {
   readonly devLogin?: DevLogin;
   // De build-SHA uit BUILD_SHA (spec release-versie); zonder die variabele ontbreekt de sleutel.
   readonly build?: string;
+  // Bestandsopslag (spec bestandsopslag): service, grenzen en, alleen bij APP_ENV=local of test, de dev-route. Ontbreekt
+  // als de app geen files meegeeft.
+  readonly files?: FilesConfig;
+}
+
+// De opslag van de app (spec bestandsopslag): de grenzen uit src/shared/limits.ts, een adapter uit defineFileStorage (per
+// app een ADR) en de map van de lokale adapter (FILES_LOCAL_DIR). Zonder storage gebruikt APP_ENV=local of test de lokale
+// adapter met de dev-route; elders is er dan geen adapter (STORAGE_UNAVAILABLE) en geen dev-route.
+export interface ServerFilesConfig {
+  readonly limits: FileLimits;
+  readonly storage?: FileStorage;
+  readonly localDir?: string;
 }
 
 // Wat van de app is (R-LAAG-02: als argument, core importeert niets uit de app).
@@ -45,6 +63,7 @@ export interface ServerConfig<Services, Name extends string> {
   readonly loginRequiresMfa: (withUser: WithUser) => (userId: string) => Promise<boolean>;
   readonly createServices: (auth: Auth) => Services;
   readonly buildApp: (deps: ServerAppDeps<Services>) => App;
+  readonly files?: ServerFilesConfig;
 }
 
 // De onderdelen met een verbinding of een poort; een test bootst ze na.
@@ -63,6 +82,18 @@ export interface ComposedServer {
   // De API zonder de SPA; start() zet er met WEB_DIR de SPA voor.
   readonly app: App;
   readonly start: () => Promise<RunningServer>;
+}
+
+// De lokale adapter staat nooit in src/ (OV-8): standaard <os.tmpdir()>/app-files-local.
+function composeFiles(files: ServerFilesConfig, env: Env): FilesConfig {
+  const { limits, storage } = files;
+  if (storage !== undefined) return { service: createFileService(storage), limits };
+  if (env.appEnv !== 'local' && env.appEnv !== 'test') return { service: createFileService(undefined), limits };
+  const local = createLocalFileStorage({
+    dir: files.localDir ?? path.join(tmpdir(), 'app-files-local'),
+    appOrigin: env.appOrigin,
+  });
+  return { service: createFileService(local), limits, devRoute: local.devRoute };
 }
 
 export function composeServer<Services, Name extends string>(
@@ -91,6 +122,7 @@ export function composeServer<Services, Name extends string>(
     loginRequiresMfa: config.loginRequiresMfa(withUser),
   });
 
+  const files = config.files === undefined ? undefined : composeFiles(config.files, env);
   const app = config.buildApp({
     appOrigin: env.appOrigin,
     auth: authGateway(auth),
@@ -102,11 +134,14 @@ export function composeServer<Services, Name extends string>(
     ...(env.appEnv === 'local' ? { devLogin: createDevLogin(devAuthSteps(auth), config.devLogin) } : {}),
     // GET /api/health toont de build alleen als de image hem meekreeg (spec release-versie).
     ...(env.buildSha === undefined ? {} : { build: env.buildSha }),
+    ...(files === undefined ? {} : { files }),
   });
+  // connect-src van de SPA: 'self' plus de uploadOrigin van de adapter (AC-5); de lokale adapter heeft er geen.
+  const uploadOrigin = files?.service.uploadOrigin ?? null;
 
   // Met WEB_DIR (de containerimage) serveert dezelfde server de SPA op dezelfde origin (ADR 0049); lokaal doet Vite dat.
   const start = () =>
-    parts.startServer(env.webDir === undefined ? app : createWebApp(app, env.webDir), {
+    parts.startServer(env.webDir === undefined ? app : createWebApp(app, env.webDir, { uploadOrigin }), {
       host: env.apiHost,
       port: env.apiPort,
       shutdownTimeoutMs: env.shutdownTimeoutMs,

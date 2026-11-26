@@ -19,6 +19,14 @@ export interface RouteActor {
   readonly twoFactorEnabled: boolean;
 }
 
+// Wat prepare krijgt (spec bestandsopslag, "Route kit in twee fasen"): de gevalideerde input, de actor zonder rol (de rol
+// komt pas in de tweede withUser) en services; geen tx, want prepare draait zonder transactie en zonder verbinding.
+export interface PrepareContext<Input, Services = unknown> {
+  readonly input: Input;
+  readonly actor: { readonly userId: UserId; readonly sessionStrength: SessionStrength };
+  readonly services: Services;
+}
+
 // services: wat de app in createApp meegeeft (bijv. uitnodigen via Better Auth); getypt via createRouteKit<…, Services>.
 export interface RouteContext<Input, Services = unknown, Audit extends AuditActions = AuditActions> {
   readonly input: Input;

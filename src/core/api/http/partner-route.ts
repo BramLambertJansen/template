@@ -42,7 +42,7 @@ interface Run<Services> {
 }
 
 // Rol en permissie (incl. MFA) zoals in de gewone route: geen rol in user_roles = geen toegang (framework §6).
-function authorize<Services>(route: Route<Services>, session: SessionInfo, role: ActorRole['role']): RouteActor {
+export function authorize<Services>(route: Route<Services>, session: SessionInfo, role: ActorRole['role']): RouteActor {
   if (role === null) throw new AppError('FORBIDDEN');
   const decision = route.check({ role, sessionStrength: session.sessionStrength });
   if (!decision.ok) throw new AppError(decision.code);

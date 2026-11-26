@@ -59,6 +59,26 @@ async function apiError(response: Response): Promise<ApiError> {
   return new ApiError(code, response.status, 'requestId' in body ? body.requestId : undefined);
 }
 
+// Het antwoord van POST /api/files (spec bestandsopslag): dezelfde vorm als SignedUpload in src/core/api/storage/port.ts,
+// hier structureel herhaald omdat de web-zone niets uit de api-zone importeert.
+export interface SignedUploadTarget {
+  readonly url: string;
+  readonly method: string;
+  readonly headers: Readonly<Record<string, string>>;
+}
+
+// Uploadt een bestand naar een signed URL: precies de methode en headers uit het antwoord, zonder cookies (de URL draagt de
+// toestemming, niet de sessie). Een niet-ok antwoord gooit ApiError met de code uit de body, anders INTERNAL_ERROR.
+export async function uploadFile(upload: SignedUploadTarget, file: Blob): Promise<void> {
+  const response = await fetch(upload.url, {
+    method: upload.method,
+    credentials: 'omit',
+    headers: { ...upload.headers },
+    body: file,
+  });
+  if (!response.ok) throw await apiError(response);
+}
+
 export function createApiClient<Contracts extends readonly AnyContract[]>() {
   async function call<K extends Key<Contracts[number]>>(
     key: K,

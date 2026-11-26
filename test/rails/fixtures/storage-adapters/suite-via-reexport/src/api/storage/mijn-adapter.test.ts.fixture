@@ -1,0 +1,7 @@
+import { fileStorageContract } from '#core/api/storage/testing.ts';
+import { mijnAdapter } from './index.ts';
+
+// De suite importeert de adapter via een re-export; de check volgt de import tot de bron.
+fileStorageContract('mijn', () =>
+  Promise.resolve({ storage: mijnAdapter, fetch: () => Promise.resolve(new Response(null)), advance: () => undefined }),
+);

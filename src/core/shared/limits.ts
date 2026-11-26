@@ -83,3 +83,43 @@ export const INTEGRATION_SWITCH_MAX_AGE_MS = 30_000;
 // Rollenregister (spec rollenregister): de naam van een rol, gelijk aan de CHECK op app.roles.name (test in
 // test/auth/role-name-limit.test.ts).
 export const ROLE_NAME_MAX_LENGTH = 32;
+
+// Bestandsopslag (spec bestandsopslag, ADR 0060): harde grenzen. Dezelfde waarden als de CHECK's op public.files (deel B).
+// Een app kiest haar waarden in FILE_LIMITS (src/shared/limits.ts); createApp weigert er een boven deze grenzen.
+export const MAX_FILE_BYTES = 26_214_400;
+export const MAX_FILE_URL_TTL_SECONDS = 900;
+export const MAX_FILENAME_LENGTH = 255;
+// Time-out op stat in createFileService (OV-22): daarna STORAGE_UNAVAILABLE.
+export const STORAGE_CALL_TIMEOUT_MS = 5000;
+
+export interface FileLimits {
+  readonly maxBytes: number;
+  readonly allowedTypes: readonly string[];
+  readonly uploadUrlTtlSeconds: number;
+  readonly downloadUrlTtlSeconds: number;
+  // Hoe lang een onvoltooide upload blijft staan; altijd langer dan uploadUrlTtlSeconds.
+  readonly pendingTtlSeconds: number;
+  readonly maxPerUser: number;
+  readonly pageSize: number;
+}
+
+const positiveUpTo = (value: number, max: number) => Number.isInteger(value) && value >= 1 && value <= max;
+
+// De namen van de foute sleutels (leeg = in orde): boven een harde grens, geen positief geheel getal, pendingTtlSeconds
+// niet groter dan uploadUrlTtlSeconds, of een lege allowedTypes bij een geconfigureerde adapter.
+export function invalidFileLimits(limits: FileLimits, options: { readonly hasStorage: boolean }): string[] {
+  const checks: readonly (readonly [keyof FileLimits, boolean])[] = [
+    ['maxBytes', positiveUpTo(limits.maxBytes, MAX_FILE_BYTES)],
+    ['allowedTypes', !options.hasStorage || limits.allowedTypes.length > 0],
+    ['uploadUrlTtlSeconds', positiveUpTo(limits.uploadUrlTtlSeconds, MAX_FILE_URL_TTL_SECONDS)],
+    ['downloadUrlTtlSeconds', positiveUpTo(limits.downloadUrlTtlSeconds, MAX_FILE_URL_TTL_SECONDS)],
+    [
+      'pendingTtlSeconds',
+      positiveUpTo(limits.pendingTtlSeconds, Number.MAX_SAFE_INTEGER) &&
+        limits.pendingTtlSeconds > limits.uploadUrlTtlSeconds,
+    ],
+    ['maxPerUser', positiveUpTo(limits.maxPerUser, Number.MAX_SAFE_INTEGER)],
+    ['pageSize', positiveUpTo(limits.pageSize, MAX_PAGE_SIZE)],
+  ];
+  return checks.filter(([, ok]) => !ok).map(([name]) => name);
+}

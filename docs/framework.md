@@ -43,15 +43,15 @@ Afgedwongen door: dependency-cruiser (ook cycles), ESLint, `check-core`.
 
 ## 3. Poorten en adapters
 
-Afgedwongen door: dependency-cruiser, lint, smoketest op provider-data-API, `pnpm check:toolchain` en de workflow `toolchain` (R-PROV-04).
+Afgedwongen door: dependency-cruiser, lint, smoketest op provider-data-API, `pnpm check:storage-adapters`, `pnpm check:toolchain` en de workflow `toolchain` (R-PROV-04).
 
 - **R-PROV-01** Template levert Postgres 17 + pgTAP, dbmate, `db/init/`, Mailpit; hosting, beheerde Postgres, SMTP, fouttracking kiest eigenaar per app-ADR (hosting-ADR bij eerste release); Supabase en Vercel zijn voorkeur van eigenaar, niet template (0039, 0040)
-- **R-PROV-02** Geen provider-functies of -schema's (`auth.uid()`, Data API, `storage.*`, `realtime.*`); provider-data-API voor browser uit, smoketest bewijst dat (0039)
+- **R-PROV-02** Geen provider-functies of -schema's (`auth.uid()`, Data API, `storage.*`, `realtime.*`); provider-data-API voor browser uit, smoketest bewijst dat; voor opslag alleen signed URL's van de API, Storage-policies, publieke buckets en listing blijven uit en de smoketest bewijst dat een browsersessie zonder signed URL niets leest of schrijft (0039, 0060)
 - **R-PROV-03** Geen provider-SDK in `src/web`; in `src/api` alleen in `deploy/<host>/` of door ADR toegestane adapter (0039)
 - **R-PROV-04** Major van Node, pnpm of TypeScript via de majorchecklist in `.github/pull_request_template.md` (changelog, CI + `gate:slow`, cloud-setup + `app:init`, versie overal gelijk, terugdraaien), zonder ADR; beleid "hoogste binnen vertrouwde major" (Node: nieuwste patch van de huidige LTS-lijn, volgende major pas als LTS; pnpm: nieuwste versie van de huidige major die minstens 7 dagen oud is; TypeScript: nieuwste binnen de `peerDependencies` van de gepinde typescript-eslint); bron van de versie: `mise.toml` en `package.json`, regels en ADR's noemen geen versie; geen Corepack; `package.json` enige bron pnpm-versie; Renovate verbergt geen major maar opent hem als eigen PR met label `major`; Postgres 18 pas als alle beoogde providers het bieden (0039, 0042, 0061, 0111)
 - **R-PROV-05** Beheerde database: eigen rollen toegestaan; herhaal pooler-lektest tegen provider; Postgres-versie gelijk aan lokaal (0042)
 - **R-PROV-06** Externe auth-provider alleen per ADR; release-workflows, smoketest, runbooks, jobs-trigger horen bij app-ADR (0039, 0041, 0050)
-- **R-OPSL-01** Geen provider-SDK of productieopslag in template; provider per app-ADR (0060)
+- **R-OPSL-01** Geen provider-SDK of productieopslag in template; provider per app-ADR; core levert poort `FileStorage` (`defineFileStorage`, `src/core/api/storage/`) met contracttestsuite `fileStorageContract`, en `pnpm check:storage-adapters` eist die suite voor elke adapter; alleen `createFileService` geeft `STORAGE_UNAVAILABLE` (0060)
 - **R-OPSL-02** Opslag alleen via kortlevende signed URL (na permissie- en eigenaarcontrole, één object, één methode; upload schrijft eenmalig, download als bijlage met neutraal type); geen publieke buckets of listing (0060)
 - **R-OPSL-03** Sleutel uit rij-id, nooit gebruikersinvoer; upload heeft metadatarij met `owner_id` en RLS; verwijderen via wachtrij; fout uit voor-stap pas na rol-, permissie-, MFA-, eigenaarcontrole; dev-adapter alleen `APP_ENV=local` of `test` (0060)
 - **R-OPSL-04** Geen opslag in productie tot runner (ST-03) werkt (0060)
@@ -64,7 +64,7 @@ Afgedwongen door: dependency-cruiser, lint, smoketest op provider-data-API, `pnp
 - **R-UIT-03** Schermroute heeft `can()`-guard; uitzondering `/login`, `/uitnodiging`; spec vóór route: uitzondering `GET /api/health`, `GET /api/ready` (0049)
 - **R-UIT-04** Geen voorafgaand besluit voor functionele UI in core: `src/core/web/ui` en `src/core/web/copy` volgens R-WERK-18 (0056, 0058)
 - **R-UIT-05** `POST /api/dev/login-as` alleen `APP_ENV=local` (elders 404), CSRF-controle, alleen `{ rol: 'user' | 'admin' }`, echt inloggen als seed-account (0043)
-- **R-UIT-06** Dev-opslagroute (OPSL) valt buiten `defineRoute`, login, CSRF, bodyLimit; alleen `APP_ENV=local` of `test` (0060)
+- **R-UIT-06** Dev-opslagroute `PUT`/`GET /api/dev/files/:token` valt buiten `defineRoute`, login, CSRF, bodyLimit; alleen `APP_ENV=local` of `test` (elders 404); vervangende bescherming: HMAC-token per proces, write-once, grootte uit het token (0060)
 - **R-UIT-07** Een integratietest mag een lokale nep-partner gebruiken (`startFakePartner` uit `src/core/api/outbound/testing.ts`: echte HTTP-server in de test, vastgelegde antwoorden); eigen code en database blijven echt. De contracttest van een koppeling (`describeContract` uit `src/core/api/integrations/testing.ts`) draait tegen de nep-partner met een testlezing van de schakelaar; de handmatige run is dezelfde suite met `CONTRACT_LIVE=<naam>` en `APP_ENV=test`, nooit in CI. Elke koppeling krijgt daarnaast één handmatige run tegen de testomgeving van de partner, met commando en uitkomst in de PR (0077)
 
 ## 4. Codeerkaders

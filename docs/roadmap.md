@@ -40,6 +40,14 @@ Hooguit drie open items (`check:roadmap`); nummer 1 is bewijs vóór uitbreiding
   aanleiding: #327 (padparameters, voor-stappen en gecombineerde foutgevallen expliciet in specs en spec-review)
   aanleiding: #320 (meetdefinities voor permissievragen, modi en voorlopige weigeringstellingen)
   aanleiding: #534 ("opgepakt" in het eindrapport is gesloten met sluitbewijs of als achterhaald, ADR 0078 punt 6)
+- [ ] **ST-11 storage (P1) — bestandsopslag als poort** (spec `bestandsopslag`, goedgekeurd; [ADR 0060](template/adr/0060-bestandsopslag-als-poort.md)).
+  **Werk:** de drie delen van de spec, elk een eigen PR: A (poort, route kit met `prepare`, lokale adapter, `check:storage-adapters`),
+  B (migratie `public.files`, routes, `/bestanden`), C (opruimen via de runner). Risicowerk met een aparte tester.
+  **Afhankelijkheden:** B na A; C na B en na deel C en D van de spec achtergrondtaken (ST-03). Productie pas na deel C (R-OPSL-04).
+  Drie verschillen met het oude "Klaar als" van ST-11: de template voegt tabellen, routes en een scherm toe die zonder adapter inert zijn
+  (`STORAGE_UNAVAILABLE`); provider-ADR en dependencygoedkeuring horen bij de app; opruimen dekt objecten met een rij, geen afstemming van objecten zonder rij.
+  **Klaar als:** de AC's van de spec hebben een test.
+  aanleiding: `docs/template/specs/afbeeldingen.md` (verzoek van de eigenaar, 2026-11-23; ST-19 vraagt bestandsopslag deel A en B)
 - [ ] **ST-14 (P1) — documentatie en bouwresten opruimen** (opdracht stap 5). Doel: een repo waarmee mensen en agents apps bouwen zonder het
   bouwproces van het framework te reconstrueren; helder Nederlands over de huidige werking; bouwen met agents blijft het uitgangspunt.
   **Gedaan:** README, changelog, leeswijzer en de eerste inventaris (docs en roadmap, `docs/reviews/2026-10-15-principes-inventaris.md`).
@@ -234,7 +242,7 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
 - [ ] **ST-19 (P1) — afbeeldingen tonen bij een resource** (spec `afbeeldingen`, voorgesteld; uitbreiding op spec `bestandsopslag`).
   **Werk:** eerst een besluit-PR die ADR 0060 punt 2 en R-OPSL-02 herziet (weergave-URL voor een vaste lijst rastertypen); dan
   deel A (`createViewUrl` op de poort, `img-src` in de CSP, veld `view`) en deel B (koppelpatroon bestand bij een rij, check, gouden pad).
-  **Afhankelijkheden:** besluit-PR; het storage-deel van ST-11 eerst uit Geparkeerd en bestandsopslag deel A en B gebouwd;
+  **Afhankelijkheden:** besluit-PR; bestandsopslag deel A en B gebouwd (ST-11 storage, onder Nu);
   productie pas na bestandsopslag deel C (R-OPSL-04).
   **Klaar als:** de AC's van de spec hebben een test.
   aanleiding: `docs/template/specs/afbeeldingen.md` (verzoek van de eigenaar, 2026-11-23; afbeelding bij een artikel)
@@ -465,15 +473,12 @@ Bewust nog niet, tot de genoemde aanleiding er is (P1). Niets verdwijnt: elk ite
   PII, tokens, body of query; dedupe en opruimen getest; een alert en herstel zijn in staging bewezen. Geen telemetry-provider verplicht in core.
   **Eisen uit het regelboek** (R-DOC-10: tot de bouw staan ze hier; de bouw-PR zet ze terug in het regelboek): fouttracking standaard in een eigen tabel via `reportClientError()`, externe dienst optioneel (was in R-PROV-01). De clientfouten-route wordt een data-route zonder login (naast de machineroute van ST-15): maximale grootte per melding, limiet per IP per minuut, geen onnodige vrije tekst; de bouw-PR zet hem als uitzondering terug in R-UIT-02 (was in R-UIT-02). `assert()` meldt in productie aan de fouttracking (was in R-CODE-04).
   terug als: de eerste app naar staging gaat
-- [ ] **ST-11 (P2) — notificaties en storage (optioneel).** Notificaties: registratiecontract voor berichtsoorten, ontvangers en autorisatie,
-  voorkeuren en kanalen, met hergebruik van mail-layout en outbox; in-app inbox en push vragen eigen specs. Storage: provider-neutrale grens
-  voor uploads en downloads met owner-controle, toegestane typen en grootte, korte signed-URL-geldigheid, metadata en opruimen van verweesde
-  bestanden; geen provider-SDK in de browser. **Afhankelijkheden:** concrete appbeslissing; ST-03, ST-05; provider-ADR; dependencygoedkeuring.
-  **Klaar als:** ontvangstrechten en voorkeuren getest; herhaalde jobs veroorzaken geen dubbele inboxregels; twee gebruikers benaderen elkaars
-  bestanden niet; verlopen links en ongeldige uploads geweigerd; accountverwijdering en retention behandelen bestanden. Zonder activering voegt het
+- [ ] **ST-11 (P2) — notificaties (optioneel).** Registratiecontract voor berichtsoorten, ontvangers en autorisatie,
+  voorkeuren en kanalen, met hergebruik van mail-layout en outbox; in-app inbox en push vragen eigen specs. Het storage-deel staat onder Nu
+  (ST-11 storage). **Afhankelijkheden:** concrete appbeslissing; ST-03, ST-05.
+  **Klaar als:** ontvangstrechten en voorkeuren getest; herhaalde jobs veroorzaken geen dubbele inboxregels. Zonder activering voegt het
   geen service of runtimeverplichting toe.
-  **Eisen uit het regelboek** (R-DOC-10: tot de bouw staan ze hier; de bouw-PR zet ze terug in het regelboek): core levert poort `FileStorage` met contracttestsuite (was in R-OPSL-01, ADR 0060).
-  terug als: een concrete app notificaties of bestanden nodig heeft
+  terug als: een concrete app notificaties nodig heeft
 - [ ] **ST-12 (P2) — templateversies en upgradecontrole** (stuk 6 template-versie; ADR 0040). Nu: `docs/template-changelog.md` met "Bij een update"-notities, `TEMPLATE_VERSION` en de versie in `GET /api/health` (spec release-versie) en
   `scripts/kit/app-init.mjs` die de template-SHA vastlegt; het versieschema is semver `0.x` en een update volgt een releasetag `template-v<x.y.z>`, met de adviserende `pnpm template:status` (spec `template-release`, ADR 0094). **Werk:** onderscheid releaseversie, opgenomen
   templatecommit en app-build-SHA; leg herkomst vast bij app-init en update; upgrade-notities bij breaking changes, migraties, instellingen en
