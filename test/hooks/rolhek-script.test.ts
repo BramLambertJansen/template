@@ -33,14 +33,11 @@ const bash = (command: string) => JSON.stringify({ tool_name: 'Bash', tool_input
 test('verboden: exit 2 met de reden op stderr', () => {
   const result = run(bash('git push origin main'));
 
-  // cloud-netwerkvorm (R-TEST-02): `git push origin main` is ook niet `git push origin HEAD`; de netwerkvorm-melding (spec punt 2)
-  // staat naast de bestaande reden.
+  // cloud-netwerkvorm/AC-16 (R-TEST-02): `git push origin main` geeft alleen de main-reden; de netwerkvorm-melding viel weg
+  // (vervolg op de review van #890, N-5).
   expect([result.status, result.stderr.trim()]).toStrictEqual([
     2,
-    [
-      'rolhek: push naar main is verboden; open een PR',
-      'rolhek: Netwerkvorm: draai dit als los commando in de vorm git push origin HEAD; buiten deze vorm draait het in de sandbox, zonder token-proxy en signeerdienst (docs/ENVIRONMENT.md, "Cloud: commit, push, PR en bewijs")',
-    ].join('\n'),
+    ['rolhek: push naar main is verboden; open een PR'].join('\n'),
   ]);
 });
 
