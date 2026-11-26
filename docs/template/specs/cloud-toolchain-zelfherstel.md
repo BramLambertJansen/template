@@ -116,10 +116,14 @@ Zichtbare tekst, letterlijk (één regel, `<…>` ingevuld):
    hook zonder netwerk en zonder uitvoer (vgl. F8: zelfs een tweede run van het script kost 2,8 s).
 5. **Installeren alleen als de invoer gelijk is aan `main`.** Na een afwijking vergelijkt de hook de invoer van de
    installatie in de werkmap met de tree van het anker (`RAILS_ANKER`, dat de lader meegeeft):
-   `git diff --quiet <anker> -- <INVOER>` en `git ls-files --others -- <INVOER>` leeg (ook genegeerde bestanden, zoals
-   een `mise.local.toml`). De hook draait als root op een werkmap die een agent kan beschrijven, dus elke git-aanroep van
-   de vergelijking krijgt `-c core.fsmonitor= -c diff.external=` en `git diff` ook `--no-ext-diff --no-textconv`: geen
-   programma uit de git-configuratie van de werkmap draait mee. `INVOER` is wat `scripts/cloud-setup.sh` werkelijk leest of
+   op inhoud, niet via de werkboom-diff van git (die volgt filters uit `.git/config` en `.gitattributes`, en vertrouwt de
+   index, ook `--assume-unchanged` en `--skip-worktree`). De verwachte blob-oids komen uit `git ls-tree -r -z <anker> --
+   <INVOER>`; de bestanden in de werkmap uit `git ls-files -z --cached --others -- <INVOER>` (ook genegeerde bestanden,
+   zoals een `mise.local.toml`), gehasht met `git hash-object --no-filters --stdin-paths`. Beide verzamelingen moeten
+   gelijk zijn; een symlink, een ander bestandstype of een geneste git-repo onder een `INVOER`-pad geldt als afwijking. De
+   hook draait als root op een werkmap die een agent kan beschrijven, dus elke git-aanroep krijgt ook
+   `-c core.fsmonitor= -c diff.external=`: geen programma uit de git-configuratie van de werkmap draait mee tijdens de
+   vergelijking. `INVOER` is wat `scripts/cloud-setup.sh` werkelijk leest of
    uitvoert, als pathspecs met `:(glob)` vanaf de root:
    - `scripts/cloud-setup.sh` en `scripts/kit/` (het script draait `scripts/kit/pnpm-installeer.mjs` en importeert
      `scripts/kit/toolchain.mjs`);
@@ -193,10 +197,12 @@ Zichtbare tekst, letterlijk (één regel, `<…>` ingevuld):
   een gewijzigd `pnpm-workspace.yaml`, een gewijzigd bestand onder `scripts/kit/`, een ongetrackte `.npmrc`, een genegeerde
   `mise.local.toml`, wanneer de hook draait, dan start hij het script niet en geeft hij precies één regel die begint met
   `! toolchain niet hersteld:` en dat pad noemt, en `wijzig het veld "Setup script" van de omgeving` maar geen
-  terminalcommando. Een gewijzigd bestand buiten `INVOER` (bijvoorbeeld onder `src/`) houdt het herstel niet tegen. Elke
-  git-aanroep van de vergelijking bevat `-c core.fsmonitor=` en `-c diff.external=`, en `git diff` ook `--no-ext-diff` en
-  `--no-textconv`; een werkmap met `core.fsmonitor` naar een script dat een markeerbestand schrijft, laat dat bestand na de
-  hook afwezig. Toets: `test/hooks/toolchain-herstel.test.ts` (nieuw)
+  terminalcommando. Hetzelfde geldt voor een `INVOER`-bestand dat met `--assume-unchanged` of `--skip-worktree` gemarkeerd
+  en daarna gewijzigd is, een `INVOER`-pad dat een symlink is, en een geneste git-repo onder `.mise/` of `.lefthook/`. Een
+  gewijzigd bestand buiten `INVOER` (bijvoorbeeld onder `src/`) houdt het herstel niet tegen. Elke git-aanroep van de
+  vergelijking bevat `-c core.fsmonitor=` en `-c diff.external=`; een werkmap met `core.fsmonitor`, of met een clean-filter
+  (`filter.<naam>.clean` of `.process`) op alle bestanden, naar een script dat een markeerbestand schrijft, laat dat
+  bestand na de hook afwezig. Toets: `test/hooks/toolchain-herstel.test.ts` (nieuw)
 - **cloud-toolchain-zelfherstel/AC-7** — Gegeven een afwijkende Node- en pnpm-pin, invoer gelijk aan het anker en een stub voor
   `scripts/cloud-setup.sh` die exit 0 geeft, wanneer de hook draait, dan start hij `bash scripts/cloud-setup.sh` met `cwd`
   de projectroot, schrijft hij de uitvoer van het script in het logbestand en niet naar stdout, en is zijn stdout precies

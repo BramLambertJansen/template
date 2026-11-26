@@ -29,7 +29,8 @@ cache niet noemt.
    `scripts/kit/toolchain.mjs`. Klopt alles, dan doet hij niets, zonder netwerk.
 4. **Installeren alleen als de invoer van de installatie gelijk is aan het anker**: `scripts/cloud-setup.sh`,
    `scripts/kit/` en de configuratie van mise, pnpm en lefthook in elke vorm die hun documentatie noemt, getrackt en
-   ongetrackt, vergeleken zonder fsmonitor, externe diff of textconv uit de werkmap. Dan draait hij
+   ongetrackt en genegeerd, vergeleken op inhoud (blob-hashes zonder filters, niet via de index of de werkboom-diff van
+   git) en zonder fsmonitor of externe diff uit de werkmap. Dan draait hij
    `scripts/cloud-setup.sh` uit de werkmap, synchroon, en stopt hij het met zijn hele procesgroep vóór zijn eigen timeout.
    Wijkt de invoer af, dan installeert hij niet.
 5. **Eén regel in de context**, alleen bij herstel, een reden om niet te herstellen, of falen; de sessie start altijd. In de
@@ -53,7 +54,13 @@ cache niet noemt.
 
 - In een cloudsessie die met een verouderde cache start, draait als root en buiten de sandbox alleen installatie-invoer
   die gelijk is aan `main`: werk dat door CI, de ruleset en de eigenaarmerge ging. `node_modules` en de mise-installaties
-  uit de cache worden niet vergeleken; `pnpm install` met de lockfile van `main` zet ze recht.
+  uit de cache worden niet vergeleken. `pnpm install` met de lockfile van `main` controleert bij een kloppende
+  `node_modules/.modules.yaml` de bestanden niet opnieuw, en `pnpm exec lefthook install` voert daarna
+  `node_modules/.bin/lefthook` als root uit. Aanvaard restrisico: de cache komt van het veld van de eigenaar, en een
+  agent kan `node_modules` in de sandbox alleen in zijn eigen sessie beschrijven, niet in de cache van een volgende.
+  Hetzelfde geldt voor de git-configuratie in `.git/` tijdens het script zelf: alleen de vergelijking is ertegen
+  gehard, niet elke git-aanroep van mise, pnpm of lefthook. `.git/` wordt niet gepusht; bij `startup` komt het uit de
+  clone van het platform, vóór de agent iets doet.
 - Op een branch met een pin-bump die nog niet op `main` staat, herstelt de hook niet; dan blijft het veld de route.
 - Tot het veld wijzigt, herhaalt elke nieuwe sessie de installatie (ongeveer anderhalve minuut met Node aanwezig).
 - Een hook- of laderwijziging werkt pas na de samenvoeging (0045); de hookcode moet op Node 22 draaien (koude VM).

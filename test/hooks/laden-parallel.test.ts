@@ -59,14 +59,14 @@ interface Repo {
   cache: string;
 }
 
-function makeRepo(versie = 'v1', metRemote = true): Repo {
+function makeRepo(versie = 'v1', metRemote = true, bron?: string): Repo {
   const root = tmp('lp-repo-');
   git(root, 'init', '-q', '-b', 'main');
   mkdirSync(path.join(root, '.claude/hooks'), { recursive: true });
   for (const naam of ['laden.mjs', 'werkstraat.mjs'])
     copyFileSync(path.join(STUB_SOURCE, naam), path.join(root, '.claude/hooks', naam));
   mkdirSync(path.join(root, 'rails/hooks'), { recursive: true });
-  writeFileSync(path.join(root, 'rails/hooks/werkstraat.mjs'), scriptVan(versie));
+  writeFileSync(path.join(root, 'rails/hooks/werkstraat.mjs'), bron ?? scriptVan(versie));
   writeFileSync(path.join(root, '.gitignore'), '.claude/hooks/.cache/\n');
   git(root, 'add', '-A');
   git(root, 'commit', '-q', '-m', 'init');
@@ -91,11 +91,12 @@ interface Uitkomst {
   stderr: string;
 }
 
-function draai(repo: Repo, args: string[]): Promise<Uitkomst> {
+function draai(repo: Repo, args: string[], extra: Record<string, string | undefined> = {}): Promise<Uitkomst> {
+  const cloud = 'CLAUDE_CODE_REMOTE' in extra ? extra : { CLAUDE_CODE_REMOTE: 'true', ...extra };
   return new Promise((resolve) => {
     const kind = spawn(process.execPath, [path.join(repo.root, '.claude/hooks/werkstraat.mjs'), ...args], {
       cwd: repo.root,
-      env: { ...process.env, ...GIT_ENV },
+      env: { ...process.env, ...GIT_ENV, ...cloud },
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     let stdout = '';
@@ -218,5 +219,42 @@ describe('cloud-toolchain-zelfherstel/AC-10 lader', () => {
     expect(uitkomst.status).toBe(0);
     expect(uitkomst.stdout).toMatch(/commondir\.geplant-\d+/);
     expect(existsSync(path.join(repo.root, '.git/commondir'))).toBe(false);
+  });
+
+  test('cloud-toolchain-zelfherstel/AC-10 K3 een script van main dat vóór zijn eigen try crasht: exit 0 en één !-regel op stdout bij toolchain-herstel', async () => {
+    const repo = makeRepo('v1', true, "throw new Error('boem bij het laden');\n");
+
+    const uitkomst = await draai(repo, ['toolchain-herstel']);
+
+    const lijst = uitkomst.stdout.split('\n').filter((regel) => regel !== '');
+    expect(uitkomst.status).toBe(0);
+    expect(lijst).toHaveLength(1);
+    expect(lijst[0]).toMatch(/^! /);
+  });
+
+  test('cloud-toolchain-zelfherstel/AC-10 K2 lokaal (CLAUDE_CODE_REMOTE niet true) ververst toolchain-herstel het anker niet: geen ls-remote of fetch', async () => {
+    const repo = makeRepo('v1');
+    await draai(repo, ['session-start']);
+    adviseer(repo, 'v2');
+    const stubs = tmp('lp-stubs-');
+    const log = path.join(stubs, 'git.log');
+    const echt = (process.env['PATH'] ?? '')
+      .split(path.delimiter)
+      .map((dir) => path.join(dir, 'git'))
+      .find((kandidaat) => existsSync(kandidaat));
+    writeFileSync(path.join(stubs, 'git'), `#!/bin/sh\necho "$@" >> "${log}"\nexec ${echt ?? 'git'} "$@"\n`, {
+      mode: 0o755,
+    });
+    const pad = { PATH: `${stubs}${path.delimiter}${process.env['PATH'] ?? ''}` };
+    const gebruikt = () => (existsSync(log) ? readFileSync(log, 'utf8') : '');
+
+    const lokaal = await draai(repo, ['toolchain-herstel'], { ...pad, CLAUDE_CODE_REMOTE: undefined });
+    const lokaalLog = gebruikt();
+    const cloud = await draai(repo, ['toolchain-herstel'], { ...pad, CLAUDE_CODE_REMOTE: 'true' });
+
+    expect(['ls-remote', 'fetch'].filter((woord) => lokaalLog.includes(woord))).toStrictEqual([]);
+    expect(lokaal.stdout).toBe('uitvoer:toolchain-herstel:v1\n');
+    expect(gebruikt()).toContain('ls-remote');
+    expect(cloud.stdout).toBe('uitvoer:toolchain-herstel:v2\n');
   });
 });

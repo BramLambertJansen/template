@@ -7,6 +7,8 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  symlinkSync,
+  utimesSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -628,6 +630,89 @@ describe('cloud-toolchain-zelfherstel/AC-6 invoer wijkt af van het anker', () =>
   });
 });
 
+describe('cloud-toolchain-zelfherstel/AC-6 vergelijking op inhoud (B1) en geneste repo (K5)', () => {
+  /** Een uitvoerbaar script dat een markeerbestand schrijft en stdin ongewijzigd doorgeeft (een clean-filter). */
+  function markeerFilter(markering: string): string {
+    const bestand = path.join(tmp('th-filter-'), 'filter.sh');
+    writeFileSync(bestand, `#!/bin/sh\ntouch "${markering}"\ncat\n`);
+    chmodSync(bestand, 0o755);
+    return bestand;
+  }
+
+  /** Eén `!`-regel met het pad en zonder installatie, of de reden waarom niet. */
+  function stopFout(w: Werkmap, uitslag: Uitslag, pad: string): string | null {
+    const lijst = regels(uitslag.stdout);
+    if (scriptGestart(w)) return 'het script is toch gestart';
+    if (lijst.length !== 1) return `${String(lijst.length)} regels`;
+    if (!(lijst[0] ?? '').startsWith('! toolchain niet hersteld: ')) return `geen !-regel: ${lijst[0] ?? ''}`;
+    if (!(lijst[0] ?? '').includes(pad)) return `pad ontbreekt: ${lijst[0] ?? ''}`;
+    return null;
+  }
+
+  test('cloud-toolchain-zelfherstel/AC-6 B1a een clean-filter uit .git/config draait niet mee bij alleen een stat-wijziging; gelijke inhoud telt als gelijk', async () => {
+    const fouten: string[] = [];
+    for (const soort of ['clean', 'process']) {
+      const w = maakWerkmap();
+      const markering = path.join(tmp('th-markering-'), 'gedraaid');
+      git(w.root, 'config', `filter.x.${soort}`, markeerFilter(markering));
+      writeFileSync(path.join(w.root, '.git/info/attributes'), '* filter=x\n');
+      const nu = new Date(Date.now() + 5000);
+      utimesSync(path.join(w.root, 'scripts/kit/toolchain.mjs'), nu, nu);
+
+      const uitslag = await draai(w);
+
+      if (existsSync(markering)) fouten.push(`${soort}: het filter draaide mee`);
+      if (!scriptGestart(w))
+        fouten.push(`${soort}: gelijke inhoud werd niet als gelijk gezien (${uitslag.stdout ?? ''})`);
+    }
+
+    expect(fouten).toStrictEqual([]);
+  });
+
+  test('cloud-toolchain-zelfherstel/AC-6 B1b een assume-unchanged of skip-worktree bestand dat inhoudelijk wijzigde: !-regel met het pad, geen installatie', async () => {
+    const fouten: string[] = [];
+    for (const vlag of ['--assume-unchanged', '--skip-worktree']) {
+      const w = maakWerkmap();
+      git(w.root, 'update-index', vlag, 'scripts/kit/toolchain.mjs');
+      writeFileSync(path.join(w.root, 'scripts/kit/toolchain.mjs'), '// inhoudelijk gewijzigd\n');
+
+      const fout = stopFout(w, await draai(w), 'scripts/kit/toolchain.mjs');
+
+      if (fout !== null) fouten.push(`${vlag}: ${fout}`);
+    }
+
+    expect(fouten).toStrictEqual([]);
+  });
+
+  test('cloud-toolchain-zelfherstel/AC-6 B1c een INVOER-pad dat een symlink is, ook naar een bestand met dezelfde inhoud: afwijking', async () => {
+    const w = maakWerkmap();
+    writeFileSync(path.join(w.root, 'src/doel.txt'), '// kit\n');
+    rmSync(path.join(w.root, 'scripts/kit/toolchain.mjs'));
+    symlinkSync('../../src/doel.txt', path.join(w.root, 'scripts/kit/toolchain.mjs'));
+
+    const uitslag = await draai(w);
+
+    expect(stopFout(w, uitslag, 'scripts/kit/toolchain.mjs')).toBeNull();
+  });
+
+  test('cloud-toolchain-zelfherstel/AC-6 K5 een geneste git-repo onder .mise/ of .lefthook/: afwijking, geen installatie', async () => {
+    const fouten: string[] = [];
+    for (const map of ['.mise', '.lefthook']) {
+      const w = maakWerkmap();
+      const geneste = path.join(w.root, map, 'geneste');
+      mkdirSync(geneste, { recursive: true });
+      git(geneste, 'init', '-q', '-b', 'main');
+      writeFileSync(path.join(geneste, 'config.toml'), 'x = 1\n');
+
+      const fout = stopFout(w, await draai(w), map);
+
+      if (fout !== null) fouten.push(`${map}: ${fout}`);
+    }
+
+    expect(fouten).toStrictEqual([]);
+  });
+});
+
 describe('cloud-toolchain-zelfherstel/AC-7 herstel', () => {
   test('cloud-toolchain-zelfherstel/AC-7 exit 0 van het script: bash scripts/cloud-setup.sh in de projectroot, uitvoer in het log, één ✓-regel', async () => {
     const w = maakWerkmap();
@@ -781,11 +866,13 @@ describe('cloud-toolchain-zelfherstel/AC-9 settings en deadline', () => {
 describe('cloud-toolchain-zelfherstel/AC-13 onverwachte fout in de hook', () => {
   function entry(invoer: string, env: Record<string, string>) {
     const cwd = tmp('th-entry-');
+    const omgeving: Record<string, string | undefined> = { ...process.env, ...env, HOME: cwd };
+    if (!('CLAUDE_CODE_REMOTE' in env)) delete omgeving['CLAUDE_CODE_REMOTE'];
     return spawnSync(process.execPath, [path.join(REPO, 'rails/hooks/werkstraat.mjs'), 'toolchain-herstel'], {
       cwd,
       input: invoer,
       encoding: 'utf8',
-      env: { ...process.env, ...env, HOME: cwd },
+      env: omgeving,
     });
   }
 
@@ -797,11 +884,15 @@ describe('cloud-toolchain-zelfherstel/AC-13 onverwachte fout in de hook', () => 
     expect(r.stdout).toMatch(/^✗ toolchain-herstel faalde: /);
   });
 
-  test('cloud-toolchain-zelfherstel/AC-13 ook buiten de cloud: de fout komt op stdout, niet alleen op stderr', () => {
-    const r = entry('{niet-json', { CLAUDE_CODE_REMOTE: 'false' });
+  test('cloud-toolchain-zelfherstel/AC-1 K1 buiten de cloud geeft ook een ongeldige payload geen uitvoer en exit 0', () => {
+    const fouten: string[] = [];
+    for (const remote of ['false', '', undefined]) {
+      const r = entry('{niet-json', remote === undefined ? {} : { CLAUDE_CODE_REMOTE: remote });
+      if (r.status !== 0 || r.stdout !== '')
+        fouten.push(`${String(remote)}: exit ${String(r.status)}, stdout ${r.stdout}`);
+    }
 
-    expect(r.status).toBe(0);
-    expect(r.stdout).toMatch(/^✗ toolchain-herstel faalde: /);
+    expect(fouten).toStrictEqual([]);
   });
 
   test('cloud-toolchain-zelfherstel/AC-13 een geldige payload buiten de cloud: geen uitvoer, exit 0', () => {
