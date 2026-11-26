@@ -196,7 +196,7 @@ describe('rood, met de stappen in de melding', () => {
   });
 });
 
-describe('een-proefkopie/AC-8: de waarborgen van app-init-proef, met de nieuwe naam en het ene prefix', () => {
+describe('een-proefkopie/AC-8: de waarborgen van stap 1 en 9, met de nieuwe naam en het ene prefix', () => {
   test('na een geslaagde en een gefaalde run is de kopie weg; de bron is ongewijzigd', () => {
     const setup = opzet();
     const status = git(setup.werkmap.bron, ['status', '--porcelain']);
