@@ -121,7 +121,7 @@ export function decide(payload, ctx) {
     : { ...ctx, authority: null, onbekendeRol: !SUBAGENT_ROLES.has(namedRole) };
   if (tool.startsWith('mcp__')) {
     // Spec cloud-netwerkvorm (Ontwerp punt 3): een MCP-bestandsschrijftool slaat lefthook over, ook als hij in mcpLezen staat.
-    if (MCP_SCHRIJVEN.has(tool)) gate(decision, role, MCP_SCHRIJVEN_REDEN);
+    if (MCP_SCHRIJVEN.test(tool)) gate(decision, role, MCP_SCHRIJVEN_REDEN);
     decideMcp({ tool, role }, context, decision);
   } else if (tool === 'Bash') {
     const command = field(input, 'command');
@@ -2135,7 +2135,7 @@ export function gitForbidden(args, { role, branch }) {
   if (subcommand === 'config' && setsHooksPath(rest)) found.push('core.hooksPath zetten is verboden');
   if (config.some((setting) => TRUSTED_CONFIG.test(setting)) || movesTrustedBase(subcommand, rest))
     found.push('de vertrouwde basis (origin/main en remote origin) verander je alleen met git fetch (ADR 0046)');
-  if (subcommand === 'push' && pushesMain(rest, branch)) found.push('push naar main is verboden; open een PR');
+  if (subcommand === 'push' && pushesMain(rest, branch)) found.push(PUSH_MAIN_REDEN);
   if (subcommand === 'push' && forcePushes(rest)) found.push('force-push is verboden, ook voor de hoofdsessie (WS-04)');
   if (subcommand === 'branch' && deletesMain(rest)) found.push('git branch -d/-D/--delete van main is verboden (ADR 0046 punt 26)');
   if (shellAlias(args, { subcommand, rest, config }))
@@ -2810,17 +2810,27 @@ function isGraphql(endpoint) {
 
 const FIELDS = new Set(['field', 'raw-field', 'input']);
 
-// `…/git/refs/heads/main` aan het einde van een genormaliseerd endpoint (spec cloud-netwerkvorm, Ontwerp punt 5).
-const MAIN_REF = /(?:^|\/)git\/refs\/heads\/main$/i;
+// `…/git/refs/heads/main` of `…/branches/main/rename` aan het einde van een genormaliseerd endpoint (spec cloud-netwerkvorm,
+// Ontwerp punt 5, AC-14).
+const MAIN_REF = /(?:^|\/)(?:git\/refs\/heads\/main|branches\/main\/rename)$/i;
 
 /**
- * Een schrijvende `gh api`-aanroep (niet-GET of met velden) op de ref `main`, na normalisatie: `%2F` wordt `/`, een query of
- * fragment valt weg, meerdere `/` worden één en een afsluitende `/` valt weg (spec cloud-netwerkvorm/AC-13).
+ * Een schrijvende `gh api`-aanroep (niet-GET of met velden) op de ref `main`, na normalisatie: elke procent-escape wordt
+ * gedecodeerd (na het weghalen van query en fragment), herhaald tot er niets meer verandert (`%6Dain`, `%252F`), meerdere `/` worden
+ * één en een afsluitende `/` valt weg (spec cloud-netwerkvorm/AC-13, AC-14).
  * @param {ApiCall} api
  */
 function apiVerzetMain(api) {
-  const endpoint = api.endpoint.replace(/%2f/gi, '/').replace(/[?#].*$/s, '').replace(/\/{2,}/g, '/').replace(/\/+$/, '');
+  // Eerst de query en het fragment van het ruwe endpoint weg, dan decoderen: een `%3F` of `%23` is voor GitHub een teken in
+  // het pad, geen einde ervan (review N-1).
+  const endpoint = decodeerEscapes(api.endpoint.replace(/[?#].*$/s, '')).replace(/\/{2,}/g, '/').replace(/\/+$/, '');
   return MAIN_REF.test(endpoint) && apiMutates(api);
+}
+
+/** Elke `%XX` naar zijn teken, herhaald tot het endpoint niet meer verandert (AC-14). @param {string} tekst @returns {string} */
+function decodeerEscapes(tekst) {
+  const gedecodeerd = tekst.replace(/%([0-9a-f]{2})/gi, (_, hex) => String.fromCharCode(Number.parseInt(String(hex), 16)));
+  return gedecodeerd === tekst ? tekst : decodeerEscapes(gedecodeerd);
 }
 
 /** REST met een andere methode dan GET of met velden/invoer (gh stuurt dan POST). @param {ApiCall} api */
@@ -2893,8 +2903,11 @@ function shortCluster(options, arg, next) {
 
 // ---------- netwerkvorm (spec cloud-netwerkvorm) ----------
 
-// Ontwerp punt 3: de MCP-tools die bestanden naar GitHub schrijven; `create_pull_request` valt erbuiten (ADR 0078 punt 4).
-const MCP_SCHRIJVEN = new Set(['mcp__github__push_files', 'mcp__github__create_or_update_file', 'mcp__github__delete_file']);
+// Ontwerp punt 3: de MCP-tools die bestanden naar GitHub schrijven, onder elke servernaam (AC-15: `mcp__github__…`,
+// `mcp__plugin_engineering_github__…`); `create_pull_request` valt erbuiten (ADR 0078 punt 4).
+const MCP_SCHRIJVEN = /^mcp__.+__(?:push_files|create_or_update_file|delete_file)$/;
+// AC-16: de reden van de main-regel voor `git push`; met deze reden geeft de netwerkvorm geen tweede melding.
+const PUSH_MAIN_REDEN = 'push naar main is verboden; open een PR';
 const MCP_SCHRIJVEN_REDEN = 'Push met `git push origin HEAD` als los commando; deze route slaat lefthook over';
 const NETWERK_SANDBOX =
   'buiten deze vorm draait het in de sandbox, zonder token-proxy en signeerdienst (docs/ENVIRONMENT.md, "Cloud: commit, push, PR en bewijs")';
@@ -2939,6 +2952,7 @@ function decideNetwerkvorm(command, ctx, decision) {
   }
   for (const [sleutel, groep] of geraakt) {
     if (groep.some((patroon) => pastOpPatroon(command, patroon))) continue;
+    if (sleutel === 'git push' && decision.deny.includes(PUSH_MAIN_REDEN)) continue;
     const verwijdert = sleutel === 'git push' && kernen.some(({ programma, sub, rest }) =>
       programma === 'git' && sub === 'push' && rest.some((arg) => PUSH_VERWIJDERT.test(arg)));
     const lokaal = ctx.lokaleNetwerkvormen;

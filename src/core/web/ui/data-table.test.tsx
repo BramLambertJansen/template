@@ -12,6 +12,7 @@ const columns: readonly DataTableColumn<(typeof rows)[number]>[] = [
 const base = { rows, columns, getRowId: (row: (typeof rows)[number]) => row.id, label: 'Personen' };
 afterEach(cleanup);
 
+// ui-data-display/AC-2, ui-data-display/AC-8
 test('sortering meldt richting zonder lokale herschikking en markeert alleen actieve kop', () => {
   const onSortChange = vi.fn();
   const { rerender } = render(<DataTable {...base} sort={null} onSortChange={onSortChange} />);
@@ -26,6 +27,7 @@ test('sortering meldt richting zonder lokale herschikking en markeert alleen act
   expect(screen.getByRole('columnheader').hasAttribute('aria-sort')).toBe(false);
 });
 
+// ui-data-display/AC-3
 test('select-all is gedeeltelijk en behoudt selectie buiten de zichtbare pagina', () => {
   const onSelectionChange = vi.fn();
   const selection = {
@@ -48,6 +50,7 @@ test('select-all is gedeeltelijk en behoudt selectie buiten de zichtbare pagina'
   expect(onSelectionChange).toHaveBeenLastCalledWith(['elsewhere', 'constructor']);
 });
 
+// ui-data-display/AC-3
 test('busy en loading blokkeren acties; lege tabel heeft correcte colspan en disabled selectie', () => {
   const onSortChange = vi.fn();
   const onLoadMore = vi.fn();
@@ -85,6 +88,7 @@ test('busy en loading blokkeren acties; lege tabel heeft correcte colspan en dis
   expect(onLoadMore).toHaveBeenCalledTimes(1);
 });
 
+// ui-data-display/AC-2, ui-data-display/AC-8
 test('lege en dubbele rij- en kolomids worden geweigerd', () => {
   expect(() => render(<DataTable {...base} rows={[...rows.slice(0, 1), ...rows.slice(0, 1)]} />)).toThrow();
   expect(() => render(<DataTable {...base} rows={[{ id: '', name: 'Leeg' }]} />)).toThrow();

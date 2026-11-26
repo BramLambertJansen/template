@@ -4,6 +4,7 @@ import { Tabs } from './tabs.tsx';
 
 afterEach(cleanup);
 
+// ui-data-display/AC-4
 test('een ouderwissel trekt focus niet terug na bewust verlaten van het paneel zonder volgend focusdoel', () => {
   const items = [
     { id: 'first', label: 'Eerste', content: <input aria-label="Invoer" /> },

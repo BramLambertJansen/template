@@ -253,13 +253,14 @@ gh en CI per runtime staat in de [receptenkaart](operations/recepten.md) (`node 
 
 Het rolhek weigert, lokaal en in de cloud, voor elke rol een commando dat een patroon uit `excludedCommands` raakt maar er
 niet in zijn geheel op past: `git commit -F m 2>&1 | tail`, `git push -u origin <branch>`, `pnpm run test:db`. De reden noemt
-de vorm die wel buiten de sandbox draait (`rails/hooks/lib/rolhek.mjs:2601`, spec `cloud-netwerkvorm`). De lijst komt uit
+de vorm die wel buiten de sandbox draait (`rails/hooks/lib/rolhek.mjs:2943`, spec `cloud-netwerkvorm`). De lijst komt uit
 `.claude/settings.json` in het anker (`rails/hooks/lib/rolhek-context.mjs:71`); een wijziging werkt in het rolhek pas na de
-merge. Een remote branch verwijder je met `gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<branch>"` (endpoint tussen aanhalingstekens, zie de receptenkaart); `main` verwijderen
-of verzetten via `gh api` is voor elke rol verboden (`rails/hooks/lib/rolhek.mjs:2492`). `mcp__github__push_files`,
-`create_or_update_file` en `delete_file` slaan lefthook over: de hoofdsessie krijgt een vraag, een subagent een weigering
-(`rails/hooks/lib/rolhek.mjs:115`). Een cloudsessie (`CLAUDE_CODE_REMOTE=true`) toont de route bij de start in één regel
-(`rails/hooks/lib/werkstraat.mjs:363`).
+merge. Een remote branch verwijder je met `gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<branch>"` (endpoint tussen aanhalingstekens, zie de receptenkaart); in de cloud weigert de GitHub-proxy die route met HTTP 403 (spec
+`cloud-netwerkvorm`, F14). `main` verwijderen
+of verzetten via `gh api` is voor elke rol verboden, ook met procent-escapes of via `…/branches/main/rename` (`rails/hooks/lib/rolhek.mjs:2823`).
+`push_files`, `create_or_update_file` en `delete_file`, onder elke MCP-servernaam (`mcp__github__push_files`), slaan lefthook over: de hoofdsessie krijgt een vraag, een subagent een weigering
+(`rails/hooks/lib/rolhek.mjs:124`). Een cloudsessie (`CLAUDE_CODE_REMOTE=true`) toont de route bij de start in één regel
+(`rails/hooks/lib/werkstraat.mjs:420`).
 
 Kies bij het starten van de sessie de omgeving uit Opzetten. De omgeving Default heeft geen toolchain:
 `node scripts/kit/feiten.mjs` meldt dan `✗ toolchain ontbreekt` en lefthook draait niet. Netwerktoegang heet in de

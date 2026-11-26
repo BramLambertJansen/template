@@ -45,6 +45,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+// ui-data-display/AC-6
 test('searchable adapter gebruikt lege optie als placeholder en respecteert disabled opties', () => {
   const base = props();
   const onChange = vi.fn();
@@ -58,6 +59,7 @@ test('searchable adapter gebruikt lege optie als placeholder en respecteert disa
   expect(onChange).toHaveBeenCalledWith('admin');
 });
 
+// ui-data-display/AC-6
 test('filterchip wist alleen eigen waarde, onbekende waarden blijven leesbaar en focus keert terug', () => {
   const base = props();
   const onChange = vi.fn();
@@ -74,6 +76,7 @@ test('filterchip wist alleen eigen waarde, onbekende waarden blijven leesbaar en
   expect(document.activeElement).toBe(screen.getByRole('combobox', { name: 'Rol' }));
 });
 
+// ui-data-display/AC-6
 test('zoekchip annuleert pending debounce en roept eenmaal de lege waarde aan', async () => {
   const base = props();
   const onQueryChange = vi.fn();
@@ -90,6 +93,7 @@ test('zoekchip annuleert pending debounce en roept eenmaal de lege waarde aan', 
   expect(input instanceof HTMLInputElement && input.value).toBe('');
 });
 
+// ui-data-display/AC-6, ui-data-display/AC-8
 test('filter ids botsen niet met zoek/sorteerveld; lege/dubbele filterids falen', () => {
   const base = props();
   const { unmount } = render(

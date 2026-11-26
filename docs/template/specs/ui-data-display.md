@@ -10,6 +10,7 @@ namespace: ui-data-display
 De eigenaar vroeg alle vijf UI-uitbreidingen op te pakken. Dit voorstel concretiseert de bouw op branch
 `codex/ui-data-display`, als vervolg op [UI-collecties](ui-collections.md). Geen bouwrechten vóór eigenaarreview en merge
 van spec en exact mandaat naar main (ADR 0046). Volgorde: DataTable, Tabs, Gallery, ListToolbar, Carousel, gezamenlijke catalogus.
+De Carousel is vervallen (ADR 0114); de paragraaf erover blijft als verslag.
 
 ## Rollen en wie wat ziet
 
@@ -135,8 +136,9 @@ Geen kunstmatige netwerklaag in core; querytoestanden via bestaand AsyncView-pat
   Escape/focusherstel, ook bij verwijderd item.
 - **ui-data-display/AC-6** — ListToolbar blijft compatibel, ondersteunt Combobox/chips, afzonderlijk/alles wissen met focus;
   gewiste zoekterm keert niet terug door pending debounce.
-- **ui-data-display/AC-7** — Carousel buttons/direct kiezen/swipes respecteren grenzen, verticale scroll en interactieve
-  inhoud; geen autoplay, verborgen focus of foutieve positiebroadcasts.
+- **ui-data-display/AC-7** — Vervallen door ADR 0114 (Carousel uit deze tranche). Was: Carousel buttons/direct
+  kiezen/swipes respecteren grenzen, verticale scroll en interactieve inhoud; geen autoplay, verborgen focus of foutieve
+  positiebroadcasts.
 - **ui-data-display/AC-8** — Meerdere instanties/dynamisch verwijderde items houden geldige ids/focus; dubbel/lege ids assert;
   onbekende controlled waarden veroorzaken geen vervangende keuze of callback.
 - **ui-data-display/AC-9** — Alle bronindexcomponenten en eindige varianten hebben bereikbare werkende voorbeelden;
@@ -165,7 +167,7 @@ Exact voorgesteld beschermd broncodemandaat voor `codex/ui-data-display`:
 - `src/core/web/ui/tabs.tsx`
 - `src/core/web/ui/gallery.tsx`
 - `src/core/web/ui/list-toolbar.tsx`
-- `src/core/web/ui/carousel.tsx`
+- `src/core/web/ui/carousel.tsx` (vervallen)
 
 Verder: app-barrel `src/web/ui/index.ts`, voorbeelden/targets onder `src/web/features/design-system/`, eventueel lokale
 SVG's onder public/, `docs/ui-data-display.md`, nieuwe componenttests en `e2e/ui-data-display.spec.ts`.
@@ -175,10 +177,12 @@ Ontbreekt een gedeeld uitbreidingspunt, meld dat concreet vóór scopewijziging;
 
 ## Buiten scope
 
-Carousel (en daarmee AC-7) is op 2026-10-15 op verzoek van de eigenaar uit deze tranche gehaald, zie `docs/ui-data-display.md`.
+Carousel (en daarmee AC-7) is op 2026-10-15 op verzoek van de eigenaar uit deze tranche gehaald, zie `docs/ui-data-display.md`;
+AC-7 vervalt door [ADR 0114](../adr/0114-carousel-uit-ui-data-display.md).
 Serverquerybeheer, paginanummers, virtualisatie, kolomresize/reorder, bulkmutaties, accountpagina ombouwen, upload,
 externe media, zoom/lightboxnavigatie, autoplay/animatie, verticale tabs, routerintegratie, nieuwe themes/API/DB.
-Geen roadmap-item wordt met deze afgebakende UI-tranche afgerond of afgevinkt.
+Geen ander roadmap-item wordt met deze afgebakende UI-tranche afgerond of afgevinkt; de eigen regel (#156) volgt uit de
+AC-dekking (ADR 0104).
 
 ## Testplan
 
