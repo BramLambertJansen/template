@@ -47,12 +47,13 @@ Zo toetst `gate:fast` een installatie die buiten de werkmap wil schrijven. Zonde
   volgorde: `--ro-bind / /`, `--dev /dev`, `--proc /proc`, daarna `/proc/sys`, `/proc/sysrq-trigger`, `/proc/irq` en `/proc/bus`
   weer als `--ro-bind` (een verse `/proc` is voor root schrijfbaar, ook zonder capabilities: een sysctl zoals
   `kernel.core_pattern` toetst alleen de bestandsrechten), `--tmpfs /tmp`, `--tmpfs /run`, `--tmpfs /var/run`, `--tmpfs` over
-  de thuismap en over `$XDG_RUNTIME_DIR` van de aanroeper, daarna de toolchain (de installatiemap van mise en de map van
-  `node`) weer als `--ro-bind`, en als laatste de werkmap als enige `--bind`; verder `--unshare-all` (geen netwerk),
+  de thuismap en over `$XDG_RUNTIME_DIR` van de aanroeper, daarna de toolchain (de installatiemap van mise, de terugvalmap
+  `~/.local/share/mise-terugval` uit `scripts/cloud-setup.sh`, de map van `node` en absolute PATH-mappen, alleen binnen de
+  thuismap) weer als `--ro-bind`, en als laatste de werkmap als enige `--bind`; verder `--unshare-all` (geen netwerk),
   `--cap-drop ALL`, `--die-with-parent`, `--new-session` en `--chdir <werkmap>`. De timeout (standaard 30 s) stopt bubblewrap
   met `SIGKILL`; met de proces-namespace stoppen alle kindprocessen mee. Uitslag: `{ status, stdout, stderr }`. De omgeving is
   alleen wat de aanroeper meegeeft plus `PATH`, `HOME=<werkmap>` en `TMPDIR=/tmp`; geen tokens uit de omgeving van de
-  aanroeper.
+  aanroeper. Toets: `test/scripts/kooi.test.ts`
 - **kooi/AC-2** — Werkmap. De kooi weigert, vóór het starten, een werkmap die na `realpath` geen echte submap is van
   `os.tmpdir()` (dus niet die map zelf), of die de root van de repository, de thuismap of `/` is of bevat.
 - **kooi/AC-3** — Dicht vallen. Zonder `bwrap` op het pad, of als bubblewrap niet start, gooit `inKooi` een fout met de

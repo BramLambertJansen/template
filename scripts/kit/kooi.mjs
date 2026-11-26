@@ -49,12 +49,15 @@ export function controleerWerkmap(werkmap) {
 
 /**
  * Mappen van de toolchain onder de thuismap: weer alleen-lezen zichtbaar na de lege thuismap. Alleen de installatiemap van
- * mise, de map van deze `node` en absolute PATH-mappen; een relatieve PATH-map (`.`) zou de hele thuismap terugbrengen.
+ * mise en zijn terugvalmap, de map van deze `node` en absolute PATH-mappen; een relatieve PATH-map (`.`) zou de hele thuismap terugbrengen.
  * @param {string} home
  */
 function toolchainMappen(home) {
   const mappen = new Set();
-  const kandidaten = [path.join(home, '.local', 'share', 'mise'), path.dirname(process.execPath)];
+  // mise-terugval: in de cloud zet scripts/cloud-setup.sh tools daar neer en `mise link` wijst ernaar (docs/ENVIRONMENT.md,
+  // "Voor mise onzichtbaar"); zonder deze bind lossen de links in de strenge kooi naar een lege thuismap op.
+  const share = path.join(home, '.local', 'share');
+  const kandidaten = [path.join(share, 'mise'), path.join(share, 'mise-terugval'), path.dirname(process.execPath)];
   for (const deel of (process.env['PATH'] ?? '').split(':')) if (path.isAbsolute(deel)) kandidaten.push(deel);
   for (const kandidaat of kandidaten) {
     if (!existsSync(kandidaat)) continue;
