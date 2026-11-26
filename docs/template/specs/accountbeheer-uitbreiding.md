@@ -53,8 +53,8 @@ Volgens de aanbeveling bij OV-1 (één nieuwe migratie; beschermde-padwijziginge
 | DELETE | `/api/accounts/:id/invitation` → `null` | `accounts:invite` | `NOT_FOUND`, `ALREADY_ACTIVE`, `FORBIDDEN`, `MFA_REQUIRED` |
 | POST | `/api/accounts/:id/reset-link` → `null` | `accounts:manage` | `NOT_FOUND`, `ACCOUNT_INVITED`, `ACCOUNT_BLOCKED`, `FORBIDDEN`, `MFA_REQUIRED` |
 | POST | `/api/auth/two-factor/generate-backup-codes` `{ password }` (Better Auth) | ingelogd met TOTP, sessie `mfa` | `WRONG_PASSWORD`, `MFA_REQUIRED`, `RATE_LIMITED` |
-| POST | `/api/auth/two-factor/verify-backup-code` `{ code }` (Better Auth) | half ingelogd (geen sessie) | `INVALID_BACKUP_CODE`, `VALIDATION`, `RATE_LIMITED` |
-| POST | `/api/auth/sign-in/email`, `/two-factor/verify-*` (bestaand) | — | erbij: `ACCOUNT_BLOCKED` (server; web toont `INVALID_CREDENTIALS`) |
+| POST | `/api/auth/two-factor/verify-backup-code` `{ code }` (Better Auth) | half ingelogd (geen sessie) | `INVALID_BACKUP_CODE`, `VALIDATION`, `RATE_LIMITED`; van de plugin ook `INVALID_TWO_FACTOR_COOKIE`, `TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE`, `ACCOUNT_TEMPORARILY_LOCKED`, `CONFLICT`; van ADR 0052 `ACCOUNT_DEACTIVATED`, `UNAUTHENTICATED` (web: zie Herstelcodes) |
+| POST | `/api/auth/sign-in/email`, `/two-factor/verify-totp`, `/two-factor/verify-backup-code` (bestaand en nieuw) | — | erbij: `ACCOUNT_BLOCKED` (server; web toont bij inloggen `INVALID_CREDENTIALS`, bij een herstelcode `INVALID_BACKUP_CODE`) |
 
 - **Blokkeren zonder admin-plugin** (ADR 0043 verwierp die; OV-1): (1) `app.set_account_blocked` in de transactie van de route; (2) daarna
   `ctx.services.sessions.revokeAll` (`internalAdapter.deleteUserSessions`), opruimen; (3) de garantie: `authGateway.getSession` ziet
@@ -73,9 +73,25 @@ Volgens de aanbeveling bij OV-1 (één nieuwe migratie; beschermde-padwijziginge
 - **RLS-vangnet:** intrekken en resetlink draaien als `auth_service`, buiten RLS. De route leest eerst in zijn transactie de rij uit `app.accounts`
   (alleen voor een admin met MFA): geen rij → `NOT_FOUND`, de status geeft `ACCOUNT_INVITED`/`ACCOUNT_BLOCKED`/`ALREADY_ACTIVE`; dan de service.
 - **Herstelcodes**: `/two-factor/verify-backup-code` en `/two-factor/generate-backup-codes` uit `disabledPaths`; `/view-backup-codes` blijft dicht.
-  `/two-factor/enable` geeft al 10 codes terug: het inschrijfscherm toont ze. Hooks (test per regel): before `generate-backup-codes`: sessie niet
-  `mfa` → `MFA_REQUIRED` (Better Auth eist alleen sessie en wachtwoord); before `verify-backup-code`: volledige sessie (dan telt de plugin geen
-  pogingen), `disableSession` of `trustDevice` → `VALIDATION` (de `trustDevice`-hook geldt nu alleen `/verify-totp`); after: `mfa`, zoals `/verify-totp`.
+  `/two-factor/enable` geeft al 10 codes terug: het inschrijfscherm toont ze. Hooks (test per regel): before `generate-backup-codes`: een eigen
+  regel, niet via `MFA_PATHS` (die eist `revokeOtherSessions`): sessie aanwezig en met TOTP niet `mfa` → `MFA_REQUIRED` (Better Auth eist alleen
+  sessie en wachtwoord); before `verify-backup-code`: een volledige sessie (dan telt de plugin geen pogingen), of `disableSession` of
+  `trustDevice` aanwezig en niet `false` → `VALIDATION` (anders dan `/verify-totp`, dat `TRUST_DEVICE_DISABLED` houdt); after: `mfa`, zoals
+  `/verify-totp`. Besluit: [ADR 0113](../adr/0113-herstelcodes-voor-totp.md).
+  Inloggen met een herstelcode is een login zoals `/verify-totp`: de loginregels van ADR 0052 (`src/core/api/auth/account-lifecycle.ts`:
+  `prepareChallenge` met de snapshot van `session_version` uit `/sign-in/email`, `completeLogin` met `last_login_at`) gelden ook voor
+  `/two-factor/verify-backup-code`.
+  Eenmalig ook bij twee gelijktijdige verzoeken: de blijvende eenmaligheid komt van de plugin (compare-and-swap op `backupCodes`); een claim
+  beslist alleen de race. De claim (`backup-code:` plus sha256 van gebruiker en code, alleen als de code de vorm `^[A-Za-z0-9]{5}-[A-Za-z0-9]{5}$`
+  heeft, anders geen claim en weigert de plugin) loopt na de controles op sessie, `trustDevice` en `disableSession`, alleen bij een HTTP-verzoek
+  met een geldige challenge (zoals `attemptUserId` in `totp-claim.ts`), met TTL `TOTP_REUSE_BLOCK_SECONDS`, ook bij een foute code. Een geclaimde
+  code geeft `INVALID_BACKUP_CODE`, hetzelfde antwoord als een foute. Faalt het verzoek na de claim zonder dat de plugin de code verbruikt
+  (bijvoorbeeld de poginglimiet), dan is die geldige code tot het einde van de TTL onbruikbaar (aanvaard).
+  Web: `enableTotp` geeft `{ totpURI, backupCodes }`; de codes staan alleen in de state van het component (geen opslag) tot na de eerste juiste
+  TOTP-code; dan het scherm "Herstelcodes"; "Ik heb ze bewaard" roept de bestaande afronding aan (doorgaan naar de app). Op `/account`
+  vervangt de lijst na "Nieuwe herstelcodes maken" het formulier in de sectie; na "Ik heb ze bewaard" komt het formulier terug. `authErrorCode`
+  stap `verifyBackupCode`, zoals `verifyTotp`: `INVALID_TWO_FACTOR_COOKIE` → `UNAUTHENTICATED` (terug naar inloggen), elke andere fout →
+  `INVALID_BACKUP_CODE`; stap `generateBackupCodes`: `INVALID_PASSWORD` → `WRONG_PASSWORD`, `MFA_REQUIRED` blijft.
 
 ## Hergebruik en UX
 
@@ -114,18 +130,26 @@ Volgens de aanbeveling bij OV-1 (één nieuwe migratie; beschermde-padwijziginge
 - **accounts/AC-16** — Gegeven een actieve `user`, wanneer de admin een resetlink stuurt, dan staat de resetmail in Mailpit (een eerdere link werkt
   niet meer); na het instellen van een nieuw wachtwoord zijn de oude sessies weg en werkt alleen het nieuwe wachtwoord.
 - **accounts/AC-17** — Gegeven een admin die TOTP instelt, wanneer de code klopt, dan ziet hij 10 herstelcodes; met één daarvan (in plaats van TOTP)
-  krijgt hij een MFA-sessie, en dezelfde code werkt daarna niet meer (`INVALID_BACKUP_CODE`).
+  krijgt hij een MFA-sessie, en dezelfde code werkt daarna niet meer (`INVALID_BACKUP_CODE`). Toets: `e2e/backup-codes.spec.ts` (nieuw),
+  `test/auth/backup-codes.int.test.ts` (nieuw)
 - **accounts/AC-18** — Gegeven een gebruiker met TOTP op `/account`, wanneer hij met zijn wachtwoord nieuwe herstelcodes maakt, dan werken de oude niet meer.
+  Toets: `e2e/backup-codes.spec.ts` (nieuw, met een admin: `/account` heeft nog geen TOTP-inschrijving), `test/auth/backup-codes.int.test.ts` (nieuw)
 - **accounts/AC-19** — Gegeven een `user` of een admin zonder MFA, wanneer hij een van de vier nieuwe accountroutes aanroept, dan `FORBIDDEN` / `MFA_REQUIRED`.
 - **accounts/AC-20** — Gegeven een half ingelogde gebruiker, wanneer hij een herstelcode stuurt met `trustDevice: true` of `disableSession: true`,
   dan `VALIDATION`, geen sessie en geen trust-device-cookie; met een volledige sessie wordt `verify-backup-code` ook geweigerd.
+  Toets: `test/auth/backup-codes.int.test.ts` (nieuw)
 - **accounts/AC-21** — Gegeven een TOTP-gebruiker met een sessie van sterkte `password`, wanneer hij `generate-backup-codes` aanroept, dan
-  `MFA_REQUIRED` en blijven de oude codes geldig.
+  `MFA_REQUIRED` en blijven de oude codes geldig. Toets: `test/auth/backup-codes.int.test.ts` (nieuw)
 - **accounts/AC-22** — Gegeven een geblokkeerd account met een sessie die na het blokkeren is ontstaan (in de test rechtstreeks via
   `internalAdapter.createSession`), wanneer die sessie een request doet, dan 401 en is de sessierij weg.
 - **accounts/AC-23** — Gegeven een geblokkeerd account, wanneer het met het juiste wachtwoord inlogt, dan antwoordt Better Auth met een 4xx en
   code `ACCOUNT_BLOCKED` (geen 500), en toont de web de gewone inlogfout.
 - **accounts/AC-24** — Gegeven één actieve admin en een uitgenodigde admin, wanneer iets de actieve admin degradeert of blokkeert, dan `LAST_ADMIN`.
+- **accounts/AC-25** — Gegeven een half ingelogde gebruiker met herstelcodes, wanneer twee verzoeken tegelijk dezelfde geldige herstelcode naar
+  `verify-backup-code` sturen, dan krijgt precies één een sessie en de ander `INVALID_BACKUP_CODE`. Toets: `test/auth/backup-codes.int.test.ts` (nieuw)
+- **accounts/AC-26** — Gegeven een gebruiker met herstelcodes, wanneer hij met een herstelcode inlogt, dan is `last_login_at` bijgewerkt zoals na
+  TOTP; is zijn `session_version` na de wachtwoordstap verhoogd, dan `UNAUTHENTICATED` en geen sessie; is zijn account na de wachtwoordstap
+  gedeactiveerd, dan `ACCOUNT_DEACTIVATED` en geen sessie (ADR 0052). Toets: `test/auth/backup-codes.int.test.ts` (nieuw)
 
 ## Randgevallen
 
@@ -153,7 +177,7 @@ Volgens de aanbeveling bij OV-1 (één nieuwe migratie; beschermde-padwijziginge
 - `src/core/api/auth` (options, `auth.ts`: `getSession` controleert `blockedAt`; `invitations.ts`: `revoke`, `sendResetLink`), `src/api/services.ts`
   (vertaling van de nieuwe fouten), mail-layout (resetmail), route `/nieuw-wachtwoord`. `src/core/web/lib/auth.ts`: `authErrorCode` zet bij inloggen
   nu elke 4xx om in `INVALID_CREDENTIALS`; dat blijft (OV-5), erbij komen herstelcode en `RESET_LINK_INVALID`. Mutaties invalideren `accounts`.
-- **Beschermde paden** (nieuwe ADR via `feiten.mjs`): ADR 0043 (backupcodes dicht, admin-plugin verworpen); ADR 0043 (allowlist; "geen sessies"
+- **Beschermde paden** (nieuwe ADR via `feiten.mjs`): ADR 0043 (backupcodes dicht, herzien door ADR 0113; admin-plugin verworpen); ADR 0043 (allowlist; "geen sessies"
   blijft); framework §6 en ADR 0041 (`better_auth` dicht behalve `auth_service`, nu `update (blocked_at)` voor `app_definer`); `db/tests/invarianten.sql`.
 - **Audit log:** besloten in [ADR 0051](../adr/0051-audit-log-en-avg.md), uitgewerkt in spec [audit-log](audit-log.md): blokkeren, deblokkeren, rol, invite en
   reinvite schrijven een regel. Intrekken (`core.account.revoke`) en resetlink (`core.account.reset_link`) krijgen hun regel bij de bouw van die routes (audit-log OV-C1).
@@ -173,7 +197,8 @@ aantal resterende herstelcodes tonen (`/view-backup-codes` is alleen server-side
 - **Integratie (`pnpm test:db`):** per nieuwe route een test per verboden rol (`user` → `FORBIDDEN`, admin zonder MFA → `MFA_REQUIRED`) en ongeldige
   input; racetest "laatste twee admins"; intrekken tegen accepteren in beide volgordes (credential eerst → `ALREADY_ACTIVE`; user weg vóór
   `createAccount` → `INVITATION_INVALID`, geen 500); AC-20 t/m AC-23; `session.create.before` bij inloggen, TOTP, herstelcode en dev-login;
-  resetlink: oude token ongeldig, nieuwe verloopt na de TTL; `/view-backup-codes` 404; `verify-backup-code` geeft `mfa`.
+  resetlink: oude token ongeldig, nieuwe verloopt na de TTL; `/view-backup-codes` 404; `verify-backup-code` geeft `mfa`; AC-25 (twee
+  gelijktijdige verzoeken) en AC-26 (loginregels van ADR 0052).
 - **E2E (`pnpm ui:check`, echte stack, CSP aan):** AC-11 t/m AC-18, mails uit Mailpit; axe op 375 en 1280 px voor accounts (met open menu en elke
   `ConfirmDialog`), herstelcodes tonen, `/account` sectie Herstelcodes, `/nieuw-wachtwoord` en het herstelcodescherm bij inloggen.
 
