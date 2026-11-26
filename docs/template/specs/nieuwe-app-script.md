@@ -239,7 +239,7 @@ Geen accountbeheerpad uit `docs/gouden-pad.md` past (dit is een setupscript, gee
     - `✗ geen git-repo` / `→ draai vanuit ~/code/<slug>`
     - `✓ --repo <repo> is de origin van deze werkmap`
     - `✓ main op GitHub heeft de hernoem-commit boven de koppel-merge`
-    - `✗ main op GitHub niet te lezen: <eerste regel van de gh-melding>` / `→ controleer gh auth status en het netwerk; draai repo-instellingen opnieuw`
+    - `✗ main op GitHub niet te lezen: <eerste regel van de gh-melding>` (slaagt `gh` maar is het antwoord onleesbaar: `geen JSON`, `geen parents in het antwoord` of `geen sha in parents` in plaats van de gh-melding) / `→ controleer gh auth status en het netwerk; draai repo-instellingen opnieuw`
     - `✓ merge-instellingen gezet: merge-commit en squash aan, rebase en auto-merge uit, branch weg na de merge` (met `--beschrijving`: `; beschrijving gezet` erachter)
     - `✓ workflow-rechten gezet: alleen lezen, geen PR-goedkeuring`
     - `✓ Actions-instellingen gezet: aan, alle acties, op volledige SHA`
