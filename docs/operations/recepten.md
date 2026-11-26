@@ -29,7 +29,8 @@ gelijk aan Lokaal.
 | Open PR's | `gh api --paginate "repos/{owner}/{repo}/pulls?state=open" --jq '.[] \| {number, title, ref: .head.ref}'` | idem |
 | Issues zoeken | `gh api "search/issues?q=repo:{owner}/{repo}+is:issue+<zoekwoord>" --jq '.items[] \| {number, title, state}'` | idem |
 | Leerpunt indienen | `gh issue create --repo <template.repository> --label leerpunt --title <titel> --body-file <bestand>` | MCP `mcp__github__issue_write` (aanmaken, label `leerpunt`, naar `template.repository`) |
-| Remote branch verwijderen | `gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<branch>"` | idem |
+| Staat de remote branch er nog | `git ls-remote --heads origin <branch>` | idem |
+| Remote branch verwijderen | `gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<branch>"` | n.v.t. (de GitHub-proxy weigert de DELETE met 403; `delete_branch_on_merge` ruimt hem bij de merge op, een achtergebleven branch meld je aan de eigenaar) |
 | `main` bijhalen in de PR-branch | `git fetch origin main`, dan `git merge --no-commit origin/main` en dan `git commit -F <bestand>` | idem |
 | `main` bijhalen als `main` een beschermd pad wijzigt | `git fetch origin main`, dan `node scripts/kit/bijhalen.mjs main`, de genoemde beschermde paden bijwerken met Edit, dan `git diff --quiet -- <paden>` en dan `git commit -F <bestand>`; tot dan geen `git add -u`, `-A`, `.` of `commit -a` | idem |
 | Branch vooruitzetten als de stap een beschermd pad wijzigt | `git fetch origin <branch>`, dan `node scripts/kit/bijhalen.mjs volg origin/<branch>` en de genoemde beschermde paden bijwerken met Edit | idem |

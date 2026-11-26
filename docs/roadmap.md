@@ -375,10 +375,9 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   niet elke procent-escape (`branches/main/rename` en GraphQL `deleteRef` vallen erbuiten; de ruleset blijft de grens); (N-3) de
   MCP-regel herkent alleen de servernaam `github`; (N-5) de dubbele melding bij `git push origin main` wordt één melding; (B-3) een
   corpustoets op codeblokken uit `docs/**` en `.claude/skills/**` die vangt dat docs of skills een commandovorm voorschrijven die het
-  rolhek weigert. Plus het open deel van de meting na de merge: of `gh api -X DELETE …/git/refs/heads/<branch>` een branch echt
-  verwijdert (meting (e) is onvolledig, F12), terwijl de skill `opleveren` die route al voorschrijft (dat het hookproces
-  `CLAUDE_CODE_REMOTE` ziet, is gemeten: F8). **Klaar als:** N-1, N-3, N-5 en B-3 hebben elk een test of een besluit "aanvaard", en de
-  meting staat in de spec.
+  rolhek weigert. Plus het open deel van de meting na de merge: of `gh api -X DELETE …/git/refs/heads/<branch>` lokaal een branch
+  echt verwijdert (in de cloud faalt het: F13, F14; de skill `opleveren` slaat de stap daar over, OV-9). **Klaar als:** N-1, N-3,
+  N-5 en B-3 hebben elk een test of een besluit "aanvaard", en de lokale meting staat in de spec.
   aanleiding: `docs/template/specs/cloud-netwerkvorm.md` (#890 "Vervolg, buiten deze PR"; #900, meting (e) onvolledig)
 - [x] **Cloud: toolchain herstelt zichzelf na een pin-bump** ([spec cloud-toolchain-zelfherstel](template/specs/cloud-toolchain-zelfherstel.md),
   [ADR 0112](template/adr/0112-cloud-toolchain-herstel-bij-startup.md)). Een SessionStart-hook herstelt in een nieuwe

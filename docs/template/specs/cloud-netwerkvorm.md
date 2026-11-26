@@ -31,11 +31,14 @@ F8 tot en met F12: deze sessie, een nieuwe cloudsessie na de merge van PR #890, 
 | F10 | (b) `git push -u origin HEAD` wordt geweigerd met dezelfde reden, met de vorm `git push origin HEAD`. |
 | F11 | (c) `git commit -F <bestand>` en `git push origin HEAD`, elk los, slagen. De lefthook-hooks draaien: pre-commit (format, secrets), commit-msg (conventional-commit) en pre-push (`gate:fast` groen, `main-achterstand`). Het commitobject heeft een `gpgsig`-blok (SSH), en de signeerdienst gaf geen fout. |
 | F12 | (e) `git push origin HEAD:refs/heads/meet-wegwerp-2026-11-21` wordt geweigerd met de reden van F10. De wegwerpbranch kwam er daarna niet (`git ls-remote origin 'refs/heads/meet*'` bleef leeg), dus de DELETE is niet uitgevoerd. |
+| F13 | 26 november 2026, cloudsessie (`CLAUDE_CODE_REMOTE=true`): `gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<headRefName>"` krijgt van de GitHub-proxy `Write access to this GitHub API path is not permitted through this proxy. (HTTP 403)`; de branch blijft staan. |
+| F14 | 26 november 2026, cloudsessie in auto mode: de classifier van Claude Code weigert hetzelfde commando al vóór het rolhek en de proxy. |
+| F15 | 26 november 2026: de template-repo heeft `delete_branch_on_merge: true` (`gh api "repos/{owner}/{repo}"`); `git ls-remote --heads origin` toont 16 branches, waaronder `main`, na ruim 900 PR's. |
 
 **Niet gemeten:** of Claude Code `pnpm test:db *` ook toepast op het kale `pnpm test:db`. Of een redirect zoals `2>&1` achter
 een verder passend commando de uitzondering breekt (F9 laat zien dat het rolhek zo'n vorm eerder weigert). Het ontwerp kiest
-bij die twee punten de veilige kant (punt 2). Of `gh api -X DELETE repos/{owner}/{repo}/git/refs/heads/<testbranch>` een
-wegwerpbranch verwijdert, en of Claude Code daarbij een vraag stelt (F12).
+bij die twee punten de veilige kant (punt 2). Of `gh api -X DELETE repos/{owner}/{repo}/git/refs/heads/<testbranch>` lokaal
+een branch verwijdert, en of Claude Code daarbij een vraag stelt; in de cloud faalt het (F13, F14; OV-9).
 
 ## Rollen en wie wat ziet
 
@@ -109,7 +112,9 @@ wegwerpbranch verwijdert, en of Claude Code daarbij een vraag stelt (F12).
    vallen. Een subagent schrijft via `gh api` sowieso niet. De echte grens voor `main` blijft de ruleset op GitHub; deze regel
    is extra bescherming. Andere schrijvende endpoints op `main` (zoals `contents` met `branch=main`) vallen buiten deze spec.
    `permissions.allow` heeft geen regel voor `gh api`, dus lokaal kan deze stap een vraag aan de eigenaar geven. De skilltekst
-   zegt dat erbij.
+   zegt dat erbij. In de cloud (`CLAUDE_CODE_REMOTE=true`) slaat de skill de DELETE over (F13, F14; OV-9): de repo-instelling
+   `delete_branch_on_merge` ruimt de branch bij de merge op (F15). De skill kijkt met `git ls-remote --heads origin <headRefName>`
+   of hij er nog staat; zo ja, dan noemt de eindmelding hem en verwijdert de eigenaar hem op GitHub.
 6. **Startmelding.** `sessionStart` (`rails/hooks/lib/werkstraat.mjs`) toont één regel als de omgeving van de hook
    `CLAUDE_CODE_REMOTE=true` heeft:
    `Cloud: commit \`git commit -F <bestand>\`, push \`git push origin HEAD\`, PR via \`mcp__github__create_pull_request\`, elk als los commando.`
@@ -200,7 +205,8 @@ Geen UI. Zichtbare tekst staat letterlijk in Ontwerp punt 2, 3 en 6.
   AC-tests, bouwt de developer, volgt een aparte review, en keurt de eigenaar de PR goed en merget hem (R-WERK-05, R-WERK-07).
 - `test/hooks/rolhek-aanvalscorpus.ts`: nieuw lid in `REGELS`.
 - `.claude/skills/opleveren/SKILL.md` stap 6 (rond r.72): `gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<headRefName>"`
-  (OV-7). De hoofdsessie wijzigt dit met Edit, met akkoord van de eigenaar; de Bash-sandbox kan `.claude/skills/` niet schrijven.
+  (OV-7), in de cloud overgeslagen met een controle via `git ls-remote` (OV-9). De hoofdsessie wijzigt dit met Edit, met
+  akkoord van de eigenaar; de Bash-sandbox kan `.claude/skills/` niet schrijven.
 - Niet geraakt: `.claude/settings.json`, `boundaries.json`, R-TOOL-02 (`docs/framework.md`) en ADR 0061. De lijst van
   uitzonderingen blijft gelijk.
 - **Gewijzigde testverwachtingen** (R-TEST-02, reden in de PR: deze spec, OV-5 en OV-7). Na de bouw krijgt de ctx van deze
@@ -233,7 +239,7 @@ Geen UI. Zichtbare tekst staat letterlijk in Ontwerp punt 2, 3 en 6.
    repos/{owner}/{repo}/git/refs/heads/<testbranch>` verwijdert een wegwerpbranch. Gemeten op 20 november 2026 in deze sessie:
    een GET met `{owner}/{repo}` op `git/refs/heads/<branch>` slaagt door het rolhek. DELETE is niet gemeten. Vastgelegd op
    21 november 2026 in F8 tot en met F12. Voor (e) maakt de eigenaar de wegwerpbranch, want het rolhek weigert de push met
-   een refspec (F12).
+   een refspec (F12). (e) in de cloud: gemeten op 26 november 2026, faalt (F13, F14); besluit OV-9. Lokaal is (e) niet gemeten.
 1. Unit: de AC's hierboven, in `pnpm gate:fast`.
 
 ## Open vragen
@@ -258,3 +264,7 @@ Geen UI. Zichtbare tekst staat letterlijk in Ontwerp punt 2, 3 en 6.
 - **OV-8 ✅ besloten** (bouw) — Wat als `.claude/settings.json` in het anker ontbreekt? Eigenaar, 20 november 2026: een lege
   lijst; de regel raakt dan niets. Dicht falen voor alles zou te zwaar zijn voor een hulpregel; de sandbox blijft de grens.
   Ongeldige JSON faalt nog wel dicht.
+- **OV-9 ✅ besloten** (meting F13 en F14) — Hoe ruimt een cloudsessie de remote branch op, nu de GitHub-proxy de DELETE met
+  403 weigert en auto mode hem al eerder weigert? Eigenaar, 26 november 2026: in de cloud de stap overslaan en vertrouwen op
+  `delete_branch_on_merge` (F15); `git ls-remote --heads origin <headRefName>` controleert, een achtergebleven branch meldt de
+  eindmelding aan de eigenaar. De lokale route blijft `gh api -X DELETE`. Rolhek, AC-3 en AC-13 blijven gelijk.
