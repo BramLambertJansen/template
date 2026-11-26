@@ -183,7 +183,7 @@ In niet-interactieve shells wordt `~/.bashrc` niet geladen. Roep mise daarom alt
 
 `scripts/kit/nieuwe-app.mjs` voert de deterministische stappen uit en meldt per stap `✓`, `·` (overgeslagen) of `✗` met een
 herstelregel (spec [nieuwe-app-script](template/specs/nieuwe-app-script.md)). Deelcommando's: `preflight` (Fase 4.2),
-`koppel` (5.1), `poorten` (7.1) en `db-bewijs` (8); `--dry-run` schrijft niets behalve het resultaatbestand. Exitcode 0: elke
+`koppel` (5.1), `repo-instellingen` (6.2), `poorten` (7.1) en `db-bewijs` (8); `--dry-run` schrijft niets behalve het resultaatbestand. Exitcode 0: elke
 stap ok of overgeslagen; 1: een fout; 2: verkeerd gebruik. Het script start geen Docker, pakketbeheerder of rootcommando en
 pusht niet.
 
@@ -621,23 +621,23 @@ Controle: `git status -sb` toont geen `ahead`; `gh api repos/<owner>/<slug>/comm
 
 ### 6.2 Repo-instellingen
 
-"Use this template" kopieert geen instellingen of rulesets. Zet de basis nu, vóór er een PR bestaat.
+"Use this template" kopieert geen instellingen of rulesets. Zet de basis nu, vóór er een PR bestaat, met het script
+(*Het setupscript*): eerst `--dry-run`, dan echt.
 
 <!-- terminal: eigenaar -->
 
 ```bash
-R=<owner>/<slug>
-# Merge-commit aan: nodig voor template-updates. Squash aan: gewone feature-PR's. Rebase uit.
-gh repo edit "$R" --enable-merge-commit --enable-squash-merge --enable-rebase-merge=false \
-  --delete-branch-on-merge --enable-auto-merge=false
-
-# Actions: workflows alleen lezen, mogen geen PR's goedkeuren, acties op volledige SHA.
-gh api -X PUT "repos/$R/actions/permissions/workflow" -f default_workflow_permissions=read -F can_approve_pull_request_reviews=false
-gh api -X PUT "repos/$R/actions/permissions" -F enabled=true -f allowed_actions=all -F sha_pinning_required=true
+~/.local/bin/mise exec node -- node scripts/kit/nieuwe-app.mjs repo-instellingen --repo <owner>/<slug> --beschrijving "<korte beschrijving>" --dry-run
+~/.local/bin/mise exec node -- node scripts/kit/nieuwe-app.mjs repo-instellingen --repo <owner>/<slug> --beschrijving "<korte beschrijving>"
 ```
 
-Zet de korte beschrijving uit de intake met `gh repo edit "$R" --description "<korte beschrijving>"` en controleer die via
-`gh repo view "$R" --json description`. Quote de werkelijke waarde veilig; voer geen shellcode uit de beschrijving uit.
+`repo-instellingen` weigert als `--repo` niet de `origin` van de werkmap is, en als `main` op GitHub nog niet de vorm van 6.1
+heeft (hernoem-commit boven koppel-merge). Het zet merge-commit en squash aan (merge-commit is nodig voor template-updates),
+rebase en auto-merge uit, branch weg na de merge, workflows alleen lezen en zonder PR-goedkeuring, en Actions aan met alle
+acties op volledige SHA (`scripts/kit/nieuwe-app.mjs`, `schrijfInstellingen`); met `--beschrijving` ook de korte
+beschrijving uit de intake (hooguit 350 tekens). De beschrijving gaat als argument mee, niet via een shell. Faalt een
+stap, dan stopt het script met `✗ … niet gezet: <gh-melding>` en schrijft het niets meer. Controle: lees
+`.template/nieuwe-app-repo-instellingen.json`: `uitslag` is `ok`.
 
 **Ruleset op `main` (overdracht).** `scripts/github-ruleset.sh` zet de ruleset `main` volgens framework §10: geen delete of force push,
 PR-plicht zonder review van een code-eigenaar en met 0 vereiste goedkeuringen, geen bypass, opgeloste reviewgesprekken, merge en squash,
@@ -674,9 +674,19 @@ Weigert de API iets:
 - ruleset op een private repo zonder Pro/Team → het script meldt het en stopt; meld de keuze aan de eigenaar (Pro, organisatie met Team, of public). Wijzig zelf de zichtbaarheid niet.
 - `sha_pinning_required` onbekend → meld: Settings → Actions → General → **Require actions to be pinned to a full-length commit SHA**.
 
-Controle: `gh api repos/$R/rulesets --jq '.[].name'` toont `main`; `gh repo view $R --json mergeCommitAllowed,squashMergeAllowed,rebaseMergeAllowed`.
-Of de ruleset blijft staan, controleert niets: `pnpm pr:merge` leest hem niet (ADR 0093 punt 5) en `check-github`
-bestaat nog niet (roadmap ST-01).
+Controle na de ruleset-overdracht, alleen lezend:
+
+```bash
+~/.local/bin/mise exec node -- node scripts/kit/nieuwe-app.mjs repo-instellingen --repo <owner>/<slug> --controleer
+```
+
+`--controleer` schrijft niets en toetst de ruleset `main` van de repo tegen de payload van `scripts/github-ruleset.sh` en de
+instellingen hierboven (`scripts/kit/ruleset-controle.mjs`). Lees `.template/nieuwe-app-repo-instellingen.json`: `uitslag`
+`ok` met de stappen `ruleset` en `instellingen`. Elke afwijking is een stap `fout` met de code als `id` en een herstelregel;
+bij de ruleset draait de eigenaar `scripts/github-ruleset.sh <owner>/<slug>` opnieuw, bij de instellingen draai jij
+`repo-instellingen` opnieuw. Geen ruleset `main` (ook bij een private repo zonder Pro/Team) is een fout: de eigenaar kiest
+Pro, een organisatie met Team, of public. `pnpm pr:merge` leest de ruleset niet (ADR 0093 punt 5); draai `--controleer`
+opnieuw als je twijfelt of hij nog staat.
 
 ## Fase 7 — Toolchain, git-hooks en lokale stack
 

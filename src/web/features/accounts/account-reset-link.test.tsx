@@ -179,3 +179,43 @@ describe('accounts/AC-16: de bevestigingsdialoog', () => {
     });
   });
 });
+
+// Focusvolgorde (accounts/AC-16): ververst de lijst terwijl de menuknop de focus heeft (zoekterm in de URL na de debounce, een
+// refetch), dan blijft die focus staan. Een `disabled` knop verloor hem in de browser, waardoor de focus na het annuleren van de
+// dialoog soms op body viel (e2e/account-reset-link.spec.ts). Tijdens het verversen opent het menu niet.
+describe('accounts/AC-16: de menuknop tijdens het verversen van de lijst', () => {
+  function row(busy: boolean) {
+    return (
+      <ErrorTextsProvider texts={errorTexts}>
+        <QueryClientProvider client={createQueryClient()}>
+          <RevokeInvitationHost onRevoked={vi.fn()}>
+            <Table label="Accounts">
+              <TableBody>
+                <AccountRow account={ACTIVE} myId="admin-1" busy={busy} onMessage={vi.fn()} />
+              </TableBody>
+            </Table>
+          </RevokeInvitationHost>
+        </QueryClientProvider>
+      </ErrorTextsProvider>
+    );
+  }
+
+  test('accounts/AC-16: de knop blijft focusbaar en houdt de focus; het menu opent niet zolang de lijst ververst', () => {
+    const { rerender } = render(row(false));
+    const trigger = screen.getByRole('button', { name: 'Acties voor Anna' });
+    trigger.focus();
+    rerender(row(true));
+
+    expect(trigger.hasAttribute('disabled')).toBe(false);
+    expect(trigger.getAttribute('aria-disabled')).toBe('true');
+    expect(document.activeElement).toBe(trigger);
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false });
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+    fireEvent.keyDown(trigger, { key: 'Enter' });
+    expect(screen.queryByRole('menu')).toBeNull();
+
+    rerender(row(false));
+    expect(document.activeElement).toBe(trigger);
+    expect(trigger.hasAttribute('aria-disabled')).toBe(false);
+  });
+});
