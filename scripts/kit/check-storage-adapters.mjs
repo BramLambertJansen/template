@@ -170,16 +170,21 @@ function herkomst(/** @type {Ctx} */ ctx, /** @type {Ref} */ ref) {
   return null;
 }
 
-/** Een lokale declaratie: een const-alias of destructurering volgt de bron, al het andere is zelf de declaratie. */
+/** Een lokale declaratie: een alias (ook `ns.prop`) of destructurering volgt de bron, al het andere is zelf de declaratie. */
 function lokaal(/** @type {Ctx} */ ctx, /** @type {Ref} */ ref, /** @type {ts.Node} */ decl) {
   const eigen = { file: ref.file, name: ref.name };
-  if (ts.isIdentifier(decl) && decl.text !== ref.name)
-    return herkomst(ctx, { file: ref.file, name: decl.text, depth: diepte(ref) });
-  if (!ts.isBindingElement(decl)) return eigen;
+  if (ts.isIdentifier(decl) && decl.text === ref.name) return eigen;
+  if (ts.isBindingElement(decl)) return destructurering(ctx, ref, decl) ?? eigen;
+  const alias = ts.isIdentifier(decl) || isToegang(decl) || ts.isParenthesizedExpression(decl);
+  return alias ? verwijzing(ctx, { file: ref.file, depth: diepte(ref) }, decl) : eigen;
+}
+
+/** `const { prop: naam } = ns`: de declaratie van ns.prop, of null als het geen namespace-destructurering is. */
+function destructurering(/** @type {Ctx} */ ctx, /** @type {Ref} */ ref, /** @type {ts.BindingElement} */ decl) {
   const init = ts.isVariableDeclaration(decl.parent.parent) ? decl.parent.parent.initializer : undefined;
   const prop =
     decl.propertyName !== undefined && ts.isIdentifier(decl.propertyName) ? decl.propertyName.text : ref.name;
-  if (init === undefined || !ts.isIdentifier(init)) return eigen;
+  if (init === undefined || !ts.isIdentifier(init)) return null;
   return lid(ctx, { file: ref.file, name: init.text, depth: diepte(ref) }, prop);
 }
 
@@ -191,14 +196,43 @@ function lid(/** @type {Ctx} */ ctx, /** @type {Ref} */ ns, /** @type {string} *
     : herkomst(ctx, { file: doel.file, name: prop, depth: diepte(ns) + 1 });
 }
 
-/** De declaratie achter de callee van een aanroep: `naam(…)` of `ns.naam(…)`. */
-function callee(/** @type {Ctx} */ ctx, /** @type {string} */ file, /** @type {ts.CallExpression} */ call) {
-  const e = call.expression;
-  if (ts.isIdentifier(e)) return herkomst(ctx, { file, name: e.text });
-  if (ts.isPropertyAccessExpression(e) && ts.isIdentifier(e.expression))
-    return lid(ctx, { file, name: e.expression.text }, e.name.text);
+const isToegang = (/** @type {ts.Node} */ n) => ts.isPropertyAccessExpression(n) || ts.isElementAccessExpression(n);
+const DOORGEEF = new Set(['call', 'apply', 'bind']);
+
+/** De naam van een eigenschapstoegang: `x.naam` of `x['naam']`, of null. */
+function eigenschap(/** @type {ts.Expression} */ e) {
+  if (ts.isPropertyAccessExpression(e)) return e.name.text;
+  if (ts.isElementAccessExpression(e) && ts.isStringLiteralLike(e.argumentExpression)) return e.argumentExpression.text;
   return null;
 }
+
+/** Haakjes, `(0, x)` en `x.call`/`.apply`/`.bind` weg: de expressie die werkelijk aangeroepen wordt. */
+function kern(/** @type {ts.Expression} */ expr) {
+  let e = expr;
+  for (let i = 0; i < MAX_DIEPTE; i++) {
+    if (ts.isParenthesizedExpression(e) || ts.isAwaitExpression(e)) e = e.expression;
+    else if (ts.isBinaryExpression(e) && e.operatorToken.kind === ts.SyntaxKind.CommaToken) e = e.right;
+    else if (isToegang(e) && DOORGEEF.has(eigenschap(e) ?? '')) e = e.expression;
+    else return e;
+  }
+  return e;
+}
+
+/**
+ * De declaratie achter een expressie: `naam`, `ns.naam` of `ns['naam']`, na het weghalen van haakjes en `.call`.
+ * @param {Ctx} ctx @param {{ file: string, depth?: number }} plek @param {ts.Expression} expr @returns {Ref | null}
+ */
+function verwijzing(ctx, plek, expr) {
+  const e = kern(expr);
+  if (ts.isIdentifier(e)) return herkomst(ctx, { file: plek.file, name: e.text, depth: plek.depth ?? 0 });
+  const prop = isToegang(e) ? eigenschap(e) : null;
+  if (prop === null || !isToegang(e) || !ts.isIdentifier(e.expression)) return null;
+  return lid(ctx, { file: plek.file, name: e.expression.text, depth: plek.depth ?? 0 }, prop);
+}
+
+/** De declaratie achter de callee van een aanroep. */
+const callee = (/** @type {Ctx} */ ctx, /** @type {string} */ file, /** @type {ts.CallExpression} */ call) =>
+  verwijzing(ctx, { file }, call.expression);
 
 const is = (/** @type {Ref | null} */ ref, /** @type {string} */ file, /** @type {(name: string) => boolean} */ naam) =>
   ref !== null && ref.file === file && naam(ref.name);
@@ -258,26 +292,71 @@ function suites(/** @type {Ctx} */ ctx, /** @type {string[]} */ tests) {
   return uit;
 }
 
-/** Wat de setup van een suite als adapter gebruikt: elke aangeroepen naam en de waarde van een eigenschap `storage`. */
-function gebruikt(/** @type {Ctx} */ ctx, /** @type {string} */ file, /** @type {ts.Node} */ node) {
+/** De adapter die de setup van een suite teruggeeft als `storage` (direct, of als resultaat van een aanroep). */
+function gebruikt(/** @type {Ctx} */ ctx, /** @type {string} */ file, /** @type {ts.Node} */ arg) {
+  if (!ts.isArrowFunction(arg) && !ts.isFunctionExpression(arg)) return [];
+  const lokaal = lokaleConsts(arg);
   /** @type {Ref[]} */
   const uit = [];
-  for (const n of [...aanroepen(node).map((call) => call.expression), ...storageWaarden(node)]) {
-    const ref = ts.isIdentifier(n) ? herkomst(ctx, { file, name: n.text }) : null;
+  for (const waarde of teruggegeven(arg).flatMap(storageWaarde)) {
+    const e = volg(kern(waarde), lokaal);
+    const ref = verwijzing(ctx, { file }, ts.isCallExpression(e) ? e.expression : e);
     if (ref !== null) uit.push(ref);
   }
   return uit;
 }
 
-function storageWaarden(/** @type {ts.Node} */ node) {
-  /** @type {ts.Node[]} */
-  const uit = [];
+/** Een naam die een const in de setup zelf is, vervangen door haar initializer (één stap). */
+function volg(/** @type {ts.Expression} */ e, /** @type {Map<string, ts.Expression>} */ lokaal) {
+  return ts.isIdentifier(e) ? kern(lokaal.get(e.text) ?? e) : e;
+}
+
+/** De consts in de eigen body van de setup (niet in geneste functies): naam → initializer. */
+function lokaleConsts(/** @type {ts.ArrowFunction | ts.FunctionExpression} */ fn) {
+  /** @type {Map<string, ts.Expression>} */
+  const map = new Map();
+  if (!ts.isBlock(fn.body)) return map;
   const loop = (/** @type {ts.Node} */ n) => {
-    if (ts.isPropertyAssignment(n) && ts.isIdentifier(n.name) && n.name.text === 'storage') uit.push(n.initializer);
-    if (ts.isShorthandPropertyAssignment(n) && n.name.text === 'storage') uit.push(n.name);
+    if (ts.isFunctionLike(n)) return;
+    if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name) && n.initializer !== undefined)
+      map.set(n.name.text, n.initializer);
     ts.forEachChild(n, loop);
   };
-  loop(node);
+  ts.forEachChild(fn.body, loop);
+  return map;
+}
+
+/** Wat een functie teruggeeft: de expressie-body, of de return-expressies in haar eigen body (niet in geneste functies). */
+function teruggegeven(/** @type {ts.ArrowFunction | ts.FunctionExpression} */ fn) {
+  if (!ts.isBlock(fn.body)) return [fn.body];
+  /** @type {ts.Expression[]} */
+  const uit = [];
+  const loop = (/** @type {ts.Node} */ n) => {
+    if (ts.isFunctionLike(n)) return;
+    if (ts.isReturnStatement(n) && n.expression !== undefined) uit.push(n.expression);
+    ts.forEachChild(n, loop);
+  };
+  ts.forEachChild(fn.body, loop);
+  return uit;
+}
+
+/** `Promise.resolve(x)` → x. */
+function zonderResolve(/** @type {ts.Expression} */ e) {
+  const isResolve =
+    ts.isCallExpression(e) && e.expression.getText() === 'Promise.resolve' && e.arguments[0] !== undefined;
+  return isResolve && e.arguments[0] !== undefined ? kern(e.arguments[0]) : e;
+}
+
+/** De waarde van eigenschap `storage` in een teruggegeven objectliteral. */
+function storageWaarde(/** @type {ts.Expression} */ expr) {
+  const obj = zonderResolve(kern(expr));
+  if (!ts.isObjectLiteralExpression(obj)) return [];
+  /** @type {ts.Expression[]} */
+  const uit = [];
+  for (const p of obj.properties) {
+    if (ts.isPropertyAssignment(p) && ts.isIdentifier(p.name) && p.name.text === 'storage') uit.push(p.initializer);
+    if (ts.isShorthandPropertyAssignment(p) && p.name.text === 'storage') uit.push(p.name);
+  }
   return uit;
 }
 

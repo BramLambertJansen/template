@@ -80,6 +80,33 @@ describe('files/AC-30: de check is niet te ontwijken', () => {
   });
 });
 
+describe('files/AC-30: nog meer manieren om de check te ontwijken', () => {
+  test.each([
+    ['een alias-variabele (const define = storage.defineFileStorage)', 'alias-variabele'],
+    ["een element-access (storage['defineFileStorage'](…))", 'element-access'],
+    ['een komma-aanroep ((0, storage.defineFileStorage)(…))', 'comma-aanroep'],
+    ['een aanroep via .call(undefined, …)', 'call-aanroep'],
+    [
+      'een fabriek waarvan de suite de fabriek aanroept maar een andere gedekte adapter teruggeeft',
+      'fabriek-andere-storage',
+    ],
+    [
+      'een suite waarin storage: mijnAdapter in een object staat dat de setup niet teruggeeft',
+      'object-niet-teruggegeven',
+    ],
+  ])('files/AC-30: %s faalt met het adapterbestand en fileStorageContract', (_, geval) => {
+    const errors = adapterFouten(fixtureRoot(geval));
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain(ADAPTER);
+    expect(errors[0]).toContain(SUITE);
+  });
+
+  test('files/AC-30: een fabriek met een suite waarvan de setup (blok-body) de fabriek aanroept en die storage teruggeeft, geeft []', () => {
+    expect(adapterFouten(fixtureRoot('fabriek-blok-body'))).toStrictEqual([]);
+  });
+});
+
 describe('files/AC-30: de check scant ook deploy/', () => {
   test('files/AC-30: een adapter in deploy/mijnhost/opslag.ts met een suite in deploy/mijnhost/opslag.test.ts geeft []', () => {
     expect(adapterFouten(fixtureRoot('deploy-met-suite'))).toStrictEqual([]);
