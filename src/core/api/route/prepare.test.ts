@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import { describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { SessionStrength } from '../../shared/can.ts';
 import { unsafeCast } from '../../shared/unsafe-cast.ts';
 import { createWithUser } from '../db/testing.ts';
@@ -13,6 +13,9 @@ import { defineRoute, errors, fakeDeps, notesContract } from './fixture.test-hel
 // over een geïnstrumenteerde pool op de drivergrens (zoals src/core/api/db/with-user-outcome.test.ts), niet over de testkit
 // beginTestDb (één vaste verbinding met savepoints, daar is "uitgegeven verbindingen" niet te meten). De pool telt connect en
 // release, volgt begin/commit/rollback en telt de aanroepen van app.consume_rate_limit; de rol uit user_roles stelt de test in.
+
+// Persoonsgegevens in een foutmelding: nooit in het antwoord en nooit in de log.
+const GEHEIM = 'geheim alice@example.com select * from users';
 
 interface PoolState {
   readonly outstanding: number;
@@ -62,7 +65,7 @@ interface Options {
   readonly sessionStrength?: SessionStrength;
   readonly retryAfter?: number;
   // Wat prepare doet: slagen met een waarde of falen met STORAGE_UNAVAILABLE.
-  readonly prepare?: 'slaagt' | 'faalt';
+  readonly prepare?: 'slaagt' | 'faalt' | 'gewone-fout';
   // Of de handler ctx.prepared() aanroept.
   readonly usesPrepared?: boolean;
 }
@@ -88,6 +91,7 @@ function scenario({
         seen.prepareCalls += 1;
         seen.atPrepare = db.state();
         seen.prepareCtx = ctx;
+        if (prepare === 'gewone-fout') return Promise.reject(new Error(GEHEIM));
         return prepare === 'faalt'
           ? Promise.reject(new AppError('STORAGE_UNAVAILABLE'))
           : Promise.resolve('uit-prepare');
@@ -228,6 +232,56 @@ describe('files/AC-30: een route met prepare', () => {
     const body = parseErrorBody(await response.json());
     expect(body.code).toBe('STORAGE_UNAVAILABLE');
     expect(Object.keys(body).toSorted()).toStrictEqual(['code', 'requestId']);
+  });
+});
+
+describe('files/AC-30: een fout uit prepare die de handler niet ophaalt', () => {
+  const spy = vi.spyOn(console, 'error');
+  beforeEach(() => {
+    spy.mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    spy.mockReset();
+  });
+
+  test('files/AC-30: een gewone Error geeft één logregel via logUnexpectedError (alleen de allowlist) en lekt niets in het antwoord', async () => {
+    const t = scenario({ role: 'user', prepare: 'gewone-fout', usesPrepared: false });
+
+    const response = await request(t.app, '/api/notes/n1');
+
+    expect(response.status).toBe(200);
+    expect(JSON.stringify(await response.json())).not.toContain(GEHEIM);
+    expect(spy).toHaveBeenCalledOnce();
+    const call: readonly unknown[] = spy.mock.calls[0] ?? [];
+    const [first, entry, ...rest] = call;
+    expect(first).toBe('unexpected error');
+    expect(rest).toStrictEqual([]);
+    expect(entry).toMatchObject({ errorClass: 'Error' });
+    const keys = typeof entry === 'object' && entry !== null ? Object.keys(entry) : [];
+    for (const key of keys) expect(['requestId', 'route', 'errorClass', 'code', 'label']).toContain(key);
+    expect(JSON.stringify(spy.mock.calls)).not.toContain(GEHEIM);
+    expect(JSON.stringify(spy.mock.calls)).not.toContain('.ts:');
+  });
+
+  test('files/AC-30: een niet opgehaalde AppError logt niets', async () => {
+    const t = scenario({ role: 'user', prepare: 'faalt', usesPrepared: false });
+
+    const response = await request(t.app, '/api/notes/n1');
+
+    expect(response.status).toBe(200);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  test('files/AC-30: een gewone Error die de handler wel ophaalt geeft INTERNAL_ERROR met alleen { code, requestId }', async () => {
+    const t = scenario({ role: 'user', prepare: 'gewone-fout' });
+
+    const response = await request(t.app, '/api/notes/n1');
+
+    expect(response.status).toBe(500);
+    const body = parseErrorBody(await response.json());
+    expect(body.code).toBe('INTERNAL_ERROR');
+    expect(JSON.stringify(body)).not.toContain(GEHEIM);
+    expect(JSON.stringify(spy.mock.calls)).not.toContain(GEHEIM);
   });
 });
 

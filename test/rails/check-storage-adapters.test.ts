@@ -61,6 +61,39 @@ describe('files/AC-30: een adapter zonder suite faalt', () => {
   });
 });
 
+describe('files/AC-30: de check is niet te ontwijken', () => {
+  test.each([
+    ['een namespace-import (import * as storage; storage.defineFileStorage)', 'namespace-import'],
+    ['een barrel met export * die de poort doorgeeft', 'barrel-export-star'],
+    ['een destructurering van een namespace-import (const { defineFileStorage: d } = s)', 'destructurering'],
+    ['een eigen fileStorageContract in een helperbestand dat de adapter "dekt"', 'nep-contract'],
+    [
+      'een suite die de adapter alleen als argument noemt (de suite draait op een andere adapter)',
+      'suite-alleen-argument',
+    ],
+  ])('files/AC-30: %s faalt met het adapterbestand en fileStorageContract', (_, geval) => {
+    const errors = adapterFouten(fixtureRoot(geval));
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain(ADAPTER);
+    expect(errors[0]).toContain(SUITE);
+  });
+});
+
+describe('files/AC-30: de check scant ook deploy/', () => {
+  test('files/AC-30: een adapter in deploy/mijnhost/opslag.ts met een suite in deploy/mijnhost/opslag.test.ts geeft []', () => {
+    expect(adapterFouten(fixtureRoot('deploy-met-suite'))).toStrictEqual([]);
+  });
+
+  test('files/AC-30: dezelfde adapter zonder suite faalt met het bronbestand en fileStorageContract', () => {
+    const errors = adapterFouten(fixtureRoot('deploy-zonder-suite'));
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('deploy/mijnhost/opslag.ts');
+    expect(errors[0]).toContain(SUITE);
+  });
+});
+
 describe('files/AC-30: een adapter met suite slaagt', () => {
   test('files/AC-30: een adapter met een testbestand dat fileStorageContract op hem draait geeft []', () => {
     expect(adapterFouten(fixtureRoot('met-suite'))).toStrictEqual([]);

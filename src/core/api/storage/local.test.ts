@@ -2,7 +2,7 @@ import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, test } from 'vitest';
-import type { FileLimits } from '../../shared/limits.ts';
+import { MAX_BODY_BYTES, type FileLimits } from '../../shared/limits.ts';
 import { createApp, type App } from '../http/create-app.ts';
 import { parseErrorBody } from '../http/error-body.test-helper.ts';
 import { createLocalFileStorage, type LocalFileStorage } from './local.ts';
@@ -499,5 +499,36 @@ describe('files/AC-4: de grootte uit het token en write-once', () => {
     const response = await r.app.fetch(putRequest(r.storage.createUploadUrl(upload(KEY_X)), bytes(SIZE)));
 
     expect(response.ok).toBe(true);
+  });
+
+  test("files/AC-4: racetest, twee gelijktijdige PUT's op één sleutel geven precies één 201 en één 409 en de inhoud is die van de winnaar", async () => {
+    const r = rig();
+    const eerste = putRequest(r.storage.createUploadUrl(upload(KEY_X)), bytes(SIZE, 1));
+    const tweede = putRequest(r.storage.createUploadUrl(upload(KEY_X)), bytes(SIZE, 2));
+
+    const [a, b] = await Promise.all([r.app.fetch(eerste), r.app.fetch(tweede)]);
+
+    expect([a.status, b.status].toSorted((x, y) => x - y)).toStrictEqual([201, 409]);
+    const winnaar = a.status === 201 ? 1 : 2;
+    const verliezer = a.status === 201 ? b : a;
+    await expectError(verliezer, 409, 'ALREADY_EXISTS');
+    const download = r.storage.createDownloadUrl({ key: KEY_X, filename: 'a.pdf', ttlSeconds: DOWNLOAD_TTL });
+    const content = new Uint8Array(await (await r.app.fetch(new Request(download.url))).arrayBuffer());
+    expect(content).toStrictEqual(bytes(SIZE, winnaar));
+    // Geen tijdelijk bestand van de verliezer: evenveel bestanden als na één gewone upload.
+    const basis = rig();
+    await basis.app.fetch(putRequest(basis.storage.createUploadUrl(upload(KEY_X)), bytes(SIZE)));
+    expect(filesIn(r.dir)).toHaveLength(filesIn(basis.dir).length);
+  });
+
+  test('files/AC-4: een upload groter dan MAX_BODY_BYTES slaagt via createApp (R-UIT-06: bodyLimit geldt niet voor de dev-route)', async () => {
+    const r = rig();
+    const size = MAX_BODY_BYTES + 1;
+    const signed = r.storage.createUploadUrl(upload(KEY_X, size));
+
+    const response = await r.app.fetch(putRequest(signed, bytes(size, 5)));
+
+    expect(response.status).toBe(201);
+    expect(await r.storage.stat(KEY_X)).toStrictEqual({ sizeBytes: size, contentType: PDF });
   });
 });

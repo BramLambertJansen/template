@@ -1,0 +1,6 @@
+import { fileStorageContract } from '#core/api/storage/testing.ts';
+import { hostAdapter } from './opslag.ts';
+
+fileStorageContract('host', () =>
+  Promise.resolve({ storage: hostAdapter, fetch: () => Promise.resolve(new Response(null)), advance: () => undefined }),
+);

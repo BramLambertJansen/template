@@ -1,26 +1,32 @@
 // check-storage-adapters (spec bestandsopslag, deel A, files/AC-30; ADR 0060 punt 2; R-OPSL-01): elke opslagadapter die
-// via defineFileStorage( ontstaat, heeft een testbestand dat fileStorageContract (of fileStorageContractCases) op precies
-// die adapter draait. Statisch: de TypeScript-parser leest de bronnen, niets wordt geladen of uitgevoerd. Een andere naam
-// voor defineFileStorage (import als alias, heruitvoer onder een andere naam, een const-alias) ontwijkt de check niet.
-// test/rails/check-storage-adapters.test.ts roept adapterFouten aan met fixture-repo's.
+// via defineFileStorage( ontstaat, heeft een testbestand dat fileStorageContract (of fileStorageContractCases) uit
+// src/core/api/storage/testing.ts op precies die adapter draait. Statisch: de TypeScript-parser leest de bronnen, niets
+// wordt geladen of uitgevoerd. Gevolgd worden benoemde imports (ook als alias), heruitvoer (ook `export *`),
+// namespace-imports (`ns.defineFileStorage(…)`), destructurering uit een namespace en const-aliassen. Een suite telt
+// alleen de adapter die haar setup aanroept of als `storage` teruggeeft, niet een naam die er alleen als argument staat.
+// Gescand: src/ en deploy/ (R-ARCH-05). test/rails/check-storage-adapters.test.ts roept adapterFouten aan met fixtures.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
 
 const PORT = 'src/core/api/storage/port.ts';
+const TESTING = 'src/core/api/storage/testing.ts';
 const DEFINE = 'defineFileStorage';
 const SUITES = new Set(['fileStorageContract', 'fileStorageContractCases']);
+const MAPPEN = ['src', 'deploy'];
 const EXTENSIES = ['.ts', '.tsx', '.mjs', '.js'];
 const MAX_DIEPTE = 8;
 
-/** @typedef {{ file: string, name: string }} Ref */
+/** @typedef {{ file: string, name: string, depth?: number }} Ref */
 /** @typedef {{ root: string, bron: (rel: string) => ts.SourceFile | null }} Ctx */
+/** @typedef {{ spec: string, name: string | null }} Herkomst */
 
 const isTest = (/** @type {string} */ rel) => /\.test\.tsx?$/.test(rel) || rel.startsWith('test/');
 const key = (/** @type {Ref} */ ref) => `${ref.file}#${ref.name}`;
+const diepte = (/** @type {Ref} */ ref) => (ref.depth ?? 0) + 1;
 
-/** Alle .ts- en .tsx-bestanden onder dir (repo-relatief, met /), zonder node_modules en gegenereerde bestanden. */
+/** Alle .ts- en .tsx-bestanden onder dir (repo-relatief, met /), zonder node_modules, fixtures en gegenereerde bestanden. */
 function bestanden(/** @type {string} */ root, /** @type {string} */ dir) {
   const abs = path.join(root, dir);
   if (!existsSync(abs)) return [];
@@ -28,8 +34,8 @@ function bestanden(/** @type {string} */ root, /** @type {string} */ dir) {
   const uit = [];
   for (const entry of readdirSync(abs, { withFileTypes: true })) {
     const rel = `${dir}/${entry.name}`;
-    if (entry.isDirectory() && entry.name !== 'node_modules' && entry.name !== 'fixtures')
-      uit.push(...bestanden(root, rel));
+    const map = entry.isDirectory() && entry.name !== 'node_modules' && entry.name !== 'fixtures';
+    if (map) uit.push(...bestanden(root, rel));
     else if (entry.isFile() && /\.tsx?$/.test(entry.name) && !entry.name.endsWith('.gen.ts')) uit.push(rel);
   }
   return uit;
@@ -67,88 +73,135 @@ function basis(/** @type {string} */ from, /** @type {string} */ spec) {
   return null;
 }
 
-/** Een import-specifier naar een bestaand repo-relatief bestand, of null (pakket of niet gevonden). */
+/** Een specifier naar een bestaand repo-relatief bestand; de twee core-bestanden ook als ze ontbreken (fixture-repo). */
 function resolve(/** @type {string} */ root, /** @type {string} */ from, /** @type {string} */ spec) {
   const base = basis(from, spec);
   if (base === null) return null;
+  if (base === PORT || base === TESTING || base === 'src/core/api/storage' || base === 'src/core/api/storage/index.ts')
+    return base === PORT || base === TESTING ? base : (vind(root, base) ?? 'src/core/api/storage/index.ts');
+  return vind(root, base);
+}
+
+function vind(/** @type {string} */ root, /** @type {string} */ base) {
   const kandidaten = [base, ...EXTENSIES.map((ext) => base + ext), ...EXTENSIES.map((ext) => `${base}/index${ext}`)];
   return kandidaten.find((rel) => existsSync(path.join(root, rel)) && statSync(path.join(root, rel)).isFile()) ?? null;
 }
 
-/** Top-level declaraties: naam → node (functie, of de initializer van een const). */
+/** Top-level declaraties: naam → node (functie, initializer van een const, of het bindingselement van een destructurering). */
 function declaraties(/** @type {ts.SourceFile} */ sf) {
   /** @type {Map<string, ts.Node>} */
   const map = new Map();
   for (const stmt of sf.statements) {
     if (ts.isFunctionDeclaration(stmt) && stmt.name !== undefined) map.set(stmt.name.text, stmt);
     if (!ts.isVariableStatement(stmt)) continue;
-    for (const decl of stmt.declarationList.declarations) {
-      if (ts.isIdentifier(decl.name) && decl.initializer !== undefined) map.set(decl.name.text, decl.initializer);
-    }
+    for (const decl of stmt.declarationList.declarations) noteerDeclaratie(decl, map);
   }
   return map;
 }
 
-/** De naam waaronder een benoemde import of heruitvoer een naam binnenhaalt, of null. */
-function element(/** @type {ts.NamedImports | ts.NamedExports} */ named, /** @type {string} */ name) {
-  const hit = named.elements.find((e) => e.name.text === name);
-  return hit === undefined ? null : (hit.propertyName ?? hit.name).text;
-}
-
-/** De benoemde bindingen en de specifier van een import- of heruitvoerdeclaratie, of null. */
-function benoemd(/** @type {ts.Statement} */ stmt) {
-  if (ts.isImportDeclaration(stmt) && ts.isStringLiteral(stmt.moduleSpecifier)) {
-    const bindings = stmt.importClause?.namedBindings;
-    return bindings !== undefined && ts.isNamedImports(bindings)
-      ? { spec: stmt.moduleSpecifier.text, named: bindings }
-      : null;
+function noteerDeclaratie(/** @type {ts.VariableDeclaration} */ decl, /** @type {Map<string, ts.Node>} */ map) {
+  if (decl.initializer === undefined) return;
+  if (ts.isIdentifier(decl.name)) map.set(decl.name.text, decl.initializer);
+  if (!ts.isObjectBindingPattern(decl.name)) return;
+  for (const element of decl.name.elements) {
+    if (ts.isIdentifier(element.name)) map.set(element.name.text, element);
   }
-  if (!ts.isExportDeclaration(stmt) || stmt.moduleSpecifier === undefined || !ts.isStringLiteral(stmt.moduleSpecifier))
-    return null;
-  const clause = stmt.exportClause;
-  return clause !== undefined && ts.isNamedExports(clause) ? { spec: stmt.moduleSpecifier.text, named: clause } : null;
 }
 
 /**
- * Waar een bestand een naam vandaan haalt: een benoemde import of een heruitvoer (export { A as B } from …).
- * @returns {{ spec: string, name: string } | null}
+ * Hoe een bestand een naam binnenhaalt: benoemd (import of heruitvoer, met de oorspronkelijke naam), als namespace
+ * (`import * as ns`, name null) of via `export *` (alleen als kandidaat). Eerst de directe treffers, dan de sterren.
+ * @returns {Herkomst[]}
  */
-function bron(/** @type {ts.SourceFile} */ sf, /** @type {string} */ name) {
+function bronnen2(/** @type {ts.SourceFile} */ sf, /** @type {string} */ name) {
+  /** @type {Herkomst[]} */
+  const direct = [];
+  /** @type {Herkomst[]} */
+  const sterren = [];
   for (const stmt of sf.statements) {
-    const decl = benoemd(stmt);
-    const origineel = decl === null ? null : element(decl.named, name);
-    if (decl !== null && origineel !== null) return { spec: decl.spec, name: origineel };
+    const spec = moduleSpec(stmt);
+    if (spec === null) continue;
+    const hit = treffer(stmt, name);
+    if (hit !== undefined) direct.push({ spec, name: hit });
+    else if (ts.isExportDeclaration(stmt) && stmt.exportClause === undefined) sterren.push({ spec, name });
+  }
+  return [...direct, ...sterren];
+}
+
+function moduleSpec(/** @type {ts.Statement} */ stmt) {
+  const isDecl = ts.isImportDeclaration(stmt) || ts.isExportDeclaration(stmt);
+  const spec = isDecl ? stmt.moduleSpecifier : undefined;
+  return spec !== undefined && ts.isStringLiteral(spec) ? spec.text : null;
+}
+
+/**
+ * De oorspronkelijke naam (string), null voor een namespace-binding, of undefined als de declaratie de naam niet noemt.
+ * @returns {string | null | undefined}
+ */
+function treffer(/** @type {ts.Statement} */ stmt, /** @type {string} */ name) {
+  const named = ts.isImportDeclaration(stmt)
+    ? stmt.importClause?.namedBindings
+    : ts.isExportDeclaration(stmt)
+      ? stmt.exportClause
+      : undefined;
+  if (named === undefined) return undefined;
+  if (ts.isNamespaceImport(named) || ts.isNamespaceExport(named)) return named.name.text === name ? null : undefined;
+  const hit = named.elements.find((e) => e.name.text === name);
+  return hit === undefined ? undefined : (hit.propertyName ?? hit.name).text;
+}
+
+/**
+ * De declaratie achter een naam in een bestand, of null. Een namespace-binding geeft { file, name: '*' }.
+ * @returns {Ref | null}
+ */
+function herkomst(/** @type {Ctx} */ ctx, /** @type {Ref} */ ref) {
+  if (ref.file === PORT || ref.file === TESTING) return { file: ref.file, name: ref.name };
+  const sf = ctx.bron(ref.file);
+  if (sf === null || (ref.depth ?? 0) > MAX_DIEPTE) return null;
+  const decl = declaraties(sf).get(ref.name);
+  if (decl !== undefined) return lokaal(ctx, ref, decl);
+  for (const via of bronnen2(sf, ref.name)) {
+    const doel = resolve(ctx.root, ref.file, via.spec);
+    if (doel === null) continue;
+    const gevonden =
+      via.name === null ? { file: doel, name: '*' } : herkomst(ctx, { file: doel, name: via.name, depth: diepte(ref) });
+    if (gevonden !== null) return gevonden;
   }
   return null;
 }
 
-/**
- * Het bestand en de naam van de declaratie achter een naam, via imports, heruitvoer en const-aliassen. Null als hij
- * buiten de repo ligt of niet te herleiden is.
- * @returns {Ref | null}
- */
-function herkomst(/** @type {Ctx} */ ctx, /** @type {Ref} */ ref, depth = 0) {
-  const sf = ctx.bron(ref.file);
-  if (sf === null || depth > MAX_DIEPTE) return null;
-  const decl = declaraties(sf).get(ref.name);
-  if (decl !== undefined) {
-    // const d = defineFileStorage: een alias in hetzelfde bestand.
-    if (ts.isIdentifier(decl) && decl.text !== ref.name)
-      return herkomst(ctx, { file: ref.file, name: decl.text }, depth + 1);
-    return ref;
-  }
-  const via = bron(sf, ref.name);
-  if (via === null) return null;
-  // De poort telt ook als het bestand ontbreekt (een fixture-repo of een app die core nog niet heeft): het pad beslist.
-  if (basis(ref.file, via.spec) === PORT) return { file: PORT, name: via.name };
-  const doel = resolve(ctx.root, ref.file, via.spec);
-  return doel === null ? null : herkomst(ctx, { file: doel, name: via.name }, depth + 1);
+/** Een lokale declaratie: een const-alias of destructurering volgt de bron, al het andere is zelf de declaratie. */
+function lokaal(/** @type {Ctx} */ ctx, /** @type {Ref} */ ref, /** @type {ts.Node} */ decl) {
+  const eigen = { file: ref.file, name: ref.name };
+  if (ts.isIdentifier(decl) && decl.text !== ref.name)
+    return herkomst(ctx, { file: ref.file, name: decl.text, depth: diepte(ref) });
+  if (!ts.isBindingElement(decl)) return eigen;
+  const init = ts.isVariableDeclaration(decl.parent.parent) ? decl.parent.parent.initializer : undefined;
+  const prop =
+    decl.propertyName !== undefined && ts.isIdentifier(decl.propertyName) ? decl.propertyName.text : ref.name;
+  if (init === undefined || !ts.isIdentifier(init)) return eigen;
+  return lid(ctx, { file: ref.file, name: init.text, depth: diepte(ref) }, prop);
 }
 
-const isDefine = (/** @type {Ctx} */ ctx, /** @type {string} */ file, /** @type {string} */ name) => {
-  const ref = herkomst(ctx, { file, name });
-  return ref !== null && ref.file === PORT && ref.name === DEFINE;
-};
+/** De declaratie van `ns.prop` als ns een namespace is, of null. */
+function lid(/** @type {Ctx} */ ctx, /** @type {Ref} */ ns, /** @type {string} */ prop) {
+  const doel = herkomst(ctx, { ...ns, depth: diepte(ns) });
+  return doel === null || doel.name !== '*'
+    ? null
+    : herkomst(ctx, { file: doel.file, name: prop, depth: diepte(ns) + 1 });
+}
+
+/** De declaratie achter de callee van een aanroep: `naam(…)` of `ns.naam(…)`. */
+function callee(/** @type {Ctx} */ ctx, /** @type {string} */ file, /** @type {ts.CallExpression} */ call) {
+  const e = call.expression;
+  if (ts.isIdentifier(e)) return herkomst(ctx, { file, name: e.text });
+  if (ts.isPropertyAccessExpression(e) && ts.isIdentifier(e.expression))
+    return lid(ctx, { file, name: e.expression.text }, e.name.text);
+  return null;
+}
+
+const is = (/** @type {Ref | null} */ ref, /** @type {string} */ file, /** @type {(name: string) => boolean} */ naam) =>
+  ref !== null && ref.file === file && naam(ref.name);
 
 /** De top-level declaratie (naam) waarin een node staat, of null. */
 function omhullend(/** @type {ts.Node} */ node) {
@@ -162,53 +215,66 @@ function omhullend(/** @type {ts.Node} */ node) {
   return null;
 }
 
-/** Alle adapters (buiten tests en buiten de poort zelf): aanroepen van defineFileStorage onder welke naam ook. */
-function adapters(/** @type {Ctx} */ ctx, /** @type {string[]} */ src) {
+/** Alle aanroepen in een bestand. */
+function aanroepen(/** @type {ts.Node} */ node) {
+  /** @type {ts.CallExpression[]} */
+  const uit = [];
+  const loop = (/** @type {ts.Node} */ n) => {
+    if (ts.isCallExpression(n)) uit.push(n);
+    ts.forEachChild(n, loop);
+  };
+  loop(node);
+  return uit;
+}
+
+/** Alle adapters (buiten tests en de poort zelf): aanroepen van defineFileStorage, onder welke naam of vorm ook. */
+function adapters(/** @type {Ctx} */ ctx, /** @type {string[]} */ bron) {
   /** @type {{ ref: Ref | null, file: string }[]} */
   const uit = [];
-  for (const file of src.filter((rel) => !isTest(rel) && rel !== PORT)) {
+  for (const file of bron.filter((rel) => !isTest(rel) && rel !== PORT)) {
     const sf = ctx.bron(file);
     if (sf === null) continue;
-    const loop = (/** @type {ts.Node} */ n) => {
-      if (ts.isCallExpression(n) && ts.isIdentifier(n.expression) && isDefine(ctx, file, n.expression.text)) {
-        const name = omhullend(n);
-        uit.push({ file, ref: name === null ? null : { file, name } });
-      }
-      ts.forEachChild(n, loop);
-    };
-    loop(sf);
+    for (const call of aanroepen(sf)) {
+      if (!is(callee(ctx, file, call), PORT, (name) => name === DEFINE)) continue;
+      const name = omhullend(call);
+      uit.push({ file, ref: name === null ? null : { file, name } });
+    }
   }
   return uit;
 }
 
-/** De adapters waarop een testbestand fileStorageContract( of fileStorageContractCases( draait, herleid naar hun bron. */
+/** De adapters waarop een testbestand een suite uit testing.ts draait, herleid naar hun bron. */
 function suites(/** @type {Ctx} */ ctx, /** @type {string[]} */ tests) {
   /** @type {Set<string>} */
   const uit = new Set();
   for (const file of tests) {
     const sf = ctx.bron(file);
     if (sf === null) continue;
-    const loop = (/** @type {ts.Node} */ n) => {
-      const via = ts.isCallExpression(n) && ts.isIdentifier(n.expression) ? bron(sf, n.expression.text) : null;
-      if (via !== null && SUITES.has(via.name) && ts.isCallExpression(n)) {
-        n.arguments.flatMap((arg) => gebruik(ctx, file, arg)).forEach((k) => uit.add(k));
-      }
-      ts.forEachChild(n, loop);
-    };
-    loop(sf);
+    for (const call of aanroepen(sf)) {
+      if (!is(callee(ctx, file, call), TESTING, (name) => SUITES.has(name))) continue;
+      call.arguments.flatMap((arg) => gebruikt(ctx, file, arg)).forEach((ref) => uit.add(key(ref)));
+    }
   }
   return uit;
 }
 
-/** Elke naam in de setup van een suite, herleid tot zijn declaratie (als sleutel). */
-function gebruik(/** @type {Ctx} */ ctx, /** @type {string} */ file, /** @type {ts.Node} */ node) {
-  /** @type {string[]} */
+/** Wat de setup van een suite als adapter gebruikt: elke aangeroepen naam en de waarde van een eigenschap `storage`. */
+function gebruikt(/** @type {Ctx} */ ctx, /** @type {string} */ file, /** @type {ts.Node} */ node) {
+  /** @type {Ref[]} */
+  const uit = [];
+  for (const n of [...aanroepen(node).map((call) => call.expression), ...storageWaarden(node)]) {
+    const ref = ts.isIdentifier(n) ? herkomst(ctx, { file, name: n.text }) : null;
+    if (ref !== null) uit.push(ref);
+  }
+  return uit;
+}
+
+function storageWaarden(/** @type {ts.Node} */ node) {
+  /** @type {ts.Node[]} */
   const uit = [];
   const loop = (/** @type {ts.Node} */ n) => {
-    if (ts.isIdentifier(n)) {
-      const ref = herkomst(ctx, { file, name: n.text });
-      if (ref !== null) uit.push(key(ref));
-    }
+    if (ts.isPropertyAssignment(n) && ts.isIdentifier(n.name) && n.name.text === 'storage') uit.push(n.initializer);
+    if (ts.isShorthandPropertyAssignment(n) && n.name.text === 'storage') uit.push(n.name);
     ts.forEachChild(n, loop);
   };
   loop(node);
@@ -219,19 +285,19 @@ function gebruik(/** @type {Ctx} */ ctx, /** @type {string} */ file, /** @type {
 export function adapterFouten(root = '.') {
   /** @type {Ctx} */
   const ctx = { root, bron: bronnen(root) };
-  const src = bestanden(root, 'src');
-  const tests = [...src.filter(isTest), ...bestanden(root, 'test').filter(isTest)];
+  const bron = MAPPEN.flatMap((dir) => bestanden(root, dir));
+  const tests = [...bron.filter(isTest), ...bestanden(root, 'test').filter(isTest)];
   const gedekt = suites(ctx, tests);
   /** @type {string[]} */
   const fouten = [];
-  for (const { file, ref } of adapters(ctx, src)) {
+  for (const { file, ref } of adapters(ctx, bron)) {
     if (ref === null) {
       fouten.push(
         `${file}: defineFileStorage buiten een benoemde top-level declaratie; geef de adapter een naam en draai fileStorageContract erop`,
       );
     } else if (!gedekt.has(key(ref))) {
       fouten.push(
-        `${file}: adapter ${ref.name} heeft geen testbestand dat fileStorageContract op deze adapter draait (ADR 0060 punt 2)`,
+        `${file}: adapter ${ref.name} heeft geen testbestand dat fileStorageContract uit src/core/api/storage/testing.ts op deze adapter draait (ADR 0060 punt 2)`,
       );
     }
   }

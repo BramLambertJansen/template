@@ -1,0 +1,2 @@
+// Een poging de check te ontwijken: de poort via een barrel met export * doorgeven.
+export * from '#core/api/storage/port.ts';

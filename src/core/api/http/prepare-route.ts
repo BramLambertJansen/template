@@ -9,6 +9,7 @@ import { guardWithUser } from '../outbound/index.ts';
 import type { RouteDef } from '../route/kit.ts';
 import { authorize } from './partner-route.ts';
 import { createRouteEffects } from './route-effects.ts';
+import { logUnexpectedError } from './safe-error-log.ts';
 
 // Het pad van een route met prepare (spec bestandsopslag, "Route kit in twee fasen", OV-20; src/core/api/db blijft
 // ongewijzigd). createApp doet stap 1 (sessie, ruwe input) en geeft hier door:
@@ -45,17 +46,43 @@ export async function runPreparedRoute<Services>(
   );
   const parsed = contract.input.safeParse(request.rawInput());
   if (!parsed.success) throw new AppError('VALIDATION');
-  const handler = await prepare({ input: parsed.data, actor, services });
-  const effects = createRouteEffects({ requestId, route: `${contract.method} /api${contract.path}` });
+  const bound = await prepare({ input: parsed.data, actor, services });
+  const routeName = `${contract.method} /api${contract.path}`;
+  const effects = createRouteEffects({ requestId, route: routeName });
+  try {
+    return await handlerStep(c, route, { request, bound, effects, input: parsed.data });
+  } finally {
+    // Een onverwachte fout uit prepare die de handler niet ophaalde, verdwijnt niet stil (alleen de vaste allowlist).
+    const lost = bound.unclaimedError();
+    if (lost !== null)
+      logUnexpectedError({ requestId, route: routeName, label: 'route: fout uit prepare niet opgehaald' }, lost.error);
+  }
+}
+
+interface HandlerStep<Services> {
+  readonly request: PreparedRequest<Services>;
+  readonly bound: Awaited<ReturnType<NonNullable<Route<Services>['prepare']>>>;
+  readonly effects: ReturnType<typeof createRouteEffects>;
+  // De gevalideerde input (z.output van het contract), zoals de handler hem verwacht.
+  readonly input: Parameters<HandlerStep<Services>['bound']['handler']>[0]['input'];
+}
+
+// Stap 5: tweede withUser zonder rate limit; rol, permissie en MFA vóór de handler.
+function handlerStep<Services>(c: Context, route: Route<Services>, step: HandlerStep<Services>): Promise<unknown> {
+  const { request, bound, effects } = step;
+  const { session, services } = request;
+  const { contract } = route;
+  const requestId = c.get('requestId');
+  const actor = { userId: session.userId, sessionStrength: session.sessionStrength };
   return effects.run(() =>
     timeDatabase(c.get('requestFacts'), () =>
-      withUser(
+      guardWithUser(request.withUser)(
         actor,
         async (tx, { role }) => {
           // Rol, permissie en MFA vóór de handler: een fout uit prepare komt pas via ctx.prepared() naar buiten.
           const routeActor = authorize(route, session, role);
-          const result = await handler({
-            input: parsed.data,
+          const result = await bound.handler({
+            input: step.input,
             actor: routeActor,
             tx,
             services,

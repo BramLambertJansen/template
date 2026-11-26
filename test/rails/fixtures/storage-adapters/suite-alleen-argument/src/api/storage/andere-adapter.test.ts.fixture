@@ -1,0 +1,9 @@
+import { fileStorageContract } from '#core/api/storage/testing.ts';
+import { andereAdapter } from './andere-adapter.ts';
+import { mijnAdapter } from './mijn-adapter.ts';
+
+// mijnAdapter komt hier alleen voor als argument van String(); de suite draait op andereAdapter.
+const fetch = () => Promise.resolve(new Response(null));
+fileStorageContract('x', () =>
+  Promise.resolve({ storage: andereAdapter, label: String(mijnAdapter), fetch, advance: () => undefined }),
+);

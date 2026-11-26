@@ -3,6 +3,7 @@ import type { CanActor, Decision, Permissions } from '../../shared/can.ts';
 import type { AuditActions, AuditFn } from '../../shared/audit.ts';
 import type { Contract, Method } from '../../shared/contract.ts';
 import type { PrepareContext, RouteContext } from './context.ts';
+import { AppError } from '../errors.ts';
 import { partnerDef, type PartnerDef, type PartnerHandlerContext, type PartnerStep } from './partner.ts';
 
 // defineRoute en definePartnerRoute (framework §1, §6; ADR 0040): de enige manieren om een route te maken. createApp
@@ -28,9 +29,7 @@ export interface RouteDef<C extends Contract = Contract, Services = unknown> {
   // roept dan die handler aan in plaats van `handler` (src/core/api/http/prepare-route.ts).
   readonly prepare?: (
     ctx: PrepareContext<z.output<C['input']>, Services>,
-  ) => Promise<
-    (ctx: RouteContext<z.output<C['input']>, Services>) => z.input<C['output']> | Promise<z.input<C['output']>>
-  >;
+  ) => Promise<BoundPrepare<RouteContext<z.output<C['input']>, Services>, z.input<C['output']>>>;
   // Alleen bij definePartnerRoute (spec partnerstap): createApp kiest dan het pad van src/core/api/http/partner-route.ts.
   readonly partner?: PartnerDef<z.output<C['input']>, z.input<C['output']>, Services>;
 }
@@ -54,6 +53,13 @@ export interface RouteOptions<Input, Services, Result> {
   readonly prepare: (ctx: PrepareContext<Input, Services>) => Promise<Result>;
 }
 
+// De handler met ctx.prepared gebonden, en na het request de fout uit prepare die niemand ophaalde en geen AppError is
+// (die logt createApp; een niet opgehaalde AppError blijft stil).
+export interface BoundPrepare<Ctx, Output> {
+  readonly handler: (ctx: Ctx) => Output | Promise<Output>;
+  readonly unclaimedError: () => { readonly error: unknown } | null;
+}
+
 type Settled<Result> = { readonly ok: true; readonly value: Result } | { readonly ok: false; readonly error: unknown };
 
 // Voert prepare uit en bewaart de uitkomst; geeft de handler terug met ctx.prepared gebonden aan die uitkomst.
@@ -68,12 +74,18 @@ function bindPrepare<Input, Services, Audit extends AuditActions, Result, Output
         (value) => ({ ok: true as const, value }),
         (error: unknown) => ({ ok: false as const, error }),
       );
+    let claimed = false;
     const prepared = (): Promise<Result> =>
       Promise.resolve().then(() => {
+        claimed = true;
         if (!settled.ok) throw settled.error;
         return settled.value;
       });
-    return (routeCtx: RouteContext<Input, Services, Audit>) => handler({ ...routeCtx, prepared });
+    return {
+      handler: (routeCtx: RouteContext<Input, Services, Audit>) => handler({ ...routeCtx, prepared }),
+      unclaimedError: () =>
+        settled.ok || claimed || settled.error instanceof AppError ? null : { error: settled.error },
+    };
   };
 }
 

@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { mkdir, open, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { Readable } from 'node:stream';
 import { z } from 'zod';
 import { MAX_FILE_BYTES, MAX_FILE_URL_TTL_SECONDS } from '../../shared/limits.ts';
 import { AppError } from '../errors.ts';
@@ -141,29 +142,37 @@ async function put(store: Store, token: PutClaims, request: Request): Promise<Re
   }
 }
 
-// De rename is de write-once-grens: een bestaande objectmap (nooit leeg) laat hem falen.
+const EXISTS: ReadonlySet<unknown> = new Set(['EEXIST', 'ENOTEMPTY']);
+
+// De rename is de write-once-grens: een bestaande objectmap (nooit leeg) laat hem falen met EEXIST of ENOTEMPTY. Elke andere
+// fout (EACCES, ENOSPC, …) gaat ongewijzigd door en wordt INTERNAL_ERROR; put ruimt de tijdelijke map in beide gevallen op.
 async function commit(temp: string, target: string): Promise<void> {
   await mkdir(path.dirname(target), { recursive: true });
   try {
     await rename(temp, target);
-  } catch {
-    throw new AppError('ALREADY_EXISTS');
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && EXISTS.has(error.code)) throw new AppError('ALREADY_EXISTS');
+    throw error;
   }
 }
 
+// Streamt het bestand; de handle sluit zichzelf aan het eind van de stream (of bij afbreken).
 async function get(store: Store, token: GetClaims): Promise<Response> {
-  let content: Buffer;
+  const handle = await open(path.join(store.objectDir(token.k), DATA), 'r').catch(() => null);
+  if (handle === null) throw new AppError('NOT_FOUND');
+  let size: number;
   try {
-    content = await readFile(path.join(store.objectDir(token.k), DATA));
-  } catch {
-    throw new AppError('NOT_FOUND');
+    size = (await handle.stat()).size;
+  } catch (error) {
+    await handle.close();
+    throw error;
   }
-  return new Response(new Uint8Array(content), {
+  return new Response(Readable.toWeb(handle.createReadStream()), {
     status: 200,
     headers: {
       'Content-Type': 'application/octet-stream',
       'Content-Disposition': contentDisposition(token.f),
-      'Content-Length': String(content.byteLength),
+      'Content-Length': String(size),
       'X-Content-Type-Options': 'nosniff',
       'Content-Security-Policy': 'sandbox',
       'Cache-Control': 'no-store',
