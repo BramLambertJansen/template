@@ -60,7 +60,8 @@ cache niet noemt.
   agent kan `node_modules` in de sandbox alleen in zijn eigen sessie beschrijven, niet in de cache van een volgende.
   Hetzelfde geldt voor de git-configuratie in `.git/` tijdens het script zelf: alleen de vergelijking is ertegen
   gehard, niet elke git-aanroep van mise, pnpm of lefthook. `.git/` wordt niet gepusht; bij `startup` komt het uit de
-  clone van het platform, vóór de agent iets doet.
+  clone van het platform, vóór de agent iets doet. Tussen de vergelijking en het script (hooguit een seconde) kan een
+  ander proces de invoer nog wijzigen; bij `startup` loopt er nog geen agentproces, dus dat blijft een aanvaard restrisico.
 - De vergelijking beschermt alleen tegen afwijkende installatie-invoer buiten `.claude/`. De SessionStart-hooks zelf (de
   stubs in `.claude/hooks/`, waaronder `laden.mjs`) en de `env` uit `.claude/settings.json` komen uit de werkmap van de
   gekozen branch en draaien al als root, vóór deze vergelijking. Dat risico bestond al vóór deze ADR (ADR 0045, 0061) en
