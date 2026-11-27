@@ -128,7 +128,8 @@ async function put(store: Store, token: PutClaims, request: Request): Promise<Re
   }
   const target = store.objectDir(token.k);
   if ((await stat(target).catch(() => null)) !== null) throw new AppError('ALREADY_EXISTS');
-  const temp = path.join(store.dir, '.tmp', randomUUID());
+  const temp = path.resolve(store.dir, '.tmp', randomUUID());
+  if (!temp.startsWith(store.dir + path.sep)) throw new Error('lokale opslag: pad buiten de opslagmap');
   await mkdir(temp, { recursive: true });
   try {
     const written = await writeBody(request.body, path.join(temp, DATA), token.s);
@@ -196,11 +197,15 @@ export function createLocalFileStorage(options: LocalFileStorageOptions): LocalF
   const now = options.now ?? Date.now;
   const signer = createSigner();
   // Elke weg naar de schijf loopt via objectDir: een sleutel buiten files/<uuid> komt nooit in een pad.
+  // Daarna nog een padcontrole: het opgeloste pad ligt altijd binnen de opslagmap.
+  const root = path.resolve(options.dir);
   const store: Store = {
-    dir: options.dir,
+    dir: root,
     objectDir: (key) => {
       if (!isFileKey(key)) throw new Error('lokale opslag: sleutel past niet op files/<uuid>');
-      return path.join(options.dir, key);
+      const full = path.resolve(root, key);
+      if (!full.startsWith(root + path.sep)) throw new Error('lokale opslag: pad buiten de opslagmap');
+      return full;
     },
   };
   const url = (claims: Claims) => `${options.appOrigin}${DEV_PATH}${signer.sign(claims)}`;
