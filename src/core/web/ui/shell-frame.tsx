@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { uiTexts } from '../copy/ui.ts';
+import type { BuildInfo } from '../lib/api-client.ts';
 import { cn } from './cn.ts';
 import type { MenuItem } from './dropdown-menu.tsx';
 import { OfflineNotice } from './offline-notice.tsx';
@@ -154,10 +155,12 @@ interface ShellFrameProps {
   readonly className?: string;
   // Verandert bij elke routewissel (bijv. het pad); de focus gaat dan naar de h1 van het nieuwe scherm (WCAG 2.4.3).
   readonly routeKey?: string | undefined;
+  // Versie en build van de server voor de voet onder main (spec release-versie); zonder geen voet.
+  readonly buildInfo?: BuildInfo | undefined;
   readonly children: ReactNode;
 }
 
-export function ShellFrame({ header, nav, aside, className, routeKey, children }: ShellFrameProps) {
+export function ShellFrame({ header, nav, aside, className, routeKey, buildInfo, children }: ShellFrameProps) {
   const mainRef = useRef<HTMLElement>(null);
   // Volgorde telt: eerst lezen of er al een scherm stond, daarna markeren dat dit frame er nu staat.
   useFocusOnMount(mainRef);
@@ -196,6 +199,12 @@ export function ShellFrame({ header, nav, aside, className, routeKey, children }
           >
             {children}
           </main>
+          {/* De voet (spec release-versie): klein en gedempt, "Versie x.y.z" en met een build " · build <7 tekens>". */}
+          {buildInfo === undefined ? null : (
+            <footer className="px-shell-content pb-shell-content text-xs text-muted-foreground md:px-shell-content-wide print:hidden">
+              {uiTexts.buildInfo(buildInfo.version, buildInfo.build?.slice(0, 7))}
+            </footer>
+          )}
         </div>
         {nav}
       </div>
@@ -212,5 +221,7 @@ export interface ShellProps {
   readonly topbarActions?: ReactNode;
   // Verandert bij elke routewissel (bijv. het pad); de focus gaat dan naar de h1 van het nieuwe scherm (WCAG 2.4.3).
   readonly routeKey?: string | undefined;
+  // Versie en build voor de voet; de schil geeft hem door aan ShellFrame (spec release-versie).
+  readonly buildInfo?: BuildInfo | undefined;
   readonly children: ReactNode;
 }

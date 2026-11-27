@@ -97,8 +97,17 @@ export function shellContractCases<Props extends ContractShellProps>(
         'props zonder children en routeKey plus die twee vormen samen de props van de schil',
       ),
     );
+  // Met buildInfo (spec release-versie): de schil moet hem doorgeven aan ShellFrame, ook als haar props hem niet noemen.
+  const withBuild: ShellFactory = (routeKey, title) =>
+    createElement(
+      Schil,
+      unsafeCast<Props>(
+        { ...opties.props, routeKey, buildInfo: CONTRACT_BUILD_INFO, children: <PageHeader title={title} /> },
+        'de props van de schil plus buildInfo uit ShellProps; een schil die hem niet doorgeeft, faalt op de voet',
+      ),
+    );
   // Elk geval met een eigen router, ook buiten shellContract.
-  return [...structureCases(shell), ...focusCases(shell)].map((geval) => ({
+  return [...structureCases(shell), ...focusCases(shell), ...buildCases(withBuild)].map((geval) => ({
     naam: geval.naam,
     run: async () => {
       router = testRouter();
@@ -118,6 +127,24 @@ export function shellContract<Props extends ContractShellProps>(
     });
     for (const geval of shellContractCases(Schil, opties)) test(geval.naam, geval.run);
   });
+}
+
+const CONTRACT_BUILD_INFO = { version: '9.8.7', build: 'abc1234' } as const;
+
+// Spec release-versie: de voet met versie en build staat onder de schil, buiten main, en is verborgen bij afdrukken.
+function buildCases(shell: ShellFactory): Geval[] {
+  return [
+    {
+      naam: 'met buildInfo staat de voet met versie en build buiten main en verborgen bij afdrukken',
+      run: () => {
+        const { container } = render(wrap(shell('/', 'Dashboard'), {}));
+        const footer = screen.getByRole('contentinfo');
+        expect(footer.textContent).toBe(uiTexts.buildInfo(CONTRACT_BUILD_INFO.version, CONTRACT_BUILD_INFO.build));
+        expect(screen.getByRole('main').contains(footer)).toBe(false);
+        expect(hiddenInPrint(footer, shellRoot(container))).toBe(true);
+      },
+    },
+  ];
 }
 
 function structureCases(shell: ShellFactory): Geval[] {

@@ -59,6 +59,21 @@ async function apiError(response: Response): Promise<ApiError> {
   return new ApiError(code, response.status, 'requestId' in body ? body.requestId : undefined);
 }
 
+// Versie en build van de draaiende server (GET /api/health, spec release-versie); build alleen als BUILD_SHA gezet is.
+export interface BuildInfo {
+  readonly version: string;
+  readonly build?: string;
+}
+
+// Alleen een niet-lege tekst als version telt; een build die geen niet-lege tekst is valt weg.
+function toBuildInfo(body: unknown): BuildInfo | null {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) return null;
+  const version: unknown = Reflect.get(body, 'version');
+  const build: unknown = Reflect.get(body, 'build');
+  if (typeof version !== 'string' || version === '') return null;
+  return typeof build === 'string' && build !== '' ? { version, build } : { version };
+}
+
 export function createApiClient<Contracts extends readonly AnyContract[]>() {
   async function call<K extends Key<Contracts[number]>>(
     key: K,
@@ -90,6 +105,18 @@ export function createApiClient<Contracts extends readonly AnyContract[]>() {
     return response.ok;
   }
 
+  // Versie en build uit GET /api/health voor de voet van de schil (spec release-versie, addendum). Gooit nooit: elke afwijking
+  // (status, netwerk, geen JSON, andere vorm) geeft null, en de schil toont dan niets.
+  async function buildInfo(): Promise<BuildInfo | null> {
+    try {
+      const response = await fetch('/api/health', { credentials: 'same-origin' });
+      if (!response.ok) return null;
+      return toBuildInfo(await response.json());
+    } catch {
+      return null;
+    }
+  }
+
   // Alleen lokaal (ADR 0043): logt in als het seed-account van de rol uit het register van de app; elders geeft de server 404.
   async function devLoginAs(rol: string): Promise<void> {
     const response = await fetch('/api/dev/login-as', {
@@ -101,5 +128,5 @@ export function createApiClient<Contracts extends readonly AnyContract[]>() {
     if (!response.ok) throw await apiError(response);
   }
 
-  return { call, health, devLoginAs };
+  return { call, health, buildInfo, devLoginAs };
 }

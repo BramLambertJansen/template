@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { clientIpHeaders, createAccount, PASSWORD, freshTotpFor } from './support/accounts.ts';
+import { scanAxe } from './support/axe.ts';
 
 // Schil toegankelijk (roadmap 3f) tegen de echte stack: paginatitel per scherm (WCAG 2.4.2), skip-link als eerste
 // Tab-stop (2.4.1) en de focus naar de h1 na een routewissel (2.4.3).
@@ -48,4 +49,27 @@ test('titel per scherm, skip-link en focus na navigeren', async ({ page }) => {
   await expect(designSystemHeading).toBeVisible();
   await expect(designSystemHeading).toBeFocused();
   await expect(page).toHaveTitle(/^Design system · /);
+});
+
+// Spec release-versie, addendum: versie (en build als de server die geeft) onderaan in de schil, gelijk aan GET /api/health.
+test('release-versie/AC-13: de voet toont de versie uit /api/health en axe vindt niets', async ({ page }) => {
+  const admin = await createAccount('admin', { totp: true });
+  await page.goto('/login');
+  await page.getByLabel('E-mailadres').fill(admin.email);
+  await page.getByLabel('Wachtwoord').fill(PASSWORD);
+  await page.getByRole('button', { name: 'Inloggen' }).click();
+  await page.getByLabel('Code', { exact: true }).fill(freshTotpFor(admin.totpSecret ?? ''));
+  await page.getByRole('button', { name: 'Bevestigen' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+
+  const health = await page.request.get('/api/health');
+  expect(health.ok()).toBe(true);
+  const body: unknown = await health.json();
+  expect(body).toMatchObject({ ok: true, version: expect.any(String) });
+  const version = String(Reflect.get(Object(body), 'version'));
+  const build: unknown = Reflect.get(Object(body), 'build');
+  const expected = typeof build === 'string' ? `Versie ${version} · build ${build.slice(0, 7)}` : `Versie ${version}`;
+
+  await expect(page.getByRole('contentinfo')).toHaveText(expected);
+  await scanAxe(page);
 });
