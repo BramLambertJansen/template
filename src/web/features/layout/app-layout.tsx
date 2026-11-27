@@ -7,7 +7,7 @@ import { actorFromMe } from '#web/lib/session.ts';
 import { Button, SidebarShell, ThemeToggle, TopbarShell, visibleNavItems, type MenuItem } from '#web/ui/index.ts';
 import { useLogout, useMe } from '../session/queries.ts';
 import { useBuildInfo } from './queries.ts';
-import { schilKeuze, voorbeeldNav } from './schil-voorbeeld.ts';
+import { schilKeuze, toontBuildInfo, voorbeeldNav } from './schil-voorbeeld.ts';
 
 function useMenuItems(): MenuItem[] {
   const logout = useLogout();
@@ -49,10 +49,12 @@ function voorbeeldActions(): ReactNode {
 export function AppLayout() {
   const me = useMe();
   const menuItems = useMenuItems();
-  // Versie en build onderaan in de schil (spec release-versie); zonder antwoord geen voet.
-  const buildInfo = useBuildInfo().data ?? undefined;
   // resolvedLocation: pas als het nieuwe scherm gerenderd is (ook na een lazy route of loader), niet bij de start van het laden.
   const location = useRouterState({ select: (state) => state.resolvedLocation ?? state.location });
+  // Versie en build onderaan in de schil (spec release-versie); zonder antwoord en op /design-system geen voet.
+  const metVoet = toontBuildInfo(location.pathname);
+  const buildData = useBuildInfo(metVoet).data;
+  const buildInfo = metVoet ? (buildData ?? undefined) : undefined;
   if (me.data === undefined) return null;
 
   const actor = actorFromMe(me.data);

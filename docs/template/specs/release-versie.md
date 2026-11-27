@@ -53,7 +53,8 @@ Geen nieuwe schermen. Addendum (eigenaarbesluit 2026-11-26, roadmap stuk 3f): ve
   2xx-status met een niet-lege tekst `version` het object `{ version, build? }` (een `build` die geen niet-lege tekst is valt
   weg); bij een status buiten 2xx, een netwerkfout of een andere vorm `null`, nooit een fout. De app haalt het op
   in `src/web/features/layout/queries.ts` (`useBuildInfo`: één keer per sessie, geen herhaalpoging) en `AppLayout` geeft het
-  aan de schil. Zonder `BUILD_SHA` (lokaal, tests) staat er alleen de versie; antwoordt health niet, dan staat er niets.
+  aan de schil, behalve op `/design-system`: die pagina doet alleen voorbeelddata en geen aanroep buiten `/api/me`
+  (design-system/AC-10, R-WEB-08), dus daar geen voet (eigenaarbesluit 2026-11-27). Zonder `BUILD_SHA` (lokaal, tests) staat er alleen de versie; antwoordt health niet, dan staat er niets.
 
 ## Acceptatiecriteria
 
@@ -72,6 +73,7 @@ Bestaande tests blijven groen; alleen de onder "Raakt ook" genoemde tests wijzig
 - **release-versie/AC-11**: `ShellFrame` met `buildInfo={{ version: '0.2.0', build: '<40 hextekens>' }}` toont in een `contentinfo` de tekst `Versie 0.2.0 · build <eerste 7 tekens>`; met alleen `version` `Versie 0.2.0` zonder het woord build; zonder `buildInfo` is er geen `contentinfo`. De voet staat buiten `main` en is verborgen bij afdrukken. `SidebarShell` en `TopbarShell` geven `buildInfo` door, en `shellContract` laat een schil falen die hem niet doorgeeft. Toets: `src/core/web/ui/shell-build-info.test.tsx`, `src/core/web/ui/shell-contract.test.tsx`.
 - **release-versie/AC-12**: `buildInfo()` van de API-client geeft bij een 2xx-status met `{ ok, version, build }` het object `{ version, build }`, met `{ ok, version }` alleen `{ version }`, met een `build` die geen tekst is ook alleen `{ version }`, en `null` bij een status buiten 2xx, een netwerkfout, een antwoord dat geen JSON is of een `version` die geen niet-lege tekst is; het gooit nooit. Toets: `src/core/web/lib/api-client-build-info.test.ts`.
 - **release-versie/AC-13**: Tegen de echte stack staat onder een ingelogd scherm in de voet precies `Versie <version>`, met ` · build <eerste 7 tekens>` alleen als `GET /api/health` een `build` geeft (beide uit dat antwoord), en axe vindt in die staat geen overtreding. Toets: `e2e/shell.spec.ts`.
+- **release-versie/AC-14**: Op `/design-system` (ook met een slash erachter) haalt `AppLayout` geen buildInfo op en staat er geen voet, zodat de pagina geen aanroep buiten `/api/me` doet (design-system/AC-10 en designsystem-toolbox/AC-8 blijven ongewijzigd, R-WEB-08); op elk ander pad wel. Toets: `src/web/features/layout/build-info-pad.test.ts`, `e2e/design-system.spec.ts`.
 
 ## Raakt ook
 
