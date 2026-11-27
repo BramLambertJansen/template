@@ -19,6 +19,9 @@ import { defineFileStorage, isFileKey, type FileStorage, type StoredFile } from 
 const DEV_PATH = '/api/dev/files/';
 const DATA = 'data';
 const TYPE = 'type';
+// De standaardmap ligt onder os.tmpdir(): bestanden en mappen alleen voor het eigen proces (geen andere gebruikers).
+const FILE_MODE = 0o600;
+const DIR_MODE = 0o700;
 
 const claims = z.discriminatedUnion('m', [
   z.object({ m: z.literal('PUT'), k: z.string(), e: z.number(), s: z.number(), t: z.string() }).strict(),
@@ -103,7 +106,7 @@ async function statObject(store: Store, key: string): Promise<StoredFile | null>
 
 // Leest de body als stream naar `file` en breekt af zodra hij `limit` bytes overschrijdt; geeft het aantal bytes.
 async function writeBody(body: ReadableStream<Uint8Array> | null, file: string, limit: number): Promise<number> {
-  const handle = await open(file, 'wx');
+  const handle = await open(file, 'wx', FILE_MODE);
   let total = 0;
   try {
     if (body === null) return 0;
@@ -130,12 +133,12 @@ async function put(store: Store, token: PutClaims, request: Request): Promise<Re
   if ((await stat(target).catch(() => null)) !== null) throw new AppError('ALREADY_EXISTS');
   const temp = path.resolve(store.dir, '.tmp', randomUUID());
   if (!temp.startsWith(store.dir + path.sep)) throw new Error('lokale opslag: pad buiten de opslagmap');
-  await mkdir(temp, { recursive: true });
+  await mkdir(temp, { recursive: true, mode: DIR_MODE });
   try {
     const written = await writeBody(request.body, path.join(temp, DATA), token.s);
     // Een kortere body dan ondertekend past niet bij het token: niets opslaan.
     if (written !== token.s) throw new AppError('FORBIDDEN');
-    await writeFile(path.join(temp, TYPE), token.t, { flag: 'wx' });
+    await writeFile(path.join(temp, TYPE), token.t, { flag: 'wx', mode: FILE_MODE });
     await commit(temp, target);
     return new Response(null, { status: 201 });
   } finally {
@@ -148,7 +151,7 @@ const EXISTS: ReadonlySet<unknown> = new Set(['EEXIST', 'ENOTEMPTY']);
 // De rename is de write-once-grens: een bestaande objectmap (nooit leeg) laat hem falen met EEXIST of ENOTEMPTY. Elke andere
 // fout (EACCES, ENOSPC, …) gaat ongewijzigd door en wordt INTERNAL_ERROR; put ruimt de tijdelijke map in beide gevallen op.
 async function commit(temp: string, target: string): Promise<void> {
-  await mkdir(path.dirname(target), { recursive: true });
+  await mkdir(path.dirname(target), { recursive: true, mode: DIR_MODE });
   try {
     await rename(temp, target);
   } catch (error) {
