@@ -30,8 +30,16 @@ export function Layout({ klaar }: { readonly klaar: boolean }) {
 }
 `;
 
+const inVoorwaarde = `import { useState } from 'react';
+export function Layout({ klaar }: { readonly klaar: boolean }) {
+  if (klaar) useState(0);
+  return null;
+}
+`;
+
 test.each([
   { bestand: 'src/web/features/layout/x.tsx', code: naVroegeReturn, verwacht: ['react-hooks/rules-of-hooks'] },
+  { bestand: 'src/web/features/layout/x.tsx', code: inVoorwaarde, verwacht: ['react-hooks/rules-of-hooks'] },
   { bestand: 'src/core/web/ui/x.tsx', code: naVroegeReturn, verwacht: ['react-hooks/rules-of-hooks'] },
   { bestand: 'src/web/features/layout/x.tsx', code: voorVroegeReturn, verwacht: [] },
 ])('leerpunt #1031: $bestand, hook na of vóór de vroege return', async ({ bestand, code, verwacht }) => {
