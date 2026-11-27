@@ -135,10 +135,10 @@ if (json) {
     toText(results.map(({ naam, kop, inhoud }) => ({ naam, ...(kop === undefined ? {} : { kop }), inhoud }))),
   );
 }
-// Leerpunt #966: de dekking van `specs` leest alleen getrackte bestanden; meld wat daardoor niet meetelt (bij --json op
-// stderr, zodat stdout JSON blijft).
+// Leerpunt #966: de dekking van `specs` leest alleen getrackte bestanden; meld wat daardoor niet meetelt. Op stderr:
+// stdout blijft de feitenuitvoer zelf (JSON bij --json; `feitenBytes` in meting-stuurt/AC-4 meet die).
 if (names.includes('specs')) {
   const { ongetracktMelding } = await import('./ac-dekking.mjs');
   const melding = ongetracktMelding('.');
-  if (melding !== null) (json ? console.warn : console.info)(`⚠ ${melding}`);
+  if (melding !== null) console.warn(`⚠ ${melding}`);
 }

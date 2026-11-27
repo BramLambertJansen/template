@@ -85,12 +85,14 @@ describe('ongetrackt-melding', () => {
     const r = spawnSync('node', [FEITEN, 'specs'], { cwd: dir, encoding: 'utf8' });
 
     expect(r.status).toBe(0);
-    const regels = r.stdout.split('\n').filter((regel) => regel.includes('ongetrackt'));
+    const regels = r.stderr.split('\n').filter((regel) => regel.includes('ongetrackt'));
     expect(regels).toHaveLength(1);
     const regel = regels[0] ?? '';
     expect(regel).toContain('git add');
     for (const pad of TELT) expect(regel).toContain(pad);
-    for (const pad of TELT_NIET) expect(r.stdout).not.toContain(pad);
+    for (const pad of TELT_NIET) expect(r.stderr + r.stdout).not.toContain(pad);
+    // stdout blijft de feitenuitvoer zelf (meting-stuurt/AC-4 meet die als feitenBytes).
+    expect(r.stdout).not.toContain('ongetrackt');
   });
 
   test('ratchet: genegeerde bestanden niet, paden met een spatie wel; na tien paden ingekort', async () => {
@@ -128,6 +130,6 @@ describe('ongetrackt-melding', () => {
     const r = spawnSync('node', [FEITEN, 'specs'], { cwd: dir, encoding: 'utf8' });
 
     expect(r.status).toBe(0);
-    expect(r.stdout).not.toContain('ongetrackt');
+    expect(r.stdout + r.stderr).not.toContain('ongetrackt');
   });
 });
