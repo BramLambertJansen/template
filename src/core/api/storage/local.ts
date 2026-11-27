@@ -1,5 +1,5 @@
 import { createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
-import { mkdir, open, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, open, readFile, rename, rm, stat, writeFile, type FileHandle } from 'node:fs/promises';
 import path from 'node:path';
 import { Readable } from 'node:stream';
 import { z } from 'zod';
@@ -95,13 +95,32 @@ interface Store {
   readonly objectDir: (key: string) => string;
 }
 
+// Alleen "bestaat niet" (ENOENT) geeft de terugvalwaarde; elke andere fout (EACCES, EIO, …) gaat door, zodat
+// createFileService hem STORAGE_UNAVAILABLE maakt en de dev-route INTERNAL_ERROR.
+async function ifMissing<T, F>(work: Promise<T>, fallback: F): Promise<T | F> {
+  try {
+    return await work;
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return fallback;
+    throw error;
+  }
+}
+
 // Zonder `type` (een object dat een test direct in de map zette) is het type application/octet-stream.
 async function statObject(store: Store, key: string): Promise<StoredFile | null> {
   const dir = store.objectDir(key);
-  const data = await stat(path.join(dir, DATA)).catch(() => null);
+  const data = await ifMissing(stat(path.join(dir, DATA)), null);
   if (data === null || !data.isFile()) return null;
-  const type = await readFile(path.join(dir, TYPE), 'utf8').catch(() => 'application/octet-stream');
+  const type = await ifMissing(readFile(path.join(dir, TYPE), 'utf8'), 'application/octet-stream');
   return { sizeBytes: data.size, contentType: type };
+}
+
+// Een write kan minder bytes schrijven dan gevraagd: door tot de hele chunk staat.
+async function writeAll(handle: FileHandle, chunk: Uint8Array): Promise<void> {
+  for (let offset = 0; offset < chunk.byteLength;) {
+    const { bytesWritten } = await handle.write(chunk, offset, chunk.byteLength - offset);
+    offset += bytesWritten;
+  }
 }
 
 // Leest de body als stream naar `file` en breekt af zodra hij `limit` bytes overschrijdt; geeft het aantal bytes.
@@ -117,7 +136,7 @@ async function writeBody(body: ReadableStream<Uint8Array> | null, file: string, 
         await reader.cancel();
         throw new AppError('PAYLOAD_TOO_LARGE');
       }
-      await handle.write(chunk.value);
+      await writeAll(handle, chunk.value);
     }
     return total;
   } finally {
@@ -130,7 +149,7 @@ async function put(store: Store, token: PutClaims, request: Request): Promise<Re
     throw new AppError('FORBIDDEN');
   }
   const target = store.objectDir(token.k);
-  if ((await stat(target).catch(() => null)) !== null) throw new AppError('ALREADY_EXISTS');
+  if ((await ifMissing(stat(target), null)) !== null) throw new AppError('ALREADY_EXISTS');
   const temp = path.resolve(store.dir, '.tmp', randomUUID());
   if (!temp.startsWith(store.dir + path.sep)) throw new Error('lokale opslag: pad buiten de opslagmap');
   await mkdir(temp, { recursive: true, mode: DIR_MODE });
@@ -162,7 +181,7 @@ async function commit(temp: string, target: string): Promise<void> {
 
 // Streamt het bestand; de handle sluit zichzelf aan het eind van de stream (of bij afbreken).
 async function get(store: Store, token: GetClaims): Promise<Response> {
-  const handle = await open(path.join(store.objectDir(token.k), DATA), 'r').catch(() => null);
+  const handle = await ifMissing(open(path.join(store.objectDir(token.k), DATA), 'r'), null);
   if (handle === null) throw new AppError('NOT_FOUND');
   let size: number;
   try {

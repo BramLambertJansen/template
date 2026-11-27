@@ -1,8 +1,9 @@
-import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir, userInfo } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, test } from 'vitest';
 import { MAX_BODY_BYTES, type FileLimits } from '../../shared/limits.ts';
+import { AppError } from '../errors.ts';
 import { createApp, type App } from '../http/create-app.ts';
 import { parseErrorBody } from '../http/error-body.test-helper.ts';
 import { createLocalFileStorage, type LocalFileStorage } from './local.ts';
@@ -531,4 +532,68 @@ describe('files/AC-4: de grootte uit het token en write-once', () => {
     expect(response.status).toBe(201);
     expect(await r.storage.stat(KEY_X)).toStrictEqual({ sizeBytes: size, contentType: PDF });
   });
+});
+
+// --- stat: leesfouten zijn geen "ontbreekt" ---------------------------------------------------------------------------------
+
+describe('files/AC-1: stat op de lokale adapter', () => {
+  async function storedObject(r: Rig): Promise<{ typeFile: string; objectDir: string }> {
+    expect((await r.app.fetch(putRequest(r.storage.createUploadUrl(upload(KEY_X)), bytes(SIZE)))).ok).toBe(true);
+    const typeFile = filesIn(r.dir).find((file) => readFileSync(file, 'utf8') === PDF);
+    if (typeFile === undefined) throw new Error('het typebestand van het object is niet gevonden');
+    return { typeFile, objectDir: path.dirname(typeFile) };
+  }
+
+  async function rejection(run: () => Promise<unknown>): Promise<unknown> {
+    try {
+      await run();
+    } catch (error) {
+      return error;
+    }
+    return undefined;
+  }
+
+  test('files/AC-1: een ontbrekend object geeft null, ook via createFileService', async () => {
+    const r = rig();
+
+    expect(await r.storage.stat(KEY_X)).toBeNull();
+    expect(await createFileService(r.storage).stat(KEY_X)).toBeNull();
+  });
+
+  test('files/AC-1: een ontbrekend typebestand geeft application/octet-stream met de grootte van het object', async () => {
+    const r = rig();
+    const { typeFile } = await storedObject(r);
+    rmSync(typeFile);
+
+    expect(await r.storage.stat(KEY_X)).toStrictEqual({ sizeBytes: SIZE, contentType: 'application/octet-stream' });
+  });
+
+  test('files/AC-1: een typebestand dat een map is (EISDIR) laat stat falen, en via createFileService is dat STORAGE_UNAVAILABLE', async () => {
+    const r = rig();
+    const { typeFile } = await storedObject(r);
+    rmSync(typeFile);
+    mkdirSync(typeFile);
+
+    expect(await rejection(() => r.storage.stat(KEY_X))).toBeInstanceOf(Error);
+    const error = await rejection(() => createFileService(r.storage).stat(KEY_X));
+    expect(error).toBeInstanceOf(AppError);
+    expect(error).toMatchObject({ code: 'STORAGE_UNAVAILABLE' });
+  });
+
+  test.skipIf(userInfo().uid === 0)(
+    'files/AC-1: een onleesbare objectmap (chmod 000) laat stat falen en wordt via createFileService STORAGE_UNAVAILABLE',
+    async () => {
+      const r = rig();
+      const { objectDir } = await storedObject(r);
+      chmodSync(objectDir, 0o000);
+      try {
+        expect(await rejection(() => r.storage.stat(KEY_X))).toBeInstanceOf(Error);
+        expect(await rejection(() => createFileService(r.storage).stat(KEY_X))).toMatchObject({
+          code: 'STORAGE_UNAVAILABLE',
+        });
+      } finally {
+        chmodSync(objectDir, 0o700);
+      }
+    },
+  );
 });
