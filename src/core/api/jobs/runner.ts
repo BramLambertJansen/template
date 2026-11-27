@@ -70,12 +70,20 @@ export function validateJobs(config: Pick<JobsConfig, 'core' | 'app'>): void {
 }
 
 // De foutklasse zonder melding (R-SEC-02): de naam van de klasse, en voor een databasefout de SQLSTATE. Nooit message, SQL of
-// adres.
+// adres. Drizzle verpakt de pg-fout (DrizzleQueryError met de driverfout in `cause`), dus de SQLSTATE wordt ook in een korte
+// cause-keten gezocht; dan geldt de klasse van de fout die de code draagt.
+const SQLSTATE = /^[0-9A-Z]{5}$/;
+const MAX_CAUSE_DEPTH = 3;
+
 export function errorClass(error: unknown): string {
   if (!(error instanceof Error)) return typeof error;
-  const name = error.constructor.name || 'Error';
-  const code: unknown = Reflect.get(error, 'code');
-  return typeof code === 'string' && /^[0-9A-Z]{5}$/.test(code) ? `${name}:${code}` : name;
+  let current: unknown = error;
+  for (let depth = 0; depth <= MAX_CAUSE_DEPTH && current instanceof Error; depth += 1) {
+    const code: unknown = Reflect.get(current, 'code');
+    if (typeof code === 'string' && SQLSTATE.test(code)) return `${current.constructor.name || 'Error'}:${code}`;
+    current = current.cause;
+  }
+  return error.constructor.name || 'Error';
 }
 
 // Eén ronde van één taak; gooit nooit. Een fout wordt gelogd en stopt het proces niet (spec achtergrondtaken, AC-26).

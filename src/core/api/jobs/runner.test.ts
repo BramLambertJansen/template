@@ -232,6 +232,26 @@ describe('startJobs: fout in een taak', () => {
     await jobs.stop();
   });
 
+  // Review #1032 (Codex): Drizzle verpakt de pg-fout in een DrizzleQueryError met de driverfout in `cause`; de SQLSTATE moet
+  // ook dan in de log staan, zonder de melding van een van beide.
+  test('jobs/AC-26: een verpakte pg-fout (cause) logt de klasse en SQLSTATE van de driverfout, nooit een bericht', async () => {
+    class DatabaseError extends Error {
+      readonly code = '42883';
+    }
+    class DrizzleQueryError extends Error {}
+    const wrapped = new DrizzleQueryError('Failed query: select app.purge_expired(secret)', {
+      cause: new DatabaseError('function app.purge_expired does not exist'),
+    });
+    const log = vi.fn<(line: LogLine) => void>();
+    const jobs = startJobs(config({ log, app: [job(['app.wrapped', 100], () => Promise.reject(wrapped))] }));
+    await settle();
+
+    expect(log).toHaveBeenCalledWith(expect.objectContaining({ errorClass: 'DatabaseError:42883' }));
+    expect(JSON.stringify(log.mock.calls)).not.toContain('secret');
+    expect(JSON.stringify(log.mock.calls)).not.toContain('does not exist');
+    await jobs.stop();
+  });
+
   test('jobs/AC-26: een fout zonder pg-code logt de naam van de constructor', async () => {
     class VerbindingFout extends Error {}
     const log = vi.fn<(line: LogLine) => void>();
