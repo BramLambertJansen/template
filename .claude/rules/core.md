@@ -30,6 +30,6 @@ de dependency-cruiser-regel core → app; `check-core`. Bestandsopslag (spec bes
 
 ## Besloten, nog niet gebouwd
 
-Nog niet: achtergrondtaken en mail-outbox (ST-03), het privacymechanisme (ST-05); de eisen
+Nog niet: de mail-outbox (ST-03; de runner `src/core/api/jobs` is gebouwd), het privacymechanisme (ST-05); de eisen
 staan bij die roadmap-items (R-DOC-10).
 Bouw een core-onderdeel alleen in het stuk van de roadmap waar het hoort.

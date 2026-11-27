@@ -18,16 +18,21 @@ create role auth_service login password 'auth_service';
 -- Eigenaar van security definer-functies; krijgt alleen de rechten die die functies nodig hebben.
 create role app_definer nologin;
 
+-- Achtergrondtaken (ADR 0050 punt 5): geen tabelrechten, alleen execute op functies van klasse job.
+create role app_jobs login noinherit password 'app_jobs';
+
 alter role api_user set statement_timeout = '5s';
 alter role api_user set idle_in_transaction_session_timeout = '10s';
 alter role auth_service set statement_timeout = '5s';
 alter role auth_service set idle_in_transaction_session_timeout = '10s';
 alter role auth_service set search_path = better_auth;
+alter role app_jobs set statement_timeout = '5s';
+alter role app_jobs set idle_in_transaction_session_timeout = '10s';
 -- Een migratie wacht niet eindeloos op een lock van de draaiende app.
 alter role app_migrator set lock_timeout = '5s';
 
 revoke all on database app from public;
-grant connect on database app to app_migrator, api_user, auth_service;
+grant connect on database app to app_migrator, api_user, auth_service, app_jobs;
 -- Eigenaar van de database, dus via pg_database_owner ook van schema public (PG15+: PUBLIC heeft daar geen CREATE;
 -- dbmate maakt public.schema_migrations aan en de baseline past de rechten op public aan).
 alter database app owner to app_migrator;

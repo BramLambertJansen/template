@@ -1,12 +1,12 @@
--- Functiecatalogus (framework §6, ADR 0045, ADR 0075): elke functie in public en app is `client` (uitvoerbaar voor
--- app_authenticated), `intern` (geen API-rol) of `auth` (alleen auth_service, geen andere API-rol). Een nieuwe functie zonder klasse faalt hier. Elke client-functie
+-- Functiecatalogus (framework §6, ADR 0045, ADR 0075, ADR 0050): elke functie in public en app is `client` (uitvoerbaar voor
+-- app_authenticated), `intern` (geen API-rol), `auth` (alleen auth_service, geen andere API-rol) of `job` (alleen app_jobs, geen API-rol; spec achtergrondtaken jobs/AC-13). Een nieuwe functie zonder klasse faalt hier. Elke client-functie
 -- controleert de actor of heeft een vastgelegde reden waarom niet. Alles in één transactie die terugdraait.
 begin;
 set search_path = tap, public;
-select plan(9);
+select plan(14);
 
 -- Nieuwe functie: voeg hier een regel toe, in dezelfde PR als de migratie.
-create temp table catalogus (functie text primary key, klasse text not null check (klasse in ('client', 'intern', 'auth')), reden text);
+create temp table catalogus (functie text primary key, klasse text not null check (klasse in ('client', 'intern', 'auth', 'job')), reden text);
 insert into catalogus values
   ('app.current_user_id()', 'client', 'is zelf de bron van de actor: geeft alleen app.user_id terug'),
   ('app.session_strength()', 'client', 'geeft alleen de sessiesterkte van de eigen actor terug'),
@@ -24,6 +24,9 @@ insert into catalogus values
   -- Bewaarcatalogus (spec achtergrondtaken, deel A, AC-5 en AC-7).
   ('app.retention_cutoff(regclass)', 'intern', 'gelezen door policies en triggers met een termijn'),
   ('app.audit_log_guard_delete()', 'intern', 'triggerfunctie van app.audit_log'),
+  -- Opruimen van app-tabellen door app_jobs (spec achtergrondtaken, deel D, jobs/AC-30, jobs/AC-33).
+  ('app.retention_targets()', 'job', 'alleen app_jobs: de tabellen die core.purge opruimt'),
+  ('app.purge_expired(regclass, integer)', 'job', 'alleen app_jobs: verwijdert verlopen rijen in batches'),
   -- Eenmalig gebruik (ADR 0075, spec inloggat-dichten).
   ('app.claim_one_time_use(text, integer)', 'auth', 'claim van een TOTP-code of e-maillink door Better Auth'),
   -- Register en schakelaar per koppeling (spec koppelingsregister, AC-8).
@@ -51,13 +54,17 @@ create function pg_temp.zonder_klasse() returns setof text language sql stable a
   select functie from functies except select functie from catalogus order by 1
 $$;
 
--- Client: app_authenticated mag hem uitvoeren. Intern: geen enkele API-rol. Auth: auth_service wel, de andere API-rollen niet.
+-- Client: app_authenticated mag hem uitvoeren, app_jobs niet. Intern: geen enkele API-rol en app_jobs niet. Auth: auth_service wel,
+-- de andere API-rollen en app_jobs niet. Job: app_jobs wel, geen API-rol.
 create function pg_temp.verkeerde_grants() returns setof text language sql stable as $$
   select format('%s (%s): %s', f.functie, c.klasse, r.rolname)
   from functies f join catalogus c using (functie)
-  cross join (values ('app_authenticated'), ('api_user'), ('auth_service')) r (rolname)
+  cross join (values ('app_authenticated'), ('api_user'), ('auth_service'), ('app_jobs')) r (rolname)
   where (c.klasse = 'client' and r.rolname = 'app_authenticated'
          and not pg_catalog.has_function_privilege(r.rolname, f.oid, 'execute'))
+     or (c.klasse = 'client' and r.rolname = 'app_jobs' and pg_catalog.has_function_privilege(r.rolname, f.oid, 'execute'))
+     or (c.klasse = 'job' and r.rolname = 'app_jobs' and not pg_catalog.has_function_privilege(r.rolname, f.oid, 'execute'))
+     or (c.klasse = 'job' and r.rolname <> 'app_jobs' and pg_catalog.has_function_privilege(r.rolname, f.oid, 'execute'))
      or (c.klasse = 'intern' and pg_catalog.has_function_privilege(r.rolname, f.oid, 'execute'))
      or (c.klasse = 'auth' and r.rolname = 'auth_service'
          and not pg_catalog.has_function_privilege(r.rolname, f.oid, 'execute'))
@@ -107,7 +114,12 @@ select is(
   '{}'::text[],
   'de catalogus noemt geen functies die niet (meer) bestaan'
 );
-select is(array(select pg_temp.verkeerde_grants()), '{}'::text[], 'grants passen bij de klasse (client, intern of auth)');
+select is(array(select pg_temp.verkeerde_grants()), '{}'::text[], 'grants passen bij de klasse (client, intern, auth of job)');
+select is(
+  array(select functie from catalogus where klasse = 'job' order by 1),
+  array['app.purge_expired(regclass, integer)', 'app.retention_targets()'],
+  'app.retention_targets() en app.purge_expired(regclass, integer) staan als job in de catalogus (jobs/AC-42)'
+);
 select is(
   array(select pg_temp.auth_service_buiten_better_auth()),
   '{}'::text[],
@@ -152,6 +164,40 @@ select is(
   array(select pg_temp.auth_service_buiten_better_auth()),
   array['execute op app.catalogus_probe()'],
   'controle: auth_service met execute op een functie buiten klasse auth wordt gevangen'
+);
+
+-- Controle klasse job (jobs/AC-13): de grants van een probe worden per klasse gevangen. Eerst de grant van de vorige controle weg.
+revoke execute on function app.catalogus_probe() from auth_service;
+create function app.jobs_probe() returns integer language sql return 1;
+insert into catalogus values ('app.jobs_probe()', 'job', null);
+select is(
+  array(select pg_temp.verkeerde_grants()),
+  array['app.jobs_probe() (job): app_jobs'],
+  'controle: een job-functie die app_jobs niet mag uitvoeren wordt gevangen (jobs/AC-13)'
+);
+grant execute on function app.jobs_probe() to app_jobs, app_authenticated;
+select is(
+  array(select pg_temp.verkeerde_grants()),
+  array['app.jobs_probe() (job): app_authenticated'],
+  'controle: een job-functie die app_authenticated wel mag uitvoeren wordt gevangen (jobs/AC-13)'
+);
+revoke execute on function app.jobs_probe() from app_authenticated;
+create function app.client_probe() returns integer language sql return 1;
+insert into catalogus values ('app.client_probe()', 'client', 'probe');
+grant execute on function app.client_probe() to app_authenticated, app_jobs;
+select is(
+  array(select pg_temp.verkeerde_grants()),
+  array['app.client_probe() (client): app_jobs'],
+  'controle: een client-functie die app_jobs wel mag uitvoeren wordt gevangen (jobs/AC-13)'
+);
+revoke execute on function app.client_probe() from app_jobs;
+create function app.auth_probe() returns integer language sql return 1;
+insert into catalogus values ('app.auth_probe()', 'auth', 'probe');
+grant execute on function app.auth_probe() to auth_service, app_jobs;
+select is(
+  array(select pg_temp.verkeerde_grants()),
+  array['app.auth_probe() (auth): app_jobs'],
+  'controle: een auth-functie die app_jobs wel mag uitvoeren wordt gevangen (jobs/AC-13)'
 );
 
 select * from finish();

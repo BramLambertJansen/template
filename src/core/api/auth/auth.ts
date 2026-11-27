@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth';
 import pg from 'pg';
 import { UserId } from '../../shared/ids.ts';
 import { createMailing } from './mailing.ts';
+import { createPurgeExpired } from './purge.ts';
 import { createClaimOnce } from './one-time-use.ts';
 import { createRevokeInvitation } from './revoke-invitation.ts';
 import { AUTH_BASE_PATH, type AuthConfig, createAuthOptions, DISABLED_PREFIXES } from './options.ts';
@@ -40,6 +41,8 @@ export function createAuth(config: CreateAuthConfig) {
     claimOnce: createClaimOnce(pool),
     // Uitnodiging intrekken in één transactie op deze pool (spec accountbeheer-uitbreiding); via revokeInvitation in invitations.ts.
     revokeInvitation: createRevokeInvitation(pool),
+    // Opruimen van verlopen sessies, verificaties en rate-limit-rijen (ADR 0050 punt 3); alleen voor de taak core.purge_auth.
+    purgeExpired: createPurgeExpired(pool),
   });
 }
 

@@ -250,6 +250,7 @@ describe('regressie: bestaande vorm blijft werken', () => {
       AUTH_SECRET: geldig,
       DATABASE_URL: 'postgres://api_user:Kp4wQ9zL2xR7@db.example.com:5432/app',
       AUTH_DATABASE_URL: 'postgres://auth_service:Vb8nM3cT6yH1@db.example.com:5432/app',
+      JOBS_DATABASE_URL: 'postgres://app_jobs:Qw7zP2kL9xR4@db.example.com:5432/app',
       SMTP_URL: 'smtp://mail.example.com:587',
       CLIENT_IP_HEADER: 'x-real-ip',
     };

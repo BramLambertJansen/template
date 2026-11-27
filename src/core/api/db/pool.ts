@@ -20,17 +20,24 @@ function ignoreIdleErrors(pool: pg.Pool): pg.Pool {
   return pool;
 }
 
-export function createPool(connectionString: string): pg.Pool {
+export interface PoolOptions {
+  // Herkenbaar in pg_stat_activity; standaard 'api'.
+  readonly applicationName?: string;
+  // Standaard POOL_SIZE; de pool van withJob is kleiner (src/core/api/db/index.ts).
+  readonly max?: number;
+}
+
+export function createPool(connectionString: string, options: PoolOptions = {}): pg.Pool {
   return ignoreIdleErrors(
     new pg.Pool({
       connectionString,
-      max: POOL_SIZE,
+      max: options.max ?? POOL_SIZE,
       idleTimeoutMillis: IDLE_TIMEOUT_MS,
       connectionTimeoutMillis: CONNECT_TIMEOUT_MS,
       // Een dode verbinding (half-open TCP) wordt gezien in plaats van een request te laten hangen.
       keepAlive: true,
       keepAliveInitialDelayMillis: KEEPALIVE_DELAY_MS,
-      application_name: 'api',
+      application_name: options.applicationName ?? 'api',
     }),
   );
 }

@@ -10,6 +10,7 @@ const local = {
   AUTH_SECRET: 'ab12'.repeat(10),
   DATABASE_URL: 'postgres://db.example.test:5432/app',
   AUTH_DATABASE_URL: 'postgres://db.example.test:5432/app',
+  JOBS_DATABASE_URL: 'postgres://db.example.test:5432/app',
   SMTP_URL: 'smtp://mail.example.test:2525',
 };
 

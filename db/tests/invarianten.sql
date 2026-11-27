@@ -3,7 +3,7 @@
 -- de query hem vangt. Alles in één transactie die terugdraait.
 begin;
 set search_path = tap, public;
-select plan(53);
+select plan(59);
 
 -- Elke tabel in public en app: RLS aan én geforceerd (uitzondering: public.schema_migrations van dbmate).
 create function pg_temp.zonder_rls() returns setof text language sql stable as $$
@@ -19,7 +19,7 @@ $$;
 create function pg_temp.verboden_rechten() returns setof text language sql stable as $$
   select format('%s: %s op %I.%I', r.rolname, p.recht, n.nspname, c.relname)
   from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid = c.relnamespace
-  cross join (values ('app_authenticated'), ('api_user'), ('auth_service'), ('app_definer')) r (rolname)
+  cross join (values ('app_authenticated'), ('api_user'), ('auth_service'), ('app_definer'), ('app_jobs')) r (rolname)
   cross join (values ('TRUNCATE'), ('REFERENCES'), ('TRIGGER')) p (recht)
   where c.relkind in ('r', 'p', 'v', 'm', 'f') and n.nspname in ('public', 'app', 'better_auth')
     -- De eigenaar (bijv. app_definer van de view app.accounts) heeft ze altijd; het gaat om rechten die zijn toegekend.
@@ -171,6 +171,42 @@ create function pg_temp.audit_log_afwijkingen() returns setof text language sql 
     )
   order by 1
 $$;
+
+-- app_jobs (spec achtergrondtaken, deel B, jobs/AC-12): geen tabel- of kolomrecht en geen reeksrecht in public, app en
+-- better_auth, geen usage op better_auth, geen create op public of app. plpgsql, zodat het ontbreken van de rol een regel is
+-- en geen afgebroken script. (De rolattributen staan in db/tests/app_jobs.sql.)
+create function pg_temp.app_jobs_rechten() returns setof text language plpgsql stable as $$
+begin
+  if not exists (select 1 from pg_catalog.pg_roles where rolname = 'app_jobs') then
+    return next 'rol app_jobs ontbreekt';
+    return;
+  end if;
+  return query
+  select v.regel from (
+    select format('%s op %I.%I', p.recht, n.nspname, c.relname) as regel
+    from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+    cross join (values ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE'), ('TRUNCATE'), ('REFERENCES'), ('TRIGGER')) p (recht)
+    where c.relkind in ('r', 'p', 'v', 'm', 'f') and n.nspname in ('public', 'app', 'better_auth')
+      and pg_catalog.has_table_privilege('app_jobs', c.oid, p.recht)
+    union all
+    select format('kolomrecht %s op %I.%I', p.recht, n.nspname, c.relname)
+    from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+    cross join (values ('SELECT'), ('INSERT'), ('UPDATE'), ('REFERENCES')) p (recht)
+    where c.relkind in ('r', 'p', 'v', 'm', 'f') and n.nspname in ('public', 'app', 'better_auth')
+      and pg_catalog.has_any_column_privilege('app_jobs', c.oid, p.recht)
+    union all
+    select format('usage op reeks %I.%I', n.nspname, c.relname)
+    from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+    where c.relkind = 'S' and n.nspname in ('public', 'app', 'better_auth')
+      -- CASE: anders kan de planner de functie op een niet-reeks aanroepen vóór het filter op relkind.
+      and case when c.relkind = 'S' then pg_catalog.has_sequence_privilege('app_jobs', c.oid, 'USAGE') else false end
+    union all
+    select 'usage op schema better_auth' where pg_catalog.has_schema_privilege('app_jobs', 'better_auth', 'USAGE')
+    union all
+    select format('create op schema %s', s.naam) from (values ('public'), ('app')) s (naam)
+    where pg_catalog.has_schema_privilege('app_jobs', s.naam, 'CREATE')
+  ) v order by v.regel collate "C";
+end $$;
 
 -- Bewaarcatalogus (spec achtergrondtaken, deel A, ADR 0051 punt 14): elke tabel in public en app heeft een rij in
 -- app.retention (behalve public.schema_migrations), elke rij een tabel, de purger past bij het schema, en een tabel die
@@ -411,6 +447,24 @@ select lives_ok($$revoke delete on app.audit_log from app_authenticated$$, 'voor
 select lives_ok($$alter table app.audit_log disable trigger audit_log_delete_expired_only$$, 'voorbereiding: de rij-trigger uitzetten');
 select is(array(select pg_temp.audit_log_afwijkingen()), array['guard-trigger audit_log_delete_expired_only staat niet aan'], 'controle: een uitgeschakelde rij-trigger audit_log_delete_expired_only wordt gevangen (jobs/AC-7)');
 select lives_ok($$alter table app.audit_log enable trigger audit_log_delete_expired_only$$, 'voorbereiding: de rij-trigger weer aan');
+
+-- Controle app_jobs (jobs/AC-12): geen enkel recht; een opzettelijke grant op app.audit_log, een TRUNCATE en usage op better_auth worden gevangen.
+select is(array(select pg_temp.app_jobs_rechten()), '{}'::text[], 'app_jobs: geen tabel- of kolomrecht in public, app en better_auth en geen usage op better_auth (jobs/AC-12)');
+grant select on app.audit_log to app_jobs;
+select is(array(select pg_temp.app_jobs_rechten()), array['SELECT op app.audit_log', 'kolomrecht SELECT op app.audit_log'], 'controle: grant select on app.audit_log to app_jobs wordt gevangen door de app_jobs-invariant (jobs/AC-12)');
+select is(array(select pg_temp.audit_log_afwijkingen()), array['extra grant: app_jobs SELECT'], 'controle: grant select on app.audit_log to app_jobs wordt gevangen door de audit-invariant (jobs/AC-12)');
+revoke select on app.audit_log from app_jobs;
+grant truncate on app.invariant_probe to app_jobs;
+select is(
+  array(select r from pg_temp.verboden_rechten() r where r like 'app_jobs:%'),
+  array['app_jobs: TRUNCATE op app.invariant_probe'],
+  'controle: TRUNCATE voor app_jobs wordt gevangen (jobs/AC-12)'
+);
+revoke truncate on app.invariant_probe from app_jobs;
+grant usage on schema better_auth to app_jobs;
+select is(array(select pg_temp.app_jobs_rechten()), array['usage op schema better_auth'], 'controle: usage op better_auth voor app_jobs wordt gevangen (jobs/AC-12)');
+revoke usage on schema better_auth from app_jobs;
+select is(array(select pg_temp.app_jobs_rechten()), '{}'::text[], 'controle: na het intrekken is de app_jobs-invariant weer leeg');
 
 select * from finish();
 rollback;

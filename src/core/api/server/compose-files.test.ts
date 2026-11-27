@@ -6,7 +6,7 @@ import type { FileLimits } from '../../shared/limits.ts';
 import { defineRoles, type RoleOf } from '../../shared/roles.ts';
 import { unsafeCast } from '../../shared/unsafe-cast.ts';
 import type { Auth, CreateAuthConfig } from '../auth/index.ts';
-import type { Tx, WithUser } from '../db/types.ts';
+import type { Tx, WithJob, WithUser } from '../db/types.ts';
 import type { SeedAccounts } from '../dev/seed-accounts.ts';
 import type { Env } from '../env.ts';
 import { createApp, type App } from '../http/create-app.ts';
@@ -39,6 +39,7 @@ const ENV: Env = {
   shutdownTimeoutMs: 4321,
   databaseUrl: 'postgres://api@db.example.test/app',
   authDatabaseUrl: 'postgres://auth@db.example.test/app',
+  jobsDatabaseUrl: 'postgres://jobs@db.example.test/app',
   authBaseUrl: 'https://auth.example.test',
   authSecret: 'auth-geheim-voor-de-test-0123456789',
   smtpUrl: 'smtp://mail.example.test:2525',
@@ -69,6 +70,7 @@ function harness(appEnv: Env['appEnv']): Fetchable {
         Promise.resolve(new Response(null, { status: 204 })),
       ),
       closePool: vi.fn(() => Promise.resolve()),
+      purgeExpired: () => Promise.resolve({ session: 0, verification: 0, rateLimit: 0 }),
     },
     'test: alleen de onderdelen die de koppeling aanroept, geen echte Better Auth en geen pool',
   );
@@ -78,6 +80,10 @@ function harness(appEnv: Env['appEnv']): Fetchable {
     withUser: vi.fn<WithUser>(async (_actor, work) => work(fakeTx, { role: null })),
     pingDatabase: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     closeDatabase: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    // Achtergrondtaken (spec achtergrondtaken): nagebootst, geen taak draait iets.
+    withJob: vi.fn<WithJob>(() => Promise.resolve({ ran: false })),
+    purgeAppTables: vi.fn<(withJob: WithJob, signal?: AbortSignal) => Promise<unknown>>(() => Promise.resolve()),
+    checkJobsDatabase: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     createAuth: vi.fn<(config: CreateAuthConfig) => Auth>(() => auth),
     createMailer: vi.fn<(smtpUrl: string, from: string) => SendMail>(() => mailer),
     startServer: vi.fn<(app: Fetchable, options: ServeOptions) => Promise<RunningServer>>(() =>

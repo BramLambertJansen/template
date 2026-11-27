@@ -47,3 +47,19 @@ export type WithUser = <T>(
   work: (tx: Tx, actorRole: ActorRole) => Promise<T>,
   options: WithUserOptions,
 ) => Promise<T>;
+
+// Achtergrondtaken (ADR 0050 punt 1–2): een taak heeft een naam (voor de log) en een vast nummer, de tweede sleutel van de
+// advisory lock. Overslaan (lock bezet, try-variant) is zichtbaar als { ran: false }, niet als exception.
+export interface JobRef {
+  readonly name: string;
+  readonly key: number;
+}
+
+export interface WithJobOptions {
+  // Wachten op de lock (pg_advisory_xact_lock) in plaats van overslaan; begrensd door de statement_timeout van app_jobs.
+  readonly wait?: boolean;
+}
+
+export type JobResult<T> = { readonly ran: false } | { readonly ran: true; readonly value: T };
+
+export type WithJob = <T>(job: JobRef, work: (tx: Tx) => Promise<T>, options?: WithJobOptions) => Promise<JobResult<T>>;

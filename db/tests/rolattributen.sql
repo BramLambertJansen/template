@@ -17,28 +17,28 @@ $$;
 -- ===== De rollen en hun attributen (R-DB-01) =====
 select is(
   (select count(*)::integer from pg_catalog.pg_roles
-    where rolname in ('app_migrator', 'app_authenticated', 'api_user', 'auth_service', 'app_definer')),
-  5,
-  'rolattributen: de vijf rollen uit db/init bestaan'
+    where rolname in ('app_migrator', 'app_authenticated', 'api_user', 'auth_service', 'app_definer', 'app_jobs')),
+  6,
+  'rolattributen: de zes rollen uit db/init bestaan'
 );
 select results_eq(
   $$select rolname::text collate "default", rolcanlogin from pg_catalog.pg_roles
-    where rolname in ('app_migrator', 'app_authenticated', 'api_user', 'auth_service', 'app_definer')
+    where rolname in ('app_migrator', 'app_authenticated', 'api_user', 'auth_service', 'app_definer', 'app_jobs')
     order by rolname::text collate "C"$$,
-  $$values ('api_user', true), ('app_authenticated', false), ('app_definer', false), ('app_migrator', true), ('auth_service', true)$$,
-  'rolattributen: alleen app_migrator, api_user en auth_service mogen inloggen; app_authenticated en app_definer zijn NOLOGIN'
+  $$values ('api_user', true), ('app_authenticated', false), ('app_definer', false), ('app_jobs', true), ('app_migrator', true), ('auth_service', true)$$,
+  'rolattributen: alleen app_migrator, api_user, auth_service en app_jobs mogen inloggen; app_authenticated en app_definer zijn NOLOGIN'
 );
 select results_eq(
   $$select rolname::text collate "default", rolinherit from pg_catalog.pg_roles
-    where rolname in ('app_authenticated', 'api_user') order by rolname::text collate "C"$$,
-  $$values ('api_user', false), ('app_authenticated', false)$$,
-  'rolattributen: api_user en app_authenticated zijn NOINHERIT'
+    where rolname in ('app_authenticated', 'api_user', 'app_jobs') order by rolname::text collate "C"$$,
+  $$values ('api_user', false), ('app_authenticated', false), ('app_jobs', false)$$,
+  'rolattributen: api_user, app_authenticated en app_jobs zijn NOINHERIT'
 );
 select is(
   (select count(*)::integer from pg_catalog.pg_roles
-    where rolname in ('app_migrator', 'app_authenticated', 'api_user', 'auth_service', 'app_definer') and (rolsuper or rolbypassrls)),
+    where rolname in ('app_migrator', 'app_authenticated', 'api_user', 'auth_service', 'app_definer', 'app_jobs') and (rolsuper or rolbypassrls)),
   0,
-  'rolattributen: geen van de vijf rollen is superuser of heeft BYPASSRLS (FORCE RLS geldt voor allemaal)'
+  'rolattributen: geen van de zes rollen is superuser of heeft BYPASSRLS (FORCE RLS geldt voor allemaal)'
 );
 select results_eq(
   $$select rolsuper, rolbypassrls from pg_catalog.pg_roles where rolname = 'app_migrator'$$,
@@ -84,7 +84,7 @@ select is(pg_temp.role_setting('auth_service', 'search_path'), 'better_auth', 'r
 select is(
   (select count(*)::integer from pg_catalog.pg_db_role_setting d
     join pg_catalog.pg_roles r on r.oid = d.setrole
-    where r.rolname in ('app_migrator', 'app_authenticated', 'api_user', 'auth_service', 'app_definer') and d.setdatabase <> 0),
+    where r.rolname in ('app_migrator', 'app_authenticated', 'api_user', 'auth_service', 'app_definer', 'app_jobs') and d.setdatabase <> 0),
   0,
   'rolattributen: geen rolinstelling per database die de rolinstellingen zou overschrijven'
 );

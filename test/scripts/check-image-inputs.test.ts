@@ -17,6 +17,7 @@ import { TEMPLATE_VERSION } from '../../src/core/shared/template-version.ts';
 
 const root = path.join(import.meta.dirname, '../..');
 const script = readFileSync(path.join(root, 'scripts/check-image.sh'), 'utf8');
+const dbDockerfile = readFileSync(path.join(root, 'db/docker/Dockerfile'), 'utf8');
 const dirs: string[] = [];
 
 afterEach(() => {
@@ -39,7 +40,20 @@ function dockerStub(dir: string) {
   stub(
     dir,
     'docker',
-    `if [[ "$1" == run && "$*" == *"--entrypoint id"* ]]; then echo 1000; exit 0; fi
+    `printf '%s\\n' "$*" >> "$STUB_DIR/docker.log"
+if [[ "$1" == run && "$*" == *"--entrypoint id"* ]]; then echo 1000; exit 0; fi
+if [[ "$1" == run ]]; then
+  detached=0; unreachable=0
+  for arg in "$@"; do
+    if [[ "$arg" == -d ]]; then detached=1; fi
+    if [[ "$arg" == JOBS_DATABASE_URL=*db.invalid* ]]; then unreachable=1; fi
+  done
+  # Opstartcontrole (jobs/AC-17): een app die in de voorgrond start met een onbereikbare jobs-database hoort te stoppen.
+  if [[ "$detached" == 0 && "$unreachable" == 1 ]]; then
+    echo 'Error: opstartcontrole: geen verbinding als app_jobs (Error); controleer JOBS_DATABASE_URL' >&2
+    exit "\${STUB_UNREACHABLE_EXIT:-1}"
+  fi
+fi
 if [[ "$1" == inspect ]]; then
   if [[ "$*" == *State.ExitCode* ]]; then echo 0; else echo PATH=/usr/bin; fi
   exit 0
@@ -84,6 +98,7 @@ function fixture() {
   write(dir, 'package.json', '{"name":"smoke-fixture","private":true}');
   write(dir, 'playwright.smoke.config.ts', 'export default { testDir: "e2e" };');
   write(dir, 'e2e/prod-spa.smoke.spec.ts', '// baseline smoke');
+  write(dir, 'db/docker/Dockerfile', dbDockerfile);
   write(dir, 'compose.yaml', 'services:\n  ui-runner:\n    image: mcr.microsoft.com/playwright:v1.63.0-noble\n');
   // Het script leest de verwachte versie uit het bronbestand (spec release-versie, AC-9).
   write(
@@ -118,7 +133,7 @@ esac`,
   return dir;
 }
 
-function run(dir: string, options: { browserExit?: number; scriptPath?: string } = {}) {
+function run(dir: string, options: { browserExit?: number; scriptPath?: string; unreachableExit?: number } = {}) {
   const result = spawnSync('bash', [options.scriptPath ?? 'scripts/check-image.sh', 'app:fixture'], {
     cwd: dir,
     encoding: 'utf8',
@@ -130,6 +145,7 @@ function run(dir: string, options: { browserExit?: number; scriptPath?: string }
       SMOKE_BROWSER: '1',
       STUB_DIR: `${dir}/stubs`,
       STUB_BROWSER_EXIT: String(options.browserExit ?? 0),
+      STUB_UNREACHABLE_EXIT: String(options.unreachableExit ?? 1),
     },
   });
   const snapshotFile = path.join(dir, 'stubs/snapshot');
@@ -229,4 +245,96 @@ test('weigert een repository die via een symlink wordt aangesproken', () => {
   expect(result.status).toBe(1);
   expect(result.stderr).toMatch(/symlink|veilig pad/);
   expect(existsSync(path.join(dir, 'stubs/browser-started'))).toBe(false);
+});
+
+// jobs/AC-17: de jobs-verbinding van de image (opstartcontrole, jobs/AC-44). De stub logt elke docker-aanroep.
+function dockerCalls(dir: string): string[][] {
+  return readFileSync(path.join(dir, 'stubs/docker.log'), 'utf8')
+    .split('\n')
+    .filter((line) => line !== '')
+    .map((line) => line.split(' '));
+}
+
+const isRun = (args: string[]) => args[0] === 'run';
+const isDetached = (args: string[]) => args.includes('-d');
+const jobsUrl = (args: string[]) => args.find((arg) => arg.startsWith('JOBS_DATABASE_URL='));
+const dockerfileImage = /^FROM (\S+)/m.exec(dbDockerfile)?.[1] ?? '';
+const sidecarIndex = (calls: string[][]) => calls.findIndex((args) => isRun(args) && args.includes(dockerfileImage));
+const unreachableIndex = (calls: string[][]) =>
+  calls.findIndex((args) => isRun(args) && !isDetached(args) && jobsUrl(args)?.includes('db.invalid') === true);
+const appIndex = (calls: string[][], after = -1) =>
+  calls.findIndex((args, index) => index > after && isRun(args) && isDetached(args) && args.includes('app:fixture'));
+
+test('jobs/AC-17: de image start eerst met een onbereikbare JOBS_DATABASE_URL (zonder -d) en moet falen', () => {
+  const dir = fixture();
+
+  const result = run(dir);
+
+  expect(result.status).toBe(0);
+  const calls = dockerCalls(dir);
+  const unreachable = unreachableIndex(calls);
+  expect(unreachable).toBeGreaterThanOrEqual(0);
+  expect(unreachable).toBeLessThan(appIndex(calls));
+});
+
+test('jobs/AC-17: een image die bij een onbereikbare jobs-database zonder fout start, maakt het script rood', () => {
+  const dir = fixture();
+
+  const result = run(dir, { unreachableExit: 0 });
+
+  expect(result.status).not.toBe(0);
+  expect(existsSync(path.join(dir, 'stubs/browser-started'))).toBe(false);
+  expect(appIndex(dockerCalls(dir))).toBe(-1);
+});
+
+test('jobs/AC-17: daarna start een Postgres-sidecar met het image uit db/docker/Dockerfile, en de app wijst ernaar', () => {
+  const dir = fixture();
+
+  const result = run(dir);
+
+  expect(result.status).toBe(0);
+  expect(dockerfileImage).toMatch(/^postgres:.+@sha256:/);
+  const calls = dockerCalls(dir);
+  const sidecar = sidecarIndex(calls);
+  expect(sidecar).toBeGreaterThanOrEqual(0);
+  const sidecarArgs = calls[sidecar] ?? [];
+  expect(isDetached(sidecarArgs)).toBe(true);
+  expect(sidecarArgs).toContain('POSTGRES_USER=app_jobs');
+  const password = sidecarArgs.find((arg) => arg.startsWith('POSTGRES_PASSWORD='))?.slice('POSTGRES_PASSWORD='.length);
+  expect(password).toBeTruthy();
+  expect(password).not.toBe('app_jobs');
+
+  // De image wordt binnengehaald (via timeout) en de sidecar hangt aan een niet-interne bridge.
+  const pull = calls.findIndex((args) => args[0] === 'pull' && args.includes(dockerfileImage));
+  expect(pull).toBeGreaterThanOrEqual(0);
+  expect(pull).toBeLessThan(sidecar);
+  const network = calls.findIndex(
+    (args) => args[0] === 'network' && args[1] === 'create' && !args.includes('--internal'),
+  );
+  expect(network).toBeGreaterThanOrEqual(0);
+  expect(network).toBeLessThan(sidecar);
+
+  // De app start na de sidecar; haar JOBS_DATABASE_URL gebruikt app_jobs met het wachtwoord van de sidecar.
+  const app = appIndex(calls, sidecar);
+  expect(app).toBeGreaterThan(sidecar);
+  const url = jobsUrl(calls[app] ?? []);
+  expect(url).toBeDefined();
+  const parsed = new URL((url ?? '').slice('JOBS_DATABASE_URL='.length));
+  expect(parsed.username).toBe('app_jobs');
+  expect(parsed.password).toBe(password);
+  expect(parsed.hostname).not.toContain('invalid');
+  expect(sidecarArgs).toContain(parsed.hostname);
+});
+
+test('jobs/AC-17: de volgorde is: onbereikbare start, sidecar, app, daarna de overige controles (browser-smoke)', () => {
+  const dir = fixture();
+
+  run(dir);
+
+  const calls = dockerCalls(dir);
+  const sidecar = sidecarIndex(calls);
+  expect(unreachableIndex(calls)).toBeGreaterThanOrEqual(0);
+  expect(unreachableIndex(calls)).toBeLessThan(sidecar);
+  expect(sidecar).toBeLessThan(appIndex(calls, sidecar));
+  expect(existsSync(path.join(dir, 'stubs/browser-started'))).toBe(true);
 });

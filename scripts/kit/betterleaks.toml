@@ -10,6 +10,6 @@ en db/test.env. Ze werken alleen tegen de lokale of test-database; buiten APP_EN
 ze (framework §6, Secrets)."""
 regexTarget = "match"
 regexes = [
-  '''^postgres://(app_migrator:app_migrator|api_user:api_user|auth_service:auth_service|postgres:postgres)@''',
+  '''^postgres://(app_migrator:app_migrator|api_user:api_user|auth_service:auth_service|app_jobs:app_jobs|postgres:postgres)@''',
   '''^(POSTGRES_)?PASSWORD(: |=)postgres$''',
 ]

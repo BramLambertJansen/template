@@ -84,6 +84,16 @@ export const INTEGRATION_SWITCH_MAX_AGE_MS = 30_000;
 // test/auth/role-name-limit.test.ts).
 export const ROLE_NAME_MAX_LENGTH = 32;
 
+// Achtergrondtaken (ADR 0050, spec achtergrondtaken): standaardinterval per taak, en opruimen in begrensde batches. De
+// batchgrens is ook de grens in app.purge_expired (gelijkheidstest in test/jobs/purge.int.test.ts).
+export const JOBS_INTERVAL_SECONDS = 60;
+export const MAX_PURGE_BATCH = 1000;
+export const MAX_PURGE_BATCHES_PER_ROUND = 100;
+// Better Auth 1.7.7 (spec achtergrondtaken, OV-A4): het standaardvenster van de rate limit, expliciet gezet in
+// src/core/api/auth/options.ts, en de opruimtermijn van better_auth."rateLimit" = het langste vaste venster van Better Auth
+// (60 s voor /forget-password* en /email-otp/*). Gelijk aan de rij in app.retention (test/datapad/retention-limits.int.test.ts).
+export const AUTH_RATE_LIMIT_WINDOW_SECONDS = 10;
+export const AUTH_RATE_LIMIT_KEEP_SECONDS = 60;
 // Bestandsopslag (spec bestandsopslag, ADR 0060): harde grenzen. Dezelfde waarden als de CHECK's op public.files (deel B).
 // Een app kiest haar waarden in FILE_LIMITS (src/shared/limits.ts); createApp weigert er een boven deze grenzen.
 export const MAX_FILE_BYTES = 26_214_400;

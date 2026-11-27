@@ -11,7 +11,7 @@ Letterlijk uit `docs/framework.md`; bij verschil wint het regelboek.
 
 - **R-DB-12** `db/schema.snapshot.sql` is enige schemabestand; `pnpm db:generate` schrijft het met `src/api/db/schema.ts`, nooit met de hand; lees snapshot, niet alle migraties (0042)
 - **R-DB-07** Migratie = nieuw bestand in `db/migrations/` (dbmate, geen down, als `app_migrator`); nooit gecommitte migratie wijzigen; versie later dan elke bestaande migratie (`check:migrations`; in een app is een ongewijzigde templatemigratie uitgezonderd, op main vergelijkt de check achteraf met de vorige commit); expand/contract; nooit handmatig aan productie (0042)
-- **R-DB-01** Rollen: `app_migrator` (eigenaar, geen superuser), `app_authenticated` (NOLOGIN), `api_user` (NOINHERIT, alleen `SET LOCAL ROLE app_authenticated`), `auth_service`, `app_definer` (NOLOGIN, eigenaar security definer); rollen nooit in migraties maar in `db/init/` en runbook (0042)
+- **R-DB-01** Rollen: `app_migrator` (eigenaar, geen superuser), `app_authenticated` (NOLOGIN), `api_user` (NOINHERIT, alleen `SET LOCAL ROLE app_authenticated`), `auth_service`, `app_definer` (NOLOGIN, eigenaar security definer), `app_jobs` (LOGIN, NOINHERIT, achtergrondtaken: geen tabelrechten, alleen `execute` op functies van klasse `job`, niets op `better_auth`); rollen nooit in migraties maar in `db/init/` en het runbook `docs/operations/rollen.md` (0042, 0050)
 - **R-DB-05** Elke tabel in `public` of `app` (behalve `public.schema_migrations`), nooit in `better_auth` of `tap`: RLS aan en `FORCE`, expliciete grants met alleen nodige rechten in dezelfde migratie (nooit TRUNCATE, REFERENCES, TRIGGER; PUBLIC niets), policies met `(select app.current_user_id())`, per policy pgTAP-test op naam (0042)
 - **R-DB-17** Bewaarcatalogus `app.retention`: elke tabel in `public` en `app` heeft rij; `app.retention_cutoff()` enige bron voor termijnen in policies en triggers; uitzondering op R-DB-05: migratie die tabel aanmaakt zet `app.retention` `no force`, voegt alleen die rij in, dan `force` (0051)
 - **R-TEST-05** CSRF-wijziging heeft matrix uit ADR 0041 als tests; hooks hebben tabeltests; pgTAP begint (na `begin;` en psql-metaregels) met `set search_path = tap, public`, `select plan(n)` vóór de eerste `set local role`, geen `no_plan()` (strikt in `pnpm ratchet`); screenshot-baselines alleen in gepinde Playwright-image (0041, 0045)
@@ -28,7 +28,7 @@ Letterlijk uit `docs/framework.md`; bij verschil wint het regelboek.
 - **R-CODE-05** Branded IDs via zod `.brand()`; kolom `id` of `*_id` krijgt brand via FK of `db/ids.json` (of `null` met reden); types per resource apart geëxporteerd (fw)
 - **R-DB-03** `withUser(actor, tx => …)` enige ingang: één transactie per request (GET read only), controleert `current_user = session_user`, zet rol, `app.user_id`, `app.session_strength`, `app.request_id` (server-`requestId`) met `set_config(…, true)` (0042, 0051)
 - **R-DB-15** `app.audit_log` append-only, RLS geforceerd, regel in dezelfde transactie, details alleen ID's en enums, termijn minstens 1 jaar, lezen alleen een beheerrol met MFA (`app.is_mfa_admin()`). Bekend gat: faalt route-commit na uitnodigen, dan account zonder rol en zonder auditregel (0051, 0092)
-- **R-LAAG-06** `src/core/api/db` exporteert alleen `withUser()`, `pingDatabase()` (readiness) en `closeDatabase()` (stoppen) alleen vanuit `src/core/api/server.ts` (lintregel `no-restricted-imports`), `createAuditFn()` uit audit.ts en `readIntegrationSwitch()` uit integration-switch.ts (enige bestanden naast index, testing, types; alleen `app.audit` in `tx`, resp. alleen de schakelaar lezen), `testing.ts` (alleen tests) (0042)
+- **R-LAAG-06** `src/core/api/db` exporteert alleen `withUser()`, `withJob()` (batch van een achtergrondtaak), `checkJobsDatabase()` (opstartcontrole), `purgeAppTables()` (de taak `core.purge`), `pingDatabase()` (readiness) en `closeDatabase()` (stoppen); de laatste vijf alleen vanuit `src/core/api/server.ts` (lintregel `no-restricted-imports`), `createAuditFn()` uit audit.ts en `readIntegrationSwitch()` uit integration-switch.ts (enige bestanden naast index, testing, types; alleen `app.audit` in `tx`, resp. alleen de schakelaar lezen), `testing.ts` (alleen tests) (0042)
 
 Hoe (geen norm):
 
@@ -52,5 +52,6 @@ als `app_migrator` en wordt alleen in `test/` gemaakt).
 
 ## Besloten, nog niet gebouwd
 
-Nog niet: `app_jobs` en `app.mail_outbox` (ST-03) en `app.delete_account` (ST-05). De eisen staan bij die roadmap-items
-(R-DOC-10).
+Nog niet: `app.mail_outbox` (ST-03, spec mail-outbox) en `app.delete_account` (ST-05). De eisen staan bij die roadmap-items
+(R-DOC-10). Gebouwd in ST-03: rol `app_jobs` (runbook `docs/operations/rollen.md`), `withJob()` en `checkJobsDatabase()`,
+`app.retention_targets()` en `app.purge_expired` (klasse `job`).

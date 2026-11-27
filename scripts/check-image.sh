@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Controleert de productie-image (ADR 0049) zonder database: start met APP_ENV=staging en geldige, niet-demo geheimen,
+# Controleert de productie-image (ADR 0049) zonder API-database: eerst dat de image stopt zonder jobs-verbinding
+# (opstartcontrole), dan start met APP_ENV=staging, geldige, niet-demo geheimen en een eigen Postgres voor app_jobs;
 # daarna: niet als root, liveness 200, readiness 503 (geen database), SPA met CSP, API-fout als { code, requestId },
 # en na SIGTERM netjes gestopt (exitcode 0). Voor CI en de eigenaar; de agent gebruikt geen docker.
 # Met SMOKE_BROWSER=1 daarna ook de browser-smoke (e2e/*.smoke.spec.ts, playwright.smoke.config.ts): de bundel laadt en
@@ -17,12 +18,19 @@ net="${name}-net"
 port=18080
 secret="$(head -c 48 /dev/urandom | base64 | tr -d '\n/+=')"
 dbpass="$(head -c 24 /dev/urandom | base64 | tr -d '\n/+=')"
+jobspass="$(head -c 24 /dev/urandom | base64 | tr -d '\n/+=')"
+# Eigen Postgres voor de rol app_jobs (spec achtergrondtaken, AC-17): de opstartcontrole (ADR 0049 punt 3) laat de image
+# anders niet starten. Een gewone bridge (niet --internal), zodat de poort van de app op de host bereikbaar blijft.
+dbname="${name}-jobs-db"
+dbnet="${name}-jobs-net"
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 smoke_input=""
 
 cleanup() {
   docker rm -f "$name" >/dev/null 2>&1 || true
+  docker rm -f "$dbname" >/dev/null 2>&1 || true
   docker network rm "$net" >/dev/null 2>&1 || true
+  docker network rm "$dbnet" >/dev/null 2>&1 || true
   if [[ -n "$smoke_input" ]]; then rm -rf -- "$smoke_input"; fi
 }
 trap cleanup EXIT
@@ -68,16 +76,55 @@ uid="$(docker run --rm --entrypoint id "$image" -u)"
 [[ "$uid" != "0" ]] || fail "image draait als root"
 echo "✓ niet als root (uid $uid)"
 
-# Postgres-host bestaat niet (.invalid): readiness moet dan 503 geven, het proces mag niet stoppen.
-docker run -d --name "$name" -p "127.0.0.1:${port}:8080" \
-  -e APP_ENV=staging \
-  -e APP_ORIGIN=https://app.example.test \
-  -e AUTH_BASE_URL=https://app.example.test \
-  -e AUTH_SECRET="$secret" \
-  -e DATABASE_URL="postgres://api_user:${dbpass}@db.invalid:5432/app" \
-  -e AUTH_DATABASE_URL="postgres://auth_service:${dbpass}x@db.invalid:5432/app" \
-  -e SMTP_URL=smtp://mail.invalid:25 \
-  -e CLIENT_IP_HEADER=x-forwarded-for \
+# De omgeving van de app: staging met geldige, niet-demo geheimen. De API-database bestaat niet (.invalid).
+app_env=(
+  -e APP_ENV=staging
+  -e APP_ORIGIN=https://app.example.test
+  -e AUTH_BASE_URL=https://app.example.test
+  -e AUTH_SECRET="$secret"
+  -e DATABASE_URL="postgres://api_user:${dbpass}@db.invalid:5432/app"
+  -e AUTH_DATABASE_URL="postgres://auth_service:${dbpass}x@db.invalid:5432/app"
+  -e SMTP_URL=smtp://mail.invalid:25
+  -e CLIENT_IP_HEADER=x-forwarded-for
+)
+
+# Opstartcontrole (ADR 0049 punt 3, spec achtergrondtaken AC-17): kan de image niet als app_jobs verbinden, dan start de
+# server niet en stopt het proces met een fout. In de voorgrond, begrensd zodat een image die toch start niet blijft hangen.
+if startup_out="$(timeout --kill-after=10s 60 docker run --rm --name "${name}-zonder-jobs" "${app_env[@]}" \
+  -e JOBS_DATABASE_URL="postgres://app_jobs:${jobspass}@db.invalid:5432/app" "$image" 2>&1)"; then
+  fail "de image start zonder werkende jobs-verbinding (opstartcontrole ontbreekt)"
+fi
+# Gestopt om de goede reden: de melding van de opstartcontrole, zonder het adres van de database (R-SEC-02).
+grep -q 'opstartcontrole: geen verbinding als app_jobs' <<<"$startup_out" \
+  || fail "de image stopte zonder jobs-verbinding, maar niet met de melding van de opstartcontrole"
+! grep -q 'db.invalid' <<<"$startup_out" || fail "de stopmelding van de opstartcontrole noemt het adres van de database"
+echo "✓ zonder jobs-verbinding stopt de image bij opstart"
+
+# De Postgres-sidecar: het gepinde image uit db/docker/Dockerfile (dat bouwt daar alleen pgTAP bij), rol app_jobs als
+# eigenaar van een lege database. Elke pull begrensd, zoals het Playwright-image hieronder.
+pg_image="$(sed -n 's/^FROM \(postgres:[^ ]*\)$/\1/p' "$repo/db/docker/Dockerfile")"
+[[ -n "$pg_image" && "$pg_image" != *$'\n'* ]] || fail "geen eenduidig Postgres-image in db/docker/Dockerfile"
+pg_pulled=""
+for attempt in 1 2 3; do
+  if timeout --kill-after=10s 300 docker pull --quiet "$pg_image" >/dev/null; then pg_pulled=1 && break; fi
+  printf '✗ Postgres-image binnenhalen: poging %s van 3 faalde of hing langer dan 300 s.\n' "$attempt" >&2
+done
+[[ -n "$pg_pulled" ]] || fail "Postgres-image binnenhalen faalde na 3 pogingen; draai de job later opnieuw"
+docker network create "$dbnet" >/dev/null
+docker run -d --name "$dbname" --network "$dbnet" -e POSTGRES_USER=app_jobs -e POSTGRES_PASSWORD="$jobspass" \
+  -e POSTGRES_DB=app "$pg_image" >/dev/null
+# Via TCP: de tijdelijke init-server luistert alleen op de socket (zoals de healthcheck in compose.yaml).
+pg_ready=""
+for _ in $(seq 1 30); do
+  if docker exec "$dbname" pg_isready -h 127.0.0.1 -U app_jobs -d app >/dev/null 2>&1; then pg_ready=1 && break; fi
+  sleep 1
+done
+[[ -n "$pg_ready" ]] || fail "de Postgres-sidecar voor app_jobs wordt niet gereed"
+
+# De API-database bestaat niet (.invalid): readiness moet dan 503 geven, het proces mag niet stoppen. De taken falen per ronde
+# (gelogd), de server blijft draaien.
+docker run -d --name "$name" --network "$dbnet" -p "127.0.0.1:${port}:8080" "${app_env[@]}" \
+  -e JOBS_DATABASE_URL="postgres://app_jobs:${jobspass}@${dbname}:5432/app" \
   "$image" >/dev/null
 
 base="http://127.0.0.1:${port}"
