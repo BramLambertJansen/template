@@ -24,8 +24,9 @@ Hoe (geen norm):
 ## Gebouwd: waar alles staat
 
 `src/core/api/{env.ts,db,http,auth,mail}`, en in `src/core/shared`: `errors.ts` (`defineErrorCodes`), `can.ts` (`definePermissions`,
-MFA-eis voor elke beheerrol), `limits.ts`, `assert.ts`, `unsafe-cast.ts`, `ids.ts` (`brandedId`), `money.ts` (`Cents`), `cursor.ts`; de API-client;
-de dependency-cruiser-regel core → app; `check-core`.
+MFA-eis voor elke beheerrol), `limits.ts`, `assert.ts`, `unsafe-cast.ts`, `ids.ts` (`brandedId`), `money.ts` (`Cents`), `cursor.ts`; de API-client (met `uploadFile`);
+de dependency-cruiser-regel core → app; `check-core`. Bestandsopslag (spec bestandsopslag, deel A): de poort in `src/core/api/storage/`
+(`defineFileStorage`, `createFileService`, de lokale adapter, `fileStorageContract` in `testing.ts`), grenzen `FileLimits` in `limits.ts`.
 
 ## Besloten, nog niet gebouwd
 

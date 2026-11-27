@@ -45,7 +45,10 @@ in `src/shared/contracts/<resource>.ts`, dan de handler in `src/api/routes/<reso
 (`src/shared/contracts/index.ts`, `src/api/app.ts`). Routetests tegen de echte database: de testkit uit `src/core/api/db/testing.ts` (`beginTestDb`, `asUser(rol)` met een
 `auth`-gateway voor `buildApp`). Tabellen en views voor `tx`: `src/api/db/schema.ts` (gegenereerd, `pnpm db:generate`); queries met `drizzle-orm`
 (`eq`, `desc`, `sql`), nooit een driver (R-LAAG-05). Iets buiten de database (bijv. uitnodigen via Better Auth): via `ctx.services`
-(`src/api/services.ts`), dat core-fouten vertaalt naar foutcodes. Voorbeeld van alles samen: `src/api/routes/accounts.ts`. Request-logging: `createApp({ log })` met `src/core/api/obs/request-log.ts`; een route logt niet zelf. Bouw er niet op vooruit; staat iets niet in `node scripts/kit/feiten.mjs`, vraag het.
+(`src/api/services.ts`), dat core-fouten vertaalt naar foutcodes. Voorbeeld van alles samen: `src/api/routes/accounts.ts`. Request-logging: `createApp({ log })` met `src/core/api/obs/request-log.ts`; een route logt niet zelf.
+Twee fasen (spec bestandsopslag): `defineRoute(contract, handler, { prepare })` draait `prepare` zonder transactie tussen twee
+`withUser()`-aanroepen; de handler krijgt `ctx.prepared()` (`src/core/api/http/prepare-route.ts`). Bestanden: `createApp({ files })`
+met `createFileService` uit `src/core/api/storage`; alleen die gooit `STORAGE_UNAVAILABLE`; de dev-route `/api/dev/files/:token` alleen bij `APP_ENV=local`/`test`. Bouw er niet op vooruit; staat iets niet in `node scripts/kit/feiten.mjs`, vraag het.
 
 ## Besloten, nog niet gebouwd
 

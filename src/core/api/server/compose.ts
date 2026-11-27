@@ -1,16 +1,30 @@
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { authGateway, type Auth, type AuthGateway, type CreateAuthConfig, type Invitation } from '../auth/index.ts';
 import type { WithJob, WithUser } from '../db/types.ts';
 import { createDevLogin, devAuthSteps, type DevLoginConfig } from '../dev/login-as.ts';
 import type { Env } from '../env.ts';
-import type { App, DevLogin } from '../http/create-app.ts';
+import type { App, DevLogin, FilesConfig } from '../http/create-app.ts';
 import { createReadiness, type Readiness } from '../http/readiness.ts';
 import type { RunningServer, ServeOptions } from '../http/serve.ts';
 import { createWebApp } from '../http/web.ts';
-import { coreJobs, errorClass, startJobs, validateJobs, type JobDefinition, type JobsRunner } from '../jobs/index.ts';
+import {
+  coreJobs,
+  errorClass,
+  startJobs,
+  validateJobs,
+  type JobDefinition,
+  type JobsConfig,
+  type JobsRunner,
+} from '../jobs/index.ts';
 import { unsafeCast } from '../../shared/unsafe-cast.ts';
 import type { Mail, SendMail } from '../mail/smtp.ts';
 import { writeJsonLine, type RequestLog } from '../obs/request-log.ts';
 import { guardWithUser } from '../outbound/index.ts';
+import type { FileLimits } from '../../shared/limits.ts';
+import { createLocalFileStorage } from '../storage/local.ts';
+import type { FileStorage } from '../storage/port.ts';
+import { createFileService } from '../storage/service.ts';
 
 // De koppeling tussen de core-onderdelen van de server (spec create-server, ADR 0040): omgeving, mail, auth, readiness,
 // dev-login, de SPA, starten en stoppen. De app geeft alleen mee wat van haar is (ServerConfig); de onderdelen met een
@@ -34,6 +48,18 @@ export interface ServerAppDeps<Services> {
   readonly devLogin?: DevLogin;
   // De build-SHA uit BUILD_SHA (spec release-versie); zonder die variabele ontbreekt de sleutel.
   readonly build?: string;
+  // Bestandsopslag (spec bestandsopslag): service, grenzen en, alleen bij APP_ENV=local of test, de dev-route. Ontbreekt
+  // als de app geen files meegeeft.
+  readonly files?: FilesConfig;
+}
+
+// De opslag van de app (spec bestandsopslag): de grenzen uit src/shared/limits.ts, een adapter uit defineFileStorage (per
+// app een ADR) en de map van de lokale adapter (FILES_LOCAL_DIR). Zonder storage gebruikt APP_ENV=local of test de lokale
+// adapter met de dev-route; elders is er dan geen adapter (STORAGE_UNAVAILABLE) en geen dev-route.
+export interface ServerFilesConfig {
+  readonly limits: FileLimits;
+  readonly storage?: FileStorage;
+  readonly localDir?: string;
 }
 
 // Wat van de app is (R-LAAG-02: als argument, core importeert niets uit de app).
@@ -48,6 +74,7 @@ export interface ServerConfig<Services, Name extends string> {
   readonly buildApp: (deps: ServerAppDeps<Services>) => App;
   // Achtergrondtaken van de app (spec achtergrondtaken, ADR 0050): nummers vanaf 100; ze draaien naast de core-taken.
   readonly jobs?: readonly JobDefinition[];
+  readonly files?: ServerFilesConfig;
 }
 
 // De onderdelen met een verbinding of een poort; een test bootst ze na.
@@ -80,6 +107,47 @@ function jobsStartupError(error: unknown): Error {
   return new Error(
     `opstartcontrole: geen verbinding als app_jobs (${errorClass(error)}); controleer JOBS_DATABASE_URL en de rol (docs/operations/rollen.md)`,
   );
+}
+
+// De lokale adapter staat nooit in src/ (OV-8): standaard <os.tmpdir()>/app-files-local.
+function composeFiles(files: ServerFilesConfig, env: Env): FilesConfig {
+  const { limits, storage } = files;
+  if (storage !== undefined) return { service: createFileService(storage), limits };
+  if (env.appEnv !== 'local' && env.appEnv !== 'test') return { service: createFileService(undefined), limits };
+  const local = createLocalFileStorage({
+    dir: files.localDir ?? path.join(tmpdir(), 'app-files-local'),
+    appOrigin: env.appOrigin,
+  });
+  return { service: createFileService(local), limits, devRoute: local.devRoute };
+}
+
+// Met WEB_DIR (de containerimage) serveert dezelfde server de SPA op dezelfde origin (ADR 0049); lokaal doet Vite dat.
+// Vóór de server: de opstartcontrole als app_jobs (ADR 0049 punt 3); faalt die, dan start de server niet. Na de server: de
+// runner. Bij het stoppen eerst de runner (de lopende batch maakt zijn transactie af), dan de pools.
+interface StartDeps {
+  readonly parts: ServerParts;
+  readonly env: Env;
+  readonly auth: Auth;
+}
+
+function createStart({ parts, env, auth }: StartDeps, webApp: App, jobs: JobsConfig): () => Promise<RunningServer> {
+  return async () => {
+    await parts.checkJobsDatabase().catch((error: unknown) => {
+      throw jobsStartupError(error);
+    });
+    const runner: { jobs?: JobsRunner } = {};
+    const server = await parts.startServer(webApp, {
+      host: env.apiHost,
+      port: env.apiPort,
+      shutdownTimeoutMs: env.shutdownTimeoutMs,
+      onStopped: async () => {
+        await runner.jobs?.stop();
+        await Promise.all([parts.closeDatabase(), auth.closePool()]);
+      },
+    });
+    runner.jobs = startJobs(jobs);
+    return server;
+  };
 }
 
 export function composeServer<Services, Name extends string>(
@@ -119,6 +187,7 @@ export function composeServer<Services, Name extends string>(
   };
   validateJobs(jobDefinitions);
 
+  const files = config.files === undefined ? undefined : composeFiles(config.files, env);
   const app = config.buildApp({
     appOrigin: env.appOrigin,
     auth: authGateway(auth),
@@ -130,27 +199,12 @@ export function composeServer<Services, Name extends string>(
     ...(env.appEnv === 'local' ? { devLogin: createDevLogin(devAuthSteps(auth), config.devLogin) } : {}),
     // GET /api/health toont de build alleen als de image hem meekreeg (spec release-versie).
     ...(env.buildSha === undefined ? {} : { build: env.buildSha }),
+    ...(files === undefined ? {} : { files }),
   });
+  // connect-src van de SPA: 'self' plus de uploadOrigin van de adapter (AC-5); de lokale adapter heeft er geen.
+  const uploadOrigin = files?.service.uploadOrigin ?? null;
 
-  // Met WEB_DIR (de containerimage) serveert dezelfde server de SPA op dezelfde origin (ADR 0049); lokaal doet Vite dat.
-  // Vóór de server: de opstartcontrole als app_jobs (ADR 0049 punt 3); faalt die, dan start de server niet. Na de server: de
-  // runner. Bij het stoppen eerst de runner (de lopende batch maakt zijn transactie af), dan de pools.
-  const start = async () => {
-    await parts.checkJobsDatabase().catch((error: unknown) => {
-      throw jobsStartupError(error);
-    });
-    const runner: { jobs?: JobsRunner } = {};
-    const server = await parts.startServer(env.webDir === undefined ? app : createWebApp(app, env.webDir), {
-      host: env.apiHost,
-      port: env.apiPort,
-      shutdownTimeoutMs: env.shutdownTimeoutMs,
-      onStopped: async () => {
-        await runner.jobs?.stop();
-        await Promise.all([parts.closeDatabase(), auth.closePool()]);
-      },
-    });
-    runner.jobs = startJobs({ ...jobDefinitions, withJob });
-    return server;
-  };
+  const webApp = env.webDir === undefined ? app : createWebApp(app, env.webDir, { uploadOrigin });
+  const start = createStart({ parts, env, auth }, webApp, { ...jobDefinitions, withJob });
   return { app, start };
 }

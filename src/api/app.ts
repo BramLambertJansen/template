@@ -1,6 +1,6 @@
 import type { AuthGateway } from '#core/api/auth/index.ts';
 import type { WithUser } from '#core/api/db/types.ts';
-import { createApp, type DevLogin } from '#core/api/http/create-app.ts';
+import { createApp, type DevLogin, type FilesConfig } from '#core/api/http/create-app.ts';
 import type { Readiness } from '#core/api/http/readiness.ts';
 import type { RequestLog } from '#core/api/obs/request-log.ts';
 import type { RateLimits } from '#core/shared/limits.ts';
@@ -64,6 +64,9 @@ export interface BuildAppConfig {
   // De build-SHA voor GET /api/health (spec release-versie); runServer geeft hem mee als BUILD_SHA gezet is. Een app die
   // haar config uitpakt in plaats van doorgeeft (`...config`), geeft `build` zelf door aan createApp.
   readonly build?: string;
+  // Bestandsopslag (spec bestandsopslag): runServer geeft service, grenzen en (alleen local en test) de dev-route mee;
+  // tests zonder bestanden laten hem weg. ctx.services.files volgt in deel B.
+  readonly files?: FilesConfig;
 }
 
 export function buildApp(config: BuildAppConfig) {

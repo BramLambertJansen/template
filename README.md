@@ -84,6 +84,7 @@ Eenmalig per account: één omgeving voor alle repo's uit de template, met netwe
 | `pnpm ratchet` | Architectuur- en documentatiecontroles tegen de bestaande baseline |
 | `pnpm check:catalogus` | Bereikbare UI-voorbeelden en eindige stringvarianten |
 | `pnpm check:schillen` | Contracttest per schil en een schil onder elke layoutroute |
+| `pnpm check:storage-adapters` | Contracttestsuite op elke opslagadapter (`defineFileStorage`) |
 | `pnpm build` | TypeScript en de productiebuild van de webapp |
 | `scripts/doctor.sh` | De lokale ontwikkelomgeving |
 | `node scripts/kit/feiten.mjs` | Beschikbare controles, registraties en documentstatussen |

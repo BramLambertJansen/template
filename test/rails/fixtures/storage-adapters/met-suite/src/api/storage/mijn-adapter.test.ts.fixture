@@ -1,0 +1,6 @@
+import { fileStorageContract } from '#core/api/storage/testing.ts';
+import { mijnAdapter } from './mijn-adapter.ts';
+
+fileStorageContract('mijn', () =>
+  Promise.resolve({ storage: mijnAdapter, fetch: () => Promise.resolve(new Response(null)), advance: () => undefined }),
+);

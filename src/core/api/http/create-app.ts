@@ -5,10 +5,12 @@ import { routePath } from 'hono/route';
 import { secureHeaders } from 'hono/secure-headers';
 import { coreErrorCodes, type ErrorRegistry } from '../../shared/errors.ts';
 import {
+  invalidFileLimits,
   invalidRateLimits,
   MAX_BODY_BYTES,
   RATE_LIMIT_MAX,
   RATE_LIMIT_WINDOW_SECONDS,
+  type FileLimits,
   type RateLimits,
 } from '../../shared/limits.ts';
 import { TEMPLATE_VERSION } from '../../shared/template-version.ts';
@@ -27,13 +29,24 @@ import { csrf } from './csrf.ts';
 import type { Readiness } from './readiness.ts';
 import { createRouteEffects } from './route-effects.ts';
 import { guardWithUser } from '../outbound/index.ts';
-import { assertPartnerRoute, runPartnerRoute } from './partner-route.ts';
+import { assertPartnerRoute, authorize, runPartnerRoute } from './partner-route.ts';
+import { runPreparedRoute } from './prepare-route.ts';
+import type { FileService } from '../storage/service.ts';
 import type { Integrations } from '../integrations/index.ts';
 
 // Dev-login (spec accountbeheer, framework §3: limitatieve uitzondering, ADR 0043): logt echt in als het seed-account van de
 // rol en geeft de set-cookie-regels terug. Alleen meegeven bij APP_ENV=local; zonder bestaat /api/dev/login-as niet (404).
 // De rol is een naam uit het register van de app (config.roles); createApp weigert elke andere met VALIDATION.
 export type DevLogin = (role: string, headers: Headers) => Promise<readonly string[]>;
+
+// Bestandsopslag (spec bestandsopslag, deel A): de service uit createFileService, de grenzen van de app (FILE_LIMITS) en,
+// alleen bij APP_ENV=local of test, de dev-route van de lokale adapter. createApp weigert ongeldige grenzen bij opstart
+// (AC-6); zonder devRoute bestaat /api/dev/files/:token niet (AC-2).
+export interface FilesConfig {
+  readonly service: FileService;
+  readonly limits: FileLimits;
+  readonly devRoute?: (request: Request) => Promise<Response>;
+}
 
 interface BaseConfig<Services> {
   // Exact de origin van de SPA (ADR 0041); zonder waarde weigert de CSRF-controle elke Origin-header.
@@ -63,6 +76,7 @@ interface BaseConfig<Services> {
   // De build-SHA van de image (spec release-versie): GET /api/health toont hem naast de templateversie; zonder waarde
   // ontbreekt de sleutel in het antwoord. composeServer geeft hem mee als BUILD_SHA gezet is.
   readonly build?: string;
+  readonly files?: FilesConfig;
 }
 
 // Wat handlers via ctx.services krijgen (bijv. uitnodigen via Better Auth): verplicht zodra de app een Services-type kiest
@@ -106,6 +120,13 @@ async function readSession(c: Context, auth: AuthGateway): Promise<SessionInfo> 
   return session;
 }
 
+function servicesOf<Services>(config: { readonly services?: Services }): Services {
+  return unsafeCast<Services>(
+    config.services,
+    'AppConfig eist services zodra Services geen undefined toelaat; anders is undefined een geldige waarde',
+  );
+}
+
 function routeHandler<Services>(
   route: RouteDef<Contract, Services>,
   config: BaseConfig<Services> & { readonly services?: Services },
@@ -119,14 +140,15 @@ function routeHandler<Services>(
     if (auth === undefined || withUser === undefined) throw new Error('createApp: routes vragen auth en withUser');
     const session = await readSession(c, auth);
     const raw = await readRawInput(c, contract.method);
-    const services = unsafeCast<Services>(
-      config.services,
-      'AppConfig eist services zodra Services geen undefined toelaat; anders is undefined een geldige waarde',
-    );
+    const services = servicesOf(config);
+    const rawInput = () => parseInput(raw, c.req.param());
     // Spec partnerstap: twee transacties met de aanroep ertussen (partner-route.ts).
     if (route.partner !== undefined) {
-      const rawInput = () => parseInput(raw, c.req.param());
       return c.json(await runPartnerRoute(c, route, { auth, withUser, session, rawInput, services, rateLimit }));
+    }
+    // Spec bestandsopslag: prepare tussen twee withUser-aanroepen (prepare-route.ts).
+    if (route.prepare !== undefined) {
+      return c.json(await runPreparedRoute(c, route, { withUser, session, rawInput, services, rateLimit }));
     }
     const actor = { userId: session.userId, sessionStrength: session.sessionStrength };
     const effects = createRouteEffects({
@@ -141,14 +163,12 @@ function routeHandler<Services>(
           actor,
           async (tx, { role }) => {
             // Eerst de input (VALIDATION vóór FORBIDDEN), dan de rol: geen rol in user_roles = geen toegang (framework §6).
-            const parsed = contract.input.safeParse(parseInput(raw, c.req.param()));
+            const parsed = contract.input.safeParse(rawInput());
             if (!parsed.success) throw new AppError('VALIDATION');
-            if (role === null) throw new AppError('FORBIDDEN');
-            const decision = route.check({ role, sessionStrength: session.sessionStrength });
-            if (!decision.ok) throw new AppError(decision.code);
+            const routeActor = authorize(route, session, role);
             const result = await route.handler({
               input: parsed.data,
-              actor: { ...session, twoFactorEnabled: session.twoFactorEnabled === true, role },
+              actor: routeActor,
               tx,
               services,
               audit: createAuditFn(tx, route.audit),
@@ -187,24 +207,40 @@ function devLoginHandler(devLogin: DevLogin, roles: Roles | undefined) {
   };
 }
 
-// Vaste volgorde (framework §6): requestId, request-log (als log is meegegeven), secureHeaders, CSRF, bodyLimit, routes; één onError en notFound met alleen
-// `{ code, requestId }`. Health (liveness) en ready (readiness) zijn de publieke uitzonderingen uit framework §3.
-export function createApp(): App;
-export function createApp<Services = undefined>(config: AppConfig<Services>): App;
-export function createApp<Services>(config: BaseConfig<Services> & { readonly services?: Services } = {}): App {
-  const routes = config.routes ?? [];
-  const rateLimits = config.rateLimits ?? RATE_LIMIT_MAX;
-  const invalid = invalidRateLimits(rateLimits);
+// Opstartcontroles: rate limits, alleen routes uit de kit, partnerroutes en de bestandsgrenzen (AC-6: de melding noemt de sleutel).
+function checkConfig<Services>(config: BaseConfig<Services>): void {
+  const invalid = invalidRateLimits(config.rateLimits ?? RATE_LIMIT_MAX);
   if (invalid.length > 0) {
     throw new Error(
       `createApp: rate limit ${invalid.join(', ')} moet een geheel getal zijn van 1 t/m de harde grens uit core`,
     );
   }
-  for (const route of routes) {
+  for (const route of config.routes ?? []) {
     if (!isRouteDef(route))
       throw new Error('createApp: alleen routes uit defineRoute of definePartnerRoute (ADR 0040)');
     assertPartnerRoute(route, config.integrations);
   }
+  const { files } = config;
+  if (files === undefined) return;
+  const keys = invalidFileLimits(files.limits, { hasStorage: files.service.available });
+  if (keys.length > 0) {
+    const pending = keys.includes('pendingTtlSeconds')
+      ? ' (pendingTtlSeconds moet groter zijn dan uploadUrlTtlSeconds)'
+      : '';
+    throw new Error(
+      `createApp: FILE_LIMITS ${keys.join(', ')} ongeldig: een positief geheel getal tot de harde grens uit core, allowedTypes niet leeg bij een adapter${pending}`,
+    );
+  }
+}
+
+// Vaste volgorde (framework §6): requestId, request-log (als log is meegegeven), secureHeaders, CSRF, bodyLimit, routes; één onError en notFound met alleen
+// `{ code, requestId }`. Health (liveness) en ready (readiness) zijn de publieke uitzonderingen uit framework §3.
+export function createApp(): App;
+export function createApp<Services = undefined>(config: AppConfig<Services>): App;
+export function createApp<Services>(config: BaseConfig<Services> & { readonly services?: Services } = {}): App {
+  checkConfig(config);
+  const routes = config.routes ?? [];
+  const rateLimits = config.rateLimits ?? RATE_LIMIT_MAX;
   const fail = (c: Context, code: string) => c.json({ code, requestId: c.get('requestId') }, statusFor(code));
   const core: readonly string[] = coreErrorCodes;
   const isPublic = (code: string) => config.errors?.is(code) ?? core.includes(code);
@@ -225,8 +261,13 @@ export function createApp<Services>(config: BaseConfig<Services> & { readonly se
       await next();
     });
   if (config.log !== undefined) app.use(requestLog(config.log));
+  app.use(secureHeaders());
+  // De dev-route van de lokale opslag (ADR 0060 punt 6, framework §3): vóór CSRF en bodyLimit, met het ondertekende token als
+  // bescherming; zijn fouten (AppError) maakt onError tot { code, requestId }. Alleen gemount met devRoute (APP_ENV=local of
+  // test); zonder bestaat de route niet en geldt de gewone keten (CSRF, notFound), AC-2.
+  const devFiles = config.files?.devRoute;
+  if (devFiles !== undefined) app.on(['GET', 'PUT'], '/dev/files/:token', (c) => devFiles(c.req.raw));
   app
-    .use(secureHeaders())
     .use(csrf(config.appOrigin))
     .use(bodyLimit({ maxSize: MAX_BODY_BYTES, onError: (c) => fail(c, 'PAYLOAD_TOO_LARGE') }))
     .onError((error, c) => {

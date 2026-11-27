@@ -127,10 +127,18 @@ if (unknown.length > 0) {
 }
 const names = wanted.length > 0 ? wanted : VOLGORDE;
 const results = await Promise.all(names.map(async (naam) => ({ naam, ...(await sections[naam]?.()) })));
-if (args.includes('--json')) {
+const json = args.includes('--json');
+if (json) {
   console.info(JSON.stringify(Object.fromEntries(results.map(({ naam, json }) => [naam, json])), null, 2));
 } else {
   console.info(
     toText(results.map(({ naam, kop, inhoud }) => ({ naam, ...(kop === undefined ? {} : { kop }), inhoud }))),
   );
+}
+// Leerpunt #966: de dekking van `specs` leest alleen getrackte bestanden; meld wat daardoor niet meetelt. Op stderr:
+// stdout blijft de feitenuitvoer zelf (JSON bij --json; `feitenBytes` in meting-stuurt/AC-4 meet die).
+if (names.includes('specs')) {
+  const { ongetracktMelding } = await import('./ac-dekking.mjs');
+  const melding = ongetracktMelding('.');
+  if (melding !== null) console.warn(`⚠ ${melding}`);
 }
