@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import { defineConfig, globalIgnores } from 'eslint/config';
 import { builtinRules } from 'eslint/use-at-your-own-risk';
+import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 import klassenKit from './rails/eslint/klassen-kit.mjs';
@@ -563,6 +564,15 @@ export default defineConfig(
     ignores: ['**/*.test.{ts,tsx}'],
     plugins: { rails },
     rules: { 'rails/klassen-kit': 'error' },
+  },
+  // Regels van hooks (leerpunt #1031): een hook na een vroege return of in een voorwaarde wisselt het aantal hooks per
+  // render, en dan gooit React pas in de browser. Alleen rules-of-hooks, niet de React Compiler-regels van de
+  // recommended-set; exhaustive-deps raakt een bewust effect zonder dependencies in src/core/web/ui/tabs.tsx en is een
+  // aparte keuze.
+  {
+    files: ['src/web/**/*.{ts,tsx}', 'src/core/web/**/*.{ts,tsx}'],
+    plugins: { 'react-hooks': reactHooks },
+    rules: { 'react-hooks/rules-of-hooks': 'error' },
   },
   // R-LAAG-06 (spec create-server, AC-11): pingDatabase en closeDatabase alleen in de serveringang van core en in de
   // databasemodule zelf. Op de naam binnen de databasemodule (elk pad dat op db/index.ts eindigt, alias of relatief): de
