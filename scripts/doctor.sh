@@ -105,7 +105,7 @@ check_env_ports() {
     skip ".env.local niet leesbaar: poortsamenhang overgeslagen"
     return 0
   fi
-  for pair in DATABASE_URL:PG_PORT:54322 AUTH_DATABASE_URL:PG_PORT:54322 MIGRATOR_DATABASE_URL:PG_PORT:54322 \
+  for pair in DATABASE_URL:PG_PORT:54322 AUTH_DATABASE_URL:PG_PORT:54322 JOBS_DATABASE_URL:PG_PORT:54322 MIGRATOR_DATABASE_URL:PG_PORT:54322 \
     SMTP_URL:SMTP_PORT:54325 APP_ORIGIN:WEB_PORT:5173 AUTH_BASE_URL:WEB_PORT:5173; do
     IFS=: read -r key port_key default <<<"$pair"
     if ! grep -q "^$key=" .env.local; then continue; fi

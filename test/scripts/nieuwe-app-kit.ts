@@ -183,6 +183,7 @@ WEB_PORT=5173
 MIGRATOR_DATABASE_URL=postgres://app_migrator:app_migrator@127.0.0.1:54322/app?sslmode=disable
 DATABASE_URL=postgres://api_user:api_user@127.0.0.1:54322/app
 AUTH_DATABASE_URL=postgres://auth_service:auth_service@127.0.0.1:54322/app
+JOBS_DATABASE_URL=postgres://app_jobs:app_jobs@127.0.0.1:54322/app
 AUTH_BASE_URL=http://localhost:5173
 AUTH_SECRET=local-demo-secret-change-per-environment-000000
 SMTP_URL=smtp://127.0.0.1:54325
@@ -215,7 +216,7 @@ export function envLocalVoor(poorten: Poortenset, voorbeeld = ENV_EXAMPLE): stri
       const waarde = rest.join('=');
       const vast = vervang[sleutel];
       if (vast !== undefined) return `${sleutel}=${vast}`;
-      if (['MIGRATOR_DATABASE_URL', 'DATABASE_URL', 'AUTH_DATABASE_URL'].includes(sleutel))
+      if (['MIGRATOR_DATABASE_URL', 'DATABASE_URL', 'AUTH_DATABASE_URL', 'JOBS_DATABASE_URL'].includes(sleutel))
         return `${sleutel}=${waarde.replace(':54322/', `:${String(poorten.pg)}/`)}`;
       if (sleutel === 'SMTP_URL') return `${sleutel}=${waarde.replace(':54325', `:${String(poorten.smtp)}`)}`;
       return regel;

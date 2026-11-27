@@ -36,12 +36,13 @@ const SLEUTELS = [
   'WEB_PORT',
   'DATABASE_URL',
   'AUTH_DATABASE_URL',
+  'JOBS_DATABASE_URL',
   'MIGRATOR_DATABASE_URL',
   'SMTP_URL',
   'APP_ORIGIN',
   'AUTH_BASE_URL',
 ];
-const URL_SLEUTELS = ['DATABASE_URL', 'AUTH_DATABASE_URL', 'MIGRATOR_DATABASE_URL', 'SMTP_URL'];
+const URL_SLEUTELS = ['DATABASE_URL', 'AUTH_DATABASE_URL', 'JOBS_DATABASE_URL', 'MIGRATOR_DATABASE_URL', 'SMTP_URL'];
 
 /** Een bind-functie die alleen de opgegeven (poort, host)-paren bezet meldt; zonder host: elke host. */
 function bezet(paren: [number, string?][]): Bind {
@@ -177,6 +178,7 @@ describe('nieuwe-app-script/AC-7: poorten --env schrijft .env.local uit .env.exa
     const poortVan: Record<string, string> = {
       DATABASE_URL: '54332',
       AUTH_DATABASE_URL: '54332',
+      JOBS_DATABASE_URL: '54332',
       MIGRATOR_DATABASE_URL: '54332',
       SMTP_URL: '54335',
     };
