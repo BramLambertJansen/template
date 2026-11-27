@@ -184,8 +184,10 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   PR met een rode verplichte check niet mergebaar is. Geen actieve bescherming claimen op basis van alleen JSON-bestanden. Voorwaarde voor ADR 0030 PR 2.
   **Eisen uit het regelboek** (R-DOC-10: tot de bouw staan ze hier; de bouw-PR zet ze terug in het regelboek): `.github/settings/main-protection.json` en `scripts/check-github.mjs` volgen de ruleset van R-REPO-02 (was in R-REPO-02).
   aanleiding: `scripts/github-ruleset.sh`
-- [ ] **Versie en build-SHA onderaan in de app** (stuk 3f; publieke buildmetadata, geen secrets). In `GET /api/health` staan ze al
-  (spec release-versie, #724, #729). De versiestrategie zelf hoort bij ST-12 (Geparkeerd).
+- [x] **Versie en build-SHA onderaan in de app** (stuk 3f; publieke buildmetadata, geen secrets). `GET /api/health` geeft ze
+  (spec release-versie, #724, #729); de voet van elke schil toont ze (addendum release-versie, AC-11 tot AC-14; bewijs
+  `src/core/web/ui/shell-build-info.test.tsx`, `src/core/web/lib/api-client-build-info.test.ts`, `src/web/features/layout/build-info-pad.test.ts`, `e2e/shell.spec.ts`). De
+  versiestrategie zelf hoort bij ST-12 (Geparkeerd).
   aanleiding: `docs/reviews/2026-10-15-principes-inventaris.md` (B-11)
 - [ ] **`/.well-known/security.txt` en `LICENSE`** (eigendom, geen open-source-licentie): beide wachten op een waarde van de eigenaar
   (contactadres per app; licentietekst).
