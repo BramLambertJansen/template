@@ -56,7 +56,7 @@ en de cloudroute uit `docs/ENVIRONMENT.md`.
   id, soort, tekst en regelnummer. Toets: `test/scripts/feiten-besluiten.test.ts`
 - **nachtrun/AC-5** — Gegeven meerdere specs, wanneer `besluitenSectie` draait, dan eerst geparkeerd en dan voorlopig met de
   telling in de kop, zonder treffers één regel, `specBestanden` leest beide specmappen zonder `_*.md`, de sectie vindt
-  OV-5 t/m OV-9 van deze spec, en `besluiten` is de laatste sectie in `VOLGORDE`.
+  OV-5 t/m OV-10 van deze spec, en `besluiten` is de laatste sectie in `VOLGORDE`.
   Toets: `test/scripts/feiten-besluiten.test.ts`
 - **nachtrun/AC-6** — Gegeven de repo, dan staat geen `mcp__`-tool in `permissions.allow` van `.claude/settings.json`, `.tmp/` in `.gitignore` en in de `globalIgnores` van `eslint.config.js`, en noemt `CLAUDE.md`
   `.tmp/<bestand>` en niet langer "zet je in `$TMPDIR`". Toets: `test/rails/nachtrun-instellingen.test.ts`
@@ -68,7 +68,7 @@ en de cloudroute uit `docs/ENVIRONMENT.md`.
 
 | Situatie | Gedrag | Foutcode |
 |---|---|---|
-| `base` is een branch van een open PR (stapelen) | Doorgelaten; de ruleset op `main` blijft de grens | — |
+| `base` is een branch van een open PR | Het rolhek laat de PR-tool door; de ruleset op `main` blijft de grens. Een branch vanaf die branch maken weigert het rolhek (verse `origin/main`), dus een afhankelijke taak wordt geparkeerd (OV-10) | — |
 | Een vraag van Claude Code of het rolhek tijdens de nachtrun | Niemand antwoordt; de stap wordt geparkeerd | — |
 | Een spec zonder `## Open vragen` | Keuzes in de PR onder `## Voorlopige keuzes` en `## Geparkeerd`; `besluiten` ziet ze niet | — |
 
@@ -86,7 +86,7 @@ de uitslag in zijn ochtendrapport.
 ## Open vragen
 
 - **OV-1 ✅ besloten** — Wat mag de agent zelf? Omkeerbaar zelf kiezen, de rest parkeren (eigenaar, 2026-11-27).
-- **OV-2 ✅ besloten** — Merges: niet-beschermde PR's zelf mergen, op beschermde stapelen (eigenaar, 2026-11-27).
+- **OV-2 ✅ besloten** — Merges: niet-beschermde PR's zelf mergen, op beschermde stapelen (eigenaar, 2026-11-27); het stapelen zelf is OV-10.
 - **OV-3 ✅ besloten** — PR openen in de cloud zonder vraag (eigenaar, 2026-11-27).
 - **OV-4 ✅ besloten** — Omvang: cloud plus de kleine WSL-punten (eigenaar, 2026-11-27).
 - **OV-5 ⏳ voorlopig** — Moeten `pr:resolve`, `pr:log` en de trage checks naar `allow`? gekozen: nee, omdat hun vraag de ankertoets van ADR 0102 is en het rolhek ze al zonder vraag doorlaat als de runnercode gelijk is aan main (agent, 2026-11-27)
@@ -94,3 +94,4 @@ de uitslag in zijn ochtendrapport.
 - **OV-7 ⏳ voorlopig** — Een apart besluitenregister? gekozen: nee, markeringen in de bestaande open vragen van de spec, gelezen door `feiten.mjs besluiten` (agent, 2026-11-27)
 - **OV-8 ⏳ voorlopig** — Vraagt Claude Code in auto mode in de cloud nog bij de PR-tool of bij een ankertoets? gekozen: niet vooraf meten, de eerste nachtrun meet het en meldt het in zijn ochtendrapport (agent, 2026-11-27)
 - **OV-9 ⏳ voorlopig** — Een limiet op duur of kosten? gekozen: geen, omdat de repo dat niet kan afdwingen; de noodrem is de sessie stoppen in de app (agent, 2026-11-27)
+- **OV-10 ⏸ geparkeerd** — Stapelen op een PR die op de eigenaar wacht (OV-2) botst met de regel dat een nieuwe branch van een verse `origin/main` start (`rails/hooks/lib/verse-main.mjs`, spec rolhek-herstel AC-4; gevonden door de Codex-review op PR #1034). Die regel versoepelen is een besluit van de eigenaar; tot dan parkeert een nachtrun een afhankelijke taak; nodig: mag het rolhek in een nachtrun een branch vanaf de eigen werkbranch toestaan? (agent, 2026-11-27)

@@ -28,7 +28,9 @@ ruleset en verplichte checks op `main`, het rolhek, de `deny`-regels en de eigen
    skill `opleveren` (behalve de CI-lus), wordt `⏸ geparkeerd`: die taak stopt, het werk gaat door met de volgende taak die
    er niet van afhangt. Een fix die een regel, check, hook of test afzwakt, is altijd geparkeerd.
 4. **Merges zoals 0069.** Een PR zonder beschermd pad merget de hoofdsessie zelf; een PR met beschermd pad wacht op de
-   eigenaar, en een taak die erop voortbouwt, stapelt: een branch vanaf die branch en een PR met die branch als `base`.
+   eigenaar, en een taak die erop voortbouwt, wordt geparkeerd. Stapelen (een branch vanaf die branch) weigert het rolhek:
+   een nieuwe branch start van een verse `origin/main` (spec rolhek-herstel AC-4). Of stapelen mag, is een open besluit van
+   de eigenaar (spec nachtrun OV-10).
 5. **PR openen zonder vraag.** Het rolhek geeft zelf allow op `mcp__<server>__create_pull_request` voor de hoofdsessie als
    `head` precies de huidige branch is (geen `main`, geen losse HEAD) en `base` gezet is en ervan verschilt; anders vraagt het
    de hoofdsessie en weigert het een subagent, zoals voorheen. Geen regel in `permissions.allow`: zonder hook blijft de

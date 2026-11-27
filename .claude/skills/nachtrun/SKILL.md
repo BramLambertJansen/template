@@ -49,7 +49,8 @@ in de PR, zodat de eigenaar haar bij de merge ziet; de markering blijft staan to
 
 - Per taak de gewone route (framework §8): spec waar nodig, bouwer, reviewer, dan de skill `opleveren`.
 - Merges zoals ADR 0069: zonder beschermd pad merge je zelf via `pnpm pr:merge`. Met beschermd pad wacht de PR op de
-  eigenaar; bouw je erop voort, dan start de volgende branch vanaf die branch en krijgt de PR die branch als `base`.
+  eigenaar; een taak die erop voortbouwt, parkeer je (een nieuwe branch start altijd van een verse main, spec nachtrun OV-10).
+  Werk daarom eerst de taken af die niet op een beschermde PR wachten.
 - Commit- en PR-tekst en lees- of rekenscripts in `.tmp/<bestand>` van je werkmap.
 - In de cloud open je de PR met `mcp__github__create_pull_request`, met de eigen werkbranch als `head`: het rolhek geeft dan allow.
 

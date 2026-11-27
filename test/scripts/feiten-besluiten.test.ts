@@ -81,6 +81,6 @@ describe('nachtrun/AC-5: specBestanden', () => {
     const ids = besluitenSectie(specBestanden(werkmap))
       .json.filter((besluit) => besluit.spec === 'docs/template/specs/nachtrun.md')
       .map((besluit) => besluit.id);
-    expect(ids).toStrictEqual(['OV-5', 'OV-6', 'OV-7', 'OV-8', 'OV-9']);
+    expect(ids).toStrictEqual(['OV-10', 'OV-5', 'OV-6', 'OV-7', 'OV-8', 'OV-9']);
   });
 });
