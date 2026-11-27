@@ -232,7 +232,7 @@ describe('startJobs: fout in een taak', () => {
     await jobs.stop();
   });
 
-  // Review #1032 (Codex): Drizzle verpakt de pg-fout in een DrizzleQueryError met de driverfout in `cause`; de SQLSTATE moet
+  // Review #1032: Drizzle verpakt de pg-fout in een DrizzleQueryError met de driverfout in `cause`; de SQLSTATE moet
   // ook dan in de log staan, zonder de melding van een van beide.
   test('jobs/AC-26: een verpakte pg-fout (cause) logt de klasse en SQLSTATE van de driverfout, nooit een bericht', async () => {
     class DatabaseError extends Error {
