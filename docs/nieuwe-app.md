@@ -709,7 +709,7 @@ pre-commit, commit-msg en pre-push, en is de afdwinging lokaal zwakker dan in de
 
 | Instelling in de nieuwe app | Waarde |
 |---|---|
-| `PG_PORT` en de poort in `DATABASE_URL`, `AUTH_DATABASE_URL`, `MIGRATOR_DATABASE_URL` | gekozen PG-poort |
+| `PG_PORT` en de poort in `DATABASE_URL`, `AUTH_DATABASE_URL`, `JOBS_DATABASE_URL`, `MIGRATOR_DATABASE_URL` | gekozen PG-poort |
 | `MAIL_UI_PORT` | gekozen Mailpit-UI-poort |
 | `SMTP_PORT` en de poort in `SMTP_URL` | gekozen SMTP-poort |
 | `API_PORT` en `WEB_PORT` | gekozen API- en webpoort |

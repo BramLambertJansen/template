@@ -178,12 +178,13 @@ describe('nieuwe-app-script/AC-16: .env.example en de poorten van het script', (
       'WEB_PORT',
       'DATABASE_URL',
       'AUTH_DATABASE_URL',
+      'JOBS_DATABASE_URL',
       'MIGRATOR_DATABASE_URL',
       'SMTP_URL',
       'APP_ORIGIN',
       'AUTH_BASE_URL',
     ]);
-    for (const sleutel of ['DATABASE_URL', 'AUTH_DATABASE_URL', 'MIGRATOR_DATABASE_URL'])
+    for (const sleutel of ['DATABASE_URL', 'AUTH_DATABASE_URL', 'JOBS_DATABASE_URL', 'MIGRATOR_DATABASE_URL'])
       expect(waarde(sleutel), sleutel).toContain(`:${String(p.pg)}/`);
     expect(waarde('SMTP_URL')).toContain(`:${String(p.smtp)}`);
     expect(waarde('APP_ORIGIN')).toBe(`http://localhost:${String(p.web)}`);

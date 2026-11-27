@@ -42,6 +42,7 @@ export const ENV_SLEUTELS = Object.freeze([
   'WEB_PORT',
   'DATABASE_URL',
   'AUTH_DATABASE_URL',
+  'JOBS_DATABASE_URL',
   'MIGRATOR_DATABASE_URL',
   'SMTP_URL',
   'APP_ORIGIN',
@@ -52,6 +53,7 @@ export const ENV_SLEUTELS = Object.freeze([
 const URL_BIJ = new Map([
   ['DATABASE_URL', 'pg'],
   ['AUTH_DATABASE_URL', 'pg'],
+  ['JOBS_DATABASE_URL', 'pg'],
   ['MIGRATOR_DATABASE_URL', 'pg'],
   ['SMTP_URL', 'smtp'],
   ['APP_ORIGIN', 'web'],
