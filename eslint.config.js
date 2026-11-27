@@ -564,9 +564,9 @@ export default defineConfig(
     plugins: { rails },
     rules: { 'rails/klassen-kit': 'error' },
   },
-  // R-LAAG-06 (spec create-server, AC-11): pingDatabase en closeDatabase alleen in de serveringang van core en in de
-  // databasemodule zelf. Op de naam binnen de databasemodule (elk pad dat op db/index.ts eindigt, alias of relatief): de
-  // rest van src/core/api/db/index.ts blijft vrij importeerbaar. Niet op elk pad: `import * as x from '<iets>'` telt voor
+  // R-LAAG-06 (spec create-server, AC-11; spec achtergrondtaken): pingDatabase, closeDatabase, withJob, checkJobsDatabase en
+  // purgeAppTables alleen in de serveringang van core en in de databasemodule zelf. Op de naam binnen de databasemodule (elk
+  // pad dat op db/index.ts eindigt, alias of relatief): de rest van src/core/api/db/index.ts blijft vrij importeerbaar. Niet op elk pad: `import * as x from '<iets>'` telt voor
   // ESLint als import van elke naam en zou dan overal falen.
   {
     files: ['**/*.{ts,tsx}'],
@@ -578,9 +578,9 @@ export default defineConfig(
           patterns: [
             {
               regex: '(^|/)db/index\\.ts$',
-              importNames: ['pingDatabase', 'closeDatabase'],
+              importNames: ['pingDatabase', 'closeDatabase', 'withJob', 'checkJobsDatabase', 'purgeAppTables'],
               message:
-                'pingDatabase en closeDatabase alleen in src/core/api/server.ts (runServer) en src/core/api/db (R-LAAG-06); elders komen ze als argument binnen (parts van composeServer).',
+                'pingDatabase, closeDatabase, withJob, checkJobsDatabase en purgeAppTables alleen in src/core/api/server.ts (runServer) en src/core/api/db (R-LAAG-06); elders komen ze als argument binnen (parts van composeServer).',
             },
           ],
         },

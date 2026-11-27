@@ -1,7 +1,11 @@
 import pg from 'pg';
 import { afterAll, afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { z } from 'zod';
-import { RATE_LIMIT_WINDOW_SECONDS, SESSION_ABSOLUTE_SECONDS } from '../../src/core/shared/limits.ts';
+import {
+  AUTH_RATE_LIMIT_KEEP_SECONDS,
+  RATE_LIMIT_WINDOW_SECONDS,
+  SESSION_ABSOLUTE_SECONDS,
+} from '../../src/core/shared/limits.ts';
 import { required } from '../auth/harness.ts';
 
 // De termijnen in app.retention zijn gelijk aan de constanten in src/core/shared/limits.ts (spec achtergrondtaken, jobs/AC-9):
@@ -52,5 +56,14 @@ describe('app.retention is gelijk aan limits.ts (jobs/AC-9)', () => {
 
   test("better_auth.verification: keep is interval '0' met time_column expiresAt", async () => {
     expect(await retentionRow('better_auth.verification')).toStrictEqual({ seconds: 0, time_column: 'expiresAt' });
+  });
+});
+
+describe('better_auth."rateLimit" is gelijk aan limits.ts (jobs/AC-41)', () => {
+  test('jobs/AC-41: keep is AUTH_RATE_LIMIT_KEEP_SECONDS met time_column lastRequest', async () => {
+    expect(await retentionRow('better_auth."rateLimit"')).toStrictEqual({
+      seconds: AUTH_RATE_LIMIT_KEEP_SECONDS,
+      time_column: 'lastRequest',
+    });
   });
 });

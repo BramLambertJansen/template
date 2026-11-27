@@ -19,6 +19,7 @@ export const DEMO_DB_PASSWORDS: readonly string[] = [
   'app_migrator',
   'api_user',
   'auth_service',
+  'app_jobs',
   'password',
 ];
 
@@ -38,7 +39,12 @@ const origin = url.refine(
 );
 // Een lege waarde in een .env-bestand telt als niet gezet, net als bij API_PORT.
 const unsetIfEmpty = (value: unknown): unknown => (value === '' ? undefined : value);
-const databaseUrl = url.refine((value) => /^postgres(ql)?:$/.test(new URL(value).protocol), 'geen postgres-URL');
+// URL.canParse eerst: zod draait deze refine ook als `url` al faalde (lege waarde), en new URL zou dan gooien in plaats van een
+// melding voor de variabele te geven.
+const databaseUrl = url.refine(
+  (value) => URL.canParse(value) && /^postgres(ql)?:$/.test(new URL(value).protocol),
+  'geen postgres-URL',
+);
 
 const baseSchema = z.object({
   APP_ENV: z.enum(['local', 'test', 'staging', 'production']),
@@ -61,6 +67,8 @@ const baseSchema = z.object({
   ),
   DATABASE_URL: databaseUrl,
   AUTH_DATABASE_URL: databaseUrl,
+  // De rol app_jobs voor achtergrondtaken (ADR 0050 punt 5): verplicht, zonder start de server niet (spec achtergrondtaken, OV-B1).
+  JOBS_DATABASE_URL: databaseUrl,
   AUTH_BASE_URL: origin,
   AUTH_SECRET: z.string().min(1),
   SMTP_URL: url,
@@ -110,7 +118,9 @@ function checkSecrets(raw: RawEnv, issue: Issue): void {
   for (const message of secretIssues(raw.AUTH_SECRET, raw.APP_ENV, { minBytes: MIN_SECRET_BYTES })) {
     issue('AUTH_SECRET', message);
   }
-  for (const key of ['DATABASE_URL', 'AUTH_DATABASE_URL'] as const) {
+  for (const key of ['DATABASE_URL', 'AUTH_DATABASE_URL', 'JOBS_DATABASE_URL'] as const) {
+    // Een ongeldige URL heeft al een melding van het veld zelf; zod draait deze controle toch.
+    if (!URL.canParse(raw[key])) continue;
     const parsed = new URL(raw[key]);
     const password = decodeURIComponent(parsed.password);
     if (password === '' || password === decodeURIComponent(parsed.username) || DEMO_DB_PASSWORDS.includes(password)) {
@@ -118,7 +128,7 @@ function checkSecrets(raw: RawEnv, issue: Issue): void {
     }
   }
   for (const key of ['APP_ORIGIN', 'AUTH_BASE_URL'] as const) {
-    if (new URL(raw[key]).protocol !== 'https:') issue(key, 'moet https zijn');
+    if (URL.canParse(raw[key]) && new URL(raw[key]).protocol !== 'https:') issue(key, 'moet https zijn');
   }
   if (raw.AUTH_BASE_URL !== raw.APP_ORIGIN) issue('AUTH_BASE_URL', 'moet gelijk zijn aan APP_ORIGIN');
   if (raw.CLIENT_IP_HEADER === undefined) issue('CLIENT_IP_HEADER', 'verplicht: anders werkt de rate limit niet');
@@ -140,6 +150,7 @@ export interface Env {
   readonly shutdownTimeoutMs: number;
   readonly databaseUrl: string;
   readonly authDatabaseUrl: string;
+  readonly jobsDatabaseUrl: string;
   readonly authBaseUrl: string;
   readonly authSecret: string;
   readonly smtpUrl: string;
@@ -165,6 +176,7 @@ export function parseEnv(source: Readonly<Record<string, string | undefined>>): 
     shutdownTimeoutMs: raw.SHUTDOWN_TIMEOUT_MS,
     databaseUrl: raw.DATABASE_URL,
     authDatabaseUrl: raw.AUTH_DATABASE_URL,
+    jobsDatabaseUrl: raw.JOBS_DATABASE_URL,
     authBaseUrl: raw.AUTH_BASE_URL,
     authSecret: raw.AUTH_SECRET,
     smtpUrl: raw.SMTP_URL,

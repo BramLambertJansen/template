@@ -28,6 +28,9 @@ function fixture(options: { versionFile?: string | null } = {}) {
   dirs.push(dir);
   mkdirSync(path.join(dir, 'scripts'), { recursive: true });
   cpSync(path.join(ROOT, 'scripts/check-image.sh'), path.join(dir, 'scripts/check-image.sh'));
+  // Het script leest het Postgres-image voor de jobs-sidecar uit db/docker/Dockerfile (spec achtergrondtaken, jobs/AC-17).
+  mkdirSync(path.join(dir, 'db/docker'), { recursive: true });
+  cpSync(path.join(ROOT, 'db/docker/Dockerfile'), path.join(dir, 'db/docker/Dockerfile'));
   if (options.versionFile !== null) {
     mkdirSync(path.dirname(path.join(dir, VERSION_FILE)), { recursive: true });
     writeFileSync(
@@ -39,6 +42,8 @@ function fixture(options: { versionFile?: string | null } = {}) {
     dir,
     'docker',
     `if [[ "$1" == run && "$*" == *"--entrypoint id"* ]]; then echo 1000; exit 0; fi
+# De opstartcontrole (spec achtergrondtaken, jobs/AC-17): in de voorgrond met een onbereikbare jobs-database stopt de image.
+if [[ "$1" == run && " $* " != *" -d "* && "$*" == *"JOBS_DATABASE_URL=postgres://app_jobs:"*"@db.invalid"* ]]; then exit 1; fi
 if [[ "$1" == inspect ]]; then
   if [[ "$*" == *State.ExitCode* ]]; then echo 0; else echo PATH=/usr/bin; fi
 fi

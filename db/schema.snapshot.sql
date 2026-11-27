@@ -330,6 +330,50 @@ CREATE FUNCTION app.is_mfa_admin() RETURNS boolean
 ALTER FUNCTION app.is_mfa_admin() OWNER TO app_definer;
 
 --
+-- Name: purge_expired(regclass, integer); Type: FUNCTION; Schema: app; Owner: app_definer
+--
+
+CREATE FUNCTION app.purge_expired(p_table regclass, p_batch integer) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $_$
+  declare
+    v_time_column text;
+    v_keep interval;
+    v_purger text;
+    v_count integer;
+  begin
+    select r.time_column, r.keep, r.purger into v_time_column, v_keep, v_purger
+      from app.retention r where r.table_name = p_table;
+    if not found then
+      raise exception 'tabel % staat niet in app.retention', p_table using errcode = '22023';
+    end if;
+    if v_purger <> 'app' then
+      raise exception 'tabel % wordt niet door app.purge_expired opgeruimd', p_table using errcode = '22023';
+    end if;
+    -- ctid is per partitie uniek, niet over de hele tabel: een gepartitioneerde tabel vraagt een eigen opruimvorm.
+    if (select c.relkind from pg_catalog.pg_class c where c.oid = p_table) = 'p' then
+      raise exception 'tabel % is gepartitioneerd', p_table using errcode = '22023';
+    end if;
+    if p_batch is null or p_batch < 1 or p_batch > 1000 then
+      raise exception 'batch buiten 1 … 1000' using errcode = '22023';
+    end if;
+    if v_keep is null then
+      return 0;
+    end if;
+    execute pg_catalog.format(
+      'delete from %s where ctid = any (array(select ctid from %s where %I < $1 limit $2))',
+      p_table, p_table, v_time_column
+    ) using app.retention_cutoff(p_table), p_batch;
+    get diagnostics v_count = row_count;
+    return v_count;
+  end
+  $_$;
+
+
+ALTER FUNCTION app.purge_expired(p_table regclass, p_batch integer) OWNER TO app_definer;
+
+--
 -- Name: register_role(text, boolean); Type: FUNCTION; Schema: app; Owner: app_definer
 --
 
@@ -384,6 +428,22 @@ CREATE FUNCTION app.retention_cutoff(p_table regclass) RETURNS timestamp with ti
 
 
 ALTER FUNCTION app.retention_cutoff(p_table regclass) OWNER TO app_definer;
+
+--
+-- Name: retention_targets(); Type: FUNCTION; Schema: app; Owner: app_definer
+--
+
+CREATE FUNCTION app.retention_targets() RETURNS SETOF regclass
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+    select r.table_name from app.retention r
+    where r.purger = 'app' and r.keep is not null
+    order by r.table_name::text
+  $$;
+
+
+ALTER FUNCTION app.retention_targets() OWNER TO app_definer;
 
 --
 -- Name: roles_keep_one_beheer(); Type: FUNCTION; Schema: app; Owner: app_definer
@@ -1357,6 +1417,7 @@ CREATE POLICY user_roles_select_own ON public.user_roles FOR SELECT TO app_authe
 GRANT USAGE ON SCHEMA app TO app_authenticated;
 GRANT ALL ON SCHEMA app TO app_definer;
 GRANT USAGE ON SCHEMA app TO auth_service;
+GRANT USAGE ON SCHEMA app TO app_jobs;
 
 
 --
@@ -1471,6 +1532,14 @@ GRANT ALL ON FUNCTION app.is_mfa_admin() TO app_authenticated;
 
 
 --
+-- Name: FUNCTION purge_expired(p_table regclass, p_batch integer); Type: ACL; Schema: app; Owner: app_definer
+--
+
+REVOKE ALL ON FUNCTION app.purge_expired(p_table regclass, p_batch integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION app.purge_expired(p_table regclass, p_batch integer) TO app_jobs;
+
+
+--
 -- Name: FUNCTION register_role(p_name text, p_beheer boolean); Type: ACL; Schema: app; Owner: app_definer
 --
 
@@ -1490,6 +1559,14 @@ GRANT ALL ON FUNCTION app.request_id() TO app_definer;
 --
 
 REVOKE ALL ON FUNCTION app.retention_cutoff(p_table regclass) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION retention_targets(); Type: ACL; Schema: app; Owner: app_definer
+--
+
+REVOKE ALL ON FUNCTION app.retention_targets() FROM PUBLIC;
+GRANT ALL ON FUNCTION app.retention_targets() TO app_jobs;
 
 
 --

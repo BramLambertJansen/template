@@ -9,6 +9,7 @@ import { createClaimOnce } from './one-time-use.ts';
 import { createResetSessionBump, createSendResetPassword } from './reset-password.ts';
 import { createInviteeGuard } from './revoke-invitation.ts';
 import {
+  AUTH_RATE_LIMIT_WINDOW_SECONDS,
   EMAIL_CHANGE_TTL_SECONDS,
   INVITATION_TTL_SECONDS,
   MAX_PASSWORD_LENGTH,
@@ -179,7 +180,8 @@ export function createAuthOptions(config: AuthConfig, database: Pool) {
         },
       },
     },
-    rateLimit: { enabled: true, storage: 'database' },
+    // Het standaardvenster expliciet (spec achtergrondtaken, OV-A4): de opruimtermijn AUTH_RATE_LIMIT_KEEP_SECONDS hangt ervan af.
+    rateLimit: { enabled: true, storage: 'database', window: AUTH_RATE_LIMIT_WINDOW_SECONDS },
     advanced: {
       useSecureCookies: false,
       cookies,

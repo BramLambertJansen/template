@@ -1,11 +1,12 @@
 import { authGateway, type Auth, type AuthGateway, type CreateAuthConfig, type Invitation } from '../auth/index.ts';
-import type { WithUser } from '../db/types.ts';
+import type { WithJob, WithUser } from '../db/types.ts';
 import { createDevLogin, devAuthSteps, type DevLoginConfig } from '../dev/login-as.ts';
 import type { Env } from '../env.ts';
 import type { App, DevLogin } from '../http/create-app.ts';
 import { createReadiness, type Readiness } from '../http/readiness.ts';
 import type { RunningServer, ServeOptions } from '../http/serve.ts';
 import { createWebApp } from '../http/web.ts';
+import { coreJobs, startJobs, validateJobs, type JobDefinition, type JobsRunner } from '../jobs/index.ts';
 import { unsafeCast } from '../../shared/unsafe-cast.ts';
 import type { Mail, SendMail } from '../mail/smtp.ts';
 import { writeJsonLine, type RequestLog } from '../obs/request-log.ts';
@@ -45,6 +46,8 @@ export interface ServerConfig<Services, Name extends string> {
   readonly loginRequiresMfa: (withUser: WithUser) => (userId: string) => Promise<boolean>;
   readonly createServices: (auth: Auth) => Services;
   readonly buildApp: (deps: ServerAppDeps<Services>) => App;
+  // Achtergrondtaken van de app (spec achtergrondtaken, ADR 0050): nummers vanaf 100; ze draaien naast de core-taken.
+  readonly jobs?: readonly JobDefinition[];
 }
 
 // De onderdelen met een verbinding of een poort; een test bootst ze na.
@@ -54,6 +57,12 @@ export interface ServerParts {
   readonly withUser: (...args: Parameters<WithUser>) => ReturnType<WithUser>;
   readonly pingDatabase: () => Promise<void>;
   readonly closeDatabase: () => Promise<void>;
+  // Eén batch als app_jobs (ADR 0050 punt 2), en de opstartcontrole van die verbinding (ADR 0049 punt 3). Zonder de generieke T,
+  // net als withUser hierboven.
+  readonly withJob: (...args: Parameters<WithJob>) => ReturnType<WithJob>;
+  readonly checkJobsDatabase: () => Promise<void>;
+  // De taak core.purge (src/core/api/db/purge-app.ts): de SQL blijft in de databasemodule.
+  readonly purgeAppTables: (withJob: WithJob, signal?: AbortSignal) => Promise<unknown>;
   readonly createAuth: (config: CreateAuthConfig) => Auth;
   readonly createMailer: (smtpUrl: string, from: string) => SendMail;
   readonly startServer: (app: App, options: ServeOptions) => Promise<RunningServer>;
@@ -77,6 +86,10 @@ export function composeServer<Services, Name extends string>(
       'withUser geeft terug wat work teruggeeft; het type van parts mist alleen de generieke T',
     ),
   );
+  const withJob = unsafeCast<WithJob>(
+    parts.withJob,
+    'withJob geeft terug wat work teruggeeft; het type van parts mist alleen de generieke T',
+  );
   const sendMail = parts.createMailer(env.smtpUrl, `no-reply@${new URL(env.appOrigin).hostname}`);
   // Eén instantie voor services, gateway, dev-login en het sluiten van de pool.
   const auth = parts.createAuth({
@@ -90,6 +103,13 @@ export function composeServer<Services, Name extends string>(
     appName: config.appName,
     loginRequiresMfa: config.loginRequiresMfa(withUser),
   });
+
+  // Het register van taken faalt bij opstart, vóór de server (spec achtergrondtaken, AC-24).
+  const jobDefinitions = {
+    core: coreJobs({ purgeExpired: auth.purgeExpired, purgeAppTables: parts.purgeAppTables }),
+    app: config.jobs ?? [],
+  };
+  validateJobs(jobDefinitions);
 
   const app = config.buildApp({
     appOrigin: env.appOrigin,
@@ -105,14 +125,22 @@ export function composeServer<Services, Name extends string>(
   });
 
   // Met WEB_DIR (de containerimage) serveert dezelfde server de SPA op dezelfde origin (ADR 0049); lokaal doet Vite dat.
-  const start = () =>
-    parts.startServer(env.webDir === undefined ? app : createWebApp(app, env.webDir), {
+  // Vóór de server: de opstartcontrole als app_jobs (ADR 0049 punt 3); faalt die, dan start de server niet. Na de server: de
+  // runner. Bij het stoppen eerst de runner (de lopende batch maakt zijn transactie af), dan de pools.
+  const start = async () => {
+    await parts.checkJobsDatabase();
+    const runner: { jobs?: JobsRunner } = {};
+    const server = await parts.startServer(env.webDir === undefined ? app : createWebApp(app, env.webDir), {
       host: env.apiHost,
       port: env.apiPort,
       shutdownTimeoutMs: env.shutdownTimeoutMs,
       onStopped: async () => {
+        await runner.jobs?.stop();
         await Promise.all([parts.closeDatabase(), auth.closePool()]);
       },
     });
+    runner.jobs = startJobs({ ...jobDefinitions, withJob });
+    return server;
+  };
   return { app, start };
 }

@@ -3,7 +3,7 @@ import { defineRoles } from '../../shared/roles.ts';
 import { TEMPLATE_VERSION } from '../../shared/template-version.ts';
 import { unsafeCast } from '../../shared/unsafe-cast.ts';
 import type { Auth, CreateAuthConfig } from '../auth/index.ts';
-import type { Tx, WithUser } from '../db/types.ts';
+import type { Tx, WithJob, WithUser } from '../db/types.ts';
 import type { Env } from '../env.ts';
 import { createApp, type App } from '../http/create-app.ts';
 import type { RunningServer, ServeOptions } from '../http/serve.ts';
@@ -35,6 +35,7 @@ const ENV: Env = {
   shutdownTimeoutMs: 4321,
   databaseUrl: 'postgres://db.example.test/app',
   authDatabaseUrl: 'postgres://db.example.test/auth',
+  jobsDatabaseUrl: 'postgres://jobs@db.example.test/app',
   authBaseUrl: 'https://auth.example.test',
   authSecret: 'ab12'.repeat(10),
   smtpUrl: 'smtp://mail.example.test:2525',
@@ -48,6 +49,7 @@ function fakeParts() {
       api: { getSession: () => Promise.resolve({ headers: new Headers(), response: null }) },
       handler: () => Promise.resolve(new Response(null, { status: 204 })),
       closePool: () => Promise.resolve(),
+      purgeExpired: () => Promise.resolve({ session: 0, verification: 0, rateLimit: 0 }),
     },
     'test: alleen de onderdelen die de koppeling aanroept, geen echte Better Auth en geen pool',
   );
@@ -56,6 +58,10 @@ function fakeParts() {
     withUser: vi.fn<WithUser>(async (_actor, work) => work(fakeTx, { role: null })),
     pingDatabase: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     closeDatabase: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    // Achtergrondtaken (spec achtergrondtaken): nagebootst, geen taak draait iets.
+    withJob: vi.fn<WithJob>(() => Promise.resolve({ ran: false })),
+    purgeAppTables: vi.fn<(withJob: WithJob, signal?: AbortSignal) => Promise<unknown>>(() => Promise.resolve()),
+    checkJobsDatabase: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     createAuth: vi.fn<(config: CreateAuthConfig) => Auth>(() => auth),
     createMailer: vi.fn<(smtpUrl: string, from: string) => SendMail>(() => () => Promise.resolve()),
     startServer: vi.fn<(app: Fetchable, options: ServeOptions) => Promise<RunningServer>>(() =>

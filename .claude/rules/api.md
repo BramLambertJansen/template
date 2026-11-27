@@ -49,5 +49,6 @@ in `src/shared/contracts/<resource>.ts`, dan de handler in `src/api/routes/<reso
 
 ## Besloten, nog niet gebouwd
 
-Nog niet: achtergrondtaken (`startJobs`, `runJobsOnce`; ST-03) en de privacyroutes (`GET /api/me/export`,
+Gebouwd: achtergrondtaken (`startJobs`, `runJobsOnce`, `src/core/api/jobs`; een app registreert taken met `jobs` in de
+`runServer`-aanroep). Nog niet: de mail-outbox (ST-03) en de privacyroutes (`GET /api/me/export`,
 `createApp({ privacy })`; ST-05). De eisen staan bij die roadmap-items (R-DOC-10).

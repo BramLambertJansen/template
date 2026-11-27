@@ -196,6 +196,8 @@ test('de migraties in db/migrations zijn groen, en zonder `owner to app_definer`
     'db/migrations/20261114120000_roles_register.sql:171: app.user_roles_keep_one_admin',
     'db/migrations/20261114120000_roles_register.sql:186: app.set_account_blocked',
     'db/migrations/20261114120000_roles_register.sql:230: app.set_account_deactivated',
+    'db/migrations/20261126130000_purge_expired.sql:8: app.retention_targets',
+    'db/migrations/20261126130000_purge_expired.sql:22: app.purge_expired',
   ]);
 });
 

@@ -6,3 +6,5 @@ grant execute on all functions in schema tap to app_authenticated, app_migrator;
 -- pgTAP-tests wisselen als app_migrator naar app_authenticated om policies te testen (alleen lokaal en in CI;
 -- inherit false: app_migrator krijgt geen rechten van die rol, alleen SET ROLE).
 grant app_authenticated to app_migrator with inherit false, set true;
+-- Idem voor app_jobs (spec achtergrondtaken): pgTAP toetst de rechten van de jobrol en app.purge_expired als die rol.
+grant app_jobs to app_migrator with inherit false, set true;

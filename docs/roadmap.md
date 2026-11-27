@@ -122,7 +122,11 @@ Open werk dat niet geparkeerd is, grofweg in volgorde. Wat nog een spec of eigen
   **Klaar als:** twee runners claimen dezelfde rij niet tegelijk; crash, lease-verval en SMTP-uitval getest; definitief mislukte mail blijft
   herstelbaar; alleen verlopen rijen verdwijnen; stoppen wacht op de lopende batch vóór het sluiten van pools. Documenteer at-least-once-verzending
   (geen exactly-once-claim).
-  **Eisen uit het regelboek** (R-DOC-10: tot de bouw staan ze hier; de bouw-PR zet ze terug in het regelboek): `startJobs()` draait taken op interval vanuit `src/api/server.ts`, batch = één transactie met advisory lock; nul-schalende host: adapter roept `runJobsOnce()`; HTTP-cronpad alleen met hostgeheim, als §3-uitzondering (was R-JOB-01). `withJob()` gebruikt een eigen pool als rol `app_jobs` (`JOBS_DATABASE_URL`, execute alleen klasse `job`, niets op `better_auth`) (was in R-JOB-02). `app.mail_outbox`: RLS geforceerd, geen link of token in payload, foutcode zonder adressen; erin alleen via `app.enqueue_mail` (security definer, definer per mailsoort); at-least-once met lease, link pas bij verzenden (was R-JOB-03). `GET /api/ready` pingt niet als `app_jobs` (OV-C4, besloten 2026-11-11); vóór `startServer` één verbinding als `app_jobs`, faalt die dan stopt het proces (was in R-DEPLOY-01).
+  **Stand:** runner, rol `app_jobs` en opruimen zijn gebouwd (spec [achtergrondtaken](template/specs/achtergrondtaken.md), deel A–D;
+  bewijs per AC in `test/jobs/*.int.test.ts`, `db/tests/app_jobs.sql`, `db/tests/purge_expired.sql`, `src/core/api/jobs/*.test.ts`);
+  de eisen R-JOB-04 (was R-JOB-01), R-JOB-02 en de opstartcontrole (R-DEPLOY-01) staan nu in het regelboek. Open: de mail-outbox (spec
+  [mail-outbox](template/specs/mail-outbox.md)) met lease, retries en het herstelrunbook voor mail.
+  **Eisen uit het regelboek** (R-DOC-10: tot de bouw staan ze hier; de bouw-PR zet ze terug in het regelboek): `app.mail_outbox`: RLS geforceerd, geen link of token in payload, foutcode zonder adressen; erin alleen via `app.enqueue_mail` (security definer, definer per mailsoort); at-least-once met lease, link pas bij verzenden (was R-JOB-03).
   aanleiding: `docs/template/adr/0050-achtergrondtaken-en-mail-outbox.md`
 - [ ] **ST-05 (P0) — AVG: privacymechanisme, export en verwijderen** ([ADR 0051](template/adr/0051-audit-log-en-avg.md)). Mechanisme in core, inhoud per app.
   **Werk:** bewaarcatalogus, FK-invarianten, eigen export, admin-verwijdering en app-registratie van exporters en erasers, in de volgorde van

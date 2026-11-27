@@ -18,6 +18,7 @@ export {
   type InvitationLifecycle,
 } from './invitations.ts';
 export type { Invitation } from './options.ts';
+export type { PurgeReport } from './purge.ts';
 export {
   confirmEmail,
   CurrentSessionError,
