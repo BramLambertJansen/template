@@ -4,6 +4,7 @@ export { coreJobs, type CoreJobDeps } from './core-jobs.ts';
 export { drainBatches, type DrainOptions, type DrainResult } from './drain.ts';
 export { CORE_JOB_KEYS, JOB_LOCK_NAMESPACE } from './lock.ts';
 export {
+  errorClass,
   runJobsOnce,
   startJobs,
   validateJobs,

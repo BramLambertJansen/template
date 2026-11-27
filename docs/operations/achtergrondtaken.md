@@ -29,6 +29,8 @@ klasse van de fout en bij een databasefout de SQLSTATE; nooit de melding, SQL of
 - **De server start niet: opstartcontrole faalt.** De server verbindt vóór het starten één keer als `app_jobs` (ADR 0049
   punt 3). Controleer of de rol bestaat, `connect` heeft en of `JOBS_DATABASE_URL` de gegevens van `app_jobs` heeft (niet van
   een andere rol). Readiness (`GET /api/ready`) hangt hier niet van af.
+- **Eén tabel faalt in `core.purge`.** De andere tabellen worden in dezelfde ronde nog opgeruimd; daarna logt de runner de
+  eerste fout. Herstel volgens de tabel hierboven.
 - **Opruimen loopt achter** (meer dan `MAX_PURGE_BATCHES_PER_ROUND` × `MAX_PURGE_BATCH` verlopen rijen per tabel). Elke ronde
   ruimt hooguit 100 × 1000 rijen per tabel op; de rest volgt vanzelf in de volgende rondes.
 - **Een lock blijft bezet.** Een advisory lock in transactievorm leeft alleen zolang de transactie: zoek in `pg_locks`

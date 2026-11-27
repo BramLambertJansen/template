@@ -19,7 +19,8 @@ van de host. Migraties maken nooit rollen (R-DB-07); een migratie die een rol no
 | `app_jobs` | `login`, `noinherit` | — | `statement_timeout = 5s`, `idle_in_transaction_session_timeout = 10s` | ja | `JOBS_DATABASE_URL` |
 
 Geen rol is superuser of heeft `createrole`, `createdb` of `bypassrls`; `db/tests/rolattributen.sql` en
-`db/tests/invarianten.sql` toetsen dat.
+`db/tests/invarianten.sql` toetsen dat lokaal en in CI. In een andere omgeving bewaakt alleen dit runbook het: de opstartcontrole
+van de server (ADR 0049 punt 3) kijkt alleen of de verbinding als `app_jobs` inlogt, niet naar de attributen van die rol.
 
 ## Rollen aanmaken in een nieuwe omgeving
 

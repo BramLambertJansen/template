@@ -6,7 +6,7 @@ import type { App, DevLogin } from '../http/create-app.ts';
 import { createReadiness, type Readiness } from '../http/readiness.ts';
 import type { RunningServer, ServeOptions } from '../http/serve.ts';
 import { createWebApp } from '../http/web.ts';
-import { coreJobs, startJobs, validateJobs, type JobDefinition, type JobsRunner } from '../jobs/index.ts';
+import { coreJobs, errorClass, startJobs, validateJobs, type JobDefinition, type JobsRunner } from '../jobs/index.ts';
 import { unsafeCast } from '../../shared/unsafe-cast.ts';
 import type { Mail, SendMail } from '../mail/smtp.ts';
 import { writeJsonLine, type RequestLog } from '../obs/request-log.ts';
@@ -74,6 +74,14 @@ export interface ComposedServer {
   readonly start: () => Promise<RunningServer>;
 }
 
+// De stopmelding van een mislukte opstartcontrole: alleen de foutklasse (R-SEC-02), niet de melding van pg, die host, poort of
+// rolnaam kan noemen; de top-level await in src/api/server.ts print hem.
+function jobsStartupError(error: unknown): Error {
+  return new Error(
+    `opstartcontrole: geen verbinding als app_jobs (${errorClass(error)}); controleer JOBS_DATABASE_URL en de rol (docs/operations/rollen.md)`,
+  );
+}
+
 export function composeServer<Services, Name extends string>(
   config: ServerConfig<Services, Name>,
   env: Env,
@@ -128,7 +136,9 @@ export function composeServer<Services, Name extends string>(
   // Vóór de server: de opstartcontrole als app_jobs (ADR 0049 punt 3); faalt die, dan start de server niet. Na de server: de
   // runner. Bij het stoppen eerst de runner (de lopende batch maakt zijn transactie af), dan de pools.
   const start = async () => {
-    await parts.checkJobsDatabase();
+    await parts.checkJobsDatabase().catch((error: unknown) => {
+      throw jobsStartupError(error);
+    });
     const runner: { jobs?: JobsRunner } = {};
     const server = await parts.startServer(env.webDir === undefined ? app : createWebApp(app, env.webDir), {
       host: env.apiHost,

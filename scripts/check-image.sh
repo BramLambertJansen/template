@@ -90,10 +90,14 @@ app_env=(
 
 # Opstartcontrole (ADR 0049 punt 3, spec achtergrondtaken AC-17): kan de image niet als app_jobs verbinden, dan start de
 # server niet en stopt het proces met een fout. In de voorgrond, begrensd zodat een image die toch start niet blijft hangen.
-if timeout --kill-after=10s 60 docker run --rm --name "${name}-zonder-jobs" "${app_env[@]}" \
-  -e JOBS_DATABASE_URL="postgres://app_jobs:${jobspass}@db.invalid:5432/app" "$image" >/dev/null 2>&1; then
+if startup_out="$(timeout --kill-after=10s 60 docker run --rm --name "${name}-zonder-jobs" "${app_env[@]}" \
+  -e JOBS_DATABASE_URL="postgres://app_jobs:${jobspass}@db.invalid:5432/app" "$image" 2>&1)"; then
   fail "de image start zonder werkende jobs-verbinding (opstartcontrole ontbreekt)"
 fi
+# Gestopt om de goede reden: de melding van de opstartcontrole, zonder het adres van de database (R-SEC-02).
+grep -q 'opstartcontrole: geen verbinding als app_jobs' <<<"$startup_out" \
+  || fail "de image stopte zonder jobs-verbinding, maar niet met de melding van de opstartcontrole"
+! grep -q 'db.invalid' <<<"$startup_out" || fail "de stopmelding van de opstartcontrole noemt het adres van de database"
 echo "✓ zonder jobs-verbinding stopt de image bij opstart"
 
 # De Postgres-sidecar: het gepinde image uit db/docker/Dockerfile (dat bouwt daar alleen pgTAP bij), rol app_jobs als

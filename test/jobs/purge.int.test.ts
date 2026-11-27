@@ -31,7 +31,9 @@ function sqlstateOf(error: unknown): string | undefined {
   return wrapped.success ? sqlstateOf(wrapped.data.cause) : undefined;
 }
 
-const FIXTURE = 'app.purge_fixture';
+// In schema public, zoals een tabel van `pnpm new:resource`: app_jobs heeft daar geen usage (review #1032: een regclass als tekst
+// faalde daar als app_jobs).
+const FIXTURE = 'public.purge_fixture';
 
 // Een tabel die een app aan de bewaarcatalogus toevoegt: eigenaar app_migrator, RLS aan (niet geforceerd, zodat de eigenaar de
 // rijen kan klaarzetten), select en delete voor app_definer met een delete-policy op app.retention_cutoff.

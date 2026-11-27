@@ -14,6 +14,7 @@ create function app.retention_targets() returns setof regclass
   $$;
 
 alter function app.retention_targets() owner to app_definer;
+revoke all on function app.retention_targets() from public;
 grant execute on function app.retention_targets() to app_jobs;
 
 -- Verwijdert hooguit p_batch verlopen rijen van p_table en geeft het aantal. 1000 = MAX_PURGE_BATCH in
@@ -56,6 +57,7 @@ create function app.purge_expired(p_table regclass, p_batch integer) returns int
   $$;
 
 alter function app.purge_expired(regclass, integer) owner to app_definer;
+revoke all on function app.purge_expired(regclass, integer) from public;
 grant execute on function app.purge_expired(regclass, integer) to app_jobs;
 
 -- migrate:down

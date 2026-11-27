@@ -49,7 +49,10 @@ if [[ "$1" == run ]]; then
     if [[ "$arg" == JOBS_DATABASE_URL=*db.invalid* ]]; then unreachable=1; fi
   done
   # Opstartcontrole (jobs/AC-17): een app die in de voorgrond start met een onbereikbare jobs-database hoort te stoppen.
-  if [[ "$detached" == 0 && "$unreachable" == 1 ]]; then exit "\${STUB_UNREACHABLE_EXIT:-1}"; fi
+  if [[ "$detached" == 0 && "$unreachable" == 1 ]]; then
+    echo 'Error: opstartcontrole: geen verbinding als app_jobs (Error); controleer JOBS_DATABASE_URL' >&2
+    exit "\${STUB_UNREACHABLE_EXIT:-1}"
+  fi
 fi
 if [[ "$1" == inspect ]]; then
   if [[ "$*" == *State.ExitCode* ]]; then echo 0; else echo PATH=/usr/bin; fi

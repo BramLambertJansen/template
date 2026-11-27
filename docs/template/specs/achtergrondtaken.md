@@ -352,6 +352,7 @@ uit de functies zijn fouten in de servercode.
 | Situatie | Gedrag | Foutcode |
 |---|---|---|
 | Twee API-instanties, dezelfde taak | per batch één; de ander slaat over (`{ ran: false }`) | — |
+| `core.purge` faalt op één tabel (22023, 57014, 42501) | de andere tabellen gaan in dezelfde ronde door; daarna gooit de taak de eerste fout en logt de runner hem | — |
 | `core.purge` krijgt `{ ran: false }` voor een tabel | die tabel overslaan, door met de volgende; volgende ronde opnieuw; geen fout (AC-43) | — |
 | Anonieme request op `/api/auth/forget-password*` of `/api/auth/email-otp/*` | rij in `"rateLimit"` met venster 60 s; opruimen pas na 60 s | — |
 | Wachtende variant en de lock blijft bezet | wacht tot de `statement_timeout` (5 s), dan fout en rollback; gelogd | — |

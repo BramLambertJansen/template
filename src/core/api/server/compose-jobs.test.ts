@@ -200,7 +200,10 @@ describe('jobs/AC-44: opstartcontrole en stopvolgorde', () => {
     const h = harness([appJob(run)]);
     h.parts.checkJobsDatabase.mockRejectedValue(new Error('jobs-verbinding geweigerd'));
 
-    await expect(h.server.start()).rejects.toThrow('jobs-verbinding geweigerd');
+    // De stopmelding noemt de opstartcontrole en de foutklasse, niet de melding van pg (die host of poort kan bevatten).
+    const failure = h.server.start();
+    await expect(failure).rejects.toThrow(/^opstartcontrole: geen verbinding als app_jobs \(Error\)/);
+    await expect(failure).rejects.not.toThrow('jobs-verbinding geweigerd');
     await vi.advanceTimersByTimeAsync(120_000);
 
     expect(h.parts.startServer).not.toHaveBeenCalled();
