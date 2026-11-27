@@ -11,6 +11,7 @@
 // `meldingen` als `schaduw: <naam>: <treffer>`. De groene regel noemt ook de strikte modules.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { format, resolveConfig } from 'prettier';
+import { ongetracktMelding } from './ac-dekking.mjs';
 import { acToetsMeldingen, acToetsUitGit } from './ac-toets.mjs';
 import { docsKrimp, docsMeldingen, docsViolations } from './check-docs.mjs';
 import { pgTapVormViolations } from './check-policies.mjs';
@@ -61,6 +62,7 @@ export const meldingen = {
   'check-docs': () => docsMeldingen(process.cwd()),
   'eslint-onderdrukkingen': () => Promise.resolve(onderdrukkingMeldingenUitGit(process.cwd())),
   'ac-toets': () => Promise.resolve(acToetsMeldingen(process.cwd())),
+  ongetrackt: () => Promise.resolve([ongetracktMelding(process.cwd())].filter((m) => m !== null)),
   'schaduw-termijn': () => termijnMeldingen(process.cwd()),
   schaduw: () => trefferMeldingen(process.cwd(), schaduw),
 };
