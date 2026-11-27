@@ -3,7 +3,8 @@ import { describe, expect, test } from 'vitest';
 
 // Spec agents-leveren (punt 1b): de developer laadt per stap de juiste skill. De router noemt elke bouwskill; een nieuwe
 // skillmap zonder rij maakt deze toets rood, zodat hij niet stil buiten de router valt.
-const UITZONDERINGEN = ['opleveren', 'security-review', 'spec'];
+// GEWIJZIGD (spec nachtrun, ADR 0115, R-TEST-02): `nachtrun` is een skill van de hoofdsessie, geen bouwskill.
+const UITZONDERINGEN = ['nachtrun', 'opleveren', 'security-review', 'spec'];
 const KOP = '## Welke skill je laadt';
 
 /** De skillnamen in de tweede kolom van de routertabel onder `KOP`. */

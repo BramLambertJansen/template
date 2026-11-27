@@ -59,10 +59,12 @@ describe('skills', () => {
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name);
 
+  // GEWIJZIGD (spec nachtrun, ADR 0115, R-TEST-02): de skill `nachtrun` komt erbij.
   test('de skills uit de roadmap (zonder release: fase 3)', () => {
     expect(skills.sort()).toStrictEqual(
       [
         'migratie',
+        'nachtrun',
         'nieuw-component',
         'nieuw-route',
         'nieuw-scherm',

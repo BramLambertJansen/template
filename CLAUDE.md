@@ -10,11 +10,12 @@ Wat een gate kan afdwingen, staat hier niet. Groeit dit bestand of `AGENTS.md` o
 - Een beslissing ontbreekt, de spec spreekt zichzelf tegen, of een regel staat de opdracht in de weg.
 - Een check faalt en de fix zou een regel, check, hook of test afzwakken.
 - Na twee mislukte correctiepogingen (bij reviewbevindingen telt een fix als poging, een reviewronde niet, ADR 0105): stop, vat samen wat je probeerde, vraag om richting in één gebundeld besluit. Kleine reviewbevindingen gaan niet in de lus. Uitzondering: de CI-lus van de skill `opleveren` (R-WERK-12) loopt door tot groen; daar gelden alleen de stopgronden uit die skill.
+- In een nachtrun (skill `nachtrun`, ADR 0115) vraag je niets meer na de start: kies voorlopig of parkeer de taak (die stopt), en ga door met de volgende.
 
 ## Sandbox en rolhek
 
 - Werk in je eigen werkmap. Nieuwe werkmap: eerst `node scripts/kit/worktree-install.mjs`; zonder toolchain falen `feiten.mjs`, lint, de git-hooks en de Stop-hook. Vóór de eerste commit vertrouwt de eigenaar daar `mise.toml` (`docs/operations/agent-doorloop.md`, "Nieuw werk beginnen").
-- Eén eenvoudig commando per Bash-aanroep. Het rolhek weigert een variabele of `$(…)` als commandowoord, vaak accolades of tekenklassen, en het woord `merge` naast `gh` of in de titel of body van een PR. Tekst voor commit of PR via `-F` of `--body-file`; een script dat alleen leest of rekent, zet je in `$TMPDIR` en draai je met `node`.
+- Eén eenvoudig commando per Bash-aanroep. Het rolhek weigert een variabele of `$(…)` als commandowoord, vaak accolades of tekenklassen, en het woord `merge` naast `gh` of in de titel of body van een PR. Tekst voor commit of PR via `-F` of `--body-file`, en een script dat alleen leest of rekent (draai het met `node`): in `.tmp/<bestand>` van je werkmap (genegeerd door git), niet in `$TMPDIR` (ADR 0115 punt 8).
 - De Bash-sandbox kan `.claude/settings.json` (ook settings.local.json), `.claude/hooks/` en `.claude/skills/` niet schrijven: wijzigen alleen met Edit in de hoofdsessie met akkoord van de eigenaar, of de eigenaar doet het zelf (`docs/ENVIRONMENT.md`, "Grens van de sandbox"). Een branchwissel die ze raakt kan halverwege afbreken: vergelijk eerst (`docs/operations/agent-doorloop.md`, "Branchwissels in een sandbox").
 - Bij een weigering: lees de reden en kies een toegestane vorm; omzeil niets (R-PRINC-09).
 

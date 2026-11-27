@@ -528,6 +528,8 @@ export default defineConfig(
     'playwright-report/',
     'test-results/',
     '.runner-output/',
+    // Tijdelijke lees- of rekenscripts van agents, genegeerd door git (ADR 0115 punt 8).
+    '.tmp/',
     // Worktrees van subagents: eigen kopieën van de repo, met hun eigen lint (ADR 0047).
     '.claude/worktrees/',
     // Lokale kopie van de hooks van main (anker, R-ROL-09); de bron rails/hooks/ wordt wel gelint.

@@ -351,4 +351,5 @@ export const VOLGORDE = [
   'tokens',
   'fase',
   'recepten',
+  'besluiten',
 ];

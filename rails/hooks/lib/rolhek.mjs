@@ -122,7 +122,7 @@ export function decide(payload, ctx) {
   if (tool.startsWith('mcp__')) {
     // Spec cloud-netwerkvorm (Ontwerp punt 3): een MCP-bestandsschrijftool slaat lefthook over, ook als hij in mcpLezen staat.
     if (MCP_SCHRIJVEN.test(tool)) gate(decision, role, MCP_SCHRIJVEN_REDEN);
-    decideMcp({ tool, role }, context, decision);
+    decideMcp({ tool, role, input }, context, decision);
   } else if (tool === 'Bash') {
     const command = field(input, 'command');
     decideBash({ command, role, feiten: leesFeiten(command, context) }, context, decision);
@@ -399,13 +399,35 @@ function gate(decision, role, reason) {
 /**
  * MCP-tools (WS-06): alleen exacte namen uit mcpLezen mogen door; anders vraagt de hoofdsessie de eigenaar en weigert een
  * subagent (ook een onbekende), want een connector kan buiten de repo schrijven (framework §10).
- * @param {{ tool: string, role: string }} call
+ * Uitzondering (ADR 0115 punt 5, spec nachtrun): de hoofdsessie opent een PR van haar eigen werkbranch zonder vraag; het
+ * rolhek geeft dan zelf allow.
+ * @param {{ tool: string, role: string, input: unknown }} call
  * @param {Ctx} ctx
  * @param {Decision} decision
  */
-function decideMcp({ tool, role }, ctx, decision) {
+function decideMcp({ tool, role, input }, ctx, decision) {
   if (ctx.config.mcpLezen.includes(tool)) return;
+  // Een allow van de hook, geen regel in permissions.allow: zonder hook blijft de vraag van Claude Code (faalt dicht).
+  if (role === 'hoofdsessie' && eigenPr(tool, input, ctx.branch)) {
+    decision.allow = true;
+    return;
+  }
   gate(decision, role, `${tool} staat niet in mcpLezen (.claude/gates.json): MCP alleen read-only (AGENTS.md)`);
+}
+
+const MCP_PR = /^mcp__.+__create_pull_request$/;
+const GEEN_WERKBRANCH = new Set(['', 'main', 'HEAD']);
+
+/**
+ * Een PR van de eigen werkbranch (spec nachtrun AC-1 t/m AC-3): `head` is precies de huidige branch, die geen `main` of
+ * losse HEAD is, en `base` is gezet en verschilt van `head`. Een andere `base` dan `main` mag: zo stapelt een nachtrun op een
+ * PR die op de eigenaar wacht (ADR 0115 punt 4); de ruleset op `main` blijft de grens.
+ * @param {string} tool @param {unknown} input @param {string} branch @returns {boolean}
+ */
+function eigenPr(tool, input, branch) {
+  if (!MCP_PR.test(tool) || GEEN_WERKBRANCH.has(branch)) return false;
+  const base = field(input, 'base');
+  return field(input, 'head') === branch && base !== '' && base !== branch;
 }
 
 // ---------- bestanden ----------

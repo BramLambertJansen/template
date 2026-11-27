@@ -20,6 +20,8 @@ blob-report/
 .runner-canary.*
 # Resultaatbestanden van nieuwe-app.mjs, doctor en bootstrap (spec nieuwe-app-script).
 .template/
+# Tijdelijke bestanden van agents: commit- en PR-tekst, lees- of rekenscripts (ADR 0115 punt 8).
+.tmp/
 # Reviewpakketten van scripts/kit/reviewpakket.mjs (spec agents-leveren, OV-4).
 .reviewpakket/
 *.log
