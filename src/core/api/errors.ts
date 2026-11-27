@@ -37,6 +37,7 @@ const STATUS = new Map<string, ErrorStatus>(
     UPSTREAM_INVALID: 502,
     UPSTREAM_UNAVAILABLE: 503,
     UPSTREAM_TIMEOUT: 504,
+    STORAGE_UNAVAILABLE: 503,
   } satisfies Record<CoreErrorCode, ErrorStatus>),
 );
 

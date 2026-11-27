@@ -33,6 +33,12 @@ export const gates = [
     snel: true,
   },
   {
+    script: 'check:storage-adapters',
+    bewaakt:
+      'elke opslagadapter uit defineFileStorage, ook onder een andere naam, heeft een testbestand dat fileStorageContract op die adapter draait (spec bestandsopslag, deel A; ADR 0060 punt 2)',
+    snel: true,
+  },
+  {
     script: 'check:migrations',
     bewaakt:
       'geen gecommitte migratie gewijzigd of verwijderd t.o.v. origin/main, namen en versies uniek (framework §10)',

@@ -1,0 +1,11 @@
+import * as storage from '#core/api/storage/port.ts';
+
+const define = storage.defineFileStorage;
+
+export const mijnAdapter = define({
+  createUploadUrl: () => ({ url: 'https://opslag.example/up', method: 'PUT', headers: {} }),
+  createDownloadUrl: () => ({ url: 'https://opslag.example/down' }),
+  stat: () => Promise.resolve(null),
+  delete: () => Promise.resolve(),
+  uploadOrigin: 'https://opslag.example',
+});

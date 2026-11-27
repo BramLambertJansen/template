@@ -1,0 +1,2 @@
+// Een eigen functie met dezelfde naam als de echte suite; zij toetst niets.
+export function fileStorageContract(): void {}

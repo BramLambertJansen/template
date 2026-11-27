@@ -1,0 +1,11 @@
+import { fileStorageContract } from '#core/api/storage/testing.ts';
+import { andereAdapter } from './andere-adapter.ts';
+import { mijnAdapter } from './mijn-adapter.ts';
+
+// mijnAdapter staat in een object dat de setup niet teruggeeft.
+const fetch = () => Promise.resolve(new Response(null));
+fileStorageContract('x', () => {
+  const ongebruikt = { storage: mijnAdapter };
+  void ongebruikt;
+  return Promise.resolve({ storage: andereAdapter, fetch, advance: () => undefined });
+});

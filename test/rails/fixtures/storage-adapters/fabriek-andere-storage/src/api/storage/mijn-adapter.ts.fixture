@@ -1,0 +1,11 @@
+import { defineFileStorage } from '#core/api/storage/port.ts';
+
+export function createMijnStorage() {
+  return defineFileStorage({
+    createUploadUrl: () => ({ url: 'https://opslag.example/up', method: 'PUT', headers: {} }),
+    createDownloadUrl: () => ({ url: 'https://opslag.example/down' }),
+    stat: () => Promise.resolve(null),
+    delete: () => Promise.resolve(),
+    uploadOrigin: 'https://opslag.example',
+  });
+}

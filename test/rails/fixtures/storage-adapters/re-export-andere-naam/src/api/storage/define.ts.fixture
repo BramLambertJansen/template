@@ -1,0 +1,2 @@
+// Een poging de check te ontwijken: defineFileStorage onder een andere naam.
+export { defineFileStorage as maakOpslag } from '#core/api/storage/port.ts';

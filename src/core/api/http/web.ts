@@ -34,7 +34,12 @@ function isServable(root: string, requestPath: string): boolean {
   return realpathSync(index).startsWith(root + path.sep);
 }
 
-export function createWebApp(api: App, webDir: string): App {
+export interface WebAppOptions {
+  // De uploadOrigin van de opslagadapter (spec bestandsopslag, AC-5): komt naast 'self' in connect-src; null of weg = alleen 'self'.
+  readonly uploadOrigin?: string | null;
+}
+
+export function createWebApp(api: App, webDir: string, options: WebAppOptions = {}): App {
   const root = realpathSync(path.resolve(webDir));
   if (!existsSync(path.join(root, 'index.html'))) {
     throw new Error(`createWebApp: ${root}/index.html ontbreekt; draai eerst pnpm build`);
@@ -42,7 +47,7 @@ export function createWebApp(api: App, webDir: string): App {
   if (!isServable(root, '/index.html')) {
     throw new Error(`createWebApp: ${root}/index.html ligt buiten de build`);
   }
-  const headers = securityHeaders();
+  const headers = securityHeaders(undefined, options.uploadOrigin);
   const app = new Hono();
 
   // Eerst /api: de middleware hieronder (SPA-headers, cache) mag API-responses nooit raken (web.test.ts bewaakt dat).

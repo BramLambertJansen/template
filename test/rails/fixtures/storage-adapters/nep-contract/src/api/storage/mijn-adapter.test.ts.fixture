@@ -1,0 +1,6 @@
+import { fileStorageContract } from './nep-contract.ts';
+import { mijnAdapter } from './mijn-adapter.ts';
+
+// De naam klopt, maar de functie komt niet uit #core/api/storage/testing.ts.
+void mijnAdapter;
+fileStorageContract();

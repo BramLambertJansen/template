@@ -1,0 +1,7 @@
+import { fileStorageContract } from '#core/api/storage/testing.ts';
+import { andereAdapter } from './andere-adapter.ts';
+
+// De suite draait wel, maar op een andere adapter dan mijn-adapter.ts.
+fileStorageContract('andere', () =>
+  Promise.resolve({ storage: andereAdapter, fetch: () => Promise.resolve(new Response(null)), advance: () => undefined }),
+);

@@ -1,0 +1,11 @@
+import { fileStorageContract } from '#core/api/storage/testing.ts';
+import { createMijnStorage } from './mijn-adapter.ts';
+
+const maakMap = () => 'tmp-map';
+const fetch = () => Promise.resolve(new Response(null));
+
+// Een setup met een blok-body: de fabriek dekt de adapter via de teruggegeven storage.
+fileStorageContract('mijn', async () => {
+  const dir = maakMap();
+  return { storage: createMijnStorage(dir), fetch, advance: () => undefined };
+});

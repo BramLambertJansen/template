@@ -1,0 +1,10 @@
+import { fileStorageContract } from '#core/api/storage/testing.ts';
+import { andereAdapter } from './andere-adapter.ts';
+import { createMijnStorage } from './mijn-adapter.ts';
+
+// De fabriek wordt aangeroepen, maar de setup geeft een andere adapter terug.
+const fetch = () => Promise.resolve(new Response(null));
+fileStorageContract('x', () => {
+  createMijnStorage();
+  return Promise.resolve({ storage: andereAdapter, fetch, advance: () => undefined });
+});

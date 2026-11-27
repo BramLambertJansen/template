@@ -17,4 +17,5 @@ export const coreErrorTexts = {
   UPSTREAM_INVALID: 'Een externe dienst gaf een onverwacht antwoord. Probeer het later opnieuw.',
   UPSTREAM_UNAVAILABLE: 'Een externe dienst is nu niet bereikbaar. Probeer het later opnieuw.',
   UPSTREAM_TIMEOUT: 'Een externe dienst reageerde niet op tijd. Probeer het later opnieuw.',
+  STORAGE_UNAVAILABLE: 'Bestanden zijn nu niet beschikbaar. Probeer het later opnieuw.',
 } as const satisfies Record<CoreErrorCode, string>;

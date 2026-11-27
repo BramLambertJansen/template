@@ -37,6 +37,7 @@
     "ratchet:update": "node scripts/kit/ratchet.mjs --update",
     "check:catalogus": "node scripts/kit/catalogus.mjs",
     "check:schillen": "node scripts/kit/check-schillen.mjs",
+    "check:storage-adapters": "node scripts/kit/check-storage-adapters.mjs",
     "check:migrations": "node scripts/kit/check-migrations.mjs",
     "check:docs-drift": "node scripts/kit/check-docs-drift.mjs",
     "template:release": "node scripts/kit/template-release.mjs",

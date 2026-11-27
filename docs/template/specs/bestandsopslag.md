@@ -79,7 +79,7 @@ zet `claimed_until` en verhoogt `attempts` (`for update skip locked`; `p_limit` 
 
 ## Routes en foutcodes
 
-Alle routes via `defineRoute`, input `.strict()`, contract in `src/shared/contracts/files.ts`. Zonder adapter geven alle vijf
+Alle routes via `defineRoute`, input `.strict()`, contract in `src/shared/contracts/files.ts` (nieuw). Zonder adapter geven alle vijf
 `STORAGE_UNAVAILABLE` (OV-9). Rate-limitcategorie volgens OV-13.
 
 | Methode | Pad | Permissie | Foutcodes |
@@ -410,11 +410,11 @@ Per regel een bestaand pad uit `docs/gouden-pad.md` (accountbeheer) en wat je ov
 - **Unit**: contracttestsuite tegen de lokale adapter met een injecteerbare klok (AC-1, AC-3, AC-4, AC-23); CSP (AC-5); opstartcontroles (AC-6);
   route kit met `prepare` (AC-30: poolmeting op `createWithUser` met een geïnstrumenteerde pool (`connect`/`release` tellen), niet met de testkit `beginTestDb` (één vaste verbinding met savepoints), één rate-limittelling, gebruiker zonder rol en admin zonder MFA met een falende `prepare`);
   sleutelcontrole en time-out van `createFileService` (AC-31); fixtures van `check:storage-adapters` (AC-30); `format.bytes`; formulierafleiding uit `File`; `Input`-variant in de catalogus.
-- **Integratie** (`test/api/files.int.test.ts`, echte lokale stack, lokale adapter): AC-2, AC-8 t/m AC-21 en AC-31, met racetests voor AC-12 en
+- **Integratie** (`test/api/files.int.test.ts` (nieuw), echte lokale stack, lokale adapter): AC-2, AC-8 t/m AC-21 en AC-31, met racetests voor AC-12 en
   AC-16 (twee gelijktijdige requests); AC-10 door direct in `FILES_LOCAL_DIR` te schrijven; per verboden rol en admin zonder MFA; een test dat
   de advisory-lock-namespace van bestanden verschilt van die van de jobs.
 - **Securitysuite**: `files` in `test/security/resources.ts` (zie "Raakt ook").
-- **E2E** (`e2e/files.spec.ts`, axe op 375 en 1280 px): AC-7, AC-17, AC-22, plus de foutmeldingen van AC-8 en AC-9 in de UI.
+- **E2E** (`e2e/files.spec.ts` (nieuw), axe op 375 en 1280 px): AC-7, AC-17, AC-22, plus de foutmeldingen van AC-8 en AC-9 in de UI.
 - **Deel C**: integratie met `runJobsOnce` (AC-24 t/m AC-29), met een adapter die een fout kan geven.
 
 ## Open vragen

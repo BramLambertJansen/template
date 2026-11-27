@@ -1,0 +1,8 @@
+import { test } from 'vitest';
+import { fileStorageContractCases } from '#core/api/storage/testing.ts';
+import { mijnAdapter } from './mijn-adapter.ts';
+
+const cases = fileStorageContractCases(() =>
+  Promise.resolve({ storage: mijnAdapter, fetch: () => Promise.resolve(new Response(null)), advance: () => undefined }),
+);
+for (const geval of cases) test(geval.name, geval.run);

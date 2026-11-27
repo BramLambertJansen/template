@@ -17,6 +17,9 @@ const dateTime = new Intl.DateTimeFormat(LOCALE, {
 const euro = new Intl.NumberFormat(LOCALE, { style: 'currency', currency: 'EUR' });
 const number = new Intl.NumberFormat(LOCALE);
 const relativeTime = new Intl.RelativeTimeFormat(LOCALE, { numeric: 'auto' });
+// Bestandsgrootte (spec bestandsopslag, "Opmaak"): hooguit één decimaal, zonder ",0" en zonder groepering.
+const byteSize = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 1, useGrouping: false });
+const BYTE_UNITS = ['B', 'KB', 'MB', 'GB'] as const;
 
 // Vaste grenzen in seconden, grootste eerst (spec relatieve-tijd): geen kalenderrekening, een maand is 30 dagen en een
 // jaar 365 dagen. Onder een minuut is het altijd "nu".
@@ -46,10 +49,22 @@ function relative(iso: string, now: Date): string {
     : relativeTime.format(Math.trunc(seconds / unit[1]), unit[0]);
 }
 
+// Veelvouden van 1024. De eenheid volgt uit de afgeronde waarde, zodat 1023,96 KB "1 MB" wordt en niet "1024 KB".
+function bytes(value: number): string {
+  let unit = 0;
+  let scaled = value;
+  while (unit < BYTE_UNITS.length - 1 && Math.round(scaled * 10) / 10 >= 1024) {
+    scaled /= 1024;
+    unit += 1;
+  }
+  return `${byteSize.format(unit === 0 ? Math.round(scaled) : scaled)} ${BYTE_UNITS[unit] ?? 'GB'}`;
+}
+
 export const format = {
   date: (iso: string): string => date.format(parse(iso)),
   dateTime: (iso: string): string => dateTime.format(parse(iso)),
   cents: (amount: Cents): string => euro.format(amount / 100),
   number: (value: number): string => number.format(value),
   relative,
+  bytes,
 };
