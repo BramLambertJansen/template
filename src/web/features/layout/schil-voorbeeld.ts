@@ -10,6 +10,12 @@ import type { NavItem } from '#web/ui/index.ts';
 
 export const SCHIL_PATH = '/design-system';
 
+// Spec release-versie: op /design-system geen buildInfo en dus geen voet; de pagina doet geen aanroep buiten /api/me
+// (design-system/AC-10, R-WEB-08).
+export function toontBuildInfo(pathname: string): boolean {
+  return pathname !== SCHIL_PATH && pathname !== `${SCHIL_PATH}/`;
+}
+
 // Zoekparameters naast q en vak in src/web/routes/_app/design-system.tsx; een onbekende waarde valt weg (.catch). items
 // staat als getal in de URL (de router leest "9" als getal).
 export const schilSearch = {

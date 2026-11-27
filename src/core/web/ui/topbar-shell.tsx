@@ -61,7 +61,7 @@ function TopbarNav({ items }: { readonly items: readonly NavItem<string>[] }) {
 // links de items, rechts topbarActions en het profielmenu. Smaller (ook onder md en bij 200 % tekst) toont de balk de
 // menuknop met dezelfde sheet als de SidebarShell. Garanties uit ShellFrame; meldingen uit ToastProvider. Zonder
 // nav-items geen nav, menuknop of sheet.
-export function TopbarShell({ nav, userName, menuItems, topbarActions, routeKey, children }: ShellProps) {
+export function TopbarShell({ nav, userName, menuItems, topbarActions, routeKey, buildInfo, children }: ShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const hasNav = nav.length > 0;
   const openMenu = () => {
@@ -71,6 +71,7 @@ export function TopbarShell({ nav, userName, menuItems, topbarActions, routeKey,
     <ShellFrame
       className="flex flex-col"
       routeKey={routeKey}
+      buildInfo={buildInfo}
       header={
         <Topbar
           userName={userName}

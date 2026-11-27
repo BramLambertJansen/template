@@ -4,6 +4,7 @@ import { StrictMode, type ReactNode } from 'react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { CenteredCard } from './centered-card.tsx';
 import { PageHeader } from './page-header.tsx';
+import type { BuildInfo } from '../lib/api-client.ts';
 import { ShellFrame, ShellSessionProvider } from './shell-frame.tsx';
 import { SidebarShell } from './sidebar-shell.tsx';
 import type { NavItem } from './sidebar.tsx';
@@ -128,6 +129,8 @@ describe('schillen/AC-16: focus bij de mount van een schil', () => {
 interface FixtureProps {
   readonly label: string;
   readonly routeKey?: string | undefined;
+  // Spec release-versie: een schil geeft buildInfo door aan ShellFrame.
+  readonly buildInfo?: BuildInfo | undefined;
   readonly children: ReactNode;
 }
 
@@ -138,7 +141,22 @@ const fixtureHeader = (label: string, extra?: ReactNode) => (
   </header>
 );
 
-function EigenSchil({ label, routeKey, children }: FixtureProps) {
+function EigenSchil({ label, routeKey, buildInfo, children }: FixtureProps) {
+  return (
+    <ShellFrame
+      className="flex flex-col"
+      routeKey={routeKey}
+      buildInfo={buildInfo}
+      header={fixtureHeader(label)}
+      nav={null}
+    >
+      {children}
+    </ShellFrame>
+  );
+}
+
+// Spec release-versie: geeft buildInfo niet door aan ShellFrame.
+function SchilZonderBuildInfo({ label, routeKey, children }: FixtureProps) {
   return (
     <ShellFrame className="flex flex-col" routeKey={routeKey} header={fixtureHeader(label)} nav={null}>
       {children}
@@ -226,5 +244,10 @@ describe('schillen/AC-10: shellContract op een eigen schil', () => {
   test('schillen/AC-10: een schil met een eigen OfflineNotice laat het OfflineNotice-geval falen', async () => {
     const cases = shellContractCases(SchilMetEigenOfflineNotice, fixtureProps);
     await expectCaseToFail(cases, 'OfflineNotice staat er precies één keer');
+  });
+
+  test('release-versie/AC-11: een schil die buildInfo niet doorgeeft laat het voetgeval falen', async () => {
+    const cases = shellContractCases(SchilZonderBuildInfo, fixtureProps);
+    await expectCaseToFail(cases, 'met buildInfo staat de voet');
   });
 });
