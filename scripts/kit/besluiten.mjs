@@ -13,7 +13,7 @@ const REGEL = /^- \*\*(OV-\d+) (⏳ voorlopig|⏸ geparkeerd)\*\*\s*[—–-]\s*
 
 /**
  * De specs uit `SPECMAPPEN` (niet `_*.md`), via de lezer van de aanroeper; een ontbrekende map geeft niets.
- * @param {{ lijst: (map: string) => string[], lees: (pad: string) => string | null }} lezer @returns {Bestand[]}
+ * @param {{ lijst: (map: string) => readonly string[], lees: (pad: string) => string | null }} lezer @returns {Bestand[]}
  */
 export function specBestanden(lezer) {
   return SPECMAPPEN.flatMap((map) =>
