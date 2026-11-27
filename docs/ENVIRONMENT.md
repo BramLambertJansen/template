@@ -245,7 +245,7 @@ voor `pnpm meting` geldt de netwerkvorm: alleen als los commando, niet in een pi
 |---|---|---|
 | Commit | `git commit -F <bestand>` | buiten de sandbox; lefthook draait mee, nooit `--no-verify` |
 | Push | `git push origin HEAD` | de smalle vorm; `deny` en het rolhek weigeren push naar `main` en force |
-| PR openen | `mcp__github__create_pull_request` | `gh pr create` werkt niet in de cloud (GraphQL); Claude Code vraagt de eigenaar één keer per PR (gemeten: één prompt, spec `cloud-pr-route` F10; ADR 0078 punt 4, herzien) |
+| PR openen | `mcp__github__create_pull_request` | `gh pr create` werkt niet in de cloud (GraphQL); met `head` gelijk aan de werkbranch geeft het rolhek allow (ADR 0115 punt 5; geen vraag verwacht, nog niet gemeten: spec `nachtrun` OV-8); zonder hook of in een andere vorm vraagt Claude Code de eigenaar (gemeten: één prompt, spec `cloud-pr-route` F10) |
 | Bewijs lezen | `pnpm pr:verify <nummer>`, `gh api "repos/{owner}/{repo}/…"` (endpoint tussen aanhalingstekens) | alleen REST; `gh pr …` en `gh issue …` gebruiken GraphQL en werken niet |
 
 Lokaal blijft `gh pr create --head <branch> --body-file <bestand>` de route (zie Dagelijks werken). Elke handeling met git,
